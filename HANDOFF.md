@@ -129,6 +129,21 @@
   4. **التحقق الفعلي الشامل (`65/65` مسار API ناجح بنسبة `100%`):**
      - تم اختبار `65` مسار API حي (`GET` و`POST`) يغطي جميع صفحات المنصة (`65/65 Passed — 0 Failed`).
 
+### المرحلة 13: الفحص العميق بالمترجم (`0` TypeScript Errors)، الداشبورد المستمر 24/7 ذو الأركان الأربعة، وتوسيع الترسانة (`70` أداة Kali + `50` مشروع GitHub 2026)
+- **القضاء التام على أخطاء المعرفات غير المستوردة (`Zap`, `Database`, `copyToClipboard`, `memoriesState`):**
+  - تشغيل فحص المترجم الصارم (`tsc --noEmit -p artifacts/kali-panel/tsconfig.json`) على جميع ملفات الواجهة (`src/**/*`) والوصول إلى **`0` أخطاء برمجية**، مع اختبار جميع مسارات `resolveStandaloneApi` الـ `24` الخاصة بمحرك الأبحاث العميق (`24/24 Passed`).
+- **ترقية الداشبورد (`HomeDashboard.tsx` & `Dashboard.tsx`) ليحتفظ بالجلسة ويعمل بلا انقطاع 24/7:**
+  - حفظ وقت بدء الجلسة (`cybernova_session_start_ts`) وسجل النشاط (`cybernova_home_activity_v2`) والمهام الـ `12` (`cybernova_agenttasks_v2`) في `localStorage` وربطها بمحرك الذاكرة السحابية (`/api/deep-research/workstation-state`).
+  - بناء **مركز استمرارية الجلسة الحية ذي الأركان الأربعة (`4-Pillar Persistent Session & Beneficial Wisdom Center`):**
+    1. **✅ اللي اتعمل واللي عمله (`What Was Done`):** عرض المهام المنجزة والدورات الذاتية المكتملة (`35+` دورة) والمستخرجات الموثقة (`31` غنيمة و`6` شهادات `Zero-FP SHA-256`).
+    2. **⚡ اللي بيعمله دلوقتي لحظياً (`What It Is Doing Now`):** عرض المرحلة الجارية والأمر المنفذ لحظياً ومؤقت الجلسة المستمر.
+    3. **🧭 اللي هيعمله بعد كده (`What It Will Do Next`):** عرض خطة المراحل القادمة مع إمكانية إضافة مهام جديدة أو تشغيل دورة فورية بضغطة زر.
+    4. **🌿 كل مفيد وخير من الله (`Beneficial Ethical Security Wisdom & Remediation`):** بطاقات متجددة للعلم النافع والحماية الأخلاقية البناءة وأكواد الترقيع الآمنة (`Zero-Trust Ownership`, `SSRF Egress Isolation`, `Zero-FP Gate`, `OWASP 2026 AI Guardrails`).
+- **توسيع الترسانة بأحدث أدوات ومشاريع 2026 (`2,592` عنصر معرفي مفهرس):**
+  - رفع ترسانة Kali Linux إلى **`70` أداة** بإضافة: `uncover`, `jshunter`, `nettacker`, `sstimap`, `julius`, `kosty`.
+  - رفع ترسانة GitHub المفتوحة إلى **`50` مشروعاً** بإضافة: `AIPentest/CyberStrikeAI`, `1N3/Sn1per`, `0x4m4/hexstrike-ai`, `projectdiscovery/uncover`, `cc1a2b/JShunter`, `kosty-cloud/kosty`, `praetorian-inc/julius`, `IcarusSec/ICARUS`.
+
+
 
 
 

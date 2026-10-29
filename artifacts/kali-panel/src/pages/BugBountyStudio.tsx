@@ -3,7 +3,7 @@ import {
   Shield, BookOpen, Code, CheckSquare, FileText, Globe, AlertTriangle,
   CheckCircle2, Copy, Download, Search, Sparkles, Lock, Layers, Server,
   ExternalLink, Terminal, ChevronRight, RefreshCw, Plus, Trash2, Award,
-  Radio, Save, Target,
+  Radio, Save, Target, Zap, Database, Activity, Cpu, Clock, Play,
 } from "lucide-react";
 import { emitPlatformWsEvent, useWebSocket } from "@/hooks/useWebSocket";
 import { jsonRequest } from "@/lib/sse";
@@ -1731,6 +1731,12 @@ export default function BugBountyStudio() {
   const [cvssI, setCvssI] = useState<"H" | "L" | "N">("L");
   const [cvssA, setCvssA] = useState<"H" | "L" | "N">("N");
   const [copiedReport, setCopiedReport] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const copyToClipboard = (text: string, id: string) => {
+    void navigator.clipboard?.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 1800);
+  };
 
   const cvssResult = useMemo(() => {
     const avMap = { N: 0.85, A: 0.62, L: 0.55, P: 0.2 };
@@ -3473,10 +3479,10 @@ ${reportFix}
                 <div className="flex items-center justify-between text-xs font-mono text-cyan-300">
                   <span>🐉 مخرجات التحقق الآمن لأداة: {kaliSimResult.toolName}</span>
                   <button
-                    onClick={() => copyText("kali-sim", kaliSimResult.output)}
+                    onClick={() => copyToClipboard(kaliSimResult.output, "kali-sim")}
                     className="px-2 py-0.5 rounded bg-white/10 text-[11px] text-white"
                   >
-                    {copiedId === "kali-sim" ? "تم النسخ ✓" : "نسخ المخرجات"}
+                    {copied === "kali-sim" ? "تم النسخ ✓" : "نسخ المخرجات"}
                   </button>
                 </div>
                 <pre className="text-[11px] font-mono text-emerald-300 overflow-x-auto whitespace-pre-wrap leading-relaxed" dir="ltr">
@@ -3521,10 +3527,10 @@ ${reportFix}
                           {deepLoading === `kali-${tool.id}` ? "جاري الفحص..." : "⚡ تشغيل الفحص الآمن"}
                         </button>
                         <button
-                          onClick={() => copyText(`cmd-${tool.id}`, cmd)}
+                          onClick={() => copyToClipboard(cmd, `cmd-${tool.id}`)}
                           className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-gray-300"
                         >
-                          {copiedId === `cmd-${tool.id}` ? "✓" : "نسخ الأمر"}
+                          {copied === `cmd-${tool.id}` ? "✓" : "نسخ الأمر"}
                         </button>
                       </div>
                     </div>
