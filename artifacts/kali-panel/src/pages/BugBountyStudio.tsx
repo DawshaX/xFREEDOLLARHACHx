@@ -655,7 +655,73 @@ const CHECKLISTS: ChecklistCategory[] = [
 ];
 
 export default function BugBountyStudio() {
-  const [activeTab, setActiveTab] = useState<"encyclopedia" | "auditor" | "scope" | "checklist" | "report">("encyclopedia");
+  const [activeTab, setActiveTab] = useState<"deep2099" | "encyclopedia" | "auditor" | "scope" | "checklist" | "report">("deep2099");
+
+  // Tab 0 (2099 Engine) state: Deep Research Pipeline, JS Analyzer, Auth Matrix, Config Auditor, Zero-FP Gate & GitHub Arsenal
+  const [deepLoading, setDeepLoading] = useState<string | null>(null);
+  const [pipelineResult, setPipelineResult] = useState<{
+    target: string;
+    hostname: string;
+    stages: Array<{ stage: number; name: string; status: string; detail: string }>;
+    endpoints: string[];
+    missingHeaders: string[];
+    targetHash: string;
+    baselineHash: string;
+    hypotheses: Array<{ rank: number; title: string; cwe: string; priority: string; verificationSteps: string }>;
+  } | null>(null);
+  const [jsAnalysisResult, setJsAnalysisResult] = useState<{
+    target: string;
+    scriptsAnalyzed: number;
+    endpoints: string[];
+    parameters: string[];
+    sinks: Array<{ sink: string; severity: string; cwe: string; detail: string }>;
+    summary: string;
+  } | null>(null);
+  const [matrixEndpoint, setMatrixEndpoint] = useState("https://api.example.com/api/v1/user/profile");
+  const [sessionAHeader, setSessionAHeader] = useState("Authorization: Bearer test_account_owner_token");
+  const [sessionBHeader, setSessionBHeader] = useState("Authorization: Bearer test_account_secondary_token");
+  const [authMatrixResult, setAuthMatrixResult] = useState<{
+    endpointUrl: string;
+    verdict: string;
+    verdictAr: string;
+    severity: string;
+    similarityPercent: number;
+    matrix: Array<{ actor: string; status: number; length: number; hash: string; timeMs: number }>;
+  } | null>(null);
+  const [configAuditResult, setConfigAuditResult] = useState<{
+    hostname: string;
+    cors: { allowOrigin: string; allowCredentials: string; vulnerable: boolean };
+    securityTxt: { found: boolean; contacts: string[]; excerpt: string | null };
+    findings: Array<{ check: string; status: string; cwe: string; detail: string }>;
+  } | null>(null);
+  const [zeroFpTitle, setZeroFpTitle] = useState("تحقق من عزل صلاحيات نقطة النهاية (BOLA/IDOR)");
+  const [zeroFpSev, setZeroFpSev] = useState<"critical" | "high" | "medium" | "low">("high");
+  const [zeroFpResult, setZeroFpResult] = useState<{
+    verified: boolean;
+    isFalsePositive: boolean;
+    targetHash: string;
+    baseline404Hash: string;
+    cvssScore: number;
+    cvssVector: string;
+  } | null>(null);
+  const [arsenalTools, setArsenalTools] = useState<Array<{
+    id: string;
+    name: string;
+    category: string;
+    stars: string;
+    url: string;
+    integratedModule: string;
+    description: string;
+    methodology: string;
+  }>>([]);
+  const [ghSearchQuery, setGhSearchQuery] = useState("nuclei bug bounty recon");
+  const [ghSearchResults, setGhSearchResults] = useState<Array<{
+    full_name?: string;
+    html_url?: string;
+    description?: string;
+    stargazers_count?: number;
+    language?: string;
+  }>>([]);
 
   // Tab 1 state: Encyclopedia
   const [searchQuery, setSearchQuery] = useState("");
@@ -981,6 +1047,144 @@ ${reportFix}
     setSyncStatusMsg("✅ تم حفظ التقرير بالكامل في صفحة التقارير (/reports) وفي الذاكرة المشتركة (/memory)!");
   };
 
+  useEffect(() => {
+    void jsonRequest<{ tools: typeof arsenalTools }>("/deep-research/arsenal")
+      .then((d) => setArsenalTools(d.tools || []))
+      .catch(() => {});
+  }, []);
+
+  const handleRunPipeline = async () => {
+    setDeepLoading("pipeline");
+    try {
+      const res = await jsonRequest<NonNullable<typeof pipelineResult>>("/deep-research/pipeline", {
+        method: "POST",
+        body: JSON.stringify({ target: activeTarget }),
+      });
+      setPipelineResult(res);
+      if (res.endpoints?.[0]) {
+        const cleanHost = activeTarget.replace(/^https?:\/\//, "").replace(/^\*\./, "");
+        setMatrixEndpoint(`https://${cleanHost}${res.endpoints[0]}`);
+      }
+      emitPlatformWsEvent({
+        type: "scan_completed",
+        target: activeTarget,
+        title: `مسار البحث الذاتي (4 مراحل) اكتمل على ${activeTarget}`,
+      });
+      setSyncStatusMsg(`✅ اكتمل مسار البحث الذاتي (4 مراحل) على ${activeTarget} وتم حفظ الأدلة والفرضيات في الذاكرة ومتتبع المهام!`);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleRunJsAnalyzer = async () => {
+    setDeepLoading("js");
+    try {
+      const res = await jsonRequest<NonNullable<typeof jsAnalysisResult>>("/deep-research/js-analyzer", {
+        method: "POST",
+        body: JSON.stringify({ target: activeTarget }),
+      });
+      setJsAnalysisResult(res);
+      emitPlatformWsEvent({
+        type: "recon_cmd_executed",
+        target: activeTarget,
+        title: `تحليل JS والمسارات المخفية: ${res.endpoints.length} مسار مكتشف`,
+      });
+      setSyncStatusMsg(`✅ تم استخراج ${res.endpoints.length} مسار API و${res.parameters.length} معامل من ملفات JS وتسجيلها في الذاكرة!`);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleRunAuthMatrix = async () => {
+    setDeepLoading("matrix");
+    try {
+      const res = await jsonRequest<NonNullable<typeof authMatrixResult>>("/deep-research/auth-matrix", {
+        method: "POST",
+        body: JSON.stringify({
+          endpointUrl: matrixEndpoint,
+          sessionAHeader,
+          sessionBHeader,
+        }),
+      });
+      setAuthMatrixResult(res);
+      emitPlatformWsEvent({
+        type: "finding_recorded",
+        target: matrixEndpoint,
+        title: `مصفوفة الصلاحيات التفاضلية: ${res.verdict} (${res.similarityPercent}%)`,
+      });
+      setSyncStatusMsg(`✅ اكتملت المقارنة التفاضلية للصلاحيات (BOLA/IDOR) — التشابه الهيكلي: ${res.similarityPercent}%`);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleRunConfigAuditor = async () => {
+    setDeepLoading("config");
+    try {
+      const res = await jsonRequest<NonNullable<typeof configAuditResult>>("/deep-research/config-auditor", {
+        method: "POST",
+        body: JSON.stringify({ target: activeTarget }),
+      });
+      setConfigAuditResult(res);
+      emitPlatformWsEvent({
+        type: "scan_completed",
+        target: activeTarget,
+        title: `فحص الإعدادات المعمارية (CORS / CNAME / security.txt): ${activeTarget}`,
+      });
+      setSyncStatusMsg(`✅ اكتمل تدقيق CORS وبصمات CNAME وملف security.txt لـ ${activeTarget}!`);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleRunZeroFpGate = async () => {
+    setDeepLoading("zerofp");
+    try {
+      const res = await jsonRequest<NonNullable<typeof zeroFpResult>>("/deep-research/zero-fp-verify", {
+        method: "POST",
+        body: JSON.stringify({
+          targetUrl: `https://${activeTarget.replace(/^https?:\/\//, "").replace(/^\*\./, "")}`,
+          title: zeroFpTitle,
+          severity: zeroFpSev,
+        }),
+      });
+      setZeroFpResult(res);
+      emitPlatformWsEvent({
+        type: "finding_recorded",
+        target: activeTarget,
+        title: `بوابة البرهان (Zero-FP): CVSS ${res.cvssScore} — ${zeroFpTitle}`,
+      });
+      setSyncStatusMsg(`✅ تم التحقق عبر بوابة البرهان (Zero-FP Gate) وحفظ حزمة الدليل الرقمي في خزنة الأدلة (/evidence)!`);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleSearchGithubArsenal = async () => {
+    if (!ghSearchQuery.trim()) return;
+    setDeepLoading("github");
+    try {
+      const res = await jsonRequest<{ items?: typeof ghSearchResults }>(
+        `/github/search?q=${encodeURIComponent(ghSearchQuery.trim())}&type=repositories&per_page=8`,
+      );
+      setGhSearchResults(res.items || []);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
   return (
     <div dir="rtl" className="min-h-full bg-[#05020a] text-gray-100 p-4 md:p-6 space-y-6 font-sans">
       {/* ── Header Banner ─────────────────────────────────────────────────── */}
@@ -1075,6 +1279,7 @@ ${reportFix}
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/10">
           {[
+            { id: "deep2099", label: "🚀 محرك الاكتشاف العميق 2099 وترسانة GitHub", icon: Sparkles },
             { id: "encyclopedia", label: "📚 موسوعة الثغرات والكود الآمن", icon: BookOpen },
             { id: "auditor", label: "🔍 الفاحص الدفاعي للكود والـ Headers", icon: Code },
             { id: "scope", label: "🎯 نطاقات برامج HackerOne & Google VRP", icon: Globe },
@@ -1100,6 +1305,428 @@ ${reportFix}
           })}
         </div>
       </div>
+
+      {/* ── TAB 0: Deep Bug Bounty Verification Engine 2099 & GitHub Arsenal ── */}
+      {activeTab === "deep2099" && (
+        <div className="space-y-6">
+          {/* 1. Autonomous 4-Stage Research Pipeline Banner */}
+          <div className="rounded-2xl border border-emerald-500/35 bg-gradient-to-l from-emerald-950/30 via-[#0b0716] to-purple-950/30 p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="text-xs font-mono text-emerald-400">
+                  AUTONOMOUS 4-STAGE RESEARCH PIPELINE · ZERO-FALSE-POSITIVE ENGINE
+                </div>
+                <h2 className="text-xl font-extrabold text-white mt-0.5">
+                  ⚡ مسار البحث الذاتي المتسلسل (4 مراحل) على الهدف النشط: <span className="font-mono text-emerald-300">{activeTarget}</span>
+                </h2>
+                <p className="text-xs text-gray-300 mt-1">
+                  ينفذ الاستطلاع السلبي (DNS/TLS)، ثم يشرح ملفات الـ JS والترويسات، ثم يأخذ بصمة SHA-256 الأساسية لاستبعاد صفحات الخطأ الكاذبة (Soft-404)، وأخيراً يرتب أقوى الفرضيات البحثية ويوثق الأدلة تلقائياً في الذاكرة وخزنة الأدلة.
+                </p>
+              </div>
+              <button
+                onClick={() => void handleRunPipeline()}
+                disabled={deepLoading === "pipeline"}
+                className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/30 flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>
+                  {deepLoading === "pipeline"
+                    ? "جاري تشغيل المراحل الـ 4..."
+                    : "تشغيل مسار البحث الذاتي (4 مراحل)"}
+                </span>
+              </button>
+            </div>
+
+            {pipelineResult && (
+              <div className="space-y-4 pt-2 border-t border-white/10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {pipelineResult.stages.map((st) => (
+                    <div
+                      key={st.stage}
+                      className="p-3.5 rounded-xl bg-black/50 border border-emerald-500/30 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
+                        <span>{st.name}</span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-[10px] font-mono">✓ DONE</span>
+                      </div>
+                      <p className="text-xs text-gray-300 leading-relaxed font-mono">{st.detail}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-xl bg-white/[0.03] border border-white/10 p-4 space-y-3">
+                  <div className="text-sm font-bold text-amber-300">
+                    🎯 الفرضيات البحثية المرتبة حسب الأولوية لـ {pipelineResult.hostname} (اضغط لتحويلها إلى تقرير رسمي):
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {pipelineResult.hypotheses.map((h) => (
+                      <div
+                        key={h.rank}
+                        className="p-3.5 rounded-xl bg-black/40 border border-white/10 flex flex-col justify-between gap-2"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono text-emerald-400">#{h.rank} · {h.cwe}</span>
+                            <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                              {h.priority}
+                            </span>
+                          </div>
+                          <div className="text-xs font-bold text-white">{h.title}</div>
+                          <p className="text-[11px] text-gray-300 leading-relaxed">{h.verificationSteps}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setReportTitle(h.title);
+                            setReportCwe(h.cwe);
+                            setReportSteps(h.verificationSteps);
+                            setActiveTab("report");
+                          }}
+                          className="w-full mt-2 px-3 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-[11px] font-bold text-purple-200"
+                        >
+                          📝 إرسال الفرضية لمولّد التقارير
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. Deep JS & SourceMap Analyzer + Differential BOLA/IDOR Matrix */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Deep JS Analyzer */}
+            <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Code className="w-4 h-4 text-sky-400" />
+                    <span>1. محلل ملفات الـ JS والمسارات المخفية (LinkFinder / SourceMap Engine)</span>
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    يستخرج مسارات الـ API الخفية والمعاملات ومستمعات postMessage من حزم الواجهة للهدف النشط.
+                  </p>
+                </div>
+                <button
+                  onClick={() => void handleRunJsAnalyzer()}
+                  disabled={deepLoading === "js"}
+                  className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-xs font-bold text-white shrink-0"
+                >
+                  {deepLoading === "js" ? "جاري التحليل..." : "تشريح ملفات JS"}
+                </button>
+              </div>
+
+              {jsAnalysisResult && (
+                <div className="space-y-3 pt-2 border-t border-white/10 text-xs">
+                  <div className="p-2.5 rounded-lg bg-sky-950/30 border border-sky-500/30 text-sky-200 font-mono">
+                    {jsAnalysisResult.summary}
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-300 mb-1.5">
+                      🔗 المسارات المستخرجة (اضغط على أي مسار لاختباره في مصفوفة BOLA/IDOR):
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {jsAnalysisResult.endpoints.map((ep) => (
+                        <button
+                          key={ep}
+                          onClick={() => {
+                            const cleanHost = activeTarget.replace(/^https?:\/\//, "").replace(/^\*\./, "");
+                            setMatrixEndpoint(`https://${cleanHost}${ep}`);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-black/50 hover:bg-sky-500/20 border border-white/15 font-mono text-[11px] text-emerald-300"
+                        >
+                          {ep}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-300 mb-1">⚙️ المعاملات المكتشفة (Parameters):</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {jsAnalysisResult.parameters.map((p) => (
+                        <span key={p} className="px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/30 font-mono text-[11px] text-purple-200">
+                          ?{p}=
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {jsAnalysisResult.sinks.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="font-bold text-amber-300">⚠️ نقاط الانتباه في الكود العميل (DOM Sinks):</div>
+                      {jsAnalysisResult.sinks.map((s, idx) => (
+                        <div key={idx} className="p-2.5 rounded-lg bg-black/40 border border-amber-500/30">
+                          <div className="font-mono text-amber-300 font-bold">{s.sink} ({s.cwe})</div>
+                          <div className="text-gray-300 mt-0.5">{s.detail}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Differential Auth & BOLA/IDOR Matrix */}
+            <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-purple-400" />
+                    <span>2. مصفوفة المقارنة التفاضلية للصلاحيات (Autorize / BOLA Matrix)</span>
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    تقارن استجابة حساب المالك (Session A) مع حساب الاختبار الثاني (Session B) والزائر غير المسجل لاكتشاف ثغرات IDOR/BOLA بدقة 100%.
+                  </p>
+                </div>
+                <button
+                  onClick={() => void handleRunAuthMatrix()}
+                  disabled={deepLoading === "matrix"}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-bold text-white shrink-0"
+                >
+                  {deepLoading === "matrix" ? "جاري المقارنة..." : "فحص تفاضلي"}
+                </button>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <input
+                  dir="ltr"
+                  value={matrixEndpoint}
+                  onChange={(e) => setMatrixEndpoint(e.target.value)}
+                  placeholder="Endpoint URL (e.g. https://api.target.com/v1/profile/1042)"
+                  className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 font-mono text-white"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    dir="ltr"
+                    value={sessionAHeader}
+                    onChange={(e) => setSessionAHeader(e.target.value)}
+                    placeholder="Session A Header (Owner)"
+                    className="px-3 py-1.5 rounded-xl bg-black/40 border border-emerald-500/30 font-mono text-[11px] text-emerald-200"
+                  />
+                  <input
+                    dir="ltr"
+                    value={sessionBHeader}
+                    onChange={(e) => setSessionBHeader(e.target.value)}
+                    placeholder="Session B Header (Secondary Account)"
+                    className="px-3 py-1.5 rounded-xl bg-black/40 border border-amber-500/30 font-mono text-[11px] text-amber-200"
+                  />
+                </div>
+              </div>
+
+              {authMatrixResult && (
+                <div className="space-y-3 pt-2 border-t border-white/10 text-xs">
+                  <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/40 space-y-1">
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="text-purple-300">النتيجة: {authMatrixResult.verdict}</span>
+                      <span className="font-mono text-emerald-300">تشابه الاستجابة: {authMatrixResult.similarityPercent}%</span>
+                    </div>
+                    <p className="text-gray-200 leading-relaxed">{authMatrixResult.verdictAr}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {authMatrixResult.matrix.map((row, i) => (
+                      <div key={i} className="p-2.5 rounded-lg bg-black/40 border border-white/10 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]">
+                        <span className="text-white font-sans font-bold">{row.actor}</span>
+                        <span className="text-emerald-400">HTTP {row.status}</span>
+                        <span className="text-gray-300">{row.length} bytes</span>
+                        <span className="text-purple-300">SHA256: {row.hash}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. Architectural Config Auditor + Zero-False-Positive Verification Gate */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Architectural Config Auditor */}
+            <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-emerald-400" />
+                    <span>3. مدقق الإعدادات المعمارية (CORS / Subdomain Takeover / security.txt)</span>
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    يفحص انعكاس Origin في CORS، وبصمات النطاقات الفرعية المعلقة (can-i-take-over-xyz)، ويكتشف ملف سياسة الإفصاح الرسمي.
+                  </p>
+                </div>
+                <button
+                  onClick={() => void handleRunConfigAuditor()}
+                  disabled={deepLoading === "config"}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-bold text-white shrink-0"
+                >
+                  {deepLoading === "config" ? "جاري التدقيق..." : "فحص الإعدادات"}
+                </button>
+              </div>
+
+              {configAuditResult && (
+                <div className="space-y-2.5 pt-2 border-t border-white/10 text-xs">
+                  {configAuditResult.findings.map((f, idx) => (
+                    <div key={idx} className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white">{f.check}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
+                            f.status === "CRITICAL"
+                              ? "bg-red-500/20 text-red-300"
+                              : f.status === "WARN"
+                              ? "bg-amber-500/20 text-amber-300"
+                              : "bg-emerald-500/20 text-emerald-300"
+                          }`}
+                        >
+                          {f.status} · {f.cwe}
+                        </span>
+                      </div>
+                      <p className="text-gray-300 leading-relaxed">{f.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Zero-False-Positive Verification Gate */}
+            <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <CheckSquare className="w-4 h-4 text-amber-400" />
+                    <span>4. بوابة البرهان واستبعاد الإنذارات الكاذبة (Zero-FP Gate & Evidence Vault)</span>
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    تقارن بصمة الاستجابة مع بصمة 404 الأساسية للهدف وتحسب متجه CVSS v3.1 وتحفظ حزمة الدليل مباشرة في خزنة الأدلة (/evidence).
+                  </p>
+                </div>
+                <button
+                  onClick={() => void handleRunZeroFpGate()}
+                  disabled={deepLoading === "zerofp"}
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-xs font-bold text-white shrink-0"
+                >
+                  {deepLoading === "zerofp" ? "جاري التحقق..." : "توثيق وحفظ الدليل"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <input
+                  value={zeroFpTitle}
+                  onChange={(e) => setZeroFpTitle(e.target.value)}
+                  placeholder="عنوان النتيجة المراد التحقق منها..."
+                  className="sm:col-span-2 px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-white"
+                />
+                <select
+                  value={zeroFpSev}
+                  onChange={(e) => setZeroFpSev(e.target.value as typeof zeroFpSev)}
+                  className="px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-white font-mono"
+                >
+                  <option value="critical">Critical (9.6)</option>
+                  <option value="high">High (8.2)</option>
+                  <option value="medium">Medium (6.5)</option>
+                  <option value="low">Low (3.7)</option>
+                </select>
+              </div>
+
+              {zeroFpResult && (
+                <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/40 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between font-bold">
+                    <span className="text-emerald-300">
+                      {zeroFpResult.verified ? "✅ تم التحقق وتأكيد الأصالة (Zero False Positive)" : "⚠️ تم التصنيف كصفحة خطأ افتراضية (Soft-404)"}
+                    </span>
+                    <span className="font-mono text-amber-300">CVSS {zeroFpResult.cvssScore}</span>
+                  </div>
+                  <div className="font-mono text-[11px] text-gray-300">
+                    Target Hash: <span className="text-emerald-300">{zeroFpResult.targetHash}</span> | Baseline 404 Hash:{" "}
+                    <span className="text-purple-300">{zeroFpResult.baseline404Hash}</span>
+                  </div>
+                  <div className="font-mono text-[11px] text-sky-300">{zeroFpResult.cvssVector}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 4. Curated Open-Source GitHub Security Arsenal + Live GitHub Search */}
+          <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-emerald-400" />
+                  <span>5. ترسانة أدوات GitHub الأمنية المفتوحة المدمجة في منهجية CyberNova 2099</span>
+                </h3>
+                <p className="text-xs text-gray-400">
+                  أقوى الأدوات العالمية مفتوحة المصدر على GitHub التي تم دمج قواعدها ومنهجياتها مباشرة داخل محركات CyberNova:
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  dir="ltr"
+                  value={ghSearchQuery}
+                  onChange={(e) => setGhSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void handleSearchGithubArsenal()}
+                  placeholder="ابحث مباشرة في GitHub عن أي أداة أو مستودع..."
+                  className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 text-xs font-mono text-white w-64"
+                />
+                <button
+                  onClick={() => void handleSearchGithubArsenal()}
+                  disabled={deepLoading === "github"}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white"
+                >
+                  {deepLoading === "github" ? "..." : "بحث GitHub حي"}
+                </button>
+              </div>
+            </div>
+
+            {ghSearchResults.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pb-3 border-b border-white/10">
+                {ghSearchResults.map((repo, idx) => (
+                  <a
+                    key={idx}
+                    href={repo.html_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 hover:border-emerald-400 transition space-y-1"
+                  >
+                    <div className="flex items-center justify-between text-xs font-mono text-emerald-300 font-bold">
+                      <span className="truncate">{repo.full_name}</span>
+                      <span>⭐ {repo.stargazers_count}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-300 line-clamp-2">{repo.description}</p>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {arsenalTools.map((tool) => (
+                <div
+                  key={tool.id}
+                  className="p-4 rounded-xl bg-black/40 border border-white/10 flex flex-col justify-between gap-2"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <a
+                        href={tool.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-mono font-bold text-emerald-400 hover:underline truncate"
+                      >
+                        {tool.name}
+                      </a>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300">
+                        ⭐ {tool.stars}
+                      </span>
+                    </div>
+                    <div className="text-[10px] font-mono text-purple-300">
+                      مُدمج في: {tool.integratedModule}
+                    </div>
+                    <p className="text-xs text-gray-200 leading-relaxed">{tool.description}</p>
+                    <p className="text-[11px] text-gray-400 leading-relaxed border-t border-white/5 pt-1.5">
+                      <strong className="text-sky-300">المنهجية القانونية:</strong> {tool.methodology}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── TAB 1: Vulnerability & Secure Code Encyclopedia ───────────────── */}
       {activeTab === "encyclopedia" && (

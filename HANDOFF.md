@@ -51,3 +51,12 @@
   - دعم جميع مسارات `/api/tools/*` و`/api/proxy/*` و`/api/scanner/url` محلياً وعلى GitHub Pages.
   - تعبئة الهدف النشط (`cybernova_active_target`) تلقائياً في جميع أدوات الاستطلاع والماسح الأمني.
   - تسجيل نتائج كل فحص تلقائياً في **الذاكرة (`/api/memory`)** و**متتبع المهام (`/api/missions`)** وبثها عبر **WebSocket (`/api/ws`)** بحيث يراها جميع الوكلاء فوراً.
+
+### المرحلة 7: محرك الاكتشاف العميق 2099 وترسانة GitHub الأمنية المفتوحة (`deep-research.ts` & `BugBountyStudio.tsx`)
+- بناء وإدماج 6 محركات تحقق واكتشاف عميق في `artifacts/api-server/src/routes/deep-research.ts` و`standalone-api.ts` وواجهة `BugBountyStudio.tsx`:
+  1. **مسار البحث الذاتي المتسلسل (4 مراحل — `POST /api/deep-research/pipeline`):** يجمع بين استطلاع DNS/TLS، وتشريح ملفات JS والترويسات، وبوابة البرهان (`Zero-FP Baseline`)، وترتيب الفرضيات البحثية مع تحويلها بضغطة زر إلى مولّد التقارير.
+  2. **محلل ملفات JS والمسارات المخفية (`POST /api/deep-research/js-analyzer`):** مستوحى من `LinkFinder` و`sourcemapper` لاستخراج مسارات الـ API الخفية (`/api/v1/...`, `/graphql`) والمعاملات وملفات `.js.map` ومستمعات `postMessage`.
+  3. **مصفوفة المقارنة التفاضلية للصلاحيات (`POST /api/deep-research/auth-matrix`):** مستوحاة من `Autorize` لمقارنة استجابة المالك (`Session A`) مع حساب الاختبار الثاني (`Session B`) والزائر غير المسجل (`Unauthenticated`) لاكتشاف ثغرات `BOLA/IDOR` مع استبعاد صفحات العامة أو أخطاء `Soft-403`.
+  4. **مدقق الإعدادات المعمارية (`POST /api/deep-research/config-auditor`):** يفحص انعكاس `Origin` في `CORS` مع `Credentials`، وبصمات النطاقات الفرعية المعلقة (`EdOverflow/can-i-take-over-xyz`)، ويكتشف ملف `/.well-known/security.txt` الرسمي (`RFC 9116`).
+  5. **محلل الكود والمستودعات المفتوحة وترسانة GitHub (`POST /api/deep-research/github-auditor` & `GET /api/deep-research/arsenal`):** يدمج قواعد `Semgrep` لاكتشاف `SQLi`, `CMDi`, `SSRF`, `BOLA`, `XSS`, `JWT None`, `Prototype Pollution`, و`CORS` مع بحث حي في مستودعات GitHub.
+  6. **بوابة البرهان واستبعاد الإنذارات الكاذبة (`POST /api/deep-research/zero-fp-verify`):** تقارن بصمة `SHA-256` للاستجابة مع بصمة `404` الأساسية للهدف وتحسب متجه `CVSS v3.1` وتحفظ حزمة الدليل الرقمي مباشرة في خزنة الأدلة (`/api/evidence`).

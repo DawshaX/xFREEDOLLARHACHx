@@ -32,7 +32,13 @@ export default function EvidenceDashboard() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"scan" | "evidence" | "ioc">("scan");
-  const [scanUrl, setScanUrl] = useState("");
+  const [scanUrl, setScanUrl] = useState(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      return "";
+    }
+  });
   const [scanResult, setScanResult] = useState<{
     scanId: string; target: string; findings: EvidenceItem[];
     totalFindings: number; aiReport: string; severity: Record<string, number>;

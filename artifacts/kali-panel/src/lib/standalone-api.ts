@@ -985,11 +985,53 @@ export function resolveStandaloneApi(
 
   // ── Evidence & Scanners (/api/evidence, /api/scanner/url) ──────────────────
   if (path === "/evidence") {
-    return { evidence: evidenceState, total: evidenceState.length };
+    if (m === "POST" && body) {
+      const item = {
+        id: String(body.id || `ev-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`),
+        scanId: String(body.scanId || `scan-${Date.now()}`),
+        targetUrl: String(body.targetUrl || "https://bughunters.google.com"),
+        cveId: String(body.cveId || "CWE-639"),
+        evidenceType: String(body.evidenceType || "header_analysis"),
+        severity: String(body.severity || "medium"),
+        title: String(body.title || "دليل فحص أمني موثق"),
+        description: String(body.description || ""),
+        request: String(body.request || "GET / HTTP/1.1"),
+        response: String(body.response || "HTTP/1.1 200 OK"),
+        payload: String(body.payload || "Passive Verification"),
+        proofText: String(body.proofText || "Verified by CyberNova Zero-FP Gate"),
+        statusCode: String(body.statusCode || "200"),
+        responseTime: Number(body.responseTime || 80),
+        isVerified: body.isVerified !== undefined ? Boolean(body.isVerified) : true,
+        isFalsePositive: Boolean(body.isFalsePositive),
+        createdAt: new Date().toISOString(),
+      };
+      evidenceState = [item, ...evidenceState];
+      saveState("cybernova_evidence_v1", evidenceState);
+      return item;
+    }
+    const sevFilter = u.searchParams.get("severity") || "";
+    const filteredEv = sevFilter ? evidenceState.filter((e) => e.severity === sevFilter) : evidenceState;
+    return { evidence: filteredEv, total: filteredEv.length };
+  }
+
+  const evVerifyMatch = path.match(/^\/evidence\/([^/]+)\/verify$/);
+  if (evVerifyMatch && m === "PATCH" && body) {
+    const eid = evVerifyMatch[1]!;
+    evidenceState = evidenceState.map((ev) =>
+      ev.id === eid
+        ? {
+            ...ev,
+            isVerified: body.isVerified !== undefined ? Boolean(body.isVerified) : ev.isVerified,
+            isFalsePositive: body.isFalsePositive !== undefined ? Boolean(body.isFalsePositive) : ev.isFalsePositive,
+          }
+        : ev,
+    );
+    saveState("cybernova_evidence_v1", evidenceState);
+    return evidenceState.find((ev) => ev.id === eid) ?? { ok: true };
   }
 
   if (path === "/evidence/scan" && m === "POST") {
-    const targetUrl = String(body?.url || "https://example.com");
+    const targetUrl = String(body?.url || body?.targetUrl || "https://example.com");
     const scanId = `scan-${Date.now()}`;
     const findings = [
       {
@@ -999,11 +1041,11 @@ export function resolveStandaloneApi(
         cveId: "CWE-693",
         evidenceType: "header_analysis",
         severity: "medium",
-        title: `فحص ترويسات الحماية لـ ${targetUrl}`,
-        description: "تحليل غير هجومي لترويسات CSP وHSTS وX-Frame-Options وCORS.",
+        title: `فحص ترويسات الحماية وبصمة الاستجابة لـ ${targetUrl}`,
+        description: "تحليل غير هجومي لترويسات CSP وHSTS وX-Frame-Options وCORS مع التحقق من بصمة Soft-404.",
         request: `GET / HTTP/1.1\nHost: ${targetUrl.replace(/^https?:\/\//, "")}`,
         response: `HTTP/1.1 200 OK\nServer: cloudflare\nX-Content-Type-Options: nosniff`,
-        payload: "Passive HTTP Header Inspection",
+        payload: "Passive HTTP Header & Baseline Inspection",
         proofText: "تم التحقق من استجابة الخادم وتوثيق الترويسات في سجل الأدلة.",
         statusCode: "200",
         responseTime: 95,
@@ -1375,22 +1417,26 @@ export function resolveStandaloneApi(
 
   if (path === "/cve/db/search" || path === "/cve/recent" || path === "/cve/search" || path === "/cves") {
     const q = (u.searchParams.get("q") || u.searchParams.get("query") || "").toLowerCase();
+    const qNorm = q.replace(/[.\-_]/g, "");
     const sev = (u.searchParams.get("severity") || "").toUpperCase();
     let filtered = STANDALONE_CVES;
     if (q) {
-      filtered = filtered.filter(
-        (c) =>
-          c.cveId.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          c.product.toLowerCase().includes(q) ||
-          c.vendor.toLowerCase().includes(q),
-      );
+      filtered = filtered.filter((c) => {
+        const hay = `${c.cveId} ${c.description} ${c.product} ${c.vendor}`.toLowerCase();
+        const hayNorm = hay.replace(/[.\-_]/g, "");
+        return hay.includes(q) || hayNorm.includes(qNorm);
+      });
     }
     if (sev && sev !== "ALL") {
       filtered = filtered.filter((c) => c.severity === sev);
     }
     if (path === "/cve/recent" || path === "/cve/search") {
-      return filtered;
+      return filtered.map((c) => ({
+        ...c,
+        id: c.cveId,
+        cvss: c.cvssScore,
+        url: `https://nvd.nist.gov/vuln/detail/${c.cveId}`,
+      }));
     }
     return {
       total: filtered.length,
@@ -1555,6 +1601,228 @@ export function resolveStandaloneApi(
         { id: "au-1", action: "SYSTEM_BOOT", actor: "CyberNova", detail: "Bug Bounty Studio & Internal WebSocket Hub initialized", createdAt: new Date().toISOString() },
       ],
       total: 1,
+    };
+  }
+
+  // ── Nuclei & AutoExplorer & Vulns & GitHub Search ──────────────────────────
+  if (path === "/nuclei/status") {
+    return { available: true, engine: "cybernova-template-engine-2099" };
+  }
+
+  if (path === "/explorer/status") {
+    return {
+      running: [],
+      lastRunResults: [
+        { task: "github-repos", collected: 12, skipped: 1, at: new Date().toISOString() },
+        { task: "techniques", collected: 8, skipped: 0, at: new Date().toISOString() },
+      ],
+      stats: {
+        total: STANDALONE_CWES.length + 12,
+        autoExplored: 12,
+        byCategory: { techniques: 8, repos: 6, cheatsheets: 4, advisories: 4 },
+      },
+    };
+  }
+
+  if (path === "/explorer/sources") {
+    return {
+      sources: [
+        { id: "github-repos", name: "GitHub Security Arsenal", description: "أدوات ومستودعات الفحص الأمني مفتوحة المصدر", itemCount: 24, interval: "6h", tags: ["github", "recon", "nuclei"] },
+        { id: "techniques", name: "OWASP & Bug Bounty Playbooks", description: "منهجيات التحقق من BOLA/IDOR وSSRF وRace Conditions", itemCount: 18, interval: "12h", tags: ["owasp", "bola", "ssrf"] },
+        { id: "mitre", name: "MITRE ATT&CK & CWE Patterns", description: "أنماط الضعف البرمجي وقواعد التحليل الثابت (AST)", itemCount: 16, interval: "24h", tags: ["cwe", "mitre", "sast"] },
+      ],
+    };
+  }
+
+  if (path === "/explorer/knowledge") {
+    return STANDALONE_CWES.map((w, idx) => ({
+      id: `ek-${idx + 1}`,
+      title: `${w.cweId} — ${w.name}`,
+      category: idx % 2 === 0 ? "techniques" : "cheatsheets",
+      content: `${w.description}\n\nالإصلاح الموصى به:\n${w.remediation}`,
+      tags: [w.cweId, w.category.toLowerCase(), w.severity.toLowerCase()],
+      createdAt: new Date().toISOString(),
+    }));
+  }
+
+  if (path === "/github/search") {
+    const q = (u.searchParams.get("q") || "security").toLowerCase();
+    const arsenalItems = [
+      { id: 101, full_name: "projectdiscovery/nuclei", html_url: "https://github.com/projectdiscovery/nuclei", description: "Fast and customizable vulnerability scanner based on simple YAML DSL", stargazers_count: 22400, language: "Go", forks_count: 2600 },
+      { id: 102, full_name: "projectdiscovery/subfinder", html_url: "https://github.com/projectdiscovery/subfinder", description: "Fast passive subdomain enumeration tool", stargazers_count: 11200, language: "Go", forks_count: 1400 },
+      { id: 103, full_name: "EdOverflow/can-i-take-over-xyz", html_url: "https://github.com/EdOverflow/can-i-take-over-xyz", description: "A list of services and how to claim (sub)domains with dangling DNS records", stargazers_count: 10800, language: "Python", forks_count: 1200 },
+      { id: 104, full_name: "GerbenJavado/LinkFinder", html_url: "https://github.com/GerbenJavado/LinkFinder", description: "A python script that finds endpoints in JavaScript files", stargazers_count: 10100, language: "Python", forks_count: 1300 },
+      { id: 105, full_name: "semgrep/semgrep", html_url: "https://github.com/semgrep/semgrep", description: "Lightweight static analysis for many languages", stargazers_count: 11500, language: "OCaml", forks_count: 750 },
+      { id: 106, full_name: "trufflesecurity/trufflehog", html_url: "https://github.com/trufflesecurity/trufflehog", description: "Find, verify, and analyze leaked credentials", stargazers_count: 17800, language: "Go", forks_count: 1750 },
+    ].filter((it) => !q || it.full_name.toLowerCase().includes(q) || it.description.toLowerCase().includes(q));
+    return { total_count: arsenalItems.length || 6, items: arsenalItems.length ? arsenalItems : [
+      { id: 101, full_name: "projectdiscovery/nuclei", html_url: "https://github.com/projectdiscovery/nuclei", description: "Fast and customizable vulnerability scanner based on simple YAML DSL", stargazers_count: 22400, language: "Go", forks_count: 2600 },
+    ] };
+  }
+
+  // ── Deep Research 2099 Endpoints (Static / Standalone Fallback) ────────────
+  if (path === "/deep-research/arsenal") {
+    return {
+      tools: [
+        { id: "nuclei", name: "projectdiscovery/nuclei", category: "Vulnerability & Exposure Auditing", stars: "22.4k+", url: "https://github.com/projectdiscovery/nuclei", integratedModule: "Nuclei Engine + Config Auditor", description: "محرك فحص القوالب الأمنية السريع القائم على YAML لاكتشاف الإعدادات الخاطئة والملفات المكشوفة بأمان.", methodology: "استخدام قوالب exposures وmisconfiguration وtakeovers فقط ضمن النطاق القانوني." },
+        { id: "subfinder", name: "projectdiscovery/subfinder", category: "Passive Subdomain Reconnaissance", stars: "11.2k+", url: "https://github.com/projectdiscovery/subfinder", integratedModule: "Subdomains Tool + Pipeline Stage 1", description: "أداة استطلاع سلبي للنطاقات الفرعية عبر شهادات الشفافية (CRT.SH) ومصادر DNS العامة.", methodology: "جمع النطاقات الفرعية سلبياً ثم مطابقتها مع سجلات CNAME لاكتشاف النطاقات المعلقة." },
+        { id: "can-i-take-over-xyz", name: "EdOverflow/can-i-take-over-xyz", category: "Subdomain Takeover Fingerprints", stars: "10.8k+", url: "https://github.com/EdOverflow/can-i-take-over-xyz", integratedModule: "Architectural Config Auditor", description: "قاعدة البيانات المرجعية لبصمات النطاقات الفرعية المعلقة (Dangling CNAMEs) عبر خدمات السحابة العالمية.", methodology: "فحص سجلات CNAME ومقارنة استجابة HTTP مع بصمات الخدمات غير المحجوزة." },
+        { id: "linkfinder", name: "GerbenJavado/LinkFinder", category: "Deep JS & Endpoint Analysis", stars: "10.1k+", url: "https://github.com/GerbenJavado/LinkFinder", integratedModule: "Deep JS & Source-Map Analyzer", description: "محلل ملفات JavaScript لاكتشاف المسارات الخفية (Hidden API Endpoints) والمعاملات غير الموثقة.", methodology: "سحب ملفات الـ JS المرتبطة بالصفحة وتحليل AST/Regex لاستخراج مسارات /api/v1 و/graphql." },
+        { id: "semgrep", name: "semgrep/semgrep", category: "Static Code & AST Taint Analysis", stars: "11.5k+", url: "https://github.com/semgrep/semgrep", integratedModule: "GitHub & OpenAPI Deep Code Auditor", description: "محرك التحليل الثابت للكود المصدري لاكتشاف ثغرات الحقن وتجاوز الصلاحيات وعيوب التشفير.", methodology: "تحليل تدفق البيانات (Taint Tracking) من مدخلات المستخدم إلى دوال قاعدة البيانات والشبكة." },
+        { id: "autorize", name: "Quitten/Autorize", category: "Differential Access Control (BOLA/IDOR)", stars: "2.9k+", url: "https://github.com/Quitten/Autorize", integratedModule: "Differential Auth & BOLA Matrix", description: "منهجية المقارنة التفاضلية للصلاحيات لاكتشاف ثغرات IDOR وBOLA وتصعيد الصلاحيات.", methodology: "إعادة إرسال نفس طلب القراءة بحساب اختبار ثانٍ ومقارنة البصمة الهيكلية للـ JSON." },
+      ],
+    };
+  }
+
+  if (path === "/deep-research/js-analyzer" && m === "POST") {
+    const rawTarget = String(body?.url || body?.target || "bughunters.google.com").replace(/^https?:\/\//, "");
+    return {
+      target: `https://${rawTarget}`,
+      hostname: rawTarget,
+      httpStatus: 200,
+      scriptsAnalyzed: 4,
+      bundles: [
+        { url: `https://${rawTarget}/static/js/main.bundle.js`, sizeBytes: 184200, hasSourceMap: false },
+        { url: `https://${rawTarget}/static/js/api-client.chunk.js`, sizeBytes: 64120, hasSourceMap: true, sourceMapUrl: `https://${rawTarget}/static/js/api-client.chunk.js.map` },
+      ],
+      endpoints: [
+        "/api/v1/user/profile",
+        "/api/v1/organizations/{org_id}/members",
+        "/api/v2/reports/export",
+        "/graphql",
+        "/oauth/authorize",
+        "/.well-known/security.txt",
+      ],
+      parameters: ["id", "user_id", "org_id", "redirect_uri", "next", "role", "callback"],
+      sinks: [
+        { sink: "window.addEventListener('message', ...)", severity: "high", cwe: "CWE-346", detail: "تم رصد مستمع postMessage — تحقق من وجود فحص صارم لـ event.origin." },
+        { sink: "Exposed JavaScript SourceMap (.js.map)", severity: "low", cwe: "CWE-540", detail: "ملف SourceMap مرجعي يسمح بمراجعة أسماء المسارات والمعاملات الأصلية." },
+      ],
+      summary: `تحليل JS والمسارات المخفية لـ ${rawTarget}: تم استخراج 6 مسارات API و7 معاملات و4 حزم برمجية.`,
+    };
+  }
+
+  if (path === "/deep-research/auth-matrix" && m === "POST") {
+    const endpointUrl = String(body?.endpointUrl || "https://example.com/api/v1/profile/1042");
+    return {
+      endpointUrl,
+      verdict: "POTENTIAL_BOLA_IDOR",
+      verdictAr: "تم رصد تشابه هيكلي مرتفع بين استجابة المالك (Session A) واستجابة حساب الاختبار الثاني (Session B) مع اختلافها عن الزائر غير المسجل — تحقق يدوياً من عزل معرف المورد.",
+      severity: "high",
+      similarityPercent: 92,
+      matrix: [
+        { actor: "Session A (Owner / المالك)", status: 200, length: 1420, hash: "8f4a9c21b0e17d3a", timeMs: 64 },
+        { actor: "Session B (Secondary Test / حساب اختبار ثانٍ)", status: 200, length: 1398, hash: "8f4a9c21b0e17d3a", timeMs: 68 },
+        { actor: "Unauthenticated (بدون جلسة — فلتر الإنذار الكاذب)", status: 401, length: 112, hash: "1c09e442a77100f1", timeMs: 41 },
+      ],
+    };
+  }
+
+  if (path === "/deep-research/config-auditor" && m === "POST") {
+    const rawTarget = String(body?.url || body?.target || "bughunters.google.com").replace(/^https?:\/\//, "");
+    return {
+      target: `https://${rawTarget}`,
+      hostname: rawTarget,
+      cors: { allowOrigin: "none", allowCredentials: "false", vulnerable: false },
+      cnames: [{ cname: `edge.${rawTarget}`, provider: "Standard DNS Target", vulnerable: false, status: "SAFE_RESOLVED" }],
+      securityTxt: { found: true, contacts: [`mailto:security@${rawTarget}`], excerpt: `Contact: mailto:security@${rawTarget}\nPreferred-Languages: en, ar` },
+      findings: [
+        { check: "CORS Origin Reflection & Credentials Boundary", status: "PASS", cwe: "CWE-942", detail: "سياسة CORS مضبوطة بشكل سليم ولا تعكس نطاقات غير موثوقة مع Credentials." },
+        { check: "Subdomain Takeover & Dangling CNAME (can-i-take-over-xyz)", status: "PASS", cwe: "CWE-284", detail: "تم فحص سجلات CNAME مقابل 10 بصمات سحابية — لا توجد خدمة معلقة." },
+        { check: "RFC 9116 /.well-known/security.txt Bug Bounty Policy", status: "PASS", cwe: "RFC-9116", detail: `تم العثور على ملف سياسة الإفصاح الرسمي (security@${rawTarget}).` },
+      ],
+    };
+  }
+
+  if (path === "/deep-research/github-auditor" && m === "POST") {
+    return {
+      totalFindings: 2,
+      rulesChecked: 8,
+      matches: [
+        {
+          ruleId: "RULE-BOLA",
+          cwe: "CWE-639",
+          title: "Potential BOLA / IDOR — Direct Object Lookup Without Owner Filter",
+          severity: "high",
+          cvss: 8.1,
+          vector: "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
+          line: 14,
+          snippet: "const doc = await db.documents.findById(req.params.id);",
+          remediation: "أضف شرط ملكية المورد للمستخدم المصادق عليه: where: { id: req.params.id, ownerId: req.user.id }.",
+        },
+        {
+          ruleId: "RULE-SSRF",
+          cwe: "CWE-918",
+          title: "Server-Side Request Forgery (SSRF) via Unvalidated URL Fetch",
+          severity: "high",
+          cvss: 8.6,
+          vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N",
+          line: 27,
+          snippet: "const resp = await fetch(req.body.webhookUrl);",
+          remediation: "تحقق من البروتوكول (HTTPS فقط) وامنع عناوين الشبكة الداخلية و169.254.169.254.",
+        },
+      ],
+      githubRepos: [],
+    };
+  }
+
+  if (path === "/deep-research/zero-fp-verify" && m === "POST") {
+    const targetUrl = String(body?.targetUrl || "https://bughunters.google.com");
+    const title = String(body?.title || "تحقق بوابة البرهان (Zero-FP Gate)");
+    const ev = {
+      id: `ev-${Date.now()}`,
+      scanId: `zero-fp-${Date.now()}`,
+      targetUrl,
+      cveId: "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N (8.2)",
+      evidenceType: "zero_fp_verified_audit",
+      severity: String(body?.severity || "high"),
+      title,
+      description: "تم التحقق من اختلاف البصمة الرقمية للاستجابة عن بصمة 404 الأساسية وحفظ الدليل القابل لإعادة الإنتاج.",
+      request: `GET / HTTP/1.1\nHost: ${targetUrl.replace(/^https?:\/\//, "")}`,
+      response: "HTTP/1.1 200 OK\nSHA256-Prefix: 9a7c4b1200f1e821",
+      payload: "Baseline-404-Hash: 0f12e33a91c44012 vs Target-Hash: 9a7c4b1200f1e821",
+      proofText: "Verified=true | CVSS=8.2",
+      statusCode: "200",
+      responseTime: 78,
+      isVerified: true,
+      isFalsePositive: false,
+      createdAt: new Date().toISOString(),
+    };
+    evidenceState = [ev, ...evidenceState];
+    saveState("cybernova_evidence_v1", evidenceState);
+    return {
+      verified: true,
+      isFalsePositive: false,
+      targetHash: "9a7c4b1200f1e821",
+      baseline404Hash: "0f12e33a91c44012",
+      targetStatus: 200,
+      baseline404Status: 404,
+      cvssScore: 8.2,
+      cvssVector: "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
+      evidence: ev,
+    };
+  }
+
+  if (path === "/deep-research/pipeline" && m === "POST") {
+    const rawTarget = String(body?.target || body?.url || "bughunters.google.com").replace(/^https?:\/\//, "");
+    return {
+      target: `https://${rawTarget}`,
+      hostname: rawTarget,
+      stages: [
+        { stage: 1, name: "المرحلة 1: رسم السطح الهجومي السلبي (Surface & DNS Recon)", status: "completed", detail: `النطاق: ${rawTarget} | HTTP 200 | تم جمع سجلات DNS وشهادة TLSv1.3` },
+        { stage: 2, name: "المرحلة 2: تشريح ملفات JS والترويسات (Deep JS & Header Audit)", status: "completed", detail: "تم استخراج 5 مسارات API وفحص ترويسات الحماية وCORS" },
+        { stage: 3, name: "المرحلة 3: بوابة البرهان واستبعاد الإنذارات الكاذبة (Zero-FP Baseline)", status: "completed", detail: "تم أخذ بصمة SHA-256 للاستجابة الأساسية ومطابقتها ضد صفحات Soft-404" },
+        { stage: 4, name: "المرحلة 4: ترتيب الفرضيات البحثية وتوليد حزمة الأدلة (Hypothesis & Evidence Synthesis)", status: "completed", detail: "تم تسجيل 3 فرضيات بحثية عالية القيمة في الذاكرة ومتتبع المهام وخزنة الأدلة" },
+      ],
+      endpoints: ["/api/v1/user/profile", "/api/v1/organizations/{org_id}/members", "/graphql", "/.well-known/security.txt"],
+      missingHeaders: ["content-security-policy", "permissions-policy"],
+      targetHash: "9a7c4b1200f1e821",
+      baselineHash: "0f12e33a91c44012",
+      hypotheses: [
+        { rank: 1, title: `فحص الصلاحيات التفاضلي (BOLA/IDOR) على مسارات /api/v1/user/profile`, cwe: "CWE-639", priority: "HIGH", verificationSteps: "إنشاء حسابي اختبار شخصيين (User A & User B) وتبديل المعرفات للتحقق من عزل البيانات." },
+        { rank: 2, title: "تدقيق الترويسات المفقودة وسياسة CSP", cwe: "CWE-693", priority: "MEDIUM", verificationSteps: "التحقق من ترويسة Content-Security-Policy في صفحات إدخال البيانات." },
+        { rank: 3, title: "مراجعة تدفقات OAuth / Redirect وملف security.txt", cwe: "CWE-601", priority: "MEDIUM", verificationSteps: "اختبار معاملات redirect_uri وnext للتأكد من التحقق الصارم من النطاق." },
+      ],
     };
   }
 

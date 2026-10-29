@@ -5,15 +5,26 @@ const router = Router();
 const clients = new Set<Response>();
 
 export interface LiveEvent {
-  type: "tool_start" | "tool_done" | "shell_output" | "browser_screenshot" | "agent_alert" | "client_tool" | "system_stats" | "other";
+  type: string;
   data: Record<string, unknown>;
   ts: string;
 }
 
-export function broadcastLiveEvent(event: LiveEvent): void {
-  const payload = `data: ${JSON.stringify(event)}\n\n`;
+export function broadcastLiveEvent(
+  eventOrType: LiveEvent | string | Record<string, unknown>,
+  data?: Record<string, unknown>,
+): void {
+  const obj =
+    typeof eventOrType === "string"
+      ? { type: eventOrType, data: data ?? {}, ts: new Date().toISOString() }
+      : eventOrType;
+  const payload = `data: ${JSON.stringify(obj)}\n\n`;
   for (const client of clients) {
-    try { client.write(payload); } catch { clients.delete(client); }
+    try {
+      client.write(payload);
+    } catch {
+      clients.delete(client);
+    }
   }
 }
 

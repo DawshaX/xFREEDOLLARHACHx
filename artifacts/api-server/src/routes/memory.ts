@@ -87,14 +87,51 @@ function normalizeKind(raw?: string): string {
   return "fact";
 }
 
+export interface SaveMemoryOptions {
+  kind?: string;
+  memoryType?: string;
+  title?: string;
+  key?: string;
+  content: string;
+  tags?: string | string[];
+  importance?: number;
+  pinned?: boolean;
+}
+
 export function saveMemory(
-  memoryType: string,
-  key: string,
-  content: string,
-  tags = "",
-  importance = 5,
-  pinned = false,
+  memoryTypeOrOpts: string | SaveMemoryOptions,
+  keyArg?: string,
+  contentArg?: string,
+  tagsArg: string | string[] = "",
+  importanceArg = 5,
+  pinnedArg = false,
 ): UnifiedMemoryEntry {
+  const memoryType =
+    typeof memoryTypeOrOpts === "string"
+      ? memoryTypeOrOpts
+      : memoryTypeOrOpts.memoryType || memoryTypeOrOpts.kind || "project";
+  const key =
+    typeof memoryTypeOrOpts === "string"
+      ? keyArg || "ملاحظة أمنية"
+      : memoryTypeOrOpts.title || memoryTypeOrOpts.key || "ملاحظة أمنية";
+  const content =
+    typeof memoryTypeOrOpts === "string"
+      ? contentArg || ""
+      : memoryTypeOrOpts.content || "";
+  const rawTags =
+    typeof memoryTypeOrOpts === "string"
+      ? tagsArg
+      : memoryTypeOrOpts.tags || "";
+  const tags = Array.isArray(rawTags) ? rawTags.join(",") : String(rawTags);
+  const importance =
+    typeof memoryTypeOrOpts === "string"
+      ? importanceArg
+      : Number(memoryTypeOrOpts.importance ?? 7);
+  const pinned =
+    typeof memoryTypeOrOpts === "string"
+      ? pinnedArg
+      : Boolean(memoryTypeOrOpts.pinned);
+
   const kind = normalizeKind(memoryType);
   const existing = memoryStore.find((m) => m.key === key || m.title === key);
   const nowIso = new Date().toISOString();

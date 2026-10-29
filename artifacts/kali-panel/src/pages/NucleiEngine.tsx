@@ -40,7 +40,13 @@ const TEMPLATE_GROUPS = [
 const NEON_CARD = { background: "rgba(8,0,18,0.95)", border: "1px solid rgba(180,0,255,0.12)", borderRadius: 16, boxShadow: "0 0 20px rgba(150,0,255,0.04), inset 0 0 30px rgba(0,0,0,0.3)" };
 
 export default function NucleiEngine() {
-  const [target, setTarget] = useState("");
+  const [target, setTarget] = useState(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      return "";
+    }
+  });
   const [templates, setTemplates] = useState<string[]>(["cves", "exposures", "technologies", "misconfiguration"]);
   const [severity, setSeverity] = useState<string[]>(["critical", "high", "medium"]);
   const [scan, setScan] = useState<ScanState>({ status: "idle", target: "", results: [], logs: [] });

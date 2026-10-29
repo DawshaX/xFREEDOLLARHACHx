@@ -30,7 +30,15 @@ export default function ActiveScanner() {
   const [filter, setFilter] = useState("all");
   const [showNew, setShowNew] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const [form, setForm] = useState({ targetUrl: "", scanType: "http_probe", notes: "" });
+  const [form, setForm] = useState(() => {
+    let defaultTarget = "";
+    try {
+      defaultTarget = localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      defaultTarget = "";
+    }
+    return { targetUrl: defaultTarget, scanType: "http_probe", notes: "" };
+  });
   const [, navigate] = useLocation();
 
   async function load() {
