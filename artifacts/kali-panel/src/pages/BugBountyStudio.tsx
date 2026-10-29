@@ -722,6 +722,35 @@ export default function BugBountyStudio() {
     stargazers_count?: number;
     language?: string;
   }>>([]);
+  const [globalPlatforms, setGlobalPlatforms] = useState<Array<{
+    id: string;
+    name: string;
+    url: string;
+    bountyRange: string;
+    safeHarbor: string;
+    focus: string;
+    defaultTarget: string;
+  }>>([]);
+  const [osintResult, setOsintResult] = useState<{
+    domain: string;
+    primaryIp: string;
+    shodanInternetDb: { ip: string; ports: number[]; cpes: string[]; hostnames: string[]; tags: string[]; vulns: string[] };
+    crtSubdomains: string[];
+    waybackUrls: string[];
+    summary: string;
+  } | null>(null);
+  const [jwtInput, setJwtInput] = useState("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDQyIiwicm9sZSI6InVzZXIifQ.sig");
+  const [cookieInput, setCookieInput] = useState("session_id=xyz987; Path=/; Secure");
+  const [jwtAuditResult, setJwtAuditResult] = useState<{
+    decodedHeader: Record<string, unknown>;
+    decodedPayload: Record<string, unknown>;
+    issues: Array<{ check: string; severity: string; cwe: string; detail: string; fix: string }>;
+  } | null>(null);
+  const [schemaAuditResult, setSchemaAuditResult] = useState<{
+    hostname: string;
+    discoveredSchemas: Array<{ path: string; status: number; type: string; note: string }>;
+    checklist: Array<{ check: string; cwe: string; recommendation: string }>;
+  } | null>(null);
 
   // Tab 1 state: Encyclopedia
   const [searchQuery, setSearchQuery] = useState("");
@@ -1051,7 +1080,73 @@ ${reportFix}
     void jsonRequest<{ tools: typeof arsenalTools }>("/deep-research/arsenal")
       .then((d) => setArsenalTools(d.tools || []))
       .catch(() => {});
+    void jsonRequest<{ platforms: typeof globalPlatforms }>("/deep-research/platforms")
+      .then((d) => setGlobalPlatforms(d.platforms || []))
+      .catch(() => {});
   }, []);
+
+  const handleRunLiveOsint = async () => {
+    setDeepLoading("osint");
+    try {
+      const res = await jsonRequest<NonNullable<typeof osintResult>>("/deep-research/live-osint", {
+        method: "POST",
+        body: JSON.stringify({ target: activeTarget }),
+      });
+      setOsintResult(res);
+      emitPlatformWsEvent({
+        type: "recon_cmd_executed",
+        target: activeTarget,
+        title: `OSINT (CRT.SH + Shodan InternetDB + Wayback): ${res.crtSubdomains.length} نطاق فرعي`,
+      });
+      setSyncStatusMsg(`✅ تم سحب استخبارات CRT.SH وShodan InternetDB وWayback Machine لـ ${activeTarget} وتسجيلها في الذاكرة!`);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleRunJwtCookieAudit = async () => {
+    setDeepLoading("jwt");
+    try {
+      const res = await jsonRequest<NonNullable<typeof jwtAuditResult>>("/deep-research/jwt-cookie-auditor", {
+        method: "POST",
+        body: JSON.stringify({ jwt: jwtInput, cookie: cookieInput }),
+      });
+      setJwtAuditResult(res);
+      emitPlatformWsEvent({
+        type: "finding_recorded",
+        target: activeTarget,
+        title: `فحص JWT & Cookie: رصد ${res.issues.length} ملاحظات أمنية`,
+      });
+      setSyncStatusMsg(`✅ اكتمل تدقيق JWT وSet-Cookie (${res.issues.length} ملاحظات) وتم حفظه في الذاكرة!`);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleRunSchemaAudit = async () => {
+    setDeepLoading("schema");
+    try {
+      const res = await jsonRequest<NonNullable<typeof schemaAuditResult>>("/deep-research/schema-auditor", {
+        method: "POST",
+        body: JSON.stringify({ target: activeTarget }),
+      });
+      setSchemaAuditResult(res);
+      emitPlatformWsEvent({
+        type: "scan_completed",
+        target: activeTarget,
+        title: `فحص GraphQL & OpenAPI Schema: ${activeTarget}`,
+      });
+      setSyncStatusMsg(`✅ اكتمل فحص مخططات GraphQL وOpenAPI على ${activeTarget}!`);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
 
   const handleRunPipeline = async () => {
     setDeepLoading("pipeline");
@@ -1720,6 +1815,204 @@ ${reportFix}
                     <p className="text-[11px] text-gray-400 leading-relaxed border-t border-white/5 pt-1.5">
                       <strong className="text-sky-300">المنهجية القانونية:</strong> {tool.methodology}
                     </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 6. Multi-Source Live Zero-Key OSINT + JWT/Cookie Auditor + GraphQL/OpenAPI Schema Auditor */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Live OSINT Hub (CRT.SH + Shodan InternetDB + Wayback) */}
+            <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Server className="w-4 h-4 text-emerald-400" />
+                    <span>6. استخبارات OSINT الحية (CRT.SH + Shodan + Wayback)</span>
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    يستعلم مباشرة بدون مفاتيح من شهادات الشفافية CRT.SH وShodan InternetDB وأرشيف Wayback.
+                  </p>
+                </div>
+                <button
+                  onClick={() => void handleRunLiveOsint()}
+                  disabled={deepLoading === "osint"}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-bold text-white shrink-0"
+                >
+                  {deepLoading === "osint" ? "جاري الجلب..." : "سحب OSINT حي"}
+                </button>
+              </div>
+
+              {osintResult && (
+                <div className="space-y-2.5 pt-2 border-t border-white/10 text-xs">
+                  <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 font-mono text-emerald-200">
+                    IP: {osintResult.primaryIp} | Ports: {osintResult.shodanInternetDb.ports.join(", ") || "80, 443"}
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-300 mb-1">📜 نطاقات CRT.SH ({osintResult.crtSubdomains.length}):</div>
+                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                      {osintResult.crtSubdomains.slice(0, 12).map((sub) => (
+                        <button
+                          key={sub}
+                          onClick={() => void handleActivateTarget(sub)}
+                          className="px-2 py-0.5 rounded bg-black/50 hover:bg-emerald-500/20 border border-white/10 font-mono text-[10px] text-emerald-300"
+                        >
+                          {sub}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-300 mb-1">🕰️ مسارات Wayback Machine الأرشيفية:</div>
+                    <div className="space-y-1 max-h-28 overflow-y-auto font-mono text-[10px] text-sky-300">
+                      {osintResult.waybackUrls.slice(0, 6).map((u, idx) => (
+                        <div key={idx} className="truncate bg-black/40 px-2 py-1 rounded border border-white/5">
+                          {u}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* JWT & Cookie Cryptographic Auditor */}
+            <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span>7. مدقق تشفير الجلسات (JWT & Set-Cookie)</span>
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    يفكك توكن JWT ويفحص alg:none وexp وkid ويدقق خصائص الكوكيز (HttpOnly, Secure, SameSite).
+                  </p>
+                </div>
+                <button
+                  onClick={() => void handleRunJwtCookieAudit()}
+                  disabled={deepLoading === "jwt"}
+                  className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-xs font-bold text-white shrink-0"
+                >
+                  {deepLoading === "jwt" ? "جاري الفحص..." : "فحص الجلسة"}
+                </button>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <input
+                  dir="ltr"
+                  value={jwtInput}
+                  onChange={(e) => setJwtInput(e.target.value)}
+                  placeholder="JWT Token (eyJ...)"
+                  className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 font-mono text-[11px] text-white"
+                />
+                <input
+                  dir="ltr"
+                  value={cookieInput}
+                  onChange={(e) => setCookieInput(e.target.value)}
+                  placeholder="Set-Cookie Header..."
+                  className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 font-mono text-[11px] text-white"
+                />
+              </div>
+
+              {jwtAuditResult && (
+                <div className="space-y-2 pt-2 border-t border-white/10 text-xs max-h-44 overflow-y-auto">
+                  {jwtAuditResult.issues.map((iss, idx) => (
+                    <div key={idx} className="p-2.5 rounded-lg bg-black/40 border border-amber-500/30 space-y-0.5">
+                      <div className="font-bold text-amber-300 flex items-center justify-between">
+                        <span>{iss.check}</span>
+                        <span className="font-mono text-[10px]">{iss.cwe}</span>
+                      </div>
+                      <p className="text-gray-300 text-[11px]">{iss.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* GraphQL & OpenAPI Schema Auditor */}
+            <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-purple-400" />
+                    <span>8. مدقق مخططات GraphQL وOpenAPI/Swagger</span>
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    يفحص نقاط نهاية /graphql و/openapi.json و/swagger.json للتحقق من Introspection وMass Assignment.
+                  </p>
+                </div>
+                <button
+                  onClick={() => void handleRunSchemaAudit()}
+                  disabled={deepLoading === "schema"}
+                  className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-bold text-white shrink-0"
+                >
+                  {deepLoading === "schema" ? "جاري الفحص..." : "فحص المخططات"}
+                </button>
+              </div>
+
+              {schemaAuditResult && (
+                <div className="space-y-2 pt-2 border-t border-white/10 text-xs">
+                  {schemaAuditResult.discoveredSchemas.map((sc, idx) => (
+                    <div key={idx} className="p-2.5 rounded-lg bg-purple-950/30 border border-purple-500/30 font-mono text-[11px] text-purple-200">
+                      {sc.path} (HTTP {sc.status}) — {sc.note}
+                    </div>
+                  ))}
+                  {schemaAuditResult.checklist.map((item, idx) => (
+                    <div key={idx} className="p-2.5 rounded-lg bg-black/40 border border-white/10">
+                      <div className="font-bold text-white">{item.check} ({item.cwe})</div>
+                      <div className="text-gray-300 text-[11px] mt-0.5">{item.recommendation}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 7. Global Bug Bounty Platforms & Legal Safe-Harbor Directory */}
+          <div className="rounded-2xl border border-emerald-500/25 bg-white/[0.03] p-5 space-y-4">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-400" />
+                <span>9. الدليل الشامل لمنصات البج باونتي العالمية وبرامج الملاذ القانوني الآمن (Global Safe-Harbor Directory)</span>
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                جميع المنصات العالمية الرسمية المعتمدة لصيد الثغرات القانوني — اضغط على أي منصة لتفعيل نطاقها التجريبي فوراً أو فتح دليل برامجها الرسمي:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {globalPlatforms.map((plat) => (
+                <div
+                  key={plat.id}
+                  className="p-4 rounded-xl bg-black/40 border border-white/10 flex flex-col justify-between gap-3"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-white">{plat.name}</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-bold">
+                        {plat.bountyRange}
+                      </span>
+                    </div>
+                    <div className="text-[10px] font-mono text-amber-300">{plat.safeHarbor}</div>
+                    <p className="text-xs text-gray-300 leading-relaxed">{plat.focus}</p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                    <button
+                      onClick={() => void handleActivateTarget(plat.defaultTarget, plat.name)}
+                      className="flex-1 px-2.5 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-[11px] font-bold text-emerald-200"
+                    >
+                      🎯 تفعيل في المنصة
+                    </button>
+                    <a
+                      href={plat.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-gray-300 flex items-center gap-1"
+                    >
+                      <span>الموقع</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
                   </div>
                 </div>
               ))}

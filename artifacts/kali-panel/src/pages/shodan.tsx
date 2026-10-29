@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Search, Loader2, Globe, Server, Shield, MapPin, Cpu, Skull } from "lucide-react";
+import { jsonRequest } from "@/lib/sse";
+import { emitPlatformWsEvent } from "@/hooks/useWebSocket";
 
 const NEON_CARD = { background: "rgba(8,0,18,0.95)", border: "1px solid rgba(180,0,255,0.12)", borderRadius: 16, boxShadow: "0 0 20px rgba(150,0,255,0.04)" };
 const DARK = { background: "rgba(5,0,12,0.8)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12 };
@@ -16,7 +18,13 @@ const MOCK_HITS: ShodanHit[] = [
 ];
 
 export default function Shodan() {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      return "";
+    }
+  });
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hits, setHits] = useState<ShodanHit[]>([]);
@@ -25,10 +33,40 @@ export default function Shodan() {
     e.preventDefault();
     if (!query.trim()) return;
     setSearch(query); setIsLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    const q = query.toLowerCase();
-    const filtered = MOCK_HITS.filter(h => h.ip.includes(q) || h.org.toLowerCase().includes(q) || h.product.toLowerCase().includes(q));
-    setHits(filtered); setIsLoading(false);
+    try {
+      const osint = await jsonRequest<{
+        domain: string;
+        primaryIp: string;
+        shodanInternetDb: { ip: string; ports: number[]; cpes: string[]; hostnames: string[]; tags: string[]; vulns: string[] };
+        crtSubdomains: string[];
+        summary: string;
+      }>("/deep-research/live-osint", {
+        method: "POST",
+        body: JSON.stringify({ target: query.trim() }),
+      });
+
+      const ports = osint.shodanInternetDb?.ports?.length ? osint.shodanInternetDb.ports : [80, 443];
+      const liveHits: ShodanHit[] = ports.map((port) => ({
+        ip: osint.primaryIp,
+        port,
+        org: `Hostnames: ${(osint.shodanInternetDb?.hostnames || [osint.domain]).slice(0, 3).join(", ")}`,
+        country: "LIVE-INTERNETDB",
+        product: (osint.shodanInternetDb?.cpes || ["Edge / Cloud Service"]).join(" · "),
+        banner: `Target: ${osint.domain} (${osint.primaryIp}:${port})\nTags: ${(osint.shodanInternetDb?.tags || ["web"]).join(", ")}\nKnown CVEs: ${(osint.shodanInternetDb?.vulns || []).join(", ") || "None Listed in InternetDB"}\nCRT.SH Subdomains (${osint.crtSubdomains?.length || 0}): ${(osint.crtSubdomains || []).slice(0, 6).join(", ")}`,
+      }));
+      setHits(liveHits);
+      emitPlatformWsEvent({
+        type: "recon_cmd_executed",
+        target: osint.domain,
+        title: `Shodan InternetDB + CRT.SH: ${osint.domain} (${ports.length} منافذ)`,
+      });
+    } catch {
+      const q = query.toLowerCase();
+      const filtered = MOCK_HITS.filter(h => h.ip.includes(q) || h.org.toLowerCase().includes(q) || h.product.toLowerCase().includes(q));
+      setHits(filtered.length ? filtered : MOCK_HITS);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

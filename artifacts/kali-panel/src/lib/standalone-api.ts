@@ -1543,16 +1543,79 @@ export function resolveStandaloneApi(
   }
 
   if (path === "/ioc") {
+    if (m === "POST" && body) {
+      const newIoc = {
+        id: `ioc-${Date.now()}`,
+        type: String(body.iocType || "domain"),
+        iocType: String(body.iocType || "domain"),
+        value: String(body.value || "example.com"),
+        severity: String(body.severity || "medium"),
+        source: String(body.source || "manual"),
+        confidence: Number(body.confidence ?? 0.9),
+        description: String(body.description || "مؤشر مسجل يدوياً"),
+        relatedCves: Array.isArray(body.relatedCves) ? body.relatedCves : [],
+        tags: Array.isArray(body.tags) ? body.tags : ["bounty"],
+        isActive: true,
+        isVerified: true,
+        firstSeen: new Date().toISOString(),
+        lastSeen: new Date().toISOString(),
+      };
+      return { ioc: newIoc, ok: true };
+    }
     return {
       iocs: [
-        { id: "ioc-1", type: "header", iocType: "header", value: "x-middleware-subrequest", severity: "CRITICAL", source: "CVE-2025-29927", description: "Next.js Middleware Authorization Bypass Header", firstSeen: new Date().toISOString(), isVerified: true },
-        { id: "ioc-2", type: "path", iocType: "path", value: "/api/v1/..;/admin", severity: "HIGH", source: "CVE-2025-24813", description: "Tomcat Path Equivalence Payload Pattern", firstSeen: new Date().toISOString(), isVerified: true },
+        { id: "ioc-1", type: "header", iocType: "header", value: "x-middleware-subrequest", severity: "critical", source: "CVE-2025-29927", confidence: 0.98, description: "Next.js Middleware Authorization Bypass Header", relatedCves: ["CVE-2025-29927"], tags: ["nextjs", "auth-bypass"], isActive: true, isVerified: true, firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString() },
+        { id: "ioc-2", type: "path", iocType: "path", value: "/api/v1/..;/admin", severity: "high", source: "CVE-2025-24813", confidence: 0.95, description: "Tomcat Path Equivalence Pattern", relatedCves: ["CVE-2025-24813"], tags: ["tomcat", "path-traversal"], isActive: true, isVerified: true, firstSeen: new Date().toISOString(), lastSeen: new Date().toISOString() },
       ],
       total: 2,
     };
   }
 
-  if (path === "/knowledge" || path === "/intelligence/knowledge") {
+  if (path === "/ioc/stats") {
+    return {
+      byType: [
+        { iocType: "header", count: 1 },
+        { iocType: "path", count: 1 },
+        { iocType: "domain", count: 3 },
+      ],
+      bySeverity: [
+        { severity: "critical", count: 1 },
+        { severity: "high", count: 2 },
+        { severity: "medium", count: 2 },
+      ],
+    };
+  }
+
+  if (path.startsWith("/ioc/") && m === "DELETE") {
+    return { ok: true };
+  }
+
+  if (path === "/knowledge") {
+    const entries = STANDALONE_CWES.map((w, idx) => ({
+      id: idx + 1,
+      title: `${w.cweId} — ${w.name}`,
+      category: w.category.toLowerCase(),
+      summary: w.description,
+      content: `${w.description}\n\nالإصلاح البرمجي الموصى به:\n${w.remediation}`,
+      remediation: w.remediation,
+      severity: w.severity,
+      tags: [w.cweId, w.category.toLowerCase(), w.severity.toLowerCase()],
+      createdAt: new Date().toISOString(),
+    }));
+    if (m === "POST" && body) {
+      return {
+        id: Date.now(),
+        title: String(body.title || "ملاحظة معرفية جديدة"),
+        category: String(body.category || "general"),
+        content: String(body.content || ""),
+        tags: Array.isArray(body.tags) ? body.tags : [String(body.tags || "security")],
+        createdAt: new Date().toISOString(),
+      };
+    }
+    return entries;
+  }
+
+  if (path === "/intelligence/knowledge") {
     return {
       items: STANDALONE_CWES.map((w) => ({
         id: w.id,
@@ -1563,6 +1626,28 @@ export function resolveStandaloneApi(
         severity: w.severity,
       })),
       total: STANDALONE_CWES.length,
+    };
+  }
+
+  if (path === "/knowledge/search") {
+    const q = (u.searchParams.get("q") || "").toLowerCase();
+    const results = STANDALONE_CWES.filter(
+      (w) => !q || w.name.toLowerCase().includes(q) || w.cweId.toLowerCase().includes(q) || w.description.toLowerCase().includes(q),
+    ).map((w, idx) => ({
+      id: idx + 1,
+      title: `${w.cweId} — ${w.name}`,
+      category: w.category.toLowerCase(),
+      content: `${w.description}\n\nالإصلاح:\n${w.remediation}`,
+      tags: [w.cweId, w.category],
+      score: 0.95,
+    }));
+    return { results };
+  }
+
+  if (path === "/knowledge/ask" && m === "POST") {
+    const query = String(body?.query || "");
+    return {
+      answer: `تحليل قاعدة المعرفة في CyberNova لسؤالك ("${query}"):\n\n1. افحص عزل الصلاحيات (BOLA/IDOR) عبر مصفوفة الصلاحيات التفاضلية.\n2. تحقق من بصمات CNAME وسجلات CRT.SH عبر محرك الاستخبارات الحية (Live OSINT).\n3. تأكد من تمرير كل نتيجة عبر بوابة البرهان (Zero-FP Gate) قبل كتابة التقرير.`,
     };
   }
 
@@ -1582,10 +1667,119 @@ export function resolveStandaloneApi(
   }
 
   if (path === "/playbooks") {
-    return [
-      { id: "pb-1", name: "Recon & Subdomain Enumeration Playbook", description: "استطلاع النطاقات الفرعية وفحص الشهادات والمنافذ القانونية", stepsCount: 5, status: "ready" },
-      { id: "pb-2", name: "OWASP API Top 10 Audit (BOLA / IDOR / SSRF)", description: "فحص صلاحيات الوصول للموارد واختبار SSRF وMass Assignment", stepsCount: 6, status: "ready" },
+    const pbList = [
+      {
+        id: 1,
+        name: "Recon & Subdomain Enumeration Playbook",
+        title: "خطة الاستطلاع السلبي الشامل (CRT.SH + Shodan InternetDB + DNS)",
+        description: "استطلاع النطاقات الفرعية وفحص الشهادات والمنافذ القانونية بدون إزعاج الهدف",
+        category: "recon",
+        tags: "recon,crtsh,shodan,dns",
+        isAutoGenerated: false,
+        runCount: 14,
+        stepsCount: 4,
+        status: "ready",
+        lastRunAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 2,
+        name: "OWASP API Top 10 Audit (BOLA / IDOR / SSRF)",
+        title: "خطة فحص صلاحيات API والمقارنة التفاضلية (BOLA / IDOR / JWT)",
+        description: "فحص صلاحيات الوصول للموارد واختبار BOLA وتدقيق JWT وCORS",
+        category: "scan",
+        tags: "api,bola,idor,jwt,cors",
+        isAutoGenerated: false,
+        runCount: 9,
+        stepsCount: 5,
+        status: "ready",
+        lastRunAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      },
     ];
+    if (m === "POST" && body) {
+      return {
+        id: Date.now(),
+        title: String(body.title || "خطة فحص جديدة"),
+        description: String(body.description || ""),
+        category: String(body.category || "recon"),
+        tags: String(body.tags || "custom"),
+        isAutoGenerated: false,
+        runCount: 0,
+        createdAt: new Date().toISOString(),
+      };
+    }
+    return pbList;
+  }
+
+  if (path === "/playbooks/runs") {
+    return [
+      {
+        id: 101,
+        playbookId: 1,
+        status: "completed",
+        startedAt: new Date(Date.now() - 120_000).toISOString(),
+        completedAt: new Date().toISOString(),
+        resultSummary: "تم جمع سجلات DNS وشهادات CRT.SH وتحديث الذاكرة المشتركة.",
+        triggeredBy: "operator",
+      },
+    ];
+  }
+
+  if (/^\/playbooks\/\d+$/.test(path)) {
+    return {
+      id: 1,
+      title: "خطة الاستطلاع السلبي الشامل",
+      description: "استطلاع النطاقات الفرعية وفحص الشهادات والمنافذ القانونية",
+      category: "recon",
+      tags: "recon,dns,ssl",
+      isAutoGenerated: false,
+      runCount: 15,
+      createdAt: new Date().toISOString(),
+      steps: [
+        { id: 1, stepOrder: 1, title: "جلب شهادات الشفافية CRT.SH", toolName: "scan_target", toolInput: "crt.sh passive lookup", continueOnError: true },
+        { id: 2, stepOrder: 2, title: "فحص ترويسات الحماية وبصمة 404", toolName: "scan_url", toolInput: "zero-fp baseline check", continueOnError: true },
+        { id: 3, stepOrder: 3, title: "حفظ المخرجات في الذاكرة", toolName: "memory_save", toolInput: "save findings to /api/memory", continueOnError: true },
+      ],
+    };
+  }
+
+  if (/^\/playbooks\/\d+\/run$/.test(path) && m === "POST") {
+    return { ok: true, status: "completed", summary: "تم تنفيذ خطوات الخطة وتسجيل النتائج في الذاكرة." };
+  }
+
+  if (path === "/threats") {
+    return [
+      {
+        id: 1,
+        title: "Missing Content-Security-Policy & HSTS on Edge Endpoint",
+        description: "تم رصد غياب ترويسات العزل الأساسية على واجهة الويب مما يستوجب المراجعة الدفاعية.",
+        sourceIp: "93.184.216.34",
+        targetIp: "10.0.0.10",
+        port: 443,
+        protocol: "https",
+        threatType: "Misconfiguration",
+        severity: "MEDIUM",
+        rawData: "HTTP/1.1 200 OK | CSP: None | X-Frame-Options: None",
+        aiAnalysis: "يُنصح بإضافة Content-Security-Policy وStrict-Transport-Security لحماية جلسات المستخدمين.",
+        analyzedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      },
+    ];
+  }
+
+  if (path === "/threats/stats") {
+    return {
+      total: 1,
+      analyzed: 1,
+      pending: 0,
+      bySeverity: { CRITICAL: 0, HIGH: 0, MEDIUM: 1, LOW: 0 },
+      byType: { Misconfiguration: 1 },
+    };
+  }
+
+  if ((path === "/risk/score-batch" || path === "/risk/analyze-llm" || path === "/osv/sync") && m === "POST") {
+    return { ok: true, scored: 14820, updated: 24, message: "تم تحديث تقييم المخاطر بنجاح" };
   }
 
   if (path === "/workspaces") {
@@ -1822,6 +2016,81 @@ export function resolveStandaloneApi(
         { rank: 1, title: `فحص الصلاحيات التفاضلي (BOLA/IDOR) على مسارات /api/v1/user/profile`, cwe: "CWE-639", priority: "HIGH", verificationSteps: "إنشاء حسابي اختبار شخصيين (User A & User B) وتبديل المعرفات للتحقق من عزل البيانات." },
         { rank: 2, title: "تدقيق الترويسات المفقودة وسياسة CSP", cwe: "CWE-693", priority: "MEDIUM", verificationSteps: "التحقق من ترويسة Content-Security-Policy في صفحات إدخال البيانات." },
         { rank: 3, title: "مراجعة تدفقات OAuth / Redirect وملف security.txt", cwe: "CWE-601", priority: "MEDIUM", verificationSteps: "اختبار معاملات redirect_uri وnext للتأكد من التحقق الصارم من النطاق." },
+      ],
+    };
+  }
+
+  if (path === "/deep-research/platforms") {
+    return {
+      platforms: [
+        { id: "hackerone", name: "HackerOne Directory", url: "https://hackerone.com/directory/programs", bountyRange: "$100 – $100,000+", safeHarbor: "Gold Standard Safe Harbor", focus: "Web, API, Cloud, Mobile, Open-Source (GitHub, Cloudflare, Shopify, Uber, GitLab)", defaultTarget: "hackerone.com" },
+        { id: "google-vrp", name: "Google & Alphabet VRP", url: "https://bughunters.google.com/", bountyRange: "$500 – $250,000+", safeHarbor: "Official Google VRP Policy", focus: "Google Cloud, Android, Chrome, AI/LLM (Abuse VRP), Open Source", defaultTarget: "bughunters.google.com" },
+        { id: "bugcrowd", name: "Bugcrowd Programs", url: "https://bugcrowd.com/engagements", bountyRange: "$150 – $100,000+", safeHarbor: "Disclose.io Safe Harbor", focus: "OpenAI, Tesla, Netflix, Atlassian, Mastercard, Web & API Security", defaultTarget: "openai.com" },
+        { id: "intigriti", name: "Intigriti (Europe #1 Bug Bounty)", url: "https://www.intigriti.com/programs", bountyRange: "€100 – €50,000+", safeHarbor: "EU Legal Safe Harbor", focus: "European FinTech, SaaS, E-Commerce, Telecom & Enterprise APIs", defaultTarget: "intigriti.com" },
+        { id: "yeswehack", name: "YesWeHack Global VDP/Bounty", url: "https://yeswehack.com/programs", bountyRange: "€100 – €40,000+", safeHarbor: "YesWeHack Legal Framework", focus: "Cloud Infrastructure, GovTech, Telecom, Open-Source & Mobile Apps", defaultTarget: "yeswehack.com" },
+        { id: "immunefi", name: "Immunefi (Web3 & Smart Contracts)", url: "https://immunefi.com/bug-bounty/", bountyRange: "$1,000 – $10,000,000+", safeHarbor: "Web3 Whitehat Safe Harbor", focus: "DeFi Protocols, L1/L2 Bridges, Smart Contracts & Web2 Portals", defaultTarget: "immunefi.com" },
+        { id: "msrc", name: "Microsoft MSRC Bug Bounty", url: "https://www.microsoft.com/en-us/msrc/bounty", bountyRange: "$500 – $250,000+", safeHarbor: "Microsoft Safe Harbor", focus: "Azure Cloud, Identity/Entra ID, Office 365, Dynamics, Copilot AI", defaultTarget: "microsoft.com" },
+        { id: "apple-bounty", name: "Apple Security Bounty", url: "https://security.apple.com/bounty/", bountyRange: "$5,000 – $2,000,000+", safeHarbor: "Apple Official Security Research Policy", focus: "iCloud Web/API, Apple Account Auth, iOS/macOS & Server Infrastructure", defaultTarget: "icloud.com" },
+      ],
+      publicIntelApis: [
+        { id: "crtsh", name: "CRT.SH Certificate Transparency", url: "https://crt.sh", auth: "Zero-Key Public API" },
+        { id: "internetdb", name: "Shodan InternetDB API", url: "https://internetdb.shodan.io", auth: "Zero-Key Public API" },
+        { id: "wayback", name: "Wayback Machine CDX API", url: "https://web.archive.org", auth: "Zero-Key Public API" },
+        { id: "rdap", name: "IANA / ICANN RDAP Registry", url: "https://rdap.org", auth: "Zero-Key Public API" },
+        { id: "osv", name: "Google OSV.dev Vulnerability DB", url: "https://osv.dev", auth: "Zero-Key Public API" },
+        { id: "nvd", name: "NIST NVD CVE 2.0 API", url: "https://nvd.nist.gov", auth: "Zero-Key Public API" },
+      ],
+    };
+  }
+
+  if (path === "/deep-research/live-osint" && m === "POST") {
+    const rawDomain = String(body?.target || body?.domain || "bughunters.google.com").replace(/^https?:\/\//i, "").replace(/^\*\./, "");
+    return {
+      domain: rawDomain,
+      primaryIp: "142.250.180.14",
+      allIps: ["142.250.180.14"],
+      shodanInternetDb: {
+        ip: "142.250.180.14",
+        ports: [80, 443],
+        cpes: ["cpe:/a:google:frontend_edge"],
+        hostnames: [rawDomain, `www.${rawDomain}`],
+        tags: ["cloud", "cdn"],
+        vulns: [],
+      },
+      crtSubdomains: [rawDomain, `www.${rawDomain}`, `api.${rawDomain}`, `auth.${rawDomain}`, `docs.${rawDomain}`],
+      waybackUrls: [
+        `https://${rawDomain}/robots.txt`,
+        `https://${rawDomain}/.well-known/security.txt`,
+        `https://${rawDomain}/api/v1/health`,
+      ],
+      summary: `استخبارات OSINT الحية لـ ${rawDomain}: 5 نطاقات في CRT.SH | المنافذ في Shodan InternetDB: (80, 443) | 3 مسارات أرشيفية في Wayback Machine.`,
+    };
+  }
+
+  if (path === "/deep-research/jwt-cookie-auditor" && m === "POST") {
+    return {
+      decodedHeader: { alg: "HS256", typ: "JWT" },
+      decodedPayload: { sub: "1042", role: "user", iat: 1710000000 },
+      cookieAnalyzed: String(body?.cookie || "session_id=xyz987; Path=/; Secure"),
+      issues: [
+        { check: "Missing Token Expiration Claim (exp)", severity: "medium", cwe: "CWE-613", detail: "التوكن لا يحتوي على حقل انتهاء الصلاحية (exp) مما يجعله صالحاً لفترة غير محددة.", fix: "أضف حقل exp بعمر قصير مع آلية Refresh Token آمنة." },
+        { check: "Cookie Missing 'HttpOnly' Flag", severity: "medium", cwe: "CWE-1004", detail: "الكوكي غير محمي بـ HttpOnly مما يسمح بقراءته عبر document.cookie في حال وجود XSS.", fix: "أضف العلامة HttpOnly لجميع كوكيز الجلسات." },
+      ],
+    };
+  }
+
+  if (path === "/deep-research/schema-auditor" && m === "POST") {
+    const rawDomain = String(body?.target || "example.com").replace(/^https?:\/\//i, "");
+    return {
+      target: `https://${rawDomain}`,
+      hostname: rawDomain,
+      discoveredSchemas: [
+        { path: "/graphql", status: 200, type: "GraphQL Endpoint", note: "استجابة نشطة — افحص تعطيل Introspection وتحديد عمق الاستعلام." },
+      ],
+      checklist: [
+        { check: "GraphQL Introspection & Field Suggestion Exposure", cwe: "CWE-200", recommendation: "عطّل Introspection في بيئة الإنتاج وراقب عمق الاستعلامات (Query Depth Limit)." },
+        { check: "GraphQL Batching & Alias Rate-Limit Bypass", cwe: "CWE-307", recommendation: "طبّق تحديد معدل الطلبات على مستوى عدد الـ Resolvers داخل الطلب الواحد." },
+        { check: "OpenAPI Mass Assignment (additionalProperties / Unbound DTOs)", cwe: "CWE-915", recommendation: "حدد الحقول المسموح بتعديلها صراحةً (Allowlist DTO)." },
       ],
     };
   }
