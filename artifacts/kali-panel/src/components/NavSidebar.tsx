@@ -609,16 +609,11 @@ interface NavSidebarProps { collapsed: boolean; onToggle: () => void; }
 
 export function NavSidebar({ collapsed, onToggle }: NavSidebarProps) {
   const [location, navigate] = useLocation();
-  const [sec, setSec] = useState(0);
-  const [scanLine, setScanLine] = useState(0);
+  const [, setSec] = useState(0);
+  const scanLine = 50;
 
   useEffect(() => {
-    const id = setInterval(() => setSec(s => s + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => setScanLine(s => (s + 1) % 100), 30);
+    const id = setInterval(() => setSec(s => s + 1), 15000);
     return () => clearInterval(id);
   }, []);
 

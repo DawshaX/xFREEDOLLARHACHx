@@ -1,10 +1,23 @@
-import * as LucideIcons from "lucide-react";
+import {
+  Zap, Database, Activity, Cpu, Clock, Play, Shield, ShieldAlert, ShieldCheck,
+  Terminal, Sparkles, Globe, Code, BookOpen, Server, Layers, AlertTriangle,
+  CheckCircle2, RefreshCw, Search, Copy, Download, Plus, Trash2, Radio, Award,
+  Save, FileText, CheckSquare, ExternalLink, ChevronRight, Bug, Eye, CheckCircle,
+  AlertCircle, HardDrive, Usb,
+} from "lucide-react";
 import { resolveStandaloneApi } from "@/lib/standalone-api";
 
-// Register all Lucide icon components on globalThis as a defensive safety net
+// Register core Lucide icon components on globalThis as a defensive safety net
 try {
+  const safeIcons: Record<string, unknown> = {
+    Zap, Database, Activity, Cpu, Clock, Play, Shield, ShieldAlert, ShieldCheck,
+    Terminal, Sparkles, Globe, Code, BookOpen, Server, Layers, AlertTriangle,
+    CheckCircle2, RefreshCw, Search, Copy, Download, Plus, Trash2, Radio, Award,
+    Save, FileText, CheckSquare, ExternalLink, ChevronRight, Bug, Eye, CheckCircle,
+    AlertCircle, HardDrive, Usb,
+  };
   const g = globalThis as Record<string, unknown>;
-  for (const [key, val] of Object.entries(LucideIcons)) {
+  for (const [key, val] of Object.entries(safeIcons)) {
     if (!(key in g) && val) {
       g[key] = val;
     }
@@ -14,31 +27,6 @@ try {
 }
 
 const originalFetch = window.fetch.bind(window);
-
-// Auto-heal stale cached 404.html sub-routes on GitHub Pages (/bug-bounty-studio, /vuln-encyclopedia, /code-auditor, etc.)
-try {
-  if (typeof window !== "undefined" && window.location.hostname.endsWith("github.io")) {
-    const currentScript = document.querySelector('script[type="module"][src*="assets/index-"]')?.getAttribute("src") || "";
-    if (currentScript && !sessionStorage.getItem("cybernova_verified_build_v15")) {
-      originalFetch(`/xFREEDOLLARHACHx/index.html?_cb=${Date.now()}`, { cache: "no-store" })
-        .then((r) => (r.ok ? r.text() : ""))
-        .then((html) => {
-          const match = html.match(/src="([^"]*assets\/index-[^"]+\.js)"/);
-          if (match && match[1] && match[1] !== currentScript) {
-            sessionStorage.setItem("cybernova_verified_build_v15", "1");
-            const u = new URL(window.location.href);
-            u.searchParams.set("_v", String(Date.now()));
-            window.location.replace(u.toString());
-          } else if (match && match[1]) {
-            sessionStorage.setItem("cybernova_verified_build_v15", "1");
-          }
-        })
-        .catch(() => {});
-    }
-  }
-} catch {
-  // ignore
-}
 
 function parseBody(init?: RequestInit): Record<string, unknown> | null {
   if (!init?.body || typeof init.body !== "string") return null;

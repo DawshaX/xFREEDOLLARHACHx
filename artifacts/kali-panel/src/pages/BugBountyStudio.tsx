@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
-  Shield, BookOpen, Code, CheckSquare, FileText, Globe, AlertTriangle,
+  Shield, ShieldCheck, BookOpen, Code, CheckSquare, FileText, Globe, AlertTriangle,
   CheckCircle2, Copy, Download, Search, Sparkles, Lock, Layers, Server,
   ExternalLink, Terminal, ChevronRight, RefreshCw, Plus, Trash2, Award,
   Radio, Save, Target, Zap, Database, Activity, Cpu, Clock, Play,
@@ -1023,6 +1023,252 @@ function getSafeRelativePath(input: string): string {
       "إضافة ترويسة `Referrer-Policy: strict-origin-when-cross-origin` أو `no-referrer` على صفحات المصادقة.",
     ],
   },
+  {
+    id: "immunefi-reentrancy-readonly",
+    titleAr: "إعادة الدخول الكلاسيكية والقرائية في العقود الذكية (Classic & Read-Only Reentrancy)",
+    titleEn: "Smart Contract Classic & Read-Only Reentrancy (Immunefi Critical)",
+    cwe: "CWE-841 / SWC-107",
+    owasp: "Immunefi V2.3 Critical — Direct Theft of User Funds",
+    severity: "Critical",
+    cvssBase: 9.8,
+    bountyRange: "$50,000 – $2,500,000 (Immunefi)",
+    summaryAr:
+      "تحدث عندما يقوم عقد ذكي بإجراء استدعاء خارجي (مثل إرسال ETH عبر `.call{value}` أو استدعاء دالة callback في ERC-777/ERC-1155) قبل تحديث أرصدة الحالة الداخلية، مما يسمح للعقد المستدعى بإعادة الدخول أو قراءة سعر غير محدث (Read-Only Reentrancy) في بروتوكول متكامل.",
+    rootCauseAr:
+      "مخالفة نمط Checks-Effects-Interactions (CEI) أو عدم مشاركة قفل ReentrancyGuard مع دوال القراءة (view) التي تعتمد عليها بروتوكولات الإقراض لحساب قيمة الضمانات.",
+    language: "Solidity (EVM / Foundry)",
+    vulnerableCode: `// ❌ كود Solidity ضعيف: استدعاء خارجي قبل تحديث الرصيد وعدم حماية دالة السعر
+contract VulnerableLendingPool {
+  mapping(address => uint256) public balances;
+  uint256 public totalLiquidity;
+
+  function withdraw(uint256 amount) external {
+    require(balances[msg.sender] >= amount, "Insufficient");
+    // ⚠️ استدعاء خارجي يسلم التحكم للمستلم قبل خصم الرصيد وتحديث totalLiquidity!
+    (bool ok, ) = msg.sender.call{value: amount}("");
+    require(ok, "Transfer failed");
+    balances[msg.sender] -= amount;
+    totalLiquidity -= amount;
+  }
+
+  // ⚠️ دالة view تقرأ حالة غير متسقة أثناء تنفيذ callback
+  function getSharePrice() external view returns (uint256) {
+    return (address(this).balance * 1e18) / totalLiquidity;
+  }
+}`,
+    secureCode: `// ✅ كود Solidity آمن: تطبيق صارم لـ CEI + قفل Reentrancy شامل للقراءة والكتابة
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract SecureLendingPool is ReentrancyGuard {
+  mapping(address => uint256) public balances;
+  uint256 public totalLiquidity;
+
+  function withdraw(uint256 amount) external nonReentrant {
+    require(balances[msg.sender] >= amount, "Insufficient");
+    // 1. Effects: تحديث جميع متغيرات الحالة أولاً
+    balances[msg.sender] -= amount;
+    totalLiquidity -= amount;
+    // 2. Interactions: الاستدعاء الخارجي في النهاية فقط
+    (bool ok, ) = msg.sender.call{value: amount}("");
+    require(ok, "Transfer failed");
+  }
+
+  function getSharePrice() external view returns (uint256) {
+    require(!_reentrancyGuardEntered(), "Read-only reentrancy blocked");
+    return (totalLiquidity == 0) ? 1e18 : (address(this).balance * 1e18) / totalLiquidity;
+  }
+}`,
+    auditChecklist: [
+      "فحص جميع استدعاءات `.call{value: ...}`، `_safeMint`، `onERC721Received`، و`tokensReceived` باستخدام `slither . --detect reentrancy-eth`.",
+      "التحقق مما إذا كانت دوال `view` (مثل `get_virtual_price` أو `previewRedeem`) تقرأ حالة غير محدثة أثناء تنفيذ callback خارجي.",
+      "كتابة اختبار Foundry محلي (`forge test --fork-url $RPC_URL`) لإثبات فرق الأرصدة قبل وبعد المعاملة بدون لمس الشبكة الحية.",
+    ],
+    remediationSteps: [
+      "تطبيق نمط Checks-Effects-Interactions (CEI) بتحديث جميع الأرصدة وإجمالي الأسهم قبل أي استدعاء خارجي.",
+      "استخدام `ReentrancyGuard` أو `ReentrancyGuardTransient` (EIP-1153) والتحقق من حالة القفل في دوال التسعير الحساسة.",
+    ],
+  },
+  {
+    id: "immunefi-erc4626-inflation",
+    titleAr: "تضخم أسهم المودع الأول وفقدان الدقة الحسابية (ERC-4626 Vault Share Inflation)",
+    titleEn: "ERC-4626 First-Depositor Share Inflation & Precision Loss",
+    cwe: "CWE-682 / SWC-101",
+    owasp: "Immunefi V2.3 High/Critical — Theft of Depositor Yield/Principal",
+    severity: "Critical",
+    cvssBase: 9.4,
+    bountyRange: "$25,000 – $1,000,000 (Immunefi)",
+    summaryAr:
+      "ثغرة رياضية في خزائن السيولة (ERC-4626 Vaults) وبروتوكولات الإقراض عندما تكون الخزنة فارغة (`totalSupply == 0`)، حيث يودع المهاجم 1 wei للحصول على سهم واحد، ثم يتبرع بكمية كبيرة من التوكن مباشرة للعقد لتضخيم قيمة السهم الواحد، مما يجعل إيداع الضحية التالي يُقرب إلى الصفر (`0 shares`).",
+    rootCauseAr:
+      "اعتماد حساب الأسهم على `totalAssets()` المباشر (`ERC20.balanceOf(address(this))`) مع القسمة الصحيحة التي تقرب نحو الصفر بدون وجود Virtual Shares/Assets Offset.",
+    language: "Solidity (EVM / Foundry)",
+    vulnerableCode: `// ❌ كود Solidity ضعيف: حساب الأسهم بدون Virtual Offset واعتماد مباشر على balanceOf
+contract VulnerableVault {
+  IERC20 public immutable asset;
+  uint256 public totalSupply;
+  mapping(address => uint256) public balanceOf;
+
+  function deposit(uint256 assets) external returns (uint256 shares) {
+    uint256 totalAssets = asset.balanceOf(address(this));
+    // ⚠️ إذا كان totalSupply = 1 و totalAssets = 10000e18، فإن إيداع 9999e18 ينتج 0 أسهم!
+    shares = (totalSupply == 0) ? assets : (assets * totalSupply) / totalAssets;
+    // ⚠️ لا يوجد فحص require(shares > 0) ولا إزاحة عشرية!
+    asset.transferFrom(msg.sender, address(this), assets);
+    balanceOf[msg.sender] += shares;
+    totalSupply += shares;
+  }
+}`,
+    secureCode: `// ✅ كود Solidity آمن: استخدام Virtual Offset (OpenZeppelin v5 ERC4626) ومنع الأسهم الصفرية
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+
+contract SecureVault is ERC4626 {
+  using Math for uint256;
+
+  constructor(IERC20 asset_) ERC4626(asset_) ERC20("Secure Vault", "sVLT") {}
+
+  // إضافة إزاحة عشرية افتراضية (Virtual Shares/Assets) تجعل هجوم التضخم غير مجدٍ اقتصادياً
+  function _decimalsOffset() internal pure override returns (uint8) {
+    return 3;
+  }
+
+  function deposit(uint256 assets, address receiver) public override returns (uint256 shares) {
+    shares = super.deposit(assets, receiver);
+    require(shares > 0, "Zero shares minted");
+  }
+}`,
+    auditChecklist: [
+      "فحص جميع عمليات القسمة في دوال `convertToShares` و`convertToAssets` للتأكد من اتجاه التقريب (لصالح الخزنة وليس المستخدم).",
+      "التحقق من وجود Virtual Offset (`_decimalsOffset()`) أو حرق حصة أولية (`MINIMUM_LIQUIDITY`) كما في Uniswap V2.",
+    ],
+    remediationSteps: [
+      "استخدام تنفيذ OpenZeppelin v5 القياسي لـ `ERC4626` مع تفعيل `_decimalsOffset()`.",
+      "فرض شرط `require(shares >= minSharesOut && shares > 0)` لحماية المودعين من الانزلاق السعري.",
+    ],
+  },
+  {
+    id: "immunefi-flashloan-oracle",
+    titleAr: "التلاعب بأوراكل الأسعار عبر القروض الخاطفة (Flash Loan Oracle Manipulation)",
+    titleEn: "Flash Loan Spot-Price Oracle Manipulation & Stale Chainlink Feed",
+    cwe: "CWE-345",
+    owasp: "Immunefi V2.3 Critical — Protocol Insolvency / Direct Theft",
+    severity: "Critical",
+    cvssBase: 9.9,
+    bountyRange: "$100,000 – $5,000,000 (Immunefi)",
+    summaryAr:
+      "تحدث عندما يعتمد بروتوكول DeFi على السعر الفوري (Spot Price) لمجمع سيولة (AMM Pool `getReserves()` أو `balanceOf`) أو يقرأ بيانات Chainlink بدون التحقق من حداثة السعر (`updatedAt`) وحالة المُسلسِل (L2 Sequencer Uptime).",
+    rootCauseAr:
+      "استخدام مصدر سعر قابل للتلاعب داخل نفس البلوك عبر قرض خاطف (Flash Loan) غير مضمون، أو غياب الفحوصات الأمنية على مخرجات `latestRoundData()`.",
+    language: "Solidity (EVM / Foundry)",
+    vulnerableCode: `// ❌ كود Solidity ضعيف: قراءة السعر الفوري من مجمع AMM أو تجاهل فحوصات Chainlink
+contract VulnerableOracle {
+  IUniswapV2Pair public pair;
+  AggregatorV3Interface public priceFeed;
+
+  function getSpotPrice() external view returns (uint256) {
+    (uint112 r0, uint112 r1, ) = pair.getReserves();
+    // ⚠️ قابل للتلاعب بنسبة 1000% داخل معاملة Flash Loan واحدة!
+    return (uint256(r1) * 1e18) / uint256(r0);
+  }
+
+  function getChainlinkPrice() external view returns (uint256) {
+    (, int256 answer, , , ) = priceFeed.latestRoundData();
+    // ⚠️ لا يتحقق من answer > 0 ولا من updatedAt (Stale Price)!
+    return uint256(answer);
+  }
+}`,
+    secureCode: `// ✅ كود Solidity آمن: التحقق الصارم من حداثة وصحة بيانات أوراكل Chainlink
+contract SecureOracle {
+  AggregatorV3Interface public immutable priceFeed;
+  uint256 public constant MAX_HEARTBEAT = 3600; // ساعة واحدة كحد أقصى
+
+  function getValidatedPrice() external view returns (uint256) {
+    (
+      uint80 roundId,
+      int256 answer,
+      ,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    ) = priceFeed.latestRoundData();
+
+    require(answer > 0, "Invalid oracle price");
+    require(updatedAt > 0 && block.timestamp - updatedAt <= MAX_HEARTBEAT, "Stale oracle price");
+    require(answeredInRound >= roundId, "Stale round");
+    return uint256(answer);
+  }
+}`,
+    auditChecklist: [
+      "البحث عن أي استخدام لـ `getReserves()` أو `slot0()` أو `balanceOf()` لحساب أسعار الضمانات الفورية.",
+      "فحص جميع استدعاءات `latestRoundData()` للتأكد من فحص `answer > 0` و`block.timestamp - updatedAt <= heartbeat`.",
+    ],
+    remediationSteps: [
+      "استخدام أوراكل Chainlink الموثق مع فحص Heartbeat وحالة L2 Sequencer على شبكات Arbitrum/Optimism/Base.",
+      "دمج متوسط السعر المرجح زمنياً (TWAP) لفترة كافية مع حدود انحراف سعرية (Circuit Breakers).",
+    ],
+  },
+  {
+    id: "immunefi-bridge-sig-replay",
+    titleAr: "تجاوز التحقق من رسائل الجسور والتواقيع التشفيرية (Bridge & EIP-712 Signature Replay)",
+    titleEn: "Cross-Chain Bridge Message Verification Bypass & Signature Replay",
+    cwe: "CWE-347 / SWC-117 / SWC-121",
+    owasp: "Immunefi V2.3 Critical — Unbacked Token Minting / Bridge Drain",
+    severity: "Critical",
+    cvssBase: 10.0,
+    bountyRange: "$100,000 – $10,000,000 (Immunefi)",
+    summaryAr:
+      "تعد ثغرات الجسور عبر الشبكات (Cross-Chain Bridges) الأعلى مكافأة في تاريخ Immunefi (تصل إلى 10-15 مليون دولار)، وتنتج عن أخطاء في التحقق من التواقيع التشفيرية (`ecrecover` الذي يعيد `address(0)` عند فشل التوقيع) أو غياب `chainId` و`nonce` من هيكل الرسالة الموقعة.",
+    rootCauseAr:
+      "استدعاء `ecrecover` مباشرة ومقارنته بمتغير حارس غير مهيأ (`address(0)`)، أو عدم تسجيل تجزئة الرسالة (`messageHash`) كمنفذة لمنع إعادة إرسالها.",
+    language: "Solidity (EVM / Foundry)",
+    vulnerableCode: `// ❌ كود Solidity ضعيف: عدم فحص address(0) وغياب chainId/nonce
+contract VulnerableBridge {
+  address public validator; // ⚠️ إذا لم يُهيأ وترك address(0)، أي توقيع باطل سيمر!
+
+  function claimTokens(address to, uint256 amount, uint8 v, bytes32 r, bytes32 s) external {
+    bytes32 hash = keccak256(abi.encodePacked(to, amount));
+    address signer = ecrecover(hash, v, r, s);
+    // ⚠️ إذا كان التوقيع غير صالح، يعيد ecrecover القيمة address(0)!
+    require(signer == validator, "Invalid signature");
+    _mint(to, amount);
+  }
+}`,
+    secureCode: `// ✅ كود Solidity آمن: استخدام OpenZeppelin ECDSA + EIP-712 + Nonce لمنع التكرار
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+
+contract SecureBridge is EIP712 {
+  using ECDSA for bytes32;
+  address public immutable validator;
+  mapping(bytes32 => bool) public processedMessages;
+
+  constructor(address _validator) EIP712("SecureBridge", "1") {
+    require(_validator != address(0), "Zero validator");
+    validator = _validator;
+  }
+
+  function claimTokens(address to, uint256 amount, uint256 nonce, bytes calldata sig) external {
+    bytes32 structHash = keccak256(abi.encode(
+      keccak256("Claim(address to,uint256 amount,uint256 nonce,uint256 chainId)"),
+      to, amount, nonce, block.chainid
+    ));
+    bytes32 digest = _hashTypedDataV4(structHash);
+    require(!processedMessages[digest], "Already processed");
+    processedMessages[digest] = true;
+
+    address signer = ECDSA.recover(digest, sig); // يمنع address(0) و s-malleability تلقائياً
+    require(signer == validator, "Invalid validator signature");
+    _mint(to, amount);
+  }
+}`,
+    auditChecklist: [
+      "فحص كل استدعاء لـ `ecrecover` للتأكد من عدم إمكانية مطابقة `address(0)` واستخدام مكتبة `ECDSA.recover`.",
+      "التحقق من شمول `block.chainid` وعنوان العقد (`address(this)`) ورقم تسلسلي (`nonce`) داخل كل رسالة موقعة.",
+    ],
+    remediationSteps: [
+      "اعتماد معيار EIP-712 عبر مكتبة OpenZeppelin `EIP712` و`ECDSA` القياسية.",
+      "تخزين تجزئة كل رسالة منفذة في `mapping(bytes32 => bool)` قبل تنفيذ أي تحويل للأصول.",
+    ],
+  },
 ];
 
 // ─── 2) Official Bug Bounty Programs Directory ───────────────────────────────
@@ -1039,6 +1285,50 @@ interface BountyProgram {
 }
 
 const DEFAULT_PROGRAMS: BountyProgram[] = [
+  {
+    id: "immunefi-layerzero",
+    name: "LayerZero Cross-Chain Protocol (Immunefi Mega Bounty)",
+    platform: "Immunefi",
+    url: "https://immunefi.com/bug-bounty/layerzero/",
+    safeHarbor: true,
+    maxBounty: "$15,000,000 (أعلى مكافأة عالمية للعقود الذكية)",
+    inScopeSummary: "LayerZero Endpoint V1/V2 Smart Contracts, Ultra Light Node (ULN), Cross-Chain Messaging Verification (Local Fork PoC Only!)",
+    outOfScopeSummary: "Mainnet exploitation (Testing strictly prohibited on live mainnet — use local Foundry fork only!), phishing, DDoS",
+    focusAreas: ["Cross-Chain Message Verification", "Signature Replay", "ULN Proof Validation", "Solidity / Rust Contracts"],
+  },
+  {
+    id: "immunefi-sky-makerdao",
+    name: "Sky (MakerDAO) DeFi Protocol Bug Bounty",
+    platform: "Immunefi",
+    url: "https://immunefi.com/bug-bounty/sky/",
+    safeHarbor: true,
+    maxBounty: "$10,000,000 (Critical Smart Contract Bugs)",
+    inScopeSummary: "Core Vaults, Liquidation Engine, Price Oracles, Governance PauseProxy, USDS/DAI Minting Contracts (Local Foundry Fork Only)",
+    outOfScopeSummary: "Testing on live mainnet or public testnets, frontend DDoS, social engineering",
+    focusAreas: ["ERC-4626 / Vault Accounting", "Oracle Price Manipulation", "Liquidation Math Precision", "Flash Loan Governance"],
+  },
+  {
+    id: "immunefi-wormhole",
+    name: "Wormhole Cross-Chain Bridge Bug Bounty",
+    platform: "Immunefi",
+    url: "https://immunefi.com/bug-bounty/wormhole/",
+    safeHarbor: true,
+    maxBounty: "$10,000,000 (Critical Bridge & Guardian Bugs)",
+    inScopeSummary: "Wormhole Core Bridge Contracts (EVM, Solana/Rust, Sui/Move, CosmWasm), Guardian Signature Verification",
+    outOfScopeSummary: "Any transaction sent to live mainnet/testnet contracts (Local Fork PoC required), third-party dApps",
+    focusAreas: ["Guardian Quorum Bypass", "VAA Signature Verification", "Uninitialized Proxy Implementation", "Token Bridge Decimal Normalization"],
+  },
+  {
+    id: "immunefi-aave-eigenlayer",
+    name: "Aave & EigenLayer DeFi / Restaking Bounties",
+    platform: "Immunefi",
+    url: "https://immunefi.com/explore/",
+    safeHarbor: true,
+    maxBounty: "$1,000,000 – $2,000,000+",
+    inScopeSummary: "Lending Pools, Restaking StrategyManager, DelegationManager, Slasher, FlashLoan Routers (Local Foundry Fork Only)",
+    outOfScopeSummary: "Live network state modification, governance proposals by trusted multisigs",
+    focusAreas: ["Read-Only Reentrancy", "Share Inflation / Rounding", "Withdrawal Delay Bypass", "Health Factor Calculation"],
+  },
   {
     id: "google-vrp",
     name: "Google Vulnerability Reward Program (VRP)",
@@ -1137,6 +1427,12 @@ app.get("/api/profile/:userId", async (req, res) => {
 // Access-Control-Allow-Origin: *
 // Access-Control-Allow-Credentials: true
 // Server: Apache/2.4.49
+
+// 6) نموذج عقد ذكي (Solidity / Immunefi DeFi Vault) للفحص الساكن:
+// (bool ok, ) = msg.sender.call{value: amount}("");
+// address signer = ecrecover(hash, v, r, s);
+// (, int256 answer, , , ) = priceFeed.latestRoundData();
+// require(tx.origin == owner, "Not owner");
 `;
 
 function runStaticAudit(input: string): { score: number; findings: AuditFinding[] } {
@@ -1152,6 +1448,42 @@ function runStaticAudit(input: string): { score: number; findings: AuditFinding[
     explanationAr: string;
     fixAr: string;
   }> = [
+    {
+      id: "solidity-reentrancy-call",
+      titleAr: "[Immunefi / Solidity] استدعاء خارجي منخفض المستوى (.call{value}) قد يسمح بـ Reentrancy",
+      cwe: "CWE-841 / SWC-107",
+      severity: "Critical",
+      regex: /\.call\s*\{\s*value\s*:/,
+      explanationAr: "إرسال ETH عبر .call{value: ...} يسلم التحكم للعقد المستلم وقد يؤدي إلى Reentrancy أو Read-Only Reentrancy إذا لم يتم تحديث الحالة أولاً.",
+      fixAr: "طبق نمط Checks-Effects-Interactions (CEI) واستخدم ReentrancyGuard (nonReentrant) من OpenZeppelin.",
+    },
+    {
+      id: "solidity-ecrecover-raw",
+      titleAr: "[Immunefi / Solidity] استدعاء ecrecover() مباشر بدون مكتبة ECDSA (احتمال تجاوز address(0))",
+      cwe: "CWE-347 / SWC-117",
+      severity: "Critical",
+      regex: /\becrecover\s*\(/,
+      explanationAr: "الدالة ecrecover تعيد address(0) عند فشل التوقيع وتقبل التواقيع المطاوعة (s-malleability)، مما قد يؤدي لتجاوز التحقق في الجسور.",
+      fixAr: "استخدم ECDSA.recover(digest, signature) مع EIP-712 وNonce وblock.chainid.",
+    },
+    {
+      id: "solidity-chainlink-stale",
+      titleAr: "[Immunefi / DeFi] قراءة latestRoundData() من أوراكل السعر بدون التحقق من updatedAt",
+      cwe: "CWE-345",
+      severity: "High",
+      regex: /\.latestRoundData\s*\(\s*\)/,
+      explanationAr: "عدم التحقق من updatedAt وanswer > 0 وansweredInRound يعرض البروتوكول للتسعير القديم (Stale Oracle Price) أثناء تقلب السوق.",
+      fixAr: "تحقق دائماً من require(answer > 0 && block.timestamp - updatedAt <= HEARTBEAT && answeredInRound >= roundId).",
+    },
+    {
+      id: "solidity-tx-origin",
+      titleAr: "[Immunefi / Solidity] استخدام tx.origin في التحقق من الصلاحيات",
+      cwe: "CWE-477 / SWC-115",
+      severity: "High",
+      regex: /tx\.origin/,
+      explanationAr: "الاعتماد على tx.origin يسمح لأي عقد وسيط باستغلال صلاحيات المالك عند تفاعله مع عقد خارجي.",
+      fixAr: "استخدم msg.sender دائماً للتحقق من الهوية والصلاحيات (Ownable / AccessControl).",
+    },
     {
       id: "sql-concat",
       titleAr: "دمج نصي مباشر داخل استعلام قاعدة بيانات (احتمال SQL Injection)",
@@ -2236,6 +2568,7 @@ ${reportFix}
 
   const handleCreativeRandomMix = async () => {
     const creativeSets = [
+      ["P27-FLASHLOAN-ORACLE-TWAP", "P25-READONLY-REENTRANCY", "P26-ERC4626-VAULT-INFLATION", "P28-BRIDGE-SIGNATURE-REPLAY"],
       ["P07-SUBDOMAIN-CNAME", "P10-COOKIE-SCOPE", "P06-CORS-CRED", "P08-OAUTH-REDIRECT"],
       ["P01-JS-ENDPOINT", "P23-AI-PROMPT-AGENCY", "P11-SSRF-FETCH", "P12-CLOUD-IMDS"],
       ["P13-CACHE-POISON", "P15-HTTP-DESYNC", "P14-CACHE-DECEPTION", "P09-JWT-WEAK"],
@@ -2696,6 +3029,147 @@ ${reportFix}
       {/* ── TAB 0: Deep Bug Bounty Verification Engine 2099 & GitHub Arsenal ── */}
       {activeTab === "deep2099" && (
         <div className="space-y-6">
+          {/* ── IMMUNEFI WEB3 & SMART CONTRACT MEGA-BOUNTY COMMAND HUB ── */}
+          <div className="rounded-2xl border border-cyan-500/40 bg-gradient-to-l from-cyan-950/40 via-[#070b18] to-purple-950/35 p-5 space-y-4 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-mono text-cyan-300">
+                  <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                  <span>IMMUNEFI WEB3 · SMART CONTRACT & DEFI MEGA-BOUNTY HUB ($50K – $15M)</span>
+                </div>
+                <h2 className="text-lg md:text-xl font-extrabold text-white mt-0.5">
+                  💎 مركز صيد ثغرات العقود الذكية وبروتوكولات Web3 / DeFi لمنصة <span className="text-cyan-300 font-mono">Immunefi</span>
+                </h2>
+                <p className="text-xs text-gray-300 mt-1 max-w-4xl">
+                  مجهز بالكامل بأدوات التحليل الساكن والرمزي والـ Fuzzing لعقود Solidity / Vyper / Rust / Move (Foundry Forge, Slither, Aderyn, Echidna, Medusa, Halmos, Mythril, Heimdall-rs) ولبنات ثغرات DeFi المركبة (Read-Only Reentrancy, ERC-4626 Share Inflation, Flash Loan Oracle Manipulation, Cross-Chain Bridge Signature Verification).
+                  <span className="text-emerald-300 font-bold"> القاعدة الذهبية لـ Immunefi: يُمنع تماماً التفاعل مع العقود على الشبكة الحية (Mainnet) — يتم بناء وإثبات كل PoC حصرياً داخل بيئة Foundry Local Fork المعزولة 100%!</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    const web3Prims = [
+                      "P27-FLASHLOAN-ORACLE-TWAP",
+                      "P25-READONLY-REENTRANCY",
+                      "P26-ERC4626-VAULT-INFLATION",
+                      "P28-BRIDGE-SIGNATURE-REPLAY",
+                    ];
+                    setSelectedPrimitives(web3Prims);
+                    void handleRunChainSynthesizer(web3Prims);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-l from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-xs font-extrabold text-white shadow-lg shadow-cyan-600/25"
+                >
+                  ⚡ تركيب سلسلة ثغرات Immunefi الرباعية (P25+P26+P27+P28)
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedVulnId("immunefi-reentrancy-readonly");
+                    setActiveTab("encyclopedia");
+                  }}
+                  className="px-3 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-xs font-bold text-cyan-200"
+                >
+                  📚 موسوعة ثغرات Immunefi & Solidity
+                </button>
+                <button
+                  onClick={() =>
+                    copyToClipboard(
+                      `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+import "forge-std/Test.sol";
+
+// برهان إثبات ثغرة قياسي لمنصة Immunefi يعمل حصرياً على نسخة Fork محلية معزولة 100%
+// التشغيل الآمن: forge test --fork-url $ETH_RPC_URL --match-test testImmunefiLocalForkPoC -vvvv
+contract ImmunefiExploitPoCTest is Test {
+    uint256 mainnetFork;
+
+    function setUp() public {
+        // استنساخ حالة البلوك محلياً بدون إرسال أي معاملة للشبكة الحية
+        mainnetFork = vm.createSelectFork(vm.envString("ETH_RPC_URL"));
+    }
+
+    function testImmunefiLocalForkPoC() public {
+        address attacker = makeAddr("whitehat_researcher");
+        vm.startPrank(attacker);
+        // 1. تسجيل أرصدة الخزنة والباحث قبل التنفيذ (Before-State Snapshot)
+        // 2. محاكاة سيناريو Read-Only Reentrancy أو ERC-4626 Precision Loss محلياً
+        // 3. إثبات فرق الأرصدة (Insolvency / Unauthorized Yield) عبر assertGt()
+        vm.stopPrank();
+    }
+}`,
+                      "immunefi-foundry-poc",
+                    )
+                  }
+                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white"
+                >
+                  {copied === "immunefi-foundry-poc" ? "✓ تم نسخ قالب Foundry PoC!" : "📋 نسخ قالب Foundry Fork PoC لـ Immunefi"}
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Immunefi Program Presets & Tool Triggers */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-1">
+              {[
+                {
+                  name: "LayerZero Protocol",
+                  bounty: "$15,000,000",
+                  target: "layerzero.network",
+                  focus: "Cross-Chain Bridge & ULN Verification (P28)",
+                  toolId: "foundry-forge",
+                },
+                {
+                  name: "Sky / MakerDAO",
+                  bounty: "$10,000,000",
+                  target: "sky.money",
+                  focus: "ERC-4626 Vaults, Oracles & Liquidations (P26/P27)",
+                  toolId: "slither",
+                },
+                {
+                  name: "Wormhole Bridge",
+                  bounty: "$10,000,000",
+                  target: "wormhole.com",
+                  focus: "Guardian Signatures & Proxy Implementation (P28)",
+                  toolId: "halmos",
+                },
+                {
+                  name: "Aave V3 & EigenLayer",
+                  bounty: "$2,000,000+",
+                  target: "aave.com",
+                  focus: "Read-Only Reentrancy & Health Factor Math (P25)",
+                  toolId: "echidna",
+                },
+              ].map((prog) => (
+                <div
+                  key={prog.name}
+                  className="p-3 rounded-xl bg-black/50 border border-cyan-500/25 flex flex-col justify-between gap-2"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-extrabold text-white">{prog.name}</span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300">
+                        {prog.bounty}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-gray-300 mt-1">{prog.focus}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <button
+                      onClick={() => void handleActivateTarget(prog.target)}
+                      className="flex-1 px-2.5 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/30 text-[11px] font-bold text-cyan-200"
+                    >
+                      🎯 تفعيل نطاق {prog.target}
+                    </button>
+                    <button
+                      onClick={() => void handleSimulateKaliTool(prog.toolId)}
+                      className="px-2.5 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-400/30 text-[11px] font-mono text-purple-200"
+                    >
+                      ⚡ {prog.toolId}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* 0. Self-Awareness & Coverage Diagnostic Matrix */}
           {selfAwareness && (
             <div className="rounded-2xl border border-purple-500/35 bg-gradient-to-l from-purple-950/35 via-[#0b0716] to-emerald-950/30 p-5 space-y-4">

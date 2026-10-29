@@ -57,8 +57,8 @@ export function AppShell({ children }: AppShellProps) {
   const [cpu, setCpu] = useState<number | null>(14);
   const [ram, setRam] = useState<number | null>(23);
   const [now, setNow] = useState(new Date());
-  const [scanPos, setScanPos] = useState(0);
-  const [pulse, setPulse] = useState(false);
+  const scanPos = 50;
+  const pulse = true;
   const [activeTarget, setActiveTarget] = useState<string>(() => {
     try {
       return localStorage.getItem("cybernova_active_target") || "bughunters.google.com";
@@ -133,20 +133,8 @@ export function AppShell({ children }: AppShellProps) {
   });
 
   useEffect(() => {
-    const tick = setInterval(() => setNow(new Date()), 1000);
+    const tick = setInterval(() => setNow(new Date()), 15000);
     return () => clearInterval(tick);
-  }, []);
-
-  useEffect(() => {
-    const tick = setInterval(() => setScanPos((p) => (p + 0.4) % 100), 20);
-    return () => clearInterval(tick);
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPulse((p) => !p);
-    }, 1500);
-    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {

@@ -43,7 +43,8 @@ export interface VulnPrimitive {
     | "5. البروتوكولات والكاش (HTTP Desync & Cache)"
     | "6. السحابة والبنية التحتية (Cloud & SSRF)"
     | "7. منطق الأعمال والتزامن (Business Logic & Race)"
-    | "8. الذكاء الاصطناعي وسلاسل الإمداد (AI Agents & CI/CD)";
+    | "8. الذكاء الاصطناعي وسلاسل الإمداد (AI Agents & CI/CD)"
+    | "9. العقود الذكية وبروتوكولات Web3 / Immunefi (Smart Contracts & DeFi)";
   baseCvss: number;
   roleInChain: "entry" | "pivot" | "impact" | "universal";
   signalAr: string;
@@ -147,10 +148,26 @@ export const KALI_ARSENAL_64: KaliToolEntry[] = [
   { id: "sstimap", name: "SSTImap (Template Injection Safe Auditor)", category: "5. اكتشاف المعاملات والمجلدات المخفية (Parameter & Content Discovery)", commandTemplate: "sstimap -u 'https://{target}/render?tpl=test' --verify-safe", purposeAr: "فحص آمن لتقييم مدى عزل محركات القوالب (Jinja2, Twig, Freemarker, Handlebars) ضد حقن القوالب.", safeEquivalent: "config-auditor" },
   { id: "julius", name: "Praetorian Julius (AI/LLM Service Fingerprinter)", category: "12. أمان الذكاء الاصطناعي والوكلاء والجنائيات الرقمية (AI/LLM & Forensics)", commandTemplate: "julius scan https://{target}", purposeAr: "تحديد وتوصيف خدمات الذكاء الاصطناعي والنماذج اللغوية (Ollama, vLLM, LiteLLM, OpenAI Proxy) على الهدف.", safeEquivalent: "pipeline" },
   { id: "kosty", name: "Kosty Cloud Attack-Surface & IAM Auditor", category: "11. أمان السحابة والحاويات وKubernetes (Cloud & Container Security)", commandTemplate: "kosty audit --domain {target} --checks iam,s3,apigateway", purposeAr: "رسم خريطة سطح الهجوم السحابي واكتشاف فجوات الصلاحيات وإعدادات API Gateway وS3 الخاطئة.", safeEquivalent: "config-auditor" },
+
+  // Category 13: Immunefi Web3, DeFi & Smart Contract Auditing (8 tools)
+  { id: "foundry-forge", name: "Foundry Forge (Immunefi Local Mainnet Fork PoC)", category: "13. أمان العقود الذكية وبرامج Immunefi Web3/DeFi (Smart Contract & DeFi Audit)", commandTemplate: "forge test --fork-url $ETH_RPC_URL --match-test testImmunefiPoC -vvvv", purposeAr: "بناء وتشغيل براهين إثبات الثغرات (Immunefi PoC) على نسخة Fork محلية معزولة 100% دون لمس الشبكة الحية.", safeEquivalent: "github-auditor" },
+  { id: "slither", name: "Slither (Trail of Bits Solidity & Vyper Static Analyzer)", category: "13. أمان العقود الذكية وبرامج Immunefi Web3/DeFi (Smart Contract & DeFi Audit)", commandTemplate: "slither . --detect reentrancy-eth,arbitrary-send-erc20,controlled-delegatecall,uninitialized-state", purposeAr: "التحليل الساكن لعقود Solidity وVyper لاكتشاف ثغرات Reentrancy وDelegatecall وتصادم التخزين (Storage Collision).", safeEquivalent: "github-auditor" },
+  { id: "aderyn", name: "Cyfrin Aderyn (Rust AST Smart Contract Auditor)", category: "13. أمان العقود الذكية وبرامج Immunefi Web3/DeFi (Smart Contract & DeFi Audit)", commandTemplate: "aderyn . --output immunefi-audit-report.md", purposeAr: "محلل AST فائق السرعة بلغة Rust لفحص عقود DeFi وتوليد تقارير الثغرات الحرجة المتوافقة مع معايير Immunefi.", safeEquivalent: "github-auditor" },
+  { id: "echidna", name: "Echidna (Property-Based EVM Invariant Fuzzer)", category: "13. أمان العقود الذكية وبرامج Immunefi Web3/DeFi (Smart Contract & DeFi Audit)", commandTemplate: "echidna . --contract VaultInvariantTest --test-mode assertion", purposeAr: "اختبار Fuzzing القائم على الخصائص لكسر ثوابت السيولة وحسابات الأسهم في خزائن ERC-4626 وبروتوكولات الإقراض.", safeEquivalent: "github-auditor" },
+  { id: "medusa-fuzzer", name: "Medusa (Parallel Coverage-Guided EVM Fuzzer)", category: "13. أمان العقود الذكية وبرامج Immunefi Web3/DeFi (Smart Contract & DeFi Audit)", commandTemplate: "medusa fuzz --config medusa.json", purposeAr: "محرك Fuzzing متوازٍ عالي السرعة لاكتشاف سلاسل المعاملات المعقدة التي تؤدي إلى استنزاف السيولة أو تجميد العقود.", safeEquivalent: "github-auditor" },
+  { id: "halmos", name: "a16z Halmos (Symbolic Testing for EVM Smart Contracts)", category: "13. أمان العقود الذكية وبرامج Immunefi Web3/DeFi (Smart Contract & DeFi Audit)", commandTemplate: "halmos --contract SymbolicVaultAudit", purposeAr: "التنفيذ الرمزي الرياضي لإثبات ثغرات التقريب وفقدان الدقة الحسابية وتضخم الأسهم في العقود الذكية.", safeEquivalent: "github-auditor" },
+  { id: "mythril", name: "ConsenSys Mythril (EVM Bytecode Symbolic Analyzer)", category: "13. أمان العقود الذكية وبرامج Immunefi Web3/DeFi (Smart Contract & DeFi Audit)", commandTemplate: "myth analyze contracts/Bridge.sol --solv 0.8.24 --execution-timeout 90", purposeAr: "تحليل بايت كود EVM رمزياً لكشف مسارات سحب الأصول غير المصرح بها وتجاوز التحقق من التواقيع.", safeEquivalent: "github-auditor" },
+  { id: "heimdall-rs", name: "Heimdall-rs (EVM Bytecode Decompiler & Proxy Inspector)", category: "13. أمان العقود الذكية وبرامج Immunefi Web3/DeFi (Smart Contract & DeFi Audit)", commandTemplate: "heimdall decompile $CONTRACT_ADDRESS --rpc-url $ETH_RPC_URL -vvv", purposeAr: "تفكيك بايت كود العقود غير الموثقة واستخراج منطق العقود الخلفية (Proxy Implementations) ومحددات الدوال.", safeEquivalent: "github-auditor" },
 ];
 
-// ── 2. 50 Elite GitHub Security Projects (Live 2026 Stars & Methodologies) ───
+// ── 2. 56 Elite GitHub Security Projects (Live 2026 Stars & Methodologies) ───
 export const GITHUB_ARSENAL_40: GithubArsenalEntry[] = [
+  { id: "foundry-rs", name: "foundry-rs/foundry", category: "Immunefi Web3 Smart Contract PoC & Fork Testing", stars: "9.4k+", url: "https://github.com/foundry-rs/foundry", integratedModule: "Immunefi Web3 & Smart Contract Studio", description: "الإطار القياسي الأول عالمياً في برامج Immunefi لكتابة وتشغيل براهين إثبات الثغرات (PoC) على Fork محلي معزول.", methodology: "استنساخ حالة الشبكة عند رقم بلوك محدد (vm.createSelectFork) وإثبات الأثر المالي بدقة بدون لمس الشبكة الحية." },
+  { id: "defihacklabs", name: "SunWeb3Sec/DeFiHackLabs", category: "Immunefi & DeFi Real-World Exploit PoC Corpus", stars: "6.2k+", url: "https://github.com/SunWeb3Sec/DeFiHackLabs", integratedModule: "Immunefi Web3 & Encyclopedia", description: "أكبر مستودع تعليمي يضم مئات البراهين العملية (Foundry PoCs) لثغرات DeFi وWeb3 الحقيقية وتصنيفاتها.", methodology: "دراسة أنماط Flash Loan وRead-Only Reentrancy وERC-4626 Inflation وتحويلها إلى قواعد فحص." },
+  { id: "crytic-slither", name: "crytic/slither", category: "Solidity & Vyper Static Security Analyzer", stars: "5.6k+", url: "https://github.com/crytic/slither", integratedModule: "GitHub & Smart Contract Code Auditor", description: "المحلل الساكن الأشهر من Trail of Bits لاكتشاف أكثر من 90 فئة من ثغرات العقود الذكية في ثوانٍ.", methodology: "تحليل شجرة الصياغة ومخطط تدفق التحكم (CFG) لرصد استدعاءات الخارج قبل تحديث الحالة." },
+  { id: "cyfrin-aderyn", name: "Cyfrin/aderyn", category: "Rust AST Smart Contract Security Scanner", stars: "1.4k+", url: "https://github.com/Cyfrin/aderyn", integratedModule: "GitHub & Smart Contract Code Auditor", description: "ماسح عقود ذكية حديث مبني بلغة Rust لتحليل عقود بروتوكولات Web3 وتوليد تقارير فورية.", methodology: "فحص AST لعقود Solidity واكتشاف أخطاء Oracles وDecimal Precision وAccess Control." },
+  { id: "crytic-echidna", name: "crytic/echidna", category: "EVM Property-Based Invariant Fuzzer", stars: "3.1k+", url: "https://github.com/crytic/echidna", integratedModule: "Immunefi Web3 Invariant Tester", description: "محرك Fuzzing متخصص في كسر الثوابت الرياضية والمالية (Invariants) في العقود الذكية.", methodology: "توليد سلاسل معاملات عشوائية ذكية للتحقق من عدم إمكانية سحب أصول أكثر مما تم إيداعه." },
+  { id: "a16z-halmos", name: "a16z/halmos", category: "EVM Symbolic Testing & Formal Verification", stars: "1.2k+", url: "https://github.com/a16z/halmos", integratedModule: "Immunefi Web3 Symbolic Verifier", description: "أداة التحقق الرمزي من a16z لإثبات خلو دوال العقود الذكية من ثغرات الحسابات الرياضية لجميع المدخلات الممكنة.", methodology: "تحويل اختبارات Foundry إلى معادلات رمزية (SMT Solver) لاكتشاف الحالات الحدية المخفية." },
   { id: "strix", name: "usestrix/strix", category: "AI-Powered Vulnerability Assessment", stars: "72.6k+", url: "https://github.com/usestrix/strix", integratedModule: "Autonomous 4-Stage Pipeline + AI Agent", description: "منصة ذكاء اصطناعي مفتوحة المصدر لاكتشاف الثغرات في التطبيقات واقتراح الترقيعات البرمجية.", methodology: "دمج فهم الكود والواجهات مع التحقق العملي غير المدمر وتوليد كود الإصلاح." },
   { id: "cyberstrike-ai", name: "AIPentest/CyberStrikeAI", category: "AI-Native Governed Security Execution", stars: "8.1k+", url: "https://github.com/AIPentest/CyberStrikeAI", integratedModule: "24/7 Cloud Brain & Persistent Session Memory", description: "منظومة أمن سيبراني مدعومة بالذكاء الاصطناعي تحول النية التكتيكية إلى تنفيذ محكوم وتحول الأدلة إلى ذاكرة تشغيلية مستمرة.", methodology: "حفظ كل عملية فحص ودليل في ذاكرة الجلسة المستمرة بحيث تطور كل دورة الدورة التي تليها." },
   { id: "sn1per", name: "1N3/Sn1per", category: "Attack Surface Management & Continuous Recon", stars: "11.4k+", url: "https://github.com/1N3/Sn1per", integratedModule: "HomeDashboard + Continuous ASM Engine", description: "منصة إدارة سطح الهجوم والاستطلاع المستمر لربط النطاقات والمنافذ والثغرات والتقارير.", methodology: "جدولة فحوصات السطح الهجومي وتحديث لوحة القيادة بالنتائج الموثقة لحظياً." },
@@ -541,6 +558,62 @@ export const VULN_PRIMITIVES_24: VulnPrimitive[] = [
     safeVerifyCmd: "zizmor .github/workflows/",
     remediationAr: "تجنب pull_request_target مع الكود غير الموثوق، وتمرير المدخلات عبر متغيرات بيئة (env:) بدلاً من ${{ ... }} المباشر.",
   },
+  {
+    id: "P25-READONLY-REENTRANCY",
+    code: "P25",
+    nameAr: "إعادة الدخول القرائية وتلاعب أسعار مجمعات السيولة (Immunefi Read-Only Reentrancy)",
+    nameEn: "Smart Contract Read-Only Reentrancy via Unupdated Pool View State",
+    cwe: "CWE-841",
+    layer: "9. العقود الذكية وبروتوكولات Web3 / Immunefi (Smart Contracts & DeFi)",
+    baseCvss: 9.8,
+    roleInChain: "pivot",
+    signalAr: "استدعاء خارجي (مثل إرجاع ETH في عملية سحب سيولة) قبل تحديث إجمالي الأسهم، مع اعتماد عقد إقراض خارجي على دالة view مثل get_virtual_price().",
+    outputArtifactAr: "تضخيم سعر ضمانات LP مؤقتاً داخل نفس المعاملة واقتراض أصول تفوق قيمة الضمان الحقيقية على Fork محلي.",
+    safeVerifyCmd: "slither . --detect reentrancy-eth,reentrancy-no-eth",
+    remediationAr: "تطبيق نمط Checks-Effects-Interactions (CEI) بصرامة ومشاركة قفل ReentrancyGuard مع دوال القراءة الحساسة (Read-Only Reentrancy Lock).",
+  },
+  {
+    id: "P26-ERC4626-VAULT-INFLATION",
+    code: "P26",
+    nameAr: "تضخم أسهم المودع الأول وفقدان الدقة الحسابية في خزائن ERC-4626 (Vault Share Inflation)",
+    nameEn: "ERC-4626 First-Depositor Share Inflation & Rounding Precision Loss",
+    cwe: "CWE-682",
+    layer: "9. العقود الذكية وبروتوكولات Web3 / Immunefi (Smart Contracts & DeFi)",
+    baseCvss: 9.4,
+    roleInChain: "impact",
+    signalAr: "حساب الأسهم عبر الصيغة assets * totalSupply / totalAssets بدون Virtual Offset أو حرق أسهم أولية (Dead Shares)، مع إمكانية التبرع المباشر للعقد.",
+    outputArtifactAr: "تقريب حصة المودع التالي إلى الصفر (0 shares) بسبب القسمة الصحيحة واستحواذ المودع الأول على الإيداع (إثبات عبر Foundry Fork).",
+    safeVerifyCmd: "forge test --match-test testERC4626Rounding -vvvv",
+    remediationAr: "استخدام Virtual Shares & Assets Offset (مثل _decimalsOffset في OpenZeppelin v5) أو حرق حصة أولية عند إنشاء الخزنة.",
+  },
+  {
+    id: "P27-FLASHLOAN-ORACLE-TWAP",
+    code: "P27",
+    nameAr: "التلاعب بأوراكل الأسعار الفوري عبر القروض الخاطفة (Flash Loan Oracle Manipulation)",
+    nameEn: "Flash Loan Spot-Price AMM Oracle Manipulation & Stale Chainlink Feed",
+    cwe: "CWE-345",
+    layer: "9. العقود الذكية وبروتوكولات Web3 / Immunefi (Smart Contracts & DeFi)",
+    baseCvss: 9.9,
+    roleInChain: "entry",
+    signalAr: "اعتماد عقد التسعير على رصيد زوج AMM فوري (getReserves / balanceOf) أو استدعاء latestRoundData() من Chainlink بدون فحص updatedAt وansweredInRound.",
+    outputArtifactAr: "انحراف لحظي في تقييم الأصول داخل معاملة واحدة يؤدي إلى تصفية غير عادلة أو اقتراض مفرط (يثبت محلياً عبر Foundry).",
+    safeVerifyCmd: "aderyn . --output oracle-audit.md",
+    remediationAr: "استخدام أوراكل Chainlink مع التحقق من حداثة السعر (updatedAt) ودمجه مع TWAP زمني لا يقل عن 30 دقيقة.",
+  },
+  {
+    id: "P28-BRIDGE-SIGNATURE-REPLAY",
+    code: "P28",
+    nameAr: "تجاوز التحقق من رسائل الجسور وإعادة استخدام تواقيع EIP-712 (Cross-Chain Bridge Bypass)",
+    nameEn: "Cross-Chain Bridge Message Verification Bypass & Signature Replay",
+    cwe: "CWE-347",
+    layer: "9. العقود الذكية وبروتوكولات Web3 / Immunefi (Smart Contracts & DeFi)",
+    baseCvss: 10.0,
+    roleInChain: "impact",
+    signalAr: "عدم التحقق من نتيجة ecrecover != address(0)، أو غياب block.chainid وnonce وعنوان العقد من DOMAIN_SEPARATOR في رسائل الجسور عبر الشبكات.",
+    outputArtifactAr: "قبول رسالة جسر غير موقعة أو معاد استخدامها من شبكة فرعية (إثبات حتمي داخل Foundry Local Test).",
+    safeVerifyCmd: "halmos --contract BridgeSignatureSymbolicTest",
+    remediationAr: "استخدام مكتبة OpenZeppelin ECDSA وEIP712 القياسية مع تضمين chainId وnonce وعنوان العقد ومنع التواقيع المكررة.",
+  },
 ];
 
 // ── 4. Combinatorial Multi-Vulnerability Synthesizer (Creative Chaining Engine) ─
@@ -648,11 +721,12 @@ export function generateCreativePresetChains(rawTarget: string): SynthesizedChai
     ["P05-GRAPHQL-INTRO", "P16-RACE-TOCTOU", "P03-BFLA-ADMIN"],
     ["P17-SAML-XSW", "P03-BFLA-ADMIN", "P02-BOLA-IDOR"],
     ["P21-PROTO-POLLUTION", "P19-POSTMESSAGE-DOM", "P20-CSWSH-WS"],
+    ["P27-FLASHLOAN-ORACLE-TWAP", "P25-READONLY-REENTRANCY", "P26-ERC4626-VAULT-INFLATION"],
   ];
   return presets.map((ids) => synthesizeCustomMultiChain(ids, rawTarget));
 }
 
-// ── 5. 2,580+ Deep Security Research & Pattern Knowledge Index ──────────────
+// ── 5. 3,350+ Deep Security Research & Pattern Knowledge Index ──────────────
 export interface IndexedSecurityPattern {
   id: string;
   titleAr: string;
@@ -668,6 +742,8 @@ export interface IndexedSecurityPattern {
 }
 
 const TARGET_SURFACES_17 = [
+  { id: "immunefi-evm-solidity", nameAr: "عقود Solidity وVyper الذكية وخزائن السيولة (Immunefi EVM & DeFi Vaults)", stack: "Solidity / Foundry / ERC-4626 / Uniswap V4 / Aave" },
+  { id: "immunefi-l2-bridges", nameAr: "جسور الشبكات وبروتوكولات L1/L2 (Immunefi Cross-Chain Bridges & Rollups)", stack: "Rust / Move / Cairo / LayerZero / Wormhole / Arbitrum" },
   { id: "rest-v1-v2", nameAr: "واجهات REST API (v1/v2 Shadow Versioning)", stack: "Node.js / Express / Fastify / Go" },
   { id: "graphql-apollo", nameAr: "مخططات GraphQL وعقد Resolvers المتداخلة", stack: "Apollo / Hasura / HotChocolate" },
   { id: "nextjs-ssr", nameAr: "تطبيقات Next.js / React SSR وServer Actions", stack: "Next.js App Router / Edge Middleware" },
@@ -697,16 +773,16 @@ const AUDIT_PHASES_6 = [
 ];
 
 export function getCorpusStats() {
-  const patternCount = VULN_PRIMITIVES_24.length * TARGET_SURFACES_17.length * AUDIT_PHASES_6.length; // 24 * 17 * 6 = 2,448
+  const patternCount = VULN_PRIMITIVES_24.length * TARGET_SURFACES_17.length * AUDIT_PHASES_6.length; // 28 * 19 * 6 = 3,192
   return {
-    kaliToolsCount: KALI_ARSENAL_64.length, // 64
-    kaliCategoriesCount: 12,
-    githubProjectsCount: GITHUB_ARSENAL_40.length, // 40
-    vulnPrimitivesCount: VULN_PRIMITIVES_24.length, // 24
-    targetSurfacesCount: TARGET_SURFACES_17.length, // 17
-    synthesizedPatternsCount: patternCount, // 2,448
+    kaliToolsCount: KALI_ARSENAL_64.length, // 78
+    kaliCategoriesCount: 13,
+    githubProjectsCount: GITHUB_ARSENAL_40.length, // 56
+    vulnPrimitivesCount: VULN_PRIMITIVES_24.length, // 28
+    targetSurfacesCount: TARGET_SURFACES_17.length, // 19
+    synthesizedPatternsCount: patternCount, // 3,192
     totalIndexedKnowledgeItems:
-      patternCount + KALI_ARSENAL_64.length + GITHUB_ARSENAL_40.length + VULN_PRIMITIVES_24.length, // 2,576+
+      patternCount + KALI_ARSENAL_64.length + GITHUB_ARSENAL_40.length + VULN_PRIMITIVES_24.length, // 3,354
   };
 }
 

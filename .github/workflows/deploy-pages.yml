@@ -44,6 +44,16 @@ jobs:
         run: |
           pnpm --filter @workspace/kali-panel run build
           cp artifacts/kali-panel/dist/public/index.html artifacts/kali-panel/dist/public/404.html
+          for route in bug-bounty-studio vuln-encyclopedia code-auditor dashboard desktop kali-terminal mission-tracker vuln-center scanner agent live-agent memory reports; do
+            mkdir -p "artifacts/kali-panel/dist/public/$route"
+            cp artifacts/kali-panel/dist/public/index.html "artifacts/kali-panel/dist/public/$route/index.html"
+          done
+          MAIN_JS=$(ls artifacts/kali-panel/dist/public/assets/index-*.js | head -n 1)
+          if [ -n "$MAIN_JS" ]; then
+            cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index-CGaem1qQ.js || true
+            cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index-BOeZlOmc.js || true
+            cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index.js || true
+          fi
           touch artifacts/kali-panel/dist/public/.nojekyll
 
       - name: Configure Pages

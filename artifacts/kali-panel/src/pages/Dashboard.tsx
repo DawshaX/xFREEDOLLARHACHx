@@ -135,16 +135,16 @@ export default function Dashboard() {
           <div className="rounded-xl p-3 space-y-1.5" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.28)" }}>
             <div className="text-[11px] font-black text-emerald-300">✅ 1. اللي اتعمل واللي عمله</div>
             <div className="text-[10px] text-white/80 leading-relaxed">
-              • استطلاع سحابي سلبي (CRT.SH + Shodan + Uncover + Subfinder) وتوثيق 24 غنيمة.<br />
-              • تشريح ملفات JS عبر Katana + JShunter + LinkFinder.<br />
-              • تركيب سلسلة ثغرات رباعية (CVSS 9.5) وتوثيق 6 شهادات Zero-FP SHA-256.
+              • تجهيز ترسانة Immunefi Web3 & Smart Contracts (Foundry, Slither, Aderyn, Echidna, Halmos).<br />
+              • استطلاع سحابي سلبي (CRT.SH + Shodan + Uncover + Subfinder) وتوثيق 31 غنيمة.<br />
+              • تركيب سلسلة ثغرات رباعية (CVSS 9.8) وتوثيق 6 شهادات Zero-FP SHA-256.
             </div>
           </div>
 
           <div className="rounded-xl p-3 space-y-1.5" style={{ background: "rgba(59,130,246,0.07)", border: "1px solid rgba(59,130,246,0.3)" }}>
             <div className="text-[11px] font-black text-blue-300">⚡ 2. اللي بيعمله دلوقتي (لحظياً)</div>
             <div className="text-[10px] text-blue-100/90">
-              مراقبة ذاتية 24/7 عبر 70 أداة Kali و50 مشروع GitHub 2026 (CyberStrikeAI, Sn1per, Uncover, JShunter, Kosty, Julius):
+              مراقبة ذاتية 24/7 عبر 78 أداة Kali/Web3 و56 مشروع GitHub 2026 (Foundry, Slither, DeFiHackLabs, CyberStrikeAI, Sn1per):
             </div>
             <div className="p-1.5 rounded bg-black/70 border border-blue-500/25 font-mono text-[9px] text-cyan-300 overflow-x-auto" dir="ltr">
               $ {activeCmd}

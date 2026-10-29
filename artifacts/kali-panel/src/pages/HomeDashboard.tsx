@@ -1360,6 +1360,9 @@ export default function HomeDashboard() {
                   </div>
                   <div className="space-y-1.5 text-[10px] text-white/80 leading-relaxed max-h-36 overflow-y-auto pr-1">
                     <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
+                      ✔️ تجهيز ترسانة Immunefi Web3 & DeFi (78 أداة Kali/Foundry/Slither/Aderyn/Halmos + 56 مشروع GitHub + 28 لبنة ثغرات).
+                    </div>
+                    <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
                       ✔️ استطلاع سلبي كامل (CRT.SH + Shodan + Uncover + Subfinder) وتوثيق النطاقات والمنافذ.
                     </div>
                     <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
