@@ -205,10 +205,10 @@ export default function VulnCenter() {
     } catch (e) { pushLog("خطأ", `فشلت المزامنة: ${e instanceof Error ? e.message : "خطأ غير معروف"}`); }
   };
 
-  const severityPieData = SEVS.map((s) => ({ name: s, value: stats?.bySeverity[s] ?? 0 })).filter((d) => d.value > 0);
+  const severityPieData = SEVS.map((s) => ({ name: s, value: stats?.bySeverity?.[s] ?? 0 })).filter((d) => d.value > 0);
   const sourceBarData = Object.entries(stats?.bySource ?? {}).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8);
-  const dailyChartData = [...(daily?.days ?? [])].sort((a, b) => a.day.localeCompare(b.day)).slice(-30)
-    .map((d) => ({ name: fmtDate(d.day), day: d.day, CRITICAL: d.CRITICAL ?? 0, HIGH: d.HIGH ?? 0, MEDIUM: d.MEDIUM ?? 0, LOW: d.LOW ?? 0, total: d.total ?? 0 }));
+  const dailyChartData = [...(daily?.days ?? [])].sort((a, b) => String(a.day ?? "").localeCompare(String(b.day ?? ""))).slice(-30)
+    .map((d) => ({ name: fmtDate(d.day ?? new Date().toISOString()), day: d.day ?? "", CRITICAL: d.CRITICAL ?? 0, HIGH: d.HIGH ?? 0, MEDIUM: d.MEDIUM ?? 0, LOW: d.LOW ?? 0, total: d.total ?? 0 }));
 
   const elapsed = sessionNow - sessionStart;
   const hh = Math.floor(elapsed / 3600000);

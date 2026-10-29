@@ -109,7 +109,7 @@ export default function CveLive() {
                   style={{ background: `${color}06`, border: `1px solid ${color}18` }}>
                   <div className="text-[9px] font-black font-mono uppercase mb-1" style={{ color: `${color}88` }}>{s}</div>
                   <div className="text-lg font-black font-mono" style={{ color, textShadow: `0 0 10px ${color}55` }}>
-                    {(stats?.bySeverity[s] ?? 0).toLocaleString()}
+                    {(stats?.bySeverity?.[s] ?? 0).toLocaleString()}
                   </div>
                 </div>
               );
@@ -134,7 +134,7 @@ export default function CveLive() {
               </div>
               <div className="flex justify-between">
                 <span style={{ color: "rgba(255,255,255,0.35)" }}>جُلب:</span>
-                <span style={{ color: "rgba(255,255,255,0.7)" }}>{job.totalFetched.toLocaleString()} / {job.totalAvailable ? job.totalAvailable.toLocaleString() : "?"}</span>
+                <span style={{ color: "rgba(255,255,255,0.7)" }}>{(job.totalFetched ?? 0).toLocaleString()} / {job.totalAvailable ? job.totalAvailable.toLocaleString() : "?"}</span>
               </div>
               <div className="flex justify-between">
                 <span style={{ color: "rgba(255,255,255,0.35)" }}>صفحات:</span>

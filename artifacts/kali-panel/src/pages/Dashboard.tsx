@@ -150,8 +150,8 @@ export default function Dashboard() {
           </div>
           {dbStats && !dbLoading && (
             <div className="flex items-center gap-4 text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
-              <span style={{ color: "#44ff88" }}><span className="font-black">{dbStats.total.toLocaleString()}</span> ثغرة</span>
-              <span>{Object.keys(dbStats.bySource).length} مصادر</span>
+              <span style={{ color: "#44ff88" }}><span className="font-black">{(dbStats.total ?? 0).toLocaleString()}</span> ثغرة</span>
+              <span>{Object.keys(dbStats.bySource ?? {}).length} مصادر</span>
             </div>
           )}
           {syncing && <span className="text-[10px] font-black font-mono animate-pulse" style={{ color: "#ffaa44" }}>● مزامنة...</span>}
@@ -191,7 +191,7 @@ export default function Dashboard() {
                   <AlertTriangle className="w-3.5 h-3.5 text-red-400" />توزيع الخطورة
                 </h4>
                 {SEVS.map((s) => {
-                  const cnt = dbStats?.bySeverity[s] ?? 0;
+                  const cnt = dbStats?.bySeverity?.[s] ?? 0;
                   const total = dbStats?.total ?? 1;
                   const pct = total > 0 ? (cnt / total) * 100 : 0;
                   return (
@@ -328,7 +328,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex justify-between">
                       <span style={{ color: "rgba(255,255,255,0.35)" }}>جُلب</span>
-                      <span style={{ color: "rgba(255,255,255,0.8)" }}>{job.totalFetched.toLocaleString()} / {job.totalAvailable > 0 ? job.totalAvailable.toLocaleString() : "?"}</span>
+                      <span style={{ color: "rgba(255,255,255,0.8)" }}>{(job.totalFetched ?? 0).toLocaleString()} / {(job.totalAvailable ?? 0) > 0 ? job.totalAvailable.toLocaleString() : "?"}</span>
                     </div>
                     {syncing && job.totalAvailable > 0 && (
                       <div className="mt-1.5">

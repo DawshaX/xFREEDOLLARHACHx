@@ -16,7 +16,14 @@ export default function Files() {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = async () => setList(await jsonRequest<FileRow[]>("/files"));
+  const load = async () => {
+    try {
+      const res = await jsonRequest<FileRow[]>("/files");
+      setList(Array.isArray(res) ? res : []);
+    } catch {
+      setList([]);
+    }
+  };
 
   useEffect(() => {
     load();

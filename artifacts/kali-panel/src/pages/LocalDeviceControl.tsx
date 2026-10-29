@@ -133,7 +133,7 @@ export default function LocalDeviceControl() {
         setPreflight(d);
         setActiveSection("fingerprint");
         if (d.connected) {
-          addLine({ kind: "system", text: `✅ Fingerprint: ${d.hostname} [${d.platform}] — ${d.toolCount ?? d.tools.length} أداة`, ts: Date.now() });
+          addLine({ kind: "system", text: `✅ Fingerprint: ${d.hostname} [${d.platform}] — ${d.toolCount ?? (d.tools ?? []).length} أداة`, ts: Date.now() });
         } else {
           addLine({ kind: "error", text: "❌ لا يوجد وكيل متصل", ts: Date.now() });
         }
@@ -277,7 +277,7 @@ export default function LocalDeviceControl() {
           <div className="ms-auto flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-mono"
             style={{ color: "rgba(52,211,153,0.7)", background: "rgba(52,211,153,0.05)", border: "1px solid rgba(52,211,153,0.15)" }}>
             <CheckCircle className="w-3 h-3" />
-            {preflight.hostname} · {preflight.toolCount ?? preflight.tools.length} أداة
+            {preflight.hostname} · {preflight.toolCount ?? (preflight.tools ?? []).length} أداة
           </div>
         )}
       </div>

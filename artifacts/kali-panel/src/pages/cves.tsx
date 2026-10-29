@@ -16,16 +16,17 @@ export default function Cves() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [severity, setSeverity] = useState<string | undefined>(undefined);
 
-  const { data: cves, isLoading } = useQuery<CveItem[]>({
+  const { data: rawCves, isLoading } = useQuery<CveItem[] | { items?: CveItem[]; cves?: CveItem[]; results?: CveItem[] }>({
     queryKey: ["cves-search", debouncedSearch, severity],
     queryFn: () => {
       const p = new URLSearchParams();
       if (debouncedSearch) p.set("q", debouncedSearch);
       if (severity) p.set("severity", severity);
       p.set("limit", "50");
-      return jsonRequest<CveItem[]>(`/cve/db/search?${p}`);
+      return jsonRequest<CveItem[] | { items?: CveItem[]; cves?: CveItem[]; results?: CveItem[] }>(`/cve/db/search?${p}`);
     },
   });
+  const cves = Array.isArray(rawCves) ? rawCves : (rawCves?.items ?? rawCves?.cves ?? rawCves?.results ?? []);
 
   return (
     <div className="min-h-screen p-5 space-y-5" style={{ background: "linear-gradient(180deg,#060010 0%,#03000a 100%)" }} dir="rtl">

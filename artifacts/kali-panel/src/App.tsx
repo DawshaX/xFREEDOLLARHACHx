@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, Component, type ReactNode } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -83,12 +83,54 @@ const VulnsPage = lazy(() => import("@/pages/VulnsPage"));
 const MissionTrackerPage = lazy(() => import("@/pages/MissionTracker"));
 const LocalDeviceControl = lazy(() => import("@/pages/LocalDeviceControl"));
 const BugBountyStudio = lazy(() => import("@/pages/BugBountyStudio"));
+const NovaKnowledge = lazy(() => import("@/pages/nova-knowledge"));
+const AgentV3 = lazy(() => import("@/pages/agent-v3"));
 import { Placeholder } from "@/pages/Placeholder";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false } },
 });
+
+class PageErrorBoundary extends Component<
+  { children: ReactNode; resetKey?: string },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode; resetKey?: string }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidUpdate(prevProps: { resetKey?: string }) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, error: null });
+    }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center space-y-4" dir="rtl">
+          <div className="p-4 rounded-2xl border border-red-500/30 bg-red-950/20 max-w-lg space-y-3">
+            <ShieldAlert className="w-8 h-8 text-red-400 mx-auto" />
+            <div className="text-sm font-black text-red-300">تم التقاط خطأ تشغيلي وعزل الصفحة تلقائياً</div>
+            <div className="text-xs font-mono text-slate-400 break-all">
+              {this.state.error?.message || "Unexpected Render Error"}
+            </div>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="px-4 py-2 rounded-xl text-xs font-mono font-bold bg-purple-600/30 border border-purple-500/40 text-purple-200 hover:bg-purple-600/50"
+            >
+              إعادة محاولة العرض
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function InnerRoutes() {
   return (
@@ -189,16 +231,29 @@ function InnerRoutes() {
 
       {/* ── New Extended Pages ────────────────────────────────────── */}
       <Route path="/ai" component={AIPage} />
+      <Route path="/ai-page" component={AIPage} />
       <Route path="/cyber-control-hub" component={CyberControlHub} />
+      <Route path="/cyber-control" component={CyberControlHub} />
       <Route path="/kali-command-center" component={KaliCommandCenter} />
+      <Route path="/kali-command" component={KaliCommandCenter} />
       <Route path="/kali-terminal" component={KaliTerminalPage} />
       <Route path="/nova-commander" component={NovaCommander} />
       <Route path="/files-explorer" component={FilesPage} />
+      <Route path="/files-page" component={FilesPage} />
       <Route path="/network" component={NetworkPage} />
+      <Route path="/network-page" component={NetworkPage} />
       <Route path="/processes" component={ProcessesPage} />
+      <Route path="/processes-page" component={ProcessesPage} />
       <Route path="/vulns" component={VulnsPage} />
+      <Route path="/vulns-page" component={VulnsPage} />
       <Route path="/mission-tracker" component={MissionTrackerPage} />
       <Route path="/local-control" component={LocalDeviceControl} />
+      <Route path="/local-device" component={LocalDeviceControl} />
+      <Route path="/scans" component={Scanner} />
+      <Route path="/agent-tasks" component={Agent} />
+      <Route path="/cve-browser" component={CveLive} />
+      <Route path="/nova-knowledge" component={NovaKnowledge} />
+      <Route path="/agent-v3" component={AgentV3} />
 
       {/* ── Placeholders ──────────────────────────────────────────── */}
       <Route path="/perms"><Placeholder title="فحص الصلاحيات" subtitle="تحليل صلاحيات المستخدمين" icon={ShieldAlert} /></Route>
@@ -269,14 +324,28 @@ function AppRouter() {
   const isDesktop = location === "/desktop" || location === "/desktop-enhanced" || location === "/desktop-fixed" || location === "/desktop-advanced" || location === "/desktop-enhanced-plus";
   const isHome = location === "/";
 
-  if (isDesktop) return <Suspense fallback={<PageFallback />}><Desktop /></Suspense>;
-  if (isHome) return <Suspense fallback={<PageFallback />}><HomeDashboard /></Suspense>;
+  if (isDesktop) {
+    return (
+      <PageErrorBoundary resetKey={location}>
+        <Suspense fallback={<PageFallback />}><Desktop /></Suspense>
+      </PageErrorBoundary>
+    );
+  }
+  if (isHome) {
+    return (
+      <PageErrorBoundary resetKey={location}>
+        <Suspense fallback={<PageFallback />}><HomeDashboard /></Suspense>
+      </PageErrorBoundary>
+    );
+  }
 
   return (
     <AppShell>
-      <Suspense fallback={<PageFallback />}>
-        <InnerRoutes />
-      </Suspense>
+      <PageErrorBoundary resetKey={location}>
+        <Suspense fallback={<PageFallback />}>
+          <InnerRoutes />
+        </Suspense>
+      </PageErrorBoundary>
     </AppShell>
   );
 }

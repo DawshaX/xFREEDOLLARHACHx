@@ -103,7 +103,117 @@ function buildStaticSseResponse(urlStr: string, body: Record<string, unknown> | 
     return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
   }
 
+  if (urlStr.includes("/api/nova-agent-v3/chat")) {
+    const cmd = String(body?.command || "فحص الهدف");
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (type: string, content: string) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type, content })}\n\n`));
+        };
+        send("thought", `تحليل الهدف التكتيكي بناءً على الأمر: "${cmd}"`);
+        await new Promise((r) => setTimeout(r, 80));
+        send("action", "تشغيل محرك الاستطلاع السلبي وبوابة البرهان Zero-FP Gate");
+        await new Promise((r) => setTimeout(r, 80));
+        send("observation", "تم التحقق من السلسلة الرباعية [P01 JS] ➔ [P05 GraphQL] ➔ [P04 Mass Assign] ➔ [P02 BOLA] (CVSS 9.9).");
+        await new Promise((r) => setTimeout(r, 80));
+        send("final", "اكتمل التنفيذ التكتيكي وتم التوثيق في الذاكرة المشتركة.");
+        controller.close();
+      },
+    });
+    return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+  }
+
+  if (urlStr.includes("/api/kali-command/chat")) {
+    const msg = String(body?.message || "status");
+    const reply = `⚡ **مركز القيادة التكتيكي (Kali Command Center)**\nتم تنفيذ وتحليل الطلب: \`${msg}\`\n- الوكيل النشط: \`kali-sandbox-01\` (64 أداة كالي جاهزة)\n- بوابة البرهان Zero-FP: مفعلة (\`SHA256: 910b7659c9d71a03\`)`;
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (ev: string, data: unknown) => {
+          controller.enqueue(encoder.encode(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`));
+        };
+        send("delta", { text: reply });
+        await new Promise((r) => setTimeout(r, 40));
+        send("done", { ok: true });
+        controller.close();
+      },
+    });
+    return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+  }
+
+  if (/\/api\/bot\/cron\/\d+\/trigger$/.test(urlStr)) {
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (ev: string, data: unknown) => {
+          controller.enqueue(encoder.encode(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`));
+        };
+        send("tool_call", { name: "cve_and_osint_sync", input: { mode: "autonomous" } });
+        await new Promise((r) => setTimeout(r, 60));
+        send("tool_result", { name: "cve_and_osint_sync", ok: true });
+        send("cron_message", { text: "تم تنفيذ المهمة المجدولة وتحديث الذاكرة بنجاح." });
+        send("cron_completed", { ok: true });
+        controller.close();
+      },
+    });
+    return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+  }
+
   return null;
+}
+
+// Intercept EventSource on static hosts (e.g., GitHub Pages) so SSE streams never fail
+if (typeof window !== "undefined" && window.location.hostname.endsWith("github.io") && typeof window.EventSource !== "undefined") {
+  const OriginalEventSource = window.EventSource;
+  class StandaloneEventSource extends EventTarget {
+    url: string;
+    readyState = 1;
+    onopen: ((ev: Event) => unknown) | null = null;
+    onmessage: ((ev: MessageEvent) => unknown) | null = null;
+    onerror: ((ev: Event) => unknown) | null = null;
+    private timer: ReturnType<typeof setTimeout> | null = null;
+
+    constructor(url: string | URL, eventSourceInitDict?: EventSourceInit) {
+      super();
+      const urlStr = String(url);
+      this.url = urlStr;
+      if (!urlStr.includes("/api/")) {
+        return new OriginalEventSource(url, eventSourceInitDict) as unknown as StandaloneEventSource;
+      }
+      this.timer = setTimeout(() => {
+        this.onopen?.(new Event("open"));
+        const emit = (data: unknown) => {
+          const msgEv = new MessageEvent("message", { data: JSON.stringify(data) });
+          this.onmessage?.(msgEv);
+          this.dispatchEvent(msgEv);
+        };
+        if (urlStr.includes("/local-agent/exec-stream")) {
+          emit({ type: "stdout", data: "kali@cybernova-kali-sandbox:~$ Executed in Kali Sandbox (64 tools ready)\n" });
+          emit({ type: "done", exitCode: 0 });
+        } else if (urlStr.includes("/explorer/run")) {
+          emit({ type: "log", message: "⚡ تم جمع وتحديث 12 عنصر استخباراتي جديد في الفهرس المعرفي." });
+          emit({ type: "done", summary: { totalCollected: 12, totalSkipped: 1, duration: 420 } });
+        } else if (urlStr.includes("/nuclei/scan")) {
+          emit({ type: "log", message: "[INF] Running passive template verification..." });
+          emit({ type: "done", total: 1 });
+        } else if (urlStr.includes("/cve/stream") || urlStr.includes("/cve-live/stream")) {
+          emit({
+            id: "CVE-2025-29927",
+            severity: "CRITICAL",
+            cvss: 9.8,
+            publishedAt: new Date().toISOString(),
+            source: "NVD/KEV",
+            exploitType: "AuthBypass",
+            epssScore: 0.96,
+            pocUrl: "https://nvd.nist.gov/vuln/detail/CVE-2025-29927",
+          });
+        }
+      }, 60);
+    }
+    close() {
+      this.readyState = 2;
+      if (this.timer) clearTimeout(this.timer);
+    }
+  }
+  window.EventSource = StandaloneEventSource as unknown as typeof EventSource;
 }
 
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -136,6 +246,10 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
           headers: { "Content-Type": "application/json" },
         });
       }
+      return new Response(JSON.stringify({ ok: true, items: [], results: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     try {
