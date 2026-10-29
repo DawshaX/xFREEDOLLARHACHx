@@ -1,0 +1,228 @@
+{
+  "program": "Sky (formerly MakerDAO) Immunefi Bug Bounty",
+  "programUrl": "https://immunefi.com/bug-bounty/sky/",
+  "updatedAt": "2026-10-29T20:09:42Z",
+  "bountyTerms": {
+    "maxBountyUsd": 10000000,
+    "minCriticalUsd": 150000,
+    "highRangeUsd": [
+      5000,
+      100000
+    ],
+    "mediumUsd": 5000,
+    "lowUsd": 1000,
+    "pocRule": "Foundry local fork PoC required; strictly zero testing on mainnet or public testnets",
+    "kycRequired": true
+  },
+  "liveMainnetTelemetry": {
+    "chainLogAddress": "0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F",
+    "totalChainLogKeys": 520,
+    "pauBeacon": {
+      "address": "0x829dc2b7e94b1954f0764e573f2e0d45afa28199",
+      "registeredFacetsCount": 25,
+      "facets": {
+        "AAVE_FACET": "0x8ce890a96a193ff2dd4b2ea3c682326f655f6b62",
+        "BASIN_FACET": "0xc84825bcd13aeddc372400239499380376a44a39",
+        "CCTP_FACET": "0xadf62692340e46ef90336f2e75ce3b37f1148873",
+        "CENTRIFUGE_FACET": "0xa0a10ba97be1412730d694b8de1afe7eff20ec31",
+        "CURVE_FACET": "0x139d81d7d6040faef7cf0ef5a2636ca8a97a30d8",
+        "DAIUSDS_FACET": "0x3817f734cae6ad2bdb79f9ff23091f2ad478da5f",
+        "ERC4626_FACET": "0x1dca18608c89174181153e786778705b4a0e1a06",
+        "ERC7540_FACET": "0x4f7e0e3612b0e1e156a2b6570a51d4bd709f1315",
+        "ETHENA_FACET": "0xec48d773ceef1c6b07cda1afa2716c478b55187b",
+        "FARM_FACET": "0xf24e91f5d8529436c9fb92dd94f80d4a6c25d0f0",
+        "LAYER_ZERO_FACET": "0xa0c323a0acb20f259ea4ff343319d450be6472e5",
+        "MAPLE_FACET": "0x691b5c26ad2b74d2376f4ed87904e9d3e47bd630",
+        "MERKL_FACET": "0x321138db5e056e9d0080d4c278e10a1edc091eb0",
+        "OTC_FACET": "0x46b24ba00b65cb4f603447590e539b08097fb7ac",
+        "PENDLE_FACET": "0xcc9dd4c9b2a9c08f2692e7060f43d29a03e87348",
+        "PSM_FACET": "0xe4a5dac768a310cc2316f258901b32e499653064",
+        "SPARK_VAULT_FACET": "0xff0d19920e207e3a17eb5a2e5ba3afa44836362b",
+        "SUPERSTATE_FACET": "0xee197475607e9a27ccaa4786e740d2f0d0e706a7",
+        "TRANSFER_ASSET_FACET": "0x4da7608c331b8f135df5b985018933780ecd089d",
+        "UNISWAP_V3_FACET": "0x445d9dc752f269be48250f1a180cac4c61ce4bab",
+        "UNISWAP_V4_FACET": "0x75d35ffb8e6b871e12eb549ccf6afd324c46e47d",
+        "USDS_FACET": "0x1221cc4b85ab260660ad21c2829e0eb516dffbc7",
+        "WEETH_FACET": "0x1d8d089eb7d558f5dc6aa0cf98dde13b77b3f641",
+        "WRAP_PROXY_ETH_FACET": "0x081506de21c695af5e61a81ad288c8a96b6b59b9",
+        "WSTETH_FACET": "0x3a82d11cd37fb0098363262dc69425d07fa05516"
+      }
+    },
+    "pasStack": {
+      "PAS_STATE": "0x1a1879e66547f90bff87d45a5b0335950e019e02",
+      "PAS_CONFIGURATOR": "0xb7e61df6cab0a51e9a5dab1a7dd3f942dde5b929",
+      "PAS_TIMELOCK": "0xb50a06af02dde44db6ea7ee729403848c2b35293",
+      "PAS_MOM": "0xd44b8d01d5207aa792c666d0a712a1a161cd6171",
+      "timelockMinDelaySeconds": 1209600,
+      "timelockPaused": true
+    },
+    "sbeBeam": {
+      "MCD_SBEBEAM": "0xc8b61d211d3d03a630fb09199e17953a8c9749a9",
+      "REWARDS_OWNER_LSSKY_USDS": "0xa3d3a2e9fe5d0901d720d5382e4a7ea12d4e2b0e",
+      "maxKbumpUsds": 12000.0,
+      "minHopSeconds": 550,
+      "maxRateUsdsPerSec": 11.098427194317605,
+      "tauSeconds": 1800,
+      "toc": 0
+    },
+    "stUsds": {
+      "STUSDS": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+      "STUSDS_IMP": "0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22",
+      "STUSDS_RATE_SETTER": "0x30784615252b13e1dbe2bdf598627eac297bf4c5",
+      "STUSDS_MOM": "0x99159d0b885cc6633dac7cd4d82e4247a834b89a",
+      "totalSupplyStUsds": 168287850.91259193,
+      "totalAssetsUsds": 181950586.0043126,
+      "capUsds": 217000000.0,
+      "lineUsds": 193000000.0
+    }
+  },
+  "wavesAudited": [
+    {
+      "wave": 1,
+      "name": "Prime Agent System (PAS - 2026-09-01 Scope)",
+      "repos": [
+        "sky-ecosystem/pas"
+      ],
+      "contracts": [
+        "BeamState.sol",
+        "Configurator.sol",
+        "PASMom.sol",
+        "timelock/Timelock.sol",
+        "timelock/Bytes32LinkedList.sol"
+      ],
+      "summary": "Audited the complete 810-line PAS codebase at commit 947e71cd5dbaaf9c5b3840dd1b23e8e99d9a564d and post-commit L2PASDeployer additions. Verified cbeam pacing, rbeam step/expiry enforcement, unlimited-rate-limit protection in Configurator, and doubly-linked list queue/cancel/execute invariants in Timelock. Live Mainnet PAS_TIMELOCK (0xb50a06af02dde44db6ea7ee729403848c2b35293) is currently paused (paused=1) with a 14-day (1,209,600s) delay."
+    },
+    {
+      "wave": 2,
+      "name": "Diamond PAU Architecture & All 25 Mainnet Facets (2026-07-06 Scope)",
+      "repos": [
+        "sky-ecosystem/diamond-pau",
+        "sky-ecosystem/pau-administered-agent",
+        "sky-ecosystem/pau-assemblers",
+        "sky-ecosystem/subproxy-methods"
+      ],
+      "contracts": [
+        "Beacon.sol",
+        "Controller.sol",
+        "ControllerSharedStorage.sol",
+        "RateLimits.sol",
+        "AccessControls.sol",
+        "ALMProxy.sol",
+        "ALMProxyFreezable.sol",
+        "PAUFactory.sol",
+        "DefaultPAUAssembler.sol",
+        "AdministeredAgent.sol",
+        "AdministeredAgentFactory.sol",
+        "SubProxyMethods.sol",
+        "AaveFacet.sol",
+        "AaveV4Facet.sol",
+        "BasinFacet.sol",
+        "CCTPFacet.sol",
+        "CentrifugeFacet.sol",
+        "CurveFacet.sol",
+        "DAIUSDSFacet.sol",
+        "ERC4626Facet.sol",
+        "ERC7540Facet.sol",
+        "EthenaFacet.sol",
+        "FarmFacet.sol",
+        "LayerZeroFacet.sol",
+        "MapleFacet.sol",
+        "MerklFacet.sol",
+        "NFATHaloFacet.sol",
+        "NFATPrimeFacet.sol",
+        "OTCFacet.sol",
+        "OTCBuffer.sol",
+        "PendleFacet.sol",
+        "PSMFacet.sol",
+        "PSM3Facet.sol",
+        "SparkVaultFacet.sol",
+        "SuperstateFacet.sol",
+        "SwapAssetFacet.sol",
+        "TransferAssetFacet.sol",
+        "UniswapV3Facet.sol",
+        "UniswapV4Facet.sol",
+        "USDSFacet.sol",
+        "WEETHFacet.sol",
+        "WEETHModule.sol",
+        "WrapProxyETHFacet.sol",
+        "WSTETHFacet.sol"
+      ],
+      "summary": "Audited core Diamond PAU dispatch/storage isolation (ERC-7201 namespaces), RateLimits linear replenishment and key derivation, and all 25 deployed facets on PAU_BEACON (0x829dc2b7e94b1954f0764e573f2e0d45afa28199), plus post-v1140 commits (AaveV4Facet, SwapAssetFacet, L2BeaconSpell). Verified balance-delta accounting, residual approval clearing via ApproveLib, and ERC-4626 donation attack protection via maxExchangeRate."
+    },
+    {
+      "wave": 3,
+      "name": "Surplus Buffer Engine Beam & Emergency Spells (2026-07-21 & 2026-08-17 Scope)",
+      "repos": [
+        "sky-ecosystem/dss-flappers",
+        "sky-ecosystem/dss-emergency-spells",
+        "sky-ecosystem/star-guard"
+      ],
+      "contracts": [
+        "SBEBeam.sol",
+        "FarmOwner.sol",
+        "Splitter.sol",
+        "Kicker.sol",
+        "FlapperUniV2.sol",
+        "FlapperUniV2SwapOnly.sol",
+        "StUsdsWipeParamSpell.sol",
+        "StUsdsRateSetterDissBudSpell.sol",
+        "StUsdsRateSetterHaltSpell.sol",
+        "StarGuard.sol"
+      ],
+      "summary": "Audited SBEBeam.sol and FarmOwner.sol (beam branch), Kicker/Splitter surplus distribution and reward duration re-rating, StarGuard spell codehash/deadline/ownership preservation, and stUSDS emergency spells."
+    },
+    {
+      "wave": 4,
+      "name": "StUSDS ($181.95M TVL), Lockstake, Cross-Chain OApp/OFT (EVM + Solana), & Core Modules",
+      "repos": [
+        "sky-ecosystem/stusds",
+        "sky-ecosystem/lockstake",
+        "sky-ecosystem/sky-oapp-oft",
+        "sky-ecosystem/lz-governance-relay",
+        "sky-ecosystem/dss-allocator",
+        "sky-ecosystem/protego",
+        "sky-ecosystem/dss-blow2"
+      ],
+      "contracts": [
+        "StUsds.sol",
+        "StUsdsMom.sol",
+        "StUsdsRateSetter.sol",
+        "LockstakeEngine.sol",
+        "LockstakeClipper.sol",
+        "LockstakeUrn.sol",
+        "LockstakeCappedOsmWrapper.sol",
+        "SkyOFTAdapter.sol",
+        "SkyOFTAdapterMintBurn.sol",
+        "SkyOFTCore.sol",
+        "SkyRateLimiter.sol",
+        "GovernanceOAppSender.sol",
+        "GovernanceOAppReceiver.sol",
+        "L1GovernanceRelay.sol",
+        "L2GovernanceRelay.sol",
+        "programs/oft/src/lib.rs",
+        "programs/governance/src/lib.rs"
+      ],
+      "summary": "Audited StUsds ERC-4626/chi/cut/line accounting ($181.95M live TVL), LockstakeEngine & LockstakeClipper bad-debt Due/cut integration, LayerZero EVM + Solana Anchor OFT and Governance relay programs, and AllocatorVault/Buffer."
+    }
+  ],
+  "architecturalNotesAndEdgeCases": [
+    {
+      "id": "SKY-NOTE-01",
+      "component": "stusds / StUsds.sol::cut(uint256 rad)",
+      "classification": "Architectural Edge-Case (Documented in README / Governance-Gated)",
+      "details": "In StUsds.sol, cut(rad) slashes chi = uint192(oldChi * (totalAssets_ - assets) / totalAssets_). If a catastrophic bad-debt event or governance cut ever sets assets == totalAssets_ (or rounds newChi down to 0 while totalSupply > 0), chi becomes 0 permanently: _drip() multiplies by chi_ (0), and deposit() / withdraw() revert with division-by-zero Panic(0x12) while mint() / redeem() revert with StUsds/assets-zero, requiring a UUPS upgrade by governance to recover."
+    },
+    {
+      "id": "SKY-NOTE-02",
+      "component": "diamond-pau /deploy/L2BeaconSpell.sol & Controller.sol",
+      "classification": "Cross-Transaction Sync Invariant (Documented in NatSpec)",
+      "details": "Controller.updateIntegrations(ids) pulls the current Config from Beacon at execution time without taking an expected config hash parameter. As documented in L2BeaconSpell.sol, if a PAS Configurator operator queues/executes a Controller sync, off-chain verification must ensure the Beacon config was not modified in between."
+    },
+    {
+      "id": "SKY-NOTE-03",
+      "component": "diamond-pau / facets (SwapAssetFacet, ERC4626Facet, CentrifugeFacet, etc.)",
+      "classification": "Post-v1140 Unreleased Facet Additions on dev Branch",
+      "details": "On live Mainnet PAU_BEACON (0x829dc2b7e94b1954f0764e573f2e0d45afa28199), exactly 25 facets are registered (matching the 2026-07-06 Immunefi scope list). Newer facets in the dev branch of diamond-pau (AaveV4Facet, NFATHaloFacet, NFATPrimeFacet, PSM3Facet, SwapAssetFacet) are not yet registered on Mainnet PAU_BEACON."
+    }
+  ]
+}

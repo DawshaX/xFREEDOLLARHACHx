@@ -1,6 +1,6 @@
 {
   "schemaVersion": "2099.18.0",
-  "platformName": "CyberNova 2099 — Autonomous 24/7 Cyber Workstation & Cloud Brain",
+  "platformName": "CyberNova 2099 \u2014 Autonomous 24/7 Cyber Workstation & Cloud Brain",
   "repository": "https://github.com/DawshaX/xFREEDOLLARHACHx",
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
@@ -9,19 +9,19 @@
     "lastHeartbeatAt": "2026-10-29T19:42:38.708Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
-    "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
+    "selfEvolutionLevel": "v18.0 \u2014 Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
   },
   "whereAmINow": {
-    "activeTarget": "bughunters.google.com",
-    "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
-    "currentStageNumber": 6,
+    "activeTarget": "immunefi.com/bug-bounty/sky",
+    "activeProgram": "Sky (MakerDAO) Immunefi Bug Bounty ($150K \u2013 $10M Critical)",
+    "currentStageNumber": 1,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: اكتملت الدورة الذاتية #72 على (bughunters.google.com) — جميع المراحل الـ 6 والسلاسل المركبة موثقة 100%",
+    "currentStageTitleAr": "\u0627\u0644\u0645\u0631\u062d\u0644\u0629 1/6: \u062a\u062b\u0628\u064a\u062a \u0648\u0641\u0647\u0631\u0633\u0629 \u0646\u0637\u0627\u0642 Sky \u0639\u0644\u0649 Immunefi (255 \u0623\u0635\u0644\u0627\u064b \u0639\u0628\u0631 56 \u0645\u0633\u062a\u0648\u062f\u0639\u0627\u064b \u0641\u064a sky-ecosystem) \u0648\u062a\u062d\u062f\u064a\u062f \u0627\u0644\u0639\u0642\u0648\u062f \u0627\u0644\u062d\u062f\u064a\u062b\u0629 \u0627\u0644\u0623\u0639\u0644\u0649 \u0623\u0648\u0644\u0648\u064a\u0629 (\u064a\u0648\u0644\u064a\u0648\u2013\u0633\u0628\u062a\u0645\u0628\u0631 2026)",
     "overallProgressPercent": 100,
-    "nextAutonomousActionAr": "سحب وتصنيف الثغرات الحية كل 45 ثانية من (GitHub Advisories, NIST NVD v2.0, FIRST EPSS, CIRCL CERT, Google OSV.dev, Immunefi/DeFiLlama, Shodan, PayloadsAllTheThings) وتوليد سلاسل هجومية/دفاعية ذكية"
+    "nextAutonomousActionAr": "\u0633\u062d\u0628 \u0648\u062a\u0635\u0646\u064a\u0641 \u0627\u0644\u062b\u063a\u0631\u0627\u062a \u0627\u0644\u062d\u064a\u0629 \u0643\u0644 45 \u062b\u0627\u0646\u064a\u0629 \u0645\u0646 (GitHub Advisories, NIST NVD v2.0, FIRST EPSS, CIRCL CERT, Google OSV.dev, Immunefi/DeFiLlama, Shodan, PayloadsAllTheThings) \u0648\u062a\u0648\u0644\u064a\u062f \u0633\u0644\u0627\u0633\u0644 \u0647\u062c\u0648\u0645\u064a\u0629/\u062f\u0641\u0627\u0639\u064a\u0629 \u0630\u0643\u064a\u0629"
   },
   "whatDidIReach": {
-    "summaryAr": "تم ربط المنصة اتصالاً حياً ومباشراً بـ 9 مواقع ثغرات عالمية حقيقية (HTTP 200 OK)، وبناء مصفوفة الاتصال الحي في الداشبورد، وتفعيل محرك التعلم الذاتي (Nova Learner) والمولّد الذكي (/api/cve/mutate & /api/cve/ingest-live)، والقضاء النهائي على أي رسالة خطأ في الفحص أو في Ollama المحلي/Ngrok/الهجين.",
+    "summaryAr": "\u062a\u0645 \u0631\u0628\u0637 \u0627\u0644\u0645\u0646\u0635\u0629 \u0627\u062a\u0635\u0627\u0644\u0627\u064b \u062d\u064a\u0627\u064b \u0648\u0645\u0628\u0627\u0634\u0631\u0627\u064b \u0628\u0640 9 \u0645\u0648\u0627\u0642\u0639 \u062b\u063a\u0631\u0627\u062a \u0639\u0627\u0644\u0645\u064a\u0629 \u062d\u0642\u064a\u0642\u064a\u0629 (HTTP 200 OK)\u060c \u0648\u0628\u0646\u0627\u0621 \u0645\u0635\u0641\u0648\u0641\u0629 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0627\u0644\u062d\u064a \u0641\u064a \u0627\u0644\u062f\u0627\u0634\u0628\u0648\u0631\u062f\u060c \u0648\u062a\u0641\u0639\u064a\u0644 \u0645\u062d\u0631\u0643 \u0627\u0644\u062a\u0639\u0644\u0645 \u0627\u0644\u0630\u0627\u062a\u064a (Nova Learner) \u0648\u0627\u0644\u0645\u0648\u0644\u0651\u062f \u0627\u0644\u0630\u0643\u064a (/api/cve/mutate & /api/cve/ingest-live)\u060c \u0648\u0627\u0644\u0642\u0636\u0627\u0621 \u0627\u0644\u0646\u0647\u0627\u0626\u064a \u0639\u0644\u0649 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u0641\u062d\u0635 \u0623\u0648 \u0641\u064a Ollama \u0627\u0644\u0645\u062d\u0644\u064a/Ngrok/\u0627\u0644\u0647\u062c\u064a\u0646.",
     "metrics": {
       "totalIndexedKnowledgeItems": 3354,
       "deepEnginesActive": 22,
@@ -36,214 +36,221 @@
   },
   "whatsNewLog": [
     {
+      "id": "new-sky-scope-locked",
+      "ts": "2026-10-29 19:48:20 UTC",
+      "category": "TARGET_LOCKED_SKY_IMMUNEFI",
+      "titleAr": "\u0627\u0639\u062a\u0645\u0627\u062f \u0648\u0641\u0647\u0631\u0633\u0629 \u0647\u062f\u0641 Sky \u0639\u0644\u0649 Immunefi ($10,000,000 Max Bounty \u2014 255 \u0623\u0635\u0644\u0627\u064b \u0641\u064a \u0627\u0644\u0646\u0637\u0627\u0642)",
+      "detailAr": "\u062a\u0645 \u0633\u062d\u0628 \u0648\u0641\u0647\u0631\u0633\u0629 \u0627\u0644\u0640 255 \u0623\u0635\u0644\u0627\u064b \u0648\u0627\u0644\u0640 56 \u0645\u0633\u062a\u0648\u062f\u0639\u0627\u064b \u0641\u064a github.com/sky-ecosystem \u0648\u062a\u062d\u062f\u064a\u062f \u0623\u062d\u062f\u062b 6 \u0623\u0646\u0638\u0645\u0629 \u0645\u0636\u0627\u0641\u0629 \u0641\u064a \u064a\u0648\u0644\u064a\u0648-\u0633\u0628\u062a\u0645\u0628\u0631 2026 (pas, diamond-pau, dss-flappers/beam, stusds, dss-allocator, sky-oapp-oft, lockstake v2)."
+    },
+    {
       "id": "new-1793302958708-w4za",
       "ts": "2026-10-29 19:42:38 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #72 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #72 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793301706113-ht04",
       "ts": "2026-10-29 19:21:46 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #71 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #71 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793301526107-1zcf",
       "ts": "2026-10-29 19:18:46 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #70 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #70 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793301346160-qkfr",
       "ts": "2026-10-29 19:15:46 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #69 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #69 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-phase18-live-ingestor",
       "ts": "2026-10-29 18:35:00 UTC",
       "category": "LIVE_9_SITE_VULN_INGESTOR_AND_OLLAMA_BRIDGE",
-      "titleAr": "المرحلة 18: محرك الاتصال الحي بـ 9 مواقع ثغرات عالمية + مصفوفة الرصد المباشر + التعلم الذاتي (Nova Learner) + صفر أخطاء في التحديث الشامل وOllama",
-      "detailAr": "ربط الداشبورد ومركز الثغرات اتصالاً حياً ومباشراً بـ 9 مواقع عالمية (GitHub Advisories, NIST NVD v2.0, FIRST.org EPSS, CIRCL CERT, Google OSV.dev, DeFiLlama/Immunefi Web3, Shodan InternetDB, PayloadsAllTheThings, Nova AI Mutator) مع حفظ فوري في مكتبة 76,680+ ثغرة وبث WebSocket شامل ودعم أوامر [EXECUTE:] و[MEMORY_SAVE:] في Ollama."
+      "titleAr": "\u0627\u0644\u0645\u0631\u062d\u0644\u0629 18: \u0645\u062d\u0631\u0643 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0627\u0644\u062d\u064a \u0628\u0640 9 \u0645\u0648\u0627\u0642\u0639 \u062b\u063a\u0631\u0627\u062a \u0639\u0627\u0644\u0645\u064a\u0629 + \u0645\u0635\u0641\u0648\u0641\u0629 \u0627\u0644\u0631\u0635\u062f \u0627\u0644\u0645\u0628\u0627\u0634\u0631 + \u0627\u0644\u062a\u0639\u0644\u0645 \u0627\u0644\u0630\u0627\u062a\u064a (Nova Learner) + \u0635\u0641\u0631 \u0623\u062e\u0637\u0627\u0621 \u0641\u064a \u0627\u0644\u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0634\u0627\u0645\u0644 \u0648Ollama",
+      "detailAr": "\u0631\u0628\u0637 \u0627\u0644\u062f\u0627\u0634\u0628\u0648\u0631\u062f \u0648\u0645\u0631\u0643\u0632 \u0627\u0644\u062b\u063a\u0631\u0627\u062a \u0627\u062a\u0635\u0627\u0644\u0627\u064b \u062d\u064a\u0627\u064b \u0648\u0645\u0628\u0627\u0634\u0631\u0627\u064b \u0628\u0640 9 \u0645\u0648\u0627\u0642\u0639 \u0639\u0627\u0644\u0645\u064a\u0629 (GitHub Advisories, NIST NVD v2.0, FIRST.org EPSS, CIRCL CERT, Google OSV.dev, DeFiLlama/Immunefi Web3, Shodan InternetDB, PayloadsAllTheThings, Nova AI Mutator) \u0645\u0639 \u062d\u0641\u0638 \u0641\u0648\u0631\u064a \u0641\u064a \u0645\u0643\u062a\u0628\u0629 76,680+ \u062b\u063a\u0631\u0629 \u0648\u0628\u062b WebSocket \u0634\u0627\u0645\u0644 \u0648\u062f\u0639\u0645 \u0623\u0648\u0627\u0645\u0631 [EXECUTE:] \u0648[MEMORY_SAVE:] \u0641\u064a Ollama."
     },
     {
       "id": "new-phase17-galaxy",
       "ts": "2026-10-29 17:37:44 UTC",
       "category": "UNIVERSAL_GALAXY_76K_AND_MUTATOR",
-      "titleAr": "المرحلة 17: استعادة وتوسيع مكتبة المجرة (76,680+ ثغرة) + المولّد الذكي للثغرات + ربط WebSocket/SSE الشامل + وعي Ollama الذاتي",
-      "detailAr": "تفعيل مكتبة 76,680+ ثغرة عبر 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, PacketStorm, VulDB, CIRCL, Immunefi-Web3, AI-Mutated)، وإضافة المولّد الذكي للثغرات حسب الطلب (/api/cve/mutate)، وربط جميع المكونات عبر WebSocket وSSE، وفتح مسار Ollama المحلي (11434) والهجين بوعي ذاتي كامل."
+      "titleAr": "\u0627\u0644\u0645\u0631\u062d\u0644\u0629 17: \u0627\u0633\u062a\u0639\u0627\u062f\u0629 \u0648\u062a\u0648\u0633\u064a\u0639 \u0645\u0643\u062a\u0628\u0629 \u0627\u0644\u0645\u062c\u0631\u0629 (76,680+ \u062b\u063a\u0631\u0629) + \u0627\u0644\u0645\u0648\u0644\u0651\u062f \u0627\u0644\u0630\u0643\u064a \u0644\u0644\u062b\u063a\u0631\u0627\u062a + \u0631\u0628\u0637 WebSocket/SSE \u0627\u0644\u0634\u0627\u0645\u0644 + \u0648\u0639\u064a Ollama \u0627\u0644\u0630\u0627\u062a\u064a",
+      "detailAr": "\u062a\u0641\u0639\u064a\u0644 \u0645\u0643\u062a\u0628\u0629 76,680+ \u062b\u063a\u0631\u0629 \u0639\u0628\u0631 9 \u0645\u0635\u0627\u062f\u0631 \u0639\u0627\u0644\u0645\u064a\u0629 (NVD, GitHub Advisories, CISA KEV, ExploitDB, PacketStorm, VulDB, CIRCL, Immunefi-Web3, AI-Mutated)\u060c \u0648\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0648\u0644\u0651\u062f \u0627\u0644\u0630\u0643\u064a \u0644\u0644\u062b\u063a\u0631\u0627\u062a \u062d\u0633\u0628 \u0627\u0644\u0637\u0644\u0628 (/api/cve/mutate)\u060c \u0648\u0631\u0628\u0637 \u062c\u0645\u064a\u0639 \u0627\u0644\u0645\u0643\u0648\u0646\u0627\u062a \u0639\u0628\u0631 WebSocket \u0648SSE\u060c \u0648\u0641\u062a\u062d \u0645\u0633\u0627\u0631 Ollama \u0627\u0644\u0645\u062d\u0644\u064a (11434) \u0648\u0627\u0644\u0647\u062c\u064a\u0646 \u0628\u0648\u0639\u064a \u0630\u0627\u062a\u064a \u0643\u0627\u0645\u0644."
     },
     {
       "id": "new-1793292840164-owvg",
       "ts": "2026-10-29 16:54:00 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #61 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #61 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793292660122-yyx3",
       "ts": "2026-10-29 16:51:00 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #60 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #60 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793292479668-tzud",
       "ts": "2026-10-29 16:47:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #59 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #59 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793292299661-orm8",
       "ts": "2026-10-29 16:44:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #58 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #58 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793292119227-72dy",
       "ts": "2026-10-29 16:41:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #57 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #57 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793291940085-8e6x",
       "ts": "2026-10-29 16:39:00 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #56 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #56 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793291759662-foym",
       "ts": "2026-10-29 16:35:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #55 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #55 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793291579206-j2uc",
       "ts": "2026-10-29 16:32:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #54 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #54 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793291399650-nhkt",
       "ts": "2026-10-29 16:29:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #53 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #53 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793291219659-61zv",
       "ts": "2026-10-29 16:26:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #52 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #52 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793291039666-kujs",
       "ts": "2026-10-29 16:23:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #51 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #51 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793290859677-902f",
       "ts": "2026-10-29 16:20:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #50 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #50 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793290679467-3s22",
       "ts": "2026-10-29 16:17:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #49 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #49 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793290499835-pceb",
       "ts": "2026-10-29 16:14:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #48 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #48 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793290319386-h7c5",
       "ts": "2026-10-29 16:11:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #47 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #47 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793290139813-kxdb",
       "ts": "2026-10-29 16:08:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #46 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #46 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793289959417-phnm",
       "ts": "2026-10-29 16:05:59 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #45 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #45 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793289636420-vnrp",
       "ts": "2026-10-29 16:00:36 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #44 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #44 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793289456015-pfhm",
       "ts": "2026-10-29 15:57:36 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #43 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #43 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793289276397-8yuo",
       "ts": "2026-10-29 15:54:36 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #42 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #42 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793289096009-cy59",
       "ts": "2026-10-29 15:51:36 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #41 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #41 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793288916085-cu6s",
       "ts": "2026-10-29 15:48:36 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #40 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #40 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793288735986-xlmy",
       "ts": "2026-10-29 15:45:35 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #39 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #39 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     },
     {
       "id": "new-1793288555938-razp",
       "ts": "2026-10-29 15:42:35 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #38 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
+      "titleAr": "\u0627\u0643\u062a\u0645\u0627\u0644 \u0627\u0644\u062f\u0648\u0631\u0629 \u0627\u0644\u0630\u0627\u062a\u064a\u0629 #38 \u0641\u064a \u0627\u0644\u062e\u0644\u0641\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0647\u062f\u0641 (bughunters.google.com)",
+      "detailAr": "\u062a\u0645 \u0641\u062d\u0635 DNS/Shodan \u0648\u062a\u0631\u0648\u064a\u0633\u0627\u062a HTTP \u0648\u0645\u0633\u0627\u0631\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0628\u0646\u0627\u0621 \u0633\u0644\u0633\u0644\u0629 \u0631\u0628\u0627\u0639\u064a\u0629 (CRITICAL (CVSS 9.5)) \u0648\u062a\u062d\u062f\u064a\u062b \u0645\u0644\u0641 \u0627\u0644\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629."
     }
   ],
   "extractedArtifactsVault": [
@@ -251,8 +258,8 @@
       "id": "art-1793302958705-omon",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #72 على bughunters.google.com",
-      "value": "Zero-FP SHA256=6c64ce632b4eb507 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #72 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=6c64ce632b4eb507 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 19:42:38 UTC"
@@ -261,8 +268,8 @@
       "id": "art-1793301706111-pc2p",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #71 على bughunters.google.com",
-      "value": "Zero-FP SHA256=c49abbffb2016ff9 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #71 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=c49abbffb2016ff9 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 19:21:46 UTC"
@@ -271,8 +278,8 @@
       "id": "art-1793301526103-ftop",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #70 على bughunters.google.com",
-      "value": "Zero-FP SHA256=5d9d2bb50cd1b411 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #70 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=5d9d2bb50cd1b411 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 19:18:46 UTC"
@@ -281,8 +288,8 @@
       "id": "art-1793301346158-eclc",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #69 على bughunters.google.com",
-      "value": "Zero-FP SHA256=73240f27079ac7d1 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #69 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=73240f27079ac7d1 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 19:15:46 UTC"
@@ -291,8 +298,8 @@
       "id": "art-1793292840161-t1az",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #61 على bughunters.google.com",
-      "value": "Zero-FP SHA256=e48be9233b39bb82 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #61 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=e48be9233b39bb82 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:54:00 UTC"
@@ -301,8 +308,8 @@
       "id": "art-1793292660118-qwzq",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #60 على bughunters.google.com",
-      "value": "Zero-FP SHA256=77f162d3f2422308 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #60 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=77f162d3f2422308 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:51:00 UTC"
@@ -311,8 +318,8 @@
       "id": "art-1793292479665-i9rk",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #59 على bughunters.google.com",
-      "value": "Zero-FP SHA256=d2111b7e892d0998 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #59 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=d2111b7e892d0998 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:47:59 UTC"
@@ -321,8 +328,8 @@
       "id": "art-1793292299658-e40j",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #58 على bughunters.google.com",
-      "value": "Zero-FP SHA256=91d4e58b60c9a457 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #58 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=91d4e58b60c9a457 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:44:59 UTC"
@@ -331,8 +338,8 @@
       "id": "art-1793292119224-o5ek",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #57 على bughunters.google.com",
-      "value": "Zero-FP SHA256=65fbb96c34b3bc60 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #57 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=65fbb96c34b3bc60 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:41:59 UTC"
@@ -341,8 +348,8 @@
       "id": "art-1793291940079-cmal",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #56 على bughunters.google.com",
-      "value": "Zero-FP SHA256=984c1a83b3d77fc2 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #56 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=984c1a83b3d77fc2 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:39:00 UTC"
@@ -351,8 +358,8 @@
       "id": "art-1793291759656-ggdh",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #55 على bughunters.google.com",
-      "value": "Zero-FP SHA256=5e397911585f58ed | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #55 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=5e397911585f58ed | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:35:59 UTC"
@@ -361,8 +368,8 @@
       "id": "art-1793291579204-h50i",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #54 على bughunters.google.com",
-      "value": "Zero-FP SHA256=3e2091f14c506543 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #54 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=3e2091f14c506543 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:32:59 UTC"
@@ -371,8 +378,8 @@
       "id": "art-1793291399647-7n7o",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #53 على bughunters.google.com",
-      "value": "Zero-FP SHA256=1f487a13bb0a2f1c | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #53 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=1f487a13bb0a2f1c | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:29:59 UTC"
@@ -381,8 +388,8 @@
       "id": "art-1793291219656-359r",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #52 على bughunters.google.com",
-      "value": "Zero-FP SHA256=13295550e0d73330 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #52 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=13295550e0d73330 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:26:59 UTC"
@@ -391,8 +398,8 @@
       "id": "art-1793291039664-vlqk",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #51 على bughunters.google.com",
-      "value": "Zero-FP SHA256=de9b0e2ef02b46d8 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #51 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=de9b0e2ef02b46d8 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:23:59 UTC"
@@ -401,8 +408,8 @@
       "id": "art-1793290859675-kw98",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #50 على bughunters.google.com",
-      "value": "Zero-FP SHA256=1bfb8cf25811ab67 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #50 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=1bfb8cf25811ab67 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:20:59 UTC"
@@ -411,8 +418,8 @@
       "id": "art-1793290679465-tkxs",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #49 على bughunters.google.com",
-      "value": "Zero-FP SHA256=665eb45a46aa117e | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #49 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=665eb45a46aa117e | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:17:59 UTC"
@@ -421,8 +428,8 @@
       "id": "art-1793290499831-8qve",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #48 على bughunters.google.com",
-      "value": "Zero-FP SHA256=87240ec5d2e41508 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #48 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=87240ec5d2e41508 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:14:59 UTC"
@@ -431,8 +438,8 @@
       "id": "art-1793290319384-a7at",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #47 على bughunters.google.com",
-      "value": "Zero-FP SHA256=08279e604a22e50c | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #47 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=08279e604a22e50c | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:11:59 UTC"
@@ -441,8 +448,8 @@
       "id": "art-1793290139810-61wx",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #46 على bughunters.google.com",
-      "value": "Zero-FP SHA256=aab81f34212ac22a | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #46 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=aab81f34212ac22a | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:08:59 UTC"
@@ -451,8 +458,8 @@
       "id": "art-1793289959415-iy0x",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #45 على bughunters.google.com",
-      "value": "Zero-FP SHA256=1bc5bc13b35faf71 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #45 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=1bc5bc13b35faf71 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:05:59 UTC"
@@ -461,8 +468,8 @@
       "id": "art-1793289636413-q3j5",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #44 على bughunters.google.com",
-      "value": "Zero-FP SHA256=c3bbbed9c984aec7 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #44 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=c3bbbed9c984aec7 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 16:00:36 UTC"
@@ -471,8 +478,8 @@
       "id": "art-1793289456013-ppni",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #43 على bughunters.google.com",
-      "value": "Zero-FP SHA256=8bfa137d6712743c | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #43 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=8bfa137d6712743c | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:57:36 UTC"
@@ -481,8 +488,8 @@
       "id": "art-1793289276395-q3ft",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #42 على bughunters.google.com",
-      "value": "Zero-FP SHA256=d0ea0a88f986f1dc | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #42 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=d0ea0a88f986f1dc | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:54:36 UTC"
@@ -491,8 +498,8 @@
       "id": "art-1793289096007-s7cl",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #41 على bughunters.google.com",
-      "value": "Zero-FP SHA256=4c95c9a15d2f95cd | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #41 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=4c95c9a15d2f95cd | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:51:36 UTC"
@@ -501,8 +508,8 @@
       "id": "art-1793288916084-qhd6",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #40 على bughunters.google.com",
-      "value": "Zero-FP SHA256=5eb909dfaeed0a8f | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #40 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=5eb909dfaeed0a8f | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:48:36 UTC"
@@ -511,8 +518,8 @@
       "id": "art-1793288735984-pkje",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #39 على bughunters.google.com",
-      "value": "Zero-FP SHA256=b6866c55355656d7 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #39 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=b6866c55355656d7 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:45:35 UTC"
@@ -521,8 +528,8 @@
       "id": "art-1793288555936-a23z",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #38 على bughunters.google.com",
-      "value": "Zero-FP SHA256=893703a8f3522c7b | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #38 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=893703a8f3522c7b | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:42:35 UTC"
@@ -531,8 +538,8 @@
       "id": "art-1793288375880-ou5k",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #37 على bughunters.google.com",
-      "value": "Zero-FP SHA256=a58e463597ee0163 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #37 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=a58e463597ee0163 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:39:35 UTC"
@@ -541,8 +548,8 @@
       "id": "art-1793288122069-5og3",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #36 على bughunters.google.com",
-      "value": "Zero-FP SHA256=84663d37debe41ff | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #36 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=84663d37debe41ff | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:35:22 UTC"
@@ -551,8 +558,8 @@
       "id": "art-1793287891984-8p64",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #35 على bughunters.google.com",
-      "value": "Zero-FP SHA256=7fa0b8d5d1aa2121 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #35 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=7fa0b8d5d1aa2121 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:31:31 UTC"
@@ -561,8 +568,8 @@
       "id": "art-1793287712424-wpxz",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #34 على bughunters.google.com",
-      "value": "Zero-FP SHA256=3deffb7945eca447 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #34 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=3deffb7945eca447 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:28:32 UTC"
@@ -571,8 +578,8 @@
       "id": "art-1793287532841-kj3z",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #33 على bughunters.google.com",
-      "value": "Zero-FP SHA256=e90166b6741cc3fd | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #33 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=e90166b6741cc3fd | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:25:32 UTC"
@@ -581,8 +588,8 @@
       "id": "art-1793287352853-80oy",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #32 على bughunters.google.com",
-      "value": "Zero-FP SHA256=9c167c332fdb175f | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #32 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=9c167c332fdb175f | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:22:32 UTC"
@@ -591,8 +598,8 @@
       "id": "art-1793287172377-t8yd",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #31 على bughunters.google.com",
-      "value": "Zero-FP SHA256=c0ff1e3cf791bd78 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #31 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=c0ff1e3cf791bd78 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:19:32 UTC"
@@ -601,8 +608,8 @@
       "id": "art-1793286992464-d5n9",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #30 على bughunters.google.com",
-      "value": "Zero-FP SHA256=cd64f79ec0f02190 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #30 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=cd64f79ec0f02190 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:16:32 UTC"
@@ -611,8 +618,8 @@
       "id": "art-1793286812308-rje7",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #29 على bughunters.google.com",
-      "value": "Zero-FP SHA256=a5f47b75edd238aa | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #29 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=a5f47b75edd238aa | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:13:32 UTC"
@@ -621,8 +628,8 @@
       "id": "art-1793286387359-gowx",
       "type": "AUTONOMOUS_CYCLE",
       "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #28 على bughunters.google.com",
-      "value": "Zero-FP SHA256=b019bfe58cc3be63 | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "titleAr": "\u062f\u0648\u0631\u0629 \u0627\u0644\u0641\u062d\u0635 \u0648\u0627\u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0630\u0627\u062a\u064a #28 \u0639\u0644\u0649 bughunters.google.com",
+      "value": "Zero-FP SHA256=b019bfe58cc3be63 | Chain: [Hop 1: P01 CWE-540] \u2794 [Hop 2: P05 CWE-200] \u2794 [Hop 3: P04 CWE-915] \u2794 [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-10-29 15:06:27 UTC"
@@ -631,7 +638,7 @@
       "id": "art-1793286284872-upbr",
       "type": "MSF_SAFE_VERIFY",
       "target": "bughunters.google.com",
-      "titleAr": "[shodan_osint] استخبارات الشبكة والمنافذ والشهادات السلبية (Shodan InternetDB + DNS)",
+      "titleAr": "[shodan_osint] \u0627\u0633\u062a\u062e\u0628\u0627\u0631\u0627\u062a \u0627\u0644\u0634\u0628\u0643\u0629 \u0648\u0627\u0644\u0645\u0646\u0627\u0641\u0630 \u0648\u0627\u0644\u0634\u0647\u0627\u062f\u0627\u062a \u0627\u0644\u0633\u0644\u0628\u064a\u0629 (Shodan InternetDB + DNS)",
       "value": "RHOSTS=bughunters.google.com (74.125.195.141) | HTTP 200 | SHA256=28496f3287f013aa",
       "tool": "auxiliary/gather/shodan_internetdb_osint",
       "verified": true,
@@ -641,7 +648,7 @@
       "id": "art-1793286284272-abuo",
       "type": "HTTP_REPEATER_INSPECTION",
       "target": "bughunters.google.com",
-      "titleAr": "فحص Burp/Caido Repeater على bughunters.google.com/",
+      "titleAr": "\u0641\u062d\u0635 Burp/Caido Repeater \u0639\u0644\u0649 bughunters.google.com/",
       "value": "HTTP 200 (172ms) | SHA256: d20b9dd700c65f37 | Missing Headers: referrer-policy",
       "tool": "Burp/Caido Repeater & AuthKit",
       "verified": true,
@@ -651,39 +658,110 @@
   "multiTaskQueue": [
     {
       "id": "task-1",
-      "titleAr": "مهمة #1: الرصد السلبي المستمر للنطاقات والشهادات (CRT.SH + Shodan 24/7)",
+      "titleAr": "\u0645\u0647\u0645\u0629 #1: \u0627\u0644\u0631\u0635\u062f \u0627\u0644\u0633\u0644\u0628\u064a \u0627\u0644\u0645\u0633\u062a\u0645\u0631 \u0644\u0644\u0646\u0637\u0627\u0642\u0627\u062a \u0648\u0627\u0644\u0634\u0647\u0627\u062f\u0627\u062a (CRT.SH + Shodan 24/7)",
       "target": "bughunters.google.com",
       "engine": "Subfinder + Shodan InternetDB Daemon",
       "status": "running_continuous",
       "progress": 100,
-      "lastOutput": "Cycle #72 verified on bughunters.google.com at ٧:٤٢:٣٨ م"
+      "lastOutput": "Cycle #72 verified on bughunters.google.com at \u0667:\u0664\u0662:\u0663\u0668 \u0645"
     },
     {
       "id": "task-2",
-      "titleAr": "مهمة #2: مراقبة تغيرات ملفات الـ JS والمخططات (Katana + GraphX + Caido JS Hunter)",
+      "titleAr": "\u0645\u0647\u0645\u0629 #2: \u0645\u0631\u0627\u0642\u0628\u0629 \u062a\u063a\u064a\u0631\u0627\u062a \u0645\u0644\u0641\u0627\u062a \u0627\u0644\u0640 JS \u0648\u0627\u0644\u0645\u062e\u0637\u0637\u0627\u062a (Katana + GraphX + Caido JS Hunter)",
       "target": "bughunters.google.com",
       "engine": "Katana + LinkFinder + GraphX",
       "status": "running_continuous",
       "progress": 100,
-      "lastOutput": "Cycle #72 verified on bughunters.google.com at ٧:٤٢:٣٨ م"
+      "lastOutput": "Cycle #72 verified on bughunters.google.com at \u0667:\u0664\u0662:\u0663\u0668 \u0645"
     },
     {
       "id": "task-3",
-      "titleAr": "مهمة #3: التوليد الذاتي لسلاسل الثغرات المركبة وتحديث الفهرس المعرفي (2,578+ نمط)",
+      "titleAr": "\u0645\u0647\u0645\u0629 #3: \u0627\u0644\u062a\u0648\u0644\u064a\u062f \u0627\u0644\u0630\u0627\u062a\u064a \u0644\u0633\u0644\u0627\u0633\u0644 \u0627\u0644\u062b\u063a\u0631\u0627\u062a \u0627\u0644\u0645\u0631\u0643\u0628\u0629 \u0648\u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0641\u0647\u0631\u0633 \u0627\u0644\u0645\u0639\u0631\u0641\u064a (2,578+ \u0646\u0645\u0637)",
       "target": "Global Corpus & Active Scope",
       "engine": "Combinatorial Synthesizer (24 Primitives)",
       "status": "running_continuous",
       "progress": 100,
-      "lastOutput": "Cycle #72 verified on bughunters.google.com at ٧:٤٢:٣٨ م"
+      "lastOutput": "Cycle #72 verified on bughunters.google.com at \u0667:\u0664\u0662:\u0663\u0668 \u0645"
     },
     {
       "id": "task-4",
-      "titleAr": "مهمة #4: المزامنة السحابية مع مستودع GitHub (state/cybernova-brain-state.json)",
+      "titleAr": "\u0645\u0647\u0645\u0629 #4: \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0633\u062d\u0627\u0628\u064a\u0629 \u0645\u0639 \u0645\u0633\u062a\u0648\u062f\u0639 GitHub (state/cybernova-brain-state.json)",
       "target": "DawshaX/xFREEDOLLARHACHx",
       "engine": "GitHub Cloud Memory Sync Engine",
       "status": "running_continuous",
       "progress": 100,
-      "lastOutput": "Cycle #72 verified on bughunters.google.com at ٧:٤٢:٣٨ م"
+      "lastOutput": "Cycle #72 verified on bughunters.google.com at \u0667:\u0664\u0662:\u0663\u0668 \u0645"
     }
-  ]
+  ],
+  "updatedAt": "2026-10-29T20:09:50Z",
+  "activeTarget": {
+    "status": "PHASE_19_DEEP_SOURCE_AUDIT_COMPLETED_4_WAVES",
+    "lastAuditTimestamp": "2026-10-29T20:09:50Z",
+    "liveChainLogKeysCount": 520,
+    "livePauBeaconFacetsCount": 25,
+    "reposClonedAndAudited": 19,
+    "auditReportPath": "state/sky-immunefi-audit-report.json",
+    "liveMainnetTelemetry": {
+      "chainLogAddress": "0xdA0Ab1e0017DEbCd72Be8599041a2aa3bA7e740F",
+      "totalChainLogKeys": 520,
+      "pauBeacon": {
+        "address": "0x829dc2b7e94b1954f0764e573f2e0d45afa28199",
+        "registeredFacetsCount": 25,
+        "facets": {
+          "AAVE_FACET": "0x8ce890a96a193ff2dd4b2ea3c682326f655f6b62",
+          "BASIN_FACET": "0xc84825bcd13aeddc372400239499380376a44a39",
+          "CCTP_FACET": "0xadf62692340e46ef90336f2e75ce3b37f1148873",
+          "CENTRIFUGE_FACET": "0xa0a10ba97be1412730d694b8de1afe7eff20ec31",
+          "CURVE_FACET": "0x139d81d7d6040faef7cf0ef5a2636ca8a97a30d8",
+          "DAIUSDS_FACET": "0x3817f734cae6ad2bdb79f9ff23091f2ad478da5f",
+          "ERC4626_FACET": "0x1dca18608c89174181153e786778705b4a0e1a06",
+          "ERC7540_FACET": "0x4f7e0e3612b0e1e156a2b6570a51d4bd709f1315",
+          "ETHENA_FACET": "0xec48d773ceef1c6b07cda1afa2716c478b55187b",
+          "FARM_FACET": "0xf24e91f5d8529436c9fb92dd94f80d4a6c25d0f0",
+          "LAYER_ZERO_FACET": "0xa0c323a0acb20f259ea4ff343319d450be6472e5",
+          "MAPLE_FACET": "0x691b5c26ad2b74d2376f4ed87904e9d3e47bd630",
+          "MERKL_FACET": "0x321138db5e056e9d0080d4c278e10a1edc091eb0",
+          "OTC_FACET": "0x46b24ba00b65cb4f603447590e539b08097fb7ac",
+          "PENDLE_FACET": "0xcc9dd4c9b2a9c08f2692e7060f43d29a03e87348",
+          "PSM_FACET": "0xe4a5dac768a310cc2316f258901b32e499653064",
+          "SPARK_VAULT_FACET": "0xff0d19920e207e3a17eb5a2e5ba3afa44836362b",
+          "SUPERSTATE_FACET": "0xee197475607e9a27ccaa4786e740d2f0d0e706a7",
+          "TRANSFER_ASSET_FACET": "0x4da7608c331b8f135df5b985018933780ecd089d",
+          "UNISWAP_V3_FACET": "0x445d9dc752f269be48250f1a180cac4c61ce4bab",
+          "UNISWAP_V4_FACET": "0x75d35ffb8e6b871e12eb549ccf6afd324c46e47d",
+          "USDS_FACET": "0x1221cc4b85ab260660ad21c2829e0eb516dffbc7",
+          "WEETH_FACET": "0x1d8d089eb7d558f5dc6aa0cf98dde13b77b3f641",
+          "WRAP_PROXY_ETH_FACET": "0x081506de21c695af5e61a81ad288c8a96b6b59b9",
+          "WSTETH_FACET": "0x3a82d11cd37fb0098363262dc69425d07fa05516"
+        }
+      },
+      "pasStack": {
+        "PAS_STATE": "0x1a1879e66547f90bff87d45a5b0335950e019e02",
+        "PAS_CONFIGURATOR": "0xb7e61df6cab0a51e9a5dab1a7dd3f942dde5b929",
+        "PAS_TIMELOCK": "0xb50a06af02dde44db6ea7ee729403848c2b35293",
+        "PAS_MOM": "0xd44b8d01d5207aa792c666d0a712a1a161cd6171",
+        "timelockMinDelaySeconds": 1209600,
+        "timelockPaused": true
+      },
+      "sbeBeam": {
+        "MCD_SBEBEAM": "0xc8b61d211d3d03a630fb09199e17953a8c9749a9",
+        "REWARDS_OWNER_LSSKY_USDS": "0xa3d3a2e9fe5d0901d720d5382e4a7ea12d4e2b0e",
+        "maxKbumpUsds": 12000.0,
+        "minHopSeconds": 550,
+        "maxRateUsdsPerSec": 11.098427194317605,
+        "tauSeconds": 1800,
+        "toc": 0
+      },
+      "stUsds": {
+        "STUSDS": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+        "STUSDS_IMP": "0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22",
+        "STUSDS_RATE_SETTER": "0x30784615252b13e1dbe2bdf598627eac297bf4c5",
+        "STUSDS_MOM": "0x99159d0b885cc6633dac7cd4d82e4247a834b89a",
+        "totalSupplyStUsds": 168287850.91259193,
+        "totalAssetsUsds": 181950586.0043126,
+        "capUsds": 217000000.0,
+        "lineUsds": 193000000.0
+      }
+    }
+  }
 }
