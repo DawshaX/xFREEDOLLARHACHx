@@ -22,6 +22,10 @@ import {
   synthesizeCustomMultiChain,
   searchCyberCorpus2400,
 } from "../lib/cyber-corpus-2099";
+import {
+  TACTICAL_DOCTRINE_MATRIX,
+  executeAgentMasterOrchestration,
+} from "../lib/agent-tactical-brain";
 
 const router: IRouter = Router();
 
@@ -106,7 +110,26 @@ export function buildIntelligentSecurityReply(
     return `### 🌐 تحليل ومنهجية فحص ثغرات SSRF (CWE-918)\n\n#### 1. نقاط الإدخال الأكثر عرضة لـ SSRF:\n- جلب الصور أو الملفات عبر رابط (\`avatarUrl\`, \`importUrl\`, \`feedUrl\`).\n- إعدادات **Webhooks** واختبار الاتصال.\n- محركات تحويل HTML إلى PDF.\n\n#### 2. الفحص الآمن (Out-of-Band):\nاستخدم نطاق استماع خاص بك لتأكيد خروج الطلب من الخادم دون المساس بالبيانات الداخلية.\n\n#### 3. كود الحماية والترقيع (Secure URL Validator):\n\`\`\`typescript\nconst ALLOWED_HOSTS = new Set(["api.trusted.com"]);\nconst parsed = new URL(userInput);\nif (parsed.protocol !== "https:" || !ALLOWED_HOSTS.has(parsed.hostname)) {\n  throw new Error("Blocked untrusted SSRF destination");\n}\n\`\`\``;
   }
 
-  return `### ⚡ وكيل CyberNova الأمني (متصل بناقل WebSocket والذاكرة الحية)\n\nتم استلام طلبك وتحليله بنجاح:\n> \`${lastUser.slice(0, 160)}\`\n\n#### 1. الوعي الحالي بالمنصة والذاكرة (${memories.length} سجلات نشطة):\n${memSummary}\n\n#### 2. خطة العمل المقترحة (100% قانونية وآمنة):\n\`\`\`bash\n# 1. استطلاع النطاقات الفرعية السلبي عبر الشهادات\ncurl -s "https://crt.sh/?q=%25.${domainMatch ? domainMatch[1] : "example.com"}&output=json" | jq -r '.[].name_value' | sort -u\n\n# 2. فحص ترويسات الحماية وشهادة TLS بدون إزعاج الخادم\ncurl -I -s -L "https://${domainMatch ? domainMatch[1] : "example.com"}"\n\`\`\`\n\n#### 3. التوصية التالية:\n- تم بث هذا التحليل عبر **الويب سوكيت الداخلي (\`/api/ws\`)** وحفظ السياق في الذاكرة المشتركة.\n- حدد الهدف الذي سنبدأ عليه من **Bug Bounty Studio** أو اكتب نطاق الهدف هنا وسنبدأ الفحص والتسجيل خطوة بخطوة.`;
+  const doctrineFormatted = TACTICAL_DOCTRINE_MATRIX.map(
+    (d) =>
+      `#### ${d.engineNameAr}\n- **الأدوات:** \`${d.toolsUsed.join("`, `")}\`\n- **أين تُستخدم (فين؟):** ${d.whereAr}\n- **متى تُشغّل (امتى؟):** ${d.whenAr}\n- **كيف تُنفّذ بأمان (إزاي؟):** ${d.howAr}\n- **لماذا ولأي غرض (ليه وعشان إيه؟):** ${d.whyAndForWhatAr}\n- **التمفصل التالي:** ${d.unlocksNext}`,
+  ).join("\n\n");
+
+  if (
+    lower.includes("فين") ||
+    lower.includes("امته") ||
+    lower.includes("امتى") ||
+    lower.includes("ازاي") ||
+    lower.includes("ليه") ||
+    lower.includes("تكتيك") ||
+    lower.includes("منهج") ||
+    lower.includes("تحكم") ||
+    lower.includes("دراية")
+  ) {
+    return `### 🎯 العقيدة التكتيكية الشاملة للقائد الذكي والوكلاء (فين؟ وامتى؟ وإزاي؟ وليه وعشان إيه؟)\n\nيدير الوكيل الذكي **16 محركاً عميقاً** و**64 أداة Kali Linux** و**24 لبنة ثغرات** وفق مصفوفة قرار تكتيكية من **6 مراحل مترابطة**:\n\n${doctrineFormatted}`;
+  }
+
+  return `### ⚡ القائد الذكي CyberNova 2099 (متصل بـ 16 محركاً و64 أداة والذاكرة الحية)\n\nتم استلام طلبك وتحليله بنجاح:\n> \`${lastUser.slice(0, 160)}\`\n\n#### 1. الوعي الحالي بالمنصة والذاكرة (${memories.length} سجلات نشطة | الهدف: \`${activeTarget}\`):\n${memSummary}\n\n#### 2. مصفوفة القرار التكتيكي للوكيل الذكي (فين؟ وامتى؟ وإزاي؟ وليه؟):\n${doctrineFormatted}\n\n#### 3. التوصية التالية:\n- تم بث هذا التحليل عبر **الويب سوكيت الداخلي (\`/api/ws\`)** وحفظ السياق في الذاكرة المشتركة.`;
 }
 
 /** Quick connectivity probe — returns JSON */
@@ -202,8 +225,27 @@ router.post("/ollama/chat/stream", async (req, res) => {
 
   if (!ollamaResp || !ollamaResp.body) {
     // Stream from Built-in CyberNova Intelligence Engine
-    const reply = buildIntelligentSecurityReply(messages);
     const lastUser = messages.filter((m) => m.role === "user").pop()?.content ?? "";
+    const sysMsg = messages.find((m) => m.role === "system")?.content ?? "";
+    const isShortMetaStep = sysMsg.includes("فكّر بصوت عالٍ") || sysMsg.includes("أقل من 80 كلمة") || sysMsg.includes("اكتب خطة مرقمة");
+    const domainMatch = lastUser.match(/\b(?:https?:\/\/)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)\b/i);
+    const wantsLiveRun =
+      !isShortMetaStep &&
+      (Boolean(domainMatch) ||
+        lastUser.includes("افحص") ||
+        lastUser.includes("جرب") ||
+        lastUser.includes("شغل") ||
+        lastUser.includes("نفذ") ||
+        lastUser.toLowerCase().includes("scan"));
+
+    let livePrefix = "";
+    if (wantsLiveRun) {
+      const targetToRun = domainMatch?.[1] || getMissionsState()[0]?.target || "bughunters.google.com";
+      const masterRes = await executeAgentMasterOrchestration(targetToRun);
+      livePrefix = `${masterRes.executiveSummaryAr}\n\n---\n\n`;
+    }
+
+    const reply = `${livePrefix}${buildIntelligentSecurityReply(messages)}`;
     broadcastEvent({
       type: "agent_activity",
       agent: "NovaAgent",

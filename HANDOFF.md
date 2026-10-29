@@ -87,4 +87,22 @@
   - **توسيع ترسانة GitHub المفتوحة إلى `36` مشروعاً عالمياً** (بما في ذلك مشاريع 2026 مثل `usestrix/strix`, `KeygraphHQ/shannon`, `aquasecurity/trivy`, `lissy93/web-check`, `vxcontrol/pentagi`, `gitleaks/gitleaks`, `smicallef/spiderfoot`, `yogeshojha/rengine`, `awarexone/Agentic-Bug-Hunter`, `elementalsouls/Claude-BugHunter`, `PortSwigger/param-miner`, `PortSwigger/http-request-smuggler`, `woodruffw/zizmor`).
   - **توسيع موسوعة الثغرات والكود الآمن إلى `30` فئة شاملة** بإضافة `HTTP Request Smuggling (H2.CL)`, `Web Cache Poisoning`, `Web Cache Deception`, `SAML 2.0 XML Signature Wrapping`, `WebAuthn / Passkey RP Flaws`, `CI/CD GitHub Actions Injection`, `XXE`, `BFLA`, `gRPC Reflection`, `Host Header Password Reset Poisoning`, `Multi-Tenant RLS Bypass`, و`Open Redirect to OAuth Token Chain`.
 
+### المرحلة 10: العقل التكتيكي الموحد للقائد الذكي وجميع الوكلاء (`agent-tactical-brain.ts` — فين؟ وامتى؟ وإزاي؟ وليه وعشان إيه؟)
+- **بناء محرك القرار التكتيكي والتنفيذ الذاتي الموحد (`artifacts/api-server/src/lib/agent-tactical-brain.ts`):**
+  1. **مصفوفة العقيدة التكتيكية من 6 مراحل (`GET /api/deep-research/tactical-doctrine`):** تشرح وتوجه جميع الوكلاء (`NovaAgent`, `LiveAgent`, `Autonomous Agent`, `KaliGPT`, `NovaCommander`, `Chat`, `BugBountyStudio`) حول:
+     - **📍 أين تُستخدم كل أداة (`WHERE / فين`):** الطبقة المعمارية والسطح المستهدف (`DNS/IP`, `JS Bundles`, `REST/GraphQL Schemas`, `Auth/JWT/OAuth/SAML`, `CDN/Cache/Edge`).
+     - **⏱️ متى تُشغّل (`WHEN / امتى`):** الترتيب التكتيكي والإشارة التي تستدعي تشغيل الأداة.
+     - **⚙️ كيف تُنفّذ بأمان واحترافية (`HOW / إزاي`):** المعاملات القانونية غير المدمرة ومعدل الطلبات الآمن (`Rate-Limited & Safe Harbor`).
+     - **🎯 لماذا ولأي غرض (`WHY / ليه وعشان إيه`):** المخرجات التي تنتجها الأداة وكيف تغذي الأداة التي تليها في السلسلة (`Unlocks Next`).
+  2. **التشغيل الذاتي الشامل للقائد الذكي (`POST /api/deep-research/agent-master-run`):**
+     - ينفذ 5 مراحل حية متسلسلة على الهدف النشط:
+       - `Stage 1:` استطلاع `DNS + Shodan InternetDB + Subfinder`
+       - `Stage 2:` تشريح حزم `JS` واستخراج مسارات `API` المخفية (`Katana + LinkFinder`)
+       - `Stage 3:` تدقيق الترويسات وإعدادات `CORS` والـ `Edge` (`Nuclei Safe Mode`)
+       - `Stage 4:` تركيب سلسلة ثغرات رباعية متزامنة (`4-Hop Combinatorial Chain: P01 ➔ P05 ➔ P04 ➔ P02`)
+       - `Stage 5:` بوابة البرهان التشفيري (`Zero-FP Gate SHA-256 Differential Verification`)
+  3. **ربط جميع الوكلاء في المنصة (`LiveAgent`, `Autonomous Agent`, `NovaAgent`, `KaliGPT`, `Chat`) بالتنفيذ الحي:**
+     - تحديث `app.ts` و`ollama-proxy.ts` و`ollama-browser.ts` بحيث يبث الوكيل الحي (`LiveAgent`) ومشغل المهام الذاتي (`Agent`) استدعاءات الأدوات الحقيقية (`tool_call` و`tool_result`) ومخرجات المراحل الخمس مباشرة عبر `SSE` و`NDJSON` ويسجلها في الذاكرة (`/memory`) ومتتبع المهام (`/missions`).
+
+
 

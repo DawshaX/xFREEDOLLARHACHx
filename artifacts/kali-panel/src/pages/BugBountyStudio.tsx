@@ -1416,7 +1416,46 @@ export default function BugBountyStudio() {
     };
     coveragePercent: number;
     dimensions: Array<{ id: string; name: string; completed: boolean; recommendedAction: string }>;
+    tacticalDoctrine?: Array<{
+      id: string;
+      phaseOrder: number;
+      engineNameAr: string;
+      toolsUsed: string[];
+      whereAr: string;
+      whenAr: string;
+      howAr: string;
+      whyAndForWhatAr: string;
+      unlocksNext: string;
+    }>;
     nextRecommendedStep: string;
+  } | null>(null);
+  const [showDoctrineMatrix, setShowDoctrineMatrix] = useState<boolean>(true);
+  const [agentMasterResult, setAgentMasterResult] = useState<{
+    target: string;
+    executedAt: string;
+    coverageBefore: number;
+    coverageAfter: number;
+    stepsExecuted: Array<{
+      stepNumber: number;
+      toolId: string;
+      toolName: string;
+      where: string;
+      when: string;
+      how: string;
+      why: string;
+      commandExecuted: string;
+      liveOutput: string;
+      status: string;
+    }>;
+    zeroFpProof: {
+      verified: boolean;
+      targetStatus: number;
+      targetHash: string;
+      baseline404Hash: string;
+      missingSecurityHeaders: string[];
+      serverHeader: string;
+    };
+    executiveSummaryAr: string;
   } | null>(null);
   const [kaliTools, setKaliTools] = useState<Array<{
     id: string;
@@ -1823,6 +1862,30 @@ ${reportFix}
       setSelfAwareness(data);
     } catch {
       // ignore
+    }
+  };
+
+  const handleRunAgentMaster = async () => {
+    setDeepLoading("agent-master");
+    try {
+      const res = await jsonRequest<NonNullable<typeof agentMasterResult>>("/deep-research/agent-master-run", {
+        method: "POST",
+        body: JSON.stringify({ target: activeTarget }),
+      });
+      setAgentMasterResult(res);
+      emitPlatformWsEvent({
+        type: "scan_completed",
+        target: activeTarget,
+        title: `القائد الذكي الشامل (5 مراحل + سلسلة رباعية + Zero-FP) اكتمل على ${activeTarget}`,
+      });
+      setSyncStatusMsg(
+        `✅ اكتمل التشغيل الذاتي الشامل للقائد الذكي (5 مراحل حية + سلسلة ثغرات رباعية + برهان Zero-FP) على ${activeTarget}!`,
+      );
+      void refreshSelfAwareness(activeTarget);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
     }
   };
 
@@ -2268,11 +2331,26 @@ ${reportFix}
                     تراقب المنصة تلقائياً كل ما لديها من محركات وأدوات وذاكرة وأدلة، وتحدد أبعاد الفحص المكتملة والمتبقية على الهدف النشط.
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <div className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-center">
                     <div className="text-[10px] text-emerald-300 font-mono">نسبة تغطية الفحص</div>
                     <div className="text-xl font-extrabold font-mono text-white">{selfAwareness.coveragePercent}%</div>
                   </div>
+                  <button
+                    onClick={() => void handleRunAgentMaster()}
+                    disabled={deepLoading === "agent-master"}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-l from-emerald-600 to-purple-600 hover:from-emerald-500 hover:to-purple-500 disabled:opacity-50 text-xs font-extrabold text-white shadow-lg shadow-purple-600/30"
+                  >
+                    {deepLoading === "agent-master"
+                      ? "⚡ القائد الذكي ينفذ المراحل الـ 5..."
+                      : "🚀 تشغيل القائد الذكي الشامل (5 مراحل + سلسلة رباعية)"}
+                  </button>
+                  <button
+                    onClick={() => setShowDoctrineMatrix((v) => !v)}
+                    className="px-3.5 py-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-xs font-bold text-purple-200"
+                  >
+                    {showDoctrineMatrix ? "إخفاء مصفوفة القرار التكتيكي" : "🎯 مصفوفة (فين؟ امتى؟ إزاي؟ ليه؟)"}
+                  </button>
                   <button
                     onClick={() => void refreshSelfAwareness()}
                     className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold text-white"
@@ -2327,6 +2405,78 @@ ${reportFix}
               <div className="text-xs font-mono text-purple-200 bg-purple-950/30 border border-purple-500/30 rounded-xl px-3.5 py-2">
                 💡 التوصية الذكية التالية للهدف ({activeTarget}): {selfAwareness.nextRecommendedStep}
               </div>
+
+              {/* Tactical Decision Doctrine Matrix: WHERE / WHEN / HOW / WHY */}
+              {showDoctrineMatrix && selfAwareness.tacticalDoctrine && selfAwareness.tacticalDoctrine.length > 0 && (
+                <div className="rounded-xl bg-black/50 border border-purple-500/35 p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm font-extrabold text-purple-200">
+                      🎯 العقيدة التكتيكية الموحدة للقائد الذكي وجميع الوكلاء: فين؟ وامتى؟ وإزاي؟ وليه وعشان إيه؟
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded bg-purple-500/20 text-[10px] font-mono text-purple-200">
+                      6-STAGE TACTICAL BRAIN · 100% CONNECTED
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {selfAwareness.tacticalDoctrine.map((doc) => (
+                      <div key={doc.id} className="p-3 rounded-xl bg-white/[0.03] border border-white/10 space-y-1.5 text-xs">
+                        <div className="font-extrabold text-emerald-300">{doc.engineNameAr}</div>
+                        <div className="text-[11px] font-mono text-purple-300">
+                          🛠️ {doc.toolsUsed.join(" · ")}
+                        </div>
+                        <div className="text-gray-200">
+                          <span className="font-bold text-amber-300">📍 فين (WHERE): </span>
+                          {doc.whereAr}
+                        </div>
+                        <div className="text-gray-200">
+                          <span className="font-bold text-sky-300">⏱️ امتى (WHEN): </span>
+                          {doc.whenAr}
+                        </div>
+                        <div className="text-gray-200">
+                          <span className="font-bold text-emerald-300">⚙️ إزاي (HOW): </span>
+                          {doc.howAr}
+                        </div>
+                        <div className="text-gray-200">
+                          <span className="font-bold text-pink-300">🎯 ليه وعشان إيه (WHY): </span>
+                          {doc.whyAndForWhatAr}
+                        </div>
+                        <div className="text-[11px] font-mono text-emerald-400 pt-1 border-t border-white/10">
+                          🔗 {doc.unlocksNext}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Live Agent Master 5-Stage Execution Output */}
+              {agentMasterResult && (
+                <div className="rounded-xl bg-emerald-950/25 border border-emerald-500/40 p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm font-extrabold text-emerald-300">
+                      ✅ سجل التنفيذ الحي للقائد الذكي الشامل على ({agentMasterResult.target}) — التغطية: {agentMasterResult.coverageAfter}%
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded bg-emerald-500/20 text-[11px] font-mono text-emerald-200">
+                      Zero-FP Verified: {agentMasterResult.zeroFpProof.targetHash} ≠ {agentMasterResult.zeroFpProof.baseline404Hash}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5">
+                    {agentMasterResult.stepsExecuted.map((st) => (
+                      <div key={st.stepNumber} className="p-3 rounded-xl bg-black/60 border border-emerald-500/30 space-y-1 text-xs">
+                        <div className="font-bold text-emerald-300">{st.toolName}</div>
+                        <div className="text-[11px] text-amber-200">📍 فين: {st.where}</div>
+                        <div className="text-[11px] text-sky-200">🎯 ليه: {st.why}</div>
+                        <div className="text-[10px] font-mono text-purple-300 bg-black/50 p-1.5 rounded">
+                          $ {st.commandExecuted}
+                        </div>
+                        <div className="text-[11px] font-mono text-gray-200 pt-1 border-t border-white/10">
+                          {st.liveOutput}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

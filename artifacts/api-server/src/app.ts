@@ -5,10 +5,11 @@ import path from "path";
 import fs from "fs";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { resolveStandaloneApi } from "./lib/standalone-api";
+import { resolveStandaloneApi, getMissionsState } from "./lib/standalone-api";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
 import { getAllMemories, saveMemory } from "./routes/memory";
 import { broadcastEvent } from "./lib/ws-hub";
+import { executeAgentMasterOrchestration } from "./lib/agent-tactical-brain";
 
 const app: Express = express();
 
@@ -65,17 +66,18 @@ app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Resp
     }
   };
 
-  const toolId = `tc-${Date.now()}`;
+  // 1. Memory & Self-Awareness lookup tool call
+  const memToolId = `tc-mem-${Date.now()}`;
   sendSse("tool_call", {
-    id: toolId,
-    name: "memory_search",
+    id: memToolId,
+    name: "memory_and_self_awareness_lookup",
     input: { query: content.slice(0, 80), sessionId },
   });
 
-  await new Promise((r) => setTimeout(r, 120));
+  await new Promise((r) => setTimeout(r, 90));
   const memories = getAllMemories().slice(0, 4);
   sendSse("tool_result", {
-    toolCallId: toolId,
+    toolCallId: memToolId,
     result: JSON.stringify(
       memories.map((m) => ({ title: m.title, kind: m.kind, content: m.content.slice(0, 120) })),
       null,
@@ -84,12 +86,38 @@ app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Resp
     isError: false,
   });
 
-  const reply = buildIntelligentSecurityReply([{ role: "user", content }]);
-  const chunks = reply.match(/.{1,24}/gs) ?? [reply];
+  // 2. Extract target or use active mission target & run Live Multi-Stage Tactical Execution
+  const domainMatch = content.match(/\b([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b/);
+  const activeTarget = domainMatch?.[0] || getMissionsState()[0]?.target || "bughunters.google.com";
+
+  const masterResult = await executeAgentMasterOrchestration(activeTarget, async (step) => {
+    const tcId = `tc-${step.stepNumber}-${Date.now()}`;
+    sendSse("tool_call", {
+      id: tcId,
+      name: step.toolId,
+      input: {
+        target: activeTarget,
+        where: step.where,
+        when: step.when,
+        how: step.how,
+        why: step.why,
+        command: step.commandExecuted,
+      },
+    });
+    sendSse("tool_result", {
+      toolCallId: tcId,
+      result: step.liveOutput,
+      isError: false,
+    });
+  });
+
+  const baseReply = buildIntelligentSecurityReply([{ role: "user", content }]);
+  const reply = `${masterResult.executiveSummaryAr}\n\n---\n\n${baseReply}`;
+  const chunks = reply.match(/.{1,28}/gs) ?? [reply];
   for (const chunk of chunks) {
     if (res.writableEnded) break;
     sendSse("delta", { text: chunk });
-    await new Promise((r) => setTimeout(r, 14));
+    await new Promise((r) => setTimeout(r, 12));
   }
 
   // Persist into standalone session history
@@ -127,32 +155,48 @@ app.post("/api/agent/tasks/:taskId/steps/:stepId/run", async (req: Request, res:
   const task = resolveStandaloneApi(`/api/agent/tasks/${taskId}`, "GET") as {
     id: number;
     title: string;
+    goal?: string;
     steps?: Array<{ id: number; title: string; description: string; status: string; output: string }>;
   } | null;
   const step = task?.steps?.find((s) => s.id === stepId);
   const stepTitle = step?.title || `خطوة #${stepId}`;
 
+  const domainMatch = `${task?.title || ""} ${task?.goal || ""}`.match(/\b([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b/);
+  const activeTarget = domainMatch?.[0] || getMissionsState()[0]?.target || "bughunters.google.com";
+
   sendSse("step_started", { title: stepTitle });
+
+  const masterResult = await executeAgentMasterOrchestration(activeTarget);
+  const matchedStage =
+    masterResult.stepsExecuted[(stepId - 1) % masterResult.stepsExecuted.length] ||
+    masterResult.stepsExecuted[0]!;
+
   const outputLines = [
-    `[CyberNova Autonomous Step Runner]`,
-    `▶ تنفيذ: ${stepTitle}`,
-    `• التحقق من السياق والذاكرة المشتركة (${getAllMemories().length} ملاحظات)...`,
-    `• تطبيق الفحص القانوني غير الهجومي وتوثيق المخرجات...`,
-    `✅ اكتملت الخطوة بنجاح وتم تسجيل النتيجة في سجل المهمة.`,
+    `[CyberNova Autonomous Tactical Agent — Live Execution]`,
+    `▶ الخطوة: ${stepTitle} (الهدف: ${activeTarget})`,
+    `• الأداة المختارة: ${matchedStage.toolName}`,
+    `• أين تُستخدم (WHERE): ${matchedStage.where}`,
+    `• متى تُستخدم (WHEN): ${matchedStage.when}`,
+    `• كيف تُنفذ بأمان (HOW): ${matchedStage.how}`,
+    `• لماذا ولأي غرض (WHY): ${matchedStage.why}`,
+    `• الأمر المنفذ: $ ${matchedStage.commandExecuted}`,
+    `• المخرجات الحية: ${matchedStage.liveOutput}`,
+    `• السلسلة المركبة المرتبطة: ${masterResult.synthesizedChain.architecturalGraph} (${masterResult.synthesizedChain.combinedSeverity})`,
+    `✅ اكتملت الخطوة بنجاح وتم تحديث الذاكرة وخزنة الأدلة (Zero-FP SHA256: ${masterResult.zeroFpProof.targetHash}).`,
   ].join("\n");
 
-  const chunks = outputLines.match(/.{1,22}/gs) ?? [outputLines];
+  const chunks = outputLines.match(/.{1,26}/gs) ?? [outputLines];
   for (const chunk of chunks) {
     if (res.writableEnded) break;
     sendSse("step_delta", { text: chunk });
-    await new Promise((r) => setTimeout(r, 18));
+    await new Promise((r) => setTimeout(r, 14));
   }
 
   if (step) {
     step.status = "completed";
     step.output = outputLines;
   }
-  saveMemory("fact", `تنفيذ خطوة وكيل: ${stepTitle}`, outputLines, "agent,step", 6, false);
+  saveMemory("fact", `تنفيذ خطوة وكيل تكتيكي: ${stepTitle}`, outputLines, `agent,step,${activeTarget}`, 8, false);
   broadcastEvent({ type: "agent_step_completed", taskId, stepId, title: stepTitle, ts: Date.now() });
 
   sendSse("step_completed", { stepId });

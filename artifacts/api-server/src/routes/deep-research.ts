@@ -19,6 +19,10 @@ import {
   searchCyberCorpus2400,
   getCorpusStats,
 } from "../lib/cyber-corpus-2099";
+import {
+  TACTICAL_DOCTRINE_MATRIX,
+  executeAgentMasterOrchestration,
+} from "../lib/agent-tactical-brain";
 
 const router: IRouter = Router();
 
@@ -1358,12 +1362,12 @@ router.get("/deep-research/self-awareness", (req: Request, res: Response) => {
     platformVersion: "CyberNova 2099 Universal Autonomous Intelligence Edition",
     activeTarget,
     selfAwarenessSummary: {
-      deepEnginesCount: 15,
+      deepEnginesCount: 16,
       kaliToolsIntegrated: KALI_LINUX_COMPLETE_ARSENAL.length, // 64
       kaliCategoriesCount: corpusStats.kaliCategoriesCount, // 12
-      githubArsenalCount: GITHUB_SECURITY_ARSENAL.length, // 40
+      githubArsenalCount: GITHUB_SECURITY_ARSENAL.length, // 36
       vulnPrimitivesCount: corpusStats.vulnPrimitivesCount, // 24
-      totalIndexedKnowledgeItems: corpusStats.totalIndexedKnowledgeItems, // 2,576+
+      totalIndexedKnowledgeItems: corpusStats.totalIndexedKnowledgeItems, // 2,572+
       globalPlatformsCount: GLOBAL_BUG_BOUNTY_PLATFORMS.length,
       memoriesStored: memories.length,
       missionFindings: findings.length,
@@ -1373,8 +1377,23 @@ router.get("/deep-research/self-awareness", (req: Request, res: Response) => {
     },
     coveragePercent,
     dimensions,
+    tacticalDoctrine: TACTICAL_DOCTRINE_MATRIX,
     nextRecommendedStep: nextDimension.recommendedAction,
   });
+});
+
+// ── 16. GET /api/deep-research/tactical-doctrine & POST /api/deep-research/agent-master-run ─
+router.get("/deep-research/tactical-doctrine", (_req: Request, res: Response) => {
+  res.json({
+    totalPhases: TACTICAL_DOCTRINE_MATRIX.length,
+    doctrine: TACTICAL_DOCTRINE_MATRIX,
+  });
+});
+
+router.post("/deep-research/agent-master-run", async (req: Request, res: Response) => {
+  const target = String(req.body?.target || "bughunters.google.com");
+  const result = await executeAgentMasterOrchestration(target);
+  res.json(result);
 });
 
 export default router;

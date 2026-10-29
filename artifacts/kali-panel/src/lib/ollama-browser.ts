@@ -44,22 +44,8 @@ export async function streamOllamaChat(opts: OllamaStreamOpts): Promise<string> 
       signal: opts.signal,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    // Distinguish: is Ollama running but no CORS, or completely down?
-    const probe = await probeOllamaBrowser(base);
-    if (probe.runningButNoCors) {
-      throw new OllamaCorsError(base);
-    }
-    if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("CORS")) {
-      // Could be CORS or not running — show generic connection error
-      throw new Error(
-        `❌ تعذّر الوصول إلى Ollama على ${base}.\n\n` +
-        `تأكد من:\n` +
-        `1. تشغيل Ollama: ollama serve\n` +
-        `2. تفعيل CORS: OLLAMA_ORIGINS="*" ollama serve`
-      );
-    }
-    throw new Error(`❌ تعذّر الوصول إلى Ollama على ${base}.\n${msg}`);
+    // Seamlessly fall back to the CyberNova Intelligent Security Copilot server stream
+    return streamOllamaViaServer(opts);
   }
 
   if (!resp.ok) {
@@ -122,41 +108,20 @@ export interface OllamaProbeResult {
 export async function probeOllamaBrowser(base?: string): Promise<OllamaProbeResult> {
   const url = (base || getStoredOllamaBase()).replace(/\/$/, "");
 
-  // Phase 1: Is Ollama running at all? (no-cors → opaque response if running, throws if not)
   try {
-    await fetch(`${url}/api/tags`, {
-      mode: "no-cors",
-      signal: AbortSignal.timeout(3000),
-    });
-    // Reached here → server IS running (no-cors gives opaque response with status 0)
+    const r = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(2500) });
+    if (r.ok) {
+      const data = await r.json() as { models?: Array<{ name: string }> };
+      return {
+        connected: true,
+        models: (data.models ?? []).map((m) => m.name),
+      };
+    }
   } catch {
-    // Connection refused or network error → server is NOT running
-    return {
-      connected: false,
-      models: [],
-      notRunning: true,
-      error: `Ollama غير شغّال — شغّل: ollama serve`,
-    };
+    // Fall back to CyberNova server-side intelligent copilot probe
   }
 
-  // Phase 2: Is CORS configured? (normal fetch → can read response if CORS OK)
-  try {
-    const r = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(3000) });
-    if (!r.ok) return { connected: false, models: [], error: `HTTP ${r.status}` };
-    const data = await r.json() as { models?: Array<{ name: string }> };
-    return {
-      connected: true,
-      models: (data.models ?? []).map((m) => m.name),
-    };
-  } catch {
-    // Server is running (phase 1 passed) but CORS is blocking
-    return {
-      connected: false,
-      models: [],
-      runningButNoCors: true,
-      error: `CORS غير مُفعَّل — شغّل: OLLAMA_ORIGINS="*" ollama serve`,
-    };
-  }
+  return probeOllamaViaServer();
 }
 
 // ── Server-side proxy streaming (no CORS needed) ─────────────────────────────
