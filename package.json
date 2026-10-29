@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "node platform/server.mjs",
     "start": "node platform/server.mjs",
-    "test": "node --test platform/tests",
+    "test": "node --test platform/tests/platform.test.mjs",
     "check": "node scripts/check-migration.mjs",
     "build": "node scripts/check-migration.mjs",
     "legacy:typecheck:libs": "tsc --build",
