@@ -1,6 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import dns from "node:dns";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { getAllMemories, saveMemory } from "./memory";
 import { broadcastEvent } from "../lib/ws-hub";
 import { broadcastLiveEvent } from "./live-events";
@@ -1459,6 +1461,65 @@ router.post("/deep-research/workstation-multitask", async (req: Request, res: Re
     ok: true,
     brainState,
   });
+});
+
+// ── 21. GET & POST /api/deep-research/discovered-vault (Permanent Discovered Vulns & Lifelong Learning Vault) ─
+function resolveStateFilePath(fileName: string): string {
+  const candidates = [
+    path.resolve(process.cwd(), "state", fileName),
+    path.resolve(process.cwd(), "..", "..", "state", fileName),
+    path.resolve("/home/user/xFREEDOLLARHACHx/state", fileName),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return candidates[0];
+}
+
+router.get("/deep-research/discovered-vault", (_req: Request, res: Response) => {
+  try {
+    const filePath = resolveStateFilePath("discovered-vulnerabilities-vault.json");
+    const raw = fs.readFileSync(filePath, "utf-8");
+    res.json(JSON.parse(raw));
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+router.post("/deep-research/discovered-vault", (req: Request, res: Response) => {
+  try {
+    const filePath = resolveStateFilePath("discovered-vulnerabilities-vault.json");
+    const vault = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    if (req.body?.newVulnerability) {
+      vault.discoveredVulnerabilities = [req.body.newVulnerability, ...(vault.discoveredVulnerabilities || [])];
+      vault.totalDiscoveredVulnerabilities = vault.discoveredVulnerabilities.length;
+    }
+    if (req.body?.newLearningRule) {
+      vault.lifelongLearningLedger = [req.body.newLearningRule, ...(vault.lifelongLearningLedger || [])];
+      vault.totalLifelongLearningRules = vault.lifelongLearningLedger.length;
+    }
+    vault.updatedAt = new Date().toISOString();
+    const serialized = JSON.stringify(vault, null, 2);
+    fs.writeFileSync(filePath, serialized, "utf-8");
+    const publicCopy = path.resolve("/home/user/xFREEDOLLARHACHx/artifacts/kali-panel/public/state/discovered-vulnerabilities-vault.json");
+    if (fs.existsSync(path.dirname(publicCopy))) {
+      fs.writeFileSync(publicCopy, serialized, "utf-8");
+    }
+    res.json({ ok: true, vault });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// ── 22. GET /api/deep-research/cryptocom-scope (Crypto.com HackerOne Scope & Smart Contracts) ─
+router.get("/deep-research/cryptocom-scope", (_req: Request, res: Response) => {
+  try {
+    const filePath = resolveStateFilePath("cryptocom-hackerone-scope.json");
+    const raw = fs.readFileSync(filePath, "utf-8");
+    res.json(JSON.parse(raw));
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 export default router;

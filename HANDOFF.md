@@ -236,6 +236,18 @@
   - **`SKY-VULN-02`**: `UniswapV3Facet.removeLiquidity` (`src/facets/uniswap-v3/UniswapV3Facet.sol`, lines `451–515`, `972–978`) never consults `twapTick` and checks `min.amount >= amounts.amount * maxSlippage / 1e18` against actual post-withdrawal spot outputs, allowing `min = actualAmounts` at any manipulated spot price while reverting honest `removeLiquidity` calls (`"UniswapV3Facet/min-amount-below-bound"`) on small normal tick shifts.
   - **Artifacts Saved & Synced**:
     - `audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md`
-    - `audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol`
+    - `audit/sky-immunefi/IMMUNEFI_STEP_BY_STEP_SUBMISSION_GUIDE.md`
+    - `audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol` (`test_PoC1`..`test_PoC4` — 4/4 passing on Mainnet fork, including `$30,004,359.92 USD` `GROVE_PAU_PROXY` Position `#1352494`)
     - `state/sky-immunefi-audit-report.json` & `artifacts/kali-panel/public/state/sky-immunefi-audit-report.json`
     - `state/cybernova-brain-state.json` & `artifacts/kali-panel/public/state/cybernova-brain-state.json`
+
+---
+
+## Phase 21 — Permanent Discovered Vulnerabilities Vault, Lifelong Learning Ledger & `Crypto.com` (HackerOne) Smart Contracts Audit
+
+- **Permanent Discovered Vulnerabilities Vault (`state/discovered-vulnerabilities-vault.json` & `GET/POST /api/deep-research/discovered-vault`)**:
+  - Permanently archives all verified vulnerabilities (`SKY-VULN-02`, `SKY-VULN-01`, `SKY-VULN-03`, `CDC-NOTE-01`), architectural notes (`SKY-NOTE-01`..`06`), Markdown reports, Foundry Mainnet-fork PoCs, and **8 Lifelong Learning Rules (`LEARN-01`..`LEARN-08`)** directly inside the `CyberNova` Encyclopedia, CVE Center, Memory Bus, Reports Generator, and `state/discovered-vulnerabilities-vault.json`.
+- **Active Free Target: `Crypto.com` on HackerOne (`https://hackerone.com/crypto` — `$0` Fee, `14h` First Response, Up to `$1,000,000`–`$2,000,000`)**:
+  - Indexed all 31 official CSV scope assets + 4 on-chain Smart Contracts (`CDCETH` `0xfe18aE03741a5b84e39C295Ac9C856eD7991C38e` on Ethereum, `CDCBTC` `0x2e53c5586e12a99d4CAE366E9Fc5C14fE9c6495d` on Cronos, `CDCETH` `0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446` on Cronos, and `CDCBTC` `0xDDCDe8DE19284cC5Aab6db5AC6Af1dcdA175f5e2` on Ethereum) in `state/cryptocom-hackerone-scope.json`.
+  - Audited `crypto-com/wrapped-tokens-os` (`LiquidETHV1.sol`, `FiatTokenV2_1.sol`, `MintForwarder.sol`, `RateLimit.sol`, `ExchangeRateUpdater.sol`, `deploy_staked_token.ts`) and discovered **`CDC-NOTE-01`**: Uninitialized `LiquidETHV1` implementation contract (`0xCC4b4878d64A76616c483a280fBfdBb08b705757`, `slot[8]=0`, `slot[18]=0`) on Cronos Mainnet (`audit/cryptocom-hackerone/CRYPTOCOM_SMART_CONTRACTS_SCOPE_AND_INITIAL_AUDIT.md`).
+

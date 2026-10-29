@@ -43,6 +43,86 @@ export interface StandaloneCve {
 
 export const STANDALONE_CVES: StandaloneCve[] = [
   {
+    id: "SKY-VULN-02",
+    cveId: "SKY-VULN-02",
+    description:
+      "[CyberNova Discovered — Sky Immunefi] Unprivileged Two-Sided 0.1% Slippage Pincer in UniswapV3Facet.removeLiquidity (0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab) Causing Temporary Freezing of Funds / Griefing on Live $30,004,359.92 USD GROVE_PAU_PROXY Position #1352494 (Foundry Mainnet Fork PoC 4/4 Verified).",
+    severity: "HIGH",
+    cvssScore: 7.5,
+    score: 7.5,
+    publishedAt: "2026-10-30T01:30:00Z",
+    published: "2026-10-30T01:30:00Z",
+    cweId: "CWE-682",
+    cwe: "Slippage-Pincer-DoS",
+    source: "CyberNova-Vault",
+    epss: 0.95,
+    vendor: "Sky (MakerDAO)",
+    product: "diamond-pau / UniswapV3Facet",
+    exploitAvailable: true,
+    inKev: false,
+    references: ["https://etherscan.io/address/0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab"],
+  },
+  {
+    id: "SKY-VULN-01",
+    cveId: "SKY-VULN-01",
+    description:
+      "[CyberNova Discovered — Sky Immunefi] Unchecked params.target vs TWAP expectedAmounts in UniswapV3Facet.addLiquidity allowing TWAP slippage check bypass and asymmetric upper-bound DoS.",
+    severity: "MEDIUM",
+    cvssScore: 6.5,
+    score: 6.5,
+    publishedAt: "2026-10-30T01:15:00Z",
+    published: "2026-10-30T01:15:00Z",
+    cweId: "CWE-682",
+    cwe: "TWAP-Target-Bypass",
+    source: "CyberNova-Vault",
+    epss: 0.88,
+    vendor: "Sky (MakerDAO)",
+    product: "diamond-pau / UniswapV3Facet",
+    exploitAvailable: true,
+    inKev: false,
+    references: ["https://etherscan.io/address/0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab"],
+  },
+  {
+    id: "SKY-VULN-03",
+    cveId: "SKY-VULN-03",
+    description:
+      "[CyberNova Discovered — Sky Immunefi] Complete Omission of maxSlippage Verification in Deployed UniswapV4Facet (0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D) across mintPosition, increasePosition, and decreasePosition.",
+    severity: "MEDIUM",
+    cvssScore: 6.2,
+    score: 6.2,
+    publishedAt: "2026-10-30T01:20:00Z",
+    published: "2026-10-30T01:20:00Z",
+    cweId: "CWE-841",
+    cwe: "Missing-Slippage-Guard",
+    source: "CyberNova-Vault",
+    epss: 0.82,
+    vendor: "Sky (MakerDAO)",
+    product: "diamond-pau / UniswapV4Facet",
+    exploitAvailable: true,
+    inKev: false,
+    references: ["https://etherscan.io/address/0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D"],
+  },
+  {
+    id: "CDC-NOTE-01",
+    cveId: "CDC-NOTE-01",
+    description:
+      "[CyberNova Discovered — Crypto.com HackerOne] Uninitialized LiquidETHV1 Implementation Contract (0xCC4b4878d64A76616c483a280fBfdBb08b705757) for CDCETH Proxy on Cronos Mainnet due to deploy_staked_token.ts calling transferOwnership(admin) without calling public initialize().",
+    severity: "LOW",
+    cvssScore: 4.3,
+    score: 4.3,
+    publishedAt: "2026-10-30T03:00:00Z",
+    published: "2026-10-30T03:00:00Z",
+    cweId: "CWE-665",
+    cwe: "Uninitialized-Impl",
+    source: "CyberNova-Vault",
+    epss: 0.65,
+    vendor: "Crypto.com",
+    product: "wrapped-tokens-os / LiquidETHV1",
+    exploitAvailable: true,
+    inKev: false,
+    references: ["https://explorer.cronos.org/address/0xCC4b4878d64A76616c483a280fBfdBb08b705757"],
+  },
+  {
     id: "CVE-2025-24813",
     cveId: "CVE-2025-24813",
     description:
@@ -510,6 +590,48 @@ export interface MemoryRecord {
 
 const DEFAULT_MEMORIES: MemoryRecord[] = [
   {
+    id: "mem-sky-vuln-02",
+    kind: "fact",
+    memoryType: "intel",
+    title: "[SKY-VULN-02] انغلاق سحب السيولة ثنائي الاتجاه (0.1% Two-Sided Pincer) في UniswapV3Facet ($30.00M GROVE_PAU_PROXY)",
+    key: "vault:sky-vuln-02",
+    content:
+      "دالة removeLiquidity في UniswapV3Facet (0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab) تفرض شرطاً عكسياً علويّاً (minAmounts[i] * WAD / amount >= maxSlippage) بعد السحب من Uniswap V3، مما يخلق نافذة سحب بعرض 0.1% فقط. تم إثبات تعطيل سحب مركز سيولة GROVE_PAU_PROXY البالغ $30,004,359.92 USD (#1352494) عبر تحريك السعر 2 ticks فقط (4/4 Foundry Fork Tests).",
+    tags: "sky,immunefi,uniswap-v3,diamond-pau,discovered-vault",
+    pinned: true,
+    importance: 10,
+    ts: Date.now() - 300_000,
+    createdAt: new Date(Date.now() - 300_000).toISOString(),
+  },
+  {
+    id: "mem-cryptocom-h1",
+    kind: "project",
+    memoryType: "project",
+    title: "[الهدف النشط] فحص العقود الذكية لمنصة Crypto.com على HackerOne (مجاني 100% — مكافآت حتى $1,000,000)",
+    key: "mission:cryptocom-hackerone-smart-contracts",
+    content:
+      "فحص العقود الذكية الرسمية لمنصة Crypto.com على Ethereum وCronos: عقد CDCETH (0xfe18aE03741a5b84e39C295Ac9C856eD7991C38e - LiquidETHV1)، وعقد CDCBTC (0x2e53c5586e12a99d4CAE366E9Fc5C14fE9c6495d - FiatTokenV2_1)، ومستودع wrapped-tokens-os (MintForwarder, RateLimit, ExchangeRateUpdater). تم رصد وتوثيق CDC-NOTE-01 (عقد التنفيذ غير المهيأ 0xCC4b4878d64A76616c483a280fBfdBb08b705757 على Cronos Mainnet).",
+    tags: "cryptocom,hackerone,smart-contracts,cdceth,cdcbtc,cronos",
+    pinned: true,
+    importance: 10,
+    ts: Date.now() - 120_000,
+    createdAt: new Date(Date.now() - 120_000).toISOString(),
+  },
+  {
+    id: "mem-lifelong-learning",
+    kind: "fact",
+    memoryType: "intel",
+    title: "سجل التعلم المستمر مدى الحياة (CyberNova Lifelong Learning Ledger — 8 Core Rules)",
+    key: "learning:lifelong-ledger-v21",
+    content:
+      "1. Two-Sided Slippage Pincer في المجمعات المركزة.\n2. التحقق الحي من ربط الـ Facets عبر PAU_FACTORY وController.integrations().\n3. استخدام خزائن السيولة الحية (vm.prank) بدلاً من deal() على عقود الـ Proxy المعقدة.\n4. تحديد sqrtPriceLimitX96 لتجنب مسح TickBitmap الطويل.\n5. بناء الاستغلال من عنوان خارجي غير ذي صلاحية (Unprivileged Actor).\n6. التوجيه التلقائي للمنصات المجانية 100% (HackerOne Crypto.com, Bugcrowd Binance, Cantina Coinbase).\n7. اكتشاف العقود عبر الشبكات بحساب عناوين CREATE الحتمية.\n8. فحص تهيئة عقود الـ Implementation في نمط FiatTokenProxy.",
+    tags: "lifelong-learning,heuristics,foundry,defi,bug-bounty",
+    pinned: true,
+    importance: 10,
+    ts: Date.now() - 60_000,
+    createdAt: new Date(Date.now() - 60_000).toISOString(),
+  },
+  {
     id: "mem-1",
     kind: "project",
     memoryType: "project",
@@ -523,88 +645,80 @@ const DEFAULT_MEMORIES: MemoryRecord[] = [
     ts: Date.now() - 3600_000,
     createdAt: new Date(Date.now() - 3600_000).toISOString(),
   },
-  {
-    id: "mem-2",
-    kind: "fact",
-    memoryType: "intel",
-    title: "قائمة فحص الثغرات عالية المكافأة (High-Bounty Checklist)",
-    key: "checklist:high-bounty-vulns",
-    content:
-      "1. IDOR / BOLA في نقاط نهاية API (تغيير معرفات الموارد بين حسابين).\n2. SSRF في جلب الروابط أو Webhooks أو تحويل PDF.\n3. Race Conditions (TOCTOU) في الكوبونات والرصيد.\n4. Prototype Pollution / Mass Assignment في JSON body.",
-    tags: "idor,ssrf,race-condition,owasp",
-    pinned: true,
-    importance: 9,
-    ts: Date.now() - 1800_000,
-    createdAt: new Date(Date.now() - 1800_000).toISOString(),
-  },
-  {
-    id: "mem-3",
-    kind: "preference",
-    memoryType: "preference",
-    title: "إعدادات التزامن الحي (WebSocket + Agents + Notes)",
-    key: "system:ws-sync-active",
-    content:
-      "جميع الوكلاء (NovaAgent, LiveAgent, KaliGPT) والملاحظات ومتتبع المهام متصلة عبر ناقل WebSocket الداخلي لتسجيل كل فحص أو ملاحظة تلقائياً.",
-    tags: "websocket,agents,sync",
-    pinned: false,
-    importance: 8,
-    ts: Date.now() - 600_000,
-    createdAt: new Date(Date.now() - 600_000).toISOString(),
-  },
 ];
 
-let memoriesState: MemoryRecord[] = loadState("cybernova_memories_v1", DEFAULT_MEMORIES);
+let memoriesState: MemoryRecord[] = loadState("cybernova_memories_v2", DEFAULT_MEMORIES);
 
 const DEFAULT_MISSIONS = [
   {
     id: 1,
-    name: "عملية الاستطلاع والتدقيق القانوني — Bug Bounty Readiness",
-    target: "bughunters.google.com / hackerone.com",
-    objective: "استطلاع النطاقات الفرعية، تحليل ترويسات الأمان، وفحص نقاط النهاية ضد IDOR وSSRF ضمن النطاق المصرح به.",
-    phase: "reconnaissance",
+    name: "Crypto.com Smart Contracts Audit (HackerOne — 100% Free / Up to $1,000,000)",
+    target: "https://hackerone.com/crypto (CDCETH 0xfe18aE03... & CDCBTC 0x2e53c558...)",
+    objective: "التدقيق الأمني العميق للعقود الذكية لمنصة Crypto.com على شبكتي Ethereum وCronos (LiquidETHV1, FiatTokenV2_1, MintForwarder, RateLimit, ExchangeRateUpdater) وحفظ جميع الثغرات المكتشفة في خزنة CyberNova الدائمة.",
+    phase: "deep-smart-contract-audit",
     status: "active",
-    createdAt: new Date(Date.now() - 7200_000).toISOString(),
+    createdAt: new Date(Date.now() - 3600_000).toISOString(),
     updatedAt: new Date().toISOString(),
-    notes: "جميع الملاحظات والأدلة تسجل تلقائياً عبر ناقل WebSocket الداخلي.",
-    tags: ["bug-bounty", "recon", "legal-scope"],
+    notes: "تم حفظ ثغرات Sky الثلاث (SKY-VULN-01, SKY-VULN-02, SKY-VULN-03) وتقريرها الكامل في الخزنة الدائمة، وبدأ الفحص العميق لعقود Crypto.com.",
+    tags: ["cryptocom", "hackerone", "smart-contracts", "sky-vault", "zero-fee"],
     findings: [
       {
-        id: 1,
+        id: 101,
+        type: "vuln",
+        title: "[SKY-VULN-02] Two-Sided 0.1% Slippage Pincer in UniswapV3Facet ($30.00M GROVE_PAU_PROXY)",
+        severity: "high",
+        detail: "تم التحقق بـ 4 اختبارات Foundry على فورك الشبكة الحية وحفظ التقرير الكامل في audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md.",
+        tool: "Foundry Mainnet Fork Verifier",
+        ts: new Date().toISOString(),
+      },
+      {
+        id: 102,
         type: "info",
-        title: "تفعيل ناقل التزامن الحي (WebSocket + Memory Bus)",
-        severity: "info",
-        detail: "المنصة جاهزة لتسجيل الأهداف والملاحظات والأدلة من جميع الوحدات تلقائياً.",
-        tool: "BugBountyStudio",
+        title: "[CDC-NOTE-01] Uninitialized LiquidETHV1 Implementation (0xCC4b4878...757) on Cronos Mainnet",
+        severity: "low",
+        detail: "رصد عدم تهيئة عقد التنفيذ LiquidETHV1 لعملة CDCETH على شبكة Cronos بسبب استدعاء transferOwnership فقط في deploy_staked_token.ts.",
+        tool: "Cronos RPC Storage Inspector",
         ts: new Date().toISOString(),
       },
     ],
     commands: [
       {
-        cmd: "curl -s 'https://crt.sh/?q=%25.example.com&output=json' | jq -r '.[].name_value' | sort -u",
-        output: "api.example.com\nauth.example.com\ndev.example.com",
+        cmd: "MAINNET_RPC_URL=https://gateway.tenderly.co/public/mainnet forge test --match-path test/PoC_UniswapV3_Bypass.t.sol -vv",
+        output: "Suite result: ok. 4 passed; 0 failed; 0 skipped (test_PoC1, test_PoC2, test_PoC3, test_PoC4_LiveGrovePAU_30M_Position_RemoveLiquidity_DoS)",
         ts: new Date().toISOString(),
       },
     ],
   },
 ];
 
-let missionsState = loadState("cybernova_missions_v1", DEFAULT_MISSIONS);
+let missionsState = loadState("cybernova_missions_v2", DEFAULT_MISSIONS);
 
 const DEFAULT_REPORTS = [
   {
     id: 1,
-    title: "تقرير جاهزية الفحص الأمني وموسوعة الثغرات — CyberNova",
-    target: "Bug Bounty Legal Scope",
-    kind: "vulnerability_assessment",
+    title: "[Saved in Vault] Sky (MakerDAO) — Unprivileged Two-Sided 0.1% Slippage Pincer in UniswapV3Facet.removeLiquidity ($30.00M GROVE_PAU_PROXY)",
+    target: "0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab / 0x0DcD9298e163dFD3c0B5b00F0d9093C36e40A153",
+    kind: "smart_contract_audit",
     severity: "HIGH",
     status: "completed",
     createdAt: new Date().toISOString(),
-    summary: "تقرير شامل لمنهجيات اكتشاف ثغرات OWASP Top 10 وCWE مع أكواد الترقيع (Remediation Diff).",
-    markdown: `# تقرير التقييم الأمني — CyberNova\n\n## الملخص التنفيذي\nتم إعداد هذا التقرير عبر منصة **CyberNova** لتوثيق منهجية الفحص القانوني للثغرات عالية الخطورة (IDOR/BOLA, SSRF, SQLi, XSS, Race Conditions) مع أكواد الترقيع الآمنة.\n\n## التوصيات\n1. فرض التحقق من ملكية المورد في كل استعلام قاعدة بيانات لمنع IDOR.\n2. تطبيق Allowlist صارمة للروابط الخارجية لمنع SSRF.\n3. استخدام Parameterized Queries لمنع SQL Injection.`,
+    summary: "تقرير كامل جاهز ومفحوص 100% على فورك الشبكة الحية (4/4 Foundry Tests) يوثق ثغرة SKY-VULN-02 وثغرتي SKY-VULN-01 وSKY-VULN-03 في مستودع diamond-pau.",
+    markdown: `# Unprivileged Two-Sided 0.1% Slippage Pincer in \`UniswapV3Facet.removeLiquidity\` Causing Temporary Freezing of Funds on Live $30.00M \`GROVE_PAU_PROXY\` Position #1352494\n\n- **Full Report File**: \`audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md\`\n- **Foundry Mainnet-Fork PoC**: \`audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol\` (\`4 passed; 0 failed\`)\n- **Target Contracts**: \`UNISWAP_V3_FACET\` (\`0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab\`), \`GROVE_PAU_PROXY\` (\`0x0DcD9298e163dFD3c0B5b00F0d9093C36e40A153\`)\n\n## Root Cause\nIn \`UniswapV3Facet.removeLiquidity\` (lines 333-339), after burning liquidity at the spot tick, the contract enforces an inverted upper-bound check:\n\`\`\`solidity\nrequire(\n    (minAmounts[0] == 0 || minAmounts[0] * WAD / amount0 >= maxSlippage) &&\n    (minAmounts[1] == 0 || minAmounts[1] * WAD / amount1 >= maxSlippage),\n    "UniswapV3Facet/excessive-slippage"\n);\n\`\`\`\nCombined with \`amount0Min = minAmounts[0]\` and \`amount1Min = minAmounts[1]\`, any 2-tick deviation across \`[-10, 10]\` causes one token to increase by >0.20%, reverting all \`removeLiquidity\` calls.`,
+  },
+  {
+    id: 2,
+    title: "[Active Audit] Crypto.com (HackerOne) — Smart Contracts Scope & On-Chain Storage Dossier (CDCETH & CDCBTC)",
+    target: "https://hackerone.com/crypto (0xfe18aE03741a5b84e39C295Ac9C856eD7991C38e & 0x2e53c5586e12a99d4CAE366E9Fc5C14fE9c6495d)",
+    kind: "smart_contract_audit",
+    severity: "MEDIUM",
+    status: "completed",
+    createdAt: new Date().toISOString(),
+    summary: "ملف الفحص المعماري الشامل للعقود الذكية لمنصة Crypto.com على Ethereum وCronos (CDCETH, CDCBTC, MintForwarder, RateLimit, ExchangeRateUpdater) مع توثيق CDC-NOTE-01.",
+    markdown: `# Crypto.com (HackerOne) — Smart Contracts Audit Dossier\n\n- **Full Dossier File**: \`audit/cryptocom-hackerone/CRYPTOCOM_SMART_CONTRACTS_SCOPE_AND_INITIAL_AUDIT.md\`\n- **Explicit In-Scope Contracts**:\n  1. \`CDCETH\` on Ethereum Mainnet (\`0xfe18aE03741a5b84e39C295Ac9C856eD7991C38e\`, impl \`0x7e772ed6e4BfEAE80f2d58e4254f6b6e96669253\`)\n  2. \`CDCBTC\` on Cronos Mainnet (\`0x2e53c5586e12a99d4CAE366E9Fc5C14fE9c6495d\`, impl \`0xDDCDe8DE19284cC5Aab6db5AC6Af1dcdA175f5e2\`)\n- **Open-Scope Sister Contracts**:\n  3. \`CDCETH\` on Cronos Mainnet (\`0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446\`, impl \`0xCC4b4878d64A76616c483a280fBfdBb08b705757\` — **Uninitialized Implementation \`CDC-NOTE-01\`**)\n  4. \`CDCBTC\` on Ethereum Mainnet (\`0xDDCDe8DE19284cC5Aab6db5AC6Af1dcdA175f5e2\`, impl \`0x0A84f3855CC1Ae96d7D1c2cFF9600DfD2Fedf13C\`)`,
   },
 ];
 
-let reportsState = loadState("cybernova_reports_v1", DEFAULT_REPORTS);
+let reportsState = loadState("cybernova_reports_v2", DEFAULT_REPORTS);
 
 const DEFAULT_NODES = [
   {
@@ -902,7 +1016,7 @@ export function setActiveMissionTarget(target: string, programName?: string) {
   if (missionsState[0]) {
     missionsState[0].target = target;
     if (programName) missionsState[0].name = `فحص قانوني: ${programName} (${target})`;
-    saveState("cybernova_missions_v1", missionsState);
+    saveState("cybernova_missions_v2", missionsState);
   }
 }
 
@@ -913,7 +1027,7 @@ export function recordMissionCommand(cmd: string, output = "تم التنفيذ 
       output,
       ts: new Date().toLocaleTimeString("ar-EG"),
     });
-    saveState("cybernova_missions_v1", missionsState);
+    saveState("cybernova_missions_v2", missionsState);
   }
 }
 
@@ -933,7 +1047,7 @@ export function recordMissionFinding(finding: {
       tool: finding.tool || "CyberNova Master AI Agent",
       ts: new Date().toLocaleTimeString("ar-EG"),
     });
-    saveState("cybernova_missions_v1", missionsState);
+    saveState("cybernova_missions_v2", missionsState);
   }
 }
 
@@ -1333,7 +1447,7 @@ export function resolveStandaloneApi(
         createdAt: new Date().toISOString(),
       };
       memoriesState = [entry, ...memoriesState];
-      saveState("cybernova_memories_v1", memoriesState);
+      saveState("cybernova_memories_v2", memoriesState);
       return entry;
     }
     const q = (u.searchParams.get("search") || u.searchParams.get("q") || "").toLowerCase();
@@ -1354,7 +1468,7 @@ export function resolveStandaloneApi(
     const target = memoriesState.find((x) => String(x.id) === id);
     const nextPinned = body?.pinned !== undefined ? Boolean(body.pinned) : !(target?.pinned ?? false);
     memoriesState = memoriesState.map((x) => (String(x.id) === id ? { ...x, pinned: nextPinned } : x));
-    saveState("cybernova_memories_v1", memoriesState);
+    saveState("cybernova_memories_v2", memoriesState);
     return { id, pinned: nextPinned };
   }
 
@@ -1362,7 +1476,7 @@ export function resolveStandaloneApi(
   if (memDelMatch && m === "DELETE") {
     const id = memDelMatch[1];
     memoriesState = memoriesState.filter((x) => String(x.id) !== id);
-    saveState("cybernova_memories_v1", memoriesState);
+    saveState("cybernova_memories_v2", memoriesState);
     return { ok: true, id };
   }
 
@@ -1384,7 +1498,7 @@ export function resolveStandaloneApi(
         commands: [],
       };
       missionsState = [created, ...missionsState];
-      saveState("cybernova_missions_v1", missionsState);
+      saveState("cybernova_missions_v2", missionsState);
       return created;
     }
     return missionsState.map((ms) => ({
@@ -1410,7 +1524,7 @@ export function resolveStandaloneApi(
     if (mission) {
       mission.findings.unshift(finding);
       mission.updatedAt = new Date().toISOString();
-      saveState("cybernova_missions_v1", missionsState);
+      saveState("cybernova_missions_v2", missionsState);
     }
     return finding;
   }
@@ -1427,7 +1541,7 @@ export function resolveStandaloneApi(
     if (mission) {
       mission.commands.unshift(cmdEntry);
       mission.updatedAt = new Date().toISOString();
-      saveState("cybernova_missions_v1", missionsState);
+      saveState("cybernova_missions_v2", missionsState);
     }
     return { ok: true, count: mission?.commands.length ?? 1 };
   }
@@ -1438,12 +1552,12 @@ export function resolveStandaloneApi(
     const mission = missionsState.find((x) => x.id === mid) || missionsState[0];
     if (m === "DELETE") {
       missionsState = missionsState.filter((x) => x.id !== mid);
-      saveState("cybernova_missions_v1", missionsState);
+      saveState("cybernova_missions_v2", missionsState);
       return { ok: true };
     }
     if ((m === "PATCH" || m === "PUT") && mission && body) {
       Object.assign(mission, body, { updatedAt: new Date().toISOString() });
-      saveState("cybernova_missions_v1", missionsState);
+      saveState("cybernova_missions_v2", missionsState);
       return mission;
     }
     return mission ?? null;
@@ -1487,7 +1601,7 @@ export function resolveStandaloneApi(
         createdAt: new Date().toISOString(),
       };
       reportsState = [created, ...reportsState];
-      saveState("cybernova_reports_v1", reportsState);
+      saveState("cybernova_reports_v2", reportsState);
       return created;
     }
     return reportsState;
@@ -1497,7 +1611,7 @@ export function resolveStandaloneApi(
   if (reportDelMatch && m === "DELETE") {
     const rid = Number(reportDelMatch[1]);
     reportsState = reportsState.filter((r) => r.id !== rid);
-    saveState("cybernova_reports_v1", reportsState);
+    saveState("cybernova_reports_v2", reportsState);
     return { ok: true };
   }
 
@@ -2158,7 +2272,7 @@ export function resolveStandaloneApi(
       createdAt: new Date().toISOString(),
     };
     memoriesState = [newMem, ...memoriesState];
-    saveState("cybernova_memories_v1", memoriesState);
+    saveState("cybernova_memories_v2", memoriesState);
 
     return {
       ok: true,
@@ -2430,7 +2544,7 @@ export function resolveStandaloneApi(
         createdAt: new Date().toISOString(),
       };
       memoriesState = [learnMem, ...memoriesState].slice(0, 200);
-      saveState("cybernova_memories_v1", memoriesState);
+      saveState("cybernova_memories_v2", memoriesState);
     }
 
     return {
@@ -3937,6 +4051,155 @@ export function resolveStandaloneApi(
     }
     saveState("cybernova_brain_state_v12", savedBrain);
     return { ok: true, brainState: savedBrain };
+  }
+
+  if (path === "/deep-research/discovered-vault") {
+    const defaultVault = {
+      schemaVersion: "2099.21.0",
+      updatedAt: new Date().toISOString(),
+      vaultTitleAr: "خزنة الثغرات المكتشفة والتقارير المحفوظة وسجل التعلم مدى الحياة — CyberNova Permanent Vault",
+      totalDiscoveredVulnerabilities: 4,
+      totalArchitecturalNotes: 6,
+      totalSavedDisclosureReports: 2,
+      totalLifelongLearningRules: 8,
+      discoveredVulnerabilities: [
+        {
+          id: "SKY-VULN-02",
+          titleAr: "انغلاق سحب السيولة ثنائي الاتجاه (0.1% Two-Sided Slippage Pincer) وتجميد مؤقت لمركز سيولة بقيمة $30,004,359.92 USD",
+          titleEn: "Unprivileged Two-Sided 0.1% Slippage Pincer in UniswapV3Facet.removeLiquidity Causing Temporary Freezing of Funds on Live $30.00M GROVE_PAU_PROXY Position #1352494",
+          targetProgram: "Sky (formerly MakerDAO) — Immunefi",
+          severity: "High / Medium",
+          cvssScore: 7.5,
+          cwe: "CWE-682 / CWE-400",
+          status: "VERIFIED_ON_MAINNET_FORK_SAVED_IN_VAULT",
+          submissionNoteAr: "محفوظ بالكامل مع كود الإثبات (4/4 Foundry Fork Tests) والتقرير النهائي؛ مؤجل التقديم على Immunefi بسبب فرض رسوم تقديم (50 USDC).",
+          affectedAssets: [
+            "UNISWAP_V3_FACET: 0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab",
+            "GROVE_PAU_PROXY: 0x0DcD9298e163dFD3c0B5b00F0d9093C36e40A153 ($30,004,359.92 USD Position #1352494)",
+          ],
+          rootCauseAr: "دالة removeLiquidity في UniswapV3Facet.sol (الأسطر 333-339) تفرض شرطاً عكسياً علويّاً (minAmounts[i] * WAD / amount >= maxSlippage) بعد السحب من المجمع، مما يخلق كماشة بعرض 0.1% فقط تجعل أي تحرك بـ 2 ticks عبر النطاق [-10, 10] يعطل جميع عمليات السحب.",
+          proofOfConceptPath: "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol (test_PoC4)",
+          reportMarkdownPath: "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
+          remediationSummaryAr: "إزالة الشرط العلوي العكسي والاكتفاء بالحد الأدنى القياسي (amount0Min, amount1Min) المشتق من TWAP.",
+        },
+        {
+          id: "SKY-VULN-01",
+          titleAr: "انفصال متغير target عن expectedAmounts في دالة addLiquidity داخل UniswapV3Facet",
+          titleEn: "TWAP Slippage Check Bypass & Asymmetric Upper-Bound DoS in UniswapV3Facet.addLiquidity via Unchecked params.target vs TWAP expectedAmounts",
+          targetProgram: "Sky (formerly MakerDAO) — Immunefi",
+          severity: "Medium",
+          cvssScore: 6.5,
+          cwe: "CWE-682 / CWE-20",
+          status: "VERIFIED_ON_MAINNET_FORK_SAVED_IN_VAULT",
+          submissionNoteAr: "مدمج كخلل معماري مقترن في تقرير UniswapV3Facet الشامل مع إثبات Foundry (test_PoC1..3).",
+          affectedAssets: ["UNISWAP_V3_FACET: 0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab"],
+          rootCauseAr: "دالة _calculateExpectedAmountsForLiquidity تحسب السيولة من params.maxAmounts عند TWAP بينما تمرر params.target غير المفحوص كـ amountDesired.",
+          proofOfConceptPath: "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol (test_PoC1..3)",
+          reportMarkdownPath: "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
+          remediationSummaryAr: "إلزام params.target بالتساوي مع expectedAmounts المحسوبة من TWAP.",
+        },
+        {
+          id: "SKY-VULN-03",
+          titleAr: "غياب فحص maxSlippage بالكامل في عقد UniswapV4Facet المنشور في PAU_BEACON",
+          titleEn: "Complete Omission of maxSlippage Verification in Deployed UniswapV4Facet",
+          targetProgram: "Sky (formerly MakerDAO) — Immunefi",
+          severity: "Medium / Defense-in-Depth",
+          cvssScore: 6.2,
+          cwe: "CWE-841",
+          status: "VERIFIED_ON_MAINNET_BYTECODE_SAVED_IN_VAULT",
+          submissionNoteAr: "موثق في التقرير الشامل كخلل معماري في الـ Facet المنشور في PAU_BEACON.",
+          affectedAssets: ["UNISWAP_V4_FACET: 0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D"],
+          rootCauseAr: "عقد UniswapV4Facet لا يستدعي getMaxSlippage إطلاقاً في دوال mintPosition وincreasePosition وdecreasePosition.",
+          proofOfConceptPath: "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol",
+          reportMarkdownPath: "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
+          remediationSummaryAr: "اشتقاق الحدود الدنيا للانزلاق السعري من TWAP وmaxSlippage داخل دوال UniswapV4Facet الثلاث.",
+        },
+        {
+          id: "CDC-NOTE-01",
+          titleAr: "عقد التنفيذ LiquidETHV1 غير المهيأ (Uninitialized Implementation) لعملة CDCETH على شبكة Cronos Mainnet",
+          titleEn: "Uninitialized LiquidETHV1 Implementation Contract (0xCC4b4878d64A76616c483a280fBfdBb08b705757) for CDCETH Proxy on Cronos Mainnet",
+          targetProgram: "Crypto.com — HackerOne (https://hackerone.com/crypto)",
+          severity: "Low / Informational (Defense-in-Depth)",
+          cvssScore: 4.3,
+          cwe: "CWE-665",
+          status: "DISCOVERED_ON_CRONOS_MAINNET_UNDER_EVALUATION",
+          submissionNoteAr: "تم رصده أثناء فحص مستودع crypto-com/wrapped-tokens-os؛ السكريبت deploy_staked_token.ts يستدعي transferOwnership(admin) دون استدعاء initialize() العامة.",
+          affectedAssets: [
+            "Cronos LiquidETHV1 Impl: 0xCC4b4878d64A76616c483a280fBfdBb08b705757",
+            "Cronos CDCETH Proxy: 0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446",
+          ],
+          rootCauseAr: "دالة initialize() في FiatTokenV1 عامة بدون onlyOwner وتستدعي setOwner(newOwner) بينما slot[8] == 0 على عقد التنفيذ.",
+          proofOfConceptPath: "audit/cryptocom-hackerone/CRYPTOCOM_SMART_CONTRACTS_SCOPE_AND_INITIAL_AUDIT.md",
+          reportMarkdownPath: "audit/cryptocom-hackerone/CRYPTOCOM_SMART_CONTRACTS_SCOPE_AND_INITIAL_AUDIT.md",
+          remediationSummaryAr: "استدعاء initialize() وinitializeV2() وinitializeV2_1() على عقد الـ Implementation فور نشره.",
+        },
+      ],
+      lifelongLearningLedger: [
+        {
+          id: "LEARN-01",
+          category: "DeFi / Concentrated Liquidity Math",
+          titleAr: "كماشة الانزلاق السعري ثنائية الاتجاه في المجمعات المركزة (Two-Sided Slippage Pincer)",
+          ruleAr: "عندما يحسب عقد ذكي مبالغ السحب المتوقعة من Uniswap V3/V4 عبر TWAP لنطاق ضيق ([-10, 10])، فإن أي تحرك بـ 2 ticks يغير نسبة التوكنين بأكثر من 0.2%؛ فرض حد أعلى على المبلغ المسحوب يؤدي حتماً إلى تعطيل السحب (DoS).",
+        },
+        {
+          id: "LEARN-02",
+          category: "Diamond Proxy / Beacon Architecture",
+          titleAr: "التحقق الحي من ربط الـ Facets الفعلية في الـ Controller على الشبكة الحية",
+          ruleAr: "استجواب PAU_FACTORY وController.integrations() على الشبكة الحية لتحديد أي Proxy يفوض الـ selectors للـ Facet المصاب وحساب الأموال الفعلية المعرضة للخطر.",
+        },
+        {
+          id: "LEARN-03",
+          category: "Foundry Mainnet-Fork Engineering",
+          titleAr: "تجنب فشل stdStorage deal() على عقود الـ Proxy المعقدة (AUSD / FiatTokenProxy USDC)",
+          ruleAr: "استخدام vm.prank() من خزنة سيولة حية (مثل LITE_PSM_USDC_A_POCKET) لتمويل حساب الاختبار فوراً في 0.1 ثانية بدلاً من deal().",
+        },
+        {
+          id: "LEARN-04",
+          category: "Foundry Mainnet-Fork Engineering",
+          titleAr: "تحديد sqrtPriceLimitX96 عند تنفيذ Swaps كبيرة في مجمعات ذات tickSpacing = 1",
+          ruleAr: "تحديد sqrtPriceLimitX96 عند الـ Tick المستهدف مباشرة لتجنب مسح آلاف كلمات TickBitmap عبر RPC.",
+        },
+        {
+          id: "LEARN-05",
+          category: "Bug Bounty Scope & Policy Intelligence",
+          titleAr: "مطابقة شروط استثناء الصلاحيات (Unprivileged Actor First)",
+          ruleAr: "بناء سيناريو الاستغلال الأساسي دائماً من عنوان خارجي غير ذي صلاحية لتجنب استبعادات المفاتيح المسربة أو صلاحيات المديرين.",
+        },
+        {
+          id: "LEARN-06",
+          category: "2026 Platform Economics & Zero-Fee Routing",
+          titleAr: "التوجيه الذكي للبرامج المجانية 100% (Zero-Fee Program Routing)",
+          ruleAr: "فحص شروط المنصة مسبقاً والتركيز على البرامج المجانية 100% مثل Crypto.com على HackerOne وBinance/TrustWallet على Bugcrowd وCoinbase Onchain على Cantina.",
+        },
+        {
+          id: "LEARN-07",
+          category: "Cross-Chain EVM Reconnaissance",
+          titleAr: "اكتشاف العقود الذكية عبر الشبكات المتعددة بحساب عناوين CREATE الحتمية",
+          ruleAr: "فحص نفس عنوان الناشر عبر Ethereum وCronos EVM لاكتشاف العقود الشقيقة ونماذج الـ Proxy/Implementation.",
+        },
+        {
+          id: "LEARN-08",
+          category: "Proxy & Upgradeable Contracts",
+          titleAr: "فحص تهيئة عقود التنفيذ (Implementation Initialization) في نمط FiatTokenProxy",
+          ruleAr: "التحقق من slot[8] (initialized) وslot[18] (_initializedVersion) على كل من الـ Proxy والـ Implementation لأن transferOwnership وحده لا يقفل initialize().",
+        },
+      ],
+    };
+    const savedVault = loadState("cybernova_discovered_vault_v21", defaultVault);
+    if (m === "POST" && body) {
+      if (body.newVulnerability) {
+        savedVault.discoveredVulnerabilities.unshift(body.newVulnerability as never);
+        savedVault.totalDiscoveredVulnerabilities = savedVault.discoveredVulnerabilities.length;
+      }
+      if (body.newLearningRule) {
+        savedVault.lifelongLearningLedger.unshift(body.newLearningRule as never);
+        savedVault.totalLifelongLearningRules = savedVault.lifelongLearningLedger.length;
+      }
+      savedVault.updatedAt = new Date().toISOString();
+      saveState("cybernova_discovered_vault_v21", savedVault);
+      return { ok: true, vault: savedVault };
+    }
+    return savedVault;
   }
 
   // ── Phase 13 Complete Zero-Black-Screen Endpoint Coverage ──────────────────

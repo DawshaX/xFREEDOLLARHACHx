@@ -31,6 +31,132 @@ export interface VulnEntry {
 
 const ENCYCLOPEDIA: VulnEntry[] = [
   {
+    id: "sky-vuln-02",
+    titleAr: "[مكتشفة ومحفوظة 🏆] انغلاق سحب السيولة ثنائي الاتجاه (0.1% Two-Sided Slippage Pincer — Sky $30.00M GROVE_PAU_PROXY)",
+    titleEn: "[Discovered & Verified] Unprivileged Two-Sided 0.1% Slippage Pincer in UniswapV3Facet.removeLiquidity ($30.00M GROVE_PAU_PROXY)",
+    cwe: "CWE-682 / CWE-400",
+    owasp: "SC03:2025 — Logic Errors & Improper Slippage Calculation",
+    severity: "High",
+    cvssBase: 7.5,
+    bountyRange: "$1,000 – $30,000+ (Sky Immunefi — Saved in Vault)",
+    summaryAr:
+      "ثغرة منطقية رياضية مكتشفة ومثبتة بـ 4 اختبارات Foundry على فورك الشبكة الحية في عقد UniswapV3Facet (0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab) التابع لبروتوكول Sky، تؤدي إلى تعطيل وتجميد مؤقت لسحب سيولة مركز GROVE_PAU_PROXY الحي البالغ $30,004,359.92 USD (#1352494) بمجرد تحرك السعر بمقدار 2 ticks فقط.",
+    rootCauseAr:
+      "دالة removeLiquidity تحسب المبالغ المتوقعة عند سعر TWAP (600s) ثم تفرض بعد السحب الفعلي شرطاً عكسياً علويّاً: require(minAmounts[i] * WAD / amount >= maxSlippage). هذا الشرط مع الحد الأدنى القياسي يخلق نافذة سحب ثنائية الاتجاه بعرض 0.1% فقط (min <= actual <= min / 0.999) يستحيل تحققها للعملتين معاً عند تحرك السعر 2 ticks عبر النطاق [-10, 10].",
+    language: "Solidity 0.8.24 (diamond-pau)",
+    vulnerableCode: `// ❌ كود ضعيف (UniswapV3Facet.sol الأسطر 314-340): يفرض حداً أعلى عكسياً بعد السحب!
+uint256[2] memory expectedAmounts = _calculateExpectedAmountsForLiquidity(poolData, params.liquidity);
+uint256 maxSlippage = UniswapV3Controller(address(this)).getMaxSlippage(params.tokenId);
+uint256[2] memory minAmounts = [expectedAmounts[0] * maxSlippage / WAD, expectedAmounts[1] * maxSlippage / WAD];
+
+(amount0, amount1) = UniswapV3NonfungiblePositionManager(nonfungiblePositionManager).decreaseLiquidity(
+    UniswapV3NonfungiblePositionManager.DecreaseLiquidityParams({
+        tokenId: params.tokenId,
+        liquidity: params.liquidity,
+        amount0Min: minAmounts[0],
+        amount1Min: minAmounts[1],
+        deadline: block.timestamp
+    })
+);
+// ❌ كماشة 0.1%: إذا زاد أحد التوكنين بأكثر من 0.1% بسبب تحرك 2 ticks، تفشل المعاملة بالكامل!
+require(
+    (minAmounts[0] == 0 || minAmounts[0] * WAD / amount0 >= maxSlippage) &&
+    (minAmounts[1] == 0 || minAmounts[1] * WAD / amount1 >= maxSlippage),
+    "UniswapV3Facet/excessive-slippage"
+);`,
+    secureCode: `// ✅ كود آمن: إزالة الشرط العلوي العكسي والاكتفاء بالحد الأدنى القياسي المشتق من TWAP
+uint256[2] memory expectedAmounts = _calculateExpectedAmountsForLiquidity(poolData, params.liquidity);
+uint256 maxSlippage = UniswapV3Controller(address(this)).getMaxSlippage(params.tokenId);
+uint256[2] memory minAmounts = [expectedAmounts[0] * maxSlippage / WAD, expectedAmounts[1] * maxSlippage / WAD];
+
+// ✅ decreaseLiquidity نفسها تضمن: amount0 >= minAmounts[0] && amount1 >= minAmounts[1]
+(amount0, amount1) = UniswapV3NonfungiblePositionManager(nonfungiblePositionManager).decreaseLiquidity(
+    UniswapV3NonfungiblePositionManager.DecreaseLiquidityParams({
+        tokenId: params.tokenId,
+        liquidity: params.liquidity,
+        amount0Min: minAmounts[0],
+        amount1Min: minAmounts[1],
+        deadline: block.timestamp
+    })
+);`,
+    auditChecklist: [
+      "فحص جميع معادلات الانزلاق السعري (Slippage Checks) للتأكد من عدم قلب البسط والمقام (min * WAD / actual vs actual * WAD / expected).",
+      "التحقق من سلوك المجمعات المركزة ضيقة النطاق (مثل [-10, 10]) عند اختلاف السعر الفوري (Spot Tick) عن متوسط السعر الزمني (TWAP Tick) بمقدار 1-2 ticks.",
+      "اختبار الدالة على فورك الشبكة الحية على المراكز الفعلية المنشورة (مثل GROVE_PAU_PROXY Token #1352494 بقيمة $30.00M).",
+      "مراجعة التقرير الكامل في audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md وكود الإثبات PoC_UniswapV3_Bypass.t.sol.",
+    ],
+    remediationSteps: [
+      "حذف شرط require العلوي العكسي من دالة removeLiquidity في UniswapV3Facet.sol.",
+      "توحيد منطق التحقق من الانزلاق السعري مع CurveFacet.sol الذي يتحقق من الحد الأدنى فقط.",
+      "إضافة فحص maxSlippage المفقود في عقد UniswapV4Facet.sol المنشور في PAU_BEACON.",
+    ],
+  },
+  {
+    id: "sky-vuln-01",
+    titleAr: "[مكتشفة ومحفوظة 🏆] تجاوز فحص TWAP عبر فصل متغير target عن expectedAmounts في UniswapV3Facet.addLiquidity",
+    titleEn: "[Discovered & Verified] TWAP Slippage Check Bypass & Upper-Bound DoS in UniswapV3Facet.addLiquidity",
+    cwe: "CWE-682 / CWE-20",
+    owasp: "SC03:2025 — Improper Parameter Validation in AMM Facet",
+    severity: "Medium",
+    cvssBase: 6.5,
+    bountyRange: "Coupled in Sky UniswapV3Facet Report (Saved in Vault)",
+    summaryAr:
+      "خلل معماري في دالة addLiquidity داخل UniswapV3Facet يسمح بانفصال المبالغ الممررة إلى Uniswap V3 (params.target) عن المبالغ المحسوبة من سعر الـ TWAP (expectedAmounts)، مما يتيح تجاوز فحص الانزلاق السعري أو التسبب في فشل الإيداع عندما يتحرك السعر لصالح البروتوكول.",
+    rootCauseAr:
+      "دالة _calculateExpectedAmountsForLiquidity تحسب السيولة من params.maxAmounts عند سعر TWAP ثم تعيد تحويلها إلى expectedAmounts عند نفس سعر TWAP، بينما يتم تمرير params.target غير المفحوص كـ amount0Desired وamount1Desired.",
+    language: "Solidity 0.8.24 (diamond-pau)",
+    vulnerableCode: `// ❌ كود ضعيف: يحسب expectedAmounts من maxAmounts بينما يمرر params.target إلى Uniswap V3!
+uint256[2] memory expectedAmounts = _calculateExpectedAmountsForLiquidity(poolData, params.maxAmounts);
+uint256 maxSlippage = UniswapV3Controller(address(this)).getMaxSlippage(params.tokenId);
+uint256[2] memory minAmounts = [expectedAmounts[0] * maxSlippage / WAD, expectedAmounts[1] * maxSlippage / WAD];
+// يمرر params.target[0] و params.target[1] دون التحقق من علاقتهما بـ expectedAmounts!`,
+    secureCode: `// ✅ كود آمن: تمرير expectedAmounts المحسوبة من TWAP مباشرة كـ amount0Desired/amount1Desired
+uint256[2] memory expectedAmounts = _calculateExpectedAmountsForLiquidity(poolData, params.maxAmounts);
+uint256 maxSlippage = UniswapV3Controller(address(this)).getMaxSlippage(params.tokenId);
+uint256[2] memory minAmounts = [expectedAmounts[0] * maxSlippage / WAD, expectedAmounts[1] * maxSlippage / WAD];
+// استخدام expectedAmounts[0] و expectedAmounts[1] كـ Desired Amounts`,
+    auditChecklist: [
+      "التحقق من ارتباط جميع المعاملات الداخلة لدوال AMM (target, maxAmounts, minAmounts) ببعضها رياضياً.",
+      "تشغيل اختبارات test_PoC1 وtest_PoC2 وtest_PoC3 في ملف PoC_UniswapV3_Bypass.t.sol.",
+    ],
+    remediationSteps: [
+      "استخدام expectedAmounts بدلاً من params.target غير المفحوص في دوال الإيداع.",
+    ],
+  },
+  {
+    id: "cdc-note-01",
+    titleAr: "[مكتشفة ومحفوظة 🏆] عقد التنفيذ LiquidETHV1 غير المهيأ (Uninitialized Implementation) لعملة CDCETH على Cronos",
+    titleEn: "[Discovered on Cronos Mainnet] Uninitialized LiquidETHV1 Implementation (0xCC4b4878...757) in Crypto.com wrapped-tokens-os",
+    cwe: "CWE-665",
+    owasp: "SC04:2025 — Uninitialized Proxy Implementation Contract",
+    severity: "Medium",
+    cvssBase: 4.3,
+    bountyRange: "Defense-in-Depth Architecture Note (Crypto.com HackerOne Vault)",
+    summaryAr:
+      "تم رصد أن عقد التنفيذ LiquidETHV1 (0xCC4b4878d64A76616c483a280fBfdBb08b705757) الخاص بعملة CDCETH على شبكة Cronos Mainnet غير مهيأ (slot[8] == 0 و slot[18] == 0) لأن سكريبت النشر استدعى transferOwnership(admin) فقط ولم يستدعِ initialize().",
+    rootCauseAr:
+      "في deploy_staked_token.ts السطر 104، افترض المطور أن transferOwnership(admin) كافٍ لقفل عقد الـ Implementation، ولكن دالة FiatTokenV1.initialize() عامة (public) بدون onlyOwner وتستدعي setOwner(newOwner) لتستبدل المالك بالكامل.",
+    language: "Solidity 0.6.12 / TypeScript (wrapped-tokens-os)",
+    vulnerableCode: `// ❌ كود ضعيف في deploy/deploy_staked_token.ts:
+const liquidETHV1Implementation = await ethers.getContractAt('LiquidETHV1', liquidETHV1Deployment.address);
+await (await liquidETHV1Implementation.transferOwnership(admin)).wait();
+// نسي استدعاء initialize() و initializeV2() و initializeV2_1() على الـ Implementation!`,
+    secureCode: `// ✅ كود آمن: تهيئة عقد الـ Implementation فوراً في سكريبت النشر أو قفله في الـ constructor
+await (await liquidETHV1Implementation.initialize(
+  "Crypto.com Wrapped Staked ETH", "CDCETH", "ETH", 18,
+  THROWAWAY_ADDRESS, THROWAWAY_ADDRESS, THROWAWAY_ADDRESS, THROWAWAY_ADDRESS
+)).wait();
+await (await liquidETHV1Implementation.initializeV2(THROWAWAY_ADDRESS, 0)).wait();
+await (await liquidETHV1Implementation.initializeV2_1(THROWAWAY_ADDRESS)).wait();`,
+    auditChecklist: [
+      "فحص slot[8] (initialized) وslot[18] (_initializedVersion) على كل من الـ Proxy والـ Implementation عبر eth_getStorageAt.",
+      "التحقق مما إذا كانت دالة initialize() تحتوي على onlyOwner أم أنها متاحة للعامة (public).",
+    ],
+    remediationSteps: [
+      "استدعاء دوال التهيئة الثلاث على العقد 0xCC4b4878d64A76616c483a280fBfdBb08b705757 على شبكة Cronos Mainnet وتحديث deploy_staked_token.ts.",
+    ],
+  },
+  {
     id: "idor-bola",
     titleAr: "تجاوز الصلاحيات والوصول المباشر للكائنات (IDOR / BOLA)",
     titleEn: "Insecure Direct Object Reference / Broken Object Level Authorization",

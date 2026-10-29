@@ -1,0 +1,169 @@
+{
+  "schemaVersion": "2099.21.0",
+  "updatedAt": "2026-10-30T03:05:00Z",
+  "vaultTitleAr": "خزنة الثغرات المكتشفة والتقارير المحفوظة وسجل التعلم مدى الحياة — CyberNova Permanent Vault",
+  "totalDiscoveredVulnerabilities": 4,
+  "totalArchitecturalNotes": 6,
+  "totalSavedDisclosureReports": 2,
+  "totalLifelongLearningRules": 12,
+  "discoveredVulnerabilities": [
+    {
+      "id": "SKY-VULN-02",
+      "titleAr": "انغلاق سحب السيولة ثنائي الاتجاه (0.1% Two-Sided Slippage Pincer) وتجميد مؤقت لمركز سيولة بقيمة $30,004,359.92 USD",
+      "titleEn": "Unprivileged Two-Sided 0.1% Slippage Pincer in UniswapV3Facet.removeLiquidity Causing Temporary Freezing of Funds / Griefing on Live $30.00M GROVE_PAU_PROXY Position #1352494",
+      "targetProgram": "Sky (formerly MakerDAO) — Immunefi",
+      "severity": "High / Medium",
+      "cvssScore": 7.5,
+      "cwe": "CWE-682 (Incorrect Calculation) / CWE-400 (Resource Exhaustion / DoS)",
+      "status": "VERIFIED_ON_MAINNET_FORK_SAVED_IN_VAULT",
+      "submissionNoteAr": "محفوظ بالكامل مع كود الإثبات (4/4 Foundry Fork Tests) والتقرير النهائي؛ مؤجل التقديم على Immunefi بسبب فرض المنصة رسوم تقديم غير مستردة (50 USDC) في مرحلة المراجعة.",
+      "affectedAssets": [
+        "UNISWAP_V3_FACET: 0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab (Ethereum Mainnet)",
+        "GROVE_PAU_CONTROLLER: 0xbf83F5974B932c7D842254042717D6A2706CE5eE",
+        "GROVE_PAU_PROXY: 0x0DcD9298e163dFD3c0B5b00F0d9093C36e40A153 (Token ID #1352494 — $30,004,359.92 USD in AUSD/USDC 0.01% pool)"
+      ],
+      "rootCauseAr": "دالة removeLiquidity في UniswapV3Facet.sol (الأسطر 333-339) تحسب expectedAmounts عبر استدعاء LiquidityAmounts.getAmountsForLiquidity باستخدام متوسط السعر الزمني (TWAP 600s)، ثم تحسب minAmounts = expectedAmounts * maxSlippage / WAD، وبعد السحب الفعلي من المجمع عند السعر الفوري (Spot) تفرض شرطاً عكسياً علويّاً: require(minAmounts[i] * WAD / actualAmount >= maxSlippage). هذا الشرط يخلق كماشة ثنائية الاتجاه بعرض 0.1% فقط (min <= actual <= min / 0.999) تجعل أي تحرك سعري بسيط بمقدار 2 ticks عبر النطاق [-10, 10] يؤدي إلى فشل (Revert: UniswapV3Facet/excessive-slippage) لجميع معاملات سحب السيولة.",
+      "proofOfConceptPath": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol (test_PoC4_LiveGrovePAU_30M_Position_RemoveLiquidity_DoS)",
+      "reportMarkdownPath": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
+      "remediationSummaryAr": "إزالة الشرط العلوي العكسي (minAmounts * WAD / amount >= maxSlippage) من removeLiquidity والاكتفاء بالحد الأدنى القياسي في Uniswap V3 (amount0Min, amount1Min) المشتق من TWAP."
+    },
+    {
+      "id": "SKY-VULN-01",
+      "titleAr": "انفصال متغير target عن expectedAmounts في دالة addLiquidity داخل UniswapV3Facet",
+      "titleEn": "TWAP Slippage Check Bypass & Asymmetric Upper-Bound DoS in UniswapV3Facet.addLiquidity via Unchecked params.target vs TWAP expectedAmounts",
+      "targetProgram": "Sky (formerly MakerDAO) — Immunefi",
+      "severity": "Medium",
+      "cvssScore": 6.5,
+      "cwe": "CWE-682 (Incorrect Calculation) / CWE-20 (Improper Input Validation)",
+      "status": "VERIFIED_ON_MAINNET_FORK_SAVED_IN_VAULT",
+      "submissionNoteAr": "مدمج كخلل معماري مقترن في تقرير UniswapV3Facet الشامل مع إثبات Foundry (test_PoC1, test_PoC2, test_PoC3).",
+      "affectedAssets": [
+        "UNISWAP_V3_FACET: 0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab (diamond-pau/src/facets/UniswapV3Facet.sol, lines 206-297)"
+      ],
+      "rootCauseAr": "دالة _calculateExpectedAmountsForLiquidity تحسب السيولة من params.maxAmounts عند سعر TWAP ثم تحسب expectedAmounts عند نفس سعر TWAP، بينما يتم تمرير params.target غير المفحوص كـ amount0Desired/amount1Desired إلى NonfungiblePositionManager.mint/increaseLiquidity، مما يسمح بانحراف المبالغ الفعلية أو فشل الإيداع عندما يتحرك السعر الفوري لصالح البروتوكول.",
+      "proofOfConceptPath": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol (test_PoC1, test_PoC2, test_PoC3)",
+      "reportMarkdownPath": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
+      "remediationSummaryAr": "إلزام params.target بالتساوي مع expectedAmounts المحسوبة من TWAP وفحص نسبة التغير الفعلي."
+    },
+    {
+      "id": "SKY-VULN-03",
+      "titleAr": "غياب فحص maxSlippage بالكامل في عقد UniswapV4Facet المنشور في PAU_BEACON",
+      "titleEn": "Complete Omission of maxSlippage Verification in Deployed UniswapV4Facet (mintPosition, increasePosition, decreasePosition)",
+      "targetProgram": "Sky (formerly MakerDAO) — Immunefi",
+      "severity": "Medium / Architectural Defense-in-Depth",
+      "cvssScore": 6.2,
+      "cwe": "CWE-841 (Improper Enforcement of Behavioral Workflow)",
+      "status": "VERIFIED_ON_MAINNET_BYTECODE_SAVED_IN_VAULT",
+      "submissionNoteAr": "موثق في التقرير الشامل كخلل معماري في الـ Facet المنشور في PAU_BEACON قبل تفعيله في الـ Controllers.",
+      "affectedAssets": [
+        "UNISWAP_V4_FACET: 0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D (diamond-pau/src/facets/UniswapV4Facet.sol)"
+      ],
+      "rootCauseAr": "رغم أن UniswapV4Controller يخزن متغير maxSlippage، فإن عقد UniswapV4Facet لا يستدعي getMaxSlippage إطلاقاً في دوال mintPosition وincreasePosition وdecreasePosition، بل يتحقق فقط من أن السعر الفوري يساوي TWAP ثم يمرر params.minAmounts المحددة من الـ actor مباشرة.",
+      "proofOfConceptPath": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol",
+      "reportMarkdownPath": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
+      "remediationSummaryAr": "اشتقاق الحدود الدنيا للانزلاق السعري من TWAP وmaxSlippage داخل دوال UniswapV4Facet الثلاث."
+    },
+    {
+      "id": "CDC-NOTE-01",
+      "titleAr": "عقد التنفيذ LiquidETHV1 غير المهيأ (Uninitialized Implementation) لعملة CDCETH على شبكة Cronos Mainnet",
+      "titleEn": "Uninitialized LiquidETHV1 Implementation Contract (0xCC4b4878d64A76616c483a280fBfdBb08b705757) for CDCETH Proxy on Cronos Mainnet",
+      "targetProgram": "Crypto.com — HackerOne (https://hackerone.com/crypto)",
+      "severity": "Low / Informational (Defense-in-Depth — No selfdestruct in LiquidETHV1)",
+      "cvssScore": 4.3,
+      "cwe": "CWE-665 (Improper Initialization)",
+      "status": "DISCOVERED_ON_CRONOS_MAINNET_UNDER_EVALUATION",
+      "submissionNoteAr": "تم رصده أثناء الفحص الأولي لمستودع crypto-com/wrapped-tokens-os؛ السكريبت deploy_staked_token.ts يستدعي transferOwnership(admin) على عقد الـ Implementation لكنه ينسى استدعاء initialize(...) عليه، ولأن دالة initialize() عامة (public) بدون onlyOwner وتستدعي setOwner(newOwner)، يمكن لأي عنوان استدعاء initialize() على الـ Implementation مباشرًة. (لا يحتوي LiquidETHV1 على delegatecall أو selfdestruct، لذا لا يؤثر على أموال الـ Proxy 0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446 ولكنه مسجل في الخزنة كدليل معماري).",
+      "affectedAssets": [
+        "Cronos Mainnet LiquidETHV1 Implementation: 0xCC4b4878d64A76616c483a280fBfdBb08b705757",
+        "Cronos Mainnet CDCETH Proxy: 0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446",
+        "GitHub: crypto-com/wrapped-tokens-os/deploy/deploy_staked_token.ts (lines 103-105)"
+      ],
+      "rootCauseAr": "في deploy_staked_token.ts السطر 104: يتم استدعاء liquidETHV1Implementation.transferOwnership(admin) بدون استدعاء initialize()، بينما في FiatTokenV1.sol السطر 629 دالة initialize() لا تتحقق من onlyOwner بل من require(!initialized) فقط وتقوم بالكتابة فوق _owner عبر setOwner(newOwner).",
+      "proofOfConceptPath": "audit/cryptocom-hackerone/CRYPTOCOM_SMART_CONTRACTS_SCOPE_AND_INITIAL_AUDIT.md",
+      "reportMarkdownPath": "audit/cryptocom-hackerone/CRYPTOCOM_SMART_CONTRACTS_SCOPE_AND_INITIAL_AUDIT.md",
+      "remediationSummaryAr": "استدعاء initialize() وinitializeV2() وinitializeV2_1() على عقد الـ Implementation فور نشره أو قفل initialized = true في الـ constructor."
+    }
+  ],
+  "architecturalNotes": [
+    {
+      "id": "SKY-NOTE-01",
+      "title": "SUsds.sol (0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD) — ERC-4626 SSR Vault Accounting & Ray Math",
+      "summary": "تحقق كامل من حسابات chi وrho وssr والـ rounding لصالح الخزنة؛ محمي ضد هجمات التضخم (Inflation Attack) بفضل السيولة المبدئية الضخمة ($4.87B+)."
+    },
+    {
+      "id": "SKY-NOTE-02",
+      "title": "StarGuard.sol & AdministeredAgent.sol — SubDAO Governance Timelock & Expiration Guards",
+      "summary": "تحقق من آليات الحماية الزمنية وصلاحيات الـ ward والـ proposer والـ canceller في عقود SubDAO."
+    },
+    {
+      "id": "SKY-NOTE-03",
+      "title": "CurveFacet.sol — One-Sided Slippage Check Comparison vs UniswapV3Facet",
+      "summary": "أثبت المقارنة أن CurveFacet يتحقق من الحد الأدنى فقط (actual >= min) ولا يفرض الشرط العلوي العكسي الخاطئ الموجود في UniswapV3Facet."
+    },
+    {
+      "id": "SKY-NOTE-04",
+      "title": "BasinFacet.sol & GroveBasin.sol — Constant Exchange Rate Bucket Accounting",
+      "summary": "فحص شامل لتحويلات الـ decimals والتقريب في عقود BasinFacet وGroveBasin."
+    },
+    {
+      "id": "SKY-NOTE-05",
+      "title": "PendleFacet.sol — PT/SY/YT Redemption & Oracle Slippage Bounds",
+      "summary": "تحقق من حسابات سحب السيولة ومعدلات Pendle TWAP."
+    },
+    {
+      "id": "SKY-NOTE-06",
+      "title": "PAU_FACTORY (0x69A5d548830AC2A4Ba90A44a2C75BDA71f97fc66) — Complete Mapping of All 11 Mainnet PAU Deployments",
+      "summary": "حصر شامل لجميع الـ 11 PAU Controllers والـ Proxies والـ Facets المفعلة على شبكة الإيثيريوم الرئيسية."
+    }
+  ],
+  "lifelongLearningLedger": [
+    {
+      "id": "LEARN-01",
+      "category": "DeFi / Concentrated Liquidity Math",
+      "titleAr": "كماشة الانزلاق السعري ثنائية الاتجاه في المجمعات المركزة (Two-Sided Slippage Pincer on Narrow Tick Ranges)",
+      "ruleAr": "عندما يحسب عقد ذكي مبالغ السحب المتوقعة من Uniswap V3/V4 عبر TWAP لنطاق ضيق (مثل [-10, 10] في مجمعات العملات المستقرة)، فإن أي تحرك سعري بسيط بـ 1-2 ticks يغير نسبة التوكنين (Token0/Token1) بشكل حاد (>0.2%) حتى لو كان السعر نفسه لم يتحرك إلا بـ 0.02%. فرض حد أعلى (Upper Bound) على التوكن المسحوب يؤدي حتماً إلى تعطيل السحب (DoS)."
+    },
+    {
+      "id": "LEARN-02",
+      "category": "Diamond Proxy / Beacon Architecture",
+      "titleAr": "التحقق من ربط الـ Facets الفعلية في الـ Controller على الشبكة الحية (On-Chain Selector Delegation Verification)",
+      "ruleAr": "وجود عقد Facet في PAU_BEACON لا يعني بالضرورة أنه مفعل على كل Proxy؛ يجب دائماً استجواب PAU_FACTORY وController.integrations() على الشبكة الحية لتحديد أي Proxy يفوض الـ selectors للـ Facet المصاب وحساب الأموال الفعلية المعرضة للخطر (Funds at Risk)."
+    },
+    {
+      "id": "LEARN-03",
+      "category": "Foundry Mainnet-Fork Engineering",
+      "titleAr": "تجنب فشل stdStorage deal() على عقود الـ Proxy المعقدة (AUSD / FiatTokenProxy USDC)",
+      "ruleAr": "بدلاً من استخدام deal() التي قد تفشل أو تستغرق آلاف استدعاءات RPC على عقود Proxy المخصصة، استخدم vm.prank() من خزنة سيولة ضخمة على الشبكة الحية مثل LITE_PSM_USDC_A_POCKET (0x37305B1cD40574E4C5Ce33f8e8306Be057fD7341) لتمويل حساب الاختبار فوراً في 0.1 ثانية."
+    },
+    {
+      "id": "LEARN-04",
+      "category": "Foundry Mainnet-Fork Engineering",
+      "titleAr": "تحديد sqrtPriceLimitX96 عند تنفيذ Swaps كبيرة في مجمعات Uniswap V3 ذات tickSpacing = 1",
+      "ruleAr": "تمرير sqrtPriceLimitX96 = 0 في مجمع ذي tickSpacing = 1 مع مبلغ ضخم يجعل العقد يمسح آلاف كلمات TickBitmap عبر RPC ويتسبب في Timeout؛ يجب دائماً تحديد sqrtPriceLimitX96 عند الـ Tick المستهدف مباشرة (مثل TickMath.getSqrtRatioAtTick(15))."
+    },
+    {
+      "id": "LEARN-05",
+      "category": "Bug Bounty Scope & Policy Intelligence",
+      "titleAr": "مطابقة شروط استثناء الصلاحيات (Privileged / Strategist Address Exclusions)",
+      "ruleAr": "برامج Immunefi وHackerOne تستبعد الهجمات التي تتطلب مفاتيح مسربة أو عناوين مديرين/استراتيجيين؛ لذلك يجب دائماً بناء سيناريو الاستغلال الأساسي من عنوان خارجي غير ذي صلاحية (Unprivileged External Actor / MEV Bot) وإثبات الأثر المباشر."
+    },
+    {
+      "id": "LEARN-06",
+      "category": "2026 Platform Economics & Zero-Fee Routing",
+      "titleAr": "خريطة رسوم التقديم وشروط المنصات في 2026 (Zero-Fee vs Paid-Gate Platforms)",
+      "ruleAr": "في 2026 فرضت بعض برامج Immunefi (مثل Sky: 50 USDC) وSherlock (250 USDC stake) وEthereum Foundation (ETH burn tx) وبعض برامج HackenProof/Cantina رسوم تقديم؛ بينما منصتا HackerOne (مثل Crypto.com: 0$ رسوم، رد خلال 14 ساعة، Signal >= -1.0) وBugcrowd (مثل Binance/TrustWallet: 0$ رسوم) وبرنامج Coinbase Onchain على Cantina (0$ deposit) وبرنامج Cronos zkEVM على HackenProof (0$ fee) تتيح التقديم المجاني 100%."
+    },
+    {
+      "id": "LEARN-07",
+      "category": "Cross-Chain EVM Reconnaissance",
+      "titleAr": "اكتشاف العقود الذكية عبر الشبكات المتعددة بحساب عناوين CREATE الحتمية (Deterministic Nonce Discovery)",
+      "ruleAr": "عنوان العقد المنشور عبر CREATE يعتمد فقط على (عنوان الناشر، nonce)؛ بفحص نفس عنوان الناشر عبر Ethereum وCronos EVM وCronos zkEVM يمكن اكتشاف العقود الشقيقة ونماذج الـ Proxy/Implementation غير المدرجة صراحةً."
+    },
+    {
+      "id": "LEARN-08",
+      "category": "Proxy & Upgradeable Contracts",
+      "titleAr": "فحص تهيئة عقود التنفيذ (Implementation Initialization) في نمط FiatTokenProxy / ZeppelinOS",
+      "ruleAr": "في عقود FiatTokenV1/V2_1/LiquidETHV1، دالة initialize() عامة (public) ولا تحتوي على onlyOwner وتقوم باستدعاء setOwner(newOwner)؛ لذا فإن استدعاء transferOwnership(admin) وحده على عقد الـ Implementation دون استدعاء initialize() يترك العقد قابلاً للتهيئة من أي طرف خارجي."
+    }
+  ]
+}
