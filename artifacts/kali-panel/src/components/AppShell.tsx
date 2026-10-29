@@ -51,7 +51,7 @@ function TopMarquee({ lastWsText }: { lastWsText: string | null }) {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [apiAlive, setApiAlive] = useState(true);
   const [cpu, setCpu] = useState<number | null>(14);
@@ -66,9 +66,53 @@ export function AppShell({ children }: AppShellProps) {
       return "bughunters.google.com";
     }
   });
+  const [sessionCycles, setSessionCycles] = useState<number>(() => {
+    try {
+      return Number(localStorage.getItem("cybernova_session_cycles_v15") || "35") || 35;
+    } catch {
+      return 35;
+    }
+  });
   const [wsEventCount, setWsEventCount] = useState(1);
   const [lastWsText, setLastWsText] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "cybernova_active_session_v15",
+        JSON.stringify({
+          lastRoute: location,
+          activeTarget,
+          sessionCycles,
+          savedAt: new Date().toISOString(),
+        })
+      );
+    } catch {
+      // ignore
+    }
+  }, [location, activeTarget, sessionCycles]);
+
+  const triggerGlobalPulse = async () => {
+    try {
+      await fetch("/api/agent/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "advance_cycle", target: activeTarget }),
+      });
+      await fetch("/api/deep-research/workstation-multitask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "tick", target: activeTarget }),
+      });
+      const next = sessionCycles + 1;
+      setSessionCycles(next);
+      localStorage.setItem("cybernova_session_cycles_v15", String(next));
+      setLastWsText(`تم تنفيذ دورة عمل ذاتية #${next} وحفظ حالة الجلسة بالكامل`);
+    } catch {
+      // ignore
+    }
+  };
 
   const { connected: wsConnected } = useWebSocket({
     sessionId: "appshell-global",
@@ -240,6 +284,20 @@ export function AppShell({ children }: AppShellProps) {
             <Target style={{ width: 10, height: 10, color: "#44ff88" }} />
             <span>TARGET: {activeTarget}</span>
           </div>
+
+          {/* Persistent Session & Autonomous Cycle Pill */}
+          <button
+            onClick={() => void triggerGlobalPulse()}
+            title="حفظ الجلسة وتنفيذ دورة عمل ذاتية فورية"
+            className="hidden sm:flex cursor-pointer items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black font-mono transition-all hover:scale-105"
+            style={{
+              background: "rgba(16,185,129,0.14)",
+              border: "1px solid rgba(16,185,129,0.4)",
+              color: "#34d399",
+            }}
+          >
+            <span>💾 SESSION · PULSE #{sessionCycles}</span>
+          </button>
 
           {/* CPU */}
           {cpu !== null && (

@@ -3,7 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Cyber-Nova Panel</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Cyber-Nova 2099 — Ethical Security & Bug Bounty Platform</title>
+    <script>
+      (function () {
+        try {
+          window.addEventListener("error", function (e) {
+            var msg = String((e && e.message) || "");
+            if (
+              (msg.indexOf("is not defined") !== -1 ||
+                msg.indexOf("Failed to fetch dynamically imported module") !== -1 ||
+                msg.indexOf("Importing a module script failed") !== -1) &&
+              !sessionStorage.getItem("cybernova_hard_reload_v15")
+            ) {
+              sessionStorage.setItem("cybernova_hard_reload_v15", "1");
+              var u = new URL(window.location.href);
+              u.searchParams.set("_v", String(Date.now()));
+              window.location.replace(u.toString());
+            }
+          });
+        } catch (_err) {}
+      })();
+    </script>
     <meta name="description" content="Cyber-Nova Panel — built on Replit. Update this description to reflect the app." />
     <meta name="robots" content="index, follow" />
     <meta property="og:title" content="Cyber-Nova Panel" />

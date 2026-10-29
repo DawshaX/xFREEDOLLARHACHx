@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   Shield, BookOpen, Code, CheckSquare, FileText, Globe, AlertTriangle,
   CheckCircle2, Copy, Download, Search, Sparkles, Lock, Layers, Server,
@@ -7,6 +8,7 @@ import {
 } from "lucide-react";
 import { emitPlatformWsEvent, useWebSocket } from "@/hooks/useWebSocket";
 import { jsonRequest } from "@/lib/sse";
+import { resolveStandaloneApi } from "@/lib/standalone-api";
 
 // ─── 1) Vulnerability & Secure Code Encyclopedia Data ─────────────────────────
 export interface VulnEntry {
@@ -1301,7 +1303,20 @@ const CHECKLISTS: ChecklistCategory[] = [
 ];
 
 export default function BugBountyStudio() {
-  const [activeTab, setActiveTab] = useState<"deep2099" | "workstation" | "encyclopedia" | "auditor" | "scope" | "checklist" | "report">("deep2099");
+  const [location] = useLocation();
+  const resolveTabFromPath = (pathStr: string): "deep2099" | "workstation" | "encyclopedia" | "auditor" | "scope" | "checklist" | "report" => {
+    const p = (pathStr || (typeof window !== "undefined" ? window.location.pathname : "")).toLowerCase();
+    if (p.includes("vuln-encyclopedia")) return "encyclopedia";
+    if (p.includes("code-auditor")) return "auditor";
+    if (p.includes("workstation")) return "workstation";
+    return "deep2099";
+  };
+  const [activeTab, setActiveTab] = useState<"deep2099" | "workstation" | "encyclopedia" | "auditor" | "scope" | "checklist" | "report">(() =>
+    resolveTabFromPath(location)
+  );
+  useEffect(() => {
+    setActiveTab(resolveTabFromPath(location));
+  }, [location]);
 
   // Tab 0 (2099 Engine) state: Deep Research Pipeline, JS Analyzer, Auth Matrix, Config Auditor, Zero-FP Gate & GitHub Arsenal
   const [deepLoading, setDeepLoading] = useState<string | null>(null);
@@ -1359,7 +1374,10 @@ export default function BugBountyStudio() {
     integratedModule: string;
     description: string;
     methodology: string;
-  }>>([]);
+  }>>(() => {
+    const init = resolveStandaloneApi("/api/deep-research/arsenal", "GET") as { tools?: Array<any> } | null;
+    return init?.tools || [];
+  });
   const [ghSearchQuery, setGhSearchQuery] = useState("nuclei bug bounty recon");
   const [ghSearchResults, setGhSearchResults] = useState<Array<{
     full_name?: string;
@@ -1376,7 +1394,10 @@ export default function BugBountyStudio() {
     safeHarbor: string;
     focus: string;
     defaultTarget: string;
-  }>>([]);
+  }>>(() => {
+    const init = resolveStandaloneApi("/api/deep-research/platforms", "GET") as { platforms?: Array<any> } | null;
+    return init?.platforms || [];
+  });
   const [osintResult, setOsintResult] = useState<{
     domain: string;
     primaryIp: string;
@@ -1428,7 +1449,7 @@ export default function BugBountyStudio() {
       unlocksNext: string;
     }>;
     nextRecommendedStep: string;
-  } | null>(null);
+  } | null>(() => resolveStandaloneApi("/api/deep-research/self-awareness?target=bughunters.google.com", "GET") as any);
   const [showDoctrineMatrix, setShowDoctrineMatrix] = useState<boolean>(true);
   const [agentMasterResult, setAgentMasterResult] = useState<{
     target: string;
@@ -1464,7 +1485,10 @@ export default function BugBountyStudio() {
     commandTemplate: string;
     purposeAr: string;
     safeEquivalent: string;
-  }>>([]);
+  }>>(() => {
+    const init = resolveStandaloneApi("/api/deep-research/kali-arsenal", "GET") as { tools?: Array<any> } | null;
+    return init?.tools || [];
+  });
   const [selectedKaliCategory, setSelectedKaliCategory] = useState<string>("all");
   const [kaliSimResult, setKaliSimResult] = useState<{
     toolId: string;
@@ -1484,7 +1508,10 @@ export default function BugBountyStudio() {
     baseCvss: number;
     roleInChain: string;
     signalAr: string;
-  }>>([]);
+  }>>(() => {
+    const init = resolveStandaloneApi("/api/deep-research/primitives", "GET") as { primitives?: Array<any> } | null;
+    return init?.primitives || [];
+  });
   const [selectedPrimitives, setSelectedPrimitives] = useState<string[]>([
     "P01-JS-ENDPOINT",
     "P05-GRAPHQL-INTRO",
@@ -1529,7 +1556,7 @@ export default function BugBountyStudio() {
       safeCheckAr: string;
       remediationAr: string;
     }>;
-  } | null>(null);
+  } | null>(() => resolveStandaloneApi("/api/deep-research/corpus-search?q=&layer=all&limit=18", "GET") as any);
 
   // 24/7 Cloud Brain & Multi-Window Cyber Workstation State
   const [workstationData, setWorkstationData] = useState<{
@@ -1612,7 +1639,7 @@ export default function BugBountyStudio() {
       severity: string;
       descriptionAr: string;
     }>;
-  } | null>(null);
+  } | null>(() => resolveStandaloneApi("/api/deep-research/workstation-state", "GET") as any);
 
   const [repeaterUrl, setRepeaterUrl] = useState("https://bughunters.google.com");
   const [repeaterMethod, setRepeaterMethod] = useState("GET");

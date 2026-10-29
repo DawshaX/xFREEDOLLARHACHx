@@ -103,6 +103,25 @@ class PageErrorBoundary extends Component<
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
+  componentDidCatch(error: Error) {
+    try {
+      const msg = String(error?.message || "");
+      if (
+        (msg.includes("is not defined") ||
+          msg.includes("Failed to fetch dynamically imported module") ||
+          msg.includes("Importing a module script failed") ||
+          msg.includes("Loading chunk")) &&
+        !sessionStorage.getItem("cybernova_boundary_reload_v15")
+      ) {
+        sessionStorage.setItem("cybernova_boundary_reload_v15", "1");
+        const u = new URL(window.location.href);
+        u.searchParams.set("_v", String(Date.now()));
+        window.location.replace(u.toString());
+      }
+    } catch {
+      // ignore
+    }
+  }
   componentDidUpdate(prevProps: { resetKey?: string }) {
     if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
       this.setState({ hasError: false, error: null });
@@ -118,12 +137,23 @@ class PageErrorBoundary extends Component<
             <div className="text-xs font-mono text-slate-400 break-all">
               {this.state.error?.message || "Unexpected Render Error"}
             </div>
-            <button
-              onClick={() => this.setState({ hasError: false, error: null })}
-              className="px-4 py-2 rounded-xl text-xs font-mono font-bold bg-purple-600/30 border border-purple-500/40 text-purple-200 hover:bg-purple-600/50"
-            >
-              إعادة محاولة العرض
-            </button>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  const msg = String(this.state.error?.message || "");
+                  if (msg.includes("is not defined") || msg.includes("Failed to fetch")) {
+                    const u = new URL(window.location.href);
+                    u.searchParams.set("_v", String(Date.now()));
+                    window.location.replace(u.toString());
+                    return;
+                  }
+                  this.setState({ hasError: false, error: null });
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-mono font-bold bg-purple-600/30 border border-purple-500/40 text-purple-200 hover:bg-purple-600/50"
+              >
+                إعادة محاولة العرض (تحديث النسخة الحية)
+              </button>
+            </div>
           </div>
         </div>
       );
