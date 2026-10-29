@@ -11,6 +11,16 @@
  * Persists state in localStorage when running in the browser.
  */
 
+import {
+  KALI_ARSENAL_64,
+  GITHUB_ARSENAL_40,
+  VULN_PRIMITIVES_24,
+  synthesizeCustomMultiChain,
+  generateCreativePresetChains,
+  searchCyberCorpus2400,
+  getCorpusStats,
+} from "./cyber-corpus-2099";
+
 export interface StandaloneCve {
   id: string;
   cveId: string;
@@ -1591,7 +1601,7 @@ export function resolveStandaloneApi(
   }
 
   if (path === "/knowledge") {
-    const entries = STANDALONE_CWES.map((w, idx) => ({
+    const cweEntries = STANDALONE_CWES.map((w, idx) => ({
       id: idx + 1,
       title: `${w.cweId} — ${w.name}`,
       category: w.category.toLowerCase(),
@@ -1602,6 +1612,18 @@ export function resolveStandaloneApi(
       tags: [w.cweId, w.category.toLowerCase(), w.severity.toLowerCase()],
       createdAt: new Date().toISOString(),
     }));
+    const primEntries = VULN_PRIMITIVES_24.map((p, idx) => ({
+      id: 100 + idx,
+      title: `[${p.code} · ${p.cwe}] ${p.nameAr}`,
+      category: "chaining-primitive",
+      summary: p.signalAr,
+      content: `الإشارة الأمنية: ${p.signalAr}\nالأثر في السلسلة: ${p.outputArtifactAr}\nأمر الفحص الآمن: ${p.safeVerifyCmd}\nالإصلاح المعماري: ${p.remediationAr}`,
+      remediation: p.remediationAr,
+      severity: p.baseCvss >= 8.5 ? "CRITICAL" : "HIGH",
+      tags: [p.code, p.cwe, p.roleInChain],
+      createdAt: new Date().toISOString(),
+    }));
+    const entries = [...cweEntries, ...primEntries];
     if (m === "POST" && body) {
       return {
         id: Date.now(),
@@ -1617,51 +1639,55 @@ export function resolveStandaloneApi(
 
   if (path === "/intelligence/knowledge") {
     return {
-      items: STANDALONE_CWES.map((w) => ({
-        id: w.id,
-        title: `${w.cweId} — ${w.name}`,
-        category: w.category,
-        summary: w.description,
-        remediation: w.remediation,
-        severity: w.severity,
+      items: VULN_PRIMITIVES_24.map((p) => ({
+        id: p.id,
+        title: `[${p.code}] ${p.nameAr} (${p.cwe})`,
+        category: p.layer,
+        summary: p.signalAr,
+        remediation: p.remediationAr,
+        severity: p.baseCvss >= 8.5 ? "CRITICAL" : "HIGH",
       })),
-      total: STANDALONE_CWES.length,
+      total: getCorpusStats().totalIndexedKnowledgeItems,
     };
   }
 
   if (path === "/knowledge/search") {
-    const q = (u.searchParams.get("q") || "").toLowerCase();
-    const results = STANDALONE_CWES.filter(
-      (w) => !q || w.name.toLowerCase().includes(q) || w.cweId.toLowerCase().includes(q) || w.description.toLowerCase().includes(q),
-    ).map((w, idx) => ({
+    const q = u.searchParams.get("q") || "";
+    const corpusMatches = searchCyberCorpus2400(q, "all", 20);
+    const results = corpusMatches.items.map((it, idx) => ({
       id: idx + 1,
-      title: `${w.cweId} — ${w.name}`,
-      category: w.category.toLowerCase(),
-      content: `${w.description}\n\nالإصلاح:\n${w.remediation}`,
-      tags: [w.cweId, w.category],
-      score: 0.95,
+      title: it.titleAr,
+      category: it.category,
+      content: `${it.safeCheckAr}\nسلسلة الربط: ${it.chainFormula}\nالإصلاح: ${it.remediationAr}`,
+      tags: [it.cwe, it.surface],
+      score: 0.96,
     }));
-    return { results };
+    return { results, totalMatched: corpusMatches.totalMatched };
   }
 
   if (path === "/knowledge/ask" && m === "POST") {
     const query = String(body?.query || "");
+    const topMatches = searchCyberCorpus2400(query, "all", 3).items;
+    const matchLines = topMatches
+      .map((mItem, i) => `${i + 1}. **${mItem.titleAr}** (\`CVSS ${mItem.cvss}\` | \`${mItem.chainFormula}\`)\n   - التحقق الآمن: ${mItem.safeCheckAr}\n   - الإصلاح: ${mItem.remediationAr}`)
+      .join("\n");
     return {
-      answer: `تحليل قاعدة المعرفة في CyberNova لسؤالك ("${query}"):\n\n1. افحص عزل الصلاحيات (BOLA/IDOR) عبر مصفوفة الصلاحيات التفاضلية.\n2. تحقق من بصمات CNAME وسجلات CRT.SH عبر محرك الاستخبارات الحية (Live OSINT).\n3. تأكد من تمرير كل نتيجة عبر بوابة البرهان (Zero-FP Gate) قبل كتابة التقرير.`,
+      answer: `تحليل الفهرس المعرفي الشامل في CyberNova (${getCorpusStats().totalIndexedKnowledgeItems.toLocaleString()}+ نمط أمني) لسؤالك ("${query}"):\n\n${matchLines}`,
     };
   }
 
   if (path === "/intelligence/stats") {
+    const cStats = getCorpusStats();
     return {
       memory: memoriesState.length,
-      knowledge: STANDALONE_CWES.length,
-      pocCount: 8,
-      threatCount: 12,
-      patterns: 8,
-      github: 15,
-      webIntel: 24,
+      knowledge: cStats.totalIndexedKnowledgeItems,
+      pocCount: cStats.vulnPrimitivesCount,
+      threatCount: 24,
+      patterns: cStats.synthesizedPatternsCount,
+      github: cStats.githubProjectsCount,
+      webIntel: cStats.kaliToolsCount,
       cveTotal: 14820,
-      byType: { cve: 8, cwe: 8, mitre: 5 },
+      byType: { cve: 18, cwe: 24, mitre: 12 },
       topCves: STANDALONE_CVES.slice(0, 5),
     };
   }
@@ -1856,26 +1882,7 @@ export function resolveStandaloneApi(
 
   // ── Deep Research 2099 Endpoints (Static / Standalone Fallback) ────────────
   if (path === "/deep-research/arsenal") {
-    return {
-      tools: [
-        { id: "nuclei", name: "projectdiscovery/nuclei", category: "Vulnerability & Exposure Auditing", stars: "22.4k+", url: "https://github.com/projectdiscovery/nuclei", integratedModule: "Nuclei Engine + Config Auditor", description: "محرك فحص القوالب الأمنية السريع القائم على YAML لاكتشاف الإعدادات الخاطئة والملفات المكشوفة بأمان.", methodology: "استخدام قوالب exposures وmisconfiguration وtakeovers فقط ضمن النطاق القانوني." },
-        { id: "subfinder", name: "projectdiscovery/subfinder", category: "Passive Subdomain Reconnaissance", stars: "11.2k+", url: "https://github.com/projectdiscovery/subfinder", integratedModule: "Subdomains Tool + Pipeline Stage 1", description: "أداة استطلاع سلبي للنطاقات الفرعية عبر شهادات الشفافية (CRT.SH) ومصادر DNS العامة.", methodology: "جمع النطاقات الفرعية سلبياً ثم مطابقتها مع سجلات CNAME لاكتشاف النطاقات المعلقة." },
-        { id: "can-i-take-over-xyz", name: "EdOverflow/can-i-take-over-xyz", category: "Subdomain Takeover Fingerprints", stars: "10.8k+", url: "https://github.com/EdOverflow/can-i-take-over-xyz", integratedModule: "Architectural Config Auditor", description: "قاعدة البيانات المرجعية لبصمات النطاقات الفرعية المعلقة (Dangling CNAMEs) عبر خدمات السحابة العالمية.", methodology: "فحص سجلات CNAME ومقارنة استجابة HTTP مع بصمات الخدمات غير المحجوزة." },
-        { id: "linkfinder", name: "GerbenJavado/LinkFinder", category: "Deep JS & Endpoint Analysis", stars: "10.1k+", url: "https://github.com/GerbenJavado/LinkFinder", integratedModule: "Deep JS & Source-Map Analyzer", description: "محلل ملفات JavaScript لاكتشاف المسارات الخفية (Hidden API Endpoints) والمعاملات غير الموثقة.", methodology: "سحب ملفات الـ JS المرتبطة بالصفحة وتحليل AST/Regex لاستخراج مسارات /api/v1 و/graphql." },
-        { id: "semgrep", name: "semgrep/semgrep", category: "Static Code & AST Taint Analysis", stars: "11.5k+", url: "https://github.com/semgrep/semgrep", integratedModule: "GitHub & OpenAPI Deep Code Auditor", description: "محرك التحليل الثابت للكود المصدري لاكتشاف ثغرات الحقن وتجاوز الصلاحيات وعيوب التشفير.", methodology: "تحليل تدفق البيانات (Taint Tracking) من مدخلات المستخدم إلى دوال قاعدة البيانات والشبكة." },
-        { id: "autorize", name: "Quitten/Autorize", category: "Differential Access Control (BOLA/IDOR)", stars: "2.9k+", url: "https://github.com/Quitten/Autorize", integratedModule: "Differential Auth & BOLA Matrix", description: "منهجية المقارنة التفاضلية للصلاحيات لاكتشاف ثغرات IDOR وBOLA وتصعيد الصلاحيات.", methodology: "إعادة إرسال نفس طلب القراءة بحساب اختبار ثانٍ ومقارنة البصمة الهيكلية للـ JSON." },
-        { id: "httpx", name: "projectdiscovery/httpx", category: "Zero-False-Positive HTTP Fingerprinting", stars: "8.4k+", url: "https://github.com/projectdiscovery/httpx", integratedModule: "Zero-FP Verification Gate", description: "أداة سبر وتحليل استجابات HTTP مع حساب التجزئة (Hashes) واكتشاف صفحات الخطأ المخصصة (Soft-404).", methodology: "مقارنة بصمة الاستجابة مع بصمة 404 الأساسية لضمان صفر إنذارات كاذبة." },
-        { id: "trufflehog", name: "trufflesecurity/trufflehog", category: "Secret & Credential Hygiene", stars: "17.8k+", url: "https://github.com/trufflesecurity/trufflehog", integratedModule: "Deep JS & Code Secret Scanner", description: "كاشف المفاتيح والتوكنات المنسية في الكود المصدري وملفات الإعدادات العامة.", methodology: "التحقق السلبي من وجود مفاتيح مكشوفة في ملفات الواجهة أو المستودعات العامة." },
-        { id: "amass", name: "owasp-amass/amass", category: "Attack Surface Mapping (OWASP)", stars: "12.5k+", url: "https://github.com/owasp-amass/amass", integratedModule: "Live OSINT + Attack Surface", description: "مشروع OWASP الرسمي لرسم الخريطة الكاملة للأصول والنطاقات الفرعية والعلاقات الشبكية.", methodology: "استخدام الوضع السلبي (amass enum -passive) لجمع البنية التحتية بهدوء." },
-        { id: "bbot", name: "blacklanternsecurity/bbot", category: "Recursive OSINT & ASM", stars: "10.8k+", url: "https://github.com/blacklanternsecurity/bbot", integratedModule: "Autonomous 4-Stage Pipeline", description: "ماسح الاستطلاع العودي (Recursive OSINT) الذي يربط مخرجات DNS مع شهادات الشفافية ومحتوى JS.", methodology: "ربط مخرجات كل مرحلة استطلاع كمدخلات للمرحلة التالية مع فلترة النطاق القانوني." },
-        { id: "reconftw", name: "six2dez/reconftw", category: "Automated Bug Bounty Recon Workflow", stars: "8.3k+", url: "https://github.com/six2dez/reconftw", integratedModule: "Playbooks + Pipeline Orchestrator", description: "منظومة أتمتة الاستطلاع الشامل لصائدي الثغرات لجمع النطاقات والمسارات والملفات المنسية.", methodology: "تشغيل مراحل الفحص الهادئ بالترتيب وحفظ النتائج في سجل المهام والذاكرة." },
-        { id: "arjun", name: "s0md3v/Arjun", category: "HTTP Parameter Discovery", stars: "6.4k+", url: "https://github.com/s0md3v/Arjun", integratedModule: "Deep JS & Parameter Extractor", description: "أداة اكتشاف معاملات HTTP المخفية (Query & JSON Parameters) في نقاط نهاية الـ API.", methodology: "استخراج أسماء المعاملات من ملفات الـ JS ومخططات OpenAPI." },
-        { id: "katana", name: "projectdiscovery/katana", category: "Next-Gen SPA & Web Crawler", stars: "12.1k+", url: "https://github.com/projectdiscovery/katana", integratedModule: "Deep JS & Source-Map Analyzer", description: "زاحف ويب حديث لتحليل تطبيقات الصفحة الواحدة (SPA) واستخراج الروابط الخفية وملفات الـ JS.", methodology: "زحف هادئ ومحدد النطاق لتحليل ملفات الواجهة واستخراج مسارات الـ API." },
-        { id: "cariddi", name: "edoardottt/cariddi", category: "Endpoint, Extension & Secret Crawler", stars: "3.8k+", url: "https://github.com/edoardottt/cariddi", integratedModule: "Deep JS & Config Auditor", description: "محلل سريع للروابط لاستخراج المسارات الحساسة وامتدادات الملفات (.json, .yaml, .map).", methodology: "تحليل الروابط المجمعة من Wayback وJS دون إغراق الخادم بطلبات عشوائية." },
-        { id: "nettacker", name: "OWASP/Nettacker", category: "OWASP Automated Security Assessment", stars: "5.7k+", url: "https://github.com/OWASP/Nettacker", integratedModule: "Scanner + Config Auditor", description: "إطار عمل OWASP الرسمي لفحص الإعدادات الأمنية وتقييم الثغرات وإدارة سطح الهجوم.", methodology: "فحص الترويسات، الشهادات، والخدمات المكشوفة وتوليد تقارير متوافقة مع معايير OWASP." },
-        { id: "llmrecon", name: "perplext/LLMrecon", category: "OWASP LLM & AI Top 10 Security", stars: "2.1k+", url: "https://github.com/perplext/LLMrecon", integratedModule: "Vulnerability Encyclopedia + AI Auditor", description: "إطار فحص تطبيقات الذكاء الاصطناعي والنماذج اللغوية وفق معيار OWASP Top 10 for LLM 2025/2026.", methodology: "تدقيق حدود الصلاحيات في وكلاء الذكاء الاصطناعي وحماية Prompt Injection." },
-      ],
-    };
+    return { tools: GITHUB_ARSENAL_40 };
   }
 
   if (path === "/deep-research/js-analyzer" && m === "POST") {
@@ -2105,43 +2112,18 @@ export function resolveStandaloneApi(
     };
   }
 
-  const kaliArsenalTools = [
-    { id: "nmap", name: "Nmap (Network Mapper)", category: "1. جمع المعلومات واستطلاع الشبكات (Information Gathering & OSINT)", commandTemplate: "nmap -Pn -sV --top-ports 20 -T3 {target}", purposeAr: "اكتشاف المنافذ المفتوحة وإصدارات الخدمات التشغيلية بهدوء.", safeEquivalent: "portscan" },
-    { id: "amass", name: "OWASP Amass", category: "1. جمع المعلومات واستطلاع الشبكات (Information Gathering & OSINT)", commandTemplate: "amass enum -passive -d {target}", purposeAr: "رسم خريطة سطح الهجوم والنطاقات الفرعية سلبياً.", safeEquivalent: "live-osint" },
-    { id: "subfinder", name: "ProjectDiscovery Subfinder", category: "1. جمع المعلومات واستطلاع الشبكات (Information Gathering & OSINT)", commandTemplate: "subfinder -d {target} -silent", purposeAr: "اكتشاف النطاقات الفرعية بسرعة فائقة عبر شهادات الشفافية.", safeEquivalent: "subdomains" },
-    { id: "theharvester", name: "theHarvester", category: "1. جمع المعلومات واستطلاع الشبكات (Information Gathering & OSINT)", commandTemplate: "theHarvester -d {target} -b crtsh,rapiddns,waybackarchive", purposeAr: "جمع النطاقات الفرعية والمسارات العامة من الأرشيفات المفتوحة.", safeEquivalent: "live-osint" },
-    { id: "whatweb", name: "WhatWeb Fingerprinter", category: "1. جمع المعلومات واستطلاع الشبكات (Information Gathering & OSINT)", commandTemplate: "whatweb -a 1 https://{target}", purposeAr: "تحديد تقنيات الويب وخادم الحافة من طلب HTTP واحد.", safeEquivalent: "scanner" },
-    { id: "nuclei", name: "ProjectDiscovery Nuclei", category: "2. تحليل الثغرات والقوالب الأمنية (Vulnerability Analysis)", commandTemplate: "nuclei -u https://{target} -t exposures,misconfiguration,takeovers -rl 15", purposeAr: "فحص الإعدادات الخاطئة والملفات المكشوفة وبصمات النطاقات المعلقة.", safeEquivalent: "config-auditor" },
-    { id: "nikto", name: "Nikto Web Server Auditor", category: "2. تحليل الثغرات والقوالب الأمنية (Vulnerability Analysis)", commandTemplate: "nikto -h https://{target} -Tuning 123b -Pause 1", purposeAr: "فحص ترويسات خادم الويب والملفات الإرشادية الحساسة.", safeEquivalent: "scanner" },
-    { id: "searchsploit", name: "SearchSploit (Exploit-DB)", category: "2. تحليل الثغرات والقوالب الأمنية (Vulnerability Analysis)", commandTemplate: "searchsploit --cve {target}", purposeAr: "البحث في قاعدة بيانات الثغرات الرسمية لمطابقة الإصدارات.", safeEquivalent: "cve-search" },
-    { id: "httpx", name: "ProjectDiscovery httpx", category: "3. فحص تطبيقات الويب وواجهات API (Web & API Security)", commandTemplate: "httpx -u https://{target} -status-code -title -tech-detect -hash sha256", purposeAr: "سبر خوادم الويب وحساب بصمة SHA-256 لاكتشاف صفحات الخطأ المخصصة.", safeEquivalent: "zero-fp" },
-    { id: "katana", name: "ProjectDiscovery Katana", category: "3. فحص تطبيقات الويب وواجهات API (Web & API Security)", commandTemplate: "katana -u https://{target} -jc -d 2 -rl 10", purposeAr: "زحف وتحليل ملفات الـ JavaScript لاستخراج مسارات الـ API المخفية.", safeEquivalent: "js-analyzer" },
-    { id: "arjun", name: "Arjun Parameter Discovery", category: "3. فحص تطبيقات الويب وواجهات API (Web & API Security)", commandTemplate: "arjun -u https://{target}/api/v1/profile -m GET --stable", purposeAr: "اكتشاف معاملات الاستعلام غير الموثقة في نقاط النهاية.", safeEquivalent: "js-analyzer" },
-    { id: "ffuf", name: "ffuf (Safe Discovery Mode)", category: "3. فحص تطبيقات الويب وواجهات API (Web & API Security)", commandTemplate: "ffuf -u https://{target}/FUZZ -w api-routes.txt -mc 200,401,403 -rate 10", purposeAr: "اكتشاف المسارات القياسية ومخططات التوثيق مع تحديد معدل الطلبات.", safeEquivalent: "schema-auditor" },
-    { id: "owasp-zap", name: "OWASP ZAP (Passive & Ajax Audit)", category: "3. فحص تطبيقات الويب وواجهات API (Web & API Security)", commandTemplate: "zap-baseline.py -t https://{target} -I", purposeAr: "الفحص الأساسي السلبي لترويسات الأمان، الكوكيز، وضوابط مكافحة CSRF.", safeEquivalent: "scanner" },
-    { id: "jwt-tool", name: "jwt_tool (Token Auditor)", category: "3. فحص تطبيقات الويب وواجهات API (Web & API Security)", commandTemplate: "python3 jwt_tool.py <JWT_TOKEN> -M pb", purposeAr: "تفكيك وتدقيق توكنات JWT لاكتشاف ثغرات alg:none وغياب exp.", safeEquivalent: "jwt-cookie" },
-    { id: "semgrep", name: "Semgrep AST Static Analyzer", category: "4. تحليل الكود المصدري وسلاسل الإمداد (SAST & Supply-Chain)", commandTemplate: "semgrep scan --config=p/owasp-top-ten .", purposeAr: "تحليل شجرة الكود المصدري لاكتشاف ثغرات الحقن وتجاوز الصلاحيات.", safeEquivalent: "github-auditor" },
-    { id: "trufflehog", name: "TruffleHog Secret Verifier", category: "4. تحليل الكود المصدري وسلاسل الإمداد (SAST & Supply-Chain)", commandTemplate: "trufflehog git https://github.com/org/repo --only-verified", purposeAr: "البحث عن المفاتيح والتوكنات المنسية في سجل Git وحزم الواجهة.", safeEquivalent: "js-analyzer" },
-    { id: "trivy", name: "Aqua Trivy & OSV-Scanner", category: "4. تحليل الكود المصدري وسلاسل الإمداد (SAST & Supply-Chain)", commandTemplate: "trivy fs --scanners vuln,secret,misconfig .", purposeAr: "فحص مكتبات المشروع والحاويات مقابل قواعد بيانات OSV وNVD.", safeEquivalent: "config-auditor" },
-    { id: "testssl", name: "testssl.sh / SSLyze", category: "5. التشفير وفحص شهادات TLS والجلسات (Cryptography & TLS)", commandTemplate: "testssl.sh --protocols --ciphers --headers https://{target}", purposeAr: "فحص بروتوكولات TLS وخوارزميات التشفير وصلاحية الشهادات.", safeEquivalent: "ssl" },
-    { id: "hashid-john", name: "Hash Identifier & Cryptographic Strength", category: "5. التشفير وفحص شهادات TLS والجلسات (Cryptography & TLS)", commandTemplate: "sha256sum / openssl dgst -sha256", purposeAr: "توليد ومطابقة البصمات الرقمية وفحص قوة خوارزميات التجزئة.", safeEquivalent: "zero-fp" },
-    { id: "dig-dnsrecon", name: "dig / DNSRecon / Subjack", category: "6. تحليل البنية التحتية وبصمات النطاقات (DNS & Cloud Infrastructure)", commandTemplate: "dig +short A AAAA MX TXT CNAME NS {target}", purposeAr: "تحليل سجلات DNS وفحص سجلات CNAME المعلقة.", safeEquivalent: "config-auditor" },
-    { id: "ghidra-binwalk-yara", name: "Ghidra / Binwalk / YARA / ExifTool", category: "7. التحقيق الجنائي الرقمي وتحليل الملفات (Forensics & Binary Audit)", commandTemplate: "exiftool / yara -r rules.yar / binwalk -e artifact.bin", purposeAr: "تحليل البيانات الوصفية والملفات الثنائية لاكتشاف تسريب المسارات.", safeEquivalent: "js-analyzer" },
-    { id: "llmrecon-prowler", name: "LLMrecon & Cloud Security Auditor", category: "8. أمان الذكاء الاصطناعي والسحابة (AI/LLM & Cloud Security)", commandTemplate: "llmrecon --owasp-2025 --target https://{target}", purposeAr: "فحص واجهات الذكاء الاصطناعي ضد تسريب موجهات النظام وتجاوز الصلاحيات.", safeEquivalent: "pipeline" },
-  ];
-
   if (path === "/deep-research/kali-arsenal") {
     return {
-      totalTools: kaliArsenalTools.length,
-      categories: Array.from(new Set(kaliArsenalTools.map((t) => t.category))),
-      tools: kaliArsenalTools,
+      totalTools: KALI_ARSENAL_64.length,
+      categories: Array.from(new Set(KALI_ARSENAL_64.map((t) => t.category))),
+      tools: KALI_ARSENAL_64,
     };
   }
 
   if (path === "/deep-research/kali-simulate" && m === "POST") {
     const toolId = String(body?.toolId || "nmap").toLowerCase();
     const rawTarget = String(body?.target || "bughunters.google.com").replace(/^https?:\/\//i, "").replace(/^\*\./, "");
-    const toolDef = kaliArsenalTools.find((t) => t.id === toolId) || kaliArsenalTools[0]!;
+    const toolDef = KALI_ARSENAL_64.find((t) => t.id === toolId) || KALI_ARSENAL_64[0]!;
     const renderedCommand = toolDef.commandTemplate.replace(/\{target\}/g, rawTarget);
     const output = [
       `[CYBERNOVA SAFE VERIFICATION ENGINE — ${toolDef.name.toUpperCase()}]`,
@@ -2164,85 +2146,75 @@ export function resolveStandaloneApi(
     };
   }
 
+  if (path === "/deep-research/primitives") {
+    return {
+      totalPrimitives: VULN_PRIMITIVES_24.length,
+      layers: Array.from(new Set(VULN_PRIMITIVES_24.map((p) => p.layer))),
+      primitives: VULN_PRIMITIVES_24,
+    };
+  }
+
   if (path === "/deep-research/chain-synthesizer" && m === "POST") {
     const rawTarget = String(body?.target || "bughunters.google.com").replace(/^https?:\/\//i, "").replace(/^\*\./, "");
+    const requestedPrimitiveIds: string[] = Array.isArray(body?.primitiveIds)
+      ? (body.primitiveIds as unknown[]).map((x) => String(x))
+      : [];
+    const customChain =
+      requestedPrimitiveIds.length >= 2
+        ? synthesizeCustomMultiChain(requestedPrimitiveIds, rawTarget)
+        : null;
+    const presetChains = generateCreativePresetChains(rawTarget);
+    const allChains = customChain ? [customChain, ...presetChains] : presetChains;
     return {
       target: rawTarget,
+      customSynthesized: customChain,
       contextStats: {
         memoriesCount: memoryState.length,
         missionFindingsCount: missionsState[0]?.findings.length ?? 3,
         evidenceCount: evidenceState.length,
+        primitivesAvailable: VULN_PRIMITIVES_24.length,
       },
-      chains: [
-        {
-          id: "chain-bola-js",
-          title: "سلسلة (1): استخراج مسارات API من ملفات JS + غياب فحص ملكية المورد (BOLA / IDOR Chain)",
-          combinedSeverity: "CRITICAL (CVSS 9.1)",
-          cvssVector: "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
-          cweChain: ["CWE-540 (JS/SourceMap Exposure)", "CWE-639 (BOLA / IDOR)"],
-          steps: [
-            `الخطوة 1: استخراج مسارات الـ API غير الموثقة ومعاملات المعرفات من حزم JavaScript على ${rawTarget}.`,
-            "الخطوة 2: إرسال طلب قراءة بنفس المعرف عبر حسابين اختباريين مستقلين (Session A مقابل Session B) في مصفوفة الصلاحيات.",
-            "الخطوة 3: تحويل مسار مخفي غير موثق إلى ثغرة وصول غير مصرح به للبيانات الحساسة.",
-          ],
-          verificationTool: "Deep JS Analyzer -> Differential Auth Matrix -> Zero-FP Gate",
-          remediation: "تطبيق فحص ملكية المورد (Object-Level Authorization) داخل طبقة الـ Middleware/ORM.",
-        },
-        {
-          id: "chain-cors-cookie",
-          title: "سلسلة (2): انعكاس Origin في CORS + ضعف عزل كوكيز الجلسة (Cross-Origin Account Read Chain)",
-          combinedSeverity: "HIGH (CVSS 8.3)",
-          cvssVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:L/A:N",
-          cweChain: ["CWE-942 (Permissive CORS)", "CWE-352 / CWE-1004 (Cookie SameSite/HttpOnly)"],
-          steps: [
-            `الخطوة 1: فحص استجابة ${rawTarget} لترويسة Origin مخصصة مع Access-Control-Allow-Credentials: true.`,
-            "الخطوة 2: فحص خصائص Set-Cookie للتأكد مما إذا كانت الكوكيز تُرسل بدون SameSite=Strict.",
-            "الخطوة 3: إثبات إمكانية قراءة استجابة نقطة نهاية مصادق عليها عبر المتصفح.",
-          ],
-          verificationTool: "Architectural Config Auditor -> JWT & Cookie Auditor",
-          remediation: "حصر Access-Control-Allow-Origin في قائمة بيضاء صارمة وتفعيل SameSite=Lax/Strict وHttpOnly.",
-        },
-        {
-          id: "chain-osint-takeover-oauth",
-          title: "سلسلة (3): نطاق فرعي في CRT.SH + سجل CNAME معلق + نطاق redirect_uri في OAuth",
-          combinedSeverity: "CRITICAL (CVSS 9.3)",
-          cvssVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N",
-          cweChain: ["CWE-284 (Subdomain Takeover)", "CWE-601 (OAuth Redirect Manipulation)"],
-          steps: [
-            `الخطوة 1: استخراج جميع النطاقات الفرعية التاريخية لـ ${rawTarget} عبر محرك CRT.SH وWayback Machine.`,
-            "الخطوة 2: مطابقة سجلات CNAME للنطاقات الفرعية مقابل بصمات الخدمات السحابية غير المحجوزة.",
-            "الخطوة 3: إذا كان مزود OAuth يقبل *.target.com في redirect_uri، فإن النطاق الفرعي المعلق يرفع الخطورة إلى استيلاء كامل على رمز المصادقة.",
-          ],
-          verificationTool: "Live OSINT Hub -> Config Auditor -> Zero-FP Gate",
-          remediation: "إزالة سجلات DNS/CNAME المعلقة فوراً وتحديد عناوين redirect_uri كاملة وثابتة.",
-        },
-        {
-          id: "chain-graphql-race",
-          title: "سلسلة (4): كشف مخطط GraphQL/OpenAPI + Mass Assignment أو Race Condition (TOCTOU)",
-          combinedSeverity: "HIGH (CVSS 8.6)",
-          cvssVector: "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
-          cweChain: ["CWE-200 (Schema Introspection)", "CWE-915 (Mass Assignment)", "CWE-362 (Race Condition)"],
-          steps: [
-            `الخطوة 1: فحص نقاط نهاية /graphql و/openapi.json على ${rawTarget} لاستخراج الحقول والـ Mutations غير الظاهرة.`,
-            "الخطوة 2: مراجعة الحقول الحساسة (مثل role, credits, verified) أو العمليات الحساسة للتزامن.",
-            "الخطوة 3: إثبات تعديل حقل غير مصرح به أو تجاوز حد الاستخدام بحساب اختبار شخصي.",
-          ],
-          verificationTool: "GraphQL & OpenAPI Schema Auditor -> Static Code Auditor",
-          remediation: "تعطيل Introspection في الإنتاج، استخدام DTOs صارمة، وتطبيق أقفال المعاملات الذرية.",
-        },
-      ],
+      chains: allChains.map((c) => ({
+        id: c.id,
+        title: c.titleAr,
+        titleEn: c.titleEn,
+        hopsCount: c.hopsCount,
+        primitiveIds: c.primitiveIds,
+        combinedSeverity: c.combinedSeverity,
+        compoundCvss: c.compoundCvss,
+        cvssVector: c.cvssVector,
+        estimatedBounty: c.estimatedBounty,
+        cweChain: c.cweChain,
+        architecturalGraph: c.architecturalGraph,
+        steps: c.steps,
+        verificationTool: c.verificationTool,
+        safeVerificationCommands: c.safeVerificationCommands,
+        remediation: c.remediation,
+        noveltyAnalysisAr: c.noveltyAnalysisAr,
+      })),
     };
+  }
+
+  if (path === "/deep-research/corpus-search") {
+    const q = String(u.searchParams.get("q") || "");
+    const layer = String(u.searchParams.get("layer") || "all");
+    const limit = Math.min(60, Math.max(6, Number(u.searchParams.get("limit")) || 24));
+    return searchCyberCorpus2400(q, layer, limit);
   }
 
   if (path === "/deep-research/self-awareness") {
     const activeTarget = String(u.searchParams.get("target") || missionsState[0]?.target || "bughunters.google.com");
+    const corpusStats = getCorpusStats();
     return {
-      platformVersion: "CyberNova 2099 Autonomous Security Intelligence Edition",
+      platformVersion: "CyberNova 2099 Universal Autonomous Intelligence Edition",
       activeTarget,
       selfAwarenessSummary: {
-        deepEnginesCount: 13,
-        kaliToolsIntegrated: kaliArsenalTools.length,
-        githubArsenalCount: 16,
+        deepEnginesCount: 15,
+        kaliToolsIntegrated: KALI_ARSENAL_64.length, // 64
+        kaliCategoriesCount: corpusStats.kaliCategoriesCount, // 12
+        githubArsenalCount: GITHUB_ARSENAL_40.length, // 40
+        vulnPrimitivesCount: corpusStats.vulnPrimitivesCount, // 24
+        totalIndexedKnowledgeItems: corpusStats.totalIndexedKnowledgeItems, // 2,576+
         globalPlatformsCount: 8,
         memoriesStored: memoryState.length,
         missionFindings: missionsState[0]?.findings.length ?? 0,
@@ -2257,9 +2229,9 @@ export function resolveStandaloneApi(
         { id: "auth-bola", name: "3. مصفوفة المقارنة التفاضلية للصلاحيات (BOLA / IDOR Differential Matrix)", completed: true, recommendedAction: "مكتمل" },
         { id: "arch-config", name: "4. تدقيق الإعدادات المعمارية (CORS / Subdomain Takeover / security.txt)", completed: true, recommendedAction: "مكتمل" },
         { id: "jwt-schema", name: "5. تدقيق تشفير الجلسات ومخططات الـ API (JWT / Cookies / GraphQL / OpenAPI)", completed: true, recommendedAction: "مكتمل" },
-        { id: "zero-fp-chains", name: "6. بوابة البرهان (Zero-FP Gate) وبناء سلاسل الأثر المركب (Vulnerability Chaining)", completed: true, recommendedAction: "مكتمل" },
+        { id: "zero-fp-chains", name: "6. بوابة البرهان (Zero-FP Gate) والدمج المتزامن لسلاسل الثغرات (A->B->C->D Chaining)", completed: true, recommendedAction: "مكتمل" },
       ],
-      nextRecommendedStep: "النظام في حالة وعي وجاهزية 100% — يمكنك تشغيل مسار البحث الذاتي أو اختيار أي أداة للتدقيق الحي.",
+      nextRecommendedStep: "النظام في حالة وعي وجاهزية 100% — يمكنك دمج 2–5 ثغرات في نفس الوقت من المختبر الإبداعي أو البحث في 2,576+ نمط أمني.",
     };
   }
 

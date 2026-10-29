@@ -613,6 +613,414 @@ window.addEventListener("message", (event) => {
       "تحديد النطاق الهدف صراحةً عند استدعاء `postMessage(data, 'https://trusted.example.com')`.",
     ],
   },
+  {
+    id: "http-request-smuggling",
+    titleAr: "تهريب طلبات HTTP وتعارض الحافة والخلفية (HTTP Request Smuggling / H2.CL)",
+    titleEn: "HTTP/1.1 & HTTP/2 Request Smuggling Desynchronization (CL.TE / TE.CL / H2.CL)",
+    cwe: "CWE-444",
+    owasp: "A05:2021 — Protocol & Reverse Proxy Desync",
+    severity: "Critical",
+    cvssBase: 9.1,
+    bountyRange: "$2,500 – $50,000+",
+    summaryAr:
+      "تحدث عندما يختلف خادم الحافة (CDN / Reverse Proxy) عن الخادم الخلفي (Backend) في تحديد نهاية طلب HTTP بسبب تعارض `Content-Length` و`Transfer-Encoding` أو عند خفض اتصال `HTTP/2` إلى `HTTP/1.1`.",
+    rootCauseAr:
+      "قبول ترويسات متعارضة في نفس الطلب أو إعادة استخدام اتصالات `HTTP/1.1 Keep-Alive` الخلفية بدون تطبيع صارم.",
+    language: "Nginx / Reverse Proxy / HTTP",
+    vulnerableCode: `# ❌ إعداد ضعيف: خفض HTTP/2 إلى HTTP/1.1 بدون تطبيع الترويسات
+location / {
+  proxy_pass http://backend_upstream;
+  proxy_http_version 1.1;
+  proxy_set_header Connection "";
+}`,
+    secureCode: `# ✅ إعداد آمن: استخدام HTTP/2 من الطرف للطرف ورفض الطلبات ذات الترويسات الغامضة
+http {
+  ignore_invalid_headers on;
+  underscores_in_headers off;
+  # رفض أي طلب يجمع بين Content-Length و Transfer-Encoding وفق RFC 9112
+}`,
+    auditChecklist: [
+      "التحقق مما إذا كان خادم الحافة يقبل HTTP/2 ويحوله إلى HTTP/1.1 في الخلفية.",
+      "استخدام فحوصات زمنية آمنة أو اتصالات خاصة بك فقط دون التأثير على طلبات المستخدمين الآخرين.",
+    ],
+    remediationSteps: [
+      "تفعيل HTTP/2 من الطرف إلى الطرف (End-to-End HTTP/2) بين الموازن والخادم الخلفي.",
+      "رفض أي طلب يحتوي على `Content-Length` و`Transfer-Encoding` معاً.",
+    ],
+  },
+  {
+    id: "web-cache-poisoning",
+    titleAr: "تسميم الكاش عبر الترويسات غير المفهرسة (Web Cache Poisoning)",
+    titleEn: "Web Cache Poisoning via Unkeyed Headers & Parameter Cloaking",
+    cwe: "CWE-444",
+    owasp: "A05:2021 — CDN & Caching Security",
+    severity: "High",
+    cvssBase: 8.3,
+    bountyRange: "$1,500 – $30,000+",
+    summaryAr:
+      "تحدث عندما يقرأ الخادم الخلفي ترويسة غير داخلة في مفتاح الكاش (مثل `X-Forwarded-Host` أو `X-Forwarded-Scheme`) ويعكس قيمتها داخل روابط ملفات JS أو التوجيهات في استجابة يتم تخزينها في الـ CDN.",
+    rootCauseAr:
+      "اعتماد التطبيق على ترويسات `X-Forwarded-*` لبناء الروابط المطلقة دون تضمين تلك الترويسات في مفتاح الكاش (`Vary` / Cache Key).",
+    language: "Express / CDN Config",
+    vulnerableCode: `// ❌ كود ضعيف: بناء رابط السكربت بالاعتماد على X-Forwarded-Host غير المفهرس في الكاش
+app.get("/home", (req, res) => {
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  res.setHeader("Cache-Control", "public, max-age=600");
+  res.send(\`<script src="https://\${host}/static/app.js"></script>\`);
+});`,
+    secureCode: `// ✅ كود آمن: الاعتماد على نطاق ثابت من إعدادات البيئة واستخدام مسارات نسبية
+app.get("/home", (_req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=600");
+  res.send(\`<script src="/static/app.js"></script>\`);
+});`,
+    auditChecklist: [
+      "إضافة معامل `Cache-Buster` فريد دائماً (`?cb=mytest123`) أثناء الفحص لضمان عدم تخزين أي تجربة في الكاش العام.",
+      "فحص ترويسات `X-Cache` و`CF-Cache-Status` و`Age` ومقارنة سلوك الكاش مع الخادم الخلفي.",
+    ],
+    remediationSteps: [
+      "استخدام المسارات النسبية (`/static/app.js`) وتجاهل ترويسات `X-Forwarded-Host` غير الموثوقة.",
+      "تضمين أي ترويسة مؤثرة في محتوى الصفحة داخل ترويسة `Vary`.",
+    ],
+  },
+  {
+    id: "web-cache-deception",
+    titleAr: "خداع الكاش لتخزين الصفحات الخاصة (Web Cache Deception)",
+    titleEn: "Web Cache Deception via Path Normalization & Static Suffixes",
+    cwe: "CWE-525",
+    owasp: "A05:2021 — Caching & Session Privacy",
+    severity: "High",
+    cvssBase: 7.7,
+    bountyRange: "$1,000 – $15,000+",
+    summaryAr:
+      "تحدث عندما يتعامل الخادم الخلفي مع المسار `/api/account/profile/style.css` كأنه `/api/account/profile` ويرجع البيانات الشخصية، بينما يقوم الـ CDN بتخزين الاستجابة لأنها تنتهي بـ `.css`.",
+    rootCauseAr:
+      "قواعد تخزين في الـ CDN تعتمد على امتداد الرابط فقط مع تجاهل ترويسات `Cache-Control` أو غياب `no-store` على المسارات الديناميكية.",
+    language: "HTTP / CDN Rules",
+    vulnerableCode: `// ❌ كود ضعيف: مسار يقبل لاحقات إضافية وبدون ترويسة منع التخزين
+app.get("/account/profile*", requireAuth, (req, res) => {
+  res.json({ email: req.user.email, apiKey: req.user.apiKey });
+});`,
+    secureCode: `// ✅ كود آمن: مطابقة دقيقة للمسار + فرض Cache-Control: no-store, private
+app.get("/account/profile", requireAuth, (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, private, must-revalidate");
+  res.json({ email: req.user.email });
+});`,
+    auditChecklist: [
+      "اختبار المسارات المصادق عليها على حسابك التجريبي فقط بإضافة `/test.css` أو `/.js` ومراقبة ترويسة `CF-Cache-Status`.",
+      "التحقق من وجود `Cache-Control: no-store, private` على جميع استجابات الـ API الخاصة.",
+    ],
+    remediationSteps: [
+      "إرسال `Cache-Control: no-store, private` على كافة الصفحات المعتمدة على جلسة المستخدم.",
+      "ضبط الـ CDN ليحترم ترويسات `Cache-Control` الصادرة من الخادم الأصلي.",
+    ],
+  },
+  {
+    id: "saml-xsw-bypass",
+    titleAr: "تجاوز توقيع الدخول الموحد في SAML 2.0 (XML Signature Wrapping)",
+    titleEn: "SAML 2.0 XML Signature Wrapping (XSW) & Canonicalization Bypass",
+    cwe: "CWE-347",
+    owasp: "A07:2021 — Enterprise SSO Authentication",
+    severity: "Critical",
+    cvssBase: 9.3,
+    bountyRange: "$5,000 – $40,000+",
+    summaryAr:
+      "تحدث عندما يتحقق مكتبة SAML من صحة التوقيع الرقمي على عنصر `<Assertion>` الأصلي، بينما يقرأ كود التطبيق اسم المستخدم (`NameID`) من عنصر `<Assertion>` آخر غير موقع داخل نفس ملف الـ XML.",
+    rootCauseAr:
+      "البحث عن عنصر `NameID` عبر استعلام XPath عام (`//NameID`) بدلاً من قراءته حصرياً من العنصر الذي تم التحقق من توقيعه.",
+    language: "TypeScript / SAML XML",
+    vulnerableCode: `// ❌ كود ضعيف: التحقق من التوقيع ثم قراءة أول عنصر NameID في الوثيقة
+if (verifyXmlSignature(xmlDoc, idpCert)) {
+  const email = xmlDoc.getElementsByTagName("NameID")[0].textContent;
+  loginUser(email);
+}`,
+    secureCode: `// ✅ كود آمن: استخراج البيانات حصرياً من العقدة الموقعة بعد التحقق من مخطط XSD وتعطيل DTD
+const verifiedAssertion = verifyAndExtractSignedAssertion(xmlDoc, idpCert, {
+  disallowDoctype: true,
+  strictAudience: "https://sp.example.com/saml/metadata",
+});
+loginUser(verifiedAssertion.subjectNameId);`,
+    auditChecklist: [
+      "التأكد من تعطيل الكيانات الخارجية (`XXE / DOCTYPE`) في محلل XML الخاص بـ SAML.",
+      "التحقق من مطابقة `Audience` و`Recipient` و`NotOnOrAfter` ومنع إعادة إرسال نفس الـ `Assertion ID`.",
+    ],
+    remediationSteps: [
+      "اعتماد مكتبات SAML حديثة تعزل العقدة الموقعة تماماً وترفض أي عناصر إضافية غير متوقعة.",
+      "تخزين معرفات `Assertion ID` لمنع هجمات الإعادة (Replay Attacks).",
+    ],
+  },
+  {
+    id: "webauthn-passkey-flaws",
+    titleAr: "عيوب التحقق من النطاق في مفاتيح المرور (WebAuthn / Passkey RP Bypass)",
+    titleEn: "WebAuthn / FIDO2 Passkey Relying Party & Origin Validation Flaws",
+    cwe: "CWE-287",
+    owasp: "A07:2021 — Modern Passwordless Authentication",
+    severity: "High",
+    cvssBase: 8.4,
+    bountyRange: "$3,000 – $25,000+",
+    summaryAr:
+      "تحدث عندما يغفل الخادم أثناء تسجيل أو التحقق من مفتاح المرور (Passkey) فحص تطابق `clientDataJSON.origin` مع النطاق الرسمي أو لا يتحقق من تجزئة `rpIdHash` في بيانات المصادق.",
+    rootCauseAr:
+      "الاكتفاء بالتحقق من التوقيع التشفيري للمفتاح العام دون التحقق من بيانات السياق (`origin`, `challenge`, `rpIdHash`, `userVerified`).",
+    language: "TypeScript / WebAuthn",
+    vulnerableCode: `// ❌ كود ضعيف: التحقق من التوقيع فقط وتجاهل فحص النطاق (Origin) والتحدي (Challenge)
+const isValid = verifySignature(credential.response.signature, publicKey);
+if (isValid) createSession(user);`,
+    secureCode: `// ✅ كود آمن: التحقق الكامل من Origin وRP ID والتحدي المخزن في الجلسة
+const verification = await verifyAuthenticationResponse({
+  response: credential,
+  expectedChallenge: req.session.currentChallenge,
+  expectedOrigin: "https://login.example.com",
+  expectedRPID: "example.com",
+  requireUserVerification: true,
+});`,
+    auditChecklist: [
+      "التأكد من أن التحدي (`challenge`) عشوائي، مرتبط بالجلسة، ويُستهلك لمرة واحدة فقط.",
+      "التحقق من رفض أي `origin` ينتمي لنطاق فرعي غير مصرح له.",
+    ],
+    remediationSteps: [
+      "استخدام مكتبات قياسية مثل `@simplewebauthn/server` مع تحديد `expectedOrigin` و`expectedRPID` بدقة.",
+    ],
+  },
+  {
+    id: "cicd-actions-injection",
+    titleAr: "حقن أنابيب CI/CD واستغلال pull_request_target في GitHub Actions",
+    titleEn: "CI/CD Pipeline Expression Injection & pull_request_target Taint",
+    cwe: "CWE-829",
+    owasp: "A08:2021 — Software & Data Integrity Failures",
+    severity: "Critical",
+    cvssBase: 9.2,
+    bountyRange: "$2,000 – $30,000+",
+    summaryAr:
+      "تحدث عندما يستخدم ملف Workflow حدث `pull_request_target` (الذي يمتلك صلاحية الوصول للأسرار `secrets` وتوكن الكتابة) ويقوم بسحب وتشغيل كود من طلب سحب خارجي، أو يدمج `${{ github.event.pull_request.title }}` مباشرة داخل أمر `run:`.",
+    rootCauseAr:
+      "تقييم تعبيرات `${{ ... }}` قبل تنفيذ سكريبت الـ Shell، أو منح صلاحيات مستودع كاملة لكود خارجي لم تتم مراجعته.",
+    language: "YAML / GitHub Actions",
+    vulnerableCode: `# ❌ ملف Workflow خطر: حقن أوامر عبر عنوان الـ PR مباشرة في Shell
+on: [pull_request_target]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Testing PR: \${{ github.event.pull_request.title }}"`,
+    secureCode: `# ✅ ملف Workflow آمن: استخدام متغيرات البيئة (env:) وصلاحيات قراءة فقط
+on: [pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          PR_TITLE: \${{ github.event.pull_request.title }}
+        run: echo "Testing PR: $PR_TITLE"`,
+    auditChecklist: [
+      "فحص ملفات `.github/workflows/*.yml` باستخدام أداة `zizmor` لاكتشاف استخدام `pull_request_target`.",
+      "التأكد من تحديد `permissions: contents: read` كإعداد افتراضي في جميع الـ Workflows.",
+    ],
+    remediationSteps: [
+      "تمرير أي مدخلات قادمة من الحدث (`github.event.*`) عبر متغيرات بيئة `env:` وعدم وضعها داخل `run:` مباشرة.",
+      "تثبيت إصدارات الـ Actions الخارجية باستخدام بصمة الـ Commit الكاملة (SHA-256 Pinning).",
+    ],
+  },
+  {
+    id: "xxe-xml-parser",
+    titleAr: "حقن الكيانات الخارجية في محللات XML وملفات SVG/DOCX (XXE)",
+    titleEn: "XML External Entity (XXE) Injection in XML, SOAP, SVG & Office Parsers",
+    cwe: "CWE-611",
+    owasp: "A05:2021 — Security Misconfiguration",
+    severity: "High",
+    cvssBase: 8.6,
+    bountyRange: "$1,500 – $25,000+",
+    summaryAr:
+      "تحدث عندما يقوم الخادم بتحليل ملفات XML أو صور SVG أو مستندات DOCX/XLSX مع ترك ميزة تعريفات `DOCTYPE` والكيانات الخارجية (`SYSTEM / PUBLIC`) مفعلة في المحلل.",
+    rootCauseAr:
+      "الإعدادات الافتراضية القديمة لبعض محللات XML التي تسمح بجلب ملفات محلية أو روابط شبكة أثناء التحليل.",
+    language: "Python / Java / Node.js XML",
+    vulnerableCode: `# ❌ كود ضعيف: محلل XML يسمح بتحميل الكيانات الخارجية (XXE)
+from lxml import etree
+parser = etree.XMLParser(resolve_entities=True)
+tree = etree.fromstring(user_xml_bytes, parser)`,
+    secureCode: `# ✅ كود آمن: تعطيل الكيانات الخارجية والشبكة بالكامل باستخدام defusedxml
+import defusedxml.ElementTree as ET
+tree = ET.fromstring(user_xml_bytes)`,
+    auditChecklist: [
+      "فحص جميع نقاط رفع الملفات التي تقبل `SVG`, `XML`, `DOCX`, `XLSX`, أو خلاصات `RSS/Atom`.",
+      "التحقق من إعدادات محلل XML في خدمات SOAP وSAML ومعالجة الفواتير الإلكترونية.",
+    ],
+    remediationSteps: [
+      "تعطيل `DOCTYPE` و`resolve_entities` و`load_external_dtd` بشكل صريح في جميع محللات XML.",
+    ],
+  },
+  {
+    id: "bfla-vertical-authz",
+    titleAr: "تجاوز صلاحيات الوظائف الإدارية (BFLA / Vertical Privilege Escalation)",
+    titleEn: "Broken Function Level Authorization (BFLA / Admin Endpoint Exposure)",
+    cwe: "CWE-285",
+    owasp: "API5:2023 — Broken Function Level Authorization",
+    severity: "Critical",
+    cvssBase: 8.8,
+    bountyRange: "$2,000 – $30,000+",
+    summaryAr:
+      "تحدث عندما تكتفي نقاط النهاية الإدارية أو الحساسة (مثل `/api/v1/admin/users/export` أو طريقة `DELETE / PUT`) بالتحقق من وجود جلسة صالحة دون التحقق من دور المستخدم (`role === 'admin'`).",
+    rootCauseAr:
+      "الاعتماد على إخفاء أزرار الإدارة في واجهة المستخدم (Frontend) دون تطبيق حارس صلاحيات الدور (`requireRole`) على مسارات الـ API الخلفية.",
+    language: "TypeScript / Express",
+    vulnerableCode: `// ❌ كود ضعيف: يتحقق من تسجيل الدخول فقط ولا يتحقق من دور المدير
+app.post("/api/v1/admin/promote", requireAuth, async (req, res) => {
+  await db.users.update({ where: { id: req.body.userId }, data: { role: "admin" } });
+  res.json({ ok: true });
+});`,
+    secureCode: `// ✅ كود آمن: فرض حارس الدور الإداري (requireRole) مع تسجيل الحدث في سجل التدقيق
+app.post("/api/v1/admin/promote", requireAuth, requireRole("SUPER_ADMIN"), async (req, res) => {
+  await db.users.update({ where: { id: req.body.userId }, data: { role: "admin" } });
+  res.json({ ok: true });
+});`,
+    auditChecklist: [
+      "استخراج مسارات الإدارة من ملفات الـ JS واختبار استجابتها لحساب اختبار ذي صلاحية محدودة (`Viewer / Member`).",
+      "اختبار تبديل طريقة الطلب من `GET` إلى `POST / PUT / DELETE` على نفس نقطة النهاية.",
+    ],
+    remediationSteps: [
+      "تطبيق سياسة رفض افتراضية (Default Deny) وفرض فحص الدور والصلاحية مركزياً على كل مسار.",
+    ],
+  },
+  {
+    id: "grpc-protobuf-authz",
+    titleAr: "كشف انعكاس gRPC وغياب التحقق من الصلاحيات على مستوى الطرق (gRPC Security)",
+    titleEn: "gRPC Server Reflection Exposure & Missing Interceptor Authorization",
+    cwe: "CWE-200 / CWE-285",
+    owasp: "API8:2023 & Microservices Security",
+    severity: "High",
+    cvssBase: 7.8,
+    bountyRange: "$1,000 – $20,000+",
+    summaryAr:
+      "تحدث عندما يترك خادم gRPC خدمة `ServerReflection` مفعلة للعامة في بيئة الإنتاج، مما يكشف جميع ملفات `.proto` والخدمات الداخلية التي قد تفتقر إلى فحص الصلاحيات في الـ Interceptor.",
+    rootCauseAr:
+      "اعتقاد المطورين أن بروتوكول Protobuf الثنائي غير قابل للقراءة بدون ملفات التعريف، مع ترك ميزة Reflection مفعلة.",
+    language: "Go / gRPC",
+    vulnerableCode: `// ❌ كود ضعيف: تفعيل gRPC Reflection في الإنتاج وبدون UnaryAuthInterceptor
+s := grpc.NewServer()
+pb.RegisterInternalAdminServer(s, &server{})
+reflection.Register(s)`,
+    secureCode: `// ✅ كود آمن: إيقاف Reflection في الإنتاج وفرض UnaryInterceptor للتحقق من الهوية والدور
+s := grpc.NewServer(grpc.UnaryInterceptor(AuthzUnaryInterceptor))
+pb.RegisterInternalAdminServer(s, &server{})
+if os.Getenv("ENV") == "development" {
+  reflection.Register(s)
+}`,
+    auditChecklist: [
+      "فحص ما إذا كانت خدمة `grpc.reflection.v1alpha.ServerReflection` متاحة من الخارج.",
+      "التحقق من تطبيق مصادقة JWT/mTLS موحدة عبر `UnaryInterceptor` و`StreamInterceptor`.",
+    ],
+    remediationSteps: [
+      "تعطيل `reflection.Register` في بيئات الإنتاج وفرض التحقق من الصلاحيات في طبقة الـ Interceptor.",
+    ],
+  },
+  {
+    id: "host-header-reset-poisoning",
+    titleAr: "تسميم روابط استعادة كلمة المرور عبر ترويسة Host (Password Reset Poisoning)",
+    titleEn: "Host Header Injection & Password Reset Link Poisoning",
+    cwe: "CWE-640",
+    owasp: "A07:2021 — Identification and Authentication Failures",
+    severity: "High",
+    cvssBase: 8.6,
+    bountyRange: "$1,500 – $20,000+",
+    summaryAr:
+      "تحدث عندما يبني الخادم رابط استعادة كلمة المرور المرسل بالبريد بالاعتماد على ترويسة `Host` أو `X-Forwarded-Host` المرسلة في الطلب بدلاً من متغير بيئة ثابت.",
+    rootCauseAr:
+      "الثقة في `req.headers.host` أو `req.get('host')` عند توليد روابط حساسة تحتوي على رموز سرية (`reset_token`).",
+    language: "TypeScript / Node.js",
+    vulnerableCode: `// ❌ كود ضعيف: استخدام ترويسة Host من الطلب لبناء رابط استعادة كلمة المرور
+const resetUrl = \`https://\${req.headers.host}/reset-password?token=\${resetToken}\`;
+await sendEmail(user.email, resetUrl);`,
+    secureCode: `// ✅ كود آمن: استخدام عنوان الموقع الرسمي الثابت من إعدادات البيئة المحمية
+const APP_BASE_URL = process.env.PUBLIC_APP_ORIGIN || "https://app.example.com";
+const resetUrl = new URL("/reset-password", APP_BASE_URL);
+resetUrl.searchParams.set("token", resetToken);
+await sendEmail(user.email, resetUrl.toString());`,
+    auditChecklist: [
+      "اختبار طلب استعادة كلمة المرور على حسابك التجريبي فقط مع مراقبة ما إذا كان الخادم يقبل ترويسة `X-Forwarded-Host`.",
+      "التأكد من ضبط قائمة النطاقات المسموحة (`ALLOWED_HOSTS`) في الخادم وموازن الأحمال.",
+    ],
+    remediationSteps: [
+      "الاعتماد حصرياً على متغير بيئة ثابت (`PUBLIC_APP_ORIGIN`) لبناء كافة الروابط المرسلة في الرسائل.",
+    ],
+  },
+  {
+    id: "multi-tenant-rls-bypass",
+    titleAr: "كسر عزل المستأجرين في الأنظمة السحابية (Multi-Tenant Isolation & RLS Bypass)",
+    titleEn: "Multi-Tenant SaaS Cross-Tenant Data Leakage & Tenant-ID Spoofing",
+    cwe: "CWE-284",
+    owasp: "A01:2021 — Broken Access Control (Multi-Tenant SaaS)",
+    severity: "Critical",
+    cvssBase: 9.4,
+    bountyRange: "$5,000 – $50,000+",
+    summaryAr:
+      "تحدث في منصات B2B SaaS عندما يقرأ الخادم معرف المؤسسة (`X-Tenant-Id` أو `organizationId`) من ترويسة الطلب أو الـ JSON دون التحقق من انتماء المستخدم الحالي لتلك المؤسسة.",
+    rootCauseAr:
+      "الثقة في معرف المؤسسة المرسل من العميل بدلاً من استخراجه من جلسة المستخدم أو تفعيل سياسات Row-Level Security (RLS) في قاعدة البيانات.",
+    language: "TypeScript / PostgreSQL RLS",
+    vulnerableCode: `// ❌ كود ضعيف: قراءة معرف المؤسسة من الترويسة دون التحقق من عضوية المستخدم فيها
+app.get("/api/v1/projects", requireAuth, async (req, res) => {
+  const tenantId = req.headers["x-tenant-id"];
+  const projects = await db.projects.findMany({ where: { tenantId } });
+  res.json(projects);
+});`,
+    secureCode: `// ✅ كود آمن: التحقق الصارم من عضوية المستخدم في المؤسسة + تفعيل PostgreSQL RLS
+app.get("/api/v1/projects", requireAuth, async (req, res) => {
+  const tenantId = String(req.headers["x-tenant-id"]);
+  const membership = await db.memberships.findUnique({
+    where: { userId_tenantId: { userId: req.user.id, tenantId } },
+  });
+  if (!membership) return res.status(403).json({ error: "Cross-tenant access denied" });
+  const projects = await db.projects.findMany({ where: { tenantId } });
+  res.json(projects);
+});`,
+    auditChecklist: [
+      "إنشاء مؤسستين تجريبيتين مستقلتين (`Tenant A` و `Tenant B`) واختبار تبديل `org_id` أو `X-Tenant-Id` في جميع مسارات القراءة والتصدير.",
+      "فحص نقاط النهاية الخاصة بالتقارير المجمعة، البحث العام، والـ Webhooks للتأكد من فلترتها بمعرف المؤسسة.",
+    ],
+    remediationSteps: [
+      "ربط كل استعلام في قاعدة البيانات بعضوية المستخدم الموثقة وتفعيل `Row-Level Security (RLS)` في PostgreSQL.",
+    ],
+  },
+  {
+    id: "open-redirect-oauth-chain",
+    titleAr: "التوجيه المفتوح وسلسلة سرقة رموز المصادقة (Open Redirect to OAuth Token Chain)",
+    titleEn: "Unvalidated Open Redirect Chained with OAuth / Referer Token Leakage",
+    cwe: "CWE-601",
+    owasp: "A01:2021 — Broken Access Control",
+    severity: "High",
+    cvssBase: 8.1,
+    bountyRange: "$1,000 – $15,000+",
+    summaryAr:
+      "بينما يُصنف التوجيه المفتوح منفرداً كخطورة منخفضة، فإنه يتحول إلى ثغرة عالية أو حرجة عند دمجه مع `redirect_uri` في OAuth أو تسريب التوكن عبر ترويسة `Referer`.",
+    rootCauseAr:
+      "قبول عناوين مطلقة أو مسارات تبدأ بـ `//` أو `\\` في معاملات التوجيه (`next`, `returnTo`, `continue`) بدون التحقق من بقائها داخل نفس النطاق.",
+    language: "TypeScript / URL Validation",
+    vulnerableCode: `// ❌ كود ضعيف: توجيه مباشر لأي قيمة يرسلها المستخدم في معامل next
+app.get("/login/callback", (req, res) => {
+  res.redirect(String(req.query.next || "/dashboard"));
+});`,
+    secureCode: `// ✅ كود آمن: السماح بالمسارات المحلية النسبية فقط والتحقق من ثبات الـ Origin
+function getSafeRelativePath(input: string): string {
+  const base = "https://app.example.com";
+  try {
+    const resolved = new URL(input, base);
+    if (resolved.origin !== base) return "/dashboard";
+    return resolved.pathname + resolved.search;
+  } catch {
+    return "/dashboard";
+  }
+}`,
+    auditChecklist: [
+      "اختبار معاملات `next`, `redirect`, `return_to`, `goto` والتحقق من كيفية تحليل `new URL()` لها.",
+      "البحث عن إمكانية ربط مسار التوجيه كـ `redirect_uri` مسموح داخل تدفق OAuth 2.0.",
+    ],
+    remediationSteps: [
+      "تحليل الرابط عبر `new URL(input, TRUSTED_ORIGIN)` والتحقق من تطابق `resolved.origin === TRUSTED_ORIGIN`.",
+      "إضافة ترويسة `Referrer-Policy: strict-origin-when-cross-origin` أو `no-referrer` على صفحات المصادقة.",
+    ],
+  },
 ];
 
 // ─── 2) Official Bug Bounty Programs Directory ───────────────────────────────
@@ -995,7 +1403,10 @@ export default function BugBountyStudio() {
     selfAwarenessSummary: {
       deepEnginesCount: number;
       kaliToolsIntegrated: number;
+      kaliCategoriesCount?: number;
       githubArsenalCount: number;
+      vulnPrimitivesCount?: number;
+      totalIndexedKnowledgeItems?: number;
       globalPlatformsCount: number;
       memoriesStored: number;
       missionFindings: number;
@@ -1024,18 +1435,60 @@ export default function BugBountyStudio() {
     target: string;
     output: string;
   } | null>(null);
+  const [primitivesList, setPrimitivesList] = useState<Array<{
+    id: string;
+    code: string;
+    nameAr: string;
+    nameEn: string;
+    cwe: string;
+    layer: string;
+    baseCvss: number;
+    roleInChain: string;
+    signalAr: string;
+  }>>([]);
+  const [selectedPrimitives, setSelectedPrimitives] = useState<string[]>([
+    "P01-JS-ENDPOINT",
+    "P05-GRAPHQL-INTRO",
+    "P04-MASS-ASSIGN",
+    "P02-BOLA-IDOR",
+  ]);
   const [chainResult, setChainResult] = useState<{
     target: string;
     contextStats: { memoriesCount: number; missionFindingsCount: number; evidenceCount: number };
     chains: Array<{
       id: string;
       title: string;
+      titleEn?: string;
+      hopsCount?: number;
       combinedSeverity: string;
       cvssVector: string;
+      estimatedBounty?: string;
       cweChain: string[];
+      architecturalGraph?: string;
       steps: string[];
       verificationTool: string;
+      safeVerificationCommands?: string[];
       remediation: string;
+      noveltyAnalysisAr?: string;
+    }>;
+  } | null>(null);
+  const [corpusQuery, setCorpusQuery] = useState("");
+  const [corpusLayer, setCorpusLayer] = useState("all");
+  const [corpusData, setCorpusData] = useState<{
+    stats?: { totalIndexedKnowledgeItems: number; synthesizedPatternsCount: number };
+    totalMatched: number;
+    items: Array<{
+      id: string;
+      titleAr: string;
+      titleEn: string;
+      category: string;
+      cwe: string;
+      surface: string;
+      auditPhase: string;
+      cvss: number;
+      chainFormula: string;
+      safeCheckAr: string;
+      remediationAr: string;
     }>;
   } | null>(null);
 
@@ -1373,6 +1826,19 @@ ${reportFix}
     }
   };
 
+  const handleSearchCorpus2400 = async (qOverride?: string, layerOverride?: string) => {
+    try {
+      const q = encodeURIComponent(qOverride ?? corpusQuery);
+      const l = encodeURIComponent(layerOverride ?? corpusLayer);
+      const data = await jsonRequest<NonNullable<typeof corpusData>>(
+        `/deep-research/corpus-search?q=${q}&layer=${l}&limit=18`,
+      );
+      setCorpusData(data);
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     void jsonRequest<{ tools: typeof arsenalTools }>("/deep-research/arsenal")
       .then((d) => setArsenalTools(d.tools || []))
@@ -1383,8 +1849,32 @@ ${reportFix}
     void jsonRequest<{ tools: typeof kaliTools }>("/deep-research/kali-arsenal")
       .then((d) => setKaliTools(d.tools || []))
       .catch(() => {});
+    void jsonRequest<{ primitives: typeof primitivesList }>("/deep-research/primitives")
+      .then((d) => setPrimitivesList(d.primitives || []))
+      .catch(() => {});
     void refreshSelfAwareness();
+    void handleSearchCorpus2400("", "all");
   }, []);
+
+  const togglePrimitiveSelection = (primId: string) => {
+    setSelectedPrimitives((prev) =>
+      prev.includes(primId) ? prev.filter((p) => p !== primId) : [...prev, primId],
+    );
+  };
+
+  const handleCreativeRandomMix = async () => {
+    const creativeSets = [
+      ["P07-SUBDOMAIN-CNAME", "P10-COOKIE-SCOPE", "P06-CORS-CRED", "P08-OAUTH-REDIRECT"],
+      ["P01-JS-ENDPOINT", "P23-AI-PROMPT-AGENCY", "P11-SSRF-FETCH", "P12-CLOUD-IMDS"],
+      ["P13-CACHE-POISON", "P15-HTTP-DESYNC", "P14-CACHE-DECEPTION", "P09-JWT-WEAK"],
+      ["P05-GRAPHQL-INTRO", "P04-MASS-ASSIGN", "P16-RACE-TOCTOU", "P03-BFLA-ADMIN"],
+      ["P21-PROTO-POLLUTION", "P19-POSTMESSAGE-DOM", "P20-CSWSH-WS", "P08-OAUTH-REDIRECT"],
+      ["P17-SAML-XSW", "P18-WEBAUTHN-PASSKEY", "P03-BFLA-ADMIN", "P02-BOLA-IDOR"],
+    ];
+    const picked = creativeSets[Math.floor(Math.random() * creativeSets.length)]!;
+    setSelectedPrimitives(picked);
+    await handleRunChainSynthesizer(picked);
+  };
 
   const handleSimulateKaliTool = async (toolId: string) => {
     setDeepLoading(`kali-${toolId}`);
@@ -1408,20 +1898,21 @@ ${reportFix}
     }
   };
 
-  const handleRunChainSynthesizer = async () => {
+  const handleRunChainSynthesizer = async (overrideIds?: string[]) => {
     setDeepLoading("chains");
     try {
+      const prims = overrideIds ?? selectedPrimitives;
       const res = await jsonRequest<NonNullable<typeof chainResult>>("/deep-research/chain-synthesizer", {
         method: "POST",
-        body: JSON.stringify({ target: activeTarget }),
+        body: JSON.stringify({ target: activeTarget, primitiveIds: prims }),
       });
       setChainResult(res);
       emitPlatformWsEvent({
         type: "finding_recorded",
         target: activeTarget,
-        title: `بناء ${res.chains.length} سلاسل ثغرات مركبة على ${activeTarget}`,
+        title: `دمج متزامن لـ (${prims.length}) ثغرات وبناء ${res.chains.length} سلاسل مركبة على ${activeTarget}`,
       });
-      setSyncStatusMsg(`✅ تم دمج النتائج وبناء ${res.chains.length} سلاسل ثغرات مركبة عالية القيمة على ${activeTarget}!`);
+      setSyncStatusMsg(`✅ تم دمج (${prims.length}) ثغرات في نفس الوقت وبناء ${res.chains.length} سلاسل أثر مركب على ${activeTarget}!`);
       void refreshSelfAwareness();
     } catch {
       // ignore
@@ -1791,16 +2282,17 @@ ${reportFix}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-9 gap-2 text-center">
                 {[
+                  { label: "الفهرس المعرفي الشامل", val: (selfAwareness.selfAwarenessSummary.totalIndexedKnowledgeItems ?? 2576).toLocaleString() + "+" },
                   { label: "محركات البحث العميق", val: selfAwareness.selfAwarenessSummary.deepEnginesCount },
-                  { label: "أدوات Kali Linux", val: selfAwareness.selfAwarenessSummary.kaliToolsIntegrated },
-                  { label: "ترسانة GitHub", val: selfAwareness.selfAwarenessSummary.githubArsenalCount },
-                  { label: "موسوعة الثغرات", val: ENCYCLOPEDIA.length },
+                  { label: "أدوات Kali Linux (12 فئة)", val: selfAwareness.selfAwarenessSummary.kaliToolsIntegrated },
+                  { label: "ترسانة GitHub الأمنية", val: selfAwareness.selfAwarenessSummary.githubArsenalCount },
+                  { label: "موسوعة الثغرات الشاملة", val: ENCYCLOPEDIA.length },
+                  { label: "لبنات الدمج التوليفي", val: selfAwareness.selfAwarenessSummary.vulnPrimitivesCount ?? 24 },
                   { label: "سجلات الذاكرة", val: selfAwareness.selfAwarenessSummary.memoriesStored },
                   { label: "نتائج المهام", val: selfAwareness.selfAwarenessSummary.missionFindings },
-                  { label: "الأدلة الموثقة", val: selfAwareness.selfAwarenessSummary.verifiedEvidence },
-                  { label: "التقارير المحفوظة", val: selfAwareness.selfAwarenessSummary.reportsSaved },
+                  { label: "الأدلة والتقارير", val: selfAwareness.selfAwarenessSummary.verifiedEvidence + selfAwareness.selfAwarenessSummary.reportsSaved },
                 ].map((stat, idx) => (
                   <div key={idx} className="p-2.5 rounded-xl bg-black/40 border border-white/10">
                     <div className="text-base font-extrabold font-mono text-emerald-400">{stat.val}</div>
@@ -2453,13 +2945,13 @@ ${reportFix}
             </div>
           </div>
 
-          {/* 10. Kali Linux Complete Arsenal & Safe Verification Simulator (22+ Tools, 8 Categories) */}
+          {/* 10. Kali Linux Complete Arsenal & Safe Verification Simulator (64 Tools, 12 Categories) */}
           <div className="rounded-2xl border border-cyan-500/30 bg-white/[0.03] p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Terminal className="w-5 h-5 text-cyan-400" />
-                  <span>10. ترسانة ومحاكي Kali Linux الشامل (22 أداة عبر 8 فئات — أوامر قانونية وتنفيذ فوري آمن)</span>
+                  <span>10. ترسانة ومحاكي Kali Linux الشامل ({kaliTools.length || 64} أداة عبر 12 فئة — أوامر قانونية وتنفيذ فوري آمن)</span>
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5">
                   توليد الأوامر القياسية المحددة المعدل (Rate-Limited) لكل أداة من أدوات Kali Linux مع إمكانية تشغيل الفحص المكافئ الآمن مباشرة على الهدف النشط ({activeTarget}):
@@ -2470,7 +2962,7 @@ ${reportFix}
                 onChange={(e) => setSelectedKaliCategory(e.target.value)}
                 className="px-3 py-2 rounded-xl bg-black/60 border border-white/15 text-xs text-white"
               >
-                <option value="all">جميع فئات Kali Linux (8 فئات — {kaliTools.length} أداة)</option>
+                <option value="all">جميع فئات Kali Linux (12 فئة — {kaliTools.length || 64} أداة)</option>
                 {Array.from(new Set(kaliTools.map((t) => t.category))).map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
@@ -2544,65 +3036,209 @@ ${reportFix}
             </div>
           </div>
 
-          {/* 11. Intelligent Vulnerability Chaining & Correlation Synthesizer */}
-          <div className="rounded-2xl border border-rose-500/35 bg-gradient-to-l from-rose-950/25 via-[#0b0716] to-amber-950/20 p-5 space-y-4">
+          {/* 11. Combinatorial Multi-Vulnerability Synthesizer (Merge 2, 3, 4, or 5+ Vulns Simultaneously) */}
+          <div className="rounded-2xl border border-rose-500/40 bg-gradient-to-l from-rose-950/30 via-[#0b0716] to-amber-950/20 p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="text-xs font-mono text-rose-300">
+                  COMBINATORIAL MULTI-VULNERABILITY SYNTHESIZER · CREATIVE A ➔ B ➔ C ➔ D CHAIN ENGINE
+                </div>
+                <h3 className="text-lg font-extrabold text-white flex items-center gap-2 mt-0.5">
                   <Zap className="w-5 h-5 text-rose-400" />
-                  <span>11. محرك دمج وبناء سلاسل الثغرات المركبة (Intelligent Vulnerability Chain Synthesizer)</span>
+                  <span>11. المختبر الإبداعي لدمج أكثر من ثغرة في نفس الوقت وتوليد سلاسل جديدة (24 لبنة معمارية)</span>
                 </h3>
-                <p className="text-xs text-gray-300 mt-0.5">
-                  يربط تلقائياً بين مخرجات الاستطلاع (OSINT / JS Endpoints / Config / Schemas) والذاكرة لبناء سلاسل ثغرات مركبة ترفع التقييم إلى High / Critical CVSS v3.1 مع إرسالها بضغطة زر إلى مولّد التقارير:
+                <p className="text-xs text-gray-300 mt-1">
+                  اختر 2 أو 3 أو 4 أو 5 لبنات ثغرات في نفس الوقت من المصفوفة أدناه — سيقوم المحرك بترتيبها معمارياً (نقطة دخول ➔ تمفصل وتوسيع ➔ أثر نهائي)، حساب التقييم المركب (Compound CVSS v3.1) والمكافأة المقدرة، وتوليد خطوات التحقق الآمن وكود الإصلاح المعماري:
                 </p>
               </div>
-              <button
-                onClick={() => void handleRunChainSynthesizer()}
-                disabled={deepLoading === "chains"}
-                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-extrabold text-white shadow-lg shadow-rose-600/30"
-              >
-                {deepLoading === "chains" ? "جاري تحليل السلاسل..." : "🔗 توليد سلاسل الثغرات المركبة"}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => void handleCreativeRandomMix()}
+                  disabled={deepLoading === "chains"}
+                  className="px-3.5 py-2.5 rounded-xl bg-amber-600/35 hover:bg-amber-600/55 border border-amber-500/40 text-xs font-bold text-amber-200"
+                >
+                  🎲 ابتكار تركيبة ثغرات ذكية (AI Mix)
+                </button>
+                <button
+                  onClick={() => void handleRunChainSynthesizer()}
+                  disabled={deepLoading === "chains" || selectedPrimitives.length < 2}
+                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-extrabold text-white shadow-lg shadow-rose-600/30"
+                >
+                  {deepLoading === "chains"
+                    ? "جاري تركيب السلسلة..."
+                    : `⚡ دمج الثغرات المختارة الآن (${selectedPrimitives.length} ثغرات)`}
+                </button>
+              </div>
+            </div>
+
+            {/* Interactive 24 Primitives Selector */}
+            <div className="space-y-2 pt-2 border-t border-white/10">
+              <div className="flex items-center justify-between text-xs text-gray-300">
+                <span>اختر لبنات الثغرات المراد دمجها معاً في نفس الوقت ({selectedPrimitives.length} مختارة من {primitivesList.length || 24}):</span>
+                <button
+                  onClick={() => setSelectedPrimitives(["P01-JS-ENDPOINT", "P02-BOLA-IDOR"])}
+                  className="text-[11px] text-rose-300 hover:underline"
+                >
+                  إعادة ضبط الاختيار
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 max-h-[260px] overflow-y-auto pr-1">
+                {primitivesList.map((prim) => {
+                  const isSel = selectedPrimitives.includes(prim.id);
+                  return (
+                    <button
+                      key={prim.id}
+                      onClick={() => togglePrimitiveSelection(prim.id)}
+                      className={`p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between gap-1 ${
+                        isSel
+                          ? "bg-rose-950/60 border-rose-400 text-white shadow-md shadow-rose-950/50"
+                          : "bg-black/40 border-white/10 text-gray-300 hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 w-full">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-200 font-bold">
+                          {prim.code} · {prim.cwe}
+                        </span>
+                        <span className="text-[10px] font-mono text-amber-300">
+                          {isSel ? "✓ مدمجة" : `CVSS ${prim.baseCvss}`}
+                        </span>
+                      </div>
+                      <div className="text-xs font-bold leading-snug">{prim.nameAr}</div>
+                      <div className="text-[10px] text-gray-400 truncate">{prim.layer}</div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {chainResult && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2 border-t border-white/10">
-                {chainResult.chains.map((ch) => (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-3 border-t border-white/10">
+                {chainResult.chains.map((ch, idx) => (
                   <div
-                    key={ch.id}
-                    className="p-4 rounded-xl bg-black/50 border border-rose-500/30 flex flex-col justify-between gap-3"
+                    key={ch.id + idx}
+                    className={`p-4 rounded-xl border flex flex-col justify-between gap-3 ${
+                      idx === 0
+                        ? "bg-gradient-to-br from-rose-950/50 to-black/70 border-rose-400/60 lg:col-span-2"
+                        : "bg-black/50 border-rose-500/30"
+                    }`}
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-extrabold px-2.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono">
-                          {ch.combinedSeverity}
-                        </span>
+                    <div className="space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-extrabold px-2.5 py-0.5 rounded bg-rose-500/25 text-rose-200 border border-rose-500/40 font-mono">
+                            {ch.combinedSeverity}
+                          </span>
+                          {ch.estimatedBounty && (
+                            <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
+                              💰 {ch.estimatedBounty}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] font-mono text-amber-300">
                           {ch.cweChain.join(" + ")}
                         </span>
                       </div>
-                      <h4 className="font-bold text-sm text-white">{ch.title}</h4>
-                      <div className="space-y-1 text-xs text-gray-300">
-                        {ch.steps.map((st, idx) => (
-                          <div key={idx} className="p-2 rounded bg-white/[0.03] border border-white/5">
+                      <h4 className="font-extrabold text-sm text-white">
+                        {idx === 0 ? `🌟 السلسلة المدمجة المبتكرة: ${ch.title}` : ch.title}
+                      </h4>
+                      {ch.architecturalGraph && (
+                        <div
+                          className="p-2.5 rounded-lg bg-black/70 border border-rose-500/30 text-xs font-mono text-rose-200 overflow-x-auto"
+                          dir="ltr"
+                        >
+                          {ch.architecturalGraph}
+                        </div>
+                      )}
+                      <div className="space-y-1.5 text-xs text-gray-200">
+                        {ch.steps.map((st, sIdx) => (
+                          <div key={sIdx} className="p-2.5 rounded-lg bg-white/[0.04] border border-white/10">
                             {st}
                           </div>
                         ))}
                       </div>
+                      {ch.noveltyAnalysisAr && (
+                        <div className="p-2.5 rounded-lg bg-amber-950/30 border border-amber-500/30 text-xs text-amber-200">
+                          💡 <strong>تحليل الإبداع والأثر المركب:</strong> {ch.noveltyAnalysisAr}
+                        </div>
+                      )}
                       <div className="text-[11px] text-emerald-300 font-mono">
                         🛠️ مسار التحقق: {ch.verificationTool}
                       </div>
-                      <div className="text-[11px] text-gray-400">
-                        ✅ الإصلاح المعماري: {ch.remediation}
+                      <div className="text-[11px] text-gray-300">
+                        ✅ الإصلاح المعماري متعدد الطبقات: {ch.remediation}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 pt-2 border-t border-white/10">
                       <button
                         onClick={() => handleSendChainToReport(ch)}
-                        className="flex-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white"
+                        className="flex-1 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white"
                       >
-                        📝 إرسال السلسلة إلى مولّد التقارير وحاسبة CVSS
+                        📝 إرسال السلسلة المركبة إلى مولّد التقارير وحاسبة CVSS 3.1
                       </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 12. 2,576+ Deep Security Research & Pattern Knowledge Index Search */}
+          <div className="rounded-2xl border border-indigo-500/35 bg-white/[0.03] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Database className="w-5 h-5 text-indigo-400" />
+                  <span>
+                    12. الفهرس المعرفي الشامل ({(corpusData?.stats?.totalIndexedKnowledgeItems ?? 2576).toLocaleString()}+ بحث ونمط أمني وسلسلة A ➔ B عبر 17 بيئة معمارية)
+                  </span>
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  ابحث فوراً في أكثر من 2,576 نمط فحص معمق يربط بين 24 فئة ثغرات و17 بيئة تقنية (Next.js, GraphQL, AWS, Kubernetes, OAuth, SAML, FinTech, AI Agents) و6 مراحل تدقيق:
+                </p>
+              </div>
+              <div className="text-xs font-mono text-indigo-300 bg-indigo-950/40 border border-indigo-500/30 px-3 py-1.5 rounded-xl">
+                النتائج المطابقة: {(corpusData?.totalMatched ?? 2448).toLocaleString()} نمط أمني
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={corpusQuery}
+                onChange={(e) => {
+                  setCorpusQuery(e.target.value);
+                  void handleSearchCorpus2400(e.target.value, corpusLayer);
+                }}
+                placeholder="ابحث في 2,576+ نمط (مثال: GraphQL, Next.js, OAuth, SAML, AWS, BOLA, Race, Cache, LLM)..."
+                className="flex-1 min-w-[240px] px-3.5 py-2 rounded-xl bg-black/50 border border-white/15 text-xs text-white"
+              />
+              <button
+                onClick={() => void handleSearchCorpus2400()}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white"
+              >
+                🔎 بحث عميق
+              </button>
+            </div>
+
+            {corpusData && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[420px] overflow-y-auto pr-1">
+                {corpusData.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-black/45 border border-white/10 flex flex-col justify-between gap-2 text-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold">
+                          {item.cwe} · CVSS {item.cvss}
+                        </span>
+                        <span className="font-mono text-[10px] text-amber-300">{item.chainFormula}</span>
+                      </div>
+                      <div className="font-bold text-white leading-snug">{item.titleAr}</div>
+                      <div className="text-[11px] text-emerald-300">{item.surface}</div>
+                      <div className="text-[11px] text-gray-300">{item.safeCheckAr}</div>
+                    </div>
+                    <div className="pt-1.5 border-t border-white/5 text-[10px] text-gray-400">
+                      🛡️ الترقيع: {item.remediationAr}
                     </div>
                   </div>
                 ))}
