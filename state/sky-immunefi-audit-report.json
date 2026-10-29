@@ -224,5 +224,91 @@
       "classification": "Post-v1140 Unreleased Facet Additions on dev Branch",
       "details": "On live Mainnet PAU_BEACON (0x829dc2b7e94b1954f0764e573f2e0d45afa28199), exactly 25 facets are registered (matching the 2026-07-06 Immunefi scope list). Newer facets in the dev branch of diamond-pau (AaveV4Facet, NFATHaloFacet, NFATPrimeFacet, PSM3Facet, SwapAssetFacet) are not yet registered on Mainnet PAU_BEACON."
     }
+  ],
+  "auditDate": "2026-10-29T18:56:00Z",
+  "auditedRepositoriesCount": 32,
+  "waves": [
+    {
+      "wave": 5,
+      "focus": "Web/App (governance-portal-v2, gov-polling-db) + Endgame/Core/PSM/D3M/RWA/StarkNet/Vest (13 Repositories)",
+      "repos": [
+        "governance-portal-v2",
+        "gov-polling-db",
+        "endgame-toolkit",
+        "usds",
+        "sky",
+        "sdai",
+        "vote-delegate",
+        "univ2-pool-migrator",
+        "dss-lite-psm",
+        "starknet-dai-bridge",
+        "dss-direct-deposit",
+        "rwa-toolkit",
+        "dss-vest"
+      ],
+      "contractsAudited": [
+        "pages/api/cache/invalidate.ts",
+        "pages/api/auth.ts",
+        "modules/cache/cache.ts",
+        "pages/api/sky/polls/[pollIdOrSlug].ts",
+        "pages/api/sky/polls/tally/[pollId].ts",
+        "modules/executive/api/fetchSkyExecutiveDetail.ts",
+        "modules/executive/api/analyzeSpell.ts",
+        "modules/address/api/fetchEnsAvatar.ts",
+        "lib/markdown.ts",
+        "lib/csp.js",
+        "src/SubProxy.sol",
+        "src/VestedRewardsDistribution.sol",
+        "src/synthetix/StakingRewards.sol",
+        "src/Usds.sol",
+        "src/DaiUsds.sol",
+        "src/Sky.sol",
+        "src/MkrSky.sol",
+        "src/SUsds.sol",
+        "src/VoteDelegate.sol",
+        "src/VoteDelegateFactory.sol",
+        "deploy/UniV2PoolMigratorInit.sol",
+        "deploy/UniV2PoolWithdraw.sol",
+        "src/DssLitePsm.sol",
+        "src/D3MHub.sol",
+        "src/plans/D3MOperatorPlan.sol",
+        "src/pools/D3M4626TypePool.sol",
+        "src/conduits/RwaMultiSwapOutputConduit.sol",
+        "contracts/l1/L1DAIBridge.sol",
+        "contracts/l1/L1GovernanceRelay.sol",
+        "src/DssVest.sol"
+      ],
+      "invariantVerification": [
+        "governance-portal-v2 analyzeSpell.ts strictly validates /^0x[a-fA-F0-9]{40}$/ and enforces 30s timeout + rate limit against the private spell analysis webhook",
+        "governance-portal-v2 fetchEnsAvatar.ts validates domain regex and restricts avatar URLs to HTTPS only, blocking internal SSRF via ENS text records",
+        "governance-portal-v2 lib/markdown.ts disables raw HTML (html: false) and runs DOMPurify.sanitize() before rendering governance markdown",
+        "DssLitePsm enforces 1:1 gem/DAI swap math with pocket custody and checks rate == RAY in rush()/gush()",
+        "SUsds (sUSDS) implements ERC-4626 rounding directions (_divup on mint/withdraw, floor on deposit/redeem) and requires rho == block.timestamp when updating ssr",
+        "D3MHub enforces non-reentrant lock mutex, SAFEMAX bounds on lineWad/ink/art, and unwinds automatically if currentAssets + WAD < ink"
+      ],
+      "defensiveNotes": [
+        {
+          "id": "SKY-NOTE-04",
+          "contract": "governance-portal-v2/modules/cache/cache.ts & pages/api/cache/invalidate.ts",
+          "severity": "Low / Web-App Defensive Hygiene",
+          "title": "Inverted Filesystem Cache Expiry Check (birthtime < Date.now() + expiryMs), Property Mismatch (checkedData vs data), and Unsanitized Substring Match in /api/cache/invalidate",
+          "analysis": "In modules/cache/cache.ts line 172, filesystem cache expiry checks `if (expiryMs && birthtime && birthtime.getTime() < Date.now() + expiryMs)` instead of `birthtime.getTime() + expiryMs < Date.now()`. Since birthtime <= Date.now() and expiryMs > 0, this condition is always true, causing filesystem cache entries to be deleted on every cacheGet call when Redis is disabled. Additionally, cacheSet stores `{ expiry, checkedData }` in memoryCache[path] (line 226) while cacheGet reads `memCached.data` (line 166, returning undefined). Finally, pages/api/cache/invalidate.ts validates cacheKey via substring match (`cacheKey.indexOf(next) !== -1`), which allows path traversal sequences in getFilePath() if authenticated and Redis is disabled."
+        },
+        {
+          "id": "SKY-NOTE-05",
+          "contract": "governance-portal-v2/pages/api/sky/polls/[pollIdOrSlug].ts & pages/api/sky/polls/tally/[pollId].ts",
+          "severity": "Informational / Web-App Input Validation",
+          "title": "Unencoded Path Interpolation of pollIdOrSlug and pollId in Upstream vote.sky.money API Requests",
+          "analysis": "Unlike fetchSkyExecutiveDetail.ts (which strictly validates proposalId against /^0x[a-fA-F0-9]{40}$/ or /^[a-z0-9]+(-[a-z0-9]+)*$/), pages/api/sky/polls/[pollIdOrSlug].ts and pages/api/sky/polls/tally/[pollId].ts interpolate `pollIdOrSlug` and `pollId` directly into `https://vote.sky.money/api/polling/${pollIdOrSlug}` without regex validation or encodeURIComponent()."
+        },
+        {
+          "id": "SKY-NOTE-06",
+          "contract": "governance-portal-v2/pages/api/auth.ts",
+          "severity": "Informational / Environment Configuration",
+          "title": "Fail-Open Authentication in /api/auth When DASHBOARD_PASSWORD Environment Variable Is Unset",
+          "analysis": "In pages/api/auth.ts lines 18-22, `if (!config.DASHBOARD_PASSWORD) { return res.status(200).json({ auth: 'ok' }); }` returns a successful authentication response whenever DASHBOARD_PASSWORD is not configured in the deployment environment."
+        }
+      ]
+    }
   ]
 }

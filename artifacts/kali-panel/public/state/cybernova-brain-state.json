@@ -693,9 +693,9 @@
       "lastOutput": "Cycle #72 verified on bughunters.google.com at \u0667:\u0664\u0662:\u0663\u0668 \u0645"
     }
   ],
-  "updatedAt": "2026-10-29T20:09:50Z",
+  "updatedAt": "2026-10-29T18:56:00Z",
   "activeTarget": {
-    "status": "PHASE_19_DEEP_SOURCE_AUDIT_COMPLETED_4_WAVES",
+    "status": "PHASE_19_DEEP_SOURCE_AUDIT_COMPLETED_5_WAVES_32_REPOS",
     "lastAuditTimestamp": "2026-10-29T20:09:50Z",
     "liveChainLogKeysCount": 520,
     "livePauBeaconFacetsCount": 25,
@@ -762,6 +762,15 @@
         "capUsds": 217000000.0,
         "lineUsds": 193000000.0
       }
-    }
+    },
+    "auditedRepositoriesCount": 32,
+    "defensiveNotes": [
+      "SKY-NOTE-01: StUsds.cut(rad) rounding newChi down to 0 when totalSupply > 0 permanently bricks _drip()/deposit()/withdraw() with Panic(0x12) until UUPS upgrade",
+      "SKY-NOTE-02: Diamond PAU Controller.updateIntegrations(ids) pulls live Beacon config without expected configHash commitment",
+      "SKY-NOTE-03: 5 dev-branch PAU facets (AaveV4Facet, SwapAssetFacet, NFATHaloFacet, NFATPrimeFacet, PSM3Facet) are not yet registered on Mainnet PAU_BEACON",
+      "SKY-NOTE-04: governance-portal-v2 modules/cache/cache.ts has inverted fs expiry comparison (birthtime.getTime() < Date.now() + expiryMs), memoryCache property mismatch (checkedData vs data), and substring match in /api/cache/invalidate",
+      "SKY-NOTE-05: governance-portal-v2 /api/sky/polls/[pollIdOrSlug] and /api/sky/polls/tally/[pollId] interpolate path parameters without regex validation or encodeURIComponent",
+      "SKY-NOTE-06: governance-portal-v2 /api/auth fails open (200 { auth: 'ok' }) if DASHBOARD_PASSWORD is unset"
+    ]
   }
 }
