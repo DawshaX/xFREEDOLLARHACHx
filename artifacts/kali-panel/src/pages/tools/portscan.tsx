@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2, Search, RadioTower } from "lucide-react";
 import { jsonRequest } from "@/lib/sse";
+import { emitPlatformWsEvent } from "@/hooks/useWebSocket";
 
 const DARK = { background: "rgba(5,0,12,0.88)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16 };
 const inputStyle: React.CSSProperties = { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "monospace", padding: "10px 14px", outline: "none", flex: 1 };
@@ -12,7 +13,13 @@ const STATE_STYLE: Record<string, { color: string; rgb: string }> = {
 };
 
 export default function PortScanTool() {
-  const [targetInput, setTargetInput] = useState("");
+  const [targetInput, setTargetInput] = useState(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      return "";
+    }
+  });
   const [data, setData] = useState<{ target: string; ports: Array<{ port: number; state: string; service: string }> } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +31,11 @@ export default function PortScanTool() {
     try {
       const res = await jsonRequest<typeof data>(`/proxy/portscan?target=${encodeURIComponent(targetInput.trim())}`);
       setData(res);
+      emitPlatformWsEvent({
+        type: "recon_cmd_executed",
+        title: `PortScan: ${targetInput.trim()} (${res?.ports?.filter(p => p.state === "open").length || 0} مفتوحة)`,
+        target: targetInput.trim(),
+      });
     } catch {
       setData({ target: targetInput, ports: [
         { port: 22, state: "open", service: "ssh" },

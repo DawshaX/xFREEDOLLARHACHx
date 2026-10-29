@@ -167,12 +167,15 @@ app.post("/api/agent/tasks/:taskId/steps/:stepId/run", async (req: Request, res:
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   if (!process.env.DATABASE_URL) {
     const p = req.path;
-    // Let dedicated in-memory/streaming routers handle /memory, /ollama, /events, /local-agent
+    // Let dedicated in-memory/streaming/network routers handle their routes first
     const letRouterHandle =
       p.startsWith("/memory") ||
       p.startsWith("/ollama") ||
       p.startsWith("/events") ||
-      p.startsWith("/local-agent");
+      p.startsWith("/local-agent") ||
+      p.startsWith("/tools") ||
+      p.startsWith("/proxy") ||
+      p.startsWith("/scanner");
 
     if (!letRouterHandle) {
       const standaloneData = resolveStandaloneApi(

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ScanLine, ShieldCheck, X, Check, AlertTriangle, Skull } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
 import { jsonRequest } from "@/lib/sse";
+import { emitPlatformWsEvent } from "@/hooks/useWebSocket";
 
 interface ScanResult {
   url: string; status: number; responseTimeMs: number; server: string;
@@ -22,7 +23,13 @@ function scoreColor(s: number) {
 }
 
 export default function Scanner() {
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      return "";
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +41,11 @@ export default function Scanner() {
     try {
       const data = await jsonRequest<ScanResult>("/scanner/url", { method: "POST", body: JSON.stringify({ url }) });
       setResult(data);
+      emitPlatformWsEvent({
+        type: "scan_completed",
+        title: `فحص أمني: ${data.url} (${data.score}/100)`,
+        target: data.url,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scan failed");
     } finally { setLoading(false); }

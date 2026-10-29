@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2, Search, Eye } from "lucide-react";
 import { jsonRequest } from "@/lib/sse";
+import { emitPlatformWsEvent } from "@/hooks/useWebSocket";
 
 const DARK = { background: "rgba(5,0,12,0.88)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16 };
 const inputStyle: React.CSSProperties = { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "monospace", padding: "10px 14px", outline: "none", flex: 1 };
@@ -8,7 +9,13 @@ const inputStyle: React.CSSProperties = { background: "rgba(255,255,255,0.03)", 
 const TYPE_COLOR: Record<string, string> = { A: "#44ff88", MX: "#ffaa44", TXT: "#4488ff", AAAA: "#aa44ff", CNAME: "#44eebb", NS: "#ff8844" };
 
 export default function DnsTool() {
-  const [domainInput, setDomainInput] = useState("");
+  const [domainInput, setDomainInput] = useState(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      return "";
+    }
+  });
   const [data, setData] = useState<{ domain: string; records: Array<{ type: string; value: string; ttl: number }> } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +27,11 @@ export default function DnsTool() {
     try {
       const res = await jsonRequest<typeof data>(`/proxy/dns?domain=${encodeURIComponent(domainInput.trim())}`);
       setData(res);
+      emitPlatformWsEvent({
+        type: "recon_cmd_executed",
+        title: `DNS Lookup: ${domainInput.trim()} (${res?.records?.length || 0} سجلات)`,
+        target: domainInput.trim(),
+      });
     } catch {
       setData({ domain: domainInput, records: [
         { type: "A", value: "93.184.216.34", ttl: 3600 },

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2, Search, Network } from "lucide-react";
 import { jsonRequest } from "@/lib/sse";
+import { emitPlatformWsEvent } from "@/hooks/useWebSocket";
 
 const DARK = { background: "rgba(5,0,12,0.88)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16 };
 const inputStyle: React.CSSProperties = { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "monospace", padding: "10px 14px", outline: "none", flex: 1 };
@@ -8,7 +9,13 @@ const inputStyle: React.CSSProperties = { background: "rgba(255,255,255,0.03)", 
 const SRC_COLOR: Record<string, string> = { DNS: "#44eebb", "CRT.SH": "#aa44ff", BRUTEFORCE: "#ff8844", DEFAULT: "#4488ff" };
 
 export default function SubdomainsTool() {
-  const [domainInput, setDomainInput] = useState("");
+  const [domainInput, setDomainInput] = useState(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      return "";
+    }
+  });
   const [data, setData] = useState<{ domain: string; subdomains: Array<{ host: string; ip: string; source: string }> } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +27,11 @@ export default function SubdomainsTool() {
     try {
       const res = await jsonRequest<typeof data>(`/proxy/subdomains?domain=${encodeURIComponent(domainInput.trim())}`);
       setData(res);
+      emitPlatformWsEvent({
+        type: "recon_cmd_executed",
+        title: `Subdomains: ${domainInput.trim()} (${res?.subdomains?.length || 0} نطاق فرعي)`,
+        target: domainInput.trim(),
+      });
     } catch {
       setData({ domain: domainInput, subdomains: [
         { host: `www.${domainInput}`, ip: "1.2.3.4", source: "DNS" },

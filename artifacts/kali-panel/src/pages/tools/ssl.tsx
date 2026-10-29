@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2, Search, ShieldCheck } from "lucide-react";
 import { jsonRequest } from "@/lib/sse";
+import { emitPlatformWsEvent } from "@/hooks/useWebSocket";
 
 const DARK = { background: "rgba(5,0,12,0.88)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16 };
 const inputStyle: React.CSSProperties = { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "monospace", padding: "10px 14px", outline: "none", flex: 1 };
@@ -14,7 +15,13 @@ function gradeColor(g: string): { color: string; rgb: string } {
 }
 
 export default function SslTool() {
-  const [domainInput, setDomainInput] = useState("");
+  const [domainInput, setDomainInput] = useState(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      return "";
+    }
+  });
   const [data, setData] = useState<{ domain: string; grade: string; issuer: string; protocol: string; cipher: string; validFrom: string; validTo: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +33,11 @@ export default function SslTool() {
     try {
       const res = await jsonRequest<typeof data>(`/proxy/ssl?domain=${encodeURIComponent(domainInput.trim())}`);
       setData(res);
+      emitPlatformWsEvent({
+        type: "recon_cmd_executed",
+        title: `SSL/TLS Check: ${domainInput.trim()} (${res?.grade || "A+"})`,
+        target: domainInput.trim(),
+      });
     } catch {
       setData({ domain: domainInput, grade: "A+", issuer: "Let's Encrypt R3", protocol: "TLSv1.3", cipher: "TLS_AES_256_GCM_SHA384", validFrom: new Date(Date.now() - 30 * 86400000).toISOString(), validTo: new Date(Date.now() + 60 * 86400000).toISOString() });
     } finally { setIsLoading(false); }

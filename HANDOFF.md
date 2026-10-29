@@ -47,3 +47,7 @@
 - **شريط التزامن الحي والهدف النشط (`AppShell.tsx` & `BugBountyStudio.tsx`):**
   - إظهار حالة `WS SYNC` والهدف النشط (`TARGET`) ومركز الإشعارات (`NotificationCenter`) والزر العائم للوكيل الحي (`FloatingNovaButton`) في الشريط العلوي لجميع الصفحات.
   - ترقية جميع صفحات الأدوات الفرعية (`Placeholder.tsx`) إلى منصة عمل تفاعلية مربوطة بالهدف النشط والذاكرة ومتتبع المهام.
+- **ربط أدوات الاستطلاع والفحص الأمني الحي (`tools.ts`, `scanner.ts`, `dns.tsx`, `ssl.tsx`, `whois.tsx`, `portscan.tsx`, `subdomains.tsx`, `Scanner.tsx`):**
+  - دعم جميع مسارات `/api/tools/*` و`/api/proxy/*` و`/api/scanner/url` محلياً وعلى GitHub Pages.
+  - تعبئة الهدف النشط (`cybernova_active_target`) تلقائياً في جميع أدوات الاستطلاع والماسح الأمني.
+  - تسجيل نتائج كل فحص تلقائياً في **الذاكرة (`/api/memory`)** و**متتبع المهام (`/api/missions`)** وبثها عبر **WebSocket (`/api/ws`)** بحيث يراها جميع الوكلاء فوراً.

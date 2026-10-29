@@ -14,6 +14,7 @@ import { Router, type IRouter } from "express";
 import { setOllamaBusy } from "../lib/cron-scheduler";
 import { getOllamaBaseUrl as getOllamaUrl, getOllamaModel } from "../lib/ollama-settings";
 import { getAllMemories, saveMemory } from "./memory";
+import { getMissionsState, getEvidenceState, getReportsState } from "../lib/standalone-api";
 import { broadcastEvent } from "../lib/ws-hub";
 import { broadcastLiveEvent } from "./live-events";
 
@@ -26,8 +27,20 @@ export function buildIntelligentSecurityReply(
   const userMsgs = messages.filter((m) => m.role === "user");
   const lastUser = userMsgs[userMsgs.length - 1]?.content ?? "";
   const memories = getAllMemories().slice(0, 6);
+  const missions = getMissionsState();
+  const activeMission = missions[0];
+  const activeTarget = activeMission?.target || "bughunters.google.com";
+  const findingsCount = activeMission?.findings?.length ?? 0;
+  const commandsCount = activeMission?.commands?.length ?? 0;
+  const evidenceCount = getEvidenceState().length;
+  const reportsCount = getReportsState().length;
+
   const memSummary = memories
     .map((m) => `- **[${m.kind}] ${m.title}**: ${m.content.slice(0, 140)}`)
+    .join("\n");
+  const findingsSummary = (activeMission?.findings ?? [])
+    .slice(0, 4)
+    .map((f) => `- **[${f.severity.toUpperCase()}] ${f.title}** (${f.tool || "Scanner"}): ${f.detail.slice(0, 120)}`)
     .join("\n");
 
   // 1. Thinking phase (NovaAgentChat THINK_SYS)
@@ -63,7 +76,7 @@ export function buildIntelligentSecurityReply(
   }
 
   if (lower.includes("ذاكر") || lower.includes("ملاحظ") || lower.includes("memory") || lower.includes("سجل")) {
-    return `### 🧠 حالة الذاكرة والملاحظات المتصلة في CyberNova\n\nيوجد حالياً **${memories.length} ملاحظات وسجلات نشطة** متصلة بناقل WebSocket الداخلي:\n\n${memSummary || "- لا توجد ملاحظات بعد."}\n\n#### كيف يعمل التزامن التلقائي؟\n- أي هدف تختاره أو تفحصه في **Bug Bounty Studio** أو **الماسح** أو **الوكيل الحي** يتم تسجيله فوراً في **الذاكرة (\`/memory\`)** و**متتبع المهام (\`/mission-tracker\`)**.\n- يمكنك إضافة ملاحظة جديدة في أي وقت وسيكون جميع الوكلاء على دراية فورية بها.`;
+    return `### 🧠 حالة الذاكرة والمهام المتصلة في CyberNova\n\n- **الهدف النشط حالياً:** \`${activeTarget}\`\n- **الملاحظات في الذاكرة:** \`${memories.length}\` | **نتائج الفحص في المهمة:** \`${findingsCount}\` | **الأوامر المسجلة:** \`${commandsCount}\` | **الأدلة:** \`${evidenceCount}\` | **التقارير:** \`${reportsCount}\`\n\n#### 1. أحدث الملاحظات في الذاكرة (\`/memory\`):\n${memSummary || "- لا توجد ملاحظات بعد."}\n\n#### 2. أحدث النتائج المسجلة في المهمة النشطة (\`/mission-tracker\`):\n${findingsSummary || "- لا توجد نتائج مسجلة بعد."}\n\n#### كيف يعمل التزامن التلقائي؟\n- أي هدف تختاره أو تفحصه في **Bug Bounty Studio** أو **الماسح** أو **أدوات الشبكة (DNS, SSL, WHOIS, PortScan, Subdomains)** يتم تسجيله فوراً في **الذاكرة (\`/memory\`)** و**متتبع المهام (\`/mission-tracker\`)**.`;
   }
 
   if (lower.includes("idor") || lower.includes("bola") || lower.includes("صلاحيات")) {

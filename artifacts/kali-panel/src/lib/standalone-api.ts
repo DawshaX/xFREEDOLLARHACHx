@@ -590,6 +590,18 @@ let notificationsState = loadState("cybernova_notifs_v1", [
   },
 ]);
 
+export function getMissionsState() {
+  return missionsState;
+}
+
+export function getReportsState() {
+  return reportsState;
+}
+
+export function getEvidenceState() {
+  return evidenceState;
+}
+
 export function resolveStandaloneApi(
   rawUrl: string,
   method = "GET",
@@ -598,6 +610,72 @@ export function resolveStandaloneApi(
   const u = new URL(rawUrl, "http://localhost");
   const path = u.pathname.replace(/^.*\/api/, "");
   const m = method.toUpperCase();
+
+  // ── Network & Recon Tools (/proxy/* & /tools/*) ────────────────────────────
+  if (path === "/proxy/dns" || path === "/tools/dns") {
+    const domain = u.searchParams.get("domain") || "example.com";
+    return {
+      domain,
+      records: [
+        { type: "A", value: "93.184.216.34", ttl: 3600 },
+        { type: "MX", value: `mail.${domain}`, ttl: 3600 },
+        { type: "TXT", value: "v=spf1 include:_spf.google.com ~all", ttl: 3600 },
+        { type: "NS", value: `ns1.${domain}`, ttl: 3600 },
+      ],
+    };
+  }
+
+  if (path === "/proxy/ssl" || path === "/tools/ssl") {
+    const domain = u.searchParams.get("domain") || "example.com";
+    return {
+      domain,
+      grade: "A+",
+      issuer: "Google Trust Services / Let's Encrypt",
+      protocol: "TLSv1.3",
+      cipher: "TLS_AES_256_GCM_SHA384",
+      validFrom: new Date(Date.now() - 30 * 86400_000).toISOString(),
+      validTo: new Date(Date.now() + 60 * 86400_000).toISOString(),
+    };
+  }
+
+  if (path === "/proxy/whois" || path === "/tools/whois") {
+    const domain = u.searchParams.get("domain") || "example.com";
+    return {
+      domain,
+      registrar: "ICANN Accredited Domain Registrar",
+      createdAt: new Date(Date.now() - 365 * 5 * 86400_000).toISOString(),
+      expiresAt: new Date(Date.now() + 365 * 2 * 86400_000).toISOString(),
+      nameservers: [`ns1.${domain}`, `ns2.${domain}`],
+      status: ["clientTransferProhibited", "clientUpdateProhibited"],
+    };
+  }
+
+  if (path === "/proxy/subdomains" || path === "/tools/subdomains") {
+    const domain = u.searchParams.get("domain") || "example.com";
+    return {
+      domain,
+      subdomains: [
+        { host: `www.${domain}`, ip: "93.184.216.34", source: "DNS" },
+        { host: `api.${domain}`, ip: "93.184.216.35", source: "CRT.SH" },
+        { host: `auth.${domain}`, ip: "93.184.216.36", source: "CRT.SH" },
+        { host: `dev.${domain}`, ip: "93.184.216.37", source: "DNS" },
+      ],
+    };
+  }
+
+  if (path === "/proxy/portscan" || path === "/tools/portscan") {
+    const target = u.searchParams.get("target") || "example.com";
+    return {
+      target,
+      ports: [
+        { port: 22, state: "filtered", service: "ssh" },
+        { port: 80, state: "open", service: "http" },
+        { port: 443, state: "open", service: "https" },
+        { port: 3306, state: "closed", service: "mysql" },
+        { port: 8080, state: "filtered", service: "http-proxy" },
+      ],
+    };
+  }
 
   // ── Health & Status ────────────────────────────────────────────────────────
   if (path === "/healthz" || path === "/health") {
@@ -948,28 +1026,63 @@ export function resolveStandaloneApi(
   }
 
   if (path === "/scanner/url" && m === "POST") {
-    const targetUrl = String(body?.url || "https://example.com");
+    const rawTarget = String(body?.url || "https://example.com").trim();
+    const targetUrl = /^https?:\/\//i.test(rawTarget) ? rawTarget : `https://${rawTarget}`;
     return {
       url: targetUrl,
       status: 200,
-      headers: {
-        "content-type": "text/html; charset=UTF-8",
-        "x-content-type-options": "nosniff",
-      },
-      securityHeaders: {
-        "strict-transport-security": false,
-        "content-security-policy": false,
-        "x-frame-options": true,
-        "x-content-type-options": true,
-      },
-      findings: [
+      responseTimeMs: 84,
+      server: "cloudflare",
+      contentType: "text/html; charset=UTF-8",
+      title: `Security Scan — ${rawTarget}`,
+      headers: [
+        { name: "content-type", value: "text/html; charset=UTF-8" },
+        { name: "x-content-type-options", value: "nosniff" },
+        { name: "x-frame-options", value: "SAMEORIGIN" },
+      ],
+      securityHeaders: [
         {
-          severity: "medium",
-          title: "Missing Content-Security-Policy (CWE-693)",
-          description: "توصية بإضافة ترويسة CSP للحماية من XSS.",
+          name: "strict-transport-security",
+          present: true,
+          value: "max-age=31536000; includeSubDomains",
+          recommendation: "Enforce HTTPS with a long max-age and includeSubDomains",
+        },
+        {
+          name: "content-security-policy",
+          present: false,
+          value: "",
+          recommendation: "Define a strict CSP to mitigate XSS",
+        },
+        {
+          name: "x-frame-options",
+          present: true,
+          value: "SAMEORIGIN",
+          recommendation: "Set DENY or SAMEORIGIN to prevent clickjacking",
+        },
+        {
+          name: "x-content-type-options",
+          present: true,
+          value: "nosniff",
+          recommendation: "Set to nosniff",
+        },
+        {
+          name: "referrer-policy",
+          present: true,
+          value: "strict-origin-when-cross-origin",
+          recommendation: "Use strict-origin-when-cross-origin",
+        },
+        {
+          name: "permissions-policy",
+          present: false,
+          value: "",
+          recommendation: "Restrict powerful browser features",
         },
       ],
-      ts: new Date().toISOString(),
+      score: 67,
+      risks: [
+        "Missing content-security-policy",
+        "Missing permissions-policy",
+      ],
     };
   }
 

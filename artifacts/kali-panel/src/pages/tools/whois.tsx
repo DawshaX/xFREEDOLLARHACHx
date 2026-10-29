@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { Loader2, Search, FileSearch } from "lucide-react";
 import { jsonRequest } from "@/lib/sse";
+import { emitPlatformWsEvent } from "@/hooks/useWebSocket";
 
 const DARK = { background: "rgba(5,0,12,0.88)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16 };
 const inputStyle: React.CSSProperties = { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "monospace", padding: "10px 14px", outline: "none", flex: 1 };
 
 export default function WhoisTool() {
-  const [domainInput, setDomainInput] = useState("");
+  const [domainInput, setDomainInput] = useState(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "";
+    } catch {
+      return "";
+    }
+  });
   const [data, setData] = useState<{ domain: string; registrar: string; createdAt: string; expiresAt: string; nameservers: string[]; status: string[] } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +25,11 @@ export default function WhoisTool() {
     try {
       const res = await jsonRequest<typeof data>(`/proxy/whois?domain=${encodeURIComponent(domainInput.trim())}`);
       setData(res);
+      emitPlatformWsEvent({
+        type: "recon_cmd_executed",
+        title: `WHOIS Lookup: ${domainInput.trim()}`,
+        target: domainInput.trim(),
+      });
     } catch {
       setData({ domain: domainInput, registrar: "GoDaddy.com, LLC", createdAt: new Date(Date.now() - 365 * 24 * 3600000).toISOString(), expiresAt: new Date(Date.now() + 365 * 24 * 3600000).toISOString(), nameservers: ["ns1.example.com", "ns2.example.com"], status: ["clientTransferProhibited", "clientUpdateProhibited"] });
     } finally { setIsLoading(false); }

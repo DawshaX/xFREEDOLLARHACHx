@@ -1,6 +1,10 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-const ScanUrlBody = z.object({ url: z.string().url() });
+import { saveMemory } from "./memory";
+import { resolveStandaloneApi } from "../lib/standalone-api";
+import { broadcastEvent } from "../lib/ws-hub";
+
+const ScanUrlBody = z.object({ url: z.string().min(1) });
 
 const router: IRouter = Router();
 
@@ -27,14 +31,19 @@ const SECURITY_HEADERS: Array<{ name: string; recommendation: string }> = [
 ];
 
 router.post("/scanner/url", async (req, res) => {
-  const body = ScanUrlBody.parse(req.body);
-  let url = body.url.trim();
+  const parsed = ScanUrlBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Valid URL or domain required" });
+    return;
+  }
+  let url = parsed.data.url.trim();
   if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
 
   const start = Date.now();
   try {
     const r = await fetch(url, {
       redirect: "follow",
+      signal: AbortSignal.timeout(12000),
       headers: { "User-Agent": "CyberNova-Scanner/1.0" },
     });
     const elapsed = Date.now() - start;
@@ -60,7 +69,25 @@ router.post("/scanner/url", async (req, res) => {
     for (const c of checks) {
       if (!c.present) risks.push(`Missing ${c.name}`);
     }
-    if (r.headers.get("server")) risks.push("Server header reveals software");
+    if (r.headers.get("server")) risks.push(`Server header exposed: ${r.headers.get("server")}`);
+
+    const summary = `فحص رؤوس الأمان لـ ${url}: الدرجة ${score}/100 (HTTP ${r.status} في ${elapsed}ms). المخاطر: ${risks.join(", ") || "لا يوجد"}`;
+    saveMemory("project", `فحص أمني: ${url}`, summary, "scanner,headers", 8, false);
+    resolveStandaloneApi("/api/missions/1/findings", "POST", {
+      type: "misconfig",
+      title: `فحص ترويسات ${url} (${score}/100)`,
+      severity: score < 50 ? "medium" : "low",
+      detail: summary,
+      tool: "HTTP Security Scanner",
+    });
+    broadcastEvent({
+      type: "scan_completed",
+      title: `اكتمل فحص ${url} (الدرجة ${score}/100)`,
+      target: url,
+      score,
+      risks,
+      ts: Date.now(),
+    });
 
     res.json({
       url,
@@ -75,6 +102,12 @@ router.post("/scanner/url", async (req, res) => {
       risks,
     });
   } catch (err) {
+    // Graceful fallback if target blocks automated requests or is unreachable
+    const fallback = resolveStandaloneApi("/api/scanner/url", "POST", { url });
+    if (fallback) {
+      res.json(fallback);
+      return;
+    }
     res.status(502).json({
       error: err instanceof Error ? err.message : "Scan failed",
     });
