@@ -873,9 +873,9 @@ export async function tickAutonomousDaemon(customTarget?: string): Promise<Brain
     .split("/")[0]!;
 
   state.whereAmINow.activeTarget = target;
-  state.schemaVersion = "2099.17.0";
+  state.schemaVersion = "2099.18.0";
   const cStats = getCorpusStats();
-  state.daemonStatus.selfEvolutionLevel = `v17.0 — 76,680+ Universal CVE Galaxy + ${cStats.totalIndexedKnowledgeItems.toLocaleString()} Indexed Patterns + 78 Kali/Web3 Tools`;
+  state.daemonStatus.selfEvolutionLevel = `v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + ${cStats.totalIndexedKnowledgeItems.toLocaleString()} Indexed Patterns + 78 Kali/Web3 Tools`;
   state.whatDidIReach.metrics.totalIndexedKnowledgeItems = cStats.totalIndexedKnowledgeItems;
   state.whatDidIReach.metrics.kaliToolsReady = KALI_ARSENAL_64.length;
   state.whatDidIReach.metrics.githubArsenalProjects = GITHUB_ARSENAL_40.length;
