@@ -74,6 +74,118 @@
       "totalAssetsUsds": 181950586.0043126,
       "capUsds": 217000000.0,
       "lineUsds": 193000000.0
+    },
+    "pauBeaconFacets": [
+      {
+        "id": "AAVE_FACET",
+        "address": "0x8CE890A96a193ff2DD4B2eA3C682326F655f6b62"
+      },
+      {
+        "id": "BASIN_FACET",
+        "address": "0xC84825BCD13AEddc372400239499380376a44A39"
+      },
+      {
+        "id": "CCTP_FACET",
+        "address": "0xADf62692340e46EF90336f2e75ce3b37f1148873"
+      },
+      {
+        "id": "CENTRIFUGE_FACET",
+        "address": "0xa0A10BA97be1412730D694B8dE1afe7eff20eC31"
+      },
+      {
+        "id": "CURVE_FACET",
+        "address": "0x139D81d7d6040fAeF7cF0EF5A2636Ca8a97a30d8"
+      },
+      {
+        "id": "DAIUSDS_FACET",
+        "address": "0x3817F734CAe6AD2BDb79F9ff23091F2AD478da5F"
+      },
+      {
+        "id": "ERC4626_FACET",
+        "address": "0x1dCA18608c89174181153E786778705b4A0E1a06"
+      },
+      {
+        "id": "ERC7540_FACET",
+        "address": "0x4f7e0E3612b0e1E156A2B6570a51d4BD709F1315"
+      },
+      {
+        "id": "ETHENA_FACET",
+        "address": "0xEc48D773CEef1c6b07CdA1afA2716C478b55187B"
+      },
+      {
+        "id": "FARM_FACET",
+        "address": "0xF24E91f5D8529436c9fB92dd94F80d4A6C25d0f0"
+      },
+      {
+        "id": "LAYER_ZERO_FACET",
+        "address": "0xA0c323a0acb20F259eA4ff343319D450BE6472e5"
+      },
+      {
+        "id": "MAPLE_FACET",
+        "address": "0x691b5c26aD2B74d2376f4eD87904E9D3E47bD630"
+      },
+      {
+        "id": "MERKL_FACET",
+        "address": "0x321138Db5E056e9d0080D4c278e10A1EdC091Eb0"
+      },
+      {
+        "id": "OTC_FACET",
+        "address": "0x46b24ba00B65CB4f603447590e539b08097fb7Ac"
+      },
+      {
+        "id": "PENDLE_FACET",
+        "address": "0xcC9dD4c9B2a9c08f2692e7060F43d29A03E87348"
+      },
+      {
+        "id": "PSM_FACET",
+        "address": "0xE4A5dAc768a310cc2316f258901b32E499653064"
+      },
+      {
+        "id": "SPARK_VAULT_FACET",
+        "address": "0xff0d19920E207e3A17eb5A2E5bA3AFA44836362b"
+      },
+      {
+        "id": "SUPERSTATE_FACET",
+        "address": "0xeE197475607E9a27cCAA4786e740d2F0d0E706A7"
+      },
+      {
+        "id": "TRANSFER_ASSET_FACET",
+        "address": "0x4DA7608C331b8f135df5b985018933780eCd089D"
+      },
+      {
+        "id": "UNISWAP_V3_FACET",
+        "address": "0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab"
+      },
+      {
+        "id": "UNISWAP_V4_FACET",
+        "address": "0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D"
+      },
+      {
+        "id": "USDS_FACET",
+        "address": "0x1221CC4B85Ab260660aD21C2829e0EB516dffBc7"
+      },
+      {
+        "id": "WEETH_FACET",
+        "address": "0x1d8D089EB7D558F5dc6aA0cf98DDe13B77b3F641"
+      },
+      {
+        "id": "WRAP_PROXY_ETH_FACET",
+        "address": "0x081506DE21C695Af5e61a81aD288C8A96B6b59B9"
+      },
+      {
+        "id": "WSTETH_FACET",
+        "address": "0x3a82D11Cd37Fb0098363262Dc69425d07Fa05516"
+      }
+    ],
+    "subDaoPausAndControllers": {
+      "SPARK_ALM_CONTROLLER": "0x5c46Fc65855c0C7465a1EA85EEA0B24B601502D3",
+      "SPARK_ALM_PROXY": "0x1601843c5E9bC251A3272907010AFa41Fa18347E",
+      "SPARK_ALM_PROXY_SUSDS_BALANCE": "684112181.64 sUSDS (~$700M+ USD)",
+      "SPARK_ALM_PROXY_FREEZABLE": "0xe5c6318456a7Cb6f74f93B4eee4616dB5fcef699",
+      "GROVE_ALM_CONTROLLER": "0xfd9dEA9a8D5B955649579Af482DB7198A392A9F5",
+      "GROVE_ALM_PROXY": "0x491EDFB0B8b608044e227225C715981a30F3A44E",
+      "GROVE_PAU_CONTROLLER": "0xbf83F5974B932c7D842254042717D6A2706CE5eE",
+      "GROVE_PAU_PROXY": "0x0DcD9298e163dFD3c0B5b00F0d9093C36e40A153"
     }
   },
   "wavesAudited": [
@@ -203,6 +315,34 @@
         "programs/governance/src/lib.rs"
       ],
       "summary": "Audited StUsds ERC-4626/chi/cut/line accounting ($181.95M live TVL), LockstakeEngine & LockstakeClipper bad-debt Due/cut integration, LayerZero EVM + Solana Anchor OFT and Governance relay programs, and AllocatorVault/Buffer."
+    },
+    {
+      "wave": 6,
+      "name": "Core Maker/Sky Protocol & Full 30-Facet diamond-pau Deep Audit",
+      "reposAudited": 22,
+      "repositories": [
+        "arbitrum-dai-bridge",
+        "optimism-dai-bridge",
+        "clipper-mom",
+        "dsr-manager",
+        "dss",
+        "dss-auto-line",
+        "dss-cdp-manager",
+        "dss-chain-log",
+        "dss-exec-lib",
+        "dss-flash",
+        "dss-gem-joins",
+        "dss-psm",
+        "ilk-registry",
+        "line-mom",
+        "median",
+        "mkr-authority",
+        "osm",
+        "univ2-lp-oracle",
+        "univ3-lp-oracle",
+        "diamond-pau (all 30 facets + Mainnet fork PoC)"
+      ],
+      "summary": "Completed full 54-repository coverage across all active sky-ecosystem repos and verified two coupled mathematical vulnerabilities (SKY-VULN-01 and SKY-VULN-02) in diamond-pau src/facets/uniswap-v3/UniswapV3Facet.sol (live on-chain at 0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab, 20,042 bytes opcode-identical) using a 3-test Mainnet-fork Foundry suite."
     }
   ],
   "architecturalNotesAndEdgeCases": [
@@ -225,89 +365,198 @@
       "details": "On live Mainnet PAU_BEACON (0x829dc2b7e94b1954f0764e573f2e0d45afa28199), exactly 25 facets are registered (matching the 2026-07-06 Immunefi scope list). Newer facets in the dev branch of diamond-pau (AaveV4Facet, NFATHaloFacet, NFATPrimeFacet, PSM3Facet, SwapAssetFacet) are not yet registered on Mainnet PAU_BEACON."
     }
   ],
-  "auditDate": "2026-10-29T18:56:00Z",
-  "auditedRepositoriesCount": 32,
+  "auditDate": "2026-10-29T18:45:00Z",
+  "auditedRepositoriesCount": 54,
   "waves": [
     {
-      "wave": 5,
-      "focus": "Web/App (governance-portal-v2, gov-polling-db) + Endgame/Core/PSM/D3M/RWA/StarkNet/Vest (13 Repositories)",
+      "wave": 1,
+      "name": "Prime Agent System (PAS - 2026-09-01 Scope)",
       "repos": [
-        "governance-portal-v2",
-        "gov-polling-db",
-        "endgame-toolkit",
-        "usds",
-        "sky",
-        "sdai",
-        "vote-delegate",
-        "univ2-pool-migrator",
-        "dss-lite-psm",
-        "starknet-dai-bridge",
-        "dss-direct-deposit",
-        "rwa-toolkit",
-        "dss-vest"
+        "sky-ecosystem/pas"
       ],
-      "contractsAudited": [
-        "pages/api/cache/invalidate.ts",
-        "pages/api/auth.ts",
-        "modules/cache/cache.ts",
-        "pages/api/sky/polls/[pollIdOrSlug].ts",
-        "pages/api/sky/polls/tally/[pollId].ts",
-        "modules/executive/api/fetchSkyExecutiveDetail.ts",
-        "modules/executive/api/analyzeSpell.ts",
-        "modules/address/api/fetchEnsAvatar.ts",
-        "lib/markdown.ts",
-        "lib/csp.js",
-        "src/SubProxy.sol",
-        "src/VestedRewardsDistribution.sol",
-        "src/synthetix/StakingRewards.sol",
-        "src/Usds.sol",
-        "src/DaiUsds.sol",
-        "src/Sky.sol",
-        "src/MkrSky.sol",
-        "src/SUsds.sol",
-        "src/VoteDelegate.sol",
-        "src/VoteDelegateFactory.sol",
-        "deploy/UniV2PoolMigratorInit.sol",
-        "deploy/UniV2PoolWithdraw.sol",
-        "src/DssLitePsm.sol",
-        "src/D3MHub.sol",
-        "src/plans/D3MOperatorPlan.sol",
-        "src/pools/D3M4626TypePool.sol",
-        "src/conduits/RwaMultiSwapOutputConduit.sol",
-        "contracts/l1/L1DAIBridge.sol",
-        "contracts/l1/L1GovernanceRelay.sol",
-        "src/DssVest.sol"
+      "contracts": [
+        "BeamState.sol",
+        "Configurator.sol",
+        "PASMom.sol",
+        "timelock/Timelock.sol",
+        "timelock/Bytes32LinkedList.sol"
       ],
-      "invariantVerification": [
-        "governance-portal-v2 analyzeSpell.ts strictly validates /^0x[a-fA-F0-9]{40}$/ and enforces 30s timeout + rate limit against the private spell analysis webhook",
-        "governance-portal-v2 fetchEnsAvatar.ts validates domain regex and restricts avatar URLs to HTTPS only, blocking internal SSRF via ENS text records",
-        "governance-portal-v2 lib/markdown.ts disables raw HTML (html: false) and runs DOMPurify.sanitize() before rendering governance markdown",
-        "DssLitePsm enforces 1:1 gem/DAI swap math with pocket custody and checks rate == RAY in rush()/gush()",
-        "SUsds (sUSDS) implements ERC-4626 rounding directions (_divup on mint/withdraw, floor on deposit/redeem) and requires rho == block.timestamp when updating ssr",
-        "D3MHub enforces non-reentrant lock mutex, SAFEMAX bounds on lineWad/ink/art, and unwinds automatically if currentAssets + WAD < ink"
+      "summary": "Audited the complete 810-line PAS codebase at commit 947e71cd5dbaaf9c5b3840dd1b23e8e99d9a564d and post-commit L2PASDeployer additions. Verified cbeam pacing, rbeam step/expiry enforcement, unlimited-rate-limit protection in Configurator, and doubly-linked list queue/cancel/execute invariants in Timelock. Live Mainnet PAS_TIMELOCK (0xb50a06af02dde44db6ea7ee729403848c2b35293) is currently paused (paused=1) with a 14-day (1,209,600s) delay."
+    },
+    {
+      "wave": 2,
+      "name": "Diamond PAU Architecture & All 25 Mainnet Facets (2026-07-06 Scope)",
+      "repos": [
+        "sky-ecosystem/diamond-pau",
+        "sky-ecosystem/pau-administered-agent",
+        "sky-ecosystem/pau-assemblers",
+        "sky-ecosystem/subproxy-methods"
       ],
-      "defensiveNotes": [
-        {
-          "id": "SKY-NOTE-04",
-          "contract": "governance-portal-v2/modules/cache/cache.ts & pages/api/cache/invalidate.ts",
-          "severity": "Low / Web-App Defensive Hygiene",
-          "title": "Inverted Filesystem Cache Expiry Check (birthtime < Date.now() + expiryMs), Property Mismatch (checkedData vs data), and Unsanitized Substring Match in /api/cache/invalidate",
-          "analysis": "In modules/cache/cache.ts line 172, filesystem cache expiry checks `if (expiryMs && birthtime && birthtime.getTime() < Date.now() + expiryMs)` instead of `birthtime.getTime() + expiryMs < Date.now()`. Since birthtime <= Date.now() and expiryMs > 0, this condition is always true, causing filesystem cache entries to be deleted on every cacheGet call when Redis is disabled. Additionally, cacheSet stores `{ expiry, checkedData }` in memoryCache[path] (line 226) while cacheGet reads `memCached.data` (line 166, returning undefined). Finally, pages/api/cache/invalidate.ts validates cacheKey via substring match (`cacheKey.indexOf(next) !== -1`), which allows path traversal sequences in getFilePath() if authenticated and Redis is disabled."
-        },
-        {
-          "id": "SKY-NOTE-05",
-          "contract": "governance-portal-v2/pages/api/sky/polls/[pollIdOrSlug].ts & pages/api/sky/polls/tally/[pollId].ts",
-          "severity": "Informational / Web-App Input Validation",
-          "title": "Unencoded Path Interpolation of pollIdOrSlug and pollId in Upstream vote.sky.money API Requests",
-          "analysis": "Unlike fetchSkyExecutiveDetail.ts (which strictly validates proposalId against /^0x[a-fA-F0-9]{40}$/ or /^[a-z0-9]+(-[a-z0-9]+)*$/), pages/api/sky/polls/[pollIdOrSlug].ts and pages/api/sky/polls/tally/[pollId].ts interpolate `pollIdOrSlug` and `pollId` directly into `https://vote.sky.money/api/polling/${pollIdOrSlug}` without regex validation or encodeURIComponent()."
-        },
-        {
-          "id": "SKY-NOTE-06",
-          "contract": "governance-portal-v2/pages/api/auth.ts",
-          "severity": "Informational / Environment Configuration",
-          "title": "Fail-Open Authentication in /api/auth When DASHBOARD_PASSWORD Environment Variable Is Unset",
-          "analysis": "In pages/api/auth.ts lines 18-22, `if (!config.DASHBOARD_PASSWORD) { return res.status(200).json({ auth: 'ok' }); }` returns a successful authentication response whenever DASHBOARD_PASSWORD is not configured in the deployment environment."
-        }
+      "contracts": [
+        "Beacon.sol",
+        "Controller.sol",
+        "ControllerSharedStorage.sol",
+        "RateLimits.sol",
+        "AccessControls.sol",
+        "ALMProxy.sol",
+        "ALMProxyFreezable.sol",
+        "PAUFactory.sol",
+        "DefaultPAUAssembler.sol",
+        "AdministeredAgent.sol",
+        "AdministeredAgentFactory.sol",
+        "SubProxyMethods.sol",
+        "AaveFacet.sol",
+        "AaveV4Facet.sol",
+        "BasinFacet.sol",
+        "CCTPFacet.sol",
+        "CentrifugeFacet.sol",
+        "CurveFacet.sol",
+        "DAIUSDSFacet.sol",
+        "ERC4626Facet.sol",
+        "ERC7540Facet.sol",
+        "EthenaFacet.sol",
+        "FarmFacet.sol",
+        "LayerZeroFacet.sol",
+        "MapleFacet.sol",
+        "MerklFacet.sol",
+        "NFATHaloFacet.sol",
+        "NFATPrimeFacet.sol",
+        "OTCFacet.sol",
+        "OTCBuffer.sol",
+        "PendleFacet.sol",
+        "PSMFacet.sol",
+        "PSM3Facet.sol",
+        "SparkVaultFacet.sol",
+        "SuperstateFacet.sol",
+        "SwapAssetFacet.sol",
+        "TransferAssetFacet.sol",
+        "UniswapV3Facet.sol",
+        "UniswapV4Facet.sol",
+        "USDSFacet.sol",
+        "WEETHFacet.sol",
+        "WEETHModule.sol",
+        "WrapProxyETHFacet.sol",
+        "WSTETHFacet.sol"
+      ],
+      "summary": "Audited core Diamond PAU dispatch/storage isolation (ERC-7201 namespaces), RateLimits linear replenishment and key derivation, and all 25 deployed facets on PAU_BEACON (0x829dc2b7e94b1954f0764e573f2e0d45afa28199), plus post-v1140 commits (AaveV4Facet, SwapAssetFacet, L2BeaconSpell). Verified balance-delta accounting, residual approval clearing via ApproveLib, and ERC-4626 donation attack protection via maxExchangeRate."
+    },
+    {
+      "wave": 3,
+      "name": "Surplus Buffer Engine Beam & Emergency Spells (2026-07-21 & 2026-08-17 Scope)",
+      "repos": [
+        "sky-ecosystem/dss-flappers",
+        "sky-ecosystem/dss-emergency-spells",
+        "sky-ecosystem/star-guard"
+      ],
+      "contracts": [
+        "SBEBeam.sol",
+        "FarmOwner.sol",
+        "Splitter.sol",
+        "Kicker.sol",
+        "FlapperUniV2.sol",
+        "FlapperUniV2SwapOnly.sol",
+        "StUsdsWipeParamSpell.sol",
+        "StUsdsRateSetterDissBudSpell.sol",
+        "StUsdsRateSetterHaltSpell.sol",
+        "StarGuard.sol"
+      ],
+      "summary": "Audited SBEBeam.sol and FarmOwner.sol (beam branch), Kicker/Splitter surplus distribution and reward duration re-rating, StarGuard spell codehash/deadline/ownership preservation, and stUSDS emergency spells."
+    },
+    {
+      "wave": 4,
+      "name": "StUSDS ($181.95M TVL), Lockstake, Cross-Chain OApp/OFT (EVM + Solana), & Core Modules",
+      "repos": [
+        "sky-ecosystem/stusds",
+        "sky-ecosystem/lockstake",
+        "sky-ecosystem/sky-oapp-oft",
+        "sky-ecosystem/lz-governance-relay",
+        "sky-ecosystem/dss-allocator",
+        "sky-ecosystem/protego",
+        "sky-ecosystem/dss-blow2"
+      ],
+      "contracts": [
+        "StUsds.sol",
+        "StUsdsMom.sol",
+        "StUsdsRateSetter.sol",
+        "LockstakeEngine.sol",
+        "LockstakeClipper.sol",
+        "LockstakeUrn.sol",
+        "LockstakeCappedOsmWrapper.sol",
+        "SkyOFTAdapter.sol",
+        "SkyOFTAdapterMintBurn.sol",
+        "SkyOFTCore.sol",
+        "SkyRateLimiter.sol",
+        "GovernanceOAppSender.sol",
+        "GovernanceOAppReceiver.sol",
+        "L1GovernanceRelay.sol",
+        "L2GovernanceRelay.sol",
+        "programs/oft/src/lib.rs",
+        "programs/governance/src/lib.rs"
+      ],
+      "summary": "Audited StUsds ERC-4626/chi/cut/line accounting ($181.95M live TVL), LockstakeEngine & LockstakeClipper bad-debt Due/cut integration, LayerZero EVM + Solana Anchor OFT and Governance relay programs, and AllocatorVault/Buffer."
+    },
+    {
+      "wave": 6,
+      "name": "Core Maker/Sky Protocol & Full 30-Facet diamond-pau Deep Audit",
+      "reposAudited": 22,
+      "repositories": [
+        "arbitrum-dai-bridge",
+        "optimism-dai-bridge",
+        "clipper-mom",
+        "dsr-manager",
+        "dss",
+        "dss-auto-line",
+        "dss-cdp-manager",
+        "dss-chain-log",
+        "dss-exec-lib",
+        "dss-flash",
+        "dss-gem-joins",
+        "dss-psm",
+        "ilk-registry",
+        "line-mom",
+        "median",
+        "mkr-authority",
+        "osm",
+        "univ2-lp-oracle",
+        "univ3-lp-oracle",
+        "diamond-pau (all 30 facets + Mainnet fork PoC)"
+      ],
+      "summary": "Completed full 54-repository coverage across all active sky-ecosystem repos and verified two coupled mathematical vulnerabilities (SKY-VULN-01 and SKY-VULN-02) in diamond-pau src/facets/uniswap-v3/UniswapV3Facet.sol (live on-chain at 0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab, 20,042 bytes opcode-identical) using a 3-test Mainnet-fork Foundry suite."
+    }
+  ],
+  "verifiedVulnerabilities": [
+    {
+      "id": "SKY-VULN-01",
+      "title": "UniswapV3Facet.addLiquidity Unbounded target vs. TWAP expectedAmounts & min(liquidity0, liquidity1) Collapse Bypasses 30-Minute TWAP & maxSlippage",
+      "severity": "HIGH / CRITICAL (Per diamond-pau Threat Model: Compromised ALLOCATOR_ROLE Value Extraction)",
+      "repository": "sky-ecosystem/diamond-pau",
+      "file": "src/facets/uniswap-v3/UniswapV3Facet.sol",
+      "lines": "659-748",
+      "liveMainnetAddress": "0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab",
+      "rootCause": "_validateAddLiquidityParameters computes expectedLiquidity = LiquidityAmounts.getLiquidityForAmounts(sqrtTWAPPriceX96, ...) = min(liquidity0_TWAP, liquidity1_TWAP) and validates min against expectedAmounts without bounding target (amount0Desired, amount1Desired) against expectedAmounts. Passing a single-sided or skewed target when ticks.lower < twapTick < ticks.upper zeroes or shrinks expectedAmounts and min while NonfungiblePositionManager.mint/increaseLiquidity consumes up to 100% of target at a flash-manipulated spot price.",
+      "pocVerified": true,
+      "pocFile": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol",
+      "submissionReport": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
+      "pocTests": [
+        "test_PoC1_addAndRemoveLiquidity_zeroExpectedLiquidityBypass (PASS: $196,146.25 loss on $10M = 19.6x the 0.1% maxSlippage limit, +$191,806.78 DAI net attacker profit)",
+        "test_PoC2_addLiquidity_nonZeroExpectedLiquidity_inRangeSpot_bypassesTWAP (PASS: expectedLiquidity > 0 and spotTick strictly inside range; TWAP expects 303.57 DAI while mint consumes 7,921,380.05 DAI = 26,094x TWAP expectation, +$169,395.22 DAI net attacker profit)"
+      ]
+    },
+    {
+      "id": "SKY-VULN-02",
+      "title": "UniswapV3Facet.removeLiquidity Missing TWAP Reference & Inverted _checkSlippage Direction Enables Spot Manipulation Extraction & Reverts Honest Withdrawals",
+      "severity": "HIGH / MEDIUM (Spot Manipulation Extraction + Honest Allocator Withdrawal DoS)",
+      "repository": "sky-ecosystem/diamond-pau",
+      "file": "src/facets/uniswap-v3/UniswapV3Facet.sol",
+      "lines": "451-515, 972-978",
+      "liveMainnetAddress": "0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab",
+      "rootCause": "removeLiquidity never consults twapTick and instead calls _checkSlippage(amounts.amount, min.amount, maxSlippage) where amounts are actual post-withdrawal spot outputs. Setting min = actualAmounts satisfies min >= actual * maxSlippage / 1e18 tautologically at any manipulated spot price, while an honest allocator setting min = expected * maxSlippage / 1e18 reverts with 'UniswapV3Facet/min-amount-below-bound' whenever a small normal trade shifts the tick inside the range so either token's output increases.",
+      "pocVerified": true,
+      "pocFile": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol",
+      "submissionReport": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
+      "pocTests": [
+        "test_PoC1_addAndRemoveLiquidity_zeroExpectedLiquidityBypass (PASS)",
+        "test_PoC3_removeLiquidity_invertedSlippageCheck_revertsHonestAllocatorOnSmallTickShift (PASS)"
       ]
     }
   ]

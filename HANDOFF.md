@@ -224,3 +224,18 @@
 
 
 
+
+---
+
+## Phase 19 & Phase 20 — Full 6-Wave Sky (`sky-ecosystem`) Source Audit (54 Repos) & Verified Mainnet-Fork Foundry PoC (`SKY-VULN-01` & `SKY-VULN-02`)
+
+- **Complete 6-Wave Source Audit (`54` Active Repositories in `https://github.com/sky-ecosystem`)**:
+  - Audited Waves 1–6 covering all 2026 & 2025 Immunefi scope additions (`pas`, `diamond-pau` all 30 facets, `pau-administered-agent`, `pau-assemblers`, `subproxy-methods`, `star-guard`, `dss-flappers`, `dss-emergency-spells`, `sky-oapp-oft`, `lz-governance-relay`, `lockstake`, `stusds`, `chief`, `protego`, `sp-beam`, `dss-blow2`, `dss-allocator`, `arbitrum-token-bridge`, `op-token-bridge`, `dss-vest`, `sdao-DSSVest`, `dss-kiln`, `ve-sky`, `sky`, `usds`, `sdai`, `endgame-toolkit`, `governance-portal-v2`, `chainlog.sky.money`, `arbitrum-dai-bridge`, `optimism-dai-bridge`, `clipper-mom`, `dsr-manager`, `dss`, `dss-auto-line`, `dss-cdp-manager`, `dss-chain-log`, `dss-exec-lib`, `dss-flash`, `dss-gem-joins`, `dss-psm`, `ilk-registry`, `line-mom`, `median`, `mkr-authority`, `osm`, `univ2-lp-oracle`, `univ3-lp-oracle`).
+- **Verified Live Mainnet Bytecode & Findings (`UNISWAP_V3_FACET` `0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab`)**:
+  - **`SKY-VULN-01`**: `UniswapV3Facet.addLiquidity` (`src/facets/uniswap-v3/UniswapV3Facet.sol`, lines `659–748`) validates `min` against `expectedAmounts` without bounding `target` (`amount0Desired`, `amount1Desired`) against `expectedAmounts`. When `ticks.lower < twapTick < ticks.upper`, `LiquidityAmounts.getLiquidityForAmounts` returns `min(liquidity0_TWAP, liquidity1_TWAP)`, allowing a single-sided or skewed `target` to zero or shrink `expectedAmounts` and `min` while `NonfungiblePositionManager.mint`/`increaseLiquidity` consumes up to 100% of `target` at a flash-manipulated spot price.
+  - **`SKY-VULN-02`**: `UniswapV3Facet.removeLiquidity` (`src/facets/uniswap-v3/UniswapV3Facet.sol`, lines `451–515`, `972–978`) never consults `twapTick` and checks `min.amount >= amounts.amount * maxSlippage / 1e18` against actual post-withdrawal spot outputs, allowing `min = actualAmounts` at any manipulated spot price while reverting honest `removeLiquidity` calls (`"UniswapV3Facet/min-amount-below-bound"`) on small normal tick shifts.
+  - **Artifacts Saved & Synced**:
+    - `audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md`
+    - `audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol`
+    - `state/sky-immunefi-audit-report.json` & `artifacts/kali-panel/public/state/sky-immunefi-audit-report.json`
+    - `state/cybernova-brain-state.json` & `artifacts/kali-panel/public/state/cybernova-brain-state.json`
