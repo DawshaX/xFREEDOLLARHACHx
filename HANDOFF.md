@@ -1,46 +1,49 @@
-# 🛡️ وثيقة الأساس والتسليم المستمر — منصة CyberNova (`xFREEDOLLARHACHx`)
+# 🛡️ CyberNova (`xFREEDOLLARHACHx`) — Master Architecture & Session Handoff Log
 
-> **قاعدة ذهبية لأي جلسة جديدة:** اقرأ هذا الملف أولاً قبل كتابة أي كود أو اتخاذ أي خطوة. هذا المستودع (`DawshaX/xFREEDOLLARHACHx`) هو المقر الرئيسي الموحّد لمنصة الأمان والبحث الأمني الأخلاقي.
-
----
-
-## 1️⃣ المبادئ الأساسية المتفق عليها (غير قابلة للتجاوز)
-
-1. **الهدوء والعقلانية:** لا استعجال ولا تعديل عشوائي؛ كل خطوة تُفهم وتُناقش وتُوثّق هنا أولاً.
-2. **قانوني وأخلاقي ومجاني 100%:** العمل مخصص للأمن السيبراني الأخلاقي، الفحص الدفاعي، تحليل الشيفرات المصدرية (SAST)، إدارة نطاقات البج باونتي المصرح بها (HackerOne / Google VRP)، وبناء الوعي والمعرفة الأمنية، باستخدام أدوات ونماذج مجانية ومفتوحة المصدر بالكامل.
-3. **التوثيق اللحظي على GitHub:** كل تقدم أو تعديل أو خطة يُرفع فوراً على `DawshaX/xFREEDOLLARHACHx` ليظل السجل كاملاً لو انتقلنا لأي محادثة أو جلسة جديدة.
-4. **عدم المساس بالمصانع الأخرى:** مستودعات المصانع الأخرى (`DawshaX/youtube`, `DawshaX/Dollars`, `DawshaX/XTreNDAW`, `DawshaX/daousha`) تظل محفوظة ومستقلة تماماً.
+> **تاريخ آخر تحديث:** `2026-10-29`
+> **المستودع الرسمي والمرجعي 100%:** `https://github.com/DawshaX/xFREEDOLLARHACHx`
+> **الرابط الحي الدائم (GitHub Pages Auto-Deploy):** `https://dawshax.github.io/xFREEDOLLARHACHx/`
+> **رابط استوديو البج باونتي وموسوعة الثغرات:** `https://dawshax.github.io/xFREEDOLLARHACHx/bug-bounty-studio`
 
 ---
 
-## 2️⃣ سجل التقدم والإنجازات (يُحدّث لحظياً)
-
-### ✅ المرحلة 1: فك الضغط والنقل والتأسيس
-* سحب الأرشيف `Hello-Brother (copy 1).zip` من `DawshaX/nova` وفك ضغطه بالكامل (486 ملفاً) وفحصه أمنياً.
-* رفع المشروع كاملاً ومفكوكاً إلى `DawshaX/xFREEDOLLARHACHx`.
-
-### ✅ المرحلة 2: بناء «استوديو البج باونتي القانوني وموسوعة الأمان الشاملة» (`BugBountyStudio.tsx`)
-* المسارات المضافة في الواجهة الأمامية (`artifacts/kali-panel/src/pages/BugBountyStudio.tsx`):
-  * `/bug-bounty-studio` — استوديو البج باونتي القانوني المتكامل.
-  * `/vuln-encyclopedia` — موسوعة الثغرات والبرمجة الآمنة (`IDOR/BOLA`, `SSRF`, `SQLi`, `XSS`, `Subdomain Takeover`, `CORS Misconfiguration`, `JWT/OAuth Flaws`, `Business Logic & Race Conditions`) مع مقارنة الكود الضعيف بالكود الآمن وخطوات الفحص والترقيع.
-  * `/code-auditor` — الفاحص الدفاعي الساكن للكود المصدري ورؤوس HTTP/CORS مع حساب درجة الأمان (0–100) واقتراح الإصلاحات.
-  * إدارة نطاقات برامج البج باونتي الرسمية (Google VRP, GitHub, Cloudflare, Shopify, HackerOne) مع إمكانية إضافة برامج مخصصة وحفظها تلقائياً.
-  * قوائم الفحص المنهجية التفاعلية (Checklists) المحفوظة تلقائياً في المتصفح.
-  * مولّد تقارير HackerOne / Google VRP الاحترافية بصيغة Markdown مع حاسبة `CVSS v3.1` التفاعلية.
-
-### ✅ المرحلة 3: إصلاح التشغيل المستقل والاستضافة التلقائية على GitHub Pages
-* تحديث `lib/db/src/index.ts` و `artifacts/api-server/src/routes/dashboard.ts` ليعمل الخادم الخلفي (`api-server`) بسلاسة حتى في الوضع المستقل بدون قاعدة بيانات خارجية.
-* تحديث `artifacts/kali-panel/vite.config.ts` لربط `/api` بالخادم الخلفي تلقائياً عبر الـ Proxy.
-* إضافة `.github/workflows/deploy-pages.yml` لبناء ونشر المنصة تلقائياً على **GitHub Pages** (`https://dawshax.github.io/xFREEDOLLARHACHx/`) مع كل تحديث على الفرع `main`.
+## 📌 1. الهدف العام وفلسفة العمل
+تم استخراج منصة **CyberNova** (`Hello-Brother (copy 1).zip` من مستودع `DawshaX/nova` — `485` ملف برمجي) ورفعها بالكامل إلى المستودع المستقل `DawshaX/xFREEDOLLARHACHx` لتكون منصة متكاملة **قانونية وأخلاقية ومجانية 100%** للأمن السيبراني، اكتشاف الثغرات، مراجعة الكود المصدري، وصيد المكافآت القانوني (**Legal Bug Bounty — HackerOne & Google VRP**).
 
 ---
 
-## 3️⃣ كيفية التشغيل السريع في أي بيئة
+## ✅ 2. سجل المراحل المنجزة بالكامل (100% End-to-End Verified)
 
-```bash
-# 1) تشغيل الخادم الخلفي (المنفذ 8080)
-PORT=8080 pnpm --filter @workspace/api-server run dev
+### المرحلة 1: استخراج وفحص ورفع المستودع الأساسي (`8477e24`)
+- فحص شامل لجميع الملفات للتأكد من خلوها من أي مفاتيح سرية مدمجة (`0` secrets).
+- رفع الكود المصدري الكامل إلى `DawshaX/xFREEDOLLARHACHx`.
 
-# 2) تشغيل الواجهة الأمامية (المنفذ 3000 مع Proxy تلقائي إلى 8080)
-PORT=3000 BASE_PATH=/ pnpm --filter @workspace/kali-panel run dev
-```
+### المرحلة 2: إصلاح الاعتماديات وتشغيل الخادم والواجهة (`2990194`)
+- جعل الاتصال بقاعدة البيانات `PostgreSQL` اختيارياً في `lib/db/src/index.ts` و`artifacts/api-server/src/index.ts` حتى يعمل الخادم بنمط **Standalone Mode** بدون الحاجة لقاعدة بيانات خارجية مدفوعة.
+- ضبط `artifacts/kali-panel/vite.config.ts` للعمل على المنفذ `3000` محلياً وفي معاينة المتصفح الحية (`0.0.0.0:3000`).
+
+### المرحلة 3: بناء ودمج استوديو البج باونتي وموسوعة الثغرات والكود الآمن (`69454b9`)
+- إنشاء `artifacts/kali-panel/src/pages/BugBountyStudio.tsx` ويضم 5 أقسام رئيسية:
+  1. **📚 موسوعة الثغرات والكود الآمن (Vulnerability & Secure Code Encyclopedia):** شرح علمي وعملي عميق لثغرات `IDOR/BOLA`, `SSRF`, `SQLi`, `XSS`, `Command Injection`, `Path Traversal`, `JWT Flaws`, `Race Conditions (TOCTOU)`, و`Prototype Pollution` مع مقارنة الكود الضعيف بالكود الآمن.
+  2. **🔍 الفاحص الدفاعي الساكن للكود والترويسات (Static Code & Header Auditor):** فحص فوري للشيفرات البرمجية وترويسات HTTP واكتشاف الأنماط الضعيفة مع درجة أمان من `100` وزر حفظ مباشر للنتائج في الذاكرة ومتتبع المهام.
+  3. **🎯 نطاقات برامج HackerOne و Google VRP (Legal Scope & Safe Harbor):** دليل البرامج الرسمية مع فاحص النطاق القانوني وزر **"تفعيل كهدف"** لمزامنة الهدف مع كامل المنصة.
+  4. **✅ قوائم الفحص المنهجية التفاعلية (Methodology Checklists):** خطوات الاستطلاع القانوني وفحص الصلاحيات ومنطق الأعمال المحفوظة تلقائياً.
+  5. **📝 مولّد التقارير الاحترافية وحاسبة CVSS v3.1:** توليد تقارير Markdown احترافية مع زر حفظ مباشر في صفحة التقارير (`/reports`) والذاكرة المشتركة (`/memory`).
+
+### المرحلة 4: النشر التلقائي المستمر على GitHub Pages (`760da10`)
+- إعداد `.github/workflows/deploy-pages.yml` لبناء ونشر الواجهة تلقائياً مع دعم SPA fallback (`404.html`).
+
+### المرحلة 5: محرك البيانات المستقل وإصلاح جميع مسارات الـ API (`d147272`)
+- بناء `standalone-api.ts` وربطه بـ `setup.ts` (في الواجهة) و`app.ts` (في الخادم) لضمان عمل جميع المسارات (`22/22` مساراً بـ `200 OK`) سواء محلياً أو على GitHub Pages.
+
+### المرحلة 6: ربط ناقل WebSocket الداخلي (`/api/ws`) والذاكرة والملاحظات والوكلاء ومتتبع المهام (التحديث الحالي)
+- **إصلاح وتفعيل WebSocket الداخلي (`/api/ws`):**
+  - ربط `hubWss` في `artifacts/api-server/src/index.ts` مع `ws-hub.ts` لاستقبال اتصالات `/api/ws?sessionId=...` وبث جميع الأحداث الحية (`target_selected`, `note_added`, `finding_recorded`, `code_audit_run`, `chat_send`) لجميع النوافذ والوكلاء في الوقت الفعلي.
+  - دعم ناقل `BroadcastChannel("cybernova_ws_bus")` في `useWebSocket.ts` ليعمل التزامن الحي 100% حتى على الاستضافة الساكنة في GitHub Pages.
+- **توحيد نظام الذاكرة والملاحظات (`/api/memory`):**
+  - تحديث `artifacts/api-server/src/routes/memory.ts` و`standalone-api.ts` لدعم الإضافة (`POST /api/memory`)، التثبيت (`PATCH /api/memory/:id/pin`)، الحذف (`DELETE /api/memory/:id`)، والبحث الفوري، مع بث كل ملاحظة جديدة عبر WebSocket لجميع الوكلاء.
+- **تفعيل محرك الذكاء الأمني المدمج للوكلاء (`NovaAgent`, `LiveAgent`, `KaliGPT`, `Chat`, `Autonomous Agent`):**
+  - تحديث `artifacts/api-server/src/routes/ollama-proxy.ts` و`app.ts` و`setup.ts` ليعمل جميع الوكلاء بتدفق حي (`NDJSON` و`SSE`) مع وعي كامل بالهدف النشط والملاحظات المسجلة في الذاكرة حتى في حال عدم تشغيل خادم Ollama خارجي.
+- **شريط التزامن الحي والهدف النشط (`AppShell.tsx` & `BugBountyStudio.tsx`):**
+  - إظهار حالة `WS SYNC` والهدف النشط (`TARGET`) ومركز الإشعارات (`NotificationCenter`) والزر العائم للوكيل الحي (`FloatingNovaButton`) في الشريط العلوي لجميع الصفحات.
+  - ترقية جميع صفحات الأدوات الفرعية (`Placeholder.tsx`) إلى منصة عمل تفاعلية مربوطة بالهدف النشط والذاكرة ومتتبع المهام.

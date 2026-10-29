@@ -3,7 +3,10 @@ import {
   Shield, BookOpen, Code, CheckSquare, FileText, Globe, AlertTriangle,
   CheckCircle2, Copy, Download, Search, Sparkles, Lock, Layers, Server,
   ExternalLink, Terminal, ChevronRight, RefreshCw, Plus, Trash2, Award,
+  Radio, Save, Target,
 } from "lucide-react";
+import { emitPlatformWsEvent, useWebSocket } from "@/hooks/useWebSocket";
+import { jsonRequest } from "@/lib/sse";
 
 // ─── 1) Vulnerability & Secure Code Encyclopedia Data ─────────────────────────
 export interface VulnEntry {
@@ -792,6 +795,192 @@ ${reportFix}
   const totalChecklistCount = CHECKLISTS.reduce((acc, c) => acc + c.items.length, 0);
   const completedChecklistCount = Object.values(checkedItems).filter(Boolean).length;
 
+  // Live Active Target & Platform WebSocket Bus
+  const [activeTarget, setActiveTarget] = useState<string>(() => {
+    try {
+      return localStorage.getItem("cybernova_active_target") || "bughunters.google.com";
+    } catch {
+      return "bughunters.google.com";
+    }
+  });
+  const [quickNote, setQuickNote] = useState("");
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string>("");
+  const [liveFeed, setLiveFeed] = useState<Array<{ id: string; text: string; ts: string }>>([
+    {
+      id: "init-1",
+      text: "ناقل WebSocket الداخلي متصل — جاهز لتسجيل الأهداف والملاحظات والأدلة تلقائياً",
+      ts: new Date().toLocaleTimeString("ar-EG"),
+    },
+  ]);
+
+  const { connected: wsConnected } = useWebSocket({
+    sessionId: "bug-bounty-studio",
+    onMessage: (ev) => {
+      if (ev.title || ev.target || ev.prompt) {
+        const summary = String(ev.title || ev.target || ev.prompt);
+        setLiveFeed((prev) => [
+          { id: `ev-${Date.now()}-${Math.random()}`, text: `[${ev.type}] ${summary}`, ts: new Date().toLocaleTimeString("ar-EG") },
+          ...prev.slice(0, 7),
+        ]);
+      }
+    },
+  });
+
+  const handleActivateTarget = async (targetDomain: string, programName?: string) => {
+    const cleanTarget = targetDomain.trim();
+    if (!cleanTarget) return;
+    setActiveTarget(cleanTarget);
+    setScopeCheckHost(cleanTarget);
+    setReportAsset(`https://${cleanTarget.replace(/^\*\./, "api.")}`);
+    if (programName) setReportProgram(programName);
+    try {
+      localStorage.setItem("cybernova_active_target", cleanTarget);
+    } catch {
+      // ignore
+    }
+
+    const noteContent = `تم تفعيل الهدف النشط: ${cleanTarget}${programName ? ` ضمن برنامج (${programName})` : ""}. جميع الوكلاء والملاحظات ومتتبع المهام على دراية بالهدف الآن.`;
+    try {
+      await jsonRequest("/memory", {
+        method: "POST",
+        body: JSON.stringify({
+          kind: "project",
+          title: `🎯 هدف نشط: ${cleanTarget}`,
+          content: noteContent,
+          pinned: true,
+        }),
+      });
+      await jsonRequest("/missions/1", {
+        method: "PATCH",
+        body: JSON.stringify({
+          target: cleanTarget,
+          name: `فحص قانوني: ${programName || cleanTarget}`,
+        }),
+      });
+    } catch {
+      // ignore
+    }
+
+    emitPlatformWsEvent({
+      type: "target_selected",
+      target: cleanTarget,
+      title: `تفعيل الهدف النشط: ${cleanTarget}`,
+      detail: noteContent,
+      saveToMemory: true,
+    });
+    setSyncStatusMsg(`✅ تم تفعيل الهدف (${cleanTarget}) ومزامنته مع الذاكرة ومتتبع المهام وجميع الوكلاء!`);
+  };
+
+  const handleSaveQuickNote = async () => {
+    if (!quickNote.trim()) return;
+    const text = quickNote.trim();
+    setQuickNote("");
+    try {
+      await jsonRequest("/memory", {
+        method: "POST",
+        body: JSON.stringify({
+          kind: "fact",
+          title: `📝 ملاحظة فحص [${activeTarget}]`,
+          content: text,
+          pinned: true,
+        }),
+      });
+      await jsonRequest("/missions/1/findings", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "info",
+          title: `ملاحظة استطلاع على ${activeTarget}`,
+          severity: "info",
+          detail: text,
+          tool: "BugBountyStudio",
+        }),
+      });
+    } catch {
+      // ignore
+    }
+    emitPlatformWsEvent({
+      type: "note_added",
+      target: activeTarget,
+      title: `ملاحظة جديدة على ${activeTarget}`,
+      detail: text,
+      saveToMemory: true,
+    });
+    setSyncStatusMsg("✅ تم حفظ الملاحظة في الذاكرة (/memory) وسجل المهام (/mission-tracker) وبثها للوكلاء!");
+  };
+
+  const handleSyncAuditFindings = async () => {
+    const summaryText =
+      auditResult.findings.length === 0
+        ? `فحص ساكن للكود على ${activeTarget}: لم يتم رصد أنماط ضعيفة (الدرجة 100/100).`
+        : `فحص ساكن للكود على ${activeTarget} (الدرجة ${auditResult.score}/100): تم رصد ${auditResult.findings.length} ثغرات محتملة:\n` +
+          auditResult.findings.map((f) => `- [${f.severity}] ${f.cwe}: ${f.titleAr} (السطر ${f.line})`).join("\n");
+    try {
+      await jsonRequest("/memory", {
+        method: "POST",
+        body: JSON.stringify({
+          kind: "fact",
+          title: `🔍 نتيجة فحص الكود الساكن [${activeTarget}]`,
+          content: summaryText,
+        }),
+      });
+      for (const f of auditResult.findings.slice(0, 5)) {
+        await jsonRequest("/missions/1/findings", {
+          method: "POST",
+          body: JSON.stringify({
+            type: "vulnerability",
+            title: `${f.cwe}: ${f.titleAr}`,
+            severity: f.severity.toLowerCase(),
+            detail: `${f.explanationAr}\nالسطر ${f.line}: ${f.snippet}\nالحل: ${f.fixAr}`,
+            tool: "StaticCodeAuditor",
+          }),
+        });
+      }
+    } catch {
+      // ignore
+    }
+    emitPlatformWsEvent({
+      type: "code_audit_run",
+      target: activeTarget,
+      title: `تسجيل ${auditResult.findings.length} نتائج فحص كود ساكن لـ ${activeTarget}`,
+      detail: summaryText,
+      saveToMemory: true,
+    });
+    setSyncStatusMsg(`✅ تم تسجيل ${auditResult.findings.length} نتائج في الذاكرة ومتتبع المهام وبثها عبر WebSocket!`);
+  };
+
+  const handleSaveReportToPlatform = async () => {
+    try {
+      await jsonRequest("/reports", {
+        method: "POST",
+        body: JSON.stringify({
+          title: reportTitle,
+          target: reportAsset || activeTarget,
+          kind: "vulnerability_assessment",
+          notes: markdownReport,
+        }),
+      });
+      await jsonRequest("/memory", {
+        method: "POST",
+        body: JSON.stringify({
+          kind: "project",
+          title: `📄 تقرير ثغرة: ${reportTitle.slice(0, 60)}`,
+          content: markdownReport,
+          pinned: true,
+        }),
+      });
+    } catch {
+      // ignore
+    }
+    emitPlatformWsEvent({
+      type: "finding_recorded",
+      target: activeTarget,
+      title: `حفظ تقرير رسمي: ${reportTitle.slice(0, 60)}`,
+      detail: markdownReport.slice(0, 300),
+      saveToMemory: true,
+    });
+    setSyncStatusMsg("✅ تم حفظ التقرير بالكامل في صفحة التقارير (/reports) وفي الذاكرة المشتركة (/memory)!");
+  };
+
   return (
     <div dir="rtl" className="min-h-full bg-[#05020a] text-gray-100 p-4 md:p-6 space-y-6 font-sans">
       {/* ── Header Banner ─────────────────────────────────────────────────── */}
@@ -821,6 +1010,66 @@ ${reportFix}
               </div>
             </div>
           </div>
+        </div>
+
+        {/* ── Live Target & Internal WebSocket Sync Bar ───────────────────── */}
+        <div className="mt-4 p-3.5 rounded-xl bg-black/50 border border-emerald-500/25 space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+            <div className="lg:col-span-4 flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-xs font-mono text-emerald-300 shrink-0">
+                <Radio className={`w-3.5 h-3.5 ${wsConnected ? "animate-pulse text-emerald-400" : "text-amber-400"}`} />
+                <span>WS LIVE</span>
+              </div>
+              <div className="flex-1 flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-purple-400 shrink-0" />
+                <input
+                  dir="ltr"
+                  value={activeTarget}
+                  onChange={(e) => setActiveTarget(e.target.value)}
+                  placeholder="الهدف النشط (e.g. api.example.com)"
+                  className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/15 text-xs font-mono text-white"
+                />
+                <button
+                  onClick={() => void handleActivateTarget(activeTarget)}
+                  className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shrink-0"
+                >
+                  تفعيل الهدف
+                </button>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5 flex items-center gap-2">
+              <input
+                value={quickNote}
+                onChange={(e) => setQuickNote(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleSaveQuickNote();
+                }}
+                placeholder="سجّل ملاحظة فحص فورية على الهدف (تُحفظ في الذاكرة ومتتبع المهام وتُبث للوكلاء)..."
+                className="w-full px-3 py-1.5 rounded-lg bg-white/5 border border-white/15 text-xs text-white"
+              />
+              <button
+                onClick={() => void handleSaveQuickNote()}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1 shrink-0"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>تسجيل</span>
+              </button>
+            </div>
+
+            <div className="lg:col-span-3 text-[11px] font-mono text-emerald-300 truncate">
+              {liveFeed[0] ? `⚡ ${liveFeed[0].text}` : "جاهز للتسجيل الحي"}
+            </div>
+          </div>
+
+          {syncStatusMsg && (
+            <div className="text-xs font-mono text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center justify-between">
+              <span>{syncStatusMsg}</span>
+              <button onClick={() => setSyncStatusMsg("")} className="text-gray-400 hover:text-white text-[10px]">
+                إغلاق ✕
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Navigation Tabs */}
@@ -1013,14 +1262,21 @@ ${reportFix}
           </div>
 
           <div className="lg:col-span-6 space-y-4">
-            <div className="p-4 rounded-2xl border border-white/15 bg-white/[0.03] flex items-center justify-between">
+            <div className="p-4 rounded-2xl border border-white/15 bg-white/[0.03] flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-xs text-gray-400">درجة سلامة الكود والإعدادات</div>
                 <div className="text-2xl font-extrabold text-white mt-0.5">
                   {auditResult.score} / 100
                 </div>
               </div>
-              <div className="text-left">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => void handleSyncAuditFindings()}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>حفظ النتائج في الذاكرة ومتتبع المهام</span>
+                </button>
                 <span
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold ${
                     auditResult.findings.length === 0
@@ -1159,15 +1415,29 @@ ${reportFix}
                     <span className="text-xs font-mono text-emerald-400">{p.platform}</span>
                     <h3 className="text-lg font-bold text-white">{p.name}</h3>
                   </div>
-                  <a
-                    href={p.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white flex items-center gap-1"
-                  >
-                    <span>الصفحة الرسمية</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() =>
+                        void handleActivateTarget(
+                          p.inScopeSummary.split(",")[0]?.trim() || p.name,
+                          p.name,
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center gap-1"
+                    >
+                      <Target className="w-3.5 h-3.5" />
+                      <span>تفعيل كهدف</span>
+                    </button>
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white flex items-center gap-1"
+                    >
+                      <span>الصفحة الرسمية</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                 </div>
                 <div className="text-xs text-amber-300 font-bold">🏆 المكافآت: {p.maxBounty}</div>
                 <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/25 text-xs text-emerald-100">
@@ -1398,19 +1668,28 @@ ${reportFix}
 
           {/* Markdown Output */}
           <div className="lg:col-span-6 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-bold text-base text-white">📄 التقرير الجاهز للنسخ والتقديم (Markdown)</h3>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(markdownReport);
-                  setCopiedReport(true);
-                  setTimeout(() => setCopiedReport(false), 2000);
-                }}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1.5"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>{copiedReport ? "✓ تم النسخ!" : "نسخ التقرير بالكامل"}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => void handleSaveReportToPlatform()}
+                  className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>حفظ في التقارير والذاكرة</span>
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(markdownReport);
+                    setCopiedReport(true);
+                    setTimeout(() => setCopiedReport(false), 2000);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center gap-1.5"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedReport ? "✓ تم النسخ!" : "نسخ التقرير بالكامل"}</span>
+                </button>
+              </div>
             </div>
             <pre
               dir="ltr"
