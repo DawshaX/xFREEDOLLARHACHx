@@ -1,0 +1,30 @@
+kind = "web"
+previewPath = "/kali/"
+title = "CyberNova Kali Panel"
+version = "1.0.0"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/kali/" ]
+localPort = 3000
+
+[services.development]
+run = "PORT=3000 BASE_PATH=/kali/ pnpm --filter @workspace/kali-panel run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/kali-panel", "run", "build" ]
+publicDir = "artifacts/kali-panel/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "3000"
+BASE_PATH = "/kali/"
+  
