@@ -14,8 +14,15 @@ import { scheduleGC } from "./lib/gc-scheduler";
 import { forceOllamaDefault } from "./lib/ai";
 import { initLocalAgentWss } from "./routes/local-agent";
 
-const rawPort = process.env["PORT"];
-if (!rawPort) throw new Error("PORT environment variable is required but was not provided.");
+process.on("unhandledRejection", (reason) => {
+  logger.warn({ reason }, "Unhandled promise rejection caught safely (standalone mode)");
+});
+
+process.on("uncaughtException", (err) => {
+  logger.warn({ err }, "Uncaught exception caught safely (standalone mode)");
+});
+
+const rawPort = process.env["PORT"] || "8080";
 const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${rawPort}"`);
 
@@ -39,21 +46,23 @@ server.on("upgrade", (req, socket, head) => {
   }
 });
 
-server.listen(port, () => {
-  logger.info({ port }, "Server listening");
+server.listen(port, "127.0.0.1", () => {
+  logger.info({ port }, "Server listening on 127.0.0.1");
 
-  forceOllamaDefault().catch(e => logger.error({ err: e }, "forceOllamaDefault error"));
-  runCveMigrations().catch(e => logger.error({ err: e }, "CVE migrations error"));
-  runSentinelMigrations().catch(e => logger.error({ err: e }, "SENTINEL migrations error"));
+  if (process.env.DATABASE_URL) {
+    forceOllamaDefault().catch(e => logger.error({ err: e }, "forceOllamaDefault error"));
+    runCveMigrations().catch(e => logger.error({ err: e }, "CVE migrations error"));
+    runSentinelMigrations().catch(e => logger.error({ err: e }, "SENTINEL migrations error"));
 
-  try { startScheduler(); } catch (e) { logger.error({ err: e }, "Failed to start cron scheduler"); }
-  try { startWatchdog(); } catch (e) { logger.error({ err: e }, "Failed to start watchdog"); }
-  try { startKeyManagerLoop(); } catch (e) { logger.error({ err: e }, "Failed to start key manager"); }
-  try { startCveMonitor(); } catch (e) { logger.error({ err: e }, "Failed to start CVE monitor"); }
+    try { startScheduler(); } catch (e) { logger.error({ err: e }, "Failed to start cron scheduler"); }
+    try { startWatchdog(); } catch (e) { logger.error({ err: e }, "Failed to start watchdog"); }
+    try { startKeyManagerLoop(); } catch (e) { logger.error({ err: e }, "Failed to start key manager"); }
+    try { startCveMonitor(); } catch (e) { logger.error({ err: e }, "Failed to start CVE monitor"); }
+  } else {
+    logger.info("Running in standalone mode (no DATABASE_URL configured)");
+  }
 
   scheduleGC();
-
-  logger.info("WebSocket agent endpoint: wss://<domain>/api/local-agent/ws");
 });
 
 server.on("error", (err) => {
