@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
       - name: Upload static safe dashboard only
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: platform/public
       - name: Deploy to GitHub Pages
