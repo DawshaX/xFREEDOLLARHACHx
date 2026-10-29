@@ -23,6 +23,16 @@ import {
   TACTICAL_DOCTRINE_MATRIX,
   executeAgentMasterOrchestration,
 } from "../lib/agent-tactical-brain";
+import {
+  WORKSTATION_ENVIRONMENTS_12,
+  MSF_SAFE_MODULES,
+  loadBrainState,
+  runWorkstationProxyRepeater,
+  runWorkstationMsfConsole,
+  runWorkstationTerminal,
+  tickAutonomousDaemon,
+  addAutonomousMultiTask,
+} from "../lib/autonomous-daemon";
 
 const router: IRouter = Router();
 
@@ -1362,12 +1372,12 @@ router.get("/deep-research/self-awareness", (req: Request, res: Response) => {
     platformVersion: "CyberNova 2099 Universal Autonomous Intelligence Edition",
     activeTarget,
     selfAwarenessSummary: {
-      deepEnginesCount: 16,
+      deepEnginesCount: 20,
       kaliToolsIntegrated: KALI_LINUX_COMPLETE_ARSENAL.length, // 64
       kaliCategoriesCount: corpusStats.kaliCategoriesCount, // 12
-      githubArsenalCount: GITHUB_SECURITY_ARSENAL.length, // 36
+      githubArsenalCount: GITHUB_SECURITY_ARSENAL.length, // 42
       vulnPrimitivesCount: corpusStats.vulnPrimitivesCount, // 24
-      totalIndexedKnowledgeItems: corpusStats.totalIndexedKnowledgeItems, // 2,572+
+      totalIndexedKnowledgeItems: corpusStats.totalIndexedKnowledgeItems, // 2,578+
       globalPlatformsCount: GLOBAL_BUG_BOUNTY_PLATFORMS.length,
       memoriesStored: memories.length,
       missionFindings: findings.length,
@@ -1394,6 +1404,61 @@ router.post("/deep-research/agent-master-run", async (req: Request, res: Respons
   const target = String(req.body?.target || "bughunters.google.com");
   const result = await executeAgentMasterOrchestration(target);
   res.json(result);
+});
+
+// ── 17. GET /api/deep-research/workstation-state (24/7 Cloud Brain & Workstation State) ─
+router.get("/deep-research/workstation-state", (_req: Request, res: Response) => {
+  const brainState = loadBrainState();
+  res.json({
+    brainState,
+    environments: WORKSTATION_ENVIRONMENTS_12,
+    msfModules: MSF_SAFE_MODULES,
+  });
+});
+
+// ── 18. POST /api/deep-research/workstation-proxy-repeater (Burp/Caido Repeater & AuthDiff) ─
+router.post("/deep-research/workstation-proxy-repeater", async (req: Request, res: Response) => {
+  const result = await runWorkstationProxyRepeater({
+    url: String(req.body?.url || "https://bughunters.google.com"),
+    method: String(req.body?.method || "GET"),
+    headersText: String(req.body?.headersText || ""),
+    compareSessionBHeader: String(req.body?.compareSessionBHeader || ""),
+    codecInput: String(req.body?.codecInput || ""),
+  });
+  res.json(result);
+});
+
+// ── 19. POST /api/deep-research/workstation-msf-console (MSF6-Verify Safe Console) ─
+router.post("/deep-research/workstation-msf-console", async (req: Request, res: Response) => {
+  const result = await runWorkstationMsfConsole({
+    command: String(req.body?.command || "check"),
+    moduleId: req.body?.moduleId ? String(req.body.moduleId) : undefined,
+    target: req.body?.target ? String(req.body.target) : undefined,
+  });
+  res.json(result);
+});
+
+// ── 20. POST /api/deep-research/workstation-terminal & workstation-multitask ─
+router.post("/deep-research/workstation-terminal", async (req: Request, res: Response) => {
+  const result = await runWorkstationTerminal({
+    command: String(req.body?.command || "status"),
+    target: req.body?.target ? String(req.body.target) : undefined,
+  });
+  res.json(result);
+});
+
+router.post("/deep-research/workstation-multitask", async (req: Request, res: Response) => {
+  const action = String(req.body?.action || "tick");
+  const target = String(req.body?.target || "bughunters.google.com");
+  const titleAr = String(req.body?.titleAr || `مهمة فحص ومراقبة مستمرة: ${target}`);
+  const brainState =
+    action === "add"
+      ? await addAutonomousMultiTask({ titleAr, target })
+      : await tickAutonomousDaemon(target);
+  res.json({
+    ok: true,
+    brainState,
+  });
 });
 
 export default router;

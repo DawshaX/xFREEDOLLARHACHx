@@ -1301,7 +1301,7 @@ const CHECKLISTS: ChecklistCategory[] = [
 ];
 
 export default function BugBountyStudio() {
-  const [activeTab, setActiveTab] = useState<"deep2099" | "encyclopedia" | "auditor" | "scope" | "checklist" | "report">("deep2099");
+  const [activeTab, setActiveTab] = useState<"deep2099" | "workstation" | "encyclopedia" | "auditor" | "scope" | "checklist" | "report">("deep2099");
 
   // Tab 0 (2099 Engine) state: Deep Research Pipeline, JS Analyzer, Auth Matrix, Config Auditor, Zero-FP Gate & GitHub Arsenal
   const [deepLoading, setDeepLoading] = useState<string | null>(null);
@@ -1530,6 +1530,138 @@ export default function BugBountyStudio() {
       remediationAr: string;
     }>;
   } | null>(null);
+
+  // 24/7 Cloud Brain & Multi-Window Cyber Workstation State
+  const [workstationData, setWorkstationData] = useState<{
+    brainState: {
+      schemaVersion: string;
+      platformName: string;
+      repository: string;
+      liveUrl: string;
+      daemonStatus: {
+        state: string;
+        autonomousCyclesCompleted: number;
+        lastHeartbeatAt: string;
+        cloudMemorySynced: boolean;
+        activeWorkers: number;
+        selfEvolutionLevel: string;
+      };
+      whereAmINow: {
+        activeTarget: string;
+        activeProgram: string;
+        currentStageNumber: number;
+        totalStages: number;
+        currentStageTitleAr: string;
+        overallProgressPercent: number;
+        nextAutonomousActionAr: string;
+      };
+      whatDidIReach: {
+        summaryAr: string;
+        metrics: {
+          totalIndexedKnowledgeItems: number;
+          deepEnginesActive: number;
+          kaliToolsReady: number;
+          githubArsenalProjects: number;
+          workstationEnvironments: number;
+          extractedArtifactsCount: number;
+          parallelTasksActive: number;
+          zeroFpVerifiedCount: number;
+        };
+      };
+      whatsNewLog: Array<{
+        id: string;
+        ts: string;
+        category: string;
+        titleAr: string;
+        detailAr: string;
+      }>;
+      extractedArtifactsVault: Array<{
+        id: string;
+        type: string;
+        target: string;
+        titleAr: string;
+        value: string;
+        tool: string;
+        verified: boolean;
+        ts: string;
+      }>;
+      multiTaskQueue: Array<{
+        id: string;
+        titleAr: string;
+        target: string;
+        engine: string;
+        status: string;
+        progress: number;
+        lastOutput: string;
+      }>;
+    };
+    environments: Array<{
+      id: string;
+      name: string;
+      badge: string;
+      category: string;
+      toolsIncluded: string[];
+      purposeAr: string;
+      status: string;
+    }>;
+    msfModules: Array<{
+      id: string;
+      path: string;
+      nameAr: string;
+      cwe: string;
+      severity: string;
+      descriptionAr: string;
+    }>;
+  } | null>(null);
+
+  const [repeaterUrl, setRepeaterUrl] = useState("https://bughunters.google.com");
+  const [repeaterMethod, setRepeaterMethod] = useState("GET");
+  const [repeaterHeaders, setRepeaterHeaders] = useState("Accept: application/json, text/html\nX-Audit-Scope: Safe-Harbor");
+  const [repeaterSessionB, setRepeaterSessionB] = useState("");
+  const [repeaterCodecInput, setRepeaterCodecInput] = useState("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9");
+  const [repeaterResult, setRepeaterResult] = useState<{
+    targetUrl: string;
+    hostname: string;
+    method: string;
+    status: number;
+    timeMs: number;
+    bodyLength: number;
+    sha256: string;
+    missingSecHeaders: string[];
+    rawRequestText: string;
+    rawResponseText: string;
+    authDiff: {
+      executed: boolean;
+      sessionBStatus: number;
+      sessionBHash: string;
+      identicalBody: boolean;
+      verdictAr: string;
+    } | null;
+    decoderOutput: {
+      input: string;
+      base64Encode: string;
+      base64Decode: string;
+      urlEncode: string;
+      hexEncode: string;
+      sha256Hash: string;
+    };
+  } | null>(null);
+
+  const [msfModuleId, setMsfModuleId] = useState("shodan_osint");
+  const [msfCommand, setMsfCommand] = useState("check");
+  const [msfResult, setMsfResult] = useState<{
+    activeModule: { id: string; path: string; nameAr: string; cwe: string; severity: string };
+    rhosts: string;
+    output: string;
+  } | null>(null);
+
+  const [termCommand, setTermCommand] = useState("status");
+  const [termOutput, setTermOutput] = useState<string>(
+    "kali@cybernova-2099:~# status\n[+] 24/7 Autonomous Background Daemon & GitHub Cloud Brain Ready.\n[+] Type 'help' or click any quick command chip above to execute.",
+  );
+
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskTarget, setNewTaskTarget] = useState("");
 
   // Tab 1 state: Encyclopedia
   const [searchQuery, setSearchQuery] = useState("");
@@ -1902,6 +2034,149 @@ ${reportFix}
     }
   };
 
+  const refreshWorkstationState = async () => {
+    try {
+      const data = await jsonRequest<NonNullable<typeof workstationData>>("/deep-research/workstation-state");
+      // Also check live GitHub repository cloud checkpoint if available
+      try {
+        const ghRes = await fetch(
+          "https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/state/cybernova-brain-state.json",
+          { cache: "no-store" },
+        );
+        if (ghRes.ok) {
+          const ghBrain = await ghRes.json();
+          if (
+            ghBrain?.daemonStatus?.autonomousCyclesCompleted >
+            (data.brainState?.daemonStatus?.autonomousCyclesCompleted || 0)
+          ) {
+            data.brainState = ghBrain;
+          }
+        }
+      } catch {
+        // use local/server state
+      }
+      setWorkstationData(data);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRunProxyRepeater = async () => {
+    setDeepLoading("repeater");
+    try {
+      const res = await jsonRequest<NonNullable<typeof repeaterResult>>("/deep-research/workstation-proxy-repeater", {
+        method: "POST",
+        body: JSON.stringify({
+          url: repeaterUrl || `https://${activeTarget}`,
+          method: repeaterMethod,
+          headersText: repeaterHeaders,
+          compareSessionBHeader: repeaterSessionB,
+          codecInput: repeaterCodecInput,
+        }),
+      });
+      setRepeaterResult(res);
+      setSyncStatusMsg(`✅ تم تنفيذ طلب Burp/Caido Repeater على ${res.hostname} (HTTP ${res.status} · SHA256=${res.sha256}) وحفظه في خزنة المستخرجات!`);
+      void refreshWorkstationState();
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleRunMsfConsole = async (cmdOverride?: string, modOverride?: string) => {
+    setDeepLoading("msf");
+    try {
+      const res = await jsonRequest<NonNullable<typeof msfResult>>("/deep-research/workstation-msf-console", {
+        method: "POST",
+        body: JSON.stringify({
+          command: cmdOverride ?? msfCommand,
+          moduleId: modOverride ?? msfModuleId,
+          target: activeTarget,
+        }),
+      });
+      setMsfResult(res);
+      setSyncStatusMsg(`✅ تم تشغيل وحدة التحقق [${res.activeModule.path}] في كونسول msf6-verify وحفظ النتيجة في المستخرجات!`);
+      void refreshWorkstationState();
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleRunTerminal = async (cmdOverride?: string) => {
+    setDeepLoading("terminal");
+    try {
+      const cmdToRun = cmdOverride ?? termCommand;
+      const res = await jsonRequest<{ command: string; output: string }>("/deep-research/workstation-terminal", {
+        method: "POST",
+        body: JSON.stringify({
+          command: cmdToRun,
+          target: activeTarget,
+        }),
+      });
+      setTermOutput(res.output);
+      setSyncStatusMsg(`✅ تم تنفيذ أمر الطرفية (${res.command}) وتحديث سجل المستخرجات!`);
+      void refreshWorkstationState();
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleTriggerDaemonPulse = async () => {
+    setDeepLoading("daemon-pulse");
+    try {
+      const res = await jsonRequest<{ ok: boolean; brainState: NonNullable<typeof workstationData>["brainState"] }>(
+        "/deep-research/workstation-multitask",
+        {
+          method: "POST",
+          body: JSON.stringify({ action: "tick", target: activeTarget }),
+        },
+      );
+      if (workstationData && res.brainState) {
+        setWorkstationData({ ...workstationData, brainState: res.brainState });
+      } else {
+        void refreshWorkstationState();
+      }
+      setSyncStatusMsg(`✅ اكتملت نبضة العمل والتطوير الذاتي 24/7 وتم تحديث خزنة المستخرجات وذاكرة GitHub السحابية!`);
+      void refreshSelfAwareness(activeTarget);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleAddParallelTask = async () => {
+    const tTarget = (newTaskTarget || activeTarget).trim();
+    const tTitle = (newTaskTitle || `مهمة مراقبة وفحص مستمر 24/7: ${tTarget}`).trim();
+    setDeepLoading("add-task");
+    try {
+      const res = await jsonRequest<{ ok: boolean; brainState: NonNullable<typeof workstationData>["brainState"] }>(
+        "/deep-research/workstation-multitask",
+        {
+          method: "POST",
+          body: JSON.stringify({ action: "add", target: tTarget, titleAr: tTitle }),
+        },
+      );
+      setNewTaskTitle("");
+      setNewTaskTarget("");
+      if (workstationData && res.brainState) {
+        setWorkstationData({ ...workstationData, brainState: res.brainState });
+      } else {
+        void refreshWorkstationState();
+      }
+      setSyncStatusMsg(`✅ تمت إضافة المهمة المتوازية (${tTitle}) إلى طابور العمل المستمر 24/7!`);
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
   useEffect(() => {
     void jsonRequest<{ tools: typeof arsenalTools }>("/deep-research/arsenal")
       .then((d) => setArsenalTools(d.tools || []))
@@ -1916,6 +2191,7 @@ ${reportFix}
       .then((d) => setPrimitivesList(d.primitives || []))
       .catch(() => {});
     void refreshSelfAwareness();
+    void refreshWorkstationState();
     void handleSearchCorpus2400("", "all");
   }, []);
 
@@ -2281,12 +2557,83 @@ ${reportFix}
               </button>
             </div>
           )}
+
+          {/* ── 24/7 Persistent GitHub Cloud Brain & Continuity Banner ("أنا فين؟ وصلت لإيه؟ إيه الجديد؟ المستخرجات") ── */}
+          {workstationData?.brainState && (
+            <div className="p-3.5 rounded-xl bg-gradient-to-l from-purple-950/50 via-black/70 to-emerald-950/40 border border-purple-500/35 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-extrabold text-emerald-300">
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 font-mono text-[10px] text-emerald-300">
+                    🟢 {workstationData.brainState.daemonStatus.state} · الدورات المكتملة: #{workstationData.brainState.daemonStatus.autonomousCyclesCompleted}
+                  </span>
+                  <span>☁️ ذاكرة GitHub السحابية الدائمة ومتتبع الاستمرارية الحي (يعرف دايماً هو فين ووصل لإيه)</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setActiveTab("workstation")}
+                    className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-[11px] font-extrabold text-white"
+                  >
+                    🖥️ فتح كمبيوتر الشغل وتعدد النوافذ (Burp/Caido + MSF + Terminal)
+                  </button>
+                  <button
+                    onClick={() => void handleTriggerDaemonPulse()}
+                    disabled={deepLoading === "daemon-pulse"}
+                    className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-[11px] font-bold text-white"
+                  >
+                    {deepLoading === "daemon-pulse" ? "⚡ جاري التحديث الذاتي..." : "⚡ تشغيل دورة تطور وفحص ذاتي الآن"}
+                  </button>
+                  <a
+                    href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/desktop`}
+                    className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-bold text-sky-200"
+                  >
+                    🪟 سطح المكتب الكامل
+                  </a>
+                  <a
+                    href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/kali-terminal`}
+                    className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-bold text-amber-200"
+                  >
+                    💻 طرفية كالي الكاملة
+                  </a>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 text-xs">
+                <div className="p-2.5 rounded-lg bg-black/50 border border-white/10">
+                  <div className="font-bold text-amber-300 mb-0.5">📍 هو فين دلوقتي؟ (Where Am I Now)</div>
+                  <div className="text-gray-200 leading-relaxed">
+                    الهدف: <span className="font-mono text-emerald-300">{workstationData.brainState.whereAmINow.activeTarget}</span> ({workstationData.brainState.whereAmINow.overallProgressPercent}%) — {workstationData.brainState.whereAmINow.currentStageTitleAr}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-black/50 border border-white/10">
+                  <div className="font-bold text-sky-300 mb-0.5">📈 وصل لإيه؟ (What Did I Reach)</div>
+                  <div className="text-gray-200 leading-relaxed">
+                    {workstationData.brainState.whatDidIReach.metrics.totalIndexedKnowledgeItems.toLocaleString()}+ نمط أمني | {workstationData.brainState.whatDidIReach.metrics.kaliToolsReady} أداة كالي | {workstationData.brainState.whatDidIReach.metrics.githubArsenalProjects} مشروع GitHub | {workstationData.brainState.whatDidIReach.metrics.workstationEnvironments} بيئة عمل
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-black/50 border border-white/10">
+                  <div className="font-bold text-purple-300 mb-0.5">🆕 إيه الجديد؟ (What&apos;s New)</div>
+                  <div className="text-gray-200 leading-relaxed">
+                    {workstationData.brainState.whatsNewLog[0]?.titleAr}: {workstationData.brainState.whatsNewLog[0]?.detailAr.slice(0, 110)}...
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-black/50 border border-white/10">
+                  <div className="font-bold text-emerald-300 mb-0.5">
+                    📦 المستخرجات والسجل ({workstationData.brainState.extractedArtifactsVault.length} غنيمة موثقة)
+                  </div>
+                  <div className="text-gray-200 font-mono text-[11px] leading-relaxed">
+                    {workstationData.brainState.extractedArtifactsVault[0]?.titleAr}: {workstationData.brainState.extractedArtifactsVault[0]?.value.slice(0, 95)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/10">
           {[
             { id: "deep2099", label: "🚀 محرك الاكتشاف العميق 2099 وترسانة GitHub", icon: Sparkles },
+            { id: "workstation", label: "🖥️ كمبيوتر الشغل وتعدد النوافذ والترمنال والذاكرة 24/7", icon: Terminal },
             { id: "encyclopedia", label: "📚 موسوعة الثغرات والكود الآمن", icon: BookOpen },
             { id: "auditor", label: "🔍 الفاحص الدفاعي للكود والـ Headers", icon: Code },
             { id: "scope", label: "🎯 نطاقات برامج HackerOne & Google VRP", icon: Globe },
@@ -3394,6 +3741,410 @@ ${reportFix}
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB WORKSTATION: Multi-Window Cyber Computer, Burp/Caido, MSF-Verify, Terminal & 24/7 Cloud Brain ── */}
+      {activeTab === "workstation" && (
+        <div className="space-y-6">
+          {/* 12 Integrated Security Environments Registry */}
+          {workstationData?.environments && (
+            <div className="rounded-2xl border border-purple-500/35 bg-gradient-to-l from-purple-950/35 via-[#0b0716] to-emerald-950/30 p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-mono text-purple-300">
+                    12 INTEGRATED SECURITY OS & WORKSTATION ENVIRONMENTS · MULTI-WINDOW CYBER RANGE
+                  </div>
+                  <h2 className="text-xl font-extrabold text-white mt-0.5">
+                    🖥️ كمبيوتر الشغل الشامل وتعدد النوافذ والبيئات المتكاملة (12 بيئة عمل حية)
+                  </h2>
+                  <p className="text-xs text-gray-300 mt-1">
+                    جميع البيئات والأدوات مدمجة ومتصلة بالذاكرة السحابية على GitHub وبالهدف النشط ({activeTarget}) مع دعم العمل المستمر 24/7 وتعدد المهام المتوازية.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/desktop`}
+                    className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-extrabold text-white"
+                  >
+                    🪟 فتح سطح المكتب الكامل متعدد النوافذ (/desktop)
+                  </a>
+                  <a
+                    href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/kali-terminal`}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-extrabold text-white"
+                  >
+                    💻 فتح طرفية كالي المستقلة (/kali-terminal)
+                  </a>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                {workstationData.environments.map((env) => (
+                  <div key={env.id} className="p-3 rounded-xl bg-black/50 border border-white/10 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">
+                        {env.badge}
+                      </span>
+                      <span className="text-[10px] font-mono text-emerald-400">● {env.status}</span>
+                    </div>
+                    <div className="font-bold text-white">{env.name}</div>
+                    <p className="text-[11px] text-gray-300 leading-relaxed">{env.purposeAr}</p>
+                    <div className="text-[10px] font-mono text-purple-300 pt-1 border-t border-white/10">
+                      🛠️ {env.toolsIncluded.slice(0, 5).join(" · ")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 4-Window Simultaneous Multi-Window Cyber Workbench Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* WINDOW 1: Burp Suite Pro / Caido / trex HTTP Repeater, AuthKit Diff & Decoder */}
+            <div className="rounded-2xl border border-amber-500/35 bg-[#0a0612] overflow-hidden flex flex-col">
+              <div className="px-4 py-2.5 bg-gradient-to-l from-amber-950/60 to-black border-b border-amber-500/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <span className="text-xs font-extrabold text-amber-300 mr-1">
+                    نافذة #1: 🦅 مختبر Burp Suite / Caido / trex (HTTP Repeater & AuthKit Diff & Decoder)
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-amber-200 px-2 py-0.5 rounded bg-amber-500/20">
+                  WINDOW 1 · PROXY & REPEATER
+                </span>
+              </div>
+
+              <div className="p-4 space-y-3 flex-1 text-xs">
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={repeaterMethod}
+                    onChange={(e) => setRepeaterMethod(e.target.value)}
+                    className="px-3 py-2 rounded-xl bg-black/60 border border-white/15 font-mono text-amber-300 font-bold"
+                  >
+                    <option value="GET">GET</option>
+                    <option value="HEAD">HEAD</option>
+                    <option value="OPTIONS">OPTIONS</option>
+                  </select>
+                  <input
+                    dir="ltr"
+                    value={repeaterUrl}
+                    onChange={(e) => setRepeaterUrl(e.target.value)}
+                    placeholder="https://bughunters.google.com/api/v1/..."
+                    className="flex-1 px-3 py-2 rounded-xl bg-black/60 border border-white/15 font-mono text-white"
+                  />
+                  <button
+                    onClick={() => void handleRunProxyRepeater()}
+                    disabled={deepLoading === "repeater"}
+                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 font-extrabold text-white"
+                  >
+                    {deepLoading === "repeater" ? "جاري الإرسال..." : "🚀 Send Request"}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] text-gray-300 mb-1">الترويسات المخصصة (Request Headers):</label>
+                    <textarea
+                      dir="ltr"
+                      rows={2}
+                      value={repeaterHeaders}
+                      onChange={(e) => setRepeaterHeaders(e.target.value)}
+                      className="w-full p-2 rounded-lg bg-black/60 border border-white/15 font-mono text-[11px] text-emerald-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-300 mb-1">
+                      ترويسة الجلسة الثانية للمقارنة (AuthKit Session B Diff — اختياري):
+                    </label>
+                    <input
+                      dir="ltr"
+                      value={repeaterSessionB}
+                      onChange={(e) => setRepeaterSessionB(e.target.value)}
+                      placeholder="Authorization: Bearer secondary_test_token"
+                      className="w-full p-2 rounded-lg bg-black/60 border border-white/15 font-mono text-[11px] text-purple-200 mb-1.5"
+                    />
+                    <input
+                      dir="ltr"
+                      value={repeaterCodecInput}
+                      onChange={(e) => setRepeaterCodecInput(e.target.value)}
+                      placeholder="Decoder / Encoder Input (Base64 / JWT / URL / Hex)"
+                      className="w-full p-2 rounded-lg bg-black/60 border border-white/15 font-mono text-[11px] text-sky-200"
+                    />
+                  </div>
+                </div>
+
+                {repeaterResult && (
+                  <div className="space-y-2.5 pt-2 border-t border-white/10">
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-black/60 p-2 rounded-lg border border-amber-500/30 font-mono text-[11px]">
+                      <span className="text-emerald-300">
+                        HTTP {repeaterResult.status} ({repeaterResult.timeMs}ms · {repeaterResult.bodyLength} bytes)
+                      </span>
+                      <span className="text-purple-300">SHA256: {repeaterResult.sha256}</span>
+                      <span className="text-amber-300">
+                        Missing Headers: {repeaterResult.missingSecHeaders.join(", ") || "None"}
+                      </span>
+                    </div>
+
+                    {repeaterResult.authDiff && (
+                      <div className="p-2 rounded-lg bg-purple-950/35 border border-purple-500/35 text-[11px] text-purple-200">
+                        {repeaterResult.authDiff.verdictAr}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <pre
+                        dir="ltr"
+                        className="p-2.5 rounded-lg bg-black/80 border border-white/10 text-[10px] font-mono text-amber-200 overflow-x-auto max-h-40"
+                      >
+                        {repeaterResult.rawRequestText}
+                      </pre>
+                      <pre
+                        dir="ltr"
+                        className="p-2.5 rounded-lg bg-black/80 border border-white/10 text-[10px] font-mono text-emerald-200 overflow-x-auto max-h-40"
+                      >
+                        {repeaterResult.rawResponseText}
+                      </pre>
+                    </div>
+
+                    <div className="p-2 rounded-lg bg-black/50 border border-white/10 font-mono text-[10px] text-sky-200 space-y-0.5" dir="ltr">
+                      <div>[Decoder] Base64 Encode: {repeaterResult.decoderOutput.base64Encode.slice(0, 70)}</div>
+                      <div>[Decoder] URL Encode   : {repeaterResult.decoderOutput.urlEncode.slice(0, 70)}</div>
+                      <div>[Decoder] SHA-256 Hash : {repeaterResult.decoderOutput.sha256Hash}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* WINDOW 2: Metasploit-Style Modular Advisory & Safe Verification Console (msf6-verify >) */}
+            <div className="rounded-2xl border border-rose-500/35 bg-[#0a0612] overflow-hidden flex flex-col">
+              <div className="px-4 py-2.5 bg-gradient-to-l from-rose-950/60 to-black border-b border-rose-500/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <span className="text-xs font-extrabold text-rose-300 mr-1">
+                    نافذة #2: 🛡️ كونسول التحقق المعياري والأدلة (msf6-verify Safe Advisory Console)
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-rose-200 px-2 py-0.5 rounded bg-rose-500/20">
+                  WINDOW 2 · MSF6-VERIFY
+                </span>
+              </div>
+
+              <div className="p-4 space-y-3 flex-1 text-xs">
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={msfModuleId}
+                    onChange={(e) => {
+                      setMsfModuleId(e.target.value);
+                      void handleRunMsfConsole("check", e.target.value);
+                    }}
+                    className="flex-1 px-3 py-2 rounded-xl bg-black/60 border border-white/15 font-mono text-rose-200"
+                  >
+                    {(workstationData?.msfModules || []).map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.path} — {m.nameAr}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => void handleRunMsfConsole("check", msfModuleId)}
+                    disabled={deepLoading === "msf"}
+                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 font-extrabold text-white"
+                  >
+                    {deepLoading === "msf" ? "جاري الفحص..." : "▶ Run Safe Check"}
+                  </button>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    dir="ltr"
+                    value={msfCommand}
+                    onChange={(e) => setMsfCommand(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleRunMsfConsole();
+                    }}
+                    placeholder="msf6-verify > check | set RHOSTS example.com | use shodan_osint"
+                    className="flex-1 px-3 py-2 rounded-xl bg-black/60 border border-white/15 font-mono text-emerald-300"
+                  />
+                  <button
+                    onClick={() => void handleRunMsfConsole()}
+                    className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 font-mono text-white"
+                  >
+                    تنفيذ
+                  </button>
+                </div>
+
+                <pre
+                  dir="ltr"
+                  className="p-3.5 rounded-xl bg-black/90 border border-rose-500/30 font-mono text-[11px] text-emerald-300 overflow-x-auto min-h-[210px] leading-relaxed"
+                >
+                  {msfResult
+                    ? msfResult.output
+                    : `msf6-verify (auxiliary/gather/shodan_internetdb_osint) > ready\n[*] Target RHOSTS : ${activeTarget}\n[*] 10 Non-Destructive Advisory & Verification Modules Loaded.\n[*] Click 'Run Safe Check' or select a module above to execute.`}
+                </pre>
+              </div>
+            </div>
+
+            {/* WINDOW 3: Kali Linux 2026.3 Interactive Security Terminal */}
+            <div className="rounded-2xl border border-emerald-500/35 bg-[#0a0612] overflow-hidden flex flex-col">
+              <div className="px-4 py-2.5 bg-gradient-to-l from-emerald-950/60 to-black border-b border-emerald-500/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <span className="text-xs font-extrabold text-emerald-300 mr-1">
+                    نافذة #3: 💻 طرفية Kali Linux 2026.3 التفاعلية الشاملة (kali@cybernova-2099:~#)
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-200 px-2 py-0.5 rounded bg-emerald-500/20">
+                  WINDOW 3 · KALI CLI
+                </span>
+              </div>
+
+              <div className="p-4 space-y-3 flex-1 text-xs">
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    "status",
+                    "artifacts",
+                    "missions",
+                    `subfinder -d ${activeTarget}`,
+                    `nmap -sV ${activeTarget}`,
+                    `katana -u https://${activeTarget}`,
+                    `nuclei -u https://${activeTarget}`,
+                    `trex -u https://${activeTarget}`,
+                    `agent-master ${activeTarget}`,
+                    "help",
+                  ].map((cmdChip) => (
+                    <button
+                      key={cmdChip}
+                      onClick={() => {
+                        setTermCommand(cmdChip);
+                        void handleRunTerminal(cmdChip);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/30 font-mono text-[10px] text-emerald-200"
+                    >
+                      $ {cmdChip}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    dir="ltr"
+                    value={termCommand}
+                    onChange={(e) => setTermCommand(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleRunTerminal();
+                    }}
+                    placeholder="kali@cybernova-2099:~# enter command..."
+                    className="flex-1 px-3 py-2 rounded-xl bg-black/60 border border-white/15 font-mono text-emerald-300"
+                  />
+                  <button
+                    onClick={() => void handleRunTerminal()}
+                    disabled={deepLoading === "terminal"}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 font-extrabold text-white"
+                  >
+                    {deepLoading === "terminal" ? "يركض..." : "Run CLI"}
+                  </button>
+                </div>
+
+                <pre
+                  dir="ltr"
+                  className="p-3.5 rounded-xl bg-black/90 border border-emerald-500/30 font-mono text-[11px] text-emerald-300 overflow-x-auto min-h-[210px] max-h-[280px] overflow-y-auto leading-relaxed"
+                >
+                  {termOutput}
+                </pre>
+              </div>
+            </div>
+
+            {/* WINDOW 4: 24/7 Parallel Multi-Task Queue & Extracted Artifacts Vault */}
+            <div className="rounded-2xl border border-sky-500/35 bg-[#0a0612] overflow-hidden flex flex-col">
+              <div className="px-4 py-2.5 bg-gradient-to-l from-sky-950/60 to-black border-b border-sky-500/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <span className="text-xs font-extrabold text-sky-300 mr-1">
+                    نافذة #4: 🤖 المهام المتعددة 24/7 + خزنة المستخرجات والغنائم + ذاكرة GitHub
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-sky-200 px-2 py-0.5 rounded bg-sky-500/20">
+                  WINDOW 4 · 24/7 DAEMON & VAULT
+                </span>
+              </div>
+
+              <div className="p-4 space-y-3 flex-1 text-xs">
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    placeholder="عنوان المهمة المتوازية الجديدة (مثلاً: مراقبة نطاقات وحدود صلاحيات الهدف)..."
+                    className="flex-1 px-3 py-2 rounded-xl bg-black/60 border border-white/15 text-white"
+                  />
+                  <input
+                    dir="ltr"
+                    value={newTaskTarget}
+                    onChange={(e) => setNewTaskTarget(e.target.value)}
+                    placeholder={activeTarget}
+                    className="w-44 px-3 py-2 rounded-xl bg-black/60 border border-white/15 font-mono text-emerald-300"
+                  />
+                  <button
+                    onClick={() => void handleAddParallelTask()}
+                    disabled={deepLoading === "add-task"}
+                    className="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 font-extrabold text-white"
+                  >
+                    + إضافة مهمة 24/7
+                  </button>
+                </div>
+
+                {workstationData?.brainState && (
+                  <div className="space-y-3">
+                    <div>
+                      <div className="font-bold text-sky-300 mb-1.5">
+                        🔄 طابور المهام المتعددة التي تعمل في الخلفية ({workstationData.brainState.multiTaskQueue.length} مهام نشطة):
+                      </div>
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                        {workstationData.brainState.multiTaskQueue.map((task) => (
+                          <div key={task.id} className="p-2 rounded-lg bg-black/60 border border-white/10">
+                            <div className="flex items-center justify-between font-bold text-white">
+                              <span>{task.titleAr}</span>
+                              <span className="text-[10px] font-mono text-emerald-400">
+                                {task.progress}% · {task.status}
+                              </span>
+                            </div>
+                            <div className="text-[10px] font-mono text-gray-300 mt-0.5">{task.lastOutput}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="font-bold text-emerald-300 mb-1.5">
+                        📦 خزنة المستخرجات والغنائم والسجل الحي ({workstationData.brainState.extractedArtifactsVault.length} مستخرج موثق):
+                      </div>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                        {workstationData.brainState.extractedArtifactsVault.map((art) => (
+                          <div key={art.id} className="p-2 rounded-lg bg-emerald-950/20 border border-emerald-500/25">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-emerald-200">{art.titleAr}</span>
+                              <span className="text-[10px] font-mono text-purple-300">{art.tool}</span>
+                            </div>
+                            <div className="text-[11px] font-mono text-gray-200 mt-0.5" dir="ltr">
+                              {art.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

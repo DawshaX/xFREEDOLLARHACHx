@@ -1,0 +1,31 @@
+name: CyberNova 24/7 Autonomous Cloud Brain Pulse
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cloud-brain-pulse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Execute Autonomous Cloud Brain Pulse
+        run: node scripts/autonomous-brain-pulse.mjs
+
+      - name: Commit & Push Updated Cloud Memory State
+        run: |
+          git config user.name "CyberNova 2099 Cloud Brain"
+          git config user.email "cybernova-brain@users.noreply.github.com"
+          git add state/cybernova-brain-state.json artifacts/kali-panel/public/state/cybernova-brain-state.json
+          git diff --staged --quiet || (git commit -m "chore(cloud-brain): autonomous 24/7 pulse checkpoint [skip ci]" && git push origin main)

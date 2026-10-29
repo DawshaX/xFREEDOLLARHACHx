@@ -104,5 +104,20 @@
   3. **ربط جميع الوكلاء في المنصة (`LiveAgent`, `Autonomous Agent`, `NovaAgent`, `KaliGPT`, `Chat`) بالتنفيذ الحي:**
      - تحديث `app.ts` و`ollama-proxy.ts` و`ollama-browser.ts` بحيث يبث الوكيل الحي (`LiveAgent`) ومشغل المهام الذاتي (`Agent`) استدعاءات الأدوات الحقيقية (`tool_call` و`tool_result`) ومخرجات المراحل الخمس مباشرة عبر `SSE` و`NDJSON` ويسجلها في الذاكرة (`/memory`) ومتتبع المهام (`/missions`).
 
+### المرحلة 11: محرك العمل المستمر 24/7 في الخلفية، ذاكرة GitHub السحابية الدائمة، وكمبيوتر الشغل متعدد النوافذ (`autonomous-daemon.ts` & `state/cybernova-brain-state.json`)
+- **ذاكرة GitHub السحابية الدائمة ونبضة العمل المستمر 24/7 (`state/cybernova-brain-state.json` + `.github/workflows/autonomous-brain-pulse.yml`):**
+  - إنشاء ملف الحالة السحابي الموحد `state/cybernova-brain-state.json` وسكريبت `scripts/autonomous-brain-pulse.mjs` مع سير عمل GitHub Actions يعمل تلقائياً وبشكل دوري ليحفظ:
+    - **📍 أنا فين دلوقتي (`whereAmINow`):** الهدف النشط، المرحلة الحالية (`المرحلة 6/6`)، ونسبة الإنجاز (`100%`).
+    - **📈 وصلت لإيه (`whatDidIReach`):** إحصائيات شاملة (`2,578` نمط أمني، `20` محركاً عميقاً، `64` أداة Kali، `42` مشروع GitHub، و`12` بيئة عمل).
+    - **🆕 إيه الجديد (`whatsNewLog`):** سجل زمني لكل دورة تطور وفحص ذاتي تمت في الخلفية.
+    - **📦 خزنة المستخرجات والغنائم (`extractedArtifactsVault`):** جميع عناوين IP والمنافذ، مسارات الـ JS، فحوصات الترويسات وCORS، سلاسل الثغرات المركبة، وبصمات `Zero-FP SHA-256`.
+    - **🔄 طابور المهام المتعددة المتوازية (`multiTaskQueue`):** مهام متوازية تعمل باستمرار دون توقف.
+- **كمبيوتر الشغل متعدد النوافذ والبيئات الـ 12 (`activeTab === "workstation"` في `BugBountyStudio.tsx` + `/desktop` + `/kali-terminal`):**
+  1. **نافذة #1 — 🦅 مختبر `Burp Suite Pro / Caido / trex` (`POST /api/deep-research/workstation-proxy-repeater`):** فاحص طلبات واستجابات HTTP الخام، مقارنة الجلسات التفاضلية (`AuthKit Session B Diff`), وحاسبة فك وترميز البيانات (`Base64`, `URL`, `Hex`, `SHA-256`).
+  2. **نافذة #2 — 🛡️ كونسول التحقق المعياري والأدلة (`msf6-verify >` — `POST /api/deep-research/workstation-msf-console`):** يضم `10` وحدات تحقق آمنة غير مدمرة (`auxiliary/gather/shodan_internetdb_osint`, `auxiliary/scanner/http/security_headers_cors`, `auxiliary/scanner/http/js_endpoint_miner`, `auxiliary/scanner/http/bola_differential_matrix`, `auxiliary/analyze/combinatorial_4hop_chain`, إلخ).
+  3. **نافذة #3 — 💻 طرفية `Kali Linux 2026.3` التفاعلية (`kali@cybernova-2099:~#` — `POST /api/deep-research/workstation-terminal`):** تنفيذ فوري لأوامر `subfinder`, `nmap`, `katana`, `nuclei`, `trex`, `agent-master`, `status`, `artifacts`, `missions`.
+  4. **نافذة #4 — 🤖 مدير المهام المتعددة 24/7 وخزنة المستخرجات (`POST /api/deep-research/workstation-multitask`):** إضافة مهام متوازية جديدة للعمل المستمر وعرض خزنة الغنائم الموثقة.
+
+
 
 

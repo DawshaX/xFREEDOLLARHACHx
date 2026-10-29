@@ -22,6 +22,7 @@ import {
 import { getAllMemories, getMemoryCount, saveMemory } from "./routes/memory";
 import { broadcastLiveEvent } from "./routes/live-events";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
+import { startAutonomousBackgroundDaemon } from "./lib/autonomous-daemon";
 
 process.on("unhandledRejection", (reason) => {
   logger.warn({ reason }, "Unhandled promise rejection caught safely (standalone mode)");
@@ -204,6 +205,13 @@ server.listen(port, "127.0.0.1", () => {
     try { startCveMonitor(); } catch (e) { logger.error({ err: e }, "Failed to start CVE monitor"); }
   } else {
     logger.info("Running in standalone mode (no DATABASE_URL configured)");
+  }
+
+  try {
+    startAutonomousBackgroundDaemon();
+    logger.info("24/7 Autonomous Background Daemon & Cloud Brain State initialized");
+  } catch (e) {
+    logger.error({ err: e }, "Failed to start autonomous background daemon");
   }
 
   scheduleGC();
