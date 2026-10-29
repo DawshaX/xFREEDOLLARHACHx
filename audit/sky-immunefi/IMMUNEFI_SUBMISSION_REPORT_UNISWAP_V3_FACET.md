@@ -183,3 +183,24 @@ TokenAmounts memory expectedAmounts;
 _checkSlippage(expectedAmounts.amount0, min.amount0, poolConfig.maxSlippage);
 _checkSlippage(expectedAmounts.amount1, min.amount1, poolConfig.maxSlippage);
 ```
+
+---
+
+## Live Production Verification (`test_PoC4`: `$30,004,359.92 USD` Position `#1352494` on `GROVE_PAU_PROXY` @ Block `26,300,000`)
+
+In addition to `test_PoC1`–`test_PoC3`, `test_PoC4_liveGrovePAU_30MillionUSD_Position_1352494()` forks Ethereum Mainnet at **Block `26,300,000`** with **zero local deployments**, interacting directly with the live deployed production contracts:
+- **`GROVE_PAU_CONTROLLER`**: `0xbf83F5974B932c7D842254042717D6A2706CE5eE` (wired to live `PAU_BEACON` `0x829dC2b7E94B1954F0764E573f2E0d45Afa28199` and live `UNISWAP_V3_FACET` `0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab`)
+- **`GROVE_PAU_PROXY`**: `0x0DcD9298e163dFD3c0B5b00F0d9093C36e40A153`
+- **Live Active Uniswap V3 NFT**: `Token ID 1352494` (`AUSD/USDC` 1bps pool `0xbAFeAd7c60Ea473758ED6c6021505E8BBd7e8E5d`, `tickLower = -10`, `tickUpper = 10`, `liquidity = 30013312755563770`, holding **`16,215,547.30 AUSD` + `13,788,812.62 USDC` = `$30,004,359.92 USD`**)
+- **Live On-Chain Configuration**: `maxSlippage = 0.999e18` (`0.1%`), `twapSecondsAgo = 600` (`10 minutes`), `removeLiquidity` rate limits = `type(uint256).max` (`UNLIMITED`).
+
+```text
+Ran 1 test for test/mainnet-fork/PoC_UniswapV3_Bypass.t.sol:PoC_LiveGrovePAU_30M_Position_Test
+[PASS] test_PoC4_liveGrovePAU_30MillionUSD_Position_1352494() (gas: 1927058)
+Logs:
+  LIVE GROVE_PAU_PROXY Position #1352494 Unmanipulated AUSD: 16215547.299075
+  LIVE GROVE_PAU_PROXY Position #1352494 Unmanipulated USDC: 13788812.616748
+  Withdrawn AUSD at manipulated spot: 0.000000
+  Withdrawn USDC at manipulated spot: 30011813.440330
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.72s
+```
