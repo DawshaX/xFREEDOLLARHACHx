@@ -1,0 +1,25 @@
+{
+  "name": "nova-security-platform",
+  "version": "0.1.0",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "description": "NOVA / xFREEDOLLARHACHx — authorized security research workspace. Safe read-only control plane; legacy runtime quarantined.",
+  "scripts": {
+    "dev": "node platform/server.mjs",
+    "start": "node platform/server.mjs",
+    "test": "node --test platform/tests",
+    "check": "node scripts/check-migration.mjs",
+    "build": "node scripts/check-migration.mjs",
+    "legacy:typecheck:libs": "tsc --build",
+    "legacy:typecheck": "pnpm run legacy:typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "legacy:build": "pnpm run legacy:typecheck && pnpm -r --if-present run build"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3",
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.17"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "source_repository": "DawshaX/nova",
+  "source_archive": "Hello-Brother (copy 1).zip",
+  "source_archive_sha256": "1cbf867f535f9da95fd621e9ed5d796a9175d45a386c94c80ce9f28cd27bf810",
+  "target_repository": "DawshaX/xFREEDOLLARHACHx",
+  "copied_file_count": 480,
+  "sanitized_file_count": 10,
+  "excluded": [
+    "compiled dist output",
+    "source maps",
+    "tsbuildinfo",
+    "logs",
+    "original zip",
+    "Replit auto-run configuration"
+  ],
+  "legacy_runtime": "disabled",
+  "active_target_scanning": "not enabled",
+  "note": "Sanitized migration baseline. Source archive remains in the private source repository."
+}

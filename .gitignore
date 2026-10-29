@@ -1,0 +1,48 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.db
+secrets/
+credentials/
+uploads/
+review/
+
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+*.map
+*.log
+logs/
+
+# Local data and caches
+.cache/
+.local/
+.data/
+.tmp/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Archives: keep source archives out of the public repository
+*.zip
+*.tar
+*.tar.gz
+*.tgz
