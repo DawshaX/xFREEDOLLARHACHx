@@ -466,6 +466,7 @@ export const STANDALONE_MITRE = [
 ];
 
 // ── Persistent State Store (Memory + localStorage sync) ─────────────────────
+const memoryStore = new Map<string, string>();
 
 function loadState<T>(key: string, fallback: T): T {
   try {
@@ -473,6 +474,8 @@ function loadState<T>(key: string, fallback: T): T {
       const raw = localStorage.getItem(key);
       if (raw) return JSON.parse(raw) as T;
     }
+    const memRaw = memoryStore.get(key);
+    if (memRaw) return JSON.parse(memRaw) as T;
   } catch {
     // ignore
   }
@@ -481,8 +484,10 @@ function loadState<T>(key: string, fallback: T): T {
 
 function saveState<T>(key: string, val: T): void {
   try {
+    const serialized = JSON.stringify(val);
+    memoryStore.set(key, serialized);
     if (typeof localStorage !== "undefined") {
-      localStorage.setItem(key, JSON.stringify(val));
+      localStorage.setItem(key, serialized);
     }
   } catch {
     // ignore
