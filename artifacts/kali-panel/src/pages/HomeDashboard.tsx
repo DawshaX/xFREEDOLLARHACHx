@@ -906,6 +906,8 @@ export default function HomeDashboard() {
   const sevColor = (s: string) => s === "CRITICAL" ? "#f87171" : s === "HIGH" ? "#fb923c" : s === "MEDIUM" ? "#facc15" : "#60a5fa";
 
   const BOT_CARDS = [
+    { label:"استوديو البج باونتي", desc:"HackerOne & VRP Studio", icon:Shield,   path:"/bug-bounty-studio", color:"text-emerald-400 border-emerald-500/40 bg-emerald-500/15" },
+    { label:"موسوعة الثغرات والكود", desc:"OWASP & SAST Code Audit", icon:BookOpen, path:"/vuln-encyclopedia", color:"text-sky-400 border-sky-500/40 bg-sky-500/15" },
     { label:"Live Agent",       desc:"Recon & pentest AI",  icon:Radio,    path:"/live-agent",        color:"text-emerald-400 border-emerald-500/20 bg-emerald-500/5" },
     { label:"AI Agent V3",      desc:"Tool-calling loop",   icon:Brain,    path:"/nova-agent-v3",     color:"text-purple-400 border-purple-500/20 bg-purple-500/5"    },
     { label:"Nova Agent V6",    desc:"Ultimate AI engine",  icon:Sparkles, path:"/nova-agent-v6",     color:"text-cyan-400 border-cyan-500/20 bg-cyan-500/5"          },

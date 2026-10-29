@@ -13,56 +13,34 @@
 
 ---
 
-## 2️⃣ ما تم إنجازه في خطوة التأسيس والنقل
+## 2️⃣ سجل التقدم والإنجازات (يُحدّث لحظياً)
 
-* تم سحب الأرشيف الأصلي `Hello-Brother (copy 1).zip` من المستودع القديم `DawshaX/nova`.
-* تم فك الضغط بالكامل وفحص جميع الملفات للتأكد من خلوها من أي مفاتيح سرية مكشوفة.
-* تم رفع الهيكل الكامل للمنصة مفكوكاً ومنظماً إلى المستودع الجديد: `https://github.com/DawshaX/xFREEDOLLARHACHx`.
+### ✅ المرحلة 1: فك الضغط والنقل والتأسيس
+* سحب الأرشيف `Hello-Brother (copy 1).zip` من `DawshaX/nova` وفك ضغطه بالكامل (486 ملفاً) وفحصه أمنياً.
+* رفع المشروع كاملاً ومفكوكاً إلى `DawshaX/xFREEDOLLARHACHx`.
 
----
+### ✅ المرحلة 2: بناء «استوديو البج باونتي القانوني وموسوعة الأمان الشاملة» (`BugBountyStudio.tsx`)
+* المسارات المضافة في الواجهة الأمامية (`artifacts/kali-panel/src/pages/BugBountyStudio.tsx`):
+  * `/bug-bounty-studio` — استوديو البج باونتي القانوني المتكامل.
+  * `/vuln-encyclopedia` — موسوعة الثغرات والبرمجة الآمنة (`IDOR/BOLA`, `SSRF`, `SQLi`, `XSS`, `Subdomain Takeover`, `CORS Misconfiguration`, `JWT/OAuth Flaws`, `Business Logic & Race Conditions`) مع مقارنة الكود الضعيف بالكود الآمن وخطوات الفحص والترقيع.
+  * `/code-auditor` — الفاحص الدفاعي الساكن للكود المصدري ورؤوس HTTP/CORS مع حساب درجة الأمان (0–100) واقتراح الإصلاحات.
+  * إدارة نطاقات برامج البج باونتي الرسمية (Google VRP, GitHub, Cloudflare, Shopify, HackerOne) مع إمكانية إضافة برامج مخصصة وحفظها تلقائياً.
+  * قوائم الفحص المنهجية التفاعلية (Checklists) المحفوظة تلقائياً في المتصفح.
+  * مولّد تقارير HackerOne / Google VRP الاحترافية بصيغة Markdown مع حاسبة `CVSS v3.1` التفاعلية.
 
-## 3️⃣ التشريح الكامل للمنصة الحالية (ما بداخل `xFREEDOLLARHACHx`)
-
-المنصة عبارة عن **Monorepo متكامل بـ TypeScript + pnpm workspaces** يتكون من 3 طبقات رئيسية:
-
-### أ) الواجهة الأمامية (`artifacts/kali-panel`) — React + Vite + Tailwind
-تضم أكثر من **50 شاشة ووحدة متخصصة**، أهمها:
-* **مركز الثغرات والمخاطر:** `VulnCenter.tsx`, `VulnsPage.tsx`, `RiskCenter.tsx`, `AttackSurface.tsx`, `ActiveScanner.tsx`, `Scanner.tsx`, `NucleiEngine.tsx`.
-* **مكتبة الثغرات والتهديدات العالمية (تحديث لحظي):**
-  * `CveLive.tsx` & `CveSearch.tsx` & `cve-db.tsx` (ربط مع قواعد بيانات الثغرات العالمية).
-  * `cwe.tsx` (تصنيف نقاط الضعف البرمجية CWE).
-  * `mitre.tsx` (إطار MITRE ATT&CK التكتيكي).
-  * `ThreatIntelligence.tsx` & `ThreatDetectionDashboard.tsx` & `IocTracker.tsx`.
-* **المعرفة والكتب والـ Playbooks:**
-  * `Knowledge.tsx` & `nova-knowledge.tsx` (مكتبة المعرفة الأمنية والبرمجية).
-  * `Playbooks.tsx` (خطط ومنهجيات الفحص المنظم خطوة بخطوة).
-* **الوكيل الذكي متعدد النماذج (Multi-AI):**
-  * `LiveAgent.tsx`, `NovaAgentV6.tsx`, `NovaCommander.tsx`, `NovaIntelligence.tsx`.
-  * لوحة إدارة 7 مزودات ذكاء اصطناعي مجانية (`Groq`, `Gemini`, `OpenRouter`, `Mistral`, `HuggingFace`, `Together`, `Ollama`).
-* **إدارة المهام والأدلة والتقارير (Bug Bounty Workflow):**
-  * `Workspaces.tsx` (مساحات العمل لكل برنامج أو هدف مصرح به).
-  * `MissionTracker.tsx` (تتبع مراحل الفحص).
-  * `EvidenceDashboard.tsx` (توثيق الأدلة والملاحظات).
-  * `Reports.tsx` (توليد تقارير الثغرات الاحترافية).
-
-### ب) الخادم الخلفي (`artifacts/api-server`) — Express 5 + TypeScript
-يضم **45+ مسار API (`src/routes/`)** و **33 محرك ومكتبة داخلية (`src/lib/`)**:
-* `ai-multi-router.ts`: موجه ذكي يربط 7 نماذج AI مجانية مع التبديل التلقائي (Fallback).
-* `cve-monitor.ts` & `nova-cve-monitor.ts` & `osv-intel.ts` & `cve-classifier.ts`: رادار رصد وتصنيف الثغرات من 7 مصادر عالمية (NVD, CISA, OSV, GitHub, CIRCL...).
-* `novaRag.ts` & `novaRagV2.ts` & `nova-learner.ts`: نظام ذاكرة واسترجاع معرفي (RAG) لربط الكتب البرمجية والمراجع الأمنية بالتحليل.
-* `risk-engine.ts` & `llm-analyzer.ts`: محرك تقييم خطورة الثغرات وتحليلها.
-* `security-tools.ts` & `audit.ts`: إدارة أدوات الفحص وسجل التدقيق الكامل.
-
-### ج) قاعدة البيانات والمواصفات (`lib/`)
-* `lib/db/src/schema/`: **33 جدول PostgreSQL (Drizzle ORM)** تغطي كل شيء (`cves`, `cwe`, `mitre`, `ioc`, `threats`, `risk_scores`, `evidence`, `reports`, `knowledge`, `playbooks`, `assets`, `workspaces`, `agentSessions`, `bot_memory`...).
-* `lib/api-spec/openapi.yaml` + `lib/api-zod` + `lib/api-client-react`: عقود API موثقة بالكامل.
+### ✅ المرحلة 3: إصلاح التشغيل المستقل والاستضافة التلقائية على GitHub Pages
+* تحديث `lib/db/src/index.ts` و `artifacts/api-server/src/routes/dashboard.ts` ليعمل الخادم الخلفي (`api-server`) بسلاسة حتى في الوضع المستقل بدون قاعدة بيانات خارجية.
+* تحديث `artifacts/kali-panel/vite.config.ts` لربط `/api` بالخادم الخلفي تلقائياً عبر الـ Proxy.
+* إضافة `.github/workflows/deploy-pages.yml` لبناء ونشر المنصة تلقائياً على **GitHub Pages** (`https://dawshax.github.io/xFREEDOLLARHACHx/`) مع كل تحديث على الفرع `main`.
 
 ---
 
-## 4️⃣ خارطة الطريق للمرحلة القادمة
+## 3️⃣ كيفية التشغيل السريع في أي بيئة
 
-1. **تجهيز نسخة العرض المباشر (Live Dashboard / GitHub Pages):** بحيث تفتح المنصة من المتصفح في أي وقت ومن أي جهاز بدون تعقيد.
-2. **تغذية مكتبة المعرفة الأمنية والبرمجية (Vulnerability & Code Audit Encyclopedia):**
-   * موسوعة كاملة لأنواع الثغرات (OWASP Top 10, Web/API Vulnerabilities, Logic Flaws, Auth/Access Control, Subdomain Takeover, Cloud Misconfigurations) مع شرح الكود الضعيف وكيفية اكتشافه وإصلاحه.
-3. **وحدة البج باونتي القانونية (HackerOne / Google VRP Assistant):**
-   * قراءة نطاق البرنامج (Scope)، تحليل الأصول المسموحة، قائمة فحص منهجية (Methodology Checklist)، ومساعد كتابة التقرير النهائي (PoC & Impact & Remediation Report Builder) لتقديمه بشكل احترافي.
+```bash
+# 1) تشغيل الخادم الخلفي (المنفذ 8080)
+PORT=8080 pnpm --filter @workspace/api-server run dev
+
+# 2) تشغيل الواجهة الأمامية (المنفذ 3000 مع Proxy تلقائي إلى 8080)
+PORT=3000 BASE_PATH=/ pnpm --filter @workspace/kali-panel run dev
+```

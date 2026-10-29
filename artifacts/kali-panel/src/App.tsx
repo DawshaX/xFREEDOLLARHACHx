@@ -82,6 +82,7 @@ const ProcessesPage = lazy(() => import("@/pages/ProcessesPage"));
 const VulnsPage = lazy(() => import("@/pages/VulnsPage"));
 const MissionTrackerPage = lazy(() => import("@/pages/MissionTracker"));
 const LocalDeviceControl = lazy(() => import("@/pages/LocalDeviceControl"));
+const BugBountyStudio = lazy(() => import("@/pages/BugBountyStudio"));
 import { Placeholder } from "@/pages/Placeholder";
 import NotFound from "@/pages/not-found";
 
@@ -94,6 +95,9 @@ function InnerRoutes() {
     <Switch>
       {/* ── Dashboard ─────────────────────────────────────────────── */}
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/bug-bounty-studio" component={BugBountyStudio} />
+      <Route path="/vuln-encyclopedia" component={BugBountyStudio} />
+      <Route path="/code-auditor" component={BugBountyStudio} />
 
       {/* ── CVE & Vuln ────────────────────────────────────────────── */}
       <Route path="/vuln-center" component={VulnCenter} />
