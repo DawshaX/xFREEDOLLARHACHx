@@ -10,6 +10,7 @@
     <script>
       (function () {
         try {
+          localStorage.removeItem("cybernova_home_activity_v2");
           window.addEventListener("error", function (e) {
             var msg = String((e && e.message) || "");
             if (

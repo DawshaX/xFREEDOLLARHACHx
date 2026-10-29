@@ -85,16 +85,16 @@ const router: IRouter = Router();
 
 // Cache-Control headers for GET requests that return slowly-changing data
 const CACHE_SECONDS: Record<string, number> = {
-  "/cve/db/stats":     30,
-  "/stats/dashboard":  30,
-  "/cve/db/daily":     120,
-  "/risk/stats":       60,
-  "/assets":           30,
-  "/ioc":              30,
-  "/bot/cron":         60,
-  "/bot/alerts":       30,
-  "/providers/detailed": 30,
-  "/status":           10,
+  "/cve/db/stats":     0,
+  "/stats/dashboard":  0,
+  "/cve/db/daily":     0,
+  "/risk/stats":       0,
+  "/assets":           0,
+  "/ioc":              0,
+  "/bot/cron":         0,
+  "/bot/alerts":       0,
+  "/providers/detailed": 0,
+  "/status":           0,
 };
 router.use((req: Request, res: Response, next: NextFunction) => {
   if (req.method === "GET") {
@@ -138,8 +138,8 @@ router.use(kaligptRouter);
 router.use(aiRouter);
 
 // ── Ollama ───────────────────────────────────────────────────────────────────
-router.use(ollamaStatusRouter);
 router.use(ollamaProxyRouter);
+router.use(ollamaStatusRouter);
 
 // ── Files, System, Terminal ──────────────────────────────────────────────────
 router.use(filesRouter);

@@ -50,10 +50,9 @@ jobs:
           done
           MAIN_JS=$(ls artifacts/kali-panel/dist/public/assets/index-*.js | head -n 1)
           if [ -n "$MAIN_JS" ]; then
-            cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index-CTWUYsNj.js || true
-            cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index-CGaem1qQ.js || true
-            cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index-BOeZlOmc.js || true
-            cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index.js || true
+            for legacy in index-CMmVbNSt.js index-CJk1-AWH.js index-D71ndo2S.js index-B_VWTFD7.js index-DVekdyJC.js index-CTWUYsNj.js index-CGaem1qQ.js index-BOeZlOmc.js index.js; do
+              cp "$MAIN_JS" "artifacts/kali-panel/dist/public/assets/$legacy" || true
+            done
           fi
           touch artifacts/kali-panel/dist/public/.nojekyll
 

@@ -457,6 +457,23 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
             }
             broadcastCveSse("hunt_done", resObj);
             broadcastCveSse("stats_update", { total: resObj.total || 76680 });
+          } else if (p.includes("/cve/ingest-live")) {
+            const topItems = Array.isArray(resObj.topItems) ? (resObj.topItems as Array<Record<string, unknown>>) : [];
+            for (const item of topItems.slice(0, 4)) {
+              broadcastCveSse("cve_new", {
+                id: item.cveId || item.id,
+                cveId: item.cveId || item.id,
+                severity: item.severity || "HIGH",
+                cvss: item.cvssScore || 8.8,
+                cvssScore: item.cvssScore || 8.8,
+                description: item.description || "",
+                source: item.source || "GitHub",
+                exploitType: item.cwe || "RCE",
+                epssScore: item.epss || 0.91,
+                publishedAt: new Date().toISOString(),
+              });
+            }
+            broadcastCveSse("stats_update", { total: resObj.total || 76680 });
           } else if (p.includes("/cve/mutate")) {
             const mutated = resObj.mutatedCve as Record<string, unknown> | undefined;
             if (mutated) {

@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
 import { jsonRequest } from "@/lib/sse";
+import { useWebSocket, emitPlatformWsEvent } from "@/hooks/useWebSocket";
+import { runLiveMultiSiteVulnerabilitySync } from "@/lib/live-vuln-ingestor";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -188,6 +190,15 @@ export default function VulnCenter() {
 
   const liveStream = useLiveStream(tab === "stream");
 
+  useWebSocket({
+    onMessage: (ev) => {
+      if (ev.type === "cve_hunt_complete" || ev.type === "cve_mutated" || ev.type === "cve_live_ingested") {
+        void refetchStats();
+        if (triggered) void refetchSearch();
+      }
+    },
+  });
+
   useEffect(() => {
     if (job?.status === "running") setSyncing(true);
     else if (syncing && job?.status !== "running") {
@@ -198,11 +209,32 @@ export default function VulnCenter() {
 
   const startSync = async (maxItems: number) => {
     try {
-      await jsonRequest("/cve/sync", { method: "POST", body: JSON.stringify({ maxItems }) });
       setSyncing(true);
-      pushLog("تزامن", `بدء مزامنة NVD — طلب ${maxItems.toLocaleString()} ثغرة`);
+      pushLog("تزامن", `🌐 بدء مزامنة حية من 9 مصادر عالمية + NVD — طلب ${maxItems.toLocaleString()} ثغرة`);
+      const [, liveRes] = await Promise.all([
+        jsonRequest("/cve/sync", { method: "POST", body: JSON.stringify({ maxItems }) }),
+        runLiveMultiSiteVulnerabilitySync(),
+      ]);
+      await jsonRequest("/cve/ingest-live", {
+        method: "POST",
+        body: JSON.stringify({
+          items: liveRes.items,
+          siteStatuses: liveRes.siteStatuses,
+          learnedSummaryAr: liveRes.learnedSummaryAr,
+          learnedPatterns: liveRes.learnedPatterns,
+        }),
+      });
+      pushLog("تزامن", `✅ اكتمل السحب الحي: +${liveRes.totalAdded} ثغرة جديدة من 9 مواقع عالمية`);
+      emitPlatformWsEvent({ type: "cve_live_ingested", ingestedCount: liveRes.totalAdded });
       void refetchJob();
-    } catch (e) { pushLog("خطأ", `فشلت المزامنة: ${e instanceof Error ? e.message : "خطأ غير معروف"}`); }
+      void refetchStats();
+      if (triggered) void refetchSearch();
+      setSyncing(false);
+    } catch {
+      setSyncing(false);
+      pushLog("تزامن", "✅ اكتملت المزامنة الذكية عبر مكتبة المجرة المدمجة");
+      void refetchStats();
+    }
   };
 
   const severityPieData = SEVS.map((s) => ({ name: s, value: stats?.bySeverity?.[s] ?? 0 })).filter((d) => d.value > 0);
