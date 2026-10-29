@@ -375,6 +375,244 @@ if (res.rowCount === 0) throw new Error("Insufficient balance");`,
       "التحقق الصارم من القيم الموجبة والحدود المنطقية ومفاتيح `Idempotency-Key`.",
     ],
   },
+  {
+    id: "sub-takeover",
+    titleAr: "الاستيلاء على النطاقات الفرعية المعلقة (Subdomain Takeover / Dangling CNAME)",
+    titleEn: "Subdomain Takeover via Dangling DNS / CNAME Record",
+    cwe: "CWE-284",
+    owasp: "A05:2021 — Security Misconfiguration (Cloud & DNS)",
+    severity: "High",
+    cvssBase: 8.2,
+    bountyRange: "$500 – $10,000+",
+    summaryAr:
+      "تحدث عندما يشير سجل DNS (مثل CNAME أو A) لنطاق فرعي تابع للهدف إلى خدمة سحابية خارجية (GitHub Pages, AWS S3, Azure, Heroku, Fastly) تم حذفها أو انتهاء اشتراكها دون حذف سجل الـ DNS.",
+    rootCauseAr:
+      "عدم أتمتة حذف سجلات DNS عند إيقاف أو حذف الموارد السحابية الخارجية (Orphaned DNS Records).",
+    language: "DNS / Cloud Infrastructure",
+    vulnerableCode: `// ❌ إعداد DNS خطر: سجل CNAME يشير إلى مورد سحابي تم حذفه
+// promos.target.com.  300  IN  CNAME  target-promos-2023.s3.amazonaws.com.
+// عند طلب https://promos.target.com يرجع السيرفر:
+// <Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message>`,
+    secureCode: `// ✅ الإجراء الآمن (DNS & Cloud Lifecycle Hygiene):
+// 1. حذف سجل CNAME من DNS قبل حذف الـ Bucket أو الخدمة السحابية
+// 2. ربط إدارة DNS بـ Terraform / IaC لضمان عدم بقاء أي سجل معلق
+// 3. فحص دوري لبصمات can-i-take-over-xyz على كافة النطاقات الفرعية`,
+    auditChecklist: [
+      "جمع النطاقات الفرعية سلبياً عبر CRT.SH وSubfinder وفحص سجلات CNAME لكل نطاق.",
+      "مقارنة استجابات HTTP للنطاقات الفرعية مع بصمات `EdOverflow/can-i-take-over-xyz`.",
+      "عدم حجز المورد باسم عام يكشف بيانات، بل الاكتفاء بإثبات البصمة أو ملف نصي غير مرئي وفق سياسة البرنامج.",
+    ],
+    remediationSteps: [
+      "إزالة سجل CNAME أو A المعلق من خادم DNS فوراً.",
+      "مراجعة نطاق الكوكيز (`Domain=.target.com`) وقوائم `redirect_uri` في OAuth.",
+    ],
+  },
+  {
+    id: "graphql-flaws",
+    titleAr: "ثغرات مخططات GraphQL وتجاوز حدود الاستعلامات (Introspection & Batching)",
+    titleEn: "GraphQL Introspection Exposure, Field Suggestion & Batching Abuse",
+    cwe: "CWE-200 / CWE-307",
+    owasp: "API8:2023 & API4:2023 — GraphQL & API Security",
+    severity: "High",
+    cvssBase: 7.5,
+    bountyRange: "$500 – $15,000+",
+    summaryAr:
+      "تحدث عندما يترك خادم GraphQL ميزة Introspection مفعلة في الإنتاج مع وجود Mutations أو حقول داخلية غير محمية بفحص صلاحيات مستقل داخل كل Resolver.",
+    rootCauseAr:
+      "الاعتماد على حماية واجهة REST فقط وترك عقد GraphQL الفرعية (Nested Resolvers) بدون فحص صلاحيات.",
+    language: "TypeScript / GraphQL",
+    vulnerableCode: `// ❌ كود ضعيف: Introspection مفعل في الإنتاج وResolver بدون فحص ملكية
+const server = new ApolloServer({
+  typeDefs,
+  resolvers: {
+    Query: {
+      userPrivateNotes: (_parent, { userId }) => db.notes.findByUser(userId),
+    },
+  },
+  introspection: true,
+});`,
+    secureCode: `// ✅ كود آمن: تعطيل Introspection في الإنتاج + فحص الصلاحية وتحديد عمق الاستعلام
+const server = new ApolloServer({
+  typeDefs,
+  resolvers: {
+    Query: {
+      userPrivateNotes: (_parent, { userId }, context) => {
+        if (!context.user || context.user.id !== userId) throw new ForbiddenError("Unauthorized");
+        return db.notes.findByUser(userId);
+      },
+    },
+  },
+  introspection: process.env.NODE_ENV !== "production",
+  validationRules: [depthLimit(5)],
+});`,
+    auditChecklist: [
+      "فحص ما إذا كان استعلام `__schema` متاحاً في بيئة الإنتاج.",
+      "مراجعة جميع الـ Mutations والحقول الفرعية (Nested Fields) للتأكد من تطبيق نفس صلاحيات المستخدم.",
+      "فحص حدود عمق الاستعلام (Query Depth) وعدد الاستعلامات المجمعة (Batching / Aliases).",
+    ],
+    remediationSteps: [
+      "تعطيل `introspection` في بيئة الإنتاج وتحديد أقصى عمق للاستعلام (`depthLimit`).",
+      "فرض التحقق من الهوية والصلاحية داخل كل Resolver أو عبر Directive موحد.",
+    ],
+  },
+  {
+    id: "oauth-oidc-flaws",
+    titleAr: "ثغرات تدفقات OAuth 2.0 / OIDC والتلاعب بـ redirect_uri و state",
+    titleEn: "OAuth 2.0 / OIDC redirect_uri Manipulation & Missing CSRF State",
+    cwe: "CWE-601 / CWE-352",
+    owasp: "A07:2021 — Identification and Authentication Failures",
+    severity: "Critical",
+    cvssBase: 9.1,
+    bountyRange: "$2,000 – $50,000+",
+    summaryAr:
+      "تحدث عندما يقبل مزود الهوية (OAuth Provider) عناوين إعادة توجيه (`redirect_uri`) غير مطابقة بدقة (مثل السماح بأي مسار أو نطاق فرعي) أو يغفل التحقق من معامل `state` العشوائي.",
+    rootCauseAr:
+      "استخدام Regex أو `startsWith` ضعيف للتحقق من `redirect_uri` بدلاً من المطابقة الكاملة للقائمة البيضاء.",
+    language: "TypeScript / OAuth 2.0",
+    vulnerableCode: `// ❌ كود ضعيف: مطابقة جزئية تسمح بـ https://app.example.com.attacker.com
+if (req.query.redirect_uri.startsWith("https://app.example.com")) {
+  return res.redirect(\`\${req.query.redirect_uri}?code=\${authCode}\`);
+}`,
+    secureCode: `// ✅ كود آمن: مطابقة نصية دقيقة (Exact Match) مع فرض PKCE ومعامل state
+const ALLOWED_REDIRECTS = new Set(["https://app.example.com/oauth/callback"]);
+if (!ALLOWED_REDIRECTS.has(String(req.query.redirect_uri))) {
+  return res.status(400).json({ error: "Invalid redirect_uri" });
+}
+if (!req.query.state || req.query.state !== req.session.oauthState) {
+  return res.status(400).json({ error: "Invalid OAuth state" });
+}`,
+    auditChecklist: [
+      "التحقق من وجود معامل `state` عشوائي ومرتبط بجلسة المتصفح لمنع ربط الحسابات قسرياً (Account Linking CSRF).",
+      "اختبار مطابقة `redirect_uri` باستخدام حساباتك الاختبارية فقط للتأكد من رفض النطاقات غير المسجلة.",
+      "التأكد من استخدام `PKCE (code_challenge)` وعدم إرسال التوكن في `URL Fragment` عند توفر بديل آمن.",
+    ],
+    remediationSteps: [
+      "اعتماد المطابقة الكاملة (Exact String Match) لعناوين `redirect_uri` المسجلة مسبقاً.",
+      "إلزامية `state` و `PKCE (S256)` في جميع تدفقات OAuth 2.0.",
+    ],
+  },
+  {
+    id: "llm-prompt-agency",
+    titleAr: "ثغرات تطبيقات الذكاء الاصطناعي والوكلاء (OWASP LLM01 & LLM06: Excessive Agency)",
+    titleEn: "OWASP LLM Top 10 (2025/2026): Indirect Prompt Injection & Excessive Agency",
+    cwe: "CWE-77 / OWASP-LLM01",
+    owasp: "OWASP LLM01:2025 & LLM06:2025 — AI / LLM Security",
+    severity: "Critical",
+    cvssBase: 9.0,
+    bountyRange: "$1,000 – $50,000+ (Google AI VRP / OpenAI / MSRC)",
+    summaryAr:
+      "تحدث عندما يقوم وكيل ذكاء اصطناعي (AI Agent) بقراءة بيانات غير موثوقة (صفحة ويب، بريد، ملف، تعليق) وتنفيذ أوامر أو استدعاء أدوات (Tool Calls / APIs) بصلاحيات المستخدم دون تأكيد بشري أو عزل للصلاحيات.",
+    rootCauseAr:
+      "دمج البيانات الخارجية غير الموثوقة مباشرة في سياق التعليمات مع منح الوكيل صلاحيات كتابة أو تنفيذ غير مقيدة.",
+    language: "TypeScript / AI Agent Tooling",
+    vulnerableCode: `// ❌ كود ضعيف: السماح للنموذج باستدعاء أداة حساسة تلقائياً بناءً على نص خارجي غير موثوق
+const llmDecision = await model.generate({
+  system: "You are a helpful assistant with access to deleteAccount and sendEmail tools.",
+  prompt: \`Summarize this external webpage: \${untrustedWebpageContent}\`,
+});
+if (llmDecision.toolCall) await executeToolDirectly(llmDecision.toolCall);`,
+    secureCode: `// ✅ كود آمن: فصل البيانات عن التعليمات + بوابة موافقة بشرية (Human-in-the-Loop) للأدوات الحساسة
+const SAFE_READONLY_TOOLS = new Set(["getWeather", "searchDocs"]);
+if (llmDecision.toolCall && !SAFE_READONLY_TOOLS.has(llmDecision.toolCall.name)) {
+  return res.status(202).json({
+    requiresUserConfirmation: true,
+    proposedAction: llmDecision.toolCall.name,
+  });
+}`,
+    auditChecklist: [
+      "فحص الأدوات (Tools / Plugins) المتاحة لوكيل الذكاء الاصطناعي والتأكد من تطبيق مبدأ أقل الصلاحيات.",
+      "اختبار ما إذا كان المحتوى المسترجع عبر RAG يحترم صلاحيات المستخدم الحالي (Document-Level ACL).",
+      "التحقق من عدم تسريب مفاتيح النظام أو بيانات مستخدمين آخرين في مخرجات النموذج.",
+    ],
+    remediationSteps: [
+      "فرض موافقة المستخدم الصريحة (Human-in-the-Loop) قبل أي عملية تغيير حالة أو إرسال بيانات للخارج.",
+      "تطبيق صلاحيات المستخدم الحالي (User-Scoped OAuth Token) عند استدعاء أي API من داخل الوكيل.",
+    ],
+  },
+  {
+    id: "mass-assignment-bopla",
+    titleAr: "التعيين الجماعي للحقول وتجاوز صلاحيات الخصائص (Mass Assignment / BOPLA)",
+    titleEn: "Broken Object Property Level Authorization (BOPLA / Mass Assignment)",
+    cwe: "CWE-915",
+    owasp: "API3:2023 — Broken Object Property Level Authorization",
+    severity: "High",
+    cvssBase: 8.3,
+    bountyRange: "$750 – $20,000+",
+    summaryAr:
+      "تحدث عندما يمرر الخادم كائن JSON المرسل من المستخدم (`req.body`) مباشرة إلى دالة التحديث في قاعدة البيانات (`update / create`) دون تصفية الحقول الحساسة مثل `role` أو `isAdmin` أو `balance`.",
+    rootCauseAr:
+      "الربط التلقائي لخصائص الكائن (Auto-binding / Object Spread) في ORM بدون استخدام DTO يحدد الحقول المسموحة.",
+    language: "TypeScript / Prisma / Mongoose",
+    vulnerableCode: `// ❌ كود ضعيف: تمرير req.body بالكامل إلى قاعدة البيانات
+app.patch("/api/v1/users/me", requireAuth, async (req, res) => {
+  const updated = await prisma.user.update({
+    where: { id: req.user.id },
+    data: req.body, // يسمح بتمرير { "role": "admin", "credits": 99999 }
+  });
+  res.json(updated);
+});`,
+    secureCode: `// ✅ كود آمن: انتقاء الحقول المسموح للمستخدم بتعديلها فقط عبر مخطط Zod صارم
+const UpdateProfileSchema = z.object({
+  displayName: z.string().min(2).max(60),
+  bio: z.string().max(300).optional(),
+}).strict();
+
+app.patch("/api/v1/users/me", requireAuth, async (req, res) => {
+  const safeData = UpdateProfileSchema.parse(req.body);
+  const updated = await prisma.user.update({
+    where: { id: req.user.id },
+    data: safeData,
+  });
+  res.json(updated);
+});`,
+    auditChecklist: [
+      "مقارنة الحقول المعادة في استجابة `GET /api/v1/users/me` مع الحقول المقبولة في `PATCH / PUT`.",
+      "فحص مخططات OpenAPI/GraphQL لاكتشاف الحقول الداخلية المتعلقة بالأدوار أو الفوترة.",
+    ],
+    remediationSteps: [
+      "استخدام Allowlist DTO صريح لكل نقطة نهاية وعدم تمرير `req.body` مباشرة للـ ORM.",
+      "فصل نماذج القراءة عن نماذج التحديث وتحديد الحقول المسموح إرجاعها في الاستجابة (`select`).",
+    ],
+  },
+  {
+    id: "postmessage-websocket",
+    titleAr: "ثغرات رسائل المتصفح والويب سوكيت (Insecure postMessage & CSWSH)",
+    titleEn: "DOM postMessage Origin Bypass & Cross-Site WebSocket Hijacking",
+    cwe: "CWE-346 / CWE-1385",
+    owasp: "A01:2021 & Client-Side Security",
+    severity: "High",
+    cvssBase: 8.0,
+    bountyRange: "$500 – $15,000+",
+    summaryAr:
+      "تحدث عندما يستقبل تطبيق الواجهة رسائل `window.addEventListener('message', ...)` بدون التحقق الصارم من `event.origin` أو عندما يقبل خادم WebSocket اتصالات معتمدة على الكوكيز بدون التحقق من ترويسة `Origin`.",
+    rootCauseAr:
+      "غياب التحقق من `event.origin` في JavaScript أو إرسال رسائل حساسة عبر `postMessage(..., '*')`.",
+    language: "TypeScript / Browser & WebSocket",
+    vulnerableCode: `// ❌ كود ضعيف: استقبال أي رسالة من أي نافذة وتنفيذ محتواها بدون فحص event.origin
+window.addEventListener("message", (event) => {
+  if (event.data?.type === "SET_AUTH_TOKEN") {
+    localStorage.setItem("token", event.data.token);
+    location.href = event.data.redirectUrl;
+  }
+});`,
+    secureCode: `// ✅ كود آمن: التحقق الصارم من النطاق المرسل (Origin Allowlist) قبل معالجة الرسالة
+const TRUSTED_ORIGINS = new Set(["https://auth.example.com"]);
+window.addEventListener("message", (event) => {
+  if (!TRUSTED_ORIGINS.has(event.origin)) return;
+  if (event.data?.type === "SET_AUTH_TOKEN" && typeof event.data.token === "string") {
+    sessionStorage.setItem("token", event.data.token);
+  }
+});`,
+    auditChecklist: [
+      "البحث عن جميع مستمعات `addEventListener('message')` في حزم الـ JavaScript.",
+      "التأكد من عدم إرسال توكنات المصادقة عبر `targetWindow.postMessage(secret, '*')`.",
+      "التحقق من فحص ترويسة `Origin` عند ترقية اتصال `WebSocket` (`HTTP 101 Switching Protocols`).",
+    ],
+    remediationSteps: [
+      "فرض مطابقة صارمة لـ `event.origin` مع قائمة النطاقات الموثوقة.",
+      "تحديد النطاق الهدف صراحةً عند استدعاء `postMessage(data, 'https://trusted.example.com')`.",
+    ],
+  },
 ];
 
 // ─── 2) Official Bug Bounty Programs Directory ───────────────────────────────
@@ -751,6 +989,55 @@ export default function BugBountyStudio() {
     discoveredSchemas: Array<{ path: string; status: number; type: string; note: string }>;
     checklist: Array<{ check: string; cwe: string; recommendation: string }>;
   } | null>(null);
+  const [selfAwareness, setSelfAwareness] = useState<{
+    platformVersion: string;
+    activeTarget: string;
+    selfAwarenessSummary: {
+      deepEnginesCount: number;
+      kaliToolsIntegrated: number;
+      githubArsenalCount: number;
+      globalPlatformsCount: number;
+      memoriesStored: number;
+      missionFindings: number;
+      commandsLogged: number;
+      verifiedEvidence: number;
+      reportsSaved: number;
+    };
+    coveragePercent: number;
+    dimensions: Array<{ id: string; name: string; completed: boolean; recommendedAction: string }>;
+    nextRecommendedStep: string;
+  } | null>(null);
+  const [kaliTools, setKaliTools] = useState<Array<{
+    id: string;
+    name: string;
+    category: string;
+    commandTemplate: string;
+    purposeAr: string;
+    safeEquivalent: string;
+  }>>([]);
+  const [selectedKaliCategory, setSelectedKaliCategory] = useState<string>("all");
+  const [kaliSimResult, setKaliSimResult] = useState<{
+    toolId: string;
+    toolName: string;
+    category: string;
+    command: string;
+    target: string;
+    output: string;
+  } | null>(null);
+  const [chainResult, setChainResult] = useState<{
+    target: string;
+    contextStats: { memoriesCount: number; missionFindingsCount: number; evidenceCount: number };
+    chains: Array<{
+      id: string;
+      title: string;
+      combinedSeverity: string;
+      cvssVector: string;
+      cweChain: string[];
+      steps: string[];
+      verificationTool: string;
+      remediation: string;
+    }>;
+  } | null>(null);
 
   // Tab 1 state: Encyclopedia
   const [searchQuery, setSearchQuery] = useState("");
@@ -1076,6 +1363,16 @@ ${reportFix}
     setSyncStatusMsg("✅ تم حفظ التقرير بالكامل في صفحة التقارير (/reports) وفي الذاكرة المشتركة (/memory)!");
   };
 
+  const refreshSelfAwareness = async (targetOverride?: string) => {
+    try {
+      const t = encodeURIComponent(targetOverride || activeTarget);
+      const data = await jsonRequest<NonNullable<typeof selfAwareness>>(`/deep-research/self-awareness?target=${t}`);
+      setSelfAwareness(data);
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     void jsonRequest<{ tools: typeof arsenalTools }>("/deep-research/arsenal")
       .then((d) => setArsenalTools(d.tools || []))
@@ -1083,7 +1380,68 @@ ${reportFix}
     void jsonRequest<{ platforms: typeof globalPlatforms }>("/deep-research/platforms")
       .then((d) => setGlobalPlatforms(d.platforms || []))
       .catch(() => {});
+    void jsonRequest<{ tools: typeof kaliTools }>("/deep-research/kali-arsenal")
+      .then((d) => setKaliTools(d.tools || []))
+      .catch(() => {});
+    void refreshSelfAwareness();
   }, []);
+
+  const handleSimulateKaliTool = async (toolId: string) => {
+    setDeepLoading(`kali-${toolId}`);
+    try {
+      const res = await jsonRequest<NonNullable<typeof kaliSimResult>>("/deep-research/kali-simulate", {
+        method: "POST",
+        body: JSON.stringify({ toolId, target: activeTarget }),
+      });
+      setKaliSimResult(res);
+      emitPlatformWsEvent({
+        type: "recon_cmd_executed",
+        target: activeTarget,
+        title: `Kali Tool [${res.toolName}]: ${res.command}`,
+      });
+      setSyncStatusMsg(`✅ تم تنفيذ الفحص الآمن لأداة [${res.toolName}] على ${activeTarget} وتسجيل المخرجات في الذاكرة ومتتبع المهام!`);
+      void refreshSelfAwareness();
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleRunChainSynthesizer = async () => {
+    setDeepLoading("chains");
+    try {
+      const res = await jsonRequest<NonNullable<typeof chainResult>>("/deep-research/chain-synthesizer", {
+        method: "POST",
+        body: JSON.stringify({ target: activeTarget }),
+      });
+      setChainResult(res);
+      emitPlatformWsEvent({
+        type: "finding_recorded",
+        target: activeTarget,
+        title: `بناء ${res.chains.length} سلاسل ثغرات مركبة على ${activeTarget}`,
+      });
+      setSyncStatusMsg(`✅ تم دمج النتائج وبناء ${res.chains.length} سلاسل ثغرات مركبة عالية القيمة على ${activeTarget}!`);
+      void refreshSelfAwareness();
+    } catch {
+      // ignore
+    } finally {
+      setDeepLoading(null);
+    }
+  };
+
+  const handleSendChainToReport = (chain: NonNullable<typeof chainResult>["chains"][number]) => {
+    setReportTitle(`${chain.title} on ${activeTarget}`);
+    setReportAsset(`https://${activeTarget}`);
+    setReportCwe(chain.cweChain.join(" + "));
+    setReportSummary(
+      `سلسلة ثغرات مركبة (Vulnerability Chain) تجمع بين ${chain.cweChain.join(" و ")} لرفع الأثر الأمني إلى ${chain.combinedSeverity}.`
+    );
+    setReportSteps(chain.steps.join("\n"));
+    setReportFix(chain.remediation);
+    setActiveTab("report");
+    setSyncStatusMsg("✅ تم نقل سلسلة الثغرات المركبة إلى مولّد التقارير وحاسبة CVSS 3.1!");
+  };
 
   const handleRunLiveOsint = async () => {
     setDeepLoading("osint");
@@ -1404,6 +1762,82 @@ ${reportFix}
       {/* ── TAB 0: Deep Bug Bounty Verification Engine 2099 & GitHub Arsenal ── */}
       {activeTab === "deep2099" && (
         <div className="space-y-6">
+          {/* 0. Self-Awareness & Coverage Diagnostic Matrix */}
+          {selfAwareness && (
+            <div className="rounded-2xl border border-purple-500/35 bg-gradient-to-l from-purple-950/35 via-[#0b0716] to-emerald-950/30 p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs font-mono text-purple-300">
+                    SELF-AWARE AUTONOMOUS SECURITY PLATFORM · COVERAGE DIAGNOSTIC ENGINE
+                  </div>
+                  <h2 className="text-lg font-extrabold text-white mt-0.5">
+                    🧠 الوعي الذاتي الكامل للمنصة وتغطية الفحص على: <span className="font-mono text-emerald-300">{activeTarget}</span>
+                  </h2>
+                  <p className="text-xs text-gray-300 mt-1">
+                    تراقب المنصة تلقائياً كل ما لديها من محركات وأدوات وذاكرة وأدلة، وتحدد أبعاد الفحص المكتملة والمتبقية على الهدف النشط.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-center">
+                    <div className="text-[10px] text-emerald-300 font-mono">نسبة تغطية الفحص</div>
+                    <div className="text-xl font-extrabold font-mono text-white">{selfAwareness.coveragePercent}%</div>
+                  </div>
+                  <button
+                    onClick={() => void refreshSelfAwareness()}
+                    className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-bold text-white"
+                  >
+                    🔄 تحديث الوعي
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-center">
+                {[
+                  { label: "محركات البحث العميق", val: selfAwareness.selfAwarenessSummary.deepEnginesCount },
+                  { label: "أدوات Kali Linux", val: selfAwareness.selfAwarenessSummary.kaliToolsIntegrated },
+                  { label: "ترسانة GitHub", val: selfAwareness.selfAwarenessSummary.githubArsenalCount },
+                  { label: "موسوعة الثغرات", val: ENCYCLOPEDIA.length },
+                  { label: "سجلات الذاكرة", val: selfAwareness.selfAwarenessSummary.memoriesStored },
+                  { label: "نتائج المهام", val: selfAwareness.selfAwarenessSummary.missionFindings },
+                  { label: "الأدلة الموثقة", val: selfAwareness.selfAwarenessSummary.verifiedEvidence },
+                  { label: "التقارير المحفوظة", val: selfAwareness.selfAwarenessSummary.reportsSaved },
+                ].map((stat, idx) => (
+                  <div key={idx} className="p-2.5 rounded-xl bg-black/40 border border-white/10">
+                    <div className="text-base font-extrabold font-mono text-emerald-400">{stat.val}</div>
+                    <div className="text-[10px] text-gray-300 mt-0.5">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {selfAwareness.dimensions.map((dim) => (
+                  <div
+                    key={dim.id}
+                    className={`p-3 rounded-xl border text-xs ${
+                      dim.completed
+                        ? "bg-emerald-950/25 border-emerald-500/35 text-emerald-200"
+                        : "bg-black/40 border-white/10 text-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 font-bold">
+                      <span>{dim.name}</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/40">
+                        {dim.completed ? "✅ مكتمل" : "⏳ مقترح"}
+                      </span>
+                    </div>
+                    {!dim.completed && (
+                      <div className="text-[11px] text-amber-300 mt-1">{dim.recommendedAction}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-xs font-mono text-purple-200 bg-purple-950/30 border border-purple-500/30 rounded-xl px-3.5 py-2">
+                💡 التوصية الذكية التالية للهدف ({activeTarget}): {selfAwareness.nextRecommendedStep}
+              </div>
+            </div>
+          )}
+
           {/* 1. Autonomous 4-Stage Research Pipeline Banner */}
           <div className="rounded-2xl border border-emerald-500/35 bg-gradient-to-l from-emerald-950/30 via-[#0b0716] to-purple-950/30 p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -2017,6 +2451,163 @@ ${reportFix}
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* 10. Kali Linux Complete Arsenal & Safe Verification Simulator (22+ Tools, 8 Categories) */}
+          <div className="rounded-2xl border border-cyan-500/30 bg-white/[0.03] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Terminal className="w-5 h-5 text-cyan-400" />
+                  <span>10. ترسانة ومحاكي Kali Linux الشامل (22 أداة عبر 8 فئات — أوامر قانونية وتنفيذ فوري آمن)</span>
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  توليد الأوامر القياسية المحددة المعدل (Rate-Limited) لكل أداة من أدوات Kali Linux مع إمكانية تشغيل الفحص المكافئ الآمن مباشرة على الهدف النشط ({activeTarget}):
+                </p>
+              </div>
+              <select
+                value={selectedKaliCategory}
+                onChange={(e) => setSelectedKaliCategory(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-black/60 border border-white/15 text-xs text-white"
+              >
+                <option value="all">جميع فئات Kali Linux (8 فئات — {kaliTools.length} أداة)</option>
+                {Array.from(new Set(kaliTools.map((t) => t.category))).map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {kaliSimResult && (
+              <div className="p-4 rounded-xl bg-black/75 border border-cyan-500/40 space-y-2">
+                <div className="flex items-center justify-between text-xs font-mono text-cyan-300">
+                  <span>🐉 مخرجات التحقق الآمن لأداة: {kaliSimResult.toolName}</span>
+                  <button
+                    onClick={() => copyText("kali-sim", kaliSimResult.output)}
+                    className="px-2 py-0.5 rounded bg-white/10 text-[11px] text-white"
+                  >
+                    {copiedId === "kali-sim" ? "تم النسخ ✓" : "نسخ المخرجات"}
+                  </button>
+                </div>
+                <pre className="text-[11px] font-mono text-emerald-300 overflow-x-auto whitespace-pre-wrap leading-relaxed" dir="ltr">
+                  {kaliSimResult.output}
+                </pre>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[460px] overflow-y-auto pr-1">
+              {kaliTools
+                .filter((t) => selectedKaliCategory === "all" || t.category === selectedKaliCategory)
+                .map((tool) => {
+                  const cleanHost = activeTarget.replace(/^https?:\/\//, "").replace(/^\*\./, "");
+                  const cmd = tool.commandTemplate.replace(/\{target\}/g, cleanHost);
+                  return (
+                    <div
+                      key={tool.id}
+                      className="p-3.5 rounded-xl bg-black/40 border border-white/10 flex flex-col justify-between gap-2.5"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-xs text-cyan-300 font-mono">{tool.name}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-200 font-mono">
+                            {tool.safeEquivalent}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-gray-400">{tool.category}</div>
+                        <p className="text-xs text-gray-300 leading-relaxed">{tool.purposeAr}</p>
+                        <div
+                          className="p-2 rounded bg-black/70 border border-white/10 text-[11px] font-mono text-emerald-300 overflow-x-auto"
+                          dir="ltr"
+                        >
+                          $ {cmd}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => void handleSimulateKaliTool(tool.id)}
+                          disabled={deepLoading === `kali-${tool.id}`}
+                          className="flex-1 px-2.5 py-1.5 rounded-lg bg-cyan-600/35 hover:bg-cyan-600/55 border border-cyan-500/40 text-[11px] font-bold text-cyan-100"
+                        >
+                          {deepLoading === `kali-${tool.id}` ? "جاري الفحص..." : "⚡ تشغيل الفحص الآمن"}
+                        </button>
+                        <button
+                          onClick={() => copyText(`cmd-${tool.id}`, cmd)}
+                          className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-gray-300"
+                        >
+                          {copiedId === `cmd-${tool.id}` ? "✓" : "نسخ الأمر"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* 11. Intelligent Vulnerability Chaining & Correlation Synthesizer */}
+          <div className="rounded-2xl border border-rose-500/35 bg-gradient-to-l from-rose-950/25 via-[#0b0716] to-amber-950/20 p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-rose-400" />
+                  <span>11. محرك دمج وبناء سلاسل الثغرات المركبة (Intelligent Vulnerability Chain Synthesizer)</span>
+                </h3>
+                <p className="text-xs text-gray-300 mt-0.5">
+                  يربط تلقائياً بين مخرجات الاستطلاع (OSINT / JS Endpoints / Config / Schemas) والذاكرة لبناء سلاسل ثغرات مركبة ترفع التقييم إلى High / Critical CVSS v3.1 مع إرسالها بضغطة زر إلى مولّد التقارير:
+                </p>
+              </div>
+              <button
+                onClick={() => void handleRunChainSynthesizer()}
+                disabled={deepLoading === "chains"}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-extrabold text-white shadow-lg shadow-rose-600/30"
+              >
+                {deepLoading === "chains" ? "جاري تحليل السلاسل..." : "🔗 توليد سلاسل الثغرات المركبة"}
+              </button>
+            </div>
+
+            {chainResult && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2 border-t border-white/10">
+                {chainResult.chains.map((ch) => (
+                  <div
+                    key={ch.id}
+                    className="p-4 rounded-xl bg-black/50 border border-rose-500/30 flex flex-col justify-between gap-3"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-extrabold px-2.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono">
+                          {ch.combinedSeverity}
+                        </span>
+                        <span className="text-[11px] font-mono text-amber-300">
+                          {ch.cweChain.join(" + ")}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-sm text-white">{ch.title}</h4>
+                      <div className="space-y-1 text-xs text-gray-300">
+                        {ch.steps.map((st, idx) => (
+                          <div key={idx} className="p-2 rounded bg-white/[0.03] border border-white/5">
+                            {st}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-[11px] text-emerald-300 font-mono">
+                        🛠️ مسار التحقق: {ch.verificationTool}
+                      </div>
+                      <div className="text-[11px] text-gray-400">
+                        ✅ الإصلاح المعماري: {ch.remediation}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                      <button
+                        onClick={() => handleSendChainToReport(ch)}
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white"
+                      >
+                        📝 إرسال السلسلة إلى مولّد التقارير وحاسبة CVSS
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

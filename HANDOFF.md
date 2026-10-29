@@ -64,3 +64,18 @@
   8. **مدقق تشفير الجلسات والكوكيز (`POST /api/deep-research/jwt-cookie-auditor`):** يفكك توكنات `JWT` ويكتشف ثغرات `alg: none` (`CWE-347`) وغياب `exp` (`CWE-613`) وحقن `kid` (`CWE-22`) ويدقق خصائص `Set-Cookie` (`HttpOnly`, `Secure`, `SameSite`).
   9. **مدقق مخططات `GraphQL` و`OpenAPI/Swagger` (`POST /api/deep-research/schema-auditor`):** يفحص نقاط نهاية المخططات ويتحقق من `Introspection` و`Batching` و`Mass Assignment` (`CWE-915`).
   10. **الدليل الشامل لمنصات البج باونتي العالمية (`GET /api/deep-research/platforms`):** يضم 8 منصات عالمية معتمدة (`HackerOne`, `Google VRP`, `Bugcrowd`, `Intigriti`, `YesWeHack`, `Immunefi`, `Microsoft MSRC`, `Apple Security Bounty`) مع تفعيل فوري للنطاق بضغطة زر، بالإضافة إلى توحيد مخططات صفحات `Knowledge`, `Playbooks`, `IocTracker`, و`ThreatDetectionDashboard`.
+
+### المرحلة 8: الوعي الذاتي الكامل للمنصة، ترسانة Kali Linux الشاملة (22 أداة / 8 فئات)، توسيع ترسانة GitHub (16 مشروعاً)، موسوعة الثغرات (18 فئة شاملة)، ومحرك بناء سلاسل الثغرات المركبة
+- **محرك الوعي الذاتي وتغطية الفحص الشامل (`GET /api/deep-research/self-awareness`):**
+  - تراقب المنصة تلقائياً كل قدراتها ومخزونها المعرفي (`13 محركاً عميقاً`، `22 أداة Kali Linux`، `16 مشروع GitHub`، `18 فئة ثغرات`، سجلات الذاكرة، نتائج المهمة، الأدلة الموثقة، والتقارير المحفوظة).
+  - تحسب نسبة تغطية الفحص (`Coverage %`) على الهدف النشط عبر **6 أبعاد أمنية** وتقترح الخطوة الذكية التالية تلقائياً.
+- **ترسانة ومحاكي Kali Linux الشامل (`GET /api/deep-research/kali-arsenal` & `POST /api/deep-research/kali-simulate`):**
+  - دمج **22 أداة أساسية من Kali Linux** موزعة على **8 فئات** (`Nmap`, `OWASP Amass`, `Subfinder`, `theHarvester`, `WhatWeb`, `Nuclei`, `Nikto`, `SearchSploit`, `httpx`, `Katana`, `Arjun`, `ffuf`, `OWASP ZAP`, `jwt_tool`, `Semgrep`, `TruffleHog`, `Aqua Trivy`, `testssl.sh`, `Hash Auditor`, `dig/DNSRecon`, `Ghidra/Binwalk/YARA/ExifTool`, `LLMrecon`).
+  - توليد الأمر القانوني المحدد المعدل لكل أداة، مع إمكانية تشغيل الفحص الحي الآمن غير المدمر بضغطة زر وتوثيق النتيجة في الذاكرة ومتتبع المهام.
+- **توسيع ترسانة GitHub الأمنية مفتوحة المصدر إلى 16 مشروعاً عالمياً:**
+  - إضافة `owasp-amass/amass`, `blacklanternsecurity/bbot`, `six2dez/reconftw`, `s0md3v/Arjun`, `projectdiscovery/katana`, `edoardottt/cariddi`, `OWASP/Nettacker`, و`perplext/LLMrecon`.
+- **توسيع موسوعة الثغرات والكود الآمن إلى 18 فئة شاملة (`VULN_ENCYCLOPEDIA`):**
+  - تغطية شاملة لـ `OWASP Web Top 10`, `OWASP API Security Top 10`, `OWASP LLM/AI Top 10 (2025/2026)`, `Cloud/DNS Infrastructure`, و`Client/Realtime Security` (بما في ذلك `Subdomain Takeover`, `GraphQL Introspection & Batching`, `OAuth 2.0 / OIDC Flaws`, `Indirect Prompt Injection & Excessive Agency`, `Mass Assignment / BOPLA`, و`DOM postMessage & CSWSH`).
+- **محرك دمج وبناء سلاسل الثغرات المركبة (`POST /api/deep-research/chain-synthesizer`):**
+  - يربط مخرجات الاستطلاع والذاكرة لبناء **4 سلاسل أثر مركب عالية القيمة** (`CVSS 8.3 – 9.3`) مع زر نقل مباشر للسلسلة إلى مولّد التقارير وحاسبة `CVSS v3.1`.
+
