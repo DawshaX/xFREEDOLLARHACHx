@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { resolveStandaloneApi } from "@/lib/standalone-api";
 
 export type WsEventHandler = (event: { type: string; [key: string]: unknown }) => void;
 
@@ -38,6 +39,16 @@ export function emitPlatformWsEvent(event: { type: string; [key: string]: unknow
       // ignore
     }
   });
+  if (typeof window !== "undefined") {
+    const g = window as unknown as { __cybernovaRawWsListeners?: Set<(ev: unknown) => void> };
+    g.__cybernovaRawWsListeners?.forEach((cb) => {
+      try {
+        cb(payload);
+      } catch {
+        // ignore
+      }
+    });
+  }
   const bc = getBroadcastChannel();
   if (bc) {
     try {
@@ -56,6 +67,10 @@ export function emitPlatformWsEvent(event: { type: string; [key: string]: unknow
   }
 }
 
+if (typeof window !== "undefined") {
+  (window as unknown as { __cybernovaEmitWs?: typeof emitPlatformWsEvent }).__cybernovaEmitWs = emitPlatformWsEvent;
+}
+
 function simulateStandaloneWsChat(
   msg: Record<string, unknown>,
   dispatch: (ev: { type: string; [key: string]: unknown }) => void,
@@ -69,35 +84,36 @@ function simulateStandaloneWsChat(
       type: "chat_tool_call",
       requestId,
       id: toolCallId,
-      name: "memory_and_target_sync",
-      input: { query: content.slice(0, 120), mode: "internal-ws-bus" },
+      name: "cybernova_galaxy_brain_sync",
+      input: { query: content.slice(0, 120), mode: "internal-ws-bus", galaxyCves: 76680 },
     });
-  }, 60);
+  }, 40);
 
   setTimeout(() => {
     dispatch({
       type: "chat_tool_result",
       requestId,
       toolCallId,
-      result: JSON.stringify({ synced: true, bus: "internal-ws-active" }, null, 2),
+      result: JSON.stringify({ synced: true, bus: "internal-ws-active", galaxyCves: 76680, tools: 78, primitives: 28 }, null, 2),
       isError: false,
     });
-  }, 180);
+  }, 110);
 
+  const brainRes = resolveStandaloneApi("/api/ollama/chat", "POST", { prompt: content }) as { response?: string } | null;
   const reply =
-    `⚡ **وكيل CyberNova الحي (متصل عبر ناقل WebSocket الداخلي)**\n\n` +
+    brainRes?.response ||
+    `⚡ **وكيل CyberNova الحي (متصل عبر ناقل WebSocket الداخلي ومكتبة 76,680+ ثغرة)**\n\n` +
     `تم استلام رسالتك: "${content}"\n\n` +
-    `- جميع الأحداث والملاحظات والأهداف متزامنة في الوقت الفعلي مع **الذاكرة (/memory)** و**متتبع المهام (/mission-tracker)** و**Bug Bounty Studio**.\n` +
-    `- يمكنك الآن اختيار هدف من **Bug Bounty Studio** أو كتابة نطاق الهدف هنا لبدء الفحص القانوني وتوثيق النتائج تلقائياً.`;
+    `- جميع الأحداث والملاحظات والأهداف متزامنة في الوقت الفعلي مع **الذاكرة (/memory)** و**متتبع المهام (/mission-tracker)** و**Bug Bounty Studio**.`;
 
-  const chunks = reply.match(/.{1,20}/gs) ?? [reply];
+  const chunks = reply.match(/.{1,36}/gs) ?? [reply];
   chunks.forEach((chunk, idx) => {
     setTimeout(() => {
       dispatch({ type: "chat_delta", requestId, text: chunk });
       if (idx === chunks.length - 1) {
         dispatch({ type: "chat_done", requestId, ts: Date.now() });
       }
-    }, 240 + idx * 25);
+    }, 150 + idx * 14);
   });
 }
 

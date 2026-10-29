@@ -40,34 +40,39 @@ function parseBody(init?: RequestInit): Record<string, unknown> | null {
 function buildStaticOllamaStreamResponse(body: Record<string, unknown> | null): Response {
   const messages = (body?.messages as Array<{ role: string; content: string }>) ?? [];
   const sysMsg = messages.find((m) => m.role === "system")?.content ?? "";
-  const lastUser = messages.filter((m) => m.role === "user").pop()?.content ?? "";
+  const lastUser =
+    String(body?.prompt || body?.message || messages.filter((m) => m.role === "user").pop()?.content || "").trim();
 
   let reply = "";
   if (sysMsg.includes("فكّر بصوت عالٍ") || sysMsg.includes("أقل من 80 كلمة")) {
-    reply = `تحليل الطلب: "${lastUser.slice(0, 80)}". سأقوم بمراجعة نطاق الهدف في ذاكرة المنصة، تطبيق منهجية OWASP Top 10 وCWE بشكل قانوني، وتوثيق النتائج في سجل المهام والملاحظات.`;
+    reply = `تحليل تكتيكي للطلب: "${lastUser.slice(0, 90)}". متصل الآن بمكتبة المجرة (76,680+ ثغرة من 9 مصادر عالمية + Immunefi Web3) وترسانة 78 أداة كالي و28 فئة ثغرات أولية (P01-P28) مع مزامنة WebSocket الحية.`;
   } else if (sysMsg.includes("اكتب خطة مرقمة")) {
     reply = [
-      "1. التحقق من النطاق القانوني (In-Scope) وقواعد برنامج Bug Bounty للهدف المحدد",
-      "2. تنفيذ استطلاع سلبي (Passive Recon) للنطاقات الفرعية وشهادات TLS وسجلات DNS",
-      "3. فحص ترويسات الأمان (CSP, HSTS, CORS) واكتشاف التقنيات المكشوفة",
-      "4. اختبار نقاط النهاية ضد ثغرات IDOR/BOLA وSSRF بشكل آمن",
-      "5. توثيق الأدلة وكتابة التقرير الفني مع كود الترقيع (Remediation Diff)",
+      "1. التحقق من النطاق القانوني (In-Scope) وقواعد برنامج Bug Bounty / Immunefi للهدف النشط",
+      "2. تنفيذ استطلاع سلبي (Passive Recon) للنطاقات الفرعية، العقود الذكية، وشهادات TLS",
+      "3. مطابقة السطح الهجومي مع مكتبة 76,680+ ثغرة (NVD, CISA KEV, GitHub, ExploitDB, Immunefi-Web3)",
+      "4. تركيب سلاسل الثغرات (A->B->C) أو اختبار Fork محلي معزول عبر Foundry وSlither بدون أي أثر تدميري",
+      "5. التحقق ببوابة Zero-FP (SHA-256 Baseline Diff) وتوليد التقرير الفني وكود الترقيع الدفاعي",
     ].join("\n");
   } else {
+    const brainRes = resolveStandaloneApi("/api/ollama/chat", "POST", {
+      prompt: lastUser || "تحليل أمني شامل للمنصة والهدف النشط",
+      messages,
+    }) as { response?: string } | null;
     reply =
-      `### ⚡ وكيل CyberNova الأمني (متصل بالذاكرة وناقل WebSocket الداخلي)\n\n` +
-      `تم استلام طلبك وتحليله بنجاح:\n> \`${lastUser.slice(0, 150)}\`\n\n` +
-      `- جميع الملاحظات والأهداف متزامنة في الوقت الفعلي مع **الذاكرة (/memory)** و**متتبع المهام (/mission-tracker)** و**Bug Bounty Studio**.\n` +
-      `- يمكنك اختيار هدف من **Bug Bounty Studio** لبدء الفحص القانوني وتوثيق النتائج خطوة بخطوة.`;
+      brainRes?.response ||
+      `### ⚡ وكيل CyberNova الأمني الذاتي الوعي (متصل بمكتبة 76,680+ ثغرة وناقل WebSocket الحي)\n\n` +
+      `تم تحليل طلبك:\n> \`${lastUser.slice(0, 150)}\`\n\n` +
+      `- **الوعي الذاتي للمنصة**: متصل بـ **76,680+ ثغرة** (من 9 مصادر حية)، **78 أداة Kali & Web3**، **56 مشروع GitHub 2026**، و**28 فئة ثغرات أولية (P01–P28)**.`;
   }
 
   const encoder = new TextEncoder();
-  const chunks = reply.match(/.{1,24}/gs) ?? [reply];
+  const chunks = reply.match(/.{1,36}/gs) ?? [reply];
   const stream = new ReadableStream({
     async start(controller) {
       for (const chunk of chunks) {
         controller.enqueue(encoder.encode(JSON.stringify({ token: chunk, done: false }) + "\n"));
-        await new Promise((r) => setTimeout(r, 15));
+        await new Promise((r) => setTimeout(r, 12));
       }
       controller.enqueue(encoder.encode(JSON.stringify({ token: "", done: true }) + "\n"));
       controller.close();
@@ -186,8 +191,81 @@ function buildStaticSseResponse(urlStr: string, body: Record<string, unknown> | 
   return null;
 }
 
-// Intercept EventSource on static hosts (e.g., GitHub Pages) so SSE streams never fail
-if (typeof window !== "undefined" && window.location.hostname.endsWith("github.io") && typeof window.EventSource !== "undefined") {
+type SseEmitterFn = (eventName: string, data: unknown) => void;
+const activeCveSseEmitters = new Set<SseEmitterFn>();
+
+function notifyAllSseAndWs(urlStr: string, method: string, mockResult: unknown) {
+  const m = (method || "GET").toUpperCase();
+  if (m === "GET") return;
+  const g = typeof window !== "undefined"
+    ? (window as unknown as { __cybernovaEmitWs?: (ev: { type: string; [key: string]: unknown }) => void })
+    : null;
+
+  if (urlStr.includes("/cve/hunt/trigger") || urlStr.includes("/cve/sync") || urlStr.includes("/cve-live/hunt")) {
+    const resObj = (mockResult || {}) as Record<string, unknown>;
+    const latestCve = resObj.latestCve as Record<string, unknown> | undefined;
+    activeCveSseEmitters.forEach((emitNamed) => {
+      emitNamed("hunt_start", { ts: new Date().toISOString() });
+      if (latestCve) {
+        emitNamed("cve_new", {
+          id: latestCve.cveId || latestCve.id,
+          cveId: latestCve.cveId || latestCve.id,
+          severity: latestCve.severity || "CRITICAL",
+          cvss: latestCve.cvssScore || 9.8,
+          cvssScore: latestCve.cvssScore || 9.8,
+          description: latestCve.description || "",
+          source: latestCve.source || "Immunefi-Web3",
+          exploitType: latestCve.cwe || "Reentrancy-Web3",
+          epssScore: latestCve.epss || 0.97,
+          publishedAt: new Date().toISOString(),
+        });
+      }
+      emitNamed("hunt_done", resObj);
+      emitNamed("stats_update", { total: resObj.total || 76680 });
+    });
+    g?.__cybernovaEmitWs?.({
+      type: "cve_hunt_complete",
+      newFound: resObj.newFound || 31,
+      total: resObj.total || 76680,
+      latestCve,
+    });
+  } else if (urlStr.includes("/cve/mutate")) {
+    const resObj = (mockResult || {}) as Record<string, unknown>;
+    const mutated = resObj.mutatedCve as Record<string, unknown> | undefined;
+    if (mutated) {
+      activeCveSseEmitters.forEach((emitNamed) => {
+        emitNamed("cve_new", {
+          id: mutated.cveId || mutated.id,
+          cveId: mutated.cveId || mutated.id,
+          severity: mutated.severity || "CRITICAL",
+          cvss: mutated.cvssScore || 9.9,
+          cvssScore: mutated.cvssScore || 9.9,
+          description: mutated.description || "",
+          source: mutated.source || "AI-Mutated",
+          exploitType: mutated.exploitType || mutated.cwe || "Reentrancy-Web3",
+          epssScore: mutated.epssScore || 0.98,
+          publishedAt: new Date().toISOString(),
+        });
+        emitNamed("stats_update", { total: resObj.total || 76680 });
+      });
+      g?.__cybernovaEmitWs?.({
+        type: "cve_mutated",
+        cve: mutated,
+        total: resObj.total || 76680,
+      });
+    }
+  } else {
+    g?.__cybernovaEmitWs?.({
+      type: "api_mutation",
+      endpoint: urlStr,
+      method: m,
+      ts: Date.now(),
+    });
+  }
+}
+
+// Intercept EventSource on static hosts (e.g., GitHub Pages) so SSE streams never fail and support named SSE events
+if (typeof window !== "undefined" && window.location.hostname.endsWith("github.io")) {
   const OriginalEventSource = window.EventSource;
   class StandaloneEventSource extends EventTarget {
     url: string;
@@ -196,53 +274,145 @@ if (typeof window !== "undefined" && window.location.hostname.endsWith("github.i
     onmessage: ((ev: MessageEvent) => unknown) | null = null;
     onerror: ((ev: Event) => unknown) | null = null;
     private timer: ReturnType<typeof setTimeout> | null = null;
+    private emitNamedFn: SseEmitterFn | null = null;
 
     constructor(url: string | URL, eventSourceInitDict?: EventSourceInit) {
       super();
       const urlStr = String(url);
       this.url = urlStr;
-      if (!urlStr.includes("/api/")) {
+      if (!urlStr.includes("/api/") && OriginalEventSource) {
         return new OriginalEventSource(url, eventSourceInitDict) as unknown as StandaloneEventSource;
       }
+      const emitNamed: SseEmitterFn = (eventName: string, data: unknown) => {
+        if (this.readyState === 2) return;
+        const jsonStr = JSON.stringify(data);
+        if (eventName && eventName !== "message") {
+          const namedEv = new MessageEvent(eventName, { data: jsonStr });
+          this.dispatchEvent(namedEv);
+        }
+        const msgEv = new MessageEvent("message", { data: jsonStr });
+        this.onmessage?.(msgEv);
+        this.dispatchEvent(msgEv);
+      };
+      this.emitNamedFn = emitNamed;
+
       this.timer = setTimeout(() => {
         this.onopen?.(new Event("open"));
-        const emit = (data: unknown) => {
-          const msgEv = new MessageEvent("message", { data: JSON.stringify(data) });
-          this.onmessage?.(msgEv);
-          this.dispatchEvent(msgEv);
-        };
+        this.dispatchEvent(new Event("open"));
+
         if (urlStr.includes("/local-agent/exec-stream")) {
-          emit({ type: "stdout", data: "kali@cybernova-kali-sandbox:~$ Executed in Kali Sandbox (64 tools ready)\n" });
-          emit({ type: "done", exitCode: 0 });
+          emitNamed("message", { type: "stdout", data: "kali@cybernova-kali-sandbox:~$ Executed in Kali Sandbox (78 tools ready)\n" });
+          emitNamed("message", { type: "done", exitCode: 0 });
         } else if (urlStr.includes("/explorer/run")) {
-          emit({ type: "log", message: "⚡ تم جمع وتحديث 12 عنصر استخباراتي جديد في الفهرس المعرفي." });
-          emit({ type: "done", summary: { totalCollected: 12, totalSkipped: 1, duration: 420 } });
+          emitNamed("message", { type: "log", message: "⚡ تم جمع وتحديث 28 عنصر استخباراتي جديد في الفهرس المعرفي." });
+          emitNamed("message", { type: "done", summary: { totalCollected: 28, totalSkipped: 0, duration: 380 } });
         } else if (urlStr.includes("/nuclei/scan")) {
-          emit({ type: "log", message: "[INF] Running passive template verification..." });
-          emit({ type: "done", total: 1 });
+          emitNamed("message", { type: "log", message: "[INF] Running passive template verification across 76,680+ galaxy signatures..." });
+          emitNamed("message", { type: "done", total: 1 });
         } else if (urlStr.includes("/cve/stream") || urlStr.includes("/cve-live/stream")) {
-          emit({
-            id: "CVE-2025-29927",
+          activeCveSseEmitters.add(emitNamed);
+          const currentStats = resolveStandaloneApi("/api/cve/db/stats", "GET", null) as { total?: number } | null;
+          const totalCount = currentStats?.total || 76680;
+          emitNamed("connected", { ok: true, status: "live", sources: 9, total: totalCount });
+          emitNamed("stats_update", { total: totalCount });
+          emitNamed("cve_new", {
+            id: "IMMUNEFI-2026-001",
+            cveId: "IMMUNEFI-2026-001",
             severity: "CRITICAL",
-            cvss: 9.8,
+            cvss: 10.0,
+            cvssScore: 10.0,
             publishedAt: new Date().toISOString(),
-            source: "NVD/KEV",
-            exploitType: "AuthBypass",
-            epssScore: 0.96,
-            pocUrl: "https://nvd.nist.gov/vuln/detail/CVE-2025-29927",
+            source: "Immunefi-Web3",
+            exploitType: "Bridge-SigBypass",
+            epssScore: 0.99,
+            description:
+              "[Immunefi Web3 Critical] Cross-Chain Bridge Message Verification & EIP-712 Signature Replay via uninitialized ecrecover(0x0) (Foundry Local Fork Verified).",
+            pocUrl: "https://immunefi.com/explore/",
           });
         }
-      }, 60);
+      }, 45);
     }
     close() {
       this.readyState = 2;
       if (this.timer) clearTimeout(this.timer);
+      if (this.emitNamedFn) activeCveSseEmitters.delete(this.emitNamedFn);
     }
   }
   window.EventSource = StandaloneEventSource as unknown as typeof EventSource;
+  (globalThis as unknown as { EventSource: unknown }).EventSource = window.EventSource;
 }
 
-window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+// Intercept raw WebSocket on static hosts (e.g., GitHub Pages) so pages calling new WebSocket('/api/ws') connect to the internal bus
+if (typeof window !== "undefined" && window.location.hostname.endsWith("github.io")) {
+  const OriginalWebSocket = window.WebSocket;
+  const g = window as unknown as {
+    __cybernovaRawWsListeners?: Set<(ev: unknown) => void>;
+    __cybernovaEmitWs?: (ev: { type: string; [key: string]: unknown }) => void;
+  };
+  if (!g.__cybernovaRawWsListeners) {
+    g.__cybernovaRawWsListeners = new Set();
+  }
+
+  class StandaloneWebSocket extends EventTarget {
+    static readonly CONNECTING = 0;
+    static readonly OPEN = 1;
+    static readonly CLOSING = 2;
+    static readonly CLOSED = 3;
+    readonly CONNECTING = 0;
+    readonly OPEN = 1;
+    readonly CLOSING = 2;
+    readonly CLOSED = 3;
+    url: string;
+    readyState = 1;
+    onopen: ((ev: Event) => unknown) | null = null;
+    onmessage: ((ev: MessageEvent) => unknown) | null = null;
+    onclose: ((ev: Event) => unknown) | null = null;
+    onerror: ((ev: Event) => unknown) | null = null;
+    private listener: ((payload: unknown) => void) | null = null;
+
+    constructor(url: string | URL, protocols?: string | string[]) {
+      super();
+      const urlStr = String(url);
+      this.url = urlStr;
+      if ((urlStr.includes("127.0.0.1") || urlStr.includes("localhost")) && OriginalWebSocket) {
+        return new OriginalWebSocket(url, protocols) as unknown as StandaloneWebSocket;
+      }
+      this.listener = (payload: unknown) => {
+        if (this.readyState !== 1) return;
+        const msgEv = new MessageEvent("message", { data: JSON.stringify(payload) });
+        this.onmessage?.(msgEv);
+        this.dispatchEvent(msgEv);
+      };
+      g.__cybernovaRawWsListeners?.add(this.listener);
+      setTimeout(() => {
+        const openEv = new Event("open");
+        this.onopen?.(openEv);
+        this.dispatchEvent(openEv);
+        this.listener?.({ type: "ws_connected", status: "active", galaxyTotalCves: 76680, ts: Date.now() });
+      }, 25);
+    }
+
+    send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+      if (typeof data === "string") {
+        try {
+          const parsed = JSON.parse(data) as { type?: string; [key: string]: unknown };
+          g.__cybernovaEmitWs?.({ ...parsed, type: parsed.type || "ws_message" });
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    close() {
+      this.readyState = 3;
+      if (this.listener) g.__cybernovaRawWsListeners?.delete(this.listener);
+    }
+  }
+  window.WebSocket = StandaloneWebSocket as unknown as typeof WebSocket;
+  (globalThis as unknown as { WebSocket: unknown }).WebSocket = window.WebSocket;
+}
+
+const cybernovaFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   let urlStr: string | null = null;
 
   if (typeof input === "string") {
@@ -251,6 +421,14 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     urlStr = input.toString();
   } else if (input instanceof Request) {
     urlStr = input.url;
+  }
+
+  // Never intercept direct browser calls to the user's local Ollama instance on port 11434
+  const isLocalOllama =
+    Boolean(urlStr) &&
+    (urlStr!.includes(":11434") || urlStr!.includes("127.0.0.1:11434") || urlStr!.includes("localhost:11434"));
+  if (isLocalOllama) {
+    return originalFetch(input, init);
   }
 
   if (urlStr && urlStr.includes("/api/")) {
@@ -267,6 +445,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 
       const mock = resolveStandaloneApi(urlStr, method, parsedBody);
       if (mock !== null) {
+        notifyAllSseAndWs(urlStr, method, mock);
         return new Response(JSON.stringify(mock), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -289,6 +468,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 
         const mock = resolveStandaloneApi(urlStr, method, parsedBody);
         if (mock !== null) {
+          notifyAllSseAndWs(urlStr, method, mock);
           return new Response(JSON.stringify(mock), {
             status: 200,
             headers: { "Content-Type": "application/json" },
@@ -305,6 +485,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 
       const mock = resolveStandaloneApi(urlStr, method, parsedBody);
       if (mock !== null) {
+        notifyAllSseAndWs(urlStr, method, mock);
         return new Response(JSON.stringify(mock), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -316,3 +497,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 
   return originalFetch(input, init);
 };
+
+window.fetch = cybernovaFetch;
+(globalThis as unknown as { fetch: unknown }).fetch = cybernovaFetch;
+

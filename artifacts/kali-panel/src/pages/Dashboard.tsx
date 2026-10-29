@@ -7,7 +7,8 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
 import { jsonRequest } from "@/lib/sse";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useWebSocket, emitPlatformWsEvent } from "@/hooks/useWebSocket";
 
 interface Stats {
   criticalCves: number; highCves: number; totalScans: number;
@@ -87,14 +88,29 @@ export default function Dashboard() {
     setWisdomIdx((i) => (i + 1) % WISDOM_ITEMS.length);
   };
 
-  const { data: stats } = useQuery<Stats>({ queryKey: ["dashboard-stats"], queryFn: () => jsonRequest<Stats>("/stats/dashboard"), refetchInterval: 30000 });
-  const { data: recentCves } = useQuery<Cve[]>({ queryKey: ["recent-cves-dash"], queryFn: () => jsonRequest<Cve[]>("/cve/recent?severity=CRITICAL&limit=5"), refetchInterval: 60000 });
-  const { data: dbStats, isLoading: dbLoading } = useQuery<DbStats>({ queryKey: ["dashboard-db-stats"], queryFn: () => jsonRequest<DbStats>("/cve/db/stats"), refetchInterval: 30000, staleTime: 15000 });
+  const { data: stats, refetch: refetchStats } = useQuery<Stats>({ queryKey: ["dashboard-stats"], queryFn: () => jsonRequest<Stats>("/stats/dashboard"), refetchInterval: 30000 });
+  const { data: recentCves, refetch: refetchRecentCves } = useQuery<Cve[]>({ queryKey: ["recent-cves-dash"], queryFn: () => jsonRequest<Cve[]>("/cve/recent?severity=CRITICAL&limit=8"), refetchInterval: 60000 });
+  const { data: dbStats, isLoading: dbLoading, refetch: refetchDbStats } = useQuery<DbStats>({ queryKey: ["dashboard-db-stats"], queryFn: () => jsonRequest<DbStats>("/cve/db/stats"), refetchInterval: 30000, staleTime: 5000 });
   const { data: job, refetch: refetchJob } = useQuery<SyncJob | null>({ queryKey: ["dashboard-sync-job"], queryFn: () => jsonRequest<SyncJob | null>("/cve/sync/status"), refetchInterval: syncing ? 2000 : 30000 });
 
+  useWebSocket({
+    onMessage: useCallback((ev: { type: string; [key: string]: unknown }) => {
+      if (ev.type === "cve_mutated" || ev.type === "cve_hunt_complete" || ev.type === "scan_complete") {
+        void refetchDbStats();
+        void refetchStats();
+        void refetchRecentCves();
+      }
+    }, [refetchDbStats, refetchStats, refetchRecentCves]),
+  });
+
   const startSync = async (maxItems: number) => {
-    try { await jsonRequest("/cve/sync", { method: "POST", body: JSON.stringify({ maxItems }) }); setSyncing(true); void refetchJob(); }
-    catch { /* ignore */ }
+    try {
+      setSyncing(true);
+      await jsonRequest("/cve/sync", { method: "POST", body: JSON.stringify({ maxItems }) });
+      await Promise.all([refetchJob(), refetchDbStats(), refetchStats(), refetchRecentCves()]);
+      emitPlatformWsEvent({ type: "cve_hunt_complete", maxItems });
+    } catch { /* ignore */ }
+    setSyncing(false);
   };
 
   const sourceEntries = Object.entries(dbStats?.bySource ?? {}).sort((a, b) => b[1] - a[1]);

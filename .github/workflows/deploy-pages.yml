@@ -50,6 +50,7 @@ jobs:
           done
           MAIN_JS=$(ls artifacts/kali-panel/dist/public/assets/index-*.js | head -n 1)
           if [ -n "$MAIN_JS" ]; then
+            cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index-CTWUYsNj.js || true
             cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index-CGaem1qQ.js || true
             cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index-BOeZlOmc.js || true
             cp "$MAIN_JS" artifacts/kali-panel/dist/public/assets/index.js || true
