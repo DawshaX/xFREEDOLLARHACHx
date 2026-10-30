@@ -251,3 +251,15 @@
   - Indexed all 31 official CSV scope assets + 4 on-chain Smart Contracts (`CDCETH` `0xfe18aE03741a5b84e39C295Ac9C856eD7991C38e` on Ethereum, `CDCBTC` `0x2e53c5586e12a99d4CAE366E9Fc5C14fE9c6495d` on Cronos, `CDCETH` `0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446` on Cronos, and `CDCBTC` `0xDDCDe8DE19284cC5Aab6db5AC6Af1dcdA175f5e2` on Ethereum) in `state/cryptocom-hackerone-scope.json`.
   - Audited `crypto-com/wrapped-tokens-os` (`LiquidETHV1.sol`, `FiatTokenV2_1.sol`, `MintForwarder.sol`, `RateLimit.sol`, `ExchangeRateUpdater.sol`, `deploy_staked_token.ts`) and discovered **`CDC-NOTE-01`**: Uninitialized `LiquidETHV1` implementation contract (`0xCC4b4878d64A76616c483a280fBfdBb08b705757`, `slot[8]=0`, `slot[18]=0`) on Cronos Mainnet (`audit/cryptocom-hackerone/CRYPTOCOM_SMART_CONTRACTS_SCOPE_AND_INITIAL_AUDIT.md`).
 
+
+---
+
+## Phase 24 — Bounded Live Crypto.com Web/API Review (2026-10-30)
+
+- Re-verified the official HackerOne scope CSV, program guidelines, severity definitions, and Gold Standard Safe Harbor before any live request.
+- Performed a deliberately bounded review of `developer-platform-api.crypto.com`, `developer.crypto.com`, `developer-api.crypto.com`, `x-growth.crypto.com`, and `https://crypto.com/exchange`: no DoS, brute force, broad scanning, real-user data access, financial state changes, development-login invocation, or token use.
+- **Result: 0 new verified vulnerabilities, 0 Critical findings, and 0 submission-ready reports.** No unverified candidate was added to the Discovered Vulnerabilities Vault.
+- The three Developer Platform names returned no A/AAAA/CNAME/HTTPS answers through both Cloudflare and Google DoH during the review; this is not reported as a vulnerability.
+- The latest `cdcx-cli` (`1.2.6`, commit `4d1112e86b061f8bdd8a6d92c3fd9aeb55b3b7bc`) still shows the same session-id browser/polling design, but one fresh-random-UUID negative control returned an empty HTTP 500; `CDC-DEV-03` therefore remains unproven and is not submission-ready.
+- Reviewed 34 public Exchange first-party JS assets (371,464 bytes). Development-auth strings were found, but the production trigger is hidden and a single matching probe request returned empty HTTP 405. The development login/accounts paths were not called.
+- Full evidence and next validation gates: `audit/cryptocom-hackerone/CRYPTOCOM_LIVE_WEB_API_REVIEW_2026-10-30.md` and `audit/cryptocom-hackerone/evidence/live-web-api-review-2026-10-30.json`.

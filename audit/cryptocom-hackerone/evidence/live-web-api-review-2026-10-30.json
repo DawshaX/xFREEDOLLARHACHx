@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "1.0.0",
+  "reviewDate": "2026-10-30",
+  "program": "Crypto.com HackerOne",
+  "result": {
+    "newVerifiedVulnerabilities": 0,
+    "newCriticalVulnerabilities": 0,
+    "submissionReadyReports": 0
+  },
+  "safety": {
+    "broadScanning": false,
+    "denialOfService": false,
+    "bruteForceOrCredentialGuessing": false,
+    "realUserDataAccessed": false,
+    "financialStateChanged": false,
+    "developmentLoginInvoked": false,
+    "tokensRequestedOrUsed": false,
+    "responseValuesSanitized": true
+  },
+  "officialScopeCsv": {
+    "url": "https://hackerone.com/teams/crypto/assets/download_csv.csv",
+    "bytes": 5270,
+    "sha256": "959273a235f237e29865b76bc0b942f2104c39a669f9377d968d8f8b927bf994"
+  },
+  "dnsChecks": [
+    {
+      "name": "developer-platform-api.crypto.com",
+      "providers": ["Cloudflare DoH", "Google DoH"],
+      "types": ["A", "AAAA", "CNAME", "HTTPS"],
+      "status": 0,
+      "answers": [],
+      "interpretation": "No address record returned during review; not a vulnerability"
+    },
+    {
+      "name": "developer.crypto.com",
+      "providers": ["Cloudflare DoH", "Google DoH"],
+      "types": ["A", "AAAA", "CNAME", "HTTPS"],
+      "status": 0,
+      "answers": [],
+      "interpretation": "No address record returned during review; not a vulnerability"
+    },
+    {
+      "name": "developer-api.crypto.com",
+      "providers": ["Cloudflare DoH", "Google DoH"],
+      "types": ["A", "AAAA", "CNAME", "HTTPS"],
+      "status": 0,
+      "answers": [],
+      "interpretation": "No address record returned during review; not a vulnerability"
+    }
+  ],
+  "requests": [
+    {
+      "target": "https://x-growth.crypto.com/",
+      "method": "GET",
+      "purpose": "Root reachability",
+      "httpStatus": 403,
+      "responseBytes": 5659,
+      "securityImpactVerified": false
+    },
+    {
+      "target": "https://crypto.com/exchange",
+      "method": "GET",
+      "purpose": "Public client retrieval",
+      "finalHttpStatus": 200,
+      "finalPath": "/exchange-pro/en-US",
+      "responseBytes": 135780,
+      "securityImpactVerified": false
+    },
+    {
+      "target": "https://crypto.com/__dev/auth/probe",
+      "method": "POST",
+      "purpose": "Single existence check matching public client behavior",
+      "requestBody": "empty",
+      "authentication": "none",
+      "httpStatus": 405,
+      "responseBytes": 0,
+      "responseSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "securityImpactVerified": false
+    },
+    {
+      "target": "https://x-growth.crypto.com/static/cli/authenticate",
+      "method": "POST",
+      "purpose": "Negative control with fresh random UUID; no real session used",
+      "requestBodyShape": {
+        "session": "random UUIDv4 (value not archived)",
+        "ts": "current milliseconds"
+      },
+      "authentication": "none",
+      "httpStatus": 500,
+      "responseBytes": 0,
+      "responseSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "securityImpactVerified": false
+    }
+  ],
+  "sourceRevisions": {
+    "crypto-com/cdcx-cli": {
+      "commit": "4d1112e86b061f8bdd8a6d92c3fd9aeb55b3b7bc",
+      "version": "1.2.6"
+    },
+    "crypto-com/developer-platform-client-ts": {
+      "commit": "2d0da269de72f416a59ad65d3ff77b66701d867e",
+      "version": "1.1.4"
+    }
+  },
+  "publicClientReview": {
+    "firstPartyJavaScriptFiles": 34,
+    "totalBytes": 371464,
+    "unverifiedCandidates": [
+      "Development authentication strings in production bundle; probe returned 405 and login was not invoked",
+      "Deterministic OAuth state in client URL builder; server-side validation unknown",
+      "Notification content HTML sink; no cross-user attacker-controlled source established"
+    ]
+  }
+}
