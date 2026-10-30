@@ -274,3 +274,16 @@
 - Saved safe PoC/evidence: `audit/cryptocom-hackerone/poc/disable_2fa_magic_token_disclosure.js`, `evidence/magic-token-disclosure-repro3-2026-10-30.json`, `evidence/mcp-official-gating-test-2026-10-30.log`, and `evidence/mcp-official-gating-test-2026-10-30.patch`. Raw browser output containing transient cookie state was not published.
 - The temporary Rust source edit was restored and the ephemeral `cdcx-cli` checkout left clean.
 - Permanent state synchronized in both `state/` and `artifacts/kali-panel/public/state/`: vault schema `2099.23.0`, **11 research/vulnerability records, 15 lifelong-learning rules**. **Verified Critical vulnerabilities remain 0; submission-ready Critical reports remain 0.**
+
+---
+
+## Phase 26 — Exchange Upload, BFF/BE/OAuth, WebSocket & Source-to-Sink Dynamic Review (2026-10-30)
+
+- Expanded the accumulated static Exchange review to **645 JavaScript files / 8,303,793 bytes** and extracted **123 Exchange-Pro API call sites (122 unique)**. Close source-to-sink review found no reproducible DOM XSS, token-exfiltration, or OAuth redirect chain.
+- Executed the pending official VIP upload harness in a fresh unauthenticated browser. A benign 68-byte 1×1 PNG returned **201**, but its returned static-host URL returned **CloudFront 403** on direct retrieval. A separate **inert, script-free HTML** validation file returned **400** and no URL. No active content was uploaded; no arbitrary public file read, stored XSS, or Critical impact was verified.
+- Tested four sensitive non-`/private/` BFF reads without credentials: Predictions positions returned **404**; KYC popup, KYC resubmissions, and fixed-body read-only AUM returned **401 / 264005**. Ten Legacy sensitive proxy GETs—including internal OAuth token history, social links, user details, payment cards, and Dual Invest data—all returned **401 / 264005**. Two bounded `public/../` OAuth-read normalization variants reached Cloudflare **403** and were not bypassed.
+- WebSocket validation without account credentials produced **`40101 Unauthorized`** on the private user stream. The global BFF stream was decoded with the official Exchange FlatBuffers decoder and showed only public market ticker/price messages, not `user.balance` or account data.
+- Six direct Exchange-BE read operations returned `10002 Not logged-in` (five) or `10016 User does not exist` for device activity without a device ID (one), always with `data: null`; no identifier enumeration or state-changing call followed.
+- Additional Developer Platform `CNAME`/`NS`/`HTTPS` DoH queries returned no answers; no dangling CNAME/delegation or takeover was established.
+- Saved full methodology and non-repeat register: `audit/cryptocom-hackerone/CRYPTOCOM_PHASE26_EXCHANGE_DYNAMIC_REVIEW_2026-10-30.md`; sanitized machine evidence: `audit/cryptocom-hackerone/evidence/phase26-exchange-dynamic-review-2026-10-30.json`.
+- Permanent state synchronized in both locations: schema `2099.24.0`, **11 research/vulnerability records, 16 lifelong-learning rules**. **Verified Critical vulnerabilities remain 0; verified ATO remains 0; submission-ready Critical reports remain 0.**

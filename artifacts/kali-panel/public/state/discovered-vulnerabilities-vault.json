@@ -1,11 +1,11 @@
 {
-  "schemaVersion": "2099.23.0",
-  "updatedAt": "2026-10-30T01:32:31Z",
+  "schemaVersion": "2099.24.0",
+  "updatedAt": "2026-10-30T01:57:05Z",
   "vaultTitleAr": "\u062e\u0632\u0646\u0629 \u0627\u0644\u062b\u063a\u0631\u0627\u062a \u0627\u0644\u0645\u0643\u062a\u0634\u0641\u0629 \u0648\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0645\u062d\u0641\u0648\u0638\u0629 \u0648\u0633\u062c\u0644 \u0627\u0644\u062a\u0639\u0644\u0645 \u0645\u062f\u0649 \u0627\u0644\u062d\u064a\u0627\u0629 \u2014 CyberNova Permanent Vault",
   "totalDiscoveredVulnerabilities": 11,
   "totalArchitecturalNotes": 6,
   "totalSavedDisclosureReports": 3,
-  "totalLifelongLearningRules": 15,
+  "totalLifelongLearningRules": 16,
   "discoveredVulnerabilities": [
     {
       "id": "CDC-WEB-01",
@@ -364,6 +364,13 @@
       "pattern": "Unmatched private state-changing OpenAPI operations fall through to SensitiveRead, omit acknowledged from generated tools, and pass runtime gating",
       "detectionMethod": "Parse the current official spec with every production overlay, generate the actual MCP tool, execute the actual gate with no acknowledgment and dangerous methods disabled, and compare against documented business semantics. Never call the real financial endpoint.",
       "originVulnId": "CDC-MCP-01"
+    },
+    {
+      "ruleId": "RULE-16",
+      "category": "Hypothesis-to-Proof Gating Across Upload, API, WebSocket, and DNS Boundaries",
+      "pattern": "Public client constants, sensitive-looking route names, missing /private/ path segments, binary WebSocket frames, or NOERROR/NODATA DNS responses are hypotheses rather than vulnerabilities; each requires layer-specific dynamic proof and impact.",
+      "detectionMethod": "Use the official UI with only benign content, separate upload acceptance from retrieval and content execution, issue bounded read-only unauthenticated matrix requests, decode binary protocols with the official client decoder, record only sanitized status/hash/shape evidence, and stop at edge challenges without bypassing them. Never infer Critical impact from static names or chain multiple negative/Low observations.",
+      "originVulnId": "CDC-PHASE-26-ELIMINATION-EVIDENCE"
     }
   ]
 }

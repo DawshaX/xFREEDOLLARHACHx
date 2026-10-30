@@ -1,0 +1,386 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-10-30T01:55:48Z",
+  "targetProgram": "Crypto.com HackerOne",
+  "reviewPhase": "Phase 26",
+  "accountCredentialsUsed": false,
+  "realUserIdentifiersSupplied": false,
+  "financialStateChangingRequests": 0,
+  "activeContentUploaded": false,
+  "verifiedCriticalVulnerabilities": 0,
+  "verifiedAccountTakeover": false,
+  "submissionReadyCriticalReports": 0,
+  "staticCoverage": {
+    "exchangeJavaScriptFilesReviewed": 645,
+    "exchangeJavaScriptBytesReviewed": 8303793,
+    "directExchangeProApiCallsExtracted": 123,
+    "uniqueExchangeProApiCalls": 122,
+    "sourceSinkCloseCandidateFiles": [
+      "exchange-js/login-BS0uRhCv.js",
+      "exchange-js/root-CgDhaEKC.js",
+      "legacy-exchange/index-D7ETiHqh.js"
+    ],
+    "exploitableSourceSinkChainVerified": false
+  },
+  "vipUploadValidation": {
+    "benignPng": {
+      "officialForm": "https://crypto.com/exchange/vip-portal",
+      "fileBytes": 68,
+      "fileSha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+      "uploadStatus": 201,
+      "returnedFileHost": "dprd-static-bff.dprd.crypto.com",
+      "directBrowserRetrievalStatus": 403,
+      "activeContent": false
+    },
+    "inertHtml": {
+      "fileBytes": 166,
+      "fileSha256": "c0cc0f24dc9f647da1d88cabeb63f8adbd00f57057abffd1405d98cbf79bed9d",
+      "activeContent": false,
+      "uploadStatus": 400,
+      "returnedFileUrls": 0
+    },
+    "storedXssVerified": false,
+    "publicArbitraryFileRetrievalVerified": false
+  },
+  "sensitiveNonPrivatePathReads": [
+    {
+      "name": "predictions-positions",
+      "method": "GET",
+      "statusLine": "HTTP/2 404",
+      "bodyBytes": 108,
+      "bodySha256": "f5da4dc8fbc56e78d77120a82c143313988add51f0d44c64ed876ae8a1531960",
+      "errorFields": {
+        "code": 404,
+        "message": "NOT_FOUND"
+      },
+      "url": "https://exchange-fe.crypto.com/v3/predictions/positions"
+    },
+    {
+      "name": "kyc-popup-status",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 131,
+      "bodySha256": "97212cec36b7084176143fadb081974a89a883358ba865360768f84c37df3388",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/main-app/exapi/kyc/get_popup_status"
+    },
+    {
+      "name": "kyc-resubmissions",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 166,
+      "bodySha256": "5207387130d7dc345e6d4fb1201c7f87d0d3a2652933427f84f5c5f835ec1318",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/kyc-web/web_api/v2/kyc/resubmissions?product_name=exchange_id_resubmit"
+    },
+    {
+      "name": "aum-detail-fixed-read",
+      "method": "POST",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 148,
+      "bodySha256": "b40b6cd60b00abe41e1abcb0907692be19c17c8b35f5a2f40af1fe750607b172",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/datacenter/internal/v1/userinfo/aums/user_aum_detail"
+    }
+  ],
+  "legacySensitiveProxyGets": [
+    {
+      "name": "legacy-sensitive-get-01",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 152,
+      "bodySha256": "78e37b65f5eb576ec918fe5bdc04f5ea917aa9875c2dfe6b950e687eb26b53fd",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/authnz2/v1/internal/oauth2/tokens?client_id=trading-view"
+    },
+    {
+      "name": "legacy-sensitive-get-02",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 137,
+      "bodySha256": "c3f77c1a320bf2ffef8ceb0c5716809e6a2b689f25618d46c1d6f67cc8248567",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/authnz/v1/authentication/social-auth/list"
+    },
+    {
+      "name": "legacy-sensitive-get-03",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 117,
+      "bodySha256": "96bfe4a4edc2bec7e9dcc0f8c8b81e936abeb66242b147aee7e69d9e5a66fa69",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/rails/exapi/user/show"
+    },
+    {
+      "name": "legacy-sensitive-get-04",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 124,
+      "bodySha256": "164c74231c97f901f31d0977b0c931a153d7f679600945160b2c4d0c347b0dd6",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/cashier/api/v1/payment-cards"
+    },
+    {
+      "name": "legacy-sensitive-get-05",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 128,
+      "bodySha256": "cc4fafc3b6bed3913f6813dd2fe0117487ff6211594494757a7a5cccb49b0eb3",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/rails/api/v1/dual-invest/account"
+    },
+    {
+      "name": "legacy-sensitive-get-06",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 135,
+      "bodySha256": "04075e2e1e5fcc4a67a55ecd7b8abf16f22d08c0f8d9b74bb31883a7f2b8889b",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/rails/api/v1/dual-invest/positions/open"
+    },
+    {
+      "name": "legacy-sensitive-get-07",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 138,
+      "bodySha256": "006399e21acedec28b61affd53a09f91019e4de71e93579472411a61722eada6",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/rails//api/v1/dual-invest/positions/settled"
+    },
+    {
+      "name": "legacy-sensitive-get-08",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 148,
+      "bodySha256": "90e9cc8318bbb259b48cfcac132f9db85e36e72d20772b3d498cf3303cfde27c",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/rails/api/v1/dual-invest/auto-renew-chains/positions"
+    },
+    {
+      "name": "legacy-sensitive-get-09",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 154,
+      "bodySha256": "de62e305137649d15ad393f9339f3f2f8c3faf6189f23f5d134646fd66f4b152",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/rails/api/v1/dual-invest/auto-renew-chains/orders?limit=10"
+    },
+    {
+      "name": "legacy-sensitive-get-10",
+      "method": "GET",
+      "statusLine": "HTTP/2 401",
+      "bodyBytes": 138,
+      "bodySha256": "4b6f71795f094486d461a829dadf28edc895e93fd2fe543fa713e25b744e69ce",
+      "errorFields": {
+        "code": 264005,
+        "message": "UNAUTHORIZED"
+      },
+      "url": "https://exchange-fe.crypto.com/proxy/rails/api/v1/dual-invest/auto-renew-chains"
+    }
+  ],
+  "oauthTokenPathNormalization": {
+    "cases": [
+      {
+        "url": "https://exchange-fe.crypto.com/public/../proxy/authnz2/v1/internal/oauth2/tokens?client_id=trading-view",
+        "method": "GET",
+        "statusLine": "HTTP/2 403",
+        "bodySha256": "f9bbd06edb29de75526535d7cde1db03ac64b65144b0648e5842e95e2cac35c3"
+      },
+      {
+        "url": "https://exchange-fe.crypto.com/proxy/authnz2/v1/public/../internal/oauth2/tokens?client_id=trading-view",
+        "method": "GET",
+        "statusLine": "HTTP/2 403",
+        "bodySha256": "442d66a987386e9d4ae8d09b2ef9387fcf21e1873d15b3668a3b7b6a94d14ad7"
+      }
+    ],
+    "backendSensitiveDataObserved": false,
+    "cloudflareChallengeBypassAttempted": false
+  },
+  "webSockets": {
+    "derivUserNoToken": {
+      "url": "wss://deriv-web-stream.crypto.com/v1/user",
+      "accountCredentialSent": false,
+      "subscriptionChannel": "user.balance",
+      "responseCode": 40101,
+      "responseMethod": "subscribe",
+      "responseMessage": "Unauthorized",
+      "privateDataObserved": false
+    },
+    "bffGlobalNoTokenOfficialFlatBuffersDecoder": {
+      "url": "wss://exchange-fe.crypto.com/v1/global/websocket",
+      "accountCredentialSent": false,
+      "subscriptionChannel": "user.balance",
+      "decoder": "official Exchange vendor-protobuf flatBuffersToObject",
+      "decodedMessageCount": 10,
+      "observedDataKinds": [
+        "public market ticker/price fields"
+      ],
+      "userBalanceOrAccountDataObserved": false
+    }
+  },
+  "exchangeBeSensitiveReads": [
+    {
+      "name": "exchange-be-sensitive-read-01",
+      "method": "GET",
+      "statusLine": "HTTP/2 200",
+      "bodyBytes": 50,
+      "bodySha256": "1f64227fcf851808eefd125bcdc2d4fda4ef57bccf374fc9060645d2a56a7a64",
+      "errorFields": {
+        "code": "10002",
+        "msg": "Not logged-in"
+      },
+      "url": "https://exchange-be.crypto.com/user/withdrawal_info"
+    },
+    {
+      "name": "exchange-be-sensitive-read-02",
+      "method": "GET",
+      "statusLine": "HTTP/2 200",
+      "bodyBytes": 50,
+      "bodySha256": "1f64227fcf851808eefd125bcdc2d4fda4ef57bccf374fc9060645d2a56a7a64",
+      "errorFields": {
+        "code": "10002",
+        "msg": "Not logged-in"
+      },
+      "url": "https://exchange-be.crypto.com/user/device/list"
+    },
+    {
+      "name": "exchange-be-sensitive-read-03",
+      "method": "GET",
+      "statusLine": "HTTP/2 200",
+      "bodyBytes": 56,
+      "bodySha256": "ac8e7e736a45c7cdd2a5bcbbb3886c40d45eaf7cb51a576a2d79929d8ec149b3",
+      "errorFields": {
+        "code": "10016",
+        "msg": "User does not exist"
+      },
+      "url": "https://exchange-be.crypto.com/user/device/activity"
+    },
+    {
+      "name": "exchange-be-sensitive-read-04",
+      "method": "GET",
+      "statusLine": "HTTP/2 200",
+      "bodyBytes": 50,
+      "bodySha256": "1f64227fcf851808eefd125bcdc2d4fda4ef57bccf374fc9060645d2a56a7a64",
+      "errorFields": {
+        "code": "10002",
+        "msg": "Not logged-in"
+      },
+      "url": "https://exchange-be.crypto.com/deposit/unverified_deposits?pageSize=10"
+    },
+    {
+      "name": "exchange-be-sensitive-read-05",
+      "method": "GET",
+      "statusLine": "HTTP/2 200",
+      "bodyBytes": 50,
+      "bodySha256": "1f64227fcf851808eefd125bcdc2d4fda4ef57bccf374fc9060645d2a56a7a64",
+      "errorFields": {
+        "code": "10002",
+        "msg": "Not logged-in"
+      },
+      "url": "https://exchange-be.crypto.com/common/main_app_withdrawal_status"
+    },
+    {
+      "name": "exchange-be-sensitive-read-06",
+      "method": "POST",
+      "statusLine": "HTTP/2 200",
+      "bodyBytes": 50,
+      "bodySha256": "1f64227fcf851808eefd125bcdc2d4fda4ef57bccf374fc9060645d2a56a7a64",
+      "errorFields": {
+        "code": "10002",
+        "msg": "Not logged-in"
+      },
+      "url": "https://exchange-be.crypto.com/addr/address_list"
+    }
+  ],
+  "developerDnsAdditionalTypes": [
+    {
+      "host": "developer-platform-api.crypto.com",
+      "type": "CNAME",
+      "resolver": "cloudflare",
+      "Status": 0,
+      "answerCount": 0,
+      "authorityHasCryptoComSoa": true
+    },
+    {
+      "host": "developer-platform-api.crypto.com",
+      "type": "NS",
+      "resolver": "cloudflare",
+      "Status": 0,
+      "answerCount": 0,
+      "authorityHasCryptoComSoa": true
+    },
+    {
+      "host": "developer-platform-api.crypto.com",
+      "type": "HTTPS",
+      "resolver": "cloudflare",
+      "Status": 0,
+      "answerCount": 0,
+      "authorityHasCryptoComSoa": true
+    },
+    {
+      "host": "developer.crypto.com",
+      "type": "CNAME",
+      "resolver": "cloudflare",
+      "Status": 0,
+      "answerCount": 0,
+      "authorityHasCryptoComSoa": true
+    },
+    {
+      "host": "developer.crypto.com",
+      "type": "NS",
+      "resolver": "cloudflare",
+      "Status": 0,
+      "answerCount": 0,
+      "authorityHasCryptoComSoa": true
+    },
+    {
+      "host": "developer.crypto.com",
+      "type": "HTTPS",
+      "resolver": "cloudflare",
+      "Status": 0,
+      "answerCount": 0,
+      "authorityHasCryptoComSoa": true
+    }
+  ],
+  "danglingCnameOrDelegationVerified": false,
+  "notes": [
+    "All response evidence is reduced to status, error fields, byte counts, hashes, and JSON shape; no account data, cookies, API secrets, or real-user identifiers are included.",
+    "Cloudflare 403 results were not bypassed. No HTML/SVG/script upload, trade, withdrawal, logout, deletion, or credential-generation request was made."
+  ]
+}
