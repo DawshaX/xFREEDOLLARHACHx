@@ -5,7 +5,7 @@
 **Affected asset:** `https://crypto.com/exchange/disable-2fa`
 **Program:** Crypto.com on HackerOne (`$0` submission fee)
 **Status:** Live-reproduced security-relevant disclosure; draft for human review, **not submitted**
-**Severity position:** Medium confidentiality candidate at most; **not a Critical finding and not an account-takeover claim**
+**Severity position:** Low confidentiality candidate under the program's current guidance unless triage establishes greater direct impact; **not a Critical finding and not an account-takeover claim**
 
 ## Executive summary
 
@@ -92,4 +92,6 @@ SHA-256 integrity values:
 
 ## Scope and reporting boundary
 
-The in-scope root cause is the Crypto.com page's decision to initialize third-party telemetry while a security credential remains in the URL. No testing of third-party provider infrastructure is requested or authorized. This draft does not assert Critical severity, external attacker access to provider consoles, real-token usability, 2FA bypass, or account takeover. Program triage should determine whether the demonstrated confidentiality exposure is accepted and how it is rated.
+The in-scope root cause is the Crypto.com page's decision to initialize third-party telemetry while a security credential remains in the URL. No testing of third-party provider infrastructure is requested or authorized. This draft does not assert Critical severity, external attacker access to provider consoles, real-token usability, 2FA bypass, or account takeover.
+
+The official severity guidance says findings that do not meet all High-severity criteria are classified Low or None. Because direct account impact and external attacker access were not established, this draft conservatively uses **Low candidate**, not Medium/High. The issue is not being represented as non-sensitive information disclosure: the affected value is specifically a credential for a 2FA-disable magic-link flow. Program triage retains final authority over eligibility and rating.

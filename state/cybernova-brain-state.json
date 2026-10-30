@@ -703,7 +703,7 @@
       "lastOutput": "Cycle #72 verified on bughunters.google.com at \u0667:\u0664\u0662:\u0663\u0668 \u0645"
     }
   ],
-  "updatedAt": "2026-10-30T01:31:16Z",
+  "updatedAt": "2026-10-30T01:32:31Z",
   "activeTarget": {
     "status": "PHASE_20_COMPLETE_6_WAVES_54_REPOS_MAINNET_FORK_POC_VERIFIED",
     "lastAuditTimestamp": "2026-10-29T20:09:50Z",
@@ -789,7 +789,7 @@
     "submissionReportPath": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
     "foundryPoCPath": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol"
   },
-  "lastUpdated": "2026-10-30T01:31:16Z",
+  "lastUpdated": "2026-10-30T01:32:31Z",
   "discoveredVaultSummary": {
     "vaultPath": "state/discovered-vulnerabilities-vault.json",
     "totalDiscoveredVulnerabilities": 11,
@@ -831,6 +831,7 @@
     "reports": [
       "audit/cryptocom-hackerone/CRYPTOCOM_2FA_MAGIC_TOKEN_DISCLOSURE_2026-10-30.md",
       "audit/cryptocom-hackerone/CRYPTOCOM_MCP_STATE_CHANGE_GATING_2026-10-30.md"
-    ]
+    ],
+    "severityPosition": "CDC-WEB-01 Low candidate under current program guidance; CDC-MCP-01 Low/local defense-in-depth; neither Critical"
   }
 }
