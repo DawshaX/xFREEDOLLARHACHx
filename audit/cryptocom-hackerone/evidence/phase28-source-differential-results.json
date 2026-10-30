@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-10-30T02:13:22Z",
+  "purpose": "Non-repeat evidence only; no standalone Phase 28 vulnerability report",
+  "accountCredentialsUsed": false,
+  "cookiesSent": false,
+  "stateChangingRequests": 0,
+  "rawResponseBodiesPersisted": false,
+  "verifiedCriticalVulnerabilities": 0,
+  "verifiedAccountTakeover": false,
+  "sourceDifferential": {
+    "exchangeProCallSitesReviewed": 123,
+    "sensitiveExplicitWithTokenFalseCandidates": 0,
+    "sensitiveSamePathCrossServiceCandidates": 0,
+    "note": "Only server timestamp and public category reads explicitly suppressed tokens; no sensitive route qualified."
+  },
+  "fcmReadOnlyApiKeyResults": [
+    {
+      "name": "fcm-api-key-list-official-read",
+      "url": "https://web-api.crypto.com/fcm/v1/private/api-key/api-key-list",
+      "method": "POST",
+      "requestBody": {},
+      "accountCredentialOrCookieSent": false,
+      "curlExitCode": 0,
+      "httpStatus": 403,
+      "bodyBytes": 0,
+      "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "responseShape": {
+        "type": "nonJsonOrEmpty",
+        "previewWithheld": true
+      },
+      "sensitiveFieldNamesPresentAnywhere": [],
+      "rawBodyPersisted": false,
+      "stderr": ""
+    },
+    {
+      "name": "fcm-subaccount-api-key-list-official-read",
+      "url": "https://web-api.crypto.com/fcm/v1/private/subaccount/apikey/get-api-keys",
+      "method": "POST",
+      "requestBody": {
+        "params": {
+          "system_type": "CDNA_FCM"
+        }
+      },
+      "accountCredentialOrCookieSent": false,
+      "curlExitCode": 0,
+      "httpStatus": 403,
+      "bodyBytes": 0,
+      "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "responseShape": {
+        "type": "nonJsonOrEmpty",
+        "previewWithheld": true
+      },
+      "sensitiveFieldNamesPresentAnywhere": [],
+      "rawBodyPersisted": false,
+      "stderr": ""
+    }
+  ],
+  "exchangeBeActuatorHealthResult": {
+    "generatedAt": "2026-10-30T02:13:01Z",
+    "url": "https://exchange-be.crypto.com/actuator/health",
+    "method": "GET",
+    "accountCredentialOrCookieSent": false,
+    "httpStatus": 404,
+    "curlExitCode": 0,
+    "bodyBytes": 0,
+    "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "responseShape": {
+      "type": "nonJsonOrEmpty"
+    },
+    "rawBodyPersisted": false,
+    "followOnManagementRequests": 0,
+    "stderr": ""
+  },
+  "challengeBypassAttempted": false,
+  "followOnManagementRequests": 0,
+  "createUpdateDeleteApiKeyRequests": 0
+}

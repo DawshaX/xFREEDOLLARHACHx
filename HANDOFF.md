@@ -297,3 +297,12 @@
 - Executed two new `Origin: null` preflights without cookies or tokens. BFF user info returned **404** without ACAO; BE withdrawal info returned **200** with fixed `Access-Control-Allow-Origin: https://crypto.com`, not `null`, and no credential-allowance header. The conditional harness therefore sent no actual sensitive read. The challenged NTS route was not retested.
 - Report: `audit/cryptocom-hackerone/CRYPTOCOM_PHASE27_NULL_ORIGIN_CORS_REVIEW_2026-10-30.md`; sanitized evidence: `audit/cryptocom-hackerone/evidence/phase27-null-origin-cors-results.json`.
 - Permanent state synchronized at schema `2099.25.0`: **11 research/vulnerability records, 16 lifelong-learning rules, 0 verified Critical, 0 verified ATO, 0 submission-ready Critical reports**.
+
+---
+
+## Phase 28 — Source-Differential Auth Review; Non-Repeat Evidence Only (2026-10-30)
+
+- Re-reviewed all **123 Exchange-Pro call sites** for authentication mismatches instead of adding another broad endpoint matrix. No sensitive route explicitly used `withToken:false`, and no sensitive same-path cross-service routing candidate qualified.
+- Two official **read-only** FCM API-key-list calls were tested without cookies/tokens because they were distinct from the challenged NTS path. Both returned empty **403** responses; no keys/data appeared and no create/update/delete operation or challenge bypass followed.
+- One Jetty-fingerprint-guided `GET /actuator/health` on Exchange-BE returned empty **404**. No environment, heapdump, management invocation, or follow-on management request occurred.
+- **No standalone Phase 28 report and no vulnerability claim.** Sanitized non-repeat evidence only: `audit/cryptocom-hackerone/evidence/phase28-source-differential-results.json`. Verified Critical/ATO/submission-ready Critical counts remain **0/0/0**.
