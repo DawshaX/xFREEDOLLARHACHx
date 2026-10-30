@@ -1,0 +1,89 @@
+{
+  "schema": "cybernova.invalid-marker-disclosure.v1",
+  "startedAt": "2026-10-30T01:28:58.046Z",
+  "finishedAt": "2026-10-30T01:29:19.826Z",
+  "targetPath": "/exchange/disable-2fa?magic_token=<INVALID_MARKER>",
+  "markerIsDeliberatelyInvalid": true,
+  "navigationStatus": 200,
+  "interceptedSensitivePosts": [
+    {
+      "method": "POST",
+      "endpoint": "https://exchange-be.crypto.com/security/disable_2fa_by_magic_link",
+      "locallyFulfilled": true,
+      "requestReachedBackend": false
+    }
+  ],
+  "thirdPartyDisclosures": [
+    {
+      "at": "2026-10-30T01:29:00.244Z",
+      "service": "RTG pageview",
+      "host": "insights.rtgio.co",
+      "path": "/pageview/cryptocom",
+      "method": "GET",
+      "markerLocations": [
+        "query.pgl"
+      ],
+      "completeTargetUrlDisclosed": true
+    },
+    {
+      "at": "2026-10-30T01:29:01.028Z",
+      "service": "Bugsnag error monitoring",
+      "host": "notify.bugsnag.com",
+      "path": "/",
+      "method": "POST",
+      "markerLocations": [
+        "$.events[0].request.url",
+        "$.events[0].breadcrumbs[1].metaData.state.current",
+        "$.events[0].breadcrumbs[1].metaData.to",
+        "$.events[0].breadcrumbs[1].metaData.from",
+        "$.events[0].breadcrumbs[4].metaData.state.current",
+        "$.events[0].breadcrumbs[4].metaData.prevState.current",
+        "$.events[0].breadcrumbs[4].metaData.to",
+        "$.events[0].breadcrumbs[4].metaData.from"
+      ],
+      "completeTargetUrlDisclosed": true
+    },
+    {
+      "at": "2026-10-30T01:29:02.374Z",
+      "service": "Google Ads measurement",
+      "host": "www.google.com",
+      "path": "/measurement/conversion",
+      "method": "POST",
+      "markerLocations": [
+        "query.url"
+      ],
+      "completeTargetUrlDisclosed": true
+    },
+    {
+      "at": "2026-10-30T01:29:02.374Z",
+      "service": "Google Analytics",
+      "host": "analytics.google.com",
+      "path": "/g/collect",
+      "method": "POST",
+      "markerLocations": [
+        "query.dl"
+      ],
+      "completeTargetUrlDisclosed": true
+    }
+  ],
+  "completedThirdPartyResponses": [
+    {
+      "host": "insights.rtgio.co",
+      "status": 200
+    },
+    {
+      "host": "analytics.google.com",
+      "status": 204
+    },
+    {
+      "host": "www.google.com",
+      "status": 200
+    }
+  ],
+  "pageErrors": [],
+  "limitations": [
+    "No real magic token was used.",
+    "The sensitive disable-2fa POST was locally fulfilled and did not reach the backend.",
+    "Provider-side access, token usability after disclosure, and account takeover were not tested or established."
+  ]
+}

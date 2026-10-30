@@ -1,6 +1,6 @@
 # 🛡️ CyberNova (`xFREEDOLLARHACHx`) — Master Architecture & Session Handoff Log
 
-> **تاريخ آخر تحديث:** `2026-10-29`
+> **تاريخ آخر تحديث:** `2026-10-30`
 > **المستودع الرسمي والمرجعي 100%:** `https://github.com/DawshaX/xFREEDOLLARHACHx`
 > **الرابط الحي الدائم (GitHub Pages Auto-Deploy):** `https://dawshax.github.io/xFREEDOLLARHACHx/`
 > **رابط استوديو البج باونتي وموسوعة الثغرات:** `https://dawshax.github.io/xFREEDOLLARHACHx/bug-bounty-studio`
@@ -263,3 +263,14 @@
 - The latest `cdcx-cli` (`1.2.6`, commit `4d1112e86b061f8bdd8a6d92c3fd9aeb55b3b7bc`) still shows the same session-id browser/polling design, but one fresh-random-UUID negative control returned an empty HTTP 500; `CDC-DEV-03` therefore remains unproven and is not submission-ready.
 - Reviewed 34 public Exchange first-party JS assets (371,464 bytes). Development-auth strings were found, but the production trigger is hidden and a single matching probe request returned empty HTTP 405. The development login/accounts paths were not called.
 - Full evidence and next validation gates: `audit/cryptocom-hackerone/CRYPTOCOM_LIVE_WEB_API_REVIEW_2026-10-30.md` and `audit/cryptocom-hackerone/evidence/live-web-api-review-2026-10-30.json`.
+
+---
+
+## Phase 25 — Invalid-Marker Magic-Link Disclosure & Official-Spec MCP Gating Regression (2026-10-30)
+
+- **`CDC-WEB-01` — live disclosure behavior reproduced 3/3, impact deliberately bounded.** Fresh-browser runs with only obviously invalid `magic_token` markers showed the complete disable-2fa URL sent to RTG (`pgl`), Google Ads (`url`), Google Analytics (`dl`), and Bugsnag (`request.url` plus router breadcrumbs). The exact persisted Playwright harness also passed with navigation 200 and zero page errors. The sensitive disable-2fa POST was intercepted and fulfilled locally in every run; no real token/account/credentials/2FA state was used. This is a Medium confidentiality report candidate, **not Critical, not ATO, and not proof of provider-side attacker access**.
+- **`CDC-MCP-01` — local official-spec regression passed 1/1.** Using `cdcx-cli` `1.2.6` at `4d1112e86b061f8bdd8a6d92c3fd9aeb55b3b7bc`, the current official 95-operation YAML, all ten production overlays, production registry/tool generation, and runtime gating, `private/fiat/fiat-create-bank-account`, `private/otc/request-deal`, and `private/otc/request-quote` were all derived as `sensitive_read`; their MCP tools omitted `acknowledged`, and `check_mcp_safety(method, None, false)` returned `Ok(())`. The official OTC specification says `request-deal` requests a deal from a quote and its success example returns `deal_status: ACCEPTED`. No real financial/API request occurred. This is a verified local safety-control defect, **not a submission-ready Critical vulnerability**.
+- Saved reports: `audit/cryptocom-hackerone/CRYPTOCOM_2FA_MAGIC_TOKEN_DISCLOSURE_2026-10-30.md` and `audit/cryptocom-hackerone/CRYPTOCOM_MCP_STATE_CHANGE_GATING_2026-10-30.md`.
+- Saved safe PoC/evidence: `audit/cryptocom-hackerone/poc/disable_2fa_magic_token_disclosure.js`, `evidence/magic-token-disclosure-repro3-2026-10-30.json`, `evidence/mcp-official-gating-test-2026-10-30.log`, and `evidence/mcp-official-gating-test-2026-10-30.patch`. Raw browser output containing transient cookie state was not published.
+- The temporary Rust source edit was restored and the ephemeral `cdcx-cli` checkout left clean.
+- Permanent state synchronized in both `state/` and `artifacts/kali-panel/public/state/`: vault schema `2099.23.0`, **11 research/vulnerability records, 15 lifelong-learning rules**. **Verified Critical vulnerabilities remain 0; submission-ready Critical reports remain 0.**

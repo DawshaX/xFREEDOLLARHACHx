@@ -1,12 +1,69 @@
 {
   "schemaVersion": "2099.23.0",
-  "updatedAt": "2026-10-30T00:58:06Z",
+  "updatedAt": "2026-10-30T01:31:16Z",
   "vaultTitleAr": "\u062e\u0632\u0646\u0629 \u0627\u0644\u062b\u063a\u0631\u0627\u062a \u0627\u0644\u0645\u0643\u062a\u0634\u0641\u0629 \u0648\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0645\u062d\u0641\u0648\u0638\u0629 \u0648\u0633\u062c\u0644 \u0627\u0644\u062a\u0639\u0644\u0645 \u0645\u062f\u0649 \u0627\u0644\u062d\u064a\u0627\u0629 \u2014 CyberNova Permanent Vault",
-  "totalDiscoveredVulnerabilities": 9,
+  "totalDiscoveredVulnerabilities": 11,
   "totalArchitecturalNotes": 6,
   "totalSavedDisclosureReports": 3,
-  "totalLifelongLearningRules": 13,
+  "totalLifelongLearningRules": 15,
   "discoveredVulnerabilities": [
+    {
+      "id": "CDC-WEB-01",
+      "program": "Crypto.com (HackerOne)",
+      "platform": "HackerOne",
+      "submissionFee": "0 USD (100% Free)",
+      "titleEn": "Disable-2FA magic_token Disclosed in the Complete URL to RTG, Google Ads/Analytics, and Bugsnag",
+      "titleAr": "\u0625\u0641\u0635\u0627\u062d \u0631\u0627\u0628\u0637 \u062a\u0639\u0637\u064a\u0644 2FA \u0627\u0644\u0643\u0627\u0645\u0644 \u0627\u0644\u062d\u0627\u0645\u0644 \u0644\u0640 magic_token \u0625\u0644\u0649 RTG \u0648Google Ads/Analytics \u0648Bugsnag",
+      "targetProgram": "Crypto.com \u2014 HackerOne (https://crypto.com/exchange)",
+      "severity": "Medium confidentiality candidate (program triage required; not Critical)",
+      "cwe": "CWE-200 / CWE-598",
+      "status": "LIVE_BEHAVIOR_VERIFIED_3_OF_3_WITH_INVALID_MARKERS__DRAFT_NOT_SUBMITTED",
+      "submissionNoteEn": "The disclosure behavior is manually reproducible and a report draft is saved. No real token was used; no provider-side attacker access, token usability, 2FA bypass, ATO, Critical impact, acceptance, or reward is claimed.",
+      "affectedAssets": [
+        "https://crypto.com/exchange/disable-2fa?magic_token=<token>",
+        "https://exchange-be.crypto.com/security/disable_2fa_by_magic_link (POST locally intercepted; never reached during PoC)",
+        "Third-party destinations observed: insights.rtgio.co, www.google.com, analytics.google.com, notify.bugsnag.com"
+      ],
+      "rootCauseEn": "The disable-2fa route initializes advertising, analytics, and error-monitoring telemetry while the security-sensitive magic_token remains in document.location. RTG receives the complete URL in pgl, Google Ads in url, Google Analytics in dl, and Bugsnag in request.url plus router breadcrumbs.",
+      "impactEn": "Verified unintended third-party disclosure of the full token-bearing URL. This expands confidentiality exposure for a 2FA-disable magic-link credential; real-token exploitation was deliberately not attempted.",
+      "limitationsEn": [
+        "Only obviously invalid research markers were used.",
+        "The sensitive disable-2fa POST was intercepted and fulfilled locally in every run.",
+        "Pre-consumption ordering was observed in one run but was inconsistent across runs; no reliable race is claimed.",
+        "No external attacker access to provider data, real-token validity after disclosure, account takeover, or Critical impact was established."
+      ],
+      "proofOfConceptPath": "audit/cryptocom-hackerone/poc/disable_2fa_magic_token_disclosure.js",
+      "evidencePath": "audit/cryptocom-hackerone/evidence/magic-token-disclosure-repro3-2026-10-30.json",
+      "reportMarkdownPath": "audit/cryptocom-hackerone/CRYPTOCOM_2FA_MAGIC_TOKEN_DISCLOSURE_2026-10-30.md",
+      "remediationSummaryEn": "Avoid query-string security credentials, remove/exchange them before telemetry initialization, disable nonessential third-party telemetry on account-security routes, redact URLs and breadcrumbs, and enforce short-lived single-use server-side tokens.",
+      "learnedHeuristic": "RULE-14: On magic-link, reset, verification, and account-security routes, treat the complete URL as a secret until the credential is consumed and removed. Trace document.location into analytics query fields, error-monitor request metadata, router breadcrumbs, consent state, and referrers before third-party scripts initialize. Reproduce only with invalid markers and intercept the sensitive action locally."
+    },
+    {
+      "id": "CDC-MCP-01",
+      "program": "Crypto.com (HackerOne) / official cdcx-cli source audit",
+      "platform": "HackerOne scope constrained; CLI not independently listed",
+      "submissionFee": "0 USD (100% Free)",
+      "titleEn": "Fiat Bank-Account Creation and OTC request-deal/request-quote Misclassified as sensitive_read, Bypassing MCP Acknowledgment Gating",
+      "titleAr": "\u062a\u0635\u0646\u064a\u0641 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062d\u0633\u0627\u0628 \u0627\u0644\u0628\u0646\u0643\u064a \u0648\u0639\u0645\u0644\u064a\u0627\u062a OTC request-deal/request-quote \u0643\u0642\u0631\u0627\u0621\u0629 \u062d\u0633\u0627\u0633\u0629 \u0648\u062a\u062c\u0627\u0648\u0632 \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0625\u0642\u0631\u0627\u0631 \u0641\u064a MCP",
+      "targetProgram": "Crypto.com \u2014 official cdcx-cli 1.2.6 and Exchange OpenAPI",
+      "severity": "Medium / local safety-control defect (not Critical; live financial impact unproven)",
+      "cwe": "CWE-693 / CWE-840",
+      "status": "LOCAL_OFFICIAL_SPEC_REGRESSION_VERIFIED_1_OF_1__NOT_SUBMISSION_READY",
+      "submissionNoteEn": "The production registry, generated tools, and runtime gate were executed locally against the official 95-operation YAML and all ten production overlays. No real endpoint, credential, bank, Plaid, quote, deal, or trade was used. Local stdio, opt-in services, and scope constraints prevent a Critical or submission-ready claim.",
+      "affectedAssets": [
+        "crypto-com/cdcx-cli@4d1112e86b061f8bdd8a6d92c3fd9aeb55b3b7bc",
+        "private/fiat/fiat-create-bank-account \u2192 cdcx_fiat_bank-account",
+        "private/otc/request-deal \u2192 cdcx_otc_request-deal",
+        "private/otc/request-quote \u2192 cdcx_otc_request-quote"
+      ],
+      "rootCauseEn": "SafetyTier::from_method uses an explicit mutation/dangerous list and maps every unmatched private method to SensitiveRead. The three state-changing official operations are absent from the list. Production tool generation therefore omits acknowledged, and check_mcp_safety(method, None, false) returns Ok(()).",
+      "impactEn": "The CLI/MCP defense-in-depth confirmation boundary is bypassed for state-changing operations. OTC request-deal is the strongest case because the official specification requests a deal from a quote and its success example returns deal_status ACCEPTED with instrument, price, quantity, and side. No real financial effect was tested.",
+      "proofOfConceptPath": "audit/cryptocom-hackerone/evidence/mcp-official-gating-test-2026-10-30.patch",
+      "evidencePath": "audit/cryptocom-hackerone/evidence/mcp-official-gating-test-2026-10-30.log",
+      "reportMarkdownPath": "audit/cryptocom-hackerone/CRYPTOCOM_MCP_STATE_CHANGE_GATING_2026-10-30.md",
+      "remediationSummaryEn": "Explicitly classify fiat bank-account creation and OTC request-quote as Mutate and request-deal as Mutate or Dangerous according to execution semantics. Add a CI differential over every official operation and default-deny/review unmatched state-changing private methods.",
+      "learnedHeuristic": "RULE-15: Do not infer API safety from HTTP verb or a private/ prefix. Differential-test every official OpenAPI operation against the production safety registry, generated tool schema, and runtime gate; read operation documentation and success responses for economic state changes such as OTC deal_status ACCEPTED."
+    },
     {
       "id": "CDC-SC-01",
       "program": "Crypto.com (HackerOne)",
@@ -292,6 +349,20 @@
       "pattern": "Early return on `allowance == maxAllowance` inside `_replenishAllowance()` before subtracting spend, combined with `public` state-mutating `currentAllowance(address)` integer-division reset",
       "detectionRegex": "if\\s*\\(\\s*allowances\\[[^\\]]+\\]\\s*==\\s*maxAllowances\\[[^\\]]+\\]\\s*\\)\\s*\\{\\s*return;\\s*\\}",
       "originVulnId": "CDC-SC-01"
+    },
+    {
+      "ruleId": "RULE-14",
+      "category": "Magic-Link Credential Confidentiality & Third-Party Telemetry",
+      "pattern": "Sensitive token remains in document.location while analytics, advertising, error monitoring, router breadcrumbs, or consent state collect the complete URL",
+      "detectionMethod": "Fresh-browser invalid-marker reproduction; locally intercept the sensitive action; allowlist and sanitize destination, field, ordering, and response evidence; never use a real token or inspect provider data.",
+      "originVulnId": "CDC-WEB-01"
+    },
+    {
+      "ruleId": "RULE-15",
+      "category": "MCP / Agent Safety-Tier Semantic Differential",
+      "pattern": "Unmatched private state-changing OpenAPI operations fall through to SensitiveRead, omit acknowledged from generated tools, and pass runtime gating",
+      "detectionMethod": "Parse the current official spec with every production overlay, generate the actual MCP tool, execute the actual gate with no acknowledgment and dangerous methods disabled, and compare against documented business semantics. Never call the real financial endpoint.",
+      "originVulnId": "CDC-MCP-01"
     }
   ]
 }

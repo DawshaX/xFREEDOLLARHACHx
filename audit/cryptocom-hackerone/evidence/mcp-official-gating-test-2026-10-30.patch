@@ -1,0 +1,86 @@
+--- crates/cdcx-cli/src/mcp/tools.rs.before-portable-gating-test	2026-10-30 01:30:07.626809484 +0000
++++ crates/cdcx-cli/src/mcp/tools.rs	2026-10-30 01:30:07.658809484 +0000
+@@ -373,4 +373,83 @@
+         assert_eq!(schema["type"], "number");
+         assert_eq!(schema["description"], "Order quantity");
+     }
++
++    #[test]
++    fn official_state_changing_operations_runtime_gating_regression() {
++        use cdcx_core::schema::OverlayGroup;
++        use std::path::PathBuf;
++
++        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
++        let yaml_path = std::env::var("CDCX_OPENAPI_YAML")
++            .expect("set CDCX_OPENAPI_YAML to the official exchange-openapi.generated.yaml");
++        let yaml = std::fs::read_to_string(yaml_path)
++            .expect("official OpenAPI YAML must be present");
++        let overlay_names = [
++            "market", "account", "trade", "advanced", "wallet", "fiat", "staking",
++            "margin", "history", "bot",
++        ];
++        let overlays: Vec<OverlayGroup> = overlay_names
++            .iter()
++            .map(|name| {
++                let text = std::fs::read_to_string(
++                    root.join("schemas/apis").join(format!("{name}.toml")),
++                )
++                .expect("production overlay must be readable");
++                toml::from_str(&text).expect("production overlay must parse")
++            })
++            .collect();
++
++        // This is the same parser + overlay + authoritative SafetyTier path used by SchemaRegistry::new.
++        let registry = SchemaRegistry::from_openapi_with_overlay(&yaml, &overlays)
++            .expect("official spec + production overlays must parse");
++        for (method, service) in [
++            ("private/fiat/fiat-create-bank-account", "fiat"),
++            ("private/otc/request-deal", "otc"),
++            ("private/otc/request-quote", "otc"),
++        ] {
++            let endpoint = registry
++                .get_by_method(method)
++                .expect("official state-changing operation must be present");
++            println!(
++                "OFFICIAL_ENDPOINT method={} command={} group={} safety_tier={} http_method={}",
++                endpoint.method,
++                endpoint.command,
++                endpoint.group,
++                endpoint.safety_tier,
++                endpoint.http_method
++            );
++            assert_eq!(endpoint.safety_tier, "sensitive_read");
++
++            let tools = generate_tools(&registry, &[service.to_string()]);
++            let expected_name = format!("cdcx_{service}_{}", endpoint.command);
++            let tool = tools
++                .iter()
++                .find(|tool| tool.name == expected_name)
++                .expect("production MCP tool must be generated when its service is enabled");
++            let schema = tool.input_schema.as_ref();
++            let properties = schema
++                .get("properties")
++                .and_then(|value| value.as_object())
++                .expect("tool must have input properties");
++            let required: Vec<&str> = schema
++                .get("required")
++                .and_then(|value| value.as_array())
++                .map(|items| items.iter().filter_map(|item| item.as_str()).collect())
++                .unwrap_or_default();
++            println!(
++                "OFFICIAL_TOOL name={} acknowledged_property={} acknowledged_required={}",
++                tool.name,
++                properties.contains_key("acknowledged"),
++                required.contains(&"acknowledged")
++            );
++            assert!(!properties.contains_key("acknowledged"));
++            assert!(!required.contains(&"acknowledged"));
++
++            // Reproduce the production MCP safety decision: service enabled, dangerous disabled, no acknowledgment.
++            let decision = crate::mcp::gating::check_mcp_safety(method, &None, false);
++            println!("OFFICIAL_GATING method={method} allow_dangerous=false acknowledged=absent decision={decision:?}");
++            assert!(decision.is_ok());
++        }
++    }
++
+ }

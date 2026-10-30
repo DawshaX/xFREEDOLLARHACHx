@@ -12,16 +12,16 @@
     "selfEvolutionLevel": "v18.0 \u2014 Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
   },
   "whereAmINow": {
-    "activeTarget": "https://hackerone.com/crypto (developer-platform-api.crypto.com, cdc-ai-agent-signer-app, cdcx-cli, exchange)",
+    "activeTarget": "https://hackerone.com/crypto (Exchange disable-2fa telemetry and official cdcx-cli MCP safety)",
     "activeProgram": "Sky (MakerDAO) Immunefi Bug Bounty ($150K \u2013 $10M Critical)",
     "currentStageNumber": 1,
     "totalStages": 6,
-    "currentStageTitleAr": "\u0627\u0644\u0645\u0631\u062d\u0644\u0629 1/6: \u062a\u062b\u0628\u064a\u062a \u0648\u0641\u0647\u0631\u0633\u0629 \u0646\u0637\u0627\u0642 Sky \u0639\u0644\u0649 Immunefi (255 \u0623\u0635\u0644\u0627\u064b \u0639\u0628\u0631 56 \u0645\u0633\u062a\u0648\u062f\u0639\u0627\u064b \u0641\u064a sky-ecosystem) \u0648\u062a\u062d\u062f\u064a\u062f \u0627\u0644\u0639\u0642\u0648\u062f \u0627\u0644\u062d\u062f\u064a\u062b\u0629 \u0627\u0644\u0623\u0639\u0644\u0649 \u0623\u0648\u0644\u0648\u064a\u0629 (\u064a\u0648\u0644\u064a\u0648\u2013\u0633\u0628\u062a\u0645\u0628\u0631 2026)",
+    "currentStageTitleAr": "\u0627\u0644\u0645\u0631\u062d\u0644\u0629 25: \u062a\u062d\u0642\u0642 \u0645\u062a\u0635\u0641\u062d \u0641\u0639\u0644\u064a \u0645\u0646 \u0625\u0641\u0635\u0627\u062d magic_token \u0648\u062a\u062d\u0642\u0642 Rust \u0645\u062d\u0644\u064a \u0645\u0646 \u0628\u0648\u0627\u0628\u0629 MCP \u0645\u0639 \u062d\u062f\u0648\u062f \u0623\u062b\u0631 \u0635\u0631\u064a\u062d\u0629",
     "overallProgressPercent": 100,
-    "nextAutonomousActionAr": "\u0633\u062d\u0628 \u0648\u062a\u0635\u0646\u064a\u0641 \u0627\u0644\u062b\u063a\u0631\u0627\u062a \u0627\u0644\u062d\u064a\u0629 \u0643\u0644 45 \u062b\u0627\u0646\u064a\u0629 \u0645\u0646 (GitHub Advisories, NIST NVD v2.0, FIRST EPSS, CIRCL CERT, Google OSV.dev, Immunefi/DeFiLlama, Shodan, PayloadsAllTheThings) \u0648\u062a\u0648\u0644\u064a\u062f \u0633\u0644\u0627\u0633\u0644 \u0647\u062c\u0648\u0645\u064a\u0629/\u062f\u0641\u0627\u0639\u064a\u0629 \u0630\u0643\u064a\u0629",
-    "currentStage": "STAGE_22_CRYPTOCOM_PARALLEL_TRACK_SOURCE_AUDIT_COMPLETED",
+    "nextAutonomousActionAr": "\u0645\u062a\u0627\u0628\u0639\u0629 \u0645\u0631\u0627\u062c\u0639\u0629 \u0646\u0637\u0627\u0642 Crypto.com \u0628\u0641\u0631\u0636\u064a\u0627\u062a \u0645\u062d\u062f\u062f\u0629 \u0645\u0639 \u062d\u0641\u0638 \u0627\u0644\u0623\u062f\u0644\u0629 \u0627\u0644\u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u062a\u0643\u0631\u0627\u0631 \u0641\u0642\u0637 \u0648\u0627\u0639\u062a\u0631\u0627\u0636 \u0627\u0644\u0639\u0645\u0644\u064a\u0627\u062a \u0627\u0644\u062d\u0633\u0627\u0633\u0629 \u0645\u062d\u0644\u064a\u0627\u064b \u0648\u0639\u062f\u0645 \u0631\u0641\u0639 \u0627\u0644\u0634\u062f\u0629 \u062f\u0648\u0646 \u062f\u0644\u064a\u0644 \u0623\u062b\u0631 \u062c\u062f\u064a\u062f.",
+    "currentStage": "PHASE_25_CRYPTOCOM_MAGIC_TOKEN_AND_MCP_GATING_EXECUTED_WITH_LIMITED_IMPACT",
     "completedProgressPercent": 100,
-    "nextAutonomousAction": "Deep audit of Crypto.com Smart Contracts (CDCETH LiquidETHV1, CDCBTC FiatTokenV2_1, MintForwarder, RateLimit, ExchangeRateUpdater) + Permanent Discovered Vulnerabilities Vault synchronization."
+    "nextAutonomousAction": "Continue hypothesis-driven Crypto.com scope review; preserve only reproducible evidence, keep sensitive actions intercepted, and never upgrade these candidates to Critical without new impact evidence."
   },
   "whatDidIReach": {
     "summaryAr": "\u062a\u0645 \u0631\u0628\u0637 \u0627\u0644\u0645\u0646\u0635\u0629 \u0627\u062a\u0635\u0627\u0644\u0627\u064b \u062d\u064a\u0627\u064b \u0648\u0645\u0628\u0627\u0634\u0631\u0627\u064b \u0628\u0640 9 \u0645\u0648\u0627\u0642\u0639 \u062b\u063a\u0631\u0627\u062a \u0639\u0627\u0644\u0645\u064a\u0629 \u062d\u0642\u064a\u0642\u064a\u0629 (HTTP 200 OK)\u060c \u0648\u0628\u0646\u0627\u0621 \u0645\u0635\u0641\u0648\u0641\u0629 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0627\u0644\u062d\u064a \u0641\u064a \u0627\u0644\u062f\u0627\u0634\u0628\u0648\u0631\u062f\u060c \u0648\u062a\u0641\u0639\u064a\u0644 \u0645\u062d\u0631\u0643 \u0627\u0644\u062a\u0639\u0644\u0645 \u0627\u0644\u0630\u0627\u062a\u064a (Nova Learner) \u0648\u0627\u0644\u0645\u0648\u0644\u0651\u062f \u0627\u0644\u0630\u0643\u064a (/api/cve/mutate & /api/cve/ingest-live)\u060c \u0648\u0627\u0644\u0642\u0636\u0627\u0621 \u0627\u0644\u0646\u0647\u0627\u0626\u064a \u0639\u0644\u0649 \u0623\u064a \u0631\u0633\u0627\u0644\u0629 \u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u0641\u062d\u0635 \u0623\u0648 \u0641\u064a Ollama \u0627\u0644\u0645\u062d\u0644\u064a/Ngrok/\u0627\u0644\u0647\u062c\u064a\u0646.",
@@ -38,6 +38,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "new-phase25-cryptocom-magic-token-and-mcp-gating",
+      "ts": "2026-10-30T01:31:16Z",
+      "category": "CRYPTOCOM_LIVE_AND_OFFICIAL_SPEC_REGRESSION",
+      "titleAr": "\u0627\u0644\u0645\u0631\u062d\u0644\u0629 25: \u062a\u0648\u062b\u064a\u0642 \u0625\u0641\u0635\u0627\u062d magic_token \u0648\u062e\u0644\u0644 \u062a\u0635\u0646\u064a\u0641 \u0639\u0645\u0644\u064a\u0627\u062a Fiat/OTC \u0641\u064a MCP",
+      "detailAr": "\u062b\u0644\u0627\u062b\u0629 \u062a\u0634\u063a\u064a\u0644\u0627\u062a \u0645\u062a\u0635\u0641\u062d \u0628\u0639\u0644\u0627\u0645\u0627\u062a \u063a\u064a\u0631 \u0635\u0627\u0644\u062d\u0629 \u0623\u062b\u0628\u062a\u062a \u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 disable-2fa \u0627\u0644\u0643\u0627\u0645\u0644 \u0625\u0644\u0649 RTG \u0648Google \u0648Bugsnag \u0645\u0639 \u0627\u0639\u062a\u0631\u0627\u0636 POST \u0627\u0644\u062d\u0633\u0627\u0633 \u0645\u062d\u0644\u064a\u0627\u064b. \u0627\u062e\u062a\u0628\u0627\u0631 Rust \u0628\u0645\u0644\u0641 OpenAPI \u0627\u0644\u0631\u0633\u0645\u064a \u0648\u0643\u0644 overlays \u0623\u062b\u0628\u062a \u0623\u0646 \u062b\u0644\u0627\u062b \u0639\u0645\u0644\u064a\u0627\u062a \u0645\u063a\u064a\u0651\u0631\u0629 \u0644\u0644\u062d\u0627\u0644\u0629 \u062a\u0645\u0631 \u0643\u0640 sensitive_read \u062f\u0648\u0646 acknowledged\u061b \u0627\u0644\u0646\u062a\u064a\u062c\u0629 1/1 \u0648\u0644\u0645 \u062a\u064f\u0631\u0633\u0644 \u0623\u064a \u0639\u0645\u0644\u064a\u0629 \u0645\u0627\u0644\u064a\u0629. \u0644\u0627 \u064a\u0648\u062c\u062f \u0627\u062f\u0639\u0627\u0621 Critical \u0623\u0648 ATO."
+    },
     {
       "id": "new-sky-scope-locked",
       "ts": "2026-10-29 19:48:20 UTC",
@@ -696,7 +703,7 @@
       "lastOutput": "Cycle #72 verified on bughunters.google.com at \u0667:\u0664\u0662:\u0663\u0668 \u0645"
     }
   ],
-  "updatedAt": "2026-10-30T00:58:06Z",
+  "updatedAt": "2026-10-30T01:31:16Z",
   "activeTarget": {
     "status": "PHASE_20_COMPLETE_6_WAVES_54_REPOS_MAINNET_FORK_POC_VERIFIED",
     "lastAuditTimestamp": "2026-10-29T20:09:50Z",
@@ -782,13 +789,16 @@
     "submissionReportPath": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
     "foundryPoCPath": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol"
   },
-  "lastUpdated": "2026-10-29T18:45:00Z",
+  "lastUpdated": "2026-10-30T01:31:16Z",
   "discoveredVaultSummary": {
     "vaultPath": "state/discovered-vulnerabilities-vault.json",
-    "totalDiscoveredVulnerabilities": 8,
+    "totalDiscoveredVulnerabilities": 11,
     "totalArchitecturalNotes": 6,
-    "totalLifelongLearningRules": 12,
+    "totalLifelongLearningRules": 15,
     "items": [
+      "CDC-WEB-01 (disable-2fa magic_token full-URL third-party disclosure; 3/3 invalid-marker runs; no ATO claim)",
+      "CDC-MCP-01 (fiat/OTC MCP acknowledgment bypass; official-spec local regression 1/1; no financial request)",
+      "CDC-SC-01 (wrapped-tokens-os RateLimit.sol single-block 2x bypass; Foundry 2/2)",
       "CDC-DEV-01 (cdc-ai-agent-signer-app Unverified jwtDecode + wallet_addEthereumChain RPC Injection + Zero-Slippage Swaps)",
       "CDC-DEV-02 (ApprovalPaymaster.sol Unchecked amount = 0 Gas Sponsorship & OTKAccount.sol Key Depletion Lockout)",
       "CDC-DEV-03 (cdcx-cli Shared session_id in authorize_broker & x-growth Polling without PKCE)",
@@ -800,8 +810,27 @@
     ]
   },
   "discoveredVulnerabilitiesVault": {
-    "totalVulnerabilities": 9,
-    "totalLifelongRules": 13,
-    "latestAdded": "CDC-SC-01 (wrapped-tokens-os RateLimit.sol Single-Block 2x Bypass + Foundry PoC)"
+    "totalVulnerabilities": 11,
+    "totalLifelongRules": 15,
+    "latestAdded": "CDC-WEB-01 (invalid-marker live disclosure) + CDC-MCP-01 (official-spec local MCP gating regression)",
+    "criticalVerifiedCount": 0,
+    "submissionReadyCriticalReports": 0
+  },
+  "cryptocomPhase25": {
+    "updatedAt": "2026-10-30T01:31:16Z",
+    "verifiedCriticalVulnerabilities": 0,
+    "newResearchRecords": [
+      "CDC-WEB-01",
+      "CDC-MCP-01"
+    ],
+    "magicTokenDisclosureRuns": 3,
+    "realTokensUsed": 0,
+    "sensitiveDisable2faPostsReachedBackend": 0,
+    "mcpOfficialSpecRegression": "1 passed; 0 failed",
+    "realFinancialRequests": 0,
+    "reports": [
+      "audit/cryptocom-hackerone/CRYPTOCOM_2FA_MAGIC_TOKEN_DISCLOSURE_2026-10-30.md",
+      "audit/cryptocom-hackerone/CRYPTOCOM_MCP_STATE_CHANGE_GATING_2026-10-30.md"
+    ]
   }
 }
