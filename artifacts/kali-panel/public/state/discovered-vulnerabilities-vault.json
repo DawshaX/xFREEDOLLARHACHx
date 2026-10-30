@@ -1,11 +1,11 @@
 {
-  "schemaVersion": "2099.26.0",
-  "updatedAt": "2026-10-30T02:13:34Z",
-  "vaultTitleAr": "\u062e\u0632\u0646\u0629 \u0627\u0644\u062b\u063a\u0631\u0627\u062a \u0627\u0644\u0645\u0643\u062a\u0634\u0641\u0629 \u0648\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0645\u062d\u0641\u0648\u0638\u0629 \u0648\u0633\u062c\u0644 \u0627\u0644\u062a\u0639\u0644\u0645 \u0645\u062f\u0649 \u0627\u0644\u062d\u064a\u0627\u0629 \u2014 CyberNova Permanent Vault",
+  "schemaVersion": "2099.27.0",
+  "updatedAt": "2026-10-30T02:35:01Z",
+  "vaultTitleAr": "خزنة الثغرات المكتشفة والتقارير المحفوظة وسجل التعلم مدى الحياة — CyberNova Permanent Vault",
   "totalDiscoveredVulnerabilities": 11,
   "totalArchitecturalNotes": 6,
   "totalSavedDisclosureReports": 3,
-  "totalLifelongLearningRules": 16,
+  "totalLifelongLearningRules": 18,
   "discoveredVulnerabilities": [
     {
       "id": "CDC-WEB-01",
@@ -13,8 +13,8 @@
       "platform": "HackerOne",
       "submissionFee": "0 USD (100% Free)",
       "titleEn": "Disable-2FA magic_token Disclosed in the Complete URL to RTG, Google Ads/Analytics, and Bugsnag",
-      "titleAr": "\u0625\u0641\u0635\u0627\u062d \u0631\u0627\u0628\u0637 \u062a\u0639\u0637\u064a\u0644 2FA \u0627\u0644\u0643\u0627\u0645\u0644 \u0627\u0644\u062d\u0627\u0645\u0644 \u0644\u0640 magic_token \u0625\u0644\u0649 RTG \u0648Google Ads/Analytics \u0648Bugsnag",
-      "targetProgram": "Crypto.com \u2014 HackerOne (https://crypto.com/exchange)",
+      "titleAr": "إفصاح رابط تعطيل 2FA الكامل الحامل لـ magic_token إلى RTG وGoogle Ads/Analytics وBugsnag",
+      "targetProgram": "Crypto.com — HackerOne (https://crypto.com/exchange)",
       "severity": "Low confidentiality candidate under current program guidance (not Critical; eligibility triage required)",
       "cwe": "CWE-200 / CWE-598",
       "status": "LIVE_BEHAVIOR_VERIFIED_3_OF_3_WITH_INVALID_MARKERS__DRAFT_NOT_SUBMITTED",
@@ -45,17 +45,17 @@
       "platform": "HackerOne scope constrained; CLI not independently listed",
       "submissionFee": "0 USD (100% Free)",
       "titleEn": "Fiat Bank-Account Creation and OTC request-deal/request-quote Misclassified as sensitive_read, Bypassing MCP Acknowledgment Gating",
-      "titleAr": "\u062a\u0635\u0646\u064a\u0641 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062d\u0633\u0627\u0628 \u0627\u0644\u0628\u0646\u0643\u064a \u0648\u0639\u0645\u0644\u064a\u0627\u062a OTC request-deal/request-quote \u0643\u0642\u0631\u0627\u0621\u0629 \u062d\u0633\u0627\u0633\u0629 \u0648\u062a\u062c\u0627\u0648\u0632 \u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0625\u0642\u0631\u0627\u0631 \u0641\u064a MCP",
-      "targetProgram": "Crypto.com \u2014 official cdcx-cli 1.2.6 and Exchange OpenAPI",
+      "titleAr": "تصنيف إنشاء الحساب البنكي وعمليات OTC request-deal/request-quote كقراءة حساسة وتجاوز بوابة الإقرار في MCP",
+      "targetProgram": "Crypto.com — official cdcx-cli 1.2.6 and Exchange OpenAPI",
       "severity": "Low / local safety-control defect (not Critical; live financial impact unproven)",
       "cwe": "CWE-693 / CWE-840",
       "status": "LOCAL_OFFICIAL_SPEC_REGRESSION_VERIFIED_1_OF_1__NOT_SUBMISSION_READY",
       "submissionNoteEn": "The production registry, generated tools, and runtime gate were executed locally against the official 95-operation YAML and all ten production overlays. No real endpoint, credential, bank, Plaid, quote, deal, or trade was used. Local stdio, opt-in services, and scope constraints prevent a Critical or submission-ready claim.",
       "affectedAssets": [
         "crypto-com/cdcx-cli@4d1112e86b061f8bdd8a6d92c3fd9aeb55b3b7bc",
-        "private/fiat/fiat-create-bank-account \u2192 cdcx_fiat_bank-account",
-        "private/otc/request-deal \u2192 cdcx_otc_request-deal",
-        "private/otc/request-quote \u2192 cdcx_otc_request-quote"
+        "private/fiat/fiat-create-bank-account → cdcx_fiat_bank-account",
+        "private/otc/request-deal → cdcx_otc_request-deal",
+        "private/otc/request-quote → cdcx_otc_request-quote"
       ],
       "rootCauseEn": "SafetyTier::from_method uses an explicit mutation/dangerous list and maps every unmatched private method to SensitiveRead. The three state-changing official operations are absent from the list. Production tool generation therefore omits acknowledged, and check_mcp_safety(method, None, false) returns Ok(()).",
       "impactEn": "The CLI/MCP defense-in-depth confirmation boundary is bypassed for state-changing operations. OTC request-deal is the strongest case because the official specification requests a deal from a quote and its success example returns deal_status ACCEPTED with instrument, price, quantity, and side. No real financial effect was tested.",
@@ -74,7 +74,7 @@
       "severity": "High / Medium",
       "cvss": 7.3,
       "cwe": "CWE-682 / CWE-841 / CWE-284",
-      "status": "Verified in Foundry (2/2 PASS \u2014 test_PoC1_SingleBlock_2x_RateLimit_Bypass & test_PoC2_Unprivileged_External_Allowance_Truncation)",
+      "status": "Verified in Foundry (2/2 PASS — test_PoC1_SingleBlock_2x_RateLimit_Bypass & test_PoC2_Unprivileged_External_Allowance_Truncation)",
       "chain": "Ethereum Mainnet & Cronos Mainnet (wrapped-tokens-os)",
       "targetAddress": "https://github.com/crypto-com/wrapped-tokens-os (contracts/wrapped-tokens/RateLimit.sol, MintForwarder.sol, ExchangeRateUpdater.sol)",
       "atRiskFundsUSD": 0,
@@ -87,262 +87,262 @@
     },
     {
       "id": "CDC-DEV-01",
-      "titleAr": "\u0641\u0643 \u062a\u0634\u0641\u064a\u0631 JWT \u0628\u062f\u0648\u0646 \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u062a\u0648\u0642\u064a\u0639 (jwtDecode) \u0648\u062d\u0642\u0646 RPC \u0641\u064a wallet_addEthereumChain \u0648\u0627\u0646\u0639\u062f\u0627\u0645 \u062d\u0645\u0627\u064a\u0629 \u0627\u0644\u0627\u0646\u0632\u0644\u0627\u0642 (amountOutMin = 0) \u0641\u064a cdc-ai-agent-signer-app",
+      "titleAr": "فك تشفير JWT بدون التحقق من التوقيع (jwtDecode) وحقن RPC في wallet_addEthereumChain وانعدام حماية الانزلاق (amountOutMin = 0) في cdc-ai-agent-signer-app",
       "titleEn": "Unverified Client-Side JWT Decoding (jwtDecode), Untrusted wallet_addEthereumChain RPC Injection, Zero-Slippage Swaps (amountOutMin = '0'), and Hardcoded 18-Decimal Transfers in cdc-ai-agent-signer-app",
-      "targetProgram": "Crypto.com \u2014 HackerOne (developer.crypto.com / developer-platform-api.crypto.com)",
+      "targetProgram": "Crypto.com — HackerOne (developer.crypto.com / developer-platform-api.crypto.com)",
       "severity": "High",
       "cvssScore": 8.1,
       "cwe": "CWE-347 (Improper Signature Verification) / CWE-829 / CWE-682",
       "status": "SOURCE_VERIFIED_SAVED_IN_VAULT",
-      "submissionNoteAr": "\u062a\u0645 \u0627\u0643\u062a\u0634\u0627\u0641\u0647\u0627 \u0648\u062a\u0648\u062b\u064a\u0642\u0647\u0627 \u0645\u0646 \u0627\u0644\u0643\u0648\u062f \u0627\u0644\u0645\u0635\u062f\u0631\u064a \u0627\u0644\u0631\u0633\u0645\u064a \u0644\u0645\u0633\u062a\u0648\u062f\u0639 crypto-com/cdc-ai-agent-signer-app \u0648\u0631\u0628\u0637\u0647\u0627 \u0628\u0646\u0637\u0627\u0642 developer-platform-api.crypto.com.",
+      "submissionNoteAr": "تم اكتشافها وتوثيقها من الكود المصدري الرسمي لمستودع crypto-com/cdc-ai-agent-signer-app وربطها بنطاق developer-platform-api.crypto.com.",
       "affectedAssets": [
         "crypto-com/cdc-ai-agent-signer-app: src/hooks/useTransactionDetails.ts, src/utils/switchNetworks.ts, src/pages/SwapToken.tsx, src/pages/TransferToken.tsx",
         "developer-platform-api.crypto.com/api/v1/cdc-developer-platform/token/{transfer,swap,wrap}"
       ],
-      "rootCauseAr": "\u062a\u0637\u0628\u064a\u0642 \u0627\u0644\u062a\u0648\u0642\u064a\u0639 \u064a\u0633\u062a\u062e\u062f\u0645 \u0645\u0643\u062a\u0628\u0629 jwt-decode \u0627\u0644\u062a\u064a \u062a\u0641\u0643 \u062a\u0631\u0645\u064a\u0632 Base64 \u0641\u0642\u0637 \u062f\u0648\u0646 \u0623\u064a \u062a\u062d\u0642\u0642 \u062a\u0634\u0641\u064a\u0631\u064a \u0645\u0646 \u062a\u0648\u0642\u064a\u0639 \u0627\u0644\u0640 JWT \u0623\u0648 \u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0639\u0627\u0645\u0644\u0629 \u0639\u0644\u0649 \u0627\u0644\u062e\u0627\u062f\u0645\u060c \u062b\u0645 \u064a\u0645\u0631\u0631 \u0639\u0646\u0648\u0627\u0646 RPC \u0648\u0627\u0633\u0645 \u0627\u0644\u0634\u0628\u0643\u0629 \u0645\u0646 \u0627\u0644\u0640 JWT \u063a\u064a\u0631 \u0627\u0644\u0645\u0648\u062b\u0642 \u0645\u0628\u0627\u0634\u0631\u0629 \u0625\u0644\u0649 wallet_addEthereumChain\u060c \u0643\u0645\u0627 \u064a\u0645\u0631\u0631 amountOutMin = '0' \u0641\u064a \u062c\u0645\u064a\u0639 \u0639\u0645\u0644\u064a\u0627\u062a \u0627\u0644\u0645\u0628\u0627\u062f\u0644\u0629 \u0648\u064a\u062b\u0628\u062a 18 \u062e\u0627\u0646\u0629 \u0639\u0634\u0631\u064a\u0629 \u0641\u064a \u0627\u0644\u062a\u062d\u0648\u064a\u0644\u0627\u062a.",
+      "rootCauseAr": "تطبيق التوقيع يستخدم مكتبة jwt-decode التي تفك ترميز Base64 فقط دون أي تحقق تشفيري من توقيع الـ JWT أو مطابقة معرف المعاملة على الخادم، ثم يمرر عنوان RPC واسم الشبكة من الـ JWT غير الموثق مباشرة إلى wallet_addEthereumChain، كما يمرر amountOutMin = '0' في جميع عمليات المبادلة ويثبت 18 خانة عشرية في التحويلات.",
       "proofOfConceptPath": "audit/cryptocom-hackerone/CRYPTOCOM_PARALLEL_TRACK_SOURCE_AUDIT.md",
       "reportMarkdownPath": "audit/cryptocom-hackerone/CRYPTOCOM_PARALLEL_TRACK_SOURCE_AUDIT.md",
-      "remediationSummaryAr": "\u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u062a\u0648\u0642\u064a\u0639 JWS \u0623\u0648 \u062c\u0644\u0628 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0639\u0627\u0645\u0644\u0629 \u0645\u0646 \u0627\u0644\u062e\u0627\u062f\u0645\u060c \u0648\u062d\u0635\u0631 \u0627\u0644\u0634\u0628\u0643\u0627\u062a \u0641\u064a \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0628\u064a\u0636\u0627\u0621 CHAINS\u060c \u0648\u062d\u0633\u0627\u0628 decimals() \u0648amountOutMin."
+      "remediationSummaryAr": "التحقق من توقيع JWS أو جلب بيانات المعاملة من الخادم، وحصر الشبكات في القائمة البيضاء CHAINS، وحساب decimals() وamountOutMin."
     },
     {
       "id": "CDC-DEV-02",
-      "titleAr": "\u0639\u062f\u0645 \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0642\u064a\u0645\u0629 amount \u0627\u0644\u0645\u0642\u062a\u0637\u0639\u0629 \u0641\u064a ApprovalPaymaster.sol \u0648\u0627\u0633\u062a\u0646\u0632\u0627\u0641 \u0627\u0644\u0645\u0641\u0627\u062a\u064a\u062d \u0627\u0644\u062f\u0627\u0626\u0645 \u0641\u064a OTKAccount.sol \u0639\u0644\u0649 Cronos zkEVM",
+      "titleAr": "عدم التحقق من قيمة amount المقتطعة في ApprovalPaymaster.sol واستنزاف المفاتيح الدائم في OTKAccount.sol على Cronos zkEVM",
       "titleEn": "Unchecked ERC-20 Fee amount in ApprovalPaymaster.sol (Allowing amount = 0 Gas Sponsorship) and Permanent Key Depletion Lockout in OTKAccount.sol",
-      "targetProgram": "Crypto.com \u2014 HackerOne (developer.crypto.com / Smart Wallet SDK)",
+      "targetProgram": "Crypto.com — HackerOne (developer.crypto.com / Smart Wallet SDK)",
       "severity": "High / Medium",
       "cvssScore": 7.4,
       "cwe": "CWE-20 (Improper Input Validation) / CWE-682",
       "status": "SOURCE_VERIFIED_SAVED_IN_VAULT",
-      "submissionNoteAr": "\u062a\u0645 \u0627\u0643\u062a\u0634\u0627\u0641\u0647\u0627 \u0641\u064a \u0639\u0642\u0648\u062f Account Abstraction \u0627\u0644\u0631\u0633\u0645\u064a\u0629 \u062f\u0627\u062e\u0644 crypto-com/developer-platform-sdk-examples.",
+      "submissionNoteAr": "تم اكتشافها في عقود Account Abstraction الرسمية داخل crypto-com/developer-platform-sdk-examples.",
       "affectedAssets": [
         "crypto-com/developer-platform-sdk-examples: ai/smart-wallet-example/smart-wallet-core-solidty/contracts/paymasters/ApprovalPaymaster.sol",
         "crypto-com/developer-platform-sdk-examples: ai/smart-wallet-example/smart-wallet-core-solidty/contracts/OTKAccount.sol"
       ],
-      "rootCauseAr": "\u0639\u0642\u062f ApprovalPaymaster \u064a\u062a\u062d\u0642\u0642 \u0645\u0646 allowance >= PRICE_FOR_PAYING_FEES \u0644\u0643\u0646\u0647 \u0644\u0627 \u064a\u062a\u062d\u0642\u0642 \u0645\u0646 \u0623\u0646 \u0645\u062a\u063a\u064a\u0631 amount \u0627\u0644\u0645\u0645\u0631\u0631 \u0641\u064a paymasterInput \u0623\u0643\u0628\u0631 \u0645\u0646 \u0627\u0644\u0635\u0641\u0631 \u0623\u0648 \u064a\u063a\u0637\u064a requiredETH\u060c \u0628\u064a\u0646\u0645\u0627 \u0639\u0642\u062f OTKAccount \u064a\u0633\u062a\u0647\u0644\u0643 \u0627\u0644\u0645\u0641\u0627\u062a\u064a\u062d \u0630\u0627\u062a \u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0627\u0644\u0648\u0627\u062d\u062f (otks[recoveredAddress] = false) \u062f\u0648\u0646 \u062f\u0627\u0644\u0629 \u0644\u0625\u0636\u0627\u0641\u0629 \u0645\u0641\u0627\u062a\u064a\u062d \u062c\u062f\u064a\u062f\u0629 \u0645\u0645\u0627 \u064a\u0642\u0641\u0644 \u0627\u0644\u0645\u062d\u0641\u0638\u0629 \u0644\u0644\u0623\u0628\u062f \u0628\u0639\u062f \u0646\u0641\u0627\u062f \u0627\u0644\u0642\u0627\u0626\u0645\u0629.",
+      "rootCauseAr": "عقد ApprovalPaymaster يتحقق من allowance >= PRICE_FOR_PAYING_FEES لكنه لا يتحقق من أن متغير amount الممرر في paymasterInput أكبر من الصفر أو يغطي requiredETH، بينما عقد OTKAccount يستهلك المفاتيح ذات الاستخدام الواحد (otks[recoveredAddress] = false) دون دالة لإضافة مفاتيح جديدة مما يقفل المحفظة للأبد بعد نفاد القائمة.",
       "proofOfConceptPath": "audit/cryptocom-hackerone/CRYPTOCOM_PARALLEL_TRACK_SOURCE_AUDIT.md",
       "reportMarkdownPath": "audit/cryptocom-hackerone/CRYPTOCOM_PARALLEL_TRACK_SOURCE_AUDIT.md",
-      "remediationSummaryAr": "\u0625\u0636\u0627\u0641\u0629 require(amount >= requiredFee) \u0641\u064a ApprovalPaymaster \u0648\u0625\u0636\u0627\u0641\u0629 \u0622\u0644\u064a\u0629 \u062a\u062f\u0648\u064a\u0631/\u0625\u0636\u0627\u0641\u0629 \u0645\u0641\u0627\u062a\u064a\u062d \u0644\u0644\u0645\u0627\u0644\u0643 \u0641\u064a OTKAccount."
+      "remediationSummaryAr": "إضافة require(amount >= requiredFee) في ApprovalPaymaster وإضافة آلية تدوير/إضافة مفاتيح للمالك في OTKAccount."
     },
     {
       "id": "CDC-DEV-03",
-      "titleAr": "\u063a\u064a\u0627\u0628 PKCE \u0648\u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0646\u0641\u0633 \u0645\u0639\u0631\u0641 \u0627\u0644\u062c\u0644\u0633\u0629 (session_id) \u0641\u064a \u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u062a\u0635\u0641\u062d \u0648\u0646\u0642\u0637\u0629 \u0627\u0633\u062a\u0644\u0627\u0645 \u0645\u0641\u0627\u062a\u064a\u062d \u0627\u0644\u062a\u062f\u0627\u0648\u0644 \u0641\u064a cdcx-cli",
+      "titleAr": "غياب PKCE واستخدام نفس معرف الجلسة (session_id) في رابط المتصفح ونقطة استلام مفاتيح التداول في cdcx-cli",
       "titleEn": "Shared session_id in Browser Authorization URL and Unauthenticated Credential Polling Endpoint (Missing PKCE / Session Fixation Risk) in cdcx-cli",
-      "targetProgram": "Crypto.com \u2014 HackerOne (crypto.com/exchange & x-growth.crypto.com & cdcx-cli)",
+      "targetProgram": "Crypto.com — HackerOne (crypto.com/exchange & x-growth.crypto.com & cdcx-cli)",
       "severity": "High / Medium",
       "cvssScore": 7.2,
       "cwe": "CWE-384 (Session Fixation) / CWE-306",
       "status": "SOURCE_VERIFIED_SAVED_IN_VAULT",
-      "submissionNoteAr": "\u062a\u0645 \u0627\u0643\u062a\u0634\u0627\u0641\u0647\u0627 \u0641\u064a crates/cdcx-cli/src/groups/auth_login.rs \u062f\u0627\u062e\u0644 \u0645\u0633\u062a\u0648\u062f\u0639 crypto-com/cdcx-cli.",
+      "submissionNoteAr": "تم اكتشافها في crates/cdcx-cli/src/groups/auth_login.rs داخل مستودع crypto-com/cdcx-cli.",
       "affectedAssets": [
         "crypto-com/cdcx-cli: crates/cdcx-cli/src/groups/auth_login.rs",
         "https://crypto.com/exchange/authorize_broker",
         "https://x-growth.crypto.com/static/cli/authenticate"
       ],
-      "rootCauseAr": "\u064a\u062a\u0645 \u062a\u0648\u0644\u064a\u062f session_id \u0641\u064a \u0627\u0644\u0639\u0645\u064a\u0644 \u0648\u062a\u0645\u0631\u064a\u0631\u0647 \u0641\u064a \u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u062a\u0635\u0641\u062d \u0627\u0644\u0639\u0627\u0645 (redirect_uri & broker_reference_id) \u062b\u0645 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0646\u0641\u0633 \u0627\u0644\u0640 session_id \u0628\u062f\u0648\u0646 code_verifier (PKCE) \u0641\u064a \u0637\u0644\u0628\u0627\u062a POST \u063a\u064a\u0631 \u0627\u0644\u0645\u0648\u062b\u0642\u0629 \u0625\u0644\u0649 x-growth.crypto.com/static/cli/authenticate \u0644\u0627\u0633\u062a\u0644\u0627\u0645 api_key \u0648secret_key.",
+      "rootCauseAr": "يتم توليد session_id في العميل وتمريره في رابط المتصفح العام (redirect_uri & broker_reference_id) ثم استخدام نفس الـ session_id بدون code_verifier (PKCE) في طلبات POST غير الموثقة إلى x-growth.crypto.com/static/cli/authenticate لاستلام api_key وsecret_key.",
       "proofOfConceptPath": "audit/cryptocom-hackerone/CRYPTOCOM_PARALLEL_TRACK_SOURCE_AUDIT.md",
       "reportMarkdownPath": "audit/cryptocom-hackerone/CRYPTOCOM_PARALLEL_TRACK_SOURCE_AUDIT.md",
-      "remediationSummaryAr": "\u062a\u0637\u0628\u064a\u0642 \u0645\u0639\u064a\u0627\u0631 PKCE (RFC 7636) \u0628\u062d\u064a\u062b \u064a\u0645\u0631\u0631 \u0627\u0644\u0645\u062a\u0635\u0641\u062d code_challenge \u0641\u0642\u0637 \u0628\u064a\u0646\u0645\u0627 \u064a\u062a\u0637\u0644\u0628 \u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u0645\u0641\u0627\u062a\u064a\u062d \u0625\u0631\u0633\u0627\u0644 code_verifier \u0627\u0644\u0633\u0631\u064a."
+      "remediationSummaryAr": "تطبيق معيار PKCE (RFC 7636) بحيث يمرر المتصفح code_challenge فقط بينما يتطلب استلام المفاتيح إرسال code_verifier السري."
     },
     {
       "id": "CDC-DEV-04",
-      "titleAr": "\u062f\u0645\u062c \u0627\u0644\u0645\u0639\u0627\u0645\u0644\u0627\u062a \u0641\u064a \u0631\u0648\u0627\u0628\u0637 REST API \u062f\u0648\u0646 \u062a\u0631\u0645\u064a\u0632 (Unencoded URL Path/Query Interpolation) \u0641\u064a \u0645\u0643\u062a\u0628\u0629 developer-platform-client-ts",
+      "titleAr": "دمج المعاملات في روابط REST API دون ترميز (Unencoded URL Path/Query Interpolation) في مكتبة developer-platform-client-ts",
       "titleEn": "Unencoded Path & Query Parameter Interpolation in @crypto.com/developer-platform-client Used by AI Agent Tool Calls",
-      "targetProgram": "Crypto.com \u2014 HackerOne (developer-platform-api.crypto.com)",
+      "targetProgram": "Crypto.com — HackerOne (developer-platform-api.crypto.com)",
       "severity": "Medium",
       "cvssScore": 6.1,
       "cwe": "CWE-88 / CWE-20",
       "status": "SOURCE_VERIFIED_SAVED_IN_VAULT",
-      "submissionNoteAr": "\u062a\u0645 \u0627\u0643\u062a\u0634\u0627\u0641\u0647\u0627 \u0641\u064a \u062c\u0645\u064a\u0639 \u0648\u062d\u062f\u0627\u062a src/integrations/*.api.ts \u0641\u064a \u0645\u0633\u062a\u0648\u062f\u0639 crypto-com/developer-platform-client-ts.",
+      "submissionNoteAr": "تم اكتشافها في جميع وحدات src/integrations/*.api.ts في مستودع crypto-com/developer-platform-client-ts.",
       "affectedAssets": [
         "crypto-com/developer-platform-client-ts: src/integrations/*.api.ts",
         "developer-platform-api.crypto.com"
       ],
-      "rootCauseAr": "\u064a\u062a\u0645 \u062f\u0645\u062c \u0627\u0644\u0645\u062a\u063a\u064a\u0631\u0627\u062a \u0627\u0644\u0642\u0627\u062f\u0645\u0629 \u0645\u0646 \u0627\u0633\u062a\u062f\u0639\u0627\u0621\u0627\u062a \u0623\u062f\u0648\u0627\u062a \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a (LLM tool_calls) \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064a \u0645\u0633\u0627\u0631\u0627\u062a \u0648\u0627\u0633\u062a\u0639\u0644\u0627\u0645\u0627\u062a BASE_URL \u062f\u0648\u0646 encodeURIComponent \u0645\u0639 \u0625\u0631\u0633\u0627\u0644 \u062a\u0631\u0648\u064a\u0633\u0629 x-api-key \u0627\u0644\u062e\u0627\u0635\u0629 \u0628\u0627\u0644\u062e\u0627\u062f\u0645.",
+      "rootCauseAr": "يتم دمج المتغيرات القادمة من استدعاءات أدوات الذكاء الاصطناعي (LLM tool_calls) مباشرة في مسارات واستعلامات BASE_URL دون encodeURIComponent مع إرسال ترويسة x-api-key الخاصة بالخادم.",
       "proofOfConceptPath": "audit/cryptocom-hackerone/CRYPTOCOM_PARALLEL_TRACK_SOURCE_AUDIT.md",
       "reportMarkdownPath": "audit/cryptocom-hackerone/CRYPTOCOM_PARALLEL_TRACK_SOURCE_AUDIT.md",
-      "remediationSummaryAr": "\u0627\u0633\u062a\u062e\u062f\u0627\u0645 encodeURIComponent() \u0648URLSearchParams() \u0644\u062c\u0645\u064a\u0639 \u0627\u0644\u0645\u062a\u063a\u064a\u0631\u0627\u062a \u0627\u0644\u062f\u064a\u0646\u0627\u0645\u064a\u0643\u064a\u0629."
+      "remediationSummaryAr": "استخدام encodeURIComponent() وURLSearchParams() لجميع المتغيرات الديناميكية."
     },
     {
       "id": "SKY-VULN-02",
-      "titleAr": "\u0627\u0646\u063a\u0644\u0627\u0642 \u0633\u062d\u0628 \u0627\u0644\u0633\u064a\u0648\u0644\u0629 \u062b\u0646\u0627\u0626\u064a \u0627\u0644\u0627\u062a\u062c\u0627\u0647 (0.1% Two-Sided Slippage Pincer) \u0648\u062a\u062c\u0645\u064a\u062f \u0645\u0624\u0642\u062a \u0644\u0645\u0631\u0643\u0632 \u0633\u064a\u0648\u0644\u0629 \u0628\u0642\u064a\u0645\u0629 $30,004,359.92 USD",
+      "titleAr": "انغلاق سحب السيولة ثنائي الاتجاه (0.1% Two-Sided Slippage Pincer) وتجميد مؤقت لمركز سيولة بقيمة $30,004,359.92 USD",
       "titleEn": "Unprivileged Two-Sided 0.1% Slippage Pincer in UniswapV3Facet.removeLiquidity Causing Temporary Freezing of Funds / Griefing on Live $30.00M GROVE_PAU_PROXY Position #1352494",
-      "targetProgram": "Sky (formerly MakerDAO) \u2014 Immunefi",
+      "targetProgram": "Sky (formerly MakerDAO) — Immunefi",
       "severity": "High / Medium",
       "cvssScore": 7.5,
       "cwe": "CWE-682 (Incorrect Calculation) / CWE-400 (Resource Exhaustion / DoS)",
       "status": "VERIFIED_ON_MAINNET_FORK_SAVED_IN_VAULT",
-      "submissionNoteAr": "\u0645\u062d\u0641\u0648\u0638 \u0628\u0627\u0644\u0643\u0627\u0645\u0644 \u0645\u0639 \u0643\u0648\u062f \u0627\u0644\u0625\u062b\u0628\u0627\u062a (4/4 Foundry Fork Tests) \u0648\u0627\u0644\u062a\u0642\u0631\u064a\u0631 \u0627\u0644\u0646\u0647\u0627\u0626\u064a\u061b \u0645\u0624\u062c\u0644 \u0627\u0644\u062a\u0642\u062f\u064a\u0645 \u0639\u0644\u0649 Immunefi \u0628\u0633\u0628\u0628 \u0641\u0631\u0636 \u0627\u0644\u0645\u0646\u0635\u0629 \u0631\u0633\u0648\u0645 \u062a\u0642\u062f\u064a\u0645 \u063a\u064a\u0631 \u0645\u0633\u062a\u0631\u062f\u0629 (50 USDC) \u0641\u064a \u0645\u0631\u062d\u0644\u0629 \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629.",
+      "submissionNoteAr": "محفوظ بالكامل مع كود الإثبات (4/4 Foundry Fork Tests) والتقرير النهائي؛ مؤجل التقديم على Immunefi بسبب فرض المنصة رسوم تقديم غير مستردة (50 USDC) في مرحلة المراجعة.",
       "affectedAssets": [
         "UNISWAP_V3_FACET: 0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab (Ethereum Mainnet)",
         "GROVE_PAU_CONTROLLER: 0xbf83F5974B932c7D842254042717D6A2706CE5eE",
-        "GROVE_PAU_PROXY: 0x0DcD9298e163dFD3c0B5b00F0d9093C36e40A153 (Token ID #1352494 \u2014 $30,004,359.92 USD in AUSD/USDC 0.01% pool)"
+        "GROVE_PAU_PROXY: 0x0DcD9298e163dFD3c0B5b00F0d9093C36e40A153 (Token ID #1352494 — $30,004,359.92 USD in AUSD/USDC 0.01% pool)"
       ],
-      "rootCauseAr": "\u062f\u0627\u0644\u0629 removeLiquidity \u0641\u064a UniswapV3Facet.sol (\u0627\u0644\u0623\u0633\u0637\u0631 333-339) \u062a\u062d\u0633\u0628 expectedAmounts \u0639\u0628\u0631 \u0627\u0633\u062a\u062f\u0639\u0627\u0621 LiquidityAmounts.getAmountsForLiquidity \u0628\u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0645\u062a\u0648\u0633\u0637 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0632\u0645\u0646\u064a (TWAP 600s)\u060c \u062b\u0645 \u062a\u062d\u0633\u0628 minAmounts = expectedAmounts * maxSlippage / WAD\u060c \u0648\u0628\u0639\u062f \u0627\u0644\u0633\u062d\u0628 \u0627\u0644\u0641\u0639\u0644\u064a \u0645\u0646 \u0627\u0644\u0645\u062c\u0645\u0639 \u0639\u0646\u062f \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0641\u0648\u0631\u064a (Spot) \u062a\u0641\u0631\u0636 \u0634\u0631\u0637\u0627\u064b \u0639\u0643\u0633\u064a\u0627\u064b \u0639\u0644\u0648\u064a\u0651\u0627\u064b: require(minAmounts[i] * WAD / actualAmount >= maxSlippage). \u0647\u0630\u0627 \u0627\u0644\u0634\u0631\u0637 \u064a\u062e\u0644\u0642 \u0643\u0645\u0627\u0634\u0629 \u062b\u0646\u0627\u0626\u064a\u0629 \u0627\u0644\u0627\u062a\u062c\u0627\u0647 \u0628\u0639\u0631\u0636 0.1% \u0641\u0642\u0637 (min <= actual <= min / 0.999) \u062a\u062c\u0639\u0644 \u0623\u064a \u062a\u062d\u0631\u0643 \u0633\u0639\u0631\u064a \u0628\u0633\u064a\u0637 \u0628\u0645\u0642\u062f\u0627\u0631 2 ticks \u0639\u0628\u0631 \u0627\u0644\u0646\u0637\u0627\u0642 [-10, 10] \u064a\u0624\u062f\u064a \u0625\u0644\u0649 \u0641\u0634\u0644 (Revert: UniswapV3Facet/excessive-slippage) \u0644\u062c\u0645\u064a\u0639 \u0645\u0639\u0627\u0645\u0644\u0627\u062a \u0633\u062d\u0628 \u0627\u0644\u0633\u064a\u0648\u0644\u0629.",
+      "rootCauseAr": "دالة removeLiquidity في UniswapV3Facet.sol (الأسطر 333-339) تحسب expectedAmounts عبر استدعاء LiquidityAmounts.getAmountsForLiquidity باستخدام متوسط السعر الزمني (TWAP 600s)، ثم تحسب minAmounts = expectedAmounts * maxSlippage / WAD، وبعد السحب الفعلي من المجمع عند السعر الفوري (Spot) تفرض شرطاً عكسياً علويّاً: require(minAmounts[i] * WAD / actualAmount >= maxSlippage). هذا الشرط يخلق كماشة ثنائية الاتجاه بعرض 0.1% فقط (min <= actual <= min / 0.999) تجعل أي تحرك سعري بسيط بمقدار 2 ticks عبر النطاق [-10, 10] يؤدي إلى فشل (Revert: UniswapV3Facet/excessive-slippage) لجميع معاملات سحب السيولة.",
       "proofOfConceptPath": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol (test_PoC4_LiveGrovePAU_30M_Position_RemoveLiquidity_DoS)",
       "reportMarkdownPath": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
-      "remediationSummaryAr": "\u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0634\u0631\u0637 \u0627\u0644\u0639\u0644\u0648\u064a \u0627\u0644\u0639\u0643\u0633\u064a (minAmounts * WAD / amount >= maxSlippage) \u0645\u0646 removeLiquidity \u0648\u0627\u0644\u0627\u0643\u062a\u0641\u0627\u0621 \u0628\u0627\u0644\u062d\u062f \u0627\u0644\u0623\u062f\u0646\u0649 \u0627\u0644\u0642\u064a\u0627\u0633\u064a \u0641\u064a Uniswap V3 (amount0Min, amount1Min) \u0627\u0644\u0645\u0634\u062a\u0642 \u0645\u0646 TWAP."
+      "remediationSummaryAr": "إزالة الشرط العلوي العكسي (minAmounts * WAD / amount >= maxSlippage) من removeLiquidity والاكتفاء بالحد الأدنى القياسي في Uniswap V3 (amount0Min, amount1Min) المشتق من TWAP."
     },
     {
       "id": "SKY-VULN-01",
-      "titleAr": "\u0627\u0646\u0641\u0635\u0627\u0644 \u0645\u062a\u063a\u064a\u0631 target \u0639\u0646 expectedAmounts \u0641\u064a \u062f\u0627\u0644\u0629 addLiquidity \u062f\u0627\u062e\u0644 UniswapV3Facet",
+      "titleAr": "انفصال متغير target عن expectedAmounts في دالة addLiquidity داخل UniswapV3Facet",
       "titleEn": "TWAP Slippage Check Bypass & Asymmetric Upper-Bound DoS in UniswapV3Facet.addLiquidity via Unchecked params.target vs TWAP expectedAmounts",
-      "targetProgram": "Sky (formerly MakerDAO) \u2014 Immunefi",
+      "targetProgram": "Sky (formerly MakerDAO) — Immunefi",
       "severity": "Medium",
       "cvssScore": 6.5,
       "cwe": "CWE-682 (Incorrect Calculation) / CWE-20 (Improper Input Validation)",
       "status": "VERIFIED_ON_MAINNET_FORK_SAVED_IN_VAULT",
-      "submissionNoteAr": "\u0645\u062f\u0645\u062c \u0643\u062e\u0644\u0644 \u0645\u0639\u0645\u0627\u0631\u064a \u0645\u0642\u062a\u0631\u0646 \u0641\u064a \u062a\u0642\u0631\u064a\u0631 UniswapV3Facet \u0627\u0644\u0634\u0627\u0645\u0644 \u0645\u0639 \u0625\u062b\u0628\u0627\u062a Foundry (test_PoC1, test_PoC2, test_PoC3).",
+      "submissionNoteAr": "مدمج كخلل معماري مقترن في تقرير UniswapV3Facet الشامل مع إثبات Foundry (test_PoC1, test_PoC2, test_PoC3).",
       "affectedAssets": [
         "UNISWAP_V3_FACET: 0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab (diamond-pau/src/facets/UniswapV3Facet.sol, lines 206-297)"
       ],
-      "rootCauseAr": "\u062f\u0627\u0644\u0629 _calculateExpectedAmountsForLiquidity \u062a\u062d\u0633\u0628 \u0627\u0644\u0633\u064a\u0648\u0644\u0629 \u0645\u0646 params.maxAmounts \u0639\u0646\u062f \u0633\u0639\u0631 TWAP \u062b\u0645 \u062a\u062d\u0633\u0628 expectedAmounts \u0639\u0646\u062f \u0646\u0641\u0633 \u0633\u0639\u0631 TWAP\u060c \u0628\u064a\u0646\u0645\u0627 \u064a\u062a\u0645 \u062a\u0645\u0631\u064a\u0631 params.target \u063a\u064a\u0631 \u0627\u0644\u0645\u0641\u062d\u0648\u0635 \u0643\u0640 amount0Desired/amount1Desired \u0625\u0644\u0649 NonfungiblePositionManager.mint/increaseLiquidity\u060c \u0645\u0645\u0627 \u064a\u0633\u0645\u062d \u0628\u0627\u0646\u062d\u0631\u0627\u0641 \u0627\u0644\u0645\u0628\u0627\u0644\u063a \u0627\u0644\u0641\u0639\u0644\u064a\u0629 \u0623\u0648 \u0641\u0634\u0644 \u0627\u0644\u0625\u064a\u062f\u0627\u0639 \u0639\u0646\u062f\u0645\u0627 \u064a\u062a\u062d\u0631\u0643 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0641\u0648\u0631\u064a \u0644\u0635\u0627\u0644\u062d \u0627\u0644\u0628\u0631\u0648\u062a\u0648\u0643\u0648\u0644.",
+      "rootCauseAr": "دالة _calculateExpectedAmountsForLiquidity تحسب السيولة من params.maxAmounts عند سعر TWAP ثم تحسب expectedAmounts عند نفس سعر TWAP، بينما يتم تمرير params.target غير المفحوص كـ amount0Desired/amount1Desired إلى NonfungiblePositionManager.mint/increaseLiquidity، مما يسمح بانحراف المبالغ الفعلية أو فشل الإيداع عندما يتحرك السعر الفوري لصالح البروتوكول.",
       "proofOfConceptPath": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol (test_PoC1, test_PoC2, test_PoC3)",
       "reportMarkdownPath": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
-      "remediationSummaryAr": "\u0625\u0644\u0632\u0627\u0645 params.target \u0628\u0627\u0644\u062a\u0633\u0627\u0648\u064a \u0645\u0639 expectedAmounts \u0627\u0644\u0645\u062d\u0633\u0648\u0628\u0629 \u0645\u0646 TWAP \u0648\u0641\u062d\u0635 \u0646\u0633\u0628\u0629 \u0627\u0644\u062a\u063a\u064a\u0631 \u0627\u0644\u0641\u0639\u0644\u064a."
+      "remediationSummaryAr": "إلزام params.target بالتساوي مع expectedAmounts المحسوبة من TWAP وفحص نسبة التغير الفعلي."
     },
     {
       "id": "SKY-VULN-03",
-      "titleAr": "\u063a\u064a\u0627\u0628 \u0641\u062d\u0635 maxSlippage \u0628\u0627\u0644\u0643\u0627\u0645\u0644 \u0641\u064a \u0639\u0642\u062f UniswapV4Facet \u0627\u0644\u0645\u0646\u0634\u0648\u0631 \u0641\u064a PAU_BEACON",
+      "titleAr": "غياب فحص maxSlippage بالكامل في عقد UniswapV4Facet المنشور في PAU_BEACON",
       "titleEn": "Complete Omission of maxSlippage Verification in Deployed UniswapV4Facet (mintPosition, increasePosition, decreasePosition)",
-      "targetProgram": "Sky (formerly MakerDAO) \u2014 Immunefi",
+      "targetProgram": "Sky (formerly MakerDAO) — Immunefi",
       "severity": "Medium / Architectural Defense-in-Depth",
       "cvssScore": 6.2,
       "cwe": "CWE-841 (Improper Enforcement of Behavioral Workflow)",
       "status": "VERIFIED_ON_MAINNET_BYTECODE_SAVED_IN_VAULT",
-      "submissionNoteAr": "\u0645\u0648\u062b\u0642 \u0641\u064a \u0627\u0644\u062a\u0642\u0631\u064a\u0631 \u0627\u0644\u0634\u0627\u0645\u0644 \u0643\u062e\u0644\u0644 \u0645\u0639\u0645\u0627\u0631\u064a \u0641\u064a \u0627\u0644\u0640 Facet \u0627\u0644\u0645\u0646\u0634\u0648\u0631 \u0641\u064a PAU_BEACON \u0642\u0628\u0644 \u062a\u0641\u0639\u064a\u0644\u0647 \u0641\u064a \u0627\u0644\u0640 Controllers.",
+      "submissionNoteAr": "موثق في التقرير الشامل كخلل معماري في الـ Facet المنشور في PAU_BEACON قبل تفعيله في الـ Controllers.",
       "affectedAssets": [
         "UNISWAP_V4_FACET: 0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D (diamond-pau/src/facets/UniswapV4Facet.sol)"
       ],
-      "rootCauseAr": "\u0631\u063a\u0645 \u0623\u0646 UniswapV4Controller \u064a\u062e\u0632\u0646 \u0645\u062a\u063a\u064a\u0631 maxSlippage\u060c \u0641\u0625\u0646 \u0639\u0642\u062f UniswapV4Facet \u0644\u0627 \u064a\u0633\u062a\u062f\u0639\u064a getMaxSlippage \u0625\u0637\u0644\u0627\u0642\u0627\u064b \u0641\u064a \u062f\u0648\u0627\u0644 mintPosition \u0648increasePosition \u0648decreasePosition\u060c \u0628\u0644 \u064a\u062a\u062d\u0642\u0642 \u0641\u0642\u0637 \u0645\u0646 \u0623\u0646 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0641\u0648\u0631\u064a \u064a\u0633\u0627\u0648\u064a TWAP \u062b\u0645 \u064a\u0645\u0631\u0631 params.minAmounts \u0627\u0644\u0645\u062d\u062f\u062f\u0629 \u0645\u0646 \u0627\u0644\u0640 actor \u0645\u0628\u0627\u0634\u0631\u0629.",
+      "rootCauseAr": "رغم أن UniswapV4Controller يخزن متغير maxSlippage، فإن عقد UniswapV4Facet لا يستدعي getMaxSlippage إطلاقاً في دوال mintPosition وincreasePosition وdecreasePosition، بل يتحقق فقط من أن السعر الفوري يساوي TWAP ثم يمرر params.minAmounts المحددة من الـ actor مباشرة.",
       "proofOfConceptPath": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol",
       "reportMarkdownPath": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
-      "remediationSummaryAr": "\u0627\u0634\u062a\u0642\u0627\u0642 \u0627\u0644\u062d\u062f\u0648\u062f \u0627\u0644\u062f\u0646\u064a\u0627 \u0644\u0644\u0627\u0646\u0632\u0644\u0627\u0642 \u0627\u0644\u0633\u0639\u0631\u064a \u0645\u0646 TWAP \u0648maxSlippage \u062f\u0627\u062e\u0644 \u062f\u0648\u0627\u0644 UniswapV4Facet \u0627\u0644\u062b\u0644\u0627\u062b."
+      "remediationSummaryAr": "اشتقاق الحدود الدنيا للانزلاق السعري من TWAP وmaxSlippage داخل دوال UniswapV4Facet الثلاث."
     },
     {
       "id": "CDC-NOTE-01",
-      "titleAr": "\u0639\u0642\u062f \u0627\u0644\u062a\u0646\u0641\u064a\u0630 LiquidETHV1 \u063a\u064a\u0631 \u0627\u0644\u0645\u0647\u064a\u0623 (Uninitialized Implementation) \u0644\u0639\u0645\u0644\u0629 CDCETH \u0639\u0644\u0649 \u0634\u0628\u0643\u0629 Cronos Mainnet",
+      "titleAr": "عقد التنفيذ LiquidETHV1 غير المهيأ (Uninitialized Implementation) لعملة CDCETH على شبكة Cronos Mainnet",
       "titleEn": "Uninitialized LiquidETHV1 Implementation Contract (0xCC4b4878d64A76616c483a280fBfdBb08b705757) for CDCETH Proxy on Cronos Mainnet",
-      "targetProgram": "Crypto.com \u2014 HackerOne (https://hackerone.com/crypto)",
-      "severity": "Low / Informational (Defense-in-Depth \u2014 No selfdestruct in LiquidETHV1)",
+      "targetProgram": "Crypto.com — HackerOne (https://hackerone.com/crypto)",
+      "severity": "Low / Informational (Defense-in-Depth — No selfdestruct in LiquidETHV1)",
       "cvssScore": 4.3,
       "cwe": "CWE-665 (Improper Initialization)",
       "status": "DISCOVERED_ON_CRONOS_MAINNET_UNDER_EVALUATION",
-      "submissionNoteAr": "\u062a\u0645 \u0631\u0635\u062f\u0647 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u0641\u062d\u0635 \u0627\u0644\u0623\u0648\u0644\u064a \u0644\u0645\u0633\u062a\u0648\u062f\u0639 crypto-com/wrapped-tokens-os\u061b \u0627\u0644\u0633\u0643\u0631\u064a\u0628\u062a deploy_staked_token.ts \u064a\u0633\u062a\u062f\u0639\u064a transferOwnership(admin) \u0639\u0644\u0649 \u0639\u0642\u062f \u0627\u0644\u0640 Implementation \u0644\u0643\u0646\u0647 \u064a\u0646\u0633\u0649 \u0627\u0633\u062a\u062f\u0639\u0627\u0621 initialize(...) \u0639\u0644\u064a\u0647\u060c \u0648\u0644\u0623\u0646 \u062f\u0627\u0644\u0629 initialize() \u0639\u0627\u0645\u0629 (public) \u0628\u062f\u0648\u0646 onlyOwner \u0648\u062a\u0633\u062a\u062f\u0639\u064a setOwner(newOwner)\u060c \u064a\u0645\u0643\u0646 \u0644\u0623\u064a \u0639\u0646\u0648\u0627\u0646 \u0627\u0633\u062a\u062f\u0639\u0627\u0621 initialize() \u0639\u0644\u0649 \u0627\u0644\u0640 Implementation \u0645\u0628\u0627\u0634\u0631\u064b\u0629. (\u0644\u0627 \u064a\u062d\u062a\u0648\u064a LiquidETHV1 \u0639\u0644\u0649 delegatecall \u0623\u0648 selfdestruct\u060c \u0644\u0630\u0627 \u0644\u0627 \u064a\u0624\u062b\u0631 \u0639\u0644\u0649 \u0623\u0645\u0648\u0627\u0644 \u0627\u0644\u0640 Proxy 0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446 \u0648\u0644\u0643\u0646\u0647 \u0645\u0633\u062c\u0644 \u0641\u064a \u0627\u0644\u062e\u0632\u0646\u0629 \u0643\u062f\u0644\u064a\u0644 \u0645\u0639\u0645\u0627\u0631\u064a).",
+      "submissionNoteAr": "تم رصده أثناء الفحص الأولي لمستودع crypto-com/wrapped-tokens-os؛ السكريبت deploy_staked_token.ts يستدعي transferOwnership(admin) على عقد الـ Implementation لكنه ينسى استدعاء initialize(...) عليه، ولأن دالة initialize() عامة (public) بدون onlyOwner وتستدعي setOwner(newOwner)، يمكن لأي عنوان استدعاء initialize() على الـ Implementation مباشرًة. (لا يحتوي LiquidETHV1 على delegatecall أو selfdestruct، لذا لا يؤثر على أموال الـ Proxy 0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446 ولكنه مسجل في الخزنة كدليل معماري).",
       "affectedAssets": [
         "Cronos Mainnet LiquidETHV1 Implementation: 0xCC4b4878d64A76616c483a280fBfdBb08b705757",
         "Cronos Mainnet CDCETH Proxy: 0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446",
         "GitHub: crypto-com/wrapped-tokens-os/deploy/deploy_staked_token.ts (lines 103-105)"
       ],
-      "rootCauseAr": "\u0641\u064a deploy_staked_token.ts \u0627\u0644\u0633\u0637\u0631 104: \u064a\u062a\u0645 \u0627\u0633\u062a\u062f\u0639\u0627\u0621 liquidETHV1Implementation.transferOwnership(admin) \u0628\u062f\u0648\u0646 \u0627\u0633\u062a\u062f\u0639\u0627\u0621 initialize()\u060c \u0628\u064a\u0646\u0645\u0627 \u0641\u064a FiatTokenV1.sol \u0627\u0644\u0633\u0637\u0631 629 \u062f\u0627\u0644\u0629 initialize() \u0644\u0627 \u062a\u062a\u062d\u0642\u0642 \u0645\u0646 onlyOwner \u0628\u0644 \u0645\u0646 require(!initialized) \u0641\u0642\u0637 \u0648\u062a\u0642\u0648\u0645 \u0628\u0627\u0644\u0643\u062a\u0627\u0628\u0629 \u0641\u0648\u0642 _owner \u0639\u0628\u0631 setOwner(newOwner).",
+      "rootCauseAr": "في deploy_staked_token.ts السطر 104: يتم استدعاء liquidETHV1Implementation.transferOwnership(admin) بدون استدعاء initialize()، بينما في FiatTokenV1.sol السطر 629 دالة initialize() لا تتحقق من onlyOwner بل من require(!initialized) فقط وتقوم بالكتابة فوق _owner عبر setOwner(newOwner).",
       "proofOfConceptPath": "audit/cryptocom-hackerone/CRYPTOCOM_SMART_CONTRACTS_SCOPE_AND_INITIAL_AUDIT.md",
       "reportMarkdownPath": "audit/cryptocom-hackerone/CRYPTOCOM_SMART_CONTRACTS_SCOPE_AND_INITIAL_AUDIT.md",
-      "remediationSummaryAr": "\u0627\u0633\u062a\u062f\u0639\u0627\u0621 initialize() \u0648initializeV2() \u0648initializeV2_1() \u0639\u0644\u0649 \u0639\u0642\u062f \u0627\u0644\u0640 Implementation \u0641\u0648\u0631 \u0646\u0634\u0631\u0647 \u0623\u0648 \u0642\u0641\u0644 initialized = true \u0641\u064a \u0627\u0644\u0640 constructor."
+      "remediationSummaryAr": "استدعاء initialize() وinitializeV2() وinitializeV2_1() على عقد الـ Implementation فور نشره أو قفل initialized = true في الـ constructor."
     }
   ],
   "architecturalNotes": [
     {
       "id": "SKY-NOTE-01",
-      "title": "SUsds.sol (0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD) \u2014 ERC-4626 SSR Vault Accounting & Ray Math",
-      "summary": "\u062a\u062d\u0642\u0642 \u0643\u0627\u0645\u0644 \u0645\u0646 \u062d\u0633\u0627\u0628\u0627\u062a chi \u0648rho \u0648ssr \u0648\u0627\u0644\u0640 rounding \u0644\u0635\u0627\u0644\u062d \u0627\u0644\u062e\u0632\u0646\u0629\u061b \u0645\u062d\u0645\u064a \u0636\u062f \u0647\u062c\u0645\u0627\u062a \u0627\u0644\u062a\u0636\u062e\u0645 (Inflation Attack) \u0628\u0641\u0636\u0644 \u0627\u0644\u0633\u064a\u0648\u0644\u0629 \u0627\u0644\u0645\u0628\u062f\u0626\u064a\u0629 \u0627\u0644\u0636\u062e\u0645\u0629 ($4.87B+)."
+      "title": "SUsds.sol (0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD) — ERC-4626 SSR Vault Accounting & Ray Math",
+      "summary": "تحقق كامل من حسابات chi وrho وssr والـ rounding لصالح الخزنة؛ محمي ضد هجمات التضخم (Inflation Attack) بفضل السيولة المبدئية الضخمة ($4.87B+)."
     },
     {
       "id": "SKY-NOTE-02",
-      "title": "StarGuard.sol & AdministeredAgent.sol \u2014 SubDAO Governance Timelock & Expiration Guards",
-      "summary": "\u062a\u062d\u0642\u0642 \u0645\u0646 \u0622\u0644\u064a\u0627\u062a \u0627\u0644\u062d\u0645\u0627\u064a\u0629 \u0627\u0644\u0632\u0645\u0646\u064a\u0629 \u0648\u0635\u0644\u0627\u062d\u064a\u0627\u062a \u0627\u0644\u0640 ward \u0648\u0627\u0644\u0640 proposer \u0648\u0627\u0644\u0640 canceller \u0641\u064a \u0639\u0642\u0648\u062f SubDAO."
+      "title": "StarGuard.sol & AdministeredAgent.sol — SubDAO Governance Timelock & Expiration Guards",
+      "summary": "تحقق من آليات الحماية الزمنية وصلاحيات الـ ward والـ proposer والـ canceller في عقود SubDAO."
     },
     {
       "id": "SKY-NOTE-03",
-      "title": "CurveFacet.sol \u2014 One-Sided Slippage Check Comparison vs UniswapV3Facet",
-      "summary": "\u0623\u062b\u0628\u062a \u0627\u0644\u0645\u0642\u0627\u0631\u0646\u0629 \u0623\u0646 CurveFacet \u064a\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u062d\u062f \u0627\u0644\u0623\u062f\u0646\u0649 \u0641\u0642\u0637 (actual >= min) \u0648\u0644\u0627 \u064a\u0641\u0631\u0636 \u0627\u0644\u0634\u0631\u0637 \u0627\u0644\u0639\u0644\u0648\u064a \u0627\u0644\u0639\u0643\u0633\u064a \u0627\u0644\u062e\u0627\u0637\u0626 \u0627\u0644\u0645\u0648\u062c\u0648\u062f \u0641\u064a UniswapV3Facet."
+      "title": "CurveFacet.sol — One-Sided Slippage Check Comparison vs UniswapV3Facet",
+      "summary": "أثبت المقارنة أن CurveFacet يتحقق من الحد الأدنى فقط (actual >= min) ولا يفرض الشرط العلوي العكسي الخاطئ الموجود في UniswapV3Facet."
     },
     {
       "id": "SKY-NOTE-04",
-      "title": "BasinFacet.sol & GroveBasin.sol \u2014 Constant Exchange Rate Bucket Accounting",
-      "summary": "\u0641\u062d\u0635 \u0634\u0627\u0645\u0644 \u0644\u062a\u062d\u0648\u064a\u0644\u0627\u062a \u0627\u0644\u0640 decimals \u0648\u0627\u0644\u062a\u0642\u0631\u064a\u0628 \u0641\u064a \u0639\u0642\u0648\u062f BasinFacet \u0648GroveBasin."
+      "title": "BasinFacet.sol & GroveBasin.sol — Constant Exchange Rate Bucket Accounting",
+      "summary": "فحص شامل لتحويلات الـ decimals والتقريب في عقود BasinFacet وGroveBasin."
     },
     {
       "id": "SKY-NOTE-05",
-      "title": "PendleFacet.sol \u2014 PT/SY/YT Redemption & Oracle Slippage Bounds",
-      "summary": "\u062a\u062d\u0642\u0642 \u0645\u0646 \u062d\u0633\u0627\u0628\u0627\u062a \u0633\u062d\u0628 \u0627\u0644\u0633\u064a\u0648\u0644\u0629 \u0648\u0645\u0639\u062f\u0644\u0627\u062a Pendle TWAP."
+      "title": "PendleFacet.sol — PT/SY/YT Redemption & Oracle Slippage Bounds",
+      "summary": "تحقق من حسابات سحب السيولة ومعدلات Pendle TWAP."
     },
     {
       "id": "SKY-NOTE-06",
-      "title": "PAU_FACTORY (0x69A5d548830AC2A4Ba90A44a2C75BDA71f97fc66) \u2014 Complete Mapping of All 11 Mainnet PAU Deployments",
-      "summary": "\u062d\u0635\u0631 \u0634\u0627\u0645\u0644 \u0644\u062c\u0645\u064a\u0639 \u0627\u0644\u0640 11 PAU Controllers \u0648\u0627\u0644\u0640 Proxies \u0648\u0627\u0644\u0640 Facets \u0627\u0644\u0645\u0641\u0639\u0644\u0629 \u0639\u0644\u0649 \u0634\u0628\u0643\u0629 \u0627\u0644\u0625\u064a\u062b\u064a\u0631\u064a\u0648\u0645 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629."
+      "title": "PAU_FACTORY (0x69A5d548830AC2A4Ba90A44a2C75BDA71f97fc66) — Complete Mapping of All 11 Mainnet PAU Deployments",
+      "summary": "حصر شامل لجميع الـ 11 PAU Controllers والـ Proxies والـ Facets المفعلة على شبكة الإيثيريوم الرئيسية."
     }
   ],
   "lifelongLearningLedger": [
     {
       "id": "LEARN-01",
       "category": "DeFi / Concentrated Liquidity Math",
-      "titleAr": "\u0643\u0645\u0627\u0634\u0629 \u0627\u0644\u0627\u0646\u0632\u0644\u0627\u0642 \u0627\u0644\u0633\u0639\u0631\u064a \u062b\u0646\u0627\u0626\u064a\u0629 \u0627\u0644\u0627\u062a\u062c\u0627\u0647 \u0641\u064a \u0627\u0644\u0645\u062c\u0645\u0639\u0627\u062a \u0627\u0644\u0645\u0631\u0643\u0632\u0629 (Two-Sided Slippage Pincer on Narrow Tick Ranges)",
-      "ruleAr": "\u0639\u0646\u062f\u0645\u0627 \u064a\u062d\u0633\u0628 \u0639\u0642\u062f \u0630\u0643\u064a \u0645\u0628\u0627\u0644\u063a \u0627\u0644\u0633\u062d\u0628 \u0627\u0644\u0645\u062a\u0648\u0642\u0639\u0629 \u0645\u0646 Uniswap V3/V4 \u0639\u0628\u0631 TWAP \u0644\u0646\u0637\u0627\u0642 \u0636\u064a\u0642 (\u0645\u062b\u0644 [-10, 10] \u0641\u064a \u0645\u062c\u0645\u0639\u0627\u062a \u0627\u0644\u0639\u0645\u0644\u0627\u062a \u0627\u0644\u0645\u0633\u062a\u0642\u0631\u0629)\u060c \u0641\u0625\u0646 \u0623\u064a \u062a\u062d\u0631\u0643 \u0633\u0639\u0631\u064a \u0628\u0633\u064a\u0637 \u0628\u0640 1-2 ticks \u064a\u063a\u064a\u0631 \u0646\u0633\u0628\u0629 \u0627\u0644\u062a\u0648\u0643\u0646\u064a\u0646 (Token0/Token1) \u0628\u0634\u0643\u0644 \u062d\u0627\u062f (>0.2%) \u062d\u062a\u0649 \u0644\u0648 \u0643\u0627\u0646 \u0627\u0644\u0633\u0639\u0631 \u0646\u0641\u0633\u0647 \u0644\u0645 \u064a\u062a\u062d\u0631\u0643 \u0625\u0644\u0627 \u0628\u0640 0.02%. \u0641\u0631\u0636 \u062d\u062f \u0623\u0639\u0644\u0649 (Upper Bound) \u0639\u0644\u0649 \u0627\u0644\u062a\u0648\u0643\u0646 \u0627\u0644\u0645\u0633\u062d\u0648\u0628 \u064a\u0624\u062f\u064a \u062d\u062a\u0645\u0627\u064b \u0625\u0644\u0649 \u062a\u0639\u0637\u064a\u0644 \u0627\u0644\u0633\u062d\u0628 (DoS)."
+      "titleAr": "كماشة الانزلاق السعري ثنائية الاتجاه في المجمعات المركزة (Two-Sided Slippage Pincer on Narrow Tick Ranges)",
+      "ruleAr": "عندما يحسب عقد ذكي مبالغ السحب المتوقعة من Uniswap V3/V4 عبر TWAP لنطاق ضيق (مثل [-10, 10] في مجمعات العملات المستقرة)، فإن أي تحرك سعري بسيط بـ 1-2 ticks يغير نسبة التوكنين (Token0/Token1) بشكل حاد (>0.2%) حتى لو كان السعر نفسه لم يتحرك إلا بـ 0.02%. فرض حد أعلى (Upper Bound) على التوكن المسحوب يؤدي حتماً إلى تعطيل السحب (DoS)."
     },
     {
       "id": "LEARN-02",
       "category": "Diamond Proxy / Beacon Architecture",
-      "titleAr": "\u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0631\u0628\u0637 \u0627\u0644\u0640 Facets \u0627\u0644\u0641\u0639\u0644\u064a\u0629 \u0641\u064a \u0627\u0644\u0640 Controller \u0639\u0644\u0649 \u0627\u0644\u0634\u0628\u0643\u0629 \u0627\u0644\u062d\u064a\u0629 (On-Chain Selector Delegation Verification)",
-      "ruleAr": "\u0648\u062c\u0648\u062f \u0639\u0642\u062f Facet \u0641\u064a PAU_BEACON \u0644\u0627 \u064a\u0639\u0646\u064a \u0628\u0627\u0644\u0636\u0631\u0648\u0631\u0629 \u0623\u0646\u0647 \u0645\u0641\u0639\u0644 \u0639\u0644\u0649 \u0643\u0644 Proxy\u061b \u064a\u062c\u0628 \u062f\u0627\u0626\u0645\u0627\u064b \u0627\u0633\u062a\u062c\u0648\u0627\u0628 PAU_FACTORY \u0648Controller.integrations() \u0639\u0644\u0649 \u0627\u0644\u0634\u0628\u0643\u0629 \u0627\u0644\u062d\u064a\u0629 \u0644\u062a\u062d\u062f\u064a\u062f \u0623\u064a Proxy \u064a\u0641\u0648\u0636 \u0627\u0644\u0640 selectors \u0644\u0644\u0640 Facet \u0627\u0644\u0645\u0635\u0627\u0628 \u0648\u062d\u0633\u0627\u0628 \u0627\u0644\u0623\u0645\u0648\u0627\u0644 \u0627\u0644\u0641\u0639\u0644\u064a\u0629 \u0627\u0644\u0645\u0639\u0631\u0636\u0629 \u0644\u0644\u062e\u0637\u0631 (Funds at Risk)."
+      "titleAr": "التحقق من ربط الـ Facets الفعلية في الـ Controller على الشبكة الحية (On-Chain Selector Delegation Verification)",
+      "ruleAr": "وجود عقد Facet في PAU_BEACON لا يعني بالضرورة أنه مفعل على كل Proxy؛ يجب دائماً استجواب PAU_FACTORY وController.integrations() على الشبكة الحية لتحديد أي Proxy يفوض الـ selectors للـ Facet المصاب وحساب الأموال الفعلية المعرضة للخطر (Funds at Risk)."
     },
     {
       "id": "LEARN-03",
       "category": "Foundry Mainnet-Fork Engineering",
-      "titleAr": "\u062a\u062c\u0646\u0628 \u0641\u0634\u0644 stdStorage deal() \u0639\u0644\u0649 \u0639\u0642\u0648\u062f \u0627\u0644\u0640 Proxy \u0627\u0644\u0645\u0639\u0642\u062f\u0629 (AUSD / FiatTokenProxy USDC)",
-      "ruleAr": "\u0628\u062f\u0644\u0627\u064b \u0645\u0646 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 deal() \u0627\u0644\u062a\u064a \u0642\u062f \u062a\u0641\u0634\u0644 \u0623\u0648 \u062a\u0633\u062a\u063a\u0631\u0642 \u0622\u0644\u0627\u0641 \u0627\u0633\u062a\u062f\u0639\u0627\u0621\u0627\u062a RPC \u0639\u0644\u0649 \u0639\u0642\u0648\u062f Proxy \u0627\u0644\u0645\u062e\u0635\u0635\u0629\u060c \u0627\u0633\u062a\u062e\u062f\u0645 vm.prank() \u0645\u0646 \u062e\u0632\u0646\u0629 \u0633\u064a\u0648\u0644\u0629 \u0636\u062e\u0645\u0629 \u0639\u0644\u0649 \u0627\u0644\u0634\u0628\u0643\u0629 \u0627\u0644\u062d\u064a\u0629 \u0645\u062b\u0644 LITE_PSM_USDC_A_POCKET (0x37305B1cD40574E4C5Ce33f8e8306Be057fD7341) \u0644\u062a\u0645\u0648\u064a\u0644 \u062d\u0633\u0627\u0628 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0641\u0648\u0631\u0627\u064b \u0641\u064a 0.1 \u062b\u0627\u0646\u064a\u0629."
+      "titleAr": "تجنب فشل stdStorage deal() على عقود الـ Proxy المعقدة (AUSD / FiatTokenProxy USDC)",
+      "ruleAr": "بدلاً من استخدام deal() التي قد تفشل أو تستغرق آلاف استدعاءات RPC على عقود Proxy المخصصة، استخدم vm.prank() من خزنة سيولة ضخمة على الشبكة الحية مثل LITE_PSM_USDC_A_POCKET (0x37305B1cD40574E4C5Ce33f8e8306Be057fD7341) لتمويل حساب الاختبار فوراً في 0.1 ثانية."
     },
     {
       "id": "LEARN-04",
       "category": "Foundry Mainnet-Fork Engineering",
-      "titleAr": "\u062a\u062d\u062f\u064a\u062f sqrtPriceLimitX96 \u0639\u0646\u062f \u062a\u0646\u0641\u064a\u0630 Swaps \u0643\u0628\u064a\u0631\u0629 \u0641\u064a \u0645\u062c\u0645\u0639\u0627\u062a Uniswap V3 \u0630\u0627\u062a tickSpacing = 1",
-      "ruleAr": "\u062a\u0645\u0631\u064a\u0631 sqrtPriceLimitX96 = 0 \u0641\u064a \u0645\u062c\u0645\u0639 \u0630\u064a tickSpacing = 1 \u0645\u0639 \u0645\u0628\u0644\u063a \u0636\u062e\u0645 \u064a\u062c\u0639\u0644 \u0627\u0644\u0639\u0642\u062f \u064a\u0645\u0633\u062d \u0622\u0644\u0627\u0641 \u0643\u0644\u0645\u0627\u062a TickBitmap \u0639\u0628\u0631 RPC \u0648\u064a\u062a\u0633\u0628\u0628 \u0641\u064a Timeout\u061b \u064a\u062c\u0628 \u062f\u0627\u0626\u0645\u0627\u064b \u062a\u062d\u062f\u064a\u062f sqrtPriceLimitX96 \u0639\u0646\u062f \u0627\u0644\u0640 Tick \u0627\u0644\u0645\u0633\u062a\u0647\u062f\u0641 \u0645\u0628\u0627\u0634\u0631\u0629 (\u0645\u062b\u0644 TickMath.getSqrtRatioAtTick(15))."
+      "titleAr": "تحديد sqrtPriceLimitX96 عند تنفيذ Swaps كبيرة في مجمعات Uniswap V3 ذات tickSpacing = 1",
+      "ruleAr": "تمرير sqrtPriceLimitX96 = 0 في مجمع ذي tickSpacing = 1 مع مبلغ ضخم يجعل العقد يمسح آلاف كلمات TickBitmap عبر RPC ويتسبب في Timeout؛ يجب دائماً تحديد sqrtPriceLimitX96 عند الـ Tick المستهدف مباشرة (مثل TickMath.getSqrtRatioAtTick(15))."
     },
     {
       "id": "LEARN-05",
       "category": "Bug Bounty Scope & Policy Intelligence",
-      "titleAr": "\u0645\u0637\u0627\u0628\u0642\u0629 \u0634\u0631\u0648\u0637 \u0627\u0633\u062a\u062b\u0646\u0627\u0621 \u0627\u0644\u0635\u0644\u0627\u062d\u064a\u0627\u062a (Privileged / Strategist Address Exclusions)",
-      "ruleAr": "\u0628\u0631\u0627\u0645\u062c Immunefi \u0648HackerOne \u062a\u0633\u062a\u0628\u0639\u062f \u0627\u0644\u0647\u062c\u0645\u0627\u062a \u0627\u0644\u062a\u064a \u062a\u062a\u0637\u0644\u0628 \u0645\u0641\u0627\u062a\u064a\u062d \u0645\u0633\u0631\u0628\u0629 \u0623\u0648 \u0639\u0646\u0627\u0648\u064a\u0646 \u0645\u062f\u064a\u0631\u064a\u0646/\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u064a\u0646\u061b \u0644\u0630\u0644\u0643 \u064a\u062c\u0628 \u062f\u0627\u0626\u0645\u0627\u064b \u0628\u0646\u0627\u0621 \u0633\u064a\u0646\u0627\u0631\u064a\u0648 \u0627\u0644\u0627\u0633\u062a\u063a\u0644\u0627\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064a \u0645\u0646 \u0639\u0646\u0648\u0627\u0646 \u062e\u0627\u0631\u062c\u064a \u063a\u064a\u0631 \u0630\u064a \u0635\u0644\u0627\u062d\u064a\u0629 (Unprivileged External Actor / MEV Bot) \u0648\u0625\u062b\u0628\u0627\u062a \u0627\u0644\u0623\u062b\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631."
+      "titleAr": "مطابقة شروط استثناء الصلاحيات (Privileged / Strategist Address Exclusions)",
+      "ruleAr": "برامج Immunefi وHackerOne تستبعد الهجمات التي تتطلب مفاتيح مسربة أو عناوين مديرين/استراتيجيين؛ لذلك يجب دائماً بناء سيناريو الاستغلال الأساسي من عنوان خارجي غير ذي صلاحية (Unprivileged External Actor / MEV Bot) وإثبات الأثر المباشر."
     },
     {
       "id": "LEARN-06",
       "category": "2026 Platform Economics & Zero-Fee Routing",
-      "titleAr": "\u062e\u0631\u064a\u0637\u0629 \u0631\u0633\u0648\u0645 \u0627\u0644\u062a\u0642\u062f\u064a\u0645 \u0648\u0634\u0631\u0648\u0637 \u0627\u0644\u0645\u0646\u0635\u0627\u062a \u0641\u064a 2026 (Zero-Fee vs Paid-Gate Platforms)",
-      "ruleAr": "\u0641\u064a 2026 \u0641\u0631\u0636\u062a \u0628\u0639\u0636 \u0628\u0631\u0627\u0645\u062c Immunefi (\u0645\u062b\u0644 Sky: 50 USDC) \u0648Sherlock (250 USDC stake) \u0648Ethereum Foundation (ETH burn tx) \u0648\u0628\u0639\u0636 \u0628\u0631\u0627\u0645\u062c HackenProof/Cantina \u0631\u0633\u0648\u0645 \u062a\u0642\u062f\u064a\u0645\u061b \u0628\u064a\u0646\u0645\u0627 \u0645\u0646\u0635\u062a\u0627 HackerOne (\u0645\u062b\u0644 Crypto.com: 0$ \u0631\u0633\u0648\u0645\u060c \u0631\u062f \u062e\u0644\u0627\u0644 14 \u0633\u0627\u0639\u0629\u060c Signal >= -1.0) \u0648Bugcrowd (\u0645\u062b\u0644 Binance/TrustWallet: 0$ \u0631\u0633\u0648\u0645) \u0648\u0628\u0631\u0646\u0627\u0645\u062c Coinbase Onchain \u0639\u0644\u0649 Cantina (0$ deposit) \u0648\u0628\u0631\u0646\u0627\u0645\u062c Cronos zkEVM \u0639\u0644\u0649 HackenProof (0$ fee) \u062a\u062a\u064a\u062d \u0627\u0644\u062a\u0642\u062f\u064a\u0645 \u0627\u0644\u0645\u062c\u0627\u0646\u064a 100%."
+      "titleAr": "خريطة رسوم التقديم وشروط المنصات في 2026 (Zero-Fee vs Paid-Gate Platforms)",
+      "ruleAr": "في 2026 فرضت بعض برامج Immunefi (مثل Sky: 50 USDC) وSherlock (250 USDC stake) وEthereum Foundation (ETH burn tx) وبعض برامج HackenProof/Cantina رسوم تقديم؛ بينما منصتا HackerOne (مثل Crypto.com: 0$ رسوم، رد خلال 14 ساعة، Signal >= -1.0) وBugcrowd (مثل Binance/TrustWallet: 0$ رسوم) وبرنامج Coinbase Onchain على Cantina (0$ deposit) وبرنامج Cronos zkEVM على HackenProof (0$ fee) تتيح التقديم المجاني 100%."
     },
     {
       "id": "LEARN-07",
       "category": "Cross-Chain EVM Reconnaissance",
-      "titleAr": "\u0627\u0643\u062a\u0634\u0627\u0641 \u0627\u0644\u0639\u0642\u0648\u062f \u0627\u0644\u0630\u0643\u064a\u0629 \u0639\u0628\u0631 \u0627\u0644\u0634\u0628\u0643\u0627\u062a \u0627\u0644\u0645\u062a\u0639\u062f\u062f\u0629 \u0628\u062d\u0633\u0627\u0628 \u0639\u0646\u0627\u0648\u064a\u0646 CREATE \u0627\u0644\u062d\u062a\u0645\u064a\u0629 (Deterministic Nonce Discovery)",
-      "ruleAr": "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0639\u0642\u062f \u0627\u0644\u0645\u0646\u0634\u0648\u0631 \u0639\u0628\u0631 CREATE \u064a\u0639\u062a\u0645\u062f \u0641\u0642\u0637 \u0639\u0644\u0649 (\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0646\u0627\u0634\u0631\u060c nonce)\u061b \u0628\u0641\u062d\u0635 \u0646\u0641\u0633 \u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0646\u0627\u0634\u0631 \u0639\u0628\u0631 Ethereum \u0648Cronos EVM \u0648Cronos zkEVM \u064a\u0645\u0643\u0646 \u0627\u0643\u062a\u0634\u0627\u0641 \u0627\u0644\u0639\u0642\u0648\u062f \u0627\u0644\u0634\u0642\u064a\u0642\u0629 \u0648\u0646\u0645\u0627\u0630\u062c \u0627\u0644\u0640 Proxy/Implementation \u063a\u064a\u0631 \u0627\u0644\u0645\u062f\u0631\u062c\u0629 \u0635\u0631\u0627\u062d\u0629\u064b."
+      "titleAr": "اكتشاف العقود الذكية عبر الشبكات المتعددة بحساب عناوين CREATE الحتمية (Deterministic Nonce Discovery)",
+      "ruleAr": "عنوان العقد المنشور عبر CREATE يعتمد فقط على (عنوان الناشر، nonce)؛ بفحص نفس عنوان الناشر عبر Ethereum وCronos EVM وCronos zkEVM يمكن اكتشاف العقود الشقيقة ونماذج الـ Proxy/Implementation غير المدرجة صراحةً."
     },
     {
       "id": "LEARN-08",
       "category": "Proxy & Upgradeable Contracts",
-      "titleAr": "\u0641\u062d\u0635 \u062a\u0647\u064a\u0626\u0629 \u0639\u0642\u0648\u062f \u0627\u0644\u062a\u0646\u0641\u064a\u0630 (Implementation Initialization) \u0641\u064a \u0646\u0645\u0637 FiatTokenProxy / ZeppelinOS",
-      "ruleAr": "\u0641\u064a \u0639\u0642\u0648\u062f FiatTokenV1/V2_1/LiquidETHV1\u060c \u062f\u0627\u0644\u0629 initialize() \u0639\u0627\u0645\u0629 (public) \u0648\u0644\u0627 \u062a\u062d\u062a\u0648\u064a \u0639\u0644\u0649 onlyOwner \u0648\u062a\u0642\u0648\u0645 \u0628\u0627\u0633\u062a\u062f\u0639\u0627\u0621 setOwner(newOwner)\u061b \u0644\u0630\u0627 \u0641\u0625\u0646 \u0627\u0633\u062a\u062f\u0639\u0627\u0621 transferOwnership(admin) \u0648\u062d\u062f\u0647 \u0639\u0644\u0649 \u0639\u0642\u062f \u0627\u0644\u0640 Implementation \u062f\u0648\u0646 \u0627\u0633\u062a\u062f\u0639\u0627\u0621 initialize() \u064a\u062a\u0631\u0643 \u0627\u0644\u0639\u0642\u062f \u0642\u0627\u0628\u0644\u0627\u064b \u0644\u0644\u062a\u0647\u064a\u0626\u0629 \u0645\u0646 \u0623\u064a \u0637\u0631\u0641 \u062e\u0627\u0631\u062c\u064a."
+      "titleAr": "فحص تهيئة عقود التنفيذ (Implementation Initialization) في نمط FiatTokenProxy / ZeppelinOS",
+      "ruleAr": "في عقود FiatTokenV1/V2_1/LiquidETHV1، دالة initialize() عامة (public) ولا تحتوي على onlyOwner وتقوم باستدعاء setOwner(newOwner)؛ لذا فإن استدعاء transferOwnership(admin) وحده على عقد الـ Implementation دون استدعاء initialize() يترك العقد قابلاً للتهيئة من أي طرف خارجي."
     },
     {
       "id": "LEARN-09",
       "category": "HackerOne Policy & Bounty Table Intelligence",
-      "titleAr": "\u0641\u062d\u0635 \u062c\u062f\u0627\u0648\u0644 \u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062a \u0627\u0644\u0641\u0639\u0644\u064a\u0629 \u0644\u0643\u0644 \u0623\u0635\u0644 \u0639\u0628\u0631 GraphQL PolicyScopesQuery \u0642\u0628\u0644 \u0627\u0633\u062a\u062b\u0645\u0627\u0631 \u0627\u0644\u0648\u0642\u062a",
-      "ruleAr": "\u0628\u0639\u0636 \u0627\u0644\u0628\u0631\u0627\u0645\u062c \u062a\u0636\u0639 \u0642\u064a\u0645\u0627\u064b \u0631\u0645\u0632\u064a\u0629 ($1-$6) \u0644\u0644\u062b\u063a\u0631\u0627\u062a \u0627\u0644\u0645\u0646\u062e\u0641\u0636\u0629/\u0627\u0644\u0645\u062a\u0648\u0633\u0637\u0629/\u0627\u0644\u0639\u0627\u0644\u064a\u0629 \u0641\u064a \u0641\u0626\u0629 \u0645\u0639\u064a\u0646\u0629 (\u0645\u062b\u0644 Smart Contracts \u0641\u064a Crypto.com) \u0628\u064a\u0646\u0645\u0627 \u062a\u062f\u0641\u0639 $500-$40,000+ \u0644\u0646\u0641\u0633 \u062f\u0631\u062c\u0627\u062a \u0627\u0644\u062e\u0637\u0648\u0631\u0629 \u0641\u064a \u0641\u0626\u0629 \u0627\u0644\u0640 Exchange \u0648\u0627\u0644\u0640 APIs\u061b \u0644\u0630\u0627 \u064a\u062c\u0628 \u062f\u0627\u0626\u0645\u0627\u064b \u062a\u062d\u0644\u064a\u0644 bounty_table_rows \u0644\u0643\u0644 \u0623\u0635\u0644 \u0623\u0648\u0644\u0627\u064b."
+      "titleAr": "فحص جداول المكافآت الفعلية لكل أصل عبر GraphQL PolicyScopesQuery قبل استثمار الوقت",
+      "ruleAr": "بعض البرامج تضع قيماً رمزية ($1-$6) للثغرات المنخفضة/المتوسطة/العالية في فئة معينة (مثل Smart Contracts في Crypto.com) بينما تدفع $500-$40,000+ لنفس درجات الخطورة في فئة الـ Exchange والـ APIs؛ لذا يجب دائماً تحليل bounty_table_rows لكل أصل أولاً."
     },
     {
       "id": "LEARN-10",
       "category": "Web3 Signer & Magic-Link Security",
-      "titleAr": "\u062e\u0637\u0648\u0631\u0629 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 jwt-decode \u0628\u062f\u0648\u0646 \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u062a\u0648\u0642\u064a\u0639 \u0641\u064a \u062a\u0637\u0628\u064a\u0642\u0627\u062a \u062a\u0648\u0642\u064a\u0639 \u0627\u0644\u0645\u0639\u0627\u0645\u0644\u0627\u062a (Signer Apps)",
-      "ruleAr": "\u0627\u0633\u062a\u062e\u062f\u0627\u0645 jwtDecode() \u0641\u064a \u0627\u0644\u0648\u0627\u062c\u0647\u0629 \u0627\u0644\u0623\u0645\u0627\u0645\u064a\u0629 \u0644\u062a\u0637\u0628\u064a\u0642\u0627\u062a \u0627\u0644\u062a\u0648\u0642\u064a\u0639 \u064a\u0633\u0645\u062d \u0628\u062a\u0645\u0631\u064a\u0631 \u0628\u064a\u0627\u0646\u0627\u062a \u0645\u0639\u0627\u0645\u0644\u0629 \u0623\u0648 \u0639\u0646\u0648\u0627\u0646 RPC \u063a\u064a\u0631 \u0645\u0648\u062b\u0642 \u0625\u0644\u0649 wallet_addEthereumChain\u061b \u064a\u062c\u0628 \u062f\u0627\u0626\u0645\u0627\u064b \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u062a\u0648\u0642\u064a\u0639 \u0627\u0644\u062a\u0634\u0641\u064a\u0631\u064a (JWS) \u0648\u062d\u0635\u0631 \u0627\u0644\u0634\u0628\u0643\u0627\u062a \u0641\u064a \u0642\u0627\u0626\u0645\u0629 \u0628\u064a\u0636\u0627\u0621 \u062b\u0627\u0628\u062a\u0629."
+      "titleAr": "خطورة استخدام jwt-decode بدون التحقق من التوقيع في تطبيقات توقيع المعاملات (Signer Apps)",
+      "ruleAr": "استخدام jwtDecode() في الواجهة الأمامية لتطبيقات التوقيع يسمح بتمرير بيانات معاملة أو عنوان RPC غير موثق إلى wallet_addEthereumChain؛ يجب دائماً التحقق من التوقيع التشفيري (JWS) وحصر الشبكات في قائمة بيضاء ثابتة."
     },
     {
       "id": "LEARN-11",
       "category": "zkSync / Cronos zkEVM Account Abstraction",
-      "titleAr": "\u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0645\u0628\u0644\u063a \u0627\u0644\u0641\u0639\u0644\u064a \u0627\u0644\u0645\u0642\u062a\u0637\u0639 \u0641\u064a \u0639\u0642\u0648\u062f Paymaster \u0648\u0645\u0646 \u062a\u062f\u0648\u064a\u0631 \u0627\u0644\u0645\u0641\u0627\u062a\u064a\u062d \u0641\u064a \u0627\u0644\u062d\u0633\u0627\u0628\u0627\u062a \u0627\u0644\u0645\u062e\u0635\u0635\u0629",
-      "ruleAr": "\u0641\u064a \u0639\u0642\u0648\u062f IPaymaster \u0639\u0644\u0649 zkSync/Cronos zkEVM\u060c \u0644\u0627 \u064a\u0643\u0641\u064a \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 allowance \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0628\u0644 \u064a\u062c\u0628 \u0627\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0623\u0646 \u0627\u0644\u0640 amount \u0627\u0644\u0645\u0645\u0631\u0631 \u0641\u064a paymasterInput \u064a\u063a\u0637\u064a \u062a\u0643\u0644\u0641\u0629 \u0627\u0644\u063a\u0627\u0632 requiredETH."
+      "titleAr": "التحقق من المبلغ الفعلي المقتطع في عقود Paymaster ومن تدوير المفاتيح في الحسابات المخصصة",
+      "ruleAr": "في عقود IPaymaster على zkSync/Cronos zkEVM، لا يكفي التحقق من allowance المستخدم بل يجب التحقق من أن الـ amount الممرر في paymasterInput يغطي تكلفة الغاز requiredETH."
     },
     {
       "id": "LEARN-12",
       "category": "CLI & Broker OAuth Security",
-      "titleAr": "\u0627\u0644\u0641\u0635\u0644 \u0628\u064a\u0646 \u0645\u0639\u0631\u0641 \u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u062a\u0635\u0641\u062d \u0648\u0633\u0631 \u0627\u0644\u0627\u0633\u062a\u0639\u0644\u0627\u0645 (PKCE) \u0641\u064a \u0645\u0635\u0627\u062f\u0642\u0629 \u0623\u062f\u0648\u0627\u062a \u0627\u0644\u0640 CLI",
-      "ruleAr": "\u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0646\u0641\u0633 \u0627\u0644\u0640 session_id \u0641\u064a \u0631\u0627\u0628\u0637 authorize_broker \u0648\u0641\u064a \u0646\u0642\u0637\u0629 \u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u0645\u0641\u0627\u062a\u064a\u062d \u0628\u062f\u0648\u0646 PKCE \u064a\u0639\u0631\u0636 \u0639\u0645\u0644\u064a\u0629 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0644\u0645\u062e\u0627\u0637\u0631 Session Fixation."
+      "titleAr": "الفصل بين معرف رابط المتصفح وسر الاستعلام (PKCE) في مصادقة أدوات الـ CLI",
+      "ruleAr": "استخدام نفس الـ session_id في رابط authorize_broker وفي نقطة استلام المفاتيح بدون PKCE يعرض عملية تسجيل الدخول لمخاطر Session Fixation."
     },
     {
       "ruleId": "RULE-13",
@@ -371,6 +371,20 @@
       "pattern": "Public client constants, sensitive-looking route names, missing /private/ path segments, binary WebSocket frames, or NOERROR/NODATA DNS responses are hypotheses rather than vulnerabilities; each requires layer-specific dynamic proof and impact.",
       "detectionMethod": "Use the official UI with only benign content, separate upload acceptance from retrieval and content execution, issue bounded read-only unauthenticated matrix requests, decode binary protocols with the official client decoder, record only sanitized status/hash/shape evidence, and stop at edge challenges without bypassing them. Never infer Critical impact from static names or chain multiple negative/Low observations.",
       "originVulnId": "CDC-PHASE-26-ELIMINATION-EVIDENCE"
+    },
+    {
+      "ruleId": "RULE-17",
+      "category": "Scope-Owned CT and Source-Map Differential Discovery",
+      "pattern": "Certificate Transparency names, wildcard scope, public source maps, internal hostnames, and sensitive-looking client routes expand attack surface but do not prove liveness, ownership, authorization, or impact. Previously tested paths can reappear in newly discovered bundles without becoming new evidence.",
+      "detectionMethod": "Confirm the current official scope, resolve candidates passively, separate first-party applications from third-party infrastructure, fetch only declared same-organization assets, validate source-map bodies and sourcesContent, diff extracted paths against prior inventories before any dynamic request, and preserve sanitized hashes/status/shape rather than secrets or raw sensitive bodies.",
+      "originVulnId": "CDC-PHASE-30-ELIMINATION-EVIDENCE"
+    },
+    {
+      "ruleId": "RULE-18",
+      "category": "Authentication-Challenge and Proxy-Whitelist Proof Boundaries",
+      "pattern": "A public session-debug page, client-side cryptographic key, proxy service name, or secret-labelled environment variable is not an authentication bypass. A random invalid challenge must never be replaced by real-user guessing, and an edge challenge or whitelist denial must not be escalated into a payload matrix.",
+      "detectionMethod": "Use at most one obviously invalid random marker for a source-indicated token exchange, record only token presence/length/hash if unexpectedly issued, use a benign public read as a proxy control, stop on invalid_ac/whitelist/Cloudflare denials, and require positive session/data impact before claiming ATO or Critical severity.",
+      "originVulnId": "CDC-PHASE-30-ELIMINATION-EVIDENCE"
     }
   ]
 }

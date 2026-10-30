@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "1.0",
+  "phase": 30,
+  "generatedAt": "2026-10-30T02:35:01Z",
+  "target": "Entire official Crypto.com HackerOne scope; Critical-eligible wildcards prioritized",
+  "scope": {
+    "officialCsvRows": 31,
+    "criticalWildcard": "*.crypto.com",
+    "monaWildcard": "*.mona.co",
+    "thirdPartyInfrastructureNotTested": [
+      "web-assets.og.com",
+      "Superlogic",
+      "api.onecompany.com",
+      "Firebase/Google infrastructure"
+    ],
+    "ctPresenceAloneTreatedAsAuthorization": false
+  },
+  "outcome": {
+    "verifiedCriticalVulnerabilities": 0,
+    "verifiedAccountTakeover": 0,
+    "submissionReadyCriticalReports": 0,
+    "newVulnerabilityRecordsAdded": 0,
+    "standaloneNegativeReportCreated": false
+  },
+  "sourceAnalysis": {
+    "sameOrganizationScriptsReviewed": 152,
+    "sameOrganizationScriptBytesReviewed": 18904438,
+    "initialTravelExperiencesTickets": {
+      "scripts": 61,
+      "bytes": 3532973
+    },
+    "payAndTax": {
+      "scripts": 11,
+      "bytes": 9111579
+    },
+    "custodyCqlAndTitan": {
+      "scripts": 26,
+      "bytes": 4635045
+    },
+    "accountsInitial": {
+      "scripts": 46,
+      "bytes": 1547568
+    },
+    "accountsSessionRoutes": {
+      "scripts": 8,
+      "bytes": 77273
+    },
+    "titanSourceMap": {
+      "url": "https://webview.titan.crypto.com/assets/index-CCz4DAjr.js.map",
+      "httpStatus": 200,
+      "bytes": 10198834,
+      "sha256": "7b825b47e1c5a7553182ce443fc42fb2943ab2b1c6847f30212c18808f6774b6",
+      "sources": 1147,
+      "sourcesWithContent": 1147,
+      "applicationSourcesExtracted": 407,
+      "applicationSourceBytes": 2016430,
+      "productionSecretsOrCredentialsVerified": false,
+      "vulnerabilityClaimedFromMapAlone": false
+    },
+    "otherSourceMaps": {
+      "custodyDeclaredMapStatus": 404,
+      "accountsSelectedMapStatus": 403,
+      "travelExactMapStatuses": [
+        404,
+        404,
+        404
+      ],
+      "mapAccessBypassAttempted": false
+    }
+  },
+  "passiveDiscovery": {
+    "cryptoComCt": {
+      "certificateRows": 3087,
+      "uniqueNames": 125
+    },
+    "monaCt": {
+      "certificateRows": 646,
+      "uniqueNames": 13
+    },
+    "ownershipValidation": "Cloudflare DoH followed by one benign root GET only on selected resolving names; CT names and third-party CNAMEs were not treated as authorization.",
+    "newAccessibleApplicationsAnalyzed": [
+      "accounts.crypto.com",
+      "custody.crypto.com",
+      "grpc.cql.crypto.com/hub",
+      "webview.titan.crypto.com"
+    ]
+  },
+  "closedHypotheses": [
+    {
+      "id": "P30-PAY-TEST-TENANT-ISOLATION",
+      "result": "Two published TEST objects: own-key reads 200/live_mode:false; cross-key reads 404; no-key reads 401. No live keys/payments and no production impact inferred."
+    },
+    {
+      "id": "P30-TAX-SENSITIVE-NOAUTH",
+      "result": "Effective double /api/api/ prefix established with a public enum control; exchange-API credentials, wallets/exchanges, and transactions each returned 401 without sensitive data."
+    },
+    {
+      "id": "P30-TRAVEL-SLAPI-FALLBACK",
+      "result": "Exact public-fallback payment-card and loyalty-account GETs returned 403; no sensitive data."
+    },
+    {
+      "id": "P30-TITAN-NEW-FIAT-READS",
+      "result": "Two newly differentiated NTS Fiat GETs encountered Cloudflare 403. Backend authorization was not inferred and the challenge was not bypassed."
+    },
+    {
+      "id": "P30-TITAN-PREDICTION-BALANCE",
+      "result": "New source-indicated unauthenticated balance GET returned 404 and no financial data; no sibling order/trade mutation requests followed."
+    },
+    {
+      "id": "P30-ACCOUNTS-INVALID-AC",
+      "result": "One random invalid auth-code exchange returned HTTP 400 with errorType invalid_ac; no session_token was issued or used.",
+      "evidenceSha256": "0608a1ac133371e4c19641a0700827f23a6707d5b48e3a2387d7989ff58c7f71"
+    },
+    {
+      "id": "P30-ACCOUNTS-XBFF-PROXY",
+      "result": "A public timestamp control through the source-indicated xbff proxy returned 403 API route not in whitelist; no sensitive route followed."
+    },
+    {
+      "id": "P30-ACCOUNTS-PROXY-NORMALIZATION",
+      "result": "One public-control literal dot-segment differential encountered Cloudflare 403; no encoded variants, challenge bypass, or sensitive path expansion followed."
+    },
+    {
+      "id": "P30-CQL-NOAUTH-SESSION",
+      "result": "Source-indicated NextAuth session path returned 404; no user session or API key was observed."
+    },
+    {
+      "id": "P30-CLIENT-SECRET-TRIAGE",
+      "result": "No usable production AWS key, JWT, private key, bearer token, password, or API credential was verified in extracted Titan sources. Secret-like upload values were non-credential placeholders; Accounts cryptography remained client-side key handling without demonstrated decryption impact."
+    }
+  ],
+  "nonRepeatRegister": [
+    "Do not repeat the two published Pay TEST own/cross/no-key differentials or infer live-mode behavior.",
+    "Do not repeat corrected Tax /api/api/ sensitive no-auth reads or the erroneous single-prefix variant.",
+    "Do not refetch unchanged Travel source maps or repeat exact SLAPI fallback reads.",
+    "Do not repeat Titan Fiat no-auth GETs, prediction balance GET, Accounts invalid-ac exchange, xbff public proxy control, dot-segment control, or CQL session path without new source evidence.",
+    "Do not repeat Phase 26 AUM/KYC paths merely because they reappeared in the Titan source map; their earlier 401 evidence remains authoritative.",
+    "Do not bypass Cloudflare, source-map 403s, application whitelists, OTP/reset/payment controls, or third-party infrastructure boundaries."
+  ],
+  "safety": {
+    "accountCredentialsUsed": false,
+    "realUserDataIntentionallyAccessed": false,
+    "paymentCreationModificationOrPurchaseRequests": 0,
+    "otpResetRefundDeleteOrTradingRequests": 0,
+    "rawPaymentBodiesPersisted": false,
+    "rawCookiesOrSessionTokensPersisted": false,
+    "rawSecretValuesIncluded": false
+  }
+}

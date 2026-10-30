@@ -306,3 +306,14 @@
 - Two official **read-only** FCM API-key-list calls were tested without cookies/tokens because they were distinct from the challenged NTS path. Both returned empty **403** responses; no keys/data appeared and no create/update/delete operation or challenge bypass followed.
 - One Jetty-fingerprint-guided `GET /actuator/health` on Exchange-BE returned empty **404**. No environment, heapdump, management invocation, or follow-on management request occurred.
 - **No standalone Phase 28 report and no vulnerability claim.** Sanitized non-repeat evidence only: `audit/cryptocom-hackerone/evidence/phase28-source-differential-results.json`. Verified Critical/ATO/submission-ready Critical counts remain **0/0/0**.
+
+---
+
+## Phase 30 — Whole-Scope CT/Source-Map Differential & Authentication Elimination (2026-10-30)
+
+- Reconfirmed that the official Critical-eligible scope includes **`*.crypto.com`** and **`*.mona.co`**, while third-party infrastructure remains outside authorization. Passive CT produced **3,087 rows / 125 unique Crypto.com names** and **646 rows / 13 Mona names**; DNS/ownership triage preceded any selected root request.
+- Reviewed **152 same-organization JavaScript files / 18,904,438 bytes** across Travel/Experiences/Tickets, Pay/Tax, Custody/CQL/Titan, and Accounts. The declared Titan WebView source map was valid (**10,198,834 bytes; 1,147 sources with content; 407 application sources**), while the selected Accounts maps returned 403 and the Custody map returned 404. No map-access bypass occurred, and source availability alone is not reported as a vulnerability.
+- Corrected Pay TEST differentials passed: own-key reads returned 200/`live_mode:false`, cross-key reads 404, and no-key reads 401. Corrected Tax sensitive no-auth reads used the source-established `/api/api/` prefix and all returned 401. No production payment behavior was inferred.
+- Compared Titan paths against the Phase 26 inventory before dynamic testing, avoiding repeat AUM/KYC requests. Two new Fiat reads encountered Cloudflare 403; the new prediction-balance read returned 404. No challenge bypass or financial/account mutation followed.
+- Accounts exposed a public session-debug route in source, but one obviously invalid random `ac` exchange returned **400 / `invalid_ac`** and issued no session token. The source-indicated `xbff` proxy rejected a benign public control with **403 / `API route not in whitelist`**; one dot-segment public control encountered Cloudflare and was not expanded. CQL’s source-indicated session path returned 404.
+- **No standalone Phase 30 report and no vulnerability claim.** Sanitized non-repeat evidence: `audit/cryptocom-hackerone/evidence/phase30-whole-scope-source-differential-results.json`. Permanent state is synchronized at schema **`2099.27.0`** with **11 research/vulnerability records and 18 learning rules**. Verified Critical/ATO/submission-ready Critical counts remain **0/0/0**.
