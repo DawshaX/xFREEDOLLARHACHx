@@ -287,3 +287,13 @@
 - Additional Developer Platform `CNAME`/`NS`/`HTTPS` DoH queries returned no answers; no dangling CNAME/delegation or takeover was established.
 - Saved full methodology and non-repeat register: `audit/cryptocom-hackerone/CRYPTOCOM_PHASE26_EXCHANGE_DYNAMIC_REVIEW_2026-10-30.md`; sanitized machine evidence: `audit/cryptocom-hackerone/evidence/phase26-exchange-dynamic-review-2026-10-30.json`.
 - Permanent state synchronized in both locations: schema `2099.24.0`, **11 research/vulnerability records, 16 lifelong-learning rules**. **Verified Critical vulnerabilities remain 0; verified ATO remains 0; submission-ready Critical reports remain 0.**
+
+---
+
+## Phase 27 — Null-Origin CORS & Auth-Flow Source Triage (2026-10-30)
+
+- Source triage rejected blind JWT algorithm testing: Exchange-Pro sends an opaque `exchange-token` header, while explicit JWT references belonged to Intercom. No forged token or random identity was sent.
+- Re-reviewed the OAuth authorization-code callback boundary without repeating the callback request. The existing invalid-code response is an empty first-party **302**, and no client query-string `code`/access-token consumer or third-party code disclosure was established; no valid-code claim is made.
+- Executed two new `Origin: null` preflights without cookies or tokens. BFF user info returned **404** without ACAO; BE withdrawal info returned **200** with fixed `Access-Control-Allow-Origin: https://crypto.com`, not `null`, and no credential-allowance header. The conditional harness therefore sent no actual sensitive read. The challenged NTS route was not retested.
+- Report: `audit/cryptocom-hackerone/CRYPTOCOM_PHASE27_NULL_ORIGIN_CORS_REVIEW_2026-10-30.md`; sanitized evidence: `audit/cryptocom-hackerone/evidence/phase27-null-origin-cors-results.json`.
+- Permanent state synchronized at schema `2099.25.0`: **11 research/vulnerability records, 16 lifelong-learning rules, 0 verified Critical, 0 verified ATO, 0 submission-ready Critical reports**.

@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-10-30T02:00:08Z",
+  "accountCredentialsUsed": false,
+  "cookiesSent": false,
+  "stateChangingRequests": 0,
+  "challengedNtsPathRetested": false,
+  "results": [
+    {
+      "name": "bff-user-info-null-origin-preflight",
+      "url": "https://exchange-fe.crypto.com/v1/private/get-user-info",
+      "method": "OPTIONS",
+      "origin": "null",
+      "accountCredentialOrCookieSent": false,
+      "exitCode": 0,
+      "statusLine": "HTTP/2 404",
+      "selectedHeaders": {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "139",
+        "vary": "Origin",
+        "access-control-max-age": "600"
+      },
+      "bodyBytes": 139,
+      "bodySha256": "fc0d18a9525a1a46a3b8be4ba8658a566999a35c37327e4b06b1ad0bd7fd2a80",
+      "jsonFields": {
+        "code": 404,
+        "message": "Cannot OPTIONS /v1/private/get-user-info",
+        "path": "/v1/private/get-user-info"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "be-withdrawal-info-null-origin-preflight",
+      "url": "https://exchange-be.crypto.com/user/withdrawal_info",
+      "method": "OPTIONS",
+      "origin": "null",
+      "accountCredentialOrCookieSent": false,
+      "exitCode": 0,
+      "statusLine": "HTTP/2 200",
+      "selectedHeaders": {
+        "content-length": "0",
+        "access-control-allow-origin": "https://crypto.com",
+        "access-control-allow-headers": "Content-Type,Content-Length, Authorization, Accept,X-Requested-With,exchange-token,exchange-language,exchange-client,exchange-time",
+        "access-control-allow-methods": "PUT,POST,GET,DELETE,OPTIONS",
+        "access-control-max-age": "86400"
+      },
+      "bodyBytes": 0,
+      "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "jsonFields": {},
+      "stderr": ""
+    }
+  ]
+}
