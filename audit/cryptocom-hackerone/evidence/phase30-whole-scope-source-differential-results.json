@@ -126,6 +126,10 @@
     {
       "id": "P30-CLIENT-SECRET-TRIAGE",
       "result": "No usable production AWS key, JWT, private key, bearer token, password, or API credential was verified in extracted Titan sources. Secret-like upload values were non-credential placeholders; Accounts cryptography remained client-side key handling without demonstrated decryption impact."
+    },
+    {
+      "id": "P30-DOCUMENT-SEND-BLACKCAT-BOUNDARIES",
+      "result": "document-hub redirected only into the public privacy flow; send redirected to mcointernal.okta.com SendSafely SSO and no Okta/third-party request was made beyond the redirect response; black-cat was not contacted because its CNAME points to online-metrix.net third-party infrastructure."
     }
   ],
   "nonRepeatRegister": [
@@ -134,7 +138,8 @@
     "Do not refetch unchanged Travel source maps or repeat exact SLAPI fallback reads.",
     "Do not repeat Titan Fiat no-auth GETs, prediction balance GET, Accounts invalid-ac exchange, xbff public proxy control, dot-segment control, or CQL session path without new source evidence.",
     "Do not repeat Phase 26 AUM/KYC paths merely because they reappeared in the Titan source map; their earlier 401 evidence remains authoritative.",
-    "Do not bypass Cloudflare, source-map 403s, application whitelists, OTP/reset/payment controls, or third-party infrastructure boundaries."
+    "Do not bypass Cloudflare, source-map 403s, application whitelists, OTP/reset/payment controls, or third-party infrastructure boundaries.",
+    "Do not re-triage document-hub/send root redirects or contact black-cat/online-metrix without new first-party source evidence and explicit authorization."
   ],
   "safety": {
     "accountCredentialsUsed": false,
@@ -144,5 +149,6 @@
     "rawPaymentBodiesPersisted": false,
     "rawCookiesOrSessionTokensPersisted": false,
     "rawSecretValuesIncluded": false
-  }
+  },
+  "lastUpdatedAt": "2026-10-30T02:36:06Z"
 }
