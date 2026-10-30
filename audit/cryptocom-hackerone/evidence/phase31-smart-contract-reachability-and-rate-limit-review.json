@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.0",
+  "phase": 31,
+  "generatedAt": "2026-10-30T03:02:03Z",
+  "track": "CDCETH/CDCBTC deployed-token role and auxiliary rate-limit reachability review",
+  "scopeBasis": {
+    "program": "https://hackerone.com/crypto/policy_scopes",
+    "includedTargets": [
+      "CDCETH Ethereum proxy 0xfe18aE03741a5b84e39C295Ac9C856eD7991C38e",
+      "CDCETH Cronos proxy 0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446",
+      "CDCBTC Cronos proxy 0x2e53c5586e12a99d4CAE366E9Fc5C14fE9c6495d",
+      "CDCBTC Ethereum open-scope proxy 0xDDCDe8DE19284cC5Aab6db5AC6Af1dcdA175f5e2"
+    ],
+    "validationMode": "Local source analysis plus read-only eth_call/event/source queries; no transactions were sent."
+  },
+  "sourceReview": {
+    "repository": "https://github.com/crypto-com/wrapped-tokens-os",
+    "commit": "bf69767366a3fd67f52986332099f858800c8b03",
+    "filesReviewed": [
+      "contracts/wrapped-tokens/RateLimit.sol",
+      "contracts/wrapped-tokens/MintForwarder.sol",
+      "contracts/wrapped-tokens/MintUtil.sol",
+      "contracts/wrapped-tokens/staking/ExchangeRateUpdater.sol",
+      "contracts/wrapped-tokens/staking/ExchangeRateUtil.sol",
+      "contracts/wrapped-tokens/staking/LiquidETHV1.sol",
+      "deploy/deploy_mint_forwarder.ts",
+      "deploy/deploy_exchange_rate_updater.ts",
+      "deploy/deploy_staked_token.ts",
+      "deployments/mainnet/LiquidETHV1.json",
+      "deployments/mainnet/FiatTokenProxy.json"
+    ],
+    "blocksecAudit": "https://crypto.com/document/blocksec_securityaudit2024",
+    "auditedSourceMd5MatchesBlocksecReport": {
+      "MintUtil.sol": "40c97260847ed5c094da04aa921e91b1",
+      "MintForwarder.sol": "c729f40e147f19273a29c75a59e5f955",
+      "FiatTokenProxy.sol": "f7ee7d926a4d31b39e154ac7ed5000cf",
+      "RateLimit.sol": "8ef7cad260fa577ea080d157e5ca9bdd",
+      "ExchangeRateUtil.sol": "ec28a374455abc949ec05c5a2d4334d1",
+      "ExchangeRateUpdater.sol": "c08e90496bafa47d86c3e4cd8759bca7",
+      "LiquidETHV1.sol": "96f5ff1ef834bd57d14251f99ea61341"
+    },
+    "localFoundryPoC": {
+      "pathInPrimaryRepo": "audit/cryptocom-hackerone/PoC_RateLimit_Bypass.t.sol",
+      "run": "forge test --root /var/tmp/cryptocom-audit/rate-limit-poc -vvv",
+      "result": "2 passed, 0 failed",
+      "proofScope": "Self-contained exact-logic harness for the RateLimit source; does not by itself prove an attacker can reach a deployed production forwarder or raise severity."
+    },
+    "staticAnalysis": {
+      "tool": "Slither 0.11.6",
+      "analyzed": [
+        "MintForwarder.sol dependency graph",
+        "ExchangeRateUpdater.sol dependency graph",
+        "RateLimit.sol dependency graph"
+      ],
+      "observations": [
+        "Expected strict-equality detector on the already-known RateLimit full-quota early return.",
+        "Unused-return and reentrancy-events detector hits are not independently exploitable findings here: calls are to the configured token path and no untrusted callback path/asset impact was established.",
+        "A complete Slither compile of LiquidETHV1/Centre dependencies did not complete because this sandbox's partially installed legacy npm dependency graph and old-solc source path mapping were incompatible; no claim of successful whole-project analysis is made."
+      ]
+    }
+  },
+  "productionStateReadOnly": {
+    "ethereumMainnet": {
+      "rpc": "https://ethereum-rpc.publicnode.com",
+      "cdceth": {
+        "proxy": "0xfe18aE03741a5b84e39C295Ac9C856eD7991C38e",
+        "implementation": "0x7e772ed6e4BfEAE80f2d58e4254f6b6e96669253",
+        "owner": "0xfDaad168E93b6c776a9ADB404B874aAcd8937B67",
+        "masterMinterMatchesOwner": true,
+        "oracleContractCodeBytes": 0,
+        "totalSupplyBaseUnits": "2000000000000000000000",
+        "ownerIsMinter": true,
+        "ownerMinterAllowanceBaseUnits": "198000000000000000000000",
+        "mintForwarderDeploymentInProjectMainnetManifest": false,
+        "publicMinterConfiguredEvents": {
+          "count": 1,
+          "configuredAddress": "0xfdaad168e93b6c776a9adb404b874aacd8937b67",
+          "removedEvents": 0,
+          "provider": "Routescan Etherscan-compatible event API"
+        }
+      },
+      "cdcbtcOpenScope": {
+        "proxy": "0xDDCDe8DE19284cC5Aab6db5AC6Af1dcdA175f5e2",
+        "implementation": "0x0A84f3855CC1Ae96d7D1c2cFF9600DfD2Fedf13C",
+        "ownerIsMinter": false,
+        "ownerMinterAllowanceBaseUnits": "0",
+        "totalSupplyBaseUnits": "0"
+      }
+    },
+    "cronosEvm": {
+      "rpc": "https://evm.cronos.org",
+      "cdceth": {
+        "proxy": "0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446",
+        "implementation": "0xCC4b4878d64A76616c483a280fBfdBb08b705757",
+        "ownerEqualsMasterMinter": true,
+        "oracleContractCodeBytes": 0,
+        "totalSupplyBaseUnits": "9420000000000000000000",
+        "ownerIsMinter": true,
+        "ownerMinterAllowanceBaseUnits": "165580000000000000000000",
+        "deploymentManifestListsAuxiliaryMintForwarder": false
+      },
+      "cdcbtc": {
+        "proxy": "0x2e53c5586e12a99d4CAE366E9Fc5C14fE9c6495d",
+        "implementation": "0xDDCDe8DE19284cC5Aab6db5AC6Af1dcdA175f5e2",
+        "owner": "0x2aA6132DF397B3B369FdE39f00ca1019C5fB24Ad",
+        "masterMinter": "0x4b7B0A16912E2162fdBff5B82B9DA948A04b21E8",
+        "ownerIsMinter": true,
+        "ownerMinterAllowanceBaseUnits": "282700000000",
+        "masterMinterIsMinter": false,
+        "masterMinterAllowanceBaseUnits": "0",
+        "totalSupplyBaseUnits": "17300000000"
+      }
+    },
+    "explorerCrossCheck": [
+      "https://explorer.cronos.com/address/0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446",
+      "https://explorer.cronos.com/token/0x7a7c9db510aB29A2FC362a4c34260BEcB5cE3446",
+      "https://explorer.cronos.com/token/0x2e53c5586e12a99d4CAE366E9Fc5C14fE9c6495d"
+    ],
+    "interpretation": "These observations confirm privileged token minter configuration, not an attacker-controlled route. The known RateLimit 2x PoC applies only if a caller is configured on a deployed MintForwarder/ExchangeRateUpdater that itself has production mint/oracle authority. That production link was not found in the official repo's current mainnet manifests; Ethereum CDCETH's single public MinterConfigured event points to its owner/master-minter EOA, not a forwarder. Cronos historical log coverage was limited by public-node range/API-key restrictions, so absence of Cronos forwarder configuration is not claimed as fully proven."
+  },
+  "impactAndDisposition": {
+    "verifiedCritical": 0,
+    "verifiedAto": 0,
+    "submissionReadyCritical": 0,
+    "newVulnerabilityRecordAdded": false,
+    "existingRateLimitRecordSeverityRaised": false,
+    "reason": "Code-level rate-limit bypass is reproducible in an isolated harness, but no public attacker path or production deployed forwarder/token-role connection is proven. The affected mint/update callers are allowlisted by owner; no unauthorized mint, rate manipulation, or real funds impact was performed or observed."
+  },
+  "safety": {
+    "transactionsSent": 0,
+    "signaturesCollectedOrUsed": 0,
+    "privateKeysOrAccountsUsed": 0,
+    "productionMintOrOracleCallsMade": 0,
+    "realUserAssetsTouched": false
+  },
+  "doNotRepeat": [
+    "Do not rerun the exact local 2x RateLimit harness as evidence of production exploitability; it only tests contract logic in isolation.",
+    "Do not infer a live forwarder from source presence or from a direct owner's minter allowance.",
+    "Do not transmit any transaction to the production token, oracle, or minter contracts.",
+    "Do not elevate the existing CDC-SC-01 above its documented High/Medium candidate status absent a proven deployed configuration and realistic attacker path."
+  ],
+  "nextHypothesis": "Pivot to another Critical-eligible public surface or a new on-chain integration graph: resolve the actual configured roles/consumer contracts from verified deployment artifacts and passive chain data, then test only a source-supported unauthenticated transition in a local fork. Do not enumerate/mutate production roles or submit requests/signatures.",
+  "lastUpdatedAt": "2026-10-30T03:02:03Z"
+}

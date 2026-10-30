@@ -1,11 +1,11 @@
 {
-  "schemaVersion": "2099.27.0",
-  "updatedAt": "2026-10-30T02:35:01Z",
+  "schemaVersion": "2099.28.0",
+  "updatedAt": "2026-10-30T03:02:03Z",
   "vaultTitleAr": "خزنة الثغرات المكتشفة والتقارير المحفوظة وسجل التعلم مدى الحياة — CyberNova Permanent Vault",
   "totalDiscoveredVulnerabilities": 11,
   "totalArchitecturalNotes": 6,
   "totalSavedDisclosureReports": 3,
-  "totalLifelongLearningRules": 18,
+  "totalLifelongLearningRules": 19,
   "discoveredVulnerabilities": [
     {
       "id": "CDC-WEB-01",
@@ -385,6 +385,13 @@
       "pattern": "A public session-debug page, client-side cryptographic key, proxy service name, or secret-labelled environment variable is not an authentication bypass. A random invalid challenge must never be replaced by real-user guessing, and an edge challenge or whitelist denial must not be escalated into a payload matrix.",
       "detectionMethod": "Use at most one obviously invalid random marker for a source-indicated token exchange, record only token presence/length/hash if unexpectedly issued, use a benign public read as a proxy control, stop on invalid_ac/whitelist/Cloudflare denials, and require positive session/data impact before claiming ATO or Critical severity.",
       "originVulnId": "CDC-PHASE-30-ELIMINATION-EVIDENCE"
+    },
+    {
+      "ruleId": "RULE-19",
+      "category": "On-Chain Deployment and Privilege-Graph Reachability",
+      "pattern": "A Solidity bug reproduced in an isolated harness is not proof of a production exploit or Critical impact. Audit claims must connect the exact deployed runtime/proxy implementation, current role assignments and allowance, an attacker-reachable public transition, and a material asset or protocol consequence. Owner/master-minter permissions, existing minter allowances, and source-only auxiliary contracts are not attacker paths.",
+      "detectionMethod": "Pin the official in-scope address and chain; resolve proxy implementation/admin slots; compare deployed code or verified source and audit version hashes; read roles, oracle, minter flags, allowances, supply and paused/blacklist state via eth_call; inspect deployment manifests and event history; model roles in a local fork or isolated Foundry harness; stop before sending any production transaction. Mark incomplete public event coverage as inconclusive rather than as absence.",
+      "originVulnId": "CDC-PHASE-31-RATE-LIMIT-REACHABILITY-REVIEW"
     }
   ]
 }

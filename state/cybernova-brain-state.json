@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "2099.27.0",
+  "schemaVersion": "2099.28.0",
   "platformName": "CyberNova 2099 — Autonomous 24/7 Cyber Workstation & Cloud Brain",
   "repository": "https://github.com/DawshaX/xFREEDOLLARHACHx",
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
@@ -16,12 +16,12 @@
     "activeProgram": "Crypto.com HackerOne Bug Bounty",
     "currentStageNumber": 1,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 30: اكتشاف النطاق الكامل وتحليل SourceMaps والتحقق التفاضلي دون Critical مؤكد",
+    "currentStageTitleAr": "المرحلة 31: تدقيق CDCETH/CDCBTC وربط ثغرة RateLimit بالنشر والصلاحيات الحية",
     "overallProgressPercent": 100,
-    "nextAutonomousActionAr": "مواصلة فقط عبر فرضية مصدر جديدة قوية داخل النطاق الرسمي؛ عدم تكرار اختبارات Phase 30، وعدم تجاوز التحديات أو البنية الخارجية، وعدم إعلان Critical قبل دليل أثر إيجابي قابل لإعادة الإنتاج.",
-    "currentStage": "PHASE_30_CRYPTOCOM_WHOLE_SCOPE_SOURCE_MAP_DIFFERENTIAL",
+    "nextAutonomousActionAr": "الانتقال إلى فرضية جديدة ضمن النطاق ذي أثر Critical؛ لا تُرفع ثغرة RateLimit المعزولة إلى Critical ما لم يثبت عقد منشور ومسار مهاجم وصلة mint/oracle ذات أثر حقيقي.",
+    "currentStage": "PHASE_31_ONCHAIN_RATE_LIMIT_DEPLOYMENT_REACHABILITY",
     "completedProgressPercent": 100,
-    "nextAutonomousAction": "Continue only with a fresh source-backed hypothesis inside official scope. Do not repeat Phase 30 checks, bypass challenges, test third-party infrastructure, or claim Critical before positive reproducible impact."
+    "nextAutonomousAction": "Pivot to a fresh Critical-eligible hypothesis. Keep the isolated RateLimit issue at its existing candidate severity unless a deployed contract and attacker-reachable mint/oracle impact are proven; do not test via production transactions."
   },
   "whatDidIReach": {
     "summaryAr": "تم ربط المنصة اتصالاً حياً ومباشراً بـ 9 مواقع ثغرات عالمية حقيقية (HTTP 200 OK)، وبناء مصفوفة الاتصال الحي في الداشبورد، وتفعيل محرك التعلم الذاتي (Nova Learner) والمولّد الذكي (/api/cve/mutate & /api/cve/ingest-live)، والقضاء النهائي على أي رسالة خطأ في الفحص أو في Ollama المحلي/Ngrok/الهجين.",
@@ -31,7 +31,7 @@
       "kaliToolsReady": 78,
       "githubArsenalProjects": 56,
       "workstationEnvironments": 12,
-      "extractedArtifactsCount": 43,
+      "extractedArtifactsCount": 44,
       "parallelTasksActive": 4,
       "zeroFpVerifiedCount": 6,
       "universalGalaxyTotalCves": 76680
@@ -282,6 +282,13 @@
       "category": "CRYPTOCOM_PHASE_30",
       "titleAr": "تحليل النطاق الكامل وSourceMaps مع إغلاق فرضيات Pay/Tax/Accounts دون Critical",
       "detailAr": "رُوجع 152 ملف JavaScript وخريطة Titan الأصلية؛ اجتازت Pay TEST العزل وأعادت Tax 401، ورفض Accounts رمز ac مختلقًا. لا جلسات أو بيانات حساسة أو Critical مؤكد."
+    },
+    {
+      "id": "new-phase31-onchain-role-reachability",
+      "ts": "2026-10-30T03:02:03Z",
+      "category": "CRYPTOCOM_PHASE_31",
+      "titleAr": "تدقيق أدوار CDCETH/CDCBTC وربط RateLimit بالنشر الحي",
+      "detailAr": "تأكد Foundry من PoC منطق RateLimit محلياً (2/2)، لكن لم يثبت ربط forwarder إنتاجي به. قراءات eth_call أظهرت minter allowances تحت صلاحيات مالك/مفتاح رئيسي؛ لا Critical أو معاملة إنتاجية."
     }
   ],
   "extractedArtifactsVault": [
@@ -714,6 +721,16 @@
       "tool": "CyberNova CT + JS/source-map differential harnesses",
       "verified": true,
       "ts": "2026-10-30T02:35:01Z"
+    },
+    {
+      "id": "art-phase31-onchain-role-reachability",
+      "type": "ONCHAIN_DEPLOYMENT_ROLE_GRAPH_AND_STATIC_ANALYSIS",
+      "target": "Crypto.com CDCETH/CDCBTC token contracts",
+      "titleAr": "دليل المرحلة 31: تحقق الصلاحيات والنشر على السلسلة",
+      "value": "Foundry 2/2 isolated RateLimit tests; read-only role/allowance checks across four token deployments; no deployed auxiliary mint-forwarder link or attacker route proven.",
+      "tool": "Foundry 1.8.7, Slither 0.11.6, cast, Routescan/Cronos Explorer",
+      "verified": true,
+      "ts": "2026-10-30T03:02:03Z"
     }
   ],
   "multiTaskQueue": [
@@ -754,7 +771,7 @@
       "lastOutput": "Cycle #72 verified on bughunters.google.com at ٧:٤٢:٣٨ م"
     }
   ],
-  "updatedAt": "2026-10-30T02:35:01Z",
+  "updatedAt": "2026-10-30T03:02:03Z",
   "activeTarget": {
     "status": "PHASE_20_COMPLETE_6_WAVES_54_REPOS_MAINNET_FORK_POC_VERIFIED",
     "lastAuditTimestamp": "2026-10-29T20:09:50Z",
@@ -840,12 +857,12 @@
     "submissionReportPath": "audit/sky-immunefi/IMMUNEFI_SUBMISSION_REPORT_UNISWAP_V3_FACET.md",
     "foundryPoCPath": "audit/sky-immunefi/PoC_UniswapV3_Bypass.t.sol"
   },
-  "lastUpdated": "2026-10-30T02:35:01Z",
+  "lastUpdated": "2026-10-30T03:02:03Z",
   "discoveredVaultSummary": {
     "vaultPath": "state/discovered-vulnerabilities-vault.json",
     "totalDiscoveredVulnerabilities": 11,
     "totalArchitecturalNotes": 6,
-    "totalLifelongLearningRules": 18,
+    "totalLifelongLearningRules": 19,
     "items": [
       "CDC-WEB-01 (disable-2fa magic_token full-URL third-party disclosure; 3/3 invalid-marker runs; no ATO claim)",
       "CDC-MCP-01 (fiat/OTC MCP acknowledgment bypass; official-spec local regression 1/1; no financial request)",
@@ -862,7 +879,7 @@
   },
   "discoveredVulnerabilitiesVault": {
     "totalVulnerabilities": 11,
-    "totalLifelongRules": 18,
+    "totalLifelongRules": 19,
     "latestAdded": "CDC-WEB-01 (invalid-marker live disclosure) + CDC-MCP-01 (official-spec local MCP gating regression)",
     "criticalVerifiedCount": 0,
     "submissionReadyCriticalReports": 0
@@ -964,5 +981,20 @@
     "challengeBypassAttempted": false,
     "standaloneReportCreated": false,
     "evidence": "audit/cryptocom-hackerone/evidence/phase30-whole-scope-source-differential-results.json"
+  },
+  "cryptocomPhase31": {
+    "updatedAt": "2026-10-30T03:02:03Z",
+    "target": "CDCETH/CDCBTC deployed token and wrapped-tokens-os auxiliary role reachability",
+    "sourceRepoCommit": "bf69767366a3fd67f52986332099f858800c8b03",
+    "officialSourceMd5MatchesBlocksecAudit": true,
+    "foundryRateLimitLogicTests": "2 passed; isolated harness only",
+    "readOnlyMainnetCalls": true,
+    "productionMintForwarderLinkProven": false,
+    "verifiedCritical": 0,
+    "verifiedAto": false,
+    "submissionReadyCriticalReports": 0,
+    "productionTransactionsSent": 0,
+    "liquidEthWholeProjectSlitherCompleted": false,
+    "evidence": "audit/cryptocom-hackerone/evidence/phase31-smart-contract-reachability-and-rate-limit-review.json"
   }
 }
