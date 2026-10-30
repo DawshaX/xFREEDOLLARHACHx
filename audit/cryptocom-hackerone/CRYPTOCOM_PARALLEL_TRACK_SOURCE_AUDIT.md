@@ -209,3 +209,68 @@ Because `@crypto.com/developer-platform-client` is invoked directly by `AIAgentS
 
 ### Recommended Remediation
 - Wrap all dynamic path segments and query parameters with `encodeURIComponent(...)` and construct query strings using `new URLSearchParams(...)`.
+
+---
+
+## Finding `CDC-SC-01` — Single-Block `2x` Rate-Limit Bypass & Unprivileged External Allowance Starvation in `RateLimit.sol` (`MintForwarder` & `ExchangeRateUpdater`)
+
+- **Severity**: **High / Medium (CVSS 7.3 — Smart Contract Rate-Limit Invariant Bypass & Griefing)**
+- **Target Repository**: `https://github.com/crypto-com/wrapped-tokens-os` (`CDCETH` / `CDCBTC` Official Repository)
+- **Vulnerable Files**:
+  - `contracts/wrapped-tokens/RateLimit.sol` (lines 125–184)
+  - `contracts/wrapped-tokens/MintForwarder.sol` (lines 79–96)
+  - `contracts/wrapped-tokens/ExchangeRateUpdater.sol` (lines 74–96)
+- **Verified Foundry PoC**: `audit/cryptocom-hackerone/PoC_RateLimit_Bypass.t.sol` (`2/2 PASS`)
+
+### 1. Root Cause #1: Instant `2x` (`200%`) Rate-Limit Bypass in a Single Block (`CWE-682` / `CWE-841`)
+In `RateLimit.sol` (lines 142–160), `_replenishAllowance(address caller)` returns early whenever `allowances[caller] == maxAllowances[caller]` **without updating `allowancesLastSet[caller] = block.timestamp`**:
+
+```solidity
+    function _replenishAllowance(address caller) internal {
+        if (allowances[caller] == maxAllowances[caller]) {
+            return; // BUG: Does NOT update allowancesLastSet[caller] = block.timestamp!
+        }
+        uint256 amountToReplenish = _getReplenishAmount(caller);
+        if (amountToReplenish == 0) {
+            return;
+        }
+
+        allowances[caller] = allowances[caller] + amountToReplenish;
+        allowancesLastSet[caller] = block.timestamp;
+        ...
+    }
+```
+
+And in both `MintForwarder.mint()` and `ExchangeRateUpdater.updateExchangeRate()`, the contract:
+1. Calls `_replenishAllowance(msg.sender)` **before** subtracting the consumed allowance (`_amount` or `diff`).
+2. Subtracts `allowances[msg.sender] = allowances[msg.sender] - _amount` **without** updating `allowancesLastSet[msg.sender]`.
+
+**Exploit Sequence (Verified in `test_PoC1_SingleBlock_2x_RateLimit_Bypass`)**:
+1. At `t = t0`, `configureCaller(caller, maxQuota, interval)` sets `allowances[caller] = maxQuota` and `allowancesLastSet[caller] = t0`.
+2. After `interval` seconds have elapsed (`t = t0 + interval`), `caller` calls `mint(to, maxQuota)` (or `updateExchangeRate()`):
+   - `_replenishAllowance(caller)` sees `allowances[caller] == maxAllowances[caller]` and returns early **leaving `allowancesLastSet[caller] == t0`**.
+   - `mint()` subtracts `maxQuota`, setting `allowances[caller] = 0` while `allowancesLastSet[caller]` is still `t0` (`interval` seconds in the past!).
+3. In the **exact same block (`t = t0 + interval`, `0` seconds elapsed)**, `caller` calls `mint(to, maxQuota)` a second time:
+   - Now `allowances[caller] == 0 < maxAllowances[caller]`.
+   - `_getReplenishAmount(caller)` calculates `secondsSinceAllowanceSet = block.timestamp - t0 = interval`, returning `amountToReplenish = maxQuota`.
+   - `allowances[caller]` is immediately refilled to `maxQuota` in `0` seconds and consumed a second time — allowing **`2x maxAllowances` (`200%` of the configured rate limit)** to be minted or shifted in a single atomic transaction.
+
+### 2. Root Cause #2: Unprivileged Public `currentAllowance(address)` Replenishment Truncation (`CWE-284` / `CWE-682`)
+In `RateLimit.sol` (lines 136–139), `currentAllowance(address caller)` is a state-mutating `public` function with **no access control**:
+
+```solidity
+    function currentAllowance(address caller) public returns (uint256) {
+        _replenishAllowance(caller);
+        return allowances[caller];
+    }
+```
+
+Whenever `allowances[caller] < maxAllowances[caller]`, `_getReplenishAmount(caller)` computes integer division:
+```solidity
+uint256 amountToReplenish = (secondsSinceAllowanceSet * maxAllowances[caller]) / intervals[caller];
+```
+And whenever `amountToReplenish >= 1`, `_replenishAllowance` overwrites `allowancesLastSet[caller] = block.timestamp`, permanently discarding the fractional time remainder `(secondsSinceAllowanceSet * maxAllowances[caller]) % intervals[caller]`. Because `currentAllowance(caller)` is `public`, any unprivileged external address can repeatedly call `currentAllowance(caller)` right after `amountToReplenish` crosses `1` unit, destroying up to ~50% of the accrued replenishment time on every poke (`test_PoC2_Unprivileged_External_Allowance_Truncation_Via_currentAllowance`).
+
+### 3. Recommended Fix
+1. When `allowances[caller] == maxAllowances[caller]` inside `_replenishAllowance(caller)`, always set `allowancesLastSet[caller] = block.timestamp;` before returning so that spending from a full allowance starts the replenishment timer from the moment of spend.
+2. Advance `allowancesLastSet[caller]` only by the time corresponding to the replenished amount (`allowancesLastSet[caller] += (amountToReplenish * intervals[caller]) / maxAllowances[caller]`) or restrict `currentAllowance(address)` to `onlyCallers` while providing `estimatedAllowance(address)` as the `view` getter (and cap `estimatedAllowance` at `maxAllowances[caller]`).
