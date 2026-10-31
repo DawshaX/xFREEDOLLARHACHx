@@ -423,6 +423,16 @@ export function NovaWorkstation() {
     let assistantId = nextId();
     setLines((prev) => [...prev, { id: assistantId, role: "assistant", text: "", at: Date.now() }]);
 
+    // Notes and tool lines belong ABOVE the answer being written, otherwise the
+    // transcript reads backwards (answer first, reasoning after).
+    const insertBefore = (line: Omit<Line, "id" | "at">) =>
+      setLines((prev) => {
+        const item = { ...line, id: nextId(), at: Date.now() };
+        const idx = prev.findIndex((l) => l.id === assistantId);
+        if (idx < 0) return [...prev, item];
+        return [...prev.slice(0, idx), item, ...prev.slice(idx)];
+      });
+
     const appendAssistant = (chunk: string) => {
       assistant += chunk;
       setLines((prev) => prev.map((l) => (l.id === assistantId ? { ...l, text: assistant } : l)));
@@ -477,22 +487,22 @@ export function NovaWorkstation() {
     function handleEvent(ev: Record<string, unknown>, append: (s: string) => void) {
       const type = String(ev.type ?? "");
       if (type === "thought" && ev.text) {
-        push({ role: "note", text: `🧠 ${String(ev.text)}` });
+        insertBefore({ role: "note", text: `🧠 ${String(ev.text)}` });
       } else if (type === "tool_call") {
         const name = String(ev.name ?? "أداة");
-        push({ role: "tool", text: `▶︎ ${name} ${JSON.stringify(ev.args ?? {})}`, name });
+        insertBefore({ role: "tool", text: `▶︎ ${name} ${JSON.stringify(ev.args ?? {})}`, name });
         track(name, "running", String(ev.id ?? name));
       } else if (type === "tool_result") {
         const name = String(ev.name ?? "أداة");
         const ok = ev.ok !== false;
-        push({ role: "tool", text: `${ok ? "✓" : "✗"} ${name}: ${String(ev.summary ?? "")}`, ok, name });
+        insertBefore({ role: "tool", text: `${ok ? "✓" : "✗"} ${name}: ${String(ev.summary ?? "")}`, ok, name });
         track(name, ok ? "done" : "failed", String(ev.id ?? name), Number(ev.ms ?? 0) || undefined);
       } else if (type === "delta" && ev.text) {
         append(String(ev.text));
       } else if (type === "error" && ev.message) {
         push({ role: "error", text: String(ev.message) });
       } else if (type === "confirm_required") {
-        push({ role: "note", text: `⏸️ ${String(ev.reason ?? "أداة حساسة محتاجة موافقة")}` });
+        insertBefore({ role: "note", text: `⏸️ ${String(ev.reason ?? "أداة حساسة محتاجة موافقة")}` });
       }
     }
   };
