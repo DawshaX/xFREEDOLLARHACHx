@@ -58,3 +58,7 @@ services:
         sync: false
       - key: TOGETHER_API_KEY
         sync: false
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: GITHUB_MODELS_TOKEN
+        sync: false

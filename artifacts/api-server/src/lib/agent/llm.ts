@@ -123,6 +123,23 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
       model: process.env.TOGETHER_MODEL || "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
       keys: ["TOGETHER_API_KEY"],
     },
+    {
+      // Free tier, very fast inference; OpenAI-compatible so no extra code path.
+      id: "cerebras",
+      label: "Cerebras (free tier)",
+      baseUrl: "https://api.cerebras.ai/v1",
+      model: process.env.CEREBRAS_MODEL || "llama-3.3-70b",
+      keys: ["CEREBRAS_API_KEY"],
+    },
+    {
+      // GitHub Models: free with any GitHub token, rate-limited per day.
+      // The token is read from the environment only — never logged, never stored.
+      id: "github-models",
+      label: "GitHub Models (free with token)",
+      baseUrl: "https://models.github.ai/inference",
+      model: process.env.GITHUB_MODELS_MODEL || "openai/gpt-4o-mini",
+      keys: ["GITHUB_MODELS_TOKEN"],
+    },
   ];
 
   // OpenAI stays last: it is the only paid option, so it is a true last resort.

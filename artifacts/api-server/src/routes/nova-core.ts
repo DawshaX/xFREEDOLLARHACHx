@@ -29,6 +29,7 @@ import {
   type MemoryKind,
 } from "../lib/agent/memory-store";
 import { ensureOllamaReady, ollamaHealth } from "../lib/agent/ollama-manager";
+import { runSelfCheck, storageSnapshot } from "../lib/agent/self-check";
 import { broadcastEvent } from "../lib/ws-hub";
 import { logger } from "../lib/logger";
 
@@ -142,6 +143,43 @@ router.get("/nova-core/status", async (_req: Request, res: Response) => {
       tools: AGENT_TOOLS.length,
       categories: [...new Set(AGENT_TOOLS.map((t) => t.category))],
     });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+/* ── self check (the honest pulse) ───────────────────────────────────────── */
+
+/**
+ * GET /api/nova-core/self-check[?refresh=1]
+ * Runs real probes and returns evidence, not claims. Cached ~20 s so polling
+ * the dashboard cannot melt a free-tier instance.
+ */
+router.get("/nova-core/self-check", async (req: Request, res: Response) => {
+  try {
+    const refresh = String(req.query.refresh ?? "") === "1" || String(req.query.refresh) === "true";
+    const report = await runSelfCheck({ refresh });
+    res.setHeader("Cache-Control", "no-store");
+    res.json(report);
+  } catch (err) {
+    logger.warn({ err }, "self-check failed");
+    res.status(200).json({
+      ok: false,
+      score: 0,
+      total: 0,
+      passed: 0,
+      verdict: `الفحص نفسه وقع: ${(err as Error).message}`,
+      checkedAt: new Date().toISOString(),
+      cached: false,
+      items: [],
+    });
+  }
+});
+
+/** GET /api/nova-core/storage — cheap storage snapshot (no full probe). */
+router.get("/nova-core/storage", (_req: Request, res: Response) => {
+  try {
+    res.json({ ok: true, ...storageSnapshot() });
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }
