@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --ignore-scripts
 
+      - name: 🛡️ Audit API connections & contracts
+        run: pnpm run audit:connections
+
       - name: Build CyberNova Platform for GitHub Pages
         env:
           PORT: "3000"

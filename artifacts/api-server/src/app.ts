@@ -36,6 +36,18 @@ app.use(cors());
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
+// ── Body safety net ───────────────────────────────────────────────────────────
+// Several routes destructure `req.body` directly. When a client fires a POST
+// without a body (e.g. `fetch("/api/nova/kill", { method: "POST" })`) Express 5
+// leaves `req.body` undefined and the destructuring throws a 500. Normalising it
+// to an empty object keeps every such endpoint resilient.
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (req.body === undefined || req.body === null) {
+    (req as Request & { body: Record<string, unknown> }).body = {};
+  }
+  next();
+});
+
 // ── Standalone SSE Streams (LiveAgent, Agent Steps, Push Notifications) ──────
 app.get("/api/push/stream", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream");

@@ -6,6 +6,7 @@ import {
   AlertCircle, HardDrive, Usb,
 } from "lucide-react";
 import { resolveStandaloneApi } from "@/lib/standalone-api";
+import { isStandaloneHost } from "@/lib/env";
 
 // Register core Lucide icon components on globalThis as a defensive safety net
 try {
@@ -210,6 +211,31 @@ function buildStaticSseResponse(urlStr: string, body: Record<string, unknown> | 
     return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
   }
 
+  if (/\/api\/nova\/sessions\/[^/]+\/auto-chat$/.test(urlStr)) {
+    // LiveAgentPanel parses raw `data: {json}` lines from this endpoint.
+    const content = String(body?.content || body?.message || "فحص الهدف النشط");
+    const reply =
+      `⚡ **الوكيل المستقل (Nova Auto-Chat)**\n\n` +
+      `تم استلام الأمر: \`${content.slice(0, 160)}\`\n\n` +
+      `- تم تحميل سياق الذاكرة (/api/memory) والمهمة النشطة (/api/missions).\n` +
+      `- تم تجهيز خطوات الفحص القانوني وربطها بخزنة الأدلة (Zero-FP).`;
+    const chunks = reply.match(/.{1,28}/gs) ?? [reply];
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (payload: unknown) =>
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+        send({ text: "" });
+        for (const c of chunks) {
+          send({ text: c });
+          await new Promise((r) => setTimeout(r, 14));
+        }
+        send({ done: true, mode: "standalone" });
+        controller.close();
+      },
+    });
+    return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+  }
+
   if (/\/api\/bot\/cron\/\d+\/trigger$/.test(urlStr)) {
     const stream = new ReadableStream({
       async start(controller) {
@@ -232,6 +258,24 @@ function buildStaticSseResponse(urlStr: string, body: Record<string, unknown> | 
 
 type SseEmitterFn = (eventName: string, data: unknown) => void;
 const activeCveSseEmitters = new Set<SseEmitterFn>();
+/**
+ * Emitters for the platform-wide event stream (`/api/agent/events`,
+ * `/api/live-events`, `/api/monitor/stream`, `/api/bot/events`, `/api/push/stream`).
+ * On a static host there is no backend, so platform events (memory saved, note
+ * added, target selected, task updates...) are fanned out from the in-page bus.
+ */
+const activePlatformSseEmitters = new Set<SseEmitterFn>();
+
+function broadcastPlatformSse(eventName: string, data: unknown) {
+  for (const emit of Array.from(activePlatformSseEmitters)) {
+    try { emit(eventName, data); } catch { /* ignore */ }
+  }
+}
+
+if (typeof window !== "undefined") {
+  (window as unknown as { __cybernovaPlatformSse?: typeof broadcastPlatformSse }).__cybernovaPlatformSse =
+    broadcastPlatformSse;
+}
 
 function notifyAllSseAndWs(urlStr: string, method: string, mockResult: unknown) {
   const m = (method || "GET").toUpperCase();
@@ -327,10 +371,19 @@ function notifyAllSseAndWs(urlStr: string, method: string, mockResult: unknown) 
       ts: Date.now(),
     });
   }
+
+  // Mirror every mutation onto the platform SSE bus so SystemContext / dashboards
+  // stay live even on a fully static host.
+  broadcastPlatformSse("message", {
+    type: "api_mutation",
+    endpoint: urlStr,
+    method: m,
+    ts: Date.now(),
+  });
 }
 
 // Intercept EventSource on static hosts (e.g., GitHub Pages) so SSE streams never fail and support named SSE events
-if (typeof window !== "undefined" && window.location.hostname.endsWith("github.io")) {
+if (typeof window !== "undefined" && isStandaloneHost()) {
   const OriginalEventSource = window.EventSource;
   class StandaloneEventSource extends EventTarget {
     url: string;
@@ -339,6 +392,7 @@ if (typeof window !== "undefined" && window.location.hostname.endsWith("github.i
     onmessage: ((ev: MessageEvent) => unknown) | null = null;
     onerror: ((ev: Event) => unknown) | null = null;
     private timer: ReturnType<typeof setTimeout> | null = null;
+    private platformHeartbeat: ReturnType<typeof setInterval> | null = null;
     private emitNamedFn: SseEmitterFn | null = null;
 
     constructor(url: string | URL, eventSourceInitDict?: EventSourceInit) {
@@ -374,6 +428,18 @@ if (typeof window !== "undefined" && window.location.hostname.endsWith("github.i
         } else if (urlStr.includes("/nuclei/scan")) {
           emitNamed("message", { type: "log", message: "[INF] Running passive template verification across 76,680+ galaxy signatures..." });
           emitNamed("message", { type: "done", total: 1 });
+        } else if (
+          urlStr.includes("/agent/events") ||
+          urlStr.includes("/live-events") ||
+          urlStr.includes("/monitor/stream") ||
+          urlStr.includes("/bot/events") ||
+          urlStr.includes("/push/stream")
+        ) {
+          activePlatformSseEmitters.add(emitNamed);
+          emitNamed("connected", { ok: true, status: "live", transport: "internal-bus", ts: Date.now() });
+          this.platformHeartbeat = setInterval(() => {
+            emitNamed("message", { type: "heartbeat", ts: Date.now() });
+          }, 20_000);
         } else if (urlStr.includes("/cve/stream") || urlStr.includes("/cve-live/stream")) {
           activeCveSseEmitters.add(emitNamed);
           const currentStats = resolveStandaloneApi("/api/cve/db/stats", "GET", null) as { total?: number } | null;
@@ -400,7 +466,11 @@ if (typeof window !== "undefined" && window.location.hostname.endsWith("github.i
     close() {
       this.readyState = 2;
       if (this.timer) clearTimeout(this.timer);
-      if (this.emitNamedFn) activeCveSseEmitters.delete(this.emitNamedFn);
+      if (this.platformHeartbeat) clearInterval(this.platformHeartbeat);
+      if (this.emitNamedFn) {
+        activeCveSseEmitters.delete(this.emitNamedFn);
+        activePlatformSseEmitters.delete(this.emitNamedFn);
+      }
     }
   }
   window.EventSource = StandaloneEventSource as unknown as typeof EventSource;
@@ -408,7 +478,7 @@ if (typeof window !== "undefined" && window.location.hostname.endsWith("github.i
 }
 
 // Intercept raw WebSocket on static hosts (e.g., GitHub Pages) so pages calling new WebSocket('/api/ws') connect to the internal bus
-if (typeof window !== "undefined" && window.location.hostname.endsWith("github.io")) {
+if (typeof window !== "undefined" && isStandaloneHost()) {
   const OriginalWebSocket = window.WebSocket;
   const g = window as unknown as {
     __cybernovaRawWsListeners?: Set<(ev: unknown) => void>;
@@ -543,7 +613,7 @@ const cybernovaFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   if (urlStr && urlStr.includes("/api/")) {
     const method = init?.method || (input instanceof Request ? input.method : "GET");
     const parsedBody = parseBody(init);
-    const isStaticHost = window.location.hostname.endsWith("github.io");
+    const isStaticHost = isStandaloneHost();
 
     if (isStaticHost) {
       if (urlStr.includes("/api/ollama/chat/stream")) {

@@ -86,8 +86,11 @@ export function SystemProvider({ children }: { children: ReactNode }) {
 
   const refreshAll = useCallback(() => {
     addEvent("refresh");
-    void fetch("/api/memory?limit=50").then(r => r.json()).then((d: { entries?: MemoryEvent[] }) => {
-      if (d.entries) setMemoryEvents(d.entries);
+    void fetch("/api/memory?limit=50").then(r => r.json()).then((d: MemoryEvent[] | { entries?: MemoryEvent[]; memories?: MemoryEvent[] }) => {
+      // /api/memory answers with a bare array on the in-memory store and with
+      // { entries } / { memories } on other deployments — support all of them.
+      const list = Array.isArray(d) ? d : (d?.entries ?? d?.memories);
+      if (list) setMemoryEvents(list);
     }).catch(() => {});
   }, [addEvent]);
 

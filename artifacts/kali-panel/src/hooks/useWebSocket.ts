@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { resolveStandaloneApi } from "@/lib/standalone-api";
+import { isStandaloneHost } from "@/lib/env";
 
 export type WsEventHandler = (event: { type: string; [key: string]: unknown }) => void;
 
@@ -65,6 +66,15 @@ export function emitPlatformWsEvent(event: { type: string; [key: string]: unknow
       // ignore
     }
   }
+  // Mirror onto the platform SSE bus (installed by setup.ts on static hosts) so
+  // EventSource consumers such as SystemContext receive the same live events.
+  if (typeof window !== "undefined") {
+    const hook = (window as unknown as { __cybernovaPlatformSse?: (name: string, data: unknown) => void })
+      .__cybernovaPlatformSse;
+    if (hook) {
+      try { hook("message", payload); } catch { /* ignore */ }
+    }
+  }
 }
 
 if (typeof window !== "undefined") {
@@ -124,8 +134,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlersRef = useRef<Set<WsEventHandler>>(new Set());
-  const isStaticHost =
-    typeof window !== "undefined" && window.location.hostname.endsWith("github.io");
+  const isStaticHost = isStandaloneHost();
 
   if (onMessage) {
     handlersRef.current.add(onMessage);

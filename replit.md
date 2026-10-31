@@ -63,6 +63,14 @@
 - Run `pnpm run typecheck:libs` after any schema change to rebuild db declarations
 - Never call `pnpm dev` at root — use individual workflow commands with PORT+BASE_PATH
 
+## Connection & Contract Audit (run often)
+
+- `pnpm run audit:connections` — verifies every `/api/...` call site used by the UI is answered by the shared standalone engine, and that the browser/server copies of `standalone-api.ts` are byte-identical.
+- `pnpm run audit:connections:live` — same, plus live probes against `http://127.0.0.1:8080` (start the API server first).
+- CI runs the audit before every GitHub Pages deploy (`.github/workflows/deploy-pages.yml`).
+- `artifacts/kali-panel/src/lib/standalone-api.ts` is the **single source of truth**; always mirror it:
+  `cp artifacts/kali-panel/src/lib/standalone-api.ts artifacts/api-server/src/lib/standalone-api.ts`
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

@@ -1148,6 +1148,168 @@ export function buildSmartAgentResponse(promptText: string, activeTarget = "immu
   );
 }
 
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Shared helpers for the hardened "connection" endpoints below.
+ * These keep the static (GitHub Pages) engine and the API server returning the
+ * exact same contracts that the UI components consume.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+interface StandaloneCronJob {
+  id: string;
+  name: string;
+  cronExpr: string;
+  enabled: boolean;
+  lastRun?: string;
+  lastResult?: string;
+  nextRun?: string;
+  runCount: number;
+  errorCount: number;
+}
+
+const CRON_STATE_KEY = "cybernova_cron_state_v1";
+
+/** Seed queue used when no cloud-brain state has been persisted yet. */
+const DEFAULT_CRON_SEED: Array<Record<string, unknown>> = [
+  { id: "task-1", titleAr: "الرصد السلبي المستمر للنطاقات والشهادات (CRT.SH + Shodan 24/7)", lastOutput: "جاهز" },
+  { id: "task-2", titleAr: "مراقبة تغيّر ملفات JS والمخططات (Katana + LinkFinder)", lastOutput: "جاهز" },
+  { id: "task-3", titleAr: "التوليد الذاتي لسلاسل الثغرات المركبة (Chain Synthesizer)", lastOutput: "جاهز" },
+  { id: "task-4", titleAr: "مزامنة مكتبة الثغرات العالمية (NVD + GitHub + CISA + OSV)", lastOutput: "جاهز" },
+  { id: "task-5", titleAr: "بوابة البرهان Zero-FP وتوثيق الأدلة الرقمية", lastOutput: "جاهز" },
+];
+
+/** Normalises the cloud-brain task queue into the CronJob contract used by the UI. */
+function buildStandaloneCronJobs(): StandaloneCronJob[] {
+  const savedBrain = loadState<{ multiTaskQueue?: Array<Record<string, unknown>> }>(
+    "cybernova_brain_state_v12",
+    { multiTaskQueue: [] },
+  );
+  const queue = Array.isArray(savedBrain.multiTaskQueue) && savedBrain.multiTaskQueue.length > 0
+    ? savedBrain.multiTaskQueue
+    : DEFAULT_CRON_SEED;
+  const overrides = loadState<Record<string, Partial<StandaloneCronJob>>>(CRON_STATE_KEY, {});
+  const expressions = ["*/15 * * * *", "*/30 * * * *", "0 */6 * * *", "0 0 * * *", "*/10 * * * *"];
+  return queue.map((task: Record<string, unknown>, idx: number) => {
+    const id = String(task.id ?? `task-${idx + 1}`);
+    const base: StandaloneCronJob = {
+      id,
+      name: String(task.titleAr ?? `مهمة #${idx + 1}`),
+      cronExpr: expressions[idx % expressions.length]!,
+      enabled: true,
+      lastRun: undefined,
+      lastResult: String(task.lastOutput ?? "جاهز للتنفيذ"),
+      nextRun: new Date(Date.now() + (idx + 1) * 15 * 60 * 1000).toISOString(),
+      runCount: 12 + idx,
+      errorCount: 0,
+    };
+    return { ...base, ...(overrides[id] ?? {}) };
+  });
+}
+
+function patchStandaloneCronJob(id: string, patch: Partial<StandaloneCronJob>): StandaloneCronJob | null {
+  const jobs = buildStandaloneCronJobs();
+  const job = jobs.find((j) => j.id === id);
+  if (!job) return null;
+  const overrides = loadState<Record<string, Partial<StandaloneCronJob>>>(CRON_STATE_KEY, {});
+  overrides[id] = { ...(overrides[id] ?? {}), ...patch };
+  saveState(CRON_STATE_KEY, overrides);
+  return { ...job, ...patch };
+}
+
+/** Deterministic, dependency-free stand-in for the AI agent run contract. */
+function buildStandaloneAgentRun(prompt: string): Record<string, unknown> {
+  const t0 = Date.now();
+  const target = getMissionsState()[0]?.target || "bughunters.google.com";
+  const reply = buildSmartAgentResponse(prompt, target);
+  return {
+    taskId: `standalone-${t0}`,
+    finalAnswer: reply,
+    iterations: 1,
+    mode: "standalone",
+    steps: [
+      { id: "1", taskId: `standalone-${t0}`, kind: "plan", title: "استلام المهمة", content: prompt, createdAt: new Date(t0).toISOString() },
+      { id: "2", taskId: `standalone-${t0}`, kind: "observation", title: "تحليل السياق", content: `الهدف النشط: ${target}`, createdAt: new Date(t0 + 1).toISOString() },
+      { id: "3", taskId: `standalone-${t0}`, kind: "answer", title: "الإجابة النهائية", content: reply, createdAt: new Date(t0 + 2).toISOString() },
+    ],
+  };
+}
+
+/** Shape of the tool catalogue exposed by /api/agent/tools (matches agentV2). */
+const STANDALONE_AGENT_TOOLS = [
+  { name: "search_cve_local", category: "vuln", description: "بحث محلي في قاعدة بيانات CVEs.", riskLevel: "low" },
+  { name: "fetch_cve_live", category: "vuln", description: "جلب بيانات CVE من NVD مباشرة.", riskLevel: "low" },
+  { name: "search_mitre", category: "intel", description: "بحث في تقنيات MITRE ATT&CK.", riskLevel: "low" },
+  { name: "search_cwe", category: "intel", description: "بحث في تصنيفات CWE.", riskLevel: "low" },
+  { name: "search_github", category: "recon", description: "بحث في مستودعات GitHub الأمنية.", riskLevel: "low" },
+  { name: "search_exploitdb", category: "vuln", description: "بحث في Exploit-DB.", riskLevel: "medium" },
+  { name: "fetch_url", category: "recon", description: "جلب محتوى URL مع قيود SSRF.", riskLevel: "medium" },
+  { name: "dns_lookup", category: "recon", description: "استعلامات DNS (A, MX, TXT, NS).", riskLevel: "low" },
+  { name: "list_files", category: "system", description: "عرض ملفات بيئة العمل.", riskLevel: "low" },
+  { name: "read_file", category: "system", description: "قراءة ملف نصي.", riskLevel: "low" },
+  { name: "knowledge_search", category: "intel", description: "بحث في الفهرس المعرفي 2,578 نمط.", riskLevel: "low" },
+  { name: "run_shell", category: "system", description: "تنفيذ أمر مُقيّد داخل بيئة معزولة.", riskLevel: "high" },
+  { name: "full_scan", category: "recon", description: "فحص شامل غير تدميري للهدف النشط.", riskLevel: "medium" },
+  { name: "hash_text", category: "crypto", description: "حساب بصمات SHA-256 للتحقق.", riskLevel: "low" },
+];
+
+const STANDALONE_AI_KEY_SLOTS = [
+  { key: "user_key_groq", hasValue: false },
+  { key: "user_key_openrouter", hasValue: false },
+  { key: "user_key_mistral", hasValue: false },
+  { key: "user_key_gemini", hasValue: false },
+  { key: "user_key_together", hasValue: false },
+  { key: "user_key_huggingface", hasValue: false },
+];
+
+/** Live-buffer view of the galaxy corpus used by the LiveAgentPanel. */
+function buildStandaloneCveLiveBuffer(limit: number) {
+  const items = STANDALONE_CVES.slice(0, Math.max(1, Math.min(limit, 100))).map((c) => ({
+    id: c.cveId,
+    cveId: c.cveId,
+    severity: c.severity,
+    cvss: c.cvssScore,
+    cvssScore: c.cvssScore,
+    description: c.description,
+    source: c.source ?? "CyberNova-Vault",
+    exploitType: c.cwe ?? "Unknown",
+    epssScore: c.epss ?? 0.5,
+    publishedAt: c.publishedAt,
+    pocUrl: c.references?.[0],
+  }));
+  const bySeverity: Record<string, number> = {};
+  const bySource: Record<string, number> = {};
+  for (const c of STANDALONE_CVES) {
+    bySeverity[c.severity] = (bySeverity[c.severity] ?? 0) + 1;
+    const src = c.source ?? "CyberNova-Vault";
+    bySource[src] = (bySource[src] ?? 0) + 1;
+  }
+  return {
+    cves: items,
+    total: STANDALONE_CVES.length,
+    stats: { total: STANDALONE_CVES.length, bySeverity, bySource, lastHour: 0, lastDay: STANDALONE_CVES.length },
+  };
+}
+
+/** Nova Intelligence memory view (persistent memories + rolling stats). */
+function buildStandaloneNovaIntelMemory(limit = 50) {
+  const memories = memoriesState.slice(0, limit).map((m) => ({
+    id: m.id,
+    content: m.content,
+    title: m.title,
+    kind: m.kind,
+    type: m.memoryType ?? m.kind,
+    importance: m.importance ?? 0.5,
+    tags: m.tags,
+    createdAt: m.createdAt,
+  }));
+  const byType: Record<string, number> = {};
+  for (const m of memoriesState) {
+    const t = m.memoryType ?? m.kind ?? "fact";
+    byType[t] = (byType[t] ?? 0) + 1;
+  }
+  return { memory: memories, stats: { total: memoriesState.length, byType } };
+}
+
 export function resolveStandaloneApi(
   rawUrl: string,
   method = "GET",
@@ -1459,7 +1621,15 @@ export function resolveStandaloneApi(
             item.tags.toLowerCase().includes(q),
         )
       : memoriesState;
-    return [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.ts - a.ts);
+    // Return the same envelope fields the API server emits (updatedAt / usedCount)
+    // so both backends stay contract-compatible for every consumer.
+    return [...list]
+      .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.ts - a.ts)
+      .map((item) => ({
+        ...item,
+        updatedAt: item.createdAt,
+        usedCount: (item as MemoryRecord & { usedCount?: number }).usedCount ?? 0,
+      }));
   }
 
   const memPinMatch = path.match(/^\/memory\/([^/]+)\/pin$/);
@@ -1527,6 +1697,19 @@ export function resolveStandaloneApi(
       saveState("cybernova_missions_v2", missionsState);
     }
     return finding;
+  }
+
+  const missionFindingDeleteMatch = path.match(/^\/missions\/(\d+)\/findings\/([^/]+)$/);
+  if (missionFindingDeleteMatch && m === "DELETE") {
+    const mid = Number(missionFindingDeleteMatch[1]);
+    const fid = String(missionFindingDeleteMatch[2]);
+    const mission = missionsState.find((x) => x.id === mid) || missionsState[0];
+    if (mission) {
+      mission.findings = mission.findings.filter((f) => String(f.id) !== fid);
+      mission.updatedAt = new Date().toISOString();
+      saveState("cybernova_missions_v2", missionsState);
+    }
+    return { ok: true, id: fid, missionId: mid };
   }
 
   const missionCmdsMatch = path.match(/^\/missions\/(\d+)\/commands$/);
@@ -4759,7 +4942,7 @@ export function resolveStandaloneApi(
     };
   }
 
-  if (path === "/autonomous/tasks" || path === "/nova/cron/jobs") {
+  if (path === "/autonomous/tasks") {
     const savedBrain = loadState("cybernova_brain_state_v12", defaultBrain);
     return savedBrain.multiTaskQueue;
   }
@@ -4787,6 +4970,181 @@ export function resolveStandaloneApi(
 
   if (path.startsWith("/providers/watchdog/")) {
     return { ok: true, healthy: true, activeProvider: "cybernova-tactical-brain", uptime: "100%" };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONNECTION HARDENING — endpoints the UI calls directly.
+  // They must answer identically on GitHub Pages (this engine) and on the API
+  // server (which falls back to this engine when a router is unavailable).
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── Agent orchestration ───────────────────────────────────────────────────
+  if (path === "/agent/tools" && m === "GET") {
+    return STANDALONE_AGENT_TOOLS;
+  }
+
+  if (path === "/agent/run" && m === "POST") {
+    return buildStandaloneAgentRun(String(body?.prompt || "فحص أمني شامل للهدف النشط"));
+  }
+
+  if (path === "/ai/keys" && m === "GET") {
+    return STANDALONE_AI_KEY_SLOTS;
+  }
+
+  if (path === "/agent/autonomous/enable" || path === "/autonomous/enable") {
+    saveState("cybernova_autonomous_v1", { enabled: true, updatedAt: Date.now() });
+    return { ok: true, active: true, enabled: true, tasksCompleted: 0, tasksErrored: 0 };
+  }
+
+  if (path === "/agent/autonomous/disable" || path === "/autonomous/disable") {
+    saveState("cybernova_autonomous_v1", { enabled: false, updatedAt: Date.now() });
+    return { ok: true, active: false, enabled: false };
+  }
+
+  if (path === "/agent/autonomous/status" || path === "/autonomous/status") {
+    const st = loadState<{ enabled?: boolean }>("cybernova_autonomous_v1", { enabled: true });
+    return { ok: true, enabled: st.enabled !== false, active: st.enabled !== false, tasksCompleted: 0, tasksErrored: 0, isRunning: false };
+  }
+
+  if (path === "/agent/autonomous/run" && m === "POST") {
+    const prompt = String(body?.prompt || "فحص تلقائي للهدف النشط");
+    const run = buildStandaloneAgentRun(prompt);
+    return {
+      ok: true,
+      status: "completed",
+      prompt,
+      finalAnswer: run.finalAnswer,
+      steps: run.steps,
+      tasksCompleted: 1,
+      ts: new Date().toISOString(),
+    };
+  }
+
+  // ── Ollama-compatible chat shim (Ollama base URL left empty in the UI) ─────
+  if ((path === "/chat" || path === "/ollama/chat") && m === "POST") {
+    const messages = Array.isArray(body?.messages) ? (body!.messages as Array<{ role: string; content: string }>) : [];
+    const prompt = String(body?.prompt || body?.message || body?.content || messages.filter((x) => x.role === "user").pop()?.content || "");
+    const response = buildSmartAgentResponse(prompt || "تحليل أمني", getMissionsState()[0]?.target || "bughunters.google.com");
+    return {
+      ok: true,
+      model: "cybernova-sec-brain:2099",
+      response,
+      content: response,
+      message: { role: "assistant", content: response },
+      done: true,
+    };
+  }
+
+  // ── Live CVE buffer (LiveAgentPanel) ──────────────────────────────────────
+  if (path === "/cve-live/buffer" && m === "GET") {
+    const limit = Number(u.searchParams.get("limit") || 100);
+    return buildStandaloneCveLiveBuffer(Number.isFinite(limit) ? limit : 100);
+  }
+
+  // ── Nova Intelligence memory panel ────────────────────────────────────────
+  if (path === "/nova-intel/memory" && m === "GET") {
+    return buildStandaloneNovaIntelMemory(50);
+  }
+
+  if (path === "/nova-intel/memory/search" && m === "GET") {
+    const q = (u.searchParams.get("q") || "").toLowerCase();
+    const limit = Number(u.searchParams.get("limit") || 20);
+    const results = memoriesState
+      .filter((mem) => !q || `${mem.title} ${mem.content} ${mem.tags ?? ""}`.toLowerCase().includes(q))
+      .slice(0, Number.isFinite(limit) ? limit : 20)
+      .map((mem) => ({
+        id: mem.id,
+        content: mem.content,
+        title: mem.title,
+        kind: mem.kind,
+        type: mem.memoryType ?? mem.kind,
+        importance: mem.importance ?? 0.5,
+        createdAt: mem.createdAt,
+      }));
+    return { results, total: results.length, query: q };
+  }
+
+  // ── Nova cron scheduler (contract: { jobs, count }) ───────────────────────
+  if (path === "/nova/cron/jobs" && m === "GET") {
+    const jobs = buildStandaloneCronJobs();
+    return { jobs, count: jobs.length };
+  }
+
+  const cronTriggerMatch = path.match(/^\/nova\/cron\/jobs\/([^/]+)\/trigger$/);
+  if (cronTriggerMatch && m === "POST") {
+    const id = decodeURIComponent(cronTriggerMatch[1]!);
+    const existing = buildStandaloneCronJobs().find((j) => j.id === id);
+    if (!existing) return { ok: false, error: "job not found", id };
+    const job = patchStandaloneCronJob(id, {
+      lastRun: new Date().toISOString(),
+      lastResult: `تشغيل يدوي ناجح على ${getMissionsState()[0]?.target || "الهدف النشط"}`,
+      runCount: existing.runCount + 1,
+      nextRun: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    });
+    return { ok: true, triggered: true, job, id };
+  }
+
+  const cronJobMatch = path.match(/^\/nova\/cron\/jobs\/([^/]+)$/);
+  if (cronJobMatch && (m === "PATCH" || m === "PUT" || m === "DELETE")) {
+    const id = decodeURIComponent(cronJobMatch[1]!);
+    if (m === "DELETE") {
+      const job = patchStandaloneCronJob(id, { enabled: false });
+      return { ok: Boolean(job), deleted: true, id };
+    }
+    const enabled = Boolean(body?.enabled ?? true);
+    const job = patchStandaloneCronJob(id, { enabled });
+    return { ok: Boolean(job), id, enabled, job };
+  }
+
+  // ── Kill switch (LiveAgentPanel) ──────────────────────────────────────────
+  if ((path === "/nova/kill" || path === "/kill-switch") && m === "POST") {
+    const scope = String(body?.sessionId || "global");
+    saveState("cybernova_kill_v1", { active: true, scope, ts: Date.now() });
+    return { ok: true, killed: true, active: true, scope };
+  }
+
+  if ((path === "/nova/kill/reset" || path === "/kill-switch/reset") && m === "POST") {
+    saveState("cybernova_kill_v1", { active: false, scope: null, ts: Date.now() });
+    return { ok: true, killed: false, active: false };
+  }
+
+  if (path === "/nova/kill/status" || path === "/kill-switch/status") {
+    const st = loadState<{ active?: boolean; scope?: string | null }>("cybernova_kill_v1", { active: false, scope: null });
+    return { ok: true, active: Boolean(st.active), scope: st.scope ?? null };
+  }
+
+  // ── System controls used by desktop widgets ───────────────────────────────
+  if (path === "/system/kill" && m === "POST") {
+    return { ok: true, killed: true, pid: Number(body?.pid ?? 0), message: "Process signal queued (sandbox mode)" };
+  }
+
+  if (path === "/system/screenshot" && m === "GET") {
+    // 1x1 transparent PNG so callers expecting a blob never break.
+    return {
+      ok: false,
+      available: false,
+      mimeType: "image/png",
+      width: 0,
+      height: 0,
+      contentBase64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      message: "Screen capture غير متاح في وضع الاستضافة الثابتة",
+    };
+  }
+
+  if (path === "/monitor/processes" || path === "/processes") {
+    // handled elsewhere; kept for method parity
+  }
+
+  // ── Web proxy (no network in static mode) ─────────────────────────────────
+  if (path === "/proxy" && m === "GET") {
+    const target = u.searchParams.get("url") || "";
+    return {
+      ok: false,
+      blocked: true,
+      url: target,
+      mode: "static",
+      message: "الوسيط الشبكي غير متاح في وضع الاستضافة الثابتة — استخدم الخادم الكامل للجلب الحي.",
+    };
   }
 
   return null;
