@@ -255,7 +255,18 @@ async function phaseWorkUi() {
   const need = ["محطة العمل", "المهمات", "الأدوات", "خريطة الشبكة", "الليف بانل", "وسّع القدرات", "خطة العمل", "حالة الاتصالات"];
   const missing = need.filter((n) => !text.includes(n));
 
-  results.workUi = { chars: text.length, inputs, missing };
+  let storeMachines = null;
+  try {
+    storeMachines = window.__novaLive?.()?.machines?.length ?? null;
+  } catch { /* ignore */ }
+  const machines = storeMachines ?? Number((text.match(/أجهزة\s*(\d+)/) ?? [])[1] ?? NaN);
+  results.workUi = {
+    chars: text.length, inputs, missing, machines,
+    fleetDebug: (() => { try { return window.__novaFleetDebug ?? null; } catch { return null; } })(),
+  };
+  // The strip used to read «أجهزة 0» even though the browser itself is a live
+  // node — that is the "looks dead" bug.
+  if (machines === 0) findings.push({ kind: "fleet-zero", detail: "live bar shows 0 machines while the browser node exists" });
 
   // The live site once claimed «اتصال مباشر دائم مع المنصة» with no server at
   // all — the exact "it's connected" lie. Keep that from coming back.
@@ -628,7 +639,8 @@ if (asJson) {
   }
   if (results.workUi) {
     const u = results.workUi;
-    console.log(`Work page     : ${u.chars} chars, ${u.inputs} inputs${u.missing.length ? ` — missing: ${u.missing.join(", ")}` : " ✓"}`);
+    console.log(`Work page     : ${u.chars} chars, ${u.inputs} inputs, ${u.machines ?? "?"} node(s)${u.missing.length ? ` — missing: ${u.missing.join(", ")}` : " ✓"}`);
+    if (u.fleetDebug) console.log(`  fleet debug : ${JSON.stringify(u.fleetDebug)}`);
   }
   console.log("");
   if (findings.length) {

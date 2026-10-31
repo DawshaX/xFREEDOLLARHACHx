@@ -245,16 +245,23 @@ let socket: WebSocket | null = null;
 let timers: ReturnType<typeof setTimeout>[] = [];
 
 async function refreshFleet() {
+  const dbg = (window as unknown as { __novaFleetDebug?: Record<string, unknown> }).__novaFleetDebug ?? {};
   try {
     const r = await fetch(`${apiBase()}/agents`, { headers: { accept: "application/json" } });
+    dbg.url = `${apiBase()}/agents`;
+    dbg.status = r.status;
     if (!r.ok) return;
     const j = await r.json();
     const agents: unknown[] = Array.isArray(j) ? j : (j?.agents ?? []);
     // No server ⇒ no remote machines, but this tab is still a live node.
+    dbg.count = agents.length;
     ingest({ type: "fleet", agents: agents.length ? agents : [selfNode()] });
-  } catch {
+    dbg.after = state.machines.length;
+  } catch (e) {
+    dbg.error = (e as Error).message;
     /* offline: keep last known truth */
   }
+  (window as unknown as { __novaFleetDebug?: Record<string, unknown> }).__novaFleetDebug = dbg;
 }
 
 function connect() {
@@ -317,7 +324,16 @@ function start() {
   );
 }
 
-if (typeof window !== "undefined") start();
+if (typeof window !== "undefined") {
+  start();
+  // If the first read lost the race with the shim, try once more shortly after.
+  setTimeout(() => {
+    if (!state.machines.length) void refreshFleet();
+  }, 1500);
+  // Debug/audit hook: the live store is otherwise invisible from the outside,
+  // which made "the bar says 0 but the API says 1" impossible to diagnose.
+  (window as unknown as { __novaLive?: () => NovaLinkState }).__novaLive = () => state;
+}
 
 /* ────────────────────────────── hook ────────────────────────────── */
 
