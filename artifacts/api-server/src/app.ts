@@ -433,6 +433,8 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       // The whole local-agent namespace is a real router (fleet of machines,
       // PTY, files, screenshots, downloads) — none of it may be mocked.
       p.startsWith("/local-agent") ||
+      // Fleet mesh = the live network between all agents; must never be mocked.
+      p.startsWith("/fleet") ||
       (p.startsWith("/tools") && p !== "/tools/shell" && p !== "/tools/webfetch") ||
       p.startsWith("/proxy") ||
       p.startsWith("/scanner") ||
