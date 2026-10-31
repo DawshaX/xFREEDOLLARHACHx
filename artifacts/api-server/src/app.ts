@@ -435,6 +435,10 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       p.startsWith("/local-agent") ||
       // Fleet mesh = the live network between all agents; must never be mocked.
       p.startsWith("/fleet") ||
+      // The live-agent router owns sessions + brain-status. The mock used to
+      // answer these with a DIFFERENT payload shape, which crashed the panel
+      // (brainStatus.activeProcesses was undefined → ".length of undefined").
+      p.startsWith("/live-agent") ||
       (p.startsWith("/tools") && p !== "/tools/shell" && p !== "/tools/webfetch") ||
       p.startsWith("/proxy") ||
       p.startsWith("/scanner") ||

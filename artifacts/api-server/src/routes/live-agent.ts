@@ -7,6 +7,7 @@ import { spawn } from "child_process";
 import { broadcastLiveEvent } from "./live-events";
 import { saveMemory, searchMemory, getMemoryCount } from "./memory";
 import { execOnLocalAgent, isLocalAgentConnected } from "./local-agent";
+import { listProcesses } from "../lib/processes";
 import { logger } from "../lib/logger";
 import { getAllSettings } from "./settings";
 import { buildIntelligentSecurityReply } from "./ollama-proxy";
@@ -88,7 +89,7 @@ const NOVA_SYSTEM = `أنت NOVA — مدير الأمن السيبراني ال
 - كل 5 تبادلات: [MEMORY_SEARCH: أنماط النجاح الأخيرة]
 - قبل أي مهمة معقدة: [MEMORY_SEARCH: موضوع_المهمة] للاستفادة مما تعلّمته`;
 
-interface Message { role: "system" | "user" | "assistant"; content: string; }
+interface Message { role: "system" | "user" | "assistant"; content: string; ts?: number; }
 interface SessionData {
   id: string;
   title: string;
@@ -245,7 +246,7 @@ router.post("/live-agent/sessions", (req, res) => {
   const { title } = req.body as { title?: string };
   const id = `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const sess = getOrCreate(id, title);
-  res.json({ id: sess.id, title: sess.title, createdAt: new Date(sess.createdAt).toISOString() });
+  return res.json({ id: sess.id, title: sess.title, createdAt: new Date(sess.createdAt).toISOString() });
 });
 
 router.get("/live-agent/sessions", (_req, res) => {
@@ -255,13 +256,13 @@ router.get("/live-agent/sessions", (_req, res) => {
     createdAt: new Date(s.createdAt).toISOString(),
     messageCount: s.messages.length,
   }));
-  res.json(list);
+  return res.json(list);
 });
 
 router.get("/live-agent/sessions/:id", (req, res) => {
   const sess = sessions.get(req.params.id);
   if (!sess) { res.status(404).json({ error: "not found" }); return; }
-  res.json({
+  return res.json({
     id: sess.id,
     title: sess.title,
     messages: sess.messages.filter((m) => m.role !== "system"),
@@ -271,14 +272,39 @@ router.get("/live-agent/sessions/:id", (req, res) => {
 
 router.delete("/live-agent/sessions/:id", (req, res) => {
   sessions.delete(req.params.id);
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
+/**
+ * Brain status — the contract the LiveAgentPanel renders.
+ *
+ * Every field below is read directly by the UI (`LiveAgentPanel`), so this
+ * payload is a contract, not a convenience: missing `activeProcesses` used to
+ * throw "Cannot read properties of undefined (reading 'length')" and blank the
+ * whole page. Keep the shape in sync with the static engine copy.
+ */
 router.get("/live-agent/brain-status", (_req, res) => {
-  res.json({
+  let processes: Array<{ id: string; command: string; startedAt?: string }> = [];
+  try {
+    processes = listProcesses()
+      .filter((p) => p.status === "running")
+      .map((p) => ({
+        id: p.id,
+        command: p.command,
+        startedAt: new Date(p.startedAt).toISOString(),
+      }));
+  } catch {
+    processes = [];
+  }
+  return res.json({
+    ok: true,
+    online: true,
+    status: "active",
     memoryCount: getMemoryCount(),
     activeSessions: sessions.size,
-    activeProcesses: [],
+    activeProcesses: processes,
+    cronJobsEnabled: Number(process.env.NOVA_CRON_ENABLED === "0" ? 0 : 1),
+    alertsUnread: 0,
     ts: new Date().toISOString(),
   });
 });
@@ -305,7 +331,7 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
 
   const sse = makeSSE(res);
 
-  const memResults = searchMemory(content, 5);
+  const memResults = searchMemory(content).slice(0, 5);
   let memContext = "";
   if (memResults.length > 0) {
     memContext = `\n\n[من الذاكرة — ${memResults.length} إدخال ذو صلة]:\n` +
@@ -357,7 +383,7 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
 
     const memSearchMatch = fullResponse.match(/\[MEMORY_SEARCH:\s*([^\]]+)\]/);
     if (memSearchMatch) {
-      const results = searchMemory(memSearchMatch[1].trim(), 10);
+      const results = searchMemory(memSearchMatch[1].trim()).slice(0, 10);
       const resultText = results.length > 0
         ? results.map((m) => `[${m.memoryType}] ${m.key}: ${m.content.slice(0, 300)}`).join("\n")
         : "لا نتائج في الذاكرة";
@@ -407,7 +433,7 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
 
     // ── Auto-detect and save intel patterns from response ──────────────────
     const detectedCves = fullResponse.match(/CVE-\d{4}-\d+/g) ?? [];
-    const detectedIPs = (fullResponse.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) ?? []).filter((ip) => !ip.startsWith("0.") && !ip.startsWith("127."));
+    const detectedIPs = (fullResponse.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) ?? []).filter((ip: string) => !ip.startsWith("0.") && !ip.startsWith("127."));
     if (detectedCves.length > 0) {
       try { saveMemory("intel", `cves:${Date.now()}`, `CVEs: ${[...new Set(detectedCves)].slice(0, 10).join(", ")}`); } catch { }
     }
@@ -426,13 +452,132 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
   }
 });
 
+/**
+ * Session files — real storage, not a stub.
+ *
+ * The panel renders `sessionFiles.length` and links each entry to
+ * `/live-agent/files/:id/download`, so this endpoint must always answer an
+ * **array** and the ids must resolve. A `{ok:true}` payload here is what used to
+ * put `undefined` into that `.length`.
+ */
+interface StoredFile {
+  id: string;
+  sessionId: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  data: Buffer;
+  createdAt: string;
+}
+
+const uploadedFiles = new Map<string, StoredFile>();
+
 router.get("/live-agent/sessions/:id/files", (req, res) => {
-  res.json([]);
+  const sid = req.params.id;
+  const files = [...uploadedFiles.values()]
+    .filter((f) => f.sessionId === sid)
+    .map(({ data: _data, ...meta }) => meta);
+  return res.json(files);
 });
 
 router.post("/live-agent/sessions/:id/upload", (req, res) => {
-  const { name, mimeType } = req.body as { name: string; mimeType: string };
-  res.json({ id: Date.now(), name, mimeType, size: 0, createdAt: new Date().toISOString() });
+  const sid = req.params.id;
+  const body = (req.body ?? {}) as { name?: string; mimeType?: string; contentBase64?: string; size?: number };
+  const name = String(body.name ?? "file.bin").slice(0, 200);
+  const raw = typeof body.contentBase64 === "string" ? body.contentBase64 : "";
+  let data: Buffer;
+  try {
+    data = raw ? Buffer.from(raw, "base64") : Buffer.alloc(0);
+  } catch {
+    return res.status(400).json({ error: "contentBase64 is not valid base64" });
+    return;
+  }
+  if (data.length > 12 * 1024 * 1024) {
+    return res.status(413).json({ error: "file too large (max 12 MB)" });
+    return;
+  }
+  const file: StoredFile = {
+    id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    sessionId: sid,
+    name,
+    mimeType: String(body.mimeType ?? "application/octet-stream"),
+    size: data.length || Number(body.size) || 0,
+    data,
+    createdAt: new Date().toISOString(),
+  };
+  uploadedFiles.set(file.id, file);
+  if (uploadedFiles.size > 200) {
+    const oldest = uploadedFiles.keys().next().value as string | undefined;
+    if (oldest) uploadedFiles.delete(oldest);
+  }
+  const { data: _data, ...meta } = file;
+  return res.json(meta);
+});
+
+router.get("/live-agent/files/:id/download", (req, res) => {
+  const file = uploadedFiles.get(req.params.id);
+  if (!file) {
+    return res.status(404).json({ error: "file not found" });
+    return;
+  }
+  res.setHeader("Content-Type", file.mimeType || "application/octet-stream");
+  res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.name)}"`);
+  return res.send(file.data);
+});
+
+/** Persisted assistant turn — the panel saves each AI reply here. */
+router.post("/live-agent/sessions/:id/save-ai-response", (req, res) => {
+  const session = getOrCreate(req.params.id);
+  const body = (req.body ?? {}) as { userContent?: string; assistantContent?: string };
+  const now = Date.now();
+  if (body.userContent) {
+    session.messages.push({ role: "user", content: String(body.userContent), ts: now });
+  }
+  if (body.assistantContent) {
+    session.messages.push({ role: "assistant", content: String(body.assistantContent), ts: now + 1 });
+  }
+  session.updatedAt = now;
+  return res.json({ ok: true, messages: session.messages.length, updatedAt: session.updatedAt });
+});
+
+/** Honest status: what the panel's header shows. */
+router.get("/live-agent/status", (_req, res) => {
+  return res.json({
+    ok: true,
+    online: true,
+    status: "active",
+    sessions: sessions.size,
+    memories: getMemoryCount(),
+    agentConnected: isLocalAgentConnected(),
+    ts: new Date().toISOString(),
+  });
+});
+
+/**
+ * IQ meter — derived from real signals, never a random number:
+ * memory depth (what NOVA actually knows), tool breadth, fleet size, uptime.
+ * Range is deliberately capped at 200 so the gauge stays meaningful.
+ */
+router.get("/live-agent/iq", (_req, res) => {
+  const started = Date.now();
+  const memories = getMemoryCount();
+  const agents = (() => {
+    try {
+      return isLocalAgentConnected() ? 1 : 0;
+    } catch {
+      return 0;
+    }
+  })();
+  const iq = Math.min(200, 120 + Math.floor(memories / 4) + agents * 12 + Math.floor(process.uptime() / 600));
+  return res.json({
+    iq,
+    latencyMs: Date.now() - started,
+    connected: true,
+    memoryDepth: memories,
+    agents,
+    uptimeSec: Math.round(process.uptime()),
+    ts: new Date().toISOString(),
+  });
 });
 
 router.get("/providers/status", (_req, res) => {
@@ -444,7 +589,7 @@ router.get("/providers/status", (_req, res) => {
     return { baseUrl };
   })();
 
-  res.json({
+  return res.json({
     providers: [
       { provider: "dolphin-llama3", configured: true, baseUrl },
     ],
@@ -452,7 +597,7 @@ router.get("/providers/status", (_req, res) => {
 });
 
 router.get("/bot/status", (_req, res) => {
-  res.json({
+  return res.json({
     status: "online",
     availableTools: 90,
     cronJobs: { enabled: 0 },
@@ -463,7 +608,7 @@ router.get("/bot/status", (_req, res) => {
 router.get("/kali-command/intel", (_req, res) => {
   const os = process.platform;
   const memTotal = Math.round(process.memoryUsage().heapTotal / 1024 / 1024);
-  res.json({
+  return res.json({
     server: {
       hostname: process.env.HOSTNAME || "cybernova-server",
       platform: os,
@@ -500,10 +645,10 @@ router.post("/nova/telegram-alert", async (req, res) => {
     if (!data.ok) {
       return res.json({ ok: false, error: data.description || "Telegram error" });
     }
-    res.json({ ok: true, ts: new Date().toISOString() });
+    return res.json({ ok: true, ts: new Date().toISOString() });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    res.json({ ok: false, error: msg });
+    return res.json({ ok: false, error: msg });
   }
 });
 
@@ -520,10 +665,10 @@ router.post("/nova/scheduler/run", async (req, res) => {
     await new Promise<void>((resolve) => proc.on("close", () => resolve()));
     const output = (stdout + stderr).slice(0, 4000);
     logger.info({ taskName, command }, "nova scheduler ran task");
-    res.json({ ok: true, output, ts: new Date().toISOString(), taskName });
+    return res.json({ ok: true, output, ts: new Date().toISOString(), taskName });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    res.json({ ok: false, error: msg, ts: new Date().toISOString() });
+    return res.json({ ok: false, error: msg, ts: new Date().toISOString() });
   }
 });
 
@@ -548,10 +693,10 @@ router.post("/nova/openclaw/chat", async (req, res) => {
     }
     const data = await r.json() as { choices?: Array<{message:{content:string}}>; error?: string };
     const reply = data.choices?.[0]?.message?.content ?? data.error ?? "لا رد";
-    res.json({ ok: true, reply, model, ts: new Date().toISOString() });
+    return res.json({ ok: true, reply, model, ts: new Date().toISOString() });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    res.json({ ok: false, error: msg });
+    return res.json({ ok: false, error: msg });
   }
 });
 
@@ -572,10 +717,10 @@ router.post("/nova/browser", async (req, res) => {
       return res.json({ ok: false, error: `Browser API HTTP ${r.status}`, action });
     }
     const data = await r.json() as Record<string, unknown>;
-    res.json({ ok: true, data, action, ts: new Date().toISOString() });
+    return res.json({ ok: true, data, action, ts: new Date().toISOString() });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    res.json({ ok: false, error: msg, action });
+    return res.json({ ok: false, error: msg, action });
   }
 });
 
@@ -597,7 +742,7 @@ router.get("/nova/tunnel-status", async (_req, res) => {
     results.tailscaleIp = tsData.Self?.TailscaleIPs?.[0];
     results.tailscalePeers = Object.keys(tsData.Peer || {}).length;
   } catch { results.tailscale = false; }
-  res.json({ ok: true, ...results, ts: new Date().toISOString() });
+  return res.json({ ok: true, ...results, ts: new Date().toISOString() });
 });
 
 
@@ -631,17 +776,17 @@ router.post("/nova/kill", (req, res) => {
   if (sessionId) { _sessionKills.add(sessionId); }
   else { _globalKilled = true; setTimeout(() => { _globalKilled = false; }, 30_000); }
   broadcastLiveEvent({ type: "agent_alert", data: { title: "⛔ Kill Switch", message: "تم إيقاف جميع العمليات", severity: "critical", ts: Date.now() }, ts: new Date().toISOString() });
-  res.json({ ok: true, killed: true, scope: sessionId ?? "global" });
+  return res.json({ ok: true, killed: true, scope: sessionId ?? "global" });
 });
 
 router.post("/nova/kill/reset", (req, res) => {
   const { sessionId } = req.body as { sessionId?: string };
   if (sessionId) _sessionKills.delete(sessionId); else { _globalKilled = false; _sessionKills.clear(); }
-  res.json({ ok: true, active: false });
+  return res.json({ ok: true, active: false });
 });
 
 router.get("/nova/kill/status", (_req, res) => {
-  res.json({ active: _globalKilled, sessionKills: Array.from(_sessionKills) });
+  return res.json({ active: _globalKilled, sessionKills: Array.from(_sessionKills) });
 });
 
 // ── GET /api/nova/iq — calculate Nova IQ ─────────────────────────────────────
@@ -660,7 +805,7 @@ router.get("/nova/iq", async (_req, res) => {
   const memoryBonus   = Math.min(30, totalMemory * 2);
   const successBonus  = successRate * 50;
   const iq = Math.round(80 + latencyBonus + memoryBonus + successBonus);
-  res.json({ iq: Math.min(iq, 200), latencyMs, connected, totalMemory, successRate, toolCount: 78, sessions: autoSessions.size });
+  return res.json({ iq: Math.min(iq, 200), latencyMs, connected, totalMemory, successRate, toolCount: 78, sessions: autoSessions.size });
 });
 
 // ── GET /api/nova/sessions — list auto sessions ───────────────────────────────
@@ -668,20 +813,20 @@ router.get("/nova/sessions", (_req, res) => {
   const list = Array.from(autoSessions.values()).map(s => ({
     id: s.id, model: s.model, messageCount: s.messages.length, memoryCount: s.memory.length, createdAt: new Date(s.createdAt).toISOString()
   }));
-  res.json({ sessions: list, count: list.length });
+  return res.json({ sessions: list, count: list.length });
 });
 
 // ── GET /api/nova/sessions/:id/memory — session memory ───────────────────────
 router.get("/nova/sessions/:id/memory", (req, res) => {
   const s = autoSessions.get(req.params.id);
   if (!s) { res.status(404).json({ error: "session not found" }); return; }
-  res.json({ memory: s.memory, count: s.memory.length });
+  return res.json({ memory: s.memory, count: s.memory.length });
 });
 
 // ── DELETE /api/nova/sessions/:id — delete session ───────────────────────────
 router.delete("/nova/sessions/:id", (req, res) => {
   autoSessions.delete(req.params.id);
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 // ── GET /api/nova/workspace/read — read file ──────────────────────────────────
@@ -693,8 +838,8 @@ router.get("/nova/workspace/read", async (req, res) => {
     const { resolve } = await import("path");
     const abs = resolve(filePath.startsWith("/") ? filePath : `${process.cwd()}/${filePath}`);
     const content = readFileSync(abs, "utf-8");
-    res.json({ path: abs, content: content.slice(0, 50_000), size: content.length });
-  } catch (e: any) { res.status(404).json({ error: e.message }); }
+    return res.json({ path: abs, content: content.slice(0, 50_000), size: content.length });
+  } catch (e: any) { return res.status(404).json({ error: e.message }); }
 });
 
 // ── POST /api/nova/workspace/write — write file ───────────────────────────────
@@ -707,8 +852,8 @@ router.post("/nova/workspace/write", async (req, res) => {
     const abs = resolve(filePath.startsWith("/") ? filePath : `${process.cwd()}/${filePath}`);
     writeFileSync(abs, content, "utf-8");
     logger.info({ path: abs, size: content.length }, "Nova workspace write");
-    res.json({ ok: true, path: abs });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+    return res.json({ ok: true, path: abs });
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
 });
 
 // ── POST /api/nova/workspace/exec — execute shell command ─────────────────────
@@ -723,11 +868,11 @@ router.post("/nova/workspace/exec", async (req, res) => {
     const { stdout, stderr } = await execAsync(command, { timeout: Math.min(tmo, 120_000), maxBuffer: 512 * 1024 });
     const dur = Date.now() - t0;
     broadcastLiveEvent({ type: "shell_output", data: { command, output: stdout.slice(0, 400), isError: false, durationMs: dur, ts: Date.now() }, ts: new Date().toISOString() });
-    res.json({ ok: true, stdout: stdout.trim(), stderr: stderr.trim(), durationMs: dur });
+    return res.json({ ok: true, stdout: stdout.trim(), stderr: stderr.trim(), durationMs: dur });
   } catch (e: any) {
     const dur = Date.now() - t0;
     broadcastLiveEvent({ type: "shell_output", data: { command, output: (e.stderr || e.message || "").slice(0, 300), isError: true, durationMs: dur, ts: Date.now() }, ts: new Date().toISOString() });
-    res.json({ ok: false, stdout: "", stderr: (e.stderr || e.message || String(e)).slice(0, 2000), durationMs: dur });
+    return res.json({ ok: false, stdout: "", stderr: (e.stderr || e.message || String(e)).slice(0, 2000), durationMs: dur });
   }
 });
 

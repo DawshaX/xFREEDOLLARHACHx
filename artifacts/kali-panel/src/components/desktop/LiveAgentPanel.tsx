@@ -172,6 +172,51 @@ interface BrainStatus {
   ts: string;
 }
 
+/** Coerce any wire payload into a real array — `.length`/`.map` must never see undefined. */
+function asArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (value && typeof value === "object") {
+    for (const key of ["items", "data", "results", "files", "sessions", "agents"]) {
+      const inner = (value as Record<string, unknown>)[key];
+      if (Array.isArray(inner)) return inner as T[];
+    }
+  }
+  return [];
+}
+
+/**
+ * Never trust the wire. The brain-status payload has already shipped twice with
+ * a different shape (the static mock answered with only `memories`), and a
+ * single missing array blanked the whole page with
+ * "Cannot read properties of undefined (reading 'length')".
+ * Every field is coerced here so the UI can only ever see a complete object.
+ */
+function normalizeBrainStatus(raw: unknown): BrainStatus {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const num = (v: unknown, fallback = 0): number => {
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+  const rawProcs = r.activeProcesses;
+  const activeProcesses = Array.isArray(rawProcs)
+    ? rawProcs
+        .filter((p): p is Record<string, unknown> => Boolean(p) && typeof p === "object")
+        .map((p) => ({
+          id: String(p.id ?? p.pid ?? ""),
+          command: String(p.command ?? p.cmd ?? ""),
+          startedAt: p.startedAt ? String(p.startedAt) : undefined,
+        }))
+    : [];
+  return {
+    memoryCount: num(r.memoryCount ?? r.memories),
+    alertsUnread: num(r.alertsUnread),
+    activeSessions: num(r.activeSessions),
+    cronJobsEnabled: num(r.cronJobsEnabled),
+    activeProcesses,
+    ts: typeof r.ts === "string" && r.ts ? r.ts : new Date().toISOString(),
+  };
+}
+
 interface MemoryEntry {
   id: number;
   memoryType: string;
@@ -1542,7 +1587,7 @@ export function LiveAgentPanel({
   const refreshFiles = async (sid: string) => {
     try {
       const r = await fetch(`${API_BASE}/live-agent/sessions/${sid}/files`);
-      if (r.ok) setSessionFiles((await r.json()) as SessionFile[]);
+      if (r.ok) setSessionFiles(asArray<SessionFile>(await r.json()));
     } catch { /* ignore */ }
   };
 
@@ -1654,7 +1699,7 @@ export function LiveAgentPanel({
   const loadSessions = async () => {
     try {
       const r = await fetch(`${API_BASE}/live-agent/sessions`);
-      if (r.ok) setAllSessions((await r.json()) as Session[]);
+      if (r.ok) setAllSessions(asArray<Session>(await r.json()));
     } catch { /* ignore */ }
   };
 
@@ -2142,7 +2187,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   const refreshBrainStatus = async () => {
     try {
       const r = await fetch(`${API_BASE}/live-agent/brain-status`);
-      if (r.ok) setBrainStatus((await r.json()) as BrainStatus);
+      if (r.ok) setBrainStatus(normalizeBrainStatus(await r.json()));
     } catch { /* ignore */ }
   };
 
@@ -3110,7 +3155,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     setKaliMemoryLoading(true);
     try {
       const r = await fetch(`${API_BASE}/kali-command/memories?limit=30`);
-      if (r.ok) setKaliMemoryList(await r.json() as KaliMemEntry[]);
+      if (r.ok) setKaliMemoryList(asArray<KaliMemEntry>(await r.json()));
     } catch {}
     setKaliMemoryLoading(false);
   };
@@ -3982,8 +4027,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               <span className="flex items-center gap-1.5 text-[9px] font-mono">
                 <span className="text-violet-300">🧠 {brainStatus.memoryCount}</span>
                 <span className="text-muted-foreground">·</span>
-                <span className={brainStatus.activeProcesses.length > 0 ? "text-cyan-300" : "text-muted-foreground"}>
-                  ⚙ {brainStatus.activeProcesses.length}
+                <span className={(brainStatus.activeProcesses?.length ?? 0) > 0 ? "text-cyan-300" : "text-muted-foreground"}>
+                  ⚙ {brainStatus.activeProcesses?.length ?? 0}
                 </span>
                 <span className="text-muted-foreground">·</span>
                 <span className="text-amber-300">⏰ {brainStatus.cronJobsEnabled}</span>
@@ -4010,10 +4055,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                     </div>
                   ))}
                 </div>
-                {brainStatus.activeProcesses.length > 0 && (
+                {(brainStatus.activeProcesses?.length ?? 0) > 0 && (
                   <div>
                     <div className="text-[9px] font-mono text-muted-foreground mb-1">عمليات نشطة:</div>
-                    {brainStatus.activeProcesses.slice(0, 3).map((p) => (
+                    {(brainStatus.activeProcesses ?? []).slice(0, 3).map((p) => (
                       <div key={p.id} className="flex items-center gap-1.5 text-[9px] font-mono text-cyan-300 bg-cyan-500/5 border border-cyan-500/20 rounded px-2 py-1 mb-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
                         <span className="truncate">[{p.id}] {p.command}</span>
@@ -4157,8 +4202,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               <span className="flex items-center gap-1">
                 <CpuIcon className="w-2.5 h-2.5" />
                 عمليات
-                {brainStatus && brainStatus.activeProcesses.length > 0 && (
-                  <span className="w-3.5 h-3.5 rounded-full bg-cyan-500 text-white text-[7px] flex items-center justify-center font-bold">{brainStatus.activeProcesses.length}</span>
+                {brainStatus && (brainStatus.activeProcesses?.length ?? 0) > 0 && (
+                  <span className="w-3.5 h-3.5 rounded-full bg-cyan-500 text-white text-[7px] flex items-center justify-center font-bold">{brainStatus.activeProcesses?.length ?? 0}</span>
                 )}
               </span>
             </button>
@@ -4668,14 +4713,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 <RefreshCw className="w-2.5 h-2.5" /> تحديث
               </button>
             </div>
-            {(!brainStatus || brainStatus.activeProcesses.length === 0) && (
+            {(!brainStatus || (brainStatus.activeProcesses?.length ?? 0) === 0) && (
               <div className="text-center py-8">
                 <CpuIcon className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
                 <div className="text-xs text-muted-foreground">لا توجد عمليات نشطة</div>
                 <div className="text-[10px] text-muted-foreground mt-1">اطلب من الوكيل تشغيل مسح أو أي عملية طويلة</div>
               </div>
             )}
-            {brainStatus?.activeProcesses.map((p) => (
+            {(brainStatus?.activeProcesses ?? []).map((p) => (
               <div key={p.id} className="rounded-xl bg-cyan-500/5 border border-cyan-500/20 p-2.5">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="relative flex h-2 w-2">
@@ -9284,14 +9329,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         )}
 
         {/* ── Session files ── */}
-        {sessionFiles.length > 0 && panelSize !== "mini" && (
+        {(sessionFiles?.length ?? 0) > 0 && panelSize !== "mini" && (
           <div className="px-3 py-2 border-t border-primary/10 bg-background/30 max-h-20 overflow-y-auto shrink-0">
             <div className="flex items-center gap-1 text-[9px] font-mono text-muted-foreground mb-1">
               <FileText className="w-3 h-3" />
-              ملفات الجلسة ({sessionFiles.length})
+              ملفات الجلسة ({sessionFiles?.length ?? 0})
             </div>
             <div className="flex flex-wrap gap-1">
-              {sessionFiles.slice(0, 12).map((f) => (
+              {(sessionFiles ?? []).slice(0, 12).map((f) => (
                 <a key={f.id} href={`${API_BASE}/live-agent/files/${f.id}/download`}
                   title={`${f.name} · ${f.size} بايت`}
                   className="group inline-flex items-center gap-1 max-w-[160px] text-[10px] px-2 py-1 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/20">

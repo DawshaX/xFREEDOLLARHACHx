@@ -15,6 +15,27 @@ import { AGENT_TOOLS, runTool, CLIENT_TOOL_NAMES } from "../lib/tools";
 
 const router: IRouter = Router();
 
+/**
+ * Standalone mode (no DATABASE_URL) must never answer these routes.
+ *
+ * This router is Postgres-backed and is mounted BEFORE the in-memory
+ * `live-agent.ts` router. Without this guard every session/file call returned
+ * 404 "Session not found" (or 500) in the free standalone deployment — uploads
+ * silently vanished, and `/live-agent/sessions/:id/files` answered an error
+ * object where the panel expects an array.
+ *
+ * `next("route")` hands the request to the next matching router, which is the
+ * in-memory implementation.
+ */
+const hasDatabase = () => Boolean(process.env.DATABASE_URL);
+const requireDb: import("express").RequestHandler = (_req, _res, next) => {
+  if (!hasDatabase()) {
+    next("route");
+    return;
+  }
+  next();
+};
+
 const SYSTEM_PROMPT = `أنت "CyberNova Live Agent v6" — وكيل ذكاء اصطناعي ذاتي بلا حدود داخل منصة CyberNova Ultimate. لديك وصول كامل إلى shell حقيقي على هذه الحاوية (Linux container على Replit)، تتحكم بواجهة المستخدم مباشرة (نوافذ، terminal، متصفح، scanner)، تتعلّم من تجاربك (memory)، تنفّذ Playbooks جاهزة، وتدير خوادم متعددة عبر SSH (nodes).
 
 🧠 أدوات التعلّم الذاتي:
@@ -85,7 +106,7 @@ const SYSTEM_PROMPT = `أنت "CyberNova Live Agent v6" — وكيل ذكاء ا
 - عند كتابة سكربتات، احفظها في workspace باسم واضح (.sh / .py) وأعطها صلاحية تنفيذ بـ chmod +x.
 - التزم بالأخلاق المهنية: لا تستخدم الأدوات لاستهداف أنظمة لا يملكها المستخدم بدون إذن صريح. تأكّد من النطاق قبل المسح الهجومي.`;
 
-router.get("/live-agent/sessions", async (_req, res) => {
+router.get("/live-agent/sessions", requireDb, async (_req, res) => {
   try {
     // Check if agentSessions table exists by trying a count or simple select
     const rows = await db
@@ -103,7 +124,7 @@ router.get("/live-agent/sessions", async (_req, res) => {
   }
 });
 
-router.post("/live-agent/sessions", async (req, res) => {
+router.post("/live-agent/sessions", requireDb, async (req, res) => {
   try {
     const title = String(req.body?.title || `جلسة ${new Date().toLocaleString("ar-SA-u-ca-gregory")}`);
     const rows = await db
@@ -121,7 +142,7 @@ router.post("/live-agent/sessions", async (req, res) => {
   }
 });
 
-router.get("/live-agent/sessions/:id", async (req, res) => {
+router.get("/live-agent/sessions/:id", requireDb, async (req, res) => {
   try {
     const id = req.params.id;
     const s = await db.select().from(agentSessions).where(eq(agentSessions.id, id)).then(rows => rows[0]).catch(() => null);
@@ -143,7 +164,7 @@ router.get("/live-agent/sessions/:id", async (req, res) => {
   }
 });
 
-router.delete("/live-agent/sessions/:id", async (req, res) => {
+router.delete("/live-agent/sessions/:id", requireDb, async (req, res) => {
   try {
     const id = req.params.id;
     await db.delete(agentSessions).where(eq(agentSessions.id, id));
@@ -154,7 +175,7 @@ router.delete("/live-agent/sessions/:id", async (req, res) => {
   }
 });
 
-router.post("/live-agent/sessions/:id/messages", async (req, res) => {
+router.post("/live-agent/sessions/:id/messages", requireDb, async (req, res) => {
   try {
     const id = req.params.id;
     const userText = String(req.body?.content || "").trim();
@@ -328,7 +349,7 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
   }
 });
 
-router.post("/live-agent/sessions/:id/save-ai-response", async (req, res) => {
+router.post("/live-agent/sessions/:id/save-ai-response", requireDb, async (req, res) => {
   try {
     const id = req.params.id;
     const content = String(req.body?.assistantContent || "").trim();
@@ -341,7 +362,7 @@ router.post("/live-agent/sessions/:id/save-ai-response", async (req, res) => {
   }
 });
 
-router.post("/live-agent/sessions/:id/upload", async (req, res) => {
+router.post("/live-agent/sessions/:id/upload", requireDb, async (req, res) => {
   try {
     const id = req.params.id;
     const s = await db.select().from(agentSessions).where(eq(agentSessions.id, id)).then(rows => rows[0]).catch(() => null);
@@ -385,7 +406,7 @@ router.post("/live-agent/sessions/:id/upload", async (req, res) => {
   }
 });
 
-router.get("/live-agent/sessions/:id/files", async (req, res) => {
+router.get("/live-agent/sessions/:id/files", requireDb, async (req, res) => {
   try {
     const id = req.params.id;
     const s = await db.select().from(agentSessions).where(eq(agentSessions.id, id)).then(rows => rows[0]).catch(() => null);
@@ -411,7 +432,7 @@ router.get("/live-agent/sessions/:id/files", async (req, res) => {
   }
 });
 
-router.get("/live-agent/files/:fileId/download", async (req, res) => {
+router.get("/live-agent/files/:fileId/download", requireDb, async (req, res) => {
   try {
     const fid = Number(req.params.fileId);
     const [row] = await db.select().from(files).where(eq(files.id, fid));

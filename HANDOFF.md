@@ -590,3 +590,56 @@ Ollama+موديل, systemd بـ Restart=always, Nginx مع SSE/WebSocket, UFW, T
 
 ### 5) متغيرات بيئة جديدة
 `NOVA_FLEET_MACHINES` (افتراضي 5) · `NOVA_FLEET_AGENTS` (افتراضي 10) · `NOVA_MESH_FILE`.
+
+---
+
+## المرحلة 37 — إصلاح السقوط الحقيقي + فحوص جديدة بتكشف النوع ده
+
+### 1) البج اللي كان بيوقّع الصفحة
+```
+TypeError: Cannot read properties of undefined (reading 'length')
+```
+- **المكان:** `LiveAgentPanel.tsx` سطر 3985 → `brainStatus.activeProcesses.length`.
+- **السبب الجذري:** `/api/live-agent/*` ما كانتش في allowlist الوضع المستقل، فكان الـ**mock**
+  بيجاوب بشكل مختلف (`{memories, iqScore, …}`) عن الراوتر الحقيقي
+  (`{memoryCount, activeProcesses, …}`) → `activeProcesses` = undefined → المكوّن يرمي →
+  حدود الخطأ تعزل الصفحة. البج كان **نايم** لأن `/nova-agent` و`/desktop` بيعرضوا اللوحة
+  بحجم `mini` (شريط الحالة مخفي)، و`/nova-fleet` بيعرضها بحجم عادي فيظهر الشريط.
+
+### 2) الإصلاح في 4 طبقات
+| طبقة | التغيير |
+|---|---|
+| `app.ts` | `p.startsWith("/live-agent")` في allowlist → الراوتر الحقيقي بدل الـmock |
+| `routes/live-agent.ts` | عقد `/live-agent/brain-status` كامل: `activeProcesses` (من `listProcesses()` الحقيقية)، `cronJobsEnabled`, `alertsUnread`, `ts` |
+| `standalone-api.ts` (النسختين) | نفس الشكل بالظبط + `iq/latencyMs/connected` (كانت ناقصة والعدّاد بيقراها) |
+| `LiveAgentPanel.tsx` | `normalizeBrainStatus()` عند المصدر + `asArray()` + `?.length ?? 0` في كل مواضع القراءة |
+
+**إثبات إن التحصين شغّال:** شغّلت الصفحة والـAPI بيرجّع **الرد القديم المكسور** بالحرف →
+`crashed: false` والصفحة رُسمت 174,419 بايت. يعني حتى لو السيرفر رجّع شكل قديم تاني، مش هتقع.
+
+### 3) بجات تانية اتكشفت واتصلحت في نفس المسار
+- **رفع/تحميل ملفات الجلسة كان مكسور تماماً في الوضع المستقل**: راوتر Postgres
+  (`live_agent.ts`) بيمسك `/live-agent/sessions/:id/upload|files` و`/files/:id/download`
+  ويرجّع `Session not found` لأن مفيش قاعدة بيانات. أضفت `requireDb` guard بـ`next("route")`
+  فبيروح للراوتر الـ in-memory. **اتأكدت بدورة كاملة:** رفع → قائمة → تحميل رجّع `hello NOVA`.
+- **الراوتر الحقيقي كان ناقص:** `/live-agent/status` و`/live-agent/iq` و`save-ai-response`
+  و`files/:id/download` ورفع حقيقي (تخزين + حد 12 ميجا + تنظيف 200 ملف) — كلها اتضافت.
+- **8 أخطاء TypeScript في `routes/live-agent.ts`** (كانت موجودة قبل كده) — اتصلحت كلها، الملف الآن 0 أخطاء.
+
+### 4) فحوص جديدة (دي اللي كانت ناقصة)
+| سكربت | بيكشف إيه | النتيجة |
+|---|---|---|
+| `scripts/audit-live.mjs` | يرسم **كل** مسار مع **بروكسي للـAPI الحقيقي** ويفشل لو ظهرت حدود الخطأ أو console.error | **155/155 مسار نضيف** |
+| `scripts/audit-contracts.mjs` | يقارن **شكل الرد** بين المحرك الثابت والسيرفر الحقيقي لكل نقطة حرجة | **0 مخالفة** |
+| `audit-render.mjs` (قديم) | شبكة مقفولة — لسه مفيد كفحص «بدون سيرفر» | 6/6 |
+
+`audit-render` القديم كان بيقفل الشبكة، فما كانش يشوف الردود الحقيقية — عشان كده البج عدّى.
+الفحص الجديد بيستخدم بيانات حيّة، وهو اللي مسك المشكلة.
+أوامر جاهزة في `package.json`: `audit:live` · `audit:contracts` · `audit:all`.
+
+### 5) الحالة النهائية بعد إعادة التشغيل الكامل
+- API ✓ · Vite ✓ · `tsc` للواجهة 0 أخطاء.
+- `audit:connections` → 118 نقطة · 69 بروب حي · 0 فجوة · 0 انحراف.
+- `audit:contracts` → 0 مخالفة.
+- `audit:live` → 155/155 مسار نظيف ببيانات حيّة.
+- الأسطول: **10 وكلاء / 5 ماكينات** جاهز، وبث أمر واحد على الـ10 رجّع `exit=0` للكل.

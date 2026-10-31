@@ -8,7 +8,12 @@
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "audit:connections": "node scripts/audit-connections.mjs",
-    "audit:connections:live": "node scripts/audit-connections.mjs --server=http://127.0.0.1:8080"
+    "audit:connections:live": "node scripts/audit-connections.mjs --server=http://127.0.0.1:8080",
+    "audit:render": "node scripts/audit-render.mjs",
+    "audit:live": "node scripts/audit-live.mjs",
+    "audit:live:server": "node scripts/audit-live.mjs --server=http://127.0.0.1:8080",
+    "audit:contracts": "node scripts/audit-contracts.mjs",
+    "audit:all": "pnpm run audit:contracts && pnpm run audit:connections:live && pnpm run audit:live"
   },
   "private": true,
   "devDependencies": {
