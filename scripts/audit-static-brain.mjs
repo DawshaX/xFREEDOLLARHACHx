@@ -252,7 +252,7 @@ async function phaseWorkUi() {
 
   const text = window.document.body.textContent || "";
   const inputs = window.document.querySelectorAll("textarea, input").length;
-  const need = ["محطة العمل", "المهمات", "الأدوات", "خريطة الشبكة", "الليف بانل", "وسّع القدرات", "خطة العمل", "حالة الاتصالات"];
+  const need = ["محطة العمل", "المهمات", "الأدوات", "خريطة الشبكة", "الليف بانل", "وسّع القدرات", "خطة العمل", "حالة الاتصالات", "العقل السحابي 24/7"];
   const missing = need.filter((n) => !text.includes(n));
 
   let storeMachines = null;

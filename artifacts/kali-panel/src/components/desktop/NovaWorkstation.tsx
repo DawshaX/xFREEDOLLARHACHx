@@ -26,6 +26,7 @@ import {
   type ProbeResult,
 } from "@/lib/remote";
 import { runLocalBrain } from "@/lib/local-brain";
+import { CloudBrainCard } from "./CloudBrainCard";
 import {
   createSession, deleteSession, exportSession, getActiveId, getSession, listSessions,
   onSessionsChange, persistent, replaceLines, setActiveId, type ChatSession,
@@ -730,6 +731,7 @@ export function NovaWorkstation() {
         <LiveRail items={items} />
         <PlanBox onPlan={() => setPlanVersion((v) => v + 1)} version={planVersion} />
         <HealthCard linked={linked} server={health.server} checked={health.checked} onRecheck={() => void checkHealth()} />
+        <CloudBrainCard />
       </div>
     </div>
   );

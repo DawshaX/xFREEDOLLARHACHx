@@ -17,6 +17,122 @@ const publicStatePath = path.resolve(
   "artifacts/kali-panel/public/state/cybernova-brain-state.json",
 );
 
+
+/**
+ * Real intelligence harvesting.
+ *
+ * This runs on GitHub's runners, not in a browser: no CORS, no tab, no device.
+ * That is what makes it genuinely 24/7 — it keeps collecting while the page is
+ * closed, and the page reads the result when it opens.
+ *
+ * Every source is independent: if NVD is down the others still contribute, and
+ * the state records which ones actually answered.
+ */
+async function harvestIntel(state) {
+  const feed = Array.isArray(state.intelFeed) ? state.intelFeed : [];
+  const seen = new Set(feed.map((f) => f.id));
+  const fresh = [];
+  const answered = [];
+
+  const push = (item) => {
+    if (!item?.id || seen.has(item.id)) return;
+    seen.add(item.id);
+    fresh.push(item);
+  };
+
+  // 1) NVD — the newest CVEs.
+  try {
+    const r = await fetch("https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=30", {
+      headers: { "User-Agent": "CyberNova-2099-Cloud-Brain" },
+      signal: AbortSignal.timeout(25000),
+    });
+    const j = await r.json();
+    let n = 0;
+    for (const row of j.vulnerabilities ?? []) {
+      const cve = row.cve;
+      if (!cve?.id) continue;
+      const dt = cve.metrics?.cvssMetricV31?.[0]?.cvssData ?? cve.metrics?.cvssMetricV30?.[0]?.cvssData;
+      push({
+        id: cve.id,
+        title: cve.id,
+        description: String(cve.descriptions?.find((d) => d.lang === "en")?.value ?? "").slice(0, 400),
+        cvss: dt?.baseScore ?? null,
+        severity: dt?.baseSeverity ?? null,
+        source: "NVD",
+        url: `https://nvd.nist.gov/vuln/detail/${cve.id}`,
+        at: new Date().toISOString(),
+      });
+      n += 1;
+    }
+    if (n) answered.push(`NVD:${n}`);
+  } catch {
+    /* source down — the others still run */
+  }
+
+  // 2) CISA KEV — vulnerabilities that are being exploited right now.
+  try {
+    const r = await fetch("https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json", {
+      signal: AbortSignal.timeout(25000),
+    });
+    const j = await r.json();
+    const rows = (j.vulnerabilities ?? []).slice(-15).reverse();
+    let n = 0;
+    for (const v of rows) {
+      push({
+        id: v.cveID,
+        title: `${v.cveID} — ${v.vendorProject ?? ""} ${v.product ?? ""}`.trim(),
+        description: `${v.vulnerabilityName ?? ""} — ${v.shortDescription ?? ""}`.slice(0, 400),
+        cvss: null,
+        severity: "KEV",
+        source: "CISA KEV",
+        url: `https://nvd.nist.gov/vuln/detail/${v.cveID}`,
+        at: new Date().toISOString(),
+      });
+      n += 1;
+    }
+    if (n) answered.push(`KEV:${n}`);
+  } catch {
+    /* ignore */
+  }
+
+  // 3) GitHub Security Advisories.
+  try {
+    const r = await fetch("https://api.github.com/advisories?per_page=30", {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "CyberNova-2099-Cloud-Brain" },
+      signal: AbortSignal.timeout(25000),
+    });
+    const j = await r.json();
+    let n = 0;
+    for (const a of Array.isArray(j) ? j : []) {
+      const sev = String(a.severity ?? "").toLowerCase();
+      if (sev !== "critical" && sev !== "high") continue;
+      push({
+        id: a.cve_id || a.ghsa_id,
+        title: a.cve_id || a.ghsa_id,
+        description: String(a.summary ?? "").slice(0, 400),
+        cvss: a.cvss?.score ?? null,
+        severity: sev.toUpperCase(),
+        source: "GitHub Advisories",
+        url: a.html_url,
+        at: new Date().toISOString(),
+      });
+      n += 1;
+    }
+    if (n) answered.push(`GHSA:${n}`);
+  } catch {
+    /* ignore */
+  }
+
+  state.intelFeed = [...fresh, ...feed].slice(0, 200);
+  state.intelStats = {
+    total: state.intelFeed.length,
+    freshThisPulse: fresh.length,
+    sourcesAnswered: answered,
+    at: new Date().toISOString(),
+  };
+  return { fresh: fresh.length, answered };
+}
+
 async function runPulse() {
   const raw = fs.readFileSync(statePath, "utf-8");
   const state = JSON.parse(raw);
@@ -45,12 +161,16 @@ async function runPulse() {
   const cycle = state.daemonStatus.autonomousCyclesCompleted;
   state.whereAmINow.currentStageTitleAr = `المرحلة 6/6: نبضة العقل السحابي #${cycle} مكتملة على (${target}) — المراقبة والتطوير الذاتي نشط 24/7`;
 
+  const intel = await harvestIntel(state).catch(() => ({ fresh: 0, answered: [] }));
+
   state.whatsNewLog.unshift({
     id: `pulse-${Date.now()}`,
     ts: new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC",
     category: "GITHUB_CLOUD_PULSE",
     titleAr: `نبضة العقل السحابي التلقائية #${cycle} على الهدف (${target})`,
-    detailAr: `IP: ${ips.join(", ")} | HTTP ${status} | SHA256: ${bodyHash} — تم التحديث والحفظ في ذاكرة GitHub الدائمة.`,
+    detailAr: `IP: ${ips.join(", ")} | HTTP ${status} | SHA256: ${bodyHash} — تم التحديث والحفظ في ذاكرة GitHub الدائمة.${
+      intel.fresh ? ` | ${intel.fresh} ثغرة جديدة (${intel.answered.join(" · ")})` : ""
+    }`,
   });
   state.whatsNewLog = state.whatsNewLog.slice(0, 25);
 
