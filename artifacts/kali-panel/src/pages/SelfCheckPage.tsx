@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Activity, AlertTriangle, CheckCircle2, Clock, Cpu, Database, Globe,
-  Loader2, Radio, RefreshCw, Server, ShieldCheck, Terminal, XCircle, Brain,
+  Loader2, Radio, RefreshCw, Server, ShieldCheck, Terminal, XCircle, Brain, Zap,
 } from "lucide-react";
 import { getRemoteBase } from "@/lib/remote";
 import { listSessions } from "@/lib/session-store";
@@ -154,12 +154,24 @@ async function browserChecks(): Promise<CheckItem[]> {
   return items;
 }
 
+/** Recent missions executed for real by the scheduled GitHub runner. */
+interface MissionEntry {
+  ranAt: string;
+  target: string;
+  toolsOk: number;
+  tools: Array<{ name: string; ok: boolean; ms: number; summary: string }>;
+  chatEvents: number;
+  selfCheckScore: number | null;
+  mode: string | null;
+}
+
 export default function SelfCheckPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [base, setBase] = useState<string>("");
   const [browserReport, setBrowserReport] = useState<Report | null>(null);
+  const [missions, setMissions] = useState<MissionEntry[]>([]);
 
   useEffect(() => {
     setBase(getRemoteBase());
@@ -204,6 +216,21 @@ export default function SelfCheckPage() {
   useEffect(() => {
     void run(false);
   }, [run]);
+
+  // The scheduled runner writes state/nova-mission-log.json; that file is served
+  // next to the panel, so the page can show real executions even with no server.
+  useEffect(() => {
+    let alive = true;
+    fetch(`state/nova-mission-log.json?t=${Date.now()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (alive && Array.isArray(j?.missions)) setMissions(j.missions.slice(0, 5));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const shown = report ?? browserReport;
   const overall: Status = !shown
@@ -322,6 +349,46 @@ export default function SelfCheckPage() {
           );
         })}
       </div>
+
+      {/* ── live missions (executed by the scheduled runner) ─────────────── */}
+      {missions.length > 0 && (
+        <section className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-white">
+            <Zap className="h-4 w-4 text-cyan-300" />
+            مهام حيّة نُفّذت فعلاً (على سيرفرات GitHub المجانية)
+          </h2>
+          <p className="mb-3 text-xs text-slate-400">
+            السكربت `scripts/nova-live-mission.mjs` بيقوم بالسيرفر، ينفّذ أدوات حقيقية على هدف حقيقي،
+            يحفظ النتائج في الذاكرة، ويكتب السجل ده — كل 3 ساعات، بدون جهازك وبدون كارت.
+          </p>
+          <div className="space-y-2">
+            {missions.map((m) => (
+              <div key={m.ranAt} className="rounded-xl bg-black/30 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="font-mono text-slate-300">{m.target}</span>
+                  <span className={m.toolsOk === m.tools.length ? "text-emerald-300" : "text-amber-300"}>
+                    {m.toolsOk}/{m.tools.length} أداة ناجحة
+                  </span>
+                  <span className="text-slate-500">{new Date(m.ranAt).toLocaleString("ar-EG")}</span>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {m.tools.map((t) => (
+                    <span
+                      key={t.name}
+                      title={t.summary}
+                      className={`rounded-md px-1.5 py-0.5 text-[10px] ${
+                        t.ok ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"
+                      }`}
+                    >
+                      {t.ok ? "✓" : "✗"} {t.name} · {t.ms}ms
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── what this proves / does not ─────────────────────────────────── */}
       <section className="rounded-2xl border border-white/10 bg-slate-900/50 p-5 text-sm text-slate-300">

@@ -1,0 +1,121 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA — live mission (the program actually doing its job, 24/7, free)
+#
+# Every 3 hours, on GitHub's own runners (no credit card, no server of your own):
+#   1. build the real server,
+#   2. boot it,
+#   3. execute real tools against a real target (DNS · HTTP headers · TLS),
+#   4. save the findings into long-term memory,
+#   5. prove the conversational agent loop answers,
+#   6. commit the mission log + memory back to `state/`.
+#
+# The result is visible in the panel (self-check page → "المهام الحيّة") and in
+# state/nova-mission-log.json.
+#
+# Target: repo variable NOVA_TARGET (Settings → Variables → Actions).
+# Defaults to example.com — a public, harmless domain.
+# ─────────────────────────────────────────────────────────────────────────────
+name: NOVA live mission
+
+on:
+  schedule:
+    - cron: "30 */3 * * *"   # every 3 hours
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Domain to run the real mission against"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nova-live-mission
+  cancel-in-progress: false
+
+jobs:
+  mission:
+    name: real tools · real target
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+
+      - name: Install & build the real server
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm --filter @workspace/api-server run build
+          BASE_PATH=/ pnpm --filter @workspace/kali-panel run build
+
+      # Long-term memory is gitignored on purpose (it can contain conversation
+      # content), so it is carried between runs by the Actions cache instead of
+      # being committed to a public repo.
+      - name: Restore memory from the previous run
+        uses: actions/cache/restore@v4
+        with:
+          path: state/nova-memory.json
+          key: nova-memory-${{ github.run_id }}
+          restore-keys: |
+            nova-memory-
+
+      - name: Run the mission
+        env:
+          TARGET: ${{ github.event.inputs.target || vars.NOVA_TARGET || 'example.com' }}
+        run: node scripts/nova-live-mission.mjs --port=8099
+
+      - name: Show what was learned
+        run: |
+          node -e '
+            const log = require("./state/nova-mission-log.json");
+            const m = log.missions[0];
+            const rows = log.missions.map(x =>
+              `| ${x.ranAt} | ${x.target} | ${x.toolsOk}/${x.tools.length} | ${x.selfCheckScore ?? "-"}% |`
+            );
+            const body = [
+              "### NOVA live mission — " + m.ranAt,
+              "",
+              "**Target:** " + m.target + " · **tools ok:** " + m.toolsOk + "/" + m.tools.length +
+                " · **mode:** " + (m.mode ?? "?") + " · **chat events:** " + m.chatEvents,
+              "",
+              "| tool | result | ms | what it saw |",
+              "|---|---|---|---|",
+              ...m.tools.map(t => `| ${t.name} | ${t.ok ? "✅" : "❌"} | ${t.ms} | ${String(t.summary).replace(/\|/g, "\\|").slice(0, 140)} |`),
+              "",
+              "**Self-check:** " + (m.selfCheckScore ?? "?") + "% — " + (m.selfCheckVerdict ?? ""),
+              "",
+              "#### last 5 missions",
+              "| when | target | tools | score |",
+              "|---|---|---|---|",
+              ...rows.slice(0, 5),
+            ];
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, body.join("\n") + "\n");
+          '
+
+      - name: Publish the log next to the panel (so the page can read it)
+        run: |
+          mkdir -p artifacts/kali-panel/public/state
+          cp state/nova-mission-log.json artifacts/kali-panel/public/state/nova-mission-log.json
+
+      - name: Commit mission log & memory
+        run: |
+          git config user.name "CyberNova Live Mission"
+          git config user.email "cybernova-mission@users.noreply.github.com"
+          git add state/nova-mission-log.json state/nova-memory.json                   artifacts/kali-panel/public/state/nova-mission-log.json
+          git diff --staged --quiet || (git commit -m "chore(mission): live mission checkpoint [skip ci]" && git push origin HEAD:main)
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nova-mission-${{ github.run_number }}
+          path: state/nova-mission-log.json
+          retention-days: 30
+          if-no-files-found: ignore

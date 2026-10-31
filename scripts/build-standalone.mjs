@@ -58,6 +58,14 @@ for (const name of ["nova-memory.json", "cybernova-brain-state.json", "discovere
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(OUT, "state", name));
 }
 
+// The panel reads the mission log from its own /state/ path, so ship a copy
+// inside public/state/ too (the same mirror the Pages deploy uses).
+const missionLog = path.join(STATE, "nova-mission-log.json");
+if (fs.existsSync(missionLog)) {
+  fs.mkdirSync(path.join(OUT, "public", "state"), { recursive: true });
+  fs.copyFileSync(missionLog, path.join(OUT, "public", "state", "nova-mission-log.json"));
+}
+
 /* ── 2. launch scripts ───────────────────────────────────────────────────── */
 fs.writeFileSync(
   path.join(OUT, "start.sh"),
