@@ -106,7 +106,7 @@ export function CloudBrainCard() {
           </div>
 
           <div className="text-[7px] text-white/35 leading-snug">
-            شغّالة على سيرفرات GitHub كل 6 ساعات — من غير جهازك ومن غير إن الصفحة تكون مفتوحة.
+            شغّالة على سيرفرات GitHub كل ساعة — من غير جهازك ومن غير إن الصفحة تكون مفتوحة.
             {state.whereAmINow?.activeTarget ? ` الهدف النشط: ${state.whereAmINow.activeTarget}.` : ""}
             {stats?.sourcesAnswered?.length ? ` المصادر اللي ردت: ${stats.sourcesAnswered.join(" · ")}.` : ""}
           </div>
