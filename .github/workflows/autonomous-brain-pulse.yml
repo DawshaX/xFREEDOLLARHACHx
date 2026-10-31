@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: "0 */6 * * *"
   workflow_dispatch:
+  # Run once whenever the pulse itself changes, so a fresh version is proven
+  # immediately instead of waiting up to six hours. State commits by the bot
+  # only touch state/, which is not in `paths`, so this cannot loop.
+  push:
+    paths:
+      - "scripts/autonomous-brain-pulse.mjs"
+      - ".github/workflows/autonomous-brain-pulse.yml"
 
 permissions:
   contents: write
