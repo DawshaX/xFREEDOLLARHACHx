@@ -13,7 +13,9 @@
     "audit:live": "node scripts/audit-live.mjs",
     "audit:live:server": "node scripts/audit-live.mjs --server=http://127.0.0.1:8080",
     "audit:contracts": "node scripts/audit-contracts.mjs",
-    "audit:all": "pnpm run audit:contracts && pnpm run audit:connections:live && pnpm run audit:live"
+    "audit:all": "pnpm run audit:contracts && pnpm run audit:connections:live && pnpm run audit:live && pnpm run audit:brain:linked",
+    "audit:brain": "node scripts/audit-static-brain.mjs",
+    "audit:brain:linked": "node scripts/audit-static-brain.mjs --server=http://127.0.0.1:8080"
   },
   "private": true,
   "devDependencies": {

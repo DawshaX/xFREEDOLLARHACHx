@@ -13,6 +13,7 @@
  * or third-party: it is the same free WS endpoint the device agents use.
  */
 import { useEffect, useRef, useState, useCallback } from "react";
+import { getRemoteBase, remoteWsUrl } from "@/lib/remote";
 
 export interface FleetMachine {
   id: string;
@@ -60,6 +61,14 @@ function apiBase(): string {
 }
 
 function wsUrl(): string {
+  // A linked NOVA server owns the realtime channel. Without one we still try
+  // same-origin, and the UI reports the truth instead of a fake green dot.
+  try {
+    const remote = getRemoteBase();
+    if (remote) return remoteWsUrl(`/api/ws`);
+  } catch {
+    /* fall through to same-origin */
+  }
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
   return `${proto}//${location.host}${base}${API}/ws`.replace(/([^:])\/+/g, "$1/");

@@ -58,6 +58,11 @@ function discoverCallSites() {
     const rel = path.relative(PANEL_SRC, file);
     if (SKIP.has(rel)) continue;
     let src = fs.readFileSync(file, "utf8");
+    // Strip comments first: a path mentioned in a doc comment is not a call site
+    // (this produced false "broken endpoint" findings for `/api/nova-core/chat`).
+    src = src
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
     src = src
       .replace(/\$\{API_BASE\}/g, "")
       .replace(/\$\{base\}/g, "")
@@ -75,6 +80,7 @@ function discoverCallSites() {
         if (/(BugBountyStudio|cyber-corpus-2099)/.test(rel)) continue;
       }
       if (raw.length > 90) continue;
+      if (raw.includes("*")) continue; // glob in a doc/string, not an endpoint
 
       let p = raw.replace(/\$\{[^}]*\}/g, "1");
       const qIdx = p.indexOf("?");

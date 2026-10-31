@@ -10321,6 +10321,10 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
       // and every tool call/result rendered inline. Falls back to the legacy
       // auto-chat stream when the core endpoint is unavailable (static build).
       let coreOk = false;
+      // How many SSE frames the brain actually sent. A 200 with a body but zero
+      // events is the exact shape of the old static-mode bug: the panel then
+      // rendered an empty assistant bubble and looked broken.
+      let coreEvents = 0;
       try {
         const core = await fetch("/api/nova-core/chat", {
           method: "POST",
@@ -10344,6 +10348,7 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
             if (!dataLine) continue;
             let ev: { type?: string; text?: string; name?: string; args?: unknown; ok?: boolean; summary?: string; message?: string };
             try { ev = JSON.parse(dataLine.slice(5).trim()); } catch { continue; }
+            coreEvents += 1;
             if ((ev as { type?: string }).type === "confirm_required") {
               const c = ev as { name?: string; title?: string; args?: unknown; reason?: string };
               setPendingConfirm({
@@ -10380,10 +10385,28 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
       } catch (coreErr) {
         if (!coreOk) throw coreErr;
       }
-      if (coreOk) {
+      if (coreOk && (current.trim().length > 0 || coreEvents > 0)) {
         setMessages(prev => {
           const copy = [...prev];
-          if (copy[copy.length - 1]?.type === "streaming") copy[copy.length - 1] = { role: "assistant", content: current };
+          const idx = copy.findIndex(m => m.type === "streaming");
+          const finalText =
+            current.trim() ||
+            "النواة ردّت بإشارات تنفيذ بس من غير نص. جرّب تعيد الصياغة، أو اربط سيرفر من «محطة العمل» عشان يبقى فيه عقل كامل.";
+          if (idx >= 0) copy[idx] = { role: "assistant", content: finalText };
+          return copy;
+        });
+        setStreaming(false);
+        return;
+      }
+
+      if (coreOk) {
+        // Silent stream: say exactly that instead of showing an empty bubble.
+        setMessages(prev => {
+          const copy = [...prev];
+          const idx = copy.findIndex(m => m.type === "streaming");
+          const note =
+            "⚠️ عقل نوفا رجّع رد فاضي (وضع بدون سيرفر). افتح «نوفا · الأسطول الموحّد → محطة العمل» واربط سيرفرك، أو اكتب السؤال تاني وهجيب الرد من الفهرس المحلي.";
+          if (idx >= 0) copy[idx] = { role: "note", content: note };
           return copy;
         });
         setStreaming(false);
