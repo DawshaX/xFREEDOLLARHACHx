@@ -23,6 +23,7 @@ import {
 } from "./tools";
 import { llmComplete, extractJson } from "./llm";
 import { saveMemory, getAllMemories } from "../../routes/memory";
+import { remember, memoryContextFor, memoryStats, initMemory } from "./memory-store";
 import { getMissionsState, recordMissionCommand } from "../standalone-api";
 import { broadcastEvent } from "../ws-hub";
 import { broadcastLiveEvent } from "./../../routes/live-events";
@@ -63,17 +64,21 @@ export interface AgentRunResult {
 
 /* ── context ─────────────────────────────────────────────────────────────── */
 
-function buildContextBlock(): string {
+/**
+ * Everything NOVA knows before it answers: live platform state + the durable
+ * long-term memory (ranked against the current question and target).
+ */
+function buildContextBlock(query = ""): string {
   const missions = getMissionsState();
   const active = missions[0];
-  const memories = getAllMemories().slice(0, 6);
-  const memLines = memories.map((m) => `- [${m.kind}] ${m.title}: ${m.content.slice(0, 120)}`).join("\n");
+  const stats = memoryStats();
+  const longTerm = memoryContextFor(query, active?.target ?? undefined, 8);
   return [
     `# سياق المنصة الآن`,
     `- الهدف النشط: ${active?.target ?? "غير محدد"} (${active?.name ?? "—"})`,
     `- نتائج مسجلة في المهمة: ${active?.findings.length ?? 0}`,
-    `- إجمالي الذاكرة: ${getAllMemories().length}`,
-    memLines ? `# آخر ما تعرفه من ذاكرة\n${memLines}` : `# الذاكرة فارغة حتى الآن`,
+    `- ذاكرتك طويلة الأمد: ${stats.total} ذكرى (${stats.pinned} مثبتة) — تفضل بعد إعادة التشغيل`,
+    longTerm || "# الذاكرة طويلة الأمد فارغة حتى الآن",
   ].join("\n");
 }
 
@@ -143,12 +148,39 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
     tools: (msg) => [{ tool: "kali_toolbox", args: { query: cleanQuery(msg), target: extractTarget(msg) ?? undefined } }],
   },
   {
-    test: /(?:احفظ|سجّل|سجل|remember|حفظ)/i,
-    tools: (msg) => [{ tool: "memory_save", args: { title: msg.slice(0, 60), content: msg, kind: "note" } }],
+    // Recall must be checked BEFORE save, otherwise "تفتكر ايه عني" (what do you
+    // remember about me?) matches the save verb "افتكر" and stores a memory.
+    test: /(?:تفتكر|تتذكر|فاكر|فاتكر|تذكر|\bذكرى|ذاكرت|الذاكرة|\bmemory\b|what do you remember|\brecall\b)/i,
+    tools: (msg) => {
+      const q = cleanQuery(
+        msg
+          .replace(/(?:انت\s*)?(?:تفتكر|تتذكر|فاكر|فاتكر)\s*(?:ايه|إيه|ايوه|عن|حاجة|حاجه)?/gi, " ")
+          .replace(/(?:ايه|إيه)\s*(?:اللي)?/gi, " ")
+          .replace(/\s+/g, " "),
+      );
+      return [{ tool: "memory_search", args: { query: q || msg } }];
+    },
   },
   {
-    test: /(?:ذاكرت|ذاكرة|memory|تذكر|فاكر)/i,
-    tools: (msg) => [{ tool: "memory_search", args: { query: cleanQuery(msg) } }],
+    test: /(?:^|[\s،,])(?:احفظ|سجّل|سجل|remember|حفظ)(?![\p{L}])/iu,
+    tools: (msg) => {
+      // "احفظ ان ..." → keep the payload, not the command verb.
+      const body =
+        msg
+          .replace(/^\s*(?:من فضلك\s*|please\s*)?(?:احفظ|سجّل|سجل|remember|حفظ|افتكر)\s*/i, "")
+          .replace(/^\s*(?:اني|أني|إني|انه|أنه|إنه|ان|أن|إن|that|ه)\s+/i, "")
+          .trim() || msg;
+      const isPreference = /(?:انا\s*(?:افضل|أفضل|بحب|عايز|محتاج)|دايماً|دائماً|دائما|كل مرة|always|prefer|i want you to)/i.test(msg);
+      return [{
+        tool: "memory_save",
+        args: {
+          title: body.slice(0, 70),
+          content: body,
+          kind: isPreference ? "preference" : "fact",
+          importance: isPreference ? 9 : 7,
+        },
+      }];
+    },
   },
   {
     test: /(?:الهدف النشط|حدد هدف|set target|active target)/i,
@@ -242,7 +274,7 @@ async function llmPlan(
   history: Array<{ role: "user" | "assistant"; content: string }>,
 ): Promise<{ thought: string; steps: PlannedStep[]; directAnswer?: string; provider: string; model: string } | null> {
   const messages = [
-    { role: "system" as const, content: `${NOVA_SYSTEM_PROMPT_SHORT}\n\n# أدواتك\n${toolCatalogueForPrompt()}\n\n${buildContextBlock()}\n\n${PLAN_INSTRUCTIONS}` },
+    { role: "system" as const, content: `${NOVA_SYSTEM_PROMPT_SHORT}\n\n# أدواتك\n${toolCatalogueForPrompt()}\n\n${buildContextBlock(message)}\n\n${PLAN_INSTRUCTIONS}` },
     ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
     { role: "user" as const, content: message },
   ];
@@ -333,7 +365,17 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
 
 /* ── main loop ───────────────────────────────────────────────────────────── */
 
+let memoryBooted = false;
+
 export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
+  if (!memoryBooted) {
+    memoryBooted = true;
+    try {
+      initMemory();
+    } catch {
+      /* store failures must never block a reply */
+    }
+  }
   const started = Date.now();
   const sessionId = opts.sessionId || `nova-${Date.now()}`;
   const history = opts.history ?? [];
@@ -380,7 +422,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     if (!reply) {
       const llm = await llmComplete(
         [
-          { role: "system", content: `${NOVA_SYSTEM_PROMPT}\n\n${buildContextBlock()}` },
+          { role: "system", content: `${NOVA_SYSTEM_PROMPT}\n\n${buildContextBlock(message)}` },
           ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
           { role: "user", content: message },
         ],
@@ -460,7 +502,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
           role: "system",
           content: `${NOVA_SYSTEM_PROMPT}\n\n# مخرجات أدواتك الحقيقية الآن (استخدمها كما هي، لا تخترع غيرها)\n${results
             .map((r) => `## ${r.name} (${r.ok ? "نجحت" : "فشلت"}): ${r.summary}\n${preview(r.data).slice(0, 1500)}`)
-            .join("\n\n")}\n\n# سياق\n${buildContextBlock()}`,
+            .join("\n\n")}\n\n# سياق\n${buildContextBlock(message)}`,
         },
         { role: "user", content: `${message}\n\nفسّر النتائج باختصار، اذكر المهم والخطورة، واختم بخطوة تالية واحدة.` },
       ],
@@ -476,19 +518,45 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     await sleep(6);
   }
 
-  // Persist a compact memory entry so the next session remembers the run
+  // ── Long-term memory: this is what makes NOVA remember across restarts ──
   try {
-    const entry = saveMemory(
-      "fact",
-      `جلسة نوفا: ${message.slice(0, 50)}`,
-      `${results.map((r) => `${r.name} → ${r.summary}`).join(" | ")}`.slice(0, 1200),
-      "nova,session",
-      6,
-      false,
-    );
-    opts.emit({ type: "memory", id: entry.id, title: entry.title });
+    const scope = cleanScope(extractTarget(message) ?? getMissionsState()[0]?.target);
+    const summary = results.map((r) => `${r.name} → ${r.summary}`).join(" | ").slice(0, 1800);
+
+    // 1) A session record (searchable transcript digest).
+    const sessionRec = remember({
+      kind: "session",
+      title: `جلسة نوفا: ${message.slice(0, 60)}`,
+      content: `سؤال: ${message}\nالأدوات: ${results.map((r) => r.name).join(", ") || "بدون"}\nالنتائج: ${summary}\nالرد: ${reply.slice(0, 700)}`,
+      scope,
+      tags: ["session", ...results.map((r) => r.name)],
+      importance: 5,
+      source: "agent",
+    });
+
+    // 2) A lesson whenever a tool actually produced something durable.
+    const facts = results.filter((r) => r.ok && r.name !== "platform_status");
+    if (facts.length) {
+      remember({
+        kind: "lesson",
+        title: `نتيجة ${facts[0].name} على ${scope}`,
+        content: facts.map((r) => `${r.name}: ${r.summary}`).join("\n").slice(0, 1500),
+        scope,
+        tags: ["auto", ...facts.map((r) => r.name)],
+        importance: 6,
+        source: "agent-auto",
+      });
+    }
+
+    // Mirror into the platform feed so /memory keeps working unchanged.
+    try {
+      saveMemory("session", sessionRec.title, sessionRec.content.slice(0, 1200), "nova,session,longterm", 6, false);
+    } catch {
+      /* best-effort */
+    }
+    opts.emit({ type: "memory", id: sessionRec.id, title: sessionRec.title });
   } catch {
-    /* memory is best-effort */
+    /* memory is best-effort — never fail a run because of it */
   }
 
   const out: AgentRunResult = {
@@ -507,6 +575,20 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
 function splitChunks(text: string, size = 48): string[] {
   if (!text) return [];
   return text.match(new RegExp(`[\\s\\S]{1,${size}}`, "g")) ?? [text];
+}
+
+/** A stable scope key: bare hostname when we can find one, otherwise "global". */
+function cleanScope(raw: string | undefined | null): string {
+  if (!raw) return "global";
+  let v = String(raw).trim().toLowerCase();
+  try {
+    if (/^https?:\/\//.test(v)) v = new URL(v).hostname;
+  } catch {
+    /* keep as-is */
+  }
+  const host = v.match(/^([a-z0-9][a-z0-9.-]*\.[a-z]{2,24})/);
+  if (host) return host[1];
+  return v.length > 0 && v.length <= 60 ? v : "global";
 }
 
 function sleep(ms: number): Promise<void> {

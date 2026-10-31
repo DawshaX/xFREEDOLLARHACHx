@@ -191,8 +191,27 @@ server.on("upgrade", (req, socket, head) => {
   }
 });
 
-server.listen(port, "127.0.0.1", () => {
-  logger.info({ port }, "Server listening on 127.0.0.1 (HTTP + /api/ws + /api/local-agent/ws)");
+// Bind to 127.0.0.1 locally, 0.0.0.0 inside containers/cloud (HOST=0.0.0.0).
+const host = process.env.HOST?.trim() || "127.0.0.1";
+
+server.listen(port, host, () => {
+  logger.info({ port, host }, `Server listening on ${host} (HTTP + /api/ws + /api/local-agent/ws)`);
+
+  // ── NOVA boot sequence (never blocks the listener) ────────────────────────
+  void import("./lib/agent/memory-store")
+    .then(({ initMemory, memoryStats }) => {
+      initMemory();
+      const st = memoryStats();
+      logger.info({ total: st.total, file: st.file, bytes: st.bytes }, "NOVA long-term memory loaded");
+    })
+    .catch((e) => logger.warn({ err: e }, "NOVA memory init failed"));
+
+  if (process.env.NOVA_AUTOPULL !== "0") {
+    void import("./lib/agent/ollama-manager")
+      .then(({ ensureOllamaReady }) => ensureOllamaReady())
+      .then((r) => logger.info({ ready: r.ready, model: r.activeModel, pulled: r.pulled, msg: r.message }, "NOVA local model check"))
+      .catch((e) => logger.warn({ err: e }, "NOVA local model check failed"));
+  }
 
   if (process.env.DATABASE_URL) {
     forceOllamaDefault().catch(e => logger.error({ err: e }, "forceOllamaDefault error"));

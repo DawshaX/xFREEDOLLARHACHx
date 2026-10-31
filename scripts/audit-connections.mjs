@@ -133,6 +133,9 @@ async function main() {
     });
   }
 
+  // Bare API *prefixes* (e.g. `const API = "/api/nova-core"`) are constants, not routes.
+  const API_PREFIXES = new Set(["/api/nova-core", "/api/nova", "/api/agent", "/api/nova-intel"]);
+
   // 3b. Static engine coverage
   let missing = [];
   try {
@@ -144,6 +147,10 @@ async function main() {
       // SSE endpoints are served by dedicated stream handlers (setup.ts / app.ts),
       // not by the JSON engine — skip them here.
       if (streaming.test(site.path)) continue;
+      // NOVA's agent stream is served by the dedicated SSE handler (setup.ts on the
+      // static build, app.ts on the server) — it is not a JSON engine route.
+      if (site.path === "/api/nova-core/chat") continue;
+      if (API_PREFIXES.has(site.path)) continue;
       if (site.path === "/api/ws" || site.path === "/api/local-agent/ws") continue;
       let result = null;
       try {
@@ -182,6 +189,9 @@ async function main() {
     { method: "GET", path: "/api/nova-core/status", files: ["artifacts/kali-panel/src/lib/nova-core.ts"] },
     { method: "GET", path: "/api/nova-core/tools", files: ["artifacts/kali-panel/src/lib/nova-core.ts"] },
     { method: "GET", path: "/api/nova-core/persona", files: ["artifacts/api-server/src/routes/nova-core.ts"] },
+    { method: "GET", path: "/api/nova-core/memory", files: ["artifacts/kali-panel/src/pages/NovaMemory.tsx"] },
+    { method: "GET", path: "/api/nova-core/memory/stats", files: ["artifacts/kali-panel/src/pages/NovaMemory.tsx"] },
+    { method: "GET", path: "/api/nova-core/ollama", files: ["artifacts/api-server/src/routes/nova-core.ts"] },
   ];
   const serverResults = [];
   const skipped = [];
@@ -191,6 +201,8 @@ async function main() {
       if (/(stream|events|sse|exec-stream|screenshot)$/.test(site.path)) continue;
       // /api/proxy needs a `?url=` argument; probing it bare always returns 400.
       if (site.path === "/api/proxy") continue;
+      // Bare API *prefixes* (e.g. `const API = "/api/nova-core"`) are not routes.
+      if (API_PREFIXES.has(site.path)) continue;
       try {
         const res = await fetch(serverBase + site.path, {
           method: site.method,

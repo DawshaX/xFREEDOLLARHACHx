@@ -1,0 +1,80 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CyberNova / NOVA — full stack, 100% free, runs unattended
+#
+#   docker compose up -d                 → panel + API  (built-in brain, no model)
+#   docker compose --profile local-ai up -d  → + Ollama with a free local model
+#
+# Everything restarts itself (`restart: unless-stopped`) and the memory lives in
+# a named volume, so a reboot or a redeploy never forgets anything.
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+  nova:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cybernova:latest
+    container_name: cybernova
+    restart: unless-stopped
+    ports:
+      - "${NOVA_PORT:-8080}:8080"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8080
+      NOVA_MEMORY_FILE: /data/nova-memory.json
+      # Local model (used when the local-ai profile is on)
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      # Free-tier keys (optional). Put them in a .env file next to this compose file.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      TOGETHER_API_KEY: ${TOGETHER_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - nova-state:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    mem_limit: ${NOVA_MEM_LIMIT:-1500m}
+
+  # Free local brain — CPU only, no key, no quota. Enable with:
+  #   docker compose --profile local-ai up -d
+  ollama:
+    image: ollama/ollama:latest
+    container_name: nova-ollama
+    restart: unless-stopped
+    profiles: ["local-ai"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h
+      OLLAMA_ORIGINS: "*"
+    # Uncomment for NVIDIA GPUs (needs nvidia-container-toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # Pulls the model once, then exits — idempotent.
+  ollama-pull:
+    image: ollama/ollama:latest
+    profiles: ["local-ai"]
+    depends_on: [ollama]
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "sleep 5 && OLLAMA_HOST=http://ollama:11434 ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"
+    restart: "no"
+
+volumes:
+  nova-state:
+  ollama-models:

@@ -1,0 +1,80 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Keeps a free-tier deployment awake and backs up NOVA's long-term memory.
+#
+# Why: Render/Koyeb free instances sleep after ~15 minutes. A 10-minute ping
+# keeps the agent warm so it answers instantly — and costs nothing.
+#
+# Setup (GitHub → Settings → Secrets and variables → Actions → New secret):
+#   NOVA_URL   e.g. https://cybernova-nova.onrender.com   (no trailing slash)
+#
+# Optional: MEMORY_TOKEN — if you protect the memory endpoint later.
+# ─────────────────────────────────────────────────────────────────────────────
+name: NOVA keep-alive & memory backup
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes — keep the free instance awake
+    - cron: "20 3 * * *"     # daily — snapshot the long-term memory
+  workflow_dispatch:
+
+concurrency:
+  group: nova-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: wake the agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /api/health
+        env:
+          NOVA_URL: ${{ secrets.NOVA_URL }}
+        run: |
+          if [ -z "${NOVA_URL:-}" ]; then
+            echo "::notice::NOVA_URL secret is not set — skipping (set it to your deployment URL)."
+            exit 0
+          fi
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$NOVA_URL/api/health" || echo 000)
+            echo "attempt $i → HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          echo "::warning::agent did not answer after 3 tries"
+
+      - name: Ping the agent brain
+        env:
+          NOVA_URL: ${{ secrets.NOVA_URL }}
+        run: |
+          if [ -z "${NOVA_URL:-}" ]; then exit 0; fi
+          curl -s --max-time 30 "$NOVA_URL/api/nova-core/status" | head -c 400 || true
+
+  backup:
+    name: daily memory backup
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '20 3 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download memory snapshot
+        env:
+          NOVA_URL: ${{ secrets.NOVA_URL }}
+        run: |
+          if [ -z "${NOVA_URL:-}" ]; then
+            echo "::notice::NOVA_URL secret is not set — skipping backup."
+            exit 0
+          fi
+          mkdir -p backup
+          code=$(curl -s -o backup/nova-memory.json -w "%{http_code}" --max-time 60 "$NOVA_URL/api/nova-core/memory/export" || echo 000)
+          echo "HTTP $code · $(wc -c < backup/nova-memory.json) bytes"
+          # keep only today's run (the artifact store holds the history)
+          jq -e '.records | length' backup/nova-memory.json >/dev/null 2>&1 \
+            && echo "records: $(jq '.records | length' backup/nova-memory.json)" \
+            || echo "::warning::memory export did not look like a valid snapshot"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nova-memory-${{ github.run_number }}
+          path: backup/
+          retention-days: 30
+          if-no-files-found: ignore

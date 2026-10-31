@@ -1,0 +1,18 @@
+# keep images small and free of local secrets/state
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.github
+.env
+.env.*
+!.env.nova.example
+**/nova-memory.json
+**/nova-memory.json.*
+**/logs
+**/*.log
+attached_assets
+tmp
+coverage
+.playwright-cli

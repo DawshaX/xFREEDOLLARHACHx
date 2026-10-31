@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Render Blueprint — free tier, deploys from this repo with one click.
+# Free web services sleep after ~15 min idle and wake in ~30s; the panel itself
+# is static and instant, and the GitHub Action keep-alive ping keeps the API warm.
+#
+#   Render dashboard → New → Blueprint → pick this repo → Apply
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+  - type: web
+    name: cybernova-nova
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    healthCheckPath: /api/health
+    buildCommand: |
+      corepack enable &&
+      corepack prepare pnpm@10.34.9 --activate &&
+      pnpm install --no-frozen-lockfile &&
+      pnpm --filter @workspace/api-server run build &&
+      BASE_PATH=/ pnpm --filter @workspace/kali-panel run build
+    startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8080
+      - key: NODE_VERSION
+        value: 22.22.3
+      - key: NOVA_MEMORY_FILE
+        value: /opt/render/project/src/state/nova-memory.json
+      - key: OLLAMA_MODEL
+        value: qwen2.5:3b
+      # Optional free-tier keys — leave unset and NOVA uses the built-in brain.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: TOGETHER_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+    disk:
+      name: nova-memory
+      mountPath: /opt/render/project/src/state
+      sizeGB: 1

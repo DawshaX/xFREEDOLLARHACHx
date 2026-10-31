@@ -425,6 +425,8 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     const p = req.path;
     // Let dedicated in-memory/streaming/network routers handle their routes first
     const letRouterHandle =
+      // NOVA Core owns its own durable memory + agent stream — never mock it.
+      p.startsWith("/nova-core") ||
       p.startsWith("/memory") ||
       p.startsWith("/ollama") ||
       p.startsWith("/events") ||

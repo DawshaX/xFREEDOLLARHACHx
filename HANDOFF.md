@@ -429,3 +429,75 @@
 - اختبار حي: `POST /api/nova-core/chat {"message":"اعمل استطلاع على github.com"}` →
   `set_active_target` ✅ → `recon_target` ✅ (IP + HTTP 200 + TLS حتى 2026-11-01) → `github_search` ⚠️
   → رد عربي بقراءة أمنية + خطوة تالية مقترحة.
+
+---
+
+## المرحلة 34 — ذاكرة طويلة الأمد + تشغيل 24/7 مجاني (2026-10-31)
+
+### 1) الذاكرة طويلة الأمد (`lib/agent/memory-store.ts`)
+- **تخزين دائم على القرص**: `state/nova-memory.json` (أو `NOVA_MEMORY_FILE`)، كتابة ذرّية
+  (tmp + rename) + debounce، وتنظيف عند كل كتابة. **نجا من `kill -9`** في الاختبار.
+- **5 أنواع**: `fact` · `preference` · `lesson` · `event` · `session` — كل نوع بسقف مستقل،
+  والمثبتة (`pinned`) لا تُحذف أبداً.
+- **استرجاع شفّاف**: دالة ترتيب (تطابق العنوان ×2 + المحتوى + الأهمية + الحداثة + نفس النطاق +
+  المثبتة + عدد الاستخدام) وكل نتيجة معاها `why` يشرح سبب اختيارها.
+- **حقن تلقائي**: `memoryContextFor()` بتضيف أقرب 8 ذكريات + التفضيلات + أهم الدروس
+  داخل الـ System Prompt قبل كل رد (مش محتاج تطلب).
+- **تطبيع النطاق** عند التحميل: أي scope قديم/غريب يتحول لهوست نظيف تلقائياً.
+- **مقاومة التلف**: لو الملف اتلف، بيتحفظ جانباً باسم `.corrupt-<ts>` ويبدأ مخزن جديد بدل الكراش.
+- **تصدير/استيراد** كامل (JSON) للنقل بين السيرفرات + نسخ احتياطي.
+
+### 2) أدوات جديدة (21 → 29)
+`memory_forget` · `memory_stats` · `mission_create` · `report_generate` (Markdown جاهز للإرسال
+من ملاحظات المهمة + الأدلة + الخطوات) · `evidence_list` · `report_list` · `corpus_stats` · `task_list`.
+
+### 3) مسارات API جديدة
+```
+GET  /api/nova-core/memory            ?kind&scope&limit&offset&sort
+GET  /api/nova-core/memory/stats
+GET  /api/nova-core/memory/search     ?q
+POST /api/nova-core/memory
+PATCH/DELETE /api/nova-core/memory/:id      (+ /pin)
+DELETE /api/nova-core/memory          ?kind&scope&olderThanDays
+GET  /api/nova-core/memory/export | POST /api/nova-core/memory/import
+GET  /api/nova-core/ollama | POST /api/nova-core/ollama/prepare
+```
+
+### 4) Ollama ذاتي الإدارة (`lib/agent/ollama-manager.ts`)
+- اكتشاف تلقائي: env → 127.0.0.1 → `host.docker.internal` → `ollama:11434` (Compose).
+- `ensureOllamaReady()` بينزّل موديل صغير (`qwen2.5:3b`) تلقائياً أول تشغيل، وقابل للتخطي بـ
+  `NOVA_AUTOPULL=0`. يُستدعى في `index.ts` عند البوت بدون ما يعطّل الاستماع.
+- مزوّدين: **Gemini** موجود، و**OpenAI** أُضيف آخر السلسلة (مدفوع) — كل المفاتيح من env فقط.
+
+### 5) تشغيل مستقل 24/7 (كل الحلول مجانية)
+`Dockerfile` · `docker-compose.yml` (المخ + Ollama profile) · `render.yaml` · `fly.toml` ·
+`ecosystem.config.cjs` (PM2) · `deploy/oracle-setup.sh` (تثبيت كامل لأمر واحد: Node, pnpm,
+Ollama+موديل, systemd بـ Restart=always, Nginx مع SSE/WebSocket, UFW, TLS اختياري,
+**نسخة احتياطية يومية للذاكرة**) · `.github/workflows/keepalive.yml` (نبضة كل 10 دقايق +
+نسخة ذاكرة يومية كـ artifact) · `deploy/README.md` (دليل عربي خطوة بخطوة).
+- `index.ts` بقى بيستمع على `HOST` (افتراضي 127.0.0.1، و`0.0.0.0` في الحاويات/السحابة).
+
+### 6) واجهة الذاكرة `/nova-memory`
+عرض/بحث/تثبيت/حذف/إضافة/تصدير/استيراد + إحصائيات (حجم الملف، الأنواع، النطاقات، آخر خطأ كتابة).
+
+### 7) المحرك الثابت (GitHub Pages)
+`resolveStandaloneApi` بقى يخدم `/nova-core/status`, `/nova-core/memory[/stats]`, `/nova-core/ollama`
+من مخزن المتصفح — صفحة الذاكرة بتشتغل حتى بدون سيرفر. النسختان متطابقتان بايت ببايت.
+
+### 8) أخطاء حقيقية اتصلحت
+- **«تفتكر ايه عني» كان بيحفظ ذكرى بدل ما يسترجع**: ترتيب النوايا كانت بتخلي «افتكر» (حفظ)
+  تسبق الاسترجاع وتطابق داخل «تفتكر». تم عكس الترتيب + حدود كلمات دقيقة + تنظيف نص البحث.
+- **`scope` كان بيتخزن كرابط كامل** («https://hackerone.com/...») → تطبيع تلقائي عند التحميل
+  والكتابة، والبيانات القديمة اتصلحت لوحدها.
+- **`/api/nova-core` (ثابت أساس) كان بيتفسر كمسار** في فحص الاتصالات → استُثني مع بقية الأساسات.
+
+### 9) نتائج الفحص
+| فحص | النتيجة |
+|---|---|
+| `tsc --noEmit` (الواجهة) | 0 أخطاء |
+| بناء API + Vite | ✓ |
+| `audit:connections --server` | **115 نقطة · 0 فجوة · 0 انحراف · 61 بروب حي 0 خطأ** |
+| `audit-render /nova-memory /nova-core` | 124,146 و125,322 بايت مرسومة |
+| اختبار الذاكرة | حُفظت 6 ذكريات → `kill -9` → إعادة تشغيل → **6 ذكريات حاضرين** |
+| استرجاع في جلسة جديدة | `memory_search` رجّع 3 نتائج صحيحة بأعلى صلة للسؤال |
+| أدوات جديدة حيّة | `task_list` (29 قدرة) · `corpus_stats` · `report_generate` (تقرير 1,612 حرف) |

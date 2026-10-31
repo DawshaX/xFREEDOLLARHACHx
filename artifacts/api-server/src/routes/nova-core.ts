@@ -13,6 +13,22 @@ import { runAgent, type AgentEvent } from "../lib/agent/core";
 import { AGENT_TOOLS, runAgentTool, getToolSpec } from "../lib/agent/tools";
 import { buildPersonaCard, NOVA_IDENTITY } from "../lib/agent/persona";
 import { listConfiguredProviders } from "../lib/agent/llm";
+import {
+  listMemories,
+  memoryStats,
+  recall,
+  remember,
+  forget,
+  forgetMany,
+  pinMemory,
+  updateMemory,
+  exportMemories,
+  importMemories,
+  flushMemory,
+  initMemory,
+  type MemoryKind,
+} from "../lib/agent/memory-store";
+import { ensureOllamaReady, ollamaHealth } from "../lib/agent/ollama-manager";
 import { broadcastEvent } from "../lib/ws-hub";
 import { logger } from "../lib/logger";
 
@@ -158,6 +174,141 @@ router.post("/nova-core/execute", async (req: Request, res: Response) => {
   try {
     const result = await runAgentTool(tool, body.args ?? {});
     res.json({ ok: result.ok, tool, summary: result.summary, ms: result.ms, data: result.data });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+/* ── long-term memory (durable, on disk) ─────────────────────────────────── */
+
+const KINDS: MemoryKind[] = ["fact", "preference", "lesson", "event", "session"];
+
+router.get("/nova-core/memory", (req: Request, res: Response) => {
+  initMemory();
+  const kind = String(req.query.kind ?? "");
+  const res1 = listMemories({
+    kind: KINDS.includes(kind as MemoryKind) ? (kind as MemoryKind) : undefined,
+    scope: req.query.scope ? String(req.query.scope) : undefined,
+    limit: Number(req.query.limit ?? 50),
+    offset: Number(req.query.offset ?? 0),
+    sort: req.query.sort === "important" ? "important" : "recent",
+  });
+  res.json({ ...res1, stats: memoryStats() });
+});
+
+router.get("/nova-core/memory/stats", (_req: Request, res: Response) => {
+  initMemory();
+  res.json(memoryStats());
+});
+
+router.get("/nova-core/memory/search", (req: Request, res: Response) => {
+  initMemory();
+  const q = String(req.query.q ?? "").trim();
+  const hits = recall(q, {
+    scope: req.query.scope ? String(req.query.scope) : undefined,
+    limit: Number(req.query.limit ?? 12),
+  });
+  res.json({ query: q, count: hits.length, hits });
+});
+
+router.post("/nova-core/memory", (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as {
+    kind?: string;
+    title?: string;
+    content?: string;
+    scope?: string;
+    tags?: string[];
+    importance?: number;
+    pinned?: boolean;
+  };
+  if (!body.title || !body.content) {
+    res.status(400).json({ error: "title and content are required" });
+    return;
+  }
+  const rec = remember({
+    kind: KINDS.includes(body.kind as MemoryKind) ? (body.kind as MemoryKind) : "fact",
+    title: body.title,
+    content: body.content,
+    scope: body.scope,
+    tags: body.tags,
+    importance: body.importance,
+    pinned: body.pinned,
+    source: "user",
+  });
+  res.status(201).json(rec);
+});
+
+router.patch("/nova-core/memory/:id", (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { title?: string; content?: string; importance?: number; tags?: string[]; scope?: string };
+  const rec = updateMemory(String(req.params.id), body);
+  if (!rec) {
+    res.status(404).json({ error: "memory not found" });
+    return;
+  }
+  res.json(rec);
+});
+
+router.patch("/nova-core/memory/:id/pin", (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { pinned?: boolean };
+  const rec = pinMemory(String(req.params.id), body.pinned !== false);
+  if (!rec) {
+    res.status(404).json({ error: "memory not found" });
+    return;
+  }
+  res.json(rec);
+});
+
+router.delete("/nova-core/memory/:id", (req: Request, res: Response) => {
+  const ok = forget(String(req.params.id));
+  res.status(ok ? 200 : 404).json({ deleted: ok, id: req.params.id });
+});
+
+router.delete("/nova-core/memory", (req: Request, res: Response) => {
+  const kind = String(req.query.kind ?? "");
+  const removed = forgetMany({
+    kind: KINDS.includes(kind as MemoryKind) ? (kind as MemoryKind) : undefined,
+    scope: req.query.scope ? String(req.query.scope) : undefined,
+    olderThanDays: req.query.olderThanDays ? Number(req.query.olderThanDays) : undefined,
+  });
+  res.json({ removed });
+});
+
+router.get("/nova-core/memory/export", (_req: Request, res: Response) => {
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="nova-memory-${new Date().toISOString().slice(0, 10)}.json"`);
+  res.send(exportMemories());
+});
+
+router.post("/nova-core/memory/import", (req: Request, res: Response) => {
+  const body = req.body as { records?: unknown[] } | undefined;
+  if (!body) {
+    res.status(400).json({ error: "body required" });
+    return;
+  }
+  try {
+    const result = importMemories(JSON.stringify(body));
+    flushMemory();
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+/* ── local model (Ollama) self-management ────────────────────────────────── */
+
+router.get("/nova-core/ollama", async (_req: Request, res: Response) => {
+  try {
+    res.json(await ollamaHealth());
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/nova-core/ollama/prepare", async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { model?: string; pull?: boolean };
+  try {
+    const result = await ensureOllamaReady({ model: body.model, allowPull: body.pull !== false });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }
