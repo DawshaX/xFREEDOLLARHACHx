@@ -176,9 +176,17 @@ async function main() {
   }
 
   // 3c. Live server probe
+  // NOVA Core endpoints are addressed through a variable base (`${base}/nova-core/…`),
+  // so they never show up as literal `/api/…` call sites. Probe them explicitly.
+  const EXTRA_PROBES = [
+    { method: "GET", path: "/api/nova-core/status", files: ["artifacts/kali-panel/src/lib/nova-core.ts"] },
+    { method: "GET", path: "/api/nova-core/tools", files: ["artifacts/kali-panel/src/lib/nova-core.ts"] },
+    { method: "GET", path: "/api/nova-core/persona", files: ["artifacts/api-server/src/routes/nova-core.ts"] },
+  ];
   const serverResults = [];
+  const skipped = [];
   if (serverBase) {
-    for (const site of callSites) {
+    for (const site of [...callSites, ...EXTRA_PROBES]) {
       if (!["GET", "DELETE"].includes(site.method)) continue;
       if (/(stream|events|sse|exec-stream|screenshot)$/.test(site.path)) continue;
       // /api/proxy needs a `?url=` argument; probing it bare always returns 400.
@@ -191,6 +199,23 @@ async function main() {
         });
         await res.body?.cancel().catch(() => {});
         serverResults.push({ endpoint: `${site.method} ${site.path}`, status: res.status });
+        // Collection-scoped routes (`/api/missions/1`) legitimately 404 when the
+        // store is empty — that is data, not a broken connection. Confirm by
+        // asking the parent collection before reporting a finding.
+        if (res.status === 404 && /\/\d+$/.test(site.path)) {
+          try {
+            const parent = site.path.replace(/\/\d+$/, "");
+            const listRes = await fetch(serverBase + parent, { signal: AbortSignal.timeout(8000) });
+            const json = await listRes.json().catch(() => null);
+            await listRes.body?.cancel().catch(() => {});
+            if (Array.isArray(json) && json.length === 0) {
+              skipped.push({ endpoint: `${site.method} ${site.path}`, reason: `${parent} is empty` });
+              continue;
+            }
+          } catch {
+            /* fall through to the normal finding */
+          }
+        }
         if (res.status >= 400) {
           findings.push({
             kind: "server-error",
@@ -217,6 +242,7 @@ async function main() {
     engineDrift: drift,
     staticMissing: missing.length,
     serverProbed: serverResults.length,
+    skipped,
     findings,
   };
 

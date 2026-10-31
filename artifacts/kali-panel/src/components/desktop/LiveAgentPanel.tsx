@@ -10241,6 +10241,66 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
     let current = "";
     setMessages(prev => [...prev, { role: "assistant", content: "", type: "streaming" }]);
     try {
+      // ── NOVA Core first ────────────────────────────────────────────────────
+      // The desktop chat talks to the real agent brain: 21 live tools, a plan,
+      // and every tool call/result rendered inline. Falls back to the legacy
+      // auto-chat stream when the core endpoint is unavailable (static build).
+      let coreOk = false;
+      try {
+        const core = await fetch("/api/nova-core/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: content, sessionId }),
+        });
+        if (!core.ok || !core.body) throw new Error(`nova-core ${core.status}`);
+        coreOk = true;
+        const coreReader = core.body.getReader();
+        const coreDec = new TextDecoder();
+        let coreBuf = "";
+        while (true) {
+          const { done, value } = await coreReader.read();
+          if (done) break;
+          coreBuf += coreDec.decode(value, { stream: true });
+          let sep: number;
+          while ((sep = coreBuf.indexOf("\n\n")) >= 0) {
+            const frame = coreBuf.slice(0, sep);
+            coreBuf = coreBuf.slice(sep + 2);
+            const dataLine = frame.split("\n").find(l => l.startsWith("data:"));
+            if (!dataLine) continue;
+            let ev: { type?: string; text?: string; name?: string; args?: unknown; ok?: boolean; summary?: string; message?: string };
+            try { ev = JSON.parse(dataLine.slice(5).trim()); } catch { continue; }
+            if (ev.type === "thought" && ev.text) {
+              setMessages(prev => [...prev, { role: "note", content: `🧠 ${ev.text}` }]);
+            } else if (ev.type === "tool_call") {
+              setMessages(prev => [...prev, { role: "tool", content: `$ ${ev.name} ${JSON.stringify(ev.args ?? {})}`, type: "exec" }]);
+            } else if (ev.type === "tool_result") {
+              setMessages(prev => [...prev, { role: "tool", content: `${ev.ok ? "✓" : "✗"} ${ev.summary ?? ""}`, type: "output" }]);
+            } else if (ev.type === "delta" && ev.text) {
+              current += ev.text;
+              setMessages(prev => {
+                const copy = [...prev];
+                const idxS = copy.findIndex(m => m.type === "streaming");
+                if (idxS >= 0) copy[idxS] = { role: "assistant", content: current, type: "streaming" };
+                return copy;
+              });
+            } else if (ev.type === "error" && ev.message) {
+              setMessages(prev => [...prev, { role: "error", content: ev.message as string }]);
+            }
+          }
+        }
+      } catch (coreErr) {
+        if (!coreOk) throw coreErr;
+      }
+      if (coreOk) {
+        setMessages(prev => {
+          const copy = [...prev];
+          if (copy[copy.length - 1]?.type === "streaming") copy[copy.length - 1] = { role: "assistant", content: current };
+          return copy;
+        });
+        setStreaming(false);
+        return;
+      }
+
       const resp = await fetch(`/api/nova/sessions/${sessionId}/auto-chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content, model, autonomousMode }) });
       if (!resp.body) throw new Error("no body");
       const reader = resp.body.getReader(); const dec = new TextDecoder();

@@ -422,6 +422,30 @@ const missions: Mission[] = [];
 let missionIdSeq = 1;
 let findingIdSeq = 1;
 
+// ── Boot seed ─────────────────────────────────────────────────────────────────
+// The mission store is in-memory, so a fresh process used to start with an empty
+// list: MissionTracker showed nothing and every `/api/missions/:id` call 404'd
+// (the agent's record_finding / mission_status tools had nothing to write to).
+// One starter mission keeps the whole flow alive from the first second.
+(() => {
+  if (missions.length > 0) return;
+  const now = new Date().toISOString();
+  missions.push({
+    id: missionIdSeq++,
+    name: "مهمة الاستطلاع الأولى",
+    target: "github.com",
+    objective: "استطلاع آمن لسطح الهجوم الخارجي: DNS، شهادة TLS، ترويسات الأمان، والنطاقات الفرعية.",
+    phase: "reconnaissance",
+    status: "active",
+    createdAt: now,
+    updatedAt: now,
+    findings: [],
+    commands: [],
+    notes: "مهمة افتتاحية تُنشأ تلقائياً عند تشغيل الخادم — عدّلها أو احذفها كما تحب.",
+    tags: ["recon", "starter"],
+  } as Mission);
+})();
+
 router.get("/missions", (_req, res) => {
   res.json(missions.map(m => ({
     ...m, findingCount: m.findings.length, commandCount: m.commands.length,

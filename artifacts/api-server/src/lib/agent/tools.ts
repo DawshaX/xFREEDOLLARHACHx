@@ -369,7 +369,7 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         const https = rawArgs.https !== false;
         await assertPublicHost(host);
         const res = (await scanHeaders(host, https)) as Record<string, Record<string, unknown>>;
-        const missing = (res.missing ?? []) as string[];
+        const missing = (res.missing ?? []) as unknown as string[];
         return done(
           true,
           `${summariseHeaders(res)} · ${missing.length ? `ناقص: ${missing.slice(0, 4).join(", ")}` : "الترويسات الأساسية موجودة"}`,
