@@ -2,7 +2,9 @@ name: CyberNova 24/7 Autonomous Cloud Brain Pulse
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    # Hourly: the public repo's Actions minutes are free, each run is ~30s, and
+    # NVD allows 5 requests / 30s — one per hour is far below that.
+    - cron: "0 * * * *"
   workflow_dispatch:
   # Run once whenever the pulse itself changes, so a fresh version is proven
   # immediately instead of waiting up to six hours. State commits by the bot
