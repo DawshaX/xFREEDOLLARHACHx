@@ -19,12 +19,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle, Brain, CheckCircle2, CircleDashed, Clock, Loader2, Plug,
   PlugZap, Radio, RefreshCw, Send, Server, Sparkles, Trash2, Wifi, WifiOff, Wrench,
+  History, Plus, Copy,
 } from "lucide-react";
 import {
   clearRemoteBase, getRemoteBase, isRemoteConfigured, probeRemote, setRemoteBase,
   type ProbeResult,
 } from "@/lib/remote";
 import { runLocalBrain } from "@/lib/local-brain";
+import {
+  createSession, deleteSession, exportSession, getActiveId, getSession, listSessions,
+  onSessionsChange, persistent, replaceLines, setActiveId, type ChatSession,
+} from "@/lib/session-store";
 
 const API = "/api";
 
@@ -369,7 +374,16 @@ function PlanBox({ onPlan, version }: { onPlan: (p: Plan | null) => void; versio
 /* ─────────────────────────── the workstation ─────────────────────────── */
 
 export function NovaWorkstation() {
-  const [lines, setLines] = useState<Line[]>([]);
+  // The conversation lives in a persistent session, so coming back to the page
+  // (or to an older chat) never loses it.
+  const [sessionId, setSessionId] = useState<string>(() => {
+    const active = getActiveId();
+    if (active && getSession(active)) return active;
+    return createSession().id;
+  });
+  const [lines, setLines] = useState<Line[]>(() => (getSession(sessionId)?.lines as Line[] | undefined) ?? []);
+  const [sessions, setSessions] = useState<ChatSession[]>(() => listSessions());
+  const [showSessions, setShowSessions] = useState(false);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [brain, setBrain] = useState<"auto" | "server" | "browser">("auto");
@@ -384,6 +398,30 @@ export function NovaWorkstation() {
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [lines]);
+
+  // Persist on every settled change. Streaming grows one line, so this stays
+  // cheap even on a long answer.
+  useEffect(() => {
+    if (!sessionId) return;
+    const id = setTimeout(() => replaceLines(sessionId, lines as Parameters<typeof replaceLines>[1]), 250);
+    return () => clearTimeout(id);
+  }, [lines, sessionId]);
+
+  useEffect(() => onSessionsChange(() => setSessions(listSessions())), []);
+
+  const openSession = (id: string) => {
+    setSessionId(id);
+    setActiveId(id);
+    setLines((getSession(id)?.lines as Line[] | undefined) ?? []);
+    setShowSessions(false);
+  };
+
+  const startSession = () => {
+    const s2 = createSession();
+    setSessionId(s2.id);
+    setLines([]);
+    setShowSessions(false);
+  };
 
   // Is the server side actually answering? Not a guess — a real request.
   const checkHealth = useCallback(async () => {
@@ -444,7 +482,7 @@ export function NovaWorkstation() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: content,
-          sessionId: "workstation",
+          sessionId: sessionId || "workstation",
           ...(effectiveBrain === "browser" ? { forceHeuristic: true } : {}),
         }),
       });
@@ -468,7 +506,7 @@ export function NovaWorkstation() {
       if (!assistant.trim()) {
         try {
           await runLocalBrain(content, (ev) => handleEvent(ev as Record<string, unknown>, appendAssistant), {
-            sessionId: "workstation",
+            sessionId: sessionId || "workstation",
           });
         } catch {
           /* the note below still tells the truth */
@@ -537,20 +575,91 @@ export function NovaWorkstation() {
                 {b === "auto" ? "تلقائي" : b === "server" ? "سيرفر" : "متصفح"}
               </button>
             ))}
-            <button onClick={() => void checkHealth()} title="إعادة فحص الاتصال" className="ms-1 text-white/40 hover:text-cyan-300">
+            <button
+              onClick={() => setShowSessions((v) => !v)}
+              title="محادثاتي المحفوظة"
+              className={`ms-1 flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded border ${
+                showSessions ? "border-cyan-400/50 bg-cyan-400/15 text-cyan-200" : "border-white/10 bg-white/5 text-white/50 hover:text-cyan-200"
+              }`}
+            >
+              <History className="h-2.5 w-2.5" /> {sessions.length}
+            </button>
+            <button onClick={startSession} title="محادثة جديدة" className="text-white/40 hover:text-cyan-300">
+              <Plus className="h-3 w-3" />
+            </button>
+            <button onClick={() => void checkHealth()} title="إعادة فحص الاتصال" className="text-white/40 hover:text-cyan-300">
               <RefreshCw className="h-3 w-3" />
             </button>
           </div>
         </div>
+
+        {showSessions && (
+          <div className="shrink-0 max-h-40 overflow-y-auto border-b border-white/10 bg-black/40 p-2 space-y-1">
+            <div className="flex items-center gap-1.5 px-1">
+              <History className="h-3 w-3 text-cyan-300" />
+              <span className="text-[9px] font-black text-white/70">محادثاتي</span>
+              <span className="text-[7.5px] text-white/30">{persistent() ? "محفوظة على جهازك" : "المتصفح مش بيسمح بالحفظ"}</span>
+              <button onClick={startSession} className="ms-auto text-[8px] px-1.5 py-0.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-200">
+                + جديدة
+              </button>
+            </div>
+            {sessions.length === 0 && <div className="text-[8px] text-white/30 px-1">مفيش محادثات محفوظة بعد.</div>}
+            {sessions.map((sess) => (
+              <div
+                key={sess.id}
+                className={`flex items-center gap-1 rounded-lg border px-1.5 py-1 ${
+                  sess.id === sessionId ? "border-cyan-500/40 bg-cyan-500/10" : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05]"
+                }`}
+              >
+                <button onClick={() => openSession(sess.id)} className="flex-1 min-w-0 text-start">
+                  <div className="text-[8.5px] text-white/75 truncate">{sess.title}</div>
+                  <div className="text-[7px] text-white/30">
+                    {new Date(sess.updatedAt).toLocaleString("ar-EG")} · {sess.lines.length} سطر
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    const text = exportSession(sess.id);
+                    void navigator.clipboard?.writeText(text);
+                  }}
+                  title="نسخ المحادثة"
+                  className="text-white/30 hover:text-cyan-300"
+                >
+                  <Copy className="h-2.5 w-2.5" />
+                </button>
+                <button
+                  onClick={() => {
+                    deleteSession(sess.id);
+                    if (sess.id === sessionId) startSession();
+                  }}
+                  title="حذف"
+                  className="text-white/25 hover:text-red-300"
+                >
+                  <Trash2 className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {lines.length === 0 && (
             <div className="text-center py-8 space-y-2">
               <Sparkles className="h-6 w-6 text-cyan-300 mx-auto" />
               <div className="text-[11px] font-black text-white/70">اكتب أول أمر لنوفا</div>
-              <div className="text-[9px] text-white/35">مثال: «افحص example.com» · «ابحث عن CVE-2025-29927» · «إيه اللي في ذاكرتك عني؟»</div>
+              <div className="text-[9px] text-white/35">
+                مثال: «استخرج ثغرات example.com» · «المهمات» · «ابحث عن CVE-2025-29927» · «إيه اللي في ذاكرتك عني؟»
+              </div>
               <div className="flex flex-wrap justify-center gap-1 pt-1">
-                {["إيه الأجهزة المتصلة؟", "ابحث عن CVE-2025-29927", "إيه حالة المنصة؟"].map((t) => (
+                {[
+                  "استخرج ثغرات example.com",
+                  "هات الثغرات",
+                  "المهمات",
+                  "افحص example.com",
+                  "ابحث عن CVE-2025-29927",
+                  "إيه حالة المنصة؟",
+                  "إيه الأجهزة المتصلة؟",
+                ].map((t) => (
                   <button key={t} onClick={() => setInput(t)} className="text-[8.5px] px-2 py-1 rounded-lg border border-cyan-500/25 bg-cyan-500/5 text-cyan-200/80 hover:bg-cyan-500/15">
                     {t}
                   </button>

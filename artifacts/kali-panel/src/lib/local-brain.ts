@@ -18,7 +18,8 @@
  * Tools that need the network or a fleet are reported as "needs a server" —
  * never faked.
  */
-import { buildSmartAgentResponse, getMissionsState, resolveStandaloneApi } from "./standalone-api";
+import { getMissionsState, resolveStandaloneApi } from "./standalone-api";
+import { addFindings, createMission, finishMission, listMissions, missionStats, updateStep, type Finding } from "./mission-store";
 
 export type LocalBrainEvent =
   | { type: "ready"; sessionId: string; mode: "builtin"; provider: string; model: string; tools: number }
@@ -47,6 +48,7 @@ interface Step {
 const LOCAL_TOOLS = new Set([
   "memory_search", "knowledge_search", "cve_lookup", "corpus_stats", "platform_status", "memory_list",
   "mission_status", "dns_lookup", "github_search", "exploit_search", "web_fetch", "subdomain_enum",
+  "nvd_search",
 ]);
 /** Tools that exist but need the server (reported honestly, never faked). */
 const SERVER_ONLY = new Set(["recon_target", "tls_audit", "http_headers_audit", "port_scan", "fleet_list", "fleet_profile", "fleet_exec", "device_control_map", "report_generate"]);
@@ -63,6 +65,7 @@ const TITLES: Record<string, string> = {
   subdomain_enum: "تعداد نطاقات فرعية (crt.sh)",
   github_search: "بحث GitHub الحي",
   exploit_search: "بحث ثغرات حي (OSV)",
+  nvd_search: "استخراج ثغرات من NVD",
   recon_target: "استطلاع الهدف",
   port_scan: "فحص المنافذ",
   web_fetch: "جلب صفحة",
@@ -92,6 +95,8 @@ export type Intent =
   | { kind: "fetch"; url: string }
   | { kind: "exploit"; query: string }
   | { kind: "knowledge"; query: string }
+  | { kind: "hunt"; target: string | null }
+  | { kind: "missions" }
   | { kind: "smalltalk"; text: string };
 
 /** Normalise Arabic chat text: strip diacritics, punctuation runs, letter stutter. */
@@ -127,6 +132,9 @@ export function understand(message: string): Intent {
   if (short && exact(/^(مرحبا|مرحبتين|هلا|هاي|هلو|اهلا|السلام عليكم|سلام|صباح الخير|مساء الخير|ازيك|عامل ايه|اخبارك|ايه الاخبار|hello|hi|hey|yo|sup)$/))
     return { kind: "greeting" };
   if (short && exact(/^(شكرا|تسلم|ميرسي|ربنا يكرمك|thanks|thank you|thx|ok|تمام|ماشي|حلو)$/)) return { kind: "thanks" };
+  // «انت عامل ايه» / «اخبارك» / «كيفك» are small talk, not a request for a report.
+  if (has(/^(انت |انتي )?(عامل|عامله|عاملين) ايه$|^(اخبارك|اخبارك ايه|ايه الاخبار|كيفك|كيف حالك|شلونك|ازيك|ازاي حالك|how are you|how is it going)/))
+    return { kind: "greeting" };
   if (has(/(مين انت|من انت|انت مين|اسمك ايه|مين حضرتك|who are you|عرّف بنفسك|عرف بنفسك)/)) return { kind: "identity" };
   if (has(/(بتعرف تعمل|تعرف تعمل|امكانيات|قدرات|بتساعد في|بتعمل ايه|تقدر تعمل ايه|what can you do|ساعدني في ايه)/))
     return { kind: "capabilities" };
@@ -144,7 +152,11 @@ export function understand(message: string): Intent {
   if (domain && has(/(افتح|اقرا|هات|جيب|محتوي|fetch|read|صفحه)/)) return { kind: "fetch", url: domain };
   if (has(/(استغلال|exploit|اثبات مفهوم)/)) return { kind: "exploit", query: domain ?? raw.slice(0, 60) };
   if (has(/(افتكر|تفتكر|فاكر|ذاكره|memory|remember|عني)/)) return { kind: "memory", query: raw.slice(0, 80) };
-  if (has(/(حاله المنصه|احصائ|كام ثغره|ثغرات|الفهرس|galaxy|حاله الاسطول|الاسطول|stats|status)/)) return { kind: "status" };
+  if (has(/(مهمات|المهمات|مهمه|مهمه جديده|شغل مهمه|missions|misso)/) && !has(/(ثغرات|vuln)/)) return { kind: "missions" };
+  // "استخرج الثغرات" / "هات الثغرات" / "شوف الثغرات" — a real hunt, not a search.
+  if (has(/(استخرج|استخراج|هات|طلع|جيب|اجمع|شوف|دور|ابحث|اعمل|نفذ)/) && has(/(ثغرات|ثغره|vulns|vulnerabilit|exploit)/))
+    return { kind: "hunt", target: domain ?? null };
+  if (has(/(حاله المنصه|احصائ|كام ثغره|الفهرس|galaxy|حاله الاسطول|الاسطول|stats|status)/)) return { kind: "status" };
   if (has(/(بحث|ابحث|دور|اعرف|اشرح|ايه هو|ايه هي|what is|explain)/) || domain)
     return { kind: "knowledge", query: raw.slice(0, 90) };
 
@@ -200,6 +212,28 @@ export function planFor(intent: Intent, message: string): { thought: string; ste
       return { thought: `هقرا ${intent.url} وألخّصلك اللي فيها.`, steps: [{ tool: "web_fetch", title: TITLES.web_fetch, args: { url: intent.url } }] };
     case "knowledge":
       return { thought: "هدور في فهرس المعرفة المحلي الأول، ولو مفيش نتيجة أقولك.", steps: [{ tool: "knowledge_search", title: TITLES.knowledge_search, args: { query: q } }] };
+    case "missions": {
+      const stats = missionStats();
+      return {
+        thought: `عندك ${stats.total} مهمة (${stats.running} شغّالة) و${stats.findings} نتيجة مسجّلة.`,
+        steps: [],
+      };
+    }
+    case "hunt": {
+      const steps: Step[] = [];
+      if (intent.target) {
+        steps.push({ tool: "dns_lookup", title: TITLES.dns_lookup, args: { target: intent.target } });
+        steps.push({ tool: "subdomain_enum", title: TITLES.subdomain_enum, args: { target: intent.target } });
+        steps.push({ tool: "web_fetch", title: "بصمة التقنيات من الصفحة", args: { url: intent.target } });
+      }
+      steps.push({ tool: "nvd_search", title: TITLES.nvd_search, args: { keyword: intent.target ?? "" } });
+      return {
+        thought: intent.target
+          ? `مهمة استخراج ثغرات على ${intent.target}: DNS + نطاقات فرعية + ثغرات من NVD. كل خطوة بتتسجّل في المهمة.`
+          : "مهمة استخراج ثغرات من المصادر الحية (NVD) — وبسجّلها كمهمة تقدر ترجع لها.",
+        steps,
+      };
+    }
   }
 }
 
@@ -307,6 +341,25 @@ async function runLocalTool(step: Step): Promise<ToolOutcome> {
           data: null,
         };
       }
+      case "nvd_search": {
+        const keyword = String(step.args.keyword ?? "").trim();
+        const harvest = await harvestVulnerabilities(keyword);
+        if (!harvest.items.length) {
+          return {
+            ok: false,
+            summary: `${harvest.status.join(" · ")} — مفيش صفوف راجعة${keyword ? ` لـ «${keyword}»` : ""}.`,
+            data: Object.assign([], { status: harvest.status }),
+          };
+        }
+        const crit = harvest.items.filter((c) => (c.score ?? 0) >= 9).length;
+        return {
+          ok: true,
+          summary:
+            `${harvest.items.length} ثغرة${keyword ? ` مرتبطة بـ ${keyword}` : " (الأحدث)"} — ${crit} حرجة · أعلى: ` +
+            `${harvest.items[0].id} ${harvest.items[0].score ?? "?"} · المصادر: ${harvest.sources.join(" + ")}`,
+          data: Object.assign(harvest.items, { status: harvest.status }),
+        };
+      }
       case "dns_lookup": {
         const domain = String(step.args.target ?? "").replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
         if (!domain) return { ok: false, summary: "محتاج اسم نطاق", data: null };
@@ -398,11 +451,28 @@ async function runLocalTool(step: Step): Promise<ToolOutcome> {
       case "web_fetch": {
         const url = String(step.args.url ?? "");
         const absolute = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-        const text = await getText(`https://r.jina.ai/${absolute}`, 15000);
-        const clean = text.replace(/\s+/g, " ").trim();
-        return clean
-          ? { ok: true, summary: `قريت ${absolute} (${clean.length} حرف): ${clean.slice(0, 200)}`, data: clean.slice(0, 4000) }
-          : { ok: false, summary: "الصفحة رجعت فاضية", data: null };
+        // Readers that send CORS headers, tried in order. A browser cannot fetch
+        // an arbitrary site directly (no CORS), so one of these has to answer.
+        const readers = [
+          `https://r.jina.ai/${absolute}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(absolute)}`,
+        ];
+        for (const reader of readers) {
+          try {
+            const text = await getText(reader, 15000);
+            const clean = text.replace(/\s+/g, " ").trim();
+            if (!clean) continue;
+            const title = clean.match(/<title[^>]*>([^<]{2,120})<\/title>/i)?.[1] ?? clean.slice(0, 80);
+            return {
+              ok: true,
+              summary: `قريت ${absolute} (${clean.length} حرف) — ${title}`,
+              data: clean.slice(0, 6000),
+            };
+          } catch {
+            /* try the next reader */
+          }
+        }
+        return { ok: false, summary: `مقدرتش أقرا ${absolute} من الشبكة دي (الاتنين اترفضوا)`, data: null };
       }
       case "corpus_stats": {
         const res = resolveStandaloneApi("/corpus/stats", "GET", null) as { totalIndexedKnowledgeItems?: number } | null;
@@ -436,6 +506,165 @@ async function runLocalTool(step: Step): Promise<ToolOutcome> {
   }
 }
 
+
+
+/* ───────────────────── real vulnerability harvesting ───────────────────── */
+
+interface HarvestedVuln {
+  id: string;
+  description: string;
+  score?: number;
+  severity?: string;
+  published?: string;
+  source: string;
+  url?: string;
+}
+
+interface Harvest {
+  items: HarvestedVuln[];
+  sources: string[];
+  status: string[];
+}
+
+function severityFromScore(score?: number): string | undefined {
+  if (!score) return undefined;
+  if (score >= 9) return "CRITICAL";
+  if (score >= 7) return "HIGH";
+  if (score >= 4) return "MEDIUM";
+  return "LOW";
+}
+
+/**
+ * Pull real advisories from every free source this browser can reach, and say
+ * which ones answered. NVD is the primary; GitHub Advisories is a genuine
+ * second source that works when NVD is rate-limited or blocked; the local
+ * 76k-row corpus is the last resort. Nothing is invented.
+ */
+async function harvestVulnerabilities(keyword: string): Promise<Harvest> {
+  const items: HarvestedVuln[] = [];
+  const sources: string[] = [];
+  const status: string[] = [];
+
+  // 1) NVD live (keyword search when we have one).
+  try {
+    const url = keyword
+      ? `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(keyword)}&resultsPerPage=40`
+      : `https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=40`;
+    const j = (await getJson(url, 15000)) as {
+      vulnerabilities?: Array<{
+        cve?: {
+          id?: string;
+          published?: string;
+          descriptions?: Array<{ lang?: string; value?: string }>;
+          metrics?: {
+            cvssMetricV31?: Array<{ cvssData?: { baseScore?: number; baseSeverity?: string } }>;
+            cvssMetricV30?: Array<{ cvssData?: { baseScore?: number; baseSeverity?: string } }>;
+            cvssMetricV2?: Array<{ cvssData?: { baseScore?: number }; baseSeverity?: string }>;
+          };
+        };
+      }>;
+    };
+    let count = 0;
+    for (const row of j.vulnerabilities ?? []) {
+      const cve = row.cve;
+      if (!cve?.id) continue;
+      const m = cve.metrics;
+      const data = m?.cvssMetricV31?.[0]?.cvssData ?? m?.cvssMetricV30?.[0]?.cvssData;
+      items.push({
+        id: cve.id,
+        description: cve.descriptions?.find((d) => d.lang === "en")?.value ?? "",
+        score: data?.baseScore ?? m?.cvssMetricV2?.[0]?.cvssData?.baseScore,
+        severity: data?.baseSeverity ?? m?.cvssMetricV2?.[0]?.baseSeverity,
+        published: cve.published,
+        source: "NVD",
+        url: `https://nvd.nist.gov/vuln/detail/${cve.id}`,
+      });
+      count += 1;
+    }
+    status.push(count ? `NVD: ${count}` : "NVD: صفر نتائج");
+    if (count) sources.push("NVD");
+  } catch {
+    status.push("NVD: مش متاح من الشبكة دي");
+  }
+
+  // 2) GitHub Security Advisories — free, CORS, no key, real advisories.
+  try {
+    const j = (await getJson(
+      `https://api.github.com/advisories?per_page=60`,
+      12000,
+    )) as Array<{
+      ghsa_id?: string;
+      cve_id?: string | null;
+      summary?: string;
+      severity?: string;
+      cvss?: { score?: number };
+      html_url?: string;
+      published_at?: string;
+    }>;
+    let count = 0;
+    for (const row of Array.isArray(j) ? j : []) {
+      const id = row.cve_id || row.ghsa_id;
+      if (!id) continue;
+      if (items.some((i) => i.id === id)) continue;
+      const sev = (row.severity ?? "").toLowerCase();
+      if (sev !== "critical" && sev !== "high") continue;
+      const hay = `${row.summary ?? ""}`.toLowerCase();
+      // With a keyword, only keep advisories that actually mention it.
+      if (keyword && !hay.includes(keyword.toLowerCase())) continue;
+      items.push({
+        id,
+        description: row.summary ?? "",
+        score: row.cvss?.score,
+        severity: row.severity?.toUpperCase(),
+        published: row.published_at,
+        source: "GitHub Advisories",
+        url: row.html_url,
+      });
+      count += 1;
+    }
+    status.push(count ? `GitHub Advisories: ${count}` : "GitHub Advisories: صفر نتائج");
+    if (count) sources.push("GitHub Advisories");
+  } catch {
+    status.push("GitHub Advisories: مش متاح");
+  }
+
+  // 3) Local corpus (76k rows shipped with the page).
+  try {
+    const corpusUrl = keyword
+      ? `/cve/search?q=${encodeURIComponent(keyword)}&limit=40`
+      : `/cve/db/search?severity=CRITICAL&limit=40`;
+    const local = resolveStandaloneApi(corpusUrl, "GET", null) as {
+      cves?: unknown[];
+      results?: unknown[];
+      items?: unknown[];
+    } | null;
+    const list = ((local?.cves ?? local?.results ?? local?.items) as Array<Record<string, unknown>>) ?? [];
+    let count = 0;
+    for (const item of list) {
+      const id = String(item.cveId ?? item.id ?? "");
+      if (!id || items.some((i) => i.id === id)) continue;
+      const score = typeof item.cvssScore === "number" ? item.cvssScore : undefined;
+      items.push({
+        id,
+        description: String(item.description ?? ""),
+        score,
+        severity: String(item.severity ?? severityFromScore(score) ?? ""),
+        source: "فهرس المنصة",
+        url: `https://nvd.nist.gov/vuln/detail/${id}`,
+      });
+      count += 1;
+    }
+    if (count) {
+      sources.push("فهرس المنصة");
+      status.push(`الفهرس المحلي: ${count}`);
+    }
+  } catch {
+    /* ignore */
+  }
+
+  items.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  return { items: items.slice(0, 40), sources, status };
+}
 
 /* ─────────────────────────── answering ─────────────────────────────────── */
 
@@ -551,6 +780,53 @@ function composeReply(intent: Intent, results: ToolResult[], message: string): s
       if (!r.ok) return [`مقدرتش أقرا ${intent.url}: ${r.summary}`, "", `جرّب تفتحها بنفسك: https://${intent.url}`];
       return [`## ${intent.url}`, "", String(r.summary).slice(0, 1200)];
     }
+    case "missions": {
+      const all = listMissions();
+      if (!all.length) {
+        return [
+          "## المهمات",
+          "",
+          "مفيش مهمات لسه. اكتب حاجة زي:",
+          "- «استخرج ثغرات example.com» → مهمة كاملة (DNS + نطاقات فرعية + ثغرات)",
+          "- «هات الثغرات» → مهمة على أحدث الثغرات من NVD",
+        ];
+      }
+      const lines = ["## المهمات", ""];
+      for (const m of all.slice(0, 8)) {
+        const done = m.steps.filter((st) => st.status === "done").length;
+        const icon = m.status === "running" ? "🟡" : m.status === "failed" ? "🔴" : "🟢";
+        lines.push(
+          `- ${icon} **${m.title}** — ${done}/${m.steps.length} خطوة · ${m.findings.length} نتيجة${
+            m.target ? ` · الهدف: ${m.target}` : ""
+          }`,
+        );
+      }
+      return lines;
+    }
+    case "hunt": {
+      const nvd = find(results, "nvd_search");
+      const dns = find(results, "dns_lookup");
+      const subs = find(results, "subdomain_enum");
+      const lines = [`## استخراج الثغرات${intent.target ? ` — ${intent.target}` : ""}`, ""];
+      if (dns) lines.push(`- **DNS:** ${dns.summary}`);
+      if (subs) lines.push(`- **نطاقات فرعية:** ${subs.summary}`);
+      const status = (nvd?.data as { status?: string[] } | undefined)?.status;
+      if (Array.isArray(status) && status.length) lines.push(`- **حالة المصادر:** ${status.join(" · ")}`);
+      if (nvd?.ok && Array.isArray(nvd.data)) {
+        const rows = (nvd.data as Array<{ id: string; score?: number; severity?: string; description?: string; source: string }>).slice(0, 12);
+        lines.push("", `### ${nvd.summary}`, "", "| الثغرة | CVSS | الخطورة | المصدر | الوصف |", "|---|---|---|---|---|");
+        for (const r of rows) {
+          lines.push(
+            `| ${r.id} | ${r.score ?? "—"} | ${r.severity ?? "—"} | ${r.source} | ${(r.description ?? "").replace(/\|/g, "/").slice(0, 90)} |`,
+          );
+        }
+      } else if (nvd) {
+        lines.push(`- **الثغرات:** ${nvd.summary}`);
+      }
+      lines.push("", "> كل النتائج دي متسجّلة في **المهمات** — اضغط تبويب «المهمات» أو اسألني «المهمات».");
+      lines.push("> المتصفح بيجيب ويصنّف الثغرات فعلياً؛ إنهاء استغلال على الهدف نفسه محتاج سيرفر مربوط.");
+      return lines;
+    }
     case "knowledge": {
       const r = find(results, "knowledge_search");
       if (!r) return ["مفيش نتائج."];
@@ -598,6 +874,20 @@ export async function runLocalBrain(
   emit({ type: "thought", text: plan.thought });
   emit({ type: "plan", steps: plan.steps.map((s2) => ({ tool: s2.tool, args: s2.args })) });
 
+  // A hunt is a mission: it gets a real record that survives a reload, and each
+  // step below is advanced only when the tool actually returns.
+  const mission =
+    intent.kind === "hunt"
+      ? createMission({
+          title: intent.target ? `استخراج ثغرات — ${intent.target}` : "استخراج ثغرات (أحدث الثغرات)",
+          target: intent.target ?? undefined,
+          kind: "hunt",
+          steps: plan.steps.map((st) => ({ title: st.title, tool: st.tool })),
+        })
+      : null;
+  const missionStepFor = (tool: string): string | null =>
+    mission?.steps.find((st) => st.tool === tool && st.status === "queued")?.id ?? null;
+
   const results: Array<{ name: string; ok: boolean; summary: string; data: unknown }> = [];
   for (const [idx, step] of plan.steps.entries()) {
     const id = `${idx + 1}-${step.tool}`;
@@ -610,11 +900,56 @@ export async function runLocalBrain(
       risk: SERVER_ONLY.has(step.tool) ? "needs-server" : "safe",
     });
     const t0 = Date.now();
+    const msStep = missionStepFor(step.tool);
+    if (mission && msStep) updateStep(mission.id, msStep, { status: "running", startedAt: t0 });
     const outcome = await runLocalTool(step);
     const ms = Date.now() - t0;
     results.push({ name: step.tool, ...outcome });
     emit({ type: "tool_result", id, name: step.tool, ok: outcome.ok, summary: outcome.summary, ms, dataPreview: preview(outcome.data) });
+
+    if (mission && msStep) {
+      updateStep(mission.id, msStep, { status: outcome.ok ? "done" : "failed", endedAt: Date.now(), ms, note: outcome.summary.slice(0, 160) });
+    }
+    // Record what was actually found — CVE rows only, never invented ones.
+    if (mission && step.tool === "nvd_search" && Array.isArray(outcome.data)) {
+      const rows = outcome.data as Array<{
+        id: string;
+        description?: string;
+        score?: number;
+        severity?: string;
+        source?: string;
+        url?: string;
+      }>;
+      const findings: Finding[] = rows
+        .filter((r) => r?.id)
+        .map((r) => ({
+          id: `f-${r.id}`,
+          title: `${r.id}${r.score ? ` (CVSS ${r.score})` : ""}`,
+          cvss: r.score,
+          severity: (r.severity as Finding["severity"]) ?? (r.score && r.score >= 9 ? "CRITICAL" : r.score && r.score >= 7 ? "HIGH" : undefined),
+          source: r.source ?? "NVD",
+          ref: r.url ?? `https://nvd.nist.gov/vuln/detail/${r.id}`,
+          detail: (r.description ?? "").slice(0, 300),
+          at: Date.now(),
+        }));
+      addFindings(mission.id, findings);
+    }
+    if (mission && step.tool === "subdomain_enum" && Array.isArray(outcome.data)) {
+      const names = outcome.data as string[];
+      addFindings(
+        mission.id,
+        names.slice(0, 40).map((n) => ({
+          id: `f-sub-${n}`,
+          title: `نطاق فرعي: ${n}`,
+          severity: "INFO" as const,
+          source: "crt.sh / DNS",
+          detail: "نطاق فرعي مؤكد — يوسّع مساحة الفحص.",
+          at: Date.now(),
+        })),
+      );
+    }
   }
+  if (mission) finishMission(mission.id);
 
   // Answer the thing that was actually asked. No canned intel dump: the reply
   // is built from the intent and from what the tools really returned.

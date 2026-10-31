@@ -2791,38 +2791,12 @@ export function resolveStandaloneApi(
         const hayNorm = hay.replace(/[.\-_]/g, "");
         return hay.includes(q) || hayNorm.includes(qNorm);
       });
-      // If user searches for a custom keyword not yet in seed list, synthesize a matching live entry on the fly!
-      if (filtered.length === 0) {
-        const synthId = `AI-GALAXY-${Math.floor(1000 + Math.random() * 8999)}`;
-        filtered = [
-          {
-            id: synthId,
-            cveId: synthId,
-            description: `[مكتبة المجرة التكيفية · بحث ذكي فوري] تحليل وثغرة مطابقة لـ (${q}): فحص السطح الهجومي ونقاط النهاية والعقود المرتبطة مع توليد بصمة تحقق Zero-FP وكود الترقيع الدفاعي.`,
-            severity: "CRITICAL",
-            cvssScore: 9.5,
-            cvss: 9.5,
-            score: 9.5,
-            publishedAt: new Date().toISOString(),
-            published: new Date().toISOString(),
-            cweId: "CWE-639",
-            cwe: "IDOR",
-            source: "AI-Mutated",
-            exploitType: "IDOR",
-            exploit_type: "IDOR",
-            epss: 0.95,
-            epssScore: 0.95,
-            epss_score: 0.95,
-            collectedAt: new Date().toISOString(),
-            vendor: q.toUpperCase(),
-            product: q,
-            exploitAvailable: true,
-            inKev: true,
-            references: ["https://nvd.nist.gov"],
-            url: "https://nvd.nist.gov",
-          },
-        ];
-      }
+      // No fabricated fallback here on purpose.
+      //
+      // This used to invent an `AI-GALAXY-xxxx` "CVE" with a made-up CVSS 9.5
+      // whenever a keyword had no match. That is exactly the "sounds smart,
+      // knows nothing" behaviour: the brain would then report a vulnerability
+      // that does not exist. An empty result is the truthful answer.
     }
     if (sev && sev !== "ALL") {
       filtered = filtered.filter((c) => c.severity === sev);

@@ -57,13 +57,14 @@ const { JSDOM } = await import("jsdom").catch(() => {
 const findings = [];
 const results = {};
 
-function bootDom({ remoteBase = "", search = "" } = {}) {
+function bootDom({ remoteBase = "", search = "", seed = null } = {}) {
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="root"></div></body></html>', {
     url: `${HOST}/nova-fleet${search}`,
     pretendToBeVisual: true,
     runScripts: "outside-only",
   });
   const { window } = dom;
+  if (seed) for (const [k, v] of Object.entries(seed)) window.localStorage.setItem(k, v);
   if (remoteBase) {
     window.localStorage.setItem("cybernova_remote_base", JSON.stringify({ base: remoteBase, savedAt: Date.now() }));
   }
@@ -251,7 +252,7 @@ async function phaseWorkUi() {
 
   const text = window.document.body.textContent || "";
   const inputs = window.document.querySelectorAll("textarea, input").length;
-  const need = ["محطة العمل", "خريطة الشبكة", "الليف بانل", "وسّع القدرات", "خطة العمل", "حالة الاتصالات"];
+  const need = ["محطة العمل", "المهمات", "الأدوات", "خريطة الشبكة", "الليف بانل", "وسّع القدرات", "خطة العمل", "حالة الاتصالات"];
   const missing = need.filter((n) => !text.includes(n));
 
   results.workUi = { chars: text.length, inputs, missing };
@@ -362,6 +363,9 @@ async function phaseIntents() {
     { msg: "ابحث في GitHub عن nuclei", expect: { tools: ["github_search"] } },
     { msg: "اقرا example.com", expect: { tools: ["web_fetch"] } },
     { msg: "ايه رايك في القهوة", expect: { noTools: true, includes: ["تقصد"] } },
+    { msg: "انت عامل ايه", expect: { noTools: true, includes: ["أنا نوفا"] } },
+    { msg: "اخبارك", expect: { noTools: true, includes: ["أنا نوفا"] } },
+    { msg: "المهمات", expect: { noTools: true, includes: ["المهمات"] } },
   ];
 
   const out = [];
@@ -379,6 +383,134 @@ async function phaseIntents() {
     if (r.chars < 15) findings.push({ kind: "intent-empty", detail: `«${c.msg}» → ${r.chars} chars` });
   }
   results.intents = out;
+  window.close?.();
+}
+
+
+/* ── 6. missions + persistent chat ───────────────────────────────────────── */
+
+async function phaseMissions() {
+  const { window } = bootDom();
+  await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
+  await new Promise((r) => setTimeout(r, 300));
+
+  const ask = async (message, sid = "mission-audit") => {
+    const res = await window.fetch("/api/nova-core/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, sessionId: sid }),
+    });
+    const events = await readSse(res);
+    return {
+      text: events.filter((e) => e.type === "delta").map((e) => e.text).join(""),
+      tools: events.filter((e) => e.type === "tool_call").map((e) => e.name),
+    };
+  };
+
+  // A hunt must create a real mission with steps and (when a source answers)
+  // findings, and it must be there on a second read.
+  const hunt = await ask("استخرج ثغرات example.com");
+  const raw = window.localStorage.getItem("cybernova_missions_v1");
+  const missions = raw ? JSON.parse(raw) : [];
+  const mission = missions[0];
+
+  results.missions = {
+    created: missions.length,
+    title: mission?.title ?? null,
+    steps: mission?.steps?.length ?? 0,
+    doneSteps: mission?.steps?.filter((s) => s.status === "done").length ?? 0,
+    findings: mission?.findings?.length ?? 0,
+    tools: hunt.tools,
+  };
+
+  if (!missions.length) findings.push({ kind: "no-mission", detail: "hunt did not create a mission" });
+  if ((mission?.steps?.length ?? 0) < 2) findings.push({ kind: "thin-mission", detail: "mission has fewer than 2 steps" });
+  if (!hunt.text.includes("استخراج الثغرات")) findings.push({ kind: "hunt-reply", detail: "hunt reply does not summarise the hunt" });
+
+  // asking for the list must show it back
+  const list = await ask("المهمات");
+  if (!list.text.includes(mission?.title ?? "___")) findings.push({ kind: "mission-list", detail: "«المهمات» did not list the created mission" });
+
+  // chat sessions persist: write through the store the UI uses
+  const sessions = window.localStorage.getItem("cybernova_chat_sessions_v1");
+  results.sessions = { stored: sessions ? JSON.parse(sessions).length : 0 };
+
+  window.close?.();
+}
+
+
+/* ── 7. chat that survives a reload ─────────────────────────────────────── */
+
+async function phasePersist() {
+  const { window } = bootDom();
+  await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
+  await new Promise((r) => setTimeout(r, 2200));
+
+  const doc = window.document;
+  const textarea = doc.querySelector("textarea");
+  if (!textarea) {
+    findings.push({ kind: "no-textarea", detail: "work page has no chat input to drive" });
+    window.close?.();
+    return;
+  }
+
+  // React tracks the value through its own property descriptor; use the native
+  // setter so the component sees the change (this is the standard trick).
+  const proto = Object.getPrototypeOf(textarea);
+  const desc = Object.getOwnPropertyDescriptor(proto, "value") ?? Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value");
+  desc.set.call(textarea, "مرحبا");
+  textarea.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 150));
+
+  const sendBtn = [...doc.querySelectorAll("button")].find((b) => /إرسال/.test(b.textContent || ""));
+  if (!sendBtn) {
+    findings.push({ kind: "no-send", detail: "no send button found" });
+    window.close?.();
+    return;
+  }
+  sendBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 3500));
+
+  const raw = window.localStorage.getItem("cybernova_chat_sessions_v1");
+  const stored = raw ? JSON.parse(raw) : [];
+  const first = stored[0];
+  const replied = (doc.body.textContent || "").includes("أنا نوفا");
+  results.persist = {
+    sessions: stored.length,
+    lines: first?.lines?.length ?? 0,
+    replied,
+  };
+  if (!stored.length) findings.push({ kind: "chat-not-saved", detail: "sending a message stored no session" });
+  if ((first?.lines?.length ?? 0) < 2) findings.push({ kind: "chat-thin", detail: `session has ${first?.lines?.length ?? 0} lines` });
+  if (!replied) findings.push({ kind: "no-reply-in-ui", detail: "answer never rendered in the chat" });
+  window.close?.();
+
+  // Save the snapshot for the restore phase, which runs in a clean process
+  // (two DOMs in one process fight over `window`, so they must not share one).
+  const snapshot = {};
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const k = window.localStorage.key(i);
+    snapshot[k] = window.localStorage.getItem(k);
+  }
+  fs.writeFileSync("/tmp/nova-session-snapshot.json", JSON.stringify(snapshot));
+}
+
+/* ── 8. restore: fresh process, same storage ─────────────────────────────── */
+
+async function phaseRestore() {
+  const snapPath = "/tmp/nova-session-snapshot.json";
+  if (!fs.existsSync(snapPath)) {
+    findings.push({ kind: "no-snapshot", detail: "persist phase produced no snapshot" });
+    return;
+  }
+  const seed = JSON.parse(fs.readFileSync(snapPath, "utf8"));
+  const { window } = bootDom({ seed });
+  await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
+  await new Promise((r) => setTimeout(r, 2000));
+  const body = window.document.body.textContent || "";
+  const restored = body.includes("أنا نوفا") && body.includes("مرحبا");
+  results.restore = { restored };
+  if (!restored) findings.push({ kind: "chat-not-restored", detail: "reload did not bring the conversation back" });
   window.close?.();
 }
 
@@ -401,6 +533,21 @@ if (MODE === "regress") {
 }
 if (MODE === "intents") {
   await phaseIntents();
+  fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
+  process.exit(findings.length ? 1 : 0);
+}
+if (MODE === "missions") {
+  await phaseMissions();
+  fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
+  process.exit(findings.length ? 1 : 0);
+}
+if (MODE === "persist") {
+  await phasePersist();
+  fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
+  process.exit(findings.length ? 1 : 0);
+}
+if (MODE === "restore") {
+  await phaseRestore();
   fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
   process.exit(findings.length ? 1 : 0);
 }
@@ -432,6 +579,9 @@ if (MODE === "linked") {
   run("brain");
   run("regress");
   run("intents");
+  run("missions");
+  run("persist");
+  run("restore");
   run("ui");
   if (SERVER) run("linked");
 }
@@ -466,6 +616,15 @@ if (asJson) {
     for (const c of results.intents) {
       console.log(`  ${c.ok ? "✓" : "✗"} «${c.msg}» → ${c.chars} chars${c.tools.length ? ` · ${c.tools.join(", ")}` : " · no tools"}`);
     }
+  }
+  if (results.persist) {
+    const p2 = results.persist;
+    const restored = results.restore?.restored;
+    console.log(`Chat persist  : ${p2.sessions} session · ${p2.lines} lines · reply ${p2.replied ? "✓" : "✗"} · restored after reload ${restored ? "✓" : "✗"}`);
+  }
+  if (results.missions) {
+    const m = results.missions;
+    console.log(`Missions      : ${m.created} created · ${m.steps} steps (${m.doneSteps} done) · ${m.findings} findings`);
   }
   if (results.workUi) {
     const u = results.workUi;
