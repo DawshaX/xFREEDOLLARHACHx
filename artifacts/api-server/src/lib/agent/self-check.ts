@@ -251,6 +251,14 @@ async function probeSocket(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">
 
 async function probeDaemon(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">> {
   try {
+    const disabled = ["0", "false", "off", "no"].includes(String(process.env.NOVA_CRON_ENABLED ?? "").toLowerCase());
+    if (disabled) {
+      return {
+        status: "warn",
+        detail: "الدورة الذاتية متوقفة في هذا التشغيل (NOVA_CRON_ENABLED=0) — مش عطل، ده إعداد",
+        fix: "شيل NOVA_CRON_ENABLED أو خليه =1 لو عايز النبضات الذاتية 24/7 تشتغل.",
+      };
+    }
     const statePath = path.resolve(process.cwd(), "state/cybernova-brain-state.json");
     if (!fs.existsSync(statePath)) {
       return {

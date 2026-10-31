@@ -17,6 +17,9 @@ import {
   Loader2, Radio, RefreshCw, Server, ShieldCheck, Terminal, XCircle, Brain,
 } from "lucide-react";
 import { getRemoteBase } from "@/lib/remote";
+import { listSessions } from "@/lib/session-store";
+import { listMissions } from "@/lib/mission-store";
+import { getCorpusStats } from "@/lib/cyber-corpus-2099";
 
 type Status = "ok" | "warn" | "fail";
 
@@ -56,11 +59,107 @@ const STYLES: Record<Status, { ring: string; text: string; bg: string; label: st
   fail: { ring: "border-red-500/50", text: "text-red-300", bg: "bg-red-500/10", label: "واقع", Icon: XCircle },
 };
 
+/**
+ * Browser-only checks — what is really true when no server answers.
+ * Nothing here claims to be a server: it reports what this tab can do.
+ */
+async function browserChecks(): Promise<CheckItem[]> {
+  const items: CheckItem[] = [];
+  const now = () => performance.now();
+
+  // 1. localStorage really persists (write → read → delete)
+  let t = now();
+  let storageOk = false;
+  let storageDetail = "المتصفح مانع التخزين (وضع خاص/حظر) — المحادثات هتضيع مع الريفريش";
+  try {
+    const key = "cybernova_selfcheck_probe";
+    localStorage.setItem(key, "1");
+    storageOk = localStorage.getItem(key) === "1";
+    localStorage.removeItem(key);
+    if (storageOk) {
+      const sessions = listSessions().length;
+      const missions = listMissions().length;
+      storageDetail = `التخزين شغّال · ${sessions} محادثة و ${missions} مهمة محفوظة في المتصفح`;
+    }
+  } catch {
+    storageOk = false;
+  }
+  items.push({
+    id: "storage",
+    label: "تخزين المتصفح (محادثاتك ومهماتك)",
+    status: storageOk ? "ok" : "fail",
+    detail: storageDetail,
+    fix: storageOk ? undefined : "افتح الموقع في نافذة عادية (مش private) واسمح بالـcookies/التخزين.",
+    ms: Math.round(now() - t),
+  });
+
+  // 2. The static corpus (offline knowledge) is loaded
+  t = now();
+  let corpusCount = 0;
+  let corpusOk = false;
+  try {
+    corpusCount = getCorpusStats().totalIndexedKnowledgeItems;
+    corpusOk = true;
+  } catch {
+    corpusOk = false;
+  }
+  items.push({
+    id: "tools",
+    label: "العقل المدمج (يشتغل بدون سيرفر)",
+    status: corpusOk ? "ok" : "warn",
+    detail: corpusOk
+      ? `قاعدة المعرفة جوه الصفحة محمّلة (${corpusCount.toLocaleString("ar-EG")} مدخل) + أدوات DNS/NVD/GitHub بتشتغل من المتصفح`
+      : "قاعدة المعرفة مش محمّلة — الشات هيرد رد عام",
+    fix: corpusOk ? undefined : "اعمل ريفريش كامل (Ctrl+F5) — ممكن جزء من ملفات الصفحة مالنزلش.",
+    ms: Math.round(now() - t),
+  });
+
+  // 3. Real internet from the browser (DNS-over-HTTPS, CORS-friendly)
+  t = now();
+  let netOk = false;
+  let netDetail = "مفيش اتصال بالإنترنت من المتصفح";
+  try {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      netDetail = "المتصفح نفسه بيقول: مفيش اتصال";
+    } else {
+      const res = await fetch("https://dns.google/resolve?name=example.com&type=A", {
+        headers: { accept: "application/dns-json" },
+      });
+      const json = (await res.json()) as { Answer?: unknown[] };
+      netOk = res.ok && Array.isArray(json.Answer) && json.Answer.length > 0;
+      netDetail = netOk ? "DNS-over-HTTPS بيرد فعلاً من المتصفح (dns.google)" : `dns.google رجّع ${res.status}`;
+    }
+  } catch (err) {
+    netDetail = `الاتصال فشل: ${(err as Error).message}`;
+  }
+  items.push({
+    id: "internet",
+    label: "الاتصال بالإنترنت (من المتصفح)",
+    status: netOk ? "ok" : "fail",
+    detail: netDetail,
+    fix: netOk ? undefined : "راجع الشبكة/الـVPN. الأدوات المحلية هتفضل شغالة لكن المصادر الحية لأ.",
+    ms: Math.round(now() - t),
+  });
+
+  // 4. Talking to a real server? (the whole point of linking one)
+  items.push({
+    id: "socket",
+    label: "سيرفر NOVA (تنفيذ حقيقي + أسطول + 24/7)",
+    status: "warn",
+    detail: "مفيش سيرفر مرتبط — كل حاجة بتشتغل جوه التاب (الشات، الأدوات، الذاكرة، المهمات)",
+    fix: "من «نوفا · الأسطول الموحّد» → «وسّع القدرات» حطّ رابط السيرفر (مثال https://cybernova-nova.onrender.com) واضغط «اختبر واربط».",
+    ms: 0,
+  });
+
+  return items;
+}
+
 export default function SelfCheckPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [base, setBase] = useState<string>("");
+  const [browserReport, setBrowserReport] = useState<Report | null>(null);
 
   useEffect(() => {
     setBase(getRemoteBase());
@@ -83,6 +182,20 @@ export default function SelfCheckPage() {
     } catch (err) {
       setError((err as Error).name === "AbortError" ? "السيرفر ماردّش في 25 ثانية" : (err as Error).message);
       setReport(null);
+      // No server → still answer honestly, from the browser itself.
+      const items = await browserChecks();
+      const passed = items.filter((i) => i.status === "ok").length;
+      setBrowserReport({
+        ok: false,
+        score: Math.round((passed / items.length) * 100),
+        total: items.length,
+        passed,
+        verdict:
+          "مفيش سيرفر مرتبط — الواجهة والمحرّك في المتصفح شغالين، لكن التنفيذ على السيرفر والأسطول و24/7 محتاجين باك-إند.",
+        checkedAt: new Date().toISOString(),
+        cached: false,
+        items,
+      });
     } finally {
       setLoading(false);
     }
@@ -92,7 +205,14 @@ export default function SelfCheckPage() {
     void run(false);
   }, [run]);
 
-  const overall: Status = !report ? "fail" : report.ok ? (report.score === 100 ? "ok" : "warn") : "fail";
+  const shown = report ?? browserReport;
+  const overall: Status = !shown
+    ? "fail"
+    : shown.items.some((i) => i.status === "fail")
+      ? "fail"
+      : shown.items.some((i) => i.status === "warn")
+        ? "warn"
+        : "ok";
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6" dir="rtl">
@@ -125,17 +245,17 @@ export default function SelfCheckPage() {
             <Server className="mr-1 inline h-3.5 w-3.5" />
             {base ? `سيرفر مرتبط: ${base}` : "بدون سيرفر خارجي — الواجهة الحالية"}
           </span>
-          {report?.checkedAt && (
+          {shown?.checkedAt && (
             <span className="rounded-lg bg-white/5 px-2 py-1">
-              آخر فحص: {new Date(report.checkedAt).toLocaleTimeString("ar-EG")} · من {report.total} فحص ·{" "}
-              {report.passed} ناجح
+              {report ? "فحص السيرفر" : "فحص المتصفح"} · {new Date(shown.checkedAt).toLocaleTimeString("ar-EG")} ·{" "}
+              {shown.passed}/{shown.total} ناجح
             </span>
           )}
         </div>
       </header>
 
       {/* ── verdict ────────────────────────────────────────────────────── */}
-      {loading && !report && (
+      {loading && !shown && (
         <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/60 p-5 text-slate-300">
           <Loader2 className="h-5 w-5 animate-spin text-cyan-300" />
           بشغّل الفحوصات الحقيقية…
@@ -156,22 +276,18 @@ export default function SelfCheckPage() {
         </div>
       )}
 
-      {report && (
-        <div
-          className={`rounded-2xl border p-5 ${STYLES[overall].ring} ${STYLES[overall].bg}`}
-        >
+      {shown && (
+        <div className={`rounded-2xl border p-5 ${STYLES[overall].ring} ${STYLES[overall].bg}`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className={`text-base font-semibold ${STYLES[overall].text}`}>{report.verdict}</p>
+            <p className={`text-base font-semibold ${STYLES[overall].text}`}>{shown.verdict}</p>
             <span className={`rounded-xl bg-black/40 px-3 py-1 text-sm font-bold ${STYLES[overall].text}`}>
-              {report.passed}/{report.total} · {report.score}%
+              {shown.passed}/{shown.total} · {shown.score}%
             </span>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-black/40">
             <div
-              className={`h-full rounded-full transition-all ${
-                report.ok ? "bg-emerald-400" : "bg-amber-400"
-              }`}
-              style={{ width: `${report.score}%` }}
+              className={`h-full rounded-full transition-all ${overall === "ok" ? "bg-emerald-400" : overall === "warn" ? "bg-amber-400" : "bg-red-400"}`}
+              style={{ width: `${shown.score}%` }}
             />
           </div>
         </div>
@@ -179,7 +295,7 @@ export default function SelfCheckPage() {
 
       {/* ── items ──────────────────────────────────────────────────────── */}
       <div className="grid gap-3 md:grid-cols-2">
-        {report?.items.map((item) => {
+        {shown?.items.map((item) => {
           const style = STYLES[item.status];
           const Icon = ICONS[item.id] ?? Activity;
           return (
