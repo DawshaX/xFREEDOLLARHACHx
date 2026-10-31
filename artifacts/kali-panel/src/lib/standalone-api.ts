@@ -4954,6 +4954,40 @@ export function resolveStandaloneApi(
 
   // The static build has no WebSocket server, so there is genuinely no live
   // fleet. Report that honestly instead of inventing connected machines.
+  // ── Fleet mesh (static build) ────────────────────────────────────────────
+  // No WebSocket server here, so there is genuinely no live mesh. Answer with a
+  // real, renderable shape and say so — never invent connected machines.
+  if (path === "/fleet/mesh" || path.startsWith("/fleet/")) {
+    const staticNote = "الوضع الثابت: مفيش سيرفر — الأسطول بيظهر لما تشغّل المنصة.";
+    if (path === "/fleet/mesh") {
+      return {
+        ok: true,
+        static: true,
+        note: staticNote,
+        now: Date.now(),
+        capacity: {
+          machines: { target: 5, connected: 0 },
+          agents: { target: 10, connected: 0 },
+          ready: false,
+          installCommand: "curl -fsSL <host>/api/local-agent/download-agent | bash -s -- --id machine-N",
+        },
+        nodes: [],
+        stats: { nodes: 0, online: 0, machines: 0, slots: 0, messages: 0 },
+        plan: null,
+        plans: [],
+        log: [],
+      };
+    }
+    if (path === "/fleet/mesh/log") return { ok: true, count: 0, log: [], static: true, note: staticNote };
+    if (path === "/fleet/plan/active") return { ok: true, plan: null, static: true, note: staticNote };
+    if (path === "/fleet/broadcast") {
+      return { ok: false, error: "no_agents", static: true, hint: staticNote };
+    }
+    if (path === "/fleet/plan") return { ok: false, error: "static_mode", static: true, hint: staticNote };
+    if (path === "/fleet/mesh/send") return { ok: false, error: "static_mode", static: true, hint: staticNote };
+    return { ok: true, static: true, note: staticNote };
+  }
+
   if (path === "/local-agent/agents") {
     return { agents: [], count: 0, static: true, note: "الوضع الثابت: مفيش سيرفر — شغّل المنصة لربط الأجهزة." };
   }

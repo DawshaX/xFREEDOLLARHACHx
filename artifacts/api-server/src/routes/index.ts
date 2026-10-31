@@ -81,6 +81,7 @@ import kaliTerminalRouter from "./kali-terminal";
 import multiAiRouter from "./multi-ai";
 import novaGatewayRouter from "./nova-gateway";
 import novaCoreRouter from "./nova-core";
+import fleetMeshRouter from "./fleet-mesh";
 
 const router: IRouter = Router();
 
@@ -130,6 +131,7 @@ router.use(novaGatewayRouter);
 
 // ── NOVA Core (persona + real tools + agent loop) ────────────────────────────
 router.use(novaCoreRouter);
+router.use(fleetMeshRouter);
 
 // ── AI / Chat ────────────────────────────────────────────────────────────────
 router.use(liveAgentRouter);

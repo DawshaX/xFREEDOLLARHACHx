@@ -56,3 +56,6 @@ nova-memory-*.json
 
 # api-server runtime logs (never content)
 artifacts/api-server/logs/
+
+# fleet mesh runtime state
+fleet-mesh.json

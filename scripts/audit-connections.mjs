@@ -197,6 +197,13 @@ async function main() {
     { method: "GET", path: "/api/local-agent/agents", files: ["artifacts/kali-panel/src/components/desktop/NovaFleetPanel.tsx"] },
     { method: "GET", path: "/api/local-agent/download-nova-agent", files: ["artifacts/api-server/src/routes/local-agent.ts"] },
     { method: "GET", path: "/api/local-agent/download-agent", files: ["artifacts/kali-panel/src/components/desktop/NovaFleetPanel.tsx"] },
+    // Fleet mesh — the bus that connects every agent to every other agent.
+    { method: "GET", path: "/api/fleet/mesh", files: ["artifacts/kali-panel/src/pages/NovaFleetUnified.tsx"] },
+    { method: "GET", path: "/api/fleet/mesh/log", files: ["artifacts/api-server/src/routes/fleet-mesh.ts"] },
+    { method: "GET", path: "/api/fleet/plan/active", files: ["artifacts/api-server/src/routes/fleet-mesh.ts"] },
+    { method: "POST", path: "/api/fleet/broadcast", files: ["artifacts/kali-panel/src/pages/NovaFleetUnified.tsx"], body: { command: "echo audit", approve: false } },
+    { method: "POST", path: "/api/fleet/plan", files: ["artifacts/kali-panel/src/pages/NovaFleetUnified.tsx"], body: { goal: "audit probe" } },
+    { method: "POST", path: "/api/fleet/mesh/send", files: ["artifacts/api-server/src/routes/fleet-mesh.ts"], body: { from: "audit", to: "nova", text: "probe" } },
   ];
   const serverResults = [];
   const skipped = [];
@@ -204,6 +211,8 @@ async function main() {
     for (const site of [...callSites, ...EXTRA_PROBES]) {
       if (!["GET", "DELETE"].includes(site.method)) continue;
       if (/(stream|events|sse|exec-stream|screenshot)$/.test(site.path)) continue;
+      // WebSocket endpoints never answer a plain GET — probing them is a false positive.
+      if (site.path === "/api/ws" || site.path === "/api/local-agent/ws") continue;
       // /api/proxy needs a `?url=` argument; probing it bare always returns 400.
       if (site.path === "/api/proxy") continue;
       // Bare API *prefixes* (e.g. `const API = "/api/nova-core"`) are not routes.
