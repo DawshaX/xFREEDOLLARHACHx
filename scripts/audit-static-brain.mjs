@@ -90,7 +90,30 @@ function bootDom({ remoteBase = "", search = "", seed = null } = {}) {
 
   // jsdom has no fetch; give the bundle Node's real fetch so the app's own shim
   // (setup.ts) can wrap it, exactly like a browser.
-  if (!window.fetch) window.fetch = globalThis.fetch.bind(globalThis);
+  //
+  // External origins are answered locally with a 503 instead of hitting the
+  // network: this audit must be deterministic and offline-safe. A component
+  // that fetches a third-party URL at mount time used to crash the whole phase
+  // with an unhandled ECONNRESET when the sandbox had no route to it.
+  if (!window.fetch) {
+    const realFetch = globalThis.fetch.bind(globalThis);
+    window.fetch = (input, init) => {
+      const url = typeof input === "string" ? input : input?.url ?? "";
+      const absolute = /^https?:\/\//i.test(url);
+      // Only the linked server (if any) may be reached for real; the Pages
+      // origin itself is a third party here and must not hit the network.
+      const allowed = !absolute || (Boolean(SERVER) && url.startsWith(SERVER));
+      if (!allowed) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ skipped: "external-origin blocked in audit", url }), {
+            status: 503,
+            headers: { "content-type": "application/json" },
+          }),
+        );
+      }
+      return realFetch(input, init);
+    };
+  }
   if (!window.Request) window.Request = globalThis.Request;
   if (!window.Response) window.Response = globalThis.Response;
   if (!window.Headers) window.Headers = globalThis.Headers;
