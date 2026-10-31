@@ -49,6 +49,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Live Agent",       icon: Radio,           path: "/live-agent",        iconColor: "#ff4444", hot: true },
       { label: "AI Agent V3",      icon: Brain,           path: "/nova-agent-v3",     iconColor: "#ff7722", badge: "V3" },
       { label: "Nova Agent V6",    icon: Sparkles,        path: "/nova-agent-v6",     iconColor: "#ffaa00", badge: "V6" },
+      { label: "NOVA Core · المحادثة", icon: Sparkles,    path: "/nova-core",         iconColor: "#22d3ee", badge: "LIVE", hot: true },
       { label: "Nova Agent Chat",  icon: Bot,             path: "/nova-agent-chat",   iconColor: "#aa66ff", badge: "NEW", hot: true },
       { label: "Nova Intelligence",icon: Eye,             path: "/nova-intelligence", iconColor: "#ff5555" },
       { label: "Nova Sentinel",    icon: Shield,          path: "/nova-sentinel",     iconColor: "#ff3333" },
