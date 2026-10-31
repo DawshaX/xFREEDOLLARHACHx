@@ -1,0 +1,128 @@
+{
+  "updatedAt": "2026-10-31T23:41:59.478Z",
+  "missions": [
+    {
+      "ranAt": "2026-10-31T23:41:59.478Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 25,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 19,
+          "summary": "HTTP ? · server: — · الترويسات الأساسية موجودة"
+        },
+        {
+          "name": "tls_audit",
+          "ok": false,
+          "ms": 5,
+          "summary": "TLS example.com:443 فشل — Error: Client network socket disconnected before secure TLS connection was established"
+        }
+      ],
+      "toolsOk": 2,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-10-31T23:41\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 33 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 86,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: العقل اللغوي.",
+      "durationMs": 81,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.22.3",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-10-31T23:41:53.243Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 23,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": false,
+          "ms": 0,
+          "summary": "فشل http_headers_audit: النطاق مطلوب (domain required)"
+        },
+        {
+          "name": "tls_audit",
+          "ok": false,
+          "ms": 0,
+          "summary": "فشل tls_audit: النطاق مطلوب (domain required)"
+        }
+      ],
+      "toolsOk": 1,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-10-31T23:41\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 33 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 86,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: العقل اللغوي.",
+      "durationMs": 76,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.22.3",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-10-31T23:41:39.983Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "events": 28,
+      "tools": [
+        {
+          "name": "kali_toolbox",
+          "ok": true,
+          "ms": 1,
+          "summary": "ترسانة Kali: 0 أداة مطابقة"
+        },
+        {
+          "name": "memory_search",
+          "ok": false,
+          "ms": 0,
+          "summary": "مفيش ذكرى عن \"نفّذ مهمة استطلاع حقيقية على النطاق باستخدام الأدوات الفعلية: dns_lookup ثم http_headers_a\""
+        },
+        {
+          "name": "memory_save",
+          "ok": true,
+          "ms": 1,
+          "summary": "اتحفظت في الذاكرة طويلة الأمد: نفّذ مهمة استطلاع حقيقية على النطاق example.com باستخدام الأدوات الفعل (fact · global)"
+        },
+        {
+          "name": "mission_status",
+          "ok": true,
+          "ms": 0,
+          "summary": "المهمة النشطة: https://hackerone.com/crypto (CDCETH 0xfe18aE03... & CDCBTC 0x2e53c558...) · 2 نتيجة"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **4** أداة (3 نجحت · 1 فشلت). دي القراءة:\n\n### ✅ kali_toolbox\nترسانة Kali: 0 أداة مطابقة\n\n### ⚠️ memory_search\nمفيش ذكرى عن \"نفّذ مهمة استطلاع حقيقية على النطاق باستخدام الأدوات الفعلية: dns_lookup ثم http_headers_a\"\n\n### ✅ memory_save\nاتحفظت في الذاكرة طويلة الأمد: نفّذ مهمة استطلاع حقيقية على النطاق example.com باستخدام الأدوات الفعل (fact · global)\n\n### ✅ mission_status\nالمهمة النشطة: https://hackerone.com/crypto (CDCETH 0xfe18aE03... & CDCBTC 0x2e53c558...) · 2 نتيجة\n\n## اللي فشل وليه\n- **memory_search:** مفيش ذكرى عن \"نفّذ مهمة استطلاع حقيقية على النطاق باستخدام الأدوات الفعلية: dns_lookup ثم http_headers_a\"\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 86,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: العقل اللغوي.",
+      "durationMs": 134,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.22.3",
+        "platform": "linux x64"
+      }
+    }
+  ]
+}
