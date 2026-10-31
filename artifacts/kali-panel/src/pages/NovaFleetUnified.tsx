@@ -20,6 +20,10 @@ import {
 } from "lucide-react";
 import { LiveAgentPanel } from "@/components/desktop/LiveAgentPanel";
 import { NovaWorkstation } from "@/components/desktop/NovaWorkstation";
+import { NovaMissions } from "@/components/desktop/NovaMissions";
+import { NovaToolbox } from "@/components/desktop/NovaToolbox";
+import { missionStats, onMissionsChange } from "@/lib/mission-store";
+import { useEffect as useEffectM, useState as useStateM } from "react";
 import { NovaLiveBar, useNovaLive } from "@/components/desktop/NovaFleetLive";
 
 const API = "/api";
@@ -334,8 +338,27 @@ function PlanBoard({ plan, onRefresh }: { plan: FleetPlan | null; onRefresh: () 
 
 export default function NovaFleetUnified() {
   const [, navigate] = useLocation();
+  const [missionCount, setMissionCount] = useStateM(() => missionStats());
+  useEffectM(() => onMissionsChange(() => setMissionCount(missionStats())), []);
   // «محطة العمل» is the default: that is where the user talks to NOVA and works.
-  const [view, setView] = useState<"work" | "mesh" | "panel">("work");
+  const [view, setView] = useState<"work" | "missions" | "tools" | "mesh" | "panel">(() => {
+    try {
+      const h = window.location.hash.replace("#", "");
+      if (h === "missions" || h === "tools" || h === "mesh" || h === "panel") return h;
+    } catch {
+      /* ignore */
+    }
+    return "work";
+  });
+
+  const pickView = (key: typeof view) => {
+    setView(key);
+    try {
+      window.history.replaceState(null, "", `#${key}`);
+    } catch {
+      /* ignore */
+    }
+  };
   const [snap, setSnap] = useState<MeshSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const live = useNovaLive();
@@ -394,10 +417,16 @@ export default function NovaFleetUnified() {
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
           <div className="flex items-center gap-1 rounded-xl border border-white/10 p-0.5">
-            {([["work", "محطة العمل"], ["mesh", "خريطة الشبكة"], ["panel", "الليف بانل"]] as const).map(([key, label]) => (
+            {([
+              ["work", "محطة العمل"],
+              ["missions", "المهمات"],
+              ["tools", "الأدوات"],
+              ["mesh", "خريطة الشبكة"],
+              ["panel", "الليف بانل"],
+            ] as const).map(([key, label]) => (
               <button
                 key={key}
-                onClick={() => setView(key)}
+                onClick={() => pickView(key)}
                 className={`px-2 py-1 rounded-lg text-[9px] font-black transition-all ${
                   view === key ? "bg-cyan-500/20 text-cyan-200 border border-cyan-500/40" : "text-white/45 hover:text-white/75 border border-transparent"
                 }`}
@@ -408,6 +437,7 @@ export default function NovaFleetUnified() {
           </div>
           <span className="text-white/45">عقد <b className="text-cyan-300">{snap?.stats.online ?? 0}/{snap?.stats.nodes ?? 0}</b></span>
           <span className="text-white/45">رسائل <b className="text-fuchsia-300">{snap?.stats.messages ?? 0}</b></span>
+          <span className="text-white/45">مهمات <b className="text-amber-300">{missionCount.running}/{missionCount.total}</b></span>
           {error && <span className="text-red-400">⚠️ {error}</span>}
         </div>
       </div>
@@ -415,6 +445,10 @@ export default function NovaFleetUnified() {
       <NovaLiveBar onOpen={() => navigate("/nova-agent")} />
 
       {view === "work" && <NovaWorkstation />}
+
+      {view === "missions" && <NovaMissions />}
+
+      {view === "tools" && <NovaToolbox />}
 
       {view === "panel" && (
         <div className="rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[78vh] min-h-[520px]">
