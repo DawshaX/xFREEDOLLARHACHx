@@ -17,6 +17,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { ClientToolEvent } from "./AgentWindow";
+import { NovaFleetPanel, NovaProjectPulse } from "./NovaFleetPanel";
+import { novaTask, novaLog } from "./NovaFleetLive";
 import { RealTimeSystemMonitor } from "./RealTimeSystemMonitor";
 import { AdvancedFileManager } from "./AdvancedFileManager";
 import { RegistryEditor } from "./RegistryEditor";
@@ -989,7 +991,11 @@ export function LiveAgentPanel({
   const [memoryLoading, setMemoryLoading] = useState(false);
 
   // ── Background Process Monitor ────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"chat" | "processes" | "live" | "missions" | "capabilities" | "terminal" | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser" | "multiAI">("chat");
+  const [activeTab, setActiveTab] = useState<
+    | "chat" | "processes" | "live" | "missions" | "capabilities" | "terminal"
+    | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser"
+    | "multiAI" | "fleet" | "pulse"
+  >("chat");
 
   // ── Multi-AI Free Providers ───────────────────────────────────────────────
   interface MultiAIProvider { id: string; displayName: string; emoji: string; description: string; available: boolean; enabled: boolean; defaultModel: string; freeModels: string[]; speed: string; specialty: string; exhaustedUntil?: number; lastError?: string; }
@@ -4128,6 +4134,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "chat" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" />شات</span>
             </button>
+            <button onClick={() => { setActiveTab("pulse"); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "pulse" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />نبض المشروع</span>
+            </button>
+            <button onClick={() => { setActiveTab("fleet"); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "fleet" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Server className="w-2.5 h-2.5" />الأجهزة</span>
+            </button>
             <button onClick={() => setActiveTab("missions")}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "missions" ? "border-amber-400 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
@@ -4489,6 +4503,18 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         )}
 
         {/* ── Live WS Events Feed Tab ── */}
+        {activeTab === "pulse" && panelSize !== "mini" && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <NovaProjectPulse />
+          </div>
+        )}
+
+        {activeTab === "fleet" && panelSize !== "mini" && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <NovaFleetPanel />
+          </div>
+        )}
+
         {activeTab === "live" && panelSize !== "mini" && (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Header */}
@@ -10224,6 +10250,9 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
   const [model, setModel] = React.useState("dolphin3:latest");
   const [autonomousMode, setAutonomousMode] = React.useState(false);
   const [iq, setIq] = React.useState(0);
+  const [pendingConfirm, setPendingConfirm] = React.useState<
+    { message: string; tool: string; title: string; args: string; reason: string } | null
+  >(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -10232,11 +10261,12 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
     fetch("/api/nova/iq").then(r => r.json()).then((d: { iq?: number }) => setIq(d.iq ?? 0)).catch(() => {});
   }, []);
 
-  const send = async () => {
-    const content = input.trim();
+  const send = async (opts?: { text?: string; approve?: string[] }) => {
+    const content = (opts?.text ?? input).trim();
     if (!content || streaming) return;
-    setInput("");
-    setMessages(prev => [...prev, { role: "user", content }]);
+    if (!opts?.text) setInput("");
+    if (!opts?.approve) setMessages(prev => [...prev, { role: "user", content }]);
+    else setMessages(prev => [...prev, { role: "user", content: `✅ موافقة: نفّذ ${(opts?.approve ?? []).join(", ")}` }]);
     setStreaming(true);
     let current = "";
     setMessages(prev => [...prev, { role: "assistant", content: "", type: "streaming" }]);
@@ -10250,7 +10280,7 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
         const core = await fetch("/api/nova-core/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content, sessionId }),
+          body: JSON.stringify({ message: content, sessionId, ...(opts?.approve ? { approve: opts.approve } : {}) }),
         });
         if (!core.ok || !core.body) throw new Error(`nova-core ${core.status}`);
         coreOk = true;
@@ -10269,12 +10299,26 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
             if (!dataLine) continue;
             let ev: { type?: string; text?: string; name?: string; args?: unknown; ok?: boolean; summary?: string; message?: string };
             try { ev = JSON.parse(dataLine.slice(5).trim()); } catch { continue; }
-            if (ev.type === "thought" && ev.text) {
+            if ((ev as { type?: string }).type === "confirm_required") {
+              const c = ev as { name?: string; title?: string; args?: unknown; reason?: string };
+              setPendingConfirm({
+                message: content,
+                tool: String(c.name ?? ""),
+                title: String(c.title ?? c.name ?? ""),
+                args: JSON.stringify(c.args ?? {}),
+                reason: String(c.reason ?? "أداة حساسة محتاجة موافقة"),
+              });
+              setMessages(prev => [...prev, { role: "note", content: `⏸️ ${c.reason ?? ""}` }]);
+            } else if (ev.type === "thought" && ev.text) {
               setMessages(prev => [...prev, { role: "note", content: `🧠 ${ev.text}` }]);
             } else if (ev.type === "tool_call") {
               setMessages(prev => [...prev, { role: "tool", content: `$ ${ev.name} ${JSON.stringify(ev.args ?? {})}`, type: "exec" }]);
+              novaTask({ id: String((ev as { id?: string }).id ?? ev.name), title: String(ev.name ?? "أداة"), status: "running", tool: String(ev.name ?? ""), startedAt: Date.now() });
+              novaLog({ at: Date.now(), kind: "tool", level: "info", message: `▶︎ ${ev.name} اشتغلت` });
             } else if (ev.type === "tool_result") {
               setMessages(prev => [...prev, { role: "tool", content: `${ev.ok ? "✓" : "✗"} ${ev.summary ?? ""}`, type: "output" }]);
+              novaTask({ id: String((ev as { id?: string }).id ?? ev.name), title: String(ev.name ?? "أداة"), status: ev.ok ? "done" : "failed", tool: String(ev.name ?? ""), startedAt: Date.now(), ms: (ev as { ms?: number }).ms });
+              novaLog({ at: Date.now(), kind: "tool_result", level: ev.ok ? "ok" : "error", message: `${ev.ok ? "✅" : "❌"} ${ev.name}: ${String(ev.summary ?? "").slice(0, 160)}` });
             } else if (ev.type === "delta" && ev.text) {
               current += ev.text;
               setMessages(prev => {
@@ -10385,6 +10429,25 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
             <pre className="text-[8px] whitespace-pre-wrap break-words leading-relaxed font-sans">{m.content}{m.type === "streaming" ? "▌" : ""}</pre>
           </div>
         ))}
+        {pendingConfirm && (
+          <div className="p-3 rounded-xl space-y-2" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.45)" }}>
+            <div className="text-[9px] font-black text-amber-300">⏸️ موافقة مطلوبة قبل التنفيذ</div>
+            <div className="text-[8px] text-amber-100/80 leading-relaxed">{pendingConfirm.reason}</div>
+            <pre className="text-[8px] text-amber-200/70 whitespace-pre-wrap break-all font-mono">{pendingConfirm.tool} {pendingConfirm.args}</pre>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { const c = pendingConfirm; setPendingConfirm(null); void send({ text: c.message, approve: [c.tool] }); }}
+                className="px-3 py-1.5 rounded-lg text-[9px] font-black bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 border border-amber-500/50">
+                ✅ موافق، نفّذ
+              </button>
+              <button
+                onClick={() => { setPendingConfirm(null); setMessages(prev => [...prev, { role: "note", content: "❌ ألغيت التنفيذ — الجهاز ما اتلمسش." }]); }}
+                className="px-3 py-1.5 rounded-lg text-[9px] font-black bg-white/5 hover:bg-white/10 text-white/70 border border-white/15">
+                ❌ إلغاء
+              </button>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 

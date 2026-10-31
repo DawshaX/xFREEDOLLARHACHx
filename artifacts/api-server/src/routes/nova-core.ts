@@ -51,6 +51,7 @@ router.post("/nova-core/chat", async (req: Request, res: Response) => {
     sessionId?: string;
     history?: Array<{ role: "user" | "assistant"; content: string }>;
     forceHeuristic?: boolean;
+    approve?: string[];
   };
   const message = String(body.message ?? "").trim();
   if (!message) {
@@ -93,6 +94,7 @@ router.post("/nova-core/chat", async (req: Request, res: Response) => {
       sessionId: body.sessionId,
       history: Array.isArray(body.history) ? body.history.slice(-8) : [],
       forceHeuristic: body.forceHeuristic === true,
+      approved: Array.isArray(body.approve) ? body.approve.map(String) : [],
       emit,
     });
     broadcastEvent({ type: "agent_run_complete", agent: "nova", mode: result.mode, tools: result.toolsUsed, ts: Date.now() });

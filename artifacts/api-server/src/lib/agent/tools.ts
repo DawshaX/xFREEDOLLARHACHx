@@ -28,6 +28,11 @@ import {
   fetchUrlAsText,
 } from "../security-tools";
 import { searchCyberCorpus2400, getCorpusStats, KALI_ARSENAL_64 } from "../cyber-corpus-2099";
+import {
+  getConnectedAgentList,
+  getAgentDeepProfile,
+  execOnLocalAgent,
+} from "../../routes/local-agent";
 import { saveMemory, searchMemory, getAllMemories } from "../../routes/memory";
 import {
   remember,
@@ -50,8 +55,8 @@ export interface AgentTool {
   name: string;
   title: string;
   description: string;
-  category: "recon" | "intel" | "memory" | "mission" | "utility" | "platform";
-  risk: "safe" | "active" | "sensitive";
+  category: "recon" | "intel" | "memory" | "mission" | "utility" | "platform" | "fleet";
+  risk: "safe" | "active" | "sensitive" | "risky";
   input_schema: {
     type: "object";
     properties: Record<string, unknown>;
@@ -411,6 +416,53 @@ export const AGENT_TOOLS: AgentTool[] = [
       properties: { category: { type: "string", description: "recon | intel | memory | mission | platform | utility" } },
     },
   },
+  {
+    name: "fleet_list",
+    title: "قائمة الأجهزة المتصلة",
+    description:
+      "يعرض كل جهاز/وكيل متصل بالمنصة الآن (حتى 10 وكلاء و5 أجهزة وأكثر) مع نظامه وقدراته وعدد أدواته الأمنية.",
+    category: "fleet",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "fleet_profile",
+    title: "ملف جهاز تفصيلي",
+    description:
+      "يقرأ الملف العميق لجهاز متصل: الأدوات الأمنية المنصّبة، الواجهات الشبكية، الخدمات، الدوكر، والمستخدمين.",
+    category: "fleet",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { agentId: { type: "string", description: "معرّف الجهاز (اتركه فارغاً للأول)" } },
+    },
+  },
+  {
+    name: "fleet_exec",
+    title: "تنفيذ أمر على جهاز",
+    description:
+      "ينفّذ أمراً حقيقياً على جهاز متصل ويرجّع المخرجات. يحتاج وكيل NOVA شغّال على ذلك الجهاز. استخدمه بعد إذن المستخدم فقط.",
+    category: "fleet",
+    risk: "sensitive",
+    input_schema: {
+      type: "object",
+      properties: {
+        command: { type: "string" },
+        agentId: { type: "string" },
+        timeout: { type: "number", description: "مللي ثانية، الافتراضي 30000" },
+      },
+      required: ["command"],
+    },
+  },
+  {
+    name: "device_control_map",
+    title: "دليل ربط الأجهزة",
+    description:
+      "يرجّع خطوات ربط جهاز جديد بالمنصة (أمر التثبيت الجاهز) لكل نظام تشغيل — استخدمه لو المستخدم سأل «إزاي أربط جهاز؟».",
+    category: "fleet",
+    risk: "safe",
+    input_schema: { type: "object", properties: { platform: { type: "string", enum: ["linux", "macos", "windows"] } } },
+  },
 ];
 
 export const AGENT_TOOL_NAMES = AGENT_TOOLS.map((t) => t.name);
@@ -759,6 +811,71 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
       case "corpus_stats": {
         const stats = getCorpusStats();
         return done(true, `الفهرس: ${JSON.stringify(stats).slice(0, 150)}`, stats);
+      }
+
+      case "fleet_list": {
+        const agents = getConnectedAgentList();
+        if (agents.length === 0) {
+          return done(
+            false,
+            "مفيش أي جهاز متصل حالياً. شغّل وكيل NOVA على الجهاز: node nova-agent.js --server wss://<host>/api/local-agent/ws",
+            { agents: [], count: 0 },
+          );
+        }
+        const lines = agents.map((a) => `${a.hostname} (${a.platform}/${a.arch ?? "?"}) · ${a.user} · ${a.capabilities.length} قدرة`);
+        return done(true, `${agents.length} جهاز متصل: ${lines.join(" · ")}`, {
+          count: agents.length,
+          agents: agents.map((a) => ({
+            ...a,
+            connectedForMin: Math.round((Date.now() - a.connectedAt) / 60000),
+          })),
+        });
+      }
+
+      case "fleet_profile": {
+        const agentId = rawArgs.agentId ? String(rawArgs.agentId) : undefined;
+        const profile = getAgentDeepProfile(agentId);
+        if (!profile) return done(false, "مفيش ملف عميق للجهاز ده (الوكيل لسه مبعتهوش)", null);
+        const toolCount = profile.toolCount ?? 0;
+        return done(
+          true,
+          `${profile.system?.hostname ?? "جهاز"} · ${toolCount} أداة أمنية · ${profile.services?.running?.length ?? 0} خدمة · ${profile.docker?.count ?? 0} حاوية`,
+          profile,
+        );
+      }
+
+      case "fleet_exec": {
+        const command = String(rawArgs.command ?? "").trim();
+        if (!command) throw new Error("command مطلوب");
+        const agents = getConnectedAgentList();
+        if (agents.length === 0) {
+          return done(false, "مفيش جهاز متصل — شغّل وكيل NOVA الأول.", null);
+        }
+        const agentId = rawArgs.agentId ? String(rawArgs.agentId) : agents[0].id;
+        const timeout = Math.min(Number(rawArgs.timeout ?? 30_000) || 30_000, 180_000);
+        const result = await execOnLocalAgent(command, agentId, timeout);
+        if (!result) return done(false, `الجهاز ${agentId} ماردّش (منفصل أو لا يدعم التنفيذ)`, null);
+        const host = agents.find((a) => a.id === agentId)?.hostname ?? agentId;
+        const preview = (result.stdout || result.stderr || "").trim().slice(0, 300);
+        return done(
+          result.exitCode === 0,
+          `[${host}] exit=${result.exitCode} · ${result.durationMs}ms · ${preview || "بدون مخرجات"}`,
+          result,
+        );
+      }
+
+      case "device_control_map": {
+        const platform = String(rawArgs.platform ?? "linux");
+        const base = process.env.NOVA_PUBLIC_URL || "https://<your-host>";
+        const ws = `${base.replace(/^http/, "ws")}/api/local-agent/ws`;
+        const map = {
+          linux: `curl -fsSL ${base}/api/local-agent/download-agent | bash -s -- --server ${ws}`,
+          macos: `curl -fsSL ${base}/api/local-agent/download-agent | bash -s -- --server ${ws}`,
+          windows: `powershell -c "iwr ${base}/api/local-agent/download-agent?platform=windows -OutFile nova-agent.ps1; .\nova-agent.ps1"`,
+          manual: `node nova-agent.js --server ${ws} --id my-machine`,
+          manyAgents: "شغّل الوكيل على كل جهاز بمعرّف مختلف (--id) — المنصة بتستقبل حتى 10 وكلاء وأكثر في نفس الوقت.",
+        };
+        return done(true, `خطوات الربط لـ ${platform} جاهزة`, { platform, commands: map, endpoint: ws });
       }
 
       case "task_list": {

@@ -192,6 +192,11 @@ async function main() {
     { method: "GET", path: "/api/nova-core/memory", files: ["artifacts/kali-panel/src/pages/NovaMemory.tsx"] },
     { method: "GET", path: "/api/nova-core/memory/stats", files: ["artifacts/kali-panel/src/pages/NovaMemory.tsx"] },
     { method: "GET", path: "/api/nova-core/ollama", files: ["artifacts/api-server/src/routes/nova-core.ts"] },
+    // Fleet endpoints are addressed through `const API = "/api"` in the UI, so
+    // they never appear as literal call sites either.
+    { method: "GET", path: "/api/local-agent/agents", files: ["artifacts/kali-panel/src/components/desktop/NovaFleetPanel.tsx"] },
+    { method: "GET", path: "/api/local-agent/download-nova-agent", files: ["artifacts/api-server/src/routes/local-agent.ts"] },
+    { method: "GET", path: "/api/local-agent/download-agent", files: ["artifacts/kali-panel/src/components/desktop/NovaFleetPanel.tsx"] },
   ];
   const serverResults = [];
   const skipped = [];

@@ -4952,6 +4952,12 @@ export function resolveStandaloneApi(
     return { ok: true, memories: memoriesState, results: [] };
   }
 
+  // The static build has no WebSocket server, so there is genuinely no live
+  // fleet. Report that honestly instead of inventing connected machines.
+  if (path === "/local-agent/agents") {
+    return { agents: [], count: 0, static: true, note: "الوضع الثابت: مفيش سيرفر — شغّل المنصة لربط الأجهزة." };
+  }
+
   if (path === "/local-agent/status") {
     return { connected: true, agents: [sandboxAgent], count: 1 };
   }

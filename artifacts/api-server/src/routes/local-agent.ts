@@ -77,7 +77,22 @@ export function getAgentDeepProfile(agentId?: string): AgentDeepProfile | null {
   return first ?? null;
 }
 
-function getConnectedAgentList() {
+export interface FleetAgent {
+  id: string;
+  hostname: string;
+  platform: string;
+  user: string;
+  arch?: string;
+  cpus?: number;
+  totalMemory?: number;
+  nodeVersion?: string;
+  capabilities: string[];
+  interfaces?: Record<string, string[]>;
+  connectedAt: number;
+}
+
+/** Read-only snapshot of every machine currently attached to the platform. */
+export function getConnectedAgentList(): FleetAgent[] {
   return [...connectedAgents.values()].map((a) => ({
     id: a.id,
     hostname: a.hostname,
@@ -783,10 +798,14 @@ router.get("/local-agent/screen-stream", async (req, res) => {
 });
 
 router.get("/local-agent/download-nova-agent", (_req, res) => {
+  // The agent used to be looked up in three paths that never existed, so this
+  // endpoint (and therefore "connect a computer") always answered 404.
   const agentPaths = [
-    path.resolve("/home/runner/workspace/nova-agent.js"),
-    path.resolve(process.cwd(), "../../nova-agent.js"),
+    path.resolve(process.cwd(), "../../nova-agent.js"), // cwd = artifacts/api-server
+    path.resolve(process.cwd(), "../nova-agent.js"),
     path.resolve(process.cwd(), "nova-agent.js"),
+    path.resolve("/opt/cybernova/nova-agent.js"),
+    path.resolve("/home/runner/workspace/nova-agent.js"),
   ];
   for (const p of agentPaths) {
     if (fs.existsSync(p)) {
@@ -807,17 +826,57 @@ router.get("/local-agent/download-nova-agent", (_req, res) => {
 });
 
 router.get("/local-agent/download-agent", (req, res) => {
-  const origin = `${req.protocol}://${req.get("host")}`;
-  const wsHost = req.get("host") || "localhost";
+  const isHttps = req.protocol === "https" || req.get("x-forwarded-proto") === "https";
+  const origin = `${isHttps ? "https" : "http"}://${req.get("host")}`;
+  // Plain `ws://` on localhost/LAN, `wss://` only behind TLS — otherwise the
+  // generated bootstrap silently fails to connect on a local install.
+  const wsScheme = isHttps ? "wss" : "ws";
+  const wsHost = `${wsScheme}://${req.get("host") || "localhost"}/api/local-agent/ws`;
+  const platform = String(req.query.platform || "auto");
+
+  // Windows / PowerShell variant
+  if (platform === "windows" || platform === "ps1") {
+    const ps = `# CyberNova NOVA-Agent bootstrap (Windows PowerShell)
+$ErrorActionPreference = "Stop"
+$Server = "${wsHost}"
+$AgentFile = Join-Path $env:TEMP "nova-agent.js"
+Write-Host "[nova] downloading agent..."
+Invoke-WebRequest -UseBasicParsing "${origin}/api/local-agent/download-nova-agent" -OutFile $AgentFile
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+  Write-Host "[nova] Node.js غير منصّب. نزّله من https://nodejs.org ثم أعد تشغيل السكربت." -ForegroundColor Yellow
+  exit 1
+}
+Write-Host "[nova] connecting to $Server"
+node $AgentFile --server $Server $args
+`;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=nova-agent.ps1");
+    res.send(ps);
+    return;
+  }
+
   const fallback = `#!/usr/bin/env bash
 # CyberNova Nova-Agent bootstrap
 set -e
-SERVER_URL="wss://${wsHost}/api/local-agent/ws"
+SERVER_URL="${wsHost}"
 AGENT_FILE="/tmp/nova-agent.js"
 echo "[nova] Downloading nova-agent.js..."
-curl -sL "${origin}/api/local-agent/download-nova-agent" -o "$AGENT_FILE"
+if ! command -v curl >/dev/null 2>&1; then
+  echo "[nova] curl غير موجود — نصّبه: apt install -y curl" >&2
+  exit 1
+fi
+curl -fsSL "${origin}/api/local-agent/download-nova-agent" -o "$AGENT_FILE"
+if ! head -c 20 "$AGENT_FILE" | grep -q "node"; then
+  echo "[nova] فشل تنزيل الوكيل من السيرفر (تحقق من الرابط)" >&2
+  exit 1
+fi
+if ! command -v node >/dev/null 2>&1; then
+  echo "[nova] Node.js غير منصّب — نصّبه أولاً:" >&2
+  echo "        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs" >&2
+  exit 1
+fi
 echo "[nova] Connecting to $SERVER_URL"
-exec node "$AGENT_FILE" --server "$SERVER_URL" --reconnect "$@"
+exec node "$AGENT_FILE" --server "$SERVER_URL" "$@"
 `;
   res.setHeader("Content-Type", "application/x-sh");
   res.setHeader("Content-Disposition", "attachment; filename=kali-agent.sh");
@@ -895,5 +954,4 @@ router.get("/local-agent/connect-info", (req, res) => {
   });
 });
 
-export { getConnectedAgentList };
 export default router;
