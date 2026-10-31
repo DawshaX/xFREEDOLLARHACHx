@@ -59,3 +59,6 @@ artifacts/api-server/logs/
 
 # fleet mesh runtime state
 fleet-mesh.json
+
+# portable 24/7 bundle output (built by CI, published as a release asset)
+dist-standalone/
