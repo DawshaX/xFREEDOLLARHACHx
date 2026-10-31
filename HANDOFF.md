@@ -366,3 +366,66 @@
 - `pnpm run audit:connections` → **113 نقطة اتصال، 0 فجوة، 0 انحراف**.
 - `pnpm run audit:connections:live` → **55 نقطة أُختبرت حياً على الخادم، 0 خطأ**.
 - `tsc --noEmit` للواجهة → **0 أخطاء**، وبناء Vite وesbuild ناجح.
+
+---
+
+## المرحلة 33 — NOVA: عقل حقيقي + شات ينفّذ قدامك (2026-10-31)
+
+### الفكرة
+تحويل المنصة من «واجهة تعرض بيانات» إلى **كيان ذكي تتكلم معاه وينفّذ فعليًا**:
+شات بشخصية، عقل يخطّط، وطبقة أدوات حقيقية بنتيجة حية لحظة بلحظة — بميزانية صفر.
+
+### القرار المعماري
+- **مفيش إعادة كتابة بـ Python** (كان اقتراح المستخدم): نفس الستاك TS/Express/React، نفس السيرفر،
+  نفس الـ WebSocket — لأن كل الأدوات الأمنية (`security-tools.ts`، `cyber-corpus-2099.ts`) موجودة
+  أصلاً في الـ API server. الفائدة صفر من طبقة بايثون زايدة، والتكلفة صيانة مزدوجة.
+- **العقل مرن (Free-first):** Ollama المحلي أولًا → مفاتيح سحابية مجانية (Groq/OpenRouter/Gemini/Mistral/Together)
+  → **عقل مدمج (Built-in Planner)** يفهم العربي وينفّذ نفس الأدوات بنفس الترتيب. يعني الشات
+  **عمره ما يقف** حتى بدون أي نموذج لغوي.
+
+### الملفات الجديدة
+| ملف | الدور |
+|---|---|
+| `artifacts/api-server/src/lib/agent/persona.ts` | هوية NOVA + System Prompt كامل + بروتوكول تفكير + خطوط حمراء |
+| `artifacts/api-server/src/lib/agent/tools.ts` | 21 أداة حقيقية + `runAgentTool()` + حماية SSRF |
+| `artifacts/api-server/src/lib/agent/llm.ts` | ترتيب المزوّدين، `llmComplete()`، timeout محدد |
+| `artifacts/api-server/src/lib/agent/core.ts` | حلقة الوكيل: ready→thought→plan→tool_call→tool_result→delta→done |
+| `artifacts/api-server/src/routes/nova-core.ts` | REST + SSE: `/api/nova-core/{status,tools,persona,chat,execute}` |
+| `artifacts/kali-panel/src/lib/nova-core.ts` | عميل المتصفح: يفضّل السيرفر ويسقط تلقائيًا للمخ المحلي |
+| `artifacts/kali-panel/src/pages/NovaCore.tsx` | صفحة الشات + تايم لاين تنفيذ حي + روابط للصفحات |
+| `scripts/nova-local.sh` | تشغيل كل حاجة بأمر واحد + فحص Ollama |
+| `NOVA.md` | دليل عربي بسيط للتشغيل والاستخدام |
+| `artifacts/api-server/.env.nova.example` | قالب إعدادات العقل (كل الخيارات مجانية) |
+
+### أخطاء حقيقية اتصلحت أثناء البناء
+1. **البث كان صامت تمامًا (SSE فاضي):** كان الكود بيسمع على `req.on("close")` — في Node 22 الحدث ده
+   بيضرب بعد قراءة الـ body، فبقى كل حدث يُهمَل. الحل: الاستماع على `res.on("close")` + `res.flush()` بعد كل كتابة.
+2. **تعليق 2 دقيقة قبل أول حرف:** قراءة إعدادات Ollama من قاعدة البيانات (غير موجودة في الوضع المستقل)
+   كانت بتعلّق التنفيذ. الحل: `withDeadline()` بحد 1.5 ثانية + fallback لمتغيرات البيئة.
+3. **عقود أدوات خاطئة:** `scanSubdomains` يرجّع مصفوفة، `exploitDbSearch` يرجّع `{data,recordsTotal}`،
+   `KALI_ARSENAL_64` بحقول `purposeAr`/`commandTemplate`/`safeEquivalent` — كلها ظبطت قبل التشغيل.
+
+### الوضع على GitHub Pages
+الشات شغال هناك برضه عبر **المخ المحلي**: DNS-over-HTTPS، NVD، GitHub API، فهرس المنصة،
+وذاكرة دائمة في المتصفح. الميزات اللي محتاجة سيرفر (TLS/ترويسات/منافذ/تعداد نطاقات) بتظهر
+كاقتراح واضح «شغّل السيرفر عشان تفتحها» — مفيش أي زر بيدّعي حاجة مش حقيقية.
+
+### ربط الديسكتوب
+`NovaAutonomousChat` داخل `LiveAgentPanel` (شات الديسكتوب) بقى يكلّم **NOVA Core أولًا**:
+كل `tool_call` و`tool_result` و`thought` بيظهر جوه الشات كسطر تنفيذ، وبيرجع تلقائيًا للمسار القديم
+(`/api/nova/sessions/:id/auto-chat`) لو الـ endpoint مش متاح — يعني مفيش شات بيتعطل.
+
+### إصلاحات إضافية
+- **مهمة افتتاحية** عند تشغيل الخادم (`stubs.ts`) عشان `MissionTracker` والـ `record_finding` ميبقوش شغالين على مخزن فاضي.
+- **فحص الاتصالات بقى ذكي مع البيانات:** أي مسار من نوع `/api/x/1` يرجّع 404 بيتم التأكد من المجموعة الأم
+  (`/api/x`) — لو فاضية يُسجّل «تم التخطي (بيانات)» بدل ما يبلّغ عن عطل وهمي.
+
+### نتائج الفحص
+- `tsc --noEmit` للواجهة → **0 أخطاء**
+- `pnpm --filter @workspace/api-server run build` → ✓
+- `BASE_PATH=… vite build` → ✓ 10.6s
+- `audit-connections --server` → **58 نقطة حيّة (زادت 3 لمسارات NOVA)، 0 خطأ**
+- `audit-render /nova-core /live-agent` → **123,713 و118,278 بايت مرسومة** (مش شاشة سوداء)
+- اختبار حي: `POST /api/nova-core/chat {"message":"اعمل استطلاع على github.com"}` →
+  `set_active_target` ✅ → `recon_target` ✅ (IP + HTTP 200 + TLS حتى 2026-11-01) → `github_search` ⚠️
+  → رد عربي بقراءة أمنية + خطوة تالية مقترحة.

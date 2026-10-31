@@ -80,6 +80,7 @@ import novaAgentRouter from "./novaAgent";
 import kaliTerminalRouter from "./kali-terminal";
 import multiAiRouter from "./multi-ai";
 import novaGatewayRouter from "./nova-gateway";
+import novaCoreRouter from "./nova-core";
 
 const router: IRouter = Router();
 
@@ -126,6 +127,9 @@ router.use(multiAiRouter);
 
 // ── Nova Gateway (centralized AI + ngrok + Ollama status) ────────────────────
 router.use(novaGatewayRouter);
+
+// ── NOVA Core (persona + real tools + agent loop) ────────────────────────────
+router.use(novaCoreRouter);
 
 // ── AI / Chat ────────────────────────────────────────────────────────────────
 router.use(liveAgentRouter);
