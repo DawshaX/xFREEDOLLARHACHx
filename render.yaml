@@ -1,9 +1,21 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Render Blueprint — free tier, deploys from this repo with one click.
-# Free web services sleep after ~15 min idle and wake in ~30s; the panel itself
-# is static and instant, and the GitHub Action keep-alive ping keeps the API warm.
+# Render Blueprint — free forever, **no credit card**, deploys from this repo.
 #
 #   Render dashboard → New → Blueprint → pick this repo → Apply
+#
+# What the free plan gives you (2026): 512 MB RAM, shared CPU, 750 instance
+# hours per month (a month is ~744 h, so one always-awake service still fits).
+#
+# What the free plan does NOT give you:
+#   • no persistent disk — a disk on `plan: free` makes the Blueprint fail, so
+#     there is none here. Long-term memory lives in state/nova-memory.json and
+#     is therefore lost on redeploys (survives plain restarts). Export/import
+#     commands are in deploy/README.md.
+#   • no always-on — the service sleeps after 15 minutes without traffic. The
+#     keepalive workflow (.github/workflows/keepalive.yml) pings it every 10
+#     minutes, and deploy/render-free-guide.md explains the second pinger.
+#   • no Ollama — 512 MB cannot host a model. NOVA falls back to the built-in
+#     engine, or to a free API key (Gemini / Groq / OpenRouter) if you set one.
 # ─────────────────────────────────────────────────────────────────────────────
 services:
   - type: web
@@ -12,6 +24,7 @@ services:
     plan: free
     region: frankfurt
     branch: main
+    autoDeploy: true
     healthCheckPath: /api/health
     buildCommand: |
       corepack enable &&
@@ -19,21 +32,22 @@ services:
       pnpm install --no-frozen-lockfile &&
       pnpm --filter @workspace/api-server run build &&
       BASE_PATH=/ pnpm --filter @workspace/kali-panel run build
+    # The server reads PORT from the environment, and Render injects its own —
+    # so the port is deliberately NOT hard-coded here.
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
     envVars:
       - key: NODE_ENV
         value: production
       - key: HOST
         value: 0.0.0.0
-      - key: PORT
-        value: 8080
       - key: NODE_VERSION
         value: 22.22.3
+      # Point memory at the repo working dir so the path is predictable;
+      # note it is still wiped by every redeploy (free plan has no disk).
       - key: NOVA_MEMORY_FILE
         value: /opt/render/project/src/state/nova-memory.json
-      - key: OLLAMA_MODEL
-        value: qwen2.5:3b
       # Optional free-tier keys — leave unset and NOVA uses the built-in brain.
+      # Add them from the Render dashboard, never in the repo.
       - key: GEMINI_API_KEY
         sync: false
       - key: GROQ_API_KEY
@@ -44,9 +58,3 @@ services:
         sync: false
       - key: TOGETHER_API_KEY
         sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-    disk:
-      name: nova-memory
-      mountPath: /opt/render/project/src/state
-      sizeGB: 1
