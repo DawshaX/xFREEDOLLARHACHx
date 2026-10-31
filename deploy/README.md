@@ -51,6 +51,14 @@ certbot هيعمل TLS تلقائي + تجديد تلقائي.
 
 ---
 
+## 0) إزاي أتأكد إنه شغّال؟ (الفحص الذاتي)
+
+- في السيرفر: `/self-check` — 7 فحوصات حقيقية (ذاكرة · قرص · عقل · أدوات · إنترنت · WebSocket · الدورة الذاتية).
+- من برّه: `AUDIT_URL=http://<host>:8080 node scripts/audit-live-server.mjs` — 15 فحص.
+- تلقائي كل 6 ساعات: `.github/workflows/live-audit.yml` (يحتاج سرّ `NOVA_URL`).
+
+---
+
 ## 2) Render — أسرع بداية (بدون terminal)
 
 1. اعمل حساب على <https://render.com> واربط GitHub.

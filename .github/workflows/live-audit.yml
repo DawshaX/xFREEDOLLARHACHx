@@ -1,0 +1,89 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA — live audit (the "is it really working?" job)
+#
+# Runs scripts/audit-live-server.mjs against a deployed NOVA 15 checks of real
+# evidence: HTTP health, panel HTML, SPA routing, the WebSocket hub, real tool
+# execution, memory write + search + export, outbound internet, and the
+# self-check endpoint itself.
+#
+# Setup (GitHub → Settings → Secrets and variables → Actions → New secret):
+#   NOVA_URL   e.g. https://cybernova-nova.onrender.com   (no trailing slash)
+#
+# Without the secret the job is a no-op — it never fails your repo for being
+# unconfigured. It also restores memory first when MEMORY_RESTORE is on:
+# that is how a free tier survives a redeploy (Render has no disk on `free`).
+# ─────────────────────────────────────────────────────────────────────────────
+name: NOVA live audit
+
+on:
+  schedule:
+    - cron: "15 */6 * * *"   # every 6 hours
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: "Force a fresh self-check (bypass the 20s cache)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: nova-live-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: probe the running agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AUDIT_URL: ${{ secrets.NOVA_URL }}
+      AUDIT_TIMEOUT_MS: "25000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Skip when no deployment is configured
+        if: ${{ env.AUDIT_URL == '' }}
+        run: echo "::notice::NOVA_URL is not set — nothing to audit."
+
+      - name: Wake the instance (cold start can take ~60s)
+        if: ${{ env.AUDIT_URL != '' }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$AUDIT_URL/api/health" || echo 000)
+            echo "wake attempt $i → HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          echo "::warning::instance did not wake up — the audit below will report why"
+
+      - name: Run the live audit
+        if: ${{ env.AUDIT_URL != '' }}
+        run: |
+          node scripts/audit-live-server.mjs --json | tee audit.json
+          node -e '
+            const r = require("./audit.json");
+            const failed = r.results.filter(x => !x.ok);
+            const lines = [
+              "### NOVA live audit — " + r.passed + "/" + r.total + " passed",
+              "",
+              "| capability | check | result | evidence |",
+              "|---|---|---|---|",
+              ...r.results.map(x => `| ${x.capability} | ${x.name} | ${x.ok ? "✅" : "❌"} | ${String(x.detail).replace(/\|/g, "\\|")} |`),
+            ];
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+            if (failed.length) {
+              console.log("::error::" + failed.length + " check(s) failed");
+              process.exit(1);
+            }
+          '
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ env.AUDIT_URL != '' && always() }}
+        with:
+          name: nova-live-audit-${{ github.run_number }}
+          path: audit.json
+          retention-days: 14
+          if-no-files-found: ignore

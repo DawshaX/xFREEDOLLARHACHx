@@ -79,12 +79,32 @@ Value: https://cybernova-nova.onrender.com      (من غير / في الآخر)
 | **Google Gemini** | <https://aistudio.google.com/apikey> | تير مجاني سخي |
 | **Groq** | <https://console.groq.com/keys> | سريع جداً |
 | **OpenRouter** | <https://openrouter.ai/keys> | موديلات `:free` |
+| **Mistral** | <https://console.mistral.ai/api-keys> | تير مجاني |
+| **Together AI** | <https://api.together.ai/settings/api-keys> | موديلات `-Free` |
+| **Cerebras** | <https://cloud.cerebras.ai> | سريع جداً + مجاني |
+| **GitHub Models** | <https://github.com/settings/tokens> | مجاني بمحدودية يومية (`GITHUB_MODELS_TOKEN`) |
 
 ضيفهم من: Render → الخدمة → **Environment** → Add Environment Variable
 (`GEMINI_API_KEY` / `GROQ_API_KEY` / `OPENROUTER_API_KEY`).
 **متكتبهم في الكود ولا في Git أبداً.** لو مفتاح اتكشف → اعمله revoke فوراً.
 
 ---
+
+## إزاي تعرف إنه شغّال فعلاً (مش كلام)
+بعد النشر، افتح:
+```
+https://cybernova-nova.onrender.com/self-check
+```
+الصفحة دي بتشغّل 7 فحوصات حقيقية على السيرفر نفسه (ذاكرة، قرص، عقل، أدوات، إنترنت،
+WebSocket، الدورة الذاتية) وبترجّع سكور وحكم بالعربي + حل جنب كل نقطة واقعة.
+
+ومن أي جهاز، فحص خارجي كامل (15 فحص) من غير أي تثبيت:
+```bash
+AUDIT_URL=https://cybernova-nova.onrender.com node scripts/audit-live-server.mjs
+```
+
+وفيه كمان مراقبة تلقائية كل 6 ساعات على GitHub: `.github/workflows/live-audit.yml`
+(بتشتغل لما تضيف `NOVA_URL` وتكتبلك جدول بالنتايج في Actions → Summary).
 
 ## اللي بتكسبه واللي بتخسره (بصراحة)
 
