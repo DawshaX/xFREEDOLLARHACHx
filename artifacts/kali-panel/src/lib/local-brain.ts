@@ -36,10 +36,20 @@ interface Step {
   title: string;
 }
 
-/** Tools this brain can really run without a server. */
-const LOCAL_TOOLS = new Set(["memory_search", "knowledge_search", "cve_lookup", "corpus_stats", "platform_status", "memory_list", "mission_status"]);
+/**
+ * Tools this brain can really run without a server.
+ *
+ * The browser has a network stack, so DNS, public advisories, GitHub search and
+ * page fetching are genuinely doable client-side (all of those APIs send CORS
+ * headers). What a browser cannot do — raw sockets, TLS handshakes, arbitrary
+ * ports — stays in SERVER_ONLY and is reported as such.
+ */
+const LOCAL_TOOLS = new Set([
+  "memory_search", "knowledge_search", "cve_lookup", "corpus_stats", "platform_status", "memory_list",
+  "mission_status", "dns_lookup", "github_search", "exploit_search", "web_fetch", "subdomain_enum",
+]);
 /** Tools that exist but need the server (reported honestly, never faked). */
-const SERVER_ONLY = new Set(["recon_target", "dns_lookup", "tls_audit", "http_headers_audit", "port_scan", "subdomain_enum", "web_fetch", "github_search", "exploit_search", "fleet_list", "fleet_profile", "fleet_exec", "device_control_map", "report_generate"]);
+const SERVER_ONLY = new Set(["recon_target", "tls_audit", "http_headers_audit", "port_scan", "fleet_list", "fleet_profile", "fleet_exec", "device_control_map", "report_generate"]);
 
 const TITLES: Record<string, string> = {
   memory_search: "بحث في الذاكرة",
@@ -49,6 +59,10 @@ const TITLES: Record<string, string> = {
   corpus_stats: "إحصاءات الفهرس",
   platform_status: "حالة المنصة",
   mission_status: "حالة المهمة",
+  dns_lookup: "فحص DNS الحي",
+  subdomain_enum: "تعداد نطاقات فرعية (crt.sh)",
+  github_search: "بحث GitHub الحي",
+  exploit_search: "بحث ثغرات حي (OSV)",
   recon_target: "استطلاع الهدف",
   port_scan: "فحص المنافذ",
   web_fetch: "جلب صفحة",
@@ -69,20 +83,28 @@ export function planLocally(message: string): { thought: string; steps: Step[] }
   const wantsStats = /(?:احصائ|إحصائ|stats|كام|عدد|حالة)/i.test(msg);
   const wantsScan = /(?:افحص|نفذ|scan|nmap|nuclei|recon|استطلع)/i.test(msg);
 
+  const wantsRepos = /(?:github|ريبو|مستودع|repo)/i.test(msg);
+  const wantsExploit = /(?:exploit|استغلال|poC|poc)/i.test(msg);
+  const wantsFetch = /(?:افتح|اقرا|اقرأ|جيب|fetch|اقتبس)/i.test(msg);
+
   if (cveId) steps.push({ tool: "cve_lookup", title: TITLES.cve_lookup, args: { cveId } });
   if (wantsMemory) steps.push({ tool: "memory_search", title: TITLES.memory_search, args: { query: msg.slice(0, 80) } });
   if (wantsKnowledge && !cveId) steps.push({ tool: "knowledge_search", title: TITLES.knowledge_search, args: { query: msg.slice(0, 80) } });
   if (wantsStats) steps.push({ tool: "corpus_stats", title: TITLES.corpus_stats, args: {} });
-  if (wantsScan) {
-    steps.push(
-      target
-        ? { tool: "recon_target", title: TITLES.recon_target, args: { target } }
-        : { tool: "platform_status", title: TITLES.platform_status, args: {} },
-    );
+  if (wantsRepos) steps.push({ tool: "github_search", title: TITLES.github_search, args: { query: msg.slice(0, 60) } });
+  if (wantsExploit) steps.push({ tool: "exploit_search", title: TITLES.exploit_search, args: { query: cveId ?? msg.slice(0, 60) } });
+  if (wantsScan && target) {
+    // Real client-side recon: DNS over HTTPS and certificate transparency both
+    // work from a browser. Raw port scans still need a server — and we say so.
+    steps.push({ tool: "dns_lookup", title: TITLES.dns_lookup, args: { target } });
+    steps.push({ tool: "subdomain_enum", title: TITLES.subdomain_enum, args: { target } });
+  } else if (wantsScan) {
+    steps.push({ tool: "platform_status", title: TITLES.platform_status, args: {} });
   }
+  if (wantsFetch && target) steps.push({ tool: "web_fetch", title: TITLES.web_fetch, args: { url: target } });
   if (steps.length === 0) {
     steps.push({ tool: "knowledge_search", title: TITLES.knowledge_search, args: { query: msg.slice(0, 80) } });
-    if (target) steps.push({ tool: "recon_target", title: TITLES.recon_target, args: { target } });
+    if (target && /\.[a-z]{2,}/i.test(msg)) steps.push({ tool: "dns_lookup", title: TITLES.dns_lookup, args: { target } });
   }
 
   const thought = cveId
@@ -100,7 +122,20 @@ interface ToolOutcome {
   data: unknown;
 }
 
-function runLocalTool(step: Step): ToolOutcome {
+/** Small, bounded fetch used by the network tools. Never throws past the tool. */
+async function getJson(url: string, timeoutMs = 7000): Promise<unknown> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs), headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function getText(url: string, timeoutMs = 9000): Promise<string> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
+
+async function runLocalTool(step: Step): Promise<ToolOutcome> {
   try {
     switch (step.tool) {
       case "memory_search": {
@@ -142,6 +177,105 @@ function runLocalTool(step: Step): ToolOutcome {
         return list.length
           ? { ok: true, summary: `${id}: ${list[0]?.description?.slice(0, 120) ?? "موجودة في الفهرس"} (CVSS ${list[0]?.cvssScore ?? "?"})`, data: list }
           : { ok: false, summary: `${id} مش موجودة في الفهرس المحلي — اسألني على سيرفر مربوط عشان أدور في NVD مباشرة`, data: null };
+      }
+
+      // ── real network tools (the browser has a network stack) ──────────────
+      case "dns_lookup": {
+        const domain = String(step.args.target ?? "").replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+        if (!domain) return { ok: false, summary: "محتاج اسم نطاق", data: null };
+        const types = ["A", "AAAA", "MX", "TXT", "NS"] as const;
+        const out: Record<string, string[]> = {};
+        for (const t of types) {
+          try {
+            const j = (await getJson(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${t}`)) as {
+              Answer?: Array<{ data?: string }>;
+            };
+            out[t] = (j.Answer ?? []).map((a) => String(a.data ?? "")).filter(Boolean).slice(0, 6);
+          } catch {
+            out[t] = [];
+          }
+        }
+        const total = Object.values(out).reduce((n, v) => n + v.length, 0);
+        return total
+          ? { ok: true, summary: `DNS حي لـ ${domain}: A ${out.A[0] ?? "—"} · MX ${out.MX.length} · TXT ${out.TXT.length} · NS ${out.NS.length}`, data: out }
+          : { ok: false, summary: `مفيش سجلات DNS راجعة لـ ${domain} (ممكن النطاق مش موجود أو الشبكة مقفولة)`, data: out };
+      }
+      case "subdomain_enum": {
+        const domain = String(step.args.target ?? "").replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+        // crt.sh first (certificate transparency = the widest source), but it is
+        // frequently down, so a real DoH sweep of common prefixes backs it up.
+        try {
+          const j = (await getJson(`https://crt.sh/?q=%25.${encodeURIComponent(domain)}&output=json`, 10000)) as Array<{
+            name_value?: string;
+          }>;
+          const names = new Set<string>();
+          for (const row of Array.isArray(j) ? j : []) {
+            for (const n of String(row.name_value ?? "").split("\n")) {
+              const clean = n.trim().toLowerCase();
+              if (clean && !clean.startsWith("*") && clean.endsWith(domain)) names.add(clean);
+            }
+          }
+          const list = [...names].slice(0, 40);
+          if (list.length) {
+            return { ok: true, summary: `${list.length} نطاق فرعي من سجلات الشهادات (crt.sh): ${list.slice(0, 4).join(" · ")}`, data: list };
+          }
+        } catch {
+          /* fall through to DNS */
+        }
+        const prefixes = ["www", "mail", "api", "dev", "staging", "admin", "app", "blog", "cdn", "docs"];
+        const found: string[] = [];
+        await Promise.all(
+          prefixes.map(async (p) => {
+            try {
+              const j = (await getJson(`https://dns.google/resolve?name=${p}.${domain}&type=A`, 5000)) as {
+                Answer?: unknown[];
+              };
+              if ((j.Answer ?? []).length) found.push(`${p}.${domain}`);
+            } catch {
+              /* ignore single failure */
+            }
+          }),
+        );
+        const sorted = found.sort();
+        return sorted.length
+          ? { ok: true, summary: `${sorted.length} نطاق فرعي حي عبر DNS: ${sorted.join(" · ")}`, data: sorted }
+          : { ok: false, summary: `مفيش نطاقات فرعية ظاهرة لـ ${domain} (crt.sh وقع وDNS مالوش نتائج للبادئات الشائعة)`, data: [] };
+      }
+      case "github_search": {
+        const q = String(step.args.query ?? "");
+        const j = (await getJson(`https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&per_page=5`)) as {
+          total_count?: number;
+          items?: Array<{ full_name?: string; stargazers_count?: number; html_url?: string }>;
+        };
+        const items = j.items ?? [];
+        return items.length
+          ? {
+              ok: true,
+              summary: `${(j.total_count ?? 0).toLocaleString()} مستودع · الأبرز: ${items.slice(0, 3).map((i) => i.full_name).join(" · ")}`,
+              data: items.map((i) => ({ name: i.full_name, stars: i.stargazers_count, url: i.html_url })),
+            }
+          : { ok: false, summary: `GitHub مالوش نتائج لـ «${q}»`, data: [] };
+      }
+      case "exploit_search": {
+        const q = String(step.args.query ?? "");
+        const j = (await getJson(`https://api.osv.dev/v1/vulns/${encodeURIComponent(q)}`)) as {
+          id?: string;
+          summary?: string;
+          severity?: unknown[];
+          aliases?: string[];
+        };
+        return j?.id
+          ? { ok: true, summary: `${j.id}: ${String(j.summary ?? "").slice(0, 140)} — ${(j.aliases ?? []).join(", ") || "مفيش مرادفات"}`, data: j }
+          : { ok: false, summary: `مفيش سجل استغلال لـ ${q}`, data: null };
+      }
+      case "web_fetch": {
+        const url = String(step.args.url ?? "");
+        const absolute = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+        const text = await getText(`https://r.jina.ai/${absolute}`, 15000);
+        const clean = text.replace(/\s+/g, " ").trim();
+        return clean
+          ? { ok: true, summary: `قريت ${absolute} (${clean.length} حرف): ${clean.slice(0, 200)}`, data: clean.slice(0, 4000) }
+          : { ok: false, summary: "الصفحة رجعت فاضية", data: null };
       }
       case "corpus_stats": {
         const res = resolveStandaloneApi("/corpus/stats", "GET", null) as { totalIndexedKnowledgeItems?: number } | null;
@@ -220,7 +354,7 @@ export async function runLocalBrain(
       risk: SERVER_ONLY.has(step.tool) ? "needs-server" : "safe",
     });
     const t0 = Date.now();
-    const outcome = runLocalTool(step);
+    const outcome = await runLocalTool(step);
     const ms = Date.now() - t0;
     results.push({ name: step.tool, ...outcome });
     emit({ type: "tool_result", id, name: step.tool, ok: outcome.ok, summary: outcome.summary, ms, dataPreview: preview(outcome.data) });
@@ -239,10 +373,9 @@ export async function runLocalBrain(
   for (const r of blocked) lines.push(`- ⚠️ **${r.name}** — ${r.summary}`);
 
   lines.push("");
-  lines.push("### 🔌 ناقص إيه عشان يبقى تنفيذ كامل");
-  lines.push(
-    "- ده وضع المتصفح: مفيش سيرفر ولا أجهزة. اربط سيرفرك من صفحة **نوفا · الأسطول الموحّد → محطة العمل** وخلي العقل «سيرفر»، وساعتها الفحص الحقيقي والأسطول والأوامر تشتغل.",
-  );
+  lines.push("### 🧠 الوضع الحالي");
+  lines.push(`- شغّال دلوقتي بالكامل في المتصفح: ذاكرة + فهرس + DNS حي + GitHub + OSV + قراءة صفحات. مفيش أي إعداد مطلوب.`);
+  lines.push("- الحاجات الوحيدة اللي محتاجة سيرفر بحكم الفيزياء: مسح منافذ TCP، مصافحة TLS، تنفيذ أوامر على أجهزة تانية. لو ربطت سيرفر بتاعك بتتفتح تلقائياً — ولو مش مربوط كل حاجة تانية بتشتغل عادي.");
 
   const reply = lines.join("\n");
   for (const chunk of chunks(reply)) {

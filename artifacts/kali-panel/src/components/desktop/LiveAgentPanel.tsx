@@ -19,6 +19,7 @@ import {
 import type { ClientToolEvent } from "./AgentWindow";
 import { NovaFleetPanel, NovaProjectPulse } from "./NovaFleetPanel";
 import { novaTask, novaLog } from "./NovaFleetLive";
+import { runLocalBrain } from "@/lib/local-brain";
 import { RealTimeSystemMonitor } from "./RealTimeSystemMonitor";
 import { AdvancedFileManager } from "./AdvancedFileManager";
 import { RegistryEditor } from "./RegistryEditor";
@@ -10399,14 +10400,40 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
         return;
       }
 
+      // Silent stream (old deploy, proxy, odd route): answer from the in-browser
+      // engine instead of leaving an empty bubble or a "go run a server" note.
+      try {
+        const local = await runLocalBrain(content, (ev) => {
+          if (ev.type === "delta") {
+            current += ev.text;
+            setMessages(prev => {
+              const copy = [...prev];
+              const idxS = copy.findIndex(m => m.type === "streaming");
+              if (idxS >= 0) copy[idxS] = { role: "assistant", content: current, type: "streaming" };
+              return copy;
+            });
+          } else if (ev.type === "tool_result") {
+            novaLog({ at: Date.now(), kind: "tool_result", level: ev.ok ? "ok" : "error", message: `${ev.ok ? "✅" : "❌"} ${ev.name}: ${ev.summary.slice(0, 160)}` });
+          }
+        }, { sessionId });
+        if (local.reply.trim()) {
+          setMessages(prev => {
+            const copy = [...prev];
+            const idx = copy.findIndex(m => m.type === "streaming");
+            if (idx >= 0) copy[idx] = { role: "assistant", content: local.reply };
+            return copy;
+          });
+          setStreaming(false);
+          return;
+        }
+      } catch {
+        /* fall through to the honest note */
+      }
       if (coreOk) {
-        // Silent stream: say exactly that instead of showing an empty bubble.
         setMessages(prev => {
           const copy = [...prev];
           const idx = copy.findIndex(m => m.type === "streaming");
-          const note =
-            "⚠️ عقل نوفا رجّع رد فاضي (وضع بدون سيرفر). افتح «نوفا · الأسطول الموحّد → محطة العمل» واربط سيرفرك، أو اكتب السؤال تاني وهجيب الرد من الفهرس المحلي.";
-          if (idx >= 0) copy[idx] = { role: "note", content: note };
+          if (idx >= 0) copy[idx] = { role: "note", content: "مفيش رد رجع — اكتب تاني، ولو اتكرر قولي الرسالة اللي كتبتها." };
           return copy;
         });
         setStreaming(false);

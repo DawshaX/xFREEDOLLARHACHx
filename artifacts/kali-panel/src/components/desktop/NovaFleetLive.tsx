@@ -13,7 +13,8 @@
  * or third-party: it is the same free WS endpoint the device agents use.
  */
 import { useEffect, useRef, useState, useCallback } from "react";
-import { getRemoteBase, remoteWsUrl } from "@/lib/remote";
+import { getRemoteBase, isRemoteConfigured, remoteWsUrl } from "@/lib/remote";
+import { LOCAL_BRAIN_TOOL_COUNT } from "@/lib/local-brain";
 
 export interface FleetMachine {
   id: string;
@@ -29,6 +30,8 @@ export interface FleetMachine {
   ramTotal?: number;
   uptime?: number;
   readOnly?: boolean;
+  /** This browser tab — a real node running the engine, not a fake machine. */
+  self?: boolean;
 }
 
 export interface NovaTask {
@@ -58,6 +61,30 @@ const MAX_TASKS = 40;
 
 function apiBase(): string {
   return `${API}/local-agent`;
+}
+
+const PAGE_STARTED = Date.now();
+
+/**
+ * The one machine we can honestly report without any server: this browser.
+ * It really is executing the engine, so it belongs in the fleet instead of the
+ * empty «أجهزة 0» that made the whole page look dead.
+ */
+function selfNode(): FleetMachine {
+  const nav = typeof navigator === "undefined" ? undefined : navigator;
+  return {
+    id: "browser-self",
+    hostname: nav ? `${nav.platform || "browser"} · ${nav.language || ""}`.trim() : "browser",
+    platform: nav?.userAgent?.match(/\(([^)]+)\)/)?.[1]?.split(";")[0]?.trim() || "browser",
+    arch: nav?.userAgent?.includes("ARM") ? "arm64" : "x64",
+    user: "nova",
+    connectedAt: PAGE_STARTED,
+    lastSeen: Date.now(),
+    tools: LOCAL_BRAIN_TOOL_COUNT,
+    uptime: Math.round((Date.now() - PAGE_STARTED) / 1000),
+    readOnly: false,
+    self: true,
+  };
 }
 
 function wsUrl(): string {
@@ -222,7 +249,9 @@ async function refreshFleet() {
     const r = await fetch(`${apiBase()}/agents`, { headers: { accept: "application/json" } });
     if (!r.ok) return;
     const j = await r.json();
-    ingest({ type: "fleet", agents: Array.isArray(j) ? j : (j.agents ?? []) });
+    const agents: unknown[] = Array.isArray(j) ? j : (j?.agents ?? []);
+    // No server ⇒ no remote machines, but this tab is still a live node.
+    ingest({ type: "fleet", agents: agents.length ? agents : [selfNode()] });
   } catch {
     /* offline: keep last known truth */
   }
@@ -243,7 +272,14 @@ function connect() {
   ws.onopen = () => {
     retry = 0;
     publish({ socket: "open", everOpened: true });
-    pushEvent({ at: Date.now(), kind: "link", level: "ok", message: "اتصال مباشر دائم اتفتح مع المنصة" });
+    pushEvent({
+      at: Date.now(),
+      kind: "link",
+      level: "ok",
+      message: isRemoteConfigured()
+        ? "اتصال مباشر دائم اتفتح مع سيرفر NOVA المربوط"
+        : "قناة المتصفح الداخلية اتفتحت — العقل شغّال هنا من غير سيرفر",
+    });
     void refreshFleet();
   };
 
@@ -313,14 +349,17 @@ export function NovaLiveBar({ onOpen }: { onOpen?: () => void }) {
       : live.socket === "connecting"
         ? "bg-amber-400 animate-pulse"
         : "bg-red-500";
+  const remote = isRemoteConfigured();
   const label =
     live.socket === "open"
-      ? "اتصال مباشر دائم"
+      ? remote
+        ? "اتصال مباشر دائم بالسيرفر المربوط"
+        : "شغّال في المتصفح — قناة داخلية حقيقية (مفيش سيرفر خارجي)"
       : live.socket === "connecting"
         ? "بيتصل…"
         : live.everOpened
           ? "انقطع — بيعيد المحاولة تلقائياً"
-          : "مفيش سيرفر مباشر (وضع ثابت) — شغّل الخادم عشان الأسطول يشتغل";
+          : "قناة المتصفح بتفتح…";
 
   return (
     <div className="rounded-xl p-3 border border-white/10" style={{ background: "rgba(16,185,129,0.05)" }}>
