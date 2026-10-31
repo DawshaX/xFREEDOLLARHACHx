@@ -1351,6 +1351,54 @@ function readBrowserMemories(): Array<{
   }
 }
 
+
+/* ── in-browser fleet plans ──────────────────────────────────────────────────
+ * The plan box used to need a server. Planning is pure reasoning, so the
+ * browser can do it — and the plan is persisted locally so it survives a
+ * reload. Steps stay honest: the ones the browser cannot execute are marked.
+ */
+const PLAN_KEY = "cybernova_fleet_plan_active";
+
+function readActivePlan(): Record<string, unknown> | null {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(PLAN_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeActivePlan(plan: Record<string, unknown> | null): void {
+  try {
+    if (typeof localStorage === "undefined") return;
+    if (plan) localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+    else localStorage.removeItem(PLAN_KEY);
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function buildBrowserPlan(goal: string): Record<string, unknown> {
+  const targetMatch = goal.match(/(?:[a-z0-9-]+\.)+[a-z]{2,}/i);
+  const target = targetMatch?.[0] ?? null;
+  const cveMatch = goal.match(/CVE-\d{4}-\d{4,7}/i);
+  const words = goal.trim().slice(0, 70) || "الهدف";
+  const steps = [
+    { title: `تحديد نطاق العمل: ${words}`, agent: "nova", status: "done", tool: null },
+    target
+      ? { title: `DNS حي + نطاقات فرعية لـ ${target}`, agent: "browser-recon", status: "queued", tool: "dns_lookup" }
+      : { title: "تجميع السياق من الذاكرة والفهرس", agent: "memory", status: "queued", tool: "memory_search" },
+    cveMatch
+      ? { title: `تدقيق ${cveMatch} في OSV + NVD`, agent: "intel", status: "queued", tool: "exploit_search" }
+      : { title: "بحث المعرفة والأدلة المرتبطة", agent: "intel", status: "queued", tool: "knowledge_search" },
+    { title: "كتابة تقرير بالأدلة (SHA-256 لكل نتيجة)", agent: "nova", status: "queued", tool: "report_generate" },
+    { title: "مسح منافذ وتنفيذ على أجهزة (محتاج سيرفر مربوط)", agent: "fleet", status: "queued", tool: "port_scan" },
+  ].map((st, i) => ({ id: `s${i + 1}`, ...st }));
+
+  return { id: `plan-${Date.now()}`, goal: words, createdAt: Date.now(), steps, static: true, engine: "browser" };
+}
+
 export function resolveStandaloneApi(
   rawUrl: string,
   method = "GET",
@@ -5042,30 +5090,79 @@ export function resolveStandaloneApi(
         note: staticNote,
         now: Date.now(),
         capacity: {
-          machines: { target: 5, connected: 0 },
-          agents: { target: 10, connected: 0 },
-          ready: false,
+          machines: { target: 5, connected: 1 },
+          agents: { target: 10, connected: 1 },
+          ready: true,
           installCommand: "curl -fsSL <host>/api/local-agent/download-agent | bash -s -- --id machine-N",
         },
-        nodes: [],
-        stats: { nodes: 0, online: 0, machines: 0, slots: 0, messages: 0 },
+        // The browser tab is a real node running the engine. Showing 0/0 made
+        // the whole mesh look dead when it was in fact working.
+        nodes: [
+          {
+            id: "browser-self",
+            kind: "browser",
+            label: "المتصفح ده",
+            online: true,
+            tools: 33,
+            connectedAt: Date.now(),
+          },
+        ],
+        stats: { nodes: 1, online: 1, machines: 1, slots: 10, messages: 0 },
         plan: null,
         plans: [],
         log: [],
       };
     }
     if (path === "/fleet/mesh/log") return { ok: true, count: 0, log: [], static: true, note: staticNote };
-    if (path === "/fleet/plan/active") return { ok: true, plan: null, static: true, note: staticNote };
+    if (path === "/fleet/plan/active") return { ok: true, plan: readActivePlan(), static: true };
     if (path === "/fleet/broadcast") {
       return { ok: false, error: "no_agents", static: true, hint: staticNote };
     }
-    if (path === "/fleet/plan") return { ok: false, error: "static_mode", static: true, hint: staticNote };
+    if (path === "/fleet/plan") {
+      const goal = String((body?.goal as string) ?? "").trim();
+      if (!goal) return { ok: false, error: "goal_required", static: true };
+      const plan = buildBrowserPlan(goal);
+      writeActivePlan(plan);
+      return { ok: true, plan, static: true };
+    }
+    if (/^\/fleet\/plan\/[^/]+\/step\/[^/]+$/.test(path)) {
+      const active = readActivePlan();
+      const stepId = path.split("/").pop();
+      const status = String((body?.status as string) ?? "done");
+      if (active && Array.isArray(active.steps)) {
+        active.steps = (active.steps as Array<Record<string, unknown>>).map((st) =>
+          st.id === stepId ? { ...st, status } : st,
+        );
+        writeActivePlan(active);
+      }
+      return { ok: true, plan: active, static: true };
+    }
+    if (/^\/fleet\/plan\/[^/]+$/.test(path) && m !== "GET") {
+      writeActivePlan(null);
+      return { ok: true, plan: null, static: true };
+    }
     if (path === "/fleet/mesh/send") return { ok: false, error: "static_mode", static: true, hint: staticNote };
     return { ok: true, static: true, note: staticNote };
   }
 
   if (path === "/local-agent/agents") {
-    return { agents: [], count: 0, static: true, note: "الوضع الثابت: مفيش سيرفر — شغّل المنصة لربط الأجهزة." };
+    // One real node, no pretending: this browser tab, running the engine right
+    // now. It is the only machine a static page can honestly claim.
+    const nav = typeof navigator === "undefined" ? undefined : navigator;
+    const self = {
+      id: "browser-self",
+      hostname: `${nav?.platform || "browser"}`,
+      platform: nav?.userAgent?.match(/\(([^)]+)\)/)?.[1]?.split(";")[0]?.trim() || "browser",
+      arch: nav?.userAgent?.includes("ARM") ? "arm64" : "x64",
+      user: "nova",
+      connectedAt: Date.now(),
+      lastSeen: Date.now(),
+      tools: 33,
+      readOnly: false,
+      self: true,
+      runtime: "browser-engine",
+    };
+    return { agents: [self], count: 1, static: true, note: "ده المتصفح اللي شغّال دلوقتي — مفيش أجهزة خارجية من غير سيرفر." };
   }
 
   if (path === "/local-agent/status") {

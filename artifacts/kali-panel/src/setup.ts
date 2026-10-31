@@ -127,8 +127,25 @@ function buildStaticOllamaStreamResponse(body: Record<string, unknown> | null): 
   });
 }
 
-function buildStaticSseResponse(urlStr: string, body: Record<string, unknown> | null): Response | null {
+/**
+ * Reduce a request URL to its path.
+ *
+ * Route matching used to run against the raw URL string, so a perfectly normal
+ * call like `/api/nova-core/chat?brain=browser` fell through the `$`-anchored
+ * rules into the generic `{ok:true}` stub. The panel then read an empty stream
+ * and showed «العقل رجّع رد فاضي» — the exact bug seen on the live site.
+ */
+function routePathOf(input: string): string {
+  try {
+    return new URL(input, "http://local.invalid").pathname;
+  } catch {
+    return input.split("?")[0].split("#")[0];
+  }
+}
+
+function buildStaticSseResponse(rawUrl: string, body: Record<string, unknown> | null): Response | null {
   const encoder = new TextEncoder();
+  const urlStr = routePathOf(rawUrl);
   if (/\/api\/live-agent\/sessions\/[^/]+\/messages$/.test(urlStr)) {
     const content = String(body?.content || "");
     const toolId = `tc-${Date.now()}`;
@@ -665,7 +682,7 @@ const cybernovaFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       // The server streams `event: <type>` + `data: {...}` frames. Answering
       // with a plain `{ok:true}` used to make the panel render an EMPTY bubble:
       // it saw a 200 with a body, assumed the core replied, and read nothing.
-      if (/\/api\/nova-core\/chat$/.test(urlStr) && method === "POST") {
+      if (/\/api\/nova-core\/chat$/.test(routePathOf(urlStr)) && method === "POST") {
         const message = String(parsedBody?.message ?? "").trim();
         const sessionId = String(parsedBody?.sessionId ?? `local-${Date.now()}`);
         if (!message) {

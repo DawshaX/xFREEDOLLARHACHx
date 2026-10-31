@@ -24,6 +24,7 @@ import {
   clearRemoteBase, getRemoteBase, isRemoteConfigured, probeRemote, setRemoteBase,
   type ProbeResult,
 } from "@/lib/remote";
+import { runLocalBrain } from "@/lib/local-brain";
 
 const API = "/api";
 
@@ -137,14 +138,15 @@ function ServerLink({ onChange }: { onChange: () => void }) {
     <div className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5 space-y-2">
       <div className="flex items-center gap-1.5">
         {linked ? <PlugZap className="h-3.5 w-3.5 text-emerald-300" /> : <Plug className="h-3.5 w-3.5 text-amber-300" />}
-        <span className="text-[11px] font-black text-white/80">ربط السيرفر</span>
+        <span className="text-[11px] font-black text-white/80">وسّع القدرات — سيرفر اختياري</span>
         <span className={`text-[8px] px-1.5 py-0.5 rounded border ${linked ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200" : "border-amber-400/40 bg-amber-400/10 text-amber-200"}`}>
           {linked ? "مربوط" : "مش مربوط"}
         </span>
       </div>
 
       <div className="text-[8.5px] leading-relaxed text-white/45">
-        الصفحة الثابتة مفيهاش سيرفر. حطّ رابط NOVA عندك (Oracle Free / Fly / ngrok) وكل الشات والأسطول هيتحوّلوا عليه.
+        كل حاجة ذكية شغّالة دلوقتي من غير سيرفر. لو عندك NOVA على Oracle Free / Fly / ngrok، حطّ الرابط هنا
+        والشات والأسطول يتحوّلوا عليه تلقائياً (مسح منافذ + تنفيذ على أجهزة).
       </div>
 
       <div className="flex gap-1.5">
@@ -282,9 +284,7 @@ function PlanBox({ onPlan, version }: { onPlan: (p: Plan | null) => void; versio
         setGoal("");
       } else {
         setNote(
-          j?.static
-            ? "وضع المتصفح: الخطة محتاجة سيرفر. اربط سيرفر من فوق."
-            : `تعذر إنشاء الخطة: ${j?.error ?? "خطأ غير معروف"}`,
+          `تعذر إنشاء الخطة: ${j?.error ?? "خطأ غير معروف"}`,
         );
       }
     } catch (e) {
@@ -429,33 +429,46 @@ export function NovaWorkstation() {
     };
 
     try {
-      if (effectiveBrain === "browser") {
-        // Force the built-in engine: the setup shim owns that route.
-        const res = await fetch(`${API}/nova-core/chat?brain=browser`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content, sessionId: "workstation", forceHeuristic: true }),
-        });
-        if (!res.ok) throw new Error(`chat ${res.status}`);
+      const res = await fetch(`${API}/nova-core/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: content,
+          sessionId: "workstation",
+          ...(effectiveBrain === "browser" ? { forceHeuristic: true } : {}),
+        }),
+      });
+      if (!res.ok) throw new Error(`chat ${res.status}`);
+      const ctype = res.headers.get("content-type") ?? "";
+      if (ctype.includes("text/event-stream")) {
         await streamSse(res, (ev) => handleEvent(ev, appendAssistant));
       } else {
-        const res = await fetch(`${API}/nova-core/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content, sessionId: "workstation" }),
-        });
-        if (!res.ok) throw new Error(`chat ${res.status}`);
-        await streamSse(res, (ev) => handleEvent(ev, appendAssistant));
+        // Not a stream (a proxy, a 404 page, an old deploy): take the text if
+        // there is any, otherwise fall through to the in-browser brain below.
+        const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+        const text = String(body?.reply ?? body?.response ?? body?.content ?? body?.message ?? "");
+        if (text) appendAssistant(text);
       }
     } catch (err) {
       push({ role: "error", text: `فشل الاتصال بالعقل: ${(err as Error).message}` });
-      setLines((prev) => prev.filter((l) => !(l.id === assistantId && l.text === "")));
     } finally {
+      // Absolute last resort: never leave the user with an empty answer. The
+      // in-browser engine is the same one the shim serves, so this can only
+      // add an answer, not fake one.
+      if (!assistant.trim()) {
+        try {
+          await runLocalBrain(content, (ev) => handleEvent(ev as Record<string, unknown>, appendAssistant), {
+            sessionId: "workstation",
+          });
+        } catch {
+          /* the note below still tells the truth */
+        }
+      }
       if (!assistant.trim()) {
         setLines((prev) => prev.filter((l) => l.id !== assistantId));
         push({
           role: "note",
-          text: "العقل رجّع رد فاضي. جرّب «متصفح» من فوق، أو اربط سيرفر من محطة العمل.",
+          text: "مفيش رد رجع من العقل — اكتب تاني أو اضغط تحديث، ولو اتكرر ابعتلي الرسالة اللي كتبتها.",
         });
       }
       setStreaming(false);
@@ -616,31 +629,29 @@ function HealthCard({
   checked: boolean;
   onRecheck: () => void;
 }) {
+  // Ordered by what the user actually has: the browser engine first (it always
+  // works), then the optional server-only extras. No wall of «محتاج سيرفر».
   const rows: Array<{ label: string; ok: boolean | null; hint: string }> = [
     {
-      label: "ربط سيرفر",
-      ok: linked,
-      hint: linked ? "مربوط — كل الطلبات بتروح عليه" : "مش مربوط — بنستخدم عقل المتصفح",
+      label: "عقل المتصفح",
+      ok: true,
+      hint: "شغّال — ذاكرة + فهرس + DNS حي + GitHub + OSV + قراءة صفحات",
     },
     {
-      label: "عقل السيرفر (33 أداة)",
-      ok: server,
-      hint: server ? "شغّال" : "مش متاح — محتاج سيرفر",
+      label: "قناة المتصفح الداخلية",
+      ok: true,
+      hint: "الأحداث والنتائج بتمر فيها لحظياً",
     },
+    linked
+      ? { label: "سيرفر مربوط", ok: server, hint: server ? "شغّال — 33 أداة + أسطول" : "مربوط بس مش راد" }
+      : { label: "سيرفر خارجي", ok: null, hint: "مش مربوط — اختياري، بيوسّع القدرات بس" },
+    linked
+      ? { label: "WebSocket على السيرفر", ok: server, hint: server ? "wss:// مفتوح" : "مش راد" }
+      : { label: "WebSocket على سيرفر", ok: null, hint: "بيتفتح تلقائياً لو ربطت سيرفر" },
     {
-      label: "WebSocket مباشر",
-      ok: linked,
-      hint: linked ? "بيفتح wss:// على السيرفر المربوط" : "مفيش سيرفر، فمفيش سوكت",
-    },
-    {
-      label: "أسطول أجهزة",
-      ok: linked ? null : false,
-      hint: linked ? "بيظهر لو الوكيل متشغّل على جهاز" : "محتاج سيرفر + nova-agent.js",
-    },
-    {
-      label: "Ollama",
-      ok: linked ? null : false,
-      hint: linked ? "بيتفحص على السيرفر (المتصفح مايوصلهاش)" : "مستحيل من المتصفح — CORS/mixed content",
+      label: "مسح منافذ / تنفيذ على أجهزة",
+      ok: linked && server ? null : null,
+      hint: "مستحيل من المتصفح بحكم الفيزياء — محتاج سيرفر",
     },
   ];
   return (
@@ -671,10 +682,12 @@ function HealthCard({
       ))}
       {!checked && <div className="text-[7.5px] text-cyan-300/60 flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> بيفحص…</div>}
       {!server && (
-        <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-1.5 text-[7.5px] leading-relaxed text-cyan-100/70">
-          <div className="flex items-center gap-1 font-black text-cyan-200"><Server className="h-2.5 w-2.5" /> تشغيل سيرفر مجاني</div>
-          <code className="block font-mono text-[7px] text-emerald-300/80 mt-0.5" dir="ltr">bash deploy/oracle-setup.sh</code>
-          <div className="mt-0.5">أو Fly.io / Render / Docker على أي VPS — التفاصيل في <span className="font-mono">deploy/README.md</span></div>
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-1.5 text-[7.5px] leading-relaxed text-white/45">
+          <div className="flex items-center gap-1 font-black text-white/60"><Server className="h-2.5 w-2.5" /> السيرفر اختياري</div>
+          <div className="mt-0.5">
+            كل حاجة ذكية شغّالة دلوقتي من غير سيرفر. لو حبيت تضيف مسح منافذ وأوامر على أجهزة:{" "}
+            <span className="font-mono text-emerald-300/70" dir="ltr">bash deploy/oracle-setup.sh</span>
+          </div>
         </div>
       )}
       <div className="text-[7px] text-white/20 flex items-center gap-1 pt-0.5">

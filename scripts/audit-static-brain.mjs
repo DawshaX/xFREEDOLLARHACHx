@@ -35,6 +35,7 @@ const asJson = args.includes("--json");
 const serverArg = args.find((a) => a.startsWith("--server="));
 const SERVER = serverArg ? serverArg.split("=")[1].replace(/\/$/, "") : "";
 const MODE = (args.find((a) => a.startsWith("--mode=")) || "").split("=")[1] || "";
+const MESSAGE = (args.find((a) => a.startsWith("--message=")) || "").split("=").slice(1).join("=") || "ابحث عن CVE-2025-29927 وإيه حالة المنصة؟";
 const PHASE_OUT = "/tmp/nova-static-brain-phase.json";
 
 if (!fs.existsSync(path.join(DIST, "index.html"))) {
@@ -151,7 +152,7 @@ async function phaseBrowserBrain() {
   const res = await window.fetch("/api/nova-core/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: "ابحث عن CVE-2025-29927 وإيه حالة المنصة؟", sessionId: "audit" }),
+    body: JSON.stringify({ message: MESSAGE, sessionId: "audit" }),
   });
 
   const ctype = res.headers.get("content-type") ?? "";
@@ -250,13 +251,79 @@ async function phaseWorkUi() {
 
   const text = window.document.body.textContent || "";
   const inputs = window.document.querySelectorAll("textarea, input").length;
-  const need = ["محطة العمل", "خريطة الشبكة", "الليف بانل", "ربط السيرفر", "خطة العمل", "حالة الاتصالات"];
+  const need = ["محطة العمل", "خريطة الشبكة", "الليف بانل", "وسّع القدرات", "خطة العمل", "حالة الاتصالات"];
   const missing = need.filter((n) => !text.includes(n));
 
   results.workUi = { chars: text.length, inputs, missing };
 
+  // The live site once claimed «اتصال مباشر دائم مع المنصة» with no server at
+  // all — the exact "it's connected" lie. Keep that from coming back.
+  if (!results.workUi || true) {
+    const claimsLive = /اتصال مباشر دائم/.test(text);
+    const honestLocal = /شغّال في المتصفح|قناة داخلية|بدون سيرفر خارجي|قناة المتصفح/.test(text);
+    results.workUi.fakeLiveClaim = claimsLive;
+    results.workUi.honestLabel = honestLocal;
+    if (claimsLive) findings.push({ kind: "fake-live-claim", detail: "page says «اتصال مباشر دائم» with no server linked" });
+    if (!honestLocal) findings.push({ kind: "no-honest-label", detail: "no honest static-mode label on the live bar" });
+  }
   if (missing.length) findings.push({ kind: "work-page-incomplete", detail: `missing: ${missing.join(", ")}` });
   if (inputs === 0) findings.push({ kind: "no-chat-input", detail: "work page rendered no input/textarea" });
+  window.close?.();
+}
+
+
+/* ── 4. regression cases that actually broke on the live site ───────────── */
+
+async function phaseRegression() {
+  const { window } = bootDom();
+  await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
+  await new Promise((r) => setTimeout(r, 300));
+
+  const ask = async (url, body) => {
+    const res = await window.fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const ctype = res.headers.get("content-type") ?? "";
+    if (!ctype.includes("text/event-stream")) {
+      const j = await res.json().catch(() => null);
+      return { ctype, events: [], text: "" , json: j };
+    }
+    const events = await readSse(res);
+    return { ctype, events, text: events.filter((e) => e.type === "delta").map((e) => e.text).join("") };
+  };
+
+  const cases = [
+    { name: "greeting", url: "/api/nova-core/chat", body: { message: "مرحباااااااااا" } },
+    { name: "greeting+query", url: "/api/nova-core/chat?brain=browser", body: { message: "مرحباااااااااا" } },
+    { name: "scan", url: "/api/nova-core/chat", body: { message: "افحص example.com" } },
+  ];
+  const out = [];
+  for (const c of cases) {
+    const r = await ask(c.url, c.body);
+    out.push({ name: c.name, ctype: r.ctype, events: r.events.length, chars: r.text.trim().length });
+    if (!r.ctype.includes("text/event-stream")) findings.push({ kind: "not-sse", detail: `${c.name}: ${r.ctype}` });
+    if (r.text.trim().length < 40) findings.push({ kind: "empty-reply", detail: `${c.name}: ${r.text.trim().length} chars` });
+  }
+
+  // the plan box used to need a server
+  const planRes = await window.fetch("/api/fleet/plan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ goal: "افحص example.com وقيس مخاطرته" }),
+  });
+  const plan = await planRes.json().catch(() => null);
+  const steps = Array.isArray(plan?.plan?.steps) ? plan.plan.steps.length : 0;
+  out.push({ name: "plan", steps });
+  if (steps < 3) findings.push({ kind: "plan-broken", detail: `plan steps=${steps}` });
+
+  // the fleet must show this browser as a real node, not 0 machines
+  const mesh = await (await window.fetch("/api/local-agent/agents")).json().catch(() => null);
+  const meshCount = Array.isArray(mesh) ? mesh.length : (mesh?.agents ?? []).length;
+  out.push({ name: "agents", count: meshCount });
+
+  results.regression = out;
   window.close?.();
 }
 
@@ -269,6 +336,11 @@ if (MODE === "brain") {
 }
 if (MODE === "ui") {
   await phaseWorkUi();
+  fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
+  process.exit(findings.length ? 1 : 0);
+}
+if (MODE === "regress") {
+  await phaseRegression();
   fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
   process.exit(findings.length ? 1 : 0);
 }
@@ -298,6 +370,7 @@ if (MODE === "linked") {
     if (out.status === null) findings.push({ kind: "phase-timeout", detail: `${mode} timed out` });
   };
   run("brain");
+  run("regress");
   run("ui");
   if (SERVER) run("linked");
 }
@@ -322,6 +395,11 @@ if (asJson) {
     console.log(`  sockets      : ${l.socketUrls.join(", ") || "none"}`);
   } else {
     console.log("Linked server  : skipped (pass --server=http://127.0.0.1:8080)");
+  }
+  if (results.regression) {
+    for (const c of results.regression) {
+      console.log(`  case ${String(c.name).padEnd(14)} ${c.chars !== undefined ? `${c.chars} chars / ${c.events} events` : c.steps !== undefined ? `${c.steps} plan steps` : `${c.count} agents`}`);
+    }
   }
   if (results.workUi) {
     const u = results.workUi;
