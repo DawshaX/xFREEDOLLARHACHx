@@ -8,6 +8,7 @@ on:
   # immediately instead of waiting up to six hours. State commits by the bot
   # only touch state/, which is not in `paths`, so this cannot loop.
   push:
+    branches: [main]
     paths:
       - "scripts/autonomous-brain-pulse.mjs"
       - ".github/workflows/autonomous-brain-pulse.yml"

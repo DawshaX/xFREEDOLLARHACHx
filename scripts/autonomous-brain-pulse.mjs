@@ -42,7 +42,15 @@ async function harvestIntel(state) {
 
   // 1) NVD — the newest CVEs.
   try {
-    const r = await fetch("https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=30", {
+    // `resultsPerPage` alone returns the FIRST page of the corpus (CVE-1999-*).
+    // Ask for what changed in the last 3 days instead — that is real news.
+    const until = new Date();
+    const since = new Date(until.getTime() - 3 * 24 * 3600 * 1000);
+    const stamp = (d) => d.toISOString().replace(/\.\d{3}Z$/, ".000Z");
+    const nvdUrl =
+      `https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=40` +
+      `&lastModStartDate=${encodeURIComponent(stamp(since))}&lastModEndDate=${encodeURIComponent(stamp(until))}`;
+    const r = await fetch(nvdUrl, {
       headers: { "User-Agent": "CyberNova-2099-Cloud-Brain" },
       signal: AbortSignal.timeout(25000),
     });
@@ -123,7 +131,8 @@ async function harvestIntel(state) {
     /* ignore */
   }
 
-  state.intelFeed = [...fresh, ...feed].slice(0, 200);
+  const rank = (x) => (x.severity === "KEV" ? 11 : Number(x.cvss) || 0);
+  state.intelFeed = [...fresh, ...feed].sort((a, b) => rank(b) - rank(a)).slice(0, 200);
   state.intelStats = {
     total: state.intelFeed.length,
     freshThisPulse: fresh.length,
