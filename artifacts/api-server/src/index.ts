@@ -32,7 +32,14 @@ process.on("uncaughtException", (err) => {
   logger.warn({ err }, "Uncaught exception caught safely (standalone mode)");
 });
 
-const rawPort = process.env["PORT"] || "8080";
+// PORT first, then the names other free hosts use for the same thing:
+// SERVER_PORT (Silly Development / Pterodactyl panels), APP_PORT, WEB_PORT.
+const rawPort =
+  process.env["PORT"] ||
+  process.env["SERVER_PORT"] ||
+  process.env["APP_PORT"] ||
+  process.env["WEB_PORT"] ||
+  "8080";
 const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${rawPort}"`);
 

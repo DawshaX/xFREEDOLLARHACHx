@@ -1,0 +1,101 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA — build the portable 24/7 bundle and publish it as a Release asset.
+#
+# Why: free always-on hosts (Silly Development, Pterodactyl panels) give 256 MB
+# RAM and 512 MB disk — a `pnpm install` would not fit. This workflow builds
+# everything here (GitHub runners are free) and publishes a ~2.5 MB zip that
+# runs with `node server.mjs`, no install, no build, no credit card.
+#
+# Download: Releases → "nova-portable" → nova-24-7.zip
+#           (or Actions → this run → Artifacts)
+# ─────────────────────────────────────────────────────────────────────────────
+name: NOVA portable bundle (24/7)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/api-server/**"
+      - "artifacts/kali-panel/**"
+      - "scripts/build-standalone.mjs"
+      - "state/**"
+      - ".github/workflows/standalone-bundle.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: nova-standalone
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    name: build & publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build server + panel
+        run: |
+          pnpm --filter @workspace/api-server run build
+          BASE_PATH=/ pnpm --filter @workspace/kali-panel run build
+
+      - name: Assemble the portable folder
+        run: node scripts/build-standalone.mjs
+
+      - name: Smoke-test the bundle in a clean directory (no node_modules)
+        run: |
+          rm -rf /tmp/clean && mkdir -p /tmp/clean
+          cd /tmp/clean && unzip -q "$GITHUB_WORKSPACE/dist-standalone/nova-24-7.zip"
+          cd nova-24-7
+          SERVER_PORT=8099 sh ./start.sh > /tmp/nova.log 2>&1 &
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8099/api/health || echo 000)
+            [ "$code" = "200" ] && break
+            sleep 2
+          done
+          echo "health → $code"
+          [ "$code" = "200" ] || { echo "::error::portable bundle did not start"; tail -30 /tmp/nova.log; exit 1; }
+          curl -s http://127.0.0.1:8099/api/nova-core/self-check | head -c 400
+          echo
+          node "$GITHUB_WORKSPACE/scripts/audit-live-server.mjs" 2>/dev/null || true
+        env:
+          AUDIT_URL: http://127.0.0.1:8099
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nova-24-7
+          path: dist-standalone/nova-24-7.zip
+          retention-days: 90
+
+      - name: Publish as a release asset (stable download link)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nova-portable
+          name: "NOVA — النسخة المحمولة 24/7"
+          body: |
+            حزمة جاهزة للتشغيل على أي استضافة مجانية **بدون تثبيت وبدون كارت**:
+
+            1. نزّل `nova-24-7.zip` وفك الضغط.
+            2. شغّل: `node server.mjs` (أو `sh start.sh`).
+            3. البورت من `PORT` أو `SERVER_PORT`، والاستماع على `0.0.0.0`.
+            4. لـHTTPS مجاني بدون حساب: `sh start-tunnel.sh`.
+
+            الحجم ~10MB · الذاكرة ~90–110MB RSS · مفيش npm install ولا build.
+          files: dist-standalone/nova-24-7.zip
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -579,7 +579,12 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {
+  // A portable build (see scripts/build-standalone.mjs) ships the panel next to
+  // the server bundle, so honour an explicit dir first, then the usual layouts.
   const candidates = [
+    ...(process.env.NOVA_STATIC_DIR ? [path.resolve(process.env.NOVA_STATIC_DIR)] : []),
+    path.resolve(process.cwd(), "public"),
+    path.resolve(__dirname, "public"),
     path.resolve(process.cwd(), "artifacts/kali-panel/dist/public"),
     path.resolve(process.cwd(), "../kali-panel/dist/public"),
     path.resolve(__dirname, "../../kali-panel/dist/public"),
