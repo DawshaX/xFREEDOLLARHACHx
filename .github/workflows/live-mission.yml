@@ -20,6 +20,13 @@ name: NOVA live mission
 on:
   schedule:
     - cron: "30 */3 * * *"   # every 3 hours
+  # A fresh version proves itself immediately instead of waiting 3 hours.
+  # Commits made by this job only touch state/, which is not in `paths`.
+  push:
+    branches: [main]
+    paths:
+      - "scripts/nova-live-mission.mjs"
+      - ".github/workflows/live-mission.yml"
   workflow_dispatch:
     inputs:
       target:
