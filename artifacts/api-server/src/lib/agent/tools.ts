@@ -30,11 +30,20 @@ import {
 import { searchCyberCorpus2400, getCorpusStats, KALI_ARSENAL_64 } from "../cyber-corpus-2099";
 import { saveMemory, searchMemory, getAllMemories } from "../../routes/memory";
 import {
+  remember,
+  recall,
+  forget,
+  listMemories,
+  memoryStats,
+  type MemoryKind,
+} from "./memory-store";
+import {
   getMissionsState,
   setActiveMissionTarget,
   recordMissionCommand,
   recordMissionFinding,
   getEvidenceState,
+  getReportsState,
 } from "../standalone-api";
 
 export interface AgentTool {
@@ -214,35 +223,70 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: "memory_save",
-    title: "حفظ في الذاكرة",
-    description: "حفظ نتيجة/درس/اكتشاف في الذاكرة الدائمة (تظهر في /memory لكل الوكلاء).",
+    title: "حفظ في الذاكرة طويلة الأمد",
+    description:
+      "يحفظ حقيقة أو درساً أو تفضيلاً في الذاكرة الدائمة على القرص — تفضل موجودة بعد إعادة التشغيل وبعد شهور. استخدمها كلما عرفت شيئاً مهماً عن الهدف أو عن طريقة عمل المستخدم.",
     category: "memory",
     risk: "safe",
     input_schema: {
       type: "object",
       properties: {
-        title: { type: "string" },
+        title: { type: "string", description: "عنوان قصير ثابت لسهولة التحديث" },
         content: { type: "string" },
-        kind: { type: "string", description: "fact | lesson | target | note" },
+        kind: { type: "string", enum: ["fact", "preference", "lesson", "event", "session"] },
+        scope: { type: "string", description: "الهدف/النطاق، افتراضي global" },
+        importance: { type: "number", description: "1..10" },
+        pinned: { type: "boolean" },
       },
       required: ["title", "content"],
     },
   },
   {
     name: "memory_search",
-    title: "بحث في الذاكرة",
-    description: "يبحث في كل ما حفظته سابقاً.",
+    title: "بحث في الذاكرة طويلة الأمد",
+    description: "يبحث في كل ما تعرفه من جلسات سابقة ويرتّب النتائج حسب الصلة والأهمية.",
     category: "memory",
     risk: "safe",
-    input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        scope: { type: "string" },
+        limit: { type: "number" },
+      },
+      required: ["query"],
+    },
   },
   {
     name: "memory_list",
     title: "كل الذاكرة",
-    description: "آخر الإدخالات المحفوظة في الذاكرة.",
+    description: "آخر الإدخالات المحفوظة (أو الأهم) مع إحصائيات المخزن الدائم.",
     category: "memory",
     risk: "safe",
-    input_schema: { type: "object", properties: { limit: { type: "number" } } },
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number" },
+        kind: { type: "string", enum: ["fact", "preference", "lesson", "event", "session"] },
+        sort: { type: "string", enum: ["recent", "important"] },
+      },
+    },
+  },
+  {
+    name: "memory_forget",
+    title: "نسيان ذكرى",
+    description: "يحذف ذكرى خاطئة أو قديمة من الذاكرة الدائمة بالمعرّف.",
+    category: "memory",
+    risk: "safe",
+    input_schema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+  },
+  {
+    name: "memory_stats",
+    title: "إحصائيات الذاكرة",
+    description: "حجم الذاكرة طويلة الأمد وتوزيعها على الأنواع والأهداف.",
+    category: "memory",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
   },
   {
     name: "set_active_target",
@@ -299,6 +343,72 @@ export const AGENT_TOOLS: AgentTool[] = [
       type: "object",
       properties: { text: { type: "string" }, algo: { type: "string", description: "sha256 | sha1 | md5" } },
       required: ["text"],
+    },
+  },
+  {
+    name: "mission_create",
+    title: "إنشاء مهمة",
+    description: "ينشئ مهمة/مشروع فحص جديد بهدف واضح، ويجعله الهدف النشط.",
+    category: "mission",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        target: { type: "string" },
+        objective: { type: "string" },
+        program: { type: "string" },
+      },
+      required: ["target"],
+    },
+  },
+  {
+    name: "report_generate",
+    title: "توليد تقرير",
+    description: "يبني تقرير Markdown جاهز للإرسال من نتائج المهمة الحالية (الملاحظات + الأدلة + الخطوات).",
+    category: "mission",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        includeEvidence: { type: "boolean" },
+      },
+    },
+  },
+  {
+    name: "evidence_list",
+    title: "عرض الأدلة",
+    description: "يسرد الأدلة المحفوظة في المنصة (لقطات/سجلات) وعددها.",
+    category: "mission",
+    risk: "safe",
+    input_schema: { type: "object", properties: { limit: { type: "number" } } },
+  },
+  {
+    name: "report_list",
+    title: "عرض التقارير",
+    description: "يسرد التقارير المُنشأة سابقاً في المنصة.",
+    category: "mission",
+    risk: "safe",
+    input_schema: { type: "object", properties: { limit: { type: "number" } } },
+  },
+  {
+    name: "corpus_stats",
+    title: "إحصائيات فهرس المنصة",
+    description: "أرقام فهرس الأمان الداخلي: عدد الأنماط، الطبقات، وأدوات Kali المتاحة.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "task_list",
+    title: "المهام والقدرات",
+    description: "يسرد كل ما تستطيع نوفا تنفيذه الآن (أدواتها مصنّفة) — مفيد لما يسأل المستخدم «تقدر تعمل إيه؟».",
+    category: "platform",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { category: { type: "string", description: "recon | intel | memory | mission | platform | utility" } },
     },
   },
 ];
@@ -465,27 +575,65 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
       }
 
       case "memory_save": {
-        const entry = saveMemory(
-          String(rawArgs.kind ?? "fact"),
-          String(rawArgs.title ?? "ملاحظة من نوفا"),
-          String(rawArgs.content ?? ""),
-          "nova,agent",
-          8,
-          false,
-        );
-        return done(true, `تم الحفظ في الذاكرة: ${entry.title}`, entry);
+        const kind = (["fact", "preference", "lesson", "event", "session"].includes(String(rawArgs.kind))
+          ? String(rawArgs.kind)
+          : "fact") as MemoryKind;
+        const rec = remember({
+          kind,
+          title: String(rawArgs.title ?? "ملاحظة من نوفا"),
+          content: String(rawArgs.content ?? ""),
+          scope: rawArgs.scope ? String(rawArgs.scope) : undefined,
+          importance: rawArgs.importance !== undefined ? Number(rawArgs.importance) : undefined,
+          pinned: rawArgs.pinned === true,
+          source: "agent",
+        });
+        // Mirror into the platform-wide memory feed so /memory stays populated.
+        try {
+          saveMemory(kind, rec.title, rec.content, "nova,agent,longterm", rec.importance, rec.pinned);
+        } catch {
+          /* the durable store is the source of truth */
+        }
+        return done(true, `اتحفظت في الذاكرة طويلة الأمد: ${rec.title} (${rec.kind} · ${rec.scope})`, rec);
       }
 
       case "memory_search": {
         const q = String(rawArgs.query ?? "").trim();
-        const items = searchMemory(q).slice(0, 12);
-        return done(true, `الذاكرة "${q}": ${items.length} إدخال`, items);
+        const limit = Math.min(Number(rawArgs.limit ?? 10) || 10, 30);
+        const hits = recall(q, { scope: rawArgs.scope ? String(rawArgs.scope) : undefined, limit });
+        return done(
+          hits.length > 0,
+          hits.length ? `${hits.length} ذكرى عن "${q}" · أقربها: ${hits[0].title}` : `مفيش ذكرى عن "${q}"`,
+          hits,
+        );
       }
 
       case "memory_list": {
-        const limit = Math.min(Number(rawArgs.limit ?? 15) || 15, 50);
-        const items = getAllMemories().slice(0, limit);
-        return done(true, `الذاكرة: ${items.length} إدخال من ${getAllMemories().length}`, items);
+        const limit = Math.min(Number(rawArgs.limit ?? 15) || 15, 100);
+        const kind = ["fact", "preference", "lesson", "event", "session"].includes(String(rawArgs.kind))
+          ? (String(rawArgs.kind) as MemoryKind)
+          : undefined;
+        const res = listMemories({
+          limit,
+          kind,
+          sort: String(rawArgs.sort) === "important" ? "important" : "recent",
+        });
+        return done(true, `الذاكرة: ${res.items.length} من ${res.total}`, res);
+      }
+
+      case "memory_forget": {
+        const id = String(rawArgs.id ?? "").trim();
+        if (!id) throw new Error("id مطلوب");
+        const ok = forget(id);
+        return done(ok, ok ? `اتمسحت الذكرى ${id}` : `مفيش ذكرى بالمعرّف ${id}`, { id, deleted: ok });
+      }
+
+      case "memory_stats": {
+        const st = memoryStats();
+        return done(
+          true,
+          `${st.total} ذكرى · ${st.pinned} مثبتة · ${Math.round(st.bytes / 1024)}KB على القرص`,
+          st,
+        );
       }
 
       case "set_active_target": {
@@ -550,6 +698,78 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         const out = await run(cmd, { timeout: 20_000, maxBuffer: 512 * 1024 });
         recordMissionCommand(cmd, (out.stdout || "").slice(0, 400));
         return done(true, `نُفّذ: ${cmd}`, { stdout: out.stdout?.slice(0, 4000), stderr: out.stderr?.slice(0, 1000) });
+      }
+
+      case "mission_create": {
+        const target = normaliseHost(rawArgs.target);
+        if (!target) throw new Error("target مطلوب");
+        const name = String(rawArgs.name ?? rawArgs.program ?? `فحص ${target}`);
+        setActiveMissionTarget(target, String(rawArgs.program ?? name));
+        const mission = getMissionsState()[0];
+        if (mission && rawArgs.objective) mission.objective = String(rawArgs.objective);
+        recordMissionCommand(`mission:create ${target}`, `تم إنشاء المهمة: ${name}`);
+        return done(true, `المهمة جاهزة: ${name} → ${target}`, mission ?? null);
+      }
+
+      case "report_generate": {
+        const mission = getMissionsState()[0];
+        if (!mission) return done(false, "مفيش مهمة نشطة", null);
+        const evidence = rawArgs.includeEvidence === false ? [] : getEvidenceState().slice(0, 10);
+        const title = String(rawArgs.title ?? `تقرير فحص: ${mission.target}`);
+        const lines: string[] = [
+          `# ${title}`,
+          "",
+          `- **الهدف:** ${mission.target}`,
+          `- **المهمة:** ${mission.name}`,
+          `- **الهدف من الفحص:** ${mission.objective}`,
+          `- **التاريخ:** ${new Date().toISOString().slice(0, 10)}`,
+          "",
+          "## الملاحظات",
+        ];
+        if (mission.findings.length === 0) lines.push("_لم تُسجَّل ملاحظات بعد._");
+        for (const f of mission.findings) {
+          lines.push(`### [${String(f.severity).toUpperCase()}] ${f.title}`, f.detail || "—", "");
+        }
+        if (evidence.length) {
+          lines.push("## الأدلة", ...evidence.map((e, i) => `${i + 1}. ${JSON.stringify(e).slice(0, 200)}`), "");
+        }
+        lines.push("## الخطوات المنفّذة");
+        lines.push(
+          ...(mission.commands.length
+            ? mission.commands.slice(0, 15).map((c) => `- \`${c.cmd}\` → ${c.output}`)
+            : ["_لا يوجد_"]),
+        );
+        lines.push("", "## التوصيات", "- مراجعة الترويسات الناقصة وتحديث الشهادة إن لزم.", "- إعادة الفحص بعد المعالجة للتأكد.");
+        const markdown = lines.join("\n");
+        return done(true, `تقرير جاهز (${markdown.length} حرف · ${mission.findings.length} ملاحظة)`, { title, markdown });
+      }
+
+      case "evidence_list": {
+        const limit = Math.min(Number(rawArgs.limit ?? 10) || 10, 30);
+        const items = getEvidenceState().slice(0, limit);
+        return done(true, items.length ? `${items.length} دليل محفوظ` : "مفيش أدلة محفوظة", items);
+      }
+
+      case "report_list": {
+        const limit = Math.min(Number(rawArgs.limit ?? 10) || 10, 30);
+        const items = (getReportsState() as unknown[]).slice(0, limit);
+        return done(true, items.length ? `${items.length} تقرير` : "مفيش تقارير بعد", items);
+      }
+
+      case "corpus_stats": {
+        const stats = getCorpusStats();
+        return done(true, `الفهرس: ${JSON.stringify(stats).slice(0, 150)}`, stats);
+      }
+
+      case "task_list": {
+        const cat = rawArgs.category ? String(rawArgs.category) : null;
+        const list = AGENT_TOOLS.filter((t) => !cat || t.category === cat).map((t) => ({
+          name: t.name,
+          title: t.title,
+          category: t.category,
+          risk: t.risk,
+        }));
+        return done(true, `${list.length} قدرة متاحة${cat ? ` في ${cat}` : ""}`, list);
       }
 
       default:

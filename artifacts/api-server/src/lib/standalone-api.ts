@@ -1310,6 +1310,47 @@ function buildStandaloneNovaIntelMemory(limit = 50) {
   return { memory: memories, stats: { total: memoriesState.length, byType } };
 }
 
+/** Mirrors the browser-side NOVA memory store (see lib/nova-core.ts). */
+function readBrowserMemories(): Array<{
+  id: string;
+  kind: "fact" | "preference" | "lesson" | "event" | "session";
+  scope: string;
+  title: string;
+  content: string;
+  tags: string[];
+  importance: number;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+  hits: number;
+  lastUsedAt: string | null;
+}> {
+  try {
+    if (typeof localStorage === "undefined") return [];
+    const raw = localStorage.getItem("cybernova_nova_memories");
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    if (!Array.isArray(parsed)) return [];
+    return (parsed as Array<Record<string, unknown>>).map((m) => ({
+      id: String(m.id ?? `m-${Math.random().toString(36).slice(2)}`),
+      kind: (["fact", "preference", "lesson", "event", "session"].includes(String(m.kind))
+        ? String(m.kind)
+        : "fact") as "fact" | "preference" | "lesson" | "event" | "session",
+      scope: String(m.scope ?? "global"),
+      title: String(m.title ?? "ملاحظة"),
+      content: String(m.content ?? ""),
+      tags: Array.isArray(m.tags) ? (m.tags as string[]) : [],
+      importance: Number(m.importance ?? 5),
+      pinned: Boolean(m.pinned),
+      createdAt: String(m.createdAt ?? new Date().toISOString()),
+      updatedAt: String(m.updatedAt ?? m.createdAt ?? new Date().toISOString()),
+      hits: Number(m.hits ?? 0),
+      lastUsedAt: (m.lastUsedAt as string | null) ?? null,
+    })).reverse();
+  } catch {
+    return [];
+  }
+}
+
 export function resolveStandaloneApi(
   rawUrl: string,
   method = "GET",
@@ -1318,6 +1359,64 @@ export function resolveStandaloneApi(
   const u = new URL(rawUrl, "http://localhost");
   const path = u.pathname.replace(/^.*\/api/, "");
   const m = method.toUpperCase();
+
+  // ── NOVA Core (static / GitHub Pages build) ────────────────────────────────
+  // The agent brain needs a server, but the memory browser must still work
+  // without one. On the static build these endpoints read the same
+  // localStorage store the browser engine writes to.
+  if (path === "/nova-core/status") {
+    return {
+      ok: true,
+      identity: { name: "نوفا (NOVA)", handle: "@nova", role: "شريك أمني ذكي — عقل منصة CyberNova", version: "2099.1" },
+      brain: {
+        mode: "builtin",
+        ollamaOnline: false,
+        ollamaModel: null,
+        cloudProviders: [],
+        note: "وضع ثابت (GitHub Pages): مخ نوفا المحلي في المتصفح — للعقل الكامل شغّل السيرفر.",
+      },
+      tools: 9,
+      categories: ["recon", "intel", "memory", "platform"],
+    };
+  }
+
+  if (path === "/nova-core/memory" || path === "/nova-core/memory/stats") {
+    const records = readBrowserMemories();
+    const byKind = { fact: 0, preference: 0, lesson: 0, event: 0, session: 0 };
+    const scopes = new Map<string, number>();
+    for (const r of records) {
+      byKind[r.kind] = (byKind[r.kind] ?? 0) + 1;
+      scopes.set(r.scope, (scopes.get(r.scope) ?? 0) + 1);
+    }
+    const stats = {
+      total: records.length,
+      byKind,
+      scopes: [...scopes.entries()].map(([scope, count]) => ({ scope, count })).slice(0, 20),
+      pinned: records.filter((r) => r.pinned).length,
+      file: "localStorage://cybernova_nova_memories",
+      bytes: JSON.stringify(records).length,
+      lastWriteError: null,
+      oldest: records.length ? records[records.length - 1].createdAt : null,
+      newest: records.length ? records[0].createdAt : null,
+      storage: "browser",
+    };
+    if (path.endsWith("/stats")) return stats;
+    return { total: records.length, items: records.slice(0, 100), stats };
+  }
+
+  if (path === "/nova-core/ollama") {
+    return {
+      ok: false,
+      baseUrl: "http://127.0.0.1:11434",
+      reachable: false,
+      models: [],
+      activeModel: null,
+      ready: false,
+      hint: "الوضع الثابت: شغّل المنصة محلياً أو على سيرفر مجاني لتشغيل Ollama.",
+      error: "static build — no local runtime",
+      checkedAt: new Date().toISOString(),
+    };
+  }
 
   // ── Network & Recon Tools (/proxy/* & /tools/*) ────────────────────────────
   if (path === "/proxy/dns" || path === "/tools/dns") {

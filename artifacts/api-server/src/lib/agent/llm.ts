@@ -10,6 +10,7 @@
  */
 
 import { getOllamaBaseUrl, getOllamaModel } from "../ollama-settings";
+import { resolveOllamaBase, preferredOllamaModel } from "./ollama-manager";
 import { logger } from "../logger";
 
 export type LlmRole = "system" | "user" | "assistant";
@@ -58,12 +59,14 @@ function withDeadline<T>(promise: Promise<T>, ms: number, fallback: T): Promise<
 export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
   const providers: LlmProviderInfo[] = [];
 
-  // 1. Local Ollama (always attempted — free & private)
+  // 1. Local Ollama — free, private, and auto-discovered (works inside Docker too)
   try {
     const envBase = (process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
-    const envModel = process.env.OLLAMA_MODEL || "llama3.1";
-    const baseUrl = await withDeadline(getOllamaBaseUrl(), SETTINGS_TIMEOUT_MS, envBase);
-    const model = await withDeadline(getOllamaModel(), SETTINGS_TIMEOUT_MS, envModel);
+    const discovered = await resolveOllamaBase();
+    const baseUrl = discovered ?? (await withDeadline(getOllamaBaseUrl(), SETTINGS_TIMEOUT_MS, envBase));
+    const model = discovered
+      ? await preferredOllamaModel()
+      : await withDeadline(getOllamaModel(), SETTINGS_TIMEOUT_MS, process.env.OLLAMA_MODEL || "qwen2.5:3b");
     providers.push({
       id: "ollama",
       label: "Ollama (محلي مجاني)",
@@ -76,7 +79,7 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
     providers.push({
       id: "ollama",
       label: "Ollama (محلي مجاني)",
-      model: process.env.OLLAMA_MODEL || "llama3.1",
+      model: process.env.OLLAMA_MODEL || "qwen2.5:3b",
       kind: "ollama",
       baseUrl: (process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434").replace(/\/$/, ""),
       free: true,
@@ -121,6 +124,17 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
       keys: ["TOGETHER_API_KEY"],
     },
   ];
+
+  // OpenAI stays last: it is the only paid option, so it is a true last resort.
+  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim().length > 8) {
+    envProviders.push({
+      id: "openai",
+      label: "OpenAI (مدفوع — آخر خيار)",
+      baseUrl: "https://api.openai.com/v1",
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      keys: ["OPENAI_API_KEY"],
+    });
+  }
 
   for (const p of envProviders) {
     const key = p.keys.map((k) => process.env[k]).find((v) => v && v.trim().length > 8);
