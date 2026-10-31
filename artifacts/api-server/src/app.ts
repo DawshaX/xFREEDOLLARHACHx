@@ -430,8 +430,9 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       p.startsWith("/memory") ||
       p.startsWith("/ollama") ||
       p.startsWith("/events") ||
-      p.startsWith("/local-agent/ws") ||
-      p.startsWith("/local-agent/download-nova-agent") ||
+      // The whole local-agent namespace is a real router (fleet of machines,
+      // PTY, files, screenshots, downloads) — none of it may be mocked.
+      p.startsWith("/local-agent") ||
       (p.startsWith("/tools") && p !== "/tools/shell" && p !== "/tools/webfetch") ||
       p.startsWith("/proxy") ||
       p.startsWith("/scanner") ||

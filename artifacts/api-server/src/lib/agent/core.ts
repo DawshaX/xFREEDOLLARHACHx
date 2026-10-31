@@ -27,6 +27,7 @@ import { remember, memoryContextFor, memoryStats, initMemory } from "./memory-st
 import { getMissionsState, recordMissionCommand } from "../standalone-api";
 import { broadcastEvent } from "../ws-hub";
 import { broadcastLiveEvent } from "./../../routes/live-events";
+import { getConnectedAgentList } from "../../routes/local-agent";
 
 export type AgentEvent =
   | { type: "ready"; sessionId: string; mode: "llm" | "heuristic"; provider: string; model: string; tools: number }
@@ -34,6 +35,7 @@ export type AgentEvent =
   | { type: "plan"; steps: Array<{ tool: string; args: Record<string, unknown> }> }
   | { type: "tool_call"; id: string; name: string; title: string; args: Record<string, unknown>; risk: string }
   | { type: "tool_result"; id: string; name: string; ok: boolean; summary: string; ms: number; dataPreview: string }
+  | { type: "confirm_required"; id: string; name: string; title: string; args: Record<string, unknown>; risk: string; reason: string }
   | { type: "delta"; text: string }
   | { type: "memory"; id: string; title: string }
   | { type: "done"; sessionId: string; mode: string; toolCount: number; ms: number; provider: string }
@@ -47,6 +49,13 @@ export interface AgentRunOptions {
   /** Force the deterministic brain (used by tests / air-gapped mode). */
   forceHeuristic?: boolean;
   maxSteps?: number;
+  /**
+   * Tools the human has already approved for this turn. Anything that declares
+   * `risk: "sensitive"` (running commands on a real machine, killing processes…)
+   * is NOT executed until its name shows up here, so the chat can never touch a
+   * connected box by surprise — it must ask first and be told "yes".
+   */
+  approved?: string[];
 }
 
 interface PlannedStep {
@@ -64,6 +73,20 @@ export interface AgentRunResult {
 
 /* ── context ─────────────────────────────────────────────────────────────── */
 
+/** Compact, failure-proof summary of the connected machines. */
+function safeFleetSummary(): string {
+  try {
+    const agents = getConnectedAgentList();
+    if (agents.length === 0) return "لا يوجد (شغّل nova-agent.js على أي جهاز لربطه)";
+    return `${agents.length} جهاز — ${agents
+      .slice(0, 6)
+      .map((a) => `${a.hostname}(${a.platform})`)
+      .join(", ")}`;
+  } catch {
+    return "غير متاح";
+  }
+}
+
 /**
  * Everything NOVA knows before it answers: live platform state + the durable
  * long-term memory (ranked against the current question and target).
@@ -73,9 +96,11 @@ function buildContextBlock(query = ""): string {
   const active = missions[0];
   const stats = memoryStats();
   const longTerm = memoryContextFor(query, active?.target ?? undefined, 8);
+  const fleet = safeFleetSummary();
   return [
     `# سياق المنصة الآن`,
     `- الهدف النشط: ${active?.target ?? "غير محدد"} (${active?.name ?? "—"})`,
+    `- الأجهزة المتصلة الآن: ${fleet}`,
     `- نتائج مسجلة في المهمة: ${active?.findings.length ?? 0}`,
     `- ذاكرتك طويلة الأمد: ${stats.total} ذكرى (${stats.pinned} مثبتة) — تفضل بعد إعادة التشغيل`,
     longTerm || "# الذاكرة طويلة الأمد فارغة حتى الآن",
@@ -148,6 +173,23 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
     tools: (msg) => [{ tool: "kali_toolbox", args: { query: cleanQuery(msg), target: extractTarget(msg) ?? undefined } }],
   },
   {
+    // "run `uname -a` on the machines" → real fleet_exec (gated by approval).
+    test: /(?:الأجهزة|الاجهزة|أجهزة|اجهزة|الماكينات|ماكينات|devices?|fleet|كمبيوتر|computers?|سيرفرات|servers?|remote|ريموت)/i,
+    tools: (msg) => {
+      const cmd = extractFleetCommand(msg);
+      if (!cmd) return [{ tool: "fleet_list", args: {} }, { tool: "fleet_profile", args: {} }];
+      return [{ tool: "fleet_list", args: {} }, { tool: "fleet_exec", args: { command: cmd } }];
+    },
+  },
+  {
+    // A bare "نفّذ `whoami`" with no machine mentioned still means the fleet.
+    test: /(?:نفّذ|نفذ|شغّل|شغل|اعمل|run|execute|exec)\s+(?:الأمر|الامر|command|دي|ده|كود|امر|أمر)?\s*`[^`]+`/i,
+    tools: (msg) => {
+      const cmd = extractFleetCommand(msg);
+      return cmd ? [{ tool: "fleet_exec", args: { command: cmd } }] : [];
+    },
+  },
+  {
     // Recall must be checked BEFORE save, otherwise "تفتكر ايه عني" (what do you
     // remember about me?) matches the save verb "افتكر" and stores a memory.
     test: /(?:تفتكر|تتذكر|فاكر|فاتكر|تذكر|\bذكرى|ذاكرت|الذاكرة|\bmemory\b|what do you remember|\brecall\b)/i,
@@ -212,6 +254,34 @@ function cleanQuery(msg: string): string {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 90) || "أمن سيبراني";
+}
+
+/**
+ * Pull the shell command out of a natural-language request.
+ * Handles backticks first ("نفّذ `uname -a` على الأجهزة"), then "نفّذ <cmd> على/في …".
+ */
+export function extractFleetCommand(message: string): string | null {
+  const ticked = message.match(/`([^`]{1,400})`/);
+  if (ticked) return ticked[1].trim();
+  const after = message.match(
+    /(?:نفّذ|نفذ|شغّل|شغل|اعمل|run|execute|exec)\s+(?:الأمر|الامر|command|التالى|التالي)?\s*([^\n]{1,300}?)\s*(?:\s+(?:على|علي|في|فى|داخل|عند|across|on)\b|$)/i,
+  );
+  const raw = after?.[1]?.trim();
+  if (!raw) return null;
+  // Reject prose ("uname -a على الأجهزة" is fine, "الاجهزة المتصلة" is not a command).
+  if (!/[a-z0-9_.\-]/i.test(raw)) return null;
+  // Cut the trailing Arabic prose: "uname -a على الأجهزة" → "uname -a".
+  const tokens = raw.split(/\s+/);
+  const kept: string[] = [];
+  for (const t of tokens) {
+    if (/[\u0600-\u06FF]/.test(t)) break;
+    if (/^(?:on|across|in)$/i.test(t)) break;
+    kept.push(t);
+  }
+  const stop = kept.join(" ").trim();
+  if (!stop || stop.length > 200) return null;
+  if (/^(?:الأجهزة|الاجهزة|أجهزة|اجهزة|الأجهزه|fleet|devices?)$/i.test(stop)) return null;
+  return stop;
 }
 
 const SMALL_TALK = /^(?:أهلا|اهلا|السلام|سلام|صباح|مساء|hi|hello|hey|ازيك|إزيك|عامل ايه)/i;
@@ -367,6 +437,9 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
 
 let memoryBooted = false;
 
+/** Approvals that were asked for and never answered (surfaced by /nova-core/pending). */
+export const pendingApprovals: Array<{ sessionId: string; tool: string; args: Record<string, unknown>; at: number }> = [];
+
 export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   if (!memoryBooted) {
     memoryBooted = true;
@@ -460,6 +533,18 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       data: { tool: step.tool, args: step.args, agent: "nova", ts: Date.now() },
       ts: new Date().toISOString(),
     });
+
+    // ── human-in-the-loop gate ────────────────────────────────────────────
+    // Sensitive tools stop here and ask. The client answers by re-sending the
+    // same message with `approve: [tool]`; only then does anything execute.
+    const risk = String(spec?.risk ?? "safe");
+    if (risk === "sensitive" && !(opts.approved ?? []).includes(step.tool)) {
+      const reason = `الأداة «${spec?.title ?? step.tool}» حساسة — ممكن تنفّذ أوامر على جهاز حقيقي. محتاج موافقتك قبل التنفيذ.`;
+      opts.emit({ type: "confirm_required", id, name: step.tool, title: spec?.title ?? step.tool, args: step.args, risk, reason });
+      pendingApprovals.push({ sessionId, tool: step.tool, args: step.args, at: Date.now() });
+      results.push({ name: step.tool, ok: false, summary: "⏸️ متوقفة لحد ما توافق على التنفيذ", data: null });
+      continue;
+    }
 
     let result: ToolRunResult;
     try {

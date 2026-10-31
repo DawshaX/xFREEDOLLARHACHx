@@ -46,7 +46,8 @@ export const NAV_SECTIONS: NavSection[] = [
     id: "bots", title: "العمليات العصبية", titleEn: "AI · NEURAL OPS",
     neonColor: "#ff6600", neonRgb: "255,102,0", symbol: "⚡",
     items: [
-      { label: "Live Agent",       icon: Radio,           path: "/live-agent",        iconColor: "#ff4444", hot: true },
+      { label: "نوفا — الوكيل الأساسي", icon: Radio,       path: "/nova-agent",        iconColor: "#22d3ee", badge: "CORE", hot: true, skull: true },
+      { label: "Live Agent Panel", icon: Activity,         path: "/live-agent",        iconColor: "#ff4444" },
       { label: "AI Agent V3",      icon: Brain,           path: "/nova-agent-v3",     iconColor: "#ff7722", badge: "V3" },
       { label: "Nova Agent V6",    icon: Sparkles,        path: "/nova-agent-v6",     iconColor: "#ffaa00", badge: "V6" },
       { label: "NOVA Core · المحادثة", icon: Sparkles,    path: "/nova-core",         iconColor: "#22d3ee", badge: "LIVE", hot: true },

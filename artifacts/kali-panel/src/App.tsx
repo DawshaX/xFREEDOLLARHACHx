@@ -45,6 +45,7 @@ const NovaAgentV6 = lazy(() => import("@/pages/NovaAgentV6"));
 const NovaAgentChat = lazy(() => import("@/pages/NovaAgentChat"));
 const NovaCore = lazy(() => import("@/pages/NovaCore"));
 const NovaMemory = lazy(() => import("@/pages/NovaMemory"));
+const NovaAgentPage = lazy(() => import("@/pages/NovaAgentPage"));
 const Shodan = lazy(() => import("@/pages/shodan"));
 const Mitre = lazy(() => import("@/pages/mitre"));
 const Cwe = lazy(() => import("@/pages/cwe"));
@@ -204,6 +205,7 @@ function InnerRoutes() {
       <Route path="/nova-modules" component={NovaModules} />
       <Route path="/nova-agent-v6" component={NovaAgentV6} />
       <Route path="/nova-core" component={NovaCore} />
+      <Route path="/nova-agent" component={NovaAgentPage} />
       <Route path="/nova-memory" component={NovaMemory} />
       <Route path="/nova-agent-chat" component={NovaAgentChat} />
       <Route path="/knowledge" component={Knowledge} />

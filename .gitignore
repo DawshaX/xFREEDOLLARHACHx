@@ -53,3 +53,6 @@ nova-memory.json
 nova-memory.json.*
 nova-memory-*.json
 *cybernova-nova-memory*
+
+# api-server runtime logs (never content)
+artifacts/api-server/logs/

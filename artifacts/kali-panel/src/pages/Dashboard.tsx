@@ -9,6 +9,9 @@ import { PageHeader } from "@/components/Layout";
 import { jsonRequest } from "@/lib/sse";
 import { useState, useEffect, useCallback } from "react";
 import { useWebSocket, emitPlatformWsEvent } from "@/hooks/useWebSocket";
+import { NovaFleetWidget, NovaProjectPulse } from "@/components/desktop/NovaFleetPanel";
+import { NovaLiveBar } from "@/components/desktop/NovaFleetLive";
+import { useLocation } from "wouter";
 
 interface Stats {
   criticalCves: number; highCves: number; totalScans: number;
@@ -36,6 +39,7 @@ function SevBadge({ sev }: { sev: string }) {
 }
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const [syncing, setSyncing] = useState(false);
   const [dbOpen, setDbOpen] = useState(true);
   const [sessionElapsed, setSessionElapsed] = useState(0);
@@ -145,6 +149,17 @@ export default function Dashboard() {
           >
             ⚡ تنفيذ دورة فورية وتحديث الجلسة الآن
           </button>
+        </div>
+
+        {/* ── NOVA live socket: what's running now / done / next ── */}
+        <NovaLiveBar onOpen={() => navigate("/nova-agent")} />
+
+        {/* ── NOVA live: connected machines + project pulse ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <NovaFleetWidget onOpen={() => navigate("/nova-agent")} />
+          <div className="lg:col-span-2 rounded-xl overflow-hidden border border-white/10" style={{ maxHeight: 220 }}>
+            <NovaProjectPulse />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
