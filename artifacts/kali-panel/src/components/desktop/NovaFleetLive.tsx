@@ -63,30 +63,6 @@ function apiBase(): string {
   return `${API}/local-agent`;
 }
 
-const PAGE_STARTED = Date.now();
-
-/**
- * The one machine we can honestly report without any server: this browser.
- * It really is executing the engine, so it belongs in the fleet instead of the
- * empty «أجهزة 0» that made the whole page look dead.
- */
-function selfNode(): FleetMachine {
-  const nav = typeof navigator === "undefined" ? undefined : navigator;
-  return {
-    id: "browser-self",
-    hostname: nav ? `${nav.platform || "browser"} · ${nav.language || ""}`.trim() : "browser",
-    platform: nav?.userAgent?.match(/\(([^)]+)\)/)?.[1]?.split(";")[0]?.trim() || "browser",
-    arch: nav?.userAgent?.includes("ARM") ? "arm64" : "x64",
-    user: "nova",
-    connectedAt: PAGE_STARTED,
-    lastSeen: Date.now(),
-    tools: LOCAL_BRAIN_TOOL_COUNT,
-    uptime: Math.round((Date.now() - PAGE_STARTED) / 1000),
-    readOnly: false,
-    self: true,
-  };
-}
-
 function wsUrl(): string {
   // A linked NOVA server owns the realtime channel. Without one we still try
   // same-origin, and the UI reports the truth instead of a fake green dot.
@@ -118,9 +94,35 @@ interface NovaLinkState {
   everOpened: boolean;
 }
 
+const PAGE_STARTED = Date.now();
+
+/**
+ * The one machine we can honestly report without any server: this browser.
+ * It really is executing the engine, so it belongs in the fleet instead of the
+ * empty «أجهزة 0» that made the whole page look dead.
+ */
+function selfNode(): FleetMachine {
+  const nav = typeof navigator === "undefined" ? undefined : navigator;
+  return {
+    id: "browser-self",
+    hostname: nav ? `${nav.platform || "browser"} · ${nav.language || ""}`.trim() : "browser",
+    platform: nav?.userAgent?.match(/\(([^)]+)\)/)?.[1]?.split(";")[0]?.trim() || "browser",
+    arch: nav?.userAgent?.includes("ARM") ? "arm64" : "x64",
+    user: "nova",
+    connectedAt: PAGE_STARTED,
+    lastSeen: Date.now(),
+    tools: LOCAL_BRAIN_TOOL_COUNT,
+    uptime: Math.round((Date.now() - PAGE_STARTED) / 1000),
+    readOnly: false,
+    self: true,
+  };
+}
+
 const initial: NovaLinkState = {
   socket: "connecting",
-  machines: [],
+  // This tab is a real node from the first paint. The fleet read later replaces
+  // it with the server's machines when one is linked.
+  machines: typeof navigator === "undefined" ? [] : [selfNode()],
   running: [],
   done: [],
   next: [],
