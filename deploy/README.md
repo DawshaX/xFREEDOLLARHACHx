@@ -61,9 +61,15 @@ certbot هيعمل TLS تلقائي + تجديد تلقائي.
 > الـ Free plan بينام بعد 15 دقيقة خمول. الحل: **GitHub Action** جاهز بينبّه كل 10 دقايق:
 > Repo → Settings → Secrets and variables → Actions → **NOVA_URL** = رابطك.
 
+**مفيش فيزا / مفيش كارت؟** ده المسار الوحيد الكامل من غير أي بيانات بنكية —
+الدليل خطوة بخطوة (بالحدود الحقيقية والذاكرة والـkeep-alive المزدوج): **[`deploy/render-free-guide.md`](./render-free-guide.md)**
+
 ---
 
 ## 3) Fly.io — تشغيل مستمر مع قرص دائم
+
+> ⚠️ **Fly.io بقى بيطلب كارت بنكي، والفري تير القديم اتلغى** (تجربة محدودة بس).
+> القسم ده للعلم أو لو عندك كارت — لو مفيش، استخدم Render فوق.
 
 ```bash
 curl -L https://fly.io/install.sh | sh
