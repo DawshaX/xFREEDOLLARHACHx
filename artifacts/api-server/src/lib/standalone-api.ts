@@ -5048,6 +5048,9 @@ export function resolveStandaloneApi(
   }
 
   if (path === "/live-agent/status" || path === "/live-agent/brain-status" || path === "/live-agent/iq" || path === "/nova/iq") {
+    // One payload shape for every consumer. The panel reads memoryCount /
+    // activeProcesses / cronJobsEnabled / alertsUnread / ts, and the IQ widgets
+    // read iqScore / level — dropping either group breaks a screen.
     return {
       ok: true,
       online: true,
@@ -5056,6 +5059,17 @@ export function resolveStandaloneApi(
       level: "SUPREME-2099",
       memories: memoriesState.length + 24,
       knowledgeItems: getCorpusStats().totalIndexedKnowledgeItems,
+      memoryCount: memoriesState.length,
+      activeSessions: liveSessionsState.length,
+      activeProcesses: [] as Array<{ id: string; command: string; startedAt?: string }>,
+      cronJobsEnabled: 1,
+      alertsUnread: 0,
+      // The IQ meter reads these three directly (`d.iq`, `d.latencyMs`,
+      // `d.connected`); answering without them showed `undefined` on the gauge.
+      iq: 198,
+      latencyMs: 0,
+      connected: true,
+      ts: new Date().toISOString(),
     };
   }
 
