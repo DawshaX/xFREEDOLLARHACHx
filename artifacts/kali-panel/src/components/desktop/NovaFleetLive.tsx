@@ -304,6 +304,9 @@ function connect() {
 function start() {
   if (started || typeof window === "undefined") return;
   started = true;
+  // Ask for the fleet immediately instead of waiting for the socket's open
+  // event, so the strip never renders a misleading "أجهزة 0" on first paint.
+  void refreshFleet();
   connect();
   // The socket is permanent, so these only backstop gaps in the feed.
   timers.push(setInterval(refreshFleet, 5000));
