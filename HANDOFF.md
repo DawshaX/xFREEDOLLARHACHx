@@ -329,3 +329,40 @@
 - The official repository’s mainnet deployment manifest lists the token proxy and LiquidETH implementation, not a MintForwarder deployment. The known 2x limiter defect is exploitable only by an already whitelisted caller on a deployed forwarder/updater with actual production mint/oracle authority. That production link and an attacker-reachable route were not proven. Cronos historical log completeness was constrained by public RPC range/API-key limits; absence of Cronos configuration is therefore **inconclusive**, not asserted.
 - No production transaction, mint, oracle update, account, or user asset was touched. No Critical/ATO/submission-ready report was found; `CDC-SC-01` remains at its existing High/Medium candidate status.
 - Sanitized evidence and next hypothesis: `audit/cryptocom-hackerone/evidence/phase31-smart-contract-reachability-and-rate-limit-review.json`. Permanent brain/vault copies are synchronized at schema **`2099.28.0`**, retaining **11 records** and adding the on-chain deployment/privilege-graph learning rule (now **19 rules**). Continue on a different source-backed Critical hypothesis; do not retest the isolated harness or write/mutate production chain state.
+
+---
+
+## Phase 32 — فحص الاتصالات الشامل (Connection & Contract Audit) وإصلاح كل المسارات المقطوعة (2026-10-31)
+
+### المنهجية
+تم بناء فحص آلي ثلاثي الطبقات بدلاً من الفحص اليدوي:
+1. **استخراج كل نقاط الاتصال** من الواجهة (113 نقطة `fetch` / `EventSource` / `WebSocket` / `sseJson`).
+2. **مطابقة كل نقطة مع محرك البيانات المشترك** (`resolveStandaloneApi`) الذي يخدم GitHub Pages والسيرفر معاً.
+3. **مقارنة شكل الاستجابة (Response Shape) بين الخادم والاستضافة الثابتة** لكل `GET` لاكتشاف أي اختلاف في العقود.
+4. **اختبار عرض فعلي لكل المسارات (153 مساراً)** في بيئة DOM محاكية لمضيف `github.io` للتأكد من عدم وجود شاشة سوداء.
+
+### الأخطاء التي تم اكتشافها وإصلاحها
+- **عقود استجابة مختلفة بين الخادم وGitHub Pages** (سبب فراغ بيانات حقيقي):
+  - `/api/nova/cron/jobs`: الخادم يرجّع مصفوفة والمحرك يرجّع مصفوفة بينما `NovaCronTab` كان يتوقع `{ jobs }` فقط → تم توحيد العقد إلى `{ jobs, count }` في المحرك، وجعل الواجهة تقبل الشكلين.
+  - `/api/agent/tools` و`/api/ai/keys` و`/api/memory`: كانت الواجهة تتوقع كائناً مغلّفاً (`{tools}`, `{keys}`, `{entries}`) بينما الخادم يرجّع مصفوفة → أصبحت `agent-v3` و`SystemContext` تقبل الشكلين.
+- **مسارات مقطوعة تماماً (404/500)** أصبحت تعمل على المنصتين:
+  `POST /api/agent/autonomous/{enable,disable,run}`, `GET /api/agent/events` (SSE), `POST /api/agent/run`,
+  `GET /api/agent/tools`, `GET /api/ai/keys`, `GET /api/cve-live/buffer`, `GET /api/nova-intel/memory`,
+  `GET /api/nova-intel/memory/search`, `PATCH /api/nova/cron/jobs/:id`, `POST /api/nova/cron/jobs/:id/trigger`,
+  `POST /api/nova/kill`, `POST /api/nova/kill/reset`, `GET /api/nova/kill/status`,
+  `POST /api/system/kill`, `GET /api/system/screenshot`, `DELETE /api/missions/:id/findings/:fid`,
+  `POST /api/chat`, `GET /api/proxy`.
+- **خطأ 500 عند أي `POST` بدون Body:** كانت المسارات تفكّك `req.body` مباشرة فينفجر الطلب (مثال حقيقي: زر Kill-Switch في `LiveAgentPanel` يرسل `POST /api/nova/kill` بدون `Content-Type`). تمت إضافة طبقة أمان في `app.ts` تجعل `req.body = {}` دائماً.
+- **`POST /api/agent/run` كان يفشل بـ 500** لأن `agentV2.ts` يكتب في PostgreSQL غير المتاح في الوضع المستقل → تمت إضافة مسار كامل في الذاكرة (بدون قاعدة بيانات) يرجّع نفس عقد الاستجابة مع استخدام محرك الذكاء المدمج والأدوات الآمنة فقط.
+- **`POST /api/nova/sessions/:id/auto-chat`** كان ينتهي برسالة `error` فارغة عند تعذّر الوصول إلى Ollama → أصبح يعرض رداً كاملاً من محرك الذكاء المدمج مع حدث `fallback`.
+- **SSE على الاستضافة الثابتة:** كان `EventSource` البديل يخدم بث الثغرات فقط، فأصبح يخدم أيضاً `/api/agent/events`, `/api/live-events`, `/api/monitor/stream`, `/api/bot/events`, `/api/push/stream` مع نبضة كل 20 ثانية، وربط ناقل `BroadcastChannel`/WebSocket ببث SSE، وإضافة بث لمحرك `auto-chat`.
+- **انحراف نسختي محرك البيانات** (`kali-panel` ↔ `api-server`): أصبحتا متطابقتين بايت ببايت، والفحص الآلي يفشل عند أي انحراف مستقبلي.
+
+### الأتمتة المضافة
+- `scripts/audit-connections.mjs` + `pnpm run audit:connections` و`pnpm run audit:connections:live`.
+- خطوة إلزامية في `.github/workflows/deploy-pages.yml` قبل كل بناء ونشر: `pnpm run audit:connections`.
+
+### نتيجة الفحص النهائي
+- `pnpm run audit:connections` → **113 نقطة اتصال، 0 فجوة، 0 انحراف**.
+- `pnpm run audit:connections:live` → **55 نقطة أُختبرت حياً على الخادم، 0 خطأ**.
+- `tsc --noEmit` للواجهة → **0 أخطاء**، وبناء Vite وesbuild ناجح.

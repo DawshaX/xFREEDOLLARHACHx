@@ -28,7 +28,12 @@ export function broadcastLiveEvent(
   }
 }
 
-router.get("/live-events", (req: Request, res: Response) => {
+/**
+ * Register an SSE response on the shared platform event bus.
+ * Used by `/api/live-events` and `/api/agent/events` so that every real-time
+ * consumer (SystemContext, dashboards, ...) receives the same broadcast stream.
+ */
+export function subscribeLiveEvents(req: Request, res: Response): void {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -44,7 +49,12 @@ router.get("/live-events", (req: Request, res: Response) => {
   }, 20_000);
 
   req.on("close", () => { clearInterval(ping); clients.delete(res); });
-});
+}
+
+router.get("/live-events", subscribeLiveEvents);
+
+// Alias consumed by the frontend SystemContext (GET /api/agent/events)
+router.get("/agent/events", subscribeLiveEvents);
 
 router.get("/live-events/count", (_req, res) => {
   res.json({ subscribers: clients.size });

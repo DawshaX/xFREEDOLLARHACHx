@@ -3,6 +3,7 @@ import { db, agentTasksTable, agentTaskStepsTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { resolveAi } from "../lib/ai";
 import { TOOLS, runTool } from "../lib/agentTools";
+import { buildIntelligentSecurityReply } from "./ollama-proxy";
 
 const router: IRouter = Router();
 
@@ -42,8 +43,44 @@ const SYSTEM_TOOLS = `أنت "CyberNova Agent" — وكيل أمني ذكي وم
 
 router.post("/agent/run", async (req, res, next) => {
   try {
-    const { prompt, conversationId } = req.body as { prompt: string; conversationId?: string };
+    const { prompt, conversationId } = (req.body ?? {}) as { prompt: string; conversationId?: string };
     if (!prompt) return res.status(400).json({ error: "prompt required" });
+
+    // ── Standalone mode (no Postgres) ────────────────────────────────────────
+    // Without DATABASE_URL every INSERT/UPDATE below would throw. In that mode we
+    // still want the agent page to work, so the run is executed fully in memory
+    // and the exact same response contract is returned.
+    if (!process.env.DATABASE_URL) {
+      const t0 = Date.now();
+      const reply = buildStandaloneAgentAnswer(prompt);
+      const toolResults = await runStandaloneTools(prompt);
+      return res.json({
+        taskId: `standalone-${t0}`,
+        finalAnswer: toolResults.length
+          ? `${reply}\n\n---\n\n### نتائج الأدوات\n${toolResults.map((r) => `- **${r.name}** → ${r.output.slice(0, 400)}`).join("\n")}`
+          : reply,
+        iterations: 1,
+        mode: "standalone",
+        steps: [
+          {
+            id: "1",
+            taskId: `standalone-${t0}`,
+            kind: "plan",
+            title: "استلام المهمة",
+            content: prompt,
+            createdAt: new Date(t0).toISOString(),
+          },
+          {
+            id: "2",
+            taskId: `standalone-${t0}`,
+            kind: "answer",
+            title: "الإجابة النهائية",
+            content: reply,
+            createdAt: new Date(t0 + 1).toISOString(),
+          },
+        ],
+      });
+    }
 
     const [task] = await db.insert(agentTasksTable).values({
       conversationId: conversationId ?? null,
@@ -174,5 +211,41 @@ router.post("/agent/run", async (req, res, next) => {
     });
   } catch (e) { return next(e); }
 });
+
+/**
+ * Standalone (no-Postgres) agent answer. Reuses the same intelligent security
+ * brain that powers the other agent endpoints so behaviour stays consistent.
+ */
+function buildStandaloneAgentAnswer(prompt: string): string {
+  const brain = buildIntelligentSecurityReply([{ role: "user", content: prompt }]);
+  return `### 🧠 CyberNova Agent v3 — وضع مستقل (بدون قاعدة بيانات)\n\n${brain}`;
+}
+
+/**
+ * Runs only side-effect-free, offline-safe tools for the standalone agent run.
+ * Network / shell tools are intentionally skipped so the endpoint can never
+ * turn into an unexpected outbound action.
+ */
+async function runStandaloneTools(prompt: string): Promise<Array<{ name: string; output: string }>> {
+  const results: Array<{ name: string; output: string }> = [];
+  const safeTools = new Set(["search_cve_local", "search_mitre", "search_cwe", "knowledge_search", "hash_text"]);
+  const candidates: Array<{ name: string; input: Record<string, unknown> }> = [];
+
+  const cveMatch = prompt.match(/CVE-\d{4}-\d{4,7}/i);
+  if (cveMatch) candidates.push({ name: "search_cve_local", input: { query: cveMatch[0] } });
+  if (/mitre|att&ck|تكتيك/i.test(prompt)) candidates.push({ name: "search_mitre", input: { query: prompt.slice(0, 80) } });
+  if (/cwe|ثغرة|فئة/i.test(prompt)) candidates.push({ name: "search_cwe", input: { query: prompt.slice(0, 80) } });
+
+  for (const c of candidates.slice(0, 2)) {
+    if (!safeTools.has(c.name)) continue;
+    try {
+      const out = await runTool(c.name, c.input);
+      results.push({ name: c.name, output: String(out ?? "") });
+    } catch {
+      // Tool failures must never break the agent response
+    }
+  }
+  return results;
+}
 
 export default router;

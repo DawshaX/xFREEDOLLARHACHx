@@ -10049,7 +10049,21 @@ export function NovaCronTab() {
 
   const loadJobs = React.useCallback(async () => {
     const r = await fetch("/api/nova/cron/jobs").catch(() => null);
-    if (r?.ok) { const d = await r.json() as { jobs: CronJob[] }; setJobs(d.jobs ?? []); }
+    if (r?.ok) {
+      // The API may answer with a bare array (standalone engine / cloud-brain queue)
+      // or with { jobs, count } (scheduler router). Accept both contracts.
+      const d = await r.json() as CronJob[] | { jobs?: CronJob[]; count?: number };
+      const list = Array.isArray(d) ? d : (d?.jobs ?? []);
+      setJobs(list.map((j, idx) => ({
+        ...j,
+        id: String(j?.id ?? `job-${idx}`),
+        name: String(j?.name ?? "مهمة مجدولة"),
+        cronExpr: String(j?.cronExpr ?? "—"),
+        enabled: j?.enabled !== false,
+        runCount: Number(j?.runCount ?? 0),
+        errorCount: Number(j?.errorCount ?? 0),
+      })));
+    }
   }, []);
 
   React.useEffect(() => { void loadJobs(); const t = setInterval(() => void loadJobs(), 10_000); return () => clearInterval(t); }, [loadJobs]);

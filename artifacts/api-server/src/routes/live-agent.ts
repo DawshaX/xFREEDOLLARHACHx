@@ -9,6 +9,7 @@ import { saveMemory, searchMemory, getMemoryCount } from "./memory";
 import { execOnLocalAgent, isLocalAgentConnected } from "./local-agent";
 import { logger } from "../lib/logger";
 import { getAllSettings } from "./settings";
+import { buildIntelligentSecurityReply } from "./ollama-proxy";
 
 const router = Router();
 
@@ -854,8 +855,25 @@ router.post("/nova/sessions/:id/auto-chat", async (req, res) => {
     }
     emit("done", { mode: autonomousMode ? "autonomous" : "standard", commandsRun: cmds.length });
   } catch (e: any) {
-    logger.error({ err: e }, "nova auto-chat error");
-    emit("error", { error: e.message ?? String(e) });
-    broadcastLiveEvent({ type: "agent_alert", data: { title: "خطأ الوكيل", message: (e.message ?? "").slice(0,150), severity: "critical", ts: Date.now() }, ts: new Date().toISOString() });
+    logger.warn({ err: e }, "nova auto-chat: live model unreachable — serving built-in brain reply");
+    // The external model (Ollama / ngrok) is unavailable. Instead of leaving the
+    // user with an empty bubble + hard error, stream the built-in security brain
+    // so the autonomous chat keeps working end-to-end in every environment.
+    try {
+      emit("fallback", { reason: e?.message ?? String(e) });
+      const brainReply = buildIntelligentSecurityReply([{ role: "user", content }]);
+      const chunks = brainReply.match(/.{1,32}/gs) ?? [brainReply];
+      for (const chunk of chunks) {
+        if (isKilledLocal(sessionId)) break;
+        emit("delta", { text: chunk });
+        await new Promise((r) => setTimeout(r, 10));
+      }
+      session.messages.push({ role: "assistant", content: brainReply });
+      emit("done", { mode: "standalone-fallback", commandsRun: 0 });
+      broadcastLiveEvent({ type: "agent_alert", data: { title: "وضع الطوارئ الذكي", message: "الموديل الخارجي غير متصل — تم استخدام محرك الذكاء المدمج", severity: "warning", ts: Date.now() }, ts: new Date().toISOString() });
+    } catch (fallbackErr) {
+      logger.error({ err: fallbackErr }, "nova auto-chat fallback failed");
+      emit("error", { error: e.message ?? String(e) });
+    }
   } finally { res.end(); }
 });

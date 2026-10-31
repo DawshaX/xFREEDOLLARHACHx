@@ -62,12 +62,17 @@ export default function AgentV3Page() {
   const screenRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(API("/agent/tools")).then(r => r.ok ? r.json() : null).then(d => d?.tools && setTools(d.tools)).catch(() => undefined);
+    fetch(API("/agent/tools")).then(r => r.ok ? r.json() : null).then((d: AgentTool[] | { tools?: AgentTool[] } | null) => {
+      const list = Array.isArray(d) ? d : d?.tools;
+      if (list) setTools(list);
+    }).catch(() => undefined);
     fetch(API("/ai/providers")).then(r => r.ok ? r.json() : null).then((d: ProvidersResp | null) => d && setProvider(d.current)).catch(() => undefined);
-    fetch(API("/ai/keys")).then(r => r.ok ? r.json() : null).then((d: { keys?: Array<{ key: string; hasValue: boolean }> } | null) => {
-      if (!d?.keys) return;
+    fetch(API("/ai/keys")).then(r => r.ok ? r.json() : null).then((d: Array<{ key: string; hasValue: boolean }> | { keys?: Array<{ key: string; hasValue: boolean }> } | null) => {
+      // Accept both a bare array and { keys: [...] }
+      const keys = Array.isArray(d) ? d : d?.keys;
+      if (!keys) return;
       const status: Record<string, boolean> = {};
-      for (const k of d.keys) { const id = k.key.replace(/^user_key_/, ""); status[id] = k.hasValue; }
+      for (const k of keys) { const id = String(k.key ?? "").replace(/^user_key_/, ""); status[id] = Boolean(k.hasValue); }
       setKeyStatus(status);
     }).catch(() => undefined);
   }, []);
