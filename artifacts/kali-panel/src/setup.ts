@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { resolveStandaloneApi } from "@/lib/standalone-api";
 import { isStandaloneHost } from "@/lib/env";
+import { getRemoteBase, remoteUrl, remoteWsUrl } from "@/lib/remote";
+import { runLocalBrain } from "@/lib/local-brain";
 
 // Register core Lucide icon components on globalThis as a defensive safety net
 try {
@@ -507,10 +509,19 @@ if (typeof window !== "undefined" && isStandaloneHost()) {
 
     constructor(url: string | URL, protocols?: string | string[]) {
       super();
-      const urlStr = String(url);
+      // A linked NOVA server means a REAL socket on THAT server. Before this,
+      // the shim faked `readyState = 1` and fired a synthetic "ws_connected",
+      // so the UI showed a live link that carried nothing — the exact
+      // "says connected but nothing arrives" complaint.
+      //
+      // Relative `/api/ws` URLs are rewritten here too, so any component
+      // (including third-party ones) reaches the linked server without knowing
+      // about the connector.
+      const remoteLinked = Boolean(getRemoteBase());
+      const urlStr = remoteLinked && String(url).startsWith("/") ? remoteWsUrl(String(url)) : String(url);
       this.url = urlStr;
-      if ((urlStr.includes("127.0.0.1") || urlStr.includes("localhost")) && OriginalWebSocket) {
-        return new OriginalWebSocket(url, protocols) as unknown as StandaloneWebSocket;
+      if ((remoteLinked || urlStr.includes("127.0.0.1") || urlStr.includes("localhost")) && OriginalWebSocket) {
+        return new OriginalWebSocket(urlStr, protocols) as unknown as StandaloneWebSocket;
       }
       this.listener = (payload: unknown) => {
         if (this.readyState !== 1) return;
@@ -548,6 +559,40 @@ if (typeof window !== "undefined" && isStandaloneHost()) {
 }
 
 const cybernovaFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  // ── Linked NOVA server ────────────────────────────────────────────────────
+  // When the user connects a server from «محطة العمل», the whole app talks to
+  // it: the real 33-tool brain, the real fleet, its Ollama, its WebSockets.
+  // This must run BEFORE any static interception, otherwise the built-in engine
+  // would answer instead of the server the user actually linked.
+  const linkedBase = (() => {
+    try {
+      return getRemoteBase();
+    } catch {
+      return "";
+    }
+  })();
+  if (linkedBase) {
+    const rawUrl =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input instanceof Request
+            ? input.url
+            : String(input);
+    const isSameOriginApi = rawUrl.startsWith("/api/") || rawUrl.startsWith(`${window.location.origin}/api/`);
+    if (isSameOriginApi) {
+      const target = remoteUrl(rawUrl.replace(/^https?:\/\/[^/]+/, ""));
+      try {
+        return await originalFetch(target, init);
+      } catch (err) {
+        // Server unreachable: fall through to the built-in engine so the UI
+        // stays usable, but say so loudly in the console.
+        console.warn(`[nova] linked server unreachable (${linkedBase}) — using built-in engine: ${(err as Error).message}`);
+      }
+    }
+  }
+
   let urlStr: string | null = null;
 
   if (typeof input === "string") {
@@ -616,6 +661,51 @@ const cybernovaFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const isStaticHost = isStandaloneHost();
 
     if (isStaticHost) {
+      // ── NOVA Core chat, in the browser ────────────────────────────────────
+      // The server streams `event: <type>` + `data: {...}` frames. Answering
+      // with a plain `{ok:true}` used to make the panel render an EMPTY bubble:
+      // it saw a 200 with a body, assumed the core replied, and read nothing.
+      if (/\/api\/nova-core\/chat$/.test(urlStr) && method === "POST") {
+        const message = String(parsedBody?.message ?? "").trim();
+        const sessionId = String(parsedBody?.sessionId ?? `local-${Date.now()}`);
+        if (!message) {
+          return new Response(JSON.stringify({ error: "message is required" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        const encoder2 = new TextEncoder();
+        const stream = new ReadableStream({
+          async start(controller) {
+            const send = (event: { type: string }) => {
+              try {
+                controller.enqueue(encoder2.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`));
+              } catch {
+                /* client gone */
+              }
+            };
+            try {
+              await runLocalBrain(message, send, {
+                sessionId,
+                history: Array.isArray(parsedBody?.history) ? (parsedBody!.history as Array<{ role: string; content: string }>) : [],
+              });
+            } catch (err) {
+              send({ type: "error", message: (err as Error).message } as { type: string });
+            } finally {
+              try {
+                controller.close();
+              } catch {
+                /* already closed */
+              }
+            }
+          },
+        });
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
+        });
+      }
+
       if (urlStr.includes("/api/ollama/chat/stream")) {
         return buildStaticOllamaStreamResponse(parsedBody);
       }

@@ -1364,9 +1364,85 @@ export function resolveStandaloneApi(
   // The agent brain needs a server, but the memory browser must still work
   // without one. On the static build these endpoints read the same
   // localStorage store the browser engine writes to.
+  // The brain's own tool catalogue. The static build cannot run the server-side
+  // tool implementations, but it must still answer with the SAME shape (a real
+  // list of the 33 tools) so `/nova-fleet` and `/nova-agent` render correctly.
+  if (path === "/nova-core/tools") {
+    const names = [
+      ["recon_target", "استطلاع هدف", "استطلاع سلبي شامل لنطاق (يتطلب سيرفر)"],
+      ["dns_lookup", "فحص DNS", "سجلات A/AAAA/MX/TXT (يتطلب سيرفر)"],
+      ["tls_audit", "تدقيق TLS", "الشهادة والإصدارات (يتطلب سيرفر)"],
+      ["http_headers_audit", "ترويسات HTTP", "تحليل الترويسات الأمنية (يتطلب سيرفر)"],
+      ["port_scan", "فحص منافذ", "منافذ محدودة على هدف مصرّح به (يتطلب سيرفر)"],
+      ["subdomain_enum", "تعداد نطاقات فرعية", "من مصادر عامة (يتطلب سيرفر)"],
+      ["web_fetch", "جلب صفحة", "قراءة صفحة وتحليلها (يتطلب سيرفر)"],
+      ["cve_lookup", "بحث CVE", "فهرس محلي + NVD"],
+      ["vuln_search", "بحث ثغرات", "فهرس المعرفة المحلي"],
+      ["exploit_search", "بحث استغلالات", "Exploit-DB (يتطلب سيرفر)"],
+      ["github_search", "بحث GitHub", "مستودعات وكود (يتطلب سيرفر)"],
+      ["knowledge_search", "بحث المعرفة", "فهرس 76,680+ عنصر داخل المتصفح"],
+      ["kali_toolbox", "ترسانة كالي", "كتالوج الأدوات"],
+      ["memory_save", "حفظ ذكرى", "ذاكرة محلية دائمة"],
+      ["memory_search", "بحث الذاكرة", "ذاكرة محلية"],
+      ["memory_list", "قائمة الذاكرة", "ذاكرة محلية"],
+      ["memory_forget", "حذف ذكرى", "ذاكرة محلية"],
+      ["memory_stats", "إحصاءات الذاكرة", "ذاكرة محلية"],
+      ["set_active_target", "تحديد الهدف", "هدف نشط"],
+      ["record_finding", "تسجيل نتيجة", "متتبع المهام"],
+      ["mission_status", "حالة المهمة", "متتبع المهام"],
+      ["platform_status", "حالة المنصة", "إحصاءات محلية"],
+      ["hash_text", "تجزئة نص", "SHA-256 في المتصفح"],
+      ["mission_create", "إنشاء مهمة", "متتبع المهام"],
+      ["report_generate", "توليد تقرير", "تقرير Markdown (يتطلب سيرفر)"],
+      ["evidence_list", "قائمة الأدلة", "خزنة الأدلة"],
+      ["report_list", "قائمة التقارير", "خزانة التقارير"],
+      ["corpus_stats", "إحصاءات الفهرس", "فهرس محلي"],
+      ["task_list", "قائمة المهام", "متتبع المهام"],
+      ["fleet_list", "قائمة الأجهزة", "يتطلب سيرفر وأجهزة متصلة"],
+      ["fleet_profile", "بصمة جهاز", "يتطلب سيرفر"],
+      ["fleet_exec", "تنفيذ على جهاز", "يتطلب سيرفر + موافقة"],
+      ["device_control_map", "خريطة التحكم", "أوامر تركيب الوكيل"],
+    ];
+    return {
+      total: names.length,
+      tools: names.map(([name, title, description], i) => ({
+        name,
+        title,
+        description,
+        category: i < 7 ? "recon" : i < 13 ? "intel" : i < 19 ? "memory" : i < 24 ? "mission" : "system",
+        risk: name === "fleet_exec" ? "sensitive" : "safe",
+        availableInBrowser: !description.includes("يتطلب سيرفر"),
+      })),
+      mode: "static",
+      note: "الأدوات اللي مكتوب عليها «يتطلب سيرفر» بتحتاج ربط سيرفر من محطة العمل.",
+    };
+  }
+
+  if (path === "/nova-core/persona") {
+    return {
+      identity: { name: "NOVA", codename: "nofva-2099", role: "شريك أمني تنفيذي", version: "10.0-static" },
+      tagline: "مش بوت أوامر — شريكك اللي بيفكر وينفّذ ويشرح.",
+      traits: ["تفكير بصوت عالٍ قبل كل خطوة", "تنفيذ أدوات حقيقي", "ذاكرة دائمة", "عربية مصرية تقنية"],
+      principles: ["أهداف مصرّح بها فقط", "لا نتائج مُفبركة", "الدقة قبل الإثارة"],
+      capabilities: ["فهرس 76,680+ ثغرة", "33 أداة", "أسطول أجهزة عند ربط سيرفر"],
+      fleet: {
+        note: "في وضع المتصفح مفيش أجهزة. اربط سيرفر عشان الأسطول يظهر.",
+        install: "curl -fsSL <host>/api/local-agent/download-agent | bash -s -- --id machine-N",
+        gated: "fleet_exec محتاج موافقة صريحة",
+      },
+      mode: "static",
+    };
+  }
+
   if (path === "/nova-core/status") {
     return {
       ok: true,
+      // `mode: "static"` is the flag the UI uses to tell "the built-in engine
+      // answered" from "a real server answered". Without it the workstation
+      // showed a green "server brain online" light for a server that was not
+      // there at all.
+      mode: "static",
+      source: "browser-engine",
       identity: { name: "نوفا (NOVA)", handle: "@nova", role: "شريك أمني ذكي — عقل منصة CyberNova", version: "2099.1" },
       brain: {
         mode: "builtin",
@@ -1375,8 +1451,8 @@ export function resolveStandaloneApi(
         cloudProviders: [],
         note: "وضع ثابت (GitHub Pages): مخ نوفا المحلي في المتصفح — للعقل الكامل شغّل السيرفر.",
       },
-      tools: 9,
-      categories: ["recon", "intel", "memory", "platform"],
+      tools: 33,
+      categories: ["recon", "intel", "memory", "platform", "fleet"],
     };
   }
 

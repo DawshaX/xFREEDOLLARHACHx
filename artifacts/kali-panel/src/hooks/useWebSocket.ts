@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { resolveStandaloneApi } from "@/lib/standalone-api";
+import { getRemoteBase, remoteWsUrl } from "@/lib/remote";
 import { isStandaloneHost } from "@/lib/env";
 
 export type WsEventHandler = (event: { type: string; [key: string]: unknown }) => void;
@@ -168,18 +169,39 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   }, [dispatchLocal]);
 
   const connect = useCallback(() => {
-    if (isStaticHost) {
-      setConnected(true);
+    const hasRemote = (() => {
+      try {
+        return Boolean(getRemoteBase());
+      } catch {
+        return false;
+      }
+    })();
+    if (isStaticHost && !hasRemote) {
+      // No server, no socket. Reporting "connected" here was a lie the UI showed
+      // as a live link; now it correctly reads as offline.
+      setConnected(false);
       return;
     }
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
+    // When a NOVA server is linked, the realtime channel lives on that server.
+    // On GitHub Pages isStaticHost used to short-circuit this into "connected"
+    // with no socket at all — a fake green light. Now: linked server → real
+    // socket; no server → genuinely disconnected.
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
     const host = window.location.host;
     const url = `${proto}://${host}/api/ws?sessionId=${encodeURIComponent(sessionId)}`;
+    const remoteBase = (() => {
+      try {
+        return getRemoteBase();
+      } catch {
+        return "";
+      }
+    })();
+    const finalUrl = remoteBase ? remoteWsUrl(`/api/ws?sessionId=${encodeURIComponent(sessionId)}`) : url;
 
     try {
-      const ws = new WebSocket(url);
+      const ws = new WebSocket(finalUrl);
       wsRef.current = ws;
       activeSocket = ws;
 

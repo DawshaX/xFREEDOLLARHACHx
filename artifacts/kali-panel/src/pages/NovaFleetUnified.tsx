@@ -19,6 +19,7 @@ import {
   PlayCircle, Radio, Send, Server, ShieldAlert, XCircle, Zap,
 } from "lucide-react";
 import { LiveAgentPanel } from "@/components/desktop/LiveAgentPanel";
+import { NovaWorkstation } from "@/components/desktop/NovaWorkstation";
 import { NovaLiveBar, useNovaLive } from "@/components/desktop/NovaFleetLive";
 
 const API = "/api";
@@ -333,6 +334,8 @@ function PlanBoard({ plan, onRefresh }: { plan: FleetPlan | null; onRefresh: () 
 
 export default function NovaFleetUnified() {
   const [, navigate] = useLocation();
+  // «محطة العمل» is the default: that is where the user talks to NOVA and works.
+  const [view, setView] = useState<"work" | "mesh" | "panel">("work");
   const [snap, setSnap] = useState<MeshSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const live = useNovaLive();
@@ -389,7 +392,20 @@ export default function NovaFleetUnified() {
             <p className="text-[9px] text-white/45">كل الأيجنتات والأجهزة في شبكة واحدة — اتصال حقيقي، مش رسمة.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-[10px] font-mono">
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
+          <div className="flex items-center gap-1 rounded-xl border border-white/10 p-0.5">
+            {([["work", "محطة العمل"], ["mesh", "خريطة الشبكة"], ["panel", "الليف بانل"]] as const).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setView(key)}
+                className={`px-2 py-1 rounded-lg text-[9px] font-black transition-all ${
+                  view === key ? "bg-cyan-500/20 text-cyan-200 border border-cyan-500/40" : "text-white/45 hover:text-white/75 border border-transparent"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <span className="text-white/45">عقد <b className="text-cyan-300">{snap?.stats.online ?? 0}/{snap?.stats.nodes ?? 0}</b></span>
           <span className="text-white/45">رسائل <b className="text-fuchsia-300">{snap?.stats.messages ?? 0}</b></span>
           {error && <span className="text-red-400">⚠️ {error}</span>}
@@ -398,6 +414,15 @@ export default function NovaFleetUnified() {
 
       <NovaLiveBar onOpen={() => navigate("/nova-agent")} />
 
+      {view === "work" && <NovaWorkstation />}
+
+      {view === "panel" && (
+        <div className="rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[78vh] min-h-[520px]">
+          <LiveAgentPanel embedded onClientTool={() => {}} onOpenAgentWindow={() => {}} />
+        </div>
+      )}
+
+      {view === "mesh" && (
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
         {/* left: mesh */}
         <div className="xl:col-span-3 space-y-2">
@@ -495,6 +520,7 @@ export default function NovaFleetUnified() {
           <PlanBoard plan={snap?.plan ?? null} onRefresh={() => void load()} />
         </div>
       </div>
+      )}
     </div>
   );
 }
