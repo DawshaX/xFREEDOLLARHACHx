@@ -327,6 +327,61 @@ async function phaseRegression() {
   window.close?.();
 }
 
+
+/* ── 5. does it actually understand the message? ─────────────────────────── */
+
+async function phaseIntents() {
+  const { window } = bootDom();
+  await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
+  await new Promise((r) => setTimeout(r, 300));
+
+  const ask = async (message) => {
+    const res = await window.fetch("/api/nova-core/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, sessionId: "intent" }),
+    });
+    const events = await readSse(res);
+    const text = events.filter((e) => e.type === "delta").map((e) => e.text).join("");
+    const tools = events.filter((e) => e.type === "tool_call").map((e) => e.name);
+    return { text, tools, chars: text.trim().length };
+  };
+
+  // A greeting must be greeted — not answered with a vulnerability dump, and
+  // not with a pointless knowledge_search on the word «مرحبا».
+  const cases = [
+    { msg: "مرحبا", expect: { noTools: true, includes: ["أنا نوفا"], excludes: ["78,422", "ناقل WebSocket", "العقل التكتيكي الذاتي"] } },
+    { msg: "مرحباااااااااا", expect: { noTools: true, includes: ["أنا نوفا"], excludes: ["78,422", "العقل التكتيكي الذاتي"] } },
+    { msg: "ازيك", expect: { noTools: true, includes: ["أنا نوفا"] } },
+    { msg: "شكرا", expect: { noTools: true, includes: ["العفو"] } },
+    { msg: "مين انت؟", expect: { noTools: true, includes: ["نوفا"] } },
+    { msg: "بتعرف تعمل ايه؟", expect: { noTools: true, includes: ["DNS"] } },
+    { msg: "حالة المنصة", expect: { includes: ["حالة المنصة"] } },
+    { msg: "افحص example.com", expect: { tools: ["dns_lookup"] } },
+    { msg: "ابحث عن CVE-2025-29927", expect: { tools: ["cve_lookup"] } },
+    { msg: "ابحث في GitHub عن nuclei", expect: { tools: ["github_search"] } },
+    { msg: "اقرا example.com", expect: { tools: ["web_fetch"] } },
+    { msg: "ايه رايك في القهوة", expect: { noTools: true, includes: ["تقصد"] } },
+  ];
+
+  const out = [];
+  for (const c of cases) {
+    const r = await ask(c.msg);
+    const okIncludes = (c.expect.includes ?? []).every((t) => r.text.includes(t));
+    const okExcludes = (c.expect.excludes ?? []).every((t) => !r.text.includes(t));
+    const okNoTools = c.expect.noTools ? r.tools.length === 0 : true;
+    const okTools = c.expect.tools ? c.expect.tools.every((t) => r.tools.includes(t)) : true;
+    out.push({ msg: c.msg, tools: r.tools, chars: r.chars, ok: okIncludes && okExcludes && okNoTools && okTools });
+    if (!okIncludes) findings.push({ kind: "intent-text", detail: `«${c.msg}» missing ${c.expect.includes.join(", ")}` });
+    if (!okExcludes) findings.push({ kind: "intent-dump", detail: `«${c.msg}» answered with canned intel` });
+    if (!okNoTools) findings.push({ kind: "intent-tools", detail: `«${c.msg}» ran ${r.tools.join(", ")} — should run none` });
+    if (!okTools) findings.push({ kind: "intent-tools", detail: `«${c.msg}» did not run ${c.expect.tools.join(", ")}` });
+    if (r.chars < 15) findings.push({ kind: "intent-empty", detail: `«${c.msg}» → ${r.chars} chars` });
+  }
+  results.intents = out;
+  window.close?.();
+}
+
 /* ── driver ─────────────────────────────────────────────────────────────── */
 
 if (MODE === "brain") {
@@ -341,6 +396,11 @@ if (MODE === "ui") {
 }
 if (MODE === "regress") {
   await phaseRegression();
+  fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
+  process.exit(findings.length ? 1 : 0);
+}
+if (MODE === "intents") {
+  await phaseIntents();
   fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
   process.exit(findings.length ? 1 : 0);
 }
@@ -371,6 +431,7 @@ if (MODE === "linked") {
   };
   run("brain");
   run("regress");
+  run("intents");
   run("ui");
   if (SERVER) run("linked");
 }
@@ -399,6 +460,11 @@ if (asJson) {
   if (results.regression) {
     for (const c of results.regression) {
       console.log(`  case ${String(c.name).padEnd(14)} ${c.chars !== undefined ? `${c.chars} chars / ${c.events} events` : c.steps !== undefined ? `${c.steps} plan steps` : `${c.count} agents`}`);
+    }
+  }
+  if (results.intents) {
+    for (const c of results.intents) {
+      console.log(`  ${c.ok ? "✓" : "✗"} «${c.msg}» → ${c.chars} chars${c.tools.length ? ` · ${c.tools.join(", ")}` : " · no tools"}`);
     }
   }
   if (results.workUi) {

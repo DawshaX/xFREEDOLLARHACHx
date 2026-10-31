@@ -70,50 +70,142 @@ const TITLES: Record<string, string> = {
   fleet_exec: "تنفيذ أمر على جهاز",
 };
 
-/** Same intent shape as the server's heuristic planner, trimmed to local tools. */
+/* ─────────────────────────── understanding ─────────────────────────────── */
+
+/**
+ * What the user actually asked for.
+ *
+ * The old planner matched keywords, so «مرحبا» became a knowledge search and
+ * every answer was the same canned intel dump. This classifies the message
+ * first, and only then decides which (if any) tools to run.
+ */
+export type Intent =
+  | { kind: "greeting" }
+  | { kind: "thanks" }
+  | { kind: "identity" }
+  | { kind: "capabilities" }
+  | { kind: "status" }
+  | { kind: "memory"; query: string }
+  | { kind: "cve"; cveId: string }
+  | { kind: "scan"; target: string }
+  | { kind: "github"; query: string }
+  | { kind: "fetch"; url: string }
+  | { kind: "exploit"; query: string }
+  | { kind: "knowledge"; query: string }
+  | { kind: "smalltalk"; text: string };
+
+/** Normalise Arabic chat text: strip diacritics, punctuation runs, letter stutter. */
+export function normalizeIntentText(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "") // tashkeel
+    .replace(/[إأآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/(.)\1{2,}/g, "$1$1") // مرحباااااا → مرحباا
+    .replace(/[!؟?.,،؛;:…\-"']+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const DOMAIN_RE = /(?:[a-z0-9-]+\.)+[a-z]{2,}/i;
+
+export function understand(message: string): Intent {
+  const raw = message.trim();
+  const t = normalizeIntentText(raw);
+  const words = t.split(" ").filter(Boolean);
+  const cveId = raw.match(/CVE-\d{4}-\d{4,7}/i)?.[0]?.toUpperCase() ?? null;
+  const domain = raw.match(DOMAIN_RE)?.[0] ?? null;
+  const short = words.length <= 6;
+
+  // «مرحباااااااااا» must read as «مرحبا»: compare a fully-collapsed variant too.
+  const collapsed = t.replace(/(.)\1+/g, "$1");
+  const variants = collapsed === t ? [t] : [t, collapsed];
+  const has = (re: RegExp) => variants.some((v) => re.test(v));
+  const exact = (re: RegExp) => variants.some((v) => re.test(v));
+
+  if (short && exact(/^(مرحبا|مرحبتين|هلا|هاي|هلو|اهلا|السلام عليكم|سلام|صباح الخير|مساء الخير|ازيك|عامل ايه|اخبارك|ايه الاخبار|hello|hi|hey|yo|sup)$/))
+    return { kind: "greeting" };
+  if (short && exact(/^(شكرا|تسلم|ميرسي|ربنا يكرمك|thanks|thank you|thx|ok|تمام|ماشي|حلو)$/)) return { kind: "thanks" };
+  if (has(/(مين انت|من انت|انت مين|اسمك ايه|مين حضرتك|who are you|عرّف بنفسك|عرف بنفسك)/)) return { kind: "identity" };
+  if (has(/(بتعرف تعمل|تعرف تعمل|امكانيات|قدرات|بتساعد في|بتعمل ايه|تقدر تعمل ايه|what can you do|ساعدني في ايه)/))
+    return { kind: "capabilities" };
+
+  if (cveId) {
+    if (has(/(استغلال|exploit|poc|اثبات)/)) return { kind: "exploit", query: cveId };
+    return { kind: "cve", cveId };
+  }
+  if (has(/(افحص|فحص|استطلع|scan|recon|دور علي نطاق|نطاق فرعي|subdomain)/) && domain)
+    return { kind: "scan", target: domain };
+  if (has(/(github|جيت هاب|جيتهاب|ريبو|مستودع|repo)/)) {
+    const q = t.replace(/(github|جيت هاب|جيتهاب|ريبو|مستودع|repo|ابحث|دور|عن|علي|في)/g, " ").replace(/\s+/g, " ").trim();
+    return { kind: "github", query: q || domain || raw.slice(0, 60) };
+  }
+  if (domain && has(/(افتح|اقرا|هات|جيب|محتوي|fetch|read|صفحه)/)) return { kind: "fetch", url: domain };
+  if (has(/(استغلال|exploit|اثبات مفهوم)/)) return { kind: "exploit", query: domain ?? raw.slice(0, 60) };
+  if (has(/(افتكر|تفتكر|فاكر|ذاكره|memory|remember|عني)/)) return { kind: "memory", query: raw.slice(0, 80) };
+  if (has(/(حاله المنصه|احصائ|كام ثغره|ثغرات|الفهرس|galaxy|حاله الاسطول|الاسطول|stats|status)/)) return { kind: "status" };
+  if (has(/(بحث|ابحث|دور|اعرف|اشرح|ايه هو|ايه هي|what is|explain)/) || domain)
+    return { kind: "knowledge", query: raw.slice(0, 90) };
+
+  return { kind: "smalltalk", text: raw };
+}
+
+/** Turn an intent into the smallest set of real tool calls that can answer it. */
+export function planFor(intent: Intent, message: string): { thought: string; steps: Step[] } {
+  const q = message.trim().slice(0, 80);
+  switch (intent.kind) {
+    case "greeting":
+      return { thought: "دي تحية — مفيش داعي أشغّل أدوات. هرد وأقولك أنا جاهز لإيه.", steps: [] };
+    case "thanks":
+      return { thought: "شكر — رد قصير وكفاية.", steps: [] };
+    case "identity":
+      return { thought: "بيسأل مين أنا — هعرّفه بنفسي وباللي شغّال فعلاً.", steps: [] };
+    case "capabilities":
+      return { thought: "بيسأل أقدر أعمل إيه — هقول الحقيقة: اللي شغّال واللي محتاج سيرفر.", steps: [] };
+    case "smalltalk":
+      return { thought: "مش فاهم قصدك بالظبط — هسأله يوضّح بدل ما أخمّن.", steps: [] };
+    case "status":
+      return {
+        thought: "بيسأل عن حالة المنصة — هقرأ الأرقام الحقيقية من الفهرس والذاكرة.",
+        steps: [
+          { tool: "platform_status", title: TITLES.platform_status, args: {} },
+          { tool: "corpus_stats", title: TITLES.corpus_stats, args: {} },
+          { tool: "memory_list", title: TITLES.memory_list, args: {} },
+        ],
+      };
+    case "memory":
+      return { thought: "بيسأل عن حاجة في الذاكرة — هدور فيها.", steps: [{ tool: "memory_search", title: TITLES.memory_search, args: { query: intent.query } }] };
+    case "cve":
+      return {
+        thought: `السؤال عن ${intent.cveId} — هدور عليه في الفهرس المحلي وعند OSV.`,
+        steps: [
+          { tool: "cve_lookup", title: TITLES.cve_lookup, args: { cveId: intent.cveId } },
+          { tool: "exploit_search", title: TITLES.exploit_search, args: { query: intent.cveId } },
+        ],
+      };
+    case "exploit":
+      return { thought: "بيسأل عن استغلال — هدور في OSV.", steps: [{ tool: "exploit_search", title: TITLES.exploit_search, args: { query: intent.query } }] };
+    case "scan":
+      return {
+        thought: `هدف واضح (${intent.target}) — DNS و نطاقات فرعية بينفعوا من المتصفح فعلاً.`,
+        steps: [
+          { tool: "dns_lookup", title: TITLES.dns_lookup, args: { target: intent.target } },
+          { tool: "subdomain_enum", title: TITLES.subdomain_enum, args: { target: intent.target } },
+        ],
+      };
+    case "github":
+      return { thought: "بدور على GitHub — ده API حي وبيشتغل من المتصفح.", steps: [{ tool: "github_search", title: TITLES.github_search, args: { query: intent.query } }] };
+    case "fetch":
+      return { thought: `هقرا ${intent.url} وألخّصلك اللي فيها.`, steps: [{ tool: "web_fetch", title: TITLES.web_fetch, args: { url: intent.url } }] };
+    case "knowledge":
+      return { thought: "هدور في فهرس المعرفة المحلي الأول، ولو مفيش نتيجة أقولك.", steps: [{ tool: "knowledge_search", title: TITLES.knowledge_search, args: { query: q } }] };
+  }
+}
+
+/** Kept for callers/tests that only need the plan. */
 export function planLocally(message: string): { thought: string; steps: Step[] } {
-  const msg = message.trim();
-  const lower = msg.toLowerCase();
-  const steps: Step[] = [];
-
-  const target = msg.match(/(?:[a-z0-9-]+\.)+[a-z]{2,}/i)?.[0] ?? getMissionsState()[0]?.target ?? null;
-  const cveId = msg.match(/CVE-\d{4}-\d{4,7}/i)?.[0];
-  const wantsMemory = /(?:افتكر|تفتكر|ذاكر|memory|remember)/i.test(msg);
-  const wantsKnowledge = /(?:بحث|ابحث|knowledge|فهرس|ثغرات|vuln)/i.test(msg);
-  const wantsStats = /(?:احصائ|إحصائ|stats|كام|عدد|حالة)/i.test(msg);
-  const wantsScan = /(?:افحص|نفذ|scan|nmap|nuclei|recon|استطلع)/i.test(msg);
-
-  const wantsRepos = /(?:github|ريبو|مستودع|repo)/i.test(msg);
-  const wantsExploit = /(?:exploit|استغلال|poC|poc)/i.test(msg);
-  const wantsFetch = /(?:افتح|اقرا|اقرأ|جيب|fetch|اقتبس)/i.test(msg);
-
-  if (cveId) steps.push({ tool: "cve_lookup", title: TITLES.cve_lookup, args: { cveId } });
-  if (wantsMemory) steps.push({ tool: "memory_search", title: TITLES.memory_search, args: { query: msg.slice(0, 80) } });
-  if (wantsKnowledge && !cveId) steps.push({ tool: "knowledge_search", title: TITLES.knowledge_search, args: { query: msg.slice(0, 80) } });
-  if (wantsStats) steps.push({ tool: "corpus_stats", title: TITLES.corpus_stats, args: {} });
-  if (wantsRepos) steps.push({ tool: "github_search", title: TITLES.github_search, args: { query: msg.slice(0, 60) } });
-  if (wantsExploit) steps.push({ tool: "exploit_search", title: TITLES.exploit_search, args: { query: cveId ?? msg.slice(0, 60) } });
-  if (wantsScan && target) {
-    // Real client-side recon: DNS over HTTPS and certificate transparency both
-    // work from a browser. Raw port scans still need a server — and we say so.
-    steps.push({ tool: "dns_lookup", title: TITLES.dns_lookup, args: { target } });
-    steps.push({ tool: "subdomain_enum", title: TITLES.subdomain_enum, args: { target } });
-  } else if (wantsScan) {
-    steps.push({ tool: "platform_status", title: TITLES.platform_status, args: {} });
-  }
-  if (wantsFetch && target) steps.push({ tool: "web_fetch", title: TITLES.web_fetch, args: { url: target } });
-  if (steps.length === 0) {
-    steps.push({ tool: "knowledge_search", title: TITLES.knowledge_search, args: { query: msg.slice(0, 80) } });
-    if (target && /\.[a-z]{2,}/i.test(msg)) steps.push({ tool: "dns_lookup", title: TITLES.dns_lookup, args: { target } });
-  }
-
-  const thought = cveId
-    ? `السؤال فيه معرّف ثغرة (${cveId}) — هبحث عنه في الفهرس المحلي قبل أي استنتاج.`
-    : target
-      ? `فيه هدف واضح (${target}). في وضع المتصفح أقدر أبحث في الفهرس والذاكرة، لكن الفحص الحقيقي محتاج سيرفر مربوط.`
-      : "هجمع من الذاكرة وفهرس المعرفة المحلي الأول، وبعدها أقرر.";
-
-  return { thought, steps: steps.slice(0, 4) };
+  return planFor(understand(message), message);
 }
 
 interface ToolOutcome {
@@ -168,18 +260,53 @@ async function runLocalTool(step: Step): Promise<ToolOutcome> {
           : { ok: true, summary: "مفيش نتائج مطابقة في الفهرس المحلي", data: [] };
       }
       case "cve_lookup": {
-        const id = String(step.args.cveId ?? "");
+        const id = String(step.args.cveId ?? "").toUpperCase();
         const res = resolveStandaloneApi(`/cve/search?q=${encodeURIComponent(id)}&limit=5`, "GET", null) as {
           cves?: Array<{ cveId?: string; description?: string; cvssScore?: number }>;
           results?: Array<{ cveId?: string; description?: string; cvssScore?: number }>;
         } | null;
         const list = res?.cves ?? res?.results ?? [];
-        return list.length
-          ? { ok: true, summary: `${id}: ${list[0]?.description?.slice(0, 120) ?? "موجودة في الفهرس"} (CVSS ${list[0]?.cvssScore ?? "?"})`, data: list }
-          : { ok: false, summary: `${id} مش موجودة في الفهرس المحلي — اسألني على سيرفر مربوط عشان أدور في NVD مباشرة`, data: null };
+        if (list.length) {
+          return {
+            ok: true,
+            summary: `${id}: ${list[0]?.description?.slice(0, 120) ?? "موجودة في الفهرس"} (CVSS ${list[0]?.cvssScore ?? "?"})`,
+            data: list,
+          };
+        }
+        // Not in the local corpus: ask NVD directly (CORS-friendly, no key).
+        try {
+          const nvd = (await getJson(
+            `https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${encodeURIComponent(id)}`,
+            12000,
+          )) as {
+            vulnerabilities?: Array<{
+              cve?: {
+                id?: string;
+                descriptions?: Array<{ lang?: string; value?: string }>;
+                metrics?: { cvssMetricV31?: Array<{ cvssData?: { baseScore?: number; baseSeverity?: string } }> };
+              };
+            }>;
+          };
+          const v = nvd.vulnerabilities?.[0]?.cve;
+          if (v) {
+            const desc = v.descriptions?.find((d) => d.lang === "en")?.value ?? "";
+            const score = v.metrics?.cvssMetricV31?.[0]?.cvssData?.baseScore;
+            const sev = v.metrics?.cvssMetricV31?.[0]?.cvssData?.baseSeverity;
+            return {
+              ok: true,
+              summary: `${id}${score ? ` · CVSS ${score} ${sev ?? ""}` : ""}: ${desc.slice(0, 300)}`,
+              data: { id, description: desc, score, severity: sev, source: "NVD live" },
+            };
+          }
+        } catch {
+          /* NVD blocked or offline — say so below */
+        }
+        return {
+          ok: false,
+          summary: `${id} مش في الفهرس المحلي ومقدرتش أوصله من NVD دلوقتي (شبكة/CORS).`,
+          data: null,
+        };
       }
-
-      // ── real network tools (the browser has a network stack) ──────────────
       case "dns_lookup": {
         const domain = String(step.args.target ?? "").replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
         if (!domain) return { ok: false, summary: "محتاج اسم نطاق", data: null };
@@ -309,6 +436,134 @@ async function runLocalTool(step: Step): Promise<ToolOutcome> {
   }
 }
 
+
+/* ─────────────────────────── answering ─────────────────────────────────── */
+
+type ToolResult = { name: string; ok: boolean; summary: string; data: unknown };
+
+const SERVER_NOTE =
+  "المتصفح مش قادر يعمل مسح منافذ TCP أو مصافحة TLS أو يشغّل أمر على جهاز تاني — ده محتاج سيرفر مربوط. أي حاجة تانية بتشتغل من هنا.";
+
+function find(results: ToolResult[], name: string): ToolResult | undefined {
+  return results.find((r) => r.name === name);
+}
+
+function canDoList(): string[] {
+  return [
+    "أبحث في فهرس المنصة والذاكرة (شغّال دلوقتي)",
+    "أفحص DNS ونطاقات فرعية لأي نطاق حي (شغّال دلوقتي)",
+    "أدور على ثغرة في OSV أو CVE في الفهرس (شغّال دلوقتي)",
+    "أبحث في GitHub وأقرا أي صفحة وألخّصها (شغّال دلوقتي)",
+    "أخطّط مهام وأحفظ الذاكرة (شغّال دلوقتي)",
+    "مسح منافذ / TLS / تنفيذ على أجهزة — محتاج سيرفر مربوط",
+  ];
+}
+
+function composeReply(intent: Intent, results: ToolResult[], message: string): string[] {
+  switch (intent.kind) {
+    case "greeting":
+      return [
+        "أهلًا 👋 أنا نوفا — العقل الشغّال في المتصفح ده، من غير أي سيرفر.",
+        "",
+        "قولّي إيه اللي محتاجه:",
+        "- «افحص example.com» → DNS ونطاقات فرعية حقيقية",
+        "- «ابحث عن CVE-2025-29927» → من الفهرس و OSV",
+        "- «إيه حالة المنصة؟» → الأرقام الحقيقية",
+        "- «ابحث في GitHub عن nuclei» → نتائج حية",
+      ];
+    case "thanks":
+      return ["العفو 🙌 موجود في أي وقت — ابعت اللي بعده."];
+    case "identity":
+      return [
+        "أنا **نوفا** — العقل التكتيكي لمنصة CyberNova 2099، بشتغل هنا في المتصفح نفسه.",
+        "",
+        "يعني مفيش سيرفر مستني منك ولا إعداد: بقرا الذاكرة والفهرس، بضرب DNS وGitHub وOSV على النت، وبنفّذ اللي أقدر عليه فعلاً وأقولك بصراحة اللي مش أقدر عليه.",
+      ];
+    case "capabilities":
+      return ["## اللي بعمله فعلاً دلوقتي", ...canDoList().slice(0, 5).map((l) => `- ${l}`), "", `> ${SERVER_NOTE}`];
+    case "smalltalk": {
+      const t = intent.text.slice(0, 60);
+      return [
+        `مش متأكد إني فهمت «${t}» صح.`,
+        "",
+        "تقصد إيه بالظبط؟",
+        "- تفحص نطاق؟ اكتب: «افحص example.com»",
+        "- تسأل عن ثغرة؟ اكتب رقمها: «CVE-2025-29927»",
+        "- تسأل عن حالة المنصة؟ اكتب: «حالة المنصة»",
+      ];
+    }
+    case "status": {
+      const platform = find(results, "platform_status");
+      const corpus = find(results, "corpus_stats");
+      const mem = find(results, "memory_list");
+      const lines = ["## حالة المنصة (أرقام حقيقية من المتصفح)", ""];
+      if (platform?.ok) lines.push(`- ${platform.summary}`);
+      if (corpus?.ok) lines.push(`- ${corpus.summary}`);
+      if (mem?.ok) lines.push(`- ${mem.summary}`);
+      lines.push(`- الأسطول: عقدة واحدة حقيقية = المتصفح ده (الباقي محتاج سيرفر)`);
+      return lines;
+    }
+    case "memory": {
+      const r = find(results, "memory_search");
+      if (!r) return ["مفيش نتائج."];
+      if (!r.ok) return [`${r.summary}`];
+      return ["## من الذاكرة", "", r.summary];
+    }
+    case "cve": {
+      const local = find(results, "cve_lookup");
+      const osv = find(results, "exploit_search");
+      const lines = [`## ${intent.cveId}`, ""];
+      if (local?.ok) lines.push(`- ${local.summary}`);
+      else lines.push(`- ${local?.summary ?? "مش لاقيها"}`);
+      if (osv?.ok) lines.push(`- **OSV:** ${osv.summary}`);
+      if (!local?.ok && !osv?.ok) {
+        lines.push("", "لو عايز، افتحها على NVD مباشرة:", `https://nvd.nist.gov/vuln/detail/${intent.cveId}`);
+      }
+      return lines;
+    }
+    case "exploit": {
+      const r = find(results, "exploit_search");
+      return [`## استغلال: ${intent.query}`, "", r?.ok ? `- ${r.summary}` : `- ${r?.summary ?? "مفيش نتائج"}`];
+    }
+    case "scan": {
+      const dns = find(results, "dns_lookup");
+      const subs = find(results, "subdomain_enum");
+      const lines = [`## فحص ${intent.target}`, ""];
+      if (dns) lines.push(`- **DNS:** ${dns.summary}`);
+      if (subs) lines.push(`- **نطاقات فرعية:** ${subs.summary}`);
+      lines.push("", `> ${SERVER_NOTE}`);
+      return lines;
+    }
+    case "github": {
+      const r = find(results, "github_search");
+      if (!r) return ["مفيش نتائج."];
+      const items = Array.isArray(r.data) ? (r.data as Array<{ name?: string; stars?: number; url?: string }>) : [];
+      const lines = [`## GitHub — «${intent.query}»`, "", r.summary];
+      for (const it of items.slice(0, 5)) lines.push(`- [${it.name}](${it.url}) — ⭐ ${it.stars ?? 0}`);
+      if (!r.ok) {
+        lines.push("", "لو GitHub رد بحد الاستخدام (rate limit) استنى دقيقة وجرب تاني، أو ابحث مباشرة:", `https://github.com/search?q=${encodeURIComponent(intent.query)}&type=repositories`);
+      }
+      return lines;
+    }
+    case "fetch": {
+      const r = find(results, "web_fetch");
+      if (!r) return ["مقدرتش أقرا الصفحة."];
+      if (!r.ok) return [`مقدرتش أقرا ${intent.url}: ${r.summary}`, "", `جرّب تفتحها بنفسك: https://${intent.url}`];
+      return [`## ${intent.url}`, "", String(r.summary).slice(0, 1200)];
+    }
+    case "knowledge": {
+      const r = find(results, "knowledge_search");
+      if (!r) return ["مفيش نتائج."];
+      if (!r.ok) return [`${r.summary}`];
+      const items = Array.isArray(r.data) ? (r.data as Array<{ title?: string }>) : [];
+      const lines = [`## نتائج «${intent.query}»`, "", r.summary];
+      for (const it of items.slice(0, 5)) if (it.title) lines.push(`- ${it.title}`);
+      if (!items.length) lines.push("", "مالقيتش في الفهرس المحلي. لو عايز أدور على النت قولي المصدر (GitHub / صفحة معيّنة).");
+      return lines;
+    }
+  }
+}
+
 function preview(value: unknown): string {
   try {
     return JSON.stringify(value).slice(0, 600);
@@ -338,9 +593,10 @@ export async function runLocalBrain(
 
   emit({ type: "ready", sessionId, mode: "builtin", provider: "browser-engine", model: "cybernova-local", tools: 33 });
 
-  const plan = planLocally(message);
+  const intent = understand(message);
+  const plan = planFor(intent, message);
   emit({ type: "thought", text: plan.thought });
-  emit({ type: "plan", steps: plan.steps.map((s) => ({ tool: s.tool, args: s.args })) });
+  emit({ type: "plan", steps: plan.steps.map((s2) => ({ tool: s2.tool, args: s2.args })) });
 
   const results: Array<{ name: string; ok: boolean; summary: string; data: unknown }> = [];
   for (const [idx, step] of plan.steps.entries()) {
@@ -360,22 +616,9 @@ export async function runLocalBrain(
     emit({ type: "tool_result", id, name: step.tool, ok: outcome.ok, summary: outcome.summary, ms, dataPreview: preview(outcome.data) });
   }
 
-  // Compose: the corpus brain gives the domain answer, then we append the real
-  // tool outcomes so the reply never claims more than it did.
-  const target = getMissionsState()[0]?.target || "immunefi.com";
-  const base = buildSmartAgentResponse(message, target);
-  const did = results.filter((r) => r.ok);
-  const blocked = results.filter((r) => !r.ok);
-
-  const lines: string[] = [base, "", "---", "### 🧾 اللي اتنفذ فعلاً في المتصفح"];
-  if (did.length === 0) lines.push("- مفيش أداة محلية اتنفذت على الطلب ده.");
-  for (const r of did) lines.push(`- ✅ **${r.name}** — ${r.summary}`);
-  for (const r of blocked) lines.push(`- ⚠️ **${r.name}** — ${r.summary}`);
-
-  lines.push("");
-  lines.push("### 🧠 الوضع الحالي");
-  lines.push(`- شغّال دلوقتي بالكامل في المتصفح: ذاكرة + فهرس + DNS حي + GitHub + OSV + قراءة صفحات. مفيش أي إعداد مطلوب.`);
-  lines.push("- الحاجات الوحيدة اللي محتاجة سيرفر بحكم الفيزياء: مسح منافذ TCP، مصافحة TLS، تنفيذ أوامر على أجهزة تانية. لو ربطت سيرفر بتاعك بتتفتح تلقائياً — ولو مش مربوط كل حاجة تانية بتشتغل عادي.");
+  // Answer the thing that was actually asked. No canned intel dump: the reply
+  // is built from the intent and from what the tools really returned.
+  const lines = composeReply(intent, results, message);
 
   const reply = lines.join("\n");
   for (const chunk of chunks(reply)) {
