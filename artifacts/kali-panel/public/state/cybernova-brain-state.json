@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 80,
-    "lastHeartbeatAt": "2026-10-31T19:22:00.438Z",
+    "autonomousCyclesCompleted": 81,
+    "lastHeartbeatAt": "2026-10-31T19:46:56.290Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: اكتملت الدورة الذاتية #80 على (bughunters.google.com) — جميع المراحل الـ 6 والسلاسل المركبة موثقة 100%",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #81 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1793476017123",
+      "ts": "2026-10-31 19:46:57 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #81 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 142.251.219.177 | HTTP 200 | SHA256: 336fc0221c16231f — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 66 ثغرة جديدة (NVD:30 · KEV:15 · GHSA:21)"
+    },
     {
       "id": "new-1793474520438-k1rr",
       "ts": "2026-10-31 19:22:00 UTC",
@@ -201,48 +208,6 @@
       "ts": "2026-10-29 16:44:59 UTC",
       "category": "AUTONOMOUS_PULSE",
       "titleAr": "اكتمال الدورة الذاتية #58 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793292119227-72dy",
-      "ts": "2026-10-29 16:41:59 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #57 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793291940085-8e6x",
-      "ts": "2026-10-29 16:39:00 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #56 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793291759662-foym",
-      "ts": "2026-10-29 16:35:59 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #55 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793291579206-j2uc",
-      "ts": "2026-10-29 16:32:59 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #54 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793291399650-nhkt",
-      "ts": "2026-10-29 16:29:59 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #53 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793291219659-61zv",
-      "ts": "2026-10-29 16:26:59 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #52 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     }
   ],
@@ -685,5 +650,677 @@
       "progress": 100,
       "lastOutput": "Cycle #80 verified on bughunters.google.com at ٧:٢٢:٠٠ م"
     }
-  ]
+  ],
+  "intelFeed": [
+    {
+      "id": "CVE-1999-0095",
+      "title": "CVE-1999-0095",
+      "description": "The debug command in Sendmail is enabled, allowing attackers to execute commands as root.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-0095",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-0082",
+      "title": "CVE-1999-0082",
+      "description": "CWD ~root command in ftpd allows root access.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-0082",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1471",
+      "title": "CVE-1999-1471",
+      "description": "Buffer overflow in passwd in BSD based operating systems 4.3 and earlier allows local users to gain root privileges by specifying a long shell or GECOS field.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1471",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1122",
+      "title": "CVE-1999-1122",
+      "description": "Vulnerability in restore in SunOS 4.0.3 and earlier allows local users to gain privileges.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1122",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1467",
+      "title": "CVE-1999-1467",
+      "description": "Vulnerability in rcp on SunOS 4.0.x allows remote attackers from trusted hosts to execute arbitrary commands as root, possibly related to the configuration of the nobody user.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1467",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1506",
+      "title": "CVE-1999-1506",
+      "description": "Vulnerability in SMI Sendmail 4.0 and earlier, on SunOS up to 4.0.3, allows remote attackers to access user bin.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1506",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-0084",
+      "title": "CVE-1999-0084",
+      "description": "Certain NFS servers allow users to use mknod to gain privileges by creating a writable kmem device and setting the UID to 0.",
+      "cvss": 8.4,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-0084",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-2000-0388",
+      "title": "CVE-2000-0388",
+      "description": "Buffer overflow in FreeBSD libmytinfo library allows local users to execute commands via a long TERMCAP environmental variable.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2000-0388",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-0209",
+      "title": "CVE-1999-0209",
+      "description": "The SunView (SunTools) selection_svc facility allows remote users to read files.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-0209",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1198",
+      "title": "CVE-1999-1198",
+      "description": "BuildDisk program on NeXT systems before 2.0 does not prompt users for the root password, which allows local users to gain root privileges.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1198",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1391",
+      "title": "CVE-1999-1391",
+      "description": "Vulnerability in NeXT 1.0a and 1.0 with publicly accessible printers allows local users to gain privileges via a combination of the npd program and weak directory permissions.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1391",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1392",
+      "title": "CVE-1999-1392",
+      "description": "Vulnerability in restore0.9 installation script in NeXT 1.0a and 1.0 allows local users to gain root privileges.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1392",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1057",
+      "title": "CVE-1999-1057",
+      "description": "VMS 4.0 through 5.3 allows local users to gain privileges via the ANALYZE/PROCESS_DUMP dcl command.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1057",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1554",
+      "title": "CVE-1999-1554",
+      "description": "/usr/sbin/Mail on SGI IRIX 3.3 and 3.3.1 does not properly set the group ID to the group ID of the user who started Mail, which allows local users to read the mail of other users.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1554",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1197",
+      "title": "CVE-1999-1197",
+      "description": "TIOCCONS in SunOS 4.1.1 does not properly check the permissions of a user who tries to redirect console output and input, which could allow a local user to gain privileges.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1197",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1115",
+      "title": "CVE-1999-1115",
+      "description": "Vulnerability in the /etc/suid_exec program in HP Apollo Domain/OS sr10.2 and sr10.3 beta, related to the Korn Shell (ksh).",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1115",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1258",
+      "title": "CVE-1999-1258",
+      "description": "rpc.pwdauthd in SunOS 4.1.1 and earlier does not properly prevent remote access to the daemon, which allows remote attackers to obtain sensitive system information.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1258",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1438",
+      "title": "CVE-1999-1438",
+      "description": "Vulnerability in /bin/mail in SunOS 4.1.1 and earlier allows local users to gain root privileges via certain command line arguments.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1438",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1211",
+      "title": "CVE-1999-1211",
+      "description": "Vulnerability in in.telnetd in SunOS 4.1.1 and earlier allows local users to gain root privileges.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1211",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1212",
+      "title": "CVE-1999-1212",
+      "description": "Vulnerability in in.rlogind in SunOS 4.0.3 and 4.0.3c allows local users to gain root privileges.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1212",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1194",
+      "title": "CVE-1999-1194",
+      "description": "chroot in Digital Ultrix 4.1 and 4.0 is insecurely installed, which allows local users to gain privileges.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1194",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1193",
+      "title": "CVE-1999-1193",
+      "description": "The \"me\" user in NeXT NeXTstep 2.1 and earlier has wheel group privileges, which could allow the me user to use the su command to become root.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1193",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1123",
+      "title": "CVE-1999-1123",
+      "description": "The installation of Sun Source (sunsrc) tapes allows local users to gain root privileges via setuid root programs (1) makeinstall or (2) winstall.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1123",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1034",
+      "title": "CVE-1999-1034",
+      "description": "Vulnerability in login in AT&T System V Release 4 allows local users to gain privileges.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1034",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1415",
+      "title": "CVE-1999-1415",
+      "description": "Vulnerability in /usr/bin/mail in DEC ULTRIX before 4.2 allows local users to gain privileges.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1415",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1090",
+      "title": "CVE-1999-1090",
+      "description": "The default configuration of NCSA Telnet package for Macintosh and PC enables FTP, even though it does not include an \"ftp=yes\" line, which allows remote attackers to read and modify arbitrary files.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1090",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-0498",
+      "title": "CVE-1999-0498",
+      "description": "TFTP is not running in a restricted directory, allowing a remote attacker to access sensitive information such as password files.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-0498",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1468",
+      "title": "CVE-1999-1468",
+      "description": "rdist in various UNIX systems uses popen to execute sendmail, which allows local users to gain root privileges by modifying the IFS (Internal Field Separator) variable.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1468",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-0167",
+      "title": "CVE-1999-0167",
+      "description": "In SunOS, NFS file handles could be guessed, giving unauthorized access to the exported file system.",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-0167",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-1999-1493",
+      "title": "CVE-1999-1493",
+      "description": "Vulnerability in crp in Hewlett Packard Apollo Domain OS SR10 through SR10.3 allows remote attackers to gain root privileges via insecure system calls, (1) pad_$dm_cmd and (2) pad_$def_pfk().",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-1999-1493",
+      "at": "2026-10-31T19:46:56.405Z"
+    },
+    {
+      "id": "CVE-2020-29583",
+      "title": "CVE-2020-29583 — Zyxel Multiple Products",
+      "description": "Zyxel Multiple Products Use of Hard-Coded Credentials Vulnerability — Zyxel firewalls (ATP, USG, VM) and AP Controllers (NXC2500 and NXC5500) contain a use of hard-coded credentials vulnerability in an undocumented account (\"zyfwp\") with an unchangeable password.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-29583",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2019-8394",
+      "title": "CVE-2019-8394 — Zoho ManageEngine",
+      "description": "Zoho ManageEngine ServiceDesk Plus (SDP) File Upload Vulnerability — Zoho ManageEngine ServiceDesk Plus (SDP) contains an unspecified vulnerability that allows remote users to upload files via login page customization.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-8394",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2020-10189",
+      "title": "CVE-2020-10189 — Zoho ManageEngine",
+      "description": "Zoho ManageEngine Desktop Central File Upload Vulnerability — Zoho ManageEngine Desktop Central contains a file upload vulnerability that allows for unauthenticated remote code execution.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-10189",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2021-40539",
+      "title": "CVE-2021-40539 — Zoho ManageEngine",
+      "description": "Zoho ManageEngine ADSelfService Plus Authentication Bypass Vulnerability — Zoho ManageEngine ADSelfService Plus contains an authentication bypass vulnerability affecting the REST API URLs which allow for remote code execution.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-40539",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2021-27561",
+      "title": "CVE-2021-27561 — Yealink Device Management",
+      "description": "Yealink Device Management Server-Side Request Forgery (SSRF) Vulnerability — Yealink Device Management contains a server-side request forgery (SSRF) vulnerability that allows for unauthenticated remote code execution.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-27561",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2019-9978",
+      "title": "CVE-2019-9978 — WordPress Social Warfare Plugin",
+      "description": "WordPress Social Warfare Plugin Cross-Site Scripting (XSS) Vulnerability — WordPress Social Warfare plugin contains a cross-site scripting (XSS) vulnerability that allows for remote code execution. This vulnerability affects Social Warfare and Social Warfare Pro.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-9978",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2020-11738",
+      "title": "CVE-2020-11738 — WordPress Snap Creek Duplicator Plugin",
+      "description": "WordPress Snap Creek Duplicator Plugin File Download Vulnerability — WordPress Snap Creek Duplicator plugin contains a file download vulnerability when an administrator creates a new copy of their site that allows an attacker to download the generated files from their Wordpress dashboard. This vulnerability affects Duplicator and Dulplicator Pro.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-11738",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2020-25213",
+      "title": "CVE-2020-25213 — WordPress File Manager Plugin",
+      "description": "WordPress File Manager Plugin Remote Code Execution Vulnerability — WordPress File Manager plugin contains a remote code execution vulnerability that allows unauthenticated users to execute PHP code and upload malicious files on a target site.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-25213",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2020-4006",
+      "title": "CVE-2020-4006 — VMware Multiple Products",
+      "description": "Multiple VMware Products Command Injection Vulnerability — VMware Workspace One Access, Access Connector, Identity Manager, and Identity Manager Connector contain a command injection vulnerability. An attacker with network access to the administrative configurator on port 8443 and a valid password for the configurator administrator account can execute commands with unrestricted privileges on the u",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-4006",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2021-21985",
+      "title": "CVE-2021-21985 — VMware vCenter Server",
+      "description": "VMware vCenter Server Improper Input Validation Vulnerability — VMware vSphere Client contains an improper input validation vulnerability in the Virtual SAN Health Check plug-in, which is enabled by default in vCenter Server, which allows for remote code execution.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-21985",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2021-21972",
+      "title": "CVE-2021-21972 — VMware vCenter Server",
+      "description": "VMware vCenter Server Remote Code Execution Vulnerability — VMware vCenter Server vSphere Client contains a remote code execution vulnerability in a vCenter Server plugin which allows an attacker with network access to port 443 to execute commands with unrestricted privileges on the underlying operating system.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-21972",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2020-3952",
+      "title": "CVE-2020-3952 — VMware vCenter Server",
+      "description": "VMware vCenter Server Information Disclosure Vulnerability — VMware vCenter Server contains an information disclosure vulnerability in the VMware Directory Service (vmdir) when the Platform Services Controller (PSC) does not correctly implement access controls. Successful exploitation allows an attacker with network access to port 389 to extract sensitive information.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-3952",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2021-22005",
+      "title": "CVE-2021-22005 — VMware vCenter Server",
+      "description": "VMware vCenter Server File Upload Vulnerability — VMware vCenter Server contains a file upload vulnerability in the Analytics service that allows a user with network access to port 443 to execute code.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-22005",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2020-3950",
+      "title": "CVE-2020-3950 — VMware Multiple Products",
+      "description": "VMware Multiple Products Privilege Escalation Vulnerability — VMware Fusion, Remote Console (VMRC) for Mac, and Horizon Client for Mac contain a privilege escalation vulnerability due to improper use of setuid binaries that allows attackers to escalate privileges to root.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-3950",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2020-3992",
+      "title": "CVE-2020-3992 — VMware ESXi",
+      "description": "VMware ESXi OpenSLP Use-After-Free Vulnerability — VMware ESXi OpenSLP contains a use-after-free vulnerability that allows an attacker residing in the management network with access to port 427 to perform remote code execution.",
+      "cvss": null,
+      "severity": "KEV",
+      "source": "CISA KEV",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-3992",
+      "at": "2026-10-31T19:46:56.522Z"
+    },
+    {
+      "id": "CVE-2026-118761",
+      "title": "CVE-2026-118761",
+      "description": "Kubeflow Pipelines: Pipeline archive upload allows decompression bomb to exhaust server memory",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-8fmv-6rg5-5924",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-118759",
+      "title": "CVE-2026-118759",
+      "description": "Kubeflow Pipelines: Run-log endpoint permits unauthorized access to pod logs",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-wg5q-x4j9-qm54",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119203",
+      "title": "CVE-2026-119203",
+      "description": "pypdf has possible infinite loop when hitting EOF in standard xref table during trailer search",
+      "cvss": null,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-5849-834g-hvw5",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119204",
+      "title": "CVE-2026-119204",
+      "description": "pypdf has possible large memory usage when parsing page tree",
+      "cvss": null,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-cggf-277g-3q54",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119205",
+      "title": "CVE-2026-119205",
+      "description": "pypdf has possible infinite loop when cloning dictionaries",
+      "cvss": null,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-mfr5-77xh-9j7h",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-118772",
+      "title": "CVE-2026-118772",
+      "description": "joi: quadratic-time split in `string().email({ multiple: true })` allows denial of service",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-4528-x5fx-h6hg",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119202",
+      "title": "CVE-2026-119202",
+      "description": "@hapi/content: quadratic-time parsing of Content-Disposition parameters allows denial of service",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-8494-f6mr-cjpv",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-116672",
+      "title": "CVE-2026-116672",
+      "description": "Authlib RFC 7592 examples omit registration-access-token client binding",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-c73q-w75p-j82v",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119206",
+      "title": "CVE-2026-119206",
+      "description": "pypdf has possible long runtimes when retrieving page labels",
+      "cvss": null,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-42gh-23hr-vphw",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119207",
+      "title": "CVE-2026-119207",
+      "description": "pypdf has possible large memory usage for exceptions in strict mode",
+      "cvss": null,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-4vqv-7265-gm2w",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119208",
+      "title": "CVE-2026-119208",
+      "description": "pypdf has possible long runtimes/large memory usage for encrypted PDF files",
+      "cvss": null,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-62m5-6wh8-28x7",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119209",
+      "title": "CVE-2026-119209",
+      "description": "pypdf has possible large memory usage when parsing cross-reference streams",
+      "cvss": null,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-x3rh-gjgm-fmqc",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119196",
+      "title": "CVE-2026-119196",
+      "description": "pyasn1 has quadratic CPU consumption in constructed BIT STRING decoding",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-2qm8-x737-gmw5",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119197",
+      "title": "CVE-2026-119197",
+      "description": "pyasn1 has quadratic-complexity denial of service in binary REAL decoding",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-mm57-4v3p-rchx",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119195",
+      "title": "CVE-2026-119195",
+      "description": "pyasn1 has quadratic-time denial of service in constructed string and indefinite-length ANY decoding",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-9m75-vc3g-4x39",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119194",
+      "title": "CVE-2026-119194",
+      "description": "pyasn1 has quadratic CPU use in schemaless BER/CER/DER container decoding",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-fm9c-5rcf-2q5p",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-118779",
+      "title": "CVE-2026-118779",
+      "description": "Forge: Regular expression denial of service in PEM decoding (pem.decode)",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-7wch-p9px-956x",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-118782",
+      "title": "CVE-2026-118782",
+      "description": "Forge: PKCS#12 MAC forgery and constant-key PBE via zero iteration count",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-jc66-7q78-782g",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119188",
+      "title": "CVE-2026-119188",
+      "description": "Forge: Denial of service in TLS record processing via a record interleaved with a fragmented handshake message",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-8hrf-8g6f-7xwp",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119187",
+      "title": "CVE-2026-119187",
+      "description": "Forge: Denial of service in TLS record processing via call stack exhaustion",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-hqq3-7jhf-c5jx",
+      "at": "2026-10-31T19:46:57.123Z"
+    },
+    {
+      "id": "CVE-2026-119190",
+      "title": "CVE-2026-119190",
+      "description": "Forge: X.509 basicConstraints bypass in verifyCertificateChain() via deprecated extension OIDs 2.5.29.10 and 2.5.29.13",
+      "cvss": 7.4,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-5x38-2vff-x55p",
+      "at": "2026-10-31T19:46:57.123Z"
+    }
+  ],
+  "intelStats": {
+    "total": 66,
+    "freshThisPulse": 66,
+    "sourcesAnswered": [
+      "NVD:30",
+      "KEV:15",
+      "GHSA:21"
+    ],
+    "at": "2026-10-31T19:46:57.123Z"
+  }
 }
