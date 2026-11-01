@@ -1,6 +1,45 @@
 {
-  "updatedAt": "2026-10-31T23:46:10.842Z",
+  "updatedAt": "2026-11-01T06:35:31.165Z",
   "missions": [
+    {
+      "ranAt": "2026-11-01T06:35:31.165Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 30,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 36,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 25,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-01T06:35\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 33 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 67,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 3 نقطة تحتاج انتباه: العقل اللغوي، المجلس (تعدد النماذج)، الأسطول (نودات متصلة).",
+      "durationMs": 191,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
     {
       "ranAt": "2026-10-31T23:46:10.842Z",
       "target": "example.com",
