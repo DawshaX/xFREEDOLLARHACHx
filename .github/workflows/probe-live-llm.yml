@@ -1,0 +1,87 @@
+name: probe-live-llm
+
+# One purpose: ask the *deployed* server a real question through its own LLM
+# path and print which provider actually answered. The server's keys live in
+# its .env; this job never sees them — it only sees the reply.
+#
+# Runs when a commit message contains [probe-live], or by hand from the Actions
+# tab. Nothing is deployed and nothing is written back to the repo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Base URL of the running server
+        required: false
+        default: http://node.waifly.com:27214
+  push:
+    branches: ["**"]
+    paths: [".github/workflows/probe-live-llm.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[probe-live]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Resolve target
+        id: t
+        run: |
+          URL="${{ github.event.inputs.target }}"
+          echo "url=${URL:-http://node.waifly.com:27214}" >> "$GITHUB_OUTPUT"
+
+      - name: Health + providers
+        run: |
+          U="${{ steps.t.outputs.url }}"
+          echo "── /api/health"
+          curl -sS -m 20 "$U/api/health" || echo "(failed)"
+          echo
+          echo "── /api/nova-core/status"
+          curl -sS -m 30 "$U/api/nova-core/status" || echo "(failed)"
+          echo
+          echo "── /api/nova-core/council/ping (needs the new bundle)"
+          curl -sS -m 60 "$U/api/nova-core/council/ping" | head -c 3000 || echo "(failed)"
+          echo
+
+      - name: Real question through multi-ai (SSE)
+        run: |
+          U="${{ steps.t.outputs.url }}"
+          echo "── POST /api/multi-ai/chat"
+          curl -sS -N -m 90 -X POST "$U/api/multi-ai/chat" \
+            -H 'content-type: application/json' \
+            -d '{"messages":[{"role":"user","content":"Reply with exactly: PONG"}],"maxTokens":20}' \
+            | head -c 3000 || echo "(failed)"
+          echo
+
+      - name: Real question through nova-core chat (SSE ready event shows provider)
+        run: |
+          U="${{ steps.t.outputs.url }}"
+          echo "── POST /api/nova-core/chat"
+          curl -sS -N -m 120 -X POST "$U/api/nova-core/chat" \
+            -H 'content-type: application/json' \
+            -d '{"message":"اكتب كلمة واحدة بس: تمام","history":[]}' \
+            | grep -E '^event:|^data:' | head -40 || echo "(failed)"
+          echo
+
+      - name: Council call (needs the new bundle)
+        run: |
+          U="${{ steps.t.outputs.url }}"
+          echo "── POST /api/nova-core/council"
+          curl -sS -m 120 -X POST "$U/api/nova-core/council" \
+            -H 'content-type: application/json' \
+            -d '{"message":"إيه أول خطوة في فحص نطاق مصرّح به؟ اختصر في سطرين."}' \
+            | head -c 4000 || echo "(failed)"
+          echo
+
+      - name: Fleet + agents
+        run: |
+          U="${{ steps.t.outputs.url }}"
+          echo "── /api/local-agent/agents"
+          curl -sS -m 20 "$U/api/local-agent/agents" || echo "(failed)"
+          echo
+          echo "── /api/fleet/mesh"
+          curl -sS -m 20 "$U/api/fleet/mesh" | head -c 1200 || echo "(failed)"
+          echo
