@@ -1,0 +1,122 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA FLEET — free nodes from GitHub Actions
+#
+# Why this exists
+# ───────────────
+# A free host gives you ONE 300 MB box. GitHub Actions on a PUBLIC repository
+# gives you unlimited minutes and up to 20 concurrent jobs, and every job is a
+# real 4 vCPU / 16 GB Ubuntu machine with a full network stack. That is the only
+# genuinely "as many servers as you want" resource that costs nothing and needs
+# no card.
+#
+# The catch, stated plainly: each node lives for at most 6 hours. So the fleet
+# is *ephemeral and rotating*, not permanent. A scheduled run keeps re-creating
+# it. For permanent nodes use a free host (Waifly/Render/Zeabur) — see
+# docs/FREE-FLEET.md.
+#
+# Setup
+# ─────
+#   Settings → Secrets and variables → Actions → Variables
+#     NOVA_HUB    ws://node.waifly.com:27214/api/local-agent/ws   (your hub)
+#     FLEET_NODES 4                                                (how many)
+#
+# Nodes appear in the panel under /api/local-agent/agents and /api/fleet/mesh.
+# ─────────────────────────────────────────────────────────────────────────────
+name: fleet-nodes
+
+on:
+  workflow_dispatch:
+    inputs:
+      nodes:
+        description: How many nodes to start (1-20)
+        required: false
+        default: "4"
+  schedule:
+    # Every 5 hours: a job may run 6 h, so the next wave is already up before
+    # the previous one expires — the fleet never fully disappears.
+    - cron: "0 */5 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nova-fleet
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: plan the wave
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      nodes: ${{ steps.plan.outputs.nodes }}
+    steps:
+      - id: plan
+        env:
+          INPUT_NODES: ${{ github.event.inputs.nodes }}
+          VAR_NODES: ${{ vars.FLEET_NODES }}
+        run: |
+          n="${INPUT_NODES:-${VAR_NODES:-4}}"
+          case "$n" in ''|*[!0-9]*) n=4 ;; esac
+          if [ "$n" -lt 1 ];  then n=1;  fi
+          # GitHub free plan: 20 concurrent jobs. Leave one for other workflows.
+          if [ "$n" -gt 19 ]; then n=19; fi
+          echo "nodes=$n" >> "$GITHUB_OUTPUT"
+          echo "::notice::starting $n fleet node(s)"
+
+  node:
+    name: node ${{ matrix.i }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 350          # < 6 h hard cap, so the job ends cleanly
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        # A plain list: GitHub's expression language has no range(), and a
+        # literal list is easier to read than nested join/split gymnastics.
+        i: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    steps:
+      - name: Skip if this index is beyond the requested count
+        id: gate
+        env:
+          WANTED: ${{ needs.prepare.outputs.nodes }}
+        run: |
+          if [ "${{ matrix.i }}" -gt "$WANTED" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::node ${{ matrix.i }} not needed this wave"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: 22
+
+      - name: Give the node real tools (best effort, ~40 s)
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          sudo apt-get update -qq || true
+          sudo apt-get install -y -qq --no-install-recommends \
+            dnsutils whois nmap netcat-openbsd jq curl >/dev/null 2>&1 || true
+          echo "nmap: $(command -v nmap || echo missing) · dig: $(command -v dig || echo missing)"
+
+      - name: Join the fleet
+        if: steps.gate.outputs.run == 'true'
+        env:
+          HUB: ${{ vars.NOVA_HUB }}
+          IDX: ${{ matrix.i }}
+        run: |
+          HUB="${HUB:-ws://node.waifly.com:27214/api/local-agent/ws}"
+          echo "hub: $HUB"
+          # 5 h 40 m of work per wave, then a clean exit before the job limit.
+          timeout 20300 node nova-agent.js \
+            --server "$HUB" \
+            --id "gh-${IDX}-$(date +%H%M)" \
+            --log /tmp/nova-agent.log || true
+          echo "node leaving the fleet (wave finished)"
+          tail -20 /tmp/nova-agent.log || true

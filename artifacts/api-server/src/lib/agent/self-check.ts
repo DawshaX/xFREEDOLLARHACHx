@@ -362,11 +362,11 @@ async function probeFleet(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">>
       detail:
         ids.length > 0
           ? `الأسطول متصل: ${ids.length} نود (${ids.join(" · ")}) — بيستقبلوا أوامر وينفّذوها`
-          : "مفيش نودات متصلة — السيرفر شغّال لوحده (تقدر تضيف أي جهاز بـ nova-agent.js)",
+          : "مفيش نودات متصلة — السيرفر شغّال لوحده. شغّل موجة نودات مجانية من Actions → fleet-nodes، أو اربط أي جهاز بأمر واحد من /api/fleet/bootstrap",
       fix:
         ids.length > 0
           ? undefined
-          : "على أي سيرفر تاني: curl -fsSL <رابط-الـhub>/api/local-agent/download-nova-agent -o nova-agent.js ثم NOVA_SERVER=ws://<host>:<port>/api/local-agent/ws node nova-agent.js",
+          : "curl -fsSL <hub>/api/local-agent/download-agent | bash -s -- --server ws://<hub>/api/local-agent/ws --id node-2 — أو Run workflow على fleet-nodes (19 نود × 4 vCPU مجاناً)",
     };
   } catch (err) {
     return { status: "warn", detail: `تعذّر فحص الأسطول: ${(err as Error).message}` };
