@@ -99,17 +99,55 @@ const require = createRequire(import.meta.url);
 // Panels that let you edit files but not variables: copy node.env.example to
 // .env next to this file. Real environment variables always win.
 const envFile = join(HERE, ".env");
-if (existsSync(envFile)) {
-  for (const raw of readFileSync(envFile, "utf8").split(/\\r?\\n/)) {
-    const line = raw.trim();
-    if (!line || line.startsWith("#")) continue;
-    const eq = line.indexOf("=");
-    if (eq < 1) continue;
-    const k = line.slice(0, eq).trim();
-    const v = line.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
-    if (!(k in process.env)) process.env[k] = v;
+
+/**
+ * Read .env into an object. Called again for every child launch, so editing
+ * .env from the panel file manager and asking for a restart is enough — the
+ * container itself never has to be restarted. (Real environment variables set
+ * by the host still win; this only fills the gaps.)
+ */
+const readEnvFile = () => {
+  const out = {};
+  try {
+    for (const raw of readFileSync(envFile, "utf8").split(/\\r?\\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#")) continue;
+      const eq = line.indexOf("=");
+      if (eq < 1) continue;
+      out[line.slice(0, eq).trim()] = line.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+    }
+  } catch {
+    /* no .env — nothing to merge */
   }
-  console.log("[nova] loaded " + envFile);
+  return out;
+};
+
+/**
+ * Keys that came from .env (as opposed to the host's own environment).
+ * On reload those are refreshed: editing an existing key in .env must take
+ * effect, otherwise "paste a new API key and restart" would silently keep the
+ * old value. Host-provided variables (PORT, SERVER_PORT, …) are never
+ * overridden.
+ */
+const ENV_FROM_FILE = new Set();
+
+const loadEnvFile = () => {
+  const parsed = readEnvFile();
+  let n = 0;
+  for (const [k, v] of Object.entries(parsed)) {
+    const owned = ENV_FROM_FILE.has(k);
+    if (!owned && k in process.env) continue; // the host wins for its own vars
+    if (process.env[k] === v) continue;
+    process.env[k] = v;
+    ENV_FROM_FILE.add(k);
+    n += 1;
+  }
+  return n;
+};
+
+{
+  const n = loadEnvFile();
+  if (existsSync(envFile)) console.log("[nova] loaded " + envFile + (n ? " (" + n + " vars)" : ""));
 }
 
 // Sensible defaults for any container: reachable from outside, panel served
@@ -156,6 +194,9 @@ if (role === "node" || role === "agent") {
   let mark = stamp();
 
   const launch = () => {
+    // Re-read .env first: a key added in the panel takes effect on reload.
+    const fresh = loadEnvFile();
+    if (fresh) console.log("[supervisor] picked up " + fresh + " new env var(s) from .env");
     child = spawn(process.execPath, [ENTRY], {
       stdio: "inherit",
       env: Object.assign({}, process.env, { NOVA_SUPERVISED: "1" }),
