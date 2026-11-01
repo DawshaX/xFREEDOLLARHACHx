@@ -1,0 +1,92 @@
+# live probe — 2026-11-01T05:42:46Z
+target: http://node.waifly.com:27214
+
+## /api/health
+{"status":"ok","mode":"standalone","wsConnected":true,"timestamp":"2026-11-01T05:42:46.844Z"}
+## /api/nova-core/status
+{"ok":true,"identity":{"name":"نوفا (NOVA)","handle":"@nova","role":"شريك أمني ذكي — عقل منصة CyberNova","languages":["ar","en","fr","de","es","it","pt","ru","tr","fa","ur","hi","id","ms","zh","ja","ko","nl","pl","uk","sv","el","he","vi","th"],"version":"2099.1"},"brain":{"mode":"llm","ollamaOnline":false,"ollamaModel":"dolphin-llama3","cloudProviders":[{"id":"groq","label":"Groq (free tier)","model":"llama-3.3-70b-versatile"},{"id":"openrouter","label":"OpenRouter (free models)","model":"meta-llama/llama-3.3-70b-instruct:free"},{"id":"gemini","label":"Google Gemini (free tier)","model":"gemini-2.0-flash"},{"id":"openai","label":"OpenAI (مدفوع — آخر خيار)","model":"gpt-4o-mini"}],"note":"العقل اللغوي متصل — نوفا تفكّر وتخطّط بنفسها."},"council":{"members":[{"id":"groq","label":"Groq (free tier)","model":"llama-3.3-70b-versatile"},{"id":"openrouter","label":"OpenRouter (free models)","model":"meta-llama/llama-3.3-70b-instruct:free"},{"id":"gemini","label":"Google Gemini (free tier)","model":"gemini-2.0-flash"},{"id":"openai","label":"OpenAI (مدفوع — آخر خيار)","model":"gpt-4o-mini"},{"id":"ollama","label":"Ollama (محلي مجاني)","model":"dolphin-llama3"}],"mode":"vote","note":"المجلس جاهز — أكتر من نموذج بيتسألوا مع بعض، ونموذج مختلف بيحكم بينهم."},"tools":33,"categories":["recon","intel","memory","mission","platform","utility","fleet"]}
+## /api/nova-core/council/ping (new bundle only)
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Cyber-Nova 2099 — Ethical Security & Bug Bounty Platform</title>
+    <script>
+      (function () {
+        try {
+          localStorage.removeItem("cybernova_home_activity_v2");
+          window.addEventListener("error", function (e) {
+            var msg = String((e && e.message) || "");
+            if (
+              (msg.indexOf("is not defined") !== -1 ||
+                msg.indexOf("Failed to fetch dynamically imported module") !== -1 ||
+                msg.indexOf("Importing a module script failed") !== -1) &&
+              !sessionStorage.getItem("cybernova_hard_reload_v15")
+            ) {
+              sessionStorage.setItem("cybernova_hard_reload_v15", "1");
+              var u = new URL(window.location.href);
+              u.searchParams.set("_v", String(Date.now()));
+              window.location.replace(u.toString());
+            }
+          });
+        } catch (_err) {}
+      })();
+    </script>
+    <meta name="description" content="Cyber-Nova Panel — built on Replit. Update this description to reflect the app." />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="Cyber-Nova Panel" />
+    <meta property="og:description" content="Cyber-Nova Panel — built on Replit. Update this description to reflect the app." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Cyber-Nova Panel" />
+    <meta name="twitter:description" content="Cyber-Nova Panel — built on Replit. Update this description to reflect the app." />
+    <link rel="icon" type="image/svg+xml" h
+## POST /api/multi-ai/chat  (real model call, SSE)
+event: status
+data: {"status":"thinking","provider":"auto"}
+
+event: error
+data: {"error":"❌ فشلت جميع نماذج AI المتاحة:\n[groq] 404 The model `llama-3.1-8b-instant` does not exist or you do not have access to it.\n[openrouter] 404 This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.1-8b-instruct\n[gemini] 404 status code (no body)"}
+
+
+## POST /api/nova-core/chat  (ready event names the provider)
+event: ready
+data: {"type":"ready","sessionId":"nova-1793511768273","mode":"heuristic","provider":"nova-builtin","model":"nova-heuristic","tools":33}
+event: thought
+data: {"type":"thought","text":"هجمع السياق من ذاكرتي وحالة المنصة قبل أي استنتاج. [مسار: fallback-context]"}
+event: plan
+data: {"type":"plan","steps":[{"tool":"memory_search","args":{"query":"اكتب كلمة واحدة بس: تمام"}},{"tool":"platform_status","args":{}}]}
+event: tool_call
+data: {"type":"tool_call","id":"1-memory_search","name":"memory_search","title":"بحث في الذاكرة طويلة الأمد","args":{"query":"اكتب كلمة واحدة بس: تمام"},"risk":"safe"}
+event: tool_result
+data: {"type":"tool_result","id":"1-memory_search","name":"memory_search","ok":true,"summary":"1 ذكرى عن \"اكتب كلمة واحدة بس: تمام\" · أقربها: جلسة نوفا: اكتب كلمة واحدة بس: تمام","ms":0,"dataPreview":"[{\"id\":\"mem_644b560129fb\",\"kind\":\"session\",\"scope\":\"bughunters.google.com\",\"title\":\"جلسة نوفا: اكتب كلمة واحدة بس: تمام\",\"content\":\"سؤال: اكتب كلمة واحدة بس: تمام\\nالأدوات: memory_search, platform_status\\nالنتائج: memory_search → مفيش ذكرى عن \\\"اكتب كلمة واحدة بس: تمام\\\" | platform_status → المنصة سليمة · 4 ذكرى · 3354 نمط · 33 أداة\\nالرد: تمام، نفّذت **2** أداة (1 نجحت · 1 فشلت). دي القراءة:\\n\\n### ⚠️ memory_search\\nمفيش ذكرى عن \\\"اكتب كلمة واحدة بس: تمام\\\"\\n\\n### ✅ platform_status\\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 33 أداة\\n\\n## اللي فشل وليه\\n- **memory_search:** مفيش ذكرى عن \\\"اكتب كلمة واحدة بس: تمام\\\"\\n\\n## الخطوة التالية المقترحة\\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في …"}
+event: tool_call
+data: {"type":"tool_call","id":"2-platform_status","name":"platform_status","title":"حالة المنصة","args":{},"risk":"safe"}
+event: tool_result
+data: {"type":"tool_result","id":"2-platform_status","name":"platform_status","ok":true,"summary":"المنصة سليمة · 5 ذكرى · 3354 نمط · 33 أداة","ms":0,"dataPreview":"{\"memories\":5,\"missions\":1,\"activeTarget\":\"bughunters.google.com\",\"findings\":8,\"evidence\":1,\"corpus\":{\"kaliToolsCount\":78,\"kaliCategoriesCount\":13,\"githubProjectsCount\":56,\"vulnPrimitivesCount\":28,\"targetSurfacesCount\":19,\"synthesizedPatternsCount\":3192,\"totalIndexedKnowledgeItems\":3354},\"tools\":33}"}
+event: delta
+data: {"type":"delta","text":"تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n##"}
+event: delta
+data: {"type":"delta","text":"# ✅ memory_search\n1 ذكرى عن \"اكتب كلمة واحدة بس:"}
+event: delta
+data: {"type":"delta","text":" تمام\" · أقربها: جلسة نوفا: اكتب كلمة واحدة بس: "}
+event: delta
+data: {"type":"delta","text":"تمام\n\n### ✅ platform_status\nالمنصة سليمة · 5 ذكر"}
+event: delta
+data: {"type":"delta","text":"ى · 3354 نمط · 33 أداة\n\n## الخطوة التالية المقتر"}
+event: delta
+data: {"type":"delta","text":"حة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث "}
+event: delta
+data: {"type":"delta","text":"عنها في NVD."}
+event: memory
+data: {"type":"memory","id":"mem_644b560129fb","title":"جلسة نوفا: اكتب كلمة واحدة بس: تمام"}
+
+## POST /api/nova-core/council (new bundle only)
+{"ok":false,"question":"إيه أول خطوة في فحص نطاق مصرّح به؟ سطرين بالكتير.","members":[{"provider":"groq","label":"Groq (free tier)","model":"llama-3.3-70b-versatile","ok":false,"text":"","ms":25,"error":"groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"co"},{"provider":"openrouter","label":"OpenRouter (free models)","model":"meta-llama/llama-3.3-70b-instruct:free","ok":false,"text":"","ms":56,"error":"openrouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.3-70b"},{"provider":"gemini","label":"Google Gemini (free tier)","model":"gemini-2.0-flash","ok":false,"text":"","ms":182,"error":"gemini HTTP 404: [{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"This model models/gemini-2.0-flash is no longer available. Please update your code to use m"}],"agreement":0,"agreementLabel":"صوت واحد","judge":null,"answer":"","disagreements":[],"ms":238,"error":"كل النماذج فشلت في الرد.","hint":"groq: groq HTTP 404: {\"error\":{\"message\":\"The model `llama-3.3-70b-versatile` does not exist or you do not have access to it.\",\"type\":\"invalid_request_error\",\"co · openrouter: openrouter HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: meta-llama/llama-3.3-70b · gemini: gemini HTTP 404: [{\n  \"error\": {\n    \"code\": 404,\n  "}
+## fleet
+{"agents":[],"count":0}
+{"ok":true,"now":1793511769756,"capacity":{"machines":{"target":5,"connected":0},"agents":{"target":10,"connected":0},"ready":false,"installCommand":"curl -fsSL <host>/api/local-agent/download-agent | bash -s -- --id machine-N"},"nodes":[{"id":"nova","name":"نوفا · الدماغ","kind":"brain","role":"التخطيط والتنفيذ على 33 أداة","status":"online","route":"/nova-agent"},{"id":"nova-v3","name":"Nova Agent V3","kind":"internal","role":"وكيل الجيل الثالث","status":"online","route":"/nova-agent-v3"},{"id":"nova-v6","name":"Nova Agent V6","kind":"internal","role":"وكيل الجيل السادس","status":"online","route":"/nova-agent-v6"},{"id":"commander","name":"Nova Commander","kind":"internal","role":"قيادة الأسراب وتوزيع الم
