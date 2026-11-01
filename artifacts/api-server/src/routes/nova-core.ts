@@ -11,8 +11,9 @@
 import { Router, type Request, type Response } from "express";
 import { runAgent, type AgentEvent } from "../lib/agent/core";
 import { AGENT_TOOLS, runAgentTool, getToolSpec } from "../lib/agent/tools";
-import { buildPersonaCard, NOVA_IDENTITY } from "../lib/agent/persona";
+import { buildPersonaCard, NOVA_IDENTITY, NOVA_SYSTEM_PROMPT } from "../lib/agent/persona";
 import { listConfiguredProviders } from "../lib/agent/llm";
+import { councilMembers, runCouncil, fastComplete } from "../lib/agent/council";
 import {
   listMemories,
   memoryStats,
@@ -53,6 +54,8 @@ router.post("/nova-core/chat", async (req: Request, res: Response) => {
     history?: Array<{ role: "user" | "assistant"; content: string }>;
     forceHeuristic?: boolean;
     approve?: string[];
+    /** Ask the whole council instead of a single model (slower, cross-checked). */
+    council?: boolean;
   };
   const message = String(body.message ?? "").trim();
   if (!message) {
@@ -90,6 +93,35 @@ router.post("/nova-core/chat", async (req: Request, res: Response) => {
   }, 15_000);
 
   try {
+    // Council mode: the same question goes to every configured model at once,
+    // a different model judges them, and the verdict is streamed as the reply.
+    // Slower than one model on purpose — it exists for the answers where being
+    // wrong is expensive.
+    if (body.council === true) {
+      emit({ type: "ready", sessionId: body.sessionId || `nova-${Date.now()}`, mode: "llm", provider: "council", model: "multi-model", tools: AGENT_TOOLS.length } as AgentEvent);
+      const verdict = await runCouncil([...((body.history ?? []).slice(-6) as Array<{ role: "user" | "assistant"; content: string }>), { role: "user" as const, content: message }], {
+        system: NOVA_SYSTEM_PROMPT,
+      });
+      const text = verdict.ok
+        ? verdict.answer
+        : `مفيش إجابة من المجلس: ${verdict.error ?? "سبب غير معروف"}\n\n${verdict.hint ?? ""}`;
+      for (const chunk of text.match(/[\s\S]{1,80}/g) ?? [text]) {
+        emit({ type: "delta", text: chunk } as AgentEvent);
+      }
+      emit({
+        type: "done",
+        sessionId: body.sessionId || "nova-council",
+        mode: "llm",
+        toolCount: 0,
+        ms: verdict.ms,
+        provider: verdict.judge ? `${verdict.members.length} نماذج · حكم: ${verdict.judge.provider}` : `صوت واحد: ${verdict.members.find((m) => m.ok)?.provider ?? "?"}`,
+      } as AgentEvent);
+      broadcastEvent({ type: "agent_run_complete", agent: "nova", mode: "council", tools: [], ts: Date.now() });
+      clearInterval(heartbeat);
+      if (!closed && !res.writableEnded) res.end();
+      return;
+    }
+
     const result = await runAgent({
       message,
       sessionId: body.sessionId,
@@ -127,6 +159,7 @@ router.get("/nova-core/status", async (_req: Request, res: Response) => {
       }
     }
     const cloudProviders = providers.filter((p) => p.id !== "ollama");
+    const councilSeats = await councilMembers(9);
     res.json({
       ok: true,
       identity: NOVA_IDENTITY,
@@ -140,9 +173,106 @@ router.get("/nova-core/status", async (_req: Request, res: Response) => {
             ? "العقل اللغوي متصل — نوفا تفكّر وتخطّط بنفسها."
             : "لا يوجد نموذج لغوي متاح الآن، لكن العقل المدمج ينفّذ نفس الأدوات الحقيقية بنفس الترتيب.",
       },
+      council: {
+        members: councilSeats.map((p) => ({ id: p.id, label: p.label, model: p.model })),
+        mode: councilSeats.length >= 2 ? "vote" : "single",
+        note:
+          councilSeats.length >= 2
+            ? "المجلس جاهز — أكتر من نموذج بيتسألوا مع بعض، ونموذج مختلف بيحكم بينهم."
+            : "نموذج واحد (أو ولا واحد) — ضيف مفتاح مجاني تاني والمجلس يبقى تصويت حقيقي.",
+      },
       tools: AGENT_TOOLS.length,
       categories: [...new Set(AGENT_TOOLS.map((t) => t.category))],
     });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+/* ── the council (multi-model deliberation) ──────────────────────────────── */
+
+/**
+ * GET /api/nova-core/council
+ * Who is sitting in the council right now, and what would it take to have a real
+ * vote (two or more voices).
+ */
+router.get("/nova-core/council", async (_req: Request, res: Response) => {
+  try {
+    const seats = await councilMembers(9);
+    res.json({
+      ok: true,
+      seats: seats.map((p) => ({ id: p.id, label: p.label, model: p.model, free: true })),
+      voting: seats.length >= 2,
+      note:
+        seats.length >= 2
+          ? "المجلس بيصوّت — كل سؤال بيتسأل لأكتر من نموذج، ونموذج مختلف بيحكم."
+          : "محتاج مفتاح مجاني واحد على الأقل (أو اتنين لتصويت حقيقي).",
+      freeKeys: {
+        groq: "console.groq.com → API Keys (مجاني، أسرع استجابة)",
+        gemini: "aistudio.google.com/apikey (مجاني)",
+        cerebras: "cloud.cerebras.ai (مجاني، سريع جداً)",
+        openrouter: "openrouter.ai/keys (نماذج :free كتير)",
+        "github-models": "github.com/settings/tokens → GITHUB_MODELS_TOKEN (مجاني بحساب GitHub)",
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+/**
+ * POST /api/nova-core/council  { message, history?, members? }
+ * Ask every configured model the same question in parallel, then have a
+ * different model judge them. Returns one answer + where they disagreed.
+ */
+router.post("/nova-core/council", async (req: Request, res: Response) => {
+  const message = String(req.body?.message ?? "").trim();
+  if (!message) {
+    res.status(400).json({ ok: false, error: "مفيش رسالة — اكتب سؤالك." });
+    return;
+  }
+
+  const history = Array.isArray(req.body?.history)
+    ? (req.body.history as Array<{ role: "user" | "assistant"; content: string }>)
+        .filter((h) => h && typeof h.content === "string")
+        .slice(-6)
+        .map((h) => ({ role: h.role === "assistant" ? ("assistant" as const) : ("user" as const), content: h.content.slice(0, 2000) }))
+    : [];
+
+  try {
+    const report = await runCouncil([...history, { role: "user", content: message }], {
+      members: Number(req.body?.members) || undefined,
+      system: NOVA_SYSTEM_PROMPT,
+    });
+    res.setHeader("Cache-Control", "no-store");
+    res.status(report.ok ? 200 : 503).json(report);
+  } catch (err) {
+    logger.warn({ err }, "council failed");
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+/**
+ * POST /api/nova-core/fast  { message }
+ * Race the providers and return the first good answer — for when waiting on a
+ * dead provider would cost more than the answer is worth.
+ */
+router.post("/nova-core/fast", async (req: Request, res: Response) => {
+  const message = String(req.body?.message ?? "").trim();
+  if (!message) {
+    res.status(400).json({ ok: false, error: "مفيش رسالة." });
+    return;
+  }
+  try {
+    const result = await fastComplete([
+      { role: "system", content: NOVA_SYSTEM_PROMPT },
+      { role: "user", content: message },
+    ]);
+    if (!result) {
+      res.status(503).json({ ok: false, error: "مفيش نموذج رد في الوقت المتاح.", losers: [] });
+      return;
+    }
+    res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }
