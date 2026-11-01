@@ -83,6 +83,7 @@ import novaGatewayRouter from "./nova-gateway";
 import novaCoreRouter from "./nova-core";
 import fleetMeshRouter from "./fleet-mesh";
 import fleetCapacityRouter from "./fleet-capacity";
+import panelGapsRouter from "./panel-gaps";
 
 const router: IRouter = Router();
 
@@ -135,6 +136,8 @@ router.use(novaCoreRouter);
 router.use(fleetMeshRouter);
 // Free-stack catalogue + real capacity of the connected fleet.
 router.use(fleetCapacityRouter);
+// Endpoints the panel calls that used to fall through to the SPA HTML.
+router.use(panelGapsRouter);
 
 // ── AI / Chat ────────────────────────────────────────────────────────────────
 router.use(liveAgentRouter);
