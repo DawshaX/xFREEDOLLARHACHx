@@ -308,28 +308,6 @@ app.post("/api/kali-command/chat", async (req: Request, res: Response) => {
   res.end();
 });
 
-app.get("/api/local-agent/exec-stream", async (req: Request, res: Response) => {
-  const cmd = String(req.query.command || req.query.cmd || "whoami && uname -a");
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
-  const send = (data: unknown) => {
-    if (!res.writableEnded) {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-    }
-  };
-  send({ type: "stdout", data: `kali@cybernova-kali-sandbox:~$ ${cmd}\n` });
-  await new Promise((r) => setTimeout(r, 80));
-  send({
-    type: "stdout",
-    data: `Linux cybernova-kali-sandbox 6.8.0-kali-amd64 #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux\n[+] 64 Kali Tools & Zero-FP Gate Active.\n`,
-  });
-  await new Promise((r) => setTimeout(r, 60));
-  send({ type: "done", exitCode: 0 });
-  res.end();
-});
-
 app.get("/api/monitor/stream", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
