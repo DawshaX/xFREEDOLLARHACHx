@@ -198,11 +198,39 @@ server.on("upgrade", (req, socket, head) => {
   }
 });
 
-// Bind to 127.0.0.1 locally, 0.0.0.0 inside containers/cloud (HOST=0.0.0.0).
-const host = process.env.HOST?.trim() || "127.0.0.1";
+/**
+ * Where to bind.
+ *
+ * Defaulting to 127.0.0.1 was silently fatal on panel hosts (Pterodactyl /
+ * Waifly / Silly): the egg runs `node .` without HOST, the process listened on
+ * loopback *inside* the container, and the platform's nginx could not reach it
+ * → a permanent 502 Bad Gateway with a perfectly healthy process.
+ *
+ * Rule: an explicit HOST always wins; otherwise anything that looks like a
+ * hosting environment gets 0.0.0.0, and a plain local `pnpm dev` stays private.
+ */
+const hostingPortVar = ["SERVER_PORT", "APP_PORT", "WEB_PORT"].find((k) => process.env[k]);
+const host =
+  process.env.HOST?.trim() ||
+  (hostingPortVar || process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
+if (host === "127.0.0.1" && process.env.PORT && process.env.NODE_ENV !== "production") {
+  logger.warn(
+    "Binding to 127.0.0.1 — reachable from this machine only. Set HOST=0.0.0.0 to expose it (required on panel hosts).",
+  );
+}
+
+server.on("error", (err: NodeJS.ErrnoException) => {
+  // The most common panel failure: the platform gave us a port we cannot bind.
+  logger.error({ err, port, host }, `Cannot listen on ${host}:${port} — ${err.code ?? err.message}`);
+  console.error(`\n✗ Cannot listen on ${host}:${port} — ${err.code ?? err.message}\n`);
+  process.exit(1);
+});
 
 server.listen(port, host, () => {
   logger.info({ port, host }, `Server listening on ${host} (HTTP + /api/ws + /api/local-agent/ws)`);
+  // Plain line too: panel consoles (Pterodactyl) sometimes swallow JSON logs,
+  // which made a perfectly healthy process look dead.
+  console.log(`✓ NOVA listening on http://${host}:${port} — open /self-check`);
 
   // ── NOVA boot sequence (never blocks the listener) ────────────────────────
   void import("./lib/agent/memory-store")
