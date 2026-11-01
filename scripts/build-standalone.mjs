@@ -74,6 +74,55 @@ if (fs.existsSync(agentSrc)) {
   fs.copyFileSync(agentSrc, path.join(OUT, "nova-agent.js"));
 }
 
+/* ── 2. boot.mjs — one entry point, two roles ────────────────────────────── */
+/**
+ * THE point of this file: the same folder is both the hub and a node.
+ *
+ *   NOVA_ROLE        "hub" | "node"  (default: node when NOVA_SERVER is set)
+ *   NOVA_SERVER      hub WebSocket URL, e.g. wss://hub.example.com/api/local-agent/ws
+ *   NOVA_AGENT_ID    node name shown in the fleet
+ *
+ * Panels run `node .` → package.json "main" → this file, so the role is picked
+ * from the environment only — no editing, no second zip.
+ */
+fs.writeFileSync(
+  path.join(OUT, "boot.mjs"),
+  `#!/usr/bin/env node
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+
+// Sensible defaults for any container: reachable from outside, panel served
+// from this folder, memory kept next to the code.
+process.env.HOST = process.env.HOST || "0.0.0.0";
+process.env.NODE_ENV = process.env.NODE_ENV || "production";
+process.env.NOVA_STATIC_DIR = process.env.NOVA_STATIC_DIR || join(HERE, "public");
+process.env.NOVA_MEMORY_FILE = process.env.NOVA_MEMORY_FILE || join(HERE, "state", "nova-memory.json");
+
+const explicit = String(process.env.NOVA_ROLE || "").trim().toLowerCase();
+const role = explicit || (process.env.NOVA_SERVER ? "node" : "hub");
+
+console.log("┌─ NOVA boot ─────────────────────────────────────────────");
+console.log("│ role      : " + role + (explicit ? " (NOVA_ROLE)" : " (auto)"));
+console.log("│ node      : " + process.version + " · " + process.platform + "/" + process.arch);
+if (role === "node" || role === "agent") {
+  console.log("│ hub       : " + (process.env.NOVA_SERVER || "(not set — using default)"));
+  console.log("│ agent id  : " + (process.env.NOVA_AGENT_ID || "(hostname)"));
+  console.log("└─────────────────────────────────────────────────────────");
+  // The agent is CommonJS; load it through require so there is no ESM/CJS clash.
+  require("./nova-agent.js");
+} else {
+  console.log("│ port      : " + (process.env.PORT || process.env.SERVER_PORT || "8080"));
+  console.log("│ static    : " + process.env.NOVA_STATIC_DIR);
+  console.log("└─────────────────────────────────────────────────────────");
+  await import("./server.mjs");
+}
+`,
+);
+
 /* ── 2. launch scripts ───────────────────────────────────────────────────── */
 fs.writeFileSync(
   path.join(OUT, "start.sh"),
@@ -84,7 +133,7 @@ export NODE_ENV=production
 export HOST=0.0.0.0
 export NOVA_STATIC_DIR="$(cd "$(dirname "$0")" && pwd)/public"
 export NOVA_MEMORY_FILE="$(cd "$(dirname "$0")" && pwd)/state/nova-memory.json"
-exec node server.mjs
+exec node boot.mjs
 `,
   { mode: 0o755 },
 );
@@ -125,9 +174,13 @@ fs.writeFileSync(
       // (explicit ESM), while nova-agent.js ships alongside it as CommonJS.
       // Declaring the whole folder as ESM made `node nova-agent.js` crash with
       // "require is not defined in ES module scope".
-      description: "CyberNova NOVA — portable single-file server, no dependencies",
-      main: "server.mjs",
-      scripts: { start: "node server.mjs" },
+      description: "CyberNova NOVA — portable 24/7 server + fleet node, no dependencies",
+      main: "boot.mjs",
+      scripts: {
+        start: "node boot.mjs",
+        hub: "NOVA_ROLE=hub node boot.mjs",
+        node: "NOVA_ROLE=node node boot.mjs",
+      },
       engines: { node: ">=20" },
     },
     null,
@@ -137,41 +190,167 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.join(OUT, "README.txt"),
-  `NOVA — النسخة المحمولة (24/7 من غير تثبيت)
-==========================================
+  `NOVA — النسخة الكاملة المحمولة (هاب + نود في نفس المجلد)
+=========================================================
 
-التشغيل:
-    node server.mjs
-أو:
-    sh start.sh
+مفيش npm install. مفيش build. Node 20+ بس.
 
-البورت: من متغيّر PORT أو SERVER_PORT (لوحات الاستضافة المجانية بتستخدم التاني).
-الاستماع: 0.0.0.0 — يعني متاح من برّه.
+────────────────────────────────────────────────────────────
+① تشغيل كـ«هاب» (السيرفر الرئيسي)
+────────────────────────────────────────────────────────────
+    node .
+أو    sh start.sh
 
-الذاكرة طويلة الأمد في: state/nova-memory.json
-نسخة احتياطية: GET /api/nova-core/memory/export
+- البورت: PORT أو SERVER_PORT (اللي الاستضافة بتحدده)
+- الاستماع: 0.0.0.0 — متاح من برّه
+- الواجهة: /self-check   ·   الذاكرة: state/nova-memory.json
 
-HTTPS من غير حساب ولا كارت:
+────────────────────────────────────────────────────────────
+② تشغيل كـ«نود» (سيرفر تاني ينضم للأسطول)
+────────────────────────────────────────────────────────────
+حط المتغيرين دول في إعدادات السيرفر (أو في ملف .env — شوف node.env.example):
+
+    NOVA_ROLE=node
+    NOVA_SERVER=wss://<عنوان-الهاب>/api/local-agent/ws
+    NOVA_AGENT_ID=waifly-2        # اسم اختياري
+
+وبعدها نفس الأمر:   node .
+
+⚠️ مهم: من داخل شبكة استضافة لنفس الاستضافة، البورت المخصص غالباً مقفول
+   (NAT hairpin) → استخدم wss:// على الدومين، مش ws:// على node.host:port
+
+لو مش عارف المشكلة:   node diagnose.mjs
+   بيطبّع ٣ نتائج: health / tcp / upgrade + تفسير كل واحد.
+
+────────────────────────────────────────────────────────────
+③ HTTPS مجاني بدون حساب (لو الاستضافة مش بتدي شهادة)
+────────────────────────────────────────────────────────────
     sh start-tunnel.sh
-هيطبع https://<random>.trycloudflare.com — ده الرابط اللي تحطه في الصفحة
-(«نوفا · الأسطول الموحّد» → «وسّع القدرات»).
+- بيطبّع https://<random>.trycloudflare.com — خده وحطه في صفحة الأسطول
+- ما بيحتاجش تسجيل ولا كارت
 
-فحص الحالة:
-    افتح /self-check  أو  /api/nova-core/self-check
+────────────────────────────────────────────────────────────
+④ منافذ إضافية (لو البروكسي بيوجّه لبورت تاني)
+────────────────────────────────────────────────────────────
+    NOVA_EXTRA_PORTS=3000,8080,80 node .
 
-إضافة سيرفر/جهاز تاني كـ"نود" في الأسطول (بدون أي تثبيت):
-    curl -fsSL http://<عنوان-الهاب>:<البورت>/api/local-agent/download-nova-agent -o nova-agent.js
-    NOVA_SERVER=ws://<عنوان-الهاب>:<البورت>/api/local-agent/ws NOVA_AGENT_ID=node-2 node nova-agent.js
-  النود بيسجّل نفسه، بيبعت موارده وأدواته، وبيستقبل أوامر تنفيذ من الهاب.
-  لو البروكسي رافض WebSocket على البورت المباشر، جرّب wss://<سب-دومين>/api/local-agent/ws
-  أو ادمج أكتر من عنوان مفصول بفاصلة — الوكيل بيلف بينهم تلقائياً.
-
-منافذ إضافية (لو البروكسي بيوجّه لبورت تاني):
-    NOVA_EXTRA_PORTS=3000,8080 node server.mjs
-
-المتطلبات: Node 20+ فقط. مفيش npm install، مفيش build.
-الحجم ~10MB · الذاكرة ~110MB RSS · بيدخل في 256MB.
+────────────────────────────────────────────────────────────
+⑤ الملفات
+────────────────────────────────────────────────────────────
+    boot.mjs          الدخول (يختار الدور تلقائياً)
+    server.mjs        السيرفر كامل في ملف واحد
+    nova-agent.js     وكيل النود (بيتنفّذ أوامر الهاب)
+    public/           الواجهة جاهزة
+    state/            الذاكرة وملفات الحالة
+    diagnose.mjs      تشخيص اتصال النود
+    node.env.example  نموذج إعدادات النود
+    start.sh          تشغيل الهاب
+    start-node.sh     تشغيل النود
+    start-tunnel.sh   هاب + HTTPS مجاني
 `,
+);
+
+/* ── 2b. node helpers ────────────────────────────────────────────────────── */
+
+// A ready-to-edit env file: panels that support ".env"/environment files can
+// drop this in, everyone else sets the same two variables in the UI.
+fs.writeFileSync(
+  path.join(OUT, "node.env.example"),
+  `# ── اجعل هذا المجلد "نود" في الأسطول ──────────────────────────────────────
+# انسخ الملف ده لاسم  .env  (أو حط نفس المتغيرين في إعدادات السيرفر)
+NOVA_ROLE=node
+NOVA_AGENT_ID=waifly-2
+# عنوان الهاب (البروكسي بـHTTPS ينفع، والبورت المخصص غالباً ممنوع من داخل نفس الشبكة)
+NOVA_SERVER=wss://xdaw.waifly.com/api/local-agent/ws
+
+# اجعل هذا المجلد "هاب" بدل النود: احذف السطور فوق أو خليها
+# NOVA_ROLE=hub
+`,
+);
+
+// One-shot self-test for a node: tells you why it cannot reach the hub.
+fs.writeFileSync(
+  path.join(OUT, "diagnose.mjs"),
+  `#!/usr/bin/env node
+/**
+ * NOVA — "ليه النود مش بيتصل؟" تشخيص سريع.
+ *   node diagnose.mjs                      # يختبر NOVA_SERVER من البيئة
+ *   node diagnose.mjs wss://host/api/local-agent/ws
+ */
+import net from "node:net";
+import tls from "node:tls";
+
+const target = process.argv[2] || process.env.NOVA_SERVER || "ws://127.0.0.1:8080/api/local-agent/ws";
+const m = /^(wss?):\\/\\/([^/]+)(\\/.*)?$/i.exec(target);
+if (!m) {
+  console.error("✗ عنوان غير صالح:", target);
+  process.exit(2);
+}
+const [, scheme, hostPort, pathPart = "/api/local-agent/ws"] = m;
+const secure = scheme.toLowerCase() === "wss";
+const [host, portRaw] = hostPort.split(":");
+const port = Number(portRaw || (secure ? 443 : 80));
+const httpBase = \`\${secure ? "https" : "http"}://\${hostPort}\`;
+
+console.log("target:", target);
+console.log("host  :", host, "port:", port, secure ? "(tls)" : "(plain)");
+
+// 1) HTTP reachability of the same origin
+try {
+  const r = await fetch(\`\${httpBase}/api/health\`, { signal: AbortSignal.timeout(8000) });
+  console.log("① health:", r.status, (await r.text()).slice(0, 80));
+} catch (e) {
+  console.log("① health: فشل —", e.cause?.code || e.message);
+}
+
+// 2) raw TCP reachability
+await new Promise((resolve) => {
+  const s = net.connect({ host, port });
+  s.setTimeout(8000, () => { console.log("② tcp   : timeout"); s.destroy(); resolve(); });
+  s.once("connect", () => { console.log("② tcp   : مفتوح ✓"); s.destroy(); resolve(); });
+  s.once("error", (e) => { console.log("② tcp   : فشل —", e.code); resolve(); });
+});
+
+// 3) the actual WebSocket upgrade, with the real status line
+await new Promise((resolve) => {
+  const socket = secure ? tls.connect({ host, port, servername: host }) : net.connect({ host, port });
+  const send = () =>
+    socket.write(
+      \`GET \${pathPart} HTTP/1.1\\r\\nHost: \${hostPort}\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\n\` +
+        "Sec-WebSocket-Key: MTIzNDU2Nzg5MGFiY2RlZg==\\r\\nSec-WebSocket-Version: 13\\r\\n\\r\\n",
+    );
+  if (secure) socket.once("secureConnect", send); else socket.once("connect", send);
+  socket.setTimeout(9000, () => { console.log("③ upgrade: timeout"); socket.destroy(); resolve(); });
+  socket.on("data", (d) => {
+    console.log("③ upgrade:", d.toString("latin1").split("\\r\\n")[0]);
+    socket.destroy();
+    resolve();
+  });
+  socket.on("error", (e) => { console.log("③ upgrade: فشل —", e.code || e.message); resolve(); });
+});
+
+console.log("");
+console.log("تفسير السطر ③:");
+console.log("  101 Switching Protocols → كل حاجة تمام، النود هيتصل");
+console.log("  502 / 504              → البروكسي مش واصل للتطبيق (جرّب ربط السب-دومين من جديد)");
+console.log("  404                    → المسار غلط (لازم ينتهي بـ /api/local-agent/ws)");
+console.log("  400                    → مفتاح الـhandshake غلط (باج في التشخيص نفسه، بلّغ)")
+console.log("  ECONNRESET / timeout   → البورت مقفول من الشبكة اللي انت فيها (استخدم wss:// على دومين)");
+`,
+  { mode: 0o755 },
+);
+
+// Startup helper for panels that run a shell command instead of node .
+fs.writeFileSync(
+  path.join(OUT, "start-node.sh"),
+  `#!/bin/sh
+# شغّل هذا المجلد كـ"نود" ينضم للأسطول (بدون تعديل أي ملف).
+: "\${NOVA_SERVER:?حط عنوان الهاب: NOVA_SERVER=wss://hub.example.com/api/local-agent/ws}"
+export NOVA_ROLE=node
+export NOVA_AGENT_ID="\${NOVA_AGENT_ID:-$(hostname)}"
+exec node boot.mjs
+`,
+  { mode: 0o755 },
 );
 
 /* ── 3. zip it ───────────────────────────────────────────────────────────── */
