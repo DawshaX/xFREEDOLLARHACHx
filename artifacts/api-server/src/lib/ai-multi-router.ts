@@ -178,36 +178,88 @@ async function getApiKey(id: MultiProviderId): Promise<string | null> {
 }
 
 // ── Availability Check ────────────────────────────────────────────────────────
-const availCache = new Map<MultiProviderId, { ok: boolean; ts: number }>();
+/**
+ * "Has a key" is NOT the same as "works". A mistyped or revoked key used to be
+ * reported green forever, which is worse than reporting nothing: it made the
+ * dashboard lie. This asks the provider one real 1-token question and believes
+ * only the HTTP status.
+ *
+ *   ok   → cached 5 min (a tiny request, but not free)
+ *   fail → cached 2 min (so a fixed key is picked up quickly)
+ */
+const availCache = new Map<MultiProviderId, { ok: boolean; ts: number; ms?: number; detail?: string }>();
+const AVAIL_OK_MS = 10 * 60 * 1000;
+const AVAIL_FAIL_MS = 10 * 60 * 1000;
 
-async function checkAvailable(id: MultiProviderId): Promise<boolean> {
-  const cached = availCache.get(id);
-  if (cached && Date.now() - cached.ts < 60_000) return cached.ok;
-
-  const apiKey = await getApiKey(id);
-  if (!apiKey) {
-    availCache.set(id, { ok: false, ts: Date.now() });
-    return false;
-  }
+async function probeProvider(id: MultiProviderId, apiKey: string): Promise<{ ok: boolean; ms: number; detail?: string }> {
+  const def = PROVIDER_DEFS.find((p) => p.id === id)!;
+  const started = Date.now();
 
   if (id === "ollama-local") {
     const base = (await getSetting("ollamaBaseUrl")) || process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
     try {
-      const ctrl = new AbortController();
-      setTimeout(() => ctrl.abort(), 2500);
-      const r = await fetch(`${base}/api/tags`, { signal: ctrl.signal });
-      const ok = r.ok;
-      availCache.set(id, { ok, ts: Date.now() });
-      return ok;
-    } catch {
-      availCache.set(id, { ok: false, ts: Date.now() });
-      return false;
+      const r = await fetch(`${base.replace(/\/$/, "")}/api/tags`, { signal: AbortSignal.timeout(2500) });
+      return { ok: r.ok, ms: Date.now() - started, detail: r.ok ? "local" : `HTTP ${r.status}` };
+    } catch (err) {
+      return { ok: false, ms: Date.now() - started, detail: (err as Error).message.slice(0, 80) };
     }
   }
 
-  // For all other providers, having a key means available
-  availCache.set(id, { ok: true, ts: Date.now() });
-  return true;
+  try {
+    const model = (await getSetting(`multi_model_${id}`)) || def.defaultModel;
+    const r = await fetch(`${def.baseURL}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ model, messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),
+      signal: AbortSignal.timeout(5000),
+    });
+    const ms = Date.now() - started;
+    if (r.ok) return { ok: true, ms, detail: model };
+    const body = await r.text().catch(() => "");
+    return { ok: false, ms, detail: `HTTP ${r.status} ${body.slice(0, 90)}` };
+  } catch (err) {
+    return { ok: false, ms: Date.now() - started, detail: (err as Error).message.slice(0, 90) };
+  }
+}
+
+async function checkAvailable(id: MultiProviderId): Promise<boolean> {
+  const cached = availCache.get(id);
+  if (cached) {
+    const ttl = cached.ok ? AVAIL_OK_MS : AVAIL_FAIL_MS;
+    if (Date.now() - cached.ts < ttl) return cached.ok;
+  }
+
+  const apiKey = await getApiKey(id);
+  if (!apiKey) {
+    availCache.set(id, { ok: false, ts: Date.now(), detail: "no key" });
+    return false;
+  }
+
+  const result = await probeProvider(id, apiKey);
+  availCache.set(id, { ok: result.ok, ts: Date.now(), ms: result.ms, detail: result.detail });
+  return result.ok;
+}
+
+/** Last real probe result for a provider (latency + why it failed). */
+export function providerProbeInfo(id: MultiProviderId): { ms?: number; detail?: string } {
+  const c = availCache.get(id);
+  return { ms: c?.ms, detail: c?.detail };
+}
+
+/** Force a fresh probe of every provider (used by the council ping endpoint). */
+export async function recheckAllProviders(): Promise<Array<{ id: MultiProviderId; ok: boolean; ms: number; detail?: string }>> {
+  return Promise.all(
+    PROVIDER_DEFS.map(async (def) => {
+      const apiKey = await getApiKey(def.id);
+      if (!apiKey) {
+        availCache.set(def.id, { ok: false, ts: Date.now(), detail: "no key" });
+        return { id: def.id, ok: false, ms: 0, detail: "no key" };
+      }
+      const result = await probeProvider(def.id, apiKey);
+      availCache.set(def.id, { ok: result.ok, ts: Date.now(), ms: result.ms, detail: result.detail });
+      return { id: def.id, ...result };
+    }),
+  );
 }
 
 // ── Build provider info list ──────────────────────────────────────────────────
@@ -218,10 +270,13 @@ export async function listMultiProviders(): Promise<MultiProviderInfo[]> {
       const enabled = (await getSetting(`multi_provider_${def.id}_enabled`)) !== "false";
       const ex = exhaustionCache.get(def.id);
       const now = Date.now();
+      const probe = providerProbeInfo(def.id);
       return {
         ...def,
         available,
         enabled,
+        latencyMs: probe.ms,
+        lastError: probe.detail,
         ...(ex && ex.until > now ? { exhaustedUntil: ex.until, lastError: ex.reason } : {}),
       };
     })

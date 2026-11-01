@@ -13,7 +13,7 @@ import { runAgent, type AgentEvent } from "../lib/agent/core";
 import { AGENT_TOOLS, runAgentTool, getToolSpec } from "../lib/agent/tools";
 import { buildPersonaCard, NOVA_IDENTITY, NOVA_SYSTEM_PROMPT } from "../lib/agent/persona";
 import { listConfiguredProviders } from "../lib/agent/llm";
-import { councilMembers, runCouncil, fastComplete } from "../lib/agent/council";
+import { councilMembers, runCouncil, fastComplete, pingCouncil } from "../lib/agent/council";
 import {
   listMemories,
   memoryStats,
@@ -215,6 +215,21 @@ router.get("/nova-core/council", async (_req: Request, res: Response) => {
         "github-models": "github.com/settings/tokens → GITHUB_MODELS_TOKEN (مجاني بحساب GitHub)",
       },
     });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+/**
+ * GET /api/nova-core/council/ping
+ * One real request per model, so "the key is set" can never be mistaken for
+ * "the key works". Open this URL in a browser after editing .env.
+ */
+router.get("/nova-core/council/ping", async (_req: Request, res: Response) => {
+  try {
+    const result = await pingCouncil();
+    res.setHeader("Cache-Control", "no-store");
+    res.json(result);
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }

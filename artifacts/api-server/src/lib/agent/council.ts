@@ -364,3 +364,52 @@ export async function fastComplete(
     }
   });
 }
+
+/**
+ * Ping every council seat with one real request and report the truth.
+ *
+ * Why this exists: a dashboard that only checks "is a key set?" will happily
+ * show four green lights for four revoked keys. This asks each model a trivial
+ * question and reports the HTTP outcome and real latency, so a wrong key is
+ * visible in seconds instead of after a confusing reply.
+ */
+export async function pingCouncil(): Promise<{
+  ok: boolean;
+  seats: Array<{ provider: string; model: string; ok: boolean; ms: number; detail: string }>;
+  working: number;
+  total: number;
+  verdict: string;
+}> {
+  const members = await councilMembers(9);
+  const pinged = await Promise.all(
+    members.map(async (p) => {
+      const started = Date.now();
+      try {
+        const text = await (p.kind === "ollama"
+          ? ollamaChat(p, [{ role: "user", content: "Reply with the single word: OK" }], 0)
+          : openAiChat(p, [{ role: "user", content: "Reply with the single word: OK" }], 0));
+        return { provider: p.id, model: p.model, ok: true, ms: Date.now() - started, detail: text.slice(0, 40) || "ok" };
+      } catch (err) {
+        return {
+          provider: p.id,
+          model: p.model,
+          ok: false,
+          ms: Date.now() - started,
+          detail: String((err as Error).message).slice(0, 160),
+        };
+      }
+    }),
+  );
+
+  const working = pinged.filter((p) => p.ok).length;
+  const verdict =
+    working >= 3
+      ? `المجلس جاهز للتصويت: ${working} نماذج ردّت فعلاً.`
+      : working === 2
+        ? "نموذجان بيردّوا فعلاً — تصويت + حكم متبادل، كفاية."
+        : working === 1
+          ? "نموذج واحد بيرد فعلاً. الباقي مفتاحه غلط أو منتهي أو الحصة خلصت."
+          : "مفيش أي نموذج بيرد — راجع المفاتيح في ملف .env (لازم تبقى صح ومفعّلة).";
+
+  return { ok: working > 0, seats: pinged, working, total: pinged.length, verdict };
+}
