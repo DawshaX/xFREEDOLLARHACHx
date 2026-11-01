@@ -82,6 +82,7 @@ import multiAiRouter from "./multi-ai";
 import novaGatewayRouter from "./nova-gateway";
 import novaCoreRouter from "./nova-core";
 import fleetMeshRouter from "./fleet-mesh";
+import fleetCapacityRouter from "./fleet-capacity";
 
 const router: IRouter = Router();
 
@@ -132,6 +133,8 @@ router.use(novaGatewayRouter);
 // ── NOVA Core (persona + real tools + agent loop) ────────────────────────────
 router.use(novaCoreRouter);
 router.use(fleetMeshRouter);
+// Free-stack catalogue + real capacity of the connected fleet.
+router.use(fleetCapacityRouter);
 
 // ── AI / Chat ────────────────────────────────────────────────────────────────
 router.use(liveAgentRouter);
