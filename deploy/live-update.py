@@ -62,6 +62,7 @@ PROTECTED_NAMES = {
 }
 
 REQUIRED = ("server.mjs", "index.js", "boot.mjs", "package.json")
+PORT_CANDIDATES = (27214,)  # overridden by NOVA_PORT / $PORT when set
 
 
 def log(msg: str = "") -> None:
@@ -207,9 +208,46 @@ def main() -> int:
             pass
 
     log("")
+    # ── self-restart ────────────────────────────────────────────────────────
+    # The bundle runs under a supervisor (boot.mjs). Touching the restart
+    # marker is enough for it to reload the new code — no panel button.
+    ports = []
+    for raw in (os.environ.get("NOVA_PORT"), os.environ.get("SERVER_PORT"), os.environ.get("PORT")):
+        if raw and raw.strip().isdigit():
+            ports.append(int(raw.strip()))
+    ports.extend(PORT_CANDIDATES)
+    ports = list(dict.fromkeys(ports))
+
+    if restart_via_api(ports):
+        log("✓ طلبت إعادة تشغيل ذاتية — البرنامج هيرجع بالنسخة الجديدة بعد ثانيتين")
+        return 0
+
     log("الخطوة الأخيرة: اضغط Restart في لوحة الاستضافة.")
-    log("(الواجهة بتتحدّث فوراً، والسيرفر محتاج إعادة تشغيل عشان يحمّل server.mjs الجديد)")
+    log("(النسخة القديمة شغّالة من غير المُشرف، فمش قادرة تعيد تشغيل نفسها — دي آخر مرة تحتاجها)")
     return 0
+
+
+def restart_via_api(ports):
+    """Ask the running app to reload itself. Returns True if it accepted."""
+    import json as _json
+    import urllib.request
+
+    for port in ports:
+        for host in ("127.0.0.1", "localhost"):
+            url = f"http://{host}:{port}/api/nova-core/restart"
+            try:
+                req = urllib.request.Request(url, method="POST", data=b"{}")
+                with urllib.request.urlopen(req, timeout=4) as r:
+                    body = _json.loads(r.read().decode("utf-8", "replace") or "{}")
+                if body.get("supervised"):
+                    log(f"→ إعادة تشغيل ذاتية عبر {url}")
+                    return True
+                log(f"→ {url}: النسخة الشغّالة مش تحت مُشرف (409)")
+                return False
+            except Exception:
+                continue
+    log("→ مفيش رد من الـ API على البورت المتوقع (إعادة التشغيل اليدوية)")
+    return False
 
 
 if __name__ == "__main__":
