@@ -194,6 +194,11 @@ function execAllowed(req: {
 function sameOriginOk(req: { headers?: Record<string, unknown> }): boolean {
   const host = String((req.headers?.host as string) || "");
   if (!host) return false;
+  // Browsers set `Sec-Fetch-Site` themselves and page scripts cannot forge it,
+  // so it is the most reliable signal that the panel (not a scanner) called us.
+  const fetchSite = String(req.headers?.["sec-fetch-site"] ?? "");
+  if (fetchSite === "same-origin") return true;
+
   const origins = [req.headers?.origin, req.headers?.referer]
     .map((v) => String(v ?? ""))
     .filter(Boolean);
