@@ -762,7 +762,7 @@ async function diagnose(target) {
         socket.write(
           `GET ${pathPart || "/api/local-agent/ws"} HTTP/1.1\r\n` +
             `Host: ${hostPort}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
-            "Sec-WebSocket-Key: bm92YS1kaWFnbm9zZS1rZXk=\r\nSec-WebSocket-Version: 13\r\n\r\n",
+            "Sec-WebSocket-Key: MTIzNDU2Nzg5MGFiY2RlZg==\r\nSec-WebSocket-Version: 13\r\n\r\n",
         );
       };
       if (https) socket.once("secureConnect", send);
