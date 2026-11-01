@@ -272,6 +272,27 @@ fs.writeFileSync(
 - ما بيحتاجش تسجيل ولا كارت
 
 ────────────────────────────────────────────────────────────
+③-ب  زيادة الذكاء: المجلس (أكتر من نموذج)
+────────────────────────────────────────────────────────────
+حط مفتاح مجاني واحد أو أكتر في البيئة (مفيش كارت فيهم كلهم):
+
+    GROQ_API_KEY=...          console.groq.com        (الأسرع)
+    GEMINI_API_KEY=...        aistudio.google.com
+    CEREBRAS_API_KEY=...      cloud.cerebras.ai
+    OPENROUTER_API_KEY=...    openrouter.ai/keys      (نماذج :free)
+    GITHUB_MODELS_TOKEN=...   github.com/settings/tokens
+
+مفتاح واحد  = صوت واحد
+مفتاحين    = تصويت + حكم متبادل
+تلاتة      = مجلس كامل
+
+وبعدها:
+    GET  /api/nova-core/council     مين في المجلس
+    POST /api/nova-core/council     اسأل الكل مرة واحدة (أدق)
+    POST /api/nova-core/fast        أول رد (أسرع)
+    POST /api/nova-core/chat {"council":true}
+
+────────────────────────────────────────────────────────────
 ④ منافذ إضافية (لو البروكسي بيوجّه لبورت تاني)
 ────────────────────────────────────────────────────────────
     NOVA_EXTRA_PORTS=3000,8080,80 node .

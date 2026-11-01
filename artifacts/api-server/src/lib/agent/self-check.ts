@@ -174,6 +174,42 @@ async function probeBrain(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">>
   };
 }
 
+/**
+ * Can NOVA deliberate, or only think with one voice?
+ * Counts the models that are actually configured — the council needs two to
+ * cross-check and a third to judge without grading its own homework.
+ */
+async function probeCouncil(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">> {
+  const providers = await timeBox(() => listConfiguredProviders(), 4000, []);
+  const cloud = providers.filter((p) => p.id !== "ollama");
+  const seats = cloud.length;
+
+  if (seats >= 3) {
+    return {
+      status: "ok",
+      detail: `المجلس كامل: ${seats} نماذج بيتسألوا مع بعض ونموذج مختلف بيحكم — ${cloud.map((p) => p.id).join(", ")}`,
+    };
+  }
+  if (seats === 2) {
+    return {
+      status: "ok",
+      detail: `المجلس شغّال بنموذجين (تصويت + حكم متبادل) — ${cloud.map((p) => p.id).join(", ")}`,
+    };
+  }
+  if (seats === 1) {
+    return {
+      status: "warn",
+      detail: `نموذج واحد بس (${cloud[0].id}) — مفيش تصويت ولا مقارنة، الإجابة صوت واحد.`,
+      fix: "ضيف مفتاح مجاني تاني (مثلاً GROQ_API_KEY + GEMINI_API_KEY) عشان المجلس يقارن ويحكم.",
+    };
+  }
+  return {
+    status: "warn",
+    detail: "مفيش أي نموذج في المجلس — الحوار بالعقل المدمج، والأدوات شغالة عادي.",
+    fix: "مفتاح مجاني واحد يكفي للبدء: GROQ_API_KEY (console.groq.com) · GEMINI_API_KEY (aistudio.google.com) · GITHUB_MODELS_TOKEN (توكن GitHub).",
+  };
+}
+
 async function probeTools(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">> {
   const count = AGENT_TOOLS.length;
   // Execute the cheapest real tool end-to-end. hash_text is offline and pure,
@@ -326,7 +362,9 @@ export async function runSelfCheck(opts: { refresh?: boolean } = {}): Promise<Se
   const items = await Promise.all([
     item("runtime", "الذاكرة والوقت التشغيلي", probeRuntime),
     item("storage", "التخزين والذاكرة طويلة الأمد", probeStorage),
+
     item("brain", "العقل اللغوي", probeBrain),
+    item("council", "المجلس (تعدد النماذج)", probeCouncil),
     item("tools", "الأدوات والتنفيذ الحقيقي", probeTools),
     item("internet", "الاتصال بالإنترنت", probeInternet),
     item("socket", "قناة الاتصال الحية (WebSocket)", probeSocket),

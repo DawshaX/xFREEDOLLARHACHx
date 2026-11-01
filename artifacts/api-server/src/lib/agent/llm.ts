@@ -156,12 +156,16 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
   for (const p of envProviders) {
     const key = p.keys.map((k) => process.env[k]).find((v) => v && v.trim().length > 8);
     if (!key) continue;
+    // Any OpenAI-compatible endpoint can be substituted at runtime, e.g.
+    // GROQ_BASE_URL=http://my-proxy/v1 — useful for a self-hosted gateway, a
+    // mirror, or pointing a slot at another machine in the fleet.
+    const override = (process.env[`${p.id.toUpperCase().replace(/-/g, "_")}_BASE_URL`] || "").trim();
     providers.push({
       id: p.id,
       label: p.label,
-      model: p.model,
+      model: process.env[`${p.id.toUpperCase().replace(/-/g, "_")}_MODEL`] || p.model,
       kind: "openai-compatible",
-      baseUrl: p.baseUrl,
+      baseUrl: override ? override.replace(/\/$/, "") : p.baseUrl,
       apiKey: key.trim(),
       free: true,
     });
