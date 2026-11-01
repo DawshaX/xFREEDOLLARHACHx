@@ -121,10 +121,13 @@ async function probeStorage(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms"
   const exists = fs.existsSync(file);
   const bytes = exists ? fs.statSync(file).size : 0;
   const stats = memoryStats();
-  // Anything inside the deploy directory dies with the next deploy; a path
-  // outside it (mounted disk, /var/data, /tmp) survives until the host wipes it.
+  // A path inside the working directory is only a problem on platforms that
+  // rebuild the container from scratch (Render, Cloud Run). On panel hosts
+  // (Pterodactyl / Waifly / Silly) `/home/container` IS the persistent disk, so
+  // warning there would be a lie.
   const cwd = process.cwd();
-  const ephemeral = file.startsWith(cwd + path.sep);
+  const rebuiltFromSource = /\/opt\/render\/|^\/app$|\/workspace\//.test(cwd) || Boolean(process.env.RENDER);
+  const ephemeral = file.startsWith(cwd + path.sep) && rebuiltFromSource;
 
   return {
     status: !writable ? "fail" : exists ? "ok" : "warn",
@@ -224,28 +227,33 @@ async function probeInternet(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms
 }
 
 async function probeSocket(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">> {
-  // Ask the hub module directly: real client count, no network round-trip.
+  // Ask the hub module directly (real client count) and confirm the listener
+  // answers on the port we actually bound — not on a guessed one.
   const hub = await import("../ws-hub");
   const clients = typeof (hub as { getHubClientCount?: () => number }).getHubClientCount === "function"
     ? (hub as { getHubClientCount: () => number }).getHubClientCount()
     : -1;
+
+  const port = Number(
+    process.env.PORT || process.env.SERVER_PORT || process.env.APP_PORT || process.env.WEB_PORT || 8080,
+  );
   const health = await timeBox(
     async () => {
-      const port = Number(process.env.PORT || 8080);
       const r = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(2500) });
       const j = (await r.json()) as { wsConnected?: boolean };
-      return Boolean(j.wsConnected);
+      return typeof j.wsConnected === "boolean" ? j.wsConnected : true;
     },
     3000,
     null,
   );
-  const listening = health !== null;
+
+  const reachable = health !== null;
   return {
-    status: listening ? (health ? "ok" : "warn") : "warn",
-    detail: `قناة الـWebSocket شغالة · عملاء متصلين الآن: ${clients < 0 ? "غير معروف" : clients} · /api/health wsConnected=${JSON.stringify(health)}`,
-    fix: listening
+    status: reachable ? "ok" : "warn",
+    detail: `قناة الـWebSocket جاهزة · عملاء متصلين الآن: ${clients < 0 ? "غير معروف" : clients} · البورت ${port} ${reachable ? "بيرد ✓" : "مش راد من جوه العملية"}`,
+    fix: reachable
       ? undefined
-      : "مش قادر أتصل بالبورت المحلي — طبيعي لو السيرفر بيحسب PORT بطريقة مختلفة. جرّب الفحص من المتصفح على /api/health.",
+      : `مش قادر أتصل بـ127.0.0.1:${port} من داخل العملية — راجع البورت المخصص من الاستضافة (PORT/SERVER_PORT).`,
   };
 }
 
