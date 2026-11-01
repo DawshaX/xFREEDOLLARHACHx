@@ -801,9 +801,10 @@ router.get("/local-agent/download-nova-agent", (_req, res) => {
   // The agent used to be looked up in three paths that never existed, so this
   // endpoint (and therefore "connect a computer") always answered 404.
   const agentPaths = [
+    path.resolve(process.cwd(), "nova-agent.js"), // portable bundle / panel root
+    path.resolve(process.cwd(), "public/nova-agent.js"),
     path.resolve(process.cwd(), "../../nova-agent.js"), // cwd = artifacts/api-server
     path.resolve(process.cwd(), "../nova-agent.js"),
-    path.resolve(process.cwd(), "nova-agent.js"),
     path.resolve("/opt/cybernova/nova-agent.js"),
     path.resolve("/home/runner/workspace/nova-agent.js"),
   ];

@@ -293,6 +293,29 @@ async function probeDaemon(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">
   }
 }
 
+async function probeFleet(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">> {
+  // Dynamic import keeps this probe optional: a build without the fleet routes
+  // must not break the whole self-check.
+  try {
+    const mod = await import("../../routes/local-agent");
+    const agents = typeof mod.getConnectedAgentList === "function" ? mod.getConnectedAgentList() : [];
+    const ids = agents.map((a) => a.id);
+    return {
+      status: ids.length > 0 ? "ok" : "warn",
+      detail:
+        ids.length > 0
+          ? `الأسطول متصل: ${ids.length} نود (${ids.join(" · ")}) — بيستقبلوا أوامر وينفّذوها`
+          : "مفيش نودات متصلة — السيرفر شغّال لوحده (تقدر تضيف أي جهاز بـ nova-agent.js)",
+      fix:
+        ids.length > 0
+          ? undefined
+          : "على أي سيرفر تاني: curl -fsSL <رابط-الـhub>/api/local-agent/download-nova-agent -o nova-agent.js ثم NOVA_SERVER=ws://<host>:<port>/api/local-agent/ws node nova-agent.js",
+    };
+  } catch (err) {
+    return { status: "warn", detail: `تعذّر فحص الأسطول: ${(err as Error).message}` };
+  }
+}
+
 /* ── aggregation ────────────────────────────────────────────────────────── */
 
 export async function runSelfCheck(opts: { refresh?: boolean } = {}): Promise<SelfCheckReport> {
@@ -308,6 +331,7 @@ export async function runSelfCheck(opts: { refresh?: boolean } = {}): Promise<Se
     item("internet", "الاتصال بالإنترنت", probeInternet),
     item("socket", "قناة الاتصال الحية (WebSocket)", probeSocket),
     item("daemon", "الدورة الذاتية 24/7", probeDaemon),
+    item("fleet", "الأسطول (نودات متصلة)", probeFleet),
   ]);
 
   const passed = items.filter((i) => i.status === "ok").length;
