@@ -59,10 +59,10 @@ export interface CouncilReport {
 }
 
 const MEMBER_TIMEOUT_MS = Number(process.env.NOVA_COUNCIL_TIMEOUT_MS || 30_000);
-const DEFAULT_MEMBERS = Number(process.env.NOVA_COUNCIL_MEMBERS || 3);
+const DEFAULT_MEMBERS = Number(process.env.NOVA_COUNCIL_MEMBERS || 4);
 
 /** Providers that can actually be asked right now, fastest-first. */
-const PRIORITY = ["groq", "cerebras", "github-models", "openrouter", "gemini", "mistral", "together", "openai", "ollama"];
+const PRIORITY = ["groq", "cerebras", "gemini", "github-models", "openrouter", "mistral", "together", "pollinations", "openai", "ollama"];
 
 export async function councilMembers(limit = DEFAULT_MEMBERS): Promise<LlmProviderInfo[]> {
   const all = await listConfiguredProviders();

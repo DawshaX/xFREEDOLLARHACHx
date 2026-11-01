@@ -153,6 +153,44 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
     });
   }
 
+  /*
+   * 3. Keyless providers.
+   *
+   * A provider that needs no account at all is worth more than a free tier
+   * behind a signup: it keeps the council alive on a fresh install where the
+   * only .env is the one we shipped. Pollinations serves GPT-OSS-20B on its
+   * anonymous tier through an OpenAI-compatible endpoint — no key, no card.
+   *
+   * Verified before wiring (2026-11-01): POST /openai with model "openai-fast"
+   * → {"choices":[{"message":{"content":"ready"}}],"model":"gpt-oss-20b"}.
+   * Disable with NOVA_KEYLESS_LLM=0 if it ever misbehaves.
+   */
+  const keyless: Array<{ id: string; label: string; baseUrl: string; model: string }> = [
+    {
+      id: "pollinations",
+      label: "Pollinations (بدون مفتاح)",
+      baseUrl: "https://text.pollinations.ai/openai",
+      model: process.env.POLLINATIONS_MODEL || "openai-fast",
+    },
+  ];
+
+  if (String(process.env.NOVA_KEYLESS_LLM ?? "1") !== "0") {
+    for (const p of keyless) {
+      const upper = p.id.toUpperCase().replace(/-/g, "_");
+      providers.push({
+        id: p.id,
+        label: p.label,
+        model: process.env[`${upper}_MODEL`] || p.model,
+        kind: "openai-compatible",
+        // The endpoint IS the chat route (there is no /v1 base), so mark it and
+        // let the caller append nothing.
+        baseUrl: (process.env[`${upper}_BASE_URL`] || p.baseUrl).replace(/\/$/, ""),
+        apiKey: "",
+        free: true,
+      });
+    }
+  }
+
   for (const p of envProviders) {
     const key = p.keys.map((k) => process.env[k]).find((v) => v && v.trim().length > 8);
     if (!key) continue;
@@ -209,6 +247,26 @@ const MODEL_PREFERENCE: Record<string, string[]> = {
 
 const NOT_CHAT = /embed|whisper|tts|audio|image|dall|moderation|guard|rerank|vision-ocr|realtime|search|transcribe|clip|lyria/i;
 
+/**
+ * Some OpenAI-compatible endpoints already *are* the chat route
+ * (text.pollinations.ai/openai) and take no Authorization header at all.
+ * Centralising that here keeps the two call sites honest.
+ */
+function chatUrl(provider: LlmProviderInfo): string {
+  const base = provider.baseUrl.replace(/\/$/, "");
+  return /\/chat\/completions$/.test(base) ? base : `${base}/chat/completions`;
+}
+
+function modelsUrl(provider: LlmProviderInfo): string {
+  const base = provider.baseUrl.replace(/\/$/, "");
+  if (/\/chat\/completions$/.test(base)) return base.replace(/\/chat\/completions$/, "/models");
+  return `${base}/models`;
+}
+
+function authHeaders(provider: LlmProviderInfo): Record<string, string> {
+  return provider.apiKey ? { Authorization: `Bearer ${provider.apiKey}` } : {};
+}
+
 function isModelRejection(message: string): boolean {
   return /model|404|not found|does not exist|no longer available|unavailable for free|decommission|deprecat/i.test(message) &&
     !/401|403|invalid api key|unauthor/i.test(message);
@@ -217,8 +275,8 @@ function isModelRejection(message: string): boolean {
 /** Ask the provider which models this key may call. Returns [] when unsupported. */
 async function listProviderModels(provider: LlmProviderInfo): Promise<string[]> {
   try {
-    const res = await fetch(`${provider.baseUrl}/models`, {
-      headers: { Authorization: `Bearer ${provider.apiKey}` },
+    const res = await fetch(modelsUrl(provider), {
+      headers: authHeaders(provider),
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return [];
@@ -363,11 +421,11 @@ async function callOpenAiCompatible(
   maxTokens = 1400,
   timeoutMs = TIMEOUT_MS,
 ): Promise<string> {
-  const res = await fetch(`${provider.baseUrl}/chat/completions`, {
+  const res = await fetch(chatUrl(provider), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${provider.apiKey}`,
+      ...authHeaders(provider),
     },
     body: JSON.stringify({
       model: provider.model,
