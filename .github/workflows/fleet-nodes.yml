@@ -25,6 +25,11 @@
 name: fleet-nodes
 
 on:
+  # Pushing a change to this file starts a wave — the only trigger available
+  # when the connected GitHub app has no actions:write permission.
+  push:
+    paths:
+      - ".github/workflows/fleet-nodes.yml"
   workflow_dispatch:
     inputs:
       nodes:
