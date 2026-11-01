@@ -1,11 +1,11 @@
 name: probe-live-llm
 
-# One purpose: ask the *deployed* server a real question through its own LLM
-# path and print which provider actually answered. The server's keys live in
-# its .env; this job never sees them — it only sees the reply.
+# Ask the *deployed* server a real question through its own LLM paths and write
+# the answer back into this branch as `probe-report.txt`, so the result can be
+# read without the user copying anything.
 #
-# Runs when a commit message contains [probe-live], or by hand from the Actions
-# tab. Nothing is deployed and nothing is written back to the repo.
+# The server's API keys live in its .env; this job never sees them — only the
+# reply text and which provider produced it.
 
 on:
   workflow_dispatch:
@@ -19,69 +19,70 @@ on:
     paths: [".github/workflows/probe-live-llm.yml"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[probe-live]')
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
+    env:
+      TARGET: ${{ github.event.inputs.target || 'http://node.waifly.com:27214' }}
     steps:
-      - name: Resolve target
-        id: t
-        run: |
-          URL="${{ github.event.inputs.target }}"
-          echo "url=${URL:-http://node.waifly.com:27214}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
-      - name: Health + providers
+      - name: Probe
         run: |
-          U="${{ steps.t.outputs.url }}"
-          echo "── /api/health"
-          curl -sS -m 20 "$U/api/health" || echo "(failed)"
-          echo
-          echo "── /api/nova-core/status"
-          curl -sS -m 30 "$U/api/nova-core/status" || echo "(failed)"
-          echo
-          echo "── /api/nova-core/council/ping (needs the new bundle)"
-          curl -sS -m 60 "$U/api/nova-core/council/ping" | head -c 3000 || echo "(failed)"
-          echo
+          set +e
+          R=probe-report.txt
+          : > "$R"
+          say() { echo "$@" | tee -a "$R"; }
+          say "# live probe — $(date -u +%FT%TZ)"
+          say "target: $TARGET"
+          say ""
 
-      - name: Real question through multi-ai (SSE)
-        run: |
-          U="${{ steps.t.outputs.url }}"
-          echo "── POST /api/multi-ai/chat"
-          curl -sS -N -m 90 -X POST "$U/api/multi-ai/chat" \
+          say "## /api/health"
+          curl -sS -m 20 "$TARGET/api/health" | tee -a "$R"; say ""
+
+          say "## /api/nova-core/status"
+          curl -sS -m 30 "$TARGET/api/nova-core/status" | tee -a "$R"; say ""
+
+          say "## /api/nova-core/council/ping (new bundle only)"
+          curl -sS -m 60 "$TARGET/api/nova-core/council/ping" | head -c 2000 | tee -a "$R"; say ""
+
+          say "## POST /api/multi-ai/chat  (real model call, SSE)"
+          curl -sS -N -m 90 -X POST "$TARGET/api/multi-ai/chat" \
             -H 'content-type: application/json' \
             -d '{"messages":[{"role":"user","content":"Reply with exactly: PONG"}],"maxTokens":20}' \
-            | head -c 3000 || echo "(failed)"
-          echo
+            | head -c 2500 | tee -a "$R"; say ""
 
-      - name: Real question through nova-core chat (SSE ready event shows provider)
-        run: |
-          U="${{ steps.t.outputs.url }}"
-          echo "── POST /api/nova-core/chat"
-          curl -sS -N -m 120 -X POST "$U/api/nova-core/chat" \
+          say "## POST /api/nova-core/chat  (ready event names the provider)"
+          curl -sS -N -m 120 -X POST "$TARGET/api/nova-core/chat" \
             -H 'content-type: application/json' \
             -d '{"message":"اكتب كلمة واحدة بس: تمام","history":[]}' \
-            | grep -E '^event:|^data:' | head -40 || echo "(failed)"
-          echo
+            | grep -E '^event:|^data:' | head -30 | tee -a "$R"; say ""
 
-      - name: Council call (needs the new bundle)
-        run: |
-          U="${{ steps.t.outputs.url }}"
-          echo "── POST /api/nova-core/council"
-          curl -sS -m 120 -X POST "$U/api/nova-core/council" \
+          say "## POST /api/nova-core/council (new bundle only)"
+          curl -sS -m 120 -X POST "$TARGET/api/nova-core/council" \
             -H 'content-type: application/json' \
-            -d '{"message":"إيه أول خطوة في فحص نطاق مصرّح به؟ اختصر في سطرين."}' \
-            | head -c 4000 || echo "(failed)"
-          echo
+            -d '{"message":"إيه أول خطوة في فحص نطاق مصرّح به؟ سطرين بالكتير."}' \
+            | head -c 3000 | tee -a "$R"; say ""
 
-      - name: Fleet + agents
+          say "## fleet"
+          curl -sS -m 20 "$TARGET/api/local-agent/agents" | tee -a "$R"; say ""
+          curl -sS -m 20 "$TARGET/api/fleet/mesh" | head -c 800 | tee -a "$R"; say ""
+
+      - name: Publish report to the branch
         run: |
-          U="${{ steps.t.outputs.url }}"
-          echo "── /api/local-agent/agents"
-          curl -sS -m 20 "$U/api/local-agent/agents" || echo "(failed)"
-          echo
-          echo "── /api/fleet/mesh"
-          curl -sS -m 20 "$U/api/fleet/mesh" | head -c 1200 || echo "(failed)"
-          echo
+          set -e
+          git config user.name "nova-probe"
+          git config user.email "probe@users.noreply.github.com"
+          if git diff --quiet -- probe-report.txt 2>/dev/null && [ -f probe-report.txt ]; then
+            git add probe-report.txt
+            git diff --cached --quiet && echo "no change" && exit 0
+          fi
+          git add probe-report.txt
+          git commit -m "chore(probe): live report from CI [skip ci]" || exit 0
+          git push origin "HEAD:${{ github.ref_name }}"
