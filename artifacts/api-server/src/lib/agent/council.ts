@@ -26,7 +26,7 @@
  *     clear, actionable error instead of a fake answer.
  */
 
-import { listConfiguredProviders, type LlmMessage, type LlmProviderInfo } from "./llm";
+import { listConfiguredProviders, completeWithProvider, type LlmMessage, type LlmProviderInfo } from "./llm";
 import { logger } from "../logger";
 
 export interface CouncilMemberAnswer {
@@ -83,11 +83,14 @@ async function askOne(
   const started = Date.now();
   const base = { provider: provider.id, label: provider.label, model: provider.model };
   try {
-    const text =
-      provider.kind === "ollama"
-        ? await ollamaChat(provider, messages, temperature)
-        : await openAiChat(provider, messages, temperature);
-    return { ...base, ok: true, text, ms: Date.now() - started };
+    // completeWithProvider also self-heals a retired model id (404 → discover →
+    // retry), so one dead model name cannot silently remove a council seat.
+    const out = await completeWithProvider(provider, messages, {
+      temperature,
+      maxTokens: 1600,
+      timeoutMs: MEMBER_TIMEOUT_MS,
+    });
+    return { ...base, model: out.model, ok: true, text: out.text, ms: Date.now() - started };
   } catch (err) {
     return { ...base, ok: false, text: "", ms: Date.now() - started, error: String((err as Error).message).slice(0, 200) };
   }
@@ -383,21 +386,16 @@ export async function pingCouncil(): Promise<{
   const members = await councilMembers(9);
   const pinged = await Promise.all(
     members.map(async (p) => {
-      const started = Date.now();
-      try {
-        const text = await (p.kind === "ollama"
-          ? ollamaChat(p, [{ role: "user", content: "Reply with the single word: OK" }], 0)
-          : openAiChat(p, [{ role: "user", content: "Reply with the single word: OK" }], 0));
-        return { provider: p.id, model: p.model, ok: true, ms: Date.now() - started, detail: text.slice(0, 40) || "ok" };
-      } catch (err) {
-        return {
-          provider: p.id,
-          model: p.model,
-          ok: false,
-          ms: Date.now() - started,
-          detail: String((err as Error).message).slice(0, 160),
-        };
-      }
+      // Same code path as a real council call, so the ping cannot disagree with
+      // what the council will actually do — including model auto-healing.
+      const res = await askOne(p, [{ role: "user", content: "Reply with the single word: OK" }], 0);
+      return {
+        provider: res.provider,
+        model: res.model,
+        ok: res.ok,
+        ms: res.ms,
+        detail: res.ok ? res.text.slice(0, 40) || "ok" : (res.error ?? "failed"),
+      };
     }),
   );
 

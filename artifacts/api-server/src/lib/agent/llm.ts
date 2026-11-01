@@ -92,21 +92,21 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
       id: "groq",
       label: "Groq (free tier)",
       baseUrl: "https://api.groq.com/openai/v1",
-      model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+      model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
       keys: ["GROQ_API_KEY"],
     },
     {
       id: "openrouter",
       label: "OpenRouter (free models)",
       baseUrl: "https://openrouter.ai/api/v1",
-      model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free",
+      model: process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b:free",
       keys: ["OPENROUTER_API_KEY"],
     },
     {
       id: "gemini",
       label: "Google Gemini (free tier)",
       baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-      model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
       keys: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
     },
     {
@@ -174,11 +174,130 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
   return providers;
 }
 
+/**
+ * ── Model auto-healing ────────────────────────────────────────────────────────
+ * Providers retire model ids without warning: Groq decommissioned
+ * llama-3.3-70b-versatile on 2026-08-16, Google retired gemini-2.0-flash, and
+ * OpenRouter rotates which slugs are free. A hardcoded id therefore rots into a
+ * 404 that looks like a broken key.
+ *
+ * When a model is rejected we ask the provider what it *does* serve
+ * (`GET /models`, which every OpenAI-compatible API exposes), pick the best
+ * chat model from a preference list, retry once, and remember the choice.
+ */
+
+const MODEL_CACHE = new Map<string, string>();
+
+/** Preferred ids per provider, best first. Substring match against /models. */
+const MODEL_PREFERENCE: Record<string, string[]> = {
+  groq: ["gpt-oss-120b", "gpt-oss-20b", "qwen3", "llama-3.3-70b", "llama-3.1-8b"],
+  gemini: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-flash"],
+  openrouter: [
+    "gpt-oss-120b:free",
+    "qwen3-coder:free",
+    "qwen3-next-80b:free",
+    "llama-3.3-70b-instruct:free",
+    "gemma-4-31b-it:free",
+    "openrouter/free",
+  ],
+  openai: ["gpt-5-mini", "gpt-4.1-mini", "gpt-4o-mini"],
+  cerebras: ["llama-3.3-70b", "gpt-oss-120b", "qwen-3"],
+  mistral: ["mistral-small", "open-mistral"],
+  together: ["Llama-3.3-70B", "gpt-oss-120b"],
+  "github-models": ["gpt-4o-mini", "gpt-4.1-mini", "Phi-4"],
+};
+
+const NOT_CHAT = /embed|whisper|tts|audio|image|dall|moderation|guard|rerank|vision-ocr|realtime|search|transcribe|clip|lyria/i;
+
+function isModelRejection(message: string): boolean {
+  return /model|404|not found|does not exist|no longer available|unavailable for free|decommission|deprecat/i.test(message) &&
+    !/401|403|invalid api key|unauthor/i.test(message);
+}
+
+/** Ask the provider which models this key may call. Returns [] when unsupported. */
+async function listProviderModels(provider: LlmProviderInfo): Promise<string[]> {
+  try {
+    const res = await fetch(`${provider.baseUrl}/models`, {
+      headers: { Authorization: `Bearer ${provider.apiKey}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { data?: Array<{ id?: string }>; models?: Array<{ name?: string }> };
+    const ids = (data.data ?? []).map((m) => m.id ?? "").filter(Boolean);
+    if (ids.length) return ids;
+    // Google's native shape: models/gemini-2.5-flash
+    return (data.models ?? []).map((m) => (m.name ?? "").replace(/^models\//, "")).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** Best chat model this provider actually serves, or null. */
+async function discoverModel(provider: LlmProviderInfo): Promise<string | null> {
+  const available = (await listProviderModels(provider)).filter((id) => !NOT_CHAT.test(id));
+  if (available.length === 0) return null;
+  const pref = MODEL_PREFERENCE[provider.id] ?? [];
+  for (const wanted of pref) {
+    const hit = available.find((id) => id.toLowerCase().includes(wanted.toLowerCase()));
+    if (hit) return hit;
+  }
+  return available[0] ?? null;
+}
+
+/** The model to use: env override → learned choice → configured → discovered. */
+export async function resolveModel(provider: LlmProviderInfo): Promise<string> {
+  const learned = MODEL_CACHE.get(provider.id);
+  if (learned) return learned;
+  MODEL_CACHE.set(provider.id, provider.model);
+  return provider.model;
+}
+
+/**
+ * One completion with self-correction: if the model id is rejected, discover a
+ * working one, retry once, and keep it for the life of the process.
+ */
+export async function completeWithProvider(
+  provider: LlmProviderInfo,
+  messages: LlmMessage[],
+  opts: { temperature?: number; maxTokens?: number; timeoutMs?: number } = {},
+): Promise<{ text: string; model: string; ms: number; healed?: boolean }> {
+  const started = Date.now();
+  const model = await resolveModel(provider);
+
+  const attempt = async (useModel: string): Promise<string> =>
+    provider.kind === "ollama"
+      ? callOllama({ ...provider, model: useModel }, messages, opts.temperature)
+      : callOpenAiCompatible({ ...provider, model: useModel }, messages, opts.temperature, opts.maxTokens, opts.timeoutMs);
+
+  try {
+    const text = await attempt(model);
+    return { text, model, ms: Date.now() - started };
+  } catch (err) {
+    const msg = String((err as Error).message ?? "");
+    if (!isModelRejection(msg)) throw err;
+    const healedModel = await discoverModel(provider);
+    if (!healedModel || healedModel === model) throw err;
+    logger.warn({ provider: provider.id, from: model, to: healedModel }, "llm: model retired, auto-switched");
+    const text = await attempt(healedModel);
+    MODEL_CACHE.set(provider.id, healedModel);
+    return { text, model: healedModel, ms: Date.now() - started, healed: true };
+  }
+}
+
+/** Model ids this key can actually use (for the panel / diagnostics). */
+export async function availableModelsFor(providerId: string): Promise<string[]> {
+  const providers = await listConfiguredProviders();
+  const provider = providers.find((p) => p.id === providerId);
+  if (!provider) return [];
+  return (await listProviderModels(provider)).filter((id) => !NOT_CHAT.test(id));
+}
+
 async function callOpenAiCompatible(
   provider: LlmProviderInfo,
   messages: LlmMessage[],
   temperature = 0.6,
   maxTokens = 1400,
+  timeoutMs = TIMEOUT_MS,
 ): Promise<string> {
   const res = await fetch(`${provider.baseUrl}/chat/completions`, {
     method: "POST",
@@ -192,7 +311,7 @@ async function callOpenAiCompatible(
       temperature,
       max_tokens: maxTokens,
     }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -241,12 +360,12 @@ export async function llmComplete(
     const started = Date.now();
     logger.info({ provider: provider.id, kind: provider.kind }, "llm: attempt");
     try {
-      const text =
-        provider.kind === "ollama"
-          ? await callOllama(provider, messages, opts.temperature)
-          : await callOpenAiCompatible(provider, messages, opts.temperature, opts.maxTokens);
-      logger.info({ provider: provider.id, ms: Date.now() - started }, "llm: success");
-      return { text, provider: provider.id, model: provider.model, ms: Date.now() - started };
+      const out = await completeWithProvider(provider, messages, {
+        temperature: opts.temperature,
+        maxTokens: opts.maxTokens,
+      });
+      logger.info({ provider: provider.id, model: out.model, healed: out.healed, ms: Date.now() - started }, "llm: success");
+      return { text: out.text, provider: provider.id, model: out.model, ms: Date.now() - started };
     } catch (err) {
       // Trying the next provider is a normal path (Ollama off, quota, offline…).
       logger.debug(
