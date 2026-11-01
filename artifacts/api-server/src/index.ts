@@ -271,6 +271,17 @@ server.listen(port, host, () => {
     })
     .catch((e) => logger.warn({ err: e }, "NOVA memory init failed"));
 
+  // ── self-update watcher (pull model) ──────────────────────────────────────
+  // Enabled by default inside the portable bundle; NOVA_AUTO_UPDATE=0 turns it
+  // off. It only ever installs a strictly newer published release.
+  void import("./lib/auto-update")
+    .then(({ startAutoUpdate, autoUpdateStatus }) => {
+      startAutoUpdate();
+      const st = autoUpdateStatus();
+      logger.info({ enabled: st.enabled, everyMin: st.intervalMinutes }, "NOVA self-update watcher");
+    })
+    .catch((e) => logger.warn({ err: e }, "self-update watcher failed to start"));
+
   if (process.env.NOVA_AUTOPULL !== "0") {
     void import("./lib/agent/ollama-manager")
       .then(({ ensureOllamaReady }) => ensureOllamaReady())

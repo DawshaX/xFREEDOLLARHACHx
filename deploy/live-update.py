@@ -169,8 +169,16 @@ def main() -> int:
         log("(dry-run — مفيش حاجة اتكتبت)")
         return 0
 
+    # Previous fingerprint goes into the rollback record before anything moves.
+    previous_build = None
+    try:
+        previous_build = json.load(open(os.path.join(dest, "build.json"))).get("builtAt")
+    except Exception:
+        previous_build = None
+
+    backup_dir = None
     if not args.no_backup:
-        backup(dest)
+        backup_dir = backup(dest)
 
     written = 0
     unchanged = 0
@@ -206,6 +214,32 @@ def main() -> int:
             log(f"✓ النسخة الجديدة: {info.get('commit', '?')[:10]} · {info.get('builtAt', '?')}")
         except Exception:
             pass
+
+    # Record what was installed, so the supervisor can verify the new build
+    # really serves HTTP and roll back if it does not.
+    try:
+        pending = os.path.join(dest, "state", ".update-pending")
+        os.makedirs(os.path.dirname(pending), exist_ok=True)
+        info = {}
+        meta = os.path.join(dest, "build.json")
+        if os.path.exists(meta):
+            try:
+                info = json.load(open(meta))
+            except Exception:
+                info = {}
+        with open(pending, "w") as f:
+            json.dump(
+                {
+                    "backup": backup_dir,
+                    "from": previous_build,
+                    "to": info.get("builtAt"),
+                    "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                },
+                f,
+            )
+        log(f"✓ علامة تحقق مكتوبة: {pending}")
+    except Exception as exc:
+        log(f"⚠ مقدرتش أكتب علامة التحقق: {exc}")
 
     log("")
     # ── self-restart ────────────────────────────────────────────────────────

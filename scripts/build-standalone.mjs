@@ -142,7 +142,8 @@ if (role === "node" || role === "agent") {
   //      state/.nova-restart — no panel button, no manual step;
   //   2. if the app ever crashes the container stay up and the app comes back.
   const { spawn } = await import("node:child_process");
-  const { statSync } = await import("node:fs");
+  const { statSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync } = await import("node:fs");
+  const { get: httpGet } = await import("node:http");
   const MARK = join(HERE, "state", ".nova-restart");
   const ENTRY = join(HERE, "nova-app.mjs");
 
@@ -184,6 +185,98 @@ if (role === "node" || role === "agent") {
       if (child) child.kill("SIGTERM");
     }
   }, 1000);
+
+  // ── update watchdog ───────────────────────────────────────────────────────
+  // After a self-update the new code must prove it can serve HTTP. If it does
+  // not within 2 minutes, the previous bundle is restored from the backup the
+  // updater recorded in state/.update-pending — a bad release can never leave
+  // the server dead with nobody to fix it.
+  const PENDING = join(HERE, "state", ".update-pending");
+  const FAILED = join(HERE, "state", ".update-failed");
+
+  const readPending = () => {
+    try { return JSON.parse(readFileSync(PENDING, "utf8")); } catch { return null; }
+  };
+
+  const copyBack = (from) => {
+    const skip = new Set([".env", ".env.txt", ".npm", "logs", "state", "node_modules"]);
+    let n = 0;
+    const walk = (src, dst) => {
+      for (const entry of readdirSync(src, { withFileTypes: true })) {
+        if (dst === HERE && skip.has(entry.name)) continue;
+        const s = join(src, entry.name);
+        const d = join(dst, entry.name);
+        if (entry.isDirectory()) { mkdirSync(d, { recursive: true }); walk(s, d); }
+        else { copyFileSync(s, d); n += 1; }
+      }
+    };
+    walk(from, HERE);
+    return n;
+  };
+
+  const healthy = (port) =>
+    new Promise((resolve) => {
+      const req = httpGet({ host: "127.0.0.1", port, path: "/api/health", timeout: 4000 }, (r) => {
+        r.resume();
+        resolve(r.statusCode >= 200 && r.statusCode < 500);
+      });
+      req.on("timeout", () => { req.destroy(); resolve(false); });
+      req.on("error", () => resolve(false));
+    });
+
+  let watchToken = 0;
+  const watch = (pending) => {
+    const myToken = ++watchToken;
+    const port = Number(process.env.PORT || process.env.SERVER_PORT || 8080);
+    const verifyMs = Number(process.env.NOVA_UPDATE_VERIFY_SECONDS || 120) * 1000;
+    const deadline = Date.now() + verifyMs;
+    const tick = async () => {
+      if (myToken !== watchToken) return;
+      if (await healthy(port)) {
+        console.log("[supervisor] update verified — new build is serving");
+        try { unlinkSync(PENDING); } catch {}
+        return;
+      }
+      if (Date.now() > deadline) {
+        console.log("[supervisor] new build never became healthy — rolling back");
+        try {
+          const files = copyBack(pending.backup);
+          unlinkSync(PENDING);
+          writeFileSync(FAILED, JSON.stringify({
+            at: new Date().toISOString(),
+            from: pending.from,
+            to: pending.to,
+            restored: files,
+          }, null, 2));
+          console.log("[supervisor] restored " + files + " files from " + pending.backup);
+        } catch (e) {
+          console.log("[supervisor] rollback FAILED: " + (e && e.message));
+        }
+        if (child) child.kill("SIGTERM"); else launch();
+        return;
+      }
+      setTimeout(tick, 3000);
+    };
+    setTimeout(tick, 4000);
+  };
+
+  const pendingAtBoot = readPending();
+  if (pendingAtBoot && pendingAtBoot.backup) {
+    console.log("[supervisor] an update is pending verification (from " + pendingAtBoot.from + ")");
+    watch(pendingAtBoot);
+  }
+
+  // A later update (started by the app itself) is picked up on the next reload.
+  let mark2 = 0;
+  setInterval(() => {
+    const p = readPending();
+    if (p && p.backup) {
+      try {
+        const m = statSync(PENDING).mtimeMs;
+        if (m !== mark2) { mark2 = m; watch(p); }
+      } catch {}
+    }
+  }, 5000);
 
   for (const sig of ["SIGTERM", "SIGINT"]) {
     process.on(sig, () => {

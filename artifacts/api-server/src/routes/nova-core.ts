@@ -296,6 +296,39 @@ const handleRestart = (_req: Request, res: Response) => {
 router.get("/nova-core/restart", handleRestart);
 router.post("/nova-core/restart", handleRestart);
 
+/* ── self-update (pull model) ────────────────────────────────────────────── */
+
+/**
+ * GET /api/nova-core/auto-update            → what the updater knows right now
+ * GET /api/nova-core/auto-update?check=1    → run a check (no install)
+ * POST /api/nova-core/auto-update           → check and install if newer
+ */
+router.get("/nova-core/auto-update", async (req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    const { autoUpdateStatus, checkForUpdate } = await import("../lib/auto-update");
+    if (String(req.query.check ?? "") === "1") {
+      const state = await checkForUpdate({ install: false });
+      res.json({ ok: true, ...state });
+      return;
+    }
+    res.json({ ok: true, ...autoUpdateStatus() });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/nova-core/auto-update", async (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    const { checkForUpdate } = await import("../lib/auto-update");
+    const state = await checkForUpdate({ install: true });
+    res.json({ ok: true, ...state });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
 /* ── the council (multi-model deliberation) ──────────────────────────────── */
 
 /**

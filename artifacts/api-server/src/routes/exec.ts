@@ -153,27 +153,79 @@ function runStreaming(cmd: string, cwd = "/tmp"): AsyncGenerator<{ type: string;
  */
 function tokenOk(req: { query?: Record<string, unknown>; headers?: Record<string, unknown> }): boolean {
   const expected = (process.env.NOVA_EXEC_TOKEN || "").trim();
-  if (!expected) return true;
+  if (!expected) return false; // no token configured → this check cannot pass
   const fromQuery = String((req.query?.token as string) || "");
   const fromHeader = String((req.headers?.["x-nova-token"] as string) || "");
   return fromQuery === expected || fromHeader === expected;
 }
 
+/** Is a token configured at all? (decides whether same-origin is enough) */
+function tokenRequired(): boolean {
+  return Boolean((process.env.NOVA_EXEC_TOKEN || "").trim());
+}
+
+/**
+ * The single gate every exec endpoint goes through.
+ *
+ *   token configured  → only that token works (panel included)
+ *   no token          → only same-origin requests work (the panel), and only
+ *                       because the browser sends Origin/Referer on them
+ */
+function execAllowed(req: {
+  query?: Record<string, unknown>;
+  headers?: Record<string, unknown>;
+}): boolean {
+  if (tokenRequired()) return tokenOk(req);
+  return sameOriginOk(req);
+}
+
+/**
+ * Browser-only gate.
+ *
+ * A command endpoint open to the whole internet is not acceptable on a public
+ * host. Without a token, requests are accepted only when they come from the
+ * panel itself — the browser sends `Origin`/`Referer` on those calls, while
+ * scanners and `curl` from a random host do not.
+ *
+ * Be honest about the strength: a determined attacker can forge the header.
+ * This is a speed bump that stops drive-by scanners, NOT authentication. Real
+ * authentication is `NOVA_EXEC_TOKEN`.
+ */
+function sameOriginOk(req: { headers?: Record<string, unknown> }): boolean {
+  const host = String((req.headers?.host as string) || "");
+  if (!host) return false;
+  const origins = [req.headers?.origin, req.headers?.referer]
+    .map((v) => String(v ?? ""))
+    .filter(Boolean);
+  if (origins.length === 0) return false;
+  return origins.some((o) => {
+    try {
+      return new URL(o).host === host;
+    } catch {
+      return false;
+    }
+  });
+}
+
 export function execExposure(): { open: boolean; guarded: boolean; detail: string } {
   const guarded = Boolean((process.env.NOVA_EXEC_TOKEN || "").trim());
   const shell = process.env.NOVA_EXEC_ALLOW_SHELL === "1";
+  const shellNote = shell ? " · أوامر الشل الملفوفة مسموحة" : "";
   return {
     open: !guarded,
     guarded,
     detail: guarded
-      ? `محمي بتوكن${shell ? " · أوامر الشل الملفوفة مسموحة" : ""}`
-      : `مفتوح لأي حد يوصل البورت${shell ? " · وأوامر الشل الملفوفة مسموحة" : ""}`,
+      ? `محمي بتوكن${shellNote}`
+      : `محدود على طلبات اللوحة (same-origin) — سكانر أو curl من برّه بياخد 403${shellNote}`,
   };
 }
 
 router.get("/exec/stream", async (req, res) => {
-  if (!tokenOk(req)) {
-    res.status(401).json({ error: "توكن التنفيذ مطلوب" });
+  if (!execAllowed(req)) {
+    res.status(403).json({
+      error: "التنفيذ متاح من اللوحة بس (أو بتوكن NOVA_EXEC_TOKEN)",
+      reason: "cross-origin",
+    });
     return;
   }
   const { cmd, cwd = "/tmp" } = req.query as { cmd?: string; cwd?: string };
@@ -224,8 +276,11 @@ router.get("/exec/stream", async (req, res) => {
 });
 
 router.post("/exec/run", async (req, res) => {
-  if (!tokenOk(req)) {
-    res.status(401).json({ error: "توكن التنفيذ مطلوب" });
+  if (!execAllowed(req)) {
+    res.status(403).json({
+      error: "التنفيذ متاح من اللوحة بس (أو بتوكن NOVA_EXEC_TOKEN)",
+      reason: "cross-origin",
+    });
     return;
   }
   const { command, cmd, cwd = "/tmp", timeout = 30000 } = req.body as {

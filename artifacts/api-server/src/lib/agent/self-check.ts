@@ -222,12 +222,15 @@ async function probeExec(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">> 
     return { status: "ok", detail: "أوامر الشل محمية بتوكن · الأوامر الملفوفة (bash -c) مقفولة" };
   }
   if (guarded) {
-    return { status: "warn", detail: "محمي بتوكن، لكن NOVA_EXEC_ALLOW_SHELL=1 يسمح بأوامر ملفوفة", fix: "شيل NOVA_EXEC_ALLOW_SHELL من .env لو مش محتاجه." };
+    return { status: shell ? "warn" : "ok", detail: shell ? "محمي بتوكن، لكن NOVA_EXEC_ALLOW_SHELL=1 يسمح بأوامر ملفوفة" : "محمي بتوكن · الأوامر الملفوفة (bash -c) مقفولة", fix: shell ? "شيل NOVA_EXEC_ALLOW_SHELL من .env لو مش محتاجه." : undefined };
   }
+  // No token: the endpoint still refuses cross-origin callers (scanners, curl
+  // from anywhere), so it is not "open to the internet" any more — but a forged
+  // Origin header would get through. Say exactly that instead of "ok".
   return {
     status: "warn",
-    detail: `أوامر الشل مفتوحة لأي حد يوصل البورت${shell ? " (وأوامر ملفوفة مسموحة)" : " (الأوامر الملفوفة مقفولة)"}`,
-    fix: "حط NOVA_EXEC_TOKEN=<نص عشوائي طويل> في .env — وبعدها أي طلب تنفيذ لازم يبعت التوكن.",
+    detail: `التنفيذ متاح من اللوحة بس — أي طلب من أصل تاني بياخد 403${shell ? " · وأوامر الشل الملفوفة مسموحة" : " · الأوامر الملفوفة مقفولة"}`,
+    fix: "لو عايز قفل كامل: NOVA_EXEC_TOKEN=<نص عشوائي> في .env — بعدها التنفيذ محتاج توكن حتى من اللوحة.",
   };
 }
 
