@@ -48,7 +48,7 @@ fs.rmSync(path.join(ROOT, "dist-standalone"), { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 
 /* ── 1. copy the pieces ──────────────────────────────────────────────────── */
-fs.copyFileSync(SERVER, path.join(OUT, "server.mjs"));
+fs.copyFileSync(SERVER, path.join(OUT, "nova-app.mjs"));
 copyDir(PANEL, path.join(OUT, "public"), { maxBytes: 25 * 1024 * 1024 });
 
 // Memory files worth carrying over (nothing else from state/ is needed).
@@ -135,8 +135,79 @@ if (role === "node" || role === "agent") {
   console.log("│ port      : " + (process.env.PORT || process.env.SERVER_PORT || "8080"));
   console.log("│ static    : " + process.env.NOVA_STATIC_DIR);
   console.log("└─────────────────────────────────────────────────────────");
-  await import("./server.mjs");
+
+  // ── supervisor ──────────────────────────────────────────────────────────
+  // The real server (nova-app.mjs) runs as a CHILD of this process. Two wins:
+  //   1. a deploy can replace nova-app.mjs and ask for a restart by touching
+  //      state/.nova-restart — no panel button, no manual step;
+  //   2. if the app ever crashes the container stay up and the app comes back.
+  const { spawn } = await import("node:child_process");
+  const { statSync } = await import("node:fs");
+  const MARK = join(HERE, "state", ".nova-restart");
+  const ENTRY = join(HERE, "nova-app.mjs");
+
+  const stamp = () => {
+    try { return statSync(MARK).mtimeMs; } catch { return 0; }
+  };
+
+  let child = null;
+  let leaving = false;
+  let mark = stamp();
+
+  const launch = () => {
+    child = spawn(process.execPath, [ENTRY], {
+      stdio: "inherit",
+      env: Object.assign({}, process.env, { NOVA_SUPERVISED: "1" }),
+    });
+    const started = Date.now();
+    child.on("exit", (code, signal) => {
+      child = null;
+      if (leaving) { process.exit(0); return; }
+      const lived = Date.now() - started;
+      console.log("[supervisor] app exited (" + (signal || code) + ") after " + Math.round(lived / 1000) + "s — restarting");
+      // Crash-loop guard: back off when the app dies instantly.
+      setTimeout(launch, lived < 5000 ? 3000 : 300);
+    });
+    child.on("error", (err) => {
+      console.log("[supervisor] could not start the app: " + err.message);
+      setTimeout(launch, 5000);
+    });
+  };
+
+  launch();
+
+  setInterval(() => {
+    const now = stamp();
+    if (now && now !== mark) {
+      mark = now;
+      console.log("[supervisor] restart requested — reloading the app");
+      if (child) child.kill("SIGTERM");
+    }
+  }, 1000);
+
+  for (const sig of ["SIGTERM", "SIGINT"]) {
+    process.on(sig, () => {
+      leaving = true;
+      if (child) child.kill(sig);
+      else process.exit(0);
+    });
+  }
 }
+`,
+);
+
+// server.mjs — the file hosts are told to run (`node server.mjs`).
+// It is a two-line door into boot.mjs so there is exactly one entry point.
+fs.writeFileSync(
+  path.join(OUT, "server.mjs"),
+  `#!/usr/bin/env node
+/**
+ * NOVA entry point (hosts run: node server.mjs).
+ *
+ * boot.mjs decides the role: fleet agent, or supervisor that keeps
+ * nova-app.mjs alive and reloads it after an update.
+ */
+import "./boot.mjs";
 `,
 );
 
@@ -302,7 +373,8 @@ fs.writeFileSync(
 ────────────────────────────────────────────────────────────
     index.js          الدخول على البانل: حطه في "Main file (Node.js)"
     boot.mjs          الدخول الأصلي (يختار الدور تلقائياً)
-    server.mjs        السيرفر كامل في ملف واحد
+    server.mjs        الدخول (باشراف ذاتي) — بيشغّل nova-app.mjs
+    nova-app.mjs      السيرفر كامل في ملف واحد
     nova-agent.js     وكيل النود (بيتنفّذ أوامر الهاب)
     public/           الواجهة جاهزة
     state/            الذاكرة وملفات الحالة

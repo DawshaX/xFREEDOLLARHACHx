@@ -233,6 +233,69 @@ router.get("/nova-core/version", (_req: Request, res: Response) => {
   });
 });
 
+/**
+ * POST/GET /api/nova-core/restart
+ * Reload the running app without anyone touching the hosting panel.
+ *
+ * The bundle runs as a child of `boot.mjs` (see scripts/build-standalone.mjs).
+ * That supervisor watches `state/.nova-restart`; touching the file makes it
+ * stop the child and start it again with the freshly deployed code.
+ *
+ * Without the supervisor (dev server, `pnpm dev`) there is nothing to bring the
+ * process back, so this endpoint refuses instead of killing the only thing
+ * serving requests.
+ */
+function restartMarkerPaths(): string[] {
+  const out: string[] = [];
+  if (process.env.NOVA_STATIC_DIR) out.push(path.resolve(process.env.NOVA_STATIC_DIR, "..", "state", ".nova-restart"));
+  out.push(path.resolve(process.cwd(), "state", ".nova-restart"));
+  return [...new Set(out)];
+}
+
+const handleRestart = (_req: Request, res: Response) => {
+  const supervised = process.env.NOVA_SUPERVISED === "1";
+  const paths = restartMarkerPaths();
+  res.setHeader("Cache-Control", "no-store");
+
+  if (!supervised) {
+    res.status(409).json({
+      ok: false,
+      supervised: false,
+      note: "مفيش مُشرف (supervisor) في النسخة اللي شغّالة — إعادة التشغيل الذاتي متاحة بس في حزمة nova-24-7. أعد تشغيل السيرفر من اللوحة مرة واحدة.",
+      marker: paths,
+    });
+    return;
+  }
+
+  const written: string[] = [];
+  for (const p of paths) {
+    try {
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, new Date().toISOString());
+      written.push(p);
+    } catch {
+      /* the other candidate may still work */
+    }
+  }
+
+  if (written.length === 0) {
+    res.status(500).json({ ok: false, supervised: true, note: "مقدرتش أكتب ملف إعادة التشغيل" });
+    return;
+  }
+
+  // Answer BEFORE the supervisor pulls the plug (~1 s).
+  res.json({
+    ok: true,
+    supervised: true,
+    restartingInMs: 1000,
+    marker: written,
+    note: "المُشرف شاف الملف وهيعيد تشغيل البرنامج بالنسخة الجديدة — عُد بعد 3 ثواني على /api/nova-core/version.",
+  });
+};
+
+router.get("/nova-core/restart", handleRestart);
+router.post("/nova-core/restart", handleRestart);
+
 /* ── the council (multi-model deliberation) ──────────────────────────────── */
 
 /**
