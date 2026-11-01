@@ -91,9 +91,26 @@ fs.writeFileSync(
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFileSync, existsSync } from "node:fs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
+
+// Panels that let you edit files but not variables: copy node.env.example to
+// .env next to this file. Real environment variables always win.
+const envFile = join(HERE, ".env");
+if (existsSync(envFile)) {
+  for (const raw of readFileSync(envFile, "utf8").split(/\\r?\\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq < 1) continue;
+    const k = line.slice(0, eq).trim();
+    const v = line.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+    if (!(k in process.env)) process.env[k] = v;
+  }
+  console.log("[nova] loaded " + envFile);
+}
 
 // Sensible defaults for any container: reachable from outside, panel served
 // from this folder, memory kept next to the code.
@@ -175,9 +192,9 @@ fs.writeFileSync(
       // Declaring the whole folder as ESM made `node nova-agent.js` crash with
       // "require is not defined in ES module scope".
       description: "CyberNova NOVA — portable 24/7 server + fleet node, no dependencies",
-      main: "boot.mjs",
+      main: "index.js",
       scripts: {
-        start: "node boot.mjs",
+        start: "node index.js",
         hub: "NOVA_ROLE=hub node boot.mjs",
         node: "NOVA_ROLE=node node boot.mjs",
       },
@@ -204,6 +221,31 @@ fs.writeFileSync(
 - البورت: PORT أو SERVER_PORT (اللي الاستضافة بتحدده)
 - الاستماع: 0.0.0.0 — متاح من برّه
 - الواجهة: /self-check   ·   الذاكرة: state/nova-memory.json
+
+────────────────────────────────────────────────────────────
+①-ب  على بانل Pterodactyl (زي Waifly) — إعدادات الـStartup
+────────────────────────────────────────────────────────────
+الـegg بيشغّل:  /start.sh → npm install → node <Main file (Node.js)>
+فخليك في التبويب Startup → Variables بالشكل ده:
+
+    Runtime                    = node
+    Node.js Version            = 22
+    Main file (Node.js)        = index.js      ← المهم
+    User Uploaded Files        = 1             (تخطّي git clone)
+    Additional NPM packages    = (اتركها فاضية)
+    Additional Node Arguments  = (اتركها فاضية)
+
+وللنود زوّد المتغيرين دول في نفس الصفحة:
+
+    NOVA_ROLE   = node
+    NOVA_SERVER = wss://<عنوان-الهاب>/api/local-agent/ws
+    NOVA_AGENT_ID = waifly-2
+
+الـegg بيقبل متغيرات إضافية من نفس الصفحة، ولو مش لاقي مكان تضيفها
+اكتبهم في ملف .env (شوف node.env.example) — boot.mjs بيقرأ البيئة فقط.
+
+⚠️ ما تغيّرش الـegg لـ«Web Hosting (PHP)» — PHP مش بيشغّل Node،
+   والبرنامج بتاعك JavaScript بالكامل. سيبها NodeJS + Python + FFmpeg.
 
 ────────────────────────────────────────────────────────────
 ② تشغيل كـ«نود» (سيرفر تاني ينضم للأسطول)
@@ -237,7 +279,8 @@ fs.writeFileSync(
 ────────────────────────────────────────────────────────────
 ⑤ الملفات
 ────────────────────────────────────────────────────────────
-    boot.mjs          الدخول (يختار الدور تلقائياً)
+    index.js          الدخول على البانل: حطه في "Main file (Node.js)"
+    boot.mjs          الدخول الأصلي (يختار الدور تلقائياً)
     server.mjs        السيرفر كامل في ملف واحد
     nova-agent.js     وكيل النود (بيتنفّذ أوامر الهاب)
     public/           الواجهة جاهزة
@@ -248,6 +291,35 @@ fs.writeFileSync(
     start-node.sh     تشغيل النود
     start-tunnel.sh   هاب + HTTPS مجاني
 `,
+);
+
+// index.js — the file Pterodactyl-style eggs run ("Main file (Node.js)").
+// Pterodactyl eggs execute \`node <MainFile>\`, they never run \`node .\`, and the
+// field only accepts .js/.ts — so the .mjs entry needs a CommonJS door.
+// CommonJS can dynamic-import ESM, so this is a three-line shim and there is
+// still exactly one place (boot.mjs) that decides what the process becomes.
+fs.writeFileSync(
+  path.join(OUT, "index.js"),
+  `#!/usr/bin/env node
+/**
+ * NOVA — universal entry point.
+ *
+ *   node index.js            → picks the role from the environment
+ *   NOVA_SERVER=wss://…      → fleet node
+ *   (nothing set)            → hub
+ *
+ * Works on panels that run a fixed start command such as
+ *   /start.sh  →  npm install  →  node <Main file (Node.js)>
+ * Set "Main file (Node.js)" to:  index.js
+ */
+console.log("[nova] entry index.js · " + process.version + " · " + process.platform + "/" + process.arch);
+
+import("./boot.mjs").catch((err) => {
+  console.error("[nova] boot failed:", err && (err.stack || err.message || err));
+  process.exit(1);
+});
+`,
+  { mode: 0o755 },
 );
 
 /* ── 2b. node helpers ────────────────────────────────────────────────────── */
