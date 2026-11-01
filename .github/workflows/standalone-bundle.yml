@@ -56,6 +56,9 @@ jobs:
       - name: Assemble the portable folder
         run: node scripts/build-standalone.mjs
 
+      - name: Build the fleet-node kit (one upload = a new node)
+        run: node scripts/make-node-kit.mjs --hub ws://node.waifly.com:27214/api/local-agent/ws
+
       - name: Smoke-test the bundle in a clean directory (no node_modules)
         run: |
           rm -rf /tmp/clean && mkdir -p /tmp/clean
@@ -78,7 +81,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: nova-24-7
-          path: dist-standalone/nova-24-7.zip
+          path: |
+            dist-standalone/nova-24-7.zip
+            dist-node-kit/nova-node-kit.zip
           retention-days: 90
 
       - name: Publish as a release asset (stable download link)
@@ -95,7 +100,17 @@ jobs:
             4. لـHTTPS مجاني بدون حساب: `sh start-tunnel.sh`.
 
             الحجم ~10MB · الذاكرة ~90–110MB RSS · مفيش npm install ولا build.
-          files: dist-standalone/nova-24-7.zip
+
+            ---
+
+            **نود الأسطول — `nova-node-kit.zip` (13 KB):**
+            ملفات جاهزة تخلي أي سيرفر/جهاز تاني يبقى نود تابع للهاب.
+            ارفع الملفات → خلّي Main file = `index.js` → Start.
+            مفيش أي إعداد مطلوب (عنوان الهاب مدمج)، والاتصال صادر فمش محتاج IP عام.
+            بديل بدون رفع: `curl -fsSL <hub>/api/local-agent/download-agent | bash -s -- --id node-2`
+          files: |
+            dist-standalone/nova-24-7.zip
+            dist-node-kit/nova-node-kit.zip
           make_latest: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

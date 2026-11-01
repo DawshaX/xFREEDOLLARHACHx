@@ -62,3 +62,6 @@ fleet-mesh.json
 
 # portable 24/7 bundle output (built by CI, published as a release asset)
 dist-standalone/
+
+# fleet-node kit output (published as a release asset by CI)
+dist-node-kit/
