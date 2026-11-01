@@ -427,6 +427,10 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     const letRouterHandle =
       // NOVA Core owns its own durable memory + agent stream — never mock it.
       p.startsWith("/nova-core") ||
+      // The gateway does live probes (Ollama, ngrok, every provider). The mock
+      // used to answer it with hardcoded "online: true" values, which is how a
+      // machine with no Ollama reported five installed models.
+      p.startsWith("/nova/gateway") ||
       p.startsWith("/memory") ||
       p.startsWith("/ollama") ||
       p.startsWith("/events") ||

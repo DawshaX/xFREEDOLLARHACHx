@@ -244,6 +244,25 @@ async function discoverModel(provider: LlmProviderInfo): Promise<string | null> 
   return available[0] ?? null;
 }
 
+/**
+ * Keys that the provider itself rejected (401/403). Retrying them on every
+ * message wastes a round-trip and, worse, makes the panel look like it is
+ * "trying" a provider that can never answer. Remembered for the process.
+ */
+const AUTH_REJECTED = new Map<string, string>();
+
+export function providerAuthError(providerId: string): string | null {
+  return AUTH_REJECTED.get(providerId) ?? null;
+}
+
+function isAuthRejection(message: string): boolean {
+  return /\b401\b|\b403\b|incorrect api key|invalid api key|invalid_api_key|unauthor|permission/i.test(message);
+}
+
+function isRateLimited(message: string): boolean {
+  return /\b429\b|rate.?limit|too many requests|quota|exceeded/i.test(message);
+}
+
 /** The model to use: env override → learned choice → configured → discovered. */
 export async function resolveModel(provider: LlmProviderInfo): Promise<string> {
   const learned = MODEL_CACHE.get(provider.id);
@@ -269,19 +288,64 @@ export async function completeWithProvider(
       ? callOllama({ ...provider, model: useModel }, messages, opts.temperature)
       : callOpenAiCompatible({ ...provider, model: useModel }, messages, opts.temperature, opts.maxTokens, opts.timeoutMs);
 
+  const rejected = AUTH_REJECTED.get(provider.id);
+  if (rejected) throw new Error(`${provider.id}: المفتاح مرفوض (${rejected}) — تم تجاهله`);
+
   try {
     const text = await attempt(model);
     return { text, model, ms: Date.now() - started };
   } catch (err) {
     const msg = String((err as Error).message ?? "");
-    if (!isModelRejection(msg)) throw err;
-    const healedModel = await discoverModel(provider);
-    if (!healedModel || healedModel === model) throw err;
-    logger.warn({ provider: provider.id, from: model, to: healedModel }, "llm: model retired, auto-switched");
-    const text = await attempt(healedModel);
-    MODEL_CACHE.set(provider.id, healedModel);
-    return { text, model: healedModel, ms: Date.now() - started, healed: true };
+
+    if (isAuthRejection(msg)) {
+      AUTH_REJECTED.set(provider.id, msg.slice(0, 90));
+      logger.warn({ provider: provider.id }, "llm: key rejected — provider disabled for this process");
+      throw err;
+    }
+
+    // A retired model id: ask the provider what it serves, then retry there.
+    if (isModelRejection(msg)) {
+      const healedModel = await discoverModel(provider);
+      if (healedModel && healedModel !== model) {
+        logger.warn({ provider: provider.id, from: model, to: healedModel }, "llm: model retired, auto-switched");
+        const text = await attempt(healedModel);
+        MODEL_CACHE.set(provider.id, healedModel);
+        return { text, model: healedModel, ms: Date.now() - started, healed: true };
+      }
+      throw err;
+    }
+
+    // A rate-limited free model is not a broken provider: the next free one on
+    // the same key usually answers immediately.
+    if (isRateLimited(msg)) {
+      const candidates = (await discoverModelList(provider)).filter((id) => id !== model).slice(0, 3);
+      for (const alt of candidates) {
+        try {
+          const text = await attempt(alt);
+          MODEL_CACHE.set(provider.id, alt);
+          logger.warn({ provider: provider.id, from: model, to: alt }, "llm: rate-limited model, switched");
+          return { text, model: alt, ms: Date.now() - started, healed: true };
+        } catch {
+          continue;
+        }
+      }
+    }
+    throw err;
   }
+}
+
+/** Chat-capable models for a provider, preference-ordered, de-duplicated. */
+async function discoverModelList(provider: LlmProviderInfo): Promise<string[]> {
+  const available = (await listProviderModels(provider)).filter((id) => !NOT_CHAT.test(id));
+  const pref = MODEL_PREFERENCE[provider.id] ?? [];
+  const ordered: string[] = [];
+  for (const wanted of pref) {
+    for (const id of available) {
+      if (id.toLowerCase().includes(wanted.toLowerCase()) && !ordered.includes(id)) ordered.push(id);
+    }
+  }
+  for (const id of available) if (!ordered.includes(id)) ordered.push(id);
+  return ordered;
 }
 
 /** Model ids this key can actually use (for the panel / diagnostics). */
