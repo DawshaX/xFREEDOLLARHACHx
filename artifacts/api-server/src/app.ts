@@ -567,6 +567,9 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
 
 // Standalone fallback error handler
 app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+  const message = err instanceof Error ? err.message : String(err ?? "");
+  const isDbError = /Failed query|ECONNREFUSED|relation .* does not exist|password authentication|getaddrinfo/i.test(message);
+
   if (req.originalUrl?.startsWith("/api")) {
     const fallback = resolveStandaloneApi(
       req.originalUrl,
@@ -575,6 +578,17 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
     );
     if (fallback !== null) {
       res.status(200).json(fallback);
+      return;
+    }
+    // A DB-backed route with no database is a deployment fact, not a crash:
+    // answer 503 with the reason instead of a 500 that takes the page down.
+    if (!process.env.DATABASE_URL && isDbError) {
+      res.status(503).json({
+        ok: false,
+        standalone: true,
+        error: "الميزة دي محتاجة قاعدة بيانات (DATABASE_URL) مش متظبطة في الوضع المستقل.",
+        path: req.originalUrl,
+      });
       return;
     }
   }

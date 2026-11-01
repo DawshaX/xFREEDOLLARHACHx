@@ -158,6 +158,37 @@ class PageErrorBoundary extends Component<
               >
                 إعادة محاولة العرض (تحديث النسخة الحية)
               </button>
+              {/*
+                Local recovery. Panel state (missions, CVE counters, brain
+                cache) lives in localStorage, so a stale schema from an older
+                build can crash a page with a message like
+                "Cannot read properties of undefined (reading 'CRITICAL')".
+                This clears the saved state — never the server data — and
+                reloads, which fixes the user without asking them to hunt
+                through DevTools.
+              */}
+              <button
+                onClick={() => {
+                  try {
+                    const doomed: string[] = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                      const k = localStorage.key(i);
+                      if (k && k.startsWith("cybernova")) doomed.push(k);
+                    }
+                    for (const k of doomed) localStorage.removeItem(k);
+                    sessionStorage.clear();
+                  } catch {
+                    /* storage blocked — the reload below is still worth trying */
+                  }
+                  const u = new URL(window.location.href);
+                  u.searchParams.set("_v", String(Date.now()));
+                  window.location.replace(u.toString());
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-mono font-bold bg-red-600/20 border border-red-500/40 text-red-200 hover:bg-red-600/40"
+                title="يمسح الحالة المحفوظة في المتصفح فقط — بيانات السيرفر ما بتتمسحش"
+              >
+                مسح الحالة المحلية وإعادة التحميل
+              </button>
             </div>
           </div>
         </div>

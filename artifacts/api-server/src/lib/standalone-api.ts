@@ -548,16 +548,40 @@ export const STANDALONE_MITRE = [
 // ── Persistent State Store (Memory + localStorage sync) ─────────────────────
 const memoryStore = new Map<string, string>();
 
+/**
+ * Merge persisted state over the defaults, recursively.
+ *
+ * Client state lives in localStorage and in a process-wide memory store, so a
+ * browser that used an older build still holds an *older schema*. Reading it
+ * back verbatim is how `galaxyStats.bySeverity.CRITICAL` became
+ * "Cannot read properties of undefined (reading 'CRITICAL')" on a real page:
+ * the stored object simply had no `bySeverity`. Defaults win for anything the
+ * stored copy does not have.
+ */
+function mergeState<T>(base: T, stored: unknown): T {
+  if (stored === null || stored === undefined) return base;
+  if (Array.isArray(base) || Array.isArray(stored)) return (stored as T) ?? base;
+  const baseIsObj = typeof base === "object" && base !== null;
+  const storedIsObj = typeof stored === "object" && stored !== null;
+  if (!baseIsObj || !storedIsObj) return (stored as T) ?? base;
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [k, v] of Object.entries(stored as Record<string, unknown>)) {
+    const b = (base as Record<string, unknown>)[k];
+    out[k] = b === undefined ? v : mergeState(b, v);
+  }
+  return out as T;
+}
+
 function loadState<T>(key: string, fallback: T): T {
   try {
     if (typeof localStorage !== "undefined") {
       const raw = localStorage.getItem(key);
-      if (raw) return JSON.parse(raw) as T;
+      if (raw) return mergeState(fallback, JSON.parse(raw));
     }
     const memRaw = memoryStore.get(key);
-    if (memRaw) return JSON.parse(memRaw) as T;
+    if (memRaw) return mergeState(fallback, JSON.parse(memRaw));
   } catch {
-    // ignore
+    // A corrupted value must not take the page down.
   }
   return fallback;
 }
@@ -2652,6 +2676,9 @@ export function resolveStandaloneApi(
     galaxyStats.withExploit += 1;
     galaxyStats.lastHour += 1;
     galaxyStats.lastDay += 1;
+    galaxyStats.bySeverity = galaxyStats.bySeverity ?? {};
+    galaxyStats.bySource = galaxyStats.bySource ?? {};
+    galaxyStats.byExploitType = galaxyStats.byExploitType ?? {};
     galaxyStats.bySeverity.CRITICAL = (galaxyStats.bySeverity.CRITICAL || 12140) + 1;
     galaxyStats.bySource[src] = (galaxyStats.bySource[src] || 1500) + 1;
     galaxyStats.byExploitType[et] = (galaxyStats.byExploitType[et] || 800) + 1;
@@ -2694,6 +2721,20 @@ export function resolveStandaloneApi(
   }
 
   // ── Dashboard & Stats ──────────────────────────────────────────────────────
+  // /cves/stats is served by a Postgres-backed router; in standalone mode it
+  // has no store, so answer from the in-memory corpus instead of a 500.
+  if (path === "/cves/stats" || path === "/cve/stats") {
+    const bySeverity: Record<string, number> = {};
+    for (const c of STANDALONE_CVES) bySeverity[c.severity] = (bySeverity[c.severity] ?? 0) + 1;
+    return {
+      total: STANDALONE_CVES.length,
+      bySeverity,
+      lastHour: 0,
+      lastDay: STANDALONE_CVES.length,
+      source: "in-memory corpus (standalone mode)",
+    };
+  }
+
   if (path === "/stats/dashboard") {
     return {
       totalCves: galaxyStats.total,
@@ -2898,7 +2939,8 @@ export function resolveStandaloneApi(
       galaxyStats.withExploit += 1;
       galaxyStats.lastHour += 1;
       galaxyStats.lastDay += 1;
-      galaxyStats.bySeverity[sev] = (galaxyStats.bySeverity[sev] || 0) + 1;
+      galaxyStats.bySeverity = galaxyStats.bySeverity ?? {};
+    galaxyStats.bySeverity[sev] = (galaxyStats.bySeverity[sev] || 0) + 1;
       galaxyStats.bySource[src] = (galaxyStats.bySource[src] || 0) + 1;
       galaxyStats.byExploitType[et] = (galaxyStats.byExploitType[et] || 0) + 1;
     }
@@ -3002,6 +3044,7 @@ export function resolveStandaloneApi(
     galaxyStats.inKev += 3;
     galaxyStats.lastHour += newFound;
     galaxyStats.lastDay += newFound;
+    galaxyStats.bySeverity = galaxyStats.bySeverity ?? {};
     galaxyStats.bySeverity.CRITICAL = galaxyStats.critical;
     galaxyStats.bySeverity.HIGH = galaxyStats.high;
     galaxyStats.bySeverity.MEDIUM = galaxyStats.medium;
