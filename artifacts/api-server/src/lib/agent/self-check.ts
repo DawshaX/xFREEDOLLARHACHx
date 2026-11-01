@@ -211,26 +211,58 @@ async function probeCouncil(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms"
 }
 
 /**
- * Is the remote-command surface safe? These endpoints run shell commands and on
- * a free public host they answer anyone who knows the URL, so the honest thing
- * is to say so out loud instead of hoping nobody notices.
+ * Is the remote-command surface safe? Instead of trusting the code, this probe
+ * ASKS the running server: it calls its own /api/exec/run with no browser
+ * headers and expects a 403. A pass means the gate is live in this process;
+ * a 200 means anybody on the internet can run shell commands.
  */
 async function probeExec(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">> {
   const guarded = Boolean((process.env.NOVA_EXEC_TOKEN || "").trim());
   const shell = process.env.NOVA_EXEC_ALLOW_SHELL === "1";
-  if (guarded && !shell) {
-    return { status: "ok", detail: "أوامر الشل محمية بتوكن · الأوامر الملفوفة (bash -c) مقفولة" };
+  const shellNote = shell ? " · ⚠ أوامر الشل الملفوفة مسموحة" : " · الأوامر الملفوفة (bash -c) مقفولة";
+
+  const port = Number(
+    process.env.PORT || process.env.SERVER_PORT || process.env.APP_PORT || process.env.WEB_PORT || 8080,
+  );
+
+  // The actual proof: an anonymous POST from outside the panel.
+  const probe = await timeBox(
+    async () => {
+      const res = await fetch(`http://127.0.0.1:${port}/api/exec/run`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ command: "echo nova-selfcheck-probe" }),
+        signal: AbortSignal.timeout(3000),
+      });
+      return res.status;
+    },
+    4000,
+    null,
+  );
+
+  if (probe === null) {
+    return {
+      status: "warn",
+      detail: `مقدرتش أختبر بوابة التنفيذ (مفيش رد من السيرفر على ${port})${shellNote}`,
+      fix: "لو السيرفر رد على /api/health وعيّن، ده مجرد تعارض لحظي — أعد الفحص.",
+    };
   }
-  if (guarded) {
-    return { status: shell ? "warn" : "ok", detail: shell ? "محمي بتوكن، لكن NOVA_EXEC_ALLOW_SHELL=1 يسمح بأوامر ملفوفة" : "محمي بتوكن · الأوامر الملفوفة (bash -c) مقفولة", fix: shell ? "شيل NOVA_EXEC_ALLOW_SHELL من .env لو مش محتاجه." : undefined };
+
+  if (probe === 403 || probe === 401) {
+    return {
+      status: "ok",
+      detail: guarded
+        ? `التوكن مطلوب — طلب مجهول رجّع ${probe}${shellNote}`
+        : `البوابة شغّالة: طلب مجهول رجّع ${probe} (اللوحة بس بتقدر تنفّذ)${shellNote}`,
+      fix: shell ? "شيل NOVA_EXEC_ALLOW_SHELL من .env لو مش محتاجه." : undefined,
+    };
   }
-  // No token: the endpoint still refuses cross-origin callers (scanners, curl
-  // from anywhere), so it is not "open to the internet" any more — but a forged
-  // Origin header would get through. Say exactly that instead of "ok".
+
+  // 200/2xx here means the probe's own command actually ran.
   return {
-    status: "warn",
-    detail: `التنفيذ متاح من اللوحة بس — أي طلب من أصل تاني بياخد 403${shell ? " · وأوامر الشل الملفوفة مسموحة" : " · الأوامر الملفوفة مقفولة"}`,
-    fix: "لو عايز قفل كامل: NOVA_EXEC_TOKEN=<نص عشوائي> في .env — بعدها التنفيذ محتاج توكن حتى من اللوحة.",
+    status: "fail",
+    detail: `طلب مجهول من غير هيدرز اتنفّذ فعلاً (رجّع ${probe}) — أي حد على النت يقدر ينفّذ أوامر${shellNote}`,
+    fix: "حط NOVA_EXEC_TOKEN=<نص عشوائي طويل> في .env فوراً، أو استخدم إصدار الحزمة اللي فيه بوابة same-origin.",
   };
 }
 
