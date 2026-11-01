@@ -446,6 +446,48 @@ exec node boot.mjs
   { mode: 0o755 },
 );
 
+/* ── 2c. build stamp ─────────────────────────────────────────────────────── */
+/**
+ * Why a stamp: after every deploy we could not answer "which build is actually
+ * running on that server?" without guessing from behaviour. /api/nova-core/version
+ * now reads this file, so the answer is one URL away.
+ */
+function gitCommit() {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim();
+  } catch {
+    return process.env.GITHUB_SHA || "unknown";
+  }
+}
+
+const fileCount = (() => {
+  let n = 0;
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory()) walk(path.join(dir, e.name));
+      else n++;
+    }
+  };
+  walk(OUT);
+  return n;
+})();
+
+fs.writeFileSync(
+  path.join(OUT, "build.json"),
+  JSON.stringify(
+    {
+      name: "nova-24-7",
+      version: "2099.1",
+      commit: gitCommit(),
+      builtAt: new Date().toISOString(),
+      files: fileCount,
+      builtBy: process.env.GITHUB_ACTIONS ? "github-actions" : "local",
+    },
+    null,
+    2,
+  ) + "\n",
+);
+
 /* ── 3. zip it ───────────────────────────────────────────────────────────── */
 const zipPath = path.join(ROOT, "dist-standalone", "nova-24-7.zip");
 let zipped = false;

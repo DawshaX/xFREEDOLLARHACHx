@@ -8,6 +8,8 @@
  *   GET  /api/nova-core/persona  → persona card
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import { Router, type Request, type Response } from "express";
 import { runAgent, type AgentEvent } from "../lib/agent/core";
 import { AGENT_TOOLS, runAgentTool, getToolSpec } from "../lib/agent/tools";
@@ -187,6 +189,48 @@ router.get("/nova-core/status", async (_req: Request, res: Response) => {
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }
+});
+
+/* ── which build is this? ─────────────────────────────────────────────────── */
+
+/**
+ * GET /api/nova-core/version
+ * The single question every deploy raises: "is the thing I just shipped the
+ * thing that is running?" Reads build.json written next to the bundle.
+ */
+router.get("/nova-core/version", (_req: Request, res: Response) => {
+  const candidates = [
+    path.resolve(process.cwd(), "build.json"),
+    path.resolve(process.cwd(), "..", "build.json"),
+    ...(process.env.NOVA_STATIC_DIR ? [path.resolve(process.env.NOVA_STATIC_DIR, "..", "build.json")] : []),
+  ];
+  let build: Record<string, unknown> | null = null;
+  let from: string | null = null;
+  for (const c of candidates) {
+    if (fs.existsSync(c)) {
+      try {
+        build = JSON.parse(fs.readFileSync(c, "utf8")) as Record<string, unknown>;
+        from = c;
+        break;
+      } catch {
+        /* a broken build.json is not worth a 500 */
+      }
+    }
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    build: build ?? { commit: "unknown", note: "مفيش build.json — النسخة دي أقدم من نظام البصمة" },
+    source: from,
+    runtime: {
+      node: process.version,
+      platform: `${process.platform}/${process.arch}`,
+      pid: process.pid,
+      uptimeSec: Math.round(process.uptime()),
+      startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+      rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+    },
+  });
 });
 
 /* ── the council (multi-model deliberation) ──────────────────────────────── */
