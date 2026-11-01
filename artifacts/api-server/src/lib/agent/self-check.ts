@@ -210,6 +210,27 @@ async function probeCouncil(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms"
   };
 }
 
+/**
+ * Is the remote-command surface safe? These endpoints run shell commands and on
+ * a free public host they answer anyone who knows the URL, so the honest thing
+ * is to say so out loud instead of hoping nobody notices.
+ */
+async function probeExec(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">> {
+  const guarded = Boolean((process.env.NOVA_EXEC_TOKEN || "").trim());
+  const shell = process.env.NOVA_EXEC_ALLOW_SHELL === "1";
+  if (guarded && !shell) {
+    return { status: "ok", detail: "أوامر الشل محمية بتوكن · الأوامر الملفوفة (bash -c) مقفولة" };
+  }
+  if (guarded) {
+    return { status: "warn", detail: "محمي بتوكن، لكن NOVA_EXEC_ALLOW_SHELL=1 يسمح بأوامر ملفوفة", fix: "شيل NOVA_EXEC_ALLOW_SHELL من .env لو مش محتاجه." };
+  }
+  return {
+    status: "warn",
+    detail: `أوامر الشل مفتوحة لأي حد يوصل البورت${shell ? " (وأوامر ملفوفة مسموحة)" : " (الأوامر الملفوفة مقفولة)"}`,
+    fix: "حط NOVA_EXEC_TOKEN=<نص عشوائي طويل> في .env — وبعدها أي طلب تنفيذ لازم يبعت التوكن.",
+  };
+}
+
 async function probeTools(): Promise<Omit<SelfCheckItem, "id" | "label" | "ms">> {
   const count = AGENT_TOOLS.length;
   // Execute the cheapest real tool end-to-end. hash_text is offline and pure,
@@ -366,6 +387,7 @@ export async function runSelfCheck(opts: { refresh?: boolean } = {}): Promise<Se
     item("brain", "العقل اللغوي", probeBrain),
     item("council", "المجلس (تعدد النماذج)", probeCouncil),
     item("tools", "الأدوات والتنفيذ الحقيقي", probeTools),
+    item("exec", "أمان تنفيذ الأوامر", probeExec),
     item("internet", "الاتصال بالإنترنت", probeInternet),
     item("socket", "قناة الاتصال الحية (WebSocket)", probeSocket),
     item("daemon", "الدورة الذاتية 24/7", probeDaemon),

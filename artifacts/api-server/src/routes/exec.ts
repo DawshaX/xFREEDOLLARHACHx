@@ -52,8 +52,31 @@ const FORBIDDEN_PATTERNS = [
   /chown.*\/etc\/shadow/,
 ];
 
+/**
+ * Code-wrapping forms defeat the binary allowlist: `bash -c "<anything>"`
+ * passes the "first token is bash" check and then runs *any* command. The panel
+ * only ever sends plain commands, so these are refused unless the operator
+ * explicitly opts in with NOVA_EXEC_ALLOW_SHELL=1.
+ */
+const CODE_WRAPPERS = [
+  /\b(?:ba|z|k|da)?sh\s+-c\b/i,
+  /\bnode\s+(?:-e|--eval)\b/i,
+  /\bpython3?\s+-c\b/i,
+  /\bperl\s+-e\b/i,
+  /\bruby\s+-e\b/i,
+  /\beval\s/i,
+];
+
 function isSafeCommand(cmd: string): { safe: boolean; reason?: string } {
   const trimmed = cmd.trim();
+
+  if (process.env.NOVA_EXEC_ALLOW_SHELL !== "1") {
+    for (const rx of CODE_WRAPPERS) {
+      if (rx.test(trimmed)) {
+        return { safe: false, reason: "code wrappers are disabled (NOVA_EXEC_ALLOW_SHELL=1 to allow)" };
+      }
+    }
+  }
 
   for (const rx of FORBIDDEN_PATTERNS) {
     if (rx.test(trimmed)) {
@@ -122,7 +145,37 @@ function runStreaming(cmd: string, cwd = "/tmp"): AsyncGenerator<{ type: string;
   })();
 }
 
+/**
+ * Optional shared-secret gate. When NOVA_EXEC_TOKEN is set, every exec request
+ * must carry it (`?token=` or the `x-nova-token` header). Without it these
+ * endpoints accept commands from anyone who can reach the port — which is the
+ * default on a free host, so it is worth setting on any public deployment.
+ */
+function tokenOk(req: { query?: Record<string, unknown>; headers?: Record<string, unknown> }): boolean {
+  const expected = (process.env.NOVA_EXEC_TOKEN || "").trim();
+  if (!expected) return true;
+  const fromQuery = String((req.query?.token as string) || "");
+  const fromHeader = String((req.headers?.["x-nova-token"] as string) || "");
+  return fromQuery === expected || fromHeader === expected;
+}
+
+export function execExposure(): { open: boolean; guarded: boolean; detail: string } {
+  const guarded = Boolean((process.env.NOVA_EXEC_TOKEN || "").trim());
+  const shell = process.env.NOVA_EXEC_ALLOW_SHELL === "1";
+  return {
+    open: !guarded,
+    guarded,
+    detail: guarded
+      ? `محمي بتوكن${shell ? " · أوامر الشل الملفوفة مسموحة" : ""}`
+      : `مفتوح لأي حد يوصل البورت${shell ? " · وأوامر الشل الملفوفة مسموحة" : ""}`,
+  };
+}
+
 router.get("/exec/stream", async (req, res) => {
+  if (!tokenOk(req)) {
+    res.status(401).json({ error: "توكن التنفيذ مطلوب" });
+    return;
+  }
   const { cmd, cwd = "/tmp" } = req.query as { cmd?: string; cwd?: string };
   if (!cmd) { res.status(400).json({ error: "cmd required" }); return; }
 
@@ -171,6 +224,10 @@ router.get("/exec/stream", async (req, res) => {
 });
 
 router.post("/exec/run", async (req, res) => {
+  if (!tokenOk(req)) {
+    res.status(401).json({ error: "توكن التنفيذ مطلوب" });
+    return;
+  }
   const { command, cmd, cwd = "/tmp", timeout = 30000 } = req.body as {
     command?: string; cmd?: string; cwd?: string; timeout?: number;
   };
