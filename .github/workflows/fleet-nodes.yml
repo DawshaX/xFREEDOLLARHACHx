@@ -118,10 +118,30 @@ jobs:
         run: |
           HUB="${HUB:-ws://node.waifly.com:27214/api/local-agent/ws}"
           echo "hub: $HUB"
-          # 5 h 40 m of work per wave, then a clean exit before the job limit.
-          timeout 20300 node nova-agent.js \
-            --server "$HUB" \
-            --id "gh-${IDX}-$(date +%H%M)" \
-            --log /tmp/nova-agent.log || true
+          NODE_ID="gh-${IDX}-$(date +%H%M)"
+
+          # ── keep-alive loop ───────────────────────────────────────────────
+          # The agent is single-process; if it ever exits (a hub restart, a
+          # broken socket, a stray signal) this loop brings it straight back
+          # instead of ending the whole job and losing the node. The wave ends
+          # when the deadline below passes — checked between restarts.
+          DEADLINE=$(( $(date +%s) + 20300 ))   # 5 h 38 m, under the 6 h cap
+          runs=0
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            runs=$((runs + 1))
+            echo "::notice::node $NODE_ID · run #$runs"
+
+            remaining=$(( DEADLINE - $(date +%s) ))
+            set +e
+            timeout "$remaining" node nova-agent.js \
+              --server "$HUB" \
+              --id "$NODE_ID" \
+              --log /tmp/nova-agent.log
+            code=$?
+            set -e
+            echo "agent exited with code $code after $(( DEADLINE - $(date +%s) ))s of wave time left"
+            tail -5 /tmp/nova-agent.log 2>/dev/null || true
+            # A fast exit means the hub is unreachable — back off politely.
+            if [ "$code" -ne 124 ] && [ "$code" -ne 143 ]; then sleep 10; fi
+          done
           echo "node leaving the fleet (wave finished)"
-          tail -20 /tmp/nova-agent.log || true
