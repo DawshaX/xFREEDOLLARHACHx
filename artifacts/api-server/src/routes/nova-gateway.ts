@@ -65,7 +65,13 @@ async function getDbSetting(key: string): Promise<string | undefined> {
   } catch { return undefined; }
 }
 
-const HYBRID_MODELS = [
+/**
+ * A *catalogue* of models the hybrid brain can use if they are installed.
+ * It is deliberately NOT reported as "installed": listing models that are not
+ * on the machine was how this endpoint used to claim "Ollama online" on a box
+ * with no Ollama at all.
+ */
+const HYBRID_CATALOGUE = [
   "dolphin-llama3:latest",
   "cybernova-sec-brain:2099",
   "qwen2.5-coder:32b",
@@ -89,25 +95,32 @@ async function probeNgrokUrl(url: string): Promise<NgrokStatus> {
 
     if (r.ok) {
       const data = await r.json() as { models?: Array<{ name: string }> };
+      // Only what the machine actually reports. An empty list stays empty.
       const models = (data.models ?? []).map((m) => m.name);
       return {
         url,
         online: true,
         latencyMs: Date.now() - start,
-        models: models.length > 0 ? models : HYBRID_MODELS,
+        models,
         checkedAt: new Date().toISOString(),
       };
     }
-  } catch {
-    // Seamless hybrid fallback
+    return {
+      url,
+      online: false,
+      latencyMs: Date.now() - start,
+      error: `HTTP ${r.status}`,
+      checkedAt: new Date().toISOString(),
+    };
+  } catch (err) {
+    return {
+      url,
+      online: false,
+      latencyMs: Date.now() - start,
+      error: (err as Error).message.slice(0, 120),
+      checkedAt: new Date().toISOString(),
+    };
   }
-  return {
-    url,
-    online: true,
-    latencyMs: 12,
-    models: HYBRID_MODELS,
-    checkedAt: new Date().toISOString(),
-  };
 }
 
 async function probeOllamaLocal(): Promise<OllamaLocalStatus> {
@@ -126,20 +139,27 @@ async function probeOllamaLocal(): Promise<OllamaLocalStatus> {
         online: true,
         baseUrl,
         latencyMs: Date.now() - start,
-        models: models.length > 0 ? models : HYBRID_MODELS,
+        models,
         checkedAt: new Date().toISOString(),
+        ...(models.length === 0 ? { error: "Ollama يعمل لكن مفيش موديلات مسحوبة (ollama pull)" } : {}),
       };
     }
-  } catch {
-    // Seamless hybrid fallback
+    return {
+      online: false,
+      baseUrl,
+      latencyMs: Date.now() - start,
+      error: `HTTP ${r.status}`,
+      checkedAt: new Date().toISOString(),
+    };
+  } catch (err) {
+    return {
+      online: false,
+      baseUrl,
+      latencyMs: Date.now() - start,
+      error: (err as Error).message.slice(0, 120),
+      checkedAt: new Date().toISOString(),
+    };
   }
-  return {
-    online: true,
-    baseUrl,
-    latencyMs: 4,
-    models: HYBRID_MODELS,
-    checkedAt: new Date().toISOString(),
-  };
 }
 
 async function buildGatewayStatus(): Promise<GatewayStatus> {
@@ -168,11 +188,17 @@ async function buildGatewayStatus(): Promise<GatewayStatus> {
         available: p.available,
         enabled: p.enabled,
         speed: p.speed,
+        // Real numbers from the last probe, not a hand-written label.
+        ...(p.latencyMs !== undefined ? { latencyMs: p.latencyMs } : {}),
+        ...(p.lastError ? { lastError: p.lastError } : {}),
         ...(p.exhaustedUntil ? { exhaustedUntil: p.exhaustedUntil } : {}),
       })),
     },
-    systemOnline: ngrok.online || ollamaLocal.online || enabled.length > 0,
-    activeModelCount: enabled.length + (ngrok.online ? 1 : 0) + (ollamaLocal.online ? 1 : 0),
+    // "enabled" means someone ticked a box; only "available" means a real
+    // request succeeded. The dashboard must not confuse the two.
+    systemOnline: ngrok.online || ollamaLocal.online || available.length > 0,
+    activeModelCount:
+      available.length + (ngrok.online ? 1 : 0) + (ollamaLocal.online ? (ollamaLocal.models?.length ?? 1) : 0),
     timestamp: new Date().toISOString(),
   };
 
