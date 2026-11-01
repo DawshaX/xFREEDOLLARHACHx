@@ -66,6 +66,14 @@ if (fs.existsSync(missionLog)) {
   fs.copyFileSync(missionLog, path.join(OUT, "public", "state", "nova-mission-log.json"));
 }
 
+// The agent must travel with the bundle: /api/local-agent/download-nova-agent
+// reads it from the process cwd, and without it "connect a computer" answers
+// 500 on a packaged install (it only ever worked from the source tree).
+const agentSrc = path.join(ROOT, "nova-agent.js");
+if (fs.existsSync(agentSrc)) {
+  fs.copyFileSync(agentSrc, path.join(OUT, "nova-agent.js"));
+}
+
 /* ── 2. launch scripts ───────────────────────────────────────────────────── */
 fs.writeFileSync(
   path.join(OUT, "start.sh"),
@@ -113,7 +121,10 @@ fs.writeFileSync(
       name: "nova-24-7",
       version: "1.0.0",
       private: true,
-      type: "module",
+      // NOTE: deliberately NOT "type": "module". The entry point is server.mjs
+      // (explicit ESM), while nova-agent.js ships alongside it as CommonJS.
+      // Declaring the whole folder as ESM made `node nova-agent.js` crash with
+      // "require is not defined in ES module scope".
       description: "CyberNova NOVA — portable single-file server, no dependencies",
       main: "server.mjs",
       scripts: { start: "node server.mjs" },
@@ -147,6 +158,16 @@ HTTPS من غير حساب ولا كارت:
 
 فحص الحالة:
     افتح /self-check  أو  /api/nova-core/self-check
+
+إضافة سيرفر/جهاز تاني كـ"نود" في الأسطول (بدون أي تثبيت):
+    curl -fsSL http://<عنوان-الهاب>:<البورت>/api/local-agent/download-nova-agent -o nova-agent.js
+    NOVA_SERVER=ws://<عنوان-الهاب>:<البورت>/api/local-agent/ws NOVA_AGENT_ID=node-2 node nova-agent.js
+  النود بيسجّل نفسه، بيبعت موارده وأدواته، وبيستقبل أوامر تنفيذ من الهاب.
+  لو البروكسي رافض WebSocket على البورت المباشر، جرّب wss://<سب-دومين>/api/local-agent/ws
+  أو ادمج أكتر من عنوان مفصول بفاصلة — الوكيل بيلف بينهم تلقائياً.
+
+منافذ إضافية (لو البروكسي بيوجّه لبورت تاني):
+    NOVA_EXTRA_PORTS=3000,8080 node server.mjs
 
 المتطلبات: Node 20+ فقط. مفيش npm install، مفيش build.
 الحجم ~10MB · الذاكرة ~110MB RSS · بيدخل في 256MB.

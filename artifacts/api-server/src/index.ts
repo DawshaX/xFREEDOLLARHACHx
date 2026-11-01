@@ -176,8 +176,12 @@ hubWss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
   });
 });
 
-// Route WebSocket upgrade requests by path
-server.on("upgrade", (req, socket, head) => {
+/**
+ * One upgrade router shared by every listener, so an extra port behaves
+ * exactly like the primary one (some panel proxies forward to a different
+ * port than the one the app was told to use).
+ */
+function routeUpgrade(req: http.IncomingMessage, socket: import("node:stream").Duplex, head: Buffer): void {
   const url = req.url ?? "";
   if (url === "/api/local-agent/ws" || url.startsWith("/api/local-agent/ws?")) {
     localAgentWss.handleUpgrade(req, socket, head, (ws) => {
@@ -196,7 +200,10 @@ server.on("upgrade", (req, socket, head) => {
     socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
     socket.destroy();
   }
-});
+}
+
+// Route WebSocket upgrade requests by path
+server.on("upgrade", routeUpgrade);
 
 /**
  * Where to bind.
@@ -231,6 +238,29 @@ server.listen(port, host, () => {
   // Plain line too: panel consoles (Pterodactyl) sometimes swallow JSON logs,
   // which made a perfectly healthy process look dead.
   console.log(`✓ NOVA listening on http://${host}:${port} — open /self-check`);
+
+  /**
+   * Extra listeners.
+   *
+   * Some panel proxies (Pterodactyl eggs behind a shared nginx, Waifly web
+   * proxies) forward to a port different from the one they advertised. Rather
+   * than guessing, NOVA_EXTRA_PORTS lets the same app answer on several ports;
+   * a port that is taken only produces a warning, never a crash.
+   */
+  const extraPorts = String(process.env.NOVA_EXTRA_PORTS || "")
+    .split(/[,\s]+/)
+    .map((v) => Number(v))
+    .filter((n) => Number.isInteger(n) && n > 0 && n < 65536 && n !== port);
+  for (const extraPort of new Set(extraPorts)) {
+    const extraServer = http.createServer(app);
+    extraServer.on("upgrade", routeUpgrade);
+    extraServer.on("error", (err: NodeJS.ErrnoException) => {
+      logger.warn({ port: extraPort, code: err.code }, `extra port ${extraPort} unavailable (${err.code ?? err.message})`);
+    });
+    extraServer.listen(extraPort, host, () => {
+      console.log(`✓ NOVA also listening on http://${host}:${extraPort}`);
+    });
+  }
 
   // ── NOVA boot sequence (never blocks the listener) ────────────────────────
   void import("./lib/agent/memory-store")

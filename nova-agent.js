@@ -59,11 +59,20 @@ function parseArgs(argv) {
 
 const ARGS = parseArgs(process.argv.slice(2));
 
-const SERVER =
-  ARGS.server ||
-  process.env.NOVA_SERVER ||
-  process.env.AGENT_SERVER ||
-  "ws://127.0.0.1:8080/api/local-agent/ws";
+/**
+ * Endpoint list. A single hub is the normal case, but comma-separated
+ * candidates are honoured (`ws://a/... , ws://b/...`) so a node can fall back
+ * when one route is blocked — e.g. a panel proxy that refuses WebSocket
+ * upgrades on the raw port but forwards them over its TLS subdomain.
+ */
+const SERVERS = String(
+  ARGS.server || process.env.NOVA_SERVER || process.env.AGENT_SERVER || "ws://127.0.0.1:8080/api/local-agent/ws",
+)
+  .split(",")
+  .map((v) => v.trim())
+  .filter(Boolean);
+const SERVER = SERVERS[0];
+let serverIndex = 0;
 
 const AGENT_ID =
   ARGS.id ||
@@ -723,9 +732,61 @@ async function register() {
   log(`registered as ${AGENT_ID} (${profile.toolCount} tools, ${Object.keys(profile.interfaces || {}).length} ifaces)`);
 }
 
+/**
+ * Why a handshake failed matters more than the fact that it failed.
+ * Node's WebSocket only says "non-101 status code"; this asks the same URL for
+ * the real status line so the fix is obvious (404 path / 502 proxy / 400 TLS).
+ */
+async function diagnose(target) {
+  const m = /^(wss?):\/\/([^/]+)(\/.*)?$/i.exec(target);
+  if (!m) return;
+  const [, scheme, hostPort, pathPart] = m;
+  const httpScheme = scheme.toLowerCase() === "wss" ? "https" : "http";
+  const base = `${httpScheme}://${hostPort}`;
+  try {
+    const r = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(6000) });
+    log(`diagnose: ${base}/api/health → HTTP ${r.status} ${(await r.text()).slice(0, 80)}`);
+  } catch (e) {
+    log(`diagnose: ${base}/api/health unreachable (${e.cause?.code || e.message})`);
+  }
+  try {
+    const https = httpScheme === "https";
+    const mod = await import(https ? "node:tls" : "node:net");
+    const url = new URL(base);
+    const socket = https
+      ? mod.default.connect({ host: url.hostname, port: Number(url.port || 443), servername: url.hostname })
+      : mod.default.connect({ host: url.hostname, port: Number(url.port || 80) });
+    const status = await new Promise((resolve) => {
+      const timer = setTimeout(() => resolve("(no response in 6s)"), 6000);
+      const send = () => {
+        socket.write(
+          `GET ${pathPart || "/api/local-agent/ws"} HTTP/1.1\r\n` +
+            `Host: ${hostPort}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
+            "Sec-WebSocket-Key: bm92YS1kaWFnbm9zZS1rZXk=\r\nSec-WebSocket-Version: 13\r\n\r\n",
+        );
+      };
+      if (https) socket.once("secureConnect", send);
+      else socket.once("connect", send);
+      socket.on("data", (d) => {
+        clearTimeout(timer);
+        resolve(d.toString("latin1").split("\r\n")[0]);
+        socket.destroy();
+      });
+      socket.on("error", (e) => {
+        clearTimeout(timer);
+        resolve(`tcp error ${e.code || e.message}`);
+      });
+    });
+    log(`diagnose: upgrade on ${target} → ${status}`);
+  } catch (e) {
+    log(`diagnose failed: ${e.message}`);
+  }
+}
+
 function connect() {
-  log(`connecting → ${SERVER}`);
-  ws = new WS(SERVER);
+  const target = SERVERS[serverIndex % SERVERS.length];
+  log(`connecting → ${target}${SERVERS.length > 1 ? ` (${serverIndex % SERVERS.length + 1}/${SERVERS.length})` : ""}`);
+  ws = new WS(target);
 
   ws.addEventListener("open", () => {
     attempt = 0;
@@ -805,7 +866,9 @@ function connect() {
   });
 
   ws.addEventListener("error", (e) => {
-    log("socket error:", e?.message || "unknown");
+    log("socket error:", e?.message || e?.error?.message || "unknown");
+    diagnose(target).catch(() => {});
+    if (SERVERS.length > 1) serverIndex += 1;
   });
 
   ws.addEventListener("close", (e) => {
@@ -815,7 +878,8 @@ function connect() {
     if (!RECONNECT) process.exit(0);
     attempt += 1;
     const delay = Math.min(30_000, 1000 * Math.pow(2, Math.min(attempt, 5)));
-    log(`reconnecting in ${Math.round(delay / 1000)}s (attempt ${attempt})`);
+    const next = SERVERS[serverIndex % SERVERS.length];
+    log(`reconnecting in ${Math.round(delay / 1000)}s (attempt ${attempt}) → ${next}`);
     setTimeout(connect, delay);
   });
 }
@@ -836,6 +900,6 @@ process.on("uncaughtException", (err) => log("uncaught:", err?.stack || String(e
 process.on("unhandledRejection", (err) => log("unhandled:", err?.stack || String(err)));
 
 log(`NOVA agent ${AGENT_ID} · node ${process.version} · ${os.platform()}/${os.arch()}`);
-log(`server: ${SERVER}${READ_ONLY ? " · READ-ONLY" : ""}${ALLOW.length ? ` · allow=${ALLOW.join(",")}` : ""}`);
+log(`server: ${SERVERS.join(" , ")}${READ_ONLY ? " · READ-ONLY" : ""}${ALLOW.length ? ` · allow=${ALLOW.join(",")}` : ""}`);
 log(`log file: ${LOG_FILE}`);
 connect();
