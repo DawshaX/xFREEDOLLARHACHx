@@ -4,6 +4,7 @@ import { NavSidebar } from "./NavSidebar";
 import { NotificationCenter } from "./NotificationCenter";
 import { FloatingNovaButton } from "./FloatingNovaButton";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { LanguagePicker } from "./LanguagePicker";
 import {
   Cpu, MemoryStick, Clock, Monitor, Skull,
   AlertTriangle, Radio, Target, ShieldCheck,
@@ -324,6 +325,7 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* RIGHT — nav + notifications + clock */}
         <div className="flex items-center gap-2 shrink-0">
+          <LanguagePicker />
           <NotificationCenter />
 
           <button

@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useI18n } from "@/context/LanguageContext";
+import type { TKey } from "@/lib/i18n";
 import { useLocation } from "wouter";
 import {
   Activity, Bookmark, BookOpen, Brain, Bug, ChevronDown,
@@ -220,11 +222,27 @@ function ClearanceBar() {
 }
 
 /* ─── Section component ───────────────────────────────────────────── */
+/**
+ * Section titles that exist in all 25 languages. Sections without an entry keep
+ * their own bilingual title — no half-translated header is invented for them.
+ */
+const SECTION_KEY: Record<string, TKey> = {
+  general: "sec_command",
+  bots: "sec_neural",
+  security: "sec_exploit",
+  intelligence: "sec_intel",
+  tools: "sec_tools",
+  data: "sec_data",
+};
+
 function SideSection({ section, currentPath, onNav, collapsed }: {
   section: NavSection; currentPath: string;
   onNav: (p: string) => void; collapsed: boolean;
 }) {
   const [open, setOpen] = useState(true);
+  const { t } = useI18n();
+  const sectionKey = SECTION_KEY[section.id];
+  const localTitle = sectionKey ? t(sectionKey) : section.title;
 
   if (collapsed) {
     return (
@@ -282,7 +300,7 @@ function SideSection({ section, currentPath, onNav, collapsed }: {
               {section.titleEn}
             </span>
             <span className="block text-[7px] font-bold tracking-wider" style={{ color: `rgba(${section.neonRgb},0.45)` }}>
-              {section.title}
+              {localTitle}
             </span>
           </div>
         </div>
