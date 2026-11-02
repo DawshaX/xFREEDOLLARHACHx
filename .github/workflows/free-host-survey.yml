@@ -101,7 +101,13 @@ jobs:
           retention-days: 30
 
       - name: Commit the report (so the numbers are reviewable, not log-only)
-        if: ${{ inputs.commit != false }}
+        # GitHub coerces types in ==, and `inputs` is null outside workflow_dispatch — so
+        # `inputs.commit != false` is FALSE on push/schedule (null == false) and the measurement
+        # got uploaded as an artifact and never committed (measured: run 41448213426, this step
+        # = skipped). From a sandbox that cannot read logs or download artifacts, an artifact-only
+        # result is indistinguishable from "never ran". State it as the real condition: skip ONLY
+        # when a human dispatched and unchecked the box.
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.commit == false) }}
         run: |
           git config user.name "nova-survey-bot"
           git config user.email "bot@arena.local"
