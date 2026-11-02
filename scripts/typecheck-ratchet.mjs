@@ -23,6 +23,11 @@ const PACKAGES = ["artifacts/api-server", "artifacts/kali-panel"];
 
 function runPackage(pkg) {
   const tsc = path.join(ROOT, "node_modules", "typescript", "bin", "tsc");
+  // `lib/db` is a composite project: without its .d.ts the api-server count jumps
+  // by ~50 phantom TS6305 errors, and the ratchet cries wolf. Emit them if absent.
+  if (pkg === "artifacts/api-server" && !fs.existsSync(path.join(ROOT, "lib", "db", "dist", "index.d.ts"))) {
+    spawnSync(process.execPath, [tsc, "-p", path.join(ROOT, "lib", "db", "tsconfig.json")], { cwd: ROOT, timeout: 180_000 });
+  }
   const res = spawnSync(
     process.execPath,
     ["--max-old-space-size=4096", tsc, "-p", "tsconfig.json", "--noEmit"],

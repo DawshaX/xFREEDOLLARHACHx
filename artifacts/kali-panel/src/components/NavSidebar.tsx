@@ -10,7 +10,7 @@ import {
   ListTree, Lock, Map, MemoryStick, MessageSquare, Monitor, Music2,
   Network, Package, Play, Radio, ScanLine, Search, Server,
   Settings, Shield, Sparkles, Target, Terminal, Webhook, Zap,
-  AlertTriangle, TrendingUp, Crosshair, History, Skull, Flame, Siren, Bot,
+  AlertTriangle, TrendingUp, Crosshair, History, Skull, Flame, Siren, Bot, BrainCircuit
 } from "lucide-react";
 
 type NavItem = {
@@ -48,7 +48,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: "bots", title: "العمليات العصبية", titleEn: "AI · NEURAL OPS",
     neonColor: "#ff6600", neonRgb: "255,102,0", symbol: "⚡",
     items: [
-      { label: "نوفا · الأسطول الموحّد", icon: Network,    path: "/nova-fleet",        iconColor: "#22d3ee", badge: "MESH", hot: true, skull: true },
+      { label: "نوفا · المخ والمدير",  icon: BrainCircuit, path: "/nova-fleet",        iconColor: "#e879f9", badge: "CORE", hot: true, skull: true },
       { label: "نوفا — الوكيل الأساسي", icon: Radio,       path: "/nova-agent",        iconColor: "#22d3ee", badge: "CORE", hot: true, skull: true },
       { label: "Live Agent Panel", icon: Activity,         path: "/live-agent",        iconColor: "#ff4444" },
       { label: "AI Agent V3",      icon: Brain,           path: "/nova-agent-v3",     iconColor: "#ff7722", badge: "V3" },

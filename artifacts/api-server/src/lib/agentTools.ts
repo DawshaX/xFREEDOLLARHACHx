@@ -152,9 +152,9 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
   switch (name) {
     case "search_cve_local": {
       const q = String(input.q ?? "");
-      const rows = await db.select().from(cvesTable).where(or(ilike(cvesTable.cveId, `%${q}%`), ilike(cvesTable.description, `%${q}%`))).limit(10);
+      const rows = await db.select().from(cvesTable).where(or(ilike(cvesTable.id, `%${q}%`), ilike(cvesTable.description, `%${q}%`))).limit(10);
       if (rows.length === 0) return "لا توجد نتائج محلية.";
-      return rows.map((c) => `${c.cveId} | ${c.severity} | ${c.description.slice(0, 120)}`).join("\n");
+      return rows.map((c) => `${c.id} | ${c.severity} | ${c.description.slice(0, 120)}`).join("\n");
     }
     case "fetch_cve_live": {
       const id = String(input.cveId ?? "").trim();
@@ -232,7 +232,7 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
     case "list_files": {
       const rows = await db.select().from(ragFilesTable).orderBy(desc(ragFilesTable.createdAt)).limit(30);
       if (rows.length === 0) return "لا توجد ملفات.";
-      return rows.map((f) => `${f.name} (${f.kind}, ${f.size} bytes)`).join("\n");
+      return rows.map((f) => `${f.name} (${f.mimeType}, ${f.size} bytes)`).join("\n");
     }
     case "read_file": {
       const name = String(input.name ?? "");

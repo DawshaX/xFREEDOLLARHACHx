@@ -132,6 +132,8 @@ B=http://node.waifly.com:27214
 curl -s $B/api/health                         # {"status":"ok","mode":"standalone"}
 curl -s $B/api/ops/version | head -c 200      # opsRouter:true + sha
 curl -s $B/api/ops/kinds  | head -c 120       # 13 نوع مهمة
+curl -s $B/api/nova-core/awareness | head -c 220  # verdict + organs — «المخ عارف نفسه»
+curl -s -o /dev/null -w '%{http_code}\n' -H 'Origin: https://evil.test' $B/api/ops/programs  # 403 (قراية حساسة)
 curl -s -o /dev/null -w '%{http_code}\n' -X POST $B/api/local-agent/exec -d '{"command":"id"}'   # 403
 curl -s $B/api/fleet/capabilities | head -c 160  # كام نود متصل فعلاً
 curl -s -X POST $B/api/ops/programs/discover -H "x-nova-token: $TOKEN" \

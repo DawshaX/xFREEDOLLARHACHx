@@ -1439,6 +1439,33 @@ export function resolveStandaloneApi(
   // The brain's own tool catalogue. The static build cannot run the server-side
   // tool implementations, but it must still answer with the SAME shape (a real
   // list of the 33 tools) so `/nova-fleet` and `/nova-agent` render correctly.
+  // ── NOVA · الوعي (self-state of the organism) ─────────────────────────────
+  // `/nova-fleet` asks the engine what the engine IS. A static bundle has no
+  // engine, so it answers with the same envelope and says so — the panel then
+  // measures what a browser honestly can, instead of painting a green dot.
+  if (path === "/nova-core/awareness") {
+    return {
+      ok: true,
+      standalone: true,
+      awarenessUnavailable: true,
+      at: new Date().toISOString(),
+      reasonAr: "الباوندل الثابت (Pages / standalone) مفيهوش محرك — القياس ده بيتعمل على سيرفر فيه طبقة ops.",
+      howAr: "اربط سيرفر (Waifly / Oracle / Tailscale) أو شغّل `node server.mjs` من nova-24-7.zip؛ ساعتها السطر ده يختفي.",
+    };
+  }
+
+  if (path === "/ops/kinds") {
+    return {
+      ok: true,
+      standalone: true,
+      total: 0,
+      kinds: [],
+      tools: [],
+      execPlane: { allowNodeTools: false, nodeToolsPresent: [] },
+      reasonAr: "مفيش طبقة تنفيذ في الباندل الثابت — أنواع المهام والأدوات دي بتاعة المحرك.",
+    };
+  }
+
   if (path === "/nova-core/tools") {
     const names = [
       ["recon_target", "استطلاع هدف", "استطلاع سلبي شامل لنطاق (يتطلب سيرفر)"],
