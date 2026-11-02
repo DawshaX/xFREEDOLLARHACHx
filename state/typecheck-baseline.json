@@ -1,9 +1,9 @@
 {
-  "total": 97,
+  "total": 96,
   "perPackage": {
-    "artifacts/api-server": 97,
+    "artifacts/api-server": 96,
     "artifacts/kali-panel": 0
   },
-  "updatedAt": "2026-11-02T04:10:52.872Z",
+  "updatedAt": "2026-11-02T17:16:30.508Z",
   "note": "lower this number as errors are fixed; CI blocks when total exceeds it"
 }

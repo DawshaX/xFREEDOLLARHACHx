@@ -1095,3 +1095,23 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   `41485616989` «نجح» وهو مانشرش حاجة (خسر fast-forward قدام commit توثيق من نفس الريبو)، وdeleting
   logs/artifacts من الصندوق بـ403 معناه إن التحذير مش بيتقري أصلًا. بقت 4 محاولات
   fetch+rebase+push ولو لسه مافيش حاجة منشورة → `::error::` و`exit 1`.
+
+- **2026-11-02 (جولة الحزم الكاملة + النشر اللي ما كانش بيوصل):** `pnpm audit` الكامل كان 62 استشارة
+  (11 critical كلها في `orval@8.9.1` في `lib/api-spec` — أداة codegen مش بتشتغل في الإنتاج لكن بتتثبّت
+  في أي CI). `orval ^8.46.0` + `vite ^7.3.7` من الكتالوج + 12 override نضيفة على `package.json`
+  (`markdown-it`, `nanoid`, `js-yaml`, `source-map-js`, `postcss-selector-parser`, `fast-copy`,
+  `fast-uri`, `browserslist`, `baseline-browser-mapping`, `@babel/core`, `brace-expansion@5.x`,
+  `@esbuild-kit/core-utils>esbuild`)، و`esbuild 0.27.3 → 0.28.1`، و`postcss → 8.5.32`.
+  **النتيجة المقاسة: 62 → 1** (`pnpm audit`: 1 moderate) و`--prod` لسه 1 — الباقي `uuid@8.3.2` اللي
+  `node-cron` بيطلبه، رفعه بالقوة بيكسر require بتاعه (نفس قرار الجولة اللي قبلها، متعمّد ومش نسيان).
+  التحققات: `pnpm --filter @workspace/api-spec run codegen` عدّى على 8.46 (`tsc --build` ✓) بس
+  رجع الفرق كله إعادة تنسيق (159 سطر) فارجّعنا المُولَّد — المستودع فيه مخرجات مولَّدة وصاحبة القرار
+  هو مواصفة الـAPI مش نسخة الأداة؛ بناء المحرك ✓ واللوحة ✓ 10.35s؛ `typecheck-ratchet` نزل
+  97 → **96** (ترقية الحزم *شالت* خطأ types، فقلّلنا الـbaseline بالقلم مش باليد)؛
+  `ops-selftest` exit 0 · `audit-contracts` ✓ · `audit-connections` ✓ · `audit-twins` ✓.
+- **ليه التقرير على main واقف من 14:59Z:** الـrun بتاع `b98edab` فشل في خطوة النشر بالظبط
+  (`Verify live` و`Upload the measurement` كلهم أخضر). `git rebase` على راينر شجرته ملوثة
+  (`state/cybernova-brain-state.json` المحرك بيكتبه أثناء التشغيل) بترفض: «cannot rebase: You have
+  unstaged changes» — فأي حل بيعتمد على rebase محكوم بالفشل. خطوة النشر بقت: نسخة الملفين المقاسين،
+  `git checkout -qf` لآخر `origin/$branch`، كتابة، commit، push ×3 — ولو مافيش فرق عن آخر تقرير
+  between success بدل فشل صوري.
