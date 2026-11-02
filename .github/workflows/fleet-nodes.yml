@@ -60,7 +60,34 @@ jobs:
         env:
           INPUT_NODES: ${{ github.event.inputs.nodes }}
           VAR_NODES: ${{ vars.FLEET_NODES }}
+          FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
+          EVENT: ${{ github.event_name }}
+          TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
+          # A fleet node is a machine that runs whatever the hub sends it. Spawning
+          # one against a hub that does not require a token is how "our free fleet"
+          # turns into "somebody else's botnet" — measured on the live host on
+          # 2026-11-02: an OLD deployed bundle answered an anonymous
+          # POST /api/local-agent/exec with real `id` output from a runner
+          # (uid=1001(runner) … docker group). So scheduled / push waves need BOTH:
+          #   vars.FLEET_ENABLED = 1        (you opted into the permanent fleet)
+          #   secrets.NOVA_EXEC_TOKEN       (the hub actually authenticates agents)
+          # A human pressing "Run workflow" is itself an explicit act, so it passes.
+          if [ "$EVENT" != "workflow_dispatch" ]; then
+            if [ "$FLEET_ENABLED" != "1" ]; then
+              echo "::notice::no wave — set Actions variable FLEET_ENABLED=1 to let the schedule/push triggers spawn nodes"
+              echo "nodes=0" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ -z "$TOKEN" ]; then
+              echo "::error::no wave — NOVA_EXEC_TOKEN secret is empty. Attach nodes only to a hub that requires it."
+              echo "nodes=0" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            if [ -z "$TOKEN" ]; then echo "::warning::manual wave without NOVA_EXEC_TOKEN — a hardened hub will refuse these nodes (401)"; fi
+          fi
+
           n="${INPUT_NODES:-${VAR_NODES:-4}}"
           case "$n" in ''|*[!0-9]*) n=4 ;; esac
           if [ "$n" -lt 1 ];  then n=1;  fi

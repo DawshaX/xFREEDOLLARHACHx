@@ -4,7 +4,39 @@
 >سلبي** بالظبط، ومش كفاية Ollama أو `nuclei` بالتيمبلتس. التفاصيل تحت مبنية على القيود دي، مش على
 >اتمنيّات.
 
-## 0) ليه الصفحة دي أصلاً
+## ⚠️ 00) إقرأ ده الأول — الهوست ده كان مكشوف (قياس من CI 2026-11-02)
+
+الـprobe اللي بيستخدم runner بتاع GitHub (لأن الصندوق بتاعي مابيوصلش `waifly.com`) طلع كده:
+
+```
+POST /api/local-agent/exec  (anonymous, من غير أي توكن) → 200
+{"stdout":"uid=1001(runner) gid=1001(runner) … 113(docker) …"}
+GET /api/fleet/capabilities → fleet.connected: 4 · caps: shell, files, screenshot, pty, input, clipboard
+GET /api/ops/version → HTML (مش JSON) → VERDICT: PRE-OPS bundle
+```
+
+معناه العملي: **أي حد على الإنترنت يقدر ينفّذ أوامر على السيرفر بتاعك وعلى النودات الأربعة المتصلة بيه**،
+و`download-project-zip` في الـbundle القديم كان بيرجع المصدر كاملاً — يعني **ملفات `.env` والمفاتيح اللي جواه
+اتقريت من ناس تانية**. الترتيب ده مش نصيحة، ده إطفاء حريق:
+
+1. **ادور كل المفاتيح** اللي في `.env` على الهوست (Groq/Gemini/OpenRouter/OpenAI/أي حد) — Groq شغال عندك
+   من القياس (`groq ok:true 437ms`) فاعمله rotate من console.groq.com. المفتاح اللي ممكن يكون اتقرا = مفتاح ميت.
+2. **قفّل الأسطول دلوقتي**: `Actions → All workflows → fleet-nodes → ••• → Cancel running workflow`
+   (أنا ماقدرش ألغيه — للتوكن المربوط بالريبو ماعندوش `actions:write`؛ جربت ورجّع 403).
+   كمان اقطع الـcron مؤقتاً: `Actions → fleet-nodes → Disable workflow` لحد ما التوكن يتظبط.
+3. **اعمل redeploy بالـbuild الجديد** (اللي فيه `src/lib/ops/gate.ts`) — PR #64 اتعمله merge على `main`
+   والـworkflow `NOVA portable bundle (24/7)` بينشر `nova-24-7` كـrelease asset. حمله من الخطوة 1 تحت.
+4. **سيّر `NOVA_EXEC_TOKEN` قبل الـrestart** (الخطوة 2 تحت). في الـbuild الجديد: كتابة مجهولة = 403،
+   تسجيل نود من غير توكن = 401، و`download-project-zip` = 403 غير بـ`NOVA_ALLOW_SOURCE_DOWNLOAD=1`.
+5. **الأسطول بقى محتاج opt-in**: `fleet-nodes` مابيطلقش موجة من `schedule/push` غير لما
+   `vars.FLEET_ENABLED=1` **و** `secrets.NOVA_EXEC_TOKEN` موجودين. التشغيل اليدوي لسه حر.
+
+» القياس ده هو السبب في كل القيود اللي في الوثايق دي. مش إحتراس مبالغ فيه — ده ثغرة اتقفلت ولسه عايزة
+نشر عندك.
+
+---
+
+## 0 ليه الصفحة دي أصلاً
 
 المحرك اللي شغال دلوقتي على `node.waifly.com:27214` **قبل** طبقة `src/lib/ops/` — يعني مفيش
 `/api/ops/*`، مفيش scope gate، مفيش jobs ولا أدلة. أي كلام عن «الفحص الحقيقي» على الهوست ده

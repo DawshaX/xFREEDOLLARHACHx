@@ -37,6 +37,8 @@ export interface CouncilMemberAnswer {
   text: string;
   ms: number;
   error?: string;
+  /** the seat is alive but throttled (402/429) — retry later, do not reconfigure keys */
+  rateLimited?: boolean;
 }
 
 export interface CouncilReport {
@@ -71,14 +73,50 @@ const DEFAULT_MEMBERS = Number(process.env.NOVA_COUNCIL_MEMBERS || 4);
 /** Providers that can actually be asked right now, fastest-first. */
 const PRIORITY = ["groq", "cerebras", "gemini", "github-models", "openrouter", "mistral", "together", "pollinations", "openai", "ollama"];
 
+function baseKey(p: LlmProviderInfo): string {
+  try {
+    return new URL(p.baseUrl).host || p.baseUrl;
+  } catch {
+    return p.baseUrl || p.id;
+  }
+}
+
+/**
+ * Seat choice, measured rather than assumed (CI probe of the live hub, 2026-11-02):
+ * the anonymous Pollinations tier answers **one reply per 45 s per IP** and returns
+ * `HTTP 402 FREE_LIMIT` after that. Three keyless seats on one host therefore burn
+ * each other's quota in the same second. So: take one seat per endpoint first
+ * (real independence — different providers disagree, same provider does not),
+ * then fill the remaining slots with same-host alternates, because a council of
+ * three retries of one free endpoint still beats a council of one.
+ */
 export async function councilMembers(limit = DEFAULT_MEMBERS): Promise<LlmProviderInfo[]> {
   const all = await listConfiguredProviders();
+  const want = Math.max(1, limit);
+  const fam = (id: string) => id.split(":")[0] ?? id;
   const ranked = [...all].sort((a, b) => {
-    const ia = PRIORITY.indexOf(a.id);
-    const ib = PRIORITY.indexOf(b.id);
+    const ia = PRIORITY.indexOf(fam(a.id));
+    const ib = PRIORITY.indexOf(fam(b.id));
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
   });
-  return ranked.slice(0, Math.max(1, limit));
+
+  const picked: LlmProviderInfo[] = [];
+  const seenHost = new Set<string>();
+  for (const p of ranked) {
+    const k = baseKey(p);
+    if (seenHost.has(k)) continue;
+    seenHost.add(k);
+    picked.push(p);
+    if (picked.length >= want) break;
+  }
+  if (picked.length < want) {
+    for (const p of ranked) {
+      if (picked.includes(p)) continue;
+      picked.push(p);
+      if (picked.length >= want) break;
+    }
+  }
+  return picked;
 }
 
 /** One provider, one answer, hard deadline. Never throws. */
@@ -86,8 +124,10 @@ async function askOne(
   provider: LlmProviderInfo,
   messages: LlmMessage[],
   temperature: number,
+  delayMs = 0,
 ): Promise<CouncilMemberAnswer> {
   const started = Date.now();
+  if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
   const base = { provider: provider.id, label: provider.label, model: provider.model };
   try {
     // completeWithProvider also self-heals a retired model id (404 → discover →
@@ -99,7 +139,18 @@ async function askOne(
     });
     return { ...base, model: out.model, ok: true, text: out.text, ms: Date.now() - started };
   } catch (err) {
-    return { ...base, ok: false, text: "", ms: Date.now() - started, error: String((err as Error).message).slice(0, 200) };
+    const raw = String((err as Error).message).slice(0, 200);
+    // 429/402 is a quota, not an outage and not a wrong key — the panel must not
+    // tell the user to go configure keys when the answer is "wait 45 seconds".
+    const limitHit = /\b402\b|\b429\b|rate.?limit|quota|FREE_LIMIT|too many/i.test(raw);
+    return {
+      ...base,
+      ok: false,
+      text: "",
+      ms: Date.now() - started,
+      rateLimited: limitHit || undefined,
+      error: limitHit ? `حد المعدل المجاني (مش مفتاح غلط): ${raw}` : raw,
+    };
   }
 }
 
@@ -252,8 +303,16 @@ export async function runCouncil(
     ? [{ role: "system", content: opts.system }, ...messages.filter((m) => m.role !== "system")]
     : messages;
 
+  // Two seats on the same endpoint get a staggered start so the free tier's
+  // per-IP window is not walked into all at once.
+  const seenHost = new Map<string, number>();
   const answers = await Promise.all(
-    usable.map((p) => askOne(p, withSystem, opts.temperature ?? 0.4)),
+    usable.map((p) => {
+      const k = baseKey(p);
+      const nth = seenHost.get(k) ?? 0;
+      seenHost.set(k, nth + 1);
+      return askOne(p, withSystem, opts.temperature ?? 0.4, nth * 1200);
+    }),
   );
 
   const good = answers.filter((a) => a.ok && a.text);
