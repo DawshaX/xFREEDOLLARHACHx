@@ -750,11 +750,11 @@ export const KINDS: Record<string, KindDef> = {
     active: true,
     binary: "httpx",
     installHint: "go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest",
-    // -connect-timeout + -retries matter: with only a request timeout, one host that accepts the
-    // socket and then stalls kept httpx alive until the job killed it at 180 s (measured:
-    // Actions run 41452838992, `tools.httpx: exit=-1 · 180022ms`). A tool that eats a whole job
-    // is worse than a tool that fails fast and says so.
-    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-json", "-silent", "-follow-redirects", "-status-code", "-title", "-tech-detect", "-timeout", "8", "-connect-timeout", "6", "-retries", "1"],
+    // -retries bounds the stall that ate 180 s once (run 41452838992). `-connect-timeout` was
+    // tried and REMOVED: httpx has no such flag, and its "flag provided but not defined" message
+    // (48B, seen in run 41459589703) was being accepted as a successful task because the tool
+    // printed *something* — which is exactly why the exit code is now authoritative below.
+    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-json", "-silent", "-follow-redirects", "-status-code", "-title", "-tech-detect", "-timeout", "8", "-retries", "1"],
     command: (ctx) => `httpx -u ${shQuote(`${baseUrl(ctx)}/`)} -json -silent -status-code -title -tech-detect`,
     parse: (stdout, ctx) => {
       const rows: Record<string, unknown>[] = [];
@@ -900,9 +900,22 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
       };
     }
     const parsed = kind.parse ? kind.parse(res.stdout, ctx) : { findings: [] };
+    // The exit code is authoritative. "Printed bytes" used to be enough, so a usage error from a
+    // wrong flag became a green task with zero findings — a scan that reports nothing and looks
+    // fine is the worst failure mode a security tool can have.
+    const tail = (line: string) => line.split("\n").map((x) => x.trim()).filter(Boolean).slice(-1)[0] ?? "";
+    if (res.code !== 0) {
+      return {
+        ok: false,
+        summary: `${bin} فشل (exit=${res.code}) · ${tail(res.stderr || res.stdout) || "مفيش رسالة من الأداتة"} · ${Date.now() - started}ms`,
+        findings: parsed.findings,
+        error: "tool-failed",
+        data: { exit: res.code, stderr: res.stderr.slice(0, 2_000), command: display },
+      };
+    }
     return {
-      ok: res.code === 0 || res.stdout.length > 0,
-      summary: `${bin} exit=${res.code} · ${res.stdout.length} بايت · ${Date.now() - started}ms`,
+      ok: true,
+      summary: `${bin} exit=0 · ${res.stdout.length} بايت · ${Date.now() - started}ms`,
       findings: parsed.findings,
       data: { ...(parsed.data ?? {}), exit: res.code, stderr: res.stderr.slice(0, 2_000) },
     };

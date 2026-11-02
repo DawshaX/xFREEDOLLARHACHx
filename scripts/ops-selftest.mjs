@@ -271,6 +271,8 @@ await tA("a tool found by the finder is also SPAWNED by the runner (vendor/bin o
     info: { name: "selftest match", severity: "high", tags: ["test"] },
   });
   fs.writeFileSync(fake, `#!/bin/sh\necho '${hit}'\n`, { mode: 0o755 });
+  const fakeFail = path.join(binDir, "nuclei-failing");
+  fs.writeFileSync(fakeFail, "#!/bin/sh\necho 'flag provided but not defined: -connect-timeout'\nexit 2\n", { mode: 0o755 });
   const prevDir = process.env.NOVA_TOOL_DIR;
   process.env.NOVA_TOOL_DIR = binDir;
   kinds.resetBinaryCache("nuclei");
@@ -287,6 +289,21 @@ await tA("a tool found by the finder is also SPAWNED by the runner (vendor/bin o
     assert.equal(res.ok, true, res.summary);
     assert.ok(res.findings.length >= 1, "the tool's own output has to become findings");
     assert.equal(res.findings[0]?.severity, "high");
+    // the inverse: a tool that exits non-zero while printing a usage line must NOT be a green
+    // task — that is precisely how `tools.httpx` passed with an invalid flag in run 41459589703
+    const failingKind = { ...kinds.KINDS["tools.nuclei"], binary: "nuclei-failing" };
+    const saved = kinds.KINDS["tools.nuclei"];
+    kinds.KINDS["tools.nuclei"] = failingKind;
+    kinds.resetBinaryCache("nuclei-failing");
+    try {
+      const bad = await kinds.runKind("tools.nuclei", {}, ctx);
+      assert.equal(bad.ok, false, "a non-zero exit cannot count as a successful task");
+      assert.equal(bad.error, "tool-failed");
+      assert.match(String(bad.summary), /connect-timeout/, "the tool's own error belongs in the summary");
+    } finally {
+      kinds.KINDS["tools.nuclei"] = saved;
+      kinds.resetBinaryCache("nuclei-failing");
+    }
   } finally {
     if (prevDir === undefined) delete process.env.NOVA_TOOL_DIR;
     else process.env.NOVA_TOOL_DIR = prevDir;
