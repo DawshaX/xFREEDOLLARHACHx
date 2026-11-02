@@ -14,7 +14,20 @@
         "recon.certspotter",
         "infra.freehosts"
       ],
-      "status": "queued"
+      "status": "done",
+      "startedAt": "2026-11-02T05:44:34.139Z",
+      "jobId": "20261102-129f18",
+      "report": "/xFREEDOLLARHACHx/nova-runs/demo-selfhost.md",
+      "error": null,
+      "finishedAt": "2026-11-02T05:44:36.727Z",
+      "counts": {
+        "tasks": 3,
+        "done": 3,
+        "failed": 0,
+        "findings": 0,
+        "verified": 0,
+        "ms": 1905
+      }
     }
   ]
 }
