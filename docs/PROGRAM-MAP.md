@@ -224,7 +224,8 @@ HANDOFF عن الـgateway/Ollama، بس لسه عايش في باقي الـnam
 | `ops/ratelimit.ts` | سلة رموز لكل هوست + سقف عام + backoff أسي على 429/403/5xx |
 | `ops/tools.ts` | أنواع المهام: 8 مدمجة (DNS/TLS/ترويسات/منافذ/CT/security.txt/JS/NVD) + 5 أدوات حقيقية بـ**argv بدون شل** |
 | `ops/runner.ts` | job دائم: state/jobs/<id>.json، ميزانية، pause/resume/cancel، kill-switch، أدلة SHA-256، **بوابة تحقق**، تقرير Markdown |
-| `routes/ops.ts` | REST: `/api/ops/{kinds,programs,programs/discover,jobs,stats,provision}` — القراءة مفتوحة، الكتابة بالتوكن |
+| `routes/ops.ts` | REST: `/api/ops/{kinds,programs,programs/discover,jobs,stats,provision,sweep}` — القراءة مفتوحة، الكتابة بالتوكن |
+| `ops/autonomy.ts` | الدورة الخلفية: لكل برنامج مصرّح به job حقيقي كل `NOVA_OPS_SWEEP_HOURS`، passive افتراضياً، bounded، والسجل على القرص (`ops-sweeps.json`) — مربوط بـ`tickAutonomousDaemon` كل 3 دقايق |
 | `ops/keys-source.ts` | التزويد الذاتي: مفاتيح من `NOVA_KEYS_URL`/`NOVA_KEYS_FILE` + تسجيل نطاقات `NOVA_SCOPE_DOMAINS` وقت الإقلاع (passive-only دايماً) |
 | `scripts/ops-selftest.mjs` | 35 فحص على المنطق الحقيقي (بـtype-striping، من غير build) |
 | `scripts/typecheck-ratchet.mjs` | baseline = 99، والـCI بيمنع أي رقم أعلى |
@@ -256,6 +257,8 @@ POST /api/local-agent/exec (مجهول) → 403 · WS handshake → 401 · /api/
 
 **اللسه ناقص للوصول لرؤيا «منصة زي كالي»:** طبقة `verify/` للمزيد من البراهين (SSRF canary، XSS headless،
 SQLi differential)، `lib/programs/hackerone.ts` (قايمة برامجك من API — محتاج توكن HackerOne من المستخدم)،
+`POST /api/nova-core/council` بقى بيفرّق بين «خلا في الرأي» و«ولا صوت وصل» (`outage:true`) فلو الشبكة مقطوعة
+اللوحة مابتقولش «صوت واحد» وهي صفر،
 `jobs` على Postgres بدل الملفات عشان الـconcurrency الحقيقي، وواجهة للـOps في اللوحة (المحرك لسه API/أدوات بس).
 
 ---

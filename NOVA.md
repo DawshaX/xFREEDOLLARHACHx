@@ -271,6 +271,13 @@ curl -X POST http://localhost:8080/api/ops/programs \
 | `NOVA_DEFAULT_RPS` | `1` | السقف لو البرنامج ما حدّدش |
 | `NOVA_ALLOW_SOURCE_DOWNLOAD` | `0` | يفعّل تنزيل مصدر المشروع |
 | `NOVA_OPEN_OPS` | `0` | وضع المعمل المحلي |
+| `NOVA_TOKEN` (للنود) | فارغ | التوكن اللي بيسمح لأي جهاز يسجل في الأسطول |
+| `NOVA_KEYS_URL` / `NOVA_KEYS_FILE` | فارغ | مصدر مفاتيح مجاني وقت الإقلاع (https إجباري) |
+| `NOVA_SCOPE_DOMAINS` | فارغ | نطاقات تتسجّل أوتوماتيك في وضع الاستطلاع |
+| `NOVA_KEYLESS_SEATS` | `openai-fast,mistral,llama` | موديلات المجلس بدون مفاتيح |
+| `NOVA_OPS_AUTONOMY` | `passive` | عمق الدورة الخلفية: `off`/`passive`/`standard`/`deep` |
+| `NOVA_OPS_SWEEP_HOURS` | `6` | أقل فترة بين دورتين على نفس البرنامج |
+| `NOVA_OPS_SWEEP_MAX_TASKS` | `10` | سقف مهام كل دورة |
 
 ### 6) فحص إن البوابة لسه شغالة
 ```bash
