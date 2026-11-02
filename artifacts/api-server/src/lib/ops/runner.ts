@@ -158,6 +158,12 @@ export function suggestPlan(input: CreateJobInput): { kinds: string[]; why: stri
       why.push("مفيش أدوات منصوبة على النود — المهام دي هتتخطى لو مفيش نود متصل");
     }
   }
+  // لما المهمة تتكلم عن جسم NOVA نفسها (تشغيل/استضافة/خلفية)، الكتالوج يبقى جزء من الخطة
+  const selfText = `${input.name ?? ""} ${input.objective ?? ""}`.toLowerCase();
+  if (/host|deploy|always|background|uptime|daemon|استضاف|نشر|تشغيل|خلفية|دايما|دائم/.test(selfText)) {
+    kinds.push("infra.freehosts");
+    why.push("فيها تشغيل دائم → بنقيس المضيفات المجانية الأول ونختار بالسكور مش بالذاكرة");
+  }
   if (input.taskIds?.length) {
     kinds = input.taskIds.filter((k) => KINDS[k]);
     why.push(`خطة مخصصة: ${kinds.length} مهمة`);

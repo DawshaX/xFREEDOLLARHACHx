@@ -148,6 +148,36 @@ https://something-random.trycloudflare.com
 
 ---
 
+## مفيش Postgres؟ الطبقة التنفيذية شغالة برضه
+
+`DATABASE_URL` **اختياري**. الشغل التقني (برنامج مصرّح به ← job ← أدلة ← تقرير)
+بيتحفظ في ملفات جوه `state/jobs/<job-id>/` — مش في قاعدة بيانات.
+
+العيب اللي كان موجود ومصلّح دلوقتي: `app.ts` كان بيوصّل أي `/api/ops/*` لنموذج
+الرد الثابت (`standalone-api`) طول ما `DATABASE_URL` مش مضبوط — يعني أي نشر على
+Silly أو Waifly (ومفيش داتا بيز) كان بيقابل الرد ده:
+
+```
+{"ok":true,"standalone":true,"total":0,"kinds":[],"reasonAr":"مفيش طبقة تنفيذ في الباندل الثابت…"}
+```
+
+…وهو في الحقيقة محرك كامل شغّال. الفرق بين «مفيش محرك» و«النموذج غطّى على المحرك»
+كان بيضيع أي حد بيحاول ينشر. دلوقتي `/ops` مستثنى من النموذج صراحة.
+
+تأكد في 10 ثواني بعد أي نشر:
+
+```bash
+B=https://<app-URL>
+curl -s "$B/api/ops/kinds" | head -c 220        # لازم "total":14 — ومفيش "standalone":true
+curl -s -X POST -H 'content-type: application/json' -d '{"target":"example.com"}' \
+     "$B/api/ops/programs/discover" | head -c 140
+```
+
+لو `standalone:true` بترجع، يبقى اللي مرفوع باندل أقدم من الإصلاح — ارفع آخر
+Release من Releases (`nova-portable`) بدل إعادة بناء يدوي.
+
+---
+
 ## ملاحظة أمانة
 
 Silly Development منصّة صغيرة (تموّلها إعلانات) مش شركة كبيرة زي Oracle. مفيش كارت

@@ -417,6 +417,13 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       p.startsWith("/local-agent") ||
       // Fleet mesh = the live network between all agents; must never be mocked.
       p.startsWith("/fleet") ||
+      // Ops is the execution spine — authorized programs → durable jobs → evidence
+      // → report. It persists on the filesystem, NOT on Postgres, so the "no
+      // DATABASE_URL" case is exactly the free-host case (Silly/Waifly render this
+      // app with no DB). Shadowing /ops with the static mock is what made
+      // /ops/kinds answer `total: 0` and a real job POST read as "no engine",
+      // which is indistinguishable from an unmounted router. Never mock it.
+      p.startsWith("/ops") ||
       // The live-agent router owns sessions + brain-status. The mock used to
       // answer these with a DIFFERENT payload shape, which crashed the panel
       // (brainStatus.activeProcesses was undefined → ".length of undefined").
