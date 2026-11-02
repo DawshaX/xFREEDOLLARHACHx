@@ -998,3 +998,10 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   `blind` بقى بيسمع فرق «مفيش نت» عن «مفيش ثقة TLS»)، `NovaOpsRoom` مربوطة بعقد `/ops/*` الحقيقي،
   قرايات `ops/programs|jobs|stats` اتقفلت خلف same-origin/توكن، و`agentTools` اتظبط (99→97 type errors).
   متقاس على المحرك: 35/35 selftest · 0 فجوات اتصال · 157/157 render · مصفوفة 403/200 كاملة.
+
+- **2026-11-02 (تالت):** «انزل سيرفر مجاني» بقى قرار ببيانات: `docs/FREE-HOSTS-2026.md` (كل مورد متحقق من صفحته:
+  Cyclic مات، Fly مفيهاش مجاني للجديد، Koyeb بقى $29، Render بينام + 5GB bandwidth، وGratisVPS 2GB root بلا كارت
+  بس ممنوع عنه المسح النشط، Silly Development حي ومعاها Postgres مجاني → `DATABASE_URL`).
+  نفس البيانات بقت في المحرك (`lib/ops/free-hosts.ts` + `/api/fleet/catalogue?probe=1` + عضو `freehosts` في الوعي)
+  و`scripts/free-host-survey.mjs` + workflow `free-host-survey.yml` بيعيدوا القياس ويكتبوا `state/free-hosts.md`.
+  تنبيه مهم: صندوق التطوير هنا **مفيش منه خروج للإنترنت** — أي قياس جواه = `ECONNRESET` مش إجابة المضيف.

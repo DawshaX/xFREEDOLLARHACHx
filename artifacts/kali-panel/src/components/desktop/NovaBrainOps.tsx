@@ -252,13 +252,15 @@ export function NovaOpsRoom() {
   const [decision, setDecision] = useState<Decision | null>(null);
   const [sweep, setSweep] = useState<string>("");
   const [kinds, setKinds] = useState<string[]>([]);
+  const [hosts, setHosts] = useState<Array<Record<string, unknown>> | null>(null);
+  const [hostNote, setHostNote] = useState("");
   const [status, setStatus] = useState("بقرأ السجل…");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const [form, setForm] = useState({ target: "", depth: "passive", name: "" });
 
   const load = useCallback(async () => {
-    const [p, j, k, sw] = await Promise.all([
+    const [p, j, k, sw, cat] = await Promise.all([
       opsFetch<{ programs?: ProgramRow[]; count?: number }>("/ops/programs"),
       opsFetch<{ jobs?: JobRow[] }>("/ops/jobs"),
       opsFetch<{
@@ -267,12 +269,17 @@ export function NovaOpsRoom() {
         tools?: Array<{ bin: string; present: boolean }>;
       }>("/ops/kinds"),
       opsFetch<{ level?: string; nextRunAr?: string; policy?: string; programs?: number }>("/ops/sweep"),
+      opsFetch<{ hosts?: Array<Record<string, unknown>>; counts?: Record<string, number>; measured_rule?: string; note?: string }>(
+        "/fleet/catalogue?probe=1",
+      ),
     ]);
     if (p.offline) {
       setStatus("مفيش محرك متصل — السجل والمهمات بيتقاسوا من السيرفر بس.");
       setError(p.denial ?? "");
       return;
     }
+    setHosts(cat.ok ? (cat.data?.hosts ?? []) : null);
+    setHostNote(String(cat.data?.measured_rule ?? cat.data?.note ?? ""));
     setPrograms(p.data?.programs ?? []);
     setJobs(j.data?.jobs ?? []);
     setKinds((k.data?.kinds ?? []).map((x) => (x.present || !x.binary ? x.id : `${x.id}✗`)));
@@ -709,8 +716,66 @@ export function NovaOpsRoom() {
         </div>
       )}
 
-      <p className="text-[8.5px] text-white/35 leading-relaxed">
-        <AlertTriangle className="inline h-3 w-3 text-amber-300/70" /> كل رقم هنا مقروء من المحرك في اللحظة دي. مفيش سيرفر = مفيش رقم (مش صفر)، ومفيش
+
+      {/* المضيفون المجانيون — مقاسين من المحرك، مش من مقال */}
+      {hosts && hosts.length > 0 && (
+        <div className="rounded-lg border border-white/10 bg-black/20 p-2 space-y-1.5">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-[10px] font-black text-white/70">
+              البدائل المجانية للمضيف ({hosts.length}) — القياس من السيرفر اللي بيخدم اللوحة
+            </span>
+            <button
+              onClick={() =>
+                void run("hosts", async () => {
+                  const r = await opsFetch<{ hosts?: Array<Record<string, unknown>>; measured_rule?: string }>("/fleet/catalogue?probe=1&force=1");
+                  if (r.ok) {
+                    setHosts(r.data?.hosts ?? []);
+                    setHostNote(String(r.data?.measured_rule ?? ""));
+                  } else setError(r.denial ?? "القياس اترفض");
+                })
+              }
+              className="text-[8.5px] font-mono text-cyan-300/80 hover:text-cyan-200 flex items-center gap-1"
+            >
+              {busy === "hosts" ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} قيس تاني
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1.5">
+            {hosts.map((h) => {
+              const probe = (h.probe ?? {}) as Record<string, unknown>;
+              const reachable = Boolean(probe.reachable);
+              const usable = h.usable === true;
+              const scan = String(h.scanPolicy ?? "unknown");
+              return (
+                <a
+                  key={String(h.id)}
+                  href={String(h.url ?? "#")}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`rounded-lg border p-1.5 ${
+                    usable ? "border-emerald-400/25 bg-emerald-400/[0.04] hover:border-emerald-400/50" : "border-white/10 bg-white/[0.02] hover:border-white/25"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-1.5 h-1.5 rounded-full ${h.probe ? (reachable ? "bg-emerald-400" : "bg-red-500") : "bg-white/25"}`} />
+                    <b className="text-[9.5px] truncate">{String(h.name ?? h.id)}</b>
+                    <span className="text-[7.5px] font-mono text-white/35 mr-auto">{h.probe ? `${String(probe.status ?? "—")} · ${String(probe.ms ?? "—")}ms` : "مقيسش"}</span>
+                  </div>
+                  <p className="text-[8.5px] font-mono text-white/45 truncate">
+                    {String(h.ram ?? "—")} · {h.alwaysOn === true ? "دائم" : h.sleeps === true ? "بينام" : "مش دائم"}
+                    {h.cardRequired === true ? " · كارت ❌" : " · بلا كارت"}
+                  </p>
+                  <p className="text-[8px] text-white/35 truncate">
+                    مسح نشط: {scan === "forbidden" ? "ممنوع في شروطهم ❌" : scan === "allowed" ? "مسموح ✓" : "مش مذكور — اسأل الأول"}
+                  </p>
+                </a>
+              );
+            })}
+          </div>
+          {hostNote && <p className="text-[8px] text-white/35 leading-relaxed">{hostNote}</p>}
+        </div>
+      )}
+
+      <p className="text-[8.5px] text-white/35 leading-relaxed">        <AlertTriangle className="inline h-3 w-3 text-amber-300/70" /> كل رقم هنا مقروء من المحرك في اللحظة دي. مفيش سيرفر = مفيش رقم (مش صفر)، ومفيش
         نتيجة = مفيش تأكيد. التوكن بيتخزن في المتصفح وبيتبعت هيدر <span className="font-mono">x-nova-token</span> بس.
       </p>
     </div>

@@ -1454,6 +1454,20 @@ export function resolveStandaloneApi(
     };
   }
 
+  // The free-host catalogue is the engine's opinion + the engine's probes. On a
+  // static bundle there is nothing to probe from, so the shape is complete and
+  // the lists are empty — with the reason, never a fabricated "0 hosts exist".
+  if (path === "/fleet/catalogue") {
+    return {
+      ok: true,
+      standalone: true,
+      counts: { hosts: 0, usable_no_card: 0, permanent_nodes: 0, services: 0, probed: 0, reachable: 0 },
+      hosts: [],
+      services: [],
+      note: "الكتالوج وقياس الوصول بتاعة المحرك — على Pages مافيش قياس. افتح /api/fleet/catalogue?probe=1 على السيرفر.",
+    };
+  }
+
   if (path === "/ops/kinds") {
     return {
       ok: true,

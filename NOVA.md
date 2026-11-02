@@ -390,3 +390,8 @@ ollama · pollinations:openai-fast · pollinations:mistral · pollinations:llama
 **اللي اتصلح في نفس الطريق (عشان «المدير» ميبقاش بيكلّم ثغرة):** `agentTools.ts` كان بيستعلم على
 `cvesTable.cveId` و`ragFiles.kind` — العمودين اسمهم `id` و`mimeType`. أي `search_cve_local` أو `list_files`
 على نظام فيه Postgres كان بيرمي استثناء. الرقم اتظبط: الـratchet نزل من 99 لـ**97** (والـbaseline اتقفل عليه).
+
+**وعن المضيف المجاني:** الكتالوج بقى بيانات في المحرك (`src/lib/ops/free-hosts.ts`) — كل مورد فيه
+`scanPolicy` (شروط الاستخدام بتاعته في إيه) و`status2026` (اللي موقعه قاله النهاردة) و`probeUrl`
+اللي بيتقاس بيه. `GET /api/fleet/catalogue?probe=1` بيردّ بالادّعاء + القياس، وعضو `freehosts` في
+قراية الوعي بيقول كام موقع بيردّ والأحسن دلوقتي. القصة الكاملة والوصفات: `docs/FREE-HOSTS-2026.md`.
