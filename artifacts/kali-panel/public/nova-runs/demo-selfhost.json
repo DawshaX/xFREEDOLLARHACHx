@@ -1,10 +1,10 @@
 {
   "id": "demo-selfhost",
-  "jobId": "20261102-af2e95",
+  "jobId": "20261102-129f18",
   "title": "تجربة الطابور: استطلاع سلبي + اختيار مضيف",
   "target": "example.com",
   "depth": "passive",
-  "at": "2026-11-02T05:44:07.289Z",
+  "at": "2026-11-02T05:44:36.727Z",
   "status": "done",
   "counts": {
     "tasks": 3,
@@ -12,28 +12,28 @@
     "failed": 0,
     "findings": 0,
     "verified": 0,
-    "ms": 1437
+    "ms": 1905
   },
   "plan": null,
   "tasks": [
     {
       "kind": "recon.dns",
       "status": "done",
-      "ms": 71,
+      "ms": 74,
       "summary": "DNS: 2 سجل A · 2 TXT",
       "error": ""
     },
     {
       "kind": "recon.certspotter",
       "status": "done",
-      "ms": 23,
+      "ms": 37,
       "summary": "1 نطاق فرعي من CT logs (سلبي) · 0 مرشّح",
       "error": ""
     },
     {
       "kind": "infra.freehosts",
       "status": "done",
-      "ms": 1343,
+      "ms": 1794,
       "summary": "14 مضيف · 12 بلا بطاقة · 8 دائم · 14/14 بيردّ من هنا · الأحسن: GratisVPS.net — VPS كامل بلا كارت — 2 GB · 2 vCPU KVM · NVMe · تخزين: ديسك NVMe دائم · موقعه بيردّ",
       "error": ""
     }

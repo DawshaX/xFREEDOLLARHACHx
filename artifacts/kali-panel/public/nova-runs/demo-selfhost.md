@@ -2,8 +2,8 @@
 
 - **Target:** `example.com`
 - **Program:** `example.com`
-- **Assessed by:** CyberNova NOVA · job `20261102-af2e95`
-- **Window:** 2026-11-02T05:44:04.767Z → 2026-11-02T05:44:06.210Z
+- **Assessed by:** CyberNova NOVA · job `20261102-129f18`
+- **Window:** 2026-11-02T05:44:34.209Z → 2026-11-02T05:44:36.119Z
 - **Method:** 3 task kinds · 3 done · 0 failed · 0 skipped
 - **Findings:** 0 reportable (0 independently reproduced)
 
@@ -19,6 +19,6 @@
 _No destructive testing was performed. Rate limits were respected per program policy._
 
 ---
-- نُفّذ على: GitHub Actions (nood دائم = مفيش) · 2026-11-02T05:44:07.289Z
+- نُفّذ على: GitHub Actions (nood دائم = مفيش) · 2026-11-02T05:44:36.727Z
 - أدوات موجودة على النود: nmap
 - ملاحظة: مصدر الطلب IP بتاع جيت-هَب، فده مستوى استطلاع مش اختراق.
