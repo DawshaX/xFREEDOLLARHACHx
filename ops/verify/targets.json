@@ -50,7 +50,7 @@
       "scheme": "https",
       "engineExercise": true,
       "engine_note_ar": "بنختاره لسلسلة المحرك لأنه بيخدم HTTPS على 443 بجد — فـrecon.tls وrecon.headers ليهم معنى.",
-      "expects_note_ar": "نuclei CLI بيتوجّه هنا (مش لـtestphp) لأن سلسلة المحرك طلّعت منه 11 نتيجة فعليًا — فالفارق بين «الأداة ما لقتش» و«الأداة ما اشتغلتش» بيبان."
+      "expects_note_ar": "سلسلة المحرك بتتمarsى هنا (HTTPS حقيقي و11 نتيجة فعلًا). طبقة الـCLI بتقيس nuclei على testphp: سيبل مقصود بحد ذاتو، والقوالب high,critical بس عشان الشغل يخلص جوه الميزانية."
     },
     {
       "host": "vulnweb.com",
