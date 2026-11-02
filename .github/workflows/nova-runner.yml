@@ -135,10 +135,13 @@ jobs:
           git config user.email "bot@arena.local"
           git add state/nova-queue.json artifacts/kali-panel/public/nova-runs 2>/dev/null || true
           if git diff --cached --quiet; then echo "مفيش جديد — مفيش commit"; exit 0; fi
-          # NO [skip ci] on purpose: Pages must rebuild, or the report stays committed
-          # but unpublished (measured: run 41395715818 pushed 5525eed with [skip ci] and
-          # /nova-runs/index.json kept serving the old placeholder). The loop that could
+          # This commit must NOT be marked skip-ci: Pages has to rebuild, or the report stays committed
+          # but unpublished (measured: the runner's own commit 5525eed carried the skip-ci
+          # marker and /nova-runs/index.json kept serving the old placeholder). The loop that could
           # cause — this workflow re-triggering itself — is closed by the path filter plus
+          # WARNING learned the hard way (2026-11-02): writing the skip-ci marker ANYWHERE in a
+          # commit message body — even in prose explaining it — makes GitHub skip every workflow
+          # for that push. Two commits on main lost their Pages deploy that way. Never type it here.
           # the runner exiting before it writes anything when the queue is empty.
           git commit -q -m "nova-runner: $(date -u +%Y-%m-%dT%H:%MZ) · $(git diff --cached --name-only | wc -l) ملف" || exit 0
           git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
