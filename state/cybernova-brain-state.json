@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 85,
-    "lastHeartbeatAt": "2026-11-02T11:51:31.569Z",
+    "autonomousCyclesCompleted": 86,
+    "lastHeartbeatAt": "2026-11-02T21:06:49.929Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #85 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #86 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1793653611217",
+      "ts": "2026-11-02 21:06:51 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #86 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 74.125.132.141 | HTTP 200 | SHA256: 4a6e1c9109c580bf — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 41 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:21)"
+    },
     {
       "id": "pulse-1793620292877",
       "ts": "2026-11-02 11:51:32 UTC",
@@ -202,13 +209,6 @@
       "category": "AUTONOMOUS_PULSE",
       "titleAr": "اكتمال الدورة الذاتية #62 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-phase17-galaxy",
-      "ts": "2026-10-29 17:37:44 UTC",
-      "category": "UNIVERSAL_GALAXY_76K_AND_MUTATOR",
-      "titleAr": "المرحلة 17: استعادة وتوسيع مكتبة المجرة (76,680+ ثغرة) + المولّد الذكي للثغرات + ربط WebSocket/SSE الشامل + وعي Ollama الذاتي",
-      "detailAr": "تفعيل مكتبة 76,680+ ثغرة عبر 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, PacketStorm, VulDB, CIRCL, Immunefi-Web3, AI-Mutated)، وإضافة المولّد الذكي للثغرات حسب الطلب (/api/cve/mutate)، وربط جميع المكونات عبر WebSocket وSSE، وفتح مسار Ollama المحلي (11434) والهجين بوعي ذاتي كامل."
     }
   ],
   "extractedArtifactsVault": [
@@ -803,6 +803,26 @@
       "at": "2026-11-02T03:30:53.259Z"
     },
     {
+      "id": "CVE-2019-5413",
+      "title": "CVE-2019-5413",
+      "description": "An attacker can use the format parameter to inject arbitrary commands in the npm package morgan < 1.9.1.",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-5413",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-12874",
+      "title": "CVE-2019-12874",
+      "description": "An issue was discovered in zlib_decompress_extra in modules/demux/mkv/util.cpp in VideoLAN VLC media player 3.x through 3.0.7. The Matroska demuxer, while parsing a malformed MKV file type, has a double free.",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-12874",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
       "id": "CVE-2024-26828",
       "title": "CVE-2024-26828",
       "description": "In the Linux kernel, the following vulnerability has been resolved:\n\ncifs: fix underflow in parse_server_interfaces()\n\nIn this loop, we step through the buffer and after each item we check\nif the size_left is greater than the minimum size we need.  However,\nthe problem is that \"bytes_left\" is type ssize_t while sizeof() is type\nsize_t.  That means that because of type promotion, the comparison is\n",
@@ -821,6 +841,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2006-4339",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2021-1636",
+      "title": "CVE-2021-1636",
+      "description": "Microsoft SQL Elevation of Privilege Vulnerability",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-1636",
+      "at": "2026-11-02T21:06:50.538Z"
     },
     {
       "id": "CVE-2013-0261",
@@ -851,6 +881,136 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2012-5562",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2021-2351",
+      "title": "CVE-2021-2351",
+      "description": "Vulnerability in the Advanced Networking Option component of Oracle Database Server. Supported versions that are affected are 12.1.0.2, 12.2.0.1 and 19c. Difficult to exploit vulnerability allows unauthenticated attacker with network access via Oracle Net to compromise Advanced Networking Option. Successful attacks require human interaction from a person other than the attacker and while the vulne",
+      "cvss": 8.3,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-2351",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-0232",
+      "title": "CVE-2019-0232",
+      "description": "When running on Windows with enableCmdLineArguments enabled, the CGI Servlet in Apache Tomcat 9.0.0.M1 to 9.0.17, 8.5.0 to 8.5.39 and 7.0.0 to 7.0.93 is vulnerable to Remote Code Execution due to a bug in the way the JRE passes command line arguments to Windows. The CGI Servlet is disabled by default. The CGI option enableCmdLineArguments is disable by default in Tomcat 9.0.x (and will be disabled",
+      "cvss": 8.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-0232",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-7364",
+      "title": "CVE-2019-7364",
+      "description": "DLL preloading vulnerability in versions 2017, 2018, 2019, and 2020 of Autodesk Advanced Steel, Civil 3D, AutoCAD, AutoCAD LT, AutoCAD Architecture, AutoCAD Electrical, AutoCAD Map 3D, AutoCAD Mechanical, AutoCAD MEP, AutoCAD Plant 3D and version 2017 of AutoCAD P&ID. An attacker may trick a user into opening a malicious DWG file that may leverage a DLL preloading vulnerability in AutoCAD which ma",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-7364",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-14437",
+      "title": "CVE-2019-14437",
+      "description": "The xiph_SplitHeaders function in modules/demux/xiph.h in VideoLAN VLC media player 3.0.7.1 does not check array bounds properly. As a result, a heap-based buffer over-read can be triggered via a crafted .ogg file.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14437",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-14438",
+      "title": "CVE-2019-14438",
+      "description": "A heap-based buffer over-read in xiph_PackHeaders() in modules/demux/xiph.h in VideoLAN VLC media player 3.0.7.1 allows remote attackers to trigger a heap-based buffer over-read via a crafted .ogg file.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14438",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-14498",
+      "title": "CVE-2019-14498",
+      "description": "A divide-by-zero error exists in the Control function of demux/caf.c in VideoLAN VLC media player 3.0.7.1. As a result, an FPE can be triggered via a crafted CAF file.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14498",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-14535",
+      "title": "CVE-2019-14535",
+      "description": "A divide-by-zero error exists in the SeekIndex function of demux/asf/asf.c in VideoLAN VLC media player 3.0.7.1. As a result, an FPE can be triggered via a crafted WMV file.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14535",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-14533",
+      "title": "CVE-2019-14533",
+      "description": "The Control function of demux/asf/asf.c in VideoLAN VLC media player 3.0.7.1 has a use-after-free.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14533",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-14776",
+      "title": "CVE-2019-14776",
+      "description": "A heap-based buffer over-read exists in DemuxInit() in demux/asf/asf.c in VideoLAN VLC media player 3.0.7.1 via a crafted .mkv file.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14776",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-14777",
+      "title": "CVE-2019-14777",
+      "description": "The Control function of demux/mkv/mkv.cpp in VideoLAN VLC media player 3.0.7.1 has a use-after-free.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14777",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-14778",
+      "title": "CVE-2019-14778",
+      "description": "The mkv::virtual_segment_c::seek method of demux/mkv/virtual_segment.cpp in VideoLAN VLC media player 3.0.7.1 has a use-after-free.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14778",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-14970",
+      "title": "CVE-2019-14970",
+      "description": "A vulnerability in mkv::event_thread_t in VideoLAN VLC media player 3.0.7.1 allows remote attackers to trigger a heap-based buffer overflow via a crafted .mkv file.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14970",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2021-34528",
+      "title": "CVE-2021-34528",
+      "description": "Visual Studio Code Remote Code Execution Vulnerability",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-34528",
+      "at": "2026-11-02T21:06:50.538Z"
     },
     {
       "id": "CVE-2023-52452",
@@ -901,6 +1061,96 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-52591",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2017-5647",
+      "title": "CVE-2017-5647",
+      "description": "A bug in the handling of the pipelined requests in Apache Tomcat 9.0.0.M1 to 9.0.0.M18, 8.5.0 to 8.5.12, 8.0.0.RC1 to 8.0.42, 7.0.0 to 7.0.76, and 6.0.0 to 6.0.52, when send file was used, results in the pipelined request being lost when send file processing of the previous request completed. This could result in responses appearing to be sent for the wrong request. For example, a user agent that ",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2017-5647",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2017-13745",
+      "title": "CVE-2017-13745",
+      "description": "There is a reachable assertion abort in the function jpc_dec_process_sot() in jpc/jpc_dec.c in JasPer 2.0.12 that will lead to a remote denial of service attack by triggering an unexpected jpc_ppmstabtostreams return value, a different vulnerability than CVE-2018-9154.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2017-13745",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-9936",
+      "title": "CVE-2019-9936",
+      "description": "In SQLite 3.27.2, running fts5 prefix queries inside a transaction could trigger a heap-based buffer over-read in fts5HashEntrySort in sqlite3.c, which may lead to an information leak. This is related to ext/fts5/fts5_hash.c.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-9936",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-9937",
+      "title": "CVE-2019-9937",
+      "description": "In SQLite 3.27.2, interleaving reads and writes in a single transaction with an fts5 virtual table will lead to a NULL Pointer Dereference in fts5ChunkIterate in sqlite3.c. This is related to ext/fts5/fts5_hash.c and ext/fts5/fts5_index.c.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-9937",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-10072",
+      "title": "CVE-2019-10072",
+      "description": "The fix for CVE-2019-0199 was incomplete and did not address HTTP/2 connection window exhaustion on write in Apache Tomcat versions 9.0.0.M1 to 9.0.19 and 8.5.0 to 8.5.40 . By not sending WINDOW_UPDATE messages for the connection window (stream 0) clients were able to cause server-side threads to block eventually leading to thread exhaustion and a DoS.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-10072",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-20454",
+      "title": "CVE-2019-20454",
+      "description": "An out-of-bounds read was discovered in PCRE before 10.34 when the pattern \\X is JIT compiled and used to match specially crafted subjects in non-UTF mode. Applications that use PCRE to parse untrusted input may be vulnerable to this flaw, which would allow an attacker to crash the application. The flaw occurs in do_extuni_no_utf in pcre2_jit_compile.c.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-20454",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2020-8169",
+      "title": "CVE-2020-8169",
+      "description": "curl 7.62.0 through 7.70.0 is vulnerable to an information disclosure vulnerability that can lead to a partial password being leaked over the network and to the DNS server(s).",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-8169",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2020-8231",
+      "title": "CVE-2020-8231",
+      "description": "Due to use of a dangling pointer, libcurl 7.29.0 through 7.71.1 can use the wrong connection when sending data.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-8231",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2021-38593",
+      "title": "CVE-2021-38593",
+      "description": "Qt 5.x before 5.15.6 and 6.x through 6.1.2 has an out-of-bounds write in QOutlineMapper::convertPath (called from QRasterPaintEngine::fill and QPaintEngineEx::stroke).",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-38593",
+      "at": "2026-11-02T21:06:50.538Z"
     },
     {
       "id": "CVE-2013-2056",
@@ -1053,6 +1303,36 @@
       "at": "2026-11-02T03:30:53.772Z"
     },
     {
+      "id": "CVE-2019-1543",
+      "title": "CVE-2019-1543",
+      "description": "ChaCha20-Poly1305 is an AEAD cipher, and requires a unique nonce input for every encryption operation. RFC 7539 specifies that the nonce value (IV) should be 96 bits (12 bytes). OpenSSL allows a variable nonce length and front pads the nonce with 0 bytes if it is less than 12 bytes. However it also incorrectly allows a nonce to be set of up to 16 bytes. In this case only the last 12 bytes are sign",
+      "cvss": 7.4,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-1543",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-12439",
+      "title": "CVE-2019-12439",
+      "description": "bubblewrap.c in Bubblewrap before 0.3.3 misuses temporary directories in /tmp as a mount point. In some particular configurations (related to XDG_RUNTIME_DIR), a local attacker may abuse this flaw to prevent other users from executing bubblewrap or potentially execute code.",
+      "cvss": 7.4,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-12439",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2020-8203",
+      "title": "CVE-2020-8203",
+      "description": "Prototype pollution attack when using _.zipObjectDeep in lodash before 4.17.20.",
+      "cvss": 7.4,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-8203",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
       "id": "CVE-2026-119190",
       "title": "CVE-2026-119190",
       "description": "Forge: X.509 basicConstraints bypass in verifyCertificateChain() via deprecated extension OIDs 2.5.29.10 and 2.5.29.13",
@@ -1061,6 +1341,16 @@
       "source": "GitHub Advisories",
       "url": "https://github.com/advisories/GHSA-5x38-2vff-x55p",
       "at": "2026-11-02T03:30:53.772Z"
+    },
+    {
+      "id": "CVE-2020-1002",
+      "title": "CVE-2020-1002",
+      "description": "An elevation of privilege vulnerability exists when the MpSigStub.exe for Defender allows file deletion in arbitrary locations.To exploit the vulnerability, an attacker would first have to log on to the system, aka 'Microsoft Defender Elevation of Privilege Vulnerability'.",
+      "cvss": 7.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-1002",
+      "at": "2026-11-02T21:06:50.538Z"
     },
     {
       "id": "CVE-2024-26669",
@@ -1083,6 +1373,26 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2020-11022",
+      "title": "CVE-2020-11022",
+      "description": "In jQuery starting with 1.12.0 and before 3.5.0, passing HTML from untrusted sources - even after sanitizing it - to one of jQuery's DOM manipulation methods (i.e. .html(), .append(), and others) may execute untrusted code. This problem is patched in jQuery 3.5.0.",
+      "cvss": 6.9,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-11022",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2021-21353",
+      "title": "CVE-2021-21353",
+      "description": "Pug is an npm package which is a high-performance template engine.  In pug before version 3.0.1, if a remote attacker was able to control the `pretty` option of the pug compiler, e.g. if you spread a user provided object such as the query parameters of a request into the pug template inputs, it was possible for them to achieve remote code execution on the node.js backend. This is fixed in version ",
+      "cvss": 6.8,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-21353",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
       "id": "CVE-2009-4139",
       "title": "CVE-2009-4139",
       "description": "A flaw was found in Spacewalk Java site packages. This cross-site request forgery (CSRF) vulnerability allows a remote attacker to hijack the authentication of arbitrary users. This can lead to unauthorized actions, including disabling user accounts, adding new user accounts, or escalating privileges by modifying existing user accounts to have administrator access.",
@@ -1091,6 +1401,26 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2009-4139",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2019-5439",
+      "title": "CVE-2019-5439",
+      "description": "A Buffer Overflow in VLC Media Player < 3.0.7 causes a crash which can possibly be further developed into a remote code execution exploit.",
+      "cvss": 6.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-5439",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2021-36976",
+      "title": "CVE-2021-36976",
+      "description": "libarchive 3.4.1 through 3.5.1 has a use-after-free in copy_string (called from do_uncompress_block and process_block).",
+      "cvss": 6.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-36976",
+      "at": "2026-11-02T21:06:50.538Z"
     },
     {
       "id": "CVE-2012-5625",
@@ -1123,6 +1453,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2019-0221",
+      "title": "CVE-2019-0221",
+      "description": "The SSI printenv command in Apache Tomcat 9.0.0.M1 to 9.0.0.17, 8.5.0 to 8.5.39 and 7.0.0 to 7.0.93 echoes user provided data without escaping and is, therefore, vulnerable to XSS. SSI is disabled by default. The printenv command is intended for debugging and is unlikely to be present in a production website.",
+      "cvss": 6.1,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-0221",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
       "id": "CVE-2013-1815",
       "title": "CVE-2013-1815",
       "description": "A flaw was found in PackStack. This vulnerability allows a local user to modify deployed systems by changing the answer file, which is created in insecure directories such as /tmp or the current working directory. This insecure file creation could lead to unauthorized system modifications.",
@@ -1141,6 +1481,26 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4813",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2019-14534",
+      "title": "CVE-2019-14534",
+      "description": "In VideoLAN VLC media player 3.0.7.1, there is a NULL pointer dereference at the function SeekPercent of demux/asf/asf.c that will lead to a denial of service attack.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-14534",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2021-34532",
+      "title": "CVE-2021-34532",
+      "description": "ASP.NET Core and Visual Studio Information Disclosure Vulnerability",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-34532",
+      "at": "2026-11-02T21:06:50.538Z"
     },
     {
       "id": "CVE-2012-4574",
@@ -1313,6 +1673,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2019-15291",
+      "title": "CVE-2019-15291",
+      "description": "An issue was discovered in the Linux kernel through 5.2.9. There is a NULL pointer dereference caused by a malicious USB device in the flexcop_usb_probe function in the drivers/media/usb/b2c2/flexcop-usb.c driver.",
+      "cvss": 4.6,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-15291",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
       "id": "CVE-2011-4346",
       "title": "CVE-2011-4346",
       "description": "Cross-site scripting (XSS) vulnerability in the web interface in Red Hat Network (RHN) Satellite allows remote authenticated users to inject arbitrary web script or HTML via the Description field of the asset tag in a Custom Info page.",
@@ -1333,6 +1703,36 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2018-12209",
+      "title": "CVE-2018-12209",
+      "description": "Insufficient access control in User Mode Driver in Intel(R) Graphics Driver for Windows* before versions 10.18.x.5059 (aka 15.33.x.5059), 10.18.x.5057 (aka 15.36.x.5057), 20.19.x.5063 (aka 15.40.x.5063) 21.20.x.5064 (aka 15.45.x.5064) and 24.20.100.6373 potentially enables an unprivileged user to read device configuration information via local access.",
+      "cvss": 3.3,
+      "severity": "LOW",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2018-12209",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2019-1552",
+      "title": "CVE-2019-1552",
+      "description": "OpenSSL has internal defaults for a directory tree where it can find a configuration file as well as certificates used for verification in TLS. This directory is most commonly referred to as OPENSSLDIR, and is configurable with the --prefix / --openssldir configuration options. For OpenSSL versions 1.1.0 and 1.1.1, the mingw configuration targets assume that resulting programs and libraries are in",
+      "cvss": 3.3,
+      "severity": "LOW",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-1552",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2020-8908",
+      "title": "CVE-2020-8908",
+      "description": "A temp directory creation vulnerability exists in all versions of Guava, allowing an attacker with access to the machine to potentially access data in a temporary directory created by the Guava API com.google.common.io.Files.createTempDir(). By default, on unix-like systems, the created directory is world-readable (readable by an attacker with access to the system). The method in question has been",
+      "cvss": 3.3,
+      "severity": "LOW",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-8908",
+      "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
       "id": "CVE-2012-5605",
       "title": "CVE-2012-5605",
       "description": "A flaw was found in Grinder, a component of Red Hat CloudForms. This vulnerability allows a local user to modify Grinder's cache files due to incorrect world-writable permissions set on the `/var/lib/pulp/cache/grinder/` directory. This could lead to unauthorized data tampering within the application's cache.",
@@ -1341,6 +1741,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2012-5605",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2026-62374",
+      "title": "CVE-2026-62374",
+      "description": "SD JWT JS: Tampered disclosures silently dropped instead of rejected",
+      "cvss": null,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-f9j6-8p6x-r9j6",
+      "at": "2026-11-02T21:06:51.216Z"
     },
     {
       "id": "CVE-2026-119203",
@@ -1414,13 +1824,13 @@
     }
   ],
   "intelStats": {
-    "total": 76,
-    "freshThisPulse": 0,
+    "total": 117,
+    "freshThisPulse": 41,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
       "GHSA:21"
     ],
-    "at": "2026-11-02T11:51:32.877Z"
+    "at": "2026-11-02T21:06:51.217Z"
   }
 }
