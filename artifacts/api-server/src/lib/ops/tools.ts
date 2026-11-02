@@ -750,7 +750,11 @@ export const KINDS: Record<string, KindDef> = {
     active: true,
     binary: "httpx",
     installHint: "go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest",
-    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-json", "-silent", "-follow-redirects", "-status-code", "-title", "-tech-detect", "-timeout", "8"],
+    // -connect-timeout + -retries matter: with only a request timeout, one host that accepts the
+    // socket and then stalls kept httpx alive until the job killed it at 180 s (measured:
+    // Actions run 41452838992, `tools.httpx: exit=-1 · 180022ms`). A tool that eats a whole job
+    // is worse than a tool that fails fast and says so.
+    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-json", "-silent", "-follow-redirects", "-status-code", "-title", "-tech-detect", "-timeout", "8", "-connect-timeout", "6", "-retries", "1"],
     command: (ctx) => `httpx -u ${shQuote(`${baseUrl(ctx)}/`)} -json -silent -status-code -title -tech-detect`,
     parse: (stdout, ctx) => {
       const rows: Record<string, unknown>[] = [];
@@ -793,7 +797,7 @@ export const KINDS: Record<string, KindDef> = {
     active: true,
     binary: "katana",
     installHint: "go install -v github.com/projectdiscovery/katana/cmd/katana@latest",
-    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-jsonl", "-silent", "-depth", "2", "-concurrency", "4", "-rate-limit", String(Math.max(1, Math.round(ctx.rps))), "-timeout", "8"],
+    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-jsonl", "-silent", "-depth", "2", "-concurrency", "4", "-rate-limit", String(Math.max(1, Math.round(ctx.rps))), "-timeout", "8", "-crawl-duration", "60s"],
     command: (ctx) => `katana -u ${shQuote(`${baseUrl(ctx)}/`)} -jsonl -silent -depth 2 -rate-limit ${Math.max(1, Math.round(ctx.rps))}`,
     parse: (stdout, ctx) => {
       const urls = new Set<string>();

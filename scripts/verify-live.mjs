@@ -40,6 +40,7 @@ const OUT_JSON = arg("out", "state/verified-live.json");
 const OUT_MD = arg("markdown", "state/verified-live.md");
 const PER_TIMEOUT = Number(arg("timeout", "110")); // seconds per tool run
 const STATE_DIR = arg("stateDir", "state/jobs");
+const WORDLIST = arg("wordlist", "");
 
 const log = (...a) => console.log("[verify]", ...a);
 const warn = (m) => console.log(`::warning::${m}`);
@@ -124,6 +125,10 @@ async function cliChecks(cfg) {
   const testRow = cfg.targets.find((t) => t.host.startsWith("testphp")) || live[1] || first;
   const testSite = testRow.host;
   const testUrl = `${testRow.scheme || "http"}://${testSite}/`;
+  // httpx is pointed at the HTTPS-capable exercise host, not at the port-scan host: scanme is
+  // HTTP-only and throttles cloud IPs, so an empty httpx run there says nothing about httpx.
+  const liveRow = cfg.targets.find((x) => x.engineExercise) || live[0] || cfg.targets[0];
+  const probeUrl = `${liveRow.scheme || "https"}://${liveRow.host}/`;
 
   // resolution first: if DNS does not answer, every later row is meaningless
   const dnsx = findBinary("dnsx");
@@ -145,15 +150,17 @@ async function cliChecks(cfg) {
   const httpx = findBinary("httpx");
   if (!httpx) add("cli", "httpx present", "fail", "مش موجود");
   else {
-    const r = await runBin(httpx, ["-silent", "-u", "-sc", "-title", httpTarget], 60);
+    const r = await runBin(httpx, ["-silent", "-u", "-sc", "-title", "-H", "User-Agent: Mozilla/5.0", "-timeout", "12", "-retries", "1", probeUrl], 60);
     const ok = r.code === 0 && /\[2\d\d\]|\[3\d\d\]/.test(r.out);
-    add("cli", `httpx ${httpTarget}`, ok ? "pass" : NET_ERRORS.test(r.err + r.out) ? "blocked" : "review",
-      ok ? short(r.out, 120) : short(`${r.err || ""} exit=${r.code} · ${r.out.length}B stdout`, 130), { ms: r.ms });
+    add("cli", `httpx ${probeUrl}`, ok ? "pass" : NET_ERRORS.test(r.err + r.out) ? "blocked" : "review",
+      ok ? short(r.out, 120) : short(`${r.err || ""} exit=${r.code} · ${r.out.length}B stdout · ${r.ms}ms`, 130), { ms: r.ms });
   }
 
   const katana = findBinary("katana");
   if (katana) {
-    const r = await runBin(katana, ["-u", testUrl, "-jc", "-silent", "-t", "4"], 90);
+    // no -jc: in katana that short flag is NOT "junk filter", and passing it swallowed the next
+    // flag and made the process exit 2 with no output (measured: run 41452838992).
+    const r = await runBin(katana, ["-u", testUrl, "-silent", "-depth", "2", "-timeout", "6", "-crawl-duration", "60s"], 100);
     const urls = r.out.split("\n").map((s) => s.trim()).filter((s) => /^https?:/.test(s));
     const min = cfg.targets.find((t) => t.host === testSite)?.expects?.crawledUrls ?? 3;
     add("cli", `katana crawl ${testSite}`, urls.length >= min ? "pass" : NET_ERRORS.test(r.err) ? "blocked" : "review",
@@ -164,14 +171,17 @@ async function cliChecks(cfg) {
   if (!nuclei) add("cli", "nuclei present", "fail", "مش موجود — الـvendor فشل؟");
   else {
     // -ut fetches the community template repo from GitHub; without it nuclei has nothing to match.
-    await runBin(nuclei, ["-ut"], 120);
+    // Its output is recorded, because "0 findings" from an empty template dir and from a clean
+    // target look identical otherwise — and only one of them means anything.
+    const upd = await runBin(nuclei, ["-ut"], 120);
+    const updTail = short((upd.out || upd.err).split("\n").filter(Boolean).slice(-1)[0] || `exit=${upd.code}`, 90);
     // severity-filtered on purpose: the full template set cannot finish inside a 6-runner-minute
     // budget, and "it timed out" would look identical to "the target is clean" in the report.
     const r = await runBin(nuclei, ["-u", testUrl, "-severity", "medium,high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1"], PER_TIMEOUT);
     const lines = r.out.split("\n").map((s) => s.trim()).filter(Boolean);
     const min = cfg.targets.find((t) => t.host === testSite)?.expects?.nucleiFindings ?? 1;
     add("cli", `nuclei -u ${testSite}`, lines.length >= min ? "pass" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
-      lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}` : `مفيش نتيجة · exit=${r.code} · ${r.out.length}B · ${short(r.err, 100)}`,
+      lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}` : `مفيش نتيجة · exit=${r.code} · ${r.out.length}B · قوالب: ${updTail}`,
       { count: lines.length, ms: r.ms });
   }
 
@@ -193,11 +203,11 @@ async function cliChecks(cfg) {
 
   const ffuf = findBinary("ffuf");
   if (ffuf) {
-    const wl = "/usr/share/seclists/Discovery/Web-Content/common.txt";
+    const wl = WORDLIST || "/usr/share/seclists/Discovery/Web-Content/common.txt";
     const local = fs.existsSync(wl) ? wl : null;
-    if (!local) add("cli", "ffuf wordlist", "blocked", "مفيش wordlist على الجهاز (seclists) — السكربيت اتخطّى");
+    if (!local) add("cli", "ffuf wordlist", "blocked", `مفيش wordlist في ${short(wl, 70)} — الـworkflow بينزّل واحد من SecLists؛ محليًا: نزّله ومرّر --wordlist`);
     else {
-      const r = await runBin(ffuf, ["-u", `https://${testSite}/FUZZ`, "-w", local, "-mc", "200,204,301,302,401,403", "-t", "10", "-maxtime", "45s", "-s"], 70);
+      const r = await runBin(ffuf, ["-u", `${testRow.scheme || "http"}://${testSite}/FUZZ`, "-w", local, "-mc", "200,204,301,302,401,403", "-t", "10", "-maxtime", "45s", "-s"], 70);
       const hits = (r.out.match(/\[Status: \d+/g) || []).length;
       add("cli", `ffuf fuzz ${testSite}`, hits > 0 ? "pass" : "review", `${hits} نتيجة (${r.out.split("\n").length} سطر)`, { count: hits, ms: r.ms });
     }

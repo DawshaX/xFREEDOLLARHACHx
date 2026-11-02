@@ -118,6 +118,22 @@ node scripts/verify-live.mjs --engine http://127.0.0.1:8090/api --token "$NOVA_E
 | `httpx https://scanme.nmap.org/` و`recon.tls/recon.headers` عليه فشلوا | المضيف **HTTP-only** — مفيش 443 أصلاً. المحرك كان صحيح والتوقع غلط | `scheme` بقى بيانات في `ops/verify/targets.json` (scanme=http)، وسلسلة المحرك بتتمarsى على `demo.testfire.net` لأنه بيقدر HTTPS بالحقيقة |
 | `katana` رجّع 0 رابط و`ffuf` ما نزلش | `ffuf` في أصول إصداره اسمهم `linux_amd64` مش `linux_x86_64` — الـregex ما كانش بيطابق حاجة؛ وكاتانا كان بيتوجه على `https` | وسّع الـmatch، و`nuclei -severity medium,high,critical` (من غير فلتر القوالب «الوقت خلص» بتبان زي «الموقع نضيف»)، وكل سطر فاشل بي طبّع stderr/exit بدل رقم حالة |
 
+### التشغيل التاني (13:31Z) — نفس الأرقام بعد الإصلاح، وبعدها القفل اتقفل
+
+| السطر | قبل | بعد |
+|---|---|---|
+| `engine \| job executed` | 2/7 done · 5 failed · 4 finding | **6/7 done · 1 failed · 11 finding** — أدوات `vendor/bin` بتتنفّذ جوه المحرك فعلًا |
+| الأدوات المرصودة | 7 (بلا ffuf) | **8**: dnsx · subfinder · httpx · katana · nuclei · nmap · naabu · **ffuf** |
+| `subfinder -d vulnweb.com` | 518 سوبدومين | **519** — تعداد حي من سجلات DNS/شهادات |
+| `nmap scanme:22,80` | 2 مفتوح | 2 مفتوح ✓ |
+| السيطرة السلبية | 403 passive_only | 403 passive_only ✓ — البوابة ما اتفتحتش مع فتح التنفيذ |
+
+باقي الـ5 «؟» بقية شغل متتابع، وكل واحد له سبب مكتوب في التفصيل: `tools.httpx` كان بياكل
+الـ180 ثانية كلها (اتقبض بـ `-connect-timeout 6 -retries 1`)، `katana` كان بيرجع `exit=2` لأن
+`-jc` في katana مش «filter-junk» وبتبلع الفلاج اللي بعدها (اتشال + `-crawl-duration`)، و`ffuf`
+مكانش لاقي wordlist (الـworkflow بينزّل `common.txt` من SecLists دلوقتي)، و`nuclei` بقى يطبع
+سطر تحديث القوالب في التفصيل عشان «صفر نتيجة من غير قوالب» ما تتقريش «صفر نتيجة على موقع نضيف».
+
 **الدستور اللي طلّع التعديلات دي: الأحمر بيانات — بس بشرط إن السطر يفصّل.** سطر `؟ review` من غير سبب
 («exit 0» وبس) مكانش خلاّني أعرف إني قدام عيب تنفيذ حقيقي بدل موقع بطيء.
 
