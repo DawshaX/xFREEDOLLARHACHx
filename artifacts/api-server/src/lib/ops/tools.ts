@@ -164,18 +164,29 @@ function runArgv(
   bin: string,
   args: string[],
   opts: { cwd: string; timeoutMs: number; env?: NodeJS.ProcessEnv },
-): Promise<{ code: number; stdout: string; stderr: string }> {
+): Promise<{ code: number; stdout: string; stderr: string; killed: boolean }> {
   return new Promise((resolve) => {
     let child: ReturnType<typeof spawn>;
+    let killed = false;
     try {
-      child = spawn(bin, args, { cwd: opts.cwd, env: opts.env ?? process.env, shell: false });
+      // stdio[0] = "ignore" is not cosmetic. Tools that accept targets from BOTH a flag and stdin
+      // (httpx, naabu, katana…) open their stdin as a pipe and sit there waiting for EOF when we
+      // hand them `-u` — which is exactly how `tools.httpx` burned 45 s and then 180 s and printed
+      // nothing (measured: runs 41460859502 / 41465521238). Give them EOF by giving them nothing.
+      child = spawn(bin, args, {
+        cwd: opts.cwd,
+        env: opts.env ?? process.env,
+        shell: false,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
     } catch (err) {
-      resolve({ code: 127, stdout: "", stderr: (err as Error).message });
+      resolve({ code: 127, stdout: "", stderr: (err as Error).message, killed: false });
       return;
     }
     let stdout = "";
     let stderr = "";
     const killer = setTimeout(() => {
+      killed = true; // OUR ceiling, not the tool's fault — say so instead of reporting a crash
       try {
         child.kill("SIGKILL");
       } catch {
@@ -190,11 +201,11 @@ function runArgv(
     });
     child.on("error", (e: Error) => {
       clearTimeout(killer);
-      resolve({ code: 127, stdout, stderr: e.message });
+      resolve({ code: 127, stdout, stderr: e.message, killed: false });
     });
     child.on("close", (code) => {
       clearTimeout(killer);
-      resolve({ code: code ?? -1, stdout, stderr });
+      resolve({ code: code ?? -1, stdout, stderr, killed });
     });
   });
 }
@@ -701,6 +712,10 @@ export const KINDS: Record<string, KindDef> = {
     titleAr: "ProjectDiscovery Nuclei (قوالب إعدادات/تعرّض)",
     active: true,
     binary: "nuclei",
+    // A real nuclei run against a live app is minutes of work: thousands of templates × rate limit.
+    // Inside the job default (180 s) it was ALWAYS cut off and reported as a failure — the fix is to
+    // let the scanner scan (measured: `nuclei فشل (exit=-1) · 180006ms`, run 41465521238).
+    budgetMs: 260_000,
     installHint: "sh -c \"$(curl -sL https://raw.githubusercontent.com/projectdiscovery/nuclei/main/install.sh)\"",
     args: (ctx, p) => {
       const sev = (p["severities"] as string[]) ?? ["low", "medium", "high", "critical"];
@@ -808,7 +823,7 @@ export const KINDS: Record<string, KindDef> = {
     active: true,
     binary: "katana",
     installHint: "go install -v github.com/projectdiscovery/katana/cmd/katana@latest",
-    budgetMs: 110_000,
+    budgetMs: 110_000, // katana: a bounded crawl, not an open-ended one
     args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-jsonl", "-silent", "-depth", "2", "-concurrency", "4", "-rate-limit", String(Math.max(1, Math.round(ctx.rps))), "-timeout", "8", "-crawl-duration", "60s"],
     command: (ctx) => `katana -u ${shQuote(`${baseUrl(ctx)}/`)} -jsonl -silent -depth 2 -rate-limit ${Math.max(1, Math.round(ctx.rps))}`,
     parse: (stdout, ctx) => {
@@ -895,7 +910,10 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
   const runLocal = async (): Promise<KindResult> => {
     const res = await runArgv(abs, argv, {
       cwd: ctx.jobDir,
-      timeoutMs: kind.budgetMs ? Math.min(ctx.timeoutMs, kind.budgetMs) : ctx.timeoutMs,
+      // The KIND owns its clock. A job's per-task default (180 s) is right for a header probe and
+      // wrong for a full nuclei run, so `budgetMs` can raise as well as lower — clamped to 15 s…10 m
+      // so a typo can neither make a task untouchable nor starve the job behind it.
+      timeoutMs: Math.max(15_000, Math.min(kind.budgetMs ?? ctx.timeoutMs, 600_000)),
       env: {
         ...process.env,
         TERM: "dumb",
@@ -916,6 +934,15 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
     // wrong flag became a green task with zero findings — a scan that reports nothing and looks
     // fine is the worst failure mode a security tool can have.
     const tail = (line: string) => line.split("\n").map((x) => x.trim()).filter(Boolean).slice(-1)[0] ?? "";
+    if (res.killed) {
+      return {
+        ok: false,
+        summary: `${bin} اتقطع بعد ${Date.now() - started}ms (ميزانية النوع) · ${parsed.findings.length} نتيجة لحد هنا — «اتقطع» مش «مافيش»`,
+        findings: parsed.findings,
+        error: "tool-timeout",
+        data: { exit: res.code, budgetMs: Math.max(15_000, Math.min(kind.budgetMs ?? ctx.timeoutMs, 600_000)), partial: parsed.data ?? {} },
+      };
+    }
     if (res.code !== 0) {
       return {
         ok: false,

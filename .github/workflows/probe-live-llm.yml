@@ -23,7 +23,11 @@ permissions:
 
 jobs:
   probe:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[probe-live]')
+    # `contains(github.event.head_commit.message, …)` throws when the event has no head_commit —
+    # and a workflow-level expression error kills the run with ZERO jobs, which painted every push
+    # red on the repo page for a month (measured: runs 41465482294/41465518364, jobs:[] + failure).
+    # Serialize the event and search the text instead: no null property access, any event, same rule.
+    if: github.event_name == 'workflow_dispatch' || contains(toJSON(github.event), '[probe-live]')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
