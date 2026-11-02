@@ -21,6 +21,10 @@ ssh -i your-key.pem ubuntu@<SERVER_IP>
 # على السيرفر:
 sudo apt-get update && sudo apt-get install -y git
 sudo git clone https://github.com/DawshaX/xFREEDOLLARHACHx.git /opt/cybernova
+> **هوست صغير دائم (Waifly/Zeabur/Back4App بـ300 MB)؟** اقرأ [`deploy/waifly.md`](waifly.md) —
+> فيه طريقة جيب الـbundle الجاهز من الـrelease بدل البناء على السيرفر، وجدول المتغيرات الصح
+> لـ300 MB، وطريقة الـprune للديسك، وchecklist ما بعد الـdeploy.
+
 sudo bash /opt/cybernova/deploy/oracle-setup.sh
 ```
 

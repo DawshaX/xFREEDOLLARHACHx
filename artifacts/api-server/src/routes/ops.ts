@@ -52,6 +52,7 @@ import { KIND_LIST, toolStatus } from "../lib/ops/tools";
 import { checkGate } from "../lib/ops/gate";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
+import { buildStamp } from "../lib/ops/version";
 import { throttleStats } from "../lib/ops/ratelimit";
 import { broadcastEvent } from "../lib/ws-hub";
 
@@ -307,6 +308,12 @@ router.get("/ops/jobs/:id/report", (req: Request, res: Response) => {
  * Did the free install pick up its keys and its scope? Names only — a status
  * endpoint that echoed values would put secrets in logs and in the browser.
  */
+/** Which bundle is running, and what this box can really do. Read-only, nothing secret. */
+router.get("/ops/version", (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ ok: true, ...buildStamp() });
+});
+
 router.get("/ops/provision", (_req: Request, res: Response) => {
   res.json({ ok: true, ...(provisionStatus() ?? { keys: null, scope: null }), hint_ar: "المفاتيح من NOVA_KEYS_URL/NOVA_KEYS_FILE، والنطاقات من NOVA_SCOPE_DOMAINS (استطلاع بس)." });
 });

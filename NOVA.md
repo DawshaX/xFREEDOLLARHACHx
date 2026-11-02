@@ -271,6 +271,8 @@ curl -X POST http://localhost:8080/api/ops/programs \
 | `NOVA_DEFAULT_RPS` | `1` | السقف لو البرنامج ما حدّدش |
 | `NOVA_ALLOW_SOURCE_DOWNLOAD` | `0` | يفعّل تنزيل مصدر المشروع |
 | `NOVA_OPEN_OPS` | `0` | وضع المعمل المحلي |
+
+`GET /api/ops/version` بيقول build إيه اللي شغال فعلاً (sha + عمر الـbundle + الأدوات الموجودة + وضع الدورة الخلفية) — ده أول أمر تعمله لأي هوست بعيد قبل ما تصدّق أي حاجة تانية.
 | `NOVA_TOKEN` (للنود) | فارغ | التوكن اللي بيسمح لأي جهاز يسجل في الأسطول |
 | `NOVA_KEYS_URL` / `NOVA_KEYS_FILE` | فارغ | مصدر مفاتيح مجاني وقت الإقلاع (https إجباري) |
 | `NOVA_SCOPE_DOMAINS` | فارغ | نطاقات تتسجّل أوتوماتيك في وضع الاستطلاع |

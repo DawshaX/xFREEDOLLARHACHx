@@ -70,6 +70,40 @@ jobs:
             -d '{"message":"إيه أول خطوة في فحص نطاق مصرّح به؟ سطرين بالكتير."}' \
             | head -c 3000 | tee -a "$R"; say ""
 
+          say "## engine stamp — is the deployed bundle the ops build at all?"
+          V=$(curl -sS -m 20 "$TARGET/api/ops/version" 2>/dev/null | head -c 1200 || true)
+          say "$V"
+          say ""
+          if echo "$V" | grep -q '"opsRouter"'; then
+            say "VERDICT: ops engine LIVE on this host."
+            echo "$V" | grep -q '"suspect":true' && say "VERDICT+: الـbundle قديم شوية — محتاج redeploy للفرع الأخير."
+          else
+            say "VERDICT: PRE-OPS bundle — السيرفر ده لسه مفيهوش محرك /api/ops (لا scope gate ولا jobs ولا أدلة)."
+            say "الإصلاح: اعمل deploy من الفرع/PR اللي فيه `src/lib/ops/` ثم restart، وبعدها الـprobe ده لازم يطلع opsRouter:true"
+          fi
+          say ""
+
+          say "## ops surface (200 = live, 404 = old bundle, HTML = SPA fallthrough = مش راوتر)"
+          for ep in kinds programs stats sweep provision; do
+            code=$(curl -sS -o /tmp/ops-$ep.json -w '%{http_code}' -m 20 "$TARGET/api/ops/$ep" 2>/dev/null || echo "000")
+            say "GET /api/ops/$ep → $code · $(head -c 180 /tmp/ops-$ep.json 2>/dev/null | tr -d "\n")"
+          done
+          say ""
+
+          say "## the gate must refuse an anonymous stranger"
+          code=$(curl -sS -o /tmp/deny.json -w '%{http_code}' -m 25 -X POST "$TARGET/api/ops/programs" -H 'content-type: application/json' -d '{"id":"probe-only","hosts":["example.com"]}' 2>/dev/null || echo "000")
+          say "POST /api/ops/programs (anonymous) → $code · $(head -c 200 /tmp/deny.json 2>/dev/null | tr -d "\n")"
+          [ "$code" = "403" ] && say "→ البوابة شغالة على الهوست ✅" || say "→ مفيش 403: يا الهوست قديم يا NOVA_OPEN_OPS=1 لازم يتقفل قبل ما يبقى عام ⚠️"
+          code=$(curl -sS -o /tmp/deny2.json -w '%{http_code}' -m 20 -X POST "$TARGET/api/local-agent/exec" -H 'content-type: application/json' -d '{"command":"id"}' 2>/dev/null || echo "000")
+          say "POST /api/local-agent/exec (anonymous) → $code · $(head -c 160 /tmp/deny2.json 2>/dev/null | tr -d "\n")"
+          say ""
+
+          say "## free-plane catalogue + honest fleet ceiling"
+          curl -sS -m 20 "$TARGET/api/fleet/capabilities" | head -c 420 | tee -a "$R"
+          say ""
+          curl -sS -m 20 "$TARGET/api/fleet/catalogue" | head -c 260 | tee -a "$R"
+          say ""
+
           say "## fleet"
           curl -sS -m 20 "$TARGET/api/local-agent/agents" | tee -a "$R"; say ""
           curl -sS -m 20 "$TARGET/api/fleet/mesh" | head -c 800 | tee -a "$R"; say ""
