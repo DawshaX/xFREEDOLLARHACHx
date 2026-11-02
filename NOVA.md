@@ -402,6 +402,13 @@ ollama · pollinations:openai-fast · pollinations:mistral · pollinations:llama
 وينفّذ من خلال `/api/ops/*` ويرجّع التقرير منشوراً على Pages. ده بيشتغل حتى لو كل المضيفين
 واقعين — والعمق النشط متقفل افتراضياً لأن IP المصدر هنا بتاع جيت-هَب.
 
+**وسؤال «طب شغالة كام في المية؟» بقى مقيس:** `docs/LIVE-VERIFY.md` — `scripts/verify-live.mjs`
+بيشغّل nmap/nuclei/httpx/subfinder/katana/ffuf والأحد عشر نوع مهمة على أهداف أصحابها قالوا صراحة
+«افحصوني» (scanme.nmap.org، testphp.vulnweb.com، demo.testfire.net)، ومعاه **سيطرة سلبية**: فحص
+نشط على `example.com` لازم يترفض — لو عدّى، الحكم `UNSAFE` مش `RED`. `live-verify.yml` بيعمل ده
+كل 6 ساعات على Actions وبيعمل commit لـ`state/verified-live.md`، وعضو `liveverify` في قراية الوعي
+بيحكى النتيجة بتواريخها. مفيش ادعاء بيمر من غير سطر في التقرير.
+
 **عايز مكان واحد بس؟** `render.yaml` بقى ينزّل الأدوات وقت الـbuild (`vendor/bin`: nuclei/httpx/
 subfinder/katana/dnsx/naabu/ffuf من ريليساتها، من غير root ولا apt)، فالخدمة الواحدة على Render Free
 بتشغّل المحرك + اللوحة على نفس العنوان + المجلس + jobs/أدلة/تقارير + مهام الأدوات. اللي مالوش:

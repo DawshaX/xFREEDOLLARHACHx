@@ -34,6 +34,7 @@ import { KIND_LIST, toolStatus } from "./ops/tools";
 import { autonomySummary } from "./ops/autonomy";
 import { buildStamp, type NovaBuildStamp } from "./ops/version";
 import { freeHostSummary, type FreeHostSummary } from "./ops/free-hosts";
+import { liveVerifySays, liveVerifyView, type LiveVerifyView } from "./ops/live-verify";
 import { provisionStatus } from "./ops/keys-source";
 import { opsExposure } from "./ops/gate";
 
@@ -97,6 +98,18 @@ export interface AwarenessSnapshot {
     selfCheck: { score: number; passed: number; total: number; verdict: string } | null;
     autonomy: ReturnType<typeof autonomySummary>;
     freeHosts: FreeHostSummary;
+    /** the offensive chain, measured against hosts whose owners allow scanning */
+    liveVerify: {
+      measured: boolean;
+      fresh: boolean;
+      verdict: string | null;
+      pass: number;
+      fail: number;
+      review: number;
+      blocked: number;
+      ageMin: number | null;
+      failedChecks: string[];
+    };
     gate: ReturnType<typeof opsExposure>;
     keysLoaded: number;
   };
@@ -222,7 +235,7 @@ const SNAP_TTL_MS = Number(process.env.NOVA_AWARENESS_TTL_MS || 3_000);
 export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
   if (snapCache && Date.now() - snapCache.at < SNAP_TTL_MS) return snapCache.snap;
 
-  const [providers, seats, net, selfCheck, stamp, freeHosts] = await Promise.all([
+  const [providers, seats, net, selfCheck, stamp, freeHosts, verify] = await Promise.all([
     guard(() => listConfiguredProviders(), [] as Awaited<ReturnType<typeof listConfiguredProviders>>),
     guard(() => councilMembers(9), [] as Awaited<ReturnType<typeof councilMembers>>),
     probeOutbound(),
@@ -238,6 +251,8 @@ export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
       bestHubId: "none",
       bestHubAr: "القياس ماحصلش",
     } as Awaited<ReturnType<typeof freeHostSummary>>),
+    // sync file read — wrapped so a missing report stays `unknown`, never an exception
+    Promise.resolve(guardSafe(() => liveVerifyView())),
   ]);
   const nodes = guardSafe(() => getConnectedAgentList()) ?? [];
   const jobs = guardSafe(() => listJobs(50)) ?? [];
@@ -377,6 +392,24 @@ export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
           : "صفر في القياس معناه غالبًا إن خروج السيرفر ده مقيد (مش إن المضيفين ماتوا) — القياس الحقيقى بيتعمل على الـhub. التفاصيل: `/api/fleet/catalogue?probe=1`.",
     },
     {
+      id: "liveverify",
+      label: "سلسلة الأدوات (مقاسة على أهداف حية)",
+      route: "/nova-fleet",
+      state: !(verify as LiveVerifyView | null)?.measured
+        ? "unknown"
+        : (verify as LiveVerifyView).verdict === "UNSAFE" || (verify as LiveVerifyView).verdict === "RED"
+          ? "down"
+          : (verify as LiveVerifyView).verdict === "GREEN" && (verify as LiveVerifyView).fresh
+            ? "up"
+            : "partial",
+      says: liveVerifySays(verify as LiveVerifyView),
+      fixAr: !(verify as LiveVerifyView)?.measured
+        ? "شغّل workflow `live-verify.yml` (أو `node scripts/verify-live.mjs` على جهاز فيه خروج) — القياس بيتعمل على scanme.nmap.org و testphp.vulnweb.com بأذن أصحابهم، والمحكوم بيتكتب في state/verified-live.md."
+        : (verify as LiveVerifyView).failedChecks.length
+          ? `مقسوس: ${(verify as LiveVerifyView).failedChecks.slice(0, 3).join(" · ")} — التفاصيل والموافقات في \`state/verified-live.md\``
+          : undefined,
+    },
+    {
       id: "background",
       label: "الشغل في الخلفية",
       route: "/nova-fleet",
@@ -446,6 +479,17 @@ export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
       selfCheck: selfCheck ? { score: selfCheck.score, passed: selfCheck.passed, total: selfCheck.total, verdict: selfCheck.verdict } : null,
       autonomy,
       freeHosts,
+    liveVerify: {
+      measured: Boolean((verify as LiveVerifyView | null)?.measured),
+      fresh: Boolean((verify as LiveVerifyView | null)?.fresh),
+      verdict: (verify as LiveVerifyView | null)?.verdict ?? null,
+      pass: (verify as LiveVerifyView | null)?.counts?.pass ?? 0,
+      fail: (verify as LiveVerifyView | null)?.counts?.fail ?? 0,
+      review: (verify as LiveVerifyView | null)?.counts?.review ?? 0,
+      blocked: (verify as LiveVerifyView | null)?.counts?.blocked ?? 0,
+      ageMin: (verify as LiveVerifyView | null)?.ageMin ?? null,
+      failedChecks: (verify as LiveVerifyView | null)?.failedChecks ?? [],
+    },
       gate,
       keysLoaded: keys,
     },

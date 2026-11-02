@@ -999,6 +999,12 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   قرايات `ops/programs|jobs|stats` اتقفلت خلف same-origin/توكن، و`agentTools` اتظبط (99→97 type errors).
   متقاس على المحرك: 35/35 selftest · 0 فجوات اتصال · 157/157 render · مصفوفة 403/200 كاملة.
 
+- **2026-11-02 (سادس):** «عايز كل حاجة شغالة حقيقية 100% وموثقة ومربوطة بمواقع حية» — الرد بقى قياس مش كلام:
+  `ops/verify/targets.json` (أهداف منشور إذن فحصها + سيطرة سلبية على example.com) و`scripts/verify-live.mjs`
+  (طبقة CLI + طبقة ENGINE عبر `/api/ops/*` + رفض السيطرة السلبية) و`.github/workflows/live-verify.yml` (كل 6 ساعات،
+  بيعمل commit لـ`state/verified-live.{json,md}`)، وعضو `liveverify` في `lib/awareness.ts` بيقرا التقرير.
+  **متقاس locally:** البوابة ماسكة (`HTTP 403 · passive_only` بالحرف) والسلسلة عدّت 7 مهام بدلائل مجزّأة —
+  والأدوات نفسها `fail` لأن الـvendor ما وصلش من الـSandbox (مفيش egress)، وده بالضبط اللي CI هيقيسه. `docs/LIVE-VERIFY.md`.
 - **2026-11-02 (تالت):** «انزل سيرفر مجاني» بقى قرار ببيانات: `docs/FREE-HOSTS-2026.md` (كل مورد متحقق من صفحته:
   Cyclic مات، Fly مفيهاش مجاني للجديد، Koyeb بقى $29، Render بينام + 5GB bandwidth، وGratisVPS 2GB root بلا كارت
   بس ممنوع عنه المسح النشط، Silly Development حي ومعاها Postgres مجاني → `DATABASE_URL`).
