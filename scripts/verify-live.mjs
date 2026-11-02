@@ -172,6 +172,7 @@ async function cliChecks(cfg) {
   }
 
 
+  const katana = findBinary("katana");
   if (katana) {
     // no -jc: in katana that short flag is NOT "junk filter", and passing it swallowed the next
     // flag and made the process exit 2 with no output (measured: run 41452838992).
