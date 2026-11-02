@@ -97,6 +97,14 @@ node scripts/free-host-survey.mjs --url http://127.0.0.1:8080   # نفس كود 
 
 ---
 
+### Render بقى «مكان واحد» أكتر مما كان
+
+`scripts/fetch-toolchain.mjs` بقى جزء من الـbuild جوه `render.yaml`: بينزّل nuclei/httpx/subfinder/
+katana/dnsx/naabu/ffuf كـbinaries ثابتة في `vendor/bin`، و`findBinary()` بيبحث هناك (أو في
+`NOVA_TOOL_DIR`). يعني Render Free — اللي مافيهوش SSH ولا apt — بقى ينفّذ مهام الأدوات فعلاً،
+واللي مالوش لسه: `nmap` (استخدم `naabu`) وdisك دائم واللمسة النشطة على أهداف البرامج.
+التفاصيل: `deploy/render-free-guide.md`.
+
 ## «مكان واحد يغنينا عن كل ده» — الإجابة المختصرة
 
 جرّبت المرشحين اللي بيقولوا كده، ونجّفتهم النهارده (2026-11-02):

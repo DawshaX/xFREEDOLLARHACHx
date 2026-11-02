@@ -208,7 +208,13 @@ const pathCache = new Map<string, string | null>();
  */
 function searchDirs(): string[] {
   const home = process.env.HOME || os.homedir();
-  const extra = [`${home}/.local/bin`, `${home}/go/bin`, "/usr/local/bin", "/usr/bin"];
+  // `vendor/bin` is where the build step drops static binaries (see
+  // scripts/fetch-toolchain.mjs). It exists because a free Render/PaaS box has no
+  // SSH and no apt: without this, the engine would honestly report "no nmap" while
+  // a nuclei binary sat unused in the deploy directory.
+  const vendored = [path.resolve(process.cwd(), "vendor/bin")];
+  if (process.env.NOVA_TOOL_DIR) vendored.unshift(...process.env.NOVA_TOOL_DIR.split(path.delimiter).filter(Boolean));
+  const extra = [...vendored, `${home}/.local/bin`, `${home}/go/bin`, "/usr/local/bin", "/usr/bin"];
   const dirs = (process.env.PATH || "").split(path.delimiter).filter(Boolean);
   return [...dirs, ...extra.filter((d) => !dirs.includes(d))];
 }

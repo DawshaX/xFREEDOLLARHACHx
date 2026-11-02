@@ -16,7 +16,7 @@ import crypto from "node:crypto";
 import { acquire, release, noteResponse, throttleSnapshot } from "./ratelimit";
 import { assertAuthorized, normalizeHost, type Program } from "./scope";
 import { isKilled } from "../../routes/kill-switch";
-import { runKind, KINDS, writeEvidence, type Finding, type RunCtx, type Severity } from "./tools";
+import { runKind, KINDS, writeEvidence, findBinary, type Finding, type RunCtx, type Severity } from "./tools";
 import { getConnectedAgentList } from "../../routes/local-agent";
 
 export type JobStatus = "queued" | "running" | "paused" | "done" | "failed" | "cancelled";
@@ -145,8 +145,11 @@ export function suggestPlan(input: CreateJobInput): { kinds: string[]; why: stri
     const available = PLAN_TOOLS.filter((k) => {
       const bin = KINDS[k]?.binary;
       if (!bin) return true;
+      // one finder, one truth: suggestPlan used to look only in /usr/local/bin + PATH,
+      // so it planned nothing while findBinary() (used by every actual run) had already
+      // found the binary in vendor/bin. A plan and an execution must not disagree.
       try {
-        return fs.existsSync(path.join("/usr/local/bin", bin)) || Boolean(process.env.PATH?.split(path.delimiter).some((d) => { try { fs.accessSync(path.join(d, bin), fs.constants.X_OK); return true; } catch { return false; } }));
+        return Boolean(findBinary(bin));
       } catch {
         return false;
       }
