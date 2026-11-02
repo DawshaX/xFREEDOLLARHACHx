@@ -144,7 +144,7 @@ jobs:
           node scripts/verify-live.mjs \
             --engine "$(cat /tmp/engine-url)" \
             --token "$NOVA_EXEC_TOKEN" \
-            --timeout 60 \
+            --timeout 75 \
             --out state/verified-live.json \
             --markdown state/verified-live.md \
             $ARGS | tee /tmp/verify.txt

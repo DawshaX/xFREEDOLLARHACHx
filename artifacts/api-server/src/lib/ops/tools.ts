@@ -246,6 +246,15 @@ export function findBinary(bin: string): string | null {
   return hit;
 }
 
+/**
+ * Forget resolved paths. A toolchain install (or a test that plants a binary) changes what the
+ * search dirs contain, and a stale negative would keep being reported as "tool missing" forever.
+ */
+export function resetBinaryCache(bin?: string): void {
+  if (bin) pathCache.delete(bin);
+  else pathCache.clear();
+}
+
 export function toolStatus(): Array<{ bin: string; present: boolean; where: string | null; install: string }> {
   return Object.values(KINDS)
     .filter((k) => k.binary)
@@ -861,8 +870,22 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
   const display = kind.command ? kind.command(ctx, params) : `${bin} ${argv.join(" ")}`;
   const started = Date.now();
 
+  // THE FINDING AND THE SPAWN MUST AGREE. findBinary() also looks in vendor/bin (a free PaaS
+  // has no apt), but a bare `spawn("nuclei")` is resolved by PATH — so the plan could promise a
+  // tool the exec then killed with 127 (measured: Actions run 41451529132, `tools.*: tool-missing`
+  // for binaries /ops/kinds had just reported present). Spawn the resolved path, and put its
+  // directory first on the child's PATH so tools that shell out to siblings still work.
+  const abs = findBinary(bin) ?? bin;
   const runLocal = async (): Promise<KindResult> => {
-    const res = await runArgv(bin, argv, { cwd: ctx.jobDir, timeoutMs: ctx.timeoutMs, env: { ...process.env, TERM: "dumb" } });
+    const res = await runArgv(abs, argv, {
+      cwd: ctx.jobDir,
+      timeoutMs: ctx.timeoutMs,
+      env: {
+        ...process.env,
+        TERM: "dumb",
+        ...(abs !== bin ? { PATH: `${path.dirname(abs)}${path.delimiter}${process.env.PATH || ""}` } : {}),
+      },
+    });
     if (res.code === 127) {
       return {
         ok: false,

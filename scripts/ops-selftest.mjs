@@ -255,6 +255,45 @@ await tA("runKind writes a hashed evidence file for a real probe", async () => {
   assert.ok(kinds.maxSeverity([{ severity: "low" }, { severity: "critical" }, { severity: "high" }]) === "critical");
 });
 
+await tA("a tool found by the finder is also SPAWNED by the runner (vendor/bin on PATH-less hosts)", async () => {
+  // Regression measured in CI (Actions run 41451529132): /ops/kinds said `present` for the
+  // vendored binaries while the same job reported `tools.*: tool-missing` — because findBinary
+  // looks in vendor/bin but `spawn("nuclei")` resolves via PATH. Fake the binary in a temp
+  // tool dir and require the kind to actually execute it.
+  const kinds = await import(path.join(SRC, "tools.ts"));
+  const binDir = path.join(tmp, "tool-bin");
+  fs.mkdirSync(binDir, { recursive: true });
+  const fake = path.join(binDir, "nuclei");
+  const hit = JSON.stringify({
+    "template-id": "selftest-finding",
+    "matched-at": "https://127.0.0.1/",
+    "matcher-name": "word",
+    info: { name: "selftest match", severity: "high", tags: ["test"] },
+  });
+  fs.writeFileSync(fake, `#!/bin/sh\necho '${hit}'\n`, { mode: 0o755 });
+  const prevDir = process.env.NOVA_TOOL_DIR;
+  process.env.NOVA_TOOL_DIR = binDir;
+  kinds.resetBinaryCache("nuclei");
+  try {
+    assert.equal(path.basename(kinds.findBinary("nuclei") ?? ""), "nuclei", "finder must see the vendored binary");
+    const jobDir = path.join(tmp, "job-spawn");
+    fs.mkdirSync(path.join(jobDir, "evidence"), { recursive: true }); // spawn needs a real cwd
+    const ctx = {
+      host: "127.0.0.1", scheme: "https", program, jobDir,
+      rps: 1, allowNodeTools: true, timeoutMs: 20_000, log: () => {},
+    };
+    const res = await kinds.runKind("tools.nuclei", {}, ctx);
+    assert.notEqual(res.error, "tool-missing", `spawn must not contradict the finder: ${res.summary}`);
+    assert.equal(res.ok, true, res.summary);
+    assert.ok(res.findings.length >= 1, "the tool's own output has to become findings");
+    assert.equal(res.findings[0]?.severity, "high");
+  } finally {
+    if (prevDir === undefined) delete process.env.NOVA_TOOL_DIR;
+    else process.env.NOVA_TOOL_DIR = prevDir;
+    kinds.resetBinaryCache("nuclei");
+  }
+});
+
 /* ── auto-discovery: the path a human actually uses ────────────────────── */
 console.log("scope auto-discovery");
 // security.txt is a network call. The self-test must be reproducible offline, so
