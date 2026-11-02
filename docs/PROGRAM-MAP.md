@@ -224,11 +224,12 @@ HANDOFF عن الـgateway/Ollama، بس لسه عايش في باقي الـnam
 | `ops/ratelimit.ts` | سلة رموز لكل هوست + سقف عام + backoff أسي على 429/403/5xx |
 | `ops/tools.ts` | أنواع المهام: 8 مدمجة (DNS/TLS/ترويسات/منافذ/CT/security.txt/JS/NVD) + 5 أدوات حقيقية بـ**argv بدون شل** |
 | `ops/runner.ts` | job دائم: state/jobs/<id>.json، ميزانية، pause/resume/cancel، kill-switch، أدلة SHA-256، **بوابة تحقق**، تقرير Markdown |
-| `routes/ops.ts` | REST: `/api/ops/{kinds,programs,jobs,stats}` — والقراءة مفتوحة، الكتابة بالتوكن |
-| `scripts/ops-selftest.mjs` | 29 فحص على المنطق الحقيقي (بـtype-striping، من غير build) |
+| `routes/ops.ts` | REST: `/api/ops/{kinds,programs,programs/discover,jobs,stats,provision}` — القراءة مفتوحة، الكتابة بالتوكن |
+| `ops/keys-source.ts` | التزويد الذاتي: مفاتيح من `NOVA_KEYS_URL`/`NOVA_KEYS_FILE` + تسجيل نطاقات `NOVA_SCOPE_DOMAINS` وقت الإقلاع (passive-only دايماً) |
+| `scripts/ops-selftest.mjs` | 35 فحص على المنطق الحقيقي (بـtype-striping، من غير build) |
 | `scripts/typecheck-ratchet.mjs` | baseline = 99، والـCI بيمنع أي رقم أعلى |
 
-**الأدوات (12 أداة جديدة في `agent/tools.ts`):** `scope_check` · `program_add` · `program_list` · `job_create` ·
+**الأدوات (13 أداة جديدة في `agent/tools.ts`):** `scope_check` · `program_add` · `program_discover` · `program_list` · `job_create` ·
 `job_status` · `job_list` · `job_control` · `finding_verify` · `findings_list` · `job_report` · `ops_kinds` — يعني نوفا
 تقدر تقول «ادخل على البرنامج ده» وتعمل job حقيقي بدل ما تشرحلك الخطة.
 
@@ -242,9 +243,20 @@ verify: 6/8 أُعيد إنتاجه · التقرير: state/jobs/<id>/report.md
 POST /api/local-agent/exec (مجهول) → 403 · WS handshake → 401 · /api/munknow-path → 404 JSON
 ```
 
-**اللي لسه ناقص للوصول لرؤيا «منصة زي كالي»:** طبقة `verify/` للمزيد من البراهين (SSRF canary، XSS headless،
-SQLi differential)، `lib/programs/hackerone.ts` (قايمة برامجك من API)، `jobs` على Postgres بدل الملفات عشان
-الـconcurrency الحقيقي، وواجهة للـOps (الصفحة لسه بتتكلم مع المحرك القديم).
+**اتقفل من القائمة دي (2026-11-02، نفس اليوم):**
+- التولشيت المجاني الحقيقي: `deploy/oracle-setup.sh` بينزّل `nmap/dnsutils/whois` + `nuclei/httpx/subfinder/katana`
+  من الـrelease الرسمي و`nuclei-templates`، و`POST /api/tools/install` بيعمل نفس الكلام على نود متصل (ومن غير
+  نود بيرجع 503 بصدق مش «اتنفذ» مزيّف). `findBinary` بقى بيدوّر في `~/.local/bin` و`~/go/bin` كمان.
+- التوكن للنودات: `nova-agent.js` بيبعت `NOVA_TOKEN` في `?token=` وفي الـregister، وسكربتOracle بيولّده
+  ويحفظه في `/etc/cybernova.env` (600) — من غيره أي نود جديد هيترفض 401.
+- مجلس بصوت حقيقي من غير مفاتيح: `NOVA_KEYLESS_SEATS` = 3 مقاعد موديلات مختلفة + `ollama` = 4، فـ
+  `council()` بقى `usable >= 2` وبيصوّت بدل «صوت واحد».
+- كتالوج السيرفرات المجانية (`routes/fleet-capacity.ts`) كان **مكتوب ومش مربوط** — اتmount في
+  `routes/index.ts` فـ `/api/fleet/{capabilities,catalogue,scale-plan}` بقوا أحياء.
+
+**اللسه ناقص للوصول لرؤيا «منصة زي كالي»:** طبقة `verify/` للمزيد من البراهين (SSRF canary، XSS headless،
+SQLi differential)، `lib/programs/hackerone.ts` (قايمة برامجك من API — محتاج توكن HackerOne من المستخدم)،
+`jobs` على Postgres بدل الملفات عشان الـconcurrency الحقيقي، وواجهة للـOps في اللوحة (المحرك لسه API/أدوات بس).
 
 ---
 

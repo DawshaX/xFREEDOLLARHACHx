@@ -24,6 +24,7 @@ import { getAllMemories, getMemoryCount, saveMemory } from "./routes/memory";
 import { broadcastLiveEvent } from "./routes/live-events";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
 import { startAutonomousBackgroundDaemon } from "./lib/autonomous-daemon";
+import { provisionOnBoot } from "./lib/ops/keys-source";
 
 process.on("unhandledRejection", (reason) => {
   logger.warn({ reason }, "Unhandled promise rejection caught safely (standalone mode)");
@@ -246,6 +247,11 @@ server.on("error", (err: NodeJS.ErrnoException) => {
   console.error(`\n✗ Cannot listen on ${host}:${port} — ${err.code ?? err.message}\n`);
   process.exit(1);
 });
+
+// ── self-provisioning: keys on our own host + passive scope, then listen ────
+// Awaited on purpose: the first /api/nova-core/chat should already see the
+// providers the key source supplied. A failure here is non-fatal by design.
+await provisionOnBoot();
 
 server.listen(port, host, () => {
   logger.info({ port, host }, `Server listening on ${host} (HTTP + /api/ws + /api/local-agent/ws)`);

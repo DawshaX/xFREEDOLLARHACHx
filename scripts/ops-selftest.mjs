@@ -255,6 +255,52 @@ await tA("runKind writes a hashed evidence file for a real probe", async () => {
   assert.ok(kinds.maxSeverity([{ severity: "low" }, { severity: "critical" }, { severity: "high" }]) === "critical");
 });
 
+/* ── auto-discovery: the path a human actually uses ────────────────────── */
+console.log("scope auto-discovery");
+// security.txt is a network call. The self-test must be reproducible offline, so
+// the fetch is failed on purpose: discovery has to still produce a *conservative*
+// program, not an empty answer and not a wide-open one.
+const realFetch = globalThis.fetch;
+globalThis.fetch = async () => {
+  throw new Error("offline by design");
+};
+let discovered = null;
+await tA("bare domain becomes a passive-only program", async () => {
+  discovered = await scope.discoverProgram("lab.example", { register: true });
+  assert.equal(discovered.ok, true);
+  assert.ok(discovered.registered, "register:true must write the registry");
+  assert.equal(discovered.program.passive_only, true, "discovery must never enable active probing by default");
+  assert.ok(discovered.program.hosts.includes("*.lab.example"));
+  assert.equal(discovered.program.max_rps, 1, "free hosts need a sane default rate");
+});
+t("admin/staging names are excluded even under the wildcard", () => {
+  for (const bad of ["admin.lab.example", "staging.lab.example", "internal.lab.example", "vpn.lab.example"]) {
+    assert.ok(!scope.hostMatchesProgram(bad, discovered.program), `${bad} must stay out of scope`);
+  }
+  assert.ok(scope.hostMatchesProgram("app.lab.example", discovered.program));
+});
+t("an unrelated root domain is not swept in", () => {
+  assert.ok(!scope.hostMatchesProgram("other.example", discovered.program));
+});
+await tA("a half-trusted activate sentence does not open active scanning", async () => {
+  const attempt = await scope.discoverProgram("lab.example", { register: true, activate: "I promise it is fine" });
+  assert.equal(attempt.program.passive_only, true);
+  assert.ok(attempt.warnings.some((w) => /لازم النص بالحرف/.test(w)), "must explain what the consent sentence is");
+});
+await tA("the verbatim consent sentence is what flips the mode", async () => {
+  const ok = await scope.discoverProgram("lab.example", {
+    register: true,
+    activate: "I have written permission for lab.example",
+  });
+  assert.equal(ok.program.passive_only, false);
+});
+await tA("internal targets are refused before any request is made", async () => {
+  const bad = await scope.discoverProgram("http://169.254.169.254/latest/meta-data", { register: true });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.registered, false);
+});
+globalThis.fetch = realFetch;
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log("────────────────────");
 console.log(`${passed} passed · ${failed} failed`);

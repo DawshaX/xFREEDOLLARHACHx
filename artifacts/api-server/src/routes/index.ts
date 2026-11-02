@@ -135,6 +135,9 @@ router.use(novaGatewayRouter);
 // ── NOVA Core (persona + real tools + agent loop) ────────────────────────────
 router.use(novaCoreRouter);
 router.use(fleetMeshRouter);
+// Free-hosts catalogue + honest fleet ceiling. Was imported but never mounted,
+// so /api/fleet/{capabilities,catalogue,scale-plan} 404'd while the code sat there.
+router.use(fleetCapacityRouter);
 // Free-stack catalogue + real capacity of the connected fleet.
 router.use(fleetCapacityRouter);
 // Endpoints the panel calls that used to fall through to the SPA HTML.

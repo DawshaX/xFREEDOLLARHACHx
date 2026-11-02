@@ -46,7 +46,14 @@ GitHub Actions يبني الحزمة (اختبار + build)
 الـ workflow فيه **loop**: لو الـ agent خرج لأي سبب بيرجع فوراً، فالموجة فعلاً بتكمل.
 
 قياس القدرة الحقيقي: `GET /api/fleet/capabilities` (نودات متصلة بس).
-كتالوج المجاني: `GET /api/fleet/catalogue` (كل حاجة بتطلب بطاقة معلّمة).
+كتالوج المجاني: `GET /api/fleet/catalogue` (كل حاجة بتطلب بطاقة معلّمة) — الراوتر ده كان متكتب بس
+مش مربوط في `routes/index.ts`، اتفعّل دلوقتي فـ `/api/fleet/{capabilities,catalogue,scale-plan}` شغالين.
+`GET /api/fleet/scale-plan?target=12` بيحسب عدد الموجات المطلوبة وبيدي أوامر جاهزة.
+
+**التوكن مش اختياري للأسطول:** البوابة بترفض أي نود من غير `NOVA_TOKEN` (401 في الـupgrade).
+`deploy/oracle-setup.sh` بيولّده في `/etc/cybernova.env` ويطبعه، وActions بياخده من Secret `NOVA_EXEC_TOKEN`.
+**مفيش أدوات نشطة على نودات Actions** (nmap/nuclei متثبتش) — السورس IP بتاع GitHub، والمسح النشط منه
+بلاغ بيودّي الحساب. التولشيت الكامل بيتسطّب على النود الدائم أو بـ `POST /api/tools/install {"tool":"nuclei"}`.
 
 ---
 
@@ -66,7 +73,11 @@ GitHub Actions يبني الحزمة (اختبار + build)
 | تبديل اللغة | زرار 🌐 في الهيدر · محفوظ في `localStorage` |
 | كود اللغات | `artifacts/kali-panel/src/lib/i18n.ts` (25 لغة × 32 نص) |
 | نسبة الترجمة الحقيقية | `coverage()` في نفس الملف — مفيش نسبة مزيّفة |
-| مقعد LLM بدون مفتاح | Pollinations · إيقافه بـ `NOVA_KEYLESS_LLM=0` |
+| مقاعد LLM بدون مفاتيح | `ollama` + `pollinations:openai-fast` + `pollinations:mistral` + `pollinations:llama` (4 مقاعد = مجلس بيصوّت فعلاً) |
+| تغيير قايمة المقاعد | `NOVA_KEYLESS_SEATS="openai-fast,mistral"` · إطفاء: `NOVA_KEYLESS_LLM=0` |
+| مفاتيح من مصدر عندك | `NOVA_KEYS_URL` (https) أو `NOVA_KEYS_FILE` — بيقرأ JSON ويحقن البيئة وقت الإقلاع |
+| نطاقات ائتمش يدوياً | `NOVA_SCOPE_DOMAINS=a.com,b.com` → بيتسجّل passive_only أوتوماتيك |
+| حالة التزويد | `GET /api/ops/provision` (أسماء بس، مفيش قيم) |
 
 ---
 

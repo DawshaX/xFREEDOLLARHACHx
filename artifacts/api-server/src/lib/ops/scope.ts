@@ -268,7 +268,7 @@ export async function assertAuthorized(
   if (enabled.length === 0) {
     return deny(
       "no_programs",
-      "مفيش برنامج مصرّح به محفوظ (state/programs.json فاضي). ضيف برنامج من /programs أو POST /api/ops/programs — من غيره أي فحص نشط مرفوض.",
+      "مفيش برنامج مصرّح به محفوظ (state/programs.json فاضي). الحل في أمر واحد: tool «program_discover» أو POST /api/ops/programs/discover {target} — يسجّل النطاق تلقائياً في وضع الاستطلاع، ومن غير تسجيل مفيش فحص نشط.",
     );
   }
 
@@ -289,7 +289,7 @@ export async function assertAuthorized(
   if (opts.active !== false && program.passive_only) {
     return deny(
       "passive_only",
-      `برنامج ${program.name} محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة.`,
+      `برنامج ${program.name} محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة. للتفعيل لازم تأكيد إذن مكتوب: program_discover مع activate = "I have written permission for ${host}".`,
     );
   }
 
@@ -376,3 +376,194 @@ export function isIpLiteral(value: string): boolean {
 export const net = {
   isLiteral: isIpLiteral,
 };
+
+/* ── auto-discovery: the non-technical path onto a program ───────────────── */
+
+/**
+ * Nobody should have to hand-edit `state/programs.json`. `discoverProgram` turns
+ * a bare domain (or a HackerOne/Bugcrowd program URL) into a ready-to-save scope
+ * by reading the site's own `security.txt`, and registers it in the *safest* mode
+ * first: `passive_only`, i.e. recon from public sources that never touches the
+ * target's services. Active scanning stays one deliberate `activate` away,
+ * because that is the step where written permission actually matters.
+ */
+export interface ScopeProposal {
+  ok: boolean;
+  host: string;
+  program: Program | null;
+  evidence: {
+    security_txt: boolean;
+    security_txt_url?: string;
+    contacts: string[];
+    policy_url?: string;
+    platform?: string;
+    domains_from_policy?: string[];
+    expires?: string;
+  };
+  registered: boolean;
+  /** what a human must say/do before active probing is allowed */
+  needs_ar: string;
+  warnings: string[];
+  error?: string;
+}
+
+/** Infrastructure names that must never be in scope, even under a wildcard. */
+const NEVER_IN_SCOPE = [
+  "admin",
+  "adm",
+  "panel",
+  "dashboard",
+  "internal",
+  "intranet",
+  "vpn",
+  "ssh",
+  "sso",
+  "id",
+  "auth",
+  "ldap",
+  "dev",
+  "staging",
+  "stage",
+  "test",
+  "qa",
+  "debug",
+  "metadata",
+];
+
+const PLATFORMS: Array<[RegExp, string]> = [
+  [/hackerone\.com/i, "hackerone"],
+  [/bugcrowd\.com/i, "bugcrowd"],
+  [/intigriti\.com/i, "intigriti"],
+  [/yeswehack\.com/i, "yeswehack"],
+  [/immunefi\.com/i, "immunefi"],
+];
+
+function platformOf(url: string): string | undefined {
+  for (const [rx, id] of PLATFORMS) if (rx.test(url)) return id;
+  return undefined;
+}
+
+/** Bare domains mentioned on a policy page — the only way to scope a platform URL. */
+function domainsFromPolicy(text: string): string[] {
+  const found = new Set<string>();
+  const rx = /\b((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:com|net|org|io|ai|app|dev|co|me|gg|xyz|cloud|zone|live|shop|bank|finance|gov|edu))\b/gi;
+  for (const m of text.matchAll(rx)) {
+    const host = String(m[1]).toLowerCase().replace(/\.$/, "");
+    if (host.length > 3 && !/\.(png|jpg|gif|svg|css|js|ico|json|html|txt|md|pdf)$/.test(host)) found.add(host);
+  }
+  return [...found].slice(0, 40);
+}
+
+export async function discoverProgram(
+  rawTarget: unknown,
+  opts: { register?: boolean; activate?: string; name?: string } = {},
+): Promise<ScopeProposal> {
+  const input = String(rawTarget ?? "").trim();
+  const isUrl = /^https?:\/\//i.test(input);
+  const host = normalizeHost(isUrl ? input : `https://${input}`);
+  const warn: string[] = [];
+
+  const fail = (error: string): ScopeProposal => ({
+    ok: false,
+    host,
+    program: null,
+    evidence: { security_txt: false, contacts: [] },
+    registered: false,
+    needs_ar: "اكتب نطاق الهدف نفسه (مثال: example.com) أو رابط صفحة البرنامج.",
+    warnings: warn,
+    error,
+  });
+
+  if (!host) return fail("no_host");
+  if (isInternalHostOrIp(host)) return fail(`عنوان داخلي/محلي (${host}) — مرفوض دائماً.`);
+
+  const txt = await fetchSecurityTxt(host);
+  const contacts = txt.contact.slice(0, 6);
+  const policyUrl = contacts.find((c) => /^https?:\/\//i.test(c));
+  const platform = policyUrl ? platformOf(policyUrl) : undefined;
+
+  // A platform program page: the domains live in the policy text, not in the URL.
+  const policyDomains: string[] = [];
+  if (isUrl && platform) {
+    try {
+      const res = await fetch(input, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(12_000),
+        headers: { "user-agent": "CyberNova-NOVA/2099 (scope discovery)" },
+      });
+      if (res.ok) policyDomains.push(...domainsFromPolicy((await res.text()).slice(0, 400_000)));
+      else warn.push(`صفحة البرنامج رجّعت HTTP ${res.status} — قدرت بس على security.txt تبع ${host}.`);
+    } catch (err) {
+      warn.push(`مقدرش أوصل صفحة البرنامج (${(err as Error).message}) — الصق النطاقات يدوياً لو النتييجة ناقصة.`);
+    }
+  }
+
+  const rootDomain = host.split(".").slice(-2).join(".");
+  const hosts = new Set<string>([host, `*.${host}`]);
+  for (const d of policyDomains) {
+    if (d === rootDomain || d.endsWith(`.${rootDomain}`)) hosts.add(d);
+    else if (d !== host) warn.push(`${d} مذكور في السياسة لكنه خارج نطاقك — اتساب بره النطاق تلقائياً.`);
+  }
+  const out = new Set<string>();
+  for (const prefix of NEVER_IN_SCOPE) out.add(`${prefix}.${host}`);
+
+  const id =
+    String(opts.name ?? host)
+      .toLowerCase()
+      .replace(/[^a-z0-9.]+/g, "-")
+      .replace(/^-|-$/g, "") || host;
+
+  const wantActivate = String(opts.activate ?? "").trim();
+  const consentOk = wantActivate.toLowerCase() === `i have written permission for ${host.toLowerCase()}`;
+  if (wantActivate && !consentOk) {
+    warn.push(
+      `طلب تفعيل الفحص النشط مرفوض: لازم النص بالحرف «I have written permission for ${host}» يتقال بعد تأكيد المستخدم إن عنده إذن مكتوب.`,
+    );
+  }
+
+  const proposed: Partial<Program> & { id: string; name: string; hosts: string[] } = {
+    id,
+    name: opts.name || (platform ? `${platform}:${host}` : host),
+    platform,
+    hosts: [...hosts],
+    out_of_scope: [...out],
+    max_rps: 1,
+    max_concurrency: 2,
+    // active probing is only ever on with the verbatim consent sentence
+    passive_only: !consentOk,
+    policy_url: policyUrl,
+    notes_ar: txt.found
+      ? `مكتشف أوتوماتيك من security.txt (${txt.url}). الوضع استطلاع بس لحد ما المستخدم يوافق على الفحص النشط.`
+      : `مكتشف أوتوماتيك للنطاق ${host} بدون security.txt — استطلاع بس.`,
+  };
+
+  const registered = opts.register !== false;
+  const program = registered ? upsertProgram(proposed) : null;
+  if (registered) {
+    warn.push(
+      consentOk
+        ? "سُجّل ومفعّل للفحص النشط بعد تأكيد الإذن."
+        : "سُجّل في وضع الاستطلاع فقط — قول «فعّل الفحص النشط» بعد ما تتأكد إن عندك إذن مكتوب.",
+    );
+  }
+
+  return {
+    ok: true,
+    host,
+    program,
+    evidence: {
+      security_txt: txt.found,
+      security_txt_url: txt.url,
+      contacts,
+      policy_url: policyUrl,
+      platform,
+      domains_from_policy: policyDomains.slice(0, 12),
+      expires: txt.expires,
+    },
+    registered,
+    needs_ar: txt.found
+      ? "لقيانة سياسة إفصاح على النطاق — مفيش مطلوب منك غير «ابدأ» للفحص السلبي."
+      : `مفيش security.txt على ${host} — معناه مفيش برنامج عام واضح. الفحص النشط مرفوض غير بإذن مكتوب.`,
+    warnings: warn,
+  };
+}

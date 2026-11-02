@@ -17,6 +17,7 @@
  */
 import { spawn } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import {
@@ -127,7 +128,13 @@ export function writeEvidence(
   try {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, name), buf);
-    file = path.relative(path.resolve(process.cwd()), path.join(dir, name));
+    const abs = path.join(dir, name);
+    // Relative is nicer to read in a report, but only while it stays inside the
+    // working directory. Free hosts often point NOVA_JOBS_REL at /tmp, and a
+    // `../../../../../tmp/...` path is unresolvable from the panel — so keep the
+    // honest absolute path whenever the relative one escapes.
+    const rel = path.relative(path.resolve(process.cwd()), abs);
+    file = rel && !rel.startsWith("..") && !path.isAbsolute(rel) ? rel : abs;
   } catch (err) {
     ctx.log(`evidence write failed: ${(err as Error).message}`);
   }
@@ -192,9 +199,27 @@ export function shQuote(value: string): string {
 
 const pathCache = new Map<string, string | null>();
 
+/**
+ * Free hosts (Waifly/Render/GH-Actions images) rarely put `~/.local/bin` or
+ * `~/go/bin` on PATH for a non-login shell, which made freshly installed tools
+ * invisible to the engine. Search them explicitly instead of pretending the
+ * binary is missing.
+ */
+function searchDirs(): string[] {
+  const home = process.env.HOME || os.homedir();
+  const extra = [`${home}/.local/bin`, `${home}/go/bin`, "/usr/local/bin", "/usr/bin"];
+  const dirs = (process.env.PATH || "").split(path.delimiter).filter(Boolean);
+  return [...dirs, ...extra.filter((d) => !dirs.includes(d))];
+}
+
+/** Called after an install so a just-created binary is seen in the same process. */
+export function clearBinaryCache(): void {
+  pathCache.clear();
+}
+
 export function findBinary(bin: string): string | null {
   if (pathCache.has(bin)) return pathCache.get(bin) ?? null;
-  const dirs = (process.env.PATH || "").split(path.delimiter).filter(Boolean);
+  const dirs = searchDirs();
   const exts = process.platform === "win32" ? (process.env.PATHEXT || ".EXE;.CMD").split(";") : [""];
   let hit: string | null = null;
   for (const dir of dirs) {

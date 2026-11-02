@@ -50,7 +50,7 @@ import {
   getEvidenceState,
   getReportsState,
 } from "../standalone-api";
-import { assertAuthorized, fetchSecurityTxt, loadPrograms, upsertProgram, normalizeHost } from "../ops/scope";
+import { assertAuthorized, discoverProgram, fetchSecurityTxt, loadPrograms, upsertProgram, normalizeHost } from "../ops/scope";
 import {
   buildReport,
   cancelJob,
@@ -514,6 +514,25 @@ export const AGENT_TOOLS: AgentTool[] = [
         policy_url: { type: "string" },
       },
       required: ["id", "hosts"],
+    },
+  },
+  {
+    name: "program_discover",
+    title: "اكتشف برنامج بنفسك",
+    description:
+      "بيدخل برنامج من غير ما المستخدم يحرر JSON: بياخد نطاق عادي أو رابط صفحة برنامج، " +
+      "يقرأ security.txt/السياسة بنفسه، ويسجّل النطاق في وضع الاستطلاع فقط. " +
+      "الفحص النشط محتاج تأكيد إذن مكتوب من المستخدم — لو طلبه، ارجعله النص اللي لازم يقوله.",
+    category: "platform",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: 'نطاق أو رابط: "example.com" أو "https://hackerone.com/foo"' },
+        name: { type: "string", description: "اسم اختياري للبرنامج" },
+        activate: { type: "boolean", description: "طلب التفعيل للفحص النشط (لأول مرة برجّع شروط الإذن)" },
+      },
+      required: ["target"],
     },
   },
   {
@@ -1082,6 +1101,28 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
           true,
           `سُجّل برنامج «${program.name}» (${program.hosts.join(", ")})${st.found ? " · فيه security.txt" : " · مفيش security.txt — اقرأ الـpolicy يدوياً"}`,
           { program, securityTxt: { found: st.found, contact: st.contact, url: st.url ?? null } },
+        );
+      }
+
+      case "program_discover": {
+        const target = String(rawArgs.target ?? rawArgs.host ?? "");
+        if (!target) return done(false, "مطلوب target (نطاق أو رابط صفحة البرنامج)", null);
+        const asking = rawArgs.activate === true;
+        const proposal = await discoverProgram(target, { register: !asking, name: rawArgs.name ? String(rawArgs.name) : undefined });
+        if (!proposal.ok) return done(false, proposal.error ?? "فشل الاكتشاف", proposal);
+        if (asking) {
+          const consent = `I have written permission for ${proposal.host}`;
+          return done(
+            true,
+            `التسجيل السلبي جاهز. للتفعيل النشط لازم المستخدم يقول النص ده بالحرف بعد ما يتأكد إن عنده إذن مكتوب: «${consent}» — اسأله صراحة ومتقولوش نيابة عنه.`,
+            { host: proposal.host, consentSentence: consent, evidence: proposal.evidence, program: proposal.program },
+          );
+        }
+        const ev = proposal.evidence;
+        return done(
+          true,
+          `اتسجّل «${proposal.program?.name ?? proposal.host}» في وضع الاستطلاع · ${ev.security_txt ? `لقيت security.txt${ev.contacts.length ? ` (${ev.contacts.slice(0, 2).join(" , ")})` : ""}` : "مفيش security.txt — لو عايز فحص نشط هتحتاج نص الإذن المكتوب"} · النطاقات: ${(proposal.program?.hosts ?? []).join(", ")}`,
+          { host: proposal.host, program: proposal.program, evidence: ev, warnings: proposal.warnings, needs_ar: proposal.needs_ar },
         );
       }
 

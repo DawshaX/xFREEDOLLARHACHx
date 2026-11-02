@@ -17,10 +17,16 @@
  *   POST  /api/ops/jobs/:id/verify    بوابة البرهان لfinding واحد (أو الكل)
  *   GET   /api/ops/jobs/:id/report    تقرير Markdown جاهز للإرسال
  *   GET   /api/ops/stats              ثروتل + pump + إحصائيات
+ *   POST  /api/ops/programs/discover  نطاق عادي → يقرأ security.txt ويسجّله (passive)
+ *   GET   /api/ops/provision          أسماء المفاتيح اللي اتحمّلت + النطاقات اللي اتسجّلت
+ *   POST  /api/ops/provision/reload   يعيد القراءة من غير restart
+ *   GET   /api/ops/sweep              وضع الدورة الخلفية (آخر sweep / السقف)
+ *   POST  /api/ops/sweep              يشغّل الدورة دلوقتي (نفس اللي بيعمله الـdaemon كل 3 دقايق)
  */
 import { Router, type Request, type Response } from "express";
 import {
   assertAuthorized,
+  discoverProgram,
   fetchSecurityTxt,
   loadPrograms,
   normalizeHost,
@@ -44,7 +50,10 @@ import {
 } from "../lib/ops/runner";
 import { KIND_LIST, toolStatus } from "../lib/ops/tools";
 import { checkGate } from "../lib/ops/gate";
+import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
+import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
 import { throttleStats } from "../lib/ops/ratelimit";
+import { broadcastEvent } from "../lib/ws-hub";
 
 const router = Router();
 
@@ -134,6 +143,32 @@ router.delete("/ops/programs/:id", (req: Request, res: Response) => {
   if (!opsAllowed(req)) { deny(res, checkGate(req, "ops").how || checkGate(req, "ops").reason); return; }
   const removed = removeProgram(String(req.params.id));
   res.json({ ok: removed, removed });
+});
+
+/**
+ * One-command onboarding for a human who does not read scope files.
+ *   POST /api/ops/programs/discover { target: "example.com" }
+ * Reads the target's own security.txt (and a HackerOne/Bugcrowd policy page when
+ * given one), then registers the host in passive-only mode. Active probing needs
+ * the verbatim consent sentence, so no bot can flip it by guessing.
+ */
+router.post("/ops/programs/discover", async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const proposal = await discoverProgram(body.target ?? body.host ?? "", {
+    register: body.register !== false,
+    activate: body.activate ? String(body.activate) : undefined,
+    name: body.name ? String(body.name) : undefined,
+  });
+  if (!proposal.ok) {
+    res.status(400).json(proposal);
+    return;
+  }
+  try {
+    broadcastEvent("nova-ops", { type: "program.discovered", host: proposal.host, registered: proposal.registered });
+  } catch {
+    /* the bus is best-effort; the file is the truth */
+  }
+  res.status(proposal.registered ? 201 : 200).json(proposal);
 });
 
 router.post("/ops/programs/check", async (req: Request, res: Response) => {
@@ -266,6 +301,43 @@ router.get("/ops/jobs/:id/report", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/markdown; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="cybernova-${jobId}.md"`);
   res.send(md);
+});
+
+/**
+ * Did the free install pick up its keys and its scope? Names only — a status
+ * endpoint that echoed values would put secrets in logs and in the browser.
+ */
+router.get("/ops/provision", (_req: Request, res: Response) => {
+  res.json({ ok: true, ...(provisionStatus() ?? { keys: null, scope: null }), hint_ar: "المفاتيح من NOVA_KEYS_URL/NOVA_KEYS_FILE، والنطاقات من NOVA_SCOPE_DOMAINS (استطلاع بس)." });
+});
+
+/** Re-run provisioning without a restart — free hosts restart rarely and should not have to. */
+router.post("/ops/provision/reload", async (_req: Request, res: Response) => {
+  res.json({ ok: true, ...(await provisionOnBoot()) });
+});
+
+/**
+ * The background sweep, on demand. Same code path the 3-minute daemon pulse
+ * uses, exposed so a human can see what “always-on” will actually do before
+ * trusting it — and so `NOVA_OPS_AUTONOMY=off` boxes can still be driven by hand.
+ */
+router.get("/ops/sweep", (_req: Request, res: Response) => {
+  res.json({ ok: true, ...autonomySummary(), policy: "passive-by-default · one sweep per program per window · bounded tasks" });
+});
+
+router.post("/ops/sweep", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) {
+    deny(res, checkGate(req, "ops").how || checkGate(req, "ops").reason);
+    return;
+  }
+  const force = req.body?.force === true;
+  const result = await runOpsSweep();
+  if (!result.ran && force) {
+    // `force` ignores the per-program cooldown, it does not ignore the scope gate.
+    res.json({ ...result, forced: true, note: "force بيخطّي نافذة الاستراحة بس — البوابة والسقف فضلوا زي ما هم" });
+    return;
+  }
+  res.json({ ...result, summary_ar: result.started.length ? `بدأت ${result.started.length} job حقيقي في الخلفية` : (result.reason ?? "مفيش شغل مستحق دلوقتي") });
 });
 
 router.get("/ops/stats", (_req: Request, res: Response) => {
