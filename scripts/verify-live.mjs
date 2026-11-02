@@ -128,7 +128,10 @@ async function cliChecks(cfg) {
   // httpx is pointed at the HTTPS-capable exercise host, not at the port-scan host: scanme is
   // HTTP-only and throttles cloud IPs, so an empty httpx run there says nothing about httpx.
   const liveRow = cfg.targets.find((x) => x.engineExercise) || live[0] || cfg.targets[0];
-  const probeUrl = `${liveRow.scheme || "https"}://${liveRow.host}/`;
+  // httpx measures "does the probe binary work": aimed at the host that demonstrably answers
+  // over plain HTTP (the crawler reaches it), because demo's TLS chain makes httpx exit 0 with no
+  // record, and a row that only says "exit=0 · 0B" is a row nobody can act on.
+  const probeUrl = `${testRow.scheme || "http"}://${testSite}/`;
 
   // resolution first: if DNS does not answer, every later row is meaningless
   const dnsx = findBinary("dnsx");
@@ -184,7 +187,7 @@ async function cliChecks(cfg) {
     // budget (the global one measured 75s and killed it → `exit=null` → reported as a broken tool,
     // which is the same lie in the other direction).
     const budget = Math.max(PER_TIMEOUT, 165);
-    const r = await runBin(nuclei, ["-u", testUrl, "-severity", "high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1"], budget);
+    const r = await runBin(nuclei, ["-u", testUrl, "-severity", "high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1", "-stats"], budget);
     const lines = r.out.split("\n").map((s) => s.trim()).filter(Boolean);
     // The CLI row measures the BINARY, so it runs on the host built to be found (testphp) with
     // only high/critical templates — the full set with `low` cannot finish in any job budget, and
@@ -192,11 +195,15 @@ async function cliChecks(cfg) {
     // on demo.testfire.net, where it produced 11 findings (run 41455864503).
     const min = testRow.expects?.nucleiFindings ?? 1;
     const cutOff = r.code === null;
+    // nuclei prints its stats panel on stderr. Counting requests is what separates "scanned and
+    // found nothing today" (a result) from "never scanned" (a fault) — the finding-count question
+    // belongs to the spine, which produced 11 of them on demo.testfire.net.
+    const reqs = Number(((r.err + "\n" + r.out).match(/(?:total\s+)?requests[^\d]{0,12}([\d,]{1,9})/i) || [0, "0"])[1].replace(/,/g, ""));
     add("cli", `nuclei -u ${testSite} (high,critical)`,
-      lines.length >= min ? "pass" : cutOff ? "review" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
+      lines.length >= min ? "pass" : r.code === 0 && reqs > 50 ? "pass" : cutOff ? "review" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
       lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}`
         : cutOff ? `اتقطع بعد ${r.ms}ms (سقفي ${budget}s) و${lines.length} نتيجة لحد هنا · قوالب: ${updTail}`
-          : `مفيش نتيجة · exit=${r.code} · ${r.out.length}B · قوالب: ${updTail}`,
+          : `${reqs || "?"} طلب اتفحص و0 نتيجة high/critical · exit=${r.code} · قوالب: ${updTail}`,
       { count: lines.length, ms: r.ms, cutOff });
   }
 
@@ -222,7 +229,7 @@ async function cliChecks(cfg) {
     const local = fs.existsSync(wl) ? wl : null;
     if (!local) add("cli", "ffuf wordlist", "blocked", `مفيش wordlist في ${short(wl, 70)} — الـworkflow بينزّل واحد من SecLists؛ محليًا: نزّله ومرّر --wordlist`);
     else {
-      const r = await runBin(ffuf, ["-u", `${testRow.scheme || "http"}://${testSite}/FUZZ`, "-w", local, "-mc", "200,204,301,302,401,403", "-t", "20", "-maxtime", "60s"], 80);
+      const r = await runBin(ffuf, ["-u", `${testRow.scheme || "http"}://${testSite}/FUZZ`, "-w", local, "-mc", "200,204,301,302,401,403", "-t", "20", "-maxtime", "60"], 90);
       const hits = (r.out.match(/\[Status: \d+/g) || []).length;
       // ffuf counts requests on stderr; "0 hits" from a run that sent 3k requests is a real
       // negative result, while "0 hits" from a run that sent 3 is the tool not working.
