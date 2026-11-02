@@ -238,7 +238,16 @@ function updateIndex() {
       };
     } catch { return null; }
   }).filter(Boolean);
-  fs.writeFileSync(path.join(OUT, "index.json"), JSON.stringify({ updatedAt: new Date().toISOString(), runs }, null, 2) + "\n");
+  const next = { updatedAt: new Date().toISOString(), runs };
+  const idxPath = path.join(OUT, "index.json");
+  // Only rewrite when the content actually changed. An index that churns on every
+  // run means an empty run still produces a commit — and a commit re-triggers this
+  // workflow. Idempotence is what makes the loop terminate on its own.
+  let prev = null;
+  try { prev = JSON.parse(fs.readFileSync(idxPath, "utf8")); } catch { /* first time */ }
+  const same = prev && JSON.stringify(prev.runs) === JSON.stringify(next.runs);
+  if (same) { log(`index.json: من غير تغيير (${runs.length} بعثة)`); return; }
+  fs.writeFileSync(idxPath, JSON.stringify(next, null, 2) + "\n");
   log(`index.json: ${runs.length} بعثة`);
 }
 

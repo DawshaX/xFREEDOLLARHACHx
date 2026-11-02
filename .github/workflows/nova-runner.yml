@@ -135,7 +135,12 @@ jobs:
           git config user.email "bot@arena.local"
           git add state/nova-queue.json artifacts/kali-panel/public/nova-runs 2>/dev/null || true
           if git diff --cached --quiet; then echo "مفيش جديد — مفيش commit"; exit 0; fi
-          git commit -q -m "nova-runner: $(date -u +%Y-%m-%dT%H:%MZ) · $(git diff --cached --name-only | wc -l) ملف [skip ci]" || exit 0
+          # NO [skip ci] on purpose: Pages must rebuild, or the report stays committed
+          # but unpublished (measured: run 41395715818 pushed 5525eed with [skip ci] and
+          # /nova-runs/index.json kept serving the old placeholder). The loop that could
+          # cause — this workflow re-triggering itself — is closed by the path filter plus
+          # the runner exiting before it writes anything when the queue is empty.
+          git commit -q -m "nova-runner: $(date -u +%Y-%m-%dT%H:%MZ) · $(git diff --cached --name-only | wc -l) ملف" || exit 0
           git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
           git push --quiet origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::الـpush فشل — الأثر لسه فيه التقارير"
         env:
