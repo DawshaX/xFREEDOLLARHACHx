@@ -135,6 +135,17 @@ jobs:
           done
           echo "http://127.0.0.1:8090/api" > /tmp/engine-url
 
+      - name: Fetch a wordlist for ffuf
+        # SecLists' common.txt (~4.5k entries) — the runner has open egress, and ffuf without a
+        # wordlist is a row that can only ever read "blocked", which teaches nothing.
+        run: |
+          mkdir -p /tmp/nova-wordlists
+          curl -fsSL --max-time 40 -o /tmp/nova-wordlists/common.txt \
+            https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt \
+            && wc -l /tmp/nova-wordlists/common.txt
+          echo "NOVA_WORDLIST=/tmp/nova-wordlists/common.txt" >> "$GITHUB_ENV"
+        continue-on-error: true      # ffuf is not critical — the row says `blocked` without it
+
       - name: Verify live
         env:
           NOVA_EXEC_TOKEN: ${{ env.NOVA_RUN_TOKEN }}
@@ -145,6 +156,7 @@ jobs:
             --engine "$(cat /tmp/engine-url)" \
             --token "$NOVA_EXEC_TOKEN" \
             --timeout 75 \
+            --wordlist "${{ env.NOVA_WORDLIST }}" \
             --out state/verified-live.json \
             --markdown state/verified-live.md \
             $ARGS | tee /tmp/verify.txt
