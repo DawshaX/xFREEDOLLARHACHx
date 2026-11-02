@@ -125,12 +125,12 @@ async function cliChecks(cfg) {
   const testRow = cfg.targets.find((t) => t.host.startsWith("testphp")) || live[1] || first;
   const testSite = testRow.host;
   const testUrl = `${testRow.scheme || "http"}://${testSite}/`;
-  // httpx is pointed at the HTTPS-capable exercise host, not at the port-scan host: scanme is
-  // HTTP-only and throttles cloud IPs, so an empty httpx run there says nothing about httpx.
+  // The port-scan host is deliberately NOT the httpx target: scanme is HTTP-only and throttles
+  // cloud IPs, so an empty run there would say nothing about httpx.
   const liveRow = cfg.targets.find((x) => x.engineExercise) || live[0] || cfg.targets[0];
-  // httpx measures "does the probe binary work": aimed at the host that demonstrably answers
-  // over plain HTTP (the crawler reaches it), because demo's TLS chain makes httpx exit 0 with no
-  // record, and a row that only says "exit=0 · 0B" is a row nobody can act on.
+  // httpx measures "does the probe binary work", so it is aimed at the host that demonstrably
+  // answers over plain HTTP (the crawler reaches it) — a row that only ever says "exit=0 · 0B"
+  // because of some TLS chain nobody asked about measures nothing.
   const probeUrl = `${testRow.scheme || "http"}://${testSite}/`;
 
   // resolution first: if DNS does not answer, every later row is meaningless
@@ -153,16 +153,25 @@ async function cliChecks(cfg) {
   const httpx = findBinary("httpx");
   if (!httpx) add("cli", "httpx present", "fail", "مش موجود");
   else {
-    // no -silent on purpose: with it, httpx exits 0 and prints NOTHING for a host whose TLS
-    // chain it dislikes (measured 3 runs on demo.testfire.net + 1 on scanme) — indistinguishable
-    // from "dead". Un-muted, its own error line lands in the report instead of a mystery.
-    const r = await runBin(httpx, ["-u", "-sc", "-title", "-H", "User-Agent: Mozilla/5.0", "-follow-redirects", "-timeout", "12", "-retries", "1", probeUrl], 60);
-    const ok = r.code === 0 && /\[2\d\d\]|\[3\d\d\]/.test(r.out);
+    // SAME FLAGS AS THE ENGINE KIND. The point of the CLI layer is "the binary the spine will
+    // drive, driven the way the spine drives it" — an earlier variant of this row dropped
+    // `-json`/`-silent` and printed nothing while tools.httpx inside the job worked, which
+    // measured my flag choice and not httpx (three runs of `exit=0 · 0B` before that was clear).
+    const r = await runBin(httpx, [
+      "-u", probeUrl, "-json", "-silent", "-follow-redirects", "-status-code", "-title",
+      "-tech-detect", "-timeout", "8", "-connect-timeout", "6", "-retries", "1",
+    ], 60);
+    const rec = (r.out.split("\n").map((l) => l.trim()).find((l) => l.startsWith("{")) || "").replace(/\u001b\[[0-9;]*m/g, "");
+    const status = Number((rec.match(/"status"\s*:\s*(\d{3})/) || [0, "0"])[1]);
+    const want = liveRow.expects?.httpStatus || testRow.expects?.httpStatus || 200;
+    const ok = r.code === 0 && status === want;
     add("cli", `httpx ${probeUrl}`, ok ? "pass" : NET_ERRORS.test(r.err + r.out) ? "blocked" : "review",
-      ok ? short(r.out, 120) : short(`${(r.err || r.out).split("\n").filter(Boolean).slice(-1)[0] || ""} · exit=${r.code} · ${r.out.length}B out · ${r.ms}ms`, 150), { ms: r.ms });
+      ok ? `${status} · ${short((rec.match(/"title"\s*:\s*"([^"]*)"/) || [0, ""])[1], 70)} · ${(rec.match(/tech-detect[^]]*]/i) || [""])[0].slice(0, 60)}`
+        : short(`status=${status || "مفيش"} (المطلوب ${want}) · exit=${r.code} · ${r.out.length}B · ${(r.err || "").split("\n").filter(Boolean).slice(-1)[0] || ""} · ${r.ms}ms`, 160),
+      { ms: r.ms, status });
   }
 
-  const katana = findBinary("katana");
+
   if (katana) {
     // no -jc: in katana that short flag is NOT "junk filter", and passing it swallowed the next
     // flag and made the process exit 2 with no output (measured: run 41452838992).
