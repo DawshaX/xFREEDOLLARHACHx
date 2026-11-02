@@ -45,6 +45,16 @@ GitHub Actions يبني الحزمة (اختبار + build)
 
 الـ workflow فيه **loop**: لو الـ agent خرج لأي سبب بيرجع فوراً، فالموجة فعلاً بتكمل.
 
+**الأسطول بقى opt-in (2026-11-02):** `schedule`/`push` مابيطلقوش موجة غير لو `vars.FLEET_ENABLED=1`
+**و** `secrets.NOVA_EXEC_TOKEN` موجود — لأن نود من غير توكن على هوست عام = جهاز بيتنفّذ فيه أي حاجة من بره
+(قياس حيّ: `POST /api/local-agent/exec` المجهول كان بيرجع `uid=1001(runner)` من نود حقيقي).
+الضغطة اليدوية `Run workflow` لسه بتشتغل من غير شروط.
+
+**الوصول من الصندوق مقفول؟قيس من CI:** `Actions → probe-live-llm` بيضرب على الهوست من runner وبيكتب
+`probe-report.txt` في الفرع (بيتحمله بـrebase+retry فالفرع يتحرك وهو شغال). بيقيس `GET /api/ops/version`
+(هل الـbundle الجديد وصل؟) و`POST /api/local-agent/exec` المجهول (لازم 403) — ده اللي بيفرّق
+«منشور» عن «200 من الـSPA fallback».
+
 قياس القدرة الحقيقي: `GET /api/fleet/capabilities` (نودات متصلة بس).
 كتالوج المجاني: `GET /api/fleet/catalogue` (كل حاجة بتطلب بطاقة معلّمة) — الراوتر ده كان متكتب بس
 مش مربوط في `routes/index.ts`، اتفعّل دلوقتي فـ `/api/fleet/{capabilities,catalogue,scale-plan}` شغالين.

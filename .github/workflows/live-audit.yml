@@ -30,6 +30,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The gate that must not be able to take the site down — so it lives here
+  # (every 6 h + manual) instead of inside the Pages deploy. Red here = a real
+  # regression in types or in the scope gate, and nobody merges past it.
+  quality-gate:
+    name: quality gate (types · scope gate · API contracts)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile --ignore-scripts
+      - name: 🧱 Typecheck ratchet (blocks NEW errors)
+        run: node scripts/typecheck-ratchet.mjs
+      - name: 🧪 Ops scope-gate self-test
+        run: node scripts/ops-selftest.mjs
+      - name: 🔌 API contracts
+        run: pnpm run audit:contracts
+        continue-on-error: true   # needs the built panel; reported, not fatal
+
   audit:
     name: probe the running agent
     runs-on: ubuntu-latest

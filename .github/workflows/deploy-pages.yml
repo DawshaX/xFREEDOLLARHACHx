@@ -37,8 +37,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --ignore-scripts
 
-      - name: 🧱 Typecheck ratchet (blocks only NEW errors)
-        run: node scripts/typecheck-ratchet.mjs
+      # Reported, not enforced, HERE. This job is the live site: blocking it on a
+      # type-error count means a `@types` minor bump in CI (install runs with
+      # --no-frozen-lockfile) takes the whole platform offline. The blocking gate
+      # lives in `NOVA live audit → quality-gate`, which goes red without hurting
+      # anybody. Measured on main 2026-11-02: this step went red at 99=baseline
+      # locally, i.e. CI noise — and it killed the Pages deploy.
+      - name: 🧱 Typecheck ratchet (reported; blocking gate is in live-audit)
+        run: node scripts/typecheck-ratchet.mjs || echo "::warning::typecheck ratchet above baseline — see the quality-gate job in 'NOVA live audit'; deploy continues"
 
       - name: 🧪 Ops engine self-test (scope gate must refuse out-of-scope)
         run: node scripts/ops-selftest.mjs
