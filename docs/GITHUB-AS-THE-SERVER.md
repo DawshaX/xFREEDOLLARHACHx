@@ -75,6 +75,8 @@ state/nova-queue.json  ──push──▶  workflow nova-runner.yml
 | مافيش محرك | الطابور **ما اتغيّرش**، `::warning::` واضح، وexit 2 — مش فشل صامت |
 | YAML | `actions/checkout` + 9 خطوات، `permissions: contents: write`، `concurrency` بيقفل التزامن، و`[skip ci]` في commit الروبوت بيكسر حلقة الانطلاق |
 | `node --check` على السكربت | نظيف |
+| **أول تشغيل حقيقي على CI** (05:44 UTC) | الطابور اتنفّذ من جيت-هَب لوحده: `demo-selfhost` → `done` · job `20261102-129f18` · 3 مهام / 0 فاشل / 1905 مللي ثانية · commit `5525eed` رجع بالتقرير + `index.json` |
+| التقرير بقى URL | `https://dawshax.github.io/xFREEDOLLARHACHx/nova-runs/index.json` (و`/demo-selfhost.md`) — بعد ما شِلنا `[skip ci]` من commit الروبوت، لأن بيتهرب من `deploy-pages` كمان فالتقرير يفضل جوه الريبوس مش منشور |
 
 ## الحاجات اللي جرّبتها النهارده و**مات** (عشان السؤال كان «دوّر»، مش «أكد لي»)
 
