@@ -269,12 +269,18 @@ async function phaseLinkedServer() {
 /* ── 3. work page really renders ────────────────────────────────────────── */
 
 async function phaseWorkUi() {
-  const { window } = bootDom();
+  // /nova-fleet is a TABGED page now: it opens on «المخ» and each tab mounts its
+  // own component (`view === "work" && <NovaWorkstation/>`). Rendering the page and
+  // demanding the workstation's bands in the same DOM was a false failure — the
+  // harness has to deep-link the tab it means to test. `bootDom` appends `search`
+  // raw to the URL, and the app reads the tab from location.hash.
+  const { window } = bootDom({ search: "#work" });
   await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
   await new Promise((r) => setTimeout(r, 2500));
 
   const text = window.document.body.textContent || "";
   const inputs = window.document.querySelectorAll("textarea, input").length;
+  // sidebar labels (always mounted) + the workstation's own bands
   const need = ["محطة العمل", "المهمات", "الأدوات", "خريطة الشبكة", "الليف بانل", "وسّع القدرات", "خطة العمل", "حالة الاتصالات", "العقل السحابي 24/7"];
   const missing = need.filter((n) => !text.includes(n));
 
@@ -293,7 +299,7 @@ async function phaseWorkUi() {
 
   // The live site once claimed «اتصال مباشر دائم مع المنصة» with no server at
   // all — the exact "it's connected" lie. Keep that from coming back.
-  if (!results.workUi || true) {
+  if (results.workUi) {
     const claimsLive = /اتصال مباشر دائم/.test(text);
     const honestLocal = /شغّال في المتصفح|قناة داخلية|بدون سيرفر خارجي|قناة المتصفح/.test(text);
     results.workUi.fakeLiveClaim = claimsLive;
@@ -476,7 +482,9 @@ async function phaseMissions() {
 /* ── 7. chat that survives a reload ─────────────────────────────────────── */
 
 async function phasePersist() {
-  const { window } = bootDom();
+  // the chat box lives on the work tab (the page is tabbed) — deep-link it, or this
+  // phase is asserting a textarea exists on the awareness room, which it never did.
+  const { window } = bootDom({ search: "#work" });
   await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
   await new Promise((r) => setTimeout(r, 2200));
 
@@ -538,7 +546,8 @@ async function phaseRestore() {
     return;
   }
   const seed = JSON.parse(fs.readFileSync(snapPath, "utf8"));
-  const { window } = bootDom({ seed });
+  // same tab the chat was written from — the conversation UI is the work tab
+  const { window } = bootDom({ seed, search: "#work" });
   await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
   await new Promise((r) => setTimeout(r, 2000));
   const body = window.document.body.textContent || "";

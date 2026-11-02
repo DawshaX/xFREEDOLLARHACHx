@@ -193,3 +193,5 @@ curl -X POST -H 'content-type: application/json' \
 لو مش عارف تحط نوفا فين: [`docs/FREE-HOSTS-2026.md`](../docs/FREE-HOSTS-2026.md) — كل مورد،
 اللي بيطلب بطاقة، اللي بينام، واللي شروطه بتمنع المسح النشط، ووصفة التثبيت الجاهزة لكل واحد.
 وفيه `node scripts/free-host-survey.mjs` اللي بيقيس وصولية كل مورد ويكتب `state/free-hosts.md`.
+
+- `../docs/GITHUB-AS-THE-SERVER.md` — المكان الواحد اللي مابيطلبش سيرفر: طابور في الريبو ونود جيت-هَب بيشغّله.
