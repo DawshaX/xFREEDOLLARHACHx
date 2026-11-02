@@ -211,7 +211,21 @@ jobs:
             exit 1
           fi
           git commit -q -m "live verify: $(date -u +%Y-%m-%dT%H:%MZ) [live-verify]" || exit 0
-          git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
-          git push --quiet origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::push failed — the artifact still has the measurement"
+          # A rejected push used to be a warning — and warnings here are invisible: the logs are
+          # 403 from the sandbox and artifacts cannot be downloaded, so a measurement that failed to
+          # push might as well not have run (measured: run 41485616989 finished green, had a real
+          # report committed locally, and published nothing because the branch moved under it).
+          branch="${GITHUB_REF_NAME}"
+          for try in 1 2 3 4; do
+            if git push --quiet origin "HEAD:${branch}"; then
+              echo "measurement published on attempt $try"
+              exit 0
+            fi
+            echo "push rejected (branch moved) — rebasing onto origin/${branch} and retrying"
+            git fetch --quiet origin "${branch}" && git rebase --quiet "origin/${branch}" || git rebase --abort || true
+            sleep $((try * 5))
+          done
+          echo "::error::القياس اتعمل بس مانشئرفش — الفرق موجود في commit محلي ولم يصل ${branch}. ده فشل للحلقة كلها، مش تحذير."
+          exit 1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

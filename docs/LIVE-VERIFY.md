@@ -253,3 +253,21 @@ provided but not defined: -json` و`tools.httpx: httpx فشل (exit=-1) · 18001
 
 **أول تشغيل حقيقي بعد الدمج**: عدّل/امسك `scripts/verify-live.mjs` أو سيّب الـcron
 يمشي — وبعد ~3 دقايق `git show origin/main:state/verified-live.md` هيديك الرد.
+
+### 8.1 «الواجهة الساكنة» بتتكلم — واللي ما بيتنشرش بيتحسب فشل
+
+`state/verified-live.md` بيقيس المحرك الحقيقي على راينر. الطبقة التانية من الصدق هي إن **اللي
+المستخدم بيشوفه على `https://dawshax.github.io/xFREEDOLLARHACHx/nova-fleet`** لازم يكون شغال كمان.
+
+- **شات Multi-AI**: `LiveAgentPanel` بيبدأ بـ`/api/ollama/chat`؛ ولو «لا مجيب» بيحوّل لـ
+  `POST /api/multi-ai/chat` (أو `/multi-ai/consensus`) وبيفكّ أسطر `data:{delta,provider}`. في
+  الـbundle الساكن مكنش في handler للمسارين دول — فالنتيجة كانت فقاعة فاضية. دلوقتي
+  `resolveStandaloneApi` بيردّ من `buildSmartAgentResponse` (نفس مخزون `/chat`) و`setup.ts`
+  بيرمّط الـstream. وضع التوافق ما بيمثّلش اتفاق: بيقول صراحة إن النسخة الساكنة مصدرها واحد.
+  `/multi-ai/providers` متروك للـhandler الموجود فوق (`/keys/status`) — مافيش تظليل.
+  التحقق: استدعاء الـresolver مباشرة في node بعد بناء `dist` (`chat → provider=local-brain ·
+  2735 حرف`) + `/chat` و`/ops/kinds` لسه بيردّوا + `pnpm --filter @workspace/kali-panel run build` ✓.
+- **النشر جزء من القياس**: الـrun اللي ما ينشرش تقريره = قياس ما حصلش. خطوة النشر بتعمل 4 محاولات
+  `fetch + rebase + push` (main بتتحرك من بوت التوثيق في نفس الدقيقة)، ولو الفرق اتقدّر لسه فاضي
+  → `::error::` و`exit 1`. التحذير ما كانش كفاية لأن لوجات/artifacts الـActions بترجع 403 من
+  بيئة التطوير، فالتشغيل «الأخضر بلا نشر» كان بيخبي ضياع بيانات كاملة (Run `41485616989`).

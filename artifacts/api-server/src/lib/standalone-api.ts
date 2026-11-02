@@ -5516,6 +5516,29 @@ export function resolveStandaloneApi(
     // handled elsewhere; kept for method parity
   }
 
+  // ── Multi-AI chat/consensus (Ollama's fallback in LiveAgentPanel) ──────────
+  // On the static bundle these two used to fall through to the generic `{ok:true}` stub, which is
+  // how «العقل رجّع رد فاضي» reached the user on the public URL. The local brain answers, labelled
+  // `local-brain` — no live model is imitated here. `/multi-ai/providers` is answered above by the
+  // keys/status handler, so it is deliberately not duplicated.
+  if ((path === "/multi-ai/chat" || path === "/multi-ai/consensus") && m === "POST") {
+    const msgs = Array.isArray(body?.messages) ? (body!.messages as Array<{ role: string; content: string }>) : [];
+    const prompt = String(msgs.filter((x) => x.role === "user").pop()?.content || body?.prompt || "");
+    const response = buildSmartAgentResponse(prompt || "تحليل أمني", getMissionsState()[0]?.target || "bughunters.google.com");
+    return {
+      ok: true,
+      mode: "static",
+      provider: "local-brain",
+      model: "cybernova-sec-brain:2099",
+      response,
+      content: response,
+      answers: [{ provider: "local-brain", text: response }],
+      synthesis: response,
+      done: true,
+      noteAr: "النسخة الساكنة بتجاوب بالعقل المحلي — التوافق بين أكتر من مصدر محتاج السيرفر الكامل.",
+    };
+  }
+
   // ── Web proxy (no network in static mode) ─────────────────────────────────
   if (path === "/proxy" && m === "GET") {
     const target = u.searchParams.get("url") || "";

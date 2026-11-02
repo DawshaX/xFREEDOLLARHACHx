@@ -272,6 +272,39 @@ function buildStaticSseResponse(rawUrl: string, body: Record<string, unknown> | 
     return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
   }
 
+  if (urlStr.includes("/api/multi-ai/chat") || urlStr.includes("/api/multi-ai/consensus")) {
+    // LiveAgentPanel falls back to Multi-AI the moment Ollama is offline — and in the static
+    // (Pages) build these two paths were unmatched, so the panel read an EMPTY assistant bubble.
+    // The answer comes from the same local brain `/ollama/chat` uses, and it is labelled as such:
+    // no provider name is invented and no "consensus" between sources is simulated.
+    const messages = (body?.messages as Array<{ role: string; content: string }>) ?? [];
+    const lastUser = String(
+      body?.prompt || messages.filter((x) => x.role === "user").pop()?.content || "تحليل أمني للهدف النشط",
+    );
+    const brain = resolveStandaloneApi("/api/ollama/chat", "POST", { prompt: lastUser, messages }) as
+      { response?: string } | null;
+    const text =
+      brain?.response ||
+      "⚡ النسخة الساكنة رجعت رد فاضي من العقل المحلي — شغّل السيرفر الكامل لـ Multi-AI حي.";
+    const isConsensus = urlStr.includes("consensus");
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (data: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (isConsensus) {
+          send({ delta: `> وضع التوافق في النسخة الساكنة: مصدر واحد (العقل المحلي) — التوافق بين كذا مزود محتاج السيرفر الكامل.\n\n`, provider: "local-brain" });
+        }
+        for (const c of text.match(/.{1,48}/gs) ?? [text]) {
+          send({ delta: c, provider: "local-brain" });
+          await new Promise((r) => setTimeout(r, 10));
+        }
+        if (isConsensus) send({ synthesis: text, provider: "local-brain" });
+        send({ done: true, provider: "local-brain" });
+        controller.close();
+      },
+    });
+    return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+  }
+
   return null;
 }
 
