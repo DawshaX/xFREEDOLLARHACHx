@@ -59,6 +59,16 @@ jobs:
       - name: Build the fleet-node kit (one upload = a new node)
         run: node scripts/make-node-kit.mjs --hub ws://node.waifly.com:27214/api/local-agent/ws
 
+      - name: 🔒 No secret may ride into a public release
+        # An `.env` once shipped inside `api-server-windows-*.zip` with a live NOVA_EXEC_TOKEN and
+        # nothing failed: the repo was clean, so every tracked-file check passed. The artifact is a
+        # separate surface, and this is the only step that ever looks inside it. Fatal — a bundle
+        # with a secret must not reach Releases, and a step conclusion is the only CI output a
+        # sandbox can read.
+        run: |
+          node scripts/audit-bundle-secrets.mjs dist-standalone/nova-24-7
+          node scripts/audit-bundle-secrets.mjs dist-node-kit
+
       - name: Smoke-test the bundle in a clean directory (no node_modules)
         run: |
           rm -rf /tmp/clean && mkdir -p /tmp/clean

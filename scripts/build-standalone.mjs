@@ -694,6 +694,17 @@ fs.writeFileSync(
   ) + "\n",
 );
 
+/* ── 2d. refuse to ship a secret ─────────────────────────────────────────── */
+/* الحزمة دي بتنزل كـasset في Release عام — ومرة `.env` ركب مع `api-server-windows-*.zip` وسرّب
+ * NOVA_EXEC_TOKEN ومافيش بوابة قبضته لأن ماحدش بيبص جوه الـartifact. الفحص بقى سكربت مستقل
+ * (`scripts/audit-bundle-secrets.mjs`) يتشغّل هنا على المجلد، وعلى أي حزمة منزّلة من Release. */
+try {
+  execFileSync(process.execPath, [path.join(ROOT, "scripts", "audit-bundle-secrets.mjs"), OUT], { stdio: "inherit" });
+} catch {
+  console.error("✗ الحزمة اترفضت — الباندر ما بيكملش بعد تسريب محتمل.");
+  process.exit(1);
+}
+
 /* ── 3. zip it ───────────────────────────────────────────────────────────── */
 const zipPath = path.join(ROOT, "dist-standalone", "nova-24-7.zip");
 let zipped = false;

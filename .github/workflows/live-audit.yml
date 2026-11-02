@@ -54,6 +54,12 @@ jobs:
       - name: 🔌 API contracts
         run: pnpm run audit:contracts
         continue-on-error: true   # needs the built panel; reported, not fatal
+      - name: 👯 Twinned libs must stay byte-identical
+        # `standalone-api.ts` / `cyber-corpus-2099.ts` / `live-vuln-ingestor.ts` exist twice on
+        # purpose (server build + static Pages build). A fix applied to one copy is how the public
+        # URL silently disagrees with the engine — measured on 2026-11-02 (dead Multi-AI chat).
+        # Fatal on purpose: this needs no build and no network.
+        run: node scripts/audit-twins.mjs
 
   audit:
     name: probe the running agent
