@@ -259,6 +259,32 @@ async function checkSelfCheck() {
       : `status ${r.status}`);
 }
 
+// ── 6c. the brain knows what it is ─────────────────────────────────────────
+async function checkAwareness() {
+  const a = await req("/api/nova-core/awareness");
+  const b = a.body && typeof a.body === "object" ? a.body : {};
+  const organs = Array.isArray(b.organs) ? b.organs : [];
+  const verdicts = ["alive", "degraded", "blind", "asleep"];
+  const sites = Array.isArray(b.sites) ? b.sites : [];
+  record("aware", "GET /api/nova-core/awareness", a.status === 200 && verdicts.includes(b.verdict) && organs.length >= 8,
+    `verdict=${b.verdict} organs=${organs.length} net=${b.net?.outbound} sites=${sites.filter((x) => x.ok).length}/${sites.length} mood=${String(b.moodAr || "").slice(0, 40)}…`);
+  // the organs that must always be named — a manager that forgets its own hands
+  const named = new Set(organs.map((o) => o.id));
+  const missing = ["brain", "council", "fleet", "ops", "scope", "memory", "bus", "net", "sites"].filter((id) => !named.has(id));
+  record("aware", "awareness reports every organ (incl. its own sites)", missing.length === 0,
+    missing.length ? `missing: ${missing.join(", ")}` : `${organs.length} organs · every fixAr present where state!=up`);
+  const leak = /"(sk-|ghp_|AIza[0-9A-Za-z_-]{6,})/.test(String(a.text)) || /"(apiKey|token)"\s*:\s*"[^"]{6,}/.test(String(a.text));
+  record("aware", "awareness payload carries no key material or raw hosts", !leak, leak ? "POSSIBLE SECRET IN PAYLOAD" : "clean");
+  const ov = await req("/api/ops/version");
+  record("aware", "GET /api/ops/version exists in this bundle", ov.status === 200 && Boolean(ov.body?.build),
+    `status ${ov.status} ${JSON.stringify(ov.body).slice(0, 90)}`);
+  const st = await req("/api/ops/stats");
+  record("aware", "GET /api/ops/stats readable (200 or gated 403)", [200, 403].includes(st.status), `status ${st.status}`);
+  const wr = await req("/api/ops/programs/discover", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  record("aware", "ops write surface mounted (200/403 — never 404)", [200, 403].includes(wr.status),
+    `status ${wr.status}${wr.status === 404 ? " — the deployed bundle is older than the ops layer" : ""}`);
+}
+
 // ── 7. integrity: no fabricated numbers in the live payload ────────────────
 async function checkHonesty() {
   const s = await req("/api/nova-core/status");
@@ -271,7 +297,7 @@ async function checkHonesty() {
 if (!AS_JSON) console.log(`\nCyberNova — live audit against ${BASE}\n${"─".repeat(56)}`);
 
 await checkAlive();
-await Promise.all([checkSocket(), checkOnline().then(() => checkBrain()), checkTools(), checkMemory(), checkHonesty(), checkSelfCheck()]);
+await Promise.all([checkSocket(), checkOnline().then(() => checkBrain()), checkTools(), checkMemory(), checkHonesty(), checkSelfCheck(), checkAwareness()]);
 
 const passed = results.filter((r) => r.ok).length;
 const failed = results.filter((r) => !r.ok);

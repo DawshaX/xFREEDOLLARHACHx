@@ -263,6 +263,21 @@ SQLi differential)، `lib/programs/hackerone.ts` (قايمة برامجك من A
 
 ---
 
+### 8b-وعي · العضو الواعي (2026-11-02)
+
+| القطعة | الملف | بتعمل إيه |
+|---|---|---|
+| قراية الكيان | `artifacts/api-server/src/lib/awareness.ts` | 16 مصدر في رد واحد؛ `verdict` + أعضاء + مواقع + عدادات؛ للقراءة بس؛ كاش 3s |
+| Route | `routes/nova-core.ts` → `GET /nova-core/awareness` | مفتوحة عمداً (حالة، مش أسرار) |
+| غرفة العمليات (لوحة) | `artifacts/kali-panel/src/components/desktop/NovaBrainOps.tsx` | `NovaAwarenessCard` + `NovaOpsRoom` على العقد الحقيقي |
+| عميل ops (لوحة) | `artifacts/kali-panel/src/lib/ops-client.ts` | `x-nova-token` من `localStorage`، وHTML-on-/api = «الباندل أقدم» مش 200 |
+| قراية المتصفح | `artifacts/kali-panel/src/lib/awareness.ts` | وضع Pages: يقيس اللي المتصفح يقدر عليه ويسكت عن الباقي |
+| الباندل الثابت | `src/lib/standalone-api.ts` (نسختين متطابقتين) | بيرد على `/nova-core/awareness` و`/ops/kinds` بغلاف `awarenessUnavailable` بدل الـ404 |
+| البوابة | `src/lib/ops/gate.ts` | `SENSITIVE_READS` +/`ops/jobs` `ops/stats`؛ القراية الحساسة بتقبل same-origin زي الكتابة |
+| إثبات | `scripts/audit-live-server.mjs` | 5 شكات `aware` جديدة على أي سيرفر شغال (منها: مفيش مفاتيح في الـpayload) |
+
+الصفحة `/nova-fleet` بقى افتراضيها تبان على تبويب «المخ · الكيان»، والـsidebar بقى «نوفا · المخ والمدير».
+
 ## 9) التشغيل المجاني 24/7 — الخيارات الست
 
 | الطريقة | الملف | ينفع لإيه |

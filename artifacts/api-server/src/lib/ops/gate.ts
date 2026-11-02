@@ -89,8 +89,10 @@ export function checkGate(req: GateRequest, scope: string): GateVerdict {
   const readOnly = !req.method || READONLY_METHODS.has(req.method.toUpperCase());
   if (tokenConfigured()) {
     if (tokenOk(req)) return { ok: true, code: "allowed", reason: "token ok", how: "" };
-    // reads of status pages never break; anything that acts requires the token
-    if (readOnly && !scopeRequiresTokenForRead(scope)) {
+    // reads of status pages never break; anything that acts requires the token.
+    // A sensitive read is also satisfied by same-origin — the same signal the write
+    // path trusts, since a foreign page cannot forge `Origin`/`Sec-Fetch-Site`.
+    if (readOnly && (!scopeRequiresTokenForRead(scope) || sameOriginOk(req))) {
       return { ok: true, code: "allowed", reason: "read-only", how: "" };
     }
     const reason = `مطلوب توكن (${scope})`;
@@ -99,7 +101,7 @@ export function checkGate(req: GateRequest, scope: string): GateVerdict {
       ok: false,
       code: "token_required",
       reason,
-      how: "أرسل هيدر `x-nova-token` (أو ?token=) بقيمة NOVA_EXEC_TOKEN، أو ضيف التوكن في «نوفا · الأسطول».",
+      how: "أرسل هيدر `x-nova-token` (أو ?token=) بقيمة NOVA_EXEC_TOKEN، أو اكتبه في حقل التوكن بغرفة العمليات («المخ · المدير»).",
     };
   }
   // No token configured: writes only from the panel itself.
@@ -126,6 +128,10 @@ const SENSITIVE_READS: RegExp[] = [
   /download-project-zip$/,
   /\/api\/local-agent\/(sysinfo|screenshot|processes|fs)\b/,
   /\/api\/ops\/programs$/,
+  // The job files are the findings themselves — which hosts are being worked and
+  // what was proven. Same-origin (the panel) may read them; a stranger may not.
+  /\/api\/ops\/jobs\b/,
+  /\/api\/ops\/stats$/,
   /\/api\/keys\b/,
   /\/api\/settings\b/,
 ];

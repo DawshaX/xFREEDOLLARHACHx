@@ -25,6 +25,7 @@ import { NovaToolbox } from "@/components/desktop/NovaToolbox";
 import { missionStats, onMissionsChange } from "@/lib/mission-store";
 import { useEffect as useEffectM, useState as useStateM } from "react";
 import { NovaLiveBar, useNovaLive } from "@/components/desktop/NovaFleetLive";
+import { NovaAwarenessCard, NovaOpsRoom } from "@/components/desktop/NovaBrainOps";
 
 const API = "/api";
 
@@ -340,15 +341,17 @@ export default function NovaFleetUnified() {
   const [, navigate] = useLocation();
   const [missionCount, setMissionCount] = useStateM(() => missionStats());
   useEffectM(() => onMissionsChange(() => setMissionCount(missionStats())), []);
-  // «محطة العمل» is the default: that is where the user talks to NOVA and works.
-  const [view, setView] = useState<"work" | "missions" | "tools" | "mesh" | "panel">(() => {
+  // «المخ» is the default: this page is advertised as the brain and manager of
+  // the whole program, so it opens by reporting what the organism actually is
+  // doing right now — not with a picture of one. `#work` still deep-links.
+  const [view, setView] = useState<"brain" | "work" | "missions" | "tools" | "ops" | "mesh" | "panel">(() => {
     try {
       const h = window.location.hash.replace("#", "");
-      if (h === "missions" || h === "tools" || h === "mesh" || h === "panel") return h;
+      if (h === "brain" || h === "work" || h === "missions" || h === "tools" || h === "ops" || h === "mesh" || h === "panel") return h;
     } catch {
       /* ignore */
     }
-    return "work";
+    return "brain";
   });
 
   const pickView = (key: typeof view) => {
@@ -409,18 +412,20 @@ export default function NovaFleetUnified() {
           </div>
           <div>
             <h1 className="text-sm font-black flex items-center gap-2">
-              نوفا · الأسطول الموحّد
-              <span className="text-[9px] px-1.5 py-0.5 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-200">MESH</span>
+              نوفا · المخ والمدير
+              <span className="text-[9px] px-1.5 py-0.5 rounded border border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-200">BRAIN</span>
             </h1>
-            <p className="text-[9px] text-white/45">كل الأيجنتات والأجهزة في شبكة واحدة — اتصال حقيقي، مش رسمة.</p>
+            <p className="text-[9px] text-white/45">مخ واعي لكل أعضاء البرنامج: حالته، أعضاؤه، مواقعى، عملياته الحقيقية — اتصال حقيقي، مش رسمة.</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
           <div className="flex items-center gap-1 rounded-xl border border-white/10 p-0.5">
             {([
+              ["brain", "المخ · الكيان"],
               ["work", "محطة العمل"],
               ["missions", "المهمات"],
               ["tools", "الأدوات"],
+              ["ops", "غرفة العمليات"],
               ["mesh", "خريطة الشبكة"],
               ["panel", "الليف بانل"],
             ] as const).map(([key, label]) => (
@@ -442,7 +447,13 @@ export default function NovaFleetUnified() {
         </div>
       </div>
 
+      {/* the organism's own state — visible in every tab, because a manager that
+          only reports when you ask is a log file. */}
+      <NovaAwarenessCard />
+
       <NovaLiveBar onOpen={() => navigate("/nova-agent")} />
+
+      {view === "ops" && <NovaOpsRoom />}
 
       {view === "work" && <NovaWorkstation />}
 

@@ -37,6 +37,7 @@ import { broadcastEvent } from "../lib/ws-hub";
 import { logger } from "../lib/logger";
 
 import { requireOps } from "../lib/ops/gate";
+import { awareness } from "../lib/awareness";
 
 const router = Router();
 
@@ -202,6 +203,35 @@ router.get("/nova-core/status", async (_req: Request, res: Response) => {
     });
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+/* ── the whole organism, in one call ──────────────────────────────────────── */
+
+/**
+ * GET /api/nova-core/awareness
+ * What `/nova-fleet` (the manager page) reads: brain seats, council, fleet nodes,
+ * ops engine, scope registry, evidence dir, throttle, memory, the live bus,
+ * outbound internet, and the public sites — each MEASURED, each with a fix line
+ * when it is not up. Read-only by design: counts and states, no hostnames, no
+ * key values.
+ */
+router.get("/nova-core/awareness", async (req: Request, res: Response) => {
+  try {
+    const snap = await awareness(String(req.headers.host ?? ""));
+    res.setHeader("Cache-Control", "no-store");
+    res.json(snap);
+  } catch (err) {
+    // A 500 here would leave the manager page blind, which is worse than a
+    // degraded snapshot: report what failed and keep the shape.
+    res.status(200).json({
+      ok: true,
+      at: new Date().toISOString(),
+      verdict: "degraded",
+      moodAr: `الوعي نفسه فشل: ${(err as Error).message} — اللوحة هتعرض الليعرف.`,
+      organs: [],
+      error: (err as Error).message,
+    });
   }
 });
 

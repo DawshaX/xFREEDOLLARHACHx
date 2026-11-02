@@ -49,7 +49,7 @@ import {
   verifyFinding,
 } from "../lib/ops/runner";
 import { KIND_LIST, toolStatus } from "../lib/ops/tools";
-import { checkGate } from "../lib/ops/gate";
+import { checkGate, opsExposure } from "../lib/ops/gate";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
 import { buildStamp } from "../lib/ops/version";
@@ -96,7 +96,10 @@ router.get("/ops/kinds", (_req: Request, res: Response) => {
 
 /* ── programs / scope ────────────────────────────────────────────────────── */
 
-router.get("/ops/programs", (_req: Request, res: Response) => {
+router.get("/ops/programs", (req: Request, res: Response) => {
+  // the registry IS the authorization: which programs, which hosts. A stranger
+  // reading it learns the target list, so it is gated like the job files.
+  if (!readGuarded(req, res, "/ops/programs")) return;
   const file = loadPrograms();
   res.json({
     ok: true,
@@ -194,6 +197,23 @@ router.get("/ops/programs/security-txt", async (req: Request, res: Response) => 
 
 /* ── jobs ────────────────────────────────────────────────────────────────── */
 
+/**
+ * Job reads expose the findings themselves: which hosts are being worked, what
+ * was proven, and the evidence paths. On a guarded hub (NOVA_EXEC_TOKEN set) they
+ * are gated exactly like writes — same-origin (the panel) or the token. With no
+ * token configured nothing changes, so local use stays one curl simple.
+ */
+function readGuarded(req: Request, res: Response, path: string): boolean {
+  // `SENSITIVE_READS` is matched against the full API path, so the scope label has
+  // to carry it — "ops /ops/jobs" would match nothing and the gate would be theatre.
+  const scope = `ops /api${path}`;
+  const g = checkGate(req, scope);
+  if (g.ok) return true;
+  res.status(403).json({ ok: false, error: g.code, reason: g.reason, how: g.how, endpoint: path });
+  return false;
+}
+
+
 router.post("/ops/jobs", async (req: Request, res: Response) => {
   if (!opsAllowed(req)) { deny(res, checkGate(req, "ops").how || checkGate(req, "ops").reason); return; }
   const b = (req.body ?? {}) as Record<string, unknown>;
@@ -228,11 +248,13 @@ router.post("/ops/jobs", async (req: Request, res: Response) => {
 });
 
 router.get("/ops/jobs", (req: Request, res: Response) => {
+  if (!readGuarded(req, res, "/ops/jobs")) return;
   const limit = Math.min(100, Number(req.query.limit ?? 25));
   res.json({ ok: true, jobs: listJobs(limit) });
 });
 
 router.get("/ops/jobs/:id", (req: Request, res: Response) => {
+  if (!readGuarded(req, res, "/ops/jobs/:id")) return;
   const job = getJob(String(req.params.id));
   if (!job) {
     res.status(404).json({ ok: false, error: "job-not-found", id: req.params.id });
@@ -287,6 +309,7 @@ router.post("/ops/jobs/:id/verify", async (req: Request, res: Response) => {
 });
 
 router.get("/ops/jobs/:id/report", (req: Request, res: Response) => {
+  if (!readGuarded(req, res, "/ops/jobs/:id")) return;
   const jobId = String(req.params.id);
   const include = req.query.includeUnverified === "1";
   const md = buildReport(jobId, { includeUnverified: include });
@@ -347,9 +370,21 @@ router.post("/ops/sweep", async (req: Request, res: Response) => {
   res.json({ ...result, summary_ar: result.started.length ? `بدأت ${result.started.length} job حقيقي في الخلفية` : (result.reason ?? "مفيش شغل مستحق دلوقتي") });
 });
 
-router.get("/ops/stats", (_req: Request, res: Response) => {
+router.get("/ops/stats", (req: Request, res: Response) => {
+  if (!readGuarded(req, res, "/ops/stats")) return;
   const { active, snapshot, dir } = runnerStats();
-  res.json({ ok: true, runningJobs: active, throttle: snapshot, throttleByHost: throttleStats(), jobsDir: dir, pumpIntervalMs: 3000 });
+  res.json({
+    ok: true,
+    runningJobs: active,
+    throttle: snapshot,
+    throttleByHost: throttleStats(),
+    jobsDir: dir,
+    pumpIntervalMs: 3000,
+    // the manager page has to be able to say «إيه اللي مقفول ولماذا» without a
+    // second request — exposure + autonomy are part of the machine's state.
+    exposure: opsExposure(),
+    autonomy: autonomySummary(),
+  });
 });
 
 export default router;

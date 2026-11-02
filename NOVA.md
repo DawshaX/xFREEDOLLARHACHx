@@ -341,3 +341,52 @@ ollama · pollinations:openai-fast · pollinations:mistral · pollinations:llama
   (IP بتاع GitHub = بلاغ = ضياع الحساب). الأدوات التقيلة على نودك الدائم بس.
 - `NOVA_ALLOW` على نودات Actions = قايدة قراءة/استطلاع؛ لو فاضي النود بيبقى مفتوح على كل حاجة، فمابقاش فاضي.
 
+## 10) المخ الواعي — `/nova-fleet` بقى مدير البرنامج مش واجهة
+
+الصفحة دي كانت «خريطة أسطول حلوة». بقى وراؤها عضو حقيقي في السيرفر:
+`GET /api/nova-core/awareness` (`src/lib/awareness.ts`) — **قراية واحدة، 16 مصدر، للقراءة بس**.
+
+**العقد (اللي اتقيس النهاردة على المحرك فعلياً):**
+
+```jsonc
+{ "ok": true, "verdict": "alive|degraded|blind|asleep",
+  "moodAr": "أنا نوفا: عقلي شغال على 4 مصدر · المجلس بيصوّت (4) · …",
+  "vitals": { "uptimeSec": 15, "rssMb": 127, "load1": 0.93, "node": "v22.22.3", "pid": 1759 },
+  "net":  { "outbound": true, "tlsBlocked": false, "hosts": [github, dns, nvd, hackerone] },
+  "sites":[ { "id":"pages", "url":"https://dawshax.github.io/xFREEDOLLARHACHx/", "ok":true, "ms":41 }, … ],
+  "organs":[ { "id":"brain|council|fleet|ops|scope|proof|throttle|memory|bus|net|background",
+               "state":"up|partial|down", "says":"…", "fixAr":"الحل العملي بالعربي" }, … ],
+  "counters": { "programs": {…}, "jobs": {…}, "councilSeats":4, "nodes":0, "kinds":13, … },
+  "build": { "sha":"…", "opsRouter":true, "stale":{…} } }
+```
+
+**القواعد الليخلي القراية دي صادقة:**
+- **`verdict` سُلَّم مش ألوان:** `blind` = مفيش أي مسار للخارج · `asleep` = لا عقل ولا نود ولا تصريح ·
+  `degraded` = عضو واقع · `alive` = كله فوق. الـ`partial` **مش** تنزيل للدرجة: «مفيش نود متصل» و«مفيش
+  متصفح سامع البث» حالات خمول طبيعية، وتسميتها «degraded» بتعلّم الناس تتجاهل البانر.
+- **`blind` مش «شبكة» لو المشكلة ثقة:** لو كل المنافذ رجّعت فشل اعتماد شهادة (`UNABLE_TO_VERIFY…`)
+  ده مسار موجود وثقة مقطوعة — بيتسجّل `tlsBlocked:true` و`partial` مع `fixAr` تقول `NODE_EXTRA_CA_CERTS`.
+  اتقس فعلاً: في الـsandbox ده بالظبط كان بيقلب `blind` → بقى `degraded` بالسبب الصح.
+- **مفيش كتابة خالص** في العضو ده: مفيش `POST`، مفيش تشغيل أدوات، مفيش أسماء أجهزة، مفيش قيم مفاتيح.
+  كاش 3 ثواني عشان اللوحة بتسأل كل 6، وأي مصدر بيرمي استثناء بيترجّع `ok:false` بدل ما الصفحة تولّع 500.
+- **من غير سيرفر (Pages) المتصفح بيقيس اللي يقدر عليه:** اللوحة نفسها + `state/programs.json` المنشور +
+  منافذ الخروج المسموحة للمتصفح، وكل عضواً محتاج سيرفر بيتقال عليه **«معلومة ناقصة»** — مش صفر ومش أخضر.
+  القاعدة: **رقم مقسوش = مش رقم.**
+
+**غرفة العمليات (`NovaOpsRoom` في نفس الصفحة):** مربوطة بالعقد الحقيقي حرفياً —
+`GET /ops/programs` · `POST /ops/programs/discover` · `POST /ops/programs/check` (بيعرض **سبب** الرفض كما هو:
+`passive_only` / `out_of_scope` / `no_programs`) · `POST /ops/jobs` بعمق `passive|standard|deep` ·
+`GET /ops/jobs[/:id]` · `POST /ops/jobs/:id/verify|pause|resume|cancel` · `GET /ops/jobs/:id/report` ·
+`GET|POST /ops/sweep`. مفيش قرار أمان في المتصفح: البوابة في السيرفر، واللوحة بتعرض رفضها.
+
+**تغيير أمني لازم تعرفه (اتعمل معاه):** قرايات النتائج بقت حساسة — `GET /api/ops/programs` و`/api/ops/jobs*`
+و`/api/ops/stats` محتاجين **نفس الأصل أو التوكن** (لأنها بتقول إيه النطاقات اللي شغال عليها وإيه اللي اتلقّى).
+`/api/nova-core/awareness` و`/api/ops/version` و`/api/ops/kinds` **فاضلين مفتوحين** — دول حالة machine مش أسرار.
+المصفوفة متقيسة على المحرك: من `Origin` غريب → 403، من اللوحة (same-origin) → 200، من Pages مع `x-nova-token` → 200.
+
+**التوكن في اللوحة:** حقل صغير فوق غرفة العمليات، بيتخزن في `localStorage` وبيتبعت في هيدر `x-nova-token` بس —
+مش في الـURL، مش في اللوجات، وبيترفض الطلب من غير ما يبان.
+
+**اللي اتصلح في نفس الطريق (عشان «المدير» ميبقاش بيكلّم ثغرة):** `agentTools.ts` كان بيستعلم على
+`cvesTable.cveId` و`ragFiles.kind` — العمودين اسمهم `id` و`mimeType`. أي `search_cve_local` أو `list_files`
+على نظام فيه Postgres كان بيرمي استثناء. الرقم اتظبط: الـratchet نزل من 99 لـ**97** (والـbaseline اتقفل عليه).
