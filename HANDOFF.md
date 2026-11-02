@@ -1012,6 +1012,19 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   و`scripts/free-host-survey.mjs` + workflow `free-host-survey.yml` بيعيدوا القياس ويكتبوا `state/free-hosts.md`.
   تنبيه مهم: صندوق التطوير هنا **مفيش منه خروج للإنترنت** — أي قياس جواه = `ECONNRESET` مش إجابة المضيف.
 
+- **2026-11-02 (ثامن):** «حل كل المشاكل» كمّلت لحد ثغرات الاعتماديات: `pnpm audit --prod` كان **20**
+  (critical في `proxy-addr`) وبقى **1**. الإصلاحات: `pnpm.overrides` بأرضيات مش pins
+  (`proxy-addr>=2.0.8`, `body-parser>=2.4.0`, `form-data>=4.0.6`, `qs>=6.16.1`) + ترقيات مباشرة
+  (`adm-zip 0.6.1`, `ws 8.21.0`, `compression 1.8.2`) و**zod 3→4** من الـcatalog (الاستخدام كله
+  `z.object/z.string/.default` — مفيش `.errors/flatten/nativeEnum`، فاتعمل من غير هجرة).
+  متحقق بعد الترقية: build ✓ · ratchet على الـbaseline ✓ · 36 selftest ✓ · contracts ✓ · connections ✓ ·
+  اللوحة اتبنت ✓ (9.98s) · المحرك قام نضيف و`/api/agent/tasks` بيشتغل على zod 4 · `adm-zip 0.6.1`
+  اتقاس مباشرة (كتابة/قراءة أرشيف بمحتوى عربي، `PK` سليم) — و`download-project-zip` بيرجع 403
+  `source_download_disabled` **ده مقصود** (مفتوح بس بـ`NOVA_ALLOW_SOURCE_DOWNLOAD=1`).
+  الليسابقيت: `uuid@8.3.2` (moderate، تابعة لحد تاني بيفتكر الـCJS API بتاع v8 — فرض v11 كان هيكسر
+  وقت التشغيل بدل ما يكسر عند التنزيل، فسبتها مسجّلة). و`.env` المسرّب في باوندل قديم: مفيش `.env`
+  متعقّب في الجتن حاليًا (`git ls-files` = غير `.env.nova.example`)، فالمتبقي هو حذف release قديم من
+  côté جيت-هَب + توليد `NOVA_EXEC_TOKEN` جديد — الاتنين محتاجين موافقتك مش كود.
 - **2026-11-02 (سابع):** «حل كل المشاكل» — الدورة دي على طبقة التنفيذ نفسها، كلها مقاسة من CI:
   (1) `runArgv` بقى `stdio:["ignore","pipe","pipe"]`: الأداتة اللي بتقرا أهدافها من stdin كانت
   **مستنية EOF لن احنا مش بشحنه** — ده كان سبب `tools.httpx (exit=-1 · 45018ms)` و`(180019ms)` قبلها.
