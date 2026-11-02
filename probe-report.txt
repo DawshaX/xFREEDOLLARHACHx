@@ -1,77 +1,44 @@
-# live probe — 2026-11-02T02:34:09Z
+# live probe — 2026-11-02T02:57:09Z
 target: http://node.waifly.com:27214
 
 ## /api/health
-{"status":"ok","mode":"standalone","wsConnected":true,"timestamp":"2026-11-02T02:34:10.059Z"}
+
 ## /api/nova-core/status
-{"ok":true,"identity":{"name":"نوفا (NOVA)","handle":"@nova","role":"شريك أمني ذكي — عقل منصة CyberNova","languages":["ar","en","fr","de","es","it","pt","ru","tr","fa","ur","hi","id","ms","zh","ja","ko","nl","pl","uk","sv","el","he","vi","th"],"version":"2099.1"},"brain":{"mode":"llm","ollamaOnline":false,"ollamaModel":"dolphin-llama3","cloudProviders":[{"id":"pollinations","label":"Pollinations (بدون مفتاح)","model":"openai-fast"},{"id":"groq","label":"Groq (free tier)","model":"openai/gpt-oss-120b"},{"id":"openrouter","label":"OpenRouter (free models)","model":"openai/gpt-oss-120b:free"},{"id":"gemini","label":"Google Gemini (free tier)","model":"gemini-2.5-flash"},{"id":"openai","label":"OpenAI (مدفوع — آخر خيار)","model":"gpt-4o-mini"}],"note":"العقل اللغوي متصل — نوفا تفكّر وتخطّط بنفسها."},"council":{"members":[{"id":"groq","label":"Groq (free tier)","model":"openai/gpt-oss-120b"},{"id":"gemini","label":"Google Gemini (free tier)","model":"gemini-2.5-flash"},{"id":"openrouter","label":"OpenRouter (free models)","model":"openai/gpt-oss-120b:free"},{"id":"pollinations","label":"Pollinations (بدون مفتاح)","model":"openai-fast"},{"id":"openai","label":"OpenAI (مدفوع — آخر خيار)","model":"gpt-4o-mini"},{"id":"ollama","label":"Ollama (محلي مجاني)","model":"dolphin-llama3"}],"mode":"vote","note":"المجلس جاهز — أكتر من نموذج بيتسألوا مع بعض، ونموذج مختلف بيحكم بينهم."},"tools":33,"categories":["recon","intel","memory","mission","platform","utility","fleet"]}
+
 ## /api/nova-core/council/ping (new bundle only)
-{"ok":true,"seats":[{"provider":"groq","model":"openai/gpt-oss-120b","ok":true,"ms":437,"detail":"OK"},{"provider":"gemini","model":"gemini-2.5-flash","ok":false,"ms":710,"detail":"gemini HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error"},{"provider":"openrouter","model":"openai/gpt-oss-120b:free","ok":false,"ms":652,"detail":"openrouter HTTP 429: {\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortl"},{"provider":"pollinations","model":"openai-fast","ok":true,"ms":123,"detail":"OK"},{"provider":"openai","model":"gpt-4o-mini","ok":false,"ms":2574,"detail":"openai HTTP 429: {\n    \"error\": {\n        \"message\": \"You have no credits remaining. Add credits to continue using the API at https://platform.openai.com/settings/organization/b"},{"provider":"ollama","model":"dolphin-llama3","ok":false,"ms":12,"detail":"fetch failed"}],"working":2,"total":6,"verdict":"نموذجان بيردّوا فعلاً — تصويت + حكم متبادل، كفاية."}
+
 ## POST /api/multi-ai/chat  (real model call, SSE)
-event: status
-data: {"status":"thinking","provider":"auto"}
-
-event: done
-data: {"text":"","provider":"groq","chars":0}
-
 
 ## POST /api/nova-core/chat  (ready event names the provider)
-event: ready
-data: {"type":"ready","sessionId":"nova-1793586854020","mode":"llm","provider":"pollinations","model":"openai-fast","tools":33}
-event: thought
-data: {"type":"thought","text":""}
-event: delta
-data: {"type":"delta","text":"تمام"}
-event: done
-data: {"type":"done","sessionId":"nova-1793586854020","mode":"llm","toolCount":0,"ms":5246,"provider":"pollinations"}
 
 ## POST /api/nova-core/council (new bundle only)
-{"ok":true,"question":"إيه أول خطوة في فحص نطاق مصرّح به؟ سطرين بالكتير.","members":[{"provider":"groq","label":"Groq (free tier)","model":"openai/gpt-oss-120b","ok":true,"text":"أول خطوة هي **جمع معلومات أساسية** عن النطاق: استخدم `whois`, `nslookup` و `subdomain enumeration` علشان تعرف المالك، الـ IP الأساسي، والسوب‑دومينات المتاحة.  \n\nبعد كده **تحقق من السرفرات المفتوحة** بـ `port scanning` علشان تعرف الخدمات اللي شغالة وتحدد نقطة الانطلاق للفحص.  \n\n**الخطوة التالية المقترحة:** نبدأ بـ `whois` للنطاق ونشوف النتائج. 🚀","ms":778},{"provider":"gemini","label":"Google Gemini (free tier)","model":"gemini-2.5-flash","ok":true,"text":"أهلاً يا حمو! 👋\n\nأول خطوة دايماً هي **جمع المعلومات الأساسية عن النطاق**، زي الـ IP بتاعه والـ DNS records (NS, MX, A) عشان نفهم البنية التحتية بتاعته.\n\n**الخطوة التالية المقترحة:** ممكن نستخدم أداة `dns_lookup` أو `tls_info` عشان نبدأ.","ms":2760},{"provider":"openrouter","label":"OpenRouter (free models)","model":"openai/gpt-oss-120b:free","ok":false,"text":"","ms":395,"error":"openrouter HTTP 429: {\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortl"},{"provider":"pollinations","label":"Pollinations (بدون مفتاح)","model":"openai-fast","ok":false,"text":"","ms":78,"error":"pollinations HTTP 402: {\"status\":402,\"success\":false,\"error\":{\"code\":\"FREE_LIMIT\",\"message\":\"Free limit reached: 1 reply every 45 seconds per IP. Retry after 40s, or get unlimited rep"}],"agreement":0.15,"agreementLabel":"اختلاف كبير","judge":null,"answer":"أول خطوة هي **جمع معلومات أساسية** عن النطاق: استخدم `whois`, `nslookup` و `subdomain enumeration` علشان تعرف المالك، الـ IP الأساسي، والسوب‑دومينات المتاحة.  \n\nبعد كده **تحقق من السرفرات المفتوحة** بـ `port scanning` علشان تعرف الخدمات اللي شغالة وتحدد نقطة الانطلاق للفحص.  \n\n**الخطوة التالية المقترحة:** نبدأ بـ `whois` للنطاق ونشوف النتائج. 🚀","disagreements":[],"ms":3496,"hint":"القاضي (gemini) فشل، فالعرض ده أطول إجابة. gemini HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error"}
+
 ## engine stamp — is the deployed bundle the ops build at all?
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <title>Cyber-Nova 2099 — Ethical Security & Bug Bounty Platform</title>
-    <script>
-      (function () {
-        try {
-          localStorage.removeItem("cybernova_home_activity_v2");
-          window.addEventListener("error", function (e) {
-            var msg = String((e && e.message) || "");
-            if (
-              (msg.indexOf("is not defined") !== -1 ||
-                msg.indexOf("Failed to fetch dynamically imported module") !== -1 ||
-                msg.indexOf("Importing a module script failed") !== -1) &&
-              !sessionStorage.getItem("cybernova_hard_reload_v15")
-            ) {
-              sessionStorage.setItem("cybernova_hard_reload_v15", "1");
-              var u = new URL(window.location.href);
-              u.searchParams.set("_v", String(Date.now()));
-              window.location.replace(u.toString
+
 
 VERDICT: PRE-OPS bundle — السيرفر ده لسه مفيهوش محرك /api/ops (لا scope gate ولا jobs ولا أدلة).
 الإصلاح: اعمل deploy من الفرع/PR اللي فيه  ثم restart، وبعدها الـprobe ده لازم يطلع opsRouter:true
 
 ## ops surface (200 = live, 404 = old bundle, HTML = SPA fallthrough = مش راوتر)
-GET /api/ops/kinds → 200 · <!DOCTYPE html><html lang="en">  <head>    <meta charset="UTF-8" />    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />    <meta http-
-GET /api/ops/programs → 200 · <!DOCTYPE html><html lang="en">  <head>    <meta charset="UTF-8" />    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />    <meta http-
-GET /api/ops/stats → 200 · <!DOCTYPE html><html lang="en">  <head>    <meta charset="UTF-8" />    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />    <meta http-
-GET /api/ops/sweep → 200 · <!DOCTYPE html><html lang="en">  <head>    <meta charset="UTF-8" />    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />    <meta http-
-GET /api/ops/provision → 200 · <!DOCTYPE html><html lang="en">  <head>    <meta charset="UTF-8" />    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />    <meta http-
+GET /api/ops/kinds → 000000 · 
+GET /api/ops/programs → 000000 · 
+GET /api/ops/stats → 000000 · 
+GET /api/ops/sweep → 000000 · 
+GET /api/ops/provision → 000000 · 
 
 ## the gate must refuse an anonymous stranger
-POST /api/ops/programs (anonymous) → 404 · <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Error</title></head><body><pre>Cannot POST /api/ops/programs</pre></body></html>
+POST /api/ops/programs (anonymous) → 000000 · 
 → مفيش 403: يا الهوست قديم يا NOVA_OPEN_OPS=1 لازم يتقفل قبل ما يبقى عام ⚠️
-POST /api/local-agent/exec (anonymous) → 200 · {"id":"exec-1793586865260-nhk5cbwl3ze","stdout":"uid=1001(runner) gid=1001(runner) groups=1001(runner),4(adm),100(users),113(docker),999(systemd-journal)\n","st
+POST /api/local-agent/exec (anonymous) → 000000 · 
+
+## self-provisioning state (keys loaded? scope seeded?)
+
+## background loop + toolchain on the hub
+
 
 ## free-plane catalogue + honest fleet ceiling
-{"ok":true,"hub":{"capabilities":["brain (33 أدوات)","llm chat","council","cve corpus","memory","crawl","build/deploy","self-check"]},"fleet":{"connected":4,"cpuCores":16,"ramGb":62.4,"capabilities":["clipboard","deep_profile","files","input","processes","pty","screenshot","shell","stream","sysinfo"],"nodes":[{"id":"gh-4-0008","hostname":"runnervmnwato","platform":"linux","cpus":4,"memMb":15983,"capabilities":["
-{"ok":true,"counts":{"hosts":10,"usable_no_card":8,"permanent_nodes":4,"services":22},"hosts":[{"id":"gh-actions","name":"GitHub Actions (أسطول نودات)","url":"https://github.com/DawshaX/xFREEDOLLARHACHx/actions/workflows/fleet-nodes.yml","kind":"ci",
+
+
 ## fleet
-{"agents":[{"id":"gh-4-0008","hostname":"runnervmnwato","platform":"linux","user":"runner","arch":"x64","cpus":4,"totalMemory":16759443456,"nodeVersion":"v22.23.4","capabilities":["shell","stream","files","processes","sysinfo","screenshot","pty","input","clipboard","deep_profile"],"interfaces":{"lo":[],"eth0":["10.1.0.54","fe80::6245:bdff:fe4b:565"]},"connectedAt":1793578086493},{"id":"gh-1-0008","hostname":"runnervmnwato","platform":"linux","user":"runner","arch":"x64","cpus":4,"totalMemory":16759443456,"nodeVersion":"v22.23.4","capabilities":["shell","stream","files","processes","sysinfo","screenshot","pty","input","clipboard","deep_profile"],"interfaces":{"lo":[],"eth0":["10.1.0.147","fe80::6245:bdff:feae:a66"]},"connectedAt":1793578088035},{"id":"gh-3-0008","hostname":"runnervmnwato","platform":"linux","user":"runner","arch":"x64","cpus":4,"totalMemory":16758407168,"nodeVersion":"v22.23.4","capabilities":["shell","stream","files","processes","sysinfo","screenshot","pty","input","clipboard","deep_profile"],"interfaces":{"lo":[],"eth0":["10.1.0.52","fe80::7eed:8dff:fe4b:b85c"]},"connectedAt":1793578094787},{"id":"gh-2-0008","hostname":"runnervmnwato","platform":"linux","user":"runner","arch":"x64","cpus":4,"totalMemory":16759443456,"nodeVersion":"v22.23.4","capabilities":["shell","stream","files","processes","sysinfo","screenshot","pty","input","clipboard","deep_profile"],"interfaces":{"lo":[],"eth0":["10.1.0.53","fe80::6245:bdff:fe2f:751b"]},"connectedAt":1793578099326}],"count":4}
-{"ok":true,"now":1793586866478,"capacity":{"machines":{"target":5,"connected":4},"agents":{"target":10,"connected":4},"ready":false,"installCommand":"curl -fsSL <host>/api/local-agent/download-agent | bash -s -- --id machine-N"},"nodes":[{"id":"nova","name":"نوفا · الدماغ","kind":"brain","role":"التخطيط والتنفيذ على 33 أداة","status":"online","route":"/nova-agent"},{"id":"nova-v3","name":"Nova Agent V3","kind":"internal","role":"وكيل الجيل الثالث","status":"online","route":"/nova-agent-v3"},{"id":"nova-v6","name":"Nova Agent V6","kind":"internal","role":"وكيل الجيل السادس","status":"online","route":"/nova-agent-v6"},{"id":"commander","name":"Nova Commander","kind":"internal","role":"قيادة الأسراب وتوزيع الم
+
+
