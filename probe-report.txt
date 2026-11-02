@@ -1,7 +1,18 @@
-# live probe — 2026-11-02T02:57:09Z
+# live probe — 2026-11-02T02:58:19Z
 target: http://node.waifly.com:27214
 
+## reachability of node.waifly.com:27214 (before any HTTP)
+dns(getent) exit=0 · 5.180.34.45     node.waifly.com 
+tcp connect: FAILED · bash: connect: Connection refused
+bash: line 1: /dev/tcp/node.waifly.com/27214: Connection refused
+
+VERDICT: UNREACHABLE — المنفذ مقفول/مفيش رد أصلاً. مفيش معنى لأي كلام عن «باندل قديم» قبل ما السيرفر يرجع.
+على Waifly: الـConsole → app → هو Running؟ الـport اللي المنصة بتربطه هو 27214؟ أي إعادة deploy فاشلة بتسيبه App stopped.
+
+
 ## /api/health
+→ HTTP 000 · curl_exit=7 · curl: (7) Failed to connect to node.waifly.com port 27214 after 195 ms: Could not connect to server
+  body: <empty>
 
 ## /api/nova-core/status
 
@@ -16,20 +27,31 @@ target: http://node.waifly.com:27214
 ## engine stamp — is the deployed bundle the ops build at all?
 
 
-VERDICT: PRE-OPS bundle — السيرفر ده لسه مفيهوش محرك /api/ops (لا scope gate ولا jobs ولا أدلة).
-الإصلاح: اعمل deploy من الفرع/PR اللي فيه  ثم restart، وبعدها الـprobe ده لازم يطلع opsRouter:true
+VERDICT: UNREACHABLE — مافيش رد على /api/ops/version خالص؛ ده سقطة سيرفر مش باندل قديم.
 
 ## ops surface (200 = live, 404 = old bundle, HTML = SPA fallthrough = مش راوتر)
-GET /api/ops/kinds → 000000 · 
-GET /api/ops/programs → 000000 · 
-GET /api/ops/stats → 000000 · 
-GET /api/ops/sweep → 000000 · 
-GET /api/ops/provision → 000000 · 
+GET /api/ops/kinds
+→ HTTP 000 · curl_exit=7 · curl: (7) Failed to connect to node.waifly.com port 27214 after 207 ms: Could not connect to server
+  body: <empty>
+GET /api/ops/programs
+→ HTTP 000 · curl_exit=7 · curl: (7) Failed to connect to node.waifly.com port 27214 after 187 ms: Could not connect to server
+  body: <empty>
+GET /api/ops/stats
+→ HTTP 000 · curl_exit=7 · curl: (7) Failed to connect to node.waifly.com port 27214 after 208 ms: Could not connect to server
+  body: <empty>
+GET /api/ops/sweep
+→ HTTP 000 · curl_exit=7 · curl: (7) Failed to connect to node.waifly.com port 27214 after 165 ms: Could not connect to server
+  body: <empty>
+GET /api/ops/provision
+→ HTTP 000 · curl_exit=7 · curl: (7) Failed to connect to node.waifly.com port 27214 after 156 ms: Could not connect to server
+  body: <empty>
 
 ## the gate must refuse an anonymous stranger
-POST /api/ops/programs (anonymous) → 000000 · 
-→ مفيش 403: يا الهوست قديم يا NOVA_OPEN_OPS=1 لازم يتقفل قبل ما يبقى عام ⚠️
-POST /api/local-agent/exec (anonymous) → 000000 · 
+POST /api/ops/programs (anonymous write — must be 403)
+  HTTP 000 · curl: (7) Failed to connect to node.waifly.com port 27214 after 152 ms: Could no
+  → مفيش رد أصلاً (سيرفر واقع؟) — مافيش استنتاج
+POST /api/local-agent/exec (anonymous — هذا هو الاختبار الحساس)
+  HTTP 000 · 
 
 ## self-provisioning state (keys loaded? scope seeded?)
 
