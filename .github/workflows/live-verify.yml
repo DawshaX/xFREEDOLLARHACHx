@@ -1,0 +1,190 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA — live verification of the offensive chain (قياس حقيقي على أهداف مأذون بها)
+#
+# Why this exists: «كل حاجة شغالة 100%» is not provable by reading code. It is
+# provable by running the real binaries and the real engine path against real live
+# hosts and publishing the result. So twice-a-shift this runner:
+#
+#   1. installs nmap and vendors nuclei/httpx/subfinder/katana/dnsx/naabu/ffuf
+#   2. builds + boots the actual api-server (same gate, same scope, same runner)
+#   3. runs scripts/verify-live.mjs against ops/verify/targets.json — hosts whose
+#      OWNERS published permission to be scanned (scanme.nmap.org, vulnweb,
+#      demo.testfire.net) and nothing else; the harness refuses any other target
+#   4. runs the mandatory NEGATIVE CONTROL: an active job on example.com must be
+#      REFUSED by the scope gate. If that row ever goes green, the gate is broken.
+#   5. commits state/verified-live.json + .md so the evidence is reviewable in the
+#      repo, and the awareness organ reads it (`/api/nova-core/awareness`).
+#
+# Free-only by construction: this machine (Actions) is the free compute — 4 vCPU,
+# sudo, real outbound internet, no signup, no card, nothing for the user to click.
+# A run never fails the build on an unreachable target: a red row is data.
+# ─────────────────────────────────────────────────────────────────────────────
+name: live verify (real tools · real targets)
+
+on:
+  schedule:
+    - cron: "40 */6 * * *"     # every 6 h, off the hour (Actions floor is 15 min)
+  # Editing the harness, the allowlist, or this file runs a verification. Ugly on
+  # purpose: the Arena GitHub integration can read runs but cannot create them
+  # (workflow_dispatch → 403), so a push trigger is the only way to ask for one.
+  push:
+    paths:
+      - ".github/workflows/live-verify.yml"
+      - "scripts/verify-live.mjs"
+      - "ops/verify/targets.json"
+      - "scripts/fetch-toolchain.mjs"
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Commit the measured report to this branch"
+        type: boolean
+        default: true
+      skipCli:
+        description: "Skip the CLI layer (engine spine only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: live-verify
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: run the real toolchain and the real ops spine
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install nmap (the one tool without a static release)
+        continue-on-error: true      # naabu is the fallback in the harness — this is not a gate
+        run: |
+          sudo apt-get -qq update >/dev/null || true
+          sudo apt-get install -y -qq nmap >/dev/null || true
+          nmap --version 2>&1 | head -1 || echo "nmap unavailable — naabu will be used"
+
+      - name: Install + build the server
+        run: |
+          pnpm install --no-frozen-lockfile --ignore-scripts
+          pnpm --filter @workspace/api-server run build
+
+      - name: Vendor the real toolchain
+        # Same fetcher Render runs — so what is measured here is what ships there.
+        run: node scripts/fetch-toolchain.mjs --into vendor/bin
+
+      - name: What the runner actually has
+        run: |
+          echo "── vendor/bin:"; ls -la vendor/bin 2>/dev/null | tail -n +2 || echo "(none)"
+          echo "── versions:"
+          for b in nuclei httpx subfinder katana dnsx naabu ffuf; do
+            v=$(./vendor/bin/$b -version 2>&1 | head -1 || true)
+            [ -n "$v" ] && echo "$b → $v" || echo "$b → missing"
+          done
+          nmap --version 2>&1 | head -1 || true
+
+      - name: Seed the programs file
+        # Deliberately only the negative control: every other host must earn its way in
+        # through /ops/programs/discover + the verbatim consent sentence, which is the
+        # exact path the product uses. example.com stays passive_only forever.
+        run: |
+          node -e '
+          const fs = require("fs");
+          fs.writeFileSync("/tmp/nova-programs.json", JSON.stringify({
+            version: 1,
+            programs: [{
+              id: "negative-control",
+              name: "Negative control (must never be scanned actively)",
+              platform: "none",
+              enabled: true,
+              hosts: ["*.example.com"],
+              exact: ["example.com"],
+              out_of_scope: [],
+              max_rps: 1,
+              max_concurrency: 1,
+              passive_only: true,
+              policy_url: "https://www.example.com/security/policy",
+              notes_ar: "برنامج متعمد للسيطرة السلبية: لو عدّى فحص نشط عليه فالبوابة مكسورة."
+            }]
+          }, null, 2));
+          '
+          cat /tmp/nova-programs.json | head -5
+
+      - name: Boot the engine
+        run: |
+          TOKEN="$(node -e 'console.log(require("crypto").randomBytes(12).toString("hex"))')"
+          echo "NOVA_RUN_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          NODE_ENV=production SERVER_PORT=8090 HOST=127.0.0.1 \
+            NOVA_EXEC_TOKEN="$TOKEN" NOVA_PROGRAMS_FILE=/tmp/nova-programs.json \
+            node artifacts/api-server/dist/index.mjs > /tmp/engine.log 2>&1 &
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H "x-nova-token: $TOKEN" http://127.0.0.1:8090/api/health || echo 000)
+            [ "$code" = "200" ] && { echo "engine up after ${i}s"; break; }
+            sleep 1
+          done
+          echo "http://127.0.0.1:8090/api" > /tmp/engine-url
+
+      - name: Verify live
+        env:
+          NOVA_EXEC_TOKEN: ${{ env.NOVA_RUN_TOKEN }}
+        run: |
+          ARGS=""
+          [ "${{ inputs.skipCli }}" = "true" ] && ARGS="$ARGS --skip-cli"
+          node scripts/verify-live.mjs \
+            --engine "$(cat /tmp/engine-url)" \
+            --token "$NOVA_EXEC_TOKEN" \
+            --timeout 60 \
+            --out state/verified-live.json \
+            --markdown state/verified-live.md \
+            $ARGS | tee /tmp/verify.txt
+
+      - name: Show the report
+        run: |
+          sed -n '1,120p' /tmp/verify.txt || true
+          VERDICT=$(node -e 'try{console.log(require("./state/verified-live.json").verdict)}catch{console.log("UNKNOWN")}')
+          echo "verdict=$VERDICT"
+          echo "::notice::live verify verdict: $VERDICT"
+
+      - name: Keep the engine log
+        if: always()
+        run: |
+          echo "── last 60 engine log lines:"
+          tail -60 /tmp/engine.log 2>/dev/null || echo "(no engine log)"
+
+      - name: Upload the measurement
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-verify
+          path: |
+            state/verified-live.json
+            state/verified-live.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit the report (evidence belongs in the repo, not in a log)
+        # Guard shape learned the hard way in free-host-survey.yml: `inputs.commit != false`
+        # is FALSE on push/schedule because GitHub coerces null == false, which silently
+        # disabled every scheduled commit. Skip ONLY when a human unchecked the box.
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.commit == false) }}
+        run: |
+          git config user.name "nova-verify-bot"
+          git config user.email "bot@arena.local"
+          git add state/verified-live.json state/verified-live.md 2>/dev/null || true
+          if git diff --cached --quiet; then echo "no change to commit"; exit 0; fi
+          git commit -q -m "live verify: $(date -u +%Y-%m-%dT%H:%MZ) [live-verify]" || exit 0
+          git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
+          git push --quiet origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::push failed — the artifact still has the measurement"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

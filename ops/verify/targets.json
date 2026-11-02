@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "_readme_ar": [
+    "قائمة أهداف «التمرين» اللي NOVA بتحقّق بيها سلسلة الأدوات الحقيقية — مش mock.",
+    "كل هدف هنا منشور صاحبه صراحة إن مسموح تُفحصه، والمستند محطوط في permission_url عشان أي حد يراجع.",
+    "أي هدف مش في القايمة دي مرفوض من الـharness نفسه (مش بس من scope gate) — يعني الخطأ المطبعي:",
+    "«أضيفت البوابة واتقفلت» هو اللي بيخلي التحقق ده آمن وهو شغال على جهاز مصدر IP بتاع جيت-هَب.",
+    "لو هدف واقع، الـcheck بيتعلّم blocked ومش فاشل — عشان «مفيش استجابة» مش «أدواتي بايظة»."
+  ],
+  "targets": [
+    {
+      "host": "scanme.nmap.org",
+      "why": "مضيف مخصص لاختبار nmap — صاحبه (Gordon Lyon) كاتب صراحة إن المسح مسموح",
+      "permission_url": "https://scanme.nmap.org/",
+      "expects": {
+        "openPorts": [
+          80,
+          22
+        ],
+        "httpStatus": 200,
+        "title": "scanme.nmap.org"
+      },
+      "active": true
+    },
+    {
+      "host": "testphp.vulnweb.com",
+      "why": "موقع اختبار Acunetix — منشور للاستخدام مع الماسحات (nuclei/zap/burp) في وثائقهم",
+      "permission_url": "https://www.acunetix.com/vulnerability-scanner/webscantest/",
+      "expects": {
+        "httpStatus": 200,
+        "crawledUrls": 5,
+        "nucleiFindings": 1
+      },
+      "active": true
+    },
+    {
+      "host": "demo.testfire.net",
+      "why": "تطبيق اختبار IBM العام (AppScan) — مبني عشان يتفحص",
+      "permission_url": "https://demo.testfire.net/",
+      "expects": {
+        "httpStatus": 200,
+        "title": "Hacking"
+      },
+      "active": true
+    },
+    {
+      "host": "vulnweb.com",
+      "why": "نطاق اختبار عام لتعداد النطاقات الفرعية (مصادر DNS/شهادات — بيلمس سجلات مش خدمة)",
+      "permission_url": "https://www.acunetix.com/vulnerability-scanner/webscantest/",
+      "expects": {
+        "subdomains": 2
+      },
+      "passiveDomain": true
+    }
+  ],
+  "negativeControl": {
+    "host": "example.com",
+    "why": "مثال على هدف ماحدش أذن بفحصه — لازم الخطة النشطة عليه تُرفض من scope gate. لو السطر ده بقى أخضر يبقى البوابة اتكسرت.",
+    "mustRefuse": true,
+    "noConsent": true
+  }
+}
