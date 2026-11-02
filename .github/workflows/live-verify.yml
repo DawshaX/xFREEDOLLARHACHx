@@ -49,7 +49,11 @@ permissions:
 
 concurrency:
   group: live-verify
-  cancel-in-progress: true
+  # NOT cancel-in-progress: this workflow's only product is a committed measurement, and every
+  # merge here re-triggers it — so cancelling the in-flight run destroyed the measurement it had
+  # already taken (measured: run 41459589703/41460859502 · run 41462489871 ended `cancelled` with
+  # its steps green and nothing published). Queue instead; a queued measurement is never lost.
+  cancel-in-progress: false
 
 jobs:
   verify:
