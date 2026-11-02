@@ -139,10 +139,13 @@ jobs:
           # but unpublished (measured: the runner's own commit 5525eed carried the skip-ci
           # marker and /nova-runs/index.json kept serving the old placeholder). The loop that could
           # cause — this workflow re-triggering itself — is closed by the path filter plus
-          # WARNING learned the hard way (2026-11-02): writing the skip-ci marker ANYWHERE in a
-          # commit message body — even in prose explaining it — makes GitHub skip every workflow
-          # for that push. Two commits on main lost their Pages deploy that way. Never type it here.
-          # the runner exiting before it writes anything when the queue is empty.
+          # WARNING (measured 2026-11-02): the skip-ci marker is read from the whole commit
+          # message — prose included — and it silences EVERY workflow for that push, the Pages
+          # deploy first. That is why the runner's own commit lost its publish (5525eed). It is
+          # NOT the whole story: 59610be and 4866fce had no marker and the deploy still did not
+          # run, so the honest rule is to measure rather than to explain:
+          #   gh run list --workflow "🌐 نشر المنصة على GitHub Pages (تحديث لحظي تلقائي)" -L 2
+          #   gh workflow run deploy-pages.yml -r main   # أو زرار Run workflow
           git commit -q -m "nova-runner: $(date -u +%Y-%m-%dT%H:%MZ) · $(git diff --cached --name-only | wc -l) ملف" || exit 0
           git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
           git push --quiet origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::الـpush فشل — الأثر لسه فيه التقارير"
