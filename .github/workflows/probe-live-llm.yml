@@ -39,12 +39,45 @@ jobs:
           R=probe-report.txt
           : > "$R"
           say() { echo "$@" | tee -a "$R"; }
+          # A blank line used to mean three different things: down, refused, or an
+          # empty 200. Now every probe records the HTTP code, curl's exit status and
+          # curl's own error text — `000` with exit 7 is refused, exit 28 is a
+          # timeout, and "could not resolve host" is DNS. Different fixes entirely.
+          get() {
+            url="$1"; lim="${2:-25}"
+            : > /tmp/body.txt; : > /tmp/code.txt; : > /tmp/err.txt
+            curl -sS -o /tmp/body.txt -w '%{http_code}' -m "$lim" "$url" > /tmp/code.txt 2>/tmp/err.txt
+            cx=$?
+            code=$(cat /tmp/code.txt 2>/dev/null)
+            body=$(head -c 300 /tmp/body.txt 2>/dev/null | tr '\n' ' ')
+            say "→ HTTP ${code:-none} · curl_exit=$cx · $(head -c 160 /tmp/err.txt 2>/dev/null)"
+            say "  body: ${body:-<empty>}"
+            printf '%s' "$code" > /tmp/last_code
+            printf '%s' "$cx" > /tmp/last_cx
+          }
           say "# live probe — $(date -u +%FT%TZ)"
           say "target: $TARGET"
           say ""
 
+          hostport=$(printf '%s' "$TARGET" | sed -E 's#^https?://##; s#/.*$##')
+          hostp="${hostport#*://}"; host="${hostport%%:*}"; port="${hostport##*:}"
+          [ "$port" = "$host" ] && port=80
+          say "## reachability of $host:$port (before any HTTP)"
+          getent hosts "$host" >/tmp/dns.txt 2>&1; dx=$?
+          say "dns(getent) exit=$dx · $(head -c 200 /tmp/dns.txt | tr '\n' ' ')"
+          if timeout 8 bash -c "exec 3<>/dev/tcp/$host/$port" 2>/tmp/tcp.err; then
+            say "tcp connect: OPEN ✓"
+          else
+            say "tcp connect: FAILED · $(head -c 160 /tmp/tcp.err)"
+            say ""
+            say "VERDICT: UNREACHABLE — المنفذ مقفول/مفيش رد أصلاً. مفيش معنى لأي كلام عن «باندل قديم» قبل ما السيرفر يرجع."
+            say "على Waifly: الـConsole → app → هو Running؟ الـport اللي المنصة بتربطه هو $port؟ أي إعادة deploy فاشلة بتسيبه App stopped."
+            say ""
+          fi
+          say ""
+
           say "## /api/health"
-          curl -sS -m 20 "$TARGET/api/health" | tee -a "$R"; say ""
+          get "$TARGET/api/health"; say ""
 
           say "## /api/nova-core/status"
           curl -sS -m 30 "$TARGET/api/nova-core/status" | tee -a "$R"; say ""
@@ -74,7 +107,9 @@ jobs:
           V=$(curl -sS -m 20 "$TARGET/api/ops/version" 2>/dev/null | head -c 1200 || true)
           say "$V"
           say ""
-          if echo "$V" | grep -q '"opsRouter"'; then
+          if [ ! -s /tmp/body.txt ] || [ "$(cat /tmp/last_code 2>/dev/null)" = "000" ]; then
+            say "VERDICT: UNREACHABLE — مافيش رد على /api/ops/version خالص؛ ده سقطة سيرفر مش باندل قديم."
+          elif echo "$V" | grep -q '"opsRouter"'; then
             say "VERDICT: ops engine LIVE on this host."
             echo "$V" | grep -q '"suspect":true' && say "VERDICT+: الـbundle قديم شوية — محتاج redeploy للفرع الأخير."
           else
@@ -85,17 +120,36 @@ jobs:
 
           say "## ops surface (200 = live, 404 = old bundle, HTML = SPA fallthrough = مش راوتر)"
           for ep in kinds programs stats sweep provision; do
-            code=$(curl -sS -o /tmp/ops-$ep.json -w '%{http_code}' -m 20 "$TARGET/api/ops/$ep" 2>/dev/null || echo "000")
-            say "GET /api/ops/$ep → $code · $(head -c 180 /tmp/ops-$ep.json 2>/dev/null | tr -d "\n")"
+            say "GET /api/ops/$ep"
+            get "$TARGET/api/ops/$ep" 20
           done
           say ""
 
           say "## the gate must refuse an anonymous stranger"
-          code=$(curl -sS -o /tmp/deny.json -w '%{http_code}' -m 25 -X POST "$TARGET/api/ops/programs" -H 'content-type: application/json' -d '{"id":"probe-only","hosts":["example.com"]}' 2>/dev/null || echo "000")
-          say "POST /api/ops/programs (anonymous) → $code · $(head -c 200 /tmp/deny.json 2>/dev/null | tr -d "\n")"
-          [ "$code" = "403" ] && say "→ البوابة شغالة على الهوست ✅" || say "→ مفيش 403: يا الهوست قديم يا NOVA_OPEN_OPS=1 لازم يتقفل قبل ما يبقى عام ⚠️"
-          code=$(curl -sS -o /tmp/deny2.json -w '%{http_code}' -m 20 -X POST "$TARGET/api/local-agent/exec" -H 'content-type: application/json' -d '{"command":"id"}' 2>/dev/null || echo "000")
-          say "POST /api/local-agent/exec (anonymous) → $code · $(head -c 160 /tmp/deny2.json 2>/dev/null | tr -d "\n")"
+          say "POST /api/ops/programs (anonymous write — must be 403)"
+          curl -sS -o /tmp/deny.json -w '%{http_code}' -m 25 -X POST "$TARGET/api/ops/programs" \
+            -H 'content-type: application/json' -d '{"id":"probe-only","hosts":["example.com"]}' > /tmp/c1 2>/tmp/e1 || true
+          c1=$(cat /tmp/c1); say "  HTTP ${c1:-none} · $(head -c 200 /tmp/deny.json 2>/dev/null | tr -d "\n")$(head -c 80 /tmp/e1 2>/dev/null)"
+          if [ "$c1" = "403" ]; then say "  → البوابة شغالة على الهوست ✅"
+          elif [ "$c1" = "200" ] || [ "$c1" = "201" ]; then say "  → ⚠️⚠️ الكتابة المجهولة مقبولة: الهوست مكشوف لأي حد على الإنترنت"
+          elif [ -z "$c1" ] || [ "$c1" = "000" ]; then say "  → مفيش رد أصلاً (سيرفر واقع؟) — مافيش استنتاج"
+          else say "  → HTTP $c1 (مش 403): يا باندل قديم يا route ناقص"; fi
+          say "POST /api/local-agent/exec (anonymous — هذا هو الاختبار الحساس)"
+          curl -sS -o /tmp/deny2.json -w '%{http_code}' -m 20 -X POST "$TARGET/api/local-agent/exec" \
+            -H 'content-type: application/json' -d '{"command":"id"}' > /tmp/c2 2>/tmp/e2 || true
+          c2=$(cat /tmp/c2); say "  HTTP ${c2:-none} · $(head -c 200 /tmp/deny2.json 2>/dev/null | tr -d "\n")"
+          if echo "$(cat /tmp/deny2.json 2>/dev/null)" | grep -q "uid="; then
+            say "  → 🚨 تنفيذ أمر حقيقي رجّع output لمن لا أعرفه — اقطع الهوست فوراً ودوّر المفاتيح"
+          fi
+          say ""
+
+          say "## self-provisioning state (keys loaded? scope seeded?)"
+          curl -sS -m 20 "$TARGET/api/ops/provision" | head -c 500 | tee -a "$R"
+          say ""
+          say "## background loop + toolchain on the hub"
+          curl -sS -m 20 "$TARGET/api/ops/sweep" | head -c 400 | tee -a "$R"
+          say ""
+          curl -sS -m 20 "$TARGET/api/tools/corpus-status" 2>/dev/null | head -c 260 | tee -a "$R" || true
           say ""
 
           say "## free-plane catalogue + honest fleet ceiling"
