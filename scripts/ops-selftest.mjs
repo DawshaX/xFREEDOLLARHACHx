@@ -270,7 +270,10 @@ await tA("a tool found by the finder is also SPAWNED by the runner (vendor/bin o
     "matcher-name": "word",
     info: { name: "selftest match", severity: "high", tags: ["test"] },
   });
-  fs.writeFileSync(fake, `#!/bin/sh\necho '${hit}'\n`, { mode: 0o755 });
+  // The fake ALSO reads stdin, which is how a stdin-reading tool behaves: with stdio[0]="ignore"
+  // `read` hits EOF at once and the tool prints its result; hand it an open pipe instead and it
+  // waits for input we will never send — the exact shape of the httpx hang measured in CI.
+  fs.writeFileSync(fake, `#!/bin/sh\nread -r x || true\necho '${hit}'\n`, { mode: 0o755 });
   // argv sanity: nuclei has no `-json` (it is `-jsonl`), and a wrong flag used to look like success
   {
     const argvN = String(kinds.KINDS["tools.nuclei"].args({ host: "x", scheme: "https", program, rps: 1 }, {}));
@@ -279,6 +282,8 @@ await tA("a tool found by the finder is also SPAWNED by the runner (vendor/bin o
     const argvH = String(kinds.KINDS["tools.httpx"].args({ host: "x", scheme: "https", program, rps: 1 }, {}));
     assert.doesNotMatch(argvH, /connect-timeout/, "httpx has no -connect-timeout flag");
     assert.ok(Number(kinds.KINDS["tools.httpx"].budgetMs) > 0, "httpx needs its own budget so it cannot eat the job");
+    assert.ok(Number(kinds.KINDS["tools.nuclei"].budgetMs) >= 240_000, "nuclei needs minutes, not the job default");
+    assert.ok(Number(kinds.KINDS["recon.dns"].budgetMs ?? 0) === 0, "cheap kinds inherit the job default");
   }
   const fakeFail = path.join(binDir, "nuclei-failing");
   fs.writeFileSync(fakeFail, "#!/bin/sh\necho 'flag provided but not defined: -connect-timeout'\nexit 2\n", { mode: 0o755 });

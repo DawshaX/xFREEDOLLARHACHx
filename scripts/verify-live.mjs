@@ -131,7 +131,9 @@ async function cliChecks(cfg) {
   // httpx measures "does the probe binary work", so it is aimed at the host that demonstrably
   // answers over plain HTTP (the crawler reaches it) — a row that only ever says "exit=0 · 0B"
   // because of some TLS chain nobody asked about measures nothing.
-  const probeUrl = `${testRow.scheme || "http"}://${testSite}/`;
+  // The SAME host and flags the spine drives, or the two layers answer different questions: three
+  // runs of `httpx … 0B` were a mismatched question, and the row label must name what ran.
+  const probeUrl = `${liveRow.scheme || "https"}://${liveRow.host}/`;
 
   // resolution first: if DNS does not answer, every later row is meaningless
   const dnsx = findBinary("dnsx");
@@ -305,7 +307,9 @@ async function engineChecks(cfg) {
     add("engine", "job created", "pass", `job=${job.id} · ${Array.isArray(job?.tasks) ? job.tasks.length : 0} مهمة${job?.plan?.kinds?.length ? ` · kinds=${short(job.plan.kinds.join(","), 120)}` : ""}`);
     await api(`/ops/jobs/${job.id}/run`, { method: "POST", body: {} });
     let last = null;
-    const until = Date.now() + 6 * 60 * 1000;
+    // 12 min, not 6: nuclei alone is allowed 260 s of real scanning, and a report that gives up
+    // before the job finishes measures my patience, not the engine.
+    const until = Date.now() + 12 * 60 * 1000;
     while (Date.now() < until) {
       const j = await api(`/ops/jobs/${job.id}`);
       last = j.body?.job || j.body;
