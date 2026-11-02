@@ -1017,3 +1017,17 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   `state/jobs/.../evidence/infra.freehosts-*.txt`، وتقرير شفاف «0 reportable · 1 failed: fetch failed»
   ( Sandbox = مفيش خروج، وده مكتوب في التقرير نفسه). 22/24 فحص حي · 35/35 · 0 فجوات · ratchet 97.
   كمان `router.use(fleetCapacityRouter)` كانت متكررة مرتين في `routes/index.ts` — اتوحّدت.
+
+- **2026-11-02 (خامس):** على سؤال «مفيش مكان واحد يغنينا؟» —المرشحين اتقاسوا واتنفّض: Qoddy بيطلب كارت للتوثيق
+  حتى على المجاني (مسجّل 2026-08-28)، Sealos ملهاش خطة مجانية في 2026 (تجربة 7 أيام ثم $7)،
+  Hugging Face Spaces من 2026 محتاج PRO عشان تعمل Docker Space + الخرج مقفول على 80/443/8080
+  + نوم بعد 48 ساعة، Cloudflare Containers محتاج Workers Paid $5 وسقفه 375 دقيقة vCPU/شهر.
+  الإجابة: **جيت-هَب هو المكان** (Pages عنوان + Actions جهاز 4 أنوية/16 جيجا بـ`sudo` لدقايق
+  غير محدودة + Releases تخزين)، واللي مالوش منفذ عام — فـWaifly يفضل صندوق البريد.
+  اتبنى فعلاً: `scripts/nova-queue-runner.mjs` + `.github/workflows/nova-runner.yml` (push على
+  `state/nova-queue.json` + cron */15) بينصّب nmap/nuclei/httpx/subfinder/katana/dnsx، يقدّم
+  المحرك على 127.0.0.1، يسيّب البعثات من خلال `/api/ops/*` (نفس بوابات التصريح — مفيش منطق تنفيذ
+  جديد)، ويرجّع `nova-runs/<id>.md|json|index.json` في `public/` فتظهر على Pages. العمق النشط
+  محتاج `vars.NOVA_RUNNER_ALLOW_ACTIVE=1` بشكل صريح. مُقاس محلياً: `demo-selfhost` → done
+  (job `20261102-1c8db5`، 3 مهام، 1419ms) — ومع مفيش محرك: الطابور ما اتلمسش + warning + exit 2.
+  `docs/GITHUB-AS-THE-SERVER.md` فيه العقد الكامل والجدول.

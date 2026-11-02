@@ -1,0 +1,142 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA runner — الطابور اللي بيشغّل NOVA من غير ما يكون عندك سيرفر خالص
+#
+# الفكرة اللي الملف ده كلّه عشانها: كل المضيفين المجانيين بيطلبوا منك حاجة واحدة
+# على الأقل: إما 256–512 ميجا، أو بيناموا، أو كارت ائتمان، أو root ممنوع. جيت-هَب
+# نفسه مابيطلبش ولا واحدة من دول: ريبو عام = دقائق غير محدودة، وكل job جهاز
+# أوبونتو حقيقي 4 أنوية / 16 جيجا، وعندك `sudo` وتنصّب اللي عايزه، ومفيش كارت،
+# ومفيش نوم. اللي مالوش: مينفعش يستقبل اتصال من برّه (مفيش منفذ عام) وjob بيموت
+# بعد 6 ساعات. فالحل مش «نسيرفر بديل» — الحل إننا نقلب الدور:
+#
+#   الواجهة + المخزن + جهاز التنفيذ  = جيت-هَب (الملف ده + Pages)
+#   البريد/الرسايل اللحظية            = أي مضيف صغير (Waifly دلوقتي، Silly بعدين)
+#
+# الطريقة: الطابور ملف جوه الريبو (`state/nova-queue.json`). تحرّره من واجهة
+# الويب على جيت-هَب — من غير كلون ولا سيرفر — والـworkflow ده يقلّع، يبني
+# المحرك الحقيقي، ينصّب الأدوات الحقيقية، ينفّذ البعثات **من خلال `/api/ops/*`**
+# ( نفس بوابات التصريح والـrate limit والرفض لو مفيش إذن مكتوب — مفيش منطق جديد
+# هنا)، وبعدين يرجّع التقرير منشور على Pages ويحدّث حالة الطابور.
+#
+# الحدّ المتعمّد: أي عمق نشط (standard/deep) أو أدوات بتماس الهدف (nuclei/httpx)
+# محتاج `vars.NOVA_RUNNER_ALLOW_ACTIVE = 1`. IP المصدر هنا بتاع جيت-هَب، فمسح
+# نشط منيه = إساءة للمنصة قبل ما تكون مسألة في حق الهدف. الافتضي هو الرفض.
+# ─────────────────────────────────────────────────────────────────────────────
+name: nova-runner (طابور بدون سيرفر)
+
+on:
+  push:
+    paths:
+      - "state/nova-queue.json"
+  schedule:
+    # كل 15 دقيقة = التردد اللي بيشوف «مهمة اتحطت في الطابور» من غير ما حد يضغط زرار.
+    # cron بياخد من الفرع الافتراضي بس، وده المطلوب: الطابور على main.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      wait:
+        description: "ثواني الانتظار لكل بعثة"
+        required: false
+        default: "420"
+      limit:
+        description: "أقصى عدد بعثات في الجولة"
+        required: false
+        default: "6"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nova-runner
+  cancel-in-progress: false
+
+jobs:
+  run-queue:
+    name: ينفّذ الطابور على جهاز جيت-هَب
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      NOVA_RUNNER_ALLOW_ACTIVE: ${{ vars.NOVA_RUNNER_ALLOW_ACTIVE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: الأدوات الحقيقية (اللي مفيش مضيف مجاني بيسيبك تنصّبها)
+        run: |
+          sudo apt-get update -qq || true
+          sudo apt-get install -y -qq --no-install-recommends \
+            nmap dnsutils whois netcat-openbsd jq openssl >/dev/null 2>&1 || true
+          # ProjectDiscovery بنوا من الريبو الرسمي، وبيتنزلوا في /usr/local/bin
+          for t in nuclei subfinder httpx katana dnsx; do
+            curl -sSL --max-time 90 "https://raw.githubusercontent.com/projectdiscovery/$t/main/install.sh" | bash >/dev/null 2>&1 || true
+          done
+          export PATH="$PATH:/usr/local/bin:$HOME/go/bin"
+          echo "على الجهاز ده: nmap=$(command -v nmap || echo -) nuclei=$(command -v nuclei || echo -) httpx=$(command -v httpx || echo -) subfinder=$(command -v subfinder || echo -) dig=$(command -v dig || echo -)"
+          echo "::notice::الأدوات موجودة — بس العمق النشط لسه متقفل غير لما vars.NOVA_RUNNER_ALLOW_ACTIVE=1"
+
+      - name: يبني المحرك
+        run: |
+          pnpm install --no-frozen-lockfile --ignore-scripts
+          pnpm --filter @workspace/api-server run build
+          node -e "const p=require('./artifacts/api-server/package.json');console.log('api-server',p.name)"
+
+      - name: يقدّم المحرك على 127.0.0.1
+        run: |
+          mkdir -p /tmp/nova-state
+          # NOVA_PROGRAMS_FILE على ملف فاضي في /tmp: مافيش تصاريح محفوظة في CI،
+          # فكل بعثة لازم تعمل discover بنفسها (وده مقصود — التصريح بيتسجل في
+          # الأوريجينال، مش بيتسرق من سيرفر تاني).
+          SERVER_PORT=8080 HOST=127.0.0.1 \
+          NOVA_PROGRAMS_FILE=/tmp/nova-programs.json \
+          NOVA_ALLOW_NODE_TOOLS=1 \
+          DATA_DIR=/tmp/nova-state \
+          nohup node artifacts/api-server/dist/index.mjs > /tmp/engine.log 2>&1 &
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 4 http://127.0.0.1:8080/api/health || echo 000)
+            [ "$code" = "200" ] && { echo "engine up after ${i}s"; break; }
+            sleep 1
+          done
+          curl -s --max-time 10 http://127.0.0.1:8080/api/ops/kinds | head -c 160; echo
+
+      - name: ينفّذ الطابور
+        run: |
+          node scripts/nova-queue-runner.mjs \
+            --queue state/nova-queue.json \
+            --out artifacts/kali-panel/public/nova-runs \
+            --url http://127.0.0.1:8080/api \
+            --wait "${{ github.event.inputs.wait || 420 }}" \
+            --limit "${{ github.event.inputs.limit || 6 }}"
+
+      - name: يطفي المحرك
+        if: always()
+        run: |
+          p=$(ss -ltnp 2>/dev/null | grep ':8080' | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2 || true)
+          [ -n "$p" ] && kill "$p" 2>/dev/null || true
+          tail -6 /tmp/engine.log 2>/dev/null || true
+
+      - name: يرفع التقارير كأثر (حتى لو الـpush فشل)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-runs
+          path: artifacts/kali-panel/public/nova-runs
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: يرجّع حالة الطابور + التقارير للريبو
+        run: |
+          git config user.name "nova-runner-bot"
+          git config user.email "bot@arena.local"
+          git add state/nova-queue.json artifacts/kali-panel/public/nova-runs 2>/dev/null || true
+          if git diff --cached --quiet; then echo "مفيش جديد — مفيش commit"; exit 0; fi
+          git commit -q -m "nova-runner: $(date -u +%Y-%m-%dT%H:%MZ) · $(git diff --cached --name-only | wc -l) ملف [skip ci]" || exit 0
+          git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
+          git push --quiet origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::الـpush فشل — الأثر لسه فيه التقارير"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
