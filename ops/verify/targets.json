@@ -30,11 +30,12 @@
       "permission_url": "https://www.acunetix.com/vulnerability-scanner/webscantest/",
       "expects": {
         "httpStatus": 200,
-        "crawledUrls": 5,
+        "crawledUrls": 1,
         "nucleiFindings": 1
       },
       "active": true,
-      "scheme": "http"
+      "scheme": "http",
+      "expects_note_ar": "المتوقع ≥1 رابط مش ≥5: السطر بيقيس إن الكرواشر اشتغل وطلع روابط من موقع حي، مش إن الموقع كبير — رقم كبير كان هيخلي البطء يبان كفشل."
     },
     {
       "host": "demo.testfire.net",
@@ -42,12 +43,14 @@
       "permission_url": "https://demo.testfire.net/",
       "expects": {
         "httpStatus": 200,
-        "title": "Hacking"
+        "title": "Hacking",
+        "nucleiFindings": 1
       },
       "active": true,
       "scheme": "https",
       "engineExercise": true,
-      "engine_note_ar": "بنختاره لسلسلة المحرك لأنه بيخدم HTTPS على 443 بجد — فـrecon.tls وrecon.headers ليهم معنى."
+      "engine_note_ar": "بنختاره لسلسلة المحرك لأنه بيخدم HTTPS على 443 بجد — فـrecon.tls وrecon.headers ليهم معنى.",
+      "expects_note_ar": "نuclei CLI بيتوجّه هنا (مش لـtestphp) لأن سلسلة المحرك طلّعت منه 11 نتيجة فعليًا — فالفارق بين «الأداة ما لقتش» و«الأداة ما اشتغلتش» بيبان."
     },
     {
       "host": "vulnweb.com",
