@@ -271,6 +271,15 @@ await tA("a tool found by the finder is also SPAWNED by the runner (vendor/bin o
     info: { name: "selftest match", severity: "high", tags: ["test"] },
   });
   fs.writeFileSync(fake, `#!/bin/sh\necho '${hit}'\n`, { mode: 0o755 });
+  // argv sanity: nuclei has no `-json` (it is `-jsonl`), and a wrong flag used to look like success
+  {
+    const argvN = String(kinds.KINDS["tools.nuclei"].args({ host: "x", scheme: "https", program, rps: 1 }, {}));
+    assert.match(argvN, /-jsonl/, "nuclei must be invoked with -jsonl");
+    assert.doesNotMatch(argvN, /"-json"/, "nuclei has no -json flag — that invocation exits 2");
+    const argvH = String(kinds.KINDS["tools.httpx"].args({ host: "x", scheme: "https", program, rps: 1 }, {}));
+    assert.doesNotMatch(argvH, /connect-timeout/, "httpx has no -connect-timeout flag");
+    assert.ok(Number(kinds.KINDS["tools.httpx"].budgetMs) > 0, "httpx needs its own budget so it cannot eat the job");
+  }
   const fakeFail = path.join(binDir, "nuclei-failing");
   fs.writeFileSync(fakeFail, "#!/bin/sh\necho 'flag provided but not defined: -connect-timeout'\nexit 2\n", { mode: 0o755 });
   const prevDir = process.env.NOVA_TOOL_DIR;

@@ -89,6 +89,12 @@ export interface KindDef {
   titleAr: string;
   /** requires touching the target's services (as opposed to public sources) */
   active: boolean;
+  /**
+   * Hard ceiling for this kind's own process, independent of the job's. Without it one tool that
+   * waits on a stalled socket ate the entire job window (`tools.httpx: exit=-1 · 180019ms`, run
+   * 41460859502) and starved every later task in the same job.
+   */
+  budgetMs?: number;
   binary?: string;
   args?: (ctx: RunCtx, params: Record<string, unknown>) => string[];
   /** the human-readable command string used for fleet exec + reproduce lines */
@@ -700,7 +706,10 @@ export const KINDS: Record<string, KindDef> = {
       const sev = (p["severities"] as string[]) ?? ["low", "medium", "high", "critical"];
       return [
         "-u", `${baseUrl(ctx)}/`,
-        "-json", "-silent", "-no-color",
+        // `-jsonl` — nuclei has NO `-json` flag. It exited 2 with a usage line and the old
+        // "printed something = success" rule recorded that as a completed task (measured: run
+        // 41460859502 after the exit code became authoritative).
+        "-jsonl", "-silent", "-no-color",
         "-rl", String(Math.max(1, Math.round(ctx.rps))),
         "-c", String(Math.max(1, ctx.program.max_concurrency ?? 2)),
         "-severity", sev.join(","),
@@ -708,7 +717,7 @@ export const KINDS: Record<string, KindDef> = {
         "-stats",
       ];
     },
-    command: (ctx, p) => `nuclei -u ${shQuote(`${baseUrl(ctx)}/`)} -json -silent -rl ${Math.max(1, Math.round(ctx.rps))} -severity ${shQuote(((p["severities"] as string[]) ?? ["medium", "high", "critical"]).join(","))}`,
+    command: (ctx, p) => `nuclei -u ${shQuote(`${baseUrl(ctx)}/`)} -jsonl -silent -rl ${Math.max(1, Math.round(ctx.rps))} -severity ${shQuote(((p["severities"] as string[]) ?? ["medium", "high", "critical"]).join(","))}`,
     parse: (stdout, ctx) => {
       const findings: Finding[] = [];
       for (const line of stdout.split(/\r?\n/)) {
@@ -735,7 +744,7 @@ export const KINDS: Record<string, KindDef> = {
             cvssGuess: Number(info["severity"] === "critical" ? 9.1 : info["severity"] === "high" ? 7.5 : info["severity"] === "medium" ? 5.3 : 3.1),
             reproduce: `nuclei -u ${shQuote(matched)} -id ${shQuote(String(j["template-id"] ?? ""))}`,
             remediationAr: String(info["remediation"] ?? "راجع مرجع القالب ثم أعد إنتاج النتيجة يدوياً."),
-            evidence: [writeEvidence(ctx, "tools.nuclei", `nuclei -json (template ${String(j["template-id"] ?? "?")})`, line)],
+            evidence: [writeEvidence(ctx, "tools.nuclei", `nuclei -jsonl (template ${String(j["template-id"] ?? "?")})`, line)],
             extra: { templateId: j["template-id"], matcher: j["matcher-name"], tags: info["tags"] },
           }),
         );
@@ -754,6 +763,7 @@ export const KINDS: Record<string, KindDef> = {
     // tried and REMOVED: httpx has no such flag, and its "flag provided but not defined" message
     // (48B, seen in run 41459589703) was being accepted as a successful task because the tool
     // printed *something* — which is exactly why the exit code is now authoritative below.
+    budgetMs: 45_000,
     args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-json", "-silent", "-follow-redirects", "-status-code", "-title", "-tech-detect", "-timeout", "8", "-retries", "1"],
     command: (ctx) => `httpx -u ${shQuote(`${baseUrl(ctx)}/`)} -json -silent -status-code -title -tech-detect`,
     parse: (stdout, ctx) => {
@@ -777,6 +787,7 @@ export const KINDS: Record<string, KindDef> = {
     active: false,
     binary: "subfinder",
     installHint: "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest",
+    budgetMs: 90_000,
     args: (ctx) => ["-d", ctx.host, "-json", "-silent", "-timeout", "10"],
     command: (ctx) => `subfinder -d ${shQuote(ctx.host)} -json -silent`,
     parse: (stdout, ctx) => {
@@ -797,6 +808,7 @@ export const KINDS: Record<string, KindDef> = {
     active: true,
     binary: "katana",
     installHint: "go install -v github.com/projectdiscovery/katana/cmd/katana@latest",
+    budgetMs: 110_000,
     args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-jsonl", "-silent", "-depth", "2", "-concurrency", "4", "-rate-limit", String(Math.max(1, Math.round(ctx.rps))), "-timeout", "8", "-crawl-duration", "60s"],
     command: (ctx) => `katana -u ${shQuote(`${baseUrl(ctx)}/`)} -jsonl -silent -depth 2 -rate-limit ${Math.max(1, Math.round(ctx.rps))}`,
     parse: (stdout, ctx) => {
@@ -883,7 +895,7 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
   const runLocal = async (): Promise<KindResult> => {
     const res = await runArgv(abs, argv, {
       cwd: ctx.jobDir,
-      timeoutMs: ctx.timeoutMs,
+      timeoutMs: kind.budgetMs ? Math.min(ctx.timeoutMs, kind.budgetMs) : ctx.timeoutMs,
       env: {
         ...process.env,
         TERM: "dumb",
