@@ -159,7 +159,7 @@ async function cliChecks(cfg) {
     // measured my flag choice and not httpx (three runs of `exit=0 · 0B` before that was clear).
     const r = await runBin(httpx, [
       "-u", probeUrl, "-json", "-silent", "-follow-redirects", "-status-code", "-title",
-      "-tech-detect", "-timeout", "8", "-connect-timeout", "6", "-retries", "1",
+      "-tech-detect", "-timeout", "8", "-retries", "1",
     ], 60);
     const rec = (r.out.split("\n").map((l) => l.trim()).find((l) => l.startsWith("{")) || "").replace(/\u001b\[[0-9;]*m/g, "");
     const status = Number((rec.match(/"status"\s*:\s*(\d{3})/) || [0, "0"])[1]);
@@ -167,8 +167,11 @@ async function cliChecks(cfg) {
     const ok = r.code === 0 && status === want;
     add("cli", `httpx ${probeUrl}`, ok ? "pass" : NET_ERRORS.test(r.err + r.out) ? "blocked" : "review",
       ok ? `${status} · ${short((rec.match(/"title"\s*:\s*"([^"]*)"/) || [0, ""])[1], 70)} · ${(rec.match(/tech-detect[^]]*]/i) || [""])[0].slice(0, 60)}`
-        : short(`status=${status || "مفيش"} (المطلوب ${want}) · exit=${r.code} · ${r.out.length}B · ${(r.err || "").split("\n").filter(Boolean).slice(-1)[0] || ""} · ${r.ms}ms`, 160),
-      { ms: r.ms, status });
+        : short(`status=${status || "مفيش"} (المطلوب ${want}) · exit=${r.code} · ${r.out.length}B · ${(r.err || r.out).split("\n").filter(Boolean).slice(-1)[0] || ""} · ${r.ms}ms`, 160),
+      // key is `httpStatus`, not `status`: row extras are spread over the row, so a field named
+      // `status` silently overwrote pass/fail with a number (measured: run 41459589703 printed
+      // `| cli | httpx … | · 0 |`). Never shadow a row field.
+      { ms: r.ms, httpStatus: status });
   }
 
 
