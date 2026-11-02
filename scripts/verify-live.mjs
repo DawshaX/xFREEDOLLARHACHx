@@ -167,13 +167,19 @@ async function cliChecks(cfg) {
     const status = Number((rec.match(/"status"\s*:\s*(\d{3})/) || [0, "0"])[1]);
     const want = liveRow.expects?.httpStatus || testRow.expects?.httpStatus || 200;
     const ok = r.code === 0 && status === want;
-    add("cli", `httpx ${probeUrl}`, ok ? "pass" : NET_ERRORS.test(r.err + r.out) ? "blocked" : "review",
+    // httpx بيكتب فشل الاتصال جوّه الـJSON (`"error":"..."`) مش في stderr، فالاعتماد على stderr
+    // وحده كان يطلّع صف «status=مفيش» من غير سبب (مقاس: تقرير 17:33Z على demo.testfire.net).
+    // القاعدة: مافيش صف من غير سبب — «مفيش رد» مش إجابة.
+    const toolErr = (rec.match(/"error"\s*:\s*"([^"]{1,180})"/) || [0, ""])[1];
+    const connFault = /could not complete|no response|tls|handshake|dial|connect|refused|reset|i\/o timeout|context deadline|EOF|no route/i;
+    const cause = short(toolErr || (r.err || "").split("\n").filter(Boolean).slice(-1)[0] || (r.out.trim() ? "رد من غير status" : "مفيش مخرجات"), 96);
+    add("cli", `httpx ${probeUrl}`, ok ? "pass" : (NET_ERRORS.test(`${r.err} ${r.out}`) || connFault.test(`${toolErr} ${r.err}`)) ? "blocked" : "review",
       ok ? `${status} · ${short((rec.match(/"title"\s*:\s*"([^"]*)"/) || [0, ""])[1], 70)} · ${(rec.match(/tech-detect[^]]*]/i) || [""])[0].slice(0, 60)}`
-        : short(`status=${status || "مفيش"} (المطلوب ${want}) · exit=${r.code} · ${r.out.length}B · ${(r.err || r.out).split("\n").filter(Boolean).slice(-1)[0] || ""} · ${r.ms}ms`, 160),
+        : short(`status=${status || "مفيش"} (المطلوب ${want}) · exit=${r.code} · ${r.out.length}B · السبب: ${cause} · ${r.ms}ms`, 190),
       // key is `httpStatus`, not `status`: row extras are spread over the row, so a field named
       // `status` silently overwrote pass/fail with a number (measured: run 41459589703 printed
       // `| cli | httpx … | · 0 |`). Never shadow a row field.
-      { ms: r.ms, httpStatus: status });
+      { ms: r.ms, httpStatus: status, toolError: toolErr || null });
   }
 
 
@@ -206,8 +212,9 @@ async function cliChecks(cfg) {
     const lines = r.out.split("\n").map((s) => s.trim()).filter(Boolean);
     // The CLI row measures the BINARY, so it runs on the host built to be found (testphp) with
     // only high/critical templates — the full set with `low` cannot finish in any job budget, and
-    // "cut off" would then be the only result we ever report. The spine is measured separately,
-    // on demo.testfire.net, where it produced 11 findings (run 41455864503).
+    // "cut off" would then be the only result we ever report. The spine runs medium,high,critical
+    // on demo.testfire.net (where it produced 11 findings, run 41455864503): one tier wider than
+    // this row on purpose, so a spine/CLI disagreement is a signal and not a scheduling artifact.
     const min = testRow.expects?.nucleiFindings ?? 1;
     const cutOff = r.code === null;
     // nuclei prints its stats panel on stderr. Counting requests is what separates "scanned and
@@ -331,9 +338,14 @@ async function engineChecks(cfg) {
     try { files = fs.readdirSync(dir); } catch { files = []; }
     const sizes = files.map((f) => { try { return fs.statSync(path.join(dir, f)).size; } catch { return 0; } });
     const withBytes = sizes.filter((n) => n > 8).length;
+    // «5 فيهم بايتات» مش كفاية: مين اللي فاضي وليه. الملف الفاضي غالبًا دليّة مهمة اتقطعت قبل
+    // ما تكتب (مقاس: تقرير 17:33Z — 6 ملفات، والخامس الفاضي كان بتاع مهمة nuclei المقطوعة).
+    const empties = files.filter((f, i) => sizes[i] <= 8);
     add("engine", "evidence hashed on disk", files.length ? (withBytes === files.length ? "pass" : "review") : "review",
-      files.length ? `${files.length} ملف في ${path.relative(process.cwd(), dir)} · ${withBytes} فيهم بايتات` : `مفيش مجلد دلائل مقروء من هنا (${path.relative(process.cwd(), dir)}) — جوه CI بيتقاس صح`,
-      { jobId: job.id, evidence: files.length });
+      files.length
+        ? `${files.length} ملف في ${path.relative(process.cwd(), dir)} · ${withBytes} فيهم بايتات${empties.length ? ` · فاضي: ${short(empties.slice(0, 3).join(", "), 90)} (${empties.length})` : ""}`
+        : `مفيش مجلد دلائل مقروء من هنا (${path.relative(process.cwd(), dir)}) — جوه CI بيتقاس صح`,
+      { jobId: job.id, evidence: files.length, emptyEvidence: empties.length });
 
     const rep = await api(`/ops/jobs/${job.id}/report`);
     const md = rep.text || "";

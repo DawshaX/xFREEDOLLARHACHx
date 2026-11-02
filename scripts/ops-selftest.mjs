@@ -281,6 +281,19 @@ await tA("a tool found by the finder is also SPAWNED by the runner (vendor/bin o
     assert.doesNotMatch(argvN, /"-json"/, "nuclei has no -json flag — that invocation exits 2");
     const argvH = String(kinds.KINDS["tools.httpx"].args({ host: "x", scheme: "https", program, rps: 1 }, {}));
     assert.doesNotMatch(argvH, /connect-timeout/, "httpx has no -connect-timeout flag");
+    // السيّبات اللي العمود الفقري بيشغّلها فعلًا لازم تكون نفسها اللي التقرير بيطبعها. مقاس:
+    // بأربع سيّبات (`low` جوّه) nuclei اتقطع عند ميزانية النوع 260s و0 نتيجة (تقرير 17:33Z)،
+    // وسطر `command` المعروض كان بيقول `medium,high,critical` وهو بيشتغل بـ4 — يعني التقرير
+    // بيكذب في التفصيلة اللي بيتبني عليها القرار.
+    {
+      const argvArr = kinds.KINDS["tools.nuclei"].args({ host: "x", scheme: "https", program, rps: 1 }, {});
+      const sevIdx = argvArr.indexOf("-severity");
+      assert.ok(sevIdx >= 0, "nuclei must pass -severity explicitly");
+      assert.equal(String(argvArr[sevIdx + 1]), "medium,high,critical", "nuclei default severities must be medium,high,critical (no low in a job budget)");
+      const shown = String(kinds.KINDS["tools.nuclei"].command({ host: "x", scheme: "https", program, rps: 1 }, {}));
+      assert.ok(shown.includes("medium,high,critical"), "the printed command must match the real argv");
+      assert.ok(!shown.includes("-json "), "nuclei has no -json flag — the printed command must not invent one");
+    }
     assert.ok(Number(kinds.KINDS["tools.httpx"].budgetMs) > 0, "httpx needs its own budget so it cannot eat the job");
     assert.ok(Number(kinds.KINDS["tools.nuclei"].budgetMs) >= 240_000, "nuclei needs minutes, not the job default");
     assert.ok(Number(kinds.KINDS["recon.dns"].budgetMs ?? 0) === 0, "cheap kinds inherit the job default");

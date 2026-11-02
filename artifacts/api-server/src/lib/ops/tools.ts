@@ -718,7 +718,11 @@ export const KINDS: Record<string, KindDef> = {
     budgetMs: 260_000,
     installHint: "sh -c \"$(curl -sL https://raw.githubusercontent.com/projectdiscovery/nuclei/main/install.sh)\"",
     args: (ctx, p) => {
-      const sev = (p["severities"] as string[]) ?? ["low", "medium", "high", "critical"];
+      // `low` مرميّ عن قصد: العمود الفقري شغّال على 7 مهام بالتوازي على نود 2vCPU، والأربع سيّبات
+      // خنقت nuclei عند ميزانية النوع (مقاس: `nuclei اتقطع بعد 260023ms · 0 نتيجة` في تقرير
+      // 2026-11-02T17:33Z). والقائمة دي بقت = اللي مطبوع حرفيًا في سطر `command` تحت — قبل كده
+      // السطر كان بيعرض `medium,high,critical` وهو شغّل أربع سيّبات، وده كذب في التقرير.
+      const sev = (p["severities"] as string[]) ?? ["medium", "high", "critical"];
       return [
         "-u", `${baseUrl(ctx)}/`,
         // `-jsonl` — nuclei has NO `-json` flag. It exited 2 with a usage line and the old
