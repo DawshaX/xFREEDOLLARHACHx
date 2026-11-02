@@ -50,6 +50,19 @@ import {
   getEvidenceState,
   getReportsState,
 } from "../standalone-api";
+import { assertAuthorized, fetchSecurityTxt, loadPrograms, upsertProgram, normalizeHost } from "../ops/scope";
+import {
+  buildReport,
+  cancelJob,
+  createJob,
+  getJob,
+  listJobs,
+  pauseJob,
+  resumeJob,
+  runJob,
+  verifyFinding,
+} from "../ops/runner";
+import { KIND_LIST, toolStatus } from "../ops/tools";
 
 export interface AgentTool {
   name: string;
@@ -462,6 +475,147 @@ export const AGENT_TOOLS: AgentTool[] = [
     category: "fleet",
     risk: "safe",
     input_schema: { type: "object", properties: { platform: { type: "string", enum: ["linux", "macos", "windows"] } } },
+  },
+
+  /* ── ops: authorized programs, real jobs, evidence, verification ───────── */
+  {
+    name: "scope_check",
+    title: "تأكّد إن الهدف مصرّح به",
+    description:
+      "قبل أي فحص نشط: يتأكد إن النطاق جوه برنامج مفعّل في state/programs.json (wildcard/CIDR/out-of-scope) ويعيد حدود المعدل. ابدأ به دائماً قبل أي job.",
+    category: "platform",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: "نطاق أو URL" },
+        programId: { type: "string", description: "اختياري — لو عارف البرنامج" },
+        active: { type: "boolean", description: "true = فحص نشط (لمس الخدمة)، false = مصادر عامة" },
+      },
+      required: ["target"],
+    },
+  },
+  {
+    name: "program_add",
+    title: "تسجيل برنامج مصرّح به",
+    description:
+      "يضيف/يحدّث برنامج bug bounty في سجل التصريح مع نطاقاته وحدود المعدل، ويجيب سياسة الإفصاح من security.txt. محتاج موافقة المستخدم الصريحة على النطاقات.",
+    category: "platform",
+    risk: "sensitive",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+        hosts: { type: "array", items: { type: "string" }, description: 'مثال: ["*.example.com"]' },
+        out_of_scope: { type: "array", items: { type: "string" } },
+        max_rps: { type: "number", description: "حد الطلبات/ثانية — الافتراضي 1" },
+        passive_only: { type: "boolean" },
+        policy_url: { type: "string" },
+      },
+      required: ["id", "hosts"],
+    },
+  },
+  {
+    name: "program_list",
+    title: "البرامج المسجّلة",
+    description: "يعرض كل البرامج المصرّح بها وحالتها (مفعّل/مقفول، النطاقات، الحدود).",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "job_create",
+    title: "إنشاء مهمة فحص حقيقية",
+    description:
+      "يبني job حقيقي على目标 مصرّح به: خطة مهام (DNS/TLS/ترويسات/منافذ/JS/CT-logs + أدوات النود لو منصوبة) ويشغّلها بمعدل آمن، ويخزّن الأدلة. ده هو «التنفيذ» مش العرض.",
+    category: "mission",
+    risk: "active",
+    input_schema: {
+      type: "object",
+      properties: {
+        target: { type: "string" },
+        programId: { type: "string" },
+        objective: { type: "string", description: "الهدف من الفحص بجملة" },
+        depth: { type: "string", enum: ["passive", "standard", "deep"], description: "passive = من غير لمس الخدمة" },
+        tools: { type: "boolean", description: "include real tool kinds (nuclei/httpx/katana/nmap) when present" },
+        maxTasks: { type: "number" },
+      },
+      required: ["target"],
+    },
+  },
+  {
+    name: "job_status",
+    title: "حالة مهمة",
+    description: "بيرجّع حالة job: كل مهمة (done/failed/skipped + السبب)، الـfindings، وآخر سطور اللوج.",
+    category: "mission",
+    risk: "safe",
+    input_schema: { type: "object", properties: { jobId: { type: "string" } }, required: ["jobId"] },
+  },
+  {
+    name: "job_list",
+    title: "قايمة المهام",
+    description: "كل مهام الفحص المخزّنة على القرص مع إحصائياتها — ده «إيه اللي شغال دلوقتي وإيه اللي خلص».",
+    category: "mission",
+    risk: "safe",
+    input_schema: { type: "object", properties: { limit: { type: "number" } } },
+  },
+  {
+    name: "job_control",
+    title: "إيقاف/إكمال/إلغاء مهمة",
+    description: "يتحكم في job شغال: pause | resume | cancel. استخدمه لو المستخدم قال «قف» أو «كمل».",
+    category: "mission",
+    risk: "sensitive",
+    input_schema: {
+      type: "object",
+      properties: { jobId: { type: "string" }, action: { type: "string", enum: ["pause", "resume", "cancel"] } },
+      required: ["jobId", "action"],
+    },
+  },
+  {
+    name: "finding_verify",
+    title: "بوابة البرهان",
+    description:
+      "يعيد إنتاج الدليل لfinding ويقارن البصمة — من غيرها النتيجة ما تدخلش التقرير. اعملها لكل نتيجة قبل ما تكتب تقرير.",
+    category: "mission",
+    risk: "active",
+    input_schema: {
+      type: "object",
+      properties: { jobId: { type: "string" }, findingId: { type: "string", description: "اتركه فاضي عشان يتحقق من كل غير المُتحقَّق" } },
+      required: ["jobId"],
+    },
+  },
+  {
+    name: "findings_list",
+    title: "نتائج مهمة",
+    description: "كل الـfindings المخزّنة لـjob معDegree الخطورة والأدلة وحالة التحقق.",
+    category: "mission",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { jobId: { type: "string" }, severity: { type: "string", enum: ["info", "low", "medium", "high", "critical"] } },
+      required: ["jobId"],
+    },
+  },
+  {
+    name: "ops_kinds",
+    title: "قدرات التنفيذ على النود",
+    description: "بيقولك بصدق: أي أدوات أمنية منصوبة فعلاً على السيرفر/النودات المتصلة، وإيه اللي ناقص وأمر تثبيته.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "job_report",
+    title: "تقرير برنامج جاهز",
+    description: "يبني تقرير Markdown من نتائج job — بس اللي عدّى بوابة البرهان. اربطه بزر الحفظ في /reports.",
+    category: "mission",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { jobId: { type: "string" }, includeUnverified: { type: "boolean" } },
+      required: ["jobId"],
+    },
   },
 ];
 
@@ -876,6 +1030,178 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
           manyAgents: "شغّل الوكيل على كل جهاز بمعرّف مختلف (--id) — المنصة بتستقبل حتى 10 وكلاء وأكثر في نفس الوقت.",
         };
         return done(true, `خطوات الربط لـ ${platform} جاهزة`, { platform, commands: map, endpoint: ws });
+      }
+
+      /* ── ops: authorized programs → real jobs → evidence → report ───────── */
+
+      case "scope_check": {
+        const host = normalizeHost(rawArgs.target ?? rawArgs.host ?? "");
+        const decision = await assertAuthorized(host, {
+          programId: rawArgs.programId ? String(rawArgs.programId) : undefined,
+          active: rawArgs.active !== false,
+        });
+        return done(
+          decision.ok,
+          decision.ok
+            ? `${host} داخل نطاق «${decision.program?.name}» · حدود: ${decision.limits.rps} req/s · ${decision.limits.concurrency} متوازي`
+            : `مرفوض: ${decision.reason}`,
+          decision,
+        );
+      }
+
+      case "program_list": {
+        const file = loadPrograms();
+        return done(
+          true,
+          file.programs.length
+            ? `${file.programs.length} برنامج مصرّح به`
+            : "سجل البرامج فاضي — مفيش هدف يتفحص نشط غير لما تضيف برنامج",
+          file,
+        );
+      }
+
+      case "program_add": {
+        const hosts = Array.isArray(rawArgs.hosts)
+          ? (rawArgs.hosts as unknown[]).map(String)
+          : String(rawArgs.hosts ?? "").split(/[,\s]+/).filter(Boolean);
+        const id = String(rawArgs.id ?? "").trim();
+        if (!id || hosts.length === 0) return done(false, "مطلوب id و hosts على الأقل واحد", null);
+        const st = await fetchSecurityTxt(hosts[0]!.replace(/^\*\./, ""));
+        const program = upsertProgram({
+          id,
+          name: String(rawArgs.name ?? id),
+          hosts,
+          platform: rawArgs.platform ? String(rawArgs.platform) : undefined,
+          out_of_scope: Array.isArray(rawArgs.out_of_scope) ? (rawArgs.out_of_scope as unknown[]).map(String) : undefined,
+          max_rps: rawArgs.max_rps === undefined ? undefined : Number(rawArgs.max_rps),
+          passive_only: Boolean(rawArgs.passive_only),
+          policy_url: rawArgs.policy_url ? String(rawArgs.policy_url) : st.url,
+          notes_ar: rawArgs.notes_ar ? String(rawArgs.notes_ar) : st.found ? `security.txt: ${st.contact.join(" , ")}`.slice(0, 200) : undefined,
+        });
+        return done(
+          true,
+          `سُجّل برنامج «${program.name}» (${program.hosts.join(", ")})${st.found ? " · فيه security.txt" : " · مفيش security.txt — اقرأ الـpolicy يدوياً"}`,
+          { program, securityTxt: { found: st.found, contact: st.contact, url: st.url ?? null } },
+        );
+      }
+
+      case "job_create": {
+        const target = String(rawArgs.target ?? rawArgs.host ?? "");
+        const result = await createJob({
+          target,
+          name: rawArgs.name ? String(rawArgs.name) : undefined,
+          objective: rawArgs.objective ? String(rawArgs.objective) : undefined,
+          programId: rawArgs.programId ? String(rawArgs.programId) : undefined,
+          depth: rawArgs.depth === "passive" || rawArgs.depth === "deep" ? rawArgs.depth : "standard",
+          tools: rawArgs.tools !== false,
+          maxTasks: rawArgs.maxTasks ? Number(rawArgs.maxTasks) : undefined,
+        });
+        if (!result.ok || !result.job) {
+          return done(false, `ماتعملش job: ${result.error}`, { denial: result.denial ?? null });
+        }
+        void runJob(result.job.id).catch(() => undefined);
+        return done(
+          true,
+          `بدأ الفحص الحقيقي على ${result.job.host} · ${result.job.tasks.length} مهمة · job=${result.job.id}`,
+          { id: result.job.id, tasks: result.job.tasks.map((t) => t.kind), limits: result.job.budget, status: "running" },
+        );
+      }
+
+      case "job_list": {
+        const jobs = listJobs(rawArgs.limit ? Number(rawArgs.limit) : 20);
+        return done(true, `${jobs.length} مهمة مخزّنة على القرص`, jobs);
+      }
+
+      case "job_status": {
+        const job = getJob(String(rawArgs.jobId ?? ""));
+        if (!job) return done(false, `مفيش job بالمعرّف ${rawArgs.jobId}`, null);
+        return done(
+          true,
+          `${job.status} · خلص ${job.stats.done}/${job.tasks.length} · ${job.stats.findings} نتيجة (${job.stats.verified} متحققة) · ${job.stats.failed} فشل · ${job.stats.skipped} متخطّى`,
+          {
+            id: job.id,
+            status: job.status,
+            target: job.target,
+            programId: job.programId,
+            tasks: job.tasks.map((t) => ({ kind: t.kind, status: t.status, summary: t.summary ?? null, error: t.error ?? null, ms: t.ms ?? null, findings: t.findings })),
+            log: job.log.slice(-12),
+            stats: job.stats,
+          },
+        );
+      }
+
+      case "job_control": {
+        const jobId = String(rawArgs.jobId ?? "");
+        const action = String(rawArgs.action ?? "pause");
+        const fn = action === "resume" ? resumeJob : action === "cancel" ? cancelJob : pauseJob;
+        const ok = fn(jobId);
+        return done(ok, ok ? `${action} على ${jobId}` : `مفيش job ${jobId}`, { ok, action, jobId });
+      }
+
+      case "finding_verify": {
+        const jobId = String(rawArgs.jobId ?? "");
+        const job = getJob(jobId);
+        if (!job) return done(false, `مفيش job ${jobId}`, null);
+        const targets = rawArgs.findingId
+          ? job.findings.filter((f) => f.id === String(rawArgs.findingId))
+          : job.findings.filter((f) => !f.verified);
+        const results = [];
+        for (const f of targets.slice(0, 20)) {
+          const r = await verifyFinding(jobId, f.id);
+          results.push({ findingId: f.id, title: f.title, ...(r ?? { ok: false, reproduced: false, detail: "no-result" }) });
+        }
+        const passed = results.filter((r) => r.reproduced).length;
+        return done(
+          passed > 0,
+          `بوابة البرهان: ${passed}/${results.length} أُعيد إنتاجه — دول بس اللي يدخلوا التقرير`,
+          { results, verified: job.stats.verified },
+        );
+      }
+
+      case "findings_list": {
+        const job = getJob(String(rawArgs.jobId ?? ""));
+        if (!job) return done(false, `مفيش job ${rawArgs.jobId}`, null);
+        const rank = ["critical", "high", "medium", "low", "info"];
+        let rows = [...job.findings].sort((a, b) => rank.indexOf(a.severity) - rank.indexOf(b.severity));
+        if (rawArgs.severity) rows = rows.filter((f) => f.severity === String(rawArgs.severity));
+        return done(
+          true,
+          `${rows.length} نتيجة (${rows.filter((f) => f.verified).length} متحققة) على ${job.target}`,
+          rows.slice(0, 40).map((f) => ({
+            id: f.id,
+            severity: f.severity,
+            title: f.title,
+            titleAr: f.titleAr,
+            target: f.target,
+            cwe: f.cwe ?? null,
+            confidence: f.confidence,
+            verified: f.verified,
+            evidence: f.evidence.map((e) => ({ sha256: e.sha256?.slice(0, 16), file: e.file, probe: e.probe })),
+            reproduce: f.reproduce,
+          })),
+        );
+      }
+
+      case "job_report": {
+        const job = getJob(String(rawArgs.jobId ?? ""));
+        if (!job) return done(false, `مفيش job ${rawArgs.jobId}`, null);
+        const md = buildReport(job.id, { includeUnverified: Boolean(rawArgs.includeUnverified) });
+        const reportable = job.findings.filter((f) => f.verified).length;
+        return done(
+          Boolean(md),
+          `تقرير ${job.target} جاهز · ${reportable} نتيجة موثّقة${rawArgs.includeUnverified ? " (+ غير موثّقة مشمولة)" : ""}`,
+          { jobId: job.id, markdown: md?.slice(0, 6000) ?? "", length: md?.length ?? 0, file: `state/jobs/${job.id}/report.md` },
+        );
+      }
+
+      case "ops_kinds": {
+        const tools = toolStatus();
+        const agents = getConnectedAgentList();
+        return done(
+          true,
+          `${KIND_LIST.length} نوع مهمة · أدوات على النود: ${tools.filter((t) => t.present).map((t) => t.bin).join(", ") || "ولا أداة"} · نودات متصلة: ${agents.length}`,
+          { kinds: KIND_LIST, tools, agents: agents.map((a) => ({ id: a.id, hostname: a.hostname, platform: a.platform })) },
+        );
       }
 
       case "task_list": {

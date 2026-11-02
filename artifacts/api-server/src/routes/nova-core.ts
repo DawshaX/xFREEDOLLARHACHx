@@ -36,7 +36,21 @@ import { runSelfCheck, storageSnapshot } from "../lib/agent/self-check";
 import { broadcastEvent } from "../lib/ws-hub";
 import { logger } from "../lib/logger";
 
+import { requireOps } from "../lib/ops/gate";
+
 const router = Router();
+
+// /nova-core/restart, /nova-core/auto-update and /nova-core/storage can redeploy
+// or bounce the process — never anonymous.
+router.use((req, res, next) => {
+  const p = req.path;
+  const sensitive =
+    p.startsWith("/nova-core/restart") ||
+    p.startsWith("/nova-core/auto-update") ||
+    p.startsWith("/nova-core/storage");
+  if (!sensitive) return next();
+  return requireOps("nova-core")(req, res, next);
+});
 
 /** Shared SSE header setup. */
 function openSse(res: Response): void {

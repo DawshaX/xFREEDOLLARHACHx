@@ -13,6 +13,7 @@ import { runSentinelMigrations } from "./lib/migrate-sentinel";
 import { scheduleGC } from "./lib/gc-scheduler";
 import { forceOllamaDefault } from "./lib/ai";
 import { initLocalAgentWss } from "./routes/local-agent";
+import { wsUpgradeAllowed } from "./lib/ops/gate";
 import {
   registerHubClient,
   removeHubClient,
@@ -184,6 +185,19 @@ hubWss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
 function routeUpgrade(req: http.IncomingMessage, socket: import("node:stream").Duplex, head: Buffer): void {
   const url = req.url ?? "";
   if (url === "/api/local-agent/ws" || url.startsWith("/api/local-agent/ws?")) {
+    // Registering an agent hands whoever connects a command channel into the
+    // fleet, so the handshake itself must be authenticated.
+    const gate = wsUpgradeAllowed(url, req);
+    if (!gate.ok) {
+      logger.warn({ reason: gate.reason }, "local-agent ws upgrade refused");
+      socket.write(
+        "HTTP/1.1 401 Unauthorized\r\n" +
+          `X-NOVA-Reason: ${gate.reason.replace(/[^\x20-\x7e]/g, "")}\r\n` +
+          "Connection: close\r\n\r\n",
+      );
+      socket.destroy();
+      return;
+    }
     localAgentWss.handleUpgrade(req, socket, head, (ws) => {
       localAgentWss.emit("connection", ws, req);
     });

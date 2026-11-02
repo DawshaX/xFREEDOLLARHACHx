@@ -65,3 +65,8 @@ dist-standalone/
 
 # fleet-node kit output (published as a release asset by CI)
 dist-node-kit/
+
+# ── Ops: authorized-target registry + durable job state (runtime, personal) ──
+state/programs.json
+state/jobs/
+state/jobs/*

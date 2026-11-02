@@ -1,0 +1,262 @@
+#!/usr/bin/env node
+/**
+ * Ops engine self-test — deterministic, no network, no server.
+ * ────────────────────────────────────────────────────────────
+ * The scope gate is the one piece of the platform that stands between "security
+ * tooling" and "somebody else's incident". Unit-testing it is not ceremony: a
+ * regression here means the tool starts probing hosts nobody authorized.
+ *
+ * It runs against the real TypeScript source via Node's type stripping, so it
+ * needs no build step and cannot drift from what ships.
+ *
+ *   node scripts/ops-selftest.mjs
+ */
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { registerHooks } from "node:module";
+
+/**
+ * The repo bundles with esbuild and uses extensionless relative imports
+ * (`from "../logger"`), which plain Node ESM cannot resolve. This hook teaches
+ * Node to try `.ts` first, so the self-test can import the REAL source files
+ * instead of a duplicated copy of the logic.
+ */
+let hookReady = false;
+try {
+  registerHooks({
+    resolve(specifier, context, next) {
+      try {
+        return next(specifier, context);
+      } catch (err) {
+        if (specifier.startsWith(".") && !/\.[cm]?[jt]sx?$/.test(specifier)) {
+          for (const ext of [".ts", ".js", "/index.ts", "/index.js"]) {
+            try {
+              return next(specifier + ext, context);
+            } catch {
+              /* try next extension */
+            }
+          }
+        }
+        throw err;
+      }
+    },
+  });
+  hookReady = true;
+} catch (err) {
+  console.log(`· module hooks unavailable (${String(err).slice(0, 60)}) — running logic tests only`);
+}
+
+
+const needsFlag = !process.execArgv.some((a) => a.includes("experimental-strip-types"));
+if (needsFlag && process.env.OPS_SELFTEST_CHILD !== "1") {
+  const r = spawnSync(
+    process.execPath,
+    ["--experimental-strip-types", "--no-warnings", process.argv[1], ...process.argv.slice(2)],
+    {
+      stdio: "inherit",
+      env: { ...process.env, OPS_SELFTEST_CHILD: "1" },
+    },
+  );
+  process.exit(r.status ?? 1);
+}
+
+const SRC = path.resolve(import.meta.dirname, "../artifacts/api-server/src/lib/ops");
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nova-selftest-"));
+process.env.NOVA_PROGRAMS_FILE = path.join(tmp, "programs.json");
+process.env.NOVA_EXEC_TOKEN = "";
+
+const scope = await import(path.join(SRC, "scope.ts"));
+const gate = await import(path.join(SRC, "gate.ts"));
+const limiter = await import(path.join(SRC, "ratelimit.ts"));
+
+let passed = 0;
+let failed = 0;
+function t(name, fn) {
+  try {
+    const out = fn();
+    if (out instanceof Promise) throw new Error("use tAsync for async checks");
+    console.log(`  ✓ ${name}`);
+    passed++;
+  } catch (err) {
+    console.log(`  ✗ ${name}\n      ${String(err && err.message ? err.message : err).split("\n")[0]}`);
+    failed++;
+  }
+}
+async function tA(name, fn) {
+  try {
+    await fn();
+    console.log(`  ✓ ${name}`);
+    passed++;
+  } catch (err) {
+    console.log(`  ✗ ${name}\n      ${String(err && err.message ? err.message : err).split("\n")[0]}`);
+    failed++;
+  }
+}
+
+console.log("Ops engine self-test");
+console.log("────────────────────");
+
+/* ── host normalisation ─────────────────────────────────────────────────── */
+console.log("target normalisation");
+t("strips scheme, path and port", () =>
+  assert.equal(scope.normalizeHost("HTTPS://API.Example.com:8443/v1/users?x=1"), "api.example.com"),
+);
+t("keeps bare host untouched", () => assert.equal(scope.normalizeHost("example.com"), "example.com"));
+
+/* ── scope matching ─────────────────────────────────────────────────────── */
+const program = {
+  id: "p1",
+  name: "Test Program",
+  enabled: true,
+  addedAt: new Date().toISOString(),
+  hosts: ["*.example.com", "example.com"],
+  exact: ["special.example.org"],
+  cidrs: ["203.0.113.0/24"],
+  out_of_scope: ["forum.example.com", "wiki.example.com"],
+  max_rps: 1,
+  max_concurrency: 2,
+};
+
+console.log("scope matcher");
+t("wildcard matches subdomains", () => assert.ok(scope.hostMatchesProgram("api.example.com", program)));
+t("wildcard also matches deep subdomains", () => assert.ok(scope.hostMatchesProgram("a.b.example.com", program)));
+t("apex allowed when listed", () => assert.ok(scope.hostMatchesProgram("example.com", program)));
+t("out-of-scope wins over wildcard", () => assert.ok(!scope.hostMatchesProgram("forum.example.com", program)));
+t("unrelated domain is refused", () => assert.ok(!scope.hostMatchesProgram("example.com.evil.test", program)));
+t("lookalike suffix is refused", () => assert.ok(!scope.hostMatchesProgram("notexample.com", program)));
+t("exact list works for other tld", () => assert.ok(scope.hostMatchesProgram("special.example.org", program)));
+
+/* ── internal address rejection ─────────────────────────────────────────── */
+console.log("internal/SSRF rejection");
+for (const bad of ["127.0.0.1", "10.1.2.3", "192.168.0.7", "169.254.169.254", "172.16.5.5", "localhost", "::1"]) {
+  t(`refuses ${bad}`, () => assert.ok(scope.isInternalHostOrIp(bad), `${bad} must be treated as internal`));
+}
+
+/* ── the gate itself (no DNS needed: literal IPs only) ──────────────────── */
+console.log("authorization gate");
+fs.writeFileSync(process.env.NOVA_PROGRAMS_FILE, JSON.stringify({ version: 1, programs: [program] }));
+
+await tA("empty registry denies everything", async () => {
+  fs.writeFileSync(process.env.NOVA_PROGRAMS_FILE, JSON.stringify({ version: 1, programs: [] }));
+  const d = await scope.assertAuthorized("203.0.113.7", { active: true });
+  assert.equal(d.ok, false);
+  assert.equal(d.reasonCode, "no_programs");
+});
+await tA("in-CIDR literal IP is allowed with program limits", async () => {
+  fs.writeFileSync(process.env.NOVA_PROGRAMS_FILE, JSON.stringify({ version: 1, programs: [program] }));
+  const d = await scope.assertAuthorized("203.0.113.7", { active: true });
+  assert.equal(d.ok, true, d.reason);
+  assert.equal(d.limits.rps, 1);
+});
+await tA("IP outside the CIDR is refused", async () => {
+  const d = await scope.assertAuthorized("198.51.100.7", { active: true });
+  assert.equal(d.ok, false);
+  assert.equal(d.reasonCode, "out_of_scope");
+});
+await tA("passive_only program blocks active probes only", async () => {
+  fs.writeFileSync(
+    process.env.NOVA_PROGRAMS_FILE,
+    JSON.stringify({ version: 1, programs: [{ ...program, passive_only: true }] }),
+  );
+  const active = await scope.assertAuthorized("203.0.113.7", { active: true });
+  const passive = await scope.assertAuthorized("203.0.113.7", { active: false });
+  assert.equal(active.ok, false);
+  assert.equal(active.reasonCode, "passive_only");
+  assert.equal(passive.ok, true, passive.reason);
+});
+await tA("disabled program denies", async () => {
+  fs.writeFileSync(
+    process.env.NOVA_PROGRAMS_FILE,
+    JSON.stringify({ version: 1, programs: [{ ...program, enabled: false }] }),
+  );
+  const d = await scope.assertAuthorized("203.0.113.7", { active: false });
+  assert.equal(d.ok, false);
+});
+fs.writeFileSync(process.env.NOVA_PROGRAMS_FILE, JSON.stringify({ version: 1, programs: [program] }));
+
+/* ── ops gate (who may act) ─────────────────────────────────────────────── */
+console.log("ops gate");
+t("no token + anonymous curl write ⇒ refused", () => {
+  delete process.env.NOVA_EXEC_TOKEN;
+  const v = gate.checkGate({ method: "POST", headers: { host: "h.example" }, query: {} }, "ops");
+  assert.equal(v.ok, false);
+  assert.equal(v.code, "same_origin_required");
+});
+t("no token + same-origin browser write ⇒ allowed", () => {
+  const v = gate.checkGate(
+    { method: "POST", headers: { host: "h.example", "sec-fetch-site": "same-origin" }, query: {} },
+    "ops",
+  );
+  assert.equal(v.ok, true);
+});
+t("token configured ⇒ wrong token refused, right token allowed", () => {
+  process.env.NOVA_EXEC_TOKEN = "s3cr3t";
+  assert.equal(gate.checkGate({ method: "POST", headers: { host: "h" }, query: { token: "nope" } }, "ops").ok, false);
+  assert.equal(
+    gate.checkGate({ method: "POST", headers: { host: "h", "x-nova-token": "s3cr3t" }, query: {} }, "ops").ok,
+    true,
+  );
+});
+t("agent registration without a token is refused (no same-origin signal on WS)", () => {
+  delete process.env.NOVA_EXEC_TOKEN;
+  const v = gate.wsUpgradeAllowed("/api/local-agent/ws", { headers: { host: "h" } });
+  assert.equal(v.ok, false);
+});
+t("agent registration with the token succeeds", () => {
+  process.env.NOVA_EXEC_TOKEN = "s3cr3t";
+  const v = gate.wsUpgradeAllowed("/api/local-agent/ws?token=s3cr3t", { headers: { host: "h" } });
+  assert.equal(v.ok, true);
+});
+delete process.env.NOVA_EXEC_TOKEN;
+
+/* ── throttle maths ─────────────────────────────────────────────────────── */
+console.log("rate limiter");
+await tA("1 req/s allows one immediate slot then blocks the second", async () => {
+  const host = `throttle-test-${Date.now()}`;
+  await limiter.acquire(host, { rps: 1, burst: 1, maxWaitMs: 50 });
+  limiter.release();
+  await assert.rejects(() => limiter.acquire(host, { rps: 1, burst: 1, maxWaitMs: 30 }));
+});
+await tA("a 429 from the target puts the host into backoff", async () => {
+  const host = `backoff-${Date.now()}`;
+  await limiter.acquire(host, { rps: 5, burst: 5, maxWaitMs: 1000 });
+  limiter.release();
+  limiter.noteResponse(host, 429);
+  const stats = limiter.throttleStats()[host];
+  assert.ok(stats.backoffMsLeft > 0, "expected a backoff window after 429");
+  assert.equal(stats.strikes, 1);
+});
+
+/* ── evidence integrity ─────────────────────────────────────────────────── */
+console.log("evidence chain");
+await tA("runKind writes a hashed evidence file for a real probe", async () => {
+  const kinds = await import(path.join(SRC, "tools.ts"));
+  const jobDir = path.join(tmp, "job");
+  const ctx = {
+    host: "127.0.0.1",
+    scheme: "https",
+    program,
+    jobDir,
+    rps: 1,
+    allowNodeTools: false,
+    timeoutMs: 5000,
+    log: () => {},
+  };
+  // no binary + no exec plane ⇒ must say so honestly instead of inventing output
+  const res = await kinds.runKind("tools.nuclei", {}, ctx);
+  assert.equal(res.ok, false);
+  assert.ok(res.findings.length === 0, "must not fabricate findings");
+  const ev = kinds.writeEvidence(ctx, "selftest", "echo test", "hello");
+  assert.match(ev.sha256 ?? "", /^[0-9a-f]{64}$/);
+  assert.ok(fs.existsSync(path.join(jobDir, "evidence", path.basename(ev.file ?? ""))), "evidence file must exist");
+  assert.ok(kinds.maxSeverity([{ severity: "low" }, { severity: "critical" }, { severity: "high" }]) === "critical");
+});
+
+fs.rmSync(tmp, { recursive: true, force: true });
+console.log("────────────────────");
+console.log(`${passed} passed · ${failed} failed`);
+if (failed > 0) process.exit(1);
+console.log("✅ scope gate, ops gate, throttle and evidence chain behave as documented");

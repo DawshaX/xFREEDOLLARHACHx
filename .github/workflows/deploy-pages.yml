@@ -37,6 +37,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --ignore-scripts
 
+      - name: 🧱 Typecheck ratchet (blocks only NEW errors)
+        run: node scripts/typecheck-ratchet.mjs
+
+      - name: 🧪 Ops engine self-test (scope gate must refuse out-of-scope)
+        run: node scripts/ops-selftest.mjs
+
       - name: 🛡️ Audit API connections & contracts
         run: pnpm run audit:connections
 

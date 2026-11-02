@@ -84,6 +84,7 @@ import novaCoreRouter from "./nova-core";
 import fleetMeshRouter from "./fleet-mesh";
 import fleetCapacityRouter from "./fleet-capacity";
 import panelGapsRouter from "./panel-gaps";
+import opsRouter from "./ops";
 
 const router: IRouter = Router();
 
@@ -138,6 +139,8 @@ router.use(fleetMeshRouter);
 router.use(fleetCapacityRouter);
 // Endpoints the panel calls that used to fall through to the SPA HTML.
 router.use(panelGapsRouter);
+// Ops = the real execution spine: authorized programs → durable jobs → evidence → report.
+router.use(opsRouter);
 
 // ── AI / Chat ────────────────────────────────────────────────────────────────
 router.use(liveAgentRouter);
