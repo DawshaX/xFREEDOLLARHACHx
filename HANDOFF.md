@@ -1005,3 +1005,15 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   نفس البيانات بقت في المحرك (`lib/ops/free-hosts.ts` + `/api/fleet/catalogue?probe=1` + عضو `freehosts` في الوعي)
   و`scripts/free-host-survey.mjs` + workflow `free-host-survey.yml` بيعيدوا القياس ويكتبوا `state/free-hosts.md`.
   تنبيه مهم: صندوق التطوير هنا **مفيش منه خروج للإنترنت** — أي قياس جواه = `ECONNRESET` مش إجابة المضيف.
+
+- **2026-11-02 (رابع):** الكتالوج بقى لسانه في الخطط + عيب نشر كان بيعمّي التنفيذ.
+  `infra.freehosts` بقى نوع مهمة حقيقي (`active:false`، من غير باينري): أي job اسمُه فيه
+  «استضافة/تشغيل/خلفية/دايم» بيضاف تلقائياً، وبيطلع 3 ملاحظات بدليل محفوظ — صفر قياس من الشبكة،
+  «المضيف الأحسن بيمنح المسح»، و«مضيفات من غير قراءة 2026». الاختيار بقى `hubScore`
+  (وصولية > ديسك > دوام > بلا بطاقة > رام − بينام − كارت) فطلع **GratisVPS** بدل «أول سطر في الجدول».
+  والأهم: `app.ts` كان بيوصّل `/api/ops/*` لنموذج الرد الثابت لما `DATABASE_URL` مش موجود —
+  أي نشر مجاني (Silly/Waifly) كان بيقرا `total:0` و«مفيش طبقة تنفيذ» على محرك سليم. `/ops` بقى مستثنى.
+  مُقاس على المحرك: job `20261102-d2e5ec` → 4 مهام، `infra.freehosts` done بـ3 findings ودليل
+  `state/jobs/.../evidence/infra.freehosts-*.txt`، وتقرير شفاف «0 reportable · 1 failed: fetch failed»
+  ( Sandbox = مفيش خروج، وده مكتوب في التقرير نفسه). 22/24 فحص حي · 35/35 · 0 فجوات · ratchet 97.
+  كمان `router.use(fleetCapacityRouter)` كانت متكررة مرتين في `routes/index.ts` — اتوحّدت.

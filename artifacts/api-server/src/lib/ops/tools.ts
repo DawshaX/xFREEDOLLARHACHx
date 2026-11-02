@@ -29,6 +29,7 @@ import {
   nvdSearch,
 } from "../security-tools";
 import { fetchSecurityTxt, type Program } from "./scope";
+import { HOSTS, freeHostSummary, type FreeHost } from "./free-hosts";
 import { execOnLocalAgent } from "../../routes/local-agent";
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
@@ -509,6 +510,71 @@ export const KINDS: Record<string, KindDef> = {
         );
       }
       return { ok: true, summary: `${rows.length} نطاق فرعي من CT logs (سلبي) · ${findings.length} مرشّح`, findings, data: { count: rows.length, apex, subdomains: rows.map((r) => r.subdomain) }, };
+    },
+  },
+
+  /* ── self-hosting intel · passive · zero binaries ─────────────────────────
+     The brain's own body: which free host it lives on, measured from wherever
+     it runs. Kept as a task kind so a plan can say "put the core on a VPS" and
+     the answer is evidence, not an opinion. */
+  "infra.freehosts": {
+    id: "infra.freehosts",
+    titleAr: "اختيار مضيف مجاني للتشغيل الدائم (كتالوج مقاس)",
+    active: false,
+    run: async (ctx, params) => {
+      const sum = await freeHostSummary();
+      const wanted = typeof params?.host === "string" ? params.host : sum.bestHubId;
+      const chosen: FreeHost | null = HOSTS.find((h) => h.id === wanted) ?? null;
+      const ev = writeEvidence(
+        ctx,
+        "infra.freehosts",
+        "GET /api/fleet/catalogue?probe=1",
+        JSON.stringify({ counts: sum, chosen }, null, 2),
+      );
+      const findings: Finding[] = [];
+      if (sum.probed > 0 && sum.reachable === 0) {
+        findings.push(mkFinding(ctx, {
+          kind: "infra.freehosts",
+          title: "No host reachable from this network",
+          titleAr: `صفر من ${sum.probed} موقع بيردّ من هنا — مفيش قياس صالح`,
+          severity: "info",
+          confidence: 0.9,
+          reproduce: 'curl -s "$NOVA_BASE/api/fleet/catalogue?probe=1" | head -c 400',
+          remediationAr: "الرقم ده معناه إن الشبكة اللي شغال عليها NOVA بتبلع الخروج (أو إن المواقع فعلاً ماقفة). شغّل نفس القياس من الـhub أو من GitHub Actions (workflow free-host-survey) قبل ما تبني قرار عليه.",
+          evidence: [ev],
+        }));
+      }
+      if (chosen?.scanPolicy === "forbidden") {
+        findings.push(mkFinding(ctx, {
+          kind: "infra.freehosts",
+          title: "Best hub host forbids active scanning",
+          titleAr: `«${chosen.name}» بيمنع المسح/الهجوم في شروطه — الأذرع النشطة لازم على نود تاني`,
+          severity: "medium",
+          confidence: 0.85,
+          reproduce: "cat docs/FREE-HOSTS-2026.md",
+          remediationAr: "خلي الاستطلاع السلبي (DNS/TLS/crt.sh/HTTP headers) على المضيف اللي بيمنع، واطلع nmap/nuclei/ffuf على نود فيه root (freevps.edu.pl) بعد إذن صريح من صاحب البرنامج.",
+          evidence: [ev],
+        }));
+      }
+      const stale = HOSTS.filter((h) => !h.status2026).map((h) => h.id);
+      if (stale.length) {
+        findings.push(mkFinding(ctx, {
+          kind: "infra.freehosts",
+          title: "Catalogue entries without a dated 2026 read",
+          titleAr: `${stale.length} مضيف من غير قراءة موثّقة بتاريخ 2026`,
+          severity: "low",
+          confidence: 0.8,
+          reproduce: "node -e 'import(0)' # راجع artifacts/api-server/src/lib/ops/free-hosts.ts",
+          remediationAr: `افتح صفحة المورد واكتب حقيقته في status2026 مع التاريخ: ${stale.join(", ")}. لحد ما ده يحصل الرقم يعتبر ادعاء.`,
+          evidence: [ev],
+        }));
+      }
+      return {
+        ok: true,
+        summary: `${sum.total} مضيف · ${sum.usableNoCard} بلا بطاقة · ${sum.permanent} دائم · ${sum.reachable}/${sum.probed} بيردّ من هنا · الأحسن: ${sum.bestHubAr}`,
+        findings,
+        data: { counts: sum, chosenId: chosen?.id ?? null, chosenSteps: chosen?.steps ?? [] },
+      };
     },
   },
 
