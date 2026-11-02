@@ -511,6 +511,17 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
 
   const origJson = res.json.bind(res);
   res.json = ((body: unknown) => {
+    // The mock may decorate an empty READ, but it must never overwrite a real
+    // failure. It used to rewrite 503/504/404 into `200 Executed on kali-sandbox-01`,
+    // so the panel reported work that never happened — in a security tool that is
+    // worse than a crash, because a fake green row reads like evidence.
+    const method = String(req.method || "GET").toUpperCase();
+    const path = req.originalUrl || req.url || "";
+    const isRead = method === "GET" || method === "HEAD";
+    const realNamespace = /\/api\/(exec|local-agent|local-agent-input|live-agent|live-events|nova-core|ops|fleet|nodes|kill-switch|memory|evidence|reports|settings|keys|ollama|tools|scanner|proxy|deep-research|installer|jobs)\b/.test(path);
+    if (!isRead || realNamespace) {
+      return origJson(body);
+    }
     if (res.statusCode >= 500 || res.statusCode === 404) {
       const fallback = resolveStandaloneApi(
         req.originalUrl || req.url,
@@ -538,6 +549,19 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   );
   if (fallback !== null) {
     res.status(200).json(fallback);
+    return;
+  }
+  // An unmatched /api path must never fall through to the SPA. Serving index.html
+  // with a 200 turns a routing bug into `SyntaxError: Unexpected token <` in every
+  // page that called it — and it only happens once a real server exists, which is
+  // precisely how "works on Pages, broken on the server" bugs survive a release.
+  if (req.method === "GET" || req.method === "HEAD") {
+    res.status(404).json({
+      ok: false,
+      error: "no_such_endpoint",
+      path: req.originalUrl || req.url,
+      hint: "المسار مش مسجّل في أي راوتر. لو ده استطلاع/قراءة، المحرك المحلي في الواجهة بيوّلد الرد — على السيرفر لازم راوتر.",
+    });
     return;
   }
   next();

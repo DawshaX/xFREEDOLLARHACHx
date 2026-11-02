@@ -165,22 +165,40 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
    * → {"choices":[{"message":{"content":"ready"}}],"model":"gpt-oss-20b"}.
    * Disable with NOVA_KEYLESS_LLM=0 if it ever misbehaves.
    */
-  const keyless: Array<{ id: string; label: string; baseUrl: string; model: string }> = [
-    {
-      id: "pollinations",
-      label: "Pollinations (بدون مفتاح)",
-      baseUrl: "https://text.pollinations.ai/openai",
-      model: process.env.POLLINATIONS_MODEL || "openai-fast",
-    },
-  ];
+  /**
+   * Keyless seats are ONE PER MODEL, not one per provider, because the council
+   * needs ≥2 independent voices and a single endpoint with a single model gives
+   * it one. text.pollinations.ai answers different model ids on the same
+   * OpenAI-compatible route with no account, so `openai-fast` + `mistral` +
+   * `llama` = three real voters for $0. Override the list with
+   * NOVA_KEYLESS_SEATS="openai-fast,mistral" (comma separated) if a model is
+   * retired — a dead seat is skipped at call time, never fatal.
+   */
+  const keylessModels = String(process.env.NOVA_KEYLESS_SEATS ?? "openai-fast,mistral,llama")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+  const keyless: Array<{ id: string; label: string; baseUrl: string; model: string }> = keylessModels.map(
+    (model) => ({
+      id: `pollinations:${model}`,
+      label: `Pollinations · ${model} (بدون مفتاح)`,
+      baseUrl: String(process.env.POLLINATIONS_BASE_URL || "https://text.pollinations.ai/openai").replace(/\/$/, ""),
+      model,
+    }),
+  );
 
   if (String(process.env.NOVA_KEYLESS_LLM ?? "1") !== "0") {
+    // POLLINATIONS_MODEL is honoured only when a single seat is configured: with
+    // several seats a global override would put the same model on every seat and
+    // the council would be one voice arguing with itself.
+    const soloSeat = keyless.length === 1 ? String(process.env.POLLINATIONS_MODEL ?? "").trim() : "";
     for (const p of keyless) {
-      const upper = p.id.toUpperCase().replace(/-/g, "_");
+      const upper = p.id.split(":")[0].toUpperCase().replace(/-/g, "_");
       providers.push({
         id: p.id,
         label: p.label,
-        model: process.env[`${upper}_MODEL`] || p.model,
+        model: soloSeat || p.model,
         kind: "openai-compatible",
         // The endpoint IS the chat route (there is no /v1 base), so mark it and
         // let the caller append nothing.

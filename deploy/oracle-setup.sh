@@ -47,6 +47,32 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq curl git ca-certificates gnupg ufw nginx jq >/dev/null
 
+say "1b/8 · أدوات الفحص الحقيقية (nuclei/httpx/subfinder/katana + nmap)"
+# Platform = كل الأدوات متجمعة، فالخطوة دي مش اختيارية: من غيرها محرك الـops
+# بيرجع "الأداة مش منصوبة" بدل ما يطلع نتيجة. الفشل هنا مش وقف للتثبيت.
+apt-get install -y -qq --no-install-recommends nmap dnsutils whois netcat-openbsd unzip >/dev/null 2>&1 || warn "apt للأدوات الأمنية فشل — هيكفي نستخدم الأدوات المدمجة"
+for tool in nuclei httpx subfinder katana; do
+  if command -v "$tool" >/dev/null 2>&1; then say "✓ $tool موجود"; continue; fi
+  ver=$(curl -fsSL --max-time 20 "https://api.github.com/repos/projectdiscovery/$tool/releases/latest" 2>/dev/null \
+        | grep -o '"tag_name": *"[^"]*"' | head -1 | cut -d'"' -f4)
+  [ -n "$ver" ] || { warn "$tool: معرفتش أجيب رقم النسخة"; continue; }
+  url="https://github.com/projectdiscovery/$tool/releases/download/$ver/${tool}_latest_linux_amd64.zip"
+  if curl -fsSL --max-time 120 -o "/tmp/$tool.zip" "$url" 2>/dev/null; then
+    unzip -o -q "/tmp/$tool.zip" -d /usr/local/bin "$tool" 2>/dev/null || unzip -o -q "/tmp/$tool.zip" -d /usr/local/bin
+    chmod +x "/usr/local/bin/$tool" 2>/dev/null || true
+    say "✓ $tool $ver اتثبت في /usr/local/bin"
+  else
+    warn "$tool: تنزيل فشل (شبكة؟) — كمّل بدونّه"
+  fi
+done
+# templates للـnuclei (مفيش API key مطلوب للتحميل العام)
+if command -v nuclei >/dev/null 2>&1 && [ ! -d /root/nuclei-templates ]; then
+  curl -fsSL --max-time 180 -o /tmp/nt.tar.gz https://github.com/projectdiscovery/nuclei-templates/archive/refs/heads/main.tar.gz 2>/dev/null \
+    && tar -xzf /tmp/nt.tar.gz -C /root/ 2>/dev/null \
+    && mv /root/nuclei-templates-main /root/nuclei-templates 2>/dev/null \
+    && say "✓ nuclei-templates جاهزة" || warn "templates نازلتش — nuclei هيشتغل بالتيمبلتس المدمجة لو موجودة"
+fi
+
 say "2/8 · تثبيت Node 22"
 if ! command -v node >/dev/null || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
@@ -158,6 +184,27 @@ systemctl enable nova >/dev/null
 systemctl restart nova
 sleep 4
 systemctl is-active --quiet nova && ok "nova.service شغالة" || warn "nova.service لم تبدأ — راجع: journalctl -u nova -n 50"
+
+say "7b/8 · توكن حماية + ملف البيئة (/etc/cybernova.env)"
+# بلا توكن، المنصة بترفض أي نود خارجي وبتقفل الكتابة من غير نفس الأصل —
+# فالتوليد هنا مش رفاهية، ده اللي بيخلي الأسطول المجاني يشتغل فعلاً.
+ENV_FILE=/etc/cybernova.env
+if [ ! -f "$ENV_FILE" ] || ! grep -q "^NOVA_EXEC_TOKEN=" "$ENV_FILE" 2>/dev/null; then
+  TOKEN_VAL=$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')
+  mkdir -p "$(dirname "$ENV_FILE")"
+  if [ -f "$ENV_FILE" ]; then cp "$ENV_FILE" "$ENV_FILE.bak.$(date +%s)"; fi
+  { [ -f "$ENV_FILE" ] && grep -v "^NOVA_EXEC_TOKEN=" "$ENV_FILE";
+    echo "NOVA_EXEC_TOKEN=$TOKEN_VAL";
+    echo "# NOVA_SCOPE_DOMAINS=example.com,https://hackerone.com/foo   # استطلاع بس، اتسجّل أوتوماتيك";
+  } > "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+  say "✓ توكن اتولّد: $TOKEN_VAL"
+  say "  حطّه في GitHub → Settings → Secrets and variables → Actions → Secrets باسم NOVA_EXEC_TOKEN"
+  say "  وكل نود: NOVA_TOKEN=$TOKEN_VAL node nova-agent.js --server wss://<HOST>/api/local-agent/ws"
+  warn "لو التسريب وارد (صفحة عامة/شات) دور التوكن: غيّر السطر في /etc/cybernova.env و systemctl restart nova"
+else
+  say "✓ /etc/cybernova.env موجود — التوكن المحفوظ متغيرش"
+fi
 
 say "8/8 · Nginx + الجدار الناري + TLS اختياري"
 cat > /etc/nginx/sites-available/cybernova <<EOF

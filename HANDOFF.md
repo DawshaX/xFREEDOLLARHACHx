@@ -5,6 +5,26 @@
 > **الرابط الحي الدائم (GitHub Pages Auto-Deploy):** `https://dawshax.github.io/xFREEDOLLARHACHx/`
 > **رابط استوديو البج باونتي وموسوعة الثغرات:** `https://dawshax.github.io/xFREEDOLLARHACHx/bug-bounty-studio`
 
+> **تحديث `2026-11-02` — الطبقة التنفيذية (PR #64 + ما بعدها):**
+>
+> المنصة بقى عندها **محرك تنفيذ حقيقي** مش واجهة: `artifacts/api-server/src/lib/ops/`
+> (scope gate + rate limiter + kinds/tools + job runner + policy gate) و`routes/ops.ts`
+> (20 نقطة) و13 أداة NOVA جديدة (`scope_check`, `program_discover`, `job_create`, `finding_verify`…).
+>
+> - **البوابة:** أي فحص نشط محتاج برنامج مسجّل في `state/programs.json` + `NOVA_EXEC_TOKEN` للكتابة.
+>   `deploy/oracle-setup.sh` بقى بيولّد التوكن لوحده، و`nova-agent.js` بيبعت `NOVA_TOKEN` (من غيره = 401).
+> - **التزويد الذاتي (من غير ملفات):** `NOVA_KEYS_URL`/`NOVA_KEYS_FILE` للمفاتيح، `NOVA_SCOPE_DOMAINS`
+>   للتسجيل السلبي، `program_discover` للاكتشاف من `security.txt`، `POST /api/tools/install` لتثبيت
+>   `nuclei/httpx/subfinder/katana` على النود.
+> - **المجلس بقى صوت حقيقي:** 4 مقاعد من غير أي مفتاح (`ollama` + 3 موديلات pollinations) بدل مقعد واحد.
+> - **الخلفية فعلًا:** `runOpsSweep()` شغالة جوه الدامون كل 3 دقايق — بتعمل jobs حقيقية على البرامج
+>   المصرّح بها، passive افتراضياً، بسقف 6 ساعات لكل برنامج و10 مهام.
+> - **الأرقام الدقيقة:** typecheck = **99 خطأ** في `api-server` (ميراث، مش صفر — والـCI بيمنع أي زيادة
+>   عبر `scripts/typecheck-ratchet.mjs`)، اللوحة **0**. `ops:selftest` **35/35**. audits: contracts ✓ ·
+>   connections 113/0 gaps ✓ · render **157/157** ✓.
+> - **ليسه ناقص:** صفحة Ops في اللوحة، طبقة `verify/` (SSRF canary / XSS headless / SQLi differential)،
+>   مزامنة HackerOne API، ونقل الـjobs لـPostgres لو DATABASE_URL اتفعّل.
+
 ---
 
 ## 📌 1. الهدف العام وفلسفة العمل

@@ -102,19 +102,40 @@ jobs:
         with:
           node-version: 22
 
-      - name: Give the node real tools (best effort, ~40 s)
+      # Deliberately smaller than a real host's toolkit. Active scanners
+      # (nmap/nuclei/httpx/katana) are NOT installed here: this runner's source IP
+      # belongs to GitHub, so an active probe against somebody else's program from
+      # it is GitHub-visible abuse and costs the account. Read-only intel tools are
+      # fine and are what the ops engine's `passive` depth needs. The full
+      # toolchain lives on your own permanent node (deploy/oracle-setup.sh).
+      - name: Give the node its read-only toolchain (best effort, ~40 s)
         if: steps.gate.outputs.run == 'true'
         run: |
           sudo apt-get update -qq || true
           sudo apt-get install -y -qq --no-install-recommends \
-            dnsutils whois nmap netcat-openbsd jq curl >/dev/null 2>&1 || true
-          echo "nmap: $(command -v nmap || echo missing) · dig: $(command -v dig || echo missing)"
+            dnsutils whois netcat-openbsd jq curl openssl >/dev/null 2>&1 || true
+          echo "dig: $(command -v dig || echo missing) · whois: $(command -v whois || echo missing) · jq: $(command -v jq || echo missing)"
+          echo "::notice::active scanners are intentionally absent on GitHub runners (source IP = GitHub). Use a permanent node for those."
+
+      - name: Resolve the hub token
+        if: steps.gate.outputs.run == 'true'
+        env:
+          TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::NOVA_EXEC_TOKEN secret is empty — a hardened hub refuses agent registration (401) unless it runs with NOVA_OPEN_OPS=1."
+            echo "token-set=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "token-set=true" >> "$GITHUB_OUTPUT"
+          fi
+        id: tok
 
       - name: Join the fleet
         if: steps.gate.outputs.run == 'true'
         env:
           HUB: ${{ vars.NOVA_HUB }}
           IDX: ${{ matrix.i }}
+          NOVA_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
           HUB="${HUB:-ws://node.waifly.com:27214/api/local-agent/ws}"
           echo "hub: $HUB"
@@ -133,9 +154,13 @@ jobs:
 
             remaining=$(( DEADLINE - $(date +%s) ))
             set +e
+            # NOVA_ALLOW is a real safety net, not decoration: the agent treats an
+            # EMPTY allow list as "everything is allowed". Here it is pinned to the
+            # read-only intel set, matching what this runner may lawfully do.
             timeout "$remaining" node nova-agent.js \
               --server "$HUB" \
               --id "$NODE_ID" \
+              --allow "dig,host,nslookup,whois,curl,openssl,jq,timeout,sort,uniq,grep,head,tail,awk,node,cat,wc" \
               --log /tmp/nova-agent.log
             code=$?
             set -e

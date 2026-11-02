@@ -209,3 +209,124 @@ curl -N -X POST http://localhost:8080/api/nova-core/chat \
 1. `مين انت وممكن تعمل ايه؟`
 2. `اعمل استطلاع على github.com`
 3. `ابحث عن CVE-2024-3094 وقولي الخطورة والحل`
+
+---
+
+## 9) محرك التنفيذ الحقيقي — Ops (`/api/ops/*`)
+
+> الفرق عن باقي المنصة: ده مش عرض ولا محاكاة. **job حقيقي** بيشتغل على هدف **مصرّح به**،
+> بمعدل آمن، ويكتب **أدلة مرفوصة بـ SHA-256**، ومفيش نتيجة تدخل التقرير غير بعد ما تعدّي على **بوابة البرهان**.
+
+### الدورة الكاملة
+
+```
+تسجيل البرنامج (scope)  →  jobCreate  →  مهام حقيقية  →  findings + أدلة  →  verify  →  تقرير
+     /api/ops/programs      /ops/jobs      state/jobs/<id>/     evidence/*.txt    501?     report.md
+```
+
+### 1) البوابة (`state/programs.json`)
+أي مهمة **نشطة** على نطاق مش جوه برنامج مفعّل = **مرفوضة من الكود** (مش من البرومبت):
+wildcard / exact / CIDR / `out_of_scope` / `passive_only` / سقف `max_rps` و `max_concurrency`.
+العناوين الداخلية (127./10./192.168./169.254./::1/localhost) مرفوضة دائماً + إعادة تحقق من الـDNS (حماية SSRF/rebinding).
+
+```bash
+# أضف برنامج من السيرفر (يحتاج NOVA_EXEC_TOKEN)
+curl -X POST http://localhost:8080/api/ops/programs \
+  -H "x-nova-token: $NOVA_EXEC_TOKEN" -H 'content-type: application/json' \
+  -d '{"id":"acme","name":"Acme Inc","platform":"hackerone","hosts":["*.acme.com"],"max_rps":1}'
+```
+
+### 2) أنواع المهام
+| المدمج (بيشتغل في أي حتة) | أداة حقيقية (محتاجة النود/نود متصل) |
+|---|---|
+| `recon.dns` · `recon.tls` · `recon.headers` · `recon.ports` (≤40) | `tools.nuclei` (`-json`) · `tools.httpx` |
+| `recon.certspotter` (سلبي) · `recon.securitytxt` · `recon.jspaths` | `tools.subfinder` · `tools.katana` · `tools.nmap` |
+| `intel.cvebytech` (NVD على التقنية المكتشفة) | التثبيت من `/api/installer/tools` |
+
+القاعدة: **طلب فاشل ≠ ثغرة**. لو الطلب ما وصلش، المهمة بتترجّع `failed` والسبب، ومش بتولّد finding.
+
+### 3) نوفا بتستخدمه كأدوات
+`scope_check` · `program_add` · `program_list` · `job_create` · `job_status` · `job_list` · `job_control` ·
+`finding_verify` · `findings_list` · `job_report` · `ops_kinds` — يعني تقوله:
+> «ادخل على برنامج acme واعمل استطلاع كامل وقولي لقيت إيه»
+فيردّ بالـjob الحي ويكمل معاك.
+
+### 4) الأمان بقى بوابة واحدة
+مسار جديد `src/lib/ops/gate.ts` بيحكم على **كل** حاجة خطرة: `/api/local-agent/*` (exec/pty/fs/screenshot/ماوس-كيبورد)،
+`/api/kill-switch`، `/api/nova-core/restart|auto-update|storage`، `download-project-zip`، وتسجيل الوكلاء على WebSocket.
+- `NOVA_EXEC_TOKEN` موجود → التوكن مطلوب (هيدر `x-nova-token` أو `?token=`).
+- مفيش توكن → كتابة من اللوحة بس (same-origin)، و`curl` من برّه ياخد 403.
+- `NOVA_OPEN_OPS=1` → الوضع المفتوح (معامل محلي فقط).
+- تسجيل وكيل من غير توكن → **401** (الـWebSocket مفيش فيه إشارة أصلية تثق فيها).
+
+### 5) متغيرات جديدة
+| المتغير | الافتراضي | للتحكم في إيه |
+|---|---|---|
+| `NOVA_EXEC_TOKEN` | فارغ | مفتاح كل الكتابة والتنفيذ |
+| `NOVA_PROGRAMS_FILE` | `state/programs.json` | سجل البرامج المصرّح بها |
+| `NOVA_JOBS_REL` | `state/jobs` | مكان الـjobs والأدلة |
+| `NOVA_ALLOW_NODE_TOOLS` | `1` | تشغيل الأدوات على السيرفر نفسه |
+| `NOVA_FORCE_LOCAL_TOOLS` | `0` | تجاهل النودات واشغل محلياً |
+| `NOVA_MAX_INFLIGHT` | `4` | أقصى طلبات متزامنة كلها |
+| `NOVA_DEFAULT_RPS` | `1` | السقف لو البرنامج ما حدّدش |
+| `NOVA_ALLOW_SOURCE_DOWNLOAD` | `0` | يفعّل تنزيل مصدر المشروع |
+| `NOVA_OPEN_OPS` | `0` | وضع المعمل المحلي |
+
+`GET /api/ops/version` بيقول build إيه اللي شغال فعلاً (sha + عمر الـbundle + الأدوات الموجودة + وضع الدورة الخلفية) — ده أول أمر تعمله لأي هوست بعيد قبل ما تصدّق أي حاجة تانية.
+| `NOVA_TOKEN` (للنود) | فارغ | التوكن اللي بيسمح لأي جهاز يسجل في الأسطول |
+| `NOVA_KEYS_URL` / `NOVA_KEYS_FILE` | فارغ | مصدر مفاتيح مجاني وقت الإقلاع (https إجباري) |
+| `NOVA_SCOPE_DOMAINS` | فارغ | نطاقات تتسجّل أوتوماتيك في وضع الاستطلاع |
+| `NOVA_KEYLESS_SEATS` | `openai-fast,mistral,llama` | موديلات المجلس بدون مفاتيح |
+| `NOVA_OPS_AUTONOMY` | `passive` | عمق الدورة الخلفية: `off`/`passive`/`standard`/`deep` |
+| `NOVA_OPS_SWEEP_HOURS` | `6` | أقل فترة بين دورتين على نفس البرنامج |
+| `NOVA_OPS_SWEEP_MAX_TASKS` | `10` | سقف مهام كل دورة |
+
+### 6) فحص إن البوابة لسه شغالة
+```bash
+pnpm run ops:selftest      # 35 فحص: سكوب + CIDR + SSRF + التوكن + الثروتل + الأدلة + الاكتشاف
+pnpm run typecheck:ratchet # مفيش أخطاء type جديدة
+```
+
+### حدود صادقة للمحرك
+- `recon.ports` بيعتمد على TCP connect — لو الشبكة/البروكسي بيقبل أي اتصال هتلاقي منافذ «مفتوحة» وهي مش كده.
+  بوابة `finding_verify` بتعيد الاتصال تاني بس؛ أي نتيجة من نوع منفذ لازم تتأكد بأمر banner حقيقي قبل التقرير.
+- `nuclei`/`nmap` محتاجين الأدوات على نفس النود أو نود متصل بالوكيل — من غيرها المهمة بتفشل بوضوح.
+- `fs_write` و mouse/keyboard **مقفولان بالتوكن** افتراضياً ومش بيستدعيهم أي أداة نوفا.
+
+### 7) التزويد الذاتي — الصفر اللي يشتغل من غير ما تفتح ملف
+الفكرة: منصة مجانية مفيهاش إعدادات يدوية. أي حاجة كانت محتاجة يد human اتحوّلت لأمر واحد أو متغير بيئة.
+
+| الحاجة | المتغير / الأمر | بيحصل إيه |
+|---|---|---|
+| مفاتيح من مصدر عندك | `NOVA_KEYS_URL=https://...` (أو `NOVA_KEYS_FILE=~/keys.json`) | وقت الإقلاع بيتقرا JSON زي `{"GROQ_API_KEY":"..."}` ويتحقن في البيئة. مفتاح موجود في البيئة بيفضل الأول، القيم مش بتتسجل في اللوجات، و`http://` مرفوض غير بـ `NOVA_KEYS_ALLOW_HTTP=1` |
+| نطاقات تدخل البرنامج | `NOVA_SCOPE_DOMAINS=example.com,https://hackerone.com/foo` | بيتسجّل كل نطاق **passive_only** أوتوماتيك (security.txt + استنتاج المنصة + استبعاد admin/staging/internal) |
+| حالة اللي اتعمل | `GET /api/ops/provision` | بيقول أسماء المفاتيح اللي اتحمّلت (مش قيمها) والنطاقات اللي اتسجّلت |
+| إعادة من غير restart | `POST /api/ops/provision/reload` | بيقرأ المصدر تاني فوراً |
+| تسجيل برنامج بالكلام | أداة نوفا `program_discover` · `POST /api/ops/programs/discover` | قول «اكتشف برنامج example.com» — يقرأ سياسة الموقع ويسجّله بنفسه |
+| تركيب أداة ناقصة | `POST /api/tools/install {"tool":"nuclei"}` | بينزّل ProjectDiscovery من الـrelease الرسمي أو `apt` على النود، وبعدها الأدوات بتبان في `ops_kinds` |
+
+**بوابة الفحص النشط مش أوتوماتيك، وده مقصود:** `discover` بيسجّل استطلاع بس. عشان يمسّ الخدمة لازم نص
+الإذن بالحرف `I have written permission for <host>` يجي بعد ما المستخدم يقولها — لو اتكتب من غير تأكيد
+البرنامج هيفضل مقفول. ده الخط اللي ماينفعش يتعدي: الفحص النشط على ملك حد تاني من غير إذن = جريمة،
+ومش مسألة إعداد.
+
+### 8) المجلس بقى حقيقي من غير أي مفتاح
+`listConfiguredProviders()` كان بيرجع **مقعد واحد** بدون مفاتيح، فالمجلس كان بيقول «صوت واحد»
+وماينتجش. الآن كل مقعد = موديل مستقل على نفس الطرفية المفتوحة:
+
+```
+ollama · pollinations:openai-fast · pollinations:mistral · pollinations:llama   ← 4 مقاعد، $0
+```
+
+تغيير القايمة: `NOVA_KEYLESS_SEATS="openai-fast,mistral"` · إطفاء كله: `NOVA_KEYLESS_LLM=0`.
+مقاعد `pollinations:*` مش بتتأثر بـ `POLLINATIONS_MODEL` (لو اتطبّق على الكل هيبقى صوت واحد بيخاطب نفسه) —
+بيشتغل بس لما يكون في مقعد keyless واحد.
+
+### 9) النودات والتوكن (اقرأها لو أسطولك وقف)
+البوابة بترفض تسجيل أي نود من غير توكن، لأن النود معناه شيل أوامر على جهاز.
+- `nova-agent.js` بيبعت `NOVA_TOKEN` (أو `--token`) في الـhandshake (`?token=`) وفي الـregister.
+- `deploy/oracle-setup.sh` بيولّد التوكن لوحده في `/etc/cybernova.env` (chmod 600) ويطبعه مرة واحدة.
+- أسطول GitHub بياخده من Secret اسمه `NOVA_EXEC_TOKEN`، و**الأدوات النشطة مش متثبتة عليه**
+  (IP بتاع GitHub = بلاغ = ضياع الحساب). الأدوات التقيلة على نودك الدائم بس.
+- `NOVA_ALLOW` على نودات Actions = قايدة قراءة/استطلاع؛ لو فاضي النود بيبقى مفتوح على كل حاجة، فمابقاش فاضي.
+

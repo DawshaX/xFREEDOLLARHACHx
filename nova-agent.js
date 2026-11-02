@@ -74,6 +74,25 @@ const SERVERS = String(
 const SERVER = SERVERS[0];
 let serverIndex = 0;
 
+/**
+ * Hub shared secret. The platform gate (src/lib/ops/gate.ts) refuses agent
+ * registration without it, because a machine that registers can be handed
+ * shell/file/screen control. Send it as `?token=` on the handshake AND in the
+ * register payload so old and new hubs both accept it.
+ */
+const TOKEN = String(ARGS.token || process.env.NOVA_TOKEN || process.env.NOVA_EXEC_TOKEN || "").trim();
+
+function withToken(url) {
+  if (!TOKEN) return url;
+  try {
+    const u = new URL(url);
+    if (!u.searchParams.has("token")) u.searchParams.set("token", TOKEN);
+    return u.toString();
+  } catch {
+    return `${url}${url.includes("?") ? "&" : "?"}token=${encodeURIComponent(TOKEN)}`;
+  }
+}
+
 const AGENT_ID =
   ARGS.id ||
   process.env.NOVA_AGENT_ID ||
@@ -714,6 +733,7 @@ async function register() {
   const profile = await buildDeepProfile();
   send({
     type: "register",
+    token: TOKEN || undefined,
     id: AGENT_ID,
     hostname: os.hostname(),
     platform: process.platform,
@@ -737,7 +757,8 @@ async function register() {
  * Node's WebSocket only says "non-101 status code"; this asks the same URL for
  * the real status line so the fix is obvious (404 path / 502 proxy / 400 TLS).
  */
-async function diagnose(target) {
+async function diagnose(rawTarget) {
+  const target = withToken(rawTarget);
   const m = /^(wss?):\/\/([^/]+)(\/.*)?$/i.exec(target);
   if (!m) return;
   const [, scheme, hostPort, pathPart] = m;
@@ -784,13 +805,14 @@ async function diagnose(target) {
 }
 
 function connect() {
-  const target = SERVERS[serverIndex % SERVERS.length];
+  const target = withToken(SERVERS[serverIndex % SERVERS.length]);
   log(`connecting → ${target}${SERVERS.length > 1 ? ` (${serverIndex % SERVERS.length + 1}/${SERVERS.length})` : ""}`);
   ws = new WS(target);
 
   ws.addEventListener("open", () => {
     attempt = 0;
     registered = false;
+    if (!TOKEN) log("تحذير: مفيش NOVA_TOKEN — المنصات الحديثة بترفض تسجيل أي نود من غير توكن (401). شغّل: NOVA_TOKEN=xxx node nova-agent.js ...");
     log("socket open");
     register().catch((e) => log("register failed:", e.message));
     clearInterval(heartbeatTimer);

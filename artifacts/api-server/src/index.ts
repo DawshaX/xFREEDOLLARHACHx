@@ -13,6 +13,7 @@ import { runSentinelMigrations } from "./lib/migrate-sentinel";
 import { scheduleGC } from "./lib/gc-scheduler";
 import { forceOllamaDefault } from "./lib/ai";
 import { initLocalAgentWss } from "./routes/local-agent";
+import { wsUpgradeAllowed } from "./lib/ops/gate";
 import {
   registerHubClient,
   removeHubClient,
@@ -23,6 +24,7 @@ import { getAllMemories, getMemoryCount, saveMemory } from "./routes/memory";
 import { broadcastLiveEvent } from "./routes/live-events";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
 import { startAutonomousBackgroundDaemon } from "./lib/autonomous-daemon";
+import { provisionOnBoot } from "./lib/ops/keys-source";
 
 process.on("unhandledRejection", (reason) => {
   logger.warn({ reason }, "Unhandled promise rejection caught safely (standalone mode)");
@@ -184,6 +186,19 @@ hubWss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
 function routeUpgrade(req: http.IncomingMessage, socket: import("node:stream").Duplex, head: Buffer): void {
   const url = req.url ?? "";
   if (url === "/api/local-agent/ws" || url.startsWith("/api/local-agent/ws?")) {
+    // Registering an agent hands whoever connects a command channel into the
+    // fleet, so the handshake itself must be authenticated.
+    const gate = wsUpgradeAllowed(url, req);
+    if (!gate.ok) {
+      logger.warn({ reason: gate.reason }, "local-agent ws upgrade refused");
+      socket.write(
+        "HTTP/1.1 401 Unauthorized\r\n" +
+          `X-NOVA-Reason: ${gate.reason.replace(/[^\x20-\x7e]/g, "")}\r\n` +
+          "Connection: close\r\n\r\n",
+      );
+      socket.destroy();
+      return;
+    }
     localAgentWss.handleUpgrade(req, socket, head, (ws) => {
       localAgentWss.emit("connection", ws, req);
     });
@@ -232,6 +247,11 @@ server.on("error", (err: NodeJS.ErrnoException) => {
   console.error(`\n✗ Cannot listen on ${host}:${port} — ${err.code ?? err.message}\n`);
   process.exit(1);
 });
+
+// ── self-provisioning: keys on our own host + passive scope, then listen ────
+// Awaited on purpose: the first /api/nova-core/chat should already see the
+// providers the key source supplied. A failure here is non-fatal by design.
+await provisionOnBoot();
 
 server.listen(port, host, () => {
   logger.info({ port, host }, `Server listening on ${host} (HTTP + /api/ws + /api/local-agent/ws)`);

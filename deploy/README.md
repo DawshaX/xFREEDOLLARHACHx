@@ -21,6 +21,10 @@ ssh -i your-key.pem ubuntu@<SERVER_IP>
 # على السيرفر:
 sudo apt-get update && sudo apt-get install -y git
 sudo git clone https://github.com/DawshaX/xFREEDOLLARHACHx.git /opt/cybernova
+> **هوست صغير دائم (Waifly/Zeabur/Back4App بـ300 MB)؟** اقرأ [`deploy/waifly.md`](waifly.md) —
+> فيه طريقة جيب الـbundle الجاهز من الـrelease بدل البناء على السيرفر، وجدول المتغيرات الصح
+> لـ300 MB، وطريقة الـprune للديسك، وchecklist ما بعد الـdeploy.
+
 sudo bash /opt/cybernova/deploy/oracle-setup.sh
 ```
 
@@ -46,6 +50,14 @@ http://<SERVER_IP>/nova-memory    ← الذاكرة
 
 ```bash
 sudo DOMAIN=nova.yourdomain.com EMAIL=you@mail.com bash /opt/cybernova/deploy/oracle-setup.sh
+```
+
+الاسكربت بيعمل خطوتين مهمتين غير التثبيت:
+1. **أدوات الفحص الحقيقية**: `nmap dnsutils whois netcat-openbsd jq` + `nuclei httpx subfinder katana`
+   من releases الرسمية + `nuclei-templates`. من غيرها محرك الـOps بيرفض يشغّل `tools.*` («الأداة مش منصوبة»).
+2. **توليد توكن التنفيذ**: `NOVA_EXEC_TOKEN` عشوائي في `/etc/cybernova.env` (chmod 600) وبيطبع مرة واحدة.
+   لازم يتحط في GitHub Secret بنفس الاسم `NOVA_EXEC_TOKEN` وإلا نودات الـActions هتترفض 401 عند التسجيل.
+   أي تسريب محتمل = دور التوكن: عدّل السطر و`systemctl restart nova`.
 ```
 certbot هيعمل TLS تلقائي + تجديد تلقائي.
 

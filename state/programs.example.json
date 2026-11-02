@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "_readme_ar": [
+    "ده قالب للبرنامج المصرّح به. انسخه إلى state/programs.json (ملف مهمل في git لأنه بياناتك الشخصية).",
+    "state/programs.json هو البوابة الوحيدة للفحص النشط: أي نطاق مش جواه مرفوض من الكود — مش من البرومبت.",
+    "hosts يقبل wildcard (*.example.com) · exact للمضيفات المفردة · cidrs لمدايات IP · out_of_scope للاستثناء الدائم.",
+    "max_rps و max_concurrency هما سقف الإزعاج: 1 req/s كافي لمعظم البرامج، وزيّده بس لو الـpolicy تسمح صراحة.",
+    "passive_only=true معناه استطلاع من مصادر عامة بس (DNS/CT logs/NVD) من غير لمس الخدمة — مناسب للمواقع اللي مش ليك.",
+    "لو حابب توجّه الفحص لجهاز معين في الأسطول: حط 'agent=kali-1' في notes_ar."
+  ],
+  "programs": [
+    {
+      "id": "example-program",
+      "name": "Example Program (مثال — استبدله ببرنامجك الحقيقي)",
+      "platform": "hackerone",
+      "enabled": false,
+      "hosts": ["*.example.com"],
+      "exact": ["example.com"],
+      "out_of_scope": ["forum.example.com", "wiki.example.com"],
+      "max_rps": 1,
+      "max_concurrency": 2,
+      "passive_only": false,
+      "policy_url": "https://www.example.com/security/policy",
+      "notes_ar": "مثال: احذفه أو اضبط enabled=false.سيّرو من اللوحة أو POST /api/ops/programs (بـ NOVA_EXEC_TOKEN)."
+    }
+  ]
+}

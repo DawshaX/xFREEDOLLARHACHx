@@ -45,7 +45,12 @@ export interface CouncilReport {
   members: CouncilMemberAnswer[];
   /** 0..1 — rough lexical overlap between members. Low means "verify this". */
   agreement: number;
-  agreementLabel: "متوافقون" | "اختلاف جزئي" | "اختلاف كبير" | "صوت واحد";
+  /**
+   * «صوت واحد» means one model answered. It is deliberately distinct from
+   * «ولا صوت وصل» (every seat errored — an outage) and «مفيش مقاعد» (no seats at
+   * all). Collapsing these three is what makes a dead network look like a verdict.
+   */
+  agreementLabel: "متوافقون" | "اختلاف جزئي" | "اختلاف كبير" | "صوت واحد" | "ولا صوت وصل" | "مفيش مقاعد";
   /** The judge model that produced `answer` (null when only one member answered). */
   judge: { provider: string; model: string } | null;
   /** Final answer, ready to show. */
@@ -56,6 +61,8 @@ export interface CouncilReport {
   /** Present when ok=false. */
   error?: string;
   hint?: string;
+  /** true = seats were asked and nothing answered (network/keys), not a disagreement. */
+  outage?: boolean;
 }
 
 const MEMBER_TIMEOUT_MS = Number(process.env.NOVA_COUNCIL_TIMEOUT_MS || 30_000);
@@ -231,12 +238,12 @@ export async function runCouncil(
       question,
       members: [],
       agreement: 0,
-      agreementLabel: "صوت واحد",
+      agreementLabel: "مفيش مقاعد",
       judge: null,
       answer: "",
       disagreements: [],
       ms: Date.now() - started,
-      error: "مفيش أي نموذج لغوي متاح — المجلس محتاج مفتاح واحد على الأقل.",
+      error: "مفيش أي نموذج لغوي متاح — المجلس محتاج مصدر واحد على الأقل.",
       hint: "أسهل مفتاح مجاني: GROQ_API_KEY من console.groq.com (بدون كارت) · أو GEMINI_API_KEY من aistudio.google.com · أو GITHUB_MODELS_TOKEN لو عندك توكن GitHub.",
     };
   }
@@ -259,12 +266,19 @@ export async function runCouncil(
       question,
       members: answers,
       agreement: 0,
-      agreementLabel,
+      // Never call this «صوت واحد»: nothing disagreed here, nothing answered.
+      // Dressing an outage up as a verdict is how a panel starts trusting a
+      // number that was never produced.
+      agreementLabel: "ولا صوت وصل",
       judge: null,
       answer: "",
       disagreements: [],
       ms: Date.now() - started,
-      error: "كل النماذج فشلت في الرد.",
+      outage: true,
+      error:
+        answers.every((a) => /fetch failed|network|timeout|ETIMEDOUT|ENOTFOUND|EAI_AGAIN/i.test(String(a.error ?? "")))
+          ? "كل المقاعد مقفولة بالشبكة/الدنا — ده انقطاع مش خلاف. على نود ليه خروج حر هترد؛ جوه sandbox بيقطع النطاقات الخارجية ده متوقع."
+          : "كل المقاعد رجّعت خطأ — شوف تفاصيل كل مقعد في hint.",
       hint: answers.map((a) => `${a.provider}: ${a.error}`).join(" · ").slice(0, 400),
     };
   }

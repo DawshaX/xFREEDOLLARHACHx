@@ -23,6 +23,8 @@ import {
   setActiveMissionTarget,
 } from "./standalone-api";
 import { broadcastEvent } from "./ws-hub";
+import { runOpsSweep } from "./ops/autonomy";
+import { logger } from "./logger";
 import { broadcastLiveEvent } from "../routes/live-events";
 
 export interface WorkstationEnvironmentProfile {
@@ -907,6 +909,26 @@ export async function tickAutonomousDaemon(customTarget?: string): Promise<Brain
   for (const task of state.multiTaskQueue) {
     task.progress = 100;
     task.lastOutput = `Cycle #${cycleNum} verified on ${target} at ${new Date().toLocaleTimeString("ar-EG")}`;
+  }
+
+  // ── المحرك في الخلفية فعلاً: دورة ops حقيقية على البرامج المصرّح بها ────────
+  // Not a simulation of activity: it creates real jobs through the same scope
+  // gate, rate limiter and evidence chain a manual run uses. Passive by default,
+  // bounded per program, and any throw here is swallowed so the daemon survives.
+  try {
+    const sweep = await runOpsSweep();
+    if (sweep.started.length) {
+      recordExtractedArtifact({
+        type: "AUTONOMOUS_OPS_SWEEP",
+        target: sweep.started.map((x) => x.host ?? x.programId).join(", ").slice(0, 120),
+        titleAr: `دورة تنفيذ خلفية: ${sweep.started.length} job حقيقي (عمق ${sweep.level}) · ${sweep.denied.length} مرفوض/متخطّى`,
+        value: sweep.started.map((x) => `${x.programId}→${x.jobId}`).join(" | ").slice(0, 400),
+        tool: "ops/autonomy",
+        verified: true,
+      });
+    }
+  } catch (err) {
+    logger.warn({ err }, "autonomous ops sweep failed (daemon continues)");
   }
 
   persistBrainState(state);

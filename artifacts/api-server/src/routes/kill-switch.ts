@@ -2,7 +2,13 @@ import { Router } from "express";
 import { auditLog } from "../lib/audit";
 import { broadcastLiveEvent } from "./live-events";
 
+import { requireOps } from "../lib/ops/gate";
+
 const router = Router();
+
+// Tripping the kill switch stops the autonomous brain: that is a denial-of-service
+// primitive if it is anonymous, so writes are gated like everything else.
+router.use(requireOps("kill-switch"));
 
 // Global kill switch state
 export let killSwitchActive = false;

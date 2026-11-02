@@ -2,7 +2,7 @@
  * Local Machine Agent — Full-Control WebSocket Agent Backend
  * Supports: PTY shell, file system, process management, screenshot relay, system info
  */
-import { Router } from "express";
+import { Router, type Response } from "express";
 import { WebSocket, WebSocketServer } from "ws";
 import type { IncomingMessage } from "http";
 import { logger } from "../lib/logger";
@@ -12,7 +12,14 @@ import { broadcastEvent } from "../lib/ws-hub";
 import fs from "fs";
 import path from "path";
 
+import { requireOps } from "../lib/ops/gate";
+
 const router = Router();
+
+// Every surface in this file can run commands, read/write files, or take the
+// screen of a machine in the fleet. It used to be wide open — now it goes
+// through the same gate as /api/exec (token when configured, same-origin else).
+router.use(requireOps("local-agent"));
 
 interface AgentConnection {
   ws: WebSocket;
@@ -474,6 +481,22 @@ function handleAgentMessage(
 
 // ── REST API routes ───────────────────────────────────────────────────────────
 
+/**
+ * A *query* about a machine that is not attached has an honest answer:
+ * «connected: false». Returning 503 for reads made the panel show a red error
+ * for a normal state (no node running); 503 is kept for ACTIONS below, where
+ * the caller asked us to do something and we could not.
+ */
+function noAgentRead(res: Response, what: string): void {
+  res.status(200).json({
+    ok: false,
+    connected: false,
+    error: "no_agent_connected",
+    reasonAr: `مفيش جهاز متصل بالوكيل — ماتقدرش تعرض ${what} دلوقتي. شغّل nova-agent.js على الجهاز المطلوب.`,
+    agents: getConnectedAgentList(),
+  });
+}
+
 router.get("/local-agent/agents", (_req, res) => {
   res.json({ agents: getConnectedAgentList(), count: connectedAgents.size });
 });
@@ -595,7 +618,8 @@ router.get("/local-agent/fs/list", async (req, res) => {
   const { dir = "~", agentId: reqAgentId } = req.query as { dir?: string; agentId?: string };
   const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
-    res.status(503).json({ error: "no local agent connected" }); return;
+    noAgentRead(res, "ملفات الجهاز");
+    return;
   }
   const requestId = `fs-list-${Date.now()}`;
   const result = await sendToAgent(agent.id, { type: "fs_list", requestId, dir }, requestId, 15_000);
@@ -633,7 +657,8 @@ router.get("/local-agent/processes", async (req, res) => {
   const { agentId: reqAgentId } = req.query as { agentId?: string };
   const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
-    res.status(503).json({ error: "no local agent connected" }); return;
+    noAgentRead(res, "العمليات الجارية");
+    return;
   }
   const requestId = `procs-${Date.now()}`;
   const result = await sendToAgent(agent.id, { type: "processes", requestId }, requestId, 15_000);
@@ -658,7 +683,8 @@ router.get("/local-agent/screenshot", async (req, res) => {
   const { agentId: reqAgentId } = req.query as { agentId?: string };
   const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
-    res.status(503).json({ error: "no local agent connected" }); return;
+    noAgentRead(res, "لقطة الشاشة");
+    return;
   }
   const requestId = `screenshot-${Date.now()}`;
   const result = await sendToAgent<{ ok: boolean; dataUri?: string; error?: string }>(
@@ -886,6 +912,17 @@ exec node "$AGENT_FILE" --server "$SERVER_URL" "$@"
 
 // ── GET /local-agent/download-project-zip ── Download full project as tar.gz ─
 router.get("/local-agent/download-project-zip", (req, res) => {
+  // Shipping the whole source tree to whoever asks is disclosure, not a feature.
+  // It now needs an explicit opt-in (and the ops token when one is configured).
+  if (process.env.NOVA_ALLOW_SOURCE_DOWNLOAD !== "1") {
+    res.status(403).json({
+      ok: false,
+      error: "source_download_disabled",
+      reason: "تحميل الكود المصدري مقفول. سيّر NOVA_ALLOW_SOURCE_DOWNLOAD=1 لو عايزه فعلاً (على شبكة محلية).",
+      alternative: "git clone https://github.com/DawshaX/xFREEDOLLARHACHx — المستودع عام أصلاً ومفيش فيه أسرار.",
+    });
+    return;
+  }
   const { spawn: spawnChild } = require("child_process") as typeof import("child_process");
   const workspaceRoot = "/home/runner/workspace";
   const filename = `cybernova-src-${new Date().toISOString().slice(0, 10)}.tar.gz`;

@@ -5197,31 +5197,28 @@ export function resolveStandaloneApi(
   }
 
   if (path === "/local-agent/processes") {
-    return {
-      processes: [
-        { pid: "1042", user: "kali", cpu: "4.2", mem: "2.1", command: "node autonomous-daemon.js --24-7" },
-        { pid: "1108", user: "kali", cpu: "1.9", mem: "1.4", command: "caido-cli --listen 0.0.0.0:8082" },
-        { pid: "1204", user: "kali", cpu: "5.4", mem: "3.2", command: "nuclei -u https://bughunters.google.com" },
-      ],
-    };
+    // No node is attached in this mode, so there is no process table to show.
+    // A canned list here would be a fabricated dashboard — the worst kind of bug
+    // in a security tool, because it looks like evidence.
+    return { processes: [], connected: false, error: "no_execution_plane", reasonAr: "مفيش جهاز متصل بالوكيل — مفيش عمليات حقيقية تُعرض." };
   }
 
-  if (path === "/local-agent/fs" || path === "/local-agent/fs/read") {
-    if (path === "/local-agent/fs/read") {
-      return { content: "# CyberNova Local Agent File Content\nVerified Workspace File." };
-    }
+  if (path === "/local-agent/fs" || path === "/local-agent/fs/read" || path.startsWith("/local-agent/")) {
+    // Static / no-server mode has NO execution plane. Answering `ok: true,
+    // connected: true, output: "Executed on kali-sandbox-01"` made the panel
+    // report work that never ran — and an operator cannot debug what they
+    // cannot see. Refuse honestly and name the thing that makes it real.
     return {
-      dir: "/home/user/xFREEDOLLARHACHx",
-      entries: [
-        { name: "state", isDir: true, isSymlink: false, size: 4096, mtime: Date.now(), path: "/home/user/xFREEDOLLARHACHx/state" },
-        { name: "HANDOFF.md", isDir: false, isSymlink: false, size: 18420, mtime: Date.now(), path: "/home/user/xFREEDOLLARHACHx/HANDOFF.md" },
-        { name: "cybernova-brain-state.json", isDir: false, isSymlink: false, size: 12480, mtime: Date.now(), path: "/home/user/xFREEDOLLARHACHx/state/cybernova-brain-state.json" },
-      ],
+      ok: false,
+      connected: false,
+      output: null,
+      content: null,
+      entries: [],
+      error: "no_execution_plane",
+      reasonAr: "مفيش سيرفر ومفيش جهاز متصل بالوكيل — مفيش حاجة اتنفذت فعلاً.",
+      howAr: "شغّل السيرفر، أو اربط جهاز: node nova-agent.js --server ws://<hub>/api/local-agent/ws",
+      realJobsInstead: "POST /api/ops/jobs (بعد تسجيل البرنامج في /api/ops/programs) — ده اللي بينفّذ بجد.",
     };
-  }
-
-  if (path.startsWith("/local-agent/")) {
-    return { ok: true, connected: true, output: "Executed on kali-sandbox-01" };
   }
 
   // 11. Nova Knowledge, Desktop Panels, Keys, Multi-AI, Swarm, Registry

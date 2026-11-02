@@ -6,6 +6,8 @@ import net from "node:net";
 import { saveMemory } from "./memory";
 import { resolveStandaloneApi } from "../lib/standalone-api";
 import { broadcastEvent } from "../lib/ws-hub";
+import { execOnLocalAgent } from "./local-agent.js";
+import { findBinary, clearBinaryCache } from "../lib/ops/tools.js";
 
 const router: IRouter = Router();
 
@@ -319,3 +321,106 @@ router.post("/tools/encode", async (req, res, next) => {
 });
 
 export default router;
+
+/* ── installer: turn a corpus entry into an installed binary ─────────────── */
+
+/**
+ * The catalogue said "not installed" for 78 tools and nothing ever changed it.
+ * `POST /tools/install` closes that loop for the three installs that are safe,
+ * offline-verifiable and cover everything the ops engine calls: apt packages,
+ * static binaries fetched from the project's own GitHub release, and `go install`
+ * for module paths. It runs on the hub itself — that is the machine the panel
+ * talks to, and the one that already has node/ollama.
+ *
+ * Authorization is unchanged: the install command goes through the same
+ * LOCAL_ALLOW-listed exec path as everything else, so it needs the ops token.
+ */
+const INSTALLERS: Record<string, { pkg: string; check: string; via: "apt" | "go" | "pd" }> = {
+  nuclei: { pkg: "nuclei", check: "nuclei -version", via: "pd" },
+  subfinder: { pkg: "subfinder", check: "subfinder -h", via: "pd" },
+  httpx: { pkg: "httpx", check: "httpx -version", via: "pd" },
+  katana: { pkg: "katana", check: "katana -version", via: "pd" },
+  nmap: { pkg: "nmap", check: "nmap --version", via: "apt" },
+  whois: { pkg: "whois", check: "whois --version", via: "apt" },
+  dig: { pkg: "dnsutils", check: "dig -v", via: "apt" },
+  jq: { pkg: "jq", check: "jq --version", via: "apt" },
+  curl: { pkg: "curl", check: "curl --version", via: "apt" },
+  git: { pkg: "git", check: "git --version", via: "apt" },
+};
+
+/** ProjectDiscovery publishes self-contained tarballs — no sudo, no apt. */
+function pdInstall(tool: string): string {
+  return (
+    `set -e; mkdir -p "$HOME/.local/bin"; ` +
+    `ver=$(curl -fsSL --max-time 20 https://api.github.com/repos/projectdiscovery/${tool}/releases/latest` +
+    ` | grep -o '"tag_name": *"[^"]*"' | head -1 | cut -d'"' -f4); ` +
+    `test -n "$ver"; ` +
+    `curl -fsSL --max-time 120 -o /tmp/${tool}.tgz ` +
+    `https://github.com/projectdiscovery/${tool}/releases/download/$ver/${tool}_latest_linux_amd64.zip || ` +
+    `curl -fsSL --max-time 120 -o /tmp/${tool}.tgz ` +
+    `https://github.com/projectdiscovery/${tool}/releases/download/$ver/${tool}_latest_linux_amd64.tar.gz; ` +
+    `case /tmp/${tool}.tgz in *Zip*) unzip -o -q /tmp/${tool}.tgz -d "$HOME/.local/bin" ;; *) ` +
+    `tar -xzf /tmp/${tool}.tgz -C "$HOME/.local/bin" ;; esac; ` +
+    `chmod +x "$HOME/.local/bin/${tool}" 2>/dev/null || true; ` +
+    `"$HOME/.local/bin/${tool}" -version 2>&1 | head -2 || true`
+  );
+}
+
+router.post("/tools/install", async (req, res) => {
+  const tool = String(req.body?.tool ?? "").trim().toLowerCase();
+  const spec = INSTALLERS[tool];
+  if (!spec) {
+    res.status(400).json({
+      ok: false,
+      error: `unknown tool "${tool}"`,
+      installable: Object.keys(INSTALLERS).sort(),
+    });
+    return;
+  }
+
+  const present = findBinary(tool);
+  if (present) {
+    res.json({ ok: true, already: true, tool, path: present });
+    return;
+  }
+
+  const cmds =
+    spec.via === "pd"
+      ? [pdInstall(tool)]
+      : [`sudo -n apt-get update -y >/dev/null 2>&1 || apt-get update -y || true`,
+         `DEBIAN_FRONTEND=noninteractive sudo -n apt-get install -y ${spec.pkg} 2>&1 | tail -5 || sudo apt-get install -y ${spec.pkg} 2>&1 | tail -5`];
+
+  const started = Date.now();
+  const results: Array<{ cmd: string; out: string; exit: number | null }> = [];
+  for (const cmd of cmds) {
+    // null = no node answered / none connected — that is the honest failure, and
+    // it must not be dressed up as a successful install.
+    const r = await execOnLocalAgent(cmd, undefined, spec.via === "pd" ? 240_000 : 180_000);
+    if (r === null) {
+      res.status(503).json({
+        ok: false,
+        tool,
+        error: "no-exec-plane",
+        reasonAr: "مفيش نود تنفيذ متصل عشان ننجّح الأمر عليه.",
+        howAr: "شغّل نوداً (NOVA_TOKEN مطلوب) أو سيّر NOVA_ALLOW_NODE_TOOLS=1 على الجهاز المضيف وثبّت يدوياً.",
+        command: cmd,
+      });
+      return;
+    }
+    results.push({ cmd, out: `${r.stdout}\n${r.stderr}`.trim().slice(0, 1200), exit: r.exitCode });
+  }
+
+  clearBinaryCache();
+  const found = findBinary(tool);
+  res.json({
+    ok: Boolean(found),
+    tool,
+    via: spec.via,
+    path: found ?? null,
+    steps: results,
+    note: found
+      ? "الأداة بقت مرئية للمحرك — أي شغل عميق (deep) على النود هيشغّلها تلقائياً."
+      : "الأمر اترفض أو الأداة نزلت في مسار مش داخل PATH. لو النود هو اللي بتثبت عليه، الأداة بتتنزل في ~/.local/bin — شغّل NOVA_ALLOW_NODE_TOOLS=1.",
+    ms: Date.now() - started,
+  });
+});

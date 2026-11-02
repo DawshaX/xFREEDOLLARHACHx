@@ -7,7 +7,12 @@ import { Router } from "express";
 import { execOnLocalAgent } from "./local-agent";
 import { auditLog } from "../lib/audit";
 
+import { requireOps } from "../lib/ops/gate";
+
 const router = Router();
+
+// mouse/keyboard/clipboard control — the most abusable surface in the platform.
+router.use(requireOps("local-agent-input"));
 
 // ── Helper: build result from exec output ──────────────────────────────────────
 function execResult(r: { stdout: string; stderr: string; exitCode: number; durationMs: number } | null) {

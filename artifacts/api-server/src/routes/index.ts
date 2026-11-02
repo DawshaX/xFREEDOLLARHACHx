@@ -84,6 +84,7 @@ import novaCoreRouter from "./nova-core";
 import fleetMeshRouter from "./fleet-mesh";
 import fleetCapacityRouter from "./fleet-capacity";
 import panelGapsRouter from "./panel-gaps";
+import opsRouter from "./ops";
 
 const router: IRouter = Router();
 
@@ -134,10 +135,15 @@ router.use(novaGatewayRouter);
 // ── NOVA Core (persona + real tools + agent loop) ────────────────────────────
 router.use(novaCoreRouter);
 router.use(fleetMeshRouter);
+// Free-hosts catalogue + honest fleet ceiling. Was imported but never mounted,
+// so /api/fleet/{capabilities,catalogue,scale-plan} 404'd while the code sat there.
+router.use(fleetCapacityRouter);
 // Free-stack catalogue + real capacity of the connected fleet.
 router.use(fleetCapacityRouter);
 // Endpoints the panel calls that used to fall through to the SPA HTML.
 router.use(panelGapsRouter);
+// Ops = the real execution spine: authorized programs → durable jobs → evidence → report.
+router.use(opsRouter);
 
 // ── AI / Chat ────────────────────────────────────────────────────────────────
 router.use(liveAgentRouter);
