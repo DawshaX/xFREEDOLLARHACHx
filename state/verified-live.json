@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "at": "2026-11-02T13:19:25.290Z",
+  "verdict": "AMBER",
+  "counts": {
+    "pass": 11,
+    "fail": 0,
+    "blocked": 0,
+    "review": 5
+  },
+  "meta": {
+    "tools": [
+      "dnsx",
+      "subfinder",
+      "httpx",
+      "nuclei",
+      "katana",
+      "nmap",
+      "naabu"
+    ],
+    "engine": "http://127.0.0.1:8090/api",
+    "host": "scanme.nmap.org"
+  },
+  "rows": [
+    {
+      "layer": "cli",
+      "check": "dns resolution",
+      "status": "pass",
+      "detail": "2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present",
+      "at": "2026-11-02T13:18:08.408Z"
+    },
+    {
+      "layer": "cli",
+      "check": "subfinder -d vulnweb.com",
+      "status": "pass",
+      "detail": "518 سوبدومين (المطلوب ≥2) · viruswall.vulnweb.com, charmglm.vulnweb.com, 2207.vulnweb.com",
+      "at": "2026-11-02T13:18:44.087Z",
+      "count": 518,
+      "ms": 35678
+    },
+    {
+      "layer": "cli",
+      "check": "httpx https://scanme.nmap.org/",
+      "status": "review",
+      "detail": "exit 0",
+      "at": "2026-11-02T13:18:44.620Z",
+      "ms": 533
+    },
+    {
+      "layer": "cli",
+      "check": "katana crawl testphp.vulnweb.com",
+      "status": "review",
+      "detail": "0 رابط متكرول (المطلوب ≥5)",
+      "at": "2026-11-02T13:18:44.666Z",
+      "count": 0,
+      "ms": 46
+    },
+    {
+      "layer": "cli",
+      "check": "nuclei -u testphp.vulnweb.com",
+      "status": "review",
+      "detail": "مفيش نتيجة · exit 0 ·",
+      "at": "2026-11-02T13:19:18.970Z",
+      "count": 0,
+      "ms": 23836
+    },
+    {
+      "layer": "cli",
+      "check": "nmap scanme.nmap.org:80,22",
+      "status": "pass",
+      "detail": "2 بورت مفتوح · 22/tcp open · 80/tcp open",
+      "at": "2026-11-02T13:19:19.128Z",
+      "count": 2,
+      "ms": 158
+    },
+    {
+      "layer": "cli",
+      "check": "ffuf present",
+      "status": "review",
+      "detail": "مش موجود — مش حرجي",
+      "at": "2026-11-02T13:19:19.128Z"
+    },
+    {
+      "layer": "engine",
+      "check": "engine reachable",
+      "status": "pass",
+      "detail": "HTTP 200",
+      "at": "2026-11-02T13:19:19.167Z"
+    },
+    {
+      "layer": "engine",
+      "check": "kinds report tool presence",
+      "status": "pass",
+      "detail": "14 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap",
+      "at": "2026-11-02T13:19:19.174Z"
+    },
+    {
+      "layer": "engine",
+      "check": "program registered active (scanme.nmap.org)",
+      "status": "pass",
+      "detail": "id=scanme.nmap.org · policy=https://scanme.nmap.org/",
+      "at": "2026-11-02T13:19:19.258Z"
+    },
+    {
+      "layer": "engine",
+      "check": "job created",
+      "status": "pass",
+      "detail": "job=20261102-6f71c7 · 7 مهمة",
+      "at": "2026-11-02T13:19:19.265Z"
+    },
+    {
+      "layer": "engine",
+      "check": "job executed",
+      "status": "pass",
+      "detail": "2/7 done · 5 failed · 4 finding · done",
+      "at": "2026-11-02T13:19:25.281Z",
+      "jobId": "20261102-6f71c7"
+    },
+    {
+      "layer": "engine",
+      "check": "failed tasks",
+      "status": "review",
+      "detail": "recon.headers: probe-unreachable · recon.tls: tls-unreachable · tools.subfinder: tool-missing · tools.httpx: tool-missing · tools.nuclei: tool-missing",
+      "at": "2026-11-02T13:19:25.281Z",
+      "jobId": "20261102-6f71c7"
+    },
+    {
+      "layer": "engine",
+      "check": "evidence hashed on disk",
+      "status": "pass",
+      "detail": "2 ملف في state/jobs/20261102-6f71c7/evidence · 2 فيهم بايتات",
+      "at": "2026-11-02T13:19:25.281Z",
+      "jobId": "20261102-6f71c7",
+      "evidence": 2
+    },
+    {
+      "layer": "engine",
+      "check": "report is honest about coverage",
+      "status": "pass",
+      "detail": "804 بايت · فيه «Coverage gaps»=true · «reportable»=true",
+      "at": "2026-11-02T13:19:25.286Z",
+      "jobId": "20261102-6f71c7"
+    },
+    {
+      "layer": "engine",
+      "check": "negative control refuses example.com",
+      "status": "pass",
+      "detail": "HTTP 403 · برنامج Negative control (must never be scanned actively) محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة. للتفعيل لازم تأكيد إذن مكتوب: program_d…",
+      "at": "2026-11-02T13:19:25.289Z",
+      "negative": true
+    }
+  ]
+}
