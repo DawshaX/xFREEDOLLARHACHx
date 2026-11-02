@@ -45,6 +45,7 @@ jobs:
           # timeout, and "could not resolve host" is DNS. Different fixes entirely.
           get() {
             url="$1"; lim="${2:-25}"
+            : > /tmp/body.txt; : > /tmp/code.txt; : > /tmp/err.txt
             curl -sS -o /tmp/body.txt -w '%{http_code}' -m "$lim" "$url" > /tmp/code.txt 2>/tmp/err.txt
             cx=$?
             code=$(cat /tmp/code.txt 2>/dev/null)

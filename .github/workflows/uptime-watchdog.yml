@@ -1,0 +1,143 @@
+name: NOVA uptime watchdog
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The platform tells you when IT dies — you don't find out by opening the panel.
+#
+# Measured reason this file exists: the hub was answering normally at 02:34, and
+# at 02:57 the same probe got `Connection refused` on port 27214 (DNS fine, host
+# up, nothing listening). Two hours of silence, and nobody noticed — that is the
+# exact failure mode of "free always-on".
+#
+# Behaviour:
+#   · every 10 minutes: GET /api/health  + GET /api/ops/version
+#   · DOWN  → maintain ONE issue (`nova:down`) with the live evidence, reopened if it was
+#             closed while the hub is still down (that's how it stays honest without spamming)
+#   · UP    → close that issue with a comment saying when it came back
+#   · UP but pre-ops bundle → a comment on the same issue instead of a new one
+#
+# The job never fails: a watchdog that turns CI red every 10 minutes gets disabled
+# within a day, and then we are back to silence.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: nova-uptime
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    name: is the hub alive?
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      HUB: ${{ vars.NOVA_HUB_URL || 'http://node.waifly.com:27214' }}
+    steps:
+      - name: probe
+        id: p
+        run: |
+          set +e
+          hostport=$(printf '%s' "$HUB" | sed -E 's#^https?://##; s#/.*$##')
+          host="${hostport%%:*}"
+          port="${hostport##*:}"
+          [ "$port" = "$host" ] && port=80
+
+          getent hosts "$host" >/tmp/dns.txt 2>&1
+          dns=$?
+          say() { echo "$@" | tee -a /tmp/report.md; }
+
+          # Truncate first: a leftover /tmp/v.json from a previous run would make a
+          # dead hub look like it still has the ops bundle (this exact bug class has
+          # bitten this repo twice — /tmp/last-scan.json and the model cache).
+          : > /tmp/report.md
+          : > /tmp/h.json
+          : > /tmp/v.json
+          : > /tmp/dns.txt
+          say "# hub probe — $(date -u +%FT%TZ)"
+          say "target: $HUB ($host:$port)"
+          say "dns: exit=$dns · $(head -1 /tmp/dns.txt)"
+
+          if timeout 6 bash -c "exec 3<>/dev/tcp/$host/$port" 2>/tmp/tcp.err; then
+            say "tcp: OPEN"
+            tcp=open
+          else
+            say "tcp: REFUSED/UNREACHABLE · $(head -c 120 /tmp/tcp.err | tr '\n' ' ')"
+            tcp=down
+          fi
+
+          code=$(curl -sS -o /tmp/h.json -w '%{http_code}' -m 20 "$HUB/api/health" 2>/tmp/h.err)
+          curlx=$?
+          say "GET /api/health → HTTP ${code:-000} · curl_exit=$curlx · $(head -c 120 /tmp/h.json | tr '\n' ' ')"
+          [ -s /tmp/h.err ] && say "curl said: $(head -c 160 /tmp/h.err | tr '\n' ' ')"
+
+          vcode=$(curl -sS -o /tmp/v.json -w '%{http_code}' -m 20 "$HUB/api/ops/version" 2>/dev/null)
+          say "GET /api/ops/version → HTTP ${vcode:-000} · $(head -c 160 /tmp/v.json | tr '\n' ' ')"
+
+          # Classify, in the order that matters: a refused port outranks everything.
+          status=up
+          if [ "$tcp" = "down" ]; then
+            status=down
+          elif [ "${code:-000}" != "200" ]; then
+            status=degraded
+          fi
+          ops=no
+          grep -q '"opsRouter"' /tmp/v.json 2>/dev/null && ops=yes
+
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "ops=$ops" >> "$GITHUB_OUTPUT"
+          { echo ""; echo "## last probe"; echo '```'; cat /tmp/report.md; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          cp /tmp/report.md /tmp/body.md
+          echo "status=$status · ops bundle=$ops"
+
+      - name: maintain the single down-issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS: ${{ steps.p.outputs.status }}
+          OPS: ${{ steps.p.outputs.ops }}
+        run: |
+          set +e
+          repo="$GITHUB_REPOSITORY"
+          title="🔴 NOVA hub offline — $HUB"
+          existing=$(gh api -X GET "repos/$repo/issues" -f state=all -f labels=nova:down -f per_page=1 \
+                     --jq '.[0].number // empty' 2>/dev/null)
+
+          if [ "$STATUS" = "up" ]; then
+            if [ -n "$existing" ]; then
+              gh api -X POST "repos/$repo/issues/$existing/comments" -f body="✅ رجع الساعة $(date -u +%FT%TZ). القفل كان من watchdog." >/dev/null 2>&1
+              gh api -X PATCH "repos/$repo/issues/$existing" -f state=closed >/dev/null 2>&1
+              echo "closed #$existing (hub back up)"
+            fi
+            if [ "$OPS" != "yes" ]; then
+              echo "::warning::the hub answers /api/health but NOT /api/ops/version — it is running a pre-ops bundle. Redeploy from release nova-portable."
+            fi
+            exit 0
+          fi
+
+          # the label must exist before an issue can carry it (the API will not
+          # invent one); creating it is idempotent and its errors are not our problem
+          gh api -X POST "repos/$repo/labels" -f name=nova:down -f color="b60205" \
+            -f description="the hub stopped answering; opened by the uptime watchdog" >/dev/null 2>&1
+
+          body=$(cat /tmp/body.md)
+          if [ "$STATUS" = "degraded" ]; then
+            body="## ⚠️ hub degraded (port open, health not 200)
+
+          $body"
+          fi
+          if [ -n "$existing" ]; then
+            state=$(gh api "repos/$repo/issues/$existing" --jq .state 2>/dev/null)
+            gh api -X PATCH "repos/$repo/issues/$existing" -f body="$body" $( [ "$state" = "closed" ] && echo "-f state=open" ) >/dev/null 2>&1
+            echo "updated #$existing (was $state)"
+          else
+            gh api -X POST "repos/$repo/issues" -f title="$title" -f body="$body" -f "labels[]=nova:down" >/dev/null 2>&1 \
+              && echo "opened an issue: $title" || echo "::error::could not open the issue"
+          fi
+          echo "::warning::hub is $STATUS — issue 'nova:down' carries the evidence"
+          exit 0
