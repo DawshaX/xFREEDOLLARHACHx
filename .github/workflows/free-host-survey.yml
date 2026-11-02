@@ -19,6 +19,12 @@ name: free-host survey
 on:
   schedule:
     - cron: "15 */12 * * *"   # twice a day, off the hour
+  # Editing this file runs a survey. Ugly on purpose: the Arena GitHub integration can read
+  # runs but cannot create them (workflow_dispatch → 403), so without a push trigger the
+  # measurement would only ever happen on the schedule and nobody could ask for it on demand.
+  push:
+    paths:
+      - ".github/workflows/free-host-survey.yml"
   workflow_dispatch:
     inputs:
       commit:
