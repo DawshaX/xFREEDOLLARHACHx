@@ -55,7 +55,9 @@ jobs:
   verify:
     name: run the real toolchain and the real ops spine
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    # ~4 min normal (tool updates dominate), and the nuclei row alone is allowed 165 s — so the
+    # ceiling has to stay well above the sum. Measured: run 41454924776 spent ~6 min total.
+    timeout-minutes: 26
     steps:
       - uses: actions/checkout@v4
 
