@@ -285,6 +285,11 @@ curl -X POST http://localhost:8080/api/ops/programs \
 ```bash
 pnpm run ops:selftest      # 35 فحص: سكوب + CIDR + SSRF + التوكن + الثروتل + الأدلة + الاكتشاف
 pnpm run typecheck:ratchet # مفيش أخطاء type جديدة
+
+**اللي بيمنع الجودة تتاكل في CI:** البوابة الحقيقية (ratchet + self-test للسكوب جيت)
+شغالة في `NOVA live audit → quality-gate` كل 6 ساعات، مش في شغل النشر — النشر على
+Pages بيعمل `--no-frozen-lockfile` فلو `@types` اتحدّث وزاد خطأ واحد كان الموقع كله
+بيقع. في الـworkflow بتاع النشر الرقم بيتعرض كـwarning بس. (حصل فعلاً 2026-11-02.)
 ```
 
 ### حدود صادقة للمحرك

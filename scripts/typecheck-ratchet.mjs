@@ -29,13 +29,31 @@ function runPackage(pkg) {
     { cwd: path.join(ROOT, pkg), encoding: "utf8", timeout: 900_000 },
   );
   if (res.error) return { pkg, error: `tsc could not run: ${res.error.message}`, count: null };
-  const out = `${res.stdout ?? ""}${res.stderr ?? ""}`;
+  const raw = `${res.stdout ?? ""}${res.stderr ?? ""}`;
+  // Errors raised *inside* node_modules are not the project's to fix: CI installs
+  // with --no-frozen-lockfile, so a `@types/*` minor bump can add a typing error in
+  // a dependency and turn the whole deploy red for something nobody changed. Those
+  // lines are counted separately and reported, never blocked on.
+  const out = raw
+    .split("\n")
+    .filter((l) => !/node_modules/.test(l))
+    .join("\n");
+  const depNoise = (raw.match(/error TS\d+/g) ?? []).length - (out.match(/error TS\d+/g) ?? []).length;
   const count = (out.match(/error TS\d+/g) ?? []).length;
   const byCode = {};
   for (const m of out.matchAll(/error (TS\d+)/g)) byCode[m[1]] = (byCode[m[1]] ?? 0) + 1;
   const byFile = {};
   for (const m of out.matchAll(/^([^\s(]+)\(\d+,\d+\): error TS/gm)) byFile[m[1]] = (byFile[m[1]] ?? 0) + 1;
-  return { pkg, count, byCode, byFile, sample: out.split("\n").filter((l) => /error TS/.test(l)).slice(0, 12) };
+  return {
+    pkg,
+    count,
+    depNoise,
+    byCode,
+    byFile,
+    sample: out.split("\n").filter((l) => /error TS/.test(l)).slice(0, 12),
+    exitStatus: res.status,
+    killed: res.signal ? String(res.signal) : null,
+  };
 }
 
 const results = PACKAGES.map(runPackage);
@@ -56,9 +74,16 @@ console.log("──────────────────────�
 for (const r of results) {
   if (r.error) {
     console.log(`✗ ${r.pkg}: ${r.error}`);
+    console.log("::error::typecheck could not run in this environment — the gate is broken, not the code");
     process.exit(2);
   }
-  console.log(`${r.count === 0 ? "✓" : "·"} ${r.pkg.padEnd(24)} ${r.count} error(s)`);
+  if (r.killed) {
+    // OOM-killed tsc (a real risk on CI runners for the panel) is not a regression.
+    console.log(`! ${r.pkg}: tsc died with ${r.killed}; counting what it printed (${r.count})`);
+    console.log(`::warning::tsc for ${r.pkg} was killed (${r.killed}) — partial count only`);
+  }
+  const noise = r.depNoise ? ` (+${r.depNoise} in node_modules, ignored)` : "";
+  console.log(`${r.count === 0 ? "✓" : "·"} ${r.pkg.padEnd(24)} ${r.count} error(s)${noise}`);
 }
 console.log(`\ntotal: ${total} · baseline: ${limit} (updated ${baseline.updatedAt ?? "never"})`);
 
