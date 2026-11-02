@@ -150,10 +150,13 @@ async function cliChecks(cfg) {
   const httpx = findBinary("httpx");
   if (!httpx) add("cli", "httpx present", "fail", "مش موجود");
   else {
-    const r = await runBin(httpx, ["-silent", "-u", "-sc", "-title", "-H", "User-Agent: Mozilla/5.0", "-follow-redirects", "-timeout", "12", "-retries", "1", probeUrl], 60);
+    // no -silent on purpose: with it, httpx exits 0 and prints NOTHING for a host whose TLS
+    // chain it dislikes (measured 3 runs on demo.testfire.net + 1 on scanme) — indistinguishable
+    // from "dead". Un-muted, its own error line lands in the report instead of a mystery.
+    const r = await runBin(httpx, ["-u", "-sc", "-title", "-H", "User-Agent: Mozilla/5.0", "-follow-redirects", "-timeout", "12", "-retries", "1", probeUrl], 60);
     const ok = r.code === 0 && /\[2\d\d\]|\[3\d\d\]/.test(r.out);
     add("cli", `httpx ${probeUrl}`, ok ? "pass" : NET_ERRORS.test(r.err + r.out) ? "blocked" : "review",
-      ok ? short(r.out, 120) : short(`${r.err || ""} exit=${r.code} · ${r.out.length}B stdout · ${r.ms}ms`, 130), { ms: r.ms });
+      ok ? short(r.out, 120) : short(`${(r.err || r.out).split("\n").filter(Boolean).slice(-1)[0] || ""} · exit=${r.code} · ${r.out.length}B out · ${r.ms}ms`, 150), { ms: r.ms });
   }
 
   const katana = findBinary("katana");
@@ -181,11 +184,15 @@ async function cliChecks(cfg) {
     // budget (the global one measured 75s and killed it → `exit=null` → reported as a broken tool,
     // which is the same lie in the other direction).
     const budget = Math.max(PER_TIMEOUT, 165);
-    const r = await runBin(nuclei, ["-u", probeUrl, "-severity", "low,medium,high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1"], budget);
+    const r = await runBin(nuclei, ["-u", testUrl, "-severity", "high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1"], budget);
     const lines = r.out.split("\n").map((s) => s.trim()).filter(Boolean);
-    const min = liveRow.expects?.nucleiFindings ?? 1;
+    // The CLI row measures the BINARY, so it runs on the host built to be found (testphp) with
+    // only high/critical templates — the full set with `low` cannot finish in any job budget, and
+    // "cut off" would then be the only result we ever report. The spine is measured separately,
+    // on demo.testfire.net, where it produced 11 findings (run 41455864503).
+    const min = testRow.expects?.nucleiFindings ?? 1;
     const cutOff = r.code === null;
-    add("cli", `nuclei -u ${liveRow.host}`,
+    add("cli", `nuclei -u ${testSite} (high,critical)`,
       lines.length >= min ? "pass" : cutOff ? "review" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
       lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}`
         : cutOff ? `اتقطع بعد ${r.ms}ms (سقفي ${budget}s) و${lines.length} نتيجة لحد هنا · قوالب: ${updTail}`
@@ -223,7 +230,8 @@ async function cliChecks(cfg) {
       const sent = Number((prog.match(/\[(\d+)/) || [0, "0"])[1]);
       add("cli", `ffuf fuzz ${testSite}`, hits > 0 ? "pass" : sent > 50 ? "pass" : "review",
         hits > 0 ? `${hits} نتيجة · ${short(r.out.split("\n").find((l) => /\[Status:/.test(l)) || "", 110)}`
-          : `${sent} طلب مُرسل و0 مطابقة (${r.out.split("\n").length} سطر مخرجات)`,
+          : sent > 0 ? `${sent} طلب مُرسل و0 مطابقة (${r.out.split("\n").length} سطر مخرجات)`
+            : `مفيش طلب اتبعت · ${short((r.err || r.out).split("\n").filter(Boolean).slice(-1)[0] || `exit=${r.code}`, 110)}`,
         { count: hits, sent, ms: r.ms });
     }
   } else add("cli", "ffuf present", "review", "مش موجود — مش حرجي");
