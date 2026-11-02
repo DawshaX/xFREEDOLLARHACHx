@@ -3,14 +3,14 @@
 > اتولّد من `scripts/verify-live.mjs` (شغّله `.github/workflows/live-verify.yml`).
 > كل هدف هنا صاحبه منشور صراحة إن فحصه مسموح — الوثيقة في العمود الأخير.
 
-آخر تشغيل: `2026-11-02T14:59:23.302Z` · الحكم: **AMBER** · ✓13 · ✗0 · ؟3 · (محجوب)0
+آخر تشغيل: `2026-11-02T17:33:05.357Z` · الحكم: **AMBER** · ✓13 · ✗0 · ؟3 · (محجوب)0
 الأدوات المرصودة: dnsx, subfinder, httpx, nuclei, katana, nmap, naabu, ffuf · المحرك: `http://127.0.0.1:8090/api` · هدف التمرين: `scanme.nmap.org`
 
 | الطبقة | الفحص | الحالة | التفصيل |
 |---|---|---|---|
 | cli | dns resolution | ✓ pass | 2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present |
-| cli | subfinder -d vulnweb.com | ✓ pass | 519 سوبدومين (المطلوب ≥2) · 0pn.vulnweb.com, 12t.vulnweb.com, wk.vulnweb.com |
-| cli | httpx http://testphp.vulnweb.com/ | ? review | status=مفيش (المطلوب 200) · exit=0 · 0B · · 16782ms |
+| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · www.vulnweb.com, testhmtml5.vulnweb.com, virus.vulnweb.com |
+| cli | httpx https://demo.testfire.net/ | ? review | status=مفيش (المطلوب 200) · exit=0 · 533B · {"timestamp":"2026-11-02T17:25:56.0296935Z","port":"443","url":"https://demo.testfire.net/","input":"https://demo.t… |
 | cli | katana crawl testphp.vulnweb.com | ✓ pass | 1 رابط متكرول (المطلوب ≥1) |
 | cli | nuclei -u testphp.vulnweb.com (high,critical) | ✓ pass | 4 طلب اتفحص و0 نتيجة high/critical · exit=0 · قوالب: [[34mINF[0m] No new updates found for nuclei templates |
 | cli | nmap scanme.nmap.org:80,22 | ✓ pass | 2 بورت مفتوح · 22/tcp open · 80/tcp open |
@@ -18,11 +18,11 @@
 | engine | engine reachable | ✓ pass | HTTP 200 |
 | engine | kinds report tool presence | ✓ pass | 14 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap |
 | engine | program registered active (demo.testfire.net) | ✓ pass | id=demo.testfire.net · policy=https://demo.testfire.net/ |
-| engine | job created | ✓ pass | job=20261102-974c7a · 7 مهمة |
-| engine | job executed | ✓ pass | 5/7 done · 2 failed · 11 finding · done |
-| engine | failed tasks | ? review | tools.httpx: httpx فشل (exit=-1) · مفيش رسالة من الأداتة · 45018ms · tools.nuclei: nuclei فشل (exit=-1) · مفيش رسالة من الأداتة · 180006ms |
-| engine | evidence hashed on disk | ? review | 6 ملف في state/jobs/20261102-974c7a/evidence · 5 فيهم بايتات |
-| engine | report is honest about coverage | ✓ pass | 659 بايت · فيه «Coverage gaps»=true · «reportable»=true |
+| engine | job created | ✓ pass | job=20261102-433a4a · 7 مهمة |
+| engine | job executed | ✓ pass | 6/7 done · 1 failed · 11 finding · done |
+| engine | failed tasks | ? review | tools.nuclei: nuclei اتقطع بعد 260023ms (ميزانية النوع) · 0 نتيجة لحد هنا — «اتقطع» مش «مافيش» |
+| engine | evidence hashed on disk | ? review | 6 ملف في state/jobs/20261102-433a4a/evidence · 5 فيهم بايتات |
+| engine | report is honest about coverage | ✓ pass | 622 بايت · فيه «Coverage gaps»=true · «reportable»=true |
 | engine | negative control refuses example.com | ✓ pass | HTTP 403 · برنامج Negative control (must never be scanned actively) محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة. للتفعيل لازم تأكيد إذن مكتوب: program_d… |
 
 ## الإذن لكل هدف (مش كرم — وثيقة)

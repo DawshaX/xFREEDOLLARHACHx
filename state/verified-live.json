@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "at": "2026-11-02T14:59:23.302Z",
+  "at": "2026-11-02T17:33:05.357Z",
   "verdict": "AMBER",
   "counts": {
     "pass": 13,
@@ -28,24 +28,24 @@
       "check": "dns resolution",
       "status": "pass",
       "detail": "2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present",
-      "at": "2026-11-02T14:52:17.136Z"
+      "at": "2026-11-02T17:25:38.477Z"
     },
     {
       "layer": "cli",
       "check": "subfinder -d vulnweb.com",
       "status": "pass",
-      "detail": "519 سوبدومين (المطلوب ≥2) · 0pn.vulnweb.com, 12t.vulnweb.com, wk.vulnweb.com",
-      "at": "2026-11-02T14:52:33.570Z",
-      "count": 519,
-      "ms": 16433
+      "detail": "19 سوبدومين (المطلوب ≥2) · www.vulnweb.com, testhmtml5.vulnweb.com, virus.vulnweb.com",
+      "at": "2026-11-02T17:25:54.935Z",
+      "count": 19,
+      "ms": 16458
     },
     {
       "layer": "cli",
-      "check": "httpx http://testphp.vulnweb.com/",
+      "check": "httpx https://demo.testfire.net/",
       "status": "review",
-      "detail": "status=مفيش (المطلوب 200) · exit=0 · 0B · · 16782ms",
-      "at": "2026-11-02T14:52:50.353Z",
-      "ms": 16782,
+      "detail": "status=مفيش (المطلوب 200) · exit=0 · 533B · {\"timestamp\":\"2026-11-02T17:25:56.0296935Z\",\"port\":\"443\",\"url\":\"https://demo.testfire.net/\",\"input\":\"https://demo.t…",
+      "at": "2026-11-02T17:25:56.048Z",
+      "ms": 1112,
       "httpStatus": 0
     },
     {
@@ -53,18 +53,18 @@
       "check": "katana crawl testphp.vulnweb.com",
       "status": "pass",
       "detail": "1 رابط متكرول (المطلوب ≥1)",
-      "at": "2026-11-02T14:53:11.761Z",
+      "at": "2026-11-02T17:26:17.474Z",
       "count": 1,
-      "ms": 21407
+      "ms": 21425
     },
     {
       "layer": "cli",
       "check": "nuclei -u testphp.vulnweb.com (high,critical)",
       "status": "pass",
       "detail": "4 طلب اتفحص و0 نتيجة high/critical · exit=0 · قوالب: [\u001b[34mINF\u001b[0m] No new updates found for nuclei templates",
-      "at": "2026-11-02T14:53:48.812Z",
+      "at": "2026-11-02T17:27:10.612Z",
       "count": 0,
-      "ms": 28752,
+      "ms": 42607,
       "cutOff": false
     },
     {
@@ -72,87 +72,87 @@
       "check": "nmap scanme.nmap.org:80,22",
       "status": "pass",
       "detail": "2 بورت مفتوح · 22/tcp open · 80/tcp open",
-      "at": "2026-11-02T14:53:49.049Z",
+      "at": "2026-11-02T17:27:10.763Z",
       "count": 2,
-      "ms": 236
+      "ms": 150
     },
     {
       "layer": "cli",
       "check": "ffuf fuzz testphp.vulnweb.com",
       "status": "pass",
       "detail": "61 طلب مُرسل و0 مطابقة (1 سطر مخرجات)",
-      "at": "2026-11-02T14:54:49.082Z",
+      "at": "2026-11-02T17:28:10.807Z",
       "count": 0,
       "sent": 61,
-      "ms": 60032
+      "ms": 60044
     },
     {
       "layer": "engine",
       "check": "engine reachable",
       "status": "pass",
       "detail": "HTTP 200",
-      "at": "2026-11-02T14:54:49.112Z"
+      "at": "2026-11-02T17:28:10.847Z"
     },
     {
       "layer": "engine",
       "check": "kinds report tool presence",
       "status": "pass",
       "detail": "14 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap",
-      "at": "2026-11-02T14:54:49.117Z"
+      "at": "2026-11-02T17:28:10.854Z"
     },
     {
       "layer": "engine",
       "check": "program registered active (demo.testfire.net)",
       "status": "pass",
       "detail": "id=demo.testfire.net · policy=https://demo.testfire.net/",
-      "at": "2026-11-02T14:54:49.268Z"
+      "at": "2026-11-02T17:28:11.033Z"
     },
     {
       "layer": "engine",
       "check": "job created",
       "status": "pass",
-      "detail": "job=20261102-974c7a · 7 مهمة",
-      "at": "2026-11-02T14:54:49.274Z"
+      "detail": "job=20261102-433a4a · 7 مهمة",
+      "at": "2026-11-02T17:28:11.039Z"
     },
     {
       "layer": "engine",
       "check": "job executed",
       "status": "pass",
-      "detail": "5/7 done · 2 failed · 11 finding · done",
-      "at": "2026-11-02T14:59:23.296Z",
-      "jobId": "20261102-974c7a"
+      "detail": "6/7 done · 1 failed · 11 finding · done",
+      "at": "2026-11-02T17:33:05.352Z",
+      "jobId": "20261102-433a4a"
     },
     {
       "layer": "engine",
       "check": "failed tasks",
       "status": "review",
-      "detail": "tools.httpx: httpx فشل (exit=-1) · مفيش رسالة من الأداتة · 45018ms · tools.nuclei: nuclei فشل (exit=-1) · مفيش رسالة من الأداتة · 180006ms",
-      "at": "2026-11-02T14:59:23.296Z",
-      "jobId": "20261102-974c7a"
+      "detail": "tools.nuclei: nuclei اتقطع بعد 260023ms (ميزانية النوع) · 0 نتيجة لحد هنا — «اتقطع» مش «مافيش»",
+      "at": "2026-11-02T17:33:05.352Z",
+      "jobId": "20261102-433a4a"
     },
     {
       "layer": "engine",
       "check": "evidence hashed on disk",
       "status": "review",
-      "detail": "6 ملف في state/jobs/20261102-974c7a/evidence · 5 فيهم بايتات",
-      "at": "2026-11-02T14:59:23.297Z",
-      "jobId": "20261102-974c7a",
+      "detail": "6 ملف في state/jobs/20261102-433a4a/evidence · 5 فيهم بايتات",
+      "at": "2026-11-02T17:33:05.353Z",
+      "jobId": "20261102-433a4a",
       "evidence": 6
     },
     {
       "layer": "engine",
       "check": "report is honest about coverage",
       "status": "pass",
-      "detail": "659 بايت · فيه «Coverage gaps»=true · «reportable»=true",
-      "at": "2026-11-02T14:59:23.299Z",
-      "jobId": "20261102-974c7a"
+      "detail": "622 بايت · فيه «Coverage gaps»=true · «reportable»=true",
+      "at": "2026-11-02T17:33:05.355Z",
+      "jobId": "20261102-433a4a"
     },
     {
       "layer": "engine",
       "check": "negative control refuses example.com",
       "status": "pass",
       "detail": "HTTP 403 · برنامج Negative control (must never be scanned actively) محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة. للتفعيل لازم تأكيد إذن مكتوب: program_d…",
-      "at": "2026-11-02T14:59:23.301Z",
+      "at": "2026-11-02T17:33:05.357Z",
       "negative": true
     }
   ]
