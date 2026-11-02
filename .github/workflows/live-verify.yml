@@ -196,7 +196,16 @@ jobs:
           git config user.name "nova-verify-bot"
           git config user.email "bot@arena.local"
           git add state/verified-live.json state/verified-live.md 2>/dev/null || true
-          if git diff --cached --quiet; then echo "no change to commit"; exit 0; fi
+          # A run that measures and publishes nothing is indistinguishable from a run that never
+          # happened (measured: run 41462489871 finished green and committed no report). The step
+          # fails loudly instead — step conclusions are the only CI output readable from a sandbox.
+          if git diff --cached --quiet; then
+            echo "── ما فيش تغيير؟ ده محتوى state/ بعد التشغيل:"
+            ls -la state/verified-live.* 2>/dev/null || echo "(الملفين مش موجودين)"
+            tail -3 state/verified-live.md 2>/dev/null || true
+            echo "::error::القياس ما نشرش حاجة —إما إن الـharness فشل قبل الكتابة أو الملفات ما اتكتبتش؛ شوف سطر «Verify live» في الـlog."
+            exit 1
+          fi
           git commit -q -m "live verify: $(date -u +%Y-%m-%dT%H:%MZ) [live-verify]" || exit 0
           git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
           git push --quiet origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::push failed — the artifact still has the measurement"
