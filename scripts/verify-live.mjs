@@ -119,8 +119,11 @@ function add(layer, check, status, detail, extra = {}) {
 async function cliChecks(cfg) {
   const live = cfg.targets.filter((t) => t.active);
   const domain = (cfg.targets.find((t) => t.passiveDomain) || cfg.targets[0]).host;
-  const httpTarget = `https://${live[0]?.host || cfg.targets[0].host}/`;
-  const testSite = cfg.targets.find((t) => t.host.startsWith("testphp"))?.host || live[1]?.host || live[0].host;
+  const first = live[0] || cfg.targets[0];
+  const httpTarget = `${first.scheme || "https"}://${first.host}/`;
+  const testRow = cfg.targets.find((t) => t.host.startsWith("testphp")) || live[1] || first;
+  const testSite = testRow.host;
+  const testUrl = `${testRow.scheme || "http"}://${testSite}/`;
 
   // resolution first: if DNS does not answer, every later row is meaningless
   const dnsx = findBinary("dnsx");
@@ -145,16 +148,16 @@ async function cliChecks(cfg) {
     const r = await runBin(httpx, ["-silent", "-u", "-sc", "-title", httpTarget], 60);
     const ok = r.code === 0 && /\[2\d\d\]|\[3\d\d\]/.test(r.out);
     add("cli", `httpx ${httpTarget}`, ok ? "pass" : NET_ERRORS.test(r.err + r.out) ? "blocked" : "review",
-      ok ? short(r.out, 120) : short(r.err || r.out || `exit ${r.code}`, 120), { ms: r.ms });
+      ok ? short(r.out, 120) : short(`${r.err || ""} exit=${r.code} · ${r.out.length}B stdout`, 130), { ms: r.ms });
   }
 
   const katana = findBinary("katana");
   if (katana) {
-    const r = await runBin(katana, ["-u", `https://${testSite}/`, "-jc", "-silent", "-t", "4"], 90);
+    const r = await runBin(katana, ["-u", testUrl, "-jc", "-silent", "-t", "4"], 90);
     const urls = r.out.split("\n").map((s) => s.trim()).filter((s) => /^https?:/.test(s));
     const min = cfg.targets.find((t) => t.host === testSite)?.expects?.crawledUrls ?? 3;
     add("cli", `katana crawl ${testSite}`, urls.length >= min ? "pass" : NET_ERRORS.test(r.err) ? "blocked" : "review",
-      `${urls.length} رابط متكرول (المطلوب ≥${min})`, { count: urls.length, ms: r.ms });
+      `${urls.length} رابط متكرول (المطلوب ≥${min})${urls.length ? "" : ` · ${short(r.err || `exit=${r.code}`, 110)}`}`, { count: urls.length, ms: r.ms });
   } else add("cli", "katana present", "fail", "مش موجود");
 
   const nuclei = findBinary("nuclei");
@@ -162,11 +165,13 @@ async function cliChecks(cfg) {
   else {
     // -ut fetches the community template repo from GitHub; without it nuclei has nothing to match.
     await runBin(nuclei, ["-ut"], 120);
-    const r = await runBin(nuclei, ["-u", `https://${testSite}/`, "-silent", "-no-color", "-irr", "-rl", "10", "-timeout", "5", "-retries", "1"], PER_TIMEOUT);
+    // severity-filtered on purpose: the full template set cannot finish inside a 6-runner-minute
+    // budget, and "it timed out" would look identical to "the target is clean" in the report.
+    const r = await runBin(nuclei, ["-u", testUrl, "-severity", "medium,high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1"], PER_TIMEOUT);
     const lines = r.out.split("\n").map((s) => s.trim()).filter(Boolean);
     const min = cfg.targets.find((t) => t.host === testSite)?.expects?.nucleiFindings ?? 1;
     add("cli", `nuclei -u ${testSite}`, lines.length >= min ? "pass" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
-      lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}` : `مفيش نتيجة · exit ${r.code} · ${short(r.err, 90)}`,
+      lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}` : `مفيش نتيجة · exit=${r.code} · ${r.out.length}B · ${short(r.err, 100)}`,
       { count: lines.length, ms: r.ms });
   }
 
@@ -212,7 +217,10 @@ async function engineChecks(cfg) {
   add("engine", "kinds report tool presence", present.length ? "pass" : "fail",
     `${present.length} نوع شغال على النود: ${present.join(", ") || "ولا واحد"}${kinds.body?.standalone ? " (STANDALONE MOCK — الباندل مغطي التنفيذ!)" : ""}`);
 
-  const target = cfg.targets.find((t) => t.active);
+  // The spine is exercised on the HTTPS-capable host when there is one: recon.tls and
+  // recon.headers on an HTTP-only box fail for the target's reason, not ours, and a report
+  // full of honest "unreachable" rows teaches nothing about the chain.
+  const target = cfg.targets.find((t) => t.engineExercise) || cfg.targets.find((t) => t.active);
   const host = target.host;
   const consent = `I have written permission for ${host}`;
 
@@ -229,7 +237,7 @@ async function engineChecks(cfg) {
       name: `تحقق حي — ${host}`,
       objective: `تشغيل حقيقي لسلسلة الأدوات على هدف مسموح: ${target.why}`,
       target: host,
-      scheme: "https",
+      scheme: target.scheme || "https",
       depth: "deep",
       tools: true,
       taskIds: ["recon.dns", "recon.headers", "recon.tls", "tools.subfinder", "tools.httpx", "tools.nuclei", "infra.freehosts"],
@@ -258,7 +266,7 @@ async function engineChecks(cfg) {
     add("engine", "job executed", done.length > 0 ? "pass" : "fail",
       `${done.length}/${tasks.length} done · ${failed.length} failed · ${findings} finding · ${last?.status ?? "unknown"}`,
       { jobId: job.id });
-    if (failed.length) add("engine", "failed tasks", "review", short(failed.map((f) => `${f.kind}: ${f.error || "?"}`).join(" · "), 240), { jobId: job.id });
+    if (failed.length) add("engine", "failed tasks", "review", short(failed.map((f) => `${f.kind}: ${f.summary || f.error || "?"}`).join(" · "), 300), { jobId: job.id });
 
     // evidence must be real bytes with hashes, or the report is a story
     const dir = path.resolve(STATE_DIR, String(job.id), "evidence");

@@ -20,7 +20,9 @@
         "httpStatus": 200,
         "title": "scanme.nmap.org"
       },
-      "active": true
+      "active": true,
+      "scheme": "http",
+      "scheme_note_ar": "المضيف ده HTTP-only (متقاس 2026-11-02: مافيش 443) — أي توقع HTTPS عليه يفشل handshake مش الأدات."
     },
     {
       "host": "testphp.vulnweb.com",
@@ -31,7 +33,8 @@
         "crawledUrls": 5,
         "nucleiFindings": 1
       },
-      "active": true
+      "active": true,
+      "scheme": "http"
     },
     {
       "host": "demo.testfire.net",
@@ -41,7 +44,10 @@
         "httpStatus": 200,
         "title": "Hacking"
       },
-      "active": true
+      "active": true,
+      "scheme": "https",
+      "engineExercise": true,
+      "engine_note_ar": "بنختاره لسلسلة المحرك لأنه بيخدم HTTPS على 443 بجد — فـrecon.tls وrecon.headers ليهم معنى."
     },
     {
       "host": "vulnweb.com",

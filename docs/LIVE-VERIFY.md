@@ -99,7 +99,29 @@ node scripts/verify-live.mjs --engine http://127.0.0.1:8090/api --token "$NOVA_E
   عضو `liveverify` في `/api/nova-core/awareness` بيقول «مقاس من ساعتين: 9✓ / 1✗» أو
   «سلسلة الأدوات ما اتقاستش على أهداف حية لحد دلوقتي» — من غير ملف تقرير مفيش ادعاء.
 
-## 8) ليه القياس بيعدّي على القرص أصلاً
+## 8) أول تشغيل حقيقي (Actions · 2026-11-02T13:19Z) — وإيه اللي القياس كشفه
+
+الحكم: **AMBER** · ✓11 · ✗0 · ؟5. اللي عدّى فعلاً من شبكة مفتوحة:
+
+- **الأدوات تنزّلت فعلاً**: `dnsx, subfinder, httpx, nuclei, katana, nmap, naabu` في `vendor/bin` —
+  و`/ops/kinds` رجّعت **14 نوع** فيهم `tools.nuclei/httpx/subfinder/katana/nmap`. يعني الـvendoring
+  اللي كان «ادّعاء ما اتقاسش» بقى مُثبتاً على الآلة اللي هيشغّل المحرك.
+- `subfinder -d vulnweb.com` → **518 سوبدومين** (OSINT حقيقي على هدف حي).
+- `nmap scanme.nmap.org:80,22` → **22/tcp open · 80/tcp open** — مطابق للتوقع.
+- البوابة: **403 passive_only** على `example.com` — نفس الرفض اللي اتقاس locally.
+
+والـ5 أسطر «؟» ما كنّاش «شبه نجاح» — كانوا تلات عيوب حقيقية، وكل واحد اتظبط من نفس القياس:
+
+| اللي طلع | السبب الحقيقي | اللي اتعمل |
+|---|---|---|
+| `tools.subfinder/httpx/nuclei: tool-missing` جوه المحرك، مع إن `/ops/kinds` قالت `present` | `findBinary()` بيشوف `vendor/bin` لكن `spawn("nuclei")` بيتمحل من `PATH` وحده ← exit 127. **عيب منتج مش قياس**: على Render الأدوات كانت هتفضل منظر بلا تنفيذ | المحرك بيشغّل **المسار اللي لقيه بنفسه** ويقدّمه على `PATH` الابن (`tools.ts`)، وفيه حالة `ops-selftest` بتزرع نواة مزيّفة في `NOVA_TOOL_DIR` وتطلب تنفيذها فعلًا (36 ✓) |
+| `httpx https://scanme.nmap.org/` و`recon.tls/recon.headers` عليه فشلوا | المضيف **HTTP-only** — مفيش 443 أصلاً. المحرك كان صحيح والتوقع غلط | `scheme` بقى بيانات في `ops/verify/targets.json` (scanme=http)، وسلسلة المحرك بتتمarsى على `demo.testfire.net` لأنه بيقدر HTTPS بالحقيقة |
+| `katana` رجّع 0 رابط و`ffuf` ما نزلش | `ffuf` في أصول إصداره اسمهم `linux_amd64` مش `linux_x86_64` — الـregex ما كانش بيطابق حاجة؛ وكاتانا كان بيتوجه على `https` | وسّع الـmatch، و`nuclei -severity medium,high,critical` (من غير فلتر القوالب «الوقت خلص» بتبان زي «الموقع نضيف»)، وكل سطر فاشل بي طبّع stderr/exit بدل رقم حالة |
+
+**الدستور اللي طلّع التعديلات دي: الأحمر بيانات — بس بشرط إن السطر يفصّل.** سطر `؟ review` من غير سبب
+(«exit 0» وبس) مكانش خلاّني أعرف إني قدام عيب تنفيذ حقيقي بدل موقع بطيء.
+
+
 
 `state/verified-live.json` + `.md` بيعملهم commit البوت (`nova-verify-bot`) بنفس الحيلة
 اللي اثبتت شغل في `free-host-survey.yml`: `workflow_dispatch` مقفول (403) أمام

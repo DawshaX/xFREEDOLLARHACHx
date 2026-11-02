@@ -44,7 +44,7 @@ const TOOLS = [
   { bin: "katana", repo: "projectdiscovery/katana", match: /linux_amd64\.zip$/i, asset: "zip", ver: ["-version"] },
   { bin: "dnsx", repo: "projectdiscovery/dnsx", match: /linux_amd64\.zip$/i, asset: "zip", ver: ["-version"] },
   { bin: "naabu", repo: "projectdiscovery/naabu", match: /linux_amd64\.zip$/i, asset: "zip", ver: ["-version"] },
-  { bin: "ffuf", repo: "ffuf/ffuf", match: /[Ll]inux_x86_64\.tar\.gz$/i, asset: "targz", ver: ["-V"] },
+  { bin: "ffuf", repo: "ffuf/ffuf", match: /linux[_-](amd64|x86_64)\.tar\.gz$/i, asset: "targz", ver: ["-V"] }, // amd64 naming, not x86_64 — the old regex matched nothing (measured: Actions run 41451529132)
 ].filter((t) => !ONLY.length || ONLY.includes(t.bin));
 
 const MANIFEST = path.join(INTO, ".vendored.json");
