@@ -108,16 +108,20 @@ export const HOSTS: FreeHost[] = [
     cardRequired: false,
     nodeFit: "ephemeral",
     probeUrl: "https://render.com/robots.txt",
-    signupEase: "unknown",
+    signupEase: "email",
     scanPolicy: "unknown",
-    status2026: "الخطة المجانية لسه موجودة: 750 ساعة/شهر، بس الـbandwidth اتقصّف لـ5GB في أبريل 2026 وخدمة الويب المجانية بتنام بعد 15 دقيقة (صحوتها ~دقيقة)",
+    db: "مفيش ديسك على Free خالص — الذاكرة بتتصدّر لبره (`keepalive.yml`) أو `DATABASE_URL` على Postgres مجاني",
+    status2026:
+      "الخطة المجانية لسه موجودة: 750 ساعة/شهر، بس الـbandwidth اتقصّف لـ5GB في أبريل 2026 وخدمة الويب المجانية بتنام بعد 15 دقيقة (صحوتها ~دقيقة). متحقق من شاشة New Web Service بتاريخ 2026-11-02: الخطة $0 · 0.1 CPU · 512 MB، ومفيش طلب كارت جوه الفورم نفسه (الكارت بيطلبوه لو رفعت الخطة).",
     steps: [
-      "New → Web Service → Deploy from repo",
-      "Build: node nova-agent.js لا، استخدم Background Worker لو متاح؛ غير كده Web Service + health check",
-      "Env: NOVA_SERVER = ws://<hub>:27214/api/local-agent/ws",
+      "New → **Blueprint** → اختار الريبو → Apply (render.yaml بيظبط كل حاجة: frankfurt + health check + NOVA_EXEC_TOKEN متولّد)",
+      "أو New → Web Service: Build = `corepack enable && corepack prepare pnpm@10.34.9 --activate && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-server run build && BASE_PATH=/ pnpm --filter @workspace/kali-panel run build && node scripts/fetch-toolchain.mjs --into vendor/bin`",
+      "Start = `node --enable-source-maps artifacts/api-server/dist/index.mjs` · Root Directory فاضي · Region = Frankfurt",
+      "Advanced: Health Check `/api/health` · Ignored Paths: `docs/**`, `**/*.md`, `.github/**`, `state/*` (من غيرها كل commit بتاع الروبوت هيبدأ build)",
+      "في Actions: ضيف سرّ `NOVA_URL = https://<اسمك>.onrender.com` → keepalive كل 10 دقايق + نسخة احتياطية يومية للذاكرة",
     ],
     notes:
-      "بينام بعد 15 دقيقة سكون، ولما يصحى بيتصل تاني (الـ agent عنده reconnect). مناسب كنود تقيل مش كـ hub. سياسة المسح عندمها متحققة من مصدرهم النهاردة — عشان كده «unknown»، واسأل قبل أي ضربة نشطة.",
+      "بينام بعد 15 دقيقة سكون، فمفتاحه إن `keepalive.yml` يفضل يرنّ عليه. **الأدوات الحقيقية بقت بتنزّل وقت الـbuild** (`scripts/fetch-toolchain.mjs` → `vendor/bin`: nuclei/httpx/subfinder/katana/dnsx/naabu/ffuf) فالمحرك يشوفها من غير root ومن غير apt — `findBinary()` بيبحث في `vendor/bin` وفي `NOVA_TOOL_DIR`. سياسة المسح عندهم متحققتش من مصدرهم النهاردة (`unknown`)، والمبدأ: الضربة النشطة على نود روت، والسلبي هنا. أول ما الأدوات تبان، أي خطة بقت نشطة → بوابة التصريح ترفض على برنامج `passive_only` بالمكتوب: «لازم تأكيد إذن مكتوب»",
   },
   {
     id: "zeabur",

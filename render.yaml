@@ -33,7 +33,8 @@ services:
       corepack prepare pnpm@10.34.9 --activate &&
       pnpm install --no-frozen-lockfile &&
       pnpm --filter @workspace/api-server run build &&
-      BASE_PATH=/ pnpm --filter @workspace/kali-panel run build
+      BASE_PATH=/ pnpm --filter @workspace/kali-panel run build &&
+      node scripts/fetch-toolchain.mjs --into vendor/bin
     # The server reads PORT from the environment, and Render injects its own —
     # so the port is deliberately NOT hard-coded here.
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
@@ -44,6 +45,11 @@ services:
         value: 0.0.0.0
       - key: NODE_VERSION
         value: 22.22.3
+      # Where the build step parked the static toolchain (scripts/fetch-toolchain.mjs).
+      # Keep in sync with searchDirs() in artifacts/api-server/src/lib/ops/tools.ts —
+      # that function also looks at ./vendor/bin, so this line is a belt, not a need.
+      - key: NOVA_TOOL_DIR
+        value: /opt/render/project/src/vendor/bin
       # Point memory at the repo working dir so the path is predictable;
       # note it is still wiped by every redeploy (free plan has no disk).
       - key: NOVA_MEMORY_FILE

@@ -1031,3 +1031,17 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   محتاج `vars.NOVA_RUNNER_ALLOW_ACTIVE=1` بشكل صريح. مُقاس محلياً: `demo-selfhost` → done
   (job `20261102-1c8db5`، 3 مهام، 1419ms) — ومع مفيش محرك: الطابور ما اتلمسش + warning + exit 2.
   `docs/GITHUB-AS-THE-SERVER.md` فيه العقد الكامل والجدول.
+
+- **2026-11-02 (شُغل على «مكان واحد»):** المستخدم فتح شاشة New Web Service على Render وطلب مكان واحد
+  يدير البرنامج كله. الاتنفّض بالقياس الأول (Qoddy بيطلب كارت للتوثيق حتى على المجاني — مسجّل 2026-08-28؛
+  Sealos ملهاش خطة مجانية 2026؛ HF Spaces بقى محتاج PRO لعمل Docker + الخرج مقفول على 80/443/8080؛
+  Cloudflare Containers محتاج Workers Paid $5 و375 دقيقة vCPU/شهر). اللي اتبنى: `render.yaml` بقى
+  `node scripts/fetch-toolchain.mjs --into vendor/bin` في الـbuild، والسكربت بينزّل 7 أدوات ثابتة
+  من ريليساتها (نسخة آخر إصدار من api.github.com، قارئ ZIP بالنود فلا اعتماد على unzip/python في
+  بيئة البناء، و`-version` smoke test قبل ما الأداة تُحسب، وmanifest بيشيل التنزيل التاني، وexit 0
+  دايمًا مع ::warning::). `findBinary()` بقى يبحث في `vendor/bin`/`NOVA_TOOL_DIR`، و`suggestPlan` بقى
+  يستعمل نفس الكاشف بدل `/usr/local/bin` المكتوب يدوي (خطأ كان يخطّط مافيش وهو موجود). مُقاس:
+  `/api/ops/kinds` → `present:true` + `nodeToolsPresent:["nuclei"]`، وأول ما الأدوات بانت الخطط
+  بقت نشطة والبوابة رفضت على `passive_only` — التصريح ما اتراخاش. `deploy/render-free-guide.md` فيه
+  جدول «إيه اللي بيتشغّل وإيه لأ» بالحقيقة (مفيش nmap → naabu، مفيش ديسك، بينام 15 دقيقة،
+  الضربة النشطة على نود روت). غير متحقق: التنزيل نفسه — صندوق التطوير مافيهوش خروج، والسكربت بيقولها صراحة.
