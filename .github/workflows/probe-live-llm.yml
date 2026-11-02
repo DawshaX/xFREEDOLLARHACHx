@@ -98,6 +98,15 @@ jobs:
           say "POST /api/local-agent/exec (anonymous) → $code · $(head -c 160 /tmp/deny2.json 2>/dev/null | tr -d "\n")"
           say ""
 
+          say "## self-provisioning state (keys loaded? scope seeded?)"
+          curl -sS -m 20 "$TARGET/api/ops/provision" | head -c 500 | tee -a "$R"
+          say ""
+          say "## background loop + toolchain on the hub"
+          curl -sS -m 20 "$TARGET/api/ops/sweep" | head -c 400 | tee -a "$R"
+          say ""
+          curl -sS -m 20 "$TARGET/api/tools/corpus-status" 2>/dev/null | head -c 260 | tee -a "$R" || true
+          say ""
+
           say "## free-plane catalogue + honest fleet ceiling"
           curl -sS -m 20 "$TARGET/api/fleet/capabilities" | head -c 420 | tee -a "$R"
           say ""
