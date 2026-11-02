@@ -177,12 +177,20 @@ async function cliChecks(cfg) {
     const updTail = short((upd.out || upd.err).split("\n").filter(Boolean).slice(-1)[0] || `exit=${upd.code}`, 90);
     // severity-filtered on purpose: the full template set cannot finish inside a 6-runner-minute
     // budget, and "it timed out" would look identical to "the target is clean" in the report.
-    const r = await runBin(nuclei, ["-u", probeUrl, "-severity", "low,medium,high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1"], PER_TIMEOUT);
+    // A full template set against a live app is minutes of work, so the scanner gets its own
+    // budget (the global one measured 75s and killed it → `exit=null` → reported as a broken tool,
+    // which is the same lie in the other direction).
+    const budget = Math.max(PER_TIMEOUT, 165);
+    const r = await runBin(nuclei, ["-u", probeUrl, "-severity", "low,medium,high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1"], budget);
     const lines = r.out.split("\n").map((s) => s.trim()).filter(Boolean);
     const min = liveRow.expects?.nucleiFindings ?? 1;
-    add("cli", `nuclei -u ${testSite}`, lines.length >= min ? "pass" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
-      lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}` : `مفيش نتيجة · exit=${r.code} · ${r.out.length}B · قوالب: ${updTail}`,
-      { count: lines.length, ms: r.ms });
+    const cutOff = r.code === null;
+    add("cli", `nuclei -u ${liveRow.host}`,
+      lines.length >= min ? "pass" : cutOff ? "review" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
+      lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}`
+        : cutOff ? `اتقطع بعد ${r.ms}ms (سقفي ${budget}s) و${lines.length} نتيجة لحد هنا · قوالب: ${updTail}`
+          : `مفيش نتيجة · exit=${r.code} · ${r.out.length}B · قوالب: ${updTail}`,
+      { count: lines.length, ms: r.ms, cutOff });
   }
 
   // port sweep: nmap if the box has it (CI apt), else naabu (static, vendored)
@@ -207,9 +215,16 @@ async function cliChecks(cfg) {
     const local = fs.existsSync(wl) ? wl : null;
     if (!local) add("cli", "ffuf wordlist", "blocked", `مفيش wordlist في ${short(wl, 70)} — الـworkflow بينزّل واحد من SecLists؛ محليًا: نزّله ومرّر --wordlist`);
     else {
-      const r = await runBin(ffuf, ["-u", `${testRow.scheme || "http"}://${testSite}/FUZZ`, "-w", local, "-mc", "200,204,301,302,401,403", "-t", "10", "-maxtime", "45s"], 70);
+      const r = await runBin(ffuf, ["-u", `${testRow.scheme || "http"}://${testSite}/FUZZ`, "-w", local, "-mc", "200,204,301,302,401,403", "-t", "20", "-maxtime", "60s"], 80);
       const hits = (r.out.match(/\[Status: \d+/g) || []).length;
-      add("cli", `ffuf fuzz ${testSite}`, hits > 0 ? "pass" : "review", `${hits} نتيجة (${r.out.split("\n").length} سطر)`, { count: hits, ms: r.ms });
+      // ffuf counts requests on stderr; "0 hits" from a run that sent 3k requests is a real
+      // negative result, while "0 hits" from a run that sent 3 is the tool not working.
+      const prog = (r.err.match(/Progress:\s*\[(\d+)\/(\d+)\]/g) || []).pop() ?? "";
+      const sent = Number((prog.match(/\[(\d+)/) || [0, "0"])[1]);
+      add("cli", `ffuf fuzz ${testSite}`, hits > 0 ? "pass" : sent > 50 ? "pass" : "review",
+        hits > 0 ? `${hits} نتيجة · ${short(r.out.split("\n").find((l) => /\[Status:/.test(l)) || "", 110)}`
+          : `${sent} طلب مُرسل و0 مطابقة (${r.out.split("\n").length} سطر مخرجات)`,
+        { count: hits, sent, ms: r.ms });
     }
   } else add("cli", "ffuf present", "review", "مش موجود — مش حرجي");
 }
