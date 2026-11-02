@@ -5,6 +5,8 @@
 #
 # What the free plan gives you (2026): 512 MB RAM, shared CPU, 750 instance
 # hours per month (a month is ~744 h, so one always-awake service still fits).
+# Verified 2026-11-02: outbound bandwidth was also cut to 5 GB/month in the
+# April 2026 pricing change — fine for a control plane, not for serving scans.
 #
 # What the free plan does NOT give you:
 #   • no persistent disk — a disk on `plan: free` makes the Blueprint fail, so
@@ -46,6 +48,11 @@ services:
       # note it is still wiped by every redeploy (free plan has no disk).
       - key: NOVA_MEMORY_FILE
         value: /opt/render/project/src/state/nova-memory.json
+      # Without this, every write path (jobs, sweeps, agent registration) is
+      # same-origin only — which is fine for the panel, and useless from Pages.
+      # Set it from the Render dashboard (Generate Secret), never in the repo.
+      - key: NOVA_EXEC_TOKEN
+        generate: name
       # Optional free-tier keys — leave unset and NOVA uses the built-in brain.
       # Add them from the Render dashboard, never in the repo.
       - key: GEMINI_API_KEY

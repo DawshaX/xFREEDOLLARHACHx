@@ -270,19 +270,38 @@ async function checkAwareness() {
     `verdict=${b.verdict} organs=${organs.length} net=${b.net?.outbound} sites=${sites.filter((x) => x.ok).length}/${sites.length} mood=${String(b.moodAr || "").slice(0, 40)}…`);
   // the organs that must always be named — a manager that forgets its own hands
   const named = new Set(organs.map((o) => o.id));
-  const missing = ["brain", "council", "fleet", "ops", "scope", "memory", "bus", "net", "sites"].filter((id) => !named.has(id));
+  const missing = ["brain", "council", "fleet", "ops", "scope", "memory", "bus", "net", "freehosts"].filter((id) => !named.has(id));
+  // «مواقعها» بتظهر كحقل `sites[]` (مش organ) — بيتفحص لوحده للسبب ده
+  if (sites.length === 0) missing.push("sites[]");
   record("aware", "awareness reports every organ (incl. its own sites)", missing.length === 0,
-    missing.length ? `missing: ${missing.join(", ")}` : `${organs.length} organs · every fixAr present where state!=up`);
+    missing.length ? `missing: ${missing.join(", ")}` : `${organs.length} organs · ${sites.length} sites measured`);
   const leak = /"(sk-|ghp_|AIza[0-9A-Za-z_-]{6,})/.test(String(a.text)) || /"(apiKey|token)"\s*:\s*"[^"]{6,}/.test(String(a.text));
   record("aware", "awareness payload carries no key material or raw hosts", !leak, leak ? "POSSIBLE SECRET IN PAYLOAD" : "clean");
   const ov = await req("/api/ops/version");
-  record("aware", "GET /api/ops/version exists in this bundle", ov.status === 200 && Boolean(ov.body?.build),
-    `status ${ov.status} ${JSON.stringify(ov.body).slice(0, 90)}`);
+  // the stamp is returned at the top level (`{ok, sha, …}`), not nested
+  const stamped = Boolean(ov.body?.sha ?? ov.body?.build?.sha);
+  record("aware", "GET /api/ops/version exists in this bundle", ov.status === 200 && stamped,
+    `status ${ov.status} sha=${String(ov.body?.sha ?? "—").slice(0, 12)} opsRouter=${ov.body?.opsRouter ?? "?"}`);
   const st = await req("/api/ops/stats");
   record("aware", "GET /api/ops/stats readable (200 or gated 403)", [200, 403].includes(st.status), `status ${st.status}`);
   const wr = await req("/api/ops/programs/discover", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
-  record("aware", "ops write surface mounted (200/403 — never 404)", [200, 403].includes(wr.status),
-    `status ${wr.status}${wr.status === 404 ? " — the deployed bundle is older than the ops layer" : ""}`);
+  // the free-host catalogue must be data + measurement, never a stale paste
+  const cat = await req("/api/fleet/catalogue");
+  const hosts = Array.isArray(cat.body?.hosts) ? cat.body.hosts : [];
+  record("aware", "GET /api/fleet/catalogue answers the host list", cat.status === 200 && hosts.length >= 10,
+    `status ${cat.status} · ${hosts.length} hosts · usable_no_card ${cat.body?.counts?.usable_no_card ?? "?"}`);
+  const catp = await req("/api/fleet/catalogue?probe=1");
+  const probed = (Array.isArray(catp.body?.hosts) ? catp.body.hosts : []).filter((h) => h && h.probe).length;
+  record("aware", "catalogue supports ?probe=1 (measured reachability)", catp.status === 200 && probed > 0,
+    `status ${catp.status} · ${probed} hosts carry a probe result (reachable=${catp.body?.counts?.reachable ?? "?"})`);
+  const aw2 = await req("/api/nova-core/awareness");
+  const fh = (Array.isArray(aw2.body?.organs) ? aw2.body.organs : []).find((o) => o?.id === "freehosts");
+  record("aware", "awareness reports the free-host organ", Boolean(fh) && typeof fh.says === "string" && fh.says.length > 8,
+    fh ? `${fh.state} · ${String(fh.says).slice(0, 70)}` : "organ missing");
+  // 400 is a correct answer (no target given) — it still proves the route exists.
+  // 404/405 or HTML is the failure we care about: the bundle predates the ops layer.
+  record("aware", "ops write surface mounted (never 404/405)", [200, 201, 400, 403, 422].includes(wr.status),
+    `status ${wr.status}${[404, 405, 0].includes(wr.status) ? " — the deployed bundle is older than the ops layer" : ""}`);
 }
 
 // ── 7. integrity: no fabricated numbers in the live payload ────────────────

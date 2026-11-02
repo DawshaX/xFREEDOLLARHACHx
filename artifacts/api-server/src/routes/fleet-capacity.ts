@@ -19,24 +19,13 @@ const router = Router();
 
 /* ── types ─────────────────────────────────────────────────────────────── */
 
-export interface FreeHost {
-  id: string;
-  name: string;
-  url: string;
-  kind: "server" | "ci" | "functions" | "database" | "tunnel" | "monitor";
-  /** RAM / CPU as advertised on the free tier. */
-  ram: string;
-  /** Monthly runtime allowance, in plain words. */
-  hours: string;
-  alwaysOn: boolean;
-  sleeps: boolean;
-  /** true = a payment method is demanded. Those are NOT usable for us. */
-  cardRequired: boolean;
-  /** Can it run nova-agent.js permanently? */
-  nodeFit: "permanent" | "ephemeral" | "no";
-  steps: string[];
-  notes: string;
-}
+import {
+  HOSTS,
+  probeCatalogue,
+  freeHostSummary,
+  type FreeHost,
+} from "../lib/ops/free-hosts";
+
 
 /**
  * Free npm/HTTP services that make the server more capable without a card.
@@ -55,168 +44,8 @@ export interface FreeService {
 
 /* ── catalogue: compute hosts ──────────────────────────────────────────── */
 
-const HOSTS: FreeHost[] = [
-  {
-    id: "gh-actions",
-    name: "GitHub Actions (أسطول نودات)",
-    url: "https://github.com/DawshaX/xFREEDOLLARHACHx/actions/workflows/fleet-nodes.yml",
-    kind: "ci",
-    ram: "16 GB · 4 vCPU",
-    hours: "غير محدود على الريبو العام",
-    alwaysOn: false,
-    sleeps: false,
-    cardRequired: false,
-    nodeFit: "ephemeral",
-    steps: [
-      "الريبو → Settings → Secrets and variables → Actions → Variables",
-      "NOVA_HUB = ws://node.waifly.com:27214/api/local-agent/ws",
-      "FLEET_NODES = 8 (أو أي رقم لحد 19)",
-      "Actions → fleet-nodes → Run workflow",
-    ],
-    notes:
-      "أقوى حاجة مجانية موجودة: كل job جهاز حقيقي 4 أنوية/16 جيجا. العيب الوحيد إن الجلسة 6 ساعات كحد أقصى، فالأسطول بيدور (موجة كل 5 ساعات). مش نود دائم — نود متجدد.",
-  },
-  {
-    id: "waifly",
-    name: "Waifly",
-    url: "https://waifly.com",
-    kind: "server",
-    ram: "300 MB · 1 GB disk",
-    hours: "24/7 دائم",
-    alwaysOn: true,
-    sleeps: false,
-    cardRequired: false,
-    nodeFit: "permanent",
-    steps: [
-      "سجّل حساب مجاني (بريد فقط، مش محتاج فيزا)",
-      "أنشئ سيرفر Node.js واختار الخطة المجانية",
-      "في الكونسول: curl -fsSL <hub>/api/local-agent/download-nova-agent -o nova-agent.js",
-      "NOVA_SERVER=ws://<hub>:27214/api/local-agent/ws node nova-agent.js --id waifly-2",
-    ],
-    notes:
-      "ده نفس نوع سيرفرك الحالي. دائم فعلاً. لو النود offline 3 أيام بيتعلّق — الـ keepalive بيمنع ده.",
-  },
-  {
-    id: "render",
-    name: "Render",
-    url: "https://render.com",
-    kind: "server",
-    ram: "512 MB · 0.1 CPU",
-    hours: "750 ساعة/شهر",
-    alwaysOn: false,
-    sleeps: true,
-    cardRequired: false,
-    nodeFit: "ephemeral",
-    steps: [
-      "New → Web Service → Deploy from repo",
-      "Build: node nova-agent.js لا، استخدم Background Worker لو متاح؛ غير كده Web Service + health check",
-      "Env: NOVA_SERVER = ws://<hub>:27214/api/local-agent/ws",
-    ],
-    notes:
-      "بينام بعد 15 دقيقة سكون، ولما يصحى بيتصل تاني (الـ agent عنده reconnect). مناسب كنود تقيل مش كـ hub.",
-  },
-  {
-    id: "zeabur",
-    name: "Zeabur",
-    url: "https://zeabur.com",
-    kind: "server",
-    ram: "حسب الرصيد",
-    hours: "رصيد $5 شهرياً",
-    alwaysOn: true,
-    sleeps: false,
-    cardRequired: false,
-    nodeFit: "permanent",
-    steps: ["سجّل بـ GitHub", "أنشئ مشروع Node", "ضيف متغير NOVA_SERVER"],
-    notes: "رصيد مجاني بيتجدد — سيرفر خفيف دائم لحد ما الرصيد يخلص.",
-  },
-  {
-    id: "back4app",
-    name: "Back4App Containers",
-    url: "https://www.back4app.com",
-    kind: "server",
-    ram: "256–512 MB",
-    hours: "خطة مجانية",
-    alwaysOn: true,
-    sleeps: false,
-    cardRequired: false,
-    nodeFit: "permanent",
-    steps: ["Deploy from GitHub", "Dockerfile: node:22-alpine + nova-agent.js", "Env NOVA_SERVER"],
-    notes: "حاويات مجانية بدون فيزا — مناسبة لنود دائم خفيف.",
-  },
-  {
-    id: "snapdeploy",
-    name: "SnapDeploy",
-    url: "https://snapdeploy.dev",
-    kind: "server",
-    ram: "4 × 512 MB",
-    hours: "100 ساعة حاويات/شهر",
-    alwaysOn: false,
-    sleeps: true,
-    cardRequired: false,
-    nodeFit: "ephemeral",
-    steps: ["4 حاويات مجانية", "ارفع صورة node", "شغّل nova-agent.js"],
-    notes: "أربع نودات دفعة واحدة، بس ساعات محدودة وبيناموا.",
-  },
-  {
-    id: "bonto",
-    name: "Bonto",
-    url: "https://bonto.dev",
-    kind: "server",
-    ram: "512 MB",
-    hours: "75 ساعة/شهر",
-    alwaysOn: false,
-    sleeps: true,
-    cardRequired: false,
-    nodeFit: "ephemeral",
-    steps: ["Node 22/24/26 مدعوم", "ارفع nova-agent.js", "Env NOVA_SERVER"],
-    notes: "ساعات قليلة — نود مساعد مش أساسي.",
-  },
-  {
-    id: "oracle-always-free",
-    name: "Oracle Cloud Always Free",
-    url: "https://www.oracle.com/cloud/free/",
-    kind: "server",
-    ram: "24 GB ARM · 4 vCPU",
-    hours: "دائم مجاني",
-    alwaysOn: true,
-    sleeps: false,
-    cardRequired: true, // بطاقة للتحقق فقط، لكن مطلوبة => مش متاح
-    nodeFit: "permanent",
-    steps: ["محتاج بطاقة للتحقق (حتى لو مش هتتخصم)"],
-    notes:
-      "أقوى خطة مجانية في السوق، لكن **بتطلب بطاقة للتحقق**. طالما مفيش فيزا، دي مش خيار — مسجّلة هنا عشان الأمانة بس.",
-  },
-  {
-    id: "koyeb-northflank-fly",
-    name: "Koyeb / Northflank / Fly.io",
-    url: "https://fly.io",
-    kind: "server",
-    ram: "—",
-    hours: "—",
-    alwaysOn: false,
-    sleeps: false,
-    cardRequired: true,
-    nodeFit: "no",
-    steps: ["محتاجة بطاقة — مستبعدة"],
-    notes: "Koyeb بيحجز $29، Northflank بيطلب بطاقة للتحقق، Fly.io مبقاش عنده خطة مجانية من 2024. مش «مجاني» عملياً.",
-  },
-  {
-    id: "cloudflare-pages",
-    name: "Cloudflare / Vercel / Netlify",
-    url: "https://workers.cloudflare.com",
-    kind: "functions",
-    ram: "128 MB / request",
-    hours: "دوال بس",
-    alwaysOn: true,
-    sleeps: false,
-    cardRequired: false,
-    nodeFit: "no",
-    steps: ["مناسبة للوحة والـ proxy، مش لسيرفر وراه websocket دائم"],
-    notes: "مش سيرفر — دوال قصيرة العمر. تنفع لواجهة/بروكسي، متصلحش تشيل nova-agent.",
-  },
-];
-
 /* ── catalogue: free services the brain can call today ─────────────────── */
+
 
 const SERVICES: FreeService[] = [
   { id: "cloudflare-doh", name: "Cloudflare DoH", category: "dns", endpoint: "https://cloudflare-dns.com/dns-query", needsKey: false, limit: "بدون مفتاح", usedBy: "dns_lookup" },
@@ -313,22 +142,30 @@ router.get("/fleet/capabilities", (_req: Request, res: Response) => {
 });
 
 /** The catalogue — split into what we can connect and what we can call. */
-router.get("/fleet/catalogue", (req: Request, res: Response) => {
+router.get("/fleet/catalogue", async (req: Request, res: Response) => {
   const only = String(req.query.kind ?? "").toLowerCase();
   const hosts = HOSTS.filter((h) => (only ? h.kind === only : true));
+  const probes = String(req.query.probe ?? "") === "1" ? await probeCatalogue(String(req.query.force ?? "") === "1") : [];
+  const byId = new Map(probes.map((x) => [x.id, x]));
   res.json({
     ok: true,
     counts: {
       hosts: HOSTS.length,
       usable_no_card: HOSTS.filter((h) => !h.cardRequired).length,
       permanent_nodes: HOSTS.filter((h) => h.nodeFit === "permanent").length,
+      no_scan_hosts: HOSTS.filter((h) => h.scanPolicy === "forbidden").length,
       services: SERVICES.length,
+      probed: probes.length,
+      reachable: probes.filter((x) => x.reachable).length,
     },
     hosts: hosts.map((h) => ({
       ...h,
       usable: !h.cardRequired && h.nodeFit !== "no",
+      probe: byId.get(h.id) ?? null,
     })),
     services: SERVICES,
+    measured_rule:
+      "«reachable» قياس من السيرفر اللي بتكلمه لصفحة المورد نفسه (GET واحد، كاش 10 دقايق) — مش ضمان إن التسجيل هيتم ولا إن الخدمة كلها شغالة. من غير ?probe=1 مافيش قياس خالص.",
     excluded_rule: "أي حاجة بتطلب بطاقة مش بتتحسب مجانية — بتظهر هنا بعلامة cardRequired عشان تعرف الحقيقة.",
   });
 });

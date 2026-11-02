@@ -33,10 +33,11 @@ import { throttleStats } from "./ops/ratelimit";
 import { KIND_LIST, toolStatus } from "./ops/tools";
 import { autonomySummary } from "./ops/autonomy";
 import { buildStamp, type NovaBuildStamp } from "./ops/version";
+import { freeHostSummary, type FreeHostSummary } from "./ops/free-hosts";
 import { provisionStatus } from "./ops/keys-source";
 import { opsExposure } from "./ops/gate";
 
-export type OrganState = "up" | "down" | "partial";
+export type OrganState = "up" | "down" | "partial" | "unknown";
 
 export interface Organ {
   id: string;
@@ -95,6 +96,7 @@ export interface AwarenessSnapshot {
     liveEvents: number;
     selfCheck: { score: number; passed: number; total: number; verdict: string } | null;
     autonomy: ReturnType<typeof autonomySummary>;
+    freeHosts: FreeHostSummary;
     gate: ReturnType<typeof opsExposure>;
     keysLoaded: number;
   };
@@ -220,12 +222,22 @@ const SNAP_TTL_MS = Number(process.env.NOVA_AWARENESS_TTL_MS || 3_000);
 export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
   if (snapCache && Date.now() - snapCache.at < SNAP_TTL_MS) return snapCache.snap;
 
-  const [providers, seats, net, selfCheck, stamp] = await Promise.all([
+  const [providers, seats, net, selfCheck, stamp, freeHosts] = await Promise.all([
     guard(() => listConfiguredProviders(), [] as Awaited<ReturnType<typeof listConfiguredProviders>>),
     guard(() => councilMembers(9), [] as Awaited<ReturnType<typeof councilMembers>>),
     probeOutbound(),
     guard(() => runSelfCheck(), null),
     Promise.resolve(guardSafe(() => buildStamp())),
+    guard(() => freeHostSummary(), {
+      total: 0,
+      usableNoCard: 0,
+      permanent: 0,
+      probed: 0,
+      reachable: 0,
+      scanForbidden: 0,
+      bestHubId: "none",
+      bestHubAr: "القياس ماحصلش",
+    } as Awaited<ReturnType<typeof freeHostSummary>>),
   ]);
   const nodes = guardSafe(() => getConnectedAgentList()) ?? [];
   const jobs = guardSafe(() => listJobs(50)) ?? [];
@@ -351,6 +363,20 @@ export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
           : "لوانت بتجرّب في sandbox/بدون NAT فالنتيجة دي طبيعية؛ على الهوست الحقيقي لازم 4/4",
     },
     {
+      id: "freehosts",
+      label: "المضيفون المجانيون",
+      route: "/nova-fleet",
+      state: freeHosts.reachable > 0 ? "up" : freeHosts.probed === 0 ? "unknown" : "partial",
+      says:
+        freeHosts.probed === 0
+          ? "مافيش قياس — الكتالوج مفيهوش probeUrl"
+          : `${freeHosts.reachable}/${freeHosts.probed} موقع بيردّ من هنا · ${freeHosts.usableNoCard} بلا بطاقة · ${freeHosts.permanent} يصلح hub دائم · الأحسن: ${freeHosts.bestHubAr}`,
+      fixAr:
+        freeHosts.reachable > 0
+          ? undefined
+          : "صفر في القياس معناه غالبًا إن خروج السيرفر ده مقيد (مش إن المضيفين ماتوا) — القياس الحقيقى بيتعمل على الـhub. التفاصيل: `/api/fleet/catalogue?probe=1`.",
+    },
+    {
       id: "background",
       label: "الشغل في الخلفية",
       route: "/nova-fleet",
@@ -419,6 +445,7 @@ export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
       liveEvents,
       selfCheck: selfCheck ? { score: selfCheck.score, passed: selfCheck.passed, total: selfCheck.total, verdict: selfCheck.verdict } : null,
       autonomy,
+      freeHosts,
       gate,
       keysLoaded: keys,
     },

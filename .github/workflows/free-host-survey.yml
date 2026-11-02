@@ -1,0 +1,108 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA — free-host survey (قياس المضيفين المجانيين من نت حقيقي)
+#
+# Why this exists: the catalogue in `src/lib/ops/free-hosts.ts` is a claim, and
+# the sandbox this project is developed in has NO outbound internet, so a claim
+# could not be checked locally. A GitHub runner does. So:
+#
+#   1. build the real api-server here
+#   2. boot it on 127.0.0.1
+#   3. ask its OWN route `/api/fleet/catalogue?probe=1` — the same code path the
+#      panel and the awareness organ use, measured from the open internet
+#   4. write state/free-hosts.json + state/free-hosts.md (and commit them, so
+#      the numbers are reviewable in the repo, not buried in a log)
+#
+# It never fails the build: a host being unreachable is a finding, not an error.
+# ─────────────────────────────────────────────────────────────────────────────
+name: free-host survey
+
+on:
+  schedule:
+    - cron: "15 */12 * * *"   # twice a day, off the hour
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Commit the measured report to this branch"
+        type: boolean
+        default: true
+      engine:
+        description: "Optional: survey a running hub instead of booting one (e.g. http://node.waifly.com:27214)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: free-host-survey
+  cancel-in-progress: true
+
+jobs:
+  survey:
+    name: measure the free hosts
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install + build the server
+        run: |
+          pnpm install --no-frozen-lockfile --ignore-scripts
+          pnpm --filter @workspace/api-server run build
+
+      - name: Boot the engine (unless an external hub was given)
+        run: |
+          if [ -n "${{ inputs.engine }}" ]; then
+            echo "NOVA_SURVEY_URL=${{ inputs.engine }}" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          SERVER_PORT=8080 HOST=127.0.0.1 NOVA_PROGRAMS_FILE=/tmp/none.json node artifacts/api-server/dist/index.mjs > /tmp/engine.log 2>&1 &
+          for i in $(seq 1 25); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:8080/api/health || echo 000)
+            [ "$code" = "200" ] && { echo "engine up after ${i}s"; break; }
+            sleep 1
+          done
+          echo "NOVA_SURVEY_URL=http://127.0.0.1:8080" >> "$GITHUB_ENV"
+          : /tmp/engine.log
+
+      - name: Survey
+        run: |
+          : > state/free-hosts.json 2>/dev/null || true
+          node scripts/free-host-survey.mjs --url "$NOVA_SURVEY_URL" --out state/free-hosts.json --markdown state/free-hosts.md | tee /tmp/survey.txt
+
+      - name: Show the table in the log too
+        run: |
+          sed -n '1,80p' /tmp/survey.txt || true
+          echo "::notice::free-host survey done — state/free-hosts.md holds the table"
+
+      - name: Upload the measurement
+        uses: actions/upload-artifact@v4
+        with:
+          name: free-host-survey
+          path: |
+            state/free-hosts.json
+            state/free-hosts.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit the report (so the numbers are reviewable, not log-only)
+        if: ${{ inputs.commit != false }}
+        run: |
+          git config user.name "nova-survey-bot"
+          git config user.email "bot@arena.local"
+          git add state/free-hosts.json state/free-hosts.md || true
+          if git diff --cached --quiet; then echo "no change to commit"; exit 0; fi
+          git commit -q -m "free-host survey: $(date -u +%Y-%m-%dT%H:%MZ) [host-survey]" || exit 0
+          git pull --rebase --quiet origin "${GITHUB_REF_NAME}" || true
+          git push --quiet origin "HEAD:${GITHUB_REF_NAME}" || echo "::warning::push failed — the artifact still has the measurement"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

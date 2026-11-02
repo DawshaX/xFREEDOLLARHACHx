@@ -20,6 +20,9 @@
 | المورد | رام | دائم؟ | بطاقة؟ | يصلح لنود؟ |
 |---|---|---|---|---|
 | **GitHub Actions** | 16 GB · 4 vCPU | ❌ موجة 6 ساعات | لأ ✅ | ✅ ممتاز (متجدد) |
+| **GratisVPS.net** | **2 GB · 2 vCPU KVM** | ✅ 24/7 + ديسك | لأ ✅ | ✅ دائم (المسح النشط ممنوع في شروطهم) |
+| **FreeVPS.edu.pl** | KVM مستقل | ✅ 24/7 | لأ ✅ (بريد جامعة / مراجعة GitHub) | ✅ دائم |
+| **Silly Development** | 256 MB | ✅ مفيش نوم | لأ ✅ | ✅ دائم + Postgres مجاني |
 | **Waifly** | 300 MB | ✅ 24/7 | لأ ✅ | ✅ دائم |
 | **Zeabur** | رصيد $5/شهر | ✅ | لأ ✅ | ✅ دائم |
 | **Back4App** | 256–512 MB | ✅ | لأ ✅ | ✅ دائم |
@@ -30,11 +33,14 @@
 | Koyeb / Northflank / Fly | — | — | **بطاقة ❌** | مستبعد |
 | Cloudflare / Vercel / Netlify | دوال | ✅ | لأ ✅ | ❌ مش سيرفر |
 
-القائمة دي متاحة حيّة من الـ API:
+القائمة دي متاحة حيّة من الـ API — ومع `?probe=1` المحرك بيسأل مواقع المضيفين نفسه:
 
 ```bash
-curl http://<hub>/api/fleet/catalogue
+curl "http://<hub>/api/fleet/catalogue?probe=1"   # ادّعاء + قياس (كاش 10 دقايق)
+node scripts/free-host-survey.mjs                 # يقيس ويكتب state/free-hosts.md
 ```
+
+والشرح الكامل بكل مصدر وتاريخ التحقق في [`docs/FREE-HOSTS-2026.md`](FREE-HOSTS-2026.md).
 
 ---
 

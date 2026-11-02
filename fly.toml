@@ -1,6 +1,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Fly.io — free allowance friendly, real always-on machine with a persistent
-# volume for the long-term memory.
+# Fly.io — real always-on machine with a persistent volume for long-term memory.
+# NOTE (verified 2026-11-02): there is NO free allowance for new organisations
+# any more — a trial of 2 VM-hours / 7 days, then pay-as-you-go (~$2.2-6.7/mo for
+# a shared-cpu-1x machine). Keep this config for the paid path; for a $0 hub use
+# Silly Development or GratisVPS (see docs/FREE-HOSTS-2026.md).
+# After the first deploy, also: fly secrets set NOVA_EXEC_TOKEN=$(openssl rand -hex 16)
 #
 #   fly launch --copy-config --name cybernova-nova
 #   fly volumes create nova_data --size 1 --region fra

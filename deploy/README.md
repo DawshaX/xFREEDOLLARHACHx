@@ -187,3 +187,9 @@ curl -O http://OLD_SERVER/api/nova-core/memory/export
 curl -X POST -H 'content-type: application/json' \
      --data @nova-memory-*.json http://NEW_SERVER/api/nova-core/memory/import
 ```
+
+## اختار المضيف في 2026 (مقيس، مش محفوظات)
+
+لو مش عارف تحط نوفا فين: [`docs/FREE-HOSTS-2026.md`](../docs/FREE-HOSTS-2026.md) — كل مورد،
+اللي بيطلب بطاقة، اللي بينام، واللي شروطه بتمنع المسح النشط، ووصفة التثبيت الجاهزة لكل واحد.
+وفيه `node scripts/free-host-survey.mjs` اللي بيقيس وصولية كل مورد ويكتب `state/free-hosts.md`.
