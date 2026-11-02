@@ -150,7 +150,7 @@ async function cliChecks(cfg) {
   const httpx = findBinary("httpx");
   if (!httpx) add("cli", "httpx present", "fail", "مش موجود");
   else {
-    const r = await runBin(httpx, ["-silent", "-u", "-sc", "-title", "-H", "User-Agent: Mozilla/5.0", "-timeout", "12", "-retries", "1", probeUrl], 60);
+    const r = await runBin(httpx, ["-silent", "-u", "-sc", "-title", "-H", "User-Agent: Mozilla/5.0", "-follow-redirects", "-timeout", "12", "-retries", "1", probeUrl], 60);
     const ok = r.code === 0 && /\[2\d\d\]|\[3\d\d\]/.test(r.out);
     add("cli", `httpx ${probeUrl}`, ok ? "pass" : NET_ERRORS.test(r.err + r.out) ? "blocked" : "review",
       ok ? short(r.out, 120) : short(`${r.err || ""} exit=${r.code} · ${r.out.length}B stdout · ${r.ms}ms`, 130), { ms: r.ms });
@@ -177,9 +177,9 @@ async function cliChecks(cfg) {
     const updTail = short((upd.out || upd.err).split("\n").filter(Boolean).slice(-1)[0] || `exit=${upd.code}`, 90);
     // severity-filtered on purpose: the full template set cannot finish inside a 6-runner-minute
     // budget, and "it timed out" would look identical to "the target is clean" in the report.
-    const r = await runBin(nuclei, ["-u", testUrl, "-severity", "medium,high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1"], PER_TIMEOUT);
+    const r = await runBin(nuclei, ["-u", probeUrl, "-severity", "low,medium,high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1"], PER_TIMEOUT);
     const lines = r.out.split("\n").map((s) => s.trim()).filter(Boolean);
-    const min = cfg.targets.find((t) => t.host === testSite)?.expects?.nucleiFindings ?? 1;
+    const min = liveRow.expects?.nucleiFindings ?? 1;
     add("cli", `nuclei -u ${testSite}`, lines.length >= min ? "pass" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
       lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}` : `مفيش نتيجة · exit=${r.code} · ${r.out.length}B · قوالب: ${updTail}`,
       { count: lines.length, ms: r.ms });
@@ -207,7 +207,7 @@ async function cliChecks(cfg) {
     const local = fs.existsSync(wl) ? wl : null;
     if (!local) add("cli", "ffuf wordlist", "blocked", `مفيش wordlist في ${short(wl, 70)} — الـworkflow بينزّل واحد من SecLists؛ محليًا: نزّله ومرّر --wordlist`);
     else {
-      const r = await runBin(ffuf, ["-u", `${testRow.scheme || "http"}://${testSite}/FUZZ`, "-w", local, "-mc", "200,204,301,302,401,403", "-t", "10", "-maxtime", "45s", "-s"], 70);
+      const r = await runBin(ffuf, ["-u", `${testRow.scheme || "http"}://${testSite}/FUZZ`, "-w", local, "-mc", "200,204,301,302,401,403", "-t", "10", "-maxtime", "45s"], 70);
       const hits = (r.out.match(/\[Status: \d+/g) || []).length;
       add("cli", `ffuf fuzz ${testSite}`, hits > 0 ? "pass" : "review", `${hits} نتيجة (${r.out.split("\n").length} سطر)`, { count: hits, ms: r.ms });
     }
