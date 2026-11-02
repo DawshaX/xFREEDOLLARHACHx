@@ -99,6 +99,9 @@ jobs:
   node:
     name: node ${{ matrix.i }}
     needs: prepare
+    # With nodes=0 the whole matrix must not even be scheduled: otherwise every
+    # push to this file queues 19 jobs that each boot a runner just to skip.
+    if: needs.prepare.outputs.nodes != '0'
     runs-on: ubuntu-latest
     timeout-minutes: 350          # < 6 h hard cap, so the job ends cleanly
     strategy:
