@@ -13,7 +13,7 @@ on:
       target:
         description: Base URL of the running server
         required: false
-        default: http://node.waifly.com:27214
+        default: ${{ vars.NOVA_HUB_URL || 'http://node.waifly.com:27214' }}
   push:
     branches: ["**"]
     paths: [".github/workflows/probe-live-llm.yml"]
@@ -27,7 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      TARGET: ${{ github.event.inputs.target || 'http://node.waifly.com:27214' }}
+      # ONE variable moves every live probe in this repo: set NOVA_HUB_URL in
+      # Settings → Actions → Variables to your Render/Waifly hub and keepalive,
+      # the uptime watchdog and this probe all follow it. Waifly stays the fallback
+      # so the probe still runs when nothing is configured.
+      TARGET: ${{ github.event.inputs.target || vars.NOVA_HUB_URL || 'http://node.waifly.com:27214' }}
     steps:
       - uses: actions/checkout@v4
         with:
