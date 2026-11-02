@@ -1,0 +1,89 @@
+name: bounty catalog (HackerOne + bugcrowd → ops/bounty)
+
+# الحلقة دي بتخلي «ادخل برنامج» أمر واحد بدل ما حد يقعد يطقّ نطاقات بيده.
+# المصدر: arkadiyt/bounty-targets-data — بيانات منشورة بيحدّثها CI صاحبها يوميًا من صفحة كل برنامج.
+# مفيش أي مفتاح، ومفيش أي طلب لحد غير api.github.com.
+#
+# الأهم: الكتالوج ده مش تصريح. كل مدخل فيه `consented:false` و`mode:"passive_only"`، والفحص النشط
+# لسه محتاج تسجيل صريح في `state/programs.json` مع جملة الإذن المكتوبة — وده شغل المستخدم، مش هنا.
+#
+# لو المصدر غيّر شكله السكربت بيفشل (انكماش >30% أو مصدر يرجّع برامج ب0 ناتج) والـrun بيبقى أحمر —
+# مافيش «كتالوج فاضي» بيتنشر في صمت.
+
+on:
+  schedule:
+    - cron: "17 3 * * 1" # اتنين الفجر UTC، أسبوعيًا، مش على الرأس مع live-verify
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "اكتب الكتالوج على main لو اتغير"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bounty-catalog
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch and normalize the public directory
+        run: node scripts/sync-bounty-programs.mjs --out ops/bounty/programs-catalog.json
+
+      - name: Guard the result before it can land
+        run: node scripts/sync-bounty-programs.mjs --check --out ops/bounty/programs-catalog.json
+
+      - name: What changed
+        run: |
+          git status --porcelain ops/bounty/ || true
+          node -e '
+          const c=require("./ops/bounty/programs-catalog.json");
+          console.log(`programs=${c.counts.programs} · bounty=${c.counts.bounty_programs} · with-domains=${c.counts.programs_with_domains} · domains=${c.counts.domains} · wildcards=${c.counts.wildcards}`);
+          '
+        continue-on-error: true
+
+      - name: Publish the catalog
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.commit == false) }}
+        run: |
+          git config user.name "nova-catalog-bot"
+          git config user.email "bot@arena.local"
+          git add ops/bounty/programs-catalog.json
+          if git diff --cached --quiet; then
+            echo "الكتالوج مطابق للي على main — مفيش حاجة تتنشر"
+            exit 0
+          fi
+          cp ops/bounty/programs-catalog.json /tmp/catalog.json
+          branch="${GITHUB_REF_NAME}"
+          published=0
+          for try in 1 2 3; do
+            git fetch --quiet origin "$branch" || true
+            git checkout -qf -B "publish-catalog" "origin/$branch" 2>/dev/null || true
+            cp /tmp/catalog.json ops/bounty/programs-catalog.json
+            git add ops/bounty/programs-catalog.json
+            if git diff --cached --quiet; then published=1; break; fi
+            git commit -q -m "bounty catalog: $(date -u +%Y-%m-%dT%H:%MZ) [bounty-catalog]" || true
+            if git push --quiet origin "HEAD:refs/heads/${branch}"; then
+              echo "catalog published on attempt $try"
+              published=1
+              break
+            fi
+            echo "push rejected — ${branch} تحرّك؛ إعادة المحاولة فوق آخر نسخة"
+            sleep $((try * 5))
+          done
+          if [ "$published" != 1 ]; then
+            echo "::error::الكتالوج اتجهّز بس مانشرش على ${branch} بعد 3 محاولات."
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

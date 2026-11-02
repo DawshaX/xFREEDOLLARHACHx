@@ -369,6 +369,25 @@ await tA("internal targets are refused before any request is made", async () => 
   assert.equal(bad.ok, false);
   assert.equal(bad.registered, false);
 });
+await tA("the bounty catalog is measured data and never a permission slip", async () => {
+  const root = path.resolve(import.meta.dirname, "..");
+  const file = path.join(root, "ops/bounty/programs-catalog.json");
+  assert.ok(fs.existsSync(file), "ops/bounty/programs-catalog.json ناقص — شغّل node scripts/sync-bounty-programs.mjs وcommit النتيجة");
+  const cat = JSON.parse(fs.readFileSync(file, "utf8"));
+  assert.equal(cat.schema, "cybernova.bounty-catalog/1");
+  assert.ok(cat.counts.programs > 400, `catalog too thin: ${cat.counts.programs} programs`);
+  assert.ok(cat.counts.programs_with_domains > 300, "أغلب البرامج ملهاش نطاقات؟ الشكل اتغير");
+  assert.ok(cat.sources.every((src) => src.ok || src.error || src.skipped), "كل مصدر لازم يقول حالة واضحة");
+  for (const prog of cat.programs.slice(0, 80)) {
+    assert.equal(prog.consented, false, `«${prog.handle}» مسجّل كمُوافَق عليه — الكتالوج معلومات عامة بس`);
+    assert.equal(prog.mode, "passive_only", `«${prog.handle}» ليه وضع تاني غير الاستطلاع`);
+    assert.ok(/^https?:\/\//.test(prog.url), `رابط «${prog.handle}» مش URL`);
+    for (const host of [...(prog.domains || []), ...(prog.wildcards || [])].slice(0, 10)) {
+      assert.ok(/^(?:\*\.)?[a-z0-9][a-z0-9.-]*\.[a-z]{2,24}$/.test(host), `معرّف مش نطاق في «${prog.handle}»: ${host}`);
+    }
+  }
+});
+
 globalThis.fetch = realFetch;
 
 fs.rmSync(tmp, { recursive: true, force: true });

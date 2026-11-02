@@ -1115,3 +1115,18 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   unstaged changes» — فأي حل بيعتمد على rebase محكوم بالفشل. خطوة النشر بقت: نسخة الملفين المقاسين،
   `git checkout -qf` لآخر `origin/$branch`، كتابة، commit، push ×3 — ولو مافيش فرق عن آخر تقرير
   between success بدل فشل صوري.
+
+- **2026-11-02 (الكتالوج بقى بيانات):** `ops/bounty/programs-catalog.json` بقى موجود ومتتبّع،
+  بيتولّد من `arkadiyt/bounty-targets-data` (HackerOne + bugcrowd) بـ`scripts/sync-bounty-programs.mjs`
+  وبيتنشر أسبوعيًا بـ`.github/workflows/bounty-catalog.yml` بنفس منطق النشر الآمن اللي اتعلّمناه
+  (مافيش rebase على شجرة ملوثة). مقاس: **746 برنامج · 511 offers-bounty · 4945 نطاق + 1594 wildcard ·
+  780 KB**. ثلاث قرارات جت من البيانات نفسها مش من تخمين: (1) HackerOne مالوش `asset_type: DOMAIN` —
+  النطاقات `WILDCARD`/`URL`، وأي حاجة تانية (`HARDWARE`, `GOOGLE_PLAY_APP_ID`, `SOURCE_CODE`) مش هدف
+  شبكي، وإلا `com.coloros.assistantscreen` كان يدخل قايممة الأهداف؛ (2) bugcrowd شكله مختلف تمامًا
+  وبلا `handle` — من غير خريطة كان بيرجع 297 برنامج و0 ناتج، فبقي `kept:0` فشل صريح؛
+  (3) `--check` بيمنع انكماش أكتر من 30% (متقاس بمُدخَل مقصوص 746 → 220: exit 1) وبيرفض يستبدل
+  الكتالوج بفراغ. الكتالوج **مش إذن**: كل مدخل `consented:false` و`passive_only` بطبيعته، ومفيش سطر
+  في السكربت ده بيكتب في `state/programs.json`. `ops-selftest` بقى **37 حالة** بيحرسوا ده.
+  اللي لسه: المحرك (`program_discover`/`suggestPlan`) ما بيقرأش الكتالوج — الخطوة الجاية، محتاجة
+  حالة selftest جديدة مش بس docs.
+
