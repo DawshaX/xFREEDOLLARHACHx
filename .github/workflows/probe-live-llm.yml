@@ -108,15 +108,27 @@ jobs:
           curl -sS -m 20 "$TARGET/api/local-agent/agents" | tee -a "$R"; say ""
           curl -sS -m 20 "$TARGET/api/fleet/mesh" | head -c 800 | tee -a "$R"; say ""
 
+      # The report is written back INTO the branch on purpose: the sandbox I
+      # (the agent) work in cannot reach this host nor Actions' log storage, so a
+      # committed file is the one channel that always survives. It must therefore
+      # tolerate the branch moving while the probe ran — a plain push used to fail
+      # non-fast-forward and the report was lost.
       - name: Publish report to the branch
         run: |
           set -e
           git config user.name "nova-probe"
           git config user.email "probe@users.noreply.github.com"
-          if git diff --quiet -- probe-report.txt 2>/dev/null && [ -f probe-report.txt ]; then
-            git add probe-report.txt
-            git diff --cached --quiet && echo "no change" && exit 0
-          fi
-          git add probe-report.txt
-          git commit -m "chore(probe): live report from CI [skip ci]" || exit 0
-          git push origin "HEAD:${{ github.ref_name }}"
+          git add -f probe-report.txt
+          git commit -m "chore(probe): live report from CI [skip ci]" --quiet || { echo "nothing to publish"; exit 0; }
+          branch="${{ github.ref_name }}"
+          for try in 1 2 3; do
+            if git push origin "HEAD:$branch" --quiet; then
+              echo "report published on attempt $try"
+              exit 0
+            fi
+            echo "push rejected (branch moved?) — rebasing onto origin/$branch and retrying"
+            git fetch origin "$branch" --quiet && git rebase "origin/$branch" --quiet || git rebase --abort || true
+            sleep $((try * 4))
+          done
+          echo "::warning::could not publish probe-report.txt — the report is still in this job log"
+          exit 0
