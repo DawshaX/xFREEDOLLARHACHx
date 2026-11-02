@@ -200,32 +200,49 @@ jobs:
           git config user.name "nova-verify-bot"
           git config user.email "bot@arena.local"
           git add state/verified-live.json state/verified-live.md 2>/dev/null || true
-          # A run that measures and publishes nothing is indistinguishable from a run that never
-          # happened (measured: run 41462489871 finished green and committed no report). The step
-          # fails loudly instead — step conclusions are the only CI output readable from a sandbox.
+          # A run that measures and publishes nothing is a run that never happened: the step fails
+          # loudly (step conclusions are the only CI output readable from a sandbox, since Actions
+          # logs and artifacts answer 403). Measured: run 41485616989 finished green having published
+          # nothing; run 41488048782 published nothing and finally said so.
           if git diff --cached --quiet; then
             echo "── ما فيش تغيير؟ ده محتوى state/ بعد التشغيل:"
-            ls -la state/verified-live.* 2>/dev/null || echo "(الملفين مش موجودين)"
+            ls -la state/verified-live.* 2>/dev/null || echo "(الملفين مش موجودين — الـharness فشل قبل الكتابة)"
             tail -3 state/verified-live.md 2>/dev/null || true
-            echo "::error::القياس ما نشرش حاجة —إما إن الـharness فشل قبل الكتابة أو الملفات ما اتكتبتش؛ شوف سطر «Verify live» في الـlog."
+            echo "::error::القياس ما نشرش حاجة — شوف سطر «Verify live» في الـlog."
             exit 1
           fi
-          git commit -q -m "live verify: $(date -u +%Y-%m-%dT%H:%MZ) [live-verify]" || exit 0
-          # A rejected push used to be a warning — and warnings here are invisible: the logs are
-          # 403 from the sandbox and artifacts cannot be downloaded, so a measurement that failed to
-          # push might as well not have run (measured: run 41485616989 finished green, had a real
-          # report committed locally, and published nothing because the branch moved under it).
+          # لا rebase ولا commit على شجرة التشغيل دي: المحرك الشغال بيكتب state/cybernova-brain-state.json
+          # في نفس اللحظة، و`git rebase` بيرفض مع unstaged changes — وده بالظبط اللي خلي try loop الأول
+          # يفشل 4 مرات على run 41488048782 (`cannot rebase: You have unstaged changes`).
+          # بدل كده: ناخد القياس (الملفين بس)، نعمل checkout قوي لـآخر ${GITHUB_REF_NAME}، نكتب فوقه،
+          # ونشيل أي commit وسيط — فالمسابقة مع بوت التوثيق بتتحل بالبناء من الصفر مش بالـrebase.
+          cp state/verified-live.json /tmp/verified-live.json
+          cp state/verified-live.md /tmp/verified-live.md
           branch="${GITHUB_REF_NAME}"
-          for try in 1 2 3 4; do
-            if git push --quiet origin "HEAD:${branch}"; then
-              echo "measurement published on attempt $try"
-              exit 0
+          published=0
+          for try in 1 2 3; do
+            git fetch --quiet origin "$branch" || true
+            git checkout -qf -B "publish-live-verify" "origin/$branch" 2>/dev/null || git checkout -qf "$branch" 2>/dev/null || true
+            cp /tmp/verified-live.json state/verified-live.json
+            cp /tmp/verified-live.md state/verified-live.md
+            git add state/verified-live.json state/verified-live.md
+            if git diff --cached --quiet; then
+              echo "القياس مطابق لآخر تقرير على ${branch} — مفيش حاجة تنشر، والـrun ما بيحصلش على الفاضي"
+              published=1
+              break
             fi
-            echo "push rejected (branch moved) — rebasing onto origin/${branch} and retrying"
-            git fetch --quiet origin "${branch}" && git rebase --quiet "origin/${branch}" || git rebase --abort || true
+            git commit -q -m "live verify: $(date -u +%Y-%m-%dT%H:%MZ) [live-verify]" || true
+            if git push --quiet origin "HEAD:refs/heads/${branch}"; then
+              echo "measurement published on attempt $try"
+              published=1
+              break
+            fi
+            echo "push rejected — ${branch} تحرك تحتنا؛ أعيد المحاولة فوق آخر نسخة"
             sleep $((try * 5))
           done
-          echo "::error::القياس اتعمل بس مانشئرفش — الفرق موجود في commit محلي ولم يصل ${branch}. ده فشل للحلقة كلها، مش تحذير."
-          exit 1
+          if [ "$published" != 1 ]; then
+            echo "::error::القياس اتعمل بس مانشئرفش على ${branch} بعد 3 محاولات — ده فشل للحلقة كلها، مش تحذير."
+            exit 1
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
