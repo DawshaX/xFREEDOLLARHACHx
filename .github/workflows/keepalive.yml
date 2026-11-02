@@ -29,10 +29,10 @@ jobs:
     steps:
       - name: Ping /api/health
         env:
-          NOVA_URL: ${{ secrets.NOVA_URL }}
+          NOVA_URL: ${{ secrets.NOVA_URL || vars.NOVA_HUB_URL }}
         run: |
           if [ -z "${NOVA_URL:-}" ]; then
-            echo "::notice::NOVA_URL secret is not set — skipping (set it to your deployment URL)."
+            echo "::notice::مفيش NOVA_URL (سرّ) ولا NOVA_HUB_URL (متغيّر) — القفز. حط رابط الـservice في أي واحدة منهم."
             exit 0
           fi
           for i in 1 2 3; do
@@ -45,7 +45,7 @@ jobs:
 
       - name: Ping the agent brain
         env:
-          NOVA_URL: ${{ secrets.NOVA_URL }}
+          NOVA_URL: ${{ secrets.NOVA_URL || vars.NOVA_HUB_URL }}
         run: |
           if [ -z "${NOVA_URL:-}" ]; then exit 0; fi
           curl -s --max-time 30 "$NOVA_URL/api/nova-core/status" | head -c 400 || true
@@ -58,7 +58,7 @@ jobs:
     steps:
       - name: Download memory snapshot
         env:
-          NOVA_URL: ${{ secrets.NOVA_URL }}
+          NOVA_URL: ${{ secrets.NOVA_URL || vars.NOVA_HUB_URL }}
         run: |
           if [ -z "${NOVA_URL:-}" ]; then
             echo "::notice::NOVA_URL secret is not set — skipping backup."
