@@ -3,25 +3,26 @@
 > اتولّد من `scripts/verify-live.mjs` (شغّله `.github/workflows/live-verify.yml`).
 > كل هدف هنا صاحبه منشور صراحة إن فحصه مسموح — الوثيقة في العمود الأخير.
 
-آخر تشغيل: `2026-11-02T17:48:25.355Z` · الحكم: **AMBER** · ✓13 · ✗0 · ؟3 · (محجوب)0
+آخر تشغيل: `2026-11-03T00:36:52.109Z` · الحكم: **AMBER** · ✓15 · ✗0 · ؟1 · (محجوب)1
 الأدوات المرصودة: dnsx, subfinder, httpx, nuclei, katana, nmap, naabu, ffuf · المحرك: `http://127.0.0.1:8090/api` · هدف التمرين: `scanme.nmap.org`
 
 | الطبقة | الفحص | الحالة | التفصيل |
 |---|---|---|---|
 | cli | dns resolution | ✓ pass | 2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present |
-| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · www.vulnweb.com, rest.vulnweb.com, testaspnet.vulnweb.com |
-| cli | httpx https://demo.testfire.net/ | ? review | status=مفيش (المطلوب 200) · exit=0 · 535B · السبب: رد من غير status · 1182ms |
+| cli | subfinder -d vulnweb.com | ✓ pass | 518 سوبدومين (المطلوب ≥2) · 0x2l.vulnweb.com, 161.vulnweb.com, wsdtest6zld.vulnweb.com |
+| cli | httpx https://demo.testfire.net/ | ✓ pass | 200 · Altoro Mutual · |
 | cli | katana crawl testphp.vulnweb.com | ✓ pass | 1 رابط متكرول (المطلوب ≥1) |
 | cli | nuclei -u testphp.vulnweb.com (high,critical) | ✓ pass | 4 طلب اتفحص و0 نتيجة high/critical · exit=0 · قوالب: [[34mINF[0m] No new updates found for nuclei templates |
 | cli | nmap scanme.nmap.org:80,22 | ✓ pass | 2 بورت مفتوح · 22/tcp open · 80/tcp open |
+| cli | hub node.waifly.com:27214 | · blocked | http://node.waifly.com:27214/api/health → HTTP 000 · بلا رد · ops/version بلا رد · 296ms · السبب: TypeError fetch failed ECONNREFUSED — الـconnection refused معناه مافيش حاجة بتتسمع على البورت (مش فايروال بيسقّط): شغّل العملية أو اربط البو… |
 | cli | ffuf fuzz testphp.vulnweb.com | ✓ pass | 61 طلب مُرسل و0 مطابقة (1 سطر مخرجات) |
 | engine | engine reachable | ✓ pass | HTTP 200 |
 | engine | kinds report tool presence | ✓ pass | 14 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap |
 | engine | program registered active (demo.testfire.net) | ✓ pass | id=demo.testfire.net · policy=https://demo.testfire.net/ |
-| engine | job created | ✓ pass | job=20261102-b33c5a · 7 مهمة |
+| engine | job created | ✓ pass | job=20261103-33935f · 7 مهمة |
 | engine | job executed | ✓ pass | 6/7 done · 1 failed · 11 finding · done |
-| engine | failed tasks | ? review | tools.nuclei: nuclei اتقطع بعد 260023ms (ميزانية النوع) · 0 نتيجة لحد هنا — «اتقطع» مش «مافيش» |
-| engine | evidence hashed on disk | ? review | 6 ملف في state/jobs/20261102-b33c5a/evidence · 5 فيهم بايتات · فاضي: tools.subfinder-e3b0c44298fc.txt (1) |
+| engine | failed tasks | ? review | tools.nuclei: nuclei اتقطع بعد 260020ms (ميزانية النوع) · 0 نتيجة لحد هنا — «اتقطع» مش «مافيش» |
+| engine | evidence hashed on disk | ✓ pass | 6 ملف في state/jobs/20261103-33935f/evidence · 5 فيهم بايتات · فاضي: tools.subfinder-e3b0c44298fc.txt (1 — 1 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية) |
 | engine | report is honest about coverage | ✓ pass | 622 بايت · فيه «Coverage gaps»=true · «reportable»=true |
 | engine | negative control refuses example.com | ✓ pass | HTTP 403 · برنامج Negative control (must never be scanned actively) محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة. للتفعيل لازم تأكيد إذن مكتوب: program_d… |
 
