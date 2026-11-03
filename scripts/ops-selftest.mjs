@@ -603,6 +603,34 @@ await tA("no ops route is registered inside another handler", async () => {
   console.log(`      · ${routes} تسجيل راوتر في ${files.length} ملف، مافيش واحد متخبي جوه handler`);
 });
 
+await tA("no workflow promises a context it cannot see in `on:`", async () => {
+  // `on:` ما بيشوفش `vars`/`secrets`/`inputs`/`steps`. غلطة واحدة هنا = المستودع كله أحمر على كل
+  // push من غير ما حد يقرأ سطر واحد، لأن الـworkflow بيرفض قبل ما أي job يتعمل (مقاس 2026-11-03).
+  const dir = path.resolve(ROOT0, ".github/workflows");
+  const files = fs.readdirSync(dir).filter((f) => /\.ya?ml$/.test(f));
+  assert.ok(files.length >= 8, `ملفات workflows أقل من المتوقع: ${files.length}`);
+  const BAD = ["vars.", "secrets.", "steps.", "needs.", "matrix."];
+  let scanned = 0;
+  for (const file of files) {
+    const lines = fs.readFileSync(path.join(dir, file), "utf8").split("\n");
+    let inOn = false;
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if (/^on:/.test(l)) { inOn = true; continue; }
+      if (inOn && /^[A-Za-z]/.test(l)) inOn = false;
+      if (!inOn) continue;
+      if (/^\s*#/.test(l)) continue;
+      scanned++;
+      const hit = BAD.find((k) => l.includes("${{") && l.includes(k));
+      if (hit) {
+        assert.fail(`${file}:${i + 1} — «${hit}» جوه بلوك \`on:\`: السياق ده مابيتحلّلش هناك، والنتيجة رفض الملف بالكامل (0 job) على كل push — انقل القراءة لـenv/step.`);
+      }
+    }
+  }
+  assert.ok(scanned > 60, `عدد أسطر \`on:\` المفحوصة قليل (${scanned}) — الفحص مش بيقرا`);
+  console.log(`      · ${scanned} سطر في بلوكات \`on:\` في ${files.length} ملف، كله ماحدش بيلمس سياق محظور`);
+});
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log("────────────────────");
 console.log(`${passed} passed · ${failed} failed`);

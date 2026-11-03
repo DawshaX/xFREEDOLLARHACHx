@@ -13,7 +13,11 @@ on:
       target:
         description: Base URL of the running server
         required: false
-        default: ${{ vars.NOVA_HUB_URL || 'http://node.waifly.com:27214' }}
+        # حرفي هنا لا أكتر: `vars.*` و`secrets.*` مش متاحين جوه بلوك `on:` خالص، وأي استخدام ليّه
+        # بيخلّي GitHub يرفض الملف كله — والنتيجة تشغيل **بلا أي job** (total_count:0) لونه أحمر
+        # على كل push في المستودع (مقاس: runs 41654773509 / 41654754814 / 41650731657). المتغيّر
+        # بيتقري في `env:` تحت، وهو المكان الوحيد اللي فيه `vars` ليه معنى.
+        default: http://node.waifly.com:27214
   push:
     branches: ["**"]
     paths: [".github/workflows/probe-live-llm.yml"]
