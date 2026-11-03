@@ -39,9 +39,22 @@ interface CatalogProgram extends Partial<BountyMatch> {
   name?: string;
   platform?: string;
   url?: string;
+  bounties?: boolean;
+  max_payout_usd?: number | null;
+  response_efficiency?: number | null;
+  safe_harbor?: string | null;
+  paused?: boolean;
+  submission_state?: string | null;
+  avg_hours_to_bounty?: number | null;
+  severities?: string[];
+  asset_total?: number | null;
+  eligible_assets?: number | null;
+  non_host_assets?: number | null;
   domains?: string[];
   wildcards?: string[];
   urls?: string[];
+  ips?: string[];
+  cidrs?: string[];
   consented?: boolean;
   mode?: string;
 }
@@ -185,4 +198,144 @@ export function lookupBountyProgram(hostRaw: string): BountyMatch | null {
     matched_on: best.matched,
     matched_kind: best.kind,
   };
+}
+
+/* ── hunt candidates: «هتحط إيدك على إيه الجاي؟» ────────────────────────────────
+ * الاختيار ده كان لسه بإيد المستخدم: المحرك يعرف 746 برنامج بس مابقولش «ابدأ بـ X».
+ * الترتيب مش مزاج: جودة الاستجابة (اللي بيقرأوه أصلًا) الأول، وبعدين أكبر مكافأة معلنة.
+ * **ولا حقل هنا بيرجّع إذن**: `consented:false` و`mode:"passive_only"` بيتفرضوا في
+ * الرد — مش بيتقروا من الملف — عشان أي قارئ للـJSON مايشوفش «برنامج منشور = مسموح».
+ */
+export interface HuntCandidate {
+  handle: string;
+  name: string;
+  platform: string;
+  url: string;
+  bounties: boolean;
+  paused: boolean;
+  submission_state: string | null;
+  response_efficiency: number | null;
+  max_payout_usd: number | null;
+  avg_hours_to_bounty: number | null;
+  safe_harbor: string | null;
+  severities: string[];
+  asset_total: number | null;
+  eligible_assets: number | null;
+  counts: { domains: number; wildcards: number; urls: number; cidrs: number; ips: number };
+  /** سياق بس: أول نطاقات معلنة. مش «scope» — الـscope بييجي من صفحة البرنامج/الإذن. */
+  sample_hosts: string[];
+  /** سياق شبكة: مافيش حاجة في المحرك بتحوّل دول لـscope من هنا (مقيس في ops-selftest). */
+  network_context_only: true;
+  consented: false;
+  mode: "passive_only";
+}
+
+export interface HuntQuery {
+  limit?: number;
+  platform?: string;
+  minEfficiency?: number;
+  q?: string;
+  /** لو true: بيشمل الموقوفة/المقفولة الاستقبال (للاستطلاع)، وإلا لأ. */
+  includeClosed?: boolean;
+}
+
+export function huntCandidates(opts: HuntQuery = {}): {
+  present: boolean;
+  path: string;
+  fetchedAt: string | null;
+  scanned: number;
+  filteredOut: { notBounty: number; pausedOrClosed: number; lowEfficiency: number; platform: number; query: number };
+  limit: number;
+  items: HuntCandidate[];
+} {
+  const st = catalogStatus();
+  const out = {
+    present: st.present,
+    path: st.path,
+    fetchedAt: st.fetchedAt,
+    scanned: 0,
+    filteredOut: { notBounty: 0, pausedOrClosed: 0, lowEfficiency: 0, platform: 0, query: 0 },
+    limit: Math.max(1, Math.min(Number(opts.limit) || 12, 100)),
+    items: [] as HuntCandidate[],
+  };
+  const data = st.present ? load() : null;
+  const programs = Array.isArray(data?.programs) ? data!.programs! : [];
+  if (!programs.length) return out;
+  const wantPlatform = (opts.platform || "").trim().toLowerCase();
+  const minEff = Number.isFinite(Number(opts.minEfficiency)) ? Number(opts.minEfficiency) : null;
+  const q = (opts.q || "").trim().toLowerCase();
+
+  const keep: Array<{ p: CatalogProgram; c: HuntCandidate }> = [];
+  for (const p of programs) {
+    out.scanned++;
+    if (p.bounties !== true) {
+      out.filteredOut.notBounty++;
+      continue;
+    }
+    const closed = p.paused === true || (typeof p.submission_state === "string" && p.submission_state !== "" && p.submission_state !== "open");
+    if (closed && !opts.includeClosed) {
+      out.filteredOut.pausedOrClosed++;
+      continue;
+    }
+    if (wantPlatform && String(p.platform || "").toLowerCase() !== wantPlatform) {
+      out.filteredOut.platform++;
+      continue;
+    }
+    const eff = typeof p.response_efficiency === "number" ? p.response_efficiency : null;
+    if (minEff != null && (eff == null || eff < minEff)) {
+      out.filteredOut.lowEfficiency++;
+      continue;
+    }
+    const domains = p.domains || [];
+    const wildcards = p.wildcards || [];
+    const urls = p.urls || [];
+    if (q) {
+      const hay = `${p.handle} ${p.name} ${domains.slice(0, 40).join(" ")} ${wildcards.slice(0, 40).join(" ")}`.toLowerCase();
+      if (!hay.includes(q)) {
+        out.filteredOut.query++;
+        continue;
+      }
+    }
+    keep.push({
+      p,
+      c: {
+        handle: String(p.handle),
+        name: String(p.name || p.handle),
+        platform: String(p.platform || "custom"),
+        url: String(p.url || ""),
+        bounties: true,
+        paused: p.paused === true,
+        submission_state: p.submission_state ? String(p.submission_state) : null,
+        response_efficiency: eff,
+        max_payout_usd: typeof p.max_payout_usd === "number" ? p.max_payout_usd : null,
+        avg_hours_to_bounty: typeof p.avg_hours_to_bounty === "number" ? p.avg_hours_to_bounty : null,
+        safe_harbor: p.safe_harbor ? String(p.safe_harbor) : null,
+        severities: Array.isArray(p.severities) ? (p.severities as string[]).slice(0, 6) : [],
+        asset_total: typeof p.asset_total === "number" ? p.asset_total : null,
+        eligible_assets: typeof p.eligible_assets === "number" ? p.eligible_assets : null,
+        counts: {
+          domains: domains.length,
+          wildcards: wildcards.length,
+          urls: urls.length,
+          cidrs: Array.isArray(p.cidrs) ? p.cidrs.length : 0,
+          ips: Array.isArray(p.ips) ? p.ips.length : 0,
+        },
+        sample_hosts: [...domains, ...wildcards].slice(0, 6),
+        network_context_only: true,
+        consented: false,
+        mode: "passive_only",
+      },
+    });
+  }
+  keep.sort((a, b) => {
+    const ea = a.c.response_efficiency ?? -1;
+    const eb = b.c.response_efficiency ?? -1;
+    if (eb !== ea) return eb - ea;
+    const pa = a.c.max_payout_usd ?? 0;
+    const pb = b.c.max_payout_usd ?? 0;
+    if (pb !== pa) return pb - pa;
+    return a.c.name.localeCompare(b.c.name);
+  });
+  out.items = keep.slice(0, out.limit).map((x) => x.c);
+  return out;
 }

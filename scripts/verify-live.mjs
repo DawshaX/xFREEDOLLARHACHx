@@ -463,6 +463,55 @@ async function engineChecks(cfg) {
     const honest = /Coverage gaps/i.test(md) && /reportable/i.test(md);
     add("engine", "report is honest about coverage", honest ? "pass" : "review",
       `${md.length} بايت · فيه «Coverage gaps»=${/Coverage gaps/i.test(md)} · «reportable»=${/reportable/i.test(md)}`, { jobId: job.id });
+
+    // ── الخزانة + بوابة المسودة + مرشّحو الصيد (دورة I) ────────────────────────
+    // دي الطبقة اللي مابتبينش في «job executed»: النتائج لازم تتلمّ مرة واحدة وبس،
+    // والمسودة لازم تكون مستحيلة على نتيجة ماعدش إنتاجها، والمرشّحون مابيدّوش إذن.
+    const hSync1 = await api("/ops/findings/sync", { method: "POST", body: { limit: 200 } });
+    const hSync2 = await api("/ops/findings/sync", { method: "POST", body: { limit: 200 } });
+    const hs1 = hSync1.body || {};
+    const hs2 = hSync2.body || {};
+    if (!hSync1.ok || !hSync2.ok) {
+      add("engine", "findings vault is idempotent", "fail", `sync → HTTP ${hSync1.status}/${hSync2.status} · ${short(hSync1.body?.error || hSync1.text, 120)}`, { jobId: job.id });
+    } else if (!hs1.total) {
+      add("engine", "findings vault is idempotent", "review", `الخزانة فاضية بعد ${findings} نتيجة في الجوب و${hs1.fromLegacy ?? 0} في الكتالوج القديم — القياس مفيش حاجة عليه`, { jobId: job.id });
+    } else {
+      const idem = hs2.added === 0 && hs2.total === hs1.total && hs2.updated >= 1 && hs2.verified === hs1.verified;
+      add("engine", "findings vault is idempotent", idem ? "pass" : "fail",
+        `أول sync: +${hs1.added}/-${hs1.total} (من مهام ${hs1.fromJobs} · من الكتالوج القديم ${hs1.fromLegacy}) · تاني: +${hs2.added}/-${hs2.total} ومحدّثة ${hs2.updated} · متأكَّدة ${hs2.verified}`,
+        { jobId: job.id, vaultTotal: hs2.total, vaultVerified: hs2.verified });
+    }
+
+    const hList = await api("/ops/findings?limit=5");
+    const hItems = Array.isArray(hList.body?.items) ? hList.body.items : [];
+    const hGates = [];
+    for (const it of hItems.slice(0, 3)) {
+      const d = await api(`/ops/findings/${encodeURIComponent(it.key)}/report-draft`);
+      hGates.push({ key: it.key, verified: it.verified === true, status: d.status, md: d.body?.markdown || "", reason: d.body?.reasonAr || "" });
+    }
+    if (!hGates.length) {
+      add("engine", "report draft gated on reproduction", "review", `مافيش سجل في الخزانة يتقاس عليه الرفض (total=${hs1.total ?? "?"})`);
+    } else {
+      const aligned = hGates.every((g) => (g.status === 200) === g.verified);
+      const built = hGates.filter((g) => g.status === 200);
+      const shapeOk = built.every((g) => g.md.includes("سياسة البرنامج") && /sha256/.test(g.md) && g.md.includes("إعادة الإنتاج"));
+      // الرفض لازم يقوله بالسبب، مش يسكت برقم كود وبس.
+      const refusedOk = hGates.filter((g) => g.status === 409).every((g) => /ماعادش إنتاجها/.test(g.reason));
+      add("engine", "report draft gated on reproduction", aligned && shapeOk && refusedOk ? "pass" : "fail",
+        `${hGates.length} مفتاح: ${built.length} مسودة (200) · ${hGates.length - built.length} مرفوضة (409) · البنية=${shapeOk} · سبب الرفض موجود=${refusedOk}`,
+        { keys: hGates.map((g) => `${g.key}:${g.status}`).join(",") });
+    }
+
+    const hCand = await api("/ops/hunt/candidates?limit=12&minEfficiency=80");
+    const hRows = Array.isArray(hCand.body?.items) ? hCand.body.items : [];
+    const contextOnly = hRows.length > 0 && hRows.every((c) => c.consented === false && c.mode === "passive_only" && c.network_context_only === true && String(c.url || "").startsWith("https://"));
+    const countsOk = hRows.length > 0 && hRows.every((c) => c.counts && typeof c.counts.domains === "number" && typeof c.counts.cidrs === "number");
+    const sortedOk = hRows.every((c, i) => i === 0 || Number(hRows[i - 1].response_efficiency) >= Number(c.response_efficiency));
+    add("engine", "hunt candidates stay context-only", contextOnly && countsOk && sortedOk ? "pass" : hRows.length ? "fail" : "review",
+      hRows.length
+        ? `${hRows.length} مرشّح من ${hCand.body?.scanned} برنامج · أعلى استجابة ${hRows[0]?.response_efficiency}% · مفلوت ${JSON.stringify(hCand.body?.filteredOut)} · CIDR سياق بس=${countsOk} · ترتيب=${sortedOk}`
+        : `مافيش مرشّح (present=${hCand.body?.present} · ${short(hCand.body?.reasonAr || hCand.text, 80)})`,
+      { catalogPresent: hCand.body?.present });
   }
 
   // NEGATIVE CONTROL — the suite is worthless without this one

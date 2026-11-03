@@ -70,5 +70,10 @@ dist-node-kit/
 state/programs.json
 state/jobs/
 state/jobs/*
+# the findings vault is engine runtime state too — it is rebuilt by POST /api/ops/findings/sync
+state/findings-vault.json
+# self-update watcher chatter (written next to the engine's cwd)
+state/auto-update.json
+state/auto-update.log
 # static binaries fetched by scripts/fetch-toolchain.mjs at build time
 /vendor/

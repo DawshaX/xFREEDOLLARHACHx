@@ -76,6 +76,38 @@ function persist(job: Job): void {
   atomicWrite(jobFile(job.id), JSON.stringify(job, null, 2));
 }
 
+/**
+ * سقف زمني حقيقي لمهمة واحدة داخل جوب. `budget.taskTimeoutMs` كان بيُلزَم على
+ * الأدوات اللي بتشتغل كـbinary (execFile + timeout) بس — أما اللي مبني في node
+ * والـ`run()` بتاعه مستني شبكة، ماحدش كان بيلزمه. النتيجة مقيسة في sandbox:
+ * جوب `20261103-e375d3` علّق `recon.securitytxt` في حالة `running` وفضل الـjob
+ * كله `queued` لأبد الآب (الـDNS جوه `AbortSignal.timeout` مش مغطّى في كل نسخ undici).
+ * الوعد اللي بيخلص متأخر مابيلغّش حاجة بعد كده (مافيش persist بعده) — السوكت بيمشي للـGC.
+ */
+export async function withDeadline<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      // الـrejection بتتحول لنفس الشكل: المستدعي بياخد قرارًا واحدًا (`!raced.ok`)
+      // بدل ما يفترض إن في exception جوه Promise.race.
+      promise.then(
+        (value) => ({ ok: true as const, value }),
+        (err: unknown) => ({ ok: false as const, error: String((err as Error)?.message ?? err) }),
+      ),
+      new Promise<{ ok: false; error: string }>((resolve) => {
+        timer = setTimeout(() => resolve({ ok: false, error: `task-timeout:${label}:${ms}ms` }), ms);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export function listJobs(limit = 25): Array<Pick<Job, "id" | "name" | "target" | "status" | "createdAt" | "stats" | "programId">> {
   try {
     return fs
@@ -330,7 +362,10 @@ export async function runJob(id: string): Promise<Job | null> {
         await acquire(job.host, { rps: gate.limits.rps, burst: 2, maxWaitMs: 90_000 });
         let result;
         try {
-          result = await runKind(task.kind, task.params, ctx);
+          const deadlineMs = Math.max(5_000, Math.min(Number(ctx.timeoutMs) || 60_000, 600_000));
+          const raced = await withDeadline(runKind(task.kind, task.params, ctx), deadlineMs, task.kind);
+          if (!raced.ok) throw new Error(raced.error); // الـcatch تحت بيسمّيها failed وبيزود العدّاد
+          result = raced.value;
         } finally {
           release();
           // feed the limiter with an observed status when the probe saw one

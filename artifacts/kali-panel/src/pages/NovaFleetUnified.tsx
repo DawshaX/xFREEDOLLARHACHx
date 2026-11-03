@@ -25,7 +25,7 @@ import { NovaToolbox } from "@/components/desktop/NovaToolbox";
 import { missionStats, onMissionsChange } from "@/lib/mission-store";
 import { useEffect as useEffectM, useState as useStateM } from "react";
 import { NovaLiveBar, useNovaLive } from "@/components/desktop/NovaFleetLive";
-import { NovaAwarenessCard, NovaOpsRoom } from "@/components/desktop/NovaBrainOps";
+import { NovaAwarenessCard, NovaHuntSurface, NovaOpsRoom } from "@/components/desktop/NovaBrainOps";
 
 const API = "/api";
 
@@ -453,7 +453,12 @@ export default function NovaFleetUnified() {
 
       <NovaLiveBar onOpen={() => navigate("/nova-agent")} />
 
-      {view === "ops" && <NovaOpsRoom />}
+      {view === "ops" && (
+        <>
+          <NovaOpsRoom />
+          <NovaHuntSurface />
+        </>
+      )}
 
       {view === "work" && <NovaWorkstation />}
 

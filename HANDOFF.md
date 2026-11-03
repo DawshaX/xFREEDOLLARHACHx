@@ -1204,3 +1204,57 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   بتطلب قياسها بدل ما تستنى جدول تقريبي. البوابات: selftest **38 · 0** · ratchet 96 = baseline ·
   contracts ✓ · connections ✓ · twins ✓ · YAML للـkeepalive ✓ · تشغيل harness محلي: 0 انهيارات.
 
+## المرحلة 47 — «عايز فعل مش كلام»: الخزانة، والمسودة، وسطح الصيد اتوصلوا
+
+السؤال اللي فتح الحلقة: *«صلح البرنامج كامل وافحصه فحص شامل واعرف هو قادر على إيه حقيقي، وضيف وطوّر وحط مواقع حية أونلاين وصلها بيه»*. الفحص الشامل طلع بتلات فتحات حقيقية **كلها نفس الشكل**: كل طبقة شغالة لوحدها ومفيش سلك بينها.
+
+### 1) خزانة واحدة للنتايج — `artifacts/api-server/src/lib/ops/findings-vault.ts`
+قبل كده النتايج كانت في اتنين: جوبات المحرك في `state/jobs/*.json` ومفيش مكان بيلمّها، وملف
+`state/discovered-vulnerabilities-vault.json` بتاع deep-research ماحدش بيقراه. دلوقتي:
+- مفتاح من المحتوى (`host | kind | template-id أو العنوان | المسار`) → **idempotent**: `added:0` في
+  أي sync تاني و`occurrences` بتزيد، و`firstSeen` بيفضل أقدم ظهور، و`verified:true` مالهاش رجعية.
+- تطبيع الخطورة للـ5 مستويات + `severityRaw` بيحفظ نص المصدر (قياس: 11 سجل قديم كان متقسّم على
+  **7 دلاء نصّية** زي «High / Medium» — بقوا `critical:2 · high:5 · medium:3 · low:1`).
+- 4 نقاط API: `GET /ops/findings/status` · `GET /ops/findings` · `POST /ops/findings/sync` (وراء
+  `opsAllowed`) · `GET /ops/findings/:key/report-draft`. والتوأم الثابت بيردّ بنفس الشكل +
+  `standalone:true` والسبب (مافيش قرص على Pages) — مش بصفر مخترع.
+
+### 2) مسودة إفصاح مستحيلة على نتيجة مش مثبتة
+`draftReport(key)` بترجّع `409 not-reproduced` + `reasonAr` لو `verified !== true`، و`404` لو
+المفتاح غلط. لو مثبتة: markdown بهيئة HackerOne — الهدف، خطوات إعادة الإنتاج، **كل ملف دليل بحجمه
+وبـ`sha256`**، بلوك بوابة التحقق، سياسة البرنامج + `submission_state` كسياق، وسطرين صريحين:
+«مافيش هنا حكم impact» و«scan مقطوع = تغطية ناقصة، ما تبعتش». القاعدة اللي بنيت بيها:
+**مسودة لنتيجة مش متأكَّدة أخطر من مفيش مسودة** — فالبوابة مش زر متعطّل في الواجهة، دي 409 من المحرك.
+
+### 3) الكتالوج بقى بيوصل لخطة — `huntCandidates` + سطح الصيد
+- `huntCandidates()` / `GET /ops/hunt/candidates`: المرشّحون مرتّبين بأجود استجابة، مفلوترة
+  `bounties:true` وغير الموقوفة، وكل سطر بيوصل ومعه `consented:false` + `passive_only` +
+  `network_context_only:true`، و`counts` (domains/wildcards/urls/cidrs/ips)، و`filteredOut` بكل سبب.
+  الـCIDR **سياق للعرض بس** — ومقيس في الـselftest إنه ماتحوّلش لـ`allowed_hosts` في أي ملف.
+- `POST /ops/hunt/plan { target }`: `discoverProgram(..., {register:false})` + `suggestPlan` —
+  طلب خطة، مش تسجيل إذن.
+- `NovaHuntSurface` في `NovaBrainOps.tsx` ومتوصّل في `NovaFleetUnified.tsx` (جوّه `view === "ops"`) —
+  الصفحة مابتقررش حاجة: الاختيار والرفض والمسودة كلهم ردود المحرك بحروفهم.
+- أرضية جديدة في `ops-selftest`: عدد ملفات اللوحة اللي بتسأل المحرك **3** وعدد مسارات `ops` اللي
+  بتستدعيها **13** — مانقصوش (الرقمان مقيسان بالنمط اللي في الفحص نفسه).
+
+### 4) عطلان في المحرك طلعوا من الطريق، مش من الطلب
+1. **`withDeadline` في `runner.ts`:** جوب علق `recon.securitytxt → running` و`job.status`
+   `queued` > 6 دقايق. السبب مقروء من الكود: `budget.taskTimeoutMs` كان بيلتزم على الأدوات
+   الـ`execFile` وبس — `runKind` للمبني في node كان `await` من غير سقف، فأي probe معلّق يسيب
+   الجوب للأبد ويمنع الـretry. دلوقتي الـnode-built تحت نفس السقف، والفشل بيتسجّل
+   `task-timeout:<kind>:<ms>` كـ`failed` عادي.
+2. **`audit-static-brain` اتقرأ غلط عليّ:** بنيته من غير `BASE_PATH=/xFREEDOLLARHACHx/` → `no-snapshot`
+   + `no-honest-label`؛ بنفس سطر البنا في رأس الملف: ✅. البوابات اللي تفشل على أثرفيلد = أعِد البنا.
+
+### 5) مقاس، مش متحكى
+باوندل `node server.mjs` (بلا nmap/nuclei): sync أول `added:11/fromLegacy:11` · تاني `added:0/
+updated:11/total:11` · بعد جوب حقيقي على `scanme.nmap.org`: `scanned:2 · fromJobs:7 · total:16` ·
+3× `HTTP 409` على مسودات غير مثبتة · `hunt/candidates` رجّع 12 مرشّح من 746 و`filteredOut.notBounty:235`.
+الـverify على 3 نتايج رجّع `verified 0/3` («لم يُعاد إنتاج نفس البصمة») — الشبكة في الـsandbox
+مابتتكررش، فالمسار الإيجابي متغطّي ببيانات ثابتة في `ops-selftest` (الرفض + بنية المسودة: سياسة
+البرنامج + sha256 + «مافيش impact») وبأرقام CI الحقيقية في 3 صفوف جديدة في `verify-live.mjs`.
+البوابات بعد الحلقة: selftest **57 · 0** (كانت 50) · ratchet **96 = baseline** (مافيش error جديد) ·
+api build ✓ · panel build ✓ · twins ✓ (3 متطابقين) · contracts ✓ · connections ✓ · static-brain ✓.
+اللي لسه متأجّل بقرار: عقدة Waifly (`#75`)، شغل Postgres على الجوبات، `override.query.version: 5`،
+و`free-host-survey.yml` (cancel-in-progress) — واللي على البشر: حذف ريليس فيه `.env` وتغيير `NOVA_EXEC_TOKEN`.
