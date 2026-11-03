@@ -26,6 +26,9 @@ jobs:
     name: wake the agent
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write   # للخطوة اللي بتطلب live-verify لما القياس يعجّز
     steps:
       - name: Ping /api/health
         env:
@@ -49,6 +52,41 @@ jobs:
         run: |
           if [ -z "${NOVA_URL:-}" ]; then exit 0; fi
           curl -s --max-time 30 "$NOVA_URL/api/nova-core/status" | head -c 400 || true
+
+      - name: Keep the self-measurement loop honest
+        # الحلقة اللي بتقيس الأدوات (`live-verify`) جدولها `40 */6`، وGitHub أدّى خانة 00:40
+        # متأخرة 31 دقيقة وحذف خانة 06:40 خالص — فالتقرير فضل **12 ساعة** قديم (مقاس 2026-11-03،
+        # آخر نشر 01:18Z). الكرون هنا `*/10` وهو الوحيد اللي بيمرّ فعلًا، فبدل ما نثق في جدول
+        # «تقريبي»: لو القياس اتأخر أكتر من 9 ساعات، نطلبه بـdispatch. الحلقة بتفكّر نفسها.
+        # الفشل هنا ::warning:: مش ::error:: — لأن الجدول الأساسي لسه شغال وده مسار احتياطي.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          repo="$GITHUB_REPOSITORY"
+          raw=$(gh api "repos/$repo/contents/state/verified-live.md" --jq .content 2>/dev/null || echo "")
+          if [ -z "$raw" ]; then
+            echo "::warning::مافيش state/verified-live.md على main — ماقدرناش نعرف عمر القياس"
+            exit 0
+          fi
+          line=$(printf '%s' "$raw" | base64 -d | grep -m1 -oE '20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9](:[0-9][0-9])?(\.[0-9]+)?Z')
+          if [ -z "$line" ]; then
+            echo "::warning::التقرير موجود بس مافيش فيه طابع زمني مفهوم — الحارس ما يقدرش يحكم"
+            exit 0
+          fi
+          then=$(date -u -d "$line" +%s 2>/dev/null || echo 0)
+          now=$(date -u +%s)
+          age_h=$(( (now - then) / 3600 ))
+          echo "آخر قياس منشور: $line · العمر ${age_h}h"
+          if [ "$age_h" -ge 9 ]; then
+            echo "القياس اتأخر 9 ساعات+ — بطلب live-verify دلوقتي"
+            if gh api -X POST "repos/$repo/actions/workflows/live-verify.yml/dispatches" -f ref="$GITHUB_REF_NAME" 2>/tmp/d.err; then
+              echo "✓ اتبعت الطلب (${age_h}h stale)"
+            else
+              echo "::warning::dispatch اترفض: $(head -c 160 /tmp/d.err | tr '\n' ' ') — محتاج actions:write على الـtoken، أو الجدول هيكفي"
+            fi
+          else
+            echo "القياس طازة (${age_h}h) — مفيش حاجة تتعمل"
+          fi
 
   backup:
     name: daily memory backup

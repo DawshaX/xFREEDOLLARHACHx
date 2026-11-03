@@ -715,7 +715,13 @@ export const KINDS: Record<string, KindDef> = {
     // A real nuclei run against a live app is minutes of work: thousands of templates × rate limit.
     // Inside the job default (180 s) it was ALWAYS cut off and reported as a failure — the fix is to
     // let the scanner scan (measured: `nuclei فشل (exit=-1) · 180006ms`, run 41465521238).
-    budgetMs: 260_000,
+    // 260 s was measured too short on real runs (cut off at 260020ms with 0 results on
+    // demo.testfire.net in reports 17:48Z and 01:18Z). And the reason is NOT job-level contention:
+    // `runJob` awaits each task in a plain for-loop (runner.ts), so nuclei had the node to itself —
+    // a full medium/high/critical pass over a live app at the gate's rps is simply ~9 minutes of
+    // requests. Giving it the clock it needs is the honest fix; if this row still says «اتقطع», the
+    // number in the message is the evidence that the template set, not the budget, is the limit.
+    budgetMs: 540_000,
     installHint: "sh -c \"$(curl -sL https://raw.githubusercontent.com/projectdiscovery/nuclei/main/install.sh)\"",
     args: (ctx, p) => {
       // `low` مرميّ عن قصد: العمود الفقري شغّال على 7 مهام بالتوازي على نود 2vCPU، والأربع سيّبات

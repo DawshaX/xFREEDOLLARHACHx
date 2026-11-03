@@ -378,9 +378,12 @@ async function engineChecks(cfg) {
     add("engine", "job created", "pass", `job=${job.id} · ${Array.isArray(job?.tasks) ? job.tasks.length : 0} مهمة${job?.plan?.kinds?.length ? ` · kinds=${short(job.plan.kinds.join(","), 120)}` : ""}`);
     await api(`/ops/jobs/${job.id}/run`, { method: "POST", body: {} });
     let last = null;
-    // 12 min, not 6: nuclei alone is allowed 260 s of real scanning, and a report that gives up
-    // before the job finishes measures my patience, not the engine.
-    const until = Date.now() + 12 * 60 * 1000;
+    // 22 min: nuclei is allowed 540 s of real scanning on its own (tasks run sequentially, not in
+    // parallel — see the budget comment in `ops/tools.ts`), and the other six tasks need minutes too.
+    // A report that gives up before the job finishes measures my patience, not the engine — and it
+    // reads as «0 findings» unless the wait is longer than the work. Stay below the CI job ceiling
+    // (`timeout-minutes: 26`) — `ops-selftest` asserts that ordering, so the two can't drift.
+    const until = Date.now() + 22 * 60 * 1000;
     while (Date.now() < until) {
       const j = await api(`/ops/jobs/${job.id}`);
       last = j.body?.job || j.body;
