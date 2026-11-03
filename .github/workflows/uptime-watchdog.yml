@@ -21,7 +21,9 @@ name: NOVA uptime watchdog
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/30 * * * *" # كان */10: GitHub بيحذف الجدوليات السريعة (مقاس 2026-11-02 — تشغيلان بس
+      # طول اليوم: 10:54 و20:35). الفحص الطازق بقى سطر `cli | hub …` في تقرير live-verify كل 6 ساعات،
+      # فالـwatchdog ده شغله إدارة الـissue (فتح/قفل #nova:down) مش سرعة الكشف.
   workflow_dispatch:
 
 permissions:

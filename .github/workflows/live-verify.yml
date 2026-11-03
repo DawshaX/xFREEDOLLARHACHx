@@ -152,13 +152,22 @@ jobs:
           echo "NOVA_WORDLIST=/tmp/nova-wordlists/common.txt" >> "$GITHUB_ENV"
         continue-on-error: true      # ffuf is not critical — the row says `blocked` without it
 
+      - name: Hub probe target
+        # السطر ده بقى جزء من التقرير نفسه (`cli | hub …`) لأن GitHub بيحذف الجدوليات السريعة:
+        # cron بتاع uptime-watchdog كان */10 وطلع منه تشغيلان في اليوم (مقاس 2026-11-02).
+        # NOVA_HUB_URL لو اتظبط على المتغيرات بقى هو المصدر، وإلا الافتراضي عقدة Waifly.
+        run: |
+          echo "hub=${NOVA_HUB_URL:-http://node.waifly.com:27214}" >> "$GITHUB_ENV"
+        env:
+          NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL }}
+
       - name: Verify live
         env:
           NOVA_EXEC_TOKEN: ${{ env.NOVA_RUN_TOKEN }}
         run: |
           ARGS=""
           [ "${{ inputs.skipCli }}" = "true" ] && ARGS="$ARGS --skip-cli"
-          node scripts/verify-live.mjs \
+          node scripts/verify-live.mjs --hub "$hub" \
             --engine "$(cat /tmp/engine-url)" \
             --token "$NOVA_EXEC_TOKEN" \
             --timeout 75 \
