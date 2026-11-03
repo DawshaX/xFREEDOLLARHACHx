@@ -382,6 +382,26 @@ await tA("internal targets are refused before any request is made", async () => 
   assert.equal(bad.ok, false);
   assert.equal(bad.registered, false);
 });
+await tA("a job's clock is longer than its slowest tool, and CI is longer than the job", async () => {
+  // دي مش أناقة: لو الـharness استسلم قبل ما المهمة خلّصت، التقرير بيقول «0 نتيجة» عن مسح
+  // لسه شغال — وده أخطر من أي رقم غلط، لأنه أخضر وكذاب. والقواعد متاقرأش من脑子، بل من الملفات.
+  const root = path.resolve(import.meta.dirname, "..");
+  const tools = fs.readFileSync(path.join(root, "artifacts/api-server/src/lib/ops/tools.ts"), "utf8");
+  const harness = fs.readFileSync(path.join(root, "scripts/verify-live.mjs"), "utf8");
+  const wf = fs.readFileSync(path.join(root, ".github/workflows/live-verify.yml"), "utf8");
+  // أول نسخة من السطر ده كانت regex بـ900 حرف ورجّعت NaN — والحالة فشلت بصوت عالي بدل ما تعدّي
+  // على «مافيش ميزانية». القراءة بقت: ابدأ من رأس النوع وخد أول budgetMs قبل رأس النوع اللي بعده.
+  const at = tools.indexOf('"tools.nuclei":');
+  const rest = at >= 0 ? tools.slice(at) : "";
+  const block = rest.split(/\n {2}"[a-z]+\.[a-z]+":/)[0];
+  const nucleiMs = Number((block.match(/budgetMs:\s*(\d[\d_]*)/) || [0, ""])[1].replace(/_/g, ""));
+  assert.ok(Number.isFinite(nucleiMs) && nucleiMs >= 500_000 && nucleiMs <= 600_000, `nuclei budget looks wrong (${nucleiMs}ms) — a cut-off scan is reported as a result`);
+  const waitMin = Number(/const until = Date\.now\(\) \+ (\d+) \* 60 \* 1000/.exec(harness)?.[1]);
+  assert.ok(waitMin * 60_000 > nucleiMs + 8 * 60_000, `harness wait ${waitMin}min must outlast nuclei (${nucleiMs}ms) + the other tasks`);
+  const ciMin = Number(/timeout-minutes:\s*(\d+)/.exec(wf)?.[1]);
+  assert.ok(ciMin > waitMin, `CI job ceiling ${ciMin}min must be larger than the harness wait ${waitMin}min, or the run is killed mid-measurement`);
+});
+
 await tA("the bounty catalog is measured data and never a permission slip", async () => {
   const root = path.resolve(import.meta.dirname, "..");
   const file = path.join(root, "ops/bounty/programs-catalog.json");
