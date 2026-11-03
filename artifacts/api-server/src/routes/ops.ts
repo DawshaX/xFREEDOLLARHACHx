@@ -24,6 +24,7 @@
  *   POST  /api/ops/sweep              يشغّل الدورة دلوقتي (نفس اللي بيعمله الـdaemon كل 3 دقايق)
  */
 import { Router, type Request, type Response } from "express";
+import { catalogStatus, lookupBountyProgram } from "../lib/ops/bounty-catalog";
 import {
   assertAuthorized,
   discoverProgram,
@@ -92,6 +93,19 @@ router.get("/ops/kinds", (_req: Request, res: Response) => {
       nodeToolsPresent: tools.filter((t) => t.present).map((t) => t.bin),
     },
   });
+});
+
+// حالة كتالوج برامج الـ bug bounty — سياق للنطاقات، مش مصدر إذن.
+// ?host=example.com → مين البرنامج اللي بغطي الهوست ده (ولو مافيش، ليه).
+router.get("/ops/bounty/catalog", (req: Request, res: Response) => {
+  const st = catalogStatus();
+  const raw = String(req.query.host || "").trim().toLowerCase();
+  if (!raw) {
+    res.json(st);
+    return;
+  }
+  const clean = raw.replace(/^[a-z]+:\/\//, "").split("/")[0].split(":")[0];
+  res.json({ ...st, host: clean, match: lookupBountyProgram(clean) });
 });
 
 /* ── programs / scope ────────────────────────────────────────────────────── */

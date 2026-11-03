@@ -1141,6 +1141,25 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   ويتصنّف `blocked` (متقاس بأداة وهمية في `NOVA_TOOL_DIR`)؛ (3) صف الدلائل بيسمّي الملفات الفاضية
   بدل «5 فيهم بايتات» وبس.
 
+- **2026-11-03 (كتالوج البج باونتي بقى موصولا بالمحرك — وآخر advisory اتصفّر):** حاجتان كانو اتسجلو
+  عليّ إني شايفهم ومش محلوزين:
+  - **`pnpm audit` = 0.** `node-cron ^3.0.3 → ^4.6.0` وحذف `@types/node-cron` (v4 بيجيب types معاّه).
+    الأهم إن v4 **مالوش أي dependency** — فالـadvisory الأخير (`uuid@8.3.2` moderate) مش override،
+    اختفى من الشجرة: `--prod` والكامل كل واحد «No known vulnerabilities found» (كان 63 في البداية).
+    التحقّق مكانش `tsc`: شغّلت كود node-cron نفسه (validate على 5 و6 حقول، `schedule()` بيبدأ لوحده،
+    `stop()` بيقطع التكات فعلًا 3→3)، وبعدين محرك شغال: `/api/health` 200، 19 سطر لوج مافيهوش سطر cron.
+  - **`program_discover` بقى بيقرأ الكتالوج.** `artifacts/api-server/src/lib/ops/bounty-catalog.ts`
+    (kاش على mtime، `NOVA_BOUNTY_CATALOG` للتستات) + تطعيم في `scope.ts`: `platform`/`policy_url`/
+    `notes_ar` + `evidence.bounty_program` (فيه `matched_kind` و`submission_state`) و
+    `evidence.catalog`. **`passive_only` ما اتلمستش**: مافيش سطر في الطبقة الجديدة بيرجّع
+    `consented`/`mode`، و`ops-selftest` بيفشل لو تسرّب أي واحد. مسار جديد `GET /api/ops/bounty/catalog`
+    (+`?host=`). القياس على محرك شغال: `aces-dev.wnba.com → hackerone:nba-public (domain · open)` و
+    `scanme.nmap.org → match:null`، والتقرير بقى فيه صفّان للكتالوج (`docs/LIVE-VERIFY.md` §8.6).
+  - **عطل حقيقي اتكشف وشافه بنفسه:** المسار الأول اتسجّل *جوّه* handler بتاع `/ops/kinds` — `tsc`
+    والـbuild عدّوا والنتيجة `no_such_endpoint`. حالة AST جديدة في `ops-selftest` بتفشل أي
+    `router.<verb>` مسجّل جوه handler (646 تسجيل مفحوص)، ومُثبَتة بأن العطل أعيد إنتاجه عمدًا.
+    `ops-selftest`: **49 حالة · 0 فشل** (كانت 38) · ratchet **96 = baseline** (زادت لـ98 يومّيت
+    وسقطت لـ2 يومّيت — الراتشيد إمساك الاتنين).
 - **2026-11-03 (سؤال «السيرفر شغال؟» بقى قياسًا لا ذاكرة):** آخر probe للـhub (2026-11-02T20:36Z،
   issue #75 لسه open): `dns exit=0` + `tcp: Connection refused` + `HTTP 000` على
   `http://node.waifly.com:27214` — يعني العقدة **مش شغالة** (الـrefused مش timeout = مافيش listener،

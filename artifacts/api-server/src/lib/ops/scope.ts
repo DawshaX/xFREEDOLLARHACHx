@@ -17,6 +17,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import dns from "node:dns/promises";
+import { lookupBountyProgram, catalogStatus } from "./bounty-catalog";
 
 export interface ProgramScope {
   /** wildcard host patterns, e.g. "*.example.com" */
@@ -399,6 +400,15 @@ export interface ScopeProposal {
     platform?: string;
     domains_from_policy?: string[];
     expires?: string;
+    /** برنامج bug bounty معلَن بيغطي الهوست ده (من الكتالوج العام) — سياق، مش إذن */
+    bounty_program?: {
+      handle: string; name: string; platform: string; url: string;
+      bounties: boolean; paused?: boolean; safe_harbor?: string | null;
+      max_payout_usd?: number | null; response_efficiency?: number | null;
+      matched_on: string; matched_kind: string; submission_state?: string | null;
+    } | null;
+    /** حالة الكتالوج نفسه — عشان «مفيش برنامج» متتسجلّش على إنها نتيجة بحث بينما البيانات مقفولة */
+    catalog?: { present: boolean; programs: number; fetchedAt: string | null };
   };
   registered: boolean;
   /** what a human must say/do before active probing is allowed */
@@ -499,6 +509,36 @@ export async function discoverProgram(
   }
 
   const rootDomain = host.split(".").slice(-2).join(".");
+  // الكتالوج العام (ops/bounty/programs-catalog.json) = سياق بس.
+  // ولا سطر هنا بيلمس `passive_only`: الإذن لسه جملة المستخدم بالحرف، مش اسم برنامج.
+  const bounty = lookupBountyProgram(host) ?? lookupBountyProgram(rootDomain);
+  const cat = catalogStatus();
+  const bountyEvidence = bounty
+    ? {
+        handle: bounty.handle,
+        name: bounty.name,
+        platform: bounty.platform,
+        url: bounty.url,
+        bounties: bounty.bounties,
+        paused: bounty.paused === true,
+        safe_harbor: bounty.safe_harbor ?? null,
+        max_payout_usd: bounty.max_payout_usd ?? null,
+        response_efficiency: bounty.response_efficiency ?? null,
+        matched_on: bounty.matched_on,
+        matched_kind: bounty.matched_kind,
+        submission_state: bounty.submission_state ?? null,
+      }
+    : null;
+  if (bounty) {
+    if (!policyUrl) warn.push(`مفيش security.txt على ${host} — السياسة اتجابت من كتالوج البرامج (${bounty.platform}:${bounty.handle}).`);
+    if (bounty.matched_kind === "wildcard_apex") warn.push(`المطابقة جت من wildcard على ${bounty.matched_on} — النطاق الأب نفسه غالبًا برّه الـscope، فاتعامل مع ${host} بحرص أكتر لحد ما تقرأ صفحة البرنامج.`);
+    if (bounty.paused || (bounty.submission_state && bounty.submission_state !== "open")) warn.push(`حالة الاستقبال على ${bounty.platform}: ${bounty.submission_state || "؟"}${bounty.paused ? " · paused" : ""} — استطلاع ومصادر عامة لحد ما البرنامج يفتح تاني.`);
+    if (bounty.paused) warn.push(`«${bounty.name}» مقفول الاستقبال حاليًا على ${bounty.platform} — استطلاع ومصادر عامة لحد ما يفتح تاني.`);
+  } else if (cat.present) {
+    warn.push(`الكتالوج (${cat.programs} برنامج، آخر تحديث ${cat.fetchedAt ? cat.fetchedAt.slice(0, 10) : "؟"}) مافيهوش نطاق يغطي ${host}: معناه مافيش برنامج معلَن معروف، مش إن البحث فشل.`);
+  } else {
+    warn.push(`كتالوج البرامج مش متولّد — شغّل node scripts/sync-bounty-programs.mjs عشان السياق ده يبان في الاكتشاف.`);
+  }
   const hosts = new Set<string>([host, `*.${host}`]);
   for (const d of policyDomains) {
     if (d === rootDomain || d.endsWith(`.${rootDomain}`)) hosts.add(d);
@@ -523,18 +563,20 @@ export async function discoverProgram(
 
   const proposed: Partial<Program> & { id: string; name: string; hosts: string[] } = {
     id,
-    name: opts.name || (platform ? `${platform}:${host}` : host),
-    platform,
+    name: opts.name || (bounty ? bounty.name : platform ? `${platform}:${host}` : host),
+    platform: platform ?? bounty?.platform,
     hosts: [...hosts],
     out_of_scope: [...out],
     max_rps: 1,
     max_concurrency: 2,
     // active probing is only ever on with the verbatim consent sentence
     passive_only: !consentOk,
-    policy_url: policyUrl,
+    policy_url: policyUrl ?? bounty?.url,
     notes_ar: txt.found
       ? `مكتشف أوتوماتيك من security.txt (${txt.url}). الوضع استطلاع بس لحد ما المستخدم يوافق على الفحص النشط.`
-      : `مكتشف أوتوماتيك للنطاق ${host} بدون security.txt — استطلاع بس.`,
+      : bounty
+        ? `النطاق جوّه برنامج معلَن (${bounty.platform}:${bounty.handle}) — سياسة من الكتالوج، استطلاع بس لحد الإذن المكتوب${bounty.response_efficiency != null ? ` · جودة استجابة ${bounty.response_efficiency}%` : ""}${bounty.max_payout_usd ? ` · حد أقصى ${bounty.max_payout_usd}$` : ""}.`
+        : `مكتشف أوتوماتيك للنطاق ${host} بدون security.txt — استطلاع بس.`,
   };
 
   const registered = opts.register !== false;
@@ -555,15 +597,19 @@ export async function discoverProgram(
       security_txt: txt.found,
       security_txt_url: txt.url,
       contacts,
-      policy_url: policyUrl,
-      platform,
+      policy_url: policyUrl ?? bounty?.url,
+      platform: platform ?? bounty?.platform,
       domains_from_policy: policyDomains.slice(0, 12),
       expires: txt.expires,
+      bounty_program: bountyEvidence,
+      catalog: { present: cat.present, programs: cat.programs, fetchedAt: cat.fetchedAt },
     },
     registered,
     needs_ar: txt.found
       ? "لقيانة سياسة إفصاح على النطاق — مفيش مطلوب منك غير «ابدأ» للفحص السلبي."
-      : `مفيش security.txt على ${host} — معناه مفيش برنامج عام واضح. الفحص النشط مرفوض غير بإذن مكتوب.`,
+      : bounty
+        ? `مفيش security.txt، لكن النطاق جوّه «${bounty.name}» على ${bounty.platform} (${bounty.url}). الفحص النشط محتاج الإذن المكتوب: «I have written permission for ${host}».`
+        : `مفيش security.txt على ${host} ومعروفش في كتالوج البرامج — مافيش برنامج عام واضح. الفحص النشط مرفوض غير بإذن مكتوب.`,
     warnings: warn,
   };
 }
