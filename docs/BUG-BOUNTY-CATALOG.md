@@ -76,7 +76,57 @@ POST /api/ops/programs/discover {"target":"aces-dev.wnba.com"}
   `scope_check` لسه ما بيقبولش نطاق من نوع CIDR من الكتالوج. لو احتجنا hunt على شبكة كاملة، دي
   الخطوة الجاية، ومحتاجة gate خاص بيها مش enrichment.
 
+## من الكتالوج لخطة، ومن الدليل لمسودة (2026-11-03)
+
+الطبقة اللي فوق كانت سياق بس: 746 برنامج قاعدين في ملف، والمهام شغالة في حتة، ومفيش أي
+مكان بيجمع النتايج ولا بيقرب الكتالوج من `suggestPlan`. اتقفلت التلات فتحات:
+
+- **`huntCandidates()`** في `bounty-catalog.ts` — بترجّع المرشّحين مرتّبين بأجود استجابة
+  (`response_efficiency` تنازلي، وبعدين `max_payout_usd`)، ومفلوترة تلقائيًا لـ`bounties:true`
+  وغير الموقوفة/المقفولة الاستقبال (`includeClosed:true` للعرض). كل سطر بيوصل ومعه
+  `consented:false` و`mode:"passive_only"` و`network_context_only:true` — يعني الإذن مش
+  متسلسل من سطر في JSON. `counts` بتقول كام نطاق/wildcard/URL/CIDR/IP، و`filteredOut` بتقول
+  كام اتساب وليه (`notBounty/pausedOrClosed/lowEfficiency/platform/query`).
+- **`GET /api/ops/hunt/candidates`** — نفس الرد + `registered` (تقاطع `sample_hosts` مع
+  البرامج المسجّلة في المحرك) و`permissionModel` بجملتها. **`POST /api/ops/hunt/plan { target }`**
+  بيجيب `security.txt` بـ`discoverProgram({register:false})` و`suggestPlan` — **من غير ما يسجّل
+  حاجة**: طلب خطة مش إذن.
+- **خزانة النتائج `artifacts/api-server/src/lib/ops/findings-vault.ts`** — المخزن الوحيد
+  (`state/findings-vault.json`، متجاه الـgit). المفتاح من المحتوى
+  (`host | kind | template-id أو العنوان | المسار من غير query/fragment`)، فالـsync idempotent:
+  `added:0` في التشغيل التاني و`occurrences` بتزيد. بيقرأ كمان `state/discovered-vulnerabilities-vault.json`
+  (بتاع deep-research) **للدمج بس** بيرجّعه `verified:false` لأن المصدر ده مابيدّيش إعادة إنتاج.
+  `GET /api/ops/findings`، `GET /api/ops/findings/status`، `POST /api/ops/findings/sync` (وراء
+  `opsAllowed`)، و`GET /api/ops/findings/:key/report-draft`.
+- **بوابة المسودة:** المسودة بتتكتب من سجل `verified:true` وبس. غير كده الرد
+  `409 {error:"not-reproduced", reasonAr}` (و`404 not-found` لو المفتاح غلط) —مسودة لنتيجة
+  مش مثبتة أسوأ من مفيش مسودة. اللي بيتكتب: الهدف، الخطورة المطبّعة، CWE/CVSS تقديري، عدد
+  المشاهدات والمهمات، خطوات إعادة الإنتاج، كل ملف دليل بحجمه و`sha256`، بلوك إعادة الإنتاج
+  (بوابة التحقق)، سياسة البرنامج من الكتالوج + حالة الاستقبال وقت التوليد، و«مافيش هنا حكم
+  impact» صراحةً + تحذير إن سكانس مقطوع = تغطية ناقصة ما تتبعتش.
+- **الواجهة:** `NovaHuntSurface` في `NovaBrainOps.tsx` ومحطوط في صفحة الأسطول
+  (`NovaFleetUnified.tsx`، جوّه `view === "ops"`) — مرشّحين + «خطّط» + خزانة + «مسودة».
+  على Pages التوأم الثابت بيردّ بنفس الشكل + `standalone:true` والسبب، مش بصفر مخترع.
+
+### مقاس على المحرك نفسه (باوندل `node server.mjs`، بلا أدوات أمنية)
+
+| الخطوة | الرد |
+|---|---|
+| sync على خزانة فاضية | `added:11 · fromLegacy:11 · total:11` |
+| sync تاني | `added:0 · updated:11 · total:11` — مافيش تكرار |
+| بعد جوب حقيقي (`recon.dns` على scanme.nmap.org) | `fromJobs:7 · added:2 · total:16 · scanned:2` |
+| خطورة السجلات القديمة | 7 دلاء نصّية → `critical:2 · high:5 · medium:3 · low:1` (+`severityRaw` بيحفظ أصل النص) |
+| مسودة على نتيجة مش مثبتة | `HTTP 409` + «لسه ماعادش إنتاجها (POST …/verify)» |
+| `hunt/candidates?limit=12&minEfficiency=80` | 12 مرشّح من 746 · `filteredOut.notBounty:235` · كل سطر `consented:false` |
+
+الـverify نفسه اتعمل على 3 نتايج ورجّع `verified 0/3` («لم يُعاد إنتاج نفس البصمة») — في
+sandbox الشبكة مابتتكررش حرفيًا، فده سلوك البوابة مش عطل: ماحدش قدر يحوّل نتيجة لمشيدة
+بالمصادفة، والمسودة فضلت مرفوضة. المسار الإيجابي (مثبتة → 200 + سياسة + sha256) متغطّي في
+`ops-selftest` ببيانات ثابتة، وفي CI بأرقامها الحقيقية.
+
 ## اللي لسه
-- قراية `ips`/`cidrs` في `scope_check` (فوق).
+- قراية `ips`/`cidrs` في `scope_check` (فوق) — لسه display-only، وده **مقيس**:
+  `huntCandidates` بيطبّعهم في `counts` ومعاهم `network_context_only:true`، و`ops-selftest` بيفشّش
+  إن مافيش كود بيحوّل `cidrs` لـ`allowed_hosts`، وإن الـcandidate ما بيصدّرش `allowed_hosts` أصلًا.
 - الطبقة دي كلها على السيرفر (المحرك). على Pages مافيش `node:fs`، فالواجهة الثابتة بتفضل
   تعرض الحالة من `/api/*` للسيرفر نفسه — وده مقصود، مش نقص.

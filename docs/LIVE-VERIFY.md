@@ -470,3 +470,46 @@ engine | catalog lookup over HTTP | ✓ pass | aces-dev.wnba.com → hackerone:n
 الباقي `· blocked` واحد بس: عقدة `node.waifly.com:27214` (مرفوض من صاحب الجهاز، مش من الكود) —
 `#75` بتقفل لوحدها أول ما الصف ده يبقّى `✓ pass`.
 
+### 8.9 الخزانة والمسودة وسطح الصيد — تلات صفوف جديدة، وعطل حقيقي لقيناه في النص
+
+الصفوف اللي في `scripts/verify-live.mjs` بعد سطر `job executed` (لازم الخزانة تبقى فيها شغل):
+
+| الصف | اللي بيطمّن عليه |
+|---|---|
+| `engine \| findings vault is idempotent` | `POST /ops/findings/sync` مرّتين: `added:0` والتاني، `total` ثابت، `updated>=1`، و`verified` مابتتراجعش. لو الخزانة فاضية ⇒ `review` بمقدار مش باختراع |
+| `engine \| report draft gated on reproduction` | لكل مفتاح: `(HTTP 200) == (verified===true)` بالحرف، اللي اتكتبت فيها `سياسة البرنامج` + `sha256` + بلوك إعادة الإنتاج، واللي اترفضت فيها `reasonAr` يقول «ماعادش إنتاجها» |
+| `engine \| hunt candidates stay context-only` | كل سطر `consented:false` + `passive_only` + `network_context_only:true` + `url` https، والعدد (`counts`) أرقام مش كلام، والترتيب نازل في `response_efficiency` فعلًا |
+
+**اللي اتقاس في الـsandbox قبل ما يوصل CI** (باوندل `node server.mjs` على 8095، مافيش nmap/nuclei):
+`added:2/16 · fromJobs:7 · fromLegacy:11`، تاني sync `added:0 · updated:18 · total:16`، تلات
+`409` على مسودات غير مثبتة، `12 مرشّح من 746`. الصفوف دي عدّت على الردود نفسها بنمط
+`verify-live` حرفيًا قبل ما تتكتب في السكربت.
+
+**عطلين كشفهم الشغل ده، والاتنين مش في الطبقة الجديدة:**
+
+1. `audit-static-brain` رجع `✗ no-snapshot · ✗ no-honest-label` — والحاجة كانت **فيّ أنا**: بنيته
+   بـ`pnpm --filter @workspace/kali-panel run build` من غير `BASE_PATH=/xFREEDOLLARHACHx/`، فالباوندل
+   اللي اتفحص مش اللي بينشر، والصفحة ماركبتش أصلًا. بنفس سطر البنا الموجود في رأس الملف:
+   `✅ Static brain streams a real reply and the linked-server path really proxies.` — القاعدية:
+   بوابة بتفشل على أثرفيلد مش موجود معناها أعيد البنا الأول، مش وسّع السقف.
+2. جوب `20261103-e375d3` علق: `recon.securitytxt → running` والـ`job.status` فضّل `queued`
+   أكتر من 6 دقايق. القراءة مش التخمير: `budget.taskTimeoutMs` كان بيلتزم على الأدوات اللي بتتنفّذ
+   `execFile` (في `tools.ts`) وبس — `runKind` للمبني في node كان `await` على الهوا، وأي probe
+   معلّق (DNS جوه `AbortSignal.timeout` مش مغطّى في نسخ undici كتير) يسيب الجوب كده للأبد ويمنع
+   أي retry لأن الـ`running` set مابيفرّغش. اتصلح بـ`withDeadline(promise, ms, label)` في
+   `runner.ts` وبيتلّف حوالي `runKind` — والـtimeout بيرجّع `{ok:false,error:"task-timeout:<kind>:<ms>"}`
+   بدل استثناء، فالـcatch الموجود بيسمّيها `failed` وبيزود العدّاد زي أي فشل تاني. `ops-selftest`
+   بيقاس ده على `new Promise(()=>{})` (ولازم يمسك الـloop بمؤقّت حي: الـtimer `unref` عمدًا).
+
+**والحلقة دي رجّعت عطل عملته أنا — والتقرير مسكه:** أول نسخة من `withDeadline` كانت بتاخد
+`budget.taskTimeoutMs` (180s) سقفًا لكل مهمة، بينما `tools.nuclei` ليه `budgetMs: 540_000`
+بتاعه. النتيجة في CI: `job executed | 6/7 done · 1 failed` و`failed tasks | ? review |
+tools.nuclei: فشل: task-timeout:tools.nuclei:180000ms` — يعني **سقف جديد قطع سكانس شغال**، والحكم
+نزل `GREEN → AMBER`. القاعدة اللي اتثبّتت: **أي سقف جديد لازم يرث ميزانية الأداة المعلنة، ماتنافسهاش.**
+اتقفلت بمصدر واحد للحقيقة: `kindDeadlineMs(kindId, ctxTimeoutMs)` في `tools.ts` (نفس الـclamp
+الموجود: `15s…10m` مقابل `budgetMs ?? ctx.timeoutMs`)، المستعمل الآن في التلات مواضع: `execFile`،
+ودليل `partial`، والـdeadline الخارجي في `runner.ts` (+ سماح 15 ثانية للحجز). و`ops-selftest` بقى
+يفرض: `kindDeadlineMs("tools.nuclei", 180_000) === 540_000`، وإن الـrunner ماسك نفس الدالة
+(بيفشل لو رجع سطر `Math.max(5_000, Math.min(Number(ctx.timeoutMs)…`)، وإن `tools.ts` ماعادش
+بيكرّر الـclamp — والتزوير اتعمل فعلاً: رجّعت السطر القديم فالسلف-تست قال `56 · 1 failed`، ورجّعت التعديل
+فقال `57 · 0`.

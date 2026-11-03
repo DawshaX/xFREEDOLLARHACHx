@@ -379,6 +379,13 @@ ollama · pollinations:openai-fast · pollinations:mistral · pollinations:llama
 `GET /ops/jobs[/:id]` · `POST /ops/jobs/:id/verify|pause|resume|cancel` · `GET /ops/jobs/:id/report` ·
 `GET|POST /ops/sweep`. مفيش قرار أمان في المتصفح: البوابة في السيرفر، واللوحة بتعرض رفضها.
 
+**سطح الصيد (`NovaHuntSurface`، نفس الصفحة/نفس الـtab):** `GET /ops/hunt/candidates` (مرشّحون من
+الكتالوج مرتّبين بأجود استجابة — كل سطر بيوصل ومعه `consented:false` و`passive_only` و
+`network_context_only:true`، فالـCIDR/IP سياق مش scope) · `POST /ops/hunt/plan {target}` (security.txt +
+`suggestPlan` **من غير تسجيل** — طلب خطة مش إذن) · `GET /ops/findings[/status]` · `POST /ops/findings/sync`
+(الخزانة الوحيدة للنتايج، مفتاحها من المحتوى فالتكرار مابيضاعفش) · `GET /ops/findings/:key/report-draft`
+(**409** على أي نتيجة ماعدش إنتاجها — المسودة مستحيلة مش متعطّلة، والصفحة بتطبع سبب الرفض بحروفه).
+
 **تغيير أمني لازم تعرفه (اتعمل معاه):** قرايات النتائج بقت حساسة — `GET /api/ops/programs` و`/api/ops/jobs*`
 و`/api/ops/stats` محتاجين **نفس الأصل أو التوكن** (لأنها بتقول إيه النطاقات اللي شغال عليها وإيه اللي اتلقّى).
 `/api/nova-core/awareness` و`/api/ops/version` و`/api/ops/kinds` **فاضلين مفتوحين** — دول حالة machine مش أسرار.

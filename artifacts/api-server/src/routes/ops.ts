@@ -22,9 +22,16 @@
  *   POST  /api/ops/provision/reload   يعيد القراءة من غير restart
  *   GET   /api/ops/sweep              وضع الدورة الخلفية (آخر sweep / السقف)
  *   POST  /api/ops/sweep              يشغّل الدورة دلوقتي (نفس اللي بيعمله الـdaemon كل 3 دقايق)
+ *   GET   /api/ops/findings/status      حالة خزانة النتائج (المخزن الوحيد)
+ *   GET   /api/ops/findings             النتايج مجمّعة من كل المهام (+ الكتالوج القديم)
+ *   POST  /api/ops/findings/sync        يلمّ شغل المحرك في الخزانة — idempotent
+ *   GET   /api/ops/findings/:key/report-draft  مسودة إفصاح (409 لو مش مثبتة)
+ *   GET   /api/ops/hunt/candidates      مرشّحين من كتالوج المكافآت (سياق، بلا إذن)
+ *   POST  /api/ops/hunt/plan            نطاق → security.txt + خطة أنواع، من غير تسجيل
  */
 import { Router, type Request, type Response } from "express";
-import { catalogStatus, lookupBountyProgram } from "../lib/ops/bounty-catalog";
+import { catalogStatus, lookupBountyProgram, huntCandidates } from "../lib/ops/bounty-catalog";
+import { listVault, syncFromJobs, draftReport, vaultStatus } from "../lib/ops/findings-vault";
 import {
   assertAuthorized,
   discoverProgram,
@@ -106,6 +113,100 @@ router.get("/ops/bounty/catalog", (req: Request, res: Response) => {
   }
   const clean = raw.replace(/^[a-z]+:\/\//, "").split("/")[0].split(":")[0];
   res.json({ ...st, host: clean, match: lookupBountyProgram(clean) });
+});
+
+/* ── findings vault: الخزانة الوحيدة، والمسودة بميولها مش بالكلام ──────────────── */
+
+// حالة الخزانة: موجودة؟ كام نتيجة؟ كام واحدة متأكد منها؟ (القراءة مفتوحة زي باقي الـGETs)
+router.get("/ops/findings/status", (_req: Request, res: Response) => {
+  res.json({ ok: true, ...vaultStatus() });
+});
+
+router.get("/ops/findings", (req: Request, res: Response) => {
+  const q = {
+    host: String(req.query.host || ""),
+    severity: String(req.query.severity || ""),
+    verifiedOnly: req.query.verified === "true" || req.query.verified === "1",
+    limit: Number(req.query.limit) || undefined,
+  };
+  res.json({ ok: true, ...listVault(q) });
+});
+
+/**
+ * يلمّ نتائج كل المهام المرصودة في الخزانة. كتابة على `state/` — فالـtoken مطلوب.
+ * idempotent بالقياس: تشغيله مرّتين بيضيف `occurrences` ومابيضاعف السطور (محروس في live-verify).
+ */
+router.post("/ops/findings/sync", (req: Request, res: Response) => {
+  if (!opsAllowed(req)) {
+    deny(res, checkGate(req, "ops").how || checkGate(req, "ops").reason);
+    return;
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const r = syncFromJobs({ limit: Number(body.limit) || undefined });
+  try {
+    broadcastEvent("nova-ops", { type: "findings.synced", total: r.total, verified: r.verified });
+  } catch {
+    /* الناقلة best-effort؛ الملف هو الحقيقة */
+  }
+  res.json({ ok: true, ...r });
+});
+
+/**
+ * مسودة إفصاح لنتيجة واحدة. **409 بالاسم** لو ماعدش إنتاجها — لأن مسودة «ربما»
+ * بتدخل عند آدمي بيقرأ، وده أسوأ من مافيش مسودة.
+ */
+router.get("/ops/findings/:key/report-draft", (req: Request, res: Response) => {
+  const d = draftReport(String(req.params.key));
+  if (!d.ok) {
+    res.status(d.error === "not-found" ? 404 : 409).json({ ...d, key: req.params.key });
+    return;
+  }
+  res.json({ ok: true, key: req.params.key, length: (d.markdown || "").length, markdown: d.markdown });
+});
+
+/* ── hunt surface: من الكتالوج لهدف مختار بخطّة، مش بالعكس ─────────────────────── */
+
+/**
+ * `GET /api/ops/hunt/candidates?limit=12&minEfficiency=80&platform=hackerone&q=nba`
+ * بيشيل اللي مالبهاش مكافأة والموقوفة/المقفولة استقبال، وبردّب على جودة الاستجابة الأول.
+ * الرد نفسه بيقول بصراحة: ولا سطر هنا إذن (`consented:false` متفرض، مش مقروء).
+ */
+router.get("/ops/hunt/candidates", (req: Request, res: Response) => {
+  const c = huntCandidates({
+    limit: Number(req.query.limit) || undefined,
+    platform: String(req.query.platform || ""),
+    minEfficiency: req.query.minEfficiency === undefined ? undefined : Number(req.query.minEfficiency),
+    q: String(req.query.q || ""),
+    includeClosed: req.query.includeClosed === "true" || req.query.includeClosed === "1",
+  });
+  const hosts = new Set<string>();
+  try {
+    for (const p of loadPrograms().programs || []) {
+      for (const h of [...(p.hosts || []), ...(p.exact || [])]) hosts.add(String(h).replace(/^\*\./, "").toLowerCase());
+    }
+  } catch {
+    /* مافيش سجل برامج بعد — مسجّل:false لكل مرشّح، وده رد صحيح مش فشل */
+  }
+  const items = c.items.map((x) => ({ ...x, registered: x.sample_hosts.some((h) => hosts.has(String(h).replace(/^\*\./, "").toLowerCase())) }));
+  res.json({
+    ok: true,
+    ...c,
+    items,
+    permissionModel: "الكتالوج سياق بس: `consented:false` و`mode:\"passive_only\"` بيتفرضوا في كل سطر. الفحص النشط محتاج الإذن المكتوب في program_discover.",
+  });
+});
+
+/**
+ * `POST /api/ops/hunt/plan { target }` → قراءة security.txt + مطابقة الكتالوج + خطة
+ * الأنواع، **من غير ما يسجّل حاجة**. الده كان الناقص: عندك 746 برنامج ومافيش طريق
+ * يقولي «إيه اللي يوصلني لخطة على واحد منهم» بطلب واحد.
+ */
+router.post("/ops/hunt/plan", async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const target = String(body.target ?? body.host ?? "");
+  const proposal = await discoverProgram(target, { register: false });
+  const plan = proposal.ok && proposal.program ? suggestPlan({ target: proposal.host, depth: body.depth ? String(body.depth) as never : undefined, tools: body.tools === true }) : null;
+  res.status(proposal.ok ? 200 : 400).json({ ok: proposal.ok, host: proposal.host, proposal, plan });
 });
 
 /* ── programs / scope ────────────────────────────────────────────────────── */

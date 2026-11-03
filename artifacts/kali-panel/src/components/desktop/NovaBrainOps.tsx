@@ -781,3 +781,247 @@ export function NovaOpsRoom() {
     </div>
   );
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * NovaHuntSurface — سطح الصيد: من الكتالوج لهدف بخطّة، ومن الدليل لمسودة إفصاح.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * الثلاث نقاط اللي كانت مفصولة: الكتالوج (746 برنامج) في مكان، والمهام ونتايجها في
+ * مكان، ومسودة البعت مافيش خالص. هنا الاتنين قدام بعض، والقواعد نفسها اللي على
+ * السيرفر بتتنفّذ — الصفحة مابتقررش حاجة:
+ *   • المرشّحون من `/ops/hunt/candidates` وكل سطر فيهم `consented:false` متفروض مش مقروء.
+ *   • «خطّط» بنده `/ops/hunt/plan` (security.txt + مطابقة الكتالوج + أنواع المهام) من غير تسجيل.
+ *   • «مسودة» بنده `/ops/findings/<key>/report-draft`؛ لو النتيجة ماعدش إنتاجها المحرك
+ *     بيردّ 409 والسبب — والصفحة بتعرض الرفض حرفيًا مابتخبّيهوش.
+ *   • على Pages مافيش قرص: الرد بيقول `standalone` والسبب، فبنطبّع السبب مش بنرسم أخضر.
+ */
+interface HuntRow {
+  handle: string;
+  name: string;
+  platform: string;
+  url: string;
+  response_efficiency?: number | null;
+  max_payout_usd?: number | null;
+  submission_state?: string | null;
+  counts?: { domains?: number; wildcards?: number; urls?: number; cidrs?: number; ips?: number };
+  sample_hosts?: string[];
+  registered?: boolean;
+  consented?: boolean;
+  mode?: string;
+}
+interface VaultRow {
+  key: string;
+  host: string;
+  asset?: string;
+  titleAr?: string;
+  title?: string;
+  severity?: string;
+  kind?: string;
+  verified?: boolean;
+  occurrences?: number;
+  jobs?: Array<{ id: string; name: string }>;
+  evidence?: Array<{ file?: string; sha256?: string; bytes?: number }>;
+}
+
+export function NovaHuntSurface() {
+  const [hunt, setHunt] = useState<{ items: HuntRow[]; scanned?: number; fetchedAt?: string | null; present?: boolean; reasonAr?: string; permissionModel?: string } | null>(null);
+  const [vault, setVault] = useState<{ counts?: { total?: number; verified?: number; bySeverity?: Record<string, number> }; present?: boolean; updatedAt?: string | null; reasonAr?: string } | null>(null);
+  const [rows, setRows] = useState<VaultRow[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [draft, setDraft] = useState<{ title: string; body: string } | null>(null);
+  const [plan, setPlan] = useState<{ host: string; body: string } | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+
+  const load = useCallback(async () => {
+    setBusy("load");
+    const [c, st, f] = await Promise.all([
+      opsFetch<{ items?: HuntRow[]; scanned?: number; fetchedAt?: string | null; present?: boolean; reasonAr?: string; permissionModel?: string }>(
+        `/ops/hunt/candidates?limit=6${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`
+      ),
+      opsFetch<{ counts?: { total?: number; verified?: number }; present?: boolean; updatedAt?: string | null; reasonAr?: string }>("/ops/findings/status"),
+      opsFetch<{ items?: VaultRow[] }>("/ops/findings?limit=12"),
+    ]);
+    setHunt({ items: c.data?.items || [], scanned: c.data?.scanned, fetchedAt: c.data?.fetchedAt, present: c.data?.present, reasonAr: c.data?.reasonAr, permissionModel: c.data?.permissionModel });
+    setVault({ counts: st.data?.counts, present: st.data?.present, updatedAt: st.data?.updatedAt, reasonAr: st.data?.reasonAr });
+    setRows(f.data?.items || []);
+    setNote(!c.ok ? c.denial || "مافيش رد من المحرك" : null);
+    setBusy(null);
+  }, [q]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const sync = useCallback(async () => {
+    setBusy("sync");
+    const r = await opsFetch<{ added?: number; updated?: number; total?: number; verified?: number; scanned?: number }>("/ops/findings/sync", { method: "POST", body: { limit: 200 } });
+    setNote(r.ok ? `زامنت: +${r.data?.added ?? 0} جديدة · ${r.data?.updated ?? 0} اتحدّثت · الإجمالي ${r.data?.total ?? 0} (${r.data?.scanned ?? 0} مهمة مقروءة)` : r.denial || "الزامن فشل");
+    await load();
+    setBusy(null);
+  }, [load]);
+
+  const makePlan = useCallback(async (target: string) => {
+    setBusy(`plan:${target}`);
+    setDraft(null);
+    const r = await opsFetch<{ host?: string; ok?: boolean; needs_ar?: string; warnings?: string[]; proposal?: { needs_ar?: string; warnings?: string[]; evidence?: Record<string, unknown> }; plan?: { kinds?: string[]; why?: string[] } }>("/ops/hunt/plan", {
+      method: "POST",
+      body: { target },
+    });
+    const p = (r.data?.proposal || {}) as { needs_ar?: string; warnings?: string[] };
+    const kinds = (r.data?.plan?.kinds || []).join(" · ") || "مافيش أنواع اتقترحت";
+    setPlan({
+      host: target,
+      body: [
+        `الأنواع: ${kinds}`,
+        p.needs_ar ? `\nمطلوب: ${p.needs_ar}` : "",
+        (p.warnings || []).length ? `\nتحذيرات المحرك:\n- ${(p.warnings || []).join("\n- ")}` : "",
+        (r.data?.plan?.why || []).length ? `\nليه: ${(r.data!.plan!.why || []).join(" · ")}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    });
+    setBusy(null);
+  }, []);
+
+  const makeDraft = useCallback(async (rec: VaultRow) => {
+    setBusy(`draft:${rec.key}`);
+    setPlan(null);
+    const r = await opsText(`/ops/findings/${encodeURIComponent(rec.key)}/report-draft`);
+    const parsed = (() => {
+      try {
+        return JSON.parse(r.text) as { markdown?: string; reasonAr?: string; error?: string };
+      } catch {
+        return null;
+      }
+    })();
+    if (r.ok && parsed?.markdown) setDraft({ title: `مسودة — ${rec.host} · ${rec.titleAr || rec.title || rec.key}`, body: parsed.markdown });
+    else setDraft({ title: `مرفوض (${r.status}) — ${rec.host}`, body: parsed?.reasonAr || r.text || `HTTP ${r.status}` });
+    setBusy(null);
+  }, []);
+
+  const counts = vault?.counts || {};
+  const sevList = Object.entries(counts.bySeverity || {})
+    .sort((a, b) => Number(b[1]) - Number(a[1]))
+    .map(([s, n]) => `${s} ${n}`)
+    .join(" · ");
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-[#0a0512] p-3 space-y-3">
+      <div className="flex flex-wrap items-center gap-2 justify-between">
+        <div className="flex items-center gap-2">
+          <Radar className="h-4 w-4 text-cyan-300" />
+          <h2 className="text-xs font-black">سطح الصيد · الكتالوج ↔ الخزانة ↔ المسودة</h2>
+          <span className="text-[9px] px-1.5 py-0.5 rounded border border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-200">
+            {hunt?.present ? `من ${hunt.scanned ?? 0} برنامج` : "الكتالوج على السيرفر"}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="دوّر في الأسماء والنطاقات…"
+            className="h-7 w-40 rounded-lg bg-black/40 border border-white/10 px-2 text-[10px] text-white/80 placeholder:text-white/25"
+          />
+          <button onClick={() => void load()} className="flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-[9px] font-black text-white/60 hover:text-white/90">
+            <Search className="h-3 w-3" /> تحديث
+          </button>
+          <button onClick={() => void sync()} className="flex items-center gap-1 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-2 py-1 text-[9px] font-black text-cyan-200">
+            {busy === "sync" ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} زامن الخزانة
+          </button>
+        </div>
+      </div>
+
+      {note && <p className="text-[9.5px] text-amber-200/80 leading-relaxed">{note}</p>}
+      {hunt?.permissionModel && (
+        <p className="text-[9px] text-white/40 leading-relaxed">
+          <ShieldCheck className="inline h-3 w-3 mr-1 text-emerald-300" />
+          {hunt.permissionModel}
+        </p>
+      )}
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        {/* مرشّحو الصيد */}
+        <div className="rounded-xl border border-white/10 p-2 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-black text-white/70">مرشّحون للاطلاع (الأول أجود استجابة)</h3>
+            <span className="text-[9px] text-white/35">{hunt?.fetchedAt ? `كتالوج ${String(hunt.fetchedAt).slice(0, 10)}` : ""}</span>
+          </div>
+          {hunt?.reasonAr && <p className="text-[9px] text-white/45">{hunt.reasonAr}</p>}
+          {(hunt?.items || []).length === 0 && !hunt?.reasonAr && <p className="text-[9px] text-white/35">مافيش مرشّح راجع الفلاتر — جرّب من غير بحث.</p>}
+          {(hunt?.items || []).map((c) => (
+            <div key={c.handle} className="rounded-lg bg-black/30 border border-white/5 p-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black truncate">{c.name}</p>
+                  <p className="text-[9px] text-white/45 truncate">
+                    {c.platform}:{c.handle} · {c.url}
+                  </p>
+                </div>
+                <button onClick={() => void makePlan((c.sample_hosts || [])[0] || c.handle)} className="shrink-0 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-1.5 py-1 text-[9px] font-black text-cyan-200">
+                  {busy === `plan:${(c.sample_hosts || [])[0] || c.handle}` ? "…" : "خطّط"}
+                </button>
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1 text-[8.5px] font-mono">
+                <span className="rounded bg-white/5 px-1 text-white/55">استجابة {c.response_efficiency ?? "؟"}%</span>
+                <span className="rounded bg-white/5 px-1 text-white/55">أقصى {c.max_payout_usd != null ? `$${c.max_payout_usd}` : "؟"}</span>
+                <span className="rounded bg-white/5 px-1 text-white/55">نطاقات {c.counts?.domains ?? 0}+{c.counts?.wildcards ?? 0}*</span>
+                <span className="rounded bg-white/5 px-1 text-white/55">شبكة {c.counts?.cidrs ?? 0} CIDR (سياق)</span>
+                <span className={`rounded px-1 ${c.submission_state === "open" ? "bg-emerald-400/10 text-emerald-200" : "bg-amber-400/10 text-amber-200"}`}>استقبال {c.submission_state || "؟"}</span>
+                <span className="rounded bg-rose-400/10 px-1 text-rose-200">consented:{String(c.consented)} · {c.mode}</span>
+                <span className={`rounded px-1 ${c.registered ? "bg-cyan-400/10 text-cyan-200" : "bg-white/5 text-white/45"}`}>{c.registered ? "مسجّل في المحرك" : "مش مسجّل"}</span>
+              </div>
+            </div>
+          ))}
+          {plan && (
+            <div className="rounded-lg border border-cyan-400/20 bg-cyan-400/5 p-2">
+              <p className="text-[9.5px] font-black text-cyan-100">خطّة {plan.host}</p>
+              <pre className="mt-1 whitespace-pre-wrap break-words text-[9px] text-white/65 leading-relaxed">{plan.body}</pre>
+            </div>
+          )}
+        </div>
+
+        {/* الخزانة */}
+        <div className="rounded-xl border border-white/10 p-2 space-y-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-1">
+            <h3 className="text-[10px] font-black text-white/70">خزانة النتائج</h3>
+            <span className="text-[9px] font-mono text-white/45">
+              {vault?.present ? `${counts.total ?? 0} نتيجة · ${counts.verified ?? 0} متأكَّدة` : "الخزانة على السيرفر"}
+            </span>
+          </div>
+          {vault?.reasonAr && <p className="text-[9px] text-white/45">{vault.reasonAr}</p>}
+          {sevList && <p className="text-[9px] font-mono text-white/40">{sevList}</p>}
+          {rows.length === 0 && <p className="text-[9px] text-white/35">مافيش نتائج في الخزانة — دوس «زامن الخزانة» بعد ما مهمة تخلص.</p>}
+          {rows.map((r) => (
+            <div key={r.key} className="rounded-lg bg-black/30 border border-white/5 p-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black truncate">{r.titleAr || r.title || r.key}</p>
+                  <p className="text-[9px] text-white/45 truncate font-mono">
+                    {r.host} · {r.kind} · {(r.occurrences ?? 1)} مشاهدة · {r.evidence?.length ?? 0} دليل
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className={`rounded px-1 text-[8.5px] font-mono ${r.verified ? "bg-emerald-400/10 text-emerald-200" : "bg-amber-400/10 text-amber-200"}`}>
+                    {r.verified ? "مُعاد إنتاجها" : "مش مثبتة"}
+                  </span>
+                  <button onClick={() => void makeDraft(r)} className="flex items-center gap-1 rounded-lg border border-white/10 px-1.5 py-1 text-[9px] font-black text-white/60 hover:text-white/90">
+                    {busy === `draft:${r.key}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} مسودة
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {draft && (
+            <div className="rounded-lg border border-white/10 bg-black/40 p-2">
+              <p className="text-[9.5px] font-black text-white/80">{draft.title}</p>
+              <pre className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap break-words text-[8.5px] leading-relaxed text-white/60">{draft.body}</pre>
+            </div>
+          )}
+        </div>
+      </div>
+      <p className="text-[8.5px] text-white/30">
+        الصفحة مابتقررش حاجة: الاختيار والرفض والمسودة كلهم ردود المحرك بحروفه — والرفض (409 «ماعدش إنتاجها») متعمّد يبان، مش يتخبّى.
+      </p>
+    </section>
+  );
+}

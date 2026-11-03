@@ -1468,6 +1468,78 @@ export function resolveStandaloneApi(
     };
   }
 
+  // ── findings vault + hunt surface (الباندل الثابت مالوش قرص ولا محرك) ──────────
+  // الشكل الكامل لازم يوصل للواجهة عشان تعرض، بس الأرقام مابتتخترعش: الخزانة والمهام
+  // بتاعة المحرك، فالرد هنا فاضي ومصحوب بالسبب وبمكان السؤال الصح — مش «صفر نتيجة».
+  if (path === "/ops/findings/status") {
+    return {
+      ok: true,
+      standalone: true,
+      present: false,
+      path: "state/findings-vault.json",
+      updatedAt: null,
+      counts: { total: 0, verified: 0, bySeverity: {} },
+      reasonAr: "الخزانة على قرص المحرك — على الباندل الثابت مافيش قراءة. افتح /api/ops/findings/status على السيرفر.",
+    };
+  }
+
+  if (path === "/ops/findings") {
+    return {
+      ok: true,
+      standalone: true,
+      present: false,
+      path: "state/findings-vault.json",
+      updatedAt: null,
+      counts: { total: 0, verified: 0, bySeverity: {} },
+      items: [],
+      limit: 0,
+      reasonAr: "النتايج بتتلمّ من مهام المحرك (POST /api/ops/findings/sync) — مافيش محرك في الباندل الثابت.",
+    };
+  }
+
+  if (path === "/ops/hunt/candidates") {
+    return {
+      ok: true,
+      standalone: true,
+      present: false,
+      path: "ops/bounty/programs-catalog.json",
+      fetchedAt: null,
+      scanned: 0,
+      filteredOut: { notBounty: 0, pausedOrClosed: 0, lowEfficiency: 0, platform: 0, query: 0 },
+      limit: 0,
+      items: [],
+      permissionModel: "الكتالوج سياق بس: كل سطر consented:false / passive_only. الفحص النشط محتاج الإذن المكتوب.",
+      reasonAr: "قراية الـ746 برنامج محتاجة node:fs على السيرفر — على Pages مافيش. افتح /api/ops/hunt/candidates هناك.",
+    };
+  }
+
+  if (path.startsWith("/ops/findings/") && path.endsWith("/report-draft")) {
+    return {
+      ok: false,
+      standalone: true,
+      error: "engine-only",
+      key: decodeURIComponent(path.slice("/ops/findings/".length, -"/report-draft".length)) || null,
+      reasonAr: "مسودة الإفصاح بتتبنى من دليل على قرص المحرك (sha256 لكل ملف). الباندل الثابت ماقدرش يقرأه — ولا هيفتري نتيجة.",
+    };
+  }
+
+  // «خطّط لهدف» محتاج discovery حي (security.txt + مطابقة الكتالوج) — الباندل
+  // مابيمسش الشبكة، بيرفّض وبس مش بيفترِ خطة.
+  if (path === "/ops/hunt/plan") {
+    const target = String((body as { target?: unknown } | null)?.target ?? (body as { host?: unknown } | null)?.host ?? "").trim();
+    return {
+      ok: false,
+      status: 400,
+      standalone: true,
+      error: "engine-only",
+      host: target || null,
+      proposal: { ok: false, host: target || null, needs_ar: "الـplan بيتبنى بعد discovery حي: security.txt والمطابقة مع ops/bounty/programs-catalog.json.", warnings: [] },
+      plan: null,
+      reasonAr: "الباندل الثابت مابيمسش الشبكة — فممنوع يفترِ خطة.",
+      howAr: "شغّل المحرك من nova-24-7.zip أو اربط سيرفر من «محطة نوفا»، وابعث الطلب لـ/api/ops/hunt/plan هناك.",
+    };
+  }
+
   if (path === "/ops/kinds") {
     return {
       ok: true,

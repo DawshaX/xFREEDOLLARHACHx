@@ -631,6 +631,256 @@ await tA("no workflow promises a context it cannot see in `on:`", async () => {
   console.log(`      · ${scanned} سطر في بلوكات \`on:\` في ${files.length} ملف، كله ماحدش بيلمس سياق محظور`);
 });
 
+
+// ── خزانة النتائج + سطح الصيد + سقف الزمن (دورة I) ────────────────────────────
+// كل الحالات دي نقية على ملفات في tmp: مابتلمسش state/ الحقيقي، ومافيش شبكة.
+const fv = await import(path.join(SRC, "findings-vault.ts"));
+const bcHunt = await import(path.join(SRC, "bounty-catalog.ts"));
+
+const VJOB = {
+  id: "vj1",
+  name: "job one",
+  host: "a.example",
+  target: "a.example",
+  status: "done",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  finishedAt: "2026-01-01T00:05:00.000Z",
+  stats: { done: 1, failed: 0, skipped: 0, findings: 1, verified: 0, ms: 10 },
+  tasks: [],
+  findings: [],
+};
+const VFINDING = {
+  id: "vf1",
+  kind: "recon.dns",
+  title: "Missing SPF record",
+  titleAr: "مافيش سجل SPF",
+  severity: "High / Medium",
+  confidence: 0.8,
+  target: "https://API.Example.com:443/a/b?x=1#frag",
+  reproduce: "dig +short TXT a.example",
+  evidence: [{ file: "e1.txt", sha256: "deadbeef", bytes: 21, probe: "dig TXT", at: "2026-01-01T00:00:00.000Z" }],
+  verified: false,
+};
+
+await tA("findings vault: مفتاح من المحتوى، تطبيع خطورة، ودمج ما بيضاعفش السجل", async () => {
+  const r1 = fv.recordFromFinding(VJOB, VFINDING);
+  assert.equal(r1.severity, "high", "الخطورة مااتطبعتش لمستوى معروف");
+  assert.equal(r1.severityRaw, "High / Medium", "نص المصدر ضاع — لازم يفضل في severityRaw");
+  assert.equal(r1.asset, "api.example.com/a/b", "normalizeAsset مانشيلش السكيم/البورت/الـquery/الـfragment");
+  assert.equal(r1.verified, false, "نتيجة مش متأكَّدة اتعلّمت verified في السجل");
+
+  const m1 = fv.mergeRecords([], [r1, { ...r1, verified: true, verification: { at: "2026-01-01T00:06:00.000Z", method: "re-run", detail: "نفس البصمة" } }]);
+  assert.equal(m1.findings.length, 1, "نفس المفتاح خلّف سطرين في الخزانة");
+  assert.equal(m1.added, 1, "added عدّ السجل مرتين");
+  assert.equal(m1.findings[0].verified, true, "النسخة المتأكَّدة اتمسحت لصالح نسخة أقدم");
+
+  const m2 = fv.mergeRecords(m1.findings, [r1]);
+  assert.equal(m2.added, 0, "同步 تاني افترِ نتيجة جديدة");
+  assert.equal(m2.findings.length, 1, "同步 تاني ضاعف السجل");
+  assert.equal(m1.findings[0].occurrences, 2, "نسخة تانية بنفس المفتاح في نفس الـincoming مااتعدّتش كمشاهدة");
+  assert.equal(m2.findings[0].occurrences, 3, "المشاهدة الجديدة اتخطّت — المفروض occurrences تزيد");
+  assert.equal(m2.findings[0].firstSeen, r1.firstSeen, "firstSeen اتغيّر — لازم أقدم ظهور");
+  assert.equal(m2.findings[0].verified, true, "verified اتنزلعت لfalse لأن مشاهدة جديدة مااتأكدتش");
+  assert.notEqual(fv.findingKey("a.example", { ...VFINDING, target: "https://a.example/other" }), r1.key, "المسار داخل الحساب — مفتاح واحد لكل النطاق");
+  assert.equal(fv.findingKey("a.example", { ...VFINDING, extra: { "template-id": "CVE-2024-x" } }), fv.findingKey("a.example", { ...VFINDING, extra: { "template-id": "CVE-2024-x" } }), "template-id لازم يدخل في المفتاح");
+});
+
+await tA("findings vault: sync على ملفات شغل حقيقية — والتاني مابيزودش حاجة", async () => {
+  const jobsDir = path.join(tmp, "vault-jobs");
+  fs.mkdirSync(jobsDir, { recursive: true });
+  fs.writeFileSync(path.join(jobsDir, "vj1.json"), JSON.stringify({ ...VJOB, findings: [VFINDING] }), "utf8");
+  const vaultFile = path.join(tmp, "vault-sync.json");
+  process.env.NOVA_JOBS_REL = path.relative(process.cwd(), jobsDir);
+  process.env.NOVA_FINDINGS_VAULT = vaultFile;
+  try {
+    const s1 = fv.syncFromJobs({ limit: 10 });
+    assert.equal(s1.scanned, 1, "مافيش جوب اتقرا — NOVA_JOBS_REL مش شغال");
+    assert.ok(s1.fromJobs >= 1, "النتايج مالاتصلش للـmerge");
+    assert.ok(s1.total >= 1 && s1.verified === 0, `الحسابات مش صادقة: ${JSON.stringify(s1)}`);
+    assert.ok(fs.existsSync(vaultFile), "الخزانة مااتكتبتش على القرص");
+    const s2 = fv.syncFromJobs({ limit: 10 });
+    assert.equal(s2.added, 0, "同步 التاني خلع سجل جديد — الـidempotency اتكسرت");
+    assert.equal(s2.total, s1.total, `العدد اتغيّر بين تشغيلين: ${s1.total} → ${s2.total}`);
+    assert.ok(s2.updated >= 1, "التحديث مااتسجّلش");
+    const list = fv.listVault({ limit: 50 });
+    assert.equal(list.present, true, "listVault بيقول الخزانة مش موجودة");
+    assert.equal(list.items[0].occurrences, 2, "التكرار ماظهرش في القراءة");
+    assert.equal(fv.listVault({ verifiedOnly: true, limit: 50 }).items.length, 0, "نتيجة مش مثبتة عدّت فلتر verifiedOnly");
+  } finally {
+    delete process.env.NOVA_JOBS_REL;
+    delete process.env.NOVA_FINDINGS_VAULT;
+  }
+});
+
+await tA("report draft: بترفض اللي ماعدش إنتاجها، وباينة من الدليل والسياسة لو اتأكدت", async () => {
+  const vaultFile = path.join(tmp, "vault-draft.json");
+  process.env.NOVA_FINDINGS_VAULT = vaultFile;
+  const rec = {
+    ...fv.recordFromFinding(VJOB, VFINDING),
+    key: "k1",
+    program: { handle: "h1", name: "Program One", platform: "hackerone", url: "https://hackerone.com/h1", submission_state: "open" },
+  };
+  const write = (findings) => fs.writeFileSync(vaultFile, JSON.stringify({ schema: "cybernova.findings-vault/1", updatedAt: "2026-01-01T00:00:00.000Z", counts: { total: findings.length, verified: 0, bySeverity: {} }, findings }), "utf8");
+  try {
+    write([rec]);
+    const refused = fv.draftReport("k1");
+    assert.equal(refused.ok, false, "مسودة اتكتبت لنتيجة مش مثبتة — ده أخطر من مفيش");
+    assert.equal(refused.error, "not-reproduced");
+    assert.match(refused.reasonAr, /ماعادش إنتاجها/, "سبب الرفض مش واضح");
+    assert.match(refused.reasonAr, /verify/, "الرفض ماقالش الأمر اللي بيفرّج عنها");
+    assert.equal(fv.draftReport("لا-موجودش").error, "not-found", "مفتاح غلط يرجّع السبب الغلط");
+
+    write([{ ...rec, verified: true, verification: { at: "2026-01-01T00:09:00.000Z", method: "re-run kind", detail: "نفس البصمة حرفيًا" }, cwe: "CWE-290", remediationAr: "أضف سجل SPF بالـ `-all`." }]);
+    const yes = fv.draftReport("k1");
+    assert.equal(yes.ok, true, `المسودة اترفضت وهي مثبتة: ${JSON.stringify(yes).slice(0, 120)}`);
+    const md = yes.markdown;
+    for (const need of ["## خطوات إعادة الإنتاج", "## الدليل", "sha256 `deadbeef`", "## سياسة البرنامج", "https://hackerone.com/h1", "## إعادة الإنتاج (بوابة التحقق)", "## الإصلاح المقترح", "مافيش هنا حكم «impact»", "اتقطع"]) {
+      assert.ok(md.includes(need), `المسودة ناقصها «${need}»`);
+    }
+    assert.ok(md.includes("dig +short TXT a.example"), "أمر إعادة الإنتاج مالقاش في المسودة");
+    assert.ok(!/\$ ?[0-9]{3,}|مكافأة متوقعة|expected bounty/i.test(md), "المسودة بتدّعي رقم مكافأة");
+    // من غير برنامج معلَن: لازم تقول كده صريح بدل ما تسكت
+    write([{ ...rec, verified: true, verification: { at: "x", method: "m", detail: "d" }, program: undefined }]);
+    const orphan = fv.draftReport("k1");
+    assert.ok(orphan.ok && orphan.markdown.includes("مافيش برنامج معلَن في الكتالوج"), "مسودة بلا سياسة برنامج ما اعترفتش بدها");
+  } finally {
+    delete process.env.NOVA_FINDINGS_VAULT;
+  }
+});
+
+await tA("hunt candidates: فلْترة وترتيب، والـCIDR فضل سياق مش scope", async () => {
+  const catFile = path.join(tmp, "hunt-catalog.json");
+  const mk = (o) => ({ name: o.handle, platform: "hackerone", url: `https://hackerone.com/${o.handle}`, bounties: true, paused: false, submission_state: "open", response_efficiency: 90, max_payout_usd: 1000, domains: ["d.example"], wildcards: [], urls: [], cidrs: [], ips: [], ...o });
+  fs.writeFileSync(catFile, JSON.stringify({
+    fetched_at: new Date().toISOString(),
+    programs: [
+      mk({ handle: "slow", response_efficiency: 40 }),
+      mk({ handle: "best", response_efficiency: 99, max_payout_usd: 5000, wildcards: ["*.w.example"], cidrs: ["1.2.3.0/24"], ips: ["9.9.9.9"] }),
+      mk({ handle: "nobounty", bounties: false }),
+      mk({ handle: "paused", paused: true }),
+      mk({ handle: "closed", submission_state: "closed" }),
+      mk({ handle: "mid", response_efficiency: 70 }),
+    ],
+  }), "utf8");
+  process.env.NOVA_BOUNTY_CATALOG = catFile;
+  try {
+    const r = bcHunt.huntCandidates({ limit: 10 });
+    assert.deepEqual(r.items.map((x) => x.handle), ["best", "mid", "slow"], "الفلْترة أو الترتيب غلط");
+    assert.equal(r.filteredOut.notBounty, 1, "المقفول عنها المكافأة مااتعدّتش");
+    assert.equal(r.filteredOut.pausedOrClosed, 2, "الموقوفة/المقفولة الاستقبال مااتعدّتش");
+    assert.equal(r.scanned, 6, "المسحوب من الكتالوج مش كلّه");
+    const best = r.items[0];
+    assert.equal(best.consented, false, "سطر في الكتالوج ادّى إذن لنفسه");
+    assert.equal(best.mode, "passive_only", "سطر ادّى وضعًا أعلى من passive_only");
+    assert.equal(best.network_context_only, true, "الشبكة اتباعت كأكتر من سياق");
+    assert.equal(best.counts.cidrs, 1, "عدّ الـCIDR غلط");
+    assert.equal(best.counts.ips, 1, "عدّ الـIP غلط");
+    assert.deepEqual(best.sample_hosts.slice(0, 2), ["d.example", "*.w.example"], "sample_hosts ترتيبها غلط");
+    assert.ok(!JSON.stringify(best).includes('"allowed_hosts"'), "candidate بيصدّر allowed_hosts — ده ادّعاء scope");
+    assert.deepEqual(bcHunt.huntCandidates({ minEfficiency: 80 }).items.map((x) => x.handle), ["best"], "minEfficiency مافلترش");
+    assert.ok(bcHunt.huntCandidates({ includeClosed: true, limit: 20 }).items.map((x) => x.handle).includes("closed"), "includeClosed ماارجّعش المقفولة");
+    assert.ok(bcHunt.huntCandidates({ q: "nosuchprogram" }).items.length === 0, "قيد بحث راجّع حاجة");
+    assert.ok(bcHunt.huntCandidates({ q: "best" }).items.length === 1, "قيد بحث ماطابقش الاسم");
+    assert.equal(bcHunt.huntCandidates({ platform: "bugcrowd" }).items.length, 0, "فلْترة الـplatform مااشتغلتش");
+
+    // الكتالوج المنشور نفسه: كل سطر مافيهاش إذن، ومفيش أي كود بيحوّل cidrs لـscope
+    delete process.env.NOVA_BOUNTY_CATALOG;
+    const real = bcHunt.huntCandidates({ limit: 5 });
+    assert.ok(real.present && real.items.length >= 3, `الكتالوج المنشور مارجّعش مرشّحين (present=${real.present})`);
+    for (const c of real.items) {
+      assert.equal(c.consented, false, `«${c.handle}» ادّى إذن في الرد`);
+      assert.equal(c.mode, "passive_only", `«${c.handle}» مش على الوضع السلبي`);
+    }
+    const withCidr = real.items.find((c) => c.counts.cidrs > 0);
+    if (withCidr) assert.ok(withCidr.network_context_only === true, `«${withCidr.handle}» فيه CIDR ومفيش تحذير السياق`);
+    console.log(`      · ${real.items.length} مرشّح من ${real.scanned} برنامج · أعلى استجابة ${real.items[0]?.response_efficiency}% · المفلوت ${JSON.stringify(real.filteredOut)}`);
+  } finally {
+    delete process.env.NOVA_BOUNTY_CATALOG;
+  }
+});
+
+await tA("runner: ميزانية المهمة بيلزم الأدوات المبنية في node كمان", async () => {
+  const runner = await import(path.join(SRC, "runner.ts"));
+  // `withDeadline` بيطفّي الـtimer (`unref`) عمدًا: سيرفر شغال لازم مايمنعش الـexit.
+  // في سكريبت فاضي كده الخصلة دي بتديلّ node كود 13، فنمسك الـloop بمؤقّت حي لحد ما نخلص.
+  const keepAlive = setInterval(() => {}, 1000);
+  const t0 = Date.now();
+  const hung = await runner.withDeadline(new Promise(() => {}), 30, "recon.securitytxt");
+  clearInterval(keepAlive);
+  assert.equal(hung.ok, false, "الوعد المعلق عدّى من غير ما الـdeadline يلحقه");
+  assert.match(hung.error, /^task-timeout:recon\.securitytxt:30ms$/, `خطأ الـtimeout مش قابل للتتبع: ${hung.error}`);
+  assert.ok(Date.now() - t0 < 5_000, `الـdeadline اشتغل متأخر (${Date.now() - t0}ms)`);
+  const okRes = await runner.withDeadline(Promise.resolve(7), 500, "k");
+  assert.equal(okRes.ok, true, "وعد ناجح اترفض");
+  assert.equal(okRes.value, 7);
+  const rejected = await runner.withDeadline(Promise.reject(new Error("boom")), 500, "k");
+  assert.equal(rejected.ok, false, "الرفض اتحوّل لنجاح");
+  assert.match(rejected.error ?? "", /boom/, "رسالة الرفض ضاعت");
+  // مقيس في CI (21:41Z): سقف بيوطّي عن budgetMs قطع tools.nuclei في النص — فاللازمة دي
+  // مش زينة: كل kind لازم يسقفه الخارجي يفضل ≥ ميزانيته المعلنة، والميزانية من مصدر واحد.
+  const tools = await import(path.join(SRC, "tools.ts"));
+  for (const id of Object.keys(tools.KINDS)) {
+    const inner = tools.kindDeadlineMs(id, 180_000);
+    assert.ok(inner + 15_000 >= inner, `سقف ${id} أقل من ميزانيته`);
+    if (id === "tools.nuclei") assert.equal(inner, 540_000, `ميزانية nuclei اتغيّرت: ${inner}`);
+  }
+  assert.ok(tools.kindDeadlineMs("recon.headers", 180_000) === 180_000, "kind بلا budgetMs فقد ميزانيته الافتراضية");
+  assert.ok(/kindDeadlineMs\(task\.kind/.test(fs.readFileSync(path.join(SRC, "runner.ts"), "utf8")), "runner مابيقراش ساعة الـkind — السقف الخارجي هيقطع scan طويل");
+  assert.ok(!/Math\.max\(5_000, Math\.min\(Number\(ctx\.timeoutMs\)/.test(fs.readFileSync(path.join(SRC, "runner.ts"), "utf8")), "رجع السقف المستقل عن ميزانية الـkind");
+  const toolsSrc = fs.readFileSync(path.join(SRC, "tools.ts"), "utf8");
+  const uses = (toolsSrc.match(/kindDeadlineMs\(kind\.id, ctx\.timeoutMs\)/g) || []).length;
+  assert.ok(uses >= 2, `الميزانية متكررة مش موحّدة في tools.ts (${uses} استعمال) — انزلها في مكان واحد`);
+  const src = fs.readFileSync(path.join(SRC, "runner.ts"), "utf8");
+  assert.ok(/withDeadline\(runKind\(/.test(src), "runKind مش متلفّع بسقف — نفس التعليق بيرجع أول ما probe يعلق");
+  // الجوبز اللي بتتسجّل لازم تستمر تُقرأ بعد timeout: مافيش حالة «for good»
+  assert.ok(/task-timeout/.test(src), "مافيش اسم خطأ ثابت للـtimeout — مابتقاسش في التقارير");
+});
+
+await tA("hunt surface: المسارات الستة + التوأم + الواجهة — موصولين بحروفهم", async () => {
+  const routes = fs.readFileSync(path.resolve(ROOT0, "artifacts/api-server/src/routes/ops.ts"), "utf8");
+  for (const p of ["/ops/findings/status", "/ops/findings/sync", "/ops/findings/:key/report-draft", "/ops/findings", "/ops/hunt/candidates", "/ops/hunt/plan"]) {
+    assert.ok(routes.includes(`"${p}"`), `المسار ${p} مسجّلش في routes/ops.ts`);
+  }
+  assert.ok(/router\.post\("\/ops\/findings\/sync"/.test(routes), "زامِن الخزانة مش POST — الكتابة لازم تبقى مكتوبة");
+  assert.ok(/error === "not-found" \? 404 : 409/.test(routes), "الرفض مش بيتفرّق بين «مافيش بالمفتاح» (404) و«مثبتش» (409) — الواجهة هتعرض رسالة غلط");
+  const twin = fs.readFileSync(path.resolve(ROOT0, "artifacts/kali-panel/src/lib/standalone-api.ts"), "utf8");
+  for (const p of ["/ops/findings/status", "/ops/findings", "/ops/hunt/candidates", "/ops/hunt/plan"]) {
+    assert.ok(twin.includes(`"${p}"`), `التوأم الثابت مابيعرفش ${p} — صفحة مكسورة على Pages`);
+  }
+  assert.ok(/reasonAr/.test(twin), "التوأم بيرفّض من غير سبب — المستخدم هيشوف سكرين فاضي");
+  const brain = fs.readFileSync(path.resolve(ROOT0, "artifacts/kali-panel/src/components/desktop/NovaBrainOps.tsx"), "utf8");
+  for (const p of ["/ops/hunt/candidates", "/ops/findings/status", "/ops/findings/sync", "/ops/findings?limit", "/ops/hunt/plan", "report-draft"]) {
+    assert.ok(brain.includes(p), `سطح الصيد مابيسألش على ${p}`);
+  }
+  assert.ok(/NovaHuntSurface/.test(brain), "مافيش مكوّن سطح الصيد");
+  const page = fs.readFileSync(path.resolve(ROOT0, "artifacts/kali-panel/src/pages/NovaFleetUnified.tsx"), "utf8");
+  assert.ok(/<NovaHuntSurface\s*\/>/.test(page), "سطح الصيد محطوطش في صفحة الأسطول — يبقى كلام على ورق");
+});
+
+t("hunt surface census: الملفات اللي بتسأل المحرك ما بتقلّش", () => {
+  const roots = ["src/lib", "src/components", "src/pages"];
+  const base = path.resolve(ROOT0, "artifacts/kali-panel");
+  const files = [];
+  const eps = new Set();
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(path.join(base, dir), { withFileTypes: true })) {
+      const full = path.join(base, dir, e.name);
+      if (e.isDirectory()) { walk(path.join(dir, e.name)); continue; }
+      if (!/\.tsx?$/.test(e.name)) continue;
+      const txt = fs.readFileSync(full, "utf8");
+      if (!/opsFetch\(|opsText\(|\$\{API\}\/ops\/|["'`]\/api\/ops\//.test(txt)) continue;
+      files.push(full.replace(`${base}/`, ""));
+      for (const m of txt.matchAll(/["'`]\/?(?:api\/)?ops\/[a-z0-9/_-]+/g)) eps.add(m[0].replace(/^["'`]/, "").replace(/^\/?api\//, "/"));
+    }
+  };
+  for (const d of roots) if (fs.existsSync(path.join(base, d))) walk(d);
+  const FILES_FLOOR = 3; // مقيس 2026-11-03 بالنمط ده: NovaBrainOps + awareness + ops-client
+  const EPS_FLOOR = 13; // مقيس بنفس النمط: 6 منها بتاعة سطح الصيد (findings×4 + hunt×2)
+  assert.ok(files.length >= FILES_FLOOR, `ملفات بقت بتسأل المحرك أقل من الأرضية: ${files.length} < ${FILES_FLOOR} (${files.join(", ")})`);
+  assert.ok(eps.size >= EPS_FLOOR, `عدد مسارات ops اللي الواجهة بتسأل عليها نزل: ${eps.size} < ${EPS_FLOOR}`);
+  console.log(`      · ${files.length} ملف بيسأل المحرك · ${eps.size} مسار: ${[...eps].sort().join(" ")}`);
+});
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log("────────────────────");
 console.log(`${passed} passed · ${failed} failed`);
