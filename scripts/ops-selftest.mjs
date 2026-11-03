@@ -287,13 +287,28 @@ await tA("a tool found by the finder is also SPAWNED by the runner (vendor/bin o
     // وسطر `command` المعروض كان بيقول `medium,high,critical` وهو بيشتغل بـ4 — يعني التقرير
     // بيكذب في التفصيلة اللي بيتبني عليها القرار.
     {
-      const argvArr = kinds.KINDS["tools.nuclei"].args({ host: "x", scheme: "https", program, rps: 1 }, {});
+      // البروفيل بقى محسوب على إحصاء حقيقي، فالمطلوب مش «قاومة سيّبات ثابتة»: المطلوب إن
+      // اللي بيتنفّذ هو نفسه اللي بيتطبع، وإن الحساب اللي بنبرر بيه الميزانية يفضل صحيحًا.
+      const ctxN = { host: "x", scheme: "https", program, rps: 4 };
+      const argvArr = kinds.KINDS["tools.nuclei"].args(ctxN, {});
+      const shown = String(kinds.KINDS["tools.nuclei"].command(ctxN, {}));
       const sevIdx = argvArr.indexOf("-severity");
       assert.ok(sevIdx >= 0, "nuclei must pass -severity explicitly");
-      assert.equal(String(argvArr[sevIdx + 1]), "medium,high,critical", "nuclei default severities must be medium,high,critical (no low in a job budget)");
-      const shown = String(kinds.KINDS["tools.nuclei"].command({ host: "x", scheme: "https", program, rps: 1 }, {}));
-      assert.ok(shown.includes("medium,high,critical"), "the printed command must match the real argv");
-      assert.ok(!shown.includes("-json "), "nuclei has no -json flag — the printed command must not invent one");
+      const sev = String(argvArr[sevIdx + 1]);
+      assert.ok(shown.includes(sev), `السطر المطبوع بيقول سيّبات غير اللي اتنفّذ: «${sev}» ↔ ${shown}`);
+      for (const flag of ["-jsonl", "-type", "-tags", "-rl", "-no-interactsh", "-stats", "-timeout", "-retries"]) {
+        if (argvArr.includes(flag)) assert.ok(shown.includes(flag), `«${flag}» متنفّذ ومش مطبوع — التقرير بيخبي علمًا`);
+      }
+      assert.ok(!sev.split(",").includes("low"), "low مش جوّه بروفيل بيشتغل في ميزانية مهمة");
+      const rl = Number(argvArr[argvArr.indexOf("-rl") + 1]);
+      assert.equal(rl, 4, "-rl لازم ييجي من سقف البرنامج بالحرف (ممنوع الأداة تعدّيه)");
+      assert.ok(rl <= Math.max(1, Math.round(ctxN.rps)), `nuclei -rl (${rl}) فوق سقف البرنامج (${ctxN.rps})`);
+      const prof = kinds.NUCLEI_PROFILES["first-pass"];
+      const budget = Number(kinds.KINDS["tools.nuclei"].budgetMs);
+      const etaS = Math.ceil(prof.templates / 4);
+      assert.ok(etaS * 1000 <= budget, `أول تمريرة (${prof.templates} قالب ≈ ${etaS}s عند rl=4) برّه ميزانية ${budget / 1000}s — ضيّق التاغات أو ارفع السقف، مش ترويّط بس`);
+      assert.ok(kinds.NUCLEI_PROFILES.full.templates > prof.templates, "بروفيل full لازم يفضل أوسع من first-pass");
+      assert.ok(shown.includes("-no-interactsh"), "first-pass بلا قوالب OAST — متنفّذش بلا ما يتقال في التقرير");
     }
     assert.ok(Number(kinds.KINDS["tools.httpx"].budgetMs) > 0, "httpx needs its own budget so it cannot eat the job");
     assert.ok(Number(kinds.KINDS["tools.nuclei"].budgetMs) >= 240_000, "nuclei needs minutes, not the job default");
@@ -355,7 +370,7 @@ await tA("bare domain becomes a passive-only program", async () => {
   assert.ok(discovered.registered, "register:true must write the registry");
   assert.equal(discovered.program.passive_only, true, "discovery must never enable active probing by default");
   assert.ok(discovered.program.hosts.includes("*.lab.example"));
-  assert.equal(discovered.program.max_rps, 1, "free hosts need a sane default rate");
+  assert.equal(discovered.program.max_rps, 4, "السقف الافتراضي لازم يخلي أول تمريرة نوكلي تخلص (1,034 قالب ÷ 4rps ≈ 258s < 540s)");
 });
 t("admin/staging names are excluded even under the wildcard", () => {
   for (const bad of ["admin.lab.example", "staging.lab.example", "internal.lab.example", "vpn.lab.example"]) {

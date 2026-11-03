@@ -567,7 +567,10 @@ export async function discoverProgram(
     platform: platform ?? bounty?.platform,
     hosts: [...hosts],
     out_of_scope: [...out],
-    max_rps: 1,
+    // 4 req/s = السقف اللي بيخلي أول تمريرة نوكلي (1,034 قالب مقاسة) تخلص في ~258s جوّه
+    // ميزانية 540s. قبل كده كان 1: عند rl=1 نفس القايمة بتحتاج 17 دقيقة — أي إن الافتراضي
+    // كان مضمون إنه يقطع. المشغّل لسه يحرّك السقف في [0.2, 20]، والـtool مابيتعدّاش عليه.
+    max_rps: 4,
     max_concurrency: 2,
     // active probing is only ever on with the verbatim consent sentence
     passive_only: !consentOk,
