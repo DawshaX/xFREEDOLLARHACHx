@@ -63,6 +63,7 @@ if (needsFlag && process.env.OPS_SELFTEST_CHILD !== "1") {
   process.exit(r.status ?? 1);
 }
 
+const ROOT0 = path.resolve(import.meta.dirname, "..");
 const SRC = path.resolve(import.meta.dirname, "../artifacts/api-server/src/lib/ops");
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nova-selftest-"));
 process.env.NOVA_PROGRAMS_FILE = path.join(tmp, "programs.json");
@@ -286,13 +287,28 @@ await tA("a tool found by the finder is also SPAWNED by the runner (vendor/bin o
     // وسطر `command` المعروض كان بيقول `medium,high,critical` وهو بيشتغل بـ4 — يعني التقرير
     // بيكذب في التفصيلة اللي بيتبني عليها القرار.
     {
-      const argvArr = kinds.KINDS["tools.nuclei"].args({ host: "x", scheme: "https", program, rps: 1 }, {});
+      // البروفيل بقى محسوب على إحصاء حقيقي، فالمطلوب مش «قاومة سيّبات ثابتة»: المطلوب إن
+      // اللي بيتنفّذ هو نفسه اللي بيتطبع، وإن الحساب اللي بنبرر بيه الميزانية يفضل صحيحًا.
+      const ctxN = { host: "x", scheme: "https", program, rps: 4 };
+      const argvArr = kinds.KINDS["tools.nuclei"].args(ctxN, {});
+      const shown = String(kinds.KINDS["tools.nuclei"].command(ctxN, {}));
       const sevIdx = argvArr.indexOf("-severity");
       assert.ok(sevIdx >= 0, "nuclei must pass -severity explicitly");
-      assert.equal(String(argvArr[sevIdx + 1]), "medium,high,critical", "nuclei default severities must be medium,high,critical (no low in a job budget)");
-      const shown = String(kinds.KINDS["tools.nuclei"].command({ host: "x", scheme: "https", program, rps: 1 }, {}));
-      assert.ok(shown.includes("medium,high,critical"), "the printed command must match the real argv");
-      assert.ok(!shown.includes("-json "), "nuclei has no -json flag — the printed command must not invent one");
+      const sev = String(argvArr[sevIdx + 1]);
+      assert.ok(shown.includes(sev), `السطر المطبوع بيقول سيّبات غير اللي اتنفّذ: «${sev}» ↔ ${shown}`);
+      for (const flag of ["-jsonl", "-type", "-tags", "-rl", "-no-interactsh", "-stats", "-timeout", "-retries"]) {
+        if (argvArr.includes(flag)) assert.ok(shown.includes(flag), `«${flag}» متنفّذ ومش مطبوع — التقرير بيخبي علمًا`);
+      }
+      assert.ok(!sev.split(",").includes("low"), "low مش جوّه بروفيل بيشتغل في ميزانية مهمة");
+      const rl = Number(argvArr[argvArr.indexOf("-rl") + 1]);
+      assert.equal(rl, 4, "-rl لازم ييجي من سقف البرنامج بالحرف (ممنوع الأداة تعدّيه)");
+      assert.ok(rl <= Math.max(1, Math.round(ctxN.rps)), `nuclei -rl (${rl}) فوق سقف البرنامج (${ctxN.rps})`);
+      const prof = kinds.NUCLEI_PROFILES["first-pass"];
+      const budget = Number(kinds.KINDS["tools.nuclei"].budgetMs);
+      const etaS = Math.ceil(prof.templates / 4);
+      assert.ok(etaS * 1000 <= budget, `أول تمريرة (${prof.templates} قالب ≈ ${etaS}s عند rl=4) برّه ميزانية ${budget / 1000}s — ضيّق التاغات أو ارفع السقف، مش ترويّط بس`);
+      assert.ok(kinds.NUCLEI_PROFILES.full.templates > prof.templates, "بروفيل full لازم يفضل أوسع من first-pass");
+      assert.ok(shown.includes("-no-interactsh"), "first-pass بلا قوالب OAST — متنفّذش بلا ما يتقال في التقرير");
     }
     assert.ok(Number(kinds.KINDS["tools.httpx"].budgetMs) > 0, "httpx needs its own budget so it cannot eat the job");
     assert.ok(Number(kinds.KINDS["tools.nuclei"].budgetMs) >= 240_000, "nuclei needs minutes, not the job default");
@@ -354,7 +370,7 @@ await tA("bare domain becomes a passive-only program", async () => {
   assert.ok(discovered.registered, "register:true must write the registry");
   assert.equal(discovered.program.passive_only, true, "discovery must never enable active probing by default");
   assert.ok(discovered.program.hosts.includes("*.lab.example"));
-  assert.equal(discovered.program.max_rps, 1, "free hosts need a sane default rate");
+  assert.equal(discovered.program.max_rps, 4, "السقف الافتراضي لازم يخلي أول تمريرة نوكلي تخلص (1,034 قالب ÷ 4rps ≈ 258s < 540s)");
 });
 t("admin/staging names are excluded even under the wildcard", () => {
   for (const bad of ["admin.lab.example", "staging.lab.example", "internal.lab.example", "vpn.lab.example"]) {
@@ -422,6 +438,170 @@ await tA("the bounty catalog is measured data and never a permission slip", asyn
 });
 
 globalThis.fetch = realFetch;
+
+// ── كتالوج برامج الـbug bounty: المطابقة، الكاش، و«مفيش إذن اتسرّب» ────────────
+await tA("bounty catalog scores matches and cannot grant permission", async () => {
+  const bc = await import(path.join(SRC, "bounty-catalog.ts"));
+  const catFile = path.join(tmp, "catalog.json");
+  const stat0 = () => bc.catalogStatus();
+  process.env.NOVA_BOUNTY_CATALOG = catFile;
+
+  t("catalog: ملف مقفول = present:false ومفيش مطابقة", () => {
+    assert.equal(stat0().present, false);
+    assert.equal(bc.lookupBountyProgram("example.com"), null);
+    assert.equal(bc.lookupBountyProgram(""), null);
+    assert.equal(bc.lookupBountyProgram("nodots"), null);
+  });
+
+  const programs = [
+    { handle: "alpha", name: "Alpha", platform: "hackerone", url: "https://hackerone.com/alpha", bounties: true, domains: ["example.com"], wildcards: [], urls: [], consented: false, mode: "passive_only" },
+    { handle: "evil-twin", name: "Evil", platform: "bugcrowd", url: "https://bugcrowd.com/evil", bounties: false, paused: true, submission_state: "closed", response_efficiency: 12, max_payout_usd: 500, domains: ["example.com"], consented: true, mode: "passive_only" },
+    { handle: "beta", name: "Beta", platform: "hackerone", url: "https://hackerone.com/beta", wildcards: ["*.shop.example.net"], domains: [] },
+    { handle: "gamma", name: "Gamma", platform: "custom", url: "https://gamma.test/policy", urls: ["https://bugs.pay.example.org/scope"] },
+    { handle: "delta", name: "Delta", platform: "intigriti", url: "https://intigriti.eu/delta", wildcards: ["*.apex.test"] },
+  ];
+  fs.writeFileSync(catFile, JSON.stringify({ schema: "cybernova.bounty-catalog/1", fetched_at: "2026-01-01T00:00:00.000Z", counts: { programs: programs.length, bounty_programs: 1 }, programs }));
+
+  t("catalog: نطاق صريح > غير، وأول صاحب بياخد التعادل", () => {
+    const m = bc.lookupBountyProgram("example.com");
+    assert.ok(m, "مفيش مطابقة");
+    assert.equal(m.handle, "alpha");
+    assert.equal(m.matched_kind, "domain");
+    assert.equal(m.bounties, true);
+  });
+  t("catalog: wildcard على الأب بيترجّح على مفيش، وأضعف من نطاق صريح", () => {
+    const sub = bc.lookupBountyProgram("a.b.shop.example.net");
+    assert.equal(sub.handle, "beta");
+    assert.equal(sub.matched_kind, "wildcard");
+    assert.equal(sub.matched_on, "shop.example.net");
+    const apex = bc.lookupBountyProgram("apex.test");
+    assert.equal(apex.handle, "delta");
+    assert.equal(apex.matched_kind, "wildcard_apex");
+    assert.equal(bc.lookupBountyProgram("x.apex.test").matched_kind, "wildcard");
+  });
+  t("catalog: أصل asset من رابط بيقرا الهوست بتاعه", () => {
+    const m = bc.lookupBountyProgram("https://bugs.pay.example.org/login?x=1");
+    assert.equal(m.handle, "gamma");
+    assert.equal(m.matched_kind, "url");
+    assert.equal(m.matched_on, "bugs.pay.example.org");
+  });
+  t("catalog: ذيلْ-النطاق مش كفاية (suffix confusion)", () => {
+    assert.equal(bc.lookupBountyProgram("evil-example.com"), null);
+    assert.equal(bc.lookupBountyProgram("example.com.evil.co"), null);
+    assert.equal(bc.lookupBountyProgram("notexample.com"), null);
+  });
+  t("catalog: مابيرجّعش أي حقل إذن", () => {
+    const m = bc.lookupBountyProgram("example.com");
+    for (const k of ["consented", "passive_only", "mode", "enabled"]) {
+      assert.ok(!(k in m), `الحقل «${k}» سرّب نفسه من الكتالوج`);
+    }
+    assert.equal(m.paused, false, "alpha مش موقوف");
+    assert.equal(bc.lookupBountyProgram("example.com").handle, "alpha", "الأول بيفوز على التعادل");
+    // «evil-twin» موقوف ومقفل الاستقبال — لازم يبان لو هو المختار
+    const only = { handle: "solo", name: "Solo", platform: "hackerone", url: "https://hackerone.com/solo", paused: true, submission_state: "paused", domains: ["solo.test"] };
+    fs.writeFileSync(catFile, JSON.stringify({ programs: [only] }));
+    fs.utimesSync(catFile, new Date(), new Date(Date.now() + 5000));
+    const m2 = bc.lookupBountyProgram("solo.test");
+    assert.equal(m2.paused, true);
+    assert.equal(m2.submission_state, "paused", "حالة الاستقبال بتتقال للتقرير");
+  });
+  t("catalog: الكاش على mtime (كتابة بنفس الوقت = نفس الرد)", () => {
+    const st = fs.statSync(catFile);
+    const other = { handle: "other", name: "Other", platform: "hackerone", url: "https://hackerone.com/other", domains: ["solo.test"] };
+    fs.writeFileSync(catFile, JSON.stringify({ programs: [other] }));
+    fs.utimesSync(catFile, st.atime, st.mtime); // نفس الـmtime بالظبط
+    assert.equal(bc.lookupBountyProgram("solo.test").handle, "solo", "لازم الكاش يردّ بالقديم");
+    fs.utimesSync(catFile, st.atime, new Date(st.mtimeMs + 10_000));
+    assert.equal(bc.lookupBountyProgram("solo.test").handle, "other", "mtime اتغيّر = إعادة قراءة");
+  });
+  t("catalog: scope.ts بيغني بيّه ومش بياخد منه إذن", () => {
+    const srcTxt = fs.readFileSync(path.join(SRC, "scope.ts"), "utf8");
+    assert.ok(/import \{ lookupBountyProgram, catalogStatus \} from "\.\/bounty-catalog"/.test(srcTxt), "الاستيراد مش موجود");
+    assert.ok(/bounty_program: bountyEvidence/.test(srcTxt), "المطابقة مش بتتسجل في الـevidence");
+    assert.ok(/catalog: \{ present: cat\.present/.test(srcTxt), "حالة الكتالوج مش بتتسجل — «مفيش برنامج» هتتب读رها غلط".replace("读","قرا"));
+    assert.ok(!/passive_only:[^\n]*(bounty|catalog)/i.test(srcTxt), "الكتالوج بيرجّع passive_only — ممنوع");
+    // داخل discoverProgram نفسه (مش أي سطر تاني في الملف): الوضع السلبي = ¬الإذن بالحرف
+    const di = srcTxt.indexOf("export async function discoverProgram");
+    assert.ok(di > 0, "مفيش discoverProgram");
+    const dn = srcTxt.indexOf("\nexport ", di + 10);
+    const disc = srcTxt.slice(di, dn > 0 ? dn : undefined);
+    assert.ok(/passive_only: !consentOk,/.test(disc), "discoverProgram مابقاش بيحدد passive_only من الإذن المكتوب");
+    assert.ok(!/Boolean\(input/.test(disc), "discoverProgram بقى بيقبل passive_only من المُدخل — مصدر واحد للحقيقة اتكسر");
+    assert.ok(/consentOk = [^\n]*i have written permission for/.test(disc), "جملة الإذن اتغيّرت — لازم النص بالحرف");
+    assert.ok(srcTxt.includes("program_discover") && /activate = "I have written permission for/.test(srcTxt), "رسالة بوابة التفعيل ات失ت".replace("失","فقدها"));
+    const routesTxt = fs.readFileSync(path.join(SRC, "../../routes/ops.ts"), "utf8");
+    assert.ok(routesTxt.includes('"/ops/bounty/catalog"'), "المسار /ops/bounty/catalog مش مسجّل");
+  });
+  t("catalog: البيانات المنشورة نفسها مش بتدي إذن لأحد", () => {
+    const file = path.resolve(ROOT0, "ops/bounty/programs-catalog.json");
+    if (!fs.existsSync(file)) { console.log("      · الكتالوج مش في الشجرة (اتولّد في CI) — تم تخطي الفحص الحي"); return; }
+    const raw = JSON.parse(fs.readFileSync(file, "utf8"));
+    assert.ok(Array.isArray(raw.programs) && raw.programs.length > 300, `عدد البرامج معقولش: ${raw.programs?.length}`);
+    for (const p of raw.programs) {
+      assert.equal(p.consented, false, `«${p.handle}» اتعلّم عليه إذن في الكتالوج`);
+      assert.equal(p.mode, "passive_only", `«${p.handle}» مش على الوضع السلبي`);
+    }
+    const ageDays = (Date.now() - Date.parse(raw.fetched_at)) / 86_400_000;
+    assert.ok(ageDays < 30, `الكتالوجold — ${ageDays.toFixed(1)} يوم: شغّل bounty-catalog.yml`
+      .replace("old", "عتيق"));
+    delete process.env.NOVA_BOUNTY_CATALOG; // نرجع لمسار الشجرة عشان نفحص المطابقة على البيانات الحقيقية
+    const claimed = new Map();
+    for (const p of raw.programs) for (const d of p.domains || []) {
+      if (!claimed.has(d)) claimed.set(d, new Set());
+      claimed.get(d).add(p.handle);
+    }
+    const picks = [...claimed.keys()].sort((a, b) => (b.length - a.length) - (a.length - a.length)).slice(0, 8);
+    for (const d of picks) {
+      const m = bc.lookupBountyProgram(d);
+      assert.ok(m, `مافيش مطابقة على ${d} وهو مكتوب في الكتالوج`);
+      assert.ok(claimed.get(d).has(m.handle), `«${m.handle}» مش من أصحاب ${d}`);
+      assert.ok(m.url.startsWith("https://"), `رابط سياسة مش https لـ${m.handle}`);
+    }
+    assert.ok(picks.length >= 5, `عيّنة صغيرة أوي: ${picks.length}`);
+  });
+});
+
+// ── تسجيل المسارات لازم يكون في المستوى العالي (عطل حقيقي حصل في /ops/bounty/catalog) ──
+await tA("no ops route is registered inside another handler", async () => {
+  let ts;
+  try {
+    ts = await import("typescript");
+  } catch {
+    assert.fail("مافيش typescript للتأكد من بنية التسجيل — شغّل pnpm install");
+  }
+  const TS = ts.default ?? ts;
+  const dir = path.resolve(ROOT0, "artifacts/api-server/src/routes");
+  const files = fs.readdirSync(dir).filter((x) => x.endsWith(".ts"));
+  const VERBS = new Set(["get", "post", "put", "patch", "delete", "all", "use"]);
+  let routes = 0;
+  const routePath = (node) => {
+    const arg = node.arguments[0];
+    return arg ? arg.getText().slice(0, 40) : "?";
+  };
+  for (const file of files) {
+    const text = fs.readFileSync(path.join(dir, file), "utf8");
+    const src = TS.createSourceFile(file, text, TS.ScriptTarget.ESNext, true);
+    const isRouteCall = (n) =>
+      TS.isCallExpression(n) &&
+      TS.isPropertyAccessExpression(n.expression) &&
+      n.expression.expression.getText(src) === "router" &&
+      VERBS.has(n.expression.name.getText(src));
+    (function walk(node, insideOf) {
+      let mark = insideOf;
+      if (isRouteCall(node)) {
+        if (mark) {
+          const ln = src.getLineAndCharacterOfPosition(node.getStart(src)).line + 1;
+          assert.fail(`${file}:${ln} — «${routePath(node)}» متسجّل جوّه handler بتاع «${mark}»: الراوتر بيسجّله بس بعد أول طلب يلمس ${mark}، فقبل كده الرد no_such_endpoint`);
+        }
+        routes++;
+        mark = routePath(node); // أي دالة جوّه الـcall دي هي الـhandler بتاع المسار ده
+      }
+      node.forEachChild((c) => walk(c, mark));
+    })(src, null);
+  }
+  assert.ok(routes >= 200, `AST لقى ${routes} تسجيل راوتر بس — أداة التحليل مش بتقرأ الصح`);
+  console.log(`      · ${routes} تسجيل راوتر في ${files.length} ملف، مافيش واحد متخبي جوه handler`);
+});
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log("────────────────────");

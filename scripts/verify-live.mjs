@@ -343,6 +343,41 @@ async function engineChecks(cfg) {
   add("engine", "kinds report tool presence", present.length ? "pass" : "fail",
     `${present.length} نوع شغال على النود: ${present.join(", ") || "ولا واحد"}${kinds.body?.standalone ? " (STANDALONE MOCK — الباندل مغطي التنفيذ!)" : ""}`);
 
+  // ── كتالوج البرامج: ملف → موديول → مسار HTTP. بنقيس السلسلة دي مش بنفترضها، لأن
+  // «مافيش أهداف» كان السبب الحقيقي إن المحرك يفضل يبدأ من صفر كل مرة.
+  let catDomain = null;
+  let catDomainHandle = null;
+  try {
+    const raw = JSON.parse(fs.readFileSync("ops/bounty/programs-catalog.json", "utf8"));
+    const hit = (raw.programs || []).find((p) => (p.domains || []).length);
+    catDomain = hit?.domains?.[0] || null;
+    catDomainHandle = hit?.handle || null;
+  } catch { /* مش في cwd — الصف الجاي هيقول السبب بدل ما يسكت */ }
+  const catRes = await api("/ops/bounty/catalog");
+  const catBody = catRes.body || {};
+  if (!catRes.ok || catBody.error === "no_such_endpoint") {
+    add("engine", "bounty catalog endpoint", "fail",
+      `GET ${ENGINE}/ops/bounty/catalog → HTTP ${catRes.status} · ${short(catRes.text, 110)} — المسار ده هو اللي بيوصّل المحرك بالكتالوج`);
+  } else {
+    const ageD = catBody.fetchedAt ? (Date.now() - Date.parse(catBody.fetchedAt)) / 86_400_000 : null;
+    const fresh = ageD != null && ageD <= 21; // bounty-catalog.yml أسبوعي — 21 يوم = أسبوع ضايع + هامش
+    add("engine", "bounty catalog served", catBody.present && catBody.programs > 300 && fresh ? "pass" : "fail",
+      `${catBody.programs} برنامج (${catBody.bountyPrograms} بمكافأة) · آخر تحديث ${ageD == null ? "مفيش" : `${ageD.toFixed(1)} يوم`} · ${catBody.path}` +
+      (fresh ? "" : ` — bounty-catalog.yml ما حدّثش من ${ageD == null ? "؟" : ageD.toFixed(0)} يوم`));
+    const look = await api(`/ops/bounty/catalog?host=${encodeURIComponent(catDomain || "example.com")}`);
+    if (!catDomain) {
+      add("engine", "catalog lookup over HTTP", "review", `ops/bounty/programs-catalog.json مش في cwd (${process.cwd()}) — مفيش نطاق نجربه`);
+    } else if (!look.ok || !look.body?.match) {
+      add("engine", "catalog lookup over HTTP", "fail",
+        `?host=${catDomain} (مكتوب في الكتالوج تحت «${catDomainHandle}») → match=${short(JSON.stringify(look.body?.match), 60)} · HTTP ${look.status}`);
+    } else {
+      const m = look.body.match;
+      const neg = await api("/ops/bounty/catalog?host=no-bounty-target-zzz9k.invalid");
+      add("engine", "catalog lookup over HTTP", neg.ok && neg.body?.match === null ? "pass" : "fail",
+        `${catDomain} → ${m.platform}:${m.handle} (${m.matched_kind}${m.submission_state ? ` · استقبال ${m.submission_state}` : ""}) · ونطاق مجهول → match:null`);
+    }
+  }
+
   // The spine is exercised on the HTTPS-capable host when there is one: recon.tls and
   // recon.headers on an HTTP-only box fail for the target's reason, not ours, and a report
   // full of honest "unreachable" rows teaches nothing about the chain.

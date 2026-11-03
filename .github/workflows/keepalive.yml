@@ -78,6 +78,14 @@ jobs:
           age_h=$(( (now - then) / 3600 ))
           echo "آخر قياس منشور: $line · العمر ${age_h}h"
           if [ "$age_h" -ge 9 ]; then
+            # الحارس بيشتغل كل 10 دقايق، والقياس نفسه بياخد ~15 دقيقة — من غير الفحص ده كل دورة
+            # هترمي موجة جديدة والطابور يتعمّر بشغلات مكرّرة (وكلها راينرات مدفوعة بالحد المجاني).
+            already=$(gh api "repos/$repo/actions/runs?status=in_progress&per_page=30" --jq '[.workflow_runs[] | select(.name | startswith("live verify"))] | length' 2>/dev/null || echo 0)
+            queued=$(gh api "repos/$repo/actions/runs?status=queued&per_page=30" --jq '[.workflow_runs[] | select(.name | startswith("live verify"))] | length' 2>/dev/null || echo 0)
+            if [ "${already:-0}" != "0" ] || [ "${queued:-0}" != "0" ]; then
+              echo "قياس شغال أصلًا (in_progress=${already:-0} · queued=${queued:-0}) — مفيش داعي لموجة تانية"
+              exit 0
+            fi
             echo "القياس اتأخر 9 ساعات+ — بطلب live-verify دلوقتي"
             if gh api -X POST "repos/$repo/actions/workflows/live-verify.yml/dispatches" -f ref="$GITHUB_REF_NAME" 2>/tmp/d.err; then
               echo "✓ اتبعت الطلب (${age_h}h stale)"

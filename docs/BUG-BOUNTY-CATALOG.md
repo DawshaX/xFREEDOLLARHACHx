@@ -28,7 +28,7 @@ node scripts/sync-bounty-programs.mjs                    # تنزيل + تولي
 node scripts/sync-bounty-programs.mjs --check            # مقارنة بالمتتبّع + حراسة الانكماش (>30% = فشل)
 node scripts/sync-bounty-programs.mjs --from-file x.json # شغل أوفلاين (للتجربة والصناديق المقفولة)
 node scripts/sync-bounty-programs.mjs --print --compact  # للمواسير
-node scripts/ops-selftest.mjs                            # 37 حالة، منها حالة الكتالوج
+node scripts/ops-selftest.mjs                            # 49 حالة، منها 9 حالات للكتالوج
 ```
 
 ## قرارات شكل البيانات (مقاسة على الردود، مش متخيَّلة)
@@ -42,7 +42,41 @@ node scripts/ops-selftest.mjs                            # 37 حالة، منه�
 - `out_of_scope` مش بيتقري خالص: اللي برّه النطاق برّه، حتى لو كان أسهل للـscanner.
 - الشبكة في الصناديق المقفولة: `fetch` بيفشل وcurl بينجح — السكربت بيسقط لـcurl تلقائيًا (مقاس هنا).
 
+## المحرك بيقرا الكتالوج فعلًا (2026-11-03)
+`program_discover` بقى بيغنّي نفسه من الكتالوج قبل ما يرد. القياس على محرك شغال (`node dist/index.mjs`،
+بلا database، زي ما CI بيشتغل):
+
+```
+POST /api/ops/programs/discover {"target":"aces-dev.wnba.com"}
+  program.name        "NBA Public Bug Bounty"        ← كان «hackerone:aces-dev.wnba.com» أو النطاق
+  program.policy_url  https://hackerone.com/nba-public ← كان null لأن مافيش security.txt
+  program.passive_only true                          ← ماتبدلش: الإذن لسه الجملة بالحرف
+  evidence.bounty_program {handle:"nba-public", matched_on:"aces-dev.wnba.com",
+                           matched_kind:"domain", submission_state:"open", response_efficiency:84}
+  evidence.catalog {present:true, programs:746, fetchedAt:"2026-11-02T17:25:01.547Z"}
+```
+
+- **`GET /api/ops/bounty/catalog`** — حالة الكتالوج (موجود؟ كام برنامج؟ وإمتى آخر تحديث؟)
+  و`?host=example.com` بيرجّع المطابقة نفسها أو `match:null`. مقاس الآن: `746 برنامج (511 بمكافأة)`.
+- **قواعد المطابقة** (`artifacts/api-server/src/lib/ops/bounty-catalog.ts`): نطاق صريح (1000) >
+  wildcard على أبوّتنا (100) > أبوعلى الـwildcard (90) > أصل `URL` (80). الذيل لوحده ما بيكفيش:
+  `evil-example.com` **مابيطابقش** `example.com` — وده مقس في `ops-selftest`.
+- **`matched_kind:"wildcard_apex"`** = إحنا على `example.com` واللي في الكتالوج `*.example.com`.
+  دي أضعف بدرجة مقصودة، و`discoverProgram` بيحذّر نصًا: النطاق الأب غالبًا برّه الـscope.
+  الـscanner ما بيوسّعش نفسه من الكتالوج أبدًا — الـhosts بتيجي من الهدف المدخل بس.
+- **`submission_state` / `paused`** بيترجموا لتحذير «البرنامج مقفول الاستقبال — استطلاع لحد ما يفتح»،
+  عشان ما نبنيش خطة على برنامج بعتله يوم السبت ومالوش قارئ.
+- **الكتالوج مش إذن — وده بنيوي لا لفظي**: `lookupBountyProgram` بترجّع كائن مافيهوش `consented`/`passive_only`/
+  `mode` خالص، و`ops-selftest` بيفشل لو أي حقل منهم تسرّب. وفي `programs-catalog.json` كل الـ746
+  `consented:false / mode:"passive_only"` — الحالة دي بتتفحص سطر سطر في الاختبار.
+- **طزاجة**: `ops-selftest` بيفشل لو `fetched_at` أقدم من 30 يوم، وحلقة `live-verify` بتدي **فشل**
+  لو أقدم من 21 يوم (الجدول أسبوعي) — مش تحذير أدبي. المسار بيتحلّق من `cwd` لفوق، و
+  `NOVA_BOUNTY_CATALOG=<path>` بيتoverride للتستات والاختبارات المعزولة.
+- **IP/CIDR**: `ips`/`cidrs` موجودة في الكتالوج (1594 wildcard + نطاقات) بس **مقروءة للعرض بس** —
+  `scope_check` لسه ما بيقبولش نطاق من نوع CIDR من الكتالوج. لو احتجنا hunt على شبكة كاملة، دي
+  الخطوة الجاية، ومحتاجة gate خاص بيها مش enrichment.
+
 ## اللي لسه
-الكتالوج لسه **مقطوع عن المحرك**: `suggestPlan` و`program_discover` ما بيقرأوهوش. الخطوة الجاية إن
-`program_discover("slack.com")` يجيب الـpolicy link والـsafe-harbor من الكتالوج بدل ما يكتفي
-بالنطاق — ومحتاجة حالة `ops-selftest` جديدة + سطر في تقرير `live-verify`، مش مجرد idea في الـdocs.
+- قراية `ips`/`cidrs` في `scope_check` (فوق).
+- الطبقة دي كلها على السيرفر (المحرك). على Pages مافيش `node:fs`، فالواجهة الثابتة بتفضل
+  تعرض الحالة من `/api/*` للسيرفر نفسه — وده مقصود، مش نقص.

@@ -285,6 +285,59 @@ export function toolStatus(): Array<{ bin: string; present: boolean; where: stri
 
 /* ── the catalogue ────────────────────────────────────────────────────────── */
 
+/* ── نوكلي: البروفيل محسوب على إحصاء حقيقي، مش على تخمين ─────────────────────
+ * الأرقام دي مقاسة على `nuclei-templates/main` (13,858 ملف YAML اتنزّل وفُحص النهارده):
+ *   http = 11,785 · high|critical = 4,416 · فيهم 500 بيستنيوا ردّ interactsh (OAST)
+ *   `-severity medium,high,critical` = 7,885 قالب ≈ 7,885 طلب → عند `-rl 1` = 2 ساعة و11 دقيقة.
+ * يعني ميزانية الـ540s ما كانتش «قصيرة»: القايمة العريضة أكبر بـ8 أضعاف من أي ميزانية معقولة.
+ * `first-pass` = high|critical ∩ (exposure|misconfig|takeover|default-login) ∩ http ∩ ¬OAST
+ *   = 1,034 قالب (نفس الإحصاء) ≈ 258s عند rl=4 — وده اللي بيخلص جوّه الميزانية.
+ * `full` = السلوك العريض القديم، لمَن رفع `max_rps` صراحة على نود يقدر على كده.
+ * `NOVA_NUCLEI_PROFILE=full` أو `params.profile` بيبدّلوا؛ الافتراضي دايمًا أول تمريرة بتكتمل.
+ */
+export const NUCLEI_PROFILES = {
+  "first-pass": { severities: ["high", "critical"], tags: ["exposure", "misconfig", "takeover", "default-login"], oob: false, templates: 1034 },
+  full: { severities: ["medium", "high", "critical"], tags: [] as string[], oob: true, templates: 7885 },
+} as const;
+type NucleiProfile = keyof typeof NUCLEI_PROFILES;
+function nucleiProfileOf(p: Record<string, unknown>): NucleiProfile {
+  const v = String(p["profile"] ?? process.env.NOVA_NUCLEI_PROFILE ?? "first-pass").trim().toLowerCase();
+  return v === "full" || v === "all" ? "full" : "first-pass";
+}
+/** المصدر الوحيد للـargv وللسطر المطبوع — عشان التقرير ما يكذبش على نفسه تاني. */
+function nucleiArgv(ctx: RunCtx, p: Record<string, unknown>): string[] {
+  const prof = NUCLEI_PROFILES[nucleiProfileOf(p)];
+  const sev = ((p["severities"] as string[]) ?? prof.severities).filter(Boolean).join(",");
+  return [
+    "-u", `${baseUrl(ctx)}/`,
+    // `-jsonl` — لنوكلي مافيش `-json`: كان بيخرج 2 بسطر usage، والقاعدة القديمة («طبّع = نجح»)
+    // كانت بتسجّله مهمة مكتملة (مقاس: run 41460859502 بعد ما الـexit code بقى هو الحكم).
+    "-jsonl", "-silent", "-no-color",
+    "-rl", String(Math.max(1, Math.round(ctx.rps))),
+    "-c", String(Math.max(1, ctx.program.max_concurrency ?? 2)),
+    "-severity", sev,
+    "-type", "http",
+    ...(prof.tags.length ? ["-tags", prof.tags.join(",")] : []),
+    // `-no-interactsh` (موجود في المصدر: `ni`) بيستبعد قوالب OAST — اللي بتفضّل مستنية
+    // callback ماحدش بيبعتّه على نود بلا egress، وبتاكل الميزانية وهي مستنية.
+    ...(prof.oob ? [] : ["-no-interactsh"]),
+    "-timeout", "6", "-retries", "1",
+    "-stats",
+  ];
+}
+/** الشرح اللي بيتحط في رسالة الفشل: مش «0 نتيجة» وبس، بل الحساب اللي وداها هناك. */
+export function nucleiEtaNote(p: Record<string, unknown>, rps: number): string {
+  const e = nucleiEtaMs(p, rps);
+  return `profile=${e.profile} · ~${e.templates} قالب (إحصاء 2026-11-03) · ~${Math.round(e.etaMs / 1000)}s عند rl=${e.rps} — الميزانية 540s`;
+}
+
+/** كم هياخد الوقت ده نظريًا: قالب = طلب واحد على الأقل، والسقف rl. */
+function nucleiEtaMs(p: Record<string, unknown>, rps: number): { templates: number; etaMs: number; rps: number; profile: NucleiProfile } {
+  const profile = nucleiProfileOf(p);
+  const r = Math.max(0.2, rps || 1);
+  return { profile, templates: NUCLEI_PROFILES[profile].templates, rps: Math.round(r), etaMs: Math.ceil(NUCLEI_PROFILES[profile].templates / r) * 1000 };
+}
+
 export const KINDS: Record<string, KindDef> = {
   /* ── builtin · passive or single-request, work anywhere ───────────────── */
   "recon.dns": {
@@ -712,37 +765,18 @@ export const KINDS: Record<string, KindDef> = {
     titleAr: "ProjectDiscovery Nuclei (قوالب إعدادات/تعرّض)",
     active: true,
     binary: "nuclei",
-    // A real nuclei run against a live app is minutes of work: thousands of templates × rate limit.
-    // Inside the job default (180 s) it was ALWAYS cut off and reported as a failure — the fix is to
-    // let the scanner scan (measured: `nuclei فشل (exit=-1) · 180006ms`, run 41465521238).
-    // 260 s was measured too short on real runs (cut off at 260020ms with 0 results on
-    // demo.testfire.net in reports 17:48Z and 01:18Z). And the reason is NOT job-level contention:
-    // `runJob` awaits each task in a plain for-loop (runner.ts), so nuclei had the node to itself —
-    // a full medium/high/critical pass over a live app at the gate's rps is simply ~9 minutes of
-    // requests. Giving it the clock it needs is the honest fix; if this row still says «اتقطع», the
-    // number in the message is the evidence that the template set, not the budget, is the limit.
+    // الميزانية دي محسوبة، مش متخيَّرة: إحصاء حقيقي على nuclei-templates/main (2026-11-03) قال
+    // إن `-severity medium,high,critical` = 7,885 قالب ≈ 7,885 طلب، وعند `-rl 1` (سقف scanme
+    // الافتراضي) ده ساعتين و11 دقيقة — فـ260s و540s الاتنين كانو قطع في النص، مش فشل أدوات.
+    // الحل مش ساعة أكبر: `first-pass` ≈ 1,034 قالب ≈ 258s عند rl=4، و540s سيّبت هامش 2x.
+    // ولو سطر «اتقطع» رجع، الرسالة نفسها بقت تقول profile · عدد القوالب · rl · الـETA.
     budgetMs: 540_000,
     installHint: "sh -c \"$(curl -sL https://raw.githubusercontent.com/projectdiscovery/nuclei/main/install.sh)\"",
-    args: (ctx, p) => {
-      // `low` مرميّ عن قصد: العمود الفقري شغّال على 7 مهام بالتوازي على نود 2vCPU، والأربع سيّبات
-      // خنقت nuclei عند ميزانية النوع (مقاس: `nuclei اتقطع بعد 260023ms · 0 نتيجة` في تقرير
-      // 2026-11-02T17:33Z). والقائمة دي بقت = اللي مطبوع حرفيًا في سطر `command` تحت — قبل كده
-      // السطر كان بيعرض `medium,high,critical` وهو شغّل أربع سيّبات، وده كذب في التقرير.
-      const sev = (p["severities"] as string[]) ?? ["medium", "high", "critical"];
-      return [
-        "-u", `${baseUrl(ctx)}/`,
-        // `-jsonl` — nuclei has NO `-json` flag. It exited 2 with a usage line and the old
-        // "printed something = success" rule recorded that as a completed task (measured: run
-        // 41460859502 after the exit code became authoritative).
-        "-jsonl", "-silent", "-no-color",
-        "-rl", String(Math.max(1, Math.round(ctx.rps))),
-        "-c", String(Math.max(1, ctx.program.max_concurrency ?? 2)),
-        "-severity", sev.join(","),
-        "-timeout", "6", "-retries", "1",
-        "-stats",
-      ];
-    },
-    command: (ctx, p) => `nuclei -u ${shQuote(`${baseUrl(ctx)}/`)} -jsonl -silent -rl ${Math.max(1, Math.round(ctx.rps))} -severity ${shQuote(((p["severities"] as string[]) ?? ["medium", "high", "critical"]).join(","))}`,
+    args: (ctx, p) => nucleiArgv(ctx, p),
+    // السطر اللي بيشفّه الإنسان = الـargv اللي اتنفّذت، من نفس الدالة. قبل كده كان السطر
+    // بيعرض 3 سيّبات والشغل بيطلع بأربع — وده كذب في التقرير (اتصلّح في #99 وبقى محروس).
+    command: (ctx, p) =>
+      `nuclei ${nucleiArgv(ctx, p).map((a) => (/^[A-Za-z0-9_./:,-]+$/.test(a) ? a : shQuote(a))).join(" ")}`,
     parse: (stdout, ctx) => {
       const findings: Finding[] = [];
       for (const line of stdout.split(/\r?\n/)) {
@@ -947,7 +981,11 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
     if (res.killed) {
       return {
         ok: false,
-        summary: `${bin} اتقطع بعد ${Date.now() - started}ms (ميزانية النوع) · ${parsed.findings.length} نتيجة لحد هنا — «اتقطع» مش «مافيش»`,
+        summary:
+          `${bin} اتقطع بعد ${Date.now() - started}ms (ميزانية النوع) · ${parsed.findings.length} نتيجة لحد هنا — «اتقطع» مش «مافيش»` +
+          (kindId === "tools.nuclei"
+            ? ` · ${nucleiEtaNote(params, ctx.rps)}`
+            : ""),
         findings: parsed.findings,
         error: "tool-timeout",
         data: { exit: res.code, budgetMs: Math.max(15_000, Math.min(kind.budgetMs ?? ctx.timeoutMs, 600_000)), partial: parsed.data ?? {} },
