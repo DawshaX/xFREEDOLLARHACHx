@@ -1238,7 +1238,7 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
 - أرضية جديدة في `ops-selftest`: عدد ملفات اللوحة اللي بتسأل المحرك **3** وعدد مسارات `ops` اللي
   بتستدعيها **13** — مانقصوش (الرقمان مقيسان بالنمط اللي في الفحص نفسه).
 
-### 4) عطلان في المحرك طلعوا من الطريق، مش من الطلب
+### 4) عطلان في المحرك طلعوا من الطريق + عطل مني مسكه الـCI
 1. **`withDeadline` في `runner.ts`:** جوب علق `recon.securitytxt → running` و`job.status`
    `queued` > 6 دقايق. السبب مقروء من الكود: `budget.taskTimeoutMs` كان بيلتزم على الأدوات
    الـ`execFile` وبس — `runKind` للمبني في node كان `await` من غير سقف، فأي probe معلّق يسيب
@@ -1246,6 +1246,13 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
    `task-timeout:<kind>:<ms>` كـ`failed` عادي.
 2. **`audit-static-brain` اتقرأ غلط عليّ:** بنيته من غير `BASE_PATH=/xFREEDOLLARHACHx/` → `no-snapshot`
    + `no-honest-label`؛ بنفس سطر البنا في رأس الملف: ✅. البوابات اللي تفشل على أثرفيلد = أعِد البنا.
+3. **سقف جديد حطّم سكانس شغال — من شغلي، والتقرير الحي مسكه:** أول `withDeadline` كان بياخد
+   `budget.taskTimeoutMs` (180s) سقفًا لكل المهام، و`tools.nuclei` ليه `budgetMs: 540_000` بتاعه.
+   CI (21:41Z) رجع `job executed | 6/7 done · 1 failed` + `failed tasks | ? review |
+   tools.nuclei: فشل: task-timeout:tools.nuclei:180000ms`، والحكم نزل `GREEN → AMBER`. اتصلح بـ
+   `kindDeadlineMs()` مصدرًا وحيدًا للـclamp (مستعمل في `execFile`، ودليل `partial`، والـdeadline
+   الخارجي + سماح 15s)، و`ops-selftest` بيمنع أي سقف مستقل عن ميزانية الأداة (التزوير اتعمل:
+   56 · 1 failed، وبعدين 57 · 0). القاعدة: **أي سقف جديد يرث الميزانية المعلنة، ماتنافسهاش.**
 
 ### 5) مقاس، مش متحكى
 باوندل `node server.mjs` (بلا nmap/nuclei): sync أول `added:11/fromLegacy:11` · تاني `added:0/

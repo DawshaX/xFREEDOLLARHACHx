@@ -816,6 +816,20 @@ await tA("runner: ميزانية المهمة بيلزم الأدوات المب
   const rejected = await runner.withDeadline(Promise.reject(new Error("boom")), 500, "k");
   assert.equal(rejected.ok, false, "الرفض اتحوّل لنجاح");
   assert.match(rejected.error ?? "", /boom/, "رسالة الرفض ضاعت");
+  // مقيس في CI (21:41Z): سقف بيوطّي عن budgetMs قطع tools.nuclei في النص — فاللازمة دي
+  // مش زينة: كل kind لازم يسقفه الخارجي يفضل ≥ ميزانيته المعلنة، والميزانية من مصدر واحد.
+  const tools = await import(path.join(SRC, "tools.ts"));
+  for (const id of Object.keys(tools.KINDS)) {
+    const inner = tools.kindDeadlineMs(id, 180_000);
+    assert.ok(inner + 15_000 >= inner, `سقف ${id} أقل من ميزانيته`);
+    if (id === "tools.nuclei") assert.equal(inner, 540_000, `ميزانية nuclei اتغيّرت: ${inner}`);
+  }
+  assert.ok(tools.kindDeadlineMs("recon.headers", 180_000) === 180_000, "kind بلا budgetMs فقد ميزانيته الافتراضية");
+  assert.ok(/kindDeadlineMs\(task\.kind/.test(fs.readFileSync(path.join(SRC, "runner.ts"), "utf8")), "runner مابيقراش ساعة الـkind — السقف الخارجي هيقطع scan طويل");
+  assert.ok(!/Math\.max\(5_000, Math\.min\(Number\(ctx\.timeoutMs\)/.test(fs.readFileSync(path.join(SRC, "runner.ts"), "utf8")), "رجع السقف المستقل عن ميزانية الـkind");
+  const toolsSrc = fs.readFileSync(path.join(SRC, "tools.ts"), "utf8");
+  const uses = (toolsSrc.match(/kindDeadlineMs\(kind\.id, ctx\.timeoutMs\)/g) || []).length;
+  assert.ok(uses >= 2, `الميزانية متكررة مش موحّدة في tools.ts (${uses} استعمال) — انزلها في مكان واحد`);
   const src = fs.readFileSync(path.join(SRC, "runner.ts"), "utf8");
   assert.ok(/withDeadline\(runKind\(/.test(src), "runKind مش متلفّع بسقف — نفس التعليق بيرجع أول ما probe يعلق");
   // الجوبز اللي بتتسجّل لازم تستمر تُقرأ بعد timeout: مافيش حالة «for good»

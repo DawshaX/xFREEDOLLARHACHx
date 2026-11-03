@@ -927,6 +927,18 @@ export const KIND_LIST = Object.values(KINDS).map((k) => ({
 
 /* ── dispatcher ──────────────────────────────────────────────────────────── */
 
+/**
+ * الساعة بتاعة الـkind: `budgetMs` بترفع وبتوطّي، مقصوصة 15s…10m. مطلوعة هنا لأن
+ * السقف الخارجي (الـdeadline اللي حوالين `runKind` في runner.ts) لازم يلزم **نفس**
+ * الرقم — سقف بيوطّي عن `budgetMs` بيقطع الـscan في النص، ومقاس بالظبط:
+ * CI 2026-11-03T21:41Z رجع `task-timeout:tools.nuclei:180000ms` بينما nuclei ليه 540s.
+ * القاعدة: «The KIND owns its clock» — واللي بيراقب الساعة مايعتديش عليها.
+ */
+export function kindDeadlineMs(kindId: string, ctxTimeoutMs: number): number {
+  const kind = KINDS[kindId];
+  return Math.max(15_000, Math.min(kind?.budgetMs ?? ctxTimeoutMs, 600_000));
+}
+
 export async function runKind(kindId: string, params: Record<string, unknown>, ctx: RunCtx): Promise<KindResult> {
   const kind = KINDS[kindId];
   if (!kind) return { ok: false, summary: `نوع مهمة غير معروف: ${kindId}`, findings: [], error: "unknown-kind" };
@@ -957,7 +969,7 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
       // The KIND owns its clock. A job's per-task default (180 s) is right for a header probe and
       // wrong for a full nuclei run, so `budgetMs` can raise as well as lower — clamped to 15 s…10 m
       // so a typo can neither make a task untouchable nor starve the job behind it.
-      timeoutMs: Math.max(15_000, Math.min(kind.budgetMs ?? ctx.timeoutMs, 600_000)),
+      timeoutMs: kindDeadlineMs(kind.id, ctx.timeoutMs),
       env: {
         ...process.env,
         TERM: "dumb",
@@ -988,7 +1000,7 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
             : ""),
         findings: parsed.findings,
         error: "tool-timeout",
-        data: { exit: res.code, budgetMs: Math.max(15_000, Math.min(kind.budgetMs ?? ctx.timeoutMs, 600_000)), partial: parsed.data ?? {} },
+        data: { exit: res.code, budgetMs: kindDeadlineMs(kind.id, ctx.timeoutMs), partial: parsed.data ?? {} },
       };
     }
     if (res.code !== 0) {

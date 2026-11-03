@@ -16,7 +16,7 @@ import crypto from "node:crypto";
 import { acquire, release, noteResponse, throttleSnapshot } from "./ratelimit";
 import { assertAuthorized, normalizeHost, type Program } from "./scope";
 import { isKilled } from "../../routes/kill-switch";
-import { runKind, KINDS, writeEvidence, findBinary, type Finding, type RunCtx, type Severity } from "./tools";
+import { runKind, KINDS, kindDeadlineMs, writeEvidence, findBinary, type Finding, type RunCtx, type Severity } from "./tools";
 import { getConnectedAgentList } from "../../routes/local-agent";
 
 export type JobStatus = "queued" | "running" | "paused" | "done" | "failed" | "cancelled";
@@ -362,7 +362,9 @@ export async function runJob(id: string): Promise<Job | null> {
         await acquire(job.host, { rps: gate.limits.rps, burst: 2, maxWaitMs: 90_000 });
         let result;
         try {
-          const deadlineMs = Math.max(5_000, Math.min(Number(ctx.timeoutMs) || 60_000, 600_000));
+          // السماح 15 ثانية: الأدوات اللي بتتexec بتموّت نفسها على ميزانيتها، فالسقف الخارجي
+          // للحجز بس — ولو كان أقل من `budgetMs` كان هيقطع nuclei في النص (مقيس في CI 21:41Z).
+          const deadlineMs = kindDeadlineMs(task.kind, Number(ctx.timeoutMs) || 60_000) + 15_000;
           const raced = await withDeadline(runKind(task.kind, task.params, ctx), deadlineMs, task.kind);
           if (!raced.ok) throw new Error(raced.error); // الـcatch تحت بيسمّيها failed وبيزود العدّاد
           result = raced.value;

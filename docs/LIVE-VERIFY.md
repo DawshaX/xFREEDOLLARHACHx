@@ -500,3 +500,16 @@ engine | catalog lookup over HTTP | ✓ pass | aces-dev.wnba.com → hackerone:n
    `runner.ts` وبيتلّف حوالي `runKind` — والـtimeout بيرجّع `{ok:false,error:"task-timeout:<kind>:<ms>"}`
    بدل استثناء، فالـcatch الموجود بيسمّيها `failed` وبيزود العدّاد زي أي فشل تاني. `ops-selftest`
    بيقاس ده على `new Promise(()=>{})` (ولازم يمسك الـloop بمؤقّت حي: الـtimer `unref` عمدًا).
+
+**والحلقة دي رجّعت عطل عملته أنا — والتقرير مسكه:** أول نسخة من `withDeadline` كانت بتاخد
+`budget.taskTimeoutMs` (180s) سقفًا لكل مهمة، بينما `tools.nuclei` ليه `budgetMs: 540_000`
+بتاعه. النتيجة في CI: `job executed | 6/7 done · 1 failed` و`failed tasks | ? review |
+tools.nuclei: فشل: task-timeout:tools.nuclei:180000ms` — يعني **سقف جديد قطع سكانس شغال**، والحكم
+نزل `GREEN → AMBER`. القاعدة اللي اتثبّتت: **أي سقف جديد لازم يرث ميزانية الأداة المعلنة، ماتنافسهاش.**
+اتقفلت بمصدر واحد للحقيقة: `kindDeadlineMs(kindId, ctxTimeoutMs)` في `tools.ts` (نفس الـclamp
+الموجود: `15s…10m` مقابل `budgetMs ?? ctx.timeoutMs`)، المستعمل الآن في التلات مواضع: `execFile`،
+ودليل `partial`، والـdeadline الخارجي في `runner.ts` (+ سماح 15 ثانية للحجز). و`ops-selftest` بقى
+يفرض: `kindDeadlineMs("tools.nuclei", 180_000) === 540_000`، وإن الـrunner ماسك نفس الدالة
+(بيفشل لو رجع سطر `Math.max(5_000, Math.min(Number(ctx.timeoutMs)…`)، وإن `tools.ts` ماعادش
+بيكرّر الـclamp — والتزوير اتعمل فعلاً: رجّعت السطر القديم فالسلف-تست قال `56 · 1 failed`، ورجّعت التعديل
+فقال `57 · 0`.
