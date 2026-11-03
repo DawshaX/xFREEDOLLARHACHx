@@ -1141,3 +1141,15 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
   ويتصنّف `blocked` (متقاس بأداة وهمية في `NOVA_TOOL_DIR`)؛ (3) صف الدلائل بيسمّي الملفات الفاضية
   بدل «5 فيهم بايتات» وبس.
 
+- **2026-11-03 (سؤال «السيرفر شغال؟» بقى قياسًا لا ذاكرة):** آخر probe للـhub (2026-11-02T20:36Z،
+  issue #75 لسه open): `dns exit=0` + `tcp: Connection refused` + `HTTP 000` على
+  `http://node.waifly.com:27214` — يعني العقدة **مش شغالة** (الـrefused مش timeout = مافيش listener،
+  مش فايروال). وطلع إن الاعتماد على `uptime-watchdog.yml` بكرون `*/10` كان بيكذب بالتقادم: في اليوم
+  ده الـcron اشتغل مرتين بس (10:54 و20:35) لأن GitHub بيأجّل/يحذف الجدوليات السريعة، فالإجابة كانت
+  بتبقى قديمة 3-4 ساعات. الفحص بقى سطر `cli | hub <host:port>` داخل `scripts/verify-live.mjs`
+  (من `NOVA_HUB_URL`/`--hub`، والافتراضي عقدة Waifly) فيتقاس كل 6 ساعات من الراينر، و`blocked` بيقول
+  «شغّل العملية أو اربط البورت»، و`PRE-OPS bundle` لو `/api/ops/version` رجع HTML بدل JSON.
+  مقاس على loopback في الاتجاهين (`pass · HTTP 200 · ops bundle ✓` / `blocked · ECONNREFUSED`).
+  تصحيح مسجّل: كنت قلت إن ملف الدلائل الفاضي بتاع مهمة nuclei — القياس قال `tools.subfinder-e3b0c44298fc.txt`
+  وحاشية الفراغ دي معناها «الأداة مشت وما لقاش حاجة»، فالصف بقى بيفرّق صراحة بين «صفر مخرجات» و«مفقود فعلي».
+

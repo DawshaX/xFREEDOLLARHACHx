@@ -227,8 +227,11 @@ export async function saveProviderKey(providerId: ProviderId, key: string): Prom
     .values({ key: settingKey, value: key.trim() })
     .onConflictDoUpdate({ target: settings.key, set: { value: key.trim(), updatedAt: new Date() } });
 
-  // Clear any exhaustion so the provider is immediately tried
-  reviveProvider(providerId);
+  // Clear any exhaustion so the provider is immediately tried. Both routers here track
+  // exhaustion for exactly ONE id (`ollama-local`), so calling this with a groq/openrouter id was
+  // a no-op the type system correctly rejected — and esbuild deletes types, so on the runner it
+  // silently did nothing for every other provider. Named, not hidden.
+  if (providerId === "ollama-local") reviveProvider(providerId);
 }
 
 /** Delete a provider's key */

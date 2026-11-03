@@ -41,6 +41,11 @@ const OUT_MD = arg("markdown", "state/verified-live.md");
 const PER_TIMEOUT = Number(arg("timeout", "110")); // seconds per tool run
 const STATE_DIR = arg("stateDir", "state/jobs");
 const WORDLIST = arg("wordlist", "");
+// العقدة الدائمة (Waifly/Render أي حد) — الصف ده هو اللي بيجاوب «السيرفر شغال ولا لأ» من جوه
+// الحلقة كل 6 ساعات، بدل ما نعتمد على watchdog أسبوعي. GitHub بيأجّل/بيحذف جدوليات الـ*/10
+// (مقاس 2026-11-02: cron كل 10 دقايق طلع منه تشغيلان بس في اليوم: 10:54 و20:35) — فالفحص
+// اللاصق أصدق من الـcron.
+const HUB = String(arg("hub", process.env.NOVA_HUB_URL || "http://node.waifly.com:27214")).replace(/\/+$/, "");
 
 const log = (...a) => console.log("[verify]", ...a);
 const warn = (m) => console.log(`::warning::${m}`);
@@ -164,22 +169,28 @@ async function cliChecks(cfg) {
       "-tech-detect", "-timeout", "8", "-retries", "1",
     ], 60);
     const rec = (r.out.split("\n").map((l) => l.trim()).find((l) => l.startsWith("{")) || "").replace(/\u001b\[[0-9;]*m/g, "");
-    const status = Number((rec.match(/"status"\s*:\s*(\d{3})/) || [0, "0"])[1]);
+    // httpx بيطبع الكود تحت `status_code` (مع `-status-code`) مش `status` — والقديمة كانت بتلاقي
+    // `status` بس، فمن هنا جه «status=مفيش» على تقرير 17:48Z مع exit=0 و535 بايت: يعني القالب كان
+    // فيه كل حاجة وأنا بقرا من مفتاح غلط. الاتنين مقروئين دلوقتي، وأي `failed:true` بيتحسب فشل اتصال.
+    const status = Number((rec.match(/"status(?:_code)?"\s*:\s*(\d{3})/) || [0, "0"])[1]);
+    const toolFailed = /"failed"\s*:\s*true/.test(rec);
     const want = liveRow.expects?.httpStatus || testRow.expects?.httpStatus || 200;
     const ok = r.code === 0 && status === want;
     // httpx بيكتب فشل الاتصال جوّه الـJSON (`"error":"..."`) مش في stderr، فالاعتماد على stderr
     // وحده كان يطلّع صف «status=مفيش» من غير سبب (مقاس: تقرير 17:33Z على demo.testfire.net).
     // القاعدة: مافيش صف من غير سبب — «مفيش رد» مش إجابة.
     const toolErr = (rec.match(/"error"\s*:\s*"([^"]{1,180})"/) || [0, ""])[1];
+    const seenKeys = (rec.match(/"([a-z_]+)"\s*:/g) || []).map((k) => k.replace(/["`]/g, "").slice(0, -1)).slice(0, 12);
     const connFault = /could not complete|no response|tls|handshake|dial|connect|refused|reset|i\/o timeout|context deadline|EOF|no route/i;
+    const noAnswer = !status && (toolFailed || connFault.test(toolErr) || NET_ERRORS.test(`${r.err} ${rec}`));
     const cause = short(toolErr || (r.err || "").split("\n").filter(Boolean).slice(-1)[0] || (r.out.trim() ? "رد من غير status" : "مفيش مخرجات"), 96);
-    add("cli", `httpx ${probeUrl}`, ok ? "pass" : (NET_ERRORS.test(`${r.err} ${r.out}`) || connFault.test(`${toolErr} ${r.err}`)) ? "blocked" : "review",
+    add("cli", `httpx ${probeUrl}`, ok ? "pass" : noAnswer ? "blocked" : "review",
       ok ? `${status} · ${short((rec.match(/"title"\s*:\s*"([^"]*)"/) || [0, ""])[1], 70)} · ${(rec.match(/tech-detect[^]]*]/i) || [""])[0].slice(0, 60)}`
-        : short(`status=${status || "مفيش"} (المطلوب ${want}) · exit=${r.code} · ${r.out.length}B · السبب: ${cause} · ${r.ms}ms`, 190),
+        : short(`status=${status || "مفيش"} (المطلوب ${want}) · exit=${r.code} · ${r.out.length}B · السبب: ${cause} · مفاتيح الرد: ${seenKeys.join(",") || "مفيش JSON"} · ${r.ms}ms`, 220),
       // key is `httpStatus`, not `status`: row extras are spread over the row, so a field named
       // `status` silently overwrote pass/fail with a number (measured: run 41459589703 printed
       // `| cli | httpx … | · 0 |`). Never shadow a row field.
-      { ms: r.ms, httpStatus: status, toolError: toolErr || null });
+      { ms: r.ms, httpStatus: status, toolError: toolErr || null, toolFailed });
   }
 
 
@@ -243,6 +254,59 @@ async function cliChecks(cfg) {
     add("cli", `${isNmap ? "nmap" : "naabu"} ${host}:${ports}`, open > 0 ? "pass" : NET_ERRORS.test(r.err) ? "blocked" : "review",
       open > 0 ? `${open} بورت مفتوح · ${short((r.out.match(/\d+\/tcp\s+\S+/g) || []).slice(0, 3).join(" · "), 90)}` : short(r.err || r.out || `exit ${r.code}`, 120),
       { count: open, ms: r.ms });
+  }
+
+  // ── the always-on hub: «السيرفر شغال؟» إجابة بتتحدّث مع كل قياس ──────────────
+  // السؤال ده كان معتمد على `uptime-watchdog.yml` بكرون */10، وGitHub بيحذف/بيأجّل الجدوليات
+  // السريعة (مقاس: يوم كامل = تشغيلان بس، 10:54 و20:35) — فالإجابة كانت بتبقى قديمة ساعات.
+  // هنا بقيت سطر في نفس التقرير: مافيش انتظار كرون، وكل 6 ساعات بتقاس من راينر فيه خرج حقيقي.
+  {
+    const hTarget = HUB.replace(/^https?:\/\//, "").split("/")[0];
+    const t0 = Date.now();
+    let hcode = 0;
+    let hbody = "";
+    let herr = "";
+    try {
+      const res = await fetch(`${HUB}/api/health`, {
+        signal: AbortSignal.timeout(20_000),
+        headers: { "user-agent": "CyberNova-NOVA/2099 (live verify · hub probe)" },
+      });
+      hcode = res.status;
+      hbody = (await res.text()).slice(0, 400);
+    } catch (e) {
+      herr = `${e?.name || ""} ${e?.message || e} ${e?.cause?.code || e?.cause?.message || ""}`.replace(/\s+/g, " ").trim();
+    }
+    let vcode = 0;
+    let vbody = "";
+    let verr = "";
+    try {
+      const res = await fetch(`${HUB}/api/ops/version`, { signal: AbortSignal.timeout(15_000) });
+      vcode = res.status;
+      vbody = (await res.text()).slice(0, 300);
+    } catch (e) {
+      verr = `${e?.name || ""} ${e?.message || e} ${e?.cause?.code || e?.cause?.message || ""}`.replace(/\s+/g, " ").trim();
+    }
+    const ms = Date.now() - t0;
+    const netDown = /ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH|fetch failed|timed out|aborted/i;
+    const refuses = (!hcode && netDown.test(herr)) || (!hcode && netDown.test(verr));
+    const healthJson = /^\s*\{/.test(hbody);
+    const vJson = /^\s*\{/.test(vbody);
+    let verdict = "review";
+    if (hcode === 200 && healthJson) verdict = "pass";
+    else if (refuses) verdict = "blocked";
+    const bundle = vJson ? "ops bundle ✓" : vcode === 200 ? "PRE-OPS bundle (/api/ops/version بيردّ HTML مش JSON)" : vcode ? `ops/version → HTTP ${vcode}` : "ops/version بلا رد";
+    add(
+      "cli",
+      `hub ${hTarget}`,
+      verdict,
+      short(
+        `${HUB}/api/health → HTTP ${hcode || "000"} · ${healthJson ? `JSON ${hbody.length}B` : hbody ? `${hbody.length}B مش JSON` : "بلا رد"} · ${bundle} · ${ms}ms` +
+          (herr ? ` · السبب: ${short(herr, 70)}` : "") +
+          (refuses ? " — الـconnection refused معناه مافيش حاجة بتتسمع على البورت (مش فايروال بيسقّط): شغّل العملية أو اربط البورت" : ""),
+        240,
+      ),
+      { hubUrl: HUB, httpStatus: hcode, opsStatus: vcode, ms, refused: refuses },
+    );
   }
 
   const ffuf = findBinary("ffuf");
@@ -341,11 +405,20 @@ async function engineChecks(cfg) {
     // «5 فيهم بايتات» مش كفاية: مين اللي فاضي وليه. الملف الفاضي غالبًا دليّة مهمة اتقطعت قبل
     // ما تكتب (مقاس: تقرير 17:33Z — 6 ملفات، والخامس الفاضي كان بتاع مهمة nuclei المقطوعة).
     const empties = files.filter((f, i) => sizes[i] <= 8);
-    add("engine", "evidence hashed on disk", files.length ? (withBytes === files.length ? "pass" : "review") : "review",
+    // الهاش `e3b0c442…` هو sha256 للفراغ — يعني الدليّة «فاضية بمعنى الأداة مشت وما كتبتش حاجة»،
+    // وده ناتج مش خسارة. الفرق مهم: دي مش نفس «اتقطعت في النص» (مقاس 17:48Z: الفاضي كان
+    // tools.subfinder-e3b0c44298fc.txt، أي صفر سوبدومين للهدف ده النهارده — مش دليّة مفقودة).
+    const EMPTY_SHA = "e3b0c442";
+    const zeroOutput = empties.filter((f) => f.includes(EMPTY_SHA)).length;
+    const lost = empties.length - zeroOutput;
+    // الفاضي بحاشية الفراغ مش حاجة تتحسب نقص: كل ملف ليه تفسير ⇒ الصف pass. «مفقود فعلي» وحده
+    // هو اللي يسيبها review (ولو كله صفر مخرجات فده سؤال على الأهداف، مش على السلسلة).
+    const allAccounted = files.length > 0 && lost === 0;
+    add("engine", "evidence hashed on disk", allAccounted ? "pass" : files.length ? "review" : "review",
       files.length
-        ? `${files.length} ملف في ${path.relative(process.cwd(), dir)} · ${withBytes} فيهم بايتات${empties.length ? ` · فاضي: ${short(empties.slice(0, 3).join(", "), 90)} (${empties.length})` : ""}`
+        ? `${files.length} ملف في ${path.relative(process.cwd(), dir)} · ${withBytes} فيهم بايتات${empties.length ? ` · فاضي: ${short(empties.slice(0, 3).join(", "), 80)} (${empties.length} — ${zeroOutput} منها صفر مخرجات بحاشية الفراغ، و${lost} مفاقيد فعلية)` : ""}`
         : `مفيش مجلد دلائل مقروء من هنا (${path.relative(process.cwd(), dir)}) — جوه CI بيتقاس صح`,
-      { jobId: job.id, evidence: files.length, emptyEvidence: empties.length });
+      { jobId: job.id, evidence: files.length, emptyEvidence: empties.length, zeroOutputEvidence: zeroOutput, lostEvidence: lost });
 
     const rep = await api(`/ops/jobs/${job.id}/report`);
     const md = rep.text || "";
