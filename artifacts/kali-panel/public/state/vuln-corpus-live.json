@@ -18,6 +18,7 @@
     "EPSS"
   ],
   "sample": 72,
+  "complete": true,
   "rows": [
     {
       "id": "CVE-2026-121607",
