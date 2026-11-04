@@ -120,24 +120,41 @@ jobs:
       # here: this job holds pages:write and can cancel a deployment that nothing
       # is driving any more. If the API refuses, the step says so and lets
       # deploy-pages report the failure — a silent no-op would hide the site.
+      # Measured 2026-11-04 21:59→22:10: this step cancelled a deployment that was
+      # still LIVE (the run that owned it was queued behind us, not dead), left it
+      # in `deployment_in_progress`, and the next deploy waited 9 minutes for a
+      # lock nobody held. So: wait first, cancel only what is still stuck after
+      # 4 minutes. A real deploy finishes in ~90s.
       - name: clear a stuck Pages deployment (one orphan blocks every deploy)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           set -uo pipefail
-          if ! json=$(gh api "repos/$REPO/pages/deployments?per_page=20" 2>&1); then
+          list() { gh api "repos/$REPO/pages/deployments?per_page=20" 2>/dev/null; }
+          busy() {
+            list | jq -r '(.page_deployments? // .)[]? | select(.status == "deployment_in_progress" or .status == "deployment_queued") | .id' 2>/dev/null
+          }
+          # can we even see them? (a token without pages:write gets 404, and that is
+          # not a reason to block the deploy — deploy-pages will report the truth)
+          probe=$(list) || true
+          if [ -z "${probe:-}" ]; then
             echo "cannot list Pages deployments from this token — letting deploy-pages report the truth"
-            echo "$json" | head -3
             exit 0
           fi
-          stuck=$(echo "$json" | jq -r '(.page_deployments? // .)[]? | select(.status == "deployment_in_progress" or .status == "deployment_queued") | .id' 2>/dev/null)
+          waited=0
+          while [ -n "$(busy)" ] && [ "$waited" -lt 240 ]; do
+            echo "another deployment is still working (${waited}s) — waiting, not cancelling"
+            sleep 15
+            waited=$((waited + 15))
+          done
+          stuck=$(busy)
           if [ -z "${stuck:-}" ]; then
             echo "no stuck deployment"
             exit 0
           fi
           for id in $stuck; do
-            echo "cancelling stuck deployment $id"
+            echo "deployment $id is still in progress after ${waited}s — cancelling it"
             gh api --method POST "repos/$REPO/pages/deployments/$id/cancel" >/dev/null 2>&1 \
               && echo "  cancelled $id" || echo "  could not cancel $id (deploy-pages will say why)"
           done
