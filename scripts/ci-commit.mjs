@@ -11,7 +11,7 @@
  * This helper makes the write path deterministic:
  *   1. stage exactly the paths it was given
  *   2. commit (skip when nothing changed)
- *   3. fetch → rebase with `-X ours` for the files we just produced → retry on
+ *   3. fetch → rebase with `-X theirs` for the files we just produced → retry on
  *      rejection with fresh fetch, up to 3 times
  *   4. never exit non-zero for "a bot pushed first" — that is a race, not a bug
  *
@@ -67,9 +67,13 @@ console.log(`ci-commit: committed ${files.length} path(s)`);
 
 for (let attempt = 1; attempt <= 3; attempt += 1) {
   git(["fetch", "--quiet", "origin", branch], { allowFail: true });
-  // `-X ours` keeps the file we just measured when a bot touched the same path;
-  // anything else in the tree still rebases normally.
-  const rebase = git(["rebase", "-X", "ours", `origin/${branch}`], { allowFail: true });
+  // In a rebase, "theirs" is the side being replayed — i.e. the commit we just
+  // made — so `-X theirs` keeps the file we just measured when a bot touched the
+  // same path. The old `-X ours` did the opposite: it kept origin's copy, the
+  // measurement commit became empty, rebase dropped it, and `git push` then
+  // reported success while nothing landed (measured on run 41873260816: the
+  // commit step was green and state/hunt-latest.json never moved).
+  const rebase = git(["rebase", "-X", "theirs", `origin/${branch}`], { allowFail: true });
   if (!rebase.ok && /CONFLICT/.test(rebase.out)) {
     git(["rebase", "--abort"], { allowFail: true });
     console.log("ci-commit: rebase conflicted — retrying with a fresh fetch");
@@ -77,8 +81,18 @@ for (let attempt = 1; attempt <= 3; attempt += 1) {
   }
   const push = git(["push", "origin", `HEAD:${branch}`], { allowFail: true });
   if (push.ok) {
-    console.log(`ci-commit: pushed on attempt ${attempt}`);
-    process.exit(0);
+    // A push that succeeds is not the same as a change that landed: after an
+    // aggressive rebase the commit can be empty and `Everything up-to-date`
+    // still exits 0. Verify against the remote, not against the exit code.
+    git(["fetch", "--quiet", "origin", branch], { allowFail: true });
+    const landed = git(["rev-parse", `origin/${branch}`], { allowFail: true });
+    const mine = git(["rev-parse", "HEAD"], { allowFail: true });
+    if (landed.ok && mine.ok && landed.out.trim() === mine.out.trim()) {
+      console.log(`ci-commit: pushed on attempt ${attempt} and verified on origin/${branch}`);
+      process.exit(0);
+    }
+    console.log(`ci-commit: push reported ok but origin/${branch} does not match HEAD — retrying`);
+    continue;
   }
   console.log(`ci-commit: push rejected on attempt ${attempt} — another job wrote first, retrying`);
 }
