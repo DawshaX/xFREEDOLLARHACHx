@@ -1,3 +1,3 @@
 organ,status,detail,source,at
-database,live,800 CVE · 46143 في الفهرس,supabase/dbaaclqycsiefjwjfavf,2026-11-04T16:57:00.030485+00:00
-executor,live,0 مطابقة مفتوحة · 1 صيد متخزّن,pg_cron → raw.githubusercontent.com,2026-11-04T16:57:00.030485+00:00
+database,live,46143 CVE · 46143 في الفهرس,supabase/dbaaclqycsiefjwjfavf,2026-11-04T17:22:00.217718+00:00
+executor,live,0 مطابقة مفتوحة · 1 صيد متخزّن,pg_cron → raw.githubusercontent.com,2026-11-04T17:22:00.217718+00:00
