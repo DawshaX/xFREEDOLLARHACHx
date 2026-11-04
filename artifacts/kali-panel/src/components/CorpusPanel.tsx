@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Database, Search, ShieldAlert, RefreshCw } from "lucide-react";
 import { refreshSystem, systemSnapshot, onSystemChange, type SystemSnapshot } from "@/lib/system-bus";
-import { backendCorpus, type BackendCve } from "@/lib/backend";
+import { backendCorpus, type BackendCve, type BackendCorpusMeta } from "@/lib/backend";
 
 const CARD = { background: "rgba(8,0,18,0.9)", border: "1px solid rgba(0,255,255,0.15)", borderRadius: 14 };
 
@@ -22,6 +22,7 @@ export default function CorpusPanel({ compact = false }: { compact?: boolean }) 
   const [busy, setBusy] = useState(false);
   // rows served by Postgres (the real database) when the backend answers
   const [dbRows, setDbRows] = useState<BackendCve[] | null>(null);
+  const [dbMeta, setDbMeta] = useState<BackendCorpusMeta | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,9 +40,11 @@ export default function CorpusPanel({ compact = false }: { compact?: boolean }) 
       if (!alive) return;
       if (res.ok) {
         setDbRows(res.data.rows);
+        setDbMeta(res.data);
         setDbError(null);
       } else {
         setDbRows(null);
+        setDbMeta(null);
         setDbError(res.error);
       }
     }, q ? 300 : 0);
@@ -123,7 +126,12 @@ export default function CorpusPanel({ compact = false }: { compact?: boolean }) 
           </div>
 
           <div className="font-mono text-[10px] space-y-0.5 max-h-[220px] overflow-auto">
-            {rows.length === 0 && <div className="text-white/35">مفيش صف مطابق في الشريحة المحمّلة.</div>}
+            {rows.length === 0 && (
+              <div className="text-white/35">
+                مفيش صف مطابق{q.trim() ? ` لـ«${q.trim()}»` : ""}
+                {dbMeta?.searched ? ` — البحث اتنفّذ على ${dbMeta.searched.toLocaleString("en-US")} صف في الجدول` : " في الشريحة المحمّلة"}.
+              </div>
+            )}
             {rows.map((r) => (
               <div key={r.id} className="flex items-center justify-between gap-2">
                 <span className="truncate" style={{ color: r.sev === "critical" ? "#ff5555" : r.sev === "high" ? "#ff9944" : "#8fb8ff" }}>
@@ -137,7 +145,12 @@ export default function CorpusPanel({ compact = false }: { compact?: boolean }) 
           </div>
           <div className="text-[9px] text-white/30">
             {dbRows ? (
-              <>المصدر: <span className="text-cyan-300">Postgres الحي</span> · {dbRows.length} صف مطابق</>
+              <>
+                المصدر: <span className="text-cyan-300">Postgres الحي</span> · {dbRows.length} صف مطابق
+                {dbMeta?.searched ? ` من ${dbMeta.searched.toLocaleString("en-US")} صف في الجدول` : ""}
+                {dbMeta?.indexTotal ? ` · الفهرس ${dbMeta.indexTotal.toLocaleString("en-US")}` : ""}
+                {dbMeta?.slice === true ? " · الجدول لسه جزئي والفرق مكتوب مش مخفي" : ""}
+              </>
             ) : (
               <>مصدر احتياطي: الملف الثابت{dbError ? ` (الباك إند: ${dbError})` : ""}</>
             )}

@@ -64,8 +64,19 @@ export const backendHunt = () =>
 export const backendOrgans = () =>
   getJson<{ organs: Array<{ id: string; label_ar: string; status: string; detail: string; source: string; at: string }> }>("/organs");
 
+export interface BackendCorpusMeta {
+  rows: BackendCve[];
+  found?: number;
+  /** rows the query was actually run against (the table), not the index */
+  searched?: number;
+  /** total in the published corpus index, for the honest "slice" comparison */
+  indexTotal?: number | null;
+  syncedAt?: string | null;
+  slice?: boolean | null;
+}
+
 export const backendCorpus = (q: string, limit = 20) =>
-  getJson<{ rows: BackendCve[] }>(`/corpus?q=${encodeURIComponent(q)}&limit=${limit}`);
+  getJson<BackendCorpusMeta>(`/corpus?q=${encodeURIComponent(q)}&limit=${limit}`);
 
 export interface BackendChatResult {
   ok: boolean;
