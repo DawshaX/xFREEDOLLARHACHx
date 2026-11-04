@@ -75,3 +75,12 @@ services:
         sync: false
       - key: GITHUB_MODELS_TOKEN
         sync: false
+      # Durable memory on the free plan: there is no disk, so the agent's memory
+      # mirrors itself to one row in Supabase (table `nova_memory`, service role
+      # only) and rehydrates on boot. Both values come from the Supabase
+      # dashboard → Project Settings → API. Leave them unset and the engine still
+      # runs — it just forgets everything on each deploy.
+      - key: NOVA_SUPABASE_URL
+        sync: false
+      - key: NOVA_SUPABASE_SERVICE_KEY
+        sync: false

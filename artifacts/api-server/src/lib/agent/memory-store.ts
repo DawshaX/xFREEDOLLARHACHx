@@ -81,6 +81,111 @@ let writeTimer: NodeJS.Timeout | null = null;
 let dirty = false;
 let lastWriteError: string | null = null;
 
+/**
+ * Optional durable mirror — for hosts with no disk.
+ * ────────────────────────────────────────────────
+ * A free web service (Render free, Fly scale-to-zero, any PaaS without a volume)
+ * hands the container a writable filesystem that is thrown away on the next
+ * deploy. The memory file is the whole point of this module, so losing it means
+ * the agent forgets every lesson on every deploy — the failure that looks like
+ * "it works, but it is dumb again".
+ *
+ * When `NOVA_SUPABASE_URL` + `NOVA_SUPABASE_SERVICE_KEY` are set, the store
+ * mirrors itself to one row (`nova_memory.id = 'main'`) and hydrates from it
+ * when the local file is missing. The file stays the fast path and the source of
+ * truth while the process lives; the row is the memory that outlives the box.
+ *
+ * Both variables are server-side only (the service key writes). With either one
+ * unset this module behaves exactly as before — a plain file, no network.
+ */
+const MIRROR_URL = (process.env.NOVA_SUPABASE_URL || "").replace(/\/+$/, "");
+const MIRROR_KEY = process.env.NOVA_SUPABASE_SERVICE_KEY || "";
+const MIRROR_ROW = process.env.NOVA_MEMORY_ROW || "main";
+const mirrorOn = Boolean(MIRROR_URL && MIRROR_KEY);
+let mirrorState: "off" | "idle" | "ok" | "error" = mirrorOn ? "idle" : "off";
+let mirrorError: string | null = null;
+let mirrorTimer: NodeJS.Timeout | null = null;
+
+function mirrorHeaders(): Record<string, string> {
+  return {
+    apikey: MIRROR_KEY,
+    authorization: `Bearer ${MIRROR_KEY}`,
+    "content-type": "application/json",
+  };
+}
+
+/** Pull the last saved document. Returns null when the row does not exist yet. */
+async function mirrorLoad(): Promise<MemoryFile | null> {
+  if (!mirrorOn) return null;
+  try {
+    const res = await fetch(
+      `${MIRROR_URL}/rest/v1/nova_memory?id=eq.${encodeURIComponent(MIRROR_ROW)}&select=doc`,
+      { headers: mirrorHeaders(), signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) {
+      mirrorState = "error";
+      mirrorError = `load HTTP ${res.status}`;
+      return null;
+    }
+    const rows = (await res.json()) as Array<{ doc?: MemoryFile }>;
+    const doc = rows?.[0]?.doc;
+    if (!doc || !Array.isArray(doc.records)) {
+      mirrorState = "ok";
+      return null;
+    }
+    mirrorState = "ok";
+    return { version: 2, seq: Number(doc.seq ?? 0), records: doc.records };
+  } catch (err) {
+    mirrorState = "error";
+    mirrorError = (err as Error).message;
+    return null;
+  }
+}
+
+/** Replace the row with the current document. Debounced; never throws. */
+function mirrorSchedule(): void {
+  if (!mirrorOn || mirrorTimer) return;
+  mirrorTimer = setTimeout(() => {
+    mirrorTimer = null;
+    void mirrorPush();
+  }, 1500);
+  mirrorTimer.unref?.();
+}
+
+async function mirrorPush(): Promise<void> {
+  if (!mirrorOn) return;
+  try {
+    const res = await fetch(`${MIRROR_URL}/rest/v1/nova_memory?on_conflict=id`, {
+      method: "POST",
+      headers: { ...mirrorHeaders(), prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify([{ id: MIRROR_ROW, doc: store, updated_at: new Date().toISOString() }]),
+      signal: AbortSignal.timeout(8000),
+    });
+    mirrorState = res.ok ? "ok" : "error";
+    mirrorError = res.ok ? null : `push HTTP ${res.status}`;
+  } catch (err) {
+    mirrorState = "error";
+    mirrorError = (err as Error).message;
+  }
+}
+
+/** Hydrate from the mirror once at boot (no-op with the file present). */
+export async function hydrateMemoryFromMirror(): Promise<{ hydrated: boolean; records: number }> {
+  if (!mirrorOn) return { hydrated: false, records: 0 };
+  load();
+  if (store.records.length > 0) return { hydrated: false, records: store.records.length };
+  const doc = await mirrorLoad();
+  if (!doc) return { hydrated: false, records: 0 };
+  store = doc;
+  dirty = true;
+  flushNow();
+  return { hydrated: true, records: store.records.length };
+}
+
+export function mirrorStatus(): { on: boolean; state: string; error: string | null; row: string } {
+  return { on: mirrorOn, state: mirrorState, error: mirrorError, row: MIRROR_ROW };
+}
+
 /* ── persistence ──────────────────────────────────────────────────────────── */
 
 function load(): void {
@@ -125,8 +230,12 @@ function flushNow(): void {
     fs.renameSync(tmp, OPTS.file); // atomic on the same filesystem
     dirty = false;
     lastWriteError = null;
+    mirrorSchedule();
   } catch (err) {
     lastWriteError = (err as Error).message;
+    // A read-only disk (some free hosts) must not mean "no memory at all":
+    // push what we have to the mirror even though the file write failed.
+    mirrorSchedule();
   }
 }
 
@@ -156,12 +265,32 @@ const STOP = new Set([
   "the", "and", "for", "with", "that", "this", "from", "into", "your", "you",
 ]);
 
+/**
+ * Tokens, with the compound ones split as well as kept.
+ *
+ * The first version kept `.`, `-`, `_` and `/` inside a token, so a hostname
+ * ("scanme.nmap.org"), a path ("/api/nova-core/chat") or a CVE id was ONE token:
+ * searching "scanme" found nothing, which is a silent recall miss for exactly the
+ * things this agent stores. Now the whole token is kept AND its parts, so both
+ * "scanme.nmap.org" and "scanme" hit. Only the index side splits: expanding the
+ * query would inflate the denominator of the relevance score.
+ */
 function tokens(text: string): string[] {
-  return text
+  const whole = text
     .toLowerCase()
     .replace(/[^\p{L}\p{N}.\-_/]+/gu, " ")
     .split(/\s+/)
     .filter((t) => t.length > 1 && !STOP.has(t));
+  const out = new Set<string>();
+  for (const t of whole) {
+    out.add(t);
+    if (/[.\-_/]/.test(t)) {
+      for (const part of t.split(/[.\-_/]+/)) {
+        if (part.length > 1 && !STOP.has(part)) out.add(part);
+      }
+    }
+  }
+  return [...out];
 }
 
 function hash(s: string): string {
