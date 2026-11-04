@@ -56,10 +56,20 @@ jobs:
           nmap --version 2>&1 | head -1 || echo "nmap unavailable"
 
       - name: vendor the real toolchain
+        env:
+          # authenticated api.github.com: anonymous calls are rate-limited per
+          # runner IP, and a 403 here reports as "0 tools" without an error
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/fetch-toolchain.mjs --into vendor/bin
 
       - name: PATH for the vendored binaries
         run: echo "$PWD/vendor/bin" >> "$GITHUB_PATH"
+
+      # The vendorer never fails a build (a bad CDN must not stop a deploy), so a
+      # green "vendor" step means "the script finished", not "the tools are here".
+      # This step is the one that answers the real question, before any scanning.
+      - name: prove the scanners are executable
+        run: node scripts/check-toolchain.mjs --need=httpx,katana,nuclei
 
       - name: hunt
         run: node scripts/hunt-live.mjs ${{ github.event.inputs.only && format('--only {0}', github.event.inputs.only) || '' }}
