@@ -34,7 +34,19 @@ async function probe(name, pathname, expect) {
 const health = await probe("health", "/health", (b) => b?.ok === true);
 const hunt = await probe("hunt", "/hunt", (b) => b !== null && "findings" in b);
 const organs = await probe("organs", "/organs", (b) => Array.isArray(b?.organs));
-const corpus = await probe("corpus?q=nginx", "/corpus?q=nginx&limit=3", (b) => Array.isArray(b?.rows));
+// A search that returns an empty array is a 200 too. The corpus probe asserts
+// that a real product lookup finds something AND that the row count it was run
+// against is reported, so "0 results" can never masquerade as a healthy search.
+const corpus = await probe(
+  "corpus?q=nginx",
+  "/corpus?q=nginx&limit=3",
+  (b) => Array.isArray(b?.rows) && b.rows.length > 0 && Number(b.searched) > 0,
+);
+const corpusMiss = await probe(
+  "corpus?q=zzz-no-such-product",
+  "/corpus?q=zzz-no-such-product&limit=3",
+  (b) => Array.isArray(b?.rows) && b.rows.length === 0 && Number(b.searched) > 0,
+);
 
 /* ── CSV mirrors ────────────────────────────────────────────────────────────
    Google Sheets cannot parse JSON, but `=IMPORTDATA(<url>)` reads CSV and
@@ -77,6 +89,10 @@ const report = {
   verdict: failed === 0 ? "GREEN" : "RED",
   counts: health?.counts ?? null,
   corpusSample: corpus?.rows?.length ?? 0,
+  corpusSearched: corpus?.searched ?? null,
+  corpusIndexTotal: corpus?.indexTotal ?? null,
+  corpusSlice: corpus?.slice ?? null,
+  negativeSearchOk: corpusMiss?.ok ?? null,
   checks,
 };
 fs.mkdirSync(path.join(root, "state"), { recursive: true });
