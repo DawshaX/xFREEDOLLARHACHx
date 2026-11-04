@@ -321,7 +321,10 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400);
       const rows = (doc.findings ?? []).map((f: Record<string, unknown>) => ({
         run_id: run.id,
-        host: String(f.matchedAt ?? ""),
+        // `host` is the target that was scanned; `matchedAt` is a URL. Using the
+        // URL as the host made every stored finding look like it came from a host
+        // string with a scheme and a path in it.
+        host: String(f.host ?? f.matchedAt ?? ""),
         template: String(f.template ?? ""),
         template_id: (f.templateId as string) ?? null,
         severity: (f.severity as string) ?? null,
