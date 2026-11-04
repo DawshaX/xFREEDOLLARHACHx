@@ -133,18 +133,28 @@ if (fixture) {
     const startIndex = page * perPage;
     if (startIndex > 0) await sleep(delayMs);
     let res;
-    try {
-      res = await lib.fetchNvdPage({
-        startIndex,
-        resultsPerPage: perPage,
-        apiKey,
-        lastModStartDate: incrementalSince,
-        lastModEndDate: incrementalSince ? new Date().toISOString() : undefined,
-      });
-    } catch (err) {
-      console.log(`NVD page ${page + 1} failed: ${err.message} — stopping with what we have`);
-      break;
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      try {
+        res = await lib.fetchNvdPage({
+          startIndex,
+          resultsPerPage: perPage,
+          apiKey,
+          lastModStartDate: incrementalSince,
+          lastModEndDate: incrementalSince ? new Date().toISOString() : undefined,
+        });
+        break;
+      } catch (err) {
+        const throttled = /HTTP (403|429|503)|fetch failed|timeout/i.test(err.message);
+        if (attempt === 4 || !throttled) {
+          console.log(`NVD page ${page + 1} failed: ${err.message} — stopping with what we have`);
+          break;
+        }
+        const wait = 10_000 * attempt; // 10s · 20s · 30s — NVD asks for patience, not speed
+        console.log(`NVD page ${page + 1} attempt ${attempt}: ${err.message} → retrying in ${wait / 1000}s`);
+        await new Promise((r) => setTimeout(r, wait));
+      }
     }
+    if (!res) break;
     pages += 1;
     totalResults = res.totalResults || totalResults;
     for (const r of res.rows) rows.set(r.id, { ...r, kev: kev.has(r.id) ? true : r.kev, epss: epss.get(r.id) ?? r.epss });
@@ -157,7 +167,15 @@ if (fixture) {
 }
 
 if (rows.size === 0) {
-  console.error("no rows collected — refusing to write an empty corpus");
+  // An incremental window with nothing new is the normal quiet case, not an error:
+  // NVD was throttling or nothing changed in the last 30 minutes. Only a missing
+  // corpus makes "no rows" a real failure.
+  if (fs.existsSync(lib.corpusFile()) && fs.statSync(lib.corpusFile()).size > 1024) {
+    console.log("no new CVEs in this window — existing corpus kept as is");
+    console.log(`corpus on disk: ${lib.corpusStatus().total} rows @ ${lib.corpusStatus().at}`);
+    process.exit(0);
+  }
+  console.error("no rows collected and no corpus on disk — refusing to write an empty corpus");
   process.exit(1);
 }
 
