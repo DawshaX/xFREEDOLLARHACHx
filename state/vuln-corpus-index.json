@@ -1,72 +1,204 @@
 {
   "version": 1,
-  "at": "2026-11-04T04:42:28.812Z",
+  "at": "2026-11-04T05:32:57.169Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 72,
+  "total": 46000,
   "bySeverity": {
-    "critical": 11,
-    "high": 24,
-    "medium": 31,
-    "low": 6
+    "high": 20870,
+    "medium": 21743,
+    "low": 2806,
+    "unknown": 423,
+    "critical": 158
   },
   "byYear": {
-    "2025": 1,
-    "2026": 71
+    "1999": 1573,
+    "2000": 1235,
+    "2001": 1538,
+    "2002": 2365,
+    "2003": 1515,
+    "2004": 2668,
+    "2005": 4684,
+    "2006": 7038,
+    "2007": 6498,
+    "2008": 7012,
+    "2009": 4796,
+    "2010": 4370,
+    "2011": 708
   },
-  "kev": 0,
-  "epssScored": 56,
-  "products": 10,
+  "kev": 52,
+  "epssScored": 45577,
+  "products": 17761,
   "topProducts": [
     {
-      "product": "langflow",
-      "count": 5
+      "product": "linux_kernel",
+      "count": 4485
     },
     {
-      "product": "siebel_crm",
-      "count": 4
+      "product": "firefox",
+      "count": 4007
     },
     {
-      "product": "vm2",
-      "count": 3
+      "product": "mac_os_x",
+      "count": 3278
     },
     {
-      "product": "next.js",
-      "count": 2
+      "product": "php",
+      "count": 2086
     },
     {
-      "product": "forge",
-      "count": 2
+      "product": "safari",
+      "count": 1896
     },
     {
-      "product": "pypdf",
-      "count": 2
+      "product": "ios",
+      "count": 1337
     },
     {
-      "product": "sqlite",
-      "count": 2
+      "product": "internet_explorer",
+      "count": 1328
     },
     {
-      "product": "cryptography",
-      "count": 1
+      "product": "mac_os_x_server",
+      "count": 1314
     },
     {
-      "product": "js-toml",
-      "count": 1
+      "product": "websphere_application_server",
+      "count": 1290
     },
     {
-      "product": "imagemagick",
-      "count": 1
+      "product": "ubuntu_linux",
+      "count": 1220
+    },
+    {
+      "product": "opera_browser",
+      "count": 1216
+    },
+    {
+      "product": "acrobat",
+      "count": 1191
+    },
+    {
+      "product": "irix",
+      "count": 1051
+    },
+    {
+      "product": "opensolaris",
+      "count": 1036
+    },
+    {
+      "product": "flash_player",
+      "count": 1028
+    },
+    {
+      "product": "chrome",
+      "count": 1002
+    },
+    {
+      "product": "jre",
+      "count": 988
+    },
+    {
+      "product": "quicktime",
+      "count": 896
+    },
+    {
+      "product": "freebsd",
+      "count": 890
+    },
+    {
+      "product": "wireshark",
+      "count": 883
+    },
+    {
+      "product": "ethereal",
+      "count": 863
+    },
+    {
+      "product": "mysql",
+      "count": 845
+    },
+    {
+      "product": "shockwave_player",
+      "count": 837
+    },
+    {
+      "product": "bugzilla",
+      "count": 811
+    },
+    {
+      "product": "itunes",
+      "count": 803
+    },
+    {
+      "product": "solaris",
+      "count": 790
+    },
+    {
+      "product": "sunos",
+      "count": 777
+    },
+    {
+      "product": "hp-ux",
+      "count": 749
+    },
+    {
+      "product": "aix",
+      "count": 748
+    },
+    {
+      "product": "database_server",
+      "count": 705
+    },
+    {
+      "product": "windows_2003_server",
+      "count": 702
+    },
+    {
+      "product": "http_server",
+      "count": 690
+    },
+    {
+      "product": "debian_linux",
+      "count": 681
+    },
+    {
+      "product": "linux",
+      "count": 675
+    },
+    {
+      "product": "acrobat_reader",
+      "count": 663
+    },
+    {
+      "product": "phpmyadmin",
+      "count": 647
+    },
+    {
+      "product": "application_server",
+      "count": 640
+    },
+    {
+      "product": "drupal",
+      "count": 611
+    },
+    {
+      "product": "php-nuke",
+      "count": 608
+    },
+    {
+      "product": "tomcat",
+      "count": 583
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 13877,
-    "sha256": "a70122c2d367c0d83e57aa6750cfecbe1724e5769ad4c7639000351ad8e08eeb"
+    "bytes": 4724837,
+    "sha256": "e39525da59618486574f26d4c5e72d14f6c14e70cafd9b35d4245d8678fd4ee9"
   },
-  "mode": "incremental",
-  "says_ar": "72 ثغرة حقيقية · critical 11 · high 24 · 0 مستغلّة فعلياً (KEV) · 56 لها EPSS · 10 منتج بـCPE · مزامنة 2026-11-04T04:42:28.812Z"
+  "mode": "full",
+  "says_ar": "46000 ثغرة حقيقية · critical 158 · high 20870 · 52 مستغلّة فعلياً (KEV) · 45577 لها EPSS · 17761 منتج بـCPE · مزامنة 2026-11-04T05:32:57.169Z"
 }
