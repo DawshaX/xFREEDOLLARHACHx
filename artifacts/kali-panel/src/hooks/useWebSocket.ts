@@ -1,3 +1,4 @@
+import { corpusTotal, corpusSaysAr } from "../lib/corpus-live";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { resolveStandaloneApi } from "@/lib/standalone-api";
 import { getRemoteBase, remoteWsUrl } from "@/lib/remote";
@@ -96,7 +97,7 @@ function simulateStandaloneWsChat(
       requestId,
       id: toolCallId,
       name: "cybernova_galaxy_brain_sync",
-      input: { query: content.slice(0, 120), mode: "internal-ws-bus", galaxyCves: 76680 },
+      input: { query: content.slice(0, 120), mode: "internal-ws-bus", galaxyCves: corpusTotal() ?? 0 },
     });
   }, 40);
 
@@ -105,7 +106,7 @@ function simulateStandaloneWsChat(
       type: "chat_tool_result",
       requestId,
       toolCallId,
-      result: JSON.stringify({ synced: true, bus: "internal-ws-active", galaxyCves: 76680, tools: 78, primitives: 28 }, null, 2),
+      result: JSON.stringify({ synced: true, bus: "internal-ws-active", galaxyCves: corpusTotal() ?? 0, tools: 78, primitives: 28 }, null, 2),
       isError: false,
     });
   }, 110);
@@ -113,7 +114,7 @@ function simulateStandaloneWsChat(
   const brainRes = resolveStandaloneApi("/api/ollama/chat", "POST", { prompt: content }) as { response?: string } | null;
   const reply =
     brainRes?.response ||
-    `⚡ **وكيل CyberNova الحي (متصل عبر ناقل WebSocket الداخلي ومكتبة 76,680+ ثغرة)**\n\n` +
+    `⚡ **وكيل CyberNova الحي (ناقل WebSocket الداخلي · ${corpusSaysAr()})**\n\n` +
     `تم استلام رسالتك: "${content}"\n\n` +
     `- جميع الأحداث والملاحظات والأهداف متزامنة في الوقت الفعلي مع **الذاكرة (/memory)** و**متتبع المهام (/mission-tracker)** و**Bug Bounty Studio**.`;
 

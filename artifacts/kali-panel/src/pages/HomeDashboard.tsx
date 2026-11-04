@@ -1,3 +1,4 @@
+import { corpusTotal } from "../lib/corpus-live";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
@@ -703,7 +704,7 @@ export default function HomeDashboard() {
       { id: "init-3", type: "api", msg: "⚡ تشريح حزم JavaScript عبر Katana + JShunter + LinkFinder واستخراج مسارات /api/v1 و/graphql", ts: new Date(now - 160000) },
       { id: "init-4", type: "cve", msg: "🛡️ فحص ومطابقة CVE-2025-29927 (Next.js Middleware Bypass) وIMMUNEFI-2026-001 مع ترويسات الأمان والعقود", ts: new Date(now - 120000), cveId: "IMMUNEFI-2026-001", severity: "CRITICAL", cvssScore: 10.0, cveSource: "Immunefi-Web3", cveEpss: 0.99, cveExploitType: "Bridge-SigBypass" },
       { id: "init-5", type: "system", msg: "🔗 تركيب سلسلة ثغرات رباعية (4-Hop Chain: P01 ➔ P05 ➔ P04 ➔ P02 · CVSS 9.5) وتوثيق بصمة Zero-FP SHA-256", ts: new Date(now - 80000) },
-      { id: "init-6", type: "refresh", msg: "🌿 تفعيل 78 أداة Kali & Web3 و56 مشروع GitHub 2026 ومكتبة المجرة (76,680+ ثغرة متزامنة عبر WebSocket)", ts: new Date(now - 40000) },
+      { id: "init-6", type: "refresh", msg: `🌿 تفعيل 78 أداة Kali & Web3 و56 مشروع GitHub 2026 والكوربوس الحقيقي (${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة)`, ts: new Date(now - 40000) },
     ];
   });
   const [activeTaskTab, setActiveTaskTab]   = useState<"journal"|"running"|"completed"|"pending"|"discoveries"|"session">(() => {
@@ -993,7 +994,7 @@ export default function HomeDashboard() {
         }),
       }).catch(() => null);
 
-      let totalCount = 76680 + multiSiteRes.totalAdded;
+      let totalCount = (corpusTotal() ?? 0) + multiSiteRes.totalAdded;
       if (ingestRes && ingestRes.ok) {
         const ingData = (await ingestRes.json()) as { total?: number; stats?: CveDbStats };
         if (ingData.total) totalCount = ingData.total;
@@ -1093,7 +1094,7 @@ export default function HomeDashboard() {
       // Zero-error local galaxy fallback — never shows network error!
       setLastHuntAt(new Date());
       setSessionFound(prev => prev + 18);
-      setHuntLog("✅ اكتملت المزامنة الذكية عبر مكتبة المجرة المدمجة (76,680+ ثغرة)");
+      setHuntLog(`✅ اكتملت المزامنة الذكية من الكوربوس المدمج (${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة)`);
       addLog("hunt", "✅ اكتملت المزامنة الذكية وتحديث مكتبة المجرة بنجاح", "high");
     }
     setHunting(false);
@@ -2212,7 +2213,7 @@ export default function HomeDashboard() {
                         <span className="text-[9px] font-mono font-bold" style={{ color: "rgba(147,197,253,0.65)" }}>{cnt.toLocaleString()}</span>
                       </button>
                     ))}
-                    <span className="text-[8px] font-mono ml-auto" style={{ color: "rgba(255,255,255,0.25)" }}>{(cveDbStats?.total ?? 76680).toLocaleString()} · Universal Galaxy DB</span>
+                    <span className="text-[8px] font-mono ml-auto" style={{ color: "rgba(255,255,255,0.25)" }}>{(cveDbStats?.total ?? corpusTotal() ?? 0).toLocaleString()} · Universal Galaxy DB</span>
                   </div>
                 )}
 
@@ -2292,8 +2293,8 @@ export default function HomeDashboard() {
           ═══════════════════════════════════════════════════════════════ */}
           <div ref={el => { sectionRefs.current["sec-browser"] = el; }} className="rounded-xl overflow-hidden anim-fade-up delay-150" style={{ background: "#000a18", border: "1px solid rgba(96,165,250,0.3)" }}>
             <PanelToggle open={cveBrowserOpen} onToggle={() => { setCveBrowserOpen(o => !o); addLog("nav", "متصفح CVE"); }}
-              label="🔍 مكتبة ومستعرض الثغرات الشاملة (76,680+ ثغرة) + المولّد الذكي حسب الطلب — Universal CVE Galaxy & AI Mutator" color="#60a5fa"
-              count={cveBrowserOpen ? cveBrowserTotal : (cveDbStats?.total ?? 76680)} />
+              label={`🔍 مكتبة ومستعرض الثغرات (${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة حقيقية) + المولّد الذكي — Universal CVE Galaxy`} color="#60a5fa"
+              count={cveBrowserOpen ? cveBrowserTotal : (cveDbStats?.total ?? corpusTotal() ?? 0)} />
             {cveBrowserOpen && (
               <>
                 {/* Smart AI Vulnerability Mutator & On-Demand Generator Bar */}

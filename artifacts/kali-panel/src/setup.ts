@@ -1,3 +1,4 @@
+import { corpusTotal, corpusSaysAr, loadCorpusLive } from "./lib/corpus-live";
 import {
   Zap, Database, Activity, Cpu, Clock, Play, Shield, ShieldAlert, ShieldCheck,
   Terminal, Sparkles, Globe, Code, BookOpen, Server, Layers, AlertTriangle,
@@ -69,12 +70,12 @@ function buildStaticOllamaStreamResponse(body: Record<string, unknown> | null): 
 
   let reply = "";
   if (sysMsg.includes("فكّر بصوت عالٍ") || sysMsg.includes("أقل من 80 كلمة")) {
-    reply = `تحليل تكتيكي للطلب: "${lastUser.slice(0, 90)}". متصل الآن بمكتبة المجرة (76,680+ ثغرة من 9 مصادر عالمية + Immunefi Web3) وترسانة 78 أداة كالي و28 فئة ثغرات أولية (P01-P28) مع مزامنة WebSocket الحية.`;
+    reply = `تحليل تكتيكي للطلب: "${lastUser.slice(0, 90)}". ${corpusSaysAr()} · ترسانة 78 أداة كالي و28 فئة ثغرات أولية (P01-P28).`;
   } else if (sysMsg.includes("اكتب خطة مرقمة")) {
     reply = [
       "1. التحقق من النطاق القانوني (In-Scope) وقواعد برنامج Bug Bounty / Immunefi للهدف النشط",
       "2. تنفيذ استطلاع سلبي (Passive Recon) للنطاقات الفرعية، العقود الذكية، وشهادات TLS",
-      "3. مطابقة السطح الهجومي مع مكتبة 76,680+ ثغرة (NVD, CISA KEV, GitHub, ExploitDB, Immunefi-Web3)",
+      `3. مطابقة السطح الهجومي مع الكوربوس الحقيقي (${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة · NVD + CISA KEV + EPSS + GHSA)`,
       "4. تركيب سلاسل الثغرات (A->B->C) أو اختبار Fork محلي معزول عبر Foundry وSlither بدون أي أثر تدميري",
       "5. التحقق ببوابة Zero-FP (SHA-256 Baseline Diff) وتوليد التقرير الفني وكود الترقيع الدفاعي",
     ].join("\n");
@@ -85,9 +86,9 @@ function buildStaticOllamaStreamResponse(body: Record<string, unknown> | null): 
     }) as { response?: string } | null;
     reply =
       brainRes?.response ||
-      `### ⚡ وكيل CyberNova الأمني الذاتي الوعي (متصل بمكتبة 76,680+ ثغرة وناقل WebSocket الحي)\n\n` +
+      `### ⚡ وكيل CyberNova الأمني الذاتي الوعي (${corpusSaysAr()} · وناقل WebSocket الحي)\n\n` +
       `تم تحليل طلبك:\n> \`${lastUser.slice(0, 150)}\`\n\n` +
-      `- **الوعي الذاتي للمنصة**: متصل بـ **76,680+ ثغرة** (من 9 مصادر حية)، **78 أداة Kali & Web3**، **56 مشروع GitHub 2026**، و**28 فئة ثغرات أولية (P01–P28)**.`;
+      `- **الوعي الذاتي للمنصة**: ${corpusSaysAr()}، **78 أداة Kali & Web3**، **56 مشروع GitHub 2026**، و**28 فئة ثغرات أولية (P01–P28)**.`;
   }
 
   const encoder = new TextEncoder();
@@ -356,12 +357,12 @@ function notifyAllSseAndWs(urlStr: string, method: string, mockResult: unknown) 
         });
       }
       emitNamed("hunt_done", resObj);
-      emitNamed("stats_update", { total: resObj.total || 76680 });
+      emitNamed("stats_update", { total: resObj.total || corpusTotal() || 0 });
     });
     g?.__cybernovaEmitWs?.({
       type: "cve_hunt_complete",
       newFound: resObj.newFound || 31,
-      total: resObj.total || 76680,
+      total: resObj.total || corpusTotal() || 0,
       latestCve,
     });
   } else if (urlStr.includes("/cve/ingest-live")) {
@@ -382,12 +383,12 @@ function notifyAllSseAndWs(urlStr: string, method: string, mockResult: unknown) 
           publishedAt: new Date().toISOString(),
         });
       }
-      emitNamed("stats_update", { total: resObj.total || 76680 });
+      emitNamed("stats_update", { total: resObj.total || corpusTotal() || 0 });
     });
     g?.__cybernovaEmitWs?.({
       type: "cve_live_ingested",
       ingestedCount: resObj.ingestedCount || topItems.length,
-      total: resObj.total || 76680,
+      total: resObj.total || corpusTotal() || 0,
       topItems,
     });
   } else if (urlStr.includes("/cve/mutate")) {
@@ -407,12 +408,12 @@ function notifyAllSseAndWs(urlStr: string, method: string, mockResult: unknown) 
           epssScore: mutated.epssScore || 0.98,
           publishedAt: new Date().toISOString(),
         });
-        emitNamed("stats_update", { total: resObj.total || 76680 });
+        emitNamed("stats_update", { total: resObj.total || corpusTotal() || 0 });
       });
       g?.__cybernovaEmitWs?.({
         type: "cve_mutated",
         cve: mutated,
-        total: resObj.total || 76680,
+        total: resObj.total || corpusTotal() || 0,
       });
     }
   } else {
@@ -478,7 +479,7 @@ if (typeof window !== "undefined" && isStandaloneHost()) {
           emitNamed("message", { type: "log", message: "⚡ تم جمع وتحديث 28 عنصر استخباراتي جديد في الفهرس المعرفي." });
           emitNamed("message", { type: "done", summary: { totalCollected: 28, totalSkipped: 0, duration: 380 } });
         } else if (urlStr.includes("/nuclei/scan")) {
-          emitNamed("message", { type: "log", message: "[INF] Running passive template verification across 76,680+ galaxy signatures..." });
+          emitNamed("message", { type: "log", message: `[INF] Passive verification across ${corpusTotal() ?? 0} corpus signatures...` });
           emitNamed("message", { type: "done", total: 1 });
         } else if (
           urlStr.includes("/agent/events") ||
@@ -495,7 +496,7 @@ if (typeof window !== "undefined" && isStandaloneHost()) {
         } else if (urlStr.includes("/cve/stream") || urlStr.includes("/cve-live/stream")) {
           activeCveSseEmitters.add(emitNamed);
           const currentStats = resolveStandaloneApi("/api/cve/db/stats", "GET", null) as { total?: number } | null;
-          const totalCount = currentStats?.total || 76680;
+          const totalCount = currentStats?.total || corpusTotal() || 0;
           emitNamed("connected", { ok: true, status: "live", sources: 9, total: totalCount });
           emitNamed("stats_update", { total: totalCount });
           emitNamed("cve_new", {
@@ -584,7 +585,7 @@ if (typeof window !== "undefined" && isStandaloneHost()) {
         const openEv = new Event("open");
         this.onopen?.(openEv);
         this.dispatchEvent(openEv);
-        this.listener?.({ type: "ws_connected", status: "active", galaxyTotalCves: 76680, ts: Date.now() });
+        this.listener?.({ type: "ws_connected", status: "active", galaxyTotalCves: corpusTotal() ?? 0, ts: Date.now() });
       }, 25);
     }
 

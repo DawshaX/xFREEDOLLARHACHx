@@ -1,3 +1,4 @@
+import { corpusTotal } from "./corpus-live";
 /**
  * Browser-side Ollama streaming client.
  *
@@ -25,7 +26,7 @@ export interface OllamaStreamOpts {
 
 function injectCyberNovaSelfAwareness(messages: OllamaMessage[]): OllamaMessage[] {
   let activeTarget = "immunefi.com";
-  let galaxyTotal = 76680;
+  let galaxyTotal = corpusTotal() ?? 0;
   try {
     const rawMissions = localStorage.getItem("cybernova_missions_v1");
     if (rawMissions) {
