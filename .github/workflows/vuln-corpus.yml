@@ -33,13 +33,15 @@ permissions:
   contents: write
 
 concurrency:
-  group: vuln-corpus
+  # v2: a stuck run in the old group would block every later ingest, and the
+  # integration token has no actions:write, so it cannot be cancelled remotely.
+  group: vuln-corpus-v2
   cancel-in-progress: false
 
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
