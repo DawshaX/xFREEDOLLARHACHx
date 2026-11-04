@@ -31,6 +31,7 @@ import {
 import { fetchSecurityTxt, type Program } from "./scope";
 import { HOSTS, freeHostSummary, type FreeHost } from "./free-hosts";
 import { execOnLocalAgent } from "../../routes/local-agent";
+import { sessionArgs, sessionHeaders, redactSecrets, hasSession } from "./session";
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
 
@@ -128,7 +129,15 @@ export function writeEvidence(
   status?: number,
 ): Evidence {
   const dir = path.join(ctx.jobDir, "evidence");
-  const buf = typeof content === "string" ? Buffer.from(content, "utf8") : content;
+  // A session cookie in an evidence file is a leaked credential: it would be
+  // committed, hashed, shipped in a report and pasted into a bug-bounty form.
+  // Every byte that becomes evidence passes this gate first, and the hash below is
+  // the hash of the redacted artifact — i.e. of what is really on disk, so the
+  // "reproduce this" claim still checks out.
+  const sess = ctx.program?.session;
+  const raw = typeof content === "string" ? content : content.toString("utf8");
+  const buf = Buffer.from(hasSession(sess) ? redactSecrets(raw, sess) : raw, "utf8");
+  probe = hasSession(sess) ? redactSecrets(probe, sess) : probe;
   const sha = crypto.createHash("sha256").update(buf).digest("hex");
   const name = `${kind}-${sha.slice(0, 12)}.txt`;
   let file: string | undefined;
@@ -322,6 +331,9 @@ function nucleiArgv(ctx: RunCtx, p: Record<string, unknown>): string[] {
     // callback ماحدش بيبعتّه على نود بلا egress، وبتاكل الميزانية وهي مستنية.
     ...(prof.oob ? [] : ["-no-interactsh"]),
     "-timeout", "6", "-retries", "1",
+    // The session, when the program has one: this is the difference between
+    // "the login page lacks CSP" and "template X fires on /api/v2/… as user A".
+    ...sessionArgs(ctx.program?.session),
     "-stats",
   ];
 }
@@ -442,7 +454,7 @@ export const KINDS: Record<string, KindDef> = {
     titleAr: "ترويسات الأمان + كشف التقنيات",
     active: true,
     run: async (ctx) => {
-      const data = await scanHeaders(ctx.host, ctx.scheme === "https");
+      const data = await scanHeaders(ctx.host, ctx.scheme === "https", sessionHeaders(ctx.program?.session));
       // A probe that never reached the origin tells us NOTHING about its headers.
       // Reporting "missing HSTS" from a blocked/errored request is a false positive
       // with a confidence score — exactly what this platform exists to prevent.
@@ -698,7 +710,8 @@ export const KINDS: Record<string, KindDef> = {
     titleAr: "استخراج مسارات API من حزم JS",
     active: true,
     run: async (ctx) => {
-      const res = await fetch(baseUrl(ctx), { redirect: "follow", signal: AbortSignal.timeout(ctx.timeoutMs) });
+      const sess = sessionHeaders(ctx.program?.session);
+      const res = await fetch(baseUrl(ctx), { redirect: "follow", headers: sess, signal: AbortSignal.timeout(ctx.timeoutMs) });
       const html = await res.text();
       const srcs = [...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map((m) => m[1]).slice(0, 12);
       const urls = srcs.map((s) => new URL(s, baseUrl(ctx)).toString());
@@ -706,7 +719,7 @@ export const KINDS: Record<string, KindDef> = {
       const mapFiles: string[] = [];
       for (const u of urls) {
         try {
-          const js = await (await fetch(u, { signal: AbortSignal.timeout(ctx.timeoutMs) })).text();
+          const js = await (await fetch(u, { headers: sess, signal: AbortSignal.timeout(ctx.timeoutMs) })).text();
           for (const m of js.matchAll(/["'`](\/(?:api|v\d|graphql|internal|admin|rest|private)\/[A-Za-z0-9_\-./{}:]{3,90})["'`]/g)) paths.add(m[1]);
           for (const m of js.matchAll(/["'']([^"'`]+\.js\.map)["'']/g)) mapFiles.push(m[1]);
           writeEvidence(ctx, `recon.jspaths.${path.basename(u).slice(0, 40)}`, `GET ${u}`, js);
@@ -775,8 +788,11 @@ export const KINDS: Record<string, KindDef> = {
     args: (ctx, p) => nucleiArgv(ctx, p),
     // السطر اللي بيشفّه الإنسان = الـargv اللي اتنفّذت، من نفس الدالة. قبل كده كان السطر
     // بيعرض 3 سيّبات والشغل بيطلع بأربع — وده كذب في التقرير (اتصلّح في #99 وبقى محروس).
-    command: (ctx, p) =>
-      `nuclei ${nucleiArgv(ctx, p).map((a) => (/^[A-Za-z0-9_./:,-]+$/.test(a) ? a : shQuote(a))).join(" ")}`,
+    command: (ctx, p) => {
+      const line = `nuclei ${nucleiArgv(ctx, p).map((a) => (/^[A-Za-z0-9_./:,-]+$/.test(a) ? a : shQuote(a))).join(" ")}`;
+      // The printed command is copied into reports — it must never carry the cookie.
+      return redactSecrets(line, ctx.program?.session);
+    },
     parse: (stdout, ctx) => {
       const findings: Finding[] = [];
       for (const line of stdout.split(/\r?\n/)) {
@@ -823,8 +839,8 @@ export const KINDS: Record<string, KindDef> = {
     // (48B, seen in run 41459589703) was being accepted as a successful task because the tool
     // printed *something* — which is exactly why the exit code is now authoritative below.
     budgetMs: 45_000,
-    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-json", "-silent", "-follow-redirects", "-status-code", "-title", "-tech-detect", "-timeout", "8", "-retries", "1"],
-    command: (ctx) => `httpx -u ${shQuote(`${baseUrl(ctx)}/`)} -json -silent -status-code -title -tech-detect`,
+    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-json", "-silent", "-follow-redirects", "-status-code", "-title", "-tech-detect", "-timeout", "8", "-retries", "1", ...sessionArgs(ctx.program?.session)],
+    command: (ctx) => `${redactSecrets(`httpx -u ${shQuote(`${baseUrl(ctx)}/`)} -json -silent -status-code -title -tech-detect`, ctx.program?.session)}${hasSession(ctx.program?.session) ? " -H «session»" : ""}`,
     parse: (stdout, ctx) => {
       const rows: Record<string, unknown>[] = [];
       for (const line of stdout.split(/\r?\n/)) {
@@ -868,8 +884,8 @@ export const KINDS: Record<string, KindDef> = {
     binary: "katana",
     installHint: "go install -v github.com/projectdiscovery/katana/cmd/katana@latest",
     budgetMs: 110_000, // katana: a bounded crawl, not an open-ended one
-    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-jsonl", "-silent", "-depth", "2", "-concurrency", "4", "-rate-limit", String(Math.max(1, Math.round(ctx.rps))), "-timeout", "8", "-crawl-duration", "60s"],
-    command: (ctx) => `katana -u ${shQuote(`${baseUrl(ctx)}/`)} -jsonl -silent -depth 2 -rate-limit ${Math.max(1, Math.round(ctx.rps))}`,
+    args: (ctx) => ["-u", `${baseUrl(ctx)}/`, "-jsonl", "-silent", "-depth", "2", "-concurrency", "4", "-rate-limit", String(Math.max(1, Math.round(ctx.rps))), "-timeout", "8", "-crawl-duration", "60s", ...sessionArgs(ctx.program?.session)],
+    command: (ctx) => `${redactSecrets(`katana -u ${shQuote(`${baseUrl(ctx)}/`)} -jsonl -silent -depth 2 -rate-limit ${Math.max(1, Math.round(ctx.rps))}`, ctx.program?.session)}${hasSession(ctx.program?.session) ? " -H «session»" : ""}`,
     parse: (stdout, ctx) => {
       const urls = new Set<string>();
       for (const line of stdout.split(/\r?\n/)) {

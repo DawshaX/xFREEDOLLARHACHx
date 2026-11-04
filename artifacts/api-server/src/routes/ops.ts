@@ -60,6 +60,7 @@ import { KIND_LIST, toolStatus } from "../lib/ops/tools";
 import { checkGate, opsExposure } from "../lib/ops/gate";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
+import { maskProgram, maskSession, hasSession } from "../lib/ops/session";
 import { buildStamp } from "../lib/ops/version";
 import { throttleStats } from "../lib/ops/ratelimit";
 import { broadcastEvent } from "../lib/ws-hub";
@@ -220,7 +221,9 @@ router.get("/ops/programs", (req: Request, res: Response) => {
     ok: true,
     count: file.programs.length,
     updatedAt: file.updatedAt ?? null,
-    programs: file.programs,
+    // masks `session` on every program: a reader learns that a credential exists
+    // and its fingerprint, never the credential.
+    programs: file.programs.map((p) => maskProgram(p)),
     note:
       file.programs.length === 0
         ? "مفيش برنامج مضاف — أي فحص نشط هيترفض. ضيف من /bug-bounty-studio أو POST /api/ops/programs."
@@ -251,11 +254,24 @@ router.post("/ops/programs", async (req: Request, res: Response) => {
     max_rps: b.max_rps === undefined ? undefined : Number(b.max_rps),
     max_concurrency: b.max_concurrency === undefined ? undefined : Number(b.max_concurrency),
     passive_only: Boolean(b.passive_only),
+    // Authenticated scanning. Stored, never echoed: the response below goes through
+    // maskProgram() so only header names + a fingerprint come back.
+    session: (b.session ?? undefined) as import("../lib/ops/session").ProgramSession | undefined,
     policy_url: b.policy_url ? String(b.policy_url) : st.url,
     enabled: b.enabled !== false,
     notes_ar: b.notes_ar ? String(b.notes_ar) : st.found ? `security.txt: ${st.contact.join(" , ")}`.slice(0, 200) : undefined,
   });
-  res.json({ ok: true, program, securityTxt: { found: st.found, contact: st.contact, url: st.url ?? null } });
+  res.json({
+    ok: true,
+    program: maskProgram(program),
+    securityTxt: { found: st.found, contact: st.contact, url: st.url ?? null },
+    session: {
+      ...maskSession(program.session),
+      how_ar: hasSession(program.session)
+        ? "الجلسة اتحفظت — الأفواج الجاية هتشتغل بيها. القيمة نفسها مش بتترجع من الـAPI أبداً."
+        : "مفيش جلسة — الفحص anonymous (كل حاجة ورا login مش هتتشاف).",
+    },
+  });
 });
 
 router.delete("/ops/programs/:id", (req: Request, res: Response) => {
