@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-04T16:49:49.150Z",
+  "at": "2026-11-04T16:53:49.210Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "GREEN",
   "counts": {
@@ -12,23 +12,30 @@
     {
       "name": "health",
       "status": 200,
-      "ms": 1367,
+      "ms": 1029,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-04T16:49:48.113Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":800,\"huntRuns\":1,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-04T16:53:47.301Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":800,\"huntRuns\":1,\"findings\":0}}"
     },
     {
       "name": "hunt",
       "status": 200,
-      "ms": 623,
+      "ms": 732,
       "ok": true,
       "sample": "{\"run\":{\"id\":1,\"at\":\"2026-11-04T14:44:06.933+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"targets\":4,\"findings\":0,\"bySeverity\":{},\"kevUnknown\":true},\"says"
     },
     {
+      "name": "organs",
+      "status": 200,
+      "ms": 616,
+      "ok": true,
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"800 CVE · 46143 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-04T16:52:00.050195+00:00\",\"updated_at\":\"2026-"
+    },
+    {
       "name": "corpus?q=nginx",
       "status": 200,
-      "ms": 383,
+      "ms": 534,
       "ok": true,
-      "sample": "{\"q\":\"nginx\",\"rows\":[],\"at\":\"2026-11-04T16:49:49.130Z\"}"
+      "sample": "{\"q\":\"nginx\",\"rows\":[],\"at\":\"2026-11-04T16:53:49.190Z\"}"
     }
   ]
 }
