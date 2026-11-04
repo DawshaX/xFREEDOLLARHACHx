@@ -108,8 +108,15 @@ const tools = {
   katana: have("katana"),
   nmap: have("nmap"),
 };
-if (!tools.httpx && !tools.nuclei && !tools.nmap) {
-  console.error("no scanner binaries found — nothing was measured");
+// nmap is *not* part of this loop (it was installed for a different organ), so
+// its presence says nothing about whether a scan can happen. Measured: run
+// 41894091651 had httpx/nuclei/katana all "missing", nmap "present", and this
+// guard let it through — the job then wrote a report claiming 4 targets were
+// examined in 1 ms.
+const scanners = { httpx: tools.httpx, katana: tools.katana, nuclei: tools.nuclei };
+const usable = Object.entries(scanners).filter(([, v]) => v).map(([k]) => k);
+if (usable.length === 0) {
+  console.error("no scanner binaries found (httpx/katana/nuclei) — nothing was measured");
   process.exit(1);
 }
 
@@ -149,6 +156,11 @@ for (const t of allowed) {
     steps: [],
     findings: 0,
   };
+  // A tool that is absent is a recorded fact, not an empty array: the difference
+  // between "ran and found nothing" and "never ran" must be readable.
+  for (const [name, present] of Object.entries(scanners)) {
+    if (!present) entry.steps.push({ tool: name, missing: true, why: `${name} was not installed in this job` });
+  }
 
   /* 1 · httpx — is it alive, what is it running */
   if (tools.httpx) {
@@ -276,6 +288,21 @@ for (const t of report.targets) {
   }
 }
 report.totals.skipped = report.targets.filter((t) => t.status === "skipped").length;
+// A target counts as scanned only when a real tool actually executed. The step
+// records carry the reason they did not: exit 127 = the binary could not be run,
+// exit -1 = it was killed at its ceiling (a real scan, cut short), `skipped` =
+// the budget never reached it, `missing` = it was not installed.
+const isScan = (st) => st.exit !== undefined && !st.missing && st.skipped === undefined && st.notExecuted !== true;
+for (const t of report.targets) {
+  for (const st of t.steps ?? []) {
+    if (st.exit === 127) st.notExecuted = true;
+    if (st.exit === -1) st.timedOut = true;
+  }
+  if (!(t.steps ?? []).some(isScan) && t.status !== "skipped") t.status = "not-scanned";
+}
+report.totals.scanned = report.targets.filter((t) => (t.steps ?? []).some(isScan)).length;
+report.totals.notScanned = report.targets.length - report.totals.scanned;
+report.totals.timedOutSteps = report.targets.flatMap((t) => t.steps ?? []).filter((st) => st.timedOut).length;
 
 for (const f of report.findings) report.totals.bySeverity[f.severity] = (report.totals.bySeverity[f.severity] ?? 0) + 1;
 report.totals.targets = report.targets.length;
@@ -283,10 +310,19 @@ report.totals.findings = report.findings.length;
 report.totals.rated = report.findings.filter((f) => ["high", "critical"].includes(f.severity)).length;
 report.elapsedMs = Date.now() - startedAt;
 report.budgetMs = budgetMs;
-report.says_ar =
-  report.findings.length === 0
-    ? `اتفحص ${report.targets.length} هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل.`
-    : `${report.findings.length} مطابقة قوالب على ${report.targets.length} هدف (منها ${report.totals.rated} high/critical) — كل مطابقة «خيط» لازم يتأكد يدوي قبل أي تقرير.`;
+// The sentence must describe what happened. A run where no tool ran is not
+// "examined 4 targets, zero matches" — it is a failed run, and it exits 1.
+if (report.totals.scanned === 0) {
+  const missing = Object.entries(scanners).filter(([, v]) => !v).map(([k]) => k);
+  report.says_ar = `التشغيل ده ما فحصش ولا هدف — الأدوات الناقصة: ${missing.join(", ") || "كلها"}. الرقم ده مش نتيجة، ده فشل تشغيل.`;
+  report.verdict = "not-scanned";
+} else if (report.findings.length === 0) {
+  report.says_ar = `اتفحص ${report.totals.scanned} هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل.`;
+  report.verdict = "scanned";
+} else {
+  report.says_ar = `${report.findings.length} مطابقة قوالب على ${report.totals.scanned} هدف (منها ${report.totals.rated} high/critical) — كل مطابقة «خيط» لازم يتأكد يدوي قبل أي تقرير.`;
+  report.verdict = "findings";
+}
 
 fs.mkdirSync(path.dirname(outJson), { recursive: true });
 fs.writeFileSync(outJson, JSON.stringify(report, null, 2));
@@ -295,3 +331,7 @@ console.log(`hunt: ${report.totals.findings} findings · ${report.totals.rated} 
 for (const f of report.findings.slice(0, 15)) console.log(`  [${f.severity}] ${f.template} → ${f.matchedAt}`);
 console.log(report.says_ar);
 console.log(`→ ${path.relative(root, outJson)}`);
+if (report.totals.scanned === 0) {
+  console.error(`::error title=hunt scanned nothing::${report.totals.targets} target(s) in the allowlist, 0 scanned — missing tools: ${Object.entries(scanners).filter(([, v]) => !v).map(([k]) => k).join(", ") || "none, budget consumed"}`);
+  process.exit(1);
+}
