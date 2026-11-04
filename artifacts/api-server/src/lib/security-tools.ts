@@ -517,6 +517,7 @@ export async function scanSsl(
 export async function scanHeaders(
   host: string,
   useHttps = true,
+  extraHeaders: Record<string, string> = {},
 ): Promise<Record<string, unknown>> {
   return new Promise((resolve) => {
     const lib = useHttps ? https : http;
@@ -527,7 +528,7 @@ export async function scanHeaders(
         path: "/",
         method: "HEAD",
         timeout: 8000,
-        headers: { "User-Agent": "CyberNova/5.0" },
+        headers: { "User-Agent": "CyberNova/5.0", ...extraHeaders },
         rejectUnauthorized: false,
       },
       (res) => {

@@ -18,6 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import dns from "node:dns/promises";
 import { lookupBountyProgram, catalogStatus } from "./bounty-catalog";
+import { normalizeSession, type ProgramSession } from "./session";
 
 export interface ProgramScope {
   /** wildcard host patterns, e.g. "*.example.com" */
@@ -37,6 +38,12 @@ export interface ProgramScope {
   /** program policy / safe-harbour URL */
   policy_url?: string;
   notes_ar?: string;
+  /**
+   * Credentials for scanning AS A LOGGED-IN USER — the only way the engine can see
+   * anything behind a login (IDOR/BOLA/tenant bugs). Never returned by the API;
+   * see ops/session.ts#maskProgram.
+   */
+  session?: ProgramSession;
 }
 
 export interface Program extends ProgramScope {
@@ -124,6 +131,12 @@ export function upsertProgram(input: Partial<Program> & { id: string; name: stri
     passive_only: Boolean(input.passive_only),
     policy_url: input.policy_url,
     notes_ar: input.notes_ar,
+    // A re-add without a session keeps the stored one: otherwise editing the scope
+    // would silently log the scanner out and go back to reporting header noise.
+    session:
+      normalizeSession(input.session) ??
+      file.programs.find((p) => p.id === input.id)?.session ??
+      undefined,
   };
   const programs = file.programs.filter((p) => p.id !== program.id);
   programs.unshift(program);
