@@ -13,6 +13,7 @@ on:
     branches: [main]
     paths:
       - "scripts/autonomous-brain-pulse.mjs"
+      - "scripts/ci-commit.mjs"
       - ".github/workflows/autonomous-brain-pulse.yml"
 
 permissions:
@@ -33,9 +34,12 @@ jobs:
       - name: Execute Autonomous Cloud Brain Pulse
         run: node scripts/autonomous-brain-pulse.mjs
 
+      # A raw push here loses the checkpoint whenever another job pushed first —
+      # rejected, exit 1, no annotation, state gone (measured on live-mission, the
+      # same shape). ci-commit rebases with autostash and proves the push landed.
       - name: Commit & Push Updated Cloud Memory State
+        env:
+          MSG: "chore(cloud-brain): autonomous 24/7 pulse checkpoint [skip ci]"
         run: |
-          git config user.name "CyberNova 2099 Cloud Brain"
-          git config user.email "cybernova-brain@users.noreply.github.com"
-          git add state/cybernova-brain-state.json artifacts/kali-panel/public/state/cybernova-brain-state.json
-          git diff --staged --quiet || (git commit -m "chore(cloud-brain): autonomous 24/7 pulse checkpoint [skip ci]" && git push origin main)
+          node scripts/ci-commit.mjs --allow-empty --message "$MSG" \
+            state/cybernova-brain-state.json artifacts/kali-panel/public/state/cybernova-brain-state.json
