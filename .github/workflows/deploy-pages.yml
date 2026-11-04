@@ -46,6 +46,9 @@ jobs:
       - name: 🧱 Typecheck ratchet (reported; blocking gate is in live-audit)
         run: node scripts/typecheck-ratchet.mjs || echo "::warning::typecheck ratchet above baseline — see the quality-gate job in 'NOVA live audit'; deploy continues"
 
+      - name: 🧾 Workflow files are valid YAML (a bad colon broke 3 jobs once)
+        run: node scripts/check-workflows.mjs
+
       - name: 🧪 Ops engine self-test (scope gate must refuse out-of-scope)
         run: node scripts/ops-selftest.mjs
 

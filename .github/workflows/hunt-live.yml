@@ -79,4 +79,9 @@ jobs:
           retention-days: 30
 
       - name: commit the result (findings + evidence hashes)
-        run: node scripts/ci-commit.mjs --message "chore(hunt): measured scan $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]" state/hunt-latest.json state/hunt/evidence
+        env:
+          # a colon inside an unquoted YAML scalar ("chore(corpus): …") makes the
+          # whole workflow file invalid — pass the message through env instead
+          MSG: "chore(hunt): measured scan $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]"
+        run: |
+          node scripts/ci-commit.mjs --message "$MSG" state/hunt-latest.json state/hunt/evidence
