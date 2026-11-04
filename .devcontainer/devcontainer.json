@@ -1,0 +1,33 @@
+{
+  // A free Linux computer for NOVA, on GitHub's own tab.
+  //
+  // Codespaces gives 120 core-hours/month at no cost on a personal account —
+  // more than enough for a 2-core node that is awake a few hours a day — and it
+  // is the only free machine that needs no card, no signup and no new account:
+  // the account is the one this repository already lives in.
+  //
+  //   Code button → Codespaces → Create codespace on main
+  //
+  // It boots, builds the engine AND the panel, vendors nuclei/httpx/katana, and
+  // generates the exec token. Then: Ports → 8080 → Visibility: Public, and paste
+  // that URL + the token into «محطة نوفا» on the Pages fleet page.
+  "name": "NOVA node (engine + panel + tools)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
+  "postCreateCommand": "bash scripts/nova-machine-setup.sh",
+  "postStartCommand": "bash -c 'test -f .env.local && ./scripts/nova-serve.sh --bg || true'",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "NOVA engine (API + panel + websocket)",
+      "visibility": "public",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"],
+      "settings": { "terminal.integrated.defaultProfile.linux": "bash" }
+    }
+  },
+  "hostRequirements": { "cpus": 2, "memory": "4gb", "storage": "32gb" }
+}

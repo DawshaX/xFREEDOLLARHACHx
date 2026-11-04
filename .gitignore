@@ -83,3 +83,6 @@ state/vuln-corpus/
 .env
 .env.*
 !.env.example
+
+# the machine bootstrap writes this; it holds NOVA_EXEC_TOKEN
+.env.local
