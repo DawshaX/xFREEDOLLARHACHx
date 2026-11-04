@@ -37,8 +37,11 @@ const val = (name, dflt) => {
   return v ?? true;
 };
 
-// No index yet → this is the first pass, so take a big bite by default (120k CVEs).
-const wantedPages = Number(val("pages", 60));
+// No index yet → this is the first pass. 25 pages = up to 50,000 CVEs, which a
+// no-key NVD budget can finish in ~10 minutes; the weekly `--all` run goes deeper.
+const wantedPages = Number(val("pages", 25));
+// Never let one run eat the whole window: stop cleanly and write what we have.
+const timeBudgetMin = Number(process.env.CORPUS_TIME_BUDGET_MIN || 25);
 const mode = flag("incremental") ? "incremental" : "full";
 const fixture = val("fixture", null);
 const apiKey = process.env.NVD_API_KEY || "";
@@ -109,7 +112,12 @@ if (fixture) {
   if (mode === "incremental" && !incrementalSince) console.log("incremental requested with no previous index — doing a full pass");
 
   const maxPages = flag("all") ? 10_000 : wantedPages;
+  const startedAt = Date.now();
   for (let page = 0; page < maxPages; page += 1) {
+    if (Date.now() - startedAt > timeBudgetMin * 60_000) {
+      console.log(`time budget (${timeBudgetMin} min) reached after ${pages} page(s) — writing what we have`);
+      break;
+    }
     const startIndex = page * perPage;
     if (startIndex > 0) await sleep(delayMs);
     let res;
