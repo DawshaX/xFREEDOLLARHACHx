@@ -120,7 +120,10 @@ const report = {
   tools: Object.fromEntries(Object.entries(tools).map(([k, v]) => [k, v ? "present" : "missing"])),
   targets: [],
   findings: [],
-  totals: { targets: 0, findings: 0, bySeverity: {}, kevUnknown: true },
+  // `skipped` and `toolMs` are part of the measurement, not decoration: a run
+  // that examined 4 targets and a run that ran out of budget after 1 are both
+  // "4 targets in the file", and only the numbers tell them apart.
+  totals: { targets: 0, findings: 0, bySeverity: {}, kevUnknown: true, skipped: 0, toolMs: {} },
 };
 
 const cutOff = () => Date.now() - startedAt > budgetMs;
@@ -263,6 +266,16 @@ for (const t of allowed) {
   entry.finishedAt = new Date().toISOString();
   report.targets.push(entry);
 }
+
+// Time per tool, summed from the step records: this is how "it is slow" becomes
+// "nuclei spent 300s here" without anyone reading a raw log.
+for (const t of report.targets) {
+  for (const step of t.steps ?? []) {
+    const k = step.pass ? `${step.tool}:${step.pass}` : step.tool;
+    report.totals.toolMs[k] = (report.totals.toolMs[k] ?? 0) + (step.ms ?? 0);
+  }
+}
+report.totals.skipped = report.targets.filter((t) => t.status === "skipped").length;
 
 for (const f of report.findings) report.totals.bySeverity[f.severity] = (report.totals.bySeverity[f.severity] ?? 0) + 1;
 report.totals.targets = report.targets.length;
