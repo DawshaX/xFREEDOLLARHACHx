@@ -11,8 +11,14 @@ permissions:
   id-token: write
 
 concurrency:
+  # false, not true: cancelling a workflow that is mid-deploy orphans its Pages
+  # deployment in "in progress", and an orphaned one blocks every later deploy.
+  # That is exactly what happened here — runs 41907982125 (20:35) and 41908195373
+  # (20:38) both died with "Deployment request failed … due to in progress
+  # deployment. Please cancel 27a0fede… first". GitHub's own pages template uses
+  # false for the same reason.
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -81,6 +87,34 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: "artifacts/kali-panel/dist/public"
+
+      # The orphan above already exists and waiting does not clear it, so clear it
+      # here: this job holds pages:write and can cancel a deployment that nothing
+      # is driving any more. If the API refuses, the step says so and lets
+      # deploy-pages report the failure — a silent no-op would hide the site.
+      - name: clear a stuck Pages deployment (one orphan blocks every deploy)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          if ! json=$(gh api "repos/$REPO/pages/deployments?per_page=20" 2>&1); then
+            echo "cannot list Pages deployments from this token — letting deploy-pages report the truth"
+            echo "$json" | head -3
+            exit 0
+          fi
+          stuck=$(echo "$json" | jq -r '(.page_deployments? // .)[]? | select(.status == "deployment_in_progress" or .status == "deployment_queued") | .id' 2>/dev/null)
+          if [ -z "${stuck:-}" ]; then
+            echo "no stuck deployment"
+            exit 0
+          fi
+          for id in $stuck; do
+            echo "cancelling stuck deployment $id"
+            gh api --method POST "repos/$REPO/pages/deployments/$id/cancel" >/dev/null 2>&1 \
+              && echo "  cancelled $id" || echo "  could not cancel $id (deploy-pages will say why)"
+          done
+          # give Pages a moment to release the lock it just let go of
+          sleep 10
 
       - name: Deploy to GitHub Pages
         id: deployment
