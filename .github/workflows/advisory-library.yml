@@ -16,6 +16,7 @@ on:
     paths:
       - "artifacts/api-server/src/lib/ops/advisory-library.ts"
       - "scripts/test-advisory-library.mjs"
+      - "scripts/record-failure.mjs"
       - ".github/workflows/advisory-library.yml"
 
 permissions:
@@ -56,11 +57,25 @@ jobs:
 
       - run: pnpm install --no-frozen-lockfile --ignore-scripts
 
+      # Job logs are not retrievable here (`gh run view --log` returns nothing, the
+      # artifact download dies with EOF), so a red step that ran for two seconds and
+      # printed nothing left no evidence at all — run 41907981946 took 20:35:18 to
+      # 20:35:20 and its only annotation was "exit code 1". tee the output and record
+      # the tail in the repo, the same way the corpus deepen now explains itself.
       - name: real sync + proofs (20 checks)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_EXTRA_CA_CERTS: ""
-        run: node scripts/test-advisory-library.mjs
+        run: |
+          set -o pipefail
+          node scripts/test-advisory-library.mjs 2>&1 | tee "$RUNNER_TEMP/advisory.log"
+
+      - name: record why the proofs failed
+        if: failure()
+        run: >-
+          node scripts/record-failure.mjs --step "advisory proofs"
+          --log "$RUNNER_TEMP/advisory.log"
+          --out state/advisory-last-failure.json --commit
 
       - name: sync the shipped corpus (critical + high only)
         env:
