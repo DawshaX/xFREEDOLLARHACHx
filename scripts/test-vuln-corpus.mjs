@@ -185,6 +185,14 @@ check(
   Boolean(idxAfterDeepen.deepen) && typeof idxAfterDeepen.deepen.nextStartIndex === "number",
   `deepen=${JSON.stringify(idxAfterDeepen.deepen)}`,
 );
+// A window that starts inside the prefix we already hold re-fetches rows we have:
+// run 41909776140 deepened from 24,000 with a 120,000-row corpus — 16,000 rows
+// fetched, 0 new, byYear unchanged. The window must start at the end of the prefix.
+check(
+  "--deepen starts past the rows the corpus already holds",
+  idxAfterDeepen.deepen.walkedFrom >= idxAfterDeepen.total && idxAfterDeepen.deepen.walkedFrom > 0,
+  `walkedFrom=${idxAfterDeepen.deepen.walkedFrom} corpus=${idxAfterDeepen.total}`,
+);
 // A full pass runs as its own CI step, before the deepen step, on the same runner.
 // buildIndex() cannot recompute the cursor, so a write that dropped it sent the next
 // step back to row 0 — measured: runs 41905819968 and 41907981906 both reported

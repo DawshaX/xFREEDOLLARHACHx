@@ -142,7 +142,15 @@ let pages = 0;
 // "ReferenceError: deepenFrom is not defined" — after the corpus was written and
 // before the index could be committed. Measured: runs 41889863716, 41896545563,
 // 41902320281 — all three deepen failures were this one line.
-const deepenFrom = mode === "deepen" ? Number(previous?.deepen?.nextStartIndex ?? 0) : 0;
+// A deepen window that starts inside the prefix we already hold is pure re-fetch.
+// The full pass (push events) fetches pages 1..60, i.e. NVD rows 0..120,000, and NVD
+// orders by publish date, so the corpus is a contiguous prefix of length `total`.
+// Deepening from a cursor below that prefix can only re-read rows already in the file:
+// measured on run 41909776140 (cursor 24,000, corpus 120,000) — 8 pages, 16,000 rows
+// fetched, 0 new, byYear unchanged. Advancing the cursor is the whole point, so the
+// window starts at the end of what we hold, whichever is further along.
+const deepenCursor = Number(previous?.deepen?.nextStartIndex ?? 0);
+const deepenFrom = mode === "deepen" ? Math.max(deepenCursor, Number(previous?.total ?? 0)) : 0;
 
 if (fixture) {
   const raw = JSON.parse(fs.readFileSync(fixture, "utf8"));
