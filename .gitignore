@@ -78,3 +78,8 @@ state/auto-update.log
 # static binaries fetched by scripts/fetch-toolchain.mjs at build time
 /vendor/
 state/vuln-corpus/
+
+# secrets live here, never in git
+.env
+.env.*
+!.env.example

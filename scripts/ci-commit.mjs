@@ -21,7 +21,11 @@ import { execFileSync } from "node:child_process";
 
 const argv = process.argv.slice(2);
 const mi = argv.indexOf("--message");
-const message = mi >= 0 ? argv[mi + 1] : `chore(ci): automated update ${new Date().toISOString()}`;
+// A workflow `env:` value is not a shell: "$(date …)" would be committed
+// literally (measured: a commit titled "measured scan $(date -u …)").
+const rawMessage = mi >= 0 ? argv[mi + 1] : "chore(ci): automated update";
+const stamp = new Date().toISOString().replace(":00.", ":").slice(0, 16) + "Z";
+const message = /\$\(date/.test(rawMessage) ? `${rawMessage.replace(/\s*\$\(date[^)]*\)\s*/g, " ").trim()} ${stamp}` : rawMessage;
 const files = argv.filter((a, i) => !a.startsWith("--") && i !== mi + 1);
 const branch = process.env.CI_BRANCH || "main";
 
