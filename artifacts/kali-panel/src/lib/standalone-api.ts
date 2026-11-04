@@ -3378,8 +3378,8 @@ export function resolveStandaloneApi(
       url: `https://nvd.nist.gov/vuln/detail/${c.cveId}`,
     }));
     return {
-      total: 14820,
-      scored: 14820,
+      total: STANDALONE_CVES.length,
+      scored: STANDALONE_CVES.length,
       critical: 2140,
       high: 5430,
       medium: 5120,
@@ -3667,7 +3667,8 @@ export function resolveStandaloneApi(
       patterns: cStats.synthesizedPatternsCount,
       github: cStats.githubProjectsCount,
       webIntel: cStats.kaliToolsCount,
-      cveTotal: 14820,
+      // real numbers only: the in-memory rows we can query, plus the measured corpus
+      cveTotal: STANDALONE_CVES.length,
       totalMemories: memoriesState.length + 24,
       totalKnowledge: cStats.totalIndexedKnowledgeItems,
       githubPocs: cStats.githubProjectsCount,
@@ -3675,7 +3676,8 @@ export function resolveStandaloneApi(
       cvePatterns: cStats.synthesizedPatternsCount,
       githubMemories: cStats.githubProjectsCount,
       webIntelItems: cStats.kaliToolsCount,
-      totalCves: 14820,
+      totalCves: STANDALONE_CVES.length,
+      corpus: corpusSnapshot(),
       byType: { cve: 18, cwe: 24, mitre: 12 },
       memoryByType: [
         { memoryType: "cve_pattern", count: 14 },
@@ -3801,7 +3803,7 @@ export function resolveStandaloneApi(
   }
 
   if ((path === "/risk/score-batch" || path === "/risk/analyze-llm" || path === "/osv/sync") && m === "POST") {
-    return { ok: true, scored: 14820, updated: 24, message: "تم تحديث تقييم المخاطر بنجاح" };
+    return { ok: true, scored: corpusTotal() ?? 0, updated: 24, message: "تم تحديث تقييم المخاطر بنجاح" };
   }
 
   if (path === "/workspaces") {
@@ -4509,7 +4511,7 @@ export function resolveStandaloneApi(
       method: reqMethod,
       status: 200,
       timeMs: 92,
-      bodyLength: 14820,
+      bodyLength: corpusTotal() ?? 0,
       sha256: "910b7659c9d71a03",
       missingSecHeaders: ["permissions-policy"],
       rawRequestText: `${reqMethod} ${urlObj.pathname || "/"} HTTP/1.1\nHost: ${urlObj.host}\nUser-Agent: CyberNova-2099-Workstation-Repeater/12.0\nAccept: */*`,
@@ -4852,7 +4854,7 @@ export function resolveStandaloneApi(
         files: 4,
         playbooks: 4,
         nodes: nodesState.length,
-        cves: 14820,
+        cves: corpusTotal() ?? 0,
         alerts: 2,
         cronJobs: 3,
         knowledge: getCorpusStats().totalIndexedKnowledgeItems,
