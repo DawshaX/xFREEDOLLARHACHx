@@ -61,6 +61,7 @@ import { checkGate, opsExposure } from "../lib/ops/gate";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
 import { maskProgram, maskSession, hasSession } from "../lib/ops/session";
+import { libraryStatus, lookupCve, lookupProduct, syncAdvisories } from "../lib/ops/advisory-library";
 import { buildStamp } from "../lib/ops/version";
 import { throttleStats } from "../lib/ops/ratelimit";
 import { broadcastEvent } from "../lib/ws-hub";
@@ -100,6 +101,47 @@ router.get("/ops/kinds", (_req: Request, res: Response) => {
       allowNodeTools: process.env.NOVA_ALLOW_NODE_TOOLS !== "0",
       nodeToolsPresent: tools.filter((t) => t.present).map((t) => t.bin),
     },
+  });
+});
+
+/**
+ * مكتبة الإشعارات — الرقم اللي بيتعرض هو اللي اتجاب فعلاً، مع وقته.
+ * GET  /api/ops/advisories          الحالة + التوزيع
+ * GET  /api/ops/advisories/lookup   ?product=nginx | ?cve=CVE-2026-12345
+ * POST /api/ops/advisories/sync     مزامنة حقيقية من GitHub Advisory DB
+ */
+router.get("/ops/advisories", (req: Request, res: Response) => {
+  const st = libraryStatus();
+  const product = String(req.query.product ?? "").trim();
+  const cve = String(req.query.cve ?? "").trim();
+  res.json({
+    ok: true,
+    ...st,
+    lookup: product ? lookupProduct(product, 20) : cve ? [lookupCve(cve)].filter(Boolean) : null,
+    how_ar: "المصدر: api.github.com/advisories — الرقم ده اللي اتسحب فعلاً، مش تقدير. مزامنة: POST /api/ops/advisories/sync",
+  });
+});
+
+router.post("/ops/advisories/sync", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) {
+    deny(res, checkGate(req, "ops").how || checkGate(req, "ops").reason);
+    return;
+  }
+  const b = (req.body ?? {}) as Record<string, unknown>;
+  const pages = b.pages === undefined ? 10 : Number(b.pages);
+  const result = await syncAdvisories({ pages, since: b.since ? String(b.since) : undefined });
+  const st = libraryStatus();
+  res.status(result.cache.total > 0 ? 200 : 502).json({
+    ok: result.ok,
+    pages_fetched: result.pages_fetched,
+    total: result.cache.total,
+    bySeverity: result.cache.bySeverity,
+    at: result.cache.at || null,
+    error: result.error ?? null,
+    status: st,
+    note_ar: result.ok
+      ? `اتسحب ${result.cache.total} إشعار حقيقي في ${result.pages_fetched} صفحة — ده اللي في المكتبة دلوقتي، مش إجمالي العالم.`
+      : "المزامنة فشلت — المكتبة القديمة زي ما هي، مفيش أرقام جديدة اتكتبت.",
   });
 });
 

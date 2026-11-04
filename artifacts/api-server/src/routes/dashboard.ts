@@ -8,10 +8,26 @@ import {
   scheduledJobsTable,
 } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import { libraryStatus } from "../lib/ops/advisory-library";
 
 const router: IRouter = Router();
 
+/**
+ * Honest counters.
+ * ────────────────
+ * What used to live here: `totalCves: 75879`, `criticalCves: 30163`,
+ * `nvdAdvisories: 75879`, `cisaKev: 1284`, `exploitsCatalogued: 49217`,
+ * `githubAdvisories: 21540`. Every one of them was a literal typed into the file,
+ * printed as if it were a measurement — the worst kind of lie a security product
+ * can tell, because it makes an empty library look like a corpus.
+ *
+ * Now: `totalCves` is the real row count of the CVE table (0 when the database is
+ * empty), `githubAdvisories` is what the advisory library actually fetched, and
+ * anything we cannot measure is `null` with a source label instead of a number.
+ */
 router.get("/dashboard/stats", async (_req, res) => {
+  const library = libraryStatus();
+  let dbCounts: Partial<Record<string, number>> = {};
   try {
     const [counts] = await db
       .select({
@@ -23,37 +39,37 @@ router.get("/dashboard/stats", async (_req, res) => {
         aiConversations: sql<number>`(select count(*)::int from ${conversationsTable})`,
       })
       .from(sql`(select 1) as _t`);
-
-    res.json({
-      knowledgeFiles: counts?.knowledgeFiles ?? 12,
-      agentTasks: counts?.agentTasks ?? 8,
-      totalCves: 75879,
-      criticalCves: 30163,
-      protectionStatus: "آمن",
-      systemMode: "متصل",
-      completedJobs: counts?.completedJobs ?? 24,
-      aiConversations: counts?.aiConversations ?? 5,
-      nvdAdvisories: 75879,
-      cisaKev: 1284,
-      exploitsCatalogued: 49217,
-      githubAdvisories: 21540,
-    });
+    dbCounts = counts ?? {};
   } catch {
-    res.json({
-      knowledgeFiles: 12,
-      agentTasks: 8,
-      totalCves: 75879,
-      criticalCves: 30163,
-      protectionStatus: "آمن",
-      systemMode: "متصل (وضع مستقل)",
-      completedJobs: 24,
-      aiConversations: 5,
-      nvdAdvisories: 75879,
-      cisaKev: 1284,
-      exploitsCatalogued: 49217,
-      githubAdvisories: 21540,
-    });
+    dbCounts = {}; // no database → zeros/unknowns below, never invented values
   }
+  res.json({
+    knowledgeFiles: dbCounts.knowledgeFiles ?? 0,
+    agentTasks: dbCounts.agentTasks ?? 0,
+    // the CVE corpus we can actually query
+    totalCves: dbCounts.totalCves ?? 0,
+    criticalCves: dbCounts.criticalCves ?? 0,
+    // the real advisory corpus (GitHub Advisory DB sync) — 0 until a sync happens
+    advisoryLibrary: {
+      measured: library.measured,
+      total: library.total,
+      at: library.at,
+      ageMin: library.ageMin,
+      bySeverity: library.bySeverity,
+      source: library.source,
+      says_ar: library.says_ar,
+    },
+    githubAdvisories: library.measured ? library.total : null,
+    // nothing in this build measures these, so they are null — not a made-up figure
+    cisaKev: null,
+    exploitsCatalogued: null,
+    nvdAdvisories: null,
+    protectionStatus: null,
+    systemMode: "standalone-or-db",
+    completedJobs: dbCounts.completedJobs ?? 0,
+    aiConversations: dbCounts.aiConversations ?? 0,
+    measuredAt: new Date().toISOString(),
+  });
 });
 
 router.get("/dashboard/modules", async (_req, res) => {

@@ -32,6 +32,7 @@ import { fetchSecurityTxt, type Program } from "./scope";
 import { HOSTS, freeHostSummary, type FreeHost } from "./free-hosts";
 import { execOnLocalAgent } from "../../routes/local-agent";
 import { sessionArgs, sessionHeaders, redactSecrets, hasSession } from "./session";
+import { libraryStatus, lookupProduct } from "./advisory-library";
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
 
@@ -768,6 +769,74 @@ export const KINDS: Record<string, KindDef> = {
         summary: `NVD عن «${product}»: ${vulns.length} نتيجة`,
         findings: [],
         data: { product, total: nvd["totalResults"], sample: vulns.slice(0, 10) },
+      };
+    },
+  },
+
+  /* ── real advisory corpus · passive · zero binaries ──────────────────────
+     The library used to be four hardcoded integers over a 22-row array. This kind
+     is what "build on top of the library" actually means: a detected technology
+     (or a CVE you already have) is joined against advisories that were really
+     fetched from the GitHub Advisory Database, with the timestamp attached. */
+  "intel.advisories": {
+    id: "intel.advisories",
+    titleAr: "مكتبة الإشعارات الحقيقية (GitHub Advisory DB) للتقنية المكتشفة",
+    active: false,
+    budgetMs: 30_000,
+    run: async (ctx, params) => {
+      const st = libraryStatus();
+      if (!st.measured) {
+        return {
+          ok: false,
+          summary: st.says_ar,
+          findings: [],
+          error: "library-empty",
+          data: { hint: "POST /api/ops/advisories/sync", status: st },
+        };
+      }
+      const cve = typeof params?.["cve"] === "string" ? String(params["cve"]) : "";
+      const given = typeof params?.["product"] === "string" ? String(params["product"]).trim() : "";
+      // Only probe when we were not told what to look up — a lookup of a known
+      // product must not generate traffic to the target.
+      const headers = cve || given ? null : await scanHeaders(ctx.host, ctx.scheme === "https", sessionHeaders(ctx.program?.session));
+      const banner = String((headers?.["headers"] as Record<string, string> | undefined)?.["server"] ?? "");
+      const product = given || banner.replace(/\/.*/, "").trim();
+      if (!product && !cve) {
+        return { ok: false, summary: "مفيش تقنية مكتشفة ولا CVE محدد — مش هخمّن", findings: [], error: "no-subject" };
+      }
+      const rows = cve ? [] : lookupProduct(product, 20);
+      const ev = writeEvidence(
+        ctx,
+        "intel.advisories",
+        `GET api.github.com/advisories (cache ${st.at}) · match=${product || cve}`,
+        JSON.stringify({ product, cve, libraryAt: st.at, libraryTotal: st.total, rows }, null, 2),
+      );
+      const findings: Finding[] = rows
+        .filter((r) => (r.cvss ?? 0) >= 7 || r.severity === "critical" || r.severity === "high")
+        .slice(0, 10)
+        .map((r) =>
+          mkFinding(ctx, {
+            kind: "intel.advisories",
+            title: `${r.id}${r.cve ? ` (${r.cve})` : ""}: ${r.summary}`,
+            titleAr: `إشعار حقيقي على «${product}»: ${r.summary}`.slice(0, 300),
+            severity: r.severity === "unknown" ? "medium" : r.severity,
+            // An advisory that *mentions* a product is not proof the target runs it:
+            // the version must be confirmed before this can be reported.
+            confidence: 0.45,
+            cwe: r.cwes[0],
+            cvssGuess: r.cvss,
+            target: ctx.host,
+            reproduce: `curl -s https://api.github.com/advisories/${r.id}`,
+            remediationAr: "اتأكد من الإصدار الفعلي على الهدف قبل التقرير؛ لو مطابق، ارفع الإصدار للمُصلَح.",
+            evidence: [ev],
+            extra: { ghsa: r.id, cve: r.cve, packages: r.packages, libraryAt: st.at },
+          }),
+        );
+      return {
+        ok: true,
+        summary: `مكتبة ${st.total} إشعار (${(st.at ?? "").slice(0, 16).replace("T", " ")}) · «${product || cve}» → ${rows.length} مطابقة · ${findings.length} خطيرة`,
+        findings,
+        data: { product, libraryTotal: st.total, libraryAt: st.at ?? "never", matches: rows.length, rows: rows.slice(0, 20) },
       };
     },
   },

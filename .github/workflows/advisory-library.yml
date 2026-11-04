@@ -1,0 +1,81 @@
+name: advisory library (real GHSA corpus)
+
+# The dashboard used to print 75,879 CVEs over a 22-row array. This job is the
+# replacement: it pulls the real GitHub Advisory Database, proves the library is
+# measured, and commits the (severity-filtered) corpus the app ships with.
+on:
+  schedule:
+    - cron: "17 4 * * *" # daily, off-peak
+  workflow_dispatch:
+    inputs:
+      pages:
+        description: "pages of 100 advisories to pull"
+        default: "20"
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/api-server/src/lib/ops/advisory-library.ts"
+      - "scripts/test-advisory-library.mjs"
+      - ".github/workflows/advisory-library.yml"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: advisory-library
+  cancel-in-progress: false
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile --ignore-scripts
+
+      - name: real sync + proofs (20 checks)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_EXTRA_CA_CERTS: ""
+        run: node scripts/test-advisory-library.mjs
+
+      - name: sync the shipped corpus (critical + high only)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOVA_ADVISORY_MIN_SEVERITY: high
+          NOVA_ADVISORY_CACHE: state/advisory-cache.json
+          PAGES: ${{ github.event.inputs.pages || '20' }}
+        run: |
+          node scripts/advisory-sync-cli.mjs "$PAGES"
+          ls -la state/advisory-cache.json
+
+      - name: report measured numbers (never a claim)
+        run: |
+          node -e '
+            const c = require("./state/advisory-cache.json");
+            const s = Object.entries(c.bySeverity).map(([k,v])=>`${k}: ${v}`).join(" · ");
+            console.log(`measured ${c.total} advisories in ${c.pages} page(s) at ${c.at}`);
+            console.log(`by severity → ${s}`);
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              `### Advisory library (measured)\n\n| | |\n|---|---|\n| rows stored | **${c.total}** |\n| pages | ${c.pages} |\n| synced at | ${c.at} |\n| by severity | ${s} |\n| source | ${c.source} |\n`);
+          '
+
+      - name: commit the corpus
+        run: |
+          if git diff --quiet -- state/advisory-cache.json; then echo "no change"; exit 0; fi
+          git config user.name "nova-advisory-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add state/advisory-cache.json
+          git commit -m "chore(advisory): real GHSA corpus $(date -u +%Y-%m-%d) [skip ci]"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
