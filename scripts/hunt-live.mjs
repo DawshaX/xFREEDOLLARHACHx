@@ -165,61 +165,95 @@ for (const t of allowed) {
     });
   }
 
-  /* 2 · nuclei — real templates, real requests */
-  if (tools.nuclei) {
-    const r = await run(
-      tools.nuclei,
-      ["-u", url, "-jsonl", "-silent", "-no-color", "-severity", "medium,high,critical", "-no-interactsh", "-rl", "3", "-c", "2", "-timeout", "8", "-retries", "1", "-stats-json"],
-      budget(300_000),
-    );
-    const lines = r.stdout.split("\n").filter((l) => l.trim().startsWith("{"));
-    const ev = evidence(`nuclei-${t.host}`, r.stdout || r.stderr, `nuclei -u ${url} -severity medium,high,critical -no-interactsh -rl 3`);
-    let matched = 0;
-    for (const line of lines) {
-      let j;
-      try {
-        j = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      const info = j.info ?? {};
-      if (!j["template-id"] || !info?.severity) continue;
-      matched += 1;
-      report.findings.push({
-        id: `${j["template-id"]}@${j["matched-at"] ?? url}`,
-        host: t.host,
-        template: j["template-id"],
-        name: info.name ?? j["template-id"],
-        severity: String(info.severity).toLowerCase(),
-        matchedAt: j["matched-at"] ?? url,
-        cwe: info.classification?.["cwe-id"] ?? null,
-        cve: info.classification?.["cve-id"] ?? null,
-        curl: j["curl-command"] ?? null,
-        evidence: ev,
-        // nothing here is a submitted report: a template match is a lead that a
-        // human still has to reproduce on a real program
-        verified: false,
-      });
-    }
-    entry.steps.push({ tool: "nuclei", exit: r.code, ms: r.ms, matched, evidence: ev });
-  }
-
-  /* 3 · katana — what endpoints exist at all */
+  /* 2 · katana — what endpoints exist at all (before nuclei: the scan should
+   * look where the site actually has pages, not only at "/") */
+  let endpoints = [];
   if (tools.katana) {
-    const r = await run(tools.katana, ["-u", url, "-jsonl", "-silent", "-depth", "2", "-concurrency", "3", "-rate-limit", "5", "-timeout", "8", "-crawl-duration", "45s"], budget(120_000));
+    const r = await run(tools.katana, ["-u", url, "-jsonl", "-silent", "-depth", "3", "-concurrency", "5", "-rate-limit", "10", "-timeout", "8", "-crawl-duration", "60s"], budget(120_000));
     const urls = new Set();
     for (const line of r.stdout.split("\n")) {
-      const m = line.match(/"endpoint"\s*:\s*"([^"]+)"/) ?? line.match(/"url"\s*:\s*"([^"]+)"/);
+      const m = line.match(/"endpoint"\s*:\s*"([^"]+)"/) ?? line.match(/"url"\s*:\s*"([^"]+)"/) ?? line.match(/^(https?:\/\/\S+)$/);
       if (m) urls.add(m[1]);
     }
+    endpoints = [...urls].filter((u) => u.startsWith("http"));
     entry.steps.push({
       tool: "katana",
       exit: r.code,
       ms: r.ms,
-      endpoints: urls.size,
-      sample: [...urls].slice(0, 25),
-      evidence: evidence(`katana-${t.host}`, r.stdout || r.stderr, `katana -u ${url} -depth 2 -rate-limit 5`),
+      endpoints: endpoints.length,
+      sample: endpoints.slice(0, 25),
+      evidence: evidence(`katana-${t.host}`, r.stdout || r.stderr, `katana -u ${url} -depth 3 -rate-limit 10 -crawl-duration 60s`),
     });
+  }
+
+  /* 3 · nuclei — the profile the engine already proved finishes inside a budget
+   * (1,034 templates = high|critical ∩ exposure|misconfig|takeover|default-login,
+   *  no OAST → ~258s at rl=4). The old broad run asked for 7,885 templates at
+   *  rl=3 and simply never finished: measured 300s timeout, 0 matches, twice. */
+  if (tools.nuclei) {
+    const NUCLEI = (list, cap) => [
+      ...list,
+      "-jsonl", "-silent", "-no-color", "-stats", "-stats-json",
+      "-severity", "high,critical",
+      "-type", "http",
+      "-tags", "exposure,misconfig,takeover,default-login",
+      "-no-interactsh",
+      "-rl", "4", "-c", "2", "-timeout", "6", "-retries", "1",
+    ];
+    // pass 1: the root URL. pass 2: the pages katana found, if time is left.
+    const passes = [{ label: "root", list: ["-u", url], cap: 460_000 }];
+    const picked = endpoints
+      .filter((u) => /^https?:\/\/[^/]+/.test(u))
+      .slice(0, 150);
+    if (picked.length > 0) {
+      const listFile = path.join(evidenceDir, `targets-${t.host}.txt`);
+      fs.mkdirSync(evidenceDir, { recursive: true });
+      fs.writeFileSync(listFile, picked.join("\n") + "\n");
+      passes.push({ label: "endpoints", list: ["-l", listFile], cap: 300_000 });
+    }
+    let matched = 0;
+    for (const pass of passes) {
+      if (budget(pass.cap) < 30_000) {
+        entry.steps.push({ tool: "nuclei", pass: pass.label, skipped: "time budget exhausted" });
+        continue;
+      }
+      const r = await run(tools.nuclei, NUCLEI(pass.list), budget(pass.cap));
+      const ev = evidence(
+        `nuclei-${pass.label}-${t.host}`,
+        r.stdout || r.stderr,
+        `nuclei ${pass.list.join(" ")} -severity high,critical -tags exposure,misconfig,takeover,default-login -no-interactsh -rl 4`,
+      );
+      let passMatched = 0;
+      for (const line of r.stdout.split("\n")) {
+        if (!line.trim().startsWith("{")) continue;
+        let j;
+        try {
+          j = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        const info = j.info ?? {};
+        if (!j["template-id"] || !info?.severity) continue;
+        passMatched += 1;
+        matched += 1;
+        report.findings.push({
+          id: `${j["template-id"]}@${j["matched-at"] ?? url}`,
+          host: t.host,
+          template: j["template-id"],
+          name: info.name ?? j["template-id"],
+          severity: String(info.severity).toLowerCase(),
+          matchedAt: j["matched-at"] ?? url,
+          cwe: info.classification?.["cwe-id"] ?? null,
+          cve: info.classification?.["cve-id"] ?? null,
+          curl: j["curl-command"] ?? null,
+          evidence: ev,
+          // nothing here is a submitted report: a template match is a lead that a
+          // human still has to reproduce on a real program
+          verified: false,
+        });
+      }
+      entry.steps.push({ tool: "nuclei", pass: pass.label, exit: r.code, ms: r.ms, scanned: pass.list[1] === "-l" ? picked.length : 1, matched: passMatched, evidence: ev });
+    }
   }
 
   entry.findings = report.findings.filter((f) => f.host === t.host).length;
