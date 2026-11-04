@@ -1,3 +1,4 @@
+import CorpusPanel from "@/components/CorpusPanel";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -277,6 +278,9 @@ export default function VulnCenter() {
           </div>
         ))}
       </div>
+
+      {/* ── the real corpus + the last hunt, straight from the system bus ── */}
+      <CorpusPanel />
 
       {/* ── Tabs ── */}
       <div className="flex items-center gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", background: "rgba(5,0,12,0.6)" }}>
