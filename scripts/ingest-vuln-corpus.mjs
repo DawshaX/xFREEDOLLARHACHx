@@ -137,6 +137,12 @@ const previous = lib.readIndex();
 let totalResults = 0;
 let lastPageError = null;
 let pages = 0;
+// Declared here, not inside the fetch block: the cursor-recording block after the
+// write reads it, and a `const` inside the `else` scope made that block throw
+// "ReferenceError: deepenFrom is not defined" — after the corpus was written and
+// before the index could be committed. Measured: runs 41889863716, 41896545563,
+// 41902320281 — all three deepen failures were this one line.
+const deepenFrom = mode === "deepen" ? Number(previous?.deepen?.nextStartIndex ?? 0) : 0;
 
 if (fixture) {
   const raw = JSON.parse(fs.readFileSync(fixture, "utf8"));
@@ -171,8 +177,7 @@ if (fixture) {
   if (mode === "incremental" && !incrementalSince) console.log("incremental requested with no previous index — doing a full pass");
 
   // A deepen run is a window of the same walk, not a new one: it starts where the
-  // previous run stopped and merges onto the published corpus.
-  const deepenFrom = mode === "deepen" ? Number(previous?.deepen?.nextStartIndex ?? 0) : 0;
+  // previous run stopped (deepenFrom, module scope) and merges onto the corpus.
   const maxPages = flag("all") ? 10_000 : wantedPages;
   const startedAt = Date.now();
   for (let page = 0; page < maxPages; page += 1) {
@@ -277,11 +282,15 @@ const index = lib.writeCorpus([...rows.values()], {
 
 // Record where the next deepen run should pick up. Writing this only after a
 // successful write means a crashed run repeats its window instead of skipping it.
-if (mode === "deepen" && !fixture) {
-  const next = deepenFrom + pages * perPage;
-  const wrapped = totalResults > 0 && next >= totalResults ? 0 : next;
+// Runs in fixture mode too, against lib.indexFile() — the path follows
+// NOVA_CORPUS_INDEX, so a test can exercise this block without touching the real
+// index. It was guarded by `!fixture` while also computing `next` outside the try,
+// which is why no test ever saw the ReferenceError this block threw.
+if (mode === "deepen") {
   try {
-    const file = path.join(root, "state/vuln-corpus-index.json");
+    const next = deepenFrom + pages * perPage;
+    const wrapped = totalResults > 0 && next >= totalResults ? 0 : next;
+    const file = lib.indexFile();
     const cur = JSON.parse(fs.readFileSync(file, "utf8"));
     cur.deepen = {
       nextStartIndex: wrapped,

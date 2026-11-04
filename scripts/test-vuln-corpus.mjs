@@ -176,6 +176,15 @@ const afterFirst = lib.corpusStatus().total;
 const deepen = runIngest("--deepen", "--pages=1");
 check("--deepen runs instead of throwing in the dead zone", deepen.status === 0, (deepen.stderr || "").split("\n").filter(Boolean).slice(-1)[0]);
 check("--deepen merges onto the corpus instead of replacing it", lib.corpusStatus().total === afterFirst, `before=${afterFirst} after=${lib.corpusStatus().total}`);
+// The cursor block ran after the write and threw ReferenceError for three runs in
+// a row (deepenFrom was declared inside the fetch block). Fixture mode now walks
+// that block too, so this check is the regression test for it.
+const idxAfterDeepen = JSON.parse(fs.readFileSync(process.env.NOVA_CORPUS_INDEX, "utf8"));
+check(
+  "--deepen records where the next window starts",
+  Boolean(idxAfterDeepen.deepen) && typeof idxAfterDeepen.deepen.nextStartIndex === "number",
+  `deepen=${JSON.stringify(idxAfterDeepen.deepen)}`,
+);
 const incr = runIngest("--incremental", "--pages=1");
 check("--incremental runs and keeps the rows", incr.status === 0 && lib.corpusStatus().total === afterFirst, `total=${lib.corpusStatus().total}`);
 
