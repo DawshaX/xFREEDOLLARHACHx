@@ -34,4 +34,4 @@ jobs:
         env:
           MSG: "chore(backend): health probe [skip ci]"
         run: |
-          node scripts/ci-commit.mjs --message "$MSG" state/backend-health.json
+          node scripts/ci-commit.mjs --message "$MSG" state/backend-health.json state/organs.csv state/hunt-findings.csv state/hunt-runs.csv
