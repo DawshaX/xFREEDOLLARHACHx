@@ -43,8 +43,19 @@ const rawPort =
   process.env["APP_PORT"] ||
   process.env["WEB_PORT"] ||
   "8080";
-const port = Number(rawPort);
-if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${rawPort}"`);
+/**
+ * A bad PORT must not take the whole server down.
+ *
+ * Measured 2026-11-04 on a real bundle: an env file contained the literal text
+ * `${PORT:-8080}` (written by a bootstrap script instead of being expanded), the
+ * process threw `Invalid PORT value` at import time, and the box answered
+ * nothing at all — not even a health check that could have explained it. A
+ * hosting panel assigns the port anyway, so the honest behaviour is: use it if
+ * it is a number, otherwise fall back to 8080 and say so loudly.
+ */
+const parsedPort = Number(rawPort);
+const port = Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort < 65536 ? parsedPort : 8080;
+const portWasInvalid = port !== parsedPort;
 
 // ── HTTP server wrapping Express ───────────────────────────────────────────────
 const server = http.createServer(app);
@@ -266,6 +277,14 @@ if (corpusAtBoot.measured) {
   console.log(`✓ corpus: ${corpusAtBoot.total} CVEs (${corpusAtBoot.kev} KEV) @ ${corpusAtBoot.at}`);
 } else {
   console.log("· corpus: not ingested yet — /api/ops/corpus will say so instead of printing 0 CVEs");
+}
+
+if (portWasInvalid) {
+  logger.warn(
+    { rawPort, port },
+    `PORT is not a number ("${rawPort}") — using ${port}. Fix the env file: a literal \${PORT:-8080} means it was written, not expanded.`,
+  );
+  console.log(`! PORT="${rawPort}" is not a number — falling back to ${port}`);
 }
 
 server.listen(port, host, () => {
