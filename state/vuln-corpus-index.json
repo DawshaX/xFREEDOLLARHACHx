@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-04T20:30:55.239Z",
+  "at": "2026-11-04T20:32:53.992Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 120000,
+  "total": 121071,
   "bySeverity": {
-    "high": 47725,
-    "medium": 53432,
-    "low": 5975,
-    "critical": 6105,
-    "unknown": 6763
+    "high": 48143,
+    "medium": 53858,
+    "low": 6035,
+    "critical": 6222,
+    "unknown": 6813
   },
   "byYear": {
     "1999": 1573,
@@ -35,15 +35,19 @@
     "2016": 9884,
     "2017": 15420,
     "2018": 14114,
-    "2019": 1102
+    "2019": 1102,
+    "2023": 1,
+    "2024": 7,
+    "2025": 83,
+    "2026": 980
   },
-  "kev": 430,
-  "epssScored": 113237,
-  "products": 37326,
+  "kev": 435,
+  "epssScored": 114162,
+  "products": 37367,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 9387
+      "count": 9394
     },
     {
       "product": "firefox",
@@ -55,15 +59,15 @@
     },
     {
       "product": "android",
-      "count": 7200
+      "count": 7235
     },
     {
       "product": "chrome",
-      "count": 6164
+      "count": 6246
     },
     {
       "product": "debian_linux",
-      "count": 5939
+      "count": 5941
     },
     {
       "product": "mac_os_x",
@@ -75,11 +79,11 @@
     },
     {
       "product": "safari",
-      "count": 5133
+      "count": 5149
     },
     {
       "product": "php",
-      "count": 4198
+      "count": 4206
     },
     {
       "product": "internet_explorer",
@@ -87,7 +91,7 @@
     },
     {
       "product": "iphone_os",
-      "count": 3875
+      "count": 4015
     },
     {
       "product": "wireshark",
@@ -139,7 +143,7 @@
     },
     {
       "product": "phpmyadmin",
-      "count": 2163
+      "count": 2164
     },
     {
       "product": "opensuse",
@@ -191,7 +195,7 @@
     },
     {
       "product": "fedora",
-      "count": 1425
+      "count": 1427
     },
     {
       "product": "database_server",
@@ -204,17 +208,17 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 11760100,
-    "sha256": "b7a26595702f1dd784a994987c20063355dd02694323ddbc5031dc832b120617"
+    "bytes": 11881072,
+    "sha256": "af392b968a5da459df1ffd755765ec63b3e30680aad60025efc5544b86a43255"
   },
   "mode": "deepen",
-  "says_ar": "120000 ثغرة حقيقية · critical 6105 · high 47725 · 430 مستغلّة فعلياً (KEV) · 113237 لها EPSS · 37326 منتج بـCPE · مزامنة 2026-11-04T20:30:55.239Z",
+  "says_ar": "121071 ثغرة حقيقية · critical 6222 · high 48143 · 435 مستغلّة فعلياً (KEV) · 114162 لها EPSS · 37367 منتج بـCPE · مزامنة 2026-11-04T20:32:53.992Z",
   "deepen": {
     "nextStartIndex": 24000,
     "windowPages": 12,
     "walkedFrom": 0,
     "nvdTotal": 419210,
-    "coverage": 0.2863,
-    "at": "2026-11-04T20:30:55.240Z"
+    "coverage": 0.2888,
+    "at": "2026-11-04T20:32:53.993Z"
   }
 }
