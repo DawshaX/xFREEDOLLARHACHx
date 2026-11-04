@@ -11,6 +11,7 @@
  * Persists state in localStorage when running in the browser.
  */
 
+import { libraryStatus as advisoryLibraryStatus } from "./ops/advisory-library";
 import {
   KALI_ARSENAL_64,
   GITHUB_ARSENAL_40,
@@ -3663,7 +3664,9 @@ export function resolveStandaloneApi(
       patterns: cStats.synthesizedPatternsCount,
       github: cStats.githubProjectsCount,
       webIntel: cStats.kaliToolsCount,
-      cveTotal: 14820,
+      // real numbers only: the in-memory corpus we can actually query, plus the
+      // GitHub Advisory DB cache (0 until a sync happens — never a typed-in 14,820)
+      cveTotal: STANDALONE_CVES.length,
       totalMemories: memoriesState.length + 24,
       totalKnowledge: cStats.totalIndexedKnowledgeItems,
       githubPocs: cStats.githubProjectsCount,
@@ -3671,7 +3674,8 @@ export function resolveStandaloneApi(
       cvePatterns: cStats.synthesizedPatternsCount,
       githubMemories: cStats.githubProjectsCount,
       webIntelItems: cStats.kaliToolsCount,
-      totalCves: 14820,
+      totalCves: STANDALONE_CVES.length,
+      advisoryLibrary: advisoryLibraryStatus(),
       byType: { cve: 18, cwe: 24, mitre: 12 },
       memoryByType: [
         { memoryType: "cve_pattern", count: 14 },

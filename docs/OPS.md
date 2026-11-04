@@ -115,3 +115,29 @@ GitHub Actions يبني الحزمة (اختبار + build)
 
 القاعدة: الجلسة تبقى **لحسابك انت على برنامج مصرّح**. مفيش جلسة لحد تاني، ومفيش
 كوكي بيتنقل بين برامج.
+
+---
+
+## 6) مكتبة الثغرات — من رقم مكتوب لإشعارات حقيقية
+
+**قبل:** `/api/dashboard/stats` كان بيرجّع `totalCves: 75879` · `criticalCves: 30163` ·
+`cisaKev: 1284` · `exploitsCatalogued: 49217` · `githubAdvisories: 21540` — خمس أرقام
+مكتوبة بالإيد فوق مصفوفة فيها **22 صف**. مفيش قاعدة بيانات وراها.
+
+**بعد:**
+
+| الحاجة | الحقيقة |
+|---|---|
+| المصدر | `GET https://api.github.com/advisories` (مجاني، بلا مفتاح) |
+| الترقيم | cursor (`Link: rel="next"`) — `?page=` **مش شغال** وبي رجّع نفس الصفحة |
+| المخزّن | `state/advisory-cache.json` — **1,364 إشعار حقيقي** (critical 261 · high 1,103) |
+| الفلتر | `NOVA_ADVISORY_MIN_SEVERITY=high` — عشان الملف يبقى 468 KB مش ملايين |
+| الأرقام في الـdashboard | `githubAdvisories` = عدد المخزّن فعلاً · `totalCves` = عدد صفوف جدول CVE · وأي حاجة مش مقاسة = `null` |
+| مزامنة | `POST /api/ops/advisories/sync` أو `node scripts/advisory-sync-cli.mjs 25` |
+| نوع مهمة جديد | `intel.advisories` — تقنية مكتشفة (أو CVE) → إشعارات حقيقية بأدلة |
+| إثبات | `node scripts/test-advisory-library.mjs` → **20/20** (شامل: مزامنة فاشلة ما بتمسحش المكتبة) |
+| تحديث يومي | `.github/workflows/advisory-library.yml` (كل يوم 04:17 UTC) |
+
+القاعدة: الثقة `confidence` لأي إشعار = **0.45** — إشعار بيذكر اسم منتج مش دليل إن
+الهدف بيشغّله. الإصدار لازم يتأكد قبل أي تقرير.
+
