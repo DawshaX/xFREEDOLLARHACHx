@@ -1,17 +1,17 @@
 {
   "measured": true,
-  "at": "2026-11-04T20:32:53.992Z",
-  "total": 121071,
+  "at": "2026-11-04T20:44:52.614Z",
+  "total": 120000,
   "bySeverity": {
-    "high": 48143,
-    "medium": 53858,
-    "low": 6035,
-    "critical": 6222,
-    "unknown": 6813
+    "high": 47725,
+    "medium": 53432,
+    "low": 5975,
+    "critical": 6105,
+    "unknown": 6763
   },
-  "kev": 435,
-  "epssScored": 114162,
-  "products": 37367,
+  "kev": 430,
+  "epssScored": 113237,
+  "products": 37326,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -124,26 +124,6 @@
         "phpunit",
         "phpunit",
         "communications_diameter_signaling_router"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-109618",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The su",
-      "cwe": [
-        "CWE-416",
-        "CWE-755",
-        "CWE-824"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2026-10-21T14:17:09.357",
-      "products": [
-        "php",
-        "php",
-        "php"
       ],
       "refs": []
     },
@@ -1307,25 +1287,6 @@
         "internet_explorer",
         "internet_explorer",
         "internet_explorer"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-111497",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "A buffer overflow vulnerability in the Brotli decoder (c/dec/decode.c) in Google Brotli versions 1.0.3 through 1.2.0 on all platforms allows a remote unauthenticated attacker to corrupt adjacent decoder state memory, disclose sensitive memory contents, cause a",
-      "cwe": [
-        "CWE-252",
-        "CWE-787"
-      ],
-      "kev": true,
-      "epss": 0.82641,
-      "pub": "2026-10-22T14:17:37.190",
-      "products": [
-        "brotli",
-        "brotli",
-        "brotli"
       ],
       "refs": []
     },
@@ -3857,26 +3818,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2026-109619",
-      "cvss": 8.1,
-      "sev": "high",
-      "desc": "PHP has various global state that temporarily points into request memory. In some scenarios, global state may not be correctly reset, or may be repopulated after being reset. The global state may then refer to request memory even after it has been freed. Subse",
-      "cwe": [
-        "CWE-416",
-        "CWE-755",
-        "CWE-824"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2026-10-21T14:17:09.823",
-      "products": [
-        "php",
-        "php",
-        "php"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2018-11776",
       "cvss": 8.1,
       "sev": "high",
@@ -4163,24 +4104,6 @@
       "pub": "2008-09-18T20:00:00.530",
       "products": [
         "ios"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-119977",
-      "cvss": 8.1,
-      "sev": "high",
-      "desc": "WordPress Core is vulnerable to Remote Code Execution in versions 4.7 through 7.1.3. This is due to predictable, web-accessible staging paths used during full-package core upgrades. This makes it possible for unauthenticated attackers to execute code on the se",
-      "cwe": [
-        "CWE-367"
-      ],
-      "kev": true,
-      "epss": 0.0102,
-      "pub": "2026-10-31T06:16:34.550",
-      "products": [
-        "wordpress",
-        "wordpress",
-        "wordpress"
       ],
       "refs": []
     },
@@ -7308,24 +7231,6 @@
         "linux_kernel",
         "linux_kernel",
         "linux_kernel"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-27834",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "The issue was addressed with improved checks. This issue is fixed in Safari 17.5, iOS 16.7.8 and iPadOS 16.7.8, iOS 17.5 and iPadOS 17.5, macOS Sonoma 14.5, tvOS 17.5, watchOS 10.5. An attacker with arbitrary read and write capability may be able to bypass Poi",
-      "cwe": [
-        "CWE-287"
-      ],
-      "kev": true,
-      "epss": 0.00598,
-      "pub": "2024-05-14T15:13:06.953",
-      "products": [
-        "safari",
-        "ipados",
-        "iphone_os"
       ],
       "refs": []
     },
@@ -13508,7 +13413,91 @@
         "outlook"
       ],
       "refs": []
+    },
+    {
+      "id": "CVE-2009-3958",
+      "cvss": 10,
+      "sev": "high",
+      "desc": "Multiple stack-based buffer overflows in the NOS Microsystems getPlus Helper ActiveX control before 1.6.2.49 in gp.ocx in the Download Manager in Adobe Reader and Acrobat 9.x before 9.3, and 8.x before 8.2 on Windows and Mac OS X, might allow remote attackers ",
+      "cwe": [
+        "CWE-119"
+      ],
+      "kev": false,
+      "epss": 0.52586,
+      "pub": "2010-01-13T19:30:00.560",
+      "products": [
+        "acrobat",
+        "acrobat",
+        "acrobat"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2002-1318",
+      "cvss": 10,
+      "sev": "high",
+      "desc": "Buffer overflow in samba 2.2.2 through 2.2.6 allows remote attackers to cause a denial of service and possibly execute arbitrary code via an encrypted password that causes the overflow during decryption in which a DOS codepage string is converted to a little-e",
+      "cwe": [],
+      "kev": false,
+      "epss": 0.51914,
+      "pub": "2002-12-11T05:00:00.000",
+      "products": [
+        "samba",
+        "samba",
+        "samba"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2013-4812",
+      "cvss": 10,
+      "sev": "high",
+      "desc": "UpdateCertificatesServlet in the SNAC registration server in HP ProCurve Manager (PCM) 3.20 and 4.0, PCM+ 3.20 and 4.0, and Identity Driven Manager (IDM) 4.0 does not properly validate the fileName argument, which allows remote attackers to upload .jsp files a",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": false,
+      "epss": 0.51903,
+      "pub": "2013-09-16T13:01:46.220",
+      "products": [
+        "identity_driven_manager",
+        "procurve_manager",
+        "procurve_manager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-1999-0046",
+      "cvss": 10,
+      "sev": "high",
+      "desc": "Buffer overflow of rlogin program using TERM environmental variable.",
+      "cwe": [
+        "CWE-120"
+      ],
+      "kev": false,
+      "epss": 0.51878,
+      "pub": "1997-02-06T05:00:00.000",
+      "products": [
+        "bsd_os",
+        "bsd_os",
+        "bsd_os"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2000-0681",
+      "cvss": 10,
+      "sev": "high",
+      "desc": "Buffer overflow in BEA WebLogic server proxy plugin allows remote attackers to execute arbitrary commands via a long URL with a .JSP extension.",
+      "cwe": [],
+      "kev": false,
+      "epss": 0.50858,
+      "pub": "2000-10-20T04:00:00.000",
+      "products": [
+        "weblogic_server"
+      ],
+      "refs": []
     }
   ],
-  "says_ar": "121071 ثغرة حقيقية من NVD · 435 مستغلّة فعلياً (KEV) · 37367 منتج · مزامنة 2026-11-04T20:32:53.992Z"
+  "says_ar": "120000 ثغرة حقيقية من NVD · 430 مستغلّة فعلياً (KEV) · 37326 منتج · مزامنة 2026-11-04T20:44:52.614Z"
 }
