@@ -1,0 +1,13 @@
+{
+  "at": "2026-11-04T20:04:58.705Z",
+  "step": "deepen",
+  "run": "https://github.com/DawshaX/xFREEDOLLARHACHx/actions/runs/41902320281",
+  "job": "ingest",
+  "sha": "e02d6da3855dc7898e803353d34ba492261c8b8a",
+  "log": {
+    "file": "/home/runner/work/_temp/deepen.log",
+    "bytes": 1607,
+    "keptLines": 120
+  },
+  "tail": "KEV: 1767 exploited-in-the-wild entries\nEPSS: 400189 scored CVEs\nNVD page 1 attempt 1: NVD HTTP 503 → retrying in 10s\npage 1: +2000 rows (startIndex=0) · total in NVD=419196 · collected=2000\npage 2: +2000 rows (startIndex=2000) · total in NVD=419196 · collected=4000\npage 3: +2000 rows (startIndex=4000) · total in NVD=419196 · collected=6000\npage 4: +2000 rows (startIndex=6000) · total in NVD=419196 · collected=8000\npage 5: +2000 rows (startIndex=8000) · total in NVD=419196 · collected=10000\npage 6: +2000 rows (startIndex=10000) · total in NVD=419196 · collected=12000\npage 7: +2000 rows (startIndex=12000) · total in NVD=419196 · collected=14000\npage 8: +2000 rows (startIndex=14000) · total in NVD=419196 · collected=16000\npage 9: +2000 rows (startIndex=16000) · total in NVD=419196 · collected=18000\npage 10: +2000 rows (startIndex=18000) · total in NVD=419196 · collected=20000\npage 11: +2000 rows (startIndex=20000) · total in NVD=419196 · collected=22000\npage 12: +2000 rows (startIndex=22000) · total in NVD=419196 · collected=24000\nuncaughtException: ReferenceError: deepenFrom is not defined\n    at file:///home/runner/work/xFREEDOLLARHACHx/xFREEDOLLARHACHx/scripts/ingest-vuln-corpus.mjs:281:16\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n::error title=corpus ingest crashed::uncaughtException — ReferenceError: deepenFrom is not defined     at file:///home/runner/work/xFREEDOLLARHACHx/xFREEDOLLARHACHx/scripts/ingest-vuln-corpus.mjs:281:16     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n"
+}
