@@ -296,11 +296,27 @@ export function libraryStatus(): LibraryStatus {
 
 /** Match a detected product/banner against affected packages and summaries. */
 export function lookupProduct(product: string, limit = 10): AdvisoryRow[] {
-  const needle = product.trim().toLowerCase().split(/[\s/]/)[0];
+  /*
+   * The needle used to be `product.split(/[\s/]/)[0]`, which turns a real package
+   * name into its first segment: "github.com/basekick-labs/arc" became "github.com",
+   * then got compared for EQUALITY against each package's last colon-segment — so a
+   * package that is literally in the corpus was reported as "→ 0". That is the one
+   * check the advisory job has been failing on (run 41910015778:
+   * «github.com/basekick-labs/arc» → 0, 17/18).
+   *
+   * A package in the corpus looks like "npm:express" or "github.com/org/repo": strip
+   * the ecosystem prefix, compare the whole name, and accept a path suffix so "express"
+   * still finds "npm:express" without "arc" matching "arch".
+   */
+  const clean = (p: string) => (p.includes(":") ? p.split(":").pop()! : p).trim().toLowerCase();
+  const needle = clean(product);
   if (needle.length < 3) return [];
   const hits = loadAdvisories().advisories.filter(
     (a) =>
-      a.packages.some((p) => p.toLowerCase().split(":").pop() === needle) ||
+      a.packages.some((p) => {
+        const q = clean(p);
+        return q === needle || q.endsWith(`/${needle}`) || q.startsWith(`${needle}/`);
+      }) ||
       a.summary.toLowerCase().includes(needle),
   );
   return hits
