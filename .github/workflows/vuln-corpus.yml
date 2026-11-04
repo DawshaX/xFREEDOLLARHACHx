@@ -49,6 +49,22 @@ jobs:
         with:
           fetch-depth: 0
 
+      # A run that waits in the concurrency queue keeps the commit it was QUEUED
+      # with, not the one that exists when it starts. The deepen cursor lives in
+      # state/vuln-corpus-index.json, so a stale checkout walks a window that has
+      # already been walked. Measured: run 41905819968 was queued at 20:21:25 on
+      # 27a0fede, started at 20:31:07 (after the 20:30:56 index commit), and still
+      # reported walkedFrom 0 / nextStartIndex 24000 — the same 24,000-row window
+      # as the run before it, 1,071 net new rows. Moving the tree to the current
+      # origin/main before any work is what makes the cursor a cursor.
+      - name: move to the current origin/${{ github.ref_name }} (a queued run starts on a stale commit)
+        run: |
+          git fetch --prune origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+          echo "working from $(git rev-parse --short HEAD) · index says $(
+            node -e 'const d=require("./state/vuln-corpus-index.json");console.log(d.total+" rows, deepen cursor "+(d.deepen?.nextStartIndex ?? "none"))'
+          )"
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10

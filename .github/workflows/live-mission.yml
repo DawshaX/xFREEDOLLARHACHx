@@ -49,6 +49,17 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # GitHub keeps the commit a run was QUEUED with; a run that waits behind
+      # concurrency: starts on state that is already old, decides its next step
+      # from it, and then writes that stale state back over the newer one.
+      # Measured: run 41905819968 queued 20:21:25 on 27a0fede, started 20:31:07
+      # after the 20:30:56 index commit, and re-ran the same work (walkedFrom 0).
+      - name: move to the current origin/${{ github.ref_name }} (a queued run starts on a stale commit)
+        run: |
+          git fetch --prune origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+          git log -1 --format='now on %h · %s'
+
 
       - uses: actions/setup-node@v4
         with:
