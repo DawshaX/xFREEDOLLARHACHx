@@ -29,6 +29,7 @@ process.env.NOVA_CORPUS_INDEX = path.join(work, "index.json");
 
 const esbuild = [
   path.join(root, "artifacts/api-server/node_modules/.bin/esbuild"),
+  path.join(root, "node_modules/.bin/esbuild"),
   path.join(root, "node_modules/.pnpm/node_modules/.bin/esbuild"),
 ].find((p) => fs.existsSync(p));
 if (!esbuild) throw new Error("esbuild not found — run pnpm install first");
@@ -149,6 +150,34 @@ server.close();
 check("provision downloads the corpus", prov.action === "downloaded" && fs.existsSync(path.join(fresh, "cves.jsonl.gz")), prov.says_ar);
 check("provision rebuilds the index it did not get", lib.corpusStatus().measured === true, `total=${lib.corpusStatus().total}`);
 check("provision refuses a stub payload", (await lib.provisionCorpus({ url: `data:text/plain,hi`, force: true })).ok === false);
+
+/* 9 · the ingest SCRIPT, end to end, not just the library it calls.
+      A library test cannot see a broken script: `--deepen` shipped with `merges`
+      used above its own `const`, so every ingest died with a ReferenceError in
+      its temporal dead zone (measured: run 41877458865, 17:25Z, step failed).
+      Fixture mode never touches the network, so this runs anywhere. */
+const { spawnSync } = await import("node:child_process");
+const scriptDir = path.join(work, "script");
+process.env.NOVA_CORPUS_DIR = path.join(scriptDir, "corpus");
+process.env.NOVA_CORPUS_INDEX = path.join(scriptDir, "index.json");
+fs.mkdirSync(scriptDir, { recursive: true });
+const fixtureFile = path.join(scriptDir, "nvd.json");
+fs.writeFileSync(fixtureFile, JSON.stringify({ vulnerabilities: items.slice(0, 3).map((i) => ({ cve: i })) }));
+const runIngest = (...flags) =>
+  spawnSync(process.execPath, [path.join(root, "scripts/ingest-vuln-corpus.mjs"), `--fixture=${fixtureFile}`, ...flags], {
+    cwd: root,
+    encoding: "utf8",
+    env: { ...process.env },
+  });
+const first = runIngest("--pages=1");
+check("the ingest script runs (fixture, no network)", first.status === 0, (first.stderr || first.stdout).split("\n").filter(Boolean).slice(-1)[0]);
+check("it wrote a corpus", fs.existsSync(path.join(scriptDir, "corpus", "cves.jsonl.gz")));
+const afterFirst = lib.corpusStatus().total;
+const deepen = runIngest("--deepen", "--pages=1");
+check("--deepen runs instead of throwing in the dead zone", deepen.status === 0, (deepen.stderr || "").split("\n").filter(Boolean).slice(-1)[0]);
+check("--deepen merges onto the corpus instead of replacing it", lib.corpusStatus().total === afterFirst, `before=${afterFirst} after=${lib.corpusStatus().total}`);
+const incr = runIngest("--incremental", "--pages=1");
+check("--incremental runs and keeps the rows", incr.status === 0 && lib.corpusStatus().total === afterFirst, `total=${lib.corpusStatus().total}`);
 
 let bad = 0;
 for (const [name, ok, detail] of checks) {
