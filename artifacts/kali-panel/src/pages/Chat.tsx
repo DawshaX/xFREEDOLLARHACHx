@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { MessageSquare, Plus, Send, Trash2, Skull, RefreshCw, Bot, Settings, Wifi, WifiOff, Loader2, Brain, Pin, Search, X, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
 import { jsonRequest } from "@/lib/sse";
+import { streamKeylessChat, probeKeylessSeats, type SeatProbe } from "@/lib/llm-browser";
 import {
   streamOllamaViaServer,
   probeOllamaViaServer,
@@ -29,6 +30,9 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [ollamaStatus, setOllamaStatus] = useState<"unknown" | "ok" | "error">("unknown");
+  // which free seat is answering, and what each one said when probed
+  const [activeSeat, setActiveSeat] = useState<string>("");
+  const [seats, setSeats] = useState<SeatProbe[]>([]);
   const [ollamaError, setOllamaError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [settingsBase, setSettingsBase] = useState(getStoredOllamaBase());
@@ -141,25 +145,59 @@ export default function Chat() {
         })),
       ];
 
-      const fullResponse = await streamOllamaViaServer({
-        apiBase: getStoredOllamaBase(),
-        model: getStoredOllamaModel(),
-        messages: ollamaMessages,
-        signal: abortRef.current.signal,
-        onToken: (token) => {
-          setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: m.content + token } : m));
-        },
-      });
+      const push = (token: string) =>
+        setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: m.content + token } : m));
 
-      setOllamaStatus("ok");
+      let fullResponse = "";
+      let servedBy = "";
 
-      await jsonRequest(`/anthropic/conversations/${active.id}/save-messages`, {
-        method: "POST",
-        body: JSON.stringify({ userContent: userText, assistantContent: fullResponse }),
-      });
+      // 1st: a keyless seat straight from the browser — works on GitHub Pages,
+      // with no server and no key. Tokens are rendered as they arrive.
+      try {
+        const r = await streamKeylessChat({
+          messages: ollamaMessages,
+          signal: abortRef.current.signal,
+          onToken: push,
+          onSeat: (seat) => { servedBy = seat.label; setActiveSeat(seat.label); },
+        });
+        fullResponse = r.text;
+        setOllamaStatus("ok");
+      } catch (keylessErr) {
+        if (abortRef.current.signal.aborted) return;
+        // 2nd: a local/remote Ollama through the engine, if there is one.
+        try {
+          fullResponse = await streamOllamaViaServer({
+            apiBase: getStoredOllamaBase(),
+            model: getStoredOllamaModel(),
+            messages: ollamaMessages,
+            signal: abortRef.current.signal,
+            onToken: push,
+          });
+          servedBy = `Ollama · ${getStoredOllamaModel()}`;
+          setActiveSeat(servedBy);
+          setOllamaStatus("ok");
+        } catch (ollamaErr) {
+          const msg = `⚠ مفيش مقعد ردّ.\nالمقاعد المجانية:\n${(keylessErr as Error).message}\n\nOllama:\n${(ollamaErr as Error).message}`;
+          setOllamaStatus("error");
+          setOllamaError(msg);
+          setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: msg } : m));
+          return;
+        }
+      }
 
-      const data = await jsonRequest<Conversation & { messages: Message[] }>(`/anthropic/conversations/${active.id}`);
-      setMessages(data.messages);
+      // Persistence is best-effort: on Pages there is no engine, and losing the
+      // save must not lose the answer that is already on screen.
+      try {
+        await jsonRequest(`/anthropic/conversations/${active.id}/save-messages`, {
+          method: "POST",
+          body: JSON.stringify({ userContent: userText, assistantContent: fullResponse }),
+        });
+        const data = await jsonRequest<Conversation & { messages: Message[] }>(`/anthropic/conversations/${active.id}`);
+        setMessages(data.messages);
+      } catch {
+        setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: fullResponse, createdAt: new Date().toISOString() } : m));
+      }
+      if (servedBy) setActiveSeat(servedBy);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       const msg = err instanceof Error ? err.message : String(err);
@@ -204,7 +242,19 @@ export default function Chat() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(180deg,#060010 0%,#03000a 100%)" }} dir="rtl">
       <div className="p-4 space-y-3">
-        <PageHeader title="☠ محادثة AI" subtitle="متصل بـ Ollama على جهازك مباشرة — بث حي · دعم كامل للعربية · بلا حدود" icon={MessageSquare} danger
+        {seats.length > 0 && (
+          <div className="rounded-xl p-3 font-mono text-[11px] space-y-1" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ color: "rgba(255,255,255,0.5)" }}>قياس المقاعد المجانية — الآن:</div>
+            {seats.map(s => (
+              <div key={s.id} className="flex items-center justify-between gap-2">
+                <span style={{ color: s.ok ? "#44ff88" : "#ff6666" }}>{s.ok ? "✓" : "✗"} {s.label}</span>
+                <span style={{ color: "rgba(255,255,255,0.45)" }}>{s.latencyMs}ms · {s.detail.slice(0, 60)}</span>
+              </div>
+            ))}
+            <div style={{ color: "rgba(255,255,255,0.35)" }}>{seats.filter(s => s.ok).length}/{seats.length} مقعد بيردّ — ده قياس حقيقي من متصفحك</div>
+          </div>
+        )}
+        <PageHeader title="☠ محادثة AI" subtitle="مقاعد مجانية بدون مفتاح (البث حي في المتصفح) + Ollama لو موجود — مش محتاج سيرفر" icon={MessageSquare} danger
           actions={
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-mono"
@@ -214,6 +264,24 @@ export default function Chat() {
                   {ollamaStatus === "ok" ? `${getStoredOllamaModel()} · Online` : ollamaStatus === "error" ? "Ollama Offline" : "جاري الفحص..."}
                 </span>
               </div>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-mono"
+                title="المقعد اللي بيردّ فعلاً"
+                style={{ background: "rgba(0,0,0,0.3)", border: `1px solid ${activeSeat ? "rgba(68,255,136,0.3)" : "rgba(255,255,255,0.1)"}`, color: activeSeat ? "#44ff88" : "rgba(255,255,255,0.4)" }}>
+                <Bot className="w-3 h-3" />{activeSeat || "مقعد مجاني"}
+              </div>
+              <button
+                onClick={async () => {
+                  setSeats([]);
+                  const res = await probeKeylessSeats();
+                  setSeats(res);
+                  const first = res.find(r => r.ok);
+                  if (first) { setActiveSeat(first.label); setOllamaStatus("ok"); }
+                }}
+                title="اختبر كل مقعد مجاني الآن — القياس بيظهر تحت"
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-mono"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)" }}>
+                <RefreshCw className="w-3 h-3" />اختبر المقاعد
+              </button>
               <button onClick={() => { setShowMemory(s => !s); }} className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-mono transition-all"
                 style={showMemory ? { background: "rgba(170,0,255,0.12)", border: "1px solid rgba(170,0,255,0.35)", color: "#cc66ff" } : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }}>
                 <Brain className="w-3 h-3" />الذاكرة {memories.length > 0 && <span className="font-black">{memories.length}</span>}
@@ -364,7 +432,7 @@ export default function Chat() {
 
               <form onSubmit={send} className="p-3 flex gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                 <input data-testid="input-message" value={input} onChange={(e) => setInput(e.target.value)}
-                  placeholder={ollamaStatus === "error" ? "⚠ Ollama غير متصل — افتح الإعدادات ⚙" : "اكتب رسالتك... (بلا حدود للردود)"}
+                  placeholder="اكتب رسالتك... (مقاعد مجانية بلا مفتاح + بث حي)"
                   disabled={streaming}
                   style={{ ...inputStyle, flex: 1, borderColor: ollamaStatus === "error" ? "rgba(255,68,68,0.3)" : undefined }} />
                 <button type="submit" data-testid="btn-send" disabled={streaming || !input.trim()}
