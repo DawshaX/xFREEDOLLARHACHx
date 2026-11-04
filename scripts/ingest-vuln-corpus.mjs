@@ -12,6 +12,10 @@
  *   --pages=N        NVD pages of 2,000 to pull (default 10 → up to 20,000 CVEs)
  *   --all            pull the whole database (paged until NVD says stop)
  *   --incremental    only CVEs modified since the last run (stored in the index)
+ *   --deepen         continue the walk from state/vuln-corpus-index.json
+ *                    (deepen.nextStartIndex), --pages at a time, merging onto the
+ *                    published corpus. This is how the gap gets closed without a
+ *                    run that has to last 40 minutes.
  *   --fixture=path   parse local JSON instead of the network (tests, no internet)
  *
  * NVD is slow-and-polite by design: 5 requests / 30 s without a key, 50 with one.
@@ -42,7 +46,7 @@ const val = (name, dflt) => {
 const wantedPages = Number(val("pages", 25));
 // Never let one run eat the whole window: stop cleanly and write what we have.
 const timeBudgetMin = Number(process.env.CORPUS_TIME_BUDGET_MIN || 25);
-const mode = flag("incremental") ? "incremental" : "full";
+const mode = flag("deepen") ? "deepen" : flag("incremental") ? "incremental" : "full";
 const fixture = val("fixture", null);
 const apiKey = process.env.NVD_API_KEY || "";
 const perPage = 2000;
@@ -108,8 +112,8 @@ if (fixture) {
   // A fresh CI runner has no corpus file (it is gitignored). Merging a delta onto
   // nothing silently REPLACED 104,000 rows with 72 (measured: index total 72 at
   // 04:42Z). So: pull the published base first, or refuse to write a shrink.
-  if (mode === "incremental" && !fs.existsSync(lib.corpusFile())) {
-    console.log("incremental run on a clean runner — fetching the published corpus to merge onto");
+  if ((mode === "incremental" || mode === "deepen") && !fs.existsSync(lib.corpusFile())) {
+    console.log(`${mode} run on a clean runner — fetching the published corpus to merge onto`);
     const prov = await lib.provisionCorpus();
     console.log(`  ${prov.action}: ${prov.says_ar}`);
     if (!prov.ok) {
@@ -123,6 +127,9 @@ if (fixture) {
       : undefined;
   if (mode === "incremental" && !incrementalSince) console.log("incremental requested with no previous index — doing a full pass");
 
+  // A deepen run is a window of the same walk, not a new one: it starts where the
+  // previous run stopped and merges onto the published corpus.
+  const deepenFrom = mode === "deepen" ? Number(previous?.deepen?.nextStartIndex ?? 0) : 0;
   const maxPages = flag("all") ? 10_000 : wantedPages;
   const startedAt = Date.now();
   for (let page = 0; page < maxPages; page += 1) {
@@ -130,7 +137,7 @@ if (fixture) {
       console.log(`time budget (${timeBudgetMin} min) reached after ${pages} page(s) — writing what we have`);
       break;
     }
-    const startIndex = page * perPage;
+    const startIndex = deepenFrom + page * perPage;
     if (startIndex > 0) await sleep(delayMs);
     let res;
     for (let attempt = 1; attempt <= 4; attempt += 1) {
@@ -181,16 +188,41 @@ if (rows.size === 0) {
 
 /* ── 3 · write ── */
 const baseTotal = Number(previous?.total ?? 0);
-if (mode === "incremental" && previous?.at && baseTotal > 0 && rows.size < baseTotal * 0.5 && !fs.existsSync(lib.corpusFile())) {
+if (merges && previous?.at && baseTotal > 0 && rows.size < baseTotal * 0.5 && !fs.existsSync(lib.corpusFile())) {
   console.error(`refusing to write: ${rows.size} rows would replace ${baseTotal} (no base file to merge onto)`);
   process.exit(1);
 }
 
+const merges = (mode === "incremental" || mode === "deepen") && Boolean(previous?.at);
 const index = lib.writeCorpus([...rows.values()], {
-  mode: mode === "incremental" && previous?.at ? "incremental" : "full",
+  mode: merges ? mode : "full",
   sources: ["NVD 2.0", "CISA KEV", "EPSS"],
-  merge: mode === "incremental" && Boolean(previous?.at),
+  merge: merges,
 });
+
+// Record where the next deepen run should pick up. Writing this only after a
+// successful write means a crashed run repeats its window instead of skipping it.
+if (mode === "deepen" && !fixture) {
+  const next = deepenFrom + pages * perPage;
+  const wrapped = totalResults > 0 && next >= totalResults ? 0 : next;
+  try {
+    const file = path.join(root, "state/vuln-corpus-index.json");
+    const cur = JSON.parse(fs.readFileSync(file, "utf8"));
+    cur.deepen = {
+      nextStartIndex: wrapped,
+      windowPages: pages,
+      walkedFrom: deepenFrom,
+      nvdTotal: totalResults,
+      // measured, not assumed: how much of NVD's own total the corpus holds
+      coverage: totalResults > 0 ? Number((cur.total / totalResults).toFixed(4)) : null,
+      at: new Date().toISOString(),
+    };
+    fs.writeFileSync(file, JSON.stringify(cur, null, 2) + "\n");
+    console.log(`deepen cursor → ${wrapped} of ${totalResults} (coverage ${cur.deepen.coverage})`);
+  } catch (err) {
+    console.log(`could not record the deepen cursor: ${err.message}`);
+  }
+}
 
 console.log("\n== measured ==");
 console.log(`rows stored      : ${index.total}`);
