@@ -86,21 +86,10 @@ jobs:
         run: |
           node scripts/ci-commit.mjs --message "$MSG" state/hunt-latest.json state/hunt/evidence
 
-      # ci-commit proves its own push landed, but a step that verifies the promise
-      # from the outside is cheap and cannot share the same bug: read the file back
-      # from origin and require that it is the run we just measured. Green here
-      # means "this run's scan is on main", which is the only claim worth making.
+      # ci-commit proves its own push landed, but a step that checks the promise
+      # from outside is cheap and cannot share the same bug. The probe lives in
+      # scripts/ so it can be run and tested by hand; a multi-line `node -e` inside
+      # YAML is exactly the kind of thing that fails silently at parse time.
       - name: prove it landed (read the file back from origin)
-        run: |
-          node -e '
-            const { execFileSync } = require("node:child_process");
-            const fs = require("node:fs");
-            const mine = require("./state/hunt-latest.json");
-            execFileSync("git", ["fetch", "--quiet", "origin", "main"]);
-            const theirs = JSON.parse(execFileSync("git", ["show", "origin/main:state/hunt-latest.json"], { encoding: "utf8" }));
-            if (theirs.at !== mine.at) {
-              console.error(`::error title=hunt not published::origin/main has ${theirs.at}, this run measured ${mine.at}`);
-              process.exit(1);
-            }
-            console.log(`published: ${theirs.at} · findings ${theirs.totals?.findings} · budget ${theirs.budgetMs ?? "unrecorded"} ms`);
-          '
+        run: node scripts/prove-published.mjs state/hunt-latest.json --branch main
+
