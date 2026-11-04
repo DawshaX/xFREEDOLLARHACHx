@@ -1,0 +1,211 @@
+{
+  "version": 1,
+  "at": "2026-11-04T02:01:55.316Z",
+  "sources": [
+    "NVD 2.0",
+    "CISA KEV",
+    "EPSS"
+  ],
+  "total": 104000,
+  "bySeverity": {
+    "high": 40946,
+    "medium": 47659,
+    "low": 5781,
+    "unknown": 5768,
+    "critical": 3846
+  },
+  "byYear": {
+    "1999": 1573,
+    "2000": 1237,
+    "2001": 1551,
+    "2002": 2384,
+    "2003": 1546,
+    "2004": 2702,
+    "2005": 4749,
+    "2006": 7127,
+    "2007": 6556,
+    "2008": 7146,
+    "2009": 4959,
+    "2010": 5073,
+    "2011": 4608,
+    "2012": 5545,
+    "2013": 6111,
+    "2014": 8369,
+    "2015": 7816,
+    "2016": 9297,
+    "2017": 13636,
+    "2018": 2015
+  },
+  "kev": 352,
+  "epssScored": 98232,
+  "products": 32649,
+  "topProducts": [
+    {
+      "product": "linux_kernel",
+      "count": 9109
+    },
+    {
+      "product": "firefox",
+      "count": 8134
+    },
+    {
+      "product": "android",
+      "count": 6037
+    },
+    {
+      "product": "chrome",
+      "count": 5910
+    },
+    {
+      "product": "mac_os_x",
+      "count": 5643
+    },
+    {
+      "product": "ubuntu_linux",
+      "count": 5506
+    },
+    {
+      "product": "flash_player",
+      "count": 5272
+    },
+    {
+      "product": "safari",
+      "count": 5062
+    },
+    {
+      "product": "php",
+      "count": 4115
+    },
+    {
+      "product": "debian_linux",
+      "count": 3909
+    },
+    {
+      "product": "internet_explorer",
+      "count": 3904
+    },
+    {
+      "product": "wireshark",
+      "count": 3760
+    },
+    {
+      "product": "iphone_os",
+      "count": 3699
+    },
+    {
+      "product": "moodle",
+      "count": 3250
+    },
+    {
+      "product": "acrobat",
+      "count": 3010
+    },
+    {
+      "product": "jre",
+      "count": 2889
+    },
+    {
+      "product": "websphere_application_server",
+      "count": 2496
+    },
+    {
+      "product": "ios",
+      "count": 2494
+    },
+    {
+      "product": "jdk",
+      "count": 2482
+    },
+    {
+      "product": "itunes",
+      "count": 2393
+    },
+    {
+      "product": "opera_browser",
+      "count": 2329
+    },
+    {
+      "product": "mysql",
+      "count": 2221
+    },
+    {
+      "product": "acrobat_reader",
+      "count": 2157
+    },
+    {
+      "product": "phpmyadmin",
+      "count": 2150
+    },
+    {
+      "product": "opensuse",
+      "count": 2128
+    },
+    {
+      "product": "ffmpeg",
+      "count": 1940
+    },
+    {
+      "product": "shockwave_player",
+      "count": 1764
+    },
+    {
+      "product": "windows_server_2008",
+      "count": 1714
+    },
+    {
+      "product": "windows_10",
+      "count": 1618
+    },
+    {
+      "product": "quicktime",
+      "count": 1613
+    },
+    {
+      "product": "xen",
+      "count": 1561
+    },
+    {
+      "product": "mac_os_x_server",
+      "count": 1497
+    },
+    {
+      "product": "mediawiki",
+      "count": 1461
+    },
+    {
+      "product": "drupal",
+      "count": 1412
+    },
+    {
+      "product": "openssl",
+      "count": 1396
+    },
+    {
+      "product": "database_server",
+      "count": 1390
+    },
+    {
+      "product": "office",
+      "count": 1374
+    },
+    {
+      "product": "bugzilla",
+      "count": 1281
+    },
+    {
+      "product": "tomcat",
+      "count": 1281
+    },
+    {
+      "product": "adaptive_security_appliance_software",
+      "count": 1224
+    }
+  ],
+  "files": {
+    "corpus": "cves.jsonl.gz",
+    "bytes": 10145467,
+    "sha256": "95034e2f00d7b5c5b311aedeb3a0e1440f64bdbfdb09ce380ba0a53a25481ec2"
+  },
+  "mode": "full",
+  "says_ar": "104000 ثغرة حقيقية · critical 3846 · high 40946 · 352 مستغلّة فعلياً (KEV) · 98232 لها EPSS · 32649 منتج بـCPE · مزامنة 2026-11-04T02:01:55.316Z"
+}
