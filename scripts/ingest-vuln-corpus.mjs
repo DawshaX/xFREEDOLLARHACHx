@@ -74,6 +74,27 @@ execFileSync(
 const lib = createRequire(import.meta.url)(bundle);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// A crash is a reason too. Without these, an uncaught throw (a corrupt gzip, a
+// write that fails) exits 1 with nothing but GitHub's own "Process completed with
+// exit code 1" — which is exactly what run 41896545563 left behind.
+for (const [event, handler] of [
+  ["uncaughtException", (err) => reportCrash("uncaughtException", err)],
+  ["unhandledRejection", (err) => reportCrash("unhandledRejection", err)],
+]) process.on(event, handler);
+
+function reportCrash(kind, err) {
+  const message = String(err?.stack || err?.message || err).slice(0, 1200);
+  console.error(`${kind}: ${message}`);
+  console.error(`::error title=corpus ingest crashed::${kind} — ${message.replace(/\n/g, " ").slice(0, 700)}`);
+  try {
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n**corpus ingest crashed** (${kind})\n\n\`\`\`\n${message}\n\`\`\`\n`);
+    }
+  } catch {
+    /* nothing left to try */
+  }
+  process.exit(1);
+}
 
 // A failed ingest must say why in a place that can be read back. These job logs
 // are not retrievable through the API (measured: `gh run view --log` empty,
