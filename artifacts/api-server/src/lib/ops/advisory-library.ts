@@ -180,7 +180,13 @@ export async function syncAdvisories(opts: SyncOpts = {}): Promise<{
         signal: AbortSignal.timeout(30_000),
       });
     } catch (err) {
-      error = `fetch failed: ${(err as Error).message}`;
+      // "fetch failed" is the wrapper, not the reason: undici puts the real cause
+      // (ENOTFOUND, ECONNRESET, certificate chain, timeout) on `err.cause`. Without
+      // it a failed sync reads "fetch failed" at 54 ms and nothing else — which is
+      // all the advisory job has ever said about its two-second red step.
+      const cause = (err as { cause?: { code?: string; message?: string; errno?: number } }).cause;
+      const why = cause ? [cause.code, cause.message].filter(Boolean).join(": ") : "";
+      error = `fetch failed: ${(err as Error).message}${why ? ` (${why})` : ""}`;
       break;
     }
     if (!res.ok) {
