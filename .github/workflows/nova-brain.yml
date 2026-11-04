@@ -17,6 +17,15 @@ name: NOVA brain (keyless · thinks every 15 min)
 on:
   schedule:
     - cron: "*/15 * * * *"
+  # GitHub drops or delays scheduled runs (measured 2026-11-04: the 22:15 and
+  # 22:30 ticks never started, and neither did the corpus or backend-health
+  # schedules at 22:00/22:30). Piggy-backing on the workflows that DO complete
+  # guarantees a turn per corpus cycle instead of hoping the cron wakes up.
+  workflow_run:
+    workflows:
+      - "vuln corpus (real NVD + KEV + EPSS)"
+      - "backend health (the edge function, measured from outside)"
+    types: [completed]
   workflow_dispatch:
     inputs:
       dry:
