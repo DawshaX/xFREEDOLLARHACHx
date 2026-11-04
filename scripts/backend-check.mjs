@@ -47,6 +47,26 @@ const corpusMiss = await probe(
   "/corpus?q=zzz-no-such-product&limit=3",
   (b) => Array.isArray(b?.rows) && b.rows.length === 0 && Number(b.searched) > 0,
 );
+// `probe` returns the body, not a verdict — reading `.ok` off it silently wrote
+// `negativeSearchOk: null` into the report (measured at 17:25Z), i.e. the control
+// was reported as "not run" even when it ran. Take the verdict from the check.
+const verdictOf = (name) => checks.find((c) => c.name === name)?.ok ?? null;
+const negativeOk = verdictOf("corpus?q=zzz-no-such-product");
+
+/* `published` was declared in corpus_cve and never written: 46,143 rows had NULL
+   while the panel showed an empty date column. The endpoint now serves the field,
+   so the probe asserts it is there rather than trusting the schema. */
+const corpusDated = Array.isArray(corpus?.rows) && corpus.rows.length > 0
+  ? corpus.rows.every((r) => typeof r?.published === "string" && r.published.length === 10)
+  : null;
+checks.push({
+  name: "corpus dated (published)",
+  status: corpus ? 200 : 0,
+  ms: 0,
+  ok: corpusDated === true,
+  sample: `published=${(corpus?.rows ?? []).map((r) => r?.published ?? "null").slice(0, 3).join(",")}`,
+});
+if (corpusDated !== true) failed += 1;
 
 /* ── chat, proved as a stream ────────────────────────────────────────────────
    The panel says "الباك إند هو اللي بيرد". That claim needs a measurement, not a
@@ -164,7 +184,9 @@ const report = {
   corpusSearched: corpus?.searched ?? null,
   corpusIndexTotal: corpus?.indexTotal ?? null,
   corpusSlice: corpus?.slice ?? null,
-  negativeSearchOk: corpusMiss?.ok ?? null,
+  negativeSearchOk: negativeOk,
+  negativeSearched: corpusMiss?.searched ?? null,
+  corpusDated: corpusDated,
   // streaming is a measurement: chunks > 1 means tokens really arrived over time
   chat: chat ?? null,
   checks,

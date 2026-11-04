@@ -253,11 +253,14 @@ Deno.serve(async (req) => {
       await flush();
 
       const { count: inDb } = await db.from("corpus_cve").select("*", { count: "exact", head: true });
+      // Counted once, from the same lines: `lines.length` includes blank ones, so
+      // the index total and the reported `lines` could disagree with each other.
+      const totalLines = lines.filter((l) => l.trim()).length;
       await db.from("corpus_meta").upsert(
         {
           key: "index",
           value: {
-            total: lines.filter((l) => l.trim()).length,
+            total: totalLines,
             at: new Date().toISOString(),
             source: "release:vuln-corpus/cves.jsonl.gz",
           },
@@ -272,7 +275,7 @@ Deno.serve(async (req) => {
         written,
         offset,
         limit,
-        lines: lines.length,
+        lines: totalLines,
         inDb: inDb ?? null,
         ms: Date.now() - started,
         failures: failures.slice(0, 3),
