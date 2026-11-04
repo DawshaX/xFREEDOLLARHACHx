@@ -70,6 +70,12 @@ export function readSenses() {
       coverage: corpus.deepen?.coverage ?? null,
       nextStartIndex: corpus.deepen?.nextStartIndex ?? null,
       newestYear: corpus.byYear ? Math.max(...Object.keys(corpus.byYear).map(Number)) : null,
+      // The tool takes a product token, so the brain is told which ones exist —
+      // otherwise it invents an English phrase ("coverage improvement") and the
+      // search honestly returns 0 hits, which looks like a broken tool.
+      topProducts: Array.isArray(corpus.topProducts)
+        ? corpus.topProducts.slice(0, 12).map((p) => p.product ?? p)
+        : null,
     };
   }
   if (hunt) {
@@ -132,6 +138,8 @@ export function systemPrompt(senses) {
     "ردّك لازم يكون JSON بالشكل ده بالحرف:",
     '{"reply":"<ردك للمستخدم>","action":{"kind":"none|corpus_search|cve_lookup","arg":"<نص>"},"why":"<سبب اختيار الأكشن في سطر>"}',
     "استخدم corpus_search لما السؤال عن منتج أو ثغرة، وcve_lookup لما يكون فيه CVE id صريح، وnone لما مفيش داعي.",
+    "لو استخدمت corpus_search، الـarg لازم يكون اسم منتج واحد صغير من قائمة senses.corpus.topProducts أو من كلام المستخدم — مش جملة ومش عبارة إنجليزية.",
+    "اكتب عربي سليم بدون أخطاء إملائية، ومتخترعش أرقام. لو التغطية ناقصة قول النسبة المقيسة زي ما هي.",
     "",
     "الحالة المقيسة الآن (JSON):",
     JSON.stringify(senses, null, 1),
