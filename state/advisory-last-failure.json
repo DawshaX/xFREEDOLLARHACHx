@@ -1,0 +1,13 @@
+{
+  "at": "2026-11-04T20:36:38.413Z",
+  "step": "advisory proofs",
+  "run": "https://github.com/DawshaX/xFREEDOLLARHACHx/actions/runs/41908195505",
+  "job": "corpus",
+  "sha": "f4e66a3eb6201db1ef35d2531cf44de45c7409d3",
+  "log": {
+    "file": "/home/runner/work/_temp/advisory.log",
+    "bytes": 1984,
+    "keptLines": 120
+  },
+  "tail": "▲ [WARNING] \"import.meta\" is not available with the \"cjs\" output format and will be empty [empty-import-meta]\n\n    artifacts/api-server/src/lib/ops/bounty-catalog.ts:75:45:\n      75 │ ...ocess.cwd(), path.resolve(import.meta.dirname, \"../../../..\"), ...\n         ╵                              ~~~~~~~~~~~\n\n  You need to set the output format to \"esm\" for \"import.meta\" to work correctly.\n\n▲ [WARNING] \"import.meta\" is not available with the \"cjs\" output format and will be empty [empty-import-meta]\n\n    artifacts/api-server/src/lib/ops/bounty-catalog.ts:75:95:\n      75 │ ...e, \"../../../..\"), path.resolve(import.meta.dirname, \"../../..\")];\n         ╵                                    ~~~~~~~~~~~\n\n  You need to set the output format to \"esm\" for \"import.meta\" to work correctly.\n\nPASS  fresh library is NOT measured  · measured=false\nPASS  fresh library prints 0, not a literal  · total=0\nPASS  fresh library says why (Arabic)\nPASS  sync reached api.github.com  · pages=2 · 1537ms · err=none\nPASS  sync stored real rows  · rows=200\nPASS  severity counts add up to the stored rows  · 200 vs 200\nPASS  every row has a GHSA id\nPASS  rows carry CVSS or severity\nPASS  cache file written  · /tmp/nova-advisory-cache-2281.json\nPASS  2 pages ≠ 1 page (cursor pagination works)  · total=200\nFAIL  lookupProduct finds a package that is in the corpus  · «github.com/basekick-labs/arc» → 0\nPASS  lookupProduct refuses to guess on 1 char\nPASS  lookupCve resolves a CVE that is in the corpus  · CVE-2026-55098\nPASS  lookupCve rejects a malformed id\nPASS  failed sync reports the error  · fetch failed: network down (simulated)\nPASS  failed sync kept the old corpus  · 200 vs 200\nPASS  kind runs and reports the library size  · مكتبة 200 إشعار (2026-11-04 20:36) · «github.com/basekick-labs/arc» → 0 مطابقة · 0 خطيرة\nPASS  kind never claims a match it did not find\n\n17/18 checks passed · library=200 rows @ 2026-11-04T20:36:38.127Z\n"
+}
