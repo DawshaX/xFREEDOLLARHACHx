@@ -12,6 +12,7 @@
  * Everything on this page reads from `/api/fleet/mesh` and the permanent
  * `/api/ws` socket; nothing is hard-coded fake state.
  */
+import LiveBodyCard from "@/components/LiveBodyCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -404,6 +405,9 @@ export default function NovaFleetUnified() {
 
   return (
     <div dir="rtl" className="min-h-[calc(100vh-64px)] bg-[#050208] text-white p-3 space-y-3">
+      {/* the always-on body: live Actions runs + the last real hunt */}
+      <LiveBodyCard />
+
       {/* header */}
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <div className="flex items-center gap-2">
