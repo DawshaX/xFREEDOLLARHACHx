@@ -324,6 +324,25 @@ server.listen(port, host, () => {
       .catch((e) => logger.warn({ err: e }, "NOVA local model check failed"));
   }
 
+  // Durable memory first: a free host throws the filesystem away on every
+  // deploy, and the agent's memory is the one thing that must survive it. With
+  // NOVA_SUPABASE_URL + NOVA_SUPABASE_SERVICE_KEY set, this pulls the last
+  // snapshot back before anything can write over it. No env → no network call.
+  void import("./lib/agent/memory-store")
+    .then(({ hydrateMemoryFromMirror, mirrorStatus }) =>
+      hydrateMemoryFromMirror().then((r) => {
+        const status = mirrorStatus();
+        if (!status.on) return;
+        logger.info(
+          { hydrated: r.hydrated, records: r.records, row: status.row, state: status.state, error: status.error },
+          r.hydrated
+            ? "memory: restored from the durable mirror (this box had no file)"
+            : "memory: local file already had records — mirror will follow writes",
+        );
+      }),
+    )
+    .catch((e) => logger.warn({ err: e }, "memory mirror hydrate failed"));
+
   if (process.env.DATABASE_URL) {
     forceOllamaDefault().catch(e => logger.error({ err: e }, "forceOllamaDefault error"));
     runCveMigrations().catch(e => logger.error({ err: e }, "CVE migrations error"));

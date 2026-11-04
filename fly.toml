@@ -6,6 +6,13 @@
 # Silly Development or GratisVPS (see docs/FREE-HOSTS-2026.md).
 # After the first deploy, also: fly secrets set NOVA_EXEC_TOKEN=$(openssl rand -hex 16)
 #
+# Durable memory: with a volume mounted at /data the file store is already
+# permanent. On any host WITHOUT a volume (Render free, a Sprite that is rebuilt),
+# set NOVA_SUPABASE_URL + NOVA_SUPABASE_SERVICE_KEY instead — memory-store
+# mirrors to one row in `nova_memory` and rehydrates on boot.
+#   fly secrets set NOVA_SUPABASE_URL=https://<project>.supabase.co \
+#                    NOVA_SUPABASE_SERVICE_KEY=<service-role-key>
+#
 #   fly launch --copy-config --name cybernova-nova
 #   fly volumes create nova_data --size 1 --region fra
 #   fly deploy
