@@ -153,6 +153,13 @@ export default function Chat() {
         })),
       ];
 
+      // Persist what the HUMAN said, not just what the model answered. Without
+      // this line the assistant turn was logged on its own: the brain in CI reads
+      // `chat_messages` to answer, and it could never see a question — the memory
+      // was a transcript of one side. Fire-and-forget: a failed write must never
+      // stop the answer from streaming.
+      void logChatTurn({ conversationId: String(active.id), role: "user", content: userText });
+
       const push = (token: string) =>
         setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: m.content + token } : m));
 
