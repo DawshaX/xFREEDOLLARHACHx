@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-04T05:32:57.169Z",
+  "at": "2026-11-04T12:51:42.729Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 46000,
+  "total": 46143,
   "bySeverity": {
-    "high": 20870,
-    "medium": 21743,
-    "low": 2806,
-    "unknown": 423,
-    "critical": 158
+    "high": 20924,
+    "medium": 21776,
+    "low": 2810,
+    "unknown": 473,
+    "critical": 160
   },
   "byYear": {
     "1999": 1573,
@@ -27,11 +27,14 @@
     "2008": 7012,
     "2009": 4796,
     "2010": 4370,
-    "2011": 708
+    "2011": 708,
+    "2024": 1,
+    "2025": 2,
+    "2026": 140
   },
   "kev": 52,
-  "epssScored": 45577,
-  "products": 17761,
+  "epssScored": 45608,
+  "products": 17766,
   "topProducts": [
     {
       "product": "linux_kernel",
@@ -196,9 +199,9 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 4724837,
-    "sha256": "e39525da59618486574f26d4c5e72d14f6c14e70cafd9b35d4245d8678fd4ee9"
+    "bytes": 4750003,
+    "sha256": "e204752ebdc930d4001b5205d4722a1459652e898902f0534db658e573fa3614"
   },
-  "mode": "full",
-  "says_ar": "46000 ثغرة حقيقية · critical 158 · high 20870 · 52 مستغلّة فعلياً (KEV) · 45577 لها EPSS · 17761 منتج بـCPE · مزامنة 2026-11-04T05:32:57.169Z"
+  "mode": "incremental",
+  "says_ar": "46143 ثغرة حقيقية · critical 160 · high 20924 · 52 مستغلّة فعلياً (KEV) · 45608 لها EPSS · 17766 منتج بـCPE · مزامنة 2026-11-04T12:51:42.729Z"
 }

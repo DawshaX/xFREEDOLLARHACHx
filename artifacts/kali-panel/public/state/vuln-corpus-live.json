@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-04T05:32:57.169Z",
-  "total": 46000,
+  "at": "2026-11-04T12:51:42.729Z",
+  "total": 46143,
   "bySeverity": {
-    "high": 20870,
-    "medium": 21743,
-    "low": 2806,
-    "unknown": 423,
-    "critical": 158
+    "high": 20924,
+    "medium": 21776,
+    "low": 2810,
+    "unknown": 473,
+    "critical": 160
   },
   "kev": 52,
-  "epssScored": 45577,
-  "products": 17761,
-  "mode": "full",
+  "epssScored": 45608,
+  "products": 17766,
+  "mode": "incremental",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
@@ -12927,5 +12927,5 @@
       "refs": []
     }
   ],
-  "says_ar": "46000 ثغرة حقيقية من NVD · 52 مستغلّة فعلياً (KEV) · 17761 منتج · مزامنة 2026-11-04T05:32:57.169Z"
+  "says_ar": "46143 ثغرة حقيقية من NVD · 52 مستغلّة فعلياً (KEV) · 17766 منتج · مزامنة 2026-11-04T12:51:42.729Z"
 }
