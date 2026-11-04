@@ -171,7 +171,7 @@ export default function Chat() {
           servedBy = `الباك إند · ${be.seat ?? "seat"}`;
           setActiveSeat(servedBy);
           setOllamaStatus("ok");
-          void logChatTurn({ conversationId: active.id, role: "assistant", content: be.text, seat: be.seat, tools: agent.used });
+          void logChatTurn({ conversationId: String(active.id), role: "assistant", content: be.text, seat: be.seat, tools: agent.used });
           setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: be.text } : m));
         } else {
           throw new Error(be.error ?? "backend refused");
