@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/Layout";
 import { jsonRequest } from "@/lib/sse";
 import { streamKeylessChat, probeKeylessSeats, type SeatProbe } from "@/lib/llm-browser";
 import { buildAgentContext, deterministicAnswer } from "@/lib/ops-agent";
+import { streamBackendChat, logChatTurn } from "@/lib/backend";
 import {
   streamOllamaViaServer,
   probeOllamaViaServer,
@@ -158,6 +159,25 @@ export default function Chat() {
       let fullResponse = "";
       let servedBy = "";
 
+      // 0th: the backend (Supabase Edge). It streams, it picks the seat, and it
+      // keeps the history in Postgres — so the conversation survives a reload.
+      try {
+        const be = await streamBackendChat(
+          ollamaMessages.map(m => ({ role: m.role, content: m.content })),
+          (text) => setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: text } : m)),
+        );
+        if (be.ok) {
+          fullResponse = be.text;
+          servedBy = `الباك إند · ${be.seat ?? "seat"}`;
+          setActiveSeat(servedBy);
+          setOllamaStatus("ok");
+          void logChatTurn({ conversationId: active.id, role: "assistant", content: be.text, seat: be.seat, tools: agent.used });
+          setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: be.text } : m));
+        } else {
+          throw new Error(be.error ?? "backend refused");
+        }
+      } catch (backendErr) {
+        if (abortRef.current.signal.aborted) return;
       // 1st: a keyless seat straight from the browser — works on GitHub Pages,
       // with no server and no key. Tokens are rendered as they arrive.
       try {
@@ -201,6 +221,7 @@ export default function Chat() {
         }
       }
 
+      }
       // Persistence is best-effort: on Pages there is no engine, and losing the
       // save must not lose the answer that is already on screen.
       try {

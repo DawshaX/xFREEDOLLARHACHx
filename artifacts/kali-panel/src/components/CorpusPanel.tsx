@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Database, Search, ShieldAlert, RefreshCw } from "lucide-react";
 import { refreshSystem, systemSnapshot, onSystemChange, type SystemSnapshot } from "@/lib/system-bus";
+import { backendCorpus, type BackendCve } from "@/lib/backend";
 
 const CARD = { background: "rgba(8,0,18,0.9)", border: "1px solid rgba(0,255,255,0.15)", borderRadius: 14 };
 
@@ -19,6 +20,9 @@ export default function CorpusPanel({ compact = false }: { compact?: boolean }) 
   const [snap, setSnap] = useState<SystemSnapshot | null>(systemSnapshot());
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
+  // rows served by Postgres (the real database) when the backend answers
+  const [dbRows, setDbRows] = useState<BackendCve[] | null>(null);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
     const off = onSystemChange(setSnap);
@@ -28,7 +32,37 @@ export default function CorpusPanel({ compact = false }: { compact?: boolean }) 
     };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    const t = setTimeout(async () => {
+      const res = await backendCorpus(q.trim(), compact ? 8 : 25);
+      if (!alive) return;
+      if (res.ok) {
+        setDbRows(res.data.rows);
+        setDbError(null);
+      } else {
+        setDbRows(null);
+        setDbError(res.error);
+      }
+    }, q ? 300 : 0);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [q, compact]);
+
   const rows = useMemo(() => {
+    if (dbRows) {
+      return dbRows.map((r) => ({
+        id: r.cve,
+        sev: r.severity ?? "unknown",
+        cvss: r.cvss,
+        kev: r.kev,
+        epss: r.epss,
+        products: r.products ?? [],
+        desc: r.summary ?? "",
+      }));
+    }
     const all = snap?.corpus.rows ?? [];
     const needle = q.trim().toLowerCase();
     if (!needle) return all.slice(0, compact ? 6 : 25);
@@ -102,6 +136,12 @@ export default function CorpusPanel({ compact = false }: { compact?: boolean }) 
             ))}
           </div>
           <div className="text-[9px] text-white/30">
+            {dbRows ? (
+              <>المصدر: <span className="text-cyan-300">Postgres الحي</span> · {dbRows.length} صف مطابق</>
+            ) : (
+              <>مصدر احتياطي: الملف الثابت{dbError ? ` (الباك إند: ${dbError})` : ""}</>
+            )}
+            {" · "}
             معروض من {corpus.rows.length} صف محمّل (مرتب KEV → CVSS → EPSS) من أصل {corpus.total.toLocaleString("en-US")} · مزامنة{" "}
             {corpus.at ? new Date(corpus.at).toLocaleString("ar-EG") : "—"}
           </div>

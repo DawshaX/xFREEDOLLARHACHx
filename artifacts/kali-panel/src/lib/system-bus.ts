@@ -12,6 +12,7 @@
  */
 import { loadCorpusLive, corpusSnapshot, type CorpusLive } from "./corpus-live";
 import { fetchHunt, fetchLiveRuns, type HuntReport, type WorkflowRun } from "./live-body";
+import { backendHealth, backendHunt } from "./backend";
 
 export type OrganStatus = "live" | "partial" | "unknown" | "down";
 
@@ -53,7 +54,13 @@ function organ(id: string, labelAr: string, status: OrganStatus, detail: string,
   return { id, labelAr, status, detail, source, at: at ?? null };
 }
 
-export function buildOrgans(corpus: CorpusLive, hunt: HuntReport | null, runs: WorkflowRun[], runsError?: string): Organ[] {
+export function buildOrgans(
+  corpus: CorpusLive,
+  hunt: HuntReport | null,
+  runs: WorkflowRun[],
+  runsError?: string,
+  backend?: { ok: boolean; at?: string; cves?: number; findings?: number; error?: string },
+): Organ[] {
   const out: Organ[] = [];
 
   out.push(
@@ -136,11 +143,13 @@ export function buildOrgans(corpus: CorpusLive, hunt: HuntReport | null, runs: W
   out.push(
     organ(
       "engine",
-      "محرك العمليات (سيرفر)",
-      "unknown",
-      "محتاج سيرفر شغّال — على Pages مفيش /api (وده اللي فاضل: الباك إند)",
-      "api/ops/*",
-      null,
+      "الباك إند (Supabase Edge + Postgres)",
+      backend?.ok ? "live" : "unknown",
+      backend?.ok
+        ? `مستجيب · ${backend.cves ?? 0} CVE في القاعدة · ${backend.findings ?? 0} مطابقة متخزّنة`
+        : `مش مقاس: ${backend?.error ?? "لسه ماتنادى"} — الواجهة بتقرأ من الملفات الثابتة`,
+      "supabase/functions/ops-api",
+      backend?.at,
     ),
   );
 
@@ -149,9 +158,20 @@ export function buildOrgans(corpus: CorpusLive, hunt: HuntReport | null, runs: W
 
 export async function refreshSystem(force = false): Promise<SystemSnapshot> {
   if (!force && snapshot && Date.now() - Date.parse(snapshot.at) < 15_000) return snapshot;
-  const [, hunt, runs] = await Promise.all([loadCorpusLive(force), fetchHunt(), fetchLiveRuns(8)]);
+  const [, hunt, runs, health] = await Promise.all([
+    loadCorpusLive(force),
+    fetchHunt(),
+    fetchLiveRuns(8),
+    backendHealth(),
+  ]);
   const corpus = corpusSnapshot();
-  const organs = buildOrgans(corpus, hunt, runs.runs, runs.ok ? undefined : runs.error);
+  const organs = buildOrgans(corpus, hunt, runs.runs, runs.ok ? undefined : runs.error, {
+    ok: health.ok,
+    at: health.ok ? health.data.at : undefined,
+    cves: health.ok ? health.data.counts.cves : undefined,
+    findings: health.ok ? health.data.counts.findings : undefined,
+    error: health.ok ? undefined : health.error,
+  });
   const live = organs.filter((o) => o.status === "live").length;
   const unknown = organs.filter((o) => o.status === "unknown").length;
   snapshot = {
@@ -176,6 +196,13 @@ export function systemSnapshot(): SystemSnapshot | null {
 export function onSystemChange(fn: (s: SystemSnapshot) => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
+}
+
+/** The backend's stored hunt (Postgres), used when the static file is stale. */
+export async function backendHuntSummary() {
+  const res = await backendHunt();
+  if (!res.ok || !res.data.run) return null;
+  return { at: res.data.run.at, findings: res.data.findings.length, verified: res.data.findings.filter((f) => f.verified).length };
 }
 
 export function knownPages(): Array<{ path: string; label: string }> {

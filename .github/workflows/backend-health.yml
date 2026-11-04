@@ -1,0 +1,37 @@
+name: backend health (the edge function, measured from outside)
+
+# The panel claims a live backend. This proves it every 30 minutes and records
+# the response times + row counts the claim is based on.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/backend-check.mjs"
+      - "supabase/functions/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backend-health
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: measure the backend
+        run: node scripts/backend-check.mjs
+      - name: publish the measurement
+        if: always()
+        env:
+          MSG: "chore(backend): health probe [skip ci]"
+        run: |
+          node scripts/ci-commit.mjs --message "$MSG" state/backend-health.json
