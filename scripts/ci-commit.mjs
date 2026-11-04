@@ -25,7 +25,11 @@ const mi = argv.indexOf("--message");
 // literally (measured: a commit titled "measured scan $(date -u …)").
 const rawMessage = mi >= 0 ? argv[mi + 1] : "chore(ci): automated update";
 const stamp = new Date().toISOString().replace(":00.", ":").slice(0, 16) + "Z";
-const message = /\$\(date/.test(rawMessage) ? `${rawMessage.replace(/\s*\$\(date[^)]*\)\s*/g, " ").trim()} ${stamp}` : rawMessage;
+// A workflow `env:` value is not a shell: the timestamp must be produced here.
+// Measured on main: commit b1a0cbb landed as "hunt: measured $(date -u …)".
+const message = /\$\(date/.test(rawMessage)
+  ? `${rawMessage.replace(/\s*\$\((?:date|date -u)[^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim()} ${stamp}`
+  : rawMessage;
 const files = argv.filter((a, i) => !a.startsWith("--") && i !== mi + 1);
 const branch = process.env.CI_BRANCH || "main";
 
