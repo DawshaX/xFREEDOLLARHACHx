@@ -485,3 +485,116 @@ export async function fetchEpss(fetchImpl: typeof fetch = fetch): Promise<Map<st
   const csv = gz.length > 2 && gz[0] === 0x1f && gz[1] === 0x8b ? zlib.gunzipSync(gz).toString("utf8") : gz.toString("utf8");
   return parseEpss(csv);
 }
+
+/* ── provisioning: a fresh deploy must not be an empty corpus ───────────── */
+
+/** Where the CI publishes the corpus (release asset, public, no token needed). */
+export function defaultCorpusUrl(): string {
+  return (
+    process.env.NOVA_CORPUS_URL ||
+    "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/vuln-corpus/cves.jsonl.gz"
+  );
+}
+
+/**
+ * Rebuild the index from the corpus file on disk.
+ * Needed whenever the corpus arrives without its index (a manual download, a fresh
+ * release asset) — the counts must come from the bytes we actually hold.
+ */
+export async function rebuildIndex(opts: { mode?: CorpusIndex["mode"] } = {}): Promise<CorpusIndex | null> {
+  const file = corpusFile();
+  if (!fs.existsSync(file)) return null;
+  const rows: CorpusCve[] = [];
+  const stream = fs.createReadStream(file).pipe(zlib.createGunzip());
+  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+  try {
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+      try {
+        rows.push(JSON.parse(line) as CorpusCve);
+      } catch {
+        /* skip a torn line rather than losing the corpus */
+      }
+    }
+  } finally {
+    rl.close();
+    stream.destroy();
+  }
+  const bytes = fs.statSync(file).size;
+  const sha256 = sha(fs.readFileSync(file));
+  const index = buildIndex(rows, { mode: opts.mode ?? "unknown", sources: ["local file"], bytes, sha256 });
+  fs.mkdirSync(path.dirname(indexFile()), { recursive: true });
+  fs.writeFileSync(indexFile(), JSON.stringify(index, null, 2));
+  return index;
+}
+
+export async function provisionCorpus(opts: { url?: string; force?: boolean; minBytes?: number } = {}): Promise<{
+  ok: boolean;
+  action: "present" | "downloaded" | "skipped" | "failed";
+  bytes: number;
+  total: number;
+  error?: string;
+  says_ar: string;
+}> {
+  const url = opts.url ?? defaultCorpusUrl();
+  const st = corpusStatus();
+  const file = corpusFile();
+  const minBytes = opts.minBytes ?? 1024;
+  if (!opts.force && st.filePresent && fs.existsSync(file) && fs.statSync(file).size > minBytes) {
+    return {
+      ok: true,
+      action: "present",
+      bytes: fs.statSync(file).size,
+      total: st.total,
+      says_ar: `الكوربوس موجود على القرص (${st.total} CVE) — مش هننزّل تاني`,
+    };
+  }
+  if (process.env.NOVA_CORPUS_AUTODOWNLOAD === "0") {
+    return { ok: false, action: "skipped", bytes: 0, total: st.total, says_ar: "التحميل التلقائي مقفول (NOVA_CORPUS_AUTODOWNLOAD=0)" };
+  }
+  try {
+    const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(180_000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length <= minBytes) throw new Error(`file too small (${buf.length} bytes) — refusing to install a stub`);
+    if (!(buf[0] === 0x1f && buf[1] === 0x8b)) throw new Error("not a gzip payload");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, buf);
+    // Without an index the corpus is unreadable-by-number: download it, and if the
+    // release did not carry one, count the rows we just received.
+    if (!fs.existsSync(indexFile())) {
+      const idxUrl = url.replace(/cves\.jsonl\.gz$/, "vuln-corpus-index.json");
+      let gotIndex = false;
+      try {
+        const idxRes = await fetch(idxUrl, { redirect: "follow", signal: AbortSignal.timeout(60_000) });
+        if (idxRes.ok) {
+          const idxBuf = Buffer.from(await idxRes.arrayBuffer());
+          JSON.parse(idxBuf.toString("utf8"));
+          fs.mkdirSync(path.dirname(indexFile()), { recursive: true });
+          fs.writeFileSync(indexFile(), idxBuf);
+          gotIndex = true;
+        }
+      } catch {
+        gotIndex = false;
+      }
+      if (!gotIndex) await rebuildIndex({ mode: "unknown" });
+    }
+    const after = corpusStatus();
+    return {
+      ok: true,
+      action: "downloaded",
+      bytes: buf.length,
+      total: after.total,
+      says_ar: `اتنزّل كوربوس ${(buf.length / 1048576).toFixed(2)} MB — الفهرس بيقول ${after.total} CVE`,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      action: "failed",
+      bytes: 0,
+      total: st.total,
+      error: (err as Error).message,
+      says_ar: `تحميل الكوربوس فشل (${(err as Error).message}) — البرنامج شغال بس الاستعلام بيرجّع «مفيش بيانات» بصراحة`,
+    };
+  }
+}

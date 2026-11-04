@@ -10,6 +10,7 @@
  *   5. streaming query finds by product and by CVE id, honours minCvss, and never
  *      reads more than `maxScan`
  *   6. an empty corpus reports "not ingested", not "zero vulnerabilities"
+ *   7. a fresh deploy provisions the corpus over HTTP and rebuilds its own index
  *
  * Run: node scripts/test-vuln-corpus.mjs
  */
@@ -130,6 +131,24 @@ process.env.NOVA_CORPUS_INDEX = path.join(work, "missing-index.json");
 const empty = lib.corpusStatus();
 check("empty corpus is NOT measured", empty.measured === false && empty.total === 0);
 check("empty corpus explains itself instead of printing 0 silently", /مفيش كوربوس/.test(empty.says_ar));
+
+/* 8 · provisioning: a fresh deploy pulls the published corpus, then rebuilds the
+      index from the bytes it received (a corpus without an index cannot answer) */
+const http = await import("node:http");
+const fresh = path.join(work, "fresh");
+process.env.NOVA_CORPUS_DIR = fresh;
+process.env.NOVA_CORPUS_INDEX = path.join(work, "fresh-index.json");
+const server = http.createServer((req, res) => {
+  const f = path.join(work, "corpus", "cves.jsonl.gz");
+  res.writeHead(200, { "content-type": "application/gzip" });
+  res.end(fs.readFileSync(f));
+});
+const port = await new Promise((r) => server.listen(0, "127.0.0.1", () => r(server.address().port)));
+const prov = await lib.provisionCorpus({ url: `http://127.0.0.1:${port}/cves.jsonl.gz`, minBytes: 64 });
+server.close();
+check("provision downloads the corpus", prov.action === "downloaded" && fs.existsSync(path.join(fresh, "cves.jsonl.gz")), prov.says_ar);
+check("provision rebuilds the index it did not get", lib.corpusStatus().measured === true, `total=${lib.corpusStatus().total}`);
+check("provision refuses a stub payload", (await lib.provisionCorpus({ url: `data:text/plain,hi`, force: true })).ok === false);
 
 let bad = 0;
 for (const [name, ok, detail] of checks) {
