@@ -333,6 +333,10 @@ report.totals.targets = report.targets.length;
 report.totals.findings = report.findings.length;
 report.totals.rated = report.findings.filter((f) => ["high", "critical"].includes(f.severity)).length;
 report.elapsedMs = Date.now() - startedAt;
+// `at` is when this report was opened; `finishedAt` is when the numbers stopped
+// moving. A 20-minute scan whose file says only "at 19:19" reads as if it took a
+// second, which is exactly the confusion the elapsedMs field was added for.
+report.finishedAt = new Date().toISOString();
 report.budgetMs = budgetMs;
 // The sentence must describe what happened. A run where no tool ran is not
 // "examined 4 targets, zero matches" — it is a failed run, and it exits 1.
