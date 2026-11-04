@@ -151,7 +151,7 @@ export interface CreateJobInput {
   maxTasks?: number;
 }
 
-const PLAN_PASSIVE = ["recon.dns", "recon.certspotter", "intel.cvebytech"];
+const PLAN_PASSIVE = ["recon.dns", "recon.certspotter", "intel.cvebytech", "intel.corpus"];
 const PLAN_STANDARD = [...PLAN_PASSIVE, "recon.headers", "recon.tls", "recon.securitytxt"];
 const PLAN_DEEP = [...PLAN_STANDARD, "recon.ports", "recon.jspaths"];
 const PLAN_TOOLS = ["tools.httpx", "tools.subfinder", "tools.nuclei", "tools.katana", "tools.nmap"];

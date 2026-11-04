@@ -25,6 +25,7 @@ import { broadcastLiveEvent } from "./routes/live-events";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
 import { startAutonomousBackgroundDaemon } from "./lib/autonomous-daemon";
 import { provisionOnBoot } from "./lib/ops/keys-source";
+import { provisionCorpus, corpusStatus } from "./lib/ops/vuln-corpus";
 
 process.on("unhandledRejection", (reason) => {
   logger.warn({ reason }, "Unhandled promise rejection caught safely (standalone mode)");
@@ -252,6 +253,20 @@ server.on("error", (err: NodeJS.ErrnoException) => {
 // Awaited on purpose: the first /api/nova-core/chat should already see the
 // providers the key source supplied. A failure here is non-fatal by design.
 await provisionOnBoot();
+
+// The vulnerability corpus: a fresh deploy should be able to answer "which CVEs
+// hit nginx 1.24" on the first request, not after someone SSHes in and runs a
+// 25-minute ingest. Downloads the published release asset when the disk is empty.
+// Non-fatal, and it says out loud which of the three outcomes happened.
+void provisionCorpus()
+  .then((r) => logger.info({ action: r.action, bytes: r.bytes, total: r.total }, `corpus: ${r.says_ar}`))
+  .catch((err) => logger.warn({ err }, "corpus provisioning threw — serving without a corpus"));
+const corpusAtBoot = corpusStatus();
+if (corpusAtBoot.measured) {
+  console.log(`✓ corpus: ${corpusAtBoot.total} CVEs (${corpusAtBoot.kev} KEV) @ ${corpusAtBoot.at}`);
+} else {
+  console.log("· corpus: not ingested yet — /api/ops/corpus will say so instead of printing 0 CVEs");
+}
 
 server.listen(port, host, () => {
   logger.info({ port, host }, `Server listening on ${host} (HTTP + /api/ws + /api/local-agent/ws)`);
