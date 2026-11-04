@@ -141,3 +141,29 @@ GitHub Actions يبني الحزمة (اختبار + build)
 القاعدة: الثقة `confidence` لأي إشعار = **0.45** — إشعار بيذكر اسم منتج مش دليل إن
 الهدف بيشغّله. الإصدار لازم يتأكد قبل أي تقرير.
 
+---
+
+## 7) كوربوس الثغرات الحقيقي (NVD + KEV + EPSS)
+
+البرنامج **كان** متوصّل فعلاً بـ9 مصادر حقيقية (`live-vuln-ingestor.ts`: NVD, GHSA,
+EPSS, CIRCL, OSV, DeFiLlama, Shodan InternetDB, PayloadsAllTheThings + مُتعلّم).
+المشكلة مكانتش في الاتصال — كانت في إن كل نداء بيسحب **5–10 سجلات** لبانل
+«تليمتري»، فمافيش حاجة بتتراكم. عشان كده الأرقام في الـdashboard بقت مكتوبة بالإيد.
+
+دلوقتي فيه طبقة تجميع حقيقية:
+
+| الحاجة | التفاصيل |
+|---|---|
+| المصدر | NVD 2.0 (كل الـCVEs) + CISA KEV + FIRST EPSS |
+| الشكل | سطر JSON لكل CVE + CPE مقسوم (vendor/product/version) + `kev` + `epss` |
+| الملفات | `state/vuln-corpus/cves.jsonl.gz` (مش في git) + `state/vuln-corpus-index.json` (في git) |
+| السحب | `.github/workflows/vuln-corpus.yml` — **كل 30 دقيقة** incremental + **كل أسبوع** كل القاعدة |
+| السرعة | NVD بلا مفتاح = 5 طلبات/30 ثانية (السكربت بيبطّئ نفسه أوتوماتيك) |
+| الاستعلام | `GET /api/ops/corpus?product=nginx&minCvss=7` · `?cve=CVE-2024-3094` |
+| نوع مهمة | `intel.corpus` — منتج مكتشف → CVEs حقيقية بـKEV/EPSS وأدلة |
+| الإثبات | `node scripts/test-vuln-corpus.mjs` → **27/27** |
+| التحميل | release tag `vuln-corpus` (الملف المضغوط) |
+
+**قاعدة الصدق:** `measured` = false لحد ما السحب يحصل فعلاً، و`total` هو اللي في
+ملف الفهرس بالساعة. مفيش رقم ثابت في الكود.
+
