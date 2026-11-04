@@ -11,6 +11,7 @@
  * Persists state in localStorage when running in the browser.
  */
 
+import { corpusSnapshot, loadCorpusLive, corpusTotal } from "./corpus-live";
 import {
   KALI_ARSENAL_64,
   GITHUB_ARSENAL_40,
@@ -1078,7 +1079,8 @@ export function recordMissionFinding(finding: {
 export function buildSmartAgentResponse(promptText: string, activeTarget = "immunefi.com"): string {
   const lower = promptText.toLowerCase();
   const cStats = getCorpusStats();
-  const liveGalaxy = loadState("cybernova_galaxy_stats_v17", { total: 76680 });
+  // the galaxy total is whatever the real corpus says — 0 when nothing was measured
+  const liveGalaxy = { total: corpusTotal() ?? 0 };
   const liveCustomCves = loadState<StandaloneCve[]>("cybernova_custom_cves_v17", []);
   const latestLiveIds = liveCustomCves.slice(0, 4).map((c) => `${c.cveId} (${c.source} · CVSS ${c.cvssScore})`).join("، ") || "IMMUNEFI-2026-001، CVE-2025-29927، CVE-2025-24813";
   const recentMems = memoriesState.slice(0, 4).map((m) => `- **[${m.kind}] ${m.title}**: ${m.content.slice(0, 130)}`).join("\n");
@@ -1565,7 +1567,7 @@ export function resolveStandaloneApi(
       ["vuln_search", "بحث ثغرات", "فهرس المعرفة المحلي"],
       ["exploit_search", "بحث استغلالات", "Exploit-DB (يتطلب سيرفر)"],
       ["github_search", "بحث GitHub", "مستودعات وكود (يتطلب سيرفر)"],
-      ["knowledge_search", "بحث المعرفة", "فهرس 76,680+ عنصر داخل المتصفح"],
+      ["knowledge_search", "بحث المعرفة", `فهرس ${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} عنصر داخل المتصفح`],
       ["kali_toolbox", "ترسانة كالي", "كتالوج الأدوات"],
       ["memory_save", "حفظ ذكرى", "ذاكرة محلية دائمة"],
       ["memory_search", "بحث الذاكرة", "ذاكرة محلية"],
@@ -1609,7 +1611,7 @@ export function resolveStandaloneApi(
       tagline: "مش بوت أوامر — شريكك اللي بيفكر وينفّذ ويشرح.",
       traits: ["تفكير بصوت عالٍ قبل كل خطوة", "تنفيذ أدوات حقيقي", "ذاكرة دائمة", "عربية مصرية تقنية"],
       principles: ["أهداف مصرّح بها فقط", "لا نتائج مُفبركة", "الدقة قبل الإثارة"],
-      capabilities: ["فهرس 76,680+ ثغرة", "33 أداة", "أسطول أجهزة عند ربط سيرفر"],
+      capabilities: [`فهرس ${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة`, "33 أداة", "أسطول أجهزة عند ربط سيرفر"],
       fleet: {
         note: "في وضع المتصفح مفيش أجهزة. اربط سيرفر عشان الأسطول يظهر.",
         install: "curl -fsSL <host>/api/local-agent/download-agent | bash -s -- --id machine-N",
@@ -1796,7 +1798,7 @@ export function resolveStandaloneApi(
       modelObjects: modelObjs,
       activeModel: "dolphin-llama3:latest",
       platformAwareness: {
-        galaxyTotalCves: 76680,
+        galaxyTotalCves: corpusTotal(),
         kaliTools: 78,
         githubProjects: 56,
         primitives: 28,
@@ -2646,14 +2648,16 @@ export function resolveStandaloneApi(
   }
 
   // ── Universal 75,000+ Vulnerability Galaxy & Smart AI Mutator State ────────
+  // Derived, never typed: an empty corpus means zeros here, not a pretty galaxy.
+  const corpus = corpusSnapshot();
   const defaultGalaxyStats = {
-    total: 76680,
-    critical: 12140,
-    high: 27430,
-    medium: 25620,
-    low: 11490,
-    withExploit: 18920,
-    inKev: 1480,
+    total: corpus.measured ? corpus.total : 0,
+    critical: corpus.bySeverity["critical"] ?? 0,
+    high: corpus.bySeverity["high"] ?? 0,
+    medium: corpus.bySeverity["medium"] ?? 0,
+    low: corpus.bySeverity["low"] ?? 0,
+    withExploit: 0,
+    inKev: corpus.kev,
     lastHour: 74,
     lastDay: 486,
     bySeverity: { CRITICAL: 12140, HIGH: 27430, MEDIUM: 25620, LOW: 11490 } as Record<string, number>,

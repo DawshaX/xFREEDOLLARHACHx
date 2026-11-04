@@ -5,5 +5,10 @@ import { createRoot } from "react-dom/client";
 import "./setup";
 import "./index.css";
 import App from "./App";
+// The real corpus (NVD + KEV + EPSS) is fetched once at start: every number the
+// panel shows about vulnerabilities comes from this file or is "غير مقاس".
+import { loadCorpusLive } from "./lib/corpus-live";
+
+void loadCorpusLive();
 
 createRoot(document.getElementById("root")!).render(<App />);
