@@ -185,6 +185,17 @@ check(
   Boolean(idxAfterDeepen.deepen) && typeof idxAfterDeepen.deepen.nextStartIndex === "number",
   `deepen=${JSON.stringify(idxAfterDeepen.deepen)}`,
 );
+// A full pass runs as its own CI step, before the deepen step, on the same runner.
+// buildIndex() cannot recompute the cursor, so a write that dropped it sent the next
+// step back to row 0 — measured: runs 41905819968 and 41907981906 both reported
+// walkedFrom 0 for the second run in a row, 24,000 rows re-fetched, 0 new.
+const fullAfterDeepen = runIngest("--pages=1");
+const idxAfterFull = JSON.parse(fs.readFileSync(process.env.NOVA_CORPUS_INDEX, "utf8"));
+check(
+  "a full pass keeps the deepen cursor instead of restarting the walk",
+  fullAfterDeepen.status === 0 && idxAfterFull.deepen?.nextStartIndex === idxAfterDeepen.deepen.nextStartIndex,
+  `before=${idxAfterDeepen.deepen.nextStartIndex} after=${idxAfterFull.deepen?.nextStartIndex ?? "dropped"}`,
+);
 const incr = runIngest("--incremental", "--pages=1");
 check("--incremental runs and keeps the rows", incr.status === 0 && lib.corpusStatus().total === afterFirst, `total=${lib.corpusStatus().total}`);
 

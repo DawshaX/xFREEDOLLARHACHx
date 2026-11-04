@@ -68,6 +68,23 @@ export interface CorpusIndex {
   files: { corpus: string; bytes: number; sha256?: string };
   /** how the corpus was produced: full dump or incremental delta */
   mode: "full" | "incremental" | "unknown";
+  /**
+   * Where the deep walk got to. It lives in the index because that is the only
+   * file the CI job commits, and it has to survive every write: the ingest step
+   * (a full pass) and the deepen step are two processes on the same runner, so a
+   * full pass that dropped this key left the next step reading `undefined` and
+   * restarting the walk at row 0 — measured on runs 41905819968 and 41907981906,
+   * both `walkedFrom: 0 / nextStartIndex: 24000`, 24,000 rows re-fetched for 0
+   * new rows while the cursor never moved.
+   */
+  deepen?: {
+    nextStartIndex: number;
+    windowPages: number;
+    walkedFrom: number;
+    nvdTotal: number;
+    coverage: number;
+    at: string;
+  };
   says_ar: string;
 }
 
@@ -401,12 +418,17 @@ export function writeCorpus(
   const gz = zlib.gzipSync(Buffer.from(payload, "utf8"), { level: 9 });
   fs.writeFileSync(target, gz);
   const sha256 = sha(gz);
+  // Read the cursor BEFORE overwriting the index: buildIndex() derives everything it
+  // knows from the rows, so `deepen` is not something it can recompute, and a write
+  // that drops it silently restarts the walk at row 0 (see CorpusIndex.deepen).
+  const carried = opts.outDir ? null : readIndex()?.deepen;
   const index = buildIndex(all, {
     mode: opts.mode ?? "unknown",
     sources: opts.sources ?? [],
     bytes: gz.length,
     sha256,
   });
+  if (carried) index.deepen = carried;
   if (!opts.outDir) fs.writeFileSync(indexFile(), JSON.stringify(index, null, 2));
   return index;
 }
