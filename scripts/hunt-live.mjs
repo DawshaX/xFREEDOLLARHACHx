@@ -34,7 +34,10 @@ const targetsFile = arg("targets", path.join(root, "ops/verify/targets.json"));
 const outJson = arg("out", path.join(root, "state/hunt-latest.json"));
 const evidenceDir = path.join(root, "state/hunt/evidence");
 const only = arg("only", "");
-const budgetMs = Number(arg("budget-ms", 1_200_000));
+// The budget is data, not a constant: the workflow can tighten it for a single
+// target without editing the scanner, and the chosen value is recorded in the
+// report so "target skipped" can always be traced to a number.
+const budgetMs = Number(arg("budget-ms", process.env.HUNT_BUDGET_MS ?? 1_200_000));
 
 const targets = JSON.parse(fs.readFileSync(targetsFile, "utf8")).targets ?? [];
 const allowed = targets.filter(
@@ -266,6 +269,7 @@ report.totals.targets = report.targets.length;
 report.totals.findings = report.findings.length;
 report.totals.rated = report.findings.filter((f) => ["high", "critical"].includes(f.severity)).length;
 report.elapsedMs = Date.now() - startedAt;
+report.budgetMs = budgetMs;
 report.says_ar =
   report.findings.length === 0
     ? `اتفحص ${report.targets.length} هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل.`
