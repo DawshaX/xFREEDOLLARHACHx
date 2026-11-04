@@ -1,0 +1,52 @@
+{
+  "at": "2026-11-04T17:00:00Z",
+  "note": "ما تم استخدامه فعليًا في هذه الجلسة، مع الدليل. اللي مش مستخدم مكتوب ليه.",
+  "connectors": [
+    {
+      "id": "supabase",
+      "used": true,
+      "what": "أنشأت مشروع cybernova-ops + 9 جداول + دالة ops-api + pg_cron/pg_net",
+      "proof": "GET /functions/v1/ops-api/health → {\"ok\":true,\"counts\":{\"cves\":800,...}}"
+    },
+    {
+      "id": "github",
+      "used": true,
+      "what": "PRs #117–#127 · workflows · runs",
+      "proof": "gh api repos/DawshaX/xFREEDOLLARHACHx/commits/main"
+    },
+    {
+      "id": "google_sheets",
+      "used": true,
+      "what": "شيت حي بثلاث أوراق + ورقة شرح",
+      "proof": "docs.google.com/spreadsheets/d/1JwUo30SfNoyevqxOQD6bhPTYd9U302Oil26A1knVYDY"
+    },
+    {
+      "id": "linear",
+      "used": true,
+      "what": "مشروع DAW + 3 مهام + تحديث حالة",
+      "proof": "linear.app/xdaw/issue/DAW-5"
+    },
+    {
+      "id": "notion",
+      "used": true,
+      "what": "صفحة حالة حيّة بالجداول والروابط",
+      "proof": "app.notion.com/p/CyberNova-2026-11-04-40e91ad1a05581e99b15d24cfd53061c"
+    },
+    {
+      "id": "dropbox",
+      "used": true,
+      "what": "نسخة من 20 دليل صيد + فهرس SHA-256",
+      "proof": "/CyberNova/evidence-2026-11-04.tar.gz (5.0 MB)"
+    },
+    {
+      "id": "vercel",
+      "used": false,
+      "why": "اللوحة منشورة على Pages والباك إند على Supabase؛ نشر نسخة تانية على Vercel كان هيزوّد سطح هجوم بدون قدرة جديدة. متاح لو احتجناه لاحقًا (hobby plan مقاس)."
+    },
+    {
+      "id": "google_slides",
+      "used": false,
+      "why": "محتاج أول ثغرة مؤكدة الأول — الديك بيتبني على نتيجة، مش على وعد."
+    }
+  ]
+}
