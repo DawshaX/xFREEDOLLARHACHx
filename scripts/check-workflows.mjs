@@ -71,5 +71,30 @@ for (const f of files) {
     console.log(`✗ ${f}: ${String(err.message).split("\n")[0]}`);
   }
 }
-console.log(`check-workflows: ${files.length - bad}/${files.length} valid`);
+
+/**
+ * A stateful job that both queues (concurrency) and decides its NEXT step from a
+ * file it committed must start from the current origin/main, not from the commit
+ * it was queued with. GitHub keeps the queue-time SHA: run 41905819968 was queued
+ * at 20:21:25 on 27a0fede, started at 20:31:07 after the 20:30:56 index commit,
+ * and re-walked the same 24,000-row window (walkedFrom 0 twice) because the
+ * deepen cursor still read "none" in its checkout.
+ *
+ * The rule is stated as a shape, not a file list: any workflow with `concurrency:`
+ * that runs scripts/ci-commit.mjs must contain a step that moves the tree to
+ * origin/main. Silent exemption would be the same bug with better manners.
+ */
+const stateful = files.map((f) => ({ f, raw: fs.readFileSync(path.join(dir, f), "utf8") })).filter(
+  ({ raw }) => /^\s*concurrency:/m.test(raw) && /ci-commit\.mjs/.test(raw),
+);
+const stale = stateful.filter(({ raw }) => !/git reset --hard[^\n]*origin\//.test(raw));
+for (const { f } of stale) {
+  bad += 1;
+  console.log(`✗ ${f}: commits state and reads it back, but never resets to origin/main after a queued start`);
+}
+
+console.log(
+  `check-workflows: ${files.length - bad}/${files.length} valid` +
+    ` · ${stateful.length - stale.length}/${stateful.length} stateful jobs start from origin/main`,
+);
 process.exit(bad === 0 ? 0 : 1);
