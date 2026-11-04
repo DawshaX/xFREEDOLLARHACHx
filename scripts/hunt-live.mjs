@@ -34,7 +34,7 @@ const targetsFile = arg("targets", path.join(root, "ops/verify/targets.json"));
 const outJson = arg("out", path.join(root, "state/hunt-latest.json"));
 const evidenceDir = path.join(root, "state/hunt/evidence");
 const only = arg("only", "");
-const budgetMs = Number(arg("budget-ms", 900_000));
+const budgetMs = Number(arg("budget-ms", 1_200_000));
 
 const targets = JSON.parse(fs.readFileSync(targetsFile, "utf8")).targets ?? [];
 const allowed = targets.filter(
@@ -121,6 +121,11 @@ const report = {
 };
 
 const cutOff = () => Date.now() - startedAt > budgetMs;
+// Every tool gets the smaller of its own ceiling and what is left of the budget:
+// the first version checked the budget only *between* targets, so a single nuclei
+// run could eat the whole job and nothing was committed (measured: 19+ min).
+const remaining = () => Math.max(15_000, budgetMs - (Date.now() - startedAt));
+const budget = (own) => Math.min(own, remaining());
 
 for (const t of allowed) {
   if (cutOff()) {
@@ -141,7 +146,7 @@ for (const t of allowed) {
 
   /* 1 · httpx — is it alive, what is it running */
   if (tools.httpx) {
-    const r = await run(tools.httpx, ["-u", url, "-json", "-silent", "-status-code", "-title", "-tech-detect", "-follow-redirects", "-timeout", "10", "-retries", "1"], 90_000);
+    const r = await run(tools.httpx, ["-u", url, "-json", "-silent", "-status-code", "-title", "-tech-detect", "-follow-redirects", "-timeout", "10", "-retries", "1"], budget(90_000));
     const row = r.stdout.split("\n").find((l) => l.trim().startsWith("{"));
     let parsed = null;
     try {
@@ -165,7 +170,7 @@ for (const t of allowed) {
     const r = await run(
       tools.nuclei,
       ["-u", url, "-jsonl", "-silent", "-no-color", "-severity", "medium,high,critical", "-no-interactsh", "-rl", "3", "-c", "2", "-timeout", "8", "-retries", "1", "-stats-json"],
-      480_000,
+      budget(300_000),
     );
     const lines = r.stdout.split("\n").filter((l) => l.trim().startsWith("{"));
     const ev = evidence(`nuclei-${t.host}`, r.stdout || r.stderr, `nuclei -u ${url} -severity medium,high,critical -no-interactsh -rl 3`);
@@ -201,7 +206,7 @@ for (const t of allowed) {
 
   /* 3 · katana — what endpoints exist at all */
   if (tools.katana) {
-    const r = await run(tools.katana, ["-u", url, "-jsonl", "-silent", "-depth", "2", "-concurrency", "3", "-rate-limit", "5", "-timeout", "8", "-crawl-duration", "45s"], 150_000);
+    const r = await run(tools.katana, ["-u", url, "-jsonl", "-silent", "-depth", "2", "-concurrency", "3", "-rate-limit", "5", "-timeout", "8", "-crawl-duration", "45s"], budget(120_000));
     const urls = new Set();
     for (const line of r.stdout.split("\n")) {
       const m = line.match(/"endpoint"\s*:\s*"([^"]+)"/) ?? line.match(/"url"\s*:\s*"([^"]+)"/);
