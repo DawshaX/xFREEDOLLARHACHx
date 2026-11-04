@@ -26,6 +26,7 @@ on:
     branches: [main]
     paths:
       - "scripts/nova-live-mission.mjs"
+      - "scripts/ci-commit.mjs"
       - ".github/workflows/live-mission.yml"
   workflow_dispatch:
     inputs:
@@ -119,14 +120,18 @@ jobs:
           path: state/nova-memory.json
           key: nova-memory-${{ github.run_id }}
 
+      # This was a raw `git push origin HEAD:main`: when another job had pushed in
+      # the meantime it was rejected, the step exited 1 with no annotation, and the
+      # mission log was simply lost (measured: run 41901912896). ci-commit rebases
+      # with autostash, retries, and proves its own push landed.
       - name: Commit the (public-safe) mission log
+        env:
+          MSG: "chore(mission): live mission checkpoint [skip ci]"
         run: |
-          git config user.name "CyberNova Live Mission"
-          git config user.email "cybernova-mission@users.noreply.github.com"
           # state/nova-memory.json is gitignored on purpose (it can hold chat
           # content) — it travels through the Actions cache above instead.
-          git add state/nova-mission-log.json artifacts/kali-panel/public/state/nova-mission-log.json
-          git diff --staged --quiet || (git commit -m "chore(mission): live mission checkpoint [skip ci]" && git push origin HEAD:main)
+          node scripts/ci-commit.mjs --allow-empty --message "$MSG" \
+            state/nova-mission-log.json artifacts/kali-panel/public/state/nova-mission-log.json
 
       - uses: actions/upload-artifact@v4
         if: always()
