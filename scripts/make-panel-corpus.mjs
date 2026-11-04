@@ -92,6 +92,8 @@ const top = rows
   .sort((a, b) => Number(b.kev) - Number(a.kev) || (b.cvss ?? 0) - (a.cvss ?? 0) || (b.epss ?? 0) - (a.epss ?? 0))
   .slice(0, wantRows);
 
+// If the corpus on disk is smaller than the index says, the dataset is a slice:
+// say so instead of publishing 72 rows as "the whole database".
 const bySeverity = idx?.bySeverity ?? {};
 const total = idx?.total ?? rows.length;
 const kev = idx?.kev ?? rows.filter((r) => r.kev).length;
@@ -110,6 +112,7 @@ write({
   mode: idx?.mode ?? "unknown",
   sources: idx?.sources ?? ["NVD 2.0", "CISA KEV", "EPSS"],
   sample: top.length,
+  complete: !idx || rows.length >= (idx.total ?? 0),
   rows: top,
   says_ar: `${total} ثغرة حقيقية من NVD · ${kev} مستغلّة فعلياً (KEV) · ${products} منتج · مزامنة ${at}`,
 });

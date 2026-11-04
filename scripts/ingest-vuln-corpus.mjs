@@ -105,6 +105,18 @@ if (fixture) {
   pages = 1;
   console.log(`fixture: ${rows.size} rows parsed from ${fixture}`);
 } else {
+  // A fresh CI runner has no corpus file (it is gitignored). Merging a delta onto
+  // nothing silently REPLACED 104,000 rows with 72 (measured: index total 72 at
+  // 04:42Z). So: pull the published base first, or refuse to write a shrink.
+  if (mode === "incremental" && !fs.existsSync(lib.corpusFile())) {
+    console.log("incremental run on a clean runner — fetching the published corpus to merge onto");
+    const prov = await lib.provisionCorpus();
+    console.log(`  ${prov.action}: ${prov.says_ar}`);
+    if (!prov.ok) {
+      console.error("no base corpus to merge onto — refusing to write a delta-only corpus");
+      process.exit(1);
+    }
+  }
   const incrementalSince =
     mode === "incremental" && previous?.at
       ? new Date(Math.max(Date.parse(previous.at) - 5 * 60_000, Date.now() - 119 * 86_400_000)).toISOString()
@@ -150,6 +162,12 @@ if (rows.size === 0) {
 }
 
 /* ── 3 · write ── */
+const baseTotal = Number(previous?.total ?? 0);
+if (mode === "incremental" && previous?.at && baseTotal > 0 && rows.size < baseTotal * 0.5 && !fs.existsSync(lib.corpusFile())) {
+  console.error(`refusing to write: ${rows.size} rows would replace ${baseTotal} (no base file to merge onto)`);
+  process.exit(1);
+}
+
 const index = lib.writeCorpus([...rows.values()], {
   mode: mode === "incremental" && previous?.at ? "incremental" : "full",
   sources: ["NVD 2.0", "CISA KEV", "EPSS"],
