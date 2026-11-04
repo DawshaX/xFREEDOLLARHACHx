@@ -1,19 +1,41 @@
 {
-  "at": "2026-11-04T22:27:10.237Z",
+  "at": "2026-11-04T22:28:25.121Z",
   "seat": "openai",
   "thinking": {
-    "reply": "عدد الثغرات critical في الكوربوس هو 9576، وهذا يمثل 34.35% من إجمالي المعرفة المتوفرة لدينا الآن.",
-    "why": "القيمة المطلوبة موجودة في الحالة المقيسة، لا حاجة للبحث أو lookup.",
+    "reply": "التغطية 34%، لا ثغرات تم اكتشافها؛ نحتاج توسعة فحص المنتجات عالية الوعي.",
+    "why": "لزيادة التغطية ومعرفة الثغرات في منتج شائع",
     "action": {
-      "kind": "none",
-      "arg": ""
+      "kind": "corpus_search",
+      "arg": "ubuntu_linux"
     }
   },
-  "action": null,
-  "answered": {
-    "question": "سؤال تجربة من الوكيل (مش من المستخدم): كم عدد الثغرات critical اللي عندنا في الكوربوس دلوقتي، وقولي النسبة المقيسة.",
-    "at": "2026-11-04T22:17:11.386839+00:00"
+  "action": {
+    "kind": "corpus_search",
+    "ok": true,
+    "arg": "ubuntu_linux",
+    "hits": 5,
+    "examples": [
+      {
+        "cve": "CVE-2013-0422",
+        "severity": "critical",
+        "cvss": 9.8,
+        "kev": true
+      },
+      {
+        "cve": "CVE-2019-10149",
+        "severity": "critical",
+        "cvss": 9.8,
+        "kev": true
+      },
+      {
+        "cve": "CVE-2019-16928",
+        "severity": "critical",
+        "cvss": 9.8,
+        "kev": true
+      }
+    ]
   },
+  "answered": null,
   "senses": {
     "corpus": {
       "total": 144000,
@@ -369,7 +391,7 @@
     }
   },
   "failures": [],
-  "says_ar": "فكّرت على openai · عدد الثغرات critical في الكوربوس هو 9576، وهذا يمثل 34.35% من إجمالي المعرفة المتوفرة لدينا الآن.",
+  "says_ar": "فكّرت على openai · التغطية 34%، لا ثغرات تم اكتشافها؛ نحتاج توسعة فحص المنتجات عالية الوعي.",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
