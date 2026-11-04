@@ -73,4 +73,9 @@ jobs:
           '
 
       - name: commit the corpus
-        run: node scripts/ci-commit.mjs --message "chore(advisory): real GHSA corpus $(date -u +%Y-%m-%d) [skip ci]" state/advisory-cache.json
+        env:
+          # a colon inside an unquoted YAML scalar ("chore(corpus): …") makes the
+          # whole workflow file invalid — pass the message through env instead
+          MSG: "chore(advisory): real GHSA corpus $(date -u +%Y-%m-%d) [skip ci]"
+        run: |
+          node scripts/ci-commit.mjs --message "$MSG" state/advisory-cache.json
