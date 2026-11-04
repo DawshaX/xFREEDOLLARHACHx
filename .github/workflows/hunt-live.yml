@@ -1,0 +1,89 @@
+name: hunt live (real scan · permitted targets)
+
+# الغرض: كل يوم، البرنامج بيقوم لوحده، ينصّب الأدوات الحقيقية، يفحص الأهداف
+# المسموح بها في `ops/verify/targets.json`، ويكتب النتيجة + الأدلة في الريبو.
+# مفيش سيرفر، مفيش كارت، ومفيش ادعاء: اللي في state/hunt-latest.json هو اللي حصل.
+on:
+  schedule:
+    - cron: "25 */6 * * *" # كل 6 ساعات
+  push:
+    branches: [main]
+    paths:
+      - "scripts/hunt-live.mjs"
+      - "ops/verify/targets.json"
+      - ".github/workflows/hunt-live.yml"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "host واحد بس (اختياري)"
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hunt-live
+  cancel-in-progress: false
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile --ignore-scripts
+
+      - name: install nmap (the only tool without a static release)
+        continue-on-error: true
+        run: |
+          sudo apt-get -qq update >/dev/null || true
+          sudo apt-get install -y -qq nmap >/dev/null || true
+          nmap --version 2>&1 | head -1 || echo "nmap unavailable"
+
+      - name: vendor the real toolchain
+        run: node scripts/fetch-toolchain.mjs --into vendor/bin
+
+      - name: PATH for the vendored binaries
+        run: echo "$PWD/vendor/bin" >> "$GITHUB_PATH"
+
+      - name: hunt
+        run: node scripts/hunt-live.mjs ${{ github.event.inputs.only && format('--only {0}', github.event.inputs.only) || '' }}
+
+      - name: measured summary
+        run: |
+          node -e '
+            const r = require("./state/hunt-latest.json");
+            const sev = Object.entries(r.totals.bySeverity).map(([k,v]) => `${k}: ${v}`).join(" · ") || "none";
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              `### Hunt (measured)\n\n| | |\n|---|---|\n| findings | **${r.totals.findings}** |\n| high/critical | ${r.totals.rated} |\n| targets | ${r.totals.targets} |\n| severity | ${sev} |\n| tools | ${Object.entries(r.tools).map(([k,v])=>`${k}:${v}`).join(" · ")} |\n| at | ${r.at} |\n\n${r.says_ar}\n`);
+            for (const f of r.findings.slice(0, 20)) console.log(`[${f.severity}] ${f.template} → ${f.matchedAt}`);
+          '
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hunt-findings
+          path: |
+            state/hunt-latest.json
+            state/hunt/evidence
+          retention-days: 30
+
+      - name: commit the result (findings + evidence hashes)
+        run: |
+          git add -f state/hunt-latest.json state/hunt/evidence 2>/dev/null || true
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git config user.name "nova-hunt-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git commit -m "chore(hunt): measured scan $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
