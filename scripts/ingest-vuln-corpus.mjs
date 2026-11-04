@@ -75,6 +75,23 @@ const lib = createRequire(import.meta.url)(bundle);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// A failed ingest must say why in a place that can be read back. These job logs
+// are not retrievable through the API (measured: `gh run view --log` empty,
+// artifact download dies with EOF), but annotations are — so every exit 1 is
+// announced as one, with the state that produced it.
+function die(reason, detail) {
+  const line = `${reason} — ${JSON.stringify(detail)}`;
+  console.error(line);
+  console.error(`::error title=corpus ingest::${line.replace(/\n/g, " ").slice(0, 800)}`);
+  try {
+    const summary = process.env.GITHUB_STEP_SUMMARY;
+    if (summary) fs.appendFileSync(summary, `\n**corpus ingest failed**\n\n- reason: ${reason}\n- detail: \`${JSON.stringify(detail)}\`\n`);
+  } catch {
+    /* the exit code is the contract */
+  }
+  process.exit(1);
+}
+
 /* ── 1 · KEV + EPSS joins (best-effort: a dead feed must not empty the corpus) ── */
 let kev = new Map();
 let epss = new Map();
@@ -97,6 +114,7 @@ if (!fixture) {
 const rows = new Map();
 const previous = lib.readIndex();
 let totalResults = 0;
+let lastPageError = null;
 let pages = 0;
 
 if (fixture) {
@@ -118,8 +136,11 @@ if (fixture) {
     const prov = await lib.provisionCorpus();
     console.log(`  ${prov.action}: ${prov.says_ar}`);
     if (!prov.ok) {
-      console.error("no base corpus to merge onto — refusing to write a delta-only corpus");
-      process.exit(1);
+      die("no base corpus to merge onto — refusing to write a delta-only corpus", {
+        mode,
+        corpusFile: lib.corpusFile(),
+        provision: prov,
+      });
     }
   }
   const incrementalSince =
@@ -153,6 +174,7 @@ if (fixture) {
         break;
       } catch (err) {
         const throttled = /HTTP (403|429|503)|fetch failed|timeout/i.test(err.message);
+        lastPageError = err.message;
         if (attempt === 4 || !throttled) {
           console.log(`NVD page ${page + 1} failed: ${err.message} — stopping with what we have`);
           break;
@@ -179,12 +201,35 @@ if (rows.size === 0) {
   // NVD was throttling or nothing changed in the last 30 minutes. Only a missing
   // corpus makes "no rows" a real failure.
   if (fs.existsSync(lib.corpusFile()) && fs.statSync(lib.corpusFile()).size > 1024) {
-    console.log("no new CVEs in this window — existing corpus kept as is");
-    console.log(`corpus on disk: ${lib.corpusStatus().total} rows @ ${lib.corpusStatus().at}`);
+    const kept = lib.corpusStatus();
+    // "kept as is" is true but not the whole truth: a deepen pass that collected
+    // nothing did not advance the cursor either. Say both, in the summary, so a
+    // throttled window cannot pass for progress.
+    const didNotAdvance = mode === "deepen" || mode === "incremental";
+    const line = didNotAdvance
+      ? `${mode} collected 0 rows — cursor/coverage unchanged${lastPageError ? ` (NVD: ${lastPageError})` : ""}`
+      : "no new CVEs in this window — existing corpus kept as is";
+    console.log(line);
+    console.log(`corpus on disk: ${kept.total} rows @ ${kept.at}`);
+    try {
+      if (process.env.GITHUB_STEP_SUMMARY) {
+        fs.appendFileSync(
+          process.env.GITHUB_STEP_SUMMARY,
+          `\n**corpus ${mode}: nothing advanced**\n\n- ${line}\n- corpus on disk: ${kept.total} rows @ ${kept.at}\n- pages fetched: ${pages} · NVD total: ${totalResults || "unknown"}\n- cursor: unchanged\n`,
+        );
+      }
+    } catch {
+      /* the exit code is the contract */
+    }
     process.exit(0);
   }
-  console.error("no rows collected and no corpus on disk — refusing to write an empty corpus");
-  process.exit(1);
+  die("no rows collected and no corpus on disk — refusing to write an empty corpus", {
+    mode,
+    pages,
+    nvdTotal: totalResults,
+    deepenFrom,
+    corpusFile: lib.corpusFile(),
+  });
 }
 
 /* ── 3 · write ── */
@@ -194,8 +239,13 @@ const baseTotal = Number(previous?.total ?? 0);
 // below, so `merges` was in its temporal dead zone and every ingest died with
 // "Cannot access 'merges' before initialization" (measured: run 41877458865).
 if (merges && previous?.at && baseTotal > 0 && rows.size < baseTotal * 0.5 && !fs.existsSync(lib.corpusFile())) {
-  console.error(`refusing to write: ${rows.size} rows would replace ${baseTotal} (no base file to merge onto)`);
-  process.exit(1);
+  die("refusing to write a shrink", {
+    rows: rows.size,
+    baseTotal,
+    mode,
+    corpusFile: lib.corpusFile(),
+    previousAt: previous?.at ?? null,
+  });
 }
 
 const index = lib.writeCorpus([...rows.values()], {

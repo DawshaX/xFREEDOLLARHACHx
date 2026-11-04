@@ -21,6 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { spawn } from "node:child_process";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -44,12 +45,29 @@ const allowed = targets.filter(
   (t) => t.active !== false && t.permission_url && (!only || t.host === only),
 );
 
+// Discovery mirrors findBinary() in scripts/verify-live.mjs and searchDirs() in
+// the engine: the vendored toolchain lives in vendor/bin, and looking only at
+// PATH means a step that appends to $GITHUB_PATH can hide it (measured: run
+// 41894091651 reported httpx/katana/nuclei missing in the same job that had just
+// vendored them). NOVA_TOOL_DIR wins, then vendor/bin, then PATH.
+function toolDirs() {
+  const home = process.env.HOME || os.homedir();
+  return [
+    ...(process.env.NOVA_TOOL_DIR ? process.env.NOVA_TOOL_DIR.split(path.delimiter) : []),
+    path.join(root, "vendor/bin"),
+    ...(process.env.PATH || "").split(path.delimiter),
+    "/usr/local/bin",
+    "/usr/bin",
+    path.join(home, ".local/bin"),
+  ].filter(Boolean);
+}
+
 function have(bin) {
-  const dirs = (process.env.PATH || "").split(path.delimiter).filter(Boolean);
-  for (const d of dirs) {
+  for (const d of toolDirs()) {
     try {
-      fs.accessSync(path.join(d, bin), fs.constants.X_OK);
-      return path.join(d, bin);
+      const f = path.join(d, bin);
+      fs.accessSync(f, fs.constants.X_OK);
+      return f;
     } catch {
       /* keep looking */
     }
@@ -125,6 +143,12 @@ const report = {
   at: new Date().toISOString(),
   allowlist: path.relative(root, targetsFile),
   tools: Object.fromEntries(Object.entries(tools).map(([k, v]) => [k, v ? "present" : "missing"])),
+  // where each binary was found, relative to the checkout — a report that says
+  // "missing" must also say where it looked, or the next run repeats the search
+  toolPaths: Object.fromEntries(
+    Object.entries(tools).map(([k, v]) => [k, v ? path.relative(root, v) || v : null]),
+  ),
+  searchDirs: toolDirs().map((d) => (d.startsWith(root) ? path.relative(root, d) : d)),
   targets: [],
   findings: [],
   // `skipped` and `toolMs` are part of the measurement, not decoration: a run
