@@ -1,10 +1,10 @@
 {
-  "at": "2026-11-04T14:44:06.933Z",
+  "at": "2026-11-04T19:18:05.919Z",
   "allowlist": "ops/verify/targets.json",
   "tools": {
-    "httpx": "present",
-    "nuclei": "present",
-    "katana": "present",
+    "httpx": "missing",
+    "nuclei": "missing",
+    "katana": "missing",
     "nmap": "present"
   },
   "targets": [
@@ -13,272 +13,40 @@
       "why": "مضيف مخصص لاختبار nmap — صاحبه (Gordon Lyon) كاتب صراحة إن المسح مسموح",
       "permission_url": "https://scanme.nmap.org/",
       "scheme": "http",
-      "startedAt": "2026-11-04T14:44:06.933Z",
-      "steps": [
-        {
-          "tool": "httpx",
-          "exit": 0,
-          "ms": 1095,
-          "status": 200,
-          "title": "Go ahead and ScanMe!",
-          "tech": [
-            "Apache HTTP Server:2.4.7",
-            "Ubuntu"
-          ],
-          "evidence": {
-            "file": "state/hunt/evidence/httpx-scanme.nmap.org-7447f2c8ef19.txt",
-            "sha256": "7447f2c8ef19a15438c7711917145ca0dbc2ff50b9f0130b4b749570b0ff33ab",
-            "bytes": 587,
-            "probe": "httpx -u http://scanme.nmap.org/ -json -silent -status-code -title -tech-detect",
-            "at": "2026-11-04T14:44:08.028Z"
-          }
-        },
-        {
-          "tool": "nuclei",
-          "exit": -1,
-          "ms": 300047,
-          "matched": 0,
-          "evidence": {
-            "file": "state/hunt/evidence/nuclei-scanme.nmap.org-032550b99d12.txt",
-            "sha256": "032550b99d125b13ac79676d8b4ce1d247914c2b713cfc2dda2d8c9b82e58b00",
-            "bytes": 10461,
-            "probe": "nuclei -u http://scanme.nmap.org/ -severity medium,high,critical -no-interactsh -rl 3",
-            "at": "2026-11-04T14:49:08.076Z"
-          }
-        },
-        {
-          "tool": "katana",
-          "exit": 0,
-          "ms": 37671,
-          "endpoints": 1339,
-          "sample": [
-            "http://scanme.nmap.org/",
-            "http://scanme.nmap.org/shared/js/nst.js?v=2",
-            "http://scanme.nmap.org/shared/css/nst-foot.css?v=2",
-            "http://scanme.nmap.org/site.css",
-            "http://scanme.nmap.org/shared/css/nst.css?v=2",
-            "https://nmap.org/npsl/",
-            "https://nmap.org/oem/",
-            "https://nmap.org/download.html",
-            "https://nmap.org/docs.html",
-            "https://nmap.org/book/install.html",
-            "https://nmap.org/oem/docs/Nmap-OEM-Software-Redistribution-License-Contract.docx",
-            "https://nmap.org/mailman/listinfo/dev",
-            "https://nmap.org",
-            "https://nmap.org/mailman/listinfo/announce",
-            "https://seclists.org/nmap-dev/",
-            "https://nmap.org/mailman/admin/dev",
-            "https://nmap.org/mailman/listinfo",
-            "http://www.gnu.org/software/mailman/index.html",
-            "http://www.python.org/",
-            "http://www.gnu.org/",
-            "https://nmap.org/shared/css/main.css",
-            "https://nmap.org/shared/css/mailman.css",
-            "https://nmap.org/bennieston-tutorial/",
-            "https://nmap.org/",
-            "https://npcap.com/"
-          ],
-          "evidence": {
-            "file": "state/hunt/evidence/katana-scanme.nmap.org-16f68daf2119.txt",
-            "sha256": "16f68daf21191442ed761c6925ddb76e19e5ef77472bb54ce4b258621ce717a8",
-            "bytes": 8207459,
-            "probe": "katana -u http://scanme.nmap.org/ -depth 2 -rate-limit 5",
-            "at": "2026-11-04T14:49:45.769Z"
-          }
-        }
-      ],
+      "startedAt": "2026-11-04T19:18:05.920Z",
+      "steps": [],
       "findings": 0,
-      "finishedAt": "2026-11-04T14:49:45.769Z"
+      "finishedAt": "2026-11-04T19:18:05.920Z"
     },
     {
       "host": "testphp.vulnweb.com",
       "why": "موقع اختبار Acunetix — منشور للاستخدام مع الماسحات (nuclei/zap/burp) في وثائقهم",
       "permission_url": "https://www.acunetix.com/vulnerability-scanner/webscantest/",
       "scheme": "http",
-      "startedAt": "2026-11-04T14:49:45.769Z",
-      "steps": [
-        {
-          "tool": "httpx",
-          "exit": 0,
-          "ms": 20799,
-          "status": null,
-          "title": null,
-          "tech": [],
-          "evidence": {
-            "file": "state/hunt/evidence/httpx-testphp.vulnweb.com-e3b0c44298fc.txt",
-            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "bytes": 0,
-            "probe": "httpx -u http://testphp.vulnweb.com/ -json -silent -status-code -title -tech-detect",
-            "at": "2026-11-04T14:50:06.569Z"
-          }
-        },
-        {
-          "tool": "nuclei",
-          "exit": 0,
-          "ms": 273508,
-          "matched": 0,
-          "evidence": {
-            "file": "state/hunt/evidence/nuclei-testphp.vulnweb.com-55da950965ae.txt",
-            "sha256": "55da950965ae73d08fa509134bcc2890da78c3324dbc9a0decedb47173d8a7a2",
-            "bytes": 10266,
-            "probe": "nuclei -u http://testphp.vulnweb.com/ -severity medium,high,critical -no-interactsh -rl 3",
-            "at": "2026-11-04T14:54:40.078Z"
-          }
-        },
-        {
-          "tool": "katana",
-          "exit": 0,
-          "ms": 21516,
-          "endpoints": 1,
-          "sample": [
-            "http://testphp.vulnweb.com/"
-          ],
-          "evidence": {
-            "file": "state/hunt/evidence/katana-testphp.vulnweb.com-0ed181581e38.txt",
-            "sha256": "0ed181581e38397204e027868683c811ea7e85e1b4781fbc13b9c7fe5658e890",
-            "bytes": 493,
-            "probe": "katana -u http://testphp.vulnweb.com/ -depth 2 -rate-limit 5",
-            "at": "2026-11-04T14:55:01.594Z"
-          }
-        }
-      ],
+      "startedAt": "2026-11-04T19:18:05.920Z",
+      "steps": [],
       "findings": 0,
-      "finishedAt": "2026-11-04T14:55:01.594Z"
+      "finishedAt": "2026-11-04T19:18:05.920Z"
     },
     {
       "host": "demo.testfire.net",
       "why": "تطبيق اختبار IBM العام (AppScan) — مبني عشان يتفحص",
       "permission_url": "https://demo.testfire.net/",
       "scheme": "https",
-      "startedAt": "2026-11-04T14:55:01.594Z",
-      "steps": [
-        {
-          "tool": "httpx",
-          "exit": 0,
-          "ms": 904,
-          "status": 200,
-          "title": "Altoro Mutual",
-          "tech": [
-            "Apache Tomcat",
-            "Java"
-          ],
-          "evidence": {
-            "file": "state/hunt/evidence/httpx-demo.testfire.net-3594ff93c19a.txt",
-            "sha256": "3594ff93c19a8fb3a1d6d040bd7521507dff28837083534cbf6c6127504de481",
-            "bytes": 534,
-            "probe": "httpx -u https://demo.testfire.net/ -json -silent -status-code -title -tech-detect",
-            "at": "2026-11-04T14:55:02.498Z"
-          }
-        },
-        {
-          "tool": "nuclei",
-          "exit": -1,
-          "ms": 300023,
-          "matched": 0,
-          "evidence": {
-            "file": "state/hunt/evidence/nuclei-demo.testfire.net-26ad33d44c78.txt",
-            "sha256": "26ad33d44c78db2d16d29b710dee44cea0bc4050540324a9c6dd38a3aec7edd4",
-            "bytes": 10831,
-            "probe": "nuclei -u https://demo.testfire.net/ -severity medium,high,critical -no-interactsh -rl 3",
-            "at": "2026-11-04T15:00:02.523Z"
-          }
-        },
-        {
-          "tool": "katana",
-          "exit": 0,
-          "ms": 20534,
-          "endpoints": 68,
-          "sample": [
-            "https://demo.testfire.net/",
-            "https://demo.testfire.net/style.css",
-            "https://demo.testfire.net/swagger/index.html",
-            "https://demo.testfire.net/status_check.jsp",
-            "https://demo.testfire.net/index.jsp?content=security.htm",
-            "https://demo.testfire.net/survey_questions.jsp",
-            "https://demo.testfire.net/default.jsp?content=security.htm",
-            "https://demo.testfire.net/survey_questions.jsp?step=a",
-            "https://demo.testfire.net/index.jsp",
-            "https://demo.testfire.net/login.jsp",
-            "https://demo.testfire.net/index.jsp?content=inside_contact.htm",
-            "https://demo.testfire.net/feedback.jsp",
-            "https://demo.testfire.net/index.jsp?content=personal.htm",
-            "https://demo.testfire.net/index.jsp?content=business.htm",
-            "https://demo.testfire.net/index.jsp?content=inside.htm",
-            "https://demo.testfire.net/index.jsp?content=personal_deposit.htm",
-            "https://demo.testfire.net/index.jsp?content=personal_checking.htm",
-            "https://demo.testfire.net/index.jsp?content=personal_loans.htm",
-            "https://demo.testfire.net/index.jsp?content=personal_cards.htm",
-            "https://demo.testfire.net/index.jsp?content=personal_investments.htm",
-            "https://demo.testfire.net/index.jsp?content=personal_other.htm",
-            "https://demo.testfire.net/index.jsp?content=business_deposit.htm",
-            "https://demo.testfire.net/index.jsp?content=business_lending.htm",
-            "https://demo.testfire.net/index.jsp?content=business_cards.htm",
-            "https://demo.testfire.net/index.jsp?content=business_insurance.htm"
-          ],
-          "evidence": {
-            "file": "state/hunt/evidence/katana-demo.testfire.net-f159cb3e1095.txt",
-            "sha256": "f159cb3e1095b25a8472de7cf9de5c16674c38bccbfeca441d1a6cc91dbaf60b",
-            "bytes": 4267855,
-            "probe": "katana -u https://demo.testfire.net/ -depth 2 -rate-limit 5",
-            "at": "2026-11-04T15:00:23.068Z"
-          }
-        }
-      ],
+      "startedAt": "2026-11-04T19:18:05.920Z",
+      "steps": [],
       "findings": 0,
-      "finishedAt": "2026-11-04T15:00:23.068Z"
+      "finishedAt": "2026-11-04T19:18:05.920Z"
     },
     {
       "host": "vulnweb.com",
       "why": "نطاق اختبار عام لتعداد النطاقات الفرعية (مصادر DNS/شهادات — بيلمس سجلات مش خدمة)",
       "permission_url": "https://www.acunetix.com/vulnerability-scanner/webscantest/",
       "scheme": "https",
-      "startedAt": "2026-11-04T15:00:23.068Z",
-      "steps": [
-        {
-          "tool": "httpx",
-          "exit": 0,
-          "ms": 10819,
-          "status": null,
-          "title": null,
-          "tech": [],
-          "evidence": {
-            "file": "state/hunt/evidence/httpx-vulnweb.com-e3b0c44298fc.txt",
-            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "bytes": 0,
-            "probe": "httpx -u https://vulnweb.com/ -json -silent -status-code -title -tech-detect",
-            "at": "2026-11-04T15:00:33.888Z"
-          }
-        },
-        {
-          "tool": "nuclei",
-          "exit": -1,
-          "ms": 213064,
-          "matched": 0,
-          "evidence": {
-            "file": "state/hunt/evidence/nuclei-vulnweb.com-b8a8d808cd89.txt",
-            "sha256": "b8a8d808cd89b49966f4544bdb69ae502cfa4cb30a83ee445d68d2ffb8448f30",
-            "bytes": 7682,
-            "probe": "nuclei -u https://vulnweb.com/ -severity medium,high,critical -no-interactsh -rl 3",
-            "at": "2026-11-04T15:04:06.953Z"
-          }
-        },
-        {
-          "tool": "katana",
-          "exit": -1,
-          "ms": 15007,
-          "endpoints": 0,
-          "sample": [],
-          "evidence": {
-            "file": "state/hunt/evidence/katana-vulnweb.com-e3b0c44298fc.txt",
-            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "bytes": 0,
-            "probe": "katana -u https://vulnweb.com/ -depth 2 -rate-limit 5",
-            "at": "2026-11-04T15:04:21.960Z"
-          }
-        }
-      ],
+      "startedAt": "2026-11-04T19:18:05.920Z",
+      "steps": [],
       "findings": 0,
-      "finishedAt": "2026-11-04T15:04:21.960Z"
+      "finishedAt": "2026-11-04T19:18:05.920Z"
     }
   ],
   "findings": [],
@@ -287,8 +55,11 @@
     "findings": 0,
     "bySeverity": {},
     "kevUnknown": true,
+    "skipped": 0,
+    "toolMs": {},
     "rated": 0
   },
-  "elapsedMs": 1215027,
+  "elapsedMs": 1,
+  "budgetMs": 1200000,
   "says_ar": "اتفحص 4 هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل."
 }
