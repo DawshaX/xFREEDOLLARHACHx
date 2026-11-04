@@ -3,6 +3,7 @@ import { MessageSquare, Plus, Send, Trash2, Skull, RefreshCw, Bot, Settings, Wif
 import { PageHeader } from "@/components/Layout";
 import { jsonRequest } from "@/lib/sse";
 import { streamKeylessChat, probeKeylessSeats, type SeatProbe } from "@/lib/llm-browser";
+import { buildAgentContext, deterministicAnswer } from "@/lib/ops-agent";
 import {
   streamOllamaViaServer,
   probeOllamaViaServer,
@@ -33,6 +34,8 @@ export default function Chat() {
   // which free seat is answering, and what each one said when probed
   const [activeSeat, setActiveSeat] = useState<string>("");
   const [seats, setSeats] = useState<SeatProbe[]>([]);
+  // which measured sources fed this answer (audit trail, not decoration)
+  const [toolsUsed, setToolsUsed] = useState<Array<{ tool: string; arg: string; rows: number }>>([]);
   const [ollamaError, setOllamaError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [settingsBase, setSettingsBase] = useState(getStoredOllamaBase());
@@ -137,8 +140,12 @@ export default function Chat() {
 
     try {
       const history = [...messages, { id: tempId, conversationId: active.id, role: "user", content: userText, createdAt: now }];
+      // Ask the real organs first: corpus, hunt, Actions, pages. The model then
+      // writes the sentence, but every number in it is ours.
+      const agent = await buildAgentContext(userText);
+      setToolsUsed(agent.used);
       const ollamaMessages = [
-        { role: "system" as const, content: CHAT_SYSTEM },
+        { role: "system" as const, content: `${CHAT_SYSTEM}\n\n${agent.context}` },
         ...history.map(m => ({
           role: m.role === "assistant" ? "assistant" as const : "user" as const,
           content: m.content,
@@ -177,11 +184,20 @@ export default function Chat() {
           setActiveSeat(servedBy);
           setOllamaStatus("ok");
         } catch (ollamaErr) {
-          const msg = `⚠ مفيش مقعد ردّ.\nالمقاعد المجانية:\n${(keylessErr as Error).message}\n\nOllama:\n${(ollamaErr as Error).message}`;
-          setOllamaStatus("error");
-          setOllamaError(msg);
-          setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: msg } : m));
-          return;
+          // Last line of defence: answer from the measurements with no model at all.
+          const direct = deterministicAnswer(agent);
+          if (direct) {
+            fullResponse = direct;
+            servedBy = "قياس مباشر (بلا موديل)";
+            setActiveSeat(servedBy);
+            setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: direct } : m));
+          } else {
+            const msg = `⚠ مفيش مقعد ردّ.\nالمقاعد المجانية:\n${(keylessErr as Error).message}\n\nOllama:\n${(ollamaErr as Error).message}`;
+            setOllamaStatus("error");
+            setOllamaError(msg);
+            setMessages(prev => prev.map(m => m.id === aId ? { ...m, content: msg } : m));
+            return;
+          }
         }
       }
 
@@ -242,6 +258,13 @@ export default function Chat() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(180deg,#060010 0%,#03000a 100%)" }} dir="rtl">
       <div className="p-4 space-y-3">
+        {toolsUsed.length > 0 && (
+          <div className="rounded-lg px-3 py-1.5 font-mono text-[10px] flex flex-wrap gap-2"
+            style={{ background: "rgba(0,255,255,0.05)", border: "1px solid rgba(0,255,255,0.15)", color: "rgba(120,255,255,0.75)" }}>
+            <span>مصادر الرد:</span>
+            {toolsUsed.map(t => <span key={t.tool}>{t.tool}{t.arg !== "*" ? `(${t.arg})` : ""} · {t.rows}</span>)}
+          </div>
+        )}
         {seats.length > 0 && (
           <div className="rounded-xl p-3 font-mono text-[11px] space-y-1" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ color: "rgba(255,255,255,0.5)" }}>قياس المقاعد المجانية — الآن:</div>

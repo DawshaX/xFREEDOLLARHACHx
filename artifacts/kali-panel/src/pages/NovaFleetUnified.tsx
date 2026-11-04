@@ -13,6 +13,7 @@
  * `/api/ws` socket; nothing is hard-coded fake state.
  */
 import LiveBodyCard from "@/components/LiveBodyCard";
+import CorpusPanel from "@/components/CorpusPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -407,6 +408,7 @@ export default function NovaFleetUnified() {
     <div dir="rtl" className="min-h-[calc(100vh-64px)] bg-[#050208] text-white p-3 space-y-3">
       {/* the always-on body: live Actions runs + the last real hunt */}
       <LiveBodyCard />
+      <CorpusPanel compact />
 
       {/* header */}
       <div className="flex flex-wrap items-center gap-2 justify-between">
