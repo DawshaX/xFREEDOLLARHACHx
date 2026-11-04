@@ -60,6 +60,29 @@ jobs:
       - name: plumbing proofs (27 checks, no network needed)
         run: node scripts/test-vuln-corpus.mjs
 
+      - name: warm the base corpus (a delta needs something to merge onto)
+        run: |
+          node -e '
+            (async () => {
+              const { execFileSync } = require("child_process");
+              const fs = require("fs"), path = require("path");
+              const dir = "artifacts/api-server/node_modules/.cache/vuln-corpus";
+              fs.mkdirSync(dir, { recursive: true });
+              execFileSync(path.join("artifacts/api-server/node_modules/.bin/esbuild"),
+                ["artifacts/api-server/src/lib/ops/vuln-corpus.ts", "--bundle", "--platform=node",
+                 "--format=cjs", "--target=node22", "--outfile=" + path.join(dir, "vuln-corpus.cjs")],
+                { stdio: "inherit" });
+              const lib = require("./" + path.join(dir, "vuln-corpus.cjs"));
+              if (fs.existsSync(lib.corpusFile()) && fs.statSync(lib.corpusFile()).size > 1024) {
+                console.log("base corpus already present:", lib.corpusFile());
+                return;
+              }
+              const r = await lib.provisionCorpus();
+              console.log(`provision: ${r.action} · ${r.says_ar}`);
+              if (!r.ok) process.exit(1);
+            })();
+          '
+
       - name: ingest
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
