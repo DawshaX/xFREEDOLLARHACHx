@@ -1,18 +1,18 @@
 {
-  "at": "2026-11-04T18:57:20.552Z",
+  "at": "2026-11-04T22:28:09.139Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "GREEN",
   "counts": {
-    "cves": 46143,
-    "huntRuns": 1,
+    "cves": 46861,
+    "huntRuns": 6,
     "findings": 0
   },
   "corpusSample": 3,
-  "corpusSearched": 46143,
+  "corpusSearched": 46861,
   "corpusIndexTotal": 46143,
   "corpusSlice": false,
   "negativeSearchOk": true,
-  "negativeSearched": 46143,
+  "negativeSearched": 46861,
   "corpusDated": true,
   "chat": {
     "ok": true,
@@ -20,8 +20,8 @@
     "seat": "pollinations-openai",
     "chunks": 8,
     "streamed": true,
-    "firstChunkMs": 340,
-    "totalMs": 341,
+    "firstChunkMs": 450,
+    "totalMs": 450,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
@@ -29,37 +29,37 @@
     {
       "name": "health",
       "status": 200,
-      "ms": 1720,
+      "ms": 1817,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-04T18:57:17.155Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":46143,\"huntRuns\":1,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-04T22:28:05.286Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":46861,\"huntRuns\":6,\"findings\":0}}"
     },
     {
       "name": "hunt",
       "status": 200,
-      "ms": 758,
+      "ms": 786,
       "ok": true,
-      "sample": "{\"run\":{\"id\":1,\"at\":\"2026-11-04T14:44:06.933+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"targets\":4,\"findings\":0,\"bySeverity\":{},\"kevUnknown\":true},\"says"
+      "sample": "{\"run\":{\"id\":6,\"at\":\"2026-11-04T20:35:35.079+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":34395,\"katana\":112440,\"nuclei:root\":96798,\"nucl"
     },
     {
       "name": "organs",
       "status": 200,
-      "ms": 984,
+      "ms": 881,
       "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"46143 CVE · 46143 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-04T18:57:00.217986+00:00\",\"updated_at\":\"202"
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"46861 CVE · 144000 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-04T22:27:00.028264+00:00\",\"updated_at\":\"20"
     },
     {
       "name": "corpus?q=nginx",
       "status": 200,
-      "ms": 697,
+      "ms": 728,
       "ok": true,
       "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2026-111962\",\"severity\":\"unknown\",\"cvss\":null,\"kev\":false,\"epss\":null,\"products\":[],\"summary\":\"The WP Remote Users Sync WordPress plugin before 2.2.0 does not adequately restrict access t"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
       "status": 200,
-      "ms": 582,
+      "ms": 985,
       "ok": true,
-      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":46143,\"indexTotal\":46143,\"syncedAt\":\"2026-11-04T18:56:10.841Z\",\"slice\":false,\"at\":\"2026-11-04T18:57:20.195Z\"}"
+      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":46861,\"indexTotal\":46143,\"syncedAt\":\"2026-11-04T20:26:11.930Z\",\"slice\":false,\"at\":\"2026-11-04T22:28:08.674Z\"}"
     },
     {
       "name": "corpus dated (published)",
@@ -71,9 +71,9 @@
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 341,
+      "ms": 450,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=8 first=340ms total=341ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=8 first=450ms total=450ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
