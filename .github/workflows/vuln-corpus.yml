@@ -131,7 +131,9 @@ jobs:
           # whole workflow file invalid — pass the message through env instead
           MSG: "chore(corpus): measured CVE index $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]"
         run: |
-          node scripts/ci-commit.mjs --message "$MSG" state/vuln-corpus-index.json artifacts/kali-panel/public/state/vuln-corpus-live.json
+          # --allow-empty: an incremental window with no new CVEs is the normal
+          # quiet case, and saying so is honest. A full/deepen pass always differs.
+          node scripts/ci-commit.mjs --allow-empty --message "$MSG" state/vuln-corpus-index.json artifacts/kali-panel/public/state/vuln-corpus-live.json
 
       - name: publish the corpus as a release asset
         uses: softprops/action-gh-release@v2

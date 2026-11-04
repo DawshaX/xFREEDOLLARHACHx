@@ -22,6 +22,15 @@ function loadYaml() {
   // pnpm keeps packages under .pnpm/<pkg>@<ver>/node_modules/<pkg>; look for the
   // parser the workspace already depends on before giving up.
   const base = path.join(root, "node_modules/.pnpm");
+  // A plain `npm install yaml` (no pnpm store) must be enough to run this check:
+  // the flat layout was the only one the loader could not see.
+  for (const name of ["yaml", "js-yaml"]) {
+    try {
+      return { name, mod: req(path.join(root, "node_modules", name)) };
+    } catch {
+      /* not in the flat layout — try the pnpm store */
+    }
+  }
   if (!fs.existsSync(base)) return null;
   for (const name of ["yaml", "js-yaml"]) {
     const hit = fs.readdirSync(base).find((d) => d === name || d.startsWith(`${name}@`));
