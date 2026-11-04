@@ -634,8 +634,23 @@ const cybernovaFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const isSameOriginApi = rawUrl.startsWith("/api/") || rawUrl.startsWith(`${window.location.origin}/api/`);
     if (isSameOriginApi) {
       const target = remoteUrl(rawUrl.replace(/^https?:\/\/[^/]+/, ""));
+      // The linked engine gates every write on `x-nova-token` (see ops/gate.ts).
+      // The ops room sent that header, but the chat, the fleet bus and every
+      // other raw `/api/*` call did not — so a correctly connected machine
+      // answered reads and refused writes, which reads as "connected but broken".
+      const patched: RequestInit = { ...(init ?? {}) };
       try {
-        return await originalFetch(target, init);
+        const token = localStorage.getItem("cybernova_ops_token") ?? "";
+        if (token) {
+          const headers = new Headers(patched.headers ?? undefined);
+          if (!headers.has("x-nova-token")) headers.set("x-nova-token", token);
+          patched.headers = headers;
+        }
+      } catch {
+        /* no localStorage (SSR/tests) — send it unauthenticated, the gate will say so */
+      }
+      try {
+        return await originalFetch(target, patched);
       } catch (err) {
         // Server unreachable: fall through to the built-in engine so the UI
         // stays usable, but say so loudly in the console.
