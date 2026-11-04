@@ -22,6 +22,7 @@ on:
       - "backend health (the edge function, measured from outside)"
       - "NOVA live mission"
       - "probe-live-llm"
+      - "NOVA brain (keyless · thinks every 15 min)"
     types: [completed]
   workflow_dispatch:
 

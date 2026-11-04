@@ -1,0 +1,89 @@
+name: NOVA brain (keyless · thinks every 15 min)
+
+# `/nova-fleet` calls itself the brain of the program. This is the part that
+# actually thinks — for real, with no server, no card and no key:
+#
+#   model   : text.pollinations.ai (keyless, three seats, real fallbacks)
+#   memory  : Supabase public chat rows — the same conversation the browser writes
+#   senses  : state/vuln-corpus-index.json, state/hunt-latest.json, advisory cache
+#   hands   : one tool call per turn against the ops API (/corpus?q=…), executed
+#   output  : state/nova-brain-latest.json  +  an answer posted to the chat
+#
+# It runs on the free Actions minutes of a public repo. Every 15 minutes it
+# either answers the newest human message or writes one line about the platform.
+# Background deploys re-publish the state (see deploy-pages workflow_run), so the
+# page shows the thought without anybody pushing anything.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: "1 = think but do not post to the chat"
+        default: "0"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/nova-brain.mjs"
+      - "scripts/test-nova-brain.mjs"
+      - ".github/workflows/nova-brain.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  # false: two brains thinking at once would answer the same message twice.
+  group: nova-brain
+  cancel-in-progress: false
+
+jobs:
+  think:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # A queued run keeps the SHA it was queued with, so it would think against
+      # a stale state file and answer a message somebody already answered.
+      - name: move to the current origin/main (a queued run starts on a stale commit)
+        run: |
+          git fetch --prune origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: the loop's own proofs (no network)
+        run: node scripts/test-nova-brain.mjs
+
+      - name: think
+        env:
+          DRY: ${{ github.event.inputs.dry || '0' }}
+        run: |
+          set -o pipefail
+          if [ "$DRY" = "1" ]; then
+            node scripts/nova-brain.mjs --dry
+          else
+            node scripts/nova-brain.mjs
+          fi
+
+      - name: say what it thought (step summary)
+        if: always()
+        run: |
+          node -e '
+            const d = require("./state/nova-brain-latest.json");
+            const fs = require("fs");
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              `### NOVA brain\n\n| | |\n|---|---|\n| at | ${d.at} |\n| seat | ${d.seat ?? "—"} |\n| answered | ${d.answered ? d.answered.question.slice(0,80) : "—"} |\n| action | ${d.action ? JSON.stringify(d.action).slice(0,200) : "—"} |\n| says | ${d.thinking.reply ? d.thinking.reply.split("\n")[0].slice(0,200) : "—"} |\n`);
+            if (d.failures?.length) console.log("failures:", d.failures.join(" | "));
+          '
+
+      - name: commit the thought
+        env:
+          MSG: "chore(brain): a turn was thought $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]"
+        run: |
+          node scripts/ci-commit.mjs --message "$MSG" \
+            state/nova-brain-latest.json \
+            artifacts/kali-panel/public/state/nova-brain-latest.json
