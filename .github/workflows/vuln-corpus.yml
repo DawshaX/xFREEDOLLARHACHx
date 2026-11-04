@@ -20,6 +20,7 @@ on:
       - ".github/workflows/vuln-corpus.yml"
       - "scripts/ingest-vuln-corpus.mjs"
       - "scripts/ci-commit.mjs"
+      - "scripts/record-failure.mjs"
       - "artifacts/api-server/src/lib/ops/vuln-corpus.ts"
   workflow_dispatch:
     inputs:
@@ -107,10 +108,21 @@ jobs:
       # (50k rows) before the polite NVD delay eats the job. This step carries the
       # walk forward 12 pages per run from the cursor in the index, so the gap
       # closes over the day instead of never.
+      # pipefail keeps the step's exit code honest through the tee, and the tee is
+      # what gives the next step something to record: this repository's job logs
+      # cannot be downloaded, so "it failed" with no reason is all we would have.
       - name: deepen the walk (12 pages from the stored cursor)
         env:
           CORPUS_TIME_BUDGET_MIN: "14"
-        run: node scripts/ingest-vuln-corpus.mjs --deepen --pages=12
+        run: |
+          set -o pipefail
+          node scripts/ingest-vuln-corpus.mjs --deepen --pages=12 2>&1 | tee "$RUNNER_TEMP/deepen.log"
+
+      # Runs only when the step above failed, and commits what it captured, so the
+      # reason survives the run (measured: two deepen failures left nothing behind).
+      - name: record why the deepen failed
+        if: failure()
+        run: node scripts/record-failure.mjs --step "deepen" --log "$RUNNER_TEMP/deepen.log" --out state/corpus-last-failure.json --commit
 
       - name: build the panel dataset from the corpus
         run: node scripts/make-panel-corpus.mjs --rows=800
