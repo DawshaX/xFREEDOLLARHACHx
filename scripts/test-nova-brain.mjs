@@ -115,6 +115,19 @@ check("the doc names where every number came from", Array.isArray(doc.sources) &
 check("the answered question is recorded", doc.answered?.question === "سؤال");
 check("the prompt forbids out-of-scope action", systemPrompt(senses).includes("مش مصرّح به"));
 
+/* 8 · the tool takes a product token, so the brain must be told which ones exist */
+const top = senses.corpus?.topProducts;
+check("senses carries real product tokens for the search tool", Array.isArray(top) && top.length > 0, JSON.stringify(top?.slice(0, 3)));
+check(
+  "the prompt names those products and forbids a phrase as the argument",
+  systemPrompt(senses).includes("topProducts") && systemPrompt(senses).includes("مش جملة"),
+);
+check(
+  "topProducts are the published ones, not invented",
+  Array.isArray(top) && top.every((p) => corpusFile.topProducts.some((x) => x.product === p)),
+  `${top?.length} tokens`,
+);
+
 let bad_ = 0;
 for (const [name, ok, detail] of checks) {
   if (!ok) bad_ += 1;
