@@ -116,17 +116,149 @@ Deno.serve(async (req) => {
     if (req.method === "GET" && path === "/corpus") {
       const q = (url.searchParams.get("q") ?? "").trim();
       const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 100);
+      // PostgREST `or` is a comma/paren grammar: a search string must never be
+      // able to add its own clauses, so anything structural is stripped and the
+      // remaining text is used literally.
+      const safe = q.replace(/[,()"'\\%]/g, " ").trim();
+      const cols = "cve,severity,cvss,kev,epss,products,summary,modified";
       let query = db
         .from("corpus_cve")
-        .select("cve,severity,cvss,kev,epss,products,summary,modified")
+        .select(cols)
         .order("kev", { ascending: false })
         .order("cvss", { ascending: false })
         .limit(limit);
-      if (/^cve-\d{4}-\d+/i.test(q)) query = query.eq("cve", q.toUpperCase());
-      else if (q) query = query.contains("products", [q.toLowerCase()]);
-      const { data, error } = await query;
+      if (/^cve-\d{4}-\d+$/i.test(q)) {
+        query = query.eq("cve", q.toUpperCase());
+      } else if (safe) {
+        // product name (exact element of the CPE array) OR free text in the summary
+        query = query.or(`products.cs.{${safe.toLowerCase()}},summary.ilike.%${safe}%`);
+      }
+      const [{ data, error }, { count: inDb }, meta] = await Promise.all([
+        query,
+        db.from("corpus_cve").select("*", { count: "exact", head: true }),
+        db.from("corpus_meta").select("key,value").eq("key", "index"),
+      ]);
       if (error) return json({ error: error.message }, 400);
-      return json({ q, rows: data ?? [], at: new Date().toISOString() });
+      const index = (meta.data ?? [])[0]?.value ?? null;
+      return json({
+        q,
+        rows: data ?? [],
+        found: (data ?? []).length,
+        searched: inDb ?? 0,
+        indexTotal: index?.total ?? null,
+        syncedAt: index?.at ?? null,
+        // a slice is said out loud: the answer is only ever "what is in the table"
+        slice: index?.total ? (inDb ?? 0) < index.total : null,
+        at: new Date().toISOString(),
+      });
+    }
+
+    // ── POST /corpus-sync ──────────────────────────────────────────────────
+    // Loads the published corpus (release asset, gzip JSONL) straight into the
+    // database. Postgres cannot un-gzip, so the decompression happens here in
+    // Deno and rows go in through the service client in batches.
+    //   ?limit=6000&offset=0   → ingest a window (edge functions have a wall clock)
+    if (req.method === "POST" && path === "/corpus-sync") {
+      const started = Date.now();
+      // Authorised two ways: the service key, or an unattended scheduler. The
+      // second path only ever re-reads a public release asset and upserts public
+      // data, so it needs no secret — but it is rate-limited so nobody can spin
+      // the function in a loop. Both paths are recorded.
+      const service = isService(req);
+      if (!service) {
+        const { data: m } = await db.from("corpus_meta").select("value").eq("key", "sync").maybeSingle();
+        const last = m?.value?.at ? Date.parse(m.value.at) : 0;
+        if (Date.now() - last < 180_000) {
+          return json({ skipped: "too soon", last: m?.value?.at ?? null }, 429);
+        }
+      }
+      await db.from("corpus_meta").upsert(
+        { key: "sync", value: { at: new Date().toISOString(), by: service ? "service" : "scheduler" }, updated_at: new Date().toISOString() },
+        { onConflict: "key" },
+      );
+      const offset = Math.max(Number(url.searchParams.get("offset") ?? 0), 0);
+      const limit = Math.min(Number(url.searchParams.get("limit") ?? 6000), 20000);
+      const asset =
+        "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/vuln-corpus/cves.jsonl.gz";
+
+      const res = await fetch(asset, { redirect: "follow", signal: AbortSignal.timeout(90_000) });
+      if (!res.ok || !res.body) return json({ error: `asset HTTP ${res.status}` }, 502);
+
+      const text = await new Response(
+        res.body.pipeThrough(new DecompressionStream("gzip")),
+      ).text();
+
+      const lines = text.split("\n");
+      const batch: Record<string, unknown>[] = [];
+      let seen = 0;
+      let parsed = 0;
+      let written = 0;
+      const failures: string[] = [];
+
+      const flush = async () => {
+        if (batch.length === 0) return;
+        const rows = batch.splice(0, batch.length);
+        const { error } = await db.from("corpus_cve").upsert(rows, { onConflict: "cve" });
+        if (error) failures.push(error.message);
+        else written += rows.length;
+      };
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        seen++;
+        if (seen <= offset) continue;
+        if (parsed >= limit) break;
+        let r: Record<string, any>;
+        try {
+          r = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        if (typeof r.id !== "string" || !r.id.startsWith("CVE-")) continue;
+        const products = Array.isArray(r.cpe)
+          ? [...new Set(r.cpe.map((c: any) => c?.product).filter(Boolean))].slice(0, 12)
+          : [];
+        batch.push({
+          cve: r.id,
+          cvss: typeof r.cvss === "number" ? r.cvss : null,
+          severity: r.sev ?? null,
+          kev: Boolean(r.kev),
+          epss: typeof r.epss === "number" ? r.epss : null,
+          products,
+          summary: String(r.desc ?? "").slice(0, 400),
+          modified: r.mod ?? r.modified ?? r.pub ?? null,
+          updated_at: new Date().toISOString(),
+        });
+        parsed++;
+        if (batch.length >= 500) await flush();
+      }
+      await flush();
+
+      const { count: inDb } = await db.from("corpus_cve").select("*", { count: "exact", head: true });
+      await db.from("corpus_meta").upsert(
+        {
+          key: "index",
+          value: {
+            total: lines.filter((l) => l.trim()).length,
+            at: new Date().toISOString(),
+            source: "release:vuln-corpus/cves.jsonl.gz",
+          },
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "key" },
+      );
+
+      return json({
+        ok: failures.length === 0,
+        parsed,
+        written,
+        offset,
+        limit,
+        lines: lines.length,
+        inDb: inDb ?? null,
+        ms: Date.now() - started,
+        failures: failures.slice(0, 3),
+      });
     }
 
     /* ── writes (service role only) ───────────────────────────────────────── */
