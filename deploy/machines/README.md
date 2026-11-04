@@ -21,6 +21,54 @@
 
 > Sprites مش بديل عن Codespaces في المهمة دي — هي أذكى للوكيل اللي بيعمل مهام متقطعة، ومكلفة لو سبتها صاحية. فمتخلطش: Codespaces = الكمبيوتر اللي بتشتغل عليه، Sprites = كمبيوتر الوكيل لما يبقى عنده مهام.
 
+
+## 0) من غير كارت خالص: Codespaces (انت عندك واحدة شغالة أصلاً)
+
+```bash
+cd /workspaces/xFREEDOLLARHACHx 2>/dev/null || cd ~/xFREEDOLLARHACHx
+git pull
+bash scripts/nova-codespace.sh
+```
+
+السكربت بيعمل التلاتة اللي بتتوه فيها لوحدك: يبني لو البناء ناقص، يشغّل المحرك، يستنى
+`/api/health` يرد فعلاً، **ويحوّل البورت 8080 لـPublic** ويطبلك الرابط والتوكن جاهزين:
+
+```
+https://<codespace-name>-8080.app.github.dev
+```
+
+> البورت في Codespaces **خاص (Private) افتراضيًا**. محرك شغال على 8080 ومش متاح من
+> برّه = نفس الإحساس بإنه واقف. لو `gh` رفض تحويل البورت: تبويب **Ports** → 8080 →
+> كليك يمين → **Port Visibility** → **Public**.
+>
+> Codespace بيقفل بعد 30 دقيقة خمول. أول ما يفتح تاني: `./scripts/nova-serve.sh --bg`.
+
+## 0-ب) Waifly — 300 ميجا، مجاني دايم، من غير فيزا
+
+فيه سيرفر NodeJS رسمي في القايمة + المواقع (Paris 1/2/5). اختار **NodeJS**، وبعد ما يتعمل:
+
+```bash
+# في Console بتاع السيرفر
+curl -fsSL -o w.sh https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/deploy/machines/waifly-bootstrap.sh
+sh w.sh                 # ينزّل الـbundle + يعمل توكن + يظبط الـenv
+```
+بعدها في الإعدادات: **Start Command** = `sh $HOME/app/start.sh`.
+
+قياسات حقيقية على نفس الـbundle (مش تقديرات):
+
+| | القيمة |
+| -- | -- |
+| الـbundle | 2.6 MB مضغوط · 10.8 MB بعد الفك · 126 ملف |
+| الذاكرة وقت التشغيل | `boot.mjs` ≈ 55 MB + `nova-app.mjs` ≈ 103 MB → **~160 MB** من 300 |
+| البانل | بيتخدم من نفس العملية (`/` = 200) |
+| `/api/health` | `{"status":"ok","mode":"standalone","wsConnected":true}` |
+| `/api/ops/kinds` بالتوكن | 200 |
+
+**متبنيش على السيرفر ده أبدًا** — `pnpm install` + `vite build` محتاجين ~1.5 GB رام، والـslot 300 MB.
+البناء بيحصل في CI وبينزل كـrelease asset، والـbootstrap بينزّله.
+
+و`NOVA_CORPUS_AUTODOWNLOAD=0` مقصودة: الكوربوس 14 MB مضغوط، والسؤال بيتم من `ops-api` على Supabase.
+
 ## 1) Codespaces — مجاني، دقيقة واحدة (مفضّل)
 
 1. في GitHub: زرار **Code** الأخضر → تبويب **Codespaces** → **Create codespace on main**
