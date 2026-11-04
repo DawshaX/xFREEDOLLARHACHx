@@ -75,6 +75,20 @@ async function chatStream(messages: Array<{ role: string; content: string }>): P
   return json({ error: "no seat answered", failures }, 503);
 }
 
+// Two normalisers for corpus rows. `published` was declared in the schema and
+// never populated, so it is derived here from the source date when present and,
+// failing that, from the year embedded in the id (CVE-2011-1234 → 2011-01-01).
+// That is a real lower bound taken from the record, not an invented timestamp.
+function dateOnly(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+function yearFromCve(id: string): string | null {
+  const m = /^CVE-(\d{4})-/.exec(id);
+  return m ? `${m[1]}-01-01` : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -120,7 +134,7 @@ Deno.serve(async (req) => {
       // able to add its own clauses, so anything structural is stripped and the
       // remaining text is used literally.
       const safe = q.replace(/[,()"'\\%]/g, " ").trim();
-      const cols = "cve,severity,cvss,kev,epss,products,summary,modified";
+      const cols = "cve,severity,cvss,kev,epss,products,summary,published,modified";
       let query = db
         .from("corpus_cve")
         .select(cols)
@@ -226,6 +240,10 @@ Deno.serve(async (req) => {
           epss: typeof r.epss === "number" ? r.epss : null,
           products,
           summary: String(r.desc ?? "").slice(0, 400),
+          // `published` exists in the table and was never written: all 46,143 rows
+          // had published = NULL, so any date filter or "newest first" was empty
+          // without saying so. The source carries `pub`; a CVE id carries its year.
+          published: dateOnly(r.pub) ?? yearFromCve(r.id),
           modified: r.mod ?? r.modified ?? r.pub ?? null,
           updated_at: new Date().toISOString(),
         });

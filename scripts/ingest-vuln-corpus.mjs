@@ -54,6 +54,7 @@ const delayMs = apiKey ? 700 : 6500; // NVD: 50/30s with a key, 5/30s without
 
 const esbuild = [
   path.join(root, "artifacts/api-server/node_modules/.bin/esbuild"),
+  path.join(root, "node_modules/.bin/esbuild"),
   path.join(root, "node_modules/.pnpm/node_modules/.bin/esbuild"),
 ].find((p) => fs.existsSync(p));
 if (!esbuild) throw new Error("esbuild not found — run pnpm install first");
@@ -187,13 +188,16 @@ if (rows.size === 0) {
 }
 
 /* ── 3 · write ── */
+const merges = (mode === "incremental" || mode === "deepen") && Boolean(previous?.at);
 const baseTotal = Number(previous?.total ?? 0);
+// Declared before the guard that reads it: the first version of this patch had it
+// below, so `merges` was in its temporal dead zone and every ingest died with
+// "Cannot access 'merges' before initialization" (measured: run 41877458865).
 if (merges && previous?.at && baseTotal > 0 && rows.size < baseTotal * 0.5 && !fs.existsSync(lib.corpusFile())) {
   console.error(`refusing to write: ${rows.size} rows would replace ${baseTotal} (no base file to merge onto)`);
   process.exit(1);
 }
 
-const merges = (mode === "incremental" || mode === "deepen") && Boolean(previous?.at);
 const index = lib.writeCorpus([...rows.values()], {
   mode: merges ? mode : "full",
   sources: ["NVD 2.0", "CISA KEV", "EPSS"],
