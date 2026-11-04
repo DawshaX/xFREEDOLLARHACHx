@@ -17,6 +17,18 @@ import { createRequire } from "node:module";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dir = path.join(root, ".github/workflows");
 
+/**
+ * `yaml` exports parse(); `js-yaml` exports load() — same job, different name.
+ * Measured 2026-11-04: with js-yaml installed this loader returned it happily and
+ * then every file died with "yaml.mod.parse is not a function", i.e. 0/17 valid.
+ * The shim keeps one call site (`yaml.mod.parse`) and teaches it both shapes.
+ */
+function normalize(name, mod) {
+  if (typeof mod.parse === "function") return mod;
+  if (typeof mod.load === "function") return { ...mod, parse: (s) => mod.load(s) };
+  throw new Error(`${name} exposes neither parse() nor load()`);
+}
+
 function loadYaml() {
   const req = createRequire(import.meta.url);
   // pnpm keeps packages under .pnpm/<pkg>@<ver>/node_modules/<pkg>; look for the
@@ -26,7 +38,7 @@ function loadYaml() {
   // the flat layout was the only one the loader could not see.
   for (const name of ["yaml", "js-yaml"]) {
     try {
-      return { name, mod: req(path.join(root, "node_modules", name)) };
+      return { name, mod: normalize(name, req(path.join(root, "node_modules", name))) };
     } catch {
       /* not in the flat layout — try the pnpm store */
     }
@@ -36,7 +48,7 @@ function loadYaml() {
     const hit = fs.readdirSync(base).find((d) => d === name || d.startsWith(`${name}@`));
     if (!hit) continue;
     try {
-      return { name, mod: req(path.join(base, hit, "node_modules", name)) };
+      return { name, mod: normalize(name, req(path.join(base, hit, "node_modules", name))) };
     } catch {
       /* next */
     }
@@ -58,6 +70,14 @@ if (!yaml) {
 }
 
 const files = fs.readdirSync(dir).filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
+
+function safeLoad(file) {
+  try {
+    return yaml.mod.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return null;
+  }
+}
 let bad = 0;
 for (const f of files) {
   const full = path.join(dir, f);
@@ -93,8 +113,36 @@ for (const { f } of stale) {
   console.log(`✗ ${f}: commits state and reads it back, but never resets to origin/main after a queued start`);
 }
 
+/**
+ * The other half of the same bug: a workflow that commits state with `[skip ci]`
+ * is telling GitHub "do not start anything for this commit" — and that includes
+ * the Pages deploy. Measured 2026-11-04 21:36Z: the corpus index was committed
+ * with 144,000 rows while the live site still answered 120,000 from the 21:11
+ * deploy, so anyone reading the dashboard saw yesterday's numbers labelled live.
+ *
+ * Rule: every workflow that pushes a `[skip ci]` state commit must be named in
+ * some other workflow's `workflow_run.workflows`, so the site rebuilds after it
+ * instead of waiting for the next human push.
+ */
+const skipCi = files
+  .map((f) => ({ f, doc: safeLoad(path.join(dir, f)) }))
+  .filter(({ doc }) => doc && JSON.stringify(doc).includes("[skip ci]"));
+const runTriggers = new Set();
+for (const f of files) {
+  const doc = safeLoad(path.join(dir, f));
+  const on = doc && (doc.on ?? doc[true]);
+  const wr = on && on.workflow_run;
+  for (const w of (wr && wr.workflows) || []) runTriggers.add(w);
+}
+const unpublished = skipCi.filter(({ doc }) => !runTriggers.has(doc.name));
+for (const { f, doc } of unpublished) {
+  bad += 1;
+  console.log(`✗ ${f}: commits "[skip ci]" state but no workflow_run trigger republishes it ("${doc.name}")`);
+}
+
 console.log(
   `check-workflows: ${files.length - bad}/${files.length} valid` +
-    ` · ${stateful.length - stale.length}/${stateful.length} stateful jobs start from origin/main`,
+    ` · ${stateful.length - stale.length}/${stateful.length} stateful jobs start from origin/main` +
+    ` · ${skipCi.length - unpublished.length}/${skipCi.length} skip-ci state commits republished by Pages`,
 );
 process.exit(bad === 0 ? 0 : 1);
