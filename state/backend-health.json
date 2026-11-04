@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-04T18:45:16.558Z",
+  "at": "2026-11-04T18:45:33.217Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "GREEN",
   "counts": {
@@ -20,8 +20,8 @@
     "seat": "pollinations-openai",
     "chunks": 8,
     "streamed": true,
-    "firstChunkMs": 346,
-    "totalMs": 347,
+    "firstChunkMs": 267,
+    "totalMs": 268,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
@@ -29,37 +29,37 @@
     {
       "name": "health",
       "status": 200,
-      "ms": 1549,
+      "ms": 667,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-04T18:45:14.184Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":46143,\"huntRuns\":1,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-04T18:45:30.728Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":46143,\"huntRuns\":1,\"findings\":0}}"
     },
     {
       "name": "hunt",
       "status": 200,
-      "ms": 787,
+      "ms": 732,
       "ok": true,
       "sample": "{\"run\":{\"id\":1,\"at\":\"2026-11-04T14:44:06.933+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"targets\":4,\"findings\":0,\"bySeverity\":{},\"kevUnknown\":true},\"says"
     },
     {
       "name": "organs",
       "status": 200,
-      "ms": 369,
+      "ms": 436,
       "ok": true,
       "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"46143 CVE · 46143 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-04T18:42:00.041343+00:00\",\"updated_at\":\"202"
     },
     {
       "name": "corpus?q=nginx",
       "status": 200,
-      "ms": 424,
+      "ms": 549,
       "ok": true,
       "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2026-111962\",\"severity\":\"unknown\",\"cvss\":null,\"kev\":false,\"epss\":null,\"products\":[],\"summary\":\"The WP Remote Users Sync WordPress plugin before 2.2.0 does not adequately restrict access t"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
       "status": 200,
-      "ms": 418,
+      "ms": 463,
       "ok": true,
-      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":46143,\"indexTotal\":46143,\"syncedAt\":\"2026-11-04T18:41:03.021Z\",\"slice\":false,\"at\":\"2026-11-04T18:45:16.191Z\"}"
+      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":46143,\"indexTotal\":46143,\"syncedAt\":\"2026-11-04T18:41:03.021Z\",\"slice\":false,\"at\":\"2026-11-04T18:45:32.918Z\"}"
     },
     {
       "name": "corpus dated (published)",
@@ -71,9 +71,9 @@
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 347,
+      "ms": 268,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=8 first=346ms total=347ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=8 first=267ms total=268ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
