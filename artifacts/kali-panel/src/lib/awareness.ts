@@ -18,6 +18,7 @@
  * not shown as a number.**
  */
 import { NOVA_CARD, resolveNovaServer } from "./nova-core";
+import { BACKEND_URL } from "./backend";
 import { isRemoteConfigured, remoteUrl } from "./remote";
 
 export type OrganState = "up" | "down" | "partial" | "unknown";
@@ -130,6 +131,47 @@ async function ping(id: string, label: string, url: string, ms = 4500): Promise<
   }
 }
 
+/**
+ * The brain writes one file per turn (`state/nova-brain-latest.json`). Reading it
+ * is the difference between "the brain might be running somewhere" and "the brain
+ * thought at 22:14 and here is what it said". Two rules kept from the rest of this
+ * file: an old file is reported as OLD (with its age), and a missing file is
+ * `unknown` — never a green dot.
+ */
+export interface BrainDoc {
+  at: string;
+  seat: string | null;
+  thinking: { reply: string | null; why: string; action: { kind: string; arg: string } };
+  action: { kind: string; ok?: boolean; hits?: number; error?: string } | null;
+  answered: { question: string; at: string | null } | null;
+  says_ar?: string;
+  failures?: string[];
+}
+
+const BRAIN_FRESH_MS = 45 * 60 * 1000;
+
+export function describeBrain(doc: BrainDoc, now = Date.now()): { state: OrganState; says: string } {
+  const at = Date.parse(doc.at);
+  const ageMin = Number.isFinite(at) ? Math.round((now - at) / 60000) : null;
+  const line = (doc.thinking?.reply ?? "").split("\n")[0].slice(0, 160);
+  const seat = doc.seat ? ` · ${doc.seat}` : "";
+  if (ageMin !== null && now - at > BRAIN_FRESH_MS) {
+    return { state: "partial", says: `آخر تفكير كان من ${ageMin} دقيقة (${doc.at.slice(11, 16)}Z)${seat} — مش لحظي، بس حقيقي: ${line}` };
+  }
+  return { state: "up", says: `فكّر ${ageMin === null ? "" : `من ${ageMin} دقيقة`}${seat} — ${line}` };
+}
+
+async function readBrain(base: string): Promise<BrainDoc | null> {
+  if (!base) return null;
+  try {
+    const res = await fetch(`${base}/state/nova-brain-latest.json`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    return (await res.json()) as BrainDoc;
+  } catch {
+    return null;
+  }
+}
+
 const NO_SERVER = "اللوحة على Pages من غير سيرفر — القياس ده محتاج محرك. اربط سيرفر من «محطة نوفا» في نفس الصفحة.";
 
 async function browserAwareness(): Promise<AwarenessView> {
@@ -137,7 +179,7 @@ async function browserAwareness(): Promise<AwarenessView> {
   const origin = typeof location !== "undefined" ? location.origin + BASE : "";
   const base = origin.replace(/\/$/, "");
 
-  const [pagesSite, programsProbe, doh, ghZen] = await Promise.all([
+  const [pagesSite, programsProbe, doh, ghZen, brainDoc, backendProbe] = await Promise.all([
     ping("pages", "اللوحة (GitHub Pages)", base ? `${base}/` : "", 5000),
     (async () => {
       if (!base) return null;
@@ -151,6 +193,8 @@ async function browserAwareness(): Promise<AwarenessView> {
     })(),
     ping("doh", "خروج للإنترنت (DNS-over-HTTPS)", "https://dns.google/resolve?name=github.com&type=A", 4000),
     ping("github", "GitHub API (مصدر المعلومات)", "https://api.github.com/zen", 4000),
+    readBrain(base),
+    ping("backend", "الـbackend (Supabase Edge)", `${BACKEND_URL}/health`, 6000),
   ]);
 
   const outbound = doh.ok || ghZen.ok;
@@ -159,7 +203,35 @@ async function browserAwareness(): Promise<AwarenessView> {
   const remoteSet = isRemoteConfigured();
 
   const organs: OrganView[] = [
-    { id: "brain", label: "العقل اللغوي", state: "unknown", says: remoteSet ? "السيرفر اللي ربطته مابيتجاوبش على /api/nova-core/status" : NO_SERVER, route: "/nova-core", fixAr: remoteSet ? "الرابط المحفوظ وصلش — راجعه من «محطة نوفا»" : NO_SERVER },
+    (() => {
+      const described = brainDoc ? describeBrain(brainDoc) : null;
+      if (described) {
+        return {
+          id: "brain",
+          label: "العقل اللغوي",
+          state: described.state,
+          says: described.says,
+          route: "/nova-fleet",
+        };
+      }
+      return {
+        id: "brain",
+        label: "العقل اللغوي",
+        state: "unknown" as OrganState,
+        says: remoteSet ? "السيرفر اللي ربطته مابيتجاوبش على /api/nova-core/status" : "مفيش `state/nova-brain-latest.json` منشور — الـworkflow «NOVA brain» هو اللي بيكتبه",
+        route: "/nova-fleet",
+        fixAr: remoteSet ? "الرابط المحفوظ وصلش — راجعه من «محطة نوفا»" : "شغّل workflow «NOVA brain» مرة، أو استنى الدورة الجاية (كل 15 دقيقة)",
+      };
+    })(),
+    {
+      id: "chat",
+      label: "الشات والذاكرة",
+      state: backendProbe.ok ? "up" : "down",
+      says: backendProbe.ok
+        ? `الـbackend بيرد (${backendProbe.ms}ms) — الشات بيتكلم ويتخزن في chat_messages`
+        : `الـbackend ماردّش: ${backendProbe.note}`,
+      route: "/nova-fleet",
+    },
     { id: "council", label: "المجلس", state: "unknown", says: NO_SERVER, route: "/nova-core" },
     { id: "fleet", label: "الأسطول", state: "unknown", says: NO_SERVER, route: "/nova-fleet" },
     { id: "ops", label: "محرك التنفيذ", state: "unknown", says: NO_SERVER, route: "/nova-fleet" },
