@@ -48,6 +48,78 @@ const corpusMiss = await probe(
   (b) => Array.isArray(b?.rows) && b.rows.length === 0 && Number(b.searched) > 0,
 );
 
+/* ── chat, proved as a stream ────────────────────────────────────────────────
+   The panel says "الباك إند هو اللي بيرد". That claim needs a measurement, not a
+   screenshot: post one short message, read the body chunk by chunk, and record
+   the time to the first bytes against the time to the last, plus which seat the
+   function says answered (x-nova-seat header). A 200 with an empty body is a
+   failure here, because that is exactly what a stubbed endpoint returns. */
+const chat = await (async () => {
+  const started = Date.now();
+  try {
+    const res = await fetch(`${BASE}/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "قول كلمة واحدة بس: شغال" }],
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    if (!res.ok || !res.body) {
+      failed += 1;
+      checks.push({ name: "chat (stream)", status: res.status, ms: Date.now() - started, ok: false, sample: "no body" });
+      return { ok: false, status: res.status };
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let text = "";
+    let firstMs = null;
+    let chunks = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks += 1;
+      if (firstMs === null) firstMs = Date.now() - started;
+      text += decoder.decode(value, { stream: true });
+    }
+    const totalMs = Date.now() - started;
+    // SSE frames arrive as "data: {...}"; the readable text is inside them.
+    const visible = text
+      .split("\n")
+      .map((l) => l.replace(/^data:\s*/, "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .slice(0, 160);
+    // One chunk is a legitimate answer, not a failure; it is just recorded as
+    // streamed:false so "it streamed" is never assumed.
+    const ok = text.length > 0;
+    const streamed = chunks > 1;
+    if (!ok) failed += 1;
+    checks.push({
+      name: "chat (stream)",
+      status: res.status,
+      ms: totalMs,
+      ok,
+      sample: `seat=${res.headers.get("x-nova-seat") ?? "?"} streamed=${streamed} chunks=${chunks} first=${firstMs}ms total=${totalMs}ms · ${visible}`,
+    });
+    return {
+      ok,
+      status: res.status,
+      seat: res.headers.get("x-nova-seat") ?? null,
+      chunks,
+      streamed,
+      firstChunkMs: firstMs,
+      totalMs,
+      chars: text.length,
+      text: visible,
+    };
+  } catch (err) {
+    failed += 1;
+    checks.push({ name: "chat (stream)", status: 0, ms: Date.now() - started, ok: false, sample: err.message });
+    return { ok: false, status: 0, error: err.message };
+  }
+})();
+
 /* ── CSV mirrors ────────────────────────────────────────────────────────────
    Google Sheets cannot parse JSON, but `=IMPORTDATA(<url>)` reads CSV and
    re-fetches on its own. These three files are that bridge: a spreadsheet that
@@ -93,6 +165,8 @@ const report = {
   corpusIndexTotal: corpus?.indexTotal ?? null,
   corpusSlice: corpus?.slice ?? null,
   negativeSearchOk: corpusMiss?.ok ?? null,
+  // streaming is a measurement: chunks > 1 means tokens really arrived over time
+  chat: chat ?? null,
   checks,
 };
 fs.mkdirSync(path.join(root, "state"), { recursive: true });
