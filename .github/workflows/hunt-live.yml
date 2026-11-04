@@ -10,6 +10,10 @@ on:
     branches: [main]
     paths:
       - "scripts/hunt-live.mjs"
+      # the publisher and the witness are part of this pipeline: changing either
+      # one must re-run the job that depends on them, or the fix is unverified
+      - "scripts/ci-commit.mjs"
+      - "scripts/prove-published.mjs"
       - "ops/verify/targets.json"
       - ".github/workflows/hunt-live.yml"
   workflow_dispatch:

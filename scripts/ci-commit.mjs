@@ -65,6 +65,8 @@ function git(args, { allowFail = false } = {}) {
   }
 }
 
+const firstLine = (t) => String(t ?? "").trim().split("\n").filter(Boolean).slice(-1)[0] ?? "";
+
 /** A failure the next reader can see without the job log. */
 function fail(outcome, detail) {
   attempts.push({ outcome, detail });
@@ -116,18 +118,26 @@ for (let attempt = 1; attempt <= 3; attempt += 1) {
   // `-X theirs` keeps the file we just measured when a bot touched the same path.
   // `-X ours` did the opposite: it kept origin's copy, the measurement commit went
   // empty, rebase dropped it, and the push still exited 0.
-  const rebase = git(["rebase", "-X", "theirs", `origin/${branch}`], { allowFail: true });
-  if (!rebase.ok && /CONFLICT/.test(rebase.out)) {
+  // --autostash: other steps in the job dirty the tree (measured: `pnpm install
+  // --no-frozen-lockfile` rewrites pnpm-lock.yaml), and a dirty tree makes rebase
+  // refuse with "cannot rebase: You have unstaged changes" — which is not a
+  // conflict, so the old code pushed anyway, got rejected, and failed with no
+  // reason recorded (run 41892150514: "push-failed … after 3 attempts", nothing
+  // else). Autostash carries the dirt across the rebase and puts it back.
+  const rebase = git(["rebase", "--autostash", "-X", "theirs", `origin/${branch}`], { allowFail: true });
+  if (!rebase.ok) {
     git(["rebase", "--abort"], { allowFail: true });
-    attempts.push({ attempt, rebase: "conflict" });
-    console.log("ci-commit: rebase conflicted — retrying with a fresh fetch");
-    continue;
+    attempts.push({ attempt, rebase: firstLine(rebase.out) });
+    if (/CONFLICT/.test(rebase.out)) {
+      console.log("ci-commit: rebase conflicted — retrying with a fresh fetch");
+      continue;
+    }
+    console.log(`ci-commit: rebase failed (${firstLine(rebase.out)}) — retrying with a fresh fetch`);
   }
-  if (!rebase.ok) attempts.push({ attempt, rebase: rebase.out.trim().split("\n")[0] });
 
   const push = git(["push", "origin", `HEAD:${branch}`], { allowFail: true });
   if (!push.ok) {
-    attempts.push({ attempt, push: push.out.trim().split("\n").slice(-1)[0] ?? "rejected" });
+    attempts.push({ attempt, push: firstLine(push.out) || "rejected" });
     console.log(`ci-commit: push rejected on attempt ${attempt} — another job wrote first, retrying`);
     continue;
   }
@@ -149,4 +159,7 @@ for (let attempt = 1; attempt <= 3; attempt += 1) {
   );
 }
 
-fail("push-failed", `origin/${branch} does not match HEAD after 3 attempts`);
+fail(
+  "push-failed",
+  `origin/${branch} does not match HEAD after 3 attempts · ${JSON.stringify(attempts)}`,
+);

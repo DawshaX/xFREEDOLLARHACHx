@@ -19,6 +19,7 @@ on:
     paths:
       - ".github/workflows/vuln-corpus.yml"
       - "scripts/ingest-vuln-corpus.mjs"
+      - "scripts/ci-commit.mjs"
       - "artifacts/api-server/src/lib/ops/vuln-corpus.ts"
   workflow_dispatch:
     inputs:
