@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { libraryStatus } from "../lib/ops/advisory-library";
+import { corpusStatus } from "../lib/ops/vuln-corpus";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,7 @@ const router: IRouter = Router();
  */
 router.get("/dashboard/stats", async (_req, res) => {
   const library = libraryStatus();
+  const corpus = corpusStatus();
   let dbCounts: Partial<Record<string, number>> = {};
   try {
     const [counts] = await db
@@ -60,10 +62,21 @@ router.get("/dashboard/stats", async (_req, res) => {
       says_ar: library.says_ar,
     },
     githubAdvisories: library.measured ? library.total : null,
+    // the real CVE corpus (NVD+KEV+EPSS ingest) — 0 rows until an ingest ran
+    corpus: {
+      measured: corpus.measured,
+      total: corpus.total,
+      kev: corpus.kev,
+      bySeverity: corpus.bySeverity,
+      products: corpus.products,
+      at: corpus.at,
+      ageMin: corpus.ageMin,
+      says_ar: corpus.says_ar,
+    },
     // nothing in this build measures these, so they are null — not a made-up figure
     cisaKev: null,
     exploitsCatalogued: null,
-    nvdAdvisories: null,
+    nvdAdvisories: corpus.measured ? corpus.total : null,
     protectionStatus: null,
     systemMode: "standalone-or-db",
     completedJobs: dbCounts.completedJobs ?? 0,

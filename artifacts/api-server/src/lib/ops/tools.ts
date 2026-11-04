@@ -33,6 +33,7 @@ import { HOSTS, freeHostSummary, type FreeHost } from "./free-hosts";
 import { execOnLocalAgent } from "../../routes/local-agent";
 import { sessionArgs, sessionHeaders, redactSecrets, hasSession } from "./session";
 import { libraryStatus, lookupProduct } from "./advisory-library";
+import { corpusStatus, queryCorpus } from "./vuln-corpus";
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
 
@@ -837,6 +838,72 @@ export const KINDS: Record<string, KindDef> = {
         summary: `مكتبة ${st.total} إشعار (${(st.at ?? "").slice(0, 16).replace("T", " ")}) · «${product || cve}» → ${rows.length} مطابقة · ${findings.length} خطيرة`,
         findings,
         data: { product, libraryTotal: st.total, libraryAt: st.at ?? "never", matches: rows.length, rows: rows.slice(0, 20) },
+      };
+    },
+  },
+
+  /* ── the CVE corpus · passive · zero binaries ────────────────────────────
+     Different question from `intel.advisories`: not "what advisories mention this
+     word" but "which CVEs does NVD attach to this product's CPE, how many of them
+     are exploited in the wild (KEV), and what is their EPSS probability". */
+  "intel.corpus": {
+    id: "intel.corpus",
+    titleAr: "كوربوس الثغرات الحقيقي (NVD + KEV + EPSS) للمنتج المكتشف",
+    active: false,
+    budgetMs: 60_000,
+    run: async (ctx, params) => {
+      const st = corpusStatus();
+      if (!st.measured) {
+        return {
+          ok: false,
+          summary: st.says_ar,
+          findings: [],
+          error: "corpus-empty",
+          data: { hint: "node scripts/ingest-vuln-corpus.mjs --incremental", status: st },
+        };
+      }
+      const given = typeof params?.["product"] === "string" ? String(params["product"]).trim() : "";
+      const cve = typeof params?.["cve"] === "string" ? String(params["cve"]).trim() : "";
+      let product = given;
+      if (!product && !cve) {
+        const h = await scanHeaders(ctx.host, ctx.scheme === "https", sessionHeaders(ctx.program?.session));
+        const banner = String((h?.["headers"] as Record<string, string> | undefined)?.["server"] ?? "");
+        product = banner.replace(/\/.*/, "").trim();
+      }
+      if (!product && !cve) {
+        return { ok: false, summary: "مش عارف المنتج — ومش هخمّن", findings: [], error: "no-subject" };
+      }
+      const minCvss = params?.["minCvss"] === undefined ? 7 : Number(params["minCvss"]);
+      const q = await queryCorpus({ product: product || undefined, cve: cve || undefined, minCvss, kevOnly: false, limit: 30 });
+      const ev = writeEvidence(
+        ctx,
+        "intel.corpus",
+        `corpus query product=${product || "-"} cve=${cve || "-"} minCvss=${minCvss} (corpus ${st.total} @ ${st.at})`,
+        JSON.stringify({ product, cve, minCvss, scanned: q.scanned, rows: q.rows }, null, 2),
+      );
+      const findings: Finding[] = q.rows.slice(0, 10).map((r) =>
+        mkFinding(ctx, {
+          kind: "intel.corpus",
+          title: `${r.id}${r.cvss ? ` (CVSS ${r.cvss})` : ""}: ${r.desc.slice(0, 140)}`,
+          titleAr: `${r.id}${r.kev ? " · مستغلة فعلياً (KEV)" : ""}${r.epss ? ` · EPSS ${(r.epss * 100).toFixed(1)}%` : ""} — ${r.desc.slice(0, 120)}`,
+          severity: r.sev === "unknown" || r.sev === "none" ? "medium" : r.sev,
+          // KEV changes the calculus: exploited in the wild is worth reporting even
+          // before we prove the version. A CPE match alone is still only a lead.
+          confidence: r.kev ? 0.6 : 0.45,
+          cwe: r.cwe[0],
+          cvssGuess: r.cvss,
+          target: ctx.host,
+          reproduce: `curl -s "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${r.id}"`,
+          remediationAr: "اتأكد من إصدار المنتج على الهدف؛ لو داخل النطاق المتأثر، ارفع الإصدار للمُصلَح.",
+          evidence: [ev],
+          extra: { cve: r.id, cvss: r.cvss, kev: r.kev ?? false, epss: r.epss, cpe: r.cpe.slice(0, 3), corpusAt: st.at },
+        }),
+      );
+      return {
+        ok: true,
+        summary: `كوربوس ${st.total} CVE (KEV ${st.kev}) · «${product || cve}» → ${q.rows.length} مطابقة (CVSS≥${minCvss}) · اتصفح ${q.scanned} صف`,
+        findings,
+        data: { product, cve, matches: q.rows.length, scanned: q.scanned, corpusAt: st.at, rows: q.rows.slice(0, 15) },
       };
     },
   },

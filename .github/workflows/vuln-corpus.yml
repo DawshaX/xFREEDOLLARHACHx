@@ -1,0 +1,112 @@
+name: vuln corpus (real NVD + KEV + EPSS)
+
+# The program was always connected to the real feeds (NVD, GHSA, EPSS, CIRCL, OSV…)
+# but each call pulled 5–10 records for a telemetry panel, so nothing accumulated.
+# This job accumulates: it walks the actual NVD database, joins CISA KEV and FIRST
+# EPSS on the CVE id, and publishes a corpus the app can query by product or CVE.
+#
+#   • every 30 min  → incremental (lastModStartDate = last run) → new CVEs land fast
+#   • weekly        → full pass over the database
+#
+# Numbers are printed from the index file the ingest wrote. Nothing here is typed.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *" # incremental: pick up CVEs published/modified since last run
+    - cron: "0 3 * * 0" # weekly full pass
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/vuln-corpus.yml"
+      - "scripts/ingest-vuln-corpus.mjs"
+      - "artifacts/api-server/src/lib/ops/vuln-corpus.ts"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "incremental | full"
+        default: "incremental"
+      pages:
+        description: "pages of 2000 for full mode (0 = whole database)"
+        default: "0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vuln-corpus
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile --ignore-scripts
+
+      - name: plumbing proofs (27 checks, no network needed)
+        run: node scripts/test-vuln-corpus.mjs
+
+      - name: ingest
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          MODE: ${{ github.event.inputs.mode || (github.event.schedule == '0 3 * * 0' && 'full' || 'incremental') }}
+          PAGES: ${{ github.event.inputs.pages || '0' }}
+        run: |
+          if [ "$MODE" = "full" ]; then
+            if [ "$PAGES" = "0" ]; then
+              node scripts/ingest-vuln-corpus.mjs --all
+            else
+              node scripts/ingest-vuln-corpus.mjs --pages="$PAGES"
+            fi
+          else
+            node scripts/ingest-vuln-corpus.mjs --incremental
+          fi
+
+      - name: measured summary
+        run: |
+          node -e '
+            const i = require("./state/vuln-corpus-index.json");
+            const sev = Object.entries(i.bySeverity).map(([k,v]) => `${k}: ${v}`).join(" · ");
+            const mb = (i.files.bytes/1048576).toFixed(2);
+            console.log(`${i.total} CVEs · ${i.kev} KEV · ${i.epssScored} EPSS · ${i.products} products · ${mb} MB`);
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              `### Vulnerability corpus (measured)\n\n| | |\n|---|---|\n| **CVEs stored** | ${i.total} |\n| exploited in the wild (KEV) | ${i.kev} |\n| EPSS-scored | ${i.epssScored} |\n| distinct products (CPE) | ${i.products} |\n| corpus size | ${mb} MB |\n| mode | ${i.mode} |\n| synced at | ${i.at} |\n| severity | ${sev} |\n\nTop products: ${i.topProducts.slice(0,8).map(p=>`${p.product} (${p.count})`).join(", ")}\n`);
+          '
+
+      - name: commit the index (the corpus itself goes to the release)
+        run: |
+          if git diff --quiet -- state/vuln-corpus-index.json; then echo "no change"; exit 0; fi
+          git config user.name "nova-corpus-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add state/vuln-corpus-index.json
+          git commit -m "chore(corpus): measured CVE index $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
+
+      - name: publish the corpus as a release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: vuln-corpus
+          name: "Vulnerability corpus (NVD + KEV + EPSS)"
+          body: |
+            Corpus حقيقي مفتوح: `cves.jsonl.gz` (سطر JSON لكل CVE) + `index.json`.
+
+            - المصدر: NVD 2.0 + CISA KEV + FIRST EPSS (كلهم مجانيين بلا مفتاح)
+            - الأرقام مكتوبة في `vuln-corpus-index.json` مع وقت السحب
+            - الاستخدام من البرنامج: `NOVA_CORPUS_INDEX` + الملف في `state/vuln-corpus/`
+          files: |
+            state/vuln-corpus/cves.jsonl.gz
+            state/vuln-corpus-index.json
+          fail_on_unmatched_files: false

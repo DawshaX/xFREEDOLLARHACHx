@@ -77,3 +77,4 @@ state/auto-update.json
 state/auto-update.log
 # static binaries fetched by scripts/fetch-toolchain.mjs at build time
 /vendor/
+state/vuln-corpus/

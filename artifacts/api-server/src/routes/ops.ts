@@ -62,6 +62,7 @@ import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
 import { maskProgram, maskSession, hasSession } from "../lib/ops/session";
 import { libraryStatus, lookupCve, lookupProduct, syncAdvisories } from "../lib/ops/advisory-library";
+import { corpusStatus, readIndex, queryCorpus } from "../lib/ops/vuln-corpus";
 import { buildStamp } from "../lib/ops/version";
 import { throttleStats } from "../lib/ops/ratelimit";
 import { broadcastEvent } from "../lib/ws-hub";
@@ -101,6 +102,41 @@ router.get("/ops/kinds", (_req: Request, res: Response) => {
       allowNodeTools: process.env.NOVA_ALLOW_NODE_TOOLS !== "0",
       nodeToolsPresent: tools.filter((t) => t.present).map((t) => t.bin),
     },
+  });
+});
+
+/**
+ * كوربوس الثغرات الحقيقي (NVD + KEV + EPSS).
+ * GET /api/ops/corpus                العدد المقاس + توزيعه + تاريخ السحب
+ * GET /api/ops/corpus?product=nginx  ثغرات منتج معيّن من الكوربوس
+ * GET /api/ops/corpus?cve=CVE-2024-3094
+ */
+router.get("/ops/corpus", async (req: Request, res: Response) => {
+  const st = corpusStatus();
+  const index = readIndex();
+  const product = String(req.query.product ?? "").trim();
+  const cve = String(req.query.cve ?? "").trim();
+  let query: Awaited<ReturnType<typeof queryCorpus>> | null = null;
+  if (product || cve) {
+    query = await queryCorpus({
+      product: product || undefined,
+      cve: cve || undefined,
+      minCvss: req.query.minCvss === undefined ? undefined : Number(req.query.minCvss),
+      kevOnly: req.query.kev === "1",
+      limit: req.query.limit === undefined ? 20 : Number(req.query.limit),
+    });
+  }
+  res.json({
+    ok: true,
+    ...st,
+    byYear: index?.byYear ?? null,
+    topProducts: index?.topProducts ?? null,
+    sources: index?.sources ?? null,
+    mode: index?.mode ?? null,
+    query,
+    how_ar:
+      "المصدر NVD 2.0 + CISA KEV + EPSS. الرقم من ملف الفهرس المكتوب بالسحب، مش تقدير. " +
+      "لو القرص مش فيه الملف: نزّله من release tag «vuln-corpus» أو شغّل scripts/ingest-vuln-corpus.mjs",
   });
 });
 
