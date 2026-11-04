@@ -1,13 +1,13 @@
 {
   "measured": true,
-  "at": "2026-11-04T20:44:52.614Z",
+  "at": "2026-11-04T21:11:07.584Z",
   "total": 120000,
   "bySeverity": {
     "high": 47725,
     "medium": 53432,
     "low": 5975,
-    "critical": 6105,
-    "unknown": 6763
+    "unknown": 6763,
+    "critical": 6105
   },
   "kev": 430,
   "epssScored": 113237,
@@ -12583,20 +12583,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2008-5444",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in the Oracle Secure Backup component in Oracle Secure Backup 10.2.0.2 allows remote attackers to affect confidentiality, integrity, and availability via unknown vectors, a different vulnerability than CVE-2008-5448 and CVE-2008-5449.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.60625,
-      "pub": "2009-01-14T01:30:00.717",
-      "products": [
-        "secure_backup"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2012-4711",
       "cvss": 10,
       "sev": "high",
@@ -12611,6 +12597,20 @@
         "kingview",
         "kingview",
         "kingview"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2008-5444",
+      "cvss": 10,
+      "sev": "high",
+      "desc": "Unspecified vulnerability in the Oracle Secure Backup component in Oracle Secure Backup 10.2.0.2 allows remote attackers to affect confidentiality, integrity, and availability via unknown vectors, a different vulnerability than CVE-2008-5448 and CVE-2008-5449.",
+      "cwe": [],
+      "kev": false,
+      "epss": 0.60625,
+      "pub": "2009-01-14T01:30:00.717",
+      "products": [
+        "secure_backup"
       ],
       "refs": []
     },
@@ -13499,5 +13499,5 @@
       "refs": []
     }
   ],
-  "says_ar": "120000 ثغرة حقيقية من NVD · 430 مستغلّة فعلياً (KEV) · 37326 منتج · مزامنة 2026-11-04T20:44:52.614Z"
+  "says_ar": "120000 ثغرة حقيقية من NVD · 430 مستغلّة فعلياً (KEV) · 37326 منتج · مزامنة 2026-11-04T21:11:07.584Z"
 }
