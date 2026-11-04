@@ -1,0 +1,1099 @@
+{
+  "measured": true,
+  "at": "2026-11-04T04:42:28.812Z",
+  "total": 72,
+  "bySeverity": {
+    "critical": 11,
+    "high": 24,
+    "medium": 31,
+    "low": 6
+  },
+  "kev": 0,
+  "epssScored": 56,
+  "products": 10,
+  "mode": "incremental",
+  "sources": [
+    "NVD 2.0",
+    "CISA KEV",
+    "EPSS"
+  ],
+  "sample": 72,
+  "rows": [
+    {
+      "id": "CVE-2026-121607",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "A vulnerability was found in Qihoo 360 D603-2, D600-2, D606-6 and D706 up to 6.4.9. This affects the function testspeed_command of the file /fs2/bin/iscm. Performing a manipulation of the argument host results in os command injection. The attack may be initiat",
+      "cwe": [
+        "CWE-77",
+        "CWE-78"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T02:17:19.753",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-121609",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "A vulnerability was identified in Qihoo 360 Whole Home Router M5 4.0.17.1566. This issue affects the function Home of the file /etc/init.d/mpt of the component Boot Script. The manipulation leads to hard-coded credentials. Remote exploitation of the attack is ",
+      "cwe": [
+        "CWE-259",
+        "CWE-798"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T02:17:20.243",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-121615",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "A vulnerability was determined in Linksys E5600 1.1.0.26. Affected is an unknown function of the file /cgi-bin/mesh_login.cgi of the component Login Handler. Executing a manipulation can lead to improper authentication. The attack can be launched remotely. The",
+      "cwe": [
+        "CWE-287"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T03:17:14.810",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-44008",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "vm2 is an open source vm/sandbox for Node.js. Prior to 3.11.2, the new method neutralizeArraySpeciesBatch works with objects from the other side but can call into this side via getter on the array prototype exposing objects of the wrong side into the sandbox. ",
+      "cwe": [
+        "CWE-668",
+        "CWE-1100"
+      ],
+      "kev": false,
+      "epss": 0.00851,
+      "pub": "2026-05-13T18:16:17.667",
+      "products": [
+        "vm2"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-44009",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "vm2 is an open source vm/sandbox for Node.js. Prior to 3.11.2, VM2 suffers from a sandbox breakout vulnerability. This allows attackers to write code which can escape from the VM2 sandbox and execute arbitrary commands on the host system. This vulnerability is",
+      "cwe": [
+        "CWE-668",
+        "CWE-653"
+      ],
+      "kev": false,
+      "epss": 0.00812,
+      "pub": "2026-05-13T18:16:17.803",
+      "products": [
+        "vm2"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-39892",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "cryptography is a package designed to expose cryptographic primitives and recipes to Python developers. From 45.0.0 to before 46.0.7, if a non-contiguous buffer was passed to APIs which accepted Python buffers (e.g. Hash.update()), this could lead to buffer ov",
+      "cwe": [
+        "CWE-119",
+        "CWE-131"
+      ],
+      "kev": false,
+      "epss": 0.00652,
+      "pub": "2026-04-08T21:17:01.547",
+      "products": [
+        "cryptography"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2025-49602",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "An issue was discovered in Keyfactor EJBCA 9. When an administrator is removed from its administrator role while having a valid TLS session, EJBCA may, in certain circumstances, cache authentication for longer than the configured maximum time (default: 30 seco",
+      "cwe": [
+        "CWE-613"
+      ],
+      "kev": false,
+      "epss": 0.00187,
+      "pub": "2026-10-30T17:17:11.740",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-118762",
+      "cvss": 9.3,
+      "sev": "critical",
+      "desc": "Monkeytype is a minimalistic and customizable typing test. Prior to 26.43.0, the .github/workflows/fix-formatting.yml workflow runs on pull_request_target with repository write permissions, checks out a fork pull request, installs dependencies from the fork's ",
+      "cwe": [
+        "CWE-829"
+      ],
+      "kev": false,
+      "epss": 0.0032,
+      "pub": "2026-10-29T17:18:07.070",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-121803",
+      "cvss": 9.3,
+      "sev": "critical",
+      "desc": "In UFS Field Firmware Update (FFU) functionality, there is a possible out-of-bounds write due to missing bounds checking on the PRDT table size. This could lead to local code execution or denial of service with no additional execution privileges needed.",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T04:17:33.973",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-44007",
+      "cvss": 9.1,
+      "sev": "critical",
+      "desc": "vm2 is an open source vm/sandbox for Node.js. Prior to 3.11.1, when a NodeVM is created with nesting: true, sandbox code can unconditionally require('vm2') regardless of the outer VM's require configuration — including require: false. With access to vm2, the s",
+      "cwe": [
+        "CWE-284",
+        "CWE-1100"
+      ],
+      "kev": false,
+      "epss": 0.0096,
+      "pub": "2026-05-13T18:16:17.527",
+      "products": [
+        "vm2"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-121802",
+      "cvss": 9.1,
+      "sev": "critical",
+      "desc": "@better-auth/expo before 1.7.16 allows certain account-takeover outcomes (e.g., unauthenticated changes of any account's email address), because it signs a caller-supplied state value without checking whether that value had been issued by the server. NOTE: the",
+      "cwe": [
+        "CWE-346"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T03:17:15.730",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-91437",
+      "cvss": 8.7,
+      "sev": "high",
+      "desc": "Vulnerability in the Siebel CRM Deployment product of Oracle Siebel CRM (component: Server Infrastructure).  Supported versions that are affected are 17.0-26.9. Easily exploitable vulnerability allows high privileged attacker with network access via HTTP to co",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": false,
+      "epss": 0.00361,
+      "pub": "2026-10-20T22:20:47.210",
+      "products": [
+        "siebel_crm"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-84730",
+      "cvss": 8.7,
+      "sev": "high",
+      "desc": "Stack-based buffer overflow in certain ASUS Router firmware allows an unauthenticated nearby attacker to execute arbitrary commands with root privileges via a crafted device name.\nRefer to the '\nSecurity Update for ASUS Router AiCloud Feature ' section on the ",
+      "cwe": [
+        "CWE-121"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T02:17:21.323",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-112116",
+      "cvss": 8.5,
+      "sev": "high",
+      "desc": "An exposed IOCTL with insufficient access control in ASUS System Control Interface allows a local, low-privileged user to read and write arbitrary physical memory through crafted device control requests, ultimately resulting in a complete compromise of the aff",
+      "cwe": [
+        "CWE-782"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T02:17:14.953",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-45049",
+      "cvss": 8.3,
+      "sev": "high",
+      "desc": "Open Access Management (OpenAM) is an access management solution. Prior to 16.1.1, the `Cross-Domain Single Sign-On` (`CDSSO`) servlet allows a logged-in user's raw OpenAM session token to be POSTed to an attacker-controlled URL. An attacker who induces an aut",
+      "cwe": [
+        "CWE-201"
+      ],
+      "kev": false,
+      "epss": 0.00332,
+      "pub": "2026-10-29T22:17:02.400",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119127",
+      "cvss": 8.1,
+      "sev": "high",
+      "desc": "ZITADEL 4.0.0 before 4.19.5 contains a host header injection vulnerability in the Login V2 UI that allows unauthenticated attackers to poison password-reset, invite, and email-verification links by supplying untrusted x-zitadel-public-host, x-zitadel-forward-h",
+      "cwe": [
+        "CWE-640"
+      ],
+      "kev": false,
+      "epss": 0.00278,
+      "pub": "2026-10-29T16:18:05.487",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-80335",
+      "cvss": 7.6,
+      "sev": "high",
+      "desc": "In the bootloader download module, there is a possible out-of-bounds write due to a failure to reset a global offset variable during firmware update sessions. This could lead to heap memory corruption, system crash, or potential arbitrary code execution with n",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T04:17:37.623",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-49293",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "js-toml is a TOML parser for JavaScript, fully compliant with the TOML 1.0.0 Spec. Versions up to and including 1.1.1 parse hexadecimal / octal / binary integer literals via a hand-written `parseBigInt` loop that multiplies a `BigInt` accumulator by the radix ",
+      "cwe": [
+        "CWE-400",
+        "CWE-407",
+        "CWE-1333"
+      ],
+      "kev": false,
+      "epss": 0.00644,
+      "pub": "2026-06-19T19:16:36.297",
+      "products": [
+        "js-toml"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-45109",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "Next.js is a React framework for building full-stack web applications. From 15.2.0 to before 15.5.18 and 16.2.6, it was found that the fix addressing CVE-2026-44575 did not apply to middleware.ts with Turbopack. This vulnerability is fixed in 15.5.18 and 16.2.",
+      "cwe": [
+        "CWE-288",
+        "CWE-358"
+      ],
+      "kev": false,
+      "epss": 0.00602,
+      "pub": "2026-05-13T18:16:19.283",
+      "products": [
+        "next.js",
+        "next.js"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-118772",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "joi is a schema description language and data validator for JavaScript. From 17.1.1 until 17.13.9 and 18.3.1, the Joi.string().email({ multiple: true }) rule uses a separator regular expression whose leading whitespace quantifier is retried at every position i",
+      "cwe": [
+        "CWE-1333"
+      ],
+      "kev": false,
+      "epss": 0.00467,
+      "pub": "2026-10-29T19:17:19.563",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119191",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "Forge (also called node-forge) is a native implementation of Transport Layer Security in JavaScript. Prior to 1.4.1, the affected implementation used asn1.fromDer(), BIT STRING decoding, maxDepth to process the relevant input or security decision. node-forge d",
+      "cwe": [
+        "CWE-400",
+        "CWE-674"
+      ],
+      "kev": false,
+      "epss": 0.00429,
+      "pub": "2026-10-29T20:17:30.197",
+      "products": [
+        "forge"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119196",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "pyasn1 is a generic ASN.1 library for Python. Prior to 0.6.5, constructed BIT STRING decoding repeatedly shifts and copies the complete bit value accumulated from earlier fragments. Attacker-controlled BER or CER input contains many constructed BIT STRING frag",
+      "cwe": [
+        "CWE-407"
+      ],
+      "kev": false,
+      "epss": 0.00425,
+      "pub": "2026-10-29T20:17:30.770",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119187",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "Forge (also called node-forge) is a native implementation of Transport Layer Security in JavaScript. Prior to 1.4.1, the affected implementation used forge.tls.createConnection(), TLS record processing, process() to process the relevant input or security decis",
+      "cwe": [
+        "CWE-674"
+      ],
+      "kev": false,
+      "epss": 0.00415,
+      "pub": "2026-10-29T20:17:29.647",
+      "products": [
+        "forge"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-110245",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "IBM Langflow OSS 1.0.0 through 1.12.4 could allow a remote attacker to obtain sensitive information due to improper authentication.",
+      "cwe": [
+        "CWE-287"
+      ],
+      "kev": false,
+      "epss": 0.00365,
+      "pub": "2026-10-29T16:17:56.860",
+      "products": [
+        "langflow"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119119",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "Crawl4AI before 0.9.5 contains a denial of service vulnerability in the Docker API server where _clamp_untrusted() fails to cap the delay_before_return_html, mean_delay, and max_range fields of untrusted CrawlerRunConfig bodies. Unauthenticated attackers can s",
+      "cwe": [
+        "CWE-770"
+      ],
+      "kev": false,
+      "epss": 0.00359,
+      "pub": "2026-10-29T16:18:04.207",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-103963",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "A flaw was found in glib-networking. When establishing connections using Transport Layer Security (TLS) version 1.3, the client-side session cache does not limit the number of session tickets retained for a single host. A malicious server can exploit this by s",
+      "cwe": [
+        "CWE-400"
+      ],
+      "kev": false,
+      "epss": 0.00339,
+      "pub": "2026-10-30T05:16:57.237",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-117346",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "Bitcoin Core through 31.1 is vulnerable to Denial of Service via undo files having no size limit",
+      "cwe": [
+        "CWE-770"
+      ],
+      "kev": false,
+      "epss": 0.00198,
+      "pub": "2026-10-30T15:16:46.777",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-121617",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "A security flaw has been discovered in Linksys E5600 1.1.0.26. Affected by this issue is the function init_multipart of the file /cgi-bin/upload_fw.cgi of the component Header Parser. The manipulation results in out-of-bounds write. The attack may be launched ",
+      "cwe": [
+        "CWE-119",
+        "CWE-787"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T03:17:15.287",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-79405",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "In Modem Firmware, there is a possible system crash due to improper input validation of dedicated PUCCH configuration. This could lead to remote denial of service with no additional execution privileges needed.",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T04:17:37.480",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-121608",
+      "cvss": 7.3,
+      "sev": "high",
+      "desc": "A vulnerability was determined in Qihoo 360 D603-2, D600-2 and D606-6 up to 6.3.2. This vulnerability affects the function on_push_message of the file /fs2/bin/iscm of the component Timezone Push Handler. Executing a manipulation of the argument tz can lead to",
+      "cwe": [
+        "CWE-77",
+        "CWE-78"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T02:17:20.000",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-121610",
+      "cvss": 7.3,
+      "sev": "high",
+      "desc": "A security flaw has been discovered in funadmin 7.1.0. Impacted is the function Curd::selectList of the file /frontend/ajax/index of the component Frontend List Endpoint. The manipulation of the argument selectFields results in sql injection. The attack can be",
+      "cwe": [
+        "CWE-74",
+        "CWE-89"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T02:17:20.470",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-84729",
+      "cvss": 7.2,
+      "sev": "high",
+      "desc": "Out-of-bounds write in certain ASUS Router firmware allow an unauthenticated nearby attacker to write data beyond the intended buffer or potentially cause a denial-of-service (DoS) via a crafted packet.\nRefer to the ' \nSecurity Update for ASUS Router Firmware ",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T02:17:21.163",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-91438",
+      "cvss": 7.1,
+      "sev": "high",
+      "desc": "Vulnerability in the Siebel CRM Deployment product of Oracle Siebel CRM (component: Server Infrastructure).  Supported versions that are affected are 17.0-26.9. Easily exploitable vulnerability allows low privileged attacker with network access via HTTP to com",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": false,
+      "epss": 0.00278,
+      "pub": "2026-10-20T22:20:47.323",
+      "products": [
+        "siebel_crm"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-62374",
+      "cvss": 7.1,
+      "sev": "high",
+      "desc": "SD JWT JS is a JavaScript implementation of the Selective Disclosure JWT (SD-JWT) specification. In version 0.19.0 and earlier, `@sd-jwt/decode`, also used by `@sd-jwt/core`, silently drops a tampered Disclosure whose digest no longer matches the Issuer-signed",
+      "cwe": [
+        "CWE-176",
+        "CWE-754"
+      ],
+      "kev": false,
+      "epss": 0.00226,
+      "pub": "2026-10-29T17:18:10.143",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119407",
+      "cvss": 7.1,
+      "sev": "high",
+      "desc": "Element Web and Element Desktop before 1.12.32 accept guest credentials from URL fragment parameters in loadSession, allowing remote unauthenticated attackers to log out users and clear local stores. Attackers can lure logged-in users into opening links with g",
+      "cwe": [
+        "CWE-352"
+      ],
+      "kev": false,
+      "epss": 0.00142,
+      "pub": "2026-10-30T12:16:37.120",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-110464",
+      "cvss": 6.9,
+      "sev": "medium",
+      "desc": "Missing authorization in ASUS Armoury Crate allows a local attacker to write content into a specific file or registry location with Local System privileges, or to cause a recoverable system crash, via the service's exposed inter-process interface.\nRefer to the",
+      "cwe": [
+        "CWE-862"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T02:17:14.800",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119200",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "Nuxt is an open-source web development framework for Vue.js. From 4.6.0 until 4.6.3, Nuxt resolves literal or percent-encoded dot segments before rendering a page while Nitro routing, server/middleware checks, and server route rules evaluate the unresolved pat",
+      "cwe": [
+        "CWE-41",
+        "CWE-436",
+        "CWE-863"
+      ],
+      "kev": false,
+      "epss": 0.00339,
+      "pub": "2026-10-29T21:17:18.943",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-115455",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "A flaw was found in GCC libstdc++. When an application extracts data into a bitset from a wide-character stream, internal stack memory allocation fails to properly account for character size and alignment. An attacker capable of supplying crafted input to an a",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": false,
+      "epss": 0.00303,
+      "pub": "2026-10-30T08:16:55.463",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-91440",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "Vulnerability in the Siebel CRM Deployment product of Oracle Siebel CRM (component: Server Infrastructure).  Supported versions that are affected are 17.0-26.9. Easily exploitable vulnerability allows unauthenticated attacker with network access via HTTP to co",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": false,
+      "epss": 0.00255,
+      "pub": "2026-10-20T22:20:47.550",
+      "products": [
+        "siebel_crm"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-110192",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "IBM Langflow OSS 1.0.0 through 1.12.8 could allow a remote authenticated attacker to obtain sensitive information due to insufficiently protected credentials.",
+      "cwe": [
+        "CWE-522"
+      ],
+      "kev": false,
+      "epss": 0.00249,
+      "pub": "2026-10-29T16:17:56.127",
+      "products": [
+        "langflow"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-88647",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "GnuTLS v3.8.13 can perhaps unexpectedly trust a certificate on the basis of Common Name when Subject Alternative Name has an SRV otherName (1.3.6.1.5.5.7.8.7) whose value is an OCTET STRING. NOTE: the Supplier does not consider this an actionable security vuln",
+      "cwe": [
+        "CWE-297"
+      ],
+      "kev": false,
+      "epss": 0.00208,
+      "pub": "2026-10-08T17:17:17.783",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-61673",
+      "cvss": 6.3,
+      "sev": "medium",
+      "desc": "WeGIA is a web manager for charitable institutions. Prior to 3.8.7, a stored DOM cross-site scripting vulnerability in `web/html/memorando/listar_despachos.php` results from unsafe handling of the `texto` field. The affected flow spans `web/controle/memorando/",
+      "cwe": [
+        "CWE-79"
+      ],
+      "kev": false,
+      "epss": 0.00334,
+      "pub": "2026-10-29T22:17:05.447",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-118766",
+      "cvss": 6.1,
+      "sev": "medium",
+      "desc": "Botan is a C++ cryptography library. Prior to 3.13.0, Botan's online OCSP client allowed a single HTTP redirect while posting an OCSP request to the URI in a certificate's Authority Information Access extension. A malicious OCSP responder or an on-path attacke",
+      "cwe": [
+        "CWE-918"
+      ],
+      "kev": false,
+      "epss": 0.00097,
+      "pub": "2026-10-29T18:17:28.693",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119277",
+      "cvss": 5.9,
+      "sev": "medium",
+      "desc": "MariaDB Connector/J is used to connect applications developed in Java to MariaDB and MySQL databases. From 3.0.0 until 3.3.7, 3.4.5, and 3.5.11, decoders for OK packet session-state blocks, column definition packets, text row data, or binary row data used serv",
+      "cwe": [
+        "CWE-125",
+        "CWE-130"
+      ],
+      "kev": false,
+      "epss": 0.00351,
+      "pub": "2026-10-29T21:17:21.067",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119281",
+      "cvss": 5.9,
+      "sev": "medium",
+      "desc": "MariaDB Connector/J is used to connect applications developed in Java to MariaDB and MySQL databases. From 3.0.0 until 3.3.7, 3.4.5, and 3.5.11, the connector assumed result bytes were UTF-8 but guarded only changes to character_set_client. It did not reject n",
+      "cwe": [
+        "CWE-838"
+      ],
+      "kev": false,
+      "epss": 0.00283,
+      "pub": "2026-10-29T21:17:21.710",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-95209",
+      "cvss": 5.9,
+      "sev": "medium",
+      "desc": "An issue in gnutls v3.8.13 causes legitimate CA certificates to be rejected, leading to a Denial of Service (DoS). NOTE: this is disputed by multiple parties because the behavior does not offer a new ability for an adversary to conduct a denial of service, and",
+      "cwe": [
+        "CWE-400"
+      ],
+      "kev": false,
+      "epss": 0.00241,
+      "pub": "2026-10-08T19:20:52.830",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-95184",
+      "cvss": 5.9,
+      "sev": "medium",
+      "desc": "GnuTLS v3.8.13 does not properly enforce name constraints, as demonstrated by a permitted subtree violation for \"EE O=Evil accepted although outside permitted O=Good.\" NOTE: the Supplier does not consider this an actionable security vulnerability because of it",
+      "cwe": [
+        "CWE-400"
+      ],
+      "kev": false,
+      "epss": 0.00165,
+      "pub": "2026-10-08T18:18:33.240",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119285",
+      "cvss": 5.9,
+      "sev": "medium",
+      "desc": "Fiber is an Express inspired web framework written in Go. From 2.52.1 until 2.52.3, the CORS middleware's validateDomain wildcard matcher in middleware/cors/utils.go strips the scheme and checks only a host suffix without requiring a dot boundary. An applicati",
+      "cwe": [
+        "CWE-346",
+        "CWE-942"
+      ],
+      "kev": false,
+      "epss": 0.00129,
+      "pub": "2026-10-29T22:17:01.367",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119146",
+      "cvss": 5.6,
+      "sev": "medium",
+      "desc": "ProFTPD before 1.3.9e and 1.3.10rc5 contains a buffer overflow vulnerability in the mod_rewrite int:utf8trans RewriteMap that allows remote attackers to overwrite static buffers. Attackers can send FTP command arguments longer than 1024 bytes, without authenti",
+      "cwe": [
+        "CWE-120"
+      ],
+      "kev": false,
+      "epss": 0.00459,
+      "pub": "2026-10-30T12:16:35.207",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119204",
+      "cvss": 5.5,
+      "sev": "medium",
+      "desc": "pypdf is a free and open-source pure-python PDF library. Prior to 6.21.4, pypdf can consume excessive memory while parsing a crafted PDF page tree containing many shared resources. Page-tree flattening copies page dictionary and inherited resource entries with",
+      "cwe": [
+        "CWE-400"
+      ],
+      "kev": false,
+      "epss": 0.00221,
+      "pub": "2026-10-29T21:17:19.527",
+      "products": [
+        "pypdf"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119208",
+      "cvss": 5.5,
+      "sev": "medium",
+      "desc": "pypdf is a free and open-source pure-python PDF library. Prior to 6.21.3, pypdf can consume excessive time and memory when an application accesses the page count of a crafted encrypted PDF whose page tree declares a forged /Count value. Even after successful d",
+      "cwe": [
+        "CWE-400"
+      ],
+      "kev": false,
+      "epss": 0.00221,
+      "pub": "2026-10-29T21:17:20.090",
+      "products": [
+        "pypdf"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119376",
+      "cvss": 5.5,
+      "sev": "medium",
+      "desc": "SQLite before 3.54.0 contains a stack exhaustion vulnerability that allows attackers to bypass the SQLITE_LIMIT_EXPR_DEPTH limit by chaining COLLATE postfix operators. Attackers can supply roughly 175,000 chained COLLATE operators in SQL or an untrusted databa",
+      "cwe": [
+        "CWE-674"
+      ],
+      "kev": false,
+      "epss": 0.00183,
+      "pub": "2026-10-30T12:16:36.490",
+      "products": [
+        "sqlite"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-91439",
+      "cvss": 5.5,
+      "sev": "medium",
+      "desc": "Vulnerability in the Siebel CRM Deployment product of Oracle Siebel CRM (component: Server Infrastructure).  Supported versions that are affected are 17.0-26.9. Easily exploitable vulnerability allows low privileged attacker with logon to the infrastructure wh",
+      "cwe": [
+        "CWE-269"
+      ],
+      "kev": false,
+      "epss": 0.00134,
+      "pub": "2026-10-20T22:20:47.440",
+      "products": [
+        "siebel_crm"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119372",
+      "cvss": 5.5,
+      "sev": "medium",
+      "desc": "SQLite before 3.54.0 built with FTS3/FTS4 and SQLITE_ENABLE_FTS3_PARENTHESIS contains a use-after-free vulnerability in fts3BestSnippet() caused by dangling cached position-list pointers. Attackers can run a full-text MATCH query combining OR and NEAR operator",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": false,
+      "epss": 0.00131,
+      "pub": "2026-10-30T12:16:35.873",
+      "products": [
+        "sqlite"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119054",
+      "cvss": 5.4,
+      "sev": "medium",
+      "desc": "Multiple Pages Generator by Themeisle before 4.2.5 contains a stored cross-site scripting vulnerability that allows Contributor-level users to inject script via the [mpg] and [mpg_match] shortcode base-url attribute. Attackers can store entity-encoded payloads",
+      "cwe": [
+        "CWE-79"
+      ],
+      "kev": false,
+      "epss": 0.00226,
+      "pub": "2026-10-29T14:17:52.667",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-104331",
+      "cvss": 5.4,
+      "sev": "medium",
+      "desc": "IBM Langflow OSS 1.0.0 through 1.12.3 is vulnerable to server-side request forgery (SSRF). This may allow an authenticated attacker to send unauthorized requests from the system, potentially leading to network enumeration or facilitating other attacks.",
+      "cwe": [
+        "CWE-918"
+      ],
+      "kev": false,
+      "epss": 0.0018,
+      "pub": "2026-10-29T16:17:44.280",
+      "products": [
+        "langflow"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119131",
+      "cvss": 5.3,
+      "sev": "medium",
+      "desc": "Wasmtime 46.0.0 before 48.0.6 and 49.0.0 before 49.0.3 contains a denial of service vulnerability in wasmtime-wasi-http that lets guests crash the host by sending long request URLs. Guests can use set-path-with-query with a '?' after byte 65535, overflowing a ",
+      "cwe": [
+        "CWE-190"
+      ],
+      "kev": false,
+      "epss": 0.00304,
+      "pub": "2026-10-29T16:18:06.100",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-121616",
+      "cvss": 5.3,
+      "sev": "medium",
+      "desc": "A vulnerability was identified in Linksys E5600 1.1.0.26. Affected by this vulnerability is the function strcpy of the file /cgi-bin/mesh_login.cgi of the component JSON Request Parser. The manipulation of the argument username/password/token/source/cn/action ",
+      "cwe": [
+        "CWE-119",
+        "CWE-787"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T03:17:15.060",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-121618",
+      "cvss": 5.3,
+      "sev": "medium",
+      "desc": "A weakness has been identified in Linksys E5600 1.1.0.26. This affects an unknown part of the file /cgi-bin/fqc.cgi of the component Factory Quality Control. This manipulation causes information disclosure. Remote exploitation of the attack is possible. The ex",
+      "cwe": [
+        "CWE-200",
+        "CWE-284"
+      ],
+      "kev": false,
+      "epss": null,
+      "pub": "2026-11-04T03:17:15.507",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119143",
+      "cvss": 4.8,
+      "sev": "medium",
+      "desc": "Wasmtime 46.0.0 before 48.0.6 and 49.0.0 before 49.0.3 contains a denial of service vulnerability that allows guest code to trigger a host panic through out-of-bounds zero-length stream operations. Malicious guests can perform zero-length component model strea",
+      "cwe": [
+        "CWE-129"
+      ],
+      "kev": false,
+      "epss": 0.00212,
+      "pub": "2026-10-29T16:18:07.967",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119135",
+      "cvss": 4.8,
+      "sev": "medium",
+      "desc": "Wasmtime 46.0.0 before 48.0.6 and 49.0.0 before 49.0.3 panics when the host reads a component model stream as a different Rust item type than it was created with, because the host-to-host read path asserts matching TypeIds instead of returning an error. Guest ",
+      "cwe": [
+        "CWE-617"
+      ],
+      "kev": false,
+      "epss": 0.00208,
+      "pub": "2026-10-29T16:18:06.757",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119139",
+      "cvss": 4.8,
+      "sev": "medium",
+      "desc": "Wasmtime 46.0.0 before 48.0.6 and 49.0.0 before 49.0.3 contains a leftover assertion in component::Func::call that rejects guest exports using the async ABI option. An attacker who supplies a component with an async-lifted export can crash the host process whe",
+      "cwe": [
+        "CWE-617"
+      ],
+      "kev": false,
+      "epss": 0.00208,
+      "pub": "2026-10-29T16:18:07.373",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-104308",
+      "cvss": 4.3,
+      "sev": "medium",
+      "desc": "IBM Langflow OSS 1.0.0 through 1.12.3 could allow a remote authenticated attacker to cause a denial of service due to improper neutralization of special elements used in an OS command.",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": false,
+      "epss": 0.00338,
+      "pub": "2026-10-29T16:17:43.020",
+      "products": [
+        "langflow"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-104315",
+      "cvss": 4.3,
+      "sev": "medium",
+      "desc": "IBM Langflow OSS 1.0.0 through 1.12.3 is vulnerable to server-side request forgery (SSRF). This may allow an authenticated attacker to send unauthorized requests from the system, potentially leading to network enumeration or facilitating other attacks.",
+      "cwe": [
+        "CWE-918"
+      ],
+      "kev": false,
+      "epss": 0.00211,
+      "pub": "2026-10-29T16:17:43.653",
+      "products": [
+        "langflow"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-93009",
+      "cvss": 4.3,
+      "sev": "medium",
+      "desc": "A flaw was found in dnsmasq. The DHCPv6 client hostname parser can read one byte past the end of a crafted FQDN option because it checks the next label length before confirming the pointer is still inside the option. An attacker on the local network can trigge",
+      "cwe": [
+        "CWE-125"
+      ],
+      "kev": false,
+      "epss": 0.00202,
+      "pub": "2026-10-29T14:18:00.367",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-118947",
+      "cvss": 4.3,
+      "sev": "medium",
+      "desc": "A flaw was found in the UMA resource registration endpoint of the keycloak-services component, which provides the core logic for Keycloak's authorization and identity services. The issue occurs when remote resource management is enabled, allowing an authentica",
+      "cwe": [
+        "CWE-639"
+      ],
+      "kev": false,
+      "epss": 0.00198,
+      "pub": "2026-10-30T01:16:44.347",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119415",
+      "cvss": 3.7,
+      "sev": "low",
+      "desc": "CakePHP through 5.4.3 contains a header injection vulnerability in FormDataPart that allows attackers to inject MIME part headers via unsanitized Content-Type and Content-ID values. Attackers can supply CR/LF sequences in attachment MIME types or Content-IDs p",
+      "cwe": [
+        "CWE-93"
+      ],
+      "kev": false,
+      "epss": 0.0037,
+      "pub": "2026-10-30T12:16:37.850",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119123",
+      "cvss": 3.7,
+      "sev": "low",
+      "desc": "ImageMagick before 7.1.2-34 contains a stack overflow vulnerability in the TIFF decoder that occurs when the DNG decoder is disabled. Attackers can supply a crafted image file for processing to trigger the stack overflow and crash the application, causing deni",
+      "cwe": [
+        "CWE-674"
+      ],
+      "kev": false,
+      "epss": 0.00354,
+      "pub": "2026-10-29T16:18:04.847",
+      "products": [
+        "imagemagick"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-88648",
+      "cvss": 3.7,
+      "sev": "low",
+      "desc": "In GnuTLS v3.8.13, an excluded msUPN/SRV otherName is never checked. NOTE: the Supplier does not consider this an actionable security vulnerability because of its \"threat model doesn't consider attacks only possible by modifying anything within the trust bound",
+      "cwe": [
+        "CWE-295"
+      ],
+      "kev": false,
+      "epss": 0.00195,
+      "pub": "2026-10-08T19:20:52.703",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-118780",
+      "cvss": 3.7,
+      "sev": "low",
+      "desc": "Forge (also called node-forge) is a native implementation of Transport Layer Security in JavaScript. Prior to 1.4.1, the affected implementation used pki.verifyCertificateChain(), pki.createCaStore(), duplicate subject names to process the relevant input or se",
+      "cwe": [
+        "CWE-295",
+        "CWE-471"
+      ],
+      "kev": false,
+      "epss": 0.00172,
+      "pub": "2026-10-29T19:17:20.703",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-67693",
+      "cvss": 3.7,
+      "sev": "low",
+      "desc": "An issue in gnutls v.3.8.13 allows an attacker to obtain sensitive information via failing to reject end-entity X.509 certificates that contain a contradictory combination of Key Usage (KU) and Extended Key Usage (EKU). NOTE: the Supplier does not consider thi",
+      "cwe": [
+        "CWE-367"
+      ],
+      "kev": false,
+      "epss": 0.00151,
+      "pub": "2026-10-08T19:18:41.280",
+      "products": [],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-118776",
+      "cvss": 3.7,
+      "sev": "low",
+      "desc": "Forge (also called node-forge) is a native implementation of Transport Layer Security in JavaScript. Prior to 1.4.1, the affected implementation used decipher.finish(), CBC and ECB modes, PKCS#7 padding to process the relevant input or security decision. node-",
+      "cwe": [
+        "CWE-20",
+        "CWE-354"
+      ],
+      "kev": false,
+      "epss": 0.00131,
+      "pub": "2026-10-29T19:17:20.147",
+      "products": [],
+      "refs": []
+    }
+  ],
+  "says_ar": "72 ثغرة حقيقية من NVD · 0 مستغلّة فعلياً (KEV) · 10 منتج · مزامنة 2026-11-04T04:42:28.812Z"
+}
