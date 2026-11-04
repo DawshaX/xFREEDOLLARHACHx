@@ -161,15 +161,58 @@ export function describeBrain(doc: BrainDoc, now = Date.now()): { state: OrganSt
   return { state: "up", says: `فكّر ${ageMin === null ? "" : `من ${ageMin} دقيقة`}${seat} — ${line}` };
 }
 
-async function readBrain(base: string): Promise<BrainDoc | null> {
+/** Which home answered, said out loud — "the workflow wrote this" and "the edge
+ *  brain thought this" are different claims about freshness. */
+export function brainSourceLabel(doc: BrainDoc & { source?: string }): string {
+  return doc.source === "edge" ? "على Supabase Edge (pg_cron)" : "من ملف الـworkflow";
+}
+
+/**
+ * The brain has two homes now, and the panel should not care which one answered:
+ *
+ *   1. `state/nova-brain-latest.json` — written by the GitHub workflow. Good, but
+ *      only as fresh as the last cron run, and measured 2026-11-04 the crons
+ *      stopped firing for over an hour.
+ *   2. `/nova-brain` on Supabase Edge — thinks on a pg_cron tick every 5 minutes
+ *      and stores the same shape of document in Postgres.
+ *
+ * So: read the file, and if it is missing or older than 15 minutes, ask the edge
+ * brain. Whichever is newer wins; `source` says which one spoke.
+ */
+const BRAIN_EDGE_URL = BACKEND_URL.replace(/\/ops-api$/, "/nova-brain");
+const BRAIN_FILE_STALE_MS = 15 * 60 * 1000;
+
+async function readBrainFile(base: string): Promise<(BrainDoc & { source?: string }) | null> {
   if (!base) return null;
   try {
     const res = await fetch(`${base}/state/nova-brain-latest.json`, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return null;
-    return (await res.json()) as BrainDoc;
+    return { source: "workflow", ...((await res.json()) as BrainDoc) };
   } catch {
     return null;
   }
+}
+
+async function readBrainEdge(): Promise<(BrainDoc & { source?: string }) | null> {
+  try {
+    const res = await fetch(BRAIN_EDGE_URL, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { doc?: BrainDoc | null };
+    if (!body?.doc?.at) return null;
+    return { source: "edge", ...body.doc };
+  } catch {
+    return null;
+  }
+}
+
+async function readBrain(base: string): Promise<(BrainDoc & { source?: string }) | null> {
+  const file = await readBrainFile(base);
+  const fileAge = file?.at ? Date.now() - Date.parse(file.at) : Number.POSITIVE_INFINITY;
+  if (file && fileAge < BRAIN_FILE_STALE_MS) return file;
+  const edge = await readBrainEdge();
+  if (!edge) return file;
+  const edgeAge = Date.now() - Date.parse(edge.at);
+  return Number.isFinite(edgeAge) && edgeAge < fileAge ? edge : file;
 }
 
 const NO_SERVER = "اللوحة على Pages من غير سيرفر — القياس ده محتاج محرك. اربط سيرفر من «محطة نوفا» في نفس الصفحة.";
@@ -205,12 +248,12 @@ async function browserAwareness(): Promise<AwarenessView> {
   const organs: OrganView[] = [
     (() => {
       const described = brainDoc ? describeBrain(brainDoc) : null;
-      if (described) {
+      if (described && brainDoc) {
         return {
           id: "brain",
           label: "العقل اللغوي",
           state: described.state,
-          says: described.says,
+          says: `${described.says} · ${brainSourceLabel(brainDoc)}`,
           route: "/nova-fleet",
         };
       }
@@ -218,9 +261,13 @@ async function browserAwareness(): Promise<AwarenessView> {
         id: "brain",
         label: "العقل اللغوي",
         state: "unknown" as OrganState,
-        says: remoteSet ? "السيرفر اللي ربطته مابيتجاوبش على /api/nova-core/status" : "مفيش `state/nova-brain-latest.json` منشور — الـworkflow «NOVA brain» هو اللي بيكتبه",
+        says: remoteSet
+          ? "السيرفر اللي ربطته مابيتجاوبش على /api/nova-core/status"
+          : "مفيش تفكير منشور: لا ملف `state/nova-brain-latest.json` ولا رد من `/nova-brain` على الحافة",
         route: "/nova-fleet",
-        fixAr: remoteSet ? "الرابط المحفوظ وصلش — راجعه من «محطة نوفا»" : "شغّل workflow «NOVA brain» مرة، أو استنى الدورة الجاية (كل 15 دقيقة)",
+        fixAr: remoteSet
+          ? "الرابط المحفوظ وصلش — راجعه من «محطة نوفا»"
+          : "الحافة بتفكّر كل 5 دقايق لوحدها — لو ده ظاهر يبقى الاتنين واقعين، وده يحتاج تدخل",
       };
     })(),
     {
