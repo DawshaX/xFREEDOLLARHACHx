@@ -86,8 +86,10 @@ jobs:
       - name: ingest
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-          MODE: ${{ github.event.inputs.mode || (github.event.schedule == '0 3 * * 0' && 'full' || 'incremental') }}
-          PAGES: ${{ github.event.inputs.pages || '0' }}
+          # push = someone changed the pipeline itself → take the opportunity to
+          # rebuild the corpus properly (a delta cannot repair a damaged base).
+          MODE: ${{ github.event.inputs.mode || (github.event_name == 'push' && 'full' || (github.event.schedule == '0 3 * * 0' && 'full' || 'incremental')) }}
+          PAGES: ${{ github.event.inputs.pages || (github.event_name == 'push' && '60' || '0') }}
         run: |
           if [ "$MODE" = "full" ]; then
             if [ "$PAGES" = "0" ]; then
