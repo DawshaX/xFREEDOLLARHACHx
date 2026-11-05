@@ -14,7 +14,12 @@
   "name": "NOVA node (engine + panel + tools)",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
   "postCreateCommand": "bash scripts/nova-machine-setup.sh",
-  "postStartCommand": "bash -c 'test -f .env.local && ./scripts/nova-serve.sh --bg || true'",
+  // The port attribute above asks for public, but a port that was already
+  // forwarded keeps the visibility it had. Measured 2026-11-05: the fleet saw
+  // this Codespace as `HTTP 401` — GitHub's login wall — while the engine was
+  // running fine. `gh` is already authenticated inside a Codespace, so the
+  // machine makes itself reachable instead of asking its owner to click.
+  "postStartCommand": "bash -c 'test -f .env.local && ./scripts/nova-serve.sh --bg || true; (gh codespace ports visibility 8080:public -c \"$CODESPACE_NAME\" >/dev/null 2>&1 && echo \"[nova] port 8080 is public\") || echo \"[nova] set port 8080 to Public manually: Ports 8080 Private-Public\"'",
   "forwardPorts": [8080],
   "portsAttributes": {
     "8080": {
