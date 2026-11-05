@@ -19,6 +19,8 @@
     "typecheck:ratchet": "node scripts/typecheck-ratchet.mjs",
     "typecheck:ratchet:update": "node scripts/typecheck-ratchet.mjs --update",
     "ops:selftest": "node scripts/ops-selftest.mjs",
+    "gates": "node scripts/agent-gates.mjs",
+    "gates:fast": "node scripts/agent-gates.mjs --fast",
     "audit:twins": "node scripts/audit-twins.mjs",
     "audit:bundle": "node scripts/audit-bundle-secrets.mjs"
   },

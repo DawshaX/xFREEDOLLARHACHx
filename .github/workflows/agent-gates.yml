@@ -20,6 +20,8 @@ on:
       - "artifacts/api-server/src/routes/**"
       - "artifacts/api-server/src/lib/standalone-api.ts"
       - "scripts/test-*.mjs"
+      - "scripts/agent-gates.mjs"
+      - "scripts/lib/**"
       - "scripts/ops-selftest.mjs"
       - "scripts/audit-connections.mjs"
       - "scripts/audit-contracts.mjs"
@@ -62,28 +64,8 @@ jobs:
       - name: install
         run: pnpm install --no-frozen-lockfile
 
-      # One runner, one list. A gate that is skipped here is a gate that will be
-      # skipped in practice, so the list is explicit rather than a glob.
-      - name: agent + platform gates
-        run: |
-          set -o pipefail
-          node scripts/test-self-model.mjs
-          node scripts/test-web-search.mjs
-          node scripts/test-heuristic-plan.mjs
-          node scripts/test-repeat-guard.mjs
-          node scripts/test-fleet-servers.mjs
-          node scripts/test-nova-brain.mjs
-          node scripts/test-nova-brain-edge.mjs
-          node scripts/test-vuln-corpus.mjs
-          node scripts/test-memory-mirror.mjs
-          node scripts/test-self-restart.mjs
-
-      - name: structural audits
-        run: |
-          set -o pipefail
-          node scripts/check-workflows.mjs
-          node scripts/audit-connections.mjs
-          node scripts/audit-contracts.mjs
-          node scripts/audit-twins.mjs
-          node scripts/ops-selftest.mjs
-          node scripts/typecheck-ratchet.mjs
+      # The list lives in scripts/agent-gates.mjs, not here: two copies of a
+      # list drift, and a drifted list reports green on a set of tests nobody
+      # runs locally. Same command works on a laptop.
+      - name: agent + structural gates
+        run: node scripts/agent-gates.mjs
