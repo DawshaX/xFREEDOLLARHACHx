@@ -186,7 +186,17 @@ export function loadServers(): NovaServer[] {
     // know about. A corrupt file is an accident, and inventing a list on top of
     // it would hide the corruption, so that still means "empty".
     if ((err as NodeJS.ErrnoException)?.code === "ENOENT" && process.env.NOVA_FLEET_SEED !== "0") {
-      return seedServers();
+      const seeded = seedServers();
+      // Write them down on the first read. Otherwise every call re-creates the
+      // seeds with a fresh `addedAt`, and the fleet page would claim every
+      // machine was "just added" on every refresh — a small lie, but the kind
+      // that makes a measured list look like it is guessing.
+      try {
+        saveServers(seeded);
+      } catch {
+        /* read-only disk: the list still answers for this process */
+      }
+      return seeded;
     }
     return [];
   }
