@@ -340,8 +340,10 @@ app.get(["/api/cve/stream", "/api/cve-live/stream"], (req: Request, res: Respons
   res.flushHeaders?.();
   cveStreamClients.add(res);
 
-  const statsObj = resolveStandaloneApi("/api/cve/db/stats", "GET") as { total?: number } | null;
-  const totalCount = statsObj?.total || 76680;
+  // ⛔ «|| 76680» كان معناه: لو المخزن فاضي، البث بيعلن رقم ضخم كأنه قياس. أي
+  // قيمة افتراضية شكلها قياس بتقيّم حاجة ما اتقاستش — فالبقاء للقياس الصفرى.
+  const statsObj = resolveStandaloneApi("/api/cve/db/stats", "GET") as { total?: number; measured?: boolean } | null;
+  const totalCount = Number(statsObj?.total ?? 0);
 
   const sendNamed = (ev: string, data: unknown) => {
     const json = JSON.stringify(data);
@@ -349,25 +351,20 @@ app.get(["/api/cve/stream", "/api/cve-live/stream"], (req: Request, res: Respons
     res.write(`data: ${json}\n\n`);
   };
 
-  sendNamed("connected", { ok: true, status: "live", sources: 9, total: totalCount });
+  sendNamed("connected", { ok: true, status: "live", total: totalCount, measured: true, at: new Date().toISOString() });
   sendNamed("stats_update", { total: totalCount });
-  // SYNTHETIC DEMO EVENT — not a real advisory. Kept so the live stream has a
-  // shape to render; `synthetic: true` lets the UI badge it as demo data.
-  sendNamed("cve_new", {
-    id: "IMMUNEFI-2026-001",
-    cveId: "IMMUNEFI-2026-001",
-    synthetic: true,
-    severity: "CRITICAL",
-    cvss: 10.0,
-    cvssScore: 10.0,
-    publishedAt: new Date().toISOString(),
-    source: "Immunefi-Web3",
-    exploitType: "Bridge-SigBypass",
-    epssScore: 0.99,
-    description:
-      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 Critical] Cross-Chain Bridge Message Verification & EIP-712 Signature Replay via uninitialized ecrecover(0x0) (Foundry Local Fork Verified).",
-    pocUrl: "https://immunefi.com/explore/",
-  });
+  // 🚫 السطر ده كان بيبعت `IMMUNEFI-2026-001 · CVSS 10.0 · EPSS 0.99` كحدث
+  // «ثغرة جديدة» لكل عميل يفتح البث — ثغرة ملهاش وجود، ورابطها على NVD مكسور.
+  // البث بقى بيبعت أحدث سجل حقيقي من المخزن المحلي، ومفيش حاجة يبعتهاش لو فاضي.
+  try {
+    const recent = resolveStandaloneApi("/api/cve/recent?limit=1", "GET") as
+      | Array<Record<string, unknown>>
+      | null;
+    const first = Array.isArray(recent) ? recent[0] : null;
+    if (first) sendNamed("cve_new", { ...first, origin: "local-store", measured: true });
+  } catch {
+    /* مفيش سجل — مفيش حدث. ده الرد الصحيح، مش اختراع واحد. */
+  }
 
   const timer = setInterval(() => {
     if (!res.writableEnded) {
@@ -465,51 +462,61 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
               broadcastCveSse("cve_new", {
                 id: latestCve.cveId || latestCve.id,
                 cveId: latestCve.cveId || latestCve.id,
-                severity: latestCve.severity || "CRITICAL",
-                cvss: latestCve.cvssScore || 9.8,
-                cvssScore: latestCve.cvssScore || 9.8,
+                // الأرقام دي بتاعت السجل نفسه: لو مش موجودة تتسجّل صفرية
+                // مش تتخترع (CVSS 9.8 وEPSS 0.97 من الهواء = إنذار كاذب).
+                severity: latestCve.severity || "UNKNOWN",
+                cvss: latestCve.cvssScore || 0,
+                cvssScore: latestCve.cvssScore || 0,
+                cvssMeasured: Boolean(latestCve.cvssScore),
                 description: latestCve.description || "",
-                source: latestCve.source || "Immunefi-Web3",
-                exploitType: latestCve.cwe || "Reentrancy-Web3",
-                epssScore: latestCve.epss || 0.97,
+                source: latestCve.source || "local-store",
+                exploitType: latestCve.cwe || "unknown",
+                epssScore: latestCve.epss || 0,
+                epssMeasured: Boolean(latestCve.epss),
                 publishedAt: new Date().toISOString(),
               });
             }
             broadcastCveSse("hunt_done", resObj);
-            broadcastCveSse("stats_update", { total: resObj.total || 76680 });
+            broadcastCveSse("stats_update", { total: Number(resObj.total ?? 0), measured: true });
           } else if (p.includes("/cve/ingest-live")) {
             const topItems = Array.isArray(resObj.topItems) ? (resObj.topItems as Array<Record<string, unknown>>) : [];
             for (const item of topItems.slice(0, 4)) {
               broadcastCveSse("cve_new", {
                 id: item.cveId || item.id,
                 cveId: item.cveId || item.id,
-                severity: item.severity || "HIGH",
-                cvss: item.cvssScore || 8.8,
-                cvssScore: item.cvssScore || 8.8,
+                severity: item.severity || "UNKNOWN",
+                cvss: item.cvssScore || 0,
+                cvssScore: item.cvssScore || 0,
+                cvssMeasured: Boolean(item.cvssScore),
                 description: item.description || "",
-                source: item.source || "GitHub",
-                exploitType: item.cwe || "RCE",
-                epssScore: item.epss || 0.91,
+                source: item.source || "live-ingest",
+                exploitType: item.cwe || "unknown",
+                epssScore: item.epss || 0,
+                epssMeasured: Boolean(item.epss),
                 publishedAt: new Date().toISOString(),
               });
             }
-            broadcastCveSse("stats_update", { total: resObj.total || 76680 });
+            broadcastCveSse("stats_update", { total: Number(resObj.total ?? 0), measured: true });
           } else if (p.includes("/cve/mutate")) {
             const mutated = resObj.mutatedCve as Record<string, unknown> | undefined;
             if (mutated) {
               broadcastCveSse("cve_new", {
                 id: mutated.cveId || mutated.id,
                 cveId: mutated.cveId || mutated.id,
-                severity: mutated.severity || "CRITICAL",
-                cvss: mutated.cvssScore || 9.9,
-                cvssScore: mutated.cvssScore || 9.9,
+                // المولّد بيعمل «فرضية» — البث بيبعتها كفرضية، مش كثغرة بدرجة
+                // 9.9 وEPSS 0.98 ومصدر اسمه AI-Mutated.
+                severity: "HYPOTHESIS",
+                cvss: 0,
+                cvssScore: 0,
+                cvssMeasured: false,
                 description: mutated.description || "",
-                source: mutated.source || "AI-Mutated",
-                exploitType: mutated.exploitType || mutated.cwe || "Reentrancy-Web3",
-                epssScore: mutated.epssScore || 0.98,
+                source: "CyberNova-Pattern-Library",
+                exploitType: String(mutated.exploitType || mutated.cwe || "unknown"),
+                epssScore: 0,
+                epssMeasured: false,
                 publishedAt: new Date().toISOString(),
               });
-              broadcastCveSse("stats_update", { total: resObj.total || 76680 });
+              broadcastCveSse("stats_update", { total: Number(resObj.total ?? 0), measured: true });
             }
           }
           broadcastEvent({

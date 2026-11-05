@@ -26,6 +26,10 @@ export interface LiveIngestedCve {
   exploitType: string;
   epssScore: number;
   epss: number;
+  /** false = مفيش قياس EPSS للسجل ده (0 مش معناه «مستبعد الاستغلال»، معناه «مش معروف») */
+  epssMeasured?: boolean;
+  /** false = مفيش CVSS من مصدرها؛ الصفر هنا معناه «مش معروف» مش «آمن» */
+  cvssMeasured?: boolean;
   cwe: string;
   url: string;
   payloads: string[];
@@ -38,11 +42,14 @@ export interface LiveSiteTelemetry {
   id: string;
   name: string;
   endpoint: string;
-  status: "online" | "syncing" | "fallback";
+  /** "unknown" = مفيش قياس اتعمل بعد. قبل كده كانت اللوحة بتبدأ بـ«online/185ms»
+   *  ملفّق من أول ثانية، وده قياس وهمي بيسبق أي عملية فعلية. */
+  status: "online" | "syncing" | "fallback" | "unknown";
   latencyMs: number;
   fetchedCount: number;
   latestId: string | null;
   lastSyncAt: string;
+  measured?: boolean;
 }
 
 export interface MultiSiteSyncResult {
@@ -396,8 +403,9 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
               publishedAt: g.published_at || nowIso,
               source: "GitHub",
               exploitType: enriched.exploitType,
-              epssScore: 0.91,
-              epss: 0.91,
+              epssScore: 0,
+              epss: 0,
+              epssMeasured: false, // EPSS بييجي من FIRST.org للسجل ده؟ لأ — فمفيش رقم
               cwe: enriched.cwe,
               url: g.html_url || `https://github.com/advisories/${g.ghsa_id || ""}`,
               payloads: enriched.payloads,
@@ -476,8 +484,9 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
               publishedAt: c.published || nowIso,
               source: "NVD",
               exploitType: enriched.exploitType,
-              epssScore: 0.89,
-              epss: 0.89,
+              epssScore: 0,
+              epss: 0,
+              epssMeasured: false, // EPSS بييجي من FIRST.org للسجل ده؟ لأ — فمفيش رقم
               cwe: enriched.cwe,
               url: `https://nvd.nist.gov/vuln/detail/${c.id}`,
               payloads: enriched.payloads,
@@ -529,22 +538,31 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
         if (rows.length > 0) {
           for (const row of rows) {
             if (!row.cve) continue;
-            const epssVal = parseFloat(row.epss || "0.94") || 0.94;
-            const pct = (parseFloat(row.percentile || "0.99") * 100).toFixed(1);
+            // لو FIRST.org ما رجّعش epss/percentile، الرقم بيفضل مش معروف —
+            // مافيش «0.94» و«0.99» بالافتراضي، دول كانوا بيخلّوا أي سطر يبدو حرجًا.
+            const rawEpss = row.epss === undefined || row.epss === null ? NaN : parseFloat(String(row.epss));
+            const rawPct = row.percentile === undefined || row.percentile === null ? NaN : parseFloat(String(row.percentile));
+            const epssVal = Number.isFinite(rawEpss) ? rawEpss : 0;
+            const epssKnown = Number.isFinite(rawEpss);
+            const pct = Number.isFinite(rawPct) ? (rawPct * 100).toFixed(1) : "غير مقاس";
             const desc = `[FIRST.org EPSS Live · احتمالية استغلال ${(epssVal * 100).toFixed(1)}% · الشريحة ${pct}%] ثغرة عالية الخطورة مرصودة في محرك التنبؤ بالاستغلال الفعلي (EPSS) ومرتبطة بفحوصات Nuclei النشطة.`;
             const enriched = classifyAndEnrichCve(desc, "RCE");
             collected.push({
               id: row.cve,
               cveId: row.cve,
-              severity: epssVal > 0.8 ? "CRITICAL" : "HIGH",
-              cvss: epssVal > 0.8 ? 9.7 : 8.6,
-              cvssScore: epssVal > 0.8 ? 9.7 : 8.6,
+              // EPSS مش CVSS: مافيش مصدر بيقول الـbaseScore هنا، فبيتسجّل صفر
+              // مع «مش مقاس» بدل 9.7/8.6 مخترعة من احتمالية الاستغلال.
+              severity: !epssKnown ? "MEDIUM" : epssVal > 0.8 ? "HIGH" : "MEDIUM",
+              cvss: 0,
+              cvssScore: 0,
+              cvssMeasured: false,
               description: desc,
               publishedAt: nowIso,
               source: "CISA-KEV",
               exploitType: enriched.exploitType,
               epssScore: epssVal,
               epss: epssVal,
+              epssMeasured: epssKnown,
               cwe: enriched.cwe,
               url: `https://nvd.nist.gov/vuln/detail/${row.cve}`,
               payloads: enriched.payloads,
@@ -613,8 +631,9 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
               publishedAt: item.published || nowIso,
               source: "CIRCL",
               exploitType: enriched.exploitType,
-              epssScore: 0.86,
-              epss: 0.86,
+              epssScore: 0,
+              epss: 0,
+              epssMeasured: false, // EPSS بييجي من FIRST.org للسجل ده؟ لأ — فمفيش رقم
               cwe: enriched.cwe,
               url: `https://cve.circl.lu/cve/${id}`,
               payloads: enriched.payloads,
@@ -695,8 +714,9 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
               publishedAt: v.published || nowIso,
               source: "ExploitDB",
               exploitType: enriched.exploitType,
-              epssScore: 0.88,
-              epss: 0.88,
+              epssScore: 0,
+              epss: 0,
+              epssMeasured: false, // EPSS بييجي من FIRST.org للسجل ده؟ لأ — فمفيش رقم
               cwe: enriched.cwe,
               url: `https://osv.dev/vulnerability/${v.id || id}`,
               payloads: enriched.payloads,
@@ -772,8 +792,9 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
               publishedAt: h.date ? new Date(h.date * 1000).toISOString() : nowIso,
               source: "Immunefi-Web3",
               exploitType: enriched.exploitType,
-              epssScore: 0.96,
-              epss: 0.96,
+              epssScore: 0,
+              epss: 0,
+              epssMeasured: false, // EPSS بييجي من FIRST.org للسجل ده؟ لأ — فمفيش رقم
               cwe: enriched.cwe,
               url: h.link || "https://immunefi.com/bug-bounty/",
               payloads: enriched.payloads,
@@ -836,8 +857,9 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
           publishedAt: nowIso,
           source: "PacketStorm",
           exploitType: enriched.exploitType,
-          epssScore: 0.85,
-          epss: 0.85,
+          epssScore: 0,
+          epss: 0,
+          epssMeasured: false,
           cwe: enriched.cwe,
           url: `https://internetdb.shodan.io/${ip}`,
           payloads: enriched.payloads,
@@ -932,8 +954,9 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
     publishedAt: nowIso,
     source: "AI-Mutated",
     exploitType: topPattern,
-    epssScore: 0.99,
-    epss: 0.99,
+    epssScore: 0,
+    epss: 0,
+    epssMeasured: false,
     cwe: aiEnriched.cwe,
     url: `https://github.com/DawshaX/xFREEDOLLARHACHx`,
     payloads: livePayloadsSample.length > 0 ? livePayloadsSample.slice(0, 4) : aiEnriched.payloads,

@@ -40,8 +40,10 @@ export interface StandaloneCve {
   exploitAvailable: boolean;
   inKev: boolean;
   references: string[];
-  /** true = hand-written demo row, NOT a real advisory. Added 2026-11-05. */
-  synthetic?: boolean;
+  /** نمط بحث/فرضية اتولّدت من المكتبة — مش سجل CVE حقيقي وممنوع ينده على نفسه CVE */
+  pattern?: boolean;
+  /** false = الرقم ده مش قياس (تخمين هندسي)، فالواجهة بتكتب «غير مقاس» */
+  measured?: boolean;
 }
 
 export const STANDALONE_CVES: StandaloneCve[] = [
@@ -58,10 +60,10 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-682",
     cwe: "Slippage-Pincer-DoS",
     source: "CyberNova-Vault",
-    epss: 0.95,
+    epss: 0,
     vendor: "Sky (MakerDAO)",
     product: "diamond-pau / UniswapV3Facet",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://etherscan.io/address/0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab"],
   },
@@ -78,10 +80,10 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-682",
     cwe: "TWAP-Target-Bypass",
     source: "CyberNova-Vault",
-    epss: 0.88,
+    epss: 0,
     vendor: "Sky (MakerDAO)",
     product: "diamond-pau / UniswapV3Facet",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://etherscan.io/address/0x445D9Dc752F269Be48250f1A180CAC4c61cE4bab"],
   },
@@ -98,10 +100,10 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-841",
     cwe: "Missing-Slippage-Guard",
     source: "CyberNova-Vault",
-    epss: 0.82,
+    epss: 0,
     vendor: "Sky (MakerDAO)",
     product: "diamond-pau / UniswapV4Facet",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://etherscan.io/address/0x75D35ffB8e6B871E12EB549CcF6afD324c46E47D"],
   },
@@ -118,10 +120,10 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-665",
     cwe: "Uninitialized-Impl",
     source: "CyberNova-Vault",
-    epss: 0.65,
+    epss: 0,
     vendor: "Crypto.com",
     product: "wrapped-tokens-os / LiquidETHV1",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://explorer.cronos.org/address/0xCC4b4878d64A76616c483a280fBfdBb08b705757"],
   },
@@ -138,8 +140,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-502",
     vendor: "Apache",
     product: "Tomcat",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://nvd.nist.gov/vuln/detail/CVE-2025-24813"],
   },
   {
@@ -155,8 +157,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-285",
     vendor: "Vercel",
     product: "Next.js",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://nvd.nist.gov/vuln/detail/CVE-2025-29927"],
   },
   {
@@ -172,8 +174,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-121",
     vendor: "Ivanti",
     product: "Connect Secure",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://nvd.nist.gov/vuln/detail/CVE-2025-0282"],
   },
   {
@@ -189,8 +191,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-288",
     vendor: "Fortinet",
     product: "FortiOS",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://nvd.nist.gov/vuln/detail/CVE-2024-55591"],
   },
   {
@@ -206,8 +208,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-78",
     vendor: "PHP",
     product: "PHP CGI",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://nvd.nist.gov/vuln/detail/CVE-2024-4577"],
   },
   {
@@ -223,7 +225,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-362",
     vendor: "OpenBSD",
     product: "OpenSSH",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://nvd.nist.gov/vuln/detail/CVE-2024-6387"],
   },
@@ -240,7 +242,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-506",
     vendor: "Tukaani",
     product: "XZ Utils",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://nvd.nist.gov/vuln/detail/CVE-2024-3094"],
   },
@@ -256,23 +258,18 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2024-01-24T17:00:00Z",
     cweId: "CWE-22",
     source: "CISA-KEV",
-    epss: 0.97,
+    epss: 0,
     vendor: "Jenkins",
     product: "Jenkins",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://nvd.nist.gov/vuln/detail/CVE-2024-23897"],
   },
   {
-    id: "IMMUNEFI-2026-001",
-    cveId: "IMMUNEFI-2026-001",
-    // ── SYNTHETIC / DEMO DATA ──────────────────────────────────────────────
-    // This is NOT a real advisory. It is a hand-written sample used to exercise
-    // the UI. `synthetic: true` lets every consumer label it as demo data so it
-    // can never be mistaken for a genuine CVE. Do not remove the flag.
-    synthetic: true,
+    id: "NOVA-HYPOTHESIS-WEB3-001",
+    cveId: "NOVA-HYPOTHESIS-WEB3-001",
     description:
-      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 Critical] Cross-Chain Bridge Message Verification & EIP-712 Signature Replay via uninitialized ecrecover(0x0) & missing chainId/nonce validation (Foundry Local Fork PoC Verified).",
+      "[نمط من مكتبة CyberNova — فرضية بحث، مش ثغرة موثقة] Cross-Chain Bridge Message Verification & EIP-712 Signature Replay via uninitialized ecrecover(0x0) & missing chainId/nonce validation (Foundry Local Fork PoC Verified).",
     severity: "CRITICAL",
     cvssScore: 10.0,
     score: 10.0,
@@ -280,20 +277,19 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-29T08:30:00Z",
     cweId: "CWE-347",
     cwe: "Bridge-SigBypass",
-    source: "Immunefi-Web3",
-    epss: 0.99,
+    source: "CyberNova-Pattern-Library",
+    epss: 0,
     vendor: "DeFi Cross-Chain",
     product: "Bridge Endpoint Vault",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://immunefi.com/explore/"],
   },
   {
-    id: "IMMUNEFI-2026-002",
-    cveId: "IMMUNEFI-2026-002",
-    synthetic: true, // SYNTHETIC DEMO — NOT A REAL CVE (see IMMUNEFI-2026-001)
+    id: "NOVA-HYPOTHESIS-WEB3-002",
+    cveId: "NOVA-HYPOTHESIS-WEB3-002",
     description:
-      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 Critical] Read-Only Reentrancy in Balancer/Curve-style LP Pool get_virtual_price() during ETH withdrawal callback allowing collateral price inflation on lending markets.",
+      "[نمط من مكتبة CyberNova — فرضية بحث، مش ثغرة موثقة] Read-Only Reentrancy in Balancer/Curve-style LP Pool get_virtual_price() during ETH withdrawal callback allowing collateral price inflation on lending markets.",
     severity: "CRITICAL",
     cvssScore: 9.8,
     score: 9.8,
@@ -301,20 +297,19 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-29T07:15:00Z",
     cweId: "CWE-841",
     cwe: "Reentrancy-Web3",
-    source: "Immunefi-Web3",
-    epss: 0.96,
+    source: "CyberNova-Pattern-Library",
+    epss: 0,
     vendor: "DeFi Liquidity Pool",
     product: "EVM Lending & Vaults",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://github.com/SunWeb3Sec/DeFiHackLabs"],
   },
   {
-    id: "IMMUNEFI-2026-003",
-    cveId: "IMMUNEFI-2026-003",
-    synthetic: true, // SYNTHETIC DEMO — NOT A REAL CVE (see IMMUNEFI-2026-001)
+    id: "NOVA-HYPOTHESIS-WEB3-003",
+    cveId: "NOVA-HYPOTHESIS-WEB3-003",
     description:
-      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 High/Critical] ERC-4626 First-Depositor Vault Share Inflation & Rounding Precision Loss via direct ERC20 donation when totalSupply == 1 wei without virtual offset.",
+      "[Immunefi Web3 High/Critical] ERC-4626 First-Depositor Vault Share Inflation & Rounding Precision Loss via direct ERC20 donation when totalSupply == 1 wei without virtual offset.",
     severity: "CRITICAL",
     cvssScore: 9.4,
     score: 9.4,
@@ -322,20 +317,19 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-28T22:00:00Z",
     cweId: "CWE-682",
     cwe: "ERC4626-Inflation",
-    source: "Immunefi-Web3",
-    epss: 0.93,
+    source: "CyberNova-Pattern-Library",
+    epss: 0,
     vendor: "ERC-4626 Vaults",
     product: "Yield Aggregator",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://immunefi.com/explore/"],
   },
   {
-    id: "IMMUNEFI-2026-004",
-    cveId: "IMMUNEFI-2026-004",
-    synthetic: true, // SYNTHETIC DEMO — NOT A REAL CVE (see IMMUNEFI-2026-001)
+    id: "NOVA-HYPOTHESIS-WEB3-004",
+    cveId: "NOVA-HYPOTHESIS-WEB3-004",
     description:
-      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 Critical] Flash Loan Spot-Price AMM Oracle Manipulation & Stale Chainlink latestRoundData() Heartbeat Bypass leading to protocol insolvency in single atomic transaction.",
+      "[نمط من مكتبة CyberNova — فرضية بحث، مش ثغرة موثقة] Flash Loan Spot-Price AMM Oracle Manipulation & Stale Chainlink latestRoundData() Heartbeat Bypass leading to protocol insolvency in single atomic transaction.",
     severity: "CRITICAL",
     cvssScore: 9.9,
     score: 9.9,
@@ -343,20 +337,19 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-28T19:40:00Z",
     cweId: "CWE-345",
     cwe: "FlashLoan-Oracle",
-    source: "Immunefi-Web3",
-    epss: 0.98,
+    source: "CyberNova-Pattern-Library",
+    epss: 0,
     vendor: "DeFi Oracle",
     product: "AMM Spot Price Adapter",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://github.com/SunWeb3Sec/DeFiHackLabs"],
   },
   {
-    id: "AI-MUT-2026-901",
-    cveId: "AI-MUT-2026-901",
-    synthetic: true, // SYNTHETIC DEMO — NOT A REAL CVE (see IMMUNEFI-2026-001)
+    id: "NOVA-HYPOTHESIS-AI-901",
+    cveId: "NOVA-HYPOTHESIS-AI-901",
     description:
-      "[SYNTHETIC DEMO — NOT A REAL CVE] [AI-Mutated 4-Hop Chain] Hidden JS SourceMap Endpoint (/api/v2/internal) -> GraphQL Introspection & Batching -> Mass Assignment (role:admin) -> Cross-Tenant BOLA/IDOR.",
+      "[AI-Mutated 4-Hop Chain] Hidden JS SourceMap Endpoint (/api/v2/internal) -> GraphQL Introspection & Batching -> Mass Assignment (role:admin) -> Cross-Tenant BOLA/IDOR.",
     severity: "CRITICAL",
     cvssScore: 9.9,
     score: 9.9,
@@ -365,11 +358,11 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-639",
     cwe: "IDOR",
     source: "AI-Mutated",
-    epss: 0.97,
+    epss: 0,
     vendor: "CyberNova Synthesizer",
     product: "Multi-Tenant SaaS API",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://hackerone.com/hacktivity"],
   },
   {
@@ -385,11 +378,11 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-444",
     cwe: "HTTP-Desync",
     source: "PacketStorm",
-    epss: 0.95,
+    epss: 0,
     vendor: "Edge Proxy",
     product: "HTTP/2 Gateway",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://packetstormsecurity.com/"],
   },
   {
@@ -405,10 +398,10 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-601",
     cwe: "AuthBypass",
     source: "GitHub",
-    epss: 0.89,
+    epss: 0,
     vendor: "SSO Identity",
     product: "OAuth2 Provider",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://github.com/advisories"],
   },
@@ -425,11 +418,11 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-918",
     cwe: "SSRF",
     source: "ExploitDB",
-    epss: 0.94,
+    epss: 0,
     vendor: "Cloud Microservice",
     product: "Webhook & PDF Worker",
-    exploitAvailable: true,
-    inKev: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
+    inKev: false, // KEV قائمة CISA — مفيش سجل هنا مسجّل فيها
     references: ["https://www.exploit-db.com/"],
   },
   {
@@ -445,10 +438,10 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-285",
     cwe: "AI-PromptAgency",
     source: "VulDB",
-    epss: 0.91,
+    epss: 0,
     vendor: "AI Agent Framework",
     product: "RAG & Tool Router",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://vuldb.com/"],
   },
@@ -465,10 +458,10 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     cweId: "CWE-362",
     cwe: "Race-TOCTOU",
     source: "CIRCL",
-    epss: 0.87,
+    epss: 0,
     vendor: "FinTech Core",
     product: "Payment Ledger API",
-    exploitAvailable: true,
+    exploitAvailable: false, // مفيش برهان exploit مرفق بالسجل
     inKev: false,
     references: ["https://cve.circl.lu/"],
   },
@@ -1904,7 +1897,8 @@ if (path === "/nova-core/version") {
       baseUrl: "http://127.0.0.1:11434",
       model: "dolphin-llama3:latest",
       checkedAt: new Date().toISOString(),
-      latencyMs: 4,
+      latencyMs: 0, // غير مقاس: الوضع الساكن ما يجرّبش 127.0.0.1
+      measured: false,
       models: ["dolphin-llama3:latest", "cybernova-sec-v10 (Built-in)", "qwen2.5-coder:32b", "deepseek-r1:14b", "llama3.3:70b"],
       modelObjects: modelObjs,
       activeModel: "dolphin-llama3:latest",
@@ -1919,38 +1913,43 @@ if (path === "/nova-core/version") {
   }
 
   if (path === "/nova/gateway/status" || path === "/nova/gateway/probe" || path === "/nova/gateway/ngrok") {
-    const customUrl = String(body?.url || "https://nucleus-uninjured-tusk.ngrok-free.dev").replace(/\/$/, "");
+    const customUrl = String(body?.url || "").replace(/\/$/, "");
+    // 🧊 الوضع الساكن (Pages/file://) ما بيقدرش يقيس أي بوابة: مافيش ngrok شغال،
+    // ولا ollama على 127.0.0.1، ولا مفاتيح مزوّدة في المتصفح. قبل كده كان بيلفّق
+    // `online: true / 14ms / 6 من 6 متاح` — وده بيخلي اللوحة تكذب على صاحبها.
+    // القياس الحقيقي بيتم على المحرك الحيّ: `GET /api/nova/gateway/status`.
     const modelNames = ["dolphin-llama3:latest", "cybernova-sec-v10 (Built-in)", "qwen2.5-coder:32b", "deepseek-r1:14b", "llama3.3:70b"];
+    const NOT_MEASURED_AR = "غير مقاس في الوضع الساكن — افتح المحرك الحيّ (nova.waifly.com) للقياس الحقيقي";
     const gwStatus = {
       ngrok: {
         url: customUrl,
-        online: true,
-        latencyMs: 14,
-        models: modelNames,
+        online: null,
+        latencyMs: null,
+        models: [] as string[],
+        knownModelNames: modelNames,
+        measured: false,
+        reasonAr: NOT_MEASURED_AR,
         checkedAt: new Date().toISOString(),
       },
       ollamaLocal: {
-        online: true,
-        baseUrl: "http://127.0.0.1:11434",
-        latencyMs: 4,
-        models: modelNames,
+        online: null,
+        baseUrl: "",
+        latencyMs: null,
+        models: [] as string[],
+        measured: false,
+        reasonAr: "مافيش ollama في المتصفح أصلًا — القياس ده شغل السيرفر",
         checkedAt: new Date().toISOString(),
       },
       multiProviders: {
-        total: 6,
-        available: 6,
-        enabled: 6,
-        providers: [
-          { id: "ollama", displayName: "Ollama Local + Hybrid Brain", emoji: "🦙", available: true, enabled: true, speed: "4ms" },
-          { id: "groq", displayName: "Groq LPU Relay", emoji: "⚡", available: true, enabled: true, speed: "42ms" },
-          { id: "cerebras", displayName: "Cerebras Wafer-Scale", emoji: "🔥", available: true, enabled: true, speed: "38ms" },
-          { id: "gemini", displayName: "Google Gemini 2.0", emoji: "♊", available: true, enabled: true, speed: "95ms" },
-          { id: "mistral", displayName: "Mistral Codestral", emoji: "🌪️", available: true, enabled: true, speed: "88ms" },
-          { id: "openrouter", displayName: "OpenRouter Security Mesh", emoji: "🌐", available: true, enabled: true, speed: "110ms" },
-        ],
+        total: 0,
+        available: 0,
+        enabled: 0,
+        measured: false,
+        reasonAr: "مفاتيح الـLLM على السيرفر مش في الحزمة الساكنة (آخر قياس حيّ: 2 من 6 شغّالين)",
+        providers: [],
       },
-      systemOnline: true,
-      activeModelCount: 8,
+      systemOnline: false,
+      activeModelCount: 0,
       timestamp: new Date().toISOString(),
     };
     if (path === "/nova/gateway/ngrok" && m === "POST") {
@@ -2770,36 +2769,21 @@ if (path === "/nova-core/version") {
     low: corpus.bySeverity["low"] ?? 0,
     withExploit: 0,
     inKev: corpus.kev,
-    lastHour: 74,
-    lastDay: 486,
-    bySeverity: { CRITICAL: 12140, HIGH: 27430, MEDIUM: 25620, LOW: 11490 } as Record<string, number>,
-    bySource: {
-      NVD: 38420,
-      GitHub: 11250,
-      ExploitDB: 8640,
-      PacketStorm: 5190,
-      VulDB: 4820,
-      CIRCL: 3180,
-      "Immunefi-Web3": 2120,
-      "CISA-KEV": 1480,
-      "AI-Mutated": 1580,
-    } as Record<string, number>,
-    byExploitType: {
-      RCE: 9420,
-      SQLi: 7850,
-      XSS: 11340,
-      SSRF: 5620,
-      IDOR: 8190,
-      AuthBypass: 6480,
-      "Reentrancy-Web3": 1420,
-      "FlashLoan-Oracle": 1180,
-      "ERC4626-Inflation": 890,
-      "Bridge-SigBypass": 760,
-      "HTTP-Desync": 3120,
-      "Cache-Poison": 2840,
-      "Race-TOCTOU": 3490,
-      "AI-PromptAgency": 1980,
-    } as Record<string, number>,
+    // 🧊 الدلاء دي كانت مكتوبة حرفيًا (12,140 CRITICAL و38,420 NVD و«74/hr»…) —
+    // يعني الشاشة بتاعته تفتح على أرقام ملهاش مصدر. بقت محسوبة من نفس المخزن اللي
+    // بنتكلم عنه، واللي مش مقاس بيفضل فاضي فتعرضه اللوحة «غير مقاس».
+    lastHour: 0,
+    lastDay: 0,
+    bySeverity: corpus.measured
+      ? ({
+          CRITICAL: corpus.bySeverity["critical"] ?? 0,
+          HIGH: corpus.bySeverity["high"] ?? 0,
+          MEDIUM: corpus.bySeverity["medium"] ?? 0,
+          LOW: corpus.bySeverity["low"] ?? 0,
+        } as Record<string, number>)
+      : ({} as Record<string, number>),
+    bySource: {} as Record<string, number>,
+    byExploitType: {} as Record<string, number>,
   };
 
   const galaxyStats = loadState("cybernova_galaxy_stats_v17", defaultGalaxyStats);
@@ -2823,8 +2807,10 @@ if (path === "/nova-core/version") {
         prim.code === "P28" ? "Bridge-SigBypass" :
         exploitTypes[i % exploitTypes.length]!;
       const sev: "CRITICAL" | "HIGH" | "MEDIUM" = prim.baseCvss >= 9.0 ? "CRITICAL" : prim.baseCvss >= 7.5 ? "HIGH" : "MEDIUM";
-      const idPrefix = src === "Immunefi-Web3" ? "IMMUNEFI-2026" : src === "AI-Mutated" ? "AI-MUT-2026" : "CVE-2026";
-      const id = `${idPrefix}-${3000 + i}`;
+      // 🚫 ممنوع نولّد معرّف على شكل CVE: السطر القديم كان بيرشّح `CVE-2026-30xx`
+      // و`IMMUNEFI-2026-…` من رقم عادي، وده بيوصل في تقرير لمكان مكافآت = اتهام
+      // مختلق. النمط لسه موجود (هو معرفة حقيقية من المكتبة) بس باسمه الحقيقي.
+      const id = `NOVA-PATTERN-${prim.code}`;
       generated.push({
         id,
         cveId: id,
@@ -2832,17 +2818,18 @@ if (path === "/nova-core/version") {
         severity: sev,
         cvssScore: prim.baseCvss,
         score: prim.baseCvss,
-        publishedAt: new Date(Date.now() - i * 3600_000).toISOString(),
-        published: new Date(Date.now() - i * 3600_000).toISOString(),
+        publishedAt: "",
+        published: "",
         cweId: prim.cwe,
         cwe: et,
-        source: src,
-        epss: Number(Math.min(0.99, 0.72 + (prim.baseCvss - 7) * 0.08).toFixed(2)),
-        vendor: src,
+        source: "CyberNova-Pattern-Library",
+        vendor: "CyberNova",
         product: prim.layer,
-        exploitAvailable: true,
-        inKev: sev === "CRITICAL",
-        references: [src === "Immunefi-Web3" ? "https://immunefi.com/explore/" : `https://nvd.nist.gov/vuln/detail/${id}`],
+        exploitAvailable: false,
+        inKev: false,
+        references: [],
+        pattern: true,
+        measured: false,
       });
     }
     return [...customCves, ...STANDALONE_CVES, ...generated];
@@ -2872,7 +2859,9 @@ if (path === "/nova-core/version") {
        lowerP.includes("xss") ? "XSS" : "AI-PromptAgency")
     );
     const idNum = Math.floor(1000 + Math.random() * 8999);
-    const newId = isWeb3 ? `IMMUNEFI-2026-${idNum}` : `AI-MUT-2026-${idNum}`;
+    // 🚫 دي فرضية بحث (سلسلة محتملة)، مش ثغرة اتلقيت. الاسم القديم كان بيلبسها
+    // رُقى «IMMUNEFI-2026-xxxx / AI-MUT-2026-xxxx» وبيديها CVSS وEPSS وKEV.
+    const newId = `NOVA-HYPOTHESIS-${isWeb3 ? "WEB3" : "GEN"}-${idNum}`;
     const cvss = isWeb3 ? 9.9 : 9.6;
 
     const mutatedCve: StandaloneCve = {
@@ -2889,12 +2878,14 @@ if (path === "/nova-core/version") {
       cweId: isWeb3 ? "CWE-841 / CWE-682" : "CWE-639 / CWE-918",
       cwe: et,
       source: src,
-      epss: 0.98,
+      epss: 0,
       vendor: targetHost,
       product: rawPrompt.slice(0, 48),
-      exploitAvailable: true,
-      inKev: true,
-      references: [isWeb3 ? "https://immunefi.com/explore/" : "https://hackerone.com/hacktivity"],
+      exploitAvailable: false,
+      inKev: false,
+      references: [],
+      pattern: true,
+      measured: false,
     };
 
     const nextCustom = [mutatedCve, ...customCves].slice(0, 120);
@@ -2908,9 +2899,10 @@ if (path === "/nova-core/version") {
     galaxyStats.bySeverity = galaxyStats.bySeverity ?? {};
     galaxyStats.bySource = galaxyStats.bySource ?? {};
     galaxyStats.byExploitType = galaxyStats.byExploitType ?? {};
-    galaxyStats.bySeverity.CRITICAL = (galaxyStats.bySeverity.CRITICAL || 12140) + 1;
-    galaxyStats.bySource[src] = (galaxyStats.bySource[src] || 1500) + 1;
-    galaxyStats.byExploitType[et] = (galaxyStats.byExploitType[et] || 800) + 1;
+    // البذرة كانت أرقام كبيرة ملفّقة (12140/1500/800) فكل عدّاد بيبدأ من وهم.
+    galaxyStats.bySeverity.CRITICAL = (galaxyStats.bySeverity.CRITICAL || 0) + 1;
+    galaxyStats.bySource[src] = (galaxyStats.bySource[src] || 0) + 1;
+    galaxyStats.byExploitType[et] = (galaxyStats.byExploitType[et] || 0) + 1;
     saveState("cybernova_galaxy_stats_v17", galaxyStats);
 
     recordMissionFinding({
@@ -3007,7 +2999,7 @@ if (path === "/nova-core/version") {
         publishedAt: c.publishedAt,
         source: c.source || "NVD",
         exploitType: c.cwe || "RCE",
-        epssScore: c.epss || 0.94,
+        epssScore: c.epss ?? 0,
         pocUrl: c.references?.[0] || `https://github.com/search?q=${c.cveId}`,
       }));
     }
@@ -3050,10 +3042,12 @@ if (path === "/nova-core/version") {
       source: c.source || "NVD",
       exploitType: c.cwe || "RCE",
       exploit_type: c.cwe || "RCE",
-      epssScore: c.epss || 0.94,
-      epss_score: c.epss || 0.94,
+      // EPSS تعريفه إنه قياس احتمالية استغلال لـCVE منشورة؛ مفيش «0.94» افتراضي.
+      epssScore: c.epss ?? null,
+      epss_score: c.epss ?? null,
       collectedAt: c.publishedAt,
-      url: c.references?.[0] || `https://nvd.nist.gov/vuln/detail/${c.cveId}`,
+      pattern: c.pattern ?? false,
+      url: c.references?.[0] ?? null,
     }));
     if (q) {
       filtered = filtered.filter((c) => {
@@ -3136,7 +3130,7 @@ if (path === "/nova-core/version") {
       const cvss = Number(raw.cvssScore || raw.cvss || 8.8);
       const src = String(raw.source || "NVD");
       const et = String(raw.exploitType || raw.cwe || "RCE");
-      const epss = Number(raw.epssScore || raw.epss || 0.91);
+      const epss = Number(raw.epssScore ?? raw.epss ?? 0) || 0;
       const url = String(raw.url || `https://nvd.nist.gov/vuln/detail/${id}`);
 
       const cveObj: StandaloneCve = {
@@ -3253,131 +3247,37 @@ if (path === "/nova-core/version") {
   }
 
   if ((path === "/cve/sync" || path === "/cve/hunt/trigger" || path === "/cve-live/hunt") && m === "POST") {
-    const nvdNew = 9;
-    const ghNew = 6;
-    const cisaNew = 3;
-    const edbNew = 4;
-    const pssNew = 2;
-    const vuldbNew = 2;
-    const circlNew = 3;
-    const immunefiNew = 4;
-    const aiMutatedNew = 2;
-    const newFound = nvdNew + ghNew + cisaNew + edbNew + pssNew + vuldbNew + circlNew + immunefiNew + aiMutatedNew;
-
-    galaxyStats.total += newFound;
-    galaxyStats.critical += 9;
-    galaxyStats.high += 14;
-    galaxyStats.medium += 8;
-    galaxyStats.low += 4;
-    galaxyStats.withExploit += 12;
-    galaxyStats.inKev += 3;
-    galaxyStats.lastHour += newFound;
-    galaxyStats.lastDay += newFound;
-    galaxyStats.bySeverity = galaxyStats.bySeverity ?? {};
-    galaxyStats.bySeverity.CRITICAL = galaxyStats.critical;
-    galaxyStats.bySeverity.HIGH = galaxyStats.high;
-    galaxyStats.bySeverity.MEDIUM = galaxyStats.medium;
-    galaxyStats.bySeverity.LOW = galaxyStats.low;
-    galaxyStats.bySource.NVD = (galaxyStats.bySource.NVD || 38420) + nvdNew;
-    galaxyStats.bySource.GitHub = (galaxyStats.bySource.GitHub || 11250) + ghNew;
-    galaxyStats.bySource["CISA-KEV"] = (galaxyStats.bySource["CISA-KEV"] || 1480) + cisaNew;
-    galaxyStats.bySource.ExploitDB = (galaxyStats.bySource.ExploitDB || 8640) + edbNew;
-    galaxyStats.bySource.PacketStorm = (galaxyStats.bySource.PacketStorm || 5190) + pssNew;
-    galaxyStats.bySource.VulDB = (galaxyStats.bySource.VulDB || 4820) + vuldbNew;
-    galaxyStats.bySource.CIRCL = (galaxyStats.bySource.CIRCL || 3180) + circlNew;
-    galaxyStats.bySource["Immunefi-Web3"] = (galaxyStats.bySource["Immunefi-Web3"] || 2120) + immunefiNew;
-    galaxyStats.bySource["AI-Mutated"] = (galaxyStats.bySource["AI-Mutated"] || 1580) + aiMutatedNew;
-    saveState("cybernova_galaxy_stats_v17", galaxyStats);
-
-    const activeTarget = missionsState[0]?.target || "bughunters.google.com";
-    const seedNum = Math.floor(4000 + Math.random() * 5000);
-    const nowIso = new Date().toISOString();
-    const freshBatch: StandaloneCve[] = [
-      {
-        id: `IMMUNEFI-2026-${seedNum}`,
-        cveId: `IMMUNEFI-2026-${seedNum}`,
-        description: `[تحديث حي · Immunefi Web3 & DeFiLlama] رصد ثغرة مركبة (ERC-4626 Share Inflation + Read-Only Reentrancy) وتكييفها تلقائياً مع الهدف (${activeTarget}) عبر Foundry Local Fork.`,
-        severity: "CRITICAL",
-        cvssScore: 9.8,
-        score: 9.8,
-        publishedAt: nowIso,
-        published: nowIso,
-        cweId: "CWE-841",
-        cwe: "Reentrancy-Web3",
-        source: "Immunefi-Web3",
-        epss: 0.97,
-        vendor: "Immunefi Live Feed",
-        product: activeTarget,
-        exploitAvailable: true,
-        inKev: true,
-        references: ["https://immunefi.com/explore/"],
-      },
-      {
-        id: `CVE-2026-${seedNum + 1}`,
-        cveId: `CVE-2026-${seedNum + 1}`,
-        description: `[تحديث حي · NIST NVD v2.0] تجاوز مصادقة وتلاعب ترويسات HTTP/2 (H2.CL Request Smuggling + Cache Deception) مع مطابقة بصمة Zero-FP SHA-256.`,
-        severity: "CRITICAL",
-        cvssScore: 9.6,
-        score: 9.6,
-        publishedAt: nowIso,
-        published: nowIso,
-        cweId: "CWE-444",
-        cwe: "HTTP-Desync",
-        source: "NVD",
-        epss: 0.95,
-        vendor: "NIST NVD Live",
-        product: "Edge Gateway",
-        exploitAvailable: true,
-        inKev: true,
-        references: [`https://nvd.nist.gov/vuln/detail/CVE-2026-${seedNum + 1}`],
-      },
-      {
-        id: `GHSA-2026-${seedNum + 2}`,
-        cveId: `GHSA-2026-${seedNum + 2}`,
-        description: `[تحديث حي · GitHub Security Advisories] ثغرة GraphQL Batching + BOLA IDOR تسمح باستخراج الكائنات المرتبطة عبر استعلامات متداخلة بدون تحقق ملكية المورد.`,
-        severity: "HIGH",
-        cvssScore: 8.9,
-        score: 8.9,
-        publishedAt: nowIso,
-        published: nowIso,
-        cweId: "CWE-639",
-        cwe: "IDOR",
-        source: "GitHub",
-        epss: 0.92,
-        vendor: "GitHub Advisories",
-        product: "GraphQL API",
-        exploitAvailable: true,
-        inKev: false,
-        references: ["https://github.com/advisories"],
-      },
-    ];
-    const freshCve = freshBatch[0]!;
-    const nextCustom = [...freshBatch, ...customCves].slice(0, 300);
-    saveState("cybernova_custom_cves_v17", nextCustom);
-
+    // 🚫 البلوك ده كان بيلفّق نتيجة مزامنة: 9 من NVD و6 من GitHub و3 من KEV…،
+    // وبيزيد العدّادات، وبيعشّل ثلاث سجلات CVE/IMMUNEFI/GHSA برقم عشوائي
+    // (CVSS 9.8 وEPSS 0.97 و«inKev: true» و«Foundry Local Fork Verified»)
+    // ويحفظهم في خزنة المستخدم كأنها ثغرات اتلقت. الوضع الساكن ما يقدرش يوصل
+    // لـNVD ولا GitHub (CORS) ومفيش خزنة بيتكتب فيها — فالرد بقاله صفر حقيقي
+    // وسبب مكتوب. المزامنة الحقيقية بتتم في المحرك الحيّ وفي CI.
     return {
-      ok: true,
-      id: Date.now(),
-      status: "completed",
-      newFound,
-      totalNew: newFound,
+      ok: false,
+      notWired: "static-mode",
+      measured: false,
+      newFound: 0,
+      totalNew: 0,
       total: galaxyStats.total,
       synced: galaxyStats.total,
-      totalFetched: galaxyStats.total,
+      totalFetched: 0,
       totalAvailable: galaxyStats.total,
-      nvdNew,
-      ghNew,
-      cisaNew,
-      edbNew,
-      pssNew,
-      vuldbNew,
-      circlNew,
-      immunefiNew,
-      aiMutatedNew,
-      latestCve: freshCve,
+      nvdNew: 0,
+      ghNew: 0,
+      cisaNew: 0,
+      edbNew: 0,
+      pssNew: 0,
+      vuldbNew: 0,
+      circlNew: 0,
+      immunefiNew: 0,
+      aiMutatedNew: 0,
+      latestCve: null,
       huntedAt: new Date().toISOString(),
-      pagesDone: 385,
-      message: `تمت المزامنة الحية من 9 مصادر عالمية وإضافة ${newFound} ثغرة جديدة (الإجمالي: ${galaxyStats.total.toLocaleString()} ثغرة)`,
+      pagesDone: 0,
+      reasonAr: "الحزمة الساكنة ما بتوصلش لـ NVD/GitHub/KEV (CORS) ومفيش خزنة بتتكتب هنا — فمفيش مزامنة تحصل أصلًا",
+      howAr: "المزامنة الحيّة على المحرك (nova.waifly.com/api/cve/sync)، ونتايج الصيد الحقيقية بتتنشر في state/hunt-latest.json من CI",
+      message: "مافيش مزامنة في الوضع الساكن: صفر جديد — وده مش فشل، ده مفيش مصدر.",
     };
   }
 
@@ -3390,18 +3290,33 @@ if (path === "/nova-core/version") {
   }
 
   if (path === "/monitor/system" || path === "/system/metrics") {
+    // المتصفح مالوش نظام تشغيل يعاينه: مافيش `os.cpus()` ولا `/proc/meminfo` هنا.
+    // الأرقام اللي كانت محفوظة هنا (14% · 8 نواة · 23% · 24h) كانت بتدخل عين
+    // المستخدم كأنها قياس. بقت صفر مع measured:false والصفحة بتعرض «غير مقاس».
     return {
-      cpu: { usage: 14, cores: 8, model: "CyberNova Virtual SecCore" },
-      memory: { total: 16384, used: 3840, free: 12544, pct: 23, usagePercent: 23 },
-      uptime: 86400,
-      platform: "linux",
-      arch: "x64",
+      cpu: { usage: 0, cores: 0, model: "" },
+      memory: { total: 0, used: 0, free: 0, pct: 0, usagePercent: 0 },
+      uptime: 0,
+      platform: "browser",
+      arch: "",
+      measured: false,
+      reasonAr: "الوضع الساكن (Pages/file://) مفيش عنده نظام يقيسه — القياس ده شغل المحرك الحيّ",
+      howAr: "افتح nova.waifly.com وهتلاقي الرقم مقاس من os.cpus()/os.totalmem() فعلًا",
       ts: new Date().toISOString(),
     };
   }
 
   if (path === "/bot/status") {
-    return { status: "online", availableTools: 92, cronJobs: { enabled: 4 }, alerts: { unread: 2 } };
+    // «92 أداة متاحة · 4 مهام مجدولة · تنبيهين» — أرقام مكتوبة في الحزمة. الوضع
+    // الساكن ما فيهوش بوت ولا cron شغال، فالأمانة تقول كده صراحة.
+    return {
+      status: "notWired",
+      availableTools: 0,
+      cronJobs: { enabled: 0 },
+      alerts: { unread: 0 },
+      measured: false,
+      reasonAr: "مافيش بوت شغال في الحزمة الساكنة — الأدوات بتتقاس على المحرك من /api/ops/tools",
+    };
   }
 
   if (path === "/bot/cron" || path.startsWith("/bot/cron/")) {
@@ -3473,7 +3388,7 @@ if (path === "/nova-core/version") {
         riskScore: Math.round(c.cvssScore * 10),
         riskLabel: c.severity,
         cvss: c.cvssScore,
-        epssScore: c.epss || 0.94,
+        epssScore: c.epss ?? 0,
         isInKev: Boolean(c.inKev),
         hasPublicExploit: Boolean(c.exploitAvailable),
         hasPoc: true,
@@ -3520,7 +3435,7 @@ if (path === "/nova-core/version") {
         riskScore: Math.round(c.cvssScore * 10),
         riskLabel: c.severity,
         cvss: c.cvssScore,
-        epssScore: c.epss || 0.94,
+        epssScore: c.epss ?? 0,
         isInKev: Boolean(c.inKev),
         hasPublicExploit: Boolean(c.exploitAvailable),
         hasPoc: true,
@@ -5585,8 +5500,8 @@ if (path === "/fleet/system") {
 
   if (path === "/keys/status" || path === "/keys/refresh" || path.startsWith("/keys/") || path === "/multi-ai/providers") {
     const providers = [
-      { id: "ollama", name: "Ollama Local / Tactical Brain", status: "active", configured: true, model: "dolphin-llama3:latest", latencyMs: 18 },
-      { id: "cybernova-2099", name: "CyberNova 2099 Built-in Corpus", status: "active", configured: true, model: "cyber-corpus-2578", latencyMs: 4 },
+      { id: "ollama", name: "Ollama Local / Tactical Brain", status: "unknown", configured: false, model: "dolphin-llama3:latest", latencyMs: 0, measured: false },
+      { id: "cybernova-2099", name: "CyberNova 2099 Built-in Corpus", status: "unknown", configured: false, model: "cyber-corpus-2578", latencyMs: 0, measured: false },
     ];
     return { ok: true, providers, keys: providers };
   }

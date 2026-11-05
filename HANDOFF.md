@@ -1784,3 +1784,42 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
 وحذف أصول الـrelease اللي فيها `.env` وتغيير التوكن. **اللي اتعمل بس مالوش قياس هنا:**
 تنزيل الأدوات فعلاً محتاج `objects.githubusercontent.com` (محصور في السنيدبوكس)،
 فالقياس الحقيقي هيحصل على السلوت أول ما يرفع النسخة الجديدة.
+
+## المرحلة 58 — الأسطح اتواصلت، والاختلاق اتشال من منبعه (2026-11-05)
+
+**ليه المرحلة دي:** «البرنامج مش واعي اللي فيه، وأنت بتبني الجديد وتنسى القديم». فاتساب البناء
+زائد، واتفحصت الأسطح التلاتة بعيون: `dawshax.github.io` (بانل ساكن)، `nova.waifly.com` (نفس
+الكود + سيرفر)، `dbaaclqycsiefjwjfavf.supabase.co` (الذاكرة المشتركة: Postgres + pg_cron +
+`ops-api`/`nova-brain`). القياس الحيّ من الـbackend: `cves 77617 · huntRuns 10 · findings 0`
+(22:01Z)، و`/hunt` رجّع آخر جري صيد كامل بالأدلة والـsha256 — أي إن العضلة شغالة في CI والنتايج
+بتوصل للـDB عن طريق الريبو. الاتجاه رايح بس: `api-server` مافيهوش سطر commit/push واحد.
+
+**التسريب (الأخطر):** توكن بوت تليجرام حقيقي + chat ID كانوا `?? "…"` في `nova-cron.ts` (بنسختيه)
+وفي `LiveAgentPanel.tsx` — يعني في الحزمة العامة وعلى Pages. بقوا `process.env` للسيرفر (من غيرهم
+المهمة بترجع `skipped`) و`localStorage` للمتصفح. **الباقي على صاحب المفاتيح: تدوير التوكن.**
+
+**الاتصال:** `lib/probe-services.ts` وحدة بروب واحدة (طلب حقيقي + زمن مقاس أو «غير مقاس») بتستخدمها
+`pages/status.tsx` اللي كانت **بتكتب** 6 خدمات `operational/99.9%/45ms` من غير أي طلب. شريط الإنجازات
+في `HomeDashboard` بقى بيقرا `/api/ops/tools` + `/ops/findings/status` + `ops/hunt/candidates`.
+
+**الاختلاق اللي اتشال:** `IMMUNEFI-2026-001/CVSS 10/EPSS 0.99` من بث `app.ts` · التوأم كان
+**بيزيف** مزامنة 9 مصادر ويلفّق 3 سجلات CVE/GHSA/IMMUNEFI برقم عشوائي ويحفظها في الخزنة · CPU/RAM/uptime
+الملّفقة في `/monitor/system` الساكن · `iq: 95` · `availableTools: 92` · `gateway online 14ms 6/6` ·
+15 قيمة EPSS ثابتة في `STANDALONE_CVES` · EPSS/CVSS مخترعة في `live-vuln-ingestor` · سجل افتتاح
+الصفحة بست أحداث مختلقة + الفلتر اللي كان **بيمحي رسائل الفشل** من السجل + نبضة كل 15 ثانية بتسجّل
+«تم تنفيذ subfinder» ما اتنفذش · `/status` في `routes/dashboard.ts` بتسعة سطور `operational`.
+الكل بقى قياس أو «غير مقاس/لايف» صريح — والتوأمين لسه متطابقين.
+
+**بوابات:** `audit-no-invented-intel.mjs` (5 قواعد: لا CVE-Shaped id في سياق ادّعاء من غير ما يكون في
+`state/advisory-cache.json`/الخزنة/`state/curated-cve-examples.json`؛ لا `latencyMs:<رقم>`؛ لا
+`status:"online"` في صفحة؛ لا EPSS/CVSS افتراضي؛ لا `total || 76680`) و`audit-src-secrets.mjs`
+(709 ملف متتبَّع، صفر سر حرفي). الناب متثبت بحقن ملف متتبَّع: 2 سر + 3 اختلاقات = أحمر، وبشيله = أخضر.
+واتقفلت ثغرة في `typecheck-ratchet`: كان بيعدّ «typescript مش installed» = 0 أخطاء ويخضر؛ بقى `exit 2`.
+
+**الأرقام:** `agent-gates` **21/21** · typecheck **88 == 88** · البانل **0** · connections **124/0 فجوة**
+· twins ✓ · audit-contracts ✓ · stub-honesty ✓.
+
+**لسه مفتوح (مش منسيّ):** (1) الصندوق يرجّع شله للريبو (البايتس في `state/` بس، ومحتاجة توكن كتابة) ·
+(2) `state/hunt-runs.csv` صف واحد مقابل 10 في الـDB — السجل المحلي بنصف الوتيرة · (3) `vendor/bin`
+فاضي على المكنة · (4) تدوير `TELEGRAM_BOT_TOKEN`/`NOVA_EXEC_TOKEN` · (5) من 82 صفحة بانل: 34 موصولة
+لقياس حقيقي والباقي بين عرض شكلي وتوأم بس.

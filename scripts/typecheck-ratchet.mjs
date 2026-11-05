@@ -93,6 +93,17 @@ function runPackage(pkg) {
     .join("\n");
   const depNoise = (raw.match(/error TS\d+/g) ?? []).length - (out.match(/error TS\d+/g) ?? []).length;
   const count = (out.match(/error TS\d+/g) ?? []).length;
+  // ⚠ ثغرة اتلمست بالفعلي: لما `node_modules/typescript` مش موجود، node بيطبع
+  // «Cannot find module» ويرجع بكود فشل — لكن مفيش أي سطر `error TS`، فالفحص كان
+  // بيعدّ ده «0 أخطاء» ويخضر. بوابة بتصفق للشغل اللي ما اتعملش أسوأ من بوابة حمرا.
+  // ⚠ «Cannot find module» رسالة TS شرعية (TS2307)، فممنوع نستخدمها كدليل إن
+  // المترجم ما اشتغلش. الأدلة دي بتاعة node نفسه: stack بيطبع «Error: Cannot find
+  // module '<path>'» و`code: 'MODULE_NOT_FOUND'`.
+  const bootFail = /MODULE_NOT_FOUND|^Error: Cannot find module/m.test(raw);
+  if (bootFail || (res.status !== 0 && (out.match(/error TS\d+/g) ?? []).length === 0)) {
+    const head = raw.split("\n").filter(Boolean).slice(0, 3).join(" ⏎ ").slice(0, 220);
+    return { pkg, error: `the compiler never ran (exit ${res.status}) — install deps first? :: ${head}`, count: null };
+  }
   const byCode = {};
   for (const m of out.matchAll(/error (TS\d+)/g)) byCode[m[1]] = (byCode[m[1]] ?? 0) + 1;
   const byFile = {};

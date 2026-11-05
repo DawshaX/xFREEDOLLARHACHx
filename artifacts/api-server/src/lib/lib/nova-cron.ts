@@ -46,8 +46,12 @@ async function runJob(id: string): Promise<string> {
       catch (e: any) { return `probe failed: ${e.message}`; }
     }
     case "tg_pulse": {
-      const botToken = process.env.TELEGRAM_BOT_TOKEN ?? "8430446319:AAFLClPeztKQe5HyPmVA0dCl6ULM699DRYo";
-      const chatId   = process.env.TELEGRAM_CHAT_ID   ?? "1890579200";
+      // 🔒 المفتاح كان مكتوب حرفيًا هنا — يعني منشور للعالم في المستودع وفي الحزمة
+      // العامة (ومعايه شات ID). بقى من environment بس. ومن غيره المهمة بتقول
+      // «اتخطت» بدل ما تبعت لحد أو تكدب إنها بعتت.
+      const botToken = process.env.TELEGRAM_BOT_TOKEN ?? "";
+      const chatId   = process.env.TELEGRAM_CHAT_ID   ?? "";
+      if (!botToken || !chatId) return "skipped: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID مش موجودين في environment";
       const msg = `💓 CyberNova v3 Pulse — ${new Date().toLocaleString("ar")}`;
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: msg }), signal: AbortSignal.timeout(10000) });
       return "telegram pulse sent";

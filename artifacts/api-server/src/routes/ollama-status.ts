@@ -29,9 +29,13 @@ export interface OllamaStatusSnapshot {
   baseUrl: string;
   model: string;
   checkedAt: string;
-  latencyMs?: number;
+  /** null = اتقاس وماجابش نتيجة · undefined = القياس مش مُعرّف للمسار ده */
+  latencyMs?: number | null;
   models?: string[];
   error?: string;
+  measured?: boolean;
+  reasonAr?: string;
+  modelsAreKnownNamesOnly?: boolean;
 }
 
 const FALLBACK_HYBRID_MODELS = [
@@ -74,13 +78,19 @@ async function probeOllama(): Promise<OllamaStatusSnapshot> {
     // Seamless hybrid fallback
   }
 
+  // 🥶 البلوك ده كان بيرجع «connected: true · 4ms» بعد ما الـprobe فشل (الـcatch
+  // فوق بيقول «Seamless hybrid fallback»). ده مش fallback، ده اختصال مُختلَع:
+  // اللوحة كانت بتورّد نماذج مش موجودة وتقول إن المحلي شغال.
   return {
-    connected: true,
+    connected: false,
     baseUrl,
     model: "dolphin-llama3:latest",
     checkedAt: new Date().toISOString(),
-    latencyMs: 4,
+    latencyMs: null,
+    measured: false,
+    reasonAr: "ollama ما ردّش على baseUrl — القائمة دي أسماء معروفة مش نماذج محمّلة",
     models: FALLBACK_HYBRID_MODELS,
+    modelsAreKnownNamesOnly: true,
   };
 }
 
