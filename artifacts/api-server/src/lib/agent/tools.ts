@@ -64,6 +64,7 @@ import {
 } from "../ops/runner";
 import { KIND_LIST, toolStatus } from "../ops/tools";
 import { webSearch } from "./web-search";
+import { forumSearch } from "./forum-search";
 
 export interface AgentTool {
   name: string;
@@ -193,6 +194,20 @@ export const AGENT_TOOLS: AgentTool[] = [
     title: "بحث في النت",
     description:
       "بحث حقيقي في الويب بلا أي مفتاح ولا حساب: DuckDuckGo (نتائج فورية) ثم ويكيبيديا كاحتياطي. يرجع عناوين + روابط + مقتطفات، ولو فشل الاتنين بيرجع سبب الفشل صريح.",
+    category: "intel",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { query: { type: "string" }, limit: { type: "number" } },
+      required: ["query"],
+    },
+  },
+
+  {
+    name: "forum_search",
+    title: "بحث في المنتديات الأخلاقية",
+    description:
+      "بحث في منتدى الهاكرز الأخلاقي (HackTheForum، XSS.is، Nulled، وغيره) عن ثغرات، أدوات، وبيانات نوقشت بالفعل. مرجعي للتعلم من المجتمع، مش للتنفيذ المباشر.",
     category: "intel",
     risk: "safe",
     input_schema: {
@@ -764,6 +779,16 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         const res = await webSearch(query, limit);
         if (!res.results.length) return done(false, `بحث "${query}": مفيش نتائج (${res.note ?? "المزوّدين رجعوا فاضي"})`, res);
         return done(true, `بحث "${query}": ${res.results.length} نتيجة من ${res.source}`, res);
+      }
+
+
+      case "forum_search": {
+        const query = String(rawArgs.query ?? "").trim();
+        if (!query) throw new Error("query مطلوب");
+        const limit = Math.min(Number(rawArgs.limit ?? 8) || 8, 15);
+        const res = await forumSearch(query, limit);
+        if (!res.results.length) return done(false, `بحث في المنتديات "${query}": مفيش نتائج (${res.note ?? "المزوّدين رجعوا فاضي"})`, res);
+        return done(true, `بحث في المنتديات "${query}": ${res.results.length} نتيجة من ${res.source}`, res);
       }
 
       case "cve_lookup": {

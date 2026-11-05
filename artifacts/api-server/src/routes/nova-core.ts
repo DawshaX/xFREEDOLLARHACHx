@@ -552,8 +552,10 @@ router.get("/nova-core/tools", (_req: Request, res: Response) => {
   });
 });
 
-router.get("/nova-core/persona", (_req: Request, res: Response) => {
-  res.json(buildPersonaCard(AGENT_TOOLS.map((t) => `${t.title} — ${t.description}`)));
+router.get("/nova-core/persona", (req: Request, res: Response) => {
+  const isHttps = req.protocol === "https" || req.get("x-forwarded-proto") === "https";
+  const publicUrl = `${isHttps ? "https" : "http"}://${req.get("host") || ""}`;
+  res.json(buildPersonaCard(AGENT_TOOLS.map((t) => `${t.title} — ${t.description}`), publicUrl));
 });
 
 /* ── direct execution ────────────────────────────────────────────────────── */

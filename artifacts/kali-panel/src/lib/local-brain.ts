@@ -73,6 +73,7 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   fleet_exec: "تنفيذ أمر على جهاز",
   fleet_profile: "بصمة جهاز",
   web_search: "بحث في النت",
+  forum_search: "بحث في المنتديات",
   kali_toolbox: "ترسانة أدوات كالي",
   http_headers_audit: "ترويسات الأمان",
   tls_audit: "فحص شهادة TLS",

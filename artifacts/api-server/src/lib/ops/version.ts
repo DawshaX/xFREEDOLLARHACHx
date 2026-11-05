@@ -14,6 +14,7 @@
  * Nothing here is secret: no env values, no keys, no hostnames.
  */
 import fs from "node:fs";
+import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { autonomySummary } from "./autonomy";
 import { toolStatus } from "./tools";
@@ -53,6 +54,24 @@ function currentSha(): { sha: string; source: NovaBuildStamp["shaSource"] } {
   } catch {
     /* no git, no repo, or hardened container — that is normal */
   }
+
+  /* déploy bundle: build.json يُكتب من سكريبت البناء (build-standalone.mjs)
+   * ويجلس بجانب entered point. هذا هو المصدر الوحيد المتاح في الحاويات
+   * التي لا تحمل .git ولا متغيرات بناء. */
+  for (const c of [path.resolve(process.cwd(), "build.json"), path.resolve(process.cwd(), "..", "build.json")]) {
+    try {
+      const raw = fs.readFileSync(c, "utf8");
+      const parsed = JSON.parse(raw) as { commit?: string; sha?: string };
+      const v = String(parsed.commit ?? parsed.sha ?? "").trim();
+      if (/^[0-9a-f]{7,40}$/i.test(v)) {
+        cached = { sha: v.slice(0, 40), source: "env" };
+        return cached;
+      }
+    } catch {
+      /* keep trying other candidates, then fall through to unknown */
+    }
+  }
+
   cached = { sha: "unknown", source: "unknown" };
   return cached;
 }

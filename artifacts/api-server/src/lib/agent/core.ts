@@ -308,6 +308,11 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
     test: /github/i,
     tools: (msg) => [{ tool: "github_search", args: { query: cleanQuery(msg) } }],
   },
+
+  {
+    test: /(?:منتديات|منتدى|forum|منتدى هاكرز|هاكرز)/i,
+    tools: (msg) => [{ tool: "forum_search", args: { query: cleanQuery(msg), limit: 8 } }],
+  },
   {
     test: /(?:ثغرات|ثغرة|vulnerab|cve)/i,
     tools: (msg) => [{ tool: "vuln_search", args: { keyword: cleanQuery(msg), limit: 8 } }],
@@ -931,9 +936,9 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       // so say what happened instead of saying nothing.
       reply = `معلش، المزوّد رجّع رد فاضي المرة دي (${provider}). جرّب تبعت السؤال تاني، أو خلّي الصياغة فيها هدف واضح وأنا أبدأ فوراً.\n\n**الخطوة التالية المقترحة:** اكتب مثلًا «استطلع example.com» أو «دوّر على CVE-2024-3094».`;
     }
+    // SSE frames the chunks; no artificial sleep between them — fast reception.
     for (const chunk of splitChunks(reply)) {
       opts.emit({ type: "delta", text: chunk });
-      await sleep(8);
     }
     opts.emit({ type: "done", sessionId, mode, toolCount: 0, ms: Date.now() - started, provider });
     return { mode, provider, toolsUsed: [], reply, ms: Date.now() - started };
@@ -1071,9 +1076,9 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     }
   }
 
+  // SSE frames the chunks; no artificial sleep between them — fast reception.
   for (const chunk of splitChunks(reply)) {
     opts.emit({ type: "delta", text: chunk });
-    await sleep(6);
   }
 
   // ── Long-term memory: this is what makes NOVA remember across restarts ──

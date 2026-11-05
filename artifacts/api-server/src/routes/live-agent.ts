@@ -999,26 +999,66 @@ router.post("/nova/sessions/:id/auto-chat", async (req, res) => {
       }
     }
     emit("done", { mode: autonomousMode ? "autonomous" : "standard", commandsRun: cmds.length });
-  } catch (e: any) {
+    } catch (e: any) {
     logger.warn({ err: e }, "nova auto-chat: live model unreachable — serving built-in brain reply");
-    // The external model (Ollama / ngrok) is unavailable. Instead of leaving the
-    // user with an empty bubble + hard error, stream the built-in security brain
-    // so the autonomous chat keeps working end-to-end in every environment.
+    // The external model (Ollama / ngrok) is unavailable. Fall back to the core
+    // agent (runAgent) which has ALL real tools: recon, CVE, web search, GitHub,
+    // forum search, fleet exec, memory, jobs, reports — no empty bubbles.
     try {
-      emit("fallback", { reason: e?.message ?? String(e) });
-      const brainReply = buildIntelligentSecurityReply([{ role: "user", content }]);
-      const chunks = brainReply.match(/.{1,32}/gs) ?? [brainReply];
-      for (const chunk of chunks) {
-        if (isKilledLocal(sessionId)) break;
-        emit("delta", { text: chunk });
-        await new Promise((r) => setTimeout(r, 10));
+      emit("fallback", { reason: e?.message ?? String(e), mode: "nova-core-agent" });
+      let coreReply = "";
+      await runAgent({
+        message: content,
+        sessionId,
+        history: session.messages.filter((m) => m.role !== "system").slice(-6).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+        forceHeuristic: true,
+        emit: (ev) => {
+          switch (ev.type) {
+            case "thought":
+              if (ev.text) emit("delta", { text: `🧠 ${ev.text}\n` });
+              break;
+            case "tool_call":
+              emit("exec_start", { command: ev.name, on: "nova-agent" });
+              break;
+            case "tool_result":
+              emit("exec_result", { command: ev.name, output: ev.summary ?? "", success: !!ev.ok, durationMs: ev.ms ?? 0, on: "nova-agent" });
+              break;
+            case "delta":
+              if (ev.text) { coreReply += ev.text; emit("delta", { text: ev.text }); }
+              break;
+            case "done":
+              emit("done", { mode: "nova-core-agent", commandsRun: (ev as any).toolCount ?? 0, provider: (ev as any).provider });
+              break;
+            case "error":
+              emit("error", { error: ev.message });
+              break;
+            default:
+              break;
+          }
+        },
+        approved: [],
+      });
+      if (coreReply.trim()) {
+        session.messages.push({ role: "assistant", content: coreReply });
       }
-      session.messages.push({ role: "assistant", content: brainReply });
-      emit("done", { mode: "standalone-fallback", commandsRun: 0 });
-      broadcastLiveEvent({ type: "agent_alert", data: { title: "وضع الطوارئ الذكي", message: "الموديل الخارجي غير متصل — تم استخدام محرك الذكاء المدمج", severity: "warning", ts: Date.now() }, ts: new Date().toISOString() });
+      broadcastLiveEvent({ type: "agent_alert", data: { title: "وضع الطوارئ الذكي", message: "الموديل الخارجي غير متصل — تم استخدام محركnova الأساسي مع الأدوات الحقيقية", severity: "warning", ts: Date.now() }, ts: new Date().toISOString() });
     } catch (fallbackErr) {
       logger.error({ err: fallbackErr }, "nova auto-chat fallback failed");
-      emit("error", { error: e.message ?? String(e) });
+      // Last resort: built-in brain reply
+      try {
+        emit("fallback", { reason: String(fallbackErr), mode: "builtin-brain" });
+        const brainReply = buildIntelligentSecurityReply([{ role: "user", content }]);
+        const chunks = brainReply.match(/.{1,32}/gs) ?? [brainReply];
+        for (const chunk of chunks) {
+          if (isKilledLocal(sessionId)) break;
+          emit("delta", { text: chunk });
+          await new Promise((r) => setTimeout(r, 10));
+        }
+        session.messages.push({ role: "assistant", content: brainReply });
+        emit("done", { mode: "builtin-fallback", commandsRun: 0 });
+      } catch {
+        emit("error", { error: e.message ?? String(e) });
+      }
     }
   } finally { res.end(); }
 });
