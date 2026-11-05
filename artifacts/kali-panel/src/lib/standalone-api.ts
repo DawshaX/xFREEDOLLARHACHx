@@ -5249,6 +5249,22 @@ export function resolveStandaloneApi(
         log: [],
       };
     }
+    if (path === "/fleet/servers") {
+      // The static build has no registry file: the list lives in the browser
+      // (`lib/servers.ts`) and is mirrored to a real engine when one is linked.
+      return {
+        ok: true,
+        static: true,
+        count: 0,
+        up: 0,
+        down: 0,
+        servers: [],
+        note: "الوضع الثابت: الماكينات محفوظة في المتصفح — اربط سيرفر عشان تتخزن على المحرك وتظهر في المِش.",
+      };
+    }
+    if (path.startsWith("/fleet/servers/")) {
+      return { ok: true, static: true, servers: [], note: staticNote };
+    }
     if (path === "/fleet/mesh/log") return { ok: true, count: 0, log: [], static: true, note: staticNote };
     if (path === "/fleet/plan/active") return { ok: true, plan: readActivePlan(), static: true };
     if (path === "/fleet/broadcast") {
