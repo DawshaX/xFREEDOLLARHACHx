@@ -268,6 +268,21 @@ test("a missing registry file starts from the machines we know, not from nothing
   assert.ok(list.every((s) => s.id.startsWith("srv-")), "seeded entries need real ids");
 });
 
+test("seeded machines are written down once, so addedAt stops moving", () => {
+  const previous = process.env.NOVA_SERVERS_FILE;
+  const file = join(work, "seeded-once.json");
+  process.env.NOVA_SERVERS_FILE = file;
+  const first = mod.loadServers();
+  assert.ok(existsSync(file), "the first read should persist the seeds");
+  const written = JSON.parse(readFileSync(file, "utf8")).servers;
+  assert.equal(written.length, first.length);
+  const ids = written.map((s) => s.id).sort();
+  const again = mod.loadServers();
+  process.env.NOVA_SERVERS_FILE = previous;
+  assert.deepEqual(again.map((s) => s.id).sort(), ids, "a second read must return the same machines");
+  assert.deepEqual(again.map((s) => s.addedAt), written.map((s) => s.addedAt), "addedAt must not change on every read");
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const f of failures) console.log(` - ${f}`);
