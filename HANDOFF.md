@@ -1700,6 +1700,51 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
 
 ---
 
+## المرحلة 57 — «فحص البرنامج كلو»: طبقة الستابات والافتعال اتكشفت واتصلّحت (2026-11-05 ليلاً)
+
+الفحص اتعمل بأدوات مكتوبة النهاردة، مش انطباع: جراف استيراد على 660 ملف،
+تحليل ترتيب تركيب الراوترات (80 راوتر + الـprefix + مقابل `:param`)، وقياس على
+الحزمة المبنية نفسها. الدفتر الكامل: **`docs/AUDIT-2026-11-05.md`**.
+
+**اللي طلع:** `routes/stubs.ts` = 100 handler، 72 ميت (راوتر حقيقي بيسبقه) و28
+لايف — و4 منهم بيدّعيوا نجاح على طلبات تغيير حالة، أهمهم `POST /autonomous/enable`
+اللي كان يردّ `{ok:true,active:true}` من غير ما يغيّر حاجة، و`POST /kill-switch/activate`
+اللي كان يقول `{killed:true}`. وفي البانل: `RealTimeSystemMonitor` كان بيطالب
+`/api/system/info` (مش موجود) وبيلفّق حرارة/قرص/شبكة/عمليات Windows بـ`Math.random()`؛
+`NovaModules` فيه 3 ثغرات مكتوبة في الكود + «تشغيل» بيوصل 100% من غير أي أمر؛
+`/api/tools/ssl` كان بيردّ «A+ · Let's Encrypt» لما الاتصال يفشل؛ و`/api/tools/shodan`
+بيرجع 12 مضيف مختلقين لأي سؤال.
+
+**اللي اتعمل:**
+- `routes/autonomous.ts` + `lib/autonomy-{state,events,control}.ts`: الأتمتة بقى ليها
+  حالة حقيقية (`state/autonomy.json`) بيقرأها `ops/autonomy.ts`، و`stop/isRunning`
+  في الديمون، و`stream` بأحداث دورات فعلية، و`enable/disable` متبوّبة، و`NOVA_OPS_AUTONOMY`
+  قفل أعلى سلطة. `app.ts` ساب `/autonomous` و`/kill-switch` للراوتر الحقيقي (التوأم
+  الساكن كان بيشلّهم على الحزمة اللي بتدير `nova.waifly.com`).
+- `POST /api/kill-switch/activate` الحقيقي (نفس `trip()`) + `POST /api/risk/score-one`
+  بـ`scoreOneCve` + `aliases` للأتمتة في `kali-command.ts` + الـstubs اللي مالهاش
+  مصدر بقت تعترف (`notWired`) بدل ما تدّعي.
+- `scripts/audit-stub-honesty.mjs` (بوابة جديدة في `agent-gates`، ليها `--selftest`
+  بيحقن 6 حالات) + `shadow-import` بيمنع استيراد طبقة `src/lib/lib` الظلية — و6 ملفات
+  فيها اتعلّمت بلافتة «نسخة ظلّ ميتة» (محتواها متسابش).
+- `scripts/audit-route-integrity.mjs` اتوسّع لـ`src/lib` وبقى يفهم dynamic-import
+  (بدون السطر ده كان بيغلط على `novaRagV2.ts`).
+- 6 ملفات بانل اتصلحت من الافتعال (`RealTimeSystemMonitor`, `SystemMonitor`,
+  `NovaAgentV3`, `NovaAgentV6`, `NovaModules`, `Desktop`, `shodan`, `tools/ssl`) +
+  التوأم (ssl/whois/autonomy) والنسختين متطابقتين.
+- `vuln_search`: `lib/agent/vuln-keyword.ts` بيطلّع منتج/إصدار أو CVE-ID من الكلام
+  الطبيعي، ومستحيلش مفيش → الأداة ما بتتناداش على NVD خالص، و`ok:false` بسبب مبيّن؛
+  و«0 نتيجة» بقت تتقال 0 مش «نجحت». `github_search` صار `ok` مرهون بردّ المصدر.
+- `packageManager: pnpm@10.34.9` + 5 workflows كانت على `version: 10` (التنصيب
+  كان بينضرب لما corepack جاب 12 → `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`).
+
+**الأرقام:** `agent-gates 19/19 · 50.1s` · typecheck **92** (كان 94، الأساس اتوطّى) ·
+بانل 0 · `audit-stub-honesty`: 72 ميت/28 لايف/0 ادّعاء · الحزمة 130 ملف · zip 2.7 MB ·
+`secrets audit ✅`. على الحزمة نفسها: `enable` مجهول = 403، بالتوكن = `ok:true`
+و`level:standard` وملف اتكتب و`cycles:101`، `kill-switch/activate` رجّع `active:true`
+في `/kill-switch/status`، `ssl?domain=github.com` رجّع issuer حقيقي وصلاحيه يوم،
+و`?domain=…invalid` رجّع `connected:false` برسالة الـTLS.
+
 ## المرحلة 56 — «البرنامج بيستخدم نفسه»: أدواته، بياناته، وبواباته
 
 **السؤال اللي فتح المرحلة:** «الشات عبيط» + «البرنامج فيه حاجات مش متفعلة وناقصة» +

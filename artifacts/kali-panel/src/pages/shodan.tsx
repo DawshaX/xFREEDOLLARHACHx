@@ -9,14 +9,6 @@ const inputStyle: React.CSSProperties = { background: "rgba(255,255,255,0.03)", 
 
 interface ShodanHit { ip: string; port: number; org: string; country: string; product: string; banner: string; }
 
-const MOCK_HITS: ShodanHit[] = [
-  { ip: "95.123.45.67", port: 80, org: "Saudi Telecom Company", country: "SA", product: "Apache httpd 2.4.41", banner: "HTTP/1.1 200 OK\nServer: Apache/2.4.41 (Ubuntu)\nContent-Type: text/html" },
-  { ip: "104.22.33.44", port: 443, org: "Cloudflare, Inc.", country: "US", product: "cloudflare-nginx", banner: "HTTP/1.1 403 Forbidden\nServer: cloudflare\nContent-Type: text/html" },
-  { ip: "212.11.22.33", port: 22, org: "Mobily", country: "SA", product: "OpenSSH 8.2p1", banner: "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.3" },
-  { ip: "185.55.66.77", port: 3306, org: "Zain SA", country: "SA", product: "MySQL 5.7.33", banner: "5.7.33-0ubuntu0.18.04.1" },
-  { ip: "5.6.7.8", port: 8080, org: "Amazon.com", country: "US", product: "Jetty 9.4.z-SNAPSHOT", banner: "HTTP/1.1 404 Not Found\nServer: Jetty(9.4.z-SNAPSHOT)" },
-];
-
 export default function Shodan() {
   const [query, setQuery] = useState(() => {
     try {
@@ -28,6 +20,7 @@ export default function Shodan() {
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hits, setHits] = useState<ShodanHit[]>([]);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,10 +53,12 @@ export default function Shodan() {
         target: osint.domain,
         title: `Shodan InternetDB + CRT.SH: ${osint.domain} (${ports.length} منافذ)`,
       });
-    } catch {
-      const q = query.toLowerCase();
-      const filtered = MOCK_HITS.filter(h => h.ip.includes(q) || h.org.toLowerCase().includes(q) || h.product.toLowerCase().includes(q));
-      setHits(filtered.length ? filtered : MOCK_HITS);
+    } catch (e) {
+      // الأول كانت الصفحة دي ترمي 5 مضيفات ملفّقة (MOCK_HITS) لما الاستعلام
+      // الحقيقي يفشل — يعني المستخدم بيشوف «نتايج» لهدف مفيش عليه بيانات.
+      // دلوقتي: صفر حقيقي + سبب مقروء.
+      setHits([]);
+      setFailure(e instanceof Error ? e.message : "الاستعلام فشل");
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +126,17 @@ export default function Shodan() {
       {!isLoading && search && hits.length === 0 && (
         <div className="rounded-2xl p-12 text-center space-y-3" style={NEON_CARD}>
           <Skull className="w-12 h-12 mx-auto" style={{ color: "rgba(255,255,255,0.05)" }} />
-          <p className="font-mono text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>لم يتم العثور على نتائج لـ "{search}"</p>
+          {failure ? (
+            <>
+              <p className="font-mono text-sm" style={{ color: "#ffaa44" }}>الاستعلام ما كملش: {failure}</p>
+              <p className="font-mono text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                «مافيش نتايج» و«مافيش مصدر» حاجتين مختلفتين — دي تانية، فمش هنقول إن الهدف نضيف
+                ولا هنطلّع مضيفات من دماغنا.
+              </p>
+            </>
+          ) : (
+            <p className="font-mono text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>InternetDB وCRT.SH ما رجعوش حاجة لـ "{search}"</p>
+          )}
         </div>
       )}
 

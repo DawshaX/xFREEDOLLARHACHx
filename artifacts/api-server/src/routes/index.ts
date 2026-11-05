@@ -20,6 +20,7 @@ import scanRouter from "./security/scan";
 import proxyRouter from "./proxy";
 import botRouter from "./bot";
 import monitorRouter from "./monitor";
+import autonomousRouter from "./autonomous";
 import modulesRouter from "./modules";
 import providersRouter from "./providers";
 import nodesRouter from "./nodes";
@@ -197,6 +198,7 @@ router.use(killSwitchRouter);
 // ── Bot, Cron, Monitor ───────────────────────────────────────────────────────
 router.use(botRouter);
 router.use(monitorRouter);
+router.use(autonomousRouter);
 router.use(novaCronRouter);
 router.use(novaIntelRouter);
 router.use(modulesRouter);

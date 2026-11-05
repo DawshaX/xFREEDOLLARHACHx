@@ -1786,27 +1786,37 @@ if (path === "/nova-core/version") {
   }
 
   if (path === "/proxy/ssl" || path === "/tools/ssl") {
-    const domain = u.searchParams.get("domain") || "example.com";
+    // التوأم الساكن ميقدرش يفتح TCP من المتصفح — فمش هنخترع شهادة A+ لكل دومين.
+    const domain = u.searchParams.get("domain") || "";
     return {
       domain,
-      grade: "A+",
-      issuer: "Google Trust Services / Let's Encrypt",
-      protocol: "TLSv1.3",
-      cipher: "TLS_AES_256_GCM_SHA384",
-      validFrom: new Date(Date.now() - 30 * 86400_000).toISOString(),
-      validTo: new Date(Date.now() + 60 * 86400_000).toISOString(),
+      connected: false,
+      grade: null,
+      issuer: null,
+      subject: null,
+      protocol: null,
+      cipher: null,
+      validFrom: null,
+      validTo: null,
+      validDaysRemaining: null,
+      expired: null,
+      noSource: true,
+      error: "no_execution_plane",
+      reasonAr: "توأم Pages الساكن مفيهوش إمكانية اتصال TLS — مفيش شهادة اتقاست.",
+      howAr: "استخدم السيرفر الحيّ: GET /api/tools/ssl?domain=… (أو شغّل openssl s_client من محطة العمليات).",
     };
   }
 
   if (path === "/proxy/whois" || path === "/tools/whois") {
-    const domain = u.searchParams.get("domain") || "example.com";
+    // كان بيرجّع مسجّل وتواريخ وماسمات لكل دومين من غير ما يسأل حد.
+    const domain = u.searchParams.get("domain") || "";
     return {
       domain,
-      registrar: "ICANN Accredited Domain Registrar",
-      createdAt: new Date(Date.now() - 365 * 5 * 86400_000).toISOString(),
-      expiresAt: new Date(Date.now() + 365 * 2 * 86400_000).toISOString(),
-      nameservers: [`ns1.${domain}`, `ns2.${domain}`],
-      status: ["clientTransferProhibited", "clientUpdateProhibited"],
+      registrar: null, createdAt: null, expiresAt: null, nameservers: [], status: [],
+      noSource: true,
+      error: "no_execution_plane",
+      reasonAr: "WHOIS محتاج whois:43/tcp — المتصفح مابيعرفش يفتحه.",
+      howAr: "على السيرفر الحيّ: GET /api/tools/whois?domain=… أو `whois <domain>` من محطة العمليات.",
     };
   }
 
@@ -5633,19 +5643,34 @@ if (path === "/fleet/system") {
     return STANDALONE_AI_KEY_SLOTS;
   }
 
+  // الأتمتة في التوأم الساكن: مفيش ديمون ولسه بنقول «اتفعّل ✓»؟ لأ.
+  // الحالة بتتسجل كنية محلية بس، والرد بيقول الحقيقة: مفيش مشغّل أوامر هنا.
   if (path === "/agent/autonomous/enable" || path === "/autonomous/enable") {
     saveState("cybernova_autonomous_v1", { enabled: true, updatedAt: Date.now() });
-    return { ok: true, active: true, enabled: true, tasksCompleted: 0, tasksErrored: 0 };
+    return {
+      ok: false, standalone: true, notWired: true,
+      error: "no_execution_plane",
+      enabled: false, active: false, level: "off",
+      reasonAr: "التوأم الساكن (GitHub Pages) مفيهوش ديمون يشغّل دورات ذاتية — الطلب اتسجل كنية في المتصفح بس.",
+      howAr: "شغّل الأتمتة على السيرفر الحقيقي: POST /api/autonomous/enable (يتطلب x-nova-token).",
+    };
   }
 
   if (path === "/agent/autonomous/disable" || path === "/autonomous/disable") {
     saveState("cybernova_autonomous_v1", { enabled: false, updatedAt: Date.now() });
-    return { ok: true, active: false, enabled: false };
+    return { ok: true, standalone: true, enabled: false, active: false, level: "off", note: "مفيش ديمون هنا أصلاً — الإيقاف آمن." };
   }
 
   if (path === "/agent/autonomous/status" || path === "/autonomous/status") {
     const st = loadState<{ enabled?: boolean }>("cybernova_autonomous_v1", { enabled: true });
-    return { ok: true, enabled: st.enabled !== false, active: st.enabled !== false, tasksCompleted: 0, tasksErrored: 0, isRunning: false };
+    return {
+      ok: true, standalone: true,
+      // بنبلّغ عن النية المسجلة في المتصفح، ونبين إنها مش حالة مشغّل حقيقي
+      enabled: false, active: false, intentRecordedLocally: st.enabled !== false,
+      level: "off", tasksCompleted: 0, tasksErrored: 0, isRunning: false,
+      daemon: { running: false, state: "no_daemon_in_static_twin", cycles: 0, lastHeartbeatAt: "" },
+      reasonAr: "التوأم الساكن مفيهوش ديمون؛ مفيش دورات ذاتية بتتم هنا.",
+    };
   }
 
   if (path === "/agent/autonomous/run" && m === "POST") {

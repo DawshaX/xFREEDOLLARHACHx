@@ -27,6 +27,7 @@ import { loadPrograms } from "./scope";
 import { createJob, runJob } from "./runner";
 import { broadcastEvent } from "../ws-hub";
 import { logger } from "../logger";
+import { effectiveAutonomy } from "../autonomy-state";
 
 export type AutonomyLevel = "off" | "passive" | "standard" | "deep";
 
@@ -54,10 +55,10 @@ function envInt(name: string, min: number, max: number, dflt: number): number {
 }
 
 export function autonomyLevel(): AutonomyLevel {
-  const raw = String(process.env.NOVA_OPS_AUTONOMY ?? "passive").trim().toLowerCase();
-  if (raw === "off" || raw === "0" || raw === "false") return "off";
-  if (raw === "standard" || raw === "deep") return raw;
-  return "passive";
+  // الملف المشترك بقى هو المرجع: قفل الـenv لسه أعلى سلطة، وبعده قرار اللوحة
+  // (state/autonomy.json) وبعدين passive. قبل كده كانت env بس — فاللي كان
+  // يضغط «تفعيل» في المحطة ما كان بيغيّر حاجة في المحرك خالص.
+  return effectiveAutonomy().level;
 }
 
 /**

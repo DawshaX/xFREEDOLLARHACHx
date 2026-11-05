@@ -227,3 +227,53 @@ POST + Origin نفسه          → 200 · السكربت اتنفّذ فعلا�
    `build-standalone.mjs` ينسخه (بالاسم أو بالمجلد).
 4. **`twin-fabrication`** — التوأم (`standalone-api.ts`) ممنوع يؤكد تثبيت/فحص/جلب:
    لا `installed: true`، لا «Nmap scan report»، لا «Verified HTTP 200»، ولا `ok:true` جنب `stdout`.
+
+
+---
+
+## مفتاح الأتمتة الحقيقي (مرحلة 57)
+
+قبل كده كان `POST /api/autonomous/enable` بيتجاب من `routes/stubs.ts` بيردّ
+`{ok:true,active:true}` من غير أي أثر. دلوقتي ليها راوتر وحالة:
+
+| المسار | auth | بيعمل إيه |
+|---|---|---|
+| `GET /api/autonomous/status` | مفتوح | الحالة المقروة: `enabled`, `level`, `source` (`panel`/`env`/`default`), `file`, `fileExists`, `lockedByEnv`, `daemon:{running,state,cycles,lastHeartbeatAt,activeTarget}`, `subscribers` |
+| `POST /api/autonomous/enable` | `x-nova-token` (أو same-origin كما في `/ops`) | بيكتب `state/autonomy.json`، بيشغّل `startAutonomousBackgroundDaemon()`، وبيردّ **بالحالة بعد القراءة** (لو القياس مش مطابق للطلب → `ok:false` برسالة، مش «تم ✓») |
+| `POST /api/autonomous/disable` | توكن | بيقفل المستوى وفي النسخة اللي فيها `stopAutonomousBackgroundDaemon()` بيلغي المؤقّت فعلاً |
+| `POST /api/autonomous/tick` | توكن | دورة حالّية على `tickAutonomousDaemon(target)` — للنتاجة اللحظية بدل ما يستنى اللفة الجاية |
+| `GET /api/autonomous/stream` | مفتوح | SSE: أول حدث `status` مقاس، وبعدين `tick_start/tick_done/tick_error/enabled/disabled` من مجرّة الديمون (`lib/autonomy-events.ts`) |
+
+**الأولويات:** `NOVA_OPS_AUTONOMY` لو مضبوط = قرار مشغّل وقفل (المتصفح ما
+بيتجاوزهوش، بيردّ `ok:false` مع السبب) ← بعدين `state/autonomy.json` (لوحة
+التحكم) ← بعدين `passive`. `ops/autonomy.ts:autonomyLevel()` بيقرأ من نفس المصدر،
+فمفيش شاشة تقدر تقول «مفعّل» والمحرك يقول غير كده.
+
+للتشغيل من المتصفح: `LiveAgentPanel` بيحط التوكن من `localStorage["cybernova_ops_token"]`
+في `x-nova-token` — نفس مفتاح `ops-client.ts`. من بره:
+
+```bash
+curl -X POST https://nova.waifly.com/api/autonomous/enable \
+  -H "x-nova-token: $NOVA_EXEC_TOKEN" -H 'Content-Type: application/json' -d '{"level":"standard"}'
+curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .source'
+```
+
+## بوابة أمانة الـstubs
+
+`node scripts/audit-stub-honesty.mjs` — بيحلّل ترتيب تركيب `routes/index.ts`
+(مع الـprefix ومقابل `:param`) بيقسّم `stubs.ts` ميت/لايف، وبيفشل لو ستاب **لايف**
+ادّى نجاح على طلب تغيير حالة أو لفّق `active/started/killed:true` من غير شغل،
+أو لو حد استورد من طبقة `src/lib/lib` الظلية. `--selftest` بيثبت إنه بيلحق
+الحقن. اتقاس النهاردة: 100 handler → 72 ميت / 28 لايف / 0 ادّعاء.
+
+## مفاتيح جديدة/مهملة
+
+- `SHODAN_API_KEY` (اختياري): لو موجود `GET /api/tools/shodan?q=…` بيعمل استعلام
+  `api.shodan.io/shodan/host/search` حقيقي؛ لو مش موجود بيردّ
+  `{ok:false,noSource:true,error:"no_shodan_key",reasonAr,howAr}` — **مش** بيعيد
+  12 مضيف مختلقين زي ما كان. البديل المجاني الدائم: `/api/deep-research/live-osint`.
+- `packageManager: pnpm@10.34.9` في `package.json` + كل الـworkflows مثبّتة على
+  نفس النسخة (قبل كده 5 منهم على `version: 10` — أي major جديد بيقصف
+  `--frozen-lockfile` بـ`ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`).
+- `state/autonomy.json`: حالة تشغيل، بيتكتب جوه `NOVA_STATE_DIR` أو `state/` —
+  ملف صغير تقدر تشرّه لو عايز تثبّت المستوى عند إعادة التشغيل.

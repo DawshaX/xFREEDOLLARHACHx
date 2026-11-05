@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/Layout";
 
 interface AgentStep { id: string; type: "thought" | "action" | "observation" | "result"; content: string; timestamp: string; status: "pending" | "running" | "completed" | "failed"; }
 interface AgentTask { id: string; title: string; description: string; status: "idle" | "planning" | "executing" | "completed" | "failed"; steps: AgentStep[]; createdAt: string; completedAt?: string; }
-interface SystemStatus { cpu: number; memory: number; network: "online" | "offline"; threats: number; lastScan: string; }
+interface SystemStatus { cpu: number | null; memory: number | null; network: "online" | "offline"; threats: number | null; lastScan: string; }
 
 const NEON_CARD = { background: "rgba(8,0,18,0.95)", border: "1px solid rgba(180,0,255,0.12)", borderRadius: 16, boxShadow: "0 0 20px rgba(150,0,255,0.04)" };
 const DARK = { background: "rgba(5,0,12,0.8)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12 };
@@ -27,9 +27,27 @@ export default function NovaAgentV3() {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSystemStatus(prev => ({ ...prev, cpu: Math.min(99, 15 + Math.random() * 25), memory: Math.min(95, 35 + Math.random() * 30), network: navigator.onLine ? "online" : "offline", threats: Math.floor(Math.random() * 5) }));
-    }, 2000);
+    // الأرقام دي كانت random كل 2 ثانية. بقت مقاسة من /api/system/metrics،
+    // والتهديدات/الاتصالات «غير مقاس» لحد ما يبقى ليها مصدر — أحسن من رقم واهم.
+    const tick = async () => {
+      try {
+        const r = await fetch("/api/system/metrics", { signal: AbortSignal.timeout(6000) });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const d = (await r.json()) as { cpu?: { usage?: number }; ram?: { percent?: number } };
+        setSystemStatus((prev) => ({
+          ...prev,
+          cpu: Number.isFinite(d.cpu?.usage) ? (d.cpu?.usage as number) : null,
+          memory: Number.isFinite(d.ram?.percent) ? (d.ram?.percent as number) : null,
+          threats: null,
+          network: navigator.onLine ? "online" : "offline",
+          lastScan: new Date().toISOString(),
+        }));
+      } catch {
+        setSystemStatus((prev) => ({ ...prev, cpu: null, memory: null, threats: null }));
+      }
+    };
+    void tick();
+    const interval = setInterval(() => { void tick(); }, 10_000);
     return () => clearInterval(interval);
   }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [currentTask?.steps]);
@@ -76,10 +94,10 @@ export default function NovaAgentV3() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "CPU", value: `${systemStatus.cpu.toFixed(1)}%`, color: "#44eebb", rgb: "68,238,187", icon: Cpu },
-          { label: "Memory", value: `${systemStatus.memory.toFixed(1)}%`, color: "#aa44ff", rgb: "170,68,255", icon: Activity },
+          { label: "CPU", value: systemStatus.cpu === null ? "غير مقاس" : `${systemStatus.cpu.toFixed(0)}%`, color: "#44eebb", rgb: "68,238,187", icon: Cpu },
+          { label: "Memory", value: systemStatus.memory === null ? "غير مقاس" : `${systemStatus.memory.toFixed(0)}%`, color: "#aa44ff", rgb: "170,68,255", icon: Activity },
           { label: "Network", value: systemStatus.network === "online" ? "ONLINE" : "OFFLINE", color: systemStatus.network === "online" ? "#44ff88" : "#ff4444", rgb: systemStatus.network === "online" ? "68,255,136" : "255,68,68", icon: Globe },
-          { label: "Threats", value: systemStatus.threats, color: "#ffaa44", rgb: "255,170,68", icon: Shield },
+          { label: "Threats", value: systemStatus.threats === null ? "غير مقاس" : systemStatus.threats, color: "#ffaa44", rgb: "255,170,68", icon: Shield },
         ].map(({ label, value, color, rgb, icon: Icon }) => (
           <div key={label} className="rounded-xl p-4" style={{ background: `rgba(${rgb},0.06)`, border: `1px solid rgba(${rgb},0.2)`, borderRadius: 16 }}>
             <div className="flex items-center gap-2 mb-1">

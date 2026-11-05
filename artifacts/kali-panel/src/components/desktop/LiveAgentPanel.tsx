@@ -2193,32 +2193,109 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   };
 
   // ── Autonomous mode toggle ────────────────────────────────────────────────
+  /**
+   * الزر ده كان بيبعت POST /autonomous/enable — والمقطع ده في `stubs.ts` كان
+   * بيردّ `{ok:true,active:true}` من غير ما يفعّل حاجة، والـSSE كان `: ping`
+   * بس. فمحطة العمل كانت بتعرض «الوضع المستقل نشط» والديمون الحقيقي ما اتغيّرش.
+   * بقى: الروترات الحقيقية (`routes/autonomous.ts`) + التوكن من نفس مخزن
+   * ops-client + الحالة بتتقرا من السيرفر بعد الطلب، والزر بيتضبط على المقاس.
+   */
+  const autonomyHeaders = (): Record<string, string> => {
+    try {
+      const t = localStorage.getItem("cybernova_ops_token");
+      return { "Content-Type": "application/json", ...(t ? { "x-nova-token": t } : {}) };
+    } catch {
+      return { "Content-Type": "application/json" };
+    }
+  };
+  const readAutonomyStatus = async () => {
+    try {
+      const r = await fetch(`${API_BASE}/autonomous/status`);
+      if (!r.ok) return null;
+      return (await r.json()) as {
+        enabled?: boolean; level?: string; lockedByEnv?: boolean;
+        daemon?: { running?: boolean; cycles?: number; state?: string };
+      };
+    } catch {
+      return null;
+    }
+  };
+  const openAutonomyStream = () => {
+    autonomousSseRef.current?.close();
+    const sse = new EventSource(`${API_BASE}/autonomous/stream`);
+    sse.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data) as { type: string; data: any };
+        if (data.type === "status") {
+          const st = data.data as { enabled?: boolean; level?: string; daemon?: { cycles?: number } };
+          setAutonomousMode(st?.enabled === true);
+          addToast(`الأتمتة (${st?.enabled ? "شغالة" : "مقفولة"}) · المستوى ${st?.level ?? "?"} · دورات ${st?.daemon?.cycles ?? 0}`, st?.enabled ? "success" : "warn");
+        }
+        if (data.type === "tick_start") addToast("🧠 دورة ذاتية بدأت", "info");
+        if (data.type === "tick_done") addToast(`✔ دورة ذاتية خلصت · ${data.data?.cycles ?? "?"} دورة`, "success");
+        if (data.type === "tick_error") addToast(`⚠ دورة ذاتية باظت: ${String(data.data?.error ?? "").slice(0, 70)}`, "error");
+        if (data.type === "task_done") addToast(`[Nova-Daemon] ${String(data.data?.result ?? "تمت المهمة").slice(0, 80)}`, "success");
+        if (data.type === "task_error") addToast(`⚠ ${String(data.data?.error ?? "خطأ").slice(0, 80)}`, "error");
+        if (data.type === "alert") addToast(String(data.data?.message ?? "تنبيه"), "warn");
+      } catch { /* ignore */ }
+    };
+    sse.onerror = () => { autonomousSseRef.current?.close(); autonomousSseRef.current = null; addToast("انقطع الاتصال بالوضع المستقل", "error"); };
+    autonomousSseRef.current = sse;
+  };
   const toggleAutonomous = async () => {
     if (autonomousMode) {
       autonomousSseRef.current?.close();
       autonomousSseRef.current = null;
-      setAutonomousMode(false);
-      addToast("الوضع المستقل — مُوقف", "warn");
-      try { await fetch(`${API_BASE}/autonomous/disable`, { method: "POST" }); } catch { /* ignore */ }
-    } else {
       try {
-        await fetch(`${API_BASE}/autonomous/enable`, { method: "POST" });
-      } catch { /* ignore */ }
-      const sse = new EventSource(`${API_BASE}/autonomous/stream`);
-      sse.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data) as { type: string; data: any };
-          if (data.type === "task_done") addToast(`[Nova-Daemon] ${String(data.data?.result ?? "تمت المهمة").slice(0, 80)}`, "success");
-          if (data.type === "task_error") addToast(`⚠ ${String(data.data?.error ?? "خطأ").slice(0, 80)}`, "error");
-          if (data.type === "alert") addToast(String(data.data?.message ?? "تنبيه"), "warn");
-        } catch { /* ignore */ }
-      };
-      sse.onerror = () => { setAutonomousMode(false); autonomousSseRef.current?.close(); addToast("انقطع الاتصال بالوضع المستقل", "error"); };
-      autonomousSseRef.current = sse;
-      setAutonomousMode(true);
-      addToast("الوضع المستقل — نشط! الوكيل يعمل في الخلفية", "success");
+        const r = await fetch(`${API_BASE}/autonomous/disable`, { method: "POST", headers: autonomyHeaders() });
+        const j = (await r.json().catch(() => null)) as { ok?: boolean; error?: string; status?: { enabled?: boolean } } | null;
+        if (!r.ok || j?.ok === false) {
+          addToast(`الإيقاف ما اتسجلش: ${j?.error ?? `HTTP ${r.status}`}`, "error");
+        }
+        // الزر بيتضبط على رد السيرفر، مش على النية
+        setAutonomousMode(j?.status?.enabled === true);
+        if (j?.ok === true) addToast("الوضع المستقل — مُوقف (متقاس من السيرفر)", "warn");
+      } catch (err) {
+        setAutonomousMode(false);
+        addToast(`الإيقاف فشل: ${err instanceof Error ? err.message : String(err)}`, "error");
+      }
+      return;
+    }
+    try {
+      const r = await fetch(`${API_BASE}/autonomous/enable`, { method: "POST", headers: autonomyHeaders(), body: "{}" });
+      const j = (await r.json().catch(() => null)) as { ok?: boolean; error?: string; status?: { level?: string; lockedByEnv?: boolean; daemon?: { running?: boolean; cycles?: number } } } | null;
+      if (!r.ok || j?.ok === false) {
+        const why = j?.error ?? (r.status === 403 ? "مطلوب توكن المشغّل (NOVA_EXEC_TOKEN) لتغيير حالة الأتمتة" : `HTTP ${r.status}`);
+        addToast(`التفعيل اترفض: ${why}`, "error");
+        const st = await readAutonomyStatus();
+        setAutonomousMode(st?.enabled === true);
+        return;
+      }
+      openAutonomyStream();
+      const st = await readAutonomyStatus();
+      setAutonomousMode(st?.enabled === true);
+      addToast(
+        st?.enabled
+          ? `الوضع المستقل نشط · المستوى ${st.level} · الديمون ${st.daemon?.running ? "شغال" : "مشغالش بعد"} · دورات ${st.daemon?.cycles ?? 0}`
+          : "الاتصال اتفتح بس السيرفر بيقول الأتمتة مقفولة — مفيش تفعيل وهمي",
+        st?.enabled ? "success" : "warn",
+      );
+      void j;
+    } catch (err) {
+      addToast(`التفعيل فشل: ${err instanceof Error ? err.message : String(err)}`, "error");
     }
   };
+  // أول ما المحطة تفتح: الحالة من السيرفر، مش من التخمين
+  useEffect(() => {
+    let cancelled = false;
+    void readAutonomyStatus().then((st) => {
+      if (cancelled || !st) return;
+      setAutonomousMode(st.enabled === true);
+      if (st.enabled === true && !autonomousSseRef.current) openAutonomyStream();
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Bootstrap session ──────────────────────────────────────────────────────
   useEffect(() => {
