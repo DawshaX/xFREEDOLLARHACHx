@@ -120,6 +120,17 @@ export function buildSelfModel(): SelfModel {
  */
 export function selfModelPrompt(model: SelfModel = buildSelfModel()): string {
   const toolList = model.tools.names.map((n) => `\`${n}\``).join(" · ");
+  // The can-do lines about the corpus and the fleet are re-derived from the
+  // model passed in, so an override (a test, or a caller with fresh numbers)
+  // can never produce a prompt that contradicts itself — e.g. «192,930 ثغرة»
+  // in one line and «غير مقاس» in the next.
+  const derived = model.canDo.filter((c) => !/ثغرة|ماكينة/.test(c));
+  const corpusLine = model.corpus.measured
+    ? `البحث في ${model.corpus.total.toLocaleString("en-US")} ثغرة حقيقية (NVD + KEV + EPSS) من داخل المنصة`
+    : "البحث في فهرس الثغرات (لسه مش متزامن — البحث هيقول «مفيش بيانات» بصراحة)";
+  const fleetLine = model.machines.registered
+    ? `${model.machines.registered} ماكينة مسجّلة في الأسطول (التنفيذ عليها متاح لو الوكيل متصل)`
+    : "الأسطول جاهز لكن مفيش ماكينة مسجّلة — إضافة ماكينة بتفتح تنفيذ الأوامر عليها";
   return [
     "# من أنت الآن — مقاس، مش مكتوب",
     `- أدواتك الحقيقية: **${model.tools.count}** أداة (${toolList}). كل أداة بتنفّذ فعلاً؛ لو أداة فشلت بتقول فشلت وليه.`,
@@ -129,7 +140,7 @@ export function selfModelPrompt(model: SelfModel = buildSelfModel()): string {
     model.opsKinds ? `- طبقة التنفيذ (ops): ${model.opsKinds} نوع عملية مسجّل.` : "- طبقة التنفيذ: غير متاحة في هذه النسخة.",
     "",
     "# تقدري تعملي إيه فعلاً (استخدمي دي لما حد يسأل «تقدر تعمل إيه»)",
-    ...model.canDo.map((c) => `- ${c}`),
+    ...[corpusLine, fleetLine, ...derived].map((c) => `- ${c}`),
     "",
     "# مش مقدور عليه — تقوليه بصراحة ومن غير لف",
     ...model.cannotDo.map((c) => `- ${c}`),
