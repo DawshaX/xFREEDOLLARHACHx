@@ -1677,7 +1677,7 @@ if (path === "/nova-core/version") {
       tagline: "مش بوت أوامر — شريكك اللي بيفكر وينفّذ ويشرح.",
       traits: ["تفكير بصوت عالٍ قبل كل خطوة", "تنفيذ أدوات حقيقي", "ذاكرة دائمة", "عربية مصرية تقنية"],
       principles: ["أهداف مصرّح بها فقط", "لا نتائج مُفبركة", "الدقة قبل الإثارة"],
-      capabilities: [`فهرس ${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة`, "33 أداة", "أسطول أجهزة عند ربط سيرفر"],
+      capabilities: [`فهرس ${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة`, "أدوات حقيقية بتتقاس على السيرفر", "أسطول أجهزة عند ربط سيرفر"],
       fleet: {
         note: "في وضع المتصفح مفيش أجهزة. اربط سيرفر عشان الأسطول يظهر.",
         install: "curl -fsSL <host>/api/local-agent/download-agent | bash -s -- --id machine-N",

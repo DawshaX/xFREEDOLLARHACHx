@@ -185,6 +185,43 @@ curl -s https://nova.waifly.com/api/nova-core/auto-update
 
 ---
 
+## ⛔ متضغطش «Change Language» — قبل ما تقرا السطر ده
+
+لوحة Waifly فيها زرار **Change Language** في صفحة السيرفر. الرسالة اللي بتظهر
+بتقول بالحرف: *"This triggers a reinstall on the new environment — existing files
+may be lost"*. ده معناه إن **الملفات كلها بتتمسح وتتبني من جديد**، ومنها:
+
+- الحزمة `nova-24-7` (بما فيها `nova-app.mjs` و`public/` و`boot.mjs`)
+- `state/` — الذاكرة والجلسات والـ`auto-update.json`
+- `.env` — المفاتيح والإعدادات (`NOVA_EXEC_TOKEN` وغيره)
+
+**القاعدة:** السيرفر شغّال على egg **NodeJS**، وده الصح. متغيّرش الـegg عشان
+تحاول تركّب PHP أو Go أو Rust — البرنامج JavaScript بالكامل.
+
+### ولو لزم التغيير فعلًا (تغيير المزوّد نفسه، مش البرنامج)
+
+اختار من القائمة واحد من الاتنين **بس**:
+
+| الاختيار | ليه |
+|---|---|
+| **NodeJS + Python** | الأفضل. Node للبرنامج، وPython موجود لـ`deploy/live-update.py` (المُحدِّث الذاتي). |
+| **NodeJS** | اللي شغّال دلوقتي. لو البايثون مش موجود، التحديث الذاتي بيحاول يفشل بنفسه (والتطبيق بيكتب الماركر بنفسه على أي حال). |
+
+**متختارش:** `Web Hosting (PHP)` · `Python` لوحده · `Go` · `Rust Server` · `Java Server` · `Bun` · `Generic C#` —
+ولا واحد فيهم هيشغّل `nova-app.mjs`.
+
+### قبل أي تغيير، خد نسخة (5 دقايق، مجانًا)
+
+1. **نزّل `state/`** من الـFile Manager (أو من `https://nova.waifly.com/api/nova-core/memory/export`).
+2. **نزّل `.env`** لو موجود (في `/home/container/.env`).
+3. بعد التغيير: ارفع زيب `nova-24-7` الجديد من الريليس، فكّه، وبعدها رجّع `state/` و`.env`.
+4. تأكيد: `curl -s "https://nova.waifly.com/api/fleet/doctor?cb=1"` — لازم `ready:true` تاني.
+
+> البديل الأرخص من أي تغيير egg: **سيب السلوت زي ما هو** واستخدم الـ`subdomain` التاني أو Codespace
+> لأي تجربة.
+
+---
+
 ## لو حصلت مشكلة
 
 | العرض | السبب | الحل |

@@ -151,7 +151,23 @@ router.post("/nova-core/chat", async (req: Request, res: Response) => {
     broadcastEvent({ type: "agent_run_complete", agent: "nova", mode: result.mode, tools: result.toolsUsed, ts: Date.now() });
   } catch (err) {
     logger.warn({ err }, "nova-core chat failed");
-    emit({ type: "error", message: (err as Error).message });
+    // Measured 2026-11-05: two bubbles in a real transcript were empty. The
+    // cause was a thrown turn — the panel got `error`, drew nothing, and the
+    // human read silence as «البرنامج عبيط». An error must also be a sentence.
+    const reason = (err as Error).message || "سبب غير معروف";
+    emit({ type: "error", message: reason });
+    emit({
+      type: "delta",
+      text: `حصلت مشكلة وأنا بنفّذ الطلب: **${reason}**\n\nمفيش حاجة اتلغت ومفيش حاجة اتدفنت — جرّب تبعتها تاني، ولو كررت هات نفس الرسالة اكتبلي هنا وأنا أشتغل بالوضع الحتمي (بدون موديل).\n\n**الخطوة التالية المقترحة:** ابعت نفس الطلب تاني، أو اضغط «تنفيذ حتمي» في الشات.`,
+    } as AgentEvent);
+    emit({
+      type: "done",
+      sessionId: body.sessionId || "nova-error",
+      mode: "error",
+      toolCount: 0,
+      ms: 0,
+      provider: "none",
+    } as AgentEvent);
   } finally {
     clearInterval(heartbeat);
     if (!closed && !res.writableEnded) res.end();

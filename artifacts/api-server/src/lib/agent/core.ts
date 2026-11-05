@@ -13,6 +13,7 @@
  */
 
 import { NOVA_SYSTEM_PROMPT, NOVA_SYSTEM_PROMPT_SHORT } from "./persona";
+import { buildSelfModel, selfModelPrompt } from "./self-model";
 import {
   AGENT_TOOLS,
   AGENT_TOOL_NAMES,
@@ -243,6 +244,16 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
     test: /(?:كيف أحمي|إصلاح|ترقيع|remediat|fix|حماية)/i,
     tools: (msg) => [{ tool: "knowledge_search", args: { query: cleanQuery(msg) } }],
   },
+  {
+    // General "look it up" is the request people send most, and it used to
+    // produce a counter-question because there was no search tool at all.
+    // Placed last so every specialised intent above still wins.
+    // Explicit search VERBS only. A bare product name used to match here —
+    // «google.com» went to web search instead of recon, which is the worst kind
+    // of fix: it looked like it worked.
+    test: /(?:ابحث|دوّر|دور\s+على|هات\s*لي|هاتلى|جيب\s*لي|search\s+for|search|look\s*up|find\s+(?:me\s+)?(?:a|some))/i,
+    tools: (msg) => [{ tool: "web_search", args: { query: cleanQuery(msg), limit: 8 } }],
+  },
 ];
 
 function cleanQuery(msg: string): string {
@@ -299,7 +310,30 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
   }
 
   const steps: PlannedStep[] = [];
-  const notes: string[] = [];
+  // Human-readable names of the intents that fired. The regex source used to be
+  // printed here, and it went straight to the user's screen:
+  //   «[مسار: (?:أدوات|ادوات|kali|أداة|t + (?:ابحث|دوّر...»
+  // A planner that leaks its own source code into the chat reads as broken,
+  // whatever the plan underneath was doing right.
+  const labels: string[] = [];
+  const INTENT_LABEL = (rule: RegExp): string => {
+    const src = rule.source;
+    if (/subdomain|نطاقات/.test(src)) return "تعداد نطاقات فرعية";
+    if (/CVE-/.test(src)) return "قاعدة ثغرات";
+    if (/منافذ|بورت|ports?/.test(src)) return "فحص منافذ";
+    if (/shهاد|ssl|tls/i.test(src)) return "فحص شهادة TLS";
+    if (/ترويسات|headers/i.test(src)) return "ترويسات الأمان";
+    if (/شهيرة|شائع|common|popular/i.test(src)) return "منافذ شائعة";
+    if (/أدوات|ادوات|kali/i.test(src)) return "ترسانة الأدوات";
+    if (/exploit|استغلال/i.test(src)) return "استغلالات معروفة";
+    if (/github/i.test(src)) return "مستودعات GitHub";
+    if (/ثغرات|vuln/i.test(src)) return "بحث ثغرات";
+    if (/ذاكرت|memory|فاكر/i.test(src)) return "ذاكرتي";
+    if (/مهم|mission|target|هدف/i.test(src)) return "مهمة نشطة";
+    if (/ابحث|دوّر|search/i.test(src)) return "بحث في النت";
+    if (/حالة المنصة|status|health/i.test(src)) return "حالة المنصة";
+    return "تحليل الطلب";
+  };
   for (const rule of INTENT) {
     if (!rule.test.test(msg)) continue;
     const planned = rule.tools(msg);
@@ -309,23 +343,28 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
       if (steps.some((s) => s.tool === step.tool && JSON.stringify(s.args) === JSON.stringify(step.args))) continue;
       steps.push(step);
     }
-    notes.push(rule.test.source.slice(0, 26));
+    labels.push(INTENT_LABEL(rule.test));
     if (steps.length >= 4) break;
   }
 
   if (steps.length === 0 && host) {
     steps.push({ tool: "set_active_target", args: { target: host } }, { tool: "recon_target", args: { target: host } });
-    notes.push("target-detected");
+    labels.push("هدف مكتشف");
   }
   if (steps.length === 0) {
     steps.push({ tool: "memory_search", args: { query: msg.slice(0, 80) } }, { tool: "platform_status", args: {} });
-    notes.push("fallback-context");
+    labels.push("سياق عام");
   }
 
-  const thought = host
+  const plan = host
     ? `الطلب فيه هدف واضح (${host}) — هبدأ بالاستطلاع الحقيقي وأبني عليه.`
-    : `هجمع السياق من ذاكرتي وحالة المنصة قبل أي استنتاج.`;
-  return { thought: `${thought}${notes.length ? ` [مسار: ${notes.join(" + ")}]` : ""}`, steps: steps.slice(0, 5) };
+    : labels.some((l) => l === "بحث في النت")
+      ? "دوّر في طلب بحث — هرجع بنتائج حقيقية من النت، مش بقائمة اقتراحات."
+      : "هرتّب الطلب على أدواتي الحقيقية وأشوف النتيجة قبل أي استنتاج.";
+  return {
+    thought: `${plan}${labels.length ? ` — ${labels.join(" + ")}` : ""}`,
+    steps: steps.slice(0, 5),
+  };
 }
 
 /* ── LLM planner ─────────────────────────────────────────────────────────── */
@@ -337,14 +376,21 @@ const PLAN_INSTRUCTIONS = `أعد **JSON فقط** (بدون أي شرح خارج
 - استخدم أدوات حقيقية فقط من القائمة. لا تخترع أسماء.
 - أقصى عدد خطوات 4.
 - لو السؤال عام/تحية/تعريف بشخصيتك → steps فارغة واكتب الرد في answer_if_no_tools.
+- **حقل thought بالعربي دايماً** — ده بيتعرض للمستخدم حرفياً، والإنجليزي هنا بيبان كلغة تانية وسط الكلام.
+- لو المستخدم سأل «تقدر تعمل إيه» أو «قدراتك» → **اقرا قسم «من أنت الآن» في السياق ورد منه**، مش من الذاكرة العامة.
+- لو الطلب ينفّذ بأداة موجودة (بحث/جلب صفحة/فحص) → نفّذها. **ما تسألش «تقصد إيه»** إلا لو مفيش هدف خالص.
 - لو فيه نطاق أو CVE في الطلب، نفّذ الأداة المناسبة ولا تجاوب من ذاكرتك.`;
 
 async function llmPlan(
   message: string,
   history: Array<{ role: "user" | "assistant"; content: string }>,
+  selfModel: ReturnType<typeof buildSelfModel>,
 ): Promise<{ thought: string; steps: PlannedStep[]; directAnswer?: string; provider: string; model: string } | null> {
   const messages = [
-    { role: "system" as const, content: `${NOVA_SYSTEM_PROMPT_SHORT}\n\n# أدواتك\n${toolCatalogueForPrompt()}\n\n${buildContextBlock(message)}\n\n${PLAN_INSTRUCTIONS}` },
+    {
+      role: "system" as const,
+      content: `${NOVA_SYSTEM_PROMPT_SHORT}\n\n${selfModelPrompt(selfModel)}\n\n# أدواتك\n${toolCatalogueForPrompt()}\n\n${buildContextBlock(message)}\n\n${PLAN_INSTRUCTIONS}`,
+    },
     ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
     { role: "user" as const, content: message },
   ];
@@ -379,9 +425,38 @@ function preview(data: unknown): string {
 function heuristicAnswer(message: string, results: Array<{ name: string; ok: boolean; summary: string; data: unknown }>): string {
   if (results.length === 0) {
     if (SMALL_TALK.test(message.trim())) {
-      return `أهلاً بيك 👋 أنا **نوفا** — شريكك في المنصة، مش مجرد بوت أوامر.\n\nأقدر أشتغل فعلياً على:\n- استطلاع نطاق (DNS + TLS + ترويسات أمان)\n- فحص منافذ محدود وتعداد نطاقات فرعية\n- بحث ثغرات (NVD / Exploit-DB / GitHub / فهرس المنصة)\n- ذاكرة دائمة ومتتبع مهام وأدلة\n\nقولي هدفك أو نطاقك وأنا أبدأ فوراً.\n\n**الخطوة التالية المقترحة:** ابعتلي نطاق مثل \`example.com\` وأقولك نتيجة الاستطلاع كاملة.`;
+      const sm = buildSelfModel();
+      return [
+        `أهلاً بيك 👋 أنا **نوفا** — شريكك في المنصة، مش مجرد بوت أوامر.`,
+        "",
+        `عندي دلوقتي **${sm.tools.count} أداة حقيقية**، و${sm.corpus.measured ? `فهرس **${sm.corpus.total.toLocaleString("en-US")} ثغرة**` : "فهرس ثغرات لسه مش متزامن"}، و${sm.machines.registered} ماكينة في الأسطول.`,
+        "",
+        "أقدر أشتغل فعلياً على: استطلاع نطاق (DNS + TLS + ترويسات)، فحص منافذ محدود، تعداد نطاقات فرعية، بحث ثغرات، جلب صفحات من النت، GitHub، وذاكرة دائمة.",
+        "",
+        "**الخطوة التالية المقترحة:** ابعتلي نطاق مثل `example.com` وأقولك نتيجة الاستطلاع كاملة.",
+      ].join("\n");
     }
-    return `أنا **نوفا** — كيان ذكي داخل CyberNova، بشتغل بأدوات حقيقية وأشرح كل خطوة.\n\n- بعرف أستطلع نطاق، أفحص شهادة TLS وترويسات الأمان، وأعدّد النطاقات الفرعية.\n- ببحث في NVD وExploit-DB وGitHub وفهرس المنصة (3,300+ نمط).\n- بكتب في الذاكرة وأسجّل النتائج في المهمة النشطة.\n\n**الخطوة التالية المقترحة:** ابعتلي هدفك (نطاق/برنامج) وهبدأ الاستطلاع فوراً.`;
+    // Built from the measured self-model, not from a paragraph typed once:
+    // «33 أداة» lived in this string long after the registry said 47.
+    const m = buildSelfModel();
+    return [
+      `أنا **نوفا** — كيان ذكي داخل CyberNova، بشتغل بأدوات حقيقية وأشرح كل خطوة.`,
+      "",
+      `- عندي **${m.tools.count} أداة حقيقية** مسجّلة، مش كلام: استطلاع، DNS، TLS، ترويسات، منافذ، نطاقات فرعية، بحث ثغرات، جلب صفحات من النت، GitHub، وذاكرة دائمة.`,
+      m.corpus.measured
+        ? `- ببحث جوّه **${m.corpus.total.toLocaleString("en-US")} ثغرة** حقيقية (NVD + KEV + EPSS) بدل تخمين.`
+        : "- فهرس الثغرات لسه مش متزامن على السيرفر ده — البحث هيقولك «مفيش بيانات» بصراحة.",
+      m.machines.registered
+        ? `- عندي **${m.machines.registered} ماكينة** في الأسطول (${m.machines.names.slice(0, 3).join(" · ")}).`
+        : "- الأسطول جاهز بس مفيش ماكينة مسجّلة — ضيف ماكينة وأنا أنفّذ عليها أوامر حقيقية.",
+      m.memory.total
+        ? `- ذاكرتي فيها **${m.memory.total} ذكرى** من شغلنا السابق.`
+        : "- ذاكرتي لسه فاضية — أول حاجة نحفظها هتفضل بعد إعادة التشغيل.",
+      "",
+      "**مش بقدر:** أشغّل Metasploit/Burp على السيرفر ده (مفيش root ولا مساحة)، أو أوصل لجهاز مش متصل بالوكيل.",
+      "",
+      "**الخطوة التالية المقترحة:** ابعتلي نطاق مثل `example.com` وأنا أبدأ الاستطلاع فوراً، أو قولي «دوّر على …» وأنا أجيب من النت.",
+    ].join("\n");
   }
 
   const lines: string[] = [];
@@ -454,6 +529,31 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   const history = opts.history ?? [];
   const message = (opts.message ?? "").trim();
 
+  /**
+   * What NOVA is, measured at the moment of the ask.
+   *
+   * Built once per turn (not per prompt) so the plan, the direct answer and the
+   * explanation all describe the SAME machine — and so a capability question can
+   * never be answered with the hardcoded «33 أداة» that was three releases out
+   * of date.
+   */
+  let selfModel: ReturnType<typeof buildSelfModel>;
+  try {
+    selfModel = buildSelfModel();
+  } catch {
+    // A self-model that cannot be built must not silence the agent: fall back to
+    // a minimal one whose numbers come straight from the tool registry.
+    selfModel = {
+      tools: { count: AGENT_TOOLS.length, names: AGENT_TOOLS.map((t) => t.name), byCategory: {} },
+      machines: { registered: 0, names: [] },
+      corpus: { measured: false, total: 0, ageMin: null },
+      memory: { total: 0, pinned: 0 },
+      opsKinds: 0,
+      canDo: [`تشغيل ${AGENT_TOOLS.length} أداة حقيقية`],
+      cannotDo: ["قراءة حالة المنصة الآن — تعذّرت"],
+    };
+  }
+
   if (!message) {
     opts.emit({ type: "error", message: "مفيش رسالة — اكتب طلبك." });
     return { mode: "heuristic", provider: "none", toolsUsed: [], reply: "", ms: 0 };
@@ -465,7 +565,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   let model = "nova-heuristic";
 
   if (!opts.forceHeuristic) {
-    const llm = await llmPlan(message, history);
+    const llm = await llmPlan(message, history, selfModel);
     if (llm && (llm.steps.length > 0 || llm.directAnswer)) {
       plan = llm;
       mode = "llm";
@@ -495,7 +595,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     if (!reply) {
       const llm = await llmComplete(
         [
-          { role: "system", content: `${NOVA_SYSTEM_PROMPT}\n\n${buildContextBlock(message)}` },
+          { role: "system", content: `${NOVA_SYSTEM_PROMPT}\n\n${selfModelPrompt(selfModel)}\n\n${buildContextBlock(message)}` },
           ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
           { role: "user", content: message },
         ],
@@ -503,6 +603,12 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       );
       reply = llm?.text?.trim() || heuristicAnswer(message, []);
       if (llm) provider = llm.provider;
+    }
+    if (!reply.trim()) {
+      // Measured 2026-11-05: two bubbles in a live transcript were literally
+      // empty. An empty answer is indistinguishable from "the program is dead",
+      // so say what happened instead of saying nothing.
+      reply = `معلش، المزوّد رجّع رد فاضي المرة دي (${provider}). جرّب تبعت السؤال تاني، أو خلّي الصياغة فيها هدف واضح وأنا أبدأ فوراً.\n\n**الخطوة التالية المقترحة:** اكتب مثلًا «استطلع example.com» أو «دوّر على CVE-2024-3094».`;
     }
     for (const chunk of splitChunks(reply)) {
       opts.emit({ type: "delta", text: chunk });
@@ -585,7 +691,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       [
         {
           role: "system",
-          content: `${NOVA_SYSTEM_PROMPT}\n\n# مخرجات أدواتك الحقيقية الآن (استخدمها كما هي، لا تخترع غيرها)\n${results
+          content: `${NOVA_SYSTEM_PROMPT}\n\n${selfModelPrompt(selfModel)}\n\n# مخرجات أدواتك الحقيقية الآن (استخدمها كما هي، لا تخترع غيرها)\n${results
             .map((r) => `## ${r.name} (${r.ok ? "نجحت" : "فشلت"}): ${r.summary}\n${preview(r.data).slice(0, 1500)}`)
             .join("\n\n")}\n\n# سياق\n${buildContextBlock(message)}`,
         },
@@ -596,7 +702,12 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     reply = llm?.text?.trim() ?? "";
     if (llm) provider = llm.provider;
   }
-  if (!reply) reply = heuristicAnswer(message, results);
+  if (!reply.trim()) {
+    reply = heuristicAnswer(message, results);
+    if (!reply.trim()) {
+      reply = `نفّذت ${results.length} أداة بس مقدرتش أصيغ ملخص من المزوّد. النتائج الخام في تبويب الأدوات فوق.\n\n**الخطوة التالية المقترحة:** اطلب مني نتيجة أداة واحدة بالاسم وأنا أشرحها بالتفصيل.`;
+    }
+  }
 
   for (const chunk of splitChunks(reply)) {
     opts.emit({ type: "delta", text: chunk });
