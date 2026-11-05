@@ -51,8 +51,11 @@ RUN mkdir -p /data /app/state /app/state/jobs
 VOLUME ["/data"]
 EXPOSE 8080
 
+# PORT is not fixed: Render injects its own (10000 by default) and the engine
+# listens on whatever PORT says, so a healthcheck hardcoded to 8080 would report
+# a healthy container as dead anywhere the platform reassigns the port.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "const p=process.env.PORT||8080;fetch('http://127.0.0.1:'+p+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # NODE_ENV=production is what makes the engine serve the panel on `/` (without
 # it `/` is a 404 on a perfectly healthy server — measured in #163).
