@@ -19,7 +19,7 @@ import {
 import type { ClientToolEvent } from "./AgentWindow";
 import { NovaFleetPanel, NovaProjectPulse } from "./NovaFleetPanel";
 import { novaTask, novaLog } from "./NovaFleetLive";
-import { runLocalBrain } from "@/lib/local-brain";
+import { runLocalBrain, toolLabelAr } from "@/lib/local-brain";
 import { RealTimeSystemMonitor } from "./RealTimeSystemMonitor";
 import { AdvancedFileManager } from "./AdvancedFileManager";
 import { RegistryEditor } from "./RegistryEditor";
@@ -10362,8 +10362,19 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
               setMessages(prev => [...prev, { role: "note", content: `⏸️ ${c.reason ?? ""}` }]);
             } else if (ev.type === "thought" && ev.text) {
               setMessages(prev => [...prev, { role: "note", content: `🧠 ${ev.text}` }]);
+            } else if (ev.type === "plan") {
+              // The plan used to be streamed and then dropped on the floor: the
+              // user saw tools appear one by one with no statement of what the
+              // whole turn was going to be. One line, in order, before the first
+              // tool runs — «بتفكر تعمل إيه» answered before it is asked.
+              const steps = (ev as { steps?: Array<{ tool?: string }> }).steps ?? [];
+              if (steps.length) {
+                const named = steps.map((s, i) => `${i + 1}) ${toolLabelAr(s?.tool)}`).join(" ← ");
+                setMessages(prev => [...prev, { role: "note", content: `🗺️ الخطة: ${named}` }]);
+                novaLog({ at: Date.now(), kind: "plan", level: "info", message: `الخطة: ${named}` });
+              }
             } else if (ev.type === "tool_call") {
-              setMessages(prev => [...prev, { role: "tool", content: `$ ${ev.name} ${JSON.stringify(ev.args ?? {})}`, type: "exec" }]);
+              setMessages(prev => [...prev, { role: "tool", content: `$ ${toolLabelAr(ev.name)} ${JSON.stringify(ev.args ?? {})}`, type: "exec" }]);
               novaTask({ id: String((ev as { id?: string }).id ?? ev.name), title: String(ev.name ?? "أداة"), status: "running", tool: String(ev.name ?? ""), startedAt: Date.now() });
               novaLog({ at: Date.now(), kind: "tool", level: "info", message: `▶︎ ${ev.name} اشتغلت` });
             } else if (ev.type === "tool_result") {

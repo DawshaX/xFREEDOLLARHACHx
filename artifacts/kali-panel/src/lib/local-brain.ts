@@ -53,7 +53,7 @@ const LOCAL_TOOLS = new Set([
 /** Tools that exist but need the server (reported honestly, never faked). */
 const SERVER_ONLY = new Set(["recon_target", "tls_audit", "http_headers_audit", "port_scan", "fleet_list", "fleet_profile", "fleet_exec", "device_control_map", "report_generate"]);
 
-const TITLES: Record<string, string> = {
+export const TOOL_TITLES_AR: Record<string, string> = {
   memory_search: "بحث في الذاكرة",
   memory_list: "قراءة الذاكرة",
   knowledge_search: "بحث في فهرس المعرفة",
@@ -71,7 +71,56 @@ const TITLES: Record<string, string> = {
   web_fetch: "جلب صفحة",
   fleet_list: "قراءة الأجهزة المتصلة",
   fleet_exec: "تنفيذ أمر على جهاز",
+  fleet_profile: "بصمة جهاز",
+  web_search: "بحث في النت",
+  kali_toolbox: "ترسانة أدوات كالي",
+  http_headers_audit: "ترويسات الأمان",
+  tls_audit: "فحص شهادة TLS",
+  vuln_search: "بحث ثغرات",
+  memory_save: "حفظ في الذاكرة",
+  memory_stats: "إحصاءات الذاكرة",
+  memory_forget: "حذف من الذاكرة",
+  set_active_target: "تحديد الهدف النشط",
+  scope_check: "فحص النطاق المصرّح",
+  hash_text: "حساب بصمة نص",
+  findings_list: "قراءة النتائج",
+  finding_verify: "تحقق من نتيجة",
+  evidence_list: "الأدلة المسجّلة",
+  report_list: "قائمة التقارير",
+  report_generate: "توليد تقرير",
+  mission_create: "إنشاء مهمة",
+  task_list: "قائمة المهام",
+  job_create: "تشغيل مهمة خلفية",
+  job_status: "حالة مهمة خلفية",
+  job_list: "مهام الخلفية",
+  job_control: "التحكم في مهمة",
+  job_report: "تقرير مهمة",
+  ops_kinds: "أنواع العمليات",
+  program_list: "قائمة برامج المكافآت",
+  program_add: "إضافة برنامج",
+  program_discover: "استكشاف برامج",
+  device_control_map: "خريطة تحكم الأجهزة",
+  record_finding: "تسجيل نتيجة",
 };
+
+/**
+ * The Arabic name of a tool, for anything a human reads.
+ *
+ * Every place that used to print a raw tool name now prints «بحث في النت
+ * (web_search)»: the label is what the request was about, the identifier is
+ * what actually ran. Neither alone is honest — one hides the mechanism, the
+ * other hides the intent.
+ */
+export function toolTitleAr(name: string | null | undefined): string {
+  if (!name) return "أداة";
+  return TOOL_TITLES_AR[name] ?? name;
+}
+
+/** «بحث في النت (web_search)» — label first, identifier in brackets. */
+export function toolLabelAr(name: string | null | undefined): string {
+  const label = toolTitleAr(name);
+  return label === name ? label : `${label} (${name})`;
+}
 
 /* ─────────────────────────── understanding ─────────────────────────────── */
 
@@ -181,37 +230,37 @@ export function planFor(intent: Intent, message: string): { thought: string; ste
       return {
         thought: "بيسأل عن حالة المنصة — هقرأ الأرقام الحقيقية من الفهرس والذاكرة.",
         steps: [
-          { tool: "platform_status", title: TITLES.platform_status, args: {} },
-          { tool: "corpus_stats", title: TITLES.corpus_stats, args: {} },
-          { tool: "memory_list", title: TITLES.memory_list, args: {} },
+          { tool: "platform_status", title: TOOL_TITLES_AR.platform_status, args: {} },
+          { tool: "corpus_stats", title: TOOL_TITLES_AR.corpus_stats, args: {} },
+          { tool: "memory_list", title: TOOL_TITLES_AR.memory_list, args: {} },
         ],
       };
     case "memory":
-      return { thought: "بيسأل عن حاجة في الذاكرة — هدور فيها.", steps: [{ tool: "memory_search", title: TITLES.memory_search, args: { query: intent.query } }] };
+      return { thought: "بيسأل عن حاجة في الذاكرة — هدور فيها.", steps: [{ tool: "memory_search", title: TOOL_TITLES_AR.memory_search, args: { query: intent.query } }] };
     case "cve":
       return {
         thought: `السؤال عن ${intent.cveId} — هدور عليه في الفهرس المحلي وعند OSV.`,
         steps: [
-          { tool: "cve_lookup", title: TITLES.cve_lookup, args: { cveId: intent.cveId } },
-          { tool: "exploit_search", title: TITLES.exploit_search, args: { query: intent.cveId } },
+          { tool: "cve_lookup", title: TOOL_TITLES_AR.cve_lookup, args: { cveId: intent.cveId } },
+          { tool: "exploit_search", title: TOOL_TITLES_AR.exploit_search, args: { query: intent.cveId } },
         ],
       };
     case "exploit":
-      return { thought: "بيسأل عن استغلال — هدور في OSV.", steps: [{ tool: "exploit_search", title: TITLES.exploit_search, args: { query: intent.query } }] };
+      return { thought: "بيسأل عن استغلال — هدور في OSV.", steps: [{ tool: "exploit_search", title: TOOL_TITLES_AR.exploit_search, args: { query: intent.query } }] };
     case "scan":
       return {
         thought: `هدف واضح (${intent.target}) — DNS و نطاقات فرعية بينفعوا من المتصفح فعلاً.`,
         steps: [
-          { tool: "dns_lookup", title: TITLES.dns_lookup, args: { target: intent.target } },
-          { tool: "subdomain_enum", title: TITLES.subdomain_enum, args: { target: intent.target } },
+          { tool: "dns_lookup", title: TOOL_TITLES_AR.dns_lookup, args: { target: intent.target } },
+          { tool: "subdomain_enum", title: TOOL_TITLES_AR.subdomain_enum, args: { target: intent.target } },
         ],
       };
     case "github":
-      return { thought: "بدور على GitHub — ده API حي وبيشتغل من المتصفح.", steps: [{ tool: "github_search", title: TITLES.github_search, args: { query: intent.query } }] };
+      return { thought: "بدور على GitHub — ده API حي وبيشتغل من المتصفح.", steps: [{ tool: "github_search", title: TOOL_TITLES_AR.github_search, args: { query: intent.query } }] };
     case "fetch":
-      return { thought: `هقرا ${intent.url} وألخّصلك اللي فيها.`, steps: [{ tool: "web_fetch", title: TITLES.web_fetch, args: { url: intent.url } }] };
+      return { thought: `هقرا ${intent.url} وألخّصلك اللي فيها.`, steps: [{ tool: "web_fetch", title: TOOL_TITLES_AR.web_fetch, args: { url: intent.url } }] };
     case "knowledge":
-      return { thought: "هدور في فهرس المعرفة المحلي الأول، ولو مفيش نتيجة أقولك.", steps: [{ tool: "knowledge_search", title: TITLES.knowledge_search, args: { query: q } }] };
+      return { thought: "هدور في فهرس المعرفة المحلي الأول، ولو مفيش نتيجة أقولك.", steps: [{ tool: "knowledge_search", title: TOOL_TITLES_AR.knowledge_search, args: { query: q } }] };
     case "missions": {
       const stats = missionStats();
       return {
@@ -222,11 +271,11 @@ export function planFor(intent: Intent, message: string): { thought: string; ste
     case "hunt": {
       const steps: Step[] = [];
       if (intent.target) {
-        steps.push({ tool: "dns_lookup", title: TITLES.dns_lookup, args: { target: intent.target } });
-        steps.push({ tool: "subdomain_enum", title: TITLES.subdomain_enum, args: { target: intent.target } });
+        steps.push({ tool: "dns_lookup", title: TOOL_TITLES_AR.dns_lookup, args: { target: intent.target } });
+        steps.push({ tool: "subdomain_enum", title: TOOL_TITLES_AR.subdomain_enum, args: { target: intent.target } });
         steps.push({ tool: "web_fetch", title: "بصمة التقنيات من الصفحة", args: { url: intent.target } });
       }
-      steps.push({ tool: "nvd_search", title: TITLES.nvd_search, args: { keyword: intent.target ?? "" } });
+      steps.push({ tool: "nvd_search", title: TOOL_TITLES_AR.nvd_search, args: { keyword: intent.target ?? "" } });
       return {
         thought: intent.target
           ? `مهمة استخراج ثغرات على ${intent.target}: DNS + نطاقات فرعية + ثغرات من NVD. كل خطوة بتتسجّل في المهمة.`
@@ -496,7 +545,7 @@ async function runLocalTool(step: Step): Promise<ToolOutcome> {
         return SERVER_ONLY.has(step.tool)
           ? {
               ok: false,
-              summary: `«${TITLES[step.tool] ?? step.tool}» محتاجة سيرفر مربوط. من غير سيرفر مش هأدّعي إني نفّذتها.`,
+              summary: `«${toolTitleAr(step.tool)}» محتاجة سيرفر مربوط. من غير سيرفر مش هأدّعي إني نفّذتها.`,
               data: null,
             }
           : { ok: false, summary: "أداة غير معروفة في وضع المتصفح", data: null };

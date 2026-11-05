@@ -28,6 +28,7 @@ const AGENT_GATES = [
   ["scripts/test-web-search.mjs", "web-search: keyless search, reasons on failure"],
   ["scripts/test-heuristic-plan.mjs", "planner: real tools, prose thoughts, no regex"],
   ["scripts/test-repeat-guard.mjs", "repeat guard: a failing step does not loop"],
+  ["scripts/test-tool-labels.mjs", "labels: every tool has a readable Arabic name"],
   ["scripts/test-fleet-servers.mjs", "fleet: server registry and codespace bases"],
   ["scripts/test-nova-brain.mjs", "brain: the 15-minute loop"],
   ["scripts/test-nova-brain-edge.mjs", "brain edge: the serverless function"],
