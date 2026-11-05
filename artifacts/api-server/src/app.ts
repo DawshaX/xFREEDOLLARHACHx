@@ -351,9 +351,12 @@ app.get(["/api/cve/stream", "/api/cve-live/stream"], (req: Request, res: Respons
 
   sendNamed("connected", { ok: true, status: "live", sources: 9, total: totalCount });
   sendNamed("stats_update", { total: totalCount });
+  // SYNTHETIC DEMO EVENT — not a real advisory. Kept so the live stream has a
+  // shape to render; `synthetic: true` lets the UI badge it as demo data.
   sendNamed("cve_new", {
     id: "IMMUNEFI-2026-001",
     cveId: "IMMUNEFI-2026-001",
+    synthetic: true,
     severity: "CRITICAL",
     cvss: 10.0,
     cvssScore: 10.0,
@@ -362,7 +365,7 @@ app.get(["/api/cve/stream", "/api/cve-live/stream"], (req: Request, res: Respons
     exploitType: "Bridge-SigBypass",
     epssScore: 0.99,
     description:
-      "[Immunefi Web3 Critical] Cross-Chain Bridge Message Verification & EIP-712 Signature Replay via uninitialized ecrecover(0x0) (Foundry Local Fork Verified).",
+      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 Critical] Cross-Chain Bridge Message Verification & EIP-712 Signature Replay via uninitialized ecrecover(0x0) (Foundry Local Fork Verified).",
     pocUrl: "https://immunefi.com/explore/",
   });
 

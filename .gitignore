@@ -70,6 +70,30 @@ dist-node-kit/
 state/programs.json
 state/jobs/
 state/jobs/*
+# ── Runtime state that leaks infrastructure (added 2026-11-05) ──────────────
+# These files are written by the running engine and contain live host/port,
+# backend URLs and connector proofs. They are runtime output, not source, and
+# must never be committed. The files stay on disk; only tracking is stopped.
+state/backend-health.json
+state/connectors.json
+state/free-hosts.json
+state/free-hosts.md
+state/hunt-latest.json
+state/hunt-runs.csv
+state/hunt-findings.csv
+state/hunt/
+state/discovered-vulnerabilities-vault.json
+state/cybernova-brain-state.json
+state/advisory-cache.json
+state/advisory-last-failure.json
+state/corpus-last-failure.json
+state/cryptocom-hackerone-scope.json
+# machine bootstrap notes carry the live host:port and slot id
+deploy/machines/STATE-*.md
+deploy/machines/waifly-live.md
+deploy/machines/form-answers.md
+# engine probe output (host/port + banner)
+probe-report.txt
 # the findings vault is engine runtime state too — it is rebuilt by POST /api/ops/findings/sync
 state/findings-vault.json
 state/fleet-servers.json

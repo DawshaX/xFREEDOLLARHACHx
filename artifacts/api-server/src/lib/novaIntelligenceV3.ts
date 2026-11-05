@@ -57,17 +57,11 @@ export class NovaIntelligenceV3 {
       }
 
       if (threats.length === 0) {
-        // Fallback to mock if all fail
-        return [
-          {
-            id: `CVE-2026-${Math.floor(Math.random() * 10000)}`,
-            title: 'Zero-Day RCE in Global Edge Infrastructure',
-            description: 'A newly discovered vulnerability allowing remote code execution on edge nodes.',
-            severity: 'critical',
-            publishedAt: new Date().toISOString(),
-            source: 'Mock Intel'
-          }
-        ];
+        // No live source answered. Return an EMPTY list rather than inventing a
+        // CVE id: a fabricated identifier (random CVE-2026-xxxx) is worse than
+        // no data, because it is indistinguishable from a real advisory once it
+        // reaches the UI. Callers must render "no live data" instead.
+        return [];
       }
 
       return threats;

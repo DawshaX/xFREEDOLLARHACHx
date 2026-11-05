@@ -6,7 +6,7 @@
 |---|---|
 | Panel | `https://panel.waifly.com/server/53a7d0cb` |
 | الملفات | `https://panel.waifly.com/server/53a7d0cb/files` |
-| Web Address | `node.waifly.com:27316` |
+| Web Address | `node.waifly.com:<PORT_REDACTED>` |
 | Node / Location | **PAR1** · Paris, France — **FR01** |
 | السلوت | 300 MB RAM · 30% CPU · 1024 MB disk · **Active** |
 | Egg | **NodeJS** |
@@ -17,7 +17,7 @@
 
 | القياس | القيمة |
 |---|---|
-| `GET http://node.waifly.com:27316/api/health` (من برّه) | **200** · `{"status":"ok","mode":"standalone","wsConnected":true}` |
+| `GET http://node.waifly.com:<PORT_REDACTED>/api/health` (من برّه) | **200** · `{"status":"ok","mode":"standalone","wsConnected":true}` |
 | اللوحة `GET /` | **200** — بتعرض 168,682 ثغرة والـThreat Gauge شغّال |
 | الكوربوس | اتنزّل تلقائيًا **16.20 MB** · 168,682 CVE |
 | الماكينات في الأسطول | `up 2 · down 0` — الـCodespace (277 ms) وWaifly (11 ms) |
@@ -106,13 +106,13 @@ sh /home/container/nova-24-7/run
 من جهازك (مش من السيرفر):
 
 ```sh
-bash scripts/fleet-verify.sh http://node.waifly.com:27316
+bash scripts/fleet-verify.sh http://node.waifly.com:<PORT_REDACTED>
 ```
 
 المتوقع:
 
 ```
-✅ http://node.waifly.com:27316   HTTP 200 · status=ok · mode=standalone
+✅ http://node.waifly.com:<PORT_REDACTED>   HTTP 200 · status=ok · mode=standalone
 ```
 
 ولما يبقى ✅ **مش محتاج تعمل حاجة تانية** — السيرفر مسجّل بالفعل في البرنامج باسم **«Waifly · Paris FR01»**، وهتلاقيه في صفحة `/nova-fleet` → بطاقة «ماكينات نوفا». الفحص بيحاول `http` ثم `https` لوحده، فمش مهم انهي واحد شغّال عند Waifly.
@@ -121,7 +121,7 @@ bash scripts/fleet-verify.sh http://node.waifly.com:27316
 
 ## ٦) دومين مجاني بـHTTPS (`https://nova.waifly.com`) — 2 دقيقة
 
-الرابط `http://node.waifly.com:27316` شغّال، بس المتصفح بيمنع أي طلب `http` من صفحة `https`
+الرابط `http://node.waifly.com:<PORT_REDACTED>` شغّال، بس المتصفح بيمنع أي طلب `http` من صفحة `https`
 (وده كان بيخلّي اللوحة تقول «السيرفر مش بيرد» وهو شغّال). الحل: subdomain مجاني من نفس اللوحة.
 
 Waifly بيدّي **٢ subdomain مجانيين** لكل سيرفر (المستخدم ١/٢ في 2026-11-05).

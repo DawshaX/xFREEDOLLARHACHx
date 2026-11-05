@@ -18,25 +18,25 @@
       "id": "google_sheets",
       "used": true,
       "what": "شيت حي بثلاث أوراق + ورقة شرح",
-      "proof": "docs.google.com/spreadsheets/d/1JwUo30SfNoyevqxOQD6bhPTYd9U302Oil26A1knVYDY"
+      "proof": "docs.google.com/spreadsheets/d/<REDACTED>"
     },
     {
       "id": "linear",
       "used": true,
       "what": "مشروع DAW + 3 مهام + تحديث حالة",
-      "proof": "linear.app/xdaw/issue/DAW-5"
+      "proof": "linear.app/<workspace>/issue/<REDACTED>"
     },
     {
       "id": "notion",
       "used": true,
       "what": "صفحة حالة حيّة بالجداول والروابط",
-      "proof": "app.notion.com/p/CyberNova-2026-11-04-40e91ad1a05581e99b15d24cfd53061c"
+      "proof": "app.notion.com/p/<REDACTED>"
     },
     {
       "id": "dropbox",
       "used": true,
       "what": "نسخة من 20 دليل صيد + فهرس SHA-256",
-      "proof": "/CyberNova/evidence-2026-11-04.tar.gz (5.0 MB)"
+      "proof": "/CyberNova/<REDACTED>"
     },
     {
       "id": "vercel",

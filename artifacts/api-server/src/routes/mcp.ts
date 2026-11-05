@@ -83,7 +83,7 @@ const MCP_TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
-        password: { type: "string", description: "Password to set for AnyDesk connections. Default: nova2024." },
+        password: { type: "string", description: "Password to set for AnyDesk connections. Required — no default is baked in; pass a strong, unique value." },
       },
       required: [],
     },
@@ -230,7 +230,10 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<{ 
     }
 
     case "kali_anydesk_setup": {
-      const password = String(args.password ?? "nova2024");
+      // No hardcoded fallback password: a shared default on a remote-desktop
+      // service is a backdoor. Require the caller to supply one.
+      const password = String(args.password ?? "");
+      if (!password) return errorContent("password is required (no default is set for security reasons)");
       // Check if installed
       const check = await execKali("which anydesk && anydesk --version 2>/dev/null || echo NOT_INSTALLED", 10_000);
       let steps = [`🖥️ AnyDesk Setup على Kali`];

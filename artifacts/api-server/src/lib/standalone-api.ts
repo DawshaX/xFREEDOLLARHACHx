@@ -40,6 +40,8 @@ export interface StandaloneCve {
   exploitAvailable: boolean;
   inKev: boolean;
   references: string[];
+  /** true = hand-written demo row, NOT a real advisory. Added 2026-11-05. */
+  synthetic?: boolean;
 }
 
 export const STANDALONE_CVES: StandaloneCve[] = [
@@ -264,8 +266,13 @@ export const STANDALONE_CVES: StandaloneCve[] = [
   {
     id: "IMMUNEFI-2026-001",
     cveId: "IMMUNEFI-2026-001",
+    // ── SYNTHETIC / DEMO DATA ──────────────────────────────────────────────
+    // This is NOT a real advisory. It is a hand-written sample used to exercise
+    // the UI. `synthetic: true` lets every consumer label it as demo data so it
+    // can never be mistaken for a genuine CVE. Do not remove the flag.
+    synthetic: true,
     description:
-      "[Immunefi Web3 Critical] Cross-Chain Bridge Message Verification & EIP-712 Signature Replay via uninitialized ecrecover(0x0) & missing chainId/nonce validation (Foundry Local Fork PoC Verified).",
+      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 Critical] Cross-Chain Bridge Message Verification & EIP-712 Signature Replay via uninitialized ecrecover(0x0) & missing chainId/nonce validation (Foundry Local Fork PoC Verified).",
     severity: "CRITICAL",
     cvssScore: 10.0,
     score: 10.0,
@@ -284,8 +291,9 @@ export const STANDALONE_CVES: StandaloneCve[] = [
   {
     id: "IMMUNEFI-2026-002",
     cveId: "IMMUNEFI-2026-002",
+    synthetic: true, // SYNTHETIC DEMO — NOT A REAL CVE (see IMMUNEFI-2026-001)
     description:
-      "[Immunefi Web3 Critical] Read-Only Reentrancy in Balancer/Curve-style LP Pool get_virtual_price() during ETH withdrawal callback allowing collateral price inflation on lending markets.",
+      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 Critical] Read-Only Reentrancy in Balancer/Curve-style LP Pool get_virtual_price() during ETH withdrawal callback allowing collateral price inflation on lending markets.",
     severity: "CRITICAL",
     cvssScore: 9.8,
     score: 9.8,
@@ -304,8 +312,9 @@ export const STANDALONE_CVES: StandaloneCve[] = [
   {
     id: "IMMUNEFI-2026-003",
     cveId: "IMMUNEFI-2026-003",
+    synthetic: true, // SYNTHETIC DEMO — NOT A REAL CVE (see IMMUNEFI-2026-001)
     description:
-      "[Immunefi Web3 High/Critical] ERC-4626 First-Depositor Vault Share Inflation & Rounding Precision Loss via direct ERC20 donation when totalSupply == 1 wei without virtual offset.",
+      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 High/Critical] ERC-4626 First-Depositor Vault Share Inflation & Rounding Precision Loss via direct ERC20 donation when totalSupply == 1 wei without virtual offset.",
     severity: "CRITICAL",
     cvssScore: 9.4,
     score: 9.4,
@@ -324,8 +333,9 @@ export const STANDALONE_CVES: StandaloneCve[] = [
   {
     id: "IMMUNEFI-2026-004",
     cveId: "IMMUNEFI-2026-004",
+    synthetic: true, // SYNTHETIC DEMO — NOT A REAL CVE (see IMMUNEFI-2026-001)
     description:
-      "[Immunefi Web3 Critical] Flash Loan Spot-Price AMM Oracle Manipulation & Stale Chainlink latestRoundData() Heartbeat Bypass leading to protocol insolvency in single atomic transaction.",
+      "[SYNTHETIC DEMO — NOT A REAL CVE] [Immunefi Web3 Critical] Flash Loan Spot-Price AMM Oracle Manipulation & Stale Chainlink latestRoundData() Heartbeat Bypass leading to protocol insolvency in single atomic transaction.",
     severity: "CRITICAL",
     cvssScore: 9.9,
     score: 9.9,
@@ -344,8 +354,9 @@ export const STANDALONE_CVES: StandaloneCve[] = [
   {
     id: "AI-MUT-2026-901",
     cveId: "AI-MUT-2026-901",
+    synthetic: true, // SYNTHETIC DEMO — NOT A REAL CVE (see IMMUNEFI-2026-001)
     description:
-      "[AI-Mutated 4-Hop Chain] Hidden JS SourceMap Endpoint (/api/v2/internal) -> GraphQL Introspection & Batching -> Mass Assignment (role:admin) -> Cross-Tenant BOLA/IDOR.",
+      "[SYNTHETIC DEMO — NOT A REAL CVE] [AI-Mutated 4-Hop Chain] Hidden JS SourceMap Endpoint (/api/v2/internal) -> GraphQL Introspection & Batching -> Mass Assignment (role:admin) -> Cross-Tenant BOLA/IDOR.",
     severity: "CRITICAL",
     cvssScore: 9.9,
     score: 9.9,

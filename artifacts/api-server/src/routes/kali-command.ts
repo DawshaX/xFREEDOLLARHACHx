@@ -596,7 +596,7 @@ CONFIRM required (always ask):
 9. AnyDesk workflow:
    CHECK  → [SAFE_EXEC: which anydesk && anydesk --get-id 2>/dev/null || echo NOT_INSTALLED]
    INSTALL→ [CONFIRM: apt-get install -y anydesk | medium | تثبيت AnyDesk للتحكم عن بعد]
-   RESULT → ✅ AnyDesk ID: **XXXXXXXXXX** (Nova password: nova2024)
+   RESULT → ✅ AnyDesk ID: **XXXXXXXXXX** (password: the one you supplied — never a shared default)
 10. Wordlists: /usr/share/wordlists/rockyou.txt | /usr/share/wordlists/dirb/common.txt | /usr/share/seclists/
 
 ══ PENTEST QUICK REFERENCE ══

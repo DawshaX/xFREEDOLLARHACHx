@@ -65,7 +65,7 @@ export const anthropic = {
             if (textParts.length) openaiMessages.push({ role: "user", content: textParts.join("\n") });
           } else {
             const textParts: string[] = [];
-            const toolCalls: OpenAI.Chat.ChatCompletionMessageParam["tool_calls"] = [];
+            const toolCalls: any[] = [];
             for (const block of m.content as Array<{ type: string; text?: string; id?: string; name?: string; input?: unknown }>) {
               if (block.type === "text") textParts.push(block.text ?? "");
               else if (block.type === "tool_use") {

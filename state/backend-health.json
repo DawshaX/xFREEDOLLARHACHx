@@ -1,6 +1,6 @@
 {
   "at": "2026-11-05T18:13:09.230Z",
-  "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
+  "backend": "https://<project-ref>.supabase.co/functions/v1/ops-api",
   "verdict": "GREEN",
   "counts": {
     "cves": 77617,
@@ -31,7 +31,7 @@
       "status": 200,
       "ms": 1021,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-05T18:13:05.616Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":77617,\"huntRuns\":8,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-05T18:13:05.616Z\",\"project\":\"<project-ref>\",\"counts\":{\"cves\":77617,\"huntRuns\":8,\"findings\":0}}"
     },
     {
       "name": "hunt",
@@ -45,7 +45,7 @@
       "status": 200,
       "ms": 617,
       "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"77617 CVE · 66427 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-05T18:12:00.645212+00:00\",\"updated_at\":\"202"
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"77617 CVE · 66427 في الفهرس\",\"source\":\"supabase/<project-ref>\",\"at\":\"2026-11-05T18:12:00.645212+00:00\",\"updated_at\":\"202"
     },
     {
       "name": "corpus?q=nginx",
