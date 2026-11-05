@@ -2,10 +2,17 @@ import { Router } from "express";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { requireOps } from "../lib/ops/gate";
+import { z } from "zod";
 
 
 const execAsync = promisify(exec);
 const router = Router();
+
+// zod schema for POST /terminal/exec (was referenced but never defined)
+const ExecCommandBody = z.object({
+  command: z.string().min(1),
+  cwd: z.string().optional(),
+});
 // `POST /terminal/exec` بينفّذ `command` من الـbody على المكنة (zod بشكل الأمر بس). إدارة الجلسات لسه مفتوحة — اللي اتبوّب هو التنفيذ.
 router.use((req, res, next) => {
   const p = req.path;

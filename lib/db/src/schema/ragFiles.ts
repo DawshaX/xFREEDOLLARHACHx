@@ -3,6 +3,9 @@ import { pgTable, uuid, text, timestamp, integer } from "drizzle-orm/pg-core";
 export const ragFilesTable = pgTable("rag_files", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  // ── additive (2026-11-05): seed data carries kind/chunks ────────────────
+  kind: text("kind").notNull().default("text"),
+  chunks: integer("chunks").notNull().default(0),
   mimeType: text("mime_type").notNull().default("text/plain"),
   size: integer("size").notNull().default(0),
   content: text("content").notNull().default(""),

@@ -9,6 +9,7 @@ const SendAnthropicMessageBody = z.object({
   role: z.enum(["user", "assistant"]).default("user"),
   content: z.string(),
   model: z.string().optional(),
+  attachmentIds: z.array(z.number()).optional(),
 });
 
 const router: IRouter = Router();
@@ -25,7 +26,7 @@ router.post("/anthropic/conversations", async (req, res) => {
   const body = CreateAnthropicConversationBody.parse(req.body);
   const [row] = await db
     .insert(conversations)
-    .values({ title: body.title })
+    .values({ title: body.title ?? "محادثة جديدة" })
     .returning();
   res.status(201).json(row);
 });

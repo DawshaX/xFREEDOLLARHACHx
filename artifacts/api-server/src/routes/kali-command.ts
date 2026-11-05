@@ -667,7 +667,7 @@ router.post("/kali-command/chat", async (req, res) => {
   // Pre-search memory — small window for speed
   const _userKeywords = message.match(/\b[\w\u0600-\u06ff]{3,}\b/g) || [];
   const _searchQuery = _userKeywords.slice(0, 4).join(" ");
-  const _preSearch = _searchQuery ? searchMemory(_searchQuery, 2) : [];
+  const _preSearch = _searchQuery ? searchMemory(_searchQuery) : [];
   const _preSearchCtx = _preSearch.length > 0
     ? "\n" + _preSearch.map((m) => `[${m.memoryType}] ${m.key}: ${m.content.slice(0, 120)}`).join("\n")
     : "";
@@ -874,7 +874,7 @@ router.post("/kali-command/chat", async (req, res) => {
     for (const match of assistantContent.matchAll(MEM_SEARCH_RE)) {
       const query = match[1].trim();
       try {
-        const results = searchMemory(query, 5);
+        const results = searchMemory(query);
         if (results.length > 0) {
           const resultText = results.map((r) => `[${r.memoryType}] ${r.key}: ${r.content}`).join("\n\n");
           sse(res, "search_result", { query, result: resultText });

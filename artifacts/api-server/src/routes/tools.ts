@@ -117,7 +117,7 @@ router.get(["/tools/ssl", "/proxy/ssl"], async (req, res) => {
         const ciph = socket.getCipher()?.name || "TLS_AES_256_GCM_SHA384";
         socket.end();
         resolve({
-          issuer: cert?.issuer?.O || cert?.issuer?.CN || "Google Trust Services / Let's Encrypt",
+          issuer: String(cert?.issuer?.O || cert?.issuer?.CN || "Google Trust Services / Let's Encrypt"),
           validFrom: cert?.valid_from ? new Date(cert.valid_from).toISOString() : new Date(Date.now() - 30 * 86400_000).toISOString(),
           validTo: cert?.valid_to ? new Date(cert.valid_to).toISOString() : new Date(Date.now() + 60 * 86400_000).toISOString(),
           protocol: proto,

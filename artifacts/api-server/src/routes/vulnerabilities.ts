@@ -27,7 +27,7 @@ router.get("/vulnerabilities", (_req, res) => {
 });
 
 router.post("/vulnerabilities", (req, res) => {
-  const { id } = req.body as { title: string; description?: string; severity?: string; target?: string; port?: number | null; cve?: string | null };
+  const { id } = req.body as { id: number; title?: string; description?: string; severity?: string; target?: string; port?: number | null; cve?: string | null };
   const before = vulns.length;
   vulns = vulns.filter((v) => v.id !== id);
   res.json({ success: vulns.length < before, message: "Deleted" });

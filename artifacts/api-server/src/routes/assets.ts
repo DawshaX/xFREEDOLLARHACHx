@@ -20,7 +20,7 @@ router.post("/assets", async (req, res) => {
       name: string; description?: string; techStack?: string[]; domains?: string[]; ips?: string[];
       category?: string; criticality?: string; owner?: string; notes?: string; tags?: string[];
     };
-    if (!name) return res.status(400).json({ error: "الاسم مطلوب" });
+    if (!name) { res.status(400).json({ error: "الاسم مطلوب" }); return; }
 
     const [created] = await db.insert(assets).values({
       name,
@@ -47,7 +47,7 @@ router.put("/assets/:id", async (req, res) => {
     const { id } = req.params;
     const updates = req.body as Partial<typeof assets.$inferInsert>;
     const [updated] = await db.update(assets).set({ ...updates, updatedAt: new Date() }).where(eq(assets.id, id)).returning();
-    if (!updated) return res.status(404).json({ error: "الأصل غير موجود" });
+    if (!updated) { res.status(404).json({ error: "الأصل غير موجود" }); return; }
     res.json({ asset: updated });
   } catch (err) {
     req.log.error(err);

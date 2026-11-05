@@ -81,7 +81,7 @@ router.post("/agent/tasks", async (req, res) => {
 });
 
 router.get("/agent/tasks/:id", async (req, res) => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const [task] = await db
     .select()
     .from(agentTasks)
@@ -96,14 +96,14 @@ router.get("/agent/tasks/:id", async (req, res) => {
 });
 
 router.delete("/agent/tasks/:id", async (req, res) => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   await db.delete(agentTasks).where(eq(agentTasks.id, id));
   res.status(204).end();
 });
 
 // PATCH a single pending step (edit title/description before approval)
 router.patch("/agent/tasks/:id/steps/:stepId", async (req, res) => {
-  const stepId = Number(req.params.stepId);
+  const stepId = String(req.params.stepId);
   const { title, description } = req.body as {
     title?: string;
     description?: string;
@@ -125,7 +125,7 @@ router.patch("/agent/tasks/:id/steps/:stepId", async (req, res) => {
 
 // Skip a step (mark as skipped without executing)
 router.post("/agent/tasks/:id/steps/:stepId/skip", async (req, res) => {
-  const stepId = Number(req.params.stepId);
+  const stepId = String(req.params.stepId);
   const [updated] = await db
     .update(agentSteps)
     .set({ status: "skipped", output: "تم التخطّي بطلب من المستخدم" })
@@ -136,7 +136,7 @@ router.post("/agent/tasks/:id/steps/:stepId/skip", async (req, res) => {
 
 // Re-plan: regenerate steps based on optional feedback. Replaces all pending/skipped steps.
 router.post("/agent/tasks/:id/replan", async (req, res) => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const { feedback } = req.body as { feedback?: string };
   const [task] = await db
     .select()
@@ -190,8 +190,8 @@ router.post("/agent/tasks/:id/replan", async (req, res) => {
 
 // Run ONE single step (SSE stream for live tokens). Approval gateway used by chat UI.
 router.post("/agent/tasks/:id/steps/:stepId/run", async (req, res) => {
-  const id = Number(req.params.id);
-  const stepId = Number(req.params.stepId);
+  const id = String(req.params.id);
+  const stepId = String(req.params.stepId);
   const [task] = await db
     .select()
     .from(agentTasks)
@@ -276,7 +276,7 @@ router.post("/agent/tasks/:id/steps/:stepId/run", async (req, res) => {
 });
 
 router.post("/agent/tasks/:id/run", async (req, res) => {
-  const id = Number(req.params.id);
+  const id = String(req.params.id);
   const [task] = await db
     .select()
     .from(agentTasks)

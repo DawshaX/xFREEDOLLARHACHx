@@ -41,7 +41,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 export class NovaRagEngine {
-  async ingestText(title: string, content: string, category = "general", tags: string[] = []): Promise<number> {
+  async ingestText(title: string, content: string, category = "general", tags: string[] = []): Promise<string> {
     const [row] = await db.insert(knowledgeTable).values({ title, category, content, tags }).returning();
     logger.info({ id: row!.id }, "Nova RAG: ingested text entry");
     return row!.id;

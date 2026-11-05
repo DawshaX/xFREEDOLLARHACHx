@@ -9,7 +9,22 @@ try { fs.mkdirSync(AUDIT_DIR, { recursive: true }); } catch { }
 export interface AuditEntry {
   ts: string;
   sessionId?: string;
-  action: "user_message" | "agent_response" | "exec_start" | "exec_result" | "exec_error" | "self_heal" | "kill_switch" | "connection" | "tool_call" | "exec_stream_start";
+  action:
+    | "user_message"
+    | "agent_response"
+    | "exec_start"
+    | "exec_result"
+    | "exec_error"
+    | "self_heal"
+    | "kill_switch"
+    | "connection"
+    | "tool_call"
+    | "exec_stream_start"
+    // ── additive (2026-11-05): input-control + server exec events ──────────
+    | "agent_exec"
+    | "server_exec"
+    | "mouse_input"
+    | "keyboard_input";
   data: Record<string, unknown>;
 }
 

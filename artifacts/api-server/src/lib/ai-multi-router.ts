@@ -34,6 +34,9 @@ export type MultiProviderId =
   | "huggingface"
   | "mistral"
   | "gemini"
+  // ── additive (2026-11-05): two more free-tier providers ────────────────────
+  | "nvidia"
+  | "cloudflare"
   | "ollama-local";
 
 export interface MultiProviderInfo {
@@ -135,6 +138,39 @@ const PROVIDER_DEFS: Omit<MultiProviderInfo, "available" | "enabled" | "latencyM
     freeModels: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite"],
     speed: "fast",
     specialty: "قدرات multimodal ومجاني بكميات كبيرة",
+  },
+  {
+    id: "nvidia",
+    displayName: "NVIDIA NIM 🟩",
+    emoji: "🟩",
+    description: "NVIDIA NIM — نماذج مفتوحة مُحسّنة على GPU، طبقة مجانية سخية",
+    baseURL: "https://integrate.api.nvidia.com/v1",
+    envKey: "NVIDIA_API_KEY",
+    defaultModel: "meta/llama-3.3-70b-instruct",
+    freeModels: [
+      "meta/llama-3.3-70b-instruct",
+      "meta/llama-3.1-8b-instruct",
+      "qwen/qwen2.5-coder-32b-instruct",
+      "deepseek-ai/deepseek-r1",
+    ],
+    speed: "fast",
+    specialty: "نماذج مفتوحة عالية الجودة مجاناً عبر NVIDIA NIM",
+  },
+  {
+    id: "cloudflare",
+    displayName: "Cloudflare Workers AI 🟠",
+    emoji: "🟠",
+    description: "Cloudflare Workers AI — حصة مجانية يومية على شبكة الحافة",
+    baseURL: "https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/ai/v1",
+    envKey: "CLOUDFLARE_API_TOKEN",
+    defaultModel: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    freeModels: [
+      "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "@cf/meta/llama-3.1-8b-instruct",
+      "@cf/qwen/qwen2.5-coder-32b-instruct",
+    ],
+    speed: "fast",
+    specialty: "حصة مجانية يومية على حافة Cloudflare (يتطلب CLOUDFLARE_ACCOUNT_ID)",
   },
   {
     id: "ollama-local",
@@ -323,6 +359,12 @@ async function buildClient(id: MultiProviderId): Promise<OpenAI> {
   if (id === "ollama-local") {
     const base = (await getSetting("ollamaBaseUrl")) || process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
     baseURL = `${base}/v1`;
+  }
+
+  // Cloudflare Workers AI needs the account id substituted into the base URL.
+  if (id === "cloudflare") {
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || (await getSetting("cloudflareAccountId")) || "";
+    baseURL = def.baseURL.replace("ACCOUNT_ID", accountId);
   }
 
   return new OpenAI({

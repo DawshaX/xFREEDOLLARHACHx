@@ -11,6 +11,9 @@ export const cves = pgTable(
   "cves",
   {
     id:              text("id").primaryKey(),
+    // ── additive aliases (2026-11-05): routes read cveId/cvssScore ────────────
+    cveId:           text("cve_id"),
+    cvssScore:       doublePrecision("cvss_score"),
     description:     text("description").notNull(),
     cvss:            doublePrecision("cvss").notNull().default(0),
     severity:        text("severity").notNull().default("UNKNOWN"),

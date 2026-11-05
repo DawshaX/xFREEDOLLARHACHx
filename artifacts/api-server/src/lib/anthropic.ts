@@ -86,14 +86,18 @@ export const anthropic = {
 
       const openaiTools = params.tools?.map((t) => ({
         type: "function" as const,
-        function: { name: t.name, description: t.description, parameters: t.input_schema },
-      }));
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: t.input_schema as Record<string, unknown>,
+        },
+      })) as OpenAI.Chat.Completions.ChatCompletionTool[] | undefined;
 
       const response = await client.chat.completions.create({
         model,
         max_completion_tokens: params.max_tokens,
         messages: openaiMessages,
-        ...(openaiTools && openaiTools.length ? { tools: openaiTools, tool_choice: "auto" } : {}),
+        ...(openaiTools && openaiTools.length ? { tools: openaiTools, tool_choice: "auto" as const } : {}),
       });
 
       const choice = response.choices[0];

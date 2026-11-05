@@ -5,6 +5,8 @@ import { z } from "zod/v4";
 export const conversations = pgTable("conversations", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
+  // ── additive (2026-11-05): seed + anthropic routes record the model ────────
+  model: text("model").notNull().default("dolphin-llama3"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
