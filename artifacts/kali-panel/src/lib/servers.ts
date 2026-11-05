@@ -204,6 +204,10 @@ export async function probeKnownServer(server: KnownServer): Promise<ServerStatu
   // reporting that as "السيرفر نايم" would be a lie about a server that is up
   // and serving the whole program. Say what actually happened.
   const httpsPage = typeof window !== "undefined" && window.location.protocol === "https:";
+  // An http machine on an https page is blocked before a packet leaves. We still
+  // try its https twin (some hosts serve both on the same port), but if nothing
+  // answers the honest answer is "the browser refused", not "the server is down".
+  const blockedByMixedContent = httpsPage && server.base.startsWith("http://");
   const candidates = schemeCandidates(server.base).filter((o) => !(httpsPage && o.startsWith("http://")));
   if (candidates.length === 0) {
     return {
@@ -226,6 +230,15 @@ export async function probeKnownServer(server: KnownServer): Promise<ServerStatu
       return origin === server.base ? status : { ...status, says: `${status.says} · عبر ${origin}` };
     }
     firstFailure ??= status;
+  }
+  if (blockedByMixedContent) {
+    return {
+      id: server.id,
+      state: "down",
+      ms: Date.now() - started,
+      checkedAt: Date.now(),
+      says: `الصفحة https والسيرفر ${server.base} بـhttp — المتصفح بيمنع الطلب. استخدم العنوان اللي عليه HTTPS من إعدادات Waifly (Web/WebSocket proxy).`,
+    };
   }
   return firstFailure ?? probeOrigin(server, server.base, started);
 }
