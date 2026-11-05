@@ -1,0 +1,99 @@
+# تقرير الجلسة — 2026-11-05 · نورڤا شغّالة وبتحدّث نفسها
+
+> **ابدأ من هنا لو رجعت من مكنة تانية.** الأرقام كلها مقاسة من ردود السيرفر الحيّ،
+> مش من الذاكرة. الحالة التفصيلية في `deploy/machines/STATE-2026-11-05.md`، والسجل
+> الكامل في `HANDOFF.md` (المرحلة 48 · 49).
+
+## 1) اللي كان بيحصل قبل الجلسة دي (السبب الحقيقي)
+
+كل إصدار كان بيتنزّل على **الديسك**، والسيرفر الحيّ كان بيخدم **كود أقدم**. مقاس على سلوت
+Waifly:
+
+```
+pid 28 · startedAt 01:26:03        ← العملية الشغّالة
+build.json على الديسك 02:34:39      ← الملفات الجديدة
+updater قال «installed» 02:41       ← وكل الـstatus أخضر
+```
+
+تلات إصدارات (`409d500` · `9e39a1e` · `38a6b3b`) اتنقلوا للديسك، والموقع فضل ٧٠ دقيقة على
+كود الساعة 01:26. وده كمان سبب إن `/api/fleet/system` كان بيرد `static:true`: الرد كان جاي
+من الـcatch-all بتاع `/fleet/*` في النسخة القديمة — يعني الكود الجديد مكانش شغّال أصلًا.
+
+**ليه؟** `deploy/live-update.py` كان بيطلب reload من بورت مخمّن (`27214`) ويرجع `0` سواء
+الطلب وصل أو لأ. اللوج الحيّ أثبت ده حرفيًا: `→ مفيش رد من الـ API على البورت المتوقع`.
+
+## 2) اللي اتعمل (كله مدموج على `main`)
+
+| PR | اللي حلّه |
+|---|---|
+| **#185** | `lib/self-restart.ts`: التقاط نسخة التشغيل مرة واحدة (`bootBuild`)، كشف الـdrift (`buildDrift`)، كتابة ماركر الـreload من جوه العملية، `requestReload` بيتحقق إن الـreload حصل، و`selfRespawn` للنسخة بلا مُشرف. + `boot/stale/staleWhy` في `/version`، و`restartNeeded/logTail/restartTrace` في `/auto-update`، وزرار «شغّل النسخة الجديدة» في اللوحة. |
+| **#186** | الـfallback اللي مش محتاج HTTP: المثبِّت بيكتب `<dir>/state/.nova-restart` بنفسه (هو أصلًا عارف المجلد). |
+| **#187** | حالة التحديث الذاتي على الداشبورد (مفعّل/مقفول · آخر نتيجة · محاولات · تنبيه أحمر). |
+| **#188** | صفحة `STATE` + إثبات الحلقة الكاملة من الحيّ. |
+| **#189** | **الدكتور** `GET /api/fleet/doctor` — 7 فحوصات في رد واحد، كل واحد فيه الحل. + عقل 6 أصوات بلا مفاتيح (LLM7 + OVH). + تصحيح عنوان الـhub في 8 ملفات. |
+| **#190** | نقرتين لتحويل الوكلاء من 0/10 لـ4/10 (`FLEET_ENABLED` + `NOVA_EXEC_TOKEN`). |
+| **#191** | إصلاح تلاتة في الدكتور: أمر لصق حقيقي، جملة إحصائية صادقة، ورسالة ماكينة بايظة بتسمّي الحل. |
+
+## 3) الإثبات — من الحيّ، بدون تدخّل
+
+لوج السلوت في `03:17Z` (تحديث ذاتي كامل):
+
+```
+[03:17:06] new build found: local 02:51:25 → release 03:07:01 (936s)
+[03:17:10] ✓ علامة إعادة التشغيل اتكتبت مباشرة: /home/container/state/.nova-restart
+[03:17:10] files installed — writing the reload marker from the app itself
+```
+
+وبعدها بثانية: `pid 96` · `boot = disk` · `stale:false`.
+
+آخر قياس للدكتور على الحيّ (`/api/fleet/doctor`):
+
+```json
+{"ready": true, "score": 57, "counts": {"ok": 4, "warn": 3, "fail": 0, "total": 7},
+ "says_ar": "مفيش عطل: 4/7 سليم و3 تنبيه — أولهم الماكينات."}
+```
+
+| الفحص | النتيجة |
+|---|---|
+| `build` | ✅ العملية = الديسك (`32f6616` وقتها) |
+| `machines` | ⚠️ 2/3 (Codespace البورت Private) |
+| `brain` | ✅ 6 مزوّدين |
+| `corpus` | ✅ 168,682 ثغرة |
+| `agents` | ⚠️ 0/10 |
+| `memory` | ⚠️ مفيش ملف |
+| `update` | ✅ up-to-date |
+
+## 4) اللي باقي عليك (مش هينفع أنا)
+
+1. **Codespace**: تبويب Ports → 8080 → Private ➜ **Public**.
+   أو: `gh codespace ports visibility 8080:public -c <name>`.
+2. **الوكلاء**: `Settings → Secrets and variables → Actions`:
+   - Variable `FLEET_ENABLED` = `1`
+   - Secret `NOVA_EXEC_TOKEN` = نفس توكن السيرفر
+   بعدها 4 عُقد بتدخل كل 5 ساعات على `wss://nova.waifly.com` (توكني مالوش صلاحية Actions).
+3. **الذاكرة**: رسالة واحدة في `/nova-core` بتنشئ `state/nova-memory.json`.
+4. **Ollama** (اختياري): مفيش موديل محلي — العقل شغّال على 6 مزوّدين مجانيين.
+
+## 5) أوامر التحقق (في أي وقت)
+
+```sh
+curl -s "https://nova.waifly.com/api/fleet/doctor?cb=1"        # الحكم النهائي
+curl -s "https://nova.waifly.com/api/nova-core/version?cb=1"   # شغّال ≠ متشحّن؟
+curl -s "https://nova.waifly.com/api/nova-core/auto-update?cb=1" # آخر تحديث + logTail
+curl -s "https://nova.waifly.com/api/fleet/system?cb=1"        # الصورة الكاملة
+```
+
+> **مهم:** أي طلب لـ`nova.waifly.com` لازم `?cb=<عشوائي>` — الكاش بيلزق الرد القديم
+> والواحد يفتكر إن النشر ما حصلش (ده اللي أخّر تشخيص المشكلة الأصلية).
+
+## 6) البوابات (آخر تشغيل)
+
+```
+doctor 12/12 · fleet-servers 31/31 · brain 27/27 · brain-edge 16/16
+corpus 38/38 · memory 16/16 · self-restart 13/13 · session-gate ✓
+workflows 18/18 · contracts ✓ · connections 0 gaps · twins ✓
+typecheck-ratchet 96 = baseline · api build ✓ · panel build ✓ · bundle 2.6 MB ✓
+```
+
+`audit-static-brain` فيه 5 findings **موجودة على `main` قبل الشغل ده** (الـjsdom harness
+مش بياخد الـsnapshot) — مش ناتجة عن أي تعديل هنا.
