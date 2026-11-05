@@ -223,14 +223,14 @@ HANDOFF عن الـgateway/Ollama، بس لسه عايش في باقي الـnam
 
 | الملف | الدور |
 |---|---|
-| `ops/scope.ts` | البوابة القانونية: `state/programs.json` (wildcard/exact/CIDR/out_of_scope/passive_only) + حدود لكل برنامج + مضايفة DNS/rebinding + security.txt |
-| `ops/gate.ts` | سياسة من واحد لكل حاجة خطرة: توكن/ same-origin / وضع المعمل، و`wsUpgradeAllowed` للتسجيل |
-| `ops/ratelimit.ts` | سلة رموز لكل هوست + سقف عام + backoff أسي على 429/403/5xx |
-| `ops/tools.ts` | أنواع المهام: 8 مدمجة (DNS/TLS/ترويسات/منافذ/CT/security.txt/JS/NVD) + 5 أدوات حقيقية بـ**argv بدون شل** |
-| `ops/runner.ts` | job دائم: state/jobs/<id>.json، ميزانية، pause/resume/cancel، kill-switch، أدلة SHA-256، **بوابة تحقق**، تقرير Markdown |
+| `src/lib/ops/scope.ts` | البوابة القانونية: `state/programs.json` (wildcard/exact/CIDR/out_of_scope/passive_only) + حدود لكل برنامج + مضايفة DNS/rebinding + security.txt |
+| `src/lib/ops/gate.ts` | سياسة من واحد لكل حاجة خطرة: توكن/ same-origin / وضع المعمل، و`wsUpgradeAllowed` للتسجيل |
+| `src/lib/ops/ratelimit.ts` | سلة رموز لكل هوست + سقف عام + backoff أسي على 429/403/5xx |
+| `src/lib/ops/tools.ts` | أنواع المهام: 8 مدمجة (DNS/TLS/ترويسات/منافذ/CT/security.txt/JS/NVD) + 5 أدوات حقيقية بـ**argv بدون شل** |
+| `src/lib/ops/runner.ts` | job دائم: state/jobs/<id>.json، ميزانية، pause/resume/cancel، kill-switch، أدلة SHA-256، **بوابة تحقق**، تقرير Markdown |
 | `routes/ops.ts` | REST: `/api/ops/{kinds,programs,programs/discover,jobs,stats,provision,sweep,version}` — القراءة مفتوحة، الكتابة بالتوكن |
-| `ops/autonomy.ts` | الدورة الخلفية: لكل برنامج مصرّح به job حقيقي كل `NOVA_OPS_SWEEP_HOURS`، passive افتراضياً، bounded، والسجل على القرص (`ops-sweeps.json`) — مربوط بـ`tickAutonomousDaemon` كل 3 دقايق |
-| `ops/keys-source.ts` | التزويد الذاتي: مفاتيح من `NOVA_KEYS_URL`/`NOVA_KEYS_FILE` + تسجيل نطاقات `NOVA_SCOPE_DOMAINS` وقت الإقلاع (passive-only دايماً) |
+| `src/lib/ops/autonomy.ts` | الدورة الخلفية: لكل برنامج مصرّح به job حقيقي كل `NOVA_OPS_SWEEP_HOURS`، passive افتراضياً، bounded، والسجل على القرص (`ops-sweeps.json`) — مربوط بـ`tickAutonomousDaemon` كل 3 دقايق |
+| `src/lib/ops/keys-source.ts` | التزويد الذاتي: مفاتيح من `NOVA_KEYS_URL`/`NOVA_KEYS_FILE` + تسجيل نطاقات `NOVA_SCOPE_DOMAINS` وقت الإقلاع (passive-only دايماً) |
 | `scripts/ops-selftest.mjs` | 35 فحص على المنطق الحقيقي (بـtype-striping، من غير build) |
 | `scripts/typecheck-ratchet.mjs` | baseline = 99، والـCI بيمنع أي رقم أعلى |
 
@@ -277,7 +277,7 @@ SQLi differential)، `lib/programs/hackerone.ts` (قايمة برامجك من A
 | عميل ops (لوحة) | `artifacts/kali-panel/src/lib/ops-client.ts` | `x-nova-token` من `localStorage`، وHTML-on-/api = «الباندل أقدم» مش 200 |
 | قراية المتصفح | `artifacts/kali-panel/src/lib/awareness.ts` | وضع Pages: يقيس اللي المتصفح يقدر عليه ويسكت عن الباقي |
 | الباندل الثابت | `src/lib/standalone-api.ts` (نسختين متطابقتين) | بيرد على `/nova-core/awareness` و`/ops/kinds` بغلاف `awarenessUnavailable` بدل الـ404 |
-| البوابة | `src/lib/ops/gate.ts` | `SENSITIVE_READS` +/`ops/jobs` `ops/stats`؛ القراية الحساسة بتقبل same-origin زي الكتابة |
+| البوابة | `src/lib/ops/gate.ts` | `SENSITIVE_READS` +`/api/ops/jobs` و`/api/ops/stats`؛ القراية الحساسة بتقبل same-origin زي الكتابة |
 | إثبات | `scripts/audit-live-server.mjs` | 5 شكات `aware` جديدة على أي سيرفر شغال (منها: مفيش مفاتيح في الـpayload) |
 
 الصفحة `/nova-fleet` بقى افتراضيها تبان على تبويب «المخ · الكيان»، والـsidebar بقى «نوفا · المخ والمدير».

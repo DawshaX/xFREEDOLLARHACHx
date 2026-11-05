@@ -53,6 +53,7 @@ import {
 import { assertAuthorized, discoverProgram, fetchSecurityTxt, loadPrograms, upsertProgram, normalizeHost } from "../ops/scope";
 import { provisionToolchainOnce } from "../ops/toolchain";
 import { catalogStatus, huntCandidates } from "../ops/bounty-catalog";
+import { vulnQuery } from "./vuln-keyword";
 import {
   buildReport,
   cancelJob,
@@ -834,11 +835,24 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
       }
 
       case "vuln_search": {
-        const keyword = String(rawArgs.keyword ?? "").trim();
-        if (!keyword) throw new Error("keyword مطلوب");
+        const asked = String(rawArgs.keyword ?? "").trim();
+        if (!asked) throw new Error("keyword مطلوب");
+        const q = vulnQuery(asked);
+        if (!q.usable) {
+          // صفر من غير استعلام صالح مش دليل على حاجة — بنقول كده صراحة وبنلفّ
+          // على الفهرس المحلي اللي بيحتاج نص طبيعي أصلاً.
+          return done(false, `NVD ما اتسألش: «${asked.slice(0, 48)}» ملوش مصطلح منتج/تقنية (${q.reason}). ` +
+            `NVD بيبحث بـ«Apache Tomcat 9.0.10» أو CVE-ID، مش بجُملة. جرّب knowledge_search بنفس الجملة أو عرّف المنتج.`,
+            { skipped: true, reason: "bad_keyword", suggestTool: "knowledge_search" });
+        }
         const limit = Math.min(Number(rawArgs.limit ?? 8) || 8, 20);
-        const res = (await nvdSearch({ keyword, limit })) as { totalResults?: number; vulnerabilities?: unknown[] };
-        return done(true, `NVD "${keyword}": ${res.totalResults ?? res.vulnerabilities?.length ?? 0} نتيجة`, res);
+        const res = (await nvdSearch(q.cveId && !q.keyword ? { cveId: q.cveId, limit } : { keyword: q.keyword!, limit })) as {
+          totalResults?: number; vulnerabilities?: unknown[];
+        };
+        const n = res.totalResults ?? res.vulnerabilities?.length ?? 0;
+        const label = q.cveId && !q.keyword ? q.cveId : q.keyword!;
+        const tail = n === 0 ? " — الصفر هنا معناه مافيش تطابق للمصطلح في NVD، مش إن البحث باظ" : "";
+        return done(true, `NVD "${label}": ${n} نتيجة${tail}`, { keywordUsed: label, totalResults: n, source: q.reason, items: res.vulnerabilities ?? [] });
       }
 
       case "exploit_search": {
@@ -852,8 +866,9 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
       case "github_search": {
         const q = String(rawArgs.query ?? "").trim();
         if (!q) throw new Error("query مطلوب");
-        const res = (await githubSearch({ q })) as { items?: unknown[] };
-        return done(true, `GitHub "${q}": ${res.items?.length ?? 0} نتيجة`, res);
+        const res = (await githubSearch({ q })) as { items?: unknown[]; error?: string };
+        const gn = res.items?.length ?? 0;
+        return done(!res.error, `GitHub "${q}": ${gn} نتيجة${res.error ? ` — فشل المصدر: ${res.error}` : gn === 0 ? " — مافيش مستودعات مطابقة" : ""}`, res);
       }
 
       case "knowledge_search": {

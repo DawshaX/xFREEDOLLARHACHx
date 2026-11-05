@@ -14,6 +14,7 @@
 
 import { NOVA_SYSTEM_PROMPT, NOVA_SYSTEM_PROMPT_SHORT } from "./persona";
 import { buildSelfModel, selfModelPrompt, type SelfModel } from "./self-model";
+import { vulnQuery } from "./vuln-keyword";
 import {
   AGENT_TOOLS,
   AGENT_TOOL_NAMES,
@@ -314,8 +315,14 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
     tools: (msg) => [{ tool: "forum_search", args: { query: cleanQuery(msg), limit: 8 } }],
   },
   {
+    // الجملة الكاملة ما بتدخلش على NVD: بنطلّع منها مصطلح منتج/تقنية. لو مافيش،
+    // بنلفّ على الفهرس المحلي (بيحتاج نص طبيعي أصلاً) بدل استعلام بيلفّق صفر.
     test: /(?:ثغرات|ثغرة|vulnerab|cve)/i,
-    tools: (msg) => [{ tool: "vuln_search", args: { keyword: cleanQuery(msg), limit: 8 } }],
+    tools: (msg) => {
+      const q = vulnQuery(msg);
+      if (!q.usable) return [{ tool: "knowledge_search", args: { query: cleanQuery(msg) } }];
+      return [{ tool: "vuln_search", args: { keyword: q.keyword ?? q.cveId ?? cleanQuery(msg), limit: 8 } }];
+    },
   },
   {
     test: /(?:أدوات|ادوات|kali|أداة|tool)/i,

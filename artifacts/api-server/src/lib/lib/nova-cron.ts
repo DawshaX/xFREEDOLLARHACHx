@@ -1,3 +1,7 @@
+/* ⛔ نسخة ظلّ ميتة (dead shadow): الملف ده محطوط في src/lib/lib/ ومفيش أي ملف في
+   المشروع بيستورده — النسخة الحقيقية اللي بتشتغل هي "../nova-cron.ts (or routes/nova-cron.ts)".
+   أي تعديل هنا ما بيوصلش للسيرفر أبداً (اتلمس بالفحص: 0 مستوردين). الملف متسابش
+   بالمحتوى بتاعه عشان مفيش حاجة تتلغي، بس الفاحص بيمنع استيراده. */
 /**
  * Nova Cron Scheduler — Smart AI Jobs (Standalone, No-DB)
  * 6 intelligent cron jobs: CVE hunt, self-heal probe, Telegram pulse,

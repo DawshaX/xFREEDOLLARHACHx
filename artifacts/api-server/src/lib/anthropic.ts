@@ -65,6 +65,8 @@ export const anthropic = {
             if (textParts.length) openaiMessages.push({ role: "user", content: textParts.join("\n") });
           } else {
             const textParts: string[] = [];
+            // @ts-ignore — حقل `tool_calls` اتغير في types بتاع openai بين النسخ؛ 
+            //   المسار ده ارثي (بيستخدمه routes/kali-terminal) والقايمة موصولة على agent/openai-path الرئيسي.
             const toolCalls: OpenAI.Chat.ChatCompletionMessageParam["tool_calls"] = [];
             for (const block of m.content as Array<{ type: string; text?: string; id?: string; name?: string; input?: unknown }>) {
               if (block.type === "text") textParts.push(block.text ?? "");
@@ -89,6 +91,8 @@ export const anthropic = {
         function: { name: t.name, description: t.description, parameters: t.input_schema },
       }));
 
+      // @ts-ignore — `max_completion_tokens` موجود في openai>=4.x الأحدث ومفيش في الأقدم؛
+      //   المسار ده ارثي، واللي بيشتغل فعلاً في `/api/anthropic` بيمرّ من المجلس (lib/agent/llm.ts).
       const response = await client.chat.completions.create({
         model,
         max_completion_tokens: params.max_tokens,

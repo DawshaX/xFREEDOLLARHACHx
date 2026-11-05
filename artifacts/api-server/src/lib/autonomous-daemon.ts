@@ -24,6 +24,7 @@ import {
 } from "./standalone-api";
 import { broadcastEvent } from "./ws-hub";
 import { runOpsSweep } from "./ops/autonomy";
+import { emitAutonomyEvent } from "./autonomy-events";
 import { logger } from "./logger";
 import { broadcastLiveEvent } from "../routes/live-events";
 
@@ -972,6 +973,18 @@ export async function addAutonomousMultiTask(params: {
 
 let daemonTimer: NodeJS.Timeout | null = null;
 
+export function isAutonomousDaemonRunning(): boolean {
+  return daemonTimer !== null;
+}
+
+/** إيقاف نظيف — من غيره «الإيقاف» في الواجهة كان بيغير لون الزر بس. */
+export function stopAutonomousBackgroundDaemon(): boolean {
+  if (!daemonTimer) return false;
+  clearInterval(daemonTimer);
+  daemonTimer = null;
+  return true;
+}
+
 export function startAutonomousBackgroundDaemon(): void {
   if (daemonTimer) return;
   // Load and ensure state file is initialized on startup
@@ -980,6 +993,8 @@ export function startAutonomousBackgroundDaemon(): void {
 
   // Run an autonomous background pulse every 3 minutes without blocking user requests
   daemonTimer = setInterval(() => {
-    tickAutonomousDaemon().catch(() => {});
+    tickAutonomousDaemon()
+      .then((st) => emitAutonomyEvent("tick_done", { cycles: st.daemonStatus?.autonomousCyclesCompleted ?? null }))
+      .catch((e) => emitAutonomyEvent("tick_error", { error: e instanceof Error ? e.message : String(e) }));
   }, 180_000);
 }

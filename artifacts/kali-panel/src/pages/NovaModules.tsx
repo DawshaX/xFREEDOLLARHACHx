@@ -21,46 +21,96 @@ export default function NovaModules() {
     { id: "stealth-mode", name: "Stealth & Anti-Forensics", description: "تقنيات التخفي ومقاومة التحليل الجنائي الرقمي", category: "stealth", status: "idle", progress: 0, icon: Activity },
     { id: "defense-evasion", name: "Defense Evasion", description: "تجاوز أنظمة الدفاع والكشف عن التهديدات", category: "defense", status: "idle", progress: 0, icon: AlertTriangle },
   ]);
-  const [threatIntel, setThreatIntel] = useState<ThreatIntel[]>([
-    { id: "1", title: "Remote Code Execution in Web Framework", severity: "critical", description: "ثغرة تنفيذ أكواد عن بعد في إطار ويب شائع", source: "NVD", publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), status: "new" },
-    { id: "2", title: "SQL Injection in Database System", severity: "high", description: "ثغرة حقن SQL في نظام إدارة قواعد البيانات", source: "CVE Database", publishedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), status: "analyzing" },
-    { id: "3", title: "XSS in Content Management System", severity: "medium", description: "ثغرة XSS في نظام إدارة المحتوى", source: "Security Researcher", publishedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), status: "mitigated" },
-  ]);
-  const [systemStats, setSystemStats] = useState({ cpuUsage: 0, memoryUsage: 0, activeConnections: 0, threatsDetected: 0 });
+  // Feed حقيقي من قاعدة CVE المحلية (`/api/cve/recent`).LISTA كانت دي تلات
+  // ثغرات مكتوبة في الكود (RCE/SQLi/XSS «شائعة») بتظهر للمستخدم كتحديث أمني.
+  const [threatIntel, setThreatIntel] = useState<ThreatIntel[]>([]);
+  const [feedNote, setFeedNote] = useState<string>("لم تُقرأ قائمة الثغرات بعد.");
+  const [runNote, setRunNote] = useState<string | null>(null);
+  const [systemStats, setSystemStats] = useState<{ cpuUsage: number | null; memoryUsage: number | null; activeConnections: number | null; threatsDetected: number | null }>({ cpuUsage: null, memoryUsage: null, activeConnections: null, threatsDetected: null });
+
+  const loadThreatIntel = async () => {
+    try {
+      const r = await fetch("/api/cve/recent?severity=CRITICAL&limit=8", { signal: AbortSignal.timeout(9000) });
+      if (!r.ok) { setThreatIntel([]); setFeedNote(`مصدر التغذية ردّ HTTP ${r.status} — مفيش بيانات، ومش هنلفّق ثغرات.`); return; }
+      const raw = await r.json();
+      const arr: Array<Record<string, unknown>> = Array.isArray(raw) ? raw as Array<Record<string, unknown>> : ((raw as { items?: Array<Record<string, unknown>> })?.items ?? []);
+      const mapped: ThreatIntel[] = arr.map((x) => ({
+        id: String(x.id ?? x.cveId ?? ""),
+        title: (String(x.description ?? x.title ?? "")).slice(0, 140) || "بدون وصف",
+        severity: (["critical", "high", "medium", "low"].includes(String(x.severity ?? "").toLowerCase()) ? String(x.severity).toLowerCase() : "high") as ThreatIntel["severity"],
+        description: String(x.description ?? ""),
+        source: "قاعدة CVE المحلية (/api/cve/recent)",
+        publishedAt: String(x.publishedAt ?? ""),
+        status: "new" as const,
+      }));
+      setThreatIntel(mapped);
+      setFeedNote(mapped.length ? `${mapped.length} ثغرة مقروءة الآن من القاعدة` : "قاعدة الـCVE فاضية على السيرفر ده — اعمل مزامنة الأول.");
+    } catch (err) {
+      setThreatIntel([]);
+      setFeedNote(`قراية التغذية فشلت: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSystemStats({ cpuUsage: Math.min(99, 15 + Math.random() * 25), memoryUsage: Math.min(95, 35 + Math.random() * 30), activeConnections: Math.floor(Math.random() * 50), threatsDetected: Math.floor(Math.random() * 10) });
-    }, 2000);
-    return () => clearInterval(interval);
+    let stop = false;
+    const tick = async () => {
+      try {
+        const r = await fetch("/api/system/metrics", { signal: AbortSignal.timeout(6000) });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const d = (await r.json()) as { cpu?: { usage?: number }; ram?: { percent?: number } };
+        if (stop) return;
+        setSystemStats((prev) => ({
+          ...prev,
+          cpuUsage: Number.isFinite(d.cpu?.usage) ? (d.cpu?.usage as number) : null,
+          memoryUsage: Number.isFinite(d.ram?.percent) ? (d.ram?.percent as number) : null,
+        }));
+      } catch {
+        if (!stop) setSystemStats((prev) => ({ ...prev, cpuUsage: null, memoryUsage: null }));
+      }
+    };
+    void tick();
+    void loadThreatIntel();
+    const t = setInterval(tick, 10_000);
+    return () => { stop = true; clearInterval(t); };
   }, []);
 
+  /**
+   * «تشغيل الوحدة» كان لوب بيزوّد progress 0→100 على 250ms لكل وحدة وبعدين
+   * يعلّم «مكتمل ✓» — أي زرار «شغّل الكل» بيطلّع 4 نجاحات من العدم. دلوقتي:
+   * الوحدة اللي ليها شغل حقيقي بيتقاس (قراءة التغذية) بتعمله، والباقي بيفشل
+   * بسبب مبيّن، مش بينجح بالكلام.
+   */
   const runModule = async (moduleId: string) => {
-    setModules(prev => prev.map(m => m.id === moduleId ? { ...m, status: "running", progress: 0 } : m));
-    for (let progress = 0; progress <= 100; progress += 10) {
-      await new Promise(r => setTimeout(r, 250));
-      setModules(prev => prev.map(m => m.id === moduleId ? { ...m, progress } : m));
+    setModules((prev) => prev.map((m) => (m.id === moduleId ? { ...m, status: "running", progress: 10 } : m)));
+    if (moduleId === "zero-day-intel") {
+      await loadThreatIntel();
+      setModules((prev) => prev.map((m) => (m.id === moduleId ? { ...m, status: "completed", progress: 100, lastRun: new Date().toISOString() } : m)));
+      setRunNote(null);
+      return;
     }
-    setModules(prev => prev.map(m => m.id === moduleId ? { ...m, status: "completed", progress: 100, lastRun: new Date().toISOString() } : m));
+    setModules((prev) => prev.map((m) => (m.id === moduleId ? { ...m, status: "failed", progress: 0 } : m)));
+    setRunNote(`«${moduleId}» مالهاش محرك على السيرفر — مش هتعلّم نفسها مكتملة. المتاح حالياً: /api/modules/tools/:id/install و/check.`);
   };
 
-  const syncThreatIntel = async () => {
-    await new Promise(r => setTimeout(r, 1500));
-    const newThreat: ThreatIntel = { id: Date.now().toString(), title: "New Zero-Day Vulnerability Discovered", severity: "critical", description: "ثغرة خطيرة جديدة تتطلب اهتماماً فورياً", source: "Threat Intel Feed", publishedAt: new Date().toISOString(), status: "new" };
-    setThreatIntel(prev => [newThreat, ...prev].slice(0, 10));
-  };
+  const syncThreatIntel = async () => { await loadThreatIntel(); };
 
   return (
     <div className="min-h-screen p-5 space-y-5" style={{ background: "linear-gradient(180deg,#060010 0%,#03000a 100%)" }} dir="rtl">
       <PageHeader title="☠ Nova Modules" subtitle="وحدات متقدمة للأمن السيبراني والهجوم والدفاع" icon={Shield} danger />
 
+      {/* الحالة الحقيقية: مش بنسيب المستخدم يفتكر إن فيه تهديدات/نجاح من غير مصدر */}
+      <div className="rounded-2xl px-4 py-3 space-y-1" style={DARK}>
+        <div className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.45)" }}>التغذية: {feedNote}</div>
+        {runNote && <div className="text-[10px] font-mono" style={{ color: "#ff8844" }}>{runNote}</div>}
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "CPU", value: `${systemStats.cpuUsage.toFixed(1)}%`, color: "#44eebb", rgb: "68,238,187", icon: Cpu },
-          { label: "Memory", value: `${systemStats.memoryUsage.toFixed(1)}%`, color: "#aa44ff", rgb: "170,68,255", icon: Database },
-          { label: "Connections", value: systemStats.activeConnections, color: "#4488ff", rgb: "68,136,255", icon: Globe },
-          { label: "Threats", value: systemStats.threatsDetected, color: "#ff4444", rgb: "255,68,68", icon: AlertTriangle },
+          { label: "CPU", value: systemStats.cpuUsage === null ? "غير مقاس" : `${systemStats.cpuUsage.toFixed(0)}%`, color: "#44eebb", rgb: "68,238,187", icon: Cpu },
+          { label: "Memory", value: systemStats.memoryUsage === null ? "غير مقاس" : `${systemStats.memoryUsage.toFixed(0)}%`, color: "#aa44ff", rgb: "170,68,255", icon: Database },
+          { label: "Connections", value: "غير مقاس", color: "#4488ff", rgb: "68,136,255", icon: Globe },
+          { label: "Threats", value: threatIntel.filter((t) => t.severity === "critical" || t.severity === "high").length, color: "#ff4444", rgb: "255,68,68", icon: AlertTriangle },
         ].map(({ label, value, color, rgb, icon: Icon }) => (
           <div key={label} className="rounded-xl p-4" style={{ background: `rgba(${rgb},0.06)`, border: `1px solid rgba(${rgb},0.2)`, borderRadius: 16 }}>
             <div className="flex items-center gap-2 mb-1">

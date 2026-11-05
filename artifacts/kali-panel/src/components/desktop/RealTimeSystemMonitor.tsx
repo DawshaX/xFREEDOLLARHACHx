@@ -1,145 +1,164 @@
 import { useEffect, useState } from "react";
 import {
-  Cpu, Wifi, HardDrive, Activity, Zap, Shield, Globe,
-  Server, Terminal, Users, Package, Clock,
+  Cpu, Wifi, HardDrive, Activity, Zap, Globe, Server, Terminal, Package,
 } from "lucide-react";
 
-interface SystemInfo {
-  cpu: {
-    usage: number;
-    cores: number;
-    model: string;
-    speed: number;
-    temperature?: number;
-  };
-  memory: {
-    total: number;
-    used: number;
-    free: number;
-    percent: number;
-  };
-  disk: {
-    total: number;
-    used: number;
-    free: number;
-    percent: number;
-  };
-  network: {
-    interfaces: Array<{
-      name: string;
-      ip: string;
-      mac: string;
-      speed: number;
-      status: 'up' | 'down';
-    }>;
-    connections: number;
-    bandwidth: {
-      download: number;
-      upload: number;
-    };
-  };
-  processes: Array<{
-    pid: number;
-    name: string;
-    cpu: number;
-    memory: number;
-    status: 'running' | 'sleeping' | 'stopped';
-  }>;
-  uptime: number;
-  timestamp: string;
+/**
+ * مراقبة النظام المباشرة — نسخة مقاسة.
+ *
+ * التاريخ التصحيحي (فحص 2026-11-05): الكومبوننت ده كان بيطلب
+ * `/api/system/info` و`/api/system/kill` — والمسارين دول **مفيش أصلاً** في
+ * السيرفر (system.ts فيه `/system/metrics` و`/system/run` بس). النتيجة كانت
+ * اثنتين 404 كل ثانية للأبد + سكرينة «جاري التحميل…» ما بتخلصش. والأسوأ: فرع
+ * النجاح كان يلفّق حرارة القرص والشبكة والعمليات بـ`Math.random()` (تعليق
+ * الكود نفسه كان بيقول `// Mock temperature`) وبيعرض جدول عمليات Windows
+ * مختلق (`chrome.exe`, `node.exe`, …) باسـ PID عشوائي.
+ *
+ * دلوقتي: كل رقم معروض إما مقاس من السيرفر أو مكتوب صراحة «لا مصدر مقاس»،
+ * والجدول ده بقى يعرض الأوامر الحقيقية اللي شغالة فعلاً (ProcessRecord) بدل
+ * جدول OS ملفّق. مفيش حاجة اتلغت — البطاقات سايبنة مكانها وبتقول الحقيقة.
+ */
+
+/** `/api/system/metrics` — os.totalmem/cpus/uptime/loadavg (MB في الذاكرة) */
+interface ServerMetrics {
+  cpu?: { usage?: number; cores?: number; model?: string; speed?: number };
+  ram?: { total?: number; used?: number; free?: number; percent?: number };
+  loadAvg?: number[];
+  uptime?: number;
+  platform?: string;
+  hostname?: string;
+  timestamp?: string;
+}
+/** `/api/network/interfaces` */
+interface Iface {
+  name: string;
+  addresses: string[];
+  mac: string | null;
+  isUp: boolean;
+}
+/** `/api/processes` — سجل الأوامر الحقيقية اللي شغلتها المنصة */
+interface ProcRec {
+  id: string;
+  command: string;
+  cwd?: string;
+  pid: number | null;
+  status: "running" | "exited" | "killed" | "error";
+  exitCode: number | null;
+  startedAt: number;
+  endedAt: number | null;
+}
+
+type Source = "live" | "unreachable";
+
+const fmtUptime = (sec?: number): string => {
+  if (!Number.isFinite(sec ?? NaN)) return "غير مقاس";
+  const s = Math.max(0, Math.floor(sec as number));
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return d > 0 ? `${d}ي ${h}س ${m}د` : h > 0 ? `${h}س ${m}د` : `${m}د`;
+};
+const mb = (n?: number): string =>
+  Number.isFinite(n ?? NaN) ? `${(n as number) >= 1024 ? ((n as number) / 1024).toFixed(1) + " GB" : Math.round(n as number) + " MB"}` : "غير مقاس";
+
+/** خانة مش مقاسة: بتقول كده صراحة بدل ما ترمي رقم عشوائي */
+function Unmeasured({ why }: { why: string }) {
+  return (
+    <span
+      title={`مفيش مصدر في السيرفر بيقيس ده: ${why}`}
+      className="font-mono text-[11px] text-muted-foreground/80"
+    >
+      لا مصدر مقاس
+    </span>
+  );
 }
 
 export function RealTimeSystemMonitor() {
-  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [refreshRate, setRefreshRate] = useState(1000);
+  const [metrics, setMetrics] = useState<ServerMetrics | null>(null);
+  const [ifaces, setIfaces] = useState<Iface[]>([]);
+  const [procs, setProcs] = useState<ProcRec[]>([]);
+  const [source, setSource] = useState<Source>("unreachable");
+  const [error, setError] = useState<string | null>(null);
+  const [refreshRate, setRefreshRate] = useState(5000);
   const [isExpanded, setIsExpanded] = useState(false);
-
-  const fetchSystemInfo = async () => {
-    try {
-      const response = await fetch('/api/system/info');
-      if (response.ok) {
-        const data = await response.json();
-        setSystemInfo({
-          cpu: {
-            usage: data.cpu?.usage || 0,
-            cores: data.cpu?.cores || 0,
-            model: data.cpu?.model || 'Unknown',
-            speed: data.cpu?.speed || 0,
-            temperature: Math.random() * 30 + 40, // Mock temperature
-          },
-          memory: {
-            total: data.ram?.total || 0,
-            used: data.ram?.used || 0,
-            free: data.ram?.free || 0,
-            percent: data.ram?.percent || 0,
-          },
-          disk: {
-            total: Math.random() * 1000 + 500, // Mock disk size
-            used: Math.random() * 500 + 200,
-            free: Math.random() * 300 + 100,
-            percent: Math.random() * 50 + 20,
-          },
-          network: {
-            interfaces: data.network?.interfaces || [],
-            connections: Math.floor(Math.random() * 100) + 20,
-            bandwidth: {
-              download: Math.random() * 100,
-              upload: Math.random() * 50,
-            },
-          },
-          processes: Array.from({ length: 10 }, (_, i) => ({
-            pid: Math.floor(Math.random() * 10000) + 1000,
-            name: ['chrome.exe', 'node.exe', 'ollama.exe', 'powershell.exe', 'explorer.exe'][i % 5],
-            cpu: Math.random() * 30,
-            memory: Math.random() * 20,
-            status: ['running', 'sleeping', 'stopped'][Math.floor(Math.random() * 3)] as any,
-          })),
-          uptime: data.system?.uptime || 0,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch system info:', error);
-    }
-  };
+  const [checkedAt, setCheckedAt] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchSystemInfo();
-    const interval = setInterval(fetchSystemInfo, refreshRate);
-    return () => clearInterval(interval);
+    let cancelled = false;
+    const grab = async <T,>(path: string): Promise<T | null> => {
+      try {
+        const r = await fetch(path, { signal: AbortSignal.timeout(6000) });
+        if (!r.ok) return null;
+        return (await r.json()) as T;
+      } catch {
+        return null;
+      }
+    };
+    const tick = async () => {
+      const [m, n, p] = await Promise.all([
+        grab<ServerMetrics>("/api/system/metrics"),
+        grab<Iface[]>("/api/network/interfaces"),
+        grab<ProcRec[]>("/api/processes"),
+      ]);
+      if (cancelled) return;
+      setCheckedAt(Date.now());
+      if (m) {
+        setMetrics(m);
+        setSource("live");
+        setError(null);
+      } else {
+        setSource("unreachable");
+        setError("مفيش رد من /api/system/metrics — الأرقام دي مش هتتعرض لحد ما المصدر يرد.");
+      }
+      if (n) setIfaces(Array.isArray(n) ? n : []);
+      if (p) setProcs(Array.isArray(p) ? p : []);
+    };
+    void tick();
+    const id = setInterval(tick, Math.max(2000, refreshRate));
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [refreshRate]);
 
-  const killProcess = async (pid: number) => {
+  const kill = async (id: string) => {
     try {
-      const response = await fetch('/api/system/kill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pid }),
-      });
-      if (response.ok) {
-        await fetchSystemInfo(); // Refresh after killing
-      }
-    } catch (error) {
-      console.error('Failed to kill process:', error);
+      const r = await fetch(`/api/processes/${encodeURIComponent(id)}/kill`, { method: "POST" });
+      // مافيش تحديث وهمي لو فشل — المستخدم يشوف الرد الحقيقي
+      if (!r.ok) setError(`القتل اترفض: HTTP ${r.status}`);
+    } catch (e) {
+      setError(`القتل فشل: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
-  if (!systemInfo) {
+  const live = source === "live" && !!metrics;
+  const cpu: NonNullable<ServerMetrics["cpu"]> = metrics?.cpu ?? {};
+  const ram: NonNullable<ServerMetrics["ram"]> = metrics?.ram ?? {};
+
+  if (!checkedAt) {
     return (
       <div className="p-4 text-center">
         <Terminal className="w-8 h-8 mx-auto mb-2 text-muted-foreground animate-pulse" />
-        <div className="text-sm text-muted-foreground">جاري تحميل معلومات النظام...</div>
+        <div className="text-sm text-muted-foreground">أول قراءة من السيرفر…</div>
       </div>
     );
   }
 
   return (
     <div className="bg-card/50 backdrop-blur-xl border border-primary/20 rounded-lg p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header — حالة المصدر ظاهرة، مش مستخبية ورا سبينر */}
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Server className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-bold text-foreground">مراقبة النظام المباشر</h3>
+          <span
+            className={`px-2 py-0.5 rounded text-[10px] font-mono ${
+              live ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
+            }`}
+            title={live ? "مقاس من /api/system/metrics + /api/network/interfaces + /api/processes" : (error ?? "المصدر مش بيرد")}
+          >
+            {live ? "مقاس" : "مش مقاس"}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -147,23 +166,30 @@ export function RealTimeSystemMonitor() {
             onChange={(e) => setRefreshRate(Number(e.target.value))}
             className="bg-background/60 border border-border/60 rounded px-2 py-1 text-xs font-mono text-foreground"
           >
-            <option value={500}>0.5 ثانية</option>
-            <option value={1000}>1 ثانية</option>
             <option value={2000}>2 ثانية</option>
             <option value={5000}>5 ثواني</option>
+            <option value={15000}>15 ثانية</option>
+            <option value={60000}>دقيقة</option>
           </select>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-1 rounded hover:bg-primary/10 transition-colors"
+            title="تفاصيلواجهات الشبكة والأوامر الجارية"
           >
             <Activity className="w-4 h-4 text-primary" />
           </button>
         </div>
       </div>
 
-      {/* System Overview */}
+      {!live && (
+        <div className="text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/30 rounded p-2">
+          {error ?? "مفيش قراية من السيرفر."} لو السيرفر مش شغال على نفس الأصل، البطاقات دي
+          هتفضل «لا مصدر مقاس» — مش هنعوّضها بأرقام من عندنا.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* CPU */}
+        {/* المعالج */}
         <div className="bg-gradient-to-br from-blue-500/10 to-indigo-600/10 border border-blue-400/30 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
             <Cpu className="w-4 h-4 text-blue-400" />
@@ -172,26 +198,32 @@ export function RealTimeSystemMonitor() {
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">الاستخدام:</span>
-              <span className={`font-mono ${systemInfo.cpu.usage > 80 ? 'text-red-400' : systemInfo.cpu.usage > 50 ? 'text-yellow-400' : 'text-green-400'}`}>
-                {systemInfo.cpu.usage.toFixed(1)}%
-              </span>
+              {live && Number.isFinite(cpu.usage ?? NaN) ? (
+                <span className={`font-mono ${(cpu.usage ?? 0) > 80 ? "text-red-400" : (cpu.usage ?? 0) > 50 ? "text-yellow-400" : "text-green-400"}`}>
+                  {(cpu.usage ?? 0).toFixed(0)}%
+                </span>
+              ) : (
+                <Unmeasured why="os.cpus() بياخد عينة لحظية" />
+              )}
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">النوى:</span>
-              <span className="font-mono text-foreground">{systemInfo.cpu.cores}</span>
+              <span className="font-mono text-foreground">{cpu.cores ?? "غير مقاس"}</span>
             </div>
-            {systemInfo.cpu.temperature && (
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">الحرارة:</span>
-                <span className={`font-mono ${systemInfo.cpu.temperature > 70 ? 'text-red-400' : systemInfo.cpu.temperature > 50 ? 'text-yellow-400' : 'text-green-400'}`}>
-                  {systemInfo.cpu.temperature.toFixed(1)}°C
-                </span>
-              </div>
-            )}
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">حمل النظام:</span>
+              <span className="font-mono text-foreground">
+                {metrics?.loadAvg?.length ? metrics.loadAvg.map((n) => n.toFixed(2)).join(" / ") : "غير مقاس"}
+              </span>
+            </div>
+            <div className="flex justify-between text-xs" title="قياس حرارة الـCPU محتاج /sys/class/thermal على الهوست — السيرفر مش بيطلعها">
+              <span className="text-muted-foreground">الحرارة:</span>
+              <Unmeasured why="mmap /sys/class/thermal مش متاح من المتصفح" />
+            </div>
           </div>
         </div>
 
-        {/* Memory */}
+        {/* الذاكرة */}
         <div className="bg-gradient-to-br from-emerald-500/10 to-teal-600/10 border border-emerald-400/30 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
             <Zap className="w-4 h-4 text-emerald-400" />
@@ -200,24 +232,24 @@ export function RealTimeSystemMonitor() {
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">المستخدم:</span>
-              <span className="font-mono text-foreground">{(systemInfo.memory.used / 1024).toFixed(1)} GB</span>
+              <span className="font-mono text-foreground">{mb(ram.used)}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">الإجمالي:</span>
-              <span className="font-mono text-foreground">{(systemInfo.memory.total / 1024).toFixed(1)} GB</span>
+              <span className="font-mono text-foreground">{mb(ram.total)}</span>
             </div>
             <div className="w-full bg-background/40 rounded-full h-2 mt-2">
               <div
                 className={`h-full rounded-full transition-all ${
-                  systemInfo.memory.percent > 80 ? 'bg-red-500' : systemInfo.memory.percent > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                  (ram.percent ?? 0) > 80 ? "bg-red-500" : (ram.percent ?? 0) > 50 ? "bg-yellow-500" : "bg-green-500"
                 }`}
-                style={{ width: `${systemInfo.memory.percent}%` }}
+                style={{ width: `${Math.max(0, Math.min(100, live ? ram.percent ?? 0 : 0))}%` }}
               />
             </div>
           </div>
         </div>
 
-        {/* Network */}
+        {/* الشبكة */}
         <div className="bg-gradient-to-br from-green-500/10 to-emerald-600/10 border border-green-400/30 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
             <Wifi className="w-4 h-4 text-green-400" />
@@ -225,151 +257,129 @@ export function RealTimeSystemMonitor() {
           </div>
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">واجهات نشطة:</span>
+              <span className="font-mono text-foreground">{ifaces.length ? `${ifaces.filter((i) => i.isUp).length}/${ifaces.length}` : "غير مقاس"}</span>
+            </div>
+            <div className="flex justify-between text-xs" title="عداد الاتصالات بياخد netstat على الهوست — مفيش endpoint ليه">
               <span className="text-muted-foreground">الاتصالات:</span>
-              <span className="font-mono text-foreground">{systemInfo.network.connections}</span>
+              <Unmeasured why="مفيش /network/connections" />
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">التحميل:</span>
-              <span className="font-mono text-foreground">{systemInfo.network.bandwidth.download.toFixed(1)} Mbps</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">الرفع:</span>
-              <span className="font-mono text-foreground">{systemInfo.network.bandwidth.upload.toFixed(1)} Mbps</span>
+            <div className="flex justify-between text-xs" title="سعة التحميل/الرفع محتاجة اختبار فعلية (iperf) مش رقم ثابت">
+              <span className="text-muted-foreground">العرض:</span>
+              <Unmeasured why="مفيش قياس bandwidth" />
             </div>
           </div>
         </div>
 
-        {/* Disk */}
+        {/* القرص */}
         <div className="bg-gradient-to-br from-orange-500/10 to-amber-600/10 border border-orange-400/30 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
             <HardDrive className="w-4 h-4 text-orange-400" />
             <span className="text-sm font-semibold text-foreground">القرص</span>
           </div>
           <div className="space-y-1">
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between text-xs" title="statfs() على المجلد ده ممكن نضيفه في السيرفر — لسه مضافش">
               <span className="text-muted-foreground">المستخدم:</span>
-              <span className="font-mono text-foreground">{(systemInfo.disk.used / 1024).toFixed(1)} GB</span>
+              <Unmeasured why="مفيش /system/disk" />
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">الإجمالي:</span>
-              <span className="font-mono text-foreground">{(systemInfo.disk.total / 1024).toFixed(1)} GB</span>
+              <span className="text-muted-foreground">الهوست:</span>
+              <span className="font-mono text-foreground truncate max-w-[9rem]" title={metrics?.hostname ?? ""}>
+                {metrics?.hostname ?? "غير مقاس"}
+              </span>
             </div>
-            <div className="w-full bg-background/40 rounded-full h-2 mt-2">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  systemInfo.disk.percent > 80 ? 'bg-red-500' : systemInfo.disk.percent > 50 ? 'bg-yellow-500' : 'bg-green-500'
-                }`}
-                style={{ width: `${systemInfo.disk.percent}%` }}
-              />
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">الـuptime:</span>
+              <span className="font-mono text-foreground">{fmtUptime(metrics?.uptime)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Expanded Details */}
+      {/* التفاصيل */}
       {isExpanded && (
         <div className="space-y-4 border-t border-primary/20 pt-4">
-          {/* Network Interfaces */}
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
               <Globe className="w-4 h-4 text-primary" />
-              واجهات الشبكة
+              واجهات الشبكة (os.networkInterfaces)
             </h4>
-            <div className="space-y-2">
-              {systemInfo.network.interfaces.map((iface, index) => (
-                <div key={index} className="bg-background/40 rounded p-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">الاسم:</span>
-                    <span className="font-mono text-foreground">{iface.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">الـ IP:</span>
-                    <span className="font-mono text-foreground">{iface.ip}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">الـ MAC:</span>
-                    <span className="font-mono text-foreground">{iface.mac}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">الحالة:</span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-mono ${
-                      iface.status === 'up' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                    }`}>
-                      {iface.status === 'up' ? 'نشطة' : 'معطلة'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Top Processes */}
-          <div>
-            <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" />
-              أعلى العمليات استهلاكاً
-            </h4>
-            <div className="space-y-1">
-              {systemInfo.processes.slice(0, 5).map((process, index) => (
-                <div key={process.pid} className="bg-background/40 rounded p-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-foreground">{process.name}</span>
-                      <span className="text-muted-foreground">PID: {process.pid}</span>
+            {ifaces.length === 0 ? (
+              <div className="text-xs text-muted-foreground">مفيش قراية من /api/network/interfaces.</div>
+            ) : (
+              <div className="space-y-2">
+                {ifaces.map((iface, index) => (
+                  <div key={`${iface.name}-${index}`} className="bg-background/40 rounded p-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">الاسم:</span>
+                      <span className="font-mono text-foreground">{iface.name}</span>
                     </div>
-                    <button
-                      onClick={() => killProcess(process.pid)}
-                      className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors text-xs"
-                      title="إنهاء العملية"
-                    >
-                      إنهاء
-                    </button>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">العناوين:</span>
+                      <span className="font-mono text-foreground text-left">{iface.addresses.slice(0, 3).join("، ") || "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">الـ MAC:</span>
+                      <span className="font-mono text-foreground">{iface.mac || "—"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">الحالة:</span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-mono ${iface.isUp ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                        {iface.isUp ? "نشطة" : "معطلة"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-muted-foreground">CPU:</span>
-                    <span className={`font-mono ${process.cpu > 20 ? 'text-red-400' : 'text-foreground'}`}>
-                      {process.cpu.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">ذاكرة:</span>
-                    <span className={`font-mono ${process.memory > 10 ? 'text-red-400' : 'text-foreground'}`}>
-                      {process.memory.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* System Info */}
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
               <Package className="w-4 h-4 text-primary" />
-              معلومات النظام
+              الأوامر الجارية على المنصة ({procs.length})
             </h4>
-            <div className="grid grid-cols-2 gap-2 text-xs bg-background/40 rounded p-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">نموذج CPU:</span>
-                <span className="font-mono text-foreground">{systemInfo.cpu.model}</span>
+            {procs.length === 0 ? (
+              <div className="text-xs text-muted-foreground">
+                مفيش أمر شغال حالياً. (الجدول ده سجل أوامر المنصة نفسها — مش جدول عمليات الـOS،
+                ومفيش مصدر بيدينا دول، فمش هنختلقهم.)
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">سرعة CPU:</span>
-                <span className="font-mono text-foreground">{systemInfo.cpu.speed} MHz</span>
+            ) : (
+              <div className="space-y-1 max-h-48 overflow-auto">
+                {procs.slice(0, 20).map((p) => (
+                  <div key={p.id} className="bg-background/40 rounded p-2 text-xs flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-foreground truncate" title={p.command}>{p.command}</div>
+                      <div className="text-muted-foreground">
+                        pid {p.pid ?? "—"} · {new Date(p.startedAt).toLocaleTimeString("ar-EG")} ·
+                        خرج {p.exitCode === null ? "لسه" : p.exitCode}
+                      </div>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono shrink-0 ${
+                      p.status === "running" ? "bg-green-500/20 text-green-400" : "bg-muted text-muted-foreground"
+                    }`}>
+                      {p.status === "running" ? "شغال" : p.status === "killed" ? "مقتول" : p.status === "error" ? "غلط" : "خلص"}
+                    </span>
+                    {p.status === "running" && (
+                      <button
+                        onClick={() => void kill(p.id)}
+                        className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-mono hover:bg-red-500/30 shrink-0"
+                        title="POST /api/processes/:id/kill"
+                      >
+                        إنهاء
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">وقت التشغيل:</span>
-                <span className="font-mono text-foreground">
-                  {Math.floor(systemInfo.uptime / 3600)} ساعة {Math.floor((systemInfo.uptime % 3600) / 60)} دقيقة
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">آخر تحديث:</span>
-                <span className="font-mono text-foreground">
-                  {new Date(systemInfo.timestamp).toLocaleTimeString('ar-SA')}
-                </span>
-              </div>
-            </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+            <span>
+              {live && metrics ? `نظام: ${metrics.platform ?? "؟"} · آخر قراية ${checkedAt ? new Date(checkedAt).toLocaleTimeString("ar-EG") : "—"}` : "مفيش مصدر"}
+            </span>
+            <span className="font-mono">المصادر: /api/system/metrics · /api/network/interfaces · /api/processes</span>
           </div>
         </div>
       )}

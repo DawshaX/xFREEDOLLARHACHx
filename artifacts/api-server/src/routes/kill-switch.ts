@@ -23,9 +23,7 @@ export function resetKill(sessionId?: string): void {
   else { killSwitchActive = false; sessionKills.clear(); }
 }
 
-// POST /api/kill-switch — emergency stop ALL
-router.post("/kill-switch", (req, res) => {
-  const { sessionId } = req.body as { sessionId?: string };
+function trip(sessionId?: string): void {
   if (sessionId) {
     sessionKills.add(sessionId);
   } else {
@@ -34,7 +32,20 @@ router.post("/kill-switch", (req, res) => {
   }
   auditLog({ ts: new Date().toISOString(), sessionId, action: "kill_switch", data: { scope: sessionId || "global" } });
   broadcastLiveEvent({ type: "agent_alert", data: { title: "⛔ Kill Switch", message: "تم إيقاف كل العمليات فوراً", severity: "critical", ts: Date.now() }, ts: new Date().toISOString() });
-  res.json({ ok: true, killed: true });
+}
+
+// POST /api/kill-switch — emergency stop ALL
+router.post("/kill-switch", (req, res) => {
+  const { sessionId } = req.body as { sessionId?: string };
+  trip(sessionId);
+  res.json({ ok: true, killed: true, active: killSwitchActive, sessionKills: Array.from(sessionKills) });
+});
+
+// alias — كان بردّ من stubs.ts بـ `{ok:true,killed:true}` من غير ما يلمس الحالة
+router.post("/kill-switch/activate", (req, res) => {
+  const { sessionId } = req.body as { sessionId?: string };
+  trip(sessionId);
+  res.json({ ok: true, killed: true, active: killSwitchActive, sessionKills: Array.from(sessionKills) });
 });
 
 // POST /api/kill-switch/reset — re-enable
