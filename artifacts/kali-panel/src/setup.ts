@@ -836,3 +836,24 @@ const cybernovaFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 window.fetch = cybernovaFetch;
 (globalThis as unknown as { fetch: unknown }).fetch = cybernovaFetch;
 
+// ── Auto-link on a static host ───────────────────────────────────────────────
+// GitHub Pages has no backend, so until now every feature needed a human to
+// paste a URL (and a token) into «محطة العمل» before it became real. The
+// machines this program runs on are known, so the page now tries them itself:
+// one `/api/health` call per candidate, in order, and only a JSON "ok" wins.
+//
+// It runs AFTER the fetch shim is installed but does not block first paint; the
+// app renders with the built-in engine and switches over the moment a real one
+// answers (`nova:autolink` event + the cached choice on the next load).
+if (typeof window !== "undefined" && isStandaloneHost() && !getRemoteBase()) {
+  void import("@/lib/remote")
+    .then(({ autoLinkServer }) => autoLinkServer())
+    .then((base) => {
+      if (base) console.info(`[nova] auto-linked to ${base} (first /api/health that answered)`);
+      else console.info("[nova] no NOVA server answered — using the built-in engine");
+    })
+    .catch(() => {
+      /* discovery is a convenience; the built-in engine still works */
+    });
+}
+

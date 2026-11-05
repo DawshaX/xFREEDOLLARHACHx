@@ -22,9 +22,11 @@ import {
   History, Plus, Copy,
 } from "lucide-react";
 import {
-  clearRemoteBase, getRemoteBase, isRemoteConfigured, probeRemote, setRemoteBase,
+  autoLinkServer, clearRemoteBase, effectiveBase, getRemoteBase, isRemoteConfigured,
+  probeRemote, reachableCandidates, resetAutoLink, setRemoteBase,
   type ProbeResult,
 } from "@/lib/remote";
+import { servedByEngine } from "@/lib/env";
 import { runLocalBrain } from "@/lib/local-brain";
 import { CloudBrainCard } from "./CloudBrainCard";
 import {
@@ -103,10 +105,37 @@ const nextId = () => `l-${Date.now()}-${seq++}`;
 /* ─────────────────────────── server linker ─────────────────────────── */
 
 function ServerLink({ onChange }: { onChange: () => void }) {
-  const [input, setInput] = useState(() => getRemoteBase());
+  const [input, setInput] = useState(() => effectiveBase());
   const [probe, setProbe] = useState<ProbeResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [linked, setLinked] = useState(() => isRemoteConfigured());
+  const [discovering, setDiscovering] = useState(false);
+  const [discoverMsg, setDiscoverMsg] = useState("");
+  // This page may itself be served by an engine (Waifly, Codespace, a VPS).
+  // In that case it is already connected — to its own origin — and telling the
+  // user «مش مربوط» was a lie that made the workstation look broken.
+  const sameOrigin = servedByEngine();
+
+  const discover = async () => {
+    setDiscovering(true);
+    setDiscoverMsg("");
+    resetAutoLink();
+    try {
+      const found = await autoLinkServer();
+      if (found) {
+        setInput(found);
+        setLinked(true);
+        setDiscoverMsg(`اتصلت بـ ${found}`);
+        onChange();
+      } else {
+        setDiscoverMsg(
+          `جرّبت ${reachableCandidates().length} عنوان ومفيش واحد رد. اتأكد إن السيرفر شغّال.`,
+        );
+      }
+    } finally {
+      setDiscovering(false);
+    }
+  };
 
   // Mixed content is the #1 reason a link "works on my machine" and dies on
   // GitHub Pages: an https page cannot call an http server. Say it up front.
@@ -146,14 +175,27 @@ function ServerLink({ onChange }: { onChange: () => void }) {
         {linked ? <PlugZap className="h-3.5 w-3.5 text-emerald-300" /> : <Plug className="h-3.5 w-3.5 text-amber-300" />}
         <span className="text-[11px] font-black text-white/80">وسّع القدرات — سيرفر اختياري</span>
         <span className={`text-[8px] px-1.5 py-0.5 rounded border ${linked ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200" : "border-amber-400/40 bg-amber-400/10 text-amber-200"}`}>
-          {linked ? "مربوط" : "مش مربوط"}
+          {linked ? (sameOrigin ? "مربوط · نفس السيرفر" : "مربوط") : "مش مربوط"}
         </span>
       </div>
 
       <div className="text-[8.5px] leading-relaxed text-white/45">
-        كل حاجة ذكية شغّالة دلوقتي من غير سيرفر. لو عندك NOVA على Oracle Free / Fly / ngrok، حطّ الرابط هنا
-        والشات والأسطول يتحوّلوا عليه تلقائياً (مسح منافذ + تنفيذ على أجهزة).
+        {sameOrigin
+          ? "الصفحة دي بتتخدم من محرك نوفا نفسه — الشات والأسطول والأدوات شغّالين على السيرفر ده مباشرة، من غير أي ربط."
+          : "مفيش سيرفر مربوط. دوس «اكتشف تلقائيًا» والبرنامج هيجرّب ماكينات نوفا المعروفة (Waifly / Codespace) — والربط مبيتمش غير لو /api/health رد فعلًا."}
       </div>
+
+      {!sameOrigin && (
+        <button
+          onClick={() => void discover()}
+          disabled={discovering}
+          className="w-full py-1 rounded-lg text-[8.5px] font-black bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 flex items-center justify-center gap-1 disabled:opacity-50"
+        >
+          {discovering ? <Loader2 className="h-3 w-3 animate-spin" /> : <Radio className="h-3 w-3" />}
+          اكتشف تلقائيًا
+        </button>
+      )}
+      {discoverMsg && <div className="text-[8px] text-white/55 font-mono">{discoverMsg}</div>}
 
       <div className="flex gap-1.5">
         <input

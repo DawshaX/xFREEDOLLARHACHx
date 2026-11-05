@@ -88,6 +88,14 @@ const SEED: Array<Pick<KnownServer, "name" | "kind" | "note"> & { base: string }
     note: "Ports → 8080 → Public، وبعدها شغّل scripts/nova-codespace.sh",
   },
   {
+    // The HTTPS face of the same slot (Waifly Web/WebSocket proxy, auto TLS).
+    // Listed first because an https page may only call this one.
+    name: "Waifly · HTTPS",
+    base: "https://nova.waifly.com",
+    kind: "waifly",
+    note: "نفس السلوت عبر بروكسي Waifly — العنوان اللي صفحة https تقدر تكلّمه",
+  },
+  {
     // Server 53a7d0cb · Paris FR01 · 300 MB slot. Waifly prints this address
     // without a scheme; a bare allocation port speaks HTTP and the proxy in
     // front speaks HTTPS, so the probe tries both and reports which answered.

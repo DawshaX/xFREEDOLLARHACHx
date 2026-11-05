@@ -15,7 +15,28 @@
  * No secrets are stored here — only a URL.
  */
 
+import { servedByEngine } from "./env";
+
 const STORAGE_KEY = "cybernova_remote_base";
+
+/**
+ * The machines this program actually runs on, in the order worth trying.
+ *
+ * The static build (GitHub Pages) has no backend of its own, so without this
+ * list the app can only be useful after a human pastes a URL and a token —
+ * which is exactly the "باك إند سليم في كل مكان" the user asked to stop
+ * needing. Each entry is a real origin that answers `/api/health`; discovery
+ * never trusts the list, it fetches the health endpoint before linking.
+ *
+ * `https://nova.waifly.com` is the Waifly slot behind their Web/WebSocket
+ * HTTPS proxy (auto TLS). That is the one a https page can actually reach —
+ * a browser refuses http from https before a packet leaves.
+ */
+export const KNOWN_SERVERS: ReadonlyArray<{ label: string; base: string }> = [
+  { label: "Waifly · Paris (HTTPS proxy)", base: "https://nova.waifly.com" },
+  { label: "Waifly · Paris (raw port)", base: "http://node.waifly.com:27316" },
+  { label: "Codespace", base: "https://animated-broccoli-gwx6wgpxvx5hv6gj-8080.app.github.dev" },
+];
 
 export interface RemoteConfig {
   base: string;
@@ -104,9 +125,20 @@ export function remoteWsUrl(path: string): string {
   }
 }
 
-/** True when the app is pointed at an external NOVA server. */
+/**
+ * True when there is a NOVA server behind this page — either one the user
+ * linked, or the one that is serving the page right now.
+ */
 export function isRemoteConfigured(): boolean {
-  return Boolean(memoryBase || getRemoteBase());
+  return Boolean(memoryBase || getRemoteBase() || servedByEngine());
+}
+
+/** The origin actually in use: the linked one, else this page's own origin. */
+export function effectiveBase(): string {
+  const linked = memoryBase || getRemoteBase();
+  if (linked) return linked;
+  if (servedByEngine() && typeof location !== "undefined") return location.origin;
+  return "";
 }
 
 export interface ProbeResult {
@@ -182,4 +214,118 @@ export async function probeRemote(input?: string): Promise<ProbeResult> {
 
   result.latencyMs = Date.now() - started;
   return result;
+}
+
+/**
+ * Link this page to a real engine, automatically.
+ *
+ * Runs on a static host (GitHub Pages) when nothing is linked yet. It walks
+ * `KNOWN_SERVERS`, but a candidate only wins if `/api/health` answers with JSON
+ * that says the engine is alive — the same rule the fleet card uses. Nothing is
+ * assumed because it is in the list.
+ *
+ * The choice is cached for a day so opening the site does not re-probe on every
+ * navigation, and a failed discovery is cached for ten minutes so a dead host
+ * does not slow every page load.
+ */
+const AUTOLINK_KEY = "cybernova_autolink_v1";
+const AUTOLINK_OK_MS = 24 * 60 * 60 * 1000;
+const AUTOLINK_FAIL_MS = 10 * 60 * 1000;
+
+interface AutoLinkCache {
+  base: string;
+  at: number;
+  ok: boolean;
+}
+
+function readAutoLink(): AutoLinkCache | null {
+  try {
+    const raw = localStorage.getItem(AUTOLINK_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AutoLinkCache;
+    if (!parsed?.at || typeof parsed.base !== "string") return null;
+    const ttl = parsed.ok ? AUTOLINK_OK_MS : AUTOLINK_FAIL_MS;
+    return Date.now() - parsed.at < ttl ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeAutoLink(entry: AutoLinkCache): void {
+  try {
+    localStorage.setItem(AUTOLINK_KEY, JSON.stringify(entry));
+  } catch {
+    /* private mode */
+  }
+}
+
+/** Candidates usable from this page (an https page may not fetch http). */
+export function reachableCandidates(): Array<{ label: string; base: string }> {
+  const httpsPage = typeof location !== "undefined" && location.protocol === "https:";
+  return KNOWN_SERVERS.filter((c) => !(httpsPage && c.base.startsWith("http://")));
+}
+
+async function healthAnswers(base: string, timeoutMs = 6000): Promise<boolean> {
+  try {
+    const res = await fetch(`${base}/api/health`, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return false;
+    const body = (await res.json().catch(() => null)) as { status?: string; ok?: boolean } | null;
+    // A 200 that is not JSON is GitHub's Codespace interstitial or a proxy
+    // error page, not an engine — see the same rule in the fleet card.
+    return Boolean(body && (body.status === "ok" || body.ok === true));
+  } catch {
+    return false;
+  }
+}
+
+let autoLinkPromise: Promise<string> | null = null;
+
+/**
+ * Find and link a live engine. Returns the base it linked, or "" if none of the
+ * candidates answered. Safe to call from anywhere; concurrent calls share one
+ * attempt.
+ */
+export function autoLinkServer(): Promise<string> {
+  if (autoLinkPromise) return autoLinkPromise;
+  autoLinkPromise = (async () => {
+    if (typeof window === "undefined") return "";
+    if (memoryBase || getRemoteBase()) return memoryBase || getRemoteBase();
+
+    const cached = readAutoLink();
+    if (cached?.ok && cached.base) {
+      setRemoteBase(cached.base);
+      return cached.base;
+    }
+
+    for (const candidate of reachableCandidates()) {
+      if (await healthAnswers(candidate.base)) {
+        setRemoteBase(candidate.base);
+        writeAutoLink({ base: candidate.base, at: Date.now(), ok: true });
+        try {
+          window.dispatchEvent(new CustomEvent("nova:autolink", { detail: { base: candidate.base } }));
+        } catch {
+          /* no CustomEvent (tests) */
+        }
+        return candidate.base;
+      }
+    }
+
+    writeAutoLink({ base: "", at: Date.now(), ok: false });
+    return "";
+  })().finally(() => {
+    autoLinkPromise = null;
+  });
+  return autoLinkPromise;
+}
+
+/** Forget the cached auto-link and try again (used by the «جرّب تاني» button). */
+export function resetAutoLink(): void {
+  try {
+    localStorage.removeItem(AUTOLINK_KEY);
+  } catch {
+    /* ignore */
+  }
 }

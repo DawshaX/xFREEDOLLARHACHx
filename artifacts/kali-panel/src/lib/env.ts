@@ -28,3 +28,23 @@ export function isStandaloneHost(): boolean {
   }
   return false;
 }
+
+/**
+ * True when *this page* is being served by a NOVA engine, rather than by a
+ * static host. It is the mirror image of `isStandaloneHost()` and it exists
+ * because of a real bug: opened from the Waifly slot, the panel showed
+ * «عقل المتصفح» and «السيرفر مش متاح» even though the engine was answering on
+ * the very same origin — the workstation only counted a server as "linked" if
+ * the user had pasted a URL into localStorage. A page served by the engine is
+ * already linked; nobody should have to connect a server to its own origin.
+ */
+export function servedByEngine(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const proto = window.location.protocol;
+    if (proto !== "http:" && proto !== "https:") return false;
+    return !isStandaloneHost();
+  } catch {
+    return false;
+  }
+}
