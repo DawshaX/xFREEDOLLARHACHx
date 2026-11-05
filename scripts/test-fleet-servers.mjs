@@ -174,7 +174,10 @@ test("loadServers survives a corrupt file instead of killing boot", () => {
   assert.deepEqual(mod.loadServers(), []);
   writeFileSync(registryFile, JSON.stringify({ servers: [{ base: "" }, null, { base: "https://ok.onrender.com" }] }));
   const back = mod.loadServers();
-  assert.equal(back.length, 1, "junk entries are dropped, the valid one survives");
+  // Junk dropped, the valid one survives — and because that file predates the
+  // current seed list (no seedVersion), the known machines are merged in once.
+  assert.equal(back[0].base, "https://ok.onrender.com", "junk entries are dropped, the valid one survives");
+  assert.equal(back.length, 1 + mod.SEED_SERVERS.length, "an old file gains the new seeds");
 });
 
 test("replaceServers normalises and dedupes whatever the browser sends", () => {
@@ -281,6 +284,29 @@ test("seeded machines are written down once, so addedAt stops moving", () => {
   process.env.NOVA_SERVERS_FILE = previous;
   assert.deepEqual(again.map((s) => s.id).sort(), ids, "a second read must return the same machines");
   assert.deepEqual(again.map((s) => s.addedAt), written.map((s) => s.addedAt), "addedAt must not change on every read");
+});
+
+test("a machine the user removed stays removed once the seed list is current", () => {
+  const previous = process.env.NOVA_SERVERS_FILE;
+  const file = join(work, "user-removed.json");
+  process.env.NOVA_SERVERS_FILE = file;
+  mod.saveServers([{ id: "keep", name: "keep", base: "https://keep.onrender.com", kind: "render", addedAt: 1 }]);
+  const back = mod.loadServers();
+  process.env.NOVA_SERVERS_FILE = previous;
+  assert.deepEqual(back.map((s) => s.base), ["https://keep.onrender.com"], "no resurrection after the seeds are current");
+});
+
+test("a new seed reaches a machine that booted before it existed", () => {
+  const previous = process.env.NOVA_SERVERS_FILE;
+  const file = join(work, "old-file.json");
+  writeFileSync(file, JSON.stringify({ servers: [{ id: "x", name: "x", base: "https://x.onrender.com", kind: "render", addedAt: 1 }] }));
+  process.env.NOVA_SERVERS_FILE = file;
+  const back = mod.loadServers();
+  const again = mod.loadServers();
+  process.env.NOVA_SERVERS_FILE = previous;
+  assert.equal(back.length, 1 + mod.SEED_SERVERS.length);
+  assert.ok(back.some((s) => s.base.includes("nova.waifly.com")), "the HTTPS face is one of them");
+  assert.equal(again.length, back.length, "merging happens once, not on every read");
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
