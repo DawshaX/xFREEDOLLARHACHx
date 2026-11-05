@@ -64,6 +64,26 @@ if [ -n "${CODESPACE_NAME:-}" ]; then
       bad "could not flip the port with gh — do it by hand: Ports tab → ${PORT} → right-click → Port Visibility → Public"
     fi
   fi
+
+  # Trust the outside, not our own optimism. Measured 2026-11-05: a private port
+  # answers an anonymous GET with a redirect to github.com/login, which looks
+  # exactly like "the engine is down" in the panel. So ask the public URL with no
+  # cookies and report what it really said.
+  say "checking the URL from the outside (no auth)"
+  CODE="$(curl -s -o /dev/null -m 10 -w '%{http_code}' "${PUBLIC}/api/health" 2>/dev/null)"
+  # curl prints 000 itself when it cannot connect; an empty string means the same.
+  [ -z "$CODE" ] && CODE=000
+  case "$CODE" in
+    200) ok "anyone with the URL gets 200 — the panel will connect" ;;
+    301|302|303|307|308)
+      bad "the port is still PRIVATE (GitHub redirects to login). Fix in 3 clicks:"
+      echo "     1) تحت في VS Code افتح تبويب PORTS"
+      echo "     2) دوس زرار يمين على ${PORT} → Port Visibility → Public"
+      echo "     3) شغّل السكربت ده تاني (أو افتح ${PUBLIC}/api/health في تبويب تاني)"
+      ;;
+    000) bad "مفيش رد خالص على ${PUBLIC} — البورت مش مفتوح من الـCodespace، أو الـforwarding لسه بيقوم" ;;
+    *)   bad "ردّ HTTP ${CODE} — شوف اللوج /tmp/nova.log" ;;
+  esac
 else
   echo "  not inside a Codespace (no CODESPACE_NAME) — this is a plain machine."
   echo "  Use its own address, or tunnel it:  npx --yes localtunnel --port ${PORT}"
