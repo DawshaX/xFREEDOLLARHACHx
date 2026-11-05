@@ -56,7 +56,11 @@ function fileBytes(file: string): number | null {
   }
 }
 
-export async function runDoctor(): Promise<DoctorReport> {
+export async function runDoctor(opts: { origin?: string | null } = {}): Promise<DoctorReport> {
+  // Measured 2026-11-05 on the live slot: the doctor printed
+  // `curl -fsSL https:///api/local-agent/download-agent` — a fix you cannot
+  // paste is not a fix. The origin comes from the request, never from a guess.
+  const origin = (opts.origin ?? "").replace(/\/$/, "") || "https://<host>";
   const checks: DoctorCheck[] = [];
 
   /* 1. Is the running code the shipped code? */
@@ -138,7 +142,10 @@ export async function runDoctor(): Promise<DoctorReport> {
       state: upCount === servers.length ? "ok" : "warn",
       value: `${upCount}/${servers.length}`,
       says_ar: `${upCount} من ${servers.length} ماكينة بترد دلوقتي، منهم ${httpsUp} بـHTTPS.`,
-      fix_ar: upCount === servers.length ? undefined : "GET /api/fleet/servers وشوف error الماكينات اللي مش بترد.",
+      fix_ar:
+        upCount === servers.length
+          ? undefined
+          : "GET /api/fleet/servers?peers=0 — كل ماكينة بايظة جواها سببها: لو 401 يبقى البورت Private (Ports → Public)، ولو 404 يبقى البرنامج مش شغّال عليه.",
     });
   }
 
@@ -218,7 +225,7 @@ export async function runDoctor(): Promise<DoctorReport> {
     fix_ar:
       agents > 0
         ? undefined
-        : "curl -fsSL https://<host>/api/local-agent/download-agent | bash -s -- --id machine-1  (على أي ماكينة عندك)",
+        : `curl -fsSL ${origin}/api/local-agent/download-agent | bash -s -- --id machine-1  (على أي ماكينة عندك)`,
   });
 
   /* 6. Long-term memory: an empty file means it forgets everything. */
@@ -310,7 +317,7 @@ export async function runDoctor(): Promise<DoctorReport> {
   const saysAr = ready
     ? counts.warn === 0
       ? `كل الفحوصات ${counts.total}/${counts.total} سليمة — البرنامج شغّال بالكامل.`
-      : `مفيش عطل (${counts.total}/${counts.total} مقاس): ${counts.warn} تنبيه — أولهم ${firstWarn?.label}.`
+      : `مفيش عطل: ${counts.ok}/${counts.total} سليم و${counts.warn} تنبيه — أولهم ${firstWarn?.label}.`
     : `فيه ${counts.fail} عطل من ${counts.total}: ${firstFail?.label} — ${firstFail?.fix_ar ?? "شوف التفاصيل"}`;
 
   return {

@@ -96,10 +96,14 @@ router.get("/fleet/servers", async (req: Request, res: Response) => {
  * `says_ar` is the sentence NOVA says about itself from those numbers, not a
  * template that ignores them.
  */
-router.get("/fleet/doctor", async (_req: Request, res: Response) => {
+router.get("/fleet/doctor", async (req: Request, res: Response) => {
   try {
     const { runDoctor } = await import("../lib/doctor");
-    const report = await runDoctor();
+    // The origin is what makes `fix_ar` pasteable: a host-less command is a
+    // command nobody runs. Behind a proxy the forwarded host is the real one.
+    const proto = String(req.headers["x-forwarded-proto"] ?? req.protocol ?? "http").split(",")[0].trim();
+    const host = String(req.headers["x-forwarded-host"] ?? req.headers.host ?? "").split(",")[0].trim();
+    const report = await runDoctor({ origin: host ? `${proto}://${host}` : null });
     res.setHeader("Cache-Control", "no-store");
     res.json(report);
   } catch (err) {
