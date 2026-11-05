@@ -58,6 +58,15 @@
 | سلسلة الأدوات | `fetch-toolchain.mjs` ينزّل subfinder/httpx/nuclei/katana/dnsx/naabu/ffuf من إصدارات GitHub الرسمية |
 | typecheck | api-server: **0 أخطاء** · kali-panel: **0 أخطاء** |
 | build | api-server: ✅ Done in 2285ms · kali-panel: ✅ built in 21.38s |
+| **agent-gates** | **18/18 خضراء** (كانت 15/18) — على GitHub Actions: ✅ success |
+| **NOVA live audit** | ✅ success على الكوميت `ed5552a` |
+| **live verify** | ✅ success · **nova-runner** ✅ success |
+
+### هـ) إصلاح البوابات الحمراء (15/18 → 18/18)
+| البوابة | المشكلة | الإصلاح |
+|---|---|---|
+| `audit-twins` + `audit-connections` | نسختا `standalone-api.ts` و`live-vuln-ingestor.ts` في اللوحة **متأخرتان** عن نسختَي السيرفر (اللي فيهما إصلاحات الأمان) → انحراف مُعلن | ✅ أُعيدت المزامنة **من السيرفر إلى اللوحة** (الاتجاه الصحيح — السيرفر هو اللي فيه الإصلاح) |
+| `ops-selftest` | `import { registerHooks } from "node:module"` — موجود في Node ≥ 22.6 فقط. الاستيراد **الساكن** كان يرمي SyntaxError **قبل** الـ try/catch، فيموت الاختبار كله | ✅ استيراد ديناميكي + فحص إصدار Node. على Node < 22.6 الاختبار **يتخطّى برسالة صريحة** بدل ما ينهار أو يدّعي النجاح. CI مثبّت على Node 22 فالاختبار يعمل كامل هناك |
 
 ---
 
