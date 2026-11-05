@@ -131,6 +131,21 @@ function importedNames(src) {
   }
   for (const m of src.matchAll(/import\s+([A-Za-z_$][\w$]*)\s*(?:,|\bfrom\b)/g)) set.add(m[1]);
   for (const m of src.matchAll(/import\s*\*\s*as\s*([A-Za-z_$][\w$]*)/g)) set.add(m[1]);
+  // الاستيراد الديناميكي بيوفّر الرموز كده: `import("./x").then(({ a, b }) => …)`
+  // و`const { a } = await import("./x")`. من غيرهم الفاحص بيغلط على novaRagV2.ts
+  // (اتلمس فعلاً: getOllamaBaseUrl جوه destructuring — مافيش خطأ هناك).
+  for (const m of src.matchAll(/import\([^)]*\)\s*(?:\.|,)\s*[\s\S]{0,40}?\(\s*\{([^}]*)\}/g)) {
+    for (const part of m[1].split(",")) {
+      const name = part.trim().split(/[:=]/).pop()?.trim();
+      if (name && /^[A-Za-z_$][\w$]*$/.test(name)) set.add(name);
+    }
+  }
+  for (const m of src.matchAll(/(?:const|let|var)\s*\{([^}]*)\}\s*=\s*(?:await\s+)?import\s*\(/g)) {
+    for (const part of m[1].split(",")) {
+      const name = part.trim().split(/[:=]/).pop()?.trim();
+      if (name && /^[A-Za-z_$][\w$]*$/.test(name)) set.add(name);
+    }
+  }
   return set;
 }
 
@@ -152,7 +167,10 @@ function auditSpineSymbols(root) {
   const v = [];
   const apiSrc = join(root, "artifacts/api-server/src");
   const spine = collectExports(listTs(join(apiSrc, "lib")), root);
-  for (const f of listTs(join(apiSrc, "routes"))) {
+  // الطبقتين مع بعض: الغلطة دي حصلت في route (#210) وممكن تحصل في lib زيها —
+  // والـcall اللي جوه catch بيبلع الـReferenceError الاتنين.
+  const scanned = [...listTs(join(apiSrc, "routes")), ...listTs(join(apiSrc, "lib"))];
+  for (const f of scanned) {
     const raw = readFileSync(f, "utf8");
     const code = stripNoise(raw);
     const have = new Set([...importedNames(raw), ...localDecls(raw)]);

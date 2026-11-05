@@ -1442,9 +1442,20 @@ router.post("/kali-command/autonomous/start", (_req, res) => {
   res.json({ ok: true, active: true });
 });
 
+// aliases — الـstubs كانت تردّ `{ok:true,active:true}` على المسارين دول من غير
+// ما تلمس autonomousActive خالص، فالزر كان بيبن يتفعّل والحالة الحقيقية ساكتة.
+router.post("/kali-command/autonomous/enable", (_req, res) => {
+  autonomousActive = true;
+  res.json({ ok: true, active: autonomousActive, source: "kali-command" });
+});
+
 router.post("/kali-command/autonomous/stop", (_req, res) => {
   autonomousActive = false;
   res.json({ ok: true, active: false });
+});
+router.post("/kali-command/autonomous/disable", (_req, res) => {
+  autonomousActive = false;
+  res.json({ ok: true, active: autonomousActive, source: "kali-command" });
 });
 
 router.get("/kali-command/autonomous/stream", (req, res) => {

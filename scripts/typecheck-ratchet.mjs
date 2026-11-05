@@ -21,12 +21,60 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const BASELINE_FILE = path.join(ROOT, "state", "typecheck-baseline.json");
 const PACKAGES = ["artifacts/api-server", "artifacts/kali-panel"];
 
+/** newest mtime under a dir (so a source edit invalidates the built .d.ts) */
+function newestMtime(dir) {
+  let max = 0;
+  if (!fs.existsSync(dir)) return 0;
+  const walk = (d) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      if (e.name === "node_modules" || e.name === "dist") continue;
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else { try { max = Math.max(max, fs.statSync(p).mtimeMs); } catch { /* ignore */ } }
+    }
+  };
+  walk(dir);
+  return max;
+}
+
+function ensureCompositeRefs(tsc, tsconfigPath) {
+  let cfg;
+  try {
+    // tsconfig JSONC: بشيل التعليقات قبل التحليل
+    cfg = JSON.parse(fs.readFileSync(tsconfigPath, "utf8").replace(/^\s*\/\/.*$/gm, ""));
+  } catch {
+    return;
+  }
+  for (const ref of cfg.references ?? []) {
+    const dir = path.resolve(path.dirname(tsconfigPath), ref.path);
+    const dts = path.join(dir, "dist", "index.d.ts");
+    const srcNewest = newestMtime(path.join(dir, "src"));
+    let builtAt = 0;
+    try { builtAt = fs.statSync(dts).mtimeMs; } catch { /* مش متبني */ }
+    if (builtAt && builtAt >= srcNewest) continue;
+    spawnSync(process.execPath, [tsc, "-p", path.join(dir, "tsconfig.json")], { cwd: ROOT, timeout: 300_000 });
+    // `tsc -p` بيحترم tsconfig.tsbuildinfo: لو الـdist اتمسح والـbuildinfo لسه
+    // موجود، TS بيقول «up to date» ومابيطلّعش حاجة (اتلمس على clone نضيف:
+    // lib/db/dist فضل مش موجود والعداد قفز 88 → 146). فلو المخرج لسه ناقص
+    // أو أقدم من السورس، بنعيد البناء بـ --force.
+    let after = 0;
+    try { after = fs.statSync(dts).mtimeMs; } catch { after = 0; }
+    if (!after || after < newestMtime(path.join(dir, "src"))) {
+      spawnSync(process.execPath, [tsc, "--build", "--force", path.join(dir, "tsconfig.json")], { cwd: ROOT, timeout: 300_000 });
+    }
+  }
+}
+
 function runPackage(pkg) {
   const tsc = path.join(ROOT, "node_modules", "typescript", "bin", "tsc");
-  // `lib/db` is a composite project: without its .d.ts the api-server count jumps
-  // by ~50 phantom TS6305 errors, and the ratchet cries wolf. Emit them if absent.
-  if (pkg === "artifacts/api-server" && !fs.existsSync(path.join(ROOT, "lib", "db", "dist", "index.d.ts"))) {
-    spawnSync(process.execPath, [tsc, "-p", path.join(ROOT, "lib", "db", "tsconfig.json")], { cwd: ROOT, timeout: 180_000 });
+  // Composite projects (`lib/db`, `lib/api-zod`, …) are referenced by tsconfig. If
+  // their .d.ts is missing OR staler than their sources, the api-server count jumps
+  // by phantom TS6305 errors — and that drift was install-order dependent (a fresh
+  // CI clone measured 93 where a warm tree measured 92, which is a ratchet that
+  // cries wolf). So: read the project's own `references`, and build whatever is
+  // absent/out of date, deterministically, before counting.
+  if (pkg === "artifacts/api-server") {
+    ensureCompositeRefs(tsc, path.join(ROOT, pkg, "tsconfig.json"));
   }
   const res = spawnSync(
     process.execPath,

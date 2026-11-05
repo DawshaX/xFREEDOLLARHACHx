@@ -126,7 +126,7 @@ router.get("/bot/cron", (_req, res) => {
 });
 
 router.post("/bot/alerts/:id/read", (req, res) => {
-  res.json({ ok: true, id: req.params.id });
+  res.json({ ok: false, notWired: true, error: "not_wired", id: req.params.id, reasonAr: "المسار ده في طبقة التوافق بس — مفيش تخزين بيشيله.", howAr: "استخدم المسار الحقيقي في routes/notifications.ts أو routes/bot.ts (PUT)." });
 });
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -203,7 +203,7 @@ router.get("/notifications", (_req, res) => {
 });
 
 router.post("/notifications/:id/read", (req, res) => {
-  res.json({ ok: true, id: req.params.id });
+  res.json({ ok: false, notWired: true, error: "not_wired", id: req.params.id, reasonAr: "المسار ده في طبقة التوافق بس — مفيش تخزين بيشيله.", howAr: "استخدم المسار الحقيقي في routes/notifications.ts أو routes/bot.ts (PUT)." });
 });
 
 // ── Reports ───────────────────────────────────────────────────────────────────

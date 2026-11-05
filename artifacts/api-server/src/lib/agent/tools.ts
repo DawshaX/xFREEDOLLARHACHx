@@ -53,6 +53,7 @@ import {
 import { assertAuthorized, discoverProgram, fetchSecurityTxt, loadPrograms, upsertProgram, normalizeHost } from "../ops/scope";
 import { provisionToolchainOnce } from "../ops/toolchain";
 import { catalogStatus, huntCandidates } from "../ops/bounty-catalog";
+import { vulnQuery } from "./vuln-keyword";
 import {
   buildReport,
   cancelJob,
@@ -834,57 +835,24 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
       }
 
       case "vuln_search": {
-        const rawKeyword = String(rawArgs.keyword ?? "").trim();
-        if (!rawKeyword) throw new Error("keyword مطلوب");
-        const limit = Math.min(Number(rawArgs.limit ?? 8) || 8, 20);
-
-        // ── keyword extraction (added 2026-11-06) ────────────────────────────
-        // Measured failure: the user typed a long Arabic sentence and the whole
-        // sentence was sent to NVD as one keyword → 0 results, every time.
-        // NVD matches product/technology names, not prose. So we reduce the
-        // input to the terms that can actually match, and if the first attempt
-        // still returns nothing we retry with progressively broader terms.
-        const candidates = extractSearchKeywords(rawKeyword);
-        let used = candidates[0] ?? rawKeyword;
-        let res = (await nvdSearch({ keyword: used, limit })) as {
-          totalResults?: number;
-          vulnerabilities?: unknown[];
-        };
-        let count = res.totalResults ?? res.vulnerabilities?.length ?? 0;
-
-        // Fallback ladder: try the other extracted terms before giving up.
-        const tried: string[] = [used];
-        for (const alt of candidates.slice(1, 4)) {
-          if (count > 0) break;
-          if (tried.includes(alt)) continue;
-          tried.push(alt);
-          try {
-            const r2 = (await nvdSearch({ keyword: alt, limit })) as {
-              totalResults?: number;
-              vulnerabilities?: unknown[];
-            };
-            const c2 = r2.totalResults ?? r2.vulnerabilities?.length ?? 0;
-            if (c2 > 0) {
-              res = r2;
-              used = alt;
-              count = c2;
-            }
-          } catch {
-            /* try the next term */
-          }
+        const asked = String(rawArgs.keyword ?? "").trim();
+        if (!asked) throw new Error("keyword مطلوب");
+        const q = vulnQuery(asked);
+        if (!q.usable) {
+          // صفر من غير استعلام صالح مش دليل على حاجة — بنقول كده صراحة وبنلفّ
+          // على الفهرس المحلي اللي بيحتاج نص طبيعي أصلاً.
+          return done(false, `NVD ما اتسألش: «${asked.slice(0, 48)}» ملوش مصطلح منتج/تقنية (${q.reason}). ` +
+            `NVD بيبحث بـ«Apache Tomcat 9.0.10» أو CVE-ID، مش بجُملة. جرّب knowledge_search بنفس الجملة أو عرّف المنتج.`,
+            { skipped: true, reason: "bad_keyword", suggestTool: "knowledge_search" });
         }
-
-        const note =
-          used !== rawKeyword
-            ? ` (استخرجت الكلمة المفتاحية «${used}» من النص — NVD بيطابق أسماء المنتجات مش الجمل)`
-            : "";
-        return done(
-          count > 0,
-          count > 0
-            ? `NVD "${used}": ${count} نتيجة${note}`
-            : `NVD "${used}": 0 نتيجة${note} — جرّب اسم منتج/تقنية بالإنجليزي (مثال: apache, wordpress, openssh) أو رقم CVE`,
-          { query: rawKeyword, usedKeyword: used, tried, totalResults: count, ...res },
-        );
+        const limit = Math.min(Number(rawArgs.limit ?? 8) || 8, 20);
+        const res = (await nvdSearch(q.cveId && !q.keyword ? { cveId: q.cveId, limit } : { keyword: q.keyword!, limit })) as {
+          totalResults?: number; vulnerabilities?: unknown[];
+        };
+        const n = res.totalResults ?? res.vulnerabilities?.length ?? 0;
+        const label = q.cveId && !q.keyword ? q.cveId : q.keyword!;
+        const tail = n === 0 ? " — الصفر هنا معناه مافيش تطابق للمصطلح في NVD، مش إن البحث باظ" : "";
+        return done(true, `NVD "${label}": ${n} نتيجة${tail}`, { keywordUsed: label, totalResults: n, source: q.reason, items: res.vulnerabilities ?? [] });
       }
 
       case "exploit_search": {
@@ -898,8 +866,9 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
       case "github_search": {
         const q = String(rawArgs.query ?? "").trim();
         if (!q) throw new Error("query مطلوب");
-        const res = (await githubSearch({ q })) as { items?: unknown[] };
-        return done(true, `GitHub "${q}": ${res.items?.length ?? 0} نتيجة`, res);
+        const res = (await githubSearch({ q })) as { items?: unknown[]; error?: string };
+        const gn = res.items?.length ?? 0;
+        return done(!res.error, `GitHub "${q}": ${gn} نتيجة${res.error ? ` — فشل المصدر: ${res.error}` : gn === 0 ? " — مافيش مستودعات مطابقة" : ""}`, res);
       }
 
       case "knowledge_search": {

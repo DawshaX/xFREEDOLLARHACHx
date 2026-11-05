@@ -431,6 +431,13 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       // answer these with a DIFFERENT payload shape, which crashed the panel
       // (brainStatus.activeProcesses was undefined → ".length of undefined").
       p.startsWith("/live-agent") ||
+      // الأتمتة والـkill-switch بيخزّنوا على الفسايل (state/autonomy.json) ومش على
+      // Postgres — يعني «مفيش DATABASE_URL» هو بالظب حالة الاستضافة المجانية،
+      // ولو التوأم الساكن ردّ عليهم هيقولوا «مفيش مشغّل» لمفتاح أمان شغال فعلاً،
+      // وده اللي كان مخلّي زر الوضع المستقل في المحطة كلام. متسابين للراوتر الحقيقي.
+      p.startsWith("/autonomous") ||
+      p === "/kill-switch" ||
+      p.startsWith("/kill-switch/") ||
       (p.startsWith("/tools") && p !== "/tools/shell" && p !== "/tools/webfetch") ||
       p.startsWith("/proxy") ||
       p.startsWith("/scanner") ||

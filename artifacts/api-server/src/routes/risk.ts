@@ -60,6 +60,19 @@ router.get("/risk/kev", async (req, res) => {
   }
 });
 
+// alias حقيقي — الـstub كان بيرد `{ok:true}` من غير ما يعمل أي حساب
+router.post("/risk/score-one", async (req, res) => {
+  try {
+    const cveId = String((req.body as { cveId?: unknown } | undefined)?.cveId ?? "").trim();
+    if (!cveId) { res.status(400).json({ ok: false, error: "cveId required" }); return; }
+    await scoreOneCve(cveId);
+    const stats = await getRiskStats();
+    res.json({ ok: true, cveId, stats });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
 router.post("/risk/score-batch", async (req, res) => {
   try {
     const limit = parseInt(String(req.body?.["limit"] ?? "200"));

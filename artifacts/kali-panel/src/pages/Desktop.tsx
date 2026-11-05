@@ -1880,9 +1880,13 @@ export default function Desktop() {
           const d = await r.json();
           setSysStats({ cpu: d.cpu?.usage ?? 0, ram: d.memory?.usagePercent ?? 0, services: 0 });
           setSysDetails(d);
+          // الشريط ده كان بيرقص 55→90% عشوائياً كل 8 ثوانى. بقى usage المعالج
+          // المقاس من /monitor/system — نفس المكان في الهيدر، بس برقم ليه مصدر.
+          setLiveProgress(Math.max(0, Math.min(100, Number(d.cpu?.usage) || 0)));
+        } else {
+          setLiveProgress(0);
         }
-      } catch { /* offline */ }
-      setLiveProgress(55 + Math.random() * 35);
+      } catch { /* offline */ setLiveProgress(0); }
     };
     void fetchSys();
     const t = setInterval(() => void fetchSys(), 8000);
@@ -2331,8 +2335,8 @@ export default function Desktop() {
 
         {/* ── RIGHT: time + status + notifs ── */}
         <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-          {/* Progress bar */}
-          <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+          {/* Progress bar — مقاس: CPU% من السيرفر (liveProgress == cpu.usage) */}
+          <div style={{ display:"flex", alignItems:"center", gap:4 }} title="استهلاك المعالج المقاس من /monitor/system">
             <TrendingUp style={{ width:10, height:10, color:"#4488ff" }} />
             <div style={{ width:30, height:3, background:"rgba(255,255,255,0.06)", borderRadius:3, overflow:"hidden" }}>
               <div style={{ height:"100%", width:`${liveProgress}%`, background:"linear-gradient(90deg,#1144cc,#4488ff)", transition:"width 0.5s" }} />

@@ -100,60 +100,69 @@ router.get(["/tools/whois", "/proxy/whois"], async (req, res) => {
 
 // ── 3. SSL/TLS Certificate Inspector (/tools/ssl & /proxy/ssl) ───────────────
 router.get(["/tools/ssl", "/proxy/ssl"], async (req, res) => {
+  // شهادة ملفّقة أسوأ من مفيش شهادة: الكود القديم كان بيرجّع «A+ · Let's Encrypt
+  // · TLSv1.3» في كل مرة الـsocket فيه error أو timeout، أي إن أي دومين ميت
+  // بيطلع محصّن بدرجة ممتازة. بقى القياس اللي حصل فعلاً، والباقي null.
   const domain = cleanDomain(String(req.query.domain ?? ""));
-  const certInfo = await new Promise<{
-    issuer: string;
-    validFrom: string;
-    validTo: string;
-    protocol: string;
-    cipher: string;
-    grade: string;
+  const probe = await new Promise<{
+    connected: boolean;
+    issuer: string | null;
+    subject: string | null;
+    validFrom: string | null;
+    validTo: string | null;
+    validDaysRemaining: number | null;
+    expired: boolean | null;
+    protocol: string | null;
+    cipher: string | null;
+    error: string | null;
   }>((resolve) => {
-    const socket = tls.connect(
-      { host: domain, port: 443, servername: domain, rejectUnauthorized: false, timeout: 5000 },
-      () => {
+    const fail = (msg: string) => resolve({ connected: false, issuer: null, subject: null, validFrom: null, validTo: null, validDaysRemaining: null, expired: null, protocol: null, cipher: null, error: msg });
+    if (!domain) { fail("مطلوب ?domain= صالح"); return; }
+    const socket = tls.connect({ host: domain, port: 443, servername: domain, rejectUnauthorized: false, timeout: 8000 }, () => {
+      try {
         const cert = socket.getPeerCertificate();
-        const proto = socket.getProtocol() || "TLSv1.3";
-        const ciph = socket.getCipher()?.name || "TLS_AES_256_GCM_SHA384";
+        const proto = socket.getProtocol() ?? null;
+        const ciph = socket.getCipher()?.name ?? null;
         socket.end();
+        if (!cert || Object.keys(cert).length === 0) { fail(`اتصلنا بـ ${domain}:443 بس مافيش شهادة مقدمة`); return; }
+        const iso = (d: string | undefined) => (d ? new Date(d).toISOString() : null);
+        const validTo = iso(cert.valid_to);
+        const days = validTo ? Math.round((Date.parse(validTo) - Date.now()) / 86_400_000) : null;
+        const issuer = cert.issuer as Record<string, unknown> | undefined;
+        const subj = cert.subject as Record<string, unknown> | undefined;
+        const flat = (o: Record<string, unknown> | undefined, k: string) => {
+          const v = o?.[k];
+          return Array.isArray(v) ? v.join(" ") : typeof v === "string" ? v : null;
+        };
         resolve({
-          issuer: String(cert?.issuer?.O || cert?.issuer?.CN || "Google Trust Services / Let's Encrypt"),
-          validFrom: cert?.valid_from ? new Date(cert.valid_from).toISOString() : new Date(Date.now() - 30 * 86400_000).toISOString(),
-          validTo: cert?.valid_to ? new Date(cert.valid_to).toISOString() : new Date(Date.now() + 60 * 86400_000).toISOString(),
+          connected: true,
+          issuer: flat(issuer, "O") || flat(issuer, "CN") || null,
+          subject: flat(subj, "CN") || null,
+          validFrom: iso(cert.valid_from),
+          validTo,
+          validDaysRemaining: Number.isFinite(days as number) ? days : null,
+          expired: validTo ? Date.parse(validTo) < Date.now() : null,
           protocol: proto,
           cipher: ciph,
-          grade: proto.includes("1.3") ? "A+" : "A",
+          error: null,
         });
-      },
-    );
-    socket.on("error", () => {
-      resolve({
-        issuer: "Let's Encrypt / DigiCert",
-        validFrom: new Date(Date.now() - 30 * 86400_000).toISOString(),
-        validTo: new Date(Date.now() + 60 * 86400_000).toISOString(),
-        protocol: "TLSv1.3",
-        cipher: "TLS_AES_256_GCM_SHA384",
-        grade: "A+",
-      });
+      } catch (e) {
+        try { socket.end(); } catch { /* already closed */ }
+        fail(e instanceof Error ? e.message : String(e));
+      }
     });
-    socket.on("timeout", () => {
-      socket.destroy();
-      resolve({
-        issuer: "Let's Encrypt / DigiCert",
-        validFrom: new Date(Date.now() - 30 * 86400_000).toISOString(),
-        validTo: new Date(Date.now() + 60 * 86400_000).toISOString(),
-        protocol: "TLSv1.3",
-        cipher: "TLS_AES_256_GCM_SHA384",
-        grade: "A",
-      });
-    });
+    socket.on("error", (e) => fail(`TLS error: ${e.message}`));
+    socket.on("timeout", () => { socket.destroy(); fail("مهلة 8 ثواني — المنفذ 443 مبيردش"); });
   });
 
-  const summary = `فحص شهادة SSL/TLS لـ ${domain}: التقييم ${certInfo.grade} (${certInfo.protocol} · ${certInfo.cipher}) — الجهة المصدرة: ${certInfo.issuer}`;
+  const summary = probe.connected
+    ? `فحص شهادة SSL/TLS لـ ${domain}: ${probe.issuer ?? "جهة إصدار مش معروفة"} · ${probe.protocol ?? "بروتوكول مش معروف"} · متاحة لـ ${probe.validDaysRemaining === null ? "مدة مش معروفة" : probe.validDaysRemaining + " يوم"}`
+    : `فحص SSL/TLS لـ ${domain} ما كملش: ${probe.error}`;
   saveMemory("fact", `SSL/TLS Check: ${domain}`, summary, `ssl,tls,${domain}`, 7, false);
   broadcastEvent({ type: "recon_cmd_executed", tool: "SSL Checker", target: domain, title: summary, ts: Date.now() });
 
-  res.json({ domain, ...certInfo });
+  // التقييم (A+/A/F) محتاج SSLLabs — مفيش تقييم بيتلفّق من رقم الإصدار
+  res.json({ domain, grade: null, gradeNote: "التقييم محتاج Mozilla SSLLabs؛ مفيش تقييم اتعمل", ...probe });
 });
 
 // ── 4. Subdomain Enumeration (/tools/subdomains & /proxy/subdomains) ─────────
@@ -261,27 +270,40 @@ router.get(["/tools/portscan", "/proxy/portscan"], async (req, res) => {
 });
 
 router.get("/tools/shodan", async (req, res) => {
+  // كان بيردّ 12 مضيف مختلقين (IP/org/banner ملفّقة) لأي سؤال — وده أسوأ من
+  // الصفر، لأنه بيدي المستخدم دليل مزوّر على حاجة مالهاش وجود. مفيش أي مستهلك
+  // للمسار ده في الكود (اتقاس: 0 إشارات)، فبقى مسار حقيقي بشرط مفتاح.
   const q = String(req.query.q ?? "").trim();
-  if (!q) {
-    res.json([]);
+  const key = String(process.env.SHODAN_API_KEY ?? "").trim();
+  if (!q) { res.json({ ok: false, error: "query_required", hits: [], reasonAr: "مطلوب ?q= للاستعلام." }); return; }
+  if (!key) {
+    res.json({
+      ok: false,
+      noSource: true,
+      error: "no_shodan_key",
+      query: q,
+      hits: [],
+      reasonAr: "مفيش SHODAN_API_KEY على السيرفر — مفيش طريقة نسأل بيها Shodan، ومش هنختلك مضيفات.",
+      howAr: "لو عايز الشودان الحقيقي: SHODAN_API_KEY في environment للسيرفر. البديل المجاني اللي شغال دلوقتي: /api/deep-research/live-osint (Shodan InternetDB + CRT.SH من غير مفتاح).",
+    });
     return;
   }
-  const orgs = ["Cloudflare", "AWS", "DigitalOcean", "Hetzner", "OVH", "Google Cloud"];
-  const products = ["nginx", "Apache httpd", "OpenSSH", "Caddy", "Envoy"];
-  const countries = ["US", "DE", "FR", "NL", "GB", "SG"];
-  const ports = [80, 443, 8080, 8443, 22];
-  const hits = Array.from({ length: 12 }, (_, i) => {
-    const ip = `${(45 + i) % 200}.${(11 * (i + 1)) % 250}.${(17 * (i + 2)) % 250}.${(31 * (i + 3)) % 250}`;
-    return {
-      ip,
-      port: ports[i % ports.length]!,
-      org: orgs[i % orgs.length]!,
-      country: countries[i % countries.length]!,
-      product: products[i % products.length]!,
-      banner: `HTTP/1.1 200 OK\nServer: ${products[i % products.length]}\nMatched: ${q}`,
-    };
-  });
-  res.json(hits);
+  try {
+    const r = await fetch(`https://api.shodan.io/shodan/host/search?key=${encodeURIComponent(key)}&query=${encodeURIComponent(q)}&limit=20`, { signal: AbortSignal.timeout(15_000) });
+    if (!r.ok) { res.status(502).json({ ok: false, error: `shodan_http_${r.status}`, query: q, hits: [], reasonAr: `Shodan ردّ بـ HTTP ${r.status} — الاستعلام مرفوض أو المفتاح غلط.` }); return; }
+    const data = (await r.json()) as { matches?: Array<{ ip?: string; ports?: number[]; location?: { country_name?: string }; org?: string; product?: string; version?: string; http?: { server?: string } }> };
+    const hits = (data.matches ?? []).slice(0, 20).map((mm) => ({
+      ip: mm.ip ?? "",
+      port: mm.ports?.[0] ?? 0,
+      org: mm.org ?? "",
+      country: mm.location?.country_name ?? "",
+      product: [mm.product, mm.version].filter(Boolean).join(" ") || mm.http?.server || "",
+      banner: `${mm.http?.server ? `Server: ${mm.http.server}\n` : ""}Matched: ${q}`,
+    }));
+    res.json({ ok: true, query: q, count: hits.length, hits, fetchedAt: new Date().toISOString() });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: "shodan_unreachable", query: q, hits: [], reasonAr: e instanceof Error ? e.message : String(e) });
+  }
 });
 
 router.post("/tools/hash", async (req, res, next) => {

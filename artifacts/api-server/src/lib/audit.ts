@@ -17,10 +17,12 @@ export interface AuditEntry {
     | "exec_error"
     | "self_heal"
     | "kill_switch"
+    | "autonomy_enable"
+    | "autonomy_disable"
     | "connection"
     | "tool_call"
     | "exec_stream_start"
-    // ── additive (2026-11-05): input-control + server exec events ──────────
+    // ── additive (2026-11-05): input-control + server exec events ──
     | "agent_exec"
     | "server_exec"
     | "mouse_input"
