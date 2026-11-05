@@ -43,6 +43,14 @@ export interface ServerProbe {
   /** what `/api/health` actually said, trimmed */
   health?: Record<string, unknown> | null;
   error?: string;
+  /**
+   * The origin that actually answered, when it differs from the registered
+   * `base` (http vs https). Waifly publishes its address as
+   * `node.waifly.com:27316` with no scheme, and a plain allocation port speaks
+   * HTTP while the proxy in front of it speaks HTTPS — guessing wrong makes a
+   * live server look dead.
+   */
+  via?: string;
 }
 
 const KINDS: ServerKind[] = ["codespace", "render", "waifly", "local", "custom"];
@@ -127,6 +135,43 @@ function filePath(): string {
   return process.env.NOVA_SERVERS_FILE || path.join(process.cwd(), "state", "fleet-servers.json");
 }
 
+/**
+ * The machines that exist right now, so the list is never empty on a fresh
+ * install. Measured 2026-11-05: the Codespace is public, and the Waifly slot
+ * (server 53a7d0cb) answers on its allocation — but a human had to type both
+ * URLs into a box before the fleet page could see them. These are seeds, not
+ * claims: each one is probed like any other and stays `down` until it answers.
+ *
+ * Turn them off with NOVA_FLEET_SEED=0 (a test or a fresh deployment that must
+ * start empty).
+ */
+export const SEED_SERVERS: ReadonlyArray<Pick<NovaServer, "name" | "base" | "kind" | "note">> = [
+  {
+    name: "Codespace الرئيسي",
+    base: "https://animated-broccoli-gwx6wgpxvx5hv6gj-8080.app.github.dev",
+    kind: "codespace",
+    note: "البورت 8080 لازم يكون Public من تبويب Ports جوه الكودسبيس",
+  },
+  {
+    name: "Waifly · Paris FR01",
+    base: "http://node.waifly.com:27316",
+    kind: "waifly",
+    note: "سلوت 300 MB دائم · Start Command: sh nova-24-7/start.sh",
+  },
+];
+
+function seedServers(): NovaServer[] {
+  const now = Date.now();
+  return SEED_SERVERS.map((s) => ({
+    id: makeId(normalizeServerBase(s.base)),
+    name: s.name,
+    base: normalizeServerBase(s.base),
+    kind: s.kind,
+    addedAt: now,
+    note: s.note,
+  }));
+}
+
 export function loadServers(): NovaServer[] {
   try {
     const raw = fs.readFileSync(filePath(), "utf8");
@@ -136,8 +181,13 @@ export function loadServers(): NovaServer[] {
       .filter((s) => s && typeof s.base === "string")
       .map((s) => ({ ...s, base: normalizeServerBase(s.base) }))
       .filter((s) => s.base);
-  } catch {
-    // Missing on first boot, corrupt after a bad write — both mean "empty".
+  } catch (err) {
+    // A file that is not there yet is the first boot: start from the machines we
+    // know about. A corrupt file is an accident, and inventing a list on top of
+    // it would hide the corruption, so that still means "empty".
+    if ((err as NodeJS.ErrnoException)?.code === "ENOENT" && process.env.NOVA_FLEET_SEED !== "0") {
+      return seedServers();
+    }
     return [];
   }
 }
@@ -198,39 +248,74 @@ export interface ProbeOptions {
   now?: () => number;
 }
 
+/** `https://h` ↔ `http://h` — the registered base first, the other scheme second. */
+export function schemeCandidates(base: string): string[] {
+  const primary = normalizeServerBase(base);
+  if (!primary) return [];
+  const alternate = primary.startsWith("https://")
+    ? `http://${primary.slice("https://".length)}`
+    : primary.startsWith("http://")
+      ? `https://${primary.slice("http://".length)}`
+      : "";
+  return alternate && alternate !== primary ? [primary, alternate] : [primary];
+}
+
 /** One real HTTP call. A timeout is `down`, never `unknown`. */
 export async function probeServer(server: NovaServer, opts: ProbeOptions = {}): Promise<ServerProbe> {
   const doFetch = opts.fetchImpl ?? fetch;
   const timeoutMs = opts.timeoutMs ?? 4000;
   const now = opts.now ?? Date.now;
   const started = now();
-  try {
-    const res = await doFetch(`${server.base}/api/health`, {
-      method: "GET",
-      headers: { accept: "application/json" },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    const ms = now() - started;
-    let health: Record<string, unknown> | null = null;
+
+  const candidates = schemeCandidates(server.base);
+  let lastErr: unknown = null;
+  let firstFailure: ServerProbe | null = null;
+
+  for (const origin of candidates) {
     try {
-      health = (await res.json()) as Record<string, unknown>;
-    } catch {
-      health = null;
+      const res = await doFetch(`${origin}/api/health`, {
+        method: "GET",
+        headers: { accept: "application/json" },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      const ms = now() - started;
+      let health: Record<string, unknown> | null = null;
+      try {
+        health = (await res.json()) as Record<string, unknown>;
+      } catch {
+        health = null;
+      }
+      // A 200 that is not JSON is not a health answer. Measured 2026-11-05: an
+      // anonymous GET to a *public* Codespace port lands on GitHub's "you are
+      // about to access a development port" interstitial — status 200, HTML
+      // body. Calling that "up" would put a machine in the fleet that nothing
+      // can actually talk to.
+      const json = health !== null;
+      const result: ServerProbe = {
+        id: server.id,
+        state: res.ok && json ? "up" : "down",
+        ok: res.ok && json,
+        status: res.status,
+        ms,
+        checkedAt: now(),
+        health,
+        error: res.ok && !json ? "ردّ 200 بس مش JSON — دي صفحة تحذير (الكودسبيس محتاج تسجيل دخول أو البورت مش Public)" : res.ok ? undefined : `HTTP ${res.status}`,
+        ...(origin === candidates[0] ? {} : { via: origin }),
+      };
+      // A live answer on either scheme settles it; a non-2xx does not, because
+      // the other scheme may be the one the service is actually on.
+      if (result.ok) {
+        cache.set(server.id, result);
+        return result;
+      }
+      firstFailure ??= result;
+    } catch (err) {
+      lastErr = err;
     }
-    const result: ServerProbe = {
-      id: server.id,
-      state: res.ok ? "up" : "down",
-      ok: res.ok,
-      status: res.status,
-      ms,
-      checkedAt: now(),
-      health,
-      error: res.ok ? undefined : `HTTP ${res.status}`,
-    };
-    cache.set(server.id, result);
-    return result;
-  } catch (err) {
-    const result: ServerProbe = {
+  }
+
+  const result: ServerProbe =
+    firstFailure ?? {
       id: server.id,
       state: "down",
       ok: false,
@@ -238,11 +323,10 @@ export async function probeServer(server: NovaServer, opts: ProbeOptions = {}): 
       ms: now() - started,
       checkedAt: now(),
       health: null,
-      error: explainProbeError(err),
+      error: explainProbeError(lastErr),
     };
-    cache.set(server.id, result);
-    return result;
-  }
+  cache.set(server.id, result);
+  return result;
 }
 
 /** Cached view: probes at most once per 20 s per server. */
