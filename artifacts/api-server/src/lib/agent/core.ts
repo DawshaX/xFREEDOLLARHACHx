@@ -864,6 +864,8 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       corpus: { measured: false, total: 0, ageMin: null },
       memory: { total: 0, pinned: 0 },
       opsKinds: 0,
+      // مش مقاس — بنقول كده في السطر، مافيش افتراض «موجودة» ولا «ناقصاه».
+      securityTools: { present: [], missing: [], provisionable: false, writable: false, scriptFound: false },
       canDo: [`تشغيل ${AGENT_TOOLS.length} أداة حقيقية`],
       cannotDo: ["قراءة حالة المنصة الآن — تعذّرت"],
     };

@@ -97,6 +97,8 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   job_control: "التحكم في مهمة",
   job_report: "تقرير مهمة",
   ops_kinds: "أنواع العمليات",
+  bounty_candidates: "مرشّحو منصات المكافآت",
+  tools_install: "تجهيز أدواتي",
   program_list: "قائمة برامج المكافآت",
   program_add: "إضافة برنامج",
   program_discover: "استكشاف برامج",

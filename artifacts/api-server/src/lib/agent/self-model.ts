@@ -27,6 +27,7 @@ import { loadServers } from "../server-registry";
 import { corpusStatus } from "../ops/vuln-corpus";
 import { memoryStats } from "./memory-store";
 import { KINDS } from "../ops/tools";
+import { toolchainStatus, VENDORABLE } from "../ops/toolchain";
 
 export interface SelfModel {
   tools: { count: number; names: string[]; byCategory: Record<string, number> };
@@ -34,6 +35,11 @@ export interface SelfModel {
   corpus: { measured: boolean; total: number; ageMin: number | null };
   memory: { total: number; pinned: number };
   opsKinds: number;
+  /**
+   *Tools security真实的 على المكنة دي — مقاسة من القرص. بدونها النموذج بيكرر
+   * جملة «مالوش أدوات تثبيت» وهو اللي يقدر ينزّلهم بنفسه.
+   */
+  securityTools: { present: string[]; missing: string[]; provisionable: boolean; writable: boolean; scriptFound: boolean };
   /** Things she can genuinely do right now, phrased as actions. */
   canDo: string[];
   /** Things that are honestly not available in this build. */
@@ -79,6 +85,20 @@ export function buildSelfModel(): SelfModel {
     opsKinds = 0;
   }
 
+  let securityTools = { present: [] as string[], missing: [...VENDORABLE] as string[], provisionable: false, writable: false, scriptFound: false };
+  try {
+    const tc = toolchainStatus();
+    securityTools = {
+      present: tc.present,
+      missing: tc.missing,
+      provisionable: tc.scriptAvailable && tc.writable,
+      writable: tc.writable,
+      scriptFound: tc.scriptAvailable,
+    };
+  } catch {
+    /* القياس مابيتكسرش الـprompt — بنقوله «مش مقاس» ونبقى صريحين في السطر */
+  }
+
   const canDo: string[] = [
     `تشغيل ${AGENT_TOOLS.length} أداة حقيقية مسجّلة باسمها (القائمة كاملة تحت)`,
     opsKinds ? `إنشاء وتشغيل ${opsKinds} نوع عملية على برامج مصرّح بها (ops)` : "تسجيل برامج وتشغيل عمليات مصرّح بها",
@@ -86,6 +106,11 @@ export function buildSelfModel(): SelfModel {
       ? `البحث في ${corpus.total.toLocaleString("en-US")} ثغرة حقيقية (NVD + KEV + EPSS) من داخل المنصة`
       : "البحث في فهرس الثغرات (لسه مش متزامن — البحث هيقول «مفيش بيانات» بصراحة)",
     "جلب صفحات ومواقع حقيقية من النت وقراءتها (web_fetch) — البحث والتحليل مش تخمين",
+    securityTools.present.length
+      ? `أدوات أمنية حقيقية منصوبة على المكنة دي ومقيسة: ${securityTools.present.join(" · ")}`
+      : securityTools.provisionable
+        ? `تجهّزي أدواتك بنفسك بأداة \`tools_install\` (نسخ ثابتة من GitHub في \`vendor/bin\` — ${securityTools.missing.length} أداة ناقصة)`
+        : "مافيش أدوات أمنية على المكنة دي، وتنزيلها مش متاح من هنا — الاستطلاع السلبي والـHTTP بس",
     "جلب ملفات GitHub وقراءة مستودعاتها",
     "الذاكرة الطويلة: تحفظ وتسترجع عبر الجلسات",
     servers.length
@@ -94,7 +119,12 @@ export function buildSelfModel(): SelfModel {
   ];
 
   const cannotDo: string[] = [
-    "تثبيت أدوات على السيرفر نفسه (الكالي/بورب لا يعملان هنا — الحزمة 300MB بلا root)",
+    // الجملة كانت مطلقة («مااقدرش أثبّت حاجة») وهي اللي بتخلي النموذج يقف
+    // ويِسأل المستخدم. التثبيت الثقيل (Kali/Burp/root) فعلاً مش مقدور، لكن
+    // النسخ الثابتة بتتنزّل من غير root — فنقول المقاس، مش الانطباع.
+    securityTools.provisionable
+      ? `تثبيت Kali أو Burp Suite (مافيش root/mount على الاستضافة) — بس النسخ الثابتة (${securityTools.missing.join(", ") || "كلها موجودة بالفعل"}) تتنزّل بـ\`tools_install\``
+      : "تثبيت أدوات على السيرفر نفسه: مافيش root، وتنزيل النسخ الثابتة مش متاح هنا كمان (`vendor/bin` مش قابل للكتابة أو السكربت مش في الحزمة)",
     "تشغيل Metasploit أو Burp Suite على السيرفر اللي أنا شغالة عليه",
     "الوصول لأي جهاز غير متصل بالوكيل",
     "اختراق أو مهاجمة هدف غير مصرّح به",
@@ -106,6 +136,7 @@ export function buildSelfModel(): SelfModel {
     corpus,
     memory,
     opsKinds,
+    securityTools,
     canDo,
     cannotDo,
   };
@@ -138,6 +169,10 @@ export function selfModelPrompt(model: SelfModel = buildSelfModel()): string {
     `- الأسطول: ${model.machines.registered} ماكينة مسجّلة${model.machines.names.length ? ` (${model.machines.names.slice(0, 4).join(" · ")})` : ""}.`,
     `- الكوربوس: ${model.corpus.measured ? `${model.corpus.total.toLocaleString("en-US")} ثغرة حقيقية، آخر مزامنة قبل ${model.corpus.ageMin} دقيقة` : "غير مقاس حالياً"}.`,
     model.opsKinds ? `- طبقة التنفيذ (ops): ${model.opsKinds} نوع عملية مسجّل.` : "- طبقة التنفيذ: غير متاحة في هذه النسخة.",
+    // السطر ده هو اللي بيمنع جملة «مالوش أدوات» من إنها تتكرر بعد التجهيز:
+    // بيتقرا من القرص في نفس اللحظة، مش من نص مكتوب.
+    `- أدواتك الأمنية على المكنة: ${model.securityTools.present.length ? `منصوبة ومقيسة (${model.securityTools.present.join(", ")})` : model.securityTools.provisionable ? `ناقصاه (${model.securityTools.missing.join(", ")}) — تنزّلها بـ\`tools_install\`` : "مش منصوبة ومش قادر أنزّلها هنا"}.`,
+    `- مجلد \`vendor/bin\`: ${model.securityTools.writable ? "قابل للكتابة ✓" : "مش قابل للكتابة ✗"}.`,
     "",
     "# تقدري تعملي إيه فعلاً (استخدمي دي لما حد يسأل «تقدر تعمل إيه»)",
     ...[corpusLine, fleetLine, ...derived].map((c) => `- ${c}`),

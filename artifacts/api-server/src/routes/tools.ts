@@ -8,8 +8,15 @@ import { resolveStandaloneApi } from "../lib/standalone-api";
 import { broadcastEvent } from "../lib/ws-hub";
 import { execOnLocalAgent } from "./local-agent.js";
 import { findBinary, clearBinaryCache } from "../lib/ops/tools.js";
+import { requireOps } from "../lib/ops/gate";
 
 const router: IRouter = Router();
+// `POST /tools/install` بينزّل برامج (INSTALLERS ثابتة المصادر بس بتلمّ القرص/الشبكة). `/tools/hash` و`/tools/encode` حساب نقي، فضلوا مفتوحين.
+router.use((req, res, next) => {
+  const p = req.path;
+  if (req.method === "GET" || !(p === "/tools/install")) return next();
+  return requireOps("tools-install")(req as never, res as never, next);
+});
 
 function cleanDomain(raw: string): string {
   return raw

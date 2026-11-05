@@ -28,6 +28,8 @@
  *   GET   /api/ops/findings/:key/report-draft  مسودة إفصاح (409 لو مش مثبتة)
  *   GET   /api/ops/hunt/candidates      مرشّحين من كتالوج المكافآت (سياق، بلا إذن)
  *   POST  /api/ops/hunt/plan            نطاق → security.txt + خطة أنواع، من غير تسجيل
+ *   GET   /api/ops/tools                الأدوات المقاسة على المكنة دي (موجود/ناقص)
+ *   POST  /api/ops/tools/provision      ينزّل الأدوات الثابتة في vendor/bin (مُبوّب)
  */
 import { Router, type Request, type Response } from "express";
 import { catalogStatus, lookupBountyProgram, huntCandidates } from "../lib/ops/bounty-catalog";
@@ -57,6 +59,7 @@ import {
   verifyFinding,
 } from "../lib/ops/runner";
 import { KIND_LIST, toolStatus } from "../lib/ops/tools";
+import { provisionToolchain, toolchainStatus, VENDORABLE } from "../lib/ops/toolchain";
 import { checkGate, opsExposure } from "../lib/ops/gate";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
@@ -594,6 +597,31 @@ router.get("/ops/stats", (req: Request, res: Response) => {
     exposure: opsExposure(),
     autonomy: autonomySummary(),
   });
+});
+
+/* ── الإيدين: الأدوات الحقيقية على المكنة دي ───────────────────────────────────
+ * دي الطبقة اللي بتحوّل «مافيش أدوات» من عذر لتفاصيل: القراءة دايمًا مفتوحة
+ * (زي /api/ops/version) عشان المحرك والصفحة يقولوا الحجم الحقيقي، والتنزيل
+ * خلف البوابة لأنه spawn فعلي. مافيش رد هنا بيؤكد نجاح من غير قياس —
+ * toolchainStatus() بيقرا القرص، والحالة بعد provisioning بتتقاس من جديد. */
+
+router.get("/ops/tools", (_req: Request, res: Response) => {
+  const st = toolchainStatus();
+  res.json({ ok: true, ...st, kinds: toolStatus(), catalogue: [...VENDORABLE], env: { NOVA_TOOL_DIR: process.env.NOVA_TOOL_DIR || null } });
+});
+
+/**
+ * `POST /api/ops/tools/provision {only?: "nuclei,httpx"}`
+ * بيشغّل `scripts/fetch-toolchain.mjs` (نسخ ثابتة من GitHub، بلا root، بلا shell)
+ * وبيرجّع القياس **بعد** التنفيذ، مش ادعاء. الباندل اللي مالوش `ops/` بيردّ
+ * `vendorer-missing` بدل ما يخترع نجاحًا.
+ */
+router.post("/ops/tools/provision", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "تنزيل أدوات = تشغيل عملية على المكنة، فمحتاج NOVA_EXEC_TOKEN زي أي كتابة تانية."); return; }
+  const only = String(req.body?.only || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+  const rec = await provisionToolchain({ only: only.length ? only : undefined });
+  broadcastEvent("nova-ops", { type: "toolchain", ok: rec.ok, installed: rec.installed, total: rec.total, ms: rec.ms });
+  res.status(rec.ok ? 200 : 502).json({ ok: rec.ok, ran: rec.ran ?? false, record: rec, status: toolchainStatus() });
 });
 
 export default router;

@@ -145,6 +145,30 @@ test("«مرحببببببا» is a greeting, not a memory search", () => {
   assert.ok(core.heuristicPlan("مرحبا، دوّر على CVE-2024-3094").steps.length > 0);
 });
 
+test("securityTools measured, and the prompt repeats the measurement", () => {
+  const st = model.securityTools;
+  assert.ok(st, "securityTools مش في النموذج — النموذج هيكلم نفسه بجملة عمومية");
+  assert.ok(Array.isArray(st.present) && Array.isArray(st.missing), "present/missing لازم مصفوفات مقاسة");
+  assert.equal(st.present.filter((b) => st.missing.includes(b)).length, 0, "أداة موجودة وناقصة في نفس الوقت");
+  assert.equal(typeof st.provisionable, "boolean");
+  assert.equal(typeof st.writable, "boolean");
+  const ready = mod.selfModelPrompt({ ...model, securityTools: { present: ["nuclei"], missing: [], provisionable: true, writable: true, scriptFound: true } });
+  assert.match(ready, /منصوبة ومقيسة \(nuclei\)/, "الـprompt مابيقولش المقاس");
+  const need = mod.selfModelPrompt({ ...model, securityTools: { present: [], missing: ["nuclei", "httpx"], provisionable: true, writable: true, scriptFound: true } });
+  assert.match(need, /tools_install/, "لما التجهيز متاح الـprompt لازم يسمّي الأداة");
+  assert.match(need, /ناقصاه/, "ولازم يسمّي الناقص");
+  const stuck = mod.selfModelPrompt({ ...model, securityTools: { present: [], missing: [], provisionable: false, writable: false, scriptFound: false } });
+  assert.match(stuck, /مش قادر أنزّلها هنا/, "ولو القرص مقفول يقول كده، مش يسأل المستخدم");
+});
+
+test("the agent can reach the spine: tools_install + bounty_candidates are registered", () => {
+  for (const name of ["tools_install", "bounty_candidates"]) {
+    assert.ok(model.tools.names.includes(name), `${name} مش في السجل — المحرك مالوش إيدين`);
+  }
+  assert.ok(model.tools.count >= 49, `العدد لازم يتقاس من السجل: ${model.tools.count}`);
+  assert.equal(model.tools.names.filter((n) => n === "tools_install").length, 1, "أداة متكررة في السجل");
+});
+
 console.log(`\nself-model: ${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const f of failures) console.error(`\n✗ ${f.name}\n${f.err.stack}`);

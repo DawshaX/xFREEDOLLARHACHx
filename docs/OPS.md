@@ -167,3 +167,63 @@ EPSS, CIRCL, OSV, DeFiLlama, Shodan InternetDB, PayloadsAllTheThings + مُتع�
 **قاعدة الصدق:** `measured` = false لحد ما السحب يحصل فعلاً، و`total` هو اللي في
 ملف الفهرس بالساعة. مفيش رقم ثابت في الكود.
 
+---
+
+## 🧰 الطبقة دي: المحرك بيجيب أدواته بنفسه (`lib/ops/toolchain.ts`)
+
+**ليه اتعملت:** مقاس على السلوت الحيّ `https://nova.waifly.com` في 2026-11-05T17:14Z:
+
+```
+GET /api/ops/version  → { toolsPresent: [], autonomy: { level: "passive", programs: 0 }, opsRouter: true }
+GET /api/ops/hunt/candidates → { present: false, path: "ops/bounty/programs-catalog.json", scanned: 0 }
+```
+
+يعني الحاوية سليمة وبتجري، بس **بلا إيدين وبلا بيانات**: `scripts/fetch-toolchain.mjs`
+كان **خطوة بناء في CI** بس، فأي سيرفر بينزل `nova-24-7.zip` مابيشوفش ولا أداة،
+والكتالوج اللي بيولّد الخطة أصلاً مش في الحزمة.
+
+| الحاجة | التفصيل |
+|---|---|
+| الحالة | `GET /api/ops/tools` — `present/missing` مقروءين من القرص بـ`findBinary()`، + `writable`، + `scriptAvailable`، + آخر محاولة مسجّلة |
+| التجهيز | `POST /api/ops/tools/provision {only?:"nuclei,httpx"}` — ورا `opsAllowed` (توكن/نفس الأصل)، بيشغّل `spawn(process.execPath, [script,"--into",dir,"--json"])` **بلا shell** |
+| السقف | `timeoutMs` في `provisionToolchain` (الافتراضي 540 s، مقصوص 30 s–20 min) والقتل `SIGKILL` — **مافيش متغير بيئة ليه لحد دلوقتي**، اللي عايز يغيّره يبعتّه في الـcall |
+| ضد التحميل المتكرر | `provisionToolchainOnce`: لو فيه أداة موجودة → `already-present`؛ وبعد فشل → `cooldown` (`NOVA_TOOLCHAIN_RETRY_MS`، الافتراضي 10 دقايق)؛ ومحاولة واحدة في نفس الوقت (single-flight) |
+| وقت الإقلاع | `NOVA_TOOLCHAIN_FETCH=1` دايمًا، `=auto` بس لو `vendor/bin` فاضي — **الافتراضي مطفي** (~100 MB على قرص 512 MB مع كوربوس منزّل = مخاطرة OOM، فمابنخذلهاش على المستخدم) |
+| الكاش | بعد أي تنزيل ناجح `resetBinaryCache()` — من غيره الأداة تتنصب وتفضل «مش موجودة» للابد |
+| للشارح | `NOVA_VENDOR_BIN` (المجلد) · `NOVA_TOOLCHAIN_RECORD` (ملف السجل، لافتراضي `state/toolchain-provision.json`) |
+
+**القاعدة اللي اتثبتت على الحزمة (مش على القراءة):** بعد `node scripts/build-standalone.mjs`
+و`node server.mjs` locally، نفس الطلبات رجّعت:
+
+```
+GET  /api/ops/hunt/candidates → present: true · scanned: 746 · 235 مستبعد
+GET  /api/ops/tools           → present: [] · missing: 7 · writable: true · scriptAvailable: true
+POST /api/ops/tools/provision → 403 للزائر المجهول (ops_write_requires_token)
+POST + Origin نفسه          → 200 · السكربت اتنفّذ فعلاً · «ffuf: failed — api.github.com ماردّش»
+```
+
+السطر الأخير هو المقصود: **مافيش نجاح مختلق**. لو الشبكة ماردّتش، الرد بيقول
+السكربت مشى (`ran:true`) وماثبتش حاجة (`ok:false`, `installed:0`) — مش «تم التثبيت ✓».
+
+### أداتا المحرك الجديدتان (49 في السجل)
+- `tools_install` — بيستدعي `provisionToolchainOnce`؛ يعني «ثبّت nuclei» بقى طلب
+  بيتنفّذ، مش اعتذار. و`self-model` بقى يقيس الأدوات، فالجملة اللي في البرومبت
+  («أدواتك الأمنية على المكنة: …») بتتكتب من القرص لحظة السؤال.
+- `bounty_candidates` — قراية الكتالوج (746 برنامج) كمصدر **أفكار وأهداف** بـ
+  `consented:false` صريح في كل سطر؛ الفحص النشط لسه محتاج `program_add` + `scope_check`.
+  وفي الوضع المستقل الـdirector بينفّذها هو (`/api/nova/sessions/:id/auto-chat`) بدل
+  ما يخلّص بجملة «ابعتلي نطاق» — مقاس على الحزمة: `🤖 خطوة ذاتية · bounty_candidates: 3 مرشّح من 746`.
+
+### البوابة اللي بتمنع الرجوع
+`scripts/audit-route-integrity.mjs` (مسجّل في `scripts/agent-gates.mjs` = 18/18) بأربع ضروس،
+وكل واحدة مُثبتة بحقنة في `--selftest`:
+
+1. **`spine-symbol`** — أي رمز بيتنادى في `src/routes/**` ولازم يكون متصدّر من `src/lib/**`
+   ولازم يكون مستورد في الملف. دي هي علة «الشات عبيط» حرفيًا.
+2. **`host-touch-ungated`** — أي `router.post/put/delete` بيلمّ المكنة
+   (`spawn|exec*|fs.writeFileSync|execOnLocalAgent|import("child_process")`) لازم يكون
+   جوه قرار إذن (`requireOps|checkGate|opsAllowed|assertAuthorized|tokenOk`).
+3. **`hollow-ship`** — أي ملف بيانات `ops/…` بيتقرا من `src/**` وقت التشغيل لازم
+   `build-standalone.mjs` ينسخه (بالاسم أو بالمجلد).
+4. **`twin-fabrication`** — التوأم (`standalone-api.ts`) ممنوع يؤكد تثبيت/فحص/جلب:
+   لا `installed: true`، لا «Nmap scan report»، لا «Verified HTTP 200»، ولا `ok:true` جنب `stdout`.

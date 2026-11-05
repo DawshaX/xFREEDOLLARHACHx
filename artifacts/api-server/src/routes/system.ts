@@ -1,8 +1,14 @@
 import { Router, type IRouter } from "express";
 import os from "node:os";
 import { execSync } from "node:child_process";
+import { requireOps } from "../lib/ops/gate";
 
 const router: IRouter = Router();
+// execAsync(cmd) بأمر من الـbody = تنفيذ تعليمات على المكنة من أي حد. محطوط ورا بوّابة ops.
+router.use((req, res, next) => {
+  if (req.method === "GET" || req.method === "HEAD") return next();
+  return requireOps("system-run")(req as never, res as never, next);
+});
 
 function getCpuUsage(): number {
   try {

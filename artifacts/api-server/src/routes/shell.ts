@@ -2,8 +2,14 @@ import { Router, type IRouter } from "express";
 import { db, shellSessionsTable, shellHistoryTable, auditLogTable } from "@workspace/db";
 import { desc, eq, sql } from "drizzle-orm";
 import { spawn } from "node:child_process";
+import { requireOps } from "../lib/ops/gate";
 
 const router: IRouter = Router();
+// التيرمينال بتاع الشات: `isCommandSafe` بتفلتر الشكل بس، مابتميّزش بين صاحب اللوحة وزائر مجهول.
+router.use((req, res, next) => {
+  if (req.method === "GET" || req.method === "HEAD") return next();
+  return requireOps("shell-exec")(req as never, res as never, next);
+});
 
 const ALLOWED_BIN = new Set([
   "echo", "ls", "pwd", "whoami", "date", "uname", "id", "hostname",

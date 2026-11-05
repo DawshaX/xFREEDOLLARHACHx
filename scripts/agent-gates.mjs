@@ -43,6 +43,7 @@ const STRUCTURAL_GATES = [
   ["scripts/audit-connections.mjs", "no dead connections between layers"],
   ["scripts/audit-contracts.mjs", "contracts between panel and API"],
   ["scripts/audit-twins.mjs", "twin files match, drift is declared"],
+  ["scripts/audit-route-integrity.mjs", "route wiring: symbols imported, host hands gated, bundle not hollow"],
   ["scripts/ops-selftest.mjs", "scope gate, ops gate, throttle, evidence chain"],
   ["scripts/typecheck-ratchet.mjs", "no new type errors"],
 ];

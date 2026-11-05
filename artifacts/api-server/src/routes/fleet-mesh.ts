@@ -26,8 +26,15 @@ import { getConnectedAgentList, execOnLocalAgent } from "./local-agent";
 import { cachedProbes, loadServers, probeAll, type ServerKind } from "../lib/server-registry";
 import { broadcastEvent } from "../lib/ws-hub";
 import { broadcastLiveEvent } from "./live-events";
+import { requireOps } from "../lib/ops/gate";
 
 const router = Router();
+// `/fleet/broadcast` بيبعت أمر لأجهزة المستخدم المتصلة، وخطوة الـplan بتنفّذ على جهاز. messaging/plan creation قراية بس فمفتوحة.
+router.use((req, res, next) => {
+  const p = req.path;
+  if (req.method === "GET" || !(p === "/fleet/broadcast" || p.startsWith("/fleet/plan/"))) return next();
+  return requireOps("fleet-broadcast")(req as never, res as never, next);
+});
 
 /* ── config ─────────────────────────────────────────────────────────────── */
 

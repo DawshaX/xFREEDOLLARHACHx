@@ -51,6 +51,8 @@ import {
   getReportsState,
 } from "../standalone-api";
 import { assertAuthorized, discoverProgram, fetchSecurityTxt, loadPrograms, upsertProgram, normalizeHost } from "../ops/scope";
+import { provisionToolchainOnce } from "../ops/toolchain";
+import { catalogStatus, huntCandidates } from "../ops/bounty-catalog";
 import {
   buildReport,
   cancelJob,
@@ -652,6 +654,35 @@ export const AGENT_TOOLS: AgentTool[] = [
     category: "platform",
     risk: "safe",
     input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "bounty_candidates",
+    title: "مرشّحو منصات المكافآت",
+    description:
+      "يقرأ كتالوج الـ746 برنامج (HackerOne/Bugcrowd/Intigriti) ويرجّع الأفضل استجابة كمصدر **أفكار وأهداف للاطلاع** — مع `consented:false` لكل سطر: مافيش فحص نشط من هنا. استخدمها لما تلاك هدف مطلوب ومافيش نطاق في الجلسة، بدل ما تطلب من المستخدم نطاق.",
+    category: "recon",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "كام مرشّح (الافتراضي 6، الحد 20)" },
+        platform: { type: "string", enum: ["hackerone", "bugcrowd", "intigriti", ""], description: "منصة معيّنة" },
+        q: { type: "string", description: "كلمة في الاسم أو النطاق" },
+        minEfficiency: { type: "number", description: "أدنى جودة استجابة (0-100)" },
+      },
+    },
+  },
+  {
+    name: "tools_install",
+    title: "تجهيز أدواتي",
+    description:
+      "ينزّل النسخ الثابتة الرسمية (subfinder/httpx/nuclei/katana/dnsx/naabu/ffuf) في `vendor/bin` على المكنة اللي عليها المحرك — من غير root ومن غير apt ومن غير git. اعمليها أول ما لاقية أداة missing في `ops_kinds`، بدل ما تقولي «مافيش أدوات» وتوقفي.",
+    category: "platform",
+    risk: "active",
+    input_schema: {
+      type: "object",
+      properties: { only: { type: "string", description: "اختياري: أسماء بفواصل، زي `nuclei,httpx`" } },
+    },
   },
   {
     name: "job_report",
@@ -1283,6 +1314,42 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         );
       }
 
+      // «ابعتلي نطاق» كانت بتقطع سلسلة الشغل لوحدها. الأداة دي بتدي النموذج
+      // مصدر أهداف من غير ما حد يديرو: قراية كتالوج بس، وكل سطر متعلّم
+      // `consented:false` — والفحص النشط لسه محتاج الإذن المكتوب في `/ops`.
+      case "bounty_candidates": {
+        const lim = Math.min(20, Math.max(1, Number(rawArgs.limit) || 6));
+        const c = huntCandidates({
+          limit: lim,
+          platform: String(rawArgs.platform || ""),
+          minEfficiency: rawArgs.minEfficiency === undefined ? undefined : Number(rawArgs.minEfficiency),
+          q: String(rawArgs.q || ""),
+        });
+        const cs = catalogStatus();
+        if (!c.present) {
+          return done(false, `الكتالوج مش على المكنة دي (${c.path}) — جرّب الاستطلاع السلبي على نطاق معروف`, { present: false, path: c.path });
+        }
+        const known = new Set<string>();
+        try {
+          for (const p of loadPrograms().programs || []) {
+            for (const h of [...(p.hosts || []), ...(p.exact || [])]) known.add(String(h).replace(/^\*\./, "").toLowerCase());
+          }
+        } catch {
+          /* مافيش برامج مسجّلة — مش خطأ */
+        }
+        return done(
+          true,
+          `${c.items.length} مرشّح من ${c.scanned} برنامج · ${c.filteredOut.notBounty} مستبعد (مالوش مكافأة) · ${known.size} نطاق مسجّل بإذن عندك`,
+          {
+            scanned: c.scanned,
+            fetchedAt: c.fetchedAt,
+            alreadyRegistered: known.size,
+            permissionModel: "سياق للاطلاع بس: كل سطر consented:false. الفحص النشط محتاج برنامج مسجّل + موافقة نطاق (`program_add` + `scope_check`).",
+            items: c.items.map((it) => ({ ...it, alreadyRegistered: (it.sample_hosts || []).some((h: string) => known.has(String(h).toLowerCase())) })),
+          },
+        );
+      }
+
       case "ops_kinds": {
         const tools = toolStatus();
         const agents = getConnectedAgentList();
@@ -1290,6 +1357,49 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
           true,
           `${KIND_LIST.length} نوع مهمة · أدوات على النود: ${tools.filter((t) => t.present).map((t) => t.bin).join(", ") || "ولا أداة"} · نودات متصلة: ${agents.length}`,
           { kinds: KIND_LIST, tools, agents: agents.map((a) => ({ id: a.id, hostname: a.hostname, platform: a.platform })) },
+        );
+      }
+
+      // «مافيش أدوات» كانت جملة الختام دايمًا. دلوقتي المحرك بيقدر يغيّر الواقع:
+      // بينزّل النسخة الثابتة من الأداة وبيقيس تاني — والرسالة بتقول المقاس
+      // بعد التنفيذ، مش ادعاء النجاح.
+      case "tools_install": {
+        const only = String(rawArgs.only || "")
+          .split(",")
+          .map((x: string) => x.trim())
+          .filter(Boolean);
+        const { record, status, skipped } = await provisionToolchainOnce({ only: only.length ? only : undefined });
+        const after = status.present.length;
+        if (skipped === "already-present") {
+          return done(true, `أدواتي جاهزة أصلًا: ${status.present.join(" · ")} في \`${status.dir}\``, {
+            dir: status.dir,
+            present: status.present,
+            missing: status.missing,
+          });
+        }
+        if (skipped === "cooldown") {
+          const mins = Math.max(1, Math.round((Date.now() - Date.parse(record?.at || "")) / 60000));
+          return done(false, `آخر محاولة قبل ${mins} دقيقة فشلت (${record?.error || "?"}) — هاستنى شوية بدل ما أعيد تجربة شبكة ميتة: ${String(record?.reasonAr || "").slice(0, 160)}`, {
+            cooldown: true,
+            last: record,
+          });
+        }
+        if (!record?.ok) {
+          return done(false, `ماقدرتش أنزّل الأدوات: ${record?.reasonAr || record?.error || "سبب مجهول"}`, {
+            dir: status.dir,
+            writable: status.writable,
+            script: status.script,
+            present: status.present,
+            missing: status.missing,
+            results: record?.results ?? [],
+          });
+        }
+        return done(
+          after > 0,
+          after
+            ? `نزّلت ${record.installed}/${record.total} في \`${status.dir}\` خلال ${Math.round(record.ms / 1000)} ثانية · أدواتي دلوقتي: ${status.present.join(" · ")}`
+            : `التنزيل خلص بس ولا أداة اتثبتت (${record.results.map((r) => `${r.bin}:${r.status}`).join(", ").slice(0, 200)})`,
+          { dir: status.dir, installed: record.installed, total: record.total, ms: record.ms, present: status.present, missing: status.missing, results: record.results },
         );
       }
 

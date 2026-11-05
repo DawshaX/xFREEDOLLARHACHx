@@ -2,10 +2,16 @@ import { Router } from "express";
 import { exec } from "child_process";
 import { promisify } from "util";
 import os from "os";
+import { requireOps } from "../lib/ops/gate";
 
 
 const execAsync = promisify(exec);
 const router = Router();
+// الفحص النشط بيدوّق على هدف من الـbody (nmap بأرجومنتات من بره) — من غير إذن مكتوب ومن غير بوابة. القراءة مفتوحة، والـscan بقى ورا قرار إذن ops زي `/api/ops`.
+router.use((req, res, next) => {
+  if (req.method === "GET" || req.method === "HEAD") return next();
+  return requireOps("network-scan")(req as never, res as never, next);
+});
 
 router.post("/network/scan", async (req, res) => {
   const { target, scanType = "quick", ports } = req.body as { target: string; scanType?: string; ports?: string };

@@ -11,8 +11,31 @@ import { listProcesses } from "../lib/processes";
 import { logger } from "../lib/logger";
 import { getAllSettings } from "./settings";
 import { buildIntelligentSecurityReply } from "./ollama-proxy";
+// The fallback that serves real tools when the external model is down. #210 called
+// `runAgent(...)` without importing it — TS2304, and at runtime a ReferenceError inside
+// the catch, which is exactly how a capability question ended as a canned bubble.
+import { runAgent, type AgentEvent } from "../lib/agent/core";
+import { runAgentTool } from "../lib/agent/tools";
+import { requireOps } from "../lib/ops/gate";
 
 const router = Router();
+
+// المسارات دي بتنفّذ shell على المكنة فعلاً: `/nova/scheduler/run` بياخد
+// `command` من الـbody ويحطّه في `bash -c`، و`/nova/workspace/exec` نفس الحكاية
+// بـ`exec`، و`/nova/workspace/write` بيكتب في أي مسار (من غير containment)،
+// و`/nova/kill` بيوقف كل الشغل. مقاسة 2026-11-05: ولا واحد كان ورا البوابة —
+// نفس اللي لقيناه في /installer/tools/:id/install. كلها بقت خلف requireOps
+// (توكن لو متسَيّر، وإلا نفس الأصل — زي `/api/local-agent` و`/api/exec`).
+// القراءة والشات (`/live-agent/sessions/*`, `/auto-chat`) فضلوا مفتوحين على
+// قصدهم: المحرك شغال للعامة، بس مافيش shell مجاني للزوار.
+router.use((req, res, next) => {
+  const p = req.path;
+  const sensitive =
+    req.method !== "GET" &&
+    (p === "/nova/workspace/write" || p === "/nova/workspace/exec" || p === "/nova/scheduler/run" || p === "/nova/kill" || p === "/nova/kill/reset");
+  if (!sensitive) return next();
+  return requireOps("nova-workstation")(req as never, res as never, next);
+});
 
 const DEFAULT_NGROK = "https://nucleus-uninjured-tusk.ngrok-free.dev";
 
@@ -1012,7 +1035,7 @@ router.post("/nova/sessions/:id/auto-chat", async (req, res) => {
         sessionId,
         history: session.messages.filter((m) => m.role !== "system").slice(-6).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
         forceHeuristic: true,
-        emit: (ev) => {
+        emit: (ev: AgentEvent) => {
           switch (ev.type) {
             case "thought":
               if (ev.text) emit("delta", { text: `🧠 ${ev.text}\n` });
@@ -1027,7 +1050,21 @@ router.post("/nova/sessions/:id/auto-chat", async (req, res) => {
               if (ev.text) { coreReply += ev.text; emit("delta", { text: ev.text }); }
               break;
             case "done":
-              emit("done", { mode: "nova-core-agent", commandsRun: (ev as any).toolCount ?? 0, provider: (ev as any).provider });
+              emit("done", { mode: "nova-core-agent", commandsRun: ev.toolCount, provider: ev.provider });
+              break;
+            case "plan":
+              // الخطة قبل أول أداة — نفس اللي بيعمله /nova-core/chat، وإلا الفallback
+              // يبقى صندوقة سودا: أدوات تشتغل ومستخدم مافاهمش ليه.
+              if ((ev.steps || []).length) {
+                emit("delta", { text: `🗺️ الخطة: ${ev.steps.map((st, i) => `${i + 1}) ${st.tool}`).join(" ← ")}\n` });
+              }
+              break;
+            case "confirm_required":
+              // أداة حساسة بدون موافقة = مرفوضة؛ الرفض لازم يبان، مش يتبلع.
+              emit("delta", { text: `⛔ ${ev.title || ev.name}: ${ev.reason || "محتاج موافقة صريحة قبل التنفيذ."}\n` });
+              break;
+            case "ready":
+              emit("delta", { text: `⚙️ وضع الطوارئ: ${ev.mode} · ${ev.tools} أداة · ${ev.provider}\n` });
               break;
             case "error":
               emit("error", { error: ev.message });
@@ -1038,6 +1075,20 @@ router.post("/nova/sessions/:id/auto-chat", async (req, res) => {
         },
         approved: [],
       });
+
+      // الوضع المستقل معناه إن مافيش «ارجعلي بالسؤال»: الشات بيكمّل لوحده
+      // بخطوات قراية آمنة — مرشّحو المكافآت وقياس الأدوات — وبيثيّتها في نفس
+      // الـstream. دي الإجابة الحقيقية على «ابعتلي نطاق» اللي كانت بتقطع الشغل.
+      if (autonomousMode && !isKilledLocal(sessionId)) {
+        for (const [toolName, args] of [["bounty_candidates", { limit: 3 }], ["ops_kinds", {}]] as Array<[string, Record<string, unknown>]>) {
+          if (isKilledLocal(sessionId)) break;
+          emit("exec_start", { command: toolName, on: "nova-agent", autonomous: true });
+          const fr = await runAgentTool(toolName, args);
+          emit("exec_result", { command: toolName, output: fr.summary.slice(0, 400), success: fr.ok, durationMs: fr.ms, on: "nova-agent", autonomous: true });
+          emit("delta", { text: `\n🤖 خطوة ذاتية · ${toolName}: ${fr.summary}\n` });
+          session.memory.push({ command: toolName, result: fr.summary.slice(0, 300), success: fr.ok, ts: Date.now() });
+        }
+      }
       if (coreReply.trim()) {
         session.messages.push({ role: "assistant", content: coreReply });
       }
