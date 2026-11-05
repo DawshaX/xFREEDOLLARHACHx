@@ -5249,6 +5249,22 @@ export function resolveStandaloneApi(
         log: [],
       };
     }
+    if (path === "/fleet/system") {
+      // The static build has no engine of its own, so every number here is the
+      // honest zero: nothing is measured, and the sentence says so instead of
+      // inventing a fleet. When a real engine is linked this route never runs.
+      return {
+        ok: true,
+        static: true,
+        now: Date.now(),
+        identity: { name: "NOVA", version: "2099.1", origin: null },
+        machines: { total: 0, up: 0, down: 0, list: [] },
+        corpus: { measured: false, total: 0, at: null, ageMin: null, bySeverity: {}, note: staticNote },
+        brain: { providers: [], count: 0, note: staticNote },
+        mesh: null,
+        says_ar: "أنا نوفا في وضع المتصفح: مفيش محرك مقاس هنا، فمفيش أرقام أدّعيها. اربط سيرفر عشان الحالة تبقى حقيقية.",
+      };
+    }
     if (path === "/fleet/servers") {
       // The static build has no registry file: the list lives in the browser
       // (`lib/servers.ts`) and is mirrored to a real engine when one is linked.

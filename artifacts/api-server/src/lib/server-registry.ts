@@ -31,6 +31,13 @@ export interface NovaServer {
   kind: ServerKind;
   addedAt: number;
   note?: string;
+  /**
+   * Which machine this entry was learned from, when it was not typed here.
+   * Peers exchange their lists, so the fleet converges on one picture without
+   * anyone copying URLs by hand — and every learned entry says where it came
+   * from, so the list never pretends to be first-hand knowledge.
+   */
+  learnedFrom?: string;
 }
 
 export interface ServerProbe {
@@ -370,6 +377,125 @@ export async function probeServer(server: NovaServer, opts: ProbeOptions = {}): 
     };
   cache.set(server.id, result);
   return result;
+}
+
+/* ── peer exchange ──────────────────────────────────────────────────────── */
+
+export interface GossipPeer {
+  base: string;
+  ok: boolean;
+  /** entries this peer knew and we did not */
+  gained: number;
+  ms: number | null;
+  error?: string;
+}
+
+export interface GossipResult {
+  at: number;
+  peers: GossipPeer[];
+  gained: number;
+  servers: NovaServer[];
+}
+
+/**
+ * Merge a peer's list into ours. Pure on purpose: the merge rule is the part
+ * worth testing, and it is the rule that decides whether two machines end up
+ * with the same fleet.
+ *
+ * Rules:
+ *   • our entry always wins for a base we already know (our name, our note, our
+ *     addedAt) — a peer must never rename a machine here,
+ *   • a base we have never seen is added and marked `learnedFrom` the peer,
+ *   • nothing is removed, ever: a machine disappearing from a peer's list is the
+ *     peer forgetting it, not us.
+ */
+export function mergePeerServers(
+  mine: NovaServer[],
+  theirs: unknown,
+  peerBase: string,
+  now = Date.now(),
+): { servers: NovaServer[]; gained: NovaServer[] } {
+  const byBase = new Map(mine.map((s) => [normalizeServerBase(s.base), s]));
+  const gained: NovaServer[] = [];
+  const list = Array.isArray(theirs) ? theirs : [];
+  for (const raw of list) {
+    const entry = raw as Partial<NovaServer> | null;
+    if (!entry || typeof entry.base !== "string") continue;
+    const base = normalizeServerBase(entry.base);
+    if (!base || byBase.has(base)) continue;
+    if (base === normalizeServerBase(peerBase)) continue;
+    const known = KINDS.includes(entry.kind as ServerKind) ? (entry.kind as ServerKind) : serverKind(base);
+    const added: NovaServer = {
+      id: makeId(base),
+      name: String(entry.name || base.replace(/^https?:\/\//, "")).slice(0, 60),
+      base,
+      kind: known,
+      addedAt: now,
+      note: typeof entry.note === "string" ? entry.note : undefined,
+      learnedFrom: normalizeServerBase(peerBase),
+    };
+    byBase.set(base, added);
+    gained.push(added);
+  }
+  return { servers: [...mine, ...gained], gained };
+}
+
+/** How long a gossip round stays fresh; a page refresh must not cost N fetches. */
+const GOSSIP_TTL_MS = 60_000;
+let lastGossipAt = 0;
+let lastGossip: GossipResult | null = null;
+
+/**
+ * Ask every *reachable* machine for its list and merge what is new.
+ *
+ * This is what makes the fleet one fleet: each engine knows a few seeds, and
+ * after one round every engine knows the same machines. No credentials, no
+ * shared database — it uses the connection the probe already proves exists.
+ */
+export async function gossipServers(
+  list: NovaServer[],
+  opts: ProbeOptions & { ttlMs?: number; force?: boolean } = {},
+): Promise<GossipResult> {
+  const now = opts.now ?? Date.now;
+  if (!opts.force && lastGossip && now() - lastGossipAt < (opts.ttlMs ?? GOSSIP_TTL_MS)) {
+    return lastGossip;
+  }
+  const doFetch = opts.fetchImpl ?? fetch;
+  const timeoutMs = opts.timeoutMs ?? 3500;
+  const started = now();
+  const probes = await probeAll(list, opts);
+  const up = list.filter((s) => probes.find((p) => p.id === s.id && p.ok));
+
+  const peers: GossipPeer[] = [];
+  let servers = list;
+
+  for (const peer of up) {
+    const origins = schemeCandidates(peer.base);
+    let done = false;
+    for (const origin of origins) {
+      const t0 = now();
+      try {
+        const res = await doFetch(`${origin}/api/fleet/servers?peers=0`, {
+          headers: { accept: "application/json" },
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = (await res.json()) as { servers?: unknown };
+        const merged = mergePeerServers(servers, body?.servers, origin, now());
+        servers = merged.servers;
+        peers.push({ base: origin, ok: true, gained: merged.gained.length, ms: now() - t0 });
+        done = true;
+        break;
+      } catch (err) {
+        peers.push({ base: origin, ok: false, gained: 0, ms: null, error: explainProbeError(err) });
+      }
+    }
+    if (!done) continue;
+  }
+
+  lastGossipAt = now();
+  lastGossip = { at: started, peers, gained: servers.length - list.length, servers };
+  return lastGossip;
 }
 
 /** Cached view: probes at most once per 20 s per server. */

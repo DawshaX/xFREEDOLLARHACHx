@@ -309,6 +309,68 @@ test("a new seed reaches a machine that booted before it existed", () => {
   assert.equal(again.length, back.length, "merging happens once, not on every read");
 });
 
+/* ── peer exchange: one fleet, not three lists ───────────────────────────── */
+
+test("mergePeerServers adds what the peer knows and never renames what we know", () => {
+  const mine = [{ id: "a", name: "Waifly (اسمي أنا)", base: "https://nova.waifly.com", kind: "waifly", addedAt: 1 }];
+  const theirs = [
+    { name: "Waifly (اسمهم)", base: "https://nova.waifly.com", kind: "waifly" },
+    { name: "Codespace", base: "https://x-8080.app.github.dev", kind: "codespace" },
+    { name: "junk", base: "" },
+    null,
+  ];
+  const merged = mod.mergePeerServers(mine, theirs, "https://peer.example.com", 1234);
+  assert.equal(merged.servers.length, 2, "one duplicate, one new, junk dropped");
+  assert.equal(merged.servers[0].name, "Waifly (اسمي أنا)", "a peer must not rename our machine");
+  const gained = merged.gained[0];
+  assert.equal(gained.base, "https://x-8080.app.github.dev");
+  assert.equal(gained.learnedFrom, "https://peer.example.com");
+  assert.equal(gained.addedAt, 1234);
+});
+
+test("mergePeerServers does not add the peer itself", () => {
+  const merged = mod.mergePeerServers([], [{ name: "me", base: "https://peer.example.com" }], "https://peer.example.com");
+  assert.equal(merged.servers.length, 0, "the caller already has that machine in its own list");
+});
+
+await testAsync("gossipServers asks only reachable machines and merges their lists", async () => {
+  const list = [
+    { id: "srv-a", name: "A", base: "https://a.example.com", kind: "custom", addedAt: 1 },
+    { id: "srv-b", name: "B", base: "https://dead.example.com", kind: "custom", addedAt: 1 },
+  ];
+  const asked = [];
+  const result = await mod.gossipServers(list, {
+    force: true,
+    fetchImpl: async (url) => {
+      asked.push(url);
+      if (url.includes("dead.example.com")) throw new Error("ECONNREFUSED");
+      if (url.includes("/api/health")) return jsonResponse({ status: "ok" });
+      if (url.includes("/api/fleet/servers")) {
+        return jsonResponse({ servers: [{ name: "C", base: "https://c.example.com" }] });
+      }
+      return jsonResponse({});
+    },
+  });
+  assert.ok(asked.some((u) => u.includes("a.example.com/api/fleet/servers?peers=0")), "asks a reachable peer with peers=0 (no loop)");
+  assert.ok(!asked.some((u) => u.includes("dead.example.com/api/fleet/servers")), "does not ask a machine that is down");
+  assert.equal(result.gained, 1);
+  assert.ok(result.servers.some((s) => s.base === "https://c.example.com"), "the peer's machine is now ours too");
+  assert.equal(result.peers.filter((p) => p.ok).length, 1);
+});
+
+await testAsync("gossipServers survives a peer that answers garbage", async () => {
+  const list = [{ id: "srv-a", name: "A", base: "https://a.example.com", kind: "custom", addedAt: 1 }];
+  const result = await mod.gossipServers(list, {
+    force: true,
+    fetchImpl: async (url) => {
+      if (url.includes("/api/health")) return jsonResponse({ status: "ok" });
+      return new Response("not json at all", { status: 200, headers: { "content-type": "text/html" } });
+    },
+  });
+  assert.equal(result.gained, 0);
+  assert.equal(result.servers.length, 1, "our list is untouched");
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const f of failures) console.log(` - ${f}`);
