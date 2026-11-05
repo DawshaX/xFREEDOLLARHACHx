@@ -169,6 +169,16 @@ export const SEED_SERVERS: ReadonlyArray<Pick<NovaServer, "name" | "base" | "kin
   },
 ];
 
+/**
+ * Bumped whenever SEED_SERVERS gains a machine.
+ *
+ * A registry that already exists is never re-seeded (that would resurrect hosts
+ * the user deleted), but new seeds must reach machines that booted before they
+ * existed — measured 2026-11-05: the live Waifly slot kept a two-machine file
+ * and never learned about the HTTPS face added later that same hour.
+ */
+export const SEED_VERSION = 2;
+
 function seedServers(): NovaServer[] {
   const now = Date.now();
   return SEED_SERVERS.map((s) => ({
@@ -184,12 +194,26 @@ function seedServers(): NovaServer[] {
 export function loadServers(): NovaServer[] {
   try {
     const raw = fs.readFileSync(filePath(), "utf8");
-    const parsed = JSON.parse(raw) as { servers?: NovaServer[] };
+    const parsed = JSON.parse(raw) as { servers?: NovaServer[]; seedVersion?: number };
     if (!Array.isArray(parsed?.servers)) return [];
-    return parsed.servers
+    const stored = parsed.servers
       .filter((s) => s && typeof s.base === "string")
       .map((s) => ({ ...s, base: normalizeServerBase(s.base) }))
       .filter((s) => s.base);
+    // Add seeds this file has never seen, and only those: a machine the user
+    // removed stays removed until the seed list itself changes again.
+    if ((parsed.seedVersion ?? 0) < SEED_VERSION) {
+      const known = new Set(stored.map((s) => s.base));
+      const missing = seedServers().filter((s) => !known.has(s.base));
+      const merged = [...stored, ...missing];
+      try {
+        saveServers(merged);
+      } catch {
+        /* read-only disk — answer in memory for this process */
+      }
+      return merged;
+    }
+    return stored;
   } catch (err) {
     // A file that is not there yet is the first boot: start from the machines we
     // know about. A corrupt file is an accident, and inventing a list on top of
@@ -216,7 +240,7 @@ export function saveServers(servers: NovaServer[]): boolean {
     const target = filePath();
     fs.mkdirSync(path.dirname(target), { recursive: true });
     const tmp = `${target}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify({ servers, savedAt: Date.now() }, null, 2));
+    fs.writeFileSync(tmp, JSON.stringify({ servers, seedVersion: SEED_VERSION, savedAt: Date.now() }, null, 2));
     fs.renameSync(tmp, target);
     return true;
   } catch {
