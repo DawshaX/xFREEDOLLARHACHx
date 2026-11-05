@@ -137,3 +137,31 @@ typecheck-ratchet 96 = baseline · api build ✓ · panel build ✓ · bundle 2.
 
 **الحيّ:** `8d91560` شغّال على `nova.waifly.com` — build == boot، `stale:false`،
 `ready:true`، `score 71`، صفر أعطال، والتحديث الذاتي لحق الـrelease في ~دقيقة.
+
+---
+
+## 9) تكملة نفس اليوم — الحلقة 53 → 55 (PRs #204 → #207)
+
+| اللي كان | اللي بقى |
+|---|---|
+| «انت مين» → فقرة عامة من الموديل | `identityAnswer()` من `buildSelfModel()` لحظة السؤال (46 أداة · الكوربوس · الماكينات · الذاكرة · الحدود) |
+| «مرحببببببا» → «أهلاً وسهلاً! كيف يمكنني مساعدتك؟» | `greetingAnswer()` — سطرين بأرقام حقيقية + خطوة تتنفّذ |
+| «مرحبا» مكانش في `SMALL_TALK` → `memory_search` + `platform_status` | `مرحب+ا*` + `greetingOnly()`: التحية بتتعرف، والطلب اللي وراها بيفضل طلب |
+| Pages فشل 6 مرات متتالية | retry تلقائي بعد 45 ثانية → آخر نشر **نجح** |
+| فخ `: ` في اسم خطوة YAML | اتصلح (كان بيطيّح `check-workflows` من 19/19 لـ12/19) |
+
+**مقاس:** `test-self-model` **12/12** · البوابات **17/17** · `check-workflows` **19/19** ·
+ratchet 96 = baseline · engine build 0 · bundle build 0 · Pages **success**.
+
+**برهان الشات من الحزمة الحقيقية** (`node boot.mjs` + POST على `/api/nova-core/chat`):
+
+```
+thought: «المستخدم بيسلّم — أرد بشكل شخصي وأعرض اللي أقدر أعمله.»
+delta  : «أهلاً بيك 👋 أنا نوفا — بشتغل مش بتتكلم بس.»
+delta  : «معايا دلوقتي 46 أداة حقيقية، و… 3 ماكينة مسجّلة.»
+```
+
+### ⚠️ حالة السلوت الحي
+`nova.waifly.com` رجّع **502 Bad Gateway** (nginx) في آخر الفحص — الحاوية نفسها
+مش شغّالة، مش الكود: نفس الـcommit شغّال محليًا ويرد 200. **الخطوة:** Restart من لوحة
+Waifly، والـself-update هياخد آخر release لوحده.
