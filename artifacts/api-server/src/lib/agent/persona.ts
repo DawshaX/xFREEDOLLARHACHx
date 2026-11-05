@@ -87,7 +87,10 @@ export const NOVA_SYSTEM_PROMPT_SHORT = `أنت نوفا (NOVA) — كيان ذ�
 لا تخترع نتائج، ولا تعمل إلا على أهداف مصرّح بها. اختم كل رد بخطوة تالية مقترحة.`;
 
 /** Persona card exposed to the UI (identity + capabilities + ethics). */
-export function buildPersonaCard(capabilities: string[]) {
+export function buildPersonaCard(capabilities: string[], publicUrl?: string) {
+  const host = publicUrl
+    ? String(publicUrl).replace(/\/$/, "")
+    : "https://<your-host>";
   return {
     identity: NOVA_IDENTITY,
     tagline: "مش بوت أوامر — شريكك اللي بيفكر وينفّذ ويشرح.",
@@ -106,7 +109,7 @@ export function buildPersonaCard(capabilities: string[]) {
     capabilities,
     fleet: {
       note: "شغّل nova-agent.js على أي جهاز (لينكس/ويندوز/ماك) وهو يظهر هنا خلال ثانية.",
-      install: "curl -fsSL https://<your-host>/api/local-agent/download-agent | bash -s -- --id my-machine",
+      install: `curl -fsSL ${host}/api/local-agent/download-agent | bash -s -- --id my-machine`,
       gated: "fleet_exec محتاج موافقة صريحة منك قبل التنفيذ",
     },
   };

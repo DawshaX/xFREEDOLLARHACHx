@@ -96,7 +96,7 @@ jobs:
         run: |
           pnpm --filter @workspace/kali-panel run build
           cp artifacts/kali-panel/dist/public/index.html artifacts/kali-panel/dist/public/404.html
-          for route in bug-bounty-studio vuln-encyclopedia code-auditor dashboard desktop kali-terminal mission-tracker vuln-center scanner agent live-agent memory reports; do
+          for route in bug-bounty-studio vuln-encyclopedia code-auditor dashboard desktop kali-terminal mission-tracker vuln-center scanner agent live-agent memory reports nova-fleet; do
             mkdir -p "artifacts/kali-panel/dist/public/$route"
             cp artifacts/kali-panel/dist/public/index.html "artifacts/kali-panel/dist/public/$route/index.html"
           done
