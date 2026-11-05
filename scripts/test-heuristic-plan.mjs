@@ -30,7 +30,7 @@ process.env.NOVA_SERVERS_FILE = join(work, "servers.json");
 process.env.NOVA_STATE_DIR = join(work, "state");
 process.env.NOVA_MEMORY_FILE = join(work, "state/nova-memory.json");
 
-const { heuristicPlan } = await import(out);
+const { heuristicPlan, cleanThought } = await import(out);
 
 let passed = 0;
 const failures = [];
@@ -77,6 +77,22 @@ test("a bare domain still goes to recon, not to search", () => {
   const plan = heuristicPlan("google.com");
   assert.ok(plan.steps.some((s) => s.tool === "recon_target"), JSON.stringify(plan.steps));
   assert.ok(!plan.steps.some((s) => s.tool === "web_search"));
+});
+
+test("the thought bubble can never show model residue", () => {
+  const fallback = "هرتّب الطلب على أدواتي الحقيقية وأشوف النتيجة قبل أي استنتاج.";
+  // The exact shape that reached the screen on 2026-11-05.
+  assert.equal(cleanThought("[مسار: (?:أدوات|ادوات|kali|أداة|tool)] على الطلب"), fallback);
+  // A planner that answers in JSON or English is not speaking to the user.
+  assert.equal(cleanThought('{"tool": "fleet_list", "args": {}}'), fallback);
+  assert.equal(cleanThought("Let me plan this step by step."), fallback);
+  assert.equal(cleanThought(""), fallback);
+  // Real Arabic survives — one line, no fences.
+  assert.equal(
+    cleanThought("هبدأ باستطلاع النطاق\nوبعدها هقرا الترويسات"),
+    "هبدأ باستطلاع النطاق وبعدها هقرا الترويسات",
+  );
+  assert.ok(cleanThought("أ".repeat(400)).length <= 221, "long thoughts are capped");
 });
 
 test("every planned step is a real registered tool", () => {

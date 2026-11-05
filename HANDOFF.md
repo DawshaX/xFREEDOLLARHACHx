@@ -1538,3 +1538,10 @@ connections **0 gaps** · contracts ✓ · twins ✓ · ratchet **96 = baseline*
 brain 27/27 · brain-edge 16/16 · fleet 31/31 · corpus 38/38 · memory 16/16 · self-restart 13/13 ·
 workflows **19/19** · connections 0 gaps · contracts ✓ · twins ✓ · ratchet 96 = baseline ·
 engine build 0 · panel build 0.
+
+### ٥١.١ سطر التفكير: آخر محطة قبل الشاشة
+المخطط الحتمي بقى يكتب عربي، بس المخطط اللي بالموديل ممكن يرجّع أي حاجة — والفقرة دي
+بتتطبع في bubble سطر واحد. `cleanThought()` في `core.ts` بيشيل الـfences والـJSON
+ومصدر الـregex وأي قوس مربع فاضي، بيحوّل لأكتر من سطر لسطر واحد، بيقص عند 220 حرف،
+وبيرجع لجملة عربية معقولة لو اللي فاضل مفيهوش عربي كفاية (أقل من 12 حرف).
+الاختبار: `test-heuristic-plan` بقى **6/6** بنفس الحالة اللي ظهرت على الشاشة حرفيًا.
