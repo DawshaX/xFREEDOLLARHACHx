@@ -205,6 +205,69 @@ test("explainProbeError names the five real failure modes", () => {
   assert.match(mod.explainProbeError(new Error("certificate has expired")), /TLS/);
 });
 
+await testAsync("probeServer refuses a 200 that is not JSON (GitHub port interstitial)", async () => {
+  const server = { id: "s11", name: "cs", base: "https://x-8080.app.github.dev", kind: "codespace", addedAt: 1 };
+  const probe = await mod.probeServer(server, {
+    fetchImpl: async () =>
+      new Response("<!doctype html><title>Codespaces Access Port</title>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      }),
+  });
+  assert.equal(probe.state, "down", "an HTML warning page is not a health answer");
+  assert.equal(probe.ok, false);
+  assert.match(probe.error, /مش JSON/);
+});
+
+test("schemeCandidates tries the registered origin first, then the other scheme", () => {
+  assert.deepEqual(mod.schemeCandidates("http://node.waifly.com:27316"), [
+    "http://node.waifly.com:27316",
+    "https://node.waifly.com:27316",
+  ]);
+  assert.deepEqual(mod.schemeCandidates("https://a.onrender.com"), [
+    "https://a.onrender.com",
+    "http://a.onrender.com",
+  ]);
+  assert.deepEqual(mod.schemeCandidates(""), []);
+});
+
+await testAsync("probeServer falls back to the other scheme and says which one answered", async () => {
+  const server = { id: "s9", name: "w", base: "http://node.waifly.com:27316", kind: "waifly", addedAt: 1 };
+  const tried = [];
+  const probe = await mod.probeServer(server, {
+    fetchImpl: async (url) => {
+      tried.push(url);
+      if (url.startsWith("http://")) throw new Error("fetch failed");
+      return jsonResponse({ status: "ok" });
+    },
+  });
+  assert.deepEqual(tried, ["http://node.waifly.com:27316/api/health", "https://node.waifly.com:27316/api/health"]);
+  assert.equal(probe.state, "up", "a live https answer must not be reported as down");
+  assert.equal(probe.via, "https://node.waifly.com:27316");
+});
+
+await testAsync("probeServer stays down (and names the reason) when both schemes fail", async () => {
+  const server = { id: "s10", name: "w", base: "http://node.waifly.com:27316", kind: "waifly", addedAt: 1 };
+  const probe = await mod.probeServer(server, {
+    fetchImpl: async () => {
+      throw new Error("getaddrinfo ENOTFOUND node.waifly.com");
+    },
+  });
+  assert.equal(probe.state, "down");
+  assert.equal(probe.via, undefined, "nothing answered, so nothing is claimed to have answered");
+  assert.match(probe.error, /النطاق/);
+});
+
+test("a missing registry file starts from the machines we know, not from nothing", () => {
+  const previous = process.env.NOVA_SERVERS_FILE;
+  process.env.NOVA_SERVERS_FILE = join(work, "never-written.json");
+  const list = mod.loadServers();
+  process.env.NOVA_SERVERS_FILE = previous;
+  assert.ok(list.length >= 2, "the Codespace and the Waifly slot should be there");
+  assert.ok(list.some((s) => s.kind === "waifly" && s.base.includes("27316")));
+  assert.ok(list.every((s) => s.id.startsWith("srv-")), "seeded entries need real ids");
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const f of failures) console.log(` - ${f}`);
