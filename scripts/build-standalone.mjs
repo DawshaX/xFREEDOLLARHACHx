@@ -351,10 +351,20 @@ fs.writeFileSync(
   `#!/bin/sh
 # NOVA — start (no install needed)
 # PORT is taken from PORT or SERVER_PORT; the panel is served from ./public.
+#
+# The cd is load-bearing. A panel egg runs its startup command from /home/container
+# (or whatever its workdir is), not from inside the bundle, so "sh app/start.sh"
+# used to die with "Cannot find module '/home/container/boot.mjs'" while the files
+# sat right there. Measured 2026-11-05 from /tmp before this line existed.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+cd "$HERE" || exit 1
 export NODE_ENV=production
 export HOST=0.0.0.0
-export NOVA_STATIC_DIR="$(cd "$(dirname "$0")" && pwd)/public"
-export NOVA_MEMORY_FILE="$(cd "$(dirname "$0")" && pwd)/state/nova-memory.json"
+export NOVA_STATIC_DIR="$HERE/public"
+export NOVA_MEMORY_FILE="$HERE/state/nova-memory.json"
+export NOVA_JOBS_REL="$HERE/state/jobs"
+export NOVA_PROGRAMS_FILE="$HERE/state/programs.json"
+mkdir -p "$HERE/state/jobs"
 exec node boot.mjs
 `,
   { mode: 0o755 },
@@ -428,31 +438,29 @@ fs.writeFileSync(
 - الواجهة: /self-check   ·   الذاكرة: state/nova-memory.json
 
 ────────────────────────────────────────────────────────────
-①-ب  على بانل Pterodactyl (زي Waifly) — إعدادات الـStartup
+①-ب  على بانل Pterodactyl (زي Waifly) — الطريقة اللي بتشتغل
 ────────────────────────────────────────────────────────────
-الـegg بيشغّل:  /start.sh → npm install → node <Main file (Node.js)>
-فخليك في التبويب Startup → Variables بالشكل ده:
+الـegg اسمه NodeJS، وبيشغّل اللي تكتبه في خانة Startup Command من مجلد
+/home/container (مش من جوه مجلد الباندل). عشان كده:
 
-    Runtime                    = node
-    Node.js Version            = 22
-    Main file (Node.js)        = index.js      ← المهم
-    User Uploaded Files        = 1             (تخطّي git clone)
-    Additional NPM packages    = (اتركها فاضية)
-    Additional Node Arguments  = (اتركها فاضية)
+  Startup Command:   sh nova-24-7/start.sh
 
-وللنود زوّد المتغيرين دول في نفس الصفحة:
+  start.sh بيعمل cd لمجلده الأول، فالملفات بتتلقى مهما كان المجلد اللي
+  اللوحة بتنفّذ منه. (قبل 2026-11-05 ما كانش بيعمل كده، وكان بيموت بـ
+  "Cannot find module /home/container/boot.mjs" والسيرفر سليم تمامًا.)
 
-    NOVA_ROLE   = node
-    NOVA_SERVER = wss://<عنوان-الهاب>/api/local-agent/ws
-    NOVA_AGENT_ID = waifly-2
+  لو الملفات مرفوعة في جذر /home/container مباشرة (مش جوه مجلد):
+  Startup Command:   sh start.sh
 
-الـegg بيقبل متغيرات إضافية من نفس الصفحة، ولو مش لاقي مكان تضيفها
-اكتبهم في ملف .env (شوف node.env.example) — boot.mjs بيقرأ البيئة فقط.
+متكتبش npm install ولا node . — مفيش أي تثبيت مطلوب.
 
-⚠️ ما تغيّرش الـegg لـ«Web Hosting (PHP)» — PHP مش بيشغّل Node،
-   والبرنامج بتاعك JavaScript بالكامل. سيبها NodeJS + Python + FFmpeg.
+اختيار الـegg: NodeJS لوحده. مش NodeJS + Python ومش + FFmpeg —
+بايثون وFFmpeg بياخدوا من نفس الـ RAM ومش مستخدمين خالص، والسلوت 300 MB.
 
-────────────────────────────────────────────────────────────
+لو اللوحة بتسأل عن «Main file»: server.mjs  (أو boot.mjs — الاتنين شغالين).
+
+⚠️ ما تغيّرش الـegg لـ«Web Hosting (PHP)» — PHP مش بيشغّل Node.
+
 ② تشغيل كـ«نود» (سيرفر تاني ينضم للأسطول)
 ────────────────────────────────────────────────────────────
 حط المتغيرين دول في إعدادات السيرفر (أو في ملف .env — شوف node.env.example):
