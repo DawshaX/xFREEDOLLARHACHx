@@ -1,6 +1,6 @@
 # 🛡️ CyberNova (`xFREEDOLLARHACHx`) — Master Architecture & Session Handoff Log
 
-> **تاريخ آخر تحديث:** `2026-10-30`
+> **تاريخ آخر تحديث:** `2026-11-05` (المرحلة 48 — «التحديث اللي بيتنفّذ فعلًا»)
 > **المستودع الرسمي والمرجعي 100%:** `https://github.com/DawshaX/xFREEDOLLARHACHx`
 > **الرابط الحي الدائم (GitHub Pages Auto-Deploy):** `https://dawshax.github.io/xFREEDOLLARHACHx/`
 > **رابط استوديو البج باونتي وموسوعة الثغرات:** `https://dawshax.github.io/xFREEDOLLARHACHx/bug-bounty-studio`
@@ -1265,3 +1265,77 @@ updated:11/total:11` · بعد جوب حقيقي على `scanme.nmap.org`: `scan
 api build ✓ · panel build ✓ · twins ✓ (3 متطابقين) · contracts ✓ · connections ✓ · static-brain ✓.
 اللي لسه متأجّل بقرار: عقدة Waifly (`#75`)، شغل Postgres على الجوبات، `override.query.version: 5`،
 و`free-host-survey.yml` (cancel-in-progress) — واللي على البشر: حذف ريليس فيه `.env` وتغيير `NOVA_EXEC_TOKEN`.
+
+---
+
+## المرحلة 48 — «كل حاجة اتشحنت ومفيش حاجة عاشت»: إعادة التشغيل الذاتي
+
+**السبب اللي كان بيمنع كل المراحل اللي فاتت إنها توصل للسيرفر الحيّ.** قياس حقيقي على سلوت
+Waifly في `2026-11-05`:
+
+```
+pid 28 · startedAt 01:26:03          ← العملية الشغّالة
+build.json على الديسك 02:34:39        ← الملفات الجديدة
+updater قال «installed» الساعة 02:41  ← والحالة كلها خضراء
+```
+
+تلات إصدارات (`409d500` · `9e39a1e` · `38a6b3b`) اتطبّقت على الديسك والموقع فضل يخدم كود
+الساعة 01:26. ولا حقل واحد في كل الـstatus كان بيقدر يقول كده، لأن كل حقل كان بيوصف **الديسك**،
+مش **العملية**. عشان كده `/api/fleet/system` (اللي اتضاف في `cbbd8e8`) كان بيرجّع
+`static:true` على السيرفر الحيّ: العملية كانت من `9e39a1e`، والـcatch-all بتاع `/fleet/*` فيها
+بيرد على أي مسار مش معروف فيه.
+
+### 1) `lib/self-restart.ts` — الحقيقة بقت من جوه العملية
+- `bootBuild()` بيقرا `build.json` **مرة واحدة عند الاستيراد** (مش عند كل طلب)، فبقى ممكن نجاوب
+  سؤال «الكود اللي بيشتغل فعلًا إيه؟» — وده سؤال مفيش `build.json` يقدر يجاوب عليه.
+- `buildDrift()` بيرجّع `{boot, disk, stale}`؛ `stale=true` يعني «شُحنت نسخة ومحدش عمل reload».
+- `writeRestartMarker()` بيكتب `state/.nova-restart` من **نفس العملية** اللي عارفة مسار الـstate
+  بتاعها — من غير HTTP ولا تخمين بورت. المحتوى فيه `seq` + `ms` عشان الكتابة مرتين في نفس
+  الملّي ثانية تفضل تغيّر الـmtime (الـ`boot.mjs` بيقارن mtime).
+- `requestReload({verifyMs})` بيكتب الماركر وبعد 9 ثواني، **لو العملية لسه عايشة**، بيبلّغ
+  `{reloaded:false}` بدل ما يقول «اتعمل».
+- `selfRespawn()` — للنسخة اللي **من غير مُشرف** (`node nova-app.mjs` مباشرة): بيولّد عملية بديلة
+  بعد 3 ثواني ويقفل نفسه، بحراسات: 3 محاولات كحد أقصى، ومش بيشتغل قبل 20 ثانية من عمر العملية
+  (ده اللي يمنع حلقة reload تموّت سلوت 300 ميجا).
+
+### 2) `deploy/live-update.py` — البورت الغلط
+`PORT_CANDIDATES = (27214,)` كان تخمين قديم. لو الـPOST على `/api/nova-core/restart` ماضربش،
+السكربت كان بيرجع `0` برضه، والتطبيق كان بيكتب «المُشرف بيعيد التشغيل». بقى
+`(27214, 27316, 8080, 8000, 3000, 5000, 7860, 10000)` — وأهم من كده إن التطبيق بقى بيكتب الماركر
+بنفسه بعد نجاح التثبيت، فالتخمين ده بقى محاولة أولى مش الطريق الوحيد.
+
+### 3) الحالة بقت بتقول الحقيقة
+`GET /api/nova-core/version` زوّد: `boot` · `stale` · `staleWhy` (جملة فيها الـpid والوقتين).
+`GET /api/nova-core/auto-update` زوّد: `bootCommit` · `bootBuiltAt` · `restartNeeded` ·
+`logTail` (آخر 25 سطر من `state/auto-update.log`) · `restartTrace`. وقرار `up-to-date` بقى
+بيفرّق بين «مفيش أحدث» و«فيه أحدث على الديسك بس مش شغّال» (`restart-needed`).
+`POST/GET /api/nova-core/restart?force=1` بيبدّل العملية بنفسها لما مفيش مُشرف (بدل `409` جاف).
+
+### 4) اللوحة شافت الفرق
+`NovaSystemCard` بقى فيه سطر «الكود الشغّال»: commit العملية + وقت البناء، ولما `stale` يبقى
+أحمر مع زرار **«شغّل النسخة الجديدة»** بينادي `/api/nova-core/restart`.
+
+### 5) مقاس، مش متحكى
+- `scripts/test-self-restart.mjs` — **13/13** (snapshot الـboot · drift · الماركر · فشل الـreload
+  المبلّغ عنه · كل حالات رفض الـrespawn).
+- دورة كاملة على الحزمة: `boot.mjs` + `PORT=8240` → `version` (boot = disk، `stale:false`) →
+  تعديل `build.json` → `stale:true` + `restartNeeded:true` + `staleWhy` بالعربي → `restart` →
+  `pid` جديد و`boot = disk` و`stale:false`. **ده اللي كان بيفشل في صمت.**
+- `audit-contracts` بقى فيه عقدين جديدين (`/api/nova-core/version` · `/api/nova-core/auto-update`)
+  و`audit-connections` **0 gaps** بعد ما اتضاف رد ثابت صادق لـ`/api/nova-core/restart` في الوضع الثابت.
+- `audit-twins` بقى بيصرّح بـ`corpus-live.ts` كـdrift مقصود (سيرفر بيقرا ملف · متصفح بيجيب بـfetch)
+  — كان فاشل على `main` قبل أي تعديل في المرحلة دي.
+- السيرفر الحيّ اتأكد: `/api/nova-core/version` رجّع `pid 46 · uptime 11s` بعد ما اتبعت الماركر
+  يدوي، و`/api/fleet/system` رجّع `machines 3 · up 2 · corpus 168,682 · brain 4 · mesh 20/9`،
+  و`says_ar` = «2/3 ماكينة بترد · كوربوس 168,682 ثغرة · 4 مزوّد عقل · 9 عقدة شغّالة».
+
+### 6) اللي لسه ناقص (بصراحة)
+- Codespace 8080 لسه **Private** → `/api/health` بيرد HTML، فالمِش بيشوف ماكينتين بس من برّه.
+- `capacity.ready:false` و`agents 0/10`: مفيش ولا وكيل `nova-agent.js` متصل (المسار جاهز، اللي ناقص تشغيله).
+- `state/nova-memory.json` لسه `0 bytes` على السلوت الحيّ.
+- خطوة الـsubdomain المجاني في `deploy/machines/waifly-live.md` — اتضافت في المرحلة دي (كانت ناقصة).
+
+### 7) ملاحظة على `fetch_page` (تفيد أي حد بيكمل من مكنة تانية)
+`fetch_page` بيكاش الردود حسب الـURL بالكامل، فـ`/api/fleet/system` بيرجّع نفس الرد القديم لو
+اتطلب بنفس الرابط. لازم `?cb=<عشوائي>` مع كل قياس حيّ — من غير كده هتفتكر إن النشر ماحصلش
+(وده اللي خلّى تشخيص المرحلة دي يتأخر).

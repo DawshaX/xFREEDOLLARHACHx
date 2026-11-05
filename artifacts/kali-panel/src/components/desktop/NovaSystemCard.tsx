@@ -15,7 +15,7 @@
  *     never pretends every entry was typed here.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Activity, Brain, Database, Loader2, Network, RefreshCw, Server } from "lucide-react";
+import { Activity, Brain, Database, Loader2, Network, Power, RefreshCw, Server } from "lucide-react";
 import { effectiveBase, isRemoteConfigured } from "@/lib/remote";
 
 interface SystemMachine {
@@ -27,6 +27,18 @@ interface SystemMachine {
   ms: number | null;
   error?: string;
   learnedFrom?: string;
+}
+
+/**
+ * Which code is actually executing. `build` is the disk, `boot` is the process:
+ * on 2026-11-05 the live slot answered with `boot.builtAt` 01:26 while
+ * `build.builtAt` said 02:34 — a shipped release that no one was running.
+ */
+interface VersionSnapshot {
+  build?: { commit?: string; builtAt?: string };
+  boot?: { commit: string | null; builtAt: string | null };
+  stale?: boolean;
+  staleWhy?: string | null;
 }
 
 interface SystemSnapshot {
@@ -47,8 +59,11 @@ const STATE_COLOR: Record<string, string> = {
 
 export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
   const [snap, setSnap] = useState<SystemSnapshot | null>(null);
+  const [ver, setVer] = useState<VersionSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  const [restartNote, setRestartNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -68,6 +83,32 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
       setSnap(null);
     } finally {
       setBusy(false);
+    }
+    // Same request pattern, different question: is the running code the
+    // shipped code? Failures here are silent — the system card still stands.
+    try {
+      const res = await fetch("/api/nova-core/version", { signal: AbortSignal.timeout(8000) });
+      if (res.ok) setVer((await res.json()) as VersionSnapshot);
+      else setVer(null);
+    } catch {
+      setVer(null);
+    }
+  }, []);
+
+  const restart = useCallback(async () => {
+    setRestarting(true);
+    setRestartNote(null);
+    try {
+      // force=1 only matters on a bundle with no supervisor (it swaps the
+      // process out itself); under boot.mjs the marker is enough.
+      const res = await fetch("/api/nova-core/restart", { method: "POST", signal: AbortSignal.timeout(10000) });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; note?: string; forced?: boolean };
+      setRestartNote(body.note ?? (res.ok ? "اتبعت طلب إعادة التشغيل" : `HTTP ${res.status}`));
+    } catch {
+      // A restart that works kills the connection — that is the success case.
+      setRestartNote("الاتصال اتقطع — ده معناه إن البرنامج قام من جديد. استنى 5 ثواني واضغط قياس دلوقتي.");
+    } finally {
+      setRestarting(false);
     }
   }, []);
 
@@ -141,6 +182,40 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
           <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-[8.5px] leading-relaxed text-white/70">
             {snap.says_ar}
           </div>
+
+          {ver && (
+            <div
+              className={`rounded-lg p-2 text-[8px] font-mono flex flex-wrap items-center gap-2 border ${
+                ver.stale
+                  ? "border-rose-500/50 bg-rose-500/10 text-rose-100"
+                  : "border-white/10 bg-white/[0.03] text-white/55"
+              }`}
+            >
+              <span className="text-white/40">الكود الشغّال</span>
+              <span dir="ltr">{(ver.boot?.commit ?? "?").slice(0, 7)}</span>
+              <span className="text-white/25">
+                {ver.boot?.builtAt ? new Date(ver.boot.builtAt).toISOString().slice(11, 19) : "?"}
+              </span>
+              {ver.stale ? (
+                <>
+                  <span dir="ltr" className="text-rose-200">
+                    ≠ ديسك {(ver.build?.commit ?? "?").slice(0, 7)}
+                  </span>
+                  <button
+                    onClick={() => void restart()}
+                    disabled={restarting}
+                    className="ms-auto px-2 py-0.5 rounded border border-rose-400/50 bg-rose-400/15 text-rose-100 hover:bg-rose-400/25 flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {restarting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Power className="h-3 w-3" />}
+                    شغّل النسخة الجديدة
+                  </button>
+                </>
+              ) : (
+                <span className="text-emerald-300/80 ms-auto">مطابق للديسك</span>
+              )}
+              {restartNote && <span className="basis-full text-white/60">{restartNote}</span>}
+            </div>
+          )}
 
           {!compact && (
             <div className="space-y-1">

@@ -11,6 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Router, type Request, type Response } from "express";
+import { buildDrift, canSelfRespawn, selfRespawn, writeRestartMarker, restartMarkerPaths, restartHistory } from "../lib/self-restart";
 import { runAgent, type AgentEvent } from "../lib/agent/core";
 import { AGENT_TOOLS, runAgentTool, getToolSpec } from "../lib/agent/tools";
 import { buildPersonaCard, NOVA_IDENTITY, NOVA_SYSTEM_PROMPT } from "../lib/agent/persona";
@@ -262,9 +263,18 @@ router.get("/nova-core/version", (_req: Request, res: Response) => {
     }
   }
   res.setHeader("Cache-Control", "no-store");
+  const drift = buildDrift();
   res.json({
     ok: true,
     build: build ?? { commit: "unknown", note: "مفيش build.json — النسخة دي أقدم من نظام البصمة" },
+    // `build` is the DISK. `boot` is the code actually executing. When they
+    // differ, a deploy landed and no restart happened — the exact state the
+    // live Waifly slot sat in for 70 minutes on 2026-11-05.
+    boot: drift.boot,
+    stale: drift.stale,
+    staleWhy: drift.stale
+      ? `الملفات على الديسك من ${drift.disk.builtAt} والعملية الشغّالة (pid ${process.pid}) بدأت من ${drift.boot.builtAt} — محتاج إعادة تشغيل`
+      : null,
     source: from,
     runtime: {
       node: process.version,
@@ -289,38 +299,40 @@ router.get("/nova-core/version", (_req: Request, res: Response) => {
  * process back, so this endpoint refuses instead of killing the only thing
  * serving requests.
  */
-function restartMarkerPaths(): string[] {
-  const out: string[] = [];
-  if (process.env.NOVA_STATIC_DIR) out.push(path.resolve(process.env.NOVA_STATIC_DIR, "..", "state", ".nova-restart"));
-  out.push(path.resolve(process.cwd(), "state", ".nova-restart"));
-  return [...new Set(out)];
-}
-
-const handleRestart = (_req: Request, res: Response) => {
+const handleRestart = (req: Request, res: Response) => {
   const supervised = process.env.NOVA_SUPERVISED === "1";
   const paths = restartMarkerPaths();
+  const force = String(req.query.force ?? "") === "1";
   res.setHeader("Cache-Control", "no-store");
 
   if (!supervised) {
+    const can = canSelfRespawn();
+    if (force && can.ok) {
+      const started = selfRespawn();
+      res.json({
+        ok: started.ok,
+        supervised: false,
+        forced: true,
+        note: started.ok
+          ? "مفيش مُشرف، فالعملية بتبدّل نفسها: هتقفل دلوقتي وتقوم تاني بعد 3 ثواني على نفس البورت."
+          : started.reason,
+        entry: started.entry ?? null,
+        marker: paths,
+      });
+      return;
+    }
     res.status(409).json({
       ok: false,
       supervised: false,
-      note: "مفيش مُشرف (supervisor) في النسخة اللي شغّالة — إعادة التشغيل الذاتي متاحة بس في حزمة nova-24-7. أعد تشغيل السيرفر من اللوحة مرة واحدة.",
+      canSelfRespawn: can.ok,
+      forceAvailable: can.ok,
+      note: `${can.reason}. مفيش مُشرف في النسخة اللي شغّالة — نادِ /api/nova-core/restart?force=1 عشان البرنامج يبدّل نفسه، أو اضغط Restart من اللوحة.`,
       marker: paths,
     });
     return;
   }
 
-  const written: string[] = [];
-  for (const p of paths) {
-    try {
-      fs.mkdirSync(path.dirname(p), { recursive: true });
-      fs.writeFileSync(p, new Date().toISOString());
-      written.push(p);
-    } catch {
-      /* the other candidate may still work */
-    }
-  }
+  const written = writeRestartMarker();
 
   if (written.length === 0) {
     res.status(500).json({ ok: false, supervised: true, note: "مقدرتش أكتب ملف إعادة التشغيل" });
@@ -333,6 +345,7 @@ const handleRestart = (_req: Request, res: Response) => {
     supervised: true,
     restartingInMs: 1000,
     marker: written,
+    trace: restartHistory(),
     note: "المُشرف شاف الملف وهيعيد تشغيل البرنامج بالنسخة الجديدة — عُد بعد 3 ثواني على /api/nova-core/version.",
   });
 };

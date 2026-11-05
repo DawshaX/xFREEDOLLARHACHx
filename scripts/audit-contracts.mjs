@@ -58,6 +58,8 @@ const CONTRACTS = [
   { path: "/api/fleet/mesh", required: ["nodes", "capacity", "stats", "log"] },
   { path: "/api/fleet/mesh/log", required: ["log"] },
   { path: "/api/fleet/plan/active", required: [] },
+  { path: "/api/nova-core/version", required: ["build", "boot", "stale"] },
+  { path: "/api/nova-core/auto-update", required: ["enabled", "bootBuiltAt", "restartNeeded", "logTail"] },
   { path: "/api/nova-core/status", required: [] },
   { path: "/api/nova-core/tools", required: [] },
   { path: "/api/nova-core/persona", required: [] },
