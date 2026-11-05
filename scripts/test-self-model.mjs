@@ -40,6 +40,13 @@ const { AGENT_TOOLS } = await import(
   })()
 );
 
+// identityAnswer lives in core.ts (it is the answer path, not the model), so the
+// test bundles it too — the promise being checked is that the numbers in the
+// answer are the numbers in the registry.
+const coreBundle = join(work, "core.mjs");
+bundleCli(ROOT, [join(ROOT, "artifacts/api-server/src/lib/agent/core.ts"), "--bundle", "--format=esm", "--platform=node", "--log-level=error", `--banner:js=${shim}`, `--outfile=${coreBundle}`]);
+const core = await import(coreBundle);
+
 let passed = 0;
 const failures = [];
 const test = (name, fn) => {
@@ -92,6 +99,23 @@ test("an unmeasured corpus is reported as unmeasured, never as zero rows", () =>
 test("no registered machine is said out loud", () => {
   const p = mod.selfModelPrompt({ ...model, machines: { registered: 0, names: [] } });
   assert.match(p, /0 ماكينة/);
+});
+
+test("«انت مين» is answered from the measurement, including the real count", () => {
+  const answer = core.identityAnswer(model);
+  assert.match(answer, new RegExp(String(AGENT_TOOLS.length)), "the answer must carry the measured tool count");
+  assert.doesNotMatch(answer, /33 أداة/, "the number that was typed once must never come back");
+  assert.match(answer, /مش بعمله/, "limits are stated in the same breath");
+  assert.match(answer, /example\.com/, "the answer ends with something the user can do now");
+});
+
+test("the self-question matcher catches the questions and nothing else", () => {
+  for (const q of ["انت مين", "تقدر تحمل ادوات؟", "تقدر تشتغل على metasploit و burpsuite؟", "تنزل أدوات كالي؟"]) {
+    assert.equal(core.SELF_QUESTION.test(q), true, `should match: ${q}`);
+  }
+  for (const q of ["استطلع example.com", "ابحث عن CVE-2024-3094", "كم جهاز في الأسطول؟"]) {
+    assert.equal(core.SELF_QUESTION.test(q), false, `should NOT match: ${q}`);
+  }
 });
 
 console.log(`\nself-model: ${passed} passed, ${failures.length} failed`);
