@@ -370,6 +370,29 @@ exec node boot.mjs
   { mode: 0o755 },
 );
 
+/**
+ * `run` — the launcher with no dot in its name.
+ *
+ * Measured 2026-11-05: pasting "sh /home/container/nova-24-7/start.sh" into a
+ * chat or a phone first turns it into a markdown link — `start.sh` looks like a
+ * hostname because `.sh` is a real TLD (Saint Helena). The panel then receives
+ * the literal text `[start.sh](http://start.sh)` and dies with
+ * "sh: 0: cannot open .../nova-24-7/[start.sh](http://start.sh): No such file"
+ * while the files sit right there. A name with no extension cannot be
+ * mangled, so panels get told:  sh /home/container/nova-24-7/run
+ */
+fs.writeFileSync(
+  path.join(OUT, "run"),
+  `#!/bin/sh
+# NOVA launcher — same thing as start.sh, with a name nothing linkifies.
+# Usage (Pterodactyl / Waifly Startup Command):
+#   sh /home/container/nova-24-7/run
+HERE="$(cd "$(dirname "$0")" && pwd)"
+exec sh "$HERE/start.sh" "$@"
+`,
+  { mode: 0o755 },
+);
+
 fs.writeFileSync(
   path.join(OUT, "start-tunnel.sh"),
   `#!/bin/sh
@@ -440,24 +463,28 @@ fs.writeFileSync(
 ────────────────────────────────────────────────────────────
 ①-ب  على بانل Pterodactyl (زي Waifly) — الطريقة اللي بتشتغل
 ────────────────────────────────────────────────────────────
-الـegg اسمه NodeJS، وبيشغّل اللي تكتبه في خانة Startup Command من مجلد
-/home/container (مش من جوه مجلد الباندل). عشان كده:
+الـegg بيشغّل اللي تكتبه في Startup Command من مجلد /home/container
+(مش من جوه مجلد الباندل). الأمر الصح:
 
-  Startup Command:   sh nova-24-7/start.sh
+    sh /home/container/nova-24-7/run
 
-  start.sh بيعمل cd لمجلده الأول، فالملفات بتتلقى مهما كان المجلد اللي
-  اللوحة بتنفّذ منه. (قبل 2026-11-05 ما كانش بيعمل كده، وكان بيموت بـ
-  "Cannot find module /home/container/boot.mjs" والسيرفر سليم تمامًا.)
+ليه «run» مش «start.sh»؟ لأن start.sh لما بتلصقها في شات أو على الموبايل
+بتتحول للينك ماركداون (‎.sh اسم دولة حقيقي — سانت هيلينا)، فاللوحة بتستلم
+حرفيًا [start.sh](http://start.sh) وترفض:
 
-  لو الملفات مرفوعة في جذر /home/container مباشرة (مش جوه مجلد):
-  Startup Command:   sh start.sh
+    sh: 0: cannot open /home/container/nova-24-7/[start.sh](...): No such file
 
-متكتبش npm install ولا node . — مفيش أي تثبيت مطلوب.
+«run» مفيهوش نقطة، فمستحيل يتلخبط. لو اللصق اتظبط عندك: start.sh زيها زي run.
+
+Startup Command 2: سيبها فاضية.
+Docker Image  : Node.js 22   (22 هي اللي اتقاس عليها؛ 24+ ممكن تشتغل، غير مختبرة)
+Main file     : لو اللوحة سألت — server.mjs (أو boot.mjs، الاتنين شغالين)
+
+ممنوع npm install أو node . — مفيش أي تثبيت ولا بناء.
+البناء محتاج ~1.5 GB والسلوت 300 MB.
 
 اختيار الـegg: NodeJS لوحده. مش NodeJS + Python ومش + FFmpeg —
-بايثون وFFmpeg بياخدوا من نفس الـ RAM ومش مستخدمين خالص، والسلوت 300 MB.
-
-لو اللوحة بتسأل عن «Main file»: server.mjs  (أو boot.mjs — الاتنين شغالين).
+بايثون وFFmpeg بياخدوا من نفس الـ RAM ومش مستخدمين خالص.
 
 ⚠️ ما تغيّرش الـegg لـ«Web Hosting (PHP)» — PHP مش بيشغّل Node.
 
@@ -711,6 +738,18 @@ try {
 } catch {
   console.error("✗ الحزمة اترفضت — الباندر ما بيكملش بعد تسريب محتمل.");
   process.exit(1);
+}
+
+/* ── 2e. the launchers a panel needs must actually be in the bundle ──────── */
+/* Measured 2026-11-05: the zip shipped without a launcher that survives a paste,
+ * and a Pterodactyl panel received `[start.sh](http://start.sh)` and died with
+ * "No such file" while every file was present. Shipping is not the same as
+ * working, so the two entry points are checked here instead of trusted. */
+for (const name of ["run", "start.sh", "boot.mjs", "server.mjs", "public/index.html"]) {
+  if (!fs.existsSync(path.join(OUT, name))) {
+    console.error(`✗ الحزمة ناقصة ${name} — الباندر ما بيكملش.`);
+    process.exit(1);
+  }
 }
 
 /* ── 3. zip it ───────────────────────────────────────────────────────────── */

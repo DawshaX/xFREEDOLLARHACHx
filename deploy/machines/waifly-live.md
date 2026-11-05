@@ -51,12 +51,23 @@ https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-portable/nova
 cd /home/container && unzip -oq nova-24-7.zip && rm -f nova-24-7.zip && ls nova-24-7
 ```
 
-### ٣) اضبط Start Command
-روح تبويب **Startup** (أو Settings) → خانة **Startup Command** → امسح اللي فيها وحطّ بالظبط:
+### ٣) اضبط Startup Command
+روح تبويب **Startup** → **Startup Command 1** → امسح اللي فيها وحطّ بالظبط:
 
 ```sh
-sh nova-24-7/start.sh
+sh /home/container/nova-24-7/run
 ```
+
+- **Startup Command 2**: سيبها **فاضية**.
+- **Docker Image**: **Node.js 22** (22 هي اللي اتقاس عليها؛ 24+ ممكن تشتغل بس مش مختبرة).
+
+> **ليه `run` مش `start.sh`؟** لأن `start.sh` لما تتلصق في شات أو على الموبايل بتتحول لينك ماركداون —
+> `.sh` اسم دولة حقيقي (سانت هيلينا). اللوحة بعدها بتستلم حرفيًا:
+> `sh: 0: cannot open /home/container/nova-24-7/[start.sh](http://start.sh): No such file`
+> وده اللي حصل فعلًا. الملف `run` مفيهوش نقطة فمستحيل يتلخبط، وبيعمل نفس الحاجة بالظبط.
+>
+> ملحوظة تانية من نفس اللوج: أول سطر كان `:/home/container$ /start.sh` — يعني **Startup Command 1** كان
+> لسه على القيمة الافتراضية بتاعة الـegg. لازم تمسحها، من غير ما تسيب أي أمر تاني.
 
 > **متكتبش** `npm start` ولا `node .` — الباندل مش محتاج npm ومش محتاج تثبيت أي حاجة.
 
@@ -96,6 +107,8 @@ bash scripts/fleet-verify.sh http://node.waifly.com:27316
 
 | العرض | السبب | الحل |
 |---|---|---|
+| `cannot open .../[start.sh](http://start.sh): No such file` | الأمر اتلصق من شات/موبايل فاتحول للينك ماركداون | استخدم `sh /home/container/nova-24-7/run` — مفيش نقطة فيه |
+| `cannot open .../nova-24-7/run: No such file` | الملفات مش مرفوعة أو الزيب ماتفكّش | `ls /home/container/nova-24-7` — لازم تشوف `run` و`boot.mjs` |
 | `Cannot find module '/home/container/boot.mjs'` | نسخة قديمة من `start.sh` (قبل إصلاح 2026-11-05) | هات الزيب الجديد تاني وافكّه فوق القديم |
 | `Killed` / OOM بعد التشغيل | كنت بتعمل build على السيرفر | امسح `nova-24-7` وارفع الزيب بس (مفيش build) |
 | اللوج سليم بس الرابط 502 | البورت اللي البرنامج سامع عليه ≠ البورت اللي الوكيل بيوجّه له | في Console: `env \| grep -i port` — لازم يكون نفس البورت اللي في اللوج |
