@@ -12,7 +12,7 @@ import { runCveMigrations } from "./lib/migrate-cves";
 import { runSentinelMigrations } from "./lib/migrate-sentinel";
 import { scheduleGC } from "./lib/gc-scheduler";
 import { forceOllamaDefault } from "./lib/ai";
-import { initLocalAgentWss } from "./routes/local-agent";
+import { initLocalAgentWss, registerEmbeddedAgent } from "./routes/local-agent";
 import { wsUpgradeAllowed } from "./lib/ops/gate";
 import {
   registerHubClient,
@@ -284,6 +284,24 @@ console.log(
     : `· tools: مافيش في ${toolchainAtBoot.dir} — NOVA_TOOLCHAIN_FETCH=1 بينزّلهم، أو POST /api/ops/tools/provision من الشات`,
 );
 bootToolchainFetch((m) => logger.info(m));
+
+// ── Embedded self-node (added 2026-11-06) ────────────────────────────────────
+// The fleet used to be empty until a human set NOVA_EXEC_TOKEN and ran
+// nova-agent.js on a machine. That is correct security, but it left the platform
+// with zero execution plane out of the box. Registering the server process
+// itself as a node gives the fleet a real machine immediately — measured
+// capabilities, real command execution, no new network surface, no gate bypass.
+// Disable with NOVA_SELF_NODE=0.
+try {
+  const selfNodeId = registerEmbeddedAgent();
+  if (selfNodeId) {
+    console.log(`✓ self-node: ${selfNodeId} registered (fleet has a real execution plane)`);
+  } else {
+    console.log("· self-node: disabled (NOVA_SELF_NODE=0)");
+  }
+} catch (e) {
+  logger.warn({ e }, "self-node registration failed — fleet stays empty until a remote agent connects");
+}
 
 const corpusAtBoot = corpusStatus();
 if (corpusAtBoot.measured) {

@@ -834,11 +834,57 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
       }
 
       case "vuln_search": {
-        const keyword = String(rawArgs.keyword ?? "").trim();
-        if (!keyword) throw new Error("keyword مطلوب");
+        const rawKeyword = String(rawArgs.keyword ?? "").trim();
+        if (!rawKeyword) throw new Error("keyword مطلوب");
         const limit = Math.min(Number(rawArgs.limit ?? 8) || 8, 20);
-        const res = (await nvdSearch({ keyword, limit })) as { totalResults?: number; vulnerabilities?: unknown[] };
-        return done(true, `NVD "${keyword}": ${res.totalResults ?? res.vulnerabilities?.length ?? 0} نتيجة`, res);
+
+        // ── keyword extraction (added 2026-11-06) ────────────────────────────
+        // Measured failure: the user typed a long Arabic sentence and the whole
+        // sentence was sent to NVD as one keyword → 0 results, every time.
+        // NVD matches product/technology names, not prose. So we reduce the
+        // input to the terms that can actually match, and if the first attempt
+        // still returns nothing we retry with progressively broader terms.
+        const candidates = extractSearchKeywords(rawKeyword);
+        let used = candidates[0] ?? rawKeyword;
+        let res = (await nvdSearch({ keyword: used, limit })) as {
+          totalResults?: number;
+          vulnerabilities?: unknown[];
+        };
+        let count = res.totalResults ?? res.vulnerabilities?.length ?? 0;
+
+        // Fallback ladder: try the other extracted terms before giving up.
+        const tried: string[] = [used];
+        for (const alt of candidates.slice(1, 4)) {
+          if (count > 0) break;
+          if (tried.includes(alt)) continue;
+          tried.push(alt);
+          try {
+            const r2 = (await nvdSearch({ keyword: alt, limit })) as {
+              totalResults?: number;
+              vulnerabilities?: unknown[];
+            };
+            const c2 = r2.totalResults ?? r2.vulnerabilities?.length ?? 0;
+            if (c2 > 0) {
+              res = r2;
+              used = alt;
+              count = c2;
+            }
+          } catch {
+            /* try the next term */
+          }
+        }
+
+        const note =
+          used !== rawKeyword
+            ? ` (استخرجت الكلمة المفتاحية «${used}» من النص — NVD بيطابق أسماء المنتجات مش الجمل)`
+            : "";
+        return done(
+          count > 0,
+          count > 0
+            ? `NVD "${used}": ${count} نتيجة${note}`
+            : `NVD "${used}": 0 نتيجة${note} — جرّب اسم منتج/تقنية بالإنجليزي (مثال: apache, wordpress, openssh) أو رقم CVE`,
+          { query: rawKeyword, usedKeyword: used, tried, totalResults: count, ...res },
+        );
       }
 
       case "exploit_search": {
@@ -1435,4 +1481,84 @@ export function extractTarget(text: string): string | null {
   if (/^(example|test|localhost)\./.test(host)) return null;
   if (net.isIP(host)) return host;
   return host;
+}
+
+/* ── keyword extraction for vuln_search (added 2026-11-06) ────────────────────
+ * NVD's keyword search matches product and technology names. A user asking in
+ * Arabic («عايز أعرف ثغرات في ووردبريس») sent the whole sentence and got 0
+ * results every time. This reduces free text to the terms that can match:
+ *   1. a CVE id, if present — that is the strongest signal;
+ *   2. Latin-script tokens (product names are almost always Latin);
+ *   3. a small Arabic→English technology map for the common cases;
+ *   4. otherwise the longest non-stopword token.
+ * Returns candidates best-first, de-duplicated, never empty when input is not.
+ */
+const AR_TECH_MAP: Array<[RegExp, string]> = [
+  [/وورد\s*بريس|ووردبريس|ورردبريس/, "wordpress"],
+  [/جوملا/, "joomla"],
+  [/دروبال/, "drupal"],
+  [/أباتشي|اباتشي/, "apache"],
+  [/نجينكس|نچينكس/, "nginx"],
+  [/لينكس|لينوكس/, "linux"],
+  [/ويندوز/, "windows"],
+  [/أندرويد|اندرويد/, "android"],
+  [/آيفون|ايفون/, "ios"],
+  [/أوراكل|اوراكل/, "oracle"],
+  [/مايكروسوفت|ميكروسوفت/, "microsoft"],
+  [/جوجل|قوقل/, "google"],
+  [/فايرفوكس/, "firefox"],
+  [/كروم/, "chrome"],
+  [/جافا/, "java"],
+  [/بايثون/, "python"],
+  [/نود\s*جيه\s*اس|نودجس/, "nodejs"],
+  [/دوكر/, "docker"],
+  [/كوبرنيتس|كوبرنيتيز/, "kubernetes"],
+  [/سيسكو/, "cisco"],
+  [/فورتينايت|فورتينت/, "fortinet"],
+  [/سيتريكس/, "citrix"],
+  [/فولنرابيليتي|ثغرة|ثغرات|اختراق/, ""],
+];
+
+const AR_STOPWORDS = new Set([
+  "عايز", "عاوز", "أعرف", "اعرف", "ممكن", "فيه", "فيها", "عن", "من", "على", "إلى", "الى",
+  "هل", "إيه", "ايه", "إيه", "اللي", "التي", "الذي", "ثغرات", "ثغرة", "أمنية", "امنية",
+  "برنامج", "برامج", "نظام", "سيرفر", "خادم", "موقع", "تطبيق", "شركة", "كيف", "أزاي", "ازاي",
+  "بحث", "ابحث", "دور", "لي", "عليها", "عليه", "كل", "أي", "اي", "واحد", "حاجة", "حاجه",
+]);
+
+export function extractSearchKeywords(text: string): string[] {
+  const raw = String(text || "").trim();
+  if (!raw) return [];
+  const out: string[] = [];
+  const push = (v: string) => {
+    const t = v.trim().toLowerCase();
+    if (t && t.length >= 2 && !out.includes(t)) out.push(t);
+  };
+
+  // 1. CVE id wins outright.
+  const cve = raw.match(/CVE-\d{4}-\d{4,7}/i);
+  if (cve) push(cve[0].toUpperCase());
+
+  // 2. Latin tokens (product/tech names are nearly always Latin).
+  const latin = raw.match(/[A-Za-z][A-Za-z0-9._+-]{1,30}/g) ?? [];
+  for (const t of latin) {
+    if (/^(the|and|for|with|from|about|what|how|please|search|find)$/i.test(t)) continue;
+    push(t);
+  }
+
+  // 3. Arabic technology names → canonical English product name.
+  for (const [rx, en] of AR_TECH_MAP) {
+    if (rx.test(raw) && en) push(en);
+  }
+
+  // 4. Last resort: the longest Arabic token that is not a stopword.
+  if (out.length === 0) {
+    const words = raw.split(/[\s،,.!?؟:;()\[\]{}«»"']+/).filter(Boolean);
+    const ranked = words
+      .filter((w) => !AR_STOPWORDS.has(w) && w.length >= 3)
+      .sort((a, b) => b.length - a.length);
+    if (ranked[0]) push(ranked[0]);
+  }
+
+  return out.length ? out : [raw];
 }

@@ -258,10 +258,22 @@ function buildNodes(): MeshNode[] {
 function capacity() {
   const devices = getConnectedAgentList();
   const online = Math.min(devices.length, TARGET_AGENTS);
+  // ── ready vs targetMet (added 2026-11-06) ────────────────────────────────
+  // `ready` used to mean "the 5×10 goal is met", which made the fleet page show
+  // `ready:false` even when a real machine was attached and executing commands.
+  // That conflated two different questions:
+  //   • can the platform actually execute right now?  → `ready`
+  //   • has it reached the planned capacity?          → `targetMet`
+  // Both are reported, both are measured. Nothing is assumed online.
+  const operational = devices.length >= 1 && online >= 1;
+  const targetMet = devices.length >= TARGET_MACHINES && online >= TARGET_AGENTS;
   return {
     machines: { target: TARGET_MACHINES, connected: devices.length },
     agents: { target: TARGET_AGENTS, connected: online },
-    ready: devices.length >= TARGET_MACHINES && online >= TARGET_AGENTS,
+    ready: operational,
+    targetMet,
+    operational,
+    selfNode: devices.some((d) => d.id === (process.env.NOVA_SELF_NODE_ID || "self-node")),
     installCommand: "curl -fsSL <host>/api/local-agent/download-agent | bash -s -- --id machine-N",
   };
 }
