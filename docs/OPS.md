@@ -277,3 +277,16 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
   `--frozen-lockfile` بـ`ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`).
 - `state/autonomy.json`: حالة تشغيل، بيتكتب جوه `NOVA_STATE_DIR` أو `state/` —
   ملف صغير تقدر تشرّه لو عايز تثبّت المستوى عند إعادة التشغيل.
+
+## الأسرار: مش في الكود (من المرحلة 58)
+
+`TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `OPENCLAW_GATEWAY` / `OPENCLAW_TOKEN` كانت مكتوبة
+حرفيًا في `lib/nova-cron.ts` وفي البانل، فنزلت منشورة في الحزمة العامة وعلى GitHub Pages.
+القاعدة من دلوقتي (وببوّابة `scripts/audit-src-secrets.mjs`):
+
+- السيرفر: `process.env` وبس. `tg_pulse` من غير مفاتيح بترجع `skipped: TELEGRAM_BOT_TOKEN/…`
+  مش رسالة نجاح.
+- المتصفح: `localStorage` بمفاتيح `nova_tg_bot_token` / `nova_tg_chat_id` / `nova_openclaw_token`
+  / `nova_openclaw_gateway`، والخانات في «تنبيهات تيليجرام» و«بوابة ngrok» بتحفظ هناك.
+- أي سطر مقصوده مثال/اختبار: `// allow-secret-literal` جنبه.
+- **لازم**: التوكن اللي اتنشر يتلغى من BotFather ويتعمل جديد، و`NOVA_EXEC_TOKEN` كمان.

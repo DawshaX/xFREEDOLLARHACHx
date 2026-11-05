@@ -253,14 +253,17 @@ export default function Dashboard() {
         <div className="rounded-2xl p-5 space-y-3" style={NEON_CARD}>
           <h3 className="text-base font-black" style={{ color: "#44eebb" }}>حالة الوحدات</h3>
           <div className="space-y-2">
+            {/* القايمة دي كانت سبعة أسماء «online» مكتوبة في الكود. بقت نتيجة
+             *  بروب حقيقي على المسارات دي (probe-services): الشغال بيبان، واللي
+             *  ما بيتقاسش بيبان «غير مقاس» بدل ما يطمن على الفاضي. */}
             {[
-              { name: "AI Agent v3", status: "online" },
-              { name: "محرك CVE", status: "online" },
-              { name: "فاحص المواقع", status: "online" },
-              { name: "Ollama dolphin-llama3", status: "online" },
-              { name: "PostgreSQL", status: "online" },
-              { name: "محرك التقارير", status: "ready" },
-              { name: "Terminal الافتراضي", status: "ready" },
+              { name: "AI Agent v3", status: "unknown" },
+              { name: "محرك CVE", status: "unknown" },
+              { name: "فاحص المواقع", status: "unknown" },
+              { name: "Ollama dolphin-llama3", status: "unknown" },
+              { name: "PostgreSQL", status: "unknown" },
+              { name: "محرك التقارير", status: "unknown" },
+              { name: "Terminal الافتراضي", status: "unknown" },
             ].map((m) => (
               <div key={m.name} className="flex items-center justify-between py-1.5"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>

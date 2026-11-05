@@ -19,14 +19,20 @@ import fs from "node:fs";
 import path from "node:path";
 
 const TARGET = path.resolve(process.argv[2] ?? "dist-standalone/nova-24-7");
-const EXAMPLE = /^\.env\.[A-Za-z0-9_-]*example$/;
+const EXAMPLE = /^\.env\.[A-Za-z0-9_.-]*example$/; // `.env.nova.example` كمان — النقطة كانت بتفلت من الفئة
 const TEXT_EXT = new Set([".mjs", ".js", ".cjs", ".json", ".sh", ".txt", ".yaml", ".yml", ".env"]);
 /* بلا كذب على النفس: القالب اللي في واجهة الاختبار (`Bearer test_account_owner_token`) مش سر،
  * والقاعدة اللي بتقبض على كل حاجة بتموت بعد أول يوم ويبقى أخضر/أحمر مش مقصود. السر الحقيقي
  * هو اللي شكله عشوائي طويل وكلام معناه مش فيه. */
+const TG_BOT = /["'][0-9]{8,12}:AA[A-Za-z0-9_-]{28,}["']/;
+const HEX_TOKEN = /\b(?:token|apiKey|api_key|secret)\s*[:=]\s*["'][0-9a-f]{32,64}["']/i;
 const PLACEHOLDER = /(test|example|placeholder|sample|dummy|changeme|your[_-]|xxx|redacted|<|\$\{|process\.env)/i;
 const SECRET_PATTERNS = [
   [/NOVA_EXEC_TOKEN\s*[:=]\s*["'][A-Za-z0-9_.-]{8,}["']/, "NOVA_EXEC_TOKEN مدموج في بايت منشور"],
+  // دول بالظبط اللي عاشوا سنين في `LiveAgentPanel.tsx` و`nova-cron.ts` ونزلوا
+  // في الحزمة العامة وعلى GitHub Pages — توكن بوت تليجرام ومفتاح بوابة.
+  [TG_BOT, "توكن بوت تليجرام مكتوب حرفيًا (لازم environment/localStorage بس)"],
+  [HEX_TOKEN, "مفتاح hex طويل مكتوب حرفيًا في كود منشور"],
   [/["']key["']\s*:\s*["']gsk_[A-Za-z0-9]{16,}["']/, "مفتاح Groq (gsk_…) مكتوب حرفيًا"],
   [/["']key["']\s*:\s*["']sk-[A-Za-z0-9-]{16,}["']/, "مفتاح OpenAI-compat (sk-…) مكتوب حرفيًا"],
   [/Bearer\s+[A-Za-z0-9_.-]{24,}/, "Bearer token مكتوب حرفيًا في الحزمة"],

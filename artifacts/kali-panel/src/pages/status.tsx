@@ -1,26 +1,59 @@
 import { useEffect, useState } from "react";
 import { Activity, Server, Skull } from "lucide-react";
+import { probeServices, type ProbeResult } from "@/lib/probe-services";
 
 const NEON_CARD = { background: "rgba(8,0,18,0.95)", border: "1px solid rgba(180,0,255,0.12)", borderRadius: 16, boxShadow: "0 0 20px rgba(150,0,255,0.04)" };
 const DARK = { background: "rgba(5,0,12,0.8)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12 };
 
-interface Service { name: string; status: string; uptime: number; latencyMs: number; }
+interface Service {
+  name: string;
+  status: string;
+  uptime: number | null;
+  latencyMs: number;
+  measured: boolean;
+  errorAr?: string;
+}
 
 export default function Status() {
   const [services, setServices] = useState<Service[]>([]);
 
+  // 🥇 القياس الحقيقي: كل سطر هنا نتيجة طلب فعلي على مساره. الصفحات التانية
+  // كانت بتفتتح بـ«operational / 99.9%» مكتوب في الكود — رقم ببدّل من غير ما
+  // حد يسأل أي حاجة. المسارات دي موجودة في `routes/` فعلاً.
+  const SPECS = [
+    { name: "API Server", path: "/healthz" },
+    { name: "فاحص المحرك (self-check)", path: "/self-check" },
+    { name: "الأداة المستقلة (autonomy)", path: "/autonomous/status" },
+    { name: "مراقبة النظام", path: "/monitor/system" },
+    { name: "محرك CVE", path: "/cve/db/stats" },
+    { name: "أدوات الأمان (toolchain)", path: "/ops/tools" },
+  ];
+
   useEffect(() => {
-    setServices([
-      { name: "API Server", status: "operational", uptime: 99.9, latencyMs: 45 },
-      { name: "Database", status: "operational", uptime: 100, latencyMs: 5 },
-      { name: "Agent Worker", status: "operational", uptime: 98.5, latencyMs: 120 },
-      { name: "Frontend", status: "operational", uptime: 99.99, latencyMs: 10 },
-      { name: "Ollama dolphin-llama3", status: "operational", uptime: 97.8, latencyMs: 340 },
-      { name: "CVE Sync Engine", status: "operational", uptime: 99.5, latencyMs: 60 },
-    ]);
+    let cancelled = false;
+    const run = async () => {
+      const results: ProbeResult[] = await probeServices(SPECS, 4000);
+      if (cancelled) return;
+      setServices(
+        results.map((r) => ({
+          name: r.name,
+          status: r.measured ? (r.status === "online" ? "operational" : "degraded") : "unknown",
+          uptime: null,
+          latencyMs: r.latencyMs,
+          measured: r.measured,
+          errorAr: r.errorAr,
+        })),
+      );
+    };
+    void run();
+    const timer = setInterval(() => void run(), 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, []);
 
-  const allOk = services.every(s => s.status === "operational");
+  const allOk = services.length > 0 && services.every((s) => s.status === "operational");
 
   const statusColor = (s: string) =>
     s === "operational" ? "#44ff88" : s === "degraded" ? "#ffaa44" : "#ff4444";
@@ -72,11 +105,18 @@ export default function Status() {
               <div className="flex justify-between text-center">
                 <div>
                   <div className="text-[9px] font-mono mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>Uptime</div>
-                  <div className="text-lg font-black font-mono" style={{ color: "#44ff88" }}>{service.uptime.toFixed(2)}%</div>
+                  <div className="text-lg font-black font-mono" style={{ color: "#44ff88" }}>
+                    {service.uptime === null ? "غير مقاس" : `${service.uptime.toFixed(2)}%`}
+                  </div>
                 </div>
                 <div>
                   <div className="text-[9px] font-mono mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>Latency</div>
-                  <div className="text-lg font-black font-mono" style={{ color: "#4488ff" }}>{service.latencyMs} ms</div>
+                  <div className="text-lg font-black font-mono" style={{ color: "#4488ff" }}>
+                    {service.measured ? `${service.latencyMs} ms` : "غير مقاس"}
+                  </div>
+                  {!service.measured && (
+                    <div className="text-[9px] font-mono" style={{ color: "#ff8844" }}>{service.errorAr}</div>
+                  )}
                 </div>
               </div>
 

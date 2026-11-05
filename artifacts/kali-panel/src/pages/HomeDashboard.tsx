@@ -1,4 +1,4 @@
-import { corpusTotal } from "../lib/corpus-live";
+import { corpusLabelAr, corpusSaysAr, corpusTotal } from "../lib/corpus-live";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
@@ -640,6 +640,51 @@ export default function HomeDashboard() {
   const [sideCollapsed, setSideCollapsed] = useState(false);
   const [agentTasksList, setAgentTasksList] = useState<AgentTask[]>([]);
   const [cveDbStats, setCveDbStats]         = useState<CveDbStats | null>(null);
+  // 📏 شريط الإنجازات بقى بيقرا من المحرك نفسه: الأدوات المثبتة، حالة الخزنة،
+  // حجم كتالوج البرامج. أي واحدة منهم ما جاتش = «غير مقاس» على الشاشة.
+  const [opsProbe, setOpsProbe] = useState<{
+    tools: { present: number; missing: number } | null;
+    findings: number | null;
+    programs: number | null;
+  }>({ tools: null, findings: null, programs: null });
+  useEffect(() => {
+    let cancelled = false;
+    const jget = async (u: string): Promise<unknown> => {
+      try {
+        const r = await fetch(u);
+        return r.ok ? await r.json() : null;
+      } catch {
+        return null;
+      }
+    };
+    const len = (x: unknown): number | null => (Array.isArray(x) ? x.length : null);
+    void (async () => {
+      const [tools, findings, programs] = await Promise.all([
+        jget(API("/ops/tools")),
+        jget(API("/ops/findings/status")),
+        jget(API("/ops/hunt/candidates")),
+      ]);
+      if (cancelled) return;
+      const tj = tools as { present?: unknown; missing?: unknown; installed?: unknown } | null;
+      const present = len(tj?.present) ?? len(tj?.installed) ?? 0;
+      const missing = len(tj?.missing) ?? 0;
+      const fj = findings as { candidates?: unknown; count?: number; total?: number } | null;
+      // `/ops/programs` مقفول بقراءة محمية (السجل ده فيه قائمة الأهداف)، فالرقم
+      // العام بيتقري من كتالوج البرامج العام: `/ops/hunt/candidates.scanned`.
+      const pj = programs as { programs?: unknown; total?: number; count?: number; scanned?: number } | null;
+      setOpsProbe({
+        tools: tj && (tj.present || tj.missing || tj.installed) ? { present, missing } : null,
+        findings: len(fj?.candidates) ?? (typeof fj?.count === "number" ? fj.count : typeof fj?.total === "number" ? fj.total : null),
+        programs:
+          (typeof pj?.scanned === "number" ? pj.scanned : null) ??
+          (typeof pj?.total === "number" ? pj.total : typeof pj?.count === "number" ? pj.count : null) ??
+          len(pj?.programs),
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [hunting, setHunting]               = useState(false);
   const [huntLog, setHuntLog]               = useState<string>("");
   const [discoveryLog, setDiscoveryLog]     = useState<LogEntry[]>([]);
@@ -667,19 +712,34 @@ export default function HomeDashboard() {
   const [mutatingCve, setMutatingCve]       = useState(false);
   const [mutateStatusMsg, setMutateStatusMsg] = useState("");
   const [liveLearnedSummary, setLiveLearnedSummary] = useState(
-    "🧠 محرك التعلم الذاتي (Nova Learner) متصل بـ 9 مصادر عالمية حية (NVD + GitHub + EPSS + CIRCL + OSV.dev + Immunefi/DeFiLlama + Shodan + PayloadsAllTheThings + AI Mutator).",
+    "🧠 محرك التعلم الذاتي لسه ما اشتغلش: المصادر التسعة دي قائمة معروفة مش اتصال مقاس. اضغط «تحديث شامل» والسطر ده هيتبدّل باللي اتقاس فعلًا.",
   );
-  const [liveSites, setLiveSites]           = useState<LiveSiteTelemetry[]>([
-    { id: "github", name: "GitHub Security Advisories", endpoint: "api.github.com/advisories", status: "online", latencyMs: 185, fetchedCount: 8, latestId: "CVE-2026-118664", lastSyncAt: new Date().toISOString() },
-    { id: "nvd", name: "NIST NVD v2.0", endpoint: "services.nvd.nist.gov", status: "online", latencyMs: 210, fetchedCount: 8, latestId: "CVE-2025-29927", lastSyncAt: new Date().toISOString() },
-    { id: "epss", name: "FIRST.org EPSS & KEV", endpoint: "api.first.org/data/v1/epss", status: "online", latencyMs: 142, fetchedCount: 6, latestId: "CVE-2026-99999", lastSyncAt: new Date().toISOString() },
-    { id: "circl", name: "CIRCL CERT Europe", endpoint: "cve.circl.lu/api/last", status: "online", latencyMs: 260, fetchedCount: 5, latestId: "PYSEC-2025-19", lastSyncAt: new Date().toISOString() },
-    { id: "osv", name: "Google OSV.dev (next/npm)", endpoint: "api.osv.dev/v1/query", status: "online", latencyMs: 195, fetchedCount: 5, latestId: "GHSA-223j-4rm8-mrmf", lastSyncAt: new Date().toISOString() },
-    { id: "web3", name: "Immunefi & DeFiLlama Web3", endpoint: "api.llama.fi/hacks", status: "online", latencyMs: 118, fetchedCount: 4, latestId: "IMMUNEFI-LIVE-WEB3", lastSyncAt: new Date().toISOString() },
-    { id: "shodan", name: "Shodan InternetDB Live", endpoint: "internetdb.shodan.io", status: "online", latencyMs: 76, fetchedCount: 10, latestId: "SHODAN-ASM-LIVE", lastSyncAt: new Date().toISOString() },
-    { id: "pat", name: "PayloadsAllTheThings", endpoint: "raw.githubusercontent.com", status: "online", latencyMs: 134, fetchedCount: 6, latestId: "SQLi Auth Bypass", lastSyncAt: new Date().toISOString() },
-    { id: "nova-ai", name: "Nova AI Learner & Mutator", endpoint: "local+hybrid://cybernova-brain", status: "online", latencyMs: 12, fetchedCount: 1, latestId: "CYBERNOVA-AI-2026-9100", lastSyncAt: new Date().toISOString() },
-  ]);
+  // الأسماء والعناوين دي قائمة معروفة (مش قياس): الحالة بقت "unknown" لحد
+  // «تحديث شامل» يقيس فعليًا. قبل كده كانت أول ثانية في الصفحة بتعرض 9 مصادر
+  // «متصلة» بزمن استجابة مكتوب في الكود.
+  const [liveSites, setLiveSites] = useState<LiveSiteTelemetry[]>(() =>
+    ([
+      ["github", "GitHub Security Advisories", "api.github.com/advisories"],
+      ["nvd", "NIST NVD v2.0", "services.nvd.nist.gov"],
+      ["epss", "FIRST.org EPSS & KEV", "api.first.org/data/v1/epss"],
+      ["circl", "CIRCL CERT Europe", "cve.circl.lu/api/last"],
+      ["osv", "Google OSV.dev (next/npm)", "api.osv.dev/v1/query"],
+      ["web3", "Immunefi & DeFiLlama Web3", "api.llama.fi/hacks"],
+      ["shodan", "Shodan InternetDB Live", "internetdb.shodan.io"],
+      ["pat", "PayloadsAllTheThings", "raw.githubusercontent.com"],
+      ["nova-ai", "Nova AI Learner & Mutator", "local+hybrid://cybernova-brain"],
+    ] as Array<[string, string, string]>).map(([id, name, endpoint]) => ({
+      id,
+      name,
+      endpoint,
+      status: "unknown" as const,
+      latencyMs: 0,
+      fetchedCount: 0,
+      latestId: "—",
+      lastSyncAt: "",
+      measured: false,
+    })),
+  );
   const [simPool, setSimPool]               = useState<LogEntry[]>([]);
   const simPoolRef                          = useRef<LogEntry[]>([]);
   const [selectedCve, setSelectedCve]       = useState<CveBrowserItem | null>(null);
@@ -693,11 +753,11 @@ export default function HomeDashboard() {
       if (saved) {
         const parsed = JSON.parse(saved) as Array<Omit<ActivityEntry, "ts"> & { ts: string }>;
         if (Array.isArray(parsed) && parsed.length > 0) {
+          // ⚠ الفلتر ده كان بيشيل رسائل الفشل («خطأ في الشبكة» / «تعذر الاتصال»)
+          // من السجل المحفوظ — يعني الإخفاق بيتمحيّ وبيفضل الناجح بس. بقى يحذف
+          // المكرر حرفيًا (نفس الرسالة في نفس الثانية) ومفيش انتقاء على الأساس ده.
           const clean = parsed.filter(
-            (e) =>
-              !String(e.msg || "").includes("خطأ في الشبكة") &&
-              !String(e.msg || "").includes("7 مصادر") &&
-              !String(e.msg || "").includes("تعذر الاتصال"),
+            (e, idx, arr) => arr.findIndex((x) => x.msg === e.msg && x.ts === e.ts) === idx,
           );
           if (clean.length > 0) {
             return clean.map((e) => ({ ...e, ts: new Date(e.ts) }));
@@ -706,13 +766,22 @@ export default function HomeDashboard() {
       }
     } catch { /* ignore */ }
     const now = Date.now();
+    // 🚫 السجل ده كان بيتفتح بست أحداث مختلقة («اتصلنا بـ9 مصادر»، «شريحنا JS بـ
+    // Katana»، «ركّبنا سلسلة 4-Hop»، «IMMUNEFI-2026-001 CVSS 10») وساعتها مافيش
+    // أي عملية حصلت. الأحداث الحقيقية بتتنشر من القياس نفسه (coRpus + fetchAll).
     return [
-      { id: "init-1", type: "system", msg: "✅ تم استعادة الجلسة المستمرة 24/7 وربط الذاكرة السحابية (state/cybernova-brain-state.json) ومصفوفة 9 مواقع عالمية بنجاح", ts: new Date(now - 240000) },
-      { id: "init-2", type: "hunt", msg: "🌐 اتصال مباشر نشط بـ 9 مصادر عالمية (NIST NVD + GitHub Advisories + FIRST EPSS + CIRCL + Google OSV.dev + Immunefi/DeFiLlama + Shodan + PAT + Nova AI)", ts: new Date(now - 200000), huntSources: { nvd: 8, gh: 8, cisa: 6, edb: 5, pss: 4, vuldb: 4, circl: 5, total: 40 } },
-      { id: "init-3", type: "api", msg: "⚡ تشريح حزم JavaScript عبر Katana + JShunter + LinkFinder واستخراج مسارات /api/v1 و/graphql", ts: new Date(now - 160000) },
-      { id: "init-4", type: "cve", msg: "🛡️ فحص ومطابقة CVE-2025-29927 (Next.js Middleware Bypass) وIMMUNEFI-2026-001 مع ترويسات الأمان والعقود", ts: new Date(now - 120000), cveId: "IMMUNEFI-2026-001", severity: "CRITICAL", cvssScore: 10.0, cveSource: "Immunefi-Web3", cveEpss: 0.99, cveExploitType: "Bridge-SigBypass" },
-      { id: "init-5", type: "system", msg: "🔗 تركيب سلسلة ثغرات رباعية (4-Hop Chain: P01 ➔ P05 ➔ P04 ➔ P02 · CVSS 9.5) وتوثيق بصمة Zero-FP SHA-256", ts: new Date(now - 80000) },
-      { id: "init-6", type: "refresh", msg: `🌿 تفعيل 78 أداة Kali & Web3 و56 مشروع GitHub 2026 والكوربوس الحقيقي (${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة)`, ts: new Date(now - 40000) },
+      {
+        id: "init-1",
+        type: "system",
+        msg: `📚 المخزن المحلي: ${corpusSaysAr()}`,
+        ts: new Date(now),
+      },
+      {
+        id: "init-2",
+        type: "api",
+        msg: "⏳ مصفوفة المصادر لسه ما اتقاستش — «تحديث شامل» بيقيسها واحدة واحدة",
+        ts: new Date(now),
+      },
     ];
   });
   const [activeTaskTab, setActiveTaskTab]   = useState<"journal"|"running"|"completed"|"pending"|"discoveries"|"session">(() => {
@@ -733,16 +802,22 @@ export default function HomeDashboard() {
     activeCommand: string;
     extractedCount: number;
     zeroFpCount: number;
+    /** false = الأرقام دي لسه ما جاتش من `/deep-research/workstation-state` */
+    measured: boolean;
     whatsNewLog: Array<{ id: string; ts: string; titleAr: string; detailAr: string }>;
   }>({
-    activeTarget: "bughunters.google.com",
-    activeProgram: "Google VRP — Legal Safe Harbor Scope",
-    currentStageTitleAr: "المرحلة 6/6: مراقبة ذاتية 24/7 وفحص مستمر للنطاقات وحزم الـ JS وسلاسل الثغرات المركبة",
-    nextAutonomousActionAr: "فحص تعارض بروتوكولات HTTP/2 وWeb Cache Deception وتوليد патشات الحماية الدفاعية (Remediation Diff)",
-    cyclesCompleted: 28,
-    activeCommand: "subfinder -d bughunters.google.com -silent | httpx -sc -title -tech-detect -rl 15",
-    extractedCount: 24,
-    zeroFpCount: 6,
+    // 🧊 الافتتاحي كان «28 دورة / 24 غنيمة / 6 براهين» على هدف محدد — وكل ده
+    // مكتوب حرفيًا قبل أي قياس. الحالة بقت فاضية لحد `/deep-research/workstation-state`
+    // يرد، فاللي على الشاشة يبقى إما مقاس أو «غير مقاس».
+    activeTarget: "",
+    activeProgram: "",
+    currentStageTitleAr: "لم يُقَس بعد — اللوحة بتستنى أول قراءة من حالة المحرك",
+    nextAutonomousActionAr: "",
+    cyclesCompleted: 0,
+    activeCommand: "",
+    extractedCount: 0,
+    zeroFpCount: 0,
+    measured: false,
     whatsNewLog: [],
   });
   const [wisdomIdx, setWisdomIdx]           = useState(0);
@@ -840,6 +915,10 @@ export default function HomeDashboard() {
   };
 
   const activeCount = Object.values(SERVICES).flat().filter(s => isActive(s.id)).length;
+  // 🧊 `/api/monitor/system` على المحرك الحيّ بقياس حقيقي، والتوأم الساكن بيرجّع
+  // أصفار مع `measured:false`. من غيرها كانت الصفحة الساكنة بتعرض «CPU 14% ·
+  // 8 أنوية · RAM 23% · uptime 24h» — وكلها مكتوبة في الكود، مفيش نظام تحتها.
+  const sysMeasured = Boolean(sys && (sys as unknown as { measured?: boolean }).measured !== false);
 
   // ── Fetch all data ────────────────────────────────────────────────────
   const fetchAll = useCallback(async (silent = false) => {
@@ -877,6 +956,7 @@ export default function HomeDashboard() {
         extractedCount: bs.whatDidIReach?.metrics?.extractedArtifactsCount ?? prev.extractedCount,
         zeroFpCount: bs.whatDidIReach?.metrics?.zeroFpVerifiedCount ?? prev.zeroFpCount,
         whatsNewLog: Array.isArray(bs.whatsNewLog) ? bs.whatsNewLog.slice(0, 8) : prev.whatsNewLog,
+        measured: true,
       }));
     }
     if (cds?.total !== undefined) {
@@ -956,23 +1036,17 @@ export default function HomeDashboard() {
   // ── Continuous 1-sec session timer & 15-sec autonomous session pulse ──
   useEffect(() => {
     const secTimer = setInterval(() => setSessionTickCount(c => c + 1), 1000);
+    // 🚫 النبضة دي كانت كل 15 ثانية تختار أمر من قائمة وتكتب في السجل «تم تنفيذ
+    // آمن [subfinder]» — والأمر ما اتنفذش في أي مكان. النبضة بقت قراءة صامتة
+    // للحالة الحقيقية (fetchAll silent)، فاللي بيظهر على الشاشة مسروق من قياس.
     const autoPulse = setInterval(() => {
-      const autoCommands = [
-        `subfinder -d ${brainState.activeTarget} -silent | httpx -sc -title -tech-detect -rl 15`,
-        `jshunter -u https://${brainState.activeTarget} -t 10 --only-endpoints`,
-        `uncover -q 'ssl:"${brainState.activeTarget}"' -e shodan,censys -silent`,
-        `nettacker -i ${brainState.activeTarget} -m http_status_scan,ssl_certificate_expired_vuln`,
-        `julius scan https://${brainState.activeTarget} && kosty audit --domain ${brainState.activeTarget}`,
-      ];
-      const nextCmd = autoCommands[Math.floor(Math.random() * autoCommands.length)];
-      setBrainState(prev => ({ ...prev, activeCommand: nextCmd }));
-      addLog("api", `🔄 نبضة الجلسة المستمرة 24/7: تنفيذ آمن [${nextCmd.split(" ")[0]}] وتحديث حالة الرصد`);
-    }, 15000);
+      void fetchAll(true);
+    }, 45_000);
     return () => {
       clearInterval(secTimer);
       clearInterval(autoPulse);
     };
-  }, [brainState.activeTarget, addLog]);
+  }, [fetchAll]);
 
   const triggerHunt = useCallback(async (silentAuto = false) => {
     setHunting(true);
@@ -1147,7 +1221,7 @@ export default function HomeDashboard() {
           publishedAt: mc.publishedAt || new Date().toISOString(),
           source: mc.source || "AI-Mutated",
           exploitType: mc.exploitType || "Reentrancy-Web3",
-          epssScore: mc.epssScore || 0.98,
+          epssScore: mc.epssScore ?? 0,
         };
         setCveBrowserItems(prev => [newItem, ...prev]);
         setCveBrowserTotal(d.total);
@@ -1264,7 +1338,7 @@ export default function HomeDashboard() {
 
   // ── Sparkline history ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!sys) return;
+    if (!sys || !sysMeasured) return;
     setCpuHistory(h => [...h.slice(-49), sys.cpu.usage]);
     setRamHistory(h => [...h.slice(-49), sys.memory.usagePercent]);
   }, [sys]);
@@ -1414,7 +1488,7 @@ export default function HomeDashboard() {
           </div>
 
           {/* CPU / RAM / System — clickable → scroll to KB system panel */}
-          {sys && (
+          {sys && sysMeasured && (
             <>
               <button onClick={() => sectionRefs.current["sec-kb"]?.scrollIntoView({behavior:"smooth",block:"start"})}
                 className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all hover:scale-105 group"
@@ -1561,7 +1635,9 @@ export default function HomeDashboard() {
                     70 أداة Kali + 50 مشروع GitHub 2026
                   </span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                    {brainState.extractedCount} غنيمة موثقة · {brainState.zeroFpCount} برهان Zero-FP
+                    {brainState.measured
+                      ? `${brainState.extractedCount} مستخرج في الخزنة · ${brainState.zeroFpCount} برهان`
+                      : "الخزنة: غير مقاسة — مافيش قراءة من حالة المحرك بعد"}
                   </span>
                   <button
                     onClick={() => navigate("/bug-bounty-studio")}
@@ -1583,16 +1659,22 @@ export default function HomeDashboard() {
                   </div>
                   <div className="space-y-1.5 text-[10px] text-white/80 leading-relaxed max-h-36 overflow-y-auto pr-1">
                     <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
-                      ✔️ تجهيز ترسانة Immunefi Web3 & DeFi (78 أداة Kali/Foundry/Slither/Aderyn/Halmos + 56 مشروع GitHub + 28 لبنة ثغرات).
+                      🛠️ أدوات الفحص على المكنة دي:{" "}
+                      {opsProbe.tools
+                        ? `${opsProbe.tools.present} متاحة · ${opsProbe.tools.missing} ناقصة`
+                        : "غير مقاس"}{" "}
+                      <span className="text-white/40">(مقيسة من /api/ops/tools، مش قائمة مكتوبة في الكود)</span>
                     </div>
                     <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
-                      ✔️ استطلاع سلبي كامل (CRT.SH + Shodan + Uncover + Subfinder) وتوثيق النطاقات والمنافذ.
+                      🎯 كتالوج برامج المكافآت:{" "}
+                      {opsProbe.programs ? `${opsProbe.programs} برنامج` : "غير مقاس"} · مرشحي الصيد:{" "}
+                      {opsProbe.findings !== null ? `${opsProbe.findings}` : "غير مقاس"}
                     </div>
                     <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
-                      ✔️ تشريح حزم JS عبر Katana + JShunter + LinkFinder واستخراج مسارات الـ API المخفية.
+                      📚 قاعدة المعرفة المحمّلة: {corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} — المصدر:{corpusLabelAr()}
                     </div>
-                    <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
-                      ✔️ تركيب سلسلة ثغرات رباعية (4-Hop Chain · CVSS 9.5) وتوثيق بصمة Zero-FP SHA-256.
+                    <div className="p-1.5 rounded bg-black/40 border border-amber-500/25 text-amber-200">
+                      🧩 سلاسل الثغرات في المكتبة دي أنماط بحث (فرضيات) — مش نتيجة فحص. أي سلسلة بتتحول لنتيجة لما تتأكد على هدف مصرّح بيه وبس.
                     </div>
                     {brainState.whatsNewLog.slice(0, 2).map((item) => (
                       <div key={item.id} className="p-1.5 rounded bg-black/40 border border-emerald-500/20 text-emerald-200">
@@ -1939,7 +2021,7 @@ export default function HomeDashboard() {
                         ))}
                       </div>
                     </div>
-                    {sys && (
+                    {sys && sysMeasured && (
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-1 h-4 rounded-full bg-cyan-500" />
@@ -2044,7 +2126,7 @@ export default function HomeDashboard() {
             </div>
 
             {/* ── حالة النظام الحية — System Hardware Status ───────────────── */}
-            {sys && (
+            {sys && sysMeasured && (
               <div className="grid grid-cols-1 sm:grid-cols-3 border-b" style={{ borderColor: "rgba(30,100,255,0.12)", background: "rgba(0,3,16,0.7)" }}>
 
                 {/* UPTIME */}
@@ -2165,13 +2247,14 @@ export default function HomeDashboard() {
                       </span>
                     </div>
                     <span className="text-[9px] font-mono text-emerald-400/80">
-                      {huntLog || "✅ متصل بجميع المصادر العالمية — تحديث تلقائي كل 45 ثانية"}
+                      {huntLog || "⏳ مش مقاس لسه — اضغط أي مصدر أو اعمل «تحديث شامل» (مافيش عدّاد تلقائي بيشتغل لوحده هنا)"}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 mb-2">
                     {liveSites.map((site) => {
                       const isOnline = site.status === "online";
                       const isSyncing = site.status === "syncing";
+                      const isMeasured = site.status !== "unknown";
                       return (
                         <div
                           key={site.id}
@@ -2185,7 +2268,7 @@ export default function HomeDashboard() {
                           <div className="flex items-center gap-2 min-w-0">
                             <div
                               className={`w-2 h-2 rounded-full shrink-0 ${
-                                isSyncing ? "bg-blue-400 animate-ping" : isOnline ? "bg-emerald-400 animate-pulse" : "bg-cyan-400"
+                                isSyncing ? "bg-blue-400 animate-ping" : isOnline ? "bg-emerald-400 animate-pulse" : isMeasured ? "bg-cyan-400" : "bg-slate-600"
                               }`}
                             />
                             <div className="min-w-0">
@@ -2194,10 +2277,18 @@ export default function HomeDashboard() {
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                              +{site.fetchedCount}
-                            </span>
-                            <span className="text-[8px] font-mono text-cyan-300/80">{site.latencyMs}ms</span>
+                            {isMeasured ? (
+                              <>
+                                <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                  +{site.fetchedCount}
+                                </span>
+                                <span className="text-[8px] font-mono text-cyan-300/80">{site.latencyMs}ms</span>
+                              </>
+                            ) : (
+                              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/25">
+                                غير مقاس
+                              </span>
+                            )}
                           </div>
                         </div>
                       );
@@ -2608,7 +2699,7 @@ export default function HomeDashboard() {
               <div className="flex items-center gap-1.5 px-3 py-2.5 border-b" style={{ borderColor: "rgba(52,211,153,0.12)", background: "rgba(52,211,153,0.04)" }}>
                 <Monitor className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="text-[11px] font-bold font-mono text-emerald-400">النظام</span>
-                {sys && <span className="text-[9px] font-mono text-white/20 mr-auto">{Math.floor(sys.uptime/3600)}h uptime</span>}
+                {sys && sysMeasured && <span className="text-[9px] font-mono text-white/20 mr-auto">{Math.floor(sys.uptime/3600)}h uptime</span>}
               </div>
               <div className="p-3 flex flex-col gap-3">
                 {sys ? (

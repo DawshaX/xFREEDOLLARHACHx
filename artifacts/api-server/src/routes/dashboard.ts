@@ -118,18 +118,92 @@ router.get("/dashboard/modules", async (_req, res) => {
   ]);
 });
 
+/*
+ * الحالة دي كانت راجعة تمانية سطور «operational / 99.99% / 32ms» مكتوبة حرفيًا
+ * في الكود — أي حد يفتح `/api/dashboard/status` بيطلع مطمن على خدمات ما اتجرّبش
+ * ولا واحد منها. النسخة دي بتقيس اللي يمكن قياسه فعلًا:
+ *   • API Gateway: طلب حقيقي على /healthz بنفس العملية، بزمن مقاس.
+ *   • NVD Sync / CISA KEV: نضارة الملفات اللي CI بينشرها (state/*.json) + آخر فشل.
+ *   • File Storage: المجلد قابل للكتابة؟ (اختبار فعلي، مش افتراض)
+ *   • الباقي: «notWired» صريح — مش موجود في النسخة دي، ونقطة.
+ * uptime مش محسوب: مافيش سجل تشغيلي، فالرقم «مش مقاس» مش 99.9%.
+ */
 router.get("/status", async (_req, res) => {
+  const fs = await import("node:fs");
+  const pathMod = await import("node:path");
+  const now = Date.now();
+  const readAgeHours = (rel: string): { at: string | null; ageH: number | null; exists: boolean } => {
+    try {
+      const full = pathMod.resolve(process.cwd(), rel);
+      const raw = JSON.parse(fs.readFileSync(full, "utf8")) as { at?: string };
+      const at = raw?.at ?? null;
+      const ageH = at ? Math.round(((now - Date.parse(at)) / 3_600_000) * 10) / 10 : null;
+      return { at, ageH, exists: true };
+    } catch {
+      return { at: null, ageH: null, exists: false };
+    }
+  };
+
+  const port = Number(process.env.PORT ?? 3000);
+  let gateway: { status: string; latencyMs: number | null; note: string } = {
+    status: "unknown",
+    latencyMs: null,
+    note: "القياس اتعملش",
+  };
+  const t0 = Date.now();
+  try {
+    const r = await fetch(`http://127.0.0.1:${port}/api/healthz`, { signal: AbortSignal.timeout(2500) });
+    gateway = {
+      status: r.ok ? "operational" : "degraded",
+      latencyMs: Date.now() - t0,
+      note: r.ok ? `HTTP ${r.status}` : `HTTP ${r.status}`,
+    };
+  } catch (err) {
+    gateway = { status: "down", latencyMs: null, note: `مفيش رد على 127.0.0.1:${port} — ${(err as Error).name}` };
+  }
+
+  const nvd = readAgeHours("state/vuln-corpus-index.json");
+  const kev = readAgeHours("state/advisory-cache.json");
+  const nvdFail = readAgeHours("state/corpus-last-failure.json");
+  const dirWritable = (() => {
+    try {
+      const probe = pathMod.resolve(process.cwd(), "state", ".status-probe");
+      fs.writeFileSync(probe, "1");
+      fs.rmSync(probe, { force: true });
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
   res.json({
+    measured: true,
+    at: new Date().toISOString(),
     services: [
-      { name: "API Gateway", status: "operational", uptime: 99.99, latencyMs: 32 },
-      { name: "Bug Bounty & SAST Studio", status: "operational", uptime: 100.0, latencyMs: 12 },
-      { name: "NVD Sync", status: "operational", uptime: 99.92, latencyMs: 184 },
-      { name: "CISA KEV Sync", status: "operational", uptime: 99.97, latencyMs: 96 },
-      { name: "AI Orchestrator", status: "operational", uptime: 99.95, latencyMs: 412 },
-      { name: "Vector Search", status: "operational", uptime: 99.98, latencyMs: 41 },
-      { name: "Job Scheduler", status: "operational", uptime: 99.99, latencyMs: 18 },
-      { name: "Webhook Dispatcher", status: "operational", uptime: 99.91, latencyMs: 240 },
-      { name: "File Storage", status: "operational", uptime: 99.99, latencyMs: 24 },
+      { name: "API Gateway", status: gateway.status, uptime: null, latencyMs: gateway.latencyMs, note: gateway.note },
+      {
+        name: "NVD Sync",
+        status: nvd.ageH !== null && nvd.ageH < 24 ? "operational" : nvd.exists ? "stale" : "missing",
+        uptime: null,
+        latencyMs: null,
+        note: nvd.at ? `آخر نشر ${nvd.at}${nvdFail.exists ? " · فيه فشل مسجّل" : ""}` : "مفيش ملف state/vuln-corpus-index.json",
+        lastPublishAgeHours: nvd.ageH,
+      },
+      {
+        name: "GitHub Advisories / KEV corpus",
+        status: kev.ageH !== null && kev.ageH < 24 ? "operational" : kev.exists ? "stale" : "missing",
+        uptime: null,
+        latencyMs: null,
+        note: kev.at ? `آخر نشر ${kev.at}` : "مفيش ملف state/advisory-cache.json",
+        lastPublishAgeHours: kev.ageH,
+      },
+      { name: "File Storage", status: dirWritable ? "operational" : "degraded", uptime: null, latencyMs: null, note: dirWritable ? "state/ قابل للكتابة" : "state/ مش قابل للكتابة" },
+      { name: "Bug Bounty & SAST Studio", status: "notWired", uptime: null, latencyMs: null, note: "مافيش خدمة مستقلة بالاسم ده — كتالوج البرامج بيتقرأ من /api/ops/programs مباشرة" },
+      { name: "CISA KEV Sync", status: "notWired", uptime: null, latencyMs: null, note: "التغذية جاية عبر advisory-cache من CI، مش service منفصل" },
+      { name: "AI Orchestrator", status: "notWired", uptime: null, latencyMs: null, note: "المجلس الحيّ بيتقاس من /api/council/ping" },
+      { name: "Vector Search", status: "notWired", uptime: null, latencyMs: null, note: "البحث المتجهي مش موصول في النسخة دي" },
+      { name: "Job Scheduler", status: process.env.NOVA_CRON_ENABLED === "1" ? "operational" : "disabled", uptime: null, latencyMs: null, note: "مبني على NOVA_CRON_ENABLED" },
+      { name: "Webhook Dispatcher", status: "notWired", uptime: null, latencyMs: null, note: "مفيش مُرسل شغال في المحرك" },
     ],
   });
 });

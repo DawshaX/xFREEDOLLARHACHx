@@ -103,6 +103,24 @@ function detectMemorySave(buf: string): boolean {
   return /\[MEMORY_SAVE:|حفظ ذاكرة|تم الحفظ في الذاكرة/i.test(buf);
 }
 
+// 🔒 الأسرار الشخصية (توكن بوت، توكن بوابة) ما بتعيشش في الكود: مكانها الطبيعي
+// localStorage عند اللي بيستخدم المنصة. أي قيمة اتكتبت هنا بتنزل حرفيًا في بايت
+// عام على GitHub Pages وفي الحزمة العامة — وده بالظبط اللي حصل مرة.
+function readSecret(key: string): string {
+  try {
+    return typeof localStorage === "undefined" ? "" : (localStorage.getItem(key) ?? "");
+  } catch {
+    return "";
+  }
+}
+function writeSecret(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value || "");
+  } catch {
+    /* خاصية التصفح الخاص أو مساحة ممتلئة — السر هيفضل في الذاكرة بس */
+  }
+}
+
 // ── Llama Dolphin Direct via ngrok ───────────────────────────────────────────
 // Default URL — dynamically updated from /api/settings on mount
 const LLAMA_NGROK_URL_DEFAULT = "https://nucleus-uninjured-tusk.ngrok-free.dev";
@@ -987,14 +1005,17 @@ export function LiveAgentPanel({
   const [newTaskForm, setNewTaskForm] = useState({ name: "", cron: "0 * * * *", command: "", description: "" });
   const [showNewTaskForm, setShowNewTaskForm] = useState(false);
   // ── Telegram Alert States ─────────────────────────────────────────────────
-  const [telegramBotToken, setTelegramBotToken] = useState("8430446319:AAFLClPeztKQe5HyPmVA0dCl6ULM699DRYo");
-  const [telegramChatId, setTelegramChatId] = useState("1890579200");
+  const [telegramBotTokenRaw, setTelegramBotToken] = useState(() => readSecret("nova_tg_bot_token"));
+  const [telegramChatIdRaw, setTelegramChatId] = useState(() => readSecret("nova_tg_chat_id"));
+  // المستخدمون التانيين (الحارس + الإرسال) بيقرأوا من الاسم ده: قيمة نظيفة أو فاضي
+  const telegramBotToken = telegramBotTokenRaw.trim();
+  const telegramChatId = telegramChatIdRaw.trim();
   const [telegramAlertsEnabled, setTelegramAlertsEnabled] = useState(false);
   const [telegramLog, setTelegramLog] = useState<Array<{ts: string; msg: string; ok: boolean}>>([]);
   const [lastTelegramSent, setLastTelegramSent] = useState<string | null>(null);
   // ── OpenClaw Gateway States ───────────────────────────────────────────────
-  const OPENCLAW_GATEWAY = "https://nucleus-uninjured-tusk.ngrok-free.dev";
-  const OPENCLAW_TOKEN = "4e56cc386ae98164fb0d984dd28b9db3ae6abba99a6e6cdf";
+  const OPENCLAW_GATEWAY = readSecret("nova_openclaw_gateway") || "https://nucleus-uninjured-tusk.ngrok-free.dev";
+  const OPENCLAW_TOKEN = readSecret("nova_openclaw_token"); // فاضي = مش مضبوط، مش مُختبئ
   const [openclawStatus, setOpenclawStatus] = useState<"online"|"offline"|"checking">("checking");
   const [openclawLog, setOpenclawLog] = useState<Array<{role:"user"|"nova"; text: string; ts: string}>>([]);
   const [openclawInput, setOpenclawInput] = useState("");
@@ -8482,10 +8503,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   </button>
                 </div>
                 <div className="space-y-1">
-                  <input value={telegramBotToken} onChange={e => setTelegramBotToken(e.target.value)}
-                    placeholder="Bot Token" className="w-full text-[7px] font-mono px-1.5 py-0.5 rounded bg-background/50 border border-violet-500/15 text-foreground" />
-                  <input value={telegramChatId} onChange={e => setTelegramChatId(e.target.value)}
-                    placeholder="Chat ID / User ID" className="w-full text-[7px] font-mono px-1.5 py-0.5 rounded bg-background/50 border border-violet-500/15 text-foreground" />
+                  <input value={telegramBotTokenRaw} onChange={e => { writeSecret("nova_tg_bot_token", e.target.value); setTelegramBotToken(e.target.value); }}
+                    placeholder={telegramBotTokenRaw ? "Bot Token (محفوظ محليًا)" : "Bot Token — مش محفوظ في الكود، احطّه هنا"} type="password" autoComplete="off" className="w-full text-[7px] font-mono px-1.5 py-0.5 rounded bg-background/50 border border-violet-500/15 text-foreground" />
+                  <input value={telegramChatIdRaw} onChange={e => { writeSecret("nova_tg_chat_id", e.target.value); setTelegramChatId(e.target.value); }}
+                    placeholder="Chat ID / User ID" autoComplete="off" className="w-full text-[7px] font-mono px-1.5 py-0.5 rounded bg-background/50 border border-violet-500/15 text-foreground" />
                   <button onClick={() => sendTelegramAlert("✅ *NOVA CyberNova* — اختبار التنبيهات ناجح!")}
                     className="text-[7px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30">
                     📤 إرسال اختبار
@@ -8787,6 +8808,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                           const d = await r.json() as { saved: boolean; status: GatewayNgrokStatus };
                           setGatewayStatus(prev => prev ? { ...prev, ngrok: d.status } : prev);
                           setNgrokTunnelUrl(gatewayNgrokInput);
+                          writeSecret("nova_openclaw_gateway", gatewayNgrokInput);
                           setGatewayNgrokInput("");
                           addToast(d.status.online ? `✅ ngrok متصل! ${d.status.latencyMs}ms` : "⚠ URL محفوظ — ngrok غير متصل", d.status.online ? "success" : "warn");
                         } catch { addToast("فشل حفظ ngrok URL", "error"); }
