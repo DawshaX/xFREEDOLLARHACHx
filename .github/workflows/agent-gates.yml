@@ -1,0 +1,89 @@
+name: agent gates (the proofs that keep NOVA honest)
+
+# Every fix in the agent has a test next to it — self-model, keyless search,
+# planner prose, repeat guard, fleet, brain, edge, corpus, memory, self-restart,
+# ops scope. Until now those tests only ran when a human remembered to run them,
+# which is how «33 أداة» survived in a prompt long after the registry said 47.
+#
+# This workflow runs them on every push that can affect them and on a daily
+# tick, so a regression shows up as a red check instead of as a broken reply in
+# a live chat.
+#
+# No state is committed here: this is a reader, and a reader that writes state
+# is how run-to-run answers start disagreeing with each other.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/api-server/src/lib/agent/**"
+      - "artifacts/api-server/src/routes/**"
+      - "artifacts/api-server/src/lib/standalone-api.ts"
+      - "scripts/test-*.mjs"
+      - "scripts/ops-selftest.mjs"
+      - "scripts/audit-connections.mjs"
+      - "scripts/audit-contracts.mjs"
+      - "scripts/audit-twins.mjs"
+      - "scripts/typecheck-ratchet.mjs"
+      - "scripts/check-workflows.mjs"
+      - ".github/workflows/agent-gates.yml"
+  pull_request:
+    paths:
+      - "artifacts/api-server/src/lib/agent/**"
+      - "scripts/test-*.mjs"
+      - ".github/workflows/agent-gates.yml"
+  schedule:
+    - cron: "20 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      # The agent tests bundle the real TypeScript with esbuild, so the
+      # workspace has to be installed before anything is asserted.
+      - name: install
+        run: pnpm install --no-frozen-lockfile
+
+      # One runner, one list. A gate that is skipped here is a gate that will be
+      # skipped in practice, so the list is explicit rather than a glob.
+      - name: agent + platform gates
+        run: |
+          set -o pipefail
+          node scripts/test-self-model.mjs
+          node scripts/test-web-search.mjs
+          node scripts/test-heuristic-plan.mjs
+          node scripts/test-repeat-guard.mjs
+          node scripts/test-fleet-servers.mjs
+          node scripts/test-nova-brain.mjs
+          node scripts/test-nova-brain-edge.mjs
+          node scripts/test-vuln-corpus.mjs
+          node scripts/test-memory-mirror.mjs
+          node scripts/test-self-restart.mjs
+
+      - name: structural audits
+        run: |
+          set -o pipefail
+          node scripts/check-workflows.mjs
+          node scripts/audit-connections.mjs
+          node scripts/audit-contracts.mjs
+          node scripts/audit-twins.mjs
+          node scripts/ops-selftest.mjs
+          node scripts/typecheck-ratchet.mjs

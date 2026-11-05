@@ -42,6 +42,149 @@ export type AgentEvent =
   | { type: "done"; sessionId: string; mode: string; toolCount: number; ms: number; provider: string }
   | { type: "error"; message: string };
 
+/* ── repeat guard ────────────────────────────────────────────────────────── */
+
+/**
+ * Measured 2026-11-05 in a live transcript: the same failing step came back
+ * turn after turn — `fleet_list` then `fleet_profile`, both red, both for the
+ * single reason "no agent is connected". Repeating a call that cannot succeed
+ * is not a retry, it is a loop that *looks* like work, and it teaches the user
+ * to stop reading the tool bubbles.
+ *
+ * Three promises, each one testable without a network:
+ *   1. identical steps inside one turn run once;
+ *   2. a step whose prerequisite already failed is skipped with that reason;
+ *   3. a step that failed a minute ago is not re-run unless the human says so.
+ */
+export const REPEAT_WINDOW_MS = 10 * 60 * 1000;
+
+export interface ToolAttempt {
+  at: number;
+  ok: boolean;
+  summary: string;
+}
+
+const attempts = new Map<string, Map<string, ToolAttempt>>();
+
+/** Stable key for "the same call": tool plus its args, key order normalised. */
+export function stepSignature(tool: string, args?: Record<string, unknown> | null): string {
+  const a = args ?? {};
+  const body = Object.keys(a)
+    .sort()
+    .map((k) => `${k}=${JSON.stringify(a[k])}`)
+    .join(",");
+  return `${tool}(${body})`;
+}
+
+export function recordAttempt(
+  sessionId: string,
+  tool: string,
+  args: Record<string, unknown> | null | undefined,
+  ok: boolean,
+  summary: string,
+  now = Date.now(),
+): void {
+  let bucket = attempts.get(sessionId);
+  if (!bucket) {
+    bucket = new Map();
+    attempts.set(sessionId, bucket);
+  }
+  bucket.set(stepSignature(tool, args), { at: now, ok, summary });
+}
+
+/** The previous failure for this exact call, if it is still inside the window. */
+export function findRecentFailure(
+  sessionId: string,
+  tool: string,
+  args: Record<string, unknown> | null | undefined,
+  now = Date.now(),
+  windowMs = REPEAT_WINDOW_MS,
+): ToolAttempt | undefined {
+  const hit = attempts.get(sessionId)?.get(stepSignature(tool, args));
+  if (!hit || hit.ok) return undefined;
+  if (now - hit.at > windowMs) return undefined;
+  return hit;
+}
+
+/** "جرب تاني"/"retry" is the human overriding promise 3 — never guess it. */
+export function wantsRetry(message: string): boolean {
+  return /(?:جرب|جرّب|حاول|اعد|أعد|عيد|كرر|تاني|تانى|مرة\s*تانية|\bretry\b|\bagain\b|try\s+again)/i.test(message);
+}
+
+export function resetAttempts(sessionId?: string): void {
+  if (sessionId) attempts.delete(sessionId);
+  else attempts.clear();
+}
+
+/** Steps that cannot possibly work while their prerequisite is down. */
+const REQUIRES_AGENT = new Set(["fleet_profile", "fleet_exec"]);
+
+export interface SkipDecision {
+  reason: string;
+  /** Shown to the user as the thinking line — so it must read as prose. */
+  thought: string;
+}
+
+/**
+ * Decide whether a planned step should be skipped. Pure: the caller records
+ * attempts, this only reads them. Never returns a skip for a human-requested
+ * retry, so «جرب تاني» always really re-runs.
+ */
+export function shouldSkipStep(input: {
+  sessionId: string;
+  tool: string;
+  args?: Record<string, unknown> | null;
+  title?: string;
+  seenThisTurn?: Iterable<string>;
+  failedThisTurn?: Map<string, string>;
+  retrying?: boolean;
+  now?: number;
+}): SkipDecision | null {
+  const {
+    sessionId,
+    tool,
+    args,
+    title,
+    seenThisTurn,
+    failedThisTurn,
+    retrying = false,
+    now = Date.now(),
+  } = input;
+  const signature = stepSignature(tool, args);
+  const label = title && title.trim() ? title.trim() : tool;
+
+  if (seenThisTurn) {
+    for (const seen of seenThisTurn) {
+      if (seen === signature) {
+        return {
+          reason: `«${label}» مخططة مرتين في نفس الطلب — نفّذتها مرة واحدة، مش هعيدها.`,
+          thought: `الخطوة «${label}» مكررة جوه نفس الخطة — بنفّذها مرة واحدة بس وأكمّل.`,
+        };
+      }
+    }
+  }
+
+  if (REQUIRES_AGENT.has(tool) && failedThisTurn?.has("fleet_list")) {
+    return {
+      reason: `«${label}» محتاجة جهاز متصل، و«قائمة الأجهزة» فشلت في نفس الطلب: ${failedThisTurn.get("fleet_list")}`,
+      thought: `مش هجرب «${label}» وأنا عارف إن مفيش جهاز متصل — نفس سبب فشل قائمة الأجهزة.`,
+    };
+  }
+
+  if (!retrying) {
+    const prev = findRecentFailure(sessionId, tool, args, now);
+    if (prev) {
+      const mins = Math.max(1, Math.round((now - prev.at) / 60_000));
+      return {
+        reason: `«${label}» جرّبتها قبل ${mins} دقيقة بنفس الطلب وفشلت: ${prev.summary} — مش هكررها لوحدي.`,
+        thought: `جربت «${label}» قبل ${mins} دقيقة ولسه نفس السبب (${prev.summary}). مش هعيد نفس المحاولة — لو عايز محاولة جديدة اكتب «جرب تاني».`,
+      };
+    }
+  }
+
+  return null;
+}
+
 export interface AgentRunOptions {
   sessionId?: string;
   message: string;
@@ -175,11 +318,26 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
   },
   {
     // "run `uname -a` on the machines" → real fleet_exec (gated by approval).
-    test: /(?:الأجهزة|الاجهزة|أجهزة|اجهزة|الماكينات|ماكينات|devices?|fleet|كمبيوتر|computers?|سيرفرات|servers?|remote|ريموت)/i,
+    // «الأسطول» is the word the panel itself uses for the fleet, and it was
+    // missing here — so "كم جهاز في الأسطول؟" fell through to the generic
+    // context plan. Same class of gap as the bare-domain search hijack.
+    test: /(?:الأجهزة|الاجهزة|أجهزة|اجهزة|الماكينات|ماكينات|الأسطول|اسطول|أسطول|devices?|fleet|كمبيوتر|computers?|سيرفرات|servers?|remote|ريموت)/i,
     tools: (msg) => {
       const cmd = extractFleetCommand(msg);
-      if (!cmd) return [{ tool: "fleet_list", args: {} }, { tool: "fleet_profile", args: {} }];
-      return [{ tool: "fleet_list", args: {} }, { tool: "fleet_exec", args: { command: cmd } }];
+      // A profile or a remote command needs a machine to exist first. Planning
+      // the pair when nothing is connected produces two red bubbles for ONE
+      // cause — measured in a live transcript on 2026-11-05. With no agent we
+      // plan the single honest step and let the answer carry the install
+      // command, instead of pretending to try twice.
+      const connected = getConnectedAgentList().length > 0;
+      if (!cmd) {
+        return connected
+          ? [{ tool: "fleet_list", args: {} }, { tool: "fleet_profile", args: {} }]
+          : [{ tool: "fleet_list", args: {} }];
+      }
+      return connected
+        ? [{ tool: "fleet_list", args: {} }, { tool: "fleet_exec", args: { command: cmd } }]
+        : [{ tool: "fleet_list", args: {} }];
     },
   },
   {
@@ -463,6 +621,20 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
   const failed = results.filter((r) => !r.ok);
   const okCount = results.length - failed.length;
 
+  // Every step was skipped by the repeat guard: the answer is the reason, said
+  // once, plus the one word that re-arms the run. Anything longer would be a
+  // summary of work that deliberately did not happen.
+  const skipped = results.filter((r) => r.summary.startsWith("⏭️"));
+  if (skipped.length > 0 && skipped.length === results.length) {
+    return [
+      "مش هعيد نفس المحاولة — جرّبتها قبل كده قريب ولسه نفس السبب:",
+      "",
+      ...skipped.map((r) => `- **${r.name}:** ${r.summary.replace(/^⏭️\s*/, "")}`),
+      "",
+      "**الخطوة التالية المقترحة:** عالج السبب اللي فوق، وبعدها اكتب «جرب تاني» وأنا أعيد المحاولة فوراً.",
+    ].join("\n");
+  }
+
   lines.push(`تمام، نفّذت **${results.length}** أداة (${okCount} نجحت${failed.length ? ` · ${failed.length} فشلت` : ""}). دي القراءة:`);
   lines.push("");
 
@@ -622,10 +794,49 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   opts.emit({ type: "plan", steps: plan.steps });
   const results: Array<{ name: string; ok: boolean; summary: string; data: unknown }> = [];
   const maxSteps = Math.min(opts.maxSteps ?? 5, 6);
+  const retrying = wantsRetry(message);
+  const seenThisTurn = new Set<string>();
+  const failedThisTurn = new Map<string, string>();
 
   for (const [idx, step] of plan.steps.slice(0, maxSteps).entries()) {
     const spec = AGENT_TOOLS.find((t) => t.name === step.tool);
     const id = `${idx + 1}-${step.tool}`;
+
+    // ── repeat guard ────────────────────────────────────────────────────────
+    // Checked BEFORE the tool_call event, so the UI never shows a step starting
+    // that we already know cannot run. The skip is itself reported, with the
+    // real reason, because silently dropping a step would be its own lie.
+    const skip = shouldSkipStep({
+      sessionId,
+      tool: step.tool,
+      args: step.args,
+      title: spec?.title,
+      seenThisTurn,
+      failedThisTurn,
+      retrying,
+    });
+    if (skip) {
+      seenThisTurn.add(stepSignature(step.tool, step.args));
+      results.push({ name: step.tool, ok: false, summary: `⏭️ ${skip.reason}`, data: null });
+      opts.emit({ type: "thought", text: skip.thought });
+      opts.emit({
+        type: "tool_result",
+        id,
+        name: step.tool,
+        ok: false,
+        summary: `⏭️ ${skip.reason}`,
+        ms: 0,
+        dataPreview: "",
+      });
+      broadcastLiveEvent({
+        type: "tool_result",
+        data: { tool: step.tool, ok: false, summary: skip.reason, ms: 0, skipped: true, ts: Date.now() },
+        ts: new Date().toISOString(),
+      });
+      continue;
+    }
+    seenThisTurn.add(stepSignature(step.tool, step.args));
+
     opts.emit({
       type: "tool_call",
       id,
@@ -660,6 +871,8 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     }
 
     results.push({ name: step.tool, ok: result.ok, summary: result.summary, data: result.data });
+    recordAttempt(sessionId, step.tool, step.args, result.ok, result.summary);
+    if (!result.ok) failedThisTurn.set(step.tool, result.summary);
     opts.emit({
       type: "tool_result",
       id,
