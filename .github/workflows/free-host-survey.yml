@@ -32,7 +32,7 @@ on:
         type: boolean
         default: true
       engine:
-        description: "Optional: survey a running hub instead of booting one (e.g. http://node.waifly.com:27214)"
+        description: "Optional: survey a running hub instead of booting one (e.g. https://nova.waifly.com)"
         required: false
         default: ""
 

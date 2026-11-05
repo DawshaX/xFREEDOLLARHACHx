@@ -15,7 +15,7 @@
  *     never pretends every entry was typed here.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Activity, Brain, Database, Loader2, Network, Power, RefreshCw, Server } from "lucide-react";
+import { Activity, Brain, CheckCircle2, Database, Loader2, Network, Power, RefreshCw, Server, ShieldAlert, XCircle } from "lucide-react";
 import { effectiveBase, isRemoteConfigured } from "@/lib/remote";
 
 interface SystemMachine {
@@ -61,6 +61,29 @@ interface UpdateSnapshot {
   currentCommit?: string | null;
 }
 
+/**
+ * The doctor's answer: what is broken, what it costs, and the exact fix.
+ * Kept as a separate type because it is the only part of this card that is
+ * allowed to say «fail» — everything else is a measurement.
+ */
+interface DoctorCheck {
+  id: string;
+  label: string;
+  state: "ok" | "warn" | "fail";
+  value: string;
+  says_ar: string;
+  fix_ar?: string;
+}
+
+interface DoctorReport {
+  ok: boolean;
+  ready: boolean;
+  score: number;
+  counts: { ok: number; warn: number; fail: number; total: number };
+  checks: DoctorCheck[];
+  says_ar: string;
+}
+
 interface SystemSnapshot {
   ok: boolean;
   now: number;
@@ -81,6 +104,8 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
   const [snap, setSnap] = useState<SystemSnapshot | null>(null);
   const [ver, setVer] = useState<VersionSnapshot | null>(null);
   const [upd, setUpd] = useState<UpdateSnapshot | null>(null);
+  const [doc, setDoc] = useState<DoctorReport | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [restarting, setRestarting] = useState(false);
@@ -120,6 +145,17 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
       else setUpd(null);
     } catch {
       setUpd(null);
+    }
+    // The doctor is the only call that measures everything at once. It can be
+    // slow (it probes every machine), so it runs last and its absence is silent.
+    try {
+      const res = await fetch("/api/fleet/doctor", { signal: AbortSignal.timeout(20000) });
+      if (res.ok) {
+        const body = (await res.json()) as DoctorReport & { static?: boolean };
+        setDoc(body?.static ? null : body);
+      } else setDoc(null);
+    } catch {
+      setDoc(null);
     }
   }, []);
 
@@ -242,6 +278,61 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
                 <span className="text-emerald-300/80 ms-auto">مطابق للديسك</span>
               )}
               {restartNote && <span className="basis-full text-white/60">{restartNote}</span>}
+            </div>
+          )}
+
+          {doc && (
+            <div className="space-y-1">
+              <div
+                className={`rounded-lg p-2 text-[8.5px] leading-relaxed flex flex-wrap items-center gap-2 border ${
+                  doc.ready
+                    ? doc.counts.warn
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
+                      : "border-emerald-500/50 bg-emerald-500/15 text-emerald-100"
+                    : "border-rose-500/50 bg-rose-500/10 text-rose-100"
+                }`}
+              >
+                {doc.ready ? (
+                  doc.counts.warn ? <ShieldAlert className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : (
+                  <XCircle className="h-3.5 w-3.5" />
+                )}
+                <span className="font-black">{doc.ready ? "سليم" : "فيه عطل"}</span>
+                <span className="font-mono text-white/60">{doc.score}%</span>
+                <span className="font-mono text-white/40">
+                  {doc.counts.ok}✓ · {doc.counts.warn}⚠ · {doc.counts.fail}✗
+                </span>
+                <button
+                  onClick={() => setShowAll((v) => !v)}
+                  className="ms-auto text-[8px] px-2 py-0.5 rounded border border-white/20 bg-white/5 hover:bg-white/10"
+                >
+                  {showAll ? "اقفل التفاصيل" : "كل الفحوصات"}
+                </button>
+                <span className="basis-full text-white/70">{doc.says_ar}</span>
+              </div>
+
+              {/* Fails and warnings always show; the healthy rows are opt-in. */}
+              {doc.checks
+                .filter((c) => showAll || c.state !== "ok")
+                .map((c) => (
+                  <div
+                    key={c.id}
+                    className={`rounded-lg px-2 py-1 text-[8px] leading-relaxed border flex flex-wrap items-center gap-x-2 gap-y-0.5 ${
+                      c.state === "fail"
+                        ? "border-rose-500/40 bg-rose-500/10 text-rose-100"
+                        : c.state === "warn"
+                          ? "border-amber-500/35 bg-amber-500/10 text-amber-100"
+                          : "border-white/10 bg-white/[0.03] text-white/60"
+                    }`}
+                  >
+                    <span className="font-black">{c.label}</span>
+                    <span className="font-mono text-white/50" dir="ltr">
+                      {c.value}
+                    </span>
+                    <span className="text-white/70">{c.says_ar}</span>
+                    {c.fix_ar && <span className="basis-full font-mono text-white/55" dir="ltr">{c.fix_ar}</span>}
+                  </div>
+                ))}
             </div>
           )}
 

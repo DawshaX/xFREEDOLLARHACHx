@@ -91,7 +91,7 @@ export const HOSTS: FreeHost[] = [
       "سجّل حساب مجاني (بريد فقط، مش محتاج فيزا)",
       "أنشئ سيرفر Node.js واختار الخطة المجانية",
       "في الكونسول: curl -fsSL <hub>/api/local-agent/download-nova-agent -o nova-agent.js",
-      "NOVA_SERVER=ws://<hub>:27214/api/local-agent/ws node nova-agent.js --id waifly-2",
+      "NOVA_SERVER=wss://<hub>/api/local-agent/ws node nova-agent.js --id waifly-2",
     ],
     notes:
       "ده نفس نوع سيرفرك الحالي. دائم فعلاً. لو النود offline 3 أيام بيتعلّق — الـ keepalive بيمنع ده.",

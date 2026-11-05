@@ -17,7 +17,7 @@
 # Setup
 # ─────
 #   Settings → Secrets and variables → Actions → Variables
-#     NOVA_HUB    ws://node.waifly.com:27214/api/local-agent/ws   (your hub)
+#     NOVA_HUB    wss://nova.waifly.com/api/local-agent/ws        (your hub)
 #     FLEET_NODES 4                                                (how many)
 #
 # Nodes appear in the panel under /api/local-agent/agents and /api/fleet/mesh.
@@ -167,7 +167,7 @@ jobs:
           IDX: ${{ matrix.i }}
           NOVA_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
-          HUB="${HUB:-ws://node.waifly.com:27214/api/local-agent/ws}"
+          HUB="${HUB:-wss://nova.waifly.com/api/local-agent/ws}"
           echo "hub: $HUB"
           NODE_ID="gh-${IDX}-$(date +%H%M)"
 

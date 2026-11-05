@@ -4,7 +4,8 @@ name: NOVA uptime watchdog
 # The platform tells you when IT dies — you don't find out by opening the panel.
 #
 # Measured reason this file exists: the hub was answering normally at 02:34, and
-# at 02:57 the same probe got `Connection refused` on port 27214 (DNS fine, host
+# at 02:57 the same probe got `Connection refused` on port 27214 (DNS fine, host —
+# that port was never the live one; the slot listens on 27316 behind nova.waifly.com)
 # up, nothing listening). Two hours of silence, and nobody noticed — that is the
 # exact failure mode of "free always-on".
 #
@@ -40,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     env:
-      HUB: ${{ vars.NOVA_HUB_URL || 'http://node.waifly.com:27214' }}
+      HUB: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
     steps:
       - name: probe
         id: p

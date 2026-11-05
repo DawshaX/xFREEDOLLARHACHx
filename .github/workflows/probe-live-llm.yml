@@ -17,7 +17,7 @@ on:
         # بيخلّي GitHub يرفض الملف كله — والنتيجة تشغيل **بلا أي job** (total_count:0) لونه أحمر
         # على كل push في المستودع (مقاس: runs 41654773509 / 41654754814 / 41650731657). المتغيّر
         # بيتقري في `env:` تحت، وهو المكان الوحيد اللي فيه `vars` ليه معنى.
-        default: http://node.waifly.com:27214
+        default: https://nova.waifly.com
   push:
     branches: ["**"]
     paths: [".github/workflows/probe-live-llm.yml"]
@@ -39,7 +39,7 @@ jobs:
       # Settings → Actions → Variables to your Render/Waifly hub and keepalive,
       # the uptime watchdog and this probe all follow it. Waifly stays the fallback
       # so the probe still runs when nothing is configured.
-      TARGET: ${{ github.event.inputs.target || vars.NOVA_HUB_URL || 'http://node.waifly.com:27214' }}
+      TARGET: ${{ github.event.inputs.target || vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
     steps:
       - uses: actions/checkout@v4
         with:

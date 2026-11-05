@@ -96,6 +96,18 @@ router.get("/fleet/servers", async (req: Request, res: Response) => {
  * `says_ar` is the sentence NOVA says about itself from those numbers, not a
  * template that ignores them.
  */
+router.get("/fleet/doctor", async (_req: Request, res: Response) => {
+  try {
+    const { runDoctor } = await import("../lib/doctor");
+    const report = await runDoctor();
+    res.setHeader("Cache-Control", "no-store");
+    res.json(report);
+  } catch (err) {
+    // A doctor that dies silently is worse than no doctor: say it broke, and why.
+    res.status(500).json({ ok: false, error: (err as Error).message, ready: false, checks: [] });
+  }
+});
+
 router.get("/fleet/system", async (_req: Request, res: Response) => {
   const servers = loadServers();
   const probes = await probeAll(servers);
