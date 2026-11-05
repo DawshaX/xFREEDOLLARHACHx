@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 101,
-    "lastHeartbeatAt": "2026-11-05T17:57:27.662Z",
+    "autonomousCyclesCompleted": 102,
+    "lastHeartbeatAt": "2026-11-05T21:45:36.663Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: اكتملت الدورة الذاتية #101 على (bughunters.google.com) — جميع المراحل الـ 6 والسلاسل المركبة موثقة 100%",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #102 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1793915137527",
+      "ts": "2026-11-05 21:45:37 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #102 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 172.253.63.141 | HTTP 200 | SHA256: d2527c87783268ad — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 34 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:21)"
+    },
     {
       "id": "new-1793901447662-xmgt",
       "ts": "2026-11-05 17:57:27 UTC",
@@ -201,41 +208,6 @@
       "ts": "2026-10-31 19:16:00 UTC",
       "category": "AUTONOMOUS_PULSE",
       "titleAr": "اكتمال الدورة الذاتية #78 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793473980366-d7sj",
-      "ts": "2026-10-31 19:13:00 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #77 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793473800369-aj7w",
-      "ts": "2026-10-31 19:10:00 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #76 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793473620351-dehw",
-      "ts": "2026-10-31 19:07:00 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #75 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793470632572-g6cl",
-      "ts": "2026-10-31 18:17:12 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #74 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793470452590-iy6b",
-      "ts": "2026-10-31 18:14:12 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #73 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     }
   ],
@@ -831,6 +803,26 @@
       "at": "2026-11-02T03:30:53.259Z"
     },
     {
+      "id": "CVE-2021-38299",
+      "title": "CVE-2021-38299",
+      "description": "Webauthn Framework 3.3.x before 3.3.4 has Incorrect Access Control. An attacker that controls a user's system is able to login to a vulnerable service using an attached FIDO2 authenticator without passing a check of the user presence.",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-38299",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-34718",
+      "title": "CVE-2022-34718",
+      "description": "Windows TCP/IP Remote Code Execution Vulnerability",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-34718",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
       "id": "CVE-2026-44267",
       "title": "CVE-2026-44267",
       "description": "Elo JavaScript emitter has sandbox escape to arbitrary Node.js / browser code execution via unfiltered `.constructor` member access",
@@ -881,6 +873,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2026-105769",
+      "title": "CVE-2026-105769",
+      "description": "kaniko can send the build's Azure (Entra ID) access token to lookalike ACR registry hosts",
+      "cvss": 9.3,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-5q7h-w9jf-cx97",
+      "at": "2026-11-05T21:45:37.527Z"
+    },
+    {
       "id": "CVE-2006-4339",
       "title": "CVE-2006-4339",
       "description": "A flaw was found in OpenSSL. When configured to use an RSA key with exponent 3, OpenSSL improperly removes PKCS-1 padding before generating a hash. This allows remote attackers to forge PKCS #1 v1.5 signatures. Consequently, OpenSSL may incorrectly verify X.509 and other certificates, leading to a bypass of trust and authentication mechanisms.",
@@ -889,6 +891,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2006-4339",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2022-34717",
+      "title": "CVE-2022-34717",
+      "description": "Microsoft Office Remote Code Execution Vulnerability",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-34717",
+      "at": "2026-11-05T21:45:37.064Z"
     },
     {
       "id": "CVE-2021-1636",
@@ -931,6 +943,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2026-12411",
+      "title": "CVE-2026-12411",
+      "description": "lxd allows Cross-guest volume hijack via DevLXD device patch",
+      "cvss": 8.4,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-hhf9-qw4v-72xp",
+      "at": "2026-11-05T21:45:37.527Z"
+    },
+    {
       "id": "CVE-2021-2351",
       "title": "CVE-2021-2351",
       "description": "Vulnerability in the Advanced Networking Option component of Oracle Database Server. Supported versions that are affected are 12.1.0.2, 12.2.0.1 and 19c. Difficult to exploit vulnerability allows unauthenticated attacker with network access via Oracle Net to compromise Advanced Networking Option. Successful attacks require human interaction from a person other than the attacker and while the vulne",
@@ -949,6 +971,16 @@
       "source": "GitHub Advisories",
       "url": "https://github.com/advisories/GHSA-48v2-6jcm-fc99",
       "at": "2026-11-03T18:50:34.961Z"
+    },
+    {
+      "id": "CVE-2022-32156",
+      "title": "CVE-2022-32156",
+      "description": "In Splunk Enterprise and Universal Forwarder versions before 9.0, the Splunk command-line interface (CLI) did not validate TLS certificates while connecting to a remote Splunk platform instance by default. After updating to version 9.0, see  Configure TLS host name validation for the Splunk CLI https://docs.splunk.com/Documentation/Splunk/9.0.0/Security/EnableTLSCertHostnameValidation#Configure_TL",
+      "cvss": 8.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-32156",
+      "at": "2026-11-05T21:45:37.064Z"
     },
     {
       "id": "GHSA-p3jp-9v83-76w9",
@@ -979,6 +1011,146 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-0232",
       "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2022-29119",
+      "title": "CVE-2022-29119",
+      "description": "HEVC Video Extensions Remote Code Execution Vulnerability",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-29119",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-30164",
+      "title": "CVE-2022-30164",
+      "description": "Kerberos AppContainer Security Feature Bypass Vulnerability",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-30164",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-34707",
+      "title": "CVE-2022-34707",
+      "description": "Windows Kernel Elevation of Privilege Vulnerability",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-34707",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-35768",
+      "title": "CVE-2022-35768",
+      "description": "Windows Kernel Elevation of Privilege Vulnerability",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-35768",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2819",
+      "title": "CVE-2022-2819",
+      "description": "Heap-based Buffer Overflow in GitHub repository vim/vim prior to 9.0.0211.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2819",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2817",
+      "title": "CVE-2022-2817",
+      "description": "Use After Free in GitHub repository vim/vim prior to 9.0.0213.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2817",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2862",
+      "title": "CVE-2022-2862",
+      "description": "Use After Free in GitHub repository vim/vim prior to 9.0.0221.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2862",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2889",
+      "title": "CVE-2022-2889",
+      "description": "Use After Free in GitHub repository vim/vim prior to 9.0.0225.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2889",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2982",
+      "title": "CVE-2022-2982",
+      "description": "Use After Free in GitHub repository vim/vim prior to 9.0.0260.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2982",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-3016",
+      "title": "CVE-2022-3016",
+      "description": "Use After Free in GitHub repository vim/vim prior to 9.0.0286.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-3016",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-3037",
+      "title": "CVE-2022-3037",
+      "description": "Use After Free in GitHub repository vim/vim prior to 9.0.0322.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-3037",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-34382",
+      "title": "CVE-2022-34382",
+      "description": "Dell Command Update, Dell Update and Alienware Update versions prior to 4.6.0 contains a Local Privilege Escalation Vulnerability in the custom catalog configuration. A local malicious user may potentially exploit this vulnerability in order to elevate their privileges.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-34382",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-3099",
+      "title": "CVE-2022-3099",
+      "description": "Use After Free in GitHub repository vim/vim prior to 9.0.0360.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-3099",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-3134",
+      "title": "CVE-2022-3134",
+      "description": "Use After Free in GitHub repository vim/vim prior to 9.0.0389.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-3134",
+      "at": "2026-11-05T21:45:37.064Z"
     },
     {
       "id": "CVE-2026-115878",
@@ -1149,6 +1321,36 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-52591",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2022-29546",
+      "title": "CVE-2022-29546",
+      "description": "HtmlUnit NekoHtml Parser before 2.61.0 suffers from a denial of service vulnerability. Crafted input associated with the parsing of Processing Instruction (PI) data leads to heap memory consumption. This is similar to CVE-2022-28366 but affects a much later version of the product.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-29546",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-29143",
+      "title": "CVE-2022-29143",
+      "description": "Microsoft SQL Server Remote Code Execution Vulnerability",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-29143",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2026-61536",
+      "title": "CVE-2026-61536",
+      "description": "Banks: Unsafe importlib.import_module of attacker-controlled Tool.import_path in CompletionExtension allows RCE",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-64vx-6h2c-rjh7",
+      "at": "2026-11-05T21:45:37.527Z"
     },
     {
       "id": "CVE-2015-5477",
@@ -1451,6 +1653,26 @@
       "at": "2026-11-02T03:30:53.772Z"
     },
     {
+      "id": "CVE-2022-1292",
+      "title": "CVE-2022-1292",
+      "description": "The c_rehash script does not properly sanitise shell metacharacters to prevent command injection. This script is distributed by some operating systems in a manner where it is automatically executed. On such operating systems, an attacker could execute arbitrary commands with the privileges of the script. Use of the c_rehash script is considered obsolete and should be replaced by the OpenSSL rehash",
+      "cvss": 7.3,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-1292",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2068",
+      "title": "CVE-2022-2068",
+      "description": "In addition to the c_rehash shell command injection identified in CVE-2022-1292, further circumstances where the c_rehash script does not properly sanitise shell metacharacters to prevent command injection were found by code review. When the CVE-2022-1292 was fixed it was not discovered that there are other places in the script where the file names of certificates being hashed were possibly passed",
+      "cvss": 7.3,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2068",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
       "id": "CVE-2026-62848",
       "title": "CVE-2026-62848",
       "description": "Metalama: Unsafe deserialization over Metalama's Visual Studio inter-process named pipe enables local code execution",
@@ -1521,6 +1743,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2022-37959",
+      "title": "CVE-2022-37959",
+      "description": "Network Device Enrollment Service (NDES) Security Feature Bypass Vulnerability",
+      "cvss": 6.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-37959",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
       "id": "CVE-2019-5439",
       "title": "CVE-2019-5439",
       "description": "A Buffer Overflow in VLC Media Player < 3.0.7 causes a crash which can possibly be further developed into a remote code execution exploit.",
@@ -1571,6 +1803,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2022-36280",
+      "title": "CVE-2022-36280",
+      "description": "An out-of-bounds(OOB) memory access vulnerability was found in vmwgfx driver in drivers/gpu/vmxgfx/vmxgfx_kms.c in GPU component in the Linux kernel with device file '/dev/dri/renderD128 (or Dxxx)'. This flaw allows a local attacker with a user account on the system to gain privilege, causing a denial of service(DoS).",
+      "cvss": 6.3,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-36280",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
       "id": "CVE-2019-0221",
       "title": "CVE-2019-0221",
       "description": "The SSI printenv command in Apache Tomcat 9.0.0.M1 to 9.0.0.17, 8.5.0 to 8.5.39 and 7.0.0 to 7.0.93 echoes user provided data without escaping and is, therefore, vulnerable to XSS. SSI is disabled by default. The printenv command is intended for debugging and is unlikely to be present in a production website.",
@@ -1599,6 +1841,76 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4813",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2021-4043",
+      "title": "CVE-2021-4043",
+      "description": "NULL Pointer Dereference in GitHub repository gpac/gpac prior to 1.1.0.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-4043",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2874",
+      "title": "CVE-2022-2874",
+      "description": "NULL Pointer Dereference in GitHub repository vim/vim prior to 9.0.0224.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2874",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2923",
+      "title": "CVE-2022-2923",
+      "description": "NULL Pointer Dereference in GitHub repository vim/vim prior to 9.0.0240.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2923",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2980",
+      "title": "CVE-2022-2980",
+      "description": "NULL Pointer Dereference in GitHub repository vim/vim prior to 9.0.0259.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2980",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-38533",
+      "title": "CVE-2022-38533",
+      "description": "In GNU Binutils before 2.40, there is a heap-buffer-overflow in the error function bfd_getl32 when called from the strip_main function in strip-new via a crafted file.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-38533",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-3153",
+      "title": "CVE-2022-3153",
+      "description": "NULL Pointer Dereference in GitHub repository vim/vim prior to 9.0.0404.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-3153",
+      "at": "2026-11-05T21:45:37.064Z"
+    },
+    {
+      "id": "CVE-2022-2905",
+      "title": "CVE-2022-2905",
+      "description": "An out-of-bounds memory read flaw was found in the Linux kernel's BPF subsystem in how a user calls the bpf_tail_call function with a key larger than the max_entries of the map. This flaw allows a local user to gain unauthorized access to data.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2905",
+      "at": "2026-11-05T21:45:37.064Z"
     },
     {
       "id": "CVE-2019-14534",
@@ -1952,13 +2264,13 @@
     }
   ],
   "intelStats": {
-    "total": 127,
-    "freshThisPulse": 0,
+    "total": 161,
+    "freshThisPulse": 34,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
-      "GHSA:22"
+      "GHSA:21"
     ],
-    "at": "2026-11-05T15:57:29.143Z"
+    "at": "2026-11-05T21:45:37.527Z"
   }
 }
