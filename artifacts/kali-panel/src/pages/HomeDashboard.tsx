@@ -37,7 +37,8 @@ interface CveItem   { id: string; cveId?: string; cvss?: number; score?: number;
 interface AgentTask { id: number; title: string; description?: string; status: string; createdAt: string; }
 interface CveDbStats {
   total: number; lastHour: number; lastDay: number;
-  bySeverity: Record<string, number>;
+  /** optional on purpose: an engine that has rows but no buckets yet omits it, and the page must survive that */
+  bySeverity?: Record<string, number>;
   bySource?: Record<string, number>;
   byExploitType?: Record<string, number>;
   latest?: Array<{ id: string; severity: string; cvss: number; publishedAt: string | null; source?: string; exploitType?: string; epssScore?: number | null; pocUrl?: string | null }>;
@@ -415,10 +416,17 @@ function PanelToggle({ open, onToggle, label, color = "#60a5fa", count }: { open
 function ThreatGauge({ cveDbStats }: { cveDbStats: CveDbStats | null }) {
   if (!cveDbStats || !cveDbStats.total) return null;
   const t = cveDbStats.total;
-  const crit = (cveDbStats.bySeverity["CRITICAL"] ?? cveDbStats.bySeverity["critical"] ?? 0);
-  const high = (cveDbStats.bySeverity["HIGH"] ?? cveDbStats.bySeverity["high"] ?? 0);
-  const med  = (cveDbStats.bySeverity["MEDIUM"] ?? cveDbStats.bySeverity["medium"] ?? 0);
-  const low  = (cveDbStats.bySeverity["LOW"] ?? cveDbStats.bySeverity["low"] ?? 0);
+  // Measured 2026-11-05 on the live Waifly server: the dashboard answered with
+  // "Cannot read properties of undefined (reading 'CRITICAL')" and the whole
+  // page fell into the error boundary. `total` was real, `bySeverity` was not
+  // (an engine that has counted rows but has no severity buckets yet), so the
+  // guard above it (`!cveDbStats.total`) let the crash through. The buckets are
+  // optional data, so they get an empty default instead of a crash.
+  const sev = cveDbStats.bySeverity ?? {};
+  const crit = (sev["CRITICAL"] ?? sev["critical"] ?? 0);
+  const high = (sev["HIGH"] ?? sev["high"] ?? 0);
+  const med  = (sev["MEDIUM"] ?? sev["medium"] ?? 0);
+  const low  = (sev["LOW"] ?? sev["low"] ?? 0);
   const score = Math.min(100, Math.round(((crit * 10 + high * 7 + med * 4 + low * 1) / (t * 10)) * 100));
   const level = score >= 70 ? { label: "CRITICAL", color: "#f87171", bg: "rgba(248,113,113,0.12)" }
               : score >= 45 ? { label: "HIGH",     color: "#fb923c", bg: "rgba(251,146,60,0.12)" }

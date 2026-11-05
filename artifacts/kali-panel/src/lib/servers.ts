@@ -190,7 +190,22 @@ export function schemeCandidates(base: string): string[] {
 
 export async function probeKnownServer(server: KnownServer): Promise<ServerStatus> {
   const started = Date.now();
-  const candidates = schemeCandidates(server.base);
+  // Mixed content: a page served over https may not fetch http at all — the
+  // browser refuses before a packet leaves. Measured 2026-11-05: this GitHub
+  // Pages site (https) could never reach the Waifly slot (http://…:27316), and
+  // reporting that as "السيرفر نايم" would be a lie about a server that is up
+  // and serving the whole program. Say what actually happened.
+  const httpsPage = typeof window !== "undefined" && window.location.protocol === "https:";
+  const candidates = schemeCandidates(server.base).filter((o) => !(httpsPage && o.startsWith("http://")));
+  if (candidates.length === 0) {
+    return {
+      id: server.id,
+      state: "down",
+      ms: 0,
+      checkedAt: Date.now(),
+      says: `المتصفح بيمنع الاتصال اللي مش مشفّر (الصفحة https والسيرفر ${server.base}). البرنامج شغّال — افتح ${server.base} في تاب لوحده.`,
+    };
+  }
   // Browser rule worth knowing: a page served over https cannot fetch http at
   // all (mixed content), so on GitHub Pages the https attempt is the only one
   // that can succeed — and it is the second candidate for a Waifly slot.
