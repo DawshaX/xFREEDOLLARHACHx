@@ -84,7 +84,9 @@ test("the anti-counter-question rule is in the prompt", () => {
 test("an unmeasured corpus is reported as unmeasured, never as zero rows", () => {
   const p = mod.selfModelPrompt({ ...model, corpus: { measured: false, total: 0, ageMin: null } });
   assert.match(p, /غير مقاس/);
-  assert.ok(!p.includes("0 ثغرة"), "0 must never be presented as a measurement");
+  // `192,930 ثغرة` ends with "0 ثغرة", so a plain substring check would fail on
+  // a correct prompt. Match a standalone zero instead.
+  assert.ok(!/(?<![\d,])0 ثغرة/.test(p), "0 must never be presented as a measurement");
 });
 
 test("no registered machine is said out loud", () => {
