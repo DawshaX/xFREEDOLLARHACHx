@@ -1738,7 +1738,10 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
 - `packageManager: pnpm@10.34.9` + 5 workflows كانت على `version: 10` (التنصيب
   كان بينضرب لما corepack جاب 12 → `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`).
 
-**الأرقام:** `agent-gates 19/19 · 50.1s` · typecheck **92** (كان 94، الأساس اتوطّى) ·
+**الأرقام:** `agent-gates 19/19 · 50.1s` (وفي clone نضيف 19/19 · 50.2s) · typecheck **88**
+(كان 94 — الأول نزل 92 ولما CI وقع أحمر اتقيس إن الراتشيت كان مش حتمي: 4 ملفات ارثية
+بتستورد `@langchain/*`/`axios` المش معلّنة + `tsc -p` بيكدب لما `tsbuildinfo` يفضل موجود
+والـdist متشال ⇒ 88→146؛ اتصلح في `typecheck-ratchet.mjs` بـ`--build --force` لكل `references`) ·
 بانل 0 · `audit-stub-honesty`: 72 ميت/28 لايف/0 ادّعاء · الحزمة 130 ملف · zip 2.7 MB ·
 `secrets audit ✅`. على الحزمة نفسها: `enable` مجهول = 403، بالتوكن = `ok:true`
 و`level:standard` وملف اتكتب و`cycles:101`، `kill-switch/activate` رجّع `active:true`

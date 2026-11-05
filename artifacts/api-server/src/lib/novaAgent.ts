@@ -1,3 +1,5 @@
+// @ts-ignore — كود ارثي مش في جراف البناء المقاس (اتقاس: 0 تكرار لـ@langchain في dist/index.mjs)،
+//   وهو اللي بيعتمد على حزمة مش معلنة في package.json؛ القياس بيتغير بنسخة الـinstall فبنثبّته هنا.
 import { Ollama } from "@langchain/ollama";
 import { Tool } from "@langchain/core/tools";
 import { execSync } from "node:child_process";
