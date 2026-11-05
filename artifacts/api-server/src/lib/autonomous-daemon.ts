@@ -478,7 +478,11 @@ export function loadBrainState(): BrainState {
 
 export function persistBrainState(state: BrainState): void {
   inMemoryBrainState = state;
-  const serialized = JSON.stringify(state, null, 2);
+  // Trailing newline on purpose. The tracked copies in this repo end with one;
+  // writing without it made every local engine boot show both brain-state files
+  // as modified in `git status` — a diff of one byte, `\ No newline at end of
+  // file`, that looked like uncommitted work every single turn.
+  const serialized = `${JSON.stringify(state, null, 2)}\n`;
   for (const p of [...STATE_FILE_PATHS, ...PUBLIC_STATE_PATHS]) {
     try {
       const dir = path.dirname(p);
