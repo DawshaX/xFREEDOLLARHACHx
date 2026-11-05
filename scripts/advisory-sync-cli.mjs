@@ -11,19 +11,13 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleCli } from "./lib/esbuild-runner.mjs";
 const pages = Number(process.argv[2] ?? process.env.PAGES ?? 20);
-const esbuild = [
-  path.join(root, "artifacts/api-server/node_modules/.bin/esbuild"),
-  path.join(root, "node_modules/.pnpm/node_modules/.bin/esbuild"),
-].find((p) => fs.existsSync(p));
-if (!esbuild) throw new Error("esbuild not found — run pnpm install first");
 
 const dir = path.join(root, "artifacts/api-server/node_modules/.cache/adv-cli");
 fs.mkdirSync(dir, { recursive: true });
 const out = path.join(dir, "advisory-library.cjs");
-execFileSync(
-  esbuild,
-  [
+bundleCli(root, [
     path.join(root, "artifacts/api-server/src/lib/ops/advisory-library.ts"),
     "--bundle", "--platform=node", "--format=cjs", "--target=node22",
     `--outfile=${out}`, "--log-level=warning",

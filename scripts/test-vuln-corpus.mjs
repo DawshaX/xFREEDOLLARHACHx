@@ -23,23 +23,16 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleCli } from "./lib/esbuild-runner.mjs";
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "nova-corpus-test-"));
 process.env.NOVA_CORPUS_DIR = path.join(work, "corpus");
 process.env.NOVA_CORPUS_INDEX = path.join(work, "index.json");
 
-const esbuild = [
-  path.join(root, "artifacts/api-server/node_modules/.bin/esbuild"),
-  path.join(root, "node_modules/.bin/esbuild"),
-  path.join(root, "node_modules/.pnpm/node_modules/.bin/esbuild"),
-].find((p) => fs.existsSync(p));
-if (!esbuild) throw new Error("esbuild not found — run pnpm install first");
 
 const bundleDir = path.join(root, "artifacts/api-server/node_modules/.cache/corpus-tests");
 fs.mkdirSync(bundleDir, { recursive: true });
 const bundle = path.join(bundleDir, `vuln-corpus-${process.pid}.cjs`);
-execFileSync(
-  esbuild,
-  [
+bundleCli(root, [
     path.join(root, "artifacts/api-server/src/lib/ops/vuln-corpus.ts"),
     "--bundle", "--platform=node", "--format=cjs", "--target=node22",
     `--outfile=${bundle}`, "--log-level=warning",

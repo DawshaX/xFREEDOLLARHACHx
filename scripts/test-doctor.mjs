@@ -16,18 +16,18 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleCli } from "./lib/esbuild-runner.mjs";
 const SRC = join(ROOT, "artifacts/api-server/src/lib/doctor.ts");
 const work = mkdtempSync(join(tmpdir(), "nova-doctor-"));
 // Built inside the repo (not /tmp) with packages external: the module graph pulls
 // `pg` through the corpus/settings layers, and a bundle in /tmp cannot resolve it.
 const out = join(work, "doctor.mjs");
 
-const esbuild = join(ROOT, "node_modules/.pnpm/node_modules/.bin/esbuild");
-assert.ok(existsSync(esbuild), "esbuild binary not found — run pnpm install first");
+// esbuild is resolved by ./lib/esbuild-runner.mjs: Node API first, CLI second.
 // Fully bundled (the graph reaches Postgres/logger layers), with a `require`
 // shim so the CJS dependencies inside it load from an ESM bundle.
 const shim = 'import{createRequire as __cr}from"node:module";const require=__cr(import.meta.url);';
-execFileSync(esbuild, [
+bundleCli(ROOT, [
   SRC,
   "--bundle",
   "--format=esm",

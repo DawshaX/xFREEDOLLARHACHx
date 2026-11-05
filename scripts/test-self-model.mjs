@@ -18,14 +18,14 @@ import assert from "node:assert/strict";
 
 process.env.NODE_ENV = "production";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleCli } from "./lib/esbuild-runner.mjs";
 const SRC = join(ROOT, "artifacts/api-server/src/lib/agent/self-model.ts");
 const work = mkdtempSync(join(tmpdir(), "nova-selfmodel-"));
 const out = join(work, "bundle.mjs");
 
-const esbuild = join(ROOT, "node_modules/.pnpm/node_modules/.bin/esbuild");
-assert.ok(existsSync(esbuild), "esbuild binary not found — run pnpm install first");
+// esbuild is resolved by ./lib/esbuild-runner.mjs: Node API first, CLI second.
 const shim = 'import{createRequire as __cr}from"node:module";const require=__cr(import.meta.url);';
-execFileSync(esbuild, [SRC, "--bundle", "--format=esm", "--platform=node", "--log-level=error", `--banner:js=${shim}`, `--outfile=${out}`]);
+bundleCli(ROOT, [SRC, "--bundle", "--format=esm", "--platform=node", "--log-level=error", `--banner:js=${shim}`, `--outfile=${out}`]);
 
 process.env.NOVA_SERVERS_FILE = join(work, "servers.json");
 process.env.NOVA_STATE_DIR = join(work, "state");
@@ -35,7 +35,7 @@ const mod = await import(out);
 const { AGENT_TOOLS } = await import(
   await (async () => {
     const o = join(work, "tools.mjs");
-    execFileSync(esbuild, [join(ROOT, "artifacts/api-server/src/lib/agent/tools.ts"), "--bundle", "--format=esm", "--platform=node", "--log-level=error", `--banner:js=${shim}`, `--outfile=${o}`]);
+    bundleCli(ROOT, [join(ROOT, "artifacts/api-server/src/lib/agent/tools.ts"), "--bundle", "--format=esm", "--platform=node", "--log-level=error", `--banner:js=${shim}`, `--outfile=${o}`]);
     return o;
   })()
 );
