@@ -13,7 +13,7 @@
  */
 
 import { NOVA_SYSTEM_PROMPT, NOVA_SYSTEM_PROMPT_SHORT } from "./persona";
-import { buildSelfModel, selfModelPrompt } from "./self-model";
+import { buildSelfModel, selfModelPrompt, type SelfModel } from "./self-model";
 import {
   AGENT_TOOLS,
   AGENT_TOOL_NAMES,
@@ -525,6 +525,55 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
   };
 }
 
+/* ── identity, answered from the model ───────────────────────────────────── */
+
+/**
+ * «انت مين» and «تقدر تعمل ايه» must never go to a model.
+ *
+ * Measured 2026-11-05 in a live transcript: the answer to «انت مين» was
+ * «أنا نوفا، كيان ذكي وشريك أمني داخل CyberNova» — true, and useless. The next
+ * question, «تقدر تحمل ادوات؟», produced a bubble with nothing in it. A model
+ * asked about itself answers from whatever text is nearest; the numbers it
+ * gives are decoration.
+ *
+ * So the two questions that define the agent are answered by measurement: the
+ * tool count, the corpus size, the fleet, the memory and the ops kinds all come
+ * from buildSelfModel() at the moment of asking, and the limits are stated in
+ * the same breath. It reads like a person because the facts are its own.
+ */
+export const SELF_QUESTION =
+  /(?:انت\s*مين|مين\s*انت|من\s*(?:أنت|انت)|who\s+are\s+you|عرّ?ف\s*(?:ني|نفسك)|قدراتك|إمكانياتك|امكانياتك|شخصيتك|تقدر\s*(?:تعمل|تعملي|توصل|تشغل|تنفذ|تنفّذ)\s*(?:ايه|إيه|ايه\?|اية|اي)|بتقدر\s*تعمل\s*(?:ايه|إيه)|(?:تقدر|بتقدر|بتقدري)\s*(?:تشتغل|تشغّل|تشغل|تعمل|تنفّذ|تنفذ)\s*(?:على|علي|فى|في|ب)?\s*(?:metasploit|burp|بورب|كالي|kali)|(?:تحمل|تحمّل|تحميل|تنصيب|تثبت|تنزل)\s*(?:لي\s*)?(?:ادوات|أدوات|كالي|kali)|what\s+can\s+you\s+do)/i;
+
+export function identityAnswer(model: SelfModel = buildSelfModel()): string {
+  const topCategories = Object.entries(model.tools.byCategory)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([cat, n]) => `${cat} ${n}`)
+    .join(" · ");
+  const corpusLine = model.corpus.measured
+    ? `فهرس **${model.corpus.total.toLocaleString("en-US")}** ثغرة حقيقية (NVD + KEV + EPSS) — بفتش جواه، مش بتخيل.`
+    : "فهرس الثغرات لسه مش متزامن على السيرفر ده، فمش هدّعي إني بفتش فيه.";
+  const fleetLine = model.machines.registered
+    ? `**${model.machines.registered}** ماكينة مسجّلة في الأسطول${model.machines.names.length ? ` (${model.machines.names.slice(0, 3).join(" · ")})` : ""} — الأوامر عليها بتشتغل لحظة اتصال الوكيل.`
+    : "الأسطول جاهز بس مفيش ماكينة مسجّلة — أول ما تضيف واحدة أقدر أنفّذ عليها أوامر حقيقية.";
+
+  return [
+    `أنا **نوفا** — العقل اللي جوه CyberNova، مش بوت ردود. كل حاجة تحت دي **مقاسة الآن**، مش محفوظة:`,
+    `- **${model.tools.count}** أداة حقيقية مسجّلة باسمها${topCategories ? ` (${topCategories})` : ""}.`,
+    `- ${corpusLine}`,
+    `- ${fleetLine}`,
+    model.memory.total
+      ? `- ذاكرتي فيها **${model.memory.total}** ذكرى من شغلنا، بتفضل بعد إعادة التشغيل.`
+      : "- ذاكرتي لسه فاضية — أول حاجة نحفظها هتفضل بعد الريستارت.",
+    model.opsKinds ? `- **${model.opsKinds}** نوع عملية على برامج مصرّح بها (مش تخمين).` : "",
+    "**اللي مش بعمله وهقوله على طول:**",
+    ...model.cannotDo.slice(0, 3).map((c) => `- ${c}`),
+    "**عايز تشوفني شغالة دلوقتي؟** ابعتلي نطاق زي `example.com` وأنا أعمل استطلاع حقيقي، أو اكتب «دوّر على …» وأجيب من النت بنتائج مش اقتراحات.",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+}
+
 /* ── thought hygiene ─────────────────────────────────────────────────────── */
 
 /**
@@ -807,6 +856,13 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   // Direct answer without tools (identity / chit-chat / general question)
   if (plan.steps.length === 0) {
     let reply = plan.directAnswer?.trim() || "";
+    // Self-knowledge is not a generation task. Even with a live model available,
+    // «انت مين» and «تقدر تعمل ايه» are answered from the measurement — that is
+    // the only way the numbers in the answer are the numbers in the registry.
+    if (SELF_QUESTION.test(message) && !extractTarget(message)) {
+      reply = identityAnswer(selfModel);
+      provider = `${provider}+self-model`;
+    }
     if (!reply) {
       const llm = await llmComplete(
         [
