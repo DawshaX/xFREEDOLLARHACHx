@@ -525,6 +525,49 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
   };
 }
 
+/* ── thought hygiene ─────────────────────────────────────────────────────── */
+
+/**
+ * The thinking line is streamed straight into a one-line bubble in the chat, so
+ * whatever a model copies out of its own prompt becomes user-visible text.
+ * Measured 2026-11-05: the bubble showed regex source
+ * («[مسار: (?:أدوات|ادوات|kali…») — the planner's own pattern, leaked verbatim.
+ * The deterministic planner no longer builds such a string, but the LLM planner
+ * can return anything at all, so the last stop before the screen is a sanitiser:
+ * no fences, no JSON, no regex source, one line, Arabic, capped.
+ */
+export function cleanThought(raw: string, fallback = "هرتّب الطلب على أدواتي الحقيقية وأشوف النتيجة قبل أي استنتاج."): string {
+  let t = String(raw ?? "").trim();
+  if (!t) return fallback;
+
+  t = t.replace(/```[\s\S]*?```/g, " "); // fenced blocks
+  t = t.replace(/\{\s*"[\s\S]*?\}/g, " "); // JSON objects
+  const lines = t
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !/^[{}\[\],]+$/.test(l) && !/^"?(tool|args|steps|thought)"?\s*:/.test(l) && !/(?:^|\s)(?:tool|args)\s*:/.test(l));
+  t = lines.join(" ");
+
+  // Regex source: "(?:" , "\s", "[a-z]+?", "(?:أ|ب)" … none of it belongs on screen.
+  if (/\(\?:|\\[swdb]|\[[^\]]{1,40}\]\s*[?+*]/.test(t)) t = t.replace(/\(\?:[^)]*\)/g, " ").replace(/\\[swdb]/g, " ");
+  // Whatever a stripped pattern leaves behind ("[مسار: ] على الطلب") is debris,
+  // not prose — brackets in a one-line thought are never load-bearing.
+  t = t.replace(/\[[^\]]{0,80}\]/g, " ").replace(/\s+/g, " ").trim();
+
+  // The prompt demands Arabic; a stray English sentence reads as a second voice.
+  // Fewer than a dozen Arabic letters means what survived is mostly pattern/JSON
+  // residue, and the fallback says more than the leftovers do.
+  const arabic = t.match(/[\u0600-\u06FF]/g)?.length ?? 0;
+  if (arabic < 12) return fallback;
+
+  if (t.length > 220) {
+    const cut = t.slice(0, 220);
+    const stop = Math.max(cut.lastIndexOf("."), cut.lastIndexOf("،"), cut.lastIndexOf("—"), cut.lastIndexOf(" "));
+    t = `${cut.slice(0, stop > 80 ? stop : 220).trim()}…`;
+  }
+  return t || fallback;
+}
+
 /* ── LLM planner ─────────────────────────────────────────────────────────── */
 
 const PLAN_INSTRUCTIONS = `أعد **JSON فقط** (بدون أي شرح خارج الـ JSON) بهذا الشكل:
@@ -759,7 +802,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     model,
     tools: AGENT_TOOLS.length,
   });
-  opts.emit({ type: "thought", text: plan.thought });
+  opts.emit({ type: "thought", text: cleanThought(plan.thought) });
 
   // Direct answer without tools (identity / chit-chat / general question)
   if (plan.steps.length === 0) {
