@@ -544,6 +544,29 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
 export const SELF_QUESTION =
   /(?:انت\s*مين|مين\s*انت|من\s*(?:أنت|انت)|who\s+are\s+you|عرّ?ف\s*(?:ني|نفسك)|قدراتك|إمكانياتك|امكانياتك|شخصيتك|تقدر\s*(?:تعمل|تعملي|توصل|تشغل|تنفذ|تنفّذ)\s*(?:ايه|إيه|ايه\?|اية|اي)|بتقدر\s*تعمل\s*(?:ايه|إيه)|(?:تقدر|بتقدر|بتقدري)\s*(?:تشتغل|تشغّل|تشغل|تعمل|تنفّذ|تنفذ)\s*(?:على|علي|فى|في|ب)?\s*(?:metasploit|burp|بورب|كالي|kali)|(?:تحمل|تحمّل|تحميل|تنصيب|تثبت|تنزل)\s*(?:لي\s*)?(?:ادوات|أدوات|كالي|kali)|what\s+can\s+you\s+do)/i;
 
+/**
+ * «مرحببببببا» deserves better than «كيف يمكنني مساعدتك اليوم؟».
+ *
+ * The live transcript opened with exactly that: a warm greeting, answered by a
+ * generic assistant line that could have come from any product. The greeting is
+ * the one place where the agent can introduce what it actually is in two lines,
+ * so it is answered from the same measurement as identity — short, in the
+ * conversation's own dialect, with numbers that are true right now.
+ */
+export function greetingAnswer(model: SelfModel = buildSelfModel()): string {
+  const corpus = model.corpus.measured
+    ? `فهرس **${model.corpus.total.toLocaleString("en-US")}** ثغرة حقيقية`
+    : "فهرس ثغرات لسه بيتزامن";
+  const fleet = model.machines.registered ? `**${model.machines.registered}** ماكينة مسجّلة` : "مفيش ماكينة متصلة لسه";
+  return [
+    "أهلاً بيك 👋 أنا **نوفا** — بشتغل مش بتتكلم بس.",
+    "",
+    `معايا دلوقتي **${model.tools.count}** أداة حقيقية، و${corpus}، و${fleet}.`,
+    "",
+    "اكتب «انت مين» لو عايز التفاصيل كاملة، أو ابعتلي نطاق زي `example.com` وأنا أبدأ استطلاع حقيقي حالاً.",
+  ].join("\n");
+}
+
 export function identityAnswer(model: SelfModel = buildSelfModel()): string {
   const topCategories = Object.entries(model.tools.byCategory)
     .sort((a, b) => b[1] - a[1])
@@ -861,6 +884,10 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     // the only way the numbers in the answer are the numbers in the registry.
     if (SELF_QUESTION.test(message) && !extractTarget(message)) {
       reply = identityAnswer(selfModel);
+      provider = `${provider}+self-model`;
+    } else if (SMALL_TALK.test(message.trim()) && !extractTarget(message) && !extractFleetCommand(message)) {
+      // A greeting is an introduction, not a question to the model.
+      reply = greetingAnswer(selfModel);
       provider = `${provider}+self-model`;
     }
     if (!reply) {

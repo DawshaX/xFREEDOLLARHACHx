@@ -118,6 +118,24 @@ test("the self-question matcher catches the questions and nothing else", () => {
   }
 });
 
+test("a greeting introduces the real machine, in two lines", () => {
+  const hello = core.greetingAnswer(model);
+  assert.match(hello, new RegExp(String(AGENT_TOOLS.length)), "the greeting carries the measured count");
+  assert.match(hello, /مش بتتكلم بس/, "it says what the agent is, not what a chatbot is");
+  assert.doesNotMatch(hello, /كيف يمكنني مساعدتك/, "the generic assistant line must never come back");
+  assert.ok(hello.split("\n").length <= 8, "a greeting is short");
+});
+
+test("a greeting with a real task in it is not treated as small talk", () => {
+  // `extractTarget` deliberately ignores example.com/test/localhost — a test
+  // must use a real-looking host or it tests the wrong thing.
+  const plan = core.heuristicPlan("أهلا، استطلع google.com");
+  assert.ok(
+    plan.steps.some((s) => s.tool === "recon_target"),
+    "a greeting at the front must not swallow the request behind it",
+  );
+});
+
 console.log(`\nself-model: ${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const f of failures) console.error(`\n✗ ${f.name}\n${f.err.stack}`);
