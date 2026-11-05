@@ -261,6 +261,25 @@ def main() -> int:
         log("✓ طلبت إعادة تشغيل ذاتية — البرنامج هيرجع بالنسخة الجديدة بعد ثانيتين")
         return 0
 
+    # ── the fallback that does not need HTTP at all ──────────────────────────
+    # Measured 2026-11-05 02:59 on the Waifly slot: every port guess missed
+    # (the proxy maps an external port to something we cannot see from inside),
+    # the updater exited 0, and the old process kept serving for another hour.
+    # The supervisor watches ONE file (`state/.nova-restart` next to the
+    # bundle) — and this script already knows that directory, because it just
+    # unpacked the release into it. Writing the marker directly cannot miss.
+    try:
+        state_dir = os.path.join(dest, "state")
+        os.makedirs(state_dir, exist_ok=True)
+        marker = os.path.join(state_dir, ".nova-restart")
+        with open(marker, "w", encoding="utf-8") as m:
+            m.write(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()) + " live-update.py\n")
+        log(f"✓ علامة إعادة التشغيل اتكتبت مباشرة: {marker}")
+        log("  المُشرف بيقيس الملف ده كل ثانية — البرنامج هيرجع بالنسخة الجديدة لوحده.")
+        return 0
+    except Exception as exc:
+        log(f"⚠ مقدرتش أكتب علامة إعادة التشغيل: {exc}")
+
     log("الخطوة الأخيرة: اضغط Restart في لوحة الاستضافة.")
     log("(النسخة القديمة شغّالة من غير المُشرف، فمش قادرة تعيد تشغيل نفسها — دي آخر مرة تحتاجها)")
     return 0
