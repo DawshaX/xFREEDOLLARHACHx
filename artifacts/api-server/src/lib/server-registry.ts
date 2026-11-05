@@ -153,10 +153,19 @@ export const SEED_SERVERS: ReadonlyArray<Pick<NovaServer, "name" | "base" | "kin
     note: "البورت 8080 لازم يكون Public من تبويب Ports جوه الكودسبيس",
   },
   {
+    // The HTTPS face of the same slot, via Waifly's Web/WebSocket proxy
+    // (auto TLS). This is the one a browser on an https page can actually
+    // reach — and the only one GitHub Pages is allowed to call.
+    name: "Waifly · HTTPS",
+    base: "https://nova.waifly.com",
+    kind: "waifly",
+    note: "نفس السلوت عبر بروكسي Waifly — ده العنوان اللي صفحة GitHub Pages تقدر تكلّمه",
+  },
+  {
     name: "Waifly · Paris FR01",
     base: "http://node.waifly.com:27316",
     kind: "waifly",
-    note: "سلوت 300 MB دائم · Start Command: sh nova-24-7/start.sh",
+    note: "سلوت 300 MB دائم · Start Command: sh /home/container/run",
   },
 ];
 
