@@ -96,7 +96,53 @@ jobs:
             dist-node-kit/nova-node-kit.zip
           retention-days: 90
 
+      # Measured 2026-11-05: the bundle built, passed its own smoke test and
+      # uploaded fine — and then this step failed, so the release kept the previous
+      # zip. Everything downstream reads that zip: the live slot self-updates from
+      # it, so a transient failure here silently freezes production on an old
+      # build. GitHub's API was returning 502 for minutes at a time that afternoon
+      # (the same window broke Pages deploys and PR merges), which is exactly the
+      # kind of failure a retry is for.
+      #
+      # The body is repeated in the retry on purpose: a release published by the
+      # second attempt must not come out with an empty description.
       - name: Publish as a release asset (stable download link)
+        id: publish
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: nova-portable
+          name: "NOVA — النسخة المحمولة 24/7"
+          body: |
+            حزمة جاهزة للتشغيل على أي استضافة مجانية **بدون تثبيت وبدون كارت**:
+
+            1. نزّل `nova-24-7.zip` وفك الضغط.
+            2. شغّل: `node server.mjs` (أو `sh start.sh`).
+            3. البورت من `PORT` أو `SERVER_PORT`، والاستماع على `0.0.0.0`.
+            4. لـHTTPS مجاني بدون حساب: `sh start-tunnel.sh`.
+
+            الحجم ~10MB · الذاكرة ~90–110MB RSS · مفيش npm install ولا build.
+
+            ---
+
+            **نود الأسطول — `nova-node-kit.zip` (13 KB):**
+            ملفات جاهزة تخلي أي سيرفر/جهاز تاني يبقى نود تابع للهاب.
+            ارفع الملفات → خلّي Main file = `index.js` → Start.
+            مفيش أي إعداد مطلوب (عنوان الهاب مدمج)، والاتصال صادر فمش محتاج IP عام.
+            بديل بدون رفع: `curl -fsSL <hub>/api/local-agent/download-agent | bash -s -- --id node-2`
+          files: |
+            dist-standalone/nova-24-7.zip
+            dist-node-kit/nova-node-kit.zip
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: wait, then publish again — the first attempt is allowed to fail
+        if: steps.publish.outcome == 'failure'
+        run: sleep 60
+
+      - name: Publish as a release asset (retry)
+        if: steps.publish.outcome == 'failure'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nova-portable
@@ -122,5 +168,22 @@ jobs:
             dist-standalone/nova-24-7.zip
             dist-node-kit/nova-node-kit.zip
           make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: wait, then publish again — the first attempt is allowed to fail
+        if: steps.publish.outcome == 'failure'
+        run: sleep 60
+
+      - name: Publish as a release asset (retry)
+        if: steps.publish.outcome == 'failure'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nova-portable
+          name: "NOVA — النسخة المحمولة 24/7"
+          make_latest: false
+          files: |
+            dist-standalone/nova-24-7.zip
+            dist-node-kit/nova-node-kit.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
