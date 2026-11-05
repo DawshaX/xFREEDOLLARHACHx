@@ -40,6 +40,10 @@ import agentV2Router from "./agentV2";
 import rootAgentRouter from "./rootAgent";
 import ollamaStatusRouter from "./ollama-status";
 import ollamaProxyRouter from "./ollama-proxy";
+// 2026-11-05: routes/ollama.ts existed on disk but was never imported or mounted,
+// so /api/ollama/probe, /api/ollama/chat and /api/ollama/chat/stream 404'd even
+// though the panel calls them. Mounted below (additive only).
+import ollamaRouter from "./ollama";
 import memoryRouter from "./memory";
 import threatDetectionRouter from "./threat-detection";
 
@@ -159,6 +163,9 @@ router.use(aiRouter);
 // ── Ollama ───────────────────────────────────────────────────────────────────
 router.use(ollamaProxyRouter);
 router.use(ollamaStatusRouter);
+// Mounted last so the richer ollama-status handlers keep winning for the paths
+// they share (/ollama/status, /ollama/models); this only ADDS the missing ones.
+router.use(ollamaRouter);
 
 // ── Files, System, Terminal ──────────────────────────────────────────────────
 router.use(filesRouter);
