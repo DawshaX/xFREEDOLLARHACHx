@@ -87,6 +87,15 @@ const SEED: Array<Pick<KnownServer, "name" | "kind" | "note"> & { base: string }
     kind: "codespace",
     note: "Ports → 8080 → Public، وبعدها شغّل scripts/nova-codespace.sh",
   },
+  {
+    // Server 53a7d0cb · Paris FR01 · 300 MB slot. Waifly prints this address
+    // without a scheme; a bare allocation port speaks HTTP and the proxy in
+    // front speaks HTTPS, so the probe tries both and reports which answered.
+    name: "Waifly · Paris FR01",
+    base: "http://node.waifly.com:27316",
+    kind: "waifly",
+    note: "Start Command: sh nova-24-7/start.sh — والملفات في /home/container",
+  },
 ];
 
 function seed(): KnownServer[] {
@@ -169,10 +178,38 @@ export function activateServer(server: KnownServer): string {
 }
 
 /** Real probe of one machine. A failure is reported as a failure, with its reason. */
+/** The registered origin first, then the same host on the other scheme. */
+export function schemeCandidates(base: string): string[] {
+  const primary = normalizeServerBase(base);
+  if (!primary) return [];
+  const alternate = primary.startsWith("https://")
+    ? `http://${primary.slice("https://".length)}`
+    : `https://${primary.slice("http://".length)}`;
+  return alternate && alternate !== primary ? [primary, alternate] : [primary];
+}
+
 export async function probeKnownServer(server: KnownServer): Promise<ServerStatus> {
   const started = Date.now();
+  const candidates = schemeCandidates(server.base);
+  // Browser rule worth knowing: a page served over https cannot fetch http at
+  // all (mixed content), so on GitHub Pages the https attempt is the only one
+  // that can succeed — and it is the second candidate for a Waifly slot.
+  let firstFailure: ServerStatus | null = null;
+  for (const origin of candidates) {
+    const status = await probeOrigin(server, origin, started);
+    // A live answer on either scheme settles it; a failed one does not, because
+    // the other scheme may be the one the service is actually on.
+    if (status.state === "up") {
+      return origin === server.base ? status : { ...status, says: `${status.says} · عبر ${origin}` };
+    }
+    firstFailure ??= status;
+  }
+  return firstFailure ?? probeOrigin(server, server.base, started);
+}
+
+async function probeOrigin(server: KnownServer, origin: string, started: number): Promise<ServerStatus> {
   try {
-    const res = await fetch(`${server.base}/api/health`, { signal: AbortSignal.timeout(6000) });
+    const res = await fetch(`${origin}/api/health`, { signal: AbortSignal.timeout(6000) });
     const ms = Date.now() - started;
     if (!res.ok) {
       return {
@@ -186,7 +223,18 @@ export async function probeKnownServer(server: KnownServer): Promise<ServerStatu
             : `ردّ HTTP ${res.status}`,
       };
     }
-    const body = (await res.json().catch(() => ({}))) as { status?: string; wsConnected?: boolean; name?: string };
+    const body = (await res.json().catch(() => null)) as { status?: string; wsConnected?: boolean; name?: string } | null;
+    if (!body || typeof body !== "object") {
+      // 200 + HTML is GitHub's "development port" interstitial, not a health
+      // answer — the Codespace is reachable only for a signed-in visitor.
+      return {
+        id: server.id,
+        state: "down",
+        ms,
+        checkedAt: Date.now(),
+        says: "ردّ 200 بس مش JSON — صفحة تحذير GitHub (البورت عام للعرض بس مش للبرامج)",
+      };
+    }
     return {
       id: server.id,
       state: "up",

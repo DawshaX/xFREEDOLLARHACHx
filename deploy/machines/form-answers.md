@@ -51,13 +51,19 @@
 
 ---
 
-## 2) Waifly — Create Server
+## 2) Waifly — السيرفر موجود خلاص (`53a7d0cb`)
+
+> **ده اللي اتعمل فعلًا:** السيرفر متعمل على Waifly (PAR1 · Paris FR01 · 300 MB · Active)،
+> والملف الجاهز للرفع هو `nova-24-7.zip`. الخطوات كلها في **`deploy/machines/waifly-live.md`**.
+> اللي تحت ده المرجع القديم بتاع «لو عايز تعمل سيرفر تاني».
+
+## 2-ب) Waifly — Create Server (مرجع)
 
 | الحقل | القيمة |
 |---|---|
 | **Server Name** | `nova-hub` |
 | **Egg (Server Type)** | `NodeJS` — **مش** `NodeJS + Python` ومش `NodeJS + Python + FFmpeg` |
-| **Location** | `France - Paris 1 (FR1)` — لأن FR2 ممتلئ وFR3 مدفوع |
+| **Location** | `France - Paris 1 (FR1)` (PAR1) — لأن FR2 ممتلئ وFR3 مدفوع |
 | **السلوت** | 1 slot = 300 MB RAM · 30% CPU · 1024 MB disk |
 
 ### ليه NodeJS بالظبط

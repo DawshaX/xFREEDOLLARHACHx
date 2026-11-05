@@ -85,7 +85,9 @@ else
 # written by waifly-bootstrap.sh — this file holds the exec token, never commit it
 NODE_ENV=production
 HOST=0.0.0.0
-PORT=8080   # the panel assigns the real one; start.sh prefers $PORT/$SERVER_PORT
+# PORT is deliberately NOT set: the egg exports it and boot.mjs reads
+# PORT or SERVER_PORT. A value here would win and the panel's proxy would 502.
+
 NOVA_EXEC_TOKEN=$TOKEN
 NOVA_MEMORY_FILE=$APP_DIR/state/nova-memory.json
 NOVA_STATIC_DIR=$APP_DIR/public
