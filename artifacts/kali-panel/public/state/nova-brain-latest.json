@@ -1,9 +1,9 @@
 {
-  "at": "2026-11-05T10:27:05.976Z",
+  "at": "2026-11-05T17:39:30.695Z",
   "seat": "openai",
   "thinking": {
-    "reply": "الحالة الحالية: عملك المشاهَدات ثلاث أهداف (scanme.nmap.org,testphp.vulnweb.com,demo.testfire.net) دون نتائج. التغطية 0.46، عدد المستقبليات 3. الوضع يحافظ على الالتزام للباحثين المسموحين، ومتابعة التحقيق بخصوص ملاحظات الفحص الضيق للموارد.",
-    "why": "لا توجد طلبات حاليًا لتشغيل أداة، لذلك لا حاجة لأي إجراء.",
+    "reply": "الـ corpus coverage 15.8%، scanned 3 hosts وبدون findings. الخطوة الجاية: توسيع الأهداف وتحديث قواعد الكشف.",
+    "why": "خطة متابعة مهمة.",
     "action": {
       "kind": "none",
       "arg": ""
@@ -13,27 +13,27 @@
   "answered": null,
   "senses": {
     "corpus": {
-      "total": 192930,
-      "at": "2026-11-05T07:55:32.113Z",
-      "critical": 15989,
-      "high": 76121,
-      "kev": 984,
-      "coverage": 0.46,
-      "nextStartIndex": 192930,
+      "total": 66427,
+      "at": "2026-11-05T16:33:59.753Z",
+      "critical": 3737,
+      "high": 26292,
+      "kev": 163,
+      "coverage": 0.1582,
+      "nextStartIndex": 222930,
       "newestYear": 2026,
       "topProducts": [
-        "windows_10",
-        "android",
-        "debian_linux",
-        "ubuntu_linux",
         "linux_kernel",
+        "android",
         "firefox",
         "mac_os_x",
+        "php",
+        "debian_linux",
         "fedora",
-        "chrome",
-        "safari",
-        "flash_player",
-        "iphone_os"
+        "windows_10",
+        "irix",
+        "internet_explorer",
+        "ios",
+        "ethereal"
       ]
     },
     "hunt": {
@@ -313,13 +313,13 @@
       "says": "اتفحص 3 هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل."
     },
     "advisories": {
-      "total": 1067,
-      "at": "2026-11-04T21:14:11.896Z",
-      "critical": 196
+      "total": 1068,
+      "at": "2026-11-05T15:18:56.846Z",
+      "critical": 197
     }
   },
   "failures": [],
-  "says_ar": "فكّرت على openai · الحالة الحالية: عملك المشاهَدات ثلاث أهداف (scanme.nmap.org,testphp.vulnweb.com,demo.testfire.net) دون نتائج. التغطية 0.46، عدد المستقبليات 3. الوضع يحافظ على الالتزام للباحثين الم",
+  "says_ar": "فكّرت على openai · الـ corpus coverage 15.8%، scanned 3 hosts وبدون findings. الخطوة الجاية: توسيع الأهداف وتحديث قواعد الكشف.",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
