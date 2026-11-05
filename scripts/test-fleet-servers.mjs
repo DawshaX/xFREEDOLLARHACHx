@@ -58,6 +58,29 @@ const jsonResponse = (body, status = 200) =>
 
 console.log("server registry — the honesty rules");
 
+test("a 401 says the port is Private, not «the server is down»", () => {
+  const msg = mod.probeError(401, false, false);
+  assert.match(msg, /Private/);
+  assert.match(msg, /Public/);
+  assert.match(msg, /gh codespace ports visibility/, "the fix must be pasteable");
+});
+
+test("a 200 that is HTML is a warning page, never an up machine", () => {
+  const msg = mod.probeError(200, true, false);
+  assert.match(msg, /مش JSON/);
+  assert.match(msg, /Ports/);
+});
+
+test("a 404 and a 502 give different, actionable sentences", () => {
+  assert.match(mod.probeError(404, false, false), /Ports/);
+  assert.match(mod.probeError(502, false, false), /اللوج/);
+});
+
+test("a healthy JSON 200 has no error at all", () => {
+  assert.equal(mod.probeError(200, true, true), undefined);
+});
+
+
 test("normalizeServerBase accepts host, https, trailing slash and /api", () => {
   assert.equal(mod.normalizeServerBase("nova.onrender.com"), "https://nova.onrender.com");
   assert.equal(mod.normalizeServerBase("https://nova.onrender.com/"), "https://nova.onrender.com");

@@ -5315,7 +5315,25 @@ if (path === "/nova-core/version") {
         log: [],
       };
     }
-    if (path === "/fleet/system") {
+    /**
+ * Static build: /fleet/doctor is the engine's own diagnosis, and there is no
+ * engine here. Answer `static:true` with an empty check list so the card hides
+ * the section instead of painting a green «سليم» it did not measure.
+ */
+if (path === "/fleet/doctor") {
+  return {
+    ok: true,
+    static: true,
+    ready: false,
+    score: 0,
+    counts: { ok: 0, warn: 0, fail: 0, total: 0 },
+    checks: [],
+    note: "الوضع الثابت: مفيش محرك يتشخّص — افتح /api/fleet/doctor على السيرفر.",
+    says_ar: "الصفحة دي ثابتة: التشخيص بيحتاج محرك شغّال.",
+  };
+}
+
+if (path === "/fleet/system") {
       // The static build has no engine of its own, so every number here is the
       // honest zero: nothing is measured, and the sentence says so instead of
       // inventing a fleet. When a real engine is linked this route never runs.

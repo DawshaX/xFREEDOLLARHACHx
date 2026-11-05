@@ -40,6 +40,31 @@ export interface NovaServer {
   learnedFrom?: string;
 }
 
+/**
+ * Why a probe failed, in the words that lead to the fix.
+ *
+ * A bare «HTTP 401» sent a human looking for a bug in NOVA, when the answer was
+ * a GitHub setting: a Codespace port is **Private by default**, and the fleet
+ * (an anonymous GET from another machine) gets GitHub's login wall — 401 — while
+ * the port is happily serving the owner's browser. Measured 2026-11-05.
+ */
+export function probeError(status: number, ok: boolean, json: boolean): string | undefined {
+  if (ok && !json) {
+    return "ردّ 200 بس مش JSON — دي صفحة تحذير من GitHub. خلّي البورت Public: تبويب Ports → 8080 → Private يتحوّل لـPublic.";
+  }
+  if (ok) return undefined;
+  if (status === 401 || status === 403) {
+    return `HTTP ${status} — المنفذ Private: GitHub بيرد بصفحة تسجيل دخول قبل ما يوصل للبرنامج. الحل: Ports → غيّر الـPort Visibility لـPublic (أو gh codespace ports visibility 8080:public).`;
+  }
+  if (status === 404) {
+    return "HTTP 404 — البورت مش مفتوح في الـCodespace، أو البرنامج مش شغّال عليه. شغّله وخلّي البورت يظهر في تبويب Ports.";
+  }
+  if (status === 502 || status === 503 || status === 504) {
+    return `HTTP ${status} — الوكيل شغّال والبرنامج اللي وراه مش بيرد. شوف اللوج بتاع السلوت.`;
+  }
+  return `HTTP ${status}`;
+}
+
 export interface ServerProbe {
   id: string;
   state: "up" | "down" | "unknown";
@@ -349,7 +374,7 @@ export async function probeServer(server: NovaServer, opts: ProbeOptions = {}): 
         ms,
         checkedAt: now(),
         health,
-        error: res.ok && !json ? "ردّ 200 بس مش JSON — دي صفحة تحذير (الكودسبيس محتاج تسجيل دخول أو البورت مش Public)" : res.ok ? undefined : `HTTP ${res.status}`,
+        error: probeError(res.status, res.ok, json),
         ...(origin === candidates[0] ? {} : { via: origin }),
       };
       // A live answer on either scheme settles it; a non-2xx does not, because

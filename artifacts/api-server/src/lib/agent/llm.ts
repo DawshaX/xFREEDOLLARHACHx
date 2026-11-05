@@ -188,6 +188,51 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
     }),
   );
 
+  /**
+   * More keyless seats, on other providers — because one provider is one point
+   * of failure. Both are OpenAI-compatible with an anonymous tier, verified
+   * against their docs on 2026-11-05:
+   *
+   *   • LLM7  — https://api.llm7.io/v1      · `gpt-oss:20b` answers with no
+   *              Authorization header at all (~30 RPM anonymous).
+   *   • OVH   — https://oai.endpoints.kepler.ai.cloud.ovh.net/v1 · OVHcloud's
+   *              own docs show the keyless examples at ~2 RPM per model.
+   *
+   * They cost nothing and need no account, which is the only kind of capacity
+   * this project is allowed to depend on. `NOVA_EXTRA_KEYLESS=0` removes them
+   * if a host ever blocks them; a seat that fails is skipped at call time, so a
+   * dead route can never take the brain down with it.
+   */
+  const extraKeyless: Array<{ id: string; label: string; baseUrl: string; model: string }> = [
+    {
+      id: "llm7",
+      label: "LLM7 · gpt-oss:20b (بدون مفتاح)",
+      baseUrl: String(process.env.LLM7_BASE_URL || "https://api.llm7.io/v1").replace(/\/$/, ""),
+      model: String(process.env.LLM7_MODEL || "gpt-oss:20b"),
+    },
+    {
+      id: "ovh-ai",
+      label: "OVH AI Endpoints · Qwen (بدون مفتاح)",
+      baseUrl: String(process.env.OVH_AI_BASE_URL || "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1").replace(/\/$/, ""),
+      model: String(process.env.OVH_AI_MODEL || "Qwen3.6-27B"),
+    },
+  ];
+
+  if (String(process.env.NOVA_KEYLESS_LLM ?? "1") !== "0" && String(process.env.NOVA_EXTRA_KEYLESS ?? "1") !== "0") {
+    for (const p of extraKeyless) {
+      providers.push({
+        id: p.id,
+        label: p.label,
+        model: p.model,
+        kind: "openai-compatible",
+        baseUrl: p.baseUrl,
+        // Empty string is meaningful here: no Authorization header is sent.
+        apiKey: "",
+        free: true,
+      });
+    }
+  }
+
   if (String(process.env.NOVA_KEYLESS_LLM ?? "1") !== "0") {
     // POLLINATIONS_MODEL is honoured only when a single seat is configured: with
     // several seats a global override would put the same model on every seat and
@@ -261,6 +306,8 @@ const MODEL_PREFERENCE: Record<string, string[]> = {
   mistral: ["mistral-small", "open-mistral"],
   together: ["Llama-3.3-70B", "gpt-oss-120b"],
   "github-models": ["gpt-4o-mini", "gpt-4.1-mini", "Phi-4"],
+  llm7: ["gpt-oss:20b", "codestral-latest", "mistral-nemo", "minimax", "deepseek"],
+  "ovh-ai": ["Qwen3.6-27B", "Meta-Llama-3_3-70B-Instruct", "Mistral-Small", "mistral", "Qwen"],
 };
 
 const NOT_CHAT = /embed|whisper|tts|audio|image|dall|moderation|guard|rerank|vision-ocr|realtime|search|transcribe|clip|lyria/i;

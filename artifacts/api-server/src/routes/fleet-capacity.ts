@@ -174,7 +174,7 @@ router.get("/fleet/catalogue", async (req: Request, res: Response) => {
 router.get("/fleet/scale-plan", (req: Request, res: Response) => {
   const want = Math.max(1, Math.min(100, Number(req.query.target ?? 8) || 8));
   const connected = liveAgents().length;
-  const host = String(req.headers.host ?? "node.waifly.com:27214");
+  const host = String(req.headers.host ?? "nova.waifly.com");
   const hub = `ws://${host}/api/local-agent/ws`;
   const httpBase = `http://${host}`;
 
@@ -219,7 +219,7 @@ router.get("/fleet/scale-plan", (req: Request, res: Response) => {
 
 /** One-line bootstrap for a brand-new machine. */
 router.get("/fleet/bootstrap", (req: Request, res: Response) => {
-  const host = String(req.headers.host ?? "node.waifly.com:27214");
+  const host = String(req.headers.host ?? "nova.waifly.com");
   const proto = (req.headers["x-forwarded-proto"] === "https" ? "wss" : "ws");
   const id = String(req.query.id ?? "node-2").replace(/[^\w.-]/g, "").slice(0, 40) || "node-2";
   const hub = `${proto}://${host}/api/local-agent/ws`;
