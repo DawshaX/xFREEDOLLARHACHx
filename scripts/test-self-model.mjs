@@ -136,6 +136,15 @@ test("a greeting with a real task in it is not treated as small talk", () => {
   );
 });
 
+test("«مرحببببببا» is a greeting, not a memory search", () => {
+  // The exact opener of the transcript this round exists for.
+  const plan = core.heuristicPlan("مرحببببببا");
+  assert.deepEqual(plan.steps, [], "a hello must not call tools");
+  assert.equal(core.heuristicPlan("مرحبا، عامل ايه").steps.length, 0);
+  // …while a greeting with work in it still plans the work.
+  assert.ok(core.heuristicPlan("مرحبا، دوّر على CVE-2024-3094").steps.length > 0);
+});
+
 console.log(`\nself-model: ${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const f of failures) console.error(`\n✗ ${f.name}\n${f.err.stack}`);

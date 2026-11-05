@@ -453,14 +453,37 @@ export function extractFleetCommand(message: string): string | null {
   return stop;
 }
 
-const SMALL_TALK = /^(?:أهلا|اهلا|السلام|سلام|صباح|مساء|hi|hello|hey|ازيك|إزيك|عامل ايه)/i;
+// «مرحبا» was missing here, and it is the first word of the transcript this
+// whole round started from («مرحببببببا»). A greeting the router does not
+// recognise becomes a memory search and a platform status call — two tools for
+// somebody who only said hello. `مرحب+ا*` is deliberate: people type the extra
+// letters, and a router that only accepts the dictionary spelling is a router
+// that ignores them.
+const SMALL_TALK = /^(?:مرحب+ا*|أهلا|اهلا|أهلاً|هلا|السلام|سلام|صباح|مساء|هاي|hi|hello|hey|ازيك|إزيك|عامل ايه)/i;
+
+/**
+ * Is this greeting *only* a greeting?
+ *
+ * «مرحببببببا» is. «مرحبا، دوّر على CVE-2024-3094» is not — and treating it as
+ * one is how a hello used to swallow the request behind it.
+ */
+export function greetingOnly(message: string): boolean {
+  const msg = String(message ?? "").trim();
+  if (!SMALL_TALK.test(msg)) return false;
+  const rest = msg
+    .replace(SMALL_TALK, " ")
+    .replace(/(?:يا\s*نوفا|نوفا|يا\s*بطل|يا\s*صاحبي|كيفك|كيف\s*الحال|عامل\s*ايه|ازيك|إزيك|بخير|الحمد\s*لله)/gi, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+  return rest.length === 0;
+}
 
 export function heuristicPlan(message: string): { thought: string; steps: PlannedStep[] } {
   const msg = message.trim();
   if (!msg) return { thought: "مفيش طلب واضح.", steps: [] };
 
   const host = extractTarget(msg);
-  if (SMALL_TALK.test(msg) && !host) {
+  if (greetingOnly(msg) && !host) {
     return { thought: "المستخدم بيسلّم — أرد بشكل شخصي وأعرض اللي أقدر أعمله.", steps: [] };
   }
   if (/(?:انت مين|من أنت|مين انت|who are you|شخصيتك)/i.test(msg)) {
@@ -885,7 +908,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     if (SELF_QUESTION.test(message) && !extractTarget(message)) {
       reply = identityAnswer(selfModel);
       provider = `${provider}+self-model`;
-    } else if (SMALL_TALK.test(message.trim()) && !extractTarget(message) && !extractFleetCommand(message)) {
+    } else if (greetingOnly(message) && !extractTarget(message) && !extractFleetCommand(message)) {
       // A greeting is an introduction, not a question to the model.
       reply = greetingAnswer(selfModel);
       provider = `${provider}+self-model`;
