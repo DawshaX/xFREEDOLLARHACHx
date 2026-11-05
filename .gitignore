@@ -72,6 +72,7 @@ state/jobs/
 state/jobs/*
 # the findings vault is engine runtime state too — it is rebuilt by POST /api/ops/findings/sync
 state/findings-vault.json
+state/fleet-servers.json
 # self-update watcher chatter (written next to the engine's cwd)
 state/auto-update.json
 state/auto-update.log

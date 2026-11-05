@@ -82,6 +82,7 @@ import multiAiRouter from "./multi-ai";
 import novaGatewayRouter from "./nova-gateway";
 import novaCoreRouter from "./nova-core";
 import fleetMeshRouter from "./fleet-mesh";
+import fleetServersRouter from "./fleet-servers";
 import fleetCapacityRouter from "./fleet-capacity";
 import panelGapsRouter from "./panel-gaps";
 import opsRouter from "./ops";
@@ -134,6 +135,7 @@ router.use(novaGatewayRouter);
 
 // ── NOVA Core (persona + real tools + agent loop) ────────────────────────────
 router.use(novaCoreRouter);
+router.use(fleetServersRouter);
 router.use(fleetMeshRouter);
 // Free-stack catalogue + honest fleet ceiling + measured free-host reachability.
 // (Was imported but never mounted, so /api/fleet/* 404'd while the code sat there —

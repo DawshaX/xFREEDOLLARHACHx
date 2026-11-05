@@ -14,6 +14,7 @@
  */
 import LiveBodyCard from "@/components/LiveBodyCard";
 import CorpusPanel from "@/components/CorpusPanel";
+import { NovaServerRegistry } from "@/components/desktop/NovaServerRegistry";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -408,6 +409,8 @@ export default function NovaFleetUnified() {
     <div dir="rtl" className="min-h-[calc(100vh-64px)] bg-[#050208] text-white p-3 space-y-3">
       {/* the always-on body: live Actions runs + the last real hunt */}
       <LiveBodyCard />
+      {/* the machines the program actually runs on: Codespace · Render · Waifly */}
+      <NovaServerRegistry />
       <CorpusPanel compact />
 
       {/* header */}

@@ -23,6 +23,7 @@ import { Router, type Request, type Response } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { getConnectedAgentList, execOnLocalAgent } from "./local-agent";
+import { cachedProbes, loadServers, probeAll, type ServerKind } from "../lib/server-registry";
 import { broadcastEvent } from "../lib/ws-hub";
 import { broadcastLiveEvent } from "./live-events";
 
@@ -206,6 +207,25 @@ function buildNodes(): MeshNode[] {
     });
   }
 
+  // Registered NOVA servers (Codespaces / Render / Waifly): these hosts run the
+  // program but never open a WebSocket agent, so without this loop the fleet page
+  // showed a mesh with none of the machines the platform actually lives on.
+  // Status comes from the last real `/api/health` probe, refreshed in the
+  // background by `/api/fleet/servers` — never assumed online.
+  const probes = new Map(cachedProbes().map((p) => [p.id, p]));
+  for (const server of loadServers()) {
+    const probe = probes.get(server.id);
+    nodes.push({
+      id: server.id,
+      name: server.name,
+      kind: "machine",
+      role: `سيرفر ${server.kind} · ${server.base.replace(/^https?:\/\//, "")}`,
+      status: probe ? (probe.ok ? "online" : "offline") : "waiting",
+      host: server.base.replace(/^https?:\/\//, ""),
+      tools: probe?.health && typeof probe.health.tools === "number" ? (probe.health.tools as number) : undefined,
+    });
+  }
+
   // One slot per *real* agent — never reuse a machine to fake capacity.
   // Slot #i is only "online" when there are at least i agents actually attached.
   const deviceIds = devices.map((d) => d.id);
@@ -278,7 +298,14 @@ function decompose(goal: string, nodes: MeshNode[]): PlanStep[] {
 /* ── routes ─────────────────────────────────────────────────────────────── */
 
 /** Full live picture: nodes, capacity, plan board, and the message log. */
-router.get("/fleet/mesh", (_req: Request, res: Response) => {
+router.get("/fleet/mesh", async (_req: Request, res: Response) => {
+  // Refresh registered-server probes first (cached 20 s), so the nodes below are
+  // as fresh as this request rather than as fresh as the last page visit.
+  try {
+    await probeAll(loadServers());
+  } catch {
+    /* a dead probe must never break the mesh */
+  }
   const nodes = buildNodes();
   const active = state.plans[0] ?? null;
   res.json({
