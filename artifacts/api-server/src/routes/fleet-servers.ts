@@ -16,6 +16,7 @@
 import { Router, type Request, type Response } from "express";
 import {
   codespaceBase,
+  gossipServers,
   loadServers,
   probeAll,
   probeServer,
@@ -24,8 +25,10 @@ import {
   saveServers,
   serverKind,
   upsertServer,
+  type GossipResult,
   type NovaServer,
 } from "../lib/server-registry";
+import { corpusStatus } from "../lib/ops/vuln-corpus";
 
 const router = Router();
 
@@ -40,8 +43,25 @@ function describe(servers: NovaServer[]) {
   };
 }
 
-router.get("/fleet/servers", async (_req: Request, res: Response) => {
-  const servers = loadServers();
+router.get("/fleet/servers", async (req: Request, res: Response) => {
+  let servers = loadServers();
+
+  // Peer exchange: every reachable machine is asked for its list, and machines
+  // we have never heard of are added. `?peers=0` is how a peer asks us without
+  // starting a round of its own (that would be a fetch loop between machines).
+  let peers: GossipResult | null = null;
+  if (req.query.peers !== "0") {
+    try {
+      peers = await gossipServers(servers);
+      if (peers.gained > 0) {
+        servers = peers.servers;
+        saveServers(servers);
+      }
+    } catch {
+      /* a failed round must never hide the list we do have */
+    }
+  }
+
   const probes = await probeAll(servers);
   const byId = new Map(probes.map((p) => [p.id, p]));
   const up = probes.filter((p) => p.state === "up").length;
@@ -50,11 +70,108 @@ router.get("/fleet/servers", async (_req: Request, res: Response) => {
     up,
     down: servers.length - up,
     servers: servers.map((s) => ({ ...s, probe: byId.get(s.id) ?? null })),
+    peers: peers
+      ? {
+          at: peers.at,
+          gained: peers.gained,
+          tried: peers.peers.length,
+          reached: peers.peers.filter((p) => p.ok).length,
+          list: peers.peers,
+        }
+      : undefined,
     note:
       servers.length === 0
         ? "مفيش سيرفرات مسجّلة — ضيف الـCodespace أو Render أو Waifly من نفس الصفحة، والقياس هنا حقيقي بيتصل بـ/api/health."
         : undefined,
   });
+});
+
+/**
+ * One honest snapshot of the whole program: the machines it runs on, the agents
+ * inside it, the corpus it reads, and the plan it is executing.
+ *
+ * Why this exists: the same facts were spread over six endpoints and three
+ * pages, so "is everything actually connected?" could only be answered by a
+ * human opening tabs. Here it is one request, and every field is measured —
+ * `says_ar` is the sentence NOVA says about itself from those numbers, not a
+ * template that ignores them.
+ */
+router.get("/fleet/system", async (_req: Request, res: Response) => {
+  const servers = loadServers();
+  const probes = await probeAll(servers);
+  const up = probes.filter((p) => p.state === "up");
+  const corpus = corpusStatus();
+
+  let mesh: ReturnType<typeof import("./fleet-mesh").meshSnapshot> | null = null;
+  try {
+    const { meshSnapshot } = await import("./fleet-mesh");
+    mesh = meshSnapshot();
+  } catch {
+    /* the mesh is optional here: machines and corpus still answer */
+  }
+
+  const brain = await (async () => {
+    try {
+      const { listConfiguredProviders } = await import("../lib/agent/llm");
+      const providers = await listConfiguredProviders();
+      return {
+        providers: providers.map((p) => p.id),
+        count: providers.length,
+        note: providers.length
+          ? `العقل متصل بـ ${providers.length} مزوّد (${providers.map((p) => p.id).join(" · ")})`
+          : "مفيش مزوّد عقل متاح — البرنامج يشتغل بأدواته لكن مفيش مين يفكر",
+      };
+    } catch (err) {
+      return { providers: [] as string[], count: 0, note: `تعذّر قراءة المزوّدين: ${(err as Error).message}` };
+    }
+  })();
+
+  const machines = servers.map((s) => {
+    const probe = probes.find((p) => p.id === s.id) ?? null;
+    return {
+      name: s.name,
+      base: s.base,
+      kind: s.kind,
+      state: probe?.state ?? "unknown",
+      status: probe?.status ?? null,
+      ms: probe?.ms ?? null,
+      error: probe?.error,
+      learnedFrom: s.learnedFrom,
+    };
+  });
+
+  const answers = [
+    `${machines.filter((m) => m.state === "up").length}/${machines.length} ماكينة بترد`,
+    corpus.measured ? `كوربوس ${corpus.total.toLocaleString("en-US")} ثغرة` : "الكوربوس مش مقاس",
+    brain.count ? `${brain.count} مزوّد عقل` : "مفيش عقل",
+    mesh ? `${mesh.stats.online} عقدة شغالة` : "المِش مش متاح",
+  ];
+
+  res.json({
+    ok: true,
+    now: Date.now(),
+    identity: { name: "NOVA", version: "2099.1", origin: (process.env.NOVA_PUBLIC_URL || "").trim() || null },
+    machines: {
+      total: machines.length,
+      up: machines.filter((m) => m.state === "up").length,
+      down: machines.filter((m) => m.state !== "up").length,
+      list: machines,
+    },
+    corpus: {
+      measured: corpus.measured,
+      total: corpus.total,
+      at: corpus.at,
+      ageMin: corpus.ageMin,
+      bySeverity: corpus.bySeverity,
+      note: corpus.says_ar,
+    },
+    brain,
+    mesh: mesh
+      ? { stats: mesh.stats, capacity: mesh.capacity, plan: mesh.plan, nodes: mesh.nodes.length }
+      : null,
+    says_ar: `أنا نوفا. الحالة المقاسة دلوقتي: ${answers.join(" · ")}.`,
+  });
+  return;
 });
 
 router.post("/fleet/servers", (req: Request, res: Response) => {

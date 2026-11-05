@@ -53,6 +53,8 @@ const CONTRACTS = [
   { path: "/api/live-agent/iq", required: ["iq", "latencyMs", "connected"] },
   { path: "/api/local-agent/agents", required: ["agents"] },
   { path: "/api/local-agent/status", required: [] },
+  { path: "/api/fleet/servers", required: ["servers", "count", "up", "down"] },
+  { path: "/api/fleet/system", required: ["machines", "corpus", "brain", "says_ar"] },
   { path: "/api/fleet/mesh", required: ["nodes", "capacity", "stats", "log"] },
   { path: "/api/fleet/mesh/log", required: ["log"] },
   { path: "/api/fleet/plan/active", required: [] },

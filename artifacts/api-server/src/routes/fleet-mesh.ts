@@ -298,6 +298,31 @@ function decompose(goal: string, nodes: MeshNode[]): PlanStep[] {
 /* ── routes ─────────────────────────────────────────────────────────────── */
 
 /** Full live picture: nodes, capacity, plan board, and the message log. */
+/**
+ * The same picture the HTTP route returns, without an HTTP call.
+ *
+ * `/api/fleet/system` has to answer "what does this program actually consist
+ * of, right now?" in one request — machines, agents, plan, corpus. Asking
+ * ourselves over HTTP would add a round-trip and a failure mode to a status
+ * endpoint, so the small shared builder is exported instead.
+ */
+export function meshSnapshot() {
+  const nodes = buildNodes();
+  return {
+    capacity: capacity(),
+    nodes,
+    stats: {
+      nodes: nodes.length,
+      online: nodes.filter((n) => n.status === "online").length,
+      machines: nodes.filter((n) => n.kind === "machine").length,
+      slots: nodes.filter((n) => n.kind === "slot").length,
+      messages: state.log.length,
+    },
+    plan: state.plans[0] ?? null,
+    log: state.log.slice(0, 10),
+  };
+}
+
 router.get("/fleet/mesh", async (_req: Request, res: Response) => {
   // Refresh registered-server probes first (cached 20 s), so the nodes below are
   // as fresh as this request rather than as fresh as the last page visit.
