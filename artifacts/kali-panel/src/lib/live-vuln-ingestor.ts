@@ -41,7 +41,7 @@ export interface LiveSiteTelemetry {
   status: "online" | "syncing" | "fallback";
   latencyMs: number;
   fetchedCount: number;
-  latestId: string;
+  latestId: string | null;
   lastSyncAt: string;
 }
 
@@ -378,7 +378,11 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
         if (Array.isArray(data) && data.length > 0) {
           const slice = data.slice(0, 8);
           for (const g of slice) {
-            const id = g.cve_id || g.ghsa_id || `GHSA-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+            // Never invent an advisory id. If the source gave neither a CVE nor a
+            // GHSA id, skip the row instead of minting a random GHSA-2026-xxxx
+            // that would be indistinguishable from a real advisory downstream.
+            const id = g.cve_id || g.ghsa_id;
+            if (!id) continue;
             const desc = `[GitHub Live · ${g.ghsa_id || id}] ${g.summary || g.description?.slice(0, 220) || "Live GitHub Advisory"}`;
             const cvss = Number(g.cvss?.score) || (g.severity?.toUpperCase() === "CRITICAL" ? 9.6 : 8.4);
             const enriched = classifyAndEnrichCve(desc);
@@ -799,7 +803,9 @@ export async function runLiveMultiSiteVulnerabilitySync(activeTarget = "bughunte
       status: "fallback",
       latencyMs: Date.now() - t0,
       fetchedCount: 3,
-      latestId: `IMMUNEFI-2026-${900 + cursor}`,
+      // No fabricated advisory id: this feed is a fallback marker, not a source
+      // of real advisories, so it reports no latest id rather than inventing one.
+      latestId: null,
       lastSyncAt: nowIso,
     });
   })();

@@ -16,7 +16,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { registerHooks } from "node:module";
+// 2026-11-05: `registerHooks` only exists on Node >= 22.6. A STATIC import of it
+// throws a SyntaxError on Node 20 BEFORE the try/catch below can run, so the
+// whole self-test died with "does not provide an export named 'registerHooks'"
+// instead of falling back to logic-only mode. Imported dynamically instead.
+let registerHooks = null;
+try {
+  ({ registerHooks } = await import("node:module"));
+} catch {
+  registerHooks = null;
+}
 
 /**
  * The repo bundles with esbuild and uses extensionless relative imports
@@ -26,6 +35,7 @@ import { registerHooks } from "node:module";
  */
 let hookReady = false;
 try {
+  if (typeof registerHooks !== "function") throw new Error("registerHooks unavailable on this Node");
   registerHooks({
     resolve(specifier, context, next) {
       try {
@@ -50,7 +60,14 @@ try {
 }
 
 
-const needsFlag = !process.execArgv.some((a) => a.includes("experimental-strip-types"));
+// `--experimental-strip-types` only exists on Node >= 22.6. Passing it to an
+// older Node is a hard "bad option" abort, so the flag is gated on the runtime
+// version instead of being assumed. On Node 20 the logic tests still run; only
+// the TS-source import path is skipped (reported honestly, never faked).
+const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
+const stripTypesSupported = nodeMajor > 22 || (nodeMajor === 22 && nodeMinor >= 6);
+const needsFlag =
+  stripTypesSupported && !process.execArgv.some((a) => a.includes("experimental-strip-types"));
 if (needsFlag && process.env.OPS_SELFTEST_CHILD !== "1") {
   const r = spawnSync(
     process.execPath,
@@ -65,6 +82,19 @@ if (needsFlag && process.env.OPS_SELFTEST_CHILD !== "1") {
 
 const ROOT0 = path.resolve(import.meta.dirname, "..");
 const SRC = path.resolve(import.meta.dirname, "../artifacts/api-server/src/lib/ops");
+
+// The self-test imports the REAL TypeScript sources, which needs Node's type
+// stripping (>= 22.6). On an older runtime that is impossible, so say so plainly
+// and skip — never report a pass for tests that did not run. CI pins Node 22, so
+// the gate is fully exercised there.
+if (!stripTypesSupported) {
+  console.log(
+    `· ops-selftest SKIPPED — needs Node >= 22.6 for type stripping (running ${process.versions.node}). ` +
+      `The gate runs in CI on Node 22.`,
+  );
+  process.exit(0);
+}
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nova-selftest-"));
 process.env.NOVA_PROGRAMS_FILE = path.join(tmp, "programs.json");
 process.env.NOVA_EXEC_TOKEN = "";
