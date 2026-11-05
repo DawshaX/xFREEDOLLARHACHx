@@ -74,6 +74,28 @@ if (fs.existsSync(agentSrc)) {
   fs.copyFileSync(agentSrc, path.join(OUT, "nova-agent.js"));
 }
 
+// نفس الداء، مريضين تانيين: كتالوج برامج المكافآت وسكريبت تنزيل الأدوات
+// بيتقروا/يتنفذوا من cwd وقت **التشغيل**، مش وقت البناء. مقاس على السلوت الحيّ
+// (nova.waifly.com، 2026-11-05T17:20Z): `GET /api/ops/hunt/candidates` ردّت
+// `{"present":false,"path":"ops/bounty/programs-catalog.json","scanned":0}` —
+// الكود نازل من غير بياناته، فالميزة ظهرت «مش موجودة» عند المستخدم. ومجلد
+// `ops/` كله 804 KB (الكتالوج 780 KB + أهداف التحقق 3.8 KB): رخيص مقابل 300 MB.
+// `scripts/fetch-toolchain.mjs` بقى داخل الحزمة عشان المحرك يقدر يجهّز إيده
+// بنفسه على الحاوية (`POST /api/ops/tools/provision`) من غير root ومن غير git.
+for (const rel of ["ops", path.join("scripts", "fetch-toolchain.mjs")]) {
+  const src = path.join(ROOT, rel);
+  if (!fs.existsSync(src)) {
+    console.error(`✗ الحزمة محتاجة ${rel} وقت التشغيل وهو مش في الشجرة — الباندر ما بيكملش.`);
+    process.exit(1);
+  }
+  const dest = path.join(OUT, rel);
+  if (fs.statSync(src).isDirectory()) copyDir(src, dest);
+  else {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+  }
+}
+
 /* ── 2. boot.mjs — one entry point, two roles ────────────────────────────── */
 /**
  * THE point of this file: the same folder is both the hub and a node.
@@ -745,7 +767,16 @@ try {
  * and a Pterodactyl panel received `[start.sh](http://start.sh)` and died with
  * "No such file" while every file was present. Shipping is not the same as
  * working, so the two entry points are checked here instead of trusted. */
-for (const name of ["run", "start.sh", "boot.mjs", "server.mjs", "public/index.html"]) {
+for (const name of [
+  "run",
+  "start.sh",
+  "boot.mjs",
+  "server.mjs",
+  "public/index.html",
+  // البيانات والأدوات اللي بتقرا من القرص بعد الإقلاع — لو مش هنا، الميزة مش منشورة.
+  path.join("ops", "bounty", "programs-catalog.json"),
+  path.join("scripts", "fetch-toolchain.mjs"),
+]) {
   if (!fs.existsSync(path.join(OUT, name))) {
     console.error(`✗ الحزمة ناقصة ${name} — الباندر ما بيكملش.`);
     process.exit(1);

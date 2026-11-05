@@ -1,6 +1,6 @@
 # 🛡️ CyberNova (`xFREEDOLLARHACHx`) — Master Architecture & Session Handoff Log
 
-> **تاريخ آخر تحديث:** `2026-11-05` (المرحلة 48 — «التحديث اللي بيتنفّذ فعلًا»)
+> **تاريخ آخر تحديث:** `2026-11-05` (المرحلة 56 — «البرنامج بيستخدم نفسه»: أدواته · بياناته · بواباته)
 > **المستودع الرسمي والمرجعي 100%:** `https://github.com/DawshaX/xFREEDOLLARHACHx`
 > **الرابط الحي الدائم (GitHub Pages Auto-Deploy):** `https://dawshax.github.io/xFREEDOLLARHACHx/`
 > **رابط استوديو البج باونتي وموسوعة الثغرات:** `https://dawshax.github.io/xFREEDOLLARHACHx/bug-bounty-studio`
@@ -1697,3 +1697,42 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
 
 `check-workflows` **19/19** (اتأكدت بعد كل تعديل، والملف ده بالذات هو اللي بيمسك فخ
 النقطتين اللي وقعت فيه قبل شوية).
+
+---
+
+## المرحلة 56 — «البرنامج بيستخدم نفسه»: أدواته، بياناته، وبواباته
+
+**السؤال اللي فتح المرحلة:** «الشات عبيط» + «البرنامج فيه حاجات مش متفعلة وناقصة» +
+«المفروض يعرف نفسه ويستغل كل حاجة جواه وي.stream تفكيره». الإجابات طلعت أربع علات
+مختلفة، مش واحدة:
+
+| # | العلة | مقاس قبل | بعد |
+|---|---|---|---|
+| 1 | `runAgent` مستدعى في `live-agent.ts` **من غير import** (PR #210) — TS2304 جوه الـcatch | كل «الموديل واقع» = فقاعة نص جاهز + `ReferenceError` مبلوع | `🧠 تفكير · 🗺️ الخطة · exec_start/exec_result · done` — مقاس على `nova-24-7` نفسه: 4 أدوات اتنفذّت منهم 2 ذاتية |
+| 2 | 12 مسار تنفيذ/كتابة على المكنة **بلا أي بوابة** (`/installer/tools/:id/install` بـ`spawn("/bin/sh")` من سطر DB، `/nova/workspace/{exec,write}`، `/nova/scheduler/run`، `/kali-command/{server,agent}/exec` + `/execute-direct`، `/system/run`، `/terminal/exec`، `/shell/exec`، `/network/scan`، `/tools/install`، `/fleet/broadcast`، `/deep-research/{discovered-vault,agent-master-run}`) | `POST /api/system/run` anonymously بيرجّع `stdout` (على الباندل: من التوأم) | كله ورا `requireOps(scope)`/`checkGate` (توكن لو متسَيّر، وإلا نفس الأصل — زي `/api/local-agent`)؛ القراءة والشات مفتوحين عمدًا |
+| 3 | الحزمة المنشورة **بلا بياناتها**: `ops/` و`fetch-toolchain.mjs` ماكانوش في `build-standalone.mjs` | `hunt/candidates → present:false, scanned:0` على nova.waifly.com | الباندر بينسخهم وبيفرض وجودهم؛ وعلى الحزمة: `present:true · scanned:746` |
+| 4 | التوأم (الباندل الثابت) بيأكد تنفيذ/فحص/جلب | `installed:true, version:"2026.1-kali"` · «Nmap scan report» · «Verified HTTP 200» · `ok:true`+`stdout` · مهمة «done» مختلقة | 6 مواضع بقت `{ok:false, error:"no_execution_plane", reasonAr, howAr}` |
+
+**اللي اتضاف عشان «يستغل كل حاجة في البرنامج»:**
+- `lib/ops/toolchain.ts`: `toolchainStatus()` (قياس قرص صِرف) · `provisionToolchain()`
+  (`spawn(process.execPath, […])` بلا shell، `timeoutMs`، سجل ذري في
+  `state/toolchain-provision.json`) · `provisionToolchainOnce()` (single-flight +
+  `already-present` + `cooldown`) · `bootToolchainFetch()` (opt-in بـ`NOVA_TOOLCHAIN_FETCH=1|auto`).
+- مساران: `GET /api/ops/tools` (مفتوح للقياس) و`POST /api/ops/tools/provision` (مبوّب).
+- أداتان للمحرك (السجل بقى **49**): `tools_install` و`bounty_candidates` —
+  والـself-model بيقرا `securityTools` من القرص فمابقاش يكرّر «مالوش أدوات تثبيت».
+- سطح الصيد في اللوحة بقى عليه شريط «أدواتي على المكنة» + زر «جهّز الأدوات»
+  (`NovaBrainOps.tsx`) — بنفس مسار التوكن اللي الواجهة بتستخدمه أصلًا.
+- في `autonomousMode`، الـdirector بيكمّل لوحده بعد الـfallback (`bounty_candidates`
+  ثم `ops_kinds`) بدل «ابعتلي نطاق» — وبيثبّت الخطوات في نفس الـstream.
+
+**الأرقام المقاسة بعد المرحلة:** `agent-gates` **18/18** (11 اختبار + 7 audits، منهم
+`audit-route-integrity` الجديد) · `ops-selftest` **66·0** (+9 حالات toolchain/wiring/ship) ·
+`test-self-model` **14·0** · `test-tool-labels` **5·0** (49 اسم عربي) · typecheck
+**94** (البازلاين نزل من 96 ومافيش رفع) · التوأم متطابق · `audit-connections`/`audit-contracts` خضر.
+
+**اللي لسه على المستخدم (مش كود):** `FLEET_ENABLED=1` + `NOVA_EXEC_TOKEN` على السلوت
+عشان الأسطول؛ `NOVA_TOOLCHAIN_FETCH=1` لو عايز الأدوات تنزل لوحدها عند الإقلاع؛
+وحذف أصول الـrelease اللي فيها `.env` وتغيير التوكن. **اللي اتعمل بس مالوش قياس هنا:**
+تنزيل الأدوات فعلاً محتاج `objects.githubusercontent.com` (محصور في السنيدبوكس)،
+فالقياس الحقيقي هيحصل على السلوت أول ما يرفع النسخة الجديدة.

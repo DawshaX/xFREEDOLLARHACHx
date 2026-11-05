@@ -8,8 +8,20 @@ import { db, installerToolsTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { spawn } from "node:child_process";
 import { logger } from "../lib/logger";
+import { requireOps } from "../lib/ops/gate";
 
 const router: IRouter = Router();
+
+// POST /installer/tools/:toolId/install runs `installCommand` through /bin/sh.
+// That is remote code execution with a database row as its input, so it goes
+// through the same gate as /api/exec and /api/local-agent: token when one is
+// configured, same-origin otherwise. Reads (GitHub stats, the catalogue) stay open.
+router.use((req, res, next) => {
+  const p = req.path;
+  const sensitive = req.method !== "GET" && (p.includes("/install") || p.startsWith("/installer/modules"));
+  if (!sensitive) return next();
+  return requireOps("installer")(req as never, res as never, next);
+});
 
 const UA = "CyberNova-Installer/1.0";
 
@@ -122,7 +134,10 @@ router.get("/installer/tools", async (_req: Request, res: Response, next: NextFu
 // ── POST /installer/tools/:toolId/install (SSE)
 router.post("/installer/tools/:toolId/install", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const [t] = await db.select().from(installerToolsTable).where(eq(installerToolsTable.id, req.params.toolId)).limit(1);
+    // `req.params` في types 5 بيطلع `string | string[]` لو المكرر في الـURL —
+    // التحويل صريح بدل ما يخبط في drizzle (كان TS2769 في البازلاين).
+    const toolId = String(req.params.toolId ?? "");
+    const [t] = await db.select().from(installerToolsTable).where(eq(installerToolsTable.id, toolId)).limit(1);
     if (!t) return res.status(404).json({ error: "tool not found" });
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -178,7 +193,9 @@ router.post("/installer/tools/:toolId/install", async (req: Request, res: Respon
 
 // ── GET /installer/github/:owner/:repo  — direct GitHub stats
 router.get("/installer/github/:owner/:repo", async (req: Request, res: Response) => {
-  const { owner, repo } = req.params;
+  const owner = String(req.params.owner ?? "");
+  const repo = String(req.params.repo ?? "");
+  if (!owner || !repo) return res.status(400).json({ error: "owner + repo required" });
   const stats = await fetchGitHubStats(owner, repo);
   if (!stats) return res.status(502).json({ error: "GitHub API unavailable" });
   return res.json(stats);

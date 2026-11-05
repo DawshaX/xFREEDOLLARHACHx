@@ -18,8 +18,27 @@ import { saveMemory, searchMemory, getAllMemory } from "./memory";
 import { execOnLocalAgent, execStreamOnLocalAgent, isLocalAgentConnected, getConnectedAgentList, getAgentDeepProfile } from "./local-agent";
 import { getAllSettings } from "./settings";
 import os from "os";
+import { auditLog } from "../lib/audit";
+import { requireOps } from "../lib/ops/gate";
 
 const router = Router();
+
+// الأيدي دي بتنفّذ فعلاً: `/server/exec` = `child_process.exec(command)` بأمر
+// من الـbody، و`/agent/exec` + `/execute-direct` = نفس الأمر على جهاز المستخدم
+// المتصل، و`/autonomous/*` بتتحكم في الديمون. كان ولا واحد منهم ورا بوابة
+// (واتقاس 2026-11-05)، فكلها بقت بتعدي قرار الإذن بتاع ops: توكن لو متسَيّر،
+// وإلا نفس الأصل. الشات (`/kali-command/chat`) والقسايات لسه مفتوحين عمدًا.
+router.use((req, res, next) => {
+  const p = req.path;
+  const sensitive =
+    req.method !== "GET" &&
+    (p === "/kali-command/server/exec" ||
+      p === "/kali-command/agent/exec" ||
+      p === "/kali-command/execute-direct" ||
+      p.startsWith("/kali-command/autonomous/"));
+  if (!sensitive) return next();
+  return requireOps("kali-exec")(req as never, res as never, next);
+});
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const DEFAULT_NGROK = "https://nucleus-uninjured-tusk.ngrok-free.dev";

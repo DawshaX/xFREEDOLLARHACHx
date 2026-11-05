@@ -23,6 +23,7 @@ import {
 import { getAllMemories, getMemoryCount, saveMemory } from "./routes/memory";
 import { broadcastLiveEvent } from "./routes/live-events";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
+import { bootToolchainFetch, toolchainStatus } from "./lib/ops/toolchain";
 import { startAutonomousBackgroundDaemon } from "./lib/autonomous-daemon";
 import { provisionOnBoot } from "./lib/ops/keys-source";
 import { provisionCorpus, corpusStatus } from "./lib/ops/vuln-corpus";
@@ -272,6 +273,18 @@ await provisionOnBoot();
 void provisionCorpus()
   .then((r) => logger.info({ action: r.action, bytes: r.bytes, total: r.total }, `corpus: ${r.says_ar}`))
   .catch((err) => logger.warn({ err }, "corpus provisioning threw — serving without a corpus"));
+// أدوات المحرك نفسها: على الاستضافة المصانة مافيش root ولا apt، فالنسخ الثابتة
+// من ProjectDiscovery هي الطريق الوحيد لـ«أدوات حقيقية». مابننزّلهوش افتراضيًا —
+// ~100 MB على قرص 512 MB مع corpus منزّل للتو ممكن يقطع الظهر؛ اللي يريده يقول
+// NOVA_TOOLCHAIN_FETCH=1 (أو auto: لمّا vendor/bin فاضي بس).
+const toolchainAtBoot = toolchainStatus();
+console.log(
+  toolchainAtBoot.present.length
+    ? `✓ tools: ${toolchainAtBoot.present.join(", ")} @ ${toolchainAtBoot.dir}`
+    : `· tools: مافيش في ${toolchainAtBoot.dir} — NOVA_TOOLCHAIN_FETCH=1 بينزّلهم، أو POST /api/ops/tools/provision من الشات`,
+);
+bootToolchainFetch((m) => logger.info(m));
+
 const corpusAtBoot = corpusStatus();
 if (corpusAtBoot.measured) {
   console.log(`✓ corpus: ${corpusAtBoot.total} CVEs (${corpusAtBoot.kev} KEV) @ ${corpusAtBoot.at}`);

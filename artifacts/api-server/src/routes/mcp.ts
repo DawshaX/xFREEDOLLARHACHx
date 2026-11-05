@@ -13,8 +13,15 @@
 import { Router } from "express";
 import { execOnLocalAgent, getConnectedAgentList, getAgentDeepProfile } from "./local-agent";
 import { logger } from "../lib/logger";
+import { requireOps } from "../lib/ops/gate";
 
 const router = Router();
+// `POST /openclaw/chat` بيوصل لأدوات تنفيذ (execKali) من غير أي تحقق هوية — بقى ورا البوابة زي `/api/local-agent`. الـwebhook لو عندك secret خاص بيك سيّر NOVA_OPEN_OPS=1 على مسار منفصل.
+router.use((req, res, next) => {
+  const p = req.path;
+  if (req.method === "GET" || !(p === "/openclaw/chat")) return next();
+  return requireOps("openclaw-chat")(req as never, res as never, next);
+});
 
 // ── MCP Tool definitions ──────────────────────────────────────────────────────
 const MCP_TOOLS = [

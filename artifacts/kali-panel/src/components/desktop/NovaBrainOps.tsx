@@ -22,6 +22,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Wrench,
   Activity,
   AlertTriangle,
   BrainCircuit,
@@ -822,6 +823,18 @@ interface VaultRow {
   evidence?: Array<{ file?: string; sha256?: string; bytes?: number }>;
 }
 
+/** شكل `GET /api/ops/tools` — كل حقل فيه مقاس على القرص، ومافيش «متوقع». */
+interface ToolsState {
+  dir?: string;
+  present?: string[];
+  missing?: string[];
+  writable?: boolean;
+  scriptAvailable?: boolean;
+  measured?: boolean;
+  reasonAr?: string;
+  last?: { at?: string; ok?: boolean; installed?: number; total?: number; error?: string; reasonAr?: string } | null;
+}
+
 export function NovaHuntSurface() {
   const [hunt, setHunt] = useState<{ items: HuntRow[]; scanned?: number; fetchedAt?: string | null; present?: boolean; reasonAr?: string; permissionModel?: string } | null>(null);
   const [vault, setVault] = useState<{ counts?: { total?: number; verified?: number; bySeverity?: Record<string, number> }; present?: boolean; updatedAt?: string | null; reasonAr?: string } | null>(null);
@@ -831,19 +844,23 @@ export function NovaHuntSurface() {
   const [plan, setPlan] = useState<{ host: string; body: string } | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  // إيدي المحرك: مقروءة من `/ops/tools` (فتش فعلي على القرص)، مش مكتوبة نص.
+  const [tools, setTools] = useState<ToolsState | null>(null);
 
   const load = useCallback(async () => {
     setBusy("load");
-    const [c, st, f] = await Promise.all([
+    const [c, st, f, tl] = await Promise.all([
       opsFetch<{ items?: HuntRow[]; scanned?: number; fetchedAt?: string | null; present?: boolean; reasonAr?: string; permissionModel?: string }>(
         `/ops/hunt/candidates?limit=6${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`
       ),
       opsFetch<{ counts?: { total?: number; verified?: number }; present?: boolean; updatedAt?: string | null; reasonAr?: string }>("/ops/findings/status"),
       opsFetch<{ items?: VaultRow[] }>("/ops/findings?limit=12"),
+      opsFetch<ToolsState>("/ops/tools"),
     ]);
     setHunt({ items: c.data?.items || [], scanned: c.data?.scanned, fetchedAt: c.data?.fetchedAt, present: c.data?.present, reasonAr: c.data?.reasonAr, permissionModel: c.data?.permissionModel });
     setVault({ counts: st.data?.counts, present: st.data?.present, updatedAt: st.data?.updatedAt, reasonAr: st.data?.reasonAr });
     setRows(f.data?.items || []);
+    setTools(tl.data || null);
     setNote(!c.ok ? c.denial || "مافيش رد من المحرك" : null);
     setBusy(null);
   }, [q]);
@@ -899,6 +916,22 @@ export function NovaHuntSurface() {
     setBusy(null);
   }, []);
 
+  // التجهيز من الوجهة نفسها اللي بتقوله للمحرك في الشات (`tools_install`) — بس
+  // من غير ما حد يفتح تيرمينال. الرفض بیوصل حرفيًا (403/سقف زمني/قرص مقفول).
+  const provisionTools = useCallback(async () => {
+    setBusy("provision");
+    setNote("بينزّل النسخ الثابتة من GitHub في `vendor/bin` — لو الشبكة بطيانة هيقف لوحده ويقول.");
+    const r = await opsFetch<{ ok?: boolean; record?: ToolsState["last"]; status?: ToolsState }>("/ops/tools/provision", { method: "POST", body: {} });
+    if (r.ok && r.data?.ok) {
+      setTools(r.data.status || null);
+      const rec = r.data.record;
+      setNote(`تم ${rec?.installed ?? 0}/${rec?.total ?? 0} في ${Math.max(1, Math.round((rec as unknown as { ms?: number })?.ms ? Number((rec as unknown as { ms?: number }).ms) / 1000 : 0))} ثانية — المحرك بيشوفهم من غير إعادة تشغيل.`);
+    } else {
+      setNote(`المكنة رفضت التجهيز: ${r.data?.record?.reasonAr || r.denial || r.error || `HTTP ${r.status}`}${r.how ? ` — ${r.how}` : ""}`);
+    }
+    setBusy(null);
+  }, []);
+
   const counts = vault?.counts || {};
   const sevList = Object.entries(counts.bySeverity || {})
     .sort((a, b) => Number(b[1]) - Number(a[1]))
@@ -938,6 +971,59 @@ export function NovaHuntSurface() {
           {hunt.permissionModel}
         </p>
       )}
+
+      {/* ── الإيدين: أدوات المحرك على المكنة دي، مقاسة مش معلنة ─────────────
+          السطر ده هو الفرق بين «البرنامج بيقدر يعمل كذا» و«البرنامج عنده أداته»:
+          على nova.waifly.com كان القياس `present: []` والصفحة مابتقولش. */}
+      <div className="rounded-xl border border-white/10 bg-black/20 p-2 flex flex-wrap items-center gap-1.5">
+        <span className="text-[10px] font-black text-white/70 flex items-center gap-1">
+          <Wrench className="h-3 w-3 text-cyan-300" /> أدواتي على المكنة
+        </span>
+        {tools?.measured === false ? (
+          <span className="text-[9px] text-white/40">{tools.reasonAr || "مش مقاس على الباندل الثابت"}</span>
+        ) : (
+          <>
+            {(tools?.present || []).map((bin) => (
+              <span key={bin} className="text-[9px] px-1.5 py-0.5 rounded border border-emerald-400/30 bg-emerald-400/10 text-emerald-200 font-mono">
+                {bin} ✓
+              </span>
+            ))}
+            {(tools?.missing || []).map((bin) => (
+              <span key={bin} className="text-[9px] px-1.5 py-0.5 rounded border border-white/10 text-white/35 font-mono">
+                {bin}
+              </span>
+            ))}
+            {(tools?.present || []).length === 0 && <span className="text-[9px] text-amber-200/75">ولا أداة منصوبة — الاستطلاع السلبي والـHTTP بس</span>}
+          </>
+        )}
+        <span className="ms-auto text-[8.5px] text-white/30 font-mono" title={tools?.dir || ""}>
+          {tools?.dir ? tools.dir.split("/").slice(-2).join("/") : ""}
+          {tools && tools.writable === false ? " · قرص مقفول" : ""}
+        </span>
+        {tools?.last && (
+          <span className="text-[8.5px] text-white/35">
+            آخر محاولة: {tools.last.ok ? `${tools.last.installed}/${tools.last.total} ✓` : `فشلت (${tools.last.error || "?"})`}
+          </span>
+        )}
+        <button
+          onClick={() => void provisionTools()}
+          disabled={busy === "provision" || !tools || tools.measured === false || !tools.writable || !(tools.missing || []).length}
+          title={
+            !tools
+              ? "مافيش قياس بعد"
+              : tools.measured === false
+                ? "الباندل الثابق مابيجهّزش — اربطه بالسيرفر"
+                : !tools.writable
+                  ? `${tools.dir || "vendor/bin"} مش قابل للكتابة على المكنة دي`
+                  : !(tools.missing || []).length
+                    ? "كل الأدوات موجودة"
+                    : `ينزّل ${(tools.missing || []).join(", ")} من GitHub في ${tools.dir || "vendor/bin"}`
+          }
+          className="flex items-center gap-1 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-2 py-1 text-[9px] font-black text-cyan-200 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {busy === "provision" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />} جهّز الأدوات
+        </button>
+      </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
         {/* مرشّحو الصيد */}

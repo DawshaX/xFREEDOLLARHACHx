@@ -1,10 +1,17 @@
 import { Router } from "express";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { requireOps } from "../lib/ops/gate";
 
 
 const execAsync = promisify(exec);
 const router = Router();
+// `POST /terminal/exec` بينفّذ `command` من الـbody على المكنة (zod بشكل الأمر بس). إدارة الجلسات لسه مفتوحة — اللي اتبوّب هو التنفيذ.
+router.use((req, res, next) => {
+  const p = req.path;
+  if (req.method === "GET" || !(p === "/terminal/exec")) return next();
+  return requireOps("terminal-exec")(req as never, res as never, next);
+});
 
 interface Session {
   id: string;

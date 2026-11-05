@@ -881,6 +881,120 @@ t("hunt surface census: الملفات اللي بتسأل المحرك ما ب�
   console.log(`      · ${files.length} ملف بيسأل المحرك · ${eps.size} مسار: ${[...eps].sort().join(" ")}`);
 });
 
+/* ── toolchain provisioning: القياس والتحقّق من غير شبكة ───────────────────────
+ * المقصود: المحرك اما يقول «مافيش أدوات» يبقى قارئ القرص، واما يشغّل السكربت
+ * بتاعه ويطمّن الكاش — ومفيش رد بيفتري نجاح. السكربت الحقيقي بينفّذ هنا بـ
+ * `--check` (قراية بس، ولا طلب نت). */
+const tc = await import(path.join(SRC, "toolchain.ts"));
+const toolsMod = await import(path.join(SRC, "tools.ts"));
+t("toolchain: export surface is real", () => {
+  for (const fn of ["toolchainStatus", "provisionToolchain", "provisionToolchainOnce", "findVendorerScript", "vendorDir", "bootToolchainFetch"]) {
+    assert.equal(typeof tc[fn], "function", `${fn} مش مصدّر`);
+  }
+  assert.ok(tc.VENDORABLE.length >= 7, "VENDORABLE ضل صغيرة");
+});
+const vbin = path.join(tmp, "vendor", "bin");
+fs.mkdirSync(vbin, { recursive: true });
+process.env.NOVA_VENDOR_BIN = vbin;
+process.env.NOVA_TOOLCHAIN_RECORD = path.join(tmp, "state", "toolchain-provision.json");
+const fakeTools = path.join(tmp, "fake-tools");
+fs.mkdirSync(fakeTools, { recursive: true });
+process.env.NOVA_TOOL_DIR = fakeTools;
+t("toolchain: status measures the disk, not a claim", () => {
+  const st0 = tc.toolchainStatus();
+  assert.equal(st0.dir, vbin, "vendorDir بيقرأ NOVA_VENDOR_BIN؟");
+  assert.equal(st0.writable, true, "مجلد مؤقت لازم يبقى قابل للكتابة");
+  assert.equal(st0.present.length, 0, `مافيش أدوات زرعت بعد بس present=${st0.present}`);
+  assert.equal(st0.missing.length, tc.VENDORABLE.length, "كل الناقصة لازم تظهر");
+  for (const bin of ["nuclei", "httpx"]) fs.writeFileSync(path.join(fakeTools, bin), "#!/bin/sh\n", { mode: 0o755 });
+  toolsMod.resetBinaryCache();
+  const st1 = tc.toolchainStatus();
+  assert.deepEqual(st1.present.sort(), ["httpx", "nuclei"], `القياس بعد الزرع غلط: ${st1.present}`);
+  assert.ok(st1.missing.includes("subfinder"), "الأداة اللي مش موجودة لازم تفضل missing");
+});
+t("toolchain: no vendorer in the bundle → honest failure, never a fake success", () => {
+  const rec = tc.provisionToolchain({ script: "" });
+  assert.ok(rec instanceof Promise, "provisionToolchain async؟");
+});
+await tA("toolchain: vendorer-missing says so", async () => {
+  const rec = await tc.provisionToolchain({ script: "" });
+  assert.equal(rec.ok, false, "لابد تقول فشل لما السكربت مش موجود");
+  assert.equal(rec.error, "vendorer-missing");
+  assert.match(rec.reasonAr || "", /fetch-toolchain/, "السبب لازم يسمّي الملف الناقص");
+});
+const fakeDir = path.join(tmp, "vendorer");
+fs.mkdirSync(fakeDir, { recursive: true });
+const fakeScript = path.join(fakeDir, "fetch-toolchain.mjs");
+fs.writeFileSync(
+  fakeScript,
+  'const into = process.argv[process.argv.indexOf("--into") + 1];\n' +
+  'console.log(JSON.stringify({ into, ok: 2, total: 7, results: [{ bin: "nuclei", status: "installed", tag: "v3.0.0" }, { bin: "httpx", status: "installed", tag: "v1.0.0" }, { bin: "ffuf", status: "failed", why: "no asset" }] }));\n',
+);
+await tA("toolchain: provision runs the vendorer with no shell and records the truth", async () => {
+  const before = Date.now();
+  const rec = await tc.provisionToolchain({ script: fakeScript, into: path.join(tmp, "vendor2", "bin") });
+  assert.equal(rec.ok, true, `لازم تنجح مع سكربت وهمي: ${rec.error} ${rec.reasonAr || ""}`);
+  assert.equal(rec.installed, 2, "بتعدّ installed/skipped بس");
+  assert.equal(rec.total, 7);
+  assert.equal(rec.results.length, 3, "النتايج بتتخزن كاملة عشان الصفحة تعرضها");
+  assert.ok(rec.ms >= 0 && Date.now() - before < 60_000, "سقف زمني شغال");
+  const saved = JSON.parse(fs.readFileSync(process.env.NOVA_TOOLCHAIN_RECORD, "utf8"));
+  assert.equal(saved.ok, true, "السجل على القرص لازم يطابق الرد");
+});
+await tA("toolchain: once-mode refuses to re-download and honours the cooldown", async () => {
+  const first = await tc.provisionToolchainOnce({ script: fakeScript, into: path.join(tmp, "vendor3", "bin"), only: ["ffuf"] });
+  assert.equal(first.skipped, null, "أول محاولة لازم تتنفّذ");
+  assert.equal(first.record.ok, true);
+  // الأداة بقت موجودة فعلًا (vendor2/vendor3 مش في search path) — فالمنطق بيتحقّق
+  // من السجل: نصيب cooldown/near-present حسب القرص، ومافيش مسار بيردّ ok:true كداب.
+  process.env.NOVA_TOOLCHAIN_RETRY_MS = "600000";
+  fs.writeFileSync(process.env.NOVA_TOOLCHAIN_RECORD, JSON.stringify({ at: new Date().toISOString(), ok: false, exitCode: 1, ms: 1, into: "x", installed: 0, total: 7, results: [], error: "vendorer-failed", reasonAr: "شبكة ميتة" }), "utf8");
+  const cooled = await tc.provisionToolchainOnce({ script: fakeScript, into: path.join(tmp, "vendor4", "bin"), only: ["ffuf"] });
+  assert.equal(cooled.skipped, "cooldown", "بعد فشل لازم فترة انتظار مش إعادة تنزيل");
+  assert.match(cooled.record.reasonAr || "", /شبكة ميتة/, "السبب المسجل لازم يوصل للقارئ");
+  toolsMod.resetBinaryCache();
+});
+t("toolchain: the real vendorer still parses and self-checks (--into tmp)", () => {
+  const script = path.resolve(ROOT0, "scripts/fetch-toolchain.mjs");
+  assert.ok(fs.existsSync(script), "السكربت الحقيقي لازم يفضل في scripts/");
+  const r = spawnSync(process.execPath, [script, "--into", path.join(tmp, "vendor5", "bin"), "--check", "--json"], { encoding: "utf8", timeout: 60_000 });
+  assert.equal(r.status, 0, `--check خرج ${r.status}: ${String(r.stderr).slice(0, 120)}`);
+  const j = JSON.parse(r.stdout.slice(r.stdout.indexOf("{")));
+  assert.ok(Array.isArray(j.rows) && j.rows.length >= 7, "rows ناقصة");
+  assert.ok(j.rows.every((x) => typeof x.present === "boolean"), "present لازم boolean");
+});
+t("wiring: routes, twins, agent tool and self-model all know the toolchain", () => {
+  const routes = fs.readFileSync(path.resolve(ROOT0, "artifacts/api-server/src/routes/ops.ts"), "utf8");
+  assert.match(routes, /router\.get\("\/ops\/tools"/, "GET /api/ops/tools مش مسجّل");
+  assert.match(routes, /router\.post\("\/ops\/tools\/provision"/, "POST /api/ops/tools/provision مش مسجّل");
+  const provAt = routes.indexOf('router.post("/ops/tools/provision"');
+  assert.ok(provAt > 0, "مسار provision مش مسجّل");
+  const provBody = routes.slice(provAt, provAt + 700);
+  assert.ok(provBody.indexOf("opsAllowed(req)") >= 0 && provBody.indexOf("opsAllowed(req)") < provBody.indexOf("provisionToolchain({"), "provision لازم يكون ورا قرار إذن قبل التنفيذ");
+  for (const twin of ["artifacts/api-server/src/lib/standalone-api.ts", "artifacts/kali-panel/src/lib/standalone-api.ts"]) {
+    const txt = fs.readFileSync(path.resolve(ROOT0, twin), "utf8");
+    assert.match(txt, /"\/ops\/tools"/, `${twin}: التوأم مابيعرفش /ops/tools`);
+    assert.match(txt, /measured: false/, `${twin}: الباندل الثابت لازم يقول «مش مقاس»`);
+    assert.match(txt, /error: "no_execution_plane"/, `${twin}: تثبيت الأدوات على الباندل لازم يرفض بصوت عالي`);
+  }
+  const at = fs.readFileSync(path.resolve(ROOT0, "artifacts/api-server/src/lib/agent/tools.ts"), "utf8");
+  assert.match(at, /name: "tools_install"/, "المحرك مالوش أداة تجهيز أدواته");
+  assert.match(at, /provisionToolchainOnce/, "الأداة لازم تستعمل النسخة اللي بتمنع التنزيل المتكرر");
+  const sm = fs.readFileSync(path.resolve(ROOT0, "artifacts/api-server/src/lib/agent/self-model.ts"), "utf8");
+  assert.match(sm, /toolchainStatus\(\)/, "الـself-model لازم يقيس الأدوات");
+  assert.match(sm, /securityTools/, "securityTools مش في النموذج");
+  const idx = fs.readFileSync(path.resolve(ROOT0, "artifacts/api-server/src/index.ts"), "utf8");
+  assert.match(idx, /bootToolchainFetch\(/, "خطّاف الإقلاع مش متوصّل");
+  assert.match(idx, /NOVA_TOOLCHAIN_FETCH/, "لازم يكون opt-in بمُغيّر بيئة موثّق");
+});
+t("ship: build-standalone carries the runtime data and demands it", () => {
+  const b = fs.readFileSync(path.resolve(ROOT0, "scripts/build-standalone.mjs"), "utf8");
+  assert.match(b, /for \(const rel of \["ops", path\.join\("scripts", "fetch-toolchain\.mjs"\)\]\)/, "الباندر مابينسخش ops/ + السكربت");
+  assert.match(b, /programs-catalog\.json/, "فحص الاكتمال مابيشملش الكتالوج — نفس الغلطة اللي خلفت present:false");
+  const req = b.slice(b.indexOf("the launchers a panel needs"), b.indexOf("/* ── 3. zip it"));
+  assert.ok(req.includes("fetch-toolchain.mjs") && req.includes("programs-catalog.json"), "قائمة الفحص ناقصة");
+});
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log("────────────────────");
 console.log(`${passed} passed · ${failed} failed`);

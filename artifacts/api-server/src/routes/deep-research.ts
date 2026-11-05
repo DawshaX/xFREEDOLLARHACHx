@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { checkGate } from "../lib/ops/gate";
 import dns from "node:dns";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -1403,6 +1404,13 @@ router.get("/deep-research/tactical-doctrine", (_req: Request, res: Response) =>
 });
 
 router.post("/deep-research/agent-master-run", async (req: Request, res: Response) => {
+  // الأوركسترا دي بتمشي على هدف حقيقي (fetch + scan) وبتكلّم الشبكة — مفتوحة
+  // للعامة يعني الهَب بيهاجم بالنيابة عن أي زائر. قرار الإذن بتاع ops هنا كمان.
+  const gate = checkGate(req, "deep-research agent-master-run");
+  if (!gate.ok) {
+    res.status(403).json({ ok: false, error: gate.code, reason: gate.reason, how: gate.how });
+    return;
+  }
   const target = String(req.body?.target || "bughunters.google.com");
   const result = await executeAgentMasterOrchestration(target);
   res.json(result);
@@ -1487,6 +1495,14 @@ router.get("/deep-research/discovered-vault", (_req: Request, res: Response) => 
 });
 
 router.post("/deep-research/discovered-vault", (req: Request, res: Response) => {
+  // الكتابة دي بتعدّل ملف الخزانة على قرص المحرك — نفس معيار `/api/ops`: توكن لو
+  // متسَيّر، وإلا طلب من نفس الأصل، وممنوع على الزوار المجهولين. القراءة فوق
+  // لسه مفتوحة عمدًا: الصفحة العامة تعرض اللي اتلمّ فعلاً وما تكتبش حاجة.
+  const gate = checkGate(req, "deep-research vault write");
+  if (!gate.ok) {
+    res.status(403).json({ ok: false, error: gate.code, reason: gate.reason, how: gate.how });
+    return;
+  }
   try {
     const filePath = resolveStateFilePath("discovered-vulnerabilities-vault.json");
     const vault = JSON.parse(fs.readFileSync(filePath, "utf-8"));

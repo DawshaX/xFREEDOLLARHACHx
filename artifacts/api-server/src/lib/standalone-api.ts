@@ -1581,6 +1581,30 @@ if (path === "/nova-core/version") {
     };
   }
 
+  // الأدوات: الباندل الثابق مابقدرش يقيس قرص السيرفر، فبيردّ «مقيسش» بدل
+  // «موجود/مش موجود» — والادعاء هنا كان بيخلّي الصفحة تبان جاهزة وماهيش.
+  if (path === "/ops/tools" && m === "GET") {
+    return {
+      ok: true,
+      standalone: true,
+      measured: false,
+      present: [],
+      missing: [],
+      catalogue: ["subfinder", "httpx", "nuclei", "katana", "dnsx", "naabu", "ffuf"],
+      reasonAr: "الباندل الثابت مابيقراش قرص السيرفر — القياس على المحرك: GET /api/ops/tools، والتنزيل: POST /api/ops/tools/provision.",
+    };
+  }
+
+  if (path === "/ops/tools/provision" && m === "POST") {
+    return {
+      ok: false,
+      standalone: true,
+      error: "no_execution_plane",
+      reasonAr: "تنزيل الأدوات بيشغّل process على المكنة — مافيش process جوه الباندل الثابت.",
+      howAr: "اطلبه على السيرفر: `POST /api/ops/tools/provision` (محتاج NOVA_EXEC_TOKEN لو السيرفر حاطّ واحد).",
+    };
+  }
+
   if (path.startsWith("/ops/findings/") && path.endsWith("/report-draft")) {
     return {
       ok: false,
@@ -2273,13 +2297,14 @@ if (path === "/nova-core/version") {
       id: Date.now(),
       nodeId: nid,
       command,
-      stdout: `[CyberNova Sandbox Node #${nid}] Executed: ${command}\nLinux cybernova-node 6.8.0 x86_64 GNU/Linux\nStatus: 0 (OK)`,
-      stderr: "",
-      exitCode: 0,
-      status: "completed",
+      stdout: "",
+      stderr: "no_execution_plane",
+      exitCode: null as unknown as number,
+      status: "refused",
       startedAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       triggeredBy: "operator",
+      noteAr: "الباندل الثابت مابينفّذش على العقد — الأمر مامشافش أي مكنة.",
     };
     nodeCommandsState[nid] = [cmdRecord, ...(nodeCommandsState[nid] ?? [])];
     saveState("cybernova_node_cmds_v1", nodeCommandsState);
@@ -4885,19 +4910,29 @@ if (path === "/nova-core/version") {
       description: `${t.purposeAr} (${t.commandTemplate})`,
       category: t.category.split("(")[1]?.replace(")", "") || "Recon",
       checkCmd: `which ${t.id}`,
-      installed: true,
-      version: "2026.1-kali",
+      // الترسانة دي كتالوج ثابت جوه الباندل، مش قياس مكنة: 64 أداة «منصوبة»
+      // على Pages = كدب بيظهر في صورة خضار في الصفحة. القياس الحقيقي على
+      // السيرفر (`GET /api/ops/tools`)، وهنا بنقول مش مقاس.
+      installed: false,
+      measured: false,
+      version: null,
+      noteAr: "كتالوج مش قياس — الباندل الثابت مابيفتشش على المكنة. على السيرفر: GET /api/ops/tools",
     }));
   }
 
+  // «ثبّت nmap» على باوندل ثابت = مافيش تثبيت. الرد بيأكد الفشل وسببه وطريق
+  // النجاح الحقيقي، مش `installed:true` مفبرك — الفبركة دي هي اللي بتخلّي الصفحة
+  // تبان شغالة والماكينة فاضية (نفس المرض اللي اتقفل في /exec و/local-agent).
   if (/^\/installer\/tools\/[^/]+\/install$/.test(path) && m === "POST") {
     const toolId = path.split("/")[3] || "nmap";
     return {
-      ok: true,
+      ok: false,
+      standalone: true,
+      error: "no_execution_plane",
       id: toolId,
-      installed: true,
-      version: "2026.1-kali",
-      output: `[+] Verified & activated ${toolId} in CyberNova Kali Sandbox`,
+      installed: false,
+      reasonAr: `مااقدرش أثبّت «${toolId}» هنا: الباندل الثابت مالوش صلاحية تنفيذ أوامر تثبيت.`,
+      howAr: "على سيرفر فيه المحرك: `POST /api/ops/tools/provision` بينزّل النسخ الثابتة (nuclei/httpx/subfinder/katana/dnsx/naabu/ffuf) في `vendor/bin` من غير root. وعلى أي مكنة تانية: `node scripts/fetch-toolchain.mjs --into vendor/bin`.",
     };
   }
 
@@ -5076,23 +5111,18 @@ if (path === "/nova-core/version") {
   }
 
   if (path === "/network/scan" && m === "POST") {
+    // الفحص النشط ضد نطاق حد تاني = مش حاجة تتفبرك: المستخدم بيبني عليها تقرير
+    // وإفصاح. هنا بنرفض وبنقول الطريق الحقيقي (ومعاه شرط الإذن المكتوب).
     const target = String(body?.target || "127.0.0.1");
     return {
+      ok: false,
+      standalone: true,
+      error: "no_execution_plane",
       target,
-      duration: 1.42,
-      hosts: [
-        {
-          ip: target,
-          hostname: target === "127.0.0.1" ? "cybernova-kali-sandbox.local" : target,
-          os: "Linux 6.8 (Kali SecCore)",
-          ports: [
-            { port: 80, protocol: "tcp", state: "open", service: "http", version: "Cloudflare Edge" },
-            { port: 443, protocol: "tcp", state: "open", service: "https", version: "TLSv1.3" },
-            { port: 8080, protocol: "tcp", state: "open", service: "http-proxy", version: "CyberNova API" },
-          ],
-        },
-      ],
-      rawOutput: `Nmap scan report for ${target}\nHost is up (0.012s latency).\nPORT     STATE SERVICE    VERSION\n80/tcp   open  http       Cloudflare Edge\n443/tcp  open   ssl/https  TLSv1.3\n8080/tcp open  http-proxy CyberNova API`,
+      hosts: [],
+      ports: [],
+      reasonAr: `مافيش فحص اتعمل لـ«${target}»: الباندل الثابت مالوش nmap ولا صلاحيات، وأي مخرجات هنا كانت هتبقى مختلقة.`,
+      howAr: "على المحرك: `POST /api/ops/jobs` بنوع scan بعد تسجيل البرنامج والموافقة على النطاق (ops/scope)، أو `POST /api/network/scan` هناك — وكلاهما محتاج إذن ops.",
     };
   }
 
@@ -5115,28 +5145,42 @@ if (path === "/nova-core/version") {
 
   // 9. Tools Shell & System Run (/api/tools/shell, /api/tools/webfetch, /api/shell/execute, /api/system/run, /api/system/info)
   if (path === "/tools/shell" || path === "/shell/execute" || path === "/system/run") {
+    // مقاس 2026-11-05 على الحزمة: `POST /api/system/run` كان بيردّ `ok:true` مع
+    // `stdout` مركّب من أمر المستخدم — يعني صفحة على Pages بتأكد إن `id` اتنفّذ
+    // على سيرفر. مافيش سيرفر، فمافيش تأكيد. (نفس الداء في /network/scan و
+    // /nodes/:id/exec و/kali-command/*.)
     const cmd = String(body?.command || body?.cmd || "whoami && uname -a");
     return {
-      ok: true,
-      sessionId: "kali-session-1",
+      ok: false,
+      standalone: true,
+      error: "no_execution_plane",
+      sessionId: null,
       command: cmd,
-      stdout: `kali@cybernova-sandbox$ ${cmd}\nLinux cybernova-kali-sandbox 6.8.0-kali-amd64 #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux\n[+] 64 Kali Tools & 2,578 Intelligence Items Ready.`,
+      stdout: "",
       stderr: "",
-      output: `kali@cybernova-sandbox$ ${cmd}\nLinux cybernova-kali-sandbox 6.8.0-kali-amd64 #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux`,
-      exitCode: 0,
-      durationMs: 42,
+      exitCode: null,
+      durationMs: 0,
+      reasonAr: `الباندل الثابت مالوش تنفيذ: «${cmd}» ماتنفّذش على أي مكنة، ومافيش مخرجات.`,
+      howAr: "شغّل المحرك (node server.mjs في الحزمة أو سيرفر المستودع) واطلب نفس المسار هناك — التنفيذ الحقيقي والقياس بيحصلوا هناك.",
     };
   }
 
   if (path === "/tools/webfetch") {
     const targetUrl = u.searchParams.get("url") || String(body?.url || "https://example.com");
+    // «Verified HTTP 200» لصفحة ماحصلناش عليها = معلومة مفبركة بتتخزن في
+    // الأدلة. الرفض بيقول الحقيقة وبيرجّع الشكل اللي الصفحة بتعرضه من غير ما
+    // تتكسر (status/content فاضي + السبب).
     return {
+      ok: false,
+      standalone: true,
+      error: "no_execution_plane",
       url: targetUrl,
-      status: 200,
-      headers: { "content-type": "text/html; charset=utf-8", server: "cloudflare", "x-frame-options": "SAMEORIGIN" },
-      content: `<!-- CyberNova Safe WebFetch Preview for ${targetUrl} -->\n<html><head><title>${targetUrl}</title></head><body>Verified HTTP 200</body></html>`,
-      body: `Verified HTTP 200 response from ${targetUrl}`,
-      durationMs: 85,
+      status: 0,
+      content: "",
+      body: "",
+      reasonAr: `مافيش جلب لـ«${targetUrl}»: العرض الثابت مابيمسش الشبكة (والصفحة اللي جواه ماتأكدناش منها).`,
+      howAr: "على المحرك: GET /api/tools/webfetch?url=… (وبديل مجاني تاني: أداة web_fetch في الشات).",
+      durationMs: 0,
     };
   }
 
@@ -5270,11 +5314,34 @@ if (path === "/nova-core/version") {
         updatedAt: Date.now() - 60000,
       },
     ];
-    if (m === "POST" || m === "DELETE") return { ok: true, task: tasks[0] };
+    if (m === "POST" || m === "DELETE") {
+      return {
+        ok: false,
+        standalone: true,
+        error: "no_execution_plane",
+        task: null,
+        reasonAr: "مافيش مهمة اتسجّلت ولا اتنفذّت: الديرة دي عرض ثابت، والمهام بتتعمل على المحرك (POST /api/ops/jobs).",
+        howAr: "شغّل المحرك واطلب /api/ops/jobs — وهناك كل مهمة لازم يكون ليها برنامج مسجّل وإذن نطاق.",
+      };
+    }
     return tasks;
   }
 
   if (path.startsWith("/kali-command/")) {
+    // `/server/exec` و`/agent/exec` و`/execute-direct` = تنفيذ على مكنة المستخدم.
+    // على الباندل مافيش مكنة، فالرفض الصريح أحسن من `ok:true` تخيّلي.
+    const execish = /\/(server\/exec|agent\/exec|execute-direct)$/.test(path);
+    if (execish && m === "POST") {
+      return {
+        ok: false,
+        standalone: true,
+        error: "no_execution_plane",
+        memories: memoriesState,
+        results: [],
+        reasonAr: "مافيش تنفيذ: الباندل الثابت مافيه لا child_process ولا جهاز متصل.",
+        howAr: "اربط اللوحة بالمحرك من «محطة نوفا» (رابط السيرفر) أو شغّل الحزمة — وبعدها التنفيذ بياخد NOVA_EXEC_TOKEN زي باقي مسارات ops.",
+      };
+    }
     return { ok: true, memories: memoriesState, results: [] };
   }
 
