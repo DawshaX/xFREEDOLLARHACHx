@@ -45,7 +45,7 @@ jobs:
   build-and-deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       # Always the branch head, never `github.sha`. A `workflow_run` deploy is
@@ -164,6 +164,24 @@ jobs:
           sleep 10
           exit 0
 
+      # Measured 2026-11-05: six consecutive deploys failed with GitHub's own
+      # "Deployment failed, try again" while the build, the artifact and the
+      # clear-stuck step all passed. The site kept serving an older build and the
+      # panel fixes never reached it. Pages intermittently refuses a deployment
+      # that nobody is driving; the answer GitHub's own error gives is «try
+      # again», so this job now takes it literally — once, after a pause, and only
+      # if the first attempt failed. `continue-on-error` keeps the first failure
+      # from ending the job before the retry can run.
       - name: Deploy to GitHub Pages
         id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: wait before retrying — GitHub itself says «try again»
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 45
+
+      - name: Deploy to GitHub Pages (retry)
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
