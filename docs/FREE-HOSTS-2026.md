@@ -105,6 +105,30 @@ katana/dnsx/naabu/ffuf كـbinaries ثابتة في `vendor/bin`، و`findBinary
 واللي مالوش لسه: `nmap` (استخدم `naabu`) وdisك دائم واللمسة النشطة على أهداف البرامج.
 التفاصيل: `deploy/render-free-guide.md`.
 
+#### من 2026-11-05: التنزيل بقى خطوة **تشغيل** كمان، مش بناء بس
+السلوت المجاني اللي بيجري `nova-24-7.zip` (Waifly/Pterodactyl) مابيعملش build، فـ`vendor/bin`
+كان بيفضل فاضي والأدوات «مش موجودة» للأبد. بقى:
+
+```
+GET  /api/ops/tools              → present/missing/writable/scriptAvailable + آخر محاولة (مقاسة من القرص)
+POST /api/ops/tools/provision     → بينزّل النسخ الثابتة (بلا root، بلا shell) — ورا NOVA_EXEC_TOKEN أو نفس الأصل
+```
+
+- للمحرك نفسه: أداة `tools_install` (يقولها المستخدم في الشات «ثبّت nuclei» فتعملها).
+- عند الإقلاع: `NOVA_TOOLCHAIN_FETCH=1` (أو `auto` = بس لو المجلد فاضي). **مطفي افتراضيًا**:
+  ~100 MB على قرص 512 MB مع كوربوس منزّل للتو = مخاطرة OOM على مضيف مجاني.
+- الحزمة بقى تنسخ `ops/` + `scripts/fetch-toolchain.mjs` جوّاها (`build-standalone.mjs`)،
+  و`audit-route-integrity` بيحمّر لو أي ملف بيانات بيتقرا وقت التشغيل اتنسي من الباندل.
+
+**بسبب نفس المرحلة:** `POST /api/network/scan` و`/api/system/run` و`/api/terminal/exec` و
+`/api/shell/exec` و`/api/tools/install` و`/api/fleet/broadcast` و`/api/kali-command/*exec*`
+و`/api/nova/workspace/{exec,write}` و`/api/nova/scheduler/run` و`/api/installer/tools/:id/install`
+— كلها كانت **بتنفّذ بلا هوية**. دي ورا البوابة دلوقتي: لو سيّرت `NOVA_EXEC_TOKEN` ابعت
+`x-nova-token`، وإلا الطلب لازم يجي من نفس الأصل (لوحة `/nova-fleet` شغالة عادي).
+المربوط من Pages على `dawshax.github.io` هيكسر في المسارات دي بالظبط — وده مقصود:
+ماقدرش أسيب shell مفتوح للعامة. الحل: حقل التوكن في غرفة العمليات (`المخ · المدير`).
+
+
 ## «مكان واحد يغنينا عن كل ده» — الإجابة المختصرة
 
 جرّبت المرشحين اللي بيقولوا كده، ونجّفتهم النهارده (2026-11-02):
