@@ -68,6 +68,18 @@ import {
 import { KIND_LIST, toolStatus } from "../ops/tools";
 import { webSearch } from "./web-search";
 import { forumSearch } from "./forum-search";
+import {
+  platformSelfReport,
+  terminalExec,
+  fileRead,
+  fileWrite,
+  fileList,
+  processList,
+  serviceStatus,
+  uiNavigate,
+  uiAction,
+  memoryRecall,
+} from "./platform-tools";
 
 export interface AgentTool {
   name: string;
@@ -696,6 +708,114 @@ export const AGENT_TOOLS: AgentTool[] = [
       properties: { jobId: { type: "string" }, includeUnverified: { type: "boolean" } },
       required: ["jobId"],
     },
+  },
+
+  /* ── platform tools (أدوات المنصة) ────────────────────────────────────────
+   * Added 2026-11-05. These let the agent act on the platform itself: read its
+   * own measured state, drive the panel, and run commands / read files on a
+   * connected node. `platform_self_report` is the one the persona and the claim
+   * guard both rely on — it is the single source of every number the agent is
+   * allowed to state about itself. */
+  {
+    name: "platform_self_report",
+    title: "تقرير حالة المنصة (مقاس لحظيًا)",
+    description:
+      "يرجّع حالة كل جزء من المنصة مقاسة في هذه اللحظة: عدد الأجهزة المتصلة فعليًا (مش المسجّلة)، عدد الأدوات، حجم فهرس الثغرات، حجم الذاكرة، وقدرات العقدة. استخدمها قبل أي كلام عن قدراتك — ممنوع تقول رقم مش جاي من هنا.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "terminal_exec",
+    title: "تنفيذ أمر على العقدة",
+    description: "ينفّذ أمر شل على جهاز متصل بالأسطول ويرجّع المخرجات الحقيقية (stdout/stderr/exit code).",
+    category: "platform",
+    risk: "sensitive",
+    input_schema: {
+      type: "object",
+      properties: { command: { type: "string" }, agentId: { type: "string" }, timeoutMs: { type: "number" } },
+      required: ["command"],
+    },
+  },
+  {
+    name: "file_read",
+    title: "قراءة ملف على العقدة",
+    description: "يقرأ محتوى ملف من جهاز متصل بالأسطول.",
+    category: "platform",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" }, agentId: { type: "string" } },
+      required: ["path"],
+    },
+  },
+  {
+    name: "file_write",
+    title: "كتابة ملف على العقدة",
+    description: "يكتب محتوى في ملف على جهاز متصل بالأسطول (ينشئ المجلدات لو ناقصة).",
+    category: "platform",
+    risk: "sensitive",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" }, content: { type: "string" }, agentId: { type: "string" } },
+      required: ["path", "content"],
+    },
+  },
+  {
+    name: "file_list",
+    title: "سرد مجلد على العقدة",
+    description: "يسرد محتويات مجلد على جهاز متصل بالأسطول.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: { path: { type: "string" }, agentId: { type: "string" } } },
+  },
+  {
+    name: "process_list",
+    title: "العمليات الشغّالة على العقدة",
+    description: "يسرد أهم العمليات حسب استهلاك المعالج على جهاز متصل.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: { agentId: { type: "string" } } },
+  },
+  {
+    name: "service_status",
+    title: "حالة خدمة على العقدة",
+    description: "يفحص حالة خدمة (systemd أو عملية) على جهاز متصل.",
+    category: "platform",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { name: { type: "string" }, agentId: { type: "string" } },
+      required: ["name"],
+    },
+  },
+  {
+    name: "ui_navigate",
+    title: "فتح صفحة في اللوحة",
+    description: "يطلب من اللوحة فتح صفحة معيّنة (بث عبر WebSocket).",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+  },
+  {
+    name: "ui_action",
+    title: "تنفيذ إجراء في اللوحة",
+    description: "يطلب من اللوحة تنفيذ إجراء مسمّى (تشغيل فحص، تغيير إعداد…) عبر WebSocket.",
+    category: "platform",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { action: { type: "string" }, payload: { type: "object" } },
+      required: ["action"],
+    },
+  },
+  {
+    name: "memory_recall",
+    title: "استرجاع آخر الذاكرة",
+    description: "يرجّع آخر الإدخالات المحفوظة في الذاكرة الدائمة.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: { limit: { type: "number" } } },
   },
 ];
 
@@ -1427,6 +1547,74 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
           risk: t.risk,
         }));
         return done(true, `${list.length} قدرة متاحة${cat ? ` في ${cat}` : ""}`, list);
+      }
+
+      /* ── platform tools (أدوات المنصة) ──────────────────────────────────── */
+      case "platform_self_report": {
+        const r = platformSelfReport();
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "terminal_exec": {
+        const r = await terminalExec(
+          String(rawArgs.command ?? ""),
+          rawArgs.agentId ? String(rawArgs.agentId) : undefined,
+          rawArgs.timeoutMs !== undefined ? Number(rawArgs.timeoutMs) : undefined,
+        );
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "file_read": {
+        const r = await fileRead(String(rawArgs.path ?? ""), rawArgs.agentId ? String(rawArgs.agentId) : undefined);
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "file_write": {
+        const r = await fileWrite(
+          String(rawArgs.path ?? ""),
+          String(rawArgs.content ?? ""),
+          rawArgs.agentId ? String(rawArgs.agentId) : undefined,
+        );
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "file_list": {
+        const r = await fileList(
+          rawArgs.path ? String(rawArgs.path) : ".",
+          rawArgs.agentId ? String(rawArgs.agentId) : undefined,
+        );
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "process_list": {
+        const r = await processList(rawArgs.agentId ? String(rawArgs.agentId) : undefined);
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "service_status": {
+        const r = await serviceStatus(
+          String(rawArgs.name ?? ""),
+          rawArgs.agentId ? String(rawArgs.agentId) : undefined,
+        );
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "ui_navigate": {
+        const r = uiNavigate(String(rawArgs.path ?? ""));
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "ui_action": {
+        const r = uiAction(
+          String(rawArgs.action ?? ""),
+          (rawArgs.payload && typeof rawArgs.payload === "object" ? rawArgs.payload : {}) as Record<string, unknown>,
+        );
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "memory_recall": {
+        const r = memoryRecall(rawArgs.limit !== undefined ? Number(rawArgs.limit) : 10);
+        return done(r.ok, r.summary, r.data);
       }
 
       default:

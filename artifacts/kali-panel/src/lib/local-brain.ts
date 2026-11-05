@@ -104,6 +104,19 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   program_discover: "استكشاف برامج",
   device_control_map: "خريطة تحكم الأجهزة",
   record_finding: "تسجيل نتيجة",
+  // ── platform tools (أدوات المنصة) — added 2026-11-05 ──────────────────────
+  // The agent can now act on the platform itself, not only on the internet.
+  // Labels must exist for every registered tool or the label gate goes red.
+  platform_self_report: "تقرير حالة المنصة",
+  terminal_exec: "تنفيذ أمر على العقدة",
+  file_read: "قراءة ملف على العقدة",
+  file_write: "كتابة ملف على العقدة",
+  file_list: "سرد مجلد على العقدة",
+  process_list: "العمليات الشغّالة",
+  service_status: "حالة خدمة",
+  ui_navigate: "فتح صفحة في اللوحة",
+  ui_action: "تنفيذ إجراء في اللوحة",
+  memory_recall: "استرجاع آخر الذاكرة",
 };
 
 /**
