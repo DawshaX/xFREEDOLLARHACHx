@@ -1,19 +1,19 @@
 {
   "version": 1,
-  "at": "2026-11-05T15:59:46.886Z",
+  "at": "2026-11-05T16:33:59.753Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 48000,
+  "total": 66427,
   "bySeverity": {
-    "high": 20457,
-    "medium": 21757,
-    "low": 2879,
-    "unknown": 1229,
-    "critical": 1676,
-    "none": 2
+    "high": 26292,
+    "medium": 30064,
+    "low": 3687,
+    "unknown": 2641,
+    "critical": 3737,
+    "none": 6
   },
   "byYear": {
     "1999": 1573,
@@ -23,68 +23,75 @@
     "2003": 1488,
     "2004": 2659,
     "2005": 4673,
-    "2006": 7030,
+    "2006": 7032,
     "2007": 6472,
-    "2008": 6209,
-    "2009": 771,
-    "2010": 4,
-    "2011": 1,
-    "2012": 7,
-    "2013": 10,
-    "2014": 57,
-    "2015": 50,
-    "2016": 21,
-    "2017": 109,
-    "2018": 36,
-    "2019": 212,
-    "2020": 445,
-    "2021": 730,
-    "2022": 10001,
-    "2023": 311
+    "2008": 6212,
+    "2009": 773,
+    "2010": 9,
+    "2011": 4,
+    "2012": 19,
+    "2013": 29,
+    "2014": 84,
+    "2015": 123,
+    "2016": 35,
+    "2017": 216,
+    "2018": 234,
+    "2019": 408,
+    "2020": 924,
+    "2021": 1360,
+    "2022": 13378,
+    "2023": 13391,
+    "2024": 7,
+    "2025": 34,
+    "2026": 159
   },
-  "kev": 67,
-  "epssScored": 46773,
-  "products": 20191,
+  "kev": 163,
+  "epssScored": 63751,
+  "products": 27616,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 3868
-    },
-    {
-      "product": "mac_os_x",
-      "count": 2270
-    },
-    {
-      "product": "firefox",
-      "count": 2241
-    },
-    {
-      "product": "php",
-      "count": 1380
+      "count": 4459
     },
     {
       "product": "android",
-      "count": 1303
+      "count": 3599
+    },
+    {
+      "product": "firefox",
+      "count": 2367
+    },
+    {
+      "product": "mac_os_x",
+      "count": 2274
+    },
+    {
+      "product": "php",
+      "count": 1398
+    },
+    {
+      "product": "debian_linux",
+      "count": 1366
+    },
+    {
+      "product": "fedora",
+      "count": 1308
+    },
+    {
+      "product": "windows_10",
+      "count": 1063
     },
     {
       "product": "irix",
       "count": 1051
     },
     {
-      "product": "windows_10",
-      "count": 1022
-    },
-    {
       "product": "internet_explorer",
       "count": 993
     },
     {
-      "product": "debian_linux",
-      "count": 917
-    },
-    {
       "product": "ios",
-      "count": 872
+      "count": 884
     },
     {
       "product": "ethereal",
@@ -92,43 +99,59 @@
     },
     {
       "product": "freebsd",
-      "count": 829
+      "count": 842
+    },
+    {
+      "product": "junos",
+      "count": 842
+    },
+    {
+      "product": "macos",
+      "count": 813
     },
     {
       "product": "sunos",
       "count": 753
     },
     {
-      "product": "fedora",
-      "count": 748
-    },
-    {
       "product": "solaris",
-      "count": 734
+      "count": 746
     },
     {
       "product": "hp-ux",
-      "count": 731
+      "count": 732
     },
     {
       "product": "aix",
-      "count": 714
+      "count": 723
+    },
+    {
+      "product": "jre",
+      "count": 684
     },
     {
       "product": "linux",
       "count": 673
     },
     {
+      "product": "windows_server_2008",
+      "count": 670
+    },
+    {
       "product": "mac_os_x_server",
       "count": 637
     },
     {
-      "product": "jre",
-      "count": 630
+      "product": "windows_server_2012",
+      "count": 637
+    },
+    {
+      "product": "ubuntu_linux",
+      "count": 627
     },
     {
       "product": "http_server",
-      "count": 616
+      "count": 625
     },
     {
       "product": "php-nuke",
@@ -136,7 +159,7 @@
     },
     {
       "product": "application_server",
-      "count": 591
+      "count": 592
     },
     {
       "product": "bugzilla",
@@ -147,79 +170,59 @@
       "count": 588
     },
     {
-      "product": "windows_2003_server",
-      "count": 583
-    },
-    {
-      "product": "ubuntu_linux",
-      "count": 578
+      "product": "websphere_application_server",
+      "count": 585
     },
     {
       "product": "mysql",
-      "count": 566
+      "count": 583
     },
     {
-      "product": "websphere_application_server",
-      "count": 564
+      "product": "windows_2003_server",
+      "count": 583
     },
     {
       "product": "phpbb",
       "count": 564
     },
     {
+      "product": "emui",
+      "count": 561
+    },
+    {
+      "product": "enterprise_linux",
+      "count": 537
+    },
+    {
+      "product": "iphone_os",
+      "count": 537
+    },
+    {
       "product": "opera_browser",
       "count": 514
     },
     {
-      "product": "junos",
-      "count": 503
-    },
-    {
       "product": "database_server",
-      "count": 487
-    },
-    {
-      "product": "opensolaris",
-      "count": 481
-    },
-    {
-      "product": "wireshark",
-      "count": 445
-    },
-    {
-      "product": "phpmyadmin",
-      "count": 443
-    },
-    {
-      "product": "weblogic_server",
-      "count": 441
-    },
-    {
-      "product": "drupal",
-      "count": 436
+      "count": 492
     },
     {
       "product": "office",
-      "count": 431
-    },
-    {
-      "product": "clamav",
-      "count": 426
+      "count": 488
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 4844351,
-    "sha256": "1b24b8d64e83cd2527480e8ac5fe29e4513da60b0febf64a0aef18b70ed7a6f7"
+    "bytes": 6748788,
+    "sha256": "e2aac5010ea496267453075ca91e055a53bde59444e70b4fe6217c1276de0bea"
   },
   "mode": "deepen",
-  "says_ar": "48000 ثغرة حقيقية · critical 1676 · high 20457 · 67 مستغلّة فعلياً (KEV) · 46773 لها EPSS · 20191 منتج بـCPE · مزامنة 2026-11-05T15:59:46.886Z",
+  "says_ar": "66427 ثغرة حقيقية · critical 3737 · high 26292 · 163 مستغلّة فعلياً (KEV) · 63751 لها EPSS · 27616 منتج بـCPE · مزامنة 2026-11-05T16:33:59.753Z",
   "deepen": {
-    "nextStartIndex": 204930,
-    "windowPages": 6,
-    "walkedFrom": 192930,
-    "nvdTotal": 419536,
-    "coverage": 0.1144,
-    "at": "2026-11-05T15:59:46.887Z"
+    "nextStartIndex": 222930,
+    "windowPages": 9,
+    "walkedFrom": 204930,
+    "nvdTotal": 419790,
+    "coverage": 0.1582,
+    "at": "2026-11-05T16:33:59.754Z"
   }
 }
