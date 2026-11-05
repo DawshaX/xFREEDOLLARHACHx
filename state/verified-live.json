@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "at": "2026-11-04T20:03:39.386Z",
-  "verdict": "AMBER",
+  "at": "2026-11-05T04:08:05.716Z",
+  "verdict": "GREEN",
   "counts": {
-    "pass": 19,
+    "pass": 21,
     "fail": 0,
-    "blocked": 1,
-    "review": 2
+    "blocked": 0,
+    "review": 0
   },
   "meta": {
     "tools": [
@@ -28,25 +28,25 @@
       "check": "dns resolution",
       "status": "pass",
       "detail": "2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present",
-      "at": "2026-11-04T19:59:52.658Z"
+      "at": "2026-11-05T03:57:42.571Z"
     },
     {
       "layer": "cli",
       "check": "subfinder -d vulnweb.com",
       "status": "pass",
-      "detail": "19 سوبدومين (المطلوب ≥2) · estphp.vulnweb.com, testasp.vulnweb.com, testhtml5.vulnweb.com",
-      "at": "2026-11-04T20:00:58.983Z",
+      "detail": "19 سوبدومين (المطلوب ≥2) · testaspnet.vulnweb.com, testphp.vulnweb.com, html5.vulnweb.com",
+      "at": "2026-11-05T03:57:51.776Z",
       "count": 19,
-      "ms": 66324
+      "ms": 9205
     },
     {
       "layer": "cli",
       "check": "httpx https://demo.testfire.net/",
-      "status": "review",
-      "detail": "status=مفيش (المطلوب 200) · exit=0 · 0B · السبب: مفيش مخرجات · مفاتيح الرد: مفيش JSON · 741ms",
-      "at": "2026-11-04T20:00:59.725Z",
-      "ms": 741,
-      "httpStatus": 0,
+      "status": "pass",
+      "detail": "200 · Altoro Mutual ·",
+      "at": "2026-11-05T03:57:53.094Z",
+      "ms": 1316,
+      "httpStatus": 200,
       "toolError": null,
       "toolFailed": false
     },
@@ -55,18 +55,18 @@
       "check": "katana crawl testphp.vulnweb.com",
       "status": "pass",
       "detail": "1 رابط متكرول (المطلوب ≥1)",
-      "at": "2026-11-04T20:01:21.100Z",
+      "at": "2026-11-05T03:58:14.671Z",
       "count": 1,
-      "ms": 21375
+      "ms": 21576
     },
     {
       "layer": "cli",
       "check": "nuclei -u testphp.vulnweb.com (high,critical)",
       "status": "pass",
       "detail": "4 طلب اتفحص و0 نتيجة high/critical · exit=0 · قوالب: [\u001b[34mINF\u001b[0m] No new updates found for nuclei templates",
-      "at": "2026-11-04T20:01:41.729Z",
+      "at": "2026-11-05T03:58:57.453Z",
       "count": 0,
-      "ms": 15668,
+      "ms": 30919,
       "cutOff": false
     },
     {
@@ -74,118 +74,110 @@
       "check": "nmap scanme.nmap.org:80,22",
       "status": "pass",
       "detail": "2 بورت مفتوح · 22/tcp open · 80/tcp open",
-      "at": "2026-11-04T20:01:41.853Z",
+      "at": "2026-11-05T03:58:57.647Z",
       "count": 2,
-      "ms": 123
+      "ms": 194
     },
     {
       "layer": "cli",
-      "check": "hub node.waifly.com:27214",
-      "status": "blocked",
-      "detail": "http://node.waifly.com:27214/api/health → HTTP 000 · بلا رد · ops/version بلا رد · 213ms · السبب: TypeError fetch failed ECONNREFUSED — الـconnection refused معناه مافيش حاجة بتتسمع على البورت (مش فايروال بيسقّط): شغّل العملية أو اربط البو…",
-      "at": "2026-11-04T20:01:42.066Z",
-      "hubUrl": "http://node.waifly.com:27214",
-      "httpStatus": 0,
-      "opsStatus": 0,
-      "ms": 213,
-      "refused": true
+      "check": "hub nova.waifly.com",
+      "status": "pass",
+      "detail": "https://nova.waifly.com/api/health → HTTP 200 · JSON 93B · ops bundle ✓ · 1037ms",
+      "at": "2026-11-05T03:58:58.684Z",
+      "hubUrl": "https://nova.waifly.com",
+      "httpStatus": 200,
+      "opsStatus": 200,
+      "ms": 1037,
+      "refused": false
     },
     {
       "layer": "cli",
       "check": "ffuf fuzz testphp.vulnweb.com",
       "status": "pass",
       "detail": "61 طلب مُرسل و0 مطابقة (1 سطر مخرجات)",
-      "at": "2026-11-04T20:02:42.090Z",
+      "at": "2026-11-05T03:59:58.735Z",
       "count": 0,
       "sent": 61,
-      "ms": 60024
+      "ms": 60050
     },
     {
       "layer": "engine",
       "check": "engine reachable",
       "status": "pass",
       "detail": "HTTP 200",
-      "at": "2026-11-04T20:02:42.098Z"
+      "at": "2026-11-05T03:59:58.740Z"
     },
     {
       "layer": "engine",
       "check": "kinds report tool presence",
       "status": "pass",
       "detail": "16 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap",
-      "at": "2026-11-04T20:02:42.102Z"
+      "at": "2026-11-05T03:59:58.745Z"
     },
     {
       "layer": "engine",
       "check": "bounty catalog served",
       "status": "pass",
-      "detail": "746 برنامج (511 بمكافأة) · آخر تحديث 2.1 يوم · ops/bounty/programs-catalog.json",
-      "at": "2026-11-04T20:02:42.117Z"
+      "detail": "746 برنامج (511 بمكافأة) · آخر تحديث 2.4 يوم · ops/bounty/programs-catalog.json",
+      "at": "2026-11-05T03:59:58.763Z"
     },
     {
       "layer": "engine",
       "check": "catalog lookup over HTTP",
       "status": "pass",
       "detail": "aces-dev.wnba.com → hackerone:nba-public (domain · استقبال open) · ونطاق مجهول → match:null",
-      "at": "2026-11-04T20:02:42.131Z"
+      "at": "2026-11-05T03:59:58.785Z"
     },
     {
       "layer": "engine",
       "check": "program registered active (demo.testfire.net)",
       "status": "pass",
       "detail": "id=demo.testfire.net · policy=https://demo.testfire.net/",
-      "at": "2026-11-04T20:02:42.195Z"
+      "at": "2026-11-05T03:59:59.030Z"
     },
     {
       "layer": "engine",
       "check": "job created",
       "status": "pass",
-      "detail": "job=20261104-9c1db8 · 7 مهمة",
-      "at": "2026-11-04T20:02:42.202Z"
+      "detail": "job=20261105-fb3f37 · 7 مهمة",
+      "at": "2026-11-05T03:59:59.038Z"
     },
     {
       "layer": "engine",
       "check": "job executed",
       "status": "pass",
-      "detail": "5/7 done · 2 failed · 4 finding · done",
-      "at": "2026-11-04T20:03:39.302Z",
-      "jobId": "20261104-9c1db8"
-    },
-    {
-      "layer": "engine",
-      "check": "failed tasks",
-      "status": "review",
-      "detail": "recon.headers: الطلب لـdemo.testfire.net موصّلش (Error: connect ECONNREFUSED 65.61.137.117:443) — النتيجة «مجهولة» مش «ناقصة» · recon.tls: handshake لـdemo.testfire.net فشل (Error: connect ECONNREFUSED 65.61.137.117:443) — مفيش استنتاج عن الشهادة",
-      "at": "2026-11-04T20:03:39.302Z",
-      "jobId": "20261104-9c1db8"
+      "detail": "7/7 done · 0 failed · 11 finding · done",
+      "at": "2026-11-05T04:08:05.514Z",
+      "jobId": "20261105-fb3f37"
     },
     {
       "layer": "engine",
       "check": "evidence hashed on disk",
       "status": "pass",
-      "detail": "4 ملف في state/jobs/20261104-9c1db8/evidence · 2 فيهم بايتات · فاضي: tools.httpx-e3b0c44298fc.txt, tools.subfinder-e3b0c44298fc.txt (2 — 2 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية)",
-      "at": "2026-11-04T20:03:39.303Z",
-      "jobId": "20261104-9c1db8",
-      "evidence": 4,
-      "emptyEvidence": 2,
-      "zeroOutputEvidence": 2,
+      "detail": "6 ملف في state/jobs/20261105-fb3f37/evidence · 5 فيهم بايتات · فاضي: tools.subfinder-e3b0c44298fc.txt (1 — 1 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية)",
+      "at": "2026-11-05T04:08:05.514Z",
+      "jobId": "20261105-fb3f37",
+      "evidence": 6,
+      "emptyEvidence": 1,
+      "zeroOutputEvidence": 1,
       "lostEvidence": 0
     },
     {
       "layer": "engine",
       "check": "report is honest about coverage",
       "status": "pass",
-      "detail": "668 بايت · فيه «Coverage gaps»=true · «reportable»=true",
-      "at": "2026-11-04T20:03:39.305Z",
-      "jobId": "20261104-9c1db8"
+      "detail": "614 بايت · فيه «Coverage gaps»=true · «reportable»=true",
+      "at": "2026-11-05T04:08:05.517Z",
+      "jobId": "20261105-fb3f37"
     },
     {
       "layer": "engine",
       "check": "findings vault is idempotent",
       "status": "pass",
-      "detail": "أول sync: +18/-18 (من مهام 11 · من الكتالوج القديم 11) · تاني: +0/-18 ومحدّثة 22 · متأكَّدة 0",
-      "at": "2026-11-04T20:03:39.377Z",
-      "jobId": "20261104-9c1db8",
-      "vaultTotal": 18,
+      "detail": "أول sync: +26/-26 (من مهام 19 · من الكتالوج القديم 11) · تاني: +0/-26 ومحدّثة 30 · متأكَّدة 0",
+      "at": "2026-11-05T04:08:05.703Z",
+      "jobId": "20261105-fb3f37",
+      "vaultTotal": 26,
       "vaultVerified": 0
     },
     {
@@ -193,7 +185,7 @@
       "check": "report draft gated on reproduction",
       "status": "pass",
       "detail": "3 مفتاح: 0 مسودة (200) · 3 مرفوضة (409) · البنية=true · سبب الرفض موجود=true",
-      "at": "2026-11-04T20:03:39.382Z",
+      "at": "2026-11-05T04:08:05.709Z",
       "keys": "8e6cb9b29d915ea3:409,6904dcc9f38b68e5:409,9d4b4cb37b85ac1b:409"
     },
     {
@@ -201,7 +193,7 @@
       "check": "hunt candidates stay context-only",
       "status": "pass",
       "detail": "12 مرشّح من 746 برنامج · أعلى استجابة 100% · مفلوت {\"notBounty\":235,\"pausedOrClosed\":0,\"lowEfficiency\":376,\"platform\":0,\"query\":0} · CIDR سياق بس=true · ترتيب=true",
-      "at": "2026-11-04T20:03:39.384Z",
+      "at": "2026-11-05T04:08:05.713Z",
       "catalogPresent": true
     },
     {
@@ -209,7 +201,7 @@
       "check": "negative control refuses example.com",
       "status": "pass",
       "detail": "HTTP 403 · برنامج Negative control (must never be scanned actively) محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة. للتفعيل لازم تأكيد إذن مكتوب: program_d…",
-      "at": "2026-11-04T20:03:39.386Z",
+      "at": "2026-11-05T04:08:05.715Z",
       "negative": true
     }
   ]
