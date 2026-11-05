@@ -1445,6 +1445,43 @@ export function resolveStandaloneApi(
   // `/nova-fleet` asks the engine what the engine IS. A static bundle has no
   // engine, so it answers with the same envelope and says so — the panel then
   // measures what a browser honestly can, instead of painting a green dot.
+/**
+ * The static build's honest answer to «which code is this?».
+ *
+ * On the engine this route compares the process's boot build with build.json on
+ * disk and reports `stale` when a deploy landed without a restart. A static
+ * bundle has nothing to compare — but it must still answer with the same
+ * envelope, otherwise the «نظام واحد» card loses the row that shows the user
+ * they are looking at a build, not at a running program.
+ */
+/**
+ * A static bundle cannot restart anything — there is no process. Answering
+ * `null` here made the panel show a generic empty payload (and the connection
+ * audit flagged it). The honest answer is: nothing to restart, nothing lost.
+ */
+if (path === "/nova-core/restart") {
+  return {
+    ok: false,
+    static: true,
+    supervised: false,
+    canSelfRespawn: false,
+    note: "النسخة الثابتة مفيهاش عملية سيرفر تعيد تشغيلها — مفيش حاجة عالقة، بس مفيش حاجة تتحدّث كمان. شغّل حزمة nova-24-7 على سيرفر عشان التحديث الذاتي يشتغل.",
+    marker: [],
+  };
+}
+
+if (path === "/nova-core/version") {
+  return {
+    ok: true,
+    static: true,
+    build: { commit: "static", note: "الوضع الثابت: النسخة دي صفحات — بصمة البناء مالهاش معنى هنا" },
+    boot: null,
+    stale: false,
+    staleWhy: null,
+    runtime: { mode: "static", note: "مفيش عملية سيرفر هنا — الكود بيشتغل في المتصفح، ومفيش نسخة قديمة عالقة" },
+  };
+}
+
   if (path === "/nova-core/awareness") {
     return {
       ok: true,

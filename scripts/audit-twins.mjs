@@ -31,6 +31,7 @@ const TWINS = ["standalone-api.ts", "cyber-corpus-2099.ts", "live-vuln-ingestor.
 // اختلاف مقصود — نفس الاسم، طبقتان مختلفتان فعلاً.
 const DRIFT_OK = {
   "awareness.ts": "السيرفر بيقيس حالتها (probes/كتابة state)، اللوحة بتقرأ الـsnapshot بس — العقد مشترك والمنطق لا",
+  "corpus-live.ts": "نفس السطح (snapshot/loadLive/total) على مصدرين: السيرفر بيقرأ ملف الكوربوس المُنزَّل من الديسك، والمتصفح بيجيب نفس الملف بـfetch — الشكل متطابق والتنفيذ لازم يختلف",
 };
 
 const rel = (p) => path.relative(ROOT, p);

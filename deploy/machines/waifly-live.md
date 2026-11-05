@@ -119,6 +119,72 @@ bash scripts/fleet-verify.sh http://node.waifly.com:27316
 
 ---
 
+## ٦) دومين مجاني بـHTTPS (`https://nova.waifly.com`) — 2 دقيقة
+
+الرابط `http://node.waifly.com:27316` شغّال، بس المتصفح بيمنع أي طلب `http` من صفحة `https`
+(وده كان بيخلّي اللوحة تقول «السيرفر مش بيرد» وهو شغّال). الحل: subdomain مجاني من نفس اللوحة.
+
+Waifly بيدّي **٢ subdomain مجانيين** لكل سيرفر (المستخدم ١/٢ في 2026-11-05).
+
+الخطوات في `https://panel.waifly.com/server/53a7d0cb`:
+
+1. **Network** → **Subdomains** (أو **Allocations** في بعض النسخ).
+2. اكتب الاسم: `nova` — والدومين `waifly.com` (متغيّرش).
+3. **Port**: `27316` — نفس البورت اللي البرنامج سامع عليه (تلاقيه في اللوج:
+   `NOVA listening on http://0.0.0.0:27316`).
+4. **Type**: `Web` (لو فيه اختيار `WebSocket` اختاره كمان — الشات والمِش محتاجينه).
+5. Save → استنى دقيقة → افتح `https://nova.waifly.com/api/health`.
+
+المتوقع:
+
+```json
+{"status":"ok","mode":"standalone","wsConnected":true,"timestamp":"..."}
+```
+
+بعد كده البرنامج بيسجّل الماكينة بنفسه بالـHTTPS (شفناها في `/api/fleet/system` كـ
+`Waifly · HTTPS` · `up`) — مفيش أي خطوة زيادة.
+
+**ملحوظة:** الـsubdomain التاني فاضي — لو حبيت تعمل رابط تاني (مثلاً `nova-hub`) لأي بورت
+تاني في نفس السلوت، استخدمه، بس سيب الأول زي ما هو.
+
+---
+
+## ٧) «شُحنت نسخة والموقع لسه بيجيب القديمة» — التشخيص في سطر
+
+دي كانت أكبر مشكلة واتصلحت في المرحلة 48 (`lib/self-restart.ts`). لو شكّيت:
+
+```sh
+curl -s https://nova.waifly.com/api/nova-core/version
+```
+
+شوف الحقلين:
+
+- `build.commit` / `build.builtAt` = **الملفات اللي على الديسك**.
+- `boot.commit` / `boot.builtAt` = **الكود اللي بيشتغل فعلًا** (بيتقري مرة واحدة عند التشغيل).
+
+لو `stale: true` → الملفات جديدة والعملية قديمة. الحل واحد من دول:
+
+| الطريقة | الأمر |
+|---|---|
+| من صفحة `/nova-fleet` | بطاقة «نظام واحد» → السطر الأحمر → زرار **«شغّل النسخة الجديدة»** |
+| من المتصفح | `https://nova.waifly.com/api/nova-core/restart` (GET كفاية) |
+| من اللوحة | زرار **Restart** في Waifly |
+
+ولمتابعة اللي حصل في التحديث الأخير (مفيش أي تخمين):
+
+```sh
+curl -s https://nova.waifly.com/api/nova-core/auto-update
+```
+
+`lastResult` · `lastDetail` · `logTail` (آخر 25 سطر من `state/auto-update.log`) · `restartNeeded`.
+
+**لو (`restartNeeded: true`) وفضل كده:** المُشرف مش شغّال، يعني السلوت متشغّل بـ
+`node nova-app.mjs` مباشرة. نادِ
+`https://nova.waifly.com/api/nova-core/restart?force=1` — العملية بتبدّل نفسها (بعد 3 ثواني
+ترجع على نفس البورت)، ومفيش حاجة محتاجة تدخّل منك.
+
+---
+
 ## لو حصلت مشكلة
 
 | العرض | السبب | الحل |

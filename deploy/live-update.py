@@ -62,7 +62,12 @@ PROTECTED_NAMES = {
 }
 
 REQUIRED = ("server.mjs", "index.js", "boot.mjs", "package.json")
-PORT_CANDIDATES = (27214,)  # overridden by NOVA_PORT / $PORT when set
+# Ports to try for the self-restart handshake. 27214 was a stale single guess
+# and it is why every install on the Waifly slot between 02:12 and 02:41 wrote
+# the new files, asked the wrong port to reload, and exited 0 — «installed» on
+# screen, old code in production. NOVA_PORT/$PORT still win; the app now also
+# writes the restart marker itself, so this list is only the first attempt.
+PORT_CANDIDATES = (27214, 27316, 8080, 8000, 3000, 5000, 7860, 10000)
 
 
 def log(msg: str = "") -> None:

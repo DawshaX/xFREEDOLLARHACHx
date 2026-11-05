@@ -20,6 +20,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { spawn } from "node:child_process";
+import { bootBuild, requestReload, restartHistory, selfRespawn } from "./self-restart";
 
 const REPO = process.env.NOVA_RELEASE_REPO || "DawshaX/xFREEDOLLARHACHx";
 const TAG = process.env.NOVA_RELEASE_TAG || "nova-portable";
@@ -42,6 +43,22 @@ export interface AutoUpdateState {
   updatedAt: string | null;
   attempts: number;
   logFile: string;
+  /** The build the *running process* was started from (read once at import). */
+  bootCommit: string | null;
+  bootBuiltAt: string | null;
+  /**
+   * True when the files on disk are newer than the process that is running.
+   * Measured 2026-11-05 on the live Waifly slot: the updater reported
+   * «installed» three times, build.json said 02:12, and the process kept
+   * answering with code from before 01:45 — because the supervisor reload
+   * never happened. The updater could not see that, so it kept saying it was
+   * up to date. It can see it now.
+   */
+  restartNeeded: boolean;
+  /** Last lines of the updater log — the only place a failed reload explains itself. */
+  logTail: string[];
+  /** What this process tried to do about a reload, and when. */
+  restartTrace: { at: string; what: string }[];
 }
 
 function stateDir(): string {
@@ -80,6 +97,19 @@ export function localBuild(): { commit?: string; builtAt?: string; files?: numbe
   return null;
 }
 
+/** Last N non-empty lines of the updater log. */
+function tailLog(lines = 25): string[] {
+  try {
+    return fs
+      .readFileSync(LOG(), "utf8")
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .slice(-lines);
+  } catch {
+    return [];
+  }
+}
+
 function readState(): Partial<AutoUpdateState> {
   try {
     return JSON.parse(fs.readFileSync(FILE(), "utf8")) as Partial<AutoUpdateState>;
@@ -105,6 +135,11 @@ function writeState(patch: Partial<AutoUpdateState>): AutoUpdateState {
     logFile: LOG(),
     ...readState(),
     ...patch,
+    bootCommit: bootBuild().commit,
+    bootBuiltAt: bootBuild().builtAt,
+    restartNeeded: false,
+    logTail: tailLog(),
+    restartTrace: restartHistory(),
   };
   // Fields that must always reflect the running process, not stale disk state.
   merged.currentCommit = build?.commit ?? merged.currentCommit ?? null;
@@ -112,6 +147,10 @@ function writeState(patch: Partial<AutoUpdateState>): AutoUpdateState {
   merged.enabled = enabled();
   merged.supervised = process.env.NOVA_SUPERVISED === "1";
   merged.intervalMinutes = intervalMinutes();
+  const bootNow = bootBuild();
+  merged.bootCommit = bootNow.commit;
+  merged.bootBuiltAt = bootNow.builtAt;
+  merged.restartNeeded = Boolean(bootNow.builtAt && build?.builtAt && bootNow.builtAt !== build.builtAt);
   try {
     fs.mkdirSync(stateDir(), { recursive: true });
     fs.writeFileSync(FILE(), JSON.stringify(merged, null, 2));
@@ -196,6 +235,18 @@ export async function checkForUpdate(opts: { install?: boolean } = {}): Promise<
     const deltaS = Math.round((remoteMs - localMs) / 1000);
 
     if (!(deltaS > MIN_DELTA_S)) {
+      // Up to date with the release — but is the *process* up to date with the
+      // files? Those are different questions and only one of them was answered.
+      const boot = bootBuild().builtAt;
+      const disk = build.builtAt;
+      if (boot && disk && boot !== disk) {
+        return writeState({
+          lastCheckAt: new Date().toISOString(),
+          latestReleaseAt: releaseAt,
+          lastResult: "restart-needed",
+          lastDetail: `الملفات على الديسك أحدث من العملية الشغالة (شغّالة من ${boot} والديسك ${disk}) — محتاج Restart من اللوحة`,
+        });
+      }
       return writeState({
         lastCheckAt: new Date().toISOString(),
         latestReleaseAt: releaseAt,
@@ -259,13 +310,37 @@ function startInstaller(releaseAt: string): AutoUpdateState {
       child.stderr.on("data", (d: Buffer) => appendLog(`err: ${d.toString().trim()}`));
       child.on("exit", (code) => {
         appendLog(`updater exited ${code}`);
+        if (code !== 0) {
+          writeState({
+            lastResult: "failed",
+            lastDetail: `فشل التطبيق (كود ${code}) — شوف auto-update.log`,
+          });
+          return;
+        }
+        // The updater may have asked for a reload over HTTP using a guessed
+        // port (PORT_CANDIDATES in deploy/live-update.py was a stale 27214),
+        // and it exits 0 even when that request never arrived. So do not trust
+        // it: write the marker from the process that knows its own state dir,
+        // then check in a few seconds whether we are still alive. If we are,
+        // the reload did NOT happen — say so instead of «اتطبّقت».
         writeState({
-          lastResult: code === 0 ? "installed" : "failed",
-          lastDetail:
-            code === 0
-              ? "اتطبّقت النسخة الجديدة — المُشرف بيعيد التشغيل"
-              : `فشل التطبيق (كود ${code}) — شوف auto-update.log`,
-          updatedAt: code === 0 ? new Date().toISOString() : null,
+          lastResult: "installed",
+          lastDetail: "اتطبّقت النسخة الجديدة — طلبنا إعادة التشغيل، بنتأكد إنها حصلت",
+          updatedAt: new Date().toISOString(),
+        });
+        appendLog("files installed — writing the reload marker from the app itself");
+        requestReload({
+          verifyMs: 9000,
+          then: () => {
+            const canRespawn = !process.env.NOVA_SUPERVISED;
+            writeState({
+              lastResult: "restart-needed",
+              lastDetail: canRespawn
+                ? "الملفات الجديدة جاهزة بس العملية القديمة لسه شغّالة — بندي إعادة تشغيل ذاتية للنسخة اللي من غير مُشرف"
+                : "الملفات الجديدة جاهزة بس المُشرف معملش reload — البرنامج محتاج Restart من اللوحة (أو POST /api/nova-core/restart?force=1)",
+            });
+            if (canRespawn) selfRespawn();
+          },
         });
       });
       child.on("error", (err) => {
@@ -319,5 +394,10 @@ export function autoUpdateStatus(): AutoUpdateState {
     updatedAt: stored.updatedAt ?? null,
     attempts: stored.attempts ?? 0,
     logFile: LOG(),
+    bootCommit: bootBuild().commit,
+    bootBuiltAt: bootBuild().builtAt,
+    restartNeeded: Boolean(bootBuild().builtAt && build?.builtAt && bootBuild().builtAt !== build.builtAt),
+    logTail: tailLog(),
+    restartTrace: restartHistory(),
   };
 }
