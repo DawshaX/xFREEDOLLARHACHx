@@ -15,24 +15,26 @@ name: agent gates (the proofs that keep NOVA honest)
 on:
   push:
     branches: [main]
+    # أي مفعال في scripts/ يفعّل الفحص — القوائم المفصلة دي هي اللي خلّت بوابة
+    # جديدة توتم في المستودع من غير ما CI يجربها.
     paths:
       - "artifacts/api-server/src/lib/agent/**"
       - "artifacts/api-server/src/routes/**"
       - "artifacts/api-server/src/lib/standalone-api.ts"
-      - "scripts/test-*.mjs"
-      - "scripts/agent-gates.mjs"
+      - "artifacts/kali-panel/src/**"
+      - "scripts/*.mjs"
       - "scripts/lib/**"
-      - "scripts/ops-selftest.mjs"
-      - "scripts/audit-connections.mjs"
-      - "scripts/audit-contracts.mjs"
-      - "scripts/audit-twins.mjs"
-      - "scripts/typecheck-ratchet.mjs"
-      - "scripts/check-workflows.mjs"
+      - "state/curated-cve-examples.json"
       - ".github/workflows/agent-gates.yml"
   pull_request:
     paths:
       - "artifacts/api-server/src/lib/agent/**"
-      - "scripts/test-*.mjs"
+      - "artifacts/api-server/src/routes/**"
+      - "artifacts/api-server/src/lib/standalone-api.ts"
+      - "artifacts/kali-panel/src/**"
+      - "scripts/*.mjs"
+      - "scripts/lib/**"
+      - "state/curated-cve-examples.json"
       - ".github/workflows/agent-gates.yml"
   schedule:
     - cron: "20 6 * * *"

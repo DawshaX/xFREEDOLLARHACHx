@@ -524,8 +524,24 @@ router.post("/missions/:id/commands", (req, res) => {
 });
 
 // ── Live Agent IQ ─────────────────────────────────────────────────────────────
-router.get("/live-agent/iq", (_req, res) => {
-  res.json({ connected: true, iq: 95, latencyMs: 12 });
+// الأجينت كان بيطمّن: «متصل · IQ 95 · 12ms» من غير أي قياس. النسخة دي بتقرا
+// حالة الديمون الحقيقية وبتقول صراحة إن مافيش مقياس ذكاء أصلاً.
+router.get("/live-agent/iq", async (_req, res) => {
+  const t0 = Date.now();
+  let running = false;
+  try {
+    const mod = await import("../lib/autonomous-daemon.js");
+    running = Boolean((mod as { isAutonomousDaemonRunning?: () => boolean }).isAutonomousDaemonRunning?.());
+  } catch {
+    running = false;
+  }
+  res.json({
+    connected: running,
+    iq: null,
+    iqNoteAr: "مافيش مقياس IQ في المشروع — الرقم 95 اللي كان هنا اتكتب في الكود",
+    latencyMs: Date.now() - t0,
+    measured: true,
+  });
 });
 
 // ── Autonomous ────────────────────────────────────────────────────────────────

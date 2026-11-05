@@ -352,7 +352,7 @@ function notifyAllSseAndWs(urlStr: string, method: string, mockResult: unknown) 
           description: latestCve.description || "",
           source: latestCve.source || "Immunefi-Web3",
           exploitType: latestCve.cwe || "Reentrancy-Web3",
-          epssScore: latestCve.epss || 0.97,
+          epssScore: latestCve.epss ?? 0,
           publishedAt: new Date().toISOString(),
         });
       }
@@ -379,7 +379,7 @@ function notifyAllSseAndWs(urlStr: string, method: string, mockResult: unknown) 
           description: item.description || "",
           source: item.source || "GitHub",
           exploitType: item.cwe || "RCE",
-          epssScore: item.epss || 0.91,
+          epssScore: item.epss ?? 0,
           publishedAt: new Date().toISOString(),
         });
       }
@@ -405,7 +405,7 @@ function notifyAllSseAndWs(urlStr: string, method: string, mockResult: unknown) 
           description: mutated.description || "",
           source: mutated.source || "AI-Mutated",
           exploitType: mutated.exploitType || mutated.cwe || "Reentrancy-Web3",
-          epssScore: mutated.epssScore || 0.98,
+          epssScore: mutated.epssScore ?? 0,
           publishedAt: new Date().toISOString(),
         });
         emitNamed("stats_update", { total: resObj.total || corpusTotal() || 0 });
@@ -496,23 +496,21 @@ if (typeof window !== "undefined" && isStandaloneHost()) {
         } else if (urlStr.includes("/cve/stream") || urlStr.includes("/cve-live/stream")) {
           activeCveSseEmitters.add(emitNamed);
           const currentStats = resolveStandaloneApi("/api/cve/db/stats", "GET", null) as { total?: number } | null;
-          const totalCount = currentStats?.total || corpusTotal() || 0;
-          emitNamed("connected", { ok: true, status: "live", sources: 9, total: totalCount });
+          const totalCount = Number(currentStats?.total ?? corpusTotal() ?? 0);
+          emitNamed("connected", { ok: true, status: "live", total: totalCount, measured: true, at: new Date().toISOString() });
           emitNamed("stats_update", { total: totalCount });
-          emitNamed("cve_new", {
-            id: "IMMUNEFI-2026-001",
-            cveId: "IMMUNEFI-2026-001",
-            severity: "CRITICAL",
-            cvss: 10.0,
-            cvssScore: 10.0,
-            publishedAt: new Date().toISOString(),
-            source: "Immunefi-Web3",
-            exploitType: "Bridge-SigBypass",
-            epssScore: 0.99,
-            description:
-              "[Immunefi Web3 Critical] Cross-Chain Bridge Message Verification & EIP-712 Signature Replay via uninitialized ecrecover(0x0) (Foundry Local Fork Verified).",
-            pocUrl: "https://immunefi.com/explore/",
-          });
+          // 🚫 الحدث ده كان بيبعت «IMMUNEFI-2026-001 · CVSS 10.0 · EPSS 0.99» لكل
+          // صفحة تفتح — ثغرة ملهاش وجود، ورابطها على NVD مكسور. بيبعت أحدث سجل
+          // حقيقي من المخزن، ولو المخزن فاضي مفيش حدث خالص.
+          try {
+            const recent = resolveStandaloneApi("/api/cve/recent?limit=1", "GET", null) as
+              | Array<Record<string, unknown>>
+              | null;
+            const first = Array.isArray(recent) ? recent[0] : null;
+            if (first) emitNamed("cve_new", { ...first, origin: "local-store", measured: true });
+          } catch {
+            /* مفيش سجل — مفيش حدث */
+          }
         }
       }, 45);
     }

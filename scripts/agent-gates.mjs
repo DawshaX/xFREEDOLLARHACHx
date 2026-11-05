@@ -45,6 +45,8 @@ const STRUCTURAL_GATES = [
   ["scripts/audit-twins.mjs", "twin files match, drift is declared"],
   ["scripts/audit-route-integrity.mjs", "route wiring: symbols imported, host hands gated, bundle not hollow"],
   ["scripts/audit-stub-honesty.mjs", "no live stub claims success for work it never did"],
+  ["scripts/audit-no-invented-intel.mjs", "no invented CVE ids and no number without a measurement"],
+  ["scripts/audit-src-secrets.mjs", "no credential written literally in tracked source"],
   ["scripts/ops-selftest.mjs", "scope gate, ops gate, throttle, evidence chain"],
   ["scripts/typecheck-ratchet.mjs", "no new type errors"],
 ];
