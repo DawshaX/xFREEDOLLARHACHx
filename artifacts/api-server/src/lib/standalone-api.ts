@@ -1459,6 +1459,35 @@ export function resolveStandaloneApi(
  * `null` here made the panel show a generic empty payload (and the connection
  * audit flagged it). The honest answer is: nothing to restart, nothing lost.
  */
+/**
+ * Static build: no updater exists, and saying nothing made the dashboard look
+ * like the update loop was broken. Answer with the shape the card reads, and
+ * with `enabled:false` — the honest state of a bundle with no process.
+ */
+if (path === "/nova-core/auto-update") {
+  return {
+    ok: true,
+    static: true,
+    enabled: false,
+    supervised: false,
+    intervalMinutes: 0,
+    currentCommit: null,
+    currentBuiltAt: null,
+    latestReleaseAt: null,
+    lastCheckAt: null,
+    lastResult: "static",
+    lastDetail: "الوضع الثابت مفيش فيه تحديث ذاتي — الصفحة دي بتتحدّث من GitHub مباشرة",
+    updatedAt: null,
+    attempts: 0,
+    logFile: null,
+    bootCommit: null,
+    bootBuiltAt: null,
+    restartNeeded: false,
+    logTail: [],
+    restartTrace: [],
+  };
+}
+
 if (path === "/nova-core/restart") {
   return {
     ok: false,

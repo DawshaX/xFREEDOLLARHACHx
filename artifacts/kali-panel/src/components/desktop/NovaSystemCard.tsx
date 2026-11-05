@@ -41,6 +41,26 @@ interface VersionSnapshot {
   staleWhy?: string | null;
 }
 
+/**
+ * Self-update health, on the dashboard.
+ *
+ * The updater is the one part of the program that can silently stop working:
+ * files arrive, the process keeps running, and every other card stays green
+ * (measured 2026-11-05 — 70 minutes of old code behind a green status). If
+ * `restartNeeded` is true, that is a *fault*, not a detail.
+ */
+interface UpdateSnapshot {
+  enabled?: boolean;
+  supervised?: boolean;
+  lastResult?: string;
+  lastDetail?: string;
+  lastCheckAt?: string | null;
+  attempts?: number;
+  restartNeeded?: boolean;
+  bootCommit?: string | null;
+  currentCommit?: string | null;
+}
+
 interface SystemSnapshot {
   ok: boolean;
   now: number;
@@ -60,6 +80,7 @@ const STATE_COLOR: Record<string, string> = {
 export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
   const [snap, setSnap] = useState<SystemSnapshot | null>(null);
   const [ver, setVer] = useState<VersionSnapshot | null>(null);
+  const [upd, setUpd] = useState<UpdateSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [restarting, setRestarting] = useState(false);
@@ -92,6 +113,13 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
       else setVer(null);
     } catch {
       setVer(null);
+    }
+    try {
+      const res = await fetch("/api/nova-core/auto-update", { signal: AbortSignal.timeout(8000) });
+      if (res.ok) setUpd((await res.json()) as UpdateSnapshot);
+      else setUpd(null);
+    } catch {
+      setUpd(null);
     }
   }, []);
 
@@ -214,6 +242,33 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
                 <span className="text-emerald-300/80 ms-auto">مطابق للديسك</span>
               )}
               {restartNote && <span className="basis-full text-white/60">{restartNote}</span>}
+            </div>
+          )}
+
+          {upd && (
+            <div
+              className={`rounded-lg p-2 text-[8px] flex flex-wrap items-center gap-x-2 gap-y-1 border font-mono ${
+                upd.restartNeeded
+                  ? "border-rose-500/50 bg-rose-500/10 text-rose-100"
+                  : upd.enabled
+                    ? "border-white/10 bg-white/[0.03] text-white/55"
+                    : "border-amber-500/40 bg-amber-500/10 text-amber-100"
+              }`}
+            >
+              <span className="text-white/40">التحديث الذاتي</span>
+              <span>{upd.enabled ? "مفعّل" : "مقفول"}</span>
+              <span className="text-white/25">
+                {upd.supervised ? "تحت مُشرف" : "بلا مُشرف"}
+              </span>
+              <span className="text-white/70">{upd.lastResult ?? "—"}</span>
+              {upd.attempts ? <span className="text-white/30">محاولات {upd.attempts}</span> : null}
+              {upd.lastCheckAt && (
+                <span className="text-white/25" dir="ltr">
+                  {new Date(upd.lastCheckAt).toISOString().slice(11, 19)}
+                </span>
+              )}
+              {upd.restartNeeded && <span className="text-rose-200">⚠ الملفات أحدث من العملية</span>}
+              {upd.lastDetail && <span className="basis-full text-white/50">{upd.lastDetail}</span>}
             </div>
           )}
 
