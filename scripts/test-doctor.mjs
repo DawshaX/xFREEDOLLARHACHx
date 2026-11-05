@@ -132,6 +132,31 @@ await test("the summary sentence follows the worst state", async () => {
   }
 });
 
+await test("the fix command carries a real origin, never https:///", async () => {
+  const r = await mod.runDoctor({ origin: "https://nova.waifly.com" });
+  const c = r.checks.find((x) => x.id === "agents");
+  assert.ok(c.fix_ar.includes("https://nova.waifly.com/api/local-agent/download-agent"), c.fix_ar);
+  assert.ok(!c.fix_ar.includes("https:///"), "an unpasteable link is not a fix");
+});
+
+await test("without an origin the command still has a visible placeholder", async () => {
+  const r = await mod.runDoctor({});
+  const c = r.checks.find((x) => x.id === "agents");
+  assert.ok(c.fix_ar.includes("<host>"), c.fix_ar);
+});
+
+await test("the summary never claims total/total unless it really measured all ok", async () => {
+  const r = await mod.runDoctor({ origin: "https://x.test" });
+  // Two shapes: headed by the first fail («فيه N عطل…») or by the tally
+  // («مفيش عطل: 4/7 سليم و3 تنبيه…»). Either way, 7/7 is only allowed when
+  // every single check came back ok — the live slot proved the wrong version
+  // of this sentence at 04:09 today (7/7 while 3 checks were warnings).
+  if (r.counts.ok !== r.counts.total) {
+    assert.ok(!r.says_ar.includes(`${r.counts.total}/${r.counts.total}`), r.says_ar);
+  }
+  assert.ok(/مفيش عطل|فيه \d+ عطل/.test(r.says_ar), r.says_ar);
+});
+
 await test("the report is serialisable (the panel destructures it as JSON)", () => {
   const json = JSON.stringify(report);
   assert.ok(json.length > 200);
