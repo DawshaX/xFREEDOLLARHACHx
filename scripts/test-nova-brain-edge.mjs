@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleCli } from "./lib/esbuild-runner.mjs";
 const FN = join(ROOT, "supabase/functions/nova-brain/index.ts");
 const work = mkdtempSync(join(tmpdir(), "nova-brain-edge-"));
 
@@ -79,9 +80,8 @@ export function createClient() {
 );
 
 const out = join(work, "bundle.mjs");
-const esbuild = join(ROOT, "node_modules/.pnpm/node_modules/.bin/esbuild");
-assert.ok(existsSync(esbuild), "esbuild binary not found — run pnpm install first");
-execFileSync(esbuild, [
+// esbuild is resolved by ./lib/esbuild-runner.mjs: Node API first, CLI second.
+bundleCli(ROOT, [
   FN,
   "--bundle",
   "--format=esm",

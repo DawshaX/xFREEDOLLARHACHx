@@ -22,18 +22,15 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleCli, esbuildApi, esbuildCli } from "./lib/esbuild-runner.mjs";
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "nova-memory-test-"));
 const bundle = path.join(work, "memory-store.cjs");
 
-const esbuild = [
-  path.join(root, "node_modules/.pnpm/node_modules/.bin/esbuild"),
-  path.join(root, "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/bin/esbuild"),
-].find((p) => fs.existsSync(p));
-if (!esbuild) {
+if (!esbuildApi(root) && !esbuildCli(root)) {
   console.log("check skipped: esbuild not installed (run pnpm install)");
   process.exit(0);
 }
-execFileSync(esbuild, [
+bundleCli(root, [
   path.join(root, "artifacts/api-server/src/lib/agent/memory-store.ts"),
   "--bundle",
   "--platform=node",

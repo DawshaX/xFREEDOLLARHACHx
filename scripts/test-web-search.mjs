@@ -15,12 +15,12 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleCli } from "./lib/esbuild-runner.mjs";
 const SRC = join(ROOT, "artifacts/api-server/src/lib/agent/web-search.ts");
 const work = mkdtempSync(join(tmpdir(), "nova-websearch-"));
 const out = join(work, "bundle.mjs");
-const esbuild = join(ROOT, "node_modules/.pnpm/node_modules/.bin/esbuild");
-assert.ok(existsSync(esbuild), "esbuild binary not found — run pnpm install first");
-execFileSync(esbuild, [SRC, "--bundle", "--format=esm", "--platform=node", "--log-level=error", `--outfile=${out}`]);
+// esbuild is resolved by ./lib/esbuild-runner.mjs: Node API first, CLI second.
+bundleCli(ROOT, [SRC, "--bundle", "--format=esm", "--platform=node", "--log-level=error", `--outfile=${out}`]);
 
 const mod = await import(out);
 

@@ -43,6 +43,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleCli } from "./lib/esbuild-runner.mjs";
 // Inside the api-server's own node_modules so `express`, `ws`, … resolve exactly
 // as they do in production — and node_modules is never committed.
 fs.mkdirSync(path.join(root, "artifacts/api-server/node_modules/.cache"), {
@@ -52,14 +53,7 @@ const outDir = fs.mkdtempSync(
   path.join(root, "artifacts/api-server/node_modules/.cache/nova-session-"),
 );
 for (const name of ["tools", "session"]) {
-  const esbuild = [
-    path.join(root, "artifacts/api-server/node_modules/.bin/esbuild"),
-    path.join(root, "node_modules/.pnpm/node_modules/.bin/esbuild"),
-  ].find((p) => fs.existsSync(p));
-  if (!esbuild) throw new Error("esbuild not found — run pnpm install first");
-  execFileSync(
-    esbuild,
-    [
+  bundleCli(root, [
       path.join(root, `artifacts/api-server/src/lib/ops/${name}.ts`),
       "--bundle",
       "--platform=node",

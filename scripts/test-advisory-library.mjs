@@ -21,11 +21,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const esbuild = [
-  path.join(root, "artifacts/api-server/node_modules/.bin/esbuild"),
-  path.join(root, "node_modules/.pnpm/node_modules/.bin/esbuild"),
-].find((p) => fs.existsSync(p));
-if (!esbuild) throw new Error("esbuild not found — run pnpm install first");
+import { bundleCli } from "./lib/esbuild-runner.mjs";
 
 const cacheFile = path.join(os.tmpdir(), `nova-advisory-cache-${process.pid}.json`);
 process.env.NOVA_ADVISORY_CACHE = cacheFile;
@@ -38,9 +34,7 @@ fs.mkdirSync(bundleDir, { recursive: true });
 
 function bundle(entry, name) {
   const out = path.join(bundleDir, `nova-${name}-${process.pid}.cjs`);
-  execFileSync(
-    esbuild,
-    [
+  bundleCli(root, [
       path.join(root, entry),
       "--bundle", "--platform=node", "--format=cjs", "--target=node22",
       `--outfile=${out}`, "--log-level=warning",

@@ -32,6 +32,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleCli } from "./lib/esbuild-runner.mjs";
 const args = process.argv.slice(2);
 const flag = (name) => args.find((a) => a === `--${name}` || a.startsWith(`--${name}=`));
 const val = (name, dflt) => {
@@ -52,19 +53,11 @@ const apiKey = process.env.NVD_API_KEY || "";
 const perPage = 2000;
 const delayMs = apiKey ? 700 : 6500; // NVD: 50/30s with a key, 5/30s without
 
-const esbuild = [
-  path.join(root, "artifacts/api-server/node_modules/.bin/esbuild"),
-  path.join(root, "node_modules/.bin/esbuild"),
-  path.join(root, "node_modules/.pnpm/node_modules/.bin/esbuild"),
-].find((p) => fs.existsSync(p));
-if (!esbuild) throw new Error("esbuild not found — run pnpm install first");
 
 const bundleDir = path.join(root, "artifacts/api-server/node_modules/.cache/vuln-corpus");
 fs.mkdirSync(bundleDir, { recursive: true });
 const bundle = path.join(bundleDir, "vuln-corpus.cjs");
-execFileSync(
-  esbuild,
-  [
+bundleCli(root, [
     path.join(root, "artifacts/api-server/src/lib/ops/vuln-corpus.ts"),
     "--bundle", "--platform=node", "--format=cjs", "--target=node22",
     `--outfile=${bundle}`, "--log-level=warning",
