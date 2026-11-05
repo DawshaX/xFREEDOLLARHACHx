@@ -1,6 +1,45 @@
 {
-  "updatedAt": "2026-11-05T01:37:08.381Z",
+  "updatedAt": "2026-11-05T11:22:02.741Z",
   "missions": [
+    {
+      "ranAt": "2026-11-05T11:22:02.741Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 21,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 65,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 69,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 34,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **1** أداة (1 نجحت). دي القراءة:\n\n### ✅ recon_target\nاستطلاع example.com: IP=172.66.147.243, 104.20.23.154 · HTTP 200 · server: — · TLS حتى Dec 25 22:56:35 2026 GMT\n\n## القراءة الأمنية\n- **ترويسات ناقصة (6):** content-security-policy, x-frame-options, x-content-type-options, strict-transport-security, referrer-policy, permissions-policy — أول ما يحتاج معالجة.\n- الشهادة سارية حتى **Dec 25 22:56:35 2026 GMT**.\n- الاستطلاع ده سطحي ومقصود: بيوريك الشكل الخارجي بدون أي أذى للهدف.\n\n## الخطوة التالية المقترحة\nنكمّل بفحص المنافذ المحدود + تعداد النطاقات الفرعية، وبعدها نسجّل النتائج في المهمة ونولّد تقرير قانوني جاهز للإرسال.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 66188,
+      "provider": "pollinations:openai-fast",
+      "mode": "llm",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
     {
       "ranAt": "2026-11-05T01:37:08.381Z",
       "target": "example.com",
