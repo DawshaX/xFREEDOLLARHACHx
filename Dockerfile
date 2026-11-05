@@ -22,7 +22,10 @@ RUN pnpm install --frozen-lockfile --ignore-scripts || pnpm install --no-frozen-
 # ── build ────────────────────────────────────────────────────────────────────
 FROM deps AS build
 COPY . .
+# vite + tsc on this workspace need more than the default heap when the builder
+# is small; a comment cannot sit inside a continuation, so it lives here.
 ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max-old-space-size=1536
 RUN pnpm --filter @workspace/api-server run build \
  && BASE_PATH=/ pnpm --filter @workspace/kali-panel run build
 
@@ -42,11 +45,16 @@ COPY --from=build /app/artifacts/api-server/package.json ./artifacts/api-server/
 COPY --from=build /app/artifacts/api-server/state ./artifacts/api-server/state
 COPY --from=build /app/artifacts/kali-panel/dist/public ./artifacts/kali-panel/dist/public
 
-RUN mkdir -p /data
+# The engine writes state, job logs and the fleet registry under state/ — a path
+# that does not exist makes those writes fail silently on a fresh container.
+RUN mkdir -p /data /app/state /app/state/jobs
 VOLUME ["/data"]
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+# NODE_ENV=production is what makes the engine serve the panel on `/` (without
+# it `/` is a 404 on a perfectly healthy server — measured in #163).
+ENV NODE_ENV=production
 CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
