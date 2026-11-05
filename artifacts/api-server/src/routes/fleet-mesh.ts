@@ -107,7 +107,7 @@ const INTERNAL_AGENTS: Array<{
   route: string;
   kind: "brain" | "internal";
 }> = [
-  { id: "nova", name: "نوفا · الدماغ", role: "التخطيط والتنفيذ على 33 أداة", route: "/nova-agent", kind: "brain" },
+  { id: "nova", name: "نوفا · الدماغ", role: "التخطيط والتنفيذ على أدوات حقيقية", route: "/nova-agent", kind: "brain" },
   { id: "nova-v3", name: "Nova Agent V3", role: "وكيل الجيل الثالث", route: "/nova-agent-v3", kind: "internal" },
   { id: "nova-v6", name: "Nova Agent V6", role: "وكيل الجيل السادس", route: "/nova-agent-v6", kind: "internal" },
   { id: "commander", name: "Nova Commander", role: "قيادة الأسراب وتوزيع المهام", route: "/nova-commander", kind: "internal" },

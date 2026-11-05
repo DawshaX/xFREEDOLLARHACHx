@@ -63,6 +63,7 @@ import {
   verifyFinding,
 } from "../ops/runner";
 import { KIND_LIST, toolStatus } from "../ops/tools";
+import { webSearch } from "./web-search";
 
 export interface AgentTool {
   name: string;
@@ -186,6 +187,19 @@ export const AGENT_TOOLS: AgentTool[] = [
     category: "recon",
     risk: "active",
     input_schema: { type: "object", properties: { url: { type: "string" } }, required: ["url"] },
+  },
+  {
+    name: "web_search",
+    title: "بحث في النت",
+    description:
+      "بحث حقيقي في الويب بلا أي مفتاح ولا حساب: DuckDuckGo (نتائج فورية) ثم ويكيبيديا كاحتياطي. يرجع عناوين + روابط + مقتطفات، ولو فشل الاتنين بيرجع سبب الفشل صريح.",
+    category: "intel",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { query: { type: "string" }, limit: { type: "number" } },
+      required: ["query"],
+    },
   },
   {
     name: "cve_lookup",
@@ -741,6 +755,15 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         const res = await fetchUrlAsText(url);
         const len = String((res as { text?: string }).text ?? "").length;
         return done(true, `جلب ${host}: ${len} حرف`, res);
+      }
+
+      case "web_search": {
+        const query = String(rawArgs.query ?? "").trim();
+        if (!query) throw new Error("query مطلوب");
+        const limit = Math.min(Number(rawArgs.limit ?? 8) || 8, 15);
+        const res = await webSearch(query, limit);
+        if (!res.results.length) return done(false, `بحث "${query}": مفيش نتائج (${res.note ?? "المزوّدين رجعوا فاضي"})`, res);
+        return done(true, `بحث "${query}": ${res.results.length} نتيجة من ${res.source}`, res);
       }
 
       case "cve_lookup": {
