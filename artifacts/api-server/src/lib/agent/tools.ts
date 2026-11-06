@@ -85,6 +85,7 @@ import {
   processList,
   serviceStatus,
   uiNavigate,
+  browserOpen,
   uiAction,
   memoryRecall,
 } from "./platform-tools";
@@ -860,10 +861,20 @@ export const AGENT_TOOLS: AgentTool[] = [
   {
     name: "ui_navigate",
     title: "فتح صفحة في اللوحة",
-    description: "يطلب من اللوحة فتح صفحة معيّنة (بث عبر WebSocket).",
+    description: "ينقّل اللوحة لصفحة في المنصة — عن طريق قنات الأوامر، فيقال صراحة لو مفيش حد سامع.",
     category: "platform",
     risk: "safe",
     input_schema: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+  },
+  {
+    name: "browser_open",
+    title: "افتح متصفح (عندك في اللوحة)",
+    description:
+      "يفتح رابطًا في متصفح المستخدم عن طريق اللوحة، ويقرأ الصفحة كمان. مفيش متصفح على السيرفر؟ " +
+      "التاب بيفتح عندك انت — فالجملة دي مش «مش قادر»، دي مكالمة حقيقية. لو مفيش لوحة متصلة بيقول كده بصراحة.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: { url: { type: "string" } }, required: ["url"] },
   },
   {
     name: "ui_action",
@@ -1822,6 +1833,11 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
 
       case "ui_navigate": {
         const r = uiNavigate(String(rawArgs.path ?? ""));
+        return done(r.ok, r.summary, r.data);
+      }
+
+      case "browser_open": {
+        const r = browserOpen(String(rawArgs.url ?? ""));
         return done(r.ok, r.summary, r.data);
       }
 

@@ -53,6 +53,59 @@ function dedupeParagraphs(text: string): string {
   return kept.join("\n\n");
 }
 
+/**
+ * ضبط صيغة المؤنث عن النفس.
+ *
+ * الـpersona بتقول «اتكلمي بصيغة المؤنث» والـmodel بيقول «أنا بخير يا بطل… أنا
+ * جاهز» — يعني التعليم وحده مابيكفيش (مقاس في الـtranscript الحيّ: «أنا متحمسة»
+ * في سطر و«مش قادر» في اللي بعده). الإصلاح هنا ميكانيكي وضيّق: بس الصيغ اللي
+ * بترجع لمتكلمة عن نفسها، ولو قبلها «انت/أنت» بتتساب للمخاطب المذكر.
+ */
+/**
+ * الصفات اللي بتلحق بمتكلمة عن نفسها. القاعدة مش «كل جاهز → جاهزة»: لو الصفة
+ * بتتقال للمخاطب («لو انت مش قادر توصل») بتتساب — عشان كده كل استبدال بيعمل
+ * check على الـ16 حرف اللي قبله.
+ */
+const SELF_ADJ: Array<[string, string]> = [
+  ["قادر", "قادرة"],
+  ["جاهز", "جاهزة"],
+  ["متأكد", "متأكدة"],
+  ["مستعد", "مستعدة"],
+  ["متحمس", "متحمسة"],
+  ["مبسوط", "مبسوطة"],
+  ["شايف", "شايفة"],
+  ["عارف", "عارفة"],
+];
+/** الصيغ اللي بتقطع الشك من غير سياق: «مش قادر» عن النفس. */
+const SELF_MARK = /(?:أنا|انا|إني|اني|نفسي|بنفسى|أصبح|اصبح|بقيت|لقفت)\s*$/u;
+const ADDRESSED_TO_USER = /(?:انت|أنت|انتي|أنتي|حضرتك|يا\s*\w+)\s*$/u;
+
+function skipBecauseAddressed(before: string): boolean {
+  return ADDRESSED_TO_USER.test(before);
+}
+
+export function feminizeSelfVoice(text: string): { text: string; fixed: number } {
+  let out = String(text ?? "");
+  let fixed = 0;
+  // مفيش \b: حروف العربية مش \w في JS، فالحد بيمنع المطابقة خالص (الاتست كشف ده).
+  for (const [from, to] of SELF_ADJ) {
+    const re = new RegExp("(?:مش|ما|لست)\\s*" + from + "(?!ة)|(?:أنا|انا|إني|اني|بقيت|أصبحت|اصبحت)\\s+" + from + "(?!ة)", "g");
+    out = out.replace(re, (match: string, ...rest: unknown[]) => {
+      const offset = Number(rest[rest.length - 2] ?? 0);
+      const before = out.slice(Math.max(0, offset - 16), offset);
+      // السياق جوه المطابقة نفسها: «أنا جاهز» = ضمير المتكلم، «مش قادر» = صيغة
+      // نفي بترجعلنا لو المخاطب ماذكرش. ماحدش بيطلب من القاعدة تقرأ ذهنه.
+      const hasSelfMarker = /^(?:أنا|انا|إني|اني|بقيت|أصبحت|اصبحت)/.test(match);
+      const hasNegation = /^(?:مش|ما|لست)/.test(match);
+      if (hasNegation && skipBecauseAddressed(before)) return match;
+      if (!hasSelfMarker && !hasNegation) return match;
+      fixed += 1;
+      return match.replace(from, to);
+    });
+  }
+  return { text: out, fixed };
+}
+
 export interface SanitizeResult {
   text: string;
   /** What was removed, for the log — never shown to the user. */
@@ -98,6 +151,14 @@ export function sanitizeReply(raw: string): SanitizeResult {
 
   // Never trade a real answer for an empty one.
   if (!text.trim()) return { text: original, removed: [] };
+
+  // صوت واحد لمتكلمة واحدة: الإصلاح ده بيتعمل بعد إزالة تسريب التفكير وقبل ما
+  // الرد يوصل للمستخدم، فأي مسار (موديل أو حتمي) بيمرّيه.
+  const voice = feminizeSelfVoice(text);
+  if (voice.fixed) {
+    text = voice.text;
+    removed.push(`voice:masculine→feminine (${voice.fixed})`);
+  }
 
   return { text, removed };
 }

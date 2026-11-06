@@ -36,6 +36,9 @@ import { ensureOllamaReady, ollamaHealth } from "../lib/agent/ollama-manager";
 import { runSelfCheck, storageSnapshot } from "../lib/agent/self-check";
 import { broadcastEvent } from "../lib/ws-hub";
 import { watchStatus, watchTick, watchProbe } from "../lib/agent/watchers";
+import { buildSelfModel } from "../lib/agent/self-model";
+import { CAPABILITIES, capabilityPromptLine } from "../lib/agent/capabilities";
+import { claimCommands, uiQueueStats } from "../lib/agent/ui-bridge";
 import { logger } from "../lib/logger";
 
 import { requireOps } from "../lib/ops/gate";
@@ -277,6 +280,51 @@ router.get("/nova-core/watch/probe", (_req: Request, res: Response) => {
   // قراءة فقط: بتدي نفس اللي المراقب هيقوله دلوقتي، من غير كتابة ولا بث ولا حارس
   // تكرار — عشان التشخيص من بره ما يبقاش محتاج مفتاح ops ولا يلوّث السجل.
   res.json({ ok: true, ...watchProbe() });
+});
+
+/**
+ * خريطة القدرات — للوحة («محطة العمل») وللإنسان اللي عايز يشوف إيه اللي اشتغل.
+ * كل رقم هنا متقاس في لحظة الطلب: مفيش رقم مكتوب في الكود ومفيش رقم من الذاكرة.
+ */
+router.get("/nova-core/capabilities", (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  let model: ReturnType<typeof buildSelfModel>;
+  try {
+    model = buildSelfModel();
+  } catch (err) {
+    res.status(500).json({ ok: false, errorAr: `القياس فشل: ${(err as Error).message}` });
+    return;
+  }
+  res.json({
+    ok: true,
+    measuredAt: new Date().toISOString(),
+    build: model.build,
+    line: capabilityPromptLine({
+      toolsCount: model.tools.count,
+      browser: model.runtime.browser,
+      offensive: { msf: model.runtime.msf, burp: model.runtime.burp, toolchain: model.runtime.toolchain },
+    }),
+    tools: { count: model.tools.count, byCategory: model.tools.byCategory },
+    runtime: model.runtime,
+    machines: { connected: model.machines.connected, registered: model.machines.registered, names: model.machines.names },
+    corpus: model.corpus,
+    memory: model.memory,
+    canDo: model.canDo,
+    cannotDo: model.cannotDo,
+    capabilities: CAPABILITIES.map((c) => c.key),
+    uiQueue: uiQueueStats(),
+  });
+});
+
+/**
+ * طابور أوامر اللوحة. الـGET بيسحب وبيعلّم الأوامر «اتسلّمت» — عشان الأداة
+ * تقدر تقول «اللوحة فتحتها فعلًا» بدل «أنا طلبت». من غير توكن: الأوامر نفسها
+ * بتتعمل لمن عنده اللوحة open، ومفيش فيها أي سر.
+ */
+router.get("/nova-core/ui", (req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  const after = typeof req.query.after === "string" && req.query.after ? req.query.after : null;
+  res.json({ ok: true, ...claimCommands(after, true) });
 });
 
 router.post("/nova-core/watch/tick", (req: Request, res: Response) => {
