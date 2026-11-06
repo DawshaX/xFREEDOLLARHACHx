@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { getJobs, triggerJob } from "./lib/nova-cron";
 import { resolveStandaloneApi, getMissionsState } from "./lib/standalone-api";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
 import { getAllMemories, saveMemory } from "./routes/memory";
@@ -378,7 +379,10 @@ app.get(["/api/cve/stream", "/api/cve-live/stream"], (req: Request, res: Respons
 });
 
 app.post("/api/bot/cron/:id/trigger", async (req: Request, res: Response) => {
-  const id = String(req.params.id || "1");
+  // كان هنا نص ثابت: «تم تنفيذ المهمة المجدولة #id وتحديث قاعدة المعرفة والذاكرة
+  // بنجاح» بعد setTimeout(100) — أي بث كدبة نجاح لكل عميل على الـSSE. بقى بينادى
+  // `triggerJob` بتاع nova-cron فعلًا وبيذيع نتيجتها (نجاح أو فشل أو مفيش مهمة).
+  const id = String(req.params.id || "");
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -388,11 +392,26 @@ app.post("/api/bot/cron/:id/trigger", async (req: Request, res: Response) => {
       res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
     }
   };
-  send("tool_call", { name: "cve_and_osint_sync", input: { jobId: id } });
-  await new Promise((r) => setTimeout(r, 100));
-  send("tool_result", { name: "cve_and_osint_sync", ok: true });
-  send("cron_message", { text: `تم تنفيذ المهمة المجدولة #${id} وتحديث قاعدة المعرفة والذاكرة بنجاح.` });
-  send("cron_completed", { ok: true });
+  const known = getJobs().some((j) => j.id === id);
+  if (!known) {
+    send("cron_message", {
+      text: `مفيش مهمة دائمة باسم «${id}» — المتاحة: ${getJobs().map((j) => j.id).join(", ")}.`,
+    });
+    send("cron_completed", { ok: false, notWired: "unknown-job", measured: true });
+    res.end();
+    return;
+  }
+  send("tool_call", { name: id, input: { jobId: id } });
+  const startedAt = Date.now();
+  const ran = await triggerJob(id);
+  send("tool_result", { name: id, ok: ran.ok, result: ran.result ?? null, error: ran.error ?? null });
+  send("cron_message", {
+    text: ran.ok
+      ? `«${id}» خلصت (${Math.round((Date.now() - startedAt) / 1000)} ثانية): ${ran.result}`
+      : `«${id}» وقعت: ${ran.error ?? "سبب غير معروف"}`,
+  });
+  send("cron_completed", { ok: ran.ok, measured: true, ms: Date.now() - startedAt });
+  broadcastEvent("cron_run", { id, ok: ran.ok, ms: Date.now() - startedAt, result: ran.result ?? null, error: ran.error ?? null });
   res.end();
 });
 

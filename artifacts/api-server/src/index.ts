@@ -5,6 +5,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/cron-scheduler";
+import { startCronScheduler } from "./lib/nova-cron";
+import { startWatchers } from "./lib/agent/watchers";
 import { startWatchdog } from "./lib/watchdog";
 import { startKeyManagerLoop } from "./lib/key-manager";
 import { startCveMonitor } from "./lib/cve-monitor";
@@ -381,6 +383,19 @@ server.listen(port, host, () => {
     runSentinelMigrations().catch(e => logger.error({ err: e }, "SENTINEL migrations error"));
 
     try { startScheduler(); } catch (e) { logger.error({ err: e }, "Failed to start cron scheduler"); }
+
+    // جدول `nova-cron` (6 مهام: صيد CVE، توحيد الذاكرة، self-heal، watchdog،
+    // متعلّم، نبضة تليجرام) كان موجود ومكتوب ومحروس من التسريب — بس مفيش أي
+    // سطر بيناده. `runCount`/`errorCount` فاضي للأبد، والصفحة اللي تعرضه بتعرض
+    // صفر حقيقي. بقى بيتشغّل مع الإقلاع (NOVA_CRON_ENABLED=0 يطفّيه).
+    if (process.env.NOVA_CRON_ENABLED !== "0") {
+      try { startCronScheduler(); } catch (e) { logger.error({ err: e }, "nova-cron start failed"); }
+    } else {
+      logger.info("nova-cron: متعطّل بـ NOVA_CRON_ENABLED=0");
+    }
+
+    // المراقبين: الصوت اللي بيتكلم من غير سؤال (state/proactive-log.json).
+    try { startWatchers(); } catch (e) { logger.error({ err: e }, "watchers start failed"); }
     try { startWatchdog(); } catch (e) { logger.error({ err: e }, "Failed to start watchdog"); }
     try { startKeyManagerLoop(); } catch (e) { logger.error({ err: e }, "Failed to start key manager"); }
     try { startCveMonitor(); } catch (e) { logger.error({ err: e }, "Failed to start CVE monitor"); }

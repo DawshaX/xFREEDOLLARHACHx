@@ -14,6 +14,7 @@
 
 import { NOVA_SYSTEM_PROMPT, NOVA_SYSTEM_PROMPT_SHORT } from "./persona";
 import { buildSelfModel, selfModelPrompt, type SelfModel } from "./self-model";
+import { toolchainStatus } from "../ops/toolchain";
 import { vulnQuery } from "./vuln-keyword";
 import {
   AGENT_TOOLS,
@@ -687,7 +688,8 @@ const PLAN_INSTRUCTIONS = `أعد **JSON فقط** (بدون أي شرح خارج
 - **حقل thought بالعربي دايماً** — ده بيتعرض للمستخدم حرفياً، والإنجليزي هنا بيبان كلغة تانية وسط الكلام.
 - لو المستخدم سأل «تقدر تعمل إيه» أو «قدراتك» → **اقرا قسم «من أنت الآن» في السياق ورد منه**، مش من الذاكرة العامة.
 - لو الطلب ينفّذ بأداة موجودة (بحث/جلب صفحة/فحص) → نفّذها. **ما تسألش «تقصد إيه»** إلا لو مفيش هدف خالص.
-- لو فيه نطاق أو CVE في الطلب، نفّذ الأداة المناسبة ولا تجاوب من ذاكرتك.`;
+- لو فيه نطاق أو CVE في الطلب، نفّذ الأداة المناسبة ولا تجاوب من ذاكرتك.
+- سؤال عن القدرة («تقدر/مبتقدرش/حمّل أدوات/كالي/برب/ميتاسبلويت/شغل nmap») → **لازم** خطوة \`platform_status\` أو \`task_list\` الأول، والرد من نتيجتها. «مقدرش» من الذاكرة = إجابة ممنوعة: غلط، أو استخفاف بقدراتك الحقيقية.`;
 
 async function llmPlan(
   message: string,
@@ -719,6 +721,41 @@ async function llmPlan(
   };
 }
 
+/**
+ * «إيه اللي تقدر تعمله» ما ينفعش يتكتب في سطر ويصدق للأبد: السطر القديم كان
+ * «مش بقدر أشغّل Metasploit/Burp (مفيش root ولا مساحة)» وهو مكتوب في وقت كانت
+ * فيه `tools_install` و`kali_toolbox` موجودين في السجل — أي إن الأجنت بينكر
+ * أدواته بيده. الوظيفة دي بتقرا المكنة نفسها: إيه الموجود فعلًا، وإيه اللي
+ * ينزّل، وعدد الأدوات اللي بتعرفها.
+ */
+export function capabilityTruthLine(): string {
+  const m = buildSelfModel();
+  let t: { dir: string; present: string[]; missing: string[]; exists: boolean; writable: boolean } | null = null;
+  try {
+    t = toolchainStatus();
+  } catch {
+    t = null;
+  }
+  const lines = [`**أدواتي المسجّلة دلوقتي:** ${m.tools.count} (مصنّفة: ${Object.keys(m.tools.byCategory ?? {}).join(" · ") || "من غير تصنيف"}).`];
+  if (!t) {
+    lines.push("**حالة الأدوات على المكنة دي:** غير مقاسات — حالة السلسلة بترجع خطأ، فمش هادّعي وجود أداة ولا غيابها.");
+  } else if (t.present.length) {
+    const head = t.present.slice(0, 8).join(" · ");
+    lines.push(
+      `**الموجود على المكنة دي (${t.dir}):** ${head}${t.present.length > 8 ? ` (+${t.present.length - 8} كمان)` : ""}.`,
+    );
+    if (t.missing.length) {
+      lines.push(`**الناقص وأقدر أنزّله:** ${t.missing.slice(0, 8).join(" · ")} — بأداة \`tools_install\`${t.writable ? "" : " (المجلد مش قابل للكتابة دلوقتي، فالتنزيل هيقع)"}.`);
+    }
+  } else {
+    lines.push(
+      `**الموجود على المكنة دي (${t.dir}):** مفيش أداة واحدة — الصيد التقيل بيتم في CI ونتايجُه بتوصل للريبو. \`tools_install\`${t.writable ? " متاح" : " مش متاح (المجلد مش قابل للكتابة)"} لو حابب أنزّل على المكنة دي.`,
+    );
+  }
+  lines.push("لو عايز القدرات بالحرف لكل أداة: \`task_list\` و\`platform_status\` بيقرأوا السجل الحيّ، مش نص مكتوب.");
+  return lines.join("\n");
+}
+
 /* ── explanation ─────────────────────────────────────────────────────────── */
 
 function preview(data: unknown): string {
@@ -739,7 +776,7 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
         "",
         `عندي دلوقتي **${sm.tools.count} أداة حقيقية**، و${sm.corpus.measured ? `فهرس **${sm.corpus.total.toLocaleString("en-US")} ثغرة**` : "فهرس ثغرات لسه مش متزامن"}، و${sm.machines.registered} ماكينة في الأسطول.`,
         "",
-        "أقدر أشتغل فعلياً على: استطلاع نطاق (DNS + TLS + ترويسات)، فحص منافذ محدود، تعداد نطاقات فرعية، بحث ثغرات، جلب صفحات من النت، GitHub، وذاكرة دائمة.",
+        capabilityTruthLine(),
         "",
         "**الخطوة التالية المقترحة:** ابعتلي نطاق مثل `example.com` وأقولك نتيجة الاستطلاع كاملة.",
       ].join("\n");
@@ -761,7 +798,7 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
         ? `- ذاكرتي فيها **${m.memory.total} ذكرى** من شغلنا السابق.`
         : "- ذاكرتي لسه فاضية — أول حاجة نحفظها هتفضل بعد إعادة التشغيل.",
       "",
-      "**مش بقدر:** أشغّل Metasploit/Burp على السيرفر ده (مفيش root ولا مساحة)، أو أوصل لجهاز مش متصل بالوكيل.",
+      capabilityTruthLine(),
       "",
       "**الخطوة التالية المقترحة:** ابعتلي نطاق مثل `example.com` وأنا أبدأ الاستطلاع فوراً، أو قولي «دوّر على …» وأنا أجيب من النت.",
     ].join("\n");
