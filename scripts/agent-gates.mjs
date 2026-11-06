@@ -25,6 +25,9 @@ const fast = process.argv.includes("--fast");
 /** Tests that assert agent behaviour. Each one exists because of a real bug. */
 const AGENT_GATES = [
   ["scripts/test-self-model.mjs", "self-model: numbers come from the registry"],
+  ["scripts/test-claim-guard.mjs", "claim guard: an over-claim is caught, truth untouched"],
+  ["scripts/test-sanitize-reply.mjs", "sanitizer: leaked reasoning stripped, real answers untouched"],
+  ["scripts/test-memory-persistence.mjs", "memory: survives a restart, read back by a fresh process"],
   ["scripts/test-web-search.mjs", "web-search: keyless search, reasons on failure"],
   ["scripts/test-heuristic-plan.mjs", "planner: real tools, prose thoughts, no regex"],
   ["scripts/test-repeat-guard.mjs", "repeat guard: a failing step does not loop"],

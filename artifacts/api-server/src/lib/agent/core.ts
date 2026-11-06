@@ -15,6 +15,7 @@
 import { NOVA_SYSTEM_PROMPT, NOVA_SYSTEM_PROMPT_SHORT } from "./persona";
 import { buildSelfModel, selfModelPrompt, type SelfModel } from "./self-model";
 import { enforceClaims } from "./claim-guard";
+import { sanitizeReply } from "./sanitize-reply";
 import { toolchainStatus } from "../ops/toolchain";
 import { vulnQuery } from "./vuln-keyword";
 import {
@@ -970,6 +971,9 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       tools: { count: AGENT_TOOLS.length, names: AGENT_TOOLS.map((t) => t.name), byCategory: {} },
       machines: { registered: 0, names: [], connected: 0, connectedNames: [] },
       corpus: { measured: false, total: 0, ageMin: null },
+      // The static index is not readable here either — 0 means "not measured",
+      // and the guard treats it as such rather than as a real count.
+      patterns: { total: 0 },
       memory: { total: 0, pinned: 0 },
       opsKinds: 0,
       // البصمة مش مقاسة هنا بالنفس المنطق: بنقول «مافيش» بدل ما نختلق رقم نسخة.
@@ -1060,6 +1064,18 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     // platform is now checked against the same self-model the answer was built
     // from; an over-claim gets a measured correction appended — never a silent
     // rewrite, so the human always sees the true number.
+    // ── Sanitiser (منع تسريب التفكير) ────────────────────────────────────────
+    // Measured 2026-11-06: a live reply opened with «هرد عليه بالعربي المصري
+    // وأقولو إني جاهز» — the model narrating its plan before answering. That is
+    // not the answer, and showing it makes a working agent look broken. Strip
+    // the preamble BEFORE the claim guard, so the guard audits what the user
+    // will actually read.
+    const cleaned = sanitizeReply(reply);
+    if (cleaned.removed.length) {
+      console.warn(`[sanitize] stripped ${cleaned.removed.join(", ")} from the reply`);
+    }
+    reply = cleaned.text;
+
     const guarded = enforceClaims(reply, selfModel);
     if (guarded.violations.length) {
       console.warn(
@@ -1211,6 +1227,14 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
 
   // ── Claim guard (منع الادّعاء) — same check on the tool-executing path ──
   {
+    // Same sanitiser as the conversational path: a leaked plan preamble is just
+    // as wrong after a tool run as before one.
+    const cleaned = sanitizeReply(reply);
+    if (cleaned.removed.length) {
+      console.warn(`[sanitize] stripped ${cleaned.removed.join(", ")} from the tool-path reply`);
+    }
+    reply = cleaned.text;
+
     const guarded = enforceClaims(reply, buildSelfModel());
     if (guarded.violations.length) {
       console.warn(

@@ -29,7 +29,7 @@
 
 import { buildSelfModel, type SelfModel } from "./self-model";
 
-export type ClaimKind = "fleet" | "tools" | "corpus" | "memory";
+export type ClaimKind = "fleet" | "tools" | "corpus" | "memory" | "patterns";
 
 export interface ClaimViolation {
   kind: ClaimKind;
@@ -56,6 +56,21 @@ function parseNum(raw: string): number | null {
 }
 
 /**
+ * Strip the markdown emphasis that sits *between* a number and its unit.
+ *
+ * Measured 2026-11-06 on the live slot: the reply said «**3** ماكينة مسجّلة»
+ * while `/api/fleet/mesh` said `connected: 1`. The guard did not fire — not
+ * because the rule was wrong, but because the model bolds its numbers and the
+ * `**` between `3` and `ماكينة` broke the `\d+\s*unit` match. A guard that a
+ * formatting habit can switch off is not a guard, so emphasis is removed before
+ * matching. Only `*`, `_` and backticks are touched; the reply itself is never
+ * modified.
+ */
+function stripEmphasis(s: string): string {
+  return s.replace(/[*_`]/g, "");
+}
+
+/**
  * Every "N <unit>" pair in the text, for one unit family.
  *
  * The unit alternation is deliberately narrow: it must not match a number that
@@ -78,6 +93,15 @@ const FLEET_UNIT =
 const TOOL_UNIT = "أداة|اداة|أدوات|ادوات|tool|tools";
 const CORPUS_UNIT = "ثغرة|ثغرات|ثغرات|vulnerabilit(?:y|ies)|cve|cves|advisories";
 const MEMORY_UNIT = "ذكرى|ذكريات|ذاكرة|memory|memories";
+/**
+ * The static knowledge index is a *different* quantity from the live CVE corpus:
+ * the corpus stats' `totalIndexedKnowledgeItems` counts the synthesised patterns
+ * (primitives × surfaces × phases) plus the bundled tool/project lists, while
+ * `corpus.total` counts rows pulled from NVD/KEV/EPSS. Measured 2026-11-06 the
+ * reply said «3354 نمط» — a real number, but the guard had no unit for it, so it
+ * was never checked against anything. It is checked now, against its own source.
+ */
+const PATTERN_UNIT = "نمط|أنماط|انماط|pattern|patterns";
 
 /**
  * Compare the numbers a reply claims with the numbers measured now.
@@ -87,7 +111,7 @@ const MEMORY_UNIT = "ذكرى|ذكريات|ذاكرة|memory|memories";
  * correction can never disagree with the answer it is correcting.
  */
 export function auditClaims(text: string, model: SelfModel = buildSelfModel()): ClaimViolation[] {
-  const t = normaliseDigits(String(text ?? ""));
+  const t = stripEmphasis(normaliseDigits(String(text ?? "")));
   if (!t) return [];
   const violations: ClaimViolation[] = [];
 
@@ -102,6 +126,7 @@ export function auditClaims(text: string, model: SelfModel = buildSelfModel()): 
   check("fleet", FLEET_UNIT, model.machines.connected);
   check("tools", TOOL_UNIT, model.tools.count);
   check("corpus", CORPUS_UNIT, model.corpus.measured ? model.corpus.total : 0);
+  check("patterns", PATTERN_UNIT, model.patterns.total);
   check("memory", MEMORY_UNIT, model.memory.total);
 
   return violations;
@@ -126,6 +151,7 @@ function correctionLines(violations: ClaimViolation[], model: SelfModel): string
         : `- فهرس الثغرات **الآن**: غير مقاس — مش هدّعي برقم.`,
     );
   }
+  if (kinds.has("patterns")) lines.push(`- فهرس المعرفة الثابت **الآن**: ${model.patterns.total.toLocaleString("en-US")} نمط.`);
   if (kinds.has("memory")) lines.push(`- ذاكرتي **الآن**: ${model.memory.total} ذكرى محفوظة.`);
   return lines;
 }

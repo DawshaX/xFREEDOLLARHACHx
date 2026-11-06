@@ -28,6 +28,7 @@ import { getConnectedAgentList } from "../../routes/local-agent";
 import { corpusStatus } from "../ops/vuln-corpus";
 import { memoryStats } from "./memory-store";
 import { KINDS } from "../ops/tools";
+import { getCorpusStats } from "../cyber-corpus-2099";
 import { toolchainStatus, VENDORABLE } from "../ops/toolchain";
 import { localBuild } from "../auto-update";
 
@@ -44,6 +45,13 @@ export interface SelfModel {
    */
   machines: { registered: number; names: string[]; connected: number; connectedNames: string[] };
   corpus: { measured: boolean; total: number; ageMin: number | null };
+  /**
+   * The static knowledge index — a different quantity from `corpus`.
+   * `totalIndexedKnowledgeItems` is what the persona and the tool descriptions
+   * quote as «3,300+ نمط»; without it in the model the guard had nothing to
+   * check that number against, so a stale or invented pattern count could pass.
+   */
+  patterns: { total: number };
   memory: { total: number; pinned: number };
   opsKinds: number;
   /**
@@ -118,6 +126,13 @@ export function buildSelfModel(): SelfModel {
     /* memory unavailable */
   }
 
+  let patterns = { total: 0 };
+  try {
+    patterns = { total: getCorpusStats().totalIndexedKnowledgeItems };
+  } catch {
+    /* an index that cannot be read is reported as 0, never guessed */
+  }
+
   let opsKinds = 0;
   try {
     opsKinds = Object.keys(KINDS).length;
@@ -185,6 +200,7 @@ export function buildSelfModel(): SelfModel {
       connectedNames: connected.map((a) => a.hostname),
     },
     corpus,
+    patterns,
     memory,
     opsKinds,
     securityTools,
@@ -220,6 +236,12 @@ export function selfModelPrompt(model: SelfModel = buildSelfModel()): string {
     `- أدواتك الحقيقية: **${model.tools.count}** أداة (${toolList}). كل أداة بتنفّذ فعلاً؛ لو أداة فشلت بتقول فشلت وليه.`,
     `- الذاكرة: ${model.memory.total} ذكرى محفوظة (${model.memory.pinned} مثبتة) — تفضل بعد إعادة التشغيل.`,
     `- الأسطول: ${model.machines.connected ?? 0} جهاز متصل الآن · ${model.machines.registered} ماكينة مسجّلة في السجل${(model.machines.connectedNames ?? []).length ? ` (متصل: ${(model.machines.connectedNames ?? []).slice(0, 4).join(" · ")})` : ""}. **ممنوع تقولي «متصل» على المسجّل — دول رقمين مختلفين.**`,
+    // Measured 2026-11-06: asked «انت مين», the reply opened with «3 ماكينة
+    // مسجّلة في الأسطول» — a true number, but the wrong one to lead with, and
+    // the human read it as a lie because the page showed one connected node.
+    // The rule is now explicit: the connected count is the headline, the
+    // registry is a footnote, and the two are never merged into one sentence.
+    `- **لما حد يسألك «انت مين» أو «عندك كام جهاز»: ابدئي بعدد المتصل (${model.machines.connected ?? 0}) — ده الرقم اللي بيتنفّذ عليه فعلاً. رقم السجل (${model.machines.registered}) تذكريه بعده وبكلمة «مسجّلة» بس، ومتجمعيهمش في رقم واحد.**`,
     `- الكوربوس: ${model.corpus.measured ? `${model.corpus.total.toLocaleString("en-US")} ثغرة حقيقية، آخر مزامنة قبل ${model.corpus.ageMin} دقيقة` : "غير مقاس حالياً"}.`,
     model.opsKinds ? `- طبقة التنفيذ (ops): ${model.opsKinds} نوع عملية مسجّل.` : "- طبقة التنفيذ: غير متاحة في هذه النسخة.",
     // السطر ده هو اللي بيمنع جملة «مالوش أدوات» من إنها تتكرر بعد التجهيز:
