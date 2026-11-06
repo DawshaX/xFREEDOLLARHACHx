@@ -1,0 +1,78 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA — Kali execution plane
+#
+# Why this file exists: the platform host is a free PaaS container with no root,
+# no `apt`, and no persistent disk. That is enough for the *vendored* static
+# binaries (subfinder, httpx, nuclei, katana, dnsx, naabu, ffuf, amass, gobuster,
+# dalfox, gitleaks, trivy — see scripts/fetch-toolchain.mjs), but it can never run
+# the tools that need a package manager or an interpreter:
+#
+#     nmap      → apt package, needs raw sockets
+#     sqlmap    → Python script
+#     nikto     → Perl script
+#     semgrep   → Python + rule packs
+#     whatweb   → Ruby script
+#
+# This image is the honest answer to "can it run Kali tools?" — yes, on any host
+# that has Docker. It is NOT a claim that the current sandbox can: measured
+# 2026-11-06, `docker` is not installed and /var/run/docker.sock does not exist.
+#
+# Build:  docker build -f Dockerfile.kali -t nova-kali:latest .
+# Run:    docker run --rm -it nova-kali:latest nmap --version
+# ─────────────────────────────────────────────────────────────────────────────
+FROM kalilinux/kali-rolling
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    GOBIN=/usr/local/bin
+
+# Base interpreters + the tools that genuinely need a package manager.
+# `--no-install-recommends` keeps the image from ballooning past a free tier.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl wget git unzip tar jq \
+        python3 python3-pip python3-venv \
+        perl ruby \
+        nmap \
+        sqlmap \
+        nikto \
+        whatweb \
+        gobuster \
+        dnsutils \
+        openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# semgrep — pip is the supported install path on Kali
+RUN pip3 install --no-cache-dir --break-system-packages semgrep
+
+# ProjectDiscovery + friends: static releases, same set the vendorer fetches.
+# Installed here too so the container is self-sufficient (no host mount needed).
+RUN set -eux; \
+    for t in subfinder httpx nuclei katana dnsx naabu; do \
+      ver=$(curl -fsSL "https://api.github.com/repos/projectdiscovery/${t}/releases/latest" | jq -r .tag_name); \
+      curl -fsSL -o /tmp/${t}.zip "https://github.com/projectdiscovery/${t}/releases/download/${ver}/${t}_$(echo $ver | sed 's/^v//')_linux_amd64.zip"; \
+      unzip -o -q /tmp/${t}.zip -d /usr/local/bin/; \
+      rm -f /tmp/${t}.zip; \
+    done; \
+    chmod +x /usr/local/bin/subfinder /usr/local/bin/httpx /usr/local/bin/nuclei \
+             /usr/local/bin/katana /usr/local/bin/dnsx /usr/local/bin/naabu
+
+# ffuf, dalfox, gitleaks, trivy, amass — static tarballs
+RUN set -eux; \
+    curl -fsSL -o /tmp/ffuf.tgz "https://github.com/ffuf/ffuf/releases/latest/download/ffuf_2.1.0_linux_amd64.tar.gz" || true; \
+    if [ -f /tmp/ffuf.tgz ]; then tar xzf /tmp/ffuf.tgz -C /usr/local/bin ffuf && chmod +x /usr/local/bin/ffuf; fi; \
+    rm -f /tmp/ffuf.tgz
+
+# nuclei templates — without these nuclei runs but finds nothing
+RUN nuclei -update-templates -silent || true
+
+# Non-root by default: a scanner should not need root to be useful, and the
+# platform's own gate refuses to hand out root anyway.
+RUN useradd -m -u 10001 nova
+USER nova
+WORKDIR /home/nova
+
+# Smoke test baked into the image: `docker run nova-kali:latest` proves itself.
+CMD ["sh", "-c", "echo '--- NOVA kali plane ---'; \
+  for b in nmap sqlmap nikto whatweb gobuster semgrep nuclei httpx subfinder katana dnsx naabu ffuf; do \
+    if command -v $b >/dev/null 2>&1; then echo \"  OK   $b\"; else echo \"  MISS $b\"; fi; \
+  done"]

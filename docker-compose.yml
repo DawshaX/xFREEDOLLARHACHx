@@ -75,6 +75,40 @@ services:
       "sleep 5 && OLLAMA_HOST=http://ollama:11434 ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"
     restart: "no"
 
+  # ── Kali execution plane (added 2026-11-06) ────────────────────────────────
+  # The tools that can never be a static binary — nmap, sqlmap, nikto, semgrep,
+  # whatweb — live here. The platform host has no root and no apt, so this is
+  # the only honest way to run them. No ports: it is an execution target, not a
+  # server, and nothing new listens on the network.
+  #
+  #   docker compose up -d nova-kali
+  #   docker compose exec nova-kali nmap --version
+  #   docker compose exec nova-kali semgrep --version
+  #
+  # Enable with:  docker compose --profile kali up -d
+  nova-kali:
+    build:
+      context: .
+      dockerfile: Dockerfile.kali
+    image: nova-kali:latest
+    container_name: nova-kali
+    restart: unless-stopped
+    profiles: ["kali"]
+    # Keep it alive so `docker compose exec` works; the image CMD is a smoke test.
+    command: ["sh", "-c", "tail -f /dev/null"]
+    volumes:
+      - nova-scratch:/home/nova/scratch
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # nmap's SYN scan needs raw sockets. Drop this block and use `nmap -sT`
+    # (TCP connect) if you would rather run fully unprivileged.
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
 volumes:
   nova-state:
   ollama-models:
+  nova-scratch:
