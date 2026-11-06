@@ -28,6 +28,7 @@ import { corpusStatus } from "../ops/vuln-corpus";
 import { memoryStats } from "./memory-store";
 import { KINDS } from "../ops/tools";
 import { toolchainStatus, VENDORABLE } from "../ops/toolchain";
+import { localBuild } from "../auto-update";
 
 export interface SelfModel {
   tools: { count: number; names: string[]; byCategory: Record<string, number> };
@@ -35,6 +36,14 @@ export interface SelfModel {
   corpus: { measured: boolean; total: number; ageMin: number | null };
   memory: { total: number; pinned: number };
   opsKinds: number;
+  /**
+   * البصمة اللي بتكلّمك منها دلوقتي، من `build.json` جوه الحزمة.
+   * اللي حصل: المستخدم بيقارن رقم في الشات بمستودع أحدث ويحكم على البرنامج
+   * بالكذب — بينما الرقم كان صحيحًا للبناء اللي لسه شغّال (قِيس 2026-11-06:
+   * `#216` اتدمج 00:12:49Z والردّ 00:14:17Z طلع من البناء اللي قبله).
+   * فالردّ نفسه بقى يقول هو بتكلم من أنهي نسخة ومن قد إيه، والفرق يبقى مقاس مش جدل.
+   */
+  build: { commit: string | null; builtAt: string | null; ageMin: number | null; label: string };
   /**
    *الأدوات الأمنية الحقيقية على المكنة دي — مقاسة من القرص. بدونها النموذج بيكرر
    * جملة «مالوش أدوات تثبيت» وهو اللي يقدر ينزّلهم بنفسه.
@@ -44,6 +53,18 @@ export interface SelfModel {
   canDo: string[];
   /** Things that are honestly not available in this build. */
   cannotDo: string[];
+}
+
+/** بصمة البناء اللي شغّال دلوقتي — `null` لو النسخة أقدم من نظام البصمة. */
+function buildStamp(): { commit: string | null; builtAt: string | null; ageMin: number | null; label: string } {
+  const b = localBuild();
+  const ms = b?.builtAt ? Date.parse(b.builtAt) : NaN;
+  return {
+    commit: b?.commit ?? null,
+    builtAt: b?.builtAt ?? null,
+    ageMin: Number.isFinite(ms) ? Math.max(0, Math.round((Date.now() - ms) / 60_000)) : null,
+    label: b?.commit ? b.commit.slice(0, 7) : "بلا بصمة",
+  };
 }
 
 /** Everything here is measured at call time — nothing is typed from memory. */
@@ -131,6 +152,7 @@ export function buildSelfModel(): SelfModel {
   ];
 
   return {
+    build: buildStamp(),
     tools: { count: AGENT_TOOLS.length, names, byCategory },
     machines: { registered: servers.length, names: servers.map((s) => s.name) },
     corpus,

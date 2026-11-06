@@ -881,6 +881,36 @@ t("hunt surface census: الملفات اللي بتسأل المحرك ما ب�
   console.log(`      · ${files.length} ملف بيسأل المحرك · ${eps.size} مسار: ${[...eps].sort().join(" ")}`);
 });
 
+/* ── البصمة في الردّ: كل رقم قدرة لازم يتنسب للبناء اللي قاسه ─────────────────
+ * القياس اللي خلف القاعدة دي: المستخدم قال «الشات بيقول 49 والمستودع 55» — وبمقارنة
+ * التوقيتات طلع الرقم **صح للبناء اللي كان شغّان** (#216 اتدمج 00:12:49Z، السؤال
+ * 00:14:17Z، والحلقة كانت كل 15 دقيقة). الكذب مكنش في الرقم، كان في إن الردّ
+ * مابيقلش هو بتكلم من أنهي نسخة. فالردّ بقى يقول، والحزمة بسحبة كل 5 دقايق. */
+const AGENT_DIR = path.resolve(ROOT0, "artifacts/api-server/src/lib/agent");
+const selfModel = await import(path.join(AGENT_DIR, "self-model.ts"));
+t("self-model: build stamp is measured or says so, never invented", () => {
+  const m = selfModel.buildSelfModel();
+  assert.equal(typeof m.build.label, "string", "البصمة لازم تتقال حتى لو «بلا بصمة»");
+  assert.ok(m.build.label.length > 0, "label فاضي");
+  assert.ok(m.build.ageMin === null || (Number.isInteger(m.build.ageMin) && m.build.ageMin >= 0), `ageMin مش معقول: ${m.build.ageMin}`);
+  assert.ok(m.build.commit === null || /^[0-9a-f]{7,40}$/.test(m.build.commit), `commit مش sha: ${m.build.commit}`);
+  assert.equal(m.tools.count, 55, "عدد الأدوات بقى يتغيّر وحدّث التست معاه — مش العكس");
+});
+t("wiring: the greeting and the identity answer both carry the stamp", () => {
+  const coreTxt = fs.readFileSync(path.join(AGENT_DIR, "core.ts"), "utf8");
+  const greet = coreTxt.slice(coreTxt.indexOf("export function greetingAnswer"), coreTxt.indexOf("export function identityAnswer"));
+  assert.ok(greet.includes("buildLine(model)"), "التحية بطلت تنسب الأرقام لبنائها");
+  assert.ok(coreTxt.includes('build: { commit: null, builtAt: null, ageMin: null, label: "بلا بصمة" }'), "الـfallback قدامه نموذج ناقص الحقل — هنا وقع الخطأ اللي بنتعلم منه");
+  const idt = coreTxt.slice(coreTxt.indexOf("export function identityAnswer"));
+  assert.ok(idt.slice(0, 1600).includes("buildLine(model)"), "«انت مين» بلا بصمة");
+});
+t("ship: the portable bundle pulls updates every 5 minutes in both launchers", () => {
+  const b = fs.readFileSync(path.resolve(ROOT0, "scripts/build-standalone.mjs"), "utf8");
+  assert.ok(b.includes('process.env.NOVA_AUTO_UPDATE_MINUTES = process.env.NOVA_AUTO_UPDATE_MINUTES || "5"'), "boot.mjs مابيظبطش السحبة");
+  assert.ok(b.includes('[ -z "$NOVA_AUTO_UPDATE_MINUTES" ] && export NOVA_AUTO_UPDATE_MINUTES=5'), "start.sh مابيظبطش السحبة");
+  assert.ok(!/NOVA_AUTO_UPDATE_MINUTES.*\$\{/.test(b), "استخدم ${VAR:-5} جوه template literal — ده اللي بيكسر البناء");
+});
+
 /* ── toolchain provisioning: القياس والتحقّق من غير شبكة ───────────────────────
  * المقصود: المحرك اما يقول «مافيش أدوات» يبقى قارئ القرص، واما يشغّل السكربت
  * بتاعه ويطمّن الكاش — ومفيش رد بيفتري نجاح. السكربت الحقيقي بينفّذ هنا بـ
