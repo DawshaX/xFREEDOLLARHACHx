@@ -61,6 +61,11 @@ const port = Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort < 65536
 const portWasInvalid = port !== parsedPort;
 
 // ── HTTP server wrapping Express ───────────────────────────────────────────────
+function provisionDelayMs(): number {
+  const raw = Number(process.env.NOVA_PROVISION_DELAY_MS ?? "");
+  return Number.isFinite(raw) && raw >= 0 ? raw : 90_000;
+}
+
 const server = http.createServer(app);
 
 // ── WebSocket server for /api/local-agent/ws (Kali machine agent) ─────────────
@@ -389,6 +394,33 @@ server.listen(port, host, () => {
     logger.info("nova-cron: متعطّل بـ NOVA_CRON_ENABLED=0");
   }
   try { startWatchers(); } catch (e) { logger.error({ err: e }, "watchers start failed"); }
+
+  // الأدوات: القياس الحيّ على nova.waifly.com قال `vendor/bin` فاضي و**قابل للكتابة**
+  // — أي إن `tools_install` ممكن ينزّل subfinder/httpx/nuclei/katana/dnsx/naabu/ffuf
+  // بجد، بس مفيش حد كان بيناديه غير المستخدم في الشات. الإقلاع بقى يطلبها مرة واحدة،
+  // متأخر، ودالة `provisionToolchainOnce` نفسها فيها already-present + cooldown + inflight
+  // guard فمش هتتكرر. `NOVA_PROVISION_TOOLS=0` يطفّيها.
+  if (process.env.NOVA_PROVISION_TOOLS !== "0") {
+    setTimeout(() => {
+      void import("./lib/ops/toolchain")
+        .then(({ provisionToolchainOnce }) => provisionToolchainOnce())
+        .then(({ skipped, record, status }) =>
+          logger.info(
+            {
+              skipped: skipped ?? null,
+              installed: record?.installed ?? null,
+              present: status.present.length,
+              missing: status.missing.length,
+              fetchAllowed: process.env.NOVA_TOOLCHAIN_FETCH === "1",
+            },
+            record
+              ? `toolchain: provisioning ran at boot (${record.installed}/${record.total} أداة)`
+              : `toolchain: provisioning skipped at boot (${skipped ?? "بدون سبب"}) — التنزيل نفسه محتاج NOVA_TOOLCHAIN_FETCH=1`,
+          ),
+        )
+        .catch((e) => logger.warn({ err: String(e) }, "toolchain boot provisioning failed"));
+    }, provisionDelayMs());
+  }
 
   if (process.env.DATABASE_URL) {
     forceOllamaDefault().catch(e => logger.error({ err: e }, "forceOllamaDefault error"));

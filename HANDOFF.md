@@ -1858,3 +1858,17 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
 
 **باقي على صاحب المفاتيح:** تدوير `TELEGRAM_BOT_TOKEN` + ضبطه في environment (غير كده الملاحظات
 الحية بتتسجل بس ولا توصلنى — وده مكتوب في الدفتر `skipped:` مش متخبي).
+
+## المرحلة 60 — الصوت الدائم واصل المكنة الحيّة، وكشف عطلين حقيقيين (2026-11-06)
+
+- السبب اللي خلّى المرحلة 59 «كلام من غير فعل» على waifly: `startWatchers()`/`startCronScheduler()`
+  كانوا جوه فرع `if (DATABASE_URL)` والمكنة standalone. اتصلح + بوابة `audit-boot-hooks.mjs`
+  (B1 فرع-واحد · B2 عضلة ميتة، selftest 3/3، `state/boot-hooks-allowlist.json` بأسباب متثبتة).
+- القياس الحيّ بعد الدمج: `enabled:true · ticks>0 · 4 ملاحظات` و`tools:55` في `/api/nova-core/status`.
+- المراقب كشف: (1) الحزمة ما كانتش تشمل `audit/` → دليل الخزنة «مش موجود على القرص»؛ بقت
+  9 ملفات دليل داخل الحزمة وبوابة الأسرار خضرا. (2) `vendor/bin` على المكنة **قابل للكتابة** وفاضي
+  والتنزيل كان محتاج علم يدوي؛ بقى `NOVA_TOOLCHAIN_FETCH=1`+`NOVA_PROVISION_TOOLS=1` افتراضي
+  في الحزمة والإقلاع بينادي `provisionToolchainOnce()` (`NOVA_PROVISION_DELAY_MS`، أمان: already-present/cooldown/inflight).
+- `watchStatus` + `/watch/probe` (عدادات حقيقية بدل الصمت) · التوأمان بيردّوا `measured:false` مع السبب.
+- لسه: 9 من 11 سجل في الخزنة الدائمة من غير `evidencePath` (مديونية بيانات) · تدوير توكن تليجرام عليك.
+- `agent-gates` **22/22** · typecheck **88==88** · البانل 0 · twins ✓ · بناء الحزمة 151 ملف/12MB ✓.
