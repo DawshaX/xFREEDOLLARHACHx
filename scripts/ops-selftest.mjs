@@ -430,7 +430,7 @@ await tA("internal targets are refused before any request is made", async () => 
 });
 await tA("a job's clock is longer than its slowest tool, and CI is longer than the job", async () => {
   // دي مش أناقة: لو الـharness استسلم قبل ما المهمة خلّصت، التقرير بيقول «0 نتيجة» عن مسح
-  // لسه شغال — وده أخطر من أي رقم غلط، لأنه أخضر وكذاب. والقواعد متاقرأش من脑子، بل من الملفات.
+  // لسه شغال — وده أخطر من أي رقم غلط، لأنه أخضر وكذاب. والقواعد مبتتقراش من دماغ حد، بل من الملفات.
   const root = path.resolve(import.meta.dirname, "..");
   const tools = fs.readFileSync(path.join(root, "artifacts/api-server/src/lib/ops/tools.ts"), "utf8");
   const harness = fs.readFileSync(path.join(root, "scripts/verify-live.mjs"), "utf8");
@@ -548,7 +548,7 @@ await tA("bounty catalog scores matches and cannot grant permission", async () =
     const srcTxt = fs.readFileSync(path.join(SRC, "scope.ts"), "utf8");
     assert.ok(/import \{ lookupBountyProgram, catalogStatus \} from "\.\/bounty-catalog"/.test(srcTxt), "الاستيراد مش موجود");
     assert.ok(/bounty_program: bountyEvidence/.test(srcTxt), "المطابقة مش بتتسجل في الـevidence");
-    assert.ok(/catalog: \{ present: cat\.present/.test(srcTxt), "حالة الكتالوج مش بتتسجل — «مفيش برنامج» هتتب读رها غلط".replace("读","قرا"));
+    assert.ok(/catalog: \{ present: cat\.present/.test(srcTxt), "حالة الكتالوج مش بتتسجل — «مفيش برنامج» هتتقرا غلط");
     assert.ok(!/passive_only:[^\n]*(bounty|catalog)/i.test(srcTxt), "الكتالوج بيرجّع passive_only — ممنوع");
     // داخل discoverProgram نفسه (مش أي سطر تاني في الملف): الوضع السلبي = ¬الإذن بالحرف
     const di = srcTxt.indexOf("export async function discoverProgram");
@@ -558,7 +558,7 @@ await tA("bounty catalog scores matches and cannot grant permission", async () =
     assert.ok(/passive_only: !consentOk,/.test(disc), "discoverProgram مابقاش بيحدد passive_only من الإذن المكتوب");
     assert.ok(!/Boolean\(input/.test(disc), "discoverProgram بقى بيقبل passive_only من المُدخل — مصدر واحد للحقيقة اتكسر");
     assert.ok(/consentOk = [^\n]*i have written permission for/.test(disc), "جملة الإذن اتغيّرت — لازم النص بالحرف");
-    assert.ok(srcTxt.includes("program_discover") && /activate = "I have written permission for/.test(srcTxt), "رسالة بوابة التفعيل ات失ت".replace("失","فقدها"));
+    assert.ok(srcTxt.includes("program_discover") && /activate = "I have written permission for/.test(srcTxt), "رسالة بوابة التفعيل ضاعت من الراوتر");
     const routesTxt = fs.readFileSync(path.join(SRC, "../../routes/ops.ts"), "utf8");
     assert.ok(routesTxt.includes('"/ops/bounty/catalog"'), "المسار /ops/bounty/catalog مش مسجّل");
   });
@@ -705,8 +705,8 @@ await tA("findings vault: مفتاح من المحتوى، تطبيع خطورة
   assert.equal(m1.findings[0].verified, true, "النسخة المتأكَّدة اتمسحت لصالح نسخة أقدم");
 
   const m2 = fv.mergeRecords(m1.findings, [r1]);
-  assert.equal(m2.added, 0, "同步 تاني افترِ نتيجة جديدة");
-  assert.equal(m2.findings.length, 1, "同步 تاني ضاعف السجل");
+  assert.equal(m2.added, 0, "الدمج التاني اخترع نتيجة جديدة");
+  assert.equal(m2.findings.length, 1, "الدمج التاني ضاعف السجل");
   assert.equal(m1.findings[0].occurrences, 2, "نسخة تانية بنفس المفتاح في نفس الـincoming مااتعدّتش كمشاهدة");
   assert.equal(m2.findings[0].occurrences, 3, "المشاهدة الجديدة اتخطّت — المفروض occurrences تزيد");
   assert.equal(m2.findings[0].firstSeen, r1.firstSeen, "firstSeen اتغيّر — لازم أقدم ظهور");
@@ -729,7 +729,7 @@ await tA("findings vault: sync على ملفات شغل حقيقية — وال�
     assert.ok(s1.total >= 1 && s1.verified === 0, `الحسابات مش صادقة: ${JSON.stringify(s1)}`);
     assert.ok(fs.existsSync(vaultFile), "الخزانة مااتكتبتش على القرص");
     const s2 = fv.syncFromJobs({ limit: 10 });
-    assert.equal(s2.added, 0, "同步 التاني خلع سجل جديد — الـidempotency اتكسرت");
+    assert.equal(s2.added, 0, "الدمج التاني خلّع سجل جديد — الـidempotency اتكسرت");
     assert.equal(s2.total, s1.total, `العدد اتغيّر بين تشغيلين: ${s1.total} → ${s2.total}`);
     assert.ok(s2.updated >= 1, "التحديث مااتسجّلش");
     const list = fv.listVault({ limit: 50 });
@@ -911,6 +911,36 @@ t("hunt surface census: الملفات اللي بتسأل المحرك ما ب�
   console.log(`      · ${files.length} ملف بيسأل المحرك · ${eps.size} مسار: ${[...eps].sort().join(" ")}`);
 });
 
+/* ── البصمة في الردّ: كل رقم قدرة لازم يتنسب للبناء اللي قاسه ─────────────────
+ * القياس اللي خلف القاعدة دي: المستخدم قال «الشات بيقول 49 والمستودع 55» — وبمقارنة
+ * التوقيتات طلع الرقم **صح للبناء اللي كان شغّان** (#216 اتدمج 00:12:49Z، السؤال
+ * 00:14:17Z، والحلقة كانت كل 15 دقيقة). الكذب مكنش في الرقم، كان في إن الردّ
+ * مابيقلش هو بتكلم من أنهي نسخة. فالردّ بقى يقول، والحزمة بسحبة كل 5 دقايق. */
+const AGENT_DIR = path.resolve(ROOT0, "artifacts/api-server/src/lib/agent");
+const selfModel = await import(path.join(AGENT_DIR, "self-model.ts"));
+t("self-model: build stamp is measured or says so, never invented", () => {
+  const m = selfModel.buildSelfModel();
+  assert.equal(typeof m.build.label, "string", "البصمة لازم تتقال حتى لو «بلا بصمة»");
+  assert.ok(m.build.label.length > 0, "label فاضي");
+  assert.ok(m.build.ageMin === null || (Number.isInteger(m.build.ageMin) && m.build.ageMin >= 0), `ageMin مش معقول: ${m.build.ageMin}`);
+  assert.ok(m.build.commit === null || /^[0-9a-f]{7,40}$/.test(m.build.commit), `commit مش sha: ${m.build.commit}`);
+  assert.equal(m.tools.count, 55, "عدد الأدوات بقى يتغيّر وحدّث التست معاه — مش العكس");
+});
+t("wiring: the greeting and the identity answer both carry the stamp", () => {
+  const coreTxt = fs.readFileSync(path.join(AGENT_DIR, "core.ts"), "utf8");
+  const greet = coreTxt.slice(coreTxt.indexOf("export function greetingAnswer"), coreTxt.indexOf("export function identityAnswer"));
+  assert.ok(greet.includes("buildLine(model)"), "التحية بطلت تنسب الأرقام لبنائها");
+  assert.ok(coreTxt.includes('build: { commit: null, builtAt: null, ageMin: null, label: "بلا بصمة" }'), "الـfallback قدامه نموذج ناقص الحقل — هنا وقع الخطأ اللي بنتعلم منه");
+  const idt = coreTxt.slice(coreTxt.indexOf("export function identityAnswer"));
+  assert.ok(idt.slice(0, 1600).includes("buildLine(model)"), "«انت مين» بلا بصمة");
+});
+t("ship: the portable bundle pulls updates every 5 minutes in both launchers", () => {
+  const b = fs.readFileSync(path.resolve(ROOT0, "scripts/build-standalone.mjs"), "utf8");
+  assert.ok(b.includes('process.env.NOVA_AUTO_UPDATE_MINUTES = process.env.NOVA_AUTO_UPDATE_MINUTES || "5"'), "boot.mjs مابيظبطش السحبة");
+  assert.ok(b.includes('[ -z "$NOVA_AUTO_UPDATE_MINUTES" ] && export NOVA_AUTO_UPDATE_MINUTES=5'), "start.sh مابيظبطش السحبة");
+  assert.ok(!/NOVA_AUTO_UPDATE_MINUTES.*\$\{/.test(b), "استخدم ${VAR:-5} جوه template literal — ده اللي بيكسر البناء");
+});
+
 /* ── toolchain provisioning: القياس والتحقّق من غير شبكة ───────────────────────
  * المقصود: المحرك اما يقول «مافيش أدوات» يبقى قارئ القرص، واما يشغّل السكربت
  * بتاعه ويطمّن الكاش — ومفيش رد بيفتري نجاح. السكربت الحقيقي بينفّذ هنا بـ
@@ -960,6 +990,31 @@ fs.writeFileSync(
   'const into = process.argv[process.argv.indexOf("--into") + 1];\n' +
   'console.log(JSON.stringify({ into, ok: 2, total: 7, results: [{ bin: "nuclei", status: "installed", tag: "v3.0.0" }, { bin: "httpx", status: "installed", tag: "v1.0.0" }, { bin: "ffuf", status: "failed", why: "no asset" }] }));\n',
 );
+await tA("toolchain: free space is measured, not assumed", () => {
+  const st0 = tc.toolchainStatus();
+  assert.equal(typeof st0.freeMB, "number", `freeMB لازم يبقى رقم مقاس على ${st0.dir}`);
+  assert.ok(Number(st0.freeMB) >= 0, `freeMB سالب: ${st0.freeMB}`);
+  assert.equal(st0.minFreeMB, 180, "الحد الافتراضي اتغيّر من غير ما التست يتحدّث");
+});
+await tA("toolchain: cramped disk refuses before touching the network", async () => {
+  const ran = path.join(fakeDir, "marker");
+  const spy = path.join(fakeDir, "spy.mjs");
+  fs.writeFileSync(spy, `require("node:fs").writeFileSync(${JSON.stringify(ran)}, "ran")\n`);
+  fs.rmSync(ran, { force: true });
+  process.env.NOVA_TOOLCHAIN_MIN_FREE_MB = "999999999";
+  const rec = await tc.provisionToolchain({ script: spy, into: path.join(tmp, "vendor3", "bin") });
+  assert.equal(rec.error, "no-space", `مرفوض لسبب تاني: ${rec.error}`);
+  assert.equal(rec.refused, "no-space", "لازم يسمّي الرفض نفسه");
+  assert.ok(!fs.existsSync(ran), "سكربت التنزيل اتنفّذ رغم إن القرص مرفوض — ده اللي بنمنعه");
+  assert.ok(typeof rec.reasonAr === "string" && /NOVA_TOOLCHAIN_MIN_FREE_MB/.test(rec.reasonAr), "الرفض بلا مخرج للمشغّل");
+  // السجل اللي فوق خلاص «فاشل» فبيدخل في cooldown — بنمسحه عشان نقيس قرار المساحة نفسه،
+  // و`only` يتجاوز حارس «الأدوات موجودة» (اللي سلوكه صح).
+  fs.rmSync(process.env.NOVA_TOOLCHAIN_RECORD, { force: true });
+  const once = await tc.provisionToolchainOnce({ only: ["subfinder"], script: spy, into: path.join(tmp, "vendor4", "bin") });
+  assert.equal(once.skipped, "no-space", `Once ما بلّغش عن الرفض: ${once.skipped}`);
+  delete process.env.NOVA_TOOLCHAIN_MIN_FREE_MB;
+});
+
 await tA("toolchain: provision runs the vendorer with no shell and records the truth", async () => {
   const before = Date.now();
   const rec = await tc.provisionToolchain({ script: fakeScript, into: path.join(tmp, "vendor2", "bin") });

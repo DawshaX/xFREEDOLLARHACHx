@@ -35,6 +35,7 @@ import {
 import { ensureOllamaReady, ollamaHealth } from "../lib/agent/ollama-manager";
 import { runSelfCheck, storageSnapshot } from "../lib/agent/self-check";
 import { broadcastEvent } from "../lib/ws-hub";
+import { watchStatus, watchTick, watchProbe } from "../lib/agent/watchers";
 import { logger } from "../lib/logger";
 
 import { requireOps } from "../lib/ops/gate";
@@ -259,6 +260,34 @@ router.get("/nova-core/awareness", async (req: Request, res: Response) => {
  * The single question every deploy raises: "is the thing I just shipped the
  * thing that is running?" Reads build.json written next to the bundle.
  */
+/* ── الصوت الدائم: الملاحقين (state/proactive-log.json) ─────────────────────
+   * القراية مفتوحة عشان البانل يعرضها من غير توكن، والكتابة (جري تِك يدوي)
+   * تحتاج مفتاح ops — نفس قاعدة باقي مسارات التحكم. */
+router.get("/nova-core/watch", (_req: Request, res: Response) => {
+  const s = watchStatus();
+  res.json({
+    ok: true,
+    ...s,
+    // لو المراقب ما اتشغّلش، ده بيتقال. مش بنخبي الصمت ورا مصفوفة فاضية.
+    noteAr: s.enabled ? null : "المراقبين مش متشغّلين على العملية دي (NOVA_WATCHERS=0 أو السيرفر ما إقلعش من طريق index.ts) — السجل اللي باين هو آخر المكتوب.",
+  });
+});
+
+router.get("/nova-core/watch/probe", (_req: Request, res: Response) => {
+  // قراءة فقط: بتدي نفس اللي المراقب هيقوله دلوقتي، من غير كتابة ولا بث ولا حارس
+  // تكرار — عشان التشخيص من بره ما يبقاش محتاج مفتاح ops ولا يلوّث السجل.
+  res.json({ ok: true, ...watchProbe() });
+});
+
+router.post("/nova-core/watch/tick", (req: Request, res: Response) => {
+  const guard = requireOps("nova-core");
+  guard(req, res, async () => {
+    const force = req.body?.force === true;
+    const out = await watchTick({ force });
+    res.json({ force, ...out });
+  });
+});
+
 router.get("/nova-core/version", (_req: Request, res: Response) => {
   const candidates = [
     path.resolve(process.cwd(), "build.json"),

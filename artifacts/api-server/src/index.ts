@@ -5,6 +5,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startScheduler } from "./lib/cron-scheduler";
+import { startCronScheduler } from "./lib/nova-cron";
+import { startWatchers } from "./lib/agent/watchers";
 import { startWatchdog } from "./lib/watchdog";
 import { startKeyManagerLoop } from "./lib/key-manager";
 import { startCveMonitor } from "./lib/cve-monitor";
@@ -59,6 +61,11 @@ const port = Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort < 65536
 const portWasInvalid = port !== parsedPort;
 
 // ── HTTP server wrapping Express ───────────────────────────────────────────────
+function provisionDelayMs(): number {
+  const raw = Number(process.env.NOVA_PROVISION_DELAY_MS ?? "");
+  return Number.isFinite(raw) && raw >= 0 ? raw : 90_000;
+}
+
 const server = http.createServer(app);
 
 // ── WebSocket server for /api/local-agent/ws (Kali machine agent) ─────────────
@@ -393,12 +400,57 @@ server.listen(port, host, () => {
     )
     .catch((e) => logger.warn({ err: e }, "memory mirror hydrate failed"));
 
+  // ── إقلاع ما يعتمدش على قاعدة البيانات ─────────────────────────────────────
+  // المرحلة 59 أضافت `startCronScheduler()` و`startWatchers()` — وحطّتهم جوه
+  // فرع `if (process.env.DATABASE_URL)`. القياس الحيّ على nova.waifly.com (وضع
+  // standalone، من غير DATABASE_URL) كشف إن `GET /api/nova-core/watch` بيرجع
+  // enabled:false وstartedAt:null: أي إن الصوت الدائم اتكتب وما اشتغلش على المكنة
+  // اللي المفروض تعيش عليه. الاتنين ما بيلمسوش Postgres أصلًا — فمكانهم هنا.
+  if (process.env.NOVA_CRON_ENABLED !== "0") {
+    try { startCronScheduler(); } catch (e) { logger.error({ err: e }, "nova-cron start failed"); }
+  } else {
+    logger.info("nova-cron: متعطّل بـ NOVA_CRON_ENABLED=0");
+  }
+  try { startWatchers(); } catch (e) { logger.error({ err: e }, "watchers start failed"); }
+
+  // الأدوات: القياس الحيّ على nova.waifly.com قال `vendor/bin` فاضي و**قابل للكتابة**
+  // — أي إن `tools_install` ممكن ينزّل subfinder/httpx/nuclei/katana/dnsx/naabu/ffuf
+  // بجد، بس مفيش حد كان بيناديه غير المستخدم في الشات. الإقلاع بقى يطلبها مرة واحدة،
+  // متأخر، ودالة `provisionToolchainOnce` نفسها فيها already-present + cooldown + inflight
+  // guard فمش هتتكرر. `NOVA_PROVISION_TOOLS=0` يطفّيها.
+  if (process.env.NOVA_PROVISION_TOOLS !== "0") {
+    setTimeout(() => {
+      void import("./lib/ops/toolchain")
+        .then(({ provisionToolchainOnce }) => provisionToolchainOnce())
+        .then(({ skipped, record, status }) =>
+          logger.info(
+            {
+              skipped: skipped ?? null,
+              installed: record?.installed ?? null,
+              present: status.present.length,
+              missing: status.missing.length,
+              refused: record?.refused ?? null,
+              freeMB: status.freeMB,
+              fetchAllowed: process.env.NOVA_TOOLCHAIN_FETCH === "1",
+            },
+            record?.refused
+              ? `toolchain: provisioning refused at boot — ${record.reasonAr}`
+              : record
+                ? `toolchain: provisioning ran at boot (${record.installed}/${record.total} أداة)`
+                : `toolchain: provisioning skipped at boot (${skipped ?? "بدون سبب"}) — التنزيل نفسه محتاج NOVA_TOOLCHAIN_FETCH=1`,
+          ),
+        )
+        .catch((e) => logger.warn({ err: String(e) }, "toolchain boot provisioning failed"));
+    }, provisionDelayMs());
+  }
+
   if (process.env.DATABASE_URL) {
     forceOllamaDefault().catch(e => logger.error({ err: e }, "forceOllamaDefault error"));
     runCveMigrations().catch(e => logger.error({ err: e }, "CVE migrations error"));
     runSentinelMigrations().catch(e => logger.error({ err: e }, "SENTINEL migrations error"));
 
     try { startScheduler(); } catch (e) { logger.error({ err: e }, "Failed to start cron scheduler"); }
+
     try { startWatchdog(); } catch (e) { logger.error({ err: e }, "Failed to start watchdog"); }
     try { startKeyManagerLoop(); } catch (e) { logger.error({ err: e }, "Failed to start key manager"); }
     try { startCveMonitor(); } catch (e) { logger.error({ err: e }, "Failed to start CVE monitor"); }

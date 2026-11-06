@@ -58,6 +58,14 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   memory_list: "قراءة الذاكرة",
   knowledge_search: "بحث في فهرس المعرفة",
   cve_lookup: "بحث ثغرة في الفهرس المحلي",
+  // أدوات المرحلة 59 — الكنوز اللي اتوصلت: الخزنة الدائمة، مكتبة الاستشارات،
+  // تقرير التحقق الحيّ، الاستضافة المجانية، مستوى الاستقلالية.
+  vault_list: "قراءة خزنة الاكتشافات",
+  vault_draft: "مسودة إفصاح من الخزنة",
+  advisory_search: "البحث في استشارات GitHub",
+  live_verify: "تقرير التحقق الحيّ",
+  free_hosts: "قياس الاستضافة المجانية",
+  autonomy_state: "حالة الاستقلالية",
   corpus_stats: "إحصاءات الفهرس",
   platform_status: "حالة المنصة",
   mission_status: "حالة المهمة",

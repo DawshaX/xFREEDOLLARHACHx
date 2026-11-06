@@ -46,7 +46,9 @@ const STRUCTURAL_GATES = [
   ["scripts/audit-route-integrity.mjs", "route wiring: symbols imported, host hands gated, bundle not hollow"],
   ["scripts/audit-stub-honesty.mjs", "no live stub claims success for work it never did"],
   ["scripts/audit-no-invented-intel.mjs", "no invented CVE ids and no number without a measurement"],
+  ["scripts/audit-boot-hooks.mjs", "every boot hook wired in both modes — no half-wired organ, no dead loop"],
   ["scripts/audit-src-secrets.mjs", "no credential written literally in tracked source"],
+  ["scripts/audit-no-cjk-in-text.mjs", "no stray CJK in prompt-facing or operator-facing Arabic text"],
   ["scripts/ops-selftest.mjs", "scope gate, ops gate, throttle, evidence chain"],
   ["scripts/typecheck-ratchet.mjs", "no new type errors"],
 ];

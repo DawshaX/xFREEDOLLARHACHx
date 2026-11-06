@@ -1823,3 +1823,168 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
 (2) `state/hunt-runs.csv` صف واحد مقابل 10 في الـDB — السجل المحلي بنصف الوتيرة · (3) `vendor/bin`
 فاضي على المكنة · (4) تدوير `TELEGRAM_BOT_TOKEN`/`NOVA_EXEC_TOKEN` · (5) من 82 صفحة بانل: 34 موصولة
 لقياس حقيقي والباقي بين عرض شكلي وتوأم بس.
+
+## المرحلة 59 — الشات اتوصّل بقدراته، والصوت الدائم اتعمل (2026-11-06)
+
+**السؤال:** «الشات لسه عبيط». التشخيص مكانش في الموديل — كان في الأسلاك:
+
+1. الشباك (`NovaWorkstation` → `/api/nova-core/chat` → `runAgent`) بيطلع رد الأدوار من غير أدوات
+   من نداء `llmPlan` وحده: برومبت قصير، 700 توكن، آخر 4 رسائل — الشخصية الكاملة ما بتوصلش.
+2. `heuristicAnswer` فيه سطر ثابت «**مش بقدر:** أشغّل Metasploit/Burp (مفيش root ولا مساحة)»
+   وهو بينكر بيه `tools_install` و`kali_toolbox` الموجودين في السجل. بقى `capabilityTruthLine()`
+   محسوبة من `buildSelfModel()` + `toolchainStatus()`.
+3. `ai-multi-router.ts` كان عرّف **نوفا تانية** بتوعد بـshell على Kali وExploitDB، و`multi-ai.ts`
+   فيها صفر أدوات — فأي شباك على الشبكة دي ثرثار. بقت هوية واحدة مستوردة من `persona.ts` + حدود المسار.
+4. `nova-cron.ts` (6 مهام حقيقية، منها صيد NVD+CISA+EDB+CIRCL كل 5 دقايق) **مكانش حد بينادي
+   `startCronScheduler()`** — و`POST /api/bot/cron/:id/trigger` كان `setTimeout(100)` وبثّ
+   «تم التنفيذ… بنجاح». الاتنين اتصلحوا: إقلاع حقيقي في `index.ts` + تنفيذ وقياس وذكاء الفشل.
+5. مفيش أي كود لـ«يتكلم من نفسه» (صفر نتيجة في announce/proactive/watcher) — اتعمل
+   `lib/agent/watchers.ts`: 6 قراءات، توقيع sha يمنع التكرار، بثّ `watch_note` على `ws-hub`،
+   سجل في `state/proactive-log.json`، `GET /api/nova-core/watch` + `POST …/watch/tick` (محميّ بـops)،
+   و`📡` في الشات كل 45 ثانية. التوأمان الساكنان بيقولوا `measured:false` + السبب بدل الصمت.
+
+**الكنوز اللي كانت مش موصولة** — 6 أدوات جديدة (السجل بقى 49 → **55**): `vault_list`, `vault_draft`,
+`advisory_search`, `live_verify`, `free_hosts`, `autonomy_state` + قارئ `lib/ops/permanent-vault.ts`.
+الدخان الحيّ: الخزنة الدائمة 11 ثغرة/6 ملاحظات/3 تقارير/19 قاعدة، `SKY-VULN-01` ليه تقرير 11,926 حرف،
+الكتالوج 746 برنامج (511 بدفع)، الكوربوس 104,132 متقاس، `advisory_search(react)` = 5 من 1071.
+
+**اكتشاف طلع من التوصيل نفسه:** **9 من 11** سجل في الخزنة الدائمة من غير `evidencePath` — أي إن
+معظم أغلى نتائجنا مش مرفقة ببرهان على القرص. ده شغل المرحلة الجاية (نربط الأدلة من `state/hunt/evidence`
+أو نعيد التشغيل على الأهداف ونسجّل المسارات)، مش حاجة تتقال في صفحة.
+
+**البوابات:** `audit-no-invented-intel` بقى فيه **R6** (جملة قدرة مكتوبة/`canDo` حرفية) و**R7**
+(تعريف تاني لهوية نوفا) — selftest 17/17. `test-tool-labels` 5/5 (العناوين العربي للست الجديد).
+`agent-gates` **21/21** · typecheck **88 == 88** · البانل 0 · twins ✓ · بناء البانل 12.9s ✓.
+
+**باقي على صاحب المفاتيح:** تدوير `TELEGRAM_BOT_TOKEN` + ضبطه في environment (غير كده الملاحظات
+الحية بتتسجل بس ولا توصلنى — وده مكتوب في الدفتر `skipped:` مش متخبي).
+
+## المرحلة 60 — الصوت الدائم واصل المكنة الحيّة، وكشف عطلين حقيقيين (2026-11-06)
+
+- السبب اللي خلّى المرحلة 59 «كلام من غير فعل» على waifly: `startWatchers()`/`startCronScheduler()`
+  كانوا جوه فرع `if (DATABASE_URL)` والمكنة standalone. اتصلح + بوابة `audit-boot-hooks.mjs`
+  (B1 فرع-واحد · B2 عضلة ميتة، selftest 3/3، `state/boot-hooks-allowlist.json` بأسباب متثبتة).
+- القياس الحيّ بعد الدمج: `enabled:true · ticks>0 · 4 ملاحظات` و`tools:55` في `/api/nova-core/status`.
+- المراقب كشف: (1) الحزمة ما كانتش تشمل `audit/` → دليل الخزنة «مش موجود على القرص»؛ بقت
+  9 ملفات دليل داخل الحزمة وبوابة الأسرار خضرا. (2) `vendor/bin` على المكنة **قابل للكتابة** وفاضي
+  والتنزيل كان محتاج علم يدوي؛ بقى `NOVA_TOOLCHAIN_FETCH=1`+`NOVA_PROVISION_TOOLS=1` افتراضي
+  في الحزمة والإقلاع بينادي `provisionToolchainOnce()` (`NOVA_PROVISION_DELAY_MS`، أمان: already-present/cooldown/inflight).
+- `watchStatus` + `/watch/probe` (عدادات حقيقية بدل الصمت) · التوأمان بيردّوا `measured:false` مع السبب.
+- لسه: 9 من 11 سجل في الخزنة الدائمة من غير `evidencePath` (مديونية بيانات) · تدوير توكن تليجرام عليك.
+- `agent-gates` **22/22** · typecheck **88==88** · البانل 0 · twins ✓ · بناء الحزمة 151 ملف/12MB ✓.
+
+## المرحلة 61 — المكنة حدّثت نفسها قدامنا، وسقوط GitHub اتقفل قبل ما يجمّدها (2026-11-06)
+
+- **الحديث الذاتي مقاس على الحيّ، مش مقروء في كود**: `GET /api/nova-core/auto-update` on
+  nova.waifly.com بيّن pass كامل في 3 ثواني (`new build found … 1126s` → `تم: 2.8MB` →
+  `✓ اتحدّث: 117 ملف · 24 كانوا زي ما هم` → `✓ النسخة الجديدة: 6df4b8bc09` → `state/.nova-restart`)،
+  وبعده `currentCommit == bootCommit` و`restartNeeded:false`. المكنة بقت تلحق المستودع لوحدها.
+- **العطل اللي كان هيوقف ده كله**: في نفس القراية `lastResult:"check-failed"` ·
+  `تعذّر قراءة الإصدار: GitHub 403` · `attempts:21` — أي `api.github.com` رافض (IP مشاركة)
+  كان يجمّد التحديثات للأبد. `latestReleaseAt()` بقى بيرجع `{at, via, note}` وبيعمل `HEAD`
+  على أصل الحزمة ويقرا `Last-Modified` لو الـAPI وقع؛ `updateSource` ظهر في الحالة ولوج
+  الإقلاع. متقاس بمسار API مكسور عمدًا: `via:"asset-head"`.
+- وهم اتكشف: فرق «ساعة» في سطر `لازم تحديث` طلع `builtAt` (ساعة CI) مقابل `updated_at`
+  (ساعة رفع الأصل) — بعد التحديث الفرق 22 ثانية تحت `MIN_DELTA_S=120`. مافيش خلل توقيت،
+  والقرص كان أقديم ساعة فعلًا. محدش يمسّ التوقيتات.
+- **حارس مساحة قبل التنزيل**: `toolchainStatus.freeMB` من `fs.statfsSync`، و`provisionToolchain`
+  بيرجع `no-space`/`refused:"no-space"` من غير طلب شبكة لو الفاضل أقل من `NOVA_TOOLCHAIN_MIN_FREE_MB`
+  (180). الملاحظة الحية بقت تقول كام MB فاضل + آخر محاولة مرفوضة (`lastProvision` في الـevidence).
+- توثيق: `docs/OPS.md` — سطر «وقت الإقلاع» كان لسه بيقول الافتراضي مطفي (كذب بعد المرحلة 60)
+  واتصحيح، + `NOVA_PROVISION_TOOLS`/`NOVA_PROVISION_DELAY_MS`/`NOVA_TOOLCHAIN_MIN_FREE_MB`/
+  `NOVA_VOICE`/`NOVA_RELEASE_API_URL`/`NOVA_UPDATE_ASSET_URL` و`/watch/probe`؛ وعدّاد الأدوات
+  في العنوان بقى 55 مقاس بدل 49 قديم.
+- لسه: 9/11 سجل من غير `evidencePath` · `routes/multi-ai.ts` من غير tool loop ·
+  `NOVA_TOOLCHAIN_TIMEOUT_MS` · ملاحظة `hunt`/`verify` مابظهروش في probe الهَب (لازم يتأكد
+  إن `state/hunt-latest.json` وصل للحزمة ولا لأ) · تدوير توكنات تليجرام/exec عليك.
+- `agent-gates` **23/23** · typecheck **88==88** · self-restart **13/13** · ops-selftest **68/0** ·
+- **حارس نص جديد**: `scripts/audit-no-cjk-in-text.mjs` (الـ23) — حروف شرق-آسيوية كانت جوه
+  وصف أداة `bounty_run` (حرف شرق-آسيوي بدل كلمة «هدف» في نص عربي) اللي بيتغذّى على الـprompt، وفي `self-model.ts`
+  و`docs/` و`deploy/` ورسائل فشل الـselftest (واحدة منها كانت متجمّلة بـ`.replace(<الحرف الدخيل>, "قرا")`
+  وقت الطباعة — السورس لسه مكسور والبوابة خضرا). اتنضّفوا كلهم + selftest 4/4 · المستودع
+  نضيف على 721 ملف نصّي · القواميس (`i18n.ts`) مستثناة بسبب مكتوب.
+- لسه من التوثيق: أرقام عدّاد البوابات المكتوبة في النصوص بتقادم — بقى يتقال من التشغيل.
+
+  البناء المحلي للحزمة ما اتعملش في المرحلة دي — النشر بيعمله CI (`standalone-bundle.yml` + إعادة رفع الأصل) بعد الدمج، وده المقص.
+
+## المرحلة 62 — بيانات حالة المكنة بقت تسافر في الحزمة، والضرس الخامس بيمنع النسيان (2026-11-06)
+
+- **العطل**: `probe` على الهَب طلع 4 ملاحظات بس — `hunt` و`verify` ما ظهروش، و`advisories`
+  بتردّ `measured:false`. السبب: `build-standalone.mjs` كان بينسخ 3 ملفات بس من `state/` وتعليقه
+  بيقول «nothing else from state/ is needed» — كداب مقاس. `state/hunt-latest.json` (19 موضع قراءة)
+  و`advisory-cache.json` (12 موضع، 366K) و`verified-live.json` (11) و`vuln-corpus-index.json` (14)
+  و5 تانيين ما كنوش بيلحقوا بالحزمة: `advisory_search` بيقول «مفيش بيانات» على مكنة المستودع
+  بتاعها 1071 استشارة.
+- **الإصلاح**: `STATE_DATA` في الباندر = 11 ملف (613K) مع حد 512K/ملف وسطر معلن لأي أكبر ملف.
+  مقاس بعد البناء: `· state/: 11 ملف (613K)` · 160 ملف · 12.5 MB · zip 2.9 MB · `audit-bundle-secrets` ✓ ·
+  `sha256` مطابق للمستودع لـ`hunt-latest/advisory-cache/verified-live` · 9 ملفات دليل `audit/` لسه جوّه.
+- **الضرس الخامس** `hollow-state` في `audit-route-integrity.mjs`: كل `state/*.json` متتبَّع
+  (`git ls-files state`) وعليه قارئ في `artifacts/api-server/src` أو `artifacts/kali-panel/src`
+  لازم الباندر يسمّيه — حقنه في `--selftest` (ناقص = أحمر، بعد `STATE_DATA` = أخضر).
+- قياس حيّ بنفس الفرصة: المهام الدائمة اشتغلت على الهَب (`cve_hunt runCount:3` · `self_heal:
+  system OK` · `sys_watchdog: disk/mem: 79%` · `hubClients:3`) — المرحلة 59 بقى ليها دليل تنفيذ.
+- `docs/`: §9.5 في ملف المراجعة · «البوابة اللي بتمنع الرجوع» بقت خمس ضروس · شجرة README جوه
+  الحزمة اتصححت · عدّاد البوابات في النصوص بقى يتقال من التشغيل مش من رقم مكتوب.
+- لسه: 9/11 سجل خزنة من غير `evidencePath` · `multi-ai.ts` من غير tool loop · `NOVA_TOOLCHAIN_TIMEOUT_MS` ·
+  القرص على الهَب 79% فتنزيل الأدوات هيرفض نفسه (`no-space`) — لو عايزينه ينزّل، لازم مساحة أو مكنة أكبر.
+- `agent-gates` 23/23 · typecheck 88==88 · ops-selftest 68/0 · self-restart 13/13 · tool-labels 5/5 ·
+  `audit-no-cjk-in-text` نظيف على 722 ملف.
+
+## المرحلة 63 — البيانات المقاسة بقت تعدي حماية `state/` في الإنستولر (2026-11-06)
+
+- الهَب حدّث نفسه تاني لوحده: `01:30:24Z new build found (2418s)` → `✓ اتحدّث: 3 ملف · 138 كانوا زي ما هم` →
+  `✓ النسخة الجديدة: ceffaa2742` → `01:31:31Z up-to-date · فرق 22 ثانية`، و`currentCommit == bootCommit`.
+- بس نفس اللوج فضح مرحلة 62: `✓ محفوظ زي ما هو: … state` — `live-update.py` بيحمي `state/` كلها،
+  فأي مكنة شغّالة مش هتشوف `hunt-latest.json` ولا `advisory-cache.json` أبدًا والملاحظات هتفضل ساكتة.
+  ده مثال حيّ على إن «الملف بقى في الحزمة» مش نفس «الملف يوصل المكنة».
+- `update-manifest.json` بقى يتولّد من `STATE_DATA` في الباندر: `refreshState` = 7 ملفات بيانات
+  (صيد/استشارات/فحوص حيّة/كتالوج/مجانيات/سكوب) و`neverOverwrite` = 5 (`nova-memory`،
+  `cybernova-brain-state` اللي `autonomous-brain-pulse.mjs` بنكتهَا على المكنة، `discovered-vulnerabilities-vault`
+  اللي الأجنت بيعدّلها حيًا، `nova-mission-log`، `corpus-last-failure`). من غير الاستثناء ده أول جولة
+  كانت تمسح «وقفنا فين» من على الهَب.
+- القاعدة في الإنستولر: **الأحدث يكسب** (`getmtime`) + أسماء بفلترة صارمة (لا `..` ولا مسار) + سطر
+  «النسخة على المكنة أحدث — اتسابَت». مقاس بتحميل الموديول فعليًا وفحص `plan()`.
+- ضرس في `audit-route-integrity` يمنع الفارق: مانيفست مش متولّدة من `STATE_DATA.filter(` = أحمر ·
+  إنستولر مابيقرأش المانيفست = أحمر · `--selftest` بيحقنهم.
+- البناء: `· state/: 11 ملف (613K) · 7 منها بيتحدّث على المكنة الشغّالة` · 161 ملف · 12.5 MB · zip 2.9 MB ·
+  `audit-bundle-secrets` ✓. `docs/OPS.md` §1 + `docs/AUDIT-2026-11-05.md` §9.6.
+- لسه: 9/11 سجل خزنة من غير `evidencePath` · `multi-ai.ts` من غير tool loop · `NOVA_TOOLCHAIN_TIMEOUT_MS` ·
+  القرص على الهَب 79% فتنزيل الأدوات هيرفض نفسه (`no-space`) — عايز أدوات فعلية على المكنة دي = مساحة أكبر.
+- **وكمان (نفس المرحلة، بعد القياس):** `live-update.py` بقى يقيس القرص بـ`os.statvfs` **قبل**
+  التنزيل ويرفض لو الفاضل أقل من `NOVA_UPDATE_MIN_FREE_MB` (60) — تحديث على قرص ملىان = بايت
+  مقطوعة و`state/` ناقصة ومكنة ما ترجعش. متقاس بالتشغيل: حد خرافي → `exit 1` من غير ما يلمس
+  الشبكة، وحد صغير → `· القرص: 18731MB فاضل` وكمّل.
+- **حالة الهَب لحظة الكتابة (2026-11-06، 04:00 القاهرة = 02:00Z):** بعد جولة التحديث اللي اتكتبت في 01:46:31Z المكنة ساكتة
+  — كل المسارات بترجع `502 Bad Gateway` من nginx لأكتر من 20 دقيقة (`/api/nova-core/status`,
+  `/watch/probe`). `watchdog` مافتحش `nova:down` لحد دلوقتي (جدوله كل 30 دقيقة)، والسبب ماقدرناش
+  نقوله من هنا: اللوج `logs/` جوه الحاوية ومافيش وصول_shell_ لحد ما اللوحة ترجع. اللي مطلوب:
+  **Restart من لوحة Waifly** (مش «Change Language» ⛔) — وبعدها `boot.mjs` عنده rollback لو
+  `.update-pending` ما اتأكدش (`[supervisor] new build never became healthy — rolling back`).
+- **عطل CI مقفول**: `pull_request.paths` في `agent-gates.yml` كانت أضيق من `push.paths`
+  (`scripts/*.mjs` وبس) — PR #222 اللي عدّل `deploy/live-update.py` طلع بـ`no checks reported`.
+  القايمة بقت `scripts/**` + `deploy/**` في الاتنين، وضرس في `check-workflows.mjs` يمنع الشكل ده
+  (`push.paths` عنصر مش مغطّى في `pull_request.paths` = أحمر) · `check-workflows: 19/19` ✓.
+- **الواتشدوج نفسه كان ساكت**: `NOVA uptime watchdog` `state=active` بس جدولياته اتبلعت — آخر 4
+  تشغيلات مجدولة `23:46Z · 18:12Z · 10:25Z · 02:41Z` (~4/يوم بدل `*/30`)، ولما الهَب نزل 01:46Z
+  مابقاش شغلة من 23:46Z → `nova:down` ما اتفتحش. الشغل الجاي: التنبيه يتوصّل بـtrigger بيتحرك
+  فعلًا (`workflow_run` ورا Pages deploy، أو سطر probe جوّه `NOVA live mission` اللي اشتغل 01:42Z)
+  بدل cron تاني يبلعه GitHub. مقاس وموثّق في §9.7.
+
+## المرحلة 64 — الردّ بقى يقول هو بتكلم من أنهي نسخة، والحزمة بتسحب كل 5 دقايق (2026-11-06)
+
+- الشكوى: «الشات بيقول 49 أداة والمستودع 55». بالتوقيتات: `#215` (49 أداة) اتدمج 22:35:04Z،
+  `#216` (55) اتدمج 00:12:49Z، وسؤال المستخدم 00:14:17Z — يعني الردّ قال **الحقيقة الخاصة بالبناء
+  اللي كان شغّال**، والفارق 88 ثانية بس المكنة بتسحب كل 15 دقيقة. الكذب كان في إن مفيش بصمة في الردّ.
+- `SelfModel.build = {commit, builtAt, ageMin, label}` من نفس `localBuild()` بتاعة الإنستولر،
+  و`greetingAnswer()`/`identityAnswer()` بيطبعوا سطر النسب؛ `build.json` مش موجود → السطر بيقول
+  «مش هقدر أقولك البصمة» بدل ما يختلق واحدة. والـfallback في `runAgent` بقى كامل (`build: {…null…}`) —
+  من غيره `model.build` undefined والتحية تقع جوه الـcatch.
+- `NOVA_AUTO_UPDATE_MINUTES=5` افتراضي في `boot.mjs` + `start.sh` (12 فحص/ساعة، جوه سقف GitHub) —
+  الفرق بين الدمج والردّ بقى 5 دقايق بدل 15.
+- إقلاع حقيقي للحزمة المقابلة: `POST /api/nova-core/chat {"message":"اهلا"}` → `tools":55` +
+  «**55** أداة حقيقية، وفهرس **128,526**… _(الأرقام دي مقاسة من بناء `3113dc6` · اتبني من 0 دقيقة…)_»
+  و`provider: nova-builtin+self-model`. (ده بيدي المستخدم طريقة يقيّم بيها هو نفسه: رقم النسخة في الردّ.)
+- `ops-selftest` بقى **71/0** (3 حالات: البصمة مقاسة أو معترفة · التحية و«انت مين» بيطبعوا النسب والـfallback
+  كامل · الباندر بيضبط 5 دقايق في الاتنين ومنع `${VAR:-5}` جوه الـtemplate) · `agent-gates` 23/23 · typecheck 88==88.
+- توثيق: §9.8 في ملف المراجعة فيه تايبلايت التوقيتات · `NOVA_AUTO_UPDATE_MINUTES` في `docs/OPS.md`.
+

@@ -111,3 +111,6 @@ state/vuln-corpus/
 
 # the machine bootstrap writes this; it holds NOVA_EXEC_TOKEN
 .env.local
+# بايتات بايثون بتتولد من سكريبتات deploy/
+__pycache__/
+*.pyc

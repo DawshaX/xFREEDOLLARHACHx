@@ -14,6 +14,8 @@
  */
 
 import dns from "node:dns/promises";
+import fs from "node:fs";
+import path from "node:path";
 import net from "node:net";
 import crypto from "node:crypto";
 import {
@@ -52,6 +54,12 @@ import {
 } from "../standalone-api";
 import { assertAuthorized, discoverProgram, fetchSecurityTxt, loadPrograms, upsertProgram, normalizeHost } from "../ops/scope";
 import { provisionToolchainOnce } from "../ops/toolchain";
+import { listVault, draftReport } from "../ops/findings-vault";
+import { readPermanentVault, permanentVaultDrift } from "../ops/permanent-vault";
+import { libraryStatus, lookupCve, lookupProduct } from "../ops/advisory-library";
+import { liveVerifyView } from "../ops/live-verify";
+import { freeHostSummary, probeCatalogue } from "../ops/free-hosts";
+import { autonomyLevel, autonomySummary } from "../ops/autonomy";
 import { catalogStatus, huntCandidates } from "../ops/bounty-catalog";
 import { vulnQuery } from "./vuln-keyword";
 import {
@@ -462,6 +470,66 @@ export const AGENT_TOOLS: AgentTool[] = [
     risk: "safe",
     input_schema: { type: "object", properties: {} },
   },
+  // ── المرحلة 59: الكنوز اللي كانت في المستودع ومش متوصلة بالأجنت ──────────
+  // `findings-vault` (النتايج الموثقة + مسودات الإفصاح)، `advisory-library`
+  // (1071 استشارة GitHub)، `live-verify` (براهين الصفر-FP)، `free-hosts`
+  // (الماكنات المجانية اللي تقدر تشيل الأدوات التقيلة)، `autonomy` (مستوى
+  // الاستقلالية الحالي). كل الدول كانت مستوردة في الـroutes بس — فالأجنت كان
+  // يوصف نفسه بـ49 أداة وهو فعليًا أقدر من كده بكتير.
+  {
+    name: "vault_list",
+    title: "خزنة النتائج الموثقة",
+    description: "يقرأ خزنة الاكتشافات الحقيقية: العدد، الموثق، وأحدث السجلات مع عدد أدلتها. ده المصدر الوحيد اللي تصح تتبني عليه ادعاءات «لقيت ثغرة».",
+    category: "intel",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { limit: { type: "number", description: "كام سجل من 1 لـ20، افتراضي 5" }, severity: { type: "string" } },
+    },
+  },
+  {
+    name: "vault_draft",
+    title: "مسودة إفصاح من الخزنة",
+    description: "يولّد مسودة إفصاح جاهزة لسجل موجود في الخزنة (نفس اللي بيكتبه المنصة في state/disclosure-drafts).",
+    category: "intel",
+    risk: "sensitive",
+    input_schema: { type: "object", properties: { key: { type: "string", description: "مفتاح السجل زي SKY-VULN-01" } }, required: ["key"] },
+  },
+  {
+    name: "advisory_search",
+    title: "مكتبة استشارات GitHub",
+    description: "بدّور في الكاش المحلي لاستشارات GitHub (GHSA): حسب منتج أو حسب CVE، ومعاه حالة المكتبة ونضارتها.",
+    category: "intel",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: { product: { type: "string", description: "اسم منتج/حزمة" }, cve: { type: "string", description: "معرّف CVE للبحث العكسي" } },
+    },
+  },
+  {
+    name: "live_verify",
+    title: "تقرير التحقق الحيّ",
+    description: "يقرأ آخر تقرير تحقق حيّ: الحكم، الأدوات اللي اتنفذت، الفحوصات اللي وقعت، وعمر التقرير. ده البرهان مش الرأي.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "free_hosts",
+    title: "الماكنات المجانية المتاحة",
+    description: "بيقيس الاستضافة المجانية اللي تقدر تشغّل أدوات تقيلة (nmap/nuclei/ffuf) ويرجّع اللي شغال فعلاً. بيجاوب سؤال «منين نشتغل» بالقياس.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "autonomy_state",
+    title: "مستوى الاستقلالية الحالي",
+    description: "كم البرنامج مسموح لنفسه يشتغل لوحده دلوقتي: المستوى، آخر جولة، وعدد البرامج في الكتالوج — عشان أقول لك حدودي الحقيقية مش خيالي.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
   {
     name: "task_list",
     title: "المهام والقدرات",
@@ -591,7 +659,7 @@ export const AGENT_TOOLS: AgentTool[] = [
     name: "job_create",
     title: "إنشاء مهمة فحص حقيقية",
     description:
-      "يبني job حقيقي على目标 مصرّح به: خطة مهام (DNS/TLS/ترويسات/منافذ/JS/CT-logs + أدوات النود لو منصوبة) ويشغّلها بمعدل آمن، ويخزّن الأدلة. ده هو «التنفيذ» مش العرض.",
+      "يبني job حقيقي على هدف مصرّح به: خطة مهام (DNS/TLS/ترويسات/منافذ/JS/CT-logs + أدوات النود لو منصوبة) ويشغّلها بمعدل آمن، ويخزّن الأدلة. ده هو «التنفيذ» مش العرض.",
     category: "mission",
     risk: "active",
     input_schema: {
@@ -1535,6 +1603,159 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
             ? `نزّلت ${record.installed}/${record.total} في \`${status.dir}\` خلال ${Math.round(record.ms / 1000)} ثانية · أدواتي دلوقتي: ${status.present.join(" · ")}`
             : `التنزيل خلص بس ولا أداة اتثبتت (${record.results.map((r) => `${r.bin}:${r.status}`).join(", ").slice(0, 200)})`,
           { dir: status.dir, installed: record.installed, total: record.total, ms: record.ms, present: status.present, missing: status.missing, results: record.results },
+        );
+      }
+
+      case "vault_list": {
+        const limit = Math.min(20, Math.max(1, Number(rawArgs.limit ?? 5) || 5));
+        const sev = rawArgs.severity ? String(rawArgs.severity) : undefined;
+        const v = listVault({ limit, ...(sev ? { severity: sev } : {}) });
+        const perm = readPermanentVault(limit);
+        if (!v.present) {
+          // خزنة الشغل (state/findings-vault.json) مش على المكنة دي — لكن الخزنة
+          // الدائمة (state/discovered-vulnerabilities-vault.json) هي أغلى ملف في
+          // المستودع وكانت مخبية عن الأجنت خالص. بقى المصدر التاني بيتقرا.
+          if (!perm.present) {
+            return done(false, `مفيش خزنة على المكنة دي: لا ${v.path} ولا ${perm.path}.`, {
+              present: false,
+              jobVault: v.path,
+              permanentVault: perm.path,
+            });
+          }
+          const drift = permanentVaultDrift(perm);
+          const items = perm.vulnerabilities.map((f) => ({
+            key: f.id,
+            title: f.titleEn,
+            titleAr: f.titleAr,
+            severity: f.severity,
+            status: f.status,
+            program: f.program,
+            cwe: f.cwe,
+            evidencePath: f.evidencePath,
+            evidenceOnDisk: f.evidenceOnDisk,
+            pocOnDisk: f.pocOnDisk,
+          }));
+          return done(
+            true,
+            `الخزنة الدائمة (${perm.path}): ${perm.counts.vulnerabilities} ثغرة مكتشفة · ${perm.counts.notes} ملاحظة معمارية · ${perm.counts.reports} تقرير إفصاح · ${perm.counts.rules} قاعدة تعلّم. آخر تحديث ${perm.updatedAt ?? "غير مقاس"}. ${drift.countMismatch ? `تنبيه: ${drift.detail}` : ""}`,
+            { present: true, source: perm.path, schema: "permanent-vault", counts: perm.counts, drift, items, notes: perm.notes, rules: perm.rules },
+          );
+        }
+        const items = v.items.map((f) => ({
+          key: f.key,
+          title: f.title,
+          titleAr: f.titleAr,
+          host: f.host,
+          severity: f.severity,
+          confidence: f.confidence,
+          verified: f.verified,
+          evidenceCount: Array.isArray(f.evidence) ? f.evidence.length : 0,
+          occurrences: f.occurrences,
+          program: f.program?.handle ?? null,
+        }));
+        return done(
+          true,
+          `الخزنة: ${v.counts.total} نتيجة (${v.counts.verified} موثقة) · آخر تعديل ${v.updatedAt ?? "غير مقاس"} · ${items.length} معروض${sev ? ` (severity=${sev})` : ""}.`,
+          { present: true, path: v.path, counts: v.counts, updatedAt: v.updatedAt, items },
+        );
+      }
+
+      case "vault_draft": {
+        const key = String(rawArgs.key ?? "").trim();
+        if (!key) return done(false, "محتاج مفتاح سجل من الخزنة (مثال SKY-VULN-01) — خد الأول من vault_list.", { need: "key" });
+        const d = draftReport(key);
+        if (!d.ok) {
+          // الخزنة الدائمة فيها تقارير إفصاح مكتوبة بالفعل (`reportMarkdownPath`) —
+          // أخلّس منها أحسن ما أقول «مفيش» وأنا شايل الملف.
+          const perm = readPermanentVault(50);
+          const rec = perm.present ? perm.vulnerabilities.find((f) => f.id === key) : null;
+          if (rec?.reportMarkdownPath) {
+            try {
+              const md = fs.readFileSync(path.resolve(process.cwd(), rec.reportMarkdownPath), "utf8");
+              return done(
+                true,
+                `مسودة الإفصاح المحفوظة لـ${key} (${md.length} حرف) من ${rec.reportMarkdownPath}.`,
+                { ok: true, key, chars: md.length, source: rec.reportMarkdownPath, markdown: md },
+              );
+            } catch (err) {
+              return done(false, `السجل موجود بس ملف التقرير مقروءش (${rec.reportMarkdownPath}): ${(err as Error).message}`, {
+                ok: false,
+                key,
+                reportMarkdownPath: rec.reportMarkdownPath,
+              });
+            }
+          }
+        }
+        return done(
+          Boolean(d.ok),
+          d.ok
+            ? `مسودة إفصاح جاهزة لـ${key} (${(d.markdown ?? "").length} حرف) — المرفقة بالبراهين بس اللي بتتبعت.`
+            : `مفيش مسودة لـ${key}: ${d.error ?? d.reasonAr ?? "السجل مش موجود أو مش متوثق"}`,
+          { ok: d.ok, key, chars: (d.markdown ?? "").length, markdown: d.markdown ?? null, error: d.error ?? null, reasonAr: d.reasonAr ?? null },
+        );
+      }
+
+      case "advisory_search": {
+        const st = libraryStatus();
+        const cve = rawArgs.cve ? String(rawArgs.cve).trim().toUpperCase() : null;
+        const product = rawArgs.product ? String(rawArgs.product).trim() : null;
+        if (!st.measured) {
+          return done(false, `مكتبة الاستشارات لسه ما اتزامنتش هنا (${st.source}) — شغّل syncAdvisories أو اسأل على الكاش في state/advisory-cache.json.`, {
+            measured: false,
+            source: st.source,
+          });
+        }
+        if (cve) {
+          const row = lookupCve(cve);
+          return done(Boolean(row), row ? `لقيت استشارة لـ${cve}.` : `مفيش استشارة لـ${cve} في ${st.total} استشارة (${st.ageMin ?? "عمر غير مقاس"} دقيقة).`, {
+            cve,
+            hit: row,
+            library: { total: st.total, at: st.at, ageMin: st.ageMin },
+          });
+        }
+        if (!product) return done(false, "قولي منتج (npm/pip/…) أو CVE.", { total: st.total, at: st.at });
+        const rows = lookupProduct(product, 10);
+        return done(
+          rows.length > 0,
+          rows.length ? `${rows.length} استشارة لـ«${product}» من أصل ${st.total}.` : `مفيش استشارة مسجلة لـ«${product}» في ${st.total}.`,
+          { product, rows, library: { total: st.total, at: st.at, ageMin: st.ageMin, bySeverity: st.bySeverity } },
+        );
+      }
+
+      case "live_verify": {
+        const v = liveVerifyView();
+        if (!v.measured) {
+          return done(false, "مفيش تقرير تحقق حيّ على المكنة دي — بيتكتب بعد جري الأدلة في CI.", { measured: false });
+        }
+        return done(
+          v.failedChecks.length === 0,
+          `${v.verdict ?? "لا حكم"} · ${v.tools.length} أداة اتنفذت${v.failedChecks.length ? ` · ${v.failedChecks.length} فحص واقع` : ""} · عمر ${v.ageMin ?? "غير مقاس"} دقيقة.`,
+          v,
+        );
+      }
+
+      case "free_hosts": {
+        const s = await freeHostSummary();
+        const probes = await probeCatalogue().catch(() => [] as Array<{ id: string; reachable: boolean; ms: number | null; note: string }>);
+        const live = probes.filter((h) => h.reachable);
+        return done(
+          s.reachable > 0,
+          `${s.reachable}/${s.probed} مكان مجاني بيدّي رد حيّ (من ${s.total} في الكتالوج، ${s.usableNoCard} من غير كارت). أنسب واحد: ${s.bestHubAr || s.bestHubId || "مش محدد"}.` +
+            (live.length ? ` الحيّ: ${live.slice(0, 4).map((h) => `${h.id}${h.ms === null ? "" : ` (${h.ms}ms)`}`).join(" · ")}.` : " والقياس دلوقتي: ولا واحد رد."),
+          { summary: s, probes },
+        );
+      }
+
+      case "autonomy_state": {
+        const lvl = autonomyLevel();
+        const sum = autonomySummary();
+        const cs = catalogStatus();
+        return done(
+          true,
+          `الاستقلالية: ${lvl} · آخر جولة ${sum.lastSweep ?? "غير مسجلة"} · ${sum.programs} برنامج له جولة مسجلة هنا · الكتالوج: ${
+            cs.present ? `${cs.programs} برنامج (${cs.bountyPrograms} بدفع)${cs.fetchedAt ? ` · اتجيب ${cs.fetchedAt}` : ""}` : "مش موجود"
+          }.`,
+          { level: lvl, lastSweep: sum.lastSweep, sweptPrograms: sum.programs, catalog: cs },
         );
       }
 

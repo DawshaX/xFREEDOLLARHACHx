@@ -22,18 +22,20 @@ on:
       - "artifacts/api-server/src/routes/**"
       - "artifacts/api-server/src/lib/standalone-api.ts"
       - "artifacts/kali-panel/src/**"
-      - "scripts/*.mjs"
-      - "scripts/lib/**"
+      - "scripts/**"
+      - "deploy/**"
       - "state/curated-cve-examples.json"
       - ".github/workflows/agent-gates.yml"
   pull_request:
+    # نفس قوائم `push` بالظبط — أي ضيق هنا معناه PR يدمج من غير ما البوابات تتشغّل
+    # (قِيس 2026-11-06: PR عدّل `deploy/live-update.py` وقال «no checks reported»).
     paths:
       - "artifacts/api-server/src/lib/agent/**"
       - "artifacts/api-server/src/routes/**"
       - "artifacts/api-server/src/lib/standalone-api.ts"
       - "artifacts/kali-panel/src/**"
-      - "scripts/*.mjs"
-      - "scripts/lib/**"
+      - "scripts/**"
+      - "deploy/**"
       - "state/curated-cve-examples.json"
       - ".github/workflows/agent-gates.yml"
   schedule:

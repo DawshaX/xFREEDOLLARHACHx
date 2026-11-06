@@ -61,6 +61,12 @@ const RULES = [
   { key: "R4", re: /(epss|epssScore|epss_score)\s*(\|\||\?)?\|\|\s*0\.9\d+|(epssScore|epss)\s*:\s*0\.9\d+/g, why: "EPSS افتراضي — EPSS قياس خارجي لـCVE منشورة، مفيش «تقريبًا 0.95»" },
   { key: "R4b", re: /\b(cvss|cvssScore)\s*:\s*9\.\d+,?\s*$/gm, uiOnly: true, why: "درجة CVSS مكتوبة في الصفحة — بتيجي من السجل ده أو متعرضش" },
   { key: "R5", re: /\b(total|count|totalCves|criticalCves|highCves|withExploit)\s*\|\|\s*\d{4,}/g, why: "رقم احتياطي بيلبس لبوس قياس (`x?.total || 76680`)" },
+  // R6 — من المرحلة 59: كان في `core.ts` سطر `**مش بقدر:** أشغّل Metasploit/Burp
+  // (مفيش root ولا مساحة)` وهو مكتوب في وقت كانت فيه `tools_install` و`kali_toolbox`
+  // في السجل — أي إن الأجنت بينكر أدواته بيده، والمستخدم يسمع «مقدرش» وهو يقدر.
+  // الكلام عن القدرة لازم يتحسب من buildSelfModel()/toolchainStatus()، و«canDo»
+  // المصفوفة الحرفية (من غير `${`) = ادّعاء ثابت.
+  { key: "R6", re: /\*\*(مش بقدر|لا أقدر|أقدر أشتغل|قدراتي|عندي قدرة)[^*]*\*\*|canDo:\s*\[\s*["'`][^"'`$]*["'`]\s*\]/g, why: "جملة قدرة مكتوبة في الكود — القدرات بتتبنى من القياس (`capabilityTruthLine`) مش من نص ثابت" },
 ];
 
 function listFiles(dir, out = []) {
@@ -133,6 +139,19 @@ function scan(rel, text, known, storesNote = "state/advisory-cache.json + خزن
         findings.push({ line: i + 1, rule: "R1", text: `معرّف «${m[1]}» بيتنسب لثغرة ومش موجود في أي مخزن بيانات (${storesNote})`, snippet: line.trim().slice(0, 140) });
       }
     }
+    // R7 — هوية واحدة. المرحلة دي كشفت إن `ai-multi-router.ts` كان بيعرّف
+    // NOVA_SYSTEM_PROMPT تانية بتوعد بـ«shell على Kali عبر WebSocket» و«ExploitDB»
+    // و`routes/multi-ai.ts` فيه صفر أدوات. أي تعريف تاني للشخصية = نسخة بتكذب.
+    const idDef = line.match(/^\s*(?:export )?const (NOVA_SYSTEM_PROMPT|NOVA_IDENTITY)\b/);
+    if (idDef && !/lib\/agent\/persona\.ts$/.test(rel) && !line.includes("NOVA_PERSONA_PROMPT")) {
+      findings.push({
+        line: i + 1,
+        rule: "R7",
+        text: "هوية نوفا بتتعرّف في `lib/agent/persona.ts` وبس — الاستيراد والتركيب أحل من نسخة تانية بتوعد بشغل ما المسار ده ما بيعملوش",
+        snippet: line.trim().slice(0, 140),
+      });
+    }
+
     for (const r of RULES) {
       if (r.uiOnly && !isUi) continue;
       r.re.lastIndex = 0;
@@ -163,6 +182,12 @@ if (process.argv.includes("--selftest")) {
     ["src/pages/C.tsx", '{ id: "nvd", latencyMs: 0, status: "unknown" }', []],
     ["src/pages/D.tsx", 'id: "CVE-2026-61536",', []],
     ["src/pages/E.tsx", 'placeholder="CVE-2031-9999 بحث"', []],
+    ["src/lib/agent/core.ts", '"**مش بقدر:** أشغّل Metasploit على السيرفر ده.",', ["R6"]],
+    ["src/lib/agent/x.ts", 'canDo: ["تشغيل 50 أداة"],', ["R6"]],
+    ["src/lib/agent/ok.ts", 'canDo: [`تشغيل ${AGENT_TOOLS.length} أداة`],', []],
+    ["src/lib/other.ts", 'export const NOVA_SYSTEM_PROMPT = `أنت نوفا`;', ["R7"]],
+    ["src/lib/agent/persona.ts", "export const NOVA_SYSTEM_PROMPT = `أنت نوفا`;", []],
+    ["src/lib/ai-multi-router.ts", "export const NOVA_SYSTEM_PROMPT = `${NOVA_PERSONA_PROMPT}", []],
   ];
   let bad = 0;
   for (const [file, text, expect] of cases) {

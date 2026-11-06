@@ -10,7 +10,7 @@
  * Layout
  *   server.mjs      the whole API server, bundled by esbuild (one file)
  *   public/         the built panel (HTML/JS/CSS)
- *   state/          long-term memory + brain state (real files, portable)
+ *   state/          memory + brain state + measured data (hunt-latest, advisory-cache, …)
  *   start.sh        `node server.mjs` with sane defaults
  *   start-tunnel.sh start + a free Cloudflare HTTPS tunnel (no account)
  *   package.json    so Panels that require one are happy
@@ -51,12 +51,81 @@ fs.mkdirSync(OUT, { recursive: true });
 fs.copyFileSync(SERVER, path.join(OUT, "nova-app.mjs"));
 copyDir(PANEL, path.join(OUT, "public"), { maxBytes: 25 * 1024 * 1024 });
 
-// Memory files worth carrying over (nothing else from state/ is needed).
+// البراهين اللي الخزنة الدائمة بتشير ليها (`evidencePath: audit/...`) — من غيرها
+// المكنة الحيّة بتقرا «11 ثغرة» بس ما تلقاش ملف proofs: القياس على
+// nova.waifly.com رجّع «2 سجل برهانه مسجّل ومش موجود على القرص» والحقيقة إن الحزمة
+// ما كانتش بتشمل audit/ خالص (204 كيلوبايت، 21 ملف). بوابة الأسرار بتفحص المجلد
+// ده زي أي ملف تاني، فمفيش حاجة حرفية هتعدي.
+const AUDIT = path.join(ROOT, "audit");
+if (fs.existsSync(AUDIT)) copyDir(AUDIT, path.join(OUT, "audit"), { maxBytes: 8 * 1024 * 1024 });
+
+// الحالة + البيانات المقاسة اللي السورس والباندل بيقراوها وقت التشغيل.
+// التعليق القديم كان بيقول «nothing else from state/ is needed» — وده كان غلط
+// مقاس: على nova.waifly.com ملاحظة `hunt` ما بتظهرش خالص في /api/nova-core/watch/probe
+// و`advisories` بتردّ measured:false، رغم إن المستودع فيه state/hunt-latest.json
+// (19 موضع قراءة في السورس) وstate/advisory-cache.json (12 موضع). يعني الميزة كانت
+// «مش موجودة» على الحزمة المنشورة والكود نازل. القاعدة من دلوقتي: أي ملف state/
+// متتبَّع وعليه قارئ وقت التشغيل لازم يكون في القائمة دي، و
+// scripts/audit-route-integrity.mjs (hollow-state) بيمنع أي استثناء ساكت.
+const STATE_DATA = [
+  // حالة المحرك نفسها — تتكتب على المكنة، وبننقلها لو موجودة عشان الذاكرة تفضل
+  "nova-memory.json",
+  "cybernova-brain-state.json",
+  "discovered-vulnerabilities-vault.json",
+  // بيانات مقاسة بتجي من CI ومن فحوص حيّة — محركات البحث والملاحظات بيقروها
+  "hunt-latest.json",
+  "advisory-cache.json",
+  "verified-live.json",
+  "vuln-corpus-index.json",
+  "corpus-last-failure.json",
+  "nova-brain-latest.json",
+  "nova-mission-log.json",
+  "free-hosts.json",
+  "cryptocom-hackerone-scope.json",
+];
+/** أكبر ملف يُنقل تلقائيًا — اللي فوق ده قرار صريح، مش سرقة مساحة على حاوية 512 MB. */
+const STATE_DATA_MAX_KB = 512;
 fs.mkdirSync(path.join(OUT, "state"), { recursive: true });
-for (const name of ["nova-memory.json", "cybernova-brain-state.json", "discovered-vulnerabilities-vault.json"]) {
+let stateCopied = 0;
+let stateKb = 0;
+for (const name of STATE_DATA) {
   const src = path.join(STATE, name);
-  if (fs.existsSync(src)) fs.copyFileSync(src, path.join(OUT, "state", name));
+  if (!fs.existsSync(src)) continue;
+  const kb = Math.round(fs.statSync(src).size / 1024);
+  if (kb > STATE_DATA_MAX_KB) {
+    console.log(`· state/${name}: ${kb}K أكبر من حد ${STATE_DATA_MAX_KB}K — اتساب بره الحزمة بقرار`);
+    continue;
+  }
+  fs.copyFileSync(src, path.join(OUT, "state", name));
+  stateCopied += 1;
+  stateKb += kb;
 }
+// updater بيحمي `state/` عشان ذاكرة المكنة وملفاتها اللي بتتكتب حيًا — وده غلط
+// مع البيانات اللي CI بينشرها (صيد، استشارات، فحوص حيّة): المكنة مابتكتبهاش،
+// فلو ما سافرتش مع كل تحديث هتفضل «مش موجودة» للأبد. القائمة دي بتتولّد من
+// STATE_DATA نفسه (مش قائمة تانية تتنسى)، و`deploy/live-update.py` بيقراها من
+// update-manifest.json وبيقاعدة «الأحدث يكسب».
+const STATE_MACHINE_OWNED = new Set([
+  "nova-memory.json", // ذاكرة المكنة نفسها
+  "cybernova-brain-state.json", // «وقفنا فين» — scripts/autonomous-brain-pulse.mjs بيحدّثه على المكنة
+  "discovered-vulnerabilities-vault.json", // الخزنة: agent بيعدّلها على الحيّة
+  "nova-mission-log.json", // اللوج بيتكتب على المكنة (وفي public/state للنسخة العامة)
+  "corpus-last-failure.json", // سجل فشل الكوربوس المحلي
+]);
+const REFRESH_STATE = STATE_DATA.filter((name) => !STATE_MACHINE_OWNED.has(name));
+fs.writeFileSync(
+  path.join(OUT, "update-manifest.json"),
+  `${JSON.stringify(
+    {
+      about: "ملفات state اللي CI بينشرها وبتتنقل فوق مكنة شغّالة. بتتولّد من STATE_DATA في scripts/build-standalone.mjs — مش قائمة تانية.",
+      refreshState: REFRESH_STATE,
+      neverOverwrite: [...STATE_MACHINE_OWNED],
+    },
+    null,
+    2,
+  )}\n`,
+);
+console.log(`· state/: ${stateCopied} ملف (${stateKb}K) جوّه الحزمة · ${REFRESH_STATE.length} منها بيتحدّث على المكنة الشغّالة`);
 
 // The panel reads the mission log from its own /state/ path, so ship a copy
 // inside public/state/ too (the same mirror the Pages deploy uses).
@@ -178,6 +247,19 @@ process.env.HOST = process.env.HOST || "0.0.0.0";
 process.env.NODE_ENV = process.env.NODE_ENV || "production";
 process.env.NOVA_STATIC_DIR = process.env.NOVA_STATIC_DIR || join(HERE, "public");
 process.env.NOVA_MEMORY_FILE = process.env.NOVA_MEMORY_FILE || join(HERE, "state", "nova-memory.json");
+// الحزمة المحمولة = مكنة واحدة، بلا مدير، والمستخدم قال «يعرف يحمّل أدوات وكل حاجة».
+// قبل كده كان لازم أحد يكتب NOVA_TOOLCHAIN_FETCH=1 بنفسه، فالمكنة الحيّة فضلت
+// vendor/bin فيها فاضي رغم إن القرص قابل للكتابة (اتقاس). الافتراضي بقى: التنزيل
+// مسموح، وNOVA_TOOLCHAIN_FETCH=0 يرجّع القفل.
+process.env.NOVA_TOOLCHAIN_FETCH = process.env.NOVA_TOOLCHAIN_FETCH || "1";
+process.env.NOVA_PROVISION_TOOLS = process.env.NOVA_PROVISION_TOOLS || "1";
+
+// الفحص كل 15 دقيقة خلّى المكنة تردّ ببناء قِدْم بدقايق بعد الدمج (مقاس: PR #216
+// اتدمج 00:12:49Z وسؤال المستخدم 00:14:17Z لسه طالع من البناء اللي قبله). 5 دقايق
+// = 12 فحص/ساعة لـ api.github.com — جوه سقف الـ60/ساعة غير المصادق، ومعاه fallback
+// الـHEAD على الأصل لو الـAPI رفض. NOVA_AUTO_UPDATE_MINUTES=15 يرجّع القديم.
+// (ملاحظة للبنّاء: السطر ده جوه template literal — مفيش backticks هنا عمدًا.)
+process.env.NOVA_AUTO_UPDATE_MINUTES = process.env.NOVA_AUTO_UPDATE_MINUTES || "5";
 
 const explicit = String(process.env.NOVA_ROLE || "").trim().toLowerCase();
 const role = explicit || (process.env.NOVA_SERVER ? "node" : "hub");
@@ -383,6 +465,9 @@ cd "$HERE" || exit 1
 export NODE_ENV=production
 export HOST=0.0.0.0
 export NOVA_STATIC_DIR="$HERE/public"
+[ -z "$NOVA_TOOLCHAIN_FETCH" ] && export NOVA_TOOLCHAIN_FETCH=1
+[ -z "$NOVA_PROVISION_TOOLS" ] && export NOVA_PROVISION_TOOLS=1
+[ -z "$NOVA_AUTO_UPDATE_MINUTES" ] && export NOVA_AUTO_UPDATE_MINUTES=5
 export NOVA_MEMORY_FILE="$HERE/state/nova-memory.json"
 export NOVA_JOBS_REL="$HERE/state/jobs"
 export NOVA_PROGRAMS_FILE="$HERE/state/programs.json"
@@ -568,7 +653,7 @@ Main file     : لو اللوحة سألت — server.mjs (أو boot.mjs، ال�
     nova-app.mjs      السيرفر كامل في ملف واحد
     nova-agent.js     وكيل النود (بيتنفّذ أوامر الهاب)
     public/           الواجهة جاهزة
-    state/            الذاكرة وملفات الحالة
+    state/            الذاكرة + بيانات مقاسة (11 ملف: صيد، استشارات، corpus، خزنة)
     diagnose.mjs      تشخيص اتصال النود
     node.env.example  نموذج إعدادات النود
     start.sh          تشغيل الهاب

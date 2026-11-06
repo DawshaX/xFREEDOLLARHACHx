@@ -1569,6 +1569,33 @@ if (path === "/nova-core/version") {
     };
   }
 
+  if (path === "/nova-core/watch/probe") {
+    return {
+      ok: true,
+      standalone: true,
+      measured: false,
+      notes: [],
+      reasonAr: "البروب بيقيس حالة المكنة الحيّة — الوضع الساكن مافيهوش مكنة ولا قرايات state.",
+    };
+  }
+
+  if (path === "/nova-core/watch") {
+    // الوضع الساكن مافيهوش عملية شغالة — فالمراقب مافيهوش. البانل هيشوف
+    // notes: [] مع سبب عربي، مش صمت يتفهم إنه «مفيش جديد».
+    return {
+      ok: true,
+      standalone: true,
+      measured: false,
+      enabled: false,
+      notes: [],
+      lastTickAt: null,
+      startedAt: null,
+      hubClients: 0,
+      reasonAr: "الوضع الساكن (GitHub Pages) مافيهوش عملية شغالة — المراقبين بيجروا على السيرفر الحيّ وبيكتبوا في state/proactive-log.json.",
+      howAr: "شغّل الحزمة الحيّة (nova-24-7.zip) أو اسأل على nova.waifly.com/api/nova-core/watch.",
+    };
+  }
+
   if (path === "/ops/hunt/candidates") {
     return {
       ok: true,
