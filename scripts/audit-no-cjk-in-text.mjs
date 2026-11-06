@@ -3,11 +3,11 @@
  * audit-no-cjk-in-text — النص العربي اللي بيطّلع للنموذج أو للمشغّل يفضل عربي.
  * ─────────────────────────────────────────────────────────────────────────
  * اللي حصل فعلًا (قِيس 2026-11-06): حروف صينية/يابانية دخلت جوه نص عربي في
- * `agent/tools.ts` (وصف أداة `bounty_run`: «على目标 مصرّح به») وفي `self-model.ts`
+ * `agent/tools.ts` (وصف أداة `bounty_run`: حرف شرق-آسيوي بدل كلمة «هدف») وفي `self-model.ts`
  * وفي `docs/` و`deploy/` ورسائل فشل في `scripts/ops-selftest.mjs`. ده مش تجميل:
  * وصف الأداة بيّتاكل في الـprompt، فالنموذج بيلفظه وبيردّ بكلام مكسر — وده حرفيًا
- * واحد من مصادر «الشات عبيط». وفي `.mjs` كان فيه «حل» أحط: `.replace("读","قرا")`
- * وقت الطباعة — يعني السورس لسه مكسور والبوابة خضرا.
+ * واحد من مصادر «الشات عبيط». وفي `.mjs` كان فيه «حل» أحط: `.replace(<الحرف الدخيل>,
+ * "قرا")` وقت الطباعة — يعني السورس لسه مكسور والبوابة خضرا.
  *
  * القاعدة: أي ملف متتبَّع نصّي مفيش فيه حروف شرق-آسيوية، إلاقاموس لغات صريح
  * (المسمّى في EXEMPT تحت، بسبب مكتوب). ملفات البيانات اللي بنكتبها إحنا — زي
@@ -73,10 +73,14 @@ function runSelftest() {
       console.log(`  FAIL ${name}`);
     }
   };
+  // البوابة بتفحص نفسها كمان (ملف متتبَّع)، فالحروف اللي في الحقن متبنيّة بـ
+  // `fromCharCode` مش مكتوبة — نفس الحرف بالضبط، بس السورس يفضل نضيف.
+  const INTRUDER = String.fromCharCode(0x76ee, 0x6807);
+  const INTRUDER2 = String.fromCharCode(0x540c, 0x6b65);
   try {
     fs.writeFileSync(path.join(dir, "clean.ts"), 'const a = "الثغرة مقاسة من القرص — nuclei";\n');
-    fs.writeFileSync(path.join(dir, "broken.ts"), 'const b = "يبني job حقيقي على目标 مصرّح به";\n');
-    fs.writeFileSync(path.join(dir, "mismatch.mjs"), 'console.log("同步 تاني ضاعف السجل");\n');
+    fs.writeFileSync(path.join(dir, "broken.ts"), `const b = "يبني job حقيقي على${INTRUDER} مصرّح به";\n`);
+    fs.writeFileSync(path.join(dir, "mismatch.mjs"), `console.log("${INTRUDER2} تاني ضاعف السجل");\n`);
     const files = ["clean.ts", "broken.ts", "mismatch.mjs"];
     const findings = files
       .map((f) => ({ f, hits: scanText(fs.readFileSync(path.join(dir, f), "utf8")) }))
