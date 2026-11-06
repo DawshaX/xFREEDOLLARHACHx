@@ -924,7 +924,12 @@ t("self-model: build stamp is measured or says so, never invented", () => {
   assert.ok(m.build.label.length > 0, "label فاضي");
   assert.ok(m.build.ageMin === null || (Number.isInteger(m.build.ageMin) && m.build.ageMin >= 0), `ageMin مش معقول: ${m.build.ageMin}`);
   assert.ok(m.build.commit === null || /^[0-9a-f]{7,40}$/.test(m.build.commit), `commit مش sha: ${m.build.commit}`);
-  assert.equal(m.tools.count, 55, "عدد الأدوات بقى يتغيّر وحدّث التست معاه — مش العكس");
+  // Canary, not a contract: if the catalogue grows, this number moves with it.
+  // Measured 2026-11-06 on this branch: 65 tools (main had 55 — the branch adds
+  // the platform/self-report/memory/browser set). The assertion exists so a
+  // silent drop in the catalogue is caught, so it is updated WITH the catalogue,
+  // never the other way round.
+  assert.equal(m.tools.count, 65, "عدد الأدوات بقى يتغيّر وحدّث التست معاه — مش العكس");
 });
 t("wiring: the greeting and the identity answer both carry the stamp", () => {
   const coreTxt = fs.readFileSync(path.join(AGENT_DIR, "core.ts"), "utf8");
