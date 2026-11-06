@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 102,
-    "lastHeartbeatAt": "2026-11-05T21:45:36.663Z",
+    "autonomousCyclesCompleted": 103,
+    "lastHeartbeatAt": "2026-11-06T01:56:03.406Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #102 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #103 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1793930164231",
+      "ts": "2026-11-06 01:56:04 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #103 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 172.253.115.141 | HTTP 200 | SHA256: e1192962638e46af — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 23 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:21)"
+    },
     {
       "id": "pulse-1793915137527",
       "ts": "2026-11-05 21:45:37 UTC",
@@ -201,13 +208,6 @@
       "ts": "2026-10-31 19:19:00 UTC",
       "category": "AUTONOMOUS_PULSE",
       "titleAr": "اكتمال الدورة الذاتية #79 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793474160394-sjrv",
-      "ts": "2026-10-31 19:16:00 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #78 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     }
   ],
@@ -893,6 +893,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2023-23314",
+      "title": "CVE-2023-23314",
+      "description": "An arbitrary file upload vulnerability in the /api/upload component of zdir v3.2.0 allows attackers to execute arbitrary code via a crafted .ssh file.",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-23314",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
       "id": "CVE-2022-34717",
       "title": "CVE-2022-34717",
       "description": "Microsoft Office Remote Code Execution Vulnerability",
@@ -973,6 +983,26 @@
       "at": "2026-11-03T18:50:34.961Z"
     },
     {
+      "id": "CVE-2023-24908",
+      "title": "CVE-2023-24908",
+      "description": "Remote Procedure Call Runtime Remote Code Execution Vulnerability",
+      "cvss": 8.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-24908",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-4853",
+      "title": "CVE-2023-4853",
+      "description": "A flaw was found in Quarkus where HTTP security policies are not sanitizing certain character permutations correctly when accepting requests, resulting in incorrect evaluation of permissions. This issue could allow an attacker to bypass the security policy altogether, resulting in unauthorized endpoint access and possibly a denial of service.",
+      "cvss": 8.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4853",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
       "id": "CVE-2022-32156",
       "title": "CVE-2022-32156",
       "description": "In Splunk Enterprise and Universal Forwarder versions before 9.0, the Splunk command-line interface (CLI) did not validate TLS certificates while connecting to a remote Splunk platform instance by default. After updating to version 9.0, see  Configure TLS host name validation for the Splunk CLI https://docs.splunk.com/Documentation/Splunk/9.0.0/Security/EnableTLSCertHostnameValidation#Configure_TL",
@@ -1011,6 +1041,46 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-0232",
       "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2022-20818",
+      "title": "CVE-2022-20818",
+      "description": "Multiple vulnerabilities in the CLI of Cisco SD-WAN Software could allow an authenticated, local attacker to gain elevated privileges. These vulnerabilities are due to improper access controls on commands within the application CLI. An attacker could exploit these vulnerabilities by running a malicious command on the application CLI. A successful exploit could allow the attacker to execute arbitra",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-20818",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-21748",
+      "title": "CVE-2023-21748",
+      "description": "Windows Kernel Elevation of Privilege Vulnerability",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-21748",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-5633",
+      "title": "CVE-2023-5633",
+      "description": "The reference count changes made as part of the CVE-2023-33951 and CVE-2023-33952 fixes exposed a use-after-free flaw in the way memory objects were handled when they were being used to store a surface. When running inside a VMware guest with 3D acceleration enabled, a local, unprivileged user could potentially use this flaw to escalate their privileges.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5633",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-5367",
+      "title": "CVE-2023-5367",
+      "description": "A out-of-bounds write flaw was found in the xorg-x11-server. This issue occurs due to an incorrect calculation of a buffer offset when copying data stored in the heap in the XIChangeDeviceProperty function in Xi/xiproperty.c and in RRChangeOutputProperty function in randr/rrproperty.c, allowing for possible escalation of privileges or denial of service.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5367",
+      "at": "2026-11-06T01:56:03.641Z"
     },
     {
       "id": "CVE-2022-29119",
@@ -1321,6 +1391,36 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-52591",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2022-36062",
+      "title": "CVE-2022-36062",
+      "description": "Grafana is an open-source platform for monitoring and observability. In versions prior to 8.5.13, 9.0.9, and 9.1.6, Grafana is subject to Improper Preservation of Permissions resulting in privilege escalation on some folders where Admin is the only used permission. The vulnerability impacts Grafana instances where RBAC was disabled and enabled afterwards, as the migrations which are translating le",
+      "cvss": 7.6,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-36062",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-5557",
+      "title": "CVE-2023-5557",
+      "description": "A flaw was found in the tracker-miners package. A weakness in the sandbox allows a maliciously-crafted file to execute code outside the sandbox if the tracker-extract process has first been compromised by a separate vulnerability.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5557",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-5824",
+      "title": "CVE-2023-5824",
+      "description": "A flaw was found in Squid. The limits applied for validation of HTTP response headers are applied before caching. However, Squid may grow a cached HTTP response header beyond the configured maximum size, causing a stall or crash of the worker process when a large header is retrieved from the disk cache, resulting in a denial of service.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5824",
+      "at": "2026-11-06T01:56:03.642Z"
     },
     {
       "id": "CVE-2022-29546",
@@ -1653,6 +1753,26 @@
       "at": "2026-11-02T03:30:53.772Z"
     },
     {
+      "id": "CVE-2022-23552",
+      "title": "CVE-2022-23552",
+      "description": "Grafana is an open-source platform for monitoring and observability. Starting with the 8.1 branch and prior to versions 8.5.16, 9.2.10, and 9.3.4, Grafana had a stored XSS vulnerability affecting the core plugin GeoMap. The stored XSS vulnerability was possible because SVG files weren't properly sanitized and allowed arbitrary JavaScript to be executed in the context of the currently authorized us",
+      "cvss": 7.3,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-23552",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-0507",
+      "title": "CVE-2023-0507",
+      "description": "Grafana is an open-source platform for monitoring and observability. \n\nStarting with the 8.1 branch, Grafana had a stored XSS vulnerability affecting the core plugin GeoMap. \n\nThe stored XSS vulnerability was possible due to map attributions weren't properly sanitized and allowed arbitrary JavaScript to be executed in the context of the currently authorized user of the Grafana instance. \n\nAn attac",
+      "cvss": 7.3,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-0507",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
       "id": "CVE-2022-1292",
       "title": "CVE-2022-1292",
       "description": "The c_rehash script does not properly sanitise shell metacharacters to prevent command injection. This script is distributed by some operating systems in a manner where it is automatically executed. On such operating systems, an attacker could execute arbitrary commands with the privileges of the script. Use of the c_rehash script is considered obsolete and should be replaced by the OpenSSL rehash",
@@ -1683,6 +1803,16 @@
       "at": "2026-11-03T18:50:34.961Z"
     },
     {
+      "id": "CVE-2022-23498",
+      "title": "CVE-2022-23498",
+      "description": "Grafana is an open-source platform for monitoring and observability. When datasource query caching is enabled, Grafana caches all headers, including `grafana_session`. As a result, any user that queries a datasource where the caching is enabled can acquire another user’s session. To mitigate the vulnerability you can disable datasource query caching for all datasources. This issue has been patched",
+      "cvss": 7.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-23498",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
       "id": "CVE-2020-1002",
       "title": "CVE-2020-1002",
       "description": "An elevation of privilege vulnerability exists when the MpSigStub.exe for Defender allows file deletion in arbitrary locations.To exploit the vulnerability, an attacker would first have to log on to the system, aka 'Microsoft Defender Elevation of Privilege Vulnerability'.",
@@ -1701,6 +1831,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26669",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2023-5574",
+      "title": "CVE-2023-5574",
+      "description": "A use-after-free flaw was found in xorg-x11-server-Xvfb. This issue occurs in Xvfb with a very specific and legacy configuration (a multi-screen setup with multiple protocol screens, also known as Zaphod mode). If the pointer is warped from a screen 1 to a screen 0, a use-after-free issue may be triggered during shutdown or reset of the Xvfb server, allowing for possible escalation of privileges o",
+      "cvss": 7,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5574",
+      "at": "2026-11-06T01:56:03.641Z"
     },
     {
       "id": "CVE-2024-26799",
@@ -1741,6 +1881,26 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2009-4139",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2022-39324",
+      "title": "CVE-2022-39324",
+      "description": "Grafana is an open-source platform for monitoring and observability. Prior to versions 8.5.16 and 9.2.8, malicious user can create a snapshot and arbitrarily choose the `originalUrl` parameter by editing the query, thanks to a web proxy. When another user opens the URL of the snapshot, they will be presented with the regular web interface delivered by the trusted Grafana server. The `Open original",
+      "cvss": 6.7,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-39324",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-6277",
+      "title": "CVE-2023-6277",
+      "description": "An out-of-memory flaw was found in libtiff. Passing a crafted tiff file to TIFFOpen() API may allow a remote attacker to cause a denial of service via a craft input with size smaller than 379 KB.",
+      "cvss": 6.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6277",
+      "at": "2026-11-06T01:56:03.642Z"
     },
     {
       "id": "CVE-2022-37959",
@@ -1813,6 +1973,16 @@
       "at": "2026-11-05T21:45:37.064Z"
     },
     {
+      "id": "CVE-2023-5341",
+      "title": "CVE-2023-5341",
+      "description": "A heap use-after-free flaw was found in coders/bmp.c in ImageMagick.",
+      "cvss": 6.2,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5341",
+      "at": "2026-11-06T01:56:03.642Z"
+    },
+    {
       "id": "CVE-2019-0221",
       "title": "CVE-2019-0221",
       "description": "The SSI printenv command in Apache Tomcat 9.0.0.M1 to 9.0.0.17, 8.5.0 to 8.5.39 and 7.0.0 to 7.0.93 echoes user provided data without escaping and is, therefore, vulnerable to XSS. SSI is disabled by default. The printenv command is intended for debugging and is unlikely to be present in a production website.",
@@ -1833,6 +2003,26 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2022-2127",
+      "title": "CVE-2022-2127",
+      "description": "An out-of-bounds read vulnerability was found in Samba due to insufficient length checks in winbindd_pam_auth_crap.c. When performing NTLM authentication, the client replies to cryptographic challenges back to the server. These replies have variable lengths, and Winbind fails to check the lan manager response length. When Winbind is used for NTLM authentication, a maliciously crafted request can t",
+      "cvss": 5.9,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2127",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-5981",
+      "title": "CVE-2023-5981",
+      "description": "A vulnerability was found that the response times to malformed ciphertexts in RSA-PSK ClientKeyExchange differ from response times of ciphertexts with correct PKCS#1 v1.5 padding.",
+      "cvss": 5.9,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5981",
+      "at": "2026-11-06T01:56:03.642Z"
+    },
+    {
       "id": "CVE-2023-4813",
       "title": "CVE-2023-4813",
       "description": "A flaw has been identified in glibc. In an uncommon situation, the gaih_inet function may use memory that has been freed, resulting in an application crash. This issue is only exploitable when the getaddrinfo function is called and the hosts database in /etc/nsswitch.conf is configured with SUCCESS=continue or SUCCESS=merge.",
@@ -1841,6 +2031,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4813",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2023-4194",
+      "title": "CVE-2023-4194",
+      "description": "A flaw was found in the Linux kernel's TUN/TAP functionality. This issue could allow a local user to bypass network filters and gain unauthorized access to some resources. The original patches fixing CVE-2023-1076 are incorrect or incomplete. The problem is that the following upstream commits - a096ccca6e50 (\"tun: tun_chr_open(): correctly initialize socket uid\"), - 66b2c338adce (\"tap: tap_open():",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4194",
+      "at": "2026-11-06T01:56:03.641Z"
     },
     {
       "id": "CVE-2021-4043",
@@ -2063,6 +2263,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2023-31698",
+      "title": "CVE-2023-31698",
+      "description": "Bludit v3.14.1 is vulnerable to Stored Cross Site Scripting (XSS) via SVG file on site logo. NOTE: the product's security model is that users are trusted by the administrator to insert arbitrary content (users cannot create their own accounts through self-registration).",
+      "cvss": 5.4,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-31698",
+      "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
       "id": "CVE-2012-5571",
       "title": "CVE-2012-5571",
       "description": "A flaw was found in OpenStack Keystone. This vulnerability allows remote authenticated users to bypass intended authorization restrictions. This occurs because OpenStack Keystone does not properly handle EC2 (Elastic Compute Cloud) tokens when a user's role has been removed from a tenant. An attacker can leverage a token associated with a removed user role to gain unauthorized access.",
@@ -2093,6 +2303,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2023-5871",
+      "title": "CVE-2023-5871",
+      "description": "A flaw was found in libnbd, due to a malicious Network Block Device (NBD), a protocol for accessing Block Devices such as hard disks over a Network. This issue may allow a malicious NBD server to cause a Denial of Service.",
+      "cvss": 5.3,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5871",
+      "at": "2026-11-06T01:56:03.642Z"
+    },
+    {
       "id": "CVE-2012-0059",
       "title": "CVE-2012-0059",
       "description": "A flaw was found in Spacewalk-backend. This information disclosure vulnerability occurs when a system registration XML-RPC call fails, causing cleartext user passwords to be included in error messages. Remote administrators can exploit this by reading server logs and emails, leading to the unauthorized disclosure of user passwords.",
@@ -2101,6 +2321,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2012-0059",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2023-5380",
+      "title": "CVE-2023-5380",
+      "description": "A use-after-free flaw was found in the xorg-x11-server. An X server crash may occur in a very specific and legacy configuration (a multi-screen setup with multiple protocol screens, also known as Zaphod mode) if the pointer is warped from within a window on one screen to the root window of the other screen and if the original window is destroyed followed by another window being destroyed.",
+      "cvss": 4.7,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5380",
+      "at": "2026-11-06T01:56:03.641Z"
     },
     {
       "id": "CVE-2019-15291",
@@ -2264,13 +2494,13 @@
     }
   ],
   "intelStats": {
-    "total": 161,
-    "freshThisPulse": 34,
+    "total": 184,
+    "freshThisPulse": 23,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
       "GHSA:21"
     ],
-    "at": "2026-11-05T21:45:37.527Z"
+    "at": "2026-11-06T01:56:04.231Z"
   }
 }
