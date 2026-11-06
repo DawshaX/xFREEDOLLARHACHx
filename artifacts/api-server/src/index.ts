@@ -411,11 +411,15 @@ server.listen(port, host, () => {
               installed: record?.installed ?? null,
               present: status.present.length,
               missing: status.missing.length,
+              refused: record?.refused ?? null,
+              freeMB: status.freeMB,
               fetchAllowed: process.env.NOVA_TOOLCHAIN_FETCH === "1",
             },
-            record
-              ? `toolchain: provisioning ran at boot (${record.installed}/${record.total} أداة)`
-              : `toolchain: provisioning skipped at boot (${skipped ?? "بدون سبب"}) — التنزيل نفسه محتاج NOVA_TOOLCHAIN_FETCH=1`,
+            record?.refused
+              ? `toolchain: provisioning refused at boot — ${record.reasonAr}`
+              : record
+                ? `toolchain: provisioning ran at boot (${record.installed}/${record.total} أداة)`
+                : `toolchain: provisioning skipped at boot (${skipped ?? "بدون سبب"}) — التنزيل نفسه محتاج NOVA_TOOLCHAIN_FETCH=1`,
           ),
         )
         .catch((e) => logger.warn({ err: String(e) }, "toolchain boot provisioning failed"));

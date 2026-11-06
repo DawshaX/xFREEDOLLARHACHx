@@ -25,7 +25,7 @@ import { bootBuild, requestReload, restartHistory, selfRespawn } from "./self-re
 const REPO = process.env.NOVA_RELEASE_REPO || "DawshaX/xFREEDOLLARHACHx";
 const TAG = process.env.NOVA_RELEASE_TAG || "nova-portable";
 const SCRIPT_URL = `https://raw.githubusercontent.com/${REPO}/main/deploy/live-update.py`;
-const ASSET_URL = `https://github.com/${REPO}/releases/download/${TAG}/nova-24-7.zip`;
+const ASSET_URL = process.env.NOVA_UPDATE_ASSET_URL || `https://github.com/${REPO}/releases/download/${TAG}/nova-24-7.zip`;
 
 /** Anything below this many seconds of difference is considered the same build. */
 const MIN_DELTA_S = 120;
@@ -40,6 +40,8 @@ export interface AutoUpdateState {
   lastCheckAt: string | null;
   lastResult: string;
   lastDetail: string;
+  /** منين جه تاريخ النشر: api.github.com ولا Last-Modified لأصل الحزمة */
+  updateSource?: "api" | "asset-head" | null;
   updatedAt: string | null;
   attempts: number;
   logFile: string;
@@ -183,15 +185,60 @@ function appendLog(line: string): void {
 }
 
 /** Ask GitHub for the release timestamp of the published bundle. */
-async function latestReleaseAt(): Promise<string | null> {
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/${TAG}`, {
-    headers: { "user-agent": "nova-self-update", accept: "application/vnd.github+json" },
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) throw new Error(`GitHub ${res.status}`);
-  const body = (await res.json()) as { assets?: { name: string; updated_at: string }[]; published_at?: string };
-  const asset = body.assets?.find((a) => a.name === "nova-24-7.zip");
-  return asset?.updated_at ?? body.published_at ?? null;
+export interface ReleaseReadout {
+  at: string | null;
+  via: "api" | "asset-head";
+  note: string | null;
+}
+
+/**
+ * القياس الحيّ على nova.waifly.com (2026-11-06): الحلقة اشتغلت وحدّثت فعلًا
+ * (`new build found → تم: 2.7MB → ✓ اتحدّث`)، وبعد 15 دقيقة الوقفة الجاية رجّعت
+ * `check-failed · تعذّر قراءة الإصدار: GitHub 403` — أي إن `api.github.com` من IP
+ * مشاركة (أو بعد استنزاف المعدل) بيقدر **يجمّد** التحديثات على المكنة كلها.
+ * التحديث لازم ما يعتمدش على نقطة واحدة: بنسأل الـAPI، ولو رفض بنقرا
+ * `Last-Modified` بتاع أصل الحزمة — نفس الملف اللي Installer بينزّله.
+ */
+export async function latestReleaseAt(): Promise<ReleaseReadout> {
+  let apiError: string | null = null;
+  try {
+    const api = process.env.NOVA_RELEASE_API_URL || `https://api.github.com/repos/${REPO}/releases/tags/${TAG}`;
+  const res = await fetch(api, {
+      headers: { "user-agent": "nova-self-update", accept: "application/vnd.github+json" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) throw new Error(`GitHub ${res.status}`);
+    const body = (await res.json()) as { assets?: { name: string; updated_at: string }[]; published_at?: string };
+    const asset = body.assets?.find((a) => a.name === "nova-24-7.zip");
+    const at = asset?.updated_at ?? body.published_at ?? null;
+    if (at) return { at, via: "api", note: null };
+    apiError = "الـAPI رد من غير تاريخ";
+  } catch (err) {
+    apiError = String((err as Error).message).slice(0, 80);
+  }
+  try {
+    const head = await fetch(ASSET_URL, {
+      method: "HEAD",
+      redirect: "follow",
+      headers: { "user-agent": "nova-self-update" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    const lm = head.headers.get("last-modified");
+    if (head.ok && lm) {
+      const at = new Date(lm).toISOString();
+      if (Number.isFinite(Date.parse(at))) {
+        return { at, via: "asset-head", note: `تعذّرت قراءة الـAPI (${apiError ?? "?"}) — اعتمدنا على Last-Modified لأصل الحزمة` };
+      }
+    }
+  } catch (err) {
+    apiError = `${apiError ?? ""} · وأصل الحزمة: ${String((err as Error).message).slice(0, 60)}`.trim();
+  }
+  throw new Error(apiError ?? "مقدرش يحدد إصدار النشر");
+}
+
+/** لو تاريخ النشر جه من أصل الحزمة بدل الـAPI، ده لازم يبان في التفاصيل. */
+function readNote(via: ReleaseReadout["via"] | null): string {
+  return via === "asset-head" ? " · المصدر: Last-Modified لأصل الحزمة (api.github.com كان رافض)" : "";
 }
 
 let running = false;
@@ -212,14 +259,18 @@ export async function checkForUpdate(opts: { install?: boolean } = {}): Promise<
       });
     }
 
-    let releaseAt: string | null;
+    let releaseAt: string | null = null;
+    let releaseVia: ReleaseReadout["via"] | null = null;
     try {
-      releaseAt = await latestReleaseAt();
+      const read = await latestReleaseAt();
+      releaseAt = read.at;
+      releaseVia = read.via;
     } catch (err) {
       return writeState({
         lastCheckAt: new Date().toISOString(),
         lastResult: "check-failed",
-        lastDetail: `تعذّر قراءة الإصدار: ${(err as Error).message}`,
+        updateSource: null,
+        lastDetail: `تعذّر قراءة الإصدار: ${(err as Error).message} — الـAPI وأصل الحزمة الاتنين وقعوا، فالمكنة على نفس البناء لحد ما شبكة الـGitHub ترجع`,
       });
     }
     if (!releaseAt) {
@@ -243,6 +294,7 @@ export async function checkForUpdate(opts: { install?: boolean } = {}): Promise<
         return writeState({
           lastCheckAt: new Date().toISOString(),
           latestReleaseAt: releaseAt,
+          updateSource: releaseVia,
           lastResult: "restart-needed",
           lastDetail: `الملفات على الديسك أحدث من العملية الشغالة (شغّالة من ${boot} والديسك ${disk}) — محتاج Restart من اللوحة`,
         });
@@ -251,7 +303,8 @@ export async function checkForUpdate(opts: { install?: boolean } = {}): Promise<
         lastCheckAt: new Date().toISOString(),
         latestReleaseAt: releaseAt,
         lastResult: "up-to-date",
-        lastDetail: `مفيش أحدث من اللي شغّال (فرق ${deltaS} ثانية)`,
+        updateSource: releaseVia,
+        lastDetail: `مفيش أحدث من اللي شغّال (فرق ${deltaS} ثانية)${readNote(releaseVia)}`,
       });
     }
 

@@ -930,6 +930,31 @@ fs.writeFileSync(
   'const into = process.argv[process.argv.indexOf("--into") + 1];\n' +
   'console.log(JSON.stringify({ into, ok: 2, total: 7, results: [{ bin: "nuclei", status: "installed", tag: "v3.0.0" }, { bin: "httpx", status: "installed", tag: "v1.0.0" }, { bin: "ffuf", status: "failed", why: "no asset" }] }));\n',
 );
+await tA("toolchain: free space is measured, not assumed", () => {
+  const st0 = tc.toolchainStatus();
+  assert.equal(typeof st0.freeMB, "number", `freeMB لازم يبقى رقم مقاس على ${st0.dir}`);
+  assert.ok(Number(st0.freeMB) >= 0, `freeMB سالب: ${st0.freeMB}`);
+  assert.equal(st0.minFreeMB, 180, "الحد الافتراضي اتغيّر من غير ما التست يتحدّث");
+});
+await tA("toolchain: cramped disk refuses before touching the network", async () => {
+  const ran = path.join(fakeDir, "marker");
+  const spy = path.join(fakeDir, "spy.mjs");
+  fs.writeFileSync(spy, `require("node:fs").writeFileSync(${JSON.stringify(ran)}, "ran")\n`);
+  fs.rmSync(ran, { force: true });
+  process.env.NOVA_TOOLCHAIN_MIN_FREE_MB = "999999999";
+  const rec = await tc.provisionToolchain({ script: spy, into: path.join(tmp, "vendor3", "bin") });
+  assert.equal(rec.error, "no-space", `مرفوض لسبب تاني: ${rec.error}`);
+  assert.equal(rec.refused, "no-space", "لازم يسمّي الرفض نفسه");
+  assert.ok(!fs.existsSync(ran), "سكربت التنزيل اتنفّذ رغم إن القرص مرفوض — ده اللي بنمنعه");
+  assert.ok(typeof rec.reasonAr === "string" && /NOVA_TOOLCHAIN_MIN_FREE_MB/.test(rec.reasonAr), "الرفض بلا مخرج للمشغّل");
+  // السجل اللي فوق خلاص «فاشل» فبيدخل في cooldown — بنمسحه عشان نقيس قرار المساحة نفسه،
+  // و`only` يتجاوز حارس «الأدوات موجودة» (اللي سلوكه صح).
+  fs.rmSync(process.env.NOVA_TOOLCHAIN_RECORD, { force: true });
+  const once = await tc.provisionToolchainOnce({ only: ["subfinder"], script: spy, into: path.join(tmp, "vendor4", "bin") });
+  assert.equal(once.skipped, "no-space", `Once ما بلّغش عن الرفض: ${once.skipped}`);
+  delete process.env.NOVA_TOOLCHAIN_MIN_FREE_MB;
+});
+
 await tA("toolchain: provision runs the vendorer with no shell and records the truth", async () => {
   const before = Date.now();
   const rec = await tc.provisionToolchain({ script: fakeScript, into: path.join(tmp, "vendor2", "bin") });

@@ -48,6 +48,10 @@ export interface ToolchainStatus {
   scriptAvailable: boolean;
   /** إيه اللي قالته الأدوات نفسها (findBinary) — المصدر الوحيد ل«موجود» */
   binaries: Array<{ bin: string; present: boolean; where: string | null }>;
+  /** الميغابايت الفاضلة على قرص `dir` — null لو ماقدرناش نقيس */
+  freeMB: number | null;
+  /** الحد اللي بنرفض تحته التنزيل (NOVA_TOOLCHAIN_MIN_FREE_MB) */
+  minFreeMB: number;
   /** آخر محاولة provisioning مسجلة على القرص */
   last: ProvisionRecord | null;
 }
@@ -65,6 +69,42 @@ export interface ProvisionRecord {
   ran?: boolean;
   error?: string;
   reasonAr?: string;
+  /** رفض استباقي (قبل أي شبكة) وسببه — «ran» و«ok» الاتنين false ساعتها */
+  refused?: "no-space";
+  freeMB?: number | null;
+}
+
+/**
+ * الساحة الفاضلة بالميغابايت على أقرب مسار موجود — بنقيس قبل أي تنزيل.
+ * بيترجع env في كل نداء (مش لحظة الاستيراد) عشان المشغّل يقدر يغيّره، وللـselftest.
+ */
+export function minFreeMB(): number {
+  const raw = Number(process.env.NOVA_TOOLCHAIN_MIN_FREE_MB);
+  return Number.isFinite(raw) && raw >= 0 ? Math.round(raw) : 180;
+}
+
+export function freeBytesAt(target: string): number | null {
+  let cur = path.resolve(target);
+  for (let i = 0; i < 8; i += 1) {
+    try {
+      if (fs.existsSync(cur)) {
+        const st = fs.statfsSync(cur);
+        const bytes = Number(st.bsize) * Number(st.bavail);
+        return Number.isFinite(bytes) && bytes >= 0 ? bytes : null;
+      }
+    } catch {
+      return null;
+    }
+    const up = path.dirname(cur);
+    if (up === cur) break;
+    cur = up;
+  }
+  return null;
+}
+
+export function freeMBAt(target: string): number | null {
+  const b = freeBytesAt(target);
+  return b === null ? null : Math.round(b / 1_048_576);
 }
 
 export function vendorDir(): string {
@@ -157,6 +197,8 @@ export function toolchainStatus(): ToolchainStatus {
     script: findVendorerScript(),
     scriptAvailable: Boolean(findVendorerScript()),
     binaries,
+    freeMB: freeMBAt(dir),
+    minFreeMB: minFreeMB(),
     last: readRecord(),
   };
 }
@@ -182,6 +224,29 @@ export function provisionToolchain(opts: ProvisionOptions = {}): Promise<Provisi
     writeRecord(rec);
     return rec;
   };
+
+  const need = minFreeMB();
+  const free = freeMBAt(into);
+  if (need > 0 && free !== null && free < need) {
+    return Promise.resolve(
+      finish({
+        at: new Date().toISOString(),
+        ok: false,
+        exitCode: null,
+        ms: 0,
+        into,
+        installed: 0,
+        total: VENDORABLE.length,
+        results: [],
+        error: "no-space",
+        refused: "no-space",
+        freeMB: free,
+        reasonAr:
+          `القرص الفاضل ${free} MB أقل من ${need} MB المطلوبة للتنزيل — مبننزّلش عشان ما نكسرش المكنة.` +
+          ` فرّغ مساحة أو ارفع الحد بـNOVA_TOOLCHAIN_MIN_FREE_MB.`,
+      }),
+    );
+  }
 
   if (!script) {
     return Promise.resolve(
@@ -356,7 +421,7 @@ export interface OnceResult {
   record: ProvisionRecord | null;
   status: ToolchainStatus;
   /** null = اتنفذت فعلًا. غير كده دي السبب، ومسجل في status.last. */
-  skipped: "already-present" | "cooldown" | null;
+  skipped: "already-present" | "cooldown" | "no-space" | null;
 }
 
 export async function provisionToolchainOnce(opts: ProvisionOptions = {}): Promise<OnceResult> {
@@ -374,7 +439,7 @@ export async function provisionToolchainOnce(opts: ProvisionOptions = {}): Promi
     inflight = null;
   });
   const record = await inflight;
-  return { record, status: toolchainStatus(), skipped: null };
+  return { record, status: toolchainStatus(), skipped: record.refused ?? null };
 }
 
 /**

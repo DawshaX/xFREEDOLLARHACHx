@@ -1872,3 +1872,30 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
 - `watchStatus` + `/watch/probe` (عدادات حقيقية بدل الصمت) · التوأمان بيردّوا `measured:false` مع السبب.
 - لسه: 9 من 11 سجل في الخزنة الدائمة من غير `evidencePath` (مديونية بيانات) · تدوير توكن تليجرام عليك.
 - `agent-gates` **22/22** · typecheck **88==88** · البانل 0 · twins ✓ · بناء الحزمة 151 ملف/12MB ✓.
+
+## المرحلة 61 — المكنة حدّثت نفسها قدامنا، وسقوط GitHub اتقفل قبل ما يجمّدها (2026-11-06)
+
+- **الحديث الذاتي مقاس على الحيّ، مش مقروء في كود**: `GET /api/nova-core/auto-update` on
+  nova.waifly.com بيّن pass كامل في 3 ثواني (`new build found … 1126s` → `تم: 2.8MB` →
+  `✓ اتحدّث: 117 ملف · 24 كانوا زي ما هم` → `✓ النسخة الجديدة: 6df4b8bc09` → `state/.nova-restart`)،
+  وبعده `currentCommit == bootCommit` و`restartNeeded:false`. المكنة بقت تلحق المستودع لوحدها.
+- **العطل اللي كان هيوقف ده كله**: في نفس القراية `lastResult:"check-failed"` ·
+  `تعذّر قراءة الإصدار: GitHub 403` · `attempts:21` — أي `api.github.com` رافض (IP مشاركة)
+  كان يجمّد التحديثات للأبد. `latestReleaseAt()` بقى بيرجع `{at, via, note}` وبيعمل `HEAD`
+  على أصل الحزمة ويقرا `Last-Modified` لو الـAPI وقع؛ `updateSource` ظهر في الحالة ولوج
+  الإقلاع. متقاس بمسار API مكسور عمدًا: `via:"asset-head"`.
+- وهم اتكشف: فرق «ساعة» في سطر `لازم تحديث` طلع `builtAt` (ساعة CI) مقابل `updated_at`
+  (ساعة رفع الأصل) — بعد التحديث الفرق 22 ثانية تحت `MIN_DELTA_S=120`. مافيش خلل توقيت،
+  والقرص كان أقديم ساعة فعلًا. محدش يمسّ التوقيتات.
+- **حارس مساحة قبل التنزيل**: `toolchainStatus.freeMB` من `fs.statfsSync`، و`provisionToolchain`
+  بيرجع `no-space`/`refused:"no-space"` من غير طلب شبكة لو الفاضل أقل من `NOVA_TOOLCHAIN_MIN_FREE_MB`
+  (180). الملاحظة الحية بقت تقول كام MB فاضل + آخر محاولة مرفوضة (`lastProvision` في الـevidence).
+- توثيق: `docs/OPS.md` — سطر «وقت الإقلاع» كان لسه بيقول الافتراضي مطفي (كذب بعد المرحلة 60)
+  واتصحيح، + `NOVA_PROVISION_TOOLS`/`NOVA_PROVISION_DELAY_MS`/`NOVA_TOOLCHAIN_MIN_FREE_MB`/
+  `NOVA_VOICE`/`NOVA_RELEASE_API_URL`/`NOVA_UPDATE_ASSET_URL` و`/watch/probe`؛ وعدّاد الأدوات
+  في العنوان بقى 55 مقاس بدل 49 قديم.
+- لسه: 9/11 سجل من غير `evidencePath` · `routes/multi-ai.ts` من غير tool loop ·
+  `NOVA_TOOLCHAIN_TIMEOUT_MS` · ملاحظة `hunt`/`verify` مابظهروش في probe الهَب (لازم يتأكد
+  إن `state/hunt-latest.json` وصل للحزمة ولا لأ) · تدوير توكنات تليجرام/exec عليك.
+- `agent-gates` **22/22** · typecheck **88==88** · self-restart **13/13** · ops-selftest **68/0** ·
+  البناء المحلي للحزمة ما اتعملش في المرحلة دي — النشر بيعمله CI (`standalone-bundle.yml` + إعادة رفع الأصل) بعد الدمج، وده المقص.
