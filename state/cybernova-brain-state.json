@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 105,
-    "lastHeartbeatAt": "2026-11-06T16:29:52.667Z",
+    "autonomousCyclesCompleted": 106,
+    "lastHeartbeatAt": "2026-11-06T21:53:19.810Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #105 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #106 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794002001131",
+      "ts": "2026-11-06 21:53:21 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #106 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 142.251.34.209 | HTTP 200 | SHA256: b07c0c805c6ffb61 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 17 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:20)"
+    },
     {
       "id": "pulse-1793982593680",
       "ts": "2026-11-06 16:29:53 UTC",
@@ -201,13 +208,6 @@
       "ts": "2026-11-02 02:37:15 UTC",
       "category": "AUTONOMOUS_PULSE",
       "titleAr": "اكتمال الدورة الذاتية #82 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793586855059-dee3",
-      "ts": "2026-11-02 02:34:15 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #81 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     }
   ],
@@ -803,6 +803,66 @@
       "at": "2026-11-02T03:30:53.259Z"
     },
     {
+      "id": "GHSA-47w9-6r3f-938g",
+      "title": "GHSA-47w9-6r3f-938g",
+      "description": "LXD has restricted project bypass leading to arbitrary command execution",
+      "cvss": 9.9,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-47w9-6r3f-938g",
+      "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
+      "id": "GHSA-pjff-c2wc-f6jm",
+      "title": "GHSA-pjff-c2wc-f6jm",
+      "description": "LXD has arbitrary file write on client due to trusted image hash",
+      "cvss": 9.9,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-pjff-c2wc-f6jm",
+      "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
+      "id": "GHSA-fmc8-p6q7-75cc",
+      "title": "GHSA-fmc8-p6q7-75cc",
+      "description": "LXD has argument injection in backup compression algorithm leading to AFW and ACE",
+      "cvss": 9.9,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-fmc8-p6q7-75cc",
+      "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
+      "id": "GHSA-vghh-5rfx-xhq8",
+      "title": "GHSA-vghh-5rfx-xhq8",
+      "description": "LXD has arbitrary file read+write on host via rootfs/ symlink in malicious image",
+      "cvss": 9.9,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-vghh-5rfx-xhq8",
+      "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
+      "id": "GHSA-jpf8-86f3-wp38",
+      "title": "GHSA-jpf8-86f3-wp38",
+      "description": "LXD has arbitrary file read+write on host via templates/ symlink in malicious image",
+      "cvss": 9.9,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-jpf8-86f3-wp38",
+      "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
+      "id": "GHSA-9j25-mm2h-2f76",
+      "title": "GHSA-9j25-mm2h-2f76",
+      "description": "LXD has arbitrary file write on host via `exec-output` symlink in crafted image",
+      "cvss": 9.9,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-9j25-mm2h-2f76",
+      "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
       "id": "CVE-2021-38299",
       "title": "CVE-2021-38299",
       "description": "Webauthn Framework 3.3.x before 3.3.4 has Incorrect Access Control. An attacker that controls a user's system is able to login to a vulnerable service using an attached FIDO2 authenticator without passing a check of the user presence.",
@@ -891,6 +951,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2006-4339",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2026-33050",
+      "title": "CVE-2026-33050",
+      "description": "GeoNode has OS command injection via uploaded file layer name",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-9fpx-fr6j-2vh6",
+      "at": "2026-11-06T21:53:21.130Z"
     },
     {
       "id": "CVE-2023-23314",
@@ -1393,6 +1463,26 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "GHSA-7mr3-28h5-m5vx",
+      "title": "GHSA-7mr3-28h5-m5vx",
+      "description": "LXD has project restriction bypass for custom volume copy across projects ",
+      "cvss": 7.7,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-7mr3-28h5-m5vx",
+      "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
+      "id": "GHSA-qx75-2p3r-pwm5",
+      "title": "GHSA-qx75-2p3r-pwm5",
+      "description": "LXD has project restriction bypass in instance copy across projects ",
+      "cvss": 7.7,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-qx75-2p3r-pwm5",
+      "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
       "id": "CVE-2022-36062",
       "title": "CVE-2022-36062",
       "description": "Grafana is an open-source platform for monitoring and observability. In versions prior to 8.5.13, 9.0.9, and 9.1.6, Grafana is subject to Improper Preservation of Permissions resulting in privilege escalation on some folders where Admin is the only used permission. The vulnerability impacts Grafana instances where RBAC was disabled and enabled afterwards, as the migrations which are translating le",
@@ -1893,6 +1983,26 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2023-33951",
+      "title": "CVE-2023-33951",
+      "description": "A race condition vulnerability was found in the vmwgfx driver in the Linux kernel. The flaw exists within the handling of GEM objects. The issue results from improper locking when performing operations on an object. This flaw allows a local privileged user to disclose information in the context of the kernel.",
+      "cvss": 6.7,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-33951",
+      "at": "2026-11-06T21:53:20.410Z"
+    },
+    {
+      "id": "CVE-2023-33952",
+      "title": "CVE-2023-33952",
+      "description": "A double-free vulnerability was found in handling vmw_buffer_object objects in the vmwgfx driver in the Linux kernel. This issue occurs due to the lack of validating the existence of an object prior to performing further free operations on the object, which may allow a local privileged user to escalate privileges and execute code in the context of the kernel.",
+      "cvss": 6.7,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-33952",
+      "at": "2026-11-06T21:53:20.410Z"
+    },
+    {
       "id": "CVE-2022-39324",
       "title": "CVE-2022-39324",
       "description": "Grafana is an open-source platform for monitoring and observability. Prior to versions 8.5.16 and 9.2.8, malicious user can create a snapshot and arbitrarily choose the `originalUrl` parameter by editing the query, thanks to a web proxy. When another user opens the URL of the snapshot, they will be presented with the regular web interface delivered by the trusted Grafana server. The `Open original",
@@ -1901,6 +2011,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-39324",
       "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2023-40660",
+      "title": "CVE-2023-40660",
+      "description": "A flaw was found in OpenSC packages that allow a potential PIN bypass. When a token/card is authenticated by one process, it can perform cryptographic operations in other processes when an empty zero-length pin is passed. This issue poses a security risk, particularly for OS logon/screen unlock and for small, permanently connected tokens to computers. Additionally, the token can internally track l",
+      "cvss": 6.6,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-40660",
+      "at": "2026-11-06T21:53:20.410Z"
     },
     {
       "id": "CVE-2023-6277",
@@ -2273,6 +2393,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2023-40661",
+      "title": "CVE-2023-40661",
+      "description": "Several memory vulnerabilities were identified within the OpenSC packages, particularly in the card enrollment process using pkcs15-init when a user or administrator enrolls cards. To take advantage of these flaws, an attacker must have physical access to the computer system and employ a custom-crafted USB device or smart card to manipulate responses to APDUs. This manipulation can potentially all",
+      "cvss": 5.4,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-40661",
+      "at": "2026-11-06T21:53:20.410Z"
+    },
+    {
       "id": "CVE-2023-31698",
       "title": "CVE-2023-31698",
       "description": "Bludit v3.14.1 is vulnerable to Stored Cross Site Scripting (XSS) via SVG file on site logo. NOTE: the product's security model is that users are trusted by the administrator to insert arbitrary content (users cannot create their own accounts through self-registration).",
@@ -2311,6 +2441,26 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2011-3344",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2023-34967",
+      "title": "CVE-2023-34967",
+      "description": "A Type Confusion vulnerability was found in Samba's mdssvc RPC service for Spotlight. When parsing Spotlight mdssvc RPC packets, one encoded data structure is a key-value style dictionary where the keys are character strings, and the values can be any of the supported types in the mdssvc protocol. Due to a lack of type checking in callers of the dalloc_value_for_key() function, which returns the o",
+      "cvss": 5.3,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-34967",
+      "at": "2026-11-06T21:53:20.410Z"
+    },
+    {
+      "id": "CVE-2023-34968",
+      "title": "CVE-2023-34968",
+      "description": "A path disclosure vulnerability was found in Samba. As part of the Spotlight protocol, Samba discloses the server-side absolute path of shares, files, and directories in the results for search queries. This flaw allows a malicious client or an attacker with a targeted RPC request to view the information that is part of the disclosed path.",
+      "cvss": 5.3,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-34968",
+      "at": "2026-11-06T21:53:20.410Z"
     },
     {
       "id": "CVE-2023-5871",
@@ -2433,6 +2583,26 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2007-5894",
+      "title": "CVE-2007-5894",
+      "description": "The reply function in ftpd.c in the gssftp ftpd in MIT Kerberos 5 (krb5) does not initialize the length variable when auth_type has a certain value, which has unknown impact and remote authenticated attack vectors.  NOTE: the original disclosure misidentifies the conditions under which the uninitialized variable is used.  NOTE: the vendor disputes this issue, stating \" The 'length' variable is onl",
+      "cvss": null,
+      "severity": null,
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2007-5894",
+      "at": "2026-11-06T21:53:20.410Z"
+    },
+    {
+      "id": "CVE-2026-62284",
+      "title": "CVE-2026-62284",
+      "description": "OSAC operator: Kubeconfig credential-plugin execution and SSRF in console proxy",
+      "cvss": null,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-5w5g-j6hw-6p8f",
+      "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
       "id": "CVE-2011-4899",
       "title": "CVE-2011-4899",
       "description": "wp-admin/setup-config.php in the installation component in WordPress 3.3.1 and earlier does not ensure that the specified MySQL database service is appropriate, which allows remote attackers to configure an arbitrary database via the dbhost and dbname parameters, and subsequently conduct static code injection and cross-site scripting (XSS) attacks via (1) an HTTP request or (2) a MySQL query.  NOT",
@@ -2481,56 +2651,16 @@
       "source": "GitHub Advisories",
       "url": "https://github.com/advisories/GHSA-mfr5-77xh-9j7h",
       "at": "2026-11-02T03:30:53.772Z"
-    },
-    {
-      "id": "CVE-2026-119206",
-      "title": "CVE-2026-119206",
-      "description": "pypdf has possible long runtimes when retrieving page labels",
-      "cvss": null,
-      "severity": "HIGH",
-      "source": "GitHub Advisories",
-      "url": "https://github.com/advisories/GHSA-42gh-23hr-vphw",
-      "at": "2026-11-02T03:30:53.772Z"
-    },
-    {
-      "id": "CVE-2026-119207",
-      "title": "CVE-2026-119207",
-      "description": "pypdf has possible large memory usage for exceptions in strict mode",
-      "cvss": null,
-      "severity": "HIGH",
-      "source": "GitHub Advisories",
-      "url": "https://github.com/advisories/GHSA-4vqv-7265-gm2w",
-      "at": "2026-11-02T03:30:53.772Z"
-    },
-    {
-      "id": "CVE-2026-119208",
-      "title": "CVE-2026-119208",
-      "description": "pypdf has possible long runtimes/large memory usage for encrypted PDF files",
-      "cvss": null,
-      "severity": "HIGH",
-      "source": "GitHub Advisories",
-      "url": "https://github.com/advisories/GHSA-62m5-6wh8-28x7",
-      "at": "2026-11-02T03:30:53.772Z"
-    },
-    {
-      "id": "CVE-2026-119209",
-      "title": "CVE-2026-119209",
-      "description": "pypdf has possible large memory usage when parsing cross-reference streams",
-      "cvss": null,
-      "severity": "HIGH",
-      "source": "GitHub Advisories",
-      "url": "https://github.com/advisories/GHSA-x3rh-gjgm-fmqc",
-      "at": "2026-11-02T03:30:53.772Z"
     }
   ],
   "intelStats": {
-    "total": 187,
-    "freshThisPulse": 2,
+    "total": 200,
+    "freshThisPulse": 17,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
-      "GHSA:21"
+      "GHSA:20"
     ],
-    "at": "2026-11-06T16:29:53.680Z"
+    "at": "2026-11-06T21:53:21.131Z"
   }
 }
