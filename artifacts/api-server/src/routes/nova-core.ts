@@ -35,7 +35,7 @@ import {
 import { ensureOllamaReady, ollamaHealth } from "../lib/agent/ollama-manager";
 import { runSelfCheck, storageSnapshot } from "../lib/agent/self-check";
 import { broadcastEvent } from "../lib/ws-hub";
-import { watchStatus, watchTick } from "../lib/agent/watchers";
+import { watchStatus, watchTick, watchProbe } from "../lib/agent/watchers";
 import { logger } from "../lib/logger";
 
 import { requireOps } from "../lib/ops/gate";
@@ -271,6 +271,12 @@ router.get("/nova-core/watch", (_req: Request, res: Response) => {
     // لو المراقب ما اتشغّلش، ده بيتقال. مش بنخبي الصمت ورا مصفوفة فاضية.
     noteAr: s.enabled ? null : "المراقبين مش متشغّلين على العملية دي (NOVA_WATCHERS=0 أو السيرفر ما إقلعش من طريق index.ts) — السجل اللي باين هو آخر المكتوب.",
   });
+});
+
+router.get("/nova-core/watch/probe", (_req: Request, res: Response) => {
+  // قراءة فقط: بتدي نفس اللي المراقب هيقوله دلوقتي، من غير كتابة ولا بث ولا حارس
+  // تكرار — عشان التشخيص من بره ما يبقاش محتاج مفتاح ops ولا يلوّث السجل.
+  res.json({ ok: true, ...watchProbe() });
 });
 
 router.post("/nova-core/watch/tick", (req: Request, res: Response) => {
