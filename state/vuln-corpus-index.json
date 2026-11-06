@@ -1,69 +1,69 @@
 {
   "version": 1,
-  "at": "2026-11-06T17:53:58.197Z",
+  "at": "2026-11-06T22:56:47.983Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 177904,
+  "total": 202019,
   "bySeverity": {
-    "high": 66860,
-    "medium": 84323,
-    "low": 8936,
-    "unknown": 6415,
-    "critical": 11329,
-    "none": 41
+    "high": 76806,
+    "medium": 94443,
+    "low": 9983,
+    "unknown": 6732,
+    "critical": 13998,
+    "none": 57
   },
   "byYear": {
     "1999": 1573,
-    "2000": 1236,
+    "2000": 1237,
     "2001": 1538,
     "2002": 2370,
     "2003": 1517,
     "2004": 2669,
-    "2005": 4689,
+    "2005": 4690,
     "2006": 7048,
     "2007": 6509,
-    "2008": 7035,
-    "2009": 4903,
-    "2010": 4947,
-    "2011": 4360,
+    "2008": 7037,
+    "2009": 4905,
+    "2010": 4952,
+    "2011": 4361,
     "2012": 5022,
-    "2013": 4827,
-    "2014": 135,
-    "2015": 57,
-    "2016": 44,
-    "2017": 158,
-    "2018": 608,
-    "2019": 487,
-    "2020": 713,
-    "2021": 1473,
-    "2022": 3388,
-    "2023": 17797,
-    "2024": 39012,
-    "2025": 43730,
-    "2026": 10059
+    "2013": 4831,
+    "2014": 137,
+    "2015": 58,
+    "2016": 104,
+    "2017": 212,
+    "2018": 848,
+    "2019": 707,
+    "2020": 762,
+    "2021": 1552,
+    "2022": 3442,
+    "2023": 17862,
+    "2024": 39154,
+    "2025": 44908,
+    "2026": 32014
   },
-  "kev": 585,
-  "epssScored": 172438,
-  "products": 41271,
+  "kev": 652,
+  "epssScored": 196240,
+  "products": 42936,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 51577
+      "count": 59665
     },
     {
       "product": "firefox",
-      "count": 7251
+      "count": 7598
     },
     {
       "product": "chrome",
-      "count": 5236
+      "count": 6848
     },
     {
       "product": "android",
-      "count": 5205
+      "count": 5492
     },
     {
       "product": "mac_os_x",
@@ -71,23 +71,27 @@
     },
     {
       "product": "safari",
-      "count": 3714
+      "count": 3753
     },
     {
       "product": "iphone_os",
-      "count": 3038
-    },
-    {
-      "product": "debian_linux",
-      "count": 2563
-    },
-    {
-      "product": "php",
-      "count": 2523
+      "count": 3260
     },
     {
       "product": "macos",
-      "count": 2477
+      "count": 2936
+    },
+    {
+      "product": "debian_linux",
+      "count": 2580
+    },
+    {
+      "product": "php",
+      "count": 2559
+    },
+    {
+      "product": "windows_server_2012",
+      "count": 2358
     },
     {
       "product": "flash_player",
@@ -98,12 +102,12 @@
       "count": 2302
     },
     {
-      "product": "jre",
-      "count": 2243
+      "product": "wireshark",
+      "count": 2296
     },
     {
-      "product": "wireshark",
-      "count": 2242
+      "product": "jre",
+      "count": 2284
     },
     {
       "product": "itunes",
@@ -111,75 +115,91 @@
     },
     {
       "product": "moodle",
-      "count": 2146
+      "count": 2147
+    },
+    {
+      "product": "ubuntu_linux",
+      "count": 2136
+    },
+    {
+      "product": "acrobat",
+      "count": 2127
     },
     {
       "product": "windows_server_2008",
       "count": 2116
     },
     {
-      "product": "ubuntu_linux",
-      "count": 2104
-    },
-    {
-      "product": "acrobat",
-      "count": 2095
-    },
-    {
-      "product": "windows_server_2012",
-      "count": 2039
-    },
-    {
       "product": "ios",
       "count": 2026
+    },
+    {
+      "product": "websphere_application_server",
+      "count": 2000
+    },
+    {
+      "product": "experience_manager",
+      "count": 1976
     },
     {
       "product": "internet_explorer",
       "count": 1958
     },
     {
-      "product": "websphere_application_server",
-      "count": 1956
+      "product": "jdk",
+      "count": 1906
     },
     {
       "product": "mysql",
-      "count": 1887
-    },
-    {
-      "product": "jdk",
-      "count": 1865
-    },
-    {
-      "product": "experience_manager",
-      "count": 1795
+      "count": 1890
     },
     {
       "product": "shockwave_player",
       "count": 1725
     },
     {
-      "product": "ffmpeg",
-      "count": 1671
+      "product": "harmonyos",
+      "count": 1693
     },
     {
-      "product": "harmonyos",
-      "count": 1646
+      "product": "windows_11_23h2",
+      "count": 1681
+    },
+    {
+      "product": "ffmpeg",
+      "count": 1675
+    },
+    {
+      "product": "windows_10_22h2",
+      "count": 1672
     },
     {
       "product": "qts",
-      "count": 1633
+      "count": 1666
     },
     {
       "product": "junos",
-      "count": 1559
+      "count": 1654
+    },
+    {
+      "product": "windows_10_21h2",
+      "count": 1644
+    },
+    {
+      "product": "windows_10_1809",
+      "count": 1581
     },
     {
       "product": "fedora",
-      "count": 1548
+      "count": 1560
     },
     {
       "product": "acrobat_reader",
-      "count": 1491
+      "count": 1500
+    },
+    {
+      "product": "gitlab",
+      "count": 1477
     },
     {
       "product": "mac_os_x_server",
@@ -188,41 +208,21 @@
     {
       "product": "quicktime",
       "count": 1471
-    },
-    {
-      "product": "windows_10_22h2",
-      "count": 1424
-    },
-    {
-      "product": "windows_11_23h2",
-      "count": 1414
-    },
-    {
-      "product": "windows_10_21h2",
-      "count": 1396
-    },
-    {
-      "product": "windows_10_1809",
-      "count": 1349
-    },
-    {
-      "product": "adaptive_security_appliance_software",
-      "count": 1297
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 21284242,
-    "sha256": "711b8d2120dd14c7af2202a5fbb20f8445867911c76dc5ee9391a9854794c5b6"
+    "bytes": 24938652,
+    "sha256": "621cb1757bcdf78ba3c12ebe55da0f53c248099094096a1d9eb52cac5d7e3934"
   },
   "mode": "deepen",
-  "says_ar": "177904 ثغرة حقيقية · critical 11329 · high 66860 · 585 مستغلّة فعلياً (KEV) · 172438 لها EPSS · 41271 منتج بـCPE · مزامنة 2026-11-06T17:53:58.197Z",
+  "says_ar": "202019 ثغرة حقيقية · critical 13998 · high 76806 · 652 مستغلّة فعلياً (KEV) · 196240 لها EPSS · 42936 منتج بـCPE · مزامنة 2026-11-06T22:56:47.983Z",
   "deepen": {
-    "nextStartIndex": 338930,
+    "nextStartIndex": 362930,
     "windowPages": 12,
-    "walkedFrom": 314930,
-    "nvdTotal": 420342,
-    "coverage": 0.4232,
-    "at": "2026-11-06T17:53:58.198Z"
+    "walkedFrom": 338930,
+    "nvdTotal": 420464,
+    "coverage": 0.4805,
+    "at": "2026-11-06T22:56:47.984Z"
   }
 }

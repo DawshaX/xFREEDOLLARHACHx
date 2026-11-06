@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-06T17:53:58.197Z",
-  "total": 177904,
+  "at": "2026-11-06T22:56:47.983Z",
+  "total": 202019,
   "bySeverity": {
-    "high": 66860,
-    "medium": 84323,
-    "low": 8936,
-    "unknown": 6415,
-    "critical": 11329,
-    "none": 41
+    "high": 76806,
+    "medium": 94443,
+    "low": 9983,
+    "unknown": 6732,
+    "critical": 13998,
+    "none": 57
   },
-  "kev": 585,
-  "epssScored": 172438,
-  "products": 41271,
+  "kev": 652,
+  "epssScored": 196240,
+  "products": 42936,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -90,6 +90,24 @@
         "zimbra_collaboration_suite",
         "zimbra_collaboration_suite",
         "zimbra_collaboration_suite"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-10520",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "An OS Command Injection vulnerability in Ivanti Sentry before the R10.5.2, R10.6.2 and R10.7.1 versions allows a remote unauthenticated user to achieve root-level remote code execution",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.99901,
+      "pub": "2026-06-09T16:16:35.700",
+      "products": [
+        "standalone_sentry",
+        "standalone_sentry",
+        "standalone_sentry"
       ],
       "refs": []
     },
@@ -320,6 +338,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-20182",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "May 2026: This security advisory provides the details and fix information for a vulnerability that was discovered and fixed after the  was disclosed in February 2026. This new advisory is for a new vulnerability in the control connection handshaking. The  sect",
+      "cwe": [
+        "CWE-287"
+      ],
+      "kev": true,
+      "epss": 0.91817,
+      "pub": "2026-05-14T17:16:19.387",
+      "products": [
+        "catalyst_sd-wan_manager",
+        "catalyst_sd-wan_manager",
+        "catalyst_sd-wan_manager"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-40044",
       "cvss": 10,
       "sev": "critical",
@@ -349,6 +385,42 @@
       "pub": "2025-12-16T17:16:07.843",
       "products": [
         "oneview"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-34910",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "A malicious actor with access to the network could exploit an Improper Input Validation vulnerability found in UniFi OS devices to execute a Command Injection.",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": true,
+      "epss": 0.90032,
+      "pub": "2026-05-22T02:16:34.527",
+      "products": [
+        "unifi_os_server",
+        "unifi_cloud_gateway_industrial_firmware",
+        "unifi_dream_machine_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-34908",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "A malicious actor with access to the network could exploit an Improper Access Control vulnerability found in UniFi OS devices to make unauthorized changes to the system.",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": true,
+      "epss": 0.88899,
+      "pub": "2026-05-22T02:16:34.240",
+      "products": [
+        "unifi_os_server",
+        "unifi_cloud_gateway_industrial_firmware",
+        "unifi_dream_machine_firmware"
       ],
       "refs": []
     },
@@ -437,6 +509,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-48558",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "SimpleHelp versions 5.5.15 and prior and 6.0 pre-release versions contain an authentication bypass vulnerability in the OIDC authentication flow. When OIDC authentication is configured, identity tokens submitted during login are accepted without verifying thei",
+      "cwe": [
+        "CWE-347"
+      ],
+      "kev": true,
+      "epss": 0.80786,
+      "pub": "2026-06-12T18:16:35.317",
+      "products": [
+        "simplehelp",
+        "simplehelp"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-49103",
       "cvss": 10,
       "sev": "critical",
@@ -490,6 +579,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-34909",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "A malicious actor with access to the network could exploit a Path Traversal vulnerability found in UniFi OS devices to access files on the underlying system that could be manipulated to access an underlying account.",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.69235,
+      "pub": "2026-05-22T02:16:34.390",
+      "products": [
+        "unifi_os_server",
+        "unifi_cloud_gateway_industrial_firmware",
+        "unifi_dream_machine_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-43300",
       "cvss": 10,
       "sev": "critical",
@@ -522,6 +629,23 @@
         "secure_firewall_management_center",
         "secure_firewall_management_center",
         "secure_firewall_management_center"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-48282",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "ColdFusion versions 2025.9, 2023.20 and earlier are affected by an Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') vulnerability that could lead to arbitrary code execution in the context of the current user. Exploitation of this",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.42388,
+      "pub": "2026-06-30T16:16:54.533",
+      "products": [
+        "coldfusion",
+        "coldfusion"
       ],
       "refs": []
     },
@@ -611,6 +735,25 @@
         "kace_systems_management_appliance",
         "kace_systems_management_appliance",
         "kace_systems_management_appliance"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-49869",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "Kestra is an open-source, event-driven orchestration platform. Prior to 1.0.45 and 1.3.21, AuthenticationFilter in Kestra OSS uses request.getPath().endsWith(\"/configs\") to whitelist the public configuration endpoint from Basic Auth. Because the check is a suf",
+      "cwe": [
+        "CWE-78",
+        "CWE-184",
+        "CWE-287"
+      ],
+      "kev": true,
+      "epss": 0.02095,
+      "pub": "2026-06-26T22:16:32.113",
+      "products": [
+        "kestra",
+        "kestra"
       ],
       "refs": []
     },
@@ -1142,6 +1285,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-39987",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "marimo is a reactive Python notebook. Prior to 0.23.0, Marimo has a Pre-Auth RCE vulnerability. The terminal WebSocket endpoint /terminal/ws lacks authentication validation, allowing an unauthenticated attacker to obtain a full PTY shell and execute arbitrary ",
+      "cwe": [
+        "CWE-306"
+      ],
+      "kev": true,
+      "epss": 0.99743,
+      "pub": "2026-04-09T18:17:02.807",
+      "products": [
+        "marimo"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-61882",
       "cvss": 9.8,
       "sev": "critical",
@@ -1436,6 +1595,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-41940",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "cPanel and WHM versions after 11.40 contain an authentication bypass vulnerability in the login flow that allows unauthenticated remote attackers to gain unauthorized access to the control panel.",
+      "cwe": [
+        "CWE-306"
+      ],
+      "kev": true,
+      "epss": 0.98527,
+      "pub": "2026-04-29T16:16:25.037",
+      "products": [
+        "cpanel",
+        "cpanel",
+        "cpanel"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-48788",
       "cvss": 9.8,
       "sev": "critical",
@@ -1606,6 +1783,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-20253",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "In Splunk Enterprise 10.2 versions below 10.2.4 and 10 versions below 10.0.7, an unauthenticated user could create or truncate arbitrary files through a PostgreSQL sidecar service endpoint. The vulnerability exists because the PostgreSQL sidecar service endpoi",
+      "cwe": [
+        "CWE-306"
+      ],
+      "kev": true,
+      "epss": 0.96939,
+      "pub": "2026-06-10T18:16:40.760",
+      "products": [
+        "splunk",
+        "splunk"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-46747",
       "cvss": 9.8,
       "sev": "critical",
@@ -1621,6 +1815,23 @@
         "big-ip_access_policy_manager",
         "big-ip_advanced_firewall_manager",
         "big-ip_advanced_web_application_firewall"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-35273",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Vulnerability in the PeopleSoft Enterprise PeopleTools product of Oracle PeopleSoft (component: Updates Environment Management). Supported versions that are affected are 8.61 and 8.62. Easily exploitable vulnerability allows unauthenticated attacker with netwo",
+      "cwe": [
+        "CWE-306"
+      ],
+      "kev": true,
+      "epss": 0.96678,
+      "pub": "2026-06-11T04:16:53.680",
+      "products": [
+        "peoplesoft_enterprise_peopletools",
+        "peoplesoft_enterprise_peopletools"
       ],
       "refs": []
     },
@@ -1818,6 +2029,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-35616",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A improper access control vulnerability in Fortinet FortiClientEMS 7.4.5 through 7.4.6 may allow an unauthenticated attacker to execute unauthorized code or commands via crafted requests.",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": true,
+      "epss": 0.93983,
+      "pub": "2026-04-04T01:16:39.720",
+      "products": [
+        "forticlientems",
+        "forticlientems"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-11953",
       "cvss": 9.8,
       "sev": "critical",
@@ -1907,6 +2135,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-39808",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A improper neutralization of special elements used in an os command ('os command injection') vulnerability in Fortinet FortiSandbox 4.4.0 through 4.4.8 may allow attacker to execute unauthorized code or commands via <insert attack vector here>",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.93189,
+      "pub": "2026-04-14T16:16:44.860",
+      "products": [
+        "fortisandbox"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2013-0632",
       "cvss": 9.8,
       "sev": "critical",
@@ -1987,6 +2231,24 @@
       "pub": "2024-07-10T19:15:11.390",
       "products": [
         "expedition"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-3055",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Insufficient input validation in NetScaler ADC and NetScaler Gateway when configured as a SAML IDP leading to memory overread",
+      "cwe": [
+        "CWE-125"
+      ],
+      "kev": true,
+      "epss": 0.91491,
+      "pub": "2026-03-23T21:17:17.477",
+      "products": [
+        "netscaler_application_delivery_controller",
+        "netscaler_application_delivery_controller",
+        "netscaler_application_delivery_controller"
       ],
       "refs": []
     },
@@ -2095,6 +2357,40 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-42208",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "LiteLLM is a proxy server (AI Gateway) to call LLM APIs in OpenAI (or native) format. From version 1.81.16 to before version 1.83.7, a database query used during proxy API key checks mixed the caller-supplied key value into the query text instead of passing it",
+      "cwe": [
+        "CWE-89"
+      ],
+      "kev": true,
+      "epss": 0.8942,
+      "pub": "2026-05-08T04:16:19.923",
+      "products": [
+        "litellm"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-9082",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection') vulnerability in Drupal Drupal core allows SQL Injection.\n\nThis issue affects Drupal core: from 8.9.0 before 10.4.10, from 10.5.0 before 10.5.10, from 10.6.0 before 10.6.9, fr",
+      "cwe": [
+        "CWE-89"
+      ],
+      "kev": true,
+      "epss": 0.89381,
+      "pub": "2026-05-20T20:16:41.230",
+      "products": [
+        "drupal",
+        "drupal",
+        "drupal"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-61757",
       "cvss": 9.8,
       "sev": "critical",
@@ -2125,6 +2421,22 @@
       "products": [
         "acrobat",
         "acrobat_reader"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-48908",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A vulnerability in SP Page Builder for Joomla allows unauthenticated users to upload arbitrary files, ultimately resulting in the upload and execution of PHP code.",
+      "cwe": [
+        "CWE-434"
+      ],
+      "kev": true,
+      "epss": 0.88512,
+      "pub": "2026-06-20T13:16:42.080",
+      "products": [
+        "sp_page_builder"
       ],
       "refs": []
     },
@@ -2193,6 +2505,22 @@
       "pub": "2023-10-26T17:15:09.033",
       "products": [
         "mirth_connect"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-48907",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A vulnerability in the JCE editor extension for Joomla allows the creation of new editor profiles for unauthenticated users, ultimately resulting in PHP code upload and execution.",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": true,
+      "epss": 0.85439,
+      "pub": "2026-06-05T08:16:30.797",
+      "products": [
+        "jce"
       ],
       "refs": []
     },
@@ -2335,6 +2663,42 @@
         "acrobat",
         "acrobat",
         "acrobat"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-33824",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Double free in Windows IKE Extension allows an unauthorized attacker to execute code over a network.",
+      "cwe": [
+        "CWE-415"
+      ],
+      "kev": true,
+      "epss": 0.77054,
+      "pub": "2026-04-14T18:17:34.767",
+      "products": [
+        "windows_10_1607",
+        "windows_10_1809",
+        "windows_10_21h2"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-25089",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A improper neutralization of special elements used in an os command ('os command injection') vulnerability in Fortinet FortiSandbox 5.0.0 through 5.0.5, FortiSandbox 4.4.0 through 4.4.8, FortiSandbox 4.2 all versions, FortiSandbox Cloud 5.0.4 through 5.0.5, Fo",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.76112,
+      "pub": "2026-06-09T16:16:39.943",
+      "products": [
+        "fortisandbox",
+        "fortisandbox",
+        "fortisandbox"
       ],
       "refs": []
     },
@@ -2579,6 +2943,25 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-12569",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A critical remote code execution (RCE) vulnerability has been reported in PTC Windchill PDMlink and PTC FlexPLM. The vulnerability may be exploited through the deserialization of untrusted data.   *  This advisory also applies to all CPS versions\n  *  The iden",
+      "cwe": [
+        "CWE-20",
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.46049,
+      "pub": "2026-06-18T01:18:12.040",
+      "products": [
+        "flexplm",
+        "flexplm",
+        "flexplm"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-49105",
       "cvss": 9.8,
       "sev": "critical",
@@ -2591,6 +2974,24 @@
       "pub": "2023-11-21T22:15:08.613",
       "products": [
         "owncloud_server"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-0300",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A buffer overflow vulnerability in the User-ID™ Authentication Portal (aka Captive Portal) service of Palo Alto Networks PAN-OS software allows an unauthenticated attacker to execute arbitrary code with root privileges on the PA-Series and VM-Series firewalls ",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.41714,
+      "pub": "2026-05-06T19:16:35.730",
+      "products": [
+        "pan-os",
+        "pan-os",
+        "pan-os"
       ],
       "refs": []
     },
@@ -2610,6 +3011,22 @@
         "fortimail",
         "fortimail",
         "fortimail"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-56290",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Joomla Extension - joomlack.fr - Unauthenticated file upload in Page Builder CK extension < 3.6.0 - The Joomla extension Page Builder CK is vulnerable to an unauthenticated arbitrary file upload that allows uploading executable files and leads to full RCE.",
+      "cwe": [
+        "CWE-434"
+      ],
+      "kev": true,
+      "epss": 0.30866,
+      "pub": "2026-06-29T15:16:42.360",
+      "products": [
+        "page_builder_ck"
       ],
       "refs": []
     },
@@ -2682,6 +3099,22 @@
         "sma8200v",
         "sma6200_firmware",
         "sma6210_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-45247",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Mirasvit Full Page Cache Warmer for Magento 2 before version 1.11.12 contains a PHP object injection vulnerability that allows unauthenticated attackers to achieve remote code execution by supplying a crafted serialized PHP object in the CacheWarmer cookie. At",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.26157,
+      "pub": "2026-05-26T15:16:39.263",
+      "products": [
+        "full_page_cache_warmer"
       ],
       "refs": []
     },
@@ -2792,6 +3225,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-48939",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A vulnerability in the iCagenda extension for Joomla allows the upload of arbitrary files in the file attachment feature, ultimately resulting in PHP code upload and execution.",
+      "cwe": [
+        "CWE-434"
+      ],
+      "kev": true,
+      "epss": 0.20069,
+      "pub": "2026-06-20T13:16:42.433",
+      "products": [
+        "icagenda",
+        "icagenda"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-40766",
       "cvss": 9.8,
       "sev": "critical",
@@ -2806,6 +3256,23 @@
         "sonicos",
         "sonicos",
         "sonicos"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-48172",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "LiteSpeed User-End cPanel Plugin before 2.4.5 allows privilege escalation (possibly to root), as exploited in the wild in May 2026. Detection is best done via a command line of grep -rE \"cpanel_jsonapi_func=redisAble\" /var/cpanel/logs /usr/local/cpanel/logs/ 2",
+      "cwe": [
+        "CWE-266"
+      ],
+      "kev": true,
+      "epss": 0.17915,
+      "pub": "2026-05-21T02:16:33.760",
+      "products": [
+        "litespeed_cpanel_plugin",
+        "litespeed_whm_plugin"
       ],
       "refs": []
     },
@@ -2841,6 +3308,24 @@
       "products": [
         "exchange_server",
         "exchange_server"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-46817",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Vulnerability in the Oracle Payments product of Oracle E-Business Suite (component: File Transmission).  Supported versions that are affected are 12.2.3-12.2.15. Easily exploitable vulnerability allows unauthenticated attacker with network access via HTTP to c",
+      "cwe": [
+        "CWE-269",
+        "CWE-287",
+        "CWE-306"
+      ],
+      "kev": true,
+      "epss": 0.12313,
+      "pub": "2026-05-28T21:16:31.503",
+      "products": [
+        "e-business_suite"
       ],
       "refs": []
     },
@@ -3016,6 +3501,38 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-48027",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Nx Console is the user interface for Nx & Lerna. On 19 May 2026, a malicious version of Nx Console, 18.95.0, was published at 12:30 PM UTC and removed soon after at 12:48 PM UTC, leaving it available for ~18 minutes in Visual Studio Marketplace. For OpenVSX, t",
+      "cwe": [
+        "CWE-506"
+      ],
+      "kev": true,
+      "epss": 0.0185,
+      "pub": "2026-05-27T17:16:41.787",
+      "products": [
+        "nx_console"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-8398",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A supply chain attack compromised the official installation packages of DAEMON Tools Lite (Windows versions 12.5.0.2421 through 12.5.0.2434), distributed from the legitimate website daemon-tools.cc between approximately April 8, 2026, and May 5, 2026. Attacker",
+      "cwe": [
+        "CWE-506"
+      ],
+      "kev": true,
+      "epss": 0.01456,
+      "pub": "2026-05-15T09:16:17.653",
+      "products": [
+        "daemon_tools"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-59374",
       "cvss": 9.8,
       "sev": "critical",
@@ -3028,6 +3545,42 @@
       "pub": "2025-12-17T05:16:13.080",
       "products": [
         "live_update"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-8452",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Memory overflow vulnerability NetScaler ADC and NetScaler Gateway leading to unpredictable or erroneous behavior and Denial of Service if the appliance is configured as a Gateway (SSL VPN, ICA Proxy, CVPN, RDP Proxy) or AAA virtual server",
+      "cwe": [
+        "CWE-119"
+      ],
+      "kev": true,
+      "epss": 0.01011,
+      "pub": "2026-06-30T13:19:33.450",
+      "products": [
+        "netscaler_application_delivery_controller",
+        "netscaler_application_delivery_controller",
+        "netscaler_application_delivery_controller"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-8037",
+      "cvss": 9.6,
+      "sev": "critical",
+      "desc": "OS Command Injection Remote Code Execution Vulnerability in API in Progress ADC Products allows an un-authenticated attacker to execute arbitrary commands on the LoadMaster appliance by exploiting unsanitized input in multiple command endpoints",
+      "cwe": [
+        "CWE-77"
+      ],
+      "kev": true,
+      "epss": 0.99794,
+      "pub": "2026-06-04T14:16:45.177",
+      "products": [
+        "connection_manager_for_objectscale",
+        "ecs_connection_manager",
+        "moveit_web_application_firewall"
       ],
       "refs": []
     },
@@ -3157,6 +3710,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-45321",
+      "cvss": 9.6,
+      "sev": "critical",
+      "desc": "On 2026-05-11, between approximately 19:20 and 19:26 UTC, 84 malicious versions across 42 @tanstack/* packages were published to the npm registry. The publishes were authenticated via the legitimate GitHub Actions OIDC trusted-publisher binding for TanStack/ro",
+      "cwe": [
+        "CWE-506"
+      ],
+      "kev": true,
+      "epss": 0.03278,
+      "pub": "2026-05-12T01:16:46.820",
+      "products": [
+        "tanstack\\/arktype-adapter",
+        "tanstack\\/arktype-adapter",
+        "tanstack\\/eslint-plugin-router"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-4966",
       "cvss": 9.4,
       "sev": "critical",
@@ -3203,6 +3774,24 @@
       "pub": "2025-08-05T13:15:28.487",
       "products": [
         "apex_one"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-50751",
+      "cvss": 9.3,
+      "sev": "critical",
+      "desc": "A logic flow weakness in Remote Access and Mobile Access certificate validation in deprecated IKEv1 key exchange allows an unauthenticated remote attacker to bypass user authentication and establish a remote access VPN connection without a valid user password.",
+      "cwe": [
+        "CWE-287"
+      ],
+      "kev": true,
+      "epss": 0.85348,
+      "pub": "2026-06-08T12:16:32.367",
+      "products": [
+        "gaia_os",
+        "gaia_os",
+        "gaia_os"
       ],
       "refs": []
     },
@@ -3406,6 +3995,24 @@
       "pub": "2025-11-10T15:15:36.527",
       "products": [
         "triofox"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-0257",
+      "cvss": 9.1,
+      "sev": "critical",
+      "desc": "Authentication bypass vulnerabilities in the GlobalProtect portal and gateway of Palo Alto Networks PAN-OS® software allows the attacker to bypass security restrictions and establish an unauthorized VPN connection.\n\nPanorama and Cloud NGFW are not impacted by ",
+      "cwe": [
+        "CWE-565"
+      ],
+      "kev": true,
+      "epss": 0.95642,
+      "pub": "2026-05-13T19:17:01.040",
+      "products": [
+        "pan-os",
+        "pan-os",
+        "pan-os"
       ],
       "refs": []
     },
@@ -3721,6 +4328,26 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-34197",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Improper Input Validation, Improper Control of Generation of Code ('Code Injection') vulnerability in Apache ActiveMQ Broker, Apache ActiveMQ.\n\nApache ActiveMQ Classic exposes the Jolokia JMX-HTTP bridge at /api/jolokia/ on the web console. The default Jolokia",
+      "cwe": [
+        "CWE-20",
+        "CWE-94",
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.98256,
+      "pub": "2026-04-07T09:16:20.967",
+      "products": [
+        "activemq",
+        "activemq",
+        "activemq_broker"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-52163",
       "cvss": 8.8,
       "sev": "high",
@@ -3839,6 +4466,25 @@
         "internet_explorer",
         "internet_explorer",
         "internet_explorer"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-42271",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "LiteLLM is a proxy server (AI Gateway) to call LLM APIs in OpenAI (or native) format. From version 1.74.2 to before version 1.83.7, two endpoints used to preview an MCP server before saving it — POST /mcp-rest/test/connection and POST /mcp-rest/test/tools/list",
+      "cwe": [
+        "CWE-77",
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.91445,
+      "pub": "2026-05-08T04:16:21.820",
+      "products": [
+        "litellm",
+        "openshift_ai",
+        "openshift_ai"
       ],
       "refs": []
     },
@@ -4017,6 +4663,24 @@
         "internet_explorer",
         "internet_explorer",
         "internet_explorer"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-45659",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Deserialization of untrusted data in Microsoft Office SharePoint allows an authorized attacker to execute code over a network.",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.80242,
+      "pub": "2026-05-22T23:16:56.273",
+      "products": [
+        "sharepoint_server",
+        "sharepoint_server",
+        "sharepoint_server"
       ],
       "refs": []
     },
@@ -4244,6 +4908,24 @@
       "pub": "2025-11-26T23:15:47.927",
       "products": [
         "ray"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-33634",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Trivy is a security scanner. On March 19, 2026, a threat actor used compromised credentials to publish a malicious Trivy v0.69.4 release, force-push 76 of 77 version tags in `aquasecurity/trivy-action` to credential-stealing malware, and replace all 7 tags in ",
+      "cwe": [
+        "CWE-506"
+      ],
+      "kev": true,
+      "epss": 0.59727,
+      "pub": "2026-03-23T22:16:31.290",
+      "products": [
+        "setup-trivy",
+        "trivy",
+        "trivy_action"
       ],
       "refs": []
     },
@@ -4688,6 +5370,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-5281",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Use after free in Dawn in Google Chrome prior to 146.0.7680.178 allowed a remote attacker who had compromised the renderer process to execute arbitrary code via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.13743,
+      "pub": "2026-04-01T05:16:01.440",
+      "products": [
+        "chrome"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2013-0648",
       "cvss": 8.8,
       "sev": "high",
@@ -5017,6 +5715,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-7273",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "A stack-based buffer overflow vulnerability in the CGI program of Zyxel GS1900-48HPv2 firmware versions through 2.90(ABTQ.1)C0 could allow a LAN-based, unauthenticated attacker to exploit the flaw and potentially execute OS commands via a crafted HTTP request.",
+      "cwe": [
+        "CWE-121"
+      ],
+      "kev": true,
+      "epss": 0.02734,
+      "pub": "2026-06-16T03:16:13.557",
+      "products": [
+        "gs1900-8_firmware",
+        "gs1900-8hp_firmware",
+        "gs1900-10hp_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-3910",
       "cvss": 8.8,
       "sev": "high",
@@ -5048,6 +5764,23 @@
         "commvault",
         "commvault",
         "commvault"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-11645",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Out of bounds read and write in V8 in Google Chrome prior to 149.0.7827.103 allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-125",
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.0244,
+      "pub": "2026-06-09T00:16:47.370",
+      "products": [
+        "chrome"
       ],
       "refs": []
     },
@@ -5101,6 +5834,24 @@
         "safari",
         "ipados",
         "iphone_os"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-53266",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "In the Linux kernel, the following vulnerability has been resolved:\n\nnetfilter: bridge: make ebt_snat ARP rewrite writable\n\nThe ebtables SNAT target keeps the Ethernet source address rewrite\nbehind skb_ensure_writable(skb, 0).  This is intentional: at the brid",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.00934,
+      "pub": "2026-06-25T09:16:44.643",
+      "products": [
+        "linux_kernel",
+        "linux_kernel",
+        "linux_kernel"
       ],
       "refs": []
     },
@@ -5190,6 +5941,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-20230",
+      "cvss": 8.6,
+      "sev": "high",
+      "desc": "A vulnerability in Cisco Unified Communications Manager (Unified CM) and Cisco Unified Communications Manager Session Management Edition (Unified CM SME) could allow an unauthenticated, remote attacker to conduct server-side request forgery (SSRF) attacks thro",
+      "cwe": [
+        "CWE-918"
+      ],
+      "kev": true,
+      "epss": 0.88528,
+      "pub": "2026-06-03T18:16:20.160",
+      "products": [
+        "unified_communications_manager",
+        "unified_communications_manager"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-1603",
       "cvss": 8.6,
       "sev": "high",
@@ -5238,6 +6006,24 @@
         "adaptive_security_appliance_software",
         "adaptive_security_appliance_software",
         "adaptive_security_appliance_software"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-34621",
+      "cvss": 8.6,
+      "sev": "high",
+      "desc": "Acrobat Reader versions 24.001.30356, 26.001.21367 and earlier are affected by an Improperly Controlled Modification of Object Prototype Attributes ('Prototype Pollution') vulnerability that could result in arbitrary code execution in the context of the curren",
+      "cwe": [
+        "CWE-1321"
+      ],
+      "kev": true,
+      "epss": 0.0723,
+      "pub": "2026-04-11T07:16:03.633",
+      "products": [
+        "acrobat_dc",
+        "acrobat_reader_dc",
+        "acrobat"
       ],
       "refs": []
     },
@@ -5296,6 +6082,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-54420",
+      "cvss": 8.5,
+      "sev": "high",
+      "desc": "LiteSpeed cPanel plugin before 2.4.8 (as distributed in LiteSpeed WHM PlugIn before 5.3.2.0) mishandles symlinks provided by a user with FTP or web shell access on a shared hosting server running CloudLinux/CageFS, as exploited in the wild in May 2026.",
+      "cwe": [
+        "CWE-61"
+      ],
+      "kev": true,
+      "epss": 0.01439,
+      "pub": "2026-06-14T04:16:28.630",
+      "products": [
+        "litespeed_cpanel_plugin",
+        "litespeed_whm_plugin"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-1708",
       "cvss": 8.4,
       "sev": "high",
@@ -5342,6 +6145,40 @@
       "pub": "2024-05-23T02:15:09.257",
       "products": [
         "javs_viewer"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2025-48595",
+      "cvss": 8.4,
+      "sev": "high",
+      "desc": "In multiple locations, there is a possible way to achieve code execution due to an integer overflow. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is not needed for exploitation.",
+      "cwe": [
+        "CWE-190"
+      ],
+      "kev": true,
+      "epss": 0.01947,
+      "pub": "2026-06-01T22:16:18.093",
+      "products": [
+        "android",
+        "android",
+        "android"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-55255",
+      "cvss": 8.4,
+      "sev": "high",
+      "desc": "Langflow is a tool for building and deploying AI-powered agents and workflows. Prior to 1.9.1, an Insecure Direct Object Reference (IDOR) vulnerability in /api/v1/responses endpoint allows an authenticated attacker to execute any flow belonging to another user",
+      "cwe": [
+        "CWE-639"
+      ],
+      "kev": true,
+      "epss": 0.00887,
+      "pub": "2026-06-23T17:17:08.050",
+      "products": [
+        "langflow"
       ],
       "refs": []
     },
@@ -5627,6 +6464,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-42897",
+      "cvss": 8.1,
+      "sev": "high",
+      "desc": "Improper neutralization of input during web page generation ('cross-site scripting') in Microsoft Exchange Server allows an unauthorized attacker to perform spoofing over a network.",
+      "cwe": [
+        "CWE-79"
+      ],
+      "kev": true,
+      "epss": 0.70662,
+      "pub": "2026-05-14T18:16:49.360",
+      "products": [
+        "exchange_server",
+        "exchange_server",
+        "exchange_server_subscription_edition"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2008-4128",
       "cvss": 8.1,
       "sev": "high",
@@ -5884,6 +6739,25 @@
         "acrobat",
         "acrobat_reader",
         "solaris"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-31431",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "In the Linux kernel, the following vulnerability has been resolved:\n\ncrypto: algif_aead - Revert to operating out-of-place\n\nThis mostly reverts commit 72548b093ee3 except for the copying of\nthe associated data.\n\nThere is no benefit in operating in-place in alg",
+      "cwe": [
+        "CWE-669",
+        "CWE-1288"
+      ],
+      "kev": true,
+      "epss": 0.98114,
+      "pub": "2026-04-22T09:16:21.270",
+      "products": [
+        "linux_kernel",
+        "linux_kernel",
+        "linux_kernel"
       ],
       "refs": []
     },
@@ -6478,6 +7352,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-20245",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "A vulnerability in the CLI of Cisco Catalyst SD-WAN Controller, formerly SD-WAN vSmart, Cisco Catalyst SD-WAN Manager, formerly SD-WAN vManage, and Cisco Catalyst SD-WAN Validator, formerly SD-WAN vBond, could allow an authenticated, local attacker to execute ",
+      "cwe": [
+        "CWE-116"
+      ],
+      "kev": true,
+      "epss": 0.25323,
+      "pub": "2026-06-04T23:17:31.763",
+      "products": [
+        "catalyst_sd-wan_manager",
+        "catalyst_sd-wan_manager",
+        "catalyst_sd-wan_manager"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-35250",
       "cvss": 7.8,
       "sev": "high",
@@ -6602,6 +7494,26 @@
         "windows_10_1507",
         "windows_10_1607",
         "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-46300",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "In the Linux kernel, the following vulnerability has been resolved:\n\nnet: skbuff: preserve shared-frag marker during coalescing\n\nskb_try_coalesce() can attach paged frags from @from to @to.  If @from\nhas SKBFL_SHARED_FRAG set, the resulting @to skb can contain",
+      "cwe": [
+        "CWE-787",
+        "CWE-456",
+        "CWE-123"
+      ],
+      "kev": true,
+      "epss": 0.1613,
+      "pub": "2026-05-23T12:17:02.660",
+      "products": [
+        "linux_kernel",
+        "linux_kernel",
+        "linux_kernel"
       ],
       "refs": []
     },
@@ -6733,6 +7645,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-41091",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Improper link resolution before file access ('link following') in Microsoft Defender allows an authorized attacker to elevate privileges locally.",
+      "cwe": [
+        "CWE-59"
+      ],
+      "kev": true,
+      "epss": 0.08202,
+      "pub": "2026-05-20T13:16:29.173",
+      "products": [
+        "malware_protection_engine"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2004-0210",
       "cvss": 7.8,
       "sev": "high",
@@ -6765,6 +7693,22 @@
         "windows_11_21h2",
         "windows_11_22h2",
         "windows_11_23h2"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-33825",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Insufficient granularity of access control in Microsoft Defender allows an authorized attacker to elevate privileges locally.",
+      "cwe": [
+        "CWE-1220"
+      ],
+      "kev": true,
+      "epss": 0.06749,
+      "pub": "2026-04-14T18:17:35.100",
+      "products": [
+        "defender_antimalware_platform"
       ],
       "refs": []
     },
@@ -6819,6 +7763,22 @@
         "windows_10_1507",
         "windows_10_1607",
         "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-3502",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "TrueConf Client downloads application update code and applies it without performing verification. An attacker who is able to influence the update delivery path can substitute a tampered update payload. If the payload is executed or installed by the updater, th",
+      "cwe": [
+        "CWE-494"
+      ],
+      "kev": true,
+      "epss": 0.05845,
+      "pub": "2026-03-30T19:16:27.053",
+      "products": [
+        "trueconf"
       ],
       "refs": []
     },
@@ -7744,6 +8704,25 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-34486",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "Missing Encryption of Sensitive Data vulnerability in Apache Tomcat due to the fix for CVE-2026-29146 allowing the bypass of the EncryptInterceptor.\n\nThis issue affects Apache Tomcat: 11.0.20, 10.1.53, 9.0.116.\n\nUsers are recommended to upgrade to version 11.0",
+      "cwe": [
+        "CWE-311",
+        "CWE-807"
+      ],
+      "kev": true,
+      "epss": 0.98503,
+      "pub": "2026-04-09T20:16:25.063",
+      "products": [
+        "tomcat",
+        "tomcat",
+        "tomcat"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-57727",
       "cvss": 7.5,
       "sev": "high",
@@ -7925,6 +8904,23 @@
       "products": [
         "jboss_enterprise_application_platform",
         "jboss_enterprise_application_platform"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-28318",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "SolarWinds Serv-U is susceptible to specially crafted POST requests that crash the Serv-U service without authentication using Content-Encoding: deflate. Mitigation steps are provided to secure customer environments in the SolarWinds Trust Center if you are un",
+      "cwe": [
+        "CWE-400"
+      ],
+      "kev": true,
+      "epss": 0.43651,
+      "pub": "2026-06-04T15:16:50.407",
+      "products": [
+        "serv-u",
+        "serv-u"
       ],
       "refs": []
     },
@@ -8167,6 +9163,20 @@
         "csra6620_firmware",
         "csra6640_firmware"
       ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-19868",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "An authentication enforcement vulnerability in SonicOS SSLVPN service may allow a user with valid credentials for an alternate authentication method to bypass SAML authentication controls. Successful exploitation may also bypass SAML-enforced multi-factor auth",
+      "cwe": [
+        "CWE-308"
+      ],
+      "kev": true,
+      "epss": null,
+      "pub": "2026-11-06T19:17:48.437",
+      "products": [],
       "refs": []
     },
     {
@@ -8538,6 +9548,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-6973",
+      "cvss": 7.2,
+      "sev": "high",
+      "desc": "An Improper Input Validation in Ivanti EPMM before versions 12.6.1.1, 12.7.0.1, and 12.8.0.1 allows a remotely authenticated user with administrative access to achieve remote code execution.",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": true,
+      "epss": 0.34454,
+      "pub": "2026-05-07T16:16:23.163",
+      "products": [
+        "endpoint_manager_mobile",
+        "endpoint_manager_mobile",
+        "endpoint_manager_mobile"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-68461",
       "cvss": 7.2,
       "sev": "high",
@@ -8872,6 +9900,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-34926",
+      "cvss": 6.7,
+      "sev": "medium",
+      "desc": "A directory traversal vulnerability in the Apex One (on-premise) server could allow a pre-authenticated local attacker to modify a key table on the server to inject malicious code to deploy to agents on affected installations.\n\n\r\nThis vulnerability is only exp",
+      "cwe": [
+        "CWE-23"
+      ],
+      "kev": true,
+      "epss": 0.1342,
+      "pub": "2026-05-21T14:16:45.213",
+      "products": [
+        "apex_one",
+        "apex_one"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-1976",
       "cvss": 6.7,
       "sev": "medium",
@@ -9013,6 +10058,25 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-48710",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "Starlette is a lightweight ASGI framework/toolkit. Prior to version 1.0.1, the HTTP `Host` request header was not validated before being used to reconstruct `request.url`. Because the routing algorithm relies on the raw HTTP path while `request.url` is rebuilt",
+      "cwe": [
+        "CWE-444",
+        "CWE-1289"
+      ],
+      "kev": true,
+      "epss": 0.70288,
+      "pub": "2026-05-26T22:16:44.020",
+      "products": [
+        "starlette",
+        "ai_inference_server",
+        "ansible_automation_platform"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-24054",
       "cvss": 6.5,
       "sev": "medium",
@@ -9065,6 +10129,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-32201",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "Improper input validation in Microsoft Office SharePoint allows an unauthorized attacker to perform spoofing over a network.",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": true,
+      "epss": 0.43378,
+      "pub": "2026-04-14T18:17:27.160",
+      "products": [
+        "sharepoint_server",
+        "sharepoint_server",
+        "sharepoint_server"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-20133",
       "cvss": 6.5,
       "sev": "medium",
@@ -9075,6 +10157,24 @@
       "kev": true,
       "epss": 0.3529,
       "pub": "2026-02-25T17:25:30.983",
+      "products": [
+        "catalyst_sd-wan_manager",
+        "catalyst_sd-wan_manager",
+        "catalyst_sd-wan_manager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-20262",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "A vulnerability in the web UI of Cisco Catalyst SD-WAN Manager, formerly SD-WAN vManage, could allow an authenticated, remote attacker to create a file or overwrite any file on the filesystem of an affected system.\r\n\r\nThis vulnerability exists because the affe",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.29116,
+      "pub": "2026-06-15T18:16:34.820",
       "products": [
         "catalyst_sd-wan_manager",
         "catalyst_sd-wan_manager",
@@ -9441,6 +10541,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2025-61624",
+      "cvss": 6,
+      "sev": "medium",
+      "desc": "An Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') [CWE-22] vulnerability in Fortinet FortiOS 7.6.0 through 7.6.4, FortiOS 7.4.0 through 7.4.9, FortiOS 7.2 all versions, FortiOS 7.0 all versions, FortiOS 6.4 all versions, FortiPA",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.01343,
+      "pub": "2026-04-14T16:16:31.300",
+      "products": [
+        "fortios",
+        "fortios",
+        "fortipam"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-68686",
       "cvss": 5.9,
       "sev": "medium",
@@ -9522,6 +10640,22 @@
         "secure_firewall_threat_defense",
         "secure_firewall_threat_defense",
         "secure_firewall_threat_defense"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-7473",
+      "cvss": 5.8,
+      "sev": "medium",
+      "desc": "On affected platforms running Arista EOS where a tunnel decapsulation configuration—such as VXLAN (Virtual Extensible LAN), decap-groups, or a GRE (Generic Routing Encapsulation) tunnel interface—is present, the switch will incorrectly decapsulate and forward ",
+      "cwe": [
+        "CWE-1023"
+      ],
+      "kev": true,
+      "epss": 0.01108,
+      "pub": "2026-06-05T17:17:02.850",
+      "products": [
+        "eos"
       ],
       "refs": []
     },
@@ -10116,6 +11250,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-32202",
+      "cvss": 4.3,
+      "sev": "medium",
+      "desc": "Protection mechanism failure in Windows Shell allows an unauthorized attacker to perform spoofing over a network.",
+      "cwe": [
+        "CWE-693"
+      ],
+      "kev": true,
+      "epss": 0.70902,
+      "pub": "2026-04-14T18:17:27.360",
+      "products": [
+        "windows_10_1607",
+        "windows_10_1809",
+        "windows_10_21h2"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-47813",
       "cvss": 4.3,
       "sev": "medium",
@@ -10144,6 +11296,22 @@
         "ipados",
         "ipados",
         "ipados"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-45498",
+      "cvss": 4,
+      "sev": "medium",
+      "desc": "Microsoft Defender Denial of Service Vulnerability",
+      "cwe": [
+        "CWE-400"
+      ],
+      "kev": true,
+      "epss": 0.63076,
+      "pub": "2026-05-20T13:16:36.780",
+      "products": [
+        "defender_antimalware_platform"
       ],
       "refs": []
     },
@@ -12673,1106 +13841,7 @@
         "squid_web_proxy_cache"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2011-3492",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in Azeotech DAQFactory 5.85 build 1853 and earlier allows remote attackers to cause a denial of service (crash) and execute arbitrary code via a crafted NETB packet to UDP port 20034.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.70909,
-      "pub": "2011-09-16T14:28:13.073",
-      "products": [
-        "daqfactory",
-        "daqfactory",
-        "daqfactory"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-0073",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Mozilla Firefox before 3.5.19 and 3.6.x before 3.6.17, and SeaMonkey before 2.0.14, does not properly use nsTreeRange data structures, which allows remote attackers to execute arbitrary code via unspecified vectors that lead to a \"dangling pointer.\"",
-      "cwe": [
-        "CWE-20"
-      ],
-      "kev": false,
-      "epss": 0.70893,
-      "pub": "2011-05-07T18:55:01.293",
-      "products": [
-        "firefox",
-        "firefox",
-        "firefox"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2001-0168",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in AT&T WinVNC (Virtual Network Computing) server 3.3.3r7 and earlier allows remote attackers to execute arbitrary commands via a long HTTP GET request when the DebugLevel registry key is greater than 0.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.7073,
-      "pub": "2001-05-03T04:00:00.000",
-      "products": [
-        "winvnc"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2006-6423",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the IMAP service for MailEnable Professional and Enterprise Edition 2.0 through 2.35, Professional Edition 1.6 through 1.84, and Enterprise Edition 1.1 through 1.41 allows remote attackers to execute arbitrary code via a pre-auth",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.70706,
-      "pub": "2006-12-12T02:28:00.000",
-      "products": [
-        "mailenable_enterprise",
-        "mailenable_enterprise",
-        "mailenable_enterprise"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-1553",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in getnnmdata.exe in HP OpenView Network Node Manager (OV NNM) 7.01, 7.51, and 7.53 allows remote attackers to execute arbitrary code via an invalid MaxAge parameter.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.70564,
-      "pub": "2010-05-13T17:30:02.377",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2006-6183",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple stack-based buffer overflows in 3Com 3CTftpSvc 2.0.1, and possibly earlier, allow remote attackers to cause a denial of service (crash) or execute arbitrary code via a long mode field (aka transporting mode) in a (1) GET or (2) PUT command.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.70366,
-      "pub": "2006-12-01T00:28:00.000",
-      "products": [
-        "3ctftpsvc"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-1491",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the DPC Proxy server (DpcProxy.exe) in ASUS Remote Console (aka ARC or ASMB3) 2.0.0.19 and 2.0.0.24 allows remote attackers to execute arbitrary code via a long string to TCP port 623.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.70132,
-      "pub": "2008-03-25T19:44:00.000",
-      "products": [
-        "remote_console",
-        "remote_console"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-0266",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in nnmRptConfig.exe in HP OpenView Network Node Manager (OV NNM) 7.51 and 7.53 allows remote attackers to execute arbitrary code via a long nameParams parameter, a different vulnerability than CVE-2011-0267.2.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.70111,
-      "pub": "2011-01-13T19:00:05.447",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-3176",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the Preboot Service in Novell ZENworks Configuration Management (ZCM) 11.1 and 11.1a allows remote attackers to execute arbitrary code via an opcode 0x4c request.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.70068,
-      "pub": "2012-04-09T20:55:01.960",
-      "products": [
-        "zenworks_configuration_management",
-        "zenworks_configuration_management"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-0886",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in the Java Deployment Toolkit component in Oracle Java SE and Java for Business JDK and JRE 6 Update 10 through 19 allows remote attackers to affect confidentiality, integrity, and availability via unknown vectors.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.69949,
-      "pub": "2010-04-20T19:30:00.333",
-      "products": [
-        "jre",
-        "jdk"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-4556",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the adm_build_path function in sadmind in Sun Solstice AdminSuite on Solaris 8 and 9 allows remote attackers to execute arbitrary code via a crafted request.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.69862,
-      "pub": "2008-10-14T22:36:58.633",
-      "products": [
-        "solaris",
-        "solaris"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-2703",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the execvp_nc function in the ov.dll module in HP OpenView Network Node Manager (OV NNM) 7.51 and 7.53, when running on Windows, allows remote attackers to execute arbitrary code via a long HTTP request to webappmon.exe.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.69726,
-      "pub": "2010-07-28T12:48:53.323",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2004-0627",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The check_scramble_323 function in MySQL 4.1.x before 4.1.3, and 5.0, allows remote attackers to bypass authentication via a zero-length scrambled string.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.69647,
-      "pub": "2004-12-06T05:00:00.000",
-      "products": [
-        "mysql"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-1567",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple stack-based buffer overflows in IGSSdataServer.exe 9.00.00.11063 and earlier in 7-Technologies Interactive Graphical SCADA System (IGSS) allow remote attackers to cause a denial of service (crash) and possibly execute arbitrary code via crafted (1) Li",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.69618,
-      "pub": "2011-04-05T15:19:36.070",
-      "products": [
-        "igss"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2007-6204",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple stack-based buffer overflows in HP OpenView Network Node Manager (OV NNM) 6.41, 7.01, and 7.51 allow remote attackers to execute arbitrary code via unspecified long arguments to (1) ovlogin.exe, (2) OpenView5.exe, (3) snmpviewer.exe, and (4) webappmon",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.69613,
-      "pub": "2007-12-13T21:46:00.000",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-4188",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "HP Operations Dashboard has a default password of j2deployer for the j2deployer account, which allows remote attackers to execute arbitrary code via a session that uses the manager role to conduct unrestricted file upload attacks against the /manager servlet i",
-      "cwe": [
-        "CWE-255"
-      ],
-      "kev": false,
-      "epss": 0.69492,
-      "pub": "2009-12-03T17:30:02.233",
-      "products": [
-        "operations_dashboard"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-1117",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Directory traversal vulnerability in the Notes (aka Flash Notes or instant messages) feature in tb2ftp.dll in Timbuktu Pro 8.6.5 for Windows, and possibly 8.7 for Mac OS X, allows remote attackers to upload files to arbitrary locations via a destination filena",
-      "cwe": [
-        "CWE-22"
-      ],
-      "kev": false,
-      "epss": 0.69473,
-      "pub": "2008-03-14T20:44:00.000",
-      "products": [
-        "timbuktu_pro"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2003-1192",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in IA WebMail Server 3.1.0 allows remote attackers to execute arbitrary code via a long GET request.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.69174,
-      "pub": "2003-11-03T05:00:00.000",
-      "products": [
-        "ia_webmail_server",
-        "ia_webmail_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-0230",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the ExecuteSoapAction function in the SOAPAction handler in the HTTP service in MiniUPnP MiniUPnPd 1.0 allows remote attackers to execute arbitrary code via a long quoted method.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.69151,
-      "pub": "2013-01-31T21:55:01.520",
-      "products": [
-        "miniupnpd"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2012-1533",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in the Java Runtime Environment (JRE) component in Oracle Java SE 7 Update 7 and earlier, and 6 Update 35 and earlier, allows remote attackers to affect confidentiality, integrity, and availability via unknown vectors related to Deplo",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.69037,
-      "pub": "2012-10-16T21:55:01.307",
-      "products": [
-        "jdk",
-        "jdk",
-        "jre"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2005-0260",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the Discovery Service for BrightStor ARCserve Backup 11.1 and earlier allows remote attackers to execute arbitrary code via a long packet to UDP port 41524, which is not properly handled in a recvfrom call.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.69019,
-      "pub": "2005-05-02T04:00:00.000",
-      "products": [
-        "brightstor_arcserve_backup"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-1661",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in DoubleTake.exe in HP StorageWorks Storage Mirroring (SWSM) before 4.5 SP2 allows remote attackers to execute arbitrary code via a crafted encoded authentication request.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.68962,
-      "pub": "2008-06-04T19:32:00.000",
-      "products": [
-        "storageworks_storage_mirroring"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-2367",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple unspecified vulnerabilities in HP SiteScope 11.20 and 11.21, when SOAP is used, allow remote attackers to execute arbitrary code via unknown vectors, aka ZDI-CAN-1678.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.68895,
-      "pub": "2013-07-31T13:20:18.803",
-      "products": [
-        "sitescope",
-        "sitescope"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-0960",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "SNMPv3 HMAC verification in (1) Net-SNMP 5.2.x before 5.2.4.1, 5.3.x before 5.3.2.1, and 5.4.x before 5.4.1.1; (2) UCD-SNMP; (3) eCos; (4) Juniper Session and Resource Control (SRC) C-series 1.0.0 through 2.0.0; (5) NetApp (aka Network Appliance) Data ONTAP 7.",
-      "cwe": [
-        "CWE-287"
-      ],
-      "kev": false,
-      "epss": 0.6879,
-      "pub": "2008-06-10T18:32:00.000",
-      "products": [
-        "session_and_resource_control",
-        "session_and_resource_control",
-        "src_pe"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2006-1255",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the IMAP service in Mercur Messaging 5.0 SP3 and earlier allows remote attackers to cause a denial of service (application crash) and possibly execute arbitrary code via a long string to the (1) LOGIN or (2) SELECT command, a dif",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.6877,
-      "pub": "2006-03-19T01:02:00.000",
-      "products": [
-        "mercur_messaging"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2012-5896",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The Annotation Objects Extension ActiveX control in AnnotateX.dll in Quest InTrust 10.4.0.853 and earlier does not properly implement the Add method, which allows remote attackers to execute arbitrary code via a memory address in the first argument, related to",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.6867,
-      "pub": "2012-11-17T21:55:04.500",
-      "products": [
-        "intrust",
-        "intrust",
-        "intrust"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-2227",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in B Labs Bopup Communication Server 3.2.26.5460 allows remote attackers to execute arbitrary code via a crafted request to TCP port 19810.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.68581,
-      "pub": "2009-06-26T18:30:00.877",
-      "products": [
-        "bopup_communication_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2005-0684",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple buffer overflows in the web tool for MySQL MaxDB before 7.5.00.26 allows remote attackers to execute arbitrary code via (1) an HTTP GET request with a long file parameter after a percent (\"%\") sign or (2) a long Lock-Token string to the WebDAV functio",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.68504,
-      "pub": "2005-04-25T04:00:00.000",
-      "products": [
-        "maxdb",
-        "maxdb",
-        "maxdb"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2007-0213",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Microsoft Exchange Server 2000 SP3, 2003 SP1 and SP2, and 2007 does not properly decode certain MIME encoded e-mails, which allows remote attackers to execute arbitrary code via a crafted base64-encoded MIME e-mail message.",
-      "cwe": [
-        "CWE-20"
-      ],
-      "kev": false,
-      "epss": 0.68454,
-      "pub": "2007-05-08T23:19:00.000",
-      "products": [
-        "exchange_server",
-        "exchange_server",
-        "exchange_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2007-4915",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The Intersil isl3893 extensions for Boa 0.93.15, as used on the FreeLan RO80211G-AP and other devices, do not prevent stack writes from entering memory locations used for string constants, which allows remote attackers to change the admin password stored in me",
-      "cwe": [
-        "CWE-20"
-      ],
-      "kev": false,
-      "epss": 0.68168,
-      "pub": "2007-09-17T17:17:00.000",
-      "products": [
-        "boa_webserver"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2004-0297",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in the Lightweight Directory Access Protocol (LDAP) daemon (iLDAP.exe 3.9.15.10) in Ipswitch IMail Server 8.03 allows remote attackers to cause a denial of service (crash) and execute arbitrary code via an LDAP message with a large tag length.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.68129,
-      "pub": "2004-11-23T05:00:00.000",
-      "products": [
-        "imail",
-        "imail"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-0654",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Integer underflow in the BowserWriteErrorLogEntry function in the Common Internet File System (CIFS) browser service in Mrxsmb.sys or bowser.sys in Active Directory in Microsoft Windows XP SP2 and SP3, Windows Server 2003 SP2, Windows Vista SP1 and SP2, Window",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.68084,
-      "pub": "2011-02-16T01:00:02.617",
-      "products": [
-        "windows_2003_server",
-        "windows_server_2003"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2004-0574",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The Network News Transfer Protocol (NNTP) component of Microsoft Windows NT Server 4.0, Windows 2000 Server, Windows Server 2003, Exchange 2000 Server, and Exchange Server 2003 allows remote attackers to execute arbitrary code via XPAT patterns, possibly relat",
-      "cwe": [
-        "CWE-787"
-      ],
-      "kev": false,
-      "epss": 0.67822,
-      "pub": "2004-11-03T05:00:00.000",
-      "products": [
-        "exchange_server",
-        "exchange_server",
-        "windows_2000"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-4051",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "CEServer.exe in the CEServer component in the Remote Agent module in InduSoft Web Studio 6.1 and 7.0 does not require authentication, which allows remote attackers to execute arbitrary code via vectors related to creation of a file, loading a DLL, and process ",
-      "cwe": [
-        "CWE-287"
-      ],
-      "kev": false,
-      "epss": 0.67766,
-      "pub": "2011-12-05T11:55:06.600",
-      "products": [
-        "web_studio",
-        "web_studio"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2005-1099",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple buffer overflows in the HandleChild function in server.c in Greylisting daemon (GLD) 1.3 and 1.4, when GLD is listening on a network interface, allow remote attackers to execute arbitrary code.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.67658,
-      "pub": "2005-04-12T04:00:00.000",
-      "products": [
-        "gld",
-        "gld",
-        "gld"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-1611",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in TFTP Server SP 1.4 for Windows allows remote attackers to cause a denial of service or execute arbitrary code via a long filename in a read or write request.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.67642,
-      "pub": "2008-04-01T16:44:00.000",
-      "products": [
-        "winagents_tftp_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-1602",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in Orbit downloader 2.6.3 and 2.6.4 allows remote attackers to execute arbitrary code via a long download URL, which is not properly handled during Unicode conversion for a balloon notification after a download has failed.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.6749,
-      "pub": "2008-04-06T23:44:00.000",
-      "products": [
-        "orbit_downloader",
-        "orbit_downloader"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2012-2953",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The management console in Symantec Web Gateway 5.0.x before 5.0.3.18 allows remote attackers to execute arbitrary commands via crafted input to application scripts.",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": false,
-      "epss": 0.67389,
-      "pub": "2012-07-23T17:55:03.497",
-      "products": [
-        "web_gateway",
-        "web_gateway",
-        "web_gateway"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-1960",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in the error handling functionality in ovwebsnmpsrv.exe in HP OpenView Network Node Manager (OV NNM) 7.51 and 7.53 allows remote attackers to execute arbitrary code via a long, invalid option to jovgraph.exe.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.67319,
-      "pub": "2010-06-10T00:30:07.567",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-1961",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in ovutil.dll in ovwebsnmpsrv.exe in HP OpenView Network Node Manager (OV NNM) 7.51 and 7.53 allows remote attackers to execute arbitrary code via unspecified variables to jovgraph.exe, which are not properly handled in a call to the sprintf fu",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.67319,
-      "pub": "2010-06-10T00:30:07.613",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2007-5003",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple stack-based buffer overflows in CA (Computer Associates) BrightStor ARCserve Backup for Laptops and Desktops r11.0 through r11.5 allow remote attackers to execute arbitrary code via a long (1) username or (2) password to the rxrLogin command in rxRPC.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.67204,
-      "pub": "2007-10-01T20:17:00.000",
-      "products": [
-        "brightstor_arcserve_backup_laptops_desktops",
-        "brightstor_arcserve_backup_laptops_desktops",
-        "brightstor_arcserve_backup_laptops_desktops"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-1552",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the doLoad function in snmpviewer.exe in HP OpenView Network Node Manager (OV NNM) 7.01, 7.51, and 7.53 allows remote attackers to execute arbitrary code via the act and app parameters.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.67088,
-      "pub": "2010-05-13T17:30:02.343",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2004-1050",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Heap-based buffer overflow in Internet Explorer 6 allows remote attackers to execute arbitrary code via long (1) SRC or (2) NAME attributes in IFRAME, FRAME, and EMBED elements, as originally discovered using the mangleme utility, aka \"the IFRAME vulnerability",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.67061,
-      "pub": "2004-12-31T05:00:00.000",
-      "products": [
-        "ip600_media_servers",
-        "ip600_media_servers",
-        "ip600_media_servers"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-0133",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in Microsoft HTML Help Workshop 4.74 and earlier allows context-dependent attackers to execute arbitrary code via a .hhp file with a long \"Index file\" field, possibly a related issue to CVE-2006-0564.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.67049,
-      "pub": "2009-01-15T17:30:00.703",
-      "products": [
-        "html_help_workshop"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-1566",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Directory traversal vulnerability in dc.exe 9.00.00.11059 and earlier in 7-Technologies Interactive Graphical SCADA System (IGSS) allows remote attackers to execute arbitrary programs via ..\\ (dot dot backslash) sequences in opcodes (1) 0xa and (2) 0x17 to TCP",
-      "cwe": [
-        "CWE-22"
-      ],
-      "kev": false,
-      "epss": 0.66982,
-      "pub": "2011-04-05T15:19:36.040",
-      "products": [
-        "igss"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-4179",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in ovalarm.exe in HP OpenView Network Node Manager (OV NNM) 7.01, 7.51, and 7.53 allows remote attackers to execute arbitrary code via a long HTTP Accept-Language header in an OVABverbose action.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.66973,
-      "pub": "2009-12-10T22:30:00.610",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-4798",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in HP LoadRunner before 11.52 allows remote attackers to execute arbitrary code via unknown vectors, aka ZDI-CAN-1705.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.66967,
-      "pub": "2013-07-29T13:59:14.263",
-      "products": [
-        "loadrunner",
-        "loadrunner",
-        "loadrunner"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2006-6184",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple stack-based buffer overflows in Allied Telesyn TFTP Server (AT-TFTP) 1.9, and possibly earlier, allow remote attackers to cause a denial of service (crash) or execute arbitrary code via a long filename in a (1) GET or (2) PUT command.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.66831,
-      "pub": "2006-12-01T00:28:00.000",
-      "products": [
-        "at-tftp"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-0183",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in Remote Control Server in Free Download Manager (FDM) 2.5 Build 758 and 3.0 Build 844 allows remote attackers to execute arbitrary code via a long Authorization header in an HTTP request.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.66526,
-      "pub": "2009-02-03T19:30:00.250",
-      "products": [
-        "free_download_manager",
-        "free_download_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-2347",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The Backup Client Service (OmniInet.exe) in HP Storage Data Protector 6.2X allows remote attackers to execute arbitrary commands or cause a denial of service via a crafted EXEC_BAR packet to TCP port 5555, aka ZDI-CAN-1885.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.66409,
-      "pub": "2014-01-04T04:51:17.257",
-      "products": [
-        "storage_data_protector",
-        "storage_data_protector"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2003-0694",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The prescan function in Sendmail 8.12.9 allows remote attackers to execute arbitrary code via buffer overflow attacks, as demonstrated using the parseaddr function in parseaddr.c.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.66183,
-      "pub": "2003-10-06T04:00:00.000",
-      "products": [
-        "advanced_message_server",
-        "advanced_message_server",
-        "sendmail"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-3175",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the Preboot Service in Novell ZENworks Configuration Management (ZCM) 11.1 and 11.1a allows remote attackers to execute arbitrary code via an opcode 0x6c request.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.66053,
-      "pub": "2012-04-09T20:55:01.820",
-      "products": [
-        "zenworks_configuration_management",
-        "zenworks_configuration_management"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2004-0636",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in the goaway function in the aim:goaway URI handler for AOL Instant Messenger (AIM) 5.5, including 5.5.3595, allows remote attackers to execute arbitrary code via a long Away message.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.66019,
-      "pub": "2004-11-23T05:00:00.000",
-      "products": [
-        "instant_messenger",
-        "instant_messenger",
-        "instant_messenger"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-1350",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in xtagent.exe in Novell NetIdentity Client before 1.2.4 allows remote attackers to execute arbitrary code by establishing an IPC$ connection to the XTIERRPCPIPE named pipe, and sending RPC messages that trigger a dereference of an ar",
-      "cwe": [
-        "CWE-20"
-      ],
-      "kev": false,
-      "epss": 0.65934,
-      "pub": "2009-04-21T16:24:52.280",
-      "products": [
-        "netidentity_client1.2.3"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-6194",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in HP Storage Data Protector 6.2X allows remote attackers to execute arbitrary code or cause a denial of service via unknown vectors, aka ZDI-CAN-1905.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.65924,
-      "pub": "2014-01-04T04:51:17.367",
-      "products": [
-        "storage_data_protector",
-        "storage_data_protector"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-1554",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in getnnmdata.exe in HP OpenView Network Node Manager (OV NNM) 7.01, 7.51, and 7.53 allows remote attackers to execute arbitrary code via an invalid iCount parameter.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.65921,
-      "pub": "2010-05-13T17:30:02.407",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-5010",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "apps/a3/cfg_ethping.cgi in the Ctek SkyRouter 4200 and 4300 allows remote attackers to execute arbitrary commands via shell metacharacters in the PINGADDRESS parameter for a \"u\" action.",
-      "cwe": [
-        "CWE-264"
-      ],
-      "kev": false,
-      "epss": 0.65718,
-      "pub": "2011-12-25T01:55:04.773",
-      "products": [
-        "skyrouter",
-        "skyrouter"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2012-1851",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Format string vulnerability in the Print Spooler service in Microsoft Windows XP SP2 and SP3, Windows Server 2003 SP2, Windows Vista SP2, Windows Server 2008 SP2, R2, and R2 SP1, and Windows 7 Gold and SP1 allows remote attackers to execute arbitrary code via ",
-      "cwe": [
-        "CWE-134"
-      ],
-      "kev": false,
-      "epss": 0.65624,
-      "pub": "2012-08-15T01:55:01.367",
-      "products": [
-        "windows_7",
-        "windows_server_2003",
-        "windows_server_2008"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-4279",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The default configuration of Pandora FMS 3.1 and earlier specifies an empty string for the loginhash_pwd field, which allows remote attackers to bypass authentication by sending a request to index.php with \"admin\" in the loginhash_user parameter, in conjunctio",
-      "cwe": [
-        "CWE-287"
-      ],
-      "kev": false,
-      "epss": 0.65618,
-      "pub": "2010-12-02T17:15:00.503",
-      "products": [
-        "pandora_fms",
-        "pandora_fms",
-        "pandora_fms"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-4988",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in NT_Naming_Service.exe in SAP Business One 2005 A 6.80.123 and 6.80.320 allows remote attackers to execute arbitrary code via a long GIOP request to TCP port 30000.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.65515,
-      "pub": "2010-08-25T20:00:15.563",
-      "products": [
-        "business_one_2005-a",
-        "business_one_2005-a"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-2161",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in TFTP Server SP 1.4 and 1.5 on Windows, and possibly other versions, allows remote attackers to execute arbitrary code via a long TFTP error packet.  NOTE: some of these details are obtained from third party information.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.65284,
-      "pub": "2008-05-12T22:20:00.000",
-      "products": [
-        "tftp_server_sp",
-        "tftp_server_sp"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-4040",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in MiniSmtp 3.0.11818 in NJStar Communicator allows remote attackers to execute arbitrary code via a crafted packet.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.65262,
-      "pub": "2011-11-21T11:55:03.227",
-      "products": [
-        "njstar_communicator"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-0935",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the Novell iPrint Control ActiveX control in ienipp.ocx in Novell iPrint Client before 4.34 allows remote attackers to execute arbitrary code via a long argument to the ExecuteRequest method.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.6514,
-      "pub": "2008-02-25T18:44:00.000",
-      "products": [
-        "iprint",
-        "iprint_client",
-        "iprint_client"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2008-4322",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in RealFlex Technologies Ltd. RealWin Server 2.0, as distributed by DATAC, allows remote attackers to execute arbitrary code via a crafted FC_INFOTAG/SET_CONTROL packet.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.6507,
-      "pub": "2008-09-29T19:25:59.353",
-      "products": [
-        "realwin_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2007-1689",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in the ISAlertDataCOM ActiveX control in ISLALERT.DLL for Norton Personal Firewall 2004 and Internet Security 2004 allows remote attackers to execute arbitrary code via long arguments to the (1) Get and (2) Set functions.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.65006,
-      "pub": "2007-05-16T20:30:00.000",
-      "products": [
-        "norton_internet_security",
-        "norton_personal_firewall"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-3167",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in HP OpenView Network Node Manager (OV NNM) 7.51 and 7.53 allows remote attackers to execute arbitrary code via unknown vectors, aka ZDI-CAN-1210.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.64966,
-      "pub": "2011-11-02T17:55:01.043",
-      "products": [
-        "openview_network_node_manager",
-        "openview_network_node_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2005-0491",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in Knox Arkeia Server Backup 5.3.x allows remote attackers to execute arbitrary code via a long type 77 request.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.64901,
-      "pub": "2005-05-02T04:00:00.000",
-      "products": [
-        "arkeia_server_backup",
-        "arkeia_server_backup",
-        "arkeia_server_backup"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "177904 ثغرة حقيقية من NVD · 585 مستغلّة فعلياً (KEV) · 41271 منتج · مزامنة 2026-11-06T17:53:58.197Z"
+  "says_ar": "202019 ثغرة حقيقية من NVD · 652 مستغلّة فعلياً (KEV) · 42936 منتج · مزامنة 2026-11-06T22:56:47.983Z"
 }
