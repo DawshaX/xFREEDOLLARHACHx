@@ -1906,3 +1906,26 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
 - لسه من التوثيق: أرقام عدّاد البوابات المكتوبة في النصوص بتقادم — بقى يتقال من التشغيل.
 
   البناء المحلي للحزمة ما اتعملش في المرحلة دي — النشر بيعمله CI (`standalone-bundle.yml` + إعادة رفع الأصل) بعد الدمج، وده المقص.
+
+## المرحلة 62 — بيانات حالة المكنة بقت تسافر في الحزمة، والضرس الخامس بيمنع النسيان (2026-11-06)
+
+- **العطل**: `probe` على الهَب طلع 4 ملاحظات بس — `hunt` و`verify` ما ظهروش، و`advisories`
+  بتردّ `measured:false`. السبب: `build-standalone.mjs` كان بينسخ 3 ملفات بس من `state/` وتعليقه
+  بيقول «nothing else from state/ is needed» — كداب مقاس. `state/hunt-latest.json` (19 موضع قراءة)
+  و`advisory-cache.json` (12 موضع، 366K) و`verified-live.json` (11) و`vuln-corpus-index.json` (14)
+  و5 تانيين ما كنوش بيلحقوا بالحزمة: `advisory_search` بيقول «مفيش بيانات» على مكنة المستودع
+  بتاعها 1071 استشارة.
+- **الإصلاح**: `STATE_DATA` في الباندر = 11 ملف (613K) مع حد 512K/ملف وسطر معلن لأي أكبر ملف.
+  مقاس بعد البناء: `· state/: 11 ملف (613K)` · 160 ملف · 12.5 MB · zip 2.9 MB · `audit-bundle-secrets` ✓ ·
+  `sha256` مطابق للمستودع لـ`hunt-latest/advisory-cache/verified-live` · 9 ملفات دليل `audit/` لسه جوّه.
+- **الضرس الخامس** `hollow-state` في `audit-route-integrity.mjs`: كل `state/*.json` متتبَّع
+  (`git ls-files state`) وعليه قارئ في `artifacts/api-server/src` أو `artifacts/kali-panel/src`
+  لازم الباندر يسمّيه — حقنه في `--selftest` (ناقص = أحمر، بعد `STATE_DATA` = أخضر).
+- قياس حيّ بنفس الفرصة: المهام الدائمة اشتغلت على الهَب (`cve_hunt runCount:3` · `self_heal:
+  system OK` · `sys_watchdog: disk/mem: 79%` · `hubClients:3`) — المرحلة 59 بقى ليها دليل تنفيذ.
+- `docs/`: §9.5 في ملف المراجعة · «البوابة اللي بتمنع الرجوع» بقت خمس ضروس · شجرة README جوه
+  الحزمة اتصححت · عدّاد البوابات في النصوص بقى يتقال من التشغيل مش من رقم مكتوب.
+- لسه: 9/11 سجل خزنة من غير `evidencePath` · `multi-ai.ts` من غير tool loop · `NOVA_TOOLCHAIN_TIMEOUT_MS` ·
+  القرص على الهَب 79% فتنزيل الأدوات هيرفض نفسه (`no-space`) — لو عايزينه ينزّل، لازم مساحة أو مكنة أكبر.
+- `agent-gates` 23/23 · typecheck 88==88 · ops-selftest 68/0 · self-restart 13/13 · tool-labels 5/5 ·
+  `audit-no-cjk-in-text` نظيف على 722 ملف.

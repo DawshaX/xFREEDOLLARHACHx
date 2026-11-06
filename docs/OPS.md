@@ -217,7 +217,7 @@ POST + Origin نفسه          → 200 · السكربت اتنفّذ فعلا�
 
 ### البوابة اللي بتمنع الرجوع
 `scripts/audit-route-integrity.mjs` (مسجّل في `scripts/agent-gates.mjs` — والعدد بيتقال من تشغيل السكربت
-نفسه، مش من رقم مكتوب هنا) بأربع ضروس، وكل واحدة مُثبتة بحقنة في `--selftest`:
+نفسه، مش من رقم مكتوب هنا) بخمس ضروس، وكل واحدة مُثبتة بحقنة في `--selftest`:
 
 1. **`spine-symbol`** — أي رمز بيتنادى في `src/routes/**` ولازم يكون متصدّر من `src/lib/**`
    ولازم يكون مستورد في الملف. دي هي علة «الشات عبيط» حرفيًا.
@@ -228,6 +228,12 @@ POST + Origin نفسه          → 200 · السكربت اتنفّذ فعلا�
    `build-standalone.mjs` ينسخه (بالاسم أو بالمجلد).
 4. **`twin-fabrication`** — التوأم (`standalone-api.ts`) ممنوع يؤكد تثبيت/فحص/جلب:
    لا `installed: true`، لا «Nmap scan report»، لا «Verified HTTP 200»، ولا `ok:true` جنب `stdout`.
+5. **`hollow-state`** (من المرحلة 62) — أي `state/*.json` **متتبَّع** وبيقراه السورس أو البانل
+   وقت التشغيل لازم `build-standalone.mjs` ينسخه بالحرف. اللي كشفها قياس حيّ: ملاحظة `hunt` ما
+   بتظهرش على الهَب و`advisories` بتردّ `measured:false`، لأن `state/hunt-latest.json` (19 موضع
+   قراءة) و`state/advisory-cache.json` (12 موضع) ما كنوش بيلحقوا بالحزمة. الملفات اللي بتتكتب على
+   المكنة (`proactive-log.json`، `toolchain-provision.json`، `fleet-servers.json`) مستثناة لوحدها
+   لأنها مش متتبَّعة — القاعدة بتتغذى من `git ls-files state` مش من قائمة يدوية.
 
 و`scripts/audit-no-cjk-in-text.mjs` (من المرحلة 61): أي ملف نصّي متتبَّع — سورس السيرفر،
 السكربتات، الـdocs، الـdeploy، وملفات بياناتنا — ممنوع فيه حرف شرق-آسيوي واحد. السبب مقاس:
