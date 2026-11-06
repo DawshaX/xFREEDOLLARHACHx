@@ -32,7 +32,28 @@ import { spawn } from "node:child_process";
 import { resetBinaryCache, toolStatus } from "./tools";
 
 /** الأدوات اللي السكريبت بيقدر يجيبها — لازم تفضل مطابقة لـ`fetch-toolchain.mjs`. */
-export const VENDORABLE = ["subfinder", "httpx", "nuclei", "katana", "dnsx", "naabu", "ffuf"] as const;
+export const VENDORABLE = [
+  "subfinder",
+  "httpx",
+  "nuclei",
+  "katana",
+  "dnsx",
+  "naabu",
+  "ffuf",
+  // Expanded 2026-11-06 — static linux/amd64 releases only (see fetch-toolchain.mjs).
+  "amass",
+  "gobuster",
+  "dalfox",
+  "gitleaks",
+  "trivy",
+] as const;
+
+/**
+ * Tools that need a package manager or an interpreter, so they can never be a
+ * vendored static binary. Kept next to VENDORABLE so the agent can say *why*
+ * instead of reporting a permanent "missing" that looks like a broken install.
+ */
+export const NOT_VENDORABLE = ["nmap", "sqlmap", "nikto", "semgrep", "whatweb"] as const;
 
 export interface ToolchainStatus {
   /** المجلد اللي بنحط فيه (vendor/bin، أو NOVA_VENDOR_BIN) */

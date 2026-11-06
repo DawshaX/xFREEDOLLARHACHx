@@ -45,7 +45,37 @@ const TOOLS = [
   { bin: "dnsx", repo: "projectdiscovery/dnsx", match: /linux_amd64\.zip$/i, asset: "zip", ver: ["-version"] },
   { bin: "naabu", repo: "projectdiscovery/naabu", match: /linux_amd64\.zip$/i, asset: "zip", ver: ["-version"] },
   { bin: "ffuf", repo: "ffuf/ffuf", match: /linux[_-](amd64|x86_64)\.tar\.gz$/i, asset: "targz", ver: ["-V"] }, // amd64 naming, not x86_64 — the old regex matched nothing (measured: Actions run 41451529132)
+
+  // ── Expanded set (2026-11-06) ────────────────────────────────────────────────
+  // The user asked for the full Kali toolbox. Only tools that ship a *static
+  // linux/amd64 binary* belong here: this script runs on hosts with no root, no
+  // apt and no persistent disk, so anything needing a package manager or an
+  // interpreter (nmap, sqlmap, nikto, semgrep) is NOT vendorable — those live in
+  // Dockerfile.kali instead. Adding them here would produce a permanent
+  // "failed" row that looks like a bug rather than a boundary.
+  // Asset names below are the REAL ones measured from each repo's latest release
+  // (2026-11-06) — not guesses. amass ships .tar.gz not .zip; dalfox uses
+  // `linux-x86_64` not `linux_amd64`; WhatWeb publishes no release assets at all
+  // (it is a Ruby script), so it is declared NOT_VENDORABLE instead.
+  { bin: "amass", repo: "owasp-amass/amass", match: /amass_linux_amd64\.tar\.gz$/i, asset: "targz", ver: ["-version"] },
+  { bin: "gobuster", repo: "OJ/gobuster", match: /Linux_x86_64\.tar\.gz$/i, asset: "targz", ver: ["version"] },
+  { bin: "dalfox", repo: "hahwul/dalfox", match: /linux-x86_64\.tar\.gz$/i, asset: "targz", ver: ["version"] },
+  { bin: "gitleaks", repo: "gitleaks/gitleaks", match: /linux_x64\.tar\.gz$/i, asset: "targz", ver: ["version"] },
+  { bin: "trivy", repo: "aquasecurity/trivy", match: /Linux-64bit\.tar\.gz$/i, asset: "targz", ver: ["--version"] },
 ].filter((t) => !ONLY.length || ONLY.includes(t.bin));
+
+/**
+ * Tools the user asked for that CANNOT be vendored as a static binary.
+ * Declared here so the boundary is explicit and testable instead of being
+ * rediscovered as a "failure" every run. `why` is what the agent tells the user.
+ */
+export const NOT_VENDORABLE = [
+  { bin: "nmap", why: "محتاج apt/root — بيتثبت في Dockerfile.kali أو على عقدة Linux كاملة" },
+  { bin: "sqlmap", why: "سكربت Python — محتاج مفسّر بايثون، بيتشغّل من Dockerfile.kali" },
+  { bin: "nikto", why: "سكربت Perl — محتاج مفسّر بيرل، بيتشغّل من Dockerfile.kali" },
+  { bin: "semgrep", why: "محتاج Python + قواعد — بيتشغّل من Dockerfile.kali" },
+  { bin: "whatweb", why: "سكربت Ruby ومفيش له release assets — بيتشغّل من Dockerfile.kali" },
+];
 
 const MANIFEST = path.join(INTO, ".vendored.json");
 
