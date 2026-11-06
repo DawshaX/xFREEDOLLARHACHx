@@ -1960,3 +1960,8 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
   نقوله من هنا: اللوج `logs/` جوه الحاوية ومافيش وصول_shell_ لحد ما اللوحة ترجع. اللي مطلوب:
   **Restart من لوحة Waifly** (مش «Change Language» ⛔) — وبعدها `boot.mjs` عنده rollback لو
   `.update-pending` ما اتأكدش (`[supervisor] new build never became healthy — rolling back`).
+- **عطل CI مقفول**: `pull_request.paths` في `agent-gates.yml` كانت أضيق من `push.paths`
+  (`scripts/*.mjs` وبس) — PR #222 اللي عدّل `deploy/live-update.py` طلع بـ`no checks reported`.
+  القايمة بقت `scripts/**` + `deploy/**` في الاتنين، وضرس في `check-workflows.mjs` يمنع الشكل ده
+  (`push.paths` عنصر مش مغطّى في `pull_request.paths` = أحمر) · `check-workflows: 19/19` ✓.
+

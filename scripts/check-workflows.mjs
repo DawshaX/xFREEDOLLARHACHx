@@ -114,6 +114,26 @@ for (const { f } of stale) {
 }
 
 /**
+ * `pull_request.paths` أضيق من `push.paths` معناه PR اتدمج والبوابات ما اتشغّلتش خ.
+ * مقاس 2026-11-06: PR #222 عدّل `deploy/live-update.py` — الكود اللي بيشغّل التحديث
+ * على كل مكنة — والـcheck كان `no checks reported`، لأن القايمة كانت `scripts/*.mjs`
+ * وبس. القاعدة بشكل مش بقايم: أي workflow فيه `push.paths` لازم `pull_request.paths`
+ * تغطي كل عنصر منها (غياب القايمة أصلًا = الكل متغطي، فمابقولش حاجة).
+ */
+for (const f of files) {
+  const doc = safeLoad(path.join(dir, f));
+  const on = doc && (doc.on ?? doc[true]);
+  const pp = on && on.push && on.push.paths;
+  const pr = on && on.pull_request && on.pull_request.paths;
+  if (!Array.isArray(pp) || !Array.isArray(pr)) continue;
+  const missing = pp.filter((x) => !pr.includes(x));
+  if (missing.length > 0) {
+    bad += 1;
+    console.log(`✗ ${f}: pull_request.paths أضيق من push.paths — ${missing.join(", ")} هيتدمج من غير ما البوابات تشوفه`);
+  }
+}
+
+/**
  * The other half of the same bug: a workflow that commits state with `[skip ci]`
  * is telling GitHub "do not start anything for this commit" — and that includes
  * the Pages deploy. Measured 2026-11-04 21:36Z: the corpus index was committed
