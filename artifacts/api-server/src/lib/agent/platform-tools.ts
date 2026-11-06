@@ -20,7 +20,7 @@
 import { buildSelfModel } from "./self-model";
 import { getConnectedAgentList, getAgentDeepProfile, execOnLocalAgent } from "../../routes/local-agent";
 import { listMemories, memoryStats } from "./memory-store";
-import { broadcastEvent } from "../ws-hub";
+import { navigatePanel, panelAction, openUrl } from "./ui-bridge";
 
 export interface PlatformToolResult {
   ok: boolean;
@@ -226,27 +226,37 @@ export async function serviceStatus(name: string, agentId?: string): Promise<Pla
   return { ok: res.ok, summary: res.ok ? `حالة ${n}` : `فشل فحص ${n}`, data: res.data, ms: Date.now() - started };
 }
 
-/* ── ui_navigate / ui_action ──────────────────────────────────────────────── */
+/* ── ui_navigate / ui_action / browser_open ─────────────────────────────── */
 
 /**
- * Ask the panel to open a page. Broadcast over the same WebSocket hub the UI
- * already listens on, so no new transport is introduced.
+ * أوامر اللوحة بتعدي دلوقتي على `ui-bridge` — مش بثّ في الهوا. الفرق مقصود:
+ * `uiNavigate` القديم كان بيرجّع `ok:true` و«طلبت من اللوحة تفتح /scanner» وهو
+ * مابييعرفش في حد سامع ولا لأ (الـtranscript الحيّ فيه الرد ده اتقال واللوحة ما
+ * فتحتش حاجة). الحافة دي بترجّع قياس: عدد عملاء WebSocket + هل الأمر اتسحب فعلًا.
  */
 export function uiNavigate(path: string): PlatformToolResult {
   const started = Date.now();
-  const p = String(path ?? "").trim();
-  if (!p) return { ok: false, summary: "المسار مطلوب", data: null, ms: Date.now() - started };
-  broadcastEvent("nova:ui", { action: "navigate", path: p, at: Date.now() });
-  return { ok: true, summary: `طلبت من اللوحة تفتح ${p}`, data: { path: p }, ms: Date.now() - started };
+  const r = navigatePanel(path);
+  return { ok: r.ok, summary: r.summary, data: r.data, ms: Date.now() - started };
 }
 
 /** Ask the panel to perform a named action (run a scan, toggle a setting…). */
 export function uiAction(action: string, payload: Record<string, unknown> = {}): PlatformToolResult {
   const started = Date.now();
-  const a = String(action ?? "").trim();
-  if (!a) return { ok: false, summary: "اسم الإجراء مطلوب", data: null, ms: Date.now() - started };
-  broadcastEvent("nova:ui", { action: a, payload, at: Date.now() });
-  return { ok: true, summary: `طلبت من اللوحة تنفيذ «${a}»`, data: { action: a, payload }, ms: Date.now() - started };
+  const r = panelAction(action, payload);
+  return { ok: r.ok, summary: r.summary, data: r.data, ms: Date.now() - started };
+}
+
+/**
+ * «تقدر تفتح متصفح؟» — كانت الإجابة الحيّة «مش قادرة» 65 ثانية بعد ما الموديل
+ * خمّن، واللوحة عندها `ui_browse_url`/`window.open` من جوه. الأداة دي بتوصلهم:
+ * الأمر بيروح للوحة (التاب بيفتح عند المستخدم) + القاسم المشترك للطابور فالأمر
+ * مابيموتش لو التاب كان مقفول لحظة الطلب.
+ */
+export function browserOpen(url: string): PlatformToolResult {
+  const started = Date.now();
+  const r = openUrl(url);
+  return { ok: r.ok, summary: r.summary, data: r.data, ms: Date.now() - started };
 }
 
 /* ── memory_recall (convenience over the durable store) ───────────────────── */
@@ -275,6 +285,7 @@ export const PLATFORM_TOOL_NAMES = [
   "service_status",
   "ui_navigate",
   "ui_action",
+  "browser_open",
   "memory_recall",
 ] as const;
 

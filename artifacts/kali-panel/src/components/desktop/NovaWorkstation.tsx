@@ -416,6 +416,210 @@ function PlanBox({ onPlan, version }: { onPlan: (p: Plan | null) => void; versio
 
 /* ─────────────────────────── the workstation ─────────────────────────── */
 
+/* ─────────────── خريطة القدرات + قنات أوامر نوفا للوحة ─────────────── */
+
+interface CapsPayload {
+  ok: boolean;
+  measuredAt?: string;
+  line?: string;
+  build?: { commit: string | null; builtAt: string | null; ageMin: number | null; label: string };
+  tools?: { count: number; byCategory: Record<string, number> };
+  runtime?: {
+    browser: { engines: Array<{ name: string }>; panelClients: number; note: string };
+    msf: { installed: boolean };
+    burp: { installed: boolean };
+    toolchain: { present: string[]; missing: string[]; dir: string } | null;
+  };
+  machines?: { connected: number; registered: number; names: string[] };
+  corpus?: { measured: boolean; total: number; ageMin: number | null };
+  memory?: { total: number };
+  uiQueue?: { size: number; delivered: number; wsClients: number };
+  errorAr?: string;
+}
+
+interface UiCommandDto {
+  id: string;
+  kind: "open_url" | "navigate" | "action";
+  url?: string;
+  path?: string;
+  action?: string;
+  at: number;
+}
+
+const UI_CURSOR_KEY = "nova:ui-cursor";
+
+/** كيرسور طابور اللوحة — في localStorage لو متاح، ومش بيفتح تاب من تاريخ قديم. */
+const uiCursor = {
+  read: (): string => {
+    try {
+      return persistent() ? String(localStorage.getItem(UI_CURSOR_KEY) ?? "") : "";
+    } catch {
+      return "";
+    }
+  },
+  write: (v: string): void => {
+    try {
+      if (persistent()) localStorage.setItem(UI_CURSOR_KEY, v);
+    } catch {
+      /* storage مقفول (private mode) — الكيرسور هيبقى في الذاكرة بس */
+    }
+  },
+};
+
+/**
+ * الشريط ده مابيكتبش قدرة — بيقراها من `/api/nova-core/capabilities` (قياس لحظة
+ * الطلب). والسبب إن نفس الأرقام كانت بتتقال في الشات من غير مرجع، فـ«49 ولا 55»
+ * بقت جدل. هنا المستخدم شايف: كام أداة، إيه اللي متنصّب على المكنة، كام جهاز
+ * متصل فعلًا، وإيه اللي نوفا طلبت من اللوحة يفتح (وفتَح ولا لأ).
+ */
+function CapabilityRail({ onAsk }: { onAsk: (text: string) => void }) {
+  const [caps, setCaps] = useState<CapsPayload | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState<UiCommandDto[]>([]);
+  const mountedAt = useRef(Date.now());
+
+  const refresh = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/nova-core/capabilities`, { signal: AbortSignal.timeout(8000) });
+      const j = (await r.json()) as CapsPayload;
+      if (j && j.ok) {
+        setCaps(j);
+        setErr(null);
+      } else {
+        setErr(String(j?.errorAr ?? "السيرفر مرجّعش قياس"));
+      }
+    } catch (e) {
+      setErr(`القياس مش متاح: ${(e as Error).message}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+    const t = setInterval(() => void refresh(), 60_000);
+    return () => clearInterval(t);
+  }, [refresh]);
+
+  // أوامر نوفا للوحة: رابط يتفتح / صفحة تتنقّل. كل 3 ثواني، وبعيد عن إعادة تشغيل
+  // الأوامر القديمة: الكيرسور في localStorage + أي أمر أقدم من فتح اللوحة بيتعلّم
+  // مُسلَّم من غير ما ينفّذ (مافيش تاب بيفتح لوحده من تاريخ قديم).
+  useEffect(() => {
+    let alive = true;
+    const poll = async () => {
+      try {
+        const cursor = uiCursor.read();
+        const q = cursor ? `?after=${encodeURIComponent(cursor)}` : "";
+        const r = await fetch(`${API}/nova-core/ui${q}`, { signal: AbortSignal.timeout(4000) });
+        if (!r.ok || !alive) return;
+        const j = (await r.json()) as { commands?: UiCommandDto[] };
+        const cmds = Array.isArray(j?.commands) ? j.commands : [];
+        if (!cmds.length) return;
+        const fresh: UiCommandDto[] = [];
+        for (const c of cmds) {
+          uiCursor.write(c.id);
+          if (c.at < mountedAt.current - 5000) continue;
+          fresh.push(c);
+          if (c.kind === "open_url" && c.url) {
+            window.open(c.url, "_blank", "noopener");
+          } else if (c.kind === "navigate" && c.path) {
+            window.history.pushState({}, "", c.path);
+            window.dispatchEvent(new PopStateEvent("popstate", { state: {} }));
+          } else if (c.kind === "action" && c.action) {
+            window.dispatchEvent(new CustomEvent("nova:ui-action", { detail: c }));
+          }
+        }
+        if (fresh.length) setSeen((prev) => [...fresh, ...prev].slice(0, 6));
+      } catch {
+        /* الشبكة وقعت — مافيش أمر جديد، ومش هنختلق واحد */
+      }
+    };
+    void poll();
+    const t = setInterval(() => void poll(), 3_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  const age = (min: number | null | undefined) => (min === null || min === undefined ? "—" : min < 1 ? "دلوقتي" : `من ${min} دقيقة`);
+  const t = caps?.tools;
+  const rt = caps?.runtime;
+  const mc = caps?.machines;
+  const tc = rt?.toolchain;
+
+  return (
+    <div className="border-b border-white/10 bg-white/[0.03] px-3 py-1.5 text-[9px]">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-1 font-black text-white/60 hover:text-cyan-300">
+          <Radio className="h-2.5 w-2.5" />
+          القدرات والشبكة
+          <span className="text-white/25">{open ? "▲" : "▼"}</span>
+        </button>
+        {err && !caps ? (
+          <span className="text-red-300/80">{err}</span>
+        ) : (
+          <>
+            <span className="text-cyan-200/80">{t ? `${t.count} أداة` : "عدّد مش مقاس"}</span>
+            <span className={mc && mc.connected > 0 ? "text-emerald-300/80" : "text-amber-300/80"}>
+              {mc ? `أسطول ${mc.connected}/${mc.registered} متصل` : "الأسطول مش مقاس"}
+            </span>
+            <span className={rt?.browser.engines.length ? "text-emerald-300/80" : "text-white/45"}>
+              متصفح: {rt?.browser.engines.length ? rt.browser.engines.map((e) => e.name).join("·") : "عندك في اللوحة"}
+            </span>
+            <span className="text-white/45">msf {rt?.msf.installed ? "✓" : "✗"} · burp {rt?.burp.installed ? "✓" : "✗"}</span>
+            <span className={tc && tc.present.length ? "text-emerald-300/70" : "text-white/40"}>
+              سلسلة الأدوات {tc ? `${tc.present.length}✓/${tc.missing.length}ناقص` : "مش مقاسة"}
+            </span>
+            <span className="text-white/30">{caps?.build ? `بناء ${caps.build.label} · ${age(caps.build.ageMin)}` : "بلا بصمة"}</span>
+          </>
+        )}
+        <button onClick={() => void refresh()} title="أعد القياس" className="ms-auto text-white/30 hover:text-cyan-300">
+          <RefreshCw className="h-2.5 w-2.5" />
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-1.5 space-y-1 border-t border-white/5 pt-1.5 text-[8.5px] text-white/55">
+          {caps?.line && <div className="text-white/70">{caps.line}</div>}
+          {t?.byCategory && (
+            <div>
+              {Object.entries(t.byCategory)
+                .sort((a, b) => b[1] - a[1])
+                .map(([k, v]) => `${k} ${v}`)
+                .join(" · ")}
+            </div>
+          )}
+          {tc && (
+            <div>
+              <span className="text-white/40">{tc.dir}:</span> {tc.present.join(" · ") || "مفيش حاجة متنصّبة"}
+              {tc.missing.length ? ` · ناقص: ${tc.missing.join(" · ")}` : ""}
+            </div>
+          )}
+          {caps?.corpus && (
+            <div>
+              فهرس الثغرات: {caps.corpus.measured ? `${caps.corpus.total.toLocaleString("en-US")} (${age(caps.corpus.ageMin)})` : "مش متزامن"}
+              {caps.memory ? ` · ذاكرة: ${caps.memory.total}` : ""}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1 pt-0.5">
+            {["ايه قدراتك الحقيقية؟", "دوّر على أجهزة مجانية نشغّل عليها الأدوات", "اربط جهاز جديد", "افتح https://hackerone.com"].map((q) => (
+              <button key={q} onClick={() => onAsk(q)} className="rounded-lg border border-cyan-500/25 bg-cyan-500/5 px-1.5 py-0.5 text-cyan-200/80 hover:bg-cyan-500/15">
+                {q}
+              </button>
+            ))}
+          </div>
+          {seen.length > 0 && (
+            <div className="text-white/40">
+              أوامر نوفا للوحة: {seen.map((c) => `${c.kind === "open_url" ? `فتح ${c.url}` : c.kind === "navigate" ? `نقل لـ${c.path}` : `إجراء ${c.action}`}`).join(" · ")}
+            </div>
+          )}
+          {caps?.uiQueue && <div className="text-white/30">عملاء WS: {caps.uiQueue.wsClients} · الطابور {caps.uiQueue.delivered}/{caps.uiQueue.size} اتسلّم</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NovaWorkstation() {
   // The conversation lives in a persistent session, so coming back to the page
   // (or to an older chat) never loses it.
@@ -527,8 +731,10 @@ export function NovaWorkstation() {
     });
   };
 
-  const send = async () => {
-    const content = input.trim();
+  /** `override` بيخلّي الأزرار الجاهزة تبعت من غير ما تستنى المستخدم يكتب — من غير ما
+   * الحالة تتغيّر قبل الإرسال (وده كان بيخلّي الزر يبعث فاضي لو اتعمل setInput بس). */
+  const send = async (override?: string) => {
+    const content = (override ?? input).trim();
     if (!content || streaming) return;
     setInput("");
     push({ role: "user", text: content });
@@ -718,6 +924,8 @@ export function NovaWorkstation() {
             ))}
           </div>
         )}
+
+        <CapabilityRail onAsk={(q) => void send(q)} />
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {lines.length === 0 && (

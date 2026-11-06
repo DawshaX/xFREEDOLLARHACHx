@@ -123,6 +123,7 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   process_list: "العمليات الشغّالة",
   service_status: "حالة خدمة",
   ui_navigate: "فتح صفحة في اللوحة",
+  browser_open: "فتح رابط في المتصفح",
   ui_action: "تنفيذ إجراء في اللوحة",
   memory_recall: "استرجاع آخر الذاكرة",
 };

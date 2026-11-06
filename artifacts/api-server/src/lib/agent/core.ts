@@ -16,6 +16,14 @@ import { NOVA_SYSTEM_PROMPT, NOVA_SYSTEM_PROMPT_SHORT } from "./persona";
 import { buildSelfModel, selfModelPrompt, type SelfModel } from "./self-model";
 import { enforceClaims } from "./claim-guard";
 import { sanitizeReply } from "./sanitize-reply";
+import {
+  capabilityAnswer,
+  capabilityLabels,
+  capabilitySteps,
+  matchCapabilities,
+  truthGuard,
+  type CapabilityFacts,
+} from "./capabilities";
 import { toolchainStatus } from "../ops/toolchain";
 import { vulnQuery } from "./vuln-keyword";
 import {
@@ -530,6 +538,17 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
     if (/حالة المنصة|status|health/i.test(src)) return "حالة المنصة";
     return "تحليل الطلب";
   };
+  // ── القدرات أول: «تقدر تفتح متصفح وتشتغل علي ميتاسبلويت؟» لازم تتحلّل من خريطة
+  // القدرات (تحريفات الإملائية، عربي/إنجليزي) وتتحول لأدوات فعلًا — مش تتساب
+  // للموديل يخمّن دقيقة ويرجّع إنكار غلط.
+  for (const step of capabilitySteps(msg, 3)) {
+    if (!AGENT_TOOL_NAMES.includes(step.tool)) continue;
+    if (steps.some((x) => x.tool === step.tool && JSON.stringify(x.args) === JSON.stringify(step.args))) continue;
+    steps.push(step);
+  }
+  const capLabels = capabilityLabels(msg);
+  if (capLabels.length) labels.push(...capLabels);
+
   for (const rule of INTENT) {
     if (!rule.test.test(msg)) continue;
     const planned = rule.tools(msg);
@@ -644,6 +663,11 @@ export function identityAnswer(model: SelfModel = buildSelfModel()): string {
       ? `- ذاكرتي فيها **${model.memory.total}** ذكرى من شغلنا، بتفضل بعد إعادة التشغيل.`
       : "- ذاكرتي لسه فاضية — أول حاجة نحفظها هتفضل بعد الريستارت.",
     model.opsKinds ? `- **${model.opsKinds}** نوع عملية على برامج مصرّح بها (مش تخمين).` : "",
+    model.runtime.toolchain
+      ? `- **أدوات على المكنة دي (${model.runtime.toolchain.dir}):** ${model.runtime.toolchain.present.length ? `متنصّب: ${model.runtime.toolchain.present.slice(0, 8).join(" · ")}` : "مفيش أداة متنصّبة"}${model.runtime.toolchain.missing.length ? ` · ناقص ${model.runtime.toolchain.missing.slice(0, 6).join(" · ")}` : ""}.`
+      : "- **حالة الأدوات على المكنة:** مش مقاسة — فمش هدّعي إني شايلة nuclei ولا إني بلاها.",
+    `- **المتصفح:** ${model.runtime.browser.note} **عملاء اللوحة السامعين دلوقتي: ${model.runtime.browser.panelClients}.**`,
+    `- **Metasploit:** ${model.runtime.msf.installed ? "منصّب على المكنة دي" : "مش منصّب (متقاس من PATH والمسارات المعروفة — مش رأي)"} · **Burp:** ${model.runtime.burp.installed ? "موجود" : "GUI محتاج شاشة، مش موجود"}.`,
     "**اللي مش بعمله وهقوله على طول:**",
     ...model.cannotDo.slice(0, 3).map((c) => `- ${c}`),
     "**عايز تشوفني شغالة دلوقتي؟** ابعتلي نطاق زي `example.com` وأنا أعمل استطلاع حقيقي، أو اكتب «دوّر على …» وأجيب من النت بنتائج مش اقتراحات.",
@@ -723,8 +747,24 @@ async function llmPlan(
     ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
     { role: "user" as const, content: message },
   ];
-  const result = await llmComplete(messages, { temperature: 0.3, maxTokens: 700 });
-  if (!result) return null;
+  /**
+   * سقف زمني للتخطيط. مقاس من الـtranscript الحيّ: سؤال قدرة بسيط اخد 65 ثانية جوه
+   * `llmComplete` وطلع غلط في الآخر. الردّ الحتمي بعد 12 ثانية أحسن من ردّ متخيَّل
+   * بعد دقيقة — فالتخطيط مابيحبسش المحادثة وراه.
+   */
+  const budgetMs = Math.min(60_000, Math.max(3_000, Number(process.env.NOVA_PLAN_TIMEOUT_MS ?? 12_000) || 12_000));
+  const raced = await Promise.race([
+    llmComplete(messages, { temperature: 0.3, maxTokens: 700 }),
+    new Promise<null>((resolve) => {
+      const timer = setTimeout(() => resolve(null), budgetMs);
+      (timer as unknown as { unref?: () => void }).unref?.();
+    }),
+  ]);
+  if (!raced) {
+    console.warn(`[plan] مافيش خطة من الموديل جوه ${budgetMs}ms — المخطّط الحتمي بيكمّل (أسرع وأصدق هنا)`);
+    return null;
+  }
+  const result = raced;
   const parsed = extractJson<{ thought?: string; steps?: Array<{ tool?: string; args?: Record<string, unknown> }>; answer_if_no_tools?: string }>(result.text);
   if (!parsed) return null;
   const steps = (parsed.steps ?? [])
@@ -980,6 +1020,13 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       build: { commit: null, builtAt: null, ageMin: null, label: "بلا بصمة" },
       // مش مقاس — بنقول كده في السطر، مافيش افتراض «موجودة» ولا «ناقصاه».
       securityTools: { present: [], missing: [], provisionable: false, writable: false, scriptFound: false },
+      // نفس علة `build`: fallback ناقص حقل = undefined وقت القراءة جوه مسار الخطأ.
+      runtime: {
+        browser: { engines: [], panelClients: 0, note: "القياس مش متاح (نموذج القدرات فشل) — مش هدّعي وجود متصفح ولا غيابه." },
+        msf: { installed: false, at: null },
+        burp: { installed: false, at: null },
+        toolchain: null,
+      },
       canDo: [`تشغيل ${AGENT_TOOLS.length} أداة حقيقية`],
       cannotDo: ["قراءة حالة المنصة الآن — تعذّرت"],
     };
@@ -990,12 +1037,36 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     return { mode: "heuristic", provider: "none", toolsUsed: [], reply: "", ms: 0 };
   }
 
+  /**
+   * القياس الحيّ للقدرات في نفس الدورة: بيطبّع ردّ القدرات وبيغذّي حارس الإنكار.
+   * فشل القياس بيتحوّل لـ«مش مقاس» — مش لـ«موجودة».
+   */
+  const capFacts: CapabilityFacts = {
+    toolsCount: selfModel.tools.count,
+    browser: selfModel.runtime.browser,
+    offensive: { msf: selfModel.runtime.msf, burp: selfModel.runtime.burp, toolchain: selfModel.runtime.toolchain },
+  };
+  /**
+   * دورة قدرة = الطلب اتحلّل لخطة أدوات من الخريطة. هنا مخطّط الـLLM بيتخطّى:
+   * الردّ بيتبني من تنفيذ حقيقي + قياس، والفارق كان مقاس (65 ثانية → أقل من ثانية).
+   */
+  const capTurn =
+    capabilitySteps(message, 1).length > 0 && !greetingOnly(message) && !/(?:انت\s*مين|مين\s*انت|who\s+are\s+you)/i.test(message);
+  /**
+   * التحية وسؤال الهوية لردّهم قياس جاهز — استدعاء الموديل هناك ثمنه صفر معلومة.
+   * مقاس على الحزمة: التحية كانت بتاخد 8.3 ثانية (وقت `llmComplete` لمزوّد مجاني)
+   * وبعدين الردّ بيتكتب من القياس على أي حال.
+   */
+  const measuredDirectTurn =
+    (greetingOnly(message) || (SELF_QUESTION.test(message) && !extractTarget(message) && !extractFleetCommand(message))) &&
+    capabilitySteps(message, 1).length === 0;
+
   let plan: { thought: string; steps: PlannedStep[]; directAnswer?: string } | null = null;
   let mode: "llm" | "heuristic" = "heuristic";
   let provider = "nova-builtin";
   let model = "nova-heuristic";
 
-  if (!opts.forceHeuristic) {
+  if (!opts.forceHeuristic && !capTurn && !measuredDirectTurn) {
     const llm = await llmPlan(message, history, selfModel);
     if (llm && (llm.steps.length > 0 || llm.directAnswer)) {
       plan = llm;
@@ -1084,6 +1155,15 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       );
     }
     reply = guarded.text;
+
+    // ── حارس الإنكار (capability denial guard) ──────────────────────────────
+    // أي «مش قادر/مفيش/غير متاح» في ردّ الموديل بتتلحق بيها القياسة المقابلة، من غير
+    // ما كلامه يتغيّر: الإنكار الصحيح يفضل قدام المستخدم، والمختلق يقف جنبه قياس.
+    const tg = truthGuard(reply, capFacts);
+    if (tg.guarded) {
+      console.warn("[truth-guard] denial met with a measured capability line");
+      reply = tg.text;
+    }
 
     // SSE frames the chunks; no artificial sleep between them — fast reception.
     for (const chunk of splitChunks(reply)) {
@@ -1202,7 +1282,13 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
 
   // Explain the results
   let reply = "";
-  if (mode === "llm") {
+  if (capTurn) {
+    reply = capabilityAnswer(matchCapabilities(message), capFacts, results.filter((r) => r.ok).map((r) => r.name));
+    provider = `${provider}+capability-index`;
+    // سطر لكل أداة: الناجحة والفاشلة. اللي مابيظهرش بيُفهم غلط — «اتنفّذت 3 أدوات»
+    // وهي راجعة صفر، فالملخص لازم يبان مش يتخبّى ورا «نجحت».
+    if (results.length) reply += `\n\n${results.slice(0, 4).map((r) => `- \`${r.name}\`: ${r.summary}`).join("\n")}`;
+  } else if (mode === "llm") {
     const llm = await llmComplete(
       [
         {
@@ -1243,6 +1329,16 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       );
     }
     reply = guarded.text;
+
+    // حارس الإنكار على مسار الأدوات — بس مش على ردّ القدرات نفسه: ده متبني من
+    // القياس سطرًا سطرًا، وتكرار السطر فيه بيدي انطباع إن في تصحيح غلط وقع.
+    if (!capTurn) {
+      const tg = truthGuard(reply, capFacts);
+      if (tg.guarded) {
+        console.warn("[truth-guard] tool path: denial met with a measured capability line");
+        reply = tg.text;
+      }
+    }
   }
 
   // SSE frames the chunks; no artificial sleep between them — fast reception.

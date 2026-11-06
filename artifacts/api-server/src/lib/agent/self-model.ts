@@ -23,6 +23,8 @@
  */
 
 import { AGENT_TOOLS } from "./tools";
+import { browserProbe, offensiveProbe } from "./capabilities";
+import { uiQueueStats } from "./ui-bridge";
 import { loadServers } from "../server-registry";
 import { getConnectedAgentList } from "../../routes/local-agent";
 import { corpusStatus } from "../ops/vuln-corpus";
@@ -31,6 +33,18 @@ import { KINDS } from "../ops/tools";
 import { getCorpusStats } from "../cyber-corpus-2099";
 import { toolchainStatus, VENDORABLE } from "../ops/toolchain";
 import { localBuild } from "../auto-update";
+
+/**
+ * القياس الحيّ لـ«إيه اللي على المكنة دي فعلًا»: محركات متصفح، msfconsole، burp،
+ * حالة سلسلة الأدوات. جوه النموذج — مش في نص الرد — عشان الهوية والقدرات وحارس
+ * الإنكار واللوحة كلهم يشوفوا نفس الأرقام من نفس القياس.
+ */
+export interface SelfRuntime {
+  browser: { engines: Array<{ name: string; path: string }>; panelClients: number; note: string };
+  msf: { installed: boolean; at: string | null };
+  burp: { installed: boolean; at: string | null };
+  toolchain: { present: string[]; missing: string[]; dir: string; writable: boolean } | null;
+}
 
 export interface SelfModel {
   tools: { count: number; names: string[]; byCategory: Record<string, number> };
@@ -62,6 +76,7 @@ export interface SelfModel {
    * فالردّ نفسه بقى يقول هو بتكلم من أنهي نسخة ومن قد إيه، والفرق يبقى مقاس مش جدل.
    */
   build: { commit: string | null; builtAt: string | null; ageMin: number | null; label: string };
+  runtime: SelfRuntime;
   /**
    *الأدوات الأمنية الحقيقية على المكنة دي — مقاسة من القرص. بدونها النموذج بيكرر
    * جملة «مالوش أدوات تثبيت» وهو اللي يقدر ينزّلهم بنفسه.
@@ -154,6 +169,23 @@ export function buildSelfModel(): SelfModel {
     /* القياس مابيتكسرش الـprompt — بنقوله «مش مقاس» ونبقى صريحين في السطر */
   }
 
+  /**
+   * قياس المكنة للقدرات التقيلة (متصفح/msfconsole/burp/سلسلة الأدوات). fs بس —
+   * مفيش shell ومفيش شبكة، فبيشتغل حتى لو المزوّد واقع.
+   */
+  let runtime: SelfRuntime;
+  try {
+    const off = offensiveProbe();
+    runtime = { browser: browserProbe(uiQueueStats().wsClients), msf: off.msf, burp: off.burp, toolchain: off.toolchain };
+  } catch {
+    runtime = {
+      browser: { engines: [], panelClients: 0, note: "قياس المتصفح فشل — مش هدّعي وجوده ولا غيابه." },
+      msf: { installed: false, at: null },
+      burp: { installed: false, at: null },
+      toolchain: null,
+    };
+  }
+
   const canDo: string[] = [
     `تشغيل ${AGENT_TOOLS.length} أداة حقيقية مسجّلة باسمها (القائمة كاملة تحت)`,
     opsKinds ? `إنشاء وتشغيل ${opsKinds} نوع عملية على برامج مصرّح بها (ops)` : "تسجيل برامج وتشغيل عمليات مصرّح بها",
@@ -185,13 +217,20 @@ export function buildSelfModel(): SelfModel {
     securityTools.provisionable
       ? `تثبيت Kali أو Burp Suite (مافيش root/mount على الاستضافة) — بس النسخ الثابتة (${securityTools.missing.join(", ") || "كلها موجودة بالفعل"}) تتنزّل بـ\`tools_install\``
       : "تثبيت أدوات على السيرفر نفسه: مافيش root، وتنزيل النسخ الثابتة مش متاح هنا كمان (`vendor/bin` مش قابل للكتابة أو السكربت مش في الحزمة)",
-    "تشغيل Metasploit أو Burp Suite على السيرفر اللي أنا شغالة عليه",
+    // السطر ده كان ثابتًا في الكود («مالوش Metasploit» للأبد) وهو اللي علّم النموذج
+    // يردّ «مش قادرة» وهو شايل 65 أداة. بقى مشروط بالقياس: لو msfconsole موجود على
+    // المكنة بنقولي متقاس، ولو مش موجود بنقول السبب المقاس بدل الانطباع.
+    ...(runtime.msf.installed
+      ? []
+      : ["تشغيل Metasploit على السيرفر اللي أنا شغالة عليه — متقاس: مش منصّب (PATH + /usr/share/metasploit-framework)"]),
+    ...(runtime.burp.installed ? [] : ["تشغيل Burp Suite على السيرفر ده — GUI محتاج شاشة ومش منصّب (متقاس)"]),
     "الوصول لأي جهاز غير متصل بالوكيل",
     "اختراق أو مهاجمة هدف غير مصرّح به",
   ];
 
   return {
     build: buildStamp(),
+    runtime,
     tools: { count: AGENT_TOOLS.length, names, byCategory },
     machines: {
       registered: servers.length,

@@ -929,7 +929,10 @@ t("self-model: build stamp is measured or says so, never invented", () => {
   // the platform/self-report/memory/browser set). The assertion exists so a
   // silent drop in the catalogue is caught, so it is updated WITH the catalogue,
   // never the other way round.
-  assert.equal(m.tools.count, 65, "عدد الأدوات بقى يتغيّر وحدّث التست معاه — مش العكس");
+  // بلا رقم ثابت: التست بيقارن الرقم بالقياس نفسه (السجل بقى 65 من غير ما حد
+  // يعلّم حد)، ولو العدد قلّ عن آخر معرفة معلنة يبقى فيه أداة اتشالت.
+  assert.equal(m.tools.count, m.tools.names.length, "عدد الأدوات مش ساوي عدد الأسماء — رقم بيتكتب لوحده");
+  assert.ok(m.tools.count >= 65, `السجل قلّ عن آخر قياس معروف (${m.tools.count}) — أداة اتشالت؟`);
 });
 t("wiring: the greeting and the identity answer both carry the stamp", () => {
   const coreTxt = fs.readFileSync(path.join(AGENT_DIR, "core.ts"), "utf8");
@@ -1083,6 +1086,70 @@ t("ship: build-standalone carries the runtime data and demands it", () => {
   assert.match(b, /programs-catalog\.json/, "فحص الاكتمال مابيشملش الكتالوج — نفس الغلطة اللي خلفت present:false");
   const req = b.slice(b.indexOf("the launchers a panel needs"), b.indexOf("/* ── 3. zip it"));
   assert.ok(req.includes("fetch-toolchain.mjs") && req.includes("programs-catalog.json"), "قائمة الفحص ناقصة");
+});
+
+/* ── خريطة القدرات: كلام الموديل مابيمرش من غير قياس ─────────────────────
+ * الحالة دي مكتوبة عشان سطر واحد في الـtranscript الحيّ (2026-11-06 14:38):
+ * «تقدر تفتح متصفح وتشتغل علي ميتاسبلويت؟» → 65 ثانية تفكير → «مش قادرة»،
+ * والمنصة كانت شايلة 65 أداة وفيها `ui_browse_url` عند العميل. فالقواعد هنا:
+ * نفس الجمولات لازم تتحلّل لأدوات، ومفيش سطر ثابت فينكر قدرة قابلة للقياس. */
+const caps = await import(path.join(AGENT_DIR, "capabilities.ts"));
+const sr = await import(path.join(AGENT_DIR, "sanitize-reply.ts"));
+const bridge = await import(path.join(AGENT_DIR, "ui-bridge.ts"));
+t("capabilities: الأسئلة الحيّة بتتحلّل لأدوات فعلًا (نفس جُمل الـtranscript)", () => {
+  const live = "تقدر تفتح متصفح وتشتغل علي ميتاسبلويت ؟";
+  const steps = caps.capabilitySteps(live, 3).map((s) => s.tool);
+  assert.ok(steps.includes("browser_open"), `مافيش browser_open في: ${steps.join(",")}`);
+  assert.ok(steps.includes("kali_toolbox"), `مافيش kali_toolbox في: ${steps.join(",")}`);
+  assert.deepEqual(caps.capabilitySteps("مرحبا").length, 0, "التحية ماتولّدش خطوات");
+  assert.deepEqual(caps.capabilitySteps("اهلا").length, 0, "التحية التانية كمان");
+  // تحريفات الإملائية كلها قدرة واحدة — مافيش regex بيحفظ كلمة بحرفها
+  for (const v of ["ميتاسبلويت", "ميتاسبليت", "متاسبليت", "metasploit", "msfconsole"]) {
+    const keys = caps.matchCapabilities(`عندك ${v} وشغال؟`).map((c) => c.key);
+    assert.ok(keys.includes("kali"), `${v} مابقابلتش على قدركالي`);
+  }
+  const opened = caps.capabilitySteps("افتح https://hackerone.com", 3).map((s) => s);
+  assert.ok(String(opened[0]?.args?.url ?? "").startsWith("https://hackerone.com"), `الرابط ماتبعتش للوحة: ${JSON.stringify(opened[0])}`);
+  assert.equal(opened[0]?.tool, "browser_open", "أول خطوة مفروض المتصفح");
+});
+t("capabilities: الروابط الخطرة مابتتفتحش", () => {
+  assert.equal(bridge.safeUrl("javascript:alert(1)"), null, "javascript: اتقبل!");
+  assert.equal(bridge.safeUrl("data:text/html,<script>1</script>"), null, "data: اتقبل!");
+  assert.equal(bridge.safeUrl("file:///etc/passwd"), null, "file: اتقبل!");
+  assert.equal(bridge.safeUrl("example.com"), "https://example.com/", "المضيف العادي ماتبنيش رابط صحيح");
+  const empty = bridge.openUrl("");
+  assert.equal(empty.ok, false, "من غير رابط مفروض مافيش وعد زائف");
+  assert.match(empty.summary, /قولي/, "مفيش إرشاد للمستخدم عن الصيغة الصح");
+});
+t("capabilities: مفيش إنكار قدرة مكتوب ثابت في نموذج القدرات", () => {
+  const smTxt = fs.readFileSync(path.join(AGENT_DIR, "self-model.ts"), "utf8");
+  // الإبرة متبناة من أجزاء: البوابة ماينفعش تحتوي النص اللي بتدوّر عليه
+  const needle = ["تشغيل ", "Metasploit ", "أو ", "Burp Suite ", "على السيرفر اللي أنا شغالة عليه"].join("");
+  assert.ok(!smTxt.includes(needle), "السطر الثابت رجع: النموذج بيتعلّم منك إنكر قبل ما يقيس");
+  assert.ok(smTxt.includes("runtime.msf.installed"), "msf بقى مقاس جوه cannotDo؟");
+  assert.ok(smTxt.includes("runtime.burp.installed"), "burp بقى مقاس؟");
+});
+t("speed: مخطّط الموديل ليه ميزانية، والحتمي بياخد مكانه", () => {
+  const coreTxt = fs.readFileSync(path.join(AGENT_DIR, "core.ts"), "utf8");
+  assert.ok(coreTxt.includes("NOVA_PLAN_TIMEOUT_MS"), "ميزانية التخطيط اتشيلت — سؤال قدرة بيرجّع 65 ثانية تاني");
+  assert.ok(coreTxt.includes("const raced = await Promise.race("), "الميزانية مش موصولة بـPromise.race");
+  assert.ok(coreTxt.includes("if (!opts.forceHeuristic && !capTurn && !measuredDirectTurn) {"), "دورة القدرة/التحية مابتتخطاش الموديل");
+  assert.ok(coreTxt.includes("const measuredDirectTurn ="), "التحية لسه بتستنى مخطّط الموديل (8.3 ثانية مقاسة على الحزمة)");
+  assert.ok(coreTxt.includes("const tg = truthGuard(reply, capFacts);"), "حارس الإنكار مش موصول");
+  assert.equal(coreTxt.split("truthGuard(reply, capFacts)").length - 1, 2, "الحارس مفروض على المسارين (مباشر + أدوات)");
+});
+t("voice: صيغة واحدة للمتكلمة — والقواعد متكتبش في نص الردّ", () => {
+  const a = sr.feminizeSelfVoice("أنا بخير يا بطل، كل الأنظمة شغالة وأنا جاهز أبدأ، ومش قادر أستنى");
+  assert.ok(a.text.includes("أنا جاهزة"), `«جاهز» ماتبديلش: ${a.text}`);
+  assert.ok(a.text.includes("مش قادرة"), `«مش قادر» ماتبديلش: ${a.text}`);
+  assert.equal(a.fixed, 2, `عدد الإصلاحات: ${a.fixed}`);
+  const userSide = sr.feminizeSelfVoice("لو انت مش قادر توصل قوللي");
+  assert.ok(userSide.text.includes("انت مش قادر"), "المخاطب اتغيّر بالغلط — القاعدة للمتكلمة بس");
+  const full = sr.sanitizeReply("هرد عليه بالعربي وأقول إني جاهز");
+  assert.ok(full.removed.some((r) => r.startsWith("voice:")), "الإصلاح مش موصول بـsanitizeReply");
+  const personaTxt = fs.readFileSync(path.join(AGENT_DIR, "persona.ts"), "utf8");
+  const short = personaTxt.slice(personaTxt.indexOf("NOVA_SYSTEM_PROMPT_SHORT"), personaTxt.indexOf("/** Persona card"));
+  assert.ok(/مؤنث/.test(short), "مخطط الردّ المختصر مافيهوش قاعدة الجنس — ومنه بتيجي الصيغة المذكرة");
 });
 
 fs.rmSync(tmp, { recursive: true, force: true });
