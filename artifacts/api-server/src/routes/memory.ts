@@ -7,6 +7,12 @@
 import { Router } from "express";
 import { broadcastLiveEvent } from "./live-events";
 import { broadcastEvent } from "../lib/ws-hub";
+import {
+  initMemory,
+  listMemories,
+  remember,
+  type MemoryKind,
+} from "../lib/agent/memory-store";
 
 const router = Router();
 
@@ -98,6 +104,79 @@ export interface SaveMemoryOptions {
   pinned?: boolean;
 }
 
+/**
+ * ── Durable mirror ───────────────────────────────────────────────────────────
+ * Measured 2026-11-06: a memory written through `POST /api/memory` was gone
+ * after a restart. The cause was structural, not a bug in the writer — this
+ * route kept its records in a module-level array and never touched
+ * `lib/agent/memory-store`, which is the layer that actually owns the file
+ * (`state/nova-memory.json`, atomic tmp+rename) and the Supabase mirror.
+ *
+ * So the route keeps its own shape (the panel and the agent both read it) and
+ * every write is *also* handed to the durable store. Nothing is removed: the
+ * in-memory list stays the fast read path, the file becomes the truth that
+ * survives a restart.
+ */
+const DURABLE_KINDS: MemoryKind[] = ["fact", "preference", "lesson", "event", "session"];
+
+function durableKind(kind: string): MemoryKind {
+  const k = String(kind || "").toLowerCase();
+  return (DURABLE_KINDS as string[]).includes(k) ? (k as MemoryKind) : "fact";
+}
+
+function mirrorToDurable(entry: UnifiedMemoryEntry): void {
+  try {
+    remember({
+      kind: durableKind(entry.kind),
+      title: entry.title || entry.key,
+      content: entry.content,
+      tags: String(entry.tags || "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+      importance: entry.importance,
+      pinned: entry.pinned,
+      source: "api:/memory",
+    });
+  } catch {
+    // A read-only disk must not fail the write the user asked for; the
+    // in-memory copy is still served and the store reports its own error.
+  }
+}
+
+/**
+ * Load what survived the last run into the in-memory list, so a restart does
+ * not look like amnesia. Called once at module load.
+ */
+function hydrateFromDurable(): void {
+  try {
+    initMemory();
+    const { items } = listMemories({ limit: 5000, sort: "recent" });
+    for (const r of items) {
+      if (memoryStore.some((m) => m.key === r.title || m.id === r.id)) continue;
+      memoryStore.push({
+        id: r.id,
+        kind: r.kind,
+        memoryType: r.kind,
+        title: r.title,
+        key: r.title,
+        content: r.content,
+        tags: Array.isArray(r.tags) ? r.tags.join(",") : String(r.tags ?? ""),
+        pinned: Boolean(r.pinned),
+        importance: Number(r.importance ?? 5),
+        usedCount: 1,
+        ts: Date.parse(r.createdAt) || Date.now(),
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt ?? r.createdAt,
+      });
+    }
+  } catch {
+    // No store yet (first boot) — the seeded defaults below are the start.
+  }
+}
+
+hydrateFromDurable();
+
 export function saveMemory(
   memoryTypeOrOpts: string | SaveMemoryOptions,
   keyArg?: string,
@@ -161,6 +240,7 @@ export function saveMemory(
       memory: existing,
       ts: existing.ts,
     });
+    mirrorToDurable(existing);
     return existing;
   }
 
@@ -199,6 +279,7 @@ export function saveMemory(
     memory: entry,
     ts: entry.ts,
   });
+  mirrorToDurable(entry);
   return entry;
 }
 

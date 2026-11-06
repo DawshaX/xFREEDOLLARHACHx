@@ -240,7 +240,16 @@ function searchDirs(): string[] {
   // scripts/fetch-toolchain.mjs). It exists because a free Render/PaaS box has no
   // SSH and no apt: without this, the engine would honestly report "no nmap" while
   // a nuclei binary sat unused in the deploy directory.
-  const vendored = [path.resolve(process.cwd(), "vendor/bin")];
+  //
+  // NOVA_VENDOR_BIN overrides that location — and it must REPLACE the cwd
+  // fallback, not merely be prepended to it. Measured 2026-11-06: the toolchain
+  // gate points NOVA_VENDOR_BIN at an empty temp dir to prove `present` is read
+  // off the disk, but the cwd fallback still found the real vendor/bin, so the
+  // gate saw 4 tools where it had planted 0 and failed on CI. An override that
+  // does not override is not an override.
+  const vendored = process.env.NOVA_VENDOR_BIN
+    ? [path.resolve(process.env.NOVA_VENDOR_BIN)]
+    : [path.resolve(process.cwd(), "vendor/bin")];
   if (process.env.NOVA_TOOL_DIR) vendored.unshift(...process.env.NOVA_TOOL_DIR.split(path.delimiter).filter(Boolean));
   const extra = [...vendored, `${home}/.local/bin`, `${home}/go/bin`, "/usr/local/bin", "/usr/bin"];
   const dirs = (process.env.PATH || "").split(path.delimiter).filter(Boolean);
@@ -253,8 +262,18 @@ export function clearBinaryCache(): void {
 }
 
 export function findBinary(bin: string): string | null {
-  if (pathCache.has(bin)) return pathCache.get(bin) ?? null;
+  // The cache key includes the search dirs, not just the binary name.
+  //
+  // Measured 2026-11-06: the toolchain gate points NOVA_VENDOR_BIN at an empty
+  // temp dir to prove `present` is read off the disk. It planted nothing, yet
+  // `present` came back as subfinder,httpx,nuclei,katana — because an earlier
+  // call in the same process had cached those hits under the bare name `bin`,
+  // and a cache that ignores WHERE it looked answers a question nobody asked.
+  // Keying on the dirs makes a changed search path a cache miss, which is the
+  // only correct behaviour for a filesystem probe.
   const dirs = searchDirs();
+  const key = `${bin}\u0000${dirs.join("\u0000")}`;
+  if (pathCache.has(key)) return pathCache.get(key) ?? null;
   const exts = process.platform === "win32" ? (process.env.PATHEXT || ".EXE;.CMD").split(";") : [""];
   let hit: string | null = null;
   for (const dir of dirs) {
@@ -270,7 +289,7 @@ export function findBinary(bin: string): string | null {
     }
     if (hit) break;
   }
-  pathCache.set(bin, hit);
+  pathCache.set(key, hit);
   return hit;
 }
 

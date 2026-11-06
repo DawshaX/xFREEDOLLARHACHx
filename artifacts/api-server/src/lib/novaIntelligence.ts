@@ -52,11 +52,14 @@ export class NovaIntelligence {
    * التحليل المقارن: مقارنة الكود أو الأهداف بالثغرات الجديدة (N-Day)
    */
   static async comparativeAnalysis(target: string, vulnerability: Vulnerability): Promise<{ isVulnerable: boolean; confidence: number; report: string }> {
-    // هنا يتم استخدام الموديل المحلي (Ollama) لتحليل النمط ومقارنته بالهدف
+    // NOTE: this used to return `Math.random() > 0.7` as the verdict, i.e. a
+    // coin flip presented as an analysis result. A security verdict must never
+    // be random. Until a real analyser is wired in, report "not determined"
+    // with zero confidence so the UI cannot mistake it for a finding.
     return {
-      isVulnerable: Math.random() > 0.7,
-      confidence: 0.85,
-      report: `التحليل المقارن لـ ${target} ضد ${vulnerability.id} أظهر وجود تشابه في أنماط الكود المعرضة للخطر.`
+      isVulnerable: false,
+      confidence: 0,
+      report: `التحليل المقارن لـ ${target} ضد ${vulnerability.id} لم يُنفَّذ: لا يوجد محلّل حقيقي موصول بعد. النتيجة «غير محدَّدة» وليست «آمنة».`
     };
   }
 

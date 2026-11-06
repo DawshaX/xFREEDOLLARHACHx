@@ -50,7 +50,7 @@ router.get("/evidence/scans", async (req, res) => {
 router.post("/evidence/scan", async (req, res) => {
   try {
     const { url, assetId } = req.body as { url: string; assetId?: string };
-    if (!url) return res.status(400).json({ error: "URL مطلوب" });
+    if (!url) { res.status(400).json({ error: "URL مطلوب" }); return; }
 
     let targetUrl = url;
     if (!targetUrl.startsWith("http")) targetUrl = `https://${targetUrl}`;

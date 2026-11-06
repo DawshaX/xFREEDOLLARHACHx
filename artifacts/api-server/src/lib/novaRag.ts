@@ -41,7 +41,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 export class NovaRagEngine {
-  async ingestText(title: string, content: string, category = "general", tags: string[] = []): Promise<number> {
+  async ingestText(title: string, content: string, category = "general", tags: string[] = []): Promise<string> {
     const [row] = await db.insert(knowledgeTable).values({ title, category, content, tags }).returning();
     // @ts-ignore — `id` في المخطط ده بيطلع string في نسخة وnumber في نسخة تانية حسب
     //   عمود drizzle؛ المتاح الفعلي (routes/knowledge.ts) بيستخدم NovaRagV2/newer path.

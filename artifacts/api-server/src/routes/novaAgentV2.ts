@@ -8,7 +8,8 @@ router.post("/chat", async (req, res) => {
   const { command } = req.body;
 
   if (!command) {
-    return res.status(400).json({ error: "Command is required" });
+    res.status(400).json({ error: "Command is required" });
+    return;
   }
 
   // Set headers for SSE (Server-Sent Events) for streaming

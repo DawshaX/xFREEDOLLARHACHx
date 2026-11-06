@@ -10,7 +10,11 @@
  * else. Writes are rejected unless the request carries the service role, which
  * only lives inside the function's environment.
  */
-const PROJECT = "dbaaclqycsiefjwjfavf";
+// Project ref is public (it appears in every request URL), but keep it overridable
+// so a fork can point at its own project without editing source. Set
+// VITE_NOVA_SUPABASE_PROJECT in the build env to override.
+const PROJECT =
+  (import.meta.env?.VITE_NOVA_SUPABASE_PROJECT as string | undefined) || "dbaaclqycsiefjwjfavf";
 export const BACKEND_URL = `https://${PROJECT}.supabase.co/functions/v1/ops-api`;
 /** publishable/anon — safe in a browser bundle by design */
 const ANON =

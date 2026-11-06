@@ -60,6 +60,11 @@ const Jobs = lazy(() => import("@/pages/jobs"));
 const Memory = lazy(() => import("@/pages/memory"));
 const Status = lazy(() => import("@/pages/status"));
 const NovaSentinel = lazy(() => import("@/pages/nova-sentinel"));
+// 2026-11-05: these two pages existed on disk but were never imported or routed,
+// so they were unreachable from the UI. Mounted below as /nova-sentinel-dashboard
+// and /nova-sentinel-dashboard-v2 (additive only — nothing removed).
+const NovaSentinelDashboard = lazy(() => import("@/pages/nova-sentinel-dashboard"));
+const NovaSentinelDashboardV2 = lazy(() => import("@/pages/nova-sentinel-dashboard-v2"));
 const DnsLookup = lazy(() => import("@/pages/tools/dns"));
 const SslChecker = lazy(() => import("@/pages/tools/ssl"));
 const WhoisLookup = lazy(() => import("@/pages/tools/whois"));
@@ -227,6 +232,8 @@ function InnerRoutes() {
       <Route path="/nova-sentinel" component={NovaSentinel} />
       <Route path="/nova-sentinel-v2" component={NovaSentinel} />
       <Route path="/nova-sentinel-v3" component={NovaSentinel} />
+      <Route path="/nova-sentinel-dashboard" component={NovaSentinelDashboard} />
+      <Route path="/nova-sentinel-dashboard-v2" component={NovaSentinelDashboardV2} />
 
       {/* ── AI / Agents ───────────────────────────────────────────── */}
       <Route path="/live-agent" component={LiveAgent} />

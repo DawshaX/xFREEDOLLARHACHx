@@ -33,7 +33,7 @@ router.post("/knowledge", async (req, res, next) => {
 
 router.delete("/knowledge/:id", async (req, res, next) => {
   try {
-    await db.delete(knowledgeTable).where(eq(knowledgeTable.id, Number(req.params["id"])));
+    await db.delete(knowledgeTable).where(eq(knowledgeTable.id, String(req.params["id"])));
     res.json({ ok: true });
   } catch (e) { return next(e); }
 });

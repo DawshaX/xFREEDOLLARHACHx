@@ -9,7 +9,8 @@ router.post("/nova-agent-v3/chat", async (req, res) => {
     const { command } = req.body;
 
     if (!command) {
-      return res.status(400).json({ error: "Command is required" });
+      res.status(400).json({ error: "Command is required" });
+      return;
     }
 
     res.setHeader('Content-Type', 'text/event-stream');

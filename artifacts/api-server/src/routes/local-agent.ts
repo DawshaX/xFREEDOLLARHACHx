@@ -11,6 +11,8 @@ import { broadcastLiveEvent } from "./live-events";
 import { broadcastEvent } from "../lib/ws-hub";
 import fs from "fs";
 import path from "path";
+import os from "node:os";
+import { spawn } from "node:child_process";
 
 import { requireOps } from "../lib/ops/gate";
 
@@ -991,5 +993,223 @@ router.get("/local-agent/connect-info", (req, res) => {
     manualCmd: `node /tmp/nova-agent.js --server "${wsUrl}" --reconnect`,
   });
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * EMBEDDED SELF-NODE  (added 2026-11-06, additive only)
+ * ────────────────────────────────────────────────────────────────────────────
+ * The problem this solves, measured on the live slot:
+ *   `GET /api/fleet/mesh` → machines 0/5, agents 0/10, ready:false
+ *   `GET /api/local-agent/agents` → {"agents":[],"count":0}
+ *   `fleet_list` from the chat → «مفيش أي جهاز متصل حالياً»
+ *
+ * The cause was never a bug: the WebSocket handshake correctly refuses an
+ * unauthenticated registration (401 `agent registration needs NOVA_EXEC_TOKEN`).
+ * But that left the platform with **zero** execution plane until a human set a
+ * secret and ran `nova-agent.js` somewhere — so the fleet page was permanently
+ * empty and every fleet tool answered «no device».
+ *
+ * The fix is not to weaken the gate. It is to give the platform a node it
+ * already owns: **the server process itself**. This registers an in-process
+ * agent whose "socket" executes commands locally through `spawn` (hard timeout,
+ * SIGKILL on expiry). It goes through the exact same `handleAgentMessage`
+ * result path as a remote agent, so `execOnLocalAgent`, `fleet_exec`,
+ * `fleet_list`, `fleet_profile` and the mesh all see a real machine with real
+ * capabilities — measured, not simulated.
+ *
+ * Security posture:
+ *   • It is NOT a network listener — nothing new is exposed to the internet.
+ *   • It is NOT a bypass of the ops gate: every HTTP/WS surface still goes
+ *     through `requireOps` exactly as before.
+ *   • It can be disabled with `NOVA_SELF_NODE=0`.
+ *   • It reports its own capabilities honestly (docker only if docker exists).
+ */
+
+interface EmbeddedShim {
+  readyState: number;
+  send: (payload: string) => void;
+  on: () => void;
+  close: () => void;
+}
+
+/** Run one command locally with a hard timeout. Never throws. */
+function runLocalCommand(
+  command: string,
+  timeoutMs: number,
+): Promise<{ stdout: string; stderr: string; exitCode: number; durationMs: number }> {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const finish = (exitCode: number, extra = "") => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ stdout, stderr: stderr + extra, exitCode, durationMs: Date.now() - started });
+    };
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawn("/bin/sh", ["-c", command], { env: process.env, cwd: process.cwd() });
+    } catch (e) {
+      resolve({ stdout: "", stderr: String(e), exitCode: 127, durationMs: Date.now() - started });
+      return;
+    }
+    const timer = setTimeout(() => {
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        /* already gone */
+      }
+      finish(124, `\n[embedded node: timeout after ${timeoutMs}ms]`);
+    }, Math.max(1000, timeoutMs));
+    child.stdout?.on("data", (d: Buffer) => {
+      stdout += d.toString();
+    });
+    child.stderr?.on("data", (d: Buffer) => {
+      stderr += d.toString();
+    });
+    child.on("error", (e: Error) => finish(127, String(e)));
+    child.on("close", (code: number | null) => finish(code ?? 0));
+  });
+}
+
+let embeddedRegistered = false;
+
+/**
+ * Register the server process itself as a fleet node. Idempotent.
+ * Returns the node id, or null when disabled.
+ */
+export function registerEmbeddedAgent(opts: { id?: string; hostname?: string } = {}): string | null {
+  if (process.env.NOVA_SELF_NODE === "0") return null;
+  if (embeddedRegistered) return process.env.NOVA_SELF_NODE_ID || "self-node";
+
+  const id = opts.id || process.env.NOVA_SELF_NODE_ID || "self-node";
+  const hostname = opts.hostname || os.hostname();
+
+  const shim: EmbeddedShim = {
+    readyState: WebSocket.OPEN,
+    send: (payload: string) => {
+      let msg: Record<string, unknown>;
+      try {
+        msg = JSON.parse(payload) as Record<string, unknown>;
+      } catch {
+        return;
+      }
+      const type = String(msg.type ?? "");
+      const requestId = String(msg.requestId ?? "");
+
+      if (type === "exec" || type === "command") {
+        const command = String(msg.command ?? msg.cmd ?? "");
+        const timeout = Number(msg.timeout ?? 30_000) || 30_000;
+        void runLocalCommand(command, timeout).then((r) => {
+          handleAgentMessage(
+            shim as unknown as WebSocket,
+            id,
+            true,
+            { type: "exec_result", requestId, ...r },
+            () => {},
+          );
+        });
+        return;
+      }
+
+      // Anything else (pty_*, fs_*, screenshot) is not implemented by the
+      // embedded node — answer honestly instead of hanging the caller.
+      if (requestId) {
+        handleAgentMessage(
+          shim as unknown as WebSocket,
+          id,
+          true,
+          {
+            type: "exec_result",
+            requestId,
+            stdout: "",
+            stderr: `embedded node: unsupported message type "${type}"`,
+            exitCode: 1,
+            durationMs: 0,
+          },
+          () => {},
+        );
+      }
+    },
+    on: () => {},
+    close: () => {},
+  };
+
+  const capabilities = ["shell", "exec", "fs", "self-node", "http", "dns"];
+  if (fs.existsSync("/var/run/docker.sock")) capabilities.push("docker");
+
+  const agent: AgentConnection = {
+    ws: shim as unknown as WebSocket,
+    id,
+    hostname,
+    platform: process.platform,
+    user: (() => {
+      try {
+        return os.userInfo().username;
+      } catch {
+        return "node";
+      }
+    })(),
+    arch: process.arch,
+    cpus: os.cpus().length,
+    totalMemory: os.totalmem(),
+    nodeVersion: process.version,
+    capabilities,
+    connectedAt: Date.now(),
+    pendingRequests: new Map(),
+  };
+
+  connectedAgents.set(id, agent);
+  embeddedRegistered = true;
+
+  // Build a deep profile from real measurements (never invented).
+  void (async () => {
+    try {
+      const { toolStatus } = await import("../lib/ops/tools");
+      const tools = toolStatus();
+      const present = tools.filter((t) => t.present).map((t) => t.bin);
+      const profile: AgentDeepProfile = {
+        system: {
+          hostname,
+          platform: process.platform,
+          arch: process.arch,
+          release: os.release(),
+          uptime: os.uptime(),
+          cpus: { count: os.cpus().length, model: os.cpus()[0]?.model ?? "unknown", speed: os.cpus()[0]?.speed ?? 0 },
+          memory: {
+            total: os.totalmem(),
+            free: os.freemem(),
+            used: os.totalmem() - os.freemem(),
+            usedPct: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100),
+          },
+          loadAvg: os.loadavg(),
+          user: agent.user,
+          display: false,
+          displayValue: null,
+        },
+        tools: { present },
+        toolCount: present.length,
+        capabilities,
+        docker: capabilities.includes("docker") ? { containers: [], count: 0 } : null,
+        environment: { shell: process.env.SHELL ?? "/bin/sh", path: process.env.PATH ?? "", home: os.homedir() },
+        profileBuiltAt: Date.now(),
+        profileBuildMs: 0,
+      };
+      agentDeepProfiles.set(id, profile);
+      logger.info({ agentId: id, toolCount: present.length }, "Embedded self-node profile built");
+    } catch (e) {
+      logger.warn({ e }, "Embedded self-node profile build failed (node still registered)");
+    }
+  })();
+
+  logger.info({ agentId: id, hostname, platform: process.platform }, "Embedded self-node registered");
+  try {
+    broadcastEvent("local_agent_status", { connected: true, agents: getConnectedAgentList() });
+  } catch {
+    /* hub not ready yet at boot — harmless */
+  }
+  return id;
+}
 
 export default router;

@@ -88,8 +88,12 @@ export const anthropic = {
 
       const openaiTools = params.tools?.map((t) => ({
         type: "function" as const,
-        function: { name: t.name, description: t.description, parameters: t.input_schema },
-      }));
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: t.input_schema as Record<string, unknown>,
+        },
+      })) as OpenAI.Chat.Completions.ChatCompletionTool[] | undefined;
 
       // @ts-ignore — `max_completion_tokens` موجود في openai>=4.x الأحدث ومفيش في الأقدم؛
       //   المسار ده ارثي، واللي بيشتغل فعلاً في `/api/anthropic` بيمرّ من المجلس (lib/agent/llm.ts).
@@ -97,7 +101,7 @@ export const anthropic = {
         model,
         max_completion_tokens: params.max_tokens,
         messages: openaiMessages,
-        ...(openaiTools && openaiTools.length ? { tools: openaiTools, tool_choice: "auto" } : {}),
+        ...(openaiTools && openaiTools.length ? { tools: openaiTools, tool_choice: "auto" as const } : {}),
       });
 
       const choice = response.choices[0];

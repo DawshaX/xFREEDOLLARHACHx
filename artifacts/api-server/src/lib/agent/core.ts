@@ -14,6 +14,8 @@
 
 import { NOVA_SYSTEM_PROMPT, NOVA_SYSTEM_PROMPT_SHORT } from "./persona";
 import { buildSelfModel, selfModelPrompt, type SelfModel } from "./self-model";
+import { enforceClaims } from "./claim-guard";
+import { sanitizeReply } from "./sanitize-reply";
 import { toolchainStatus } from "../ops/toolchain";
 import { vulnQuery } from "./vuln-keyword";
 import {
@@ -835,7 +837,7 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
       return [
         `أهلاً بيك 👋 أنا **نوفا** — شريكك في المنصة، مش مجرد بوت أوامر.`,
         "",
-        `عندي دلوقتي **${sm.tools.count} أداة حقيقية**، و${sm.corpus.measured ? `فهرس **${sm.corpus.total.toLocaleString("en-US")} ثغرة**` : "فهرس ثغرات لسه مش متزامن"}، و${sm.machines.registered} ماكينة في الأسطول.`,
+        `عندي دلوقتي **${sm.tools.count} أداة حقيقية**، و${sm.corpus.measured ? `فهرس **${sm.corpus.total.toLocaleString("en-US")} ثغرة**` : "فهرس ثغرات لسه مش متزامن"}، و${sm.machines.connected ? `**${sm.machines.connected} جهاز متصل الآن**` : sm.machines.registered ? `${sm.machines.registered} ماكينة **مسجّلة** (صفر متصل الآن)` : "مفيش ماكينة متصلة"}.`,
         "",
         capabilityTruthLine(),
         "",
@@ -852,9 +854,11 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
       m.corpus.measured
         ? `- ببحث جوّه **${m.corpus.total.toLocaleString("en-US")} ثغرة** حقيقية (NVD + KEV + EPSS) بدل تخمين.`
         : "- فهرس الثغرات لسه مش متزامن على السيرفر ده — البحث هيقولك «مفيش بيانات» بصراحة.",
-      m.machines.registered
-        ? `- عندي **${m.machines.registered} ماكينة** في الأسطول (${m.machines.names.slice(0, 3).join(" · ")}).`
-        : "- الأسطول جاهز بس مفيش ماكينة مسجّلة — ضيف ماكينة وأنا أنفّذ عليها أوامر حقيقية.",
+      m.machines.connected
+        ? `- عندي **${m.machines.connected} جهاز متصل الآن** بالأسطول (${m.machines.connectedNames.slice(0, 3).join(" · ")}) — التنفيذ عليهم متاح فورًا.`
+        : m.machines.registered
+          ? `- الأسطول فيه **${m.machines.registered} ماكينة مسجّلة** في السجل، بس **صفر جهاز متصل الآن** — التنفيذ بيتفتح لحظة اتصال وكيل.`
+          : "- الأسطول جاهز بس مفيش ماكينة مسجّلة ولا متصلة — ضيف ماكينة وأنا أنفّذ عليها أوامر حقيقية.",
       m.memory.total
         ? `- ذاكرتي فيها **${m.memory.total} ذكرى** من شغلنا السابق.`
         : "- ذاكرتي لسه فاضية — أول حاجة نحفظها هتفضل بعد إعادة التشغيل.",
@@ -965,8 +969,11 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     // a minimal one whose numbers come straight from the tool registry.
     selfModel = {
       tools: { count: AGENT_TOOLS.length, names: AGENT_TOOLS.map((t) => t.name), byCategory: {} },
-      machines: { registered: 0, names: [] },
+      machines: { registered: 0, names: [], connected: 0, connectedNames: [] },
       corpus: { measured: false, total: 0, ageMin: null },
+      // The static index is not readable here either — 0 means "not measured",
+      // and the guard treats it as such rather than as a real count.
+      patterns: { total: 0 },
       memory: { total: 0, pinned: 0 },
       opsKinds: 0,
       // البصمة مش مقاسة هنا بالنفس المنطق: بنقول «مافيش» بدل ما نختلق رقم نسخة.
@@ -1051,6 +1058,33 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       // so say what happened instead of saying nothing.
       reply = `معلش، المزوّد رجّع رد فاضي المرة دي (${provider}). جرّب تبعت السؤال تاني، أو خلّي الصياغة فيها هدف واضح وأنا أبدأ فوراً.\n\n**الخطوة التالية المقترحة:** اكتب مثلًا «استطلع example.com» أو «دوّر على CVE-2024-3094».`;
     }
+    // ── Claim guard (منع الادّعاء) ──────────────────────────────────────────
+    // Measured 2026-11-05: the live slot answered «3 ماكينة» while the fleet
+    // page showed 0 connected. Every number the reply asserts about the
+    // platform is now checked against the same self-model the answer was built
+    // from; an over-claim gets a measured correction appended — never a silent
+    // rewrite, so the human always sees the true number.
+    // ── Sanitiser (منع تسريب التفكير) ────────────────────────────────────────
+    // Measured 2026-11-06: a live reply opened with «هرد عليه بالعربي المصري
+    // وأقولو إني جاهز» — the model narrating its plan before answering. That is
+    // not the answer, and showing it makes a working agent look broken. Strip
+    // the preamble BEFORE the claim guard, so the guard audits what the user
+    // will actually read.
+    const cleaned = sanitizeReply(reply);
+    if (cleaned.removed.length) {
+      console.warn(`[sanitize] stripped ${cleaned.removed.join(", ")} from the reply`);
+    }
+    reply = cleaned.text;
+
+    const guarded = enforceClaims(reply, selfModel);
+    if (guarded.violations.length) {
+      console.warn(
+        `[claim-guard] corrected ${guarded.violations.length} over-claim(s): ` +
+          guarded.violations.map((v) => `${v.kind} ${v.claimed}>${v.actual}`).join(", "),
+      );
+    }
+    reply = guarded.text;
+
     // SSE frames the chunks; no artificial sleep between them — fast reception.
     for (const chunk of splitChunks(reply)) {
       opts.emit({ type: "delta", text: chunk });
@@ -1189,6 +1223,26 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     if (!reply.trim()) {
       reply = `نفّذت ${results.length} أداة بس مقدرتش أصيغ ملخص من المزوّد. النتائج الخام في تبويب الأدوات فوق.\n\n**الخطوة التالية المقترحة:** اطلب مني نتيجة أداة واحدة بالاسم وأنا أشرحها بالتفصيل.`;
     }
+  }
+
+  // ── Claim guard (منع الادّعاء) — same check on the tool-executing path ──
+  {
+    // Same sanitiser as the conversational path: a leaked plan preamble is just
+    // as wrong after a tool run as before one.
+    const cleaned = sanitizeReply(reply);
+    if (cleaned.removed.length) {
+      console.warn(`[sanitize] stripped ${cleaned.removed.join(", ")} from the tool-path reply`);
+    }
+    reply = cleaned.text;
+
+    const guarded = enforceClaims(reply, buildSelfModel());
+    if (guarded.violations.length) {
+      console.warn(
+        `[claim-guard] corrected ${guarded.violations.length} over-claim(s): ` +
+          guarded.violations.map((v) => `${v.kind} ${v.claimed}>${v.actual}`).join(", "),
+      );
+    }
+    reply = guarded.text;
   }
 
   // SSE frames the chunks; no artificial sleep between them — fast reception.

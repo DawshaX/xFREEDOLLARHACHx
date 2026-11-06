@@ -54,7 +54,7 @@ router.post("/ioc", async (req, res) => {
       iocType: string; value: string; source?: string; confidence?: number;
       severity?: string; description?: string; relatedCves?: string[]; tags?: string[];
     };
-    if (!iocType || !value) return res.status(400).json({ error: "النوع والقيمة مطلوبان" });
+    if (!iocType || !value) { res.status(400).json({ error: "النوع والقيمة مطلوبان" }); return; }
 
     const [created] = await db.insert(iocTracker).values({
       iocType,
@@ -101,7 +101,7 @@ router.delete("/ioc/:id", async (req, res) => {
 router.post("/ioc/seed-from-cves", async (req, res) => {
   try {
     const { cveIds } = req.body as { cveIds?: string[] };
-    if (!cveIds?.length) return res.json({ added: 0 });
+    if (!cveIds?.length) { res.json({ added: 0 }); return; }
 
     let added = 0;
     for (const cveId of cveIds.slice(0, 50)) {

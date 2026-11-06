@@ -24,16 +24,34 @@
 
 import { AGENT_TOOLS } from "./tools";
 import { loadServers } from "../server-registry";
+import { getConnectedAgentList } from "../../routes/local-agent";
 import { corpusStatus } from "../ops/vuln-corpus";
 import { memoryStats } from "./memory-store";
 import { KINDS } from "../ops/tools";
+import { getCorpusStats } from "../cyber-corpus-2099";
 import { toolchainStatus, VENDORABLE } from "../ops/toolchain";
 import { localBuild } from "../auto-update";
 
 export interface SelfModel {
   tools: { count: number; names: string[]; byCategory: Record<string, number> };
-  machines: { registered: number; names: string[] };
+  /**
+   * `registered` = entries in the persisted server registry (a list of hosts we
+   * know about). `connected` = agents with a LIVE WebSocket right now.
+   *
+   * These are different quantities and conflating them is exactly what produced
+   * the false «3 ماكينة» on the live slot: the registry had three hosts, the
+   * fleet had zero connected agents, and the reply quoted the first as if it
+   * were the second. Both are reported, separately, always.
+   */
+  machines: { registered: number; names: string[]; connected: number; connectedNames: string[] };
   corpus: { measured: boolean; total: number; ageMin: number | null };
+  /**
+   * The static knowledge index — a different quantity from `corpus`.
+   * `totalIndexedKnowledgeItems` is what the persona and the tool descriptions
+   * quote as «3,300+ نمط»; without it in the model the guard had nothing to
+   * check that number against, so a stale or invented pattern count could pass.
+   */
+  patterns: { total: number };
   memory: { total: number; pinned: number };
   opsKinds: number;
   /**
@@ -83,6 +101,15 @@ export function buildSelfModel(): SelfModel {
     servers = [];
   }
 
+  // Live agents — a WebSocket that is open RIGHT NOW. This is the number the
+  // fleet page shows, and the only one that may be quoted as "connected".
+  let connected: Array<{ hostname: string }> = [];
+  try {
+    connected = getConnectedAgentList();
+  } catch {
+    connected = [];
+  }
+
   let corpus = { measured: false, total: 0, ageMin: null as number | null };
   try {
     const c = corpusStatus();
@@ -97,6 +124,13 @@ export function buildSelfModel(): SelfModel {
     memory = { total: m.total, pinned: m.pinned };
   } catch {
     /* memory unavailable */
+  }
+
+  let patterns = { total: 0 };
+  try {
+    patterns = { total: getCorpusStats().totalIndexedKnowledgeItems };
+  } catch {
+    /* an index that cannot be read is reported as 0, never guessed */
   }
 
   let opsKinds = 0;
@@ -134,9 +168,14 @@ export function buildSelfModel(): SelfModel {
         : "مافيش أدوات أمنية على المكنة دي، وتنزيلها مش متاح من هنا — الاستطلاع السلبي والـHTTP بس",
     "جلب ملفات GitHub وقراءة مستودعاتها",
     "الذاكرة الطويلة: تحفظ وتسترجع عبر الجلسات",
-    servers.length
-      ? `${servers.length} ماكينة مسجّلة في الأسطول (التنفيذ عليها متاح لو الوكيل متصل)`
-      : "الأسطول جاهز لكن مفيش ماكينة مسجّلة — إضافة ماكينة بتفتح تنفيذ الأوامر عليها",
+    // The fleet line reports BOTH numbers, because they answer different
+    // questions and quoting one as the other is the false claim this file
+    // exists to prevent.
+    connected.length
+      ? `${connected.length} جهاز متصل **الآن** بالأسطول (${connected.slice(0, 4).map((a) => a.hostname).join(" · ")}) — التنفيذ عليهم متاح فورًا`
+      : servers.length
+        ? `الأسطول فيه ${servers.length} ماكينة **مسجّلة** في السجل، بس **صفر جهاز متصل الآن** — التنفيذ بيتفتح لحظة اتصال وكيل`
+        : "الأسطول جاهز لكن مفيش ماكينة مسجّلة ولا متصلة — إضافة ماكينة بتفتح تنفيذ الأوامر عليها",
   ];
 
   const cannotDo: string[] = [
@@ -154,8 +193,14 @@ export function buildSelfModel(): SelfModel {
   return {
     build: buildStamp(),
     tools: { count: AGENT_TOOLS.length, names, byCategory },
-    machines: { registered: servers.length, names: servers.map((s) => s.name) },
+    machines: {
+      registered: servers.length,
+      names: servers.map((s) => s.name),
+      connected: connected.length,
+      connectedNames: connected.map((a) => a.hostname),
+    },
     corpus,
+    patterns,
     memory,
     opsKinds,
     securityTools,
@@ -181,14 +226,22 @@ export function selfModelPrompt(model: SelfModel = buildSelfModel()): string {
   const corpusLine = model.corpus.measured
     ? `البحث في ${model.corpus.total.toLocaleString("en-US")} ثغرة حقيقية (NVD + KEV + EPSS) من داخل المنصة`
     : "البحث في فهرس الثغرات (لسه مش متزامن — البحث هيقول «مفيش بيانات» بصراحة)";
-  const fleetLine = model.machines.registered
-    ? `${model.machines.registered} ماكينة مسجّلة في الأسطول (التنفيذ عليها متاح لو الوكيل متصل)`
-    : "الأسطول جاهز لكن مفيش ماكينة مسجّلة — إضافة ماكينة بتفتح تنفيذ الأوامر عليها";
+  const fleetLine = model.machines.connected
+    ? `${model.machines.connected} جهاز متصل **الآن** بالأسطول${(model.machines.connectedNames ?? []).length ? ` (${(model.machines.connectedNames ?? []).slice(0, 4).join(" · ")})` : ""} — التنفيذ عليهم متاح فورًا`
+    : model.machines.registered
+      ? `الأسطول فيه ${model.machines.registered} ماكينة **مسجّلة** في السجل، بس **صفر جهاز متصل الآن** — التنفيذ بيتفتح لحظة اتصال وكيل`
+      : "0 ماكينة مسجّلة ولا متصلة — الأسطول جاهز، وإضافة ماكينة بتفتح تنفيذ الأوامر عليها";
   return [
     "# من أنت الآن — مقاس، مش مكتوب",
     `- أدواتك الحقيقية: **${model.tools.count}** أداة (${toolList}). كل أداة بتنفّذ فعلاً؛ لو أداة فشلت بتقول فشلت وليه.`,
     `- الذاكرة: ${model.memory.total} ذكرى محفوظة (${model.memory.pinned} مثبتة) — تفضل بعد إعادة التشغيل.`,
-    `- الأسطول: ${model.machines.registered} ماكينة مسجّلة${model.machines.names.length ? ` (${model.machines.names.slice(0, 4).join(" · ")})` : ""}.`,
+    `- الأسطول: ${model.machines.connected ?? 0} جهاز متصل الآن · ${model.machines.registered} ماكينة مسجّلة في السجل${(model.machines.connectedNames ?? []).length ? ` (متصل: ${(model.machines.connectedNames ?? []).slice(0, 4).join(" · ")})` : ""}. **ممنوع تقولي «متصل» على المسجّل — دول رقمين مختلفين.**`,
+    // Measured 2026-11-06: asked «انت مين», the reply opened with «3 ماكينة
+    // مسجّلة في الأسطول» — a true number, but the wrong one to lead with, and
+    // the human read it as a lie because the page showed one connected node.
+    // The rule is now explicit: the connected count is the headline, the
+    // registry is a footnote, and the two are never merged into one sentence.
+    `- **لما حد يسألك «انت مين» أو «عندك كام جهاز»: ابدئي بعدد المتصل (${model.machines.connected ?? 0}) — ده الرقم اللي بيتنفّذ عليه فعلاً. رقم السجل (${model.machines.registered}) تذكريه بعده وبكلمة «مسجّلة» بس، ومتجمعيهمش في رقم واحد.**`,
     `- الكوربوس: ${model.corpus.measured ? `${model.corpus.total.toLocaleString("en-US")} ثغرة حقيقية، آخر مزامنة قبل ${model.corpus.ageMin} دقيقة` : "غير مقاس حالياً"}.`,
     model.opsKinds ? `- طبقة التنفيذ (ops): ${model.opsKinds} نوع عملية مسجّل.` : "- طبقة التنفيذ: غير متاحة في هذه النسخة.",
     // السطر ده هو اللي بيمنع جملة «مالوش أدوات» من إنها تتكرر بعد التجهيز:

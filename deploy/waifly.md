@@ -38,12 +38,12 @@ GET /api/ops/version → HTML (مش JSON) → VERDICT: PRE-OPS bundle
 
 ## 0 ليه الصفحة دي أصلاً
 
-المحرك اللي شغال دلوقتي على `node.waifly.com:27214` **قبل** طبقة `src/lib/ops/` — يعني مفيش
+المحرك اللي شغال دلوقتي على `node.waifly.com:<PORT_REDACTED>` **قبل** طبقة `src/lib/ops/` — يعني مفيش
 `/api/ops/*`، مفيش scope gate، مفيش jobs ولا أدلة. أي كلام عن «الفحص الحقيقي» على الهوست ده
 بيحتاج redeploy الأول. الطريقة السريعة للتأكد (من أي جهاز، مش من الصندوق بتاعي):
 
 ```bash
-curl -s http://node.waifly.com:27214/api/ops/version
+curl -s http://node.waifly.com:<PORT_REDACTED>/api/ops/version
 # {"opsRouter":true, "sha":"…", "stale":{…}}  ← الجديد موجود
 # 404 أو HTML                                      ← الهوست لسه على build قديم
 ```
@@ -111,7 +111,7 @@ df -h | tail -1                          #space الفاضل
 ```
 GitHub → Settings → Secrets and variables → Actions
   Secret   : NOVA_EXEC_TOKEN   = نفس التوكن اللي في السيرفر
-  Variable : NOVA_HUB          = ws://node.waifly.com:27214/api/local-agent/ws
+  Variable : NOVA_HUB          = ws://node.waifly.com:<PORT_REDACTED>/api/local-agent/ws
   Variable : FLEET_NODES       = 4
 ```
 ثم `Actions → fleet-nodes → Run workflow`. **مهم:** نودات Actions متسطّبلهاش ماسحات نشطة
@@ -121,14 +121,14 @@ GitHub → Settings → Secrets and variables → Actions
 أي جهاز تاني (لابتوب/راوتر/Termux):
 
 ```bash
-curl -fsSL http://node.waifly.com:27214/api/local-agent/download-nova-agent -o nova-agent.js
-NOVA_TOKEN=<TOKEN> NOVA_SERVER=ws://node.waifly.com:27214/api/local-agent/ws node nova-agent.js --id my-box
+curl -fsSL http://node.waifly.com:<PORT_REDACTED>/api/local-agent/download-nova-agent -o nova-agent.js
+NOVA_TOKEN=<TOKEN> NOVA_SERVER=ws://node.waifly.com:<PORT_REDACTED>/api/local-agent/ws node nova-agent.js --id my-box
 ```
 
 ## 6) checklist بعد الـdeploy (اطلب من أي حد ينفذه، أو من CI)
 
 ```bash
-B=http://node.waifly.com:27214
+B=http://node.waifly.com:<PORT_REDACTED>
 curl -s $B/api/health                         # {"status":"ok","mode":"standalone"}
 curl -s $B/api/ops/version | head -c 200      # opsRouter:true + sha
 curl -s $B/api/ops/kinds  | head -c 120       # 13 نوع مهمة

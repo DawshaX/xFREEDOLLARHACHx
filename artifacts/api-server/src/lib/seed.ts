@@ -12,7 +12,7 @@ import {
   ragFilesTable,
   bookmarksTable,
   auditLogTable,
-  conversationsTable,
+  conversations,
 } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { logger } from "./logger";
@@ -59,14 +59,15 @@ export async function ensureSeed(): Promise<void> {
 
   await db.insert(cvesTable).values(
     cveSamples.map((c) => ({
+      id: c.cveId,
       cveId: c.cveId,
       severity: c.severity,
+      cvss: c.cvssScore,
       cvssScore: c.cvssScore,
       description: c.description,
       publishedAt: new Date(now - c.daysAgo * day),
       source: "NVD",
-      references: [],
-      techniques: [],
+      url: `https://nvd.nist.gov/vuln/detail/${c.cveId}`,
     })),
   );
 
@@ -163,7 +164,7 @@ export async function ensureSeed(): Promise<void> {
     { actor: "user", action: "memory.add", target: "preference", result: "success", detail: "تم تخزين تفضيل لغوي." },
   ]);
 
-  await db.insert(conversationsTable).values([
+  await db.insert(conversations).values([
     { title: "تحليل CVE-2025-29927", model: "dolphin-llama3" },
     { title: "خطة اختبار اختراق Q4", model: "dolphin-llama3" },
   ]);

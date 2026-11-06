@@ -39,7 +39,9 @@ const flag = (n) => process.argv.includes(`--${n}`);
 
 /* ── where things live ───────────────────────────────────────────────────── */
 
-export const SUPABASE = "https://dbaaclqycsiefjwjfavf.supabase.co";
+// Project ref is public (it is in every request URL). Overridable via
+// NOVA_SUPABASE_URL so a fork can point at its own project without editing source.
+export const SUPABASE = (process.env.NOVA_SUPABASE_URL || "https://dbaaclqycsiefjwjfavf.supabase.co").replace(/\/+$/, "");
 export const BACKEND = `${SUPABASE}/functions/v1/ops-api`;
 /** publishable key: read-only by design, already shipped in the browser bundle */
 export const ANON =

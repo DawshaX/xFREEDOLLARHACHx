@@ -85,7 +85,7 @@ router.post("/reports", async (req, res, next) => {
 router.delete("/reports/:id", async (req, res, next) => {
   try {
     const { eq } = await import("drizzle-orm");
-    await db.delete(reportsTable).where(eq(reportsTable.id, Number(req.params["id"])));
+    await db.delete(reportsTable).where(eq(reportsTable.id, String(req.params["id"])));
     res.json({ ok: true });
   } catch (e) { return next(e); }
 });

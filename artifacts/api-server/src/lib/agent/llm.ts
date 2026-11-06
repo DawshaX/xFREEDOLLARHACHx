@@ -92,21 +92,31 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
       id: "groq",
       label: "Groq (free tier)",
       baseUrl: "https://api.groq.com/openai/v1",
-      model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+      // Measured 2026-11-06 against a real key: `openai/gpt-oss-120b` answers 200
+      // with an EMPTY content string, while `qwen/qwen3.8-27b` returns real
+      // Arabic text. An empty 200 is worse than a 404 — it looks like success and
+      // the user gets a blank reply — so the default is the model that speaks.
+      model: process.env.GROQ_MODEL || "qwen/qwen3.8-27b",
       keys: ["GROQ_API_KEY"],
     },
     {
       id: "openrouter",
       label: "OpenRouter (free models)",
       baseUrl: "https://openrouter.ai/api/v1",
-      model: process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b:free",
+      // Measured 2026-11-06: `openai/gpt-oss-120b:free` is no longer a free slug
+      // (404 "unavailable for free"). `nvidia/nemotron-3-ultra-550b-a55b:free`
+      // answered 200 with real content on the same key.
+      model: process.env.OPENROUTER_MODEL || "nvidia/nemotron-3-ultra-550b-a55b:free",
       keys: ["OPENROUTER_API_KEY"],
     },
     {
       id: "gemini",
       label: "Google Gemini (free tier)",
       baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      // Measured 2026-11-06: `gemini-2.0-flash` is retired (404) and
+      // `gemini-2.5-flash` answered 503 "high demand" on the same key, while
+      // `gemini-3.5-flash` answered 200. Default to the one that is serving.
+      model: process.env.GEMINI_MODEL || "gemini-3.5-flash",
       keys: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
     },
     {
@@ -291,14 +301,16 @@ const MODEL_CACHE = new Map<string, string>();
 
 /** Preferred ids per provider, best first. Substring match against /models. */
 const MODEL_PREFERENCE: Record<string, string[]> = {
-  groq: ["gpt-oss-120b", "gpt-oss-20b", "qwen3", "llama-3.3-70b", "llama-3.1-8b"],
-  gemini: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-flash"],
+  // Ordered by what actually answered on 2026-11-06, not by what the docs say.
+  groq: ["qwen3.8-27b", "qwen3", "gpt-oss-120b", "gpt-oss-20b", "llama-3.3-70b", "llama-3.1-8b"],
+  gemini: ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-pro"],
   openrouter: [
-    "gpt-oss-120b:free",
-    "qwen3-coder:free",
-    "qwen3-next-80b:free",
-    "llama-3.3-70b-instruct:free",
+    "nemotron-3-ultra-550b-a55b:free",
+    "nemotron-3.5-lightning:free",
+    "nemotron-3-nano-omni-30b-a3b-reasoning:free",
     "gemma-4-31b-it:free",
+    "gemma-4-26b-a4b-it:free",
+    "dots-3-note-preview:free",
     "openrouter/free",
   ],
   openai: ["gpt-5-mini", "gpt-4.1-mini", "gpt-4o-mini"],
@@ -395,6 +407,44 @@ export async function resolveModel(provider: LlmProviderInfo): Promise<string> {
 }
 
 /**
+ * ── Transient-failure retry ──────────────────────────────────────────────────
+ * Measured 2026-11-06 on the live slot: a single 503 from Gemini ("high demand")
+ * or one dropped socket surfaced to the user as «فشل الاتصال بالعقل: network
+ * error» — the whole turn died on a blip that a 400 ms retry would have ridden
+ * out. Free tiers are *expected* to blip, so a blip must not be fatal.
+ *
+ * Only transient classes are retried (5xx, 429, timeout, socket). A 401/403 or a
+ * retired model id is NOT retried here — those are handled by the caller, which
+ * knows how to heal or disable the provider.
+ */
+function isTransient(message: string): boolean {
+  return /\b(429|500|502|503|504)\b|high demand|temporar|timeout|timed out|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|network error|fetch failed|empty response/i.test(
+    message,
+  );
+}
+
+async function attemptWithRetry(
+  attempt: (model: string) => Promise<string>,
+  model: string,
+  tries = 3,
+): Promise<string> {
+  let lastErr: unknown;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await attempt(model);
+    } catch (err) {
+      lastErr = err;
+      const msg = String((err as Error).message ?? "");
+      if (!isTransient(msg) || i === tries - 1) throw err;
+      // 400 ms, 900 ms — short enough that the user does not notice, long
+      // enough for a rate-limit window to reopen.
+      await new Promise((r) => setTimeout(r, 400 * (i + 1) + 100 * i));
+    }
+  }
+  throw lastErr;
+}
+
+/**
  * One completion with self-correction: if the model id is rejected, discover a
  * working one, retry once, and keep it for the life of the process.
  */
@@ -415,7 +465,7 @@ export async function completeWithProvider(
   if (rejected) throw new Error(`${provider.id}: المفتاح مرفوض (${rejected}) — تم تجاهله`);
 
   try {
-    const text = await attempt(model);
+    const text = await attemptWithRetry(attempt, model);
     return { text, model, ms: Date.now() - started };
   } catch (err) {
     const msg = String((err as Error).message ?? "");

@@ -13,15 +13,17 @@ function categoryFor(score: number) {
 }
 
 function toDto(c: typeof cvesTable.$inferSelect) {
+  const score = c.cvssScore ?? c.cvss ?? 0;
+  const cveId = c.cveId ?? c.id;
   return {
-    id: c.cveId,
-    cveId: c.cveId,
+    id: cveId,
+    cveId,
     severity: c.severity,
-    score: c.cvssScore,
+    score,
     description: c.description,
     publishedAt: c.publishedAt.toISOString(),
     source: c.source,
-    category: categoryFor(c.cvssScore),
+    category: categoryFor(score),
   };
 }
 
@@ -36,7 +38,7 @@ router.get("/cves", async (req, res, next) => {
     if (search)
       filters.push(
         or(
-          ilike(cvesTable.cveId, `%${search}%`),
+          ilike(cvesTable.id, `%${search}%`),
           ilike(cvesTable.description, `%${search}%`),
         )!,
       );
@@ -59,7 +61,7 @@ router.get("/cves/critical", async (_req, res, next) => {
       .select()
       .from(cvesTable)
       .where(eq(cvesTable.severity, "critical"))
-      .orderBy(desc(cvesTable.cvssScore), desc(cvesTable.publishedAt))
+      .orderBy(desc(cvesTable.cvss), desc(cvesTable.publishedAt))
       .limit(20);
     res.json(rows.map(toDto));
   } catch (e) {
@@ -85,7 +87,7 @@ router.get("/cves/:cveId", async (req, res, next) => {
     const [row] = await db
       .select()
       .from(cvesTable)
-      .where(eq(cvesTable.cveId, req.params.cveId))
+      .where(eq(cvesTable.id, req.params.cveId))
       .limit(1);
     if (!row) {
       res.status(404).json({ error: "not found" });

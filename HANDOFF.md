@@ -1182,7 +1182,7 @@ GitHub Step Summary + artifact. محتاج `NOVA_URL` بس، ومن غيره ب�
     وسقطت لـ2 يومّيت — الراتشيد إمساك الاتنين).
 - **2026-11-03 (سؤال «السيرفر شغال؟» بقى قياسًا لا ذاكرة):** آخر probe للـhub (2026-11-02T20:36Z،
   issue #75 لسه open): `dns exit=0` + `tcp: Connection refused` + `HTTP 000` على
-  `http://node.waifly.com:27214` — يعني العقدة **مش شغالة** (الـrefused مش timeout = مافيش listener،
+  `http://node.waifly.com:<PORT_REDACTED>` — يعني العقدة **مش شغالة** (الـrefused مش timeout = مافيش listener،
   مش فايروال). وطلع إن الاعتماد على `uptime-watchdog.yml` بكرون `*/10` كان بيكذب بالتقادم: في اليوم
   ده الـcron اشتغل مرتين بس (10:54 و20:35) لأن GitHub بيأجّل/يحذف الجدوليات السريعة، فالإجابة كانت
   بتبقى قديمة 3-4 ساعات. الفحص بقى سطر `cli | hub <host:port>` داخل `scripts/verify-live.mjs`
@@ -1430,7 +1430,7 @@ updater قال «installed» الساعة 02:41  ← والحالة كلها خ�
 
 ### وتصحيح عنوان الـhub في 8 ملفات
 
-`node.waifly.com:27214` كان مكتوب كـhub افتراضي في 6 workflows وملفين في المحرك — والبورت ده
+`node.waifly.com:<PORT_REDACTED>` كان مكتوب كـhub افتراضي في 6 workflows وملفين في المحرك — والبورت ده
 **مالوش listener** (مقاس: `Connection refused`). اللي شغّال فعلاً `27316` خلف
 `https://nova.waifly.com`. اتغيّر في: `fleet-nodes` · `standalone-bundle` · `uptime-watchdog` ·
 `live-verify` · `probe-live-llm` · `free-host-survey` · `fleet-capacity.ts` · `ops/free-hosts.ts`.

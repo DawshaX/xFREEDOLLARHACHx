@@ -144,7 +144,7 @@ router.post("/live-agent/sessions", requireDb, async (req, res) => {
 
 router.get("/live-agent/sessions/:id", requireDb, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const s = await db.select().from(agentSessions).where(eq(agentSessions.id, id)).then(rows => rows[0]).catch(() => null);
     if (!s) {
       // If session not in DB, return a mock empty session to prevent 404/500
@@ -166,7 +166,7 @@ router.get("/live-agent/sessions/:id", requireDb, async (req, res) => {
 
 router.delete("/live-agent/sessions/:id", requireDb, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     await db.delete(agentSessions).where(eq(agentSessions.id, id));
     res.status(204).end();
   } catch (err: any) {
@@ -177,15 +177,17 @@ router.delete("/live-agent/sessions/:id", requireDb, async (req, res) => {
 
 router.post("/live-agent/sessions/:id/messages", requireDb, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const userText = String(req.body?.content || "").trim();
     const planMode = req.body?.planMode === true;
     if (!userText) {
-      return res.status(400).json({ error: "content required" });
+      res.status(400).json({ error: "content required" });
+      return;
     }
     const s = await db.select().from(agentSessions).where(eq(agentSessions.id, id)).then(rows => rows[0]).catch(() => null);
     if (!s) {
-      return res.status(404).json({ error: "Not found" });
+      res.status(404).json({ error: "Not found" });
+      return;
     }
 
     await db.insert(agentSessionMessages).values({
@@ -351,7 +353,7 @@ router.post("/live-agent/sessions/:id/messages", requireDb, async (req, res) => 
 
 router.post("/live-agent/sessions/:id/save-ai-response", requireDb, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const content = String(req.body?.assistantContent || "").trim();
     if (!content) { res.status(400).json({ error: "assistantContent required" }); return; }
     await db.insert(agentSessionMessages).values({ sessionId: id, role: "assistant", content });
@@ -364,7 +366,7 @@ router.post("/live-agent/sessions/:id/save-ai-response", requireDb, async (req, 
 
 router.post("/live-agent/sessions/:id/upload", requireDb, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const s = await db.select().from(agentSessions).where(eq(agentSessions.id, id)).then(rows => rows[0]).catch(() => null);
     if (!s) {
       res.status(404).json({ error: "Session not found" });
@@ -408,7 +410,7 @@ router.post("/live-agent/sessions/:id/upload", requireDb, async (req, res) => {
 
 router.get("/live-agent/sessions/:id/files", requireDb, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const s = await db.select().from(agentSessions).where(eq(agentSessions.id, id)).then(rows => rows[0]).catch(() => null);
     if (!s) {
       res.status(404).json({ error: "Session not found" });

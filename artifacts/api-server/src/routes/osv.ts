@@ -16,7 +16,7 @@ router.post("/osv/sync", async (req, res) => {
 router.post("/osv/ecosystem", async (req, res) => {
   try {
     const { ecosystem, packageName } = req.body as { ecosystem: string; packageName?: string };
-    if (!ecosystem) return res.status(400).json({ error: "ecosystem مطلوب" });
+    if (!ecosystem) { res.status(400).json({ error: "ecosystem مطلوب" }); return; }
     const added = await fetchOsvByEcosystem(ecosystem, packageName);
     res.json({ added, message: `OSV ${ecosystem}: أضيف ${added} ثغرة` });
   } catch (err) {
@@ -28,7 +28,7 @@ router.post("/osv/ecosystem", async (req, res) => {
 router.get("/osv/lookup/:id", async (req, res) => {
   try {
     const data = await osvLookup(req.params.id);
-    if (!data) return res.status(404).json({ error: "لم يُعثر على الثغرة في OSV" });
+    if (!data) { res.status(404).json({ error: "لم يُعثر على الثغرة في OSV" }); return; }
     res.json({ vuln: data });
   } catch (err) {
     req.log.error(err);
