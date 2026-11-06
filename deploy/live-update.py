@@ -15,7 +15,9 @@ What it does
   1. Copies your current install to /tmp/nova-backup-<timestamp> (rollback).
   2. Downloads the published bundle (or a URL you pass) and extracts it.
   3. Copies only the *program* files over the install directory.
-  4. Never overwrites: .env, .env.txt, state/, logs/, node_modules/, .npm/.
+  4. Never overwrites: .env, .env.txt, state/, logs/, node_modules/, .npm/ —
+     إلا بيانات القياس اللي CI بينشرها، والمكتوبة في update-manifest.json جوه
+     الحزمة (refreshState). حتى دي: لو النسخة على المكنة أحدث، بتتساب.
   5. Verifies the new server.mjs / index.js exist and look sane.
   6. Prints exactly what changed and how to restart.
 
@@ -133,6 +135,49 @@ def plan(src: str, dest: str) -> list[tuple[str, str, int]]:
             full = os.path.join(dirpath, name)
             rel = name if rel_dir == "." else os.path.join(rel_dir, name)
             out.append((full, rel, os.path.getsize(full)))
+    out.extend(state_refresh(src, dest))
+    return out
+
+
+def state_refresh(src: str, dest: str) -> list[tuple[str, str, int]]:
+    """state/*.json اللي CI بينشرها — جوه مجلد محمي، بس دي بيانات مش حالة المكنة.
+
+    القائمة مش مكتوبة هنا: بتتقرا من `update-manifest.json` اللي
+    `scripts/build-standalone.mjs` بيولّده من STATE_DATA بتاعه، فمافيش قائمتين
+    يفارقوا بعض. والقاعدة «الأحدث يكسب»: المكنة بتكتب بعض الملفات في state/
+    بنفسها (الذاكرة، اللوج، الدفعة)، ومابنستبدلش حاجة على المكنة أحدث من الحزمة.
+    """
+    names: list[str] = []
+    manifest = os.path.join(src, "update-manifest.json")
+    if os.path.exists(manifest):
+        try:
+            data = json.load(open(manifest, encoding="utf-8"))
+            got = data.get("refreshState") if isinstance(data, dict) else None
+            if isinstance(got, list):
+                for name in got:
+                    if not isinstance(name, str) or not name.endswith(".json"):
+                        continue
+                    if "/" in name or "\\" in name or ".." in name:
+                        continue
+                    names.append(name)
+        except Exception as exc:  # manifest مكسور = سلوك قديم، مش تحديث ناقص
+            log(f"! update-manifest.json مقروءش ({exc}) — state هيتساب زي ما هو")
+    else:
+        log("· مافيش update-manifest.json في الحزمة — ملفات state هتفضل زي ما هي على المكنة")
+
+    out: list[tuple[str, str, int]] = []
+    for name in names:
+        full = os.path.join(src, "state", name)
+        if not os.path.isfile(full):
+            continue
+        target = os.path.join(dest, "state", name)
+        try:
+            if os.path.exists(target) and os.path.getmtime(target) > os.path.getmtime(full):
+                log(f"· state/{name}: النسخة على المكنة أحدث — اتسابَت")
+                continue
+        except OSError:
+            pass
+        out.append((full, os.path.join("state", name), os.path.getsize(full)))
     return out
 
 

@@ -35,6 +35,21 @@ GitHub Actions يبني الحزمة (اختبار + build)
 
 ---
 
+**ملفات `state/` والتحديث الذاتي (المرحلة 63):** `deploy/live-update.py` بيحمي `state/`
+عشان ذاكرة المكنة، بس الحماية دي كانت بتخلي بيانات CI المنشورة (`hunt-latest.json`،
+`advisory-cache.json`، `verified-live.json`، `vuln-corpus-index.json`، `nova-brain-latest.json`،
+`free-hosts.json`، `cryptocom-hackerone-scope.json`) ما توصلش أي مكنة محدَّثة أبدًا — حتى لو
+الحزمة فيها الملف. من المرحلة دي الباندر بيولّد `update-manifest.json` فيه `refreshState`
+(متولّد من `STATE_DATA` نفسه، مش قائمة تانية) والإنستولر بينقل الملفات دي بس، وبشرط
+**«الأحدث يكسب»**: لو النسخة على المكنة أحدث بتتساب وتتبصّط في اللوج. المستثنى صراحةً في
+`neverOverwrite`: `nova-memory.json`، `cybernova-brain-state.json` (بنكته `autonomous-brain-pulse.mjs`
+على المكنة — مسحها = مسح «وقفنا فين») `discovered-vulnerabilities-vault.json` (الأجنت بيعدّلها حيًا)،
+`nova-mission-log.json` (بيتكتب على المكنة)، `corpus-last-failure.json`. الضرس الخامس في
+`audit-route-integrity.mjs` بيمنع الفارق: مانيفست من غير توليد من `STATE_DATA.filter(` = أحمر،
+و`live-update.py` مابيقرأش المانيفست = أحمر.
+
+---
+
 ## 2) الأسطول (سيرفرات مجانية بدون فيزا)
 
 | النوع | الأمر/المكان | العمر |
