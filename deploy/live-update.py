@@ -198,6 +198,26 @@ def main() -> int:
     log(f"NOVA live update → {dest}")
     log("═" * 62)
 
+    # التحديث محتاج مساحة: تنزيل (~3 MB) + فك ضغط (~12 MB) + نسخة احتياطية (~12 MB).
+    # قرص ملىان وقت النسخ = بايت مقطوعة و`state/` مكتوبة ناقصة، والنتيجة مكنة ما
+    # ترجعش. فالقياس قبل ما نلمس الشبكة، والرفض أحسن من تحديث يكسر المكنة.
+    try:
+        min_free_mb = int(os.environ.get("NOVA_UPDATE_MIN_FREE_MB", "60") or 0)
+    except ValueError:
+        min_free_mb = 60
+    if min_free_mb > 0:
+        try:
+            vfs = os.statvfs(dest)
+            free_mb = (vfs.f_bavail * vfs.f_frsize) // (1024 * 1024)
+        except OSError:
+            free_mb = None
+        if free_mb is not None and free_mb < min_free_mb:
+            log(f"✗ القرص الفاضل {free_mb}MB أقل من {min_free_mb}MB — مفيش تحديث (مفيش ملف اتغيّر)")
+            log("  فرّغ مساحة أو نزّل يدويًا؛ الحد يتغيّر بـNOVA_UPDATE_MIN_FREE_MB (=0 يلغي الفحص).")
+            return 1
+        if free_mb is not None:
+            log(f"· القرص: {free_mb}MB فاضل (مطلوب {min_free_mb}MB)")
+
     try:
         src = extract(fetch(args.url))
     except Exception as exc:
