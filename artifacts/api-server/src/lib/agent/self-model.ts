@@ -36,7 +36,7 @@ export interface SelfModel {
   memory: { total: number; pinned: number };
   opsKinds: number;
   /**
-   *Tools security真实的 على المكنة دي — مقاسة من القرص. بدونها النموذج بيكرر
+   *الأدوات الأمنية الحقيقية على المكنة دي — مقاسة من القرص. بدونها النموذج بيكرر
    * جملة «مالوش أدوات تثبيت» وهو اللي يقدر ينزّلهم بنفسه.
    */
   securityTools: { present: string[]; missing: string[]; provisionable: boolean; writable: boolean; scriptFound: boolean };
