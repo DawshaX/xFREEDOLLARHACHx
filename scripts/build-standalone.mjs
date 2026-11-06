@@ -254,6 +254,13 @@ process.env.NOVA_MEMORY_FILE = process.env.NOVA_MEMORY_FILE || join(HERE, "state
 process.env.NOVA_TOOLCHAIN_FETCH = process.env.NOVA_TOOLCHAIN_FETCH || "1";
 process.env.NOVA_PROVISION_TOOLS = process.env.NOVA_PROVISION_TOOLS || "1";
 
+// الفحص كل 15 دقيقة خلّى المكنة تردّ ببناء قِدْم بدقايق بعد الدمج (مقاس: PR #216
+// اتدمج 00:12:49Z وسؤال المستخدم 00:14:17Z لسه طالع من البناء اللي قبله). 5 دقايق
+// = 12 فحص/ساعة لـ api.github.com — جوه سقف الـ60/ساعة غير المصادق، ومعاه fallback
+// الـHEAD على الأصل لو الـAPI رفض. NOVA_AUTO_UPDATE_MINUTES=15 يرجّع القديم.
+// (ملاحظة للبنّاء: السطر ده جوه template literal — مفيش backticks هنا عمدًا.)
+process.env.NOVA_AUTO_UPDATE_MINUTES = process.env.NOVA_AUTO_UPDATE_MINUTES || "5";
+
 const explicit = String(process.env.NOVA_ROLE || "").trim().toLowerCase();
 const role = explicit || (process.env.NOVA_SERVER ? "node" : "hub");
 
@@ -460,6 +467,7 @@ export HOST=0.0.0.0
 export NOVA_STATIC_DIR="$HERE/public"
 [ -z "$NOVA_TOOLCHAIN_FETCH" ] && export NOVA_TOOLCHAIN_FETCH=1
 [ -z "$NOVA_PROVISION_TOOLS" ] && export NOVA_PROVISION_TOOLS=1
+[ -z "$NOVA_AUTO_UPDATE_MINUTES" ] && export NOVA_AUTO_UPDATE_MINUTES=5
 export NOVA_MEMORY_FILE="$HERE/state/nova-memory.json"
 export NOVA_JOBS_REL="$HERE/state/jobs"
 export NOVA_PROGRAMS_FILE="$HERE/state/programs.json"

@@ -589,6 +589,20 @@ export const SELF_QUESTION =
  * so it is answered from the same measurement as identity — short, in the
  * conversation's own dialect, with numbers that are true right now.
  */
+/**
+ * سطر البصمة: أي رقم في الردّ بيتنسب للبناء اللي قاسه. من غيره «49 ولا 55»
+ * يبقى خلاف على صدق حدس، مش مقارنة نسخة بنسخة.
+ */
+function buildLine(model: SelfModel): string {
+  const b = model.build;
+  if (!b || !b.label || b.label === "بلا بصمة") {
+    return "_(النسخة دي مالهاش build.json جنبها، فمش هقدر أقولك بتكلمك من أنهي بصمة — الأرقام فوق من السجل الحيّ)_";
+  }
+  const age = b.ageMin === null ? "" : ` · اتبني من ${b.ageMin} دقيقة`;
+  const fresh = b.ageMin !== null && b.ageMin > 30 ? " — لو المستودع أحدث من كده فالحلقة هتسحبه نفسها" : "";
+  return `_(الأرقام دي مقاسة من بناء \`${b.label}\`${age}${fresh}، مش من ذاكرة)_`;
+}
+
 export function greetingAnswer(model: SelfModel = buildSelfModel()): string {
   const corpus = model.corpus.measured
     ? `فهرس **${model.corpus.total.toLocaleString("en-US")}** ثغرة حقيقية`
@@ -598,6 +612,8 @@ export function greetingAnswer(model: SelfModel = buildSelfModel()): string {
     "أهلاً بيك 👋 أنا **نوفا** — بشتغل مش بتتكلم بس.",
     "",
     `معايا دلوقتي **${model.tools.count}** أداة حقيقية، و${corpus}، و${fleet}.`,
+    "",
+    buildLine(model),
     "",
     "اكتب «انت مين» لو عايز التفاصيل كاملة، أو ابعتلي نطاق زي `example.com` وأنا أبدأ استطلاع حقيقي حالاً.",
   ].join("\n");
@@ -619,6 +635,7 @@ export function identityAnswer(model: SelfModel = buildSelfModel()): string {
   return [
     `أنا **نوفا** — العقل اللي جوه CyberNova، مش بوت ردود. كل حاجة تحت دي **مقاسة الآن**، مش محفوظة:`,
     `- **${model.tools.count}** أداة حقيقية مسجّلة باسمها${topCategories ? ` (${topCategories})` : ""}.`,
+    `- ${buildLine(model)}`,
     `- ${corpusLine}`,
     `- ${fleetLine}`,
     model.memory.total
@@ -952,6 +969,8 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       corpus: { measured: false, total: 0, ageMin: null },
       memory: { total: 0, pinned: 0 },
       opsKinds: 0,
+      // البصمة مش مقاسة هنا بالنفس المنطق: بنقول «مافيش» بدل ما نختلق رقم نسخة.
+      build: { commit: null, builtAt: null, ageMin: null, label: "بلا بصمة" },
       // مش مقاس — بنقول كده في السطر، مافيش افتراض «موجودة» ولا «ناقصاه».
       securityTools: { present: [], missing: [], provisionable: false, writable: false, scriptFound: false },
       canDo: [`تشغيل ${AGENT_TOOLS.length} أداة حقيقية`],
