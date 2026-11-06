@@ -1569,6 +1569,16 @@ if (path === "/nova-core/version") {
     };
   }
 
+  if (path === "/nova-core/watch/probe") {
+    return {
+      ok: true,
+      standalone: true,
+      measured: false,
+      notes: [],
+      reasonAr: "البروب بيقيس حالة المكنة الحيّة — الوضع الساكن مافيهوش مكنة ولا قرايات state.",
+    };
+  }
+
   if (path === "/nova-core/watch") {
     // الوضع الساكن مافيهوش عملية شغالة — فالمراقب مافيهوش. البانل هيشوف
     // notes: [] مع سبب عربي، مش صمت يتفهم إنه «مفيش جديد».

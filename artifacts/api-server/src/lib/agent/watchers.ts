@@ -308,6 +308,10 @@ export async function watchTick(
     }
     log.updatedAt = at;
     const logWritten = writeLog(log);
+    counters.ticks += 1;
+    counters.emitted += emitted.length;
+    counters.lastTickAt = at;
+    counters.writeFailed = !logWritten;
     logger.info({ emitted: emitted.length, checked: candidates.length }, "watchers: tick");
     return { ok: true, at, emitted, checked: candidates.length, logWritten, delivery };
   } finally {
@@ -315,25 +319,52 @@ export async function watchTick(
   }
 }
 
-export function watchStatus(): {
+/** القراءات الحالية زي ما هي، من غير كتابة ولا بث ولا حارس تكرار. */
+export function watchProbe(): { at: string; hubClients: number; notes: Array<{ kind: string; text: string; evidence: Record<string, unknown> }> } {
+  const candidates = [watchHunt(), watchVault(), watchPermanentVault(), watchAdvisories(), watchVerify(), watchToolchain(), watchCron(0)].filter(
+    (c): c is Candidate => c !== null,
+  );
+  return {
+    at: new Date().toISOString(),
+    hubClients: getHubClientCount(),
+    notes: candidates.map((c) => ({ kind: c.kind, text: c.text, evidence: c.evidence })),
+  };
+}
+
+export interface WatchStatus {
   enabled: boolean;
   intervalMs: number;
   logPath: string;
   logPresent: boolean;
+  /** آخر تِك — من الملف لو اتكتب، ومن الذاكرة لو الكتابة وقعت */
   lastTickAt: string | null;
+  lastTickAtDisk: string | null;
+  lastTickAtMemory: string | null;
   startedAt: string | null;
   notes: WatchNote[];
+  ticks: number;
+  emittedTotal: number;
+  writeFailed: boolean;
+  lastError: string | null;
   hubClients: number;
-} {
+}
+
+export function watchStatus(): WatchStatus {
   const log = readLog();
   return {
     enabled: startedAt !== null,
     intervalMs: intervalMs(),
     logPath: logPath(),
     logPresent: fs.existsSync(logPath()),
-    lastTickAt: log.updatedAt,
+    lastTickAt: log.updatedAt ?? counters.lastTickAt,
+    lastTickAtDisk: log.updatedAt,
+    lastTickAtMemory: counters.lastTickAt,
     startedAt,
     notes: log.notes,
+    ticks: counters.ticks,
+    emittedTotal: counters.emitted,
+    writeFailed: counters.writeFailed,
+    lastError: counters.lastError,
     hubClients: getHubClientCount(),
   };
 }
@@ -345,6 +376,10 @@ function intervalMs(): number {
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let startedAt: string | null = null;
+// عدادات الذاكرة: السجل على القرص ممكن ما يتكتبش (مجلد مقفول، قرص ممتلئ)، ووقتها
+// القراية من الملف وحدها بتدي «صفر ملاحظات» من غير ما تقول السبب — وده بالظبط
+// اللي حصل على المكنة الحيّة: enabled:true بس notes:[] وlogPresent:false.
+const counters = { ticks: 0, emitted: 0, lastTickAt: null as string | null, lastError: null as string | null, writeFailed: false };
 
 export function startWatchers(): void {
   if (timer) return;
@@ -355,7 +390,10 @@ export function startWatchers(): void {
   startedAt = new Date().toISOString();
   const ms = intervalMs();
   const run = (): void => {
-    void watchTick().catch((err) => logger.warn({ err: String(err) }, "watchers: tick failed"));
+    void watchTick().catch((err) => {
+      counters.lastError = String((err as Error)?.message ?? err).slice(0, 200);
+      logger.warn({ err: String(err) }, "watchers: tick failed");
+    });
   };
   setTimeout(run, 20_000);
   timer = setInterval(run, ms);
