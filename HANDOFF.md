@@ -1964,4 +1964,9 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
   (`scripts/*.mjs` وبس) — PR #222 اللي عدّل `deploy/live-update.py` طلع بـ`no checks reported`.
   القايمة بقت `scripts/**` + `deploy/**` في الاتنين، وضرس في `check-workflows.mjs` يمنع الشكل ده
   (`push.paths` عنصر مش مغطّى في `pull_request.paths` = أحمر) · `check-workflows: 19/19` ✓.
+- **الواتشدوج نفسه كان ساكت**: `NOVA uptime watchdog` `state=active` بس جدولياته اتبلعت — آخر 4
+  تشغيلات مجدولة `23:46Z · 18:12Z · 10:25Z · 02:41Z` (~4/يوم بدل `*/30`)، ولما الهَب نزل 01:46Z
+  مابقاش شغلة من 23:46Z → `nova:down` ما اتفتحش. الشغل الجاي: التنبيه يتوصّل بـtrigger بيتحرك
+  فعلًا (`workflow_run` ورا Pages deploy، أو سطر probe جوّه `NOVA live mission` اللي اشتغل 01:42Z)
+  بدل cron تاني يبلعه GitHub. مقاس وموثّق في §9.7.
 
