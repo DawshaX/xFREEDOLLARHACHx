@@ -1,58 +1,33 @@
 {
-  "at": "2026-11-05T23:47:06.707Z",
+  "at": "2026-11-06T03:08:10.830Z",
   "seat": "openai",
   "thinking": {
-    "reply": "التغطية الحالية 24.79٪، تم مسح 3 مضيفات بدون نتائج، الخطوة الجاية هي توسيع القاعدة على منتجات ذات مخاطر مرتفعة.",
-    "why": "لتبع شريحة المنتجات التي تحمل ثغرات حرجة وزيادة تغطية الاستكشاف",
+    "reply": "الحالة الحالية: انقشعت الـ coverage لـ 30.6% مع 3 مسح لم يطلع عليه أي عثور، وافتتاحات غير معتمدة ما عندهاش صلاحيات مشاء. أهم خطوة في المستقبل: توسعة نطاق الـ scan لزيادة coverage وتحقيق تغطية أفضل.",
+    "why": "الcoverage منخفض، وبالتالي نحتاج حاجة لتعزيز التغطية بدل بحث عن منتج أو CVE محدد.",
     "action": {
-      "kind": "corpus_search",
-      "arg": "linux_kernel"
+      "kind": "none",
+      "arg": ""
     }
   },
-  "action": {
-    "kind": "corpus_search",
-    "ok": true,
-    "arg": "linux_kernel",
-    "hits": 5,
-    "examples": [
-      {
-        "cve": "CVE-2021-3493",
-        "severity": "high",
-        "cvss": 8.8,
-        "kev": true
-      },
-      {
-        "cve": "CVE-2013-6282",
-        "severity": "high",
-        "cvss": 8.8,
-        "kev": true
-      },
-      {
-        "cve": "CVE-2013-2094",
-        "severity": "high",
-        "cvss": 8.4,
-        "kev": true
-      }
-    ]
-  },
+  "action": null,
   "answered": null,
   "senses": {
     "corpus": {
-      "total": 104132,
-      "at": "2026-11-05T22:31:46.717Z",
-      "critical": 4744,
-      "high": 40742,
-      "kev": 315,
-      "coverage": 0.2479,
-      "nextStartIndex": 266930,
+      "total": 128526,
+      "at": "2026-11-06T02:46:24.058Z",
+      "critical": 6900,
+      "high": 49466,
+      "kev": 413,
+      "coverage": 0.306,
+      "nextStartIndex": 290930,
       "newestYear": 2026,
       "topProducts": [
         "linux_kernel",
         "firefox",
         "chrome",
         "mac_os_x",
-        "safari",
         "android",
+        "safari",
         "iphone_os",
         "php",
         "flash_player",
@@ -338,7 +313,7 @@
     }
   },
   "failures": [],
-  "says_ar": "فكّرت على openai · التغطية الحالية 24.79٪، تم مسح 3 مضيفات بدون نتائج، الخطوة الجاية هي توسيع القاعدة على منتجات ذات مخاطر مرتفعة.",
+  "says_ar": "فكّرت على openai · الحالة الحالية: انقشعت الـ coverage لـ 30.6% مع 3 مسح لم يطلع عليه أي عثور، وافتتاحات غير معتمدة ما عندهاش صلاحيات مشاء. أهم خطوة في المستقبل: توسعة نطاق الـ scan لزيادة coverage و",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
