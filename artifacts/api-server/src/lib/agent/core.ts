@@ -756,6 +756,50 @@ export function capabilityTruthLine(): string {
   return lines.join("\n");
 }
 
+/**
+ * المسار ده هو اللي كان بيوّلع «الشات عبيط»: الأدوار اللي ملهاش أدوات (مش سؤال
+ * هوية، مش تحية) بتاخد مسودة من `llmPlan` — والـplan بياخد `NOVA_SYSTEM_PROMPT_SHORT`
+ * مع 700 توكن، فالنتيجة كلام مساعد عام بملعق تملّق وبلهجة طايحة. الوظيفة دي بتاخد
+ * المسودة وبتعيد صياغتها بالهوية الكاملة + المرجع المقاس، ولو المزوّد واقع المسودة
+ * نفسها بتفضل (ما بنفضلش الصمت على كلام ناقص).
+ */
+async function voiceAnswer(
+  draft: string,
+  message: string,
+  selfModel: SelfModel,
+  history: Array<{ role: "user" | "assistant"; content: string }>,
+): Promise<{ text: string; provider: string } | null> {
+  if (process.env.NOVA_VOICE === "0") return null;
+  const trimmed = draft.trim();
+  if (!trimmed) return null;
+  const res = await llmComplete(
+    [
+      {
+        role: "system" as const,
+        content: [
+          NOVA_SYSTEM_PROMPT,
+          selfModelPrompt(selfModel),
+          "# المرجع المقاس لقدراتك على المكنة دي (أصدق من ذاكرتك العامة)",
+          capabilityTruthLine(),
+          "# مهمتك دلوقتي",
+          "دي مسودة رد كتبها مخطِّط الشات. أعد صياغتها بصوتك إنت: عربي مصري تقني، جملة أو اتنين، من غير تملّق ومن غير «أنا متحمسة للعمل معك». لو المستخدم كتب بلغة تانية رد بيها.",
+          "- أي رقم في المسودة مش موجود في «من أنت الآن» أو في المرجع فوق: اشيله. الأرقام اللي هنا مقاسة جايبة زي ما هي.",
+          "- المسودة بتدّعي تنفيذ («نفّذت/شغّلت/حدّثت») ومفيش أداة اتنادت في الدور ده؟ قول بصراحة إن مفيش حاجة اتنفذت، واقترح الأمر اللي ينفذها.",
+          "- المسودة بترفض قدرة وهي موجودة في المرجع؟ صلّح الرفض، وورّي البديل المتاح فعلًا.",
+          "- خلّص بخطوة تالية واحدة يقدر ينفذها حالًا.",
+        ].join("\n\n"),
+      },
+      ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
+      { role: "user" as const, content: `سؤال المستخدم: ${message}\n\n--- المسودة ---\n${trimmed.slice(0, 900)}` },
+    ],
+    { temperature: 0.55, maxTokens: 420 },
+  );
+  const text = res?.text?.trim() ?? "";
+  // مسودة أقصر من إنك تتسعادت، أو الموديل رجع نفس السطر حرفيًا → ما نهدرش وقت المستخدم
+  if (!text || text === trimmed || text.length < 12) return null;
+  return { text, provider: res!.provider };
+}
+
 /* ── explanation ─────────────────────────────────────────────────────────── */
 
 function preview(data: unknown): string {
@@ -963,6 +1007,12 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       // A greeting is an introduction, not a question to the model.
       reply = greetingAnswer(selfModel);
       provider = `${provider}+self-model`;
+    } else if (reply) {
+      const voiced = await voiceAnswer(reply, message, selfModel, history);
+      if (voiced) {
+        reply = voiced.text;
+        provider = `${provider}→${voiced.provider}`;
+      }
     }
     if (!reply) {
       const llm = await llmComplete(
