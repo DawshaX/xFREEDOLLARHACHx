@@ -51,6 +51,14 @@ fs.mkdirSync(OUT, { recursive: true });
 fs.copyFileSync(SERVER, path.join(OUT, "nova-app.mjs"));
 copyDir(PANEL, path.join(OUT, "public"), { maxBytes: 25 * 1024 * 1024 });
 
+// البراهين اللي الخزنة الدائمة بتشير ليها (`evidencePath: audit/...`) — من غيرها
+// المكنة الحيّة بتقرا «11 ثغرة» بس ما تلقاش ملف proofs: القياس على
+// nova.waifly.com رجّع «2 سجل برهانه مسجّل ومش موجود على القرص» والحقيقة إن الحزمة
+// ما كانتش بتشمل audit/ خالص (204 كيلوبايت، 21 ملف). بوابة الأسرار بتفحص المجلد
+// ده زي أي ملف تاني، فمفيش حاجة حرفية هتعدي.
+const AUDIT = path.join(ROOT, "audit");
+if (fs.existsSync(AUDIT)) copyDir(AUDIT, path.join(OUT, "audit"), { maxBytes: 8 * 1024 * 1024 });
+
 // Memory files worth carrying over (nothing else from state/ is needed).
 fs.mkdirSync(path.join(OUT, "state"), { recursive: true });
 for (const name of ["nova-memory.json", "cybernova-brain-state.json", "discovered-vulnerabilities-vault.json"]) {
@@ -178,6 +186,12 @@ process.env.HOST = process.env.HOST || "0.0.0.0";
 process.env.NODE_ENV = process.env.NODE_ENV || "production";
 process.env.NOVA_STATIC_DIR = process.env.NOVA_STATIC_DIR || join(HERE, "public");
 process.env.NOVA_MEMORY_FILE = process.env.NOVA_MEMORY_FILE || join(HERE, "state", "nova-memory.json");
+// الحزمة المحمولة = مكنة واحدة، بلا مدير، والمستخدم قال «يعرف يحمّل أدوات وكل حاجة».
+// قبل كده كان لازم أحد يكتب NOVA_TOOLCHAIN_FETCH=1 بنفسه، فالمكنة الحيّة فضلت
+// vendor/bin فيها فاضي رغم إن القرص قابل للكتابة (اتقاس). الافتراضي بقى: التنزيل
+// مسموح، وNOVA_TOOLCHAIN_FETCH=0 يرجّع القفل.
+process.env.NOVA_TOOLCHAIN_FETCH = process.env.NOVA_TOOLCHAIN_FETCH || "1";
+process.env.NOVA_PROVISION_TOOLS = process.env.NOVA_PROVISION_TOOLS || "1";
 
 const explicit = String(process.env.NOVA_ROLE || "").trim().toLowerCase();
 const role = explicit || (process.env.NOVA_SERVER ? "node" : "hub");
@@ -383,6 +397,8 @@ cd "$HERE" || exit 1
 export NODE_ENV=production
 export HOST=0.0.0.0
 export NOVA_STATIC_DIR="$HERE/public"
+[ -z "$NOVA_TOOLCHAIN_FETCH" ] && export NOVA_TOOLCHAIN_FETCH=1
+[ -z "$NOVA_PROVISION_TOOLS" ] && export NOVA_PROVISION_TOOLS=1
 export NOVA_MEMORY_FILE="$HERE/state/nova-memory.json"
 export NOVA_JOBS_REL="$HERE/state/jobs"
 export NOVA_PROGRAMS_FILE="$HERE/state/programs.json"
