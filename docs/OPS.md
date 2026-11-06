@@ -188,9 +188,10 @@ GET /api/ops/hunt/candidates → { present: false, path: "ops/bounty/programs-ca
 | التجهيز | `POST /api/ops/tools/provision {only?:"nuclei,httpx"}` — ورا `opsAllowed` (توكن/نفس الأصل)، بيشغّل `spawn(process.execPath, [script,"--into",dir,"--json"])` **بلا shell** |
 | السقف | `timeoutMs` في `provisionToolchain` (الافتراضي 540 s، مقصوص 30 s–20 min) والقتل `SIGKILL` — **مافيش متغير بيئة ليه لحد دلوقتي**، اللي عايز يغيّره يبعتّه في الـcall |
 | ضد التحميل المتكرر | `provisionToolchainOnce`: لو فيه أداة موجودة → `already-present`؛ وبعد فشل → `cooldown` (`NOVA_TOOLCHAIN_RETRY_MS`، الافتراضي 10 دقايق)؛ ومحاولة واحدة في نفس الوقت (single-flight) |
-| وقت الإقلاع | `NOVA_TOOLCHAIN_FETCH=1` دايمًا، `=auto` بس لو `vendor/bin` فاضي — **الافتراضي مطفي** (~100 MB على قرص 512 MB مع كوربوس منزّل = مخاطرة OOM، فمابنخذلهاش على المستخدم) |
+| قبل ما ينزّل يقيس | `freeMB` من `fs.statfsSync` على قرص `vendor/bin` · لو أقل من `NOVA_TOOLCHAIN_MIN_FREE_MB` (افتراضي 180) بيرجع `error:"no-space"` + `refused:"no-space"` **من غير أي طلب شبكة** — أحسن من تنزيل نص المجموعة وتفجير قرص 512 MB وتجميد المكنة |
+| وقت الإقلاع | الحزمة المحمولة (من المرحلة 60) بتفتح `NOVA_TOOLCHAIN_FETCH=1` و`NOVA_PROVISION_TOOLS=1` لوحدها، و`index.ts` بينادي `provisionToolchainOnce()` بعد `NOVA_PROVISION_DELAY_MS` (90 ثانية) — يعني المكنة تجرّب تجيب أدواتها نفسها وهي شغّالة، والحارس الثلاثة فوق (already-present/cooldown/no-space) تمنع السخونة. `=auto` معناه «جرّب بس لو `vendor/bin` فاضي». الإطفاء: `NOVA_PROVISION_TOOLS=0` |
 | الكاش | بعد أي تنزيل ناجح `resetBinaryCache()` — من غيره الأداة تتنصب وتفضل «مش موجودة» للابد |
-| للشارح | `NOVA_VENDOR_BIN` (المجلد) · `NOVA_TOOLCHAIN_RECORD` (ملف السجل، لافتراضي `state/toolchain-provision.json`) |
+| للشارح | `NOVA_VENDOR_BIN` (المجلد) · `NOVA_TOOLCHAIN_RECORD` (ملف السجل، لافتراضي `state/toolchain-provision.json`) · `NOVA_TOOLCHAIN_MIN_FREE_MB` (حد المساحة، بيتقرا عند كل قرار مش لحظة الاستيراد) |
 
 **القاعدة اللي اتثبتت على الحزمة (مش على القراءة):** بعد `node scripts/build-standalone.mjs`
 و`node server.mjs` locally، نفس الطلبات رجّعت:
@@ -205,7 +206,7 @@ POST + Origin نفسه          → 200 · السكربت اتنفّذ فعلا�
 السطر الأخير هو المقصود: **مافيش نجاح مختلق**. لو الشبكة ماردّتش، الرد بيقول
 السكربت مشى (`ran:true`) وماثبتش حاجة (`ok:false`, `installed:0`) — مش «تم التثبيت ✓».
 
-### أداتا المحرك الجديدتان (49 في السجل)
+### أداتا المحرك الجديدتان (55 في السجل — مقروءة من `AGENT_TOOLS`، مش عدد مكتوب)
 - `tools_install` — بيستدعي `provisionToolchainOnce`؛ يعني «ثبّت nuclei» بقى طلب
   بيتنفّذ، مش اعتذار. و`self-model` بقى يقيس الأدوات، فالجملة اللي في البرومبت
   («أدواتك الأمنية على المكنة: …») بتتكتب من القرص لحظة السؤال.
@@ -215,8 +216,8 @@ POST + Origin نفسه          → 200 · السكربت اتنفّذ فعلا�
   ما يخلّص بجملة «ابعتلي نطاق» — مقاس على الحزمة: `🤖 خطوة ذاتية · bounty_candidates: 3 مرشّح من 746`.
 
 ### البوابة اللي بتمنع الرجوع
-`scripts/audit-route-integrity.mjs` (مسجّل في `scripts/agent-gates.mjs` = 18/18) بأربع ضروس،
-وكل واحدة مُثبتة بحقنة في `--selftest`:
+`scripts/audit-route-integrity.mjs` (مسجّل في `scripts/agent-gates.mjs` — والعدد بيتقال من تشغيل السكربت
+نفسه، مش من رقم مكتوب هنا) بخمس ضروس، وكل واحدة مُثبتة بحقنة في `--selftest`:
 
 1. **`spine-symbol`** — أي رمز بيتنادى في `src/routes/**` ولازم يكون متصدّر من `src/lib/**`
    ولازم يكون مستورد في الملف. دي هي علة «الشات عبيط» حرفيًا.
@@ -227,6 +228,19 @@ POST + Origin نفسه          → 200 · السكربت اتنفّذ فعلا�
    `build-standalone.mjs` ينسخه (بالاسم أو بالمجلد).
 4. **`twin-fabrication`** — التوأم (`standalone-api.ts`) ممنوع يؤكد تثبيت/فحص/جلب:
    لا `installed: true`، لا «Nmap scan report»، لا «Verified HTTP 200»، ولا `ok:true` جنب `stdout`.
+5. **`hollow-state`** (من المرحلة 62) — أي `state/*.json` **متتبَّع** وبيقراه السورس أو البانل
+   وقت التشغيل لازم `build-standalone.mjs` ينسخه بالحرف. اللي كشفها قياس حيّ: ملاحظة `hunt` ما
+   بتظهرش على الهَب و`advisories` بتردّ `measured:false`، لأن `state/hunt-latest.json` (19 موضع
+   قراءة) و`state/advisory-cache.json` (12 موضع) ما كنوش بيلحقوا بالحزمة. الملفات اللي بتتكتب على
+   المكنة (`proactive-log.json`، `toolchain-provision.json`، `fleet-servers.json`) مستثناة لوحدها
+   لأنها مش متتبَّعة — القاعدة بتتغذى من `git ls-files state` مش من قائمة يدوية.
+
+و`scripts/audit-no-cjk-in-text.mjs` (من المرحلة 61): أي ملف نصّي متتبَّع — سورس السيرفر،
+السكربتات، الـdocs، الـdeploy، وملفات بياناتنا — ممنوع فيه حرف شرق-آسيوي واحد. السبب مقاس:
+وصف `bounty_run` كان فيه حرف شرق-آسيوي بدل كلمة «هدف» في نص عربي، وده بيتاكل جوه الـprompt فالنموذج يلّفه.
+المستثنى الوحيد هو `i18n.ts` (قواميس zh/ja/ko)، وسببه مكتوب جوه البوابة نفسها. وفيه
+`--selftest` بأربع حالات بتثبت إن الحقنة بينمسك — عشان بوابة خضرا على فاضي أخطر من عدما.
+
 
 
 ---
@@ -277,6 +291,11 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
   `--frozen-lockfile` بـ`ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`).
 - `state/autonomy.json`: حالة تشغيل، بيتكتب جوه `NOVA_STATE_DIR` أو `state/` —
   ملف صغير تقدر تشرّه لو عايز تثبّت المستوى عند إعادة التشغيل.
+- `NOVA_RELEASE_API_URL`: بيغيّر مسار `api.github.com/.../releases/tags/...` اللي
+  التحديث الذاتي بيقرا منه. موجود للتستات (وبيرفض به الهَب المحمي بسوء الفهم) —
+  سيبه فاضي في الإنتاج.
+- `NOVA_UPDATE_ASSET_URL`: أصل الحزمة اللي بنعمله `HEAD` ونقرا `Last-Modified` لو
+  الـAPI رفض. الافتراضي `github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-portable/nova-24-7.zip`.
 
 ## الأسرار: مش في الكود (من المرحلة 58)
 
@@ -302,6 +321,10 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
 | التوصيل للمستخدم | `ws-hub` بيبعت `watch_note` · تليجرام بيشتغل لو `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` في environment (لو مش موجودين السطر بيتسجّل `skipped:`) |
 | الخزنة الدائمة | `NOVA_PERMANENT_VAULT` يغيّر مسار `state/discovered-vulnerabilities-vault.json` |
 | خزنة الشغل | `NOVA_FINDINGS_VAULT` (افتراضي `state/findings-vault.json` — مش موجود في المستودع، فالأجنت بيقرا الدائمة أوتوماتيك) |
+| تشخيص من بره | `GET /api/nova-core/watch/probe` — نفس القرايات دي على طول من غير كتابة/بثّ/فلتر تكرار (ده اللي بيكشف «ليه الملاحظة ساكتة» مش «فيها إيه») |
+| إعادة تشغيل الصوت | `NOVA_VOICE=0` يقفل طبقة إعادة صياغة الردّ الصوتي؛ من غيره الردّ المباشر بيتقال بصوت البرنامج مع `capabilityTruthLine()` |
+| أدوات الإقلاع | `NOVA_PROVISION_TOOLS=0` يطفي محاولة التنزيل وقت الإقلاع · `NOVA_PROVISION_DELAY_MS` مدّة الانتظار (90000) · في الحزمة الاتنين مفتوحين افتراضيًا |
+| لوج الملاحقين | `watchStatus` بيرجّع `ticks/emittedTotal/writeFailed/lastError` و`lastTickAtDisk` مقابل `lastTickAtMemory` — الصمت له سبب مقاس دلوقتي |
 
 الأرقام اللي بتقولها الملاحظات كلها مقروءة من الملفات نفسها (`hunt-latest.json`، `counts` الخزنة،
 `advisory-cache.json`، `vendor/bin`) — مفيش رقم مكتوب في الكود ده الآن محروس بـ`audit-no-invented-intel`

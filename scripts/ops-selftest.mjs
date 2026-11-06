@@ -400,7 +400,7 @@ await tA("internal targets are refused before any request is made", async () => 
 });
 await tA("a job's clock is longer than its slowest tool, and CI is longer than the job", async () => {
   // دي مش أناقة: لو الـharness استسلم قبل ما المهمة خلّصت، التقرير بيقول «0 نتيجة» عن مسح
-  // لسه شغال — وده أخطر من أي رقم غلط، لأنه أخضر وكذاب. والقواعد متاقرأش من脑子، بل من الملفات.
+  // لسه شغال — وده أخطر من أي رقم غلط، لأنه أخضر وكذاب. والقواعد مبتتقراش من دماغ حد، بل من الملفات.
   const root = path.resolve(import.meta.dirname, "..");
   const tools = fs.readFileSync(path.join(root, "artifacts/api-server/src/lib/ops/tools.ts"), "utf8");
   const harness = fs.readFileSync(path.join(root, "scripts/verify-live.mjs"), "utf8");
@@ -518,7 +518,7 @@ await tA("bounty catalog scores matches and cannot grant permission", async () =
     const srcTxt = fs.readFileSync(path.join(SRC, "scope.ts"), "utf8");
     assert.ok(/import \{ lookupBountyProgram, catalogStatus \} from "\.\/bounty-catalog"/.test(srcTxt), "الاستيراد مش موجود");
     assert.ok(/bounty_program: bountyEvidence/.test(srcTxt), "المطابقة مش بتتسجل في الـevidence");
-    assert.ok(/catalog: \{ present: cat\.present/.test(srcTxt), "حالة الكتالوج مش بتتسجل — «مفيش برنامج» هتتب读رها غلط".replace("读","قرا"));
+    assert.ok(/catalog: \{ present: cat\.present/.test(srcTxt), "حالة الكتالوج مش بتتسجل — «مفيش برنامج» هتتقرا غلط");
     assert.ok(!/passive_only:[^\n]*(bounty|catalog)/i.test(srcTxt), "الكتالوج بيرجّع passive_only — ممنوع");
     // داخل discoverProgram نفسه (مش أي سطر تاني في الملف): الوضع السلبي = ¬الإذن بالحرف
     const di = srcTxt.indexOf("export async function discoverProgram");
@@ -528,7 +528,7 @@ await tA("bounty catalog scores matches and cannot grant permission", async () =
     assert.ok(/passive_only: !consentOk,/.test(disc), "discoverProgram مابقاش بيحدد passive_only من الإذن المكتوب");
     assert.ok(!/Boolean\(input/.test(disc), "discoverProgram بقى بيقبل passive_only من المُدخل — مصدر واحد للحقيقة اتكسر");
     assert.ok(/consentOk = [^\n]*i have written permission for/.test(disc), "جملة الإذن اتغيّرت — لازم النص بالحرف");
-    assert.ok(srcTxt.includes("program_discover") && /activate = "I have written permission for/.test(srcTxt), "رسالة بوابة التفعيل ات失ت".replace("失","فقدها"));
+    assert.ok(srcTxt.includes("program_discover") && /activate = "I have written permission for/.test(srcTxt), "رسالة بوابة التفعيل ضاعت من الراوتر");
     const routesTxt = fs.readFileSync(path.join(SRC, "../../routes/ops.ts"), "utf8");
     assert.ok(routesTxt.includes('"/ops/bounty/catalog"'), "المسار /ops/bounty/catalog مش مسجّل");
   });
@@ -675,8 +675,8 @@ await tA("findings vault: مفتاح من المحتوى، تطبيع خطورة
   assert.equal(m1.findings[0].verified, true, "النسخة المتأكَّدة اتمسحت لصالح نسخة أقدم");
 
   const m2 = fv.mergeRecords(m1.findings, [r1]);
-  assert.equal(m2.added, 0, "同步 تاني افترِ نتيجة جديدة");
-  assert.equal(m2.findings.length, 1, "同步 تاني ضاعف السجل");
+  assert.equal(m2.added, 0, "الدمج التاني اخترع نتيجة جديدة");
+  assert.equal(m2.findings.length, 1, "الدمج التاني ضاعف السجل");
   assert.equal(m1.findings[0].occurrences, 2, "نسخة تانية بنفس المفتاح في نفس الـincoming مااتعدّتش كمشاهدة");
   assert.equal(m2.findings[0].occurrences, 3, "المشاهدة الجديدة اتخطّت — المفروض occurrences تزيد");
   assert.equal(m2.findings[0].firstSeen, r1.firstSeen, "firstSeen اتغيّر — لازم أقدم ظهور");
@@ -699,7 +699,7 @@ await tA("findings vault: sync على ملفات شغل حقيقية — وال�
     assert.ok(s1.total >= 1 && s1.verified === 0, `الحسابات مش صادقة: ${JSON.stringify(s1)}`);
     assert.ok(fs.existsSync(vaultFile), "الخزانة مااتكتبتش على القرص");
     const s2 = fv.syncFromJobs({ limit: 10 });
-    assert.equal(s2.added, 0, "同步 التاني خلع سجل جديد — الـidempotency اتكسرت");
+    assert.equal(s2.added, 0, "الدمج التاني خلّع سجل جديد — الـidempotency اتكسرت");
     assert.equal(s2.total, s1.total, `العدد اتغيّر بين تشغيلين: ${s1.total} → ${s2.total}`);
     assert.ok(s2.updated >= 1, "التحديث مااتسجّلش");
     const list = fv.listVault({ limit: 50 });
@@ -930,6 +930,31 @@ fs.writeFileSync(
   'const into = process.argv[process.argv.indexOf("--into") + 1];\n' +
   'console.log(JSON.stringify({ into, ok: 2, total: 7, results: [{ bin: "nuclei", status: "installed", tag: "v3.0.0" }, { bin: "httpx", status: "installed", tag: "v1.0.0" }, { bin: "ffuf", status: "failed", why: "no asset" }] }));\n',
 );
+await tA("toolchain: free space is measured, not assumed", () => {
+  const st0 = tc.toolchainStatus();
+  assert.equal(typeof st0.freeMB, "number", `freeMB لازم يبقى رقم مقاس على ${st0.dir}`);
+  assert.ok(Number(st0.freeMB) >= 0, `freeMB سالب: ${st0.freeMB}`);
+  assert.equal(st0.minFreeMB, 180, "الحد الافتراضي اتغيّر من غير ما التست يتحدّث");
+});
+await tA("toolchain: cramped disk refuses before touching the network", async () => {
+  const ran = path.join(fakeDir, "marker");
+  const spy = path.join(fakeDir, "spy.mjs");
+  fs.writeFileSync(spy, `require("node:fs").writeFileSync(${JSON.stringify(ran)}, "ran")\n`);
+  fs.rmSync(ran, { force: true });
+  process.env.NOVA_TOOLCHAIN_MIN_FREE_MB = "999999999";
+  const rec = await tc.provisionToolchain({ script: spy, into: path.join(tmp, "vendor3", "bin") });
+  assert.equal(rec.error, "no-space", `مرفوض لسبب تاني: ${rec.error}`);
+  assert.equal(rec.refused, "no-space", "لازم يسمّي الرفض نفسه");
+  assert.ok(!fs.existsSync(ran), "سكربت التنزيل اتنفّذ رغم إن القرص مرفوض — ده اللي بنمنعه");
+  assert.ok(typeof rec.reasonAr === "string" && /NOVA_TOOLCHAIN_MIN_FREE_MB/.test(rec.reasonAr), "الرفض بلا مخرج للمشغّل");
+  // السجل اللي فوق خلاص «فاشل» فبيدخل في cooldown — بنمسحه عشان نقيس قرار المساحة نفسه،
+  // و`only` يتجاوز حارس «الأدوات موجودة» (اللي سلوكه صح).
+  fs.rmSync(process.env.NOVA_TOOLCHAIN_RECORD, { force: true });
+  const once = await tc.provisionToolchainOnce({ only: ["subfinder"], script: spy, into: path.join(tmp, "vendor4", "bin") });
+  assert.equal(once.skipped, "no-space", `Once ما بلّغش عن الرفض: ${once.skipped}`);
+  delete process.env.NOVA_TOOLCHAIN_MIN_FREE_MB;
+});
+
 await tA("toolchain: provision runs the vendorer with no shell and records the truth", async () => {
   const before = Date.now();
   const rec = await tc.provisionToolchain({ script: fakeScript, into: path.join(tmp, "vendor2", "bin") });

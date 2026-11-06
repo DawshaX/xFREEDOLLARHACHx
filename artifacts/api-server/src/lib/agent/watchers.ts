@@ -205,9 +205,27 @@ function watchToolchain(): Candidate | null {
       ? `الأدوات الموجودة على المكنة دي: ${t.present.join(" · ")} في \`${t.dir}\`${
           t.missing.length ? ` — ناقص ${t.missing.length} تتنزّل بـ tools_install` : ""
         }.`
-      : `مفيش أداة في \`${t.dir}\` — الصيد التقيل بيتم في CI. أقدر أنزّل اللي يتنزّل بـ tools_install، والباقي محتاج مكنة فيها مساحة وصلاحيات.`,
-    evidence: { dir: t.dir, exists: t.exists, files: t.files.length, present: t.present, missing: t.missing, writable: t.writable },
+      : `مفيش أداة في \`${t.dir}\` — الصيد التقيل بيتم في CI. أقدر أنزّل اللي يتنزّل بـ tools_install، والباقي محتاج مكنة فيها مساحة وصلاحيات.` +
+        spaceWarning(t),
+    evidence: {
+      dir: t.dir,
+      exists: t.exists,
+      files: t.files.length,
+      present: t.present,
+      missing: t.missing,
+      writable: t.writable,
+      freeMB: t.freeMB,
+      minFreeMB: t.minFreeMB,
+      lastProvision: t.last ? { at: t.last.at, ok: t.last.ok, error: t.last.error ?? null, refused: t.last.refused ?? null } : null,
+    },
   };
+}
+
+/** لو المساحة أقل من حد التنزيل، الملاحظة لازم تقول كده — مش تسكت. */
+function spaceWarning(t: ReturnType<typeof toolchainStatus>): string {
+  if (t.freeMB === null) return "";
+  if (t.freeMB >= t.minFreeMB) return "";
+  return ` · القرص الفاضل ${t.freeMB} MB أقل من ${t.minFreeMB} MB، فالتنزيل مرفوض على المكنة دي (NOVA_TOOLCHAIN_MIN_FREE_MB).`;
 }
 
 /**

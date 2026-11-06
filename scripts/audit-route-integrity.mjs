@@ -24,6 +24,7 @@
  * `--selftest` بيحقن كل واحدة من الانهيارات الأربعة في شجرة مؤقتة وبيتأكد
  * إن الجيت بيشوفها: جيت مابيحمرش على حاجة محقونة مش جيت.
  */
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdtempSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
@@ -246,6 +247,19 @@ function matchingBrace(src, from) {
 
 const RUNTIME_DATA = /["'`]((?:ops|corpus|kali)\/[A-Za-z0-9_./-]*\.(?:json|ya?ml|yml|csv|txt))["'`]/g;
 
+/** أسماء ملفات state المتتبَّعة في المستودع (null = مافيش git موثوق). */
+function trackedStateNames(root) {
+  let out;
+  try {
+    out = execFileSync("git", ["ls-files", "state"], { cwd: root, encoding: "utf8", maxBuffer: 8 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] });
+  } catch {
+    return null;
+  }
+  const names = (out || "").split("\n").filter(Boolean);
+  if (names.length === 0) return null;
+  return new Set(names.map((r) => r.split("/").pop()));
+}
+
 function auditHollowShip(root) {
   const v = [];
   const bundlerPath = join(root, "scripts", "build-standalone.mjs");
@@ -254,12 +268,43 @@ function auditHollowShip(root) {
   }
   const bundler = readFileSync(bundlerPath, "utf8");
   const wanted = new Map(); // relpath -> {file,line}
+  const stateNames = new Map(); // اسم ملف state -> {file,line}
+  const STATE_SHAPES = [
+    /"state",\s*"([A-Za-z0-9._-]+\.json)"/g, // path.resolve(cwd, "state", "hunt-latest.json")
+    /["'`]state\/([A-Za-z0-9._-]+\.json)["'`]/g, // NOVA_X_REL || "state/advisory-cache.json"
+    /\/state\/([A-Za-z0-9._-]+\.json)/g, // البانل: fetch("/state/nova-brain-latest.json")
+  ];
   for (const f of listTs(join(root, "artifacts/api-server/src"))) {
     const raw = readFileSync(f, "utf8");
     for (const m of raw.matchAll(RUNTIME_DATA)) {
       const rel = m[1];
       if (!wanted.has(rel)) wanted.set(rel, { file: relative(root, f), line: lineOf(raw, m.index) });
     }
+  }
+  for (const dir of [join(root, "artifacts/api-server/src"), join(root, "artifacts/kali-panel/src")]) {
+    for (const f of listTs(dir)) {
+      const raw = readFileSync(f, "utf8");
+      for (const re of STATE_SHAPES) {
+        for (const m of raw.matchAll(new RegExp(re.source, re.flags))) {
+          const name = m[1];
+          if (!stateNames.has(name)) stateNames.set(name, { file: relative(root, f), line: lineOf(raw, m.index) });
+        }
+      }
+    }
+  }
+  // اللي بيّتكتب على المكنة (proactive-log، toolchain-provision، fleet-servers…) مش
+  // مطلوب يسافر — لازم يكون متتبَّع في المستودع عشان نطالب بيه. ومافيش git = نرجع
+  // لـexistsSync، مش نسكت.
+  const tracked = trackedStateNames(root);
+  for (const [name, at] of stateNames) {
+    if (tracked ? !tracked.has(name) : !existsSync(join(root, "state", name))) continue;
+    if (bundler.includes(`"${name}"`)) continue;
+    v.push({
+      check: "hollow-ship",
+      file: at.file,
+      line: at.line,
+      msg: `المحرك/البانل بيقرأ state/${name} وقت التشغيل، بس build-standalone.mjs مابينسخوش — على المكنة المنشورة الميزة هتردّ «مفيش بيانات» والكود نازل (اللي حصل لـhunt-latest.json وadvisory-cache.json).`,
+    });
   }
   for (const [rel, at] of wanted) {
     const base = rel.split("/").pop();
@@ -362,10 +407,12 @@ function selftest() {
 
     w("artifacts/api-server/src/routes/reader.ts", 'import fs from "node:fs";\nconst x = () => fs.readFileSync("ops/bounty/secret-catalog.json", "utf8");\nexport default x;\n');
     w("scripts/build-standalone.mjs", 'fs.copyFileSync("public/index.html", "out/index.html");\n');
+    w("state/secret-data.json", JSON.stringify({ measured: true }) + "\n");
+    w("artifacts/api-server/src/lib/needs-state.ts", 'export const p = () => JSON.parse(readFileSync(join(process.cwd(), "state", "secret-data.json"), "utf8"));\n');
     const sh = auditHollowShip(work);
     assert.ok(sh.some((x) => x.msg.includes("ops/bounty/secret-catalog.json")), "hollow-ship: injected runtime data wasn't caught");
-    w("scripts/build-standalone.mjs", 'for (const rel of ["ops"]) copyDir(rel);\nfs.copyFileSync("public/index.html", "out/index.html");\n');
-    assert.equal(auditHollowShip(work).length, 0, "hollow-ship: directory-level copy should cover its files");
+    w("scripts/build-standalone.mjs", 'const STATE_DATA = ["secret-data.json"];\nfor (const rel of ["ops"]) copyDir(rel);\nfs.copyFileSync("public/index.html", "out/index.html");\n');
+    assert.equal(auditHollowShip(work).length, 0, "hollow-ship: بيانات state المنقولة لازم تعدّي + الناقصة تتلمّ");
 
     w("artifacts/api-server/src/lib/standalone-api.ts", 'export const r = { ok: true, installed: true, version: "2026.1-kali" };\n');
     w("artifacts/kali-panel/src/lib/standalone-api.ts", 'export const r = { ok: true, installed: true };\n');
@@ -381,7 +428,7 @@ function selftest() {
     // والإنصاف: الملف السليم لازم يعدي
     w("artifacts/api-server/src/routes/bad.ts", 'import { Router } from "express";\nimport { runSpine } from "../lib/thing";\nconst router = Router();\nrouter.post("/bad", (req, res) => res.json(runSpine(req.body)));\nexport default router;\n');
     assert.equal(auditSpineSymbols(work).length, 0, "spine: an imported symbol must not be flagged");
-    console.log("✓ selftest — الحقن الأربعة كلها اتشافت، والملف السليم عدّى");
+    console.log("✓ selftest — الحقن الأربعة + حقن state اتشافت، والملف السليم عدّى");
   } finally {
     rmSync(work, { recursive: true, force: true });
   }

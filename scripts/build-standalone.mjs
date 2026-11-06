@@ -10,7 +10,7 @@
  * Layout
  *   server.mjs      the whole API server, bundled by esbuild (one file)
  *   public/         the built panel (HTML/JS/CSS)
- *   state/          long-term memory + brain state (real files, portable)
+ *   state/          memory + brain state + measured data (hunt-latest, advisory-cache, …)
  *   start.sh        `node server.mjs` with sane defaults
  *   start-tunnel.sh start + a free Cloudflare HTTPS tunnel (no account)
  *   package.json    so Panels that require one are happy
@@ -59,12 +59,48 @@ copyDir(PANEL, path.join(OUT, "public"), { maxBytes: 25 * 1024 * 1024 });
 const AUDIT = path.join(ROOT, "audit");
 if (fs.existsSync(AUDIT)) copyDir(AUDIT, path.join(OUT, "audit"), { maxBytes: 8 * 1024 * 1024 });
 
-// Memory files worth carrying over (nothing else from state/ is needed).
+// الحالة + البيانات المقاسة اللي السورس والباندل بيقراوها وقت التشغيل.
+// التعليق القديم كان بيقول «nothing else from state/ is needed» — وده كان غلط
+// مقاس: على nova.waifly.com ملاحظة `hunt` ما بتظهرش خالص في /api/nova-core/watch/probe
+// و`advisories` بتردّ measured:false، رغم إن المستودع فيه state/hunt-latest.json
+// (19 موضع قراءة في السورس) وstate/advisory-cache.json (12 موضع). يعني الميزة كانت
+// «مش موجودة» على الحزمة المنشورة والكود نازل. القاعدة من دلوقتي: أي ملف state/
+// متتبَّع وعليه قارئ وقت التشغيل لازم يكون في القائمة دي، و
+// scripts/audit-route-integrity.mjs (hollow-state) بيمنع أي استثناء ساكت.
+const STATE_DATA = [
+  // حالة المحرك نفسها — تتكتب على المكنة، وبننقلها لو موجودة عشان الذاكرة تفضل
+  "nova-memory.json",
+  "cybernova-brain-state.json",
+  "discovered-vulnerabilities-vault.json",
+  // بيانات مقاسة بتجي من CI ومن فحوص حيّة — محركات البحث والملاحظات بيقروها
+  "hunt-latest.json",
+  "advisory-cache.json",
+  "verified-live.json",
+  "vuln-corpus-index.json",
+  "corpus-last-failure.json",
+  "nova-brain-latest.json",
+  "nova-mission-log.json",
+  "free-hosts.json",
+  "cryptocom-hackerone-scope.json",
+];
+/** أكبر ملف يُنقل تلقائيًا — اللي فوق ده قرار صريح، مش سرقة مساحة على حاوية 512 MB. */
+const STATE_DATA_MAX_KB = 512;
 fs.mkdirSync(path.join(OUT, "state"), { recursive: true });
-for (const name of ["nova-memory.json", "cybernova-brain-state.json", "discovered-vulnerabilities-vault.json"]) {
+let stateCopied = 0;
+let stateKb = 0;
+for (const name of STATE_DATA) {
   const src = path.join(STATE, name);
-  if (fs.existsSync(src)) fs.copyFileSync(src, path.join(OUT, "state", name));
+  if (!fs.existsSync(src)) continue;
+  const kb = Math.round(fs.statSync(src).size / 1024);
+  if (kb > STATE_DATA_MAX_KB) {
+    console.log(`· state/${name}: ${kb}K أكبر من حد ${STATE_DATA_MAX_KB}K — اتساب بره الحزمة بقرار`);
+    continue;
+  }
+  fs.copyFileSync(src, path.join(OUT, "state", name));
+  stateCopied += 1;
+  stateKb += kb;
 }
+console.log(`· state/: ${stateCopied} ملف (${stateKb}K) جوّه الحزمة`);
 
 // The panel reads the mission log from its own /state/ path, so ship a copy
 // inside public/state/ too (the same mirror the Pages deploy uses).
@@ -584,7 +620,7 @@ Main file     : لو اللوحة سألت — server.mjs (أو boot.mjs، ال�
     nova-app.mjs      السيرفر كامل في ملف واحد
     nova-agent.js     وكيل النود (بيتنفّذ أوامر الهاب)
     public/           الواجهة جاهزة
-    state/            الذاكرة وملفات الحالة
+    state/            الذاكرة + بيانات مقاسة (11 ملف: صيد، استشارات، corpus، خزنة)
     diagnose.mjs      تشخيص اتصال النود
     node.env.example  نموذج إعدادات النود
     start.sh          تشغيل الهاب

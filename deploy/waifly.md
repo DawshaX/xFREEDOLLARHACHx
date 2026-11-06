@@ -76,7 +76,7 @@ ls        # index.mjs + public/ + …
 | `NOVA_MEMORY_FILE` | `./state/nova-memory.json` | القرص صغير؛ حطه في `state/` الجوه المجلد نفسه عشان يتنقل معاك |
 | `NOVA_PROGRAMS_FILE` | `./state/programs.json` | سجل البرامج = وثيقة الإذن. مترفعش على git عام — `state/programs.json` في `.gitignore` |
 | `NOVA_JOBS_REL` | `./state/jobs` | الأدلة والنتائج؛ **1 GB ديسك**، فخلي الـprune عادة (تحت) |
-| `NOVA_MAX_INFLIGHT` | `2` | 300 MB +共享 CPU = قلّل التزامن عشان الثروتل ميوطّش الـevent loop |
+| `NOVA_MAX_INFLIGHT` | `2` | 300 MB + CPU مشترك = قلّل التزامن عشان الثروتل ميوطّش الـevent loop |
 | `NOVA_OPS_AUTONOMY` | `passive` | الدورة الخلفية: DNS + CT-logs + intel عام. `standard` بعد ما تتأكد إن معاك إذن مكتوب |
 | `NOVA_KEYS_URL` | `https://…` (اختياري) | لو المفاتيح في endpoint عندك؛ **https إجباري** غير بـ`NOVA_KEYS_ALLOW_HTTP=1` |
 | `NOVA_KEYLESS_LLM` | `1` (افتراضي) | حتى من غير ولا مفتاح: 3 مقاعد pollinations + ollama (لو موجود) = مجلس بيصوّت |
