@@ -306,6 +306,24 @@ function auditHollowShip(root) {
       msg: `المحرك/البانل بيقرأ state/${name} وقت التشغيل، بس build-standalone.mjs مابينسخوش — على المكنة المنشورة الميزة هتردّ «مفيش بيانات» والكود نازل (اللي حصل لـhunt-latest.json وadvisory-cache.json).`,
     });
   }
+  if (stateNames.size > 0) {
+    const updaterPath = join(root, "deploy", "live-update.py");
+    const updater = existsSync(updaterPath) ? readFileSync(updaterPath, "utf8") : "";
+    if (!bundler.includes('"update-manifest.json"') || !bundler.includes("refreshState")) {
+      v.push({
+        check: "hollow-ship",
+        file: "scripts/build-standalone.mjs",
+        line: 0,
+        msg: "الباندر بينسخ بيانات state بس مابيولّدش update-manifest.json (refreshState) — و`live-update.py` بيحمي `state/`، فأي مكنة محدَّثة هتفضل «مفيش بيانات» للأبد.",
+      });
+    }
+    if (!bundler.includes("STATE_DATA.filter(")) {
+      v.push({ check: "hollow-ship", file: "scripts/build-standalone.mjs", line: 0, msg: "refreshState لازم تتولّد من STATE_DATA نفسها (`STATE_DATA.filter(`) — قائمة تانية في نص تاني بتتنسى وبتفارق." });
+    }
+    if (updater && !updater.includes("update-manifest.json")) {
+      v.push({ check: "hollow-ship", file: "deploy/live-update.py", line: 0, msg: "الـupdater بيحمي state/ ومابيقرأش update-manifest.json — بيانات CI المنشورة مش هتوصل أي مكنة شغّالة (الحالة اللي قِيسَت على الهَب)." });
+    }
+  }
   for (const [rel, at] of wanted) {
     const base = rel.split("/").pop();
     const top = rel.split("/")[0];
@@ -411,8 +429,16 @@ function selftest() {
     w("artifacts/api-server/src/lib/needs-state.ts", 'export const p = () => JSON.parse(readFileSync(join(process.cwd(), "state", "secret-data.json"), "utf8"));\n');
     const sh = auditHollowShip(work);
     assert.ok(sh.some((x) => x.msg.includes("ops/bounty/secret-catalog.json")), "hollow-ship: injected runtime data wasn't caught");
-    w("scripts/build-standalone.mjs", 'const STATE_DATA = ["secret-data.json"];\nfor (const rel of ["ops"]) copyDir(rel);\nfs.copyFileSync("public/index.html", "out/index.html");\n');
+    const cleanBundler = 'const STATE_DATA = ["secret-data.json"];\nconst REFRESH = STATE_DATA.filter((n) => !OWNED.has(n));\nwriteFileSync(join(OUT, "update-manifest.json"), JSON.stringify({ refreshState: REFRESH }));\nfor (const rel of ["ops"]) copyDir(rel);\nfs.copyFileSync("public/index.html", "out/index.html");\n';
+    w("scripts/build-standalone.mjs", cleanBundler);
+    w("deploy/live-update.py", 'PROTECTED_NAMES = {"state"}\ndef plan(src, dest):\n    read "update-manifest.json"\n    return []\n');
     assert.equal(auditHollowShip(work).length, 0, "hollow-ship: بيانات state المنقولة لازم تعدّي + الناقصة تتلمّ");
+    w("scripts/build-standalone.mjs", cleanBundler.replace("STATE_DATA.filter((n) => !OWNED.has(n))", '["nothing.json"]'));
+    assert.ok(
+      auditHollowShip(work).some((x) => x.msg.includes("STATE_DATA.filter(")),
+      "المانيفست المكتوبة بإيد مش المتولّدة من STATE_DATA لازم تتلمّ",
+    );
+    w("scripts/build-standalone.mjs", cleanBundler);
 
     w("artifacts/api-server/src/lib/standalone-api.ts", 'export const r = { ok: true, installed: true, version: "2026.1-kali" };\n');
     w("artifacts/kali-panel/src/lib/standalone-api.ts", 'export const r = { ok: true, installed: true };\n');

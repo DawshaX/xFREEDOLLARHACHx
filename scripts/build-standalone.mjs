@@ -100,7 +100,32 @@ for (const name of STATE_DATA) {
   stateCopied += 1;
   stateKb += kb;
 }
-console.log(`· state/: ${stateCopied} ملف (${stateKb}K) جوّه الحزمة`);
+// updater بيحمي `state/` عشان ذاكرة المكنة وملفاتها اللي بتتكتب حيًا — وده غلط
+// مع البيانات اللي CI بينشرها (صيد، استشارات، فحوص حيّة): المكنة مابتكتبهاش،
+// فلو ما سافرتش مع كل تحديث هتفضل «مش موجودة» للأبد. القائمة دي بتتولّد من
+// STATE_DATA نفسه (مش قائمة تانية تتنسى)، و`deploy/live-update.py` بيقراها من
+// update-manifest.json وبيقاعدة «الأحدث يكسب».
+const STATE_MACHINE_OWNED = new Set([
+  "nova-memory.json", // ذاكرة المكنة نفسها
+  "cybernova-brain-state.json", // «وقفنا فين» — scripts/autonomous-brain-pulse.mjs بيحدّثه على المكنة
+  "discovered-vulnerabilities-vault.json", // الخزنة: agent بيعدّلها على الحيّة
+  "nova-mission-log.json", // اللوج بيتكتب على المكنة (وفي public/state للنسخة العامة)
+  "corpus-last-failure.json", // سجل فشل الكوربوس المحلي
+]);
+const REFRESH_STATE = STATE_DATA.filter((name) => !STATE_MACHINE_OWNED.has(name));
+fs.writeFileSync(
+  path.join(OUT, "update-manifest.json"),
+  `${JSON.stringify(
+    {
+      about: "ملفات state اللي CI بينشرها وبتتنقل فوق مكنة شغّالة. بتتولّد من STATE_DATA في scripts/build-standalone.mjs — مش قائمة تانية.",
+      refreshState: REFRESH_STATE,
+      neverOverwrite: [...STATE_MACHINE_OWNED],
+    },
+    null,
+    2,
+  )}\n`,
+);
+console.log(`· state/: ${stateCopied} ملف (${stateKb}K) جوّه الحزمة · ${REFRESH_STATE.length} منها بيتحدّث على المكنة الشغّالة`);
 
 // The panel reads the mission log from its own /state/ path, so ship a copy
 // inside public/state/ too (the same mirror the Pages deploy uses).
