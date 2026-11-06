@@ -1950,3 +1950,18 @@ zip الساعة 15:58. وكل حاجة تحته بتقرا الملف ده: **�
   `audit-bundle-secrets` ✓. `docs/OPS.md` §1 + `docs/AUDIT-2026-11-05.md` §9.6.
 - لسه: 9/11 سجل خزنة من غير `evidencePath` · `multi-ai.ts` من غير tool loop · `NOVA_TOOLCHAIN_TIMEOUT_MS` ·
   القرص على الهَب 79% فتنزيل الأدوات هيرفض نفسه (`no-space`) — عايز أدوات فعلية على المكنة دي = مساحة أكبر.
+- **وكمان (نفس المرحلة، بعد القياس):** `live-update.py` بقى يقيس القرص بـ`os.statvfs` **قبل**
+  التنزيل ويرفض لو الفاضل أقل من `NOVA_UPDATE_MIN_FREE_MB` (60) — تحديث على قرص ملىان = بايت
+  مقطوعة و`state/` ناقصة ومكنة ما ترجعش. متقاس بالتشغيل: حد خرافي → `exit 1` من غير ما يلمس
+  الشبكة، وحد صغير → `· القرص: 18731MB فاضل` وكمّل.
+- **حالة الهَب لحظة الكتابة (2026-11-06، 04:00 القاهرة = 02:00Z):** بعد جولة التحديث اللي اتكتبت في 01:46:31Z المكنة ساكتة
+  — كل المسارات بترجع `502 Bad Gateway` من nginx لأكتر من 20 دقيقة (`/api/nova-core/status`,
+  `/watch/probe`). `watchdog` مافتحش `nova:down` لحد دلوقتي (جدوله كل 30 دقيقة)، والسبب ماقدرناش
+  نقوله من هنا: اللوج `logs/` جوه الحاوية ومافيش وصول_shell_ لحد ما اللوحة ترجع. اللي مطلوب:
+  **Restart من لوحة Waifly** (مش «Change Language» ⛔) — وبعدها `boot.mjs` عنده rollback لو
+  `.update-pending` ما اتأكدش (`[supervisor] new build never became healthy — rolling back`).
+- **عطل CI مقفول**: `pull_request.paths` في `agent-gates.yml` كانت أضيق من `push.paths`
+  (`scripts/*.mjs` وبس) — PR #222 اللي عدّل `deploy/live-update.py` طلع بـ`no checks reported`.
+  القايمة بقت `scripts/**` + `deploy/**` في الاتنين، وضرس في `check-workflows.mjs` يمنع الشكل ده
+  (`push.paths` عنصر مش مغطّى في `pull_request.paths` = أحمر) · `check-workflows: 19/19` ✓.
+
