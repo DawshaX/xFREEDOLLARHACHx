@@ -485,6 +485,40 @@ export function NovaWorkstation() {
 
   const push = (line: Omit<Line, "id" | "at">) => setLines((prev) => [...prev, { ...line, id: nextId(), at: Date.now() }]);
 
+  // ── الملاحقين: أي ملاحظة جديدة على السيرفر بتتنزل في الشات لوحدها ──
+  // مفيش هنا اختلاق: بنقرا `/api/nova-core/watch` (اللي بيقرا state/proactive-log.json)
+  // ونعرض اللي ما شفناهوش. الوضع الساكن بيرجّع notes: [] مع سبب — فالشات ساكت
+  // ومش بيدّعي إنه لسه مستني حاجة.
+  const seenNotes = useRef<string[] | null>(null);
+  const pushRef = useRef(push);
+  pushRef.current = push;
+  useEffect(() => {
+    let alive = true;
+    const poll = async () => {
+      try {
+        const r = await fetch(`${API}/nova-core/watch`, { signal: AbortSignal.timeout(6000) });
+        if (!r.ok || !alive) return;
+        const j = (await r.json()) as { notes?: Array<{ id?: string; kind?: string; text?: string }> };
+        const notes = Array.isArray(j?.notes) ? j.notes.filter((n) => typeof n?.id === "string" && typeof n?.text === "string") : [];
+        if (!notes.length) return;
+        const seen = seenNotes.current ?? notes.map((n) => String(n.id));
+        const fresh = notes.filter((n) => !seen.includes(String(n.id)));
+        seenNotes.current = [...seen, ...fresh.map((n) => String(n.id))].slice(-300);
+        for (const n of fresh.slice(0, 4).reverse()) {
+          pushRef.current({ role: "note", text: `📡 [${n.kind ?? "مراقب"}] ${String(n.text)}` });
+        }
+      } catch {
+        /* الشبكة وقعت — مفيش ملاحظة جديدة، ومش هنخترع واحدة عشان نملّي الصمت */
+      }
+    };
+    void poll();
+    const t2 = setInterval(() => void poll(), 45_000);
+    return () => {
+      alive = false;
+      clearInterval(t2);
+    };
+  }, []);
+
   const track = (label: string, status: RunningItem["status"], id?: string, ms?: number) => {
     setItems((prev) => {
       const key = id ?? `${label}-${prev.length}`;

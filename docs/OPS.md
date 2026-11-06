@@ -290,3 +290,19 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
   / `nova_openclaw_gateway`، والخانات في «تنبيهات تيليجرام» و«بوابة ngrok» بتحفظ هناك.
 - أي سطر مقصوده مثال/اختبار: `// allow-secret-literal` جنبه.
 - **لازم**: التوكن اللي اتنشر يتلغى من BotFather ويتعمل جديد، و`NOVA_EXEC_TOKEN` كمان.
+
+## الصوت الدائم والمهام الحيّة (المرحلة 59)
+
+| إيه | ازاي يتقفل/يتفتح |
+|---|---|
+| جدول `nova-cron` (6 مهام) | `NOVA_CRON_ENABLED=0` يطفيها. من غيره بتتشغّل مع `index.ts`. |
+| الملاحقين | `NOVA_WATCHERS=0` يطفيهم · `NOVA_WATCH_INTERVAL_MS=300000` المدة (أقل حاجة 30s) |
+| ملاحظات حية | `GET /api/nova-core/watch` (قراية مفتوحة) · `POST /api/nova-core/watch/tick` (عندك `NOVA_OPS_TOKEN` بس، و`{"force":true}` يكرر نفس الحالة) |
+| السجل | `state/proactive-log.json` — حالة تشغيل، **متتعملهاش commit** |
+| التوصيل للمستخدم | `ws-hub` بيبعت `watch_note` · تليجرام بيشتغل لو `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` في environment (لو مش موجودين السطر بيتسجّل `skipped:`) |
+| الخزنة الدائمة | `NOVA_PERMANENT_VAULT` يغيّر مسار `state/discovered-vulnerabilities-vault.json` |
+| خزنة الشغل | `NOVA_FINDINGS_VAULT` (افتراضي `state/findings-vault.json` — مش موجود في المستودع، فالأجنت بيقرا الدائمة أوتوماتيك) |
+
+الأرقام اللي بتقولها الملاحظات كلها مقروءة من الملفات نفسها (`hunt-latest.json`، `counts` الخزنة،
+`advisory-cache.json`، `vendor/bin`) — مفيش رقم مكتوب في الكود ده الآن محروس بـ`audit-no-invented-intel`
+(R6 قدرات مقاسة، R7 هوية واحدة).

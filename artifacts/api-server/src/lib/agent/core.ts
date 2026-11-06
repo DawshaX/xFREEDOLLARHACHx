@@ -14,6 +14,7 @@
 
 import { NOVA_SYSTEM_PROMPT, NOVA_SYSTEM_PROMPT_SHORT } from "./persona";
 import { buildSelfModel, selfModelPrompt, type SelfModel } from "./self-model";
+import { toolchainStatus } from "../ops/toolchain";
 import { vulnQuery } from "./vuln-keyword";
 import {
   AGENT_TOOLS,
@@ -687,7 +688,8 @@ const PLAN_INSTRUCTIONS = `أعد **JSON فقط** (بدون أي شرح خارج
 - **حقل thought بالعربي دايماً** — ده بيتعرض للمستخدم حرفياً، والإنجليزي هنا بيبان كلغة تانية وسط الكلام.
 - لو المستخدم سأل «تقدر تعمل إيه» أو «قدراتك» → **اقرا قسم «من أنت الآن» في السياق ورد منه**، مش من الذاكرة العامة.
 - لو الطلب ينفّذ بأداة موجودة (بحث/جلب صفحة/فحص) → نفّذها. **ما تسألش «تقصد إيه»** إلا لو مفيش هدف خالص.
-- لو فيه نطاق أو CVE في الطلب، نفّذ الأداة المناسبة ولا تجاوب من ذاكرتك.`;
+- لو فيه نطاق أو CVE في الطلب، نفّذ الأداة المناسبة ولا تجاوب من ذاكرتك.
+- سؤال عن القدرة («تقدر/مبتقدرش/حمّل أدوات/كالي/برب/ميتاسبلويت/شغل nmap») → **لازم** خطوة \`platform_status\` أو \`task_list\` الأول، والرد من نتيجتها. «مقدرش» من الذاكرة = إجابة ممنوعة: غلط، أو استخفاف بقدراتك الحقيقية.`;
 
 async function llmPlan(
   message: string,
@@ -719,6 +721,85 @@ async function llmPlan(
   };
 }
 
+/**
+ * «إيه اللي تقدر تعمله» ما ينفعش يتكتب في سطر ويصدق للأبد: السطر القديم كان
+ * «مش بقدر أشغّل Metasploit/Burp (مفيش root ولا مساحة)» وهو مكتوب في وقت كانت
+ * فيه `tools_install` و`kali_toolbox` موجودين في السجل — أي إن الأجنت بينكر
+ * أدواته بيده. الوظيفة دي بتقرا المكنة نفسها: إيه الموجود فعلًا، وإيه اللي
+ * ينزّل، وعدد الأدوات اللي بتعرفها.
+ */
+export function capabilityTruthLine(): string {
+  const m = buildSelfModel();
+  let t: { dir: string; present: string[]; missing: string[]; exists: boolean; writable: boolean } | null = null;
+  try {
+    t = toolchainStatus();
+  } catch {
+    t = null;
+  }
+  const lines = [`**أدواتي المسجّلة دلوقتي:** ${m.tools.count} (مصنّفة: ${Object.keys(m.tools.byCategory ?? {}).join(" · ") || "من غير تصنيف"}).`];
+  if (!t) {
+    lines.push("**حالة الأدوات على المكنة دي:** غير مقاسات — حالة السلسلة بترجع خطأ، فمش هادّعي وجود أداة ولا غيابها.");
+  } else if (t.present.length) {
+    const head = t.present.slice(0, 8).join(" · ");
+    lines.push(
+      `**الموجود على المكنة دي (${t.dir}):** ${head}${t.present.length > 8 ? ` (+${t.present.length - 8} كمان)` : ""}.`,
+    );
+    if (t.missing.length) {
+      lines.push(`**الناقص وأقدر أنزّله:** ${t.missing.slice(0, 8).join(" · ")} — بأداة \`tools_install\`${t.writable ? "" : " (المجلد مش قابل للكتابة دلوقتي، فالتنزيل هيقع)"}.`);
+    }
+  } else {
+    lines.push(
+      `**الموجود على المكنة دي (${t.dir}):** مفيش أداة واحدة — الصيد التقيل بيتم في CI ونتايجُه بتوصل للريبو. \`tools_install\`${t.writable ? " متاح" : " مش متاح (المجلد مش قابل للكتابة)"} لو حابب أنزّل على المكنة دي.`,
+    );
+  }
+  lines.push("لو عايز القدرات بالحرف لكل أداة: \`task_list\` و\`platform_status\` بيقرأوا السجل الحيّ، مش نص مكتوب.");
+  return lines.join("\n");
+}
+
+/**
+ * المسار ده هو اللي كان بيوّلع «الشات عبيط»: الأدوار اللي ملهاش أدوات (مش سؤال
+ * هوية، مش تحية) بتاخد مسودة من `llmPlan` — والـplan بياخد `NOVA_SYSTEM_PROMPT_SHORT`
+ * مع 700 توكن، فالنتيجة كلام مساعد عام بملعق تملّق وبلهجة طايحة. الوظيفة دي بتاخد
+ * المسودة وبتعيد صياغتها بالهوية الكاملة + المرجع المقاس، ولو المزوّد واقع المسودة
+ * نفسها بتفضل (ما بنفضلش الصمت على كلام ناقص).
+ */
+async function voiceAnswer(
+  draft: string,
+  message: string,
+  selfModel: SelfModel,
+  history: Array<{ role: "user" | "assistant"; content: string }>,
+): Promise<{ text: string; provider: string } | null> {
+  if (process.env.NOVA_VOICE === "0") return null;
+  const trimmed = draft.trim();
+  if (!trimmed) return null;
+  const res = await llmComplete(
+    [
+      {
+        role: "system" as const,
+        content: [
+          NOVA_SYSTEM_PROMPT,
+          selfModelPrompt(selfModel),
+          "# المرجع المقاس لقدراتك على المكنة دي (أصدق من ذاكرتك العامة)",
+          capabilityTruthLine(),
+          "# مهمتك دلوقتي",
+          "دي مسودة رد كتبها مخطِّط الشات. أعد صياغتها بصوتك إنت: عربي مصري تقني، جملة أو اتنين، من غير تملّق ومن غير «أنا متحمسة للعمل معك». لو المستخدم كتب بلغة تانية رد بيها.",
+          "- أي رقم في المسودة مش موجود في «من أنت الآن» أو في المرجع فوق: اشيله. الأرقام اللي هنا مقاسة جايبة زي ما هي.",
+          "- المسودة بتدّعي تنفيذ («نفّذت/شغّلت/حدّثت») ومفيش أداة اتنادت في الدور ده؟ قول بصراحة إن مفيش حاجة اتنفذت، واقترح الأمر اللي ينفذها.",
+          "- المسودة بترفض قدرة وهي موجودة في المرجع؟ صلّح الرفض، وورّي البديل المتاح فعلًا.",
+          "- خلّص بخطوة تالية واحدة يقدر ينفذها حالًا.",
+        ].join("\n\n"),
+      },
+      ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
+      { role: "user" as const, content: `سؤال المستخدم: ${message}\n\n--- المسودة ---\n${trimmed.slice(0, 900)}` },
+    ],
+    { temperature: 0.55, maxTokens: 420 },
+  );
+  const text = res?.text?.trim() ?? "";
+  // مسودة أقصر من إنك تتسعادت، أو الموديل رجع نفس السطر حرفيًا → ما نهدرش وقت المستخدم
+  if (!text || text === trimmed || text.length < 12) return null;
+  return { text, provider: res!.provider };
+}
+
 /* ── explanation ─────────────────────────────────────────────────────────── */
 
 function preview(data: unknown): string {
@@ -739,7 +820,7 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
         "",
         `عندي دلوقتي **${sm.tools.count} أداة حقيقية**، و${sm.corpus.measured ? `فهرس **${sm.corpus.total.toLocaleString("en-US")} ثغرة**` : "فهرس ثغرات لسه مش متزامن"}، و${sm.machines.registered} ماكينة في الأسطول.`,
         "",
-        "أقدر أشتغل فعلياً على: استطلاع نطاق (DNS + TLS + ترويسات)، فحص منافذ محدود، تعداد نطاقات فرعية، بحث ثغرات، جلب صفحات من النت، GitHub، وذاكرة دائمة.",
+        capabilityTruthLine(),
         "",
         "**الخطوة التالية المقترحة:** ابعتلي نطاق مثل `example.com` وأقولك نتيجة الاستطلاع كاملة.",
       ].join("\n");
@@ -761,7 +842,7 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
         ? `- ذاكرتي فيها **${m.memory.total} ذكرى** من شغلنا السابق.`
         : "- ذاكرتي لسه فاضية — أول حاجة نحفظها هتفضل بعد إعادة التشغيل.",
       "",
-      "**مش بقدر:** أشغّل Metasploit/Burp على السيرفر ده (مفيش root ولا مساحة)، أو أوصل لجهاز مش متصل بالوكيل.",
+      capabilityTruthLine(),
       "",
       "**الخطوة التالية المقترحة:** ابعتلي نطاق مثل `example.com` وأنا أبدأ الاستطلاع فوراً، أو قولي «دوّر على …» وأنا أجيب من النت.",
     ].join("\n");
@@ -926,6 +1007,12 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       // A greeting is an introduction, not a question to the model.
       reply = greetingAnswer(selfModel);
       provider = `${provider}+self-model`;
+    } else if (reply) {
+      const voiced = await voiceAnswer(reply, message, selfModel, history);
+      if (voiced) {
+        reply = voiced.text;
+        provider = `${provider}→${voiced.provider}`;
+      }
     }
     if (!reply) {
       const llm = await llmComplete(
