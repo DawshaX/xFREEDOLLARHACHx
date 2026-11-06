@@ -377,6 +377,19 @@ server.listen(port, host, () => {
     )
     .catch((e) => logger.warn({ err: e }, "memory mirror hydrate failed"));
 
+  // ── إقلاع ما يعتمدش على قاعدة البيانات ─────────────────────────────────────
+  // المرحلة 59 أضافت `startCronScheduler()` و`startWatchers()` — وحطّتهم جوه
+  // فرع `if (process.env.DATABASE_URL)`. القياس الحيّ على nova.waifly.com (وضع
+  // standalone، من غير DATABASE_URL) كشف إن `GET /api/nova-core/watch` بيرجع
+  // enabled:false وstartedAt:null: أي إن الصوت الدائم اتكتب وما اشتغلش على المكنة
+  // اللي المفروض تعيش عليه. الاتنين ما بيلمسوش Postgres أصلًا — فمكانهم هنا.
+  if (process.env.NOVA_CRON_ENABLED !== "0") {
+    try { startCronScheduler(); } catch (e) { logger.error({ err: e }, "nova-cron start failed"); }
+  } else {
+    logger.info("nova-cron: متعطّل بـ NOVA_CRON_ENABLED=0");
+  }
+  try { startWatchers(); } catch (e) { logger.error({ err: e }, "watchers start failed"); }
+
   if (process.env.DATABASE_URL) {
     forceOllamaDefault().catch(e => logger.error({ err: e }, "forceOllamaDefault error"));
     runCveMigrations().catch(e => logger.error({ err: e }, "CVE migrations error"));
@@ -384,18 +397,6 @@ server.listen(port, host, () => {
 
     try { startScheduler(); } catch (e) { logger.error({ err: e }, "Failed to start cron scheduler"); }
 
-    // جدول `nova-cron` (6 مهام: صيد CVE، توحيد الذاكرة، self-heal، watchdog،
-    // متعلّم، نبضة تليجرام) كان موجود ومكتوب ومحروس من التسريب — بس مفيش أي
-    // سطر بيناده. `runCount`/`errorCount` فاضي للأبد، والصفحة اللي تعرضه بتعرض
-    // صفر حقيقي. بقى بيتشغّل مع الإقلاع (NOVA_CRON_ENABLED=0 يطفّيه).
-    if (process.env.NOVA_CRON_ENABLED !== "0") {
-      try { startCronScheduler(); } catch (e) { logger.error({ err: e }, "nova-cron start failed"); }
-    } else {
-      logger.info("nova-cron: متعطّل بـ NOVA_CRON_ENABLED=0");
-    }
-
-    // المراقبين: الصوت اللي بيتكلم من غير سؤال (state/proactive-log.json).
-    try { startWatchers(); } catch (e) { logger.error({ err: e }, "watchers start failed"); }
     try { startWatchdog(); } catch (e) { logger.error({ err: e }, "Failed to start watchdog"); }
     try { startKeyManagerLoop(); } catch (e) { logger.error({ err: e }, "Failed to start key manager"); }
     try { startCveMonitor(); } catch (e) { logger.error({ err: e }, "Failed to start CVE monitor"); }
