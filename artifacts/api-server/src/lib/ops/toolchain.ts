@@ -27,6 +27,7 @@
  *      بيتعمله fake في `ops-selftest` (نفس طريقة `withDeadline`).
  */
 import fs from "node:fs";
+import { isDurableHost } from "../agent/durable-host";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { resetBinaryCache, toolStatus } from "./tools";
@@ -484,7 +485,9 @@ export function bootToolchainFetch(log?: (msg: string) => void): boolean {
   // الأدوات كلها 2026-11-07، والمجلد على وايفي قابل للكتابة (متقاس:
   // /home/container/vendor/bin writable:true، present:3 / missing:9).
   // `auto` بيراعي إن اللي موجود ما يتكررش، و NOVA_TOOLCHAIN_FETCH=0 بيطفي صراحةً.
-  if (!mode && process.env.NOVA_SUPERVISED === "1") mode = "auto";
+  // نفس شرط durable-host: نسخة CI/ Codespace من الحزمة تولّع NOVA_SUPERVISED=1
+  // كمان، وماينفعش تروح نزّل 100MB أدوات في كل تشغيل بوابة.
+  if (!mode && isDurableHost()) mode = "auto";
   if (!mode || mode === "0" || mode === "off" || mode === "false") return false;
   const st = toolchainStatus();
   // `auto` مع الناقص: لو فيه أداة ناقصة ننزّلها، مابنقفش عند أول واحدة موجودة.

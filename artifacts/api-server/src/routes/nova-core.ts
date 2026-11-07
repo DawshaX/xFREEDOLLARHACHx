@@ -33,6 +33,7 @@ import {
   mirrorStatus,
   type MemoryKind,
 } from "../lib/agent/memory-store";
+import { durableHostWhy } from "../lib/agent/durable-host";
 import { ensureOllamaReady, ollamaHealth } from "../lib/agent/ollama-manager";
 import { runSelfCheck, storageSnapshot } from "../lib/agent/self-check";
 import { broadcastEvent } from "../lib/ws-hub";
@@ -671,6 +672,8 @@ router.get("/nova-core/state", (_req: Request, res: Response) => {
     local,
     kv,
     mirror,
+    // «المِرور مقفول» وحدها مش كفاية — السبب هو اللي بيفرق بين «مكنة غلط» و«قفل مقصود»
+    mirrorOffReason: mirror.on ? null : durableHostWhy(),
     verdict: mirror.on
       ? mirror.state === "ok"
         ? "محفوظة على القرص + نسخة في القاعدة (آخر push نجح)"

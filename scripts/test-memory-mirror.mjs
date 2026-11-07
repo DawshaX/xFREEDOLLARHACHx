@@ -6,7 +6,7 @@
  * mean "it forgot every lesson — again". The store now mirrors to one Supabase
  * row and rehydrates from it when the file is missing.
  *
- * Seven things must hold, and none of them can be proven by reading the code:
+ * Eight things must hold, and none of them can be proven by reading the code:
  *   1. with the env unset, NOT ONE network call is made (a plain file store)
  *   2. a cold start with no file hydrates from the mirror row
  *   3. a write reaches the mirror (and carries the whole document)
@@ -59,6 +59,10 @@ function freshStore(env) {
     "NOVA_STATE_EDGE",
     "NOVA_STATE_EDGE_URL",
     "NOVA_STATE_TOKEN",
+    "NOVA_EPHEMERAL_STATE",
+    "NOVA_STATE_DIR",
+    "GITHUB_ACTIONS",
+    "CI",
   ]) {
     delete process.env[key];
   }
@@ -183,6 +187,9 @@ const remoteDoc = {
   const store = freshStore({
     NOVA_MEMORY_FILE: path.join(work, "edge.json"),
     NOVA_SUPERVISED: "1",
+    // المجلد هنا مؤقت (tmpdir) والمكان الدائم هو /home/container — فالتصريح ده
+    // بيخلي السيناريو يقيس وضع الدالة، وسيناريو 8 يقيس إنه يتقفل لوحده.
+    NOVA_EPHEMERAL_STATE: "0",
     NOVA_SUPABASE_URL: "https://example.supabase.co",
   });
   const st = store.mirrorStatus();
@@ -241,6 +248,7 @@ const remoteDoc = {
   const store = freshStore({
     NOVA_MEMORY_FILE: file,
     NOVA_SUPERVISED: "1",
+    NOVA_EPHEMERAL_STATE: "0",
     NOVA_SUPABASE_URL: "https://example.supabase.co",
   });
   const out = await store.hydrateMemoryFromMirror();
@@ -258,11 +266,39 @@ const remoteDoc = {
   const cold = freshStore({
     NOVA_MEMORY_FILE: file,
     NOVA_SUPERVISED: "1",
+    NOVA_EPHEMERAL_STATE: "0",
     NOVA_SUPABASE_URL: "https://example.supabase.co",
   });
   const out2 = await cold.hydrateMemoryFromMirror();
   check("a failed read never pushes blind", out2.bootstrapped === undefined && seen.length === before, JSON.stringify(out2));
   check("the failure is recorded, not thrown", cold.mirrorStatus().state === "error", JSON.stringify(cold.mirrorStatus()));
+}
+
+/* ── 8 · CI never writes the durable row ─────────────────────────────────── */
+{
+  // القياس اللي جبّر السيناريو ده: live audit شغّل الحزمة نفسها (boot.mjs بيحط
+  // NOVA_SUPERVISED=1) في CI وعلى جهاز تطوير، فكتب `nova_memory` بـ«Audit marker»
+  // سجلين بدل 20 سجل المكنة (متقاس 2026-11-07T17:01:20Z من القاعدة نفسها).
+  // بقى لازم مكان الحالة يكون /home/container فعلًا عشان المِرور يتفعّل بالافتراضي.
+  for (const trigger of [{ GITHUB_ACTIONS: "true" }, { CI: "true" }, { CODESPACES: "true" }, {}]) {
+    const calls = [];
+    globalThis.fetch = async (url) => {
+      calls.push(String(url));
+      return { ok: true, status: 200, json: async () => ({ ok: true, row: null, records: 0 }) };
+    };
+    const store = freshStore({
+      NOVA_MEMORY_FILE: path.join(work, "ephemeral.json"),
+      NOVA_SUPERVISED: "1",
+      NOVA_SUPABASE_URL: "https://example.supabase.co",
+      ...trigger,
+    });
+    const label = Object.keys(trigger)[0] ?? "لا CI ولا مجلد دائم";
+    await store.hydrateMemoryFromMirror();
+    store.remember({ kind: "fact", title: "علامة لحظية", content: "temp copy must not write" });
+    store.flushMemory();
+    await new Promise((r) => setTimeout(r, 1700));
+    check(`${label}: نسخة لحظية ما تكتبش في الدائمة`, calls.length === 0 && store.mirrorStatus().on === false, `${calls.length} calls · ${JSON.stringify(store.mirrorStatus())}`);
+  }
 }
 
 let bad = 0;

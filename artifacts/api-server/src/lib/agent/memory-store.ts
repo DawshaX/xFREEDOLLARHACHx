@@ -21,6 +21,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { isDurableHost } from "./durable-host";
 
 export type MemoryKind = "fact" | "preference" | "lesson" | "event" | "session";
 
@@ -99,11 +100,11 @@ let lastWriteError: string | null = null;
  * unset this module behaves exactly as before — a plain file, no network.
  */
 /**
- * المكنة المُشرَفة (boot.mjs بيحط NOVA_SUPERVISED=1) هي الوحيدة اللي ليها مصدر
- * افتراضي — أي فرع تاني من المستودع العام ما يبعتش حاجة للقاعدة دي. ومن غيره
- * لازم env صريح، فالقاعدة دي مش مخبأ: `NOVA_SUPABASE_URL` هو اللي بيختار.
+ * المصدر الافتراضي للقاعدة مفتوح للمكنة الدايمة وحدها (`durable-host.ts`):
+ * مُشرَّف + مكان الحالة `/home/container` + مفيش CI. غير كده لازم env صريح
+ * (`NOVA_SUPABASE_URL`) — فالحاجة متتعملش بالغلط من نسخة لحظية، والقاعدة مش مخبأ.
  */
-const SUPERVISED = process.env.NOVA_SUPERVISED === "1";
+const SUPERVISED = isDurableHost();
 const MIRROR_URL = (
   process.env.NOVA_SUPABASE_URL || (SUPERVISED ? "https://dbaaclqycsiefjwjfavf.supabase.co" : "")
 ).replace(/\/+$/, "");
