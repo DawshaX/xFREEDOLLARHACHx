@@ -220,6 +220,18 @@ function appendLog(line: string): void {
   try {
     fs.mkdirSync(stateDir(), { recursive: true });
     fs.appendFileSync(LOG(), `[${new Date().toISOString()}] ${line}\n`);
+    // اللوج ده بيزيد كل 5 دقايق للأبد، والحاوية المجانية سقفها 512MB — التخزين
+    // على وايفي كان بيليه من غير أي دوران (لوحة المكنة: قرص 347MB). السقف 256KB
+    // وآخر 600 سطر؛ التاريخ جوه كل سطر فاللي بيتشال بيكون الأقدم بجد.
+    const st = fs.statSync(LOG());
+    if (st.size > 256 * 1024) {
+      const tail = fs
+        .readFileSync(LOG(), "utf8")
+        .split("\n")
+        .slice(-600)
+        .join("\n");
+      fs.writeFileSync(LOG(), tail.endsWith("\n") ? tail : `${tail}\n`);
+    }
   } catch {
     /* ignore */
   }

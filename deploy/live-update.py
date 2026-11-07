@@ -243,38 +243,31 @@ def backups_root(dest: str) -> str:
     return root
 
 
-def backup(dest: str, files: list[tuple[str, str, int]] | None = None) -> str | None:
-    """نسخة احتياطية محصورة في الملفات اللي هتتكتب فعلًا.
-
-    `copytree` على الشجرة كان بينسخ `state/` اللي عليها 200k سجل وثغرات محلّية،
-    وكل محاولة كانت بتسيب نسخة في /tmp — وده اللي أكل 8GB في 13 دقيقة وقفل
-    المكنة (متقاس 2026-11-07 03:25→03:38Z). الملفات اللي مابتتغيّرش مفيش
-    لازمة لنسخها: لو اتكتبت غلط فالـrollback بيتّها هي، مش الشجرة كلها.
-    """
-    stamp = time.strftime("%Y%m%d-%H%M%S")
+def new_backup_dir(dest: str) -> str:
+    """مجلد فاضي للنسخ الاحتياطية — الملفاته بتتملى واحد-واحد وقت الكتابة."""
     prune_backups(dest)
-    target = os.path.join(backups_root(dest), f"nova-backup-{stamp}")
-    if files is None:
-        try:
-            shutil.copytree(dest, target, ignore=shutil.ignore_patterns(*PROTECTED_NAMES))
-            log(f"→ نسخة احتياطية كاملة: {target}")
-            return target
-        except Exception as exc:  # نسخة احتياطية ناقصة مش سبب نوقف
-            log(f"! تعذّر عمل نسخة احتياطية: {exc}")
-            return None
-    total = 0
+    target = os.path.join(backups_root(dest), f"nova-backup-{time.strftime('%Y%m%d-%H%M%S')}")
+    os.makedirs(target, exist_ok=True)
+    return target
+
+
+def stash(dest: str, backup_dir: str, rel: str) -> bool:
+    """ننسخ الملف الحالي قبل ما ندهسه.
+
+    النسخة كانت بتسبق النسخ وبتاخد كل ملفات الخطة — ودي 151 ملف · 11.8MB
+    كل مرة عشان بس ملفين كانو هيتغيروا (متقاس 2026-11-07 03:57Z على وايفي).
+    اللي «زي ما هو» مالوش لازمة ننسخه: مش بيتغيّر، فالرجوع ليه مش مطلوب.
+    """
+    src = os.path.join(dest, rel)
+    if not os.path.exists(src):
+        return False
+    dst = os.path.join(backup_dir, rel)
     try:
-        os.makedirs(target, exist_ok=True)
-        for full, rel, size in files:
-            dest_file = os.path.join(target, rel)
-            os.makedirs(os.path.dirname(dest_file) or target, exist_ok=True)
-            shutil.copy2(full if os.path.exists(full) else os.path.join(dest, rel), dest_file)
-            total += size
-        log(f"→ نسخة احتياطية محصورة: {target} ({len(files)} ملف · {human(total)})")
-        return target
-    except Exception as exc:
-        log(f"! تعذّر عمل نسخة احتياطية محصورة: {exc}")
-        return None
+        os.makedirs(os.path.dirname(dst) or backup_dir, exist_ok=True)
+        shutil.copy2(src, dst)
+        return True
+    except OSError:
+        return False
 
 
 def plan(src: str, dest: str) -> list[tuple[str, str, int]]:
@@ -413,8 +406,9 @@ def main() -> int:
         previous_build = None
 
     backup_dir = None
+    stashed = 0
     if not args.no_backup:
-        backup_dir = backup(dest, files)
+        backup_dir = new_backup_dir(dest)
 
     written = 0
     unchanged = 0
@@ -428,6 +422,8 @@ def main() -> int:
                         continue
         except OSError:
             pass
+        if backup_dir and stash(dest, backup_dir, rel):
+            stashed += 1
         os.makedirs(os.path.dirname(target) or dest, exist_ok=True)
         shutil.copy2(full, target)
         written += 1
@@ -442,6 +438,16 @@ def main() -> int:
     # النسخ اتكتب والسلامة متأكد منها — السجل يتصفّر والعلامة تتشال، فالمحاولة
     # الجاية تبدأ نظيفة ومش متحسوبة كفشل.
     clear_fails(dest, args.url)
+
+    if backup_dir:
+        saved = 0
+        for dirpath, _dirs, names in os.walk(backup_dir):
+            for fn in names:
+                try:
+                    saved += os.path.getsize(os.path.join(dirpath, fn))
+                except OSError:
+                    pass
+        log(f"→ نسخة احتياطية محصورة: {backup_dir} ({stashed} ملف · {human(saved)}) — اللي ما اتغيّرش اتساب")
 
     keep = [n for n in sorted(PROTECTED_NAMES) if os.path.exists(os.path.join(dest, n))]
     log("─" * 62)
