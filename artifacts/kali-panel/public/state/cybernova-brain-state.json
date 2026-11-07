@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 107,
-    "lastHeartbeatAt": "2026-11-07T01:27:41.014Z",
+    "autonomousCyclesCompleted": 108,
+    "lastHeartbeatAt": "2026-11-07T08:02:09.218Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #107 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #108 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794038530305",
+      "ts": "2026-11-07 08:02:10 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #108 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 142.251.210.113 | HTTP 200 | SHA256: ebc5264ed827a14a — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 11 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:20)"
+    },
     {
       "id": "pulse-1794014862661",
       "ts": "2026-11-07 01:27:42 UTC",
@@ -202,13 +209,6 @@
       "category": "GITHUB_CLOUD_PULSE",
       "titleAr": "نبضة العقل السحابي التلقائية #84 على الهدف (bughunters.google.com)",
       "detailAr": "IP: 142.251.218.177 | HTTP 200 | SHA256: 57deba8d9598161e — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 76 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:21)"
-    },
-    {
-      "id": "new-1793587264422-whhm",
-      "ts": "2026-11-02 02:41:04 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #83 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     }
   ],
   "extractedArtifactsVault": [
@@ -1503,6 +1503,36 @@
       "at": "2026-11-06T01:56:03.641Z"
     },
     {
+      "id": "CVE-2023-34966",
+      "title": "CVE-2023-34966",
+      "description": "An infinite loop vulnerability was found in Samba's mdssvc RPC service for Spotlight. When parsing Spotlight mdssvc RPC packets sent by the client, the core unmarshalling function sl_unpack_loop() did not validate a field in the network packet that contains the count of elements in an array-like structure. By passing 0 as the count value, the attacked function will run in an endless loop consuming",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-34966",
+      "at": "2026-11-07T08:02:09.769Z"
+    },
+    {
+      "id": "CVE-2023-5156",
+      "title": "CVE-2023-5156",
+      "description": "A flaw was found in the GNU C Library. A recent fix for CVE-2023-4806 introduced the potential for a memory leak, which may result in an application crash.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5156",
+      "at": "2026-11-07T08:02:09.769Z"
+    },
+    {
+      "id": "CVE-2023-39198",
+      "title": "CVE-2023-39198",
+      "description": "A race condition was found in the QXL driver in the Linux kernel. The qxl_mode_dumb_create() function dereferences the qobj returned by the qxl_gem_object_create_with_handle(), but the handle is the only one holding a reference to it. This flaw allows an attacker to guess the returned handle value and trigger a use-after-free issue, potentially leading to a denial of service or privilege escalatio",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-39198",
+      "at": "2026-11-07T08:02:09.769Z"
+    },
+    {
       "id": "CVE-2023-5379",
       "title": "CVE-2023-5379",
       "description": "A flaw was found in Undertow. When an AJP request is sent that exceeds the max-header-size attribute in ajp-listener, JBoss EAP is marked in an error state by mod_cluster in httpd, causing JBoss EAP to close the TCP connection without returning an AJP response. This happens because mod_proxy_cluster marks the JBoss EAP instance as an error worker when the TCP connection is closed from the backend ",
@@ -2053,6 +2083,16 @@
       "at": "2026-11-06T01:56:03.641Z"
     },
     {
+      "id": "CVE-2023-3106",
+      "title": "CVE-2023-3106",
+      "description": "A NULL pointer dereference vulnerability was found in netlink_dump. This issue can occur when the Netlink socket receives the message(sendmsg) for the XFRM_MSG_GETSA, XFRM_MSG_GETPOLICY type message, and the DUMP flag is set and can cause a denial of service or possibly another unspecified impact. Due to the nature of the flaw, privilege escalation cannot be fully ruled out, although it is unlikel",
+      "cvss": 6.6,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3106",
+      "at": "2026-11-07T08:02:09.769Z"
+    },
+    {
       "id": "CVE-2023-40660",
       "title": "CVE-2023-40660",
       "description": "A flaw was found in OpenSC packages that allow a potential PIN bypass. When a token/card is authenticated by one process, it can perform cryptographic operations in other processes when an empty zero-length pin is passed. This issue poses a security risk, particularly for OS logon/screen unlock and for small, permanently connected tokens to computers. Additionally, the token can internally track l",
@@ -2061,6 +2101,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-40660",
       "at": "2026-11-06T21:53:20.410Z"
+    },
+    {
+      "id": "CVE-2023-42755",
+      "title": "CVE-2023-42755",
+      "description": "A flaw was found in the IPv4 Resource Reservation Protocol (RSVP) classifier in the Linux kernel. The xprt pointer may go beyond the linear part of the skb, leading to an out-of-bounds read in the `rsvp_classify` function. This issue may allow a local user to crash the system and cause a denial of service.",
+      "cvss": 6.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-42755",
+      "at": "2026-11-07T08:02:09.769Z"
     },
     {
       "id": "CVE-2023-6277",
@@ -2173,6 +2223,26 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2023-5090",
+      "title": "CVE-2023-5090",
+      "description": "A flaw was found in KVM. An improper check in svm_set_x2apic_msr_interception() may allow direct access to host x2apic msrs when the guest resets its apic, potentially leading to a denial of service condition.",
+      "cvss": 6,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5090",
+      "at": "2026-11-07T08:02:09.769Z"
+    },
+    {
+      "id": "CVE-2023-3347",
+      "title": "CVE-2023-3347",
+      "description": "A vulnerability was found in Samba's SMB2 packet signing mechanism. The SMB2 packet signing is not enforced if an admin configured \"server signing = required\" or for SMB2 connections to Domain Controllers where SMB2 packet signing is mandatory. This flaw allows an attacker to perform attacks, such as a man-in-the-middle attack, by intercepting the network traffic and modifying the SMB2 messages be",
+      "cvss": 5.9,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3347",
+      "at": "2026-11-07T08:02:09.769Z"
+    },
+    {
       "id": "CVE-2022-2127",
       "title": "CVE-2022-2127",
       "description": "An out-of-bounds read vulnerability was found in Samba due to insufficient length checks in winbindd_pam_auth_crap.c. When performing NTLM authentication, the client replies to cryptographic challenges back to the server. These replies have variable lengths, and Winbind fails to check the lan manager response length. When Winbind is used for NTLM authentication, a maliciously crafted request can t",
@@ -2201,6 +2271,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4813",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2023-43788",
+      "title": "CVE-2023-43788",
+      "description": "A vulnerability was found in libXpm due to a boundary condition within the XpmCreateXpmImageFromBuffer() function. This flaw allows a local attacker to trigger an out-of-bounds read error and read the contents of memory on the system.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-43788",
+      "at": "2026-11-07T08:02:09.769Z"
     },
     {
       "id": "CVE-2023-6622",
@@ -2571,96 +2651,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-15291",
       "at": "2026-11-02T21:06:50.538Z"
-    },
-    {
-      "id": "CVE-2011-4346",
-      "title": "CVE-2011-4346",
-      "description": "Cross-site scripting (XSS) vulnerability in the web interface in Red Hat Network (RHN) Satellite allows remote authenticated users to inject arbitrary web script or HTML via the Description field of the asset tag in a Custom Info page.",
-      "cvss": 4.6,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2011-4346",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2023-42756",
-      "title": "CVE-2023-42756",
-      "description": "A flaw was found in the Netfilter subsystem of the Linux kernel. A race condition between IPSET_CMD_ADD and IPSET_CMD_SWAP can lead to a kernel panic due to the invocation of `__ip_set_put` on a wrong `set`. This issue may allow a local user to crash the system.",
-      "cvss": 4.4,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-42756",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2023-5868",
-      "title": "CVE-2023-5868",
-      "description": "A memory disclosure vulnerability was found in PostgreSQL that allows remote users to access sensitive information by exploiting certain aggregate function calls with 'unknown'-type arguments. Handling 'unknown'-type values from string literals without type designation can disclose bytes, potentially revealing notable and confidential information. This issue exists due to excessive data output in ",
-      "cvss": 4.3,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5868",
-      "at": "2026-11-07T01:27:41.993Z"
-    },
-    {
-      "id": "CVE-2023-6121",
-      "title": "CVE-2023-6121",
-      "description": "An out-of-bounds read vulnerability was found in the NVMe-oF/TCP subsystem in the Linux kernel. This issue may allow a remote attacker to send a crafted TCP packet, triggering a heap-based buffer overflow that results in kmalloc data being printed and potentially leaked to the kernel ring buffer (dmesg).",
-      "cvss": 4.3,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6121",
-      "at": "2026-11-06T16:29:53.081Z"
-    },
-    {
-      "id": "CVE-2018-12209",
-      "title": "CVE-2018-12209",
-      "description": "Insufficient access control in User Mode Driver in Intel(R) Graphics Driver for Windows* before versions 10.18.x.5059 (aka 15.33.x.5059), 10.18.x.5057 (aka 15.36.x.5057), 20.19.x.5063 (aka 15.40.x.5063) 21.20.x.5064 (aka 15.45.x.5064) and 24.20.100.6373 potentially enables an unprivileged user to read device configuration information via local access.",
-      "cvss": 3.3,
-      "severity": "LOW",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2018-12209",
-      "at": "2026-11-02T21:06:50.538Z"
-    },
-    {
-      "id": "CVE-2019-1552",
-      "title": "CVE-2019-1552",
-      "description": "OpenSSL has internal defaults for a directory tree where it can find a configuration file as well as certificates used for verification in TLS. This directory is most commonly referred to as OPENSSLDIR, and is configurable with the --prefix / --openssldir configuration options. For OpenSSL versions 1.1.0 and 1.1.1, the mingw configuration targets assume that resulting programs and libraries are in",
-      "cvss": 3.3,
-      "severity": "LOW",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-1552",
-      "at": "2026-11-02T21:06:50.538Z"
-    },
-    {
-      "id": "CVE-2020-8908",
-      "title": "CVE-2020-8908",
-      "description": "A temp directory creation vulnerability exists in all versions of Guava, allowing an attacker with access to the machine to potentially access data in a temporary directory created by the Guava API com.google.common.io.Files.createTempDir(). By default, on unix-like systems, the created directory is world-readable (readable by an attacker with access to the system). The method in question has been",
-      "cvss": 3.3,
-      "severity": "LOW",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-8908",
-      "at": "2026-11-02T21:06:50.538Z"
-    },
-    {
-      "id": "CVE-2012-5605",
-      "title": "CVE-2012-5605",
-      "description": "A flaw was found in Grinder, a component of Red Hat CloudForms. This vulnerability allows a local user to modify Grinder's cache files due to incorrect world-writable permissions set on the `/var/lib/pulp/cache/grinder/` directory. This could lead to unauthorized data tampering within the application's cache.",
-      "cvss": 3.3,
-      "severity": "LOW",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2012-5605",
-      "at": "2026-11-02T03:30:53.193Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 8,
+    "freshThisPulse": 11,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
       "GHSA:20"
     ],
-    "at": "2026-11-07T01:27:42.661Z"
+    "at": "2026-11-07T08:02:10.305Z"
   }
 }
