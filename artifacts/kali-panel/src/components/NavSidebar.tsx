@@ -49,7 +49,7 @@ export const NAV_SECTIONS: NavSection[] = [
     neonColor: "#ff6600", neonRgb: "255,102,0", symbol: "⚡",
     items: [
       { label: "نوفا · المخ والمدير",  icon: BrainCircuit, path: "/nova-fleet",        iconColor: "#e879f9", badge: "CORE", hot: true, skull: true },
-      { label: "نوفا — الوكيل الأساسي", icon: Radio,       path: "/nova-agent",        iconColor: "#22d3ee", badge: "CORE", hot: true, skull: true },
+      { label: "نوفا — مساحة عمل الوكيل", icon: Radio,     path: "/nova-fleet#work",   iconColor: "#22d3ee", badge: "LIVE", hot: true, skull: true },
       { label: "Live Agent Panel", icon: Activity,         path: "/live-agent",        iconColor: "#ff4444" },
       { label: "AI Agent V3",      icon: Brain,           path: "/nova-agent-v3",     iconColor: "#ff7722", badge: "V3" },
       { label: "Nova Agent V6",    icon: Sparkles,        path: "/nova-agent-v6",     iconColor: "#ffaa00", badge: "V6" },
@@ -235,6 +235,17 @@ const SECTION_KEY: Record<string, TKey> = {
   data: "sec_data",
 };
 
+function isNavItemActive(currentPath: string, items: NavSection["items"], path: string): boolean {
+  const hashIndex = path.indexOf("#");
+  const basePath = hashIndex >= 0 ? path.slice(0, hashIndex) : path;
+  if (hashIndex >= 0) return currentPath === basePath && window.location.hash === path.slice(hashIndex);
+
+  const hashSiblingSelected = items.some(
+    (item) => item.path.startsWith(`${path}#`) && currentPath === path && window.location.hash === item.path.slice(path.length),
+  );
+  return !hashSiblingSelected && (currentPath === path || (path !== "/" && currentPath.startsWith(path)));
+}
+
 function SideSection({ section, currentPath, onNav, collapsed }: {
   section: NavSection; currentPath: string;
   onNav: (p: string) => void; collapsed: boolean;
@@ -249,7 +260,7 @@ function SideSection({ section, currentPath, onNav, collapsed }: {
       <div className="flex flex-col items-center gap-[3px] py-1">
         {section.items.map(item => {
           const Icon = item.icon;
-          const active = currentPath === item.path || (item.path !== "/" && currentPath.startsWith(item.path));
+          const active = isNavItemActive(currentPath, section.items, item.path);
           return (
             <button key={item.path} title={item.label} onClick={() => onNav(item.path)}
               className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
@@ -314,7 +325,7 @@ function SideSection({ section, currentPath, onNav, collapsed }: {
         <div className="space-y-[1px] mt-0.5 ml-1">
           {section.items.map(item => {
             const Icon = item.icon;
-            const active = currentPath === item.path || (item.path !== "/" && currentPath.startsWith(item.path));
+            const active = isNavItemActive(currentPath, section.items, item.path);
             return (
               <button key={item.path} onClick={() => onNav(item.path)}
                 className="w-full flex items-center gap-2.5 px-2 py-[6px] rounded-xl transition-all duration-150 relative overflow-hidden group"
@@ -634,6 +645,11 @@ export function NavSidebar({ collapsed, onToggle }: NavSidebarProps) {
   const [location, navigate] = useLocation();
   const [, setSec] = useState(0);
   const scanLine = 50;
+  const onNav = (path: string) => {
+    const [pathname, hash] = path.split("#", 2);
+    navigate(pathname || "/");
+    if (hash) window.location.hash = hash;
+  };
 
   useEffect(() => {
     const id = setInterval(() => setSec(s => s + 1), 15000);
@@ -747,7 +763,7 @@ export function NavSidebar({ collapsed, onToggle }: NavSidebarProps) {
             key={section.id}
             section={section}
             currentPath={location}
-            onNav={navigate}
+            onNav={onNav}
             collapsed={collapsed}
           />
         ))}

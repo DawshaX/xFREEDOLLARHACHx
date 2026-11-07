@@ -1061,7 +1061,7 @@ function renderBody(w: WinInst, handleClientTool: (e: ClientToolEvent) => void, 
   const page = (path: string, title: string) => <PageWin path={path} title={title} />;
   switch (w.kind) {
     // Native components
-    case "browser":     return <BrowserWindow initialUrl="https://duckduckgo.com" />;
+    case "browser":     return <BrowserWindow initialUrl={typeof w.meta?.url === "string" ? w.meta.url : "https://duckduckgo.com"} />;
     case "terminal":    return <TerminalWindow />;
     case "files":       return <FilesWindow />;
     case "nodes":       return <NodesWindow />;
@@ -1941,6 +1941,38 @@ export default function Desktop() {
     setWins((prev) => [...prev, newInst(kind, meta)]);
   }, [wins]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedWindow = params.get("open");
+    if (!requestedWindow) return;
+    const requestedUrl = params.get("url");
+
+    params.delete("open");
+    params.delete("url");
+    const query = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+    );
+
+    const app = APPS.find(({ kind }) => kind === requestedWindow);
+    if (!app) return;
+
+    const meta: Record<string, unknown> = {};
+    if (app.kind === "browser" && requestedUrl) {
+      try {
+        const url = new URL(requestedUrl);
+        if ((url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password) {
+          meta.url = url.toString();
+        }
+      } catch {
+        // Keep the browser's default start page for invalid URLs.
+      }
+    }
+    openWindow(app.kind, meta);
+  }, [openWindow]);
+
   const focusWindow  = useCallback((id: string) => { zCounter += 1; setWins((p) => p.map((w) => w.id === id ? { ...w, z: zCounter } : w)); }, []);
   const closeWindow  = useCallback((id: string) => setWins((p) => {
     const next = p.filter((w) => w.id !== id);
@@ -1953,7 +1985,24 @@ export default function Desktop() {
   const resizeWin    = useCallback((id: string, ww: number, hh: number) => setWins((p) => p.map((w) => w.id === id ? { ...w, w: ww, h: hh } : w)), []);
 
   const handleClientTool = useCallback((e: ClientToolEvent) => {
-    if (e.name === "open_window" && e.input?.kind) openWindow(e.input.kind as WinKind);
+    const name = String(e.name || "");
+    const wanted = name === "open_window" || name === "ui_open_window"
+      ? (e.input?.window ?? e.input?.kind)
+      : name === "ui_browse_url" ? "browser" : undefined;
+    if (typeof wanted !== "string" || !wanted.trim()) return;
+    const meta: Record<string, unknown> = {};
+    // `ui_browse_url` (و `open_window` المصاحب لرابط) بييجوا من نوفا؛ الرابط بيتحقق
+    // منه هنا بنفس طريقة NovaFleetUnified — http(s) بس، من غير بيانات اعتماد.
+    const rawUrl = typeof e.input?.url === "string" ? e.input.url.trim() : "";
+    if (wanted === "browser" && rawUrl) {
+      try {
+        const url = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`);
+        if ((url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password) {
+          meta.url = url.toString();
+        }
+      } catch { /* النافذة هتفتح بالصفحة الافتراضية */ }
+    }
+    openWindow(wanted.trim() as WinKind, meta);
   }, [openWindow]);
 
   const unreadCount = notifs.filter((n) => !n.read).length;
