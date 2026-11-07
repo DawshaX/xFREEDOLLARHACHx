@@ -3,28 +3,28 @@
 > اتولّد من `scripts/verify-live.mjs` (شغّله `.github/workflows/live-verify.yml`).
 > كل هدف هنا صاحبه منشور صراحة إن فحصه مسموح — الوثيقة في العمود الأخير.
 
-آخر تشغيل: `2026-11-07T20:36:34.568Z` · الحكم: **AMBER** · ✓21 · ✗0 · ؟1 · (محجوب)0
-الأدوات المرصودة: dnsx, subfinder, httpx, nuclei, katana, nmap, naabu, ffuf · المحرك: `http://127.0.0.1:8090/api` · هدف التمرين: `scanme.nmap.org`
+آخر تشغيل: `2026-11-07T20:39:30.162Z` · الحكم: **RED** · ✓18 · ✗2 · ؟2 · (محجوب)0
+الأدوات المرصودة: subfinder, nuclei, nmap, ffuf · المحرك: `http://127.0.0.1:8090/api` · هدف التمرين: `scanme.nmap.org`
 
 | الطبقة | الفحص | الحالة | التفصيل |
 |---|---|---|---|
-| cli | dns resolution | ✓ pass | 2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present |
-| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · antivirus1.vulnweb.com, www.virus.vulnweb.com, www.vulnweb.com |
-| cli | httpx https://demo.testfire.net/ | ✓ pass | 200 · Altoro Mutual · |
-| cli | katana crawl testphp.vulnweb.com | ✓ pass | 1 رابط متكرول (المطلوب ≥1) |
+| cli | dns resolution | ✓ pass | 2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=absent |
+| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · antivirus1.vulnweb.com, estphp.vulnweb.com, rest.vulnweb.com |
+| cli | httpx present | ✗ fail | مش موجود |
+| cli | katana present | ✗ fail | مش موجود |
 | cli | nuclei -u testphp.vulnweb.com (high,critical) | ✓ pass | 4 طلب اتفحص و0 نتيجة high/critical · exit=0 · قوالب: [[34mINF[0m] No new updates found for nuclei templates |
 | cli | nmap scanme.nmap.org:80,22 | ✓ pass | 2 بورت مفتوح · 22/tcp open · 80/tcp open |
-| cli | hub nova.waifly.com | ✓ pass | https://nova.waifly.com/api/health → HTTP 200 · JSON 93B · ops/version → HTTP 502 · 665ms |
+| cli | hub nova.waifly.com | ? review | https://nova.waifly.com/api/health → HTTP 502 · 150B مش JSON · ops/version → HTTP 502 · 660ms |
 | cli | ffuf fuzz testphp.vulnweb.com | ✓ pass | 61 طلب مُرسل و0 مطابقة (1 سطر مخرجات) |
 | engine | engine reachable | ✓ pass | HTTP 200 |
-| engine | kinds report tool presence | ✓ pass | 21 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap, tools.amass, tools.naabu, tools.ffuf,… |
+| engine | kinds report tool presence | ✓ pass | 19 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.nuclei, tools.subfinder, tools.nmap, tools.amass, tools.ffuf, tools.dalfox, tools.gitleaks, tools.tri… |
 | engine | bounty catalog served | ✓ pass | 746 برنامج (511 بمكافأة) · آخر تحديث 5.1 يوم · ops/bounty/programs-catalog.json |
 | engine | catalog lookup over HTTP | ✓ pass | aces-dev.wnba.com → hackerone:nba-public (domain · استقبال open) · ونطاق مجهول → match:null |
 | engine | program registered active (demo.testfire.net) | ✓ pass | id=demo.testfire.net · policy=https://demo.testfire.net/ |
-| engine | job created | ✓ pass | job=20261107-83ab45 · 7 مهمة |
+| engine | job created | ✓ pass | job=20261107-8a1e38 · 7 مهمة |
 | engine | job executed | ✓ pass | 4/7 done · 3 failed · 11 finding · done |
-| engine | failed tasks | ? review | tools.subfinder: [self-node] subfinder exit=127 · 5ms · 0 نتيجة · tools.httpx: [self-node] httpx exit=127 · 4ms · 0 نتيجة · tools.nuclei: [self-node] nuclei exit=127 · 4ms · 0 نتيجة |
-| engine | evidence hashed on disk | ✓ pass | 9 ملف في state/jobs/20261107-83ab45/evidence · 4 فيهم بايتات · فاضي: tools.httpx-e3b0c44298fc.txt, tools.httpx.self-node-e3b0c44298fc.txt, tools.nuc… (5 — 5 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية) |
+| engine | failed tasks | ? review | tools.subfinder: [self-node] subfinder exit=127 · 6ms · 0 نتيجة · tools.httpx: [self-node] httpx exit=127 · 5ms · 0 نتيجة · tools.nuclei: [self-node] nuclei exit=127 · 5ms · 0 نتيجة |
+| engine | evidence hashed on disk | ✓ pass | 9 ملف في state/jobs/20261107-8a1e38/evidence · 4 فيهم بايتات · فاضي: tools.httpx-e3b0c44298fc.txt, tools.httpx.self-node-e3b0c44298fc.txt, tools.nuc… (5 — 5 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية) |
 | engine | report is honest about coverage | ✓ pass | 799 بايت · فيه «Coverage gaps»=true · «reportable»=true |
 | engine | findings vault is idempotent | ✓ pass | أول sync: +22/-22 (من مهام 11 · من الكتالوج القديم 11) · تاني: +0/-22 ومحدّثة 22 · متأكَّدة 0 |
 | engine | report draft gated on reproduction | ✓ pass | 3 مفتاح: 0 مسودة (200) · 3 مرفوضة (409) · البنية=true · سبب الرفض موجود=true |
