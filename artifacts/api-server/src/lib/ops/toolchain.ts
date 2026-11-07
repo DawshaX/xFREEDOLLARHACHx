@@ -28,6 +28,7 @@
  */
 import fs from "node:fs";
 import { isDurableHost } from "../agent/durable-host";
+import { wordlistInfo } from "./wordlist";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { resetBinaryCache, toolStatus } from "./tools";
@@ -64,6 +65,14 @@ export interface ToolchainStatus {
   files: Array<{ name: string; bytes: number }>;
   /** ملفات VENDORABLE موجودة في المجلد بس `findBinary` بيرفضها (مفيش X_OK) */
   unusable: Array<{ name: string; bytes: number }>;
+  /**
+   * حدود الحاوية المقروءة من cgroup — «استغل الرام والـCPU» لازم يبقى رقم عند
+   * الأداة، مش إحساس: منه بنعرف إن التنزيل اللي مات `exitCode:null` بعد 6.4 ثانية
+   * كان راح في حد ذاكرة، وإن nuclei ماشي في 256MB ولا لأ.
+   */
+  resources: { memLimitMB: number | null; memUsedMB: number | null; cpuQuota: number | null; note: string };
+  /** قائمة المسارات المدمجة اللي بتشتغل بيها ffuf/gobuster (متقاسة من الملف نفسه). */
+  wordlist: { path: string | null; lines: number; bytes: number; source: string };
   present: string[];
   missing: string[];
   writable: boolean;
@@ -214,6 +223,42 @@ function vendorerReason(x: {
   return `السكربت مشى بس ولا أداة ماثبتت (${x.results.map((r) => `${r.bin}:${r.status}`).join(", ").slice(0, 220)})`;
 }
 
+/** قراءة cgroup v2 ثم v1؛ لو الاتنين مش موجودين بنرجّع null وبنقول السبب. */
+function cgroupNum(files: string[], scale = 1): number | null {
+  for (const f of files) {
+    try {
+      const raw = fs.readFileSync(f, "utf8").trim();
+      if (!raw || raw === "max") continue;
+      const n = Number(raw.split(/\s+/)[0]);
+      if (Number.isFinite(n) && n > 0) return Math.round(n / scale);
+    } catch {
+      /* الملف مش موجود في الـnamespace ده — جرّب اللي بعده */
+    }
+  }
+  return null;
+}
+
+function containerResources(): { memLimitMB: number | null; memUsedMB: number | null; cpuQuota: number | null; note: string } {
+  const memLimitMB = cgroupNum(["/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"], 1048576);
+  const memUsedMB = cgroupNum(["/sys/fs/cgroup/memory.current", "/sys/fs/cgroup/memory/memory.usage_in_bytes"], 1048576);
+  // v2 بيكتب "quota period" في ملف واحد؛ v1 ملفين. `cpuQuota` = عدد الأنوية (مقاس، مش نسبة).
+  let cpuQuota: number | null = null;
+  try {
+    const [quota, period] = fs.readFileSync("/sys/fs/cgroup/cpu.max", "utf8").trim().split(/\s+/);
+    if (quota !== "max" && Number(period) > 0) cpuQuota = Math.round((Number(quota) / Number(period)) * 100) / 100;
+  } catch {
+    const q = cgroupNum(["/sys/fs/cgroup/cpu/cpu.cfs_quota_us"]);
+    const p = cgroupNum(["/sys/fs/cgroup/cpu/cpu.cfs_period_us"]);
+    if (q && p && q > 0) cpuQuota = Math.round((q / p) * 100) / 100;
+  }
+  return {
+    memLimitMB,
+    memUsedMB,
+    cpuQuota,
+    note: memLimitMB === null ? "مفيش cgroup مقروء — الحدود جوه المُشرف مش جوه الحاوية" : `فاضل ~${Math.max(0, memLimitMB - (memUsedMB ?? 0))}MB من ${memLimitMB}MB`,
+  };
+}
+
 /** قراءة فقط: مافيش شبكة، مافيش spawn، مافيش كتابة. */
 export function toolchainStatus(): ToolchainStatus {
   const dir = vendorDir();
@@ -259,6 +304,8 @@ export function toolchainStatus(): ToolchainStatus {
     scriptAvailable: Boolean(findVendorerScript()),
     binaries,
     freeMB: freeMBAt(dir),
+    resources: containerResources(),
+    wordlist: wordlistInfo(),
     minFreeMB: minFreeMB(),
     last: readRecord(),
   };
@@ -333,7 +380,15 @@ export function provisionToolchain(opts: ProvisionOptions = {}): Promise<Provisi
   const timeoutMs = Math.max(30_000, Math.min(Number(opts.timeoutMs) || 540_000, 1_200_000));
 
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, argv, { cwd: path.dirname(path.dirname(script)), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env } });
+    // سقف heap للابن = ~60% من حد الحاوية (متقاس: محاولة 17:17:17Z ماتت
+    // `exitCode:null · ms 6395` — يعني قتل من الرام مش فشل شبكة). من غير السقف ده
+    // V8 بياخد الحد كله والـOOM-killer بيختار الضحية، والرسالة اللي توصلنا «?».
+    const res = containerResources();
+    const childEnv: Record<string, string | undefined> = { ...process.env };
+    if (res.memLimitMB && res.memLimitMB > 0 && res.memLimitMB < 2048 && !process.env.NODE_OPTIONS) {
+      childEnv.NODE_OPTIONS = `--max-old-space-size=${Math.max(96, Math.round(res.memLimitMB * 0.6))}`;
+    }
+    const child = spawn(process.execPath, argv, { cwd: path.dirname(path.dirname(script)), stdio: ["ignore", "pipe", "pipe"], env: childEnv });
     let out = "";
     let err = "";
     let settled = false;

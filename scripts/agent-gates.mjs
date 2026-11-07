@@ -39,6 +39,7 @@ const AGENT_GATES = [
   ["scripts/test-memory-mirror.mjs", "memory: local + Supabase mirror"],
   ["scripts/test-self-restart.mjs", "self-restart: update marker and boot"],
   ["scripts/test-update-backoff.mjs", "update back-off: a dead loop parks itself"],
+  ["scripts/test-toolchain-mirror.mjs", "toolchain mirror: packed layout, hashes, wordlist, new kinds"],
 ];
 
 /** Structural audits: cheaper to read than to run, and they catch drift. */

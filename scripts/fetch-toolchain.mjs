@@ -24,6 +24,7 @@ import path from "node:path";
 import os from "node:os";
 import { spawn } from "node:child_process";
 import zlib from "node:zlib";
+import { Readable } from "node:stream";
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const i = argv.indexOf(`--${k}`); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : d; };
@@ -77,6 +78,27 @@ export const NOT_VENDORABLE = [
   { bin: "whatweb", why: "سكربت Ruby ومفيش له release assets — بيتشغّل من Dockerfile.kali" },
 ];
 
+/**
+ * المرآة: إصدار عندنا على جيت هاب (`nova-toolchain`) فيه الأداوات الثابتة + manifest
+ * بأختام SHA-256. ليه وهو فيه أصلًا؟ القياس على السلوت الحيّ (2026-11-07T17:32:23Z):
+ * `node scripts/fetch-toolchain.mjs` جرى لآخره (exitCode 0 · 3.3 ثانية) وكل أداة
+ * طلعت `failed · api.github.com ماردّش` — الحاوية بتوصلها تنزيلات `github.com/.../releases/download`
+ * (متقاس: الحزمة 3.0MB نزلت في 0.7 ثانية) بس الـ**API** محجوب/محدود من هناك.
+ * فبدل ما نطلب من المكنة تحل اسم آخر إصدار، CI (شغّال على رانر شبكة مفتوحة) بيحلّه
+ * وبيحزّنه، والمكنة بتسحب أرشيف واحد وتتحقق من الختم. مافيش سر في العنوان: الأصل عام.
+ * `NOVA_TOOLCHAIN_MIRROR` بياخد الأولوية، و`--no-mirror` بيرجع للمسار القديم.
+ */
+const CI_ENV = ["GITHUB_ACTIONS", "CI"].some((k) => /^(1|true)$/i.test(String(process.env[k] ?? "")));
+const MIRROR_BASE = String(
+  arg("mirror", process.env.NOVA_TOOLCHAIN_MIRROR
+    ?? (process.env.NOVA_SUPERVISED === "1" && !CI_ENV
+      ? "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-toolchain"
+      : "")),
+).replace(/\/+$/, "");
+const MIRROR = has("no-mirror") ? "" : MIRROR_BASE;
+/** سقف الأرشيف: الحزمة كلها ~200-400MB؛ فوق ده بنقول فشل صريح بدل ما ننفخ القرص. */
+const MIRROR_MAX_BYTES = Math.round(Number(process.env.NOVA_TOOLCHAIN_MIRROR_MAX_MB || 900) * 1048576);
+
 const MANIFEST = path.join(INTO, ".vendored.json");
 
 const log = (...a) => { if (!JSONOUT) console.log("[toolchain]", ...a); };
@@ -102,6 +124,42 @@ async function gh(pathname) {
   }).catch((e) => null);
   if (!res || !res.ok) return null;
   return res.json().catch(() => null);
+}
+
+/**
+ * تنزيل مكتوب على القرص على طول (Readable→WriteStream). المسار القديم كان
+ * `res.arrayBuffer()` بيحمل الملف كامل في الرام: على حاوية 256MB متقاسة
+ * (`/api/nova-core/version → rssMb 159`) ده هو اللي خلّى محاولة 17:17:17Z تموت
+ * بـ`exitCode: null · ms 6395` بعد أول ملف كبير — مش خطأ شبكة، قتل من الرام.
+ */
+function downloadStream(url, to, { timeoutMs = 240_000, maxBytes = 0 } = {}) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    const timer = setTimeout(() => { try { ac.abort(); } catch { /* already */ } finish({ ok: false, why: `انتهت المهلة (${Math.round(timeoutMs / 1000)}s)` }); }, timeoutMs);
+    const ac = new AbortController();
+    fetch(url, { redirect: "follow", signal: ac.signal })
+      .then((res) => {
+        if (!res.ok || !res.body) { clearTimeout(timer); return finish({ ok: false, why: `HTTP ${res.status ?? "?"}` }); }
+        const declared = Number(res.headers.get("content-length") || 0);
+        if (maxBytes && declared && declared > maxBytes) { clearTimeout(timer); return finish({ ok: false, why: `المعلن ${declared} بايت أكبر من السقف` }); }
+        const out = fs.createWriteStream(to);
+        let bytes = 0;
+        let sha = null;
+        try { sha = crypto.createHash("sha256"); } catch { sha = null; }
+        const src = Readable.fromWeb(res.body);
+        src.on("data", (c) => {
+          bytes += c.length;
+          if (sha) sha.update(c);
+          if (maxBytes && bytes > maxBytes) { src.destroy(new Error("over-cap")); }
+        });
+        src.on("error", (e) => { try { out.destroy(); } catch { /* already */ } clearTimeout(timer); finish({ ok: false, why: e.message }); });
+        out.on("error", (e) => { clearTimeout(timer); finish({ ok: false, why: e.message }); });
+        out.on("close", () => { clearTimeout(timer); finish({ ok: bytes > 1024, bytes, sha256: sha ? sha.digest("hex") : null, why: bytes > 1024 ? null : "الملف أصغر من 1KB" }); });
+        src.pipe(out);
+      })
+      .catch((e) => { clearTimeout(timer); finish({ ok: false, why: String(e?.message || e) }); });
+  });
 }
 
 async function download(url, to) {
@@ -190,8 +248,52 @@ async function extract(archive, dest, kind) {
 function readManifest() { try { return JSON.parse(fs.readFileSync(MANIFEST, "utf8")); } catch { return {}; } }
 function writeManifest(m) { try { fs.writeFileSync(MANIFEST, JSON.stringify(m, null, 2) + "\n"); } catch { /* read-only fs is fine */ } }
 
+/** فهرس المرآة بيُنزّل مرة واحدة لكل تشغيل (أرشيف واحد لـ12 أداة). */
+let mirrorIndex = null;
+async function loadMirror() {
+  if (mirrorIndex) return mirrorIndex;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nova-mirror-"));
+  const man = path.join(tmp, "nova-toolchain.json");
+  const got = await downloadStream(`${MIRROR}/nova-toolchain.json`, man, { timeoutMs: 30_000, maxBytes: 4 * 1048576 });
+  if (!got.ok) { fs.rmSync(tmp, { recursive: true, force: true }); mirrorIndex = { error: got.why }; return mirrorIndex; }
+  let doc = null;
+  try { doc = JSON.parse(fs.readFileSync(man, "utf8")); } catch (e) { doc = null; }
+  if (!doc || !Array.isArray(doc.tools) || !doc.archive) {
+    fs.rmSync(tmp, { recursive: true, force: true });
+    mirrorIndex = { error: "المانيفست مش مقروء" };
+    return mirrorIndex;
+  }
+  const arc = path.join(tmp, doc.archive);
+  log(`↓ مرآة: ${doc.archive} (${(Number(doc.archiveBytes || 0) / 1e6).toFixed(0)} MB) — ${doc.builtAt || "نسخة بلا تاريخ"}`);
+  const dl = await downloadStream(`${MIRROR}/${doc.archive}`, arc, { timeoutMs: 600_000, maxBytes: MIRROR_MAX_BYTES });
+  if (!dl.ok) { fs.rmSync(tmp, { recursive: true, force: true }); mirrorIndex = { error: `تنزيل الأرشيف: ${dl.why}` }; return mirrorIndex; }
+  // الختم قبل الفك: أرشيف من إصدار قديم أو ملف مقطوع لازم يرفض، مش يتفك على عميان.
+  if (doc.archiveSha256 && dl.sha256 && dl.sha256 !== doc.archiveSha256) {
+    fs.rmSync(tmp, { recursive: true, force: true });
+    mirrorIndex = { error: `ختم الأرشيف مش مطابق (${dl.sha256.slice(0, 12)}… ≠ ${doc.archiveSha256.slice(0, 12)}…)` };
+    return mirrorIndex;
+  }
+  mirrorIndex = { doc, arc, tmp, byBin: new Map(doc.tools.map((t) => [t.bin, t])) };
+  return mirrorIndex;
+}
+
+/**
+ * فك عضو واحد من الأرشيف بأمر `tar` نفسه اللي بيستخدمه مسار الـtargz فوق —
+ * القياس إن `tar` موجود على الحاوية (الأدوات اللي في vendor/bin اتفكت بيه أصلًا).
+ */
+async function extractFromMirror(idx, bin, dest) {
+  const r = await run("tar", ["xzf", idx.arc, "-C", idx.tmp, `--wildcards`, `--no-same-owner`, `bin/${bin}`], { timeout: 120_000 });
+  if (r.code !== 0) return { ok: false, why: `tar طلع ${r.code}: ${String(r.err || r.out).slice(0, 120)}` };
+  const found = path.join(idx.tmp, "bin", bin);
+  if (!fs.existsSync(found)) return { ok: false, why: "العضو مش في الأرشيف" };
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(found, dest);
+  fs.chmodSync(dest, 0o755);
+  try { fs.rmSync(found, { force: true }); } catch { /* cleanup only */ }
+  return { ok: true };
+}
+
 async function fetchOne(tool, manifest) {
-  const latest = await gh(`/repos/${tool.repo}/releases/latest`);
   const tag = latest?.tag_name || null;
   const dest = path.join(INTO, tool.bin);
   // الملف موجود بس مش executable — حالة متقاسة على وايفلّي 2026-11-07: amass (52MB)
@@ -216,7 +318,13 @@ async function fetchOne(tool, manifest) {
   if (!FORCE && fs.existsSync(dest) && manifest[tool.bin]?.tag === tag && tag) {
     return { bin: tool.bin, status: "skipped", tag, why: "موجود من قبل بنفس الإصدار" };
   }
-  if (!latest) return { bin: tool.bin, status: "failed", why: "api.github.com ماردّش (rate limit أو مفيش خروج من هنا)" };
+  if (!latest) {
+    // المكنة ما بتشوفش api.github.com (متقاس 17:32:23Z) — ده مش فشل تنزيل، ده
+    // محلول عندنا: الأرشيف المرآتي. بنحاوله قبل ما نعلن الفشل.
+    const fromMirror = await tryMirror(tool, manifest);
+    if (fromMirror) return fromMirror;
+    return { bin: tool.bin, status: "failed", why: "api.github.com ماردّش (rate limit أو مفيش خروج من هنا)" };
+  }
   const asset = (latest.assets || []).find((a) => tool.match.test(a.name));
   if (!asset) return { bin: tool.bin, status: "failed", tag, why: `مفيش asset بيطابق linux/amd64 من بين ${(latest.assets || []).length} ملف` };
 
@@ -252,6 +360,43 @@ async function fetchOne(tool, manifest) {
   manifest[tool.bin] = { tag, at: new Date().toISOString(), version: line.slice(0, 120), path: dest };
   log(`✓ ${tool.bin} → ${line.slice(0, 90)}`);
   return { bin: tool.bin, status: "installed", tag, version: line.slice(0, 120) };
+}
+
+/** نسخة الأداة من مرآتنا — بتتحقق من الختم وبتعمل اختبار نسخة زي المسار الأصلي. */
+async function tryMirror(tool, manifest) {
+  if (!MIRROR) return null;
+  const idx = await loadMirror();
+  if (!idx || !idx.byBin) return { bin: tool.bin, status: "failed", why: `المرآة ما وصلتش: ${idx?.error || "سبب مجهول"}` };
+  const entry = idx.byBin.get(tool.bin);
+  if (!entry) return null; // مش في مرآتنا —سيبه لمسار المنبع
+  const dest = path.join(INTO, tool.bin);
+  const ex = await extractFromMirror(idx, tool.bin, dest);
+  if (!ex.ok) return { bin: tool.bin, status: "failed", tag: entry.tag, why: ex.why };
+  if (entry.sha256) {
+    let got = null;
+    try {
+      got = await new Promise((resolve) => {
+        const h = crypto.createHash("sha256");
+        const rs = fs.createReadStream(dest);
+        rs.on("data", (c) => h.update(c));
+        rs.on("end", () => resolve(h.digest("hex")));
+        rs.on("error", () => resolve(null));
+      });
+    } catch { got = null; }
+    if (got && got !== entry.sha256) {
+      fs.rmSync(dest, { force: true });
+      return { bin: tool.bin, status: "failed", tag: entry.tag, why: "ملف الأداة مش مطابق لختم المرآة" };
+    }
+  }
+  const smoke = await run(dest, tool.ver, { timeout: 15_000 });
+  const line = String(smoke.out || smoke.err).split("\n").map((x) => x.trim()).filter(Boolean)[0] || "";
+  if (smoke.code !== 0 || !line) {
+    fs.rmSync(dest, { force: true });
+    return { bin: tool.bin, status: "failed", tag: entry.tag, why: `اختبار النسخة مامرّش بعد التنزيل من المرآة (exit ${smoke.code})` };
+  }
+  manifest[tool.bin] = { tag: entry.tag ?? null, at: new Date().toISOString(), version: line.slice(0, 120), path: dest, source: "mirror" };
+  log(`✓ ${tool.bin} → ${line.slice(0, 90)} (مرآة)`);
+  return { bin: tool.bin, status: "installed", tag: entry.tag ?? null, version: line.slice(0, 120), source: "mirror" };
 }
 
 async function main() {

@@ -1,0 +1,103 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA toolchain mirror — الأدوات الحقيقية بتتنزل هنا، والمكنة بتسحبها من جيت هاب.
+#
+# Why (مقاس، مش تخمين):
+#   • الحاوية على وايفلّي بتوصلها تنزيلات `github.com/.../releases/download`
+#     (متقاس: حزمة 3.0MB نزلت في 0.7 ثانية)، بس `api.github.com` مابيردش من جوه
+#     المكنة — القياس `GET /api/ops/tools → last` يوم 2026-11-07T17:32:23Z:
+#     12/12 أدوات `failed · api.github.com ماردّش`، والـ17:17:17Z محاولة ماتت
+#     بـ`exitCode: null` بعد 6.4 ثانية (رام 256MB + تنزيل محمول في الذاكرة).
+#   • الرانر هنا شبكة مفتوحة ورام كبيرة، فالحل الصحيح لمعمر: اللي بيحل أسماء
+#     الإصدارات وينزّلها هو CI، والمكنة تسحب أرشيف واحد وتتأكد من SHA-256.
+#
+# مافيش سر هنا: الأصل عام والمكنة بتقرأه بدون توكن — نفس مبدأ حزمة `nova-portable`.
+# ─────────────────────────────────────────────────────────────────────────────
+name: NOVA toolchain mirror (Kali static binaries → GitHub)
+
+on:
+  schedule:
+    # كل 6 ساعات — أحدث من كده بلا فايدة: إصدارات الأدوات مش بتتغير كل ساعة،
+    # وكل تشغيل بيحوّل ~12 طلب release لرانر مجاني.
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "أدوات بعينها (فاصل فَرَشة)، فاضي = الكل"
+        required: false
+        type: string
+      force:
+        description: "أعد التنزيل حتى لو Manifest قائل إنها موجودة"
+        required: false
+        type: boolean
+        default: false
+  push:
+    paths:
+      - "scripts/fetch-toolchain.mjs"
+      - "scripts/build-toolchain-mirror.mjs"
+      - ".github/workflows/toolchain-vendor.yml"
+
+concurrency:
+  group: nova-toolchain-mirror
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    name: fetch upstream + publish mirror
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Fetch the static binaries (this runner has the network the box lacks)
+        id: fetch
+        run: |
+          ARGS="--into out/vendor/bin --json --no-mirror"
+          [ -n "${{ inputs.only }}" ] && ARGS="$ARGS --only ${{ inputs.only }}"
+          [ "${{ inputs.force }}" = "true" ] && ARGS="$ARGS --force"
+          # الشريط ده مافيش منه نجاح مفبرك: لو ولا أداة نزلت، الخطوة بتفشل علنًا
+          # (مرآة فاضية أخطر من مفيش مرآة: المكنة هتلاقي «فشل الختم» بدل «مفيش مصدر»).
+          node scripts/fetch-toolchain.mjs $ARGS > out/fetch.json || true
+          node -e 'const d=JSON.parse(require("fs").readFileSync("out/fetch.json","utf8"));if(!d.ok){console.log(`::error::ولا أداة اتنزلت (${d.results?.length||0} نتيجة)`);process.exit(1)}console.log(`fetched ${d.ok}/${d.total}`)'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack the mirror (tar.gz + sha256 manifest)
+        run: node scripts/build-toolchain-mirror.mjs --from out/vendor/bin --out out/mirror
+
+      - name: 🔒 No secret, and every binary must answer `-version`
+        # نفس معيار الحزمة المحمولة: الأصل عام. والأداة اللي بتسحبها المكنة لازم
+        # تكون اللي اتقاس عليها، مش ملف اتقطع في النص.
+        run: |
+          node scripts/audit-bundle-secrets.mjs out/vendor/bin
+          cd out/vendor/bin
+          fail=0
+          for f in $(ls -1 | grep -v '^\.'); do
+            case "$f" in
+              nuclei|httpx|subfinder|katana|dnsx|naabu|amass) v="$f -version" ;;
+              ffuf) v="$f -V" ;;
+              gobuster|dalfox|gitleaks) v="$f version" ;;
+              trivy) v="$f --version" ;;
+              *) v="--version" ;;
+            esac
+            out="$(timeout 20 ./$f $v 2>&1 | head -1)"
+            if [ -z "$out" ]; then echo "::error::$f ما رَدّش على $v"; fail=1; else echo "✓ $f · $out"; fi
+          done
+          exit $fail
+
+      - name: Publish as a release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nova-toolchain
+          name: "NOVA — مرآة الأدوات (Kali static linux/amd64)"
+          body_path: out/mirror/NOTES.md
+          make_latest: false
+          files: |
+            out/mirror/nova-toolchain.tar.gz
+            out/mirror/nova-toolchain.json
