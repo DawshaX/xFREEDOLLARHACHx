@@ -109,13 +109,149 @@ def extract(raw: bytes) -> str:
     return tmp
 
 
-def backup(dest: str) -> str | None:
+
+# ── ledger: المحاولة اللي بتموت في النص لازم تتحسب، مش تتكرر للأبد ──────────
+# القياس الحيّ 2026-11-07 03:25→03:44Z على وايفي: كل 5 دقايق كانت الحلقة بتنزّل
+# وتفكّ وتبدأ نسخ، والبروسيس بيموت في النص — والعلامة اللي بتقول «خلصت»
+# مابتتكتبش. المكنة فضلت 20 دقيقة رايحة جاية و8GB من القرص روّح في النسخ
+# الاحتياطية الكاملة. فمن هنا: علامة «شغّال»، وعدّاد فشل لكل مصدر، وسكّون 6 ساعات بعد مرتين — مكنة على نسخة قديمة أحسن من مكنة مابتقومش.
+def _url_key(url: str) -> str:
+    return str(url or "").strip() or "default"
+
+
+def ledger_path(dest: str) -> str:
+    return os.path.join(dest, "state", "nova-update-ledger.json")
+
+
+def mark_path(dest: str) -> str:
+    return os.path.join(dest, "state", ".nova-update-in-progress")
+
+
+def read_ledger(dest: str) -> dict:
+    try:
+        data = json.load(open(ledger_path(dest), encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def write_ledger(dest: str, data: dict) -> None:
+    try:
+        os.makedirs(os.path.dirname(ledger_path(dest)), exist_ok=True)
+        with open(ledger_path(dest), "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except Exception as exc:  # اللوج مش سبب يوقف تحديث
+        log(f"! ledger اتكتبش: {exc}")
+
+
+def bump_fail(dest: str, url: str, reason: str) -> int:
+    key = _url_key(url)
+    data = read_ledger(dest)
+    entry = data.get(key) if isinstance(data.get(key), dict) else {}
+    fails = int(entry.get("fails", 0)) + 1
+    data[key] = {"fails": fails, "last": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "reason": reason[:160]}
+    write_ledger(dest, data)
+    clear_mark(dest)
+    return fails
+
+
+def clear_fails(dest: str, url: str) -> None:
+    key = _url_key(url)
+    data = read_ledger(dest)
+    if key in data:
+        data.pop(key, None)
+        write_ledger(dest, data)
+    clear_mark(dest)
+
+
+def clear_mark(dest: str) -> None:
+    try:
+        if os.path.exists(mark_path(dest)):
+            os.remove(mark_path(dest))
+    except OSError:
+        pass
+
+
+def set_mark(dest: str, url: str) -> None:
+    try:
+        os.makedirs(os.path.dirname(mark_path(dest)), exist_ok=True)
+        with open(mark_path(dest), "w", encoding="utf-8") as f:
+            json.dump({"url": _url_key(url), "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}, f)
+    except OSError:
+        pass
+
+
+def backoff_reason(dest: str, url: str) -> str | None:
+    """«واقف» لو آخر محاولة ماتت في نصها، أو نفس المصدر فشل مرتين lately."""
+    key = _url_key(url)
+    try:
+        m = mark_path(dest)
+        if os.path.exists(m) and (time.time() - os.path.getmtime(m)) > 180:
+            n = bump_fail(dest, url, "المحاولة السابقة ماتت في النص (العلامة اتسابَت)")
+            return f"المحاولة السابقة وقفت في النص (فشل رقم {n}) — هنجرب تاني لو فضلت محاولات" if n < 2 else "المحاولة السابقة وقفت في النص ومرتين فشل — سكون 6 ساعات"
+    except OSError:
+        pass
+    entry = read_ledger(dest).get(key)
+    if isinstance(entry, dict) and int(entry.get("fails", 0)) >= 2:
+        try:
+            age_h = (time.time() - time.mktime(time.strptime(str(entry.get("last")), "%Y-%m-%dT%H:%M:%SZ"))) / 3600
+        except Exception:
+            age_h = 0
+        if age_h < 6:
+            return f"نفس المصدر فشل {entry.get('fails')} مرة من {round(age_h * 60)} دقيقة — سكون لحد ما الوضع يتغيّر (امسح state/nova-update-ledger.json أو بدّل NOVA_UPDATE_URL)"
+    return None
+
+
+def prune_backups(keep: int = 3) -> int:
+    """النسخ الاحتياطية كانت بتملا /tmp — اللي قبل الأحدث يتشال."""
+    removed = 0
+    try:
+        names = sorted(n for n in os.listdir("/tmp") if n.startswith("nova-backup-"))
+    except OSError:
+        return 0
+    for name in names[:-keep] if keep else names:
+        try:
+            shutil.rmtree(f"/tmp/{name}", ignore_errors=True)
+            removed += 1
+        except OSError:
+            pass
+    if removed:
+        log(f"· ننّيف /tmp: {removed} نسخة قديمة اتشالت")
+    return removed
+
+
+def backup(dest: str, files: list[tuple[str, str, int]] | None = None) -> str | None:
+    """نسخة احتياطية محصورة في الملفات اللي هتتكتب فعلًا.
+
+    `copytree` على الشجرة كان بينسخ `state/` اللي عليها 200k سجل وثغرات محلّية،
+    وكل محاولة كانت بتسيب نسخة في /tmp — وده اللي أكل 8GB في 13 دقيقة وقفل
+    المكنة (متقاس 2026-11-07 03:25→03:38Z). الملفات اللي مابتتغيّرش مفيش
+    لازمة لنسخها: لو اتكتبت غلط فالـrollback بيتّها هي، مش الشجرة كلها.
+    """
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = f"/tmp/nova-backup-{stamp}"
+    prune_backups()
+    if files is None:
+        try:
+            shutil.copytree(dest, target, ignore=shutil.ignore_patterns(*PROTECTED_NAMES))
+            log(f"→ نسخة احتياطية كاملة: {target}")
+            return target
+        except Exception as exc:  # نسخة احتياطية ناقصة مش سبب نوقف
+            log(f"! تعذّر عمل نسخة احتياطية: {exc}")
+            return None
+    total = 0
     try:
-        shutil.copytree(dest, target, ignore=shutil.ignore_patterns(*PROTECTED_NAMES))
-        log(f"→ نسخة احتياطية: {target}")
+        os.makedirs(target, exist_ok=True)
+        for full, rel, size in files:
+            dest_file = os.path.join(target, rel)
+            os.makedirs(os.path.dirname(dest_file) or target, exist_ok=True)
+            shutil.copy2(full if os.path.exists(full) else os.path.join(dest, rel), dest_file)
+            total += size
+        log(f"→ نسخة احتياطية محصورة: {target} ({len(files)} ملف · {human(total)})")
         return target
+    except Exception as exc:
+        log(f"! تعذّر عمل نسخة احتياطية محصورة: {exc}")
+        return None
     except Exception as exc:  # a missing backup must not stop the update
         log(f"! تعذّر عمل نسخة احتياطية: {exc}")
         return None
@@ -187,6 +323,7 @@ def main() -> int:
     ap.add_argument("--url", default=os.environ.get("NOVA_UPDATE_URL", DEFAULT_URL))
     ap.add_argument("--no-backup", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--force", action="store_true", help="تجاوز السكّون بعد المحاولات الفاشلة")
     args = ap.parse_args()
 
     dest = os.path.abspath(args.dir)
@@ -202,9 +339,9 @@ def main() -> int:
     # قرص ملىان وقت النسخ = بايت مقطوعة و`state/` مكتوبة ناقصة، والنتيجة مكنة ما
     # ترجعش. فالقياس قبل ما نلمس الشبكة، والرفض أحسن من تحديث يكسر المكنة.
     try:
-        min_free_mb = int(os.environ.get("NOVA_UPDATE_MIN_FREE_MB", "60") or 0)
+        min_free_mb = int(os.environ.get("NOVA_UPDATE_MIN_FREE_MB", "350") or 0)
     except ValueError:
-        min_free_mb = 60
+        min_free_mb = 350
     if min_free_mb > 0:
         try:
             vfs = os.statvfs(dest)
@@ -218,15 +355,24 @@ def main() -> int:
         if free_mb is not None:
             log(f"· القرص: {free_mb}MB فاضل (مطلوب {min_free_mb}MB)")
 
+    if not args.force:
+        why = backoff_reason(dest, args.url)
+        if why:
+            log(f"⏸ {why}")
+            return 0
+    set_mark(dest, args.url)
+
     try:
         src = extract(fetch(args.url))
     except Exception as exc:
         log(f"✗ فشل التحميل/الفك: {exc}")
+        bump_fail(dest, args.url, f"فشل التحميل/الفك: {exc}")
         return 1
 
     missing = [n for n in REQUIRED if not os.path.exists(os.path.join(src, n))]
     if missing:
         log(f"✗ الحزمة ناقصة ملفات: {', '.join(missing)} — مفيش حاجة اتغيّرت")
+        bump_fail(dest, args.url, f"حزمة ناقصة: {', '.join(missing)}")
         return 1
 
     files = plan(src, dest)
@@ -248,7 +394,7 @@ def main() -> int:
 
     backup_dir = None
     if not args.no_backup:
-        backup_dir = backup(dest)
+        backup_dir = backup(dest, files)
 
     written = 0
     unchanged = 0
@@ -270,7 +416,12 @@ def main() -> int:
     for name in REQUIRED:
         if not os.path.exists(os.path.join(dest, name)):
             log(f"✗ بعد النسخ مفيش {name} — رجّع النسخة الاحتياطية من /tmp")
+            bump_fail(dest, args.url, f"بايت ناقصة بعد النسخ: {name}")
             return 1
+
+    # النسخ اتكتب والسلامة متأكد منها — السجل يتصفّر والعلامة تتشال، فالمحاولة
+    # الجاية تبدأ نظيفة ومش متحسوبة كفشل.
+    clear_fails(dest, args.url)
 
     keep = [n for n in sorted(PROTECTED_NAMES) if os.path.exists(os.path.join(dest, n))]
     log("─" * 62)

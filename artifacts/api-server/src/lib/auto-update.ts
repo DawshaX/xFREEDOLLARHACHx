@@ -175,6 +175,47 @@ function intervalMinutes(): number {
   return Number.isFinite(n) && n >= 2 ? Math.min(n, 720) : 15;
 }
 
+const LEDGER_FILE = () => path.join(stateDir(), "nova-update-ledger.json");
+const MARK_FILE = () => path.join(stateDir(), ".nova-update-in-progress");
+
+/**
+ * السجل ده بيكتبه `deploy/live-update.py` — بنقراه من هنا عشان الحلقة تخلص
+ * قبل ما المكنة تدور. القياس الحيّ 2026-11-07 03:25→03:44Z على وايفي: كل 5 دقايق
+ * كانت بتبدأ تنزيل ونسخ والبروسيس بيموت في النص، 4 نسخ من الـ3MB و 8GB من القرص
+ * روّحوا في /tmp، واللوحة كلها 502 عشرين دقيقة. فقبل ما نولّد السكريبت تالت
+ * مرة على نفس الإصدار: نقف ونقول ليه.
+ */
+export function backoffReason(): string | null {
+  // المفتاح لازم يكون نفس اللي بيتبعت للسكريبت (`--url ASSET_URL`) — غير كده
+  // السجل بيتقرا من غير ما يطابق، والسكّون مايبانش أبدًا.
+  const ASSET = ASSET_URL;
+  let entry: { fails?: number; last?: string } | null = null;
+  try {
+    const raw = JSON.parse(fs.readFileSync(LEDGER_FILE(), "utf8")) as Record<string, { fails?: number; last?: string }>;
+    entry = raw && typeof raw === "object" ? (raw[ASSET] ?? null) : null;
+  } catch {
+    entry = null;
+  }
+  try {
+    const mark = fs.statSync(MARK_FILE());
+    const ageMs = Date.now() - mark.mtimeMs;
+    if (ageMs > 180_000) {
+      const fails = Number(entry?.fails ?? 0) + 1;
+      if (fails >= 2) return `آخر محاولة وقفت في النص (علامة ${Math.round(ageMs / 1000)}s) وفشل رقم ${fails} — سكون، مفيش ملف هيتلمس`;
+    }
+  } catch {
+    /* مفيش علامة = مفيش محاولة ماتت */
+  }
+  const fails = Number(entry?.fails ?? 0);
+  if (fails < 2) return null;
+  // التوقيت في السجل بصيغة ISO بـ Z (كتابة بايثون) — بنضيفها لو ناقصة بس،
+  // لأن «...ZZ» بتدي NaN ووقتها النافذة ما بتنتهي أبدًا (البوابة لمسّت ده).
+  const lastMs = entry?.last ? Date.parse(String(entry.last).replace(/Z?$/, "Z")) : NaN;
+  const ageH = Number.isFinite(lastMs) ? (Date.now() - lastMs) / 3_600_000 : 0;
+  if (ageH > 6) return null;
+  return `نفس الحزمة فشلت ${fails} مرة من ${Math.round(ageH * 60)} دقيقة — الحلقة متوقفة مؤقتًا (امسح state/nova-update-ledger.json أو اعمل POST /api/nova-core/auto-update?force=1)`;
+}
+
 function appendLog(line: string): void {
   try {
     fs.mkdirSync(stateDir(), { recursive: true });
@@ -246,7 +287,7 @@ let running = false;
 /**
  * One check-then-install pass. Safe to call from a timer and from an endpoint.
  */
-export async function checkForUpdate(opts: { install?: boolean } = {}): Promise<AutoUpdateState> {
+export async function checkForUpdate(opts: { install?: boolean; force?: boolean } = {}): Promise<AutoUpdateState> {
   if (running) return { ...writeState({}), lastResult: "busy", lastDetail: "فحص شغّال بالفعل" };
   running = true;
   try {
@@ -327,6 +368,18 @@ export async function checkForUpdate(opts: { install?: boolean } = {}): Promise<
     }
 
     appendLog(`new build found: local ${build.builtAt} → release ${releaseAt} (${deltaS}s)`);
+    if (opts.force !== true) {
+      const hold = backoffReason();
+      if (hold) {
+        appendLog(`backoff: ${hold}`);
+        return writeState({
+          lastCheckAt: new Date().toISOString(),
+          latestReleaseAt: releaseAt,
+          lastResult: "backoff",
+          lastDetail: hold,
+        });
+      }
+    }
     const started = startInstaller(releaseAt);
     return started;
   } finally {

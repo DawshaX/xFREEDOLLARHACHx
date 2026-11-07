@@ -471,11 +471,12 @@ router.get("/nova-core/auto-update", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/nova-core/auto-update", async (_req: Request, res: Response) => {
+router.post("/nova-core/auto-update", async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-store");
   try {
     const { checkForUpdate } = await import("../lib/auto-update");
-    const state = await checkForUpdate({ install: true });
+    // ?force=1 = المشغّل يقول «جرب برضه» رغم السكّون بعد المحاولات الفاشلة.
+    const state = await checkForUpdate({ install: true, force: String(req.query.force ?? "") === "1" });
     res.json({ ok: true, ...state });
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
