@@ -1,3 +1,0 @@
-{"duration":"0:00:05","errors":"0","hosts":"1","matched":"0","percent":"0","requests":"2","rps":"0","startedAt":"2026-11-05T21:40:00.553584575Z","templates":"1056","total":"2095"}
-{"duration":"0:00:07","errors":"10","hosts":"1","matched":"0","percent":"0","requests":"8","rps":"1","startedAt":"2026-11-05T21:40:00.553584575Z","templates":"1056","total":"2095"}
-{"duration":"0:00:07","errors":"10","hosts":"1","matched":"0","percent":"0","requests":"8","rps":"1","startedAt":"2026-11-05T21:40:00.553584575Z","templates":"1056","total":"2095"}

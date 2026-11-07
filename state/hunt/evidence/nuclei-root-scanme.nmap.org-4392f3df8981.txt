@@ -1,2 +1,0 @@
-{"duration":"0:00:00","errors":"0","hosts":"n/a","matched":"0","percent":"9223372036854775808","requests":"0","rps":"9223372036854775808","startedAt":"0001-01-01T00:00:00Z","templates":"n/a","total":"0"}
-[FTL] Could not run nuclei: no templates provided for scan
