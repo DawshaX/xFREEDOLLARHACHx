@@ -386,7 +386,10 @@ export function provisionToolchain(opts: ProvisionOptions = {}): Promise<Provisi
     const res = containerResources();
     const childEnv: Record<string, string | undefined> = { ...process.env };
     if (res.memLimitMB && res.memLimitMB > 0 && res.memLimitMB < 2048 && !process.env.NODE_OPTIONS) {
-      childEnv.NODE_OPTIONS = `--max-old-space-size=${Math.max(96, Math.round(res.memLimitMB * 0.6))}`;
+      // 25% مش 60%: الأب شغال فعلًا بـ~115–167MB RSS على نفس السقف (متقاس من
+      // `/api/nova-core/version` 16:01Z و20:32Z)، فالـ60% كانت بتخلي الحساب
+      // أبو-160 + أب-150 > 256MB — وده بالظبط القتل اللي شُفناه.
+      childEnv.NODE_OPTIONS = `--max-old-space-size=${Math.max(48, Math.min(320, Math.round(res.memLimitMB * 0.25)))}`;
     }
     const child = spawn(process.execPath, argv, { cwd: path.dirname(path.dirname(script)), stdio: ["ignore", "pipe", "pipe"], env: childEnv });
     let out = "";
@@ -577,13 +580,15 @@ function freeDiskMB(at: string): number | null {
 
 export function bootToolchainFetch(log?: (msg: string) => void): boolean {
   let mode = String(process.env.NOVA_TOOLCHAIN_FETCH || "").trim().toLowerCase();
-  // على مكنة مُشرَفة القرار بقى «نزّل اللي ناقص» بشكل افتراضي: المستخدم طلب
-  // الأدوات كلها 2026-11-07، والمجلد على وايفي قابل للكتابة (متقاس:
-  // /home/container/vendor/bin writable:true، present:3 / missing:9).
-  // `auto` بيراعي إن اللي موجود ما يتكررش، و NOVA_TOOLCHAIN_FETCH=0 بيطفي صراحةً.
-  // نفس شرط durable-host: نسخة CI/ Codespace من الحزمة تولّع NOVA_SUPERVISED=1
-  // كمان، وماينفعش تروح نزّل 100MB أدوات في كل تشغيل بوابة.
-  if (!mode && isDurableHost()) mode = "auto";
+  // الافتراضي وقت الإقلاع بقى «مفيش تنزيل» — والقيااس اللي خلّاني أرجع الخطوة دي
+  // مش حذر نظري: أول مكنة فعّلت `auto` على الحزمة اللي فيها مرآة 219MB دخلت في
+  // حلقة إعادة تشغيل من ~20:41Z (كل وجهاء اللوحة رجّعت 502، والـupdater جوه
+  // التطبيق فمافيش مخرج ذاتي). في حاوية 256MB RAM، تنزيل+فك 219MB والتطبيق
+  // رافع ~160MB RSS مع بعض = المُشرف بيقول «App exited».
+  // فالقرار: `auto` يفضل متاح ومقيس، بس بموافقة صريحة — `NOVA_TOOLCHAIN_FETCH=1`
+  // (أو =auto)، أو `POST /api/ops/tools/provision`. اللي فاعله ده هو اللي بيقول
+  // «الرام عندنا تتحمل»، مش أنا.
+  if (!mode && isDurableHost() && process.env.NOVA_TOOLCHAIN_AT_BOOT === "1") mode = "auto";
   if (!mode || mode === "0" || mode === "off" || mode === "false") return false;
   const st = toolchainStatus();
   // `auto` مع الناقص: لو فيه أداة ناقصة ننزّلها، مابنقفش عند أول واحدة موجودة.
@@ -591,6 +596,15 @@ export function bootToolchainFetch(log?: (msg: string) => void): boolean {
   // حارس القرص: ~100MB تنزيل على حاوية مجانية بتطرح نفسها لما الديسك يخلص
   // (متقاس 2026-11-07: النسخ الاحتياطية أكلت 8GB والمكنة وقعت). تحت 1.5GB حر
   // مابننزّلش، وبنقول السبب بدل الصمت.
+  // حارس الرام: التحميل نفسه streaming، بس الأب (التطبيق) والابن (المنزّل)
+  // بيتقاسمون سقف cgroup واحد — والقيااس 20:41Z كان كافيًا يوضح إن ده مش تفصيل.
+  if (mode === "auto" || mode === "1") {
+    const res = containerResources();
+    if (res.memLimitMB !== null && res.memUsedMB !== null && res.memLimitMB - res.memUsedMB < 200) {
+      log?.(`toolchain: فاضي من الرام ${res.memLimitMB - res.memUsedMB}MB من ${res.memLimitMB}MB — التنزيل التلقائي اتخطّى (NOVA_TOOLCHAIN_FETCH=1 للتجاوز)`);
+      return false;
+    }
+  }
   if (mode === "auto") {
     const freeMB = freeDiskMB(st.dir);
     if (freeMB !== null && freeMB < 1500) {
