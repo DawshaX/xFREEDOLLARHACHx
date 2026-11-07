@@ -293,6 +293,7 @@ async function extractFromMirror(idx, bin, dest) {
 }
 
 async function fetchOne(tool, manifest) {
+  const latest = await gh(`/repos/${tool.repo}/releases/latest`);
   const tag = latest?.tag_name || null;
   const dest = path.join(INTO, tool.bin);
   // الملف موجود بس مش executable — حالة متقاسة على وايفلّي 2026-11-07: amass (52MB)

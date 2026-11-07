@@ -181,6 +181,49 @@ check("the mirror download is streamed to disk, not buffered in RAM", () => {
   assert.doesNotMatch(mirrorBlock, /arrayBuffer/, "the archive path must never buffer the whole file");
 });
 
+/* ── 6 · الـhead بتاع fetchOne بيتنفّذ فعلًا، والرسالة سبب مش ReferenceError ── */
+{
+  // الغلطة اللي البوابة دي موجودة عشانها: سطر `const latest = await gh(...)` اتشال
+  // من أول `fetchOne` وهي بتلمع المرآة، فـ`tag` بقت بتقرأ متغيّر مش موجود.
+  // `node --check` ما بيقولش حاجة (الاسم حرّ، والصياغة صح)، والبوابات التانية
+  // ما بتلمس الملفش، والنتيجة كانت CI كله أحمر: `12/12 failed · "latest is not
+  // defined"` (annotation في run 42410882574). الفحص ده بيستورد السكربت بـfetch
+  // مكسور — فبيعدّي على نفس السطر، ولا شبكة ولا 30MB في الاختبار.
+  const probe = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `globalThis.fetch = async () => { throw new Error("offline-for-test"); };
+       process.argv = [process.argv[0], ${JSON.stringify(path.join(ROOT, "scripts/fetch-toolchain.mjs"))}, "--only", "trivy,gitleaks", "--into", ${JSON.stringify(path.join(work, "offline-vendor"))}, "--json", "--no-mirror"];
+       await import(${JSON.stringify("file://" + path.join(ROOT, "scripts/fetch-toolchain.mjs"))});`,
+    ],
+    { cwd: ROOT, encoding: "utf8", timeout: 60_000 },
+  );
+  let doc = null;
+  const txt = String(probe.stdout || "");
+  for (let i = txt.indexOf("{"); i >= 0; i = txt.indexOf("{", i + 1)) {
+    try {
+      doc = JSON.parse(txt.slice(i, txt.lastIndexOf("}") + 1));
+      break;
+    } catch {
+      /* جرّب أقرب { */
+    }
+  }
+  check("the vendorer runs offline and answers JSON (not a crash)", () => {
+    assert.equal(probe.status, 0, String(probe.stderr || "").slice(0, 200));
+    assert.ok(doc && Array.isArray(doc.results), `no JSON on stdout: ${txt.slice(0, 160)}`);
+    assert.equal(doc.results.length, 2, `expected 2 rows, got ${doc.results.length}`);
+  });
+  check("each row names a real reason — no ReferenceError leaking as a failure", () => {
+    for (const r of doc.results) {
+      const why = String(r.why || "");
+      assert.doesNotMatch(why, /is not defined|is not a function|Cannot read propert/, `${r.bin}: "${why}"`);
+      assert.match(why, /offline-for-test|ماردّش|المرآة/, `${r.bin} صمتت: "${why}"`);
+    }
+  });
+}
+
 let bad = 0;
 for (const [name, ok, detail] of checks) {
   if (!ok) bad += 1;
