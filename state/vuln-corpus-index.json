@@ -1,19 +1,19 @@
 {
   "version": 1,
-  "at": "2026-11-06T22:56:47.983Z",
+  "at": "2026-11-07T02:39:57.188Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 202019,
+  "total": 225538,
   "bySeverity": {
-    "high": 76806,
-    "medium": 94443,
-    "low": 9983,
-    "unknown": 6732,
-    "critical": 13998,
-    "none": 57
+    "high": 86798,
+    "medium": 102533,
+    "low": 10890,
+    "unknown": 8051,
+    "critical": 17202,
+    "none": 64
   },
   "byYear": {
     "1999": 1573,
@@ -28,42 +28,42 @@
     "2008": 7037,
     "2009": 4905,
     "2010": 4952,
-    "2011": 4361,
+    "2011": 4362,
     "2012": 5022,
     "2013": 4831,
     "2014": 137,
     "2015": 58,
-    "2016": 104,
-    "2017": 212,
+    "2016": 106,
+    "2017": 215,
     "2018": 848,
-    "2019": 707,
-    "2020": 762,
-    "2021": 1552,
-    "2022": 3442,
-    "2023": 17862,
-    "2024": 39154,
-    "2025": 44908,
-    "2026": 32014
+    "2019": 712,
+    "2020": 776,
+    "2021": 1587,
+    "2022": 3465,
+    "2023": 18053,
+    "2024": 39238,
+    "2025": 45248,
+    "2026": 54835
   },
-  "kev": 652,
-  "epssScored": 196240,
-  "products": 42936,
+  "kev": 702,
+  "epssScored": 219114,
+  "products": 43556,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 59665
+      "count": 62585
     },
     {
       "product": "firefox",
-      "count": 7598
+      "count": 7876
     },
     {
       "product": "chrome",
-      "count": 6848
+      "count": 7717
     },
     {
       "product": "android",
-      "count": 5492
+      "count": 5538
     },
     {
       "product": "mac_os_x",
@@ -71,43 +71,43 @@
     },
     {
       "product": "safari",
-      "count": 3753
+      "count": 3779
     },
     {
       "product": "iphone_os",
-      "count": 3260
+      "count": 3400
     },
     {
       "product": "macos",
-      "count": 2936
-    },
-    {
-      "product": "debian_linux",
-      "count": 2580
-    },
-    {
-      "product": "php",
-      "count": 2559
+      "count": 3358
     },
     {
       "product": "windows_server_2012",
-      "count": 2358
+      "count": 3012
+    },
+    {
+      "product": "debian_linux",
+      "count": 2582
+    },
+    {
+      "product": "php",
+      "count": 2573
+    },
+    {
+      "product": "wireshark",
+      "count": 2371
     },
     {
       "product": "flash_player",
       "count": 2354
     },
     {
+      "product": "jre",
+      "count": 2345
+    },
+    {
       "product": "opera_browser",
       "count": 2302
-    },
-    {
-      "product": "wireshark",
-      "count": 2296
-    },
-    {
-      "product": "jre",
-      "count": 2284
     },
     {
       "product": "itunes",
@@ -118,111 +118,111 @@
       "count": 2147
     },
     {
+      "product": "windows_10_22h2",
+      "count": 2144
+    },
+    {
       "product": "ubuntu_linux",
       "count": 2136
     },
     {
       "product": "acrobat",
-      "count": 2127
+      "count": 2128
     },
     {
       "product": "windows_server_2008",
       "count": 2116
     },
     {
-      "product": "ios",
-      "count": 2026
+      "product": "windows_10_21h2",
+      "count": 2115
+    },
+    {
+      "product": "windows_10_1809",
+      "count": 2073
     },
     {
       "product": "websphere_application_server",
-      "count": 2000
+      "count": 2052
+    },
+    {
+      "product": "ios",
+      "count": 2038
     },
     {
       "product": "experience_manager",
-      "count": 1976
+      "count": 2002
+    },
+    {
+      "product": "jdk",
+      "count": 1963
     },
     {
       "product": "internet_explorer",
       "count": 1958
     },
     {
-      "product": "jdk",
-      "count": 1906
+      "product": "windows_11_24h2",
+      "count": 1936
     },
     {
       "product": "mysql",
       "count": 1890
     },
     {
+      "product": "windows_11_23h2",
+      "count": 1866
+    },
+    {
+      "product": "junos",
+      "count": 1748
+    },
+    {
+      "product": "windows_10_1607",
+      "count": 1732
+    },
+    {
       "product": "shockwave_player",
       "count": 1725
+    },
+    {
+      "product": "ffmpeg",
+      "count": 1697
     },
     {
       "product": "harmonyos",
       "count": 1693
     },
     {
-      "product": "windows_11_23h2",
-      "count": 1681
-    },
-    {
-      "product": "ffmpeg",
-      "count": 1675
-    },
-    {
-      "product": "windows_10_22h2",
-      "count": 1672
-    },
-    {
       "product": "qts",
       "count": 1666
     },
     {
-      "product": "junos",
-      "count": 1654
+      "product": "windows_server_2019",
+      "count": 1603
     },
     {
-      "product": "windows_10_21h2",
-      "count": 1644
-    },
-    {
-      "product": "windows_10_1809",
-      "count": 1581
-    },
-    {
-      "product": "fedora",
-      "count": 1560
-    },
-    {
-      "product": "acrobat_reader",
-      "count": 1500
+      "product": "thunderbird",
+      "count": 1601
     },
     {
       "product": "gitlab",
-      "count": 1477
-    },
-    {
-      "product": "mac_os_x_server",
-      "count": 1475
-    },
-    {
-      "product": "quicktime",
-      "count": 1471
+      "count": 1601
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 24938652,
-    "sha256": "621cb1757bcdf78ba3c12ebe55da0f53c248099094096a1d9eb52cac5d7e3934"
+    "bytes": 28512474,
+    "sha256": "1ebae6ad9ccb6fa92e4fe923eca4604139dce5dbd8f7e2b63a2a7be6798c9564"
   },
   "mode": "deepen",
-  "says_ar": "202019 ثغرة حقيقية · critical 13998 · high 76806 · 652 مستغلّة فعلياً (KEV) · 196240 لها EPSS · 42936 منتج بـCPE · مزامنة 2026-11-06T22:56:47.983Z",
+  "says_ar": "225538 ثغرة حقيقية · critical 17202 · high 86798 · 702 مستغلّة فعلياً (KEV) · 219114 لها EPSS · 43556 منتج بـCPE · مزامنة 2026-11-07T02:39:57.188Z",
   "deepen": {
-    "nextStartIndex": 362930,
+    "nextStartIndex": 386930,
     "windowPages": 12,
-    "walkedFrom": 338930,
-    "nvdTotal": 420464,
-    "coverage": 0.4805,
-    "at": "2026-11-06T22:56:47.984Z"
+    "walkedFrom": 362930,
+    "nvdTotal": 420475,
+    "coverage": 0.5364,
+    "at": "2026-11-07T02:39:57.188Z"
   }
 }
