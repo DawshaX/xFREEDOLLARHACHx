@@ -194,6 +194,25 @@ async function fetchOne(tool, manifest) {
   const latest = await gh(`/repos/${tool.repo}/releases/latest`);
   const tag = latest?.tag_name || null;
   const dest = path.join(INTO, tool.bin);
+  // الملف موجود بس مش executable — حالة متقاسة على وايفلّي 2026-11-07: amass (52MB)
+  // وdalfox (7.3MB) وnaabu (33MB) كانوا في `vendor/bin` بحجمهم الكامل والمحرك عدّهم
+  // «ناقصين» لأن `findBinary` بيشترط X_OK. الإصلاح أرخص من تنزيل 90MB: chmod ثم
+  // اختبار نسخة حقيقي — والنجاح يتقاس من الأدوات نفسها، ومافيش ادعاء: لو بعد
+  // chmod الأداة ما طلعتش نسخها، بنرجّع الملف لحالته ونقول فشل.
+  if (!FORCE && fs.existsSync(dest)) {
+    let execOk = true;
+    try { fs.accessSync(dest, fs.constants.X_OK); } catch { execOk = false; }
+    if (!execOk) {
+      try { fs.chmodSync(dest, 0o755); } catch { /* fs مقفول للكتابة */ }
+      const fix = await run(dest, tool.ver, { timeout: 15_000 });
+      const fixLine = String(fix.out || fix.err).split("\n").map((x) => x.trim()).filter(Boolean)[0] || "";
+      if (fix.code === 0 && fixLine) {
+        return { bin: tool.bin, status: "repaired", tag: manifest[tool.bin]?.tag ?? tag, why: `chmod أصلح الصلاحية · ${fixLine.slice(0, 60)}` };
+      }
+      try { fs.chmodSync(dest, 0o644); } catch { /* leave it */ }
+      return { bin: tool.bin, status: "failed", tag, why: "الملف موجود بس حتى بعد chmod ما طلعش نسخة — نص منزيل أو architecture مش مطابقة" };
+    }
+  }
   if (!FORCE && fs.existsSync(dest) && manifest[tool.bin]?.tag === tag && tag) {
     return { bin: tool.bin, status: "skipped", tag, why: "موجود من قبل بنفس الإصدار" };
   }

@@ -62,6 +62,8 @@ export interface ToolchainStatus {
   exists: boolean;
   /** الملفات الموجودة فعلًا وحجمها — مش قائمة أمنية */
   files: Array<{ name: string; bytes: number }>;
+  /** ملفات VENDORABLE موجودة في المجلد بس `findBinary` بيرفضها (مفيش X_OK) */
+  unusable: Array<{ name: string; bytes: number }>;
   present: string[];
   missing: string[];
   writable: boolean;
@@ -185,10 +187,38 @@ function dirWritable(dir: string): boolean {
   }
 }
 
+/**
+ * السبب البشري لفشل التنزيل — بدون رقم مكتوب: `exitCode: null` كانت بتطرح
+ * «خرج بالكود ?» وهي في الحقيقة عملية متقتلة بالسيجنال (متقاس على وايفلّي
+ * 2026-11-07T17:17:17Z: ms 6395 · exitCode null · installed 0/12). ولو فيه ملف
+ * في vendor/bin من غير صلاحية تنفيذ بنقوله بالاسم، ده تشخيص مش تخمين.
+ */
+function vendorerReason(x: {
+  ok: boolean;
+  code: number | null;
+  signal: string | null;
+  err: string;
+  ms: number;
+  results: ProvisionRecord["results"];
+  unusable: Array<{ name: string; bytes: number }>;
+}): string | undefined {
+  if (x.ok) return undefined;
+  const how = x.signal ? `اتقتل بالسيجنال ${x.signal}` : `خرج بالكود ${x.code ?? "?"}`;
+  const tail = x.err ? ` \u00b7 ${x.err.slice(0, 160)}` : "";
+  const repair = x.unusable.length
+    ? ` \u00b7 كمان فيه ${x.unusable.length} ملف في vendor/bin من غير صلاحية تنفيذ (${x.unusable.map((u) => u.name).join(", ")}) — المحاولة الجاية تصلحه بـchmod`
+    : "";
+  if (x.code !== 0 || x.signal) {
+    return `السكريبت ${how} بعد ${Math.round(x.ms / 1000)} ثانية${tail} \u2014 المحرك هيكمل باللي عندُه.${repair}`;
+  }
+  return `السكربت مشى بس ولا أداة ماثبتت (${x.results.map((r) => `${r.bin}:${r.status}`).join(", ").slice(0, 220)})`;
+}
+
 /** قراءة فقط: مافيش شبكة، مافيش spawn، مافيش كتابة. */
 export function toolchainStatus(): ToolchainStatus {
   const dir = vendorDir();
   let files: Array<{ name: string; bytes: number }> = [];
+  const unusable: Array<{ name: string; bytes: number }> = [];
   let exists = false;
   try {
     exists = fs.existsSync(dir);
@@ -198,7 +228,15 @@ export function toolchainStatus(): ToolchainStatus {
         .filter((n) => !n.startsWith("."))
         .map((n) => {
           try {
-            return { name: n, bytes: fs.statSync(path.join(dir, n)).size };
+            const full = path.join(dir, n);
+            // نفس شرط اللي بيعدّ الأداة «موجودة» (`findBinary` → X_OK): الملف اللي
+            // مفيش فيه صلاحية تنفيذ مش أداة، وهو في نفس الوقت دليل إن التنزيل
+            // السابق وقف في نصه — فبيترجّع هنا باسمه وحجمه بدل ما يختفي في «ناقص».
+            let exec = true;
+            try { fs.accessSync(full, fs.constants.X_OK); } catch { exec = false; }
+            const size = fs.statSync(full).size;
+            if (!exec && (VENDORABLE as readonly string[]).includes(n)) unusable.push({ name: n, bytes: size });
+            return { name: n, bytes: size };
           } catch {
             return { name: n, bytes: 0 };
           }
@@ -213,6 +251,7 @@ export function toolchainStatus(): ToolchainStatus {
     dir,
     exists,
     files,
+    unusable,
     present: [...VENDORABLE].filter((b) => have.has(b)),
     missing: [...VENDORABLE].filter((b) => !have.has(b)),
     writable: dirWritable(dir),
@@ -344,16 +383,19 @@ export function provisionToolchain(opts: ProvisionOptions = {}): Promise<Provisi
         }),
       );
     });
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      const stNow = toolchainStatus();
       // السكريبت بيطبع JSON واحد في الآخر (و`::warning::` لو فيه فشل جزئي).
       // مابنعدش على شكل الطباعة (مPRETTY أو سطر واحد) — بنلقط آخر كائن JSON
       // متوازن بيرجّع parse ناجح، وده بيشتغل مع أي نسخة من السكربت.
       const parsed = lastJsonObject<{ into?: string; ok?: number; total?: number; results?: ProvisionRecord["results"] }>(out);
       const results = parsed?.results ?? [];
-      const installed = results.filter((r) => r.status === "installed" || r.status === "skipped").length;
+      // `repaired` نجاح مقاس (chmod + اختبار نسخة)، فبيتحسب زي `installed` —
+      // ومن غيره الـcache السلبي يفضل says «ناقصة» للأبد.
+      const installed = results.filter((r) => r.status === "installed" || r.status === "skipped" || r.status === "repaired").length;
       // من غير كده Cache بتاع findBinary فاضي سلبًا للأبد: الأداة اتنصبت وهي
       // «مش موجودة» في `/api/ops/tools` وفي self-check. التعليق في tools.ts
       // سمّى الحالة دي بالظبط — «a stale negative would keep being reported».
@@ -373,11 +415,7 @@ export function provisionToolchain(opts: ProvisionOptions = {}): Promise<Provisi
           total: parsed?.total ?? VENDORABLE.length,
           results,
           error: ok ? undefined : "vendorer-failed",
-          reasonAr: ok
-            ? undefined
-            : code !== 0
-              ? `السكريبت خرج بالكود ${code ?? "?"}${err ? ` · ${err.slice(0, 160)}` : ""} — المحرك هيكمل باللي عندُه.`
-              : `السكربت مشى بس ولا أداة ماثبتت (${results.map((r) => `${r.bin}:${r.status}`).join(", ").slice(0, 220)})`,
+          reasonAr: vendorerReason({ ok, code, signal, err, ms: Date.now() - t0, results, unusable: stNow.unusable }),
           ran: code === 0 && Boolean(parsed),
         }),
       );
@@ -448,7 +486,10 @@ export interface OnceResult {
 
 export async function provisionToolchainOnce(opts: ProvisionOptions = {}): Promise<OnceResult> {
   const st0 = toolchainStatus();
-  if (st0.present.length > 0 && !(opts.only && opts.only.length)) {
+  // «اليدوه موجودة» ما تعفيش من تكملة الناقص: القياس على وايفلّي present:3 /
+  // missing:9 + 3 ملفات من غير X_OK، والصف القديم كان بيرجع already-present
+  // فأي محاولة من المحرك تضيف أداة كانت تتخطّى في الصمت.
+  if (st0.present.length > 0 && st0.missing.length === 0 && st0.unusable.length === 0 && !(opts.only && opts.only.length)) {
     return { record: null, status: st0, skipped: "already-present" };
   }
   const cooldownMs = Math.max(0, Number(process.env.NOVA_TOOLCHAIN_RETRY_MS ?? 600_000));
