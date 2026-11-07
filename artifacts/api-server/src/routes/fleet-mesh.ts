@@ -27,6 +27,7 @@ import { cachedProbes, loadServers, probeAll, type ServerKind } from "../lib/ser
 import { broadcastEvent } from "../lib/ws-hub";
 import { broadcastLiveEvent } from "./live-events";
 import { requireOps } from "../lib/ops/gate";
+import { getPlatformControlSnapshot } from "../lib/standalone-api";
 
 const router = Router();
 // `/fleet/broadcast` بيبعت أمر لأجهزة المستخدم المتصلة، وخطوة الـplan بتنفّذ على جهاز. messaging/plan creation قراية بس فمفتوحة.
@@ -511,6 +512,26 @@ router.post("/fleet/plan/:planId/step/:stepId", (req: Request, res: Response) =>
 router.get("/fleet/plan/active", (_req: Request, res: Response) => {
   const plan = state.plans.find((p) => p.steps.some((s) => s.status === "queued" || s.status === "running")) ?? state.plans[0] ?? null;
   res.json({ ok: true, plan });
+});
+
+/* ── حالة الأسطول في مكان واحد (لقطة المنصة + عدّاد العقد المقاس) ── */
+router.get(["/fleet/status", "/fleet/summary"], (_req, res) => {
+  const mesh = meshSnapshot();
+  res.json({
+    ok: true,
+    measured: true,
+    ts: new Date().toISOString(),
+    online: mesh.capacity.agents.connected > 0,
+    status: mesh.capacity.agents.connected > 0 ? "active" : "idle",
+    fleet: {
+      agents: mesh.capacity.agents,
+      machines: mesh.capacity.machines,
+      nodes: mesh.nodes.filter((node) => node.kind === "machine" || node.kind === "slot"),
+    },
+    stats: mesh.stats,
+    plan: mesh.plan,
+    platform: getPlatformControlSnapshot(),
+  });
 });
 
 export default router;

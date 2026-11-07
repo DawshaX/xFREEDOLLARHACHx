@@ -8,6 +8,7 @@ export interface SystemEvent {
 
 export interface MemoryEvent {
   id: string;
+  pinned?: boolean;
   memoryType: string;
   key: string;
   content: string;
@@ -35,6 +36,50 @@ interface SystemContextValue {
 }
 
 const DEFAULT_STATUS: AutonomousStatus = { enabled: false, tasksCompleted: 0, tasksErrored: 0, isRunning: false };
+
+/* الأسماء اللي بترجع من `/api/memory` مش مضمونة الشكْل (id رقم، ts تاريخ نصّي،
+ * tags متحوّلة…) — أي حقل غلط كان بيرمي الكومبوننت كله. فكل عنصر بيتنظّف هنا
+ * قبل ما يدخل الـstate، واللي مابيطلعش ذكرى صالحة بيتسقط بس. */
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+function toMemoryEvent(value: unknown): MemoryEvent | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const id = record.id;
+  const key = record.key ?? record.title;
+  const content = record.content;
+  if (id === undefined || key === undefined || typeof content !== "string") return null;
+  const createdAt = record.createdAt;
+  return {
+    id: String(id),
+    memoryType: String(record.memoryType ?? record.kind ?? "fact"),
+    key: String(key),
+    content,
+    ts: Number(record.ts ?? (typeof createdAt === "string" ? Date.parse(createdAt) : createdAt) ?? Date.now()),
+    importance: Number(record.importance ?? 0),
+    pinned: typeof record.pinned === "boolean" ? record.pinned : undefined,
+    createdAt: typeof createdAt === "string" || typeof createdAt === "number" ? createdAt : undefined,
+    tags: typeof record.tags === "string" ? record.tags : undefined,
+  };
+}
+
+async function fetchMemoryEvents(): Promise<MemoryEvent[]> {
+  const response = await fetch("/api/memory?limit=50", { cache: "no-store" });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const payload: unknown = await response.json();
+  const record = asRecord(payload);
+  const values = Array.isArray(payload)
+    ? payload
+    : Array.isArray(record?.entries)
+      ? (record.entries as unknown[])
+      : Array.isArray(record?.memories)
+        ? (record.memories as unknown[])
+        : null;
+  if (!values) throw new Error("شكل رد /api/memory مش قائمة ذكريات");
+  return values.map(toMemoryEvent).filter((entry): entry is MemoryEvent => entry !== null);
+}
 
 const SystemContext = createContext<SystemContextValue>({
   autonomousStatus: DEFAULT_STATUS,
@@ -84,15 +129,24 @@ export function SystemProvider({ children }: { children: ReactNode }) {
     }
   }, [addEvent]);
 
+  const loadMemories = useCallback(() => {
+    fetchMemoryEvents()
+      .then(setMemoryEvents)
+      .catch((error: unknown) => addEvent("memory_refresh_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      }));
+  }, [addEvent]);
+
   const refreshAll = useCallback(() => {
     addEvent("refresh");
-    void fetch("/api/memory?limit=50").then(r => r.json()).then((d: MemoryEvent[] | { entries?: MemoryEvent[]; memories?: MemoryEvent[] }) => {
-      // /api/memory answers with a bare array on the in-memory store and with
-      // { entries } / { memories } on other deployments — support all of them.
-      const list = Array.isArray(d) ? d : (d?.entries ?? d?.memories);
-      if (list) setMemoryEvents(list);
-    }).catch(() => {});
-  }, [addEvent]);
+    loadMemories();
+  }, [addEvent, loadMemories]);
+
+  // الذكريات المحفوظة كانت بتبان بس بعد حدث memory_saved — يعني أول ما تفتح
+  // اللوحة القائمة فاضية. التحميل بقى عند الفتح، والفشل معلن مش مبتلوع.
+  useEffect(() => {
+    loadMemories();
+  }, [loadMemories]);
 
   useEffect(() => {
     const es = new EventSource("/api/agent/events");

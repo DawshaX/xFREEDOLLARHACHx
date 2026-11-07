@@ -11,6 +11,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/AppShell";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { SystemProvider } from "@/context/SystemContext";
 
 import Dashboard from "@/pages/Dashboard";
 import Desktop from "@/pages/Desktop";
@@ -434,10 +435,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <LanguageProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <AppRouter />
-          </WouterRouter>
-          <Toaster />
+          <SystemProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <AppRouter />
+            </WouterRouter>
+            <Toaster />
+          </SystemProvider>
         </LanguageProvider>
       </TooltipProvider>
     </QueryClientProvider>
