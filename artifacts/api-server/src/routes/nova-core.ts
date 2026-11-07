@@ -30,6 +30,7 @@ import {
   importMemories,
   flushMemory,
   initMemory,
+  mirrorStatus,
   type MemoryKind,
 } from "../lib/agent/memory-store";
 import { ensureOllamaReady, ollamaHealth } from "../lib/agent/ollama-manager";
@@ -622,6 +623,60 @@ router.get("/nova-core/storage", (_req: Request, res: Response) => {
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }
+});
+
+/**
+ * GET /api/nova-core/state — «حالة المكنة محفوظة فين؟» بالأرقام، في نفس اللحظة.
+ * `storageSnapshot()` وحده كان بيتقرأ على إنه «كل التخزين» وهو لقطة KV للتطبيق؛
+ * الملف على القرص، وحجمه، وموعد آخر كتابة، وحالة النسخة في القاعدة — دول اللي
+ * بيجيبوا السؤال. مافيش هنا رقم مكتوب: exists/bytes/mtime من statSync، records من
+ * اللائحة نفسها، mirror من آخر محاولة معروفة.
+ */
+router.get("/nova-core/state", (_req: Request, res: Response) => {
+  const dir = path.resolve(process.env.NOVA_STATE_DIR?.trim() || path.join(process.cwd(), "state"));
+  const file = path.resolve(process.env.NOVA_MEMORY_FILE?.trim() || path.join(dir, "nova-memory.json"));
+  let local: Record<string, unknown> = { file: path.basename(file), exists: false, bytes: 0, mtime: null, records: 0 };
+  try {
+    const st = fs.existsSync(file) ? fs.statSync(file) : null;
+    local = {
+      file: path.basename(file),
+      exists: Boolean(st),
+      bytes: st?.size ?? 0,
+      mtime: st ? new Date(st.mtime).toISOString() : null,
+      records: memoryStats().total,
+      dirWritable: (() => {
+        try { fs.accessSync(path.dirname(file), fs.constants.W_OK); return true; } catch { return false; }
+      })(),
+    };
+  } catch (err) {
+    local.error = (err as Error).message;
+  }
+  type MirrorSnap = { on: boolean; state: string; error: string | null; row: string; via: string; records: number };
+  let mirror: MirrorSnap;
+  try {
+    mirror = mirrorStatus() as MirrorSnap;
+  } catch (err) {
+    mirror = { on: false, state: "error", error: (err as Error).message, row: "main", via: "off", records: 0 };
+  }
+  let kv: Record<string, unknown>;
+  try {
+    kv = { ...storageSnapshot() };
+  } catch (err) {
+    kv = { error: (err as Error).message };
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    at: new Date().toISOString(),
+    local,
+    kv,
+    mirror,
+    verdict: mirror.on
+      ? mirror.state === "ok"
+        ? "محفوظة على القرص + نسخة في القاعدة (آخر push نجح)"
+        : `على القرص، والنسخة معلقة: ${String(mirror.error ?? mirror.state ?? "error")}`
+      : "على القرص بس (المِرور مقفول على المكنة دي)",
+  });
 });
 
 /* ── catalogue ───────────────────────────────────────────────────────────── */
