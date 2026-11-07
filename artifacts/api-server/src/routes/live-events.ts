@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from "express";
-import { getPlatformControlSnapshot } from "../lib/standalone-api";
 
 const router = Router();
 
@@ -81,7 +80,6 @@ export function subscribeLiveEvents(req: Request, res: Response): void {
       }
     }
   } else {
-    res.write(`data: ${JSON.stringify({ type: "platform_snapshot", snapshot: getPlatformControlSnapshot(), ts: Date.now() })}\n\n`);
   }
   clients.add(res);
 
