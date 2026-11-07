@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 108,
-    "lastHeartbeatAt": "2026-11-07T08:02:09.218Z",
+    "autonomousCyclesCompleted": 109,
+    "lastHeartbeatAt": "2026-11-07T15:16:37.912Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #108 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #109 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794064598755",
+      "ts": "2026-11-07 15:16:38 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #109 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 172.253.139.141 | HTTP 200 | SHA256: 7412c3889a4683d0 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 22 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:20)"
+    },
     {
       "id": "pulse-1794038530305",
       "ts": "2026-11-07 08:02:10 UTC",
@@ -202,13 +209,6 @@
       "category": "GITHUB_CLOUD_PULSE",
       "titleAr": "نبضة العقل السحابي التلقائية #85 على الهدف (bughunters.google.com)",
       "detailAr": "IP: 74.125.69.141 | HTTP 200 | SHA256: 728b96accf94ab24 — تم التحديث والحفظ في ذاكرة GitHub الدائمة."
-    },
-    {
-      "id": "pulse-1793590253772",
-      "ts": "2026-11-02 03:30:53 UTC",
-      "category": "GITHUB_CLOUD_PULSE",
-      "titleAr": "نبضة العقل السحابي التلقائية #84 على الهدف (bughunters.google.com)",
-      "detailAr": "IP: 142.251.218.177 | HTTP 200 | SHA256: 57deba8d9598161e — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 76 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:21)"
     }
   ],
   "extractedArtifactsVault": [
@@ -1123,6 +1123,36 @@
       "at": "2026-11-02T21:06:50.538Z"
     },
     {
+      "id": "CVE-2023-3812",
+      "title": "CVE-2023-3812",
+      "description": "An out-of-bounds memory access flaw was found in the Linux kernel’s TUN/TAP device driver functionality in how a user generates a malicious (too big) networking packet when napi frags is enabled. This flaw allows a local user to crash or potentially escalate their privileges on the system.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3812",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-4004",
+      "title": "CVE-2023-4004",
+      "description": "A use-after-free flaw was found in the Linux kernel's netfilter in the way a user triggers the nft_pipapo_remove function with the element, without a NFT_SET_EXT_KEY_END. This issue could allow a local user to crash the system or potentially escalate their privileges on the system.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4004",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-4147",
+      "title": "CVE-2023-4147",
+      "description": "A use-after-free flaw was found in the Linux kernel’s Netfilter functionality when adding a rule with NFTA_RULE_CHAIN_ID. This flaw allows a local user to crash or escalate their privileges on the system.",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4147",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
       "id": "CVE-2022-20818",
       "title": "CVE-2022-20818",
       "description": "Multiple vulnerabilities in the CLI of Cisco SD-WAN Software could allow an authenticated, local attacker to gain elevated privileges. These vulnerabilities are due to improper access controls on commands within the application CLI. An attacker could exploit these vulnerabilities by running a malicious command on the application CLI. A successful exploit could allow the attacker to execute arbitra",
@@ -1943,6 +1973,36 @@
       "at": "2026-11-03T18:50:34.961Z"
     },
     {
+      "id": "CVE-2020-27792",
+      "title": "CVE-2020-27792",
+      "description": "A heap-based buffer overwrite vulnerability was found in GhostScript's lp8000_print_page() function in the gdevlp8k.c file. This flaw allows an attacker to trick a user into opening a crafted PDF file, triggering the heap buffer overflow that could lead to memory corruption or a denial of service.",
+      "cvss": 7.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-27792",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-3567",
+      "title": "CVE-2023-3567",
+      "description": "A use-after-free flaw was found in vcs_read in drivers/tty/vt/vc_screen.c in vc_screen in the Linux Kernel. This issue may allow an attacker with local user access to cause a system crash or leak internal kernel information.",
+      "cvss": 7.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3567",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-4387",
+      "title": "CVE-2023-4387",
+      "description": "A use-after-free flaw was found in vmxnet3_rq_alloc_rx_buf in drivers/net/vmxnet3/vmxnet3_drv.c in VMware's vmxnet3 ethernet NIC driver in the Linux Kernel. This issue could allow a local attacker to crash the system due to a double-free while cleaning up vmxnet3_rq_cleanup_all, which could also lead to a kernel information leak problem.",
+      "cvss": 7.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4387",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
       "id": "CVE-2023-6610",
       "title": "CVE-2023-6610",
       "description": "An out-of-bounds read vulnerability was found in smb2_dump_detail in fs/smb/client/smb2ops.c in the Linux Kernel. This issue could allow a local attacker to crash the system or leak internal kernel information.",
@@ -2103,6 +2163,16 @@
       "at": "2026-11-06T21:53:20.410Z"
     },
     {
+      "id": "CVE-2023-3750",
+      "title": "CVE-2023-3750",
+      "description": "A flaw was found in libvirt. The virStoragePoolObjListSearch function does not return a locked pool as expected, resulting in a race condition and denial of service when attempting to lock the same object from another thread. This issue could allow clients connecting to the read-only socket to crash the libvirt daemon.",
+      "cvss": 6.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3750",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
       "id": "CVE-2023-42755",
       "title": "CVE-2023-42755",
       "description": "A flaw was found in the IPv4 Resource Reservation Protocol (RSVP) classifier in the Linux kernel. The xprt pointer may go beyond the linear part of the skb, leading to an out-of-bounds read in the `rsvp_classify` function. This issue may allow a local user to crash the system and cause a denial of service.",
@@ -2193,6 +2263,16 @@
       "at": "2026-11-05T21:45:37.064Z"
     },
     {
+      "id": "CVE-2023-3108",
+      "title": "CVE-2023-3108",
+      "description": "A flaw was found in the subsequent get_user_pages_fast in the Linux kernel’s interface for symmetric key cipher algorithms in the skcipher_recvmsg of crypto/algif_skcipher.c function. This flaw allows a local user to crash the system.",
+      "cvss": 6.2,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3108",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
       "id": "CVE-2023-5341",
       "title": "CVE-2023-5341",
       "description": "A heap use-after-free flaw was found in coders/bmp.c in ImageMagick.",
@@ -2221,6 +2301,26 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2013-1815",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2023-3019",
+      "title": "CVE-2023-3019",
+      "description": "A DMA reentrancy issue leading to a use-after-free error was found in the e1000e NIC emulation code in QEMU. This issue could allow a privileged guest user to crash the QEMU process on the host, resulting in a denial of service.",
+      "cvss": 6,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3019",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-4273",
+      "title": "CVE-2023-4273",
+      "description": "A flaw was found in the exFAT driver of the Linux kernel. The vulnerability exists in the implementation of the file name reconstruction function, which is responsible for reading file name entries from a directory index and merging file name parts belonging to one file into a single long file name. Since the file name characters are copied into a stack variable, a local privileged attacker could ",
+      "cvss": 6,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4273",
+      "at": "2026-11-07T15:16:38.228Z"
     },
     {
       "id": "CVE-2023-5090",
@@ -2271,6 +2371,86 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4813",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2023-3745",
+      "title": "CVE-2023-3745",
+      "description": "A heap-based buffer overflow issue was found in ImageMagick's PushCharPixel() function in quantum-private.h. This issue may allow a local attacker to trick the user into opening a specially crafted file, triggering an out-of-bounds read error and allowing an application to crash, resulting in a denial of service.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3745",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-3772",
+      "title": "CVE-2023-3772",
+      "description": "A flaw was found in the Linux kernel’s IP framework for transforming packets (XFRM subsystem). This issue may allow a malicious user with CAP_NET_ADMIN privileges to directly dereference a NULL pointer in xfrm_update_ae_params(), leading to a possible kernel crash and denial of service.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3772",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-3773",
+      "title": "CVE-2023-3773",
+      "description": "A flaw was found in the Linux kernel’s IP framework for transforming packets (XFRM subsystem). This issue may allow a malicious user with CAP_NET_ADMIN privileges to cause a 4 byte out-of-bounds read of XFRMA_MTIMER_THRESH when parsing netlink attributes, leading to potential leakage of sensitive heap data to userspace.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3773",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-38559",
+      "title": "CVE-2023-38559",
+      "description": "A buffer overflow flaw was found in base/gdevdevn.c:1973 in devn_pcx_write_rle() in ghostscript. This issue may allow a local attacker to cause a denial of service via outputting a crafted PDF file for a DEVN device with gs.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-38559",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-38560",
+      "title": "CVE-2023-38560",
+      "description": "An integer overflow flaw was found in pcl/pl/plfont.c:418 in pl_glyph_name in ghostscript. This issue may allow a local attacker to cause a denial of service via transforming a crafted PCL file to PDF format.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-38560",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-4132",
+      "title": "CVE-2023-4132",
+      "description": "A use-after-free vulnerability was found in the siano smsusb module in the Linux kernel. The bug occurs during device initialization when the siano device is plugged in. This flaw allows a local user to crash the system, causing a denial of service condition.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4132",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-4133",
+      "title": "CVE-2023-4133",
+      "description": "A use-after-free vulnerability was found in the cxgb4 driver in the Linux kernel. The bug occurs when the cxgb4 device is detaching due to a possible rearming of the flower_stats_timer from the work queue. This flaw allows a local user to crash the system, causing a denial of service condition.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4133",
+      "at": "2026-11-07T15:16:38.228Z"
+    },
+    {
+      "id": "CVE-2023-4385",
+      "title": "CVE-2023-4385",
+      "description": "A NULL pointer dereference flaw was found in dbFree in fs/jfs/jfs_dmap.c in the journaling file system (JFS) in the Linux Kernel. This issue may allow a local attacker to crash the system due to a missing sanity check.",
+      "cvss": 5.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4385",
+      "at": "2026-11-07T15:16:38.228Z"
     },
     {
       "id": "CVE-2023-43788",
@@ -2471,196 +2651,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26661",
       "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2024-26662",
-      "title": "CVE-2024-26662",
-      "description": "In the Linux kernel, the following vulnerability has been resolved:\n\ndrm/amd/display: Fix 'panel_cntl' could be null in 'dcn21_set_backlight_level()'\n\n'panel_cntl' structure used to control the display panel could be null,\ndereferencing it could lead to a null pointer access.\n\nFixes the below:\ndrivers/gpu/drm/amd/amdgpu/../display/dc/hwss/dcn21/dcn21_hwseq.c:269 dcn21_set_backlight_level() error: ",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26662",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2024-26670",
-      "title": "CVE-2024-26670",
-      "description": "In the Linux kernel, the following vulnerability has been resolved:\n\narm64: entry: fix ARM64_WORKAROUND_SPECULATIVE_UNPRIV_LOAD\n\nCurrently the ARM64_WORKAROUND_SPECULATIVE_UNPRIV_LOAD workaround isn't\nquite right, as it is supposed to be applied after the last explicit\nmemory access, but is immediately followed by an LDR.\n\nThe ARM64_WORKAROUND_SPECULATIVE_UNPRIV_LOAD workaround is used to\nhandle C",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26670",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2024-26677",
-      "title": "CVE-2024-26677",
-      "description": "In the Linux kernel, the following vulnerability has been resolved:\n\nrxrpc: Fix delayed ACKs to not set the reference serial number\n\nFix the construction of delayed ACKs to not set the reference serial number\nas they can't be used as an RTT reference.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26677",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2024-26740",
-      "title": "CVE-2024-26740",
-      "description": "In the Linux kernel, the following vulnerability has been resolved:\n\nnet/sched: act_mirred: use the backlog for mirred ingress\n\nThe test Davide added in commit ca22da2fbd69 (\"act_mirred: use the backlog\nfor nested calls to mirred ingress\") hangs our testing VMs every 10 or so\nruns, with the familiar tcp_v4_rcv -> tcp_v4_rcv deadlock reported by\nlockdep.\n\nThe problem as previously described by Davi",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26740",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2024-26841",
-      "title": "CVE-2024-26841",
-      "description": "In the Linux kernel, the following vulnerability has been resolved:\n\nLoongArch: Update cpu_sibling_map when disabling nonboot CPUs\n\nUpdate cpu_sibling_map when disabling nonboot CPUs by defining & calling\nclear_cpu_sibling_map(), otherwise we get such errors on SMT systems:\n\njump label: negative count!\nWARNING: CPU: 6 PID: 45 at kernel/jump_label.c:263 __static_key_slow_dec_cpuslocked+0xec/0x100\nC",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26841",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2024-26866",
-      "title": "CVE-2024-26866",
-      "description": "In the Linux kernel, the following vulnerability has been resolved:\n\nspi: lpspi: Avoid potential use-after-free in probe()\n\nfsl_lpspi_probe() is allocating/disposing memory manually with\nspi_alloc_host()/spi_alloc_target(), but uses\ndevm_spi_register_controller(). In case of error after the latter call the\nmemory will be explicitly freed in the probe function by\nspi_controller_put() call, but used",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26866",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2023-40661",
-      "title": "CVE-2023-40661",
-      "description": "Several memory vulnerabilities were identified within the OpenSC packages, particularly in the card enrollment process using pkcs15-init when a user or administrator enrolls cards. To take advantage of these flaws, an attacker must have physical access to the computer system and employ a custom-crafted USB device or smart card to manipulate responses to APDUs. This manipulation can potentially all",
-      "cvss": 5.4,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-40661",
-      "at": "2026-11-06T21:53:20.410Z"
-    },
-    {
-      "id": "CVE-2023-31698",
-      "title": "CVE-2023-31698",
-      "description": "Bludit v3.14.1 is vulnerable to Stored Cross Site Scripting (XSS) via SVG file on site logo. NOTE: the product's security model is that users are trusted by the administrator to insert arbitrary content (users cannot create their own accounts through self-registration).",
-      "cvss": 5.4,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-31698",
-      "at": "2026-11-06T01:56:03.641Z"
-    },
-    {
-      "id": "CVE-2012-5571",
-      "title": "CVE-2012-5571",
-      "description": "A flaw was found in OpenStack Keystone. This vulnerability allows remote authenticated users to bypass intended authorization restrictions. This occurs because OpenStack Keystone does not properly handle EC2 (Elastic Compute Cloud) tokens when a user's role has been removed from a tenant. An attacker can leverage a token associated with a removed user role to gain unauthorized access.",
-      "cvss": 5.4,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2012-5571",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2011-2927",
-      "title": "CVE-2011-2927",
-      "description": "A flaw was found in Spacewalk and Red Hat Network Satellite. This vulnerability, known as cross-site scripting (XSS), allows remote attackers to inject malicious web scripts or HTML into web pages viewed by other users. The flaw is triggered through vectors related to Search forms, enabling attackers to potentially steal sensitive information or perform actions on behalf of the victim.",
-      "cvss": 5.4,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2011-2927",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2011-3344",
-      "title": "CVE-2011-3344",
-      "description": "A flaw was found in Spacewalk. A remote attacker can exploit a cross-site scripting (XSS) vulnerability in the Lookup Login/Password form by injecting arbitrary web script or HTML via the URI. This can lead to information disclosure or unauthorized actions within the user's browser session.",
-      "cvss": 5.4,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2011-3344",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2023-34967",
-      "title": "CVE-2023-34967",
-      "description": "A Type Confusion vulnerability was found in Samba's mdssvc RPC service for Spotlight. When parsing Spotlight mdssvc RPC packets, one encoded data structure is a key-value style dictionary where the keys are character strings, and the values can be any of the supported types in the mdssvc protocol. Due to a lack of type checking in callers of the dalloc_value_for_key() function, which returns the o",
-      "cvss": 5.3,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-34967",
-      "at": "2026-11-06T21:53:20.410Z"
-    },
-    {
-      "id": "CVE-2023-34968",
-      "title": "CVE-2023-34968",
-      "description": "A path disclosure vulnerability was found in Samba. As part of the Spotlight protocol, Samba discloses the server-side absolute path of shares, files, and directories in the results for search queries. This flaw allows a malicious client or an attacker with a targeted RPC request to view the information that is part of the disclosed path.",
-      "cvss": 5.3,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-34968",
-      "at": "2026-11-06T21:53:20.410Z"
-    },
-    {
-      "id": "CVE-2023-5871",
-      "title": "CVE-2023-5871",
-      "description": "A flaw was found in libnbd, due to a malicious Network Block Device (NBD), a protocol for accessing Block Devices such as hard disks over a Network. This issue may allow a malicious NBD server to cause a Denial of Service.",
-      "cvss": 5.3,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5871",
-      "at": "2026-11-06T01:56:03.642Z"
-    },
-    {
-      "id": "CVE-2012-0059",
-      "title": "CVE-2012-0059",
-      "description": "A flaw was found in Spacewalk-backend. This information disclosure vulnerability occurs when a system registration XML-RPC call fails, causing cleartext user passwords to be included in error messages. Remote administrators can exploit this by reading server logs and emails, leading to the unauthorized disclosure of user passwords.",
-      "cvss": 4.9,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2012-0059",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2023-6176",
-      "title": "CVE-2023-6176",
-      "description": "A null pointer dereference flaw was found in the Linux kernel API for the cryptographic algorithm scatterwalk functionality. This issue occurs when a user constructs a malicious packet with specific socket configuration, which could allow a local user to crash the system or escalate their privileges on the system.",
-      "cvss": 4.7,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6176",
-      "at": "2026-11-06T16:29:53.081Z"
-    },
-    {
-      "id": "CVE-2023-5380",
-      "title": "CVE-2023-5380",
-      "description": "A use-after-free flaw was found in the xorg-x11-server. An X server crash may occur in a very specific and legacy configuration (a multi-screen setup with multiple protocol screens, also known as Zaphod mode) if the pointer is warped from within a window on one screen to the root window of the other screen and if the original window is destroyed followed by another window being destroyed.",
-      "cvss": 4.7,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5380",
-      "at": "2026-11-06T01:56:03.641Z"
-    },
-    {
-      "id": "CVE-2019-15291",
-      "title": "CVE-2019-15291",
-      "description": "An issue was discovered in the Linux kernel through 5.2.9. There is a NULL pointer dereference caused by a malicious USB device in the flexcop_usb_probe function in the drivers/media/usb/b2c2/flexcop-usb.c driver.",
-      "cvss": 4.6,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-15291",
-      "at": "2026-11-02T21:06:50.538Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 11,
+    "freshThisPulse": 22,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
       "GHSA:20"
     ],
-    "at": "2026-11-07T08:02:10.305Z"
+    "at": "2026-11-07T15:16:38.755Z"
   }
 }
