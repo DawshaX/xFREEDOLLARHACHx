@@ -80,22 +80,31 @@ jobs:
         run: node scripts/build-toolchain-mirror.mjs --from out/vendor/bin --out out/mirror
 
       - name: 🔒 No secret, and every binary must answer `-version`
-        # نفس معيار الحزمة المحمولة: الأصل عام. والأداة اللي بتسحبها المكنة لازم
-        # تكون اللي اتقاس عليها، مش ملف اتقطع في النص.
+        # النسخة من عندنا لازم تتقاس مش تتورّط: كل binary بيتنفّذ بأعلامه الحقيقية
+        # ولازم يطلع سطر غير فاضي. أول تشغيل قبضها (run 42411291494) وكان الغلط
+        # في الشيل نفسه: `head -1` بياخد أول سطر — والكثير من أدوات Go بيطبعوا
+        # سطر فاضي الأول — فـ12 أداة اتقال عليها «ما رَدّتش» وهي سليمة، وكمان
+        # كان بيتكرّر اسم الأداة داخل الأعلام. بقى: أول سطر فيه حرف + أعلام بس.
         run: |
+          printf '### النسخ اللي اشتغلت فعلًا\n\n| الأداة | أول سطر من الأداة |\n|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
           node scripts/audit-bundle-secrets.mjs out/vendor/bin
           cd out/vendor/bin
           fail=0
           for f in $(ls -1 | grep -v '^\.'); do
             case "$f" in
-              nuclei|httpx|subfinder|katana|dnsx|naabu|amass) v="$f -version" ;;
-              ffuf) v="$f -V" ;;
-              gobuster|dalfox|gitleaks) v="$f version" ;;
-              trivy) v="$f --version" ;;
-              *) v="--version" ;;
+              ffuf) a="-V" ;;
+              gobuster|dalfox|gitleaks) a="version" ;;
+              trivy) a="--version" ;;
+              *) a="-version" ;;
             esac
-            out="$(timeout 20 ./$f $v 2>&1 | head -1)"
-            if [ -z "$out" ]; then echo "::error::$f ما رَدّش على $v"; fail=1; else echo "✓ $f · $out"; fi
+            line="$(timeout 25 ./"$f" $a 2>&1 | tr -d '\r' | sed -n '/[^[:space:]]/{p;q;}')"
+            if [ -z "$line" ]; then
+              echo "::error::$f ما طلعتش سطر لـ $a"
+              fail=1
+            else
+              echo "✓ $f · ${line:0:90}"
+              printf '| `%s` | %s |\n' "$f" "${line:0:90}" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+            fi
           done
           exit $fail
 

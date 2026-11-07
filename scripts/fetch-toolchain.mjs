@@ -18,6 +18,13 @@
  *     exact release tag is remembered so the next build does nothing.
  *   • Never fail the build: a network hiccup here must not stop a deploy. Failures
  *     are reported in the summary and as a ::warning:: annotation.
+ *
+ * الملف ده بيتم نسخّه جوه الحزمة المحمولة (`build-standalone.mjs`) — فأي تعديل
+ * فيه لازم يفعّي بناء حزمة جديد، وده بقى مكتوب في `on.push.paths` بتاع
+ * standalone-bundle.yml. قبل الإصلاح ده (2026-11-07) التعديل هنا كان بيرفع
+ * المستودع بس، والمكنة تفضل بشكر سكربت قديم — القياس: 12/12 أداة «ناقصين» بعد
+ * ما الإصلاح اتعمل. `test-toolchain-mirror.mjs` بيشغّل الملف ده offline عشان
+ * السطوح اللي ما بتتحطش في مسار CI ما ترجعش تتكسر بالسكرت.
  */
 import fs from "node:fs";
 import path from "node:path";
