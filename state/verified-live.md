@@ -3,7 +3,7 @@
 > اتولّد من `scripts/verify-live.mjs` (شغّله `.github/workflows/live-verify.yml`).
 > كل هدف هنا صاحبه منشور صراحة إن فحصه مسموح — الوثيقة في العمود الأخير.
 
-آخر تشغيل: `2026-11-07T20:22:59.918Z` · الحكم: **RED** · ✓16 · ✗4 · ؟2 · (محجوب)0
+آخر تشغيل: `2026-11-07T20:24:45.438Z` · الحكم: **RED** · ✓16 · ✗4 · ؟2 · (محجوب)0
 الأدوات المرصودة: nmap · المحرك: `http://127.0.0.1:8090/api` · هدف التمرين: `scanme.nmap.org`
 
 | الطبقة | الفحص | الحالة | التفصيل |
@@ -14,18 +14,18 @@
 | cli | katana present | ✗ fail | مش موجود |
 | cli | nuclei present | ✗ fail | مش موجود — الـvendor فشل؟ |
 | cli | nmap scanme.nmap.org:80,22 | ✓ pass | 2 بورت مفتوح · 22/tcp open · 80/tcp open |
-| cli | hub nova.waifly.com | ✓ pass | https://nova.waifly.com/api/health → HTTP 200 · JSON 93B · ops bundle ✓ · 556ms |
+| cli | hub nova.waifly.com | ✓ pass | https://nova.waifly.com/api/health → HTTP 200 · JSON 93B · ops bundle ✓ · 689ms |
 | cli | ffuf present | ? review | مش موجود — مش حرجي |
 | engine | engine reachable | ✓ pass | HTTP 200 |
 | engine | kinds report tool presence | ✓ pass | 12 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.nmap |
 | engine | bounty catalog served | ✓ pass | 746 برنامج (511 بمكافأة) · آخر تحديث 5.1 يوم · ops/bounty/programs-catalog.json |
 | engine | catalog lookup over HTTP | ✓ pass | aces-dev.wnba.com → hackerone:nba-public (domain · استقبال open) · ونطاق مجهول → match:null |
 | engine | program registered active (demo.testfire.net) | ✓ pass | id=demo.testfire.net · policy=https://demo.testfire.net/ |
-| engine | job created | ✓ pass | job=20261107-004698 · 7 مهمة |
+| engine | job created | ✓ pass | job=20261107-5e6bf7 · 7 مهمة |
 | engine | job executed | ✓ pass | 4/7 done · 3 failed · 11 finding · done |
-| engine | failed tasks | ? review | tools.subfinder: [self-node] subfinder exit=127 · 11ms · 0 نتيجة · tools.httpx: [self-node] httpx exit=127 · 9ms · 0 نتيجة · tools.nuclei: [self-node] nuclei exit=127 · 10ms · 0 نتيجة |
-| engine | evidence hashed on disk | ✓ pass | 9 ملف في state/jobs/20261107-004698/evidence · 4 فيهم بايتات · فاضي: tools.httpx-e3b0c44298fc.txt, tools.httpx.self-node-e3b0c44298fc.txt, tools.nuc… (5 — 5 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية) |
-| engine | report is honest about coverage | ✓ pass | 801 بايت · فيه «Coverage gaps»=true · «reportable»=true |
+| engine | failed tasks | ? review | tools.subfinder: [self-node] subfinder exit=127 · 8ms · 0 نتيجة · tools.httpx: [self-node] httpx exit=127 · 7ms · 0 نتيجة · tools.nuclei: [self-node] nuclei exit=127 · 6ms · 0 نتيجة |
+| engine | evidence hashed on disk | ✓ pass | 9 ملف في state/jobs/20261107-5e6bf7/evidence · 4 فيهم بايتات · فاضي: tools.httpx-e3b0c44298fc.txt, tools.httpx.self-node-e3b0c44298fc.txt, tools.nuc… (5 — 5 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية) |
+| engine | report is honest about coverage | ✓ pass | 799 بايت · فيه «Coverage gaps»=true · «reportable»=true |
 | engine | findings vault is idempotent | ✓ pass | أول sync: +22/-22 (من مهام 11 · من الكتالوج القديم 11) · تاني: +0/-22 ومحدّثة 22 · متأكَّدة 0 |
 | engine | report draft gated on reproduction | ✓ pass | 3 مفتاح: 0 مسودة (200) · 3 مرفوضة (409) · البنية=true · سبب الرفض موجود=true |
 | engine | hunt candidates stay context-only | ✓ pass | 12 مرشّح من 746 برنامج · أعلى استجابة 100% · مفلوت {"notBounty":235,"pausedOrClosed":0,"lowEfficiency":376,"platform":0,"query":0} · CIDR سياق بس=true · ترتيب=true |
