@@ -431,19 +431,33 @@ server.listen(port, host, () => {
   }
 
   // Durable memory first: a free host throws the filesystem away on every
-  // deploy, and the agent's memory is the one thing that must survive it. With
-  // NOVA_SUPABASE_URL + NOVA_SUPABASE_SERVICE_KEY set, this pulls the last
-  // snapshot back before anything can write over it. No env → no network call.
+  // deploy, and the agent's memory is the one thing that must survive it. On a
+  // supervised box this runs keyless through the nova-state edge function (the
+  // service key lives in Supabase, never here); with NOVA_SUPABASE_SERVICE_KEY
+  // set it talks to REST directly. Unsupervised with no env → zero calls.
+  // Either way the mirror is reconciled at boot: empty disk pulls, empty row
+  // pushes, so a box that already remembers something does not wait for its
+  // next write to get a copy in the database.
   void import("./lib/agent/memory-store")
     .then(({ hydrateMemoryFromMirror, mirrorStatus }) =>
       hydrateMemoryFromMirror().then((r) => {
         const status = mirrorStatus();
         if (!status.on) return;
         logger.info(
-          { hydrated: r.hydrated, records: r.records, row: status.row, state: status.state, error: status.error },
+          {
+            hydrated: r.hydrated,
+            bootstrapped: Boolean(r.bootstrapped),
+            records: r.records,
+            row: status.row,
+            via: status.via,
+            state: status.state,
+            error: status.error,
+          },
           r.hydrated
             ? "memory: restored from the durable mirror (this box had no file)"
-            : "memory: local file already had records — mirror will follow writes",
+            : r.bootstrapped
+              ? "memory: the durable row was empty — pushed the local copy up"
+              : "memory: mirror already has this copy — writes will keep it fresh",
         );
       }),
     )

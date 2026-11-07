@@ -6,7 +6,7 @@
  * mean "it forgot every lesson — again". The store now mirrors to one Supabase
  * row and rehydrates from it when the file is missing.
  *
- * Four things must hold, and none of them can be proven by reading the code:
+ * Seven things must hold, and none of them can be proven by reading the code:
  *   1. with the env unset, NOT ONE network call is made (a plain file store)
  *   2. a cold start with no file hydrates from the mirror row
  *   3. a write reaches the mirror (and carries the whole document)
@@ -218,6 +218,51 @@ const remoteDoc = {
     calls.length === 0 && store.mirrorStatus().on === false,
     `${calls.length} calls · ${JSON.stringify(store.mirrorStatus())}`,
   );
+}
+
+/* ── 7 · a box that already remembers must fill an empty row at boot ────── */
+{
+  // القياس اللي المفروض الفحص ده يمنع رجوعه: nova_memory كانت 0 rows والمكنة
+  // ليها 20 سجل على القرص — المِرور كان بيكتب عند الكتابة الجديدة بس، فالصف
+  // كان يفضل فاضي لأيام. بقى في الإقلاع نفسه bootstrap: قرص مملوء + صف فاضي
+  // = ارفع. ولو القراءة وقعت، مفيش رفع أعمى (احتماله يمسح نسخة حد تاني).
+  const file = path.join(work, "bootstrap.json");
+  const rec = (id, title) => ({
+    id, kind: "fact", scope: "global", title, content: `body of ${id}`,
+    tags: [], pinned: false, createdAt: "2026-11-07T10:00:00.000Z", updatedAt: "2026-11-07T10:00:00.000Z",
+  });
+  fs.writeFileSync(file, JSON.stringify({ version: 2, seq: 2, records: [rec("mem_a", "من قبل المِرور"), rec("mem_b", "الثاني")] }), "utf8");
+
+  const seen = [];
+  globalThis.fetch = async (url, init) => {
+    seen.push({ url: String(url), method: init?.method ?? "GET", body: init?.body ?? null, headers: init?.headers ?? {} });
+    return { ok: true, status: 200, json: async () => ({ ok: true, row: null, records: 0 }) };
+  };
+  const store = freshStore({
+    NOVA_MEMORY_FILE: file,
+    NOVA_SUPERVISED: "1",
+    NOVA_SUPABASE_URL: "https://example.supabase.co",
+  });
+  const out = await store.hydrateMemoryFromMirror();
+  check("full disk + empty row → one bootstrap push at boot", out.bootstrapped === true && out.records === 2, JSON.stringify(out));
+  const post = seen.filter((c) => c.method === "POST" && c.url.endsWith("/functions/v1/nova-state")).pop();
+  check("the bootstrap push carries both records", Boolean(post && JSON.parse(post.body).doc.records.length === 2), post?.url);
+  check("the row is still not read back into memory", out.hydrated === false && store.listMemories().total === 2, JSON.stringify(store.listMemories().total));
+  check("the boot reconcile is idempotent", (await store.hydrateMemoryFromMirror()).bootstrapped === true);
+
+  // والقراءة الفاشلة ما تنتجش كتابة خالص
+  const before = seen.length;
+  globalThis.fetch = async () => {
+    throw new Error("mirror unreachable");
+  };
+  const cold = freshStore({
+    NOVA_MEMORY_FILE: file,
+    NOVA_SUPERVISED: "1",
+    NOVA_SUPABASE_URL: "https://example.supabase.co",
+  });
+  const out2 = await cold.hydrateMemoryFromMirror();
+  check("a failed read never pushes blind", out2.bootstrapped === undefined && seen.length === before, JSON.stringify(out2));
+  check("the failure is recorded, not thrown", cold.mirrorStatus().state === "error", JSON.stringify(cold.mirrorStatus()));
 }
 
 let bad = 0;

@@ -203,10 +203,22 @@ async function mirrorPush(): Promise<void> {
 }
 
 /** Hydrate from the mirror once at boot (no-op with the file present). */
-export async function hydrateMemoryFromMirror(): Promise<{ hydrated: boolean; records: number }> {
+export async function hydrateMemoryFromMirror(): Promise<{ hydrated: boolean; records: number; bootstrapped?: boolean }> {
   if (!mirrorOn) return { hydrated: false, records: 0 };
   load();
-  if (store.records.length > 0) return { hydrated: false, records: store.records.length };
+  if (store.records.length > 0) {
+    // القاعدة فاضية والقرص فيه سجلات → ارفع مرة واحدة. من غير الخطوة دي الصف
+    // يفضل صفر لحد أول كتابة جديدة بعد الإقلاع، و«كل حاجة في القاعدة» تبقى
+    // كلمة على الورق (قِيس 2026-11-07: nova_memory = 0 rows والمكنة ليها 20 سجل).
+    // mirrorLoad بيرجّع null للحالتين (فاضي / فشل)، فالحكم على mirrorState مش على null:
+    // لو القراءة وقعت بنسيب القرص في حاله — مفيش push أعمى ولا احتمال مسح.
+    const probe = await mirrorLoad();
+    if (probe === null && mirrorState === "ok") {
+      await mirrorPush();
+      return { hydrated: false, records: store.records.length, bootstrapped: true };
+    }
+    return { hydrated: false, records: store.records.length };
+  }
   const doc = await mirrorLoad();
   if (!doc) return { hydrated: false, records: 0 };
   store = doc;
