@@ -420,12 +420,20 @@ router.delete("/memory", (_req, res) => {
   res.json({ ok: true });
 });
 
-router.get("/memory/stats", (_req, res) => {
+router.get("/memory/stats", async (_req, res) => {
   const byType: Record<string, number> = {};
   for (const m of memoryStore) {
     byType[m.kind] = (byType[m.kind] || 0) + 1;
   }
-  res.json({ total: memoryStore.length, byType });
+  // التزامن بقى حالة مقاسة: من غير السطر ده اللوحة تقول «محفوظ» وهي مش محفوظة.
+  let mirror: unknown = null;
+  try {
+    const mod = await import("../lib/agent/memory-store");
+    mirror = mod.mirrorStatus();
+  } catch {
+    mirror = { on: false, state: "unavailable", error: null, via: "off", records: memoryStore.length };
+  }
+  res.json({ total: memoryStore.length, byType, mirror });
 });
 
 export default router;

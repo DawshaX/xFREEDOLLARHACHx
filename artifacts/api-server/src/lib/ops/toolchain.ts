@@ -464,15 +464,41 @@ export async function provisionToolchainOnce(opts: ProvisionOptions = {}): Promi
 }
 
 /**
- * محاولة صامتة وقت الإقلاع: `NOVA_TOOLCHAIN_FETCH=1` دايمًا، و`auto` بس لو
- * مافيش حاجة في `vendor/bin`. مابتستناش الرد — الحاوية المجانية لازم تخدم
+ * محاولة صامتة وقت الإقلاع: `NOVA_TOOLCHAIN_FETCH=1` دايمًا، و`auto` لمّا يبقى
+ * فيه أداة ناقصة (وفوق 1.5GB حر على القرص). على مكنة مُشرَفة `auto` هو الافتراضي. مابتستناش الرد — الحاوية المجانية لازم تخدم
  * حالاً، والقياس بيبان في `/api/ops/tools` أول ما يخلص.
  */
+/** `fs.statfsSync` بيرجع bsize/bavail؛ لو الـAPI مش موجود نرجّع null وما نمنعش. */
+function freeDiskMB(at: string): number | null {
+  try {
+    const fst = fs.statfsSync(at || process.cwd());
+    return Math.round((fst.bsize * fst.bavail) / 1048576);
+  } catch {
+    return null;
+  }
+}
+
 export function bootToolchainFetch(log?: (msg: string) => void): boolean {
-  const mode = String(process.env.NOVA_TOOLCHAIN_FETCH || "").trim().toLowerCase();
+  let mode = String(process.env.NOVA_TOOLCHAIN_FETCH || "").trim().toLowerCase();
+  // على مكنة مُشرَفة القرار بقى «نزّل اللي ناقص» بشكل افتراضي: المستخدم طلب
+  // الأدوات كلها 2026-11-07، والمجلد على وايفي قابل للكتابة (متقاس:
+  // /home/container/vendor/bin writable:true، present:3 / missing:9).
+  // `auto` بيراعي إن اللي موجود ما يتكررش، و NOVA_TOOLCHAIN_FETCH=0 بيطفي صراحةً.
+  if (!mode && process.env.NOVA_SUPERVISED === "1") mode = "auto";
   if (!mode || mode === "0" || mode === "off" || mode === "false") return false;
   const st = toolchainStatus();
-  if (mode === "auto" && st.present.length > 0) return false;
+  // `auto` مع الناقص: لو فيه أداة ناقصة ننزّلها، مابنقفش عند أول واحدة موجودة.
+  if (mode === "auto" && st.missing.length === 0) return false;
+  // حارس القرص: ~100MB تنزيل على حاوية مجانية بتطرح نفسها لما الديسك يخلص
+  // (متقاس 2026-11-07: النسخ الاحتياطية أكلت 8GB والمكنة وقعت). تحت 1.5GB حر
+  // مابننزّلش، وبنقول السبب بدل الصمت.
+  if (mode === "auto") {
+    const freeMB = freeDiskMB(st.dir);
+    if (freeMB !== null && freeMB < 1500) {
+      log?.(`toolchain: القرص الحر ${freeMB}MB أقل من 1500MB — التنزيل التلقائي اتخطّى (NOVA_TOOLCHAIN_FETCH=1 للتجاوز)`);
+      return false;
+    }
+  }
   if (!st.scriptAvailable) {
     log?.("NOVA_TOOLCHAIN_FETCH مفعّل بس السكريبت مش في الحزمة — تخطّيت");
     return false;

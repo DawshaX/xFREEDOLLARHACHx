@@ -329,9 +329,10 @@ void provisionCorpus()
   .then((r) => logger.info({ action: r.action, bytes: r.bytes, total: r.total }, `corpus: ${r.says_ar}`))
   .catch((err) => logger.warn({ err }, "corpus provisioning threw — serving without a corpus"));
 // أدوات المحرك نفسها: على الاستضافة المصانة مافيش root ولا apt، فالنسخ الثابتة
-// من ProjectDiscovery هي الطريق الوحيد لـ«أدوات حقيقية». مابننزّلهوش افتراضيًا —
-// ~100 MB على قرص 512 MB مع corpus منزّل للتو ممكن يقطع الظهر؛ اللي يريده يقول
-// NOVA_TOOLCHAIN_FETCH=1 (أو auto: لمّا vendor/bin فاضي بس).
+// من ProjectDiscovery هي الطريق الوحيد لـ«أدوات حقيقية». على مكنة مُشرَفة ده
+// بقى auto افتراضيًا (طلب 2026-11-07: «كل الأدوات اللي هتكون عندنا») — بس بعد ما
+// نقيس القرص الحر: ~100MB على حاوية 512MB مع corpus منزّل للتو كان ممكن يقطع
+// الظهر، فالحارس في bootToolchainFetch. للطيّ الكامل: NOVA_TOOLCHAIN_FETCH=0.
 const toolchainAtBoot = toolchainStatus();
 console.log(
   toolchainAtBoot.present.length

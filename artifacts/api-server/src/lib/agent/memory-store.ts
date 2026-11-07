@@ -98,20 +98,41 @@ let lastWriteError: string | null = null;
  * Both variables are server-side only (the service key writes). With either one
  * unset this module behaves exactly as before — a plain file, no network.
  */
-const MIRROR_URL = (process.env.NOVA_SUPABASE_URL || "").replace(/\/+$/, "");
+/**
+ * المكنة المُشرَفة (boot.mjs بيحط NOVA_SUPERVISED=1) هي الوحيدة اللي ليها مصدر
+ * افتراضي — أي فرع تاني من المستودع العام ما يبعتش حاجة للقاعدة دي. ومن غيره
+ * لازم env صريح، فالقاعدة دي مش مخبأ: `NOVA_SUPABASE_URL` هو اللي بيختار.
+ */
+const SUPERVISED = process.env.NOVA_SUPERVISED === "1";
+const MIRROR_URL = (
+  process.env.NOVA_SUPABASE_URL || (SUPERVISED ? "https://dbaaclqycsiefjwjfavf.supabase.co" : "")
+).replace(/\/+$/, "");
 const MIRROR_KEY = process.env.NOVA_SUPABASE_SERVICE_KEY || "";
 const MIRROR_ROW = process.env.NOVA_MEMORY_ROW || "main";
-const mirrorOn = Boolean(MIRROR_URL && MIRROR_KEY);
+/**
+ * وضع الدالة (edge): الكتابة بتعدي علي ops-api اللي مفتاحها جوّه Supabase نفسها،
+ * فالمكنة ما محتاجة سر خالص. ده مش تنازل: الحزمة بتتنزّل من release عام، فأي
+ * مفتاح جواها بقى مقروء لأي حد — والصف الوحيد + حارس ضد المسح بيتعاملوا مع
+ * ده جوّه الدالة. `NOVA_SUPABASE_SERVICE_KEY` لو اتحط بياخد مسار REST المباشر
+ * (أدق وأسرع)، و`NOVA_STATE_EDGE=0` بيطفي التزامن خالص.
+ */
+const EDGE_STATE = (process.env.NOVA_STATE_EDGE_URL || `${MIRROR_URL}/functions/v1/nova-state`).replace(/\/+$/, "");
+const edgeOn = process.env.NOVA_STATE_EDGE !== "0" && Boolean(EDGE_STATE) && SUPERVISED;
+const mirrorOn = Boolean(MIRROR_URL && MIRROR_KEY) || edgeOn;
+const mirrorVia: "rest" | "edge" | "off" = MIRROR_URL && MIRROR_KEY ? "rest" : edgeOn ? "edge" : "off";
 let mirrorState: "off" | "idle" | "ok" | "error" = mirrorOn ? "idle" : "off";
 let mirrorError: string | null = null;
 let mirrorTimer: NodeJS.Timeout | null = null;
 
 function mirrorHeaders(): Record<string, string> {
-  return {
-    apikey: MIRROR_KEY,
-    authorization: `Bearer ${MIRROR_KEY}`,
-    "content-type": "application/json",
-  };
+  const h: Record<string, string> = { "content-type": "application/json" };
+  if (MIRROR_KEY) {
+    h.apikey = MIRROR_KEY;
+    h.authorization = `Bearer ${MIRROR_KEY}`;
+  }
+  const token = process.env.NOVA_STATE_TOKEN;
+  if (token) h["x-nova-token"] = token;
+  return h;
 }
 
 /** Pull the last saved document. Returns null when the row does not exist yet. */
@@ -119,7 +140,9 @@ async function mirrorLoad(): Promise<MemoryFile | null> {
   if (!mirrorOn) return null;
   try {
     const res = await fetch(
-      `${MIRROR_URL}/rest/v1/nova_memory?id=eq.${encodeURIComponent(MIRROR_ROW)}&select=doc`,
+      MIRROR_KEY
+        ? `${MIRROR_URL}/rest/v1/nova_memory?id=eq.${encodeURIComponent(MIRROR_ROW)}&select=doc`
+        : EDGE_STATE,
       { headers: mirrorHeaders(), signal: AbortSignal.timeout(8000) },
     );
     if (!res.ok) {
@@ -127,8 +150,11 @@ async function mirrorLoad(): Promise<MemoryFile | null> {
       mirrorError = `load HTTP ${res.status}`;
       return null;
     }
-    const rows = (await res.json()) as Array<{ doc?: MemoryFile }>;
-    const doc = rows?.[0]?.doc;
+    const body = (await res.json()) as unknown;
+    // الوضع المفتاح بيرجع { row: { doc } }، وREST بيرجع مصفوفة [{ doc }]
+    const doc = MIRROR_KEY
+      ? ((body as Array<{ doc?: MemoryFile }>)?.[0]?.doc ?? null)
+      : ((body as { row?: { doc?: MemoryFile } })?.row?.doc ?? null);
     if (!doc || !Array.isArray(doc.records)) {
       mirrorState = "ok";
       return null;
@@ -155,12 +181,19 @@ function mirrorSchedule(): void {
 async function mirrorPush(): Promise<void> {
   if (!mirrorOn) return;
   try {
-    const res = await fetch(`${MIRROR_URL}/rest/v1/nova_memory?on_conflict=id`, {
-      method: "POST",
-      headers: { ...mirrorHeaders(), prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify([{ id: MIRROR_ROW, doc: store, updated_at: new Date().toISOString() }]),
-      signal: AbortSignal.timeout(8000),
-    });
+    const res = await fetch(
+      MIRROR_KEY ? `${MIRROR_URL}/rest/v1/nova_memory?on_conflict=id` : EDGE_STATE,
+      {
+        method: "POST",
+        headers: MIRROR_KEY
+          ? { ...mirrorHeaders(), prefer: "resolution=merge-duplicates,return=minimal" }
+          : mirrorHeaders(),
+        body: MIRROR_KEY
+          ? JSON.stringify([{ id: MIRROR_ROW, doc: store, updated_at: new Date().toISOString() }])
+          : JSON.stringify({ doc: store, records: store.records.length }),
+        signal: AbortSignal.timeout(8000),
+      },
+    );
     mirrorState = res.ok ? "ok" : "error";
     mirrorError = res.ok ? null : `push HTTP ${res.status}`;
   } catch (err) {
@@ -182,8 +215,8 @@ export async function hydrateMemoryFromMirror(): Promise<{ hydrated: boolean; re
   return { hydrated: true, records: store.records.length };
 }
 
-export function mirrorStatus(): { on: boolean; state: string; error: string | null; row: string } {
-  return { on: mirrorOn, state: mirrorState, error: mirrorError, row: MIRROR_ROW };
+export function mirrorStatus(): { on: boolean; state: string; error: string | null; row: string; via: string; records: number } {
+  return { on: mirrorOn, state: mirrorState, error: mirrorError, row: MIRROR_ROW, via: mirrorVia, records: store.records.length };
 }
 
 /* ── persistence ──────────────────────────────────────────────────────────── */
