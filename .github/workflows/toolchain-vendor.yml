@@ -57,14 +57,22 @@ jobs:
 
       - name: Fetch the static binaries (this runner has the network the box lacks)
         id: fetch
+        # `bash -e` بتاع GitHub: أي `[ -n "" ] && ...` بترجّع 1 فالشريط كله كان
+        # بيموت في السطر ده (قِيت الفشل ده في أول تشغيل 2026-11-07: خطوة 4
+        # failure، من غير ما التنزيل يبدأ). بقى `if/then` صريح + `mkdir -p`.
         run: |
+          mkdir -p out
           ARGS="--into out/vendor/bin --json --no-mirror"
-          [ -n "${{ inputs.only }}" ] && ARGS="$ARGS --only ${{ inputs.only }}"
-          [ "${{ inputs.force }}" = "true" ] && ARGS="$ARGS --force"
-          # الشريط ده مافيش منه نجاح مفبرك: لو ولا أداة نزلت، الخطوة بتفشل علنًا
-          # (مرآة فاضية أخطر من مفيش مرآة: المكنة هتلاقي «فشل الختم» بدل «مفيش مصدر»).
+          ONLY="${{ inputs.only }}"
+          FORCE="${{ inputs.force }}"
+          if [ -n "$ONLY" ]; then ARGS="$ARGS --only $ONLY"; fi
+          if [ "$FORCE" = "true" ]; then ARGS="$ARGS --force"; fi
           node scripts/fetch-toolchain.mjs $ARGS > out/fetch.json || true
-          node -e 'const d=JSON.parse(require("fs").readFileSync("out/fetch.json","utf8"));if(!d.ok){console.log(`::error::ولا أداة اتنزلت (${d.results?.length||0} نتيجة)`);process.exit(1)}console.log(`fetched ${d.ok}/${d.total}`)'
+          if [ ! -s out/fetch.json ]; then echo "::error::مافيش مخرجات من fetch-toolchain أصلًا"; exit 1; fi
+          node -e 'const fs=require("fs");const txt=fs.readFileSync("out/fetch.json","utf8");const i=txt.lastIndexOf("{");let d=null;for(let s=i;s>=0;s-=1){try{d=JSON.parse(txt.slice(s,txt.lastIndexOf("}")+1));break}catch{}}
+            if(!d){console.log("::error::مخرجات مش JSON: "+txt.slice(0,200));process.exit(1)}
+            if(!d.ok){console.log(`::error::ولا أداة اتنزلت (${d.results?.length||0} نتيجة): `+(d.results||[]).map(r=>r.bin+":"+r.status).join(", ").slice(0,300));process.exit(1)}
+            console.log(`fetched ${d.ok}/${d.total}`)'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

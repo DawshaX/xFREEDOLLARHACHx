@@ -102,7 +102,9 @@ const MIRROR_MAX_BYTES = Math.round(Number(process.env.NOVA_TOOLCHAIN_MIRROR_MAX
 const MANIFEST = path.join(INTO, ".vendored.json");
 
 const log = (...a) => { if (!JSONOUT) console.log("[toolchain]", ...a); };
-const warn = (m) => console.log(`::warning::${m}`);
+// `::warning::` علي stderr: مع `--json` أي سطر علي stdout بيكسر JSON.parse
+// اللي عند CI (قِيت في أول تشغيل 2026-11-07)، والاتنين بيتقروا كأنوتيشن في Actions.
+const warn = (m) => console.error(`::warning::${m}`);
 
 function run(file, args, { cwd, timeout = 20_000 } = {}) {
   return new Promise((resolve) => {
@@ -162,13 +164,10 @@ function downloadStream(url, to, { timeoutMs = 240_000, maxBytes = 0 } = {}) {
   });
 }
 
+/** التنزيل العادي بقى علي نفس مسار البث — القياس: `exitCode:null · ms 6395` على حاوية 256MB. */
 async function download(url, to) {
-  const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(180_000) }).catch((e) => null);
-  if (!res || !res.ok) return false;
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (buf.length < 1024) return false;
-  fs.writeFileSync(to, buf);
-  return true;
+  const got = await downloadStream(url, to, { timeoutMs: 180_000, maxBytes: 400 * 1048576 });
+  return got.ok;
 }
 
 /** Find the executable inside an extracted tree (archives nest it in a folder). */
@@ -436,6 +435,6 @@ async function main() {
 
 main().then(() => process.exit(0)).catch((e) => {
   // A deploy must not die because a CDN had a bad minute — but it must say so.
-  console.log(`::warning::toolchain vendorer crashed: ${String(e?.message || e)} — المحرك هيشغل الاستطلاع السلبي بس`);
+  console.error(`::warning::toolchain vendorer crashed: ${String(e?.message || e)} — المحرك هيشغل الاستطلاع السلبي بس`);
   process.exit(0);
 });
