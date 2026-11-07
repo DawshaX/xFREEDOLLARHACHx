@@ -66,8 +66,12 @@ const TOOLS = [
   // `linux-x86_64` not `linux_amd64`; WhatWeb publishes no release assets at all
   // (it is a Ruby script), so it is declared NOT_VENDORABLE instead.
   { bin: "amass", repo: "owasp-amass/amass", match: /amass_linux_amd64\.tar\.gz$/i, asset: "targz", ver: ["-version"] },
-  { bin: "gobuster", repo: "OJ/gobuster", match: /Linux_x86_64\.tar\.gz$/i, asset: "targz", ver: ["version"] },
-  { bin: "dalfox", repo: "hahwul/dalfox", match: /linux-x86_64\.tar\.gz$/i, asset: "targz", ver: ["version"] },
+  // القياس من CI (run 42411447653): الاتنين اتنزّلوا واتفكّوا صح، واللي فشل كان
+  // اختبار النسخة بتاعنا: gobuster v3.8.2 بيطبع «Gobuster v3.8.2» بيخرج بالكود 3،
+  // وdalfox latest بقى `linux-x86_64-musl.tar.gz` فالـregex القديمة ما طابقاش
+  // الملف الصح. `okExit` و`altVer` بدل ما نطعّم الفحص أو نقبل أي مخرج.
+  { bin: "gobuster", repo: "OJ/gobuster", match: /Linux_x86_64\.tar\.gz$/i, asset: "targz", ver: ["version"], okExit: [0, 3] },
+  { bin: "dalfox", repo: "hahwul/dalfox", match: /linux[-_](x86_64|amd64)(-musl)?\.tar\.gz$/i, asset: "targz", ver: ["--version"], altVer: ["version"] },
   { bin: "gitleaks", repo: "gitleaks/gitleaks", match: /linux_x64\.tar\.gz$/i, asset: "targz", ver: ["version"] },
   { bin: "trivy", repo: "aquasecurity/trivy", match: /Linux-64bit\.tar\.gz$/i, asset: "targz", ver: ["--version"] },
 ].filter((t) => !ONLY.length || ONLY.includes(t.bin));
@@ -358,11 +362,26 @@ async function fetchOne(tool, manifest) {
   fs.chmodSync(dest, 0o755);
   fs.rmSync(tmp, { recursive: true, force: true });
 
-  const smoke = await run(dest, tool.ver, { timeout: 15_000 });
-  const line = String(smoke.out || smoke.err).split("\n").map((s) => s.trim()).filter(Boolean)[0] || "";
-  if (smoke.code !== 0 || !line) {
+  // بنجرّب الأعلام الأصلية والبدائل، وبنقبل أي مخرج فيه رقم إصدار — الـexit code
+  // لوحده مش مقياس (gobuster بيطلع 3 وهو سليم، متقاس فوق).
+  const probes = [tool.ver, ...(tool.altVer ? [tool.altVer] : [])];
+  const accept = Array.isArray(tool.okExit) ? tool.okExit : [0];
+  let smoke = { code: null, out: "", err: "" };
+  let line = "";
+  for (const args of probes) {
+    smoke = await run(dest, args, { timeout: 15_000 });
+    line = String(smoke.out || smoke.err).split("\n").map((x) => x.trim()).filter(Boolean)[0] || "";
+    if (accept.includes(smoke.code) && /\d/.test(line)) break;
+    line = "";
+  }
+  if (!line) {
     fs.rmSync(dest, { force: true });
-    return { bin: tool.bin, status: "failed", tag, why: `اختبار النسخة مامرّش (exit ${smoke.code}) — غالباً architecture مش مطابق` };
+    return {
+      bin: tool.bin,
+      status: "failed",
+      tag,
+      why: `اختبار النسخة مامرّش (exit ${smoke.code} على ${probes.map((p) => p.join(" ")).join(" / ")}) — غالباً architecture مش مطابق`,
+    };
   }
   manifest[tool.bin] = { tag, at: new Date().toISOString(), version: line.slice(0, 120), path: dest };
   log(`✓ ${tool.bin} → ${line.slice(0, 90)}`);
