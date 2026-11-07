@@ -284,7 +284,7 @@ if (role === "node" || role === "agent") {
   //      state/.nova-restart — no panel button, no manual step;
   //   2. if the app ever crashes the container stay up and the app comes back.
   const { spawn } = await import("node:child_process");
-  const { statSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync } = await import("node:fs");
+  const { statSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync, existsSync } = await import("node:fs");
   const { get: httpGet } = await import("node:http");
   const MARK = join(HERE, "state", ".nova-restart");
   const ENTRY = join(HERE, "nova-app.mjs");
@@ -369,7 +369,32 @@ if (role === "node" || role === "agent") {
       req.on("error", () => resolve(false));
     });
 
+  // لو مسار النسخة اللي في العلامة اتمسح (كونتير اتعاد قبل ما المُشرف يلحق)،
+  // بنلقط أي نسخة موجودة: أجدد واحدة في <install>/backups وبعدين /tmp.
+  // والمهم: لو مفيش نسخة خالص — نكمّل بالشغل اللي على الديسك ومانيقتلش
+  // الطفل كل دقيقتين للأبد (اللي خلّى وايفي 502 من 04:13Z لـ04:25Z).
+  const latestBackup = () => {
+    for (const root of [join(HERE, "backups"), "/tmp"]) {
+      let names = [];
+      try {
+        names = readdirSync(root).filter((n) => n.startsWith("nova-backup-")).sort();
+      } catch {
+        continue;
+      }
+      const dir = join(root, names[names.length - 1]);
+      if (names.length > 0) {
+        try {
+          if (readdirSync(dir).length > 0) return dir;
+        } catch {
+          /* جرب الجذر اللي بعده */
+        }
+      }
+    }
+    return null;
+  };
+
   let watchToken = 0;
+  let rolledBackFor = "";
   const watch = (pending) => {
     const myToken = ++watchToken;
     const port = Number(process.env.PORT || process.env.SERVER_PORT || 8080);
@@ -383,9 +408,28 @@ if (role === "node" || role === "agent") {
         return;
       }
       if (Date.now() > deadline) {
-        console.log("[supervisor] new build never became healthy — rolling back");
+        const token = String(pending.backup || "") + "|" + String(pending.to || "");
+        if (rolledBackFor === token) return; // محاولة رجوع واحدة لكل تحديث
+        const from = existsSync(pending.backup) ? pending.backup : latestBackup();
+        if (!from) {
+          rolledBackFor = token;
+          console.log("[supervisor] no backup on disk (new path and /tmp both empty) — keeping the installed files and clearing the pending marker instead of killing the app in a loop");
+          try {
+            unlinkSync(PENDING);
+            writeFileSync(FAILED, JSON.stringify({
+              at: new Date().toISOString(),
+              from: pending.from,
+              to: pending.to,
+              restored: 0,
+              reason: "backup_missing",
+            }, null, 2));
+          } catch {}
+          return;
+        }
+        rolledBackFor = token;
+        console.log("[supervisor] new build never became healthy — rolling back from " + from);
         try {
-          const files = copyBack(pending.backup);
+          const files = copyBack(from);
           unlinkSync(PENDING);
           writeFileSync(FAILED, JSON.stringify({
             at: new Date().toISOString(),
@@ -393,7 +437,7 @@ if (role === "node" || role === "agent") {
             to: pending.to,
             restored: files,
           }, null, 2));
-          console.log("[supervisor] restored " + files + " files from " + pending.backup);
+          console.log("[supervisor] restored " + files + " files from " + from);
         } catch (e) {
           console.log("[supervisor] rollback FAILED: " + (e && e.message));
         }
@@ -877,6 +921,42 @@ try {
 } catch {
   // zip is not installed everywhere; the folder itself is still the deliverable.
 }
+
+/* ── 3c. syntax gate ─────────────────────────────────────────────────────────
+ * كل ملف بيتولّد جوه الحزمة لازم يتعمله parse. السبب مقاس: في التعديل ده نفسه
+ * سطر اتكتب بعلامة نوع TypeScript (`let names: string[]`) جوّه نص boot.mjs —
+ * وهيمشّي حزمة محمّلة على المكنة ما بتقلاعش خالص. الحارس بيحوّل الغلطة دي لفشل
+ * بناء بدل ما تخنق وايفى.
+ */
+const syntaxChecked = [];
+const syntaxFailed = [];
+const SYNTAX_SKIP = new Set(["node_modules", "public", "vendor", "audit"]);
+const walkJs = (dir) => {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (!SYNTAX_SKIP.has(entry.name)) walkJs(path.join(dir, entry.name));
+    } else if (/\.(mjs|cjs|js)$/.test(entry.name)) {
+      syntaxChecked.push(path.join(dir, entry.name));
+    }
+  }
+};
+walkJs(OUT);
+for (const file of syntaxChecked) {
+  try {
+    execFileSync(process.execPath, ["--check", file], { stdio: "pipe", timeout: 20000 });
+  } catch (err) {
+    syntaxFailed.push({
+      file: path.relative(OUT, file),
+      message: String((err && err.stderr) || err.message).split("\n").slice(0, 3).join(" ").slice(0, 160),
+    });
+  }
+}
+if (syntaxFailed.length > 0) {
+  console.error(`✗ ${syntaxFailed.length}/${syntaxChecked.length} ملف في الحزمة مابيترجمش (node --check):`);
+  for (const f of syntaxFailed.slice(0, 8)) console.error(`  · ${f.file} :: ${f.message}`);
+  process.exit(1);
+}
+console.log(`· syntax gate: ${syntaxChecked.length} ملف اتعمله parse ✓`);
 
 /* ── 4. report ───────────────────────────────────────────────────────────── */
 const size = dirSize(OUT);
