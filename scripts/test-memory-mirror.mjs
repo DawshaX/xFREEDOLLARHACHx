@@ -50,7 +50,16 @@ function freshStore(env) {
   const modulePath = path.join(work, `copy-${copySeq++}.cjs`);
   fs.copyFileSync(bundle, modulePath);
   const saved = { ...process.env };
-  for (const key of ["NOVA_SUPABASE_URL", "NOVA_SUPABASE_SERVICE_KEY", "NOVA_MEMORY_FILE", "NOVA_MEMORY_ROW"]) {
+  for (const key of [
+    "NOVA_SUPABASE_URL",
+    "NOVA_SUPABASE_SERVICE_KEY",
+    "NOVA_MEMORY_FILE",
+    "NOVA_MEMORY_ROW",
+    "NOVA_SUPERVISED",
+    "NOVA_STATE_EDGE",
+    "NOVA_STATE_EDGE_URL",
+    "NOVA_STATE_TOKEN",
+  ]) {
     delete process.env[key];
   }
   Object.assign(process.env, env);
@@ -157,6 +166,58 @@ const remoteDoc = {
   store.flushMemory();
   await new Promise((r) => setTimeout(r, 2200));
   check("writes still work when the mirror is down", Boolean(rec?.id) && store.recall("محلية").length > 0);
+}
+
+/* ── 5 · the box has no secret: the edge function writes for it ─────────── */
+{
+  const seen = [];
+  globalThis.fetch = async (url, init) => {
+    seen.push({
+      url: String(url),
+      method: init?.method ?? "GET",
+      headers: init?.headers ?? {},
+      body: init?.body ?? null,
+    });
+    return { ok: true, status: 200, json: async () => ({ ok: true, row: null, records: 0 }) };
+  };
+  const store = freshStore({
+    NOVA_MEMORY_FILE: path.join(work, "edge.json"),
+    NOVA_SUPERVISED: "1",
+    NOVA_SUPABASE_URL: "https://example.supabase.co",
+  });
+  const st = store.mirrorStatus();
+  check("keyless on a supervised box keeps the mirror on", st.on === true && st.via === "edge", JSON.stringify(st));
+  const out = await store.hydrateMemoryFromMirror();
+  check("an empty row hydrates nothing", out.hydrated === false, JSON.stringify(out));
+  check("the read goes to the edge route with no apikey", seen.some((c) => c.url.endsWith("/functions/v1/nova-state") && !c.headers.apikey), seen.map((c) => c.url).join(","));
+  store.remember({ kind: "fact", title: "من غير مفتاح", content: "the box holds no secret" });
+  store.flushMemory();
+  await new Promise((r) => setTimeout(r, 2200));
+  // سيناريو 4 سيبق debounce وراّه على نفس الـmock — فكل قياس هنا بيتقصّى على مسار الدالة
+  const post = seen.filter((c) => c.method === "POST" && c.url.endsWith("/functions/v1/nova-state")).pop();
+  if (process.env.DBG) console.log("DBG seen=", JSON.stringify(seen.map((c) => ({ u: c.url, m: c.method, b: String(c.body).slice(0, 90), h: Object.keys(c.headers) })), null, 1), "status=", JSON.stringify(store.mirrorStatus()));
+  check("the write posts the doc to the edge route", Boolean(post && post.url.endsWith("/functions/v1/nova-state")), post?.url);
+  check("the edge body is { doc } with the new record", Boolean(post && JSON.parse(post.body).doc.records.some((r) => r.title === "من غير مفتاح")));
+  check("no service key ever leaves the box", Boolean(post && !post.headers.apikey && !post.headers.authorization), JSON.stringify(post?.headers ?? {}));
+  check("the edge POST carries no Prefer header (not a REST upsert)", Boolean(post && !post.headers.prefer), JSON.stringify(post?.headers ?? {}));
+}
+
+/* ── 6 · unsupervised with no env must not touch the default project ────── */
+{
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    return { ok: true, status: 200, json: async () => ({ ok: true, row: null }) };
+  };
+  const store = freshStore({ NOVA_MEMORY_FILE: path.join(work, "unsup.json") });
+  store.remember({ kind: "fact", title: "من غير إشراف", content: "local only" });
+  store.flushMemory();
+  await new Promise((r) => setTimeout(r, 1800));
+  check(
+    "unsupervised + no env → the default project is never contacted",
+    calls.length === 0 && store.mirrorStatus().on === false,
+    `${calls.length} calls · ${JSON.stringify(store.mirrorStatus())}`,
+  );
 }
 
 let bad = 0;

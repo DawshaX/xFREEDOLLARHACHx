@@ -357,3 +357,24 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
 الأرقام اللي بتقولها الملاحظات كلها مقروءة من الملفات نفسها (`hunt-latest.json`، `counts` الخزنة،
 `advisory-cache.json`، `vendor/bin`) — مفيش رقم مكتوب في الكود ده الآن محروس بـ`audit-no-invented-intel`
 (R6 قدرات مقاسة، R7 هوية واحدة).
+
+## فين بيشوف كل بايت (قياس 2026-11-07 16:00Z)
+
+| الحاجة | المكان | الرقم المتقاس |
+| --- | --- | --- |
+| ذاكرة المكنة الطويلة | `state/nova-memory.json` على المكنة (المسار السريع) | 20 سجل · 24,825 بايت (`/api/nova-core/storage`) |
+| نسخة تعيش بعد المكنة | Supabase `cybernova-ops` → `public.nova_memory` صف `main` | بتتكتب من دالة `nova-state`؛ القياس من `GET /api/memory/stats` → `mirror.state` |
+| الكوربوس | نفس القاعدة، `public.corpus_cve` | 115,990 ثغرة · 152MB — مش على قرص المكنة |
+| أدلة الصيد | `state/hunt/evidence/*.txt.gz` | مضغوطة (8.4MB → 1.15MB) بميزانية `HUNT_EVIDENCE_MAX_MB=32`؛ اللي عليه مرجع في حالة دائمة بيتحمى |
+| لوج التحديث | `state/auto-update.log` | بيلف عند 256KB (قِيس: 359KB → 24KB) |
+| نسخة رجوع التحديث | `<install>/backups/` | آخر 3، وبس الملفات اللي اتغيّرت فعلًا (قِيس: 93 بايت مكان 11.8MB) |
+| أدوات الأمان | `/home/container/vendor/bin` | 12 أداة؛ `auto` على مكنة مُشرَفة مع حارس قرص 1.5GB |
+
+ليه مافيش مفتاح على المكنة: الحزمة بتتنزّل من release **عام** (المستودع عام —
+متقاس من `gh api repos/... → visibility: public`)، فأي سر جواها بقى مقروء لأي
+حد. الكتابة للقاعدة بتعدي علي `supabase/functions/nova-state/index.ts` اللي
+مفتاح الخدمة جوّه Supabase نفسها، والباب بيرفض أي مسح للذاكرة (حارس anti-wipe)
+ويقصر الكتابة علي صف واحد. عايز تكتب مباشرة من المكنة؟ حط
+`NOVA_SUPABASE_SERVICE_KEY` في اللوحة — المسار ده بياخد الأولوية و`via` بتبقى
+`rest`. قفل additive: `NOVA_STATE_EDGE=0`.
+
