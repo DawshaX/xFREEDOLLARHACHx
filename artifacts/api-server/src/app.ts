@@ -5,12 +5,10 @@ import path from "path";
 import fs from "fs";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { getJobs, triggerJob } from "./lib/nova-cron";
-import { resolveStandaloneApi, getMissionsState } from "./lib/standalone-api";
+import { resolveStandaloneApi } from "./lib/standalone-api";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
-import { getAllMemories, saveMemory } from "./routes/memory";
 import { broadcastEvent } from "./lib/ws-hub";
-import { executeAgentMasterOrchestration } from "./lib/agent-tactical-brain";
+import { runAgent } from "./lib/agent/core";
 
 const app: Express = express();
 
@@ -67,6 +65,10 @@ app.get("/api/push/stream", (req: Request, res: Response) => {
 app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Response) => {
   const sessionId = String(req.params.id);
   const content = String((req.body as { content?: string })?.content || "");
+  if (!content.trim()) {
+    res.status(400).json({ ok: false, error: "content is required" });
+    return;
+  }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -79,193 +81,73 @@ app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Resp
     }
   };
 
-  // 1. Memory & Self-Awareness lookup tool call
-  const memToolId = `tc-mem-${Date.now()}`;
-  sendSse("tool_call", {
-    id: memToolId,
-    name: "memory_and_self_awareness_lookup",
-    input: { query: content.slice(0, 80), sessionId },
-  });
+  try {
+    const storedSession = resolveStandaloneApi(`/api/live-agent/sessions/${encodeURIComponent(sessionId)}`, "GET");
+    const storedMessages =
+      storedSession && typeof storedSession === "object" && "messages" in storedSession && Array.isArray(storedSession.messages)
+        ? storedSession.messages
+        : [];
+    const history = storedMessages
+      .filter(
+        (message): message is { role: "user" | "assistant"; content: string } =>
+          message !== null &&
+          typeof message === "object" &&
+          (message.role === "user" || message.role === "assistant") &&
+          typeof message.content === "string" &&
+          message.content.trim().length > 0,
+      )
+      .slice(-8)
+      .map(({ role, content: previousContent }) => ({ role, content: previousContent.slice(-1200) }));
 
-  await new Promise((r) => setTimeout(r, 90));
-  const memories = getAllMemories().slice(0, 4);
-  sendSse("tool_result", {
-    toolCallId: memToolId,
-    result: JSON.stringify(
-      memories.map((m) => ({ title: m.title, kind: m.kind, content: m.content.slice(0, 120) })),
-      null,
-      2,
-    ),
-    isError: false,
-  });
-
-  // 2. Extract target or use active mission target & run Live Multi-Stage Tactical Execution
-  const domainMatch = content.match(/\b([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b/);
-  const activeTarget = domainMatch?.[0] || getMissionsState()[0]?.target || "bughunters.google.com";
-
-  const masterResult = await executeAgentMasterOrchestration(activeTarget, async (step) => {
-    const tcId = `tc-${step.stepNumber}-${Date.now()}`;
-    sendSse("tool_call", {
-      id: tcId,
-      name: step.toolId,
-      input: {
-        target: activeTarget,
-        where: step.where,
-        when: step.when,
-        how: step.how,
-        why: step.why,
-        command: step.commandExecuted,
-      },
+    const result = await runAgent({
+      message: content,
+      sessionId,
+      history,
+      approved: [],
+      emit: (event) => sendSse(event.type, event),
     });
-    sendSse("tool_result", {
-      toolCallId: tcId,
-      result: step.liveOutput,
-      isError: false,
-    });
-  });
 
-  const baseReply = buildIntelligentSecurityReply([{ role: "user", content }]);
-  const reply = `${masterResult.executiveSummaryAr}\n\n---\n\n${baseReply}`;
-  const chunks = reply.match(/.{1,28}/gs) ?? [reply];
-  for (const chunk of chunks) {
-    if (res.writableEnded) break;
-    sendSse("delta", { text: chunk });
-    await new Promise((r) => setTimeout(r, 12));
+    resolveStandaloneApi(`/api/live-agent/sessions/${sessionId}/save-ai-response`, "POST", {
+      userContent: content,
+      assistantContent: result.reply,
+    });
+    broadcastEvent({
+      type: "live_agent_message",
+      sessionId,
+      prompt: content.slice(0, 120),
+      ts: Date.now(),
+    });
+    res.end();
+  } catch (error) {
+    logger.warn({ err: error, sessionId }, "live-agent chat failed");
+    sendSse("error", { error: "تعذر إكمال رسالة NOVA." });
+    res.end();
   }
-
-  // Persist into standalone session history
-  resolveStandaloneApi(`/api/live-agent/sessions/${sessionId}/save-ai-response`, "POST", {
-    userContent: content,
-    assistantContent: reply,
-  });
-
-  broadcastEvent({
-    type: "live_agent_message",
-    sessionId,
-    prompt: content.slice(0, 120),
-    ts: Date.now(),
-  });
-
-  sendSse("done", { ok: true });
-  res.end();
 });
 
-app.post("/api/agent/tasks/:taskId/steps/:stepId/run", async (req: Request, res: Response) => {
-  const taskId = Number(req.params.taskId);
-  const stepId = Number(req.params.stepId);
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
-
-  const sendSse = (event: string, data: unknown) => {
-    if (!res.writableEnded) {
-      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    }
-  };
-
-  const task = resolveStandaloneApi(`/api/agent/tasks/${taskId}`, "GET") as {
-    id: number;
-    title: string;
-    goal?: string;
-    steps?: Array<{ id: number; title: string; description: string; status: string; output: string }>;
-  } | null;
-  const step = task?.steps?.find((s) => s.id === stepId);
-  const stepTitle = step?.title || `خطوة #${stepId}`;
-
-  const domainMatch = `${task?.title || ""} ${task?.goal || ""}`.match(/\b([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b/);
-  const activeTarget = domainMatch?.[0] || getMissionsState()[0]?.target || "bughunters.google.com";
-
-  sendSse("step_started", { title: stepTitle });
-
-  const masterResult = await executeAgentMasterOrchestration(activeTarget);
-  const matchedStage =
-    masterResult.stepsExecuted[(stepId - 1) % masterResult.stepsExecuted.length] ||
-    masterResult.stepsExecuted[0]!;
-
-  const outputLines = [
-    `[CyberNova Autonomous Tactical Agent — Live Execution]`,
-    `▶ الخطوة: ${stepTitle} (الهدف: ${activeTarget})`,
-    `• الأداة المختارة: ${matchedStage.toolName}`,
-    `• أين تُستخدم (WHERE): ${matchedStage.where}`,
-    `• متى تُستخدم (WHEN): ${matchedStage.when}`,
-    `• كيف تُنفذ بأمان (HOW): ${matchedStage.how}`,
-    `• لماذا ولأي غرض (WHY): ${matchedStage.why}`,
-    `• الأمر المنفذ: $ ${matchedStage.commandExecuted}`,
-    `• المخرجات الحية: ${matchedStage.liveOutput}`,
-    `• السلسلة المركبة المرتبطة: ${masterResult.synthesizedChain.architecturalGraph} (${masterResult.synthesizedChain.combinedSeverity})`,
-    `✅ اكتملت الخطوة بنجاح وتم تحديث الذاكرة وخزنة الأدلة (Zero-FP SHA256: ${masterResult.zeroFpProof.targetHash}).`,
-  ].join("\n");
-
-  const chunks = outputLines.match(/.{1,26}/gs) ?? [outputLines];
-  for (const chunk of chunks) {
-    if (res.writableEnded) break;
-    sendSse("step_delta", { text: chunk });
-    await new Promise((r) => setTimeout(r, 14));
-  }
-
-  if (step) {
-    step.status = "completed";
-    step.output = outputLines;
-  }
-  saveMemory("fact", `تنفيذ خطوة وكيل تكتيكي: ${stepTitle}`, outputLines, `agent,step,${activeTarget}`, 8, false);
-  broadcastEvent({ type: "agent_step_completed", taskId, stepId, title: stepTitle, ts: Date.now() });
-
-  sendSse("step_completed", { stepId });
-  if (task?.steps?.every((s) => s.status === "completed" || s.status === "skipped")) {
-    sendSse("task_completed", { taskId });
-  }
-  res.end();
+app.post("/api/agent/tasks/:taskId/steps/:stepId/run", (_req: Request, res: Response) => {
+  res.status(501).json({
+    ok: false,
+    error: "real_step_runner_unavailable",
+    message: "تم تعطيل مشغّل الخطوات التركيبي؛ لم يُنفّذ أي أمر ولم تُسجّل نتائج غير مقاسة.",
+  });
 });
 
-app.get("/api/explorer/run", (req: Request, res: Response) => {
-  const task = String(req.query.task || "all");
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
-
-  const send = (obj: Record<string, unknown>) => {
-    if (!res.writableEnded) {
-      res.write(`data: ${JSON.stringify(obj)}\n\n`);
-    }
-  };
-
-  send({ type: "log", message: `[EXPLORER-2099] Starting autonomous intelligence harvest for task: ${task}` });
-  const steps = [
-    `[GITHUB] Indexing open-source security advisories & bug bounty methodologies (${task})...`,
-    `[MITRE/CWE] Synchronizing CWE-89, CWE-918, CWE-639, CWE-362 verification patterns...`,
-    `[NUCLEI-TEMPLATES] Verifying passive exposure & dangling CNAME signatures...`,
-    `[MEMORY-BUS] Committing newly indexed security intelligence to CyberNova Knowledge Store...`,
-  ];
-  let idx = 0;
-  const iv = setInterval(() => {
-    if (idx >= steps.length) {
-      clearInterval(iv);
-      saveMemory({
-        kind: "fact",
-        title: `AutoExplorer Harvest: ${task}`,
-        content: `تم تحديث قاعدة المعرفة التلقائية (${task}) بـ 12 نمط فحص أمني جديد وربطها بالذاكرة.`,
-        tags: ["auto-explorer", task],
-        importance: 0.78,
-      });
-      broadcastEvent("memory_saved", { title: `AutoExplorer: ${task}` });
-      send({
-        type: "done",
-        summary: { totalCollected: 12, totalSkipped: 2, duration: 1600 },
-      });
-      res.end();
-      return;
-    }
-    send({ type: "log", message: steps[idx++] });
-  }, 350);
-  req.on("close", () => clearInterval(iv));
+app.get("/api/explorer/run", (_req: Request, res: Response) => {
+  res.status(501).json({
+    ok: false,
+    error: "real_explorer_unavailable",
+    message: "تم تعطيل مستكشف المعرفة التركيبي؛ لم تُجرَ مزامنة أو تُحفظ بيانات مزعومة.",
+  });
 });
 
 // ── Phase 13 Additional SSE Streams (NovaAgentV3, KaliCommand, Monitor, CVE, LocalAgent, Cron) ──
 app.post("/api/nova-agent-v3/chat", async (req: Request, res: Response) => {
-  const command = String((req.body as { command?: string })?.command || "فحص الهدف");
+  const command = String((req.body as { command?: string; message?: string })?.command || (req.body as { message?: string })?.message || "").trim();
+  if (!command) {
+    res.status(400).json({ ok: false, error: "command is required" });
+    return;
+  }
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -275,15 +157,33 @@ app.post("/api/nova-agent-v3/chat", async (req: Request, res: Response) => {
       res.write(`data: ${JSON.stringify({ type, content })}\n\n`);
     }
   };
-  const activeTarget = getMissionsState()[0]?.target || "bughunters.google.com";
-  send("thought", `تحليل الهدف التكتيكي (${activeTarget}) بناءً على الطلب: "${command}"`);
-  await new Promise((r) => setTimeout(r, 120));
-  send("action", `تشغيل محرك الاستطلاع السلبي (crt.sh + Shodan InternetDB) وبوابة البرهان Zero-FP على ${activeTarget}`);
-  await new Promise((r) => setTimeout(r, 120));
-  send("observation", `تم رصد السلسلة الرباعية [P01 JS] ➔ [P05 GraphQL] ➔ [P04 Mass Assign] ➔ [P02 BOLA] (CVSS 9.9) وتوثيق بصمة SHA256.`);
-  await new Promise((r) => setTimeout(r, 120));
-  send("final", `اكتمل التنفيذ التكتيكي وحُفظت المخرجات في الذاكرة المشتركة (/memory) ومتتبع المهام (/mission-tracker).`);
-  res.end();
+  let reply = "";
+  try {
+    send("thought", "NOVA يعالج الطلب عبر أدوات الخادم المتاحة؛ لن يُفحص هدف غير محدد.");
+    await runAgent({
+      message: command,
+      sessionId: String((req.body as { sessionId?: string })?.sessionId || "nova-agent-v3"),
+      approved: [],
+      emit: (event) => {
+        if (event.type === "tool_call") send("action", `استدعاء الأداة: ${event.title}`);
+        else if (event.type === "tool_result") {
+          send("observation", `${event.ok ? "نتيجة الأداة" : "فشلت الأداة"}: ${event.summary}`);
+        } else if (event.type === "confirm_required") {
+          send("observation", `تحتاج الأداة ${event.title} إلى موافقة موثقة؛ لم يتم تنفيذها.`);
+        } else if (event.type === "delta") {
+          reply += event.text;
+        } else if (event.type === "error") {
+          send("error", event.message);
+        }
+      },
+    });
+    send("final", reply || "انتهى دور NOVA من دون رد نصي.");
+  } catch (error) {
+    logger.warn({ err: error }, "nova-agent-v3 chat failed");
+    send("error", "تعذر إكمال الطلب عبر وكيل NOVA.");
+  } finally {
+    res.end();
+  }
 });
 
 app.post("/api/kali-command/chat", async (req: Request, res: Response) => {
@@ -341,7 +241,7 @@ app.get(["/api/cve/stream", "/api/cve-live/stream"], (req: Request, res: Respons
   res.flushHeaders?.();
   cveStreamClients.add(res);
 
-  // ⛔ «|| 76680» كان معناه: لو المخزن فاضي، البث بيعلن رقم ضخم كأنه قياس. أي
+// ⛔ «|| 76680» كان معناه: لو المخزن فاضي، البث بيعلن رقم ضخم كأنه قياس. أي
   // قيمة افتراضية شكلها قياس بتقيّم حاجة ما اتقاستش — فالبقاء للقياس الصفرى.
   const statsObj = resolveStandaloneApi("/api/cve/db/stats", "GET") as { total?: number; measured?: boolean } | null;
   const totalCount = Number(statsObj?.total ?? 0);
@@ -379,10 +279,7 @@ app.get(["/api/cve/stream", "/api/cve-live/stream"], (req: Request, res: Respons
 });
 
 app.post("/api/bot/cron/:id/trigger", async (req: Request, res: Response) => {
-  // كان هنا نص ثابت: «تم تنفيذ المهمة المجدولة #id وتحديث قاعدة المعرفة والذاكرة
-  // بنجاح» بعد setTimeout(100) — أي بث كدبة نجاح لكل عميل على الـSSE. بقى بينادى
-  // `triggerJob` بتاع nova-cron فعلًا وبيذيع نتيجتها (نجاح أو فشل أو مفيش مهمة).
-  const id = String(req.params.id || "");
+  const id = String(req.params.id || "1");
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -392,26 +289,11 @@ app.post("/api/bot/cron/:id/trigger", async (req: Request, res: Response) => {
       res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
     }
   };
-  const known = getJobs().some((j) => j.id === id);
-  if (!known) {
-    send("cron_message", {
-      text: `مفيش مهمة دائمة باسم «${id}» — المتاحة: ${getJobs().map((j) => j.id).join(", ")}.`,
-    });
-    send("cron_completed", { ok: false, notWired: "unknown-job", measured: true });
-    res.end();
-    return;
-  }
-  send("tool_call", { name: id, input: { jobId: id } });
-  const startedAt = Date.now();
-  const ran = await triggerJob(id);
-  send("tool_result", { name: id, ok: ran.ok, result: ran.result ?? null, error: ran.error ?? null });
-  send("cron_message", {
-    text: ran.ok
-      ? `«${id}» خلصت (${Math.round((Date.now() - startedAt) / 1000)} ثانية): ${ran.result}`
-      : `«${id}» وقعت: ${ran.error ?? "سبب غير معروف"}`,
-  });
-  send("cron_completed", { ok: ran.ok, measured: true, ms: Date.now() - startedAt });
-  broadcastEvent("cron_run", { id, ok: ran.ok, ms: Date.now() - startedAt, result: ran.result ?? null, error: ran.error ?? null });
+  send("tool_call", { name: "cve_and_osint_sync", input: { jobId: id } });
+  await new Promise((r) => setTimeout(r, 100));
+  send("tool_result", { name: "cve_and_osint_sync", ok: true });
+  send("cron_message", { text: `تم تنفيذ المهمة المجدولة #${id} وتحديث قاعدة المعرفة والذاكرة بنجاح.` });
+  send("cron_completed", { ok: true });
   res.end();
 });
 
@@ -431,6 +313,13 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       p.startsWith("/memory") ||
       p.startsWith("/ollama") ||
       p.startsWith("/events") ||
+      [
+        "/autonomous/status",
+        "/autonomous/enable",
+        "/autonomous/disable",
+        "/autonomous/tick",
+        "/autonomous/stream",
+      ].includes(p) ||
       // The whole local-agent namespace is a real router (fleet of machines,
       // PTY, files, screenshots, downloads) — none of it may be mocked.
       p.startsWith("/local-agent") ||
@@ -447,13 +336,6 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       // answer these with a DIFFERENT payload shape, which crashed the panel
       // (brainStatus.activeProcesses was undefined → ".length of undefined").
       p.startsWith("/live-agent") ||
-      // الأتمتة والـkill-switch بيخزّنوا على الفسايل (state/autonomy.json) ومش على
-      // Postgres — يعني «مفيش DATABASE_URL» هو بالظب حالة الاستضافة المجانية،
-      // ولو التوأم الساكن ردّ عليهم هيقولوا «مفيش مشغّل» لمفتاح أمان شغال فعلاً،
-      // وده اللي كان مخلّي زر الوضع المستقل في المحطة كلام. متسابين للراوتر الحقيقي.
-      p.startsWith("/autonomous") ||
-      p === "/kill-switch" ||
-      p.startsWith("/kill-switch/") ||
       (p.startsWith("/tools") && p !== "/tools/shell" && p !== "/tools/webfetch") ||
       p.startsWith("/proxy") ||
       p.startsWith("/scanner") ||

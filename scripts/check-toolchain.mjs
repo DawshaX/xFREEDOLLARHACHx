@@ -67,11 +67,11 @@ function resolve(bin) {
   return null;
 }
 
-function runs(file, timeoutMs = 20_000) {
+function runs(file, args = ["-version"], timeoutMs = 20_000) {
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawn(file, ["-version"], { stdio: ["ignore", "pipe", "pipe"] });
+      child = spawn(file, args, { stdio: ["ignore", "pipe", "pipe"] });
     } catch (e) {
       resolve({ ok: false, code: 127, line: e.message });
       return;
@@ -109,7 +109,7 @@ for (const bin of need) {
     rows.push({ bin, ok: false, at: null, why: "not found", searched: searchDirs().length });
     continue;
   }
-  const r = await runs(file);
+  const r = await runs(file, bin === "ffuf" ? ["-V"] : ["-version"]);
   rows.push({
     bin,
     ok: r.ok,

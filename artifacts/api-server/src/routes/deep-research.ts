@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { checkGate } from "../lib/ops/gate";
 import dns from "node:dns";
+import { checkGate } from "../lib/ops/gate";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -22,10 +22,7 @@ import {
   searchCyberCorpus2400,
   getCorpusStats,
 } from "../lib/cyber-corpus-2099";
-import {
-  TACTICAL_DOCTRINE_MATRIX,
-  executeAgentMasterOrchestration,
-} from "../lib/agent-tactical-brain";
+import { TACTICAL_DOCTRINE_MATRIX } from "../lib/agent-tactical-brain";
 import {
   WORKSTATION_ENVIRONMENTS_12,
   MSF_SAFE_MODULES,
@@ -1403,17 +1400,12 @@ router.get("/deep-research/tactical-doctrine", (_req: Request, res: Response) =>
   });
 });
 
-router.post("/deep-research/agent-master-run", async (req: Request, res: Response) => {
-  // الأوركسترا دي بتمشي على هدف حقيقي (fetch + scan) وبتكلّم الشبكة — مفتوحة
-  // للعامة يعني الهَب بيهاجم بالنيابة عن أي زائر. قرار الإذن بتاع ops هنا كمان.
-  const gate = checkGate(req, "deep-research agent-master-run");
-  if (!gate.ok) {
-    res.status(403).json({ ok: false, error: gate.code, reason: gate.reason, how: gate.how });
-    return;
-  }
-  const target = String(req.body?.target || "bughunters.google.com");
-  const result = await executeAgentMasterOrchestration(target);
-  res.json(result);
+router.post("/deep-research/agent-master-run", (_req: Request, res: Response) => {
+  res.status(501).json({
+    ok: false,
+    error: "synthetic_orchestrator_disabled",
+    message: "تم تعطيل المنسّق التركيبي؛ لم يُفحص أي هدف ولم تُنتج نتائج أمنية.",
+  });
 });
 
 // ── 17. GET /api/deep-research/workstation-state (24/7 Cloud Brain & Workstation State) ─
@@ -1421,7 +1413,10 @@ router.get("/deep-research/workstation-state", (_req: Request, res: Response) =>
   const brainState = loadBrainState();
   res.json({
     brainState,
-    environments: WORKSTATION_ENVIRONMENTS_12,
+    environments: WORKSTATION_ENVIRONMENTS_12.map((environment) => ({
+      ...environment,
+      status: "CATALOG_ONLY" as const,
+    })),
     msfModules: MSF_SAFE_MODULES,
   });
 });
@@ -1496,8 +1491,7 @@ router.get("/deep-research/discovered-vault", (_req: Request, res: Response) => 
 
 router.post("/deep-research/discovered-vault", (req: Request, res: Response) => {
   // الكتابة دي بتعدّل ملف الخزانة على قرص المحرك — نفس معيار `/api/ops`: توكن لو
-  // متسَيّر، وإلا طلب من نفس الأصل، وممنوع على الزوار المجهولين. القراءة فوق
-  // لسه مفتوحة عمدًا: الصفحة العامة تعرض اللي اتلمّ فعلاً وما تكتبش حاجة.
+  // إذن صريح، وإلا 403. من غيره أي زائر يقدر يلوّث سجل الثغرات المكتشفة.
   const gate = checkGate(req, "deep-research vault write");
   if (!gate.ok) {
     res.status(403).json({ ok: false, error: gate.code, reason: gate.reason, how: gate.how });

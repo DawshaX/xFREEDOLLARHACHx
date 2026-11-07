@@ -253,11 +253,15 @@ curl -X POST http://localhost:8080/api/ops/programs \
 
 ### 4) الأمان بقى بوابة واحدة
 مسار جديد `src/lib/ops/gate.ts` بيحكم على **كل** حاجة خطرة: `/api/local-agent/*` (exec/pty/fs/screenshot/ماوس-كيبورد)،
-`/api/kill-switch`، `/api/nova-core/restart|auto-update|storage`، `download-project-zip`، وتسجيل الوكلاء على WebSocket.
+`/api/kill-switch`، `/api/nova-core/restart|auto-update|storage|execute`، اعتماد بث `/api/fleet/broadcast`،
+`download-project-zip`، وتسجيل الوكلاء على WebSocket. موافقات `/api/nova-core/chat` القادمة من العميل لا تُعتمد؛
+الأدوات الحساسة تظل محجوبة إلى أن يتوفر مسار موافقة موثّق مرتبط بالجلسة.
 - `NOVA_EXEC_TOKEN` موجود → التوكن مطلوب (هيدر `x-nova-token` أو `?token=`).
 - مفيش توكن → كتابة من اللوحة بس (same-origin)، و`curl` من برّه ياخد 403.
 - `NOVA_OPEN_OPS=1` → الوضع المفتوح (معامل محلي فقط).
 - تسجيل وكيل من غير توكن → **401** (الـWebSocket مفيش فيه إشارة أصلية تثق فيها).
+- الـdaemon المستقل متوقف افتراضياً؛ تفعيله يحتاج `NOVA_AUTONOMOUS_DAEMON=1`.
+- مسارات المنسّق ومستكشف المعرفة ومشغّل الخطوات التركيبي ترجع `501` بدل ما تعرض نتائج أو تنفيذ غير حقيقي.
 
 ### 5) متغيرات جديدة
 | المتغير | الافتراضي | للتحكم في إيه |
@@ -270,6 +274,7 @@ curl -X POST http://localhost:8080/api/ops/programs \
 | `NOVA_MAX_INFLIGHT` | `4` | أقصى طلبات متزامنة كلها |
 | `NOVA_DEFAULT_RPS` | `1` | السقف لو البرنامج ما حدّدش |
 | `NOVA_ALLOW_SOURCE_DOWNLOAD` | `0` | يفعّل تنزيل مصدر المشروع |
+| `NOVA_AUTONOMOUS_DAEMON` | `0` | تشغيل الـdaemon المستقل (اختياري؛ لا تفعّله قبل مراجعة نطاقه) |
 | `NOVA_OPEN_OPS` | `0` | وضع المعمل المحلي |
 
 `GET /api/ops/version` بيقول build إيه اللي شغال فعلاً (sha + عمر الـbundle + الأدوات الموجودة + وضع الدورة الخلفية) — ده أول أمر تعمله لأي هوست بعيد قبل ما تصدّق أي حاجة تانية.

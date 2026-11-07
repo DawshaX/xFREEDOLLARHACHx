@@ -161,6 +161,7 @@ export type Intent =
   | { kind: "thanks" }
   | { kind: "identity" }
   | { kind: "capabilities" }
+  | { kind: "fleet" }
   | { kind: "status" }
   | { kind: "memory"; query: string }
   | { kind: "cve"; cveId: string }
@@ -212,6 +213,8 @@ export function understand(message: string): Intent {
   if (has(/(مين انت|من انت|انت مين|اسمك ايه|مين حضرتك|who are you|عرّف بنفسك|عرف بنفسك)/)) return { kind: "identity" };
   if (has(/(بتعرف تعمل|تعرف تعمل|امكانيات|قدرات|بتساعد في|بتعمل ايه|تقدر تعمل ايه|what can you do|ساعدني في ايه)/))
     return { kind: "capabilities" };
+  if (has(/(الاجهزه|اجهزه|الاجهزة|أجهزة|كمبيوتر|computers?|devices?|fleet|machines?|سيرفر|vps|كالي|kali|burp|metasploit)/))
+    return { kind: "fleet" };
 
   if (cveId) {
     if (has(/(استغلال|exploit|poc|اثبات)/)) return { kind: "exploit", query: cveId };
@@ -249,6 +252,11 @@ export function planFor(intent: Intent, message: string): { thought: string; ste
       return { thought: "بيسأل مين أنا — هعرّفه بنفسي وباللي شغّال فعلاً.", steps: [] };
     case "capabilities":
       return { thought: "بيسأل أقدر أعمل إيه — هقول الحقيقة: اللي شغّال واللي محتاج سيرفر.", steps: [] };
+    case "fleet":
+      return {
+        thought: "بيسأل عن جهاز أو أداة محلية — هتحقق من وضع التشغيل قبل ما أوصف المتاح.",
+        steps: [{ tool: "fleet_list", title: TOOL_TITLES_AR.fleet_list, args: {} }],
+      };
     case "smalltalk":
       return { thought: "مش فاهم قصدك بالظبط — هسأله يوضّح بدل ما أخمّن.", steps: [] };
     case "status":
@@ -803,9 +811,16 @@ function composeReply(intent: Intent, results: ToolResult[], message: string): s
       if (platform?.ok) lines.push(`- ${platform.summary}`);
       if (corpus?.ok) lines.push(`- ${corpus.summary}`);
       if (mem?.ok) lines.push(`- ${mem.summary}`);
-      lines.push(`- الأسطول: عقدة واحدة حقيقية = المتصفح ده (الباقي محتاج سيرفر)`);
+      lines.push("- الأسطول: لا يمكن التحقق من حالة الأجهزة من دون خادم متصل؛ المتصفح ليس وكيلاً لجهاز Kali.");
       return lines;
     }
+    case "fleet":
+      return [
+        "وضع المتصفح الحالي ما يقدرش يتحقق من أجهزة الأسطول أو البرامج المثبّتة عليها؛ فمش هأكد إن فيه كمبيوتر متصل أو إن Metasploit/Burp Suite جاهزين.",
+        `- ${find(results, "fleet_list")?.summary ?? "التحقق من الأسطول يحتاج خادم NOVA متصلاً."}`,
+        "",
+        "اربط خادم NOVA أولاً، واستخدم جهازاً تملكه أو لديك إذن بإدارته. بعدها يمكن التحقق من الأجهزة والقدرات التي يبلّغ عنها الوكيل.",
+      ];
     case "memory": {
       const r = find(results, "memory_search");
       if (!r) return ["مفيش نتائج."];

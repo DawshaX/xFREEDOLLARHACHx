@@ -1006,7 +1006,7 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
       case "web_search": {
         const query = String(rawArgs.query ?? "").trim();
         if (!query) throw new Error("query مطلوب");
-        const limit = Math.min(Number(rawArgs.limit ?? 8) || 8, 15);
+        const limit = Math.max(1, Math.min(Number(rawArgs.limit ?? 8) || 8, 15));
         const res = await webSearch(query, limit);
         if (!res.results.length) return done(false, `بحث "${query}": مفيش نتائج (${res.note ?? "المزوّدين رجعوا فاضي"})`, res);
         return done(true, `بحث "${query}": ${res.results.length} نتيجة من ${res.source}`, res);

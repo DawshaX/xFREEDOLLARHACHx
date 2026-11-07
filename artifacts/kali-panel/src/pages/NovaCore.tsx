@@ -35,6 +35,7 @@ const QUICK = [
   { label: "استطلع نطاق", text: "اعمل استطلاع على github.com", icon: Globe },
   { label: "ابحث عن ثغرة", text: "ابحث عن CVE-2024-3094", icon: ShieldCheck },
   { label: "أدوات مفتوحة", text: "هات لي أدوات GitHub لفحص الويب", icon: Network },
+  { label: "بحث ويب", text: "ابحث على الويب عن خيارات حوسبة مجانية وحدودها", icon: Globe },
   { label: "فهرس المنصة", text: "ابحث في فهرس المنصة عن SSRF", icon: BookOpen },
   { label: "حالة المنصة", text: "ايه حالة المنصة دلوقتي؟", icon: Database },
 ];
@@ -52,6 +53,7 @@ const TOOL_LINKS: Record<string, string> = {
   vuln_search: "/vuln-center",
   exploit_search: "/exploit-db",
   github_search: "/github-search",
+  web_search: "/web-search",
   knowledge_search: "/vuln-encyclopedia",
   kali_toolbox: "/kali-command-center",
   memory_save: "/memory",
@@ -175,8 +177,19 @@ export default function NovaCore() {
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    void getNovaStatus().then(setStatus);
+    let active = true;
+    const refreshStatus = () => {
+      void getNovaStatus().then((nextStatus) => {
+        if (active) setStatus(nextStatus);
+      });
+    };
+    refreshStatus();
+    const timer = window.setInterval(refreshStatus, 30_000);
     setMemCount(getNovaMemories().length);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -302,7 +315,12 @@ export default function NovaCore() {
             <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-400/10">
               <Sparkles className="h-5 w-5 text-cyan-300" />
             </div>
-            <span className="absolute -bottom-0.5 -left-0.5 h-3 w-3 rounded-full border-2 border-[#050208] bg-emerald-400" />
+            <span
+              className={`absolute -bottom-0.5 -left-0.5 h-3 w-3 rounded-full border-2 border-[#050208] ${
+                status?.brain === "server" ? "bg-emerald-400" : status?.brain === "local" ? "bg-amber-400" : "bg-red-400"
+              }`}
+              title={status?.brain === "server" ? "عقل الخادم متصل" : status?.brain === "local" ? "يعمل بالعقل المحلي فقط" : "حالة الاتصال غير معروفة"}
+            />
           </div>
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-lg font-bold">

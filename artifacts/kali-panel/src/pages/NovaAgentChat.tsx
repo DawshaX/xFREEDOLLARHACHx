@@ -1,10 +1,8 @@
 /**
  * NovaAgentChat — Advanced AI Agent with:
- *  • Thinking phase: streams reasoning before answering
- *  • Planning mode: structured steps with real-time tracking + editing
+ *  • NOVA Core SSE stream for responses and real tool events
  *  • Session history sidebar: load past conversations
- *  • Learning/memory: auto-saves insights after sessions
- *  • Browser-direct Ollama streaming + server-side tool execution
+ *  • Learning/memory: handled by the server agent
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -16,11 +14,9 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
 import {
-  streamOllamaViaServer,
   getStoredOllamaBase,
   getStoredOllamaModel,
   saveOllamaSettings,
-  type OllamaMessage,
 } from "@/lib/ollama-browser";
 
 const API_BASE = "/api";
@@ -77,50 +73,7 @@ const QUICK_ACTIONS = [
   { label: "ذاكرة", icon: Brain, color: "text-violet-400", prompt: "استعرض ذاكرتك وما تعلّمته: " },
 ];
 
-const PLAN_TRIGGERS = [
-  "recon", "pentest", "بنتست", "استطلاع", "فحص كامل", "exploit", "scan",
-  "فحص شامل", "تحليل شامل", "osint", "ابحث في كل", "نفّذ", "هجوم",
-];
-
-const THINK_SYS = `أنت NovaAgent. فكّر بصوت عالٍ وباختصار شديد (أقل من 80 كلمة) عن أفضل نهج لحل هذه المهمة الأمنية. لا تجب على السؤال — فقط التفكير والنهج.`;
-
-const PLAN_SYS = `أنت NovaAgent. اكتب خطة مرقمة (3-6 خطوات) لتنفيذ هذه المهمة الأمنية.
-الشكل المطلوب الدقيق:
-1. [الخطوة]
-2. [الخطوة]
-لا تضف شرحاً إضافياً — فقط الخطوات المرقمة.`;
-
-const NOVA_SYS = `أنت "NovaAgent" — وكيل ذكاء اصطناعي متخصص في الأمن السيبراني داخل منصة CyberNova.
-
-🎯 منهجيتك:
-- اقرأ السؤال بعناية ثم نفّذ الأدوات المناسبة واحدة تلو الأخرى
-- أجب دائماً بالعربية الفصحى مع مصطلحات إنجليزية تقنية بين قوسين
-- استخدم Markdown مع code blocks وbash highlighting
-
-🛡️ أدواتك المتاحة:
-• فحص الأهداف: scan_target, scan_ports, scan_dns, scan_ssl, scan_headers
-• البحث عن الثغرات: nvd_search, cisa_kev, epss_score, exploit_db_search
-• الاستخبارات: github_search, github_advisories, fetch_url, web_search
-• النظام: run_shell, read_workspace_file, list_workspace_files
-• الذاكرة: memory_save, memory_search
-
-التزم بالأخلاق المهنية — لا تساعد على اختراق بدون إذن صريح.`;
-
 /* ───────────────────────── Helpers ───────────────────────── */
-
-function needsPlan(text: string) {
-  const lower = text.toLowerCase();
-  return PLAN_TRIGGERS.some(kw => lower.includes(kw));
-}
-
-function parsePlanSteps(text: string): PlanStep[] {
-  const lines = text.split("\n").filter(l => /^\d+[\.\)]\s/.test(l.trim()));
-  return lines.slice(0, 8).map((l, i) => ({
-    id: `step-${i}-${Date.now()}`,
-    text: l.replace(/^\d+[\.\)]\s*/, "").trim(),
-    status: "pending" as const,
-  }));
-}
 
 /* ───────────────────────── Sub-components ───────────────────────── */
 
@@ -134,7 +87,7 @@ function ThinkingBlock({
         className="w-full flex items-center gap-2 px-3 py-2 transition-all hover:bg-white/5 text-left">
         <div className={`w-2 h-2 rounded-full shrink-0 ${done ? "bg-purple-400" : "bg-purple-400 animate-pulse"}`} />
         <span className="text-[9px] font-black font-mono uppercase tracking-widest" style={{ color: "#9966ff" }}>
-          {done ? "✓ التفكير" : "🧠 يفكّر..."}
+          {done ? "✓ ملخص الخطة" : "🧠 يجهّز الخطوة"}
         </span>
         {!done && (
           <span className="flex gap-0.5 ml-1">
@@ -589,173 +542,81 @@ export default function NovaAgentChat() {
 
     addLine({ kind: "user", text: msg });
 
-    const base = getStoredOllamaBase();
-    const model = getStoredOllamaModel();
-
-    const buildHistory = (): OllamaMessage[] => {
-      const h: OllamaMessage[] = [{ role: "system", content: NOVA_SYS }];
-      for (const l of lines.filter(l => l.kind === "user" || l.kind === "assistant")) {
-        h.push({ role: l.kind as "user" | "assistant", content: l.text });
-      }
-      h.push({ role: "user", content: msg });
-      return h;
-    };
-
     try {
-      /* ── PHASE 1: THINK ── */
       setPhase("thinking");
-      const thinkId = addLine({ kind: "thinking", text: "", collapsed: false });
-      let thinkText = "";
-      try {
-        await streamOllamaViaServer({
-          apiBase: base, model,
-          messages: [
-            { role: "system", content: THINK_SYS },
-            { role: "user", content: msg },
-          ],
-          signal,
-          onToken: token => {
-            thinkText += token;
-            updateLine(thinkId, () => ({ text: thinkText }));
-          },
-        });
-      } catch (e) {
-        if (signal.aborted) throw e;
-      }
-      updateLine(thinkId, () => ({ collapsed: true }));
-
-      /* ── PHASE 2: PLAN (for complex tasks) ── */
-      let planLineId = "";
-      let currentPlanSteps: PlanStep[] = [];
-
-      if (needsPlan(msg)) {
-        setPhase("planning");
-        let planText = "";
-        try {
-          await streamOllamaViaServer({
-            apiBase: base, model,
-            messages: [
-              { role: "system", content: PLAN_SYS },
-              { role: "user", content: msg },
-            ],
-            signal,
-            onToken: token => { planText += token; },
-          });
-          currentPlanSteps = parsePlanSteps(planText);
-          if (currentPlanSteps.length > 0) {
-            planLineId = addLine({ kind: "plan", text: planText, planSteps: currentPlanSteps });
-          }
-        } catch (e) {
-          if (signal.aborted) throw e;
-        }
-      }
-
-      /* ── PHASE 3: RESPOND (browser → Ollama stream) ── */
-      setPhase("responding");
       const respId = addLine({ kind: "assistant", text: "" });
       let fullResp = "";
-
-      try {
-        fullResp = await streamOllamaViaServer({
-          apiBase: base, model,
-          messages: buildHistory(),
-          signal,
-          onToken: token => {
-            fullResp += token;
-            updateLine(respId, () => ({ text: fullResp }));
-          },
-        });
-        setOllamaStatus("ok");
-      } catch (e) {
-        if (signal.aborted) throw e;
-        throw e;
-      }
-
-      /* ── PHASE 4: SERVER TOOLS (SSE) ── */
-      setPhase("tools");
-      let stepIdx = 0;
-
-      try {
-        const toolRes = await fetch(`${API_BASE}/live-agent/sessions/${sessionId}/messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: msg }),
-          signal,
-        });
-
-        if (toolRes.ok && toolRes.body) {
-          const reader = toolRes.body.getReader();
-          const dec = new TextDecoder();
-          let buf = "", evt: string | null = null;
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buf += dec.decode(value, { stream: true });
-            const blocks = buf.split("\n\n");
-            buf = blocks.pop() ?? "";
-
-            for (const block of blocks) {
-              for (const rawLine of block.split("\n")) {
-                if (rawLine.startsWith("event: ")) evt = rawLine.slice(7);
-                else if (rawLine.startsWith("data: ") && evt) {
-                  try {
-                    const data = JSON.parse(rawLine.slice(6)) as Record<string, unknown>;
-
-                    if (evt === "tool_call") {
-                      if (planLineId && currentPlanSteps[stepIdx]) {
-                        const updated = currentPlanSteps.map((s, i) =>
-                          i === stepIdx ? { ...s, status: "running" as const } : s);
-                        updateLine(planLineId, () => ({ planSteps: updated }));
-                        currentPlanSteps = updated;
-                      }
-                      const inputStr = JSON.stringify(data.input ?? {}).slice(0, 120);
-                      addLine({ kind: "tool", toolName: String(data.name), text: `▶ ${String(data.name)}(${inputStr})` });
-
-                    } else if (evt === "tool_result") {
-                      if (planLineId && currentPlanSteps[stepIdx]) {
-                        const updated = currentPlanSteps.map((s, i) =>
-                          i === stepIdx ? { ...s, status: (data.isError ? "error" : "done") as PlanStep["status"] } : s);
-                        updateLine(planLineId, () => ({ planSteps: updated }));
-                        currentPlanSteps = updated;
-                        stepIdx++;
-                      }
-                      const result = String(data.result || "").slice(0, 500);
-                      addLine({ kind: "tool_result", toolName: String(data.name), text: result || "(تم)", isError: Boolean(data.isError) });
-
-                    } else if (evt === "done") {
-                      if (planLineId && currentPlanSteps.length > 0) {
-                        const allDone = currentPlanSteps.map(s => ({ ...s, status: "done" as const }));
-                        updateLine(planLineId, () => ({ planSteps: allDone }));
-                      }
-                      addLine({ kind: "system", text: "✓ اكتمل التنفيذ" });
-
-                    } else if (evt === "error") {
-                      addLine({ kind: "system", text: `⚙ ${String(data.error || "")}`, isError: true });
-                    }
-                  } catch { /* ignore parse errors */ }
-                  evt = null;
-                }
-              }
-            }
-          }
-        }
-      } catch (e) {
-        if (signal.aborted) throw e;
-      }
-
-      /* ── Save AI response to DB ── */
-      await fetch(`${API_BASE}/live-agent/sessions/${sessionId}/save-ai-response`, {
+      setPhase("responding");
+      const history = lines
+        .filter(l => l.kind === "user" || l.kind === "assistant")
+        .slice(-8)
+        .map(l => ({ role: l.kind as "user" | "assistant", content: l.text }));
+      const response = await fetch(`${API_BASE}/nova-core/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assistantContent: fullResp }),
-      }).catch(() => {});
+        body: JSON.stringify({ message: msg, sessionId, history }),
+        signal,
+      });
+      if (!response.ok || !response.body) {
+        throw new Error(`تعذر الاتصال بعقل NOVA (HTTP ${response.status})`);
+      }
 
+      setPhase("tools");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let eventName = "";
+      let streamError: string | null = null;
+      const handleBlock = (block: string) => {
+        let dataLine = "";
+        for (const line of block.split(/\r?\n/)) {
+          if (line.startsWith("event: ")) eventName = line.slice(7);
+          else if (line.startsWith("data: ")) dataLine = line.slice(6);
+        }
+        if (!dataLine || !eventName) return;
+        const data = JSON.parse(dataLine) as Record<string, unknown>;
+        if (eventName === "delta") {
+          fullResp += String(data.text ?? "");
+          updateLine(respId, () => ({ text: fullResp }));
+        } else if (eventName === "tool_call") {
+          const args = JSON.stringify(data.args ?? {}).slice(0, 120);
+          addLine({ kind: "tool", toolName: String(data.name ?? ""), text: `▶ ${String(data.title ?? data.name ?? "أداة")} ${args}` });
+        } else if (eventName === "tool_result") {
+          addLine({
+            kind: "tool_result",
+            toolName: String(data.name ?? ""),
+            text: String(data.summary ?? "اكتمل استدعاء الأداة").slice(0, 500),
+            isError: data.ok === false,
+          });
+        } else if (eventName === "confirm_required") {
+          addLine({
+            kind: "system",
+            text: `⏸️ الأداة ${String(data.title ?? data.name ?? "")} تحتاج موافقة منفصلة موثّقة. لم يتم تنفيذها.`,
+          });
+        } else if (eventName === "error") {
+          streamError = String(data.message ?? "فشل تشغيل وكيل NOVA");
+        } else if (eventName === "done") {
+          addLine({
+            kind: "system",
+            text: `✓ انتهى دور NOVA · أدوات مستخدمة: ${Number(data.toolCount ?? 0)} · المزوّد: ${String(data.provider ?? "غير محدد")}`,
+          });
+        }
+        eventName = "";
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() ?? "";
+        for (const block of blocks) handleBlock(block);
+      }
+      if (buffer.trim()) handleBlock(buffer);
+      if (streamError) throw new Error(streamError);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       const errMsg = err instanceof Error ? err.message : String(err);
-      setOllamaStatus("error");
-      setOllamaError(errMsg);
       addLine({ kind: "system", text: `⚠ ${errMsg}`, isError: true });
     } finally {
       setBusy(false);
@@ -776,7 +637,7 @@ export default function NovaAgentChat() {
       <div className="px-4 pt-3 pb-2 shrink-0 space-y-2">
         <PageHeader
           title="☠ Nova Agent Chat"
-          subtitle="تفكير ذكي • تخطيط تلقائي • Ollama مباشر"
+          subtitle="استجابة مباشرة من NOVA Core • أحداث الأدوات الفعلية • ذاكرة الخادم"
           icon={Bot}
           danger
           actions={
@@ -1023,7 +884,7 @@ export default function NovaAgentChat() {
                   </p>
                   <div className="flex items-center justify-center gap-3 flex-wrap">
                     {[
-                      { icon: Brain, label: "يفكّر بصوت عالٍ", color: "text-purple-400" },
+                      { icon: Brain, label: "يلخّص خطته", color: "text-purple-400" },
                       { icon: ListChecks, label: "يضع خطة تنفيذ", color: "text-cyan-400" },
                       { icon: Zap, label: "يُنفّذ الأدوات", color: "text-yellow-400" },
                       { icon: BookOpen, label: "يتعلّم ويتذكّر", color: "text-green-400" },

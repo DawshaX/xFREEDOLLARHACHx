@@ -8,8 +8,10 @@ import { Router } from "express";
 import { broadcastLiveEvent } from "./live-events";
 import { broadcastEvent } from "../lib/ws-hub";
 import {
+  forget,
   initMemory,
   listMemories,
+  pinMemory,
   remember,
   type MemoryKind,
 } from "../lib/agent/memory-store";
@@ -84,6 +86,7 @@ const memoryStore: UnifiedMemoryEntry[] = [
 ];
 
 let nextId = 4;
+const durableMemoryIds = new Map<string, string>();
 
 function normalizeKind(raw?: string): string {
   if (!raw) return "fact";
@@ -124,9 +127,9 @@ function durableKind(kind: string): MemoryKind {
   return (DURABLE_KINDS as string[]).includes(k) ? (k as MemoryKind) : "fact";
 }
 
-function mirrorToDurable(entry: UnifiedMemoryEntry): void {
+function mirrorToDurable(entry: UnifiedMemoryEntry): string | null {
   try {
-    remember({
+    const record = remember({
       kind: durableKind(entry.kind),
       title: entry.title || entry.key,
       content: entry.content,
@@ -138,9 +141,12 @@ function mirrorToDurable(entry: UnifiedMemoryEntry): void {
       pinned: entry.pinned,
       source: "api:/memory",
     });
+    durableMemoryIds.set(entry.id, record.id);
+    return record.id;
   } catch {
     // A read-only disk must not fail the write the user asked for; the
     // in-memory copy is still served and the store reports its own error.
+    return null;
   }
 }
 
@@ -151,24 +157,34 @@ function mirrorToDurable(entry: UnifiedMemoryEntry): void {
 function hydrateFromDurable(): void {
   try {
     initMemory();
-    const { items } = listMemories({ limit: 5000, sort: "recent" });
-    for (const r of items) {
-      if (memoryStore.some((m) => m.key === r.title || m.id === r.id)) continue;
-      memoryStore.push({
-        id: r.id,
-        kind: r.kind,
-        memoryType: r.kind,
-        title: r.title,
-        key: r.title,
-        content: r.content,
-        tags: Array.isArray(r.tags) ? r.tags.join(",") : String(r.tags ?? ""),
-        pinned: Boolean(r.pinned),
-        importance: Number(r.importance ?? 5),
-        usedCount: 1,
-        ts: Date.parse(r.createdAt) || Date.now(),
-        createdAt: r.createdAt,
-        updatedAt: r.updatedAt ?? r.createdAt,
-      });
+    let offset = 0;
+    while (true) {
+      const { items } = listMemories({ limit: 500, offset, sort: "recent" });
+      for (const r of items) {
+        const existing = memoryStore.find((m) => m.key === r.title || m.id === r.id);
+        if (existing) {
+          durableMemoryIds.set(existing.id, r.id);
+          continue;
+        }
+        memoryStore.push({
+          id: r.id,
+          kind: r.kind,
+          memoryType: r.kind,
+          title: r.title,
+          key: r.title,
+          content: r.content,
+          tags: Array.isArray(r.tags) ? r.tags.join(",") : String(r.tags ?? ""),
+          pinned: Boolean(r.pinned),
+          importance: Number(r.importance ?? 5),
+          usedCount: 1,
+          ts: Date.parse(r.createdAt) || Date.now(),
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt ?? r.createdAt,
+        });
+        durableMemoryIds.set(r.id, r.id);
+      }
+      if (items.length < 500) break;
+      offset += items.length;
     }
   } catch {
     // No store yet (first boot) — the seeded defaults below are the start.
@@ -358,7 +374,14 @@ router.patch("/memory/:id/pin", (req, res) => {
   const body = (req.body ?? {}) as { pinned?: boolean };
   item.pinned = body.pinned !== undefined ? Boolean(body.pinned) : !item.pinned;
   item.updatedAt = new Date().toISOString();
+  const durableId = durableMemoryIds.get(id);
+  if (durableId) pinMemory(durableId, item.pinned);
   broadcastEvent({ type: "memory_pinned", id: item.id, pinned: item.pinned, ts: Date.now() });
+  broadcastLiveEvent({
+    type: "memory_pinned",
+    data: { id: item.id, pinned: item.pinned },
+    ts: item.updatedAt,
+  });
   res.json({ id: item.id, pinned: item.pinned });
 });
 
@@ -366,12 +389,34 @@ router.delete("/memory/:id", (req, res) => {
   const id = String(req.params.id);
   const idx = memoryStore.findIndex((m) => String(m.id) === id);
   if (idx >= 0) memoryStore.splice(idx, 1);
+  const durableId = durableMemoryIds.get(id);
+  if (durableId) forget(durableId);
+  durableMemoryIds.delete(id);
   broadcastEvent({ type: "memory_deleted", id, ts: Date.now() });
+  broadcastLiveEvent({
+    type: "memory_deleted",
+    data: { id },
+    ts: new Date().toISOString(),
+  });
   res.json({ ok: true, id });
 });
 
 router.delete("/memory", (_req, res) => {
+  while (true) {
+    const { items } = listMemories({ limit: 500 });
+    if (items.length === 0) break;
+    for (const item of items) {
+      forget(item.id);
+    }
+  }
+  durableMemoryIds.clear();
   memoryStore.length = 0;
+  broadcastEvent({ type: "memory_cleared", ts: Date.now() });
+  broadcastLiveEvent({
+    type: "memory_cleared",
+    data: {},
+    ts: new Date().toISOString(),
+  });
   res.json({ ok: true });
 });
 
