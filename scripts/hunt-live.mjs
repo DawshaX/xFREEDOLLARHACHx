@@ -7,7 +7,8 @@
  * nmap), keeps the raw output as evidence with a SHA-256, and writes:
  *
  *   state/hunt-latest.json      measured summary + findings (committed by CI)
- *   state/hunt/evidence/*.txt   the bytes each conclusion stands on
+ *   state/hunt/evidence/*.txt.gz the bytes each conclusion stands on (gzipped,
+ *                              budgeted by HUNT_EVIDENCE_MAX_MB — 32 MB default)
  *
  * Scope: only hosts listed in `ops/verify/targets.json` with `active: true` and a
  * `permission_url` — the same allowlist the verify harness uses. Anything else is
@@ -20,6 +21,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import zlib from "node:zlib";
 import { spawn } from "node:child_process";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
@@ -34,6 +36,7 @@ const arg = (k, d) => {
 const targetsFile = arg("targets", path.join(root, "ops/verify/targets.json"));
 const outJson = arg("out", path.join(root, "state/hunt-latest.json"));
 const evidenceDir = path.join(root, "state/hunt/evidence");
+const STATE_DIR = path.join(root, "state");
 const only = arg("only", "");
 // The budget is data, not a constant: the workflow can tighten it for a single
 // target without editing the scanner, and the chosen value is recorded in the
@@ -115,9 +118,99 @@ function evidence(name, content, probe) {
   fs.mkdirSync(evidenceDir, { recursive: true });
   const buf = Buffer.from(typeof content === "string" ? content : JSON.stringify(content, null, 2), "utf8");
   const sha = crypto.createHash("sha256").update(buf).digest("hex");
-  const file = path.join(evidenceDir, `${name}-${sha.slice(0, 12)}.txt`);
-  fs.writeFileSync(file, buf);
-  return { file: path.relative(root, file), sha256: sha, bytes: buf.length, probe, at: new Date().toISOString() };
+  const file = path.join(evidenceDir, `${name}-${sha.slice(0, 12)}.txt.gz`);
+  // الدليل بيتخزن مضغوط: قياس فعلي على 3 ملفات katana = ×7.3–7.4 (8.4MB → 1.15MB)، والـsha256 لسه بيحسب
+  // على البايتمات الخام فالرقم يثبت نفس المحتوات مهما كان الغلاف.
+  const gz = zlib.gzipSync(buf, { level: 9 });
+  fs.writeFileSync(file, gz);
+  return {
+    file: path.relative(root, file),
+    sha256: sha,
+    bytes: buf.length,
+    gzBytes: gz.length,
+    encoding: "gzip",
+    probe,
+    at: new Date().toISOString(),
+  };
+}
+
+/**
+ * سقف الأدلة — الرقم مش زينة: `state/hunt/evidence/` كان 148 ملف خام = 128.7MB
+ * متتبعة في جيت (قيس 2026-11-07: `git ls-tree -r -l` = 128.7MB، وأكبر ملف 8.0MB)
+ * فكل مستنسخ وكل حاوية بتشيل العبء ده، والتخزين على المكنة المجانية كان بيزيد
+ * بلا حد. من دلوقتي: الخام بيتضغط، واللي ماشي في التقرير بيتشال، والمجموع
+ * ملزوم بميزانية HUNT_EVIDENCE_MAX_MB (32MB افتراضي).
+ */
+/**
+ * أي دليل مذكور في حالة دائمة يتعلّم بيه (تقرير الصيد، الاستشارات، الخزنة) —
+ * بنلمط الأسماء من JSON بتاع state/ بدل ما نحتفظ بكل حاجة للأبد أو نحذف دليل
+ * لسه مبني عليه استشارة منشورة.
+ */
+function referencedEvidence(extraBlob) {
+  const names = new Set();
+  const re = /evidence\/([A-Za-z0-9._-]+?\.(?:txt|txt\.gz))/g;
+  let blob = String(extraBlob || "");
+  if (fs.existsSync(STATE_DIR)) {
+    for (const name of fs.readdirSync(STATE_DIR)) {
+      if (!name.endsWith(".json")) continue;
+      const full = path.join(STATE_DIR, name);
+      try {
+        if (fs.statSync(full).size > 8 * 1024 * 1024) continue;
+        blob += fs.readFileSync(full, "utf8");
+      } catch {
+        /* ملف مقفول — نتجاهله ومش نحذف دليله */
+      }
+    }
+  }
+  for (const m of blob.matchAll(re)) names.add(m[1]);
+  return names;
+}
+
+function rotateEvidence(report) {
+  const maxBytes = Math.max(1, Number(process.env.HUNT_EVIDENCE_MAX_MB ?? 32)) * 1024 * 1024;
+  const out = { compressed: 0, removed: 0, kept: 0, bytes: 0, maxBytes, referenced: 0, budgetMB: maxBytes / 1048576 };
+  if (!fs.existsSync(evidenceDir)) return out;
+  const keep = referencedEvidence(report ? JSON.stringify(report) : "");
+  for (const name of fs.readdirSync(evidenceDir)) {
+    const full = path.join(evidenceDir, name);
+    if (!name.endsWith(".txt") || /^targets-/.test(name)) continue;
+    try {
+      if (!fs.statSync(full).isFile()) continue;
+      fs.writeFileSync(`${full}.gz`, zlib.gzipSync(fs.readFileSync(full), { level: 9 }));
+      fs.unlinkSync(full);
+      out.compressed += 1;
+      // مافيش إعفاء بسبب الضغط: المذيّل بيتمشى على المراجعين بجد، واللي اسمه كان
+      // .txt بيتلقط من keep.has(name.replace(/\.gz$/,"")).
+    } catch {
+      /* ملف مقفول —سيبه للمحاولة الجاية */
+    }
+  }
+  const alive = fs
+    .readdirSync(evidenceDir)
+    .filter((n) => /\.(txt|txt\.gz)$/.test(n) && !/^targets-/.test(n))
+    .map((n) => {
+      const st = fs.statSync(path.join(evidenceDir, n));
+      return { n, p: path.join(evidenceDir, n), m: st.mtimeMs, s: st.size };
+    })
+    .sort((a, b) => b.m - a.m);
+  let running = 0;
+  for (const e of alive) {
+    const referenced = keep.has(e.n) || keep.has(e.n.replace(/\.gz$/, ""));
+    if (referenced) out.referenced += 1;
+    if (referenced || running + e.s <= maxBytes) {
+      running += e.s;
+      out.kept += 1;
+      continue;
+    }
+    try {
+      fs.unlinkSync(e.p);
+      out.removed += 1;
+    } catch {
+      /* مقفول */
+    }
+  }
+  out.bytes = running;
+  return out;
 }
 
 const tools = {
@@ -352,6 +445,7 @@ if (report.totals.scanned === 0) {
   report.verdict = "findings";
 }
 
+report.evidenceBudget = rotateEvidence(report);
 fs.mkdirSync(path.dirname(outJson), { recursive: true });
 fs.writeFileSync(outJson, JSON.stringify(report, null, 2));
 
