@@ -1,39 +1,64 @@
 {
-  "at": "2026-11-07T09:02:14.551Z",
+  "at": "2026-11-07T13:26:02.274Z",
   "seat": "openai",
   "thinking": {
-    "reply": "المنصة الآن محفوظة، وزيادة التغطية شغلة. أهم خطوة جاية هي إكمال مسح الـvulnweb.com لاستغلال وقت المتاح وتحسين نسب الاستكشاف.",
-    "why": "العمل حاليًا على استعراض أهداف عينة، لا حاجة إلى جلب بيانات إضافية أو بحث في CVE.",
+    "reply": "الـ coverage 59.34٪، ما زال فيه فجوات تحتاج تدقيق – نركز التوسع على linux_kernel لزيادة تكامل التحسينات.",
+    "why": "الـ coverage أقل من 60٪، linux_kernel هو منتج رئيسي بالـ topProducts ويوجد مجال كبير للبحث عن مجالات الثغرات والمحدثات.",
     "action": {
-      "kind": "none",
-      "arg": ""
+      "kind": "corpus_search",
+      "arg": "linux_kernel"
     }
   },
-  "action": null,
+  "action": {
+    "kind": "corpus_search",
+    "ok": true,
+    "arg": "linux_kernel",
+    "hits": 5,
+    "examples": [
+      {
+        "cve": "CVE-2025-39682",
+        "severity": "critical",
+        "cvss": 9.8,
+        "kev": true
+      },
+      {
+        "cve": "CVE-2026-53266",
+        "severity": "high",
+        "cvss": 8.8,
+        "kev": true
+      },
+      {
+        "cve": "CVE-2021-3493",
+        "severity": "high",
+        "cvss": 8.8,
+        "kev": true
+      }
+    ]
+  },
   "answered": null,
   "senses": {
     "corpus": {
-      "total": 225538,
-      "at": "2026-11-07T02:39:57.188Z",
-      "critical": 17202,
-      "high": 86798,
-      "kev": 702,
-      "coverage": 0.5364,
-      "nextStartIndex": 386930,
+      "total": 249702,
+      "at": "2026-11-07T09:51:26.320Z",
+      "critical": 19499,
+      "high": 96641,
+      "kev": 742,
+      "coverage": 0.5934,
+      "nextStartIndex": 410930,
       "newestYear": 2026,
       "topProducts": [
         "linux_kernel",
-        "firefox",
         "chrome",
+        "firefox",
         "android",
+        "windows_server_2012",
         "mac_os_x",
         "safari",
-        "iphone_os",
         "macos",
-        "windows_server_2012",
-        "debian_linux",
-        "php",
-        "wireshark"
+        "windows_10_22h2",
+        "windows_10_21h2",
+        "windows_10_1809",
+        "windows_11_24h2"
       ]
     },
     "hunt": {
@@ -313,13 +338,13 @@
       "says": "اتفحص 3 هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل."
     },
     "advisories": {
-      "total": 1071,
-      "at": "2026-11-06T12:07:43.978Z",
-      "critical": 198
+      "total": 1069,
+      "at": "2026-11-07T11:04:54.848Z",
+      "critical": 201
     }
   },
   "failures": [],
-  "says_ar": "فكّرت على openai · المنصة الآن محفوظة، وزيادة التغطية شغلة. أهم خطوة جاية هي إكمال مسح الـvulnweb.com لاستغلال وقت المتاح وتحسين نسب الاستكشاف.",
+  "says_ar": "فكّرت على openai · الـ coverage 59.34٪، ما زال فيه فجوات تحتاج تدقيق – نركز التوسع على linux_kernel لزيادة تكامل التحسينات.",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
