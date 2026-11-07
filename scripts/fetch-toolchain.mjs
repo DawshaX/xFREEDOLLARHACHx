@@ -370,8 +370,15 @@ async function fetchOne(tool, manifest) {
   let line = "";
   for (const args of probes) {
     smoke = await run(dest, args, { timeout: 15_000 });
-    line = String(smoke.out || smoke.err).split("\n").map((x) => x.trim()).filter(Boolean)[0] || "";
-    if (accept.includes(smoke.code) && /\d/.test(line)) break;
+    const out = `${String(smoke.out || "")}\n${String(smoke.err || "")}`;
+    const lines = out.split("\n").map((x) => x.trim()).filter(Boolean);
+    // أول سطر فيه إصدار (رقم.رقم) — banners بتاعت ProjectDiscovery بتطبع ASCII-art
+    // فسطر «الأول» بيكون بلا أرقام، وده بالظبط اللي رفض httpx/katana/dnsx وهي سليمة
+    // (run f6dc9c7: «اختبار النسخة مامرّش (exit 0)»). لو الخروج مقبول ومافيش سطر
+    // إصدار، أي مخرج كفاية: الأداة ردّت. والصرامة بتفضل في الحالة اللي بنسامحها
+    // فيها علي كود غير صفر (gobuster exit 3): لازم يكون فيه رقم إصدار في المخرج.
+    line = lines.find((l) => /\d+\.\d+/.test(l)) || (accept.includes(smoke.code) ? lines[0] || "" : "");
+    if (accept.includes(smoke.code) && line) break;
     line = "";
   }
   if (!line) {

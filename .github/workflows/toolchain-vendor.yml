@@ -72,6 +72,10 @@ jobs:
           node -e 'const fs=require("fs");const txt=fs.readFileSync("out/fetch.json","utf8");const i=txt.lastIndexOf("{");let d=null;for(let s=i;s>=0;s-=1){try{d=JSON.parse(txt.slice(s,txt.lastIndexOf("}")+1));break}catch{}}
             if(!d){console.log("::error::مخرجات مش JSON: "+txt.slice(0,200));process.exit(1)}
             if(!d.ok){console.log(`::error::ولا أداة اتنزلت (${d.results?.length||0} نتيجة): `+(d.results||[]).map(r=>r.bin+":"+r.status).join(", ").slice(0,300));process.exit(1)}
+            // مرآة أنقص من الكاملة أخطر من مفيش مرآة: الأصل بيتنشر فوق نسخة كاملة، والمنزّل
+            // بيرمي اللي مش في المانيفست لمسار api.github.com — وهو محجوب من الحاوية.
+            // القياس: run f6dc9c7 نشر 7/12 والشريط فضل أخضر. بقى أحمر هنا.
+            if(d.ok !== d.total){console.log(`::error::المرآة ناقصة ${d.ok}/${d.total}: `+(d.results||[]).filter(r=>r.status==="failed").map(r=>r.bin+" ("+String(r.why||"").slice(0,60)+")").join(", ").slice(0,400));process.exit(1)}
             console.log(`fetched ${d.ok}/${d.total}`)'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
