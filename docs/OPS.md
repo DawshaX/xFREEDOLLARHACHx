@@ -368,9 +368,9 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
 | أدلة الصيد | `state/hunt/evidence/*.txt.gz` | مضغوطة (8.4MB → 1.15MB) بميزانية `HUNT_EVIDENCE_MAX_MB=32`؛ اللي عليه مرجع في حالة دائمة بيتحمى |
 | لوج التحديث | `state/auto-update.log` | بيلف عند 256KB (قِيس: 359KB → 24KB) |
 | نسخة رجوع التحديث | `<install>/backups/` | آخر 3، وبس الملفات اللي اتغيّرت فعلًا (قِيس: 93 بايت مكان 11.8MB) |
-| أدوات الأمان | `/home/container/vendor/bin` | 12 أداة؛ `auto` على مكنة مُشرَّفة مع حارس قرص 1.5GB وحارس رام (`--max-old-space-size` = 60% من حد cgroup) |
+| أدوات الأمان | `/home/container/vendor/bin` | 16 أداة في الشجرة (المِرر المنشور وقت كتابة السطر لسه 12؛ CI بيعيده لـ16 في أول ضمّة بعد الدفعة دي)؛ `auto` على مكنة مُشرَّفة مع حارس قرص 1.5GB وحارس رام (`--max-old-space-size` = 60% من حد cgroup) |
 | مِرر الأدوات | release `nova-toolchain` (أرشيف + SHA-256) | CI بينزّل من api.github.com، والمكنة تسحب أرشيف واحد — لأن `api.github.com` محجوب من الحاوية (متقاس 17:32:23Z: 12/12 `failed · api.github.com ماردّش`). `NOVA_TOOLCHAIN_MIRROR` يغيّره و`--no-mirror` يرجّع للمسار الأصلي |
-| قائمة المسارات | `ops/wordlists/nova-paths.txt` | 215 سطر مدمجة في الحزمة (1.9KB) — `ffuf`/`gobuster` بيشتغلوا بيها، و`NOVA_WORDLIST` بياخد الأولوية |
+| قائمة المسارات | `ops/wordlists/` | 3 قوائم مضمّنين في الحزمة: `nova-paths.txt` 215 سطر (الافتراضي)، `paths-medium.txt` 7207، `params-burp.txt` 6453 باراميتر — الاتنين الكبيرين من `danielmiessler/SecLists` (`Discovery/Web-Content`: common.txt + quickhits.txt، وburp-parameter-names.txt) متفروزين هنا عشان المكنة مايفرضش عليها تحميل 375KB+ من بره. `NOVA_WORDLIST` بياخد الأولوية، و`NOVA_WORDLIST_SIZE=medium|params` يبدّل بينهم |
 ليه مافيش مفتاح على المكنة: الحزمة بتتنزّل من release **عام** (المستودع عام —
 متقاس من `gh api repos/... → visibility: public`)، فأي سر جواها بقى مقروء لأي
 حد. الكتابة للقاعدة بتعدي علي `supabase/functions/nova-state/index.ts` اللي

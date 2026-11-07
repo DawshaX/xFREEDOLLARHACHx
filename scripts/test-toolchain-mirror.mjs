@@ -131,8 +131,14 @@ if (!esbuildApi(ROOT) && !esbuildCli(ROOT)) {
   ]);
   const mod = await import(bundle);
   const KINDS = mod.KINDS ?? {};
-  const WANT = ["tools.amass", "tools.naabu", "tools.ffuf", "tools.gobuster", "tools.dalfox", "tools.gitleaks", "tools.trivy"];
-  const VENDORABLE = ["subfinder", "httpx", "nuclei", "katana", "dnsx", "naabu", "ffuf", "amass", "gobuster", "dalfox", "gitleaks", "trivy"];
+  const WANT = [
+    "tools.amass", "tools.naabu", "tools.ffuf", "tools.gobuster", "tools.dalfox", "tools.gitleaks", "tools.trivy",
+    "tools.tlsx", "tools.uncover", "tools.osv", "tools.trufflehog", "tools.parammine",
+  ];
+  const VENDORABLE = [
+    "subfinder", "httpx", "nuclei", "katana", "dnsx", "naabu", "ffuf", "amass", "gobuster", "dalfox", "gitleaks", "trivy",
+    "tlsx", "uncover", "trufflehog", "osv-scanner",
+  ];
 
   check("every new kind is registered", () => {
     for (const id of WANT) assert.ok(KINDS[id], `${id} not in KINDS`);
@@ -153,9 +159,9 @@ if (!esbuildApi(ROOT) && !esbuildCli(ROOT)) {
     }
   });
   check("anything that touches the target is flagged active (that flag is the authorization gate)", () => {
-    const TOUCHING = ["tools.naabu", "tools.ffuf", "tools.gobuster", "tools.dalfox"];
+    const TOUCHING = ["tools.naabu", "tools.ffuf", "tools.gobuster", "tools.dalfox", "tools.tlsx", "tools.parammine"];
     for (const id of TOUCHING) assert.equal(KINDS[id].active, true, `${id} hits the target but is not active`);
-    const PASSIVE = ["tools.amass", "tools.gitleaks", "tools.trivy"];
+    const PASSIVE = ["tools.amass", "tools.gitleaks", "tools.trivy", "tools.uncover", "tools.osv", "tools.trufflehog"];
     for (const id of PASSIVE) assert.equal(KINDS[id].active, false, `${id} is passive but marked active`);
   });
   check("the brute-force kinds fall back loudly, never silently, with no wordlist", () => {
@@ -171,6 +177,20 @@ if (!esbuildApi(ROOT) && !esbuildCli(ROOT)) {
 }
 
 /* ── 5 · the vendorer refuses to trust an unverified mirror, by construction ─ */
+check("القايمة اللي بنسمّيها مدمجة بتفضل موجودة وبالحجم المتقاس", () => {
+  const med = fs.readFileSync(path.join(ROOT, "ops/wordlists/paths-medium.txt"), "utf8");
+  const par = fs.readFileSync(path.join(ROOT, "ops/wordlists/params-burp.txt"), "utf8");
+  assert.ok(med.split("\n").filter((l) => l.trim()).length >= 5000, "paths-medium缩水");
+  assert.ok(par.split("\n").filter((l) => l.trim()).length >= 5000, "params-burp缩水");
+  // ffuf بياخد السطر حرفيًا: مافيش سطر تعليق ولا سطر فاضي في النص
+  for (const [nm, txt] of [["paths-medium", med], ["params-burp", par]]) {
+    for (const l of txt.split("\n")) {
+      if (!l.trim()) continue;
+      assert.ok(!l.startsWith("#"), `${nm}: سطر تعليق هيتجرّب كابحّث حرفي — امسحه`);
+    }
+  }
+});
+
 check("the mirror download is streamed to disk, not buffered in RAM", () => {
   const srcTxt = fs.readFileSync(path.join(ROOT, "scripts/fetch-toolchain.mjs"), "utf8");
   assert.match(srcTxt, /function downloadStream/, "the streaming downloader disappeared");

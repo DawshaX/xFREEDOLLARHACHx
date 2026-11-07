@@ -74,6 +74,14 @@ const TOOLS = [
   { bin: "dalfox", repo: "hahwul/dalfox", match: /linux[-_](x86_64|amd64)(-musl)?\.tar\.gz$/i, asset: "targz", ver: ["--version"], altVer: ["version"] },
   { bin: "gitleaks", repo: "gitleaks/gitleaks", match: /linux_x64\.tar\.gz$/i, asset: "targz", ver: ["version"] },
   { bin: "trivy", repo: "aquasecurity/trivy", match: /Linux-64bit\.tar\.gz$/i, asset: "targz", ver: ["--version"] },
+  // ── إضافات 2026-11-07 (أسماء الأصول متقاسة من `releases/latest` نفسها، مش اسم على الزوق)
+  // tlsx/uncover بتوع ProjectDiscovery (نفس شكل linux_amd64.zip)، trufflehog للتدقيق
+  // المحلي علي الشجرة، وosv-scanner بيجي **ملف واحد بلا أرشيف** (`asset: "raw"`)
+  // وده بيشتغل أوفلاين: بيقرا `pnpm-lock.yaml` من غير ما ينزّل قاعدة بيانات.
+  { bin: "tlsx", repo: "projectdiscovery/tlsx", match: /tlsx_[\d.]+_linux_amd64\.zip$/i, asset: "zip", ver: ["-version"] },
+  { bin: "uncover", repo: "projectdiscovery/uncover", match: /uncover_[\d.]+_linux_amd64\.zip$/i, asset: "zip", ver: ["-version"] },
+  { bin: "trufflehog", repo: "trufflesecurity/trufflehog", match: /trufflehog_[\d.]+_linux_amd64\.tar\.gz$/i, asset: "targz", ver: ["--version"] },
+  { bin: "osv-scanner", repo: "google/osv-scanner", match: /osv-scanner_linux_amd64$/i, asset: "raw", ver: ["--version"] },
 ].filter((t) => !ONLY.length || ONLY.includes(t.bin));
 
 /**
@@ -346,6 +354,22 @@ async function fetchOne(tool, manifest) {
   if (!(await download(asset.browser_download_url, archive))) {
     fs.rmSync(tmp, { recursive: true, force: true });
     return { bin: tool.bin, status: "failed", tag, why: "التنزيل فشل من " + new URL(asset.browser_download_url).host };
+  }
+  // `raw`: الأصل نفسه هو الباينري (osv-scanner بينشر ملف واحد) — مفيش أرشيف يّفك.
+  if (tool.asset === "raw") {
+    fs.mkdirSync(INTO, { recursive: true });
+    fs.copyFileSync(archive, dest);
+    fs.chmodSync(dest, 0o755);
+    fs.rmSync(tmp, { recursive: true, force: true });
+    const raw = await run(dest, tool.ver, { timeout: 15_000 });
+    const rawLine = String(raw.out || raw.err).split("\n").map((x) => x.trim()).filter(Boolean)[0] || "";
+    if (raw.code !== 0 || !rawLine) {
+      fs.rmSync(dest, { force: true });
+      return { bin: tool.bin, status: "failed", tag, why: `الملف الخام ما ردّش علي الاختبار (exit ${raw.code})` };
+    }
+    manifest[tool.bin] = { tag, at: new Date().toISOString(), version: rawLine.slice(0, 120), path: dest };
+    log(`✓ ${tool.bin} → ${rawLine.slice(0, 90)}`);
+    return { bin: tool.bin, status: "installed", tag, version: rawLine.slice(0, 120), source: "raw" };
   }
   const exDir = path.join(tmp, "x");
   if (!(await extract(archive, exDir, tool.asset))) {

@@ -284,7 +284,7 @@ if (role === "node" || role === "agent") {
   //      state/.nova-restart — no panel button, no manual step;
   //   2. if the app ever crashes the container stay up and the app comes back.
   const { spawn } = await import("node:child_process");
-  const { statSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync, existsSync } = await import("node:fs");
+  const { statSync, statfsSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync, existsSync } = await import("node:fs");
   const { get: httpGet } = await import("node:http");
   const MARK = join(HERE, "state", ".nova-restart");
   const ENTRY = join(HERE, "nova-app.mjs");
@@ -321,6 +321,63 @@ if (role === "node" || role === "agent") {
   };
 
   launch();
+
+  /* ── الأيادي: المُشرف هو اللي بينزّل الأدوات، مش التطبيق ────────────────────
+   * القياس اللي علّمنا ده مرتين في نفس الساعة (2026-11-07): التنزيل متحطّ في هوك
+   * إقلاع التطبيق → الحاوية دخلت حلقة موت (nginx بيردّ 502 على كل حاجة، و
+   * المُحدِّث جوه التطبيق فمافيش مخرج ذاتي)، لأن التطبيق رافع ~115–167MB RSS
+   * والمرآة 219MB في حاوية سقفها 256MB. في المُشرف الابن بياخد 64MB والثانية
+   * التانية التطبيق بيخدم — والأداة اللي محتاجها المحرك تبقى موجودة قبل الإقلاع
+   * الجاي. مفيش تعطيل لأول طلب، ومفيش إعادة تشغيل.
+   */
+  const toolchainPass = () => {
+    if (process.env.NOVA_TOOLCHAIN_AT_BOOT === "0") return;
+    const root = String(process.env.NOVA_STATE_DIR || process.cwd());
+    const wantsAuto = process.env.NOVA_TOOLCHAIN_AT_BOOT === "1" || root.indexOf("/home/container") === 0;
+    if (!wantsAuto) return; // مكنة تطوير/CI ما تنزّلش 219MB لوحدها
+    const script = join(HERE, "scripts", "fetch-toolchain.mjs");
+    if (!existsSync(script)) {
+      console.log("[supervisor] مفيش scripts/fetch-toolchain.mjs في الحزمة — اتخطّيت");
+      return;
+    }
+    let free = null;
+    try {
+      const fst = statfsSync(join(HERE, "state"));
+      free = Math.round((fst.bsize * fst.bavail) / 1048576);
+    } catch {
+      free = null; // ماقدرناش نقيس — مانمنعش الحاجة، بس بنقول إننا ما قسناش
+    }
+    if (free !== null && free < 1500) {
+      console.log("[supervisor] القرص الفاضي " + free + "MB تحت 1500MB — التنزيل اتخطّى");
+      return;
+    }
+    console.log("[supervisor] toolchain pass: بنكمّل vendor/bin من مِرر جيت هاب");
+    const cp = spawn(process.execPath, [script, "--into", join(HERE, "vendor", "bin"), "--json"], {
+      cwd: HERE,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: Object.assign({}, process.env, { NODE_OPTIONS: "--max-old-space-size=64" }),
+    });
+    let out = "";
+    let err = "";
+    cp.stdout.on("data", (d) => { out += d.toString(); });
+    cp.stderr.on("data", (d) => { err += d.toString(); });
+    const killer = setTimeout(() => { try { cp.kill("SIGKILL"); } catch { /* already gone */ } }, 900_000);
+    cp.on("exit", (code, signal) => {
+      clearTimeout(killer);
+      let doc = null;
+      const i = out.lastIndexOf("{");
+      for (let s2 = i; s2 >= 0; s2 -= 1) {
+        try { doc = JSON.parse(out.slice(s2, out.lastIndexOf("}") + 1)); break; } catch { /* جرّب أقرب } */ }
+      }
+      if (doc) console.log("[supervisor] toolchain pass: " + doc.ok + "/" + doc.total + " جاهز في " + doc.into);
+      else console.log("[supervisor] toolchain pass: مفيش JSON (exit " + (signal || code) + ") — " + err.slice(0, 160).replace(/\n/g, " "));
+      const w = err.indexOf("::warning::");
+      if (w >= 0) console.log("[toolchain] " + err.slice(w + 11, w + 260).split("\n")[0]);
+    });
+  };
+  // 25 ثانية: أول طلب والـhealth يخلّصوا الأول، وبعدين الشبكة.
+  const toolchainTimer = setTimeout(toolchainPass, 25000);
+  toolchainTimer.unref?.();
 
   setInterval(() => {
     const now = stamp();

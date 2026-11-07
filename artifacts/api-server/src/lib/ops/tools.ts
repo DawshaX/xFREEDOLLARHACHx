@@ -20,7 +20,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { wordlistPath } from "./wordlist";
+import { resolveList, wordlistPath } from "./wordlist";
 import {
   scanDns,
   scanHeaders,
@@ -370,6 +370,20 @@ function nucleiEtaMs(p: Record<string, unknown>, rps: number): { templates: numb
   const profile = nucleiProfileOf(p);
   const r = Math.max(0.2, rps || 1);
   return { profile, templates: NUCLEI_PROFILES[profile].templates, rps: Math.round(r), etaMs: Math.ceil(NUCLEI_PROFILES[profile].templates / r) * 1000 };
+}
+
+/** قفل الاعتماديات بتاعنا — نفس الملف اللي البوابات بتمشي عليه (مابيخترعش مسار). */
+function lockfilePath(): string {
+  for (const base of [process.cwd(), path.resolve(process.cwd(), ".."), path.resolve(process.cwd(), "../..")]) {
+    const p = path.join(base, "pnpm-lock.yaml");
+    try {
+      if (fs.statSync(p).isFile()) return p;
+    } catch {
+      /* جرّب اللي بعده */
+    }
+  }
+  // مالقيناشش قفل = رجّع فاضي؛ المستدعي بيقرر يعمل scan -r ولا يفوت بهدوء.
+  return "";
 }
 
 export const KINDS: Record<string, KindDef> = {
@@ -1265,6 +1279,212 @@ export const KINDS: Record<string, KindDef> = {
         }),
       );
       return { findings, data: { leaks: rows.length, scanned: process.cwd(), redacted: true } };
+    },
+  },
+
+  /* ── إضافات 2026-11-07: أدوات جاية من المِرر، بنفس قواعد الإذن ─────────────
+   * تلاتة منها بتشتغل علي الشجرة بتاعتنا (osv/trufflehog) — يعني الفحص مابيرجعش
+   * «صفر» لأن النت مقفول، وواحدة بتكلّم شهادات TLS، وواحدة بتعدّي بارامترات من
+   * قائمة SecLists مدمجة. الأعلام هنا من وثايق كل أداة؛ ولو واحدة منهم غلط،
+   * الأداة بترجع exit != 0 وstderr بيتسجّل في الدليل — مافيش «نجح» من غير قياس.
+   */
+
+  "tools.tlsx": {
+    id: "tools.tlsx",
+    titleAr: "tlsx (شهادات TLS: انتهاء، توقيع ذاتي، سلاسل ناقصة)",
+    active: true, // بيفتح يد على بورت 443 بتاع الهدف
+    binary: "tlsx",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only tlsx",
+    budgetMs: 60_000,
+    args: (ctx) => ["-host", ctx.host, "-port", "443", "-json", "-silent"],
+    command: (ctx) => `tlsx -host ${shQuote(ctx.host)} -port 443 -json -silent`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.tlsx", `tlsx ${ctx.host}`, stdout);
+      const rows: Record<string, unknown>[] = [];
+      for (const line of stdout.split(/\r?\n/)) {
+        if (!line.trim().startsWith("{")) continue;
+        try {
+          rows.push(JSON.parse(line) as Record<string, unknown>);
+        } catch { /* سطر وسطي */ }
+      }
+      const findings: Finding[] = [];
+      for (const r of rows.slice(0, 8)) {
+        const expired = r.expired === true || r.Expired === true;
+        const selfSigned = String(r.cert_chain ?? "").length === 0 || r.self_signed === true;
+        if (!expired && !selfSigned) continue;
+        findings.push(
+          mkFinding(ctx, {
+            kind: "tools.tlsx",
+            title: expired ? "TLS certificate is expired" : "TLS certificate has an incomplete chain",
+            titleAr: expired ? "شهادة TLS منتهية الصلاحية" : "سلسلة الشهادة ناقصة/توقيع ذاتي",
+            severity: expired ? "high" : "medium",
+            confidence: 0.9,
+            cwe: "CWE-295",
+            target: `${ctx.host}:443`,
+            reproduce: `echo | openssl s_client -connect ${shQuote(`${ctx.host}:443`)} -servername ${shQuote(ctx.host)} 2>/dev/null | openssl x509 -noout -dates -issuer`,
+            remediationAr: "جدّد الشهادة واثبت السلسلة الكاملة (intermediate)؛ المتصفح بيحذّر ومش بيغلطش لمصلحتك.",
+            evidence: [writeEvidence(ctx, "tools.tlsx.hit", `${ctx.host}:443`, JSON.stringify(r).slice(0, 2000))],
+          }),
+        );
+      }
+      return { findings, data: { certs: rows.length } };
+    },
+  },
+
+  "tools.uncover": {
+    id: "tools.uncover",
+    titleAr: "uncover (أصول مكشوفة للنطاق على محركات بحث عامة)",
+    active: false, // بيبحث في مصادر عامة عن النطاق، ما بيلمسش الهدف
+    binary: "uncover",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only uncover",
+    budgetMs: 75_000,
+    args: (ctx) => ["-q", `domain:${ctx.host}`, "-silent", "-json"],
+    command: (ctx) => `uncover -q ${shQuote(`domain:${ctx.host}`)} -silent -json`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.uncover", `uncover domain:${ctx.host}`, stdout);
+      const hits: Array<{ ip: string; port: string; proto: string; src: string }> = [];
+      for (const line of stdout.split(/\r?\n/)) {
+        if (!line.trim().startsWith("{")) continue;
+        try {
+          const j = JSON.parse(line) as Record<string, unknown>;
+          hits.push({
+            ip: String(j.ip ?? j.URL ?? "?"),
+            port: String(j.port ?? ""),
+            proto: String(j.proto ?? j.protocol ?? ""),
+            src: String(j.source ?? ""),
+          });
+        } catch { /* سطر وسطي */ }
+      }
+      const risky = hits.filter((h) => /^(22|23|3389|5900|6379|9200|27017|554|8545)$/.test(h.port));
+      const findings = risky.slice(0, 8).map((h) =>
+        mkFinding(ctx, {
+          kind: "tools.uncover",
+          title: `Exposed service in public indexes: ${h.ip}:${h.port}`,
+          titleAr: `خدمة مكشوفة مسجّلة في محركات بحث عامة: ${h.ip}:${h.port}`,
+          severity: "high",
+          confidence: 0.7,
+          cwe: "CWE-200",
+          target: `${h.ip}:${h.port}`,
+          reproduce: `uncover -q ${shQuote(`domain:${ctx.host}`)} -silent -json | grep ${shQuote(String(h.port))}`,
+          remediationAr: "المؤشر العام معناه إن المنفذ كان مفتوح للعالم: اقفلُه أو طلعه خلف VPN، واطلب مسح من المحركات.",
+          evidence: [writeEvidence(ctx, "tools.uncover.hit", `${h.ip}:${h.port}`, JSON.stringify(h))],
+        }),
+      );
+      return { findings, data: { results: hits.length, risky: risky.length, sample: hits.slice(0, 40) } };
+    },
+  },
+
+  "tools.osv": {
+    id: "tools.osv",
+    titleAr: "osv-scanner (ثغرات قفلنا نفسه — من غير قاعدة بيانات ولا نت)",
+    active: false, // محلي 100%
+    binary: "osv-scanner",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only osv-scanner",
+    budgetMs: 180_000,
+    args: () => {
+      // الصيغة الموثّقة في v2 (`docs/usage.md`): `scan -L <قفل> --format json`، أو
+      // `scan -r <مجلد>` لو مالقيناوش (حزمة standalone). `--no-resolve` عشان
+      // ميعملش شبكة لنبني شجرة — على البوكس اللي النت فيه محدود ده فرق جوهري.
+      const lock = lockfilePath();
+      if (lock) return ["scan", "-L", lock, "--format", "json", "--no-resolve"];
+      // البوكس ماإلوش قفل في الجذر (huly: ROOT=artifacts/api-server) — نلقّيه في
+      // الشجرة ونمسك أول قفل npm/pnpm، ولو مافيشش نعمل scan -r على الجذر نفسه.
+      for (const base of [path.resolve(process.cwd(), ".."), path.resolve(process.cwd(), "../..")]) {
+        for (const name of ["pnpm-lock.yaml", "package-lock.json", "yarn.lock"]) {
+          const p = path.join(base, name);
+          try {
+            if (fs.statSync(p).isFile()) return ["scan", "-L", p, "--format", "json", "--no-resolve"];
+          } catch {
+            /* كمّل */
+          }
+        }
+      }
+      return ["scan", "-r", ".", "--format", "json", "--no-resolve"];
+    },
+    command: () => `osv-scanner scan ${lockfilePath() ? `-L ${path.basename(lockfilePath())}` : "-r ."} --format json`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.osv", `osv-scanner ${path.basename(lockfilePath() || ".")}`, stdout);
+      const vulns: Array<{ id?: string; package?: { name?: string; version?: string }; aliases?: string[]; severity?: string }> = [];
+      try {
+        const doc = JSON.parse(stdout.slice(stdout.indexOf("{"), stdout.lastIndexOf("}") + 1)) as { results?: Array<{ packages?: Array<{ packagePath?: unknown; vulnerabilities?: typeof vulns }> }> };
+        for (const r of doc?.results ?? []) for (const pkg of r?.packages ?? []) vulns.push(...(pkg?.vulnerabilities ?? []));
+      } catch {
+        /* مفيش JSON = الأداة ما خلّصتش؛ stderr بيتسجّل فوق في الدليل */
+      }
+      const findings = vulns.slice(0, 15).map((v) =>
+        mkFinding(ctx, {
+          kind: "tools.osv",
+          title: `${v.package?.name ?? "?"}@${v.package?.version ?? "?"} — ${v.id ?? "?"}`,
+          titleAr: `اعتمادية فيها ثغرة معروفة: ${v.package?.name ?? "?"}@${v.package?.version ?? "?"} (${v.id ?? "?"})`,
+          severity: "high",
+          confidence: 0.9,
+          cwe: "CWE-1104",
+          target: String(v.package?.name ?? "dependency"),
+          reproduce: "osv-scanner scan -L pnpm-lock.yaml --format json",
+          remediationAr: "ارفع النسخة في pnpm-lock واعمل commit للقفل، وسيب البوابة تقيسه.",
+          evidence: [writeEvidence(ctx, "tools.osv.hit", String(v.package?.name ?? "?"), JSON.stringify(v).slice(0, 1500))],
+        }),
+      );
+      return { findings, data: { vulns: vulns.length, source: path.basename(lockfilePath() || "scan -r .") } };
+    },
+  },
+
+  "tools.trufflehog": {
+    id: "tools.trufflehog",
+    titleAr: "trufflehog (مفاتيح حقيقية في شجرتنا — المتحقق منها بس)",
+    active: false,
+    binary: "trufflehog",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only trufflehog",
+    budgetMs: 240_000,
+    // `--results=verified` بدل `--only-verified` اللي اتغير اسمها في v3،
+    // و`--no-update-check` يمنع الأداة تلمّ نفسها من النت وقت التشغيل.
+    args: () => ["filesystem", process.cwd(), "--json", "--results=verified", "--no-update-check"],
+    command: () => `trufflehog filesystem ${shQuote(process.cwd())} --json --results=verified`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.trufflehog", `trufflehog filesystem ${process.cwd()}`, stdout);
+      const rows: Array<Record<string, unknown>> = [];
+      for (const line of stdout.split(/\r?\n/)) {
+        if (!line.trim().startsWith("{")) continue;
+        try {
+          rows.push(JSON.parse(line) as Record<string, unknown>);
+        } catch { /* سطر وسطي */ }
+      }
+      const findings = rows.slice(0, 10).map((r) => {
+        const det = (r.detector_name as string) || (r.DecoderName as string) || "secret";
+        const loc = (r.SourceMetadata as { Source?: { Raw?: string } })?.Source?.Raw || String(r.location ?? "?");
+        return mkFinding(ctx, {
+          kind: "tools.trufflehog",
+          title: `Verified ${det} credential in our own tree`,
+          titleAr: `مفتاح ${det} متحقق منه في شجرتنا`,
+          severity: "critical",
+          confidence: 0.95,
+          cwe: "CWE-798",
+          target: loc.slice(0, 200),
+          reproduce: `trufflehog filesystem . --json --results=verified`,
+          remediationAr: "ادوّر المفتاح حالا وامسحه من التاريخ (git filter-repo) وسيلّه في CI.",
+          evidence: [writeEvidence(ctx, "tools.trufflehog.hit", loc, JSON.stringify(r).slice(0, 2000))],
+        });
+      });
+      return { findings, data: { verifiedLeaks: rows.length } };
+    },
+  },
+
+  "tools.parammine": {
+    id: "tools.parammine",
+    titleAr: "صيد بارامترات (ffuf + قائمة burp المدمجة)",
+    active: true,
+    binary: "ffuf",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only ffuf",
+    budgetMs: 120_000,
+    args: (ctx) => ["-u", `${baseUrl(ctx)}/?FUZZ=1`, "-w", resolveList("params") || "/dev/null", "-t", "20", "-mc", "200,204,301,302,400,401,403,429", "-s", "-timeout", "8"],
+    command: (ctx) => `ffuf -u ${shQuote(`${baseUrl(ctx)}/?FUZZ=1`)} -w ${shQuote(resolveList("params") || "— مفيش قائمة بارامترات")} -t 20 -mc 200,400,401,403 -s`,
+    parse: (stdout, ctx) => {
+      const names = [...stdout.matchAll(/^\/(\S+?)\s+\[Status: (\d+)/gm)].map((m) => ({ name: m[1], status: Number(m[2]) }));
+      writeEvidence(ctx, "tools.parammine", `ffuf ?FUZZ ${baseUrl(ctx)}`, stdout);
+      return {
+        findings: [],
+        data: { params: names.length, sample: names.slice(0, 80), list: resolveList("params") || null },
+      };
     },
   },
 

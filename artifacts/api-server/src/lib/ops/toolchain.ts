@@ -48,6 +48,10 @@ export const VENDORABLE = [
   "dalfox",
   "gitleaks",
   "trivy",
+  "tlsx",
+  "uncover",
+  "trufflehog",
+  "osv-scanner",
 ] as const;
 
 /**
@@ -620,8 +624,14 @@ export function bootToolchainFetch(log?: (msg: string) => void): boolean {
     log?.(`NOVA_TOOLCHAIN_FETCH مفعّل بس ${st.dir} مش قابل للكتابة — تخطّيت`);
     return false;
   }
-  void provisionToolchain().then((rec) => {
-    log?.(rec.ok ? `toolchain: ${rec.installed}/${rec.total} جاهزة في ${rec.into}` : `toolchain: فشل — ${rec.reasonAr || rec.error}`);
-  });
+  // `Once` مش `provisionToolchain`: دي بتحكّي cooldown المحاولة الفاشلة
+  // (`NOVA_TOOLCHAIN_RETRY_MS`، 10 دقاقي) — ومن غيرها كل إقلاع كان بيبدأ تنزيل
+  // جديد، وهو بالظبط شكل حلقة 20:41Z (الموت → المُشرف بيعيد → تنزيل تاني).
+  void provisionToolchainOnce()
+    .then(({ record, skipped }) => {
+      if (skipped) log?.(`toolchain: اتخطّى (${skipped})`);
+      else if (record) log?.(record.ok ? `toolchain: ${record.installed}/${record.total} جاهزة في ${record.into}` : `toolchain: فشل — ${record.reasonAr || record.error}`);
+    })
+    .catch((e) => log?.(`toolchain: ${(e as Error).message}`));
   return true;
 }
