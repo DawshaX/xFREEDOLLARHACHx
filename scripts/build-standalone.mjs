@@ -37,6 +37,131 @@ function fail(msg) {
   process.exit(1);
 }
 
+const START_SH = `#!/bin/sh
+# NOVA — start (no install needed)
+# PORT is taken from PORT or SERVER_PORT; the panel is served from ./public.
+#
+# The cd is load-bearing. A panel egg runs its startup command from /home/container
+# (or whatever its workdir is), not from inside the bundle, so "sh app/start.sh"
+# used to die with "Cannot find module '/home/container/boot.mjs'" while the files
+# sat right there. Measured 2026-11-05 from /tmp before this line existed.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+cd "$HERE" || exit 1
+export NODE_ENV=production
+export HOST=0.0.0.0
+export NOVA_STATIC_DIR="$HERE/public"
+[ -z "$NOVA_TOOLCHAIN_FETCH" ] && export NOVA_TOOLCHAIN_FETCH=1
+[ -z "$NOVA_PROVISION_TOOLS" ] && export NOVA_PROVISION_TOOLS=1
+[ -z "$NOVA_AUTO_UPDATE_MINUTES" ] && export NOVA_AUTO_UPDATE_MINUTES=5
+export NOVA_MEMORY_FILE="$HERE/state/nova-memory.json"
+export NOVA_JOBS_REL="$HERE/state/jobs"
+export NOVA_PROGRAMS_FILE="$HERE/state/programs.json"
+mkdir -p "$HERE/state/jobs"
+# ── الحلقة دي هي موضوع الملف ده كله ──────────────────────────────────────────
+# boot.mjs بيراقب التطبيق، بس مافيش حاجة بتراقب boot.mjs نفسه. على بيضة
+# Pterodactyl (Waifly) العملية اللي بتخلص هنا هي العملية الرئيسية للحاوية كلها،
+# فموتها معناه السلوت بيتعلّم «offline» ومافيش حاجة بترجّعه: قِيس 2026-11-07 —
+# 502 من 20:41Z لأكتر من تلات ساعات، وكل الإصلاحات اللي في العالم ما كانتش
+# هتوصل غير بزرّار من صاحب الحساب. الحلقة دي بتحوّل «موت مؤقت» لقيام تلقائي.
+#
+# الزرّار الحقيقي بيفضل شغال: SIGTERM/INT من اللوحة بيتحوّل لـ stop نظيف بلا
+# respawn، ولو التطبيق نفسه عايز ينام (state/NOVA_HALT) الحلقة بتسلم وتخرج.
+NOVA_PID=""
+NOVA_STOP=0
+NOVA_TRIES=0
+NOVA_CODE=0
+trap 'NOVA_STOP=1; if [ -n "$NOVA_PID" ]; then kill -TERM "$NOVA_PID" 2>/dev/null; fi' TERM INT
+
+# NOVA_RESPAWN_MIN/HEALTHY للتستات والاضطرار؛ الافتراضي محسوب على مكنة 300MB.
+# (بنكتب $VAR بلا أقواس: أي dollar-brace جوه template literal بتاع JS بتتفسّر interp.)
+NOVA_MIN_SLEEP="$NOVA_RESPAWN_MIN"
+[ -z "$NOVA_MIN_SLEEP" ] && NOVA_MIN_SLEEP=2
+NOVA_HEALTHY="$NOVA_RESPAWN_HEALTHY"
+[ -z "$NOVA_HEALTHY" ] && NOVA_HEALTHY=300
+NOVA_FAST="$NOVA_RESPAWN_FASTCRASH"
+[ -z "$NOVA_FAST" ] && NOVA_FAST=60
+
+while : ; do
+  if [ -f "$HERE/state/NOVA_HALT" ]; then
+    echo "[start] state/NOVA_HALT موجود — بنسلّم ومافيش إعادة تشغيل"
+    exit 0
+  fi
+  NOVA_T0=$(date +%s)
+  node boot.mjs &
+  NOVA_PID=$!
+  wait "$NOVA_PID"
+  NOVA_CODE=$?
+  NOVA_PID=""
+  if [ "$NOVA_STOP" = 1 ]; then
+    echo "[start] اتقفلت بأمر من اللوحة (SIGTERM) — مافيش إعادة تشغيل"
+    exit 0
+  fi
+  NOVA_UP=$(( $(date +%s) - NOVA_T0 ))
+  if [ "$NOVA_UP" -ge "$NOVA_HEALTHY" ]; then NOVA_TRIES=0; fi
+  NOVA_TRIES=$((NOVA_TRIES + 1))
+  NOVA_SLEEP=$NOVA_MIN_SLEEP
+  if [ "$NOVA_TRIES" -ge 2 ]; then NOVA_SLEEP=4; fi
+  if [ "$NOVA_TRIES" -ge 3 ]; then NOVA_SLEEP=8; fi
+  if [ "$NOVA_TRIES" -ge 4 ]; then NOVA_SLEEP=16; fi
+  if [ "$NOVA_TRIES" -ge 5 ]; then NOVA_SLEEP=30; fi
+  if [ "$NOVA_TRIES" -ge 7 ]; then NOVA_SLEEP=60; fi
+  if [ "$NOVA_UP" -lt 10 ] && [ "$NOVA_SLEEP" -lt "$NOVA_FAST" ]; then
+    # أقل من 10 ثانية = الملفات نفسها مكسورة؛ الدوّر على طول بيحرق القرص والنت.
+    NOVA_SLEEP="$NOVA_FAST"
+  fi
+  echo "[start] boot.mjs خرج بكود $NOVA_CODE بعد $NOVA_UP ثانية — إعادة تشغيل في $NOVA_SLEEP ثانية (محاولة $NOVA_TRIES)"
+  sleep "$NOVA_SLEEP"
+done
+
+exit $NOVA_CODE
+`;
+
+
+/**
+ * `node scripts/build-standalone.mjs --selftest-respawn`
+ *
+ * الحلقة اللي فوق مش تعليق — بننفّذها فعلاً على boot.mjs وهمي بيموت على طول،
+ * وبنقيس إن قام تاني. من غير القطعة دي أي حد يقدر يكسر الـwhile loop بسطر واحد
+ * والحزمة تمشي لل الإنتاج وهي بتقول «شغّال مرة واحدة وبس».
+ */
+if (process.argv.includes("--selftest-respawn")) {
+  const os = await import("node:os");
+  const cp = await import("node:child_process");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nova-respawn-"));
+  fs.mkdirSync(path.join(dir, "state"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "start.sh"), START_SH, { mode: 0o755 });
+  fs.writeFileSync(
+    path.join(dir, "boot.mjs"),
+    'import { appendFileSync, readFileSync, existsSync } from "node:fs";\n' +
+      'const f = process.cwd() + "/state/kicks";\n' +
+      'appendFileSync(f, "kick\\n");\n' +
+      "console.log(\"[stub] alive \" + (existsSync(f) ? readFileSync(f, \"utf8\").trim().split(\"\\n\").length : 0));\n" +
+      "process.exit(1);\n",
+  );
+  const p = cp.spawnSync("sh", ["start.sh"], {
+    cwd: dir,
+    encoding: "utf8",
+    // بنوقف الحلقة بعد 6 ثواني — الكفاية إننا شفنا ثلاث قامات؛ من غير كده الحلقة
+    // بتلف مئات المرات والـselftest بيستنى الـtimeout كله.
+    timeout: 6_000,
+    env: { ...process.env, NOVA_RESPAWN_MIN: "0", NOVA_RESPAWN_FASTCRASH: "0", NOVA_RESPAWN_HEALTHY: "300", PORT: "0" },
+  });
+  const log = (p.stdout || "") + (p.stderr || "");
+  let kicks = 0;
+  try {
+    kicks = fs.readFileSync(path.join(dir, "state/kicks"), "utf8").trim().split("\n").length;
+  } catch {
+    /* مافيش ولا محاولة */
+  }
+    const respawned = log.includes("boot.mjs خرج بكود 1");
+  if (kicks < 3 || !respawned) {
+    console.error("\u2717 selftest-respawn: tries=" + kicks + " respawn-line=" + respawned + "\n" + log.slice(0, 400));
+    process.exit(1);
+  }
+  console.log("\u2713 selftest-respawn: boot.mjs الميت قام " + kicks + " مرات لوحده والـlog بيقول السبب");
+  process.exit(0);
+}
+
 if (!fs.existsSync(SERVER)) {
   fail("no server bundle. Run: pnpm --filter @workspace/api-server run build");
 }
@@ -551,32 +676,8 @@ import "./boot.mjs";
 );
 
 /* ── 2. launch scripts ───────────────────────────────────────────────────── */
-fs.writeFileSync(
-  path.join(OUT, "start.sh"),
-  `#!/bin/sh
-# NOVA — start (no install needed)
-# PORT is taken from PORT or SERVER_PORT; the panel is served from ./public.
-#
-# The cd is load-bearing. A panel egg runs its startup command from /home/container
-# (or whatever its workdir is), not from inside the bundle, so "sh app/start.sh"
-# used to die with "Cannot find module '/home/container/boot.mjs'" while the files
-# sat right there. Measured 2026-11-05 from /tmp before this line existed.
-HERE="$(cd "$(dirname "$0")" && pwd)"
-cd "$HERE" || exit 1
-export NODE_ENV=production
-export HOST=0.0.0.0
-export NOVA_STATIC_DIR="$HERE/public"
-[ -z "$NOVA_TOOLCHAIN_FETCH" ] && export NOVA_TOOLCHAIN_FETCH=1
-[ -z "$NOVA_PROVISION_TOOLS" ] && export NOVA_PROVISION_TOOLS=1
-[ -z "$NOVA_AUTO_UPDATE_MINUTES" ] && export NOVA_AUTO_UPDATE_MINUTES=5
-export NOVA_MEMORY_FILE="$HERE/state/nova-memory.json"
-export NOVA_JOBS_REL="$HERE/state/jobs"
-export NOVA_PROGRAMS_FILE="$HERE/state/programs.json"
-mkdir -p "$HERE/state/jobs"
-exec node boot.mjs
-`,
-  { mode: 0o755 },
-);
+fs.writeFileSync(path.join(OUT, "start.sh"), START_SH, { mode: 0o755 });
+
 
 /**
  * `run` — the launcher with no dot in its name.
@@ -600,6 +701,14 @@ exec sh "$HERE/start.sh" "$@"
 `,
   { mode: 0o755 },
 );
+
+// `sh -n` على الملفين المنبثقين: الحلقة لو اتكتبت غلط الحزمة بتترموَّج عادي
+// (مافيش JS بينده على shell)، والموت بيبان على المكنة بس — يعني بعد ما توصل.
+// الفحص ده بيخليها تفشل هنا بدل هناك. وبعد `run` تحديدًا: أول مرة حطيته بعد
+// `start.sh` طلع «cannot open run» لأن الملف ده بيتكتب تحت.
+for (const sh of ["start.sh", "run"]) {
+  execFileSync("sh", ["-n", path.join(OUT, sh)], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+}
 
 fs.writeFileSync(
   path.join(OUT, "start-tunnel.sh"),

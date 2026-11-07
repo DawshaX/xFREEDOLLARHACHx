@@ -39,7 +39,7 @@ jobs:
   watch:
     name: is the hub alive?
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 7   # الـpower step بيستنى الهب يرجع لـ180 ثانية
     env:
       HUB: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
     steps:
@@ -98,6 +98,38 @@ jobs:
           { echo ""; echo "## last probe"; echo '```'; cat /tmp/report.md; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           cp /tmp/report.md /tmp/body.md
           echo "status=$status · ops bundle=$ops"
+
+      # ── إعادة التشغيل من هنا، مش من إيد حد ────────────────────────────────
+      # اللوحة دي Pterodactyl، وأمر الطاقة بتاعها طلب HTTP واحد. مفتاح المستخدم
+      # (Panel → Account → API Credentials، بيبدأ بـPTSV_) بيتحط مرة واحدة في
+      # GitHub Secrets باسم NOVA_PANEL_TOKEN، ومن ساعتها أي سقوط للـhealth بيتردّ
+      # عليه بإعادة تشغيل فعلًا — مش بس issue بيتفتح.
+      # البوابة مابتحمراش: اللوحة مابتعرفش التوكن، والرفض حالة عادية.
+      - name: checkout (the restart script)
+        uses: actions/checkout@v4
+
+      - name: power - restart the slot when the hub is not answering
+        if: steps.p.outputs.status != 'up'
+        env:
+          NOVA_PANEL_TOKEN: ${{ secrets.NOVA_PANEL_TOKEN }}
+          NOVA_PANEL_URL: ${{ vars.NOVA_PANEL_URL || 'https://panel.waifly.com' }}
+          NOVA_PANEL_SERVER: ${{ vars.NOVA_PANEL_SERVER || '53a7d0cb' }}
+          NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
+        run: |
+          set +e
+          if [ -z "$NOVA_PANEL_TOKEN" ]; then
+            echo "::warning::مافيش NOVA_PANEL_TOKEN في أسرار المستودع — البوابة مش هتقدر تعيد التشغيل لوحدها"
+            echo "خطوة واحدة على حسابك في اللوحة: Account → API Credentials → Create، وبعدين Secrets → New repository secret باسم NOVA_PANEL_TOKEN." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "## power attempt — $(date -u +%FT%TZ)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          node scripts/nova-panel-restart.mjs --when-down --wait 180 2>&1 | tee /tmp/power.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          head -c 400 /tmp/power.json
+          # المخرج الوحيد اللي مهم نعملله echo هو السطر ده — مافيش توكن فيه.
+          grep -q '"ok":true' /tmp/power.json && echo "الأمر اتقبل من اللوحة" || echo "::notice::اللوحة رفضت أو ماردّتش — التفاصيل فوق، والمفتاح في الأمان مابانش"
+          exit 0
 
       - name: maintain the single down-issue
         env:
