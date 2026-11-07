@@ -12,6 +12,7 @@ import { jsonRequest } from "@/lib/sse";
 const BASE_API = "/api";
 
 interface Session { id: string; title: string; status: string; createdAt: string; }
+interface SessionMessage { role: "user" | "assistant"; content: string; ts?: number; }
 
 interface ChatMsg {
   id: string;
@@ -21,6 +22,7 @@ interface ChatMsg {
   toolInput?: unknown;
   toolResult?: string;
   isError?: boolean;
+  confirmationRequired?: boolean;
   pending?: boolean;
   ts: string;
 }
@@ -39,7 +41,7 @@ function ToolPill({ msg }: { msg: ChatMsg }) {
         <ChevronDown className="w-2.5 h-2.5 opacity-50 shrink-0" style={{ transform: open ? "rotate(180deg)" : "" }} />
       </button>
       {open && msg.toolResult && (
-        <pre className="px-2 pb-2 whitespace-pre-wrap max-h-40 overflow-auto text-[9px]" style={{ color: msg.isError ? "rgba(255,100,100,0.8)" : "rgba(68,255,136,0.75)" }}>
+        <pre className="px-2 pb-2 whitespace-pre-wrap max-h-40 overflow-auto text-[9px]" style={{ color: msg.isError ? "rgba(255,100,100,0.8)" : msg.confirmationRequired ? "#ffaa22" : "rgba(68,255,136,0.75)" }}>
           {msg.toolResult.slice(0, 2000)}
         </pre>
       )}
@@ -59,6 +61,7 @@ export function FloatingNovaButton() {
   const inputRef = useRef<HTMLInputElement>(null);
   const activeReqRef = useRef<string | null>(null);
   const activeAssistantIdRef = useRef<string | null>(null);
+  const activeTurnRef = useRef<{ sessionId: string; userContent: string; assistantContent: string } | null>(null);
 
   useEffect(() => {
     const t = setInterval(() => { setPulse(true); setTimeout(() => setPulse(false), 1500); }, 8000);
@@ -73,19 +76,35 @@ export function FloatingNovaButton() {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
-  const ensureSession = async () => {
-    if (sessionId) return sessionId;
+  const ensureSession = async (): Promise<{ id: string; history: ChatMsg[] } | null> => {
+    if (sessionId) {
+      return {
+        id: sessionId,
+        history: messages.filter(m => m.role === "user" || m.role === "assistant"),
+      };
+    }
     try {
       const existing = await jsonRequest<Session[]>("/live-agent/sessions");
       if (existing.length > 0) {
-        setSessionId(existing[0].id);
-        return existing[0].id;
+        const id = existing[0].id;
+        const session = await jsonRequest<{ messages?: SessionMessage[] }>(`/live-agent/sessions/${id}`);
+        const history = (session.messages ?? [])
+          .filter((message) => message.role === "user" || message.role === "assistant")
+          .map((message, index) => ({
+            id: `history_${index}`,
+            role: message.role,
+            content: message.content,
+            ts: message.ts ? new Date(message.ts).toISOString() : new Date().toISOString(),
+          }));
+        setSessionId(id);
+        setMessages(history);
+        return { id, history };
       }
     } catch { /**/ }
     try {
       const s = await jsonRequest<Session>("/live-agent/sessions", { method: "POST", body: "{}" });
       setSessionId(s.id);
-      return s.id;
+      return { id: s.id, history: [] };
     } catch { return null; }
   };
 
@@ -102,6 +121,7 @@ export function FloatingNovaButton() {
       if (e.type === "chat_delta") {
         const text = String(d.text ?? "");
         if (!text) return;
+        if (activeTurnRef.current) activeTurnRef.current.assistantContent += text;
         setMessages(prev => prev.map(m => {
           if (m.id !== assistantId) return m;
           return { ...m, content: m.content + text };
@@ -119,7 +139,13 @@ export function FloatingNovaButton() {
       } else if (e.type === "chat_tool_result") {
         const id = `tool_${String(d.toolCallId ?? "")}`;
         setMessages(prev => prev.map(m =>
-          m.id === id ? { ...m, pending: false, toolResult: String(d.result ?? ""), isError: Boolean(d.isError) } : m
+          m.id === id ? {
+            ...m,
+            pending: false,
+            toolResult: String(d.result ?? ""),
+            isError: Boolean(d.isError),
+            confirmationRequired: Boolean(d.confirmationRequired),
+          } : m
         ));
       } else if (e.type === "chat_client_tool") {
         const toolName = String(d.name ?? "");
@@ -147,10 +173,26 @@ export function FloatingNovaButton() {
           }]);
         }
       } else if (e.type === "chat_done") {
+        const turn = activeTurnRef.current;
+        if (turn?.assistantContent) {
+          void jsonRequest(`/live-agent/sessions/${turn.sessionId}/save-ai-response`, {
+            method: "POST",
+            body: JSON.stringify({ userContent: turn.userContent, assistantContent: turn.assistantContent }),
+          }).catch(() => {
+            setMessages(prev => [...prev, {
+              id: `err_${Date.now()}`,
+              role: "error",
+              content: "وصل الرد، لكن تعذّر حفظه في سجل الجلسة.",
+              ts: new Date().toISOString(),
+            }]);
+          });
+        }
+        activeTurnRef.current = null;
         setStreaming(false);
         activeReqRef.current = null;
         activeAssistantIdRef.current = null;
       } else if (e.type === "chat_error") {
+        activeTurnRef.current = null;
         setStreaming(false);
         activeReqRef.current = null;
         activeAssistantIdRef.current = null;
@@ -170,16 +212,18 @@ export function FloatingNovaButton() {
     if (!text || streaming || !wsConnected) return;
     setInput("");
 
-    const sid = await ensureSession();
-    if (!sid) {
+    const session = await ensureSession();
+    if (!session) {
       setMessages(prev => [...prev, { id: `err_${Date.now()}`, role: "error", content: "تعذّر إنشاء جلسة. تحقق من الاتصال بالخادم.", ts: new Date().toISOString() }]);
       return;
     }
+    const { id: sid, history } = session;
 
     const requestId = `req_${Date.now()}`;
     const assistantId = `a_${Date.now()}`;
     activeReqRef.current = requestId;
     activeAssistantIdRef.current = assistantId;
+    activeTurnRef.current = { sessionId: sid, userContent: text, assistantContent: "" };
 
     setMessages(prev => [
       ...prev,
@@ -188,8 +232,17 @@ export function FloatingNovaButton() {
     ]);
     setStreaming(true);
 
-    wsSend({ type: "chat_send", sessionId: sid, content: text, requestId });
-  }, [input, streaming, wsConnected, wsSend, sessionId]);
+    wsSend({
+      type: "chat_send",
+      sessionId: sid,
+      content: text,
+      requestId,
+      history: history
+        .filter(m => m.role === "user" || m.role === "assistant")
+        .slice(-8)
+        .map(m => ({ role: m.role, content: m.content })),
+    });
+  }, [input, messages, streaming, wsConnected, wsSend, sessionId]);
 
   return (
     <div className="fixed z-[9999]" style={{ bottom: "24px", right: "24px" }}>
@@ -215,8 +268,8 @@ export function FloatingNovaButton() {
                 {streaming && <><Loader2 className="w-2.5 h-2.5 animate-spin" /><span>يفكر...</span></>}
               </div>
             </div>
-            <button onClick={() => { setOpen(false); setLocation("/live-agent"); }}
-              className="text-slate-500 hover:text-fuchsia-300 p-1 transition-colors" title="فتح الصفحة الكاملة">
+            <button onClick={() => { setOpen(false); setLocation("/nova-fleet"); window.location.hash = "work"; }}
+              className="text-slate-500 hover:text-fuchsia-300 p-1 transition-colors" title="فتح مساحة عمل الوكيل الكاملة">
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
             <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-red-400 p-1 transition-colors">

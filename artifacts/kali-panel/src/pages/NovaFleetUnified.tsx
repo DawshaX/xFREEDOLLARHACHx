@@ -23,6 +23,7 @@ import {
   PlayCircle, Radio, Send, Server, ShieldAlert, XCircle, Zap,
 } from "lucide-react";
 import { LiveAgentPanel } from "@/components/desktop/LiveAgentPanel";
+import type { ClientToolEvent } from "@/components/desktop/AgentWindow";
 import { NovaWorkstation } from "@/components/desktop/NovaWorkstation";
 import { NovaMissions } from "@/components/desktop/NovaMissions";
 import { NovaToolbox } from "@/components/desktop/NovaToolbox";
@@ -348,24 +349,98 @@ export default function NovaFleetUnified() {
   // «المخ» is the default: this page is advertised as the brain and manager of
   // the whole program, so it opens by reporting what the organism actually is
   // doing right now — not with a picture of one. `#work` still deep-links.
-  const [view, setView] = useState<"brain" | "work" | "missions" | "tools" | "ops" | "mesh" | "panel">(() => {
+  const [view, setView] = useState<"brain" | "work" | "station" | "missions" | "tools" | "ops" | "mesh">(() => {
     try {
       const h = window.location.hash.replace("#", "");
-      if (h === "brain" || h === "work" || h === "missions" || h === "tools" || h === "ops" || h === "mesh" || h === "panel") return h;
+      if (h === "work" || h === "panel") return "work";
+      if (h === "brain" || h === "station" || h === "missions" || h === "tools" || h === "ops" || h === "mesh") return h;
     } catch {
       /* ignore */
     }
     return "brain";
   });
 
-  const pickView = (key: typeof view) => {
-    setView(key);
+  const pickView = (key: typeof view | "panel") => {
+    const nextView = key === "panel" ? "work" : key;
+    setView(nextView);
     try {
-      window.history.replaceState(null, "", `#${key}`);
+      window.location.hash = nextView;
     } catch {
       /* ignore */
     }
   };
+  useEffect(() => {
+    const syncHash = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash === "panel") {
+        setView("work");
+      } else if (hash === "brain" || hash === "work" || hash === "station" || hash === "missions" || hash === "tools" || hash === "ops" || hash === "mesh") {
+        setView(hash);
+      }
+    };
+    window.addEventListener("hashchange", syncHash);
+    return () => window.removeEventListener("hashchange", syncHash);
+  }, []);
+  const handlePanelClientTool = useCallback((event: ClientToolEvent) => {
+    if (event.name === "ui_open_window" || event.name === "open_window") {
+      const requestedWindow = event.input.window ?? event.input.kind;
+      if (typeof requestedWindow === "string" && requestedWindow.trim()) {
+        const params = new URLSearchParams({ open: requestedWindow.trim() });
+        if (requestedWindow === "browser" && typeof event.input.url === "string") {
+          const rawUrl = event.input.url.trim();
+          try {
+            const url = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`);
+            if ((url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password) {
+              params.set("url", url.toString());
+            }
+          } catch {
+            // Open the browser at its safe default when the requested URL is invalid.
+          }
+        }
+        navigate(`/desktop?${params.toString()}`);
+      }
+      return;
+    }
+
+    if (event.name === "ui_browse_url" && typeof event.input.url === "string") {
+      const rawUrl = event.input.url.trim();
+      try {
+        const url = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`);
+        if ((url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password) {
+          navigate(`/desktop?open=browser&url=${encodeURIComponent(url.toString())}`);
+        }
+      } catch {
+        return;
+      }
+      return;
+    }
+
+    if (event.name !== "ui_show_page" || typeof event.input.page !== "string") return;
+    const page = event.input.page.trim();
+    if (!page) return;
+
+    if (page === "brain" || page === "work" || page === "station" || page === "missions" || page === "tools" || page === "ops" || page === "mesh" || page === "panel") {
+      pickView(page);
+      return;
+    }
+
+    try {
+      const target = new URL(page.startsWith("/") ? page : `/${page}`, window.location.origin);
+      if (target.origin === window.location.origin) {
+        if (target.pathname === "/nova-fleet" && target.hash) {
+          navigate(target.pathname + target.search);
+          window.location.hash = target.hash.slice(1);
+          return;
+        }
+        navigate(`${target.pathname}${target.search}${target.hash}`);
+      }
+    } catch {
+      return;
+    }
+  }, [navigate]);
+  const openAgentWindow = useCallback(() => {
+    navigate("/desktop?open=agent");
+  }, [navigate]);
   const [snap, setSnap] = useState<MeshSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const live = useNovaLive();
@@ -434,12 +509,12 @@ export default function NovaFleetUnified() {
           <div className="flex items-center gap-1 rounded-xl border border-white/10 p-0.5">
             {([
               ["brain", "المخ · الكيان"],
-              ["work", "محطة العمل"],
+              ["work", "وكيل حي · مساحة العمل"],
+              ["station", "محطة النظام"],
               ["missions", "المهمات"],
               ["tools", "الأدوات"],
               ["ops", "غرفة العمليات"],
               ["mesh", "خريطة الشبكة"],
-              ["panel", "الليف بانل"],
             ] as const).map(([key, label]) => (
               <button
                 key={key}
@@ -472,22 +547,20 @@ export default function NovaFleetUnified() {
         </>
       )}
 
-      {view === "work" && <NovaWorkstation />}
+      <div className={view === "work" ? "rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[78vh] min-h-[520px]" : "hidden"} aria-hidden={view !== "work"}>
+        <LiveAgentPanel embedded onClientTool={handlePanelClientTool} onOpenAgentWindow={openAgentWindow} />
+      </div>
+
+      {view === "station" && <NovaWorkstation />}
 
       {view === "missions" && <NovaMissions />}
 
       {view === "tools" && <NovaToolbox />}
 
-      {view === "panel" && (
-        <div className="rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[78vh] min-h-[520px]">
-          <LiveAgentPanel embedded onClientTool={() => {}} onOpenAgentWindow={() => {}} />
-        </div>
-      )}
-
       {view === "mesh" && (
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
         {/* left: mesh */}
-        <div className="xl:col-span-3 space-y-2">
+        <div className="xl:col-span-5 space-y-2">
           <div className="rounded-xl p-2.5 border border-white/10 bg-white/[0.02] space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-black text-white/80 flex items-center gap-1.5">
@@ -569,15 +642,8 @@ export default function NovaFleetUnified() {
           </div>
         </div>
 
-        {/* center: the modified live panel */}
-        <div className="xl:col-span-6">
-          <div className="rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[78vh] min-h-[520px]">
-            <LiveAgentPanel embedded onClientTool={() => {}} onOpenAgentWindow={() => {}} />
-          </div>
-        </div>
-
         {/* right: broadcast + plan */}
-        <div className="xl:col-span-3 space-y-2">
+        <div className="xl:col-span-7 space-y-2">
           <BroadcastConsole hasTargets={(snap?.stats.machines ?? 0) > 0} />
           <PlanBoard plan={snap?.plan ?? null} onRefresh={() => void load()} />
         </div>
