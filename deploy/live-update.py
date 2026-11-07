@@ -12,7 +12,7 @@ that belongs to *you* rather than to the program.
 
 What it does
 ────────────
-  1. Copies your current install to /tmp/nova-backup-<timestamp> (rollback).
+  1. Copies the files it is about to overwrite to <install>/backups/nova-backup-<timestamp> (rollback).
   2. Downloads the published bundle (or a URL you pass) and extracts it.
   3. Copies only the *program* files over the install directory.
   4. Never overwrites: .env, .env.txt, state/, logs/, node_modules/, .npm/ —
@@ -202,22 +202,45 @@ def backoff_reason(dest: str, url: str) -> str | None:
     return None
 
 
-def prune_backups(keep: int = 3) -> int:
-    """النسخ الاحتياطية كانت بتملا /tmp — اللي قبل الأحدث يتشال."""
-    removed = 0
-    try:
-        names = sorted(n for n in os.listdir("/tmp") if n.startswith("nova-backup-"))
-    except OSError:
-        return 0
-    for name in names[:-keep] if keep else names:
+def prune_backups(dest: str = "", keep: int = 3) -> int:
+    """كل اللي قبل آخر `keep` نسخة يتشال — من جذر المكنة ومن /tmp (الميراث).
+
+    النسخ كانت بتملا /tmp: 8GB راحت في 13 دقيقة والمُشرف لقى المجلد فاضي بعد
+    ما الكونتير عاد — فالنسخ بقى جوه المكنة، وده الحارس إنوش يكبر.
+    """
+    roots = ["/tmp"]
+    if dest:
+        roots.append(os.path.join(dest, "backups"))
+    found: list[tuple[str, str]] = []
+    for root in roots:
         try:
-            shutil.rmtree(f"/tmp/{name}", ignore_errors=True)
-            removed += 1
+            for name in os.listdir(root):
+                if name.startswith("nova-backup-"):
+                    found.append((name, root))
         except OSError:
-            pass
+            continue
+    found.sort()
+    if keep <= 0 or len(found) <= keep:
+        return 0
+    removed = 0
+    for name, root in found[:-keep]:
+        shutil.rmtree(os.path.join(root, name), ignore_errors=True)
+        removed += 1
     if removed:
-        log(f"· ننّيف /tmp: {removed} نسخة قديمة اتشالت")
+        log(f"· تنضّيف النسخ الاحتياطية: {removed} نسخة قديمة اتشالت (فاضل {keep})")
     return removed
+
+
+def backups_root(dest: str) -> str:
+    """النسخ الاحتياطية جوه المجلد نفسه، مش في /tmp.
+
+    ليه: /tmp بيتمسح لما الكونتير نفسه يعيد الإقلاع — ولو التحديث نصّه وقع،
+    المكنة بتصحى على نص شجرة وملف الرجوع الاختفى. 2026-11-07 04:13Z ده بالظبط
+    اللي حصل: اتثنيت ملفات اتكتبت والـbackups في /tmp راحت مع الانتكاسة.
+    """
+    root = os.environ.get("NOVA_BACKUP_DIR") or os.path.join(dest, "backups")
+    os.makedirs(root, exist_ok=True)
+    return root
 
 
 def backup(dest: str, files: list[tuple[str, str, int]] | None = None) -> str | None:
@@ -229,8 +252,8 @@ def backup(dest: str, files: list[tuple[str, str, int]] | None = None) -> str | 
     لازمة لنسخها: لو اتكتبت غلط فالـrollback بيتّها هي، مش الشجرة كلها.
     """
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    target = f"/tmp/nova-backup-{stamp}"
-    prune_backups()
+    prune_backups(dest)
+    target = os.path.join(backups_root(dest), f"nova-backup-{stamp}")
     if files is None:
         try:
             shutil.copytree(dest, target, ignore=shutil.ignore_patterns(*PROTECTED_NAMES))
@@ -251,9 +274,6 @@ def backup(dest: str, files: list[tuple[str, str, int]] | None = None) -> str | 
         return target
     except Exception as exc:
         log(f"! تعذّر عمل نسخة احتياطية محصورة: {exc}")
-        return None
-    except Exception as exc:  # a missing backup must not stop the update
-        log(f"! تعذّر عمل نسخة احتياطية: {exc}")
         return None
 
 
@@ -415,7 +435,7 @@ def main() -> int:
     # A partial copy must never leave a half-written program behind.
     for name in REQUIRED:
         if not os.path.exists(os.path.join(dest, name)):
-            log(f"✗ بعد النسخ مفيش {name} — رجّع النسخة الاحتياطية من /tmp")
+            log(f"✗ بعد النسخ مفيش {name} — النسخة الاحتياطية في {backups_root(dest)}")
             bump_fail(dest, args.url, f"بايت ناقصة بعد النسخ: {name}")
             return 1
 
