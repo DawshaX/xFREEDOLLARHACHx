@@ -180,8 +180,8 @@ if (!esbuildApi(ROOT) && !esbuildCli(ROOT)) {
 check("القايمة اللي بنسمّيها مدمجة بتفضل موجودة وبالحجم المتقاس", () => {
   const med = fs.readFileSync(path.join(ROOT, "ops/wordlists/paths-medium.txt"), "utf8");
   const par = fs.readFileSync(path.join(ROOT, "ops/wordlists/params-burp.txt"), "utf8");
-  assert.ok(med.split("\n").filter((l) => l.trim()).length >= 5000, "paths-medium缩水");
-  assert.ok(par.split("\n").filter((l) => l.trim()).length >= 5000, "params-burp缩水");
+  assert.ok(med.split("\n").filter((l) => l.trim()).length >= 5000, "paths-medium عدد");
+  assert.ok(par.split("\n").filter((l) => l.trim()).length >= 5000, "params-burp عدد");
   // ffuf بياخد السطر حرفيًا: مافيش سطر تعليق ولا سطر فاضي في النص
   for (const [nm, txt] of [["paths-medium", med], ["params-burp", par]]) {
     for (const l of txt.split("\n")) {
