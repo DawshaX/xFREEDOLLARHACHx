@@ -5792,3 +5792,53 @@ if (path === "/fleet/system") {
 
   return null;
 }
+
+/* ── platform snapshot ────────────────────────────────────────────────────
+ * لقطة حالة في مكان واحد تقرأها الـroutes (health / live-agent / fleet)
+ * والعملاء من فوق الـWebSocket. كل حقل هنا متقاس من مخازن السيرفر اللحظة دي:
+ * النسخة اللي جت من الكودسبيس كانت بترجع `iqScore: 198` و`level: SUPREME-2099`
+ * و`connected: true` و`latencyMs: 0` كأرقام مكتوبة ثابتة — رقم مابيتحرّش مش
+ * قياس، فالحقول دي اتشالت خالص والباقي بيتقرا.
+ */
+
+export interface PlatformControlSnapshot {
+  ok: true;
+  status: "active" | "idle";
+  ts: string;
+  missionCount: number;
+  activeTarget: string | null;
+  findingCount: number;
+  reportCount: number;
+  evidenceCount: number;
+  corpus: { total: number | null; measured: boolean };
+  cronEnabled: boolean;
+}
+
+export function getPlatformControlSnapshot(): PlatformControlSnapshot {
+  const missions = getMissionsState();
+  const active = missions[0] as unknown as { target?: unknown; findings?: unknown } | undefined;
+  const findings = Array.isArray(active?.findings) ? active.findings.length : 0;
+  let corpus: PlatformControlSnapshot["corpus"] = { total: null, measured: false };
+  try {
+    const stats = resolveStandaloneApi("/api/cve/db/stats", "GET") as { total?: unknown } | null;
+    const total = Number(stats?.total);
+    if (Number.isFinite(total)) corpus = { total, measured: true };
+  } catch {
+    /* مفيش مخزن — يتسجّل «غير مقاس»، مش يتخترع رقم */
+  }
+  // الملف ده توأم مشترك بين المحرك واللوحة — واللوحة بتترن في المتصفح مافيهوش
+  // `process` خالص، فالقرّاء من `globalThis` باشارة اختيارية بدل ما يفجّر الصفحة.
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+  return {
+    ok: true,
+    status: missions.length > 0 ? "active" : "idle",
+    ts: new Date().toISOString(),
+    missionCount: missions.length,
+    activeTarget: typeof active?.target === "string" ? active.target : null,
+    findingCount: findings,
+    reportCount: getReportsState().length,
+    evidenceCount: getEvidenceState().length,
+    corpus,
+    cronEnabled: env?.NOVA_CRON_ENABLED === "1",
+  };
+}

@@ -8,6 +8,7 @@ import { broadcastLiveEvent } from "./live-events";
 import { saveMemory, searchMemory, getMemoryCount } from "./memory";
 import { execOnLocalAgent, isLocalAgentConnected } from "./local-agent";
 import { listProcesses } from "../lib/processes";
+import { getPlatformControlSnapshot } from "../lib/standalone-api";
 import { logger } from "../lib/logger";
 import { getAllSettings } from "./settings";
 import { buildIntelligentSecurityReply } from "./ollama-proxy";
@@ -329,6 +330,29 @@ router.get("/live-agent/brain-status", (_req, res) => {
     cronJobsEnabled: Number(process.env.NOVA_CRON_ENABLED === "0" ? 0 : 1),
     alertsUnread: 0,
     ts: new Date().toISOString(),
+  });
+});
+
+/** حالة الوكيل الحيّ: لقطة المنصة + العمليّات الجارية مقاسة من `listProcesses`. */
+router.get("/live-agent/status", (_req, res) => {
+  const platform = getPlatformControlSnapshot();
+  let processes: Array<{ id: string; command: string; startedAt?: string }> = [];
+  try {
+    processes = listProcesses()
+      .filter((p) => p.status === "running")
+      .map((p) => ({ id: p.id, command: p.command, startedAt: new Date(p.startedAt).toISOString() }));
+  } catch (err) {
+    logger.warn(`live-agent/status: listProcesses فشل — ${(err as Error).message}`);
+  }
+  res.json({
+    ok: true,
+    measured: true,
+    ts: new Date().toISOString(),
+    agentConnected: isLocalAgentConnected(),
+    activeSessions: sessions.size,
+    memoryCount: getMemoryCount(),
+    activeProcesses: processes,
+    platform,
   });
 });
 
