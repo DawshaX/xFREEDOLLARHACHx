@@ -1884,13 +1884,22 @@ if (path === "/nova-core/version") {
   }
 
   if (path === "/status") {
+    // كل حقل هنا اما متقاس او مفيش: `uptime: 86400` و`version: "10.3.0"` و
+    // `wsHub: "active"` كانوا ارقام ثابتة متكتبش ليها قياس — والقاعدة إن اللي
+    // ماتقاسش يتقال صريح، ميكتبش. لقطة الحالة جوه الرد نفسه (نفس اللي بيرجعه
+    // /api/platform/snapshot) عشان أي قديم بيقرا /status يلاقي المتقاس.
+    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
     return {
-      status: "online",
-      database: "standalone-memory",
+      ok: true,
+      status: "ok",
+      mode: "standalone",
+      database: env?.DATABASE_URL ? "postgres" : "standalone-memory",
       ai: "cybernova-builtin",
-      wsHub: "active",
-      uptime: 86400,
-      version: "10.3.0",
+      uptime: measuredUptimeSec(),
+      version: measuredAppVersion(),
+      measured: true,
+      ts: new Date().toISOString(),
+      platform: getPlatformControlSnapshot(),
     };
   }
 
@@ -3008,7 +3017,7 @@ if (path === "/nova-core/version") {
       },
       nodes: { total: nodesState.length, active: nodesState.length, offline: 0 },
       alerts: { unread: notificationsState.filter((n) => !n.read).length, total: notificationsState.length },
-      uptime: 86400,
+      uptime: measuredUptimeSec(),
       ts: new Date().toISOString(),
     };
   }
@@ -4905,7 +4914,7 @@ if (path === "/nova-core/version") {
       bot: {
         running: true,
         pid: 1042,
-        uptime: 86400,
+        uptime: measuredUptimeSec(),
         activeSessions: liveSessionsState.length || 2,
         totalRuns: 148,
         unreadAlerts: 2,
@@ -4929,7 +4938,7 @@ if (path === "/nova-core/version") {
         memUsedMb: 3840,
         memTotalMb: 16384,
         memPct: 23,
-        uptimeSec: 86400,
+        uptimeSec: measuredUptimeSec(),
         platform: "linux x86_64 (Kali SecCore)",
         nodeVersion: "v22.14.0",
       },
@@ -5812,6 +5821,23 @@ export interface PlatformControlSnapshot {
   evidenceCount: number;
   corpus: { total: number | null; measured: boolean };
   cronEnabled: boolean;
+}
+
+/**
+ * المدة من العملية نفسها — مفيش رقم مكتوب. اللوحة بتترن في المتصفح مافيهوش
+ * `process`، فالقياس بيرجع null والصف يعرض «غير متاح» بدل ما يختلق 86400.
+ */
+export function measuredUptimeSec(): number | null {
+  const proc = (globalThis as { process?: { uptime?: () => number } }).process;
+  const up = typeof proc?.uptime === "function" ? proc.uptime() : NaN;
+  return Number.isFinite(up) ? Math.round(up) : null;
+}
+
+/** النسخة من البيئة/البناء، ومتقابلش: null مش "10.3.0". */
+function measuredAppVersion(): string | null {
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+  const v = env?.NOVA_APP_VERSION;
+  return typeof v === "string" && v.length > 0 ? v : null;
 }
 
 export function getPlatformControlSnapshot(): PlatformControlSnapshot {
