@@ -1,19 +1,19 @@
 {
   "version": 1,
-  "at": "2026-11-07T09:51:26.320Z",
+  "at": "2026-11-07T16:15:44.413Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 249702,
+  "total": 258032,
   "bySeverity": {
-    "high": 96641,
-    "medium": 111551,
-    "low": 11840,
-    "unknown": 10105,
-    "critical": 19499,
-    "none": 66
+    "high": 99674,
+    "medium": 114787,
+    "low": 12300,
+    "unknown": 10992,
+    "critical": 20211,
+    "none": 68
   },
   "byYear": {
     "1999": 1573,
@@ -27,35 +27,35 @@
     "2007": 6509,
     "2008": 7037,
     "2009": 4905,
-    "2010": 4952,
+    "2010": 4953,
     "2011": 4362,
-    "2012": 5026,
-    "2013": 4833,
-    "2014": 142,
-    "2015": 63,
+    "2012": 5027,
+    "2013": 4837,
+    "2014": 146,
+    "2015": 65,
     "2016": 115,
-    "2017": 219,
-    "2018": 848,
-    "2019": 714,
-    "2020": 783,
-    "2021": 1594,
-    "2022": 3481,
-    "2023": 18122,
-    "2024": 39351,
-    "2025": 45416,
-    "2026": 78588
+    "2017": 223,
+    "2018": 850,
+    "2019": 771,
+    "2020": 843,
+    "2021": 1615,
+    "2022": 3554,
+    "2023": 18180,
+    "2024": 39368,
+    "2025": 45479,
+    "2026": 86551
   },
-  "kev": 742,
-  "epssScored": 242654,
-  "products": 43703,
+  "kev": 748,
+  "epssScored": 251116,
+  "products": 43712,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 62986
+      "count": 63020
     },
     {
       "product": "chrome",
-      "count": 8451
+      "count": 9032
     },
     {
       "product": "firefox",
@@ -63,23 +63,27 @@
     },
     {
       "product": "android",
-      "count": 6041
+      "count": 6096
     },
     {
       "product": "windows_server_2012",
       "count": 5082
     },
     {
+      "product": "macos",
+      "count": 4377
+    },
+    {
       "product": "mac_os_x",
       "count": 4291
     },
     {
-      "product": "safari",
-      "count": 3786
+      "product": "iphone_os",
+      "count": 3837
     },
     {
-      "product": "macos",
-      "count": 3774
+      "product": "safari",
+      "count": 3817
     },
     {
       "product": "windows_10_22h2",
@@ -96,10 +100,6 @@
     {
       "product": "windows_11_24h2",
       "count": 3570
-    },
-    {
-      "product": "iphone_os",
-      "count": 3551
     },
     {
       "product": "windows_11_23h2",
@@ -123,15 +123,15 @@
     },
     {
       "product": "php",
-      "count": 2617
+      "count": 2625
+    },
+    {
+      "product": "debian_linux",
+      "count": 2601
     },
     {
       "product": "windows_server_2019",
       "count": 2587
-    },
-    {
-      "product": "debian_linux",
-      "count": 2584
     },
     {
       "product": "wireshark",
@@ -167,7 +167,7 @@
     },
     {
       "product": "ubuntu_linux",
-      "count": 2136
+      "count": 2141
     },
     {
       "product": "windows_server_2008",
@@ -202,27 +202,27 @@
       "count": 1890
     },
     {
-      "product": "gitlab",
-      "count": 1760
+      "product": "ipados",
+      "count": 1864
     },
     {
-      "product": "junos",
-      "count": 1750
+      "product": "gitlab",
+      "count": 1800
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 32220208,
-    "sha256": "bdb66224ac6433e1c7e0b4b3258703d3dc2bebb4c9a27bc67b785e4ad1ccb02a"
+    "bytes": 33338825,
+    "sha256": "be9beb22b4d9e6e75dc19108f18970029969ee6892db4678fdb6696babcfb382"
   },
   "mode": "deepen",
-  "says_ar": "249702 ثغرة حقيقية · critical 19499 · high 96641 · 742 مستغلّة فعلياً (KEV) · 242654 لها EPSS · 43703 منتج بـCPE · مزامنة 2026-11-07T09:51:26.320Z",
+  "says_ar": "258032 ثغرة حقيقية · critical 20211 · high 99674 · 748 مستغلّة فعلياً (KEV) · 251116 لها EPSS · 43712 منتج بـCPE · مزامنة 2026-11-07T16:15:44.413Z",
   "deepen": {
-    "nextStartIndex": 410930,
-    "windowPages": 12,
-    "walkedFrom": 386930,
-    "nvdTotal": 420785,
-    "coverage": 0.5934,
-    "at": "2026-11-07T09:51:26.321Z"
+    "nextStartIndex": 0,
+    "windowPages": 6,
+    "walkedFrom": 410930,
+    "nvdTotal": 420933,
+    "coverage": 0.613,
+    "at": "2026-11-07T16:15:44.414Z"
   }
 }

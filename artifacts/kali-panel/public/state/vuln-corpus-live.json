@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-07T09:51:26.320Z",
-  "total": 249702,
+  "at": "2026-11-07T16:15:44.413Z",
+  "total": 258032,
   "bySeverity": {
-    "high": 96641,
-    "medium": 111551,
-    "low": 11840,
-    "unknown": 10105,
-    "critical": 19499,
-    "none": 66
+    "high": 99674,
+    "medium": 114787,
+    "low": 12300,
+    "unknown": 10992,
+    "critical": 20211,
+    "none": 68
   },
-  "kev": 742,
-  "epssScored": 242654,
-  "products": 43703,
+  "kev": 748,
+  "epssScored": 251116,
+  "products": 43712,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -1058,6 +1058,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-114625",
+      "cvss": 9.9,
+      "sev": "critical",
+      "desc": "VeloCloud Orchestrator (VCO) on-prem has a security issue where this issue may allow a remote attacker to access privileged internal functionality and impact the VCO host. Successful exploitation may compromise the confidentiality, integrity, and availability ",
+      "cwe": [
+        "CWE-89"
+      ],
+      "kev": true,
+      "epss": 0.01025,
+      "pub": "2026-10-22T21:17:16.870",
+      "products": [
+        "velocloud_orchestrator",
+        "velocloud_orchestrator",
+        "velocloud_orchestrator"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-84869",
       "cvss": 9.9,
       "sev": "critical",
@@ -1144,6 +1162,26 @@
         "sharepoint_server",
         "sharepoint_server",
         "sharepoint_server"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-109618",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The su",
+      "cwe": [
+        "CWE-416",
+        "CWE-755",
+        "CWE-824"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2026-10-21T14:17:09.357",
+      "products": [
+        "php",
+        "php",
+        "php"
       ],
       "refs": []
     },
@@ -7009,6 +7047,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-76418",
+      "cvss": 8.6,
+      "sev": "high",
+      "desc": "A vulnerability in the Remote Access SSL VPN service of Cisco Secure Firewall Adaptive Security Appliance (ASA) Software and Cisco Secure Firewall Threat Defense (FTD) Software could allow an unauthenticated, remote attacker to cause the device to reload unexp",
+      "cwe": [
+        "CWE-690"
+      ],
+      "kev": true,
+      "epss": 0.00821,
+      "pub": "2026-10-28T20:18:47.063",
+      "products": [
+        "adaptive_security_appliance_software",
+        "adaptive_security_appliance_software",
+        "adaptive_security_appliance_software"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-21479",
       "cvss": 8.6,
       "sev": "high",
@@ -7374,6 +7430,26 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-109619",
+      "cvss": 8.1,
+      "sev": "high",
+      "desc": "PHP has various global state that temporarily points into request memory. In some scenarios, global state may not be correctly reset, or may be repopulated after being reset. The global state may then refer to request memory even after it has been freed. Subse",
+      "cwe": [
+        "CWE-416",
+        "CWE-755",
+        "CWE-824"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2026-10-21T14:17:09.823",
+      "products": [
+        "php",
+        "php",
+        "php"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-21412",
       "cvss": 8.1,
       "sev": "high",
@@ -7682,6 +7758,24 @@
       "pub": "2025-04-25T19:15:49.143",
       "products": [
         "screenconnect"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-119977",
+      "cvss": 8.1,
+      "sev": "high",
+      "desc": "WordPress Core is vulnerable to Remote Code Execution in versions 4.7 through 7.1.3. This is due to predictable, web-accessible staging paths used during full-package core upgrades. This makes it possible for unauthenticated attackers to execute code on the se",
+      "cwe": [
+        "CWE-367"
+      ],
+      "kev": true,
+      "epss": 0.01157,
+      "pub": "2026-10-31T06:16:34.550",
+      "products": [
+        "wordpress",
+        "wordpress",
+        "wordpress"
       ],
       "refs": []
     },
@@ -10456,7 +10550,7 @@
         "CWE-308"
       ],
       "kev": true,
-      "epss": null,
+      "epss": 0.00621,
       "pub": "2026-11-06T19:17:48.437",
       "products": [],
       "refs": []
@@ -12837,6 +12931,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-118527",
+      "cvss": 4.3,
+      "sev": "medium",
+      "desc": "Use of predictable filenames in Ivanti Connect Secure before versions 25.1.1.3 and 22.8R2.6 allows a remote authenticated attacker to upload files with attacker-controlled content to a known location on disk.",
+      "cwe": [
+        "CWE-340"
+      ],
+      "kev": true,
+      "epss": 0.00822,
+      "pub": "2026-11-03T15:17:24.920",
+      "products": [
+        "connect_secure",
+        "connect_secure"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-43200",
       "cvss": 4.2,
       "sev": "medium",
@@ -13824,106 +13935,7 @@
         "serv-u_file_server"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2011-0276",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "HP OpenView Performance Insight Server 5.2, 5.3, 5.31, 5.4, and 5.41 contains a \"hidden account\" in the com.trinagy.security.XMLUserManager Java class, which allows remote attackers to execute arbitrary code via the doPost method in the com.trinagy.servlet.Hel",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.82426,
-      "pub": "2011-02-02T01:00:06.533",
-      "products": [
-        "openview_performance_insight",
-        "openview_performance_insight",
-        "openview_performance_insight"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-2140",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Adobe Flash Player before 10.3.183.5 on Windows, Mac OS X, Linux, and Solaris and before 10.3.186.3 on Android, and Adobe AIR before 2.7.1 on Windows and Mac OS X and before 2.7.1.1961 on Android, allows attackers to execute arbitrary code or cause a denial of",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.82258,
-      "pub": "2011-08-10T22:55:00.890",
-      "products": [
-        "flash_player",
-        "flash_player",
-        "flash_player"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2004-0597",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple buffer overflows in libpng 1.2.5 and earlier, as used in multiple products, allow remote attackers to execute arbitrary code via malformed PNG images in which (1) the png_handle_tRNS function does not properly validate the length of transparency chunk",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.81856,
-      "pub": "2004-11-23T05:00:00.000",
-      "products": [
-        "libpng",
-        "msn_messenger",
-        "msn_messenger"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2004-1172",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the Agent Browser in Veritas Backup Exec 8.x before 8.60.3878 Hotfix 68, and 9.x before 9.1.4691 Hotfix 40, allows remote attackers to execute arbitrary code via a registration request with a long hostname.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.81791,
-      "pub": "2005-01-10T05:00:00.000",
-      "products": [
-        "backup_exec",
-        "backup_exec",
-        "backup_exec"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-34992",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "A improper neutralization of special elements used in an os command ('os command injection') vulnerability in Fortinet  allows attacker to execute unauthorized code or commands via crafted API requests.",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": false,
-      "epss": 0.81698,
-      "pub": "2023-10-10T17:15:11.607",
-      "products": [
-        "fortisiem",
-        "fortisiem",
-        "fortisiem"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2025-34300",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "A template injection vulnerability exists in Sawtooth Software’s Lighthouse Studio versions prior to 9.16.14 via the  ciwweb.pl http://ciwweb.pl/  Perl web application. Exploitation allows an unauthenticated attacker can execute arbitrary commands.",
-      "cwe": [
-        "CWE-20",
-        "CWE-1336"
-      ],
-      "kev": false,
-      "epss": 0.81264,
-      "pub": "2025-07-16T13:15:23.823",
-      "products": [],
-      "refs": []
     }
   ],
-  "says_ar": "249702 ثغرة حقيقية من NVD · 742 مستغلّة فعلياً (KEV) · 43703 منتج · مزامنة 2026-11-07T09:51:26.320Z"
+  "says_ar": "258032 ثغرة حقيقية من NVD · 748 مستغلّة فعلياً (KEV) · 43712 منتج · مزامنة 2026-11-07T16:15:44.413Z"
 }
