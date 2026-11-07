@@ -370,9 +370,9 @@ if (role === "node" || role === "agent") {
         try { doc = JSON.parse(out.slice(s2, out.lastIndexOf("}") + 1)); break; } catch { /* جرّب أقرب } */ }
       }
       if (doc) console.log("[supervisor] toolchain pass: " + doc.ok + "/" + doc.total + " جاهز في " + doc.into);
-      else console.log("[supervisor] toolchain pass: مفيش JSON (exit " + (signal || code) + ") — " + err.slice(0, 160).replace(/\n/g, " "));
+      else console.log("[supervisor] toolchain pass: مفيش JSON (exit " + (signal || code) + ") — " + err.slice(0, 160).replace(/\\n/g, " "));
       const w = err.indexOf("::warning::");
-      if (w >= 0) console.log("[toolchain] " + err.slice(w + 11, w + 260).split("\n")[0]);
+      if (w >= 0) console.log("[toolchain] " + err.slice(w + 11, w + 260).split("\\n")[0]);
     });
   };
   // 25 ثانية: أول طلب والـhealth يخلّصوا الأول، وبعدين الشبكة.
