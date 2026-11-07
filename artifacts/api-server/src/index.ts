@@ -22,9 +22,10 @@ import {
   broadcastEvent,
   getHubClientCount,
 } from "./lib/ws-hub";
-import { getAllMemories, getMemoryCount, saveMemory } from "./routes/memory";
+import { getMemoryCount, saveMemory } from "./routes/memory";
 import { broadcastLiveEvent } from "./routes/live-events";
-import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
+import { runAgent } from "./lib/agent/core";
+import type { AgentEvent } from "./lib/agent/core";
 import { bootToolchainFetch, toolchainStatus } from "./lib/ops/toolchain";
 import { startAutonomousBackgroundDaemon } from "./lib/autonomous-daemon";
 import { provisionOnBoot } from "./lib/ops/keys-source";
@@ -107,45 +108,92 @@ hubWss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
       if (type === "chat_send") {
         const requestId = String(msg.requestId || `req_${Date.now()}`);
         const content = String(msg.content || "");
-        const toolCallId = `tc_${Date.now()}`;
-
-        ws.send(
-          JSON.stringify({
-            type: "chat_tool_call",
-            requestId,
-            id: toolCallId,
-            name: "memory_and_target_sync",
-            input: { query: content.slice(0, 120), memoriesLoaded: getMemoryCount() },
-          }),
-        );
-
-        const memories = getAllMemories().slice(0, 5);
-        ws.send(
-          JSON.stringify({
-            type: "chat_tool_result",
-            requestId,
-            toolCallId,
-            result: JSON.stringify(
-              {
-                synced: true,
-                activeMemories: memories.map((m) => ({ title: m.title, kind: m.kind })),
-              },
-              null,
-              2,
-            ),
-            isError: false,
-          }),
-        );
-
-        const reply = buildIntelligentSecurityReply([{ role: "user", content }]);
-        const chunks = reply.match(/.{1,24}/gs) ?? [reply];
-        for (const chunk of chunks) {
-          if (ws.readyState !== WebSocket.OPEN) break;
-          ws.send(JSON.stringify({ type: "chat_delta", requestId, text: chunk }));
-          await new Promise((r) => setTimeout(r, 14));
+        if (!content.trim()) {
+          ws.send(JSON.stringify({ type: "chat_error", requestId, message: "اكتب رسالة أولاً." }));
+          return;
         }
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "chat_done", requestId, ts: Date.now() }));
+        const sessionId = String(msg.sessionId || `ws-${Date.now()}`);
+        const history = Array.isArray(msg.history)
+          ? msg.history
+              .filter((entry): entry is { role: "user" | "assistant"; content: string } =>
+                Boolean(entry) &&
+                typeof entry === "object" &&
+                ((entry as Record<string, unknown>).role === "user" || (entry as Record<string, unknown>).role === "assistant") &&
+                typeof (entry as Record<string, unknown>).content === "string",
+              )
+              .slice(-8)
+              .map((entry) => ({ role: entry.role, content: entry.content.slice(-1200) }))
+          : [];
+        const sendAgentEvent = (event: AgentEvent) => {
+          if (ws.readyState !== WebSocket.OPEN) return;
+          switch (event.type) {
+            case "delta":
+              ws.send(JSON.stringify({ type: "chat_delta", requestId, text: event.text }));
+              break;
+            case "tool_call":
+              ws.send(JSON.stringify({
+                type: "chat_tool_call",
+                requestId,
+                id: event.id,
+                name: event.title,
+                input: event.args,
+                risk: event.risk,
+              }));
+              break;
+            case "tool_result":
+              ws.send(JSON.stringify({
+                type: "chat_tool_result",
+                requestId,
+                toolCallId: event.id,
+                result: event.summary,
+                isError: !event.ok,
+              }));
+              break;
+            case "confirm_required":
+              ws.send(JSON.stringify({
+                type: "chat_tool_result",
+                requestId,
+                toolCallId: event.id,
+                result: `${event.reason} لم يتم التنفيذ؛ الموافقة غير متاحة من هذه المحادثة حاليًا.`,
+                isError: false,
+                confirmationRequired: true,
+              }));
+              break;
+            case "error":
+              ws.send(JSON.stringify({ type: "chat_error", requestId, message: event.message }));
+              break;
+            case "done":
+              ws.send(JSON.stringify({
+                type: "chat_done",
+                requestId,
+                toolCount: event.toolCount,
+                mode: event.mode,
+                ts: Date.now(),
+              }));
+              break;
+          }
+        };
+        try {
+          await runAgent({
+            message: content,
+            sessionId,
+            history,
+            maxSteps: 5,
+            // `approved: []` هو اللي بيقفل الأدوات الحساسة/النشطة من جوّه الشات:
+            // مافيش مسار في main بيقبل علم «موافقة» يجي من العميل، فالموافقة
+            // المحلّية (`requireApprovalForActive`) مبقاش ليها لازمة — القفل افتراضي.
+            approved: [],
+            emit: sendAgentEvent,
+          });
+        } catch (error) {
+          logger.error({ err: error, sessionId }, "floating NOVA chat failed");
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: "chat_error",
+              requestId,
+              message: error instanceof Error ? error.message : String(error),
+            }));
+          }
         }
         return;
       }
@@ -458,11 +506,15 @@ server.listen(port, host, () => {
     logger.info("Running in standalone mode (no DATABASE_URL configured)");
   }
 
-  try {
-    startAutonomousBackgroundDaemon();
-    logger.info("24/7 Autonomous Background Daemon & Cloud Brain State initialized");
-  } catch (e) {
-    logger.error({ err: e }, "Failed to start autonomous background daemon");
+  if (process.env.NOVA_AUTONOMOUS_DAEMON === "1") {
+    try {
+      startAutonomousBackgroundDaemon();
+      logger.info("Autonomous background daemon enabled by NOVA_AUTONOMOUS_DAEMON=1");
+    } catch (e) {
+      logger.error({ err: e }, "Failed to start autonomous background daemon");
+    }
+  } else {
+    logger.info("Autonomous background daemon is disabled; set NOVA_AUTONOMOUS_DAEMON=1 to opt in");
   }
 
   scheduleGC();

@@ -974,8 +974,8 @@ export function LiveAgentPanel({
   const [ollamaModel, setOllamaModel] = useState("dolphin-llama3:latest");
   const [ollamaPulse, setOllamaPulse] = useState(false);
 
-  // ── Direct Llama Dolphin via ngrok ─────────────────────────────────────────
-  const [directMode, setDirectMode] = useState(true);
+  // Direct provider execution is disabled; chat turns use the server-side NOVA Core.
+  const directMode = false;
   const [ngrokOnline, setNgrokOnline] = useState(false);
   const [ngrokModels, setNgrokModels] = useState<string[]>([]);
   const [ngrokModel, setNgrokModel] = useState("dolphin-llama3:latest");
@@ -2323,14 +2323,53 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     let cancelled = false;
     void (async () => {
       try {
-        const r = await fetch(`${API_BASE}/live-agent/sessions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "لوحة سطح المكتب" }),
-        });
-        const s = (await r.json()) as { id: string };
-        if (!cancelled) { setSessionId(s.id); void refreshFiles(s.id); }
-      } catch { /* offline */ }
+        const listResponse = await fetch(`${API_BASE}/live-agent/sessions`);
+        if (!listResponse.ok) throw new Error(`HTTP ${listResponse.status}`);
+        const sessions = asArray<Session>(await listResponse.json());
+        const latest = sessions[0];
+        let id: string;
+
+        if (latest) {
+          const sessionResponse = await fetch(`${API_BASE}/live-agent/sessions/${encodeURIComponent(latest.id)}`);
+          if (!sessionResponse.ok) throw new Error(`HTTP ${sessionResponse.status}`);
+          const session = (await sessionResponse.json()) as {
+            id?: unknown;
+            messages?: Array<{ role?: unknown; content?: unknown }>;
+          };
+          if (typeof session.id !== "string" || !session.id) throw new Error("استجابة الجلسة غير صالحة");
+          id = session.id;
+          const restored = (session.messages ?? [])
+            .filter(
+              (message): message is { role: "user" | "assistant"; content: string } =>
+                (message.role === "user" || message.role === "assistant") && typeof message.content === "string",
+            )
+            .map(({ role, content }) => ({ role, text: content }));
+          if (!cancelled) setLines(restored);
+        } else {
+          const createResponse = await fetch(`${API_BASE}/live-agent/sessions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: "مساحة عمل NOVA" }),
+          });
+          if (!createResponse.ok) throw new Error(`HTTP ${createResponse.status}`);
+          const created = (await createResponse.json()) as { id?: unknown };
+          if (typeof created.id !== "string" || !created.id) throw new Error("استجابة إنشاء الجلسة غير صالحة");
+          id = created.id;
+        }
+
+        if (!cancelled) { setSessionId(id); void refreshFiles(id); }
+      } catch (error) {
+        if (!cancelled) {
+          setLines((prev) => [
+            ...prev,
+            {
+              role: "system",
+              text: `تعذر بدء جلسة NOVA: ${error instanceof Error ? error.message : String(error)}`,
+              isError: true,
+            },
+          ]);
+        }
+      }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -3589,17 +3628,38 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 // ── Tool call (legacy) ─────────────────────────────────────
                 } else if (pendingEvent === "tool_call") {
                   assistantBuf = "";
-                  const inputStr = JSON.stringify(data.input ?? {}).slice(0, 200);
+                  const inputStr = JSON.stringify(data.args ?? data.input ?? {}).slice(0, 200);
                   setStepCount((n) => n + 1); setThinkingPhase("tool");
-                  setCurrentTool({ name: String(data.name), input: inputStr, startedAt: Date.now() });
+                  setCurrentTool({ name: String(data.title || data.name), input: inputStr, startedAt: Date.now() });
                   setToolHistory((h) => [...h, String(data.name)].slice(-12));
-                  setLines((arr) => [...arr, { role: "tool", toolName: data.name, text: `▶ ${data.name}(${inputStr.slice(0, 120)})` }]);
+                  setLines((arr) => [...arr, { role: "tool", toolName: data.title || data.name, text: `▶ ${data.title || data.name}(${inputStr.slice(0, 120)})` }]);
                 } else if (pendingEvent === "tool_result") {
-                  const result = String(data.result || "").slice(0, 800);
+                  const result = String(data.summary ?? data.result ?? "").slice(0, 800);
+                  const isError = data.isError === undefined ? data.ok === false : Boolean(data.isError);
                   setCurrentTool(null); setThinkingPhase("thinking");
-                  setLines((arr) => [...arr, { role: "tool_result", toolName: data.name, text: result || "(تم بدون مخرجات)", isError: Boolean(data.isError) }]);
-                  if (data.isError) addToast(`فشل: ${data.name}`, "error");
+                  setLines((arr) => [...arr, { role: "tool_result", toolName: data.name, text: result || "(لا توجد تفاصيل)", isError }]);
+                  if (isError) addToast(`لم تنجح الأداة: ${data.name}`, "error");
                   void refreshBrainStatus();
+                } else if (pendingEvent === "confirm_required") {
+                  setCurrentTool(null); setThinkingPhase("thinking");
+                  setLines((arr) => [...arr, {
+                    role: "system",
+                    text: `⏸️ لم يتم التنفيذ — ${String(data.title || data.name || "الأداة")}: ${String(data.reason || "الأداة تتطلب موافقة صريحة.")} الموافقة غير متاحة من هذه المحادثة حاليًا.`,
+                    isError: true,
+                  }]);
+                } else if (pendingEvent === "plan") {
+                  const steps = Array.isArray(data.steps) ? data.steps : [];
+                  if (steps.length) {
+                    setLines((arr) => [...arr, {
+                      role: "plan",
+                      text: steps.map((step: { tool?: string }, index: number) => `${index + 1}. ${step.tool || "أداة"}`).join("\n"),
+                    }]);
+                  }
+                } else if (pendingEvent === "thought" && String(data.text || "").includes("التشغيل المستمر بعد إغلاق الصفحة")) {
+                  setLines((arr) => [...arr, { role: "system", text: String(data.text), isError: true }]);
+                } else if (pendingEvent === "memory") {
+                  setMemorySaveFlash(true);
+                  setTimeout(() => setMemorySaveFlash(false), 3000);
                 } else if (pendingEvent === "client_tool") {
                   assistantBuf = "";
                   const inputStr = JSON.stringify(data.input ?? {}).slice(0, 200);
@@ -3644,17 +3704,18 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                     }
                   }
                   // ── END intelligence ──────────────────────────────────────
-                  const cmdsRun = Number(data?.commandsRun ?? 0);
+                  const toolCount = Number(data?.toolCount ?? data?.commandsRun ?? 0);
                   if (data?.mode !== "plan") {
-                    setLines((arr) => [...arr, { role: "system", text: cmdsRun > 0 ? `✓ تم إنجاز المهمة — ${cmdsRun} أمر منفّذ` : "✓ تم إنجاز المهمة" }]);
+                    setLines((arr) => [...arr, { role: "system", text: `انتهى دور NOVA${toolCount > 0 ? ` — ${toolCount} أداة` : ""}.` }]);
                   }
                   if (sessionId) void refreshFiles(sessionId);
                   setPendingAttachments([]);
                   void refreshBrainStatus();
                 } else if (pendingEvent === "error") {
                   setCurrentTool(null); setThinkingPhase("idle");
-                  setLines((arr) => [...arr, { role: "system", text: `⚠ خطأ: ${String(data.error || "غير معروف")}`, isError: true }]);
-                  addToast(`خطأ: ${String(data.error || "غير معروف")}`, "error");
+                  const message = String(data.message ?? data.error ?? "غير معروف");
+                  setLines((arr) => [...arr, { role: "system", text: `⚠ خطأ: ${message}`, isError: true }]);
+                  addToast(`خطأ: ${message}`, "error");
                 }
               } catch { /* ignore */ }
               pendingEvent = null;
@@ -4178,35 +4239,9 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         {/* ── Provider status strip ── */}
         {panelSize !== "mini" && (
           <div className="px-3 py-1 border-b border-primary/10 flex items-center gap-1.5 overflow-x-auto shrink-0">
-            <span className={`shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 ${ollamaOnline ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/5" : "border-rose-400/30 text-rose-300 bg-rose-500/5"}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${ollamaOnline ? "bg-emerald-400 animate-pulse" : "bg-rose-400"}`} />
-              API · {ollamaModel}
+            <span className="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border border-cyan-400/40 text-cyan-200 bg-cyan-500/5">
+              NOVA CORE · محرك موحّد
             </span>
-            {/* ngrok / Llama Dolphin status */}
-            <button
-              onClick={() => {
-                if (ngrokOnline) {
-                  setDirectMode((v) => !v);
-                  addToast(directMode ? "تم إيقاف وضع Llama المباشر" : `✅ وضع Llama Dolphin المباشر (${ngrokModel})`, directMode ? "warn" : "success");
-                } else {
-                  void probeNgrok().then((ok) => {
-                    if (!ok) addToast("⚠ ngrok غير متاح حالياً — تأكد من تشغيله", "error");
-                  });
-                }
-              }}
-              title={`${LLAMA_NGROK_URL}\nانقر للتبديل بين وضع API ووضع Llama المباشر`}
-              className={`shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all cursor-pointer ${
-                directMode && ngrokOnline
-                  ? "border-violet-400/60 text-violet-200 bg-violet-500/15 shadow-[0_0_6px_rgba(167,139,250,0.3)]"
-                  : ngrokOnline
-                  ? "border-cyan-400/40 text-cyan-300 bg-cyan-500/5 hover:bg-cyan-500/15"
-                  : "border-rose-400/20 text-rose-400/70 bg-rose-500/5 hover:bg-rose-500/10"
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${ngrokOnline ? (directMode ? "bg-violet-400 animate-pulse" : "bg-cyan-400") : "bg-rose-400"}`} />
-              {directMode ? "🐬 Dolphin" : "ngrok"} · {ngrokOnline ? ngrokModel : "offline"}
-              {ngrokPing !== null && ngrokOnline && <span className="text-[8px] opacity-60">{ngrokPing}ms</span>}
-            </button>
             {/* ── Model Switcher Button ── */}
             <button onClick={() => setShowModelPicker(p => !p)}
               title={`نموذج نشط: ${selectedModel} | ctx: ${(modelCtxWindow/1000).toFixed(0)}K`}
@@ -9308,18 +9343,18 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   <Sparkles className="w-10 h-10 mx-auto text-primary/60 mb-3" />
                   <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 animate-ping opacity-60" />
                 </div>
-                <div className="text-xs font-bold text-foreground mb-1">Nova Agent v7 — مخ النظام الكامل</div>
+                <div className="text-xs font-bold text-foreground mb-1">NOVA — المحرك المركزي</div>
                 <div className="text-[10px] text-muted-foreground leading-relaxed mb-3">
-                  أعمل على <span className="text-emerald-300 font-mono">{ollamaModel}</span> محلياً.<br />
-                  لديّ <span className="text-amber-300 font-mono">{botStatus?.availableTools ?? "40+"}</span> أداة حقيقية.<br />
-                  أستطيع فتح أي نافذة، تشغيل terminal، فحص ثغرات، وأكثر.
+                  أجيب باستخدام سياق المنصة وأدواتها الآمنة المتاحة.<br />
+                  الأدوات النشطة وأوامر الأجهزة لا تُنفذ تلقائياً، والموافقة عليها غير متاحة من هذه المحادثة حالياً.<br />
+                  إغلاق الصفحة يوقف هذه الجلسة؛ التشغيل المستمر يحتاج خدمة خلفية مستقلة.
                 </div>
                 <div className="grid grid-cols-2 gap-1.5 text-right">
                   {[
-                    { text: "افتح جوجل", desc: "ui_browse_url" },
-                    { text: "افحص هدف", desc: "scan_target" },
-                    { text: "حالة النظام", desc: "get_system_state" },
-                    { text: "ابحث عن ثغرة", desc: "nvd_search" },
+                    { text: "حالة النظام", desc: "platform_status" },
+                    { text: "ابحث عن CVE", desc: "cve_lookup" },
+                    { text: "حالة الأسطول", desc: "fleet_list" },
+                    { text: "ابحث في الويب", desc: "web_search" },
                   ].map((s) => (
                     <button key={s.text} onClick={() => setInput(s.text)}
                       className="text-[10px] px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-foreground hover:bg-primary/10 transition text-right">
@@ -9344,7 +9379,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   <div key={i} className={`text-xs leading-relaxed ${cls} rounded-xl px-3 py-2.5`}>
                     <div className="flex items-center gap-1.5 mb-1.5 text-[10px] font-bold text-violet-300">
                       <ListChecks className="w-3.5 h-3.5" />
-                      خطة مقترحة — راجعها قبل التنفيذ
+                      {l.awaitingApproval ? "خطة مقترحة — راجعها قبل التنفيذ" : "خطة التنفيذ"}
                     </div>
                     <div className="text-[11px] leading-relaxed">{renderMarkdown(l.text)}</div>
                     {l.awaitingApproval && (
@@ -9468,7 +9503,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               <ListChecks className="w-3 h-3" />
               خطة {planMode ? "ON" : "OFF"}
             </button>
-            {planMode && <span className="text-[9px] font-mono text-violet-300">سيخطّط أوّلاً ثم يستأذنك</span>}
+            {planMode && <span className="text-[9px] font-mono text-violet-300">عرض الخطة فقط؛ لن تُنفّذ الأدوات</span>}
           </div>
 
           <input ref={fileInputRef} type="file" className="hidden" onChange={onPickFile} />
@@ -9553,31 +9588,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </form>
 
           <div className="mt-2 flex items-center justify-between text-[9px] text-muted-foreground font-mono gap-1 flex-wrap">
-            <span className="flex items-center gap-1">
-              <CpuIcon className="w-3 h-3" />
-              <span className={ollamaOnline ? "text-emerald-300" : "text-rose-300"}>{ollamaOnline ? "API ✓" : "API ✗"}</span>
-              · {ollamaModel}
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-400/30 text-cyan-300 bg-cyan-500/5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+              NOVA CORE
             </span>
-            {/* Direct Llama Dolphin toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                if (!ngrokOnline) { void probeNgrok(); addToast("جارٍ الاتصال بـ ngrok...", "info"); return; }
-                setDirectMode((v) => !v);
-                addToast(!directMode ? `🐬 Dolphin مباشر عبر ngrok: ${ngrokModel}` : "↩ عودة لوضع API", !directMode ? "success" : "info");
-              }}
-              className={`flex items-center gap-1 px-1.5 py-0.5 rounded border transition ${
-                directMode && ngrokOnline
-                  ? "border-violet-400/50 text-violet-200 bg-violet-500/15 animate-pulse"
-                  : ngrokOnline
-                  ? "border-cyan-400/30 text-cyan-300 bg-cyan-500/5 hover:bg-cyan-500/15"
-                  : "border-border/40 text-muted-foreground/60"
-              }`}
-              title={`Llama Dolphin عبر ngrok\n${LLAMA_NGROK_URL}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${ngrokOnline ? (directMode ? "bg-violet-400 animate-ping" : "bg-cyan-400") : "bg-rose-500"}`} />
-              {directMode ? "🐬 Dolphin" : "ngrok"}
-            </button>
             <button type="button"
               onClick={() => { const next = !voiceOn; setVoiceOn(next); if (!next && "speechSynthesis" in window) window.speechSynthesis.cancel(); }}
               className={`flex items-center gap-1 px-1.5 py-0.5 rounded border transition ${voiceOn ? "border-emerald-400/40 text-emerald-300 bg-emerald-500/10" : "border-border/40 text-muted-foreground hover:text-foreground"}`}

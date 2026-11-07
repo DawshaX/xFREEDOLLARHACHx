@@ -149,7 +149,10 @@ router.post("/nova-core/chat", async (req: Request, res: Response) => {
       sessionId: body.sessionId,
       history: Array.isArray(body.history) ? body.history.slice(-8) : [],
       forceHeuristic: body.forceHeuristic === true,
-      approved: Array.isArray(body.approve) ? body.approve.map(String) : [],
+      // الموافقة مابقتش تتقبل من قائمة يجيبها العميل: أي زائر كان يقدر يقول
+      // «approve: [fleet_exec]» ويفتح تنفيذ على جهاز متصل. الأدوات الحساسة
+      // تفضل محجوبة لحد ما يبقى فيه مسار موافقة سيرفري مربوط بالجلسة.
+      approved: [],
       emit,
     });
     broadcastEvent({ type: "agent_run_complete", agent: "nova", mode: result.mode, tools: result.toolsUsed, ts: Date.now() });
@@ -637,7 +640,7 @@ router.get("/nova-core/persona", (req: Request, res: Response) => {
 
 /* ── direct execution ────────────────────────────────────────────────────── */
 
-router.post("/nova-core/execute", async (req: Request, res: Response) => {
+router.post("/nova-core/execute", (req, res, next) => requireOps("nova-core execute")(req, res, next), async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as { tool?: string; args?: Record<string, unknown> };
   const tool = String(body.tool ?? "");
   if (!tool) {

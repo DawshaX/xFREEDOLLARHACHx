@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { getPlatformControlSnapshot } from "../lib/standalone-api";
 
 const router = Router();
 
@@ -18,11 +19,17 @@ export interface LiveEvent {
  * with real recent events instead of an empty array or, worse, SPA HTML.
  */
 const HISTORY_LIMIT = 200;
-const history: LiveEvent[] = [];
+interface StoredLiveEvent {
+  id: number;
+  event: LiveEvent;
+}
+
+const history: StoredLiveEvent[] = [];
+let nextEventId = 1;
 
 export function getLiveEventHistory(limit = 50): LiveEvent[] {
   const n = Math.max(1, Math.min(HISTORY_LIMIT, limit));
-  return history.slice(-n).reverse();
+  return history.slice(-n).reverse().map(({ event }) => event);
 }
 
 export function broadcastLiveEvent(
@@ -33,16 +40,17 @@ export function broadcastLiveEvent(
     typeof eventOrType === "string"
       ? { type: eventOrType, data: data ?? {}, ts: new Date().toISOString() }
       : eventOrType;
-  const payload = `data: ${JSON.stringify(obj)}\n\n`;
   if (obj && typeof obj === "object" && "type" in obj) {
-    history.push(obj as LiveEvent);
+    const stored = { id: nextEventId++, event: obj as LiveEvent };
+    history.push(stored);
     if (history.length > HISTORY_LIMIT) history.splice(0, history.length - HISTORY_LIMIT);
-  }
-  for (const client of clients) {
-    try {
-      client.write(payload);
-    } catch {
-      clients.delete(client);
+    const payload = `id: ${stored.id}\ndata: ${JSON.stringify(obj)}\n\n`;
+    for (const client of clients) {
+      try {
+        client.write(payload);
+      } catch {
+        clients.delete(client);
+      }
     }
   }
 }
@@ -60,7 +68,21 @@ export function subscribeLiveEvents(req: Request, res: Response): void {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.flushHeaders?.();
 
+  const rawCursor = req.get("Last-Event-ID");
+  const cursor = rawCursor && /^\d+$/.test(rawCursor) ? Number(rawCursor) : null;
+  const oldestEventId = history[0]?.id ?? nextEventId;
+  const canResume = cursor !== null && Number.isSafeInteger(cursor) && cursor >= oldestEventId - 1;
+
   res.write(`data: ${JSON.stringify({ type: "connected", ts: Date.now() })}\n\n`);
+  if (canResume && cursor < nextEventId - 1) {
+    for (const stored of history) {
+      if (stored.id > cursor) {
+        res.write(`id: ${stored.id}\ndata: ${JSON.stringify(stored.event)}\n\n`);
+      }
+    }
+  } else {
+    res.write(`data: ${JSON.stringify({ type: "platform_snapshot", snapshot: getPlatformControlSnapshot(), ts: Date.now() })}\n\n`);
+  }
   clients.add(res);
 
   const ping = setInterval(() => {

@@ -675,7 +675,7 @@ export function NovaWorkstation() {
     try {
       const r = await fetch(`${API}/nova-core/status`, { signal: AbortSignal.timeout(7000) });
       const j = await r.json();
-      const alive = r.ok && j && typeof j === "object" && Array.isArray(Object.keys(j)) ;
+      const alive = r.ok && j && typeof j === "object" && j.ok === true;
       // In static mode the engine answers with `mode: "static"` — that is not a server.
       setHealth({ server: Boolean(alive) && j?.mode !== "static", checked: true });
     } catch {
@@ -736,6 +736,11 @@ export function NovaWorkstation() {
   const send = async (override?: string) => {
     const content = (override ?? input).trim();
     if (!content || streaming) return;
+    const history = lines
+      .filter((line): line is Line & { role: "user" | "assistant" } => line.role === "user" || line.role === "assistant")
+      .filter((line) => line.text.trim().length > 0)
+      .slice(-8)
+      .map(({ role, text }) => ({ role, content: text.slice(-1200) }));
     setInput("");
     push({ role: "user", text: content });
     setStreaming(true);
@@ -766,6 +771,7 @@ export function NovaWorkstation() {
         body: JSON.stringify({
           message: content,
           sessionId: sessionId || "workstation",
+          history,
           ...(effectiveBrain === "browser" ? { forceHeuristic: true } : {}),
         }),
       });
@@ -790,6 +796,7 @@ export function NovaWorkstation() {
         try {
           await runLocalBrain(content, (ev) => handleEvent(ev as Record<string, unknown>, appendAssistant), {
             sessionId: sessionId || "workstation",
+            history,
           });
         } catch {
           /* the note below still tells the truth */

@@ -4419,7 +4419,9 @@ contract ImmunefiExploitPoCTest is Test {
                       <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">
                         {env.badge}
                       </span>
-                      <span className="text-[10px] font-mono text-emerald-400">● {env.status}</span>
+                      <span className={`text-[10px] font-mono ${env.status === "CATALOG_ONLY" ? "text-amber-400" : "text-emerald-400"}`}>
+                        ● {env.status === "CATALOG_ONLY" ? "كتالوج فقط · غير متحقق" : env.status}
+                      </span>
                     </div>
                     <div className="font-bold text-white">{env.name}</div>
                     <p className="text-[11px] text-gray-300 leading-relaxed">{env.purposeAr}</p>
