@@ -43,6 +43,7 @@ const AGENT_GATES = [
   ["scripts/test-free-store.mjs", "free store: sha256-verified mirrors, tamper refused, caps enforced"],
   ["scripts/test-panel-restart.mjs", "panel power: a remote restart with no human in it"],
   ["scripts/test-respawn-loop.mjs", "respawn loop: a dead boot.mjs gets raised again, measured"],
+  ["scripts/test-commit-recipe.mjs", "push recipe: a stale index cannot silently delete files from main"],
 ];
 
 /** Structural audits: cheaper to read than to run, and they catch drift. */
