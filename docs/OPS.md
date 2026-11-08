@@ -394,3 +394,29 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
 
 | قيام ذاتي بعد الموت | `start.sh` في الحزمة (مش `boot.mjs`) | `boot.mjs` بيراقب التطبيق بس مافيش حاجة بتراقبه — وعلى بيضة Pterodactyl اللي بتخلص هناك هي العملية الرئيسية للحاوية، فموتها = «offline» للأبد. `start.sh` بقى فيه حلقة `while : ; do` بـ backoff (2/4/8/16/30/60 ثانية)، وSIGTERM من اللوحة بيوقف بلا إعادة تشغيل، وملف `state/NOVA_HALT` بيسلّمها. للتستات: `NOVA_RESPAWN_MIN` و`NOVA_RESPAWN_FASTCRASH` و`NOVA_RESPAWN_HEALTHY`. بتتقاس بـ `node scripts/build-standalone.mjs --selftest-respawn` (بوابة `test-respawn-loop`) |
 | إعادة تشغيل من بُعد | `scripts/nova-panel-restart.mjs` | أمر طاقة Pterodactyl: `POST {panel}/api/client/servers/{id}/power` بـ `{"signal":"restart"}` ومفتاح `PTSV_…`. `uptime-watchdog` بينفّذه كل نص ساعة لما الـhealth مابيردّش، لو `NOVA_PANEL_TOKEN` موجود في أسرار المستودع. `--when-down` بيمنع إعادة تشغيل عبثية، والملف بيقيس رجوع الـhealth بعد الأمر (`--wait 180`) مش بس بعت الطلب. المفتاح مابيطلعش في أي لوج. البوابة: `node scripts/test-panel-restart.mjs` على لوحة وهمية محلّية |
+
+
+---
+
+## التخزين المجاني كطبقة رسمية (2026-11-08)
+
+**المشكلة مقاسة:** المكنة سلوت 1024MB قرص و460MB رام، والحزمة المحمولة بينزّلها
+الـupdater كل بناء — فكل ميجا في الحزمة بتتدفع في كل تحديث. والقرايات الكبيرة
+(150 ألف اسم نطاق = 1.9MB) مش محتاجاه كل مكنة.
+
+**الحل اللي اتشغّل النهارده:** الملفات اللي لازم توجد تبقى في المستودع/الحزمة
+(60 ألف مسار، 7,746 مسار حسّاس، 6,115 بارامتر)، والباقي على تخزين مجاني عام
+(Google Drive + Dropbox، اتقاست روابطهم من شبكة خارجية: `drive.usercontent.google.com`
+رجّع نفس الـJSON، و`dl.dropboxusercontent.com` رجّع الملف 1,997,427 بايت كاملًا).
+المرآة **ناقل**: `ops/wordlists/free-store.json` فيه `sha256` كل ملف، والكود بيرفض أي
+بايت مش مطابق (`scripts/test-free-store.mjs` بيثبت الرفض، 9/9).
+
+**واجهات:** `GET /api/ops/wordlists` = جرد محسوب من القرص (سطور/بايت/بصمة/مصدر)،
+و`POST /api/ops/wordlists/fetch {name}` = جلب من المرآة + تحقّق، ورا `NOVA_EXEC_TOKEN`
+زي provisioning. الحارس الدوري: `.github/workflows/free-store.yml` (كل أربعاء + أي دفع
+يعدّل القرايات) — بصمة اختلفت = الوظيفة تفشل، مش تحذير.
+
+**الافتراضي قاصدًا:** `NOVA_WORDLIST_SIZE` بياخد `xl|large|vuln|params|params-xl|subdomains-xl`،
+والسريع (215 سطر) لسه الافتراضي لأن على مكنة نواة واحدة القايمة الكبيرة تاخد دقائق —
+قرار المشغّل، مش قرارنا. resolver بتاع JS في الاستطلاع السلبي لسه على سقفه المقيس؛
+القرايات الكبيرة دي للأدوات السريعة (ffuf/gobuster/dalfox).

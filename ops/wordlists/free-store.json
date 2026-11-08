@@ -1,0 +1,141 @@
+{
+  "generatedAt": "2026-11-08T04:57:15.755Z",
+  "source": {
+    "name": "danielmiessler/SecLists",
+    "ref": "master",
+    "tarball": "https://codeload.github.com/danielmiessler/SecLists/tar.gz/refs/heads/master",
+    "tarballSha256": "681f6da2ac3420d84134efd5a920b49039b9404d2d9cf71e811c001885fb2ad1"
+  },
+  "files": {
+    "nova-paths-xl.txt": {
+      "kind": "paths",
+      "lines": 60000,
+      "bytes": 605747,
+      "sha256": "9d38c6bc79ca1f3b24e84fae345d4d77c6f5f9feddd826e5500eea5264d6c18c",
+      "note": "Union of the public discovery lists, deduped, most-common first.",
+      "from": [
+        "Discovery/Web-Content/common.txt",
+        "Discovery/Web-Content/raft-medium-directories.txt",
+        "Discovery/Web-Content/raft-large-directories.txt",
+        "Discovery/Web-Content/quickhits.txt",
+        "Discovery/Web-Content/big.txt"
+      ],
+      "inBundle": true
+    },
+    "nova-vuln-xl.txt": {
+      "kind": "paths",
+      "lines": 7746,
+      "bytes": 194888,
+      "sha256": "6d803188e8f8d740e2888140d458e64dd254ff047865b9d76a8d306df2bc2dc9",
+      "note": "Sensitive/config/backup paths — the list a passive scan cannot guess.",
+      "from": [
+        "Discovery/Web-Content/Common-DB-Backups.txt",
+        "Discovery/Web-Content/versioning_metafiles.txt",
+        "Discovery/Web-Content/vulnerability-scan_j2ee-websites_WEB-INF.txt",
+        "Discovery/Web-Content/Logins.fuzz.txt",
+        "Discovery/Web-Content/Passwords.fuzz.txt",
+        "Discovery/Web-Content/graphql.txt",
+        "Discovery/Web-Content/hashicorp-vault.txt",
+        "Discovery/Web-Content/hashicorp-consul-api.txt",
+        "Discovery/Web-Content/oauth-oidc-scopes.txt",
+        "Discovery/Web-Content/reverse-proxy-inconsistencies.txt",
+        "Discovery/Web-Content/dsstorewordlist.txt",
+        "Discovery/Web-Content/Microsoft-Frontpage.txt",
+        "Discovery/Web-Content/SAP-NetWeaver.txt",
+        "Discovery/Web-Content/wso2-enterprise-integrator.txt",
+        "Discovery/Web-Content/sap-analytics-cloud.txt",
+        "Discovery/Web-Content/domino-endpoints-coldfusion39.txt",
+        "Discovery/Web-Content/domino-dirs-coldfusion39.txt",
+        "Discovery/Web-Content/OracleAppServer.fuzz.txt",
+        "Discovery/Web-Content/coldfusion.txt",
+        "Discovery/Web-Content/JavaServlets-Common.fuzz.txt",
+        "Discovery/Web-Content/AdobeXML.fuzz.txt",
+        "Discovery/Web-Content/tftp.fuzz.txt",
+        "Discovery/Web-Content/JavaScript-Miners.txt",
+        "Discovery/Web-Content/common-api-endpoints-mazen160.txt",
+        "Discovery/Web-Content/mcp-server.txt",
+        "Discovery/Web-Content/web-mutations.txt",
+        "Discovery/Web-Content/Roundcube-123.txt"
+      ],
+      "inBundle": true
+    },
+    "nova-params-xl.txt": {
+      "kind": "words",
+      "lines": 6115,
+      "bytes": 51815,
+      "sha256": "f99f67ac3793e572545746a7343ea0e32669f765bd0849c47cdf2c1b91df6838",
+      "note": "Parameter names — what a hidden-parameter hunt actually needs.",
+      "from": [
+        "Discovery/Web-Content/burp-parameter-names.txt",
+        "Discovery/Web-Content/url-params_from-top-55-most-popular-apps.txt"
+      ],
+      "inBundle": true
+    },
+    "nova-subdomains-xl.txt": {
+      "kind": "hosts",
+      "lines": 150000,
+      "bytes": 1997427,
+      "sha256": "d4ef790ce3816d216a8b0b7e59955731ea45aaf20f395ccf61837c491a1908e8",
+      "note": "Subdomain labels for the fast C tools — 1.9MB, deliberately not in every bundle.",
+      "from": [
+        "Discovery/DNS/subdomains-top1million-110000.txt",
+        "Discovery/DNS/bitquark-subdomains-top100000.txt",
+        "Discovery/DNS/combined_subdomains.txt",
+        "Discovery/DNS/deepmagic.com-prefixes-top50000.txt",
+        "Discovery/DNS/services-names.txt",
+        "Discovery/DNS/fierce-hostlist.txt"
+      ],
+      "inBundle": false
+    }
+  },
+  "policy": {
+    "inBundle": [
+      "nova-paths.txt",
+      "paths-medium.txt",
+      "params-burp.txt",
+      "nova-paths-xl.txt",
+      "nova-vuln-xl.txt",
+      "nova-params-xl.txt"
+    ],
+    "remoteOnly": {
+      "nova-subdomains-xl.txt": {
+        "lines": 150000,
+        "bytes": 1997427,
+        "note": "1.9MB مش لازم تركب في كل حزمة — بتنجلب من المرآة بطلب، وsha256 إلزامي قبل الاستعمال"
+      }
+    },
+    "rule": "أي ملف بييجي من بره بيتحقّق من sha256 قبل ما يُستعمل؛ والمصدر اللي ماردّش بيتقال «ماردّش» مش «صفر نتائج». القايمة الكبيرة متعمّدش إنها تيجي وقت الإقلاع: المكنة وقعت مرتين (01:52Z و02:07Z) والتنزيل وقت الإقلاع هو السبب.",
+    "source": "danielmiessler/SecLists@master (codeload tarball،Sha256 في manifest) — ملف واحد جوه المستودع لأن المكنة ما تشوفش api.github.com (متقاس)"
+  },
+  "mirrors": {
+    "note": "تخزين مجاني عام للقرايات الكبيرة. أي ملف بيتقري منه لازم يطابق sha256 اللي هنا قبل ما يُستعمل — المستودع هو الحكم، والمرآة مجرد نقل.",
+    "drive": {
+      "folderId": "1iNEU1MWRZCArL11j4GUEQXnvsnZA4HtL",
+      "folderView": "https://drive.google.com/drive/folders/1iNEU1MWRZCArL11j4GUEQXnvsnZA4HtL",
+      "urlTemplate": "https://drive.usercontent.google.com/download?id={id}&export=download&confirm=t",
+      "uploadedAt": "2026-11-08T04:58:38Z",
+      "files": {
+        "nova-subdomains-xl.txt": "15I6WvH0DL4qNI9c3HV1G1luU2JEAh_-M",
+        "free-store.json": "1hIKqlxEVAlJotus5OMajMKuZpXsX_TV7"
+      }
+    },
+    "dropbox": {
+      "folder": "/nova-free-store",
+      "usedBytesAtUpload": 5194013,
+      "quotaBytes": 2147483648,
+      "uploadedAt": "2026-11-08T04:59:18Z",
+      "files": {
+        "nova-subdomains-xl.txt": "https://dl.dropboxusercontent.com/scl/fi/wpiucqr2mb09pxi1phjsn/nova-subdomains-xl.txt?rlkey=usglufkbbf554hfawrzv08x13",
+        "free-store.json": "__PENDING__"
+      }
+    },
+    "github": {
+      "note": "المستودع نفسه: ops/wordlists/ — الافتراضي لكل الملفات اللي inBundle:true",
+      "rawTemplate": "https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/ops/wordlists/{file}"
+    },
+    "verifiedFromAgentNetwork": {
+      "drive": "2026-11-08T04:59Z — GET رجع نفس الـJSON المرفوع (fetch_page عدّى الريديركت لـ drive.usercontent.google.com)",
+      "dropbox": "2026-11-08T05:00Z — GET رجع أول 250chunk من الملف (www/mail/ns2...) بحجم 1997427 بايت"
+    }
+  }
+}

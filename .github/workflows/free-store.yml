@@ -1,0 +1,56 @@
+name: 🪨 التخزين المجاني (قرايات NOVA · sha256 من المستودع)
+
+#ليه الـworkflow ده موجود:
+# المكنة سلوتها 1024MB قرص و460MB رام (متقاس من `GET /api/ops/tools → resources`)،
+# فملفات زي قايمة 150 ألف اسم نطاق (1.9MB) بتقع على Drive/Dropbox بدل ما تركب في كل
+# حزمة. المرآة دي بتتغيّر/بتتمسح/بتقع — فالوحيد اللي بيثبت إنها لسه نفس الملف هو البصمة.
+# الشغل ده لازم يتقاس من شبكة ليها نت كامل (الـsandbox مافيهاش)، وده بيحصل هنا:
+#   • `node scripts/check-free-store.mjs --live` بيجيب كل رابط معلن ويقارن sha256 والحجم.
+#   • لو مصدر ماردّش بيترفَع warning، ولو بصمة اختلفت الوظيفة كلها تفشل — لأن قايمة
+#     مغلوطة معناها نتائج غلط في صيد حقيقي، وده مش تفصيل.
+on:
+  push:
+    paths:
+      - "ops/wordlists/**"
+      - "scripts/check-free-store.mjs"
+      - "scripts/build-freelists.mjs"
+      - "artifacts/api-server/src/lib/ops/wordlist.ts"
+      - ".github/workflows/free-store.yml"
+  schedule:
+    - cron: "17 4 * * 3" # كل أربعاء — المرآة ممكن تموت من غير ما حد يلمس الكود
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: قرايات المستودع + كل مرآة معلنة
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: فحص الملفات المدمجة (من القرص، محسوبة)
+        run: node scripts/check-free-store.mjs
+
+      - name: فحص المرآات من شبكة فيها نت
+        run: node scripts/check-free-store.mjs --live
+
+      - name: لو فيه مشكلة في مرآة، تقولها بصوت عالي في السجل
+        if: failure()
+        run: |
+          echo "::error::مرآة معلنة في ops/wordlists/free-store.json مش مطابقة للمستودع — المكنة هترفض الملف (sha256)، بس اتصلحها أو اشيلها من القايمة."
+          node scripts/check-free-store.mjs --live 2>&1 | sed 's/^/· /' | head -40
+
+      - name: ملخص
+        if: always()
+        run: |
+          echo "### 🪨 التخزين المجاني" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          node scripts/check-free-store.mjs --live >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

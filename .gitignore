@@ -114,3 +114,6 @@ state/vuln-corpus/
 # بايتات بايثون بتتولد من سكريبتات deploy/
 __pycache__/
 *.pyc
+
+# ملفات توليد القرايات المؤقتة (scripts/build-freelists.mjs بدون --repo)
+/artifacts/freelists/

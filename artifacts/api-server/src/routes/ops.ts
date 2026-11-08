@@ -59,6 +59,7 @@ import {
   verifyFinding,
 } from "../lib/ops/runner";
 import { KIND_LIST, toolStatus } from "../lib/ops/tools";
+import { fetchList, listInventory, listSources, readFreeStore } from "../lib/ops/wordlist";
 import { provisionToolchain, toolchainStatus, VENDORABLE } from "../lib/ops/toolchain";
 import { checkGate, opsExposure } from "../lib/ops/gate";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
@@ -622,6 +623,40 @@ router.post("/ops/tools/provision", async (req: Request, res: Response) => {
   const rec = await provisionToolchain({ only: only.length ? only : undefined });
   broadcastEvent("nova-ops", { type: "toolchain", ok: rec.ok, installed: rec.installed, total: rec.total, ms: rec.ms });
   res.status(rec.ok ? 200 : 502).json({ ok: rec.ok, ran: rec.ran ?? false, record: rec, status: toolchainStatus() });
+});
+
+/* ── القرايات: إيه المدمج، إيه المنجلب، وإيه اللي ماجاش ────────────────────────
+ * التخزين المجاني (جيت هاب/درايف/دروبوكس) بقى جزء من التصميم لأن سلوت المكنة
+ * 1024MB و460MB رام (متقاس)، فملف 1.9MB مش من العقل إنه يركب في كل حزمة. والقراءة
+ * هنا مفتوحة زي `/api/ops/tools`: كل رقم فيها محسوب من القرص، والمرآات المُعلَنة
+ * بتتقال كأسماء — «مبنزّلهاش» مش «نزّلناها فاضية». */
+
+router.get("/ops/wordlists", (_req: Request, res: Response) => {
+  const inv = listInventory();
+  const store = readFreeStore();
+  res.json({
+    ok: true,
+    ...inv,
+    provenance: store?.source ?? null,
+    policy: store?.policy ?? null,
+    declared: store ? Object.keys(store.files || {}).map((n) => ({ name: n, sources: listSources(store, n).map((x) => x.provider) })) : [],
+    env: { NOVA_WORDLIST: process.env.NOVA_WORDLIST || null, NOVA_WORDLIST_SIZE: process.env.NOVA_WORDLIST_SIZE || null },
+  });
+});
+
+/**
+ * `POST /api/ops/wordlists/fetch {name?, timeoutMs?, maxBytes?}`
+ * بيجيب ملفًا من المرآة ويحقّق `sha256` المستودع **قبل** أي استعمال؛ الفشل بيرجّع
+ * سطر لكل مصدر. الكتابة دي شبكة على المكنة فهي ورا `NOVA_EXEC_TOKEN` زي provisioning.
+ */
+router.post("/ops/wordlists/fetch", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "تنزيل قايمة من التخزين المجاني = عملية شبكة على المكنة، فمحتاج NOVA_EXEC_TOKEN."); return; }
+  const name = String(req.body?.name || "nova-subdomains-xl.txt").trim();
+  const timeoutMs = Number(req.body?.timeoutMs) || undefined;
+  const maxBytes = Number(req.body?.maxBytes) || undefined;
+  const rec = await fetchList(name, { timeoutMs, maxBytes });
+  broadcastEvent("nova-ops", { type: "wordlist", name, verified: rec.verified, bytes: rec.bytes, source: rec.source });
+  res.status(rec.verified ? 200 : 502).json({ ok: rec.verified, record: rec, inventory: listInventory() });
 });
 
 export default router;

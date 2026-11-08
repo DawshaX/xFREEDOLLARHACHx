@@ -20,7 +20,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { resolveList, wordlistPath } from "./wordlist";
+import { paramsList, resolveList, wordlistPath } from "./wordlist";
 import {
   scanDns,
   scanHeaders,
@@ -1529,14 +1529,14 @@ export const KINDS: Record<string, KindDef> = {
     binary: "ffuf",
     installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only ffuf",
     budgetMs: 120_000,
-    args: (ctx) => ["-u", `${baseUrl(ctx)}/?FUZZ=1`, "-w", resolveList("params") || "/dev/null", "-t", "20", "-mc", "200,204,301,302,400,401,403,429", "-s", "-timeout", "8"],
-    command: (ctx) => `ffuf -u ${shQuote(`${baseUrl(ctx)}/?FUZZ=1`)} -w ${shQuote(resolveList("params") || "— مفيش قائمة بارامترات")} -t 20 -mc 200,400,401,403 -s`,
+    args: (ctx) => ["-u", `${baseUrl(ctx)}/?FUZZ=1`, "-w", paramsList() || "/dev/null", "-t", "20", "-mc", "200,204,301,302,400,401,403,429", "-s", "-timeout", "8"],
+    command: (ctx) => `ffuf -u ${shQuote(`${baseUrl(ctx)}/?FUZZ=1`)} -w ${shQuote(paramsList() || "— مفيش قائمة بارامترات")} -t 20 -mc 200,400,401,403 -s`,
     parse: (stdout, ctx) => {
       const names = [...stdout.matchAll(/^\/(\S+?)\s+\[Status: (\d+)/gm)].map((m) => ({ name: m[1], status: Number(m[2]) }));
       writeEvidence(ctx, "tools.parammine", `ffuf ?FUZZ ${baseUrl(ctx)}`, stdout);
       return {
         findings: [],
-        data: { params: names.length, sample: names.slice(0, 80), list: resolveList("params") || null },
+        data: { params: names.length, sample: names.slice(0, 80), list: paramsList() || null },
       };
     },
   },
