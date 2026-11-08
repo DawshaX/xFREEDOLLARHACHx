@@ -61,6 +61,7 @@ const STRUCTURAL_GATES = [
   ["scripts/audit-no-cjk-in-text.mjs", "no stray CJK in prompt-facing or operator-facing Arabic text"],
   ["scripts/ops-selftest.mjs", "scope gate, ops gate, throttle, evidence chain"],
   ["scripts/typecheck-ratchet.mjs", "no new type errors"],
+  ["scripts/check-mirror-coverage.mjs", "mirror coverage: وعد المكنة ⊆ ليستا الباني ⊆ المانيفست اللي اتنشر"],
 ];
 
 const gates = fast ? [...AGENT_GATES] : [...AGENT_GATES, ...STRUCTURAL_GATES];

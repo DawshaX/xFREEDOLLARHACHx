@@ -301,6 +301,30 @@ check("the vendorer caps the vendor dir size so it cannot eat the slot quota", (
   assert.match(vend, /dirMB\(INTO\)\s*>=\s*CAP_MB/);
 });
 
+// القياس اللي كشف الحادثة: أصول الريان اتحسبت 541 MB للـ16 أداة، والسقف
+// كان 500 — أي إن المرآة الكاملة كانت مستحيلة بالحساب، والغلط إن السقف كان
+// بيترفع في CI كمان وبيتحسب ok. السقف بقى 700، وCI بلا سقف، والحارس بيعدّ installed بس.
+check("the cap fits the promise, and CI runs without one", () => {
+  const vend2 = fs.readFileSync(path.join(ROOT, "scripts", "fetch-toolchain.mjs"), "utf8");
+  const m = /NOVA_VENDOR_MAX_MB \?\? (\d+)/.exec(vend2);
+  assert.ok(m && Number(m[1]) >= 700, `السقف الافتراضي ${m ? m[1] : "مقروءش"} — 16 أداة = 541 MB`);
+  const wf = fs.readFileSync(path.join(ROOT, ".github", "workflows", "toolchain-vendor.yml"), "utf8");
+  assert.match(wf, /NOVA_VENDOR_MAX_MB: "0"/, "CI لسه بيرفع السقف");
+  assert.match(wf, /status==="installed"\|\|r\.status==="repaired"/, "حارس الريان بيرضّي على skipped");
+});
+
+// حارس التغطية نفسه: لازم الـselftest بتاعه يعدّي، لأنه بيقرن مصدرين بيبانو
+// متفقين وهو بينكروا — «12/12 ✓» والمرآة فيها 12 والمكنة بتوعد بـ16.
+check("the mirror coverage gate agrees on all three sources (and its selftest is green)", () => {
+  const r = spawnSync(process.execPath, [path.join(ROOT, "scripts", "check-mirror-coverage.mjs"), "--selftest"], { encoding: "utf8" });
+  const m = /(\d+)\/(\d+) · تغطية المرآة/.exec(r.stdout || "");
+  assert.strictEqual(r.status, 0, `selftest خرج بـ${r.status}: ${(r.stdout || "") + (r.stderr || "")}`.slice(-260));
+  assert.ok(m && m[1] === m[2] && Number(m[1]) >= 7, `عدد الاختبارات: ${m ? m[0] : "مقروءش"}`);
+  const real = spawnSync(process.execPath, [path.join(ROOT, "scripts", "check-mirror-coverage.mjs")], { encoding: "utf8" });
+  assert.strictEqual(real.status, 0, `فحص المستودع الحقيقي طلع أحمر: ${(real.stdout || "").trim()}`.slice(-300));
+  assert.match(real.stdout, /وعد (\d+) · باني \1/, `الرقمين مش متطابقين: ${(real.stdout || "").trim()}`.slice(-260));
+});
+
 let bad = 0;
 for (const [name, ok, detail] of checks) {
   if (!ok) bad += 1;

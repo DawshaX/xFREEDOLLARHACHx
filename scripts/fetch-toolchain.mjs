@@ -513,7 +513,11 @@ async function main() {
   // المضيف (قِيس: 99798MB فاضي) فحارس «الفاضل» وحده ما كافيش — لو 16 أداة (296MB
   // مضغوطة، ~700MB بعد فك الضغط) دخلت على سلوت فيه 238MB بالفعل، المكنة بتقع تاني
   // من غير ما حد يفهم ليه. NOVA_VENDOR_MAX_MB=0 يلغي السقف.
-  const CAP_MB = Math.max(0, Number(process.env.NOVA_VENDOR_MAX_MB ?? 500) || 0);
+  // السقف ده protects the box's 1 GB slot — بس 500 كان بيخلي الوعد بـ16 أداة
+  // مستحيل (الـ16 مجموعهم 541 MB مقاسة من أصول الريان يوم 2026-11-08)، فاللي
+  // بييجي آخر الليستا كان بيتعلّم "skipped" والمرآة بتنشر 12 والريان أخضر.
+  // 700 = الـ16 + هامش ترقيمين. NOVA_VENDOR_MAX_MB=0 يلغي السقف.
+  const CAP_MB = Math.max(0, Number(process.env.NOVA_VENDOR_MAX_MB ?? 700) || 0);
   const dirMB = (p) => {
     let n = 0;
     try { for (const f of fs.readdirSync(p)) { try { n += fs.statSync(path.join(p, f)).size; } catch { /* ملف طار */ } } } catch { /* المجلد مش موجود */ }
@@ -522,7 +526,7 @@ async function main() {
   const results = [];
   for (const t of TOOLS) {
     if (CAP_MB > 0 && dirMB(INTO) >= CAP_MB) {
-      results.push({ bin: t.bin, status: "skipped", why: `سقف حجم vendor (${CAP_MB}MB) اتعدّى — NOVA_VENDOR_MAX_MB=0 يلغيه` });
+      results.push({ bin: t.bin, status: "skipped", why: `سقف حجم vendor (${CAP_MB}MB) اتعدّى — NOVA_VENDOR_MAX_MB=0 يلغيه (الريان لازم يلغيه)` });
       continue;
     }
     try { results.push(await fetchOne(t, manifest)); }

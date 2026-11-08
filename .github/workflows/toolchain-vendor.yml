@@ -75,10 +75,18 @@ jobs:
             // مرآة أنقص من الكاملة أخطر من مفيش مرآة: الأصل بيتنشر فوق نسخة كاملة، والمنزّل
             // بيرمي اللي مش في المانيفست لمسار api.github.com — وهو محجوب من الحاوية.
             // القياس: run f6dc9c7 نشر 7/12 والشريط فضل أخضر. بقى أحمر هنا.
-            if(d.ok !== d.total){console.log(`::error::المرآة ناقصة ${d.ok}/${d.total}: `+(d.results||[]).filter(r=>r.status==="failed").map(r=>r.bin+" ("+String(r.why||"").slice(0,60)+")").join(", ").slice(0,400));process.exit(1)}
+            // ok بيحسب "skipped" كمان (على المكنة معناها موجودة وتمام). هنا المجلد
+            // فاضي من الصفر، فأي skipped — سقف أو غيره — معناه مرآة أنقص من الوعد.
+            const done=(d.results||[]).filter(r=>r.status==="installed"||r.status==="repaired").length;
+            if(done!==d.total){console.log(`::error::المرآة ناقصة ${done}/${d.total} (ok=${d.ok}): `+(d.results||[]).filter(r=>r.status!=="installed"&&r.status!=="repaired").map(r=>r.bin+":"+r.status+" ("+String(r.why||"").slice(0,60)+")").join(", ").slice(0,400));process.exit(1)}
             console.log(`fetched ${d.ok}/${d.total}`)'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # السقف الافتراضي (700MB) صانَع عشان يحمي_slot_ اللي حجمه 1 جيجا على
+          # المكنة. الريان عنده 40 جيجا، والسقف هناك كان بيقصّ الليستا في النص:
+          # 12 أداة اتحزنت والباقي اتعلّم "skipped" — وهو بيحسب ok — فالشريط
+          # فضل أخضر على مرآة ناقصة. في CI السقف لازم يكون ملغيًا.
+          NOVA_VENDOR_MAX_MB: "0"
 
       - name: Pack the mirror (tar.gz + sha256 manifest)
         run: node scripts/build-toolchain-mirror.mjs --from out/vendor/bin --out out/mirror
