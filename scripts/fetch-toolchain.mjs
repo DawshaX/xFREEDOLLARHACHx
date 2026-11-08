@@ -465,8 +465,22 @@ async function main() {
     else rows.forEach((r) => log(`${r.present ? "✓" : "✗"} ${r.bin}${r.tag ? ` · ${r.tag}` : ""}`));
     return;
   }
+  // سقف حجم الـvendor. المكنة عليها كوتا قرص (السّلوت 1024MB) وstatfs بيقيس قرص
+  // المضيف (قِيس: 99798MB فاضي) فحارس «الفاضل» وحده ما كافيش — لو 16 أداة (296MB
+  // مضغوطة، ~700MB بعد فك الضغط) دخلت على سلوت فيه 238MB بالفعل، المكنة بتقع تاني
+  // من غير ما حد يفهم ليه. NOVA_VENDOR_MAX_MB=0 يلغي السقف.
+  const CAP_MB = Math.max(0, Number(process.env.NOVA_VENDOR_MAX_MB ?? 500) || 0);
+  const dirMB = (p) => {
+    let n = 0;
+    try { for (const f of fs.readdirSync(p)) { try { n += fs.statSync(path.join(p, f)).size; } catch { /* ملف طار */ } } } catch { /* المجلد مش موجود */ }
+    return Math.round(n / 1048576);
+  };
   const results = [];
   for (const t of TOOLS) {
+    if (CAP_MB > 0 && dirMB(INTO) >= CAP_MB) {
+      results.push({ bin: t.bin, status: "skipped", why: `سقف حجم vendor (${CAP_MB}MB) اتعدّى — NOVA_VENDOR_MAX_MB=0 يلغيه` });
+      continue;
+    }
     try { results.push(await fetchOne(t, manifest)); }
     catch (e) { results.push({ bin: t.bin, status: "failed", why: String(e?.message || e) }); }
     writeManifest(manifest); // keep progress durable: a slow tool must not lose the fast ones

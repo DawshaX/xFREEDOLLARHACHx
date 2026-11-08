@@ -455,6 +455,11 @@ if (role === "node" || role === "agent") {
    * التانية التطبيق بيخدم — والأداة اللي محتاجها المحرك تبقى موجودة قبل الإقلاع
    * الجاي. مفيش تعطيل لأول طلب، ومفيش إعادة تشغيل.
    */
+  // المحاولة الأولى بتحصل قبل ما أرشيف المرآة يخلص نشر أحيانًا (قِيس على
+  // المكنة الحيّة 2026-11-08 01:01:54Z: «المرآة ما وصلتش: HTTP 404» — والثانية
+  // 01:01:53Z كانت النشر نفسه). فالمكان ده بيعيد الناقص 3 مرات ب_backoff، وده
+  // بيخلّي «5 أدوات من 16» حالة مؤقتة مش قدر.
+  let toolchainTries = 0;
   const toolchainPass = () => {
     if (process.env.NOVA_TOOLCHAIN_AT_BOOT === "0") return;
     const root = String(process.env.NOVA_STATE_DIR || process.cwd());
@@ -498,6 +503,16 @@ if (role === "node" || role === "agent") {
       else console.log("[supervisor] toolchain pass: مفيش JSON (exit " + (signal || code) + ") — " + err.slice(0, 160).replace(/\\n/g, " "));
       const w = err.indexOf("::warning::");
       if (w >= 0) console.log("[toolchain] " + err.slice(w + 11, w + 260).split("\\n")[0]);
+      const total = doc ? Number(doc.total) : -1;
+      const okN = doc ? Number(doc.ok) : -1;
+      const missing = total > 0 ? total - okN : 1;
+      if (missing > 0 && toolchainTries < 3) {
+        const waitMin = [10, 30, 60][toolchainTries];
+        toolchainTries += 1;
+        console.log("[supervisor] فاضل " + missing + " أداة — هاعيد المحاولة بعد " + waitMin + " دقيقة (" + toolchainTries + "/3)");
+        const t2 = setTimeout(toolchainPass, waitMin * 60000);
+        if (t2.unref) t2.unref();
+      }
     });
   };
   // 25 ثانية: أول طلب والـhealth يخلّصوا الأول، وبعدين الشبكة.
