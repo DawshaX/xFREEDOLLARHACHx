@@ -325,6 +325,24 @@ check("the mirror coverage gate agrees on all three sources (and its selftest is
   assert.match(real.stdout, /وعد (\d+) · باني \1/, `الرقمين مش متطابقين: ${(real.stdout || "").trim()}`.slice(-260));
 });
 
+// «الأداة موجودة» و«الأداة بتتنفذ» حاجتين مختلفتين. القياس (state/verified-live.json
+// @ 05:44:25Z): /ops/kinds بيقول present، وكل مهام tools.* راجعة
+// «[self-node] subfinder exit=127 · 6ms» — لأن فرع الـfleet بيرمي اسم الأمر الخام
+// لـshell العقدة الذاتية، والعقدة الذاتية = نفس الجهاز بس PATH بتاعها مافيهوش vendor/bin.
+check("the fleet branch keeps the resolved vendor path, and 127 is named honestly", () => {
+  const src = fs.readFileSync(path.join(ROOT, "artifacts", "api-server", "src", "lib", "ops", "tools.ts"), "utf8");
+  const i = src.indexOf("if (ctx.agentId) {");
+  assert.ok(i > 0, "مفيش فرع fleet في تنفيذ الأنواع");
+  const pre = src.slice(Math.max(0, i - 1500), i);
+  assert.match(pre, /NOVA_SELF_NODE_ID \|\| "self-node"/, "مافيش حارس للعقدة الذاتية قبل قفزة الـfleet");
+  assert.match(pre, /abs !== bin/, "الحارس مش بيشترط إن المسار اتحل فعلًا (وإلا بنضيع الأداة التانية)");
+  assert.match(pre, /return await runLocal\(\)/, "العقدة الذاتية ما بتترجّعش للمسار المحلي");
+  const ag = src.slice(src.indexOf("const runOnAgent = async"), i);
+  assert.ok(ag.length > 200, "فرع runOnAgent مقروءش");
+  assert.match(ag, /exitCode === 127/, "127 على جهاز تاني بيعدّي صامت بدل ما يتسمّى");
+  assert.match(ag, /error: "tool-missing"/, "127 مش بيتحوّل لـtool-missing");
+});
+
 let bad = 0;
 for (const [name, ok, detail] of checks) {
   if (!ok) bad += 1;

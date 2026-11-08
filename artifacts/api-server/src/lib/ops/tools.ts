@@ -1686,6 +1686,17 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
     if (!out) {
       return { ok: false, summary: `الجهاز ${agentId} ماردّش على ${bin}`, findings: [], error: "agent-unreachable" };
     }
+    // 127 على جهاز تاني معناه الأداة مش منصّبة هناك — «0 نتيجة» لوحدها كانت
+    // بتبان كأن الفحص اتعمل ومافيش حاجة، وده أخطر سكوت ممكن يكون في ماسح.
+    if (out.exitCode === 127) {
+      return {
+        ok: false,
+        summary: `الأداة «${bin}» مش على الجهاز ${agentId} (exit=127). أمر التثبيت: ${kind.installHint ?? "/api/installer/tools"}`,
+        findings: [],
+        error: "tool-missing",
+        data: { exit: 127, command: display, agent: agentId },
+      };
+    }
     const parsed = kind.parse ? kind.parse(out.stdout, ctx) : { findings: [] };
     writeEvidence(ctx, `${kindId}.${agentId}`, display, out.stdout, out.exitCode);
     return {
@@ -1695,6 +1706,18 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
       data: { ...(parsed.data ?? {}), exit: out.exitCode, stderr: (out.stderr || "").slice(0, 2_000) },
     };
   };
+
+  // العقدة الذاتية = نفس الجهاز ونفس القرص، بس الأمر بيمرّ على shell مش عارف
+  // vendor/bin. القياس (state/verified-live.json @ 05:44:25Z): كل مهام tools.*
+  // رجّعت «[self-node] <bin> exit=127 · 4–7ms · 0 نتيجة» — أي إن الأداة كانت
+  // اتحلت بمسارها الحقيقي في `abs` (وسطحها /ops/kinds كـpresent)، بس الفرع ده
+  // بيرمي `display` الخام فيخسر المسار ويموت بـ127 قبل ما يبدأ. نفس الغلط اللي
+  // التعليق فوق حارس منه، بس على الفرع التاني.
+  const selfNodeId = process.env.NOVA_SELF_NODE_ID || "self-node";
+  if (ctx.agentId && ctx.agentId === selfNodeId && abs !== bin) {
+    ctx.log(`tools: «${bin}» اتحلت من ${path.dirname(abs)} — تنفيذ محلي بدل قفزة العقدة الذاتية`);
+    return await runLocal();
+  }
 
   if (ctx.agentId) {
     try {
