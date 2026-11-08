@@ -117,3 +117,6 @@ __pycache__/
 
 # ملفات توليد القرايات المؤقتة (scripts/build-freelists.mjs بدون --repo)
 /artifacts/freelists/
+
+# Dropbox connector download-cache — فيه ملفات env بأسرار، ممنوع تدخل الشجرة
+/dropbox/
