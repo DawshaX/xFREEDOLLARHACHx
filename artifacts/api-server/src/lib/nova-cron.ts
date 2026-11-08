@@ -21,12 +21,29 @@ const JOBS: CronJob[] = [
   { id: "nova_learn",      name: "Nova Auto-Learner",              cronExpr: "0 */6 * * *",  enabled: true, runCount: 0, errorCount: 0 },
 ];
 
+// المضيفات الضعيفة (القياس على حاوية Waifly: 0.4 CPU / ~460MB) مش لازم تجري بنفس
+// جدول رانر جيت هاب (2 نواة / 7GB مجانًا). شغل كتير بقى الـCI بيحسبه أرخص ويشاركه
+// — الكوربوس كل 30 دقيقة من vuln-corpus.yml مثلًا. `NOVA_CRON_OFF=cve_hunt,nova_learn`
+// بيقفل مهمة بالاسم من غير تعديل كود، والقيمة بتتقري وقت الإقلاع.
+const CRON_OFF = new Set(
+  String(process.env.NOVA_CRON_OFF || "").split(",").map((s) => s.trim()).filter(Boolean),
+);
+for (const job of JOBS) if (CRON_OFF.has(job.id)) job.enabled = false;
+
 const INTERVALS = new Map<string, ReturnType<typeof setInterval>>();
 
 // ── Job implementations ───────────────────────────────────────────────────────
 async function runJob(id: string): Promise<string> {
   switch (id) {
     case "cve_hunt": {
+      // NOVA_CVE_SOURCE=ci: الصيد يبقى استهلاك مش إنتاج. بدل جولات كل 5 دقايق على
+      // NVD/CISA/EDB/CIRCL (كانوا بياكلوا سقف الـCPU في حاوية صغيرة)، المكنة بتقرا
+      // فهرس المرآة الصغير وبتنزّل بس لما تكون فعلًا أجدد — الـCI هو صاحب البناء.
+      if (String(process.env.NOVA_CVE_SOURCE || "").trim().toLowerCase() === "ci") {
+        const { refreshCorpusFromRelease } = await import("./ops/vuln-corpus");
+        const r = await refreshCorpusFromRelease();
+        return `corpus-from-ci:${r.action} (${r.says_ar})`;
+      }
       const r = await runHunt();
       return `NVD:${r.nvdNew} CISA:${r.cisaNew} EDB:${r.edbNew} CIRCL:${r.circlNew} total:${r.totalNew}`;
     }
