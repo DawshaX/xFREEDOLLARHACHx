@@ -1,9 +1,9 @@
 {
-  "at": "2026-11-08T16:10:00.937Z",
+  "at": "2026-11-08T20:15:01.616Z",
   "seat": "openai",
   "thinking": {
-    "reply": "النتيجة الحالية: مفيش أي هجمات أو ثغرات محددة، التغطية بتاعت المنصة 61٪، وخطوات المسح اللي شغالة زي التعدين مابتوصلش لحد ما يطلع أي findings. بالخطوة الجاية هنشوف CVEs للمنتجات اللي في القاعدة، زي Chrome، عشان نطلعشن على أحدث الثغرات.",
-    "why": "توسيع البحث ليشمل منتج عالي الأهمية في الساحة وتحديث معرفة الثغرات الحالية",
+    "reply": "منصة الـNOVA الآن شغالة بتغطية 39.9% فقط، مع 11645 حالة حرجة، والجهد الجاي هو إثراء قاعدة ثغرات للـChrome",
+    "why": "التغطية قصيره، وأهم الحاجة ليها هو معرفة الثغرات الجديدة للمتصفح الشائع",
     "action": {
       "kind": "corpus_search",
       "arg": "chrome"
@@ -38,27 +38,27 @@
   "answered": null,
   "senses": {
     "corpus": {
-      "total": 258197,
-      "at": "2026-11-08T12:09:12.953Z",
-      "critical": 20221,
-      "high": 99719,
-      "kev": 748,
-      "coverage": 0.6132,
-      "nextStartIndex": 330047,
+      "total": 168018,
+      "at": "2026-11-08T18:03:42.938Z",
+      "critical": 11645,
+      "high": 67410,
+      "kev": 560,
+      "coverage": 0.3989,
+      "nextStartIndex": 378047,
       "newestYear": 2026,
       "topProducts": [
         "linux_kernel",
-        "chrome",
         "firefox",
+        "chrome",
+        "ubuntu_linux",
         "android",
-        "windows_server_2012",
-        "macos",
+        "debian_linux",
         "mac_os_x",
-        "iphone_os",
+        "flash_player",
         "safari",
-        "windows_10_22h2",
-        "windows_10_21h2",
-        "windows_10_1809"
+        "php",
+        "iphone_os",
+        "internet_explorer"
       ]
     },
     "hunt": {
@@ -366,7 +366,7 @@
     }
   },
   "failures": [],
-  "says_ar": "فكّرت على openai · النتيجة الحالية: مفيش أي هجمات أو ثغرات محددة، التغطية بتاعت المنصة 61٪، وخطوات المسح اللي شغالة زي التعدين مابتوصلش لحد ما يطلع أي findings. بالخطوة الجاية هنشوف CVEs للمنتجات الل",
+  "says_ar": "فكّرت على openai · منصة الـNOVA الآن شغالة بتغطية 39.9% فقط، مع 11645 حالة حرجة، والجهد الجاي هو إثراء قاعدة ثغرات للـChrome",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
