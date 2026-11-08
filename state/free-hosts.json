@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-07T17:44:09.837Z",
+  "at": "2026-11-08T05:54:59.576Z",
   "source": "engine:http://127.0.0.1:8080",
   "total": 14,
   "reachable": 14,
@@ -34,8 +34,8 @@
       "claim": null,
       "reachable": true,
       "status": 200,
-      "ms": 50,
-      "note": "ردّ HTTP 200 في 50ms",
+      "ms": 47,
+      "note": "ردّ HTTP 200 في 47ms",
       "probeUrl": "https://github.com/robots.txt"
     },
     {
@@ -52,8 +52,8 @@
       "claim": null,
       "reachable": true,
       "status": 200,
-      "ms": 554,
-      "note": "ردّ HTTP 200 في 554ms",
+      "ms": 460,
+      "note": "ردّ HTTP 200 في 460ms",
       "probeUrl": "https://waifly.com/robots.txt"
     },
     {
@@ -70,8 +70,8 @@
       "claim": "الخطة المجانية لسه موجودة: 750 ساعة/شهر، بس الـbandwidth اتقصّف لـ5GB في أبريل 2026 وخدمة الويب المجانية بتنام بعد 15 دقيقة (صحوتها ~دقيقة). متحقق من شاشة New W",
       "reachable": true,
       "status": 200,
-      "ms": 156,
-      "note": "ردّ HTTP 200 في 156ms",
+      "ms": 168,
+      "note": "ردّ HTTP 200 في 168ms",
       "probeUrl": "https://render.com/robots.txt"
     },
     {
@@ -88,8 +88,8 @@
       "claim": null,
       "reachable": true,
       "status": 200,
-      "ms": 186,
-      "note": "ردّ HTTP 200 في 186ms",
+      "ms": 537,
+      "note": "ردّ HTTP 200 في 537ms",
       "probeUrl": "https://zeabur.com/robots.txt"
     },
     {
@@ -106,8 +106,8 @@
       "claim": null,
       "reachable": true,
       "status": 200,
-      "ms": 504,
-      "note": "ردّ HTTP 200 في 504ms",
+      "ms": 609,
+      "note": "ردّ HTTP 200 في 609ms",
       "probeUrl": "https://back4app.com/robots.txt"
     },
     {
@@ -124,8 +124,8 @@
       "claim": null,
       "reachable": true,
       "status": 200,
-      "ms": 300,
-      "note": "ردّ HTTP 200 في 300ms",
+      "ms": 255,
+      "note": "ردّ HTTP 200 في 255ms",
       "probeUrl": "https://snapdeploy.dev/robots.txt"
     },
     {
@@ -142,8 +142,8 @@
       "claim": null,
       "reachable": true,
       "status": 200,
-      "ms": 241,
-      "note": "ردّ HTTP 200 في 241ms",
+      "ms": 320,
+      "note": "ردّ HTTP 200 في 320ms",
       "probeUrl": "https://bonto.dev/robots.txt"
     },
     {
@@ -160,8 +160,8 @@
       "claim": "مقارنة مضيفين مجانية (نشر أكتوبر 2026) بتقول: Always Free Arm لحد 2 OCPU/12 جيجا أو اتنين AMD micro (1 جيجا) + 200 جيجا ديسك، بطاقة للائتمان وقت التسجيل، و«idle",
       "reachable": true,
       "status": 200,
-      "ms": 294,
-      "note": "ردّ HTTP 200 في 294ms",
+      "ms": 258,
+      "note": "ردّ HTTP 200 في 258ms",
       "probeUrl": "https://www.oracle.com/robots.txt"
     },
     {
@@ -178,8 +178,8 @@
       "claim": null,
       "reachable": true,
       "status": 200,
-      "ms": 719,
-      "note": "ردّ HTTP 200 في 719ms",
+      "ms": 565,
+      "note": "ردّ HTTP 200 في 565ms",
       "probeUrl": "https://www.koyeb.com/robots.txt"
     },
     {
@@ -196,8 +196,8 @@
       "claim": null,
       "reachable": true,
       "status": 200,
-      "ms": 419,
-      "note": "ردّ HTTP 200 في 419ms",
+      "ms": 569,
+      "note": "ردّ HTTP 200 في 569ms",
       "probeUrl": "https://workers.cloudflare.com/robots.txt"
     },
     {
@@ -214,8 +214,8 @@
       "claim": "صفحة أكتوبر 2026: تسجيل ببريد بس (مفيش كارت/PayPal/تليفون)، Ubuntu 24.04 / Debian 12 / AlmaLinux 9 أو Windows، 3 ريجيونز US/Frankfurt/Singapore، و«No fixed end ",
       "reachable": true,
       "status": 200,
-      "ms": 517,
-      "note": "ردّ HTTP 200 في 517ms",
+      "ms": 732,
+      "note": "ردّ HTTP 200 في 732ms",
       "probeUrl": "https://gratisvps.net/robots.txt"
     },
     {
@@ -232,8 +232,8 @@
       "claim": "الموقع (2026): الطالب بريد `.edu` بيوافق فورًا، والمطور بمراجعة GitHub/Portfolio — يعني حسابك على GitHub هو مفتاحك، ومفيش بطاقة",
       "reachable": true,
       "status": 200,
-      "ms": 824,
-      "note": "ردّ HTTP 200 في 824ms",
+      "ms": 658,
+      "note": "ردّ HTTP 200 في 658ms",
       "probeUrl": "https://freevps.edu.pl/robots.txt"
     },
     {
@@ -250,8 +250,8 @@
       "claim": "صفحتهم (نوفمبر 2026): بلا كارت، بلا تجديد، Node/Python/Bun، قواعد بيانات مجانية. الاستثناء الوحيد: سيرفر مااتستخدموش في أول 7 أيام بيتشيل بعد إيميل تحذير. Trust",
       "reachable": true,
       "status": 200,
-      "ms": 612,
-      "note": "ردّ HTTP 200 في 612ms",
+      "ms": 499,
+      "note": "ردّ HTTP 200 في 499ms",
       "probeUrl": "https://sillydev.co.uk/robots.txt"
     },
     {
@@ -268,8 +268,8 @@
       "claim": "مقارنات 2026 بتسمّيه الاستثناء الحقيقي على قاعدة «كل كرِدِت محتاج بطاقة»: التحقق ببريد جامعة بس، و«Zero credit or debit card details required» مع root وIPv4 مخص",
       "reachable": true,
       "status": 200,
-      "ms": 384,
-      "note": "ردّ HTTP 200 في 384ms",
+      "ms": 504,
+      "note": "ردّ HTTP 200 في 504ms",
       "probeUrl": "https://azure.microsoft.com/robots.txt"
     }
   ]
