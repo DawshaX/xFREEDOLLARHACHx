@@ -1,13 +1,13 @@
 {
   "measured": true,
-  "at": "2026-11-07T23:52:53.039Z",
-  "total": 258047,
+  "at": "2026-11-08T05:27:30.723Z",
+  "total": 258173,
   "bySeverity": {
-    "high": 99681,
-    "medium": 114805,
-    "low": 12305,
+    "high": 99718,
+    "medium": 114871,
+    "low": 12324,
     "unknown": 10971,
-    "critical": 20217,
+    "critical": 20221,
     "none": 68
   },
   "kev": 748,
@@ -253,23 +253,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2025-34028",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "The Commvault Command Center Innovation Release allows an unauthenticated actor to upload ZIP files that represent install packages that, when expanded by the target server, are vulnerable to path traversal vulnerability that can result in Remote Code Executio",
-      "cwe": [
-        "CWE-22",
-        "CWE-306"
-      ],
-      "kev": true,
-      "epss": 0.97604,
-      "pub": "2025-04-22T17:16:48.027",
-      "products": [
-        "commvault"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2025-20281",
       "cvss": 10,
       "sev": "critical",
@@ -284,6 +267,23 @@
         "identity_services_engine",
         "identity_services_engine",
         "identity_services_engine_passive_identity_connector"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2025-34028",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "The Commvault Command Center Innovation Release allows an unauthenticated actor to upload ZIP files that represent install packages that, when expanded by the target server, are vulnerable to path traversal vulnerability that can result in Remote Code Executio",
+      "cwe": [
+        "CWE-22",
+        "CWE-306"
+      ],
+      "kev": true,
+      "epss": 0.97555,
+      "pub": "2025-04-22T17:16:48.027",
+      "products": [
+        "commvault"
       ],
       "refs": []
     },
@@ -461,22 +461,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2025-54253",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "Adobe Experience Manager versions 6.5.23 and earlier are affected by a Misconfiguration vulnerability that could result in arbitrary code execution. An attacker could leverage this vulnerability to bypass security mechanisms and execute code. Exploitation of t",
-      "cwe": [
-        "CWE-863"
-      ],
-      "kev": true,
-      "epss": 0.8877,
-      "pub": "2025-08-05T17:15:29.283",
-      "products": [
-        "experience_manager_forms"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2026-20079",
       "cvss": 10,
       "sev": "critical",
@@ -559,6 +543,22 @@
       "products": [
         "cloud_backup_suite",
         "cloud_backup_suite"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2025-54253",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "Adobe Experience Manager versions 6.5.23 and earlier are affected by a Misconfiguration vulnerability that could result in arbitrary code execution. An attacker could leverage this vulnerability to bypass security mechanisms and execute code. Exploitation of t",
+      "cwe": [
+        "CWE-863"
+      ],
+      "kev": true,
+      "epss": 0.80848,
+      "pub": "2025-08-05T17:15:29.283",
+      "products": [
+        "experience_manager_forms"
       ],
       "refs": []
     },
@@ -1129,24 +1129,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2025-53770",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Deserialization of untrusted data in on-premises Microsoft SharePoint Server allows an unauthorized attacker to execute code over a network.\nMicrosoft is aware that an exploit for CVE-2025-53770 exists in the wild.\nMicrosoft is preparing and fully testing a co",
-      "cwe": [
-        "CWE-502"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2025-07-20T01:15:30.777",
-      "products": [
-        "sharepoint_server",
-        "sharepoint_server",
-        "sharepoint_server"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2026-109618",
       "cvss": 9.8,
       "sev": "critical",
@@ -1182,6 +1164,24 @@
         "virtual_traffic_manager",
         "virtual_traffic_manager",
         "virtual_traffic_manager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2025-53770",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Deserialization of untrusted data in on-premises Microsoft SharePoint Server allows an unauthorized attacker to execute code over a network.\nMicrosoft is aware that an exploit for CVE-2025-53770 exists in the wild.\nMicrosoft is preparing and fully testing a co",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2025-07-20T01:15:30.777",
+      "products": [
+        "sharepoint_server",
+        "sharepoint_server",
+        "sharepoint_server"
       ],
       "refs": []
     },
@@ -1240,23 +1240,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2025-3248",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Langflow versions prior to 1.3.0 are susceptible to code injection in \nthe /api/v1/validate/code endpoint. A remote and unauthenticated attacker can send crafted HTTP requests to execute arbitrary\ncode.",
-      "cwe": [
-        "CWE-306",
-        "CWE-94"
-      ],
-      "kev": true,
-      "epss": 0.99993,
-      "pub": "2025-04-07T15:15:44.897",
-      "products": [
-        "langflow"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2024-13159",
       "cvss": 9.8,
       "sev": "critical",
@@ -1271,6 +1254,23 @@
         "endpoint_manager",
         "endpoint_manager",
         "endpoint_manager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2025-3248",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Langflow versions prior to 1.3.0 are susceptible to code injection in \nthe /api/v1/validate/code endpoint. A remote and unauthenticated attacker can send crafted HTTP requests to execute arbitrary\ncode.",
+      "cwe": [
+        "CWE-306",
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.99993,
+      "pub": "2025-04-07T15:15:44.897",
+      "products": [
+        "langflow"
       ],
       "refs": []
     },
@@ -4509,7 +4509,7 @@
         "CWE-78"
       ],
       "kev": true,
-      "epss": 0.25402,
+      "epss": 0.32872,
       "pub": "2025-08-05T13:15:28.487",
       "products": [
         "apex_one"
@@ -4560,7 +4560,7 @@
         "CWE-611"
       ],
       "kev": true,
-      "epss": 0.64726,
+      "epss": 0.65227,
       "pub": "2025-05-07T15:15:57.573",
       "products": [
         "sysaid"
@@ -4612,7 +4612,7 @@
         "CWE-611"
       ],
       "kev": true,
-      "epss": 0.42612,
+      "epss": 0.43173,
       "pub": "2025-05-07T15:15:57.447",
       "products": [
         "sysaid"
@@ -4929,25 +4929,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2025-22457",
-      "cvss": 9,
-      "sev": "critical",
-      "desc": "A stack-based buffer overflow in Ivanti Connect Secure before version 22.7R2.6, Ivanti Policy Secure before version 22.7R1.4, and Ivanti ZTA Gateways before version 22.8R2.2 allows a remote unauthenticated attacker to achieve remote code execution.",
-      "cwe": [
-        "CWE-121",
-        "CWE-787"
-      ],
-      "kev": true,
-      "epss": 0.99981,
-      "pub": "2025-04-03T16:15:35.370",
-      "products": [
-        "connect_secure",
-        "connect_secure",
-        "policy_secure"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2025-0282",
       "cvss": 9,
       "sev": "critical",
@@ -4962,6 +4943,25 @@
       "products": [
         "connect_secure",
         "neurons_for_zero-trust_access",
+        "policy_secure"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2025-22457",
+      "cvss": 9,
+      "sev": "critical",
+      "desc": "A stack-based buffer overflow in Ivanti Connect Secure before version 22.7R2.6, Ivanti Policy Secure before version 22.7R1.4, and Ivanti ZTA Gateways before version 22.8R2.2 allows a remote unauthenticated attacker to achieve remote code execution.",
+      "cwe": [
+        "CWE-121",
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.99981,
+      "pub": "2025-04-03T16:15:35.370",
+      "products": [
+        "connect_secure",
+        "connect_secure",
         "policy_secure"
       ],
       "refs": []
@@ -5392,7 +5392,7 @@
         "CWE-73"
       ],
       "kev": true,
-      "epss": 0.87015,
+      "epss": 0.87135,
       "pub": "2025-06-10T17:22:18.853",
       "products": [
         "windows_10_1507",
@@ -5499,7 +5499,7 @@
         "CWE-284"
       ],
       "kev": true,
-      "epss": 0.82699,
+      "epss": 0.82829,
       "pub": "2025-06-10T17:23:02.967",
       "products": [
         "windows_10_1507",
@@ -12714,7 +12714,7 @@
         "CWE-472"
       ],
       "kev": true,
-      "epss": 0.01349,
+      "epss": 0.01373,
       "pub": "2025-05-07T23:15:54.103",
       "products": [
         "craft_cms",
@@ -13937,5 +13937,5 @@
       "refs": []
     }
   ],
-  "says_ar": "258047 ثغرة حقيقية من NVD · 748 مستغلّة فعلياً (KEV) · 43712 منتج · مزامنة 2026-11-07T23:52:53.039Z"
+  "says_ar": "258173 ثغرة حقيقية من NVD · 748 مستغلّة فعلياً (KEV) · 43712 منتج · مزامنة 2026-11-08T05:27:30.723Z"
 }
