@@ -48,7 +48,9 @@ export const DEFAULT_IGNORE = [
 ];
 
 const git = (cwd, args, opts = {}) =>
-  execFileSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, ...opts }).trim();
+  // execFileSync بيرجّع null لما stdio يكون inherit — والـtrim على null كان بيخلّي
+  // الأمر يفشل AFTER ما ينجح: «✗» بعد دفع سليم أكذب من صفر.
+  String(execFileSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, ...opts }) ?? "").trim();
 
 const ignorePatterns = (extra) => [...DEFAULT_IGNORE, ...(extra || []).map((p) => new RegExp(p))];
 const ignored = (rel, pats) => pats.some((re) => re.test(rel));
