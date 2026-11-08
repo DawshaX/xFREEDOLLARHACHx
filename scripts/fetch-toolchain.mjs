@@ -281,18 +281,55 @@ async function loadMirror() {
     mirrorIndex = { error: "المانيفست مش مقروء" };
     return mirrorIndex;
   }
-  const arc = path.join(tmp, doc.archive);
-  log(`↓ مرآة: ${doc.archive} (${(Number(doc.archiveBytes || 0) / 1e6).toFixed(0)} MB) — ${doc.builtAt || "نسخة بلا تاريخ"}`);
-  const dl = await downloadStream(`${MIRROR}/${doc.archive}`, arc, { timeoutMs: 600_000, maxBytes: MIRROR_MAX_BYTES });
-  if (!dl.ok) { fs.rmSync(tmp, { recursive: true, force: true }); mirrorIndex = { error: `تنزيل الأرشيف: ${dl.why}` }; return mirrorIndex; }
-  // الختم قبل الفك: أرشيف من إصدار قديم أو ملف مقطوع لازم يرفض، مش يتفك على عميان.
-  if (doc.archiveSha256 && dl.sha256 && dl.sha256 !== doc.archiveSha256) {
-    fs.rmSync(tmp, { recursive: true, force: true });
-    mirrorIndex = { error: `ختم الأرشيف مش مطابق (${dl.sha256.slice(0, 12)}… ≠ ${doc.archiveSha256.slice(0, 12)}…)` };
-    return mirrorIndex;
-  }
-  mirrorIndex = { doc, arc, tmp, byBin: new Map(doc.tools.map((t) => [t.bin, t])) };
+  // الأرشيف مابقاش بيتنزّل مع الفهرس: القياس على المكنة الحيّة 2026-11-08T01:42Z
+  // قال 5 أدوات موجودة و11 ناقصة — كان بيتنزّل 296MB على سلوت 1024MB عشان أداة.
+  // كل أداة ليها أصل لوحها (`bin-<اسم>`) في نفس الإصدار، والأرشيف بقى الاحتياطي.
+  mirrorIndex = { doc, arc: null, arcErr: null, tmp, byBin: new Map(doc.tools.map((t) => [t.bin, t])) };
   return mirrorIndex;
+}
+
+/** تنزيل الأرشيف الكامل — بس اللي ماحدش من الأصول الفردية غطّاه. */
+async function ensureArchive(idx) {
+  if (idx.arc) return { ok: true };
+  if (idx.arcErr) return { ok: false, why: idx.arcErr };
+  const arc = path.join(idx.tmp, idx.doc.archive);
+  log(`↓ مرآة: الأرشيف الكامل ${idx.doc.archive} (${(Number(idx.doc.archiveBytes || 0) / 1e6).toFixed(0)} MB) — ${idx.doc.builtAt || "نسخة بلا تاريخ"}`);
+  const dl = await downloadStream(`${MIRROR}/${idx.doc.archive}`, arc, { timeoutMs: 600_000, maxBytes: MIRROR_MAX_BYTES });
+  if (!dl.ok) { idx.arcErr = `تنزيل الأرشيف: ${dl.why}`; return { ok: false, why: idx.arcErr }; }
+  // الختم قبل الفك: أرشيف من إصدار قديم أو ملف مقطوع لازم يرفض، مش يتفك على عميان.
+  if (idx.doc.archiveSha256 && dl.sha256 && dl.sha256 !== idx.doc.archiveSha256) {
+    idx.arcErr = `ختم الأرشيف مش مطابق (${dl.sha256.slice(0, 12)}… ≠ ${idx.doc.archiveSha256.slice(0, 12)}…)`;
+    return { ok: false, why: idx.arcErr };
+  }
+  idx.arc = arc;
+  return { ok: true };
+}
+
+/**
+ * أصل مفرد لكل أداة: `bin-<bin>` في نفس إصدار المرآة. البصمة والحجم من المانيفست —
+ * فملف مقطوع أو متغيّر يرفض هنا، مش يتفك على عميان زي الأرشيف.
+ */
+async function assetFromMirror(idx, bin, entry, dest) {
+  if (String(process.env.NOVA_TOOLCHAIN_ASSETS || "") === "0") return { ok: false, why: "أصول الأدوات الفردية متقفلة (NOVA_TOOLCHAIN_ASSETS=0)" };
+  if (!entry || !entry.asset) return { ok: false, why: "مفيش أصل مفرد للعضوة دي في المانيفست" };
+  const want = Number(entry.bytes) || 0;
+  const cap = Math.max(8 * 1048576, Math.min(MIRROR_MAX_BYTES, want ? want * 2 + 4 * 1048576 : 128 * 1048576));
+  const tmp = path.join(idx.tmp, `dl-${bin}-${process.pid}`);
+  const got = await downloadStream(`${MIRROR}/${entry.asset}`, tmp, { timeoutMs: 300_000, maxBytes: cap });
+  if (!got.ok) { try { fs.rmSync(tmp, { force: true }); } catch { /* مافيش حاجة تتمسح */ } return { ok: false, why: `الأرجل ${entry.asset}: ${got.why}` }; }
+  if (entry.sha256 && got.sha256 && got.sha256 !== entry.sha256) {
+    try { fs.rmSync(tmp, { force: true }); } catch { /* زي ما هي */ }
+    return { ok: false, why: `بصمة ${entry.asset} مشطابقة (${got.sha256.slice(0, 12)}… ≠ ${entry.sha256.slice(0, 12)}…) — المرجع اتمسح أو لأ` };
+  }
+  if (want && got.bytes && got.bytes !== want) {
+    try { fs.rmSync(tmp, { force: true }); } catch { /* زي ما هي */ }
+    return { ok: false, why: `حجم ${entry.asset} ${got.bytes} مش ${want} بتاع المانيفست` };
+  }
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(tmp, dest);
+  fs.chmodSync(dest, 0o755);
+  try { fs.rmSync(tmp, { force: true }); } catch { /* تنظيف وبس */ }
+  return { ok: true, source: "asset", bytes: got.bytes };
 }
 
 /**
@@ -427,8 +464,15 @@ async function tryMirror(tool, manifest) {
   const entry = idx.byBin.get(tool.bin);
   if (!entry) return null; // مش في مرآتنا —سيبه لمسار المنبع
   const dest = path.join(INTO, tool.bin);
-  const ex = await extractFromMirror(idx, tool.bin, dest);
-  if (!ex.ok) return { bin: tool.bin, status: "failed", tag: entry.tag, why: ex.why };
+  // الأصل المفرد الأول (٣٠-٧٠MB)، والأرشيف الكامل يبقى الاحتياطي — القياس على
+  // المكنة: 5 أدوات موجودة و11 ناقصة، والمسار القديم كان بيجر 296MB في الحالتين.
+  let ex = await assetFromMirror(idx, tool.bin, entry, dest);
+  if (!ex.ok) {
+    const arc = await ensureArchive(idx);
+    if (!arc.ok) return { bin: tool.bin, status: "failed", tag: entry.tag, why: `${ex.why} — والأرشيف كمان: ${arc.why}` };
+    ex = await extractFromMirror(idx, tool.bin, dest);
+    if (!ex.ok) return { bin: tool.bin, status: "failed", tag: entry.tag, why: ex.why };
+  }
   if (entry.sha256) {
     let got = null;
     try {
@@ -451,9 +495,9 @@ async function tryMirror(tool, manifest) {
     fs.rmSync(dest, { force: true });
     return { bin: tool.bin, status: "failed", tag: entry.tag, why: `اختبار النسخة مامرّش بعد التنزيل من المرآة (exit ${smoke.code})` };
   }
-  manifest[tool.bin] = { tag: entry.tag ?? null, at: new Date().toISOString(), version: line.slice(0, 120), path: dest, source: "mirror" };
+  manifest[tool.bin] = { tag: entry.tag ?? null, at: new Date().toISOString(), version: line.slice(0, 120), path: dest, source: ex.source || "mirror-archive" };
   log(`✓ ${tool.bin} → ${line.slice(0, 90)} (مرآة)`);
-  return { bin: tool.bin, status: "installed", tag: entry.tag ?? null, version: line.slice(0, 120), source: "mirror" };
+  return { bin: tool.bin, status: "installed", tag: entry.tag ?? null, version: line.slice(0, 120), source: ex.source || "mirror-archive" };
 }
 
 async function main() {

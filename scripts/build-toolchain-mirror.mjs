@@ -103,6 +103,26 @@ function main() {
     archiveSha256: arc.hash,
     tools,
   };
+  // أصل مفرد لكل أداة (`bin-<bin>`): القياس على المكنة 2026-11-08T01:42Z قال
+  // «5 موجودة و11 ناقصة» — مافيش مبرر نجرّ 296MB عشان نكمّل واحدة. التخزين على
+  // جيت هاب مجاني، فالمساحة دي مش مشكلة: نفس البايتات بتتبعت مرتين (الأرشيف للاختيار
+  // الكامل، والأصل المفرد للّقطة اللي محتاجة أداة واحدة).
+  for (const t of doc.tools) {
+    const src = path.join(stage, "bin", t.bin);
+    const dst = path.join(OUT, `bin-${t.bin}`);
+    if (!fs.existsSync(src)) continue;
+    try { if (fs.existsSync(dst)) fs.rmSync(dst, { force: true }); } catch { /* استمر */ }
+    try { fs.linkSync(src, dst); } catch { fs.copyFileSync(src, dst); }
+    t.asset = `bin-${t.bin}`;
+    t.assetUrl = `${String(process.env.NOVA_MIRROR_RELEASE_URL || "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-toolchain")}/${t.asset}`;
+  }
+  const withAsset = doc.tools.filter((t) => t.asset).length;
+  if (!withAsset) {
+    // صمت بلا أصول = المكنة ترجع تجرّ الأرشيف الكامل، وده اللي بنصلحه. يفشل بصوت عالي.
+    console.log(`::error::ولا أصل مفرد اتكتب في ${OUT} — مسار الترتيب اتكسر (مرحلة ${stage})`);
+    process.exit(1);
+  }
+  console.log(`✓ أصول مفردة: ${withAsset}/${doc.tools.length} · ${(doc.archiveBytes / 1e6).toFixed(0)} MB في الأرشيف الاحتياطي`);
   fs.writeFileSync(path.join(OUT, `${NAME}.json`), JSON.stringify(doc, null, 2) + "\n");
 
   // NOTES.md بيكتب نفسه جوه الـrelease، فأي حد يفتح Releases يشوف الإصدارات
@@ -117,6 +137,7 @@ function main() {
     `بتتستهلك من \`${path.basename(archive)}\` عن طريق \`scripts/fetch-toolchain.mjs\` (المِرر بيتحقق من الختم وبيعمل \`-version\` لكل ملف).`,
     doc.runUrl ? `البناء: ${doc.runUrl}` : "",
   ].filter(Boolean);
+  lines.splice(1, 0, "", `كل أداة ليها أصل لوحها (${withAsset} أصل): \`bin-<اسم الأداة>\` — والمكنة بتجيب اللي ناقصها بس، بحجمه وبصمته من المانيفست، من غير ما تنزّل الأرشيف الكامل (${(doc.archiveBytes / 1e6).toFixed(0)} MB).`);
   fs.writeFileSync(path.join(OUT, "NOTES.md"), lines.join("\n") + "\n");
 
   fs.rmSync(stage, { recursive: true, force: true });

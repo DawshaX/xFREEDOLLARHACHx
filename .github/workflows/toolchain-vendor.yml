@@ -116,9 +116,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nova-toolchain
-          name: "NOVA — مرآة الأدوات (Kali static linux/amd64)"
+          name: "NOVA — مرآة الأدوات (Kali static linux/amd64 · أصل لكل أداة)"
           body_path: out/mirror/NOTES.md
           make_latest: false
           files: |
             out/mirror/nova-toolchain.tar.gz
             out/mirror/nova-toolchain.json
+            out/mirror/bin-*

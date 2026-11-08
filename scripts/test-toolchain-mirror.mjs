@@ -92,6 +92,34 @@ check("the tags come from the vendorer manifest, not from a typed list", () => {
   assert.equal(amass.version, "amass version 4.2.0");
 });
 
+check("every tool also ships as its own asset, so the box stops dragging 296MB", () => {
+  for (const bin of ["amass", "naabu"]) {
+    const x = man.tools.find((y) => y.bin === bin);
+    assert.equal(x.asset, `bin-${bin}`, `${bin}: مفيش أصل مفرد في المانيفست`);
+    const p = path.join(dist, `bin-${bin}`);
+    assert.equal(fs.statSync(p).size, x.bytes, `${bin}: الأصل المفرد مش بنفس الحجم`);
+    const real = crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+    assert.equal(real, x.sha256, `${bin}: الأصل المفرد مش نفس بايتات الأرشيف`);
+    assert.ok(typeof x.assetUrl === "string" && x.assetUrl.endsWith(`bin-${bin}`), `${bin}: مفيش رابط جاهز`);
+  }
+});
+
+check("the vendorer tries the per-tool asset before the full archive", () => {
+  const vend = fs.readFileSync(path.join(ROOT, "scripts/fetch-toolchain.mjs"), "utf8");
+  const load = vend.slice(vend.indexOf("async function loadMirror"), vend.indexOf("async function ensureArchive"));
+  assert.ok(load.length > 40 && !/downloadStream\(`\$\{MIRROR\}\/\$\{doc\.archive\}`/.test(load),
+    "فهرس المرآة لسه بينزّل الأرشيف بالكامل قبل ما يعرف إيه الناقص");
+  // `fetchOne` متعرّف قبل `tryMirror` في الملف — فقصّ «لحد fetchOne» كان يطلع فاضي
+  // والبوابة تفشل على نفسها مش على الكود. القصّة الصح: للدالة اللي بعد tryMirror.
+  const tIdx = vend.indexOf("async function tryMirror");
+  const nxt = vend.indexOf("\nasync function ", tIdx + 10);
+  const tryM = vend.slice(tIdx, nxt > 0 ? nxt : undefined);
+  assert.ok(tryM.length > 200, "قصّة tryMirror فاضية — البوابة بتقيس نفسها");
+  assert.match(tryM, /await assetFromMirror\(idx, tool\.bin, entry, dest\)/);
+  assert.ok(tryM.indexOf("assetFromMirror") < tryM.indexOf("ensureArchive"), "الأصل المفرد لازم يتجرّب الأول");
+  assert.match(tryM, /status: "failed"[^\n]*الأرشيف كمان/, "لو الاتنين فشلوا لازم السببين يظهروا");
+});
+
 /* ── 2 · the extraction command the box runs must find the members ──────── */
 const out = path.join(work, "extract");
 fs.mkdirSync(out, { recursive: true });
