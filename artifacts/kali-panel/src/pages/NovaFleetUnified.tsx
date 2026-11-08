@@ -29,7 +29,7 @@ import { NovaMissions } from "@/components/desktop/NovaMissions";
 import { NovaToolbox } from "@/components/desktop/NovaToolbox";
 import { missionStats, onMissionsChange } from "@/lib/mission-store";
 import { useEffect as useEffectM, useState as useStateM } from "react";
-import { NovaLiveBar, useNovaLive } from "@/components/desktop/NovaFleetLive";
+import { NovaLiveBar, useNovaLive, NovaOpsFeed } from "@/components/desktop/NovaFleetLive";
 import { NovaAwarenessCard, NovaHuntSurface, NovaOpsRoom } from "@/components/desktop/NovaBrainOps";
 
 const API = "/api";
@@ -542,6 +542,7 @@ export default function NovaFleetUnified() {
 
       {view === "ops" && (
         <>
+          <NovaOpsFeed />
           <NovaOpsRoom />
           <NovaHuntSurface />
         </>

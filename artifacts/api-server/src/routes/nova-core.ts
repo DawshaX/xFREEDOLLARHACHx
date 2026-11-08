@@ -43,7 +43,7 @@ import { CAPABILITIES, capabilityPromptLine } from "../lib/agent/capabilities";
 import { claimCommands, uiQueueStats } from "../lib/agent/ui-bridge";
 import { logger } from "../lib/logger";
 
-import { requireOps } from "../lib/ops/gate";
+import { requireOps, tokenConfigured, checkGate } from "../lib/ops/gate";
 import { awareness } from "../lib/awareness";
 
 const router = Router();
@@ -154,7 +154,13 @@ router.post("/nova-core/chat", async (req: Request, res: Response) => {
       // الموافقة مابقتش تتقبل من قائمة يجيبها العميل: أي زائر كان يقدر يقول
       // «approve: [fleet_exec]» ويفتح تنفيذ على جهاز متصل. الأدوات الحساسة
       // تفضل محجوبة لحد ما يبقى فيه مسار موافقة سيرفري مربوط بالجلسة.
-      approved: [],
+      // The client's approve list is trusted ONLY when the caller proved it holds
+      // NOVA_EXEC_TOKEN (x-nova-token header) — otherwise any visitor could forge
+      // `approve:[fleet_exec]` and run commands on a connected machine.
+      approved: (() => {
+        const gate = tokenConfigured() ? checkGate(req as never, "nova-core chat") : null;
+        return gate && gate.ok && gate.code === "allowed" && Array.isArray(body.approve) ? body.approve : [];
+      })(),
       emit,
     });
     broadcastEvent({ type: "agent_run_complete", agent: "nova", mode: result.mode, tools: result.toolsUsed, ts: Date.now() });

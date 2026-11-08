@@ -10442,7 +10442,7 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
       try {
         const core = await fetch("/api/nova-core/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { ...autonomyHeaders() },
           body: JSON.stringify({ message: content, sessionId, ...(opts?.approve ? { approve: opts.approve } : {}) }),
         });
         if (!core.ok || !core.body) throw new Error(`nova-core ${core.status}`);

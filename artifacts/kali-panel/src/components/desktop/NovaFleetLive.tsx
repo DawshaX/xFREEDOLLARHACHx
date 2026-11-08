@@ -445,3 +445,79 @@ export function NovaLiveBar({ onOpen }: { onOpen?: () => void }) {
     </div>
   );
 }
+
+/**
+ * Live Operations Feed — the real-time step log for the Ops Room: every tool
+ * the brain actually ran (name, target, step, result) plus what is running and
+ * what just finished. Fed by the same permanent `/api/ws` socket, never a mock.
+ */
+export function NovaOpsFeed() {
+  const live = useNovaLive();
+  const fmt = (ts: number) =>
+    new Date(ts).toLocaleTimeString("ar-EG", { hour12: false }) ?? "";
+
+  const levelBadge = (l?: string) =>
+    l === "ok"
+      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+      : l === "error"
+        ? "bg-red-500/15 text-red-300 border-red-500/40"
+        : l === "warn"
+          ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
+          : "bg-sky-500/15 text-sky-300 border-sky-500/40";
+
+  return (
+    <div dir="rtl" className="rounded-xl border border-emerald-500/20 bg-black/25 p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${live.socket === "open" ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : live.socket === "connecting" ? "bg-amber-400 animate-pulse" : "bg-red-500"}`} />
+          <h2 className="text-[13px] font-black">سجل العمليات الحية</h2>
+        </div>
+        <span className="text-[9px] font-mono text-white/40">WS /api/ws · {live.events.length} حدث</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="rounded-lg p-2 bg-black/30 border border-white/5">
+          <div className="text-[9px] font-black text-amber-300 mb-1">شغّال دلوقتي</div>
+          {live.running.length === 0 ? (
+            <div className="text-[9px] text-white/35">مفيش أدوات شغالة</div>
+          ) : (
+            live.running.slice(0, 6).map((t) => (
+              <div key={t.id} className="text-[9px] text-white/75 truncate">
+                ⏳ <b className="text-amber-200">{t.tool || t.title}</b>
+                {t.target ? <span className="text-white/40"> ← {t.target}</span> : null}
+              </div>
+            ))
+          )}
+        </div>
+        <div className="rounded-lg p-2 bg-black/30 border border-white/5">
+          <div className="text-[9px] font-black text-sky-300 mb-1">خلص للتو</div>
+          {live.done.length === 0 ? (
+            <div className="text-[9px] text-white/35">لسه مفيش نتائج</div>
+          ) : (
+            live.done.slice(0, 6).map((t) => (
+              <div key={t.id} className="text-[9px] text-white/75 truncate">
+                {t.status === "failed" ? "❌" : "✅"} <b className="text-sky-200">{t.tool || t.title}</b>
+                {t.ms != null ? <span className="text-white/30"> · {t.ms}ms</span> : null}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-lg p-2 bg-black/30 border border-white/5 max-h-72 overflow-y-auto">
+        <div className="text-[9px] font-black text-white/60 mb-1">سجل الخطوات</div>
+        {live.events.length === 0 ? (
+          <div className="text-[9px] text-white/35">مستني أول حدث…</div>
+        ) : (
+          live.events.slice(0, 40).map((e) => (
+            <div key={e.id} className="flex items-start gap-2 py-1 border-b border-white/5 last:border-0">
+              <span className="text-[8px] font-mono text-white/30 whitespace-nowrap pt-0.5">{fmt(e.at)}</span>
+              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap ${levelBadge(e.level)}`}>{e.kind}</span>
+              <span className="text-[9px] text-white/70 leading-snug break-words" title={e.message}>{e.message}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

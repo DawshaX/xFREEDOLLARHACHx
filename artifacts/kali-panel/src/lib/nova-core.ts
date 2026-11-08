@@ -17,6 +17,7 @@
  */
 
 import { isStandaloneHost } from "./env";
+import { effectiveBase } from "./remote";
 import { searchCyberCorpus2400, getCorpusStats } from "./cyber-corpus-2099";
 import {
   getStoredOllamaBase,
@@ -128,6 +129,11 @@ export async function resolveNovaServer(force = false): Promise<string | null> {
   if (!force && cachedServer && Date.now() - cachedServer.at < 30_000) return cachedServer.base;
 
   const candidates = ["/api"];
+  // A linked (or engine-served) NOVA server owns the real brain — try it before
+  // the localhost fallback so a GitHub Pages build reaches nova.waifly.com with
+  // no manual URL pasted.
+  const remote = effectiveBase();
+  if (remote) candidates.push(`${remote}/api`);
   if (isStandaloneHost()) candidates.push(LOCAL_API);
   for (const base of candidates) {
     if (await probe(base)) {
