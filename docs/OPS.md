@@ -449,3 +449,24 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
   sys_watchdog / mem_consolidate) تفضل شغالة — تكلفتها قريبة من الصفر أصلًا.
 - اللي يفضل على المكنة بالضرورة: خدمة اللوحة والـWebSocket للأسطول، تنفيذ مهام
   الأدوات اللي المشغّل بيطلبها (دي طبيعتها execution plane)، والحراسة الذاتية.
+
+## قاعدة البيانات (Supabase Postgres مجاني — 500MB)
+
+`DATABASE_URL` لو موجود (`index.ts` ~510) بيقلّع migrations ذاتية + scheduler بتاع
+الـDB + مراقب CVE بتاع الـDB + مدير المفاتيح؛ ولو غايب أو مش راضي يوصل، التطبيق
+بيرجع standalone من غير ما يقع (الأخطاء بتتسجّل بس، والـpool timeout 1.5s).
+الخطوات على أي مشروع Supabase:
+
+1. Dashboard → Settings → Database → خد **Session pooler** string (مش Direct —
+   دايركت IPv6 بس على الخطة المجانية، وWaifly IPv4):
+   `postgresql://postgres.<ref>:<pass>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require`
+2. SQL Editor → الصق محتوى `lib/db/drizzle/0000_nova_init.sql` (38 جدول — متولّد
+   من `lib/db/src/schema` بـdrizzle-kit، يعني مصدر الحقيقة واحد) → Run.
+3. حط السطر في `.env` على المكنة وRestart. علامة النجاح في اللوج:
+   `CVE schema migrations applied` واختفاء سطر standalone mode.
+
+**مش محتاجين GitHub token على المكنة**: أصول الـreleases عامة بتتقري من غير
+مصادقة، والـstate بيتكتب من الـCI مش من المكنة، والطابور بيتحرّر من واجهة ويب
+جيت هوب. توكن من غير وظيفة = سطح تسريب زيادة. لو يومًا عايزين المكنة ترمي مهمات
+في `state/nova-queue.json` بنفسها، ساعتها fine-grained PAT بـcontents:write على
+الريبو ده بس.
