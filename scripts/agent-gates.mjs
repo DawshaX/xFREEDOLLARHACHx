@@ -40,6 +40,7 @@ const AGENT_GATES = [
   ["scripts/test-self-restart.mjs", "self-restart: update marker and boot"],
   ["scripts/test-update-backoff.mjs", "update back-off: a dead loop parks itself"],
   ["scripts/test-toolchain-mirror.mjs", "toolchain mirror: packed layout, hashes, wordlist, new kinds"],
+  ["scripts/test-tool-ondemand.mjs", "on-demand tools: fetch-on-use, LRU cache ceiling, inflight dedupe"],
   ["scripts/test-free-store.mjs", "free store: sha256-verified mirrors, tamper refused, caps enforced"],
   ["scripts/test-panel-restart.mjs", "panel power: a remote restart with no human in it"],
   ["scripts/test-respawn-loop.mjs", "respawn loop: a dead boot.mjs gets raised again, measured"],

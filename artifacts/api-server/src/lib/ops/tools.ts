@@ -34,6 +34,7 @@ import { HOSTS, freeHostSummary, type FreeHost } from "./free-hosts";
 import { execOnLocalAgent } from "../../routes/local-agent";
 import { sessionArgs, sessionHeaders, redactSecrets, hasSession } from "./session";
 import { libraryStatus, lookupProduct } from "./advisory-library";
+import { ensureToolBinary } from "./tool-ondemand";
 import { corpusStatus, queryCorpus } from "./vuln-corpus";
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
@@ -1623,7 +1624,7 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
   // tool the exec then killed with 127 (measured: Actions run 41451529132, `tools.*: tool-missing`
   // for binaries /ops/kinds had just reported present). Spawn the resolved path, and put its
   // directory first on the child's PATH so tools that shell out to siblings still work.
-  const abs = findBinary(bin) ?? bin;
+  let abs = findBinary(bin) ?? bin;
   const runLocal = async (): Promise<KindResult> => {
     const res = await runArgv(abs, argv, {
       cwd: ctx.jobDir,
@@ -1736,13 +1737,21 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
     };
   }
   if (!findBinary(bin)) {
-    return {
-      ok: false,
-      summary: `الأداة «${bin}» مش على النود ولا على نود متصل. ثبّتها: ${kind.installHint ?? "/api/installer/tools"}`,
-      findings: [],
-      error: "tool-missing",
-      data: { command: display },
-    };
+    // قبل ما نقول «مش موجودة»: الأداة القابلة للبيع بتتجاب من مرآة الريليز أول ما
+    // تتطلب فعلًا — on-demand مع كاش LRU بيتدوّر تحت سقف (ops/tool-ondemand.ts).
+    // فالبرنامج كامل على كوتا قرص صغيرة: 16 أداة متاحين، مش 16 أداة ساكنين. لو
+    // الجلب نفسه تعذّر بنرجع نفس الرد الصريح القديم — مفيش وعد كاذب هنا.
+    const fetched = await ensureToolBinary(bin);
+    if (!fetched) {
+      return {
+        ok: false,
+        summary: `الأداة «${bin}» مش على النود ولا على نود متصل. ثبّتها: ${kind.installHint ?? "/api/installer/tools"}`,
+        findings: [],
+        error: "tool-missing",
+        data: { command: display },
+      };
+    }
+    abs = fetched;
   }
   return await runLocal();
 }
