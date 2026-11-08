@@ -82,10 +82,13 @@ export function serverId(base: string): string {
  */
 const SEED: Array<Pick<KnownServer, "name" | "kind" | "note"> & { base: string }> = [
   {
+    // 2026-11-08: النسخة دي اتشالت من GitHub (الكودسبيس المهجورة بتتمسح، والـAPI
+    // بيرجّع total_count: 0 — مقاس، مش تخمين). الكرت فاضل كتذكار صادق «واقف»
+    // وكزرّار توليد: الأمر ده بيبني ماكينة جديدة بكل أسرارها لوحدها.
     name: "Codespace الرئيسي",
     base: codespaceBase("animated-broccoli-gwx6wgpxvx5hv6gj"),
     kind: "codespace",
-    note: "Ports → 8080 → Public، وبعدها شغّل scripts/nova-codespace.sh",
+    note: "اتمسحت للسكون — أنشئ واحدة جديدة: Code → Codespaces → Create on main (البناء والأدوات والتوكن والبورت العام كلهم أوتوماتيك)، وبعدين حدّث الرابط هنا من «ضيف»",
   },
   {
     // The HTTPS face of the same slot (Waifly Web/WebSocket proxy, auto TLS).
@@ -134,12 +137,50 @@ export function listServers(): KnownServer[] {
     }
     const parsed = JSON.parse(raw) as { servers?: KnownServer[] };
     if (!Array.isArray(parsed?.servers)) return [];
-    return parsed.servers
+    const stored = parsed.servers
       .filter((s) => s && typeof s.base === "string")
       .map((s) => ({ ...s, base: normalizeServerBase(s.base), id: s.id || serverId(s.base) }))
       .filter((s) => Boolean(s.base));
+    // 2026-11-08 — لقطة أول فتحة كانت بتجمّد الليستا للأبد: «ماكينات نوفا (2)»
+    // عند مستخدم فتح الصفحة قبل ما الـSEED يكسب ماكينة تالتة (`nova.waifly.com`
+    // HTTPS)، فبانت كأنها «اتمسحت» وهي بس ما وصلتش أبدًا. القاعدة دلوقتي: أي
+    // ماكينة جديدة في الـSEED بتتدمج في ليستا المستخدم لوحدها أول ما يفتح،
+    // وتعديلاته على الموجود متتلمسش — الزيادة من عندنا، التنقيص ملك المستخدم.
+    const have = new Set(stored.map((s) => s.id));
+    const removed = removedSeedIds();
+    const fresh = seed().filter((s) => !have.has(s.id) && !removed.has(s.id));
+    if (fresh.length > 0 && stored.length > 0) {
+      const merged = [...stored, ...fresh];
+      persist(merged);
+      return merged;
+    }
+    return stored;
   } catch {
     return [];
+  }
+}
+
+/** ماكينات الـSEED اللي المستخدم شالها بإيده — عشان الدمج التلقائي مايرجعهاش. */
+const TOMBSTONE_KEY = "cybernova_removed_seed_ids";
+
+function removedSeedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(TOMBSTONE_KEY);
+    const arr = raw ? (JSON.parse(raw) as unknown[]) : [];
+    return new Set(arr.filter((x): x is string => typeof x === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+function markTombstone(id: string, on: boolean): void {
+  try {
+    const set = removedSeedIds();
+    if (on) set.add(id);
+    else set.delete(id);
+    localStorage.setItem(TOMBSTONE_KEY, JSON.stringify([...set]));
+  } catch {
+    /* private mode */
   }
 }
 
@@ -166,12 +207,17 @@ export function addServer(input: { name?: string; base: string; kind?: ServerKin
     addedAt: existing?.addedAt ?? Date.now(),
     note: input.note ?? existing?.note,
   };
+  // رجّع ماكينة من الـSEED بإيدك؟ يبقى ماشالة من قائمة «المستخدم شالها».
+  markTombstone(entry.id, false);
   return persist([entry, ...current.filter((s) => s.base !== base)]);
 }
 
 export function removeServer(id: string): KnownServer[] {
   const next = listServers().filter((s) => s.id !== id);
   if (getRemoteBase() && serverId(getRemoteBase()) === id) clearRemoteBase();
+  // لو دي ماكينة من اللي احنا بنزرعها، سجّل إن المستخدم شالها — وإلا الدمج
+  // التلقائي هيرجّعها عند أول فتحة جاية.
+  if (seed().some((s) => s.id === id)) markTombstone(id, true);
   return persist(next);
 }
 
