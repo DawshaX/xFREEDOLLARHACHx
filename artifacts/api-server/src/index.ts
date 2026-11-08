@@ -521,15 +521,21 @@ server.listen(port, host, () => {
     logger.info("Running in standalone mode (no DATABASE_URL configured)");
   }
 
-  if (process.env.NOVA_AUTONOMOUS_DAEMON === "1") {
+  // 2026-11-08: الافتراضي اتقلب بعد طلب المشغّل صراحةً — اللايف أجينت «متصل دايمًا
+  // بالخلفية وشغّال دايمًا». الدايمن بيبدأ مع الإقلاع على عمق passive: مراقبة
+  // ومصادر عامة (DNS/CT-logs/OSINT) بلا أي لمس للخدمات، وبرامج passive_only
+  // متترفعش أبدًا، وكل مرفوض/متخطّى بيتسجّل في دفتر صريح. نبضة كل 3 دقايق —
+  // خفيفة على كوتا الـCPU. الإيقاف الكامل: NOVA_AUTONOMOUS_DAEMON=0 في البيئة،
+  // أو تقليل العمق لـoff من لوحة التحكم (بيتخزّن في state/autonomy.json).
+  if (process.env.NOVA_AUTONOMOUS_DAEMON !== "0") {
     try {
       startAutonomousBackgroundDaemon();
-      logger.info("Autonomous background daemon enabled by NOVA_AUTONOMOUS_DAEMON=1");
+      logger.info("Autonomous background daemon started (default-on · passive depth · NOVA_AUTONOMOUS_DAEMON=0 يعطّله)");
     } catch (e) {
       logger.error({ err: e }, "Failed to start autonomous background daemon");
     }
   } else {
-    logger.info("Autonomous background daemon is disabled; set NOVA_AUTONOMOUS_DAEMON=1 to opt in");
+    logger.info("Autonomous background daemon disabled by NOVA_AUTONOMOUS_DAEMON=0");
   }
 
   scheduleGC();
