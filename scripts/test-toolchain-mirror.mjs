@@ -40,6 +40,7 @@ const check = (name, fn) => {
     checks.push([name, true, ""]);
   } catch (err) {
     checks.push([name, false, String(err?.message ?? err).split("\n")[0].slice(0, 160)]);
+
   }
 };
 
@@ -243,6 +244,30 @@ check("the mirror download is streamed to disk, not buffered in RAM", () => {
     }
   });
 }
+
+
+/* ── 5 · the two follow-ups this file exists to keep honest ───────────────── */
+// قِيس على المكنة الحيّة 2026-11-08T01:01:54Z: محاولة الأدوات جت قبل نشر أرشيف
+// المرآة بثانية واحدة، والـ404 خلّى المكنة «5 أدوات من 16» لحد ما حد يضغط رستارت.
+check("the supervisor retries the missing tools instead of waiting for a restart", () => {
+  const boot = fs.readFileSync(path.join(ROOT, "scripts", "build-standalone.mjs"), "utf8");
+  assert.match(boot, /toolchainTries\s*<\s*3/);
+  assert.ok(boot.includes("setTimeout(toolchainPass"), "مفيش جدول إعادة للمحاولة");
+  assert.ok(boot.includes("toolchain-provision.json"), "محاولة المُشرف ما كتبتش السجل اللي اللوحة بتقراه");
+  // والقيااس 01:52:06Z: التطبيق نادى المنزّل في نفس لحظة الإقلاع ومضى 8.8 ثانية
+  // واتقتل — فالمسار ده لازم يسلم للمُشرف، الاتنين على سقف RAM واحد مايلحقوش.
+  const tc = fs.readFileSync(path.join(ROOT, "artifacts/api-server/src/lib/ops/toolchain.ts"), "utf8");
+  assert.ok(tc.includes("supervisorOwnsIt"), "التطبيق لسه بينزّل وقت الإقلاع لوحده");
+  assert.match(tc, /bootRoot\.startsWith\("\/home\/container"\)/);
+});
+
+// كوتا السّلوت 1024MB، لكن statfs بيقيس قرص المضيف (قِيس: 99798MB «فاضي») — فحارس
+// «الفاضل» لوحده بيضحك؛ لازم سقف حجم صريح على مجلد الأدوات نفسه.
+check("the vendorer caps the vendor dir size so it cannot eat the slot quota", () => {
+  const vend = fs.readFileSync(path.join(ROOT, "scripts", "fetch-toolchain.mjs"), "utf8");
+  assert.ok(vend.includes("NOVA_VENDOR_MAX_MB"), "مفيش متغير سقف");
+  assert.match(vend, /dirMB\(INTO\)\s*>=\s*CAP_MB/);
+});
 
 let bad = 0;
 for (const [name, ok, detail] of checks) {

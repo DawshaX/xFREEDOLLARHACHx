@@ -409,7 +409,7 @@ if (role === "node" || role === "agent") {
   //      state/.nova-restart — no panel button, no manual step;
   //   2. if the app ever crashes the container stay up and the app comes back.
   const { spawn } = await import("node:child_process");
-  const { statSync, statfsSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync, existsSync } = await import("node:fs");
+  const { statSync, statfsSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync, renameSync, existsSync } = await import("node:fs");
   const { get: httpGet } = await import("node:http");
   const MARK = join(HERE, "state", ".nova-restart");
   const ENTRY = join(HERE, "nova-app.mjs");
@@ -470,6 +470,18 @@ if (role === "node" || role === "agent") {
       console.log("[supervisor] مفيش scripts/fetch-toolchain.mjs في الحزمة — اتخطّيت");
       return;
     }
+    const recordFile = join(HERE, "state", "toolchain-provision.json");
+    const writeRecord = (rec) => {
+      // نفس شكل ProvisionRecord في lib/ops/toolchain.ts — فاللوحة تقرّى محاولة
+      // المُشرف زي ما تقرّى محاولة التطبيق بالظبط (مافيش "آخر محاولة" قديمة تخدع).
+      try {
+        mkdirSync(join(HERE, "state"), { recursive: true });
+        const tmp = recordFile + "." + process.pid + ".tmp";
+        writeFileSync(tmp, JSON.stringify(rec, null, 2));
+        renameSync(tmp, recordFile);
+      } catch { /* قرص مقفول — المحرّج لسه بيقرا المجلد نفسه */ }
+    };
+    const t0 = Date.now();
     let free = null;
     try {
       const fst = statfsSync(join(HERE, "state"));
@@ -501,6 +513,20 @@ if (role === "node" || role === "agent") {
       }
       if (doc) console.log("[supervisor] toolchain pass: " + doc.ok + "/" + doc.total + " جاهز في " + doc.into);
       else console.log("[supervisor] toolchain pass: مفيش JSON (exit " + (signal || code) + ") — " + err.slice(0, 160).replace(/\\n/g, " "));
+      writeRecord({
+        at: new Date().toISOString(),
+        ok: doc ? Number(doc.ok) > 0 : false,
+        exitCode: typeof code === "number" ? code : null,
+        ms: Date.now() - t0,
+        into: join(HERE, "vendor", "bin"),
+        installed: doc ? Number(doc.ok) || 0 : 0,
+        total: doc ? Number(doc.total) || 16 : 16,
+        results: doc && Array.isArray(doc.results) ? doc.results : [],
+        ran: true,
+        by: "supervisor",
+        error: doc ? null : "no-json",
+        reasonAr: doc ? null : "المُشرف شغّل المنزّل بس ماطلعش JSON (exit " + (signal || code) + ")",
+      });
       const w = err.indexOf("::warning::");
       if (w >= 0) console.log("[toolchain] " + err.slice(w + 11, w + 260).split("\\n")[0]);
       const total = doc ? Number(doc.total) : -1;

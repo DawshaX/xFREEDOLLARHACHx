@@ -594,6 +594,21 @@ export function bootToolchainFetch(log?: (msg: string) => void): boolean {
   // «الرام عندنا تتحمل»، مش أنا.
   if (!mode && isDurableHost() && process.env.NOVA_TOOLCHAIN_AT_BOOT === "1") mode = "auto";
   if (!mode || mode === "0" || mode === "off" || mode === "false") return false;
+  // المُشرف بقى هو صاحب التنزيل في الحزمة المحمولة. والقيااس اللي يثبت ده:
+  // 2026-11-08T01:52:06Z على nova.waifly.com — التطبيق نادى المنزّل ومضى 8.8 ثانية
+  // بس، والسجل «SIGKILL» (قتل خارجي، مش timeout بتاعنا اللي 540 ثانية)، وفي نفس
+  // اللحظة الإقلاع رافع الـRSS من تحميل كوربوس 258043 ثغرة. الأب والابن على سقف
+  // واحد = المكنة بتخسر الاتنين. فمسار الإقلاع ده بقى للمُشرف (25 ثانية بعد الإقلاع،
+  // بـ64MB وبإعادة محاولة)، والطلب الصريح `POST /api/ops/tools/provision` لسه بيشتغل.
+  if (mode === "1" || mode === "auto") {
+    const bootRoot = String(process.env.NOVA_STATE_DIR || process.cwd());
+    const supervisorOwnsIt =
+      bootRoot.startsWith("/home/container") && String(process.env.NOVA_TOOLCHAIN_AT_BOOT || "") !== "0";
+    if (supervisorOwnsIt) {
+      log?.("toolchain: التنزيل وقت الإقلاع ملك المُشرف في الحزمة المحمولة (boot.mjs) — التطبيق مابيعملوش لنفسه؛ POST /api/ops/tools/provision للطلب الصريح");
+      return false;
+    }
+  }
   const st = toolchainStatus();
   // `auto` مع الناقص: لو فيه أداة ناقصة ننزّلها، مابنقفش عند أول واحدة موجودة.
   if (mode === "auto" && st.missing.length === 0) return false;
