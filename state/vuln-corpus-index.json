@@ -1,19 +1,19 @@
 {
   "version": 1,
-  "at": "2026-11-08T18:03:42.938Z",
+  "at": "2026-11-08T22:24:38.755Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 168018,
+  "total": 192198,
   "bySeverity": {
-    "high": 67410,
-    "medium": 72885,
-    "low": 7898,
-    "unknown": 8140,
-    "critical": 11645,
-    "none": 40
+    "high": 77357,
+    "medium": 81199,
+    "low": 8938,
+    "unknown": 10258,
+    "critical": 14401,
+    "none": 45
   },
   "byYear": {
     "1999": 1573,
@@ -30,44 +30,44 @@
     "2010": 5079,
     "2011": 4623,
     "2012": 5549,
-    "2013": 6166,
-    "2014": 8496,
-    "2015": 8054,
-    "2016": 9959,
-    "2017": 15484,
+    "2013": 6167,
+    "2014": 8497,
+    "2015": 8055,
+    "2016": 9960,
+    "2017": 15487,
     "2018": 14395,
-    "2019": 1592,
-    "2020": 277,
-    "2021": 116,
-    "2022": 79,
-    "2023": 112,
-    "2024": 279,
-    "2025": 3233,
-    "2026": 42979
+    "2019": 1597,
+    "2020": 285,
+    "2021": 141,
+    "2022": 109,
+    "2023": 316,
+    "2024": 342,
+    "2025": 3419,
+    "2026": 66631
   },
-  "kev": 560,
-  "epssScored": 160481,
-  "products": 41913,
+  "kev": 605,
+  "epssScored": 184122,
+  "products": 42203,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 25080
+      "count": 25477
     },
     {
       "product": "firefox",
-      "count": 9025
+      "count": 9592
     },
     {
       "product": "chrome",
-      "count": 8354
+      "count": 9182
+    },
+    {
+      "product": "android",
+      "count": 8348
     },
     {
       "product": "ubuntu_linux",
       "count": 8095
-    },
-    {
-      "product": "android",
-      "count": 7827
     },
     {
       "product": "debian_linux",
@@ -83,15 +83,15 @@
     },
     {
       "product": "safari",
-      "count": 5190
-    },
-    {
-      "product": "php",
-      "count": 4248
+      "count": 5213
     },
     {
       "product": "iphone_os",
-      "count": 4248
+      "count": 4447
+    },
+    {
+      "product": "php",
+      "count": 4292
     },
     {
       "product": "internet_explorer",
@@ -99,11 +99,15 @@
     },
     {
       "product": "wireshark",
-      "count": 3910
+      "count": 3995
     },
     {
       "product": "moodle",
-      "count": 3334
+      "count": 3379
+    },
+    {
+      "product": "windows_server_2012",
+      "count": 3279
     },
     {
       "product": "jre",
@@ -111,7 +115,7 @@
     },
     {
       "product": "acrobat",
-      "count": 3059
+      "count": 3091
     },
     {
       "product": "jdk",
@@ -119,7 +123,7 @@
     },
     {
       "product": "websphere_application_server",
-      "count": 2639
+      "count": 2651
     },
     {
       "product": "windows_10",
@@ -128,10 +132,6 @@
     {
       "product": "ios",
       "count": 2591
-    },
-    {
-      "product": "windows_server_2012",
-      "count": 2467
     },
     {
       "product": "itunes",
@@ -163,15 +163,31 @@
     },
     {
       "product": "ffmpeg",
-      "count": 1993
+      "count": 1998
     },
     {
       "product": "windows_server_2008",
       "count": 1950
     },
     {
+      "product": "windows_server_2016",
+      "count": 1766
+    },
+    {
       "product": "shockwave_player",
       "count": 1764
+    },
+    {
+      "product": "windows_11_26h1",
+      "count": 1750
+    },
+    {
+      "product": "thunderbird",
+      "count": 1732
+    },
+    {
+      "product": "enterprise_linux",
+      "count": 1676
     },
     {
       "product": "enterprise_linux_server",
@@ -182,47 +198,31 @@
       "count": 1657
     },
     {
+      "product": "openssl",
+      "count": 1647
+    },
+    {
       "product": "quicktime",
       "count": 1613
     },
     {
       "product": "xen",
       "count": 1585
-    },
-    {
-      "product": "enterprise_linux",
-      "count": 1559
-    },
-    {
-      "product": "junos",
-      "count": 1549
-    },
-    {
-      "product": "openssl",
-      "count": 1539
-    },
-    {
-      "product": "office",
-      "count": 1537
-    },
-    {
-      "product": "mac_os_x_server",
-      "count": 1497
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 19070259,
-    "sha256": "6778be266e03ac4476c8d38f6a43a245ab25a56e3173dc45195c267502ae0bd3"
+    "bytes": 22944805,
+    "sha256": "72b3295300de631bc7fb2acc8bf810bdb631106ac2933aac3be2df06023b09ef"
   },
   "mode": "deepen",
-  "says_ar": "168018 ثغرة حقيقية · critical 11645 · high 67410 · 560 مستغلّة فعلياً (KEV) · 160481 لها EPSS · 41913 منتج بـCPE · مزامنة 2026-11-08T18:03:42.938Z",
+  "says_ar": "192198 ثغرة حقيقية · critical 14401 · high 77357 · 605 مستغلّة فعلياً (KEV) · 184122 لها EPSS · 42203 منتج بـCPE · مزامنة 2026-11-08T22:24:38.755Z",
   "deepen": {
-    "nextStartIndex": 378047,
+    "nextStartIndex": 402047,
     "windowPages": 12,
-    "walkedFrom": 354047,
-    "nvdTotal": 421206,
-    "coverage": 0.3989,
-    "at": "2026-11-08T18:03:42.939Z"
+    "walkedFrom": 378047,
+    "nvdTotal": 421267,
+    "coverage": 0.4562,
+    "at": "2026-11-08T22:24:38.756Z"
   }
 }
