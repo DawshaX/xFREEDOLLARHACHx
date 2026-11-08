@@ -5799,6 +5799,34 @@ if (path === "/fleet/system") {
     };
   }
 
+
+  // ── الأجينت المطوّر (/agent-pro) — تغطية الوضع الساكن 2026-11-08 ─────────────
+  // بدون التسجيل دي، الصفحة الجديدة كانت بتقابل payload فاضية على GitHub Pages
+  // (فاحص audit-connections بيعتبر resolveStandaloneApi()==null فجوة اتصال).
+  if (path === "/nova-core/council" && m === "GET") {
+    return {
+      ok: true,
+      mode: "static",
+      members: [
+        { id: "local-brain", label: "العقل المحلي — قواعد وبيانات الصفحة", hasKey: false },
+        { id: "pollinations:openai-fast", label: "Pollinations · openai-fast (بدون مفتاح)", hasKey: false },
+        { id: "pollinations:mistral", label: "Pollinations · mistral (بدون مفتاح)", hasKey: false },
+        { id: "pollinations:llama", label: "Pollinations · llama (بدون مفتاح)", hasKey: false },
+      ],
+      noteAr: "دي مقاعد المتصفح الصادقة — المجلس الكامل بالتصويت المتبادل بيشتغل على المحرك.",
+    };
+  }
+  if (path === "/nova-agent-v3/chat" && m === "POST") {
+    // سيل الأحداث بيصنعه الـshim في setup.ts للواجهة؛ التسجيل ده غطاء JSON صادق
+    // لأي قارئ — بلا أي ادعاء إن عملًا نُفّذ وهو ما نُفّذش.
+    return {
+      ok: true,
+      mode: "static",
+      accepted: true,
+      engine: "standalone-shim",
+      noteAr: "الوضع المستقل يرد بعقل المتصفح (تحليل نظري) — تنفيذ الأدوات الحقيقي على المحرك.",
+    };
+  }
   return null;
 }
 

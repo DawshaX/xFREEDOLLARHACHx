@@ -49,6 +49,7 @@ const NovaCore = lazy(() => import("@/pages/NovaCore"));
 const NovaMemory = lazy(() => import("@/pages/NovaMemory"));
 const SelfCheckPage = lazy(() => import("@/pages/SelfCheckPage"));
 const NovaFleetUnified = lazy(() => import("@/pages/NovaFleetUnified"));
+const NovaAgentPro = lazy(() => import("@/pages/NovaAgentPro"));
 const NovaAgentPage = lazy(() => import("@/pages/NovaAgentPage"));
 const Shodan = lazy(() => import("@/pages/shodan"));
 const Mitre = lazy(() => import("@/pages/mitre"));
@@ -249,6 +250,8 @@ function InnerRoutes() {
       <Route path="/nova-core" component={NovaCore} />
       <Route path="/self-check" component={SelfCheckPage} />
       <Route path="/nova-fleet" component={NovaFleetUnified} />
+      {/* «الأجينت المطوّر — مكتب نوفا»: شات حي + قياسات العقدة + المهمات + الأسطول */}
+      <Route path="/agent-pro" component={NovaAgentPro} />
       <Route path="/nova-agent" component={NovaAgentPage} />
       <Route path="/nova-memory" component={NovaMemory} />
       <Route path="/nova-agent-chat" component={NovaAgentChat} />

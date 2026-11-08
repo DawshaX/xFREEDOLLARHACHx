@@ -50,6 +50,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "نوفا · المخ والمدير",  icon: BrainCircuit, path: "/nova-fleet",        iconColor: "#e879f9", badge: "CORE", hot: true, skull: true },
       { label: "نوفا — مساحة عمل الوكيل", icon: Radio,     path: "/nova-fleet#work",   iconColor: "#22d3ee", badge: "LIVE", hot: true, skull: true },
+      { label: "الأجينت المطوّر — مكتب نوفا", icon: Bot,   path: "/agent-pro",         iconColor: "#4ade80", badge: "PRO", hot: true, skull: true },
       { label: "Live Agent Panel", icon: Activity,         path: "/live-agent",        iconColor: "#ff4444" },
       { label: "AI Agent V3",      icon: Brain,           path: "/nova-agent-v3",     iconColor: "#ff7722", badge: "V3" },
       { label: "Nova Agent V6",    icon: Sparkles,        path: "/nova-agent-v6",     iconColor: "#ffaa00", badge: "V6" },
