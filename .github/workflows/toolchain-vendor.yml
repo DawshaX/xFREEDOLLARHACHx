@@ -1,0 +1,124 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA toolchain mirror — الأدوات الحقيقية بتتنزل هنا، والمكنة بتسحبها من جيت هاب.
+#
+# Why (مقاس، مش تخمين):
+#   • الحاوية على وايفلّي بتوصلها تنزيلات `github.com/.../releases/download`
+#     (متقاس: حزمة 3.0MB نزلت في 0.7 ثانية)، بس `api.github.com` مابيردش من جوه
+#     المكنة — القياس `GET /api/ops/tools → last` يوم 2026-11-07T17:32:23Z:
+#     12/12 أدوات `failed · api.github.com ماردّش`، والـ17:17:17Z محاولة ماتت
+#     بـ`exitCode: null` بعد 6.4 ثانية (رام 256MB + تنزيل محمول في الذاكرة).
+#   • الرانر هنا شبكة مفتوحة ورام كبيرة، فالحل الصحيح لمعمر: اللي بيحل أسماء
+#     الإصدارات وينزّلها هو CI، والمكنة تسحب أرشيف واحد وتتأكد من SHA-256.
+#
+# مافيش سر هنا: الأصل عام والمكنة بتقرأه بدون توكن — نفس مبدأ حزمة `nova-portable`.
+# ─────────────────────────────────────────────────────────────────────────────
+name: NOVA toolchain mirror (Kali static binaries → GitHub)
+
+on:
+  schedule:
+    # كل 6 ساعات — أحدث من كده بلا فايدة: إصدارات الأدوات مش بتتغير كل ساعة،
+    # وكل تشغيل بيحوّل ~12 طلب release لرانر مجاني.
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "أدوات بعينها (فاصل فَرَشة)، فاضي = الكل"
+        required: false
+        type: string
+      force:
+        description: "أعد التنزيل حتى لو Manifest قائل إنها موجودة"
+        required: false
+        type: boolean
+        default: false
+  push:
+    paths:
+      - "scripts/fetch-toolchain.mjs"
+      - "scripts/build-toolchain-mirror.mjs"
+      - ".github/workflows/toolchain-vendor.yml"
+
+concurrency:
+  group: nova-toolchain-mirror
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    name: fetch upstream + publish mirror
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Fetch the static binaries (this runner has the network the box lacks)
+        id: fetch
+        # `bash -e` بتاع GitHub: أي `[ -n "" ] && ...` بترجّع 1 فالشريط كله كان
+        # بيموت في السطر ده (قِيت الفشل ده في أول تشغيل 2026-11-07: خطوة 4
+        # failure، من غير ما التنزيل يبدأ). بقى `if/then` صريح + `mkdir -p`.
+        run: |
+          mkdir -p out
+          ARGS="--into out/vendor/bin --json --no-mirror"
+          ONLY="${{ inputs.only }}"
+          FORCE="${{ inputs.force }}"
+          if [ -n "$ONLY" ]; then ARGS="$ARGS --only $ONLY"; fi
+          if [ "$FORCE" = "true" ]; then ARGS="$ARGS --force"; fi
+          node scripts/fetch-toolchain.mjs $ARGS > out/fetch.json || true
+          if [ ! -s out/fetch.json ]; then echo "::error::مافيش مخرجات من fetch-toolchain أصلًا"; exit 1; fi
+          node -e 'const fs=require("fs");const txt=fs.readFileSync("out/fetch.json","utf8");const i=txt.lastIndexOf("{");let d=null;for(let s=i;s>=0;s-=1){try{d=JSON.parse(txt.slice(s,txt.lastIndexOf("}")+1));break}catch{}}
+            if(!d){console.log("::error::مخرجات مش JSON: "+txt.slice(0,200));process.exit(1)}
+            if(!d.ok){console.log(`::error::ولا أداة اتنزلت (${d.results?.length||0} نتيجة): `+(d.results||[]).map(r=>r.bin+":"+r.status).join(", ").slice(0,300));process.exit(1)}
+            // مرآة أنقص من الكاملة أخطر من مفيش مرآة: الأصل بيتنشر فوق نسخة كاملة، والمنزّل
+            // بيرمي اللي مش في المانيفست لمسار api.github.com — وهو محجوب من الحاوية.
+            // القياس: run f6dc9c7 نشر 7/12 والشريط فضل أخضر. بقى أحمر هنا.
+            if(d.ok !== d.total){console.log(`::error::المرآة ناقصة ${d.ok}/${d.total}: `+(d.results||[]).filter(r=>r.status==="failed").map(r=>r.bin+" ("+String(r.why||"").slice(0,60)+")").join(", ").slice(0,400));process.exit(1)}
+            console.log(`fetched ${d.ok}/${d.total}`)'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack the mirror (tar.gz + sha256 manifest)
+        run: node scripts/build-toolchain-mirror.mjs --from out/vendor/bin --out out/mirror
+
+      - name: 🔒 No secret, and every binary must answer `-version`
+        # النسخة من عندنا لازم تتقاس مش تتورّط: كل binary بيتنفّذ بأعلامه الحقيقية
+        # ولازم يطلع سطر غير فاضي. أول تشغيل قبضها (run 42411291494) وكان الغلط
+        # في الشيل نفسه: `head -1` بياخد أول سطر — والكثير من أدوات Go بيطبعوا
+        # سطر فاضي الأول — فـ12 أداة اتقال عليها «ما رَدّتش» وهي سليمة، وكمان
+        # كان بيتكرّر اسم الأداة داخل الأعلام. بقى: أول سطر فيه حرف + أعلام بس.
+        run: |
+          printf '### النسخ اللي اشتغلت فعلًا\n\n| الأداة | أول سطر من الأداة |\n|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
+          node scripts/audit-bundle-secrets.mjs out/vendor/bin
+          cd out/vendor/bin
+          fail=0
+          for f in $(ls -1 | grep -v '^\.'); do
+            case "$f" in
+              ffuf) a="-V" ;;
+              gobuster|dalfox|gitleaks) a="version" ;;
+              trivy) a="--version" ;;
+              *) a="-version" ;;
+            esac
+            line="$(timeout 25 ./"$f" $a 2>&1 | tr -d '\r' | sed -n '/[^[:space:]]/{p;q;}')"
+            if [ -z "$line" ]; then
+              echo "::error::$f ما طلعتش سطر لـ $a"
+              fail=1
+            else
+              echo "✓ $f · ${line:0:90}"
+              printf '| `%s` | %s |\n' "$f" "${line:0:90}" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+            fi
+          done
+          exit $fail
+
+      - name: Publish as a release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nova-toolchain
+          name: "NOVA — مرآة الأدوات (Kali static linux/amd64)"
+          body_path: out/mirror/NOTES.md
+          make_latest: false
+          files: |
+            out/mirror/nova-toolchain.tar.gz
+            out/mirror/nova-toolchain.json
