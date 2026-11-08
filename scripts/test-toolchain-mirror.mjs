@@ -256,6 +256,10 @@ check("the supervisor retries the missing tools instead of waiting for a restart
   assert.ok(boot.includes("toolchain-provision.json"), "محاولة المُشرف ما كتبتش السجل اللي اللوحة بتقراه");
   // والقيااس 01:52:06Z: التطبيق نادى المنزّل في نفس لحظة الإقلاع ومضى 8.8 ثانية
   // واتقتل — فالمسار ده لازم يسلم للمُشرف، الاتنين على سقف RAM واحد مايلحقوش.
+  // والملكية دي لازم تبقى بموافقة، مش بتوقيع المسار: المكنة وقعت مرتين بعد تنزيل
+  // الإقلاع (01:01Z و01:52Z → 502 من 02:0xZ) وسقفها 460MB/1024MB.
+  assert.ok(!/root\.indexOf\("\/home\/container"\) === 0/.test(boot), "المُشرف لسه بينزّل تلقائيًا على أي /home/container");
+  assert.match(boot, /process\.env\.NOVA_TOOLCHAIN_AT_BOOT !== "1"/);
   const tc = fs.readFileSync(path.join(ROOT, "artifacts/api-server/src/lib/ops/toolchain.ts"), "utf8");
   assert.ok(tc.includes("supervisorOwnsIt"), "التطبيق لسه بينزّل وقت الإقلاع لوحده");
   assert.match(tc, /bootRoot\.startsWith\("\/home\/container"\)/);

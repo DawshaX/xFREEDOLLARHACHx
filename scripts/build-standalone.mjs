@@ -462,9 +462,17 @@ if (role === "node" || role === "agent") {
   let toolchainTries = 0;
   const toolchainPass = () => {
     if (process.env.NOVA_TOOLCHAIN_AT_BOOT === "0") return;
-    const root = String(process.env.NOVA_STATE_DIR || process.cwd());
-    const wantsAuto = process.env.NOVA_TOOLCHAIN_AT_BOOT === "1" || root.indexOf("/home/container") === 0;
-    if (!wantsAuto) return; // مكنة تطوير/CI ما تنزّلش 219MB لوحدها
+    // التنزيل وقت الإقلاع بقى بموافقة صريحة (NOVA_TOOLCHAIN_AT_BOOT=1) — مابقناش
+    // نعتمد على «المسار startsWith /home/container». والسبب مقيس على المكنة نفسها:
+    // 01:01:54Z (404 لكل الـ16) و01:52:20Z — بعدها المكنة وقعت تاني و/api/health
+    // رجّع 502 من 02:0xZ. الأب (التطبيق، 213MB وقت الإقلاع) والابن (المنزّل + tar
+    // على أرشيف 296MB) في نفس سقف الـcgroup (460MB)، والقرص سلوت 1024MB مايلحقش
+    // 296MB أرشيف + ~500MB أدوات. فالتنزيل يبقى بطلب POST /api/ops/tools/provision
+    // والمكان فاضي (RSS وقت الهدوء متقاس: 92MB).
+    if (process.env.NOVA_TOOLCHAIN_AT_BOOT !== "1") {
+      console.log("[supervisor] التنزيل وقت الإقلاع متقفل افتراضيًا — NOVA_TOOLCHAIN_AT_BOOT=1 يفتحه، أو POST /api/ops/tools/provision");
+      return;
+    }
     const script = join(HERE, "scripts", "fetch-toolchain.mjs");
     if (!existsSync(script)) {
       console.log("[supervisor] مفيش scripts/fetch-toolchain.mjs في الحزمة — اتخطّيت");
