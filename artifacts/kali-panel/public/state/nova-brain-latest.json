@@ -1,30 +1,55 @@
 {
-  "at": "2026-11-08T23:56:41.098Z",
+  "at": "2026-11-09T05:00:21.713Z",
   "seat": "openai",
   "thinking": {
-    "reply": "الحالية: 0 شغلات متعثرّة، الالتزام كامل بالكلاود وكمال مسح على 3 هدف مفتوحة، لا مرفوضات على الثغرات. الخطوة الجاية: متابعة المسح لمواقع أخرى محددة في القوائم.",
-    "why": "الطلب مجرد ملخص، مفيش حاجة بحثية إضافية تحتاج إجراء.",
+    "reply": "التغطية الإجمالية للمنصة 50.15٪، أي عشوائٍ غير مرتكز في تحليل ثغرات بعض المنتجات. الخطوة التالية تكون إلقاء نظرة معمقة على ثغرات فَيَرَفْس لتحديث قاعدة المعلومات",
+    "why": "فَيَرَفْس هو منتج بقائمة topProducts لكن التغطية غير كافية، لذا تحليل الثغرات السائدة فيه هو الخطوة الأهم لإنهاء الفجوة",
     "action": {
-      "kind": "none",
-      "arg": ""
+      "kind": "corpus_search",
+      "arg": "firefox"
     }
   },
-  "action": null,
+  "action": {
+    "kind": "corpus_search",
+    "ok": true,
+    "arg": "firefox",
+    "hits": 5,
+    "examples": [
+      {
+        "cve": "CVE-2019-11708",
+        "severity": "critical",
+        "cvss": 10,
+        "kev": true
+      },
+      {
+        "cve": "CVE-2010-3765",
+        "severity": "critical",
+        "cvss": 9.8,
+        "kev": true
+      },
+      {
+        "cve": "CVE-2024-9680",
+        "severity": "critical",
+        "cvss": 9.8,
+        "kev": true
+      }
+    ]
+  },
   "answered": null,
   "senses": {
     "corpus": {
-      "total": 192198,
-      "at": "2026-11-08T22:24:38.755Z",
-      "critical": 14401,
-      "high": 77357,
-      "kev": 605,
-      "coverage": 0.4562,
-      "nextStartIndex": 402047,
+      "total": 211256,
+      "at": "2026-11-09T01:53:38.989Z",
+      "critical": 16063,
+      "high": 84481,
+      "kev": 623,
+      "coverage": 0.5015,
+      "nextStartIndex": 0,
       "newestYear": 2026,
       "topProducts": [
         "linux_kernel",
-        "firefox",
         "chrome",
+        "firefox",
         "android",
         "ubuntu_linux",
         "debian_linux",
@@ -32,8 +57,8 @@
         "flash_player",
         "safari",
         "iphone_os",
-        "php",
-        "internet_explorer"
+        "windows_server_2012",
+        "php"
       ]
     },
     "hunt": {
@@ -341,7 +366,7 @@
     }
   },
   "failures": [],
-  "says_ar": "فكّرت على openai · الحالية: 0 شغلات متعثرّة، الالتزام كامل بالكلاود وكمال مسح على 3 هدف مفتوحة، لا مرفوضات على الثغرات. الخطوة الجاية: متابعة المسح لمواقع أخرى محددة في القوائم.",
+  "says_ar": "فكّرت على openai · التغطية الإجمالية للمنصة 50.15٪، أي عشوائٍ غير مرتكز في تحليل ثغرات بعض المنتجات. الخطوة التالية تكون إلقاء نظرة معمقة على ثغرات فَيَرَفْس لتحديث قاعدة المعلومات",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
