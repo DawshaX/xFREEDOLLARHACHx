@@ -76,6 +76,8 @@ jobs:
           git config user.name "nova-bot[ci]"
           git config user.email "bot@users.noreply.github.com"
           git add ops/db-ca/live-root.pem lib/db/src/db-bundled-ca.ts
+          # next-hop: standalone-bundle بيشتغل علينا بـworkflow_run (مقاس:
+          # gh dispatch بـGITHUB_TOKEN = 403 Resource not accessible).
           if git diff --cached --quiet; then
             echo "pin unchanged — nothing to do"
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -85,11 +87,4 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # دفعات GITHUB_TOKEN متفجّرش push events (حماية من الحلقات) — لكن dispatch
-      # مسموح بيه وبيفعّل البيلد فورًا، فالشهادة الجديدة تركب الحزمة في نفس الدقيقة
-      # بدل ما تستنى أول دفعة كود جاية.
-      - name: Fire a bundle rebuild so the new pin ships now
-        if: steps.pin.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run standalone-bundle.yml --ref main
+

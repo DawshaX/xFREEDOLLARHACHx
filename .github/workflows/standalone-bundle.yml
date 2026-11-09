@@ -27,6 +27,12 @@ on:
       - "state/**"
       - ".github/workflows/standalone-bundle.yml"
   workflow_dispatch:
+  # دفعات GITHUB_TOKEN (زي تثبيت الـCA) مبتفجّرش push events — لكن workflow_run
+  # بيشتغل عليها طبيعي (نفس النمط اللي deploy-pages بعتمد عليه)، فالشهادة
+  # المثبّتة تركب الحزمة في الدقيقة نفسها مش على أول دفعة كود جاية.
+  workflow_run:
+    workflows: ["DB CA pin sync"]
+    types: [completed]
 
 concurrency:
   group: nova-standalone
