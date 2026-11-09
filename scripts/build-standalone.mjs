@@ -421,23 +421,65 @@ if (role === "node" || role === "agent") {
   let child = null;
   let leaving = false;
   let mark = stamp();
+  let vendorRunning = false;   // تنزيل الأدوات شغال؟ (ممنوع يتداخل مع إقلاع التطبيق)
+  let fastDeaths = 0;          // موتات متتالية < 10s → crash-loop مثبت
+
+  const cgroupMb = () => {
+    // قياس حقيقي للحاوية (v2 ثم v1) — مش تخمين: لو الضغط > 85% بنأذن للمُشرف
+    // يتصرف تحفظيًا (يأجل الإقلاع أو التنزيل) بدل ما السيجرني يفرط بطنا في الثانية.
+    try {
+      for (const [cur, max] of [
+        ["/sys/fs/cgroup/memory.current", "/sys/fs/cgroup/memory.max"],
+        ["/sys/fs/cgroup/memory/memory.usage_in_bytes", "/sys/fs/cgroup/memory/memory.limit_in_bytes"],
+      ]) {
+        if (existsSync(cur) && existsSync(max)) {
+          const c = Number(readFileSync(cur, "utf8")), m = Number(readFileSync(max, "utf8"));
+          if (isFinite(c) && isFinite(m) && m > 0 && m < 9007199254740991) return { usedMb: Math.round(c / 1048576), maxMb: Math.round(m / 1048576) };
+        }
+      }
+    } catch { /* بلا cgroup ظاهر — بنقول ماقسنا */ }
+    return null;
+  };
 
   const launch = () => {
+    if (vendorRunning) { setTimeout(launch, 5000); return; } // التنزيل أولاً: مش هنضرب نفسنا
     // Re-read .env first: a key added in the panel takes effect on reload.
     const fresh = loadEnvFile();
     if (fresh) console.log("[supervisor] picked up " + fresh + " new env var(s) from .env");
+    const mem = cgroupMb();
+    if (mem && mem.usedMb > mem.maxMb * 0.88) {
+      console.log("[supervisor] RAM " + mem.usedMb + "/" + mem.maxMb + "MB فوق 88% — إقلاع مأجل 20s بدل وحدة موت فوري");
+      setTimeout(launch, 20_000);
+      return;
+    }
+    const heap = process.env.NOVA_APP_HEAP_MB || "240"; // سقف V8 < سقف الـcgroup فالـGC يسبق الـSIGKILL
+    const inherited = process.env.NODE_OPTIONS || "";
+    const appNodeOptions = /max-old-space-size/.test(inherited) ? inherited : (inherited + " --max-old-space-size=" + heap).trim();
     child = spawn(process.execPath, [ENTRY], {
       stdio: "inherit",
-      env: Object.assign({}, process.env, { NOVA_SUPERVISED: "1" }),
+      env: Object.assign({}, process.env, { NOVA_SUPERVISED: "1", NODE_OPTIONS: appNodeOptions }),
     });
     const started = Date.now();
     child.on("exit", (code, signal) => {
       child = null;
       if (leaving) { process.exit(0); return; }
       const lived = Date.now() - started;
-      console.log("[supervisor] app exited (" + (signal || code) + ") after " + Math.round(lived / 1000) + "s — restarting");
-      // Crash-loop guard: back off when the app dies instantly.
-      setTimeout(launch, lived < 5000 ? 3000 : 300);
+      if (lived < 10_000) {
+        fastDeaths += 1;
+        // backoff متصاعد: 3s → 6 → 12 → … → سقف 120s — الدوّار يهدى بدل ما يفرم الموارد
+        const wait = Math.min(120_000, 3000 * Math.pow(2, Math.min(fastDeaths - 1, 5)));
+        const m = cgroupMb();
+        console.log("[supervisor] app exited (" + (signal || code) + ") after " + Math.round(lived / 1000) + "s — موت سريع رقم " + fastDeaths
+          + (m ? " ، RAM الآن " + m.usedMb + "/" + m.maxMb + "MB" : "") + " — إعادة بعد " + Math.round(wait / 1000) + "s");
+        if (fastDeaths === 8) {
+          console.log("[supervisor] ⚠ crash-loop مثبت (8 موتات متتالية سريعة). الكود بيحني الضغط، بس لو وصلت هنا: امسح state/ أو سجّل تذكرة للمضيف — المُشرف هيكمّل بمحاولات متباعدة.");
+        }
+        setTimeout(launch, wait);
+      } else {
+        if (fastDeaths > 0) fastDeaths = 0;
+        console.log("[supervisor] app exited (" + (signal || code) + ") after " + Math.round(lived / 1000) + "s — restarting");
+        setTimeout(launch, 300);
+      }
     });
     child.on("error", (err) => {
       console.log("[supervisor] could not start the app: " + err.message);
@@ -501,7 +543,13 @@ if (role === "node" || role === "agent") {
       console.log("[supervisor] القرص الفاضي " + free + "MB تحت 1500MB — التنزيل اتخطّى");
       return;
     }
+    const mem2 = cgroupMb();
+    if (mem2 && mem2.usedMb > mem2.maxMb * 0.85) {
+      console.log("[supervisor] RAM " + mem2.usedMb + "/" + mem2.maxMb + "MB فوق 85% — التنزيل اتأجل للدورة الجاية بدل ما يضرب الأب");
+      return;
+    }
     console.log("[supervisor] toolchain pass: بنكمّل vendor/bin من مِرر جيت هاب");
+    vendorRunning = true;
     const cp = spawn(process.execPath, [script, "--into", join(HERE, "vendor", "bin"), "--json"], {
       cwd: HERE,
       stdio: ["ignore", "pipe", "pipe"],
@@ -514,6 +562,7 @@ if (role === "node" || role === "agent") {
     const killer = setTimeout(() => { try { cp.kill("SIGKILL"); } catch { /* already gone */ } }, 900_000);
     cp.on("exit", (code, signal) => {
       clearTimeout(killer);
+      vendorRunning = false;
       let doc = null;
       const i = out.lastIndexOf("{");
       for (let s2 = i; s2 >= 0; s2 -= 1) {
