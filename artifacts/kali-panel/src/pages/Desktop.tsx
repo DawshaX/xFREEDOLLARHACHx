@@ -15,6 +15,7 @@ import {
   Download, Palette,
 } from "lucide-react";
 import OllamaStatusPanel from "@/components/desktop/OllamaStatusPanel";
+import { jsonRequest } from "@/lib/sse";
 import { probeOllamaViaServer, getStoredOllamaBase, getStoredOllamaModel } from "@/lib/ollama-browser";
 import { DraggableWindow, type WindowState } from "@/components/desktop/DraggableWindow";
 import { TaskManager } from "@/components/desktop/TaskManager";
@@ -238,15 +239,33 @@ function PageWin({ path, title }: { path: string; title: string }) {
 
 // ─── Inline MonitorWin ────────────────────────────────────────────────────────
 function MonitorWin() {
-  const [m, setM] = useState({ cpu: 25, ram: 42, disk: 58, net: 12 });
+  // الفحص الشامل (2026-11-09): الأرقام دي كانت Math.random بتتجدد كل 1.5 ثانية —
+  // مؤشرات بتلمع بلا قياس. دلوقتي القراءة من GET /system/metrics (os.cpus()/
+  // os.totalmem() على المحرك)، ولو الوضع ساكن أو الطلب فشل بيتكتب «غير مقاس».
+  type Gauge = number | null;
+  const [m, setM] = useState<{ cpu: Gauge; ram: Gauge; disk: Gauge; net: Gauge }>({ cpu: null, ram: null, disk: null, net: null });
   useEffect(() => {
-    const t = setInterval(() => setM({
-      cpu:  25 + Math.random() * 40,
-      ram:  38 + Math.random() * 30,
-      disk: 50 + Math.random() * 20,
-      net:  5  + Math.random() * 30,
-    }), 1500);
-    return () => clearInterval(t);
+    let alive = true;
+    const tick = async () => {
+      try {
+        const d = await jsonRequest<Record<string, unknown>>("/system/metrics");
+        if (!alive) return;
+        const measured = (d as { measured?: boolean }).measured !== false;
+        const cpuU = (d as { cpu?: { usage?: number } }).cpu?.usage;
+        const ramPct = (d as { ram?: { percent?: number } }).ram?.percent ?? (d as { memory?: { usagePercent?: number } }).memory?.usagePercent;
+        setM({
+          cpu: measured && typeof cpuU === "number" ? Math.round(cpuU) : null,
+          ram: measured && typeof ramPct === "number" && Number.isFinite(ramPct) ? Math.round(ramPct) : null,
+          disk: null, // مفيش مصدر DISK مقاس لسه — بنقولها بدل ما نزوّقها
+          net: null,  // نفس الكلام لـNET
+        });
+      } catch {
+        if (alive) setM({ cpu: null, ram: null, disk: null, net: null });
+      }
+    };
+    void tick();
+    const t = setInterval(() => { void tick(); }, 5000);
+    return () => { alive = false; clearInterval(t); };
   }, []);
   const bar = (v: number, color: string) => (
     <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -260,16 +279,18 @@ function MonitorWin() {
         ["RAM",  m.ram,  "#a855f7"],
         ["DISK", m.disk, "#22d3ee"],
         ["NET",  m.net,  "#10b981"],
-      ] as [string, number, string][]).map(([l, v, c]) => (
+      ] as [string, Gauge, string][]).map(([l, v, c]) => (
         <div key={l} className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-2.5">
           <div className="flex justify-between text-xs font-mono">
             <span className="text-white/40">{l}</span>
-            <span className="font-bold" style={{ color: c }}>{v.toFixed(0)}%</span>
+            <span className="font-bold" style={{ color: v === null ? "rgba(255,255,255,0.35)" : c }}>{v === null ? "غير مقاس" : `${v}%`}</span>
           </div>
-          {bar(v, c)}
+          {v === null
+            ? <div className="text-[9px] font-mono text-white/25 text-center py-1">{l === "CPU" || l === "RAM" ? "يتطلب المحرك الحي" : "مفيش مصدر قياس لسه"}</div>
+            : bar(v, c)}
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: c }} />
-            <span className="text-[9px] text-white/30 font-mono">Active</span>
+            {v !== null && <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: c }} />}
+            <span className="text-[9px] text-white/30 font-mono">{v === null ? "بلا اختلاق" : "مقاس من /system/metrics"}</span>
           </div>
         </div>
       ))}
