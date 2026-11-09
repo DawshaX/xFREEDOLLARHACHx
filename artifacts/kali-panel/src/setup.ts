@@ -794,7 +794,21 @@ const cybernovaFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     }
 
     try {
-      const resp = await originalFetch(input, init);
+      // Same-origin engine: attach the ops token too, so a page served by the
+      // engine itself is authenticated on every `/api/*` call (the linked-server
+      // branch above already does this for a remote base).
+      const patched: RequestInit = { ...(init ?? {}) };
+      try {
+        const token = localStorage.getItem("cybernova_ops_token") ?? "";
+        if (token) {
+          const headers = new Headers(patched.headers ?? undefined);
+          if (!headers.has("x-nova-token")) headers.set("x-nova-token", token);
+          patched.headers = headers;
+        }
+      } catch {
+        /* no localStorage (SSR/tests) */
+      }
+      const resp = await originalFetch(input, patched);
       if (!resp.ok) {
         if (urlStr.includes("/api/ollama/chat/stream")) {
           return buildStaticOllamaStreamResponse(parsedBody);

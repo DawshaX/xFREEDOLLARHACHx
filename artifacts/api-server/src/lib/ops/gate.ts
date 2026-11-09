@@ -117,6 +117,18 @@ export function checkGate(req: GateRequest, scope: string): GateVerdict {
       how: "على أي استضافة عامة سيّر NOVA_EXEC_TOKEN وإلا كل مسارات التنفيذ هترجع 403.",
     };
   }
+  // A sensitive read is not a public read. Even with no token configured, the
+  // device inventory / tool catalogue / event bus stay behind the same-origin
+  // wall, so a stranger's curl gets 403 instead of the fleet's internals.
+  if (scopeRequiresTokenForRead(scope) && !sameOriginOk(req)) {
+    logger.warn({ scope }, "ops gate blocked: sensitive read, no token, not same-origin");
+    return {
+      ok: false,
+      code: "same_origin_required",
+      reason: "قراءة حساسة مقفولة على زوار من خارج اللوحة",
+      how: "افتح الصفحة من نفس أصل السيرفر، أو سيّر NOVA_EXEC_TOKEN وأرسله في هيدر `x-nova-token` (أو ?token=).",
+    };
+  }
   return { ok: true, code: "allowed", reason: "read-only", how: "" };
 }
 
@@ -134,6 +146,16 @@ const SENSITIVE_READS: RegExp[] = [
   /\/api\/ops\/stats$/,
   /\/api\/keys\b/,
   /\/api\/settings\b/,
+  // The brain's own catalogue and identity: the full tool schema (an attacker's
+  // map of exactly what can be run), the persona card, and the build/version
+  // banner. These were readable by anyone who could reach the host.
+  /\/api\/nova-core\/(tools|persona|version)\b/,
+  // The device inventory: hostname, platform, arch, RAM and user of every
+  // connected box. A stranger must not be able to enumerate the fleet.
+  /\/api\/local-agent\/agents\b/,
+  // The platform event bus: a live firehose of what the engine is doing right
+  // now (tool runs, targets, results).
+  /\/api\/(live-events|agent\/events)\b/,
 ];
 
 // NOTE: `/local-agent/download-nova-agent` and `/download-agent` are deliberately

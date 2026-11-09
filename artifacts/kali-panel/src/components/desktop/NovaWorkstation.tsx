@@ -27,6 +27,7 @@ import {
   type ProbeResult,
 } from "@/lib/remote";
 import { servedByEngine } from "@/lib/env";
+import { novaAuthHeaders } from "@/lib/ops-client";
 import { runLocalBrain } from "@/lib/local-brain";
 import { CloudBrainCard } from "./CloudBrainCard";
 import {
@@ -767,7 +768,7 @@ export function NovaWorkstation() {
     try {
       const res = await fetch(`${API}/nova-core/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           message: content,
           sessionId: sessionId || "workstation",
