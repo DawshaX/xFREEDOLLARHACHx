@@ -147,6 +147,31 @@ jobs:
           grep -q '"ok":true' /tmp/power.json && echo "الأمر اتقبل من اللوحة" || echo "::notice::اللوحة رفضت أو ماردّتش — التفاصيل فوق، والمفتاح في الأمان مابانش"
           exit 0
 
+      # ── تصليح الأدوات الناقصة من هنا برضه ─────────────────────────────────
+      # آخر قياس حي (2026-11-09): nuclei و dnsx غايبين من السلوت، وأول محاولة
+      # supervisor ماتت بـSIGKILL (الرام سقفها 460MB). الـendpoint بيدعم
+      # only=… — فمن غير ما حد يفتح طرفية، الـwatchdog بيبلّم الفرقة الناقصة
+      # كل ما يلاقي نقص والهب صاحي. الرفض (مافيش توكن) عادي ومابيحمرش البوابة.
+      - name: auto-repair missing toolchain (nuclei/dnsx measured absent 2026-11-09)
+        if: steps.p.outputs.status == 'up'
+        env:
+          NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          set +e
+          echo "## toolchain probe — $(date -u +%FT%TZ)" >> "$GITHUB_STEP_SUMMARY"
+          tjson=$(curl -sS -m 20 "$HUB/api/ops/tools" 2>/dev/null)
+          missing=$(printf '%s' "$tjson" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(",".join(d.get("missing") or []))' 2>/dev/null)
+          echo "- missing: ${missing:-<none>}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$missing" ] && [ -n "$NOVA_EXEC_TOKEN" ]; then
+            pcode=$(curl -sS -o /tmp/prov.json -w '%{http_code}' -m 300 -X POST "$HUB/api/ops/tools/provision"               -H "Content-Type: application/json" -H "x-nova-token: $NOVA_EXEC_TOKEN"               -d "{\"only\": \"$missing\"}" 2>/dev/null)
+            echo "- provision: HTTP ${pcode} · $(head -c 200 /tmp/prov.json | tr '\n' ' ')" >> "$GITHUB_STEP_SUMMARY"
+            echo "provision HTTP ${pcode} for: ${missing}"
+          elif [ -n "$missing" ]; then
+            echo "- NOVA_EXEC_TOKEN غير موجود — مش هنقدر ننصّب من CI" >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::في أدوات ناقصة (${missing}) وNOVA_EXEC_TOKEN مش في الأسرار"
+          fi
+          exit 0
+
       - name: maintain the single down-issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
