@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-09T09:30:14.026Z",
-  "total": 235323,
+  "at": "2026-11-09T20:01:24.445Z",
+  "total": 259856,
   "bySeverity": {
-    "high": 92174,
-    "medium": 100067,
-    "low": 10875,
-    "unknown": 13202,
-    "critical": 18954,
-    "none": 51
+    "high": 100738,
+    "medium": 112010,
+    "low": 11915,
+    "unknown": 13973,
+    "critical": 21164,
+    "none": 56
   },
-  "kev": 758,
-  "epssScored": 225112,
-  "products": 51392,
+  "kev": 853,
+  "epssScored": 248656,
+  "products": 54989,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -22,6 +22,25 @@
   "sample": 800,
   "complete": true,
   "rows": [
+    {
+      "id": "CVE-2024-3400",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "A command injection as a result of arbitrary file creation vulnerability in the GlobalProtect feature of Palo Alto Networks PAN-OS software for specific PAN-OS versions and distinct feature configurations may enable an unauthenticated attacker to execute arbit",
+      "cwe": [
+        "CWE-20",
+        "CWE-77"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2024-04-12T08:15:06.230",
+      "products": [
+        "pan-os",
+        "pan-os",
+        "pan-os"
+      ],
+      "refs": []
+    },
     {
       "id": "CVE-2023-46604",
       "cvss": 10,
@@ -37,6 +56,22 @@
         "activemq",
         "activemq",
         "activemq"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-1709",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "ConnectWise ScreenConnect 23.9.7 and prior are affected by an Authentication Bypass Using an Alternate Path or Channel\n\n vulnerability, which may allow an attacker direct access to confidential information or \n\ncritical systems.",
+      "cwe": [
+        "CWE-288"
+      ],
+      "kev": true,
+      "epss": 0.9998,
+      "pub": "2024-02-21T16:15:50.420",
+      "products": [
+        "screenconnect"
       ],
       "refs": []
     },
@@ -145,6 +180,24 @@
         "gitlab",
         "gitlab",
         "gitlab"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-1212",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "Unauthenticated remote attackers can access the system through the LoadMaster management interface, enabling arbitrary system command execution.",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.95388,
+      "pub": "2024-02-21T18:15:50.417",
+      "products": [
+        "loadmaster",
+        "loadmaster",
+        "loadmaster"
       ],
       "refs": []
     },
@@ -753,6 +806,43 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-23897",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Jenkins 2.441 and earlier, LTS 2.426.2 and earlier does not disable a feature of its CLI command parser that replaces an '@' character followed by a file path in an argument with the file's contents, allowing unauthenticated attackers to read arbitrary files o",
+      "cwe": [
+        "CWE-22",
+        "CWE-27"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2024-01-24T18:15:09.370",
+      "products": [
+        "jenkins",
+        "jenkins"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-7593",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Incorrect implementation of an authentication algorithm in Ivanti vTM other than versions 22.2R1 or 22.7R2 allows a remote unauthenticated attacker to bypass authentication of the admin panel.",
+      "cwe": [
+        "CWE-287",
+        "CWE-303"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2024-08-13T19:15:16.940",
+      "products": [
+        "virtual_traffic_manager",
+        "virtual_traffic_manager",
+        "virtual_traffic_manager"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2012-1823",
       "cvss": 9.8,
       "sev": "critical",
@@ -803,6 +893,24 @@
         "ds-2cd2032-i_firmware",
         "ds-2cd2112-i_firmware",
         "ds-2cd2132-i_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-34102",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Adobe Commerce versions 2.4.7, 2.4.6-p5, 2.4.5-p7, 2.4.4-p8 and earlier are affected by an Improper Restriction of XML External Entity Reference ('XXE') vulnerability that could result in arbitrary code execution. An attacker could exploit this vulnerability b",
+      "cwe": [
+        "CWE-611"
+      ],
+      "kev": true,
+      "epss": 0.99994,
+      "pub": "2024-06-13T09:15:10.380",
+      "products": [
+        "commerce",
+        "commerce",
+        "commerce"
       ],
       "refs": []
     },
@@ -860,6 +968,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-4577",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "In PHP versions 8.1.* before 8.1.29, 8.2.* before 8.2.20, 8.3.* before 8.3.8, when using Apache and PHP-CGI on Windows, if the system is set up to use certain code pages, Windows may use \"Best-Fit\" behavior to replace characters in command line given to Win32 ",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.99987,
+      "pub": "2024-06-09T20:15:09.550",
+      "products": [
+        "php",
+        "php",
+        "php"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-29357",
       "cvss": 9.8,
       "sev": "critical",
@@ -876,6 +1002,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-22527",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A template injection vulnerability on older versions of Confluence Data Center and Server allows an unauthenticated attacker to achieve RCE on an affected instance. Customers using an affected version must take immediate action.\n\nMost recent supported versions",
+      "cwe": [
+        "CWE-74"
+      ],
+      "kev": true,
+      "epss": 0.99984,
+      "pub": "2024-01-16T05:15:08.290",
+      "products": [
+        "confluence_data_center",
+        "confluence_data_center",
+        "confluence_server"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2014-8361",
       "cvss": 9.8,
       "sev": "critical",
@@ -888,6 +1032,24 @@
         "dir-905l_firmware",
         "dir-605l_firmware",
         "dir-600l_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-4879",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "ServiceNow has addressed an input validation vulnerability that was identified in Vancouver and Washington DC Now Platform releases. This vulnerability could enable an unauthenticated user to remotely execute code within the context of the Now Platform. Servic",
+      "cwe": [
+        "CWE-1287"
+      ],
+      "kev": true,
+      "epss": 0.99968,
+      "pub": "2024-07-10T17:15:12.117",
+      "products": [
+        "servicenow",
+        "servicenow",
+        "servicenow"
       ],
       "refs": []
     },
@@ -978,6 +1140,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-27198",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "In JetBrains TeamCity before 2023.11.4 authentication bypass allowing to perform admin actions was possible",
+      "cwe": [
+        "CWE-288"
+      ],
+      "kev": true,
+      "epss": 0.99938,
+      "pub": "2024-03-04T18:15:09.040",
+      "products": [
+        "teamcity"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-34362",
       "cvss": 9.8,
       "sev": "critical",
@@ -992,6 +1170,22 @@
         "moveit_cloud",
         "moveit_cloud",
         "moveit_cloud"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-32113",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') vulnerability in Apache OFBiz.This issue affects Apache OFBiz: before 18.12.13.\n\nUsers are recommended to upgrade to version 18.12.13, which fixes the issue.",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.99916,
+      "pub": "2024-05-08T15:15:10.227",
+      "products": [
+        "ofbiz"
       ],
       "refs": []
     },
@@ -1042,6 +1236,25 @@
       "pub": "2017-03-27T02:59:00.453",
       "products": [
         "internet_information_services"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-36401",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "GeoServer is an open source server that allows users to share and edit geospatial data. Prior to versions 2.22.6, 2.23.6, 2.24.4, and 2.25.2, multiple OGC request parameters allow Remote Code Execution (RCE) by unauthenticated users through specially crafted i",
+      "cwe": [
+        "CWE-95",
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.99813,
+      "pub": "2024-07-01T16:15:04.120",
+      "products": [
+        "geoserver",
+        "geoserver",
+        "geoserver"
       ],
       "refs": []
     },
@@ -1150,6 +1363,43 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-5217",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "ServiceNow has addressed an input validation vulnerability that was identified in the Washington DC, Vancouver, and earlier Now Platform releases. This vulnerability could enable an unauthenticated user to remotely execute code within the context of the Now Pl",
+      "cwe": [
+        "CWE-184",
+        "CWE-697"
+      ],
+      "kev": true,
+      "epss": 0.99628,
+      "pub": "2024-07-10T17:15:12.373",
+      "products": [
+        "servicenow",
+        "servicenow",
+        "servicenow"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-4040",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A server side template injection vulnerability in CrushFTP in all versions before 10.7.1 and 11.1.0 on all platforms allows unauthenticated remote attackers to read files from the filesystem outside of the VFS Sandbox, bypass authentication to gain administrat",
+      "cwe": [
+        "CWE-1336",
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.99539,
+      "pub": "2024-04-22T20:15:07.803",
+      "products": [
+        "crushftp",
+        "crushftp"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2018-20062",
       "cvss": 9.8,
       "sev": "critical",
@@ -1160,6 +1410,23 @@
       "pub": "2018-12-11T18:29:00.197",
       "products": [
         "nonecms"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-23692",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Rejetto HTTP File Server, up to and including version 2.3m, is vulnerable to a template injection vulnerability. This vulnerability allows a remote, unauthenticated attacker to execute arbitrary commands on the affected system by sending a specially crafted HT",
+      "cwe": [
+        "CWE-1336",
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.99485,
+      "pub": "2024-05-31T10:15:09.330",
+      "products": [
+        "http_file_server"
       ],
       "refs": []
     },
@@ -1199,6 +1466,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-38856",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Incorrect Authorization vulnerability in Apache OFBiz.\n\nThis issue affects Apache OFBiz: through 18.12.14.\n\nUsers are recommended to upgrade to version 18.12.15, which fixes the issue.\n\nUnauthenticated endpoints could allow execution of screen rendering code o",
+      "cwe": [
+        "CWE-863"
+      ],
+      "kev": true,
+      "epss": 0.99411,
+      "pub": "2024-08-05T09:15:56.780",
+      "products": [
+        "ofbiz"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2014-6287",
       "cvss": 9.8,
       "sev": "critical",
@@ -1211,6 +1494,22 @@
       "pub": "2014-10-07T10:55:04.493",
       "products": [
         "http_file_server"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-4885",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "In WhatsUp Gold versions released before 2023.1.3, an unauthenticated Remote Code Execution vulnerability in Progress WhatsUpGold.  The \n\nWhatsUp.ExportUtilities.Export.GetFileWithoutZip\n\n\n\n allows execution of commands with iisapppool\\nmconsole privileges.",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.99288,
+      "pub": "2024-06-25T20:15:12.970",
+      "products": [
+        "whatsup_gold"
       ],
       "refs": []
     },
@@ -1265,6 +1564,22 @@
         "confluence_data_center",
         "confluence_data_center",
         "confluence_data_center"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-27348",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "RCE-Remote Command Execution vulnerability in Apache HugeGraph-Server.This issue affects Apache HugeGraph-Server: from 1.0.0 before 1.3.0 in Java8 & Java11\n\nUsers are recommended to upgrade to version 1.3.0 with Java11 & enable the Auth system, which fixes the",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": true,
+      "epss": 0.9921,
+      "pub": "2024-04-22T14:15:07.420",
+      "products": [
+        "hugegraph"
       ],
       "refs": []
     },
@@ -1463,6 +1778,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-48788",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A improper neutralization of special elements used in an sql command ('sql injection') in Fortinet FortiClientEMS version 7.2.0 through 7.2.2, FortiClientEMS 7.0.1 through 7.0.10 allows attacker to execute unauthorized code or commands via specially crafted pa",
+      "cwe": [
+        "CWE-89"
+      ],
+      "kev": true,
+      "epss": 0.98446,
+      "pub": "2024-03-12T15:15:46.973",
+      "products": [
+        "forticlient_enterprise_management_server",
+        "forticlient_enterprise_management_server"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2016-3088",
       "cvss": 9.8,
       "sev": "critical",
@@ -1567,6 +1899,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-3272",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "** UNSUPPORTED WHEN ASSIGNED ** A vulnerability, which was classified as very critical, has been found in D-Link DNS-320L, DNS-325, DNS-327L and DNS-340L up to 20240403. This issue affects some unknown processing of the file /cgi-bin/nas_sharing.cgi of the com",
+      "cwe": [
+        "CWE-798"
+      ],
+      "kev": true,
+      "epss": 0.98109,
+      "pub": "2024-04-04T01:15:50.123",
+      "products": [
+        "dns-320l_firmware",
+        "dns-320l_firmware",
+        "dns-320l_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2018-19410",
       "cvss": 9.8,
       "sev": "critical",
@@ -1611,6 +1961,22 @@
       "pub": "2026-02-06T09:15:49.330",
       "products": [
         "forticlientems"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-4358",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "In Progress Telerik Report Server, version 2024 Q1 (10.0.24.305) or earlier, on IIS, an unauthenticated attacker can gain access to Telerik Report Server restricted functionality via an authentication bypass vulnerability.",
+      "cwe": [
+        "CWE-290"
+      ],
+      "kev": true,
+      "epss": 0.97482,
+      "pub": "2024-05-29T15:16:06.477",
+      "products": [
+        "report_server_2024"
       ],
       "refs": []
     },
@@ -1877,6 +2243,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-53704",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "An Improper Authentication vulnerability in the SSLVPN authentication mechanism allows a remote attacker to bypass authentication.",
+      "cwe": [
+        "CWE-287"
+      ],
+      "kev": true,
+      "epss": 0.95314,
+      "pub": "2025-01-09T07:15:27.203",
+      "products": [
+        "sonicos",
+        "sonicos",
+        "sonicos"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-36845",
       "cvss": 9.8,
       "sev": "critical",
@@ -1942,6 +2326,24 @@
       "pub": "2018-08-04T19:29:00.263",
       "products": [
         "nvrmini_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-21413",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Microsoft Outlook Remote Code Execution Vulnerability",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": true,
+      "epss": 0.9466,
+      "pub": "2024-02-13T18:16:00.137",
+      "products": [
+        "365_apps",
+        "office_2016",
+        "office_2019"
       ],
       "refs": []
     },
@@ -2166,6 +2568,22 @@
       "pub": "2018-05-31T18:29:00.557",
       "products": [
         "kace_system_management_appliance"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-5910",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Missing authentication for a critical function in Palo Alto Networks Expedition can lead to an Expedition admin account takeover for attackers with network access to Expedition.\n\nNote: Expedition is a tool aiding in configuration migration, tuning, and enrichm",
+      "cwe": [
+        "CWE-306"
+      ],
+      "kev": true,
+      "epss": 0.91684,
+      "pub": "2024-07-10T19:15:11.390",
+      "products": [
+        "expedition"
       ],
       "refs": []
     },
@@ -2458,6 +2876,41 @@
         "papercut_mf",
         "papercut_mf",
         "papercut_mf"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-28986",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "SolarWinds Web Help Desk was found to be susceptible to a Java Deserialization Remote Code Execution vulnerability that, if exploited, would allow an attacker to run commands on the host machine. \n\nWhile it was reported as an unauthenticated vulnerability, Sol",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.84628,
+      "pub": "2024-08-13T23:15:16.627",
+      "products": [
+        "web_help_desk",
+        "web_help_desk"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-21762",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A out-of-bounds write vulnerability in Fortinet FortiOS 7.4.0 through 7.4.2, FortiOS 7.2.0 through 7.2.6, FortiOS 7.0.0 through 7.0.13, FortiOS 6.4.0 through 6.4.14, FortiOS 6.2.0 through 6.2.15, FortiOS 6.0 all versions, FortiProxy 7.4.0 through 7.4.2, FortiP",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.84589,
+      "pub": "2024-02-09T09:15:08.087",
+      "products": [
+        "fortiproxy",
+        "fortiproxy",
+        "fortiproxy"
       ],
       "refs": []
     },
@@ -2980,6 +3433,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-23113",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A use of externally-controlled format string in Fortinet FortiOS versions 7.4.0 through 7.4.2, 7.2.0 through 7.2.6, 7.0.0 through 7.0.13, FortiProxy versions 7.4.0 through 7.4.2, 7.2.0 through 7.2.8, 7.0.0 through 7.0.14, FortiPAM versions 1.2.0, 1.1.0 through",
+      "cwe": [
+        "CWE-134"
+      ],
+      "kev": true,
+      "epss": 0.61725,
+      "pub": "2024-02-15T14:15:46.503",
+      "products": [
+        "fortiproxy",
+        "fortiswitchmanager",
+        "fortios"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-59310",
       "cvss": 9.8,
       "sev": "critical",
@@ -3045,6 +3516,24 @@
         "gaia_embedded",
         "gaia_embedded",
         "gaia_embedded"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-45249",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Remote command execution due to use of default passwords. The following products are affected: Acronis Cyber Infrastructure (ACI) before build 5.0.1-61, Acronis Cyber Infrastructure (ACI) before build 5.1.1-71, Acronis Cyber Infrastructure (ACI) before build 5",
+      "cwe": [
+        "CWE-1393"
+      ],
+      "kev": true,
+      "epss": 0.53535,
+      "pub": "2024-07-24T14:15:04.867",
+      "products": [
+        "cyber_infrastructure",
+        "cyber_infrastructure",
+        "cyber_infrastructure"
       ],
       "refs": []
     },
@@ -3371,6 +3860,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-37079",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "vCenter Server contains a heap-overflow vulnerability in the implementation of the DCERPC protocol. A malicious actor with network access to vCenter Server may trigger this vulnerability by sending a specially crafted network packet potentially leading to remo",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.22377,
+      "pub": "2024-06-18T06:15:11.350",
+      "products": [
+        "cloud_foundation",
+        "vcenter_server",
+        "vcenter_server"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2014-0546",
       "cvss": 9.8,
       "sev": "critical",
@@ -3641,6 +4148,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-21410",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Microsoft Exchange Server Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-287"
+      ],
+      "kev": true,
+      "epss": 0.12661,
+      "pub": "2024-02-13T18:15:59.680",
+      "products": [
+        "exchange_server",
+        "exchange_server"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-46817",
       "cvss": 9.8,
       "sev": "critical",
@@ -3672,6 +4196,24 @@
       "products": [
         "wordpress",
         "wordpress"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-6047",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Certain EOL GeoVision devices fail to properly filter user input for the specific functionality. Unauthenticated remote attackers can exploit this vulnerability to inject and execute arbitrary system commands on the device.",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.10072,
+      "pub": "2024-06-17T06:15:09.237",
+      "products": [
+        "gv-dsp_lpr_firmware",
+        "gv-bx130_firmware",
+        "gv-bx1500_firmware"
       ],
       "refs": []
     },
@@ -3916,6 +4458,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-116779",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "FreeSWITCH is a Software Defined Telecom Stack enabling the digital transformation from proprietary telecom switches to a software implementation that runs on any commodity hardware. Prior to 1.11.3, sofia_presence_handle_sip_i_message() split the To user of a",
+      "cwe": [
+        "CWE-77",
+        "CWE-78",
+        "CWE-749"
+      ],
+      "kev": true,
+      "epss": 0.01299,
+      "pub": "2026-11-05T20:17:44.790",
+      "products": [
+        "freeswitch"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-8452",
       "cvss": 9.8,
       "sev": "critical",
@@ -3930,6 +4490,24 @@
         "netscaler_application_delivery_controller",
         "netscaler_application_delivery_controller",
         "netscaler_application_delivery_controller"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-102895",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "GPUStack is an open-source GPU cluster manager for AI model serving and GPU instance provisioning. Prior to 2.2.0, get_current_user in gpustack/api/auth.py treated a loopback request source as the built-in administrator when force_auth_localhost was false, whi",
+      "cwe": [
+        "CWE-287",
+        "CWE-290",
+        "CWE-346"
+      ],
+      "kev": true,
+      "epss": 0.00331,
+      "pub": "2026-11-04T22:17:44.613",
+      "products": [
+        "gpustack"
       ],
       "refs": []
     },
@@ -4002,6 +4580,60 @@
         "chrome",
         "debian_linux",
         "debian_linux"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-4947",
+      "cvss": 9.6,
+      "sev": "critical",
+      "desc": "Type Confusion in V8 in Google Chrome prior to 125.0.6422.60 allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-843"
+      ],
+      "kev": true,
+      "epss": 0.15236,
+      "pub": "2024-05-15T21:15:09.273",
+      "products": [
+        "chrome",
+        "fedora",
+        "fedora"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-4671",
+      "cvss": 9.6,
+      "sev": "critical",
+      "desc": "Use after free in Visuals in Google Chrome prior to 124.0.6367.201 allowed a remote attacker who had compromised the renderer process to potentially perform a sandbox escape via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.08348,
+      "pub": "2024-05-14T15:44:15.573",
+      "products": [
+        "chrome",
+        "fedora",
+        "fedora"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-5274",
+      "cvss": 9.6,
+      "sev": "critical",
+      "desc": "Type Confusion in V8 in Google Chrome prior to 125.0.6422.112 allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-843"
+      ],
+      "kev": true,
+      "epss": 0.0773,
+      "pub": "2024-05-28T15:15:10.443",
+      "products": [
+        "chrome",
+        "fedora",
+        "fedora"
       ],
       "refs": []
     },
@@ -4097,6 +4729,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-42009",
+      "cvss": 9.3,
+      "sev": "critical",
+      "desc": "A Cross-Site Scripting vulnerability in Roundcube through 1.5.7 and 1.6.x through 1.6.7 allows a remote attacker to steal and send emails of a victim via a crafted e-mail message that abuses a Desanitization issue in message_body() in program/actions/mail/show",
+      "cwe": [
+        "CWE-79"
+      ],
+      "kev": true,
+      "epss": 0.82882,
+      "pub": "2024-08-05T19:15:38.220",
+      "products": [
+        "webmail",
+        "webmail"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-48356",
       "cvss": 9.3,
       "sev": "critical",
@@ -4127,6 +4776,24 @@
       "pub": "2026-08-17T22:17:23.580",
       "products": [
         "mlflow"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-38475",
+      "cvss": 9.1,
+      "sev": "critical",
+      "desc": "Improper escaping of output in mod_rewrite in Apache HTTP Server 2.4.59 and earlier allows an attacker to map URLs to filesystem locations that are permitted to be served by the server but are not intentionally/directly reachable by any URL, resulting in code ",
+      "cwe": [
+        "CWE-116"
+      ],
+      "kev": true,
+      "epss": 0.99957,
+      "pub": "2024-07-01T19:15:04.883",
+      "products": [
+        "http_server",
+        "ontap_9",
+        "sma_200_firmware"
       ],
       "refs": []
     },
@@ -4350,6 +5017,23 @@
         "office",
         "office",
         "office"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-29824",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "An unspecified SQL Injection vulnerability in Core server of Ivanti EPM 2022 SU5 and prior allows an unauthenticated attacker within the same network to execute arbitrary code.",
+      "cwe": [
+        "CWE-89"
+      ],
+      "kev": true,
+      "epss": 0.99938,
+      "pub": "2024-05-31T18:15:11.177",
+      "products": [
+        "endpoint_manager",
+        "endpoint_manager"
       ],
       "refs": []
     },
@@ -4580,6 +5264,23 @@
         "server_message_block",
         "intellispace_portal",
         "intellispace_portal"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-7399",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Improper limitation of a pathname to a restricted directory vulnerability in Samsung MagicINFO 9 Server version before 21.1050 allows attackers to write arbitrary file as system authority.",
+      "cwe": [
+        "CWE-22",
+        "CWE-434"
+      ],
+      "kev": true,
+      "epss": 0.91941,
+      "pub": "2024-08-12T13:38:41.550",
+      "products": [
+        "magicinfo_9_server"
       ],
       "refs": []
     },
@@ -5577,6 +6278,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-29988",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "SmartScreen Prompt Security Feature Bypass Vulnerability",
+      "cwe": [
+        "CWE-693"
+      ],
+      "kev": true,
+      "epss": 0.45151,
+      "pub": "2024-04-09T17:16:01.830",
+      "products": [
+        "windows_10_1809",
+        "windows_10_21h2",
+        "windows_10_22h2"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2017-6737",
       "cvss": 8.8,
       "sev": "high",
@@ -6374,6 +7093,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-4761",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Out of bounds write in V8 in Google Chrome prior to 124.0.6367.207 allowed a remote attacker to perform an out of bounds memory write via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.11007,
+      "pub": "2024-05-14T16:17:35.810",
+      "products": [
+        "chrome",
+        "fedora",
+        "fedora"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2017-6738",
       "cvss": 8.8,
       "sev": "high",
@@ -6421,6 +7158,24 @@
       "products": [
         "ios",
         "ios_xe"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-23222",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "A type confusion issue was addressed with improved checks. This issue is fixed in Safari 17.3, iOS 15.8.7 and iPadOS 15.8.7, iOS 16.7.5 and iPadOS 16.7.5, iOS 17.3 and iPadOS 17.3, macOS Monterey 12.7.3, macOS Sonoma 14.3, macOS Ventura 13.6.4, tvOS 17.3, visi",
+      "cwe": [
+        "CWE-843"
+      ],
+      "kev": true,
+      "epss": 0.10593,
+      "pub": "2024-01-23T01:15:11.500",
+      "products": [
+        "safari",
+        "ipados",
+        "ipados"
       ],
       "refs": []
     },
@@ -6493,6 +7248,24 @@
         "safari",
         "ipados",
         "ipados"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-38189",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Microsoft Project Remote Code Execution Vulnerability",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": true,
+      "epss": 0.08194,
+      "pub": "2024-08-13T18:15:27.733",
+      "products": [
+        "365_apps",
+        "office_2019",
+        "office_long_term_servicing_channel"
       ],
       "refs": []
     },
@@ -6593,6 +7366,59 @@
         "windows_10_1607",
         "windows_10_1809",
         "windows_10_21h2"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-30040",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Windows MSHTML Platform Security Feature Bypass Vulnerability",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": true,
+      "epss": 0.03939,
+      "pub": "2024-05-14T17:17:12.410",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-20953",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Vulnerability in the Oracle Agile PLM product of Oracle Supply Chain (component: Export).   The supported version that is affected is 9.3.6. Easily exploitable vulnerability allows low privileged attacker with network access via HTTP to compromise Oracle Agile",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.03934,
+      "pub": "2024-02-17T02:15:49.520",
+      "products": [
+        "agile_product_lifecycle_management"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-0519",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Out of bounds memory access in V8 in Google Chrome prior to 120.0.6099.224 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-787",
+        "CWE-125"
+      ],
+      "kev": true,
+      "epss": 0.03802,
+      "pub": "2024-01-16T22:15:37.753",
+      "products": [
+        "chrome",
+        "fedora",
+        "fedora"
       ],
       "refs": []
     },
@@ -6786,6 +7612,41 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-24919",
+      "cvss": 8.6,
+      "sev": "high",
+      "desc": "Potentially allowing an attacker to read certain information on Check Point Security Gateways once connected to the internet and enabled with remote Access VPN or Mobile Access Software Blades. A Security fix that mitigates this vulnerability is available.",
+      "cwe": [
+        "CWE-200"
+      ],
+      "kev": true,
+      "epss": 0.99978,
+      "pub": "2024-05-28T19:15:10.060",
+      "products": [
+        "quantum_spark_firmware",
+        "quantum_spark_firmware",
+        "quantum_security_gateway_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-28995",
+      "cvss": 8.6,
+      "sev": "high",
+      "desc": "SolarWinds Serv-U was susceptible to a directory transversal vulnerability that would allow access to read sensitive files on the host machine.",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.99614,
+      "pub": "2024-06-06T09:15:14.167",
+      "products": [
+        "serv-u",
+        "serv-u"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2022-43939",
       "cvss": 8.6,
       "sev": "high",
@@ -6852,6 +7713,24 @@
       "products": [
         "endpoint_manager",
         "endpoint_manager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-20353",
+      "cvss": 8.6,
+      "sev": "high",
+      "desc": "A vulnerability in the management and VPN web servers for Cisco Adaptive Security Appliance (ASA) Software and Cisco Firepower Threat Defense (FTD) Software could allow an unauthenticated, remote attacker to cause the device to reload unexpectedly, resulting i",
+      "cwe": [
+        "CWE-835"
+      ],
+      "kev": true,
+      "epss": 0.69824,
+      "pub": "2024-04-24T19:15:46.723",
+      "products": [
+        "adaptive_security_appliance_software",
+        "adaptive_security_appliance_software",
+        "adaptive_security_appliance_software"
       ],
       "refs": []
     },
@@ -7070,6 +7949,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-1708",
+      "cvss": 8.4,
+      "sev": "high",
+      "desc": "ConnectWise ScreenConnect 23.9.7 and prior are affected by path-traversal vulnerability, which may allow an attacker \n\nthe ability to execute remote code or directly impact confidential data or critical systems.\n\n",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.95436,
+      "pub": "2024-02-21T16:15:50.233",
+      "products": [
+        "screenconnect"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2013-2094",
       "cvss": 8.4,
       "sev": "high",
@@ -7102,6 +7997,22 @@
         "papercut_mf",
         "papercut_mf",
         "papercut_mf"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-4978",
+      "cvss": 8.4,
+      "sev": "high",
+      "desc": "Justice AV Solutions Viewer Setup 8.3.7.250-1 contains a malicious binary when executed and is signed with an unexpected authenticode signature. A remote, privileged threat actor may exploit this vulnerability to execute of unauthorized PowerShell commands.",
+      "cwe": [
+        "CWE-506"
+      ],
+      "kev": true,
+      "epss": 0.26937,
+      "pub": "2024-05-23T02:15:09.257",
+      "products": [
+        "javs_viewer"
       ],
       "refs": []
     },
@@ -7213,6 +8124,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-21893",
+      "cvss": 8.2,
+      "sev": "high",
+      "desc": "A server-side request forgery vulnerability in the SAML component of Ivanti Connect Secure (9.x, 22.x) and Ivanti Policy Secure (9.x, 22.x) and Ivanti Neurons for ZTA allows an attacker to access certain restricted resources without authentication.",
+      "cwe": [
+        "CWE-918"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2024-01-31T18:15:47.437",
+      "products": [
+        "connect_secure",
+        "connect_secure",
+        "connect_secure"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-41266",
       "cvss": 8.2,
       "sev": "high",
@@ -7227,6 +8156,24 @@
         "qlik_sense",
         "qlik_sense",
         "qlik_sense"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-6549",
+      "cvss": 8.2,
+      "sev": "high",
+      "desc": "Improper Restriction of Operations within the Bounds of a Memory Buffer in NetScaler ADC and NetScaler Gateway allows Unauthenticated Denial of Service and Out-Of-Bounds Memory Read",
+      "cwe": [
+        "CWE-119"
+      ],
+      "kev": true,
+      "epss": 0.57633,
+      "pub": "2024-01-17T21:15:11.690",
+      "products": [
+        "netscaler_application_delivery_controller",
+        "netscaler_application_delivery_controller",
+        "netscaler_application_delivery_controller"
       ],
       "refs": []
     },
@@ -7352,6 +8299,24 @@
         "tomcat",
         "7-mode_transition_tool",
         "oncommand_balance"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-21412",
+      "cvss": 8.1,
+      "sev": "high",
+      "desc": "Internet Shortcut Files Security Feature Bypass Vulnerability",
+      "cwe": [
+        "CWE-693"
+      ],
+      "kev": true,
+      "epss": 0.9941,
+      "pub": "2024-02-13T18:15:59.903",
+      "products": [
+        "windows_10_1809",
+        "windows_10_21h2",
+        "windows_10_22h2"
       ],
       "refs": []
     },
@@ -7729,6 +8694,23 @@
         "wordpress",
         "wordpress",
         "wordpress"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-123158",
+      "cvss": 8.1,
+      "sev": "high",
+      "desc": "sshd in OpenSSH before 10.6p2 on Linux, when musl libc is used without PAM, lacks a workaround for a password authentication bypass (related to misinterpretation of whether a string is intended to be a password hash). For some configurations of accounts, any p",
+      "cwe": [
+        "CWE-394"
+      ],
+      "kev": true,
+      "epss": 0.01014,
+      "pub": "2026-11-05T16:17:47.110",
+      "products": [
+        "openssh",
+        "openssh"
       ],
       "refs": []
     },
@@ -8541,6 +9523,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-21338",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Windows Kernel Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-822"
+      ],
+      "kev": true,
+      "epss": 0.62209,
+      "pub": "2024-02-13T18:15:49.083",
+      "products": [
+        "windows_10_1809",
+        "windows_10_21h2",
+        "windows_10_22h2"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2009-0563",
       "cvss": 7.8,
       "sev": "high",
@@ -9060,6 +10060,42 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-38193",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Windows Ancillary Function Driver for WinSock Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.28504,
+      "pub": "2024-08-13T18:15:28.230",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-1086",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "A use-after-free vulnerability in the Linux kernel's netfilter: nf_tables component can be exploited to achieve local privilege escalation.\n\n\n\nThe nft_verdict_init() function allows positive values as drop error within the hook verdict, and hence the nf_hook_s",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.28058,
+      "pub": "2024-01-31T13:15:10.827",
+      "products": [
+        "h300s_firmware",
+        "h500s_firmware",
+        "h700s_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-36802",
       "cvss": 7.8,
       "sev": "high",
@@ -9092,6 +10128,24 @@
         "catalyst_sd-wan_manager",
         "catalyst_sd-wan_manager",
         "catalyst_sd-wan_manager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-35250",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Windows Kernel-Mode Driver Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-822"
+      ],
+      "kev": true,
+      "epss": 0.25222,
+      "pub": "2024-06-11T17:16:02.650",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
       ],
       "refs": []
     },
@@ -9656,6 +10710,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-38080",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Windows Hyper-V Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-190"
+      ],
+      "kev": true,
+      "epss": 0.07058,
+      "pub": "2024-07-09T17:15:43.410",
+      "products": [
+        "windows_11_21h2",
+        "windows_11_22h2",
+        "windows_11_23h2"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-33825",
       "cvss": 7.8,
       "sev": "high",
@@ -9668,6 +10740,25 @@
       "pub": "2026-04-14T18:17:35.100",
       "products": [
         "defender_antimalware_platform"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-30051",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Windows DWM Core Library Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-122",
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.06168,
+      "pub": "2024-05-14T17:17:21.763",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
       ],
       "refs": []
     },
@@ -9857,6 +10948,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-26169",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Windows Error Reporting Service Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-269"
+      ],
+      "kev": true,
+      "epss": 0.04014,
+      "pub": "2024-03-12T17:15:56.173",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2018-19321",
       "cvss": 7.8,
       "sev": "high",
@@ -9975,6 +11084,41 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-32896",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "there is a possible way to bypass  due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is needed for exploitation.",
+      "cwe": [
+        "CWE-670",
+        "CWE-783"
+      ],
+      "kev": true,
+      "epss": 0.02985,
+      "pub": "2024-06-13T21:15:54.080",
+      "products": [
+        "android"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-36971",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "In the Linux kernel, the following vulnerability has been resolved:\n\nnet: fix __dst_negative_advice() race\n\n__dst_negative_advice() does not enforce proper RCU rules when\nsk->dst_cache must be cleared, leading to possible UAF.\n\nRCU rules are that we must first",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.02701,
+      "pub": "2024-06-10T09:15:09.127",
+      "products": [
+        "debian_linux",
+        "linux_kernel",
+        "linux_kernel"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-35674",
       "cvss": 7.8,
       "sev": "high",
@@ -10065,6 +11209,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-38107",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Windows Power Dependency Coordinator Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.01635,
+      "pub": "2024-08-13T18:15:10.963",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-21514",
       "cvss": 7.8,
       "sev": "high",
@@ -10079,6 +11241,42 @@
         "365_apps",
         "office_long_term_servicing_channel",
         "office_long_term_servicing_channel"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-23225",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "A memory corruption issue was addressed with improved validation. This issue is fixed in iOS 16.7.6 and iPadOS 16.7.6, iOS 17.4 and iPadOS 17.4, macOS Monterey 12.7.4, macOS Sonoma 14.4, macOS Ventura 13.6.5, tvOS 17.4, visionOS 1.1, watchOS 10.4. An attacker ",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.01481,
+      "pub": "2024-03-05T20:16:01.370",
+      "products": [
+        "ipados",
+        "ipados",
+        "iphone_os"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-23296",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "A memory corruption issue was addressed with improved validation. This issue is fixed in iOS 16.7.8 and iPadOS 16.7.8, iOS 17.4 and iPadOS 17.4, macOS Monterey 12.7.6, macOS Sonoma 14.4, macOS Ventura 13.6.7, tvOS 17.4, visionOS 1.1, watchOS 10.4. An attacker ",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.01411,
+      "pub": "2024-03-05T20:16:01.553",
+      "products": [
+        "ipados",
+        "ipados",
+        "iphone_os"
       ],
       "refs": []
     },
@@ -10133,6 +11331,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-4610",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Use After Free vulnerability in Arm Ltd Bifrost GPU Kernel Driver, Arm Ltd Valhall GPU Kernel Driver allows a local non-privileged user to make improper GPU memory processing operations to gain access to already freed memory.This issue affects Bifrost GPU Kern",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.00764,
+      "pub": "2024-06-07T12:15:09.077",
+      "products": [
+        "bifrost_gpu_kernel_driver",
+        "valhall_gpu_kernel_driver"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-53362",
       "cvss": 7.8,
       "sev": "high",
@@ -10148,6 +11363,23 @@
         "linux_kernel",
         "linux_kernel",
         "linux_kernel"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-29748",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "there is a possible way to bypass  due to a logic error in the code. This could lead to local escalation of privilege with no additional execution privileges needed. User interaction is needed for exploitation.",
+      "cwe": [
+        "CWE-755",
+        "CWE-280"
+      ],
+      "kev": true,
+      "epss": 0.00676,
+      "pub": "2024-04-05T20:15:08.407",
+      "products": [
+        "android"
       ],
       "refs": []
     },
@@ -10240,6 +11472,24 @@
         "acronis_backup",
         "acronis_backup",
         "acronis_backup"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-21351",
+      "cvss": 7.6,
+      "sev": "high",
+      "desc": "Windows SmartScreen Security Feature Bypass Vulnerability",
+      "cwe": [
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.27798,
+      "pub": "2024-02-13T18:15:51.333",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
       ],
       "refs": []
     },
@@ -10442,6 +11692,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-29059",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": ".NET Framework Information Disclosure Vulnerability",
+      "cwe": [
+        "CWE-209"
+      ],
+      "kev": true,
+      "epss": 0.98624,
+      "pub": "2024-03-23T00:15:09.150",
+      "products": [
+        ".net_framework",
+        ".net_framework",
+        ".net_framework"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-34486",
       "cvss": 7.5,
       "sev": "high",
@@ -10583,6 +11851,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-38112",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "Windows MSHTML Platform Spoofing Vulnerability",
+      "cwe": [
+        "CWE-451"
+      ],
+      "kev": true,
+      "epss": 0.84225,
+      "pub": "2024-07-09T17:15:47.860",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2015-3035",
       "cvss": 7.5,
       "sev": "high",
@@ -10631,6 +11917,21 @@
       "pub": "2018-07-11T00:29:01.663",
       "products": [
         "chakracore"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-21182",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "Vulnerability in the Oracle WebLogic Server product of Oracle Fusion Middleware (component: Core).  Supported versions that are affected are 12.2.1.4.0 and  14.1.1.0.0. Easily exploitable vulnerability allows unauthenticated attacker with network access via T3",
+      "cwe": [],
+      "kev": true,
+      "epss": 0.74162,
+      "pub": "2024-07-16T23:15:22.660",
+      "products": [
+        "weblogic_server",
+        "weblogic_server"
       ],
       "refs": []
     },
@@ -10781,6 +12082,24 @@
       "pub": "2016-04-07T23:59:10.797",
       "products": [
         "netweaver_application_server_java"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-38178",
+      "cvss": 7.5,
+      "sev": "high",
+      "desc": "Scripting Engine Memory Corruption Vulnerability",
+      "cwe": [
+        "CWE-843"
+      ],
+      "kev": true,
+      "epss": 0.4138,
+      "pub": "2024-08-13T18:15:26.220",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
       ],
       "refs": []
     },
@@ -11201,7 +12520,27 @@
       "kev": true,
       "epss": 0.00621,
       "pub": "2026-11-06T19:17:48.437",
-      "products": [],
+      "products": [
+        "sonicos",
+        "sonicos"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-20767",
+      "cvss": 7.4,
+      "sev": "high",
+      "desc": "ColdFusion versions 2023.6, 2021.12 and earlier are affected by an Improper Access Control vulnerability that could result in arbitrary file system read. An attacker could leverage this vulnerability to access or modify restricted files. Exploitation of this i",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": true,
+      "epss": 0.98514,
+      "pub": "2024-03-18T12:15:06.870",
+      "products": [
+        "coldfusion",
+        "coldfusion"
+      ],
       "refs": []
     },
     {
@@ -11270,6 +12609,41 @@
       "pub": "2026-08-01T20:16:37.157",
       "products": [
         "n-central"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-3273",
+      "cvss": 7.3,
+      "sev": "high",
+      "desc": "** UNSUPPORTED WHEN ASSIGNED ** A vulnerability, which was classified as critical, was found in D-Link DNS-320L, DNS-325, DNS-327L and DNS-340L up to 20240403. Affected is an unknown function of the file /cgi-bin/nas_sharing.cgi of the component HTTP GET Reque",
+      "cwe": [
+        "CWE-77"
+      ],
+      "kev": true,
+      "epss": 0.99995,
+      "pub": "2024-04-04T01:15:50.387",
+      "products": [
+        "dns-320l_firmware",
+        "dns-320l_firmware",
+        "dns-320l_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-27199",
+      "cvss": 7.3,
+      "sev": "high",
+      "desc": "In JetBrains TeamCity before 2023.11.4 path traversal allowing to perform limited admin actions  was possible",
+      "cwe": [
+        "CWE-23",
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.99991,
+      "pub": "2024-03-04T18:15:09.377",
+      "products": [
+        "teamcity"
       ],
       "refs": []
     },
@@ -11432,6 +12806,42 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-38094",
+      "cvss": 7.2,
+      "sev": "high",
+      "desc": "Microsoft SharePoint Remote Code Execution Vulnerability",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.50892,
+      "pub": "2024-07-09T17:15:46.090",
+      "products": [
+        "sharepoint_server",
+        "sharepoint_server",
+        "sharepoint_server"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-41710",
+      "cvss": 7.2,
+      "sev": "high",
+      "desc": "A vulnerability in the Mitel 6800 Series, 6900 Series, and 6900w Series SIP Phones, including the 6970 Conference Unit, through R6.4.0.HF1 (R6.4.0.136) could allow an authenticated attacker with administrative privilege to conduct an argument injection attack,",
+      "cwe": [
+        "CWE-88"
+      ],
+      "kev": true,
+      "epss": 0.41646,
+      "pub": "2024-08-12T19:15:16.850",
+      "products": [
+        "6970_firmware",
+        "6940w_sip_firmware",
+        "6930w_sip_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-6973",
       "cvss": 7.2,
       "sev": "high",
@@ -11482,6 +12892,22 @@
         "apex_one",
         "worry-free_business_security",
         "worry-free_business_security_services"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-7694",
+      "cvss": 7.2,
+      "sev": "high",
+      "desc": "ThreatSonar Anti-Ransomware from TeamT5 does not properly validate the content of uploaded files. Remote attackers with  administrator privileges on the product platform can upload malicious files, which can be used to execute arbitrary system command on the s",
+      "cwe": [
+        "CWE-434"
+      ],
+      "kev": true,
+      "epss": 0.01792,
+      "pub": "2024-08-12T13:38:58.553",
+      "products": [
+        "threatsonar_anti-ransomware"
       ],
       "refs": []
     },
@@ -11556,6 +12982,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-30088",
+      "cvss": 7,
+      "sev": "high",
+      "desc": "Windows Kernel Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-367"
+      ],
+      "kev": true,
+      "epss": 0.68202,
+      "pub": "2024-06-11T17:15:56.810",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-68820",
       "cvss": 7,
       "sev": "high",
@@ -11570,6 +13014,24 @@
         "windows_10_1607",
         "windows_10_1809",
         "windows_10_21h2"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-38106",
+      "cvss": 7,
+      "sev": "high",
+      "desc": "Windows Kernel Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-591"
+      ],
+      "kev": true,
+      "epss": 0.06337,
+      "pub": "2024-08-13T18:15:10.713",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
       ],
       "refs": []
     },
@@ -11623,6 +13085,25 @@
         "ipados",
         "iphone_os",
         "macos"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-37085",
+      "cvss": 6.8,
+      "sev": "medium",
+      "desc": "VMware ESXi contains an authentication bypass vulnerability. A malicious actor with sufficient Active Directory (AD) permissions can gain full access to an ESXi host that was previously  configured to use AD for user management https://blogs.vmware.com/vsphere",
+      "cwe": [
+        "CWE-287",
+        "CWE-305"
+      ],
+      "kev": true,
+      "epss": 0.2677,
+      "pub": "2024-06-25T15:15:12.377",
+      "products": [
+        "cloud_foundation",
+        "esxi",
+        "esxi"
       ],
       "refs": []
     },
@@ -11938,6 +13419,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-50224",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "TP-Link TL-WR841N dropbearpwd Improper Authentication Information Disclosure Vulnerability. This vulnerability allows network-adjacent attackers to disclose sensitive information on affected installations of TP-Link TL-WR841N routers. Authentication is not req",
+      "cwe": [
+        "CWE-290"
+      ],
+      "kev": true,
+      "epss": 0.20021,
+      "pub": "2024-05-03T03:16:10.833",
+      "products": [
+        "tl-wr841n_firmware",
+        "tl-wr841n_firmware",
+        "tl-wr841n_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-36761",
       "cvss": 6.5,
       "sev": "medium",
@@ -12006,6 +13505,24 @@
         "safari",
         "ipados",
         "ipados"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-38213",
+      "cvss": 6.5,
+      "sev": "medium",
+      "desc": "Windows Mark of the Web Security Feature Bypass Vulnerability",
+      "cwe": [
+        "CWE-693"
+      ],
+      "kev": true,
+      "epss": 0.13626,
+      "pub": "2024-08-13T18:15:30.750",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
       ],
       "refs": []
     },
@@ -12178,6 +13695,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-37383",
+      "cvss": 6.1,
+      "sev": "medium",
+      "desc": "Roundcube Webmail before 1.5.7 and 1.6.x before 1.6.7 allows XSS via SVG animate attributes.",
+      "cwe": [
+        "CWE-79"
+      ],
+      "kev": true,
+      "epss": 0.73995,
+      "pub": "2024-06-07T04:15:30.463",
+      "products": [
+        "webmail",
+        "webmail",
+        "debian_linux"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-43770",
       "cvss": 6.1,
       "sev": "medium",
@@ -12231,6 +13766,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-27443",
+      "cvss": 6.1,
+      "sev": "medium",
+      "desc": "An issue was discovered in Zimbra Collaboration (ZCS) 9.0 and 10.0. A Cross-Site Scripting (XSS) vulnerability exists in the CalendarInvite feature of the Zimbra webmail classic user interface, because of improper input validation in the handling of the calend",
+      "cwe": [
+        "CWE-79"
+      ],
+      "kev": true,
+      "epss": 0.24606,
+      "pub": "2024-08-12T15:15:20.283",
+      "products": [
+        "collaboration",
+        "collaboration"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2014-2120",
       "cvss": 6.1,
       "sev": "medium",
@@ -12261,6 +13813,42 @@
         "flash_player",
         "flash_player",
         "flash_player"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-20359",
+      "cvss": 6,
+      "sev": "medium",
+      "desc": "A vulnerability in a legacy capability that allowed for the preloading of VPN clients and plug-ins and that has been available in Cisco Adaptive Security Appliance (ASA) Software and Cisco Firepower Threat Defense (FTD) Software could allow an authenticated, l",
+      "cwe": [
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.18816,
+      "pub": "2024-04-24T19:15:46.943",
+      "products": [
+        "adaptive_security_appliance_software",
+        "adaptive_security_appliance_software",
+        "adaptive_security_appliance_software"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-20399",
+      "cvss": 6,
+      "sev": "medium",
+      "desc": "A vulnerability in the CLI of Cisco NX-OS Software could allow an authenticated user in possession of Administrator credentials to execute arbitrary commands as root on the underlying operating system of an affected device.\r\n\r\nThis vulnerability is due to insu",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.04306,
+      "pub": "2024-07-01T17:15:04.383",
+      "products": [
+        "nx-os",
+        "nx-os",
+        "nx-os"
       ],
       "refs": []
     },
@@ -12333,1523 +13921,7 @@
         "ios_xe"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2018-0179",
-      "cvss": 5.9,
-      "sev": "medium",
-      "desc": "Multiple vulnerabilities in the Login Enhancements (Login Block) feature of Cisco IOS Software could allow an unauthenticated, remote attacker to trigger a reload of an affected system, resulting in a denial of service (DoS) condition. These vulnerabilities af",
-      "cwe": [
-        "CWE-399"
-      ],
-      "kev": true,
-      "epss": 0.04935,
-      "pub": "2018-03-28T22:29:01.467",
-      "products": [
-        "ios",
-        "ios",
-        "ios"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2018-0180",
-      "cvss": 5.9,
-      "sev": "medium",
-      "desc": "Multiple vulnerabilities in the Login Enhancements (Login Block) feature of Cisco IOS Software could allow an unauthenticated, remote attacker to trigger a reload of an affected system, resulting in a denial of service (DoS) condition. These vulnerabilities af",
-      "cwe": [
-        "CWE-399"
-      ],
-      "kev": true,
-      "epss": 0.04935,
-      "pub": "2018-03-28T22:29:01.547",
-      "products": [
-        "ios",
-        "ios",
-        "ios"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2004-1464",
-      "cvss": 5.9,
-      "sev": "medium",
-      "desc": "Cisco IOS 12.2(15) and earlier allows remote attackers to cause a denial of service (refused VTY (virtual terminal) connections), via a crafted TCP connection to the Telnet or reverse Telnet port.",
-      "cwe": [
-        "CWE-400"
-      ],
-      "kev": true,
-      "epss": 0.0484,
-      "pub": "2004-12-31T05:00:00.000",
-      "products": [
-        "ios"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-2055",
-      "cvss": 5.9,
-      "sev": "medium",
-      "desc": "Cisco IOS XR 3.4.0 through 3.8.1 allows remote attackers to cause a denial of service (session reset) via a BGP UPDATE message with an invalid attribute, as demonstrated in the wild on 17 August 2009.",
-      "cwe": [
-        "CWE-20"
-      ],
-      "kev": true,
-      "epss": 0.03314,
-      "pub": "2009-08-19T17:30:01.047",
-      "products": [
-        "ios_xr",
-        "ios_xr",
-        "ios_xr"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-7473",
-      "cvss": 5.8,
-      "sev": "medium",
-      "desc": "On affected platforms running Arista EOS where a tunnel decapsulation configuration—such as VXLAN (Virtual Extensible LAN), decap-groups, or a GRE (Generic Routing Encapsulation) tunnel interface—is present, the switch will incorrectly decapsulate and forward ",
-      "cwe": [
-        "CWE-1023"
-      ],
-      "kev": true,
-      "epss": 0.01108,
-      "pub": "2026-06-05T17:17:02.850",
-      "products": [
-        "eos"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-4723",
-      "cvss": 5.7,
-      "sev": "medium",
-      "desc": "The D-Link DIR-300 router stores cleartext passwords, which allows context-dependent attackers to obtain sensitive information via unspecified vectors.",
-      "cwe": [
-        "CWE-312"
-      ],
-      "kev": true,
-      "epss": 0.03064,
-      "pub": "2011-12-20T11:55:08.413",
-      "products": [
-        "dir-300_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2016-3718",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "The (1) HTTP and (2) FTP coders in ImageMagick before 6.9.3-10 and 7.x before 7.0.1-1 allow remote attackers to conduct server-side request forgery (SSRF) attacks via a crafted image.",
-      "cwe": [
-        "CWE-918"
-      ],
-      "kev": true,
-      "epss": 0.7565,
-      "pub": "2016-05-05T18:59:08.960",
-      "products": [
-        "enterprise_linux_desktop",
-        "enterprise_linux_desktop",
-        "enterprise_linux_eus"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2016-3715",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "The EPHEMERAL coder in ImageMagick before 6.9.3-10 and 7.x before 7.0.1-1 allows remote attackers to delete arbitrary files via a crafted image.",
-      "cwe": [
-        "CWE-552"
-      ],
-      "kev": true,
-      "epss": 0.75307,
-      "pub": "2016-05-05T18:59:04.727",
-      "products": [
-        "enterprise_linux_desktop",
-        "enterprise_linux_desktop",
-        "enterprise_linux_eus"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-3896",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "Microsoft Silverlight 5 before 5.1.20913.0 does not properly validate pointers during access to Silverlight elements, which allows remote attackers to obtain sensitive information via a crafted Silverlight application, aka \"Silverlight Vulnerability.\"",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.67959,
-      "pub": "2013-10-09T14:53:25.230",
-      "products": [
-        "silverlight"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-3900",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "Why is Microsoft republishing a CVE from 2013?\nWe are republishing CVE-2013-3900 in the Security Update Guide to update the Security Updates table and to inform customers that the EnableCertPaddingCheck is available in all currently supported versions of Windo",
-      "cwe": [
-        "CWE-347"
-      ],
-      "kev": true,
-      "epss": 0.44647,
-      "pub": "2013-12-11T00:55:03.693",
-      "products": [
-        "windows_10_1507",
-        "windows_10_1607",
-        "windows_10_1809"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2016-4655",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "The kernel in Apple iOS before 9.3.5 allows attackers to obtain sensitive information from memory via a crafted app.",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.33353,
-      "pub": "2016-08-25T21:59:00.133",
-      "products": [
-        "iphone_os",
-        "iphone_os"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2014-0196",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "The n_tty_write function in drivers/tty/n_tty.c in the Linux kernel through 3.14.3 does not properly manage tty driver access in the \"LECHO & !OPOST\" case, which allows local users to cause a denial of service (memory corruption and system crash) or gain privi",
-      "cwe": [
-        "CWE-362"
-      ],
-      "kev": true,
-      "epss": 0.20329,
-      "pub": "2014-05-07T10:55:04.337",
-      "products": [
-        "linux_kernel",
-        "linux_kernel",
-        "linux_kernel"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-41991",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "A certificate validation issue was addressed. This issue is fixed in macOS Ventura 13.6, iOS 16.7 and iPadOS 16.7. A malicious app may be able to bypass signature validation. Apple is aware of a report that this issue may have been actively exploited against v",
-      "cwe": [
-        "CWE-295"
-      ],
-      "kev": true,
-      "epss": 0.1338,
-      "pub": "2023-09-21T19:15:11.283",
-      "products": [
-        "ipados",
-        "ipados",
-        "iphone_os"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-38606",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "This issue was addressed with improved state management. This issue is fixed in macOS Monterey 12.6.8, iOS 15.7.8 and iPadOS 15.7.8, iOS 16.6 and iPadOS 16.6, tvOS 16.6, macOS Big Sur 11.7.9, macOS Ventura 13.5, watchOS 9.6. An app may be able to modify sensit",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.02899,
-      "pub": "2023-07-27T00:15:16.173",
-      "products": [
-        "ipados",
-        "ipados",
-        "iphone_os"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-4211",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "A local non-privileged user can make improper GPU memory processing operations  to gain access to already freed memory.",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.00977,
-      "pub": "2023-10-01T18:15:09.927",
-      "products": [
-        "5th_gen_gpu_architecture_kernel_driver",
-        "bifrost_gpu_kernel_driver",
-        "midgard_gpu_kernel_driver"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-21237",
-      "cvss": 5.5,
-      "sev": "medium",
-      "desc": "In applyRemoteView of NotificationContentInflater.java, there is a possible way to hide foreground service notification due to misleading or insufficient UI. This could lead to local information disclosure with no additional execution privileges needed. User i",
-      "cwe": [
-        "CWE-200"
-      ],
-      "kev": true,
-      "epss": 0.00266,
-      "pub": "2023-06-28T18:15:16.560",
-      "products": [
-        "android"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-5223",
-      "cvss": 5.4,
-      "sev": "medium",
-      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in D-Link DSL-2760U Gateway (Rev. E1) allow remote authenticated users to inject arbitrary web script or HTML via the (1) ntpServer1 parameter to sntpcfg.cgi, username parameter to (2) ddnsmngr.cmd or (3) tod",
-      "cwe": [
-        "CWE-79"
-      ],
-      "kev": true,
-      "epss": 0.50833,
-      "pub": "2013-11-19T04:50:12.063",
-      "products": [
-        "dsl-2760u_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-20122",
-      "cvss": 5.4,
-      "sev": "medium",
-      "desc": "A vulnerability in the API of Cisco Catalyst SD-WAN Manager could allow an authenticated, remote attacker to overwrite arbitrary files on the local file system. To exploit this vulnerability, the attacker must have valid read-only credentials with API access o",
-      "cwe": [
-        "CWE-648"
-      ],
-      "kev": true,
-      "epss": 0.25801,
-      "pub": "2026-02-25T17:25:28.170",
-      "products": [
-        "catalyst_sd-wan_manager",
-        "catalyst_sd-wan_manager",
-        "catalyst_sd-wan_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-36584",
-      "cvss": 5.4,
-      "sev": "medium",
-      "desc": "Windows Mark of the Web Security Feature Bypass Vulnerability",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.03251,
-      "pub": "2023-10-10T18:15:14.280",
-      "products": [
-        "windows_10_1507",
-        "windows_10_1809",
-        "windows_10_21h1"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-36846",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "A Missing Authentication for Critical Function vulnerability in Juniper Networks Junos OS on SRX Series allows an unauthenticated, network-based attacker to cause limited impact to the file system integrity.\n\n\n\nWith a specific request to user.php that doesn't ",
-      "cwe": [
-        "CWE-306"
-      ],
-      "kev": true,
-      "epss": 0.93473,
-      "pub": "2023-08-17T20:15:10.457",
-      "products": [
-        "junos",
-        "junos",
-        "junos"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-41763",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "Skype for Business Elevation of Privilege Vulnerability",
-      "cwe": [
-        "CWE-918"
-      ],
-      "kev": true,
-      "epss": 0.90282,
-      "pub": "2023-10-10T18:15:18.150",
-      "products": [
-        "skype_for_business_server",
-        "skype_for_business_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-36844",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "A PHP External Variable Modification vulnerability in J-Web of Juniper Networks Junos OS on EX Series allows an unauthenticated, network-based attacker to control certain, important environment variables.\n\nUsing a crafted request an attacker is able to modify ",
-      "cwe": [
-        "CWE-473"
-      ],
-      "kev": true,
-      "epss": 0.89958,
-      "pub": "2023-08-17T20:15:10.267",
-      "products": [
-        "junos",
-        "junos",
-        "junos"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-36847",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "A Missing Authentication for Critical Function vulnerability in Juniper Networks Junos OS on EX Series allows an unauthenticated, network-based attacker to cause limited impact to the file system integrity.\n\n\n\n\n\nWith a specific request to installAppPackage.php",
-      "cwe": [
-        "CWE-306"
-      ],
-      "kev": true,
-      "epss": 0.83455,
-      "pub": "2023-08-17T20:15:10.553",
-      "products": [
-        "junos",
-        "junos",
-        "junos"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-0738",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "The JMX-Console web application in JBossAs in Red Hat JBoss Enterprise Application Platform (aka JBoss EAP or JBEAP) 4.2 before 4.2.0.CP09 and 4.3 before 4.3.0.CP08 performs access control only for the GET and POST methods, which allows remote attackers to sen",
-      "cwe": [
-        "CWE-749"
-      ],
-      "kev": true,
-      "epss": 0.73815,
-      "pub": "2010-04-28T22:30:00.447",
-      "products": [
-        "jboss_enterprise_application_platform",
-        "jboss_enterprise_application_platform"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2016-2388",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "The Universal Worklist Configuration in SAP NetWeaver AS JAVA 7.4 allows remote attackers to obtain sensitive user information via a crafted HTTP request, aka SAP Security Note 2256846.",
-      "cwe": [
-        "CWE-200"
-      ],
-      "kev": true,
-      "epss": 0.52206,
-      "pub": "2016-02-16T15:59:02.103",
-      "products": [
-        "netweaver_application_server_java"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-20316",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "A vulnerability in the web interface of Cisco Secure Firewall Management Center (FMC) Software could allow an unauthenticated, remote attacker to log in to an affected device using a low-privileged account to access sensitive data within the impacted systems.\r",
-      "cwe": [
-        "CWE-259"
-      ],
-      "kev": true,
-      "epss": 0.35096,
-      "pub": "2026-07-29T17:16:51.840",
-      "products": [
-        "secure_firewall_management_center"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-4902",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "Unspecified vulnerability in Oracle Java SE 6u101, 7u85, and 8u60 allows remote attackers to affect integrity via unknown vectors related to Deployment.",
-      "cwe": [
-        "CWE-284"
-      ],
-      "kev": true,
-      "epss": 0.13603,
-      "pub": "2015-10-22T00:00:03.093",
-      "products": [
-        "jdk",
-        "jdk",
-        "jdk"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2022-2586",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "It was discovered that a nft object or expression could reference a nft set on a different nft table, leading to a use-after-free once that table was deleted.",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.10202,
-      "pub": "2024-01-08T18:15:44.620",
-      "products": [
-        "simatic_s7-1500_tm_mfp_firmware",
-        "sinec_os",
-        "linux_kernel"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-36851",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "A Missing Authentication for Critical Function vulnerability in Juniper Networks Junos OS on SRX Series allows an unauthenticated, network-based attacker to cause limited impact to the file system integrity.\n\n\n\nWith a specific request to \n\nwebauth_operation.ph",
-      "cwe": [
-        "CWE-306"
-      ],
-      "kev": true,
-      "epss": 0.01123,
-      "pub": "2023-09-27T15:18:54.877",
-      "products": [
-        "junos",
-        "junos",
-        "junos"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-56164",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "Missing authentication for critical function in Microsoft Office SharePoint allows an unauthorized attacker to elevate privileges over a network.",
-      "cwe": [
-        "CWE-306"
-      ],
-      "kev": true,
-      "epss": 0.01011,
-      "pub": "2026-07-14T17:17:09.907",
-      "products": [
-        "sharepoint_server",
-        "sharepoint_server",
-        "sharepoint_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-66384",
-      "cvss": 5.3,
-      "sev": "medium",
-      "desc": "An authenticated user may write data outside the intended Docker cache path under specific remote-repository conditions.",
-      "cwe": [
-        "CWE-22"
-      ],
-      "kev": true,
-      "epss": 0.00665,
-      "pub": "2026-08-12T16:17:14.520",
-      "products": [
-        "artifactory",
-        "artifactory"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-20269",
-      "cvss": 5,
-      "sev": "medium",
-      "desc": "A vulnerability in the remote access VPN feature of Cisco Adaptive Security Appliance (ASA) Software and Cisco Firepower Threat Defense (FTD) Software could allow an unauthenticated, remote attacker to conduct a brute force attack in an attempt to identify val",
-      "cwe": [
-        "CWE-288",
-        "CWE-863"
-      ],
-      "kev": true,
-      "epss": 0.26623,
-      "pub": "2023-09-06T18:15:08.303",
-      "products": [
-        "adaptive_security_appliance_software",
-        "adaptive_security_appliance_software",
-        "adaptive_security_appliance_software"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-22894",
-      "cvss": 4.9,
-      "sev": "medium",
-      "desc": "Strapi through 4.5.5 allows attackers (with access to the admin panel) to discover sensitive user details by exploiting the query filter. The attacker can filter users by columns that contain sensitive information and infer a value from API responses. If the a",
-      "cwe": [
-        "CWE-312"
-      ],
-      "kev": true,
-      "epss": 0.04114,
-      "pub": "2023-04-19T16:15:07.303",
-      "products": [
-        "strapi"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2012-0518",
-      "cvss": 4.7,
-      "sev": "medium",
-      "desc": "Unspecified vulnerability in the Oracle Application Server Single Sign-On component in Oracle Fusion Middleware 10.1.4.3.0 allows remote attackers to affect integrity via unknown vectors related to Redirects, a different vulnerability than CVE-2012-3175.",
-      "cwe": [
-        "CWE-601"
-      ],
-      "kev": true,
-      "epss": 0.04685,
-      "pub": "2012-10-16T23:55:03.087",
-      "products": [
-        "fusion_middleware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-21492",
-      "cvss": 4.4,
-      "sev": "medium",
-      "desc": "Kernel pointers are printed in the log file prior to SMR May-2023 Release 1 allows a privileged local attacker to bypass ASLR.",
-      "cwe": [
-        "CWE-532"
-      ],
-      "kev": true,
-      "epss": 0.02554,
-      "pub": "2023-05-04T21:15:10.070",
-      "products": [
-        "android",
-        "android",
-        "android"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-32202",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Protection mechanism failure in Windows Shell allows an unauthorized attacker to perform spoofing over a network.",
-      "cwe": [
-        "CWE-693"
-      ],
-      "kev": true,
-      "epss": 0.70902,
-      "pub": "2026-04-14T18:17:27.360",
-      "products": [
-        "windows_10_1607",
-        "windows_10_1809",
-        "windows_10_21h2"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2017-0059",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Microsoft Internet Explorer 9 through 11 allow remote attackers to obtain sensitive information from process memory via a crafted web site, aka \"Internet Explorer Information Disclosure Vulnerability.\" This vulnerability is different from those described in CV",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.61968,
-      "pub": "2017-03-17T00:59:01.523",
-      "products": [
-        "internet_explorer",
-        "internet_explorer",
-        "internet_explorer"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2018-13374",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "A Improper Access Control in Fortinet FortiOS 6.0.2, 5.6.7 and before, FortiADC 6.1.0, 6.0.0 to 6.0.1, 5.4.0 to 5.4.4 allows attacker to obtain the LDAP server login credentials configured in FortiGate via pointing a LDAP server connectivity test request to a ",
-      "cwe": [
-        "CWE-732"
-      ],
-      "kev": true,
-      "epss": 0.38088,
-      "pub": "2019-01-22T14:29:00.220",
-      "products": [
-        "fortiadc",
-        "fortiadc",
-        "fortiadc"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2016-0162",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Microsoft Internet Explorer 9 through 11 allows remote attackers to determine the existence of files via crafted JavaScript code, aka \"Internet Explorer Information Disclosure Vulnerability.\"",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.21932,
-      "pub": "2016-04-12T23:59:26.410",
-      "products": [
-        "internet_explorer",
-        "internet_explorer",
-        "internet_explorer"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-96652",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Plex Media Server before 1.43.3.10861 allows SSRF via '/player/timeline'. An attacker using any X-Plex-Token value can include a full URL in the 'protocol' parameter and force the Plex server to POST to the attacker's chosen destination.",
-      "cwe": [
-        "CWE-918"
-      ],
-      "kev": true,
-      "epss": 0.11886,
-      "pub": "2026-09-23T17:17:23.363",
-      "products": [
-        "media_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-96655",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Plex Media Server before 1.43.3.10861 allows an authenticated user to request arbitrary internal or external addresses via the '/video/:/transcode/universal' path parameter.",
-      "cwe": [
-        "CWE-918"
-      ],
-      "kev": true,
-      "epss": 0.10724,
-      "pub": "2026-09-23T17:17:23.677",
-      "products": [
-        "media_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-118527",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Use of predictable filenames in Ivanti Connect Secure before versions 25.1.1.3 and 22.8R2.6 allows a remote authenticated attacker to upload files with attacker-controlled content to a known location on disk.",
-      "cwe": [
-        "CWE-340"
-      ],
-      "kev": true,
-      "epss": 0.00822,
-      "pub": "2026-11-03T15:17:24.920",
-      "products": [
-        "connect_secure",
-        "connect_secure"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-45498",
-      "cvss": 4,
-      "sev": "medium",
-      "desc": "Microsoft Defender Denial of Service Vulnerability",
-      "cwe": [
-        "CWE-400"
-      ],
-      "kev": true,
-      "epss": 0.63076,
-      "pub": "2026-05-20T13:16:36.780",
-      "products": [
-        "defender_antimalware_platform"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-20867",
-      "cvss": 3.9,
-      "sev": "low",
-      "desc": "A fully compromised ESXi host can force VMware Tools to fail to authenticate host-to-guest operations, impacting the confidentiality and integrity of the guest virtual machine.",
-      "cwe": [
-        "CWE-287"
-      ],
-      "kev": true,
-      "epss": 0.13638,
-      "pub": "2023-06-13T17:15:14.070",
-      "products": [
-        "tools",
-        "debian_linux",
-        "debian_linux"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-0431",
-      "cvss": 3.7,
-      "sev": "low",
-      "desc": "Unspecified vulnerability in the Java Runtime Environment (JRE) component in Oracle Java SE 7 through Update 11, and OpenJDK 7, allows user-assisted remote attackers to bypass the Java security sandbox via unspecified vectors related to JMX, aka \"Issue 52,\" a ",
-      "cwe": [
-        "CWE-693"
-      ],
-      "kev": true,
-      "epss": 0.9015,
-      "pub": "2013-01-31T14:55:01.327",
-      "products": [
-        "jre",
-        "openjdk"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-2423",
-      "cvss": 3.7,
-      "sev": "low",
-      "desc": "Unspecified vulnerability in the Java Runtime Environment (JRE) component in Oracle Java SE 7 Update 17 and earlier, and OpenJDK 7, allows remote attackers to affect integrity via unknown vectors related to HotSpot.  NOTE: the previous information is from the ",
-      "cwe": [
-        "CWE-284"
-      ],
-      "kev": true,
-      "epss": 0.85215,
-      "pub": "2013-04-17T18:55:07.087",
-      "products": [
-        "jre",
-        "ubuntu_linux",
-        "opensuse"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-26083",
-      "cvss": 3.3,
-      "sev": "low",
-      "desc": "Memory leak vulnerability in Mali GPU Kernel Driver in Midgard GPU Kernel Driver all versions from r6p0 - r32p0, Bifrost GPU Kernel Driver all versions from r0p0 - r42p0, Valhall GPU Kernel Driver all versions from r19p0 - r42p0, and Avalon GPU Kernel Driver a",
-      "cwe": [
-        "CWE-401"
-      ],
-      "kev": true,
-      "epss": 0.01218,
-      "pub": "2023-04-06T16:15:07.843",
-      "products": [
-        "5th_gen_gpu_architecture_kernel_driver",
-        "bifrost_gpu_kernel_driver",
-        "midgard_gpu_kernel_driver"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-41709",
-      "cvss": 2.7,
-      "sev": "low",
-      "desc": "VMware ESX contains an insufficient logging vulnerability. A malicious administrator could exploit this issue to perform certain operations without them being logged.",
-      "cwe": [
-        "CWE-778"
-      ],
-      "kev": true,
-      "epss": 0.00689,
-      "pub": "2026-07-30T14:16:57.420",
-      "products": [
-        "esxi",
-        "esxi"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2017-12542",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "A authentication bypass and execution of code vulnerability in HPE Integrated Lights-out 4 (iLO 4) version prior to 2.53 was found.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.99294,
-      "pub": "2018-02-15T22:29:04.263",
-      "products": [
-        "integrated_lights-out_4_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-1538",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Integer overflow in the SampleTable::setSampleToChunkParams function in SampleTable.cpp in libstagefright in Android before 5.1.1 LMY48I allows remote attackers to execute arbitrary code via crafted atoms in MP4 data that trigger an unchecked multiplication, a",
-      "cwe": [
-        "CWE-189"
-      ],
-      "kev": false,
-      "epss": 0.99064,
-      "pub": "2015-10-01T00:59:06.687",
-      "products": [
-        "android"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2007-0882",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Argument injection vulnerability in the telnet daemon (in.telnetd) in Solaris 10 and 11 (SunOS 5.10 and 5.11) misinterprets certain client \"-f\" sequences as valid requests for the login program to skip authentication, which allows remote attackers to log into ",
-      "cwe": [
-        "CWE-88"
-      ],
-      "kev": false,
-      "epss": 0.98055,
-      "pub": "2007-02-12T20:28:00.000",
-      "products": [
-        "solaris",
-        "solaris",
-        "sunos"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-0014",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in the Telnet service in Microsoft Windows Server 2003 SP2, Windows Vista SP2, Windows Server 2008 SP2 and R2 SP1, Windows 7 SP1, Windows 8, Windows 8.1, and Windows Server 2012 Gold and R2 allows remote attackers to execute arbitrary code via ",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.96893,
-      "pub": "2015-01-13T22:59:05.580",
-      "products": [
-        "windows_7",
-        "windows_8",
-        "windows_8.1"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2001-0500",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in ISAPI extension (idq.dll) in Index Server 2.0 and Indexing Service 2000 in IIS 6.0 beta and earlier allows remote attackers to execute arbitrary commands via a long argument to Internet Data Administration (.ida) and Internet Data Query (.id",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.96731,
-      "pub": "2001-07-21T04:00:00.000",
-      "products": [
-        "index_server",
-        "indexing_service",
-        "internet_information_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2000-0573",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The lreply function in wu-ftpd 2.6.0 and earlier does not properly cleanse an untrusted format string, which allows remote attackers to execute arbitrary commands via the SITE EXEC command.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.96227,
-      "pub": "2000-07-07T04:00:00.000",
-      "products": [
-        "hp-ux"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2014-6321",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Schannel in Microsoft Windows Server 2003 SP2, Windows Vista SP2, Windows Server 2008 SP2 and R2 SP1, Windows 7 SP1, Windows 8, Windows 8.1, Windows Server 2012 Gold and R2, and Windows RT Gold and 8.1 allows remote attackers to execute arbitrary code via craf",
-      "cwe": [
-        "CWE-94"
-      ],
-      "kev": false,
-      "epss": 0.95988,
-      "pub": "2014-11-11T22:55:04.997",
-      "products": [
-        "windows_7",
-        "windows_8",
-        "windows_8.1"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-4862",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in libtelnet/encrypt.c in telnetd in FreeBSD 7.3 through 9.0, MIT Kerberos Version 5 Applications (aka krb5-appl) 1.0.2 and earlier, Heimdal 1.5.1 and earlier, GNU inetutils, and possibly other products allows remote attackers to execute arbitr",
-      "cwe": [
-        "CWE-120"
-      ],
-      "kev": false,
-      "epss": 0.95061,
-      "pub": "2011-12-25T01:55:02.210",
-      "products": [
-        "inetutils",
-        "heimdal",
-        "krb5-appl"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2001-0797",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in login in various System V based operating systems allows remote attackers to execute arbitrary commands via a large number of arguments through services such as telnet and rlogin.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.95002,
-      "pub": "2001-12-12T05:00:00.000",
-      "products": [
-        "irix",
-        "irix",
-        "irix"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-0235",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Heap-based buffer overflow in the __nss_hostname_digits_dots function in glibc 2.2, and other 2.x versions before 2.18, allows context-dependent attackers to execute arbitrary code via vectors related to the (1) gethostbyname or (2) gethostbyname2 function, ak",
-      "cwe": [
-        "CWE-787"
-      ],
-      "kev": false,
-      "epss": 0.94558,
-      "pub": "2015-01-28T19:59:00.063",
-      "products": [
-        "glibc",
-        "communications_application_session_controller",
-        "communications_eagle_application_processor"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-3972",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Heap-based buffer overflow in the TELNET_STREAM_CONTEXT::OnSendData function in ftpsvc.dll in Microsoft FTP Service 7.0 and 7.5 for Internet Information Services (IIS) 7.0, and IIS 7.5, allows remote attackers to execute arbitrary code or cause a denial of ser",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.94534,
-      "pub": "2010-12-23T18:00:02.557",
-      "products": [
-        "internet_information_services"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2014-0515",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in Adobe Flash Player before 11.7.700.279 and 11.8.x through 13.0.x before 13.0.0.206 on Windows and OS X, and before 11.2.202.356 on Linux, allows remote attackers to execute arbitrary code via unspecified vectors, as exploited in the wild in ",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.94487,
-      "pub": "2014-04-29T10:37:03.733",
-      "products": [
-        "flash_player",
-        "flash_player",
-        "flash_player"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-0425",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "modules/arch/win32/mod_isapi.c in mod_isapi in the Apache HTTP Server 2.0.37 through 2.0.63, 2.2.0 through 2.2.14, and 2.3.x before 2.3.7, when running on Windows, does not ensure that request processing is complete before calling isapi_unload for an ISAPI .dl",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.94248,
-      "pub": "2010-03-05T19:30:00.517",
-      "products": [
-        "websphere_application_server",
-        "http_server",
-        "http_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-41892",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "Craft CMS is a platform for creating digital experiences. This is a high-impact, low-complexity attack vector. Users running Craft installations before 4.4.15 are encouraged to update to at least that version to mitigate the issue. This issue has been fixed in",
-      "cwe": [
-        "CWE-94"
-      ],
-      "kev": false,
-      "epss": 0.94215,
-      "pub": "2023-09-13T20:15:08.187",
-      "products": [
-        "craft_cms"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-21650",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "XWiki Platform is a generic wiki platform offering runtime services for applications built on top of it. XWiki is vulnerable to a remote code execution (RCE) attack through its user registration feature. This issue allows an attacker to execute arbitrary code ",
-      "cwe": [
-        "CWE-95",
-        "CWE-94"
-      ],
-      "kev": false,
-      "epss": 0.9348,
-      "pub": "2024-01-08T16:15:46.903",
-      "products": [
-        "xwiki",
-        "xwiki",
-        "xwiki"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2005-1983",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Stack-based buffer overflow in the Plug and Play (PnP) service for Microsoft Windows 2000 and Windows XP Service Pack 1 allows remote attackers to execute arbitrary code via a crafted packet, and local users to gain privileges via a malicious application, as e",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.93106,
-      "pub": "2005-08-10T04:00:00.000",
-      "products": [
-        "windows_2000",
-        "windows_xp"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-5371",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The AuthenticationFilter class in SolarWinds Storage Manager allows remote attackers to upload and execute arbitrary scripts via unspecified vectors.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.93083,
-      "pub": "2015-07-06T14:59:06.157",
-      "products": [
-        "storage_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-3103",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Array index error in the SMBv2 protocol implementation in srv2.sys in Microsoft Windows Vista Gold, SP1, and SP2, Windows Server 2008 Gold and SP2, and Windows 7 RC allows remote attackers to execute arbitrary code or cause a denial of service (system crash) v",
-      "cwe": [
-        "CWE-399"
-      ],
-      "kev": false,
-      "epss": 0.92347,
-      "pub": "2009-09-08T22:30:00.517",
-      "products": [
-        "windows_server_2008",
-        "windows_server_2008",
-        "windows_vista"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-0359",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Double free vulnerability in Adobe Flash Player before 13.0.0.281 and 14.x through 17.x before 17.0.0.169 on Windows and OS X and before 11.2.202.457 on Linux allows attackers to execute arbitrary code via unspecified vectors, a different vulnerability than CV",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.92109,
-      "pub": "2015-04-14T22:59:12.680",
-      "products": [
-        "flash_player",
-        "flash_player",
-        "flash_player"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2001-0414",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in ntpd ntp daemon 4.0.99k and earlier (aka xntpd and xntp3) allows remote attackers to cause a denial of service and possibly execute arbitrary commands via a long readvar argument.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.91945,
-      "pub": "2001-06-18T04:00:00.000",
-      "products": [
-        "ntpd",
-        "ntpd",
-        "ntpd"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-4221",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple stack-based buffer overflows in the pr_netio_telnet_gets function in netio.c in ProFTPD before 1.3.3c allow remote attackers to execute arbitrary code via vectors involving a TELNET IAC escape character to a (1) FTP or (2) FTPS server.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.91303,
-      "pub": "2010-11-09T21:00:06.383",
-      "products": [
-        "proftpd",
-        "proftpd"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2010-0219",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Apache Axis2, as used in dswsbobje.war in SAP BusinessObjects Enterprise XI 3.2, CA ARCserve D2D r15, and other products, has a default password of axis2 for the admin account, which makes it easier for remote attackers to execute arbitrary code by uploading a",
-      "cwe": [
-        "CWE-255"
-      ],
-      "kev": false,
-      "epss": 0.90851,
-      "pub": "2010-10-18T17:00:03.457",
-      "products": [
-        "axis2",
-        "axis2",
-        "axis2"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2014-2623",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in HP Storage Data Protector 8.x allows remote attackers to execute arbitrary code via unknown vectors.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.90738,
-      "pub": "2014-07-18T00:55:04.737",
-      "products": [
-        "storage_data_protector",
-        "storage_data_protector"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-3824",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The MPEG4Extractor::parseChunk function in MPEG4Extractor.cpp in libstagefright in Android before 5.1.1 LMY48I does not properly restrict size addition, which allows remote attackers to execute arbitrary code or cause a denial of service (integer overflow and ",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.90483,
-      "pub": "2015-10-01T00:59:09.860",
-      "products": [
-        "android"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-0545",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "cgi-bin/kerbynet in ZeroShell 1.0beta11 and earlier allows remote attackers to execute arbitrary commands via shell metacharacters in the type parameter in a NoAuthREQ x509List action.",
-      "cwe": [
-        "CWE-20"
-      ],
-      "kev": false,
-      "epss": 0.90386,
-      "pub": "2009-02-12T23:30:01.170",
-      "products": [
-        "zeroshell"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2006-2372",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Buffer overflow in the DHCP Client service for Microsoft Windows 2000 SP4, Windows XP SP1 and SP2, and Server 2003 up to SP1 allows remote attackers to execute arbitrary code via a crafted DHCP response.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.90233,
-      "pub": "2006-07-11T21:05:00.000",
-      "products": [
-        "dhcp_client_service"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-3105",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Adobe Flash Player before 13.0.0.292 and 14.x through 18.x before 18.0.0.160 on Windows and OS X and before 11.2.202.466 on Linux, Adobe AIR before 18.0.0.144 on Windows and before 18.0.0.143 on OS X and Android, Adobe AIR SDK before 18.0.0.144 on Windows and ",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.90135,
-      "pub": "2015-06-10T01:59:47.097",
-      "products": [
-        "flash_player",
-        "flash_player",
-        "flash_player"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-4983",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The get_referers function in /opt/ws/bin/sblistpack in Sophos Web Appliance before 3.7.9.1 and 3.8 before 3.8.1.1 allows remote attackers to execute arbitrary commands via shell metacharacters in the domain parameter to end-user/index.php.",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": false,
-      "epss": 0.90133,
-      "pub": "2013-09-10T11:28:40.997",
-      "products": [
-        "web_appliance_firmware",
-        "web_appliance_firmware",
-        "web_appliance_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-3829",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Off-by-one error in the MPEG4Extractor::parseChunk function in MPEG4Extractor.cpp in libstagefright in Android before 5.1.1 LMY48I allows remote attackers to execute arbitrary code or cause a denial of service (integer overflow and memory corruption) via craft",
-      "cwe": [
-        "CWE-189"
-      ],
-      "kev": false,
-      "epss": 0.89888,
-      "pub": "2015-10-01T00:59:13.860",
-      "products": [
-        "android"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-2333",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in HP Storage Data Protector 6.20, 6.21, 7.00, and 7.01 allows remote attackers to execute arbitrary code via unknown vectors, aka ZDI-CAN-1680.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.89809,
-      "pub": "2013-06-06T13:02:15.367",
-      "products": [
-        "storage_data_protector",
-        "storage_data_protector",
-        "storage_data_protector"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-46731",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "XWiki Platform is a generic wiki platform offering runtime services for applications built on top of it. XWiki doesn't properly escape the section URL parameter that is used in the code for displaying administration sections. This allows any user with read acc",
-      "cwe": [
-        "CWE-94",
-        "CWE-95"
-      ],
-      "kev": false,
-      "epss": 0.897,
-      "pub": "2023-11-06T19:15:09.307",
-      "products": [
-        "xwiki",
-        "xwiki"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-2342",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The JMX RMI service in VMware vCenter Server 5.0 before u3e, 5.1 before u3b, 5.5 before u3, and 6.0 before u1 does not restrict registration of MBeans, which allows remote attackers to execute arbitrary code via the RMI protocol.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.89048,
-      "pub": "2015-10-12T10:59:01.633",
-      "products": [
-        "vcenter_server",
-        "vcenter_server",
-        "vcenter_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-1865",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple stack-based buffer overflows in the inet service in HP OpenView Storage Data Protector 6.00 through 6.20 allow remote attackers to execute arbitrary code via a request containing crafted parameters.",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": false,
-      "epss": 0.88948,
-      "pub": "2011-07-01T10:55:02.003",
-      "products": [
-        "openview_storage_data_protector",
-        "openview_storage_data_protector",
-        "openview_storage_data_protector"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2003-0722",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The default installation of sadmind on Solaris uses weak authentication (AUTH_SYS), which allows local and remote attackers to spoof Solstice AdminSuite clients and gain root privileges via a certain sequence of RPC packets.",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.88765,
-      "pub": "2003-09-22T04:00:00.000",
-      "products": [
-        "solaris"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2011-1653",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Multiple SQL injection vulnerabilities in the Unified Network Control (UNC) Server in CA Total Defense (TD) r12 before SE2 allow remote attackers to execute arbitrary SQL commands via vectors involving the (1) UnAssignFunctionalRoles, (2) UnassignAdminRoles, (",
-      "cwe": [
-        "CWE-89"
-      ],
-      "kev": false,
-      "epss": 0.88655,
-      "pub": "2011-04-18T15:00:43.327",
-      "products": [
-        "total_defense"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-0240",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The Netlogon server implementation in smbd in Samba 3.5.x and 3.6.x before 3.6.25, 4.0.x before 4.0.25, 4.1.x before 4.1.17, and 4.2.x before 4.2.0rc5 performs a free operation on an uninitialized stack pointer, which allows remote attackers to execute arbitra",
-      "cwe": [
-        "CWE-17"
-      ],
-      "kev": false,
-      "epss": 0.88185,
-      "pub": "2015-02-24T01:59:00.050",
-      "products": [
-        "enterprise_linux",
-        "enterprise_linux",
-        "enterprise_linux"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2009-1429",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The Intel LANDesk Common Base Agent (CBA) in Symantec Alert Management System 2 (AMS2), as used in Symantec System Center (SSS); Symantec AntiVirus Server; Symantec AntiVirus Central Quarantine Server; Symantec AntiVirus (SAV) Corporate Edition 9 before 9.0 MR",
-      "cwe": [
-        "CWE-94"
-      ],
-      "kev": false,
-      "epss": 0.87725,
-      "pub": "2009-04-29T15:30:00.217",
-      "products": [
-        "antivirus",
-        "antivirus",
-        "antivirus"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2000-1209",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The \"sa\" account is installed with a default null password on (1) Microsoft SQL Server 2000, (2) SQL Server 7.0, and (3) Data Engine (MSDE) 1.0, including third party packages that use these products such as (4) Tumbleweed Secure Mail (MMS) (5) Compaq Insight ",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.87307,
-      "pub": "2002-08-12T04:00:00.000",
-      "products": [
-        "insight_manager",
-        "insight_manager_xe",
-        "insight_manager_xe"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-1488",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "The Java Runtime Environment (JRE) component in Oracle Java SE 7 Update 17 and earlier, and OpenJDK 6 and 7, allows remote attackers to execute arbitrary code via unspecified vectors involving reflection, Libraries, \"improper toString calls,\" and the JDBC driv",
-      "cwe": [
-        "CWE-94"
-      ],
-      "kev": false,
-      "epss": 0.87227,
-      "pub": "2013-03-08T18:55:01.583",
-      "products": [
-        "jdk",
-        "jre"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-3864",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "Integer underflow in the MPEG4Extractor::parseChunk function in MPEG4Extractor.cpp in libstagefright in mediaserver in Android before 5.1.1 LMY48M allows remote attackers to execute arbitrary code via crafted MPEG-4 data, aka internal bug 23034759.  NOTE: this",
-      "cwe": [
-        "CWE-189"
-      ],
-      "kev": false,
-      "epss": 0.87125,
-      "pub": "2015-10-01T00:59:31.560",
-      "products": [
-        "android"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2005-2611",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "VERITAS Backup Exec for Windows Servers 8.6 through 10.0, Backup Exec for NetWare Servers 9.0 and 9.1, and NetBackup for NetWare Media Server Option 4.5 through 5.1 uses a static password during authentication from the NDMP agent to the server, which allows re",
-      "cwe": [],
-      "kev": false,
-      "epss": 0.87026,
-      "pub": "2005-08-17T04:00:00.000",
-      "products": [
-        "backup_exec",
-        "backup_exec",
-        "backup_exec"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-1999-0067",
-      "cvss": 10,
-      "sev": "high",
-      "desc": "phf CGI program allows remote command execution through shell metacharacters.",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": false,
-      "epss": 0.86871,
-      "pub": "1996-03-20T05:00:00.000",
-      "products": [
-        "http_server",
-        "ncsa_httpd"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "235323 ثغرة حقيقية من NVD · 758 مستغلّة فعلياً (KEV) · 51392 منتج · مزامنة 2026-11-09T09:30:14.026Z"
+  "says_ar": "259856 ثغرة حقيقية من NVD · 853 مستغلّة فعلياً (KEV) · 54989 منتج · مزامنة 2026-11-09T20:01:24.445Z"
 }
