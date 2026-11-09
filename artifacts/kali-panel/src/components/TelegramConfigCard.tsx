@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Send, CheckCircle, XCircle, Eye, EyeOff, TestTube } from "lucide-react";
-import { opsFetch } from "@/lib/ops-client";
+import { opsFetch, getOpsToken, setOpsToken } from "@/lib/ops-client";
 
 /**
  * TelegramConfigCard — الضبط الدائم لقناة التليجرام من جوه المنصة.
@@ -18,6 +18,7 @@ export function TelegramConfigCard() {
   const [showToken, setShowToken] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [execToken, setExecToken] = useState(""); // NOVA_EXEC_TOKEN — من env استضافة السيرفر (waifly)
 
   const refresh = useCallback(async () => {
     const r = await opsFetch<{ keys: Record<string, boolean> }>("/ops/config/status");
@@ -28,6 +29,8 @@ export function TelegramConfigCard() {
   const save = async () => {
     setBusy(true); setMsg(null);
     try {
+      if (execToken.trim()) { setOpsToken(execToken.trim()); setExecToken(""); }
+      
       const jobs: Array<[string, string]> = [];
       if (token.trim()) jobs.push(["telegram.botToken", token.trim()]);
       if (chatId.trim()) jobs.push(["telegram.chatId", chatId.trim()]);
@@ -39,7 +42,11 @@ export function TelegramConfigCard() {
           body: { key, value },
         });
         if (!r.ok || r.data?.ok === false) {
-          setMsg({ ok: false, text: `✗ «${key}» رُفض: ${r.data?.reasonAr ?? r.error ?? r.status}` });
+          setMsg({ ok: false, text: r.status === 403
+            ? (getOpsToken()
+                ? "✗ 403: التوكن المخزن في اللوحة مش مطابق لـNOVA_EXEC_TOKEN على السيرفر — اكتبه صح في حقل «توكن التشغيل» تحت وأعد المحاولة"
+                : "✗ 403: الكتابة على السيرفر محتاجة توكن التشغيل (NOVA_EXEC_TOKEN من env الاستضافة) — اكتبه في الحقل تحت ثم احفظ.")
+            : `✗ «${key}» رُفض: ${r.data?.reasonAr ?? r.error ?? r.status}` });
           return;
         }
       }
@@ -82,6 +89,14 @@ export function TelegramConfigCard() {
       </div>
 
       <div className="space-y-2">
+        <div className="space-y-1">
+          <input
+            type="password" value={execToken} onChange={(e) => setExecToken(e.target.value)}
+            placeholder="توكن التشغيل NOVA_EXEC_TOKEN (من env استضافة السيرفر — نفس اللي كتبته في waifly)"
+            className="w-full bg-white/[0.03] border border-amber-500/20 rounded-[10px] text-white/80 text-[13px] font-mono px-3.5 py-2.5 outline-none"
+          />
+          <div className="text-[9px] font-mono text-amber-200/40">مش موجود عندك؟ اعمله: لوحة waifly → Environment → NOVA_EXEC_TOKEN = أي خلطة طويلة، Restart، واكتب نفس الخلطة هنا — اللوحة بتحفظه محليًا في جهازك بس.</div>
+        </div>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
