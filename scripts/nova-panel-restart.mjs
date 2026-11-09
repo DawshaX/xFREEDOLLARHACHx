@@ -83,25 +83,27 @@ if (!TOKEN) {
   out(opt.strict ? 3 : 0);
 }
 
-let power;
-try {
-  const r = await fetch(`${PANEL}/api/client/servers/${SERVER}/power`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ signal: opt.signal }),
-    signal: AbortSignal.timeout(25_000),
-  });
-  const text = await r.text();
-  power = { status: r.status, ok: r.status >= 200 && r.status < 300 };
-  // Pterodactyl بيطالع أخطاء كـ {"errors":[{"code":…,"detail":…}]} — بنسيب أول
-  // 240 حرف عشان «Token mismatch» يبان، بس مافيش حاجة من الـtoken في المخرج.
-  if (text && !power.ok) power.detail = text.slice(0, 240).replace(/\s+/g, " ");
-  report.power = power;
-} catch (e) {
-  report.power = { status: 0, ok: false, detail: `fetch فشل: ${String(e && e.message).slice(0, 160)}` };
-  out(opt.strict ? 4 : 0);
+async function powerOnce(signal) {
+  try {
+    const r = await fetch(`${PANEL}/api/client/servers/${SERVER}/power`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ signal }),
+      signal: AbortSignal.timeout(25_000),
+    });
+    const text = await r.text();
+    const p = { status: r.status, ok: r.status >= 200 && r.status < 300, signal };
+    // Pterodactyl بيطالع أخطاء كـ {"errors":[{"code":…,"detail":…}]} — بنسيب أول
+    // 240 حرف عشان «Token mismatch» يبان، بس مافيش حاجة من الـtoken في المخرج.
+    if (text && !p.ok) p.detail = text.slice(0, 240).replace(/\s+/g, " ");
+    return p;
+  } catch (e) {
+    return { status: 0, ok: false, signal, detail: `fetch فشل: ${String(e && e.message).slice(0, 160)}` };
+  }
 }
 
+let power = await powerOnce(opt.signal);
+report.power = power;
 if (!power.ok) out(opt.strict ? 5 : 0);
 
 // الطلب اتقبل. لو المستخدم عايز يِتأكد، نستنى الهب يرجع — ده اللي بيمنعنا نقول
@@ -125,7 +127,33 @@ if (WAIT_MS > 0) {
   report.waitedMs = Date.now() - started;
 }
 
-const backUp = report.healthAfter && report.healthAfter.code >= 200 && report.healthAfter.code < 300;
+let backUp = report.healthAfter && report.healthAfter.code >= 200 && report.healthAfter.code < 300;
+
+// التصعيد الشجاع (2026-11-09 — الحالة المقاسة: الهب فضل 502 رغم إن الـrestart
+// على لوحة Pterodactyl أحيانًا بيوصل لعملية جامدة فعلاً فـ«السيغنال» بيضيع.
+// kill ينهّي العملية بالعافية وstart يفتح نضيف على آخر build — نفس أزمة
+// «502 أكتر من تلات ساعات» اللي الملف ده اتعمل لأجلها.
+if (!backUp && opt.signal === "restart" && WAIT_MS > 0) {
+  report.escalated = "restart اتقبل وما قامش — جاري kill ثم start";
+  const k = await powerOnce("kill");
+  await sleep(3000);
+  const st = await powerOnce("start");
+  report.powerKill = k;
+  report.powerStart = st;
+  if (st.ok) {
+    const deadline2 = Date.now() + WAIT_MS;
+    const step2 = Math.max(400, Math.min(5000, Math.floor(WAIT_MS / 8)));
+    for (;;) {
+      const h = await health();
+      report.healthAfter = h;
+      if (h.code >= 200 && h.code < 300) break;
+      if (Date.now() >= deadline2) { report.note = `حتى kill+start ما رجّعش في نافذة ${opt.wait} ثانية — الخطوة الجاية من اللوحة لوج/يانصيب بناء`; break; }
+      await sleep(Math.min(step2, Math.max(100, deadline2 - Date.now())));
+    }
+    backUp = report.healthAfter && report.healthAfter.code >= 200 && report.healthAfter.code < 300;
+  }
+}
+
 report.ok = Boolean(power.ok);
 report.healthy = Boolean(backUp);
 if (power.ok && !backUp && WAIT_MS > 0) report.note = report.note || "الأمر اشتغل والرجعة لسه 502 — احتمال الإقلاع بيتعملّه تحديث ذاتي، كمّل قياس شوية";
