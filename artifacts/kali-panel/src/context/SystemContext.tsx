@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { novaTokenQuery } from "@/lib/ops-client";
 
 export interface SystemEvent {
   type: string;
@@ -149,7 +150,7 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   }, [loadMemories]);
 
   useEffect(() => {
-    const es = new EventSource("/api/agent/events");
+    const es = new EventSource(`/api/agent/events${novaTokenQuery()}`);
     es.onmessage = (ev) => {
       try {
         const d = JSON.parse(ev.data as string) as { type?: string; [key: string]: unknown };

@@ -14,6 +14,7 @@
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { getRemoteBase, isRemoteConfigured, remoteWsUrl } from "@/lib/remote";
+import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
 import { LOCAL_BRAIN_TOOL_COUNT } from "@/lib/local-brain";
 
 export interface FleetMachine {
@@ -66,15 +67,18 @@ function apiBase(): string {
 function wsUrl(): string {
   // A linked NOVA server owns the realtime channel. Without one we still try
   // same-origin, and the UI reports the truth instead of a fake green dot.
+  // The token rides as a query param because a WebSocket handshake cannot set
+  // an `x-nova-token` header from the browser.
+  const q = novaTokenQuery();
   try {
     const remote = getRemoteBase();
-    if (remote) return remoteWsUrl(`/api/ws`);
+    if (remote) return remoteWsUrl(`/api/ws${q}`);
   } catch {
     /* fall through to same-origin */
   }
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-  return `${proto}//${location.host}${base}${API}/ws`.replace(/([^:])\/+/g, "$1/");
+  return `${proto}//${location.host}${base}${API}/ws${q}`.replace(/([^:])\/+/g, "$1/");
 }
 
 /* ────────────────────────────── store ────────────────────────────── */
@@ -249,7 +253,7 @@ let timers: ReturnType<typeof setTimeout>[] = [];
 async function refreshFleet() {
   const dbg = (window as unknown as { __novaFleetDebug?: Record<string, unknown> }).__novaFleetDebug ?? {};
   try {
-    const r = await fetch(`${apiBase()}/agents`, { headers: { accept: "application/json" } });
+    const r = await fetch(`${apiBase()}/agents`, { headers: novaAuthHeaders({ accept: "application/json" }) });
     dbg.url = `${apiBase()}/agents`;
     dbg.status = r.status;
     if (!r.ok) return;

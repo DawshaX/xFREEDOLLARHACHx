@@ -70,6 +70,13 @@ dist-node-kit/
 state/programs.json
 state/jobs/
 state/jobs/*
+# ── state/ is engine runtime output, not source (hardened 2026-11-09) ──
+# The whole directory is written by the running engine: live host/port, backend
+# URLs, connector proofs, the findings vault, the brain's own memory and the
+# hunt evidence. It was partly tracked before, which leaked infrastructure into
+# the public repo. Ignore everything under it and keep only the template.
+state/*
+!state/programs.example.json
 # ── Runtime state that leaks infrastructure (added 2026-11-05) ──────────────
 # These files are written by the running engine and contain live host/port,
 # backend URLs and connector proofs. They are runtime output, not source, and

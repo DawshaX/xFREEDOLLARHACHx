@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
 import {
   Activity, CheckCircle2, Circle, Clock, Cpu, HardDrive, Loader2,
   Monitor, Network, Play, RefreshCw, Server, ShieldCheck, Terminal,
@@ -58,7 +59,7 @@ export function NovaFleetPanel({ compact = false }: { compact?: boolean }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/local-agent/agents`, { signal: AbortSignal.timeout(8000) });
+      const res = await fetch(`${API}/local-agent/agents`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = (await res.json()) as { agents?: Agent[] };
       setAgents(json.agents ?? []);
@@ -325,7 +326,7 @@ export function NovaProjectPulse() {
 
     const connect = () => {
       try {
-        es = new EventSource(`${API}/live-events`);
+        es = new EventSource(`${API}/live-events${novaTokenQuery()}`);
         es.onopen = () => setConnected(true);
         es.onerror = () => {
           setConnected(false);
@@ -383,7 +384,7 @@ export function NovaProjectPulse() {
     const pull = async () => {
       try {
         const [aRes, sRes, mRes] = await Promise.all([
-          fetch(`${API}/local-agent/agents`, { signal: AbortSignal.timeout(6000) }).catch(() => null),
+          fetch(`${API}/local-agent/agents`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(6000) }).catch(() => null),
           fetch(`${API}/nova-core/status`, { signal: AbortSignal.timeout(6000) }).catch(() => null),
           fetch(`${API}/nova-core/memory/stats`, { signal: AbortSignal.timeout(6000) }).catch(() => null),
         ]);
@@ -497,7 +498,7 @@ export function NovaFleetWidget({ onOpen }: { onOpen?: () => void }) {
   useEffect(() => {
     const pull = async () => {
       try {
-        const r = await fetch(`${API}/local-agent/agents`, { signal: AbortSignal.timeout(5000) });
+        const r = await fetch(`${API}/local-agent/agents`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(5000) });
         if (r.ok) setAgents(((await r.json()) as { agents?: Agent[] }).agents ?? []);
       } catch {
         /* offline */

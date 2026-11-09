@@ -40,6 +40,29 @@ export function hasToken(): boolean {
   return getOpsToken().length > 0;
 }
 
+/**
+ * The one place every raw `/api/*` call gets its auth header from.
+ *
+ * The engine gates its powerful surfaces (chat, fleet bus, tool catalogue,
+ * device inventory, event bus) on `x-nova-token` whenever `NOVA_EXEC_TOKEN` is
+ * set. Before this helper each component invented its own header — some sent
+ * the token, most did not — so a correctly connected machine answered reads and
+ * refused writes, which reads as "connected but broken". Now there is one
+ * source of truth: the token in `localStorage`, attached everywhere.
+ */
+export function novaAuthHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra ?? {}) };
+  const token = getOpsToken();
+  if (token) headers["x-nova-token"] = token;
+  return headers;
+}
+
+/** The token as a query param, for transports that cannot set headers (EventSource). */
+export function novaTokenQuery(): string {
+  const token = getOpsToken();
+  return token ? `?token=${encodeURIComponent(token)}` : "";
+}
+
 export interface OpsReply<T = Record<string, unknown>> {
   ok: boolean;
   status: number;

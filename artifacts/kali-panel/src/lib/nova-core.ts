@@ -18,6 +18,7 @@
 
 import { isStandaloneHost } from "./env";
 import { effectiveBase } from "./remote";
+import { novaAuthHeaders } from "./ops-client";
 import { searchCyberCorpus2400, getCorpusStats } from "./cyber-corpus-2099";
 import {
   getStoredOllamaBase,
@@ -504,7 +505,7 @@ async function runLocal(opts: RunNovaOptions): Promise<void> {
 async function runServer(base: string, opts: RunNovaOptions): Promise<void> {
   const res = await fetch(`${base}/nova-core/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: novaAuthHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       message: opts.message,
       sessionId: opts.sessionId,

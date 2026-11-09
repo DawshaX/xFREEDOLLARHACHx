@@ -55,7 +55,12 @@ router.use((req, res, next) => {
   const sensitive =
     p.startsWith("/nova-core/restart") ||
     p.startsWith("/nova-core/auto-update") ||
-    p.startsWith("/nova-core/storage");
+    p.startsWith("/nova-core/storage") ||
+    // The tool catalogue, the persona card and the version banner are the
+    // brain's own map of itself — gated like every other powerful surface.
+    p.startsWith("/nova-core/tools") ||
+    p.startsWith("/nova-core/persona") ||
+    p.startsWith("/nova-core/version");
   if (!sensitive) return next();
   return requireOps("nova-core")(req, res, next);
 });
