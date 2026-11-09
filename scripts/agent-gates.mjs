@@ -43,6 +43,7 @@ const AGENT_GATES = [
   ["scripts/test-tool-ondemand.mjs", "on-demand tools: fetch-on-use, LRU cache ceiling, inflight dedupe"],
   ["scripts/test-free-store.mjs", "free store: sha256-verified mirrors, tamper refused, caps enforced"],
   ["scripts/test-panel-restart.mjs", "panel power: a remote restart with no human in it"],
+  ["scripts/test-fetch-db-ca-handshake.mjs", "db ca pin: real Postgres SSLRequest dance, N-refusal honest, dead host loud"],
   ["scripts/test-telegram-hub.mjs", "telegram hub: throttle, /start pairing, dead-silent without token"],
   ["scripts/test-visitor-intel.mjs", "visitor intel: every visit reported to telegram with passive enrichment, api/assets/private-ip skipped"],
   ["scripts/test-fetch-auth-patch.mjs", "panel auth: every same-origin /api fetch carries x-nova-token, cross-origin never leaks"],
