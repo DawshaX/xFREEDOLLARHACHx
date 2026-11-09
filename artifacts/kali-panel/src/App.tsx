@@ -58,6 +58,14 @@ const Cron = lazy(() => import("@/pages/cron"));
 const Webhooks = lazy(() => import("@/pages/webhooks"));
 const Audit = lazy(() => import("@/pages/audit"));
 const Bookmarks = lazy(() => import("@/pages/bookmarks"));
+// ── بند 7 (2026-11-09): صفحات تراثية كانت يتيمة بلا مسارات — متوصَّلة تحت /legacy/*
+// من غير ما تزاحم البديل الحديث ولا تتحذف (قاعدتنا: مافيش حذف للتراث).
+const LegacyCveDb = lazy(() => import("@/pages/cve-db"));
+const LegacyCves = lazy(() => import("@/pages/cves"));
+const LegacyExploitDb = lazy(() => import("@/pages/exploit-db"));
+const LegacyGithub = lazy(() => import("@/pages/github"));
+const LegacyWebSearch = lazy(() => import("@/pages/web-search"));
+const LegacyNovaSentinelV3 = lazy(() => import("@/pages/nova-sentinel-v3"));
 const Jobs = lazy(() => import("@/pages/jobs"));
 const Memory = lazy(() => import("@/pages/memory"));
 const Status = lazy(() => import("@/pages/status"));
@@ -393,6 +401,14 @@ function InnerRoutes() {
       <Route path="/github-legacy"><Placeholder title="GitHub Search" subtitle="بحث في GitHub" icon={Github} /></Route>
 
       <Route component={NotFound} />
+          {/* ── Legacy (بند 7): تراث متوصَّل مش متصلق ────────────────── */}
+      <Route path="/legacy/cve-db" component={LegacyCveDb} />
+      <Route path="/legacy/cves" component={LegacyCves} />
+      <Route path="/legacy/exploit-db" component={LegacyExploitDb} />
+      <Route path="/legacy/github" component={LegacyGithub} />
+      <Route path="/legacy/web-search" component={LegacyWebSearch} />
+      <Route path="/legacy/nova-sentinel-v3" component={LegacyNovaSentinelV3} />
+
     </Switch>
   );
 }

@@ -2543,11 +2543,18 @@ export default function HomeDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {cveBrowserItems.map((item, i) => {
-                            const col = sevColor(item.severity.toUpperCase());
-                            const sc = SRC_COLORS[item.source] ?? "#ffffff40";
-                            return (
-                              <tr key={i} className="border-b hover:bg-white/3 cursor-pointer transition-colors" style={{ borderColor: "rgba(255,255,255,0.04)" }} onClick={() => setSelectedCve(item)}>
+                          {(() => {
+                            // بند 3 (2026-11-09): عزل بصري صادق — صفوف «المعمل» (سيناريوهات/فرضيات
+                            // من إنتاجنا) ما تعدّاش جنب سجلات الكالات الرسمية في صمت.
+                            const LAB_SOURCES = new Set(["CyberNova-Vault","CyberNova-Pattern-Library","CyberNova-Scenario-Lab","AI-Mutated"]);
+                            const isLab = (it: { source?: string }) => LAB_SOURCES.has(String(it.source ?? ""));
+                            const realRows = cveBrowserItems.filter((it) => !isLab(it));
+                            const labRows = cveBrowserItems.filter(isLab);
+                            const renderRow = (item: (typeof cveBrowserItems)[number], i: number, dim: boolean) => {
+                              const col = sevColor(item.severity.toUpperCase());
+                              const sc = SRC_COLORS[item.source] ?? "#ffffff40";
+                              return (
+                              <tr key={`${i}-${dim?"lab":"real"}`} className="border-b hover:bg-white/3 cursor-pointer transition-colors" style={{ borderColor: "rgba(255,255,255,0.04)", opacity: dim ? 0.62 : 1 }} onClick={() => setSelectedCve(item)}>
                                 <td className="px-3 py-2"><span className="text-[10px] font-black font-mono" style={{ color: col }}>{item.id}</span></td>
                                 <td className="px-3 py-2"><span className="text-[8px] font-black px-1.5 py-0.5 rounded" style={{ background: `${col}18`, color: col, border: `1px solid ${col}33` }}>{item.severity}</span></td>
                                 <td className="px-3 py-2"><span className="text-[10px] font-bold font-mono" style={{ color: col }}>{item.cvss.toFixed(1)}</span></td>
@@ -2557,8 +2564,22 @@ export default function HomeDashboard() {
                                 <td className="px-3 py-2"><span className="text-[8px] font-mono text-white/30">{item.publishedAt ? new Date(item.publishedAt).toLocaleDateString("ar-SA") : "—"}</span></td>
                                 <td className="px-3 py-2"><ChevronRight className="w-3.5 h-3.5 text-white/15" /></td>
                               </tr>
+                              );
+                            };
+                            return (
+                              <>
+                                {realRows.map((it, r) => renderRow(it, r, false))}
+                                {labRows.length > 0 && (
+                                  <tr key="__lab_divider">
+                                    <td colSpan={8} className="px-3 py-2" style={{ background: "rgba(168,85,247,0.06)" }}>
+                                      <div className="text-[9px] font-mono" style={{ color: "#c084fc" }}>🧪 معمل السيناريوهات — {labRows.length} صف أنماط/فرضيات من إنتاجنا الداخلي (للتعلم والربط — مش سجلات رسمية من الكالات)</div>
+                                    </td>
+                                  </tr>
+                                )}
+                                {labRows.map((it, l) => renderRow(it, l, true))}
+                              </>
                             );
-                          })}
+                          })()}
                         </tbody>
                       </table>
                       {cveBrowserItems.length < cveBrowserTotal && (
