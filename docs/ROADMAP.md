@@ -150,3 +150,15 @@ corpus_stats · vuln_search · cve_lookup · advisory_search · exploit_search �
 لكل بند: **افهم بالأرقام أولاً** (ملفات/عدّادات/مصادر) → نفّذ أصغر شريحة → تشغيل البوابات (tsc + build + agent-gates 35/35) → commit+push → تحقق حي من الرابط المنشور → تحديث هذا الملف.
 - فاحص التوأمين (`audit-twins`) وفاحص الاتصالات (`audit-connections`) بوابتان إلزاميتان لأي مسار `/api/*` جديد.
 - لا استعجال إنجاز على حساب الفهم — الملاحظة تُثبت هنا قبل أن تُنفذ.
+
+## جولة 2026-11-09 مساء — «العقدة بتشفّي نفسها» (cf39056 → 3f57248)
+
+| الإنجاز | القياس |
+|---|---|
+| إحياء آلي بعد سقوط 6 ساعات | watchdog 13:44Z بعت restart حقيقي عن طريق لوحة Pterodactyl (PTSV_ secret)، وأقفل issue #75 بنفسه 18:19Z بعد ما قاس UP |
+| شفاء Postgres بلا تدخل | `db.reachable:true · sslMode:strict · caSource:bundled-pinned` — الشهادة اتقريت من سلسلة Supabase الحية (SSLRequest dance مش TLS مباشر — علة wrong version number اتصلّحت) واتثبّتت جوه الحزمة (db-ca-sync runs يومي) |
+| مركز تليجرام | إشعارات: إقلاع + زيارات (IP/مكان/UA/صفحة/شودان سلبي) + تعلّم chat_id من أول /start → يتقفل في Supabase Edge (يتحمّل الريستارت). بوابة 5/5 |
+| عين الزيارات | إثراء سلبي فقط (ip-api + Shodan-record) — مفيش فحص نشط لأجهزة الزوار. بوابة 6/6 |
+| أزرار الواجهة 403 | رقعة fetch عالمية تركّب x-nova-token لنفس الأصل فقط + بانر OpsTokenBanner بيطلع عند أول 403 token_required. بوابة 7/7 |
+| مراقبة صادقة | GPU بـnvidia-smi أو «لا يوجد GPU على الخطة» صراحةً + disk statfs + process rss/heap |
+| أدوات | 14/16 منصّبة؛ nuclei/dnsx الـwatchdog بيحاول ينصّبهم كل دورة (SIGKILL 460MB-RAM سبب مقاس، المعادلة: بعد ريستارت التحديث الرام بينزل) |
