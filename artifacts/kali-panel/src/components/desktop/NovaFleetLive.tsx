@@ -176,6 +176,14 @@ function ingest(payload: any) {
   const type = String(payload.type ?? payload.kind ?? "");
   publish({ lastBeat: Date.now() });
 
+  // The server's live bus wraps the interesting fields under `data`
+  // (`{type:"tool_start", data:{tool, args, ts}}`). Flatten it so every branch
+  // below reads the same shape whether the event came from the bus or a direct
+  // broadcast — otherwise the ops room would show a tool with no name.
+  if (payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)) {
+    payload = { ...payload.data, type, ts: payload.ts ?? payload.data.ts };
+  }
+
   if (type === "fleet" || type === "agents" || Array.isArray(payload.agents)) {
     const machines: FleetMachine[] = (payload.agents ?? []).map((a: any) => ({
       id: a.id ?? a.agentId,
@@ -214,6 +222,39 @@ function ingest(payload: any) {
     publish({ toolsRun: state.toolsRun + 1 });
   }
 
+  // ── The agent's own tool lifecycle, mirrored from the chat ────────────────
+  // When the brain runs a tool it broadcasts `tool_start` / `tool_result` on
+  // this same bus. Turning them into tasks is what makes the ops room show the
+  // agent working in real time — the tool name, its target, and the outcome —
+  // instead of a static list. One source of truth: the same events the chat
+  // renders inline.
+  if (type === "tool_start") {
+    const tool = String(payload.tool ?? payload.name ?? "أداة");
+    const target = payload.target ?? payload.args ?? payload.message;
+    upsertTask({
+      id: String(payload.id ?? `tool-${tool}-${payload.ts ?? Date.now()}`),
+      title: tool,
+      status: "running",
+      tool,
+      target: target ? String(typeof target === "string" ? target : JSON.stringify(target)).slice(0, 120) : undefined,
+      startedAt: Number(payload.ts ?? Date.now()),
+    });
+  }
+  if (type === "tool_result") {
+    const tool = String(payload.tool ?? payload.name ?? "أداة");
+    const ok = payload.ok !== false;
+    upsertTask({
+      id: String(payload.id ?? `tool-${tool}-${payload.ts ?? Date.now()}`),
+      title: tool,
+      status: ok ? "done" : "failed",
+      tool,
+      target: payload.summary ? String(payload.summary).slice(0, 120) : undefined,
+      startedAt: Number(payload.ts ?? Date.now()),
+      endedAt: Number(payload.ts ?? Date.now()),
+      ms: typeof payload.ms === "number" ? payload.ms : undefined,
+    });
+  }
+
   if (type === "task_start" || type === "task_done" || type === "task_failed") {
     upsertTask({
       id: String(payload.id ?? payload.taskId ?? `${type}-${Date.now()}`),
@@ -233,9 +274,13 @@ function ingest(payload: any) {
     payload.summary ??
     (type === "agent_tool_result"
       ? `${payload.tool ?? "أداة"} ${payload.ok ? "نجحت" : "فشلت"}`
-      : type === "local_agent_status"
-        ? `الأسطول اتحدّث: ${(payload.agents ?? []).length} جهاز`
-        : undefined);
+      : type === "tool_start"
+        ? `▶ ${payload.tool ?? "أداة"}${payload.target ? ` ← ${String(payload.target).slice(0, 80)}` : ""}`
+        : type === "tool_result"
+          ? `${payload.ok === false ? "❌" : "✅"} ${payload.tool ?? "أداة"}${payload.summary ? ` — ${String(payload.summary).slice(0, 100)}` : ""}`
+          : type === "local_agent_status"
+            ? `الأسطول اتحدّث: ${(payload.agents ?? []).length} جهاز`
+            : undefined);
   if (message) {
     pushEvent({
       at: payload.at ?? Date.now(),

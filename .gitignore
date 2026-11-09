@@ -111,6 +111,15 @@ state/auto-update.log
 /vendor/
 state/vuln-corpus/
 
+# ── The engine's runtime state lives under the api-server package, not the repo
+# root, so the root-relative `state/*` patterns above never matched it. That is
+# how `artifacts/api-server/state/cybernova-brain-state.json` stayed tracked and
+# kept leaking live host/port + connector proofs. Ignore the whole nested dir
+# (and the fetched toolchain vendor dir) and keep only the template.
+artifacts/api-server/state/
+!artifacts/api-server/state/programs.example.json
+artifacts/api-server/vendor/
+
 # secrets live here, never in git
 .env
 .env.*

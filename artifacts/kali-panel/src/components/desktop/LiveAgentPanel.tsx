@@ -952,6 +952,10 @@ export function LiveAgentPanel({
 
   // ── Plan / Files ─────────────────────────────────────────────────────────
   const [planMode, setPlanMode] = useState(false);
+  // A sensitive tool that asked for approval this turn. The next «موافق» must
+  // re-send with `approve:[tool]` so the server actually runs it — otherwise the
+  // gate refuses again and the user sees the same pause forever.
+  const pendingToolApprovalRef = useRef<string[] | null>(null);
   const [sessionFiles, setSessionFiles] = useState<SessionFile[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<SessionFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1654,8 +1658,17 @@ export function LiveAgentPanel({
   // ── Plan handlers ─────────────────────────────────────────────────────────
   const approvePlan = () => {
     setLines((arr) => arr.map((l) => l.role === "plan" && l.awaitingApproval ? { ...l, awaitingApproval: false } : l));
+    // A sensitive-tool approval: re-send with the tool name so the server's gate
+    // lets it through. A plan approval: re-send with planMode OFF so the brain
+    // executes instead of proposing the same plan again.
+    const tools = pendingToolApprovalRef.current;
+    pendingToolApprovalRef.current = null;
+    if (tools && tools.length) {
+      void send("موافق على تنفيذ الأداة الحساسة.", { planMode: false, approve: tools });
+      return;
+    }
     setPlanMode(false);
-    void send("موافق، نفّذ الخطة بالترتيب وأبلغني بكل خطوة.");
+    void send("موافق، نفّذ الخطة بالترتيب وأبلغني بكل خطوة.", { planMode: false });
   };
 
   const rejectPlan = () => {
@@ -3468,7 +3481,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     try {
       const res = await fetch(`${API_BASE}/live-agent/sessions/${sessionId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ content: fullPrompt, planMode: false }),
       });
       if (!res.ok || !res.body) throw new Error("no stream");
@@ -3520,7 +3533,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   const agentIQ = serverIQ ?? localIQ;
 
   // ── Main send function ─────────────────────────────────────────────────────
-  const send = async (text: string) => {
+  const send = async (text: string, opts?: { planMode?: boolean; approve?: string[] }) => {
     // Route to direct Llama Dolphin (always if directMode, even if probe not yet done)
     if (directMode) { return sendDirect(text); }
     if (!text.trim() || !sessionId || busy || killActive) return;
@@ -3535,8 +3548,13 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     try {
       const res = await fetch(`${API_BASE}/live-agent/sessions/${sessionId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text, planMode, autonomousMode }),
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          content: text,
+          planMode: opts?.planMode ?? planMode,
+          autonomousMode,
+          ...(opts?.approve ? { approve: opts.approve } : {}),
+        }),
         signal: abortCtrl.signal,
       });
       if (!res.ok || !res.body) throw new Error("no stream");
@@ -3643,10 +3661,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   void refreshBrainStatus();
                 } else if (pendingEvent === "confirm_required") {
                   setCurrentTool(null); setThinkingPhase("thinking");
+                  // A sensitive tool stopped for approval. Remember it so the
+                  // «موافق — نفّذ» button re-sends with `approve:[tool]` and the
+                  // server actually runs it, instead of pausing forever.
+                  pendingToolApprovalRef.current = [String(data.name)];
                   setLines((arr) => [...arr, {
-                    role: "system",
-                    text: `⏸️ لم يتم التنفيذ — ${String(data.title || data.name || "الأداة")}: ${String(data.reason || "الأداة تتطلب موافقة صريحة.")} الموافقة غير متاحة من هذه المحادثة حاليًا.`,
-                    isError: true,
+                    role: "plan",
+                    text: `⏸️ **أداة حساسة محتاجة موافقتك:** ${String(data.title || data.name || "الأداة")}\n\n${String(data.reason || "الأداة تتطلب موافقة صريحة قبل التنفيذ.")}`,
+                    awaitingApproval: true,
                   }]);
                 } else if (pendingEvent === "plan") {
                   const steps = Array.isArray(data.steps) ? data.steps : [];
