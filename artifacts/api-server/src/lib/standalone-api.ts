@@ -3245,6 +3245,17 @@ if (path === "/nova-core/version") {
       const merged = [...newlyConverted, ...customCves].slice(0, 300);
       saveState("cybernova_custom_cves_v17", merged);
       saveState("cybernova_galaxy_stats_v17", galaxyStats);
+      // إشعار تليجرام — نار ونسيان. per-source breakdown بيتبنى من ما اتخزن فعلًا:
+      const SRC2KEY: Record<string, string> = {
+        NVD: "nvdNew", GITHUB: "ghNew", CISA: "cisaNew", "CISA-KEV": "cisaNew",
+        EXPLOITDB: "edbNew", "EXPLOIT-DB": "edbNew", PACKETSTORM: "pssNew", VULDB: "vuldbNew", CIRCL: "circlNew",
+      };
+      const sum: Record<string, number> = { totalNew: newlyConverted.length };
+      for (const c of newlyConverted) {
+        const k = SRC2KEY[String(c.source).toUpperCase()] ?? `sync.${String(c.source).slice(0, 24)}`;
+        sum[k] = (sum[k] || 0) + 1;
+      }
+      void import("./ops/telegram").then((m) => m.notifyCveHunt(sum)).catch(() => {});
     }
 
     if (learnedSummaryAr) {

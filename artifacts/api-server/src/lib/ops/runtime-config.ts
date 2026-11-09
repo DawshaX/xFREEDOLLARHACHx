@@ -42,6 +42,11 @@ export const ALLOWED_KEYS: Record<string, ConfigSpec> = {
     sensitive: true,
     validate: (v) => (/^[\w-]{16,64}$/.test(v.trim()) ? null : "شكل مفتاح غير متوقع"),
   },
+  /** «0» يسكّت إشعارات صيد الثغرات على التليجرام (افتراضيًا شغالة) */
+  "telegram.alert.cve": {
+    sensitive: false,
+    validate: (v) => (v === "" || v === "0" || v === "1" ? null : "القيمة لازم «0» أو «1»"),
+  },
   "visitorAlerts": {
     labelAr: "تنبيهات الزيارات على/قف",
     validate: (v) => (["0", "1"].includes(v.trim()) ? null : "القيمة 1 أو 0 بس"),

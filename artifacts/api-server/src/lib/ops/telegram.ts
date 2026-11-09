@@ -162,6 +162,27 @@ export async function notifyBoot(version: string): Promise<void> {
 }
 
 /** للاختبارات: صفري الحالة بين حالات الاختبار. */
+/**
+ * تلخيص صيد CVE للتليجرام — مش بيبعت للصفرات (مش هنفسح الشات بمعدد).
+ * ثروتلو per-topic: رسالة واحدة كل 10 دقايق مهما اترجرر الصيد.
+ */
+export async function notifyCveHunt(sum: Record<string, unknown>): Promise<void> {
+  if (getRuntimeConfig("telegram.alert.cve") === "0") return;
+  const total = Number(sum.totalNew ?? sum.added ?? 0);
+  if (!Number.isFinite(total) || total <= 0) return;
+  const parts = ([
+    ["NVD", "nvdNew"], ["GitHub Security", "ghNew"], ["CISA-KEV", "cisaNew"],
+    ["Exploit-DB", "edbNew"], ["PacketStorm", "pssNew"], ["VulDB", "vuldbNew"], ["circl.lu", "circlNew"],
+  ] as [string, string][])
+    .map(([label, key]) => { const n = Number(sum[key] ?? 0); return n > 0 ? `${label} +${n}` : null; })
+    .filter(Boolean).join(" · ");
+  await notifyTelegram(
+    "cve.hunt",
+    `🎯 <b>صيد ثغرات جديد</b> — +${total} سجل${parts ? `\n${parts}` : ""}\n⏱ ${new Date().toISOString()}`,
+    { minIntervalMs: 10 * 60_000 },
+  );
+}
+
 export function _resetTelegramForTests(): void {
   cachedChatId = null;
   chatPollerStarted = false;

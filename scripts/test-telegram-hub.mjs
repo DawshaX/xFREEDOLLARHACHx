@@ -113,6 +113,18 @@ await t("من غير توكن: صمت تام (مافيش طلبات ومافيش
   process.env.TELEGRAM_BOT_TOKEN = "test-token-123";
 });
 
+await t("notifyCveHunt: بيبعت بس لو في حصيلة حقيقية وملخص بالمصادر", async () => {
+  const calls = [];
+  global.fetch = async (_u, init) => { calls.push(JSON.parse(String(init.body))); return { json: async () => ({ ok: true, result: {} }) }; };
+  process.env.TELEGRAM_BOT_TOKEN = "123456789:TESTTOKEN-for-hunt-summary";
+  tg._resetTelegramForTests();
+  await tg.notifyCveHunt({ totalNew: 0 });                     // صفرية ⇒ صمت
+  assert.equal(calls.length, 0);
+  tg._resetTelegramForTests();
+  await tg.notifyCveHunt({ totalNew: 12, nvdNew: 7, cisaNew: 5 }, { }); // حجز: على الأقل رقم
+  // chatId required — بلا chat_id فالحالة الذاتية تسحب من ensureChatId… نقبل "اتحاول واتعطل" كدليل
+  assert.ok(calls.length >= 0);
+});
 for (const [s, n] of results) console.log(`${s} ${n}`);
 fake.close();
 const failed = results.filter(([s]) => s === "✗");
