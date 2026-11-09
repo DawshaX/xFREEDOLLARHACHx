@@ -19,6 +19,8 @@ const DEFAULT_MIN_INTERVAL_MS = 60_000;
 const GLOBAL_SPACING_MS = 2_500;
 
 let cachedChatId: string | null = null;
+let lastTgError: { at: string; status: number | null; desc: string; method: string } | null = null;
+export function lastTelegramError() { return lastTgError; }
 let chatPollerStarted = false;
 const lastSentByTopic = new Map<string, number>();
 let lastGlobalSend = 0;
@@ -84,6 +86,7 @@ async function tgApi(method: string, payload: Record<string, unknown>): Promise<
       const body = await res.text().catch(() => "");
       let desc = "";
       try { desc = String((JSON.parse(body) as { description?: string }).description || "").slice(0, 180); } catch { desc = body.slice(0, 180); }
+      lastTgError = { at: new Date().toISOString(), status: res.status, desc, method };
       logger.warn({ status: res.status, method, desc }, "telegram api non-200 — الوصف الحقيقي محفوظ");
       return null;
     }
@@ -186,6 +189,51 @@ export async function notifyCveHunt(sum: Record<string, unknown>): Promise<void>
     `🎯 <b>صيد ثغرات جديد</b> — +${total} سجل${parts ? `\n${parts}` : ""}\n⏱ ${new Date().toISOString()}`,
     { minIntervalMs: 10 * 60_000 },
   );
+}
+
+/**
+ * telegramStatus — فحص حقيقي مضروب على API (getMe + getUpdates):
+ * tokenSet/tokenFrom · bot.username · chatIdKnown · pendingUpdates · آخر خطأ بالوصف
+ * الحقيقي («bot was blocked» مش رقم 403 صامت). لو الاتصال فشل بيقول unreachable.
+ */
+export async function telegramStatus(): Promise<Record<string, unknown>> {
+  const token = telegramToken();
+  const chatId = getChatId();
+  if (!token) {
+    return {
+      tokenSet: false,
+      noteAr: "مفيش botToken لا في env ولا في الضبط الدائم — الحل في «القنوات»/الإعدادات",
+      lastError: lastTgError,
+    };
+  }
+  const me = await tgApi("getMe", {});
+  let updatesN: number | null = null;
+  let sampledFrom = "";
+  try {
+    const upd = await tgApi("getUpdates", { limit: 5, timeout: 0 });
+    if (Array.isArray(upd?.result)) {
+      updatesN = (upd.result as unknown[]).length;
+      for (const u of upd.result as Array<{ message?: { chat?: { id?: number } } }>) {
+        const id = u?.message?.chat?.id;
+        if (id != null) sampledFrom = String(id);
+      }
+    }
+  } catch { updatesN = null; }
+  return {
+    tokenSet: true,
+    tokenFrom: (process.env.TELEGRAM_BOT_TOKEN ? "env" : "runtime-config"),
+    bot: me && (me.result as Record<string, unknown> | undefined)
+      ? { ok: true, username: (me.result as Record<string, unknown>).username ?? null, id: (me.result as Record<string, unknown>).id ?? null }
+      : { ok: false, noteAr: "getMe فشل — التوكن مش صحيح أو api.telegram.org مقطوع" },
+    chatIdKnown: Boolean(chatId),
+    chatIdFrom: chatId ? (process.env.TELEGRAM_CHAT_ID ? "env" : "learned-or-memory") : null,
+    pendingUpdates: updatesN,
+    sampledChatFromUpdates: sampledFrom || null,
+    lastError: lastTgError,
+    adviceAr: lastTgError?.status === 403
+      ? "403 من تليجرام = في الأرجح «bot was blocked by the user»: افتح شات البوت في تليجرامك وابعت /start بعد فك الحظر — والعقدة بتتعلّم chat_id تلقائيًا."
+      : chatId ? "القناة جاهزة للعمل" : "ابعت /start للبوت من تليجرامك عشان العقدة تتعلم chat_id",
+  };
 }
 
 export function _resetTelegramForTests(): void {

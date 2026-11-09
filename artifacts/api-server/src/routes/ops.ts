@@ -634,6 +634,16 @@ router.post("/ops/config", async (req: Request, res: Response) => {
 });
 
 /* رسالة اختبار حقيقية عبر القناة بعد الضبط — تقيس end-to-end لا تتظاهر. */
+/* حالة قناة التليجرام الحقيقية — getMe/getUpdates متقاسَين لحظيًا، من غير التوكن نفسه. */
+router.get("/ops/telegram/status", async (_req: Request, res: Response) => {
+  try {
+    const { telegramStatus } = await import("../lib/ops/telegram");
+    res.json({ ok: true, ...(await telegramStatus()) });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+
 router.post("/ops/config/test-telegram", async (req: Request, res: Response) => {
   if (!opsAllowed(req)) { deny(res, "إرسال اختباري = كتابة، فمحتاج NOVA_EXEC_TOKEN زي أي كتابة تانية."); return; }
   const { notifyTelegram, telegramConfigured } = await import("../lib/ops/telegram");

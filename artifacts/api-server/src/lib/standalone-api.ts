@@ -1934,6 +1934,17 @@ if (path === "/nova-core/version") {
     };
   }
 
+  if (path === "/ops/telegram/status" && m === "GET") {
+    // الوضع الساكن مابيعدّيش على api.telegram.org من المتصفح، فبيقول الوضع صراحة.
+    return {
+      ok: true,
+      mode: "standalone-static",
+      tokenSet: false,
+      noteAr: "الفحص الحي (getMe/getUpdates) يتعمل على العقدة nova.waifly.com — هنا الصفحة الساكنة على Pages",
+      adviceAr: "افتح نفس الصفحة من رابط العقدة الحية عشان الفحص الحقيقي",
+    };
+  }
+
   if (path === "/healthz" || path === "/health") {
     return { status: "ok", mode: "standalone", wsConnected: true, timestamp: new Date().toISOString() };
   }

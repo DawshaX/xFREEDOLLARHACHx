@@ -12,6 +12,7 @@ import { opsFetch, getOpsToken, setOpsToken } from "@/lib/ops-client";
  */
 export function TelegramConfigCard() {
   const [status, setStatus] = useState<Record<string, boolean> | null>(null);
+  const [live, setLive] = useState<Record<string, unknown> | null>(null);
   const [token, setToken] = useState("");
   const [chatId, setChatId] = useState("");
   const [cveAlerts, setCveAlerts] = useState(true);
@@ -23,6 +24,8 @@ export function TelegramConfigCard() {
   const refresh = useCallback(async () => {
     const r = await opsFetch<{ keys: Record<string, boolean> }>("/ops/config/status");
     if (r.ok && r.data) setStatus(r.data.keys ?? null);
+    const lr = await opsFetch<Record<string, unknown>>("/ops/telegram/status");
+    if (lr.ok && lr.data) setLive(lr.data);
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -87,6 +90,30 @@ export function TelegramConfigCard() {
         {cell(status?.["visitorAlerts"], "تنبيهات الزيارات")}
         {cell(status?.["telegram.alert.cve"] !== false, "تنبيهات الصيد")}
       </div>
+
+      {live && (
+        <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-[10px] font-mono space-y-1">
+          {live.tokenSet === false && <div className="text-rose-300">⛔ {String(live.noteAr ?? "")}</div>}
+          {live.tokenSet === true && (
+            <>
+              <div className="text-white/60">
+                البوت: {(live.bot as { ok?: boolean; username?: string } | undefined)?.ok === true
+                  ? <span className="text-emerald-300">@{(live.bot as { username?: string }).username} ✓</span>
+                  : <span className="text-rose-300">{String((live.bot as { noteAr?: string } | undefined)?.noteAr ?? "لا")}</span>}
+                {" · "}التوكن من: {String(live.tokenFrom ?? "—")}
+                {" · "}chat_id: {live.chatIdKnown ? <span className="text-emerald-300">معروف ✓</span> : <span className="text-amber-300">لسه مجهول</span>}
+                {" · "}updates معلّقة: {String(live.pendingUpdates ?? "—")}
+              </div>
+              {(live.lastError as { status?: number; desc?: string } | null)?.desc ? (
+                <div className="text-rose-300/90">
+                  آخر خطأ تليجرام: {(live.lastError as { status?: number }).status} — {String((live.lastError as { desc?: string }).desc)}
+                </div>
+              ) : null}
+              {live.adviceAr ? <div className="text-cyan-300/80">💡 {String(live.adviceAr)}</div> : null}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="space-y-1">
