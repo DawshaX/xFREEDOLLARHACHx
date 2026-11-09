@@ -12,6 +12,7 @@
  *   • للاختبار: NOVA_TELEGRAM_API_BASE يبدّل قاعدة الـAPI (افتراضي https://api.telegram.org).
  */
 import { logger } from "../logger";
+import { getRuntimeConfig } from "./runtime-config";
 
 const API_BASE = (process.env.NOVA_TELEGRAM_API_BASE || "https://api.telegram.org").replace(/\/+$/, "");
 const DEFAULT_MIN_INTERVAL_MS = 60_000;
@@ -23,7 +24,8 @@ const lastSentByTopic = new Map<string, number>();
 let lastGlobalSend = 0;
 
 export function telegramToken(): string {
-  return (process.env.TELEGRAM_BOT_TOKEN || "").trim();
+  // env (الأصل) ← runtime-config (المقفول في الذاكرة الدائمة من POST /ops/config)
+  return (process.env.TELEGRAM_BOT_TOKEN || "").trim() || getRuntimeConfig("telegram.botToken");
 }
 
 export function telegramConfigured(): boolean {
@@ -40,7 +42,7 @@ export function esc(v: unknown, max = 200): string {
 
 export function getChatId(): string {
   if (cachedChatId) return cachedChatId;
-  const fromEnv = (process.env.TELEGRAM_CHAT_ID || "").trim();
+  const fromEnv = (process.env.TELEGRAM_CHAT_ID || "").trim() || getRuntimeConfig("telegram.chatId");
   if (fromEnv) { cachedChatId = fromEnv; return fromEnv; }
   return "";
 }

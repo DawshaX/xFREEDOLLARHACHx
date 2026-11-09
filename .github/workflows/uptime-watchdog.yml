@@ -172,6 +172,25 @@ jobs:
           fi
           exit 0
 
+      # ── دفع إعدادات العقدة من الأسرار (لو المالك سجّل TELEGRAM_BOT_TOKEN) ──
+      # مشروطة بالكامل: سر غايب = تخطّي صامت. موجود = تتدفع كل دورة فالإعداد
+      # ذاتي-الشفاء حتى لو الحداوة امحت. القيمة عمرها ما تطبع: بنتحقق بالـboolean
+      # من /ops/config/status بس.
+      - name: sync runtime config from secrets (idempotent, quiet)
+        if: steps.p.outputs.status == 'up'
+        env:
+          NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          set +e
+          [ -z "$TELEGRAM_BOT_TOKEN" ] && { echo "no telegram secret — skip"; exit 0; }
+          [ -z "$NOVA_EXEC_TOKEN" ] && { echo "::notice::NOVA_EXEC_TOKEN absent — config sync skipped"; exit 0; }
+          code=$(curl -sS -o /tmp/cfg.json -w '%{http_code}' -m 30 -X POST "$HUB/api/ops/config"             -H "Content-Type: application/json" -H "x-nova-token: $NOVA_EXEC_TOKEN"             -d "{"key": "telegram.botToken", "value": "$TELEGRAM_BOT_TOKEN"}")
+          flagged=$(curl -sS -m 20 "$HUB/api/ops/config/status" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("keys",{}).get("telegram.botToken"))' 2>/dev/null)
+          echo "config push: HTTP $code · botToken on node: ${flagged:-unknown}"
+          echo "- telegram.botToken: HTTP $code · node=$flagged" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
       - name: maintain the single down-issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

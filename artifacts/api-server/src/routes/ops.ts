@@ -62,6 +62,7 @@ import { KIND_LIST, toolStatus } from "../lib/ops/tools";
 import { fetchList, listInventory, listSources, readFreeStore } from "../lib/ops/wordlist";
 import { provisionToolchain, toolchainStatus, VENDORABLE } from "../lib/ops/toolchain";
 import { checkGate, opsExposure } from "../lib/ops/gate";
+import { ALLOWED_KEYS, hydrateRuntimeConfig, runtimeConfigStatus, setRuntimeConfig } from "../lib/ops/runtime-config";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
 import { maskProgram, maskSession, hasSession } from "../lib/ops/session";
@@ -605,6 +606,31 @@ router.get("/ops/stats", (req: Request, res: Response) => {
  * (زي /api/ops/version) عشان المحرك والصفحة يقولوا الحجم الحقيقي، والتنزيل
  * خلف البوابة لأنه spawn فعلي. مافيش رد هنا بيؤكد نجاح من غير قياس —
  * toolchainStatus() بيقرا القرص، والحالة بعد provisioning بتتقاس من جديد. */
+
+/* ── قناة الضبط الدائمة (POST gated · GET booleans فقط — القيم عمرها ما ترجع) ──
+ * السبب المقاس: توكن تليجرام اتسلّم في الشات 2026-11-09، وحوّالين الـenv على
+ * المضيف المجاني محتاجين إيد. ده بديل آمن: CI بدفع الإعداد بالتوكن التنفيذي،
+ * والسيرفر يقفله في الذاكرة الدائمة (Supabase Edge) فينجو من الريستارت. */
+
+router.get("/ops/config/status", (_req: Request, res: Response) => {
+  res.json({
+    ok: true,
+    // بيرجع «موجود؟» بس — عمر أي رد ما يحتوي القيمة نفسها.
+    keys: runtimeConfigStatus(),
+    allowedKeys: Object.entries(ALLOWED_KEYS).map(([k, s]) => ({ key: k, labelAr: s.labelAr, sensitive: Boolean(s.sensitive) })),
+    hydrated: true,
+  });
+});
+
+router.post("/ops/config", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "ضبط إعدادات دائمة = كتابة على المكنة، فمحتاج NOVA_EXEC_TOKEN زي أي كتابة تانية."); return; }
+  const key = String(req.body?.key || "").trim();
+  const value = String(req.body?.value ?? "");
+  const r = await setRuntimeConfig(key, value);
+  if (!r.ok) { res.status(400).json({ ok: false, error: "invalid", reasonAr: r.reasonAr, status: runtimeConfigStatus() }); return; }
+  broadcastEvent("nova-ops", { type: "runtime-config", key, set: Boolean(value.trim()) });
+  res.json({ ok: true, key, status: runtimeConfigStatus() });
+});
 
 router.get("/ops/tools", (_req: Request, res: Response) => {
   const st = toolchainStatus();
