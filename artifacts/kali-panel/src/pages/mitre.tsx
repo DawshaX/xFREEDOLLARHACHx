@@ -40,6 +40,8 @@ export default function Mitre() {
           <div>
             <h1 className="font-black text-xl" style={{ color: "#ff5555", textShadow: "0 0 16px rgba(255,50,50,0.5)" }}>MITRE ATT&CK Matrix</h1>
             <p className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.3)" }}>مصفوفة تكتيكات وتقنيات الهجوم</p>
+            {/* بند 5 (2026-11-09): دي عيّنة مرجعية ثابتة (8 تقنيات بمعرّفات/توصيف MITRE الرسمية) — مش قاعدة ATT&CK الكاملة ولا بث حي. المصفوفة الرسمية: https://attack.mitre.org */}
+            <a href="https://attack.mitre.org" target="_blank" rel="noreferrer" className="text-[9px] font-mono underline decoration-dotted" style={{ color: "rgba(255,190,80,0.75)" }}>📌 عيّنة مرجعية ثابتة (8 تقنيات) — المصفوفة الكاملة على attack.mitre.org ↗</a>
           </div>
         </div>
         <div style={{ position: "relative", width: 240 }}>

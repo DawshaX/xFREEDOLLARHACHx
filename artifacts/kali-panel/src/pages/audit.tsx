@@ -1,18 +1,30 @@
 import { useState, useEffect } from "react";
 import { AlertTriangle, Loader2, Skull } from "lucide-react";
+import { jsonRequest } from "@/lib/sse";
 
 const NEON_CARD = { background: "rgba(8,0,18,0.95)", border: "1px solid rgba(180,0,255,0.12)", borderRadius: 16, boxShadow: "0 0 20px rgba(150,0,255,0.04)" };
 
 export default function Audit() {
   const [logs, setLogs] = useState<any[]>([]);
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // بند 5 (2026-11-09): السجلات تحت كانت ثلاثة سطور مكتوبة في الكود (STARTUP/SCAN//
+  // LOGIN وهميين) بتتعرض كأنها تاريخ حقيقي. دلوقتي السطر بيتقرأ من GET /audit
+  // (جدول audit_log في قاعدة العقدة)، والفشل/الفراغ بيبان زي ما هو.
   useEffect(() => {
-    setLogs([
-      { id: 1, createdAt: new Date().toISOString(), actor: "System", action: "STARTUP", target: "CORE", result: "success", detail: "System services started successfully" },
-      { id: 2, createdAt: new Date(Date.now() - 3600000).toISOString(), actor: "Nova Agent", action: "SCAN", target: "192.168.1.1", result: "success", detail: "Port scan completed" },
-      { id: 3, createdAt: new Date(Date.now() - 7200000).toISOString(), actor: "User", action: "LOGIN", target: "ADMIN_PANEL", result: "warning", detail: "Login attempt from new IP" },
-    ]);
+    let alive = true;
+    (async () => {
+      try {
+        const rows = await jsonRequest<any[]>("/audit?limit=100");
+        if (alive) setLogs(Array.isArray(rows) ? rows : []);
+      } catch (e) {
+        if (alive) setError(e instanceof Error ? e.message : "تعذر قراءة سجل التدقيق");
+      } finally {
+        if (alive) setIsLoading(false);
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
   const resultColor = (r: string) => r === "success" ? "#44ff88" : r === "failure" ? "#ff4444" : r === "warning" ? "#ffaa44" : "#4488ff";
@@ -33,7 +45,7 @@ export default function Audit() {
         ) : !logs.length ? (
           <div className="p-12 text-center space-y-3">
             <Skull className="w-12 h-12 mx-auto" style={{ color: "rgba(255,255,255,0.05)" }} />
-            <p className="font-mono text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>لا توجد سجلات</p>
+            <p className="font-mono text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>{error ? `تعذر القراءة: ${error}` : "لا توجد سجلات محفوظة بعد"}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

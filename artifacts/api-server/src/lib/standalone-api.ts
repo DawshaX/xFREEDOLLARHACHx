@@ -1235,18 +1235,20 @@ function buildStandaloneCronJobs(): StandaloneCronJob[] {
     ? savedBrain.multiTaskQueue
     : DEFAULT_CRON_SEED;
   const overrides = loadState<Record<string, Partial<StandaloneCronJob>>>(CRON_STATE_KEY, {});
-  const expressions = ["*/15 * * * *", "*/30 * * * *", "0 */6 * * *", "0 0 * * *", "*/10 * * * *"];
   return queue.map((task: Record<string, unknown>, idx: number) => {
     const id = String(task.id ?? `task-${idx + 1}`);
     const base: StandaloneCronJob = {
       id,
       name: String(task.titleAr ?? `مهمة #${idx + 1}`),
-      cronExpr: expressions[idx % expressions.length]!,
+      // صدق القياس (بند 5، 2026-11-09): مفيش مجدول في المتصفح — القيم كانت بتتولّد
+      // (nextRun = now+15د لكل واحدة، runCount = 12+idx مكتوبة في الكود) وتتعرض
+      // كأنها سجل ركض حقيقي. الصفحة بقت بتكتب «— / لم يركض بعد» زي ما هي الحقيقة.
+      cronExpr: "—",
       enabled: true,
       lastRun: undefined,
-      lastResult: String(task.lastOutput ?? "جاهز للتنفيذ"),
-      nextRun: new Date(Date.now() + (idx + 1) * 15 * 60 * 1000).toISOString(),
-      runCount: 12 + idx,
+      lastResult: "قائمة عقل المتصفح — مش سجل تشغيل",
+      nextRun: undefined,
+      runCount: 0,
       errorCount: 0,
     };
     return { ...base, ...(overrides[id] ?? {}) };
@@ -3898,12 +3900,10 @@ if (path === "/nova-core/version") {
   }
 
   if (path === "/audit") {
-    return {
-      entries: [
-        { id: "au-1", action: "SYSTEM_BOOT", actor: "CyberNova", detail: "Bug Bounty Studio & Internal WebSocket Hub initialized", createdAt: new Date().toISOString() },
-      ],
-      total: 1,
-    };
+    // صدق القياس (بند 5، 2026-11-09): كان بيرجّع حدث SYSTEM_BOOT بختم «دلوقتي»
+    // عند كل طلب — حدث ما حصلش. على Pages مفيش قاعدة تدقيق؛ السجل الحقيقي
+    // (audit_log) على العقدة. الشكل مصفوفة زي الراوتر الحقيقي GET /audit بالظبط.
+    return [];
   }
 
   // ── Nuclei & AutoExplorer & Vulns & GitHub Search ──────────────────────────
