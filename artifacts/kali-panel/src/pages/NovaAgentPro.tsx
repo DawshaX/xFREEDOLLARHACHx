@@ -22,6 +22,8 @@ import { NovaOpsRoom } from "@/components/desktop/NovaBrainOps";
 import { RealTimeSystemMonitor } from "@/components/desktop/RealTimeSystemMonitor";
 import { NovaHuntSurface } from "@/components/desktop/NovaBrainOps";
 import { TelegramConfigCard } from "@/components/TelegramConfigCard";
+import { DraggableWindow, type WindowState } from "@/components/desktop/DraggableWindow";
+import { PanelTop, LayoutGrid } from "lucide-react";
 
 type TabKey = "session" | "brain" | "hardware" | "hunt" | "channels" | "nav";
 
@@ -83,6 +85,28 @@ function fmtUptime(s: number | null): string {
 
 export default function NovaAgentPro() {
   const [tab, setTab] = useState<TabKey>("session");
+  // وضع النوافذ الحرة: التبويبات بتتحول لنوافذ بتتحرك بالسحب زي سطح المكتب
+  const [freeMode, setFreeMode] = useState(false);
+  const [wins, setWins] = useState<WindowState[]>([]);
+  const zRef = useRef(10);
+  const openWin = (key: TabKey) => {
+    const meta = TABS.find((t) => t.key === key)!;
+    setWins((prev) => {
+      if (prev.some((w) => w.id === key)) {
+        return prev.map((w) => w.id === key ? { ...w, minimized: false, z: ++zRef.current } : w);
+      }
+      const idx = prev.length;
+      return [...prev, {
+        id: key, title: meta.labelAr,
+        x: 40 + (idx % 4) * 36, y: 30 + (idx % 4) * 36,
+        w: key === "session" ? 820 : 620, h: key === "session" ? 560 : 480,
+        z: ++zRef.current, minimized: false, maximized: false,
+      }];
+    });
+  };
+  const patchWin = (id: string, patch: Partial<WindowState>) =>
+    setWins((prev) => prev.map((w) => w.id === id ? { ...w, ...patch } : w));
+  const closeWin = (id: string) => setWins((prev) => prev.filter((w) => w.id !== id));
   const [vit, setVit] = useState<Vitals>({ healthOk: null, healthMs: null, db: null, sha: "", uptimeS: null, tools: 0, tgToken: null, tgChat: null });
   const mounted = useRef(Date.now());
 
@@ -138,6 +162,12 @@ export default function NovaAgentPro() {
             <div className="text-[9px] font-mono text-white/30">نظام متكامل موحّد الربط — مش بوت أوامر · الجلسة {fmtUptime(Math.round(sessionS / 1000))} · sha {vit.sha || "…"}</div>
           </div>
           <div className="mr-auto flex items-center gap-1.5 flex-wrap">
+            <button onClick={() => { setFreeMode((v) => !v); if (!freeMode && wins.length === 0) openWin("session"); }}
+              title={freeMode ? "العودة لوضع التبويبات" : "وضع النوافذ الحرة — تبويباتك تتحرك بالسحب"}
+              className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-mono font-bold border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500/20 transition">
+              {freeMode ? <PanelTop className="w-3 h-3" /> : <LayoutGrid className="w-3 h-3" />}
+              {freeMode ? "تبويبات" : "نوافذ حرة"}
+            </button>
             {pill(vit.healthOk, "السيرفر", vit.healthOk && vit.healthMs != null ? ` ${vit.healthMs}ms` : "")}
             {pill(vit.db, "قاعدة البيانات")}
             {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools}`)}
@@ -153,7 +183,7 @@ export default function NovaAgentPro() {
           {TABS.map(({ key, labelAr, sub, icon: Icon, color }) => {
             const active = tab === key;
             return (
-              <button key={key} onClick={() => setTab(key)}
+              <button key={key} onClick={() => { setTab(key); if (freeMode) openWin(key); }}
                 className={"group rounded-xl border px-3 py-2.5 text-right transition-all duration-200 relative overflow-hidden"}
                 style={active
                   ? { borderColor: color + "66", background: `linear-gradient(135deg, ${color}18, ${color}06)`, boxShadow: `0 0 18px ${color}22 inset, 0 0 12px ${color}18` }
@@ -172,7 +202,62 @@ export default function NovaAgentPro() {
       </header>
 
       {/* الجسم — كل تبويب يضمّن المكوّن الحقيقي */}
-      <main className="flex-1 min-h-0 overflow-hidden">
+      <main className="flex-1 min-h-0 overflow-hidden relative">
+        {freeMode && (
+          <div className="absolute inset-0 overflow-hidden" style={{ backgroundImage: "radial-gradient(circle, rgba(74,222,128,0.05) 1px, transparent 1px)", backgroundSize: "26px 26px" }}>
+            {wins.map((w) => {
+              const meta = TABS.find((t) => t.key === w.id as TabKey);
+              return (
+                <div key={w.id} style={{ position: "absolute", zIndex: w.z, transform: "translateZ(0)" }}>
+                  <DraggableWindow
+                    state={w}
+                    onClose={() => closeWin(w.id)}
+                    onFocus={() => patchWin(w.id, { z: ++zRef.current })}
+                    onMinimize={() => patchWin(w.id, { minimized: true })}
+                    onMaximize={() => patchWin(w.id, { maximized: !w.maximized })}
+                    onMove={(x, y) => patchWin(w.id, { x, y })}
+                    onResize={(nw, nh) => patchWin(w.id, { w: nw, h: nh })}>
+                    <div className="h-full w-full overflow-hidden bg-[#04040c]" dir="rtl">
+                      {w.id === "session" && (
+                        <NovaUnifiedChat title={meta?.labelAr ?? "الجلسة"} subtitle="الجلسة الذكية في نافذة حرة" />
+                      )}
+                      {w.id === "brain" && <div className="h-full overflow-auto"><NovaOpsRoom /></div>}
+                      {w.id === "hardware" && <div className="h-full overflow-auto p-2"><RealTimeSystemMonitor /></div>}
+                      {w.id === "hunt" && <div className="h-full overflow-auto"><NovaHuntSurface /></div>}
+                      {w.id === "channels" && <div className="h-full overflow-auto p-3"><TelegramConfigCard /></div>}
+                      {w.id === "nav" && (
+                        <div className="h-full overflow-auto p-3 space-y-3">
+                          {NAV_GROUPS.map(({ group, color, items }) => (
+                            <section key={group}>
+                              <h2 className="text-[11px] font-black mb-1.5" style={{ color }}>{group}</h2>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {items.map((it) => (
+                                  <a key={it.path} href={it.path} className="rounded-lg border px-2.5 py-2 text-center text-[10px] font-bold font-mono"
+                                    style={{ borderColor: color + "30", background: color + "08", color: color + "dd" }}>{it.label}</a>
+                                ))}
+                              </div>
+                            </section>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </DraggableWindow>
+                </div>
+              );
+            })}
+            {wins.filter((w) => w.minimized).length > 0 && (
+              <div className="absolute bottom-2 right-2 flex gap-1.5 z-[9999]">
+                {wins.filter((w) => w.minimized).map((w) => (
+                  <button key={w.id} onClick={() => patchWin(w.id, { minimized: false, z: ++zRef.current })}
+                    className="rounded-lg border border-white/15 bg-black/70 px-3 py-1.5 text-[10px] font-mono text-white/70 hover:bg-white/10">
+                    {TABS.find((t) => t.key === w.id)?.labelAr ?? w.id}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <div className={freeMode ? "hidden" : "h-full min-h-0"}>
         {tab === "session" && (
           <NovaUnifiedChat title="نوفا — المختبر ومركز التحكم" subtitle="الجلسة الذكية: عقل واحد، أدوات حقيقية، أدلة SHA-256" />
         )}
@@ -234,6 +319,7 @@ export default function NovaAgentPro() {
             ))}
           </div>
         )}
+        </div>
       </main>
 
       {/* أسفل: خط الحالة — قياس مقروء بسرعة */}

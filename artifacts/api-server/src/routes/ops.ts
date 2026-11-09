@@ -63,6 +63,7 @@ import { fetchList, listInventory, listSources, readFreeStore } from "../lib/ops
 import { provisionToolchain, toolchainStatus, VENDORABLE } from "../lib/ops/toolchain";
 import { checkGate, opsExposure } from "../lib/ops/gate";
 import { ALLOWED_KEYS, hydrateRuntimeConfig, runtimeConfigStatus, setRuntimeConfig } from "../lib/ops/runtime-config";
+import { measureStateFootprint, pruneState, lastPrune } from "../lib/ops/state-prune";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
 import { maskProgram, maskSession, hasSession } from "../lib/ops/session";
@@ -675,6 +676,18 @@ router.post("/ops/tools/provision", async (req: Request, res: Response) => {
  * 1024MB و460MB رام (متقاس)، فملف 1.9MB مش من العقل إنه يركب في كل حزمة. والقراءة
  * هنا مفتوحة زي `/api/ops/tools`: كل رقم فيها محسوب من القرص، والمرآات المُعلَنة
  * بتتقال كأسماء — «مبنزّلهاش» مش «نزّلناها فاضية». */
+
+/* ── القرص: قياس بصمة الحالة + تنظيف سياسي معلن (مش حذف عشوائي) ─────── */
+router.get("/ops/state", (_req: Request, res: Response) => {
+  res.json({ ok: true, footprint: measureStateFootprint(), lastPrune: lastPrune(), noteAr: "الذاكرة/الإعدادات بتتعاكس تلقائيًا على Supabase Edge (برّه القرص)؛ هنا بنقيس اللي فاضل محليًا وننظفه بسياسة معلنة." });
+});
+
+router.post("/ops/state/prune", (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "حذف أدلة = كتابة على قرص المكنة، فمحتاج NOVA_EXEC_TOKEN زي أي كتابة تانية."); return; }
+  const report = pruneState();
+  broadcastEvent("nova-ops", { type: "state-prune", removed: report.removed, freedBytes: report.freedBytes, kept: report.kept });
+  res.json({ ok: true, report });
+});
 
 router.get("/ops/wordlists", (_req: Request, res: Response) => {
   const inv = listInventory();

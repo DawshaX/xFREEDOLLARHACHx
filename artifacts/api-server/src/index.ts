@@ -381,7 +381,13 @@ server.listen(port, host, () => {
   void (async () => {
     try {
       const { hydrateRuntimeConfig } = await import("./lib/ops/runtime-config");
-      await hydrateRuntimeConfig(); // الإعدادات المقفولة دائمًا قبل أي إشعار
+      await hydrateRuntimeConfig();
+      // تنظيف القرص اليومي: سياسة معلنة (آخر 400 مهمة/14 يوم) — القرص مش وعاء بلا قاعة.
+      try {
+        const { pruneState } = await import("./lib/ops/state-prune");
+        setTimeout(() => { try { pruneState(); } catch { /* ok */ } }, 60_000).unref?.();
+        setInterval(() => { try { const r = pruneState(); if (r.removed > 0) logger.info({ removed: r.removed, freedBytes: r.freedBytes }, "state prune pass"); } catch { /* ok */ } }, 24 * 3600_000).unref?.();
+      } catch { /* state-prune مش جوه أول حزمة — مش شرط إقلاع */ } // الإعدادات المقفولة دائمًا قبل أي إشعار
       const { ensureChatId, notifyBoot } = await import("./lib/ops/telegram");
       ensureChatId();
       void notifyBoot(String(process.env.NOVA_BUILD_SHA || process.env.KALI_BUILD_SHA || "dev").slice(0, 12));
