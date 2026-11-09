@@ -91,6 +91,10 @@ jobs:
           vcode=$(curl -sS -o /tmp/v.json -w '%{http_code}' -m 20 "$HUB/api/ops/version" 2>/dev/null)
           say "GET /api/ops/version → HTTP ${vcode:-000} · $(head -c 160 /tmp/v.json | tr '\n' ' ')"
 
+          # قياس القاعدة من N1 في كل تقرير مراقبة من هنا ورايح (db.reachable/sslMode).
+          zcode=$(curl -sS -o /tmp/z.json -w '%{http_code}' -m 20 "$HUB/api/healthz" 2>/dev/null)
+          say "GET /api/healthz → HTTP ${zcode:-000} · db=$(python3 -c 'import json,sys;d=json.load(open("/tmp/z.json"));print(d.get("db"))' 2>/dev/null || head -c 120 /tmp/z.json | tr '\n' ' ')"
+
           # Classify, in the order that matters: a refused port outranks everything.
           status=up
           if [ "$tcp" = "down" ]; then
