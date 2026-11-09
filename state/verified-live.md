@@ -3,27 +3,27 @@
 > اتولّد من `scripts/verify-live.mjs` (شغّله `.github/workflows/live-verify.yml`).
 > كل هدف هنا صاحبه منشور صراحة إن فحصه مسموح — الوثيقة في العمود الأخير.
 
-آخر تشغيل: `2026-11-08T22:36:16.782Z` · الحكم: **GREEN** · ✓21 · ✗0 · ؟0 · (محجوب)0
+آخر تشغيل: `2026-11-09T07:17:05.545Z` · الحكم: **GREEN** · ✓21 · ✗0 · ؟0 · (محجوب)0
 الأدوات المرصودة: dnsx, subfinder, httpx, nuclei, katana, nmap, naabu, ffuf · المحرك: `http://127.0.0.1:8090/api` · هدف التمرين: `scanme.nmap.org`
 
 | الطبقة | الفحص | الحالة | التفصيل |
 |---|---|---|---|
 | cli | dns resolution | ✓ pass | 2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present |
-| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · antivirus1.vulnweb.com, tetphp.vulnweb.com, www.test.php.vulnweb.com |
+| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · antivirus1.vulnweb.com, odincovo.vulnweb.com, www.virus.vulnweb.com |
 | cli | httpx https://demo.testfire.net/ | ✓ pass | 200 · Altoro Mutual · |
 | cli | katana crawl testphp.vulnweb.com | ✓ pass | 1 رابط متكرول (المطلوب ≥1) |
 | cli | nuclei -u testphp.vulnweb.com (high,critical) | ✓ pass | 4 طلب اتفحص و0 نتيجة high/critical · exit=0 · قوالب: [[34mINF[0m] No new updates found for nuclei templates |
 | cli | nmap scanme.nmap.org:80,22 | ✓ pass | 2 بورت مفتوح · 22/tcp open · 80/tcp open |
-| cli | hub nova.waifly.com | ✓ pass | https://nova.waifly.com/api/health → HTTP 200 · JSON 93B · ops bundle ✓ · 679ms |
+| cli | hub nova.waifly.com | ✓ pass | https://nova.waifly.com/api/health → HTTP 200 · JSON 93B · ops bundle ✓ · 621ms |
 | cli | ffuf fuzz testphp.vulnweb.com | ✓ pass | 61 طلب مُرسل و0 مطابقة (1 سطر مخرجات) |
 | engine | engine reachable | ✓ pass | HTTP 200 |
 | engine | kinds report tool presence | ✓ pass | 27 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap, tools.amass, tools.naabu, tools.ffuf,… |
-| engine | bounty catalog served | ✓ pass | 746 برنامج (511 بمكافأة) · آخر تحديث 6.2 يوم · ops/bounty/programs-catalog.json |
+| engine | bounty catalog served | ✓ pass | 746 برنامج (511 بمكافأة) · آخر تحديث 6.6 يوم · ops/bounty/programs-catalog.json |
 | engine | catalog lookup over HTTP | ✓ pass | aces-dev.wnba.com → hackerone:nba-public (domain · استقبال open) · ونطاق مجهول → match:null |
 | engine | program registered active (demo.testfire.net) | ✓ pass | id=demo.testfire.net · policy=https://demo.testfire.net/ |
-| engine | job created | ✓ pass | job=20261108-2d3f4a · 7 مهمة |
+| engine | job created | ✓ pass | job=20261109-2edecb · 7 مهمة |
 | engine | job executed | ✓ pass | 7/7 done · 0 failed · 11 finding · done |
-| engine | evidence hashed on disk | ✓ pass | 6 ملف في state/jobs/20261108-2d3f4a/evidence · 6 فيهم بايتات |
+| engine | evidence hashed on disk | ✓ pass | 6 ملف في state/jobs/20261109-2edecb/evidence · 6 فيهم بايتات |
 | engine | report is honest about coverage | ✓ pass | 614 بايت · فيه «Coverage gaps»=true · «reportable»=true |
 | engine | findings vault is idempotent | ✓ pass | أول sync: +26/-26 (من مهام 19 · من الكتالوج القديم 11) · تاني: +0/-26 ومحدّثة 30 · متأكَّدة 0 |
 | engine | report draft gated on reproduction | ✓ pass | 3 مفتاح: 0 مسودة (200) · 3 مرفوضة (409) · البنية=true · سبب الرفض موجود=true |
