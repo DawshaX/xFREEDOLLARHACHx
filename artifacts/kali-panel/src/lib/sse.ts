@@ -7,6 +7,17 @@ export interface SseEvent {
 
 const API_BASE = "/api";
 
+/** بوابة الكتابة ردّت 403 token_required → أبلغ الـUI عشان بانر التوكن يظهر فورًا. */
+function maybeSignalTokenRequired(res: Response, body: unknown): void {
+  try {
+    if (res.status === 403 && (body as { error?: string } | null)?.error === "token_required") {
+      window.dispatchEvent(new CustomEvent("nova:token-required", {
+        detail: { endpoint: String((body as { endpoint?: string })?.endpoint ?? "") },
+      }));
+    }
+  } catch { /* window مش موجودة (اختبارات) — تجاهل */ }
+}
+
 /** Build the request headers once, merging caller headers with the ops token. */
 function authHeaders(init: RequestInit): Record<string, string> {
   const headers = new Headers(init.headers ?? undefined);
@@ -68,6 +79,11 @@ export async function jsonRequest<T>(
       const text = await res.text();
       throw new Error(`Server returned HTML error page instead of JSON: ${res.status} ${res.statusText}`);
     }
+    // البوابة بترجع JSON {error:"token_required"} — اقرأ البودي عشان نعلّم الـUI
+    try {
+      const maybeJson = await res.clone().json();
+      maybeSignalTokenRequired(res, maybeJson);
+    } catch { /* مش JSON — لا شيء */ }
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
   if (res.status === 204) return undefined as T;

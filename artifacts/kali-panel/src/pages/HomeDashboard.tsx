@@ -1,4 +1,5 @@
 import { corpusLabelAr, corpusSaysAr, corpusTotal } from "../lib/corpus-live";
+import { novaAuthHeaders } from "@/lib/ops-client";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
@@ -1059,7 +1060,7 @@ export default function HomeDashboard() {
     }
     try {
       const [huntRes, multiSiteRes] = await Promise.all([
-        fetch(API("/cve/hunt/trigger"), { method: "POST" }).catch(() => null),
+        fetch(API("/cve/hunt/trigger"), { method: "POST", headers: novaAuthHeaders() }).catch(() => null),
         runLiveMultiSiteVulnerabilitySync(brainState.activeTarget),
       ]);
 
@@ -1069,7 +1070,7 @@ export default function HomeDashboard() {
       // Persist all newly fetched live CVEs into the Universal Galaxy DB
       const ingestRes = await fetch(API("/cve/ingest-live"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           items: multiSiteRes.items,
           siteStatuses: multiSiteRes.siteStatuses,

@@ -48,6 +48,11 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
+// ── عين الزيارات (تليجرام) ── وسيط صامت: بيشتغل في الخلفية بعد next() وعمره ما
+// يأخر رد ولا يوقف الموقع. لو تليجرام مش مفعّل بيرجع فورًا.
+import { visitorIntelMiddleware } from "./lib/ops/visitor-intel";
+app.use(visitorIntelMiddleware());
+
 // ── Standalone SSE Streams (LiveAgent, Agent Steps, Push Notifications) ──────
 app.get("/api/push/stream", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream");

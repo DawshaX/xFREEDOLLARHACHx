@@ -376,6 +376,12 @@ if (portWasInvalid) {
 
 server.listen(port, host, () => {
   logger.info({ port, host }, `Server listening on ${host} (HTTP + /api/ws + /api/local-agent/ws)`);
+  // تليجرام: إشعار الإقلاع + تعلّم chat_id من أول /start لو مش محفوظ.
+  // معزول بالكامل — لو تليجرام مش مفعّل أو واقِع، السيرفر ما بيحسش.
+  void import("./lib/ops/telegram").then(({ ensureChatId, notifyBoot }) => {
+    ensureChatId();
+    void notifyBoot(String(process.env.NOVA_BUILD_SHA || process.env.KALI_BUILD_SHA || "dev").slice(0, 12));
+  }).catch(() => { /* telegram رفاهية */ });
   // Plain line too: panel consoles (Pterodactyl) sometimes swallow JSON logs,
   // which made a perfectly healthy process look dead.
   console.log(`✓ NOVA listening on http://${host}:${port} — open /self-check`);

@@ -37,6 +37,44 @@ try { // نقرأ السلسلة مباشرة بـ Node — بلا openssl ول�
   console.error(`✗ ${e.message}`);
   process.exit(1);
 }
-console.log("# طبّع والصق السطرين دول في env بتاع السيرفر بالظبط:");
-console.log(`NOVA_DB_SSL=strict`);
-console.log(`NOVA_DB_CA=${Buffer.from(pem, "utf8").toString("base64")}`);
+// ── أوضاع الإخراج ──────────────────────────────────────────────────────────
+// (بدون أعلام)         يطبع سطور env الجاهزة للّصق اليدوي (السلوك الأصلي).
+// --write <pem-path>   يكتب الـPEM في ملف (workflow db-ca-sync بيستخدمه).
+// --emit-ts <ts-path>  يعيد توليد lib/db/src/db-bundled-ca.ts بالشهادة مضمّنة —
+//                      الحزمة بتحملها بعد كده، فـ strict يشتغل بلا أي env على
+//                      الإطلاق (الشهادة بيانات عامة، مش سر).
+import { writeFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
+const args = process.argv.slice(2);
+const flagValue = (name) => {
+  const i = args.indexOf(name);
+  return i >= 0 ? args[i + 1] : null;
+};
+
+const writeTo = flagValue("--write");
+if (writeTo) {
+  mkdirSync(dirname(writeTo), { recursive: true });
+  writeFileSync(writeTo, pem);
+  console.log(`✔ اتكتب ${writeTo} (${pem.length} بايت)`);
+}
+
+const emitTs = flagValue("--emit-ts");
+if (emitTs) {
+  // الـPEM ملوش علاقة بالباك-تيك — concatenation أأمن من template جوه template.
+  const ts = "/**\n"
+    + " * db-bundled-ca · شهادة الجذر المثبّتة داخل الحزمة (Pinned CA)\n"
+    + " * ⚠️ متولّد آليًا بواسطة db-ca-sync (fetch-db-ca.mjs --emit-ts) — متعدّلوش بإيدك.\n"
+    + " * البيانات عامة: نفس الشهادة اللي بيتسلمها أي عميل TLS من السيرفر عند الوصل.\n"
+    + " */\n"
+    + "export const BUNDLED_DB_CA_PEM = `\n" + pem + "`;\n";
+  mkdirSync(dirname(emitTs), { recursive: true });
+  writeFileSync(emitTs, ts);
+  console.log(`✔ اتولّد ${emitTs} (${ts.length} بايت)`);
+}
+
+if (!writeTo && !emitTs) {
+  console.log("# طبّع والصق السطرين دول في env بتاع السيرفر بالظبط:");
+  console.log(`NOVA_DB_SSL=strict`);
+  console.log(`NOVA_DB_CA=${Buffer.from(pem, "utf8").toString("base64")}`);
+}

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { pool, DB_SSL_MODE, DB_SSL_NOTE_AR } from "@workspace/db";
+import { pool, DB_SSL_MODE, DB_SSL_NOTE_AR, DB_SSL_CA_SOURCE } from "@workspace/db";
 import { getPlatformControlSnapshot } from "../lib/standalone-api";
 import { getConnectedAgentList } from "./local-agent";
 
@@ -10,8 +10,8 @@ const router: IRouter = Router();
  * النتيجة بتتقاس وقت الطلب، مش بتتخزن ولا بتتفترض.
  */
 async function probeDb(): Promise<
-  | { reachable: true; sslMode: string; noteAr: string; ms: number }
-  | { reachable: false; sslMode: string; noteAr: string; errorCode: string }
+  | { reachable: true; sslMode: string; caSource: string | null; noteAr: string; ms: number }
+  | { reachable: false; sslMode: string; caSource: string | null; noteAr: string; errorCode: string }
 > {
   const started = Date.now();
   try {
@@ -19,12 +19,12 @@ async function probeDb(): Promise<
       setTimeout(() => rej(new Error("db-probe-timeout")), 1200),
     );
     await Promise.race([pool.query("select 1"), timeout]);
-    return { reachable: true, sslMode: DB_SSL_MODE, noteAr: DB_SSL_NOTE_AR, ms: Date.now() - started };
+    return { reachable: true, sslMode: DB_SSL_MODE, caSource: DB_SSL_CA_SOURCE, noteAr: DB_SSL_NOTE_AR, ms: Date.now() - started };
   } catch (e) {
     const code =
       (e as { code?: string })?.code ||
       (e instanceof Error && e.message === "db-probe-timeout" ? "PROBE_TIMEOUT" : "DB_ERROR");
-    return { reachable: false, sslMode: DB_SSL_MODE, noteAr: DB_SSL_NOTE_AR, errorCode: code };
+    return { reachable: false, sslMode: DB_SSL_MODE, caSource: DB_SSL_CA_SOURCE, noteAr: DB_SSL_NOTE_AR, errorCode: code };
   }
 }
 

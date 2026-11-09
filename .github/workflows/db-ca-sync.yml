@@ -1,0 +1,75 @@
+name: DB CA pin sync
+
+# ─────────────────────────────────────────────────────────────────────────────
+# يقرأ سلسلة TLS الحية من DATABASE_URL (Neon) ويثبّت شهادة الجذر جوه الحزمة —
+# فوضع SSL strict يشتغل على أي مضيف بلا أي إعداد يدوي ولا لصق PEM في واجهات
+# بتسحق الأسطر (الكسر المقاس 2026-11-09: SELF_SIGNED_CERT_IN_CHAIN شلّ
+# الـbrainstore كله طول ما العقدة صاحية). الشهادة بيانات عامة: هي اللي بيتسلمها
+# أي عميل TLS عند الوصلاء — السر (DATABASE_URL) بيفضل في Secrets.
+#
+# بيشتغل: يوميًا + لما الملف ده أو السكربت يتلمس على main + يدوي.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # يومي — Neon بيلف السلسلة ببطء، والتحديث الذاتي بيلتقط
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/fetch-db-ca.mjs"
+      - ".github/workflows/db-ca-sync.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: db-ca-sync
+  cancel-in-progress: true
+
+jobs:
+  pin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Read the live TLS chain and regenerate the pinned CA
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          node scripts/fetch-db-ca.mjs --write ops/db-ca/live-root.pem --emit-ts lib/db/src/db-bundled-ca.ts
+          grep -q "BEGIN CERTIFICATE" ops/db-ca/live-root.pem
+          grep -q "BEGIN CERTIFICATE" lib/db/src/db-bundled-ca.ts
+          echo "subject: $(openssl x509 -in ops/db-ca/live-root.pem -noout -subject 2>/dev/null || echo n/a)"
+
+      - name: Commit if the pin actually rotated
+        id: pin
+        run: |
+          set -e
+          git config user.name "nova-bot[ci]"
+          git config user.email "bot@users.noreply.github.com"
+          git add ops/db-ca/live-root.pem lib/db/src/db-bundled-ca.ts
+          if git diff --cached --quiet; then
+            echo "pin unchanged — nothing to do"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore(db): rotated pinned Neon CA from the live TLS chain [skip ci]"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # دفعات GITHUB_TOKEN متفجّرش push events (حماية من الحلقات) — لكن dispatch
+      # مسموح بيه وبيفعّل البيلد فورًا، فالشهادة الجديدة تركب الحزمة في نفس الدقيقة
+      # بدل ما تستنى أول دفعة كود جاية.
+      - name: Fire a bundle rebuild so the new pin ships now
+        if: steps.pin.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run standalone-bundle.yml --ref main

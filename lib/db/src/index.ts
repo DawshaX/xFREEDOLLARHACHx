@@ -1,6 +1,40 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
+import { BUNDLED_DB_CA_PEM } from "./db-bundled-ca";
+
+function decodeDbCa(v: string): string {
+  if (/BEGIN CERTIFICATE/.test(v)) return v;
+  try {
+    const dec = Buffer.from(v.trim(), "base64").toString("utf8");
+    return /BEGIN CERTIFICATE/.test(dec) ? dec : v;
+  } catch { return v; }
+}
+
+export type DbCaSource = "env" | "bundled-pinned" | "system-roots";
+
+/**
+ * سلّم الـCA لوضع strict — بلا تنزيل صامت أبدًا (rejectUnauthorized بيفضل true):
+ *   1) NOVA_DB_CA من البيئة لو اتفكّ لشهادة سليمة.
+ *   2) CA المثبّت جوه الحزمة (db-ca-sync بيقراه من سلسلة المضيف الحي) — ده اللي
+ *      بيلمّ حالة «env اتسحق في واجهة اللوحة» بدل ما الـbrainstore يقع كله
+ *      بـSELF_SIGNED_CERT_IN_CHAIN (الكسر المقاس 2026-11-09).
+ *   3) ولا واحد فيهم → جذور نظام التشغيل (زي أي عميل TLS عادي — وهتفشل بصراحة
+ *      لو المضيف بيقدّم سلسلة self-signed، مش بصمت).
+ */
+export function resolveStrictCa(
+  opts: { envCa?: string; bundled?: string } = {},
+): { ca?: string; source: DbCaSource } {
+  const envCa = String(opts.envCa ?? process.env.NOVA_DB_CA ?? "").trim();
+  if (envCa) {
+    const dec = decodeDbCa(envCa);
+    if (/BEGIN CERTIFICATE/.test(dec)) return { ca: dec, source: "env" };
+    // env مش فاضي بس مش شهادة — متستخدموش ولا تعتبره نجاح.
+  }
+  const bundled = String(opts.bundled ?? BUNDLED_DB_CA_PEM ?? "").trim();
+  if (/BEGIN CERTIFICATE/.test(bundled)) return { ca: bundled, source: "bundled-pinned" };
+  return { source: "system-roots" };
+}
 
 const { Pool } = pg;
 
@@ -35,22 +69,8 @@ function stripSslParams(url: string): string {
     .replace(/\?$/, "");
 }
 
-function buildPool(): { cfg: pg.PoolConfig; mode: DbSslMode } {
+function buildPool(): { cfg: pg.PoolConfig; mode: DbSslMode; caSource?: DbCaSource } {
   const modeEnv = (process.env.NOVA_DB_SSL || "").trim().toLowerCase();
-  /**
- * NOVA_DB_CA بيتكتب من واجهات بسطر واحد (Pterodactyl / GitHub Secrets) — الـPEM
- * الحقيقي متعدد الأسطر بيتسحق هناك. عشان كده بنقبل base64: لو مفيش BEGIN
- * CERTIFICATE في القيمة، بنفك الترميز. (سكربت scripts/fetch-db-ca.mjs بيطلّع
- * السطر جاهز.) مدخل مش PEM ولا base64 سليم → بيرجع القيمة زي ما هي ويخلّي TLS
- * يشتكي بصراحة بدل ما يكسر بصمت.
- */
-function decodeDbCa(v: string): string {
-  if (/BEGIN CERTIFICATE/.test(v)) return v;
-  try {
-    const dec = Buffer.from(v.trim(), "base64").toString("utf8");
-    return /BEGIN CERTIFICATE/.test(dec) ? dec : v;
-  } catch { return v; }
-}
 
 const url = stripSslParams(RAW_URL);
   const urlWantsSsl =
@@ -62,15 +82,17 @@ const url = stripSslParams(RAW_URL);
   if (!urlWantsSsl) return { cfg: { connectionString: url }, mode: "implicit" };
 
   if (modeEnv === "strict" || process.env.NOVA_DB_CA || process.env.NODE_EXTRA_CA_CERTS) {
+    const pick = resolveStrictCa();
     return {
       cfg: {
         connectionString: url,
         ssl: {
           rejectUnauthorized: true,
-          ...(process.env.NOVA_DB_CA ? { ca: decodeDbCa(process.env.NOVA_DB_CA) } : {}),
+          ...(pick.ca ? { ca: pick.ca } : {}),
         },
       },
       mode: "strict",
+      caSource: pick.source,
     };
   }
   return {
@@ -79,15 +101,22 @@ const url = stripSslParams(RAW_URL);
   };
 }
 
-const { cfg, mode } = buildPool();
+const { cfg, mode, caSource } = buildPool();
 
 export const DB_SSL_MODE: DbSslMode = mode;
+
+/** مصدر شهادة الـCA في وضع strict — بيتقاس وقت البناء وبيتعرض في /api/healthz. */
+export const DB_SSL_CA_SOURCE: DbCaSource | null = mode === "strict" ? (caSource ?? "system-roots") : null;
 
 export const DB_SSL_NOTE_AR =
   mode === "encrypted-unverified"
     ? "قاعدة البيانات: اتصال مشفّر بلا تحقق من سلسلة CA (هوست مجاني) — وفّر NOVA_DB_CA للتحقق الصارم."
     : mode === "strict"
-      ? "قاعدة البيانات: اتصال مشفّر بتحقق صارم من السلسلة (CA مثبّت)."
+      ? DB_SSL_CA_SOURCE === "bundled-pinned"
+        ? "قاعدة البيانات: اتصال مشفّر بتحقق صارم (CA مثبّت داخل الحزمة من سلسلة المضيف الحي — db-ca-sync)."
+        : DB_SSL_CA_SOURCE === "system-roots"
+          ? "قاعدة البيانات: strict من غير CA صريح — بيتحقق من جذور النظام، وهيفشل بصراحة لو السلسلة self-signed."
+          : "قاعدة البيانات: اتصال مشفّر بتحقق صارم من السلسلة (CA مثبّت من البيئة)."
       : mode === "off"
         ? "قاعدة البيانات: SSL مُطفأ يدوياً (NOVA_DB_SSL=off) — تطوير فقط."
         : "قاعدة البيانات: إعداد SSL ضمني من السلسلة.";

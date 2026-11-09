@@ -1,5 +1,6 @@
 import { lazy, Suspense, Component, type ReactNode } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { OpsTokenBanner } from "@/components/OpsTokenBanner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Bug, FileText, Github, Globe, ShieldAlert, Terminal, Shield,
@@ -457,6 +458,7 @@ function App() {
         <LanguageProvider>
           <SystemProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <OpsTokenBanner />
               <AppRouter />
             </WouterRouter>
             <Toaster />
