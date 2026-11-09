@@ -383,8 +383,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://hackerone.com/hacktivity"],
   },
   {
-    id: "CVE-2026-21440",
-    cveId: "CVE-2026-21440",
+    id: "NOVA-SCN-21440",
+    cveId: "NOVA-SCN-21440",
     description:
       "HTTP/2 Rapid Continuation & Reverse Proxy H2.CL Request Smuggling Desynchronization enabling Web Cache Poisoning across CDN edge nodes.",
     severity: "CRITICAL",
@@ -394,7 +394,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-27T14:20:00Z",
     cweId: "CWE-444",
     cwe: "HTTP-Desync",
-    source: "PacketStorm",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "Edge Proxy",
     product: "HTTP/2 Gateway",
@@ -403,8 +403,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://packetstormsecurity.com/"],
   },
   {
-    id: "CVE-2026-18902",
-    cveId: "CVE-2026-18902",
+    id: "NOVA-SCN-18902",
+    cveId: "NOVA-SCN-18902",
     description:
       "OAuth 2.0 / OIDC Wildcard redirect_uri & postMessage Origin Validation Bypass allowing cross-origin authorization code and access token theft.",
     severity: "HIGH",
@@ -414,7 +414,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-26T11:10:00Z",
     cweId: "CWE-601",
     cwe: "AuthBypass",
-    source: "GitHub",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "SSO Identity",
     product: "OAuth2 Provider",
@@ -423,8 +423,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://github.com/advisories"],
   },
   {
-    id: "CVE-2026-14099",
-    cveId: "CVE-2026-14099",
+    id: "NOVA-SCN-14099",
+    cveId: "NOVA-SCN-14099",
     description:
       "Cloud IMDSv1 SSRF via Headless PDF/SVG Renderer & Webhook URL DNS Rebinding exposing temporary IAM credentials.",
     severity: "CRITICAL",
@@ -434,7 +434,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-25T16:45:00Z",
     cweId: "CWE-918",
     cwe: "SSRF",
-    source: "ExploitDB",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "Cloud Microservice",
     product: "Webhook & PDF Worker",
@@ -443,8 +443,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://www.exploit-db.com/"],
   },
   {
-    id: "CVE-2026-11205",
-    cveId: "CVE-2026-11205",
+    id: "NOVA-SCN-11205",
+    cveId: "NOVA-SCN-11205",
     description:
       "AI Agent Indirect Prompt Injection & MCP Tool Excessive Agency (OWASP LLM01/LLM06) allowing unauthorized internal API invocation.",
     severity: "CRITICAL",
@@ -454,7 +454,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-24T13:00:00Z",
     cweId: "CWE-285",
     cwe: "AI-PromptAgency",
-    source: "VulDB",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "AI Agent Framework",
     product: "RAG & Tool Router",
@@ -463,8 +463,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://vuldb.com/"],
   },
   {
-    id: "CVE-2026-09881",
-    cveId: "CVE-2026-09881",
+    id: "NOVA-SCN-09881",
+    cveId: "NOVA-SCN-09881",
     description:
       "Single-Packet HTTP/2 Concurrency Race Condition (TOCTOU) in FinTech Ledger & Balance Transfer API allowing double-withdrawal.",
     severity: "HIGH",
@@ -474,7 +474,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-23T10:30:00Z",
     cweId: "CWE-362",
     cwe: "Race-TOCTOU",
-    source: "CIRCL",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "FinTech Core",
     product: "Payment Ledger API",
