@@ -62,6 +62,7 @@ import { freeHostSummary, probeCatalogue } from "../ops/free-hosts";
 import { autonomyLevel, autonomySummary } from "../ops/autonomy";
 import { catalogStatus, huntCandidates } from "../ops/bounty-catalog";
 import { vulnQuery } from "./vuln-keyword";
+import { corpusStatus, queryCorpus } from "../ops/vuln-corpus";
 import {
   buildReport,
   cancelJob,
@@ -470,6 +471,24 @@ export const AGENT_TOOLS: AgentTool[] = [
     category: "platform",
     risk: "safe",
     input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "corpus_query",
+    title: "بحث في الكوربوس الحقيقي (211K ثغرة)",
+    description:
+      "يبحث في الكوربوس الحقيقي المسحوب من NVD 2.0 + CISA KEV + EPSS (211,256 ثغرة) بالمنتج أو رقم CVE، مع CVSS وKEV وEPSS. ده المصدر الحقيقي مش الفهرس المُصنَّع.",
+    category: "intel",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        product: { type: "string", description: "اسم المنتج زي nginx أو apache" },
+        cve: { type: "string", description: "رقم CVE زي CVE-2024-3094" },
+        minCvss: { type: "number" },
+        kevOnly: { type: "boolean", description: "المستغَلّة فعلياً فقط (CISA KEV)" },
+        limit: { type: "number" },
+      },
+    },
   },
   // ── المرحلة 59: الكنوز اللي كانت في المستودع ومش متوصلة بالأجنت ──────────
   // `findings-vault` (النتايج الموثقة + مسودات الإفصاح)، `advisory-library`
@@ -1276,7 +1295,52 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
 
       case "corpus_stats": {
         const stats = getCorpusStats();
-        return done(true, `الفهرس: ${JSON.stringify(stats).slice(0, 150)}`, stats);
+        const real = corpusStatus();
+        const realLine = real.measured
+          ? `${real.total.toLocaleString("en-US")} ثغرة حقيقية (KEV ${real.kev})`
+          : "غير مقاس";
+        return done(
+          true,
+          `الفهرس المُصنَّع: ${stats.totalIndexedKnowledgeItems} نمط · الكوربوس الحقيقي: ${realLine}`,
+          { synthesized: stats, realCorpus: real },
+        );
+      }
+
+      case "corpus_query": {
+        const real = corpusStatus();
+        if (!real.measured) {
+          return done(
+            false,
+            "الكوربوس الحقيقي مش متنزّل على السيرفر — شغّل scripts/ingest-vuln-corpus.mjs أو الـworkflow الأول",
+            { measured: false, says_ar: real.says_ar },
+          );
+        }
+        const product = String(rawArgs.product ?? "").trim();
+        const cve = String(rawArgs.cve ?? "").trim();
+        if (!product && !cve) {
+          return done(
+            true,
+            `الكوربوس الحقيقي: ${real.total.toLocaleString("en-US")} ثغرة · KEV ${real.kev} · ${real.products.toLocaleString("en-US")} منتج · ${real.says_ar}`,
+            real,
+          );
+        }
+        const res = await queryCorpus({
+          product: product || undefined,
+          cve: cve || undefined,
+          minCvss: rawArgs.minCvss === undefined ? undefined : Number(rawArgs.minCvss),
+          kevOnly: rawArgs.kevOnly === true,
+          limit: rawArgs.limit === undefined ? 20 : Number(rawArgs.limit),
+        });
+        const label = cve || product;
+        return done(
+          true,
+          `الكوربوس الحقيقي "${label}": ${res.rows.length} نتيجة (من ${res.scanned.toLocaleString("en-US")} صف ممسوح)`,
+          {
+            query: { product, cve },
+            ...res,
+            corpus: { total: real.total, at: real.at, sources: ["NVD 2.0", "CISA KEV", "EPSS"] },
+          },
+        );
       }
 
       case "fleet_list": {

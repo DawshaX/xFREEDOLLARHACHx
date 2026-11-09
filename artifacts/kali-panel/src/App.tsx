@@ -98,6 +98,7 @@ const MissionTrackerPage = lazy(() => import("@/pages/MissionTracker"));
 const LocalDeviceControl = lazy(() => import("@/pages/LocalDeviceControl"));
 const NovaKnowledge = lazy(() => import("@/pages/nova-knowledge"));
 const AgentV3 = lazy(() => import("@/pages/agent-v3"));
+const HeadersTool = lazy(() => import("@/pages/tools/headers"));
 import { Placeholder } from "@/pages/Placeholder";
 import NotFound from "@/pages/not-found";
 
@@ -354,7 +355,7 @@ function InnerRoutes() {
       <Route path="/compliance-checker"><Placeholder title="Compliance Checker" subtitle="فحص الامتثال" icon={CheckCircle} /></Route>
       <Route path="/risk-assessment" component={RiskCenter} />
       <Route path="/incident-response"><Placeholder title="Incident Response" subtitle="استجابة الحوادث" icon={AlertCircle} /></Route>
-      <Route path="/header-analyzer"><Placeholder title="Header Analyzer" subtitle="تحليل رؤوس HTTP" icon={Terminal} /></Route>
+      <Route path="/header-analyzer"><HeadersTool /></Route>
       <Route path="/ip-tracker"><Placeholder title="IP Tracker" subtitle="تتبع عناوين IP" icon={Target} /></Route>
       <Route path="/bandwidth-tester"><Placeholder title="Bandwidth Tester" subtitle="اختبار سرعة الشبكة" icon={Activity} /></Route>
       <Route path="/wifi-analyzer"><Placeholder title="WiFi Analyzer" subtitle="تحليل الشبكات اللاسلكية" icon={Globe} /></Route>

@@ -385,6 +385,12 @@ router.get("/nova-core/version", (_req: Request, res: Response) => {
       ? `الملفات على الديسك من ${drift.disk.builtAt} والعملية الشغّالة (pid ${process.pid}) بدأت من ${drift.boot.builtAt} — محتاج إعادة تشغيل`
       : null,
     source: from,
+    // S10: صوت الأجينت (NOVA_VOICE) كان شغّال سيرفرياً بس اللوحة ما كانتش تعرضه.
+    // دلوقتي بنكشف حالته عشان اللوحة تقدر تقول «الصوت: مفعّل/مقفول» بصدق.
+    voice: {
+      enabled: process.env.NOVA_VOICE !== "0",
+      flag: process.env.NOVA_VOICE ?? "(default: on)",
+    },
     runtime: {
       node: process.version,
       platform: `${process.platform}/${process.arch}`,

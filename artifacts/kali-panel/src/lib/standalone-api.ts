@@ -22,6 +22,23 @@ import {
   getCorpusStats,
 } from "./cyber-corpus-2099";
 
+/**
+ * رابط البرهان الصحيح لسجل ثغرة.
+ *
+ * قبل كده كل سجل — حتى المعرّفات الداخلية زي `SKY-VULN-02` و`NOVA-HYPOTHESIS-WEB3-001`
+ * — كان بياخد رابط `nvd.nist.gov/vuln/detail/<id>`، يعني رابط لصفحة NVD لمعرّف
+ * مش موجود عند NVD. ده دليل مزيّف. دلوقتي: لو المعرّف CVE حقيقي → NVD؛ لو داخلي →
+ * أول مرجع حقيقي في السجل، ولو مفيش → رابط بحث NVD بالمعرّف.
+ */
+export function proofUrl(cve: { cveId?: string; id?: string; references?: string[] }): string {
+  const id = String(cve.cveId || cve.id || "");
+  const isRealCve = /^CVE-\d{4}-\d{4,}$/i.test(id);
+  if (isRealCve) return `https://nvd.nist.gov/vuln/detail/${id}`;
+  const ref = (cve.references ?? []).find((r) => /^https?:\/\//i.test(r));
+  if (ref) return ref;
+  return `https://nvd.nist.gov/vuln/search/results?query=${encodeURIComponent(id)}`;
+}
+
 export interface StandaloneCve {
   id: string;
   cveId: string;
@@ -3157,7 +3174,11 @@ if (path === "/nova-core/version") {
     const newlyConverted: StandaloneCve[] = [];
 
     for (const raw of incoming) {
-      const id = String(raw.cveId || raw.id || `CVE-2026-${Math.floor(10000 + Math.random() * 89999)}`);
+      // قبل كده: لو السجل مش فيه معرّف، كان بيولّد `CVE-2026-<رقم عشوائي>` —
+      // معرّف CVE ملفّق. دلوقتي: بنستخدم معرّف داخلي واضح (NOVA-SYNC-*) مش
+      // بيدّعي إنه CVE حقيقي.
+      const id = String(raw.cveId || raw.id || `NOVA-SYNC-${Date.now().toString(36).toUpperCase()}`);
+      const isRealCve = /^CVE-\d{4}-\d{4,}$/i.test(id);
       if (existingIds.has(id)) continue;
       existingIds.add(id);
       const sevRaw = String(raw.severity || "HIGH").toUpperCase();
@@ -3167,7 +3188,7 @@ if (path === "/nova-core/version") {
       const src = String(raw.source || "NVD");
       const et = String(raw.exploitType || raw.cwe || "RCE");
       const epss = Number(raw.epssScore ?? raw.epss ?? 0) || 0;
-      const url = String(raw.url || `https://nvd.nist.gov/vuln/detail/${id}`);
+      const url = String(raw.url || (isRealCve ? `https://nvd.nist.gov/vuln/detail/${id}` : ""));
 
       const cveObj: StandaloneCve = {
         id,
@@ -3438,7 +3459,7 @@ if (path === "/nova-core/version") {
       description: c.description,
       publishedAt: c.publishedAt,
       source: c.source || "NVD",
-      url: `https://nvd.nist.gov/vuln/detail/${c.cveId}`,
+      url: proofUrl(c),
     }));
     return {
       total: STANDALONE_CVES.length,
@@ -3492,7 +3513,7 @@ if (path === "/nova-core/version") {
         exploitAvailable: c.exploitAvailable,
         publishedAt: c.publishedAt,
         source: c.source || "NVD",
-        url: `https://nvd.nist.gov/vuln/detail/${c.cveId}`,
+        url: proofUrl(c),
       };
     });
     return { scores, results: scores, kev: scores, items: scores, total: scores.length };
