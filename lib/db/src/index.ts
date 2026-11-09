@@ -37,7 +37,22 @@ function stripSslParams(url: string): string {
 
 function buildPool(): { cfg: pg.PoolConfig; mode: DbSslMode } {
   const modeEnv = (process.env.NOVA_DB_SSL || "").trim().toLowerCase();
-  const url = stripSslParams(RAW_URL);
+  /**
+ * NOVA_DB_CA بيتكتب من واجهات بسطر واحد (Pterodactyl / GitHub Secrets) — الـPEM
+ * الحقيقي متعدد الأسطر بيتسحق هناك. عشان كده بنقبل base64: لو مفيش BEGIN
+ * CERTIFICATE في القيمة، بنفك الترميز. (سكربت scripts/fetch-db-ca.mjs بيطلّع
+ * السطر جاهز.) مدخل مش PEM ولا base64 سليم → بيرجع القيمة زي ما هي ويخلّي TLS
+ * يشتكي بصراحة بدل ما يكسر بصمت.
+ */
+function decodeDbCa(v: string): string {
+  if (/BEGIN CERTIFICATE/.test(v)) return v;
+  try {
+    const dec = Buffer.from(v.trim(), "base64").toString("utf8");
+    return /BEGIN CERTIFICATE/.test(dec) ? dec : v;
+  } catch { return v; }
+}
+
+const url = stripSslParams(RAW_URL);
   const urlWantsSsl =
     /[?&]sslmode=(require|prefer|verify-ca|verify-full)/i.test(RAW_URL) ||
     /supabase\.co|pooler\.supabase\.com/i.test(RAW_URL);
@@ -52,7 +67,7 @@ function buildPool(): { cfg: pg.PoolConfig; mode: DbSslMode } {
         connectionString: url,
         ssl: {
           rejectUnauthorized: true,
-          ...(process.env.NOVA_DB_CA ? { ca: process.env.NOVA_DB_CA } : {}),
+          ...(process.env.NOVA_DB_CA ? { ca: decodeDbCa(process.env.NOVA_DB_CA) } : {}),
         },
       },
       mode: "strict",
