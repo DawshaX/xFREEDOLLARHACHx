@@ -63,6 +63,18 @@ export function sameOriginOk(req: GateRequest): boolean {
   const host = header(req, "host");
   if (!host) return false;
   if (header(req, "sec-fetch-site") === "same-origin") return true;
+  // مشغّل محلي على نفس الجهاز (مهمة CI حية، cron، curl من صاحب المضيف): المتصفح
+  // هو اللي بيضيف Origin/Referer — السكربت المحلي بيبعت طلب نضيف من اللوباك.
+  // قيسنا الكسر: «NOVA live mission» على جيت-هَب فشلت 5 مرات متتالية (2026-11-09)
+  // لأن نفس سكربت الريبو اتصدّ بـsame_origin_required وهو على 127.0.0.1 مع السيرفر!
+  // ثقة اللوباك = اصطلاح أدوات الأمن المحلية كلها (من داخل الجهاز = من داخل الجهاز)،
+  // والمهاجم عن بُعد عمره ما يبان 127.0.0.1. بس لو فيه وكيل عكسي على نفس الجهاز
+  // هيتنكّر في اللوباك — عشان كده أي هيدر تمرير (XFF/X-Real-IP/CF) بيلغي الثقة.
+  if (!header(req, "origin") && !header(req, "referer")
+      && !header(req, "x-forwarded-for") && !header(req, "x-real-ip") && !header(req, "cf-connecting-ip")) {
+    const ra = String(req.socket?.remoteAddress ?? "");
+    if (ra === "127.0.0.1" || ra === "::1" || ra === "::ffff:127.0.0.1") return true;
+  }
   const origins = [header(req, "origin"), header(req, "referer")].filter(Boolean);
   if (origins.length === 0) return false;
   return origins.some((o) => {

@@ -3074,7 +3074,15 @@ if (path === "/nova-core/version") {
       bySource: galaxyStats.bySource,
       byExploitType: galaxyStats.byExploitType,
       latest: allItems.slice(0, 30),
-      topEpss: [...allItems].sort((a, b) => (b.epssScore ?? 0) - (a.epssScore ?? 0)).slice(0, 20),
+      // صدق EPSS (الفحص الشامل 2026-11-09): «أعلى مخاطر EPSS» كان بيرتّب العناصر
+      // كلها — وفرضيات المعمل (CyberNova-*/NOVA-*/SKY-*) ملهاش نقاط EPSS أصلاً،
+      // فكانت بتظهر بدرجة 0% تحت عنوان «أكثر احتمالاً للاستغلال» = كذبة بالدمج.
+      // القائمة بقت من عناصر عندها نقطة EPSS حقيقية (>0) من مصادر الكالات بس.
+      topEpss: [...allItems]
+        .filter((x) => typeof x.epssScore === "number" && x.epssScore > 0
+          && !/^(CyberNova|NOVA|SKY|AI-Mutated)/.test(String(x.source ?? ""))
+          && !/^(NOVA|SKY|CDC)-/.test(String(x.id ?? "")))
+        .sort((a, b) => (b.epssScore ?? 0) - (a.epssScore ?? 0)).slice(0, 20),
     };
   }
 
