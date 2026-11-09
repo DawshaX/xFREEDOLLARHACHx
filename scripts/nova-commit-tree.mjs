@@ -121,6 +121,10 @@ export function buildTree(cwd = REPO_DEFAULT, opts = {}) {
     for (const rel of listWorktree(cwd)) {
       if (seen.has(rel) || ignored(rel, ignore)) continue;
       const abs = path.join(cwd, rel);
+      // 2026-11-09: إندكس محلي قديم ممكن يسمّي ملفات اتشالت من على القرص (زي
+      // state/cybernova-brain-state.json بعد PR #238) → statSync كان بيكسر السكريبت كله
+      // بـ ENOENT قبل أي commit. الغياب حقيقة مشروعة — اتخطَّ بصمت مسجَّل، مش انفجار.
+      if (!fs.existsSync(abs)) { missing.push(rel); continue; }
       if (!fs.statSync(abs).isFile()) continue;
       const h = git(cwd, ["hash-object", "-w", "--", rel], { env });
       git(cwd, ["update-index", "--add", "--cacheinfo", `100644,${h},${rel}`], { env });
