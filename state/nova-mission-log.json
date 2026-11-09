@@ -1,0 +1,785 @@
+{
+  "updatedAt": "2026-11-07T01:02:55.214Z",
+  "missions": [
+    {
+      "ranAt": "2026-11-07T01:02:55.214Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 14,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 114,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 37,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 27,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "أهم 3 حاجات أتأكد منها في example.com:\n1. **سجلات DNS** (A/AAAA، MX، TXT، NS) — للتأكد من صحة التوجيه والموثوقية.\n2. **شهادة TLS** — تاريخ الانتهاء، المُصدر، البروتوكولات المدعومة، وجود أي مشاكل في التكوين.\n3. **رؤوس HTTP الأمنية** — HSTS، CSP، X‑Frame‑Options، Referrer‑Policy، وغيرها لضمان الحماية ضد هجمات XSS وCSRF وclickjacking.\n\n**الخطوة التالية المقترحة:** استخدم أداة `dns_lookup` لفحص سجلات DNS، ثم أداة `tls_audit` لفحص شهادة TLS، وأخيرًا أداة `http_headers_audit` لمراجعة رؤوس HTTP الأمنية.",
+      "memoryRecords": 2,
+      "selfCheckScore": 100,
+      "selfCheckVerdict": "كله شغّال: التشغيل والتخزين والأدوات والإنترنت والقناة الحية والدورة الذاتية — كله متحقّق بفحص حقيقي، مش كلام.",
+      "durationMs": 31100,
+      "provider": "llm7→ovh-ai",
+      "mode": "llm",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-06T19:37:36.856Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 20,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 112,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 25,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 12,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n2 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-06T19:37\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 66 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.\n---\n**⚠️ تصحيح مقاس (من المنصة نفسها، مش من دماغي):**\n- ذاكرتي **الآن**: 2 ذكرى محفوظة.\n_الأرقام اللي فوق اتقاسوا لحظة الرد. أي رقم أكبر من دول كان محفوظ أو غلط — القياس هو المرجع._",
+      "memoryRecords": 5,
+      "selfCheckScore": 100,
+      "selfCheckVerdict": "كله شغّال: التشغيل والتخزين والأدوات والإنترنت والقناة الحية والدورة الذاتية — كله متحقّق بفحص حقيقي، مش كلام.",
+      "durationMs": 12021,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-06T11:18:59.998Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 12,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 21,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 14,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "أنا شايفة أن example.com عندها استجابة HTTP 200، يعني الموقع شغال. لكن في حاجات مهمة ناقصة زي content-security-policy و x-frame-options، ده بيخلي الموقع عرضة للمخاطر الأمنية زي الهاكرز.\n\n**الخطورة:** غياب سياسات الأمان اللي بتحمي من الهجمات زي XSS و Clickjacking.\n\n**الخطوة التالية:** أ.run `http_headers_audit` على example.com تاني لما يضيفوا السياسات اللي ناقصة، عشان نضمن إن الموقع أمن كفاية.",
+      "memoryRecords": 5,
+      "selfCheckScore": 100,
+      "selfCheckVerdict": "كله شغّال: التشغيل والتخزين والأدوات والإنترنت والقناة الحية والدورة الذاتية — كله متحقّق بفحص حقيقي، مش كلام.",
+      "durationMs": 51447,
+      "provider": "ovh-ai",
+      "mode": "llm",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-06T01:43:01.291Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 41,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 51,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 38,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-06T01:42\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 55 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 6226,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-05T20:11:42.426Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 9,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 69,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 53,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 29,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "1. تأكد من صحة سجلات DNS (A, AAAA, MX, TXT) وتطابقها مع القيم المتوقعة.\n2. فحص شهادة TLS: إصدار، تاريخ الانتهاء، صحة السلسلة، دعم بروتوكولات TLS 1.2/1.3.\n3. مراجعة رؤوس HTTP للأمان: HSTS, CSP, X‑Frame‑Options, Referrer‑Policy, X‑Content‑Type‑Options.",
+      "memoryRecords": 1,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 4669,
+      "provider": "llm7",
+      "mode": "llm",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-05T11:22:02.741Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 21,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 65,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 69,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 34,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **1** أداة (1 نجحت). دي القراءة:\n\n### ✅ recon_target\nاستطلاع example.com: IP=172.66.147.243, 104.20.23.154 · HTTP 200 · server: — · TLS حتى Dec 25 22:56:35 2026 GMT\n\n## القراءة الأمنية\n- **ترويسات ناقصة (6):** content-security-policy, x-frame-options, x-content-type-options, strict-transport-security, referrer-policy, permissions-policy — أول ما يحتاج معالجة.\n- الشهادة سارية حتى **Dec 25 22:56:35 2026 GMT**.\n- الاستطلاع ده سطحي ومقصود: بيوريك الشكل الخارجي بدون أي أذى للهدف.\n\n## الخطوة التالية المقترحة\nنكمّل بفحص المنافذ المحدود + تعداد النطاقات الفرعية، وبعدها نسجّل النتائج في المهمة ونولّد تقرير قانوني جاهز للإرسال.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 66188,
+      "provider": "pollinations:openai-fast",
+      "mode": "llm",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-05T01:37:08.381Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 133,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 33,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 14,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-05T01:36\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 45 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 20517,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-04T20:35:45.214Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 9,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 33,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 77,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 51,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "1. تأكد من صحة شهادة TLS وتوافقها مع المتطلبات الأمنية (مثل HSTS وTLS 1.3). 2. افحص رؤوس HTTP للبحث عن سياسات أمان مثل CSP، X‑Frame‑Options، وReferrer‑Policy. 3. تحقق من وجود سجلات DNS صحيحة (A/AAAA، MX، TXT) وتأكد من عدم وجود سجلات غير مرغوب فيها أو تسرب معلومات.",
+      "memoryRecords": 1,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 12095,
+      "provider": "pollinations:openai-fast",
+      "mode": "llm",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-04T20:01:40.467Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 86,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 45,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 25,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-04T20:01\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 45 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 20664,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-04T11:22:46.917Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 99,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 33,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 21,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-04T11:22\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 45 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 20789,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-04T01:33:56.987Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 145,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 75,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 25,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-04T01:33\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 45 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 21082,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-03T19:42:18.830Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 21,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 12,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 40,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 23,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **1** أداة (1 نجحت). دي القراءة:\n\n### ✅ recon_target\nاستطلاع example.com: IP=172.66.147.243, 104.20.23.154 · HTTP 200 · server: — · TLS حتى Dec 25 22:56:35 2026 GMT\n\n## القراءة الأمنية\n- **ترويسات ناقصة (6):** content-security-policy, x-frame-options, x-content-type-options, strict-transport-security, referrer-policy, permissions-policy — أول ما يحتاج معالجة.\n- الشهادة سارية حتى **Dec 25 22:56:35 2026 GMT**.\n- الاستطلاع ده سطحي ومقصود: بيوريك الشكل الخارجي بدون أي أذى للهدف.\n\n## الخطوة التالية المقترحة\nنكمّل بفحص المنافذ المحدود + تعداد النطاقات الفرعية، وبعدها نسجّل النتائج في المهمة ونولّد تقرير قانوني جاهز للإرسال.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 15380,
+      "provider": "pollinations:openai-fast",
+      "mode": "llm",
+      "error": null,
+      "runner": {
+        "node": "v22.23.3",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-03T11:12:25.782Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 79,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 23,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 10,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-03T11:12\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 45 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 20747,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-03T03:00:58.715Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 66,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 49,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 24,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-03T03:00\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 45 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 40447,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-02T19:40:26.313Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 104,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 36,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 15,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-02T19:40\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 45 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 20572,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-02T06:36:13.058Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 9,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 48,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 36,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 19,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "1. سجلات DNS (A/AAAA/NS/MX) للتحقق من صحة التكوين والانتشار.\n2. شهادة TLS: إصدار، تاريخ انتهاء، صحة السلسلة، البروتوكولات المدعومة.\n3. رؤوس HTTP الأمنية (HSTS, CSP, X‑Frame‑Options, Referrer‑Policy) لضمان الحماية من هجمات XSS و clickjacking.",
+      "memoryRecords": 1,
+      "selfCheckScore": 90,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: الأسطول (نودات متصلة).",
+      "durationMs": 9608,
+      "provider": "pollinations:openai-fast",
+      "mode": "llm",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-01T22:15:03.938Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 57,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 87,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 37,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-01T22:15\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 33 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 60,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 4 نقطة تحتاج انتباه: العقل اللغوي، المجلس (تعدد النماذج)، أمان تنفيذ الأوامر، الأسطول (نودات متصلة).",
+      "durationMs": 108,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-01T16:13:18.990Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 19,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 55,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 30,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-01T16:13\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 33 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 67,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 3 نقطة تحتاج انتباه: العقل اللغوي، المجلس (تعدد النماذج)، الأسطول (نودات متصلة).",
+      "durationMs": 86,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-11-01T06:35:31.165Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 30,
+          "summary": "DNS example.com: 2 سجل A (172.66.147.243, 104.20.23.154)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 36,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 25,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-11-01T06:35\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 33 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 67,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 3 نقطة تحتاج انتباه: العقل اللغوي، المجلس (تعدد النماذج)، الأسطول (نودات متصلة).",
+      "durationMs": 191,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    },
+    {
+      "ranAt": "2026-10-31T23:46:10.842Z",
+      "target": "example.com",
+      "source": "repo-build",
+      "chatEvents": 16,
+      "tools": [
+        {
+          "name": "dns_lookup",
+          "ok": true,
+          "ms": 84,
+          "summary": "DNS example.com: 2 سجل A (104.20.23.154, 172.66.147.243)"
+        },
+        {
+          "name": "http_headers_audit",
+          "ok": true,
+          "ms": 21,
+          "summary": "HTTP 200 · server: — · ناقص: content-security-policy, x-frame-options, x-content-type-options, strict-transport-security"
+        },
+        {
+          "name": "tls_audit",
+          "ok": true,
+          "ms": 19,
+          "summary": "TLS example.com صالح حتى Dec 25 22:56:35 2026 GMT (TLSv1.3)"
+        }
+      ],
+      "toolsOk": 3,
+      "reply": "تمام، نفّذت **2** أداة (2 نجحت). دي القراءة:\n\n### ✅ memory_search\n1 ذكرى عن \"باختصار: إيه أهم 3 حاجات تتأكد منها في example.com؟\" · أقربها: استطلاع حقيقي example.com — 2026-10-31T23:46\n\n### ✅ platform_status\nالمنصة سليمة · 4 ذكرى · 3354 نمط · 33 أداة\n\n## الخطوة التالية المقترحة\nابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.",
+      "memoryRecords": 3,
+      "selfCheckScore": 86,
+      "selfCheckVerdict": "البرنامج شغّال ✅ بس فيه 1 نقطة تحتاج انتباه: العقل اللغوي.",
+      "durationMs": 145,
+      "provider": "nova-builtin",
+      "mode": "heuristic",
+      "error": null,
+      "runner": {
+        "node": "v22.23.4",
+        "platform": "linux x64"
+      }
+    }
+  ]
+}

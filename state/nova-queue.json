@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "_doc": "طابور NOVA اللي بيشيله GitHub Actions. حرّر الملف ده من واجهة الويب على جيت-هَب (ولا كلون ولا سيرفر) وكل 15 دقيقة أو مع كل commit على الملف، نود حقيقي 4 أنوية/16 جيجا هينفّذه ويرجع بالتقرير. العمق النشط (standard/deep) محتاج NOVA_RUNNER_ALLOW_ACTIVE=1 في Actions variables، غير كده هيترفض لأن IP المصدر بتاع جيت-هَب.",
+  "missions": [
+    {
+      "id": "demo-selfhost",
+      "title": "تجربة الطابور: استطلاع سلبي + اختيار مضيف",
+      "objective": "أثبت إن البعثة بتتنفّذ من غير أي سيرفر، وقولي أحسن مضيف مجاني أحمّله النواة",
+      "target": "example.com",
+      "depth": "passive",
+      "tools": false,
+      "taskIds": [
+        "recon.dns",
+        "recon.certspotter",
+        "infra.freehosts"
+      ],
+      "status": "done",
+      "startedAt": "2026-11-02T05:44:34.139Z",
+      "jobId": "20261102-129f18",
+      "report": "/xFREEDOLLARHACHx/nova-runs/demo-selfhost.md",
+      "error": null,
+      "finishedAt": "2026-11-02T05:44:36.727Z",
+      "counts": {
+        "tasks": 3,
+        "done": 3,
+        "failed": 0,
+        "findings": 0,
+        "verified": 0,
+        "ms": 1905
+      }
+    }
+  ]
+}

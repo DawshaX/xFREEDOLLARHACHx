@@ -1,0 +1,275 @@
+[
+  {
+    "id": "100912",
+    "name": "PAS_STATE",
+    "type": "smart_contract",
+    "addedAt": "2026-09-01T21:15:03.870Z",
+    "url": "https://github.com/sky-ecosystem/pas/blob/947e71cd5dbaaf9c5b3840dd1b23e8e99d9a564d/src/BeamState.sol"
+  },
+  {
+    "id": "100913",
+    "name": "PAS_CONFIGURATOR",
+    "type": "smart_contract",
+    "addedAt": "2026-09-01T21:15:03.870Z",
+    "url": "https://github.com/sky-ecosystem/pas/blob/947e71cd5dbaaf9c5b3840dd1b23e8e99d9a564d/src/Configurator.sol"
+  },
+  {
+    "id": "100914",
+    "name": "PAS_TIMELOCK",
+    "type": "smart_contract",
+    "addedAt": "2026-09-01T21:15:03.870Z",
+    "url": "https://github.com/sky-ecosystem/pas/blob/947e71cd5dbaaf9c5b3840dd1b23e8e99d9a564d/src/timelock/Timelock.sol"
+  },
+  {
+    "id": "100915",
+    "name": "PAS_MOM",
+    "type": "smart_contract",
+    "addedAt": "2026-09-01T21:15:03.870Z",
+    "url": "https://github.com/sky-ecosystem/pas/blob/947e71cd5dbaaf9c5b3840dd1b23e8e99d9a564d/src/PASMom.sol"
+  },
+  {
+    "id": "100790",
+    "name": "MCD_SBEBEAM",
+    "type": "smart_contract",
+    "addedAt": "2026-08-17T16:24:58.086Z",
+    "url": "https://github.com/sky-ecosystem/dss-flappers/blob/beam/src/SBEBeam.sol"
+  },
+  {
+    "id": "100791",
+    "name": "REWARDS_OWNER_LSSKY_USDS",
+    "type": "smart_contract",
+    "addedAt": "2026-08-17T16:24:58.086Z",
+    "url": "https://github.com/sky-ecosystem/dss-flappers/blob/beam/src/FarmOwner.sol"
+  },
+  {
+    "id": "100515",
+    "name": "EMSP_STUSDS_RATE_S_DISS_BUD_FAB",
+    "type": "smart_contract",
+    "addedAt": "2026-07-21T20:49:13.960Z",
+    "url": "https://github.com/sky-ecosystem/dss-emergency-spells/blob/master/src/stusds/StUsdsRateSetterDissBudSpell.sol"
+  },
+  {
+    "id": "100516",
+    "name": "EMSP_STUSDS_WIPE_PARAM_FAB",
+    "type": "smart_contract",
+    "addedAt": "2026-07-21T20:49:13.960Z",
+    "url": "https://github.com/sky-ecosystem/dss-emergency-spells/blob/master/src/stusds/StUsdsWipeParamSpell.sol"
+  },
+  {
+    "id": "100517",
+    "name": "EMSP_STUSDS_RATE_SETTER_HALT",
+    "type": "smart_contract",
+    "addedAt": "2026-07-21T20:49:13.960Z",
+    "url": "https://github.com/sky-ecosystem/dss-emergency-spells/blob/master/src/stusds/StUsdsRateSetterHaltSpell.sol"
+  },
+  {
+    "id": "100295",
+    "name": "PAU_BEACON",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/Beacon.sol"
+  },
+  {
+    "id": "100296",
+    "name": "AAVE_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/aave/AaveFacet.sol"
+  },
+  {
+    "id": "100297",
+    "name": "BASIN_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/basin/BasinFacet.sol"
+  },
+  {
+    "id": "100298",
+    "name": "CCTP_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/cctp/CCTPFacet.sol"
+  },
+  {
+    "id": "100299",
+    "name": "CENTRIFUGE_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/centrifuge/CentrifugeFacet.sol"
+  },
+  {
+    "id": "100300",
+    "name": "CURVE_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/curve/CurveFacet.sol"
+  },
+  {
+    "id": "100301",
+    "name": "DAIUSDS_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/dai-usds/DAIUSDSFacet.sol"
+  },
+  {
+    "id": "100302",
+    "name": "ERC4626_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/erc4626/ERC4626Facet.sol"
+  },
+  {
+    "id": "100303",
+    "name": "ERC7540_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/erc7540/ERC7540Facet.sol"
+  },
+  {
+    "id": "100304",
+    "name": "ETHENA_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/ethena/EthenaFacet.sol"
+  },
+  {
+    "id": "100305",
+    "name": "FARM_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/farm/FarmFacet.sol"
+  },
+  {
+    "id": "100306",
+    "name": "LAYER_ZERO_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/layer-zero/LayerZeroFacet.sol"
+  },
+  {
+    "id": "100307",
+    "name": "MAPLE_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/maple/MapleFacet.sol"
+  },
+  {
+    "id": "100308",
+    "name": "MERKL_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/merkl/MerklFacet.sol"
+  },
+  {
+    "id": "100309",
+    "name": "OTC_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/otc/OTCFacet.sol"
+  },
+  {
+    "id": "100310",
+    "name": "PENDLE_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/pendle/PendleFacet.sol"
+  },
+  {
+    "id": "100311",
+    "name": "PSM_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/psm/PSMFacet.sol"
+  },
+  {
+    "id": "100312",
+    "name": "SPARK_VAULT_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/spark-vault/SparkVaultFacet.sol"
+  },
+  {
+    "id": "100313",
+    "name": "SUPERSTATE_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/superstate/SuperstateFacet.sol"
+  },
+  {
+    "id": "100314",
+    "name": "TRANSFER_ASSET_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/transfer-asset/TransferAssetFacet.sol"
+  },
+  {
+    "id": "100315",
+    "name": "UNISWAP_V3_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/uniswap-v3/UniswapV3Facet.sol"
+  },
+  {
+    "id": "100316",
+    "name": "UNISWAP_V4_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/uniswap-v4/UniswapV4Facet.sol"
+  },
+  {
+    "id": "100317",
+    "name": "USDS_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/usds/USDSFacet.sol"
+  },
+  {
+    "id": "100318",
+    "name": "WEETH_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/weeth/WEETHFacet.sol"
+  },
+  {
+    "id": "100319",
+    "name": "WRAP_PROXY_ETH_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/wrap-proxy-eth/WrapProxyETHFacet.sol"
+  },
+  {
+    "id": "100320",
+    "name": "WSTETH_FACET",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/facets/wsteth/WSTETHFacet.sol"
+  },
+  {
+    "id": "100321",
+    "name": "PAU Factory",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/diamond-pau/blob/dev/src/PAUFactory.sol"
+  },
+  {
+    "id": "100322",
+    "name": "Administered Agent Factory",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/pau-administered-agent/blob/master/src/AdministeredAgentFactory.sol"
+  },
+  {
+    "id": "100323",
+    "name": "Default PAU Assembler",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/pau-assemblers/blob/dev/src/DefaultPAUAssembler.sol"
+  },
+  {
+    "id": "100324",
+    "name": "SUBPROXY_METHODS",
+    "type": "smart_contract",
+    "addedAt": "2026-07-06T21:37:14.631Z",
+    "url": "https://github.com/sky-ecosystem/subproxy-methods/blob/main/src/SubProxyMethods.sol"
+  }
+]

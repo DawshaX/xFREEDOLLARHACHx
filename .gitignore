@@ -70,12 +70,13 @@ dist-node-kit/
 state/programs.json
 state/jobs/
 state/jobs/*
-# ── state/ is engine runtime output, not source (hardened 2026-11-09) ──
-# The whole directory is written by the running engine: live host/port, backend
-# URLs, connector proofs, the findings vault, the brain's own memory and the
-# hunt evidence. It was partly tracked before, which leaked infrastructure into
-# the public repo. Ignore everything under it and keep only the template.
-state/*
+# ── state/ root: measurement reports, deliberately tracked (hardened 2026-11-09) ──
+# NOTE: the root `state/` files below are *measurement reports* that CI writes and
+# commits on purpose (scripts/ci-commit.mjs uses `git add -f`). They are NOT
+# ignored here — a blanket `state/*` rule fought the CI and caused merge
+# conflicts. The real infrastructure leak was the *nested* engine state under
+# `artifacts/api-server/state/`, which is ignored further down. Keep the
+# specific dangerous root files ignored (list below), not the whole directory.
 !state/programs.example.json
 # ── Runtime state that leaks infrastructure (added 2026-11-05) ──────────────
 # These files are written by the running engine and contain live host/port,
