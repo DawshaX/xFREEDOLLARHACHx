@@ -632,6 +632,25 @@ router.post("/ops/config", async (req: Request, res: Response) => {
   res.json({ ok: true, key, status: runtimeConfigStatus() });
 });
 
+/* رسالة اختبار حقيقية عبر القناة بعد الضبط — تقيس end-to-end لا تتظاهر. */
+router.post("/ops/config/test-telegram", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "إرسال اختباري = كتابة، فمحتاج NOVA_EXEC_TOKEN زي أي كتابة تانية."); return; }
+  const { notifyTelegram, telegramConfigured } = await import("../lib/ops/telegram");
+  if (!telegramConfigured()) {
+    res.status(400).json({ ok: false, reasonAr: "مفيش botToken عند العقدة — احفظه الأول (من هنا أو من خطوة CI اليدوية)" });
+    return;
+  }
+  const sent = await notifyTelegram(
+    "config.test",
+    "🧪 <b>NOVA</b> — رسالة اختبار من لوحة الإعدادات: قناة التليجرام شغالة end-to-end ✓",
+    { minIntervalMs: 15_000 },
+  );
+  res.json({
+    ok: sent,
+    ...(sent ? {} : { reasonAr: "التليجرام لم يقبل أو الـchat_id لسه مجهول — ابعت /start للبوت من تليجرامك ثم أعد المحاولة" }),
+  });
+});
+
 router.get("/ops/tools", (_req: Request, res: Response) => {
   const st = toolchainStatus();
   res.json({ ok: true, ...st, kinds: toolStatus(), catalogue: [...VENDORABLE], env: { NOVA_TOOL_DIR: process.env.NOVA_TOOL_DIR || null } });
