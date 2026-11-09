@@ -44,6 +44,7 @@ export const ALLOWED_KEYS: Record<string, ConfigSpec> = {
   },
   /** «0» يسكّت إشعارات صيد الثغرات على التليجرام (افتراضيًا شغالة) */
   "telegram.alert.cve": {
+    labelAr: "تنبيهات صيد الثغرات على تليجرام (0/1)",
     sensitive: false,
     validate: (v) => (v === "" || v === "0" || v === "1" ? null : "القيمة لازم «0» أو «1»"),
   },

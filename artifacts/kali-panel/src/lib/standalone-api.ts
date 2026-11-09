@@ -1902,6 +1902,38 @@ if (path === "/nova-core/version") {
   }
 
   // ── Health & Status ────────────────────────────────────────────────────────
+  // ── قراءات الضبط والنسخة في وضع Pages الساكن ─────────────────────────────
+  // صفحة agent-pro بتندّه نفس الأرقام؛ الساكن بيقول «ساكن» بصراحة بدل الحبة
+  // الفاضية. التوكن دايمًا false هنا: مفيش قفل إعدادات في المتصفح.
+  if (path === "/ops/version" && m === "GET") {
+    return {
+      ok: true,
+      mode: "standalone-static",
+      sha: measuredAppVersion(),
+      shaSource: "manifest",
+      uptimeSec: measuredUptimeSec(),
+      toolsPresent: [],
+      autonomy: { level: "passive" },
+      noteAr: "نسخة GitHub Pages الساكنة — النبض الكامل (أدوات/نسخة) يتقاس على العقدة الحية مش هنا",
+    };
+  }
+  if (path === "/ops/config/status" && m === "GET") {
+    return {
+      ok: true,
+      mode: "standalone-static",
+      hydrated: false,
+      keys: { "telegram.botToken": false, "telegram.chatId": false, "telegram.alert.cve": false, "shodan.apiKey": false, visitorAlerts: false },
+      allowedKeys: [
+        { key: "telegram.botToken", labelAr: "توكن بوت تليجرام", sensitive: true },
+        { key: "telegram.chatId", labelAr: "معرّف شات تليجرام", sensitive: true },
+        { key: "telegram.alert.cve", labelAr: "تنبيهات صيد الثغرات على تليجرام (0/1)", sensitive: false },
+        { key: "shodan.apiKey", labelAr: "مفتاح Shodan (إثراء الزوار سلبيًا)", sensitive: true },
+        { key: "visitorAlerts", labelAr: "تنبيهات الزيارات على/قف", sensitive: false },
+      ],
+      noteAr: "الوضع الساكن مابيحفظش إعدادات — اضبطها على العقدة الحية (nova.waifly.com)",
+    };
+  }
+
   if (path === "/healthz" || path === "/health") {
     return { status: "ok", mode: "standalone", wsConnected: true, timestamp: new Date().toISOString() };
   }
@@ -3182,6 +3214,33 @@ if (path === "/nova-core/version") {
     };
   }
 
+/**
+ * notifyStandaloneCveHunt — نسخة المواطنين-بالتوأمين: بتشتغل فقط لو
+ * بيانات القناة موجودة في بيئة التشغيل (env في السيرفر، ولا في الساكن).
+ * الساكن بصمتٍ صادق: مفيش تخزين أسرار في المتصفح. نار ونسيان.
+ */
+async function notifyStandaloneCveHunt(sum: Record<string, number>): Promise<void> {
+  if (!(sum.totalNew > 0)) return;
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+  const token = env.TELEGRAM_BOT_TOKEN ?? "";
+  const chat = env.TELEGRAM_CHAT_ID ?? "";
+  if (!token || !chat) return;
+  try {
+    const parts = Object.entries(sum).filter(([k]) => k !== "totalNew" && k.startsWith("sync.") === false)
+      .map(([k, v]) => (v > 0 ? `${k} +${v}` : null)).filter(Boolean).join(" · ");
+    const extra = Object.entries(sum).filter(([k]) => k.startsWith("sync.")).map(([k, v]) => `${k.slice(5)} +${v}`).join(" · ");
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chat,
+        text: `🎯 صيد NOVA — مزامنة حية: +${sum.totalNew} سجل${extra ? ` (${extra})` : ""}${parts ? `\n${parts}` : ""}`,
+        disable_web_page_preview: true,
+      }),
+    });
+  } catch { /* نار ونسيان */ }
+}
+
   // ── Live Multi-Site Vulnerability Ingestion (/api/cve/ingest-live) ─────────
   if (path === "/cve/ingest-live" && m === "POST") {
     const incoming = Array.isArray(body?.items) ? (body.items as Array<Record<string, unknown>>) : [];
@@ -3245,6 +3304,17 @@ if (path === "/nova-core/version") {
       const merged = [...newlyConverted, ...customCves].slice(0, 300);
       saveState("cybernova_custom_cves_v17", merged);
       saveState("cybernova_galaxy_stats_v17", galaxyStats);
+      // إشعار تليجرام — نار ونسيان. per-source breakdown بيتبنى من ما اتخزن فعلًا:
+      const SRC2KEY: Record<string, string> = {
+        NVD: "nvdNew", GITHUB: "ghNew", CISA: "cisaNew", "CISA-KEV": "cisaNew",
+        EXPLOITDB: "edbNew", "EXPLOIT-DB": "edbNew", PACKETSTORM: "pssNew", VULDB: "vuldbNew", CIRCL: "circlNew",
+      };
+      const sum: Record<string, number> = { totalNew: newlyConverted.length };
+      for (const c of newlyConverted) {
+        const k = SRC2KEY[String(c.source).toUpperCase()] ?? `sync.${String(c.source).slice(0, 24)}`;
+        sum[k] = (sum[k] || 0) + 1;
+      }
+      void notifyStandaloneCveHunt(sum);
     }
 
     if (learnedSummaryAr) {

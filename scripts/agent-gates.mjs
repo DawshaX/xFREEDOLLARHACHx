@@ -73,6 +73,16 @@ const STRUCTURAL_GATES = [
 const gates = fast ? [...AGENT_GATES] : [...AGENT_GATES, ...STRUCTURAL_GATES];
 const results = [];
 
+// أول حاجة بأمانة: الرملة بتسترجع بلا node_modules بين اللفات — بدونها
+// كل بوابة esbuild بتحمر وهميًا. نرجّعها لو ناقصة، وسريع لو موجودة.
+{
+  const d = spawnSync(process.execPath, [join(ROOT, "scripts/ensure-deps.mjs")], { stdio: "inherit" });
+  if (d.status !== 0) {
+    console.error("agent-gates: الاعتمادات مش موجودة والتنصيب فشل — باقي الحصيلة غير مؤتمنة ✗");
+    process.exit(1);
+  }
+}
+
 for (const [file, what] of gates) {
   const full = join(ROOT, file);
   if (!existsSync(full)) {
