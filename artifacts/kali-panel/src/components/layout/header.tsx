@@ -56,8 +56,8 @@ export function Header() {
                 <li>· قاعدة البيانات: {health.db === null ? "⏳ يتقاس…" : health.db ? "واصلة" : "مش واصلة"}</li>
               </ul>
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-center">
-                <a href="/ops/live-monitor" className="rounded-md border border-primary/30 text-primary text-[10px] font-bold py-1 hover:bg-primary/10">📡 المراقبة الحية</a>
-                <a href="/ops/operations-dashboard" className="rounded-md border border-border text-muted-foreground text-[10px] font-bold py-1 hover:bg-white/5">🛰 لوحة العمليات</a>
+                <a href="/live-agent" className="rounded-md border border-primary/30 text-primary text-[10px] font-bold py-1 hover:bg-primary/10">📡 المراقبة الحية</a>
+                <a href="/cve-live" className="rounded-md border border-border text-muted-foreground text-[10px] font-bold py-1 hover:bg-white/5">🛰 لوحة العمليات</a>
               </div>
             </div>
           )}
