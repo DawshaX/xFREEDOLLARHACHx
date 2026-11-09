@@ -29,18 +29,22 @@ on:
   push:
     # أي دفعة تلمّ سكربت الطاقة أو الملف ده = محاولة قيام كمان مرة في نفس الوقت،
     # بدل الاستنان لـcron اللي GitHub نفسه بيأخّره (متقاس 2026-11-02: تشغيلان بس
-    # في اليوم مكان كل 10 دقايق). من غير توكن المحاولة بتطبع سطر وتسليم — مافيهاش
-    # ولا خطر على حاجة، ومافيش احتمال يحمّر البوابات.
+    # في اليوم مكان كل 10 دقايق). branches: [main] — الدفعة التوأم على فرع السيشن
+    # كانت بتخلق run يفشل GitHub-level بـ0 jobs (مقاس 2026-11-09، اتنين متتاليين).
     paths:
       - "scripts/nova-panel-restart.mjs"
       - ".github/workflows/uptime-watchdog.yml"
+    branches:
+      - main
 
 permissions:
   contents: read
   issues: write
 
 concurrency:
-  group: nova-uptime
+  # ref-scoped: الجدوليات كلها على main فالمجموعة ثابتة عمليًا، لكن لو manual على
+  # فرع تاني ما يلغيش دورة main. (مقاس 2026-11-09: group واحد عالمي ألغى runين على main.)
+  group: nova-uptime-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
