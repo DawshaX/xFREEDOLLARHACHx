@@ -367,8 +367,12 @@ async function fetchOne(tool, manifest) {
       if (fix.code === 0 && fixLine) {
         return { bin: tool.bin, status: "repaired", tag: manifest[tool.bin]?.tag ?? tag, why: `chmod أصلح الصلاحية · ${fixLine.slice(0, 60)}` };
       }
-      try { fs.chmodSync(dest, 0o644); } catch { /* leave it */ }
-      return { bin: tool.bin, status: "failed", tag, why: "الملف موجود بس حتى بعد chmod ما طلعش نسخة — نص منزيل أو architecture مش مطابقة" };
+      // N3 (2026-11-09): «موجود بس مكسور» — الحفاظ على الملف بيقفل الإصلاح للأبد
+      // (مقاس من لوج العقدة: httpx/nuclei في حلقة إعادة محاولة 1/3 بلا نهاية).
+      // المكسور المقاس يتشال، والمسار بيكمّل لوحده لتنزيل طازج (مرآة → أصل GitHub).
+      log(`↻ ${tool.bin}: النسخة الموجودة مكسورة (ما طلعتش نسخة بعد chmod) — بتمسح للإصلاح الذاتي`);
+      try { fs.rmSync(dest, { force: true }); } catch { /* fs مقفول للكتابة */ }
+      // fallthrough للتنزيل الطازج تحت — dest مش موجود دلوقتي
     }
   }
   if (!FORCE && fs.existsSync(dest) && manifest[tool.bin]?.tag === tag && tag) {
