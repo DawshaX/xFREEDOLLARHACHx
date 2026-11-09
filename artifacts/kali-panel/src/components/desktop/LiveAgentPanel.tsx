@@ -9578,7 +9578,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   </button>
                 ))}
                 {novaLastAnalysis.services.map(s => (
-                  <button key={s} className="px-1.5 py-0.5 rounded text-[7px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono">
+                  <button key={s} onClick={() => setInput(`تحقق من الخدمة ${s} وقولي كيف أفحصها بأمان`)}
+                    className="px-1.5 py-0.5 rounded text-[7px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 transition-all font-mono cursor-pointer">
                     ⚙ {s}
                   </button>
                 ))}

@@ -47,6 +47,7 @@ INTEGRATION POINTS:
 */
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { jsonRequest } from "@/lib/sse";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -388,6 +389,7 @@ export function LiveAgentPanel({
   onOpenAgentWindow: () => void;
 }) {
   // ========== STATES EXISTANTS ==========
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [input, setInput] = useState("");
   const [lines, setLines] = useState<ChatLine[]>([]);
@@ -1444,7 +1446,7 @@ export function LiveAgentPanel({
                   <MapIcon className="w-4 h-4 text-violet-400" />
                   <span className="text-xs font-bold uppercase tracking-widest">Attack Map</span>
                 </div>
-                <button className="text-[9px] text-muted-foreground hover:text-primary font-bold transition">FULL VIEW</button>
+                <a href="/monitor" className="text-[9px] text-muted-foreground hover:text-primary font-bold transition">FULL VIEW</a>
               </div>
               <div className="flex-1 relative bg-black/40 rounded-2xl border border-white/5 overflow-hidden">
                 <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #3b82f6 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
@@ -1556,9 +1558,18 @@ export function LiveAgentPanel({
                     ))}
                   </div>
                 )}
-                <button className="w-full py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold hover:bg-white/10 transition flex items-center justify-center gap-2">
+                <button onClick={() => {
+                  setSyncMsg("⏳ طلب جلب NVD الحي اتبعت…");
+                  void jsonRequest("/api/cve/ingest-live", { method: "POST", body: JSON.stringify({}) })
+                    .then((r) => {
+                      const d = r as Record<string, unknown>;
+                      setSyncMsg(`✓ طلب مقبول — جلب ${d.added ?? d.ingested ?? "—"} جديد · المجموع ${d.total ?? d.stored ?? "محدّث"}`);
+                    })
+                    .catch((e) => setSyncMsg(`✗ فشل: ${e instanceof Error ? e.message : String(e)}`));
+                }} className="w-full py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold hover:bg-white/10 transition flex items-center justify-center gap-2">
                   <SearchCode className="w-3.5 h-3.5" /> SYNC THREAT DATABASE
                 </button>
+                {syncMsg && <div className="mt-1 text-[9px] font-mono text-primary/80">{syncMsg}</div>}
               </div>
             </div>
           </div>
