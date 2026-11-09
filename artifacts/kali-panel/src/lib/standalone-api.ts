@@ -903,7 +903,11 @@ let liveSessionsState = loadState("cybernova_livesessions_v1", [
   },
 ]);
 
-let agentTasksState = loadState("cybernova_agenttasks_v2", [
+// صدق الجلسة (الفحص الشامل 2026-11-09): كل إدخال هنا قالب تمريني للمتصفح —
+// مش تاريخ فحوصات وقعت فعلاً. علامة simulated:true هي الفرق بين المسرح والقياس:
+// مهام المحرك الحقيقي على العقدة بتيجي من /api/agent/tasks بلا العلامة دي.
+let agentTasksState: Array<Record<string, unknown>> = loadState<Array<Record<string, unknown>>>("cybernova_agenttasks_v2", []).map((t) => ({ ...t, simulated: true }));
+if (agentTasksState.length === 0) agentTasksState = [
   {
     id: 1,
     title: "✅ [تم إنجازه] المرحلة 1: استطلاع سحابي سلبي (CRT.SH + Shodan InternetDB + Uncover + Subfinder) ورسم سطح الهجوم",
@@ -1025,22 +1029,22 @@ let agentTasksState = loadState("cybernova_agenttasks_v2", [
       { id: 1201, taskId: 12, orderIndex: 0, title: "تصدير التقرير بصيغة Markdown الجاهزة لـ HackerOne/Google VRP", description: "مراجعة شاملة لضمان الدقة والوضوح والنفع العام.", status: "pending", output: "" },
     ],
   },
-]);
+];
 
 let notificationsState = loadState("cybernova_notifs_v1", [
   {
     id: "notif-1",
     kind: "success",
-    title: "ناقل WebSocket الداخلي نشط",
-    body: "تم ربط الوكلاء والملاحظات ومتتبع المهام وBug Bounty Studio بنجاح.",
+    title: "مركز الإشعارات",
+    body: "سطر ترحيبي: الإشعارات الحية بتظهر هنا فور تسجيلها فعلاً — مش محفوظة عن أحداث ما حصلتش.",
     read: false,
     createdAt: new Date().toISOString(),
   },
   {
     id: "notif-2",
     kind: "info",
-    title: "موسوعة الثغرات وماسح الكود جاهزان",
-    body: "يمكنك الآن اختيار هدف وتسجيل جميع خطوات الفحص تلقائياً.",
+    title: "تلميح البداية",
+    body: "اختَر هدفاً من استوديو البج باونتي — أي فحص حقيقي هيتسجّل هنا بنفسه.",
     read: false,
     createdAt: new Date().toISOString(),
   },
@@ -2700,6 +2704,7 @@ if (path === "/nova-core/version") {
         } else {
           const cycleNum = agentTasksState.length + 1;
           agentTasksState.unshift({
+            simulated: true,
             id: Date.now(),
             title: `⚡ [يعمل الآن 24/7] دورة الفحص الذاتي المتقدمة #${cycleNum}: ربط مخرجات الاستطلاع بسلاسل الثغرات (CVSS 9.5)`,
             description: "فحص ذاتي مستمر للنطاقات وملفات الـ JS وبناء سلاسل التحقق غير المدمرة.",
@@ -2716,6 +2721,7 @@ if (path === "/nova-core/version") {
       const goal = String(body.goal || body.title || "فحص الهدف وتوثيق الأدلة");
       const taskId = Date.now();
       const created = {
+        simulated: true,
         id: taskId,
         title: goal.startsWith("⚡") || goal.startsWith("🧭") ? goal.slice(0, 110) : `⚡ [يعمل الآن 24/7] ${goal.slice(0, 95)}`,
         description: goal,

@@ -34,7 +34,8 @@ interface Provider  { id: string; family: string; available: boolean; enabled: b
 interface CronJob   { id: number; name: string; cronExpression: string; isEnabled: string; lastRunAt?: string; lastStatus?: string; runCount: number; }
 interface Alert     { id: number; title: string; message: string; severity: string; createdAt: string; isRead: string; }
 interface CveItem   { id: string; cveId?: string; cvss?: number; score?: number; severity: string; description: string; publishedAt: string; source?: string; }
-interface AgentTask { id: number; title: string; description?: string; status: string; createdAt: string; }
+interface AgentTask { simulated?: boolean; // علامة صدق: مهام قالب المتصفح (مش قياس محرك حقيقي)
+   id: number; title: string; description?: string; status: string; createdAt: string; }
 interface CveDbStats {
   total: number; lastHour: number; lastDay: number;
   /** optional on purpose: an engine that has rows but no buckets yet omits it, and the page must survive that */
@@ -1004,11 +1005,12 @@ export default function HomeDashboard() {
           }));
         }
       }
-      setSessionFound(prev => prev + 1);
+      if (tasksRes.ok || pulseRes.ok) setSessionFound(prev => prev + 1);
       setWisdomIdx(prev => (prev + 1) % BENEFICIAL_WISDOM_CARDS.length);
       addLog("hunt", `✅ اكتملت الدورة الذاتية بنجاح — تم تحديث المهام المنجزة وخزنة الغنائم وذاكرة الجلسة`);
     } catch {
-      addLog("system", "✅ تم تحديث حالة الجلسة المحلية وتدوير المرحلة النشطة");
+      // الفشل بيتقال فشل — مفيش «✅» بعد خطأ شبكة
+      addLog("system", "⚠ تعذّر تنفيذ الدورة (العقل/الباك إند مش متاح هنا) — لا شيء اتسجّل ولا اتعدّ");
     }
   }, [addLog, brainState.activeTarget, BENEFICIAL_WISDOM_CARDS.length]);
 
@@ -1433,7 +1435,7 @@ export default function HomeDashboard() {
     const topEpssItem   = cveDbStats?.topEpss?.[0];
 
     const achievements: string[] = [];
-    if (sessionFound > 0) achievements.push(`✅ اكتشاف ${sessionFound} ثغرة جديدة في هذه الجلسة`);
+    if (sessionFound > 0) achievements.push(`✅ أكملت ${sessionFound} دورة فحص/ترقية في هذه الجلسة (عدد دورات — مش عدد ثغرات مكتشفة)`);
     if (completedTasks > 0) achievements.push(`✅ إتمام ${completedTasks} مهمة للوكيل بنجاح`);
     if (todayCves > 0) achievements.push(`📊 ${todayCves.toLocaleString()} ثغرة أُضيفت في آخر 24 ساعة`);
     if (newSseCount > 0) achievements.push(`🌐 ${newSseCount} ثغرة وصلت عبر البث المباشر (SSE)`);
@@ -1735,7 +1737,7 @@ export default function HomeDashboard() {
                     {agentTasksList.filter(t => t.status === "running").slice(0, 2).map(t => (
                       <div key={t.id} className="text-[9px] text-white/75 flex items-center gap-1.5 truncate">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping shrink-0" />
-                        <span className="truncate">{t.title}</span>
+                        <span className="truncate">{t.simulated ? "🧪 " : ""}{t.title}</span>
                       </div>
                     ))}
                   </div>
@@ -1755,7 +1757,7 @@ export default function HomeDashboard() {
                   <div className="space-y-1 max-h-20 overflow-y-auto">
                     {agentTasksList.filter(t => ["pending","planned"].includes(t.status)).slice(0, 3).map(t => (
                       <div key={t.id} className="text-[9px] text-white/70 truncate">
-                        ⏳ {t.title}
+                        ⏳ {t.simulated ? "🧪 (تمرين جلسة) " : ""}{t.title}
                       </div>
                     ))}
                   </div>
