@@ -1191,7 +1191,7 @@ export function buildSmartAgentResponse(promptText: string, activeTarget = "immu
     `- **مكتبة المجرة الشاملة:** \`${liveGalaxy.total.toLocaleString()}+ ثغرة\` متزامنة من **9 مصادر عالمية حية** (\`NVD\`, \`GitHub Advisories\`, \`FIRST.org EPSS\`, \`CIRCL CERT\`, \`Google OSV.dev\`, \`Immunefi/DeFiLlama Web3\`, \`Shodan InternetDB\`, \`PayloadsAllTheThings\`, \`AI-Mutated\`).\n` +
     `- **أحدث الثغرات المسحوبة في الجلسة:** \`${latestLiveIds}\`\n` +
     `- **الترسانة التنفيذية:** \`${cStats.kaliToolsCount} أداة Kali Linux & Web3\` عبر \`${cStats.kaliCategoriesCount} فئة\` + \`${cStats.githubProjectsCount} مشروع GitHub 2026\` + \`${cStats.vulnPrimitivesCount} فئة ثغرات أولية (P01–P28)\`.\n` +
-    `- **الهدف النشط:** \`${activeTarget}\` | **ناقل التزامن:** \`WebSocket (/api/ws) + SSE (/api/cve/stream) متصل 100%\`.\n\n` +
+    `- **الهدف النشط:** \`${activeTarget}\` | **ناقل التزامن:** \`ناقل المتصفح الداخلي (BroadcastChannel بين التبويبات) — قياس الـWebSocket/SSE الحقيقي بيتقرأ لحظيًا من صفحة الحالة، مفيش ادعاء «متصل دائم» هنا\`.\n\n` +
     `#### 2. أحدث الاكتشافات المسجلة في المهمة النشطة:\n` +
     `${recentFindings || "- جاهز لبدء الرصد القانوني."}\n\n` +
     `#### 3. أحدث السجلات في الذاكرة المشتركة (\`/memory\`):\n` +
