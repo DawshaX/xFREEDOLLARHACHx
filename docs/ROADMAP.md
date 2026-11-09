@@ -78,6 +78,39 @@
 
 ---
 
+## ⚙️ ملحق: كيف تدور الماكينة فعلاً (مراجعة 2026-11-09 — مقاسة من الوركفلوز والكود)
+
+### القلب النابض — 14 جدولة حية على GitHub Actions
+| كل | وظيفة |
+|---|---|
+| `*/15 * * * *` نوفا-برين | نبضة عقل تفكر وتدفع لـmain («a turn was thought») |
+| `*/30 * * * *` فُلن-كوربس | سحب CVE تزايدي من NVD/KEV/EPSS (168K←211K بأسلوب deepen) |
+| `*/10` كيب-الايف + `*/30` ووتش-دوغ/باكند-هيلث | إبقاء النسخة المجانية صاحية وفحص الصحة |
+| `*/3h` لايف-ميشن · `*/6h` هانت-لايف | مهمات فعلية على الهدف + دورات صيد |
+| `*/6h` لايف-فريفاي + لايف-أوديت | تحقق حي وتدقيق |
+| يومي: أدفايزوري 4:17 · جيتس 6:20 · أسبوعي: باونتي-كتالوج وثلاثي ستور | الخزانة المرجعية تتجدد وحدها |
+
+**يعني «شغال 24/7» مش لافتة — ده جدول.** والأدلة في `public/state/` بتتكتب منه فعلاً.
+
+### صندوق عدّة الأجينت — 66 أداة موجودة فعلاً (grep مباشر من `agent/tools.ts`)
+corpus_stats · vuln_search · cve_lookup · advisory_search · exploit_search · bounty_candidates · program_discover/add/list · scope_check · recon_target · subdomain_enum · port_scan · dns_lookup · tls_audit · http_headers_audit · web_search/fetch · github_search · browser_open · finding_verify · record_finding · vault_draft/list · report_generate/list · memory_save/recall/search/stats · mission_create/status · job_* · fleet_list/exec/profile · tools_install · kali_toolbox · terminal_exec · ui_action/navigate · platform_status/self_report · hash_text · file_*/process_list · free_hosts · forum_search · knowledge_search · device_control_map · live_verify · service_status · set_active_target · task_list · autonomy_state …
+
+### ⚠️ القدرات النائمة — موجودة وباينة، بس زرّها مش مدوس
+| # | القدرة | الزر/اللازم | أثرها على الغرض |
+|---|---|---|---|
+| S1 | **بحث الكوربوس الكامل من الشات** | تشغيل محرك العقدة (كودسبيس) — سيرفر `ops/vuln-corpus.ts` بيحمّل الكامل ويفهرسه (`state/vuln-corpus*`، AUTODOWNLOAD افتراضي على)؛ على Pages الشات يتاعه 800 عينة فقط | **الغرض كله** — البند 1 |
+| S2 | تنفيذ أوامر حقيقي `run_shell` | `ENABLE_AGENT_SHELL=1` (مقفول افتراضياً عمداً) | من «يقترح» لـ«ينفّذ» — بمحاذير |
+| S3 | أدوات تمسّ الهدف على رنر جيت-هَب | `NOVA_RUNNER_ALLOW_ACTIVE=1` (IP المصدر = جيت-هَب — مسؤولية قانونية) | صيد بتماس فعلي |
+| S4 | أتمتة أعمق للدورات | `NOVA_OPS_AUTONOMY=standard\|deep` (off = سلبي فقط) | عرض/عمق الصيد الذاتي |
+| S5 | مقاعد المجلس المقفلة (أنثروبيك/جيميناي/سيريبراس/جروك/ميسترال/GitHub Models) | مفاتيح API — حالياً متصفح: Pollinations keyless + عقل محلي فقط؛ `probe-live-llm` يدوي مش مجدول | عقول أقوى للمجلس |
+| S6 | مزامنة الذاكرة السحابية (Supabase edge `nova-state`) | تعمل تحت SUPERVISED فقط؛ مشروع Supabase قديم موجود؛ الإيصال الرباعي عبر pooler (IPv6) | ذاكرة دايمة عبر الأجهزة |
+| S7 | مرآة التول-شين | وركفلو `toolchain-vendor` **يدوي** (المرآة بتموت لو منسيتش — مكتوب تحذيره بنفسه!)، `NOVA_TOOLCHAIN_MIRROR*` | أدوات عند-الطلب أسرع/أضمن |
+| S8 | تجهيز التول-شين عند الإقلاع | `NOVA_TOOLCHAIN_AT_BOOT=1` على هوست دايم (ONDEMAND افتراضي على ✔) | جاهزية فورية |
+| S9 | الأسطول الحقيقي متعدد الماكينات | `NOVA_FLEET_MACHINES/AGENTS` + وركفلو `fleet-nodes` يدوي | توزيع الشغل |
+| S10 | صوت الأجينت (`NOVA_VOICE`) | شغال افتراضياً في السيرفر — **اللوحة لا تعرضه** | تجربة كلام |
+| S11 | الهَب الداخلي WS (`NOVA_HUB_URL`) | سيرفس داخلي — على Pages «WS SYNC» شكلية | بث لحظي حقيقي للزائر |
+| S12 | نبضة العقل الكبرى `autonomous-brain-pulse` | يدوية — المجدول هو الصغيرة كل 15 دقيقة | دورات تفكير أثقل |
+
 ## 🔁 طريقة العمل المعتمدة لهذه الخطة
 
 لكل بند: **افهم بالأرقام أولاً** (ملفات/عدّادات/مصادر) → نفّذ أصغر شريحة → تشغيل البوابات (tsc + build + agent-gates 35/35) → commit+push → تحقق حي من الرابط المنشور → تحديث هذا الملف.
