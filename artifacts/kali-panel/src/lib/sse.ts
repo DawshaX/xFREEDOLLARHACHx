@@ -1,9 +1,18 @@
+import { novaAuthHeaders, novaTokenQuery } from "./ops-client";
+
 export interface SseEvent {
   event: string;
   data: unknown;
 }
 
 const API_BASE = "/api";
+
+/** Build the request headers once, merging caller headers with the ops token. */
+function authHeaders(init: RequestInit): Record<string, string> {
+  const headers = new Headers(init.headers ?? undefined);
+  if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  return novaAuthHeaders(Object.fromEntries(headers.entries()));
+}
 
 export async function sseStream(
   path: string,
@@ -12,7 +21,7 @@ export async function sseStream(
 ): Promise<void> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init.headers || {}) },
+    headers: authHeaders(init),
   });
   if (!res.body) throw new Error("No response body");
   const reader = res.body.getReader();
@@ -50,7 +59,7 @@ export async function jsonRequest<T>(
 ): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init.headers || {}) },
+    headers: authHeaders(init),
   });
   if (!res.ok) {
     // If response is HTML (error page), throw a more descriptive error
@@ -62,18 +71,22 @@ export async function jsonRequest<T>(
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
   if (res.status === 204) return undefined as T;
-  
+
   // Check if response is actually JSON
   const contentType = res.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
     const text = await res.text();
-    throw new Error(`Expected JSON response but got ${contentType || 'unknown'}: ${text.substring(0, 100)}...`);
+    throw new Error(`Expected JSON response but got ${contentType || "unknown"}: ${text.substring(0, 100)}...`);
   }
-  
+
   try {
     return await res.json() as Promise<T>;
   } catch (error) {
     const text = await res.text();
-    throw new Error(`Failed to parse JSON response: ${error instanceof Error ? error.message : 'Unknown error'}. Response: ${text.substring(0, 100)}...`);
+    throw new Error(`Failed to parse JSON response: ${error instanceof Error ? error.message : "Unknown error"}. Response: ${text.substring(0, 100)}...`);
   }
 }
+
+// Re-export the query helper so callers that open raw EventSource / WebSocket
+// connections (e.g. SystemContext, NovaFleetLive) use the same token source.
+export { novaTokenQuery };

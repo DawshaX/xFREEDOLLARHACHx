@@ -29,8 +29,11 @@ import { NovaMissions } from "@/components/desktop/NovaMissions";
 import { NovaToolbox } from "@/components/desktop/NovaToolbox";
 import { missionStats, onMissionsChange } from "@/lib/mission-store";
 import { useEffect as useEffectM, useState as useStateM } from "react";
-import { NovaLiveBar, useNovaLive } from "@/components/desktop/NovaFleetLive";
+import { NovaLiveBar, useNovaLive, NovaOpsFeed } from "@/components/desktop/NovaFleetLive";
 import { NovaAwarenessCard, NovaHuntSurface, NovaOpsRoom } from "@/components/desktop/NovaBrainOps";
+import { NovaContextBridge } from "@/components/desktop/NovaContextBridge";
+import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
+import { novaAuthHeaders } from "@/lib/ops-client";
 
 const API = "/api";
 
@@ -349,11 +352,11 @@ export default function NovaFleetUnified() {
   // «المخ» is the default: this page is advertised as the brain and manager of
   // the whole program, so it opens by reporting what the organism actually is
   // doing right now — not with a picture of one. `#work` still deep-links.
-  const [view, setView] = useState<"brain" | "work" | "station" | "missions" | "tools" | "ops" | "mesh">(() => {
+  const [view, setView] = useState<"brain" | "chat" | "work" | "station" | "missions" | "tools" | "ops" | "mesh">(() => {
     try {
       const h = window.location.hash.replace("#", "");
       if (h === "work" || h === "panel") return "work";
-      if (h === "brain" || h === "station" || h === "missions" || h === "tools" || h === "ops" || h === "mesh") return h;
+      if (h === "brain" || h === "chat" || h === "station" || h === "missions" || h === "tools" || h === "ops" || h === "mesh") return h;
     } catch {
       /* ignore */
     }
@@ -374,7 +377,7 @@ export default function NovaFleetUnified() {
       const hash = window.location.hash.slice(1);
       if (hash === "panel") {
         setView("work");
-      } else if (hash === "brain" || hash === "work" || hash === "station" || hash === "missions" || hash === "tools" || hash === "ops" || hash === "mesh") {
+      } else if (hash === "brain" || hash === "chat" || hash === "work" || hash === "station" || hash === "missions" || hash === "tools" || hash === "ops" || hash === "mesh") {
         setView(hash);
       }
     };
@@ -447,7 +450,7 @@ export default function NovaFleetUnified() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/fleet/mesh`, { signal: AbortSignal.timeout(8000) });
+      const r = await fetch(`${API}/fleet/mesh`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(8000) });
       if (!r.ok) throw new Error(`mesh ${r.status}`);
       const j = (await r.json()) as MeshSnapshot;
       setSnap(j);
@@ -509,6 +512,7 @@ export default function NovaFleetUnified() {
           <div className="flex items-center gap-1 rounded-xl border border-white/10 p-0.5">
             {([
               ["brain", "المخ · الكيان"],
+              ["chat", "الشات الموحّد"],
               ["work", "وكيل حي · مساحة العمل"],
               ["station", "محطة النظام"],
               ["missions", "المهمات"],
@@ -542,9 +546,21 @@ export default function NovaFleetUnified() {
 
       {view === "ops" && (
         <>
+          <NovaOpsFeed />
+          <NovaContextBridge />
           <NovaOpsRoom />
           <NovaHuntSurface />
         </>
+      )}
+
+      {view === "chat" && (
+        <div className="rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[78vh] min-h-[520px]">
+          <NovaUnifiedChat
+            title="نوفا — الشات الموحّد"
+            subtitle="نفس العقل ونفس الأدوات — متصل بالأسطول والذاكرة والباص وبوابة الموافقة"
+            hideRail
+          />
+        </div>
       )}
 
       <div className={view === "work" ? "rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[78vh] min-h-[520px]" : "hidden"} aria-hidden={view !== "work"}>

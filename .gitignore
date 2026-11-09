@@ -70,6 +70,14 @@ dist-node-kit/
 state/programs.json
 state/jobs/
 state/jobs/*
+# ── state/ root: measurement reports, deliberately tracked (hardened 2026-11-09) ──
+# NOTE: the root `state/` files below are *measurement reports* that CI writes and
+# commits on purpose (scripts/ci-commit.mjs uses `git add -f`). They are NOT
+# ignored here — a blanket `state/*` rule fought the CI and caused merge
+# conflicts. The real infrastructure leak was the *nested* engine state under
+# `artifacts/api-server/state/`, which is ignored further down. Keep the
+# specific dangerous root files ignored (list below), not the whole directory.
+!state/programs.example.json
 # ── Runtime state that leaks infrastructure (added 2026-11-05) ──────────────
 # These files are written by the running engine and contain live host/port,
 # backend URLs and connector proofs. They are runtime output, not source, and
@@ -103,6 +111,15 @@ state/auto-update.log
 # static binaries fetched by scripts/fetch-toolchain.mjs at build time
 /vendor/
 state/vuln-corpus/
+
+# ── The engine's runtime state lives under the api-server package, not the repo
+# root, so the root-relative `state/*` patterns above never matched it. That is
+# how `artifacts/api-server/state/cybernova-brain-state.json` stayed tracked and
+# kept leaking live host/port + connector proofs. Ignore the whole nested dir
+# (and the fetched toolchain vendor dir) and keep only the template.
+artifacts/api-server/state/
+!artifacts/api-server/state/programs.example.json
+artifacts/api-server/vendor/
 
 # secrets live here, never in git
 .env

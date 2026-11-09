@@ -20,6 +20,7 @@ import type { ClientToolEvent } from "./AgentWindow";
 import { NovaFleetPanel, NovaProjectPulse } from "./NovaFleetPanel";
 import { novaTask, novaLog } from "./NovaFleetLive";
 import { runLocalBrain, toolLabelAr } from "@/lib/local-brain";
+import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
 import { RealTimeSystemMonitor } from "./RealTimeSystemMonitor";
 import { AdvancedFileManager } from "./AdvancedFileManager";
 import { RegistryEditor } from "./RegistryEditor";
@@ -951,6 +952,10 @@ export function LiveAgentPanel({
 
   // ── Plan / Files ─────────────────────────────────────────────────────────
   const [planMode, setPlanMode] = useState(false);
+  // A sensitive tool that asked for approval this turn. The next «موافق» must
+  // re-send with `approve:[tool]` so the server actually runs it — otherwise the
+  // gate refuses again and the user sees the same pause forever.
+  const pendingToolApprovalRef = useRef<string[] | null>(null);
   const [sessionFiles, setSessionFiles] = useState<SessionFile[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<SessionFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1154,7 +1159,7 @@ export function LiveAgentPanel({
     try {
       // CPU usage
       const cpuR = await fetch(`${API_BASE}/local-agent/exec`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ agentId: kaliSelectedAgentId, command: "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | tr -d '%us,'", timeout: 5000 }),
       });
       if (cpuR.ok) {
@@ -1164,7 +1169,7 @@ export function LiveAgentPanel({
       }
       // RAM
       const ramR = await fetch(`${API_BASE}/local-agent/exec`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ agentId: kaliSelectedAgentId, command: "free -m | awk 'NR==2{printf \"%d %d\", $3, $2}'", timeout: 5000 }),
       });
       if (ramR.ok) {
@@ -1176,7 +1181,7 @@ export function LiveAgentPanel({
       }
       // Disks
       const diskR = await fetch(`${API_BASE}/local-agent/exec`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ agentId: kaliSelectedAgentId, command: "df -h --output=target,used,size,pcent,fstype | tail -n +2 | grep -v 'tmpfs\\|udev\\|devtmpfs' | head -8", timeout: 6000 }),
       });
       if (diskR.ok) {
@@ -1190,7 +1195,7 @@ export function LiveAgentPanel({
       }
       // Network
       const netR = await fetch(`${API_BASE}/local-agent/exec`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ agentId: kaliSelectedAgentId, command: "ip -br addr show | grep -v '^lo' | head -8", timeout: 5000 }),
       });
       if (netR.ok) {
@@ -1203,7 +1208,7 @@ export function LiveAgentPanel({
       }
       // GPU
       const gpuR = await fetch(`${API_BASE}/local-agent/exec`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ agentId: kaliSelectedAgentId, command: "nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null || lspci | grep -i vga | head -3 2>/dev/null || echo 'no-gpu'", timeout: 8000 }),
       });
       if (gpuR.ok) {
@@ -1212,7 +1217,7 @@ export function LiveAgentPanel({
       }
       // Temperature
       const tempR = await fetch(`${API_BASE}/local-agent/exec`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ agentId: kaliSelectedAgentId, command: "sensors 2>/dev/null | grep -E 'Core|temp|CPU' | head -6 || cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null | awk '{printf \"%.1f°C\", $1/1000}' || echo 'N/A'", timeout: 6000 }),
       });
       if (tempR.ok) {
@@ -1221,7 +1226,7 @@ export function LiveAgentPanel({
       }
       // USB devices
       const usbR = await fetch(`${API_BASE}/local-agent/exec`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ agentId: kaliSelectedAgentId, command: "lsusb 2>/dev/null | head -12 || echo 'lsusb not available'", timeout: 5000 }),
       });
       if (usbR.ok) {
@@ -1234,7 +1239,7 @@ export function LiveAgentPanel({
       }
       // Top processes
       const procR = await fetch(`${API_BASE}/local-agent/exec`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ agentId: kaliSelectedAgentId, command: "ps aux --sort=-%cpu | awk 'NR>1{print $2,$11,$3,$4}' | head -10", timeout: 5000 }),
       });
       if (procR.ok) {
@@ -1608,7 +1613,7 @@ export function LiveAgentPanel({
   // ── File helpers ──────────────────────────────────────────────────────────
   const refreshFiles = async (sid: string) => {
     try {
-      const r = await fetch(`${API_BASE}/live-agent/sessions/${sid}/files`);
+      const r = await fetch(`${API_BASE}/live-agent/sessions/${sid}/files`, { headers: novaAuthHeaders() });
       if (r.ok) setSessionFiles(asArray<SessionFile>(await r.json()));
     } catch { /* ignore */ }
   };
@@ -1653,8 +1658,17 @@ export function LiveAgentPanel({
   // ── Plan handlers ─────────────────────────────────────────────────────────
   const approvePlan = () => {
     setLines((arr) => arr.map((l) => l.role === "plan" && l.awaitingApproval ? { ...l, awaitingApproval: false } : l));
+    // A sensitive-tool approval: re-send with the tool name so the server's gate
+    // lets it through. A plan approval: re-send with planMode OFF so the brain
+    // executes instead of proposing the same plan again.
+    const tools = pendingToolApprovalRef.current;
+    pendingToolApprovalRef.current = null;
+    if (tools && tools.length) {
+      void send("موافق على تنفيذ الأداة الحساسة.", { planMode: false, approve: tools });
+      return;
+    }
     setPlanMode(false);
-    void send("موافق، نفّذ الخطة بالترتيب وأبلغني بكل خطوة.");
+    void send("موافق، نفّذ الخطة بالترتيب وأبلغني بكل خطوة.", { planMode: false });
   };
 
   const rejectPlan = () => {
@@ -1720,7 +1734,7 @@ export function LiveAgentPanel({
   // ── Sessions handlers ─────────────────────────────────────────────────────
   const loadSessions = async () => {
     try {
-      const r = await fetch(`${API_BASE}/live-agent/sessions`);
+      const r = await fetch(`${API_BASE}/live-agent/sessions`, { headers: novaAuthHeaders() });
       if (r.ok) setAllSessions(asArray<Session>(await r.json()));
     } catch { /* ignore */ }
   };
@@ -1728,7 +1742,7 @@ export function LiveAgentPanel({
   const switchSession = async (id: string) => {
     setSessionId(id); setShowSessions(false); setLines([]);
     try {
-      const r = await fetch(`${API_BASE}/live-agent/sessions/${id}`);
+      const r = await fetch(`${API_BASE}/live-agent/sessions/${id}`, { headers: novaAuthHeaders() });
       if (r.ok) {
         const data = await r.json();
         const chatLines: ChatLine[] = (data.messages || [])
@@ -1778,7 +1792,7 @@ export function LiveAgentPanel({
   const loadMemories = async () => {
     setMemoryLoading(true);
     try {
-      const r = await fetch(`${API_BASE}/memory?limit=20`);
+      const r = await fetch(`${API_BASE}/memory?limit=20`, { headers: novaAuthHeaders() });
       if (r.ok) setMemories((await r.json()) as MemoryEntry[]);
     } catch { /* ignore */ }
     setMemoryLoading(false);
@@ -1914,7 +1928,7 @@ ${d.error}`);
     try {
       const r = await fetch(`${API_BASE}/settings`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ ollamaModel: modelId, ngrokModel: modelId }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -2208,7 +2222,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   // ── Brain Status refresh ──────────────────────────────────────────────────
   const refreshBrainStatus = async () => {
     try {
-      const r = await fetch(`${API_BASE}/live-agent/brain-status`);
+      const r = await fetch(`${API_BASE}/live-agent/brain-status`, { headers: novaAuthHeaders() });
       if (r.ok) setBrainStatus(normalizeBrainStatus(await r.json()));
     } catch { /* ignore */ }
   };
@@ -2231,7 +2245,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   };
   const readAutonomyStatus = async () => {
     try {
-      const r = await fetch(`${API_BASE}/autonomous/status`);
+      const r = await fetch(`${API_BASE}/autonomous/status`, { headers: novaAuthHeaders() });
       if (!r.ok) return null;
       return (await r.json()) as {
         enabled?: boolean; level?: string; lockedByEnv?: boolean;
@@ -2323,14 +2337,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     let cancelled = false;
     void (async () => {
       try {
-        const listResponse = await fetch(`${API_BASE}/live-agent/sessions`);
+        const listResponse = await fetch(`${API_BASE}/live-agent/sessions`, { headers: novaAuthHeaders() });
         if (!listResponse.ok) throw new Error(`HTTP ${listResponse.status}`);
         const sessions = asArray<Session>(await listResponse.json());
         const latest = sessions[0];
         let id: string;
 
         if (latest) {
-          const sessionResponse = await fetch(`${API_BASE}/live-agent/sessions/${encodeURIComponent(latest.id)}`);
+          const sessionResponse = await fetch(`${API_BASE}/live-agent/sessions/${encodeURIComponent(latest.id)}`, { headers: novaAuthHeaders() });
           if (!sessionResponse.ok) throw new Error(`HTTP ${sessionResponse.status}`);
           const session = (await sessionResponse.json()) as {
             id?: unknown;
@@ -2348,7 +2362,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         } else {
           const createResponse = await fetch(`${API_BASE}/live-agent/sessions`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: novaAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ title: "مساحة عمل NOVA" }),
           });
           if (!createResponse.ok) throw new Error(`HTTP ${createResponse.status}`);
@@ -3407,7 +3421,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
     const connect = () => {
       if (unmounted) return;
-      es = new EventSource(`${API_BASE}/live-events`);
+      es = new EventSource(`${API_BASE}/live-events${novaTokenQuery()}`);
       sseRef.current = es;
       es.onopen = () => { if (!unmounted) setWsConnected(true); };
       es.onmessage = (ev) => { if (!unmounted) handleLiveEvent(ev.data as string); };
@@ -3467,7 +3481,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     try {
       const res = await fetch(`${API_BASE}/live-agent/sessions/${sessionId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ content: fullPrompt, planMode: false }),
       });
       if (!res.ok || !res.body) throw new Error("no stream");
@@ -3519,7 +3533,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   const agentIQ = serverIQ ?? localIQ;
 
   // ── Main send function ─────────────────────────────────────────────────────
-  const send = async (text: string) => {
+  const send = async (text: string, opts?: { planMode?: boolean; approve?: string[] }) => {
     // Route to direct Llama Dolphin (always if directMode, even if probe not yet done)
     if (directMode) { return sendDirect(text); }
     if (!text.trim() || !sessionId || busy || killActive) return;
@@ -3534,8 +3548,13 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     try {
       const res = await fetch(`${API_BASE}/live-agent/sessions/${sessionId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text, planMode, autonomousMode }),
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          content: text,
+          planMode: opts?.planMode ?? planMode,
+          autonomousMode,
+          ...(opts?.approve ? { approve: opts.approve } : {}),
+        }),
         signal: abortCtrl.signal,
       });
       if (!res.ok || !res.body) throw new Error("no stream");
@@ -3642,10 +3661,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   void refreshBrainStatus();
                 } else if (pendingEvent === "confirm_required") {
                   setCurrentTool(null); setThinkingPhase("thinking");
+                  // A sensitive tool stopped for approval. Remember it so the
+                  // «موافق — نفّذ» button re-sends with `approve:[tool]` and the
+                  // server actually runs it, instead of pausing forever.
+                  pendingToolApprovalRef.current = [String(data.name)];
                   setLines((arr) => [...arr, {
-                    role: "system",
-                    text: `⏸️ لم يتم التنفيذ — ${String(data.title || data.name || "الأداة")}: ${String(data.reason || "الأداة تتطلب موافقة صريحة.")} الموافقة غير متاحة من هذه المحادثة حاليًا.`,
-                    isError: true,
+                    role: "plan",
+                    text: `⏸️ **أداة حساسة محتاجة موافقتك:** ${String(data.title || data.name || "الأداة")}\n\n${String(data.reason || "الأداة تتطلب موافقة صريحة قبل التنفيذ.")}`,
+                    awaitingApproval: true,
                   }]);
                 } else if (pendingEvent === "plan") {
                   const steps = Array.isArray(data.steps) ? data.steps : [];
@@ -7235,7 +7258,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                               onClick={async () => {
                                 const aid = kaliSelectedAgentId || kaliAgentList[0]?.id;
                                 await fetch(`${API_BASE}/local-agent/input/keyboard`, {
-                                  method: "POST", headers: { "Content-Type": "application/json" },
+                                  method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                                   body: JSON.stringify({ action: k.action, agentId: aid }),
                                 });
                                 setTimeout(() => void captureScreenOnce(), 400);
@@ -7256,7 +7279,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                                 e.currentTarget.value = "";
                                 const aid = kaliSelectedAgentId || kaliAgentList[0]?.id;
                                 await fetch(`${API_BASE}/local-agent/input/keyboard`, {
-                                  method: "POST", headers: { "Content-Type": "application/json" },
+                                  method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                                   body: JSON.stringify({ action: "type", text: txt, agentId: aid }),
                                 });
                                 setTimeout(() => void captureScreenOnce(), 600);
@@ -7432,7 +7455,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                                   setAnydeskLog(prev => [...prev, `$ ${item.cmd.slice(0, 60)}...`]);
                                   try {
                                     const r = await fetch(`${API_BASE}/local-agent/exec`, {
-                                      method: "POST", headers: { "Content-Type": "application/json" },
+                                      method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                                       body: JSON.stringify({ agentId: kaliSelectedAgentId, command: item.cmd, timeout: 30000 }),
                                     });
                                     const d = await r.json() as { stdout?: string; stderr?: string; error?: string };
@@ -7512,7 +7535,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                                         setNovncLog(prev => [...prev, `[Step ${item.step}] ${item.cmd.slice(0, 60)}...`]);
                                         try {
                                           const r = await fetch(`${API_BASE}/local-agent/exec`, {
-                                            method: "POST", headers: { "Content-Type": "application/json" },
+                                            method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                                             body: JSON.stringify({ agentId: kaliSelectedAgentId, command: item.cmd, timeout: 60000 }),
                                           });
                                           const d = await r.json() as { stdout?: string; stderr?: string };
@@ -7623,7 +7646,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                                   setDisplayInfo("جارٍ التنفيذ...");
                                   try {
                                     const r = await fetch(`${API_BASE}/local-agent/exec`, {
-                                      method: "POST", headers: { "Content-Type": "application/json" },
+                                      method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                                       body: JSON.stringify({ agentId: kaliSelectedAgentId, command: item.cmd, timeout: 20000 }),
                                     });
                                     const d = await r.json() as { stdout?: string; stderr?: string };
@@ -7766,7 +7789,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                               <span className="text-[7px] font-mono text-cyan-200 flex-1 truncate">{n.ip}</span>
                               <button onClick={() => {
                                 void fetch(`${API_BASE}/local-agent/exec`, {
-                                  method: "POST", headers: { "Content-Type": "application/json" },
+                                  method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                                   body: JSON.stringify({ agentId: kaliSelectedAgentId, command: `ip -s link show ${n.iface} 2>/dev/null | tail -6`, timeout: 4000 }),
                                 }).then(r => r.json()).then((d: { stdout?: string }) => { if (d.stdout) addToast(d.stdout.trim(), "info"); }).catch(() => {});
                               }} className="text-[6px] px-1 py-0.5 rounded border border-cyan-800/30 text-cyan-700 hover:text-cyan-400 transition shrink-0">
@@ -7805,7 +7828,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                           if (!confirm(`Kill PID ${proc.pid} (${proc.name})?`)) return;
                           try {
                             await fetch(`${API_BASE}/local-agent/exec`, {
-                              method: "POST", headers: { "Content-Type": "application/json" },
+                              method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                               body: JSON.stringify({ agentId: kaliSelectedAgentId, command: `kill -9 ${proc.pid}`, timeout: 3000 }),
                             });
                             addToast(`Killed PID ${proc.pid}`, "success");
@@ -7852,7 +7875,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         ].map(({ label, cmd }) => (
                           <button key={label} onClick={() => {
                             void fetch(`${API_BASE}/local-agent/exec`, {
-                              method: "POST", headers: { "Content-Type": "application/json" },
+                              method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                               body: JSON.stringify({ agentId: kaliSelectedAgentId, command: cmd, timeout: 8000 }),
                             }).then(r => r.json()).then((d: { stdout?: string; stderr?: string }) => {
                               const out = (d.stdout || d.stderr || "لا نتيجة").trim();
@@ -7881,7 +7904,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                           <button key={label} onClick={() => {
                             if (!confirm(confirmMsg)) return;
                             void fetch(`${API_BASE}/local-agent/exec`, {
-                              method: "POST", headers: { "Content-Type": "application/json" },
+                              method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                               body: JSON.stringify({ agentId: kaliSelectedAgentId, command: cmd, timeout: 5000 }),
                             }).then(() => addToast(`تم: ${label}`, "success")).catch(() => addToast("خطأ", "error"));
                           }} disabled={!kaliAgentConnected}
@@ -10442,7 +10465,7 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
       try {
         const core = await fetch("/api/nova-core/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: novaAuthHeaders(),
           body: JSON.stringify({ message: content, sessionId, ...(opts?.approve ? { approve: opts.approve } : {}) }),
         });
         if (!core.ok || !core.body) throw new Error(`nova-core ${core.status}`);

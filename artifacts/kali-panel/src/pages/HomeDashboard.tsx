@@ -1581,6 +1581,36 @@ export default function HomeDashboard() {
 
         <main ref={mainRef} className="flex-1 overflow-y-auto p-3 space-y-3" style={{ scrollbarWidth: "thin" }}>
 
+          {/* ══════════════════════════════════════════════════════════════
+              🚀 ابدأ من هنا — جولة سريعة للزائر (بند 8)
+              بتوجّه المستخدم الجديد للمسارات الحقيقية بالترتيب الصح.
+          ══════════════════════════════════════════════════════════════ */}
+          <div className="rounded-xl p-3 anim-fade-up" style={{ background: "linear-gradient(135deg,rgba(34,211,238,0.06),rgba(168,85,247,0.05))", border: "1px solid rgba(34,211,238,0.25)" }}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-base">🚀</span>
+              <span className="text-[12px] font-black" style={{ color: "#22d3ee" }}>ابدأ من هنا</span>
+              <span className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>4 خطوات للوصول للعقل الحقيقي</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {[
+                { n: "1", t: "كلّم نوفا", d: "غرفة العمليات — شات حقيقي بـ66 أداة", p: "/nova-fleet#work", c: "#22d3ee" },
+                { n: "2", t: "شوف الأسطول", d: "الوكلاء والأجهزة والسلوات والباص", p: "/nova-fleet", c: "#e879f9" },
+                { n: "3", t: "افحص هدف", d: "استوديو البج باونتي — فحص حقيقي", p: "/bug-bounty-studio", c: "#00ff88" },
+                { n: "4", t: "افهم المكنة", d: "الفحص الذاتي — شغّال؟ من القياس", p: "/self-check", c: "#34d399" },
+              ].map((s) => (
+                <button key={s.n} onClick={() => navigate(s.p)}
+                  className="text-right rounded-lg p-2.5 transition-all hover:scale-[1.02]"
+                  style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${s.c}33` }}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black" style={{ background: `${s.c}22`, color: s.c }}>{s.n}</span>
+                    <span className="text-[11px] font-black" style={{ color: s.c }}>{s.t}</span>
+                  </div>
+                  <div className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.45)" }}>{s.d}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* ═══════════════════════════════════════════════════════════════
               ☠️ مهام دوشة — COMMAND CENTER (TOP SECTION)
           ═══════════════════════════════════════════════════════════════ */}
@@ -1672,6 +1702,9 @@ export default function HomeDashboard() {
                     </div>
                     <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
                       📚 قاعدة المعرفة المحمّلة: {corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} — المصدر:{corpusLabelAr()}
+                    </div>
+                    <div className="p-1.5 rounded bg-black/40 border border-cyan-500/25 text-cyan-200">
+                      🗂️ تفريق المخازن: <span className="text-emerald-300">الكوربوس الحقيقي</span> (state/vuln-corpus-live.json — NVD 2.0 + CISA KEV + EPSS، بيتحدّث من الوركفلو) ≠ <span className="text-amber-300">مخزن المتصفح الحي</span> (مزامنة الجلسة، بيبدأ فاضي). الرقم فوق من الكوربوس الحقيقي بس.
                     </div>
                     <div className="p-1.5 rounded bg-black/40 border border-amber-500/25 text-amber-200">
                       🧩 سلاسل الثغرات في المكتبة دي أنماط بحث (فرضيات) — مش نتيجة فحص. أي سلسلة بتتحول لنتيجة لما تتأكد على هدف مصرّح بيه وبس.
@@ -2243,7 +2276,7 @@ export default function HomeDashboard() {
                     <div className="flex items-center gap-2">
                       <Globe className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                       <span className="text-[10px] font-black font-mono text-emerald-300">
-                        🌐 مصفوفة الاتصال الحي بمواقع الثغرات العالمية (9 مصادر متصلة لحظياً · HTTP 200 OK + WebSocket)
+                        🌐 مصفوفة الاتصال بمواقع الثغرات العالمية (9 مصادر — الحالة بتتقاس بعد «تحديث شامل» مش قبلها)
                       </span>
                     </div>
                     <span className="text-[9px] font-mono text-emerald-400/80">

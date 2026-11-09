@@ -83,6 +83,13 @@ function discoverCallSites() {
       if (raw.includes("*")) continue; // glob in a doc/string, not an endpoint
 
       let p = raw.replace(/\$\{[^}]*\}/g, "1");
+      // A trailing interpolation that is NOT preceded by `/` is a query string
+      // (`/api/ws${q}`, `/api/agent/events${novaTokenQuery()}`), not a path
+      // segment — drop the placeholder so the route matches the real streaming
+      // handler instead of being reported as a missing `/api/ws1`. A trailing
+      // `/`-preceded interpolation (`/api/missions/${id}`) IS a path segment and
+      // keeps its placeholder.
+      if (/\$\{[^}]*\}$/.test(raw) && !/\/\$\{[^}]*\}$/.test(raw)) p = p.replace(/1$/, "");
       const qIdx = p.indexOf("?");
       if (qIdx >= 0) p = p.slice(0, qIdx);
       if (p === "/api" || p === "/api/") continue;
