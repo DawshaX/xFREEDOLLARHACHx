@@ -79,7 +79,12 @@ async function tgApi(method: string, payload: Record<string, unknown>): Promise<
       signal: AbortSignal.timeout(9_000),
     });
     if (!res.ok) {
-      logger.warn({ status: res.status, method }, "telegram api non-200");
+      // تليجرام بيرجّع وصفًا صريحًا («bot was blocked by the user») — بنسجّله
+      // مش نكتفي بالرقم.
+      const body = await res.text().catch(() => "");
+      let desc = "";
+      try { desc = String((JSON.parse(body) as { description?: string }).description || "").slice(0, 180); } catch { desc = body.slice(0, 180); }
+      logger.warn({ status: res.status, method, desc }, "telegram api non-200 — الوصف الحقيقي محفوظ");
       return null;
     }
     return (await res.json()) as Record<string, unknown>;

@@ -2,7 +2,7 @@
  * NOVA SENTINEL V10 — creates new tables if they don't exist yet.
  * Idempotent (CREATE TABLE IF NOT EXISTS).
  */
-import { pool } from "@workspace/db";
+import { pgConnectWithRetry } from "@workspace/db";
 import { logger } from "./logger";
 
 const TABLES: string[] = [
@@ -92,13 +92,18 @@ const TABLES: string[] = [
 
 export async function runSentinelMigrations(): Promise<void> {
   logger.info("NOVA SENTINEL: Running table migrations…");
-  for (const sql of TABLES) {
-    try {
-      await pool.query(sql);
-    } catch (e) {
-      logger.error({ err: e }, "NOVA SENTINEL migration error");
-      throw e;
+  const client = await pgConnectWithRetry();
+  try {
+    for (const sql of TABLES) {
+      try {
+        await client.query(sql);
+      } catch (e) {
+        logger.error({ err: e }, "NOVA SENTINEL migration error");
+        throw e;
+      }
     }
+  } finally {
+    client.release();
   }
   logger.info("NOVA SENTINEL: All tables ready ✅");
 }

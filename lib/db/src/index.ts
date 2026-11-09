@@ -121,15 +121,32 @@ export const DB_SSL_NOTE_AR =
         ? "قاعدة البيانات: SSL مُطفأ يدوياً (NOVA_DB_SSL=off) — تطوير فقط."
         : "قاعدة البيانات: إعداد SSL ضمني من السلسلة.";
 
+const DB_POOL_MAX = Math.max(1, Number(process.env.NOVA_DB_POOL_MAX || 2));
 export const pool = new Pool({
   ...cfg,
-  connectionTimeoutMillis: 1500,
+  // Supabase pooler على الحاوية المجانية أحيانًا بياخد >1.5s بارد ⇒ هجراتها
+  // كانت بتقع «connection timeout» في اللوج الحي (2026-11-09 23:17Z). 8s معقول.
+  connectionTimeoutMillis: Number(process.env.NOVA_DB_CONNECT_TIMEOUT_MS || 8000),
   // الـpooler بيقتل الاتصالات الخاملة → «Connection terminated unexpectedly».
   // keepAlive + idle أقصر من قاتل الـpooler يمنع موت الاستعلامات الساكنة.
   keepAlive: true,
   idleTimeoutMillis: 10_000,
-  max: 5,
+  // حمية RAM حاوية 460MB: 5 اتصالات × buffers بحجم pg = جزء كبير من الضغط المقاس.
+  max: DB_POOL_MAX,
 });
+
+/** اتصال بإعادة محاولة — للخطوات الحرجة وقت الإقلاع (هجرات) بس، بلا تعقيد الرَّد العادي. */
+export async function pgConnectWithRetry(tries = 3, delayMs = 4000) {
+  let last: unknown = null;
+  for (let i = 0; i < tries; i++) {
+    try { return await pool.connect(); }
+    catch (e) {
+      last = e;
+      if (i < tries - 1) await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+    }
+  }
+  throw last;
+}
 
 pool.on("error", () => {
   // Prevent unhandled pool error crashes when running in standalone/fallback mode without Postgres

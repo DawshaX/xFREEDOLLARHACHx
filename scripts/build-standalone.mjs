@@ -452,7 +452,7 @@ if (role === "node" || role === "agent") {
       setTimeout(launch, 20_000);
       return;
     }
-    const heap = process.env.NOVA_APP_HEAP_MB || "240"; // سقف V8 < سقف الـcgroup فالـGC يسبق الـSIGKILL
+    const heap = process.env.NOVA_APP_HEAP_MB || "200"; // سقف V8 < سقف الـcgroup فالـGC يسبق الـSIGKILL
     const inherited = process.env.NODE_OPTIONS || "";
     const appNodeOptions = /max-old-space-size/.test(inherited) ? inherited : (inherited + " --max-old-space-size=" + heap).trim();
     child = spawn(process.execPath, [ENTRY], {
