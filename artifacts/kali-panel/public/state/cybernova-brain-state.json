@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 117,
-    "lastHeartbeatAt": "2026-11-09T07:28:05.352Z",
+    "autonomousCyclesCompleted": 118,
+    "lastHeartbeatAt": "2026-11-09T17:59:44.487Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #117 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #118 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794247185701",
+      "ts": "2026-11-09 17:59:45 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #118 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 173.194.206.141 | HTTP 200 | SHA256: 642fb127eb0491c5 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 16 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:20)"
+    },
     {
       "id": "pulse-1794209286737",
       "ts": "2026-11-09 07:28:06 UTC",
@@ -202,13 +209,6 @@
       "category": "GITHUB_CLOUD_PULSE",
       "titleAr": "نبضة العقل السحابي التلقائية #94 على الهدف (bughunters.google.com)",
       "detailAr": "IP: 108.177.98.141 | HTTP 200 | SHA256: f063702388c45ec3 — تم التحديث والحفظ في ذاكرة GitHub الدائمة."
-    },
-    {
-      "id": "pulse-1793819222181",
-      "ts": "2026-11-04 19:07:02 UTC",
-      "category": "GITHUB_CLOUD_PULSE",
-      "titleAr": "نبضة العقل السحابي التلقائية #93 على الهدف (bughunters.google.com)",
-      "detailAr": "IP: 142.251.163.141 | HTTP 200 | SHA256: bdab182487755920 — تم التحديث والحفظ في ذاكرة GitHub الدائمة."
     }
   ],
   "extractedArtifactsVault": [
@@ -863,6 +863,16 @@
       "at": "2026-11-06T21:53:21.130Z"
     },
     {
+      "id": "CVE-2022-22274",
+      "title": "CVE-2022-22274",
+      "description": "A Stack-based buffer overflow vulnerability in the SonicOS via HTTP request allows a remote unauthenticated attacker to cause Denial of Service (DoS) or potentially results in code execution in the firewall.",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-22274",
+      "at": "2026-11-09T17:59:44.894Z"
+    },
+    {
       "id": "CVE-2021-38299",
       "title": "CVE-2021-38299",
       "description": "Webauthn Framework 3.3.x before 3.3.4 has Incorrect Access Control. An attacker that controls a user's system is able to login to a vulnerable service using an attached FIDO2 authenticator without passing a check of the user presence.",
@@ -951,6 +961,36 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2006-4339",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2021-20046",
+      "title": "CVE-2021-20046",
+      "description": "A Stack-based buffer overflow in the SonicOS HTTP Content-Length response header allows a remote authenticated attacker to cause Denial of Service (DoS) and potentially results in code execution in the firewall. This vulnerability affected SonicOS Gen 5, Gen 6 and Gen 7 firmware versions.",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-20046",
+      "at": "2026-11-09T17:59:44.894Z"
+    },
+    {
+      "id": "CVE-2021-20048",
+      "title": "CVE-2021-20048",
+      "description": "A Stack-based buffer overflow in the SonicOS SessionID HTTP response header allows a remote authenticated attacker to cause Denial of Service (DoS) and potentially results in code execution in the firewall. This vulnerability affected SonicOS Gen 5, Gen 6 and Gen 7 firmware versions.",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-20048",
+      "at": "2026-11-09T17:59:44.894Z"
+    },
+    {
+      "id": "CVE-2023-1101",
+      "title": "CVE-2023-1101",
+      "description": "SonicOS SSLVPN improper restriction of excessive MFA attempts vulnerability allows an authenticated attacker to use excessive MFA codes.",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-1101",
+      "at": "2026-11-09T17:59:44.894Z"
     },
     {
       "id": "CVE-2023-5869",
@@ -1541,6 +1581,46 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-36062",
       "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2021-20027",
+      "title": "CVE-2021-20027",
+      "description": "A buffer overflow vulnerability in SonicOS allows a remote attacker to cause a Denial of Service (DoS) by sending a specially crafted request. This vulnerability affects SonicOS Gen5, Gen6, Gen7 platforms, and SonicOSv virtual firewalls.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-20027",
+      "at": "2026-11-09T17:59:44.894Z"
+    },
+    {
+      "id": "CVE-2022-22275",
+      "title": "CVE-2022-22275",
+      "description": "Improper Restriction of TCP Communication Channel in HTTP/S inbound traffic from WAN to DMZ bypassing security policy until TCP handshake potentially resulting in Denial of Service (DoS) attack if a target host is vulnerable.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-22275",
+      "at": "2026-11-09T17:59:44.894Z"
+    },
+    {
+      "id": "CVE-2022-22278",
+      "title": "CVE-2022-22278",
+      "description": "A vulnerability in SonicOS CFS (Content filtering service) returns a large 403 forbidden HTTP response message to the source address when users try to access prohibited resource this allows an attacker to cause HTTP Denial of Service (DoS) attack",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-22278",
+      "at": "2026-11-09T17:59:44.894Z"
+    },
+    {
+      "id": "CVE-2023-0656",
+      "title": "CVE-2023-0656",
+      "description": "A Stack-based buffer overflow vulnerability in the SonicOS allows a remote unauthenticated attacker to cause Denial of Service (DoS), which could cause an impacted firewall to crash.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-0656",
+      "at": "2026-11-09T17:59:44.894Z"
     },
     {
       "id": "CVE-2023-5157",
@@ -2343,6 +2423,16 @@
       "at": "2026-11-06T01:56:03.642Z"
     },
     {
+      "id": "CVE-2021-20031",
+      "title": "CVE-2021-20031",
+      "description": "A Host Header Redirection vulnerability in SonicOS potentially allows a remote attacker to redirect firewall management users to arbitrary web domains.",
+      "cvss": 6.1,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-20031",
+      "at": "2026-11-09T17:59:44.894Z"
+    },
+    {
       "id": "CVE-2019-0221",
       "title": "CVE-2019-0221",
       "description": "The SSI printenv command in Apache Tomcat 9.0.0.M1 to 9.0.0.17, 8.5.0 to 8.5.39 and 7.0.0 to 7.0.93 echoes user provided data without escaping and is, therefore, vulnerable to XSS. SSI is disabled by default. The printenv command is intended for debugging and is unlikely to be present in a production website.",
@@ -2561,106 +2651,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6622",
       "at": "2026-11-07T01:27:41.993Z"
-    },
-    {
-      "id": "CVE-2023-6679",
-      "title": "CVE-2023-6679",
-      "description": "A null pointer dereference vulnerability was found in dpll_pin_parent_pin_set() in drivers/dpll/dpll_netlink.c in the Digital Phase Locked Loop (DPLL) subsystem in the  Linux kernel. This issue could be exploited to trigger a denial of service.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6679",
-      "at": "2026-11-07T01:27:41.993Z"
-    },
-    {
-      "id": "CVE-2023-4194",
-      "title": "CVE-2023-4194",
-      "description": "A flaw was found in the Linux kernel's TUN/TAP functionality. This issue could allow a local user to bypass network filters and gain unauthorized access to some resources. The original patches fixing CVE-2023-1076 are incorrect or incomplete. The problem is that the following upstream commits - a096ccca6e50 (\"tun: tun_chr_open(): correctly initialize socket uid\"), - 66b2c338adce (\"tap: tap_open():",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4194",
-      "at": "2026-11-06T01:56:03.641Z"
-    },
-    {
-      "id": "CVE-2021-4043",
-      "title": "CVE-2021-4043",
-      "description": "NULL Pointer Dereference in GitHub repository gpac/gpac prior to 1.1.0.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-4043",
-      "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2022-2874",
-      "title": "CVE-2022-2874",
-      "description": "NULL Pointer Dereference in GitHub repository vim/vim prior to 9.0.0224.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2874",
-      "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2022-2923",
-      "title": "CVE-2022-2923",
-      "description": "NULL Pointer Dereference in GitHub repository vim/vim prior to 9.0.0240.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2923",
-      "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2022-2980",
-      "title": "CVE-2022-2980",
-      "description": "NULL Pointer Dereference in GitHub repository vim/vim prior to 9.0.0259.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2980",
-      "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2022-38533",
-      "title": "CVE-2022-38533",
-      "description": "In GNU Binutils before 2.40, there is a heap-buffer-overflow in the error function bfd_getl32 when called from the strip_main function in strip-new via a crafted file.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-38533",
-      "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2022-3153",
-      "title": "CVE-2022-3153",
-      "description": "NULL Pointer Dereference in GitHub repository vim/vim prior to 9.0.0404.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-3153",
-      "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2022-2905",
-      "title": "CVE-2022-2905",
-      "description": "An out-of-bounds memory read flaw was found in the Linux kernel's BPF subsystem in how a user calls the bpf_tail_call function with a key larger than the max_entries of the map. This flaw allows a local user to gain unauthorized access to data.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2905",
-      "at": "2026-11-05T21:45:37.064Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 7,
+    "freshThisPulse": 16,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
       "GHSA:20"
     ],
-    "at": "2026-11-09T07:28:06.737Z"
+    "at": "2026-11-09T17:59:45.701Z"
   }
 }
