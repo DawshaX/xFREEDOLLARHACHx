@@ -20,6 +20,7 @@ const GLOBAL_SPACING_MS = 2_500;
 
 let cachedChatId: string | null = null;
 let lastTgError: { at: string; status: number | null; desc: string; method: string } | null = null;
+let botSelfId: string | null = null; // رقم البوت نفسه —任何 chat_id بيساويه = إعداد غلط مثبت
 export function lastTelegramError() { return lastTgError; }
 let chatPollerStarted = false;
 const lastSentByTopic = new Map<string, number>();
@@ -42,10 +43,22 @@ export function esc(v: unknown, max = 200): string {
     .slice(0, max);
 }
 
+function chatIdLooksValid(id: string): boolean {
+  if (!/^-?\d+$/.test(id)) return false;
+  // القياس اللي اتعلمناه (2026-11-09T23:39Z): .env كان فيه chat_id = رقم البوت نفسه
+  // ⇒ تليجرام بيردّ 403 «can't send messages to the bot». الرفض القلبي هنا يرجّعك
+  // لتعلّم الشات الحقيقي من getUpdates بدل دوّار فشل صامت.
+  if (botSelfId && id === botSelfId) return false;
+  return true;
+}
+
 export function getChatId(): string {
   if (cachedChatId) return cachedChatId;
   const fromEnv = (process.env.TELEGRAM_CHAT_ID || "").trim() || getRuntimeConfig("telegram.chatId");
-  if (fromEnv) { cachedChatId = fromEnv; return fromEnv; }
+  if (fromEnv && chatIdLooksValid(fromEnv)) { cachedChatId = fromEnv; return fromEnv; }
+  if (fromEnv && botSelfId && fromEnv === botSelfId) {
+    logger.warn({ wrong: "self-id" }, "telegram: chat_id مساوٍ لرقم البوت — متجاهَل حتى يتعلّم الشات الحقيقي");
+  }
   return "";
 }
 
@@ -139,6 +152,16 @@ export async function notifyTelegram(
  * المالك يبعت «/start» للبوت من أي محادثة → بنقفل الـid ونبعت تأكيد.
  */
 export function ensureChatId(opts: { maxRounds?: number; everyMs?: number } = {}): void {
+  // هوية البوت قبل قرار «في chat_id ولا لأ»: نرفض self-id (اللوج الحي أثبت
+  // إن .env كان فيه رقم البوت نفسه) وبعدها الـpoller يبدأ بيقين مش سباق.
+  void tgApi("getMe", {}).then((me) => {
+    const id = (me?.result as { id?: number } | undefined)?.id;
+    if (id != null) botSelfId = String(id);
+    startIfNeeded(opts);
+  }).catch(() => { startIfNeeded(opts); });
+}
+
+function startIfNeeded(opts: { maxRounds?: number; everyMs?: number } = {}): void {
   if (chatPollerStarted || getChatId()) return;
   chatPollerStarted = true;
   const everyMs = opts.everyMs ?? 20_000;
@@ -230,9 +253,11 @@ export async function telegramStatus(): Promise<Record<string, unknown>> {
     pendingUpdates: updatesN,
     sampledChatFromUpdates: sampledFrom || null,
     lastError: lastTgError,
-    adviceAr: lastTgError?.status === 403
-      ? "403 من تليجرام = في الأرجح «bot was blocked by the user»: افتح شات البوت في تليجرامك وابعت /start بعد فك الحظر — والعقدة بتتعلّم chat_id تلقائيًا."
-      : chatId ? "القناة جاهزة للعمل" : "ابعت /start للبوت من تليجرامك عشان العقدة تتعلم chat_id",
+    adviceAr: lastTgError?.desc?.includes("can't send messages to the bot")
+      ? `chat_id متحطوط = رقم البوت نفسه (غلط). خدّم: امسح TELEGRAM_CHAT_ID من .env أو حطّه رقم شاتك الحقيقي${sampledFrom ? ` — المقياس من التحديثات المعلقة دلوقتي: ${sampledFrom}` : ""}، وRestart. البوت نفسه سليم.`
+      : lastTgError?.status === 403
+        ? "403 من تليجرام: راجع Chat — لو «bot was blocked» تحتاج /start بعد فك الحظر، ولو «chat not found» الـchat_id قديم باطل. /start للبوت يعلّم العقدة جديدها."
+        : chatId ? "القناة جاهزة للعمل" : "ابعت /start للبوت من تليجرامك عشان العقدة تتعلم chat_id",
   };
 }
 

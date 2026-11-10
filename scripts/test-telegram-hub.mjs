@@ -125,6 +125,22 @@ await t("notifyCveHunt: بيبعت بس لو في حصيلة حقيقية ومل
   // chatId required — بلا chat_id فالحالة الذاتية تسحب من ensureChatId… نقبل "اتحاول واتعطل" كدليل
   assert.ok(calls.length >= 0);
 });
+await t("self-id guard: chat_id مساوي لرقم البوت يترفض ويتعلّم الصحيح", async () => {
+  tg._resetTelegramForTests();
+  global.fetch = async (u) => {
+    const us = String(u);
+    if (us.includes("getMe")) return { ok: true, json: async () => ({ ok: true, result: { id: 999, username: "x_test_bot" } }) };
+    if (us.includes("getUpdates")) return { ok: true, json: async () => ({ ok: true, result: [{ message: { chat: { id: 424242 }, text: "/start" } }] }) };
+    return { ok: true, json: async () => ({ ok: true, result: {} }) };
+  };
+  process.env.TELEGRAM_BOT_TOKEN = "123456789:TESTTOKEN-self-id";
+  process.env.TELEGRAM_CHAT_ID = "999"; // رقم البوت نفسه — الـ403 المقاس من اللوج الحي
+  tg.ensureChatId({ maxRounds: 1, everyMs: 10 });
+  await new Promise((r) => setTimeout(r, 400));
+  assert.equal(tg.getChatId(), "424242");
+  delete process.env.TELEGRAM_CHAT_ID;
+});
+
 for (const [s, n] of results) console.log(`${s} ${n}`);
 fake.close();
 const failed = results.filter(([s]) => s === "✗");
