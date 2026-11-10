@@ -8,7 +8,7 @@
  *  · أي ملف غير معروف = ماتمسّوش. بس اللي تحت jobs/ القديم هو اللي بيتمشى.
  *  · التقارير للسطح: bytes وعدّادات و«آخر تنظيف» — مش «مسحنا» كلامًا.
  */
-import { readdirSync, statSync, unlinkSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
+import { readdirSync, statSync, unlinkSync, mkdirSync, readFileSync, writeFileSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const stateRoot = () => process.env.NOVA_STATE_ROOT || "/home/container";
@@ -22,6 +22,14 @@ export interface Footprint {
   jobs: { files: number; bytes: number; oldestMs: number | null };
   vendorBinMB: number;
   stateJsonBytes: number;
+  /** نسخ الرول-باك (كل تحديث ذاتي + إنقاذ المُشرف بتسيّب نسخة كاملة) */
+  backups: { dirs: number; bytes: number };
+  /** بقايا الإنقاذ في /tmp (الأرشيف المفكوك قبل الاستبدال) */
+  tmpNova: { dirs: number; bytes: number };
+  /** لوجات الحالة + auto-update.log */
+  logs: { files: number; bytes: number };
+  /** كاش trivy (~/.cache/trivy) — قاعدته بتتحدّث دوريًا وبتتضخ */
+  trivyCache: { bytes: number };
   measuredAt: string;
 }
 
@@ -47,15 +55,58 @@ function dirBytes(dir: string): { files: number; bytes: number; oldestMs: number
   return { files, bytes, oldestMs };
 }
 
+function backupDirs(): Array<{ path: string }> {
+  const found: Array<{ path: string }> = [];
+  for (const root of [join(stateRoot(), "backups"), "/tmp"]) {
+    try {
+      for (const name of readdirSync(root, { withFileTypes: true })) {
+        if (name.isDirectory() && name.name.startsWith("nova-backup-")) found.push({ path: join(root, name.name) });
+      }
+    } catch { /* الجذر مش موجود */ }
+  }
+  return found;
+}
+
+function tmpResidue(): Array<{ path: string }> {
+  const found: Array<{ path: string }> = [];
+  try {
+    for (const name of readdirSync("/tmp", { withFileTypes: true })) {
+      if (name.name.startsWith("nova-rescue-") || name.name.startsWith("nova-backup-")) {
+        found.push({ path: join("/tmp", name.name) });
+      }
+    }
+  } catch { /* /tmp مش مقروء */ }
+  return found;
+}
+
 export function measureStateFootprint(): Footprint {
   const jobs = dirBytes(jobsDir());
   const vendor = dirBytes(join(stateRoot(), "vendor", "bin"));
   const stateJson = dirBytes(join(stateRoot(), "state"));
+  // القياس الكامل لأماكن الامتلاء المعروفة: النسخ، بقايا /tmp، اللوجات، كاش trivy.
+  const backups = { dirs: 0, bytes: 0 };
+  for (const b of backupDirs()) { backups.dirs += 1; backups.bytes += dirBytes(b.path).bytes; }
+  const tmpNova = { dirs: 0, bytes: 0 };
+  for (const t of tmpResidue()) { tmpNova.dirs += 1; tmpNova.bytes += t.path.endsWith(".zip") ? (() => { try { return statSync(t.path).size; } catch { return 0; } })() : dirBytes(t.path).bytes; }
+  const logs = { files: 0, bytes: 0 };
+  for (const d of [join(stateRoot(), "logs"), join(stateRoot(), "state")]) {
+    try {
+      for (const f of readdirSync(d, { withFileTypes: true })) {
+        if (f.isFile() && (f.name.endsWith(".log"))) {
+          const lv = dirBytes(join(d, f.name));
+          logs.files += lv.files; logs.bytes += lv.bytes;
+        }
+      }
+    } catch { /* مفيش لوجات */ }
+  }
+  const home = process.env.HOME || "/home/container";
+  const trivyCache = { bytes: dirBytes(join(home, ".cache", "trivy")).bytes };
   return {
     root: stateRoot(),
     jobs,
     vendorBinMB: Math.round(vendor.bytes / 1048576),
     stateJsonBytes: stateJson.bytes,
+    backups, tmpNova, logs, trivyCache,
     measuredAt: new Date().toISOString(),
   };
 }
@@ -88,6 +139,39 @@ export function pruneState(now = Date.now()): PruneReport {
     if (protectedSet.has(e.path)) continue;
     if (e.mtime >= cutoff) continue; // حديث أو في آخر KEEP_JOBS = باقي
     try { unlinkSync(e.path); removed += 1; freedBytes += e.size; } catch { /* اتقفل */ }
+  }
+
+  // ── طبقة 2: النسخ الاحتياطية — الـwatchdog محتاج آخر واحدة بس عشان يرجّع.
+  const bks = backupDirs().sort((a, b) => a.path.localeCompare(b.path));
+  for (const old of bks.slice(0, -1)) {
+    const sz = dirBytes(old.path).bytes;
+    try { rmSync(old.path, { recursive: true, force: true }); removed += 1; freedBytes += sz; } catch { /* متحرك */ }
+  }
+  // ── طبقة 3: بقايا الإنقاذ في /tmp — بعد الاستبدال + الخروج مابلهمش لازمة أبدًا.
+  for (const t of tmpResidue()) {
+    try {
+      const st = statSync(t.path);
+      // أقدم من يوم بس — كوشن أمان لو إنقاذ شغال في نفس اللحظة
+      if (now - st.mtimeMs < 86400_000) continue;
+      const sz = st.isDirectory() ? dirBytes(t.path).bytes : st.size;
+      rmSync(t.path, { recursive: true, force: true });
+      removed += 1; freedBytes += sz;
+    } catch { /* اتشال */ }
+  }
+  // ── طبقة 4: اللوج فوق 5MB يتقصّ لآخر 1MB — مابيتراكمش للأبد.
+  for (const d of [join(stateRoot(), "logs"), join(stateRoot(), "state")]) {
+    try {
+      for (const f of readdirSync(d, { withFileTypes: true })) {
+        if (!f.isFile() || !f.name.endsWith(".log")) continue;
+        const lp = join(d, f.name);
+        const st = statSync(lp);
+        if (st.size > 5 * 1024 * 1024) {
+          const fd = readFileSync(lp);
+          writeFileSync(lp, fd.subarray(Math.max(0, fd.length - 1024 * 1024)));
+          removed += 1; freedBytes += st.size - Math.min(st.size, 1024 * 1024);
+        }
+      }
+    } catch { /* مفيش */ }
   }
 
   const kept = entries.length - removed;
