@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 118,
-    "lastHeartbeatAt": "2026-11-09T17:59:44.487Z",
+    "autonomousCyclesCompleted": 119,
+    "lastHeartbeatAt": "2026-11-10T01:19:24.726Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #118 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #119 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794273565882",
+      "ts": "2026-11-10 01:19:25 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #119 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 142.251.184.141 | HTTP 200 | SHA256: 3a1c19b0ae828f7b — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 21 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:15)"
+    },
     {
       "id": "pulse-1794247185701",
       "ts": "2026-11-09 17:59:45 UTC",
@@ -202,13 +209,6 @@
       "category": "GITHUB_CLOUD_PULSE",
       "titleAr": "نبضة العقل السحابي التلقائية #95 على الهدف (bughunters.google.com)",
       "detailAr": "IP: 192.178.212.141 | HTTP 200 | SHA256: 8dfd12e7ef4ad89e — تم التحديث والحفظ في ذاكرة GitHub الدائمة."
-    },
-    {
-      "id": "pulse-1793822498128",
-      "ts": "2026-11-04 20:01:38 UTC",
-      "category": "GITHUB_CLOUD_PULSE",
-      "titleAr": "نبضة العقل السحابي التلقائية #94 على الهدف (bughunters.google.com)",
-      "detailAr": "IP: 108.177.98.141 | HTTP 200 | SHA256: f063702388c45ec3 — تم التحديث والحفظ في ذاكرة GitHub الدائمة."
     }
   ],
   "extractedArtifactsVault": [
@@ -863,6 +863,16 @@
       "at": "2026-11-06T21:53:21.130Z"
     },
     {
+      "id": "CVE-2026-102895",
+      "title": "CVE-2026-102895",
+      "description": "GPUStack: Authentication bypass via trusted loopback source (reverse-proxy TCP peer or X-GPUStack-Real-IP header) grants unauthenticated admin",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-gj9m-f8ph-pmhr",
+      "at": "2026-11-10T01:19:25.882Z"
+    },
+    {
       "id": "CVE-2022-22274",
       "title": "CVE-2022-22274",
       "description": "A Stack-based buffer overflow vulnerability in the SonicOS via HTTP request allows a remote unauthenticated attacker to cause Denial of Service (DoS) or potentially results in code execution in the firewall.",
@@ -933,6 +943,26 @@
       "at": "2026-11-02T21:06:50.538Z"
     },
     {
+      "id": "CVE-2026-77596",
+      "title": "CVE-2026-77596",
+      "description": "Kubeflow Pipelines API server lacks authorization for shared pipeline uploads",
+      "cvss": 9.6,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-rjr3-43j3-4q8g",
+      "at": "2026-11-10T01:19:25.882Z"
+    },
+    {
+      "id": "CVE-2026-115770",
+      "title": "CVE-2026-115770",
+      "description": "Pocket ID: Email verification token remains valid after address change, enabling arbitrary verified-email spoofing",
+      "cvss": 9.6,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-rm8c-2cv8-jwf6",
+      "at": "2026-11-10T01:19:25.882Z"
+    },
+    {
       "id": "CVE-2024-26828",
       "title": "CVE-2024-26828",
       "description": "In the Linux kernel, the following vulnerability has been resolved:\n\ncifs: fix underflow in parse_server_interfaces()\n\nIn this loop, we step through the buffer and after each item we check\nif the size_left is greater than the minimum size we need.  However,\nthe problem is that \"bytes_left\" is type ssize_t while sizeof() is type\nsize_t.  That means that because of type promotion, the comparison is\n",
@@ -961,6 +991,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2006-4339",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2026-108262",
+      "title": "CVE-2026-108262",
+      "description": "DDEV incomplete tar symlink traversal fix allows host file overwrite - Incomplete fix of CVE-2026-32885",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-9hq4-hm3j-jmph",
+      "at": "2026-11-10T01:19:25.882Z"
     },
     {
       "id": "CVE-2021-20046",
@@ -1073,6 +1113,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2026-102340",
+      "title": "CVE-2026-102340",
+      "description": "Telepresence: Traffic Manager gRPC has no auth — any pod claims arbitrary namespace and intercepts services, receiving victim environment secrets",
+      "cvss": 8.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-j8j4-rw65-56r6",
+      "at": "2026-11-10T01:19:25.882Z"
+    },
+    {
       "id": "CVE-2026-12411",
       "title": "CVE-2026-12411",
       "description": "lxd allows Cross-guest volume hijack via DevLXD device patch",
@@ -1093,6 +1143,16 @@
       "at": "2026-11-02T21:06:50.538Z"
     },
     {
+      "id": "CVE-2026-102339",
+      "title": "CVE-2026-102339",
+      "description": "Telepresence: Tunnel endpoint accepts caller-supplied session ID with no ownership proof — active client sessions hijackable",
+      "cvss": 8.2,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-6j3h-rp73-6rvf",
+      "at": "2026-11-10T01:19:25.882Z"
+    },
+    {
       "id": "CVE-2026-62331",
       "title": "CVE-2026-62331",
       "description": "praktor: Path traversal in Telegram file uploads allows writing outside the agent workspace uploads/ directory (stored instruction injection)",
@@ -1101,6 +1161,16 @@
       "source": "GitHub Advisories",
       "url": "https://github.com/advisories/GHSA-48v2-6jcm-fc99",
       "at": "2026-11-03T18:50:34.961Z"
+    },
+    {
+      "id": "CVE-2026-75598",
+      "title": "CVE-2026-75598",
+      "description": "Gradle Shadow: Zip Slip path traversal in ShadowCopyAction — no independent entry-name sanitization",
+      "cvss": 8.1,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-rr8v-fxxf-c986",
+      "at": "2026-11-10T01:19:25.882Z"
     },
     {
       "id": "CVE-2023-24908",
@@ -1553,6 +1623,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2026-62662",
+      "title": "CVE-2026-62662",
+      "description": "Pocket ID: The client credentials grant allows any OIDC client to obtain tokens for arbitrary audiences",
+      "cvss": 7.7,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-q4xm-p75h-h9p3",
+      "at": "2026-11-10T01:19:25.882Z"
+    },
+    {
       "id": "GHSA-7mr3-28h5-m5vx",
       "title": "GHSA-7mr3-28h5-m5vx",
       "description": "LXD has project restriction bypass for custom volume copy across projects ",
@@ -1581,6 +1661,36 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-36062",
       "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2026-97705",
+      "title": "CVE-2026-97705",
+      "description": "Moleculer: Unauthenticated Denial of Service via negative length field in the TCP transporter packet parser",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-h89v-g948-47vp",
+      "at": "2026-11-10T01:19:25.882Z"
+    },
+    {
+      "id": "CVE-2026-102657",
+      "title": "CVE-2026-102657",
+      "description": "esm.sh: web.NewHandler allows arbitrary file read via encoded dot-segment path traversal",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-g3c2-rjq2-c763",
+      "at": "2026-11-10T01:19:25.882Z"
+    },
+    {
+      "id": "CVE-2026-77604",
+      "title": "CVE-2026-77604",
+      "description": "Code Graph RAG: MCP paginated read_file path traversal / arbitrary file read",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-vvr2-h2jp-838m",
+      "at": "2026-11-10T01:19:25.882Z"
     },
     {
       "id": "CVE-2021-20027",
@@ -2073,6 +2183,16 @@
       "at": "2026-11-03T18:50:34.961Z"
     },
     {
+      "id": "CVE-2026-87008",
+      "title": "CVE-2026-87008",
+      "description": "Code Graph RAG structural tools follow out-of-root symlinks",
+      "cvss": 7.1,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-85gg-2gfq-q95m",
+      "at": "2026-11-10T01:19:25.882Z"
+    },
+    {
       "id": "CVE-2020-27792",
       "title": "CVE-2020-27792",
       "description": "A heap-based buffer overwrite vulnerability was found in GhostScript's lp8000_print_page() function in the gdevlp8k.c file. This flaw allows an attacker to trick a user into opening a crafted PDF file, triggering the heap buffer overflow that could lead to memory corruption or a denial of service.",
@@ -2531,136 +2651,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4813",
       "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2023-4042",
-      "title": "CVE-2023-4042",
-      "description": "A flaw was found in ghostscript. The fix for CVE-2020-16305 in ghostscript was not included in RHSA-2021:1852-06 advisory as it was claimed to be. This issue only affects the ghostscript package as shipped with Red Hat Enterprise Linux 8.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4042",
-      "at": "2026-11-08T03:29:02.073Z"
-    },
-    {
-      "id": "CVE-2023-4459",
-      "title": "CVE-2023-4459",
-      "description": "A NULL pointer dereference flaw was found in vmxnet3_rq_cleanup in drivers/net/vmxnet3/vmxnet3_drv.c in the networking sub-component in vmxnet3 in the Linux Kernel. This issue may allow a local attacker with normal user privilege to cause a denial of service due to a missing sanity check during cleanup.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4459",
-      "at": "2026-11-07T19:44:50.758Z"
-    },
-    {
-      "id": "CVE-2023-3745",
-      "title": "CVE-2023-3745",
-      "description": "A heap-based buffer overflow issue was found in ImageMagick's PushCharPixel() function in quantum-private.h. This issue may allow a local attacker to trick the user into opening a specially crafted file, triggering an out-of-bounds read error and allowing an application to crash, resulting in a denial of service.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3745",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-3772",
-      "title": "CVE-2023-3772",
-      "description": "A flaw was found in the Linux kernel’s IP framework for transforming packets (XFRM subsystem). This issue may allow a malicious user with CAP_NET_ADMIN privileges to directly dereference a NULL pointer in xfrm_update_ae_params(), leading to a possible kernel crash and denial of service.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3772",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-3773",
-      "title": "CVE-2023-3773",
-      "description": "A flaw was found in the Linux kernel’s IP framework for transforming packets (XFRM subsystem). This issue may allow a malicious user with CAP_NET_ADMIN privileges to cause a 4 byte out-of-bounds read of XFRMA_MTIMER_THRESH when parsing netlink attributes, leading to potential leakage of sensitive heap data to userspace.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3773",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-38559",
-      "title": "CVE-2023-38559",
-      "description": "A buffer overflow flaw was found in base/gdevdevn.c:1973 in devn_pcx_write_rle() in ghostscript. This issue may allow a local attacker to cause a denial of service via outputting a crafted PDF file for a DEVN device with gs.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-38559",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-38560",
-      "title": "CVE-2023-38560",
-      "description": "An integer overflow flaw was found in pcl/pl/plfont.c:418 in pl_glyph_name in ghostscript. This issue may allow a local attacker to cause a denial of service via transforming a crafted PCL file to PDF format.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-38560",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-4132",
-      "title": "CVE-2023-4132",
-      "description": "A use-after-free vulnerability was found in the siano smsusb module in the Linux kernel. The bug occurs during device initialization when the siano device is plugged in. This flaw allows a local user to crash the system, causing a denial of service condition.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4132",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-4133",
-      "title": "CVE-2023-4133",
-      "description": "A use-after-free vulnerability was found in the cxgb4 driver in the Linux kernel. The bug occurs when the cxgb4 device is detaching due to a possible rearming of the flower_stats_timer from the work queue. This flaw allows a local user to crash the system, causing a denial of service condition.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4133",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-4385",
-      "title": "CVE-2023-4385",
-      "description": "A NULL pointer dereference flaw was found in dbFree in fs/jfs/jfs_dmap.c in the journaling file system (JFS) in the Linux Kernel. This issue may allow a local attacker to crash the system due to a missing sanity check.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4385",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-43788",
-      "title": "CVE-2023-43788",
-      "description": "A vulnerability was found in libXpm due to a boundary condition within the XpmCreateXpmImageFromBuffer() function. This flaw allows a local attacker to trigger an out-of-bounds read error and read the contents of memory on the system.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-43788",
-      "at": "2026-11-07T08:02:09.769Z"
-    },
-    {
-      "id": "CVE-2023-6622",
-      "title": "CVE-2023-6622",
-      "description": "A null pointer dereference vulnerability was found in nft_dynset_init() in net/netfilter/nft_dynset.c in nf_tables in the Linux kernel. This issue may allow a local attacker with CAP_NET_ADMIN user privilege to trigger a denial of service.",
-      "cvss": 5.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6622",
-      "at": "2026-11-07T01:27:41.993Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 16,
+    "freshThisPulse": 21,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
-      "GHSA:20"
+      "GHSA:15"
     ],
-    "at": "2026-11-09T17:59:45.701Z"
+    "at": "2026-11-10T01:19:25.882Z"
   }
 }
