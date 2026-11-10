@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 121,
-    "lastHeartbeatAt": "2026-11-10T16:48:39.943Z",
+    "autonomousCyclesCompleted": 122,
+    "lastHeartbeatAt": "2026-11-10T22:04:22.736Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #121 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #122 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794348264001",
+      "ts": "2026-11-10 22:04:24 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #122 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 142.250.31.141 | HTTP 200 | SHA256: 533d8185b7028426 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 28 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:7)"
+    },
     {
       "id": "pulse-1794329321157",
       "ts": "2026-11-10 16:48:41 UTC",
@@ -202,13 +209,6 @@
       "category": "AUTONOMOUS_PULSE",
       "titleAr": "اكتمال الدورة الذاتية #98 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "pulse-1793894249143",
-      "ts": "2026-11-05 15:57:29 UTC",
-      "category": "GITHUB_CLOUD_PULSE",
-      "titleAr": "نبضة العقل السحابي التلقائية #97 على الهدف (bughunters.google.com)",
-      "detailAr": "IP: 142.251.45.17 | HTTP 200 | SHA256: 711650c854708f0b — تم التحديث والحفظ في ذاكرة GitHub الدائمة."
     }
   ],
   "extractedArtifactsVault": [
@@ -863,6 +863,16 @@
       "at": "2026-11-06T21:53:21.130Z"
     },
     {
+      "id": "CVE-2026-125120",
+      "title": "CVE-2026-125120",
+      "description": "Mongoose: sanitizeFilter not applied on countDocuments",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-pcrw-h46h-c93h",
+      "at": "2026-11-10T22:04:24.001Z"
+    },
+    {
       "id": "CVE-2022-45088",
       "title": "CVE-2022-45088",
       "description": "Improper Input Validation vulnerability in Group Arge Energy and Control Systems Smartpower Web allows PHP Local File Inclusion.\n\nThis issue affects Smartpower Web: before 23.01.01.",
@@ -1063,6 +1073,16 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2026-126186",
+      "title": "CVE-2026-126186",
+      "description": "Active Storage: Possible arbitrary file read and remote code execution in video previews, analysis and image processing",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-v924-7rp8-4mxh",
+      "at": "2026-11-10T22:04:24.001Z"
+    },
+    {
       "id": "CVE-2022-45089",
       "title": "CVE-2022-45089",
       "description": "Improper Input Validation vulnerability in Group Arge Energy and Control Systems Smartpower Web allows SQL Injection.\n\nThis issue affects Smartpower Web: before 23.01.01.",
@@ -1261,6 +1281,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-2351",
       "at": "2026-11-02T21:06:50.538Z"
+    },
+    {
+      "id": "CVE-2026-125117",
+      "title": "CVE-2026-125117",
+      "description": "Mongoose walks into inherited properties when hydrating, setting, and merging, allowing overwrites of built-in functions (denial of service) and shared schema state",
+      "cvss": 8.2,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-8332-j7wj-wjw4",
+      "at": "2026-11-10T22:04:24.001Z"
     },
     {
       "id": "CVE-2026-102339",
@@ -1783,6 +1813,36 @@
       "at": "2026-11-06T01:56:03.641Z"
     },
     {
+      "id": "CVE-2026-126080",
+      "title": "CVE-2026-126080",
+      "description": "Active Support: Possible DoS vulnerability in Active Support safe_constantize",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-8474-xrp6-wh69",
+      "at": "2026-11-10T22:04:24.001Z"
+    },
+    {
+      "id": "CVE-2026-125119",
+      "title": "CVE-2026-125119",
+      "description": "Mongoose: Connection-level sanitizeFilter not applied",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-gg4r-jv3p-qx3c",
+      "at": "2026-11-10T22:04:24.001Z"
+    },
+    {
+      "id": "CVE-2026-125111",
+      "title": "CVE-2026-125111",
+      "description": "Rack: Multipart parsing allows DoS via unbounded scan buffer growth",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-5v64-555j-wjxm",
+      "at": "2026-11-10T22:04:24.001Z"
+    },
+    {
       "id": "CVE-2022-31474",
       "title": "CVE-2022-31474",
       "description": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') vulnerability in iThemes BackupBuddy allows Path Traversal.This issue affects BackupBuddy: from 8.5.8.0 through 8.7.4.1.",
@@ -2243,6 +2303,16 @@
       "at": "2026-11-02T03:30:53.772Z"
     },
     {
+      "id": "CVE-2026-126083",
+      "title": "CVE-2026-126083",
+      "description": "Action Pack: Possible IP spoofing in Action Dispatch RemoteIp",
+      "cvss": 7.4,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-2gff-2mmg-m73p",
+      "at": "2026-11-10T22:04:24.001Z"
+    },
+    {
       "id": "CVE-2026-44265",
       "title": "CVE-2026-44265",
       "description": "Elo backends have code injection via unvalidated emission of programmatic AST fields",
@@ -2581,86 +2651,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-40660",
       "at": "2026-11-06T21:53:20.410Z"
-    },
-    {
-      "id": "CVE-2022-45085",
-      "title": "CVE-2022-45085",
-      "description": "Server-Side Request Forgery (SSRF) vulnerability in Group Arge Energy and Control Systems Smartpower Web allows : Server Side Request Forgery.\n\nThis issue affects Smartpower Web: before 23.01.01.",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-45085",
-      "at": "2026-11-10T16:48:40.410Z"
-    },
-    {
-      "id": "CVE-2023-3255",
-      "title": "CVE-2023-3255",
-      "description": "A flaw was found in the QEMU built-in VNC server while processing ClientCutText messages. A wrong exit condition may lead to an infinite loop when inflating an attacker controlled zlib buffer in the `inflate_buffer` function. This could allow a remote authenticated client who is able to send a clipboard to the VNC server to trigger a denial of service.",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3255",
-      "at": "2026-11-08T10:55:02.086Z"
-    },
-    {
-      "id": "CVE-2023-4527",
-      "title": "CVE-2023-4527",
-      "description": "A flaw was found in glibc. When the getaddrinfo function is called with the AF_UNSPEC address family and the system is configured with no-aaaa mode via /etc/resolv.conf, a DNS response via TCP larger than 2048 bytes can potentially disclose stack contents through the function returned address data, and may cause a crash.",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4527",
-      "at": "2026-11-08T10:55:02.086Z"
-    },
-    {
-      "id": "CVE-2023-3750",
-      "title": "CVE-2023-3750",
-      "description": "A flaw was found in libvirt. The virStoragePoolObjListSearch function does not return a locked pool as expected, resulting in a race condition and denial of service when attempting to lock the same object from another thread. This issue could allow clients connecting to the read-only socket to crash the libvirt daemon.",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3750",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-42755",
-      "title": "CVE-2023-42755",
-      "description": "A flaw was found in the IPv4 Resource Reservation Protocol (RSVP) classifier in the Linux kernel. The xprt pointer may go beyond the linear part of the skb, leading to an out-of-bounds read in the `rsvp_classify` function. This issue may allow a local user to crash the system and cause a denial of service.",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-42755",
-      "at": "2026-11-07T08:02:09.769Z"
-    },
-    {
-      "id": "CVE-2023-6277",
-      "title": "CVE-2023-6277",
-      "description": "An out-of-memory flaw was found in libtiff. Passing a crafted tiff file to TIFFOpen() API may allow a remote attacker to cause a denial of service via a craft input with size smaller than 379 KB.",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6277",
-      "at": "2026-11-06T01:56:03.642Z"
-    },
-    {
-      "id": "CVE-2022-37959",
-      "title": "CVE-2022-37959",
-      "description": "Network Device Enrollment Service (NDES) Security Feature Bypass Vulnerability",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-37959",
-      "at": "2026-11-05T21:45:37.064Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 42,
+    "freshThisPulse": 28,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
-      "GHSA:11"
+      "GHSA:7"
     ],
-    "at": "2026-11-10T16:48:41.157Z"
+    "at": "2026-11-10T22:04:24.001Z"
   }
 }
