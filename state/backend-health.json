@@ -1,10 +1,10 @@
 {
-  "at": "2026-11-10T04:44:16.307Z",
+  "at": "2026-11-10T13:17:39.780Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "GREEN",
   "counts": {
     "cves": 115996,
-    "huntRuns": 20,
+    "huntRuns": 21,
     "findings": 0
   },
   "corpusSample": 3,
@@ -18,7 +18,7 @@
     "ok": true,
     "status": 200,
     "seat": "pollinations-openai",
-    "chunks": 9,
+    "chunks": 10,
     "streamed": true,
     "firstChunkMs": 352,
     "totalMs": 353,
@@ -29,37 +29,37 @@
     {
       "name": "health",
       "status": 200,
-      "ms": 2403,
+      "ms": 1279,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-10T04:44:13.425Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":115996,\"huntRuns\":20,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-10T13:17:37.426Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":115996,\"huntRuns\":21,\"findings\":0}}"
     },
     {
       "name": "hunt",
       "status": 200,
-      "ms": 1077,
+      "ms": 621,
       "ok": true,
-      "sample": "{\"run\":{\"id\":20,\"at\":\"2026-11-09T22:32:16.186+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":24120,\"katana\":99353,\"nuclei:root\":767758,\"nuc"
+      "sample": "{\"run\":{\"id\":21,\"at\":\"2026-11-10T07:31:14.135+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":23538,\"katana\":98910,\"nuclei:root\":691772,\"nuc"
     },
     {
       "name": "organs",
       "status": 200,
-      "ms": 253,
+      "ms": 403,
       "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"115996 CVE · 284018 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-10T04:42:00.020081+00:00\",\"updated_at\":\"2"
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"115996 CVE · 308059 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-10T13:17:00.020548+00:00\",\"updated_at\":\"2"
     },
     {
       "name": "corpus?q=nginx",
       "status": 200,
-      "ms": 640,
+      "ms": 442,
       "ok": true,
       "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2026-111962\",\"severity\":\"unknown\",\"cvss\":null,\"kev\":false,\"epss\":null,\"products\":[],\"summary\":\"The WP Remote Users Sync WordPress plugin before 2.2.0 does not adequately restrict access t"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
       "status": 200,
-      "ms": 535,
+      "ms": 511,
       "ok": true,
-      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":115996,\"indexTotal\":84000,\"syncedAt\":\"2026-11-05T22:31:14.974Z\",\"slice\":false,\"at\":\"2026-11-10T04:44:15.939Z\"}"
+      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":115996,\"indexTotal\":84000,\"syncedAt\":\"2026-11-05T22:31:14.974Z\",\"slice\":false,\"at\":\"2026-11-10T13:17:39.414Z\"}"
     },
     {
       "name": "corpus dated (published)",
@@ -73,7 +73,7 @@
       "status": 200,
       "ms": 353,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=9 first=352ms total=353ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=10 first=352ms total=353ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
