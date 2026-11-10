@@ -141,6 +141,31 @@ await t("self-id guard: chat_id مساوي لرقم البوت يترفض ويت
   delete process.env.TELEGRAM_CHAT_ID;
 });
 
+await t("@username مقبول في chat_id، ويوزر البوت نفسه يترفض ويتعلّم", async () => {
+  tg._resetTelegramForTests();
+  global.fetch = async (u) => {
+    const us = String(u);
+    if (us.includes("getMe")) return { ok: true, json: async () => ({ ok: true, result: { id: 999, username: "x_test_bot" } }) };
+    return { ok: true, json: async () => ({ ok: true, result: {} }) };
+  };
+  process.env.TELEGRAM_BOT_TOKEN = "123456789:TESTTOKEN-username";
+  process.env.TELEGRAM_CHAT_ID = "@dawsha_real";
+  const got1 = tg.getChatId();
+  assert.equal(got1, "@dawsha_real", "got1=" + JSON.stringify(got1));
+  // يوزر البوت نفسه = كيس الـ403 التاني المقاس
+  process.env.TELEGRAM_CHAT_ID = "@x_test_bot";
+  tg._resetTelegramForTests();
+  // أول read قبل getMe (botSelfUsername لسه null) — لازم فحص polls getMe الأول
+  tg.ensureChatId({ maxRounds: 1, everyMs: 5 });
+  await new Promise((r) => setTimeout(r, 300));
+  // المعيار: يوزر البوت نفسه مرفوض ومش بيتحط كشات. المتعلّم/المحفوظ من «/start» الأصلي
+  // (424242 من حالة 4) هو اللي يكسب — التصميم نفسه.
+  const got2 = tg.getChatId();
+  assert.notEqual(got2, "@x_test_bot", "يوزر البوت نفسه اتقبّل — دي كارثة 403 مكررة");
+  assert.ok(got2 === "" || got2 === "424242", "got2=" + JSON.stringify(got2));
+  delete process.env.TELEGRAM_CHAT_ID;
+});
+
 for (const [s, n] of results) console.log(`${s} ${n}`);
 fake.close();
 const failed = results.filter(([s]) => s === "✗");

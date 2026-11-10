@@ -35,7 +35,12 @@ export const ALLOWED_KEYS: Record<string, ConfigSpec> = {
   "telegram.chatId": {
     labelAr: "معرّف شات تليجرام",
     sensitive: true,
-    validate: (v) => (/^-?\d{5,}$/.test(v.trim()) ? null : "chat_id لازم رقم (خليها فاضية والسيرفر هيتعلّمها من /start)"),
+    validate: (v) => {
+      const t = v.trim();
+      if (t === "") return null;
+      if (/^-?\d{5,}$/.test(t) || /^@[A-Za-z0-9_]{4,31}$/.test(t)) return null;
+      return "chat_id لازم رقم (1890579200) أو يوزرنيم @username — وخليك فاضي والسيرفر بيتعلّم من /start";
+    },
   },
   "shodan.apiKey": {
     labelAr: "مفتاح Shodan (إثراء الزوار سلبيًا)",

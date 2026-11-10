@@ -43,12 +43,18 @@ export function esc(v: unknown, max = 200): string {
     .slice(0, max);
 }
 
+let botSelfUsername: string | null = null;
+
 function chatIdLooksValid(id: string): boolean {
-  if (!/^-?\d+$/.test(id)) return false;
-  // القياس اللي اتعلمناه (2026-11-09T23:39Z): .env كان فيه chat_id = رقم البوت نفسه
-  // ⇒ تليجرام بيردّ 403 «can't send messages to the bot». الرفض القلبي هنا يرجّعك
-  // لتعلّم الشات الحقيقي من getUpdates بدل دوّار فشل صامت.
+  // تليجرام بيقبل numeric (-?digits) أو «@username» — الاتنين صالحان لـsendMessage.
+  const numeric = /^-?\d+$/.test(id);
+  const handle = /^@[A-Za-z0-9_]{4,31}$/.test(id);
+  if (!numeric && !handle) return false;
+  // القياس المقاس على العقدة (2026-11-09T23:39Z): .env كان فيه chat_id = رقم البوت نفسه
+  // ⇒ تليجرام بيردّ 403 «can't send messages to the bot». نفس الغلط لو حطيت
+  // يوزر البوت @xDawFREE_BOT بدل يوزرك — الرفض هنا يرجّعك للتعلّم الحقيقي.
   if (botSelfId && id === botSelfId) return false;
+  if (handle && botSelfUsername && id.toLowerCase() === "@" + botSelfUsername.toLowerCase()) return false;
   return true;
 }
 
@@ -68,7 +74,7 @@ async function loadPersistedChatId(): Promise<string> {
     const { recall } = await import("../agent/memory-store");
     const hits = recall("telegram.chatId", { scope: "ops", limit: 1 });
     const id = String(hits[0]?.content ?? "").trim();
-    if (/^-?\d+$/.test(id)) { cachedChatId = id; return id; }
+    if (chatIdLooksValid(id)) { cachedChatId = id; return id; }
   } catch { /* الذاكرة رفاهية مش شرط إقلاع */ }
   return "";
 }
@@ -155,8 +161,9 @@ export function ensureChatId(opts: { maxRounds?: number; everyMs?: number } = {}
   // هوية البوت قبل قرار «في chat_id ولا لأ»: نرفض self-id (اللوج الحي أثبت
   // إن .env كان فيه رقم البوت نفسه) وبعدها الـpoller يبدأ بيقين مش سباق.
   void tgApi("getMe", {}).then((me) => {
-    const id = (me?.result as { id?: number } | undefined)?.id;
-    if (id != null) botSelfId = String(id);
+    const r = me?.result as { id?: number; username?: string } | undefined;
+    if (r?.id != null) botSelfId = String(r.id);
+    if (r?.username) botSelfUsername = String(r.username);
     startIfNeeded(opts);
   }).catch(() => { startIfNeeded(opts); });
 }
@@ -264,6 +271,9 @@ export async function telegramStatus(): Promise<Record<string, unknown>> {
 export function _resetTelegramForTests(): void {
   cachedChatId = null;
   chatPollerStarted = false;
+  botSelfId = null;
+  botSelfUsername = null;
+  lastTgError = null;
   lastSentByTopic.clear();
   lastGlobalSend = 0;
 }
