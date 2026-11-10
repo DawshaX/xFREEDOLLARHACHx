@@ -423,18 +423,31 @@ if (role === "node" || role === "agent") {
   let mark = stamp();
   let vendorRunning = false;   // تنزيل الأدوات شغال؟ (ممنوع يتداخل مع إقلاع التطبيق)
   let fastDeaths = 0;          // موتات متتالية < 10s → crash-loop مثبت
+  let bootDelays = 0;          // تأجيلات RAM متتالية — بعد 5 بنقلع على أي حال
 
   const cgroupMb = () => {
-    // قياس حقيقي للحاوية (v2 ثم v1) — مش تخمين: لو الضغط > 85% بنأذن للمُشرف
-    // يتصرف تحفظيًا (يأجل الإقلاع أو التنزيل) بدل ما السيجرني يفرط بطنا في الثانية.
+    // قياس حقيقي للحاوية (v2 ثم v1) — و«الحقيقي» معناه: نستبعد page cache.
+    // القياس اللي علّمنا ده (2026-11-10): memory.current كان 420/460MB والإقلاع اتأجل
+    // للأبد — بس الرقم ده بيعدّي inactive_file (كاش ملفات الأدوات 628MB اللي النظام
+    // بيرميه فورًا تحت أي ضغط حقيقي). الضغط الصادق = anon memory مش المجموع الخام.
+    // التفصيلة: v2 في memory.stat حقل «inactive_file»؛ v1 في memory.stat حقل
+    // «total_inactive_file». لو مقدرناش نستبعده بنرجع للمجموع (أحسن من العمى).
     try {
-      for (const [cur, max] of [
-        ["/sys/fs/cgroup/memory.current", "/sys/fs/cgroup/memory.max"],
-        ["/sys/fs/cgroup/memory/memory.usage_in_bytes", "/sys/fs/cgroup/memory/memory.limit_in_bytes"],
+      for (const [cur, max, stat, field] of [
+        ["/sys/fs/cgroup/memory.current", "/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory.stat", "inactive_file"],
+        ["/sys/fs/cgroup/memory/memory.usage_in_bytes", "/sys/fs/cgroup/memory/memory.limit_in_bytes", "/sys/fs/cgroup/memory/memory.stat", "total_inactive_file"],
       ]) {
         if (existsSync(cur) && existsSync(max)) {
           const c = Number(readFileSync(cur, "utf8")), m = Number(readFileSync(max, "utf8"));
-          if (isFinite(c) && isFinite(m) && m > 0 && m < 9007199254740991) return { usedMb: Math.round(c / 1048576), maxMb: Math.round(m / 1048576) };
+          if (!(isFinite(c) && isFinite(m) && m > 0 && m < 9007199254740991)) continue;
+          let cache = 0;
+          try {
+            const st = readFileSync(stat, "utf8");
+            const hit = st.match(new RegExp("^" + field + " (\\d+)$", "m"));
+            if (hit) cache = Number(hit[1]);
+          } catch { /* stat مش مقروء — نكمل بالمجموع */ }
+          const anon = Math.max(0, c - cache);
+          return { usedMb: Math.round(anon / 1048576), rawMb: Math.round(c / 1048576), cacheMb: Math.round(cache / 1048576), maxMb: Math.round(m / 1048576) };
         }
       }
     } catch { /* بلا cgroup ظاهر — بنقول ماقسنا */ }
@@ -448,13 +461,24 @@ if (role === "node" || role === "agent") {
     if (fresh) console.log("[supervisor] picked up " + fresh + " new env var(s) from .env");
     const mem = cgroupMb();
     if (mem && mem.usedMb > mem.maxMb * 0.88) {
-      console.log("[supervisor] RAM " + mem.usedMb + "/" + mem.maxMb + "MB فوق 88% — إقلاع مأجل 20s بدل وحدة موت فوري");
-      setTimeout(launch, 20_000);
-      return;
+      bootDelays += 1;
+      // fail-open: القياس الكذاب (page cache محسوس كضغط) علّمنا إن التأجيل الأبدي
+      // أسوأ من OOM محتمل — 502 دائمة أقسى على صاحب المنصة من إعادة تحت ضغط.
+      // بعد 5 × 20s = 100s من «فوق 88%» بنقلع على أي حال: الـheap سقفه 200MB
+      // والـOOM-killer لو تدخل هيبقى على قرار صادق مش على كاش.
+      if (bootDelays >= 5) {
+        console.log("[supervisor] RAM عالية بثبات (" + mem.usedMb + "/" + mem.maxMb + "MB anon · كاش " + mem.cacheMb + "MB خام " + mem.rawMb + "MB) — تأجل 100s. بنقلع على أي حال: 502 الأبدية أسوأ من ضغط مؤقت.");
+        bootDelays = 0;
+      } else {
+        console.log("[supervisor] RAM " + mem.usedMb + "/" + mem.maxMb + "MB anon فوق 88% (خام " + mem.rawMb + " · كاش " + mem.cacheMb + "MB) — إقلاع مأجل 20s (" + bootDelays + "/5 قبل الإقلاع القسري)");
+        setTimeout(launch, 20_000);
+        return;
+      }
     }
     const heap = process.env.NOVA_APP_HEAP_MB || "200"; // سقف V8 < سقف الـcgroup فالـGC يسبق الـSIGKILL
     const inherited = process.env.NODE_OPTIONS || "";
     const appNodeOptions = /max-old-space-size/.test(inherited) ? inherited : (inherited + " --max-old-space-size=" + heap).trim();
+    bootDelays = 0;
     child = spawn(process.execPath, [ENTRY], {
       stdio: "inherit",
       env: Object.assign({}, process.env, { NOVA_SUPERVISED: "1", NODE_OPTIONS: appNodeOptions }),
@@ -729,7 +753,80 @@ if (role === "node" || role === "agent") {
     setTimeout(tick, 4000);
   };
 
-  const pendingAtBoot = readPending();
+  // ── الإنقاذ الذاتي للمُشرف ─────────────────────────────────────────────
+  // الفخ اللي علّمنا ده جاي (2026-11-10): بوابة الرام أجّلت الإقلاع للأبد ⇒
+  // 502 متواصلة، والمُحدِّث جوه التطبيق — والتطبيق مش شغال ⇒ مافيش إصلاح بيوصل.
+  // الحلقة دي بتقفل الفخ: لو /api/health فضل ميّت 4+ دقائق ومفيش طفل شغال،
+  // المُشرف نفسه بينزّل أحدث nova-24-7.zip من GitHub Releases، بياخد نسخة أمان،
+  // بيستبدل الملفات (متخطّيًا state/ و .env)، بيسجّل .update-pending (عشان الـ
+  // watchdog فوق يرجّع لو الجديد ما صحّش)، وبيخرج بكود 42 ⇒ حلقة start.sh تعيد
+  // تشغيل boot.mjs بالنسخة الجديدة. التعطيل: NOVA_RESCUE_OFF=1.
+  let downSince = 0;
+  let rescuing = false;
+  let lastRescueTry = 0;
+  const rescuePort = Number(process.env.PORT || process.env.SERVER_PORT || 8080);
+  const rescueUrl = process.env.NOVA_UPDATE_ASSET_URL
+    || "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-portable/nova-24-7.zip";
+
+  const rescueSwap = async () => {
+    console.log("[supervisor] التطبيق ميّت 4+ دقائق ومفيش طفل — إنقاذ ذاتي: بنزّل أحدث حزمة وبستبدل نفسي");
+    const res = await fetch(rescueUrl, { redirect: "follow", signal: AbortSignal.timeout(180_000) });
+    if (!res.ok) throw new Error("asset " + res.status);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 1_000_000) throw new Error("asset صغير أوي (" + buf.length + "B) — مش هنستبدل بحاجة مشكوك فيها");
+    const stamp2 = Date.now();
+    const zipPath = "/tmp/nova-rescue-" + stamp2 + ".zip";
+    const outDir = "/tmp/nova-rescue-" + stamp2;
+    writeFileSync(zipPath, buf);
+    await new Promise((resolve, reject) => {
+      // python3 موجود فعلًا على المكنة (live-update.py بيشتغل عليه)
+      const py = spawn("python3", ["-c", "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])", zipPath, outDir], { stdio: "inherit" });
+      py.on("exit", (c) => (c === 0 ? resolve() : reject(new Error("unzip code " + c))));
+      py.on("error", reject);
+    });
+    try { unlinkSync(zipPath); } catch {}
+    // الأرشيف أحيانًا بيبقى جواه فولدر رئيسي — بنلاقي اللي فيه nova-app.mjs
+    let root = outDir;
+    if (!existsSync(join(root, "nova-app.mjs"))) {
+      for (const s of readdirSync(root, { withFileTypes: true })) {
+        const cand = join(root, s.name);
+        if (s.isDirectory() && existsSync(join(cand, "nova-app.mjs"))) { root = cand; break; }
+      }
+    }
+    if (!existsSync(join(root, "nova-app.mjs"))) throw new Error("الأرشيف مفيهوش nova-app.mjs — أبطل الإنقاذ");
+    // نسخة أمان من الحالة الحالية قبل الاستبدال (نفس قواعد تخطّي الرول-باك + backups)
+    const bk = join(HERE, "backups", "nova-backup-" + new Date().toISOString().replace(/[:.]/g, "-"));
+    mkdirSync(bk, { recursive: true });
+    const skipBk = new Set([".env", ".env.txt", ".npm", "logs", "state", "node_modules", "backups"]);
+    const toBackup = (sd, dd) => {
+      for (const entry of readdirSync(sd, { withFileTypes: true })) {
+        if (sd === HERE && skipBk.has(entry.name)) continue;
+        const s2 = join(sd, entry.name), d2 = join(dd, entry.name);
+        if (entry.isDirectory()) { mkdirSync(d2, { recursive: true }); toBackup(s2, d2); }
+        else copyFileSync(s2, d2);
+      }
+    };
+    toBackup(HERE, bk);
+    writeFileSync(PENDING, JSON.stringify({ at: new Date().toISOString(), from: "rescue", to: rescueUrl, backup: bk }, null, 2));
+    const files = copyBack(root);
+    console.log("[supervisor] rescue بدّل " + files + " ملف من آخر إصدار — خروج بكود 42 عشان حلقة start.sh ترجّع النسخة الجديدة");
+    process.exit(42);
+  };
+
+  const rescueTick = async () => {
+    if (process.env.NOVA_RESCUE_OFF === "1" || rescuing || vendorRunning || child) { downSince = 0; return; }
+    if (await healthy(rescuePort)) { downSince = 0; return; }
+    if (!downSince) { downSince = Date.now(); return; }
+    if (Date.now() - downSince < 240_000) return;   // 4 دقائق موت متواصل قبل التدخل
+    if (Date.now() - lastRescueTry < 900_000) return; // محاولة كل ربع ساعة سقف — مش فرم
+    rescuing = true; lastRescueTry = Date.now();
+    try { await rescueSwap(); }
+    catch (e) { console.log("[supervisor] rescue فشل: " + (e && e.message)); }
+    rescuing = false;
+  };
+  setInterval(() => { void rescueTick(); }, 30_000).unref?.();
+
+    const pendingAtBoot = readPending();
   if (pendingAtBoot && pendingAtBoot.backup) {
     console.log("[supervisor] an update is pending verification (from " + pendingAtBoot.from + ")");
     watch(pendingAtBoot);
