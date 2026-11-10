@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 120,
-    "lastHeartbeatAt": "2026-11-10T08:58:27.229Z",
+    "autonomousCyclesCompleted": 121,
+    "lastHeartbeatAt": "2026-11-10T16:48:39.943Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #120 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #121 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794329321157",
+      "ts": "2026-11-10 16:48:41 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #121 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 142.250.217.113 | HTTP 200 | SHA256: 034f484271df3338 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 42 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:11)"
+    },
     {
       "id": "pulse-1794301108245",
       "ts": "2026-11-10 08:58:28 UTC",
@@ -202,13 +209,6 @@
       "category": "GITHUB_CLOUD_PULSE",
       "titleAr": "نبضة العقل السحابي التلقائية #97 على الهدف (bughunters.google.com)",
       "detailAr": "IP: 142.251.45.17 | HTTP 200 | SHA256: 711650c854708f0b — تم التحديث والحفظ في ذاكرة GitHub الدائمة."
-    },
-    {
-      "id": "pulse-1793864110888",
-      "ts": "2026-11-05 07:35:10 UTC",
-      "category": "GITHUB_CLOUD_PULSE",
-      "titleAr": "نبضة العقل السحابي التلقائية #96 على الهدف (bughunters.google.com)",
-      "detailAr": "IP: 142.250.69.177 | HTTP 200 | SHA256: 662ee41d199bf345 — تم التحديث والحفظ في ذاكرة GitHub الدائمة."
     }
   ],
   "extractedArtifactsVault": [
@@ -863,6 +863,56 @@
       "at": "2026-11-06T21:53:21.130Z"
     },
     {
+      "id": "CVE-2022-45088",
+      "title": "CVE-2022-45088",
+      "description": "Improper Input Validation vulnerability in Group Arge Energy and Control Systems Smartpower Web allows PHP Local File Inclusion.\n\nThis issue affects Smartpower Web: before 23.01.01.",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-45088",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
+      "id": "CVE-2022-4557",
+      "title": "CVE-2022-4557",
+      "description": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection') vulnerability in Group Arge Energy and Control Systems Smartpower Web allows SQL Injection.\n\nThis issue affects Smartpower Web: before 23.01.01.",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-4557",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
+      "id": "CVE-2022-2504",
+      "title": "CVE-2022-2504",
+      "description": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection') vulnerability in SDD Computer Software SDD-Baro allows SQL Injection.\n\nThis issue affects SDD-Baro: before 2.8.432.",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2504",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
+      "id": "CVE-2022-3760",
+      "title": "CVE-2022-3760",
+      "description": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection') vulnerability in Mia Technology Mia-Med.\n\nThis issue affects Mia-Med: before 1.0.0.58.",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-3760",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
+      "id": "CVE-2023-28531",
+      "title": "CVE-2023-28531",
+      "description": "ssh-add in OpenSSH before 9.3 adds smartcard keys to ssh-agent without the intended per-hop destination constraints. The earliest affected version is 8.9.",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-28531",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
       "id": "CVE-2026-102895",
       "title": "CVE-2026-102895",
       "description": "GPUStack: Authentication bypass via trusted loopback source (reverse-proxy TCP peer or X-GPUStack-Real-IP header) grants unauthenticated admin",
@@ -983,6 +1033,26 @@
       "at": "2026-11-05T21:45:37.527Z"
     },
     {
+      "id": "CVE-2026-102894",
+      "title": "CVE-2026-102894",
+      "description": "GPUStack: SAML callback trusts an unverified SAMLResponse, allowing authentication bypass and account takeover",
+      "cvss": 9.1,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-62m9-f875-rqw6",
+      "at": "2026-11-10T16:48:41.157Z"
+    },
+    {
+      "id": "CVE-2026-95860",
+      "title": "CVE-2026-95860",
+      "description": "node-opcua: Namespace-Level RBAC Fail-Open - Anonymous Write/Call Bypass via Unbound `DefaultRolePermissions",
+      "cvss": 9.1,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-xggf-m53x-jc3f",
+      "at": "2026-11-10T16:48:41.157Z"
+    },
+    {
       "id": "CVE-2006-4339",
       "title": "CVE-2006-4339",
       "description": "A flaw was found in OpenSSL. When configured to use an RSA key with exponent 3, OpenSSL improperly removes PKCS-1 padding before generating a hash. This allows remote attackers to forge PKCS #1 v1.5 signatures. Consequently, OpenSSL may incorrectly verify X.509 and other certificates, leading to a bypass of trust and authentication mechanisms.",
@@ -991,6 +1061,56 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2006-4339",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2022-45089",
+      "title": "CVE-2022-45089",
+      "description": "Improper Input Validation vulnerability in Group Arge Energy and Control Systems Smartpower Web allows SQL Injection.\n\nThis issue affects Smartpower Web: before 23.01.01.",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-45089",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
+      "id": "CVE-2022-45090",
+      "title": "CVE-2022-45090",
+      "description": "Improper Input Validation vulnerability in Group Arge Energy and Control Systems Smartpower Web allows SQL Injection.\n\nThis issue affects Smartpower Web: before 23.01.01.",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-45090",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
+      "id": "CVE-2026-118670",
+      "title": "CVE-2026-118670",
+      "description": "OHIF Viewers: DOM-Based Cross Site Scripting (XSS) through MIME type of document",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-xwgp-w3pj-q5h3",
+      "at": "2026-11-10T16:48:41.157Z"
+    },
+    {
+      "id": "CVE-2026-103002",
+      "title": "CVE-2026-103002",
+      "description": "GPUStack: Missing authorization on several cluster and resource endpoints allows cross-user access and cluster takeover",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-3hch-x692-6qj3",
+      "at": "2026-11-10T16:48:41.157Z"
+    },
+    {
+      "id": "CVE-2026-113663",
+      "title": "CVE-2026-113663",
+      "description": "AG2: Newline injection in SandboxShellTool bypasses allowed=[...] and readonly=True, enabling arbitrary command execution",
+      "cvss": 8.8,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-2h4w-29cv-2cmv",
+      "at": "2026-11-10T16:48:41.157Z"
     },
     {
       "id": "CVE-2026-108262",
@@ -1663,6 +1783,46 @@
       "at": "2026-11-06T01:56:03.641Z"
     },
     {
+      "id": "CVE-2022-31474",
+      "title": "CVE-2022-31474",
+      "description": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') vulnerability in iThemes BackupBuddy allows Path Traversal.This issue affects BackupBuddy: from 8.5.8.0 through 8.7.4.1.",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-31474",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
+      "id": "CVE-2026-119191",
+      "title": "CVE-2026-119191",
+      "description": "Forge: ASN.1 resource exhaustion via BIT STRING decoding in asn1.fromDer",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-rhr8-3pm8-cq29",
+      "at": "2026-11-10T16:48:41.157Z"
+    },
+    {
+      "id": "CVE-2026-119192",
+      "title": "CVE-2026-119192",
+      "description": "Forge: RSA PKCS#1 v1.5 signature forgery via non-canonical DigestInfo encoding",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-6qrw-m8cv-hcxf",
+      "at": "2026-11-10T16:48:41.157Z"
+    },
+    {
+      "id": "CVE-2026-102650",
+      "title": "CVE-2026-102650",
+      "description": "Nuxt Content: Unauthenticated SQLite Function DoS via Content Query API",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-xxrh-5hgg-gj4h",
+      "at": "2026-11-10T16:48:41.157Z"
+    },
+    {
       "id": "CVE-2026-97705",
       "title": "CVE-2026-97705",
       "description": "Moleculer: Unauthenticated Denial of Service via negative length field in the TCP transporter packet parser",
@@ -2183,6 +2343,16 @@
       "at": "2026-11-03T18:50:34.961Z"
     },
     {
+      "id": "CVE-2022-38074",
+      "title": "CVE-2022-38074",
+      "description": "SQL Injection vulnerability in VeronaLabs WP Statistics plugin <= 13.2.10 versions.",
+      "cvss": 7.1,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-38074",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
       "id": "CVE-2026-87008",
       "title": "CVE-2026-87008",
       "description": "Code Graph RAG structural tools follow out-of-root symlinks",
@@ -2281,6 +2451,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26669",
       "at": "2026-11-02T03:30:53.193Z"
+    },
+    {
+      "id": "CVE-2021-41617",
+      "title": "CVE-2021-41617",
+      "description": "sshd in OpenSSH 6.2 through 8.x before 8.8, when certain non-default configurations are used, allows privilege escalation because supplemental groups are not initialized as expected. Helper programs for AuthorizedKeysCommand and AuthorizedPrincipalsCommand may run with privileges associated with group memberships of the sshd process, if the configuration specifies running the command as a differen",
+      "cvss": 7,
+      "severity": "HIGH",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-41617",
+      "at": "2026-11-10T16:48:40.410Z"
     },
     {
       "id": "CVE-2023-3640",
@@ -2403,6 +2583,16 @@
       "at": "2026-11-06T21:53:20.410Z"
     },
     {
+      "id": "CVE-2022-45085",
+      "title": "CVE-2022-45085",
+      "description": "Server-Side Request Forgery (SSRF) vulnerability in Group Arge Energy and Control Systems Smartpower Web allows : Server Side Request Forgery.\n\nThis issue affects Smartpower Web: before 23.01.01.",
+      "cvss": 6.5,
+      "severity": "MEDIUM",
+      "source": "NVD",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-45085",
+      "at": "2026-11-10T16:48:40.410Z"
+    },
+    {
       "id": "CVE-2023-3255",
       "title": "CVE-2023-3255",
       "description": "A flaw was found in the QEMU built-in VNC server while processing ClientCutText messages. A wrong exit condition may lead to an infinite loop when inflating an attacker controlled zlib buffer in the `inflate_buffer` function. This could allow a remote authenticated client who is able to send a clipboard to the VNC server to trigger a denial of service.",
@@ -2461,206 +2651,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-37959",
       "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2019-5439",
-      "title": "CVE-2019-5439",
-      "description": "A Buffer Overflow in VLC Media Player < 3.0.7 causes a crash which can possibly be further developed into a remote code execution exploit.",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-5439",
-      "at": "2026-11-02T21:06:50.538Z"
-    },
-    {
-      "id": "CVE-2021-36976",
-      "title": "CVE-2021-36976",
-      "description": "libarchive 3.4.1 through 3.5.1 has a use-after-free in copy_string (called from do_uncompress_block and process_block).",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-36976",
-      "at": "2026-11-02T21:06:50.538Z"
-    },
-    {
-      "id": "CVE-2012-5625",
-      "title": "CVE-2012-5625",
-      "description": "OpenStack Compute (Nova) Folsom before 2012.2.2 and Grizzly, when using libvirt and LVM backed instances, does not properly clear physical volume (PV) content when reallocating for instances, which allows attackers to obtain sensitive information by reading the memory of the previous logical volume (LV).",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2012-5625",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2013-1840",
-      "title": "CVE-2013-1840",
-      "description": "A flaw was found in OpenStack Glance. Remote authenticated users can exploit this vulnerability by requesting a cached image when the single-tenant Swift or S3 store is in use. This action causes the system to report the location field, which can lead to the disclosure of the operator's backend credentials.",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2013-1840",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2011-1594",
-      "title": "CVE-2011-1594",
-      "description": "A flaw was found in Spacewalk, as used in Red Hat Network Satellite. This open redirect vulnerability allows remote attackers to redirect users to arbitrary web sites by manipulating a URL in the url_bounce parameter. This can enable attackers to conduct phishing attacks, potentially leading to unauthorized information disclosure or credential theft.",
-      "cvss": 6.5,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2011-1594",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2022-36280",
-      "title": "CVE-2022-36280",
-      "description": "An out-of-bounds(OOB) memory access vulnerability was found in vmwgfx driver in drivers/gpu/vmxgfx/vmxgfx_kms.c in GPU component in the Linux kernel with device file '/dev/dri/renderD128 (or Dxxx)'. This flaw allows a local attacker with a user account on the system to gain privilege, causing a denial of service(DoS).",
-      "cvss": 6.3,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-36280",
-      "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2023-3108",
-      "title": "CVE-2023-3108",
-      "description": "A flaw was found in the subsequent get_user_pages_fast in the Linux kernel’s interface for symmetric key cipher algorithms in the skcipher_recvmsg of crypto/algif_skcipher.c function. This flaw allows a local user to crash the system.",
-      "cvss": 6.2,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3108",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-5341",
-      "title": "CVE-2023-5341",
-      "description": "A heap use-after-free flaw was found in coders/bmp.c in ImageMagick.",
-      "cvss": 6.2,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5341",
-      "at": "2026-11-06T01:56:03.642Z"
-    },
-    {
-      "id": "CVE-2021-20031",
-      "title": "CVE-2021-20031",
-      "description": "A Host Header Redirection vulnerability in SonicOS potentially allows a remote attacker to redirect firewall management users to arbitrary web domains.",
-      "cvss": 6.1,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-20031",
-      "at": "2026-11-09T17:59:44.894Z"
-    },
-    {
-      "id": "CVE-2019-0221",
-      "title": "CVE-2019-0221",
-      "description": "The SSI printenv command in Apache Tomcat 9.0.0.M1 to 9.0.0.17, 8.5.0 to 8.5.39 and 7.0.0 to 7.0.93 echoes user provided data without escaping and is, therefore, vulnerable to XSS. SSI is disabled by default. The printenv command is intended for debugging and is unlikely to be present in a production website.",
-      "cvss": 6.1,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-0221",
-      "at": "2026-11-02T21:06:50.538Z"
-    },
-    {
-      "id": "CVE-2013-1815",
-      "title": "CVE-2013-1815",
-      "description": "A flaw was found in PackStack. This vulnerability allows a local user to modify deployed systems by changing the answer file, which is created in insecure directories such as /tmp or the current working directory. This insecure file creation could lead to unauthorized system modifications.",
-      "cvss": 6.1,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2013-1815",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2023-3019",
-      "title": "CVE-2023-3019",
-      "description": "A DMA reentrancy issue leading to a use-after-free error was found in the e1000e NIC emulation code in QEMU. This issue could allow a privileged guest user to crash the QEMU process on the host, resulting in a denial of service.",
-      "cvss": 6,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3019",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-4273",
-      "title": "CVE-2023-4273",
-      "description": "A flaw was found in the exFAT driver of the Linux kernel. The vulnerability exists in the implementation of the file name reconstruction function, which is responsible for reading file name entries from a directory index and merging file name parts belonging to one file into a single long file name. Since the file name characters are copied into a stack variable, a local privileged attacker could ",
-      "cvss": 6,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4273",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-5090",
-      "title": "CVE-2023-5090",
-      "description": "A flaw was found in KVM. An improper check in svm_set_x2apic_msr_interception() may allow direct access to host x2apic msrs when the guest resets its apic, potentially leading to a denial of service condition.",
-      "cvss": 6,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5090",
-      "at": "2026-11-07T08:02:09.769Z"
-    },
-    {
-      "id": "CVE-2023-4806",
-      "title": "CVE-2023-4806",
-      "description": "A flaw has been identified in glibc. In an extremely rare situation, the getaddrinfo function may access memory that has been freed, resulting in an application crash. This issue is only exploitable when a NSS module implements only the _nss_*_gethostbyname2_r and _nss_*_getcanonname_r hooks without implementing the _nss_*_gethostbyname3_r hook. The resolved name should return a large number of IP",
-      "cvss": 5.9,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4806",
-      "at": "2026-11-08T10:55:02.086Z"
-    },
-    {
-      "id": "CVE-2023-3347",
-      "title": "CVE-2023-3347",
-      "description": "A vulnerability was found in Samba's SMB2 packet signing mechanism. The SMB2 packet signing is not enforced if an admin configured \"server signing = required\" or for SMB2 connections to Domain Controllers where SMB2 packet signing is mandatory. This flaw allows an attacker to perform attacks, such as a man-in-the-middle attack, by intercepting the network traffic and modifying the SMB2 messages be",
-      "cvss": 5.9,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3347",
-      "at": "2026-11-07T08:02:09.769Z"
-    },
-    {
-      "id": "CVE-2022-2127",
-      "title": "CVE-2022-2127",
-      "description": "An out-of-bounds read vulnerability was found in Samba due to insufficient length checks in winbindd_pam_auth_crap.c. When performing NTLM authentication, the client replies to cryptographic challenges back to the server. These replies have variable lengths, and Winbind fails to check the lan manager response length. When Winbind is used for NTLM authentication, a maliciously crafted request can t",
-      "cvss": 5.9,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2127",
-      "at": "2026-11-06T01:56:03.641Z"
-    },
-    {
-      "id": "CVE-2023-5981",
-      "title": "CVE-2023-5981",
-      "description": "A vulnerability was found that the response times to malformed ciphertexts in RSA-PSK ClientKeyExchange differ from response times of ciphertexts with correct PKCS#1 v1.5 padding.",
-      "cvss": 5.9,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5981",
-      "at": "2026-11-06T01:56:03.642Z"
-    },
-    {
-      "id": "CVE-2023-4813",
-      "title": "CVE-2023-4813",
-      "description": "A flaw has been identified in glibc. In an uncommon situation, the gaih_inet function may use memory that has been freed, resulting in an application crash. This issue is only exploitable when the getaddrinfo function is called and the hosts database in /etc/nsswitch.conf is configured with SUCCESS=continue or SUCCESS=merge.",
-      "cvss": 5.9,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4813",
-      "at": "2026-11-02T03:30:53.193Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 19,
+    "freshThisPulse": 42,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
-      "GHSA:15"
+      "GHSA:11"
     ],
-    "at": "2026-11-10T08:58:28.245Z"
+    "at": "2026-11-10T16:48:41.157Z"
   }
 }
