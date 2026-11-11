@@ -174,6 +174,34 @@ export function pruneState(now = Date.now()): PruneReport {
     } catch { /* مفيش */ }
   }
 
+  // ── طبقة 5: العدة الرشيقة — القرص 1.5GB امتلأ فوق الحصة (1.61GiB) والديمون
+  // رفض التشغيل (2026-11-10). vendor/bin كان 628MB. الافتراضي امسح الستة التقيلين
+  // من vendor/bin (أماس 52MB، nuclei، trivy، trufflehog، osv-scanner، gobuster).
+  // الاستثناء: NOVA_HEAVY_TOOLS=1 يخلّيهم. تنزّلهم عند الطلب الصريح شغال.
+  if (process.env.NOVA_HEAVY_TOOLS !== "1") {
+    const vdir = join(stateRoot(), "vendor", "bin");
+    for (const heavy of ["amass", "nuclei", "trivy", "trufflehog", "osv-scanner", "gobuster"]) {
+      try {
+        const st = statSync(join(vdir, heavy));
+        unlinkSync(join(vdir, heavy));
+        removed += 1; freedBytes += st.size;
+      } catch { /* مش موجود — تمام */ }
+    }
+    // كاش trivy بقاعدة الثغرات بيتضخّم لـ200-400MB — فوق 100MB نمسحه (بيتعاد تنزيله وقت الاستخدام)
+    const home = process.env.HOME || "/home/container";
+    const tcache = join(home, ".cache", "trivy");
+    try {
+      const sz = dirBytes(tcache).bytes;
+      if (sz > 100 * 1024 * 1024) { rmSync(tcache, { recursive: true, force: true }); removed += 1; freedBytes += sz; }
+    } catch { /* مفيش كاش */ }
+    // قوالب nuclei (~/nuclei-templates) ~150MB+ — نفس المنطق
+    const nt = join(home, "nuclei-templates");
+    try {
+      const sz = dirBytes(nt).bytes;
+      if (sz > 1) { rmSync(nt, { recursive: true, force: true }); removed += 1; freedBytes += sz; }
+    } catch { /* مفيش */ }
+  }
+
   const kept = entries.length - removed;
   const report: PruneReport = {
     ok: true, removed, freedBytes, kept,

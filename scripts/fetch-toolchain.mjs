@@ -45,6 +45,19 @@ const JSONOUT = has("json");
 const DRY = has("dry");
 
 /** How to fetch each tool. `match` selects the release asset; `ver` is the version flag. */
+/**
+ * العدة الرشيقة (2026-11-10) — القياس الحاسم: waifly disk quota 1.5GB امتلأ
+ * (1.61GiB) والديمون رفض التشغيل خالص. vendor/bin كان 628MB، ومعظمه الستة دول.
+ * الافتراضي بقى: العدة الخفيفة بس (~110MB: subfinder httpx katana dnsx naabu
+ * ffuf dalfox gitleaks tlsx uncover). الثقيلة بتترفع بس لو NOVA_HEAVY_TOOLS=1.
+ * مفيش خسارة قدرة «موت»: الأداة الناقصة بتتنزّل عند الطلب الصريح (ops provsion)
+ * أو بتتشغّل من عقدة أسطول بدل المكنة الصغيرة — وده المعمول بيه أصلًا.
+ */
+// ⚠ مكانه هنا مقصود: TOOLS بتتفلتر بيه وقت التعرّف.
+export const HEAVY_TOOLS = ["amass", "nuclei", "trivy", "trufflehog", "osv-scanner", "gobuster"];
+const SLIM = process.env.NOVA_HEAVY_TOOLS !== "1";
+
+
 const TOOLS = [
   { bin: "subfinder", repo: "projectdiscovery/subfinder", match: /linux[_-]amd64\.zip$/i, asset: "zip", ver: ["-version"] },
   { bin: "httpx", repo: "projectdiscovery/httpx", match: /linux_amd64\.zip$/i, asset: "zip", ver: ["-version"] },
@@ -82,7 +95,7 @@ const TOOLS = [
   { bin: "uncover", repo: "projectdiscovery/uncover", match: /uncover_[\d.]+_linux_amd64\.zip$/i, asset: "zip", ver: ["-version"] },
   { bin: "trufflehog", repo: "trufflesecurity/trufflehog", match: /trufflehog_[\d.]+_linux_amd64\.tar\.gz$/i, asset: "targz", ver: ["--version"] },
   { bin: "osv-scanner", repo: "google/osv-scanner", match: /osv-scanner_linux_amd64$/i, asset: "raw", ver: ["--version"] },
-].filter((t) => !ONLY.length || ONLY.includes(t.bin));
+].filter((t) => (ONLY.length ? ONLY.includes(t.bin) : !(SLIM && HEAVY_TOOLS.includes(t.bin))));
 
 /**
  * Tools the user asked for that CANNOT be vendored as a static binary.
