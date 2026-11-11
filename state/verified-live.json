@@ -1,19 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-10T20:09:34.375Z",
-  "verdict": "GREEN",
+  "at": "2026-11-11T01:14:57.526Z",
+  "verdict": "RED",
   "counts": {
-    "pass": 21,
-    "fail": 0,
+    "pass": 19,
+    "fail": 1,
     "blocked": 0,
-    "review": 0
+    "review": 2
   },
   "meta": {
     "tools": [
       "dnsx",
       "subfinder",
       "httpx",
-      "nuclei",
       "katana",
       "nmap",
       "naabu",
@@ -28,24 +27,24 @@
       "check": "dns resolution",
       "status": "pass",
       "detail": "2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present",
-      "at": "2026-11-10T19:58:58.591Z"
+      "at": "2026-11-11T01:13:10.052Z"
     },
     {
       "layer": "cli",
       "check": "subfinder -d vulnweb.com",
       "status": "pass",
-      "detail": "19 سوبدومين (المطلوب ≥2) · www.vulnweb.com, antivirus1.vulnweb.com, estphp.vulnweb.com",
-      "at": "2026-11-10T19:59:19.220Z",
+      "detail": "19 سوبدومين (المطلوب ≥2) · test.php.vulnweb.com, testhmtml5.vulnweb.com, u003etestasp.vulnweb.com",
+      "at": "2026-11-11T01:13:18.705Z",
       "count": 19,
-      "ms": 20628
+      "ms": 8652
     },
     {
       "layer": "cli",
       "check": "httpx https://demo.testfire.net/",
       "status": "pass",
       "detail": "200 · Altoro Mutual ·",
-      "at": "2026-11-10T19:59:20.346Z",
-      "ms": 1125,
+      "at": "2026-11-11T01:13:19.664Z",
+      "ms": 958,
       "httpStatus": 200,
       "toolError": null,
       "toolFailed": false
@@ -55,39 +54,36 @@
       "check": "katana crawl testphp.vulnweb.com",
       "status": "pass",
       "detail": "1 رابط متكرول (المطلوب ≥1)",
-      "at": "2026-11-10T19:59:41.763Z",
+      "at": "2026-11-11T01:13:41.150Z",
       "count": 1,
-      "ms": 21417
+      "ms": 21486
     },
     {
       "layer": "cli",
-      "check": "nuclei -u testphp.vulnweb.com (high,critical)",
-      "status": "pass",
-      "detail": "4 طلب اتفحص و0 نتيجة high/critical · exit=0 · قوالب: [\u001b[34mINF\u001b[0m] No new updates found for nuclei templates",
-      "at": "2026-11-10T20:00:11.540Z",
-      "count": 0,
-      "ms": 18883,
-      "cutOff": false
+      "check": "nuclei present",
+      "status": "fail",
+      "detail": "مش موجود — الـvendor فشل؟",
+      "at": "2026-11-11T01:13:41.150Z"
     },
     {
       "layer": "cli",
       "check": "nmap scanme.nmap.org:80,22",
       "status": "pass",
       "detail": "2 بورت مفتوح · 22/tcp open · 80/tcp open",
-      "at": "2026-11-10T20:00:11.736Z",
+      "at": "2026-11-11T01:13:41.308Z",
       "count": 2,
-      "ms": 195
+      "ms": 158
     },
     {
       "layer": "cli",
       "check": "hub nova.waifly.com",
-      "status": "pass",
-      "detail": "https://nova.waifly.com/api/health → HTTP 200 · JSON 93B · ops bundle ✓ · 561ms",
-      "at": "2026-11-10T20:00:12.297Z",
+      "status": "review",
+      "detail": "https://nova.waifly.com/api/health → HTTP 502 · 150B مش JSON · ops/version → HTTP 502 · 906ms",
+      "at": "2026-11-11T01:13:42.214Z",
       "hubUrl": "https://nova.waifly.com",
-      "httpStatus": 200,
-      "opsStatus": 200,
-      "ms": 561,
+      "httpStatus": 502,
+      "opsStatus": 502,
+      "ms": 906,
       "refused": false
     },
     {
@@ -95,89 +91,97 @@
       "check": "ffuf fuzz testphp.vulnweb.com",
       "status": "pass",
       "detail": "61 طلب مُرسل و0 مطابقة (1 سطر مخرجات)",
-      "at": "2026-11-10T20:01:12.354Z",
+      "at": "2026-11-11T01:14:42.230Z",
       "count": 0,
       "sent": 61,
-      "ms": 60057
+      "ms": 60015
     },
     {
       "layer": "engine",
       "check": "engine reachable",
       "status": "pass",
       "detail": "HTTP 200",
-      "at": "2026-11-10T20:01:12.360Z"
+      "at": "2026-11-11T01:14:42.235Z"
     },
     {
       "layer": "engine",
       "check": "kinds report tool presence",
       "status": "pass",
-      "detail": "27 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap, tools.amass, tools.naabu, tools.ffuf,…",
-      "at": "2026-11-10T20:01:12.366Z"
+      "detail": "22 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.httpx, tools.subfinder, tools.katana, tools.nmap, tools.naabu, tools.ffuf, tools.dalfox, tools.gitlea…",
+      "at": "2026-11-11T01:14:42.240Z"
     },
     {
       "layer": "engine",
       "check": "bounty catalog served",
       "status": "pass",
-      "detail": "746 برنامج (511 بمكافأة) · آخر تحديث 8.1 يوم · ops/bounty/programs-catalog.json",
-      "at": "2026-11-10T20:01:12.387Z"
+      "detail": "746 برنامج (511 بمكافأة) · آخر تحديث 8.3 يوم · ops/bounty/programs-catalog.json",
+      "at": "2026-11-11T01:14:42.256Z"
     },
     {
       "layer": "engine",
       "check": "catalog lookup over HTTP",
       "status": "pass",
       "detail": "aces-dev.wnba.com → hackerone:nba-public (domain · استقبال open) · ونطاق مجهول → match:null",
-      "at": "2026-11-10T20:01:12.409Z"
+      "at": "2026-11-11T01:14:42.271Z"
     },
     {
       "layer": "engine",
       "check": "program registered active (demo.testfire.net)",
       "status": "pass",
       "detail": "id=demo.testfire.net · policy=https://demo.testfire.net/",
-      "at": "2026-11-10T20:01:12.596Z"
+      "at": "2026-11-11T01:14:42.407Z"
     },
     {
       "layer": "engine",
       "check": "job created",
       "status": "pass",
-      "detail": "job=20261110-b8a9f7 · 7 مهمة",
-      "at": "2026-11-10T20:01:12.605Z"
+      "detail": "job=20261111-c94eee · 7 مهمة",
+      "at": "2026-11-11T01:14:42.413Z"
     },
     {
       "layer": "engine",
       "check": "job executed",
       "status": "pass",
-      "detail": "7/7 done · 0 failed · 11 finding · done",
-      "at": "2026-11-10T20:09:34.175Z",
-      "jobId": "20261110-b8a9f7"
+      "detail": "6/7 done · 1 failed · 11 finding · done",
+      "at": "2026-11-11T01:14:57.441Z",
+      "jobId": "20261111-c94eee"
+    },
+    {
+      "layer": "engine",
+      "check": "failed tasks",
+      "status": "review",
+      "detail": "tools.nuclei: الأداة «nuclei» مش على الجهاز self-node (exit=127). أمر التثبيت: sh -c \"$(curl -sL https://raw.githubusercontent.com/projectdiscovery/nuclei/main/install.sh)\"",
+      "at": "2026-11-11T01:14:57.441Z",
+      "jobId": "20261111-c94eee"
     },
     {
       "layer": "engine",
       "check": "evidence hashed on disk",
       "status": "pass",
-      "detail": "6 ملف في state/jobs/20261110-b8a9f7/evidence · 5 فيهم بايتات · فاضي: tools.subfinder-e3b0c44298fc.txt (1 — 1 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية)",
-      "at": "2026-11-10T20:09:34.176Z",
-      "jobId": "20261110-b8a9f7",
+      "detail": "6 ملف في state/jobs/20261111-c94eee/evidence · 6 فيهم بايتات",
+      "at": "2026-11-11T01:14:57.441Z",
+      "jobId": "20261111-c94eee",
       "evidence": 6,
-      "emptyEvidence": 1,
-      "zeroOutputEvidence": 1,
+      "emptyEvidence": 0,
+      "zeroOutputEvidence": 0,
       "lostEvidence": 0
     },
     {
       "layer": "engine",
       "check": "report is honest about coverage",
       "status": "pass",
-      "detail": "614 بايت · فيه «Coverage gaps»=true · «reportable»=true",
-      "at": "2026-11-10T20:09:34.179Z",
-      "jobId": "20261110-b8a9f7"
+      "detail": "622 بايت · فيه «Coverage gaps»=true · «reportable»=true",
+      "at": "2026-11-11T01:14:57.443Z",
+      "jobId": "20261111-c94eee"
     },
     {
       "layer": "engine",
       "check": "findings vault is idempotent",
       "status": "pass",
-      "detail": "أول sync: +28/-28 (من مهام 21 · من الكتالوج القديم 11) · تاني: +0/-28 ومحدّثة 32 · متأكَّدة 0",
-      "at": "2026-11-10T20:09:34.361Z",
-      "jobId": "20261110-b8a9f7",
-      "vaultTotal": 28,
+      "detail": "أول sync: +22/-22 (من مهام 11 · من الكتالوج القديم 11) · تاني: +0/-22 ومحدّثة 22 · متأكَّدة 0",
+      "at": "2026-11-11T01:14:57.511Z",
+      "jobId": "20261111-c94eee",
+      "vaultTotal": 22,
       "vaultVerified": 0
     },
     {
@@ -185,7 +189,7 @@
       "check": "report draft gated on reproduction",
       "status": "pass",
       "detail": "3 مفتاح: 0 مسودة (200) · 3 مرفوضة (409) · البنية=true · سبب الرفض موجود=true",
-      "at": "2026-11-10T20:09:34.368Z",
+      "at": "2026-11-11T01:14:57.516Z",
       "keys": "8e6cb9b29d915ea3:409,6904dcc9f38b68e5:409,9d4b4cb37b85ac1b:409"
     },
     {
@@ -193,7 +197,7 @@
       "check": "hunt candidates stay context-only",
       "status": "pass",
       "detail": "12 مرشّح من 746 برنامج · أعلى استجابة 100% · مفلوت {\"notBounty\":235,\"pausedOrClosed\":0,\"lowEfficiency\":376,\"platform\":0,\"query\":0} · CIDR سياق بس=true · ترتيب=true",
-      "at": "2026-11-10T20:09:34.372Z",
+      "at": "2026-11-11T01:14:57.524Z",
       "catalogPresent": true
     },
     {
@@ -201,7 +205,7 @@
       "check": "negative control refuses example.com",
       "status": "pass",
       "detail": "HTTP 403 · برنامج Negative control (must never be scanned actively) محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة. للتفعيل لازم تأكيد إذن مكتوب: program_d…",
-      "at": "2026-11-10T20:09:34.374Z",
+      "at": "2026-11-11T01:14:57.525Z",
       "negative": true
     }
   ]
