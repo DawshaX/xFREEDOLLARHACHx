@@ -19,6 +19,7 @@
 #   Settings → Secrets and variables → Actions → Variables
 #     NOVA_HUB    wss://nova.waifly.com/api/local-agent/ws        (your hub)
 #     FLEET_NODES 8                                                (how many — الفاضل 8 لو مش موجودة)
+#   wave: 2026-11-11 21:14Z — الهب قام بالإصلاح (7edd122): بنرجّع العقد بعد نوم 17 ساعة.
 #
 # Nodes appear in the panel under /api/local-agent/agents and /api/fleet/mesh.
 # ─────────────────────────────────────────────────────────────────────────────
