@@ -385,7 +385,10 @@ server.listen(port, host, () => {
       // تنظيف القرص اليومي: سياسة معلنة (آخر 400 مهمة/14 يوم) — القرص مش وعاء بلا قاعة.
       try {
         const { pruneState } = await import("./lib/ops/state-prune");
-        setTimeout(() => { try { pruneState(); } catch { /* ok */ } }, 60_000).unref?.();
+        // تنظيف فوري بعد 5s من الإقلاع (مش 60): القياس اللي علّمنا ده — القرص امتلأ
+        // فوق الحصة والديمون رفض التشغيل (2026-11-10). أول إقلاع ناجح لازم يفضّي
+        // المساحة قبل ما أي حاجة تانية تكبّرها. واليومي بيفضل حارس الخلفية.
+        setTimeout(() => { try { const r = pruneState(); if (r.removed > 0) logger.info({ removed: r.removed, freedBytes: r.freedBytes }, "boot prune pass"); } catch { /* ok */ } }, 5_000).unref?.();
         setInterval(() => { try { const r = pruneState(); if (r.removed > 0) logger.info({ removed: r.removed, freedBytes: r.freedBytes }, "state prune pass"); } catch { /* ok */ } }, 24 * 3600_000).unref?.();
       } catch { /* state-prune مش جوه أول حزمة — مش شرط إقلاع */ } // الإعدادات المقفولة دائمًا قبل أي إشعار
       const { ensureChatId, notifyBoot } = await import("./lib/ops/telegram");
