@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-11T00:00:00.099Z",
+  "at": "2026-11-11T14:03:04.447Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 331236,
+  "total": 331496,
   "bySeverity": {
-    "high": 126526,
-    "medium": 144652,
-    "low": 14835,
-    "unknown": 17641,
-    "critical": 27511,
+    "high": 126598,
+    "medium": 144809,
+    "low": 14850,
+    "unknown": 17643,
+    "critical": 27525,
     "none": 71
   },
   "byYear": {
@@ -42,11 +42,11 @@
     "2022": 4753,
     "2023": 27438,
     "2024": 38931,
-    "2025": 44987,
-    "2026": 89466
+    "2025": 44993,
+    "2026": 89720
   },
   "kev": 1131,
-  "epssScored": 315595,
+  "epssScored": 315779,
   "products": 60927,
   "topProducts": [
     {
@@ -59,7 +59,7 @@
     },
     {
       "product": "chrome",
-      "count": 10821
+      "count": 10820
     },
     {
       "product": "firefox",
@@ -212,17 +212,17 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 40305281,
-    "sha256": "a3177e3fcf7acb08cbfe25398774b323ddba2187799b7699c3c71145ccf2faeb"
+    "bytes": 40344134,
+    "sha256": "08356a3c5d4334bd037e66ca8135d33866ca1c7cf8e03aa358473fc77adcd7b6"
   },
   "mode": "deepen",
-  "says_ar": "331236 ثغرة حقيقية · critical 27511 · high 126526 · 1131 مستغلّة فعلياً (KEV) · 315595 لها EPSS · 60927 منتج بـCPE · مزامنة 2026-11-11T00:00:00.099Z",
+  "says_ar": "331496 ثغرة حقيقية · critical 27525 · high 126598 · 1131 مستغلّة فعلياً (KEV) · 315779 لها EPSS · 60927 منتج بـCPE · مزامنة 2026-11-11T14:03:04.447Z",
   "deepen": {
-    "nextStartIndex": 356682,
+    "nextStartIndex": 404682,
     "windowPages": 12,
-    "walkedFrom": 332682,
-    "nvdTotal": 423868,
-    "coverage": 0.7815,
-    "at": "2026-11-11T00:00:00.100Z"
+    "walkedFrom": 380682,
+    "nvdTotal": 424128,
+    "coverage": 0.7816,
+    "at": "2026-11-11T14:03:04.448Z"
   }
 }

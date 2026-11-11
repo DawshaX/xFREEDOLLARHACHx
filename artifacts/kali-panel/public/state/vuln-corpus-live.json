@@ -1,17 +1,17 @@
 {
   "measured": true,
-  "at": "2026-11-11T00:00:00.099Z",
-  "total": 331236,
+  "at": "2026-11-11T14:03:04.447Z",
+  "total": 331496,
   "bySeverity": {
-    "high": 126526,
-    "medium": 144652,
-    "low": 14835,
-    "unknown": 17641,
-    "critical": 27511,
+    "high": 126598,
+    "medium": 144809,
+    "low": 14850,
+    "unknown": 17643,
+    "critical": 27525,
     "none": 71
   },
   "kev": 1131,
-  "epssScored": 315595,
+  "epssScored": 315779,
   "products": 60927,
   "mode": "deepen",
   "sources": [
@@ -5435,6 +5435,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-65400",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "An authentication issue was addressed with improved state management. This issue is fixed in macOS Golden Gate 27, macOS Sequoia 15.7.9, macOS Sonoma 14.8.9, macOS Tahoe 26.6.1, macOS Tahoe 26.7. An attacker on the network may be able to authenticate to Screen",
+      "cwe": [
+        "CWE-287"
+      ],
+      "kev": true,
+      "epss": 0.18057,
+      "pub": "2026-08-06T22:18:14.533",
+      "products": [
+        "macos",
+        "macos",
+        "macos"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-48172",
       "cvss": 9.8,
       "sev": "critical",
@@ -5929,24 +5947,6 @@
       "pub": "2026-05-27T17:16:41.787",
       "products": [
         "nx_console"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-65400",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "An authentication issue was addressed with improved state management. This issue is fixed in macOS Golden Gate 27, macOS Sequoia 15.7.9, macOS Sonoma 14.8.9, macOS Tahoe 26.6.1, macOS Tahoe 26.7. An attacker on the network may be able to authenticate to Screen",
-      "cwe": [
-        "CWE-287"
-      ],
-      "kev": true,
-      "epss": 0.01723,
-      "pub": "2026-08-06T22:18:14.533",
-      "products": [
-        "macos",
-        "macos",
-        "macos"
       ],
       "refs": []
     },
@@ -6647,7 +6647,7 @@
         "CWE-863"
       ],
       "kev": true,
-      "epss": 0.90491,
+      "epss": 0.91677,
       "pub": "2026-08-11T18:18:21.610",
       "products": [
         "commerce",
@@ -9528,6 +9528,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-44308",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "The issue was addressed with improved checks. This issue is fixed in Safari 18.1.1, iOS 17.7.2 and iPadOS 17.7.2, iOS 18.1.1 and iPadOS 18.1.1, macOS Sequoia 15.1.1, visionOS 2.1.1. Processing maliciously crafted web content may lead to arbitrary code executio",
+      "cwe": [],
+      "kev": true,
+      "epss": 0.09852,
+      "pub": "2024-11-20T00:15:17.080",
+      "products": [
+        "debian_linux",
+        "safari",
+        "ipados"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-65660",
       "cvss": 8.8,
       "sev": "high",
@@ -9542,22 +9558,6 @@
         "sharepoint_server",
         "sharepoint_server",
         "sharepoint_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-44308",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "The issue was addressed with improved checks. This issue is fixed in Safari 18.1.1, iOS 17.7.2 and iPadOS 17.7.2, iOS 18.1.1 and iPadOS 18.1.1, macOS Sequoia 15.1.1, visionOS 2.1.1. Processing maliciously crafted web content may lead to arbitrary code executio",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.09852,
-      "pub": "2024-11-20T00:15:17.080",
-      "products": [
-        "debian_linux",
-        "safari",
-        "ipados"
       ],
       "refs": []
     },
@@ -13713,6 +13713,25 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-81963",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Improper link resolution before file access ('link following') in Windows Update Stack allows an authorized attacker to elevate privileges locally.",
+      "cwe": [
+        "CWE-59",
+        "CWE-284"
+      ],
+      "kev": true,
+      "epss": 0.07115,
+      "pub": "2026-09-08T18:21:00.090",
+      "products": [
+        "windows_11_23h2",
+        "windows_11_24h2",
+        "windows_11_25h2"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-38080",
       "cvss": 7.8,
       "sev": "high",
@@ -13881,23 +13900,7 @@
         "windows_nt"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2009-1123",
-      "cvss": 7.8,
-      "sev": "high",
-      "desc": "The kernel in Microsoft Windows 2000 SP4, XP SP2 and SP3, Server 2003 SP2, Vista Gold, SP1, and SP2, and Server 2008 SP2 does not properly validate changes to unspecified kernel objects, which allows local users to gain privileges via a crafted application, ak",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.04878,
-      "pub": "2009-06-10T18:30:00.327",
-      "products": [
-        "windows_2000",
-        "windows_server_2003",
-        "windows_server_2008"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "331236 ثغرة حقيقية من NVD · 1131 مستغلّة فعلياً (KEV) · 60927 منتج · مزامنة 2026-11-11T00:00:00.099Z"
+  "says_ar": "331496 ثغرة حقيقية من NVD · 1131 مستغلّة فعلياً (KEV) · 60927 منتج · مزامنة 2026-11-11T14:03:04.447Z"
 }
