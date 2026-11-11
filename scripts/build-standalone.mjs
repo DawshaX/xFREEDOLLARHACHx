@@ -420,6 +420,10 @@ if (role === "node" || role === "agent") {
 
   let child = null;
   let leaving = false;
+  // القياس 2026-11-11: التطبيق بيموت OOM بعد 25s بالظبط كل مرة — والموت ده
+  // ينجح في خدمة /api/health لللحظات دي، فـ«healthy» بتبقى true ومؤقّت الإنقاذ
+  // مش بينطلق أبدًا. الحارس الحقيقي: موت متتالي سريع (fastDeaths) = مرض.
+  let firstFastDeathAt = 0;
   let mark = stamp();
   let vendorRunning = false;   // تنزيل الأدوات شغال؟ (ممنوع يتداخل مع إقلاع التطبيق)
   let fastDeaths = 0;          // موتات متتالية < 10s → crash-loop مثبت
@@ -814,7 +818,19 @@ if (role === "node" || role === "agent") {
   };
 
   const rescueTick = async () => {
-    if (process.env.NOVA_RESCUE_OFF === "1" || rescuing || vendorRunning || child) { downSince = 0; return; }
+    if (process.env.NOVA_RESCUE_OFF === "1" || rescuing || vendorRunning) { downSince = 0; return; }
+    // flap أولاً: 3+ موتات سريعة في 120s = التطبيق بيلف على ذيله — الإنقاذ مش
+    // بيستنى صحّة غائبة، بيرأي المرض.
+    if (fastDeaths >= 3) {
+      if (Date.now() - lastRescueTry < 300_000) return; // كل 5 دقايق سقف
+      rescuing = true; lastRescueTry = Date.now();
+      console.log("[supervisor] crash-loop مثبت (" + fastDeaths + " موتات متتالية سريعة) — إنقاذ ذاتي بيستبدل الحزمة");
+      try { await rescueSwap(); }
+      catch (e) { console.log("[supervisor] rescue فشل: " + (e && e.message)); }
+      rescuing = false;
+      return;
+    }
+    if (child) { downSince = 0; return; }
     if (await healthy(rescuePort)) { downSince = 0; return; }
     if (!downSince) { downSince = Date.now(); return; }
     if (Date.now() - downSince < 240_000) return;   // 4 دقائق موت متواصل قبل التدخل
