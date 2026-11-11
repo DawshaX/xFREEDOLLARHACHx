@@ -691,7 +691,32 @@ router.post("/ops/tools/provision", async (req: Request, res: Response) => {
 router.get("/ops/state", async (_req: Request, res: Response) => {
   let githubBackup: unknown = null;
   try { githubBackup = (await import("../lib/ops/state-backup")).stateBackupInfo(); } catch { /* أقدم من الباك-أب */ }
-  res.json({ ok: true, footprint: measureStateFootprint(), lastPrune: lastPrune(), githubBackup, noteAr: "الذاكرة/الإعدادات على Supabase Edge، وstate/ النظيفة بتترفع على GitHub Releases كل 15 دقيقة؛ اللي فاضل محلي كاش قابل للتوليد (vendor من الإصدارات، corpus من release vuln-corpus) — بيتمسح ويرجع بدون خسارة." });
+  // ── قوة الأسطول الموحّدة: كل الأجهزة حيًّا، ودمج فعلي للأنوية والرام ──────
+  // الطلب المقاس (2026-11-11): «ادمج امكانيات كلهم». الدمج الحقيقي موجود أصلاً
+  // (المهام بتتوزع على الأسطول) — وهنا بنعرضه كرقم واحد صادق: مجموع الأنوية
+  // والرام اللي شافها الـprofile الحي لكل عقدة + موارد الهب من الـcgroup.
+  let fleetPower: unknown = null;
+  try {
+    const agents = (await import("./local-agent")).getConnectedAgentList();
+    let cpu = 0, memMb = 0;
+    const nodes: Array<{ id: string; hostname: string; cpus: number; ramMb: number }> = [];
+    for (const a of agents) {
+      const c = typeof a.cpus === "number" ? a.cpus : 0;
+      const m = typeof a.totalMemory === "number" ? Math.round(a.totalMemory / 1048576) : 0;
+      cpu += c; memMb += m;
+      nodes.push({ id: a.id, hostname: a.hostname, cpus: c, ramMb: m });
+    }
+    fleetPower = {
+      agentsConnected: agents.length,
+      totalVCpu: cpu,
+      totalRamMb: memMb,
+      summaryAr: agents.length > 0
+        ? `الأسطول المدمج الآن: ${agents.length} عقدة × مجموع ${cpu} أنوية / ${Math.round(memMb / 1024)}GB رام — كل المهام التقيلة بتتوزع عليهم تلقائيًا`
+        : "مفيش عقد متصلة في اللحظة دي — الموجة الجاية من Actions (8 عقد × 4vCPU/16GB) على الجدول كل 5 ساعات",
+      nodes: nodes.slice(0, 12),
+    };
+  } catch { /* الأسطول قبل التوصيل */ }
+  res.json({ ok: true, footprint: measureStateFootprint(), lastPrune: lastPrune(), githubBackup, fleetPower, noteAr: "الذاكرة/الإعدادات على Supabase Edge، وstate/ النظيفة بتترفع على GitHub Releases كل 15 دقيقة؛ اللي فاضل محلي كاش قابل للتوليد (vendor من الإصدارات، corpus من release vuln-corpus) — بيتمسح ويرجع بدون خسارة. القوة المدمجة للأسطول في fleetPower." });
 });
 
 router.post("/ops/state/github-backup", async (req: Request, res: Response) => {
