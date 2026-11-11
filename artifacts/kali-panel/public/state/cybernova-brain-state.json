@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 122,
-    "lastHeartbeatAt": "2026-11-10T22:04:22.736Z",
+    "autonomousCyclesCompleted": 123,
+    "lastHeartbeatAt": "2026-11-11T02:24:45.413Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #122 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #123 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب"
   },
@@ -35,6 +35,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794363887025",
+      "ts": "2026-11-11 02:24:47 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #123 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 172.253.135.141 | HTTP 200 | SHA256: 27408b174dbbd3c5 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 34 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:12)"
+    },
     {
       "id": "pulse-1794348264001",
       "ts": "2026-11-10 22:04:24 UTC",
@@ -201,13 +208,6 @@
       "ts": "2026-11-05 17:51:20 UTC",
       "category": "AUTONOMOUS_PULSE",
       "titleAr": "اكتمال الدورة الذاتية #99 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1793900542756-f3b9",
-      "ts": "2026-11-05 17:42:22 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #98 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     }
   ],
@@ -1383,6 +1383,16 @@
       "at": "2026-11-02T21:06:50.538Z"
     },
     {
+      "id": "CVE-2026-114146",
+      "title": "CVE-2026-114146",
+      "description": "Microsoft Security Advisory CVE-2026-114146 - ASP.NET Core Elevation of Privilege Vulnerability",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-67wp-ghc2-fw2g",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
       "id": "CVE-2023-3899",
       "title": "CVE-2023-3899",
       "description": "A vulnerability was found in subscription-manager that allows local privilege escalation due to inadequate authorization. The D-Bus interface com.redhat.RHSM1 exposes a significant number of methods to all users that could change the state of the registration. By using the com.redhat.RHSM1.Config.SetAll() method, a low-privileged local user could tamper with the state of the registration, by unreg",
@@ -1773,6 +1783,56 @@
       "at": "2026-11-02T03:30:53.193Z"
     },
     {
+      "id": "CVE-2026-118745",
+      "title": "CVE-2026-118745",
+      "description": "Microsoft Security Advisory CVE-2026-118745 - Visual Studio Remote Code Execution Vulnerability",
+      "cvss": 7.7,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-x8x8-p968-x646",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
+      "id": "CVE-2026-114152",
+      "title": "CVE-2026-114152",
+      "description": "Microsoft Security Advisory CVE-2026-114152 - Visual Studio Remote Code Execution Vulnerability",
+      "cvss": 7.7,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-xf35-v9jh-g65w",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
+      "id": "CVE-2026-114151",
+      "title": "CVE-2026-114151",
+      "description": "Microsoft Security Advisory CVE-2026-114151 - Visual Studio Remote Code Execution Vulnerability",
+      "cvss": 7.7,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-fpxj-5c99-g7vj",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
+      "id": "CVE-2026-114158",
+      "title": "CVE-2026-114158",
+      "description": "Microsoft Security Advisory CVE-2026-114158 - Visual Studio Remote Code Execution Vulnerability",
+      "cvss": 7.7,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-r8h3-p8p6-ggp7",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
+      "id": "CVE-2026-114159",
+      "title": "CVE-2026-114159",
+      "description": "Microsoft Security Advisory CVE-2026-114159 - Visual Studio Remote Code Execution Vulnerability",
+      "cvss": 7.7,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-3cgx-w6gm-fqrx",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
       "id": "CVE-2026-62662",
       "title": "CVE-2026-62662",
       "description": "Pocket ID: The client credentials grant allows any OIDC client to obtain tokens for arbitrary audiences",
@@ -1811,6 +1871,36 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-36062",
       "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2026-114147",
+      "title": "CVE-2026-114147",
+      "description": "Microsoft Security Advisory CVE-2026-114147 - ASP.NET Core Denial of Service Vulnerability",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-wr8v-9x5q-ggcm",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
+      "id": "CVE-2026-120006",
+      "title": "CVE-2026-120006",
+      "description": "Microsoft Security Advisory CVE-2026-120006 - Aspire Elevation of Privilege Vulnerability",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-f7vh-h5g3-7jrh",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
+      "id": "CVE-2026-114149",
+      "title": "CVE-2026-114149",
+      "description": "Microsoft Security Advisory CVE-2026-114149 - ASP.NET Core Denial of Service Vulnerability",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-x33c-w48q-qrgc",
+      "at": "2026-11-11T02:24:47.025Z"
     },
     {
       "id": "CVE-2026-126080",
@@ -2363,6 +2453,26 @@
       "at": "2026-11-02T03:30:53.772Z"
     },
     {
+      "id": "CVE-2026-120792",
+      "title": "CVE-2026-120792",
+      "description": "Microsoft Security Advisory CVE-2026-120792 - Aspire Information Disclosure Vulnerability",
+      "cvss": 7.3,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-q6jf-24jf-m3cg",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
+      "id": "CVE-2026-120778",
+      "title": "CVE-2026-120778",
+      "description": "Microsoft Security Advisory CVE-2026-120778 - Aspire Elevation of Privilege Vulnerability",
+      "cvss": 7.3,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-m63f-xhvm-6mv5",
+      "at": "2026-11-11T02:24:47.025Z"
+    },
+    {
       "id": "CVE-2022-23552",
       "title": "CVE-2022-23552",
       "description": "Grafana is an open-source platform for monitoring and observability. Starting with the 8.1 branch and prior to versions 8.5.16, 9.2.10, and 9.3.4, Grafana had a stored XSS vulnerability affecting the core plugin GeoMap. The stored XSS vulnerability was possible because SVG files weren't properly sanitized and allowed arbitrary JavaScript to be executed in the context of the currently authorized us",
@@ -2541,126 +2651,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3640",
       "at": "2026-11-09T07:28:06.032Z"
-    },
-    {
-      "id": "CVE-2023-42753",
-      "title": "CVE-2023-42753",
-      "description": "An array indexing vulnerability was found in the netfilter subsystem of the Linux kernel. A missing macro could lead to a miscalculation of the `h->nets` array offset, providing attackers with the primitive to arbitrarily increment/decrement a memory buffer out-of-bound. This issue may allow a local user to crash the system or potentially escalate their privileges on the system.",
-      "cvss": 7,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-42753",
-      "at": "2026-11-08T10:55:02.086Z"
-    },
-    {
-      "id": "CVE-2023-5574",
-      "title": "CVE-2023-5574",
-      "description": "A use-after-free flaw was found in xorg-x11-server-Xvfb. This issue occurs in Xvfb with a very specific and legacy configuration (a multi-screen setup with multiple protocol screens, also known as Zaphod mode). If the pointer is warped from a screen 1 to a screen 0, a use-after-free issue may be triggered during shutdown or reset of the Xvfb server, allowing for possible escalation of privileges o",
-      "cvss": 7,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5574",
-      "at": "2026-11-06T01:56:03.641Z"
-    },
-    {
-      "id": "CVE-2024-26799",
-      "title": "CVE-2024-26799",
-      "description": "In the Linux kernel, the following vulnerability has been resolved:\n\nASoC: qcom: Fix uninitialized pointer dmactl\n\nIn the case where __lpass_get_dmactl_handle is called and the driver\nid dai_id is invalid the pointer dmactl is not being assigned a value,\nand dmactl contains a garbage value since it has not been initialized\nand so the null check may not work. Fix this to initialize dmactl to\nNULL. ",
-      "cvss": 7,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-26799",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2020-11022",
-      "title": "CVE-2020-11022",
-      "description": "In jQuery starting with 1.12.0 and before 3.5.0, passing HTML from untrusted sources - even after sanitizing it - to one of jQuery's DOM manipulation methods (i.e. .html(), .append(), and others) may execute untrusted code. This problem is patched in jQuery 3.5.0.",
-      "cvss": 6.9,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-11022",
-      "at": "2026-11-02T21:06:50.538Z"
-    },
-    {
-      "id": "CVE-2021-21353",
-      "title": "CVE-2021-21353",
-      "description": "Pug is an npm package which is a high-performance template engine.  In pug before version 3.0.1, if a remote attacker was able to control the `pretty` option of the pug compiler, e.g. if you spread a user provided object such as the query parameters of a request into the pug template inputs, it was possible for them to achieve remote code execution on the node.js backend. This is fixed in version ",
-      "cvss": 6.8,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-21353",
-      "at": "2026-11-02T21:06:50.538Z"
-    },
-    {
-      "id": "CVE-2009-4139",
-      "title": "CVE-2009-4139",
-      "description": "A flaw was found in Spacewalk Java site packages. This cross-site request forgery (CSRF) vulnerability allows a remote attacker to hijack the authentication of arbitrary users. This can lead to unauthorized actions, including disabling user accounts, adding new user accounts, or escalating privileges by modifying existing user accounts to have administrator access.",
-      "cvss": 6.8,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2009-4139",
-      "at": "2026-11-02T03:30:53.193Z"
-    },
-    {
-      "id": "CVE-2023-33951",
-      "title": "CVE-2023-33951",
-      "description": "A race condition vulnerability was found in the vmwgfx driver in the Linux kernel. The flaw exists within the handling of GEM objects. The issue results from improper locking when performing operations on an object. This flaw allows a local privileged user to disclose information in the context of the kernel.",
-      "cvss": 6.7,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-33951",
-      "at": "2026-11-06T21:53:20.410Z"
-    },
-    {
-      "id": "CVE-2023-33952",
-      "title": "CVE-2023-33952",
-      "description": "A double-free vulnerability was found in handling vmw_buffer_object objects in the vmwgfx driver in the Linux kernel. This issue occurs due to the lack of validating the existence of an object prior to performing further free operations on the object, which may allow a local privileged user to escalate privileges and execute code in the context of the kernel.",
-      "cvss": 6.7,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-33952",
-      "at": "2026-11-06T21:53:20.410Z"
-    },
-    {
-      "id": "CVE-2022-39324",
-      "title": "CVE-2022-39324",
-      "description": "Grafana is an open-source platform for monitoring and observability. Prior to versions 8.5.16 and 9.2.8, malicious user can create a snapshot and arbitrarily choose the `originalUrl` parameter by editing the query, thanks to a web proxy. When another user opens the URL of the snapshot, they will be presented with the regular web interface delivered by the trusted Grafana server. The `Open original",
-      "cvss": 6.7,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-39324",
-      "at": "2026-11-06T01:56:03.641Z"
-    },
-    {
-      "id": "CVE-2023-3106",
-      "title": "CVE-2023-3106",
-      "description": "A NULL pointer dereference vulnerability was found in netlink_dump. This issue can occur when the Netlink socket receives the message(sendmsg) for the XFRM_MSG_GETSA, XFRM_MSG_GETPOLICY type message, and the DUMP flag is set and can cause a denial of service or possibly another unspecified impact. Due to the nature of the flaw, privilege escalation cannot be fully ruled out, although it is unlikel",
-      "cvss": 6.6,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3106",
-      "at": "2026-11-07T08:02:09.769Z"
-    },
-    {
-      "id": "CVE-2023-40660",
-      "title": "CVE-2023-40660",
-      "description": "A flaw was found in OpenSC packages that allow a potential PIN bypass. When a token/card is authenticated by one process, it can perform cryptographic operations in other processes when an empty zero-length pin is passed. This issue poses a security risk, particularly for OS logon/screen unlock and for small, permanently connected tokens to computers. Additionally, the token can internally track l",
-      "cvss": 6.6,
-      "severity": "MEDIUM",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-40660",
-      "at": "2026-11-06T21:53:20.410Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 28,
+    "freshThisPulse": 34,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
-      "GHSA:7"
+      "GHSA:12"
     ],
-    "at": "2026-11-10T22:04:24.001Z"
+    "at": "2026-11-11T02:24:47.025Z"
   }
 }
