@@ -57,6 +57,14 @@ export NOVA_MEMORY_FILE="$HERE/state/nova-memory.json"
 export NOVA_JOBS_REL="$HERE/state/jobs"
 export NOVA_PROGRAMS_FILE="$HERE/state/programs.json"
 mkdir -p "$HERE/state/jobs"
+# ── core dumps = قاتل القرص (مقاس 2026-11-11) ──────────────────────────────
+# كل OOM crash بـSIGABRT كان بيكتب core.* على القرص: 8 ملفات بمجموع ~2.5GB
+# (core.178 وحده 493MB) فجّروا حصة waifly وPterodactyl قتل السيرفر. القرص هنا
+# ~2GB، فكور واحد كفيل يقفل السلوت. ulimit -c 0 بيوقف توليد أي core جديد لكل
+# العمليات الفرعية (boot.mjs → التطبيق يرثان الحد)، وrm بيمسح اللي اتكتب قبل
+# الإصلاح ده عند أول إقلاع — self-healing بلا تدخل يدوي.
+ulimit -c 0 2>/dev/null || true
+rm -f "$HERE"/core.* 2>/dev/null || true
 # ── الحلقة دي هي موضوع الملف ده كله ──────────────────────────────────────────
 # boot.mjs بيراقب التطبيق، بس مافيش حاجة بتراقب boot.mjs نفسه. على بيضة
 # Pterodactyl (Waifly) العملية اللي بتخلص هنا هي العملية الرئيسية للحاوية كلها،
