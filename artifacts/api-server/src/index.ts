@@ -390,7 +390,15 @@ server.listen(port, host, () => {
         // المساحة قبل ما أي حاجة تانية تكبّرها. واليومي بيفضل حارس الخلفية.
         setTimeout(() => { try { const r = pruneState(); if (r.removed > 0) logger.info({ removed: r.removed, freedBytes: r.freedBytes }, "boot prune pass"); } catch { /* ok */ } }, 5_000).unref?.();
         setInterval(() => { try { const r = pruneState(); if (r.removed > 0) logger.info({ removed: r.removed, freedBytes: r.freedBytes }, "state prune pass"); } catch { /* ok */ } }, 24 * 3600_000).unref?.();
-      } catch { /* state-prune مش جوه أول حزمة — مش شرط إقلاع */ } // الإعدادات المقفولة دائمًا قبل أي إشعار
+      } catch { /* state-prune مش جوه أول حزمة — مش شرط إقلاع */ }
+      // ── «مافيش حاجة بتتخزن على السيرفر» — الحالة الحيّة على GitHub كل 15 دقيقة
+      // (الذاكرة/الإعدادات على Supabase من زمان، والكوربوس والأدوات كاش بيتعاد).
+      try {
+        const sb = await import("./lib/ops/state-backup");
+        const r = await sb.restoreStateFromGithubIfNeeded();
+        if (r.restored) logger.info({ files: r.files }, "state-backup: استرجاع تمام — الكونتينر كان فاضي");
+        sb.scheduleStateBackup();
+      } catch { /* state-backup مش جوه الحزمة القديمة */ } // الإعدادات المقفولة دائمًا قبل أي إشعار
       const { ensureChatId, notifyBoot } = await import("./lib/ops/telegram");
       ensureChatId();
       void notifyBoot(String(process.env.NOVA_BUILD_SHA || process.env.KALI_BUILD_SHA || "dev").slice(0, 12));

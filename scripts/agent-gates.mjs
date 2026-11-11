@@ -46,6 +46,7 @@ const AGENT_GATES = [
   ["scripts/test-fetch-db-ca-handshake.mjs", "db ca pin: real Postgres SSLRequest dance, N-refusal honest, dead host loud"],
   ["scripts/test-runtime-config.mjs", "runtime config: allowlist-only, values never leak, durable across restart"],
   ["scripts/test-state-prune.mjs", "state prune: القرص يتقاس ويتنضف بسياسة معلنة — أرقام مش نصوص"],
+  ["scripts/test-state-backup.mjs", "state backup: GitHub نسخة حيّة — بلا توكن بيقول مفعّل لأ بصراحة"],
   ["scripts/test-telegram-hub.mjs", "telegram hub: throttle, /start pairing, dead-silent without token"],
   ["scripts/test-visitor-intel.mjs", "visitor intel: every visit reported to telegram with passive enrichment, api/assets/private-ip skipped"],
   ["scripts/test-fetch-auth-patch.mjs", "panel auth: every same-origin /api fetch carries x-nova-token, cross-origin never leaks"],

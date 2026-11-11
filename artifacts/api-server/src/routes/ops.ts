@@ -688,8 +688,18 @@ router.post("/ops/tools/provision", async (req: Request, res: Response) => {
  * بتتقال كأسماء — «مبنزّلهاش» مش «نزّلناها فاضية». */
 
 /* ── القرص: قياس بصمة الحالة + تنظيف سياسي معلن (مش حذف عشوائي) ─────── */
-router.get("/ops/state", (_req: Request, res: Response) => {
-  res.json({ ok: true, footprint: measureStateFootprint(), lastPrune: lastPrune(), noteAr: "الذاكرة/الإعدادات بتتعاكس تلقائيًا على Supabase Edge (برّه القرص)؛ هنا بنقيس اللي فاضل محليًا وننظفه بسياسة معلنة." });
+router.get("/ops/state", async (_req: Request, res: Response) => {
+  let githubBackup: unknown = null;
+  try { githubBackup = (await import("../lib/ops/state-backup")).stateBackupInfo(); } catch { /* أقدم من الباك-أب */ }
+  res.json({ ok: true, footprint: measureStateFootprint(), lastPrune: lastPrune(), githubBackup, noteAr: "الذاكرة/الإعدادات على Supabase Edge، وstate/ النظيفة بتترفع على GitHub Releases كل 15 دقيقة؛ اللي فاضل محلي كاش قابل للتوليد (vendor من الإصدارات، corpus من release vuln-corpus) — بيتمسح ويرجع بدون خسارة." });
+});
+
+router.post("/ops/state/github-backup", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "رفع نسخة بيدك مفتاح النسخ — NOVA_EXEC_TOKEN مطلوب."); return; }
+  try {
+    const out = await (await import("../lib/ops/state-backup")).backupStateToGithub();
+    res.status(out.ok ? 200 : 502).json(out);
+  } catch (e) { res.status(500).json({ ok: false, detail: e instanceof Error ? e.message : "خطأ غير معروف" }); }
 });
 
 router.post("/ops/state/prune", (req: Request, res: Response) => {
