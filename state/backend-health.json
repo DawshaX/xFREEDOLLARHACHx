@@ -1,27 +1,27 @@
 {
-  "at": "2026-11-10T20:33:15.264Z",
+  "at": "2026-11-11T01:04:17.756Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "GREEN",
   "counts": {
-    "cves": 115996,
+    "cves": 115999,
     "huntRuns": 22,
     "findings": 0
   },
   "corpusSample": 3,
-  "corpusSearched": 115996,
+  "corpusSearched": 115999,
   "corpusIndexTotal": 84000,
   "corpusSlice": false,
   "negativeSearchOk": true,
-  "negativeSearched": 115996,
+  "negativeSearched": 115999,
   "corpusDated": true,
   "chat": {
     "ok": true,
     "status": 200,
     "seat": "pollinations-openai",
-    "chunks": 9,
+    "chunks": 8,
     "streamed": true,
-    "firstChunkMs": 325,
-    "totalMs": 326,
+    "firstChunkMs": 355,
+    "totalMs": 356,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
@@ -29,37 +29,37 @@
     {
       "name": "health",
       "status": 200,
-      "ms": 1515,
+      "ms": 1949,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-10T20:33:12.711Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":115996,\"huntRuns\":22,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-11T01:04:15.059Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":115999,\"huntRuns\":22,\"findings\":0}}"
     },
     {
       "name": "hunt",
       "status": 200,
-      "ms": 788,
+      "ms": 777,
       "ok": true,
       "sample": "{\"run\":{\"id\":22,\"at\":\"2026-11-10T19:52:29.221+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":23317,\"katana\":98716,\"nuclei:root\":770476,\"nuc"
     },
     {
       "name": "organs",
       "status": 200,
-      "ms": 227,
+      "ms": 627,
       "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"115996 CVE · 329672 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-10T20:32:00.095787+00:00\",\"updated_at\":\"2"
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"115999 CVE · 331236 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-11T01:02:00.075008+00:00\",\"updated_at\":\"2"
     },
     {
       "name": "corpus?q=nginx",
       "status": 200,
-      "ms": 654,
+      "ms": 407,
       "ok": true,
       "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2026-111962\",\"severity\":\"unknown\",\"cvss\":null,\"kev\":false,\"epss\":null,\"products\":[],\"summary\":\"The WP Remote Users Sync WordPress plugin before 2.2.0 does not adequately restrict access t"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
       "status": 200,
-      "ms": 516,
+      "ms": 473,
       "ok": true,
-      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":115996,\"indexTotal\":84000,\"syncedAt\":\"2026-11-05T22:31:14.974Z\",\"slice\":false,\"at\":\"2026-11-10T20:33:14.907Z\"}"
+      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":115999,\"indexTotal\":84000,\"syncedAt\":\"2026-11-05T22:31:14.974Z\",\"slice\":false,\"at\":\"2026-11-11T01:04:17.353Z\"}"
     },
     {
       "name": "corpus dated (published)",
@@ -71,9 +71,9 @@
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 326,
+      "ms": 356,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=9 first=325ms total=326ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=8 first=355ms total=356ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
