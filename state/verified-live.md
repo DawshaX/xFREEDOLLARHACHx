@@ -3,28 +3,28 @@
 > اتولّد من `scripts/verify-live.mjs` (شغّله `.github/workflows/live-verify.yml`).
 > كل هدف هنا صاحبه منشور صراحة إن فحصه مسموح — الوثيقة في العمود الأخير.
 
-آخر تشغيل: `2026-11-11T17:45:43.696Z` · الحكم: **RED** · ✓18 · ✗1 · ؟3 · (محجوب)0
+آخر تشغيل: `2026-11-11T19:52:53.974Z` · الحكم: **RED** · ✓18 · ✗1 · ؟3 · (محجوب)0
 الأدوات المرصودة: dnsx, subfinder, httpx, katana, nmap, naabu, ffuf · المحرك: `http://127.0.0.1:8090/api` · هدف التمرين: `scanme.nmap.org`
 
 | الطبقة | الفحص | الحالة | التفصيل |
 |---|---|---|---|
 | cli | dns resolution | ✓ pass | 2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present |
-| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · estphp.vulnweb.com, testphp.vulnweb.com, html5.vulnweb.com |
-| cli | httpx https://demo.testfire.net/ | ? review | status=مفيش (المطلوب 200) · exit=0 · 0B · السبب: مفيش مخرجات · مفاتيح الرد: مفيش JSON · 840ms |
+| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · www.test.php.vulnweb.com, www.vulnweb.com, testhmtml5.vulnweb.com |
+| cli | httpx https://demo.testfire.net/ | ? review | status=مفيش (المطلوب 200) · exit=0 · 0B · السبب: مفيش مخرجات · مفاتيح الرد: مفيش JSON · 1171ms |
 | cli | katana crawl testphp.vulnweb.com | ✓ pass | 1 رابط متكرول (المطلوب ≥1) |
 | cli | nuclei present | ✗ fail | مش موجود — الـvendor فشل؟ |
 | cli | nmap scanme.nmap.org:80,22 | ✓ pass | 2 بورت مفتوح · 22/tcp open · 80/tcp open |
-| cli | hub nova.waifly.com | ? review | https://nova.waifly.com/api/health → HTTP 502 · 150B مش JSON · ops/version → HTTP 502 · 787ms |
+| cli | hub nova.waifly.com | ? review | https://nova.waifly.com/api/health → HTTP 502 · 150B مش JSON · ops/version → HTTP 502 · 1016ms |
 | cli | ffuf fuzz testphp.vulnweb.com | ✓ pass | 61 طلب مُرسل و0 مطابقة (1 سطر مخرجات) |
 | engine | engine reachable | ✓ pass | HTTP 200 |
 | engine | kinds report tool presence | ✓ pass | 22 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.httpx, tools.subfinder, tools.katana, tools.nmap, tools.naabu, tools.ffuf, tools.dalfox, tools.gitlea… |
-| engine | bounty catalog served | ✓ pass | 746 برنامج (511 بمكافأة) · آخر تحديث 9.0 يوم · ops/bounty/programs-catalog.json |
+| engine | bounty catalog served | ✓ pass | 746 برنامج (511 بمكافأة) · آخر تحديث 9.1 يوم · ops/bounty/programs-catalog.json |
 | engine | catalog lookup over HTTP | ✓ pass | aces-dev.wnba.com → hackerone:nba-public (domain · استقبال open) · ونطاق مجهول → match:null |
 | engine | program registered active (demo.testfire.net) | ✓ pass | id=demo.testfire.net · policy=https://demo.testfire.net/ |
-| engine | job created | ✓ pass | job=20261111-a1ab9a · 7 مهمة |
+| engine | job created | ✓ pass | job=20261111-74e58e · 7 مهمة |
 | engine | job executed | ✓ pass | 4/7 done · 3 failed · 4 finding · done |
 | engine | failed tasks | ? review | recon.headers: الطلب لـdemo.testfire.net موصّلش (Error: connect ECONNREFUSED 65.61.137.117:443) — النتيجة «مجهولة» مش «ناقصة» · recon.tls: handshake لـdemo.testfire.net فشل (Error: connect ECONNREFUSED 65.61.137.117:443) — مفيش استنتاج عن الشهادة · tools.nuclei: الأداة «nuclei» مش على الجهاز self-n… |
-| engine | evidence hashed on disk | ✓ pass | 4 ملف في state/jobs/20261111-a1ab9a/evidence · 3 فيهم بايتات · فاضي: tools.httpx-e3b0c44298fc.txt (1 — 1 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية) |
+| engine | evidence hashed on disk | ✓ pass | 4 ملف في state/jobs/20261111-74e58e/evidence · 3 فيهم بايتات · فاضي: tools.httpx-e3b0c44298fc.txt (1 — 1 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية) |
 | engine | report is honest about coverage | ✓ pass | 708 بايت · فيه «Coverage gaps»=true · «reportable»=true |
 | engine | findings vault is idempotent | ✓ pass | أول sync: +15/-15 (من مهام 4 · من الكتالوج القديم 11) · تاني: +0/-15 ومحدّثة 15 · متأكَّدة 0 |
 | engine | report draft gated on reproduction | ✓ pass | 3 مفتاح: 0 مسودة (200) · 3 مرفوضة (409) · البنية=true · سبب الرفض موجود=true |
