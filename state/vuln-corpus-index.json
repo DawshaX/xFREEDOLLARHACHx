@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-10T18:34:34.375Z",
+  "at": "2026-11-11T00:00:00.099Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 329672,
+  "total": 331236,
   "bySeverity": {
-    "high": 125597,
-    "medium": 144248,
-    "low": 14818,
-    "unknown": 17495,
-    "critical": 27443,
+    "high": 126526,
+    "medium": 144652,
+    "low": 14835,
+    "unknown": 17641,
+    "critical": 27511,
     "none": 71
   },
   "byYear": {
@@ -41,25 +41,25 @@
     "2021": 1977,
     "2022": 4753,
     "2023": 27438,
-    "2024": 38930,
-    "2025": 44973,
-    "2026": 87917
+    "2024": 38931,
+    "2025": 44987,
+    "2026": 89466
   },
-  "kev": 1125,
-  "epssScored": 315365,
-  "products": 60925,
+  "kev": 1131,
+  "epssScored": 315595,
+  "products": 60927,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 65391
+      "count": 65432
     },
     {
       "product": "android",
-      "count": 14667
+      "count": 14699
     },
     {
       "product": "chrome",
-      "count": 10794
+      "count": 10821
     },
     {
       "product": "firefox",
@@ -212,17 +212,17 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 40213434,
-    "sha256": "a42c300da63794016b70d8324facda122c7be14dc80078c6161ccff2c92f8d44"
+    "bytes": 40305281,
+    "sha256": "a3177e3fcf7acb08cbfe25398774b323ddba2187799b7699c3c71145ccf2faeb"
   },
   "mode": "deepen",
-  "says_ar": "329672 ثغرة حقيقية · critical 27443 · high 125597 · 1125 مستغلّة فعلياً (KEV) · 315365 لها EPSS · 60925 منتج بـCPE · مزامنة 2026-11-10T18:34:34.375Z",
+  "says_ar": "331236 ثغرة حقيقية · critical 27511 · high 126526 · 1131 مستغلّة فعلياً (KEV) · 315595 لها EPSS · 60927 منتج بـCPE · مزامنة 2026-11-11T00:00:00.099Z",
   "deepen": {
-    "nextStartIndex": 332682,
+    "nextStartIndex": 356682,
     "windowPages": 12,
-    "walkedFrom": 308682,
-    "nvdTotal": 422304,
-    "coverage": 0.7807,
-    "at": "2026-11-10T18:34:34.376Z"
+    "walkedFrom": 332682,
+    "nvdTotal": 423868,
+    "coverage": 0.7815,
+    "at": "2026-11-11T00:00:00.100Z"
   }
 }

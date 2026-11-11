@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-10T18:34:34.375Z",
-  "total": 329672,
+  "at": "2026-11-11T00:00:00.099Z",
+  "total": 331236,
   "bySeverity": {
-    "high": 125597,
-    "medium": 144248,
-    "low": 14818,
-    "unknown": 17495,
-    "critical": 27443,
+    "high": 126526,
+    "medium": 144652,
+    "low": 14835,
+    "unknown": 17641,
+    "critical": 27511,
     "none": 71
   },
-  "kev": 1125,
-  "epssScored": 315365,
-  "products": 60925,
+  "kev": 1131,
+  "epssScored": 315595,
+  "products": 60927,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -6438,6 +6438,20 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-116606",
+      "cvss": 9.3,
+      "sev": "critical",
+      "desc": "An authentication bypass in Barracuda Email Security Gateway versions earlier than 9.4.0.030 allows an unauthenticated remote attacker to invoke a configuration-import function and restore a crafted, compatible backup archive, resulting in unauthorized modific",
+      "cwe": [
+        "CWE-288"
+      ],
+      "kev": true,
+      "epss": 0.01602,
+      "pub": "2026-11-02T13:17:37.017",
+      "products": [],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-22224",
       "cvss": 9.3,
       "sev": "critical",
@@ -8114,6 +8128,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-33634",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Trivy is a security scanner. On March 19, 2026, a threat actor used compromised credentials to publish a malicious Trivy v0.69.4 release, force-push 76 of 77 version tags in `aquasecurity/trivy-action` to credential-stealing malware, and replace all 7 tags in ",
+      "cwe": [
+        "CWE-506"
+      ],
+      "kev": true,
+      "epss": 0.60425,
+      "pub": "2026-03-23T22:16:31.290",
+      "products": [
+        "setup-trivy",
+        "trivy",
+        "trivy_action"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2018-6065",
       "cvss": 8.8,
       "sev": "high",
@@ -8167,24 +8199,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2026-33634",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Trivy is a security scanner. On March 19, 2026, a threat actor used compromised credentials to publish a malicious Trivy v0.69.4 release, force-push 76 of 77 version tags in `aquasecurity/trivy-action` to credential-stealing malware, and replace all 7 tags in ",
-      "cwe": [
-        "CWE-506"
-      ],
-      "kev": true,
-      "epss": 0.59727,
-      "pub": "2026-03-23T22:16:31.290",
-      "products": [
-        "setup-trivy",
-        "trivy",
-        "trivy_action"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2025-14174",
       "cvss": 8.8,
       "sev": "high",
@@ -8198,23 +8212,6 @@
       "pub": "2025-12-12T20:15:39.663",
       "products": [
         "chrome",
-        "chrome",
-        "chrome"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-2441",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Use after free in CSS in Google Chrome prior to 145.0.7632.75 allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page. (Chromium security severity: High)",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.54957,
-      "pub": "2026-02-13T19:17:31.310",
-      "products": [
         "chrome",
         "chrome"
       ],
@@ -8253,6 +8250,23 @@
         "windows_10_1507",
         "windows_10_1607",
         "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-2441",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Use after free in CSS in Google Chrome prior to 145.0.7632.75 allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.54461,
+      "pub": "2026-02-13T19:17:31.310",
+      "products": [
+        "chrome",
+        "chrome"
       ],
       "refs": []
     },
@@ -10052,6 +10066,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-125350",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Use after free in XML in Google Chrome prior to 157.0.8103.50 allowed a remote attacker to execute arbitrary code inside the sandbox via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": null,
+      "pub": "2026-11-10T18:17:35.237",
+      "products": [
+        "chrome"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-49035",
       "cvss": 8.7,
       "sev": "high",
@@ -10398,6 +10428,20 @@
         "action-composite-template",
         "action-setup"
       ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-111560",
+      "cvss": 8.6,
+      "sev": "high",
+      "desc": "Improper neutralization of shell metacharacters in the timezone configuration field in certain Barracuda appliance products using common Barracuda code allows an authenticated administrator to inject OS commands that execute with root privileges when the craft",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.0106,
+      "pub": "2026-11-02T13:17:35.190",
+      "products": [],
       "refs": []
     },
     {
@@ -13853,59 +13897,7 @@
         "windows_server_2008"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2019-0543",
-      "cvss": 7.8,
-      "sev": "high",
-      "desc": "An elevation of privilege vulnerability exists when Windows improperly handles authentication requests, aka \"Microsoft Windows Elevation of Privilege Vulnerability.\" This affects Windows 7, Windows Server 2012 R2, Windows RT 8.1, Windows Server 2008, Windows S",
-      "cwe": [
-        "CWE-287"
-      ],
-      "kev": true,
-      "epss": 0.04679,
-      "pub": "2019-01-08T21:29:00.517",
-      "products": [
-        "windows_10_1507",
-        "windows_10_1607",
-        "windows_10_1703"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2025-60710",
-      "cvss": 7.8,
-      "sev": "high",
-      "desc": "Improper link resolution before file access ('link following') in Host Process for Windows Tasks allows an authorized attacker to elevate privileges locally.",
-      "cwe": [
-        "CWE-59"
-      ],
-      "kev": true,
-      "epss": 0.04614,
-      "pub": "2025-11-11T18:15:39.073",
-      "products": [
-        "windows_11_24h2",
-        "windows_11_25h2",
-        "windows_server_2025"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2018-19320",
-      "cvss": 7.8,
-      "sev": "high",
-      "desc": "The GDrv low-level driver in GIGABYTE APP Center v1.05.21 and earlier, AORUS GRAPHICS ENGINE before 1.57, XTREME GAMING ENGINE before 1.26, and OC GURU II v2.08 exposes ring0 memcpy-like functionality that could allow a local attacker to take complete control ",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.04597,
-      "pub": "2018-12-21T23:29:00.493",
-      "products": [
-        "aorus_graphics_engine",
-        "app_center",
-        "oc_guru_ii"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "329672 ثغرة حقيقية من NVD · 1125 مستغلّة فعلياً (KEV) · 60925 منتج · مزامنة 2026-11-10T18:34:34.375Z"
+  "says_ar": "331236 ثغرة حقيقية من NVD · 1131 مستغلّة فعلياً (KEV) · 60927 منتج · مزامنة 2026-11-11T00:00:00.099Z"
 }
