@@ -1,17 +1,17 @@
 {
   "measured": true,
-  "at": "2026-11-11T06:01:08.631Z",
-  "total": 331290,
+  "at": "2026-11-11T14:03:04.447Z",
+  "total": 331496,
   "bySeverity": {
-    "high": 126551,
-    "medium": 144684,
-    "low": 14836,
-    "unknown": 17634,
-    "critical": 27514,
+    "high": 126598,
+    "medium": 144809,
+    "low": 14850,
+    "unknown": 17643,
+    "critical": 27525,
     "none": 71
   },
   "kev": 1131,
-  "epssScored": 315597,
+  "epssScored": 315779,
   "products": 60927,
   "mode": "deepen",
   "sources": [
@@ -13713,6 +13713,25 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-81963",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Improper link resolution before file access ('link following') in Windows Update Stack allows an authorized attacker to elevate privileges locally.",
+      "cwe": [
+        "CWE-59",
+        "CWE-284"
+      ],
+      "kev": true,
+      "epss": 0.07115,
+      "pub": "2026-09-08T18:21:00.090",
+      "products": [
+        "windows_11_23h2",
+        "windows_11_24h2",
+        "windows_11_25h2"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-38080",
       "cvss": 7.8,
       "sev": "high",
@@ -13881,23 +13900,7 @@
         "windows_nt"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2009-1123",
-      "cvss": 7.8,
-      "sev": "high",
-      "desc": "The kernel in Microsoft Windows 2000 SP4, XP SP2 and SP3, Server 2003 SP2, Vista Gold, SP1, and SP2, and Server 2008 SP2 does not properly validate changes to unspecified kernel objects, which allows local users to gain privileges via a crafted application, ak",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.04878,
-      "pub": "2009-06-10T18:30:00.327",
-      "products": [
-        "windows_2000",
-        "windows_server_2003",
-        "windows_server_2008"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "331290 ثغرة حقيقية من NVD · 1131 مستغلّة فعلياً (KEV) · 60927 منتج · مزامنة 2026-11-11T06:01:08.631Z"
+  "says_ar": "331496 ثغرة حقيقية من NVD · 1131 مستغلّة فعلياً (KEV) · 60927 منتج · مزامنة 2026-11-11T14:03:04.447Z"
 }
