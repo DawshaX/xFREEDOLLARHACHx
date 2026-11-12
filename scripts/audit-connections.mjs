@@ -37,6 +37,13 @@ const ENGINE_SERVER = path.join(ROOT, "artifacts/api-server/src/lib/standalone-a
 const args = process.argv.slice(2);
 const asJson = args.includes("--json");
 const serverArg = args.find((a) => a.startsWith("--server="));
+// بعد بوابة الدخول (panel-auth): الغريب يلاقي 401 بالتصميم — الفحص الحقيقي لازم
+// يعدّي البوابة زي اللوحة بالظبط: هيدر x-nova-token من NOVA_AUDIT_TOKEN/NOVA_TOKEN.
+function auditHeaders() {
+  const t = process.env.NOVA_AUDIT_TOKEN || process.env.NOVA_TOKEN || process.env.NOVA_EXEC_TOKEN || "";
+  return t ? { accept: "application/json", "x-nova-token": t } : { accept: "application/json" };
+}
+
 const serverBase = serverArg ? serverArg.split("=")[1].replace(/\/$/, "") : null;
 
 /* ── 1. Discover call sites ───────────────────────────────────────────────── */
@@ -234,7 +241,7 @@ async function main() {
         const res = await fetch(serverBase + site.path, {
           method: site.method,
           signal: AbortSignal.timeout(8000),
-          headers: { accept: "application/json" },
+          headers: auditHeaders(),
         });
         await res.body?.cancel().catch(() => {});
         serverResults.push({ endpoint: `${site.method} ${site.path}`, status: res.status });
@@ -244,7 +251,7 @@ async function main() {
         if (res.status === 404 && /\/\d+$/.test(site.path)) {
           try {
             const parent = site.path.replace(/\/\d+$/, "");
-            const listRes = await fetch(serverBase + parent, { signal: AbortSignal.timeout(8000) });
+            const listRes = await fetch(serverBase + parent, { signal: AbortSignal.timeout(8000), headers: auditHeaders() });
             const json = await listRes.json().catch(() => null);
             await listRes.body?.cancel().catch(() => {});
             if (Array.isArray(json) && json.length === 0) {
