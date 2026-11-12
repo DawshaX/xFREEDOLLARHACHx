@@ -18,7 +18,7 @@
 # ─────
 #   Settings → Secrets and variables → Actions → Variables
 #     NOVA_HUB    wss://nova.waifly.com/api/local-agent/ws        (your hub)
-#     FLEET_NODES 4                                                (how many)
+#     FLEET_NODES 8                                                (how many — الفاضل 8 لو مش موجودة)
 #
 # Nodes appear in the panel under /api/local-agent/agents and /api/fleet/mesh.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -88,8 +88,10 @@ jobs:
             if [ -z "$TOKEN" ]; then echo "::warning::manual wave without NOVA_EXEC_TOKEN — a hardened hub will refuse these nodes (401)"; fi
           fi
 
-          n="${INPUT_NODES:-${VAR_NODES:-4}}"
-          case "$n" in ''|*[!0-9]*) n=4 ;; esac
+          # الضعف المجاني المقاس (2026-11-11): المستودع public = دقائق Actions بلا حدود،
+          # فـ8 عقد × 4vCPU/16G = 32vCPU / 128GB رام في كل موجة — الافتراضي 8 بدل 4.
+          n="${INPUT_NODES:-${VAR_NODES:-8}}"
+          case "$n" in ''|*[!0-9]*) n=8 ;; esac
           if [ "$n" -lt 1 ];  then n=1;  fi
           # GitHub free plan: 20 concurrent jobs. Leave one for other workflows.
           if [ "$n" -gt 19 ]; then n=19; fi
@@ -200,3 +202,5 @@ jobs:
             if [ "$code" -ne 124 ] && [ "$code" -ne 143 ]; then sleep 10; fi
           done
           echo "node leaving the fleet (wave finished)"
+
+# موجة تحقق 2026-11-11T02:50Z
