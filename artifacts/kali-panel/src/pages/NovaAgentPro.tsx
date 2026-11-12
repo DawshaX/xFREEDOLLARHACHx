@@ -32,6 +32,7 @@ import { KaliTerminal } from "@/components/desktop/KaliTerminal";
 import { AdvancedFileManager } from "@/components/desktop/AdvancedFileManager";
 import { TelegramConfigCard } from "@/components/TelegramConfigCard";
 import { opsFetch, novaAuthHeaders } from "@/lib/ops-client";
+import { DAW_SKULL } from "@/lib/skull";
 import { useSystem } from "@/context/SystemContext";
 
 /* ─── أنواع ─── */
@@ -283,7 +284,7 @@ export default function NovaAgentPro() {
       {/* ── خلفية الجمجمة الحية — بتتنفّس + سكان لاينز ── */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute inset-[-5%] bg-center bg-cover opacity-[0.16]"
-          style={{ backgroundImage: "url(\"data/daw-skull.jpg\")", animation: "agentProBreathe 11s ease-in-out infinite" }} />
+          style={{ backgroundImage: `url("${DAW_SKULL}")`, animation: "agentProBreathe 11s ease-in-out infinite" }} />
         <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 30%, transparent 0%, rgba(5,2,8,.72) 55%, rgba(5,2,8,.96) 100%)" }} />
         <div className="absolute inset-0 opacity-[0.05]" style={{ background: "repeating-linear-gradient(0deg, transparent 0 2px, #000 2px 4px)" }} />
       </div>
@@ -293,7 +294,7 @@ export default function NovaAgentPro() {
       <header className="relative z-10 shrink-0 border-b border-rose-500/15 bg-gradient-to-l from-rose-950/25 via-[#070309] to-violet-950/25 px-3 py-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full border-2 border-rose-500/70 bg-cover bg-center shrink-0"
-            style={{ backgroundImage: "url(\"data/daw-skull.jpg\")", boxShadow: "0 0 18px rgba(239,68,68,.5)" }} />
+            style={{ backgroundImage: `url("${DAW_SKULL}")`, boxShadow: "0 0 18px rgba(239,68,68,.5)" }} />
           <div>
             <h1 className="text-sm font-black leading-4 text-rose-100">دولاب دوشة — مركز التحكم الكلي</h1>
             <div className="text-[8px] font-mono text-white/35">{dayName} · الجلسة {fmtUptime(sessionS)} · sha {vit.sha || "…"}</div>
