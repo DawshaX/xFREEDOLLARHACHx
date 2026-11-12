@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { remoteUrl } from "@/lib/remote";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
@@ -403,7 +404,7 @@ export default function KaliTerminalPage() {
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
         {/* Download nova-agent */}
-        <a href="/api/local-agent/download-nova-agent" download="nova-agent.js"
+        <a href={remoteUrl("/api/local-agent/download-nova-agent")} download="nova-agent.js"
           className="text-xs px-2 py-0.5 rounded border border-green-900/50 text-green-700 hover:text-green-300 hover:border-green-700/50 transition flex items-center gap-1">
           <Download className="w-3 h-3" /> nova-agent.js
         </a>

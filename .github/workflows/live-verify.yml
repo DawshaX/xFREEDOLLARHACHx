@@ -87,7 +87,11 @@ jobs:
           pnpm --filter @workspace/api-server run build
 
       - name: Vendor the real toolchain
-        # Same fetcher Render runs — so what is measured here is what ships there.
+        # Same fetcher Render runs — with NOVA_HEAVY_TOOLS=1 on the 40 GB CI runner
+        # so nuclei is installed and verified alongside the slim set.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOVA_HEAVY_TOOLS: "1"
         run: node scripts/fetch-toolchain.mjs --into vendor/bin
 
       - name: What the runner actually has

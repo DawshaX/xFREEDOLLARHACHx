@@ -789,11 +789,11 @@ export default function NovaAgentPro() {
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
                       {items.map((it) => (
-                        <a key={it.path} href={it.path}
-                          className="rounded-xl border px-3 py-3 text-center text-[11px] font-bold transition-all hover:-translate-y-0.5"
+                        <button key={it.path} type="button" onClick={() => navigate(it.path)}
+                          className="rounded-xl border px-3 py-3 text-center text-[11px] font-bold transition-all hover:-translate-y-0.5 cursor-pointer"
                           style={{ borderColor: color + "30", background: color + "0a", color: color + "dd", boxShadow: `0 0 12px ${color}08 inset` }}>
                           {it.label}
-                        </a>
+                        </button>
                       ))}
                     </div>
                   </section>

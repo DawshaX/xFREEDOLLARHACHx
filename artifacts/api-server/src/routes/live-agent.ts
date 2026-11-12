@@ -346,11 +346,15 @@ router.get("/live-agent/status", (_req, res) => {
   }
   res.json({
     ok: true,
+    online: true,
+    status: "active",
     measured: true,
     ts: new Date().toISOString(),
     agentConnected: isLocalAgentConnected(),
     activeSessions: sessions.size,
+    sessions: sessions.size,
     memoryCount: getMemoryCount(),
+    memories: getMemoryCount(),
     activeProcesses: processes,
     platform,
   });
@@ -546,19 +550,6 @@ router.post("/live-agent/sessions/:id/save-ai-response", (req, res) => {
   }
   session.updatedAt = now;
   return res.json({ ok: true, messages: session.messages.length, updatedAt: session.updatedAt });
-});
-
-/** Honest status: what the panel's header shows. */
-router.get("/live-agent/status", (_req, res) => {
-  return res.json({
-    ok: true,
-    online: true,
-    status: "active",
-    sessions: sessions.size,
-    memories: getMemoryCount(),
-    agentConnected: isLocalAgentConnected(),
-    ts: new Date().toISOString(),
-  });
 });
 
 /**

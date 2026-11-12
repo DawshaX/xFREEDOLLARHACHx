@@ -73,7 +73,12 @@ jobs:
 
           hostport=$(printf '%s' "$TARGET" | sed -E 's#^https?://##; s#/.*$##')
           hostp="${hostport#*://}"; host="${hostport%%:*}"; port="${hostport##*:}"
-          [ "$port" = "$host" ] && port=80
+          if [ "$port" = "$host" ]; then
+            case "$TARGET" in
+              https://*) port=443 ;;
+              *) port=80 ;;
+            esac
+          fi
           say "## reachability of $host:$port (before any HTTP)"
           getent hosts "$host" >/tmp/dns.txt 2>&1; dx=$?
           say "dns(getent) exit=$dx · $(head -c 200 /tmp/dns.txt | tr '\n' ' ')"

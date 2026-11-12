@@ -82,6 +82,9 @@ jobs:
             console.log(`fetched ${d.ok}/${d.total}`)'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # المرآة لازم تشمل الـ16 أداة كلها (بما فيها nuclei/trivy/amass/trufflehog/osv-scanner/gobuster)
+          # لأن الرانر عنده 40 جيجا، والمكنة بتسحب الثقيل عند الطلب (`--only`) من المانيفست.
+          NOVA_HEAVY_TOOLS: "1"
           # السقف الافتراضي (700MB) صانَع عشان يحمي_slot_ اللي حجمه 1 جيجا على
           # المكنة. الريان عنده 40 جيجا، والسقف هناك كان بيقصّ الليستا في النص:
           # 12 أداة اتحزنت والباقي اتعلّم "skipped" — وهو بيحسب ok — فالشريط
@@ -90,6 +93,10 @@ jobs:
 
       - name: Pack the mirror (tar.gz + sha256 manifest)
         run: node scripts/build-toolchain-mirror.mjs --from out/vendor/bin --out out/mirror
+
+      - name: Check mirror covers all promised tools
+        if: ${{ inputs.only == '' }}
+        run: node scripts/check-mirror-coverage.mjs --manifest out/mirror/nova-toolchain.json
 
       - name: 🔒 No secret, and every binary must answer `-version`
         # النسخة من عندنا لازم تتقاس مش تتورّط: كل binary بيتنفّذ بأعلامه الحقيقية
