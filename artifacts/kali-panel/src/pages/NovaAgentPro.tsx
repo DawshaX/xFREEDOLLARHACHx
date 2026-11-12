@@ -35,7 +35,7 @@ import { DAW_SKULL } from "@/lib/skull";
 import { useSystem } from "@/context/SystemContext";
 
 /* ─── أنواع ─── */
-type ArenaKey = "launch" | "events" | "cron" | "desktop" | "missions" | "brain" | "hardware" | "hunt" | "channels" | "nav";
+type ArenaKey = "launch" | "chat" | "events" | "cron" | "work" | "missions" | "brain" | "hardware" | "hunt" | "channels" | "nav";
 
 interface FleetAgentInfo {
   id: string; hostname: string; platform: string; user?: string; cpus?: number; connectedAt?: string;
@@ -90,10 +90,11 @@ const LAUNCH_GROUPS: Array<{ group: string; color: string; tiles: Tile[] }> = [
 
 const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color: string }> = [
   { key: "launch",   labelAr: "التحكم السريع", icon: Sparkles,    color: "#fb7185" },
+  { key: "chat",     labelAr: "الشات الكامل",   icon: MessageSquare, color: "#f472b6" },
+  { key: "work",     labelAr: "مكان الشغل",     icon: MonitorSmartphone, color: "#14b8a6" },
   { key: "cron",     labelAr: "الجدولة",       icon: CalendarClock, color: "#34d399" },
   { key: "events",   labelAr: "نبض الأحداث",   icon: Activity,    color: "#4ade80" },
-  { key: "desktop",  labelAr: "سطح المكتب",    icon: MonitorSmartphone, color: "#22d3ee" },
-  { key: "missions", labelAr: "المهمات",       icon: ListChecks,  color: "#fbbf24" },
+    { key: "missions", labelAr: "المهمات",       icon: ListChecks,  color: "#fbbf24" },
   { key: "brain",    labelAr: "المخ والمجلس",  icon: Brain,       color: "#a78bfa" },
   { key: "hardware", labelAr: "العتاد الحي",   icon: Cpu,         color: "#38bdf8" },
   { key: "hunt",     labelAr: "الصيد",         icon: Target,      color: "#f43f5e" },
@@ -221,6 +222,8 @@ export default function NovaAgentPro() {
   const [flash, setFlash] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [prefs, setPrefs] = useState<Prefs>(() => (typeof window === "undefined" ? { hiddenRails: [], chatOpen: true } : loadPrefs()));
+  const [notes, setNotes] = useState<string>(() => { try { return localStorage.getItem("daw.agentPro.notes") ?? ""; } catch { return ""; } });
+  const [notesSaved, setNotesSaved] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [palQuery, setPalQuery] = useState("");
   const [palIdx, setPalIdx] = useState(0);
@@ -231,6 +234,11 @@ export default function NovaAgentPro() {
   useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 20_000); return () => clearInterval(iv); }, []);
   /* حفظ التفضيلات */
   useEffect(() => { try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch { /* تخزين ممتلئ — مش مانع */ } }, [prefs]);
+  /* حفظ دفتر الشغل — debounce خفيف */
+  useEffect(() => {
+    const t = setTimeout(() => { try { localStorage.setItem("daw.agentPro.notes", notes); setNotesSaved(true); } catch { /* */ } }, 400);
+    return () => clearTimeout(t);
+  }, [notes]);
 
   const flashSay = useCallback((msg: string) => {
     setFlash(msg);
@@ -677,6 +685,27 @@ export default function NovaAgentPro() {
               </div>
             )}
 
+            {arena === "chat" && (
+              <div className="relative flex h-full min-h-[calc(100vh-220px)] flex-col overflow-hidden rounded-2xl border border-pink-500/25 bg-[#08030c]" style={{ boxShadow: "0 0 40px rgba(244,114,182,.08) inset" }}>
+                <div aria-hidden className="pointer-events-none absolute inset-0">
+                  <div className="absolute inset-[-4%] bg-center bg-cover opacity-[0.10]"
+                    style={{ backgroundImage: `url("${DAW_SKULL}")`, animation: "agentProBreathe 11s ease-in-out infinite" }} />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(8,3,12,.55), rgba(8,3,12,.9))" }} />
+                </div>
+                <div className="relative z-10 shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-pink-500/20 bg-gradient-to-l from-pink-600/15 via-[#0a0510] to-violet-600/10">
+                  <div className="w-7 h-7 rounded-full border border-pink-500/60 bg-cover bg-center shrink-0" style={{ backgroundImage: `url("${DAW_SKULL}")`, boxShadow: "0 0 12px rgba(239,68,68,.4)" }} />
+                  <div>
+                    <div className="text-[12px] font-black text-pink-100">شات نوفا — بملء الشاشة زي اللايف إيجنت</div>
+                    <div className="text-[8px] font-mono text-white/35">جلسة واحدة حقيقية · الأدوات السبعة والستين جنبك · مفيش سقف للرسايل</div>
+                  </div>
+                  <div className="mr-auto text-[9px] font-mono text-pink-200/50">هنا مكانك الثابت للكلام ⌨</div>
+                </div>
+                <div className="relative z-10 flex-1 min-h-0">
+                  <NovaUnifiedChat title="نوفا — الشات الكامل" subtitle="جلسة كاملة الصورة · أدلة مؤرشفة · رد مباشر" hideRail />
+                </div>
+              </div>
+            )}
+
             {arena === "events" && (
               <div className="space-y-1" dir="ltr">
                 {lastEvents.length === 0 && (
@@ -694,7 +723,9 @@ export default function NovaAgentPro() {
               </div>
             )}
 
-            {arena === "desktop" && (
+            {arena === "work" && (
+              <div className="space-y-3">
+              <div className="text-[10px] font-mono text-teal-100/50">منضدة حقيقية: تيرمنال + ملفات + نوتك — كلهم جنب بعض ومفيش حاجة مستخبية.</div>
               <div className="grid grid-cols-1 2xl:grid-cols-2 gap-3">
                 <div className="flex min-h-[430px] flex-col overflow-hidden rounded-xl border border-emerald-400/15 bg-black/50" style={{ boxShadow: "0 0 24px rgba(52,211,153,.06) inset" }}>
                   <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/5 px-3 bg-emerald-500/5">
@@ -714,6 +745,22 @@ export default function NovaAgentPro() {
                     <AdvancedFileManager />
                   </div>
                 </div>
+              </div>
+              {/* ── نوت باد الشغل: ملاحظاتك أثناء العملية، محفوظة محليًا ── */}
+              <section className="rounded-xl border border-teal-400/20 bg-teal-500/[0.03] overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-teal-400/15 bg-teal-500/[0.06]">
+                  <FileCode className="w-3.5 h-3.5 text-teal-300" />
+                  <span className="text-[10px] font-black text-teal-200">دفتر العملية — ملاحظات، أهداف، نتايج سريعة</span>
+                  <span className="mr-auto text-[8px] font-mono text-teal-200/40">{notesSaved ? "✓ محفوظ" : "…"} · محليًا في متصفحك</span>
+                </div>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="الهدف: …\nالمنافذ المفتوحة: …\nالملاحظات: …"
+                  className="w-full h-36 bg-transparent p-3 text-[12px] font-mono text-white/85 placeholder:text-white/25 outline-none resize-y leading-5"
+                  dir="auto"
+                />
+              </section>
               </div>
             )}
 
@@ -757,7 +804,7 @@ export default function NovaAgentPro() {
         </section>
 
         {/* ── الشات — بتحكم إظهار/إخفاء كامل ── */}
-        {prefs.chatOpen && (
+        {prefs.chatOpen && arena !== "chat" && (
           <aside className="w-full lg:w-[430px] shrink-0 border-r border-rose-500/20 lg:border-r lg:border-l-0 flex flex-col min-h-0 bg-[#060309]">
             <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-rose-500/15 bg-gradient-to-l from-rose-600/15 to-violet-600/10">
               <Sparkles className="w-3.5 h-3.5 text-rose-300" />
@@ -776,7 +823,7 @@ export default function NovaAgentPro() {
             </div>
           </aside>
         )}
-        {!prefs.chatOpen && (
+        {(!prefs.chatOpen || arena === "chat") && arena !== "chat" && (
           <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: true }))}
             className="shrink-0 flex flex-col items-center justify-center gap-2 w-10 border-r border-rose-500/20 bg-rose-500/[0.06] hover:bg-rose-500/15 transition text-rose-300"
             title="إظهار الشات">
@@ -796,7 +843,7 @@ export default function NovaAgentPro() {
           </span>
         ))}
         {ticker.length === 0 && <span className="text-white/20">القناة هادية…</span>}
-        <span className="mr-auto shrink-0 text-rose-300/50">DAWSHA DECK v6</span>
+        <span className="mr-auto shrink-0 text-rose-300/50">DAWSHA DECK v7</span>
       </footer>
     </div>
   );
