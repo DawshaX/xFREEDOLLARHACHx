@@ -16,6 +16,7 @@ import { scheduleGC } from "./lib/gc-scheduler";
 import { forceOllamaDefault } from "./lib/ai";
 import { initLocalAgentWss, registerEmbeddedAgent } from "./routes/local-agent";
 import { wsUpgradeAllowed } from "./lib/ops/gate";
+import { wsSessionUser } from "./lib/panel-auth";
 import {
   registerHubClient,
   removeHubClient,
@@ -276,6 +277,16 @@ function routeUpgrade(req: http.IncomingMessage, socket: import("node:stream").D
     url === "/ws" ||
     url.startsWith("/ws?")
   ) {
+    // قناة اللايف بتاعة الواجهة جزء من «اللي جواه» — تقفل بجلسة الدخول أو التوكن،
+    // زي أي صفحة تانية (بوابة panel-auth بتغطي الـHTTP، وهنا الـupgrade).
+    const sessUser = wsSessionUser(req.headers.cookie ?? undefined);
+    const wsTok = new URL(url, "http://x").searchParams.get("token") ?? "";
+    const tokOk = wsTok && (process.env.NOVA_EXEC_TOKEN ?? "") && wsTok === (process.env.NOVA_EXEC_TOKEN ?? "").trim();
+    if (sessUser === null && !tokOk) {
+      socket.write("HTTP/1.1 401 Unauthorized\r\nX-NOVA-Reason: login_required\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
     hubWss.handleUpgrade(req, socket, head, (ws) => {
       hubWss.emit("connection", ws, req);
     });

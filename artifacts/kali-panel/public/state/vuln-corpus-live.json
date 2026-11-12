@@ -1,17 +1,17 @@
 {
   "measured": true,
-  "at": "2026-11-11T14:03:04.447Z",
-  "total": 331496,
+  "at": "2026-11-11T21:31:59.930Z",
+  "total": 331689,
   "bySeverity": {
-    "high": 126598,
-    "medium": 144809,
-    "low": 14850,
-    "unknown": 17643,
-    "critical": 27525,
+    "high": 126682,
+    "medium": 144875,
+    "low": 14864,
+    "unknown": 17664,
+    "critical": 27533,
     "none": 71
   },
   "kev": 1131,
-  "epssScored": 315779,
+  "epssScored": 318026,
   "products": 60927,
   "mode": "deepen",
   "sources": [
@@ -669,6 +669,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-97229",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "GitLab has remediated an issue in GitLab CE/EE affecting all versions from 19.2 before 19.2.8, 19.3 before 19.3.5, and 19.4 before 19.4.2 that, under certain conditions, could have allowed an unauthenticated user to execute arbitrary code on the GitLab server ",
+      "cwe": [
+        "CWE-190"
+      ],
+      "kev": true,
+      "epss": 0.69289,
+      "pub": "2026-10-13T02:17:00.840",
+      "products": [
+        "gitlab",
+        "gitlab",
+        "gitlab"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-34909",
       "cvss": 10,
       "sev": "critical",
@@ -683,24 +701,6 @@
         "unifi_os_server",
         "unifi_cloud_gateway_industrial_firmware",
         "unifi_dream_machine_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-97229",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "GitLab has remediated an issue in GitLab CE/EE affecting all versions from 19.2 before 19.2.8, 19.3 before 19.3.5, and 19.4 before 19.4.2 that, under certain conditions, could have allowed an unauthenticated user to execute arbitrary code on the GitLab server ",
-      "cwe": [
-        "CWE-190"
-      ],
-      "kev": true,
-      "epss": 0.6522,
-      "pub": "2026-10-13T02:17:00.840",
-      "products": [
-        "gitlab",
-        "gitlab",
-        "gitlab"
       ],
       "refs": []
     },
@@ -1181,26 +1181,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2026-109618",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The su",
-      "cwe": [
-        "CWE-416",
-        "CWE-755",
-        "CWE-824"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2026-10-21T14:17:09.357",
-      "products": [
-        "php",
-        "php",
-        "php"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2023-1671",
       "cvss": 9.8,
       "sev": "critical",
@@ -1338,6 +1318,26 @@
         "sharepoint_server",
         "sharepoint_server",
         "sharepoint_server"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-109618",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The su",
+      "cwe": [
+        "CWE-416",
+        "CWE-755",
+        "CWE-824"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2026-10-21T14:17:09.357",
+      "products": [
+        "php",
+        "php",
+        "php"
       ],
       "refs": []
     },
@@ -4186,6 +4186,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-102764",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "The vulnerability exists within internal components of BeyondTrust’s Remote Support product. The components did not adequately validate the origin of the messages it received. Under the right conditions, this could allow an attacker to perform file operations ",
+      "cwe": [
+        "CWE-290"
+      ],
+      "kev": true,
+      "epss": 0.79485,
+      "pub": "2026-10-15T21:17:00.117",
+      "products": [
+        "remote_support"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2013-4810",
       "cvss": 9.8,
       "sev": "critical",
@@ -4218,22 +4234,6 @@
         "acrobat",
         "acrobat",
         "acrobat"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-102764",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "The vulnerability exists within internal components of BeyondTrust’s Remote Support product. The components did not adequately validate the origin of the messages it received. Under the right conditions, this could allow an attacker to perform file operations ",
-      "cwe": [
-        "CWE-290"
-      ],
-      "kev": true,
-      "epss": 0.77994,
-      "pub": "2026-10-15T21:17:00.117",
-      "products": [
-        "remote_support"
       ],
       "refs": []
     },
@@ -5898,6 +5898,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-116779",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "FreeSWITCH is a Software Defined Telecom Stack enabling the digital transformation from proprietary telecom switches to a software implementation that runs on any commodity hardware. Prior to 1.11.3, sofia_presence_handle_sip_i_message() split the To user of a",
+      "cwe": [
+        "CWE-77",
+        "CWE-78",
+        "CWE-749"
+      ],
+      "kev": true,
+      "epss": 0.02473,
+      "pub": "2026-11-05T20:17:44.790",
+      "products": [
+        "freeswitch"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-53521",
       "cvss": 9.8,
       "sev": "critical",
@@ -5985,24 +6003,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2026-116779",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "FreeSWITCH is a Software Defined Telecom Stack enabling the digital transformation from proprietary telecom switches to a software implementation that runs on any commodity hardware. Prior to 1.11.3, sofia_presence_handle_sip_i_message() split the To user of a",
-      "cwe": [
-        "CWE-77",
-        "CWE-78",
-        "CWE-749"
-      ],
-      "kev": true,
-      "epss": 0.01299,
-      "pub": "2026-11-05T20:17:44.790",
-      "products": [
-        "freeswitch"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2025-59374",
       "cvss": 9.8,
       "sev": "critical",
@@ -6045,7 +6045,7 @@
         "CWE-863"
       ],
       "kev": true,
-      "epss": 0.00705,
+      "epss": 0.00535,
       "pub": "2026-11-07T04:17:28.900",
       "products": [
         "aspera_faspex"
@@ -6063,7 +6063,7 @@
         "CWE-346"
       ],
       "kev": true,
-      "epss": 0.00331,
+      "epss": 0.00517,
       "pub": "2026-11-04T22:17:44.613",
       "products": [
         "gpustack"
@@ -6446,7 +6446,7 @@
         "CWE-288"
       ],
       "kev": true,
-      "epss": 0.01602,
+      "epss": 0.08934,
       "pub": "2026-11-02T13:17:37.017",
       "products": [],
       "refs": []
@@ -10031,6 +10031,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-125350",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Use after free in XML in Google Chrome prior to 157.0.8103.50 allowed a remote attacker to execute arbitrary code inside the sandbox via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.00962,
+      "pub": "2026-11-10T18:17:35.237",
+      "products": [
+        "chrome"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-53266",
       "cvss": 8.8,
       "sev": "high",
@@ -10062,22 +10078,6 @@
       "pub": "2026-09-15T19:17:32.297",
       "products": [
         "android"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-125350",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Use after free in XML in Google Chrome prior to 157.0.8103.50 allowed a remote attacker to execute arbitrary code inside the sandbox via a crafted HTML page. (Chromium security severity: High)",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": null,
-      "pub": "2026-11-10T18:17:35.237",
-      "products": [
-        "chrome"
       ],
       "refs": []
     },
@@ -10413,6 +10413,20 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-111560",
+      "cvss": 8.6,
+      "sev": "high",
+      "desc": "Improper neutralization of shell metacharacters in the timezone configuration field in certain Barracuda appliance products using common Barracuda code allows an authenticated administrator to inject OS commands that execute with root privileges when the craft",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.06196,
+      "pub": "2026-11-02T13:17:35.190",
+      "products": [],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-30154",
       "cvss": 8.6,
       "sev": "high",
@@ -10428,20 +10442,6 @@
         "action-composite-template",
         "action-setup"
       ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-111560",
-      "cvss": 8.6,
-      "sev": "high",
-      "desc": "Improper neutralization of shell metacharacters in the timezone configuration field in certain Barracuda appliance products using common Barracuda code allows an authenticated administrator to inject OS commands that execute with root privileges when the craft",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": true,
-      "epss": 0.0106,
-      "pub": "2026-11-02T13:17:35.190",
-      "products": [],
       "refs": []
     },
     {
@@ -11333,6 +11333,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-123158",
+      "cvss": 8.1,
+      "sev": "high",
+      "desc": "sshd in OpenSSH before 10.6p2 on Linux, when musl libc is used without PAM, lacks a workaround for a password authentication bypass (related to misinterpretation of whether a string is intended to be a password hash). For some configurations of accounts, any p",
+      "cwe": [
+        "CWE-394"
+      ],
+      "kev": true,
+      "epss": 0.189,
+      "pub": "2026-11-05T16:17:47.110",
+      "products": [
+        "openssh",
+        "openssh"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-22719",
       "cvss": 8.1,
       "sev": "high",
@@ -11347,23 +11364,6 @@
         "aria_operations",
         "cloud_foundation",
         "cloud_foundation"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-123158",
-      "cvss": 8.1,
-      "sev": "high",
-      "desc": "sshd in OpenSSH before 10.6p2 on Linux, when musl libc is used without PAM, lacks a workaround for a password authentication bypass (related to misinterpretation of whether a string is intended to be a password hash). For some configurations of accounts, any p",
-      "cwe": [
-        "CWE-394"
-      ],
-      "kev": true,
-      "epss": 0.16501,
-      "pub": "2026-11-05T16:17:47.110",
-      "products": [
-        "openssh",
-        "openssh"
       ],
       "refs": []
     },
@@ -11495,7 +11495,7 @@
         "CWE-367"
       ],
       "kev": true,
-      "epss": 0.01157,
+      "epss": 0.01199,
       "pub": "2026-10-31T06:16:34.550",
       "products": [
         "wordpress",
@@ -13902,5 +13902,5 @@
       "refs": []
     }
   ],
-  "says_ar": "331496 ثغرة حقيقية من NVD · 1131 مستغلّة فعلياً (KEV) · 60927 منتج · مزامنة 2026-11-11T14:03:04.447Z"
+  "says_ar": "331689 ثغرة حقيقية من NVD · 1131 مستغلّة فعلياً (KEV) · 60927 منتج · مزامنة 2026-11-11T21:31:59.930Z"
 }

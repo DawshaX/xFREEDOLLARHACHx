@@ -15,6 +15,7 @@
  * Every decision is logged so the panel can show WHY something was refused.
  */
 import { logger } from "../logger";
+import { userFromCookieHeader } from "../panel-auth";
 
 export interface GateRequest {
   method?: string;
@@ -50,6 +51,14 @@ function tokenOk(req: GateRequest): boolean {
   const expected = (process.env.NOVA_EXEC_TOKEN || "").trim();
   if (!expected) return false;
   return queryValue(req, "token") === expected || header(req, "x-nova-token") === expected;
+}
+
+function sessionOk(req: GateRequest): boolean {
+  try {
+    return userFromCookieHeader(header(req, "cookie")) !== null;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -101,6 +110,9 @@ export function checkGate(req: GateRequest, scope: string): GateVerdict {
   const readOnly = !req.method || READONLY_METHODS.has(req.method.toUpperCase());
   if (tokenConfigured()) {
     if (tokenOk(req)) return { ok: true, code: "allowed", reason: "token ok", how: "" };
+    // جلسة اللوحة (كوكي الدخول من panel-auth) بقوة التوكن لطلبات المتصفح:
+    // صاحب اللوحة سجّل دخوله — الأزرار كلها لازم تشتغل من غير ما يكتب التوكن كل مرة.
+    if (sessionOk(req)) return { ok: true, code: "allowed", reason: "panel session", how: "" };
     // reads of status pages never break; anything that acts requires the token.
     // A sensitive read is also satisfied by same-origin — the same signal the write
     // path trusts, since a foreign page cannot forge `Origin`/`Sec-Fetch-Site`.
