@@ -1,31 +1,36 @@
 /**
- * NovaAgentPro v2 — «المختبر ومركز التحكم»: الصفحة اللي بتركب OMEGA بالكامل.
+ * NovaAgentPro v3 — «مركز قيادة دوشة»: الشات مش تاب… الشات هو القلب.
  *
- * الفلسفة (منطوق المالك): مش بوت تلعبه أوامر — نظام متكامل موحّد الربط.
- *  · شريط النبض فوق: قياسات حية من 5 نقاط (healthz · نسخة العقدة · أدوات ·
- *    قناة التليجرام · عمر الجلسة) — كلها بـfetch حقيقي كل 15s، والتظليل أحمر
- *    لو أي حاجة وقعت.
- *  · تبويبات واسعة (الشكوى كانت «ضيقة»): أزرار كبيرة بأيقونات وألوان نيون
- *    ونقاط نبض — مش pills هزيلة.
- *  · كل تبويب يضمّن المكوّن الحقيقي المخدوم (ماتدوبش منطق):
- *    الجلسة=NovaUnifiedChat · المخ=NovaOpsRoom · الأجهزة=RealTimeSystemMonitor
- *    · الصيد=NovaHuntSurface · القنوات=TelegramConfigCard · الملاحة=شبكة routes حقيقية.
- *  · ممنوع نص «قريبًا» أو أزرار فاضية: بوابة check-dead-buttons تحرس.
+ * شكوى المالك بالنص: «مفيش مكان للشات ومش متناسق». فالـv3 قلبت الفلسفة:
+ *  · الشات الموحّد مثبّت يمين دايمًا (≤44% العرض) — بيشتغل وأنت بتتفرج على أي حاجة.
+ *  · عمود القيادة شمال: الأسطول المتصل (connect-info حي) + المخ (nova-core)
+ *    + العتاد (monitor/system) + الاستقلالية (SystemContext) — كل 10–15s تحديث.
+ *  · الساحة الوسطى: منظر واحد ظاهر وقت واحد (نبض الأحداث · المهمات · المخ ·
+ *    العتاد · الصيد · القنوات · الملاحة) — كلها مكونات حقيقية موجودة أصلًا.
+ *  · شريط أحداث سفلي مربوط بـSSE /api/agent/events (من SystemContext نفسه —
+ *    اللي بيطلي هنا هو اللي بيطلي لكل البرنامج).
+ *  · كل رقم مصدره fetch حقيقي؛ الفشل يتعرض نص حرفي مش قيمة متلبّسة.
+ * ممنوع «قريبًا» وأزرار ميتة — check-dead-buttons حارس.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Brain, Radio, Cpu, Target, Cable, Compass, MessageSquareText,
-  HeartPulse, Bot, Server, ShieldCheck, ShieldAlert, Clock3,
+  Brain, Cpu, Target, Cable, Compass, MessageSquareText,
+  Bot, Server, ShieldCheck, ShieldAlert, Clock3, Radio,
+  MonitorSmartphone, ListChecks, Activity, Zap, ZapOff, MemoryStick,
 } from "lucide-react";
 import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
-import { NovaOpsRoom } from "@/components/desktop/NovaBrainOps";
+import { NovaOpsRoom, NovaHuntSurface } from "@/components/desktop/NovaBrainOps";
 import { RealTimeSystemMonitor } from "@/components/desktop/RealTimeSystemMonitor";
-import { NovaHuntSurface } from "@/components/desktop/NovaBrainOps";
+import { NovaMissions } from "@/components/desktop/NovaMissions";
+import { KaliTerminal } from "@/components/desktop/KaliTerminal";
+import { AdvancedFileManager } from "@/components/desktop/AdvancedFileManager";
 import { TelegramConfigCard } from "@/components/TelegramConfigCard";
-import { DraggableWindow, type WindowState } from "@/components/desktop/DraggableWindow";
-import { PanelTop, LayoutGrid } from "lucide-react";
+import { opsFetch } from "@/lib/ops-client";
+import { useSystem } from "@/context/SystemContext";
 
-type TabKey = "session" | "brain" | "hardware" | "hunt" | "channels" | "nav";
+/* ── أنواع الردود اللي بتيجي من السيرفر (شكل مثبت من الكود مش من إحساس) ── */
+
+type ArenaKey = "events" | "desktop" | "missions" | "brain" | "hardware" | "hunt" | "channels" | "nav";
 
 interface Vitals {
   healthOk: boolean | null; healthMs: number | null; db: boolean | null;
@@ -33,13 +38,27 @@ interface Vitals {
   tgToken: boolean | null; tgChat: boolean | null;
 }
 
-const TABS: Array<{ key: TabKey; labelAr: string; sub: string; icon: typeof Brain; color: string }> = [
-  { key: "session",  labelAr: "الجلسة الذكية",   sub: "الشات الموحّد والمهمات",   icon: MessageSquareText, color: "#4ade80" },
-  { key: "brain",    labelAr: "المخ والمجلس",    sub: "حالة الكيان · التصويت",    icon: Brain,             color: "#a78bfa" },
-  { key: "hardware", labelAr: "الأجهزة الحية",   sub: "CPU · RAM · رصد لحظي",     icon: Cpu,               color: "#22d3ee" },
-  { key: "hunt",     labelAr: "الصيد والثغرات",  sub: "hunt حي · NVD · CVE",      icon: Target,            color: "#fb7185" },
-  { key: "channels", labelAr: "القنوات",         sub: "تليجرام · تنبيهات · ضبط",  icon: Cable,             color: "#fbbf24" },
-  { key: "nav",      labelAr: "الملاحة الكاملة", sub: "كل مراكز المنصة الحقيقية", icon: Compass,           color: "#60a5fa" },
+interface FleetAgentInfo {
+  id: string; hostname: string; platform: string; user?: string; cpus?: number;
+  totalMemory?: number; connectedAt?: string; capabilities?: string[];
+}
+
+interface VaultState { present: boolean | null; total: number | null; }
+interface CorpusState { measured: boolean | null; total: number | null; kev: number | null; }
+
+interface BrainStatus {
+  providers?: unknown[]; council?: unknown; tools?: unknown[]; categories?: number;
+}
+
+const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color: string }> = [
+  { key: "events",   labelAr: "نبض الأحداث",  icon: Activity,    color: "#4ade80" },
+  { key: "desktop",  labelAr: "سطح المكتب",   icon: MonitorSmartphone, color: "#34d399" },
+  { key: "missions", labelAr: "المهمات",      icon: ListChecks,  color: "#fbbf24" },
+  { key: "brain",    labelAr: "المخ والمجلس", icon: Brain,       color: "#a78bfa" },
+  { key: "hardware", labelAr: "العتاد الحي",  icon: Cpu,         color: "#22d3ee" },
+  { key: "hunt",     labelAr: "الصيد",        icon: Target,      color: "#fb7185" },
+  { key: "channels", labelAr: "القنوات",      icon: Cable,       color: "#f59e0b" },
+  { key: "nav",      labelAr: "الملاحة",      icon: Compass,     color: "#60a5fa" },
 ];
 
 const NAV_GROUPS: Array<{ group: string; color: string; items: Array<{ path: string; label: string }> }> = [
@@ -60,12 +79,12 @@ const NAV_GROUPS: Array<{ group: string; color: string; items: Array<{ path: str
     { path: "/threat-detector", label: "🚨 كشف التهديدات" },
   ] },
   { group: "الأدوات والشبكات", color: "#a78bfa", items: [
+    { path: "/terminal", label: "💻 كونسول الأسطول" },
     { path: "/port-scanner", label: "🛰 ماسح المنافذ" },
     { path: "/dns-lookup", label: "🧭 DNS Lookup" },
     { path: "/whois-lookup", label: "🗺 WHOIS" },
     { path: "/subdomains", label: "🕸 النطاقات الفرعية" },
     { path: "/hash-calculator", label: "#️⃣ الهاشات" },
-    { path: "/encryption-tool", label: "🔐 التشفير" },
   ] },
   { group: "الإدارة والتكامل", color: "#4ade80", items: [
     { path: "/settings", label: "⚙ الإعدادات وقناة التليجرام" },
@@ -83,33 +102,40 @@ function fmtUptime(s: number | null): string {
   return d > 0 ? `${d}ي ${h}س ${m}د` : h > 0 ? `${h}س ${m}د` : `${m}د`;
 }
 
+function fmtClock(ts: number): string {
+  try { return new Date(ts).toLocaleTimeString("ar-EG", { hour12: false }); } catch { return "—"; }
+}
+
+/* بطاقة صغيرة قياسية لعمود القيادة */
+function RailCard({ title, icon: Icon, color, children, footer }: {
+  title: string; icon: typeof Brain; color: string; children: React.ReactNode; footer?: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-white/8 bg-black/40 overflow-hidden">
+      <header className="flex items-center gap-2 px-3 py-2 border-b border-white/5"
+        style={{ background: `${color}0d` }}>
+        <Icon className="w-3.5 h-3.5" style={{ color }} />
+        <span className="text-[11px] font-black" style={{ color }}>{title}</span>
+      </header>
+      <div className="p-2.5 text-[11px]">{children}</div>
+      {footer && <div className="px-2.5 pb-2">{footer}</div>}
+    </section>
+  );
+}
+
 export default function NovaAgentPro() {
-  const [tab, setTab] = useState<TabKey>("session");
-  // وضع النوافذ الحرة: التبويبات بتتحول لنوافذ بتتحرك بالسحب زي سطح المكتب
-  const [freeMode, setFreeMode] = useState(false);
-  const [wins, setWins] = useState<WindowState[]>([]);
-  const zRef = useRef(10);
-  const openWin = (key: TabKey) => {
-    const meta = TABS.find((t) => t.key === key)!;
-    setWins((prev) => {
-      if (prev.some((w) => w.id === key)) {
-        return prev.map((w) => w.id === key ? { ...w, minimized: false, z: ++zRef.current } : w);
-      }
-      const idx = prev.length;
-      return [...prev, {
-        id: key, title: meta.labelAr,
-        x: 40 + (idx % 4) * 36, y: 30 + (idx % 4) * 36,
-        w: key === "session" ? 820 : 620, h: key === "session" ? 560 : 480,
-        z: ++zRef.current, minimized: false, maximized: false,
-      }];
-    });
-  };
-  const patchWin = (id: string, patch: Partial<WindowState>) =>
-    setWins((prev) => prev.map((w) => w.id === id ? { ...w, ...patch } : w));
-  const closeWin = (id: string) => setWins((prev) => prev.filter((w) => w.id !== id));
+  const [arena, setArena] = useState<ArenaKey>("events");
+  const sys = useSystem();
   const [vit, setVit] = useState<Vitals>({ healthOk: null, healthMs: null, db: null, sha: "", uptimeS: null, tools: 0, tgToken: null, tgChat: null });
+  const [agents, setAgents] = useState<FleetAgentInfo[]>([]);
+  const [agentsErr, setAgentsErr] = useState<string | null>(null);
+  const [brain, setBrain] = useState<BrainStatus | null>(null);
+  const [hw, setHw] = useState<{ cpu: number | null; mem: number | null; cores: number | null }>({ cpu: null, mem: null, cores: null });
+  const [vault, setVault] = useState<VaultState>({ present: null, total: null });
+  const [corpus, setCorpus] = useState<CorpusState>({ measured: null, total: null, kev: null });
   const mounted = useRef(Date.now());
 
+  /* ─── النبض العلوي + المخ + الأسطول (تحديث دوري، كل المصادر حقيقية) ─── */
   const refresh = useCallback(async () => {
     const t0 = performance.now();
     let healthOk = false, db: boolean | null = null, healthMs: number | null = null;
@@ -136,14 +162,56 @@ export default function NovaAgentPro() {
       tgChat = j?.keys?.["telegram.chatId"] ?? null;
     } catch { /* optional */ }
     setVit({ healthOk, healthMs, db, sha, uptimeS, tools, tgToken, tgChat });
+
+    // الأسطول الحقيقي المتصل الآن (المصدر اللحظي الأدق — connect-info)
+    try {
+      const r = await fetch("/api/local-agent/connect-info");
+      const j = (await r.json().catch(() => null)) as { agents?: FleetAgentInfo[] } | null;
+      if (r.ok && Array.isArray(j?.agents)) { setAgents(j.agents); setAgentsErr(null); }
+      else setAgentsErr(`connect-info رد ${r.status}`);
+    } catch { setAgentsErr("connect-info مش راد"); }
+
+    // المخ
+    const br = await opsFetch<BrainStatus & { providers?: unknown[]; tools?: unknown[]; categoriesCount?: number }>("/nova-core/status");
+    if (br.ok && br.data) {
+      const d = br.data as { providers?: unknown[]; tools?: unknown[]; categoriesCount?: number; categories?: number };
+      setBrain({ providers: d.providers ?? [], tools: d.tools ?? [], categories: d.categoriesCount ?? d.categories });
+    }
+
+    // العتاد
+    const mr = await opsFetch<{ cpu?: { usage?: number; cores?: number }; memory?: { usagePercent?: number } }>("/monitor/system");
+    if (mr.ok && mr.data) {
+      setHw({
+        cpu: typeof mr.data.cpu?.usage === "number" ? Math.round(mr.data.cpu.usage) : null,
+        mem: typeof mr.data.memory?.usagePercent === "number" ? mr.data.memory.usagePercent : null,
+        cores: typeof mr.data.cpu?.cores === "number" ? mr.data.cpu.cores : null,
+      });
+    }
+
+    // الخزنة + الكوربوس (الأرقام من ملفات المؤشر المكتوبة بالسحب الفعلي)
+    const fr = await opsFetch<{ present?: boolean; total?: number }>("/ops/findings/status");
+    if (fr.ok && fr.data) {
+      setVault({ present: fr.data.present ?? null, total: typeof fr.data.total === "number" ? fr.data.total : null });
+    }
+    const cr = await opsFetch<{ measured?: boolean; total?: number; kev?: number }>("/ops/corpus");
+    if (cr.ok && cr.data) {
+      setCorpus({
+        measured: cr.data.measured ?? null,
+        total: typeof cr.data.total === "number" ? cr.data.total : null,
+        kev: typeof cr.data.kev === "number" ? cr.data.kev : null,
+      });
+    }
   }, []);
-  useEffect(() => { void refresh(); const iv = setInterval(refresh, 15_000); return () => clearInterval(iv); }, [refresh]);
+  useEffect(() => { void refresh(); const iv = setInterval(refresh, 12_000); return () => clearInterval(iv); }, [refresh]);
 
   const sessionS = Date.now() - mounted.current;
+  const lastEvents = sys.systemEvents.slice(0, 40);
+  const ticker = sys.systemEvents.slice(0, 3);
+
   const pill = (ok: boolean | null | undefined, label: string, extra = "") => {
     const color = ok == null ? "#94a3b8" : ok ? "#4ade80" : "#fb7185";
     return (
-      <span key={label} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-mono font-bold"
+      <span key={label} className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-mono font-bold"
         style={{ borderColor: color + "40", color, background: color + "10" }}>
         <span className={"w-1.5 h-1.5 rounded-full" + (ok ? " animate-pulse" : "")} style={{ background: color }} />
         {ok == null ? `${label}: ⏳` : ok ? `${label}${extra}` : `${label}: ✗`}
@@ -151,184 +219,280 @@ export default function NovaAgentPro() {
     );
   };
 
+  const meter = (label: string, value: number | null, suffix = "%") => {
+    const v = value ?? 0;
+    const color = value == null ? "#64748b" : v > 85 ? "#fb7185" : v > 60 ? "#fbbf24" : "#4ade80";
+    return (
+      <div className="space-y-1" dir="ltr">
+        <div className="flex justify-between text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <span>{label}</span><span style={{ color }}>{value == null ? "—" : `${v}${suffix}`}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, Math.max(0, v))}%`, background: color }} />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#04040c]" dir="rtl">
-      {/* شريط عنوان + نبض حي */}
-      <header className="border-b border-emerald-500/10 bg-gradient-to-l from-emerald-950/20 via-[#04040c] to-purple-950/20 px-4 pt-3 pb-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <Bot className="w-6 h-6 text-emerald-400" />
+      {/* ── شريط النبض العلوي ── */}
+      <header className="shrink-0 border-b border-emerald-500/10 bg-gradient-to-l from-emerald-950/20 via-[#04040c] to-purple-950/20 px-3 py-2">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Bot className="w-5 h-5 text-emerald-400" />
           <div>
-            <h1 className="text-base font-black text-emerald-200">المختبر ومركز التحكم — NOVA AGENT PRO</h1>
-            <div className="text-[9px] font-mono text-white/30">نظام متكامل موحّد الربط — مش بوت أوامر · الجلسة {fmtUptime(Math.round(sessionS / 1000))} · sha {vit.sha || "…"}</div>
+            <h1 className="text-sm font-black text-emerald-200 leading-4">مركز قيادة دوشة — NOVA AGENT PRO</h1>
+            <div className="text-[8px] font-mono text-white/30">
+              الجلسة {fmtUptime(Math.round(sessionS / 1000))} · sha {vit.sha || "…"} · أحداث قناة البرنامج: {sys.systemEvents.length}
+            </div>
           </div>
-          <div className="mr-auto flex items-center gap-1.5 flex-wrap">
-            <button onClick={() => { setFreeMode((v) => !v); if (!freeMode && wins.length === 0) openWin("session"); }}
-              title={freeMode ? "العودة لوضع التبويبات" : "وضع النوافذ الحرة — تبويباتك تتحرك بالسحب"}
-              className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-mono font-bold border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500/20 transition">
-              {freeMode ? <PanelTop className="w-3 h-3" /> : <LayoutGrid className="w-3 h-3" />}
-              {freeMode ? "تبويبات" : "نوافذ حرة"}
-            </button>
+          <div className="mr-auto flex items-center gap-1 flex-wrap">
             {pill(vit.healthOk, "السيرفر", vit.healthOk && vit.healthMs != null ? ` ${vit.healthMs}ms` : "")}
-            {pill(vit.db, "قاعدة البيانات")}
+            {pill(vit.db, "DB")}
             {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools}`)}
-            {pill(vit.tgToken, "تليجرام·توكن")}
-            {pill(vit.tgChat, "تليجرام·شات")}
-            <span className="inline-flex items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-mono font-bold text-cyan-300">
-              <Clock3 className="w-3 h-3" /> uptime: {fmtUptime(vit.uptimeS)}
+            {pill(agents.length > 0 ? true : agentsErr == null ? null : false, `عقد ×${agents.length}`)}
+            {pill(vit.tgToken, "TG")}
+            {pill(vit.tgChat, "TG·chat")}
+            <span className="inline-flex items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-mono font-bold text-cyan-300">
+              <Clock3 className="w-3 h-3" /> {fmtUptime(vit.uptimeS)}
             </span>
           </div>
         </div>
-        {/* تبويبات واسعة بأيقونات — مش pills ضيقة */}
-        <nav className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
-          {TABS.map(({ key, labelAr, sub, icon: Icon, color }) => {
-            const active = tab === key;
-            return (
-              <button key={key} onClick={() => { setTab(key); if (freeMode) openWin(key); }}
-                className={"group rounded-xl border px-3 py-2.5 text-right transition-all duration-200 relative overflow-hidden"}
-                style={active
-                  ? { borderColor: color + "66", background: `linear-gradient(135deg, ${color}18, ${color}06)`, boxShadow: `0 0 18px ${color}22 inset, 0 0 12px ${color}18` }
-                  : { borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.015)" }}>
-                {active && <span className="absolute inset-x-6 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />}
-                <div className="flex items-center gap-2">
-                  <Icon className="w-4 h-4 shrink-0" style={{ color: active ? color : "rgba(255,255,255,0.35)" }} />
-                  <span className="text-[12px] font-black" style={{ color: active ? color : "rgba(255,255,255,0.6)" }}>{labelAr}</span>
-                  {active && <span className="mr-auto w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color }} />}
-                </div>
-                <div className="text-[8px] font-mono mt-0.5" style={{ color: active ? color + "90" : "rgba(255,255,255,0.25)" }}>{sub}</div>
-              </button>
-            );
-          })}
-        </nav>
       </header>
 
-      {/* الجسم — كل تبويب يضمّن المكوّن الحقيقي */}
-      <main className="flex-1 min-h-0 overflow-hidden relative">
-        {freeMode && (
-          <div className="absolute inset-0 overflow-hidden" style={{ backgroundImage: "radial-gradient(circle, rgba(74,222,128,0.05) 1px, transparent 1px)", backgroundSize: "26px 26px" }}>
-            {wins.map((w) => {
-              const meta = TABS.find((t) => t.key === w.id as TabKey);
-              return (
-                <div key={w.id} style={{ position: "absolute", zIndex: w.z, transform: "translateZ(0)" }}>
-                  <DraggableWindow
-                    state={w}
-                    onClose={() => closeWin(w.id)}
-                    onFocus={() => patchWin(w.id, { z: ++zRef.current })}
-                    onMinimize={() => patchWin(w.id, { minimized: true })}
-                    onMaximize={() => patchWin(w.id, { maximized: !w.maximized })}
-                    onMove={(x, y) => patchWin(w.id, { x, y })}
-                    onResize={(nw, nh) => patchWin(w.id, { w: nw, h: nh })}>
-                    <div className="h-full w-full overflow-hidden bg-[#04040c]" dir="rtl">
-                      {w.id === "session" && (
-                        <NovaUnifiedChat title={meta?.labelAr ?? "الجلسة"} subtitle="الجلسة الذكية في نافذة حرة" />
-                      )}
-                      {w.id === "brain" && <div className="h-full overflow-auto"><NovaOpsRoom /></div>}
-                      {w.id === "hardware" && <div className="h-full overflow-auto p-2"><RealTimeSystemMonitor /></div>}
-                      {w.id === "hunt" && <div className="h-full overflow-auto"><NovaHuntSurface /></div>}
-                      {w.id === "channels" && <div className="h-full overflow-auto p-3"><TelegramConfigCard /></div>}
-                      {w.id === "nav" && (
-                        <div className="h-full overflow-auto p-3 space-y-3">
-                          {NAV_GROUPS.map(({ group, color, items }) => (
-                            <section key={group}>
-                              <h2 className="text-[11px] font-black mb-1.5" style={{ color }}>{group}</h2>
-                              <div className="grid grid-cols-2 gap-1.5">
-                                {items.map((it) => (
-                                  <a key={it.path} href={it.path} className="rounded-lg border px-2.5 py-2 text-center text-[10px] font-bold font-mono"
-                                    style={{ borderColor: color + "30", background: color + "08", color: color + "dd" }}>{it.label}</a>
-                                ))}
-                              </div>
-                            </section>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </DraggableWindow>
+      {/* ── الجسم: [قيادة | ساحة | شات] ── */}
+      <main className="flex-1 min-h-0 flex overflow-hidden">
+
+        {/* عمود القيادة (يسار) — حي بالكامل */}
+        <aside className="hidden xl:flex w-[264px] shrink-0 flex-col gap-2.5 border-l border-white/5 p-2.5 overflow-y-auto">
+          <RailCard title={`الأسطول المتصل — ${agents.length} عقدة`} icon={Server} color="#22d3ee"
+            footer={agents.length === 0
+              ? <div className="text-[9px] font-mono text-white/35">{agentsErr ?? "مفيش عقد متصلة دلوقتي — /live-agent فيه سطر الانضمام الجاهز"}</div>
+              : undefined}>
+            <div className="space-y-1.5">
+              {agents.slice(0, 6).map((a) => (
+                <div key={a.id} className="flex items-center gap-2 rounded-lg border border-white/6 bg-white/[0.02] px-2 py-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-mono text-[10px] font-bold text-cyan-200 truncate" dir="ltr">{a.id}</div>
+                    <div className="text-[8px] font-mono text-white/35 truncate">{a.hostname} · {a.platform}{a.cpus ? ` · ${a.cpus}C` : ""}</div>
+                  </div>
                 </div>
+              ))}
+            </div>
+          </RailCard>
+
+          <RailCard title="المخ السحابي" icon={Brain} color="#a78bfa">
+            {brain ? (
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <div><div className="text-base font-black font-mono text-purple-300">{brain.providers?.length ?? 0}</div><div className="text-[8px] font-mono text-white/35">مزود</div></div>
+                <div><div className="text-base font-black font-mono text-purple-300">{brain.tools?.length ?? 0}</div><div className="text-[8px] font-mono text-white/35">أداة</div></div>
+                <div><div className="text-base font-black font-mono text-purple-300">{brain.categories ?? "—"}</div><div className="text-[8px] font-mono text-white/35">فئة</div></div>
+              </div>
+            ) : <div className="text-[9px] font-mono text-white/35">يتقاس…</div>}
+          </RailCard>
+
+          <RailCard title="الخزنة + كوربوس الثغرات" icon={ShieldCheck} color="#fb7185">
+            <div className="grid grid-cols-3 gap-1.5 text-center">
+              <div>
+                <div className="text-base font-black font-mono text-rose-300">{vault.total ?? "—"}</div>
+                <div className="text-[8px] font-mono text-white/35">نتيجة في الخزنة</div>
+              </div>
+              <div>
+                <div className="text-base font-black font-mono text-rose-300">{corpus.total != null ? corpus.total.toLocaleString("en") : "—"}</div>
+                <div className="text-[8px] font-mono text-white/35">CVE مقاسة</div>
+              </div>
+              <div>
+                <div className="text-base font-black font-mono text-rose-300">{corpus.kev != null ? corpus.kev.toLocaleString("en") : "—"}</div>
+                <div className="text-[8px] font-mono text-white/35">KEV مؤكدة</div>
+              </div>
+            </div>
+            {vault.total === 0 && (
+              <div className="mt-1.5 text-[8px] font-mono text-rose-200/60 border-t border-white/5 pt-1.5">
+                الخزنة فاضية رغم الكوربوس — خط «الصيد → الخزنة» بيملى لما أدوات الفحص تسجّل نتيجة مؤكدة، مش بأرقام مخترعة هنا.
+              </div>
+            )}
+          </RailCard>
+
+          <RailCard title={`العتاد الحي${hw.cores ? ` — ${hw.cores}C` : ""}`} icon={Cpu} color="#22d3ee">
+            <div className="space-y-2">
+              {meter("CPU", hw.cpu)}
+              {meter("RAM", hw.mem)}
+            </div>
+          </RailCard>
+
+          <RailCard title="الاستقلالية" icon={sys.autonomousStatus.enabled ? Zap : ZapOff} color={sys.autonomousStatus.enabled ? "#fbbf24" : "#64748b"}>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[9px] font-mono">
+                <span className={sys.autonomousStatus.enabled ? "text-amber-300" : "text-white/35"}>
+                  {sys.autonomousStatus.enabled ? (sys.autonomousStatus.isRunning ? "شغّال الآن ⚡" : "مفعّلة") : "مطفية"}
+                </span>
+                <span className="text-white/35">✔{sys.autonomousStatus.tasksCompleted} · ✗{sys.autonomousStatus.tasksErrored}</span>
+              </div>
+              <button
+                onClick={() => { sys.autonomousStatus.enabled ? sys.disableAutonomous() : sys.enableAutonomous(); }}
+                className="w-full rounded-lg border px-2 py-1.5 text-[10px] font-black transition-colors"
+                style={sys.autonomousStatus.enabled
+                  ? { borderColor: "#fbbf2466", background: "#fbbf2412", color: "#fbbf24" }
+                  : { borderColor: "#4ade8066", background: "#4ade8012", color: "#4ade80" }}>
+                {sys.autonomousStatus.enabled ? "إطفاء الوضع المستقل" : "تشغيل الوضع المستقل"}
+              </button>
+              <div className="text-[8px] font-mono text-white/30">بيضرب /api/agent/autonomous على طول — الدقيقة بتحصل من الكونتكست المركزي مش من عجة.</div>
+            </div>
+          </RailCard>
+
+          <RailCard title={`الذاكرة الحية — ${sys.memoryEvents.length}`} icon={MemoryStick} color="#f472b6">
+            <div className="space-y-1">
+              {sys.memoryEvents.slice(0, 3).map((m) => (
+                <div key={m.id} className="rounded-lg border border-white/6 bg-white/[0.02] px-2 py-1">
+                  <div className="text-[9px] font-bold text-pink-200/80 truncate">{m.key}</div>
+                  <div className="text-[8px] font-mono text-white/30 truncate" dir="ltr">{m.content.slice(0, 60)}</div>
+                </div>
+              ))}
+              {sys.memoryEvents.length === 0 && <div className="text-[9px] font-mono text-white/35">الخزنة لسه فاضية</div>}
+            </div>
+          </RailCard>
+        </aside>
+
+        {/* الساحة الوسطى */}
+        <section className="flex-1 min-w-0 flex flex-col min-h-0">
+          <nav className="shrink-0 flex items-center gap-1 px-2.5 py-2 border-b border-white/5 overflow-x-auto">
+            {ARENAS.map(({ key, labelAr, icon: Icon, color }) => {
+              const active = arena === key;
+              return (
+                <button key={key} onClick={() => setArena(key)}
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-black transition-all"
+                  style={active
+                    ? { borderColor: color + "66", background: `${color}18`, color, boxShadow: `0 0 10px ${color}22 inset` }
+                    : { borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.015)", color: "rgba(255,255,255,0.45)" }}>
+                  <Icon className="w-3.5 h-3.5" />
+                  {labelAr}
+                  {key === "events" && sys.systemEvents.length > 0 && (
+                    <span className="rounded-full px-1.5 text-[8px] font-mono" style={{ background: `${color}25`, color }}>{sys.systemEvents.length}</span>
+                  )}
+                </button>
               );
             })}
-            {wins.filter((w) => w.minimized).length > 0 && (
-              <div className="absolute bottom-2 right-2 flex gap-1.5 z-[9999]">
-                {wins.filter((w) => w.minimized).map((w) => (
-                  <button key={w.id} onClick={() => patchWin(w.id, { minimized: false, z: ++zRef.current })}
-                    className="rounded-lg border border-white/15 bg-black/70 px-3 py-1.5 text-[10px] font-mono text-white/70 hover:bg-white/10">
-                    {TABS.find((t) => t.key === w.id)?.labelAr ?? w.id}
-                  </button>
+          </nav>
+
+          <div className="flex-1 min-h-0 overflow-y-auto p-3">
+            {arena === "events" && (
+              <div className="space-y-1.5" dir="ltr">
+                {lastEvents.length === 0 && (
+                  <div className="rounded-xl border border-white/8 bg-white/[0.02] p-6 text-center text-[11px] font-mono text-white/35" dir="rtl">
+                    قناة الأحداث مفتوحة (SSE) — أول حدث هيظهر هنا لحظيًا: مهمة بتبدأ، ذكرى بتتخزن، عقدة بتدخل.
+                  </div>
+                )}
+                {lastEvents.map((ev, i) => (
+                  <div key={`${ev.ts}-${i}`} className="flex items-start gap-2.5 rounded-lg border border-white/6 bg-black/40 px-3 py-2">
+                    <span className="text-[9px] font-mono text-white/30 shrink-0 pt-0.5">{fmtClock(ev.ts)}</span>
+                    <span className="text-[10px] font-black font-mono text-emerald-300 shrink-0">{ev.type}</span>
+                    {ev.data && <span className="text-[9px] font-mono text-white/40 truncate">{JSON.stringify(ev.data).slice(0, 140)}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {arena === "desktop" && (
+              <div className="grid grid-cols-1 2xl:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-emerald-500/15 bg-black/40 overflow-hidden flex flex-col min-h-[420px]">
+                  <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-white/5 bg-emerald-500/5">
+                    <MonitorSmartphone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[11px] font-black text-emerald-300">تيرمنال كالي الحي</span>
+                    <span className="mr-auto text-[8px] font-mono text-white/35" dir="ltr">
+                      {agents.length > 0 ? `على ${agents[0].hostname} (${agents[0].user ?? "—"})` : "ينتظر عقدة…"}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-h-[380px]" dir="ltr">
+                    <KaliTerminal
+                      agentConnected={agents.length > 0}
+                      agentHostname={agents[0]?.hostname ?? ""}
+                      agentUser={agents[0]?.user ?? ""}
+                    />
+                  </div>
+                </div>
+                <div className="rounded-xl border border-cyan-500/15 bg-black/40 overflow-hidden flex flex-col min-h-[420px]">
+                  <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-white/5 bg-cyan-500/5">
+                    <Server className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="text-[11px] font-black text-cyan-300">مدير ملفات العقدة</span>
+                    <span className="mr-auto text-[8px] font-mono text-white/35" dir="ltr">/api/files — عمليات حقيقية</span>
+                  </div>
+                  <div className="flex-1 min-h-[380px] overflow-auto">
+                    <AdvancedFileManager />
+                  </div>
+                </div>
+              </div>
+            )}
+            {arena === "missions" && <NovaMissions />}
+            {arena === "brain" && <NovaOpsRoom />}
+            {arena === "hardware" && <RealTimeSystemMonitor />}
+            {arena === "hunt" && <NovaHuntSurface />}
+            {arena === "channels" && (
+              <div className="max-w-3xl space-y-3">
+                <TelegramConfigCard />
+                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-[11px] font-mono text-amber-200/80 space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold"><Radio className="w-4 h-4" /> قنوات تانية من نفس المحور:</div>
+                  <div>· تنبيهات الزيارات (عين الزيارات) — مربوطة بنفس القناة فورًا بعد التوكن.</div>
+                  <div>· GitHub متكامل فعلًا: الحزمة بتتبنى من CI بتوقيع، والـwatchdog بيفعّل صيانة الأدوات تلقائيًا.</div>
+                </div>
+              </div>
+            )}
+            {arena === "nav" && (
+              <div className="space-y-4">
+                <div className="text-[11px] font-mono text-white/40 flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-blue-400" />
+                  كل زرار هنا بيفتح مركز حقيقي جوه المنصة (83 صفحة مرروتة — حارس «مفيش زرار ميت» صايدهم كلهم).
+                </div>
+                {NAV_GROUPS.map(({ group, color, items }) => (
+                  <section key={group}>
+                    <h2 className="text-[12px] font-black mb-2 flex items-center gap-2" style={{ color }}>
+                      <span className="w-1 h-3.5 rounded-full" style={{ background: color }} />
+                      {group}
+                    </h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                      {items.map((it) => (
+                        <a key={it.path} href={it.path}
+                          className="rounded-xl border px-3 py-3 text-center text-[11px] font-bold font-mono transition-all hover:-translate-y-0.5"
+                          style={{ borderColor: color + "30", background: color + "08", color: color + "dd" }}>
+                          {it.label}
+                        </a>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             )}
           </div>
-        )}
-        <div className={freeMode ? "hidden" : "h-full min-h-0"}>
-        {tab === "session" && (
-          <NovaUnifiedChat title="نوفا — المختبر ومركز التحكم" subtitle="الجلسة الذكية: عقل واحد، أدوات حقيقية، أدلة SHA-256" />
-        )}
-        {tab === "brain" && (
-          <div className="h-full overflow-auto p-3"><NovaOpsRoom /></div>
-        )}
-        {tab === "hardware" && (
-          <div className="h-full overflow-auto p-3 space-y-3">
-            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3.5 py-2.5 text-[11px] font-mono text-cyan-200/80 flex items-center gap-2">
-              <Server className="w-4 h-4" />
-              <span>الأرقام ده هجينة بصراحة: الرصد اللحظي تحت من وكيل الأسطول (جهازك الحقيقي)، وشريط النبض فوق من حاوية السيرفر (460MB رام — بيتقال فيها كده). أي مربع «مفيش مصدر» بيتقال مش بيتزوّق.</span>
-            </div>
-            <RealTimeSystemMonitor />
+        </section>
+
+        {/* الشات الموحّد — القلب، مثبّت على طول الشاشة */}
+        <aside className="w-full lg:w-[42%] lg:min-w-[380px] xl:min-w-[420px] shrink-0 border-r border-emerald-500/15 lg:border-r lg:border-l-0 order-first lg:order-none flex flex-col min-h-0 bg-[#050608]">
+          <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-emerald-500/10 bg-emerald-500/5">
+            <MessageSquareText className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-[10px] font-black text-emerald-300">الجلسة الذكية — ثابتة هنا مهما فتحت في الساحة</span>
           </div>
-        )}
-        {tab === "hunt" ? (
-          <div className="h-full flex flex-col min-h-0">
-            <div className="px-3 pt-3 shrink-0">
-              <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-3.5 py-2.5 text-[11px] font-mono text-rose-200/80 flex items-center gap-2">
-                <Target className="w-4 h-4" />
-                <span>دورة الصيد الحية: 7 مصادر عالمية + مكتب الأدلة + إشعار تليجرام بالحصيلة الحقيقية (مش إشعار صفري). أي «Trigger» هنا بيضرب API فعلي وبيتفسح بعدّاد.</span>
-              </div>
-            </div>
-            <div className="flex-1 min-h-0 overflow-auto p-3"><NovaHuntSurface /></div>
+          <div className="flex-1 min-h-0">
+            <NovaUnifiedChat
+              title="نوفا — مركز التحكم"
+              subtitle="عقل واحد · أدوات حقيقية · أدلة SHA-256 — وبيدير كل اللي حواليك"
+            />
           </div>
-        ) : null}
-        {tab === "channels" && (
-          <div className="h-full overflow-auto p-3 max-w-3xl space-y-3">
-            <TelegramConfigCard />
-            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-[11px] font-mono text-amber-200/80 space-y-1.5">
-              <div className="flex items-center gap-2 font-bold"><Radio className="w-4 h-4" /> قنوات تانية آتية من نفس المحور:</div>
-              <div>· تنبيهات الزيارات (عين الزيارات) — مربوطة بنفس القناة فورًا بعد التوكن.</div>
-              <div>· GitHub تكامل — ct Wilfahdt، عميق بالفعل: الحزمة نفسها بتتبنى من CI بتوقيع، والـwatchdog بيفعّل صيانة الأدوات تلقائيًا. الربط العميق واحد اتنين تلاتة.</div>
-            </div>
-          </div>
-        )}
-        {tab === "nav" && (
-          <div className="h-full overflow-auto p-3 space-y-4">
-            <div className="text-[11px] font-mono text-white/40 flex items-center gap-2">
-              <Compass className="w-4 h-4 text-blue-400" />
-              كل زرار هنا بيفتح مركز حقيقي معمول جوه المنصة (83 صفحة مرروتة، حارس «مفيش زرار ميت» صايد كل واحد). النص بالعربي عشان السرعة.
-            </div>
-            {NAV_GROUPS.map(({ group, color, items }) => (
-              <section key={group}>
-                <h2 className="text-[12px] font-black mb-2 flex items-center gap-2" style={{ color }}>
-                  <span className="w-1 h-3.5 rounded-full" style={{ background: color }} />
-                  {group}
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                  {items.map((it) => (
-                    <a key={it.path} href={it.path}
-                      className="rounded-xl border px-3 py-3 text-center text-[11px] font-bold font-mono transition-all hover:-translate-y-0.5"
-                      style={{ borderColor: color + "30", background: color + "08", color: color + "dd" }}>
-                      {it.label}
-                    </a>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
-        </div>
+        </aside>
       </main>
 
-      {/* أسفل: خط الحالة — قياس مقروء بسرعة */}
-      <footer className="border-t border-white/5 px-4 py-1.5 flex items-center gap-3 text-[9px] font-mono text-white/30">
-        {vit.healthOk === true ? <ShieldCheck className="w-3 h-3 text-emerald-400" /> : <ShieldAlert className="w-3 h-3 text-rose-400" />}
-        {vit.healthOk === true
-          ? <span>المنصة واعية: healthz ok{vit.healthMs != null ? ` ${vit.healthMs}ms` : ""}{vit.db === true ? " · DB صارمة مشفرة" : ""}{vit.db === false ? " · DB مش واصلة" : ""} · تحديث كل 15 ثانية</span>
-          : <span className="text-rose-300/70">{vit.healthOk == null ? "يتقاس…" : "السيرفر مش واصل دلوقتي — المقاس أمامك ما بيظهرش أخضر كذاب"}</span>}
-        <span className="mr-auto">NOVA AGENT PRO v2 · مركز التحكم</span>
+      {/* ── شريط الأحداث السفلي: آخر 3 من قناة البرنامج الحية ── */}
+      <footer className="shrink-0 border-t border-white/5 px-3 py-1.5 flex items-center gap-3 text-[9px] font-mono text-white/30 overflow-hidden">
+        {vit.healthOk === true ? <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" /> : <ShieldAlert className="w-3 h-3 text-rose-400 shrink-0" />}
+        <span className="shrink-0">{vit.healthOk === true ? "المنصة واعية" : vit.healthOk == null ? "يتقاس…" : "السيرفر مش واصل"}</span>
+        <div className="flex items-center gap-4 min-w-0 overflow-hidden">
+          {ticker.length === 0
+            ? <span className="text-white/20">قناة الأحداث هادية…</span>
+            : ticker.map((ev, i) => (
+              <span key={`${ev.ts}-${i}`} className="whitespace-nowrap text-white/40 truncate" dir="ltr">
+                <span className="text-white/25">{fmtClock(ev.ts)}</span> <span className="text-emerald-300/80">{ev.type}</span>
+              </span>
+            ))}
+        </div>
+        <span className="mr-auto shrink-0 hidden sm:inline"><MonitorSmartphone className="w-3 h-3 inline ml-1" />AGENT PRO v3</span>
       </footer>
     </div>
   );

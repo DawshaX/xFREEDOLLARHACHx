@@ -24,7 +24,7 @@ const PAGES = path.join(ROOT, "artifacts/kali-panel/src/pages");
 const APP = path.join(ROOT, "artifacts/kali-panel/src/App.tsx");
 const asJson = process.argv.includes("--json");
 
-const NET = /probeServices?\(|streamOllamaViaServer|useQuery|useMutation|jsonRequest|apiRequest|emitPlatformWsEvent|new WebSocket|EventSource|fetch\(/g;
+const NET = /probeServices?\(|streamOllamaViaServer|useQuery|useMutation|jsonRequest|apiRequest|opsFetch\b|opsPost\b|emitPlatformWsEvent|new WebSocket|EventSource|[Ff]etch\(/g;
 const INTER = /onClick|onSubmit|onChange|onKeyDown|onMouseEnter/g;
 const STATE = /useState/g;
 

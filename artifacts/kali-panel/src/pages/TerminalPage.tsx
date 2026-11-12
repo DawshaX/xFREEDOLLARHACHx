@@ -1,180 +1,171 @@
-import { useState, useEffect, useRef } from "react";
-import { Terminal, Copy, Trash2 } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Terminal, Trash2, Loader2, ServerOff } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
+import { opsFetch } from "@/lib/ops-client";
+
+/**
+ * Live Terminal — كونسول الأسطول الحقيقي.
+ * قبل: أوامر معلبة بترد من الذاكرة (whoami/ls وهمية — LOCAL-LOGIC في الإحصاء).
+ * دلوقتي: كل أمر بيتنفّذ فعليًا على العقدة المختارة من الأسطول المتصل
+ * (POST /api/local-agent/exec — بوابة ops). الاستثناء الوحيد: help/clear محليين.
+ */
 
 interface TerminalLine {
-  id: string; type: "input" | "output" | "error"; content: string; timestamp: string;
+  id: string; type: "input" | "output" | "error" | "meta"; content: string; timestamp: string;
 }
 
-const COMMANDS: Record<string, string> = {
-  help: "عرض الأوامر المتاحة",
-  clear: "مسح الشاشة",
-  date: "عرض التاريخ والوقت",
-  whoami: "معلومات المستخدم",
-  ls: "عرض الملفات",
-  pwd: "المسار الحالي",
-  echo: "عرض نص",
-  uname: "معلومات النظام",
-  ifconfig: "معلومات الشبكة",
-  ps: "العمليات النشطة",
-};
+interface AgentInfo { id: string; hostname: string; platform: string; cpus?: number; totalMemory?: number; }
+
+interface ExecResult { stdout?: string; stderr?: string; exitCode?: number; durationMs?: number; error?: string; }
+
+const now = () => new Date().toLocaleTimeString("ar-EG", { hour12: false });
 
 export default function TerminalPage() {
-  const [lines, setLines] = useState<TerminalLine[]>([
-    { id: "1", type: "output", content: "CyberNova Terminal v2.0 — Arabic Cybersecurity Platform", timestamp: new Date().toISOString() },
-    { id: "2", type: "output", content: '┌──(cybernova)─[~/workspace]\n└─$ اكتب \'help\' لعرض الأوامر المتاحة', timestamp: new Date().toISOString() },
-  ]);
-  const [currentInput, setCurrentInput] = useState("");
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const terminalRef = useRef<HTMLDivElement>(null);
+  const [lines, setLines] = useState<TerminalLine[]>([{
+    id: "welcome", type: "meta", timestamp: now(),
+    content: "NOVA Fleet Terminal — تنفيذ حقيقي على العقد المختارة. اكتب `help` للمساعدة. انتبه: أوامرك بتترجم لشل فعلي.",
+  }]);
+  const [input, setInput] = useState("");
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [agentId, setAgentId] = useState<string>("");
+  const [running, setRunning] = useState(false);
+  const [hist, setHist] = useState<string[]>([]);
+  const [histIdx, setHistIdx] = useState(-1);
+  const [agentsError, setAgentsError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (terminalRef.current) terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
-  }, [lines]);
+    let dead = false;
+    opsFetch<{ agents?: AgentInfo[] }>("/local-agent/agents").then((r) => {
+      if (dead) return;
+      if (r.ok && r.data?.agents) {
+        setAgents(r.data.agents);
+        // الافتراضي: self-node لو موجودة (الهب نفسه)، غير كده أول عقدة
+        const def = r.data.agents.find((a) => a.id === "self-node") ?? r.data.agents[0];
+        if (def) setAgentId(def.id);
+      } else {
+        setAgentsError(r.denial || r.error || "فشل جلب قائمة العقد");
+      }
+    });
+    return () => { dead = true; };
+  }, []);
 
-  const executeCommand = (command: string) => {
-    const trimmed = command.trim();
-    if (!trimmed) return;
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [lines]);
 
-    const inputLine: TerminalLine = { id: Date.now().toString(), type: "input", content: `$ ${trimmed}`, timestamp: new Date().toISOString() };
-    setLines(p => [...p, inputLine]);
-    setHistory(p => [...p, trimmed]);
-    setHistoryIndex(-1);
+  const push = useCallback((type: TerminalLine["type"], content: string) => {
+    setLines((ls) => [...ls.slice(-400), { id: `${Date.now()}-${Math.random()}`, type, content, timestamp: now() }]);
+  }, []);
 
-    const [cmd, ...args] = trimmed.split(" ");
-    let output: TerminalLine | null = null;
-    const id = (Date.now() + 1).toString();
-    const ts = new Date().toISOString();
+  const run = useCallback(async (rawCmd: string) => {
+    const cmd = rawCmd.trim();
+    if (!cmd || running) return;
+    push("input", `$ ${cmd}`);
+    setHist((h) => [cmd, ...h.slice(0, 60)]);
+    setHistIdx(-1);
+    setInput("");
 
-    switch (cmd.toLowerCase()) {
-      case "help":
-        output = { id, type: "output", timestamp: ts, content: Object.entries(COMMANDS).map(([c, d]) => `  \x1b[32m${c.padEnd(12)}\x1b[0m ${d}`).join("\n") } as TerminalLine;
-        break;
-      case "clear":
-        setLines([]);
+    if (cmd === "clear") { setLines([]); return; }
+    if (cmd === "help") {
+      push("meta", "كل أمر بيتنفّذ على العقدة المختارة فوق (شل حقيقي). المحلي بس: help · clear · agents");
+      return;
+    }
+    if (cmd === "agents") {
+      push("meta", agents.length ? agents.map((a) => `· ${a.id} — ${a.hostname} (${a.platform}${a.cpus ? `, ${a.cpus} CPU` : ""})`).join("\n") : "مفيش عقد متصلة");
+      return;
+    }
+    if (!agentId) { push("error", "مفيش عقدة مختارة — الأسطول فاضي أو لسه بيحمّل."); return; }
+
+    setRunning(true);
+    const t0 = Date.now();
+    try {
+      const r = await opsFetch<ExecResult>("/local-agent/exec", {
+        method: "POST",
+        body: { command: cmd, agentId, timeout: 60_000 },
+      });
+      const ms = Date.now() - t0;
+      if (!r.ok) {
+        push("error", `✗ رُفض (${r.status}): ${r.denial || r.error || "تعذّر التنفيذ"}`);
         return;
-      case "date":
-        output = { id, type: "output", timestamp: ts, content: new Date().toString() };
-        break;
-      case "whoami":
-        output = { id, type: "output", timestamp: ts, content: "cybernova-user@cybernova-system [root]" };
-        break;
-      case "ls":
-        output = { id, type: "output", timestamp: ts, content: "drwxr-xr-x  Desktop    Documents   Downloads\ndrwxr-xr-x  Pictures   Videos      scans\n-rw-r--r--  targets.txt  report.html  config.json" };
-        break;
-      case "pwd":
-        output = { id, type: "output", timestamp: ts, content: "/home/cybernova-user/workspace" };
-        break;
-      case "echo":
-        output = { id, type: "output", timestamp: ts, content: args.join(" ") };
-        break;
-      case "uname":
-        output = { id, type: "output", timestamp: ts, content: "Linux cybernova 6.1.0-kali3-amd64 #1 SMP Debian GNU/Linux" };
-        break;
-      case "ifconfig":
-        output = { id, type: "output", timestamp: ts, content: "eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>\n      inet 192.168.1.100  netmask 255.255.255.0\n      ether 00:11:22:33:44:55\ntun0: flags=4305<UP,POINTOPOINT,RUNNING,NOARP,MULTICAST>\n      inet 10.10.10.1  netmask 255.255.255.0" };
-        break;
-      case "ps":
-        output = { id, type: "output", timestamp: ts, content: "  PID TTY          TIME CMD\n 1234 pts/0    00:00:12 cybernova-api\n 5678 pts/0    00:01:05 ollama\n 9012 pts/0    00:00:03 node\n 3456 pts/0    00:00:08 postgres" };
-        break;
-      default:
-        output = { id, type: "error", timestamp: ts, content: `bash: ${cmd}: command not found — اكتب 'help' لعرض الأوامر` };
-    }
-    if (output) setLines(p => [...p, output]);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      executeCommand(currentInput);
-      setCurrentInput("");
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (history.length > 0 && historyIndex < history.length - 1) {
-        const ni = historyIndex + 1;
-        setHistoryIndex(ni);
-        setCurrentInput(history[history.length - 1 - ni]);
       }
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (historyIndex > 0) {
-        const ni = historyIndex - 1;
-        setHistoryIndex(ni);
-        setCurrentInput(history[history.length - 1 - ni]);
-      } else if (historyIndex === 0) {
-        setHistoryIndex(-1);
-        setCurrentInput("");
-      }
+      const d = r.data ?? {};
+      const out = (d.stdout ?? "").replace(/\s+$/, "");
+      const err = (d.stderr ?? "").replace(/\s+$/, "");
+      if (out) push("output", out.slice(0, 20000));
+      if (err) push("error", err.slice(0, 8000));
+      if (!out && !err) push("meta", "(بدون مخرجات)");
+      push("meta", `exit ${d.exitCode ?? "?"} · ${d.durationMs ?? ms}ms · ${agentId}`);
+    } catch (e) {
+      push("error", `✗ خطأ شبكة: ${String((e as Error).message || e)}`);
+    } finally {
+      setRunning(false);
+      inputRef.current?.focus();
     }
-  };
+  }, [agentId, agents, push, running]);
 
   return (
-    <div className="min-h-screen p-5 space-y-5" style={{ background: "linear-gradient(180deg,#060010 0%,#03000a 100%)" }} dir="rtl">
-      <PageHeader title="⚡ Terminal" subtitle="محطة طرفية سيبرانية — CyberNova CLI" icon={Terminal} danger />
+    <div style={{ padding: 18, direction: "rtl" }} onClick={() => inputRef.current?.focus()}>
+      <PageHeader
+        title="Live Terminal — كونسول الأسطول"
+        subtitle="تنفيذ حقيقي عبر /api/local-agent/exec على أي عقدة متصلة"
+        icon={Terminal}
+      />
 
-      <div className="rounded-2xl overflow-hidden" style={{ background: "#000000", border: "1px solid rgba(68,255,136,0.25)", boxShadow: "0 0 30px rgba(0,255,100,0.06)" }}>
-        {/* Title bar */}
-        <div className="flex items-center justify-between px-4 py-2.5" style={{ background: "#0a0a0a", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: "#ff5555", boxShadow: "0 0 4px #ff5555" }} />
-            <div className="w-3 h-3 rounded-full" style={{ background: "#ffaa44", boxShadow: "0 0 4px #ffaa44" }} />
-            <div className="w-3 h-3 rounded-full" style={{ background: "#44ff88", boxShadow: "0 0 4px #44ff88" }} />
-            <span className="ms-3 text-[10px] font-black font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>cybernova-terminal — ~/workspace</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => { const t = lines.map(l => l.content).join("\n"); navigator.clipboard.writeText(t); }}
-              className="p-1.5 rounded-lg transition-all" style={{ color: "rgba(255,255,255,0.25)" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#44ff88"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.25)"; }}>
-              <Copy className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => setLines([])} className="p-1.5 rounded-lg transition-all" style={{ color: "rgba(255,255,255,0.25)" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "#ff4444"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.25)"; }}>
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Terminal body */}
-        <div ref={terminalRef} className="h-[60vh] overflow-y-auto p-4 font-mono text-[12px] cursor-text"
-          style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(68,255,136,0.2) transparent" }}
-          onClick={() => inputRef.current?.focus()}>
-          {lines.map(line => (
-            <div key={line.id} className="mb-1 leading-relaxed"
-              style={{ color: line.type === "input" ? "#44ff88" : line.type === "error" ? "#ff6666" : "rgba(200,255,200,0.8)" }}>
-              <pre className="whitespace-pre-wrap break-words">{line.content}</pre>
-            </div>
-          ))}
-          <div className="flex items-center gap-2 mt-1">
-            <span className="font-black" style={{ color: "#44ff88" }}>$</span>
-            <input ref={inputRef} type="text" value={currentInput}
-              onChange={e => setCurrentInput(e.target.value)}
-              onKeyDown={handleKeyDown} autoFocus dir="ltr"
-              className="flex-1 bg-transparent outline-none"
-              style={{ color: "rgba(200,255,200,0.9)", caretColor: "#44ff88", fontFamily: "monospace", fontSize: 12 }}
-              placeholder="اكتب أمراً..." />
-          </div>
-        </div>
+      {/* شريط العقد */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 10px", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>العقدة:</span>
+        {agents.map((a) => (
+          <button key={a.id} onClick={(e) => { e.stopPropagation(); setAgentId(a.id); }}
+            style={{ cursor: "pointer", fontFamily: "monospace", fontSize: 12, padding: "5px 12px", borderRadius: 999,
+              border: agentId === a.id ? "1px solid #4ade80" : "1px solid rgba(255,255,255,0.14)",
+              background: agentId === a.id ? "rgba(74,222,128,0.14)" : "rgba(255,255,255,0.03)",
+              color: agentId === a.id ? "#4ade80" : "rgba(255,255,255,0.7)" }}>
+            {a.id === "self-node" ? "🏠 " : ""}{a.id}
+          </button>
+        ))}
+        {agents.length === 0 && (
+          <span style={{ fontSize: 12, color: "#fca5a5", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <ServerOff size={14} /> {agentsError ?? "مفيش عقد متصلة"}
+          </span>
+        )}
       </div>
 
-      {/* Quick Commands */}
-      <div className="rounded-2xl p-4 space-y-3" style={{ background: "rgba(8,0,18,0.95)", border: "1px solid rgba(180,0,255,0.12)", borderRadius: 16 }}>
-        <h3 className="text-[10px] font-black font-mono uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>أوامر سريعة</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-          {Object.entries(COMMANDS).map(([cmd, desc]) => (
-            <button key={cmd} onClick={() => { setCurrentInput(cmd); inputRef.current?.focus(); }}
-              className="p-2.5 rounded-xl text-right transition-all"
-              style={{ background: "rgba(68,255,136,0.04)", border: "1px solid rgba(68,255,136,0.12)", borderRadius: 12 }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.border = "1px solid rgba(68,255,136,0.3)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.border = "1px solid rgba(68,255,136,0.12)"; }}>
-              <div className="font-black font-mono text-[11px]" style={{ color: "#44ff88" }}>{cmd}</div>
-              <div className="text-[9px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{desc}</div>
-            </button>
-          ))}
-        </div>
+      {/* الشاشة */}
+      <div style={{ background: "#050607", border: "1px solid rgba(74,222,128,0.16)", borderRadius: 14, padding: 14, minHeight: 420, maxHeight: "58vh", overflowY: "auto", fontFamily: "ui-monospace, Consolas, monospace", fontSize: 12.5, lineHeight: 1.65, direction: "ltr", textAlign: "left" }}>
+        {lines.map((l) => (
+          <div key={l.id} style={{ whiteSpace: "pre-wrap", wordBreak: "break-word",
+            color: l.type === "input" ? "#4ade80" : l.type === "error" ? "#f87171" : l.type === "meta" ? "rgba(255,255,255,0.38)" : "rgba(255,255,255,0.82)" }}>
+            {l.content}
+          </div>
+        ))}
+        {running && <div style={{ color: "rgba(255,255,255,0.4)" }}><Loader2 size={13} className="animate-spin" style={{ display: "inline", verticalAlign: "-2px" }} /> بيتنفّذ…</div>}
+        <div ref={bottomRef} />
       </div>
+
+      {/* الإدخال */}
+      <form
+        style={{ display: "flex", gap: 8, marginTop: 10 }}
+        onSubmit={(e) => { e.preventDefault(); run(input); }}
+      >
+        <span style={{ alignSelf: "center", color: "#4ade80", fontFamily: "monospace", fontWeight: 800 }}>$</span>
+        <input
+          ref={inputRef}
+          value={input}
+          disabled={running}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowUp") { e.preventDefault(); const i = Math.min(histIdx + 1, hist.length - 1); if (hist[i]) { setHistIdx(i); setInput(hist[i]); } }
+            if (e.key === "ArrowDown") { e.preventDefault(); const i = histIdx - 1; if (i >= 0 && hist[i]) { setHistIdx(i); setInput(hist[i]); } else { setHistIdx(-1); setInput(""); } }
+          }}
+          placeholder={agentId ? `نفّذ على ${agentId}… (↑ للتاريخ)` : "استنى اتصال العقد…"}
+          style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "#e6ffe6", fontFamily: "ui-monospace, monospace", fontSize: 13, padding: "10px 12px", outline: "none", direction: "ltr" }}
+          autoFocus
+        />
+        <button type="button" onClick={() => setLines([])} title="مسح الشاشة"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "0 14px", cursor: "pointer", color: "rgba(255,255,255,0.6)" }}>
+          <Trash2 size={15} />
+        </button>
+      </form>
     </div>
   );
 }

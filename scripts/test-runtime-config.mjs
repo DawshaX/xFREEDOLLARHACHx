@@ -38,9 +38,9 @@ await t("مفتاح غريب يرفض بالسبب والمسموح معلن", a
 
 await t("توكن تليجرام سليم يتقبل، المكسور يرفض", async () => {
   cfg._resetRuntimeConfigForTests();
-  const good = await cfg.setRuntimeConfig("telegram.botToken", "123456789:AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHII");
+  const good = await cfg.setRuntimeConfig("telegram.botToken", "123456789:AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHII"); // allow-secret-literal — توكن تست ملفوظ مش حقيقي
   assert.equal(good.ok, true, JSON.stringify(good));
-  assert.equal(cfg.getRuntimeConfig("telegram.botToken"), "123456789:AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHII");
+  assert.equal(cfg.getRuntimeConfig("telegram.botToken"), "123456789:AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHII"); // allow-secret-literal
   const bad = await cfg.setRuntimeConfig("telegram.botToken", "short");
   assert.equal(bad.ok, false);
   // الرفض مش بيمسح القيمة القديمة
