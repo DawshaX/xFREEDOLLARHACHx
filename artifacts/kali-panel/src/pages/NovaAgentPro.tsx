@@ -1,28 +1,27 @@
 /**
- * NovaAgentPro v5 — «دولاب دوشة»: الزخرفة السايبرية ترجع، بالتنظيم اللي طلبه.
+ * NovaAgentPro v6 — «دولاب دوشة»: تحكم كامل بإيد المالك.
  *
- * تجميع الملاحظات اللي جت بالسكرين والنص:
- *  · «رجّع الشكل القديم وحط زخارف وألوان ودِلع الدنيا» — النيون راجع:
- *    هيدر متوهّج، بلاط ملوّن، والجمجمة نفسها خلفية حية بتتنفّس (نفس أصول
- *    صفحة الدخول — daw-skull.jpg).
- *  · «مفيش مكان أتكلم فيه» — الشات قلب ثابت يمين بمساحة مريحة (430px)،
- *    بدون شريطه الجانبي المزخرف (hideRail): مساحة الكلام طلقت.
- *  · «البلاط عايز يتفصص لمكانه الصح» — الـ24 سلاح من LiveAgentPanel بقوا
- *    قاذفة منظمة في 4 مجموعات داخل عرض «التحكم السريع» الافتراضي.
- *    السلوك حقيقي 1:1: بلاط النافذة يفتح نافذة الديسكتوب الرسمية، وبلاط
- *    البرومبت يحشي صندوق الشات عبر حدث DOM (جسر nova:qa-prompt في
- *    LiveAgentPanel) — التعبئة فقط، الإرسال بيدك دايمًا (الهدف ناقص).
- *  · «شوف الكرون والمخ» — عرض «الجدولة» يقرأ /api/nova/cron/jobs حي
- *    (6 مهام فعلية على waifly) + Trigger فوري + تشغيل/إطفاء حقيقيين.
- * كل رقم fetch مقاس؛ الفشل يتكتب نص مش يتلبّس قيمة.
+ * المطالب (ردود المالك حرفيًا):
+ *  · «كل حاجة عايزة تظبيط» — تنسيق أعمق: تبويبات مثبتة، منطقة عمل تتمدد
+ *    لما تقفل الشات، روس زمنية حية.
+ *  · «أنا ليا التحكم أظهر أو لا» — كل بطاقة في عمود القيادة والشات نفسه
+ *    وشريط القسم بزر إخفاء/إظهار حقيقي محفوظ في localStorage.
+ *  · «تبويبات والتحكم في كل شيء» — لوحة أوامر Ctrl+K: الأقسام + الـ24
+ *    سلاح + مهام الكرون (تشغيل فوري) + الصفحات الحية — كلها من مكان واحد.
+ *  · «اتصال أكتر» — نتايج الكرون تتقرأ آدمي (آخر نتيجة + من كام دقيقة +
+ *    زر يوصلك لصفحة النتايج)، البطاقات الإحصائية قابلة للضغط وتوصلك،
+ *    الإطار حي (نبض SSE + زمن نسبي بيتحدث لوحده).
+ * الجمجمة خلفية حية متنفّسة (هوية DAWSHA) — أصل مضمّن base64 ما ينزلش
+ * من الباندل أبدًا (درس v5.1).
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import {
   Activity, MonitorSmartphone, ListChecks, Brain, Cpu, Target, Cable, Compass,
-  Server, Zap, ZapOff, Clock3, Sparkles, Globe, Skull, ScanLine, Shield,
+  Server, Zap, ZapOff, Clock3, Sparkles, Globe, ScanLine, Shield,
   Terminal as TerminalIcon, Search, Folder, BookOpen, Network, FlaskConical,
   Crosshair, Swords, FileCode, Wifi, CalendarClock, Play, PowerCircle,
+  Command, Eye, EyeOff, MessageSquare, Skull, ArrowLeft, RotateCcw,
 } from "lucide-react";
 import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
 import { NovaOpsRoom, NovaHuntSurface } from "@/components/desktop/NovaBrainOps";
@@ -46,11 +45,11 @@ interface CronJob {
   runCount: number; errorCount: number; lastRun?: string; nextRun?: string; lastResult?: string;
 }
 
-/* ─── قاذفة الأفعال: 24 سلاح × سلوك حقيقي (نفس تعريفات LiveAgentPanel) ─── */
+/* ─── قاذفة الأفعال: 24 سلاح × سلوك حقيقي ─── */
 type LaunchAction =
-  | { kind: "prompt"; text: string }        // يحشي الشات — الإرسال بيدك
-  | { kind: "win"; win: string }            // يفتح نافذة الديسكتوب الرسمية
-  | { kind: "arena"; arena: ArenaKey };     // يقفز لعرض داخلي
+  | { kind: "prompt"; text: string }
+  | { kind: "win"; win: string }
+  | { kind: "arena"; arena: ArenaKey };
 
 interface Tile { id: string; label: string; hint: string; icon: typeof Globe; hue: string; action: LaunchAction; }
 
@@ -102,6 +101,7 @@ const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color:
   { key: "nav",      labelAr: "كل الأقسام",    icon: Compass,     color: "#60a5fa" },
 ];
 
+/* لينكات متحقق منها ضد App.tsx — كلها صفحات حقيقية (لا placeholders) */
 const NAV_GROUPS: Array<{ group: string; color: string; items: Array<{ path: string; label: string }> }> = [
   { group: "المراقبة والتشغيل", color: "#22d3ee", items: [
     { path: "/live-agent", label: "الوكيل الحي" }, { path: "/cve-live", label: "لوحة CVE" },
@@ -125,6 +125,27 @@ const NAV_GROUPS: Array<{ group: string; color: string; items: Array<{ path: str
   ] },
 ];
 
+/* كل مهمة كرون موصولة بساحة نتايجها — زر «النتايج» حقيقي */
+const CRON_LINKS: Record<string, { path: string; label: string }> = {
+  cve_hunt:       { path: "/cve-live", label: "لوحة CVE" },
+  mem_consolidate:{ path: "/memory", label: "الذاكرة" },
+  self_heal:      { path: "/status", label: "حالة النظام" },
+  sys_watchdog:   { path: "/monitor", label: "المراقبة" },
+  tg_pulse:       { path: "/webhooks", label: "القنوات" },
+  nova_learn:     { path: "/nova-memory", label: "تعلم نوفا" },
+};
+
+/* ─── بطاقات القيادة القابلة للإخفاء (تحكم المالك الكامل) ─── */
+type RailId = "fleet" | "hw" | "vault" | "brain" | "autonomy" | "cronmini";
+const RAIL_DEFS: Array<{ id: RailId; title: string }> = [
+  { id: "fleet",    title: "الأسطول" },
+  { id: "hw",       title: "العتاد" },
+  { id: "vault",    title: "الخزنة + الكوربوس" },
+  { id: "brain",    title: "المخ والمجلس" },
+  { id: "autonomy", title: "الاستقلالية" },
+  { id: "cronmini", title: "الجدولة السريعة" },
+];
+
 /* ─── أدوات تنسيق ─── */
 const fmtUptime = (s: number | null): string => {
   if (s == null) return "—";
@@ -134,9 +155,14 @@ const fmtUptime = (s: number | null): string => {
 const fmtClock = (ts: string | number): string => {
   try { return new Date(ts).toLocaleTimeString("ar-EG", { hour12: false }); } catch { return "—"; }
 };
-const fmtDay = (iso?: string): string => {
+/* زمن نسبي عربي: «من 3د» / «بعد 25د» */
+const ago = (iso: string | undefined, now: number): string => {
   if (!iso) return "—";
-  try { return new Date(iso).toLocaleString("ar-EG", { hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return iso; }
+  const t = Date.parse(iso); if (Number.isNaN(t)) return "—";
+  const diffMin = Math.round((t - now) / 60000);
+  const a = Math.abs(diffMin);
+  const words = a < 1 ? "لحظات" : a < 60 ? `${a}د` : a < 1440 ? `${Math.floor(a / 60)}س ${a % 60}د` : `${Math.floor(a / 1440)}ي`;
+  return diffMin >= 0 ? `بعد ${words}` : `من ${words}`;
 };
 
 function NeonCard({ title, icon: Icon, color, children }: { title: string; icon: typeof Brain; color: string; children: React.ReactNode }) {
@@ -167,6 +193,17 @@ function Meter({ label, value }: { label: string; value: number | null }) {
 
 const DOT: Record<string, string> = { ok: "#34d399", bad: "#fb7185", wait: "#64748b" };
 
+/* تفضيلات المالك — محفوظة محليًا */
+const LS_KEY = "daw.agentPro.v6";
+interface Prefs { hiddenRails: RailId[]; chatOpen: boolean; }
+const loadPrefs = (): Prefs => {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) { const j = JSON.parse(raw) as Partial<Prefs>; return { hiddenRails: Array.isArray(j.hiddenRails) ? j.hiddenRails as RailId[] : [], chatOpen: j.chatOpen !== false }; }
+  } catch { /* تفضيلات أول مرة */ }
+  return { hiddenRails: [], chatOpen: true };
+};
+
 export default function NovaAgentPro() {
   const [arena, setArena] = useState<ArenaKey>("launch");
   const [, navigate] = useLocation();
@@ -174,14 +211,31 @@ export default function NovaAgentPro() {
   const [vit, setVit] = useState<{ ok: boolean | null; ms: number | null; db: boolean | null; sha: string; up: number | null; tools: number }>({ ok: null, ms: null, db: null, sha: "", up: null, tools: 0 });
   const [agents, setAgents] = useState<FleetAgentInfo[]>([]);
   const [agentsErr, setAgentsErr] = useState<string | null>(null);
-  const [brain, setBrain] = useState<{ providers: number; tools: number; council: number } | null>(null);
+  const [brain, setBrain] = useState<{ providers: number; tools: number; council: number; cloud: number } | null>(null);
   const [hw, setHw] = useState<{ cpu: number | null; mem: number | null; cores: number | null }>({ cpu: null, mem: null, cores: null });
   const [vault, setVault] = useState<number | null>(null);
   const [corpus, setCorpus] = useState<{ total: number | null; kev: number | null }>({ total: null, kev: null });
   const [cronJobs, setCronJobs] = useState<CronJob[]>([]);
   const [cronErr, setCronErr] = useState<string | null>(null);
   const [cronBusy, setCronBusy] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const [prefs, setPrefs] = useState<Prefs>(() => (typeof window === "undefined" ? { hiddenRails: [], chatOpen: true } : loadPrefs()));
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [palQuery, setPalQuery] = useState("");
+  const [palIdx, setPalIdx] = useState(0);
+  const palInputRef = useRef<HTMLInputElement>(null);
   const mounted = useRef(Date.now());
+
+  /* زمن حي: الأزمنة النسبية بتتحدث كل 20 ثانية */
+  useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 20_000); return () => clearInterval(iv); }, []);
+  /* حفظ التفضيلات */
+  useEffect(() => { try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch { /* تخزين ممتلئ — مش مانع */ } }, [prefs]);
+
+  const flashSay = useCallback((msg: string) => {
+    setFlash(msg);
+    setTimeout(() => setFlash((f) => (f === msg ? null : f)), 6000);
+  }, []);
 
   const refreshCron = useCallback(async () => {
     const r = await opsFetch<{ jobs?: CronJob[] }>("/nova/cron/jobs");
@@ -190,28 +244,64 @@ export default function NovaAgentPro() {
   }, []);
 
   const cronTrigger = useCallback(async (id: string) => {
-    setCronBusy(id + "▶");
-    try { await fetch(`/api/nova/cron/jobs/${encodeURIComponent(id)}/trigger`, { method: "POST", headers: novaAuthHeaders({}) }); } catch { /* الفشل يبان في runCount */ }
+    setCronBusy(id);
+    try {
+      const r = await fetch(`/api/nova/cron/jobs/${encodeURIComponent(id)}/trigger`, { method: "POST", headers: novaAuthHeaders({}) });
+      const j = (await r.json().catch(() => null)) as { ok?: boolean } | null;
+      if (r.ok && j?.ok !== false) flashSay(`⚡ اتشغّلت فوري — النتيجة هتظهر في السجل خلال لحظات`);
+      else flashSay(`⚠ السيرفر ردّ ${r.status} — شوف السجل`);
+    } catch { flashSay("⚠ الطلب مات في الطريق"); }
     await refreshCron(); setCronBusy(null);
-  }, [refreshCron]);
+  }, [refreshCron, flashSay]);
 
   const cronToggle = useCallback(async (id: string, enabled: boolean) => {
-    setCronBusy(id + (enabled ? "⏻" : "⏼"));
+    setCronBusy(id);
     try {
-      await fetch(`/api/nova/cron/jobs/${encodeURIComponent(id)}`, {
+      const r = await fetch(`/api/nova/cron/jobs/${encodeURIComponent(id)}`, {
         method: "PATCH",
         headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ enabled: !enabled }),
       });
-    } catch { /* يبان في الحالة */ }
+      if (r.ok) flashSay(enabled ? "⏸ اتوقفت" : "▶ اترجعت تشغّل");
+    } catch { flashSay("⚠ مفيش رد"); }
     await refreshCron(); setCronBusy(null);
-  }, [refreshCron]);
+  }, [refreshCron, flashSay]);
 
   const launch = useCallback((a: LaunchAction) => {
     if (a.kind === "win") navigate(`/desktop?open=${encodeURIComponent(a.win)}`);
     else if (a.kind === "arena") setArena(a.arena);
-    else window.dispatchEvent(new CustomEvent("nova:qa-prompt", { detail: { text: a.text } }));
-  }, [navigate]);
+    else {
+      if (!prefs.chatOpen) setPrefs((p) => ({ ...p, chatOpen: true }));
+      window.dispatchEvent(new CustomEvent("nova:qa-prompt", { detail: { text: a.text } }));
+    }
+  }, [navigate, prefs.chatOpen]);
+
+  /* ── لوحة الأوامر: كل حاجة من مكان واحد ── */
+  interface PalCmd { id: string; label: string; sub: string; color: string; run: () => void; }
+  const allCmds = useMemo<PalCmd[]>(() => {
+    const cmds: PalCmd[] = [];
+    for (const a of ARENAS) cmds.push({ id: "arena:" + a.key, label: "قسم — " + a.labelAr, sub: "اقفز لساحة العرض", color: a.color, run: () => setArena(a.key) });
+    for (const g of LAUNCH_GROUPS) for (const t of g.tiles) cmds.push({ id: "tile:" + t.id, label: t.label, sub: `${g.group} · ${t.hint}`, color: g.color, run: () => launch(t.action) });
+    for (const j of cronJobs) cmds.push({ id: "cron:" + j.id, label: "⚡ شغّل فوري: " + j.name, sub: `cron ${j.cronExpr} · تشغيلات ×${j.runCount}`, color: "#34d399", run: () => void cronTrigger(j.id) });
+    for (const g of NAV_GROUPS) for (const it of g.items) cmds.push({ id: "nav:" + it.path, label: it.label, sub: g.group + " · " + it.path, color: g.color, run: () => navigate(it.path) });
+    return cmds;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cronJobs, launch, navigate, cronTrigger]);
+  const palList = useMemo(() => {
+    const q = palQuery.trim().toLowerCase();
+    if (!q) return allCmds.slice(0, 24);
+    return allCmds.filter((c) => (c.label + " " + c.sub).toLowerCase().includes(q)).slice(0, 24);
+  }, [allCmds, palQuery]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPaletteOpen((o) => !o); setPalQuery(""); setPalIdx(0); }
+      else if (e.key === "Escape") setPaletteOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  useEffect(() => { if (paletteOpen) setTimeout(() => palInputRef.current?.focus(), 30); }, [paletteOpen]);
+  const runCmd = useCallback((c: PalCmd | undefined) => { if (!c) return; setPaletteOpen(false); c.run(); }, []);
 
   const refresh = useCallback(async () => {
     const t0 = performance.now();
@@ -239,11 +329,12 @@ export default function NovaAgentPro() {
       else setAgentsErr(`connect-info ${r.status}`);
     } catch { setAgentsErr("connect-info مش راد"); }
 
-    const br = await opsFetch<{ providers?: unknown[]; tools?: number | unknown[]; council?: { members?: unknown[] } }>("/nova-core/status");
+    const br = await opsFetch<{ providers?: unknown[]; tools?: number | unknown[]; council?: { members?: unknown[] }; cloudProviders?: unknown[] }>("/nova-core/status");
     if (br.ok && br.data) setBrain({
       providers: Array.isArray(br.data.providers) ? br.data.providers.length : 0,
       tools: Array.isArray(br.data.tools) ? br.data.tools.length : typeof br.data.tools === "number" ? br.data.tools : 0,
       council: Array.isArray(br.data.council?.members) ? br.data.council.members.length : 0,
+      cloud: Array.isArray(br.data.cloudProviders) ? br.data.cloudProviders.length : 0,
     });
     const mr = await opsFetch<{ cpu?: { usage?: number; cores?: number }; memory?: { usagePercent?: number } }>("/monitor/system");
     if (mr.ok && mr.data) setHw({
@@ -267,6 +358,13 @@ export default function NovaAgentPro() {
   const a0 = agents.find((a) => a.id === "self-node") ?? agents[0];
   const sessionS = Math.round((Date.now() - mounted.current) / 1000);
   const dayName = new Intl.DateTimeFormat("ar-EG", { weekday: "long" }).format(new Date());
+  const shownRails = RAIL_DEFS.filter((r) => !prefs.hiddenRails.includes(r.id));
+  const cronOn = cronJobs.filter((j) => j.enabled).length;
+
+  const toggleRail = (id: RailId) => setPrefs((p) => ({
+    ...p,
+    hiddenRails: p.hiddenRails.includes(id) ? p.hiddenRails.filter((x) => x !== id) : [...p.hiddenRails, id],
+  }));
 
   const pill = (ok: boolean | null | undefined, label: string, extra = "") => {
     const color = ok == null ? "#64748b" : ok ? "#34d399" : "#fb7185";
@@ -281,7 +379,7 @@ export default function NovaAgentPro() {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-[#050208] text-white" dir="rtl">
-      {/* ── خلفية الجمجمة الحية — بتتنفّس + سكان لاينز ── */}
+      {/* ── خلفية الجمجمة الحية ── */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute inset-[-5%] bg-center bg-cover opacity-[0.16]"
           style={{ backgroundImage: `url("${DAW_SKULL}")`, animation: "agentProBreathe 11s ease-in-out infinite" }} />
@@ -290,7 +388,50 @@ export default function NovaAgentPro() {
       </div>
       <style>{`@keyframes agentProBreathe{0%,100%{transform:scale(1.02);opacity:.14}50%{transform:scale(1.06);opacity:.19}}`}</style>
 
-      {/* ── الهيدر النيوني ── */}
+      {/* ── لوحة الأوامر Ctrl+K ── */}
+      {paletteOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-[12vh]" onClick={() => setPaletteOpen(false)}>
+          <div className="w-[min(640px,92vw)] rounded-2xl border border-rose-500/30 bg-[#0a0510] shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}
+            style={{ boxShadow: "0 0 60px rgba(244,63,94,.25)" }}>
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
+              <Command className="w-4 h-4 text-rose-300" />
+              <input
+                ref={palInputRef}
+                value={palQuery}
+                onChange={(e) => { setPalQuery(e.target.value); setPalIdx(0); }}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") { e.preventDefault(); setPalIdx((i) => Math.min(i + 1, palList.length - 1)); }
+                  else if (e.key === "ArrowUp") { e.preventDefault(); setPalIdx((i) => Math.max(i - 1, 0)); }
+                  else if (e.key === "Enter") runCmd(palList[palIdx]);
+                }}
+                placeholder="ابحث: قسم، سلاح، مهمة كرون، صفحة…"
+                className="flex-1 bg-transparent outline-none text-sm text-white/90 placeholder:text-white/30"
+              />
+              <span className="text-[9px] font-mono text-white/30 border border-white/10 rounded px-1.5 py-0.5" dir="ltr">Esc</span>
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto p-1.5">
+              {palList.length === 0 && <div className="text-center text-[11px] font-mono text-white/35 py-6">مفيش نتايج</div>}
+              {palList.map((c, i) => (
+                <button key={c.id} onClick={() => runCmd(c)}
+                  onMouseEnter={() => setPalIdx(i)}
+                  className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-right transition ${i === palIdx ? "bg-white/10" : "hover:bg-white/5"}`}>
+                  <span className="w-1.5 h-6 rounded-full shrink-0" style={{ background: c.color, boxShadow: `0 0 8px ${c.color}` }} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12px] font-bold text-white/90 truncate">{c.label}</div>
+                    <div className="text-[9px] font-mono text-white/35 truncate">{c.sub}</div>
+                  </div>
+                  <ArrowLeft className="w-3 h-3 text-white/25 shrink-0" />
+                </button>
+              ))}
+            </div>
+            <div className="px-4 py-2 border-t border-white/10 text-[9px] font-mono text-white/30 flex gap-3">
+              <span>↑↓ تنقل</span><span>Enter تنفيذ</span><span className="mr-auto">{palList.length} أمر متاح</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── الهيدر ── */}
       <header className="relative z-10 shrink-0 border-b border-rose-500/15 bg-gradient-to-l from-rose-950/25 via-[#070309] to-violet-950/25 px-3 py-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full border-2 border-rose-500/70 bg-cover bg-center shrink-0"
@@ -304,82 +445,131 @@ export default function NovaAgentPro() {
             {pill(vit.db, "DB")}
             {pill(agents.length > 0 ? true : agentsErr == null ? null : false, `عُقد ×${agents.length}`)}
             {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools}`)}
-            <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-mono font-bold text-cyan-300">
-              <Clock3 className="w-3 h-3" /> {fmtUptime(vit.up)}
-            </span>
+            {pill(cronOn > 0 ? true : null, `كرون ${cronOn}/${cronJobs.length}`)}
+            <button onClick={() => setPaletteOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[10px] font-black text-rose-200 hover:bg-rose-500/20 transition">
+              <Command className="w-3 h-3" /> Ctrl+K
+            </button>
+            <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: !p.chatOpen }))}
+              title={prefs.chatOpen ? "إخفاء الشات" : "إظهار الشات"}
+              className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-black transition ${prefs.chatOpen ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" : "border-white/15 bg-white/5 text-white/50"}`}>
+              {prefs.chatOpen ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />} <MessageSquare className="w-3 h-3" />
+            </button>
           </div>
         </div>
+        {flash && <div className="mt-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-mono text-emerald-200 animate-pulse">{flash}</div>}
       </header>
 
       <main className="relative z-10 flex min-h-0 flex-1 overflow-hidden">
-        {/* ── عمود القيادة (شمال) ── */}
+        {/* ── عمود القيادة — كل بطاقة بتحكم إظهار/إخفاء ── */}
         <aside className="hidden xl:flex w-[252px] shrink-0 flex-col gap-2.5 border-l border-white/5 p-2.5 overflow-y-auto">
-          <NeonCard title={`الأسطول — ${agents.length} عقدة`} icon={Server} color="#22d3ee">
-            <div className="space-y-1.5">
-              {agents.slice(0, 6).map((a) => (
-                <div key={a.id} className="flex items-center gap-2 rounded-lg border border-cyan-400/10 bg-cyan-400/[0.04] px-2 py-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" style={{ boxShadow: "0 0 8px #34d399" }} />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[10px] font-bold text-cyan-200 truncate" dir="ltr">{a.id}</div>
-                    <div className="text-[8px] font-mono text-white/35 truncate">{a.hostname} · {a.platform}{a.cpus ? ` · ${a.cpus}C` : ""}</div>
-                  </div>
+          <div className="space-y-2.5">
+            {!prefs.hiddenRails.includes("fleet") && (
+              <NeonCard title={`الأسطول — ${agents.length} عقدة`} icon={Server} color="#22d3ee">
+                <div className="space-y-1.5">
+                  {agents.slice(0, 6).map((a) => (
+                    <button key={a.id} onClick={() => navigate("/desktop?open=nodes")}
+                      className="w-full flex items-center gap-2 rounded-lg border border-cyan-400/10 bg-cyan-400/[0.04] px-2 py-1.5 hover:bg-cyan-400/10 transition text-right">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" style={{ boxShadow: "0 0 8px #34d399" }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-mono text-[10px] font-bold text-cyan-200 truncate" dir="ltr">{a.id}</div>
+                        <div className="text-[8px] font-mono text-white/35 truncate">{a.hostname} · {a.platform}{a.cpus ? ` · ${a.cpus}C` : ""}</div>
+                      </div>
+                      <ArrowLeft className="w-3 h-3 text-white/20 shrink-0" />
+                    </button>
+                  ))}
+                  {agents.length === 0 && <div className="text-[9px] font-mono text-white/35">{agentsErr ?? "مفيش عقد — سطر الانضمام في /live-agent"}</div>}
                 </div>
-              ))}
-              {agents.length === 0 && <div className="text-[9px] font-mono text-white/35">{agentsErr ?? "مفيش عقد — سطر الانضمام في /live-agent"}</div>}
-            </div>
-          </NeonCard>
+              </NeonCard>
+            )}
 
-          <NeonCard title={`العتاد${hw.cores ? ` — ${hw.cores}C` : ""}`} icon={Cpu} color="#38bdf8">
-            <div className="space-y-2"><Meter label="CPU" value={hw.cpu} /><Meter label="RAM" value={hw.mem} /></div>
-          </NeonCard>
+            {!prefs.hiddenRails.includes("hw") && (
+              <NeonCard title={`العتاد${hw.cores ? ` — ${hw.cores}C` : ""}`} icon={Cpu} color="#38bdf8">
+                <div className="space-y-2"><Meter label="CPU" value={hw.cpu} /><Meter label="RAM" value={hw.mem} /></div>
+              </NeonCard>
+            )}
 
-          <NeonCard title="الخزنة + الكوربوس" icon={Target} color="#fb7185">
-            <div className="grid grid-cols-3 gap-1 text-center font-mono">
-              <div><div className="text-sm font-black text-rose-300">{vault ?? "—"}</div><div className="text-[7px] text-white/35">نتيجة مؤكدة</div></div>
-              <div><div className="text-sm font-black text-rose-300">{corpus.total != null ? corpus.total.toLocaleString("en") : "—"}</div><div className="text-[7px] text-white/35">CVE مقاسة</div></div>
-              <div><div className="text-sm font-black text-rose-300">{corpus.kev != null ? corpus.kev.toLocaleString("en") : "—"}</div><div className="text-[7px] text-white/35">KEV</div></div>
-            </div>
-            {vault === 0 && <div className="mt-1.5 text-[8px] font-mono text-rose-200/55 border-t border-white/5 pt-1.5">الخزنة بتملى من نتيجة مؤكدة مش رقم معروض — شوف عرض «الصيد».</div>}
-          </NeonCard>
+            {!prefs.hiddenRails.includes("vault") && (
+              <NeonCard title="الخزنة + الكوربوس" icon={Target} color="#fb7185">
+                <button onClick={() => navigate("/cve-live")} className="w-full grid grid-cols-3 gap-1 text-center font-mono hover:bg-white/[0.03] rounded-lg py-1 transition">
+                  <div><div className="text-sm font-black text-rose-300">{vault ?? "—"}</div><div className="text-[7px] text-white/35">نتيجة مؤكدة</div></div>
+                  <div><div className="text-sm font-black text-rose-300">{corpus.total != null ? corpus.total.toLocaleString("en") : "—"}</div><div className="text-[7px] text-white/35">CVE مقاسة</div></div>
+                  <div><div className="text-sm font-black text-rose-300">{corpus.kev != null ? corpus.kev.toLocaleString("en") : "—"}</div><div className="text-[7px] text-white/35">KEV</div></div>
+                </button>
+                {vault === 0 && <div className="mt-1.5 text-[8px] font-mono text-rose-200/55 border-t border-white/5 pt-1.5">الخزنة بتملى من نتيجة مؤكدة — مرحلة الحصاد جاية.</div>}
+              </NeonCard>
+            )}
 
-          <NeonCard title="المخ والمجلس" icon={Brain} color="#a78bfa">
-            {brain ? (
-              <div className="grid grid-cols-3 gap-1 text-center font-mono">
-                <div><div className="text-sm font-black text-violet-300">{brain.providers}</div><div className="text-[7px] text-white/35">مزود</div></div>
-                <div><div className="text-sm font-black text-violet-300">{brain.tools}</div><div className="text-[7px] text-white/35">أداة</div></div>
-                <div><div className="text-sm font-black text-violet-300">{brain.council}</div><div className="text-[7px] text-white/35">عضو مجلس</div></div>
-              </div>
-            ) : <div className="text-[9px] font-mono text-white/35">يتقاس…</div>}
-          </NeonCard>
+            {!prefs.hiddenRails.includes("brain") && (
+              <NeonCard title="المخ والمجلس" icon={Brain} color="#a78bfa">
+                <button onClick={() => setArena("brain")} className="w-full hover:bg-white/[0.03] rounded-lg py-1 transition">
+                  {brain ? (
+                    <div className="grid grid-cols-4 gap-1 text-center font-mono">
+                      <div><div className="text-sm font-black text-violet-300">{brain.providers || brain.cloud}</div><div className="text-[7px] text-white/35">مزود</div></div>
+                      <div><div className="text-sm font-black text-violet-300">{brain.cloud}</div><div className="text-[7px] text-white/35">سحابي</div></div>
+                      <div><div className="text-sm font-black text-violet-300">{brain.tools}</div><div className="text-[7px] text-white/35">أداة</div></div>
+                      <div><div className="text-sm font-black text-violet-300">{brain.council}</div><div className="text-[7px] text-white/35">عضو</div></div>
+                    </div>
+                  ) : <div className="text-[9px] font-mono text-white/35">يتقاس…</div>}
+                </button>
+              </NeonCard>
+            )}
 
-          <NeonCard title="الاستقلالية" icon={sys.autonomousStatus.enabled ? Zap : ZapOff} color={sys.autonomousStatus.enabled ? "#fbbf24" : "#64748b"}>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold" style={{ color: sys.autonomousStatus.enabled ? "#fbbf24" : "#94a3b8" }}>
-                {sys.autonomousStatus.enabled ? (sys.autonomousStatus.isRunning ? "شغّالة الآن ⚡" : "مفعّلة") : "مطفية"}
-              </span>
-              <span className="text-[9px] font-mono text-white/35">✔{sys.autonomousStatus.tasksCompleted} · ✗{sys.autonomousStatus.tasksErrored}</span>
-            </div>
-            <button onClick={() => { sys.autonomousStatus.enabled ? sys.disableAutonomous() : sys.enableAutonomous(); }}
-              className="mt-1.5 w-full rounded-lg border px-2 py-1.5 text-[10px] font-black transition-all"
-              style={sys.autonomousStatus.enabled
-                ? { borderColor: "#fbbf2450", background: "#fbbf2414", color: "#fbbf24" }
-                : { borderColor: "#34d39950", background: "#34d39914", color: "#34d399" }}>
-              {sys.autonomousStatus.enabled ? "إطفاء الوضع المستقل" : "تشغيل الوضع المستقل"}
-            </button>
-          </NeonCard>
-
-          <NeonCard title={`الجدولة السريعة — ${cronJobs.filter(j => j.enabled).length}/${cronJobs.length} شغال`} icon={CalendarClock} color="#34d399">
-            <div className="space-y-1">
-              {cronJobs.slice(0, 4).map((j) => (
-                <div key={j.id} className="flex items-center gap-1.5 text-[9px] font-mono">
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: j.enabled ? DOT.ok : "#475569", boxShadow: j.enabled ? "0 0 6px #34d399" : "none" }} />
-                  <span className="text-white/60 truncate flex-1">{j.name}</span>
-                  <span className="text-white/30" dir="ltr">{j.cronExpr}</span>
+            {!prefs.hiddenRails.includes("autonomy") && (
+              <NeonCard title="الاستقلالية" icon={sys.autonomousStatus.enabled ? Zap : ZapOff} color={sys.autonomousStatus.enabled ? "#fbbf24" : "#64748b"}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold" style={{ color: sys.autonomousStatus.enabled ? "#fbbf24" : "#94a3b8" }}>
+                    {sys.autonomousStatus.enabled ? (sys.autonomousStatus.isRunning ? "شغّالة الآن ⚡" : "مفعّلة") : "مطفية"}
+                  </span>
+                  <span className="text-[9px] font-mono text-white/35">✔{sys.autonomousStatus.tasksCompleted} · ✗{sys.autonomousStatus.tasksErrored}</span>
                 </div>
-              ))}
-              {cronErr && <div className="text-[8px] font-mono text-rose-300/70">{cronErr}</div>}
+                <button onClick={() => { sys.autonomousStatus.enabled ? sys.disableAutonomous() : sys.enableAutonomous(); }}
+                  className="mt-1.5 w-full rounded-lg border px-2 py-1.5 text-[10px] font-black transition-all"
+                  style={sys.autonomousStatus.enabled
+                    ? { borderColor: "#fbbf2450", background: "#fbbf2414", color: "#fbbf24" }
+                    : { borderColor: "#34d39950", background: "#34d39914", color: "#34d399" }}>
+                  {sys.autonomousStatus.enabled ? "إطفاء الوضع المستقل" : "تشغيل الوضع المستقل"}
+                </button>
+              </NeonCard>
+            )}
+
+            {!prefs.hiddenRails.includes("cronmini") && (
+              <NeonCard title={`الجدولة السريعة — ${cronOn}/${cronJobs.length} شغال`} icon={CalendarClock} color="#34d399">
+                <div className="space-y-1">
+                  {cronJobs.slice(0, 4).map((j) => (
+                    <button key={j.id} onClick={() => setArena("cron")} className="w-full flex items-center gap-1.5 text-[9px] font-mono hover:bg-white/[0.03] rounded px-1 py-0.5 transition text-right">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: j.enabled ? DOT.ok : "#475569", boxShadow: j.enabled ? "0 0 6px #34d399" : "none" }} />
+                      <span className="text-white/60 truncate flex-1">{j.name}</span>
+                      <span className="text-white/30 shrink-0">{ago(j.nextRun, now)}</span>
+                    </button>
+                  ))}
+                  {cronErr && <div className="text-[8px] font-mono text-rose-300/70">{cronErr}</div>}
+                </div>
+              </NeonCard>
+            )}
+          </div>
+
+          {/* تحكم المالك: إظهار/إخفاء البطاقات */}
+          <div className="mt-auto rounded-xl border border-white/10 bg-white/[0.02] p-2.5 space-y-1.5">
+            <div className="text-[9px] font-black text-white/50 flex items-center gap-1.5"><Eye className="w-3 h-3" /> تشكيل الدولاب — عرض/إخفاء</div>
+            <div className="grid grid-cols-2 gap-1">
+              {RAIL_DEFS.map((r) => {
+                const hidden = prefs.hiddenRails.includes(r.id);
+                return (
+                  <button key={r.id} onClick={() => toggleRail(r.id)}
+                    className={`rounded-md border px-1.5 py-1 text-[8px] font-bold transition ${hidden ? "border-white/10 bg-white/[0.02] text-white/30 line-through" : "border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-200/80"}`}>
+                    {r.title}
+                  </button>
+                );
+              })}
             </div>
-          </NeonCard>
+            {prefs.hiddenRails.length > 0 && (
+              <button onClick={() => setPrefs((p) => ({ ...p, hiddenRails: [] }))}
+                className="w-full inline-flex items-center justify-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-1.5 py-1 text-[8px] font-bold text-white/50 hover:text-white/80 transition">
+                <RotateCcw className="w-2.5 h-2.5" /> إظهار الكل
+              </button>
+            )}
+          </div>
         </aside>
 
         {/* ── منضدة العمل ── */}
@@ -387,6 +577,7 @@ export default function NovaAgentPro() {
           <nav className="shrink-0 flex items-center gap-1 px-2.5 py-2 border-b border-white/5 overflow-x-auto bg-[#070309]/60">
             {ARENAS.map(({ key, labelAr, icon: Icon, color }) => {
               const active = arena === key;
+              const badge = key === "cron" && cronJobs.length > 0 ? `${cronOn}/${cronJobs.length}` : null;
               return (
                 <button key={key} onClick={() => setArena(key)}
                   className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-black transition-all"
@@ -395,6 +586,7 @@ export default function NovaAgentPro() {
                     : { borderColor: "rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", color: "rgba(255,255,255,0.45)" }}>
                   <Icon className="w-3.5 h-3.5" />
                   {labelAr}
+                  {badge && <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-1.5 text-[8px] text-emerald-300 font-mono" dir="ltr">{badge}</span>}
                 </button>
               );
             })}
@@ -404,7 +596,7 @@ export default function NovaAgentPro() {
             {arena === "launch" && (
               <div className="space-y-4">
                 <div className="rounded-xl border border-rose-500/15 bg-rose-500/[0.04] px-3.5 py-2 text-[10px] font-mono text-rose-200/70">
-                  بلاط النافذة يفتح نافذة الديسكتوب الرسمية · بلاط الأمر يحشي الشات يمين وإنت تكمل الهدف وتبعت — مفيش حاجة بتتنفذ من وراك.
+                  Ctrl+K يوصّلك لأي حاجة · بلاط النافذة يفتح نافذة الديسكتوب الرسمية · بلاط الأمر يحشي الشات وإنت تكمل الهدف وتبعت — مفيش حاجة بتتنفذ من وراك.
                 </div>
                 {LAUNCH_GROUPS.map(({ group, color, tiles }) => (
                   <section key={group}>
@@ -415,7 +607,7 @@ export default function NovaAgentPro() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {tiles.map(({ id, label, hint, icon: Icon, hue, action }) => (
                         <button key={id} onClick={() => launch(action)}
-                          className={`group rounded-xl border bg-gradient-to-br px-3 py-3 text-right transition-all hover:-translate-y-0.5 hover:shadow-lg ${hue}`}
+                          className={`rounded-xl border bg-gradient-to-br px-3 py-3 text-right transition-all hover:-translate-y-0.5 hover:shadow-lg ${hue}`}
                           style={{ boxShadow: "0 4px 18px rgba(0,0,0,.4)" }}>
                           <div className="flex items-center gap-2">
                             <Icon className="w-4 h-4 shrink-0" />
@@ -436,37 +628,51 @@ export default function NovaAgentPro() {
             {arena === "cron" && (
               <div className="space-y-2">
                 <div className="text-[10px] font-mono text-white/40 mb-1">
-                  {cronJobs.length} مهمة من /api/nova/cron/jobs — Trigger فوري وتشغيل/إطفاء حقيقيان{vit.ok === false ? " · السيرفر مش واصل" : ""}.
+                  {cronJobs.length} مهمة حية — Trigger فوري وتشغيل/إطفاء حقيقيان، والنتايج موصولة بساحتها.
                 </div>
                 {cronErr && <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-[10px] font-mono text-rose-200">{cronErr}</div>}
-                {cronJobs.map((j) => (
-                  <div key={j.id} className="rounded-xl border px-3 py-2.5 flex items-center gap-3 flex-wrap"
-                    style={{ borderColor: j.enabled ? "#34d39930" : "#ffffff12", background: j.enabled ? "#34d39908" : "rgba(255,255,255,0.015)" }}>
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: j.enabled ? DOT.ok : "#475569", boxShadow: j.enabled ? "0 0 10px #34d399" : "none" }} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] font-black text-white/85">{j.name}</span>
-                        <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[8px] font-mono text-white/50" dir="ltr">{j.cronExpr}</span>
-                        <span className="rounded border px-1.5 py-0.5 text-[8px] font-mono" style={{ borderColor: j.enabled ? "#34d39940" : "#64748b40", color: j.enabled ? "#34d399" : "#94a3b8" }}>{j.enabled ? "شغّالة" : "مطفية"}</span>
-                        {j.errorCount > 0 && <span className="rounded border border-rose-500/40 bg-rose-500/10 px-1.5 py-0.5 text-[8px] font-mono text-rose-300">أخطاء ×{j.errorCount}</span>}
+                {cronJobs.map((j) => {
+                  const link = CRON_LINKS[j.id];
+                  const busyThis = cronBusy === j.id;
+                  return (
+                    <div key={j.id} className="rounded-xl border px-3 py-2.5 flex items-center gap-3 flex-wrap"
+                      style={{ borderColor: j.enabled ? "#34d39930" : "#ffffff12", background: j.enabled ? "#34d39908" : "rgba(255,255,255,0.015)" }}>
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: j.enabled ? DOT.ok : "#475569", boxShadow: j.enabled ? "0 0 10px #34d399" : "none" }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] font-black text-white/85">{j.name}</span>
+                          <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[8px] font-mono text-white/50" dir="ltr">{j.cronExpr}</span>
+                          <span className="rounded border px-1.5 py-0.5 text-[8px] font-mono" style={{ borderColor: j.enabled ? "#34d39940" : "#64748b40", color: j.enabled ? "#34d399" : "#94a3b8" }}>{j.enabled ? "شغّالة" : "مطفية"}</span>
+                          {j.errorCount > 0 && <span className="rounded border border-rose-500/40 bg-rose-500/10 px-1.5 py-0.5 text-[8px] font-mono text-rose-300">أخطاء ×{j.errorCount}</span>}
+                        </div>
+                        <div className="mt-1 text-[9px] font-mono text-white/35">
+                          تشغيلات ×{j.runCount} · آخر: {ago(j.lastRun, now)}{j.nextRun ? ` · تالي: ${ago(j.nextRun, now)}` : ""}
+                        </div>
+                        {j.lastResult && (
+                          <div className="mt-1 rounded-lg border border-white/[0.06] bg-black/30 px-2 py-1 text-[9px] font-mono text-emerald-100/70 leading-4 break-words">
+                            ↳ {j.lastResult}
+                          </div>
+                        )}
                       </div>
-                      <div className="mt-1 text-[9px] font-mono text-white/35">
-                        تشغيلات ×{j.runCount}{j.lastRun ? ` · آخر ${fmtDay(j.lastRun)}` : ""}{j.nextRun ? ` · تالي ${fmtDay(j.nextRun)}` : ""}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {link && (
+                          <button onClick={() => navigate(link.path)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-sky-500/40 bg-sky-500/10 px-2.5 py-1.5 text-[9px] font-black text-sky-300 hover:bg-sky-500/20 transition">
+                            <ArrowLeft className="w-3 h-3" /> {link.label}
+                          </button>
+                        )}
+                        <button onClick={() => void cronTrigger(j.id)} disabled={busyThis}
+                          className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-[9px] font-black text-emerald-300 hover:bg-emerald-500/20 transition disabled:opacity-40">
+                          <Play className="w-3 h-3" /> {busyThis ? "شغّال…" : "فوري"}
+                        </button>
+                        <button onClick={() => void cronToggle(j.id, j.enabled)} disabled={busyThis}
+                          className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[9px] font-black transition disabled:opacity-40 ${j.enabled ? "border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"}`}>
+                          <PowerCircle className="w-3 h-3" /> {j.enabled ? "إطفاء" : "تشغيل"}
+                        </button>
                       </div>
-                      {j.lastResult && <div className="mt-0.5 text-[9px] font-mono text-white/45 truncate" dir="rtl">↳ {j.lastResult}</div>}
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button onClick={() => void cronTrigger(j.id)} disabled={cronBusy !== null}
-                        className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-[9px] font-black text-emerald-300 hover:bg-emerald-500/20 transition disabled:opacity-40">
-                        <Play className="w-3 h-3" /> فوري
-                      </button>
-                      <button onClick={() => void cronToggle(j.id, j.enabled)} disabled={cronBusy !== null}
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[9px] font-black transition disabled:opacity-40 ${j.enabled ? "border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"}`}>
-                        <PowerCircle className="w-3 h-3" /> {j.enabled ? "إطفاء" : "تشغيل"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {cronJobs.length === 0 && !cronErr && <div className="text-center text-[11px] font-mono text-white/35 py-6">يتقاس…</div>}
               </div>
             )}
@@ -550,20 +756,34 @@ export default function NovaAgentPro() {
           </div>
         </section>
 
-        {/* ── الشات — القلب، مساحة مريحة ── */}
-        <aside className="w-full lg:w-[430px] shrink-0 border-r border-rose-500/20 lg:border-r lg:border-l-0 flex flex-col min-h-0 bg-[#060309]">
-          <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-rose-500/15 bg-gradient-to-l from-rose-600/15 to-violet-600/10">
-            <Sparkles className="w-3.5 h-3.5 text-rose-300" />
-            <span className="text-[10px] font-black text-rose-200">الجلسة الذكية — اكتب براحتك، المكان دايمًا محجوز</span>
-          </div>
-          <div className="flex-1 min-h-0">
-            <NovaUnifiedChat
-              title="نوفا — مركز التحكم"
-              subtitle="عقل واحد · أدوات حقيقية · أدلة SHA-256"
-              hideRail
-            />
-          </div>
-        </aside>
+        {/* ── الشات — بتحكم إظهار/إخفاء كامل ── */}
+        {prefs.chatOpen && (
+          <aside className="w-full lg:w-[430px] shrink-0 border-r border-rose-500/20 lg:border-r lg:border-l-0 flex flex-col min-h-0 bg-[#060309]">
+            <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-rose-500/15 bg-gradient-to-l from-rose-600/15 to-violet-600/10">
+              <Sparkles className="w-3.5 h-3.5 text-rose-300" />
+              <span className="text-[10px] font-black text-rose-200 flex-1">الجلسة الذكية — اكتب براحتك</span>
+              <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: false }))} title="إخفاء الشات"
+                className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-white/40 hover:text-white/80 transition">
+                <EyeOff className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <NovaUnifiedChat
+                title="نوفا — مركز التحكم"
+                subtitle="عقل واحد · أدوات حقيقية · أدلة SHA-256"
+                hideRail
+              />
+            </div>
+          </aside>
+        )}
+        {!prefs.chatOpen && (
+          <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: true }))}
+            className="shrink-0 flex flex-col items-center justify-center gap-2 w-10 border-r border-rose-500/20 bg-rose-500/[0.06] hover:bg-rose-500/15 transition text-rose-300"
+            title="إظهار الشات">
+            <MessageSquare className="w-4 h-4" />
+            <span className="text-[8px] font-black" style={{ writingMode: "vertical-rl" }}>الشات</span>
+          </button>
+        )}
       </main>
 
       {/* ── الفوتر: التيكر الحي ── */}
@@ -576,7 +796,7 @@ export default function NovaAgentPro() {
           </span>
         ))}
         {ticker.length === 0 && <span className="text-white/20">القناة هادية…</span>}
-        <span className="mr-auto shrink-0 text-rose-300/50">DAWSHA DECK v5</span>
+        <span className="mr-auto shrink-0 text-rose-300/50">DAWSHA DECK v6</span>
       </footer>
     </div>
   );
