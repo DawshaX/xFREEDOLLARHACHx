@@ -934,6 +934,20 @@ export function LiveAgentPanel({
   // ── Core State ───────────────────────────────────────────────────────────
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
+
+  /* جسر الأفعال السريعة: مركز القيادة (agent-pro) يملأ صندوق الإدخال من أي
+   * بلاط تشغيل عبر حدث DOM — التعبئة بس، الإرسال دايمًا بيدك لأن البرومبتات
+   * بتستنى اسم الهدف. مش إرسال تلقائي — مفيش أوامر بتطلع من وراك. */
+  useEffect(() => {
+    const onQa = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ text?: unknown }>).detail;
+      if (detail && typeof detail.text === "string" && detail.text.trim()) {
+        setInput(detail.text);
+      }
+    };
+    window.addEventListener("nova:qa-prompt", onQa);
+    return () => window.removeEventListener("nova:qa-prompt", onQa);
+  }, []);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [busy, setBusy] = useState(false);
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
