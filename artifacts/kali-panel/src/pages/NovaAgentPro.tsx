@@ -1,22 +1,20 @@
 /**
- * NovaAgentPro v3 — «مركز قيادة دوشة»: الشات مش تاب… الشات هو القلب.
+ * NovaAgentPro v4 — «كونسول دوشة»: مكتب تشغيل هادي يشتغل فيه بني آدم فعلًا.
  *
- * شكوى المالك بالنص: «مفيش مكان للشات ومش متناسق». فالـv3 قلبت الفلسفة:
- *  · الشات الموحّد مثبّت يمين دايمًا (≤44% العرض) — بيشتغل وأنت بتتفرج على أي حاجة.
- *  · عمود القيادة شمال: الأسطول المتصل (connect-info حي) + المخ (nova-core)
- *    + العتاد (monitor/system) + الاستقلالية (SystemContext) — كل 10–15s تحديث.
- *  · الساحة الوسطى: منظر واحد ظاهر وقت واحد (نبض الأحداث · المهمات · المخ ·
- *    العتاد · الصيد · القنوات · الملاحة) — كلها مكونات حقيقية موجودة أصلًا.
- *  · شريط أحداث سفلي مربوط بـSSE /api/agent/events (من SystemContext نفسه —
- *    اللي بيطلي هنا هو اللي بيطلي لكل البرنامج).
- *  · كل رقم مصدره fetch حقيقي؛ الفشل يتعرض نص حرفي مش قيمة متلبّسة.
- * ممنوع «قريبًا» وأزرار ميتة — check-dead-buttons حارس.
+ * الشكوى المقاسة من سكرين سجل المالك للـv2: زحمة نيون وتبويبات تشيل الشات —
+ * «دا مش منظر اشتغل فيه». الرد تصميمي مش تجميلي:
+ *  · لون واحد مميز (زمردي) وحالة ألوان سيمانتيك بس (أخضر يشتغل/أحمر وقع) —
+ *    لا تدرجات، لا ظلال نيون، لا إيموجي في رؤوس الأقسام.
+ *  · الشات ثابت يمين 420px بلا الشريط الجانبي المزخرف بتاعه (hideRail) —
+ *    قناة واحدة صافية تقدر تتكلم فيها وانت شايف أي عرض تاني.
+ *  · سكة أيقونات 52px شمال للعروض (8 مناظر)، عمود سياق 232px بنصوص نظيفة
+ *    من نفس APIs الحقيقية، وشريط حالة سفلي بسطر واحد.
+ *  · كل رقم مصدره fetch مقاس؛ الفشل نص حرفي، مش قيمة متلبّسة ولا صفر مورّي.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Brain, Cpu, Target, Cable, Compass, MessageSquareText,
-  Bot, Server, ShieldCheck, ShieldAlert, Clock3, Radio,
-  MonitorSmartphone, ListChecks, Activity, Zap, ZapOff, MemoryStick,
+  Activity, MonitorSmartphone, ListChecks, Brain, Cpu, Target, Cable, Compass,
+  Server, ShieldCheck, Zap, ZapOff, MemoryStick, Clock3,
 } from "lucide-react";
 import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
 import { NovaOpsRoom, NovaHuntSurface } from "@/components/desktop/NovaBrainOps";
@@ -28,14 +26,11 @@ import { TelegramConfigCard } from "@/components/TelegramConfigCard";
 import { opsFetch } from "@/lib/ops-client";
 import { useSystem } from "@/context/SystemContext";
 
-/* ── أنواع الردود اللي بتيجي من السيرفر (شكل مثبت من الكود مش من إحساس) ── */
-
 type ArenaKey = "events" | "desktop" | "missions" | "brain" | "hardware" | "hunt" | "channels" | "nav";
 
 interface Vitals {
   healthOk: boolean | null; healthMs: number | null; db: boolean | null;
   sha: string; uptimeS: number | null; tools: number;
-  tgToken: boolean | null; tgChat: boolean | null;
 }
 
 interface FleetAgentInfo {
@@ -43,99 +38,107 @@ interface FleetAgentInfo {
   totalMemory?: number; connectedAt?: string; capabilities?: string[];
 }
 
-interface VaultState { present: boolean | null; total: number | null; }
-interface CorpusState { measured: boolean | null; total: number | null; kev: number | null; }
-
-interface BrainStatus {
-  providers?: unknown[]; council?: unknown; tools?: unknown[]; categories?: number;
-}
-
-const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color: string }> = [
-  { key: "events",   labelAr: "نبض الأحداث",  icon: Activity,    color: "#4ade80" },
-  { key: "desktop",  labelAr: "سطح المكتب",   icon: MonitorSmartphone, color: "#34d399" },
-  { key: "missions", labelAr: "المهمات",      icon: ListChecks,  color: "#fbbf24" },
-  { key: "brain",    labelAr: "المخ والمجلس", icon: Brain,       color: "#a78bfa" },
-  { key: "hardware", labelAr: "العتاد الحي",  icon: Cpu,         color: "#22d3ee" },
-  { key: "hunt",     labelAr: "الصيد",        icon: Target,      color: "#fb7185" },
-  { key: "channels", labelAr: "القنوات",      icon: Cable,       color: "#f59e0b" },
-  { key: "nav",      labelAr: "الملاحة",      icon: Compass,     color: "#60a5fa" },
+const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain }> = [
+  { key: "events",   labelAr: "نبض الأحداث",  icon: Activity },
+  { key: "desktop",  labelAr: "سطح المكتب",   icon: MonitorSmartphone },
+  { key: "missions", labelAr: "المهمات",      icon: ListChecks },
+  { key: "brain",    labelAr: "المخ والمجلس", icon: Brain },
+  { key: "hardware", labelAr: "العتاد الحي",  icon: Cpu },
+  { key: "hunt",     labelAr: "الصيد",        icon: Target },
+  { key: "channels", labelAr: "القنوات",      icon: Cable },
+  { key: "nav",      labelAr: "كل الأقسام",   icon: Compass },
 ];
 
-const NAV_GROUPS: Array<{ group: string; color: string; items: Array<{ path: string; label: string }> }> = [
-  { group: "المراقبة والتشغيل", color: "#22d3ee", items: [
-    { path: "/live-agent", label: "📡 الوكيل الحي" },
-    { path: "/cve-live", label: "🛰 لوحة CVE الحية" },
-    { path: "/monitor", label: "📈 Monitor" },
-    { path: "/dashboard", label: "🏠 الداشبورد" },
-    { path: "/jobs", label: "🧾 المهام والأدلة" },
-    { path: "/memory", label: "🧠 ذاكرة المدير" },
+const NAV_GROUPS: Array<{ group: string; items: Array<{ path: string; label: string }> }> = [
+  { group: "المراقبة", items: [
+    { path: "/live-agent", label: "الوكيل الحي" },
+    { path: "/cve-live", label: "لوحة CVE الحية" },
+    { path: "/monitor", label: "Monitor" },
+    { path: "/dashboard", label: "الداشبورد" },
+    { path: "/jobs", label: "المهام والأدلة" },
+    { path: "/memory", label: "ذاكرة المدير" },
   ] },
-  { group: "الصيد والاستخبارات", color: "#fb7185", items: [
-    { path: "/cve-db", label: "🗄 قاعدة CVE (NVD حي)" },
-    { path: "/cve-search", label: "🎯 بحث الثغرات" },
-    { path: "/shodan", label: "🌐 Shodan سلبي" },
-    { path: "/nova-intelligence", label: "🔎 NOVA Intel" },
-    { path: "/mitre", label: "🗺 MITRE ATT&CK" },
-    { path: "/threat-detector", label: "🚨 كشف التهديدات" },
+  { group: "الصيد والاستخبارات", items: [
+    { path: "/cve-db", label: "قاعدة CVE" },
+    { path: "/cve-search", label: "بحث الثغرات" },
+    { path: "/shodan", label: "Shodan سلبي" },
+    { path: "/nova-intelligence", label: "NOVA Intel" },
+    { path: "/mitre", label: "MITRE ATT&CK" },
+    { path: "/threat-detector", label: "كشف التهديدات" },
   ] },
-  { group: "الأدوات والشبكات", color: "#a78bfa", items: [
-    { path: "/terminal", label: "💻 كونسول الأسطول" },
-    { path: "/port-scanner", label: "🛰 ماسح المنافذ" },
-    { path: "/dns-lookup", label: "🧭 DNS Lookup" },
-    { path: "/whois-lookup", label: "🗺 WHOIS" },
-    { path: "/subdomains", label: "🕸 النطاقات الفرعية" },
-    { path: "/hash-calculator", label: "#️⃣ الهاشات" },
+  { group: "الأدوات", items: [
+    { path: "/terminal", label: "كونسول الأسطول" },
+    { path: "/port-scanner", label: "ماسح المنافذ" },
+    { path: "/dns-lookup", label: "DNS" },
+    { path: "/whois-lookup", label: "WHOIS" },
+    { path: "/subdomains", label: "النطاقات الفرعية" },
+    { path: "/hash-calculator", label: "الهاشات" },
   ] },
-  { group: "الإدارة والتكامل", color: "#4ade80", items: [
-    { path: "/settings", label: "⚙ الإعدادات وقناة التليجرام" },
-    { path: "/webhooks", label: "🪝 Webhooks" },
-    { path: "/workspaces", label: "🗂 مساحات العمل" },
-    { path: "/playbooks", label: "📜 Playbooks" },
-    { path: "/reports", label: "📄 التقارير PDF" },
-    { path: "/cron", label: "⏱ Cron" },
+  { group: "الإدارة", items: [
+    { path: "/settings", label: "الإعدادات" },
+    { path: "/webhooks", label: "Webhooks" },
+    { path: "/workspaces", label: "مساحات العمل" },
+    { path: "/playbooks", label: "Playbooks" },
+    { path: "/reports", label: "التقارير" },
+    { path: "/cron", label: "Cron" },
   ] },
 ];
 
-function fmtUptime(s: number | null): string {
+const fmtUptime = (s: number | null): string => {
   if (s == null) return "—";
   const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
   return d > 0 ? `${d}ي ${h}س ${m}د` : h > 0 ? `${h}س ${m}د` : `${m}د`;
-}
-
-function fmtClock(ts: number): string {
+};
+const fmtClock = (ts: number): string => {
   try { return new Date(ts).toLocaleTimeString("ar-EG", { hour12: false }); } catch { return "—"; }
-}
+};
+const fmtNum = (n: number | null): string => n == null ? "—" : n.toLocaleString("en");
 
-/* بطاقة صغيرة قياسية لعمود القيادة */
-function RailCard({ title, icon: Icon, color, children, footer }: {
-  title: string; icon: typeof Brain; color: string; children: React.ReactNode; footer?: React.ReactNode;
-}) {
+/* ── مبانٍ سطحية: قسم سياق مسطّح + رقم إحصائي + زرار حالة ── */
+
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-white/8 bg-black/40 overflow-hidden">
-      <header className="flex items-center gap-2 px-3 py-2 border-b border-white/5"
-        style={{ background: `${color}0d` }}>
-        <Icon className="w-3.5 h-3.5" style={{ color }} />
-        <span className="text-[11px] font-black" style={{ color }}>{title}</span>
-      </header>
-      <div className="p-2.5 text-[11px]">{children}</div>
-      {footer && <div className="px-2.5 pb-2">{footer}</div>}
+    <section className="border-b border-white/5 px-3 py-2.5">
+      <div className="text-[9px] font-bold tracking-[0.14em] text-zinc-500 uppercase mb-1.5" dir="ltr">{label}</div>
+      {children}
     </section>
   );
 }
 
+function Stat({ label, value, tone }: { label: string; value: string; tone?: "ok" | "bad" | "busy" }) {
+  const color = tone === "ok" ? "text-emerald-400" : tone === "bad" ? "text-rose-400" : tone === "busy" ? "text-amber-400" : "text-zinc-200";
+  return (
+    <div className="flex items-baseline justify-between py-0.5">
+      <span className="text-[10px] text-zinc-500">{label}</span>
+      <span className={`text-[11px] font-mono font-bold ${color}`} dir="ltr">{value}</span>
+    </div>
+  );
+}
+
+function Bar({ value }: { value: number }) {
+  const color = value > 85 ? "#fb7185" : value > 60 ? "#fbbf24" : "#34d399";
+  return (
+    <div className="h-1 rounded bg-white/5 overflow-hidden">
+      <div className="h-full transition-all duration-700" style={{ width: `${Math.min(100, Math.max(0, value))}%`, background: color }} />
+    </div>
+  );
+}
+
+const DOT: Record<string, string> = { ok: "#34d399", bad: "#fb7185", wait: "#52525b" };
+
 export default function NovaAgentPro() {
   const [arena, setArena] = useState<ArenaKey>("events");
   const sys = useSystem();
-  const [vit, setVit] = useState<Vitals>({ healthOk: null, healthMs: null, db: null, sha: "", uptimeS: null, tools: 0, tgToken: null, tgChat: null });
+  const [vit, setVit] = useState<Vitals>({ healthOk: null, healthMs: null, db: null, sha: "", uptimeS: null, tools: 0 });
   const [agents, setAgents] = useState<FleetAgentInfo[]>([]);
   const [agentsErr, setAgentsErr] = useState<string | null>(null);
-  const [brain, setBrain] = useState<BrainStatus | null>(null);
+  const [brain, setBrain] = useState<{ providers: number; tools: number; council: number } | null>(null);
   const [hw, setHw] = useState<{ cpu: number | null; mem: number | null; cores: number | null }>({ cpu: null, mem: null, cores: null });
-  const [vault, setVault] = useState<VaultState>({ present: null, total: null });
-  const [corpus, setCorpus] = useState<CorpusState>({ measured: null, total: null, kev: null });
+  const [vault, setVault] = useState<{ total: number | null }>({ total: null });
+  const [corpus, setCorpus] = useState<{ total: number | null; kev: number | null }>({ total: null, kev: null });
+  const [sessionSec, setSessionSec] = useState(0);
   const mounted = useRef(Date.now());
 
-  /* ─── النبض العلوي + المخ + الأسطول (تحديث دوري، كل المصادر حقيقية) ─── */
   const refresh = useCallback(async () => {
     const t0 = performance.now();
     let healthOk = false, db: boolean | null = null, healthMs: number | null = null;
@@ -154,31 +157,24 @@ export default function NovaAgentPro() {
       uptimeS = typeof j?.uptimeSec === "number" ? j.uptimeSec : null;
       tools = Array.isArray(j?.toolsPresent) ? j.toolsPresent.length : 0;
     } catch { /* offline */ }
-    let tgToken: boolean | null = null, tgChat: boolean | null = null;
-    try {
-      const r = await fetch("/api/ops/config/status");
-      const j = (await r.json().catch(() => null)) as { keys?: Record<string, boolean> } | null;
-      tgToken = j?.keys?.["telegram.botToken"] ?? null;
-      tgChat = j?.keys?.["telegram.chatId"] ?? null;
-    } catch { /* optional */ }
-    setVit({ healthOk, healthMs, db, sha, uptimeS, tools, tgToken, tgChat });
+    setVit({ healthOk, healthMs, db, sha, uptimeS, tools });
 
-    // الأسطول الحقيقي المتصل الآن (المصدر اللحظي الأدق — connect-info)
     try {
       const r = await fetch("/api/local-agent/connect-info");
       const j = (await r.json().catch(() => null)) as { agents?: FleetAgentInfo[] } | null;
       if (r.ok && Array.isArray(j?.agents)) { setAgents(j.agents); setAgentsErr(null); }
-      else setAgentsErr(`connect-info رد ${r.status}`);
+      else setAgentsErr(`connect-info ${r.status}`);
     } catch { setAgentsErr("connect-info مش راد"); }
 
-    // المخ
-    const br = await opsFetch<BrainStatus & { providers?: unknown[]; tools?: unknown[]; categoriesCount?: number }>("/nova-core/status");
+    const br = await opsFetch<{ providers?: unknown[]; tools?: number | unknown[]; council?: { members?: unknown[] } }>("/nova-core/status");
     if (br.ok && br.data) {
-      const d = br.data as { providers?: unknown[]; tools?: unknown[]; categoriesCount?: number; categories?: number };
-      setBrain({ providers: d.providers ?? [], tools: d.tools ?? [], categories: d.categoriesCount ?? d.categories });
+      const d = br.data;
+      setBrain({
+        providers: Array.isArray(d.providers) ? d.providers.length : 0,
+        tools: Array.isArray(d.tools) ? d.tools.length : typeof d.tools === "number" ? d.tools : 0,
+        council: Array.isArray(d.council?.members) ? d.council.members.length : 0,
+      });
     }
-
-    // العتاد
     const mr = await opsFetch<{ cpu?: { usage?: number; cores?: number }; memory?: { usagePercent?: number } }>("/monitor/system");
     if (mr.ok && mr.data) {
       setHw({
@@ -187,236 +183,171 @@ export default function NovaAgentPro() {
         cores: typeof mr.data.cpu?.cores === "number" ? mr.data.cpu.cores : null,
       });
     }
-
-    // الخزنة + الكوربوس (الأرقام من ملفات المؤشر المكتوبة بالسحب الفعلي)
-    const fr = await opsFetch<{ present?: boolean; total?: number }>("/ops/findings/status");
+    const fr = await opsFetch<{ present?: boolean; total?: number; counts?: { total?: number } }>("/ops/findings/status");
     if (fr.ok && fr.data) {
-      setVault({ present: fr.data.present ?? null, total: typeof fr.data.total === "number" ? fr.data.total : null });
+      const t = typeof fr.data.counts?.total === "number" ? fr.data.counts.total : typeof fr.data.total === "number" ? fr.data.total : null;
+      setVault({ total: t });
     }
-    const cr = await opsFetch<{ measured?: boolean; total?: number; kev?: number }>("/ops/corpus");
+    const cr = await opsFetch<{ total?: number; kev?: number }>("/ops/corpus");
     if (cr.ok && cr.data) {
       setCorpus({
-        measured: cr.data.measured ?? null,
         total: typeof cr.data.total === "number" ? cr.data.total : null,
         kev: typeof cr.data.kev === "number" ? cr.data.kev : null,
       });
     }
   }, []);
   useEffect(() => { void refresh(); const iv = setInterval(refresh, 12_000); return () => clearInterval(iv); }, [refresh]);
+  useEffect(() => { const iv = setInterval(() => setSessionSec(Math.round((Date.now() - mounted.current) / 1000)), 1000); return () => clearInterval(iv); }, []);
 
-  const sessionS = Date.now() - mounted.current;
   const lastEvents = sys.systemEvents.slice(0, 40);
-  const ticker = sys.systemEvents.slice(0, 3);
+  const ticker = sys.systemEvents.slice(0, 1);
+  const a0 = agents.find((a) => a.id === "self-node") ?? agents[0];
 
-  const pill = (ok: boolean | null | undefined, label: string, extra = "") => {
-    const color = ok == null ? "#94a3b8" : ok ? "#4ade80" : "#fb7185";
-    return (
-      <span key={label} className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-mono font-bold"
-        style={{ borderColor: color + "40", color, background: color + "10" }}>
-        <span className={"w-1.5 h-1.5 rounded-full" + (ok ? " animate-pulse" : "")} style={{ background: color }} />
-        {ok == null ? `${label}: ⏳` : ok ? `${label}${extra}` : `${label}: ✗`}
-      </span>
-    );
-  };
-
-  const meter = (label: string, value: number | null, suffix = "%") => {
-    const v = value ?? 0;
-    const color = value == null ? "#64748b" : v > 85 ? "#fb7185" : v > 60 ? "#fbbf24" : "#4ade80";
-    return (
-      <div className="space-y-1" dir="ltr">
-        <div className="flex justify-between text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>
-          <span>{label}</span><span style={{ color }}>{value == null ? "—" : `${v}${suffix}`}</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, Math.max(0, v))}%`, background: color }} />
-        </div>
-      </div>
-    );
-  };
+  const topDot = (ok: boolean | null | undefined): string => DOT[ok == null ? "wait" : ok ? "ok" : "bad"];
 
   return (
-    <div className="flex flex-col h-full bg-[#04040c]" dir="rtl">
-      {/* ── شريط النبض العلوي ── */}
-      <header className="shrink-0 border-b border-emerald-500/10 bg-gradient-to-l from-emerald-950/20 via-[#04040c] to-purple-950/20 px-3 py-2">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <Bot className="w-5 h-5 text-emerald-400" />
-          <div>
-            <h1 className="text-sm font-black text-emerald-200 leading-4">مركز قيادة دوشة — NOVA AGENT PRO</h1>
-            <div className="text-[8px] font-mono text-white/30">
-              الجلسة {fmtUptime(Math.round(sessionS / 1000))} · sha {vit.sha || "…"} · أحداث قناة البرنامج: {sys.systemEvents.length}
-            </div>
-          </div>
-          <div className="mr-auto flex items-center gap-1 flex-wrap">
-            {pill(vit.healthOk, "السيرفر", vit.healthOk && vit.healthMs != null ? ` ${vit.healthMs}ms` : "")}
-            {pill(vit.db, "DB")}
-            {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools}`)}
-            {pill(agents.length > 0 ? true : agentsErr == null ? null : false, `عقد ×${agents.length}`)}
-            {pill(vit.tgToken, "TG")}
-            {pill(vit.tgChat, "TG·chat")}
-            <span className="inline-flex items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-mono font-bold text-cyan-300">
-              <Clock3 className="w-3 h-3" /> {fmtUptime(vit.uptimeS)}
-            </span>
-          </div>
+    <div className="flex h-full min-h-0 flex-col bg-[#0a0d12] text-zinc-200" dir="rtl">
+      {/* ── شريط علوي رفيع: الاسم + الذرية الأساسية بس ── */}
+      <header className="flex h-11 shrink-0 items-center gap-4 border-b border-white/5 bg-[#0d1117] px-3">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[12px] font-black tracking-wide text-emerald-400">NOVA</span>
+          <span className="text-[11px] font-bold text-zinc-400">مركز قيادة دوشة</span>
+        </div>
+        <div className="flex items-center gap-3 text-[10px] font-mono text-zinc-500">
+          <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: topDot(vit.healthOk) }} />السيرفر{vit.healthMs != null ? ` ${vit.healthMs}ms` : ""}</span>
+          <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: topDot(vit.db) }} />DB</span>
+          <span className="flex items-center gap-1.5" dir="ltr"><span className="h-1.5 w-1.5 rounded-full" style={{ background: agents.length > 0 ? DOT.ok : agentsErr ? DOT.bad : DOT.wait }} />nodes×{agents.length}</span>
+          <span dir="ltr">tools×{vit.tools}</span>
+          <span className="hidden md:inline text-zinc-600" dir="ltr">up {fmtUptime(vit.uptimeS)} · {vit.sha || "…"}</span>
+        </div>
+        <div className="mr-auto flex items-center gap-1 text-[10px] font-mono text-zinc-600" dir="ltr">
+          <Clock3 className="h-3 w-3" /> session {fmtUptime(sessionSec)}
         </div>
       </header>
 
-      {/* ── الجسم: [قيادة | ساحة | شات] ── */}
-      <main className="flex-1 min-h-0 flex overflow-hidden">
+      <main className="flex min-h-0 flex-1">
+        {/* ── سكة الأيقونات الشمال ── */}
+        <nav className="flex w-[52px] shrink-0 flex-col items-center gap-1 border-l border-white/5 bg-[#0c0f14] py-2.5">
+          {ARENAS.map(({ key, labelAr, icon: Icon }) => {
+            const active = arena === key;
+            return (
+              <button key={key} onClick={() => setArena(key)} title={labelAr}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${active ? "bg-emerald-500/15 text-emerald-400" : "text-zinc-600 hover:bg-white/5 hover:text-zinc-300"}`}>
+                <Icon className="h-[17px] w-[17px]" />
+              </button>
+            );
+          })}
+        </nav>
 
-        {/* عمود القيادة (يسار) — حي بالكامل */}
-        <aside className="hidden xl:flex w-[264px] shrink-0 flex-col gap-2.5 border-l border-white/5 p-2.5 overflow-y-auto">
-          <RailCard title={`الأسطول المتصل — ${agents.length} عقدة`} icon={Server} color="#22d3ee"
-            footer={agents.length === 0
-              ? <div className="text-[9px] font-mono text-white/35">{agentsErr ?? "مفيش عقد متصلة دلوقتي — /live-agent فيه سطر الانضمام الجاهز"}</div>
-              : undefined}>
-            <div className="space-y-1.5">
-              {agents.slice(0, 6).map((a) => (
-                <div key={a.id} className="flex items-center gap-2 rounded-lg border border-white/6 bg-white/[0.02] px-2 py-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[10px] font-bold text-cyan-200 truncate" dir="ltr">{a.id}</div>
-                    <div className="text-[8px] font-mono text-white/35 truncate">{a.hostname} · {a.platform}{a.cpus ? ` · ${a.cpus}C` : ""}</div>
-                  </div>
+        {/* ── عمود السياق ── */}
+        <aside className="hidden w-[232px] shrink-0 flex-col overflow-y-auto border-l border-white/5 bg-[#0c0f14] md:flex">
+          <Section label={`nodes · ${agents.length}`}>
+            {agents.slice(0, 6).map((a) => (
+              <div key={a.id} className="flex items-center gap-2 py-1">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: DOT.ok }} />
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-[10px] font-bold text-zinc-300" dir="ltr">{a.id}</div>
+                  <div className="truncate text-[9px] text-zinc-600">{a.hostname} · {a.platform}{a.cpus ? ` · ${a.cpus}C` : ""}</div>
                 </div>
-              ))}
+              </div>
+            ))}
+            {agents.length === 0 && <div className="text-[9px] text-zinc-600">{agentsErr ?? "مفيش عقد متصلة — سطر الانضمام في /live-agent"}</div>}
+          </Section>
+
+          <Section label={`hardware${hw.cores ? ` · ${hw.cores}C` : ""}`}>
+            <div className="space-y-1.5" dir="ltr">
+              <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500">
+                <span>CPU</span><span className="text-zinc-300">{hw.cpu == null ? "—" : `${hw.cpu}%`}</span>
+              </div>
+              {hw.cpu != null && <Bar value={hw.cpu} />}
+              <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500">
+                <span>RAM</span><span className="text-zinc-300">{hw.mem == null ? "—" : `${hw.mem}%`}</span>
+              </div>
+              {hw.mem != null && <Bar value={hw.mem} />}
             </div>
-          </RailCard>
+          </Section>
 
-          <RailCard title="المخ السحابي" icon={Brain} color="#a78bfa">
-            {brain ? (
-              <div className="grid grid-cols-3 gap-1.5 text-center">
-                <div><div className="text-base font-black font-mono text-purple-300">{brain.providers?.length ?? 0}</div><div className="text-[8px] font-mono text-white/35">مزود</div></div>
-                <div><div className="text-base font-black font-mono text-purple-300">{brain.tools?.length ?? 0}</div><div className="text-[8px] font-mono text-white/35">أداة</div></div>
-                <div><div className="text-base font-black font-mono text-purple-300">{brain.categories ?? "—"}</div><div className="text-[8px] font-mono text-white/35">فئة</div></div>
-              </div>
-            ) : <div className="text-[9px] font-mono text-white/35">يتقاس…</div>}
-          </RailCard>
+          <Section label="vault · corpus">
+            <Stat label="نتائج الخزنة" value={fmtNum(vault.total)} tone={vault.total != null && vault.total > 0 ? "ok" : undefined} />
+            <Stat label="CVE مقاسة" value={fmtNum(corpus.total)} />
+            <Stat label="KEV مؤكدة" value={fmtNum(corpus.kev)} />
+            {vault.total === 0 && <div className="mt-1 text-[8px] leading-4 text-zinc-600">الخزنة بتملى بأول نتيجة مؤكدة من أدوات الفحص — مش بأرقام معروضة.</div>}
+          </Section>
 
-          <RailCard title="الخزنة + كوربوس الثغرات" icon={ShieldCheck} color="#fb7185">
-            <div className="grid grid-cols-3 gap-1.5 text-center">
-              <div>
-                <div className="text-base font-black font-mono text-rose-300">{vault.total ?? "—"}</div>
-                <div className="text-[8px] font-mono text-white/35">نتيجة في الخزنة</div>
-              </div>
-              <div>
-                <div className="text-base font-black font-mono text-rose-300">{corpus.total != null ? corpus.total.toLocaleString("en") : "—"}</div>
-                <div className="text-[8px] font-mono text-white/35">CVE مقاسة</div>
-              </div>
-              <div>
-                <div className="text-base font-black font-mono text-rose-300">{corpus.kev != null ? corpus.kev.toLocaleString("en") : "—"}</div>
-                <div className="text-[8px] font-mono text-white/35">KEV مؤكدة</div>
-              </div>
-            </div>
-            {vault.total === 0 && (
-              <div className="mt-1.5 text-[8px] font-mono text-rose-200/60 border-t border-white/5 pt-1.5">
-                الخزنة فاضية رغم الكوربوس — خط «الصيد → الخزنة» بيملى لما أدوات الفحص تسجّل نتيجة مؤكدة، مش بأرقام مخترعة هنا.
-              </div>
-            )}
-          </RailCard>
+          <Section label="council brain">
+            {brain == null
+              ? <div className="text-[9px] text-zinc-600">يتقاس…</div>
+              : (<>
+                  <Stat label="مزودون" value={fmtNum(brain.providers)} />
+                  <Stat label="أدوات" value={fmtNum(brain.tools)} />
+                  <Stat label="أصوات المجلس" value={fmtNum(brain.council)} />
+                </>)}
+          </Section>
 
-          <RailCard title={`العتاد الحي${hw.cores ? ` — ${hw.cores}C` : ""}`} icon={Cpu} color="#22d3ee">
-            <div className="space-y-2">
-              {meter("CPU", hw.cpu)}
-              {meter("RAM", hw.mem)}
-            </div>
-          </RailCard>
-
-          <RailCard title="الاستقلالية" icon={sys.autonomousStatus.enabled ? Zap : ZapOff} color={sys.autonomousStatus.enabled ? "#fbbf24" : "#64748b"}>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-[9px] font-mono">
-                <span className={sys.autonomousStatus.enabled ? "text-amber-300" : "text-white/35"}>
-                  {sys.autonomousStatus.enabled ? (sys.autonomousStatus.isRunning ? "شغّال الآن ⚡" : "مفعّلة") : "مطفية"}
-                </span>
-                <span className="text-white/35">✔{sys.autonomousStatus.tasksCompleted} · ✗{sys.autonomousStatus.tasksErrored}</span>
-              </div>
+          <Section label="autonomy">
+            <div className="flex items-center justify-between">
+              <span className={`flex items-center gap-1.5 text-[10px] font-bold ${sys.autonomousStatus.enabled ? "text-amber-400" : "text-zinc-500"}`}>
+                {sys.autonomousStatus.enabled ? <Zap className="h-3 w-3" /> : <ZapOff className="h-3 w-3" />}
+                {sys.autonomousStatus.enabled ? (sys.autonomousStatus.isRunning ? "شغّال الآن" : "مفعّلة") : "مطفية"}
+              </span>
               <button
                 onClick={() => { sys.autonomousStatus.enabled ? sys.disableAutonomous() : sys.enableAutonomous(); }}
-                className="w-full rounded-lg border px-2 py-1.5 text-[10px] font-black transition-colors"
-                style={sys.autonomousStatus.enabled
-                  ? { borderColor: "#fbbf2466", background: "#fbbf2412", color: "#fbbf24" }
-                  : { borderColor: "#4ade8066", background: "#4ade8012", color: "#4ade80" }}>
-                {sys.autonomousStatus.enabled ? "إطفاء الوضع المستقل" : "تشغيل الوضع المستقل"}
+                className={`rounded-md border px-2 py-1 text-[9px] font-bold transition-colors ${sys.autonomousStatus.enabled ? "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"}`}>
+                {sys.autonomousStatus.enabled ? "إطفاء" : "تشغيل"}
               </button>
-              <div className="text-[8px] font-mono text-white/30">بيضرب /api/agent/autonomous على طول — الدقيقة بتحصل من الكونتكست المركزي مش من عجة.</div>
             </div>
-          </RailCard>
+            <div className="mt-1 text-[8px] font-mono text-zinc-600" dir="ltr">✔ {sys.autonomousStatus.tasksCompleted} · ✗ {sys.autonomousStatus.tasksErrored}</div>
+          </Section>
 
-          <RailCard title={`الذاكرة الحية — ${sys.memoryEvents.length}`} icon={MemoryStick} color="#f472b6">
-            <div className="space-y-1">
-              {sys.memoryEvents.slice(0, 3).map((m) => (
-                <div key={m.id} className="rounded-lg border border-white/6 bg-white/[0.02] px-2 py-1">
-                  <div className="text-[9px] font-bold text-pink-200/80 truncate">{m.key}</div>
-                  <div className="text-[8px] font-mono text-white/30 truncate" dir="ltr">{m.content.slice(0, 60)}</div>
-                </div>
-              ))}
-              {sys.memoryEvents.length === 0 && <div className="text-[9px] font-mono text-white/35">الخزنة لسه فاضية</div>}
-            </div>
-          </RailCard>
+          <Section label={`memory · ${sys.memoryEvents.length}`}>
+            {sys.memoryEvents.slice(0, 3).map((m) => (
+              <div key={m.id} className="truncate py-0.5 text-[9px] text-zinc-500">{m.key}</div>
+            ))}
+            {sys.memoryEvents.length === 0 && <div className="text-[9px] text-zinc-600">فاضية</div>}
+          </Section>
         </aside>
 
-        {/* الساحة الوسطى */}
-        <section className="flex-1 min-w-0 flex flex-col min-h-0">
-          <nav className="shrink-0 flex items-center gap-1 px-2.5 py-2 border-b border-white/5 overflow-x-auto">
-            {ARENAS.map(({ key, labelAr, icon: Icon, color }) => {
-              const active = arena === key;
-              return (
-                <button key={key} onClick={() => setArena(key)}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-black transition-all"
-                  style={active
-                    ? { borderColor: color + "66", background: `${color}18`, color, boxShadow: `0 0 10px ${color}22 inset` }
-                    : { borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.015)", color: "rgba(255,255,255,0.45)" }}>
-                  <Icon className="w-3.5 h-3.5" />
-                  {labelAr}
-                  {key === "events" && sys.systemEvents.length > 0 && (
-                    <span className="rounded-full px-1.5 text-[8px] font-mono" style={{ background: `${color}25`, color }}>{sys.systemEvents.length}</span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="flex-1 min-h-0 overflow-y-auto p-3">
+        {/* ── منضدة الشغل ── */}
+        <section className="flex min-w-0 flex-1 flex-col min-h-0">
+          <div className="flex h-9 shrink-0 items-center gap-2 border-b border-white/5 bg-[#0c0f14] px-3">
+            <span className="text-[11px] font-bold text-zinc-300">{ARENAS.find((x) => x.key === arena)?.labelAr}</span>
+            {arena === "events" && <span className="font-mono text-[9px] text-zinc-600" dir="ltr">{sys.systemEvents.length} events</span>}
+            {arena === "hunt" && <span className="font-mono text-[9px] text-zinc-600">حقيقي: trigger بيضرب API بعرض عدّاد</span>}
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             {arena === "events" && (
-              <div className="space-y-1.5" dir="ltr">
+              <div className="space-y-1" dir="ltr">
                 {lastEvents.length === 0 && (
-                  <div className="rounded-xl border border-white/8 bg-white/[0.02] p-6 text-center text-[11px] font-mono text-white/35" dir="rtl">
-                    قناة الأحداث مفتوحة (SSE) — أول حدث هيظهر هنا لحظيًا: مهمة بتبدأ، ذكرى بتتخزن، عقدة بتدخل.
+                  <div className="rounded-lg border border-white/5 bg-white/[0.02] p-5 text-center text-[11px] text-zinc-600" dir="rtl">
+                    قناة الأحداث مفتوحة — أول حدث هيظهر لحظيًا: مهمة بتبدأ، ذكرى بتتخزن، عقدة بتدخل.
                   </div>
                 )}
                 {lastEvents.map((ev, i) => (
-                  <div key={`${ev.ts}-${i}`} className="flex items-start gap-2.5 rounded-lg border border-white/6 bg-black/40 px-3 py-2">
-                    <span className="text-[9px] font-mono text-white/30 shrink-0 pt-0.5">{fmtClock(ev.ts)}</span>
-                    <span className="text-[10px] font-black font-mono text-emerald-300 shrink-0">{ev.type}</span>
-                    {ev.data && <span className="text-[9px] font-mono text-white/40 truncate">{JSON.stringify(ev.data).slice(0, 140)}</span>}
+                  <div key={`${ev.ts}-${i}`} className="flex items-baseline gap-3 rounded-md border border-white/[0.04] bg-[#0c0f14] px-2.5 py-1.5">
+                    <span className="shrink-0 font-mono text-[9px] text-zinc-600">{fmtClock(ev.ts)}</span>
+                    <span className="shrink-0 font-mono text-[10px] font-bold text-emerald-400/90">{ev.type}</span>
+                    {ev.data && <span className="truncate font-mono text-[9px] text-zinc-600">{JSON.stringify(ev.data).slice(0, 140)}</span>}
                   </div>
                 ))}
               </div>
             )}
             {arena === "desktop" && (
-              <div className="grid grid-cols-1 2xl:grid-cols-2 gap-3">
-                <div className="rounded-xl border border-emerald-500/15 bg-black/40 overflow-hidden flex flex-col min-h-[420px]">
-                  <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-white/5 bg-emerald-500/5">
-                    <MonitorSmartphone className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-[11px] font-black text-emerald-300">تيرمنال كالي الحي</span>
-                    <span className="mr-auto text-[8px] font-mono text-white/35" dir="ltr">
-                      {agents.length > 0 ? `على ${agents[0].hostname} (${agents[0].user ?? "—"})` : "ينتظر عقدة…"}
-                    </span>
+              <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                <div className="flex min-h-[430px] flex-col overflow-hidden rounded-lg border border-white/8 bg-black/40">
+                  <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/5 px-3">
+                    <span className="text-[10px] font-bold text-zinc-400">تيرمنال كالي الحي</span>
+                    <span className="font-mono text-[9px] text-zinc-600" dir="ltr">{a0 ? `${a0.hostname} · ${a0.user ?? "—"}` : "ينتظر عقدة…"}</span>
                   </div>
-                  <div className="flex-1 min-h-[380px]" dir="ltr">
-                    <KaliTerminal
-                      agentConnected={agents.length > 0}
-                      agentHostname={agents[0]?.hostname ?? ""}
-                      agentUser={agents[0]?.user ?? ""}
-                    />
+                  <div className="min-h-[380px] flex-1" dir="ltr">
+                    <KaliTerminal agentConnected={agents.length > 0} agentHostname={a0?.hostname ?? ""} agentUser={a0?.user ?? ""} />
                   </div>
                 </div>
-                <div className="rounded-xl border border-cyan-500/15 bg-black/40 overflow-hidden flex flex-col min-h-[420px]">
-                  <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-white/5 bg-cyan-500/5">
-                    <Server className="w-3.5 h-3.5 text-cyan-400" />
-                    <span className="text-[11px] font-black text-cyan-300">مدير ملفات العقدة</span>
-                    <span className="mr-auto text-[8px] font-mono text-white/35" dir="ltr">/api/files — عمليات حقيقية</span>
+                <div className="flex min-h-[430px] flex-col overflow-hidden rounded-lg border border-white/8 bg-black/40">
+                  <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/5 px-3">
+                    <span className="text-[10px] font-bold text-zinc-400">مدير ملفات العقدة</span>
+                    <span className="font-mono text-[9px] text-zinc-600" dir="ltr">/api/files</span>
                   </div>
-                  <div className="flex-1 min-h-[380px] overflow-auto">
+                  <div className="min-h-0 flex-1 overflow-auto">
                     <AdvancedFileManager />
                   </div>
                 </div>
@@ -429,30 +360,21 @@ export default function NovaAgentPro() {
             {arena === "channels" && (
               <div className="max-w-3xl space-y-3">
                 <TelegramConfigCard />
-                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-[11px] font-mono text-amber-200/80 space-y-1.5">
-                  <div className="flex items-center gap-2 font-bold"><Radio className="w-4 h-4" /> قنوات تانية من نفس المحور:</div>
-                  <div>· تنبيهات الزيارات (عين الزيارات) — مربوطة بنفس القناة فورًا بعد التوكن.</div>
-                  <div>· GitHub متكامل فعلًا: الحزمة بتتبنى من CI بتوقيع، والـwatchdog بيفعّل صيانة الأدوات تلقائيًا.</div>
+                <div className="rounded-lg border border-white/8 bg-white/[0.02] p-4 text-[11px] leading-6 text-zinc-500">
+                  تنبيهات الزيارات مربوطة بنفس القناة فور التوكن. تكامل GitHub شغّال:
+                  الحزمة بتتبنى بتوقيع، والـwatchdog بيفعّل صيانة الأدوات تلقائيًا.
                 </div>
               </div>
             )}
             {arena === "nav" && (
-              <div className="space-y-4">
-                <div className="text-[11px] font-mono text-white/40 flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-blue-400" />
-                  كل زرار هنا بيفتح مركز حقيقي جوه المنصة (83 صفحة مرروتة — حارس «مفيش زرار ميت» صايدهم كلهم).
-                </div>
-                {NAV_GROUPS.map(({ group, color, items }) => (
+              <div className="space-y-5">
+                {NAV_GROUPS.map(({ group, items }) => (
                   <section key={group}>
-                    <h2 className="text-[12px] font-black mb-2 flex items-center gap-2" style={{ color }}>
-                      <span className="w-1 h-3.5 rounded-full" style={{ background: color }} />
-                      {group}
-                    </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    <h2 className="mb-2 text-[10px] font-bold tracking-wide text-zinc-500">{group}</h2>
+                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
                       {items.map((it) => (
                         <a key={it.path} href={it.path}
-                          className="rounded-xl border px-3 py-3 text-center text-[11px] font-bold font-mono transition-all hover:-translate-y-0.5"
-                          style={{ borderColor: color + "30", background: color + "08", color: color + "dd" }}>
+                          className="rounded-md border border-white/8 bg-[#0c0f14] px-3 py-2.5 text-center text-[11px] font-bold text-zinc-400 transition-colors hover:border-emerald-500/30 hover:text-emerald-300">
                           {it.label}
                         </a>
                       ))}
@@ -464,35 +386,31 @@ export default function NovaAgentPro() {
           </div>
         </section>
 
-        {/* الشات الموحّد — القلب، مثبّت على طول الشاشة */}
-        <aside className="w-full lg:w-[42%] lg:min-w-[380px] xl:min-w-[420px] shrink-0 border-r border-emerald-500/15 lg:border-r lg:border-l-0 order-first lg:order-none flex flex-col min-h-0 bg-[#050608]">
-          <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-emerald-500/10 bg-emerald-500/5">
-            <MessageSquareText className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-[10px] font-black text-emerald-300">الجلسة الذكية — ثابتة هنا مهما فتحت في الساحة</span>
-          </div>
+        {/* ── الشات الموحّد — القلب الثابت ── */}
+        <aside className="order-first flex min-h-0 w-full shrink-0 flex-col border-l border-white/5 bg-[#0b0e13] md:order-none md:w-[380px] lg:w-[420px]">
           <div className="flex-1 min-h-0">
             <NovaUnifiedChat
               title="نوفا — مركز التحكم"
-              subtitle="عقل واحد · أدوات حقيقية · أدلة SHA-256 — وبيدير كل اللي حواليك"
+              subtitle="عقل واحد · أدوات حقيقية · أدلة SHA-256"
+              hideRail
             />
           </div>
         </aside>
       </main>
 
-      {/* ── شريط الأحداث السفلي: آخر 3 من قناة البرنامج الحية ── */}
-      <footer className="shrink-0 border-t border-white/5 px-3 py-1.5 flex items-center gap-3 text-[9px] font-mono text-white/30 overflow-hidden">
-        {vit.healthOk === true ? <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" /> : <ShieldAlert className="w-3 h-3 text-rose-400 shrink-0" />}
-        <span className="shrink-0">{vit.healthOk === true ? "المنصة واعية" : vit.healthOk == null ? "يتقاس…" : "السيرفر مش واصل"}</span>
-        <div className="flex items-center gap-4 min-w-0 overflow-hidden">
-          {ticker.length === 0
-            ? <span className="text-white/20">قناة الأحداث هادية…</span>
-            : ticker.map((ev, i) => (
-              <span key={`${ev.ts}-${i}`} className="whitespace-nowrap text-white/40 truncate" dir="ltr">
-                <span className="text-white/25">{fmtClock(ev.ts)}</span> <span className="text-emerald-300/80">{ev.type}</span>
-              </span>
-            ))}
-        </div>
-        <span className="mr-auto shrink-0 hidden sm:inline"><MonitorSmartphone className="w-3 h-3 inline ml-1" />AGENT PRO v3</span>
+      {/* ── شريط سفلي: آخر حدث + حالة ── */}
+      <footer className="flex h-6 shrink-0 items-center gap-3 overflow-hidden border-t border-white/5 bg-[#0c0f14] px-3 font-mono text-[9px] text-zinc-600">
+        <span className="flex shrink-0 items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: topDot(vit.healthOk) }} />
+          {vit.healthOk === true ? "live" : vit.healthOk == null ? "…" : "down"}
+        </span>
+        {ticker.map((ev, i) => (
+          <span key={`${ev.ts}-${i}`} className="truncate text-zinc-500" dir="ltr">
+            <span className="text-zinc-700">{fmtClock(ev.ts)}</span> {ev.type}
+          </span>
+        ))}
+        {ticker.length === 0 && <span className="text-zinc-700">القناة هادية</span>}
+        <span className="mr-auto shrink-0 text-zinc-700" dir="ltr"><MemoryStick className="mr-1 inline h-3 w-3" />console v4</span>
       </footer>
     </div>
   );
