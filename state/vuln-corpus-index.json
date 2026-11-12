@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-12T10:15:25.492Z",
+  "at": "2026-11-12T18:33:32.278Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 332006,
+  "total": 332183,
   "bySeverity": {
-    "high": 126818,
-    "medium": 144915,
-    "low": 14870,
-    "unknown": 17776,
-    "critical": 27556,
+    "high": 126995,
+    "medium": 145030,
+    "low": 14886,
+    "unknown": 17621,
+    "critical": 27580,
     "none": 71
   },
   "byYear": {
@@ -39,19 +39,19 @@
     "2019": 1914,
     "2020": 1102,
     "2021": 1977,
-    "2022": 4753,
+    "2022": 4754,
     "2023": 27438,
     "2024": 38931,
-    "2025": 44994,
-    "2026": 90229
+    "2025": 44995,
+    "2026": 90404
   },
   "kev": 1131,
-  "epssScored": 318026,
-  "products": 60927,
+  "epssScored": 318245,
+  "products": 60932,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 65432
+      "count": 65710
     },
     {
       "product": "android",
@@ -212,17 +212,17 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 40371755,
-    "sha256": "58d1245447eb2c9123eb8baa45af426cd7db9db325c4875feb832bf2e3331b40"
+    "bytes": 40408720,
+    "sha256": "c9b317eae9dcb2c97f13c0eebdadb54c0d1984f507b744522f80ed6dc75262a7"
   },
   "mode": "deepen",
-  "says_ar": "332006 ثغرة حقيقية · critical 27556 · high 126818 · 1131 مستغلّة فعلياً (KEV) · 318026 لها EPSS · 60927 منتج بـCPE · مزامنة 2026-11-12T10:15:25.492Z",
+  "says_ar": "332183 ثغرة حقيقية · critical 27580 · high 126995 · 1131 مستغلّة فعلياً (KEV) · 318245 لها EPSS · 60932 منتج بـCPE · مزامنة 2026-11-12T18:33:32.278Z",
   "deepen": {
-    "nextStartIndex": 379907,
+    "nextStartIndex": 403907,
     "windowPages": 12,
-    "walkedFrom": 355907,
-    "nvdTotal": 424638,
+    "walkedFrom": 379907,
+    "nvdTotal": 424814,
     "coverage": 0.7819,
-    "at": "2026-11-12T10:15:25.493Z"
+    "at": "2026-11-12T18:33:32.279Z"
   }
 }

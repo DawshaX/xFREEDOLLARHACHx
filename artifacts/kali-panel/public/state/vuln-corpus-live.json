@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-12T10:15:25.492Z",
-  "total": 332006,
+  "at": "2026-11-12T18:33:32.278Z",
+  "total": 332183,
   "bySeverity": {
-    "high": 126818,
-    "medium": 144915,
-    "low": 14870,
-    "unknown": 17776,
-    "critical": 27556,
+    "high": 126995,
+    "medium": 145030,
+    "low": 14886,
+    "unknown": 17621,
+    "critical": 27580,
     "none": 71
   },
   "kev": 1131,
-  "epssScored": 318026,
-  "products": 60927,
+  "epssScored": 318245,
+  "products": 60932,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -5696,6 +5696,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-116606",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "An authentication bypass in Barracuda Email Security Gateway versions earlier than 9.4.0.030 allows an unauthenticated remote attacker to invoke a configuration-import function and restore a crafted, compatible backup archive, resulting in unauthorized modific",
+      "cwe": [
+        "CWE-288"
+      ],
+      "kev": true,
+      "epss": 0.08934,
+      "pub": "2026-11-02T13:17:37.017",
+      "products": [
+        "email_security_gateway_300_firmware",
+        "email_security_gateway_400_firmware",
+        "email_security_gateway_600_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2018-14558",
       "cvss": 9.8,
       "sev": "critical",
@@ -6435,20 +6453,6 @@
       "products": [
         "mlflow"
       ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-116606",
-      "cvss": 9.3,
-      "sev": "critical",
-      "desc": "An authentication bypass in Barracuda Email Security Gateway versions earlier than 9.4.0.030 allows an unauthenticated remote attacker to invoke a configuration-import function and restore a crafted, compatible backup archive, resulting in unauthorized modific",
-      "cwe": [
-        "CWE-288"
-      ],
-      "kev": true,
-      "epss": 0.08934,
-      "pub": "2026-11-02T13:17:37.017",
-      "products": [],
       "refs": []
     },
     {
@@ -10413,20 +10417,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2026-111560",
-      "cvss": 8.6,
-      "sev": "high",
-      "desc": "Improper neutralization of shell metacharacters in the timezone configuration field in certain Barracuda appliance products using common Barracuda code allows an authenticated administrator to inject OS commands that execute with root privileges when the craft",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": true,
-      "epss": 0.06196,
-      "pub": "2026-11-02T13:17:35.190",
-      "products": [],
-      "refs": []
-    },
-    {
       "id": "CVE-2025-30154",
       "cvss": 8.6,
       "sev": "high",
@@ -13900,7 +13890,23 @@
         "windows_nt"
       ],
       "refs": []
+    },
+    {
+      "id": "CVE-2009-1123",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "The kernel in Microsoft Windows 2000 SP4, XP SP2 and SP3, Server 2003 SP2, Vista Gold, SP1, and SP2, and Server 2008 SP2 does not properly validate changes to unspecified kernel objects, which allows local users to gain privileges via a crafted application, ak",
+      "cwe": [],
+      "kev": true,
+      "epss": 0.04878,
+      "pub": "2009-06-10T18:30:00.327",
+      "products": [
+        "windows_2000",
+        "windows_server_2003",
+        "windows_server_2008"
+      ],
+      "refs": []
     }
   ],
-  "says_ar": "332006 ثغرة حقيقية من NVD · 1131 مستغلّة فعلياً (KEV) · 60927 منتج · مزامنة 2026-11-12T10:15:25.492Z"
+  "says_ar": "332183 ثغرة حقيقية من NVD · 1131 مستغلّة فعلياً (KEV) · 60932 منتج · مزامنة 2026-11-12T18:33:32.278Z"
 }
