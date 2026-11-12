@@ -262,7 +262,9 @@ function InnerRoutes() {
       <Route path="/nova-fleet" component={NovaFleetUnified} />
       {/* «الأجينت المطوّر — مكتب نوفا»: شات حي + قياسات العقدة + المهمات + الأسطول */}
       <Route path="/agent-pro" component={NovaAgentPro} />
-      <Route path="/nova-agent" component={NovaAgentPage} />
+      {/* /nova-agent محجوز لـNovaAgent (المستخدم في Dashboard/الأسطول) —
+          النسخة التانية بتاخد مسارها الخاص بدل ما تكون ميتة تحت التكرار */}
+      <Route path="/nova-agent-page" component={NovaAgentPage} />
       <Route path="/nova-memory" component={NovaMemory} />
       <Route path="/nova-agent-chat" component={NovaAgentChat} />
       <Route path="/knowledge" component={Knowledge} />
@@ -401,14 +403,16 @@ function InnerRoutes() {
       <Route path="/web-search-legacy"><Placeholder title="بحث الويب" subtitle="بحث ذكي" icon={Globe} /></Route>
       <Route path="/github-legacy"><Placeholder title="GitHub Search" subtitle="بحث في GitHub" icon={Github} /></Route>
 
-      <Route component={NotFound} />
-          {/* ── Legacy (بند 7): تراث متوصَّل مش متصلق ────────────────── */}
+      {/* ── Legacy (بند 7): تراث متوصَّل مش متصلق — فوق NotFound دايمًا
+          لأن <Switch> بياخد أول مطابقة (الباج: كانت تحت فماتت كلها) ── */}
       <Route path="/legacy/cve-db" component={LegacyCveDb} />
       <Route path="/legacy/cves" component={LegacyCves} />
       <Route path="/legacy/exploit-db" component={LegacyExploitDb} />
       <Route path="/legacy/github" component={LegacyGithub} />
       <Route path="/legacy/web-search" component={LegacyWebSearch} />
       <Route path="/legacy/nova-sentinel-v3" component={LegacyNovaSentinelV3} />
+
+      <Route component={NotFound} />
 
     </Switch>
   );

@@ -100,7 +100,7 @@ export function Placeholder({
             حوّل الطلب للاجينت الحقيقي
           </button>
           <a
-            href="/nova-fleet#work"
+            href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/nova-fleet#work`}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold font-mono bg-purple-600/20 border border-purple-500/40 text-purple-300 hover:bg-purple-600/30 transition-all"
           >
             <ArrowRight className="w-3.5 h-3.5" />
