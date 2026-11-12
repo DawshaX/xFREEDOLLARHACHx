@@ -57,6 +57,17 @@ export const ALLOWED_KEYS: Record<string, ConfigSpec> = {
     labelAr: "تنبيهات الزيارات على/قف",
     validate: (v) => (["0", "1"].includes(v.trim()) ? null : "القيمة 1 أو 0 بس"),
   },
+  // ── بوابة الدخول (panel-auth) ── تتقري لحظيًا وقت تسجيل الدخول: env الأسبق،
+  // وده المسار اللي بيخلّي الباسورد يتغيّر من اللوحة نفسها من غير لمس الاستضافة.
+  "panel.user": {
+    labelAr: "يوزر صفحة الدخول",
+    validate: (v) => (/^[^\s]{2,40}$/.test(v.trim()) ? null : "اليوزر 2-40 حرف بلا مسافات"),
+  },
+  "panel.pass": {
+    labelAr: "باسورد صفحة الدخول",
+    sensitive: true,
+    validate: (v) => (v.trim().length >= 6 ? null : "الباسورد 6 أحرف على الأقل"),
+  },
 };
 
 const cache = new Map<string, string>();
