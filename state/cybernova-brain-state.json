@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 128,
-    "lastHeartbeatAt": "2026-11-12T17:24:17.901Z",
+    "autonomousCyclesCompleted": 129,
+    "lastHeartbeatAt": "2026-11-12T22:59:16.029Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,7 +16,7 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #128 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #129 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب",
     "notesAr": "",
@@ -42,6 +42,13 @@
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794524356846",
+      "ts": "2026-11-12 22:59:16 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #129 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 172.253.122.141 | HTTP 200 | SHA256: b4aa6137eea92cd3 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 41 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:3)"
+    },
     {
       "id": "pulse-1794504258896",
       "ts": "2026-11-12 17:24:18 UTC",
@@ -209,13 +216,6 @@
       "category": "GITHUB_CLOUD_PULSE",
       "titleAr": "نبضة العقل السحابي التلقائية #105 على الهدف (bughunters.google.com)",
       "detailAr": "IP: 142.251.214.209 | HTTP 200 | SHA256: a245dd81cc040c50 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 2 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:21)"
-    },
-    {
-      "id": "pulse-1793955003989",
-      "ts": "2026-11-06 08:50:03 UTC",
-      "category": "GITHUB_CLOUD_PULSE",
-      "titleAr": "نبضة العقل السحابي التلقائية #104 على الهدف (bughunters.google.com)",
-      "detailAr": "IP: 142.251.218.241 | HTTP 200 | SHA256: 8311000d27119f65 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 1 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:21)"
     }
   ],
   "extractedArtifactsVault": [
@@ -1410,6 +1410,16 @@
       "at": "2026-11-02T21:06:50.538Z"
     },
     {
+      "id": "CVE-2026-125323",
+      "title": "CVE-2026-125323",
+      "description": "pgEdge Control Plane generates pg_hba.conf with trust authentication for local and loopback connections",
+      "cvss": 7.8,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-vq9p-w6wv-cr25",
+      "at": "2026-11-12T22:59:16.845Z"
+    },
+    {
       "id": "CVE-2026-114146",
       "title": "CVE-2026-114146",
       "description": "Microsoft Security Advisory CVE-2026-114146 - ASP.NET Core Elevation of Privilege Vulnerability",
@@ -1898,6 +1908,26 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-36062",
       "at": "2026-11-06T01:56:03.641Z"
+    },
+    {
+      "id": "CVE-2026-126366",
+      "title": "CVE-2026-126366",
+      "description": "msgpack-ruby JRuby decoder makes uncapped header-count allocations; a 5-byte message forces multi-GiB OOM",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-73v3-wf97-vpgj",
+      "at": "2026-11-12T22:59:16.845Z"
+    },
+    {
+      "id": "CVE-2026-125327",
+      "title": "CVE-2026-125327",
+      "description": "pgEdge RAG Server unbounded corpus read allows resource exhaustion from unauthenticated requests",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-5qg5-rgp6-j5m5",
+      "at": "2026-11-12T22:59:16.845Z"
     },
     {
       "id": "CVE-2000-1254",
@@ -2628,46 +2658,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5764",
       "at": "2026-11-07T01:27:41.993Z"
-    },
-    {
-      "id": "CVE-2023-6606",
-      "title": "CVE-2023-6606",
-      "description": "An out-of-bounds read vulnerability was found in smbCalcSize in fs/smb/client/netmisc.c in the Linux Kernel. This issue could allow a local attacker to crash the system or leak internal kernel information.",
-      "cvss": 7.1,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6606",
-      "at": "2026-11-06T08:50:03.238Z"
-    },
-    {
-      "id": "CVE-2022-23498",
-      "title": "CVE-2022-23498",
-      "description": "Grafana is an open-source platform for monitoring and observability. When datasource query caching is enabled, Grafana caches all headers, including `grafana_session`. As a result, any user that queries a datasource where the caching is enabled can acquire another user’s session. To mitigate the vulnerability you can disable datasource query caching for all datasources. This issue has been patched",
-      "cvss": 7.1,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-23498",
-      "at": "2026-11-06T01:56:03.641Z"
-    },
-    {
-      "id": "CVE-2020-1002",
-      "title": "CVE-2020-1002",
-      "description": "An elevation of privilege vulnerability exists when the MpSigStub.exe for Defender allows file deletion in arbitrary locations.To exploit the vulnerability, an attacker would first have to log on to the system, aka 'Microsoft Defender Elevation of Privilege Vulnerability'.",
-      "cvss": 7.1,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-1002",
-      "at": "2026-11-02T21:06:50.538Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 40,
+    "freshThisPulse": 41,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
-      "GHSA:13"
+      "GHSA:3"
     ],
-    "at": "2026-11-12T17:24:18.896Z"
+    "at": "2026-11-12T22:59:16.846Z"
   }
 }
