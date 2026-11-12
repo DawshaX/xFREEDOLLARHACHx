@@ -49,6 +49,13 @@ export type AgentEvent =
   | { type: "tool_call"; id: string; name: string; title: string; args: Record<string, unknown>; risk: string }
   | { type: "tool_result"; id: string; name: string; ok: boolean; summary: string; ms: number; dataPreview: string }
   | { type: "confirm_required"; id: string; name: string; title: string; args: Record<string, unknown>; risk: string; reason: string }
+  /**
+   * Plan mode: the whole turn is a proposal, not an execution. The steps are
+   * streamed with `awaitingApproval: true` and NOTHING runs until the human
+   * answers. This is the mediator the user asked for \u2014 the agent thinks, says
+   * what it would do, and waits.
+   */
+  | { type: "plan_ready"; steps: Array<{ tool: string; args: Record<string, unknown> }>; thought: string; awaitingApproval: boolean; text: string }
   | { type: "delta"; text: string }
   | { type: "memory"; id: string; title: string }
   | { type: "done"; sessionId: string; mode: string; toolCount: number; ms: number; provider: string }
@@ -205,6 +212,16 @@ export interface AgentRunOptions {
   /** Force the deterministic brain (used by tests / air-gapped mode). */
   forceHeuristic?: boolean;
   maxSteps?: number;
+  /**
+   * Plan mode \u2014 the mediator the user asked for.
+   *
+   * When true the turn stops after planning: the steps are emitted as
+   * `plan_ready` with `awaitingApproval: true` and NOT ONE tool runs. The human
+   * reads the plan, edits it or says yes, and the next turn (with planMode off)
+   * executes. Without this the agent either ran everything immediately or
+   * answered with a canned line \u2014 neither is a conversation.
+   */
+  planMode?: boolean;
   /**
    * Tools the human has already approved for this turn. Anything that declares
    * `risk: "sensitive"` (running commands on a real machine, killing processes…)
@@ -1174,7 +1191,44 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   }
 
   // Execute the plan
-  opts.emit({ type: "plan", steps: plan.steps });
+  // In plan mode the plain `plan` event is skipped: `plan_ready` below carries
+  // the same steps AND the approval flag, and emitting both would draw two plan
+  // bubbles for one turn.
+  if (!opts.planMode) opts.emit({ type: "plan", steps: plan.steps });
+
+  /**
+   * ── Plan mode: the mediator ────────────────────────────────────────────────
+   * The user asked for an agent that thinks WITH them: proposes a numbered plan,
+   * says what is available, and STOPS for a yes before touching anything. This
+   * is that stop. The plan is streamed as `plan_ready` with `awaitingApproval`
+   * and the readable numbered list, and the function returns without running a
+   * single tool. The next turn (planMode off) executes.
+   */
+  if (opts.planMode) {
+    const numbered = plan.steps
+      .map((s, i) => {
+        const spec = AGENT_TOOLS.find((t) => t.name === s.tool);
+        const label = spec?.title ?? s.tool;
+        const argStr = Object.keys(s.args ?? {}).length ? ` ${JSON.stringify(s.args)}` : "";
+        return `${i + 1}. ${label} — \`${s.tool}\`${argStr}`;
+      })
+      .join("\n");
+    const reply = [
+      "**وضع الخطة — مش هـنفّذ حاجة قبل موافقتك.**",
+      "",
+      plan.thought ? `🧠 ${plan.thought}` : "",
+      "",
+      numbered || "_(مفيش أدوات مطلوبة — ده رد نصي بس)_",
+      "",
+      "**الخطوة التالية:** اضغط «موافق — نفّذ» عشان أبدأ بالترتيب، أو اكتب تعديلاتك على الخطة وأنا أعدّلها.",
+    ]
+      .filter((l) => l !== "")
+      .join("\n");
+    opts.emit({ type: "plan_ready", steps: plan.steps, thought: plan.thought, awaitingApproval: true, text: reply });
+    opts.emit({ type: "done", sessionId, mode: "plan", toolCount: 0, ms: Date.now() - started, provider: `${provider}+plan-mode` });
+    return { mode, provider: `${provider}+plan-mode`, toolsUsed: [], reply, ms: Date.now() - started };
+  }
+
   const results: Array<{ name: string; ok: boolean; summary: string; data: unknown }> = [];
   const maxSteps = Math.min(opts.maxSteps ?? 5, 6);
   const retrying = wantsRetry(message);

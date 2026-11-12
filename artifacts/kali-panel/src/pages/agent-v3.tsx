@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { novaAuthHeaders } from "@/lib/ops-client";
 import {
   Cpu, Send, Brain, Wrench, Sparkles, ListChecks, Loader2,
   Monitor, Terminal, Globe, Search, Database, ShieldAlert,
@@ -89,7 +90,7 @@ export default function AgentV3Page() {
     setRunning(true); setResult(null);
     setLiveLines([{ id: "boot-" + Date.now(), ts: new Date().toLocaleTimeString("ar"), kind: "system", text: `> CyberNova Agent v3 [${provider?.provider ?? "auto"}/${provider?.model ?? ""}] جاري الإقلاع...\n> استلام المهمة: ${prompt.slice(0, 80)}` }]);
     try {
-      const res = await fetch(API("/agent/run"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt }) });
+      const res = await fetch(API("/agent/run"), { method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ prompt }) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as RunResult; setResult(data);
     } catch (e) {

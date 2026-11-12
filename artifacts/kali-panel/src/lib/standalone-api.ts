@@ -22,6 +22,23 @@ import {
   getCorpusStats,
 } from "./cyber-corpus-2099";
 
+/**
+ * رابط البرهان الصحيح لسجل ثغرة.
+ *
+ * قبل كده كل سجل — حتى المعرّفات الداخلية زي `SKY-VULN-02` و`NOVA-HYPOTHESIS-WEB3-001`
+ * — كان بياخد رابط `nvd.nist.gov/vuln/detail/<id>`، يعني رابط لصفحة NVD لمعرّف
+ * مش موجود عند NVD. ده دليل مزيّف. دلوقتي: لو المعرّف CVE حقيقي → NVD؛ لو داخلي →
+ * أول مرجع حقيقي في السجل، ولو مفيش → رابط بحث NVD بالمعرّف.
+ */
+export function proofUrl(cve: { cveId?: string; id?: string; references?: string[] }): string {
+  const id = String(cve.cveId || cve.id || "");
+  const isRealCve = /^CVE-\d{4}-\d{4,}$/i.test(id);
+  if (isRealCve) return `https://nvd.nist.gov/vuln/detail/${id}`;
+  const ref = (cve.references ?? []).find((r) => /^https?:\/\//i.test(r));
+  if (ref) return ref;
+  return `https://nvd.nist.gov/vuln/search/results?query=${encodeURIComponent(id)}`;
+}
+
 export interface StandaloneCve {
   id: string;
   cveId: string;
@@ -366,8 +383,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://hackerone.com/hacktivity"],
   },
   {
-    id: "CVE-2026-21440",
-    cveId: "CVE-2026-21440",
+    id: "NOVA-SCN-21440",
+    cveId: "NOVA-SCN-21440",
     description:
       "HTTP/2 Rapid Continuation & Reverse Proxy H2.CL Request Smuggling Desynchronization enabling Web Cache Poisoning across CDN edge nodes.",
     severity: "CRITICAL",
@@ -377,7 +394,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-27T14:20:00Z",
     cweId: "CWE-444",
     cwe: "HTTP-Desync",
-    source: "PacketStorm",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "Edge Proxy",
     product: "HTTP/2 Gateway",
@@ -386,8 +403,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://packetstormsecurity.com/"],
   },
   {
-    id: "CVE-2026-18902",
-    cveId: "CVE-2026-18902",
+    id: "NOVA-SCN-18902",
+    cveId: "NOVA-SCN-18902",
     description:
       "OAuth 2.0 / OIDC Wildcard redirect_uri & postMessage Origin Validation Bypass allowing cross-origin authorization code and access token theft.",
     severity: "HIGH",
@@ -397,7 +414,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-26T11:10:00Z",
     cweId: "CWE-601",
     cwe: "AuthBypass",
-    source: "GitHub",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "SSO Identity",
     product: "OAuth2 Provider",
@@ -406,8 +423,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://github.com/advisories"],
   },
   {
-    id: "CVE-2026-14099",
-    cveId: "CVE-2026-14099",
+    id: "NOVA-SCN-14099",
+    cveId: "NOVA-SCN-14099",
     description:
       "Cloud IMDSv1 SSRF via Headless PDF/SVG Renderer & Webhook URL DNS Rebinding exposing temporary IAM credentials.",
     severity: "CRITICAL",
@@ -417,7 +434,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-25T16:45:00Z",
     cweId: "CWE-918",
     cwe: "SSRF",
-    source: "ExploitDB",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "Cloud Microservice",
     product: "Webhook & PDF Worker",
@@ -426,8 +443,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://www.exploit-db.com/"],
   },
   {
-    id: "CVE-2026-11205",
-    cveId: "CVE-2026-11205",
+    id: "NOVA-SCN-11205",
+    cveId: "NOVA-SCN-11205",
     description:
       "AI Agent Indirect Prompt Injection & MCP Tool Excessive Agency (OWASP LLM01/LLM06) allowing unauthorized internal API invocation.",
     severity: "CRITICAL",
@@ -437,7 +454,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-24T13:00:00Z",
     cweId: "CWE-285",
     cwe: "AI-PromptAgency",
-    source: "VulDB",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "AI Agent Framework",
     product: "RAG & Tool Router",
@@ -446,8 +463,8 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     references: ["https://vuldb.com/"],
   },
   {
-    id: "CVE-2026-09881",
-    cveId: "CVE-2026-09881",
+    id: "NOVA-SCN-09881",
+    cveId: "NOVA-SCN-09881",
     description:
       "Single-Packet HTTP/2 Concurrency Race Condition (TOCTOU) in FinTech Ledger & Balance Transfer API allowing double-withdrawal.",
     severity: "HIGH",
@@ -457,7 +474,7 @@ export const STANDALONE_CVES: StandaloneCve[] = [
     published: "2026-10-23T10:30:00Z",
     cweId: "CWE-362",
     cwe: "Race-TOCTOU",
-    source: "CIRCL",
+    source: "CyberNova-Scenario-Lab",
     epss: 0,
     vendor: "FinTech Core",
     product: "Payment Ledger API",
@@ -886,7 +903,11 @@ let liveSessionsState = loadState("cybernova_livesessions_v1", [
   },
 ]);
 
-let agentTasksState = loadState("cybernova_agenttasks_v2", [
+// صدق الجلسة (الفحص الشامل 2026-11-09): كل إدخال هنا قالب تمريني للمتصفح —
+// مش تاريخ فحوصات وقعت فعلاً. علامة simulated:true هي الفرق بين المسرح والقياس:
+// مهام المحرك الحقيقي على العقدة بتيجي من /api/agent/tasks بلا العلامة دي.
+let agentTasksState: Array<Record<string, unknown>> = loadState<Array<Record<string, unknown>>>("cybernova_agenttasks_v2", []).map((t) => ({ ...t, simulated: true }));
+if (agentTasksState.length === 0) agentTasksState = [
   {
     id: 1,
     title: "✅ [تم إنجازه] المرحلة 1: استطلاع سحابي سلبي (CRT.SH + Shodan InternetDB + Uncover + Subfinder) ورسم سطح الهجوم",
@@ -1008,22 +1029,22 @@ let agentTasksState = loadState("cybernova_agenttasks_v2", [
       { id: 1201, taskId: 12, orderIndex: 0, title: "تصدير التقرير بصيغة Markdown الجاهزة لـ HackerOne/Google VRP", description: "مراجعة شاملة لضمان الدقة والوضوح والنفع العام.", status: "pending", output: "" },
     ],
   },
-]);
+];
 
 let notificationsState = loadState("cybernova_notifs_v1", [
   {
     id: "notif-1",
     kind: "success",
-    title: "ناقل WebSocket الداخلي نشط",
-    body: "تم ربط الوكلاء والملاحظات ومتتبع المهام وBug Bounty Studio بنجاح.",
+    title: "مركز الإشعارات",
+    body: "سطر ترحيبي: الإشعارات الحية بتظهر هنا فور تسجيلها فعلاً — مش محفوظة عن أحداث ما حصلتش.",
     read: false,
     createdAt: new Date().toISOString(),
   },
   {
     id: "notif-2",
     kind: "info",
-    title: "موسوعة الثغرات وماسح الكود جاهزان",
-    body: "يمكنك الآن اختيار هدف وتسجيل جميع خطوات الفحص تلقائياً.",
+    title: "تلميح البداية",
+    body: "اختَر هدفاً من استوديو البج باونتي — أي فحص حقيقي هيتسجّل هنا بنفسه.",
     read: false,
     createdAt: new Date().toISOString(),
   },
@@ -1170,7 +1191,7 @@ export function buildSmartAgentResponse(promptText: string, activeTarget = "immu
     `- **مكتبة المجرة الشاملة:** \`${liveGalaxy.total.toLocaleString()}+ ثغرة\` متزامنة من **9 مصادر عالمية حية** (\`NVD\`, \`GitHub Advisories\`, \`FIRST.org EPSS\`, \`CIRCL CERT\`, \`Google OSV.dev\`, \`Immunefi/DeFiLlama Web3\`, \`Shodan InternetDB\`, \`PayloadsAllTheThings\`, \`AI-Mutated\`).\n` +
     `- **أحدث الثغرات المسحوبة في الجلسة:** \`${latestLiveIds}\`\n` +
     `- **الترسانة التنفيذية:** \`${cStats.kaliToolsCount} أداة Kali Linux & Web3\` عبر \`${cStats.kaliCategoriesCount} فئة\` + \`${cStats.githubProjectsCount} مشروع GitHub 2026\` + \`${cStats.vulnPrimitivesCount} فئة ثغرات أولية (P01–P28)\`.\n` +
-    `- **الهدف النشط:** \`${activeTarget}\` | **ناقل التزامن:** \`WebSocket (/api/ws) + SSE (/api/cve/stream) متصل 100%\`.\n\n` +
+    `- **الهدف النشط:** \`${activeTarget}\` | **ناقل التزامن:** \`ناقل المتصفح الداخلي (BroadcastChannel بين التبويبات) — قياس الـWebSocket/SSE الحقيقي بيتقرأ لحظيًا من صفحة الحالة، مفيش ادعاء «متصل دائم» هنا\`.\n\n` +
     `#### 2. أحدث الاكتشافات المسجلة في المهمة النشطة:\n` +
     `${recentFindings || "- جاهز لبدء الرصد القانوني."}\n\n` +
     `#### 3. أحدث السجلات في الذاكرة المشتركة (\`/memory\`):\n` +
@@ -1218,18 +1239,20 @@ function buildStandaloneCronJobs(): StandaloneCronJob[] {
     ? savedBrain.multiTaskQueue
     : DEFAULT_CRON_SEED;
   const overrides = loadState<Record<string, Partial<StandaloneCronJob>>>(CRON_STATE_KEY, {});
-  const expressions = ["*/15 * * * *", "*/30 * * * *", "0 */6 * * *", "0 0 * * *", "*/10 * * * *"];
   return queue.map((task: Record<string, unknown>, idx: number) => {
     const id = String(task.id ?? `task-${idx + 1}`);
     const base: StandaloneCronJob = {
       id,
       name: String(task.titleAr ?? `مهمة #${idx + 1}`),
-      cronExpr: expressions[idx % expressions.length]!,
+      // صدق القياس (بند 5، 2026-11-09): مفيش مجدول في المتصفح — القيم كانت بتتولّد
+      // (nextRun = now+15د لكل واحدة، runCount = 12+idx مكتوبة في الكود) وتتعرض
+      // كأنها سجل ركض حقيقي. الصفحة بقت بتكتب «— / لم يركض بعد» زي ما هي الحقيقة.
+      cronExpr: "—",
       enabled: true,
       lastRun: undefined,
-      lastResult: String(task.lastOutput ?? "جاهز للتنفيذ"),
-      nextRun: new Date(Date.now() + (idx + 1) * 15 * 60 * 1000).toISOString(),
-      runCount: 12 + idx,
+      lastResult: "قائمة عقل المتصفح — مش سجل تشغيل",
+      nextRun: undefined,
+      runCount: 0,
       errorCount: 0,
     };
     return { ...base, ...(overrides[id] ?? {}) };
@@ -1879,6 +1902,49 @@ if (path === "/nova-core/version") {
   }
 
   // ── Health & Status ────────────────────────────────────────────────────────
+  // ── قراءات الضبط والنسخة في وضع Pages الساكن ─────────────────────────────
+  // صفحة agent-pro بتندّه نفس الأرقام؛ الساكن بيقول «ساكن» بصراحة بدل الحبة
+  // الفاضية. التوكن دايمًا false هنا: مفيش قفل إعدادات في المتصفح.
+  if (path === "/ops/version" && m === "GET") {
+    return {
+      ok: true,
+      mode: "standalone-static",
+      sha: measuredAppVersion(),
+      shaSource: "manifest",
+      uptimeSec: measuredUptimeSec(),
+      toolsPresent: [],
+      autonomy: { level: "passive" },
+      noteAr: "نسخة GitHub Pages الساكنة — النبض الكامل (أدوات/نسخة) يتقاس على العقدة الحية مش هنا",
+    };
+  }
+  if (path === "/ops/config/status" && m === "GET") {
+    return {
+      ok: true,
+      mode: "standalone-static",
+      hydrated: false,
+      keys: { "telegram.botToken": false, "telegram.chatId": false, "telegram.alert.cve": false, "shodan.apiKey": false, visitorAlerts: false },
+      allowedKeys: [
+        { key: "telegram.botToken", labelAr: "توكن بوت تليجرام", sensitive: true },
+        { key: "telegram.chatId", labelAr: "معرّف شات تليجرام", sensitive: true },
+        { key: "telegram.alert.cve", labelAr: "تنبيهات صيد الثغرات على تليجرام (0/1)", sensitive: false },
+        { key: "shodan.apiKey", labelAr: "مفتاح Shodan (إثراء الزوار سلبيًا)", sensitive: true },
+        { key: "visitorAlerts", labelAr: "تنبيهات الزيارات على/قف", sensitive: false },
+      ],
+      noteAr: "الوضع الساكن مابيحفظش إعدادات — اضبطها على العقدة الحية (nova.waifly.com)",
+    };
+  }
+
+  if (path === "/ops/telegram/status" && m === "GET") {
+    // الوضع الساكن مابيعدّيش على api.telegram.org من المتصفح، فبيقول الوضع صراحة.
+    return {
+      ok: true,
+      mode: "standalone-static",
+      tokenSet: false,
+      noteAr: "الفحص الحي (getMe/getUpdates) يتعمل على العقدة nova.waifly.com — هنا الصفحة الساكنة على Pages",
+      adviceAr: "افتح نفس الصفحة من رابط العقدة الحية عشان الفحص الحقيقي",
+    };
+  }
+
   if (path === "/healthz" || path === "/health") {
     return { status: "ok", mode: "standalone", wsConnected: true, timestamp: new Date().toISOString() };
   }
@@ -2681,6 +2747,7 @@ if (path === "/nova-core/version") {
         } else {
           const cycleNum = agentTasksState.length + 1;
           agentTasksState.unshift({
+            simulated: true,
             id: Date.now(),
             title: `⚡ [يعمل الآن 24/7] دورة الفحص الذاتي المتقدمة #${cycleNum}: ربط مخرجات الاستطلاع بسلاسل الثغرات (CVSS 9.5)`,
             description: "فحص ذاتي مستمر للنطاقات وملفات الـ JS وبناء سلاسل التحقق غير المدمرة.",
@@ -2697,6 +2764,7 @@ if (path === "/nova-core/version") {
       const goal = String(body.goal || body.title || "فحص الهدف وتوثيق الأدلة");
       const taskId = Date.now();
       const created = {
+        simulated: true,
         id: taskId,
         title: goal.startsWith("⚡") || goal.startsWith("🧭") ? goal.slice(0, 110) : `⚡ [يعمل الآن 24/7] ${goal.slice(0, 95)}`,
         description: goal,
@@ -3055,7 +3123,15 @@ if (path === "/nova-core/version") {
       bySource: galaxyStats.bySource,
       byExploitType: galaxyStats.byExploitType,
       latest: allItems.slice(0, 30),
-      topEpss: [...allItems].sort((a, b) => (b.epssScore ?? 0) - (a.epssScore ?? 0)).slice(0, 20),
+      // صدق EPSS (الفحص الشامل 2026-11-09): «أعلى مخاطر EPSS» كان بيرتّب العناصر
+      // كلها — وفرضيات المعمل (CyberNova-*/NOVA-*/SKY-*) ملهاش نقاط EPSS أصلاً،
+      // فكانت بتظهر بدرجة 0% تحت عنوان «أكثر احتمالاً للاستغلال» = كذبة بالدمج.
+      // القائمة بقت من عناصر عندها نقطة EPSS حقيقية (>0) من مصادر الكالات بس.
+      topEpss: [...allItems]
+        .filter((x) => typeof x.epssScore === "number" && x.epssScore > 0
+          && !/^(CyberNova|NOVA|SKY|AI-Mutated)/.test(String(x.source ?? ""))
+          && !/^(NOVA|SKY|CDC)-/.test(String(x.id ?? "")))
+        .sort((a, b) => (b.epssScore ?? 0) - (a.epssScore ?? 0)).slice(0, 20),
     };
   }
 
@@ -3149,6 +3225,33 @@ if (path === "/nova-core/version") {
     };
   }
 
+/**
+ * notifyStandaloneCveHunt — نسخة المواطنين-بالتوأمين: بتشتغل فقط لو
+ * بيانات القناة موجودة في بيئة التشغيل (env في السيرفر، ولا في الساكن).
+ * الساكن بصمتٍ صادق: مفيش تخزين أسرار في المتصفح. نار ونسيان.
+ */
+async function notifyStandaloneCveHunt(sum: Record<string, number>): Promise<void> {
+  if (!(sum.totalNew > 0)) return;
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+  const token = env.TELEGRAM_BOT_TOKEN ?? "";
+  const chat = env.TELEGRAM_CHAT_ID ?? "";
+  if (!token || !chat) return;
+  try {
+    const parts = Object.entries(sum).filter(([k]) => k !== "totalNew" && k.startsWith("sync.") === false)
+      .map(([k, v]) => (v > 0 ? `${k} +${v}` : null)).filter(Boolean).join(" · ");
+    const extra = Object.entries(sum).filter(([k]) => k.startsWith("sync.")).map(([k, v]) => `${k.slice(5)} +${v}`).join(" · ");
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chat,
+        text: `🎯 صيد NOVA — مزامنة حية: +${sum.totalNew} سجل${extra ? ` (${extra})` : ""}${parts ? `\n${parts}` : ""}`,
+        disable_web_page_preview: true,
+      }),
+    });
+  } catch { /* نار ونسيان */ }
+}
+
   // ── Live Multi-Site Vulnerability Ingestion (/api/cve/ingest-live) ─────────
   if (path === "/cve/ingest-live" && m === "POST") {
     const incoming = Array.isArray(body?.items) ? (body.items as Array<Record<string, unknown>>) : [];
@@ -3157,7 +3260,11 @@ if (path === "/nova-core/version") {
     const newlyConverted: StandaloneCve[] = [];
 
     for (const raw of incoming) {
-      const id = String(raw.cveId || raw.id || `CVE-2026-${Math.floor(10000 + Math.random() * 89999)}`);
+      // قبل كده: لو السجل مش فيه معرّف، كان بيولّد `CVE-2026-<رقم عشوائي>` —
+      // معرّف CVE ملفّق. دلوقتي: بنستخدم معرّف داخلي واضح (NOVA-SYNC-*) مش
+      // بيدّعي إنه CVE حقيقي.
+      const id = String(raw.cveId || raw.id || `NOVA-SYNC-${Date.now().toString(36).toUpperCase()}`);
+      const isRealCve = /^CVE-\d{4}-\d{4,}$/i.test(id);
       if (existingIds.has(id)) continue;
       existingIds.add(id);
       const sevRaw = String(raw.severity || "HIGH").toUpperCase();
@@ -3167,7 +3274,7 @@ if (path === "/nova-core/version") {
       const src = String(raw.source || "NVD");
       const et = String(raw.exploitType || raw.cwe || "RCE");
       const epss = Number(raw.epssScore ?? raw.epss ?? 0) || 0;
-      const url = String(raw.url || `https://nvd.nist.gov/vuln/detail/${id}`);
+      const url = String(raw.url || (isRealCve ? `https://nvd.nist.gov/vuln/detail/${id}` : ""));
 
       const cveObj: StandaloneCve = {
         id,
@@ -3208,6 +3315,17 @@ if (path === "/nova-core/version") {
       const merged = [...newlyConverted, ...customCves].slice(0, 300);
       saveState("cybernova_custom_cves_v17", merged);
       saveState("cybernova_galaxy_stats_v17", galaxyStats);
+      // إشعار تليجرام — نار ونسيان. per-source breakdown بيتبنى من ما اتخزن فعلًا:
+      const SRC2KEY: Record<string, string> = {
+        NVD: "nvdNew", GITHUB: "ghNew", CISA: "cisaNew", "CISA-KEV": "cisaNew",
+        EXPLOITDB: "edbNew", "EXPLOIT-DB": "edbNew", PACKETSTORM: "pssNew", VULDB: "vuldbNew", CIRCL: "circlNew",
+      };
+      const sum: Record<string, number> = { totalNew: newlyConverted.length };
+      for (const c of newlyConverted) {
+        const k = SRC2KEY[String(c.source).toUpperCase()] ?? `sync.${String(c.source).slice(0, 24)}`;
+        sum[k] = (sum[k] || 0) + 1;
+      }
+      void notifyStandaloneCveHunt(sum);
     }
 
     if (learnedSummaryAr) {
@@ -3438,7 +3556,7 @@ if (path === "/nova-core/version") {
       description: c.description,
       publishedAt: c.publishedAt,
       source: c.source || "NVD",
-      url: `https://nvd.nist.gov/vuln/detail/${c.cveId}`,
+      url: proofUrl(c),
     }));
     return {
       total: STANDALONE_CVES.length,
@@ -3492,7 +3610,7 @@ if (path === "/nova-core/version") {
         exploitAvailable: c.exploitAvailable,
         publishedAt: c.publishedAt,
         source: c.source || "NVD",
-        url: `https://nvd.nist.gov/vuln/detail/${c.cveId}`,
+        url: proofUrl(c),
       };
     });
     return { scores, results: scores, kev: scores, items: scores, total: scores.length };
@@ -3877,12 +3995,10 @@ if (path === "/nova-core/version") {
   }
 
   if (path === "/audit") {
-    return {
-      entries: [
-        { id: "au-1", action: "SYSTEM_BOOT", actor: "CyberNova", detail: "Bug Bounty Studio & Internal WebSocket Hub initialized", createdAt: new Date().toISOString() },
-      ],
-      total: 1,
-    };
+    // صدق القياس (بند 5، 2026-11-09): كان بيرجّع حدث SYSTEM_BOOT بختم «دلوقتي»
+    // عند كل طلب — حدث ما حصلش. على Pages مفيش قاعدة تدقيق؛ السجل الحقيقي
+    // (audit_log) على العقدة. الشكل مصفوفة زي الراوتر الحقيقي GET /audit بالظبط.
+    return [];
   }
 
   // ── Nuclei & AutoExplorer & Vulns & GitHub Search ──────────────────────────
@@ -5799,6 +5915,34 @@ if (path === "/fleet/system") {
     };
   }
 
+
+  // ── الأجينت المطوّر (/agent-pro) — تغطية الوضع الساكن 2026-11-08 ─────────────
+  // بدون التسجيل دي، الصفحة الجديدة كانت بتقابل payload فاضية على GitHub Pages
+  // (فاحص audit-connections بيعتبر resolveStandaloneApi()==null فجوة اتصال).
+  if (path === "/nova-core/council" && m === "GET") {
+    return {
+      ok: true,
+      mode: "static",
+      members: [
+        { id: "local-brain", label: "العقل المحلي — قواعد وبيانات الصفحة", hasKey: false },
+        { id: "pollinations:openai-fast", label: "Pollinations · openai-fast (بدون مفتاح)", hasKey: false },
+        { id: "pollinations:mistral", label: "Pollinations · mistral (بدون مفتاح)", hasKey: false },
+        { id: "pollinations:llama", label: "Pollinations · llama (بدون مفتاح)", hasKey: false },
+      ],
+      noteAr: "دي مقاعد المتصفح الصادقة — المجلس الكامل بالتصويت المتبادل بيشتغل على المحرك.",
+    };
+  }
+  if (path === "/nova-agent-v3/chat" && m === "POST") {
+    // سيل الأحداث بيصنعه الـshim في setup.ts للواجهة؛ التسجيل ده غطاء JSON صادق
+    // لأي قارئ — بلا أي ادعاء إن عملًا نُفّذ وهو ما نُفّذش.
+    return {
+      ok: true,
+      mode: "static",
+      accepted: true,
+      engine: "standalone-shim",
+      noteAr: "الوضع المستقل يرد بعقل المتصفح (تحليل نظري) — تنفيذ الأدوات الحقيقي على المحرك.",
+    };
+  }
   return null;
 }
 

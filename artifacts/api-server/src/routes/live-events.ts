@@ -1,6 +1,12 @@
 import { Router, type Request, type Response } from "express";
+import { requireOps } from "../lib/ops/gate";
 
 const router = Router();
+
+// The platform event bus is a live firehose of what the engine is doing (tool
+// runs, targets, results). It used to be readable by anyone who could reach the
+// host — now it goes through the same gate as every other powerful surface.
+router.use(requireOps("live-events"));
 
 const clients = new Set<Response>();
 

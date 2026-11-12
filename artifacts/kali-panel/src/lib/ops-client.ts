@@ -40,6 +40,29 @@ export function hasToken(): boolean {
   return getOpsToken().length > 0;
 }
 
+/**
+ * The one place every raw `/api/*` call gets its auth header from.
+ *
+ * The engine gates its powerful surfaces (chat, fleet bus, tool catalogue,
+ * device inventory, event bus) on `x-nova-token` whenever `NOVA_EXEC_TOKEN` is
+ * set. Before this helper each component invented its own header — some sent
+ * the token, most did not — so a correctly connected machine answered reads and
+ * refused writes, which reads as "connected but broken". Now there is one
+ * source of truth: the token in `localStorage`, attached everywhere.
+ */
+export function novaAuthHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra ?? {}) };
+  const token = getOpsToken();
+  if (token) headers["x-nova-token"] = token;
+  return headers;
+}
+
+/** The token as a query param, for transports that cannot set headers (EventSource). */
+export function novaTokenQuery(): string {
+  const token = getOpsToken();
+  return token ? `?token=${encodeURIComponent(token)}` : "";
+}
+
 export interface OpsReply<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
@@ -149,3 +172,46 @@ export async function opsText(path: string): Promise<{ ok: boolean; text: string
     return { ok: false, text: "", status: 0, error: (err as Error).message };
   }
 }
+
+/** التوكن بيتخزن فين في المتصفح — رقم واحد بيستخدمه البانر العالمي والاختبارات. */
+export const OPS_TOKEN_KEY = TOKEN_KEY;
+
+/**
+ * شبكة أمان أخيرة: التفاف على window.fetch بحيث **أي** طلب خام لنفس الأصل
+ * (`/api/**`) يركّب `x-nova-token` تلقائيًا لو موجود ولو المتعامل نساه.
+ * القياس اللي حرّك ده: 2026-11-09 لوج الإنتاج أظهر 403 على 9 نقاط نهاية مختلفة
+ * استدعتها الصفحات بـfetch عريان (hunt trigger، ingest-live، deep-research analyzers…)
+ * وإصلاح كل ملف لوحده كان هيسيب ثغرة قابلة للتكرار. القيود:
+ *   • لا يلمس الطلبات عابرة الأصل (التوكن عمره ما يتسرب لنطاق تاني).
+ *   • لا يكتب فوق هيدر موجود (caller يفضل صاحب الكلمة).
+ *   • idempotent + لا يكسر fetch الأصلي عند أي خطأ.
+ */
+let fetchPatched = false;
+export function installFetchAuthPatch(): void {
+  if (fetchPatched) return;
+  fetchPatched = true;
+  const g = globalThis as { fetch?: typeof fetch };
+  if (typeof g.fetch !== "function") return;
+  const original = g.fetch.bind(globalThis);
+  g.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    try {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      const sameOrigin = url.startsWith("/") || (typeof location !== "undefined" && url.startsWith(location.origin));
+      if (sameOrigin && url.includes("/api/") && getOpsToken()) {
+        const headers = new Headers(
+          typeof input === "object" && !(input instanceof URL) && "headers" in input && input.headers && !init?.headers
+            ? input.headers
+            : init?.headers,
+        );
+        if (!headers.has("x-nova-token")) headers.set("x-nova-token", getOpsToken());
+        return original(input, { ...(init ?? {}), headers });
+      }
+    } catch {
+      /* أي خطأ في الرقعة = المسار الأصلي، عمرها ما تبوظ call */
+    }
+    return original(input, init);
+  }) as typeof fetch;
+}
+
+// تنصيب فوري: أي ملف بيستورد ops-client (وكل عميل API بيستورده) بيضمن الشبكة.
+try { installFetchAuthPatch(); } catch { /* بيئة بلا window — الاختبارات بندهها يدوي */ }

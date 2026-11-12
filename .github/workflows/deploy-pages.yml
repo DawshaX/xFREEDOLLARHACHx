@@ -16,6 +16,7 @@ on:
       - "advisory library (real GHSA corpus)"
       - "hunt live (real scan · permitted targets)"
       - "NOVA portable bundle (24/7)"
+      - "DB CA pin sync"
       # The same `[skip ci]` hole, measured by scripts/check-workflows.mjs (which
       # now fails if a skip-ci state committer is missing from this list):
       - "CyberNova 24/7 Autonomous Cloud Brain Pulse"

@@ -28,6 +28,7 @@
  */
 import fs from "node:fs";
 import { isDurableHost } from "../agent/durable-host";
+import { wordlistInfo } from "./wordlist";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { resetBinaryCache, toolStatus } from "./tools";
@@ -47,6 +48,10 @@ export const VENDORABLE = [
   "dalfox",
   "gitleaks",
   "trivy",
+  "tlsx",
+  "uncover",
+  "trufflehog",
+  "osv-scanner",
 ] as const;
 
 /**
@@ -64,6 +69,14 @@ export interface ToolchainStatus {
   files: Array<{ name: string; bytes: number }>;
   /** ملفات VENDORABLE موجودة في المجلد بس `findBinary` بيرفضها (مفيش X_OK) */
   unusable: Array<{ name: string; bytes: number }>;
+  /**
+   * حدود الحاوية المقروءة من cgroup — «استغل الرام والـCPU» لازم يبقى رقم عند
+   * الأداة، مش إحساس: منه بنعرف إن التنزيل اللي مات `exitCode:null` بعد 6.4 ثانية
+   * كان راح في حد ذاكرة، وإن nuclei ماشي في 256MB ولا لأ.
+   */
+  resources: { memLimitMB: number | null; memUsedMB: number | null; cpuQuota: number | null; note: string };
+  /** قائمة المسارات المدمجة اللي بتشتغل بيها ffuf/gobuster (متقاسة من الملف نفسه). */
+  wordlist: { path: string | null; lines: number; bytes: number; source: string };
   present: string[];
   missing: string[];
   writable: boolean;
@@ -214,6 +227,42 @@ function vendorerReason(x: {
   return `السكربت مشى بس ولا أداة ماثبتت (${x.results.map((r) => `${r.bin}:${r.status}`).join(", ").slice(0, 220)})`;
 }
 
+/** قراءة cgroup v2 ثم v1؛ لو الاتنين مش موجودين بنرجّع null وبنقول السبب. */
+function cgroupNum(files: string[], scale = 1): number | null {
+  for (const f of files) {
+    try {
+      const raw = fs.readFileSync(f, "utf8").trim();
+      if (!raw || raw === "max") continue;
+      const n = Number(raw.split(/\s+/)[0]);
+      if (Number.isFinite(n) && n > 0) return Math.round(n / scale);
+    } catch {
+      /* الملف مش موجود في الـnamespace ده — جرّب اللي بعده */
+    }
+  }
+  return null;
+}
+
+function containerResources(): { memLimitMB: number | null; memUsedMB: number | null; cpuQuota: number | null; note: string } {
+  const memLimitMB = cgroupNum(["/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"], 1048576);
+  const memUsedMB = cgroupNum(["/sys/fs/cgroup/memory.current", "/sys/fs/cgroup/memory/memory.usage_in_bytes"], 1048576);
+  // v2 بيكتب "quota period" في ملف واحد؛ v1 ملفين. `cpuQuota` = عدد الأنوية (مقاس، مش نسبة).
+  let cpuQuota: number | null = null;
+  try {
+    const [quota, period] = fs.readFileSync("/sys/fs/cgroup/cpu.max", "utf8").trim().split(/\s+/);
+    if (quota !== "max" && Number(period) > 0) cpuQuota = Math.round((Number(quota) / Number(period)) * 100) / 100;
+  } catch {
+    const q = cgroupNum(["/sys/fs/cgroup/cpu/cpu.cfs_quota_us"]);
+    const p = cgroupNum(["/sys/fs/cgroup/cpu/cpu.cfs_period_us"]);
+    if (q && p && q > 0) cpuQuota = Math.round((q / p) * 100) / 100;
+  }
+  return {
+    memLimitMB,
+    memUsedMB,
+    cpuQuota,
+    note: memLimitMB === null ? "مفيش cgroup مقروء — الحدود جوه المُشرف مش جوه الحاوية" : `فاضل ~${Math.max(0, memLimitMB - (memUsedMB ?? 0))}MB من ${memLimitMB}MB`,
+  };
+}
+
 /** قراءة فقط: مافيش شبكة، مافيش spawn، مافيش كتابة. */
 export function toolchainStatus(): ToolchainStatus {
   const dir = vendorDir();
@@ -259,6 +308,8 @@ export function toolchainStatus(): ToolchainStatus {
     scriptAvailable: Boolean(findVendorerScript()),
     binaries,
     freeMB: freeMBAt(dir),
+    resources: containerResources(),
+    wordlist: wordlistInfo(),
     minFreeMB: minFreeMB(),
     last: readRecord(),
   };
@@ -333,7 +384,18 @@ export function provisionToolchain(opts: ProvisionOptions = {}): Promise<Provisi
   const timeoutMs = Math.max(30_000, Math.min(Number(opts.timeoutMs) || 540_000, 1_200_000));
 
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, argv, { cwd: path.dirname(path.dirname(script)), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env } });
+    // سقف heap للابن = ~60% من حد الحاوية (متقاس: محاولة 17:17:17Z ماتت
+    // `exitCode:null · ms 6395` — يعني قتل من الرام مش فشل شبكة). من غير السقف ده
+    // V8 بياخد الحد كله والـOOM-killer بيختار الضحية، والرسالة اللي توصلنا «?».
+    const res = containerResources();
+    const childEnv: Record<string, string | undefined> = { ...process.env };
+    if (res.memLimitMB && res.memLimitMB > 0 && res.memLimitMB < 2048 && !process.env.NODE_OPTIONS) {
+      // 25% مش 60%: الأب شغال فعلًا بـ~115–167MB RSS على نفس السقف (متقاس من
+      // `/api/nova-core/version` 16:01Z و20:32Z)، فالـ60% كانت بتخلي الحساب
+      // أبو-160 + أب-150 > 256MB — وده بالظبط القتل اللي شُفناه.
+      childEnv.NODE_OPTIONS = `--max-old-space-size=${Math.max(48, Math.min(320, Math.round(res.memLimitMB * 0.25)))}`;
+    }
+    const child = spawn(process.execPath, argv, { cwd: path.dirname(path.dirname(script)), stdio: ["ignore", "pipe", "pipe"], env: childEnv });
     let out = "";
     let err = "";
     let settled = false;
@@ -522,20 +584,46 @@ function freeDiskMB(at: string): number | null {
 
 export function bootToolchainFetch(log?: (msg: string) => void): boolean {
   let mode = String(process.env.NOVA_TOOLCHAIN_FETCH || "").trim().toLowerCase();
-  // على مكنة مُشرَفة القرار بقى «نزّل اللي ناقص» بشكل افتراضي: المستخدم طلب
-  // الأدوات كلها 2026-11-07، والمجلد على وايفي قابل للكتابة (متقاس:
-  // /home/container/vendor/bin writable:true، present:3 / missing:9).
-  // `auto` بيراعي إن اللي موجود ما يتكررش، و NOVA_TOOLCHAIN_FETCH=0 بيطفي صراحةً.
-  // نفس شرط durable-host: نسخة CI/ Codespace من الحزمة تولّع NOVA_SUPERVISED=1
-  // كمان، وماينفعش تروح نزّل 100MB أدوات في كل تشغيل بوابة.
-  if (!mode && isDurableHost()) mode = "auto";
+  // الافتراضي وقت الإقلاع بقى «مفيش تنزيل» — والقيااس اللي خلّاني أرجع الخطوة دي
+  // مش حذر نظري: أول مكنة فعّلت `auto` على الحزمة اللي فيها مرآة 219MB دخلت في
+  // حلقة إعادة تشغيل من ~20:41Z (كل وجهاء اللوحة رجّعت 502، والـupdater جوه
+  // التطبيق فمافيش مخرج ذاتي). في حاوية 256MB RAM، تنزيل+فك 219MB والتطبيق
+  // رافع ~160MB RSS مع بعض = المُشرف بيقول «App exited».
+  // فالقرار: `auto` يفضل متاح ومقيس، بس بموافقة صريحة — `NOVA_TOOLCHAIN_FETCH=1`
+  // (أو =auto)، أو `POST /api/ops/tools/provision`. اللي فاعله ده هو اللي بيقول
+  // «الرام عندنا تتحمل»، مش أنا.
+  if (!mode && isDurableHost() && process.env.NOVA_TOOLCHAIN_AT_BOOT === "1") mode = "auto";
   if (!mode || mode === "0" || mode === "off" || mode === "false") return false;
+  // المُشرف بقى هو صاحب التنزيل في الحزمة المحمولة. والقيااس اللي يثبت ده:
+  // 2026-11-08T01:52:06Z على nova.waifly.com — التطبيق نادى المنزّل ومضى 8.8 ثانية
+  // بس، والسجل «SIGKILL» (قتل خارجي، مش timeout بتاعنا اللي 540 ثانية)، وفي نفس
+  // اللحظة الإقلاع رافع الـRSS من تحميل كوربوس 258043 ثغرة. الأب والابن على سقف
+  // واحد = المكنة بتخسر الاتنين. فمسار الإقلاع ده بقى للمُشرف (25 ثانية بعد الإقلاع،
+  // بـ64MB وبإعادة محاولة)، والطلب الصريح `POST /api/ops/tools/provision` لسه بيشتغل.
+  if (mode === "1" || mode === "auto") {
+    const bootRoot = String(process.env.NOVA_STATE_DIR || process.cwd());
+    const supervisorOwnsIt =
+      bootRoot.startsWith("/home/container") && String(process.env.NOVA_TOOLCHAIN_AT_BOOT || "") !== "0";
+    if (supervisorOwnsIt) {
+      log?.("toolchain: التنزيل وقت الإقلاع ملك المُشرف في الحزمة المحمولة (boot.mjs) — التطبيق مابيعملوش لنفسه؛ POST /api/ops/tools/provision للطلب الصريح");
+      return false;
+    }
+  }
   const st = toolchainStatus();
   // `auto` مع الناقص: لو فيه أداة ناقصة ننزّلها، مابنقفش عند أول واحدة موجودة.
   if (mode === "auto" && st.missing.length === 0) return false;
   // حارس القرص: ~100MB تنزيل على حاوية مجانية بتطرح نفسها لما الديسك يخلص
   // (متقاس 2026-11-07: النسخ الاحتياطية أكلت 8GB والمكنة وقعت). تحت 1.5GB حر
   // مابننزّلش، وبنقول السبب بدل الصمت.
+  // حارس الرام: التحميل نفسه streaming، بس الأب (التطبيق) والابن (المنزّل)
+  // بيتقاسمون سقف cgroup واحد — والقيااس 20:41Z كان كافيًا يوضح إن ده مش تفصيل.
+  if (mode === "auto" || mode === "1") {
+    const res = containerResources();
+    if (res.memLimitMB !== null && res.memUsedMB !== null && res.memLimitMB - res.memUsedMB < 200) {
+      log?.(`toolchain: فاضي من الرام ${res.memLimitMB - res.memUsedMB}MB من ${res.memLimitMB}MB — التنزيل التلقائي اتخطّى (NOVA_TOOLCHAIN_FETCH=1 للتجاوز)`);
+      return false;
+    }
+  }
   if (mode === "auto") {
     const freeMB = freeDiskMB(st.dir);
     if (freeMB !== null && freeMB < 1500) {
@@ -551,8 +639,14 @@ export function bootToolchainFetch(log?: (msg: string) => void): boolean {
     log?.(`NOVA_TOOLCHAIN_FETCH مفعّل بس ${st.dir} مش قابل للكتابة — تخطّيت`);
     return false;
   }
-  void provisionToolchain().then((rec) => {
-    log?.(rec.ok ? `toolchain: ${rec.installed}/${rec.total} جاهزة في ${rec.into}` : `toolchain: فشل — ${rec.reasonAr || rec.error}`);
-  });
+  // `Once` مش `provisionToolchain`: دي بتحكّي cooldown المحاولة الفاشلة
+  // (`NOVA_TOOLCHAIN_RETRY_MS`، 10 دقاقي) — ومن غيرها كل إقلاع كان بيبدأ تنزيل
+  // جديد، وهو بالظبط شكل حلقة 20:41Z (الموت → المُشرف بيعيد → تنزيل تاني).
+  void provisionToolchainOnce()
+    .then(({ record, skipped }) => {
+      if (skipped) log?.(`toolchain: اتخطّى (${skipped})`);
+      else if (record) log?.(record.ok ? `toolchain: ${record.installed}/${record.total} جاهزة في ${record.into}` : `toolchain: فشل — ${record.reasonAr || record.error}`);
+    })
+    .catch((e) => log?.(`toolchain: ${(e as Error).message}`));
   return true;
 }

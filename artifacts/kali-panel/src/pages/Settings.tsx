@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
 import { jsonRequest } from "@/lib/sse";
+import { TelegramConfigCard } from "@/components/TelegramConfigCard";
 import { probeOllamaViaServer, saveOllamaSettings } from "@/lib/ollama-browser";
 
 interface OllamaProbe { connected: boolean; models: string[]; error?: string; runningButNoCors?: boolean; notRunning?: boolean; }
@@ -87,6 +88,8 @@ export default function Settings() {
       <div className="max-w-4xl mx-auto space-y-4">
 
         {/* ── Ollama Service Status ── */}
+        <TelegramConfigCard />
+
         <div className="rounded-2xl p-5 space-y-4" style={NEON_CARD}>
           <div className="flex items-center gap-3 mb-1">
             <Server className="w-5 h-5" style={{ color: "#4488ff" }} />

@@ -1,0 +1,210 @@
+// artifacts/api-server/src/routes/monitor.ts
+import { Router } from "express";
+import { desc, eq } from "drizzle-orm";
+import { db, agentSessions, agentSessionMessages, botAlerts, botCronJobs } from "@workspace/db";
+
+// artifacts/api-server/src/lib/processes.ts
+var procs = /* @__PURE__ */ new Map();
+function listProcesses() {
+  return [...procs.values()].map((p) => p.record).sort((a, b) => b.startedAt - a.startedAt);
+}
+
+// artifacts/api-server/src/routes/monitor.ts
+import os from "node:os";
+import fs from "node:fs";
+import { execFile } from "node:child_process";
+var router = Router();
+var gpuCache = null;
+var gpuCacheAt = 0;
+function probeGpu(force = false) {
+  if (!force && gpuCache && Date.now() - gpuCacheAt < 6e4) return Promise.resolve(gpuCache);
+  return new Promise((resolvePromise) => {
+    execFile(
+      "nvidia-smi",
+      ["--query-gpu=name,memory.total,memory.used,utilization.gpu", "--format=csv,noheader,nounits"],
+      { timeout: 4e3 },
+      (err, stdout) => {
+        if (err || !stdout.trim()) {
+          gpuCache = {
+            present: false,
+            noteAr: "\u0644\u0627 \u064A\u0648\u062C\u062F GPU \u0645\u062E\u0635\u0651\u0635 \u0639\u0644\u0649 \u0647\u0630\u0647 \u0627\u0644\u062E\u0637\u0629 (nvidia-smi \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F) \u2014 \u0627\u0644\u0645\u0642\u0627\u0633\u0627\u062A \u0627\u0644\u0645\u062A\u0627\u062D\u0629: CPU/RAM/Disk.",
+            measuredAt: (/* @__PURE__ */ new Date()).toISOString()
+          };
+        } else {
+          const parts = stdout.trim().split("\n")[0].split(",").map((s) => s.trim());
+          gpuCache = {
+            present: true,
+            name: parts[0],
+            memoryTotalMb: Number(parts[1]),
+            memoryUsedMb: Number(parts[2]),
+            utilizationPercent: Number(parts[3]),
+            noteAr: "GPU \u0645\u062E\u0635\u0651\u0635 \u0645\u0648\u062C\u0648\u062F \u0648\u0645\u0642\u0627\u0633 \u0645\u0646 nvidia-smi.",
+            measuredAt: (/* @__PURE__ */ new Date()).toISOString()
+          };
+        }
+        gpuCacheAt = Date.now();
+        resolvePromise(gpuCache);
+      }
+    );
+  });
+}
+router.get("/monitor/system", async (_req, res) => {
+  const cpus = os.cpus();
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const usedMem = totalMem - freeMem;
+  const cpuUsage = cpus.map((cpu) => {
+    const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+    const idle = cpu.times.idle;
+    return Math.round((total - idle) / total * 100);
+  });
+  const avgCpu = Math.round(cpuUsage.reduce((a, b) => a + b, 0) / cpuUsage.length);
+  res.json({
+    hostname: os.hostname(),
+    platform: os.platform(),
+    arch: os.arch(),
+    uptime: os.uptime(),
+    loadAvg: os.loadavg(),
+    cpu: { model: cpus[0]?.model ?? "Unknown", cores: cpus.length, usage: avgCpu, perCore: cpuUsage },
+    memory: { total: totalMem, used: usedMem, free: freeMem, usagePercent: Math.round(usedMem / totalMem * 100) },
+    gpu: await probeGpu(),
+    disk: probeDiskSafe(),
+    process: {
+      pid: process.pid,
+      rssMb: Math.round(process.memoryUsage().rss / 1048576),
+      heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1048576),
+      uptimeSec: Math.round(process.uptime()),
+      node: process.version
+    },
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
+function probeDiskSafe() {
+  try {
+    const s = fs.statfsSync("/");
+    return { present: true, totalMb: Math.round(s.blocks * s.bsize / 1048576), freeMb: Math.round(s.bavail * s.bsize / 1048576), noteAr: "\u0645\u0633\u0627\u062D\u0629 \u0627\u0644\u0642\u0631\u0635 \u0627\u0644\u062C\u0630\u0631\u064A \u0645\u0642\u0627\u0633\u0629 \u0645\u0646 statfs." };
+  } catch {
+    return { present: false, noteAr: "\u062A\u0639\u0630\u0651\u0631 \u0642\u064A\u0627\u0633 \u0627\u0644\u0642\u0631\u0635 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0645\u0636\u064A\u0641." };
+  }
+}
+router.get("/monitor/processes", (_req, res) => {
+  const procs2 = listProcesses();
+  res.json({
+    total: procs2.length,
+    running: procs2.filter((p) => p.status === "running").length,
+    processes: procs2.slice(0, 50)
+  });
+});
+router.get("/monitor/activity", async (req, res) => {
+  const limit = Math.min(Number(req.query["limit"] ?? 20), 100);
+  const recentMessages = await db.select({
+    id: agentSessionMessages.id,
+    role: agentSessionMessages.role,
+    content: agentSessionMessages.content,
+    toolName: agentSessionMessages.toolName,
+    createdAt: agentSessionMessages.createdAt,
+    sessionId: agentSessionMessages.sessionId
+  }).from(agentSessionMessages).orderBy(desc(agentSessionMessages.createdAt)).limit(limit);
+  const recentAlerts = await db.select().from(botAlerts).orderBy(desc(botAlerts.createdAt)).limit(10);
+  const procs2 = listProcesses().filter((p) => p.status === "running").slice(0, 10);
+  res.json({
+    recentMessages: recentMessages.map((m) => ({ ...m, content: m.content.slice(0, 200) })),
+    recentAlerts,
+    runningProcesses: procs2,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
+router.get("/monitor/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  function send(event, data) {
+    res.write(`event: ${event}
+data: ${JSON.stringify(data)}
+
+`);
+  }
+  send("connected", { message: "CyberNova Monitor connected", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+  const systemInterval = setInterval(() => {
+    const cpus = os.cpus();
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const cpuUsage = cpus.map((cpu) => {
+      const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+      return Math.round((total - cpu.times.idle) / total * 100);
+    });
+    const avgCpu = Math.round(cpuUsage.reduce((a, b) => a + b, 0) / cpuUsage.length);
+    send("system", {
+      cpu: avgCpu,
+      memUsed: Math.round(usedMem / totalMem * 100),
+      uptime: os.uptime(),
+      loadAvg: os.loadavg()[0],
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }, 3e3);
+  const processInterval = setInterval(() => {
+    const procs2 = listProcesses();
+    send("processes", {
+      total: procs2.length,
+      running: procs2.filter((p) => p.status === "running").length,
+      processes: procs2.filter((p) => p.status === "running").slice(0, 10).map((p) => ({
+        id: p.id,
+        command: p.command.slice(0, 80),
+        status: p.status,
+        startedAt: p.startedAt
+      }))
+    });
+  }, 5e3);
+  const alertInterval = setInterval(async () => {
+    try {
+      const alerts = await db.select().from(botAlerts).where(eq(botAlerts.isRead, "false")).orderBy(desc(botAlerts.createdAt)).limit(5);
+      if (alerts.length > 0) {
+        send("alerts", { count: alerts.length, alerts });
+      }
+    } catch {
+    }
+  }, 1e4);
+  req.on("close", () => {
+    clearInterval(systemInterval);
+    clearInterval(processInterval);
+    clearInterval(alertInterval);
+  });
+});
+router.get("/monitor/dashboard", async (_req, res) => {
+  const cpus = os.cpus();
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const usedMem = totalMem - freeMem;
+  const cpuUsage = cpus.map((cpu) => {
+    const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+    return Math.round((total - cpu.times.idle) / total * 100);
+  });
+  const avgCpu = Math.round(cpuUsage.reduce((a, b) => a + b, 0) / cpuUsage.length);
+  const procs2 = listProcesses();
+  const sessions = await db.select().from(agentSessions).orderBy(desc(agentSessions.createdAt)).limit(5);
+  const unreadAlerts = await db.select().from(botAlerts).where(eq(botAlerts.isRead, "false"));
+  const cronJobs = await db.select().from(botCronJobs).where(eq(botCronJobs.isEnabled, "true"));
+  res.json({
+    system: {
+      cpu: avgCpu,
+      memUsed: Math.round(usedMem / totalMem * 100),
+      uptime: os.uptime(),
+      hostname: os.hostname()
+    },
+    processes: { total: procs2.length, running: procs2.filter((p) => p.status === "running").length },
+    agent: {
+      activeSessions: sessions.filter((s) => s.status === "active").length,
+      totalSessions: sessions.length
+    },
+    alerts: { unread: unreadAlerts.length, critical: unreadAlerts.filter((a) => a.severity === "critical").length },
+    cronJobs: { enabled: cronJobs.length },
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
+var monitor_default = router;
+export {
+  monitor_default as default,
+  probeGpu
+};

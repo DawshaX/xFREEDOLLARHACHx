@@ -9,6 +9,7 @@ import { broadcastEvent } from "../lib/ws-hub";
 import { execOnLocalAgent } from "./local-agent.js";
 import { findBinary, clearBinaryCache } from "../lib/ops/tools.js";
 import { requireOps } from "../lib/ops/gate";
+import { scanHeaders } from "../lib/security-tools";
 
 const router: IRouter = Router();
 // `POST /tools/install` بينزّل برامج (INSTALLERS ثابتة المصادر بس بتلمّ القرص/الشبكة). `/tools/hash` و`/tools/encode` حساب نقي، فضلوا مفتوحين.
@@ -54,14 +55,16 @@ router.get(["/tools/dns", "/proxy/dns"], async (req, res) => {
     }),
   );
 
-  if (records.length === 0) {
-    records.push({ type: "A", value: "93.184.216.34", ttl: 3600 });
-  }
+  // قبل كده: لو مفيش أي سجل، كان بيحطّ A = 93.184.216.34 (IP example.com) —
+  // يعني أي نطاق ميّت كان بيطلع "متصل". دلوقتي بنقول الحقيقة: مفيش سجلات.
+  const measured = records.length > 0;
 
-  const summary = `فحص سجلات DNS للنطاق ${domain}: تم استخراج ${records.length} سجلات (${records
-    .slice(0, 4)
-    .map((r) => `${r.type}: ${r.value}`)
-    .join(" | ")})`;
+  const summary = measured
+    ? `فحص سجلات DNS للنطاق ${domain}: تم استخراج ${records.length} سجلات (${records
+        .slice(0, 4)
+        .map((r) => `${r.type}: ${r.value}`)
+        .join(" | ")})`
+    : `فحص سجلات DNS للنطاق ${domain}: مفيش أي سجل DNS — النطاق مش بيحلّ (غير مقاس)`;
   saveMemory("fact", `DNS Lookup: ${domain}`, summary, `dns,recon,${domain}`, 7, false);
   resolveStandaloneApi("/api/missions/1/commands", "POST", {
     cmd: `dig ANY ${domain} +short`,
@@ -69,29 +72,71 @@ router.get(["/tools/dns", "/proxy/dns"], async (req, res) => {
   });
   broadcastEvent({ type: "recon_cmd_executed", tool: "DNS Lookup", target: domain, title: summary, ts: Date.now() });
 
-  res.json({ domain, records });
+  res.json({ domain, records, measured, saysAr: measured ? "" : "مفيش سجلات DNS — النطاق مش بيحلّ" });
 });
 
 // ── 2. WHOIS Lookup (/tools/whois & /proxy/whois) ────────────────────────────
+// قبل كده كان بيرجّع registrar ثابت ("ICANN Accredited Domain Registrar") وتواريخ
+// محسوبة من Date.now() — يعني أي نطاق كان بيطلع له نفس المسجّل وتواريخ وهمية.
+// دلوقتي: بنشغّل `whois` الحقيقي على الوكيل المحلي؛ لو مش متاح، بنقول "غير مقاس".
 router.get(["/tools/whois", "/proxy/whois"], async (req, res) => {
   const domain = cleanDomain(String(req.query.domain ?? ""));
+  if (!domain) { res.status(400).json({ error: "domain required" }); return; }
+
   let nameservers: string[] = [];
   try {
     nameservers = await dnsPromises.resolveNs(domain);
   } catch {
-    nameservers = [`ns1.${domain}`, `ns2.${domain}`];
+    nameservers = [];
   }
 
-  const payload = {
-    domain,
-    registrar: "ICANN Accredited Domain Registrar",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365 * 6).toISOString(),
-    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365 * 2).toISOString(),
-    nameservers,
-    status: ["clientTransferProhibited", "clientUpdateProhibited"],
+  // whois الحقيقي عبر الوكيل المحلي (لو البرنامج متنزّل)
+  let raw = "";
+  let measured = false;
+  try {
+    const r = await execOnLocalAgent(`whois ${domain}`, undefined, 20_000);
+    if (r && r.exitCode === 0 && r.stdout.trim()) {
+      raw = r.stdout;
+      measured = true;
+    }
+  } catch {
+    // الوكيل مش متصل أو whois مش متنزّل
+  }
+
+  const pick = (re: RegExp): string | null => {
+    const m = raw.match(re);
+    return m && m[1] ? m[1].trim() : null;
   };
 
-  const summary = `فحص WHOIS للنطاق ${domain}: الخوادم (${nameservers.join(", ")})`;
+  const payload = measured
+    ? {
+        domain,
+        measured: true,
+        registrar: pick(/Registrar:\s*(.+)/i),
+        createdAt: pick(/Creation Date:\s*(.+)/i),
+        updatedAt: pick(/Updated Date:\s*(.+)/i),
+        expiresAt: pick(/Registry Expiry Date:\s*(.+)/i) ?? pick(/Expiration Date:\s*(.+)/i),
+        nameservers: nameservers.length
+          ? nameservers
+          : (raw.match(/Name Server:\s*(.+)/gi) ?? []).map((s) => s.replace(/Name Server:\s*/i, "").trim()),
+        status: (raw.match(/Domain Status:\s*(.+)/gi) ?? []).map((s) => s.replace(/Domain Status:\s*/i, "").trim()),
+        raw: raw.slice(0, 4000),
+      }
+    : {
+        domain,
+        measured: false,
+        registrar: null,
+        createdAt: null,
+        updatedAt: null,
+        expiresAt: null,
+        nameservers,
+        status: [],
+        saysAr: "مفيش whois حقيقي — الوكيل المحلي مش متصل أو أداة whois مش متنزّلة (POST /tools/install {tool:\"whois\"})",
+      };
+
+  const summary = measured
+    ? `فحص WHOIS للنطاق ${domain}: المسجّل (${payload.registrar ?? "غير معروف"}) · الخوادم (${payload.nameservers.join(", ") || "غير معروفة"})`
+    : `فحص WHOIS للنطاق ${domain}: غير مقاس — مفيش whois حقيقي`;
   saveMemory("fact", `WHOIS: ${domain}`, summary, `whois,recon,${domain}`, 6, false);
   broadcastEvent({ type: "recon_cmd_executed", tool: "WHOIS", target: domain, title: summary, ts: Date.now() });
 
@@ -165,6 +210,30 @@ router.get(["/tools/ssl", "/proxy/ssl"], async (req, res) => {
   res.json({ domain, grade: null, gradeNote: "التقييم محتاج Mozilla SSLLabs؛ مفيش تقييم اتعمل", ...probe });
 });
 
+// ── 3b. HTTP Security Headers (/tools/headers & /proxy/headers) ─────────────
+// قبل كده مسار /header-analyzer كان Placeholder بيدّي تقرير ثابت بعد 250ms.
+// دلوقتي بيقرأ الترويسات الحقيقية من الهدف عبر scanHeaders (HEAD request حقيقي).
+router.get(["/tools/headers", "/proxy/headers"], async (req, res) => {
+  const domain = cleanDomain(String(req.query.domain ?? ""));
+  if (!domain) { res.status(400).json({ error: "domain required" }); return; }
+  const useHttps = String(req.query.https ?? "true") !== "false";
+  try {
+    const result = (await scanHeaders(domain, useHttps)) as Record<string, unknown>;
+    if (result.error) {
+      res.json({ domain, measured: false, error: String(result.error), saysAr: "الهدف مش رادّ — مفيش ترويسات مقاسة" });
+      return;
+    }
+    const missing = (result.missing ?? []) as string[];
+    const present = (result.present ?? []) as string[];
+    const summary = `فحص ترويسات الأمان لـ ${domain}: ${present.length} موجودة · ${missing.length} ناقصة (${missing.slice(0, 4).join(", ") || "لا شيء"})`;
+    saveMemory("fact", `HTTP Headers: ${domain}`, summary, `headers,recon,${domain}`, 6, false);
+    broadcastEvent({ type: "recon_cmd_executed", tool: "Header Analyzer", target: domain, title: summary, ts: Date.now() });
+    res.json({ domain, measured: true, ...result });
+  } catch (e) {
+    res.json({ domain, measured: false, error: e instanceof Error ? e.message : "فشل الفحص", saysAr: "الفحص فشل — مفيش ترويسات مقاسة" });
+  }
+});
+
 // ── 4. Subdomain Enumeration (/tools/subdomains & /proxy/subdomains) ─────────
 router.get(["/tools/subdomains", "/proxy/subdomains"], async (req, res) => {
   const domain = cleanDomain(String(req.query.domain ?? ""));
@@ -185,28 +254,28 @@ router.get(["/tools/subdomains", "/proxy/subdomains"], async (req, res) => {
     }),
   );
 
-  if (subdomains.length === 0) {
-    subdomains.push(
-      { host: `www.${domain}`, ip: "93.184.216.34", source: "DNS" },
-      { host: `api.${domain}`, ip: "93.184.216.35", source: "CRT.SH" },
-      { host: `auth.${domain}`, ip: "93.184.216.36", source: "CRT.SH" },
-    );
-  }
+  // قبل كده: لو مفيش أي نطاق فرعي اتحلّ، كان بيحطّ 3 نطاقات وهمية بـ IPs
+  // ملفّقة (93.184.216.34/35/36). دلوقتي بنقول الحقيقة: مفيش نطاقات فرعية.
+  const measured = subdomains.length > 0;
 
-  const summary = `اكتشاف النطاقات الفرعية لـ ${domain}: تم رصد ${subdomains.length} نطاقات (${subdomains
-    .map((s) => s.host)
-    .join(", ")})`;
+  const summary = measured
+    ? `اكتشاف النطاقات الفرعية لـ ${domain}: تم رصد ${subdomains.length} نطاقات (${subdomains
+        .map((s) => s.host)
+        .join(", ")})`
+    : `اكتشاف النطاقات الفرعية لـ ${domain}: مفيش نطاقات فرعية اتحلّت من القائمة الشائعة (غير مقاس)`;
   saveMemory("project", `Subdomains: ${domain}`, summary, `subdomains,recon,${domain}`, 8, false);
-  resolveStandaloneApi("/api/missions/1/findings", "POST", {
-    type: "path",
-    title: `اكتشاف ${subdomains.length} نطاقات فرعية لـ ${domain}`,
-    severity: "info",
-    detail: summary,
-    tool: "Subdomain Enumerator",
-  });
+  if (measured) {
+    resolveStandaloneApi("/api/missions/1/findings", "POST", {
+      type: "path",
+      title: `اكتشاف ${subdomains.length} نطاقات فرعية لـ ${domain}`,
+      severity: "info",
+      detail: summary,
+      tool: "Subdomain Enumerator",
+    });
+  }
   broadcastEvent({ type: "recon_cmd_executed", tool: "Subdomains", target: domain, title: summary, ts: Date.now() });
 
-  res.json({ domain, subdomains });
+  res.json({ domain, subdomains, measured, saysAr: measured ? "" : "مفيش نطاقات فرعية اتحلّت" });
 });
 
 // ── 5. TCP Port Probe (/tools/portscan & /proxy/portscan) ────────────────────

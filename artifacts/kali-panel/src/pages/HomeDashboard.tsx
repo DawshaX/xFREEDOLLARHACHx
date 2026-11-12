@@ -1,4 +1,5 @@
 import { corpusLabelAr, corpusSaysAr, corpusTotal } from "../lib/corpus-live";
+import { novaAuthHeaders } from "@/lib/ops-client";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
@@ -34,7 +35,8 @@ interface Provider  { id: string; family: string; available: boolean; enabled: b
 interface CronJob   { id: number; name: string; cronExpression: string; isEnabled: string; lastRunAt?: string; lastStatus?: string; runCount: number; }
 interface Alert     { id: number; title: string; message: string; severity: string; createdAt: string; isRead: string; }
 interface CveItem   { id: string; cveId?: string; cvss?: number; score?: number; severity: string; description: string; publishedAt: string; source?: string; }
-interface AgentTask { id: number; title: string; description?: string; status: string; createdAt: string; }
+interface AgentTask { simulated?: boolean; // علامة صدق: مهام قالب المتصفح (مش قياس محرك حقيقي)
+   id: number; title: string; description?: string; status: string; createdAt: string; }
 interface CveDbStats {
   total: number; lastHour: number; lastDay: number;
   /** optional on purpose: an engine that has rows but no buckets yet omits it, and the page must survive that */
@@ -1004,11 +1006,12 @@ export default function HomeDashboard() {
           }));
         }
       }
-      setSessionFound(prev => prev + 1);
+      if (tasksRes.ok || pulseRes.ok) setSessionFound(prev => prev + 1);
       setWisdomIdx(prev => (prev + 1) % BENEFICIAL_WISDOM_CARDS.length);
       addLog("hunt", `✅ اكتملت الدورة الذاتية بنجاح — تم تحديث المهام المنجزة وخزنة الغنائم وذاكرة الجلسة`);
     } catch {
-      addLog("system", "✅ تم تحديث حالة الجلسة المحلية وتدوير المرحلة النشطة");
+      // الفشل بيتقال فشل — مفيش «✅» بعد خطأ شبكة
+      addLog("system", "⚠ تعذّر تنفيذ الدورة (العقل/الباك إند مش متاح هنا) — لا شيء اتسجّل ولا اتعدّ");
     }
   }, [addLog, brainState.activeTarget, BENEFICIAL_WISDOM_CARDS.length]);
 
@@ -1057,7 +1060,7 @@ export default function HomeDashboard() {
     }
     try {
       const [huntRes, multiSiteRes] = await Promise.all([
-        fetch(API("/cve/hunt/trigger"), { method: "POST" }).catch(() => null),
+        fetch(API("/cve/hunt/trigger"), { method: "POST", headers: novaAuthHeaders() }).catch(() => null),
         runLiveMultiSiteVulnerabilitySync(brainState.activeTarget),
       ]);
 
@@ -1067,7 +1070,7 @@ export default function HomeDashboard() {
       // Persist all newly fetched live CVEs into the Universal Galaxy DB
       const ingestRes = await fetch(API("/cve/ingest-live"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           items: multiSiteRes.items,
           siteStatuses: multiSiteRes.siteStatuses,
@@ -1433,7 +1436,7 @@ export default function HomeDashboard() {
     const topEpssItem   = cveDbStats?.topEpss?.[0];
 
     const achievements: string[] = [];
-    if (sessionFound > 0) achievements.push(`✅ اكتشاف ${sessionFound} ثغرة جديدة في هذه الجلسة`);
+    if (sessionFound > 0) achievements.push(`✅ أكملت ${sessionFound} دورة فحص/ترقية في هذه الجلسة (عدد دورات — مش عدد ثغرات مكتشفة)`);
     if (completedTasks > 0) achievements.push(`✅ إتمام ${completedTasks} مهمة للوكيل بنجاح`);
     if (todayCves > 0) achievements.push(`📊 ${todayCves.toLocaleString()} ثغرة أُضيفت في آخر 24 ساعة`);
     if (newSseCount > 0) achievements.push(`🌐 ${newSseCount} ثغرة وصلت عبر البث المباشر (SSE)`);
@@ -1581,6 +1584,36 @@ export default function HomeDashboard() {
 
         <main ref={mainRef} className="flex-1 overflow-y-auto p-3 space-y-3" style={{ scrollbarWidth: "thin" }}>
 
+          {/* ══════════════════════════════════════════════════════════════
+              🚀 ابدأ من هنا — جولة سريعة للزائر (بند 8)
+              بتوجّه المستخدم الجديد للمسارات الحقيقية بالترتيب الصح.
+          ══════════════════════════════════════════════════════════════ */}
+          <div className="rounded-xl p-3 anim-fade-up" style={{ background: "linear-gradient(135deg,rgba(34,211,238,0.06),rgba(168,85,247,0.05))", border: "1px solid rgba(34,211,238,0.25)" }}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-base">🚀</span>
+              <span className="text-[12px] font-black" style={{ color: "#22d3ee" }}>ابدأ من هنا</span>
+              <span className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>4 خطوات للوصول للعقل الحقيقي</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {[
+                { n: "1", t: "كلّم نوفا", d: "غرفة العمليات — شات حقيقي بـ66 أداة", p: "/nova-fleet#work", c: "#22d3ee" },
+                { n: "2", t: "شوف الأسطول", d: "الوكلاء والأجهزة والسلوات والباص", p: "/nova-fleet", c: "#e879f9" },
+                { n: "3", t: "افحص هدف", d: "استوديو البج باونتي — فحص حقيقي", p: "/bug-bounty-studio", c: "#00ff88" },
+                { n: "4", t: "افهم المكنة", d: "الفحص الذاتي — شغّال؟ من القياس", p: "/self-check", c: "#34d399" },
+              ].map((s) => (
+                <button key={s.n} onClick={() => navigate(s.p)}
+                  className="text-right rounded-lg p-2.5 transition-all hover:scale-[1.02]"
+                  style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${s.c}33` }}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black" style={{ background: `${s.c}22`, color: s.c }}>{s.n}</span>
+                    <span className="text-[11px] font-black" style={{ color: s.c }}>{s.t}</span>
+                  </div>
+                  <div className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.45)" }}>{s.d}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* ═══════════════════════════════════════════════════════════════
               ☠️ مهام دوشة — COMMAND CENTER (TOP SECTION)
           ═══════════════════════════════════════════════════════════════ */}
@@ -1673,6 +1706,9 @@ export default function HomeDashboard() {
                     <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
                       📚 قاعدة المعرفة المحمّلة: {corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} — المصدر:{corpusLabelAr()}
                     </div>
+                    <div className="p-1.5 rounded bg-black/40 border border-cyan-500/25 text-cyan-200">
+                      🗂️ تفريق المخازن: <span className="text-emerald-300">الكوربوس الحقيقي</span> (state/vuln-corpus-live.json — NVD 2.0 + CISA KEV + EPSS، بيتحدّث من الوركفلو) ≠ <span className="text-amber-300">مخزن المتصفح الحي</span> (مزامنة الجلسة، بيبدأ فاضي). الرقم فوق من الكوربوس الحقيقي بس.
+                    </div>
                     <div className="p-1.5 rounded bg-black/40 border border-amber-500/25 text-amber-200">
                       🧩 سلاسل الثغرات في المكتبة دي أنماط بحث (فرضيات) — مش نتيجة فحص. أي سلسلة بتتحول لنتيجة لما تتأكد على هدف مصرّح بيه وبس.
                     </div>
@@ -1702,7 +1738,7 @@ export default function HomeDashboard() {
                     {agentTasksList.filter(t => t.status === "running").slice(0, 2).map(t => (
                       <div key={t.id} className="text-[9px] text-white/75 flex items-center gap-1.5 truncate">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping shrink-0" />
-                        <span className="truncate">{t.title}</span>
+                        <span className="truncate">{t.simulated ? "🧪 " : ""}{t.title}</span>
                       </div>
                     ))}
                   </div>
@@ -1722,7 +1758,7 @@ export default function HomeDashboard() {
                   <div className="space-y-1 max-h-20 overflow-y-auto">
                     {agentTasksList.filter(t => ["pending","planned"].includes(t.status)).slice(0, 3).map(t => (
                       <div key={t.id} className="text-[9px] text-white/70 truncate">
-                        ⏳ {t.title}
+                        ⏳ {t.simulated ? "🧪 (تمرين جلسة) " : ""}{t.title}
                       </div>
                     ))}
                   </div>
@@ -2243,7 +2279,7 @@ export default function HomeDashboard() {
                     <div className="flex items-center gap-2">
                       <Globe className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                       <span className="text-[10px] font-black font-mono text-emerald-300">
-                        🌐 مصفوفة الاتصال الحي بمواقع الثغرات العالمية (9 مصادر متصلة لحظياً · HTTP 200 OK + WebSocket)
+                        🌐 مصفوفة الاتصال بمواقع الثغرات العالمية (9 مصادر — الحالة بتتقاس بعد «تحديث شامل» مش قبلها)
                       </span>
                     </div>
                     <span className="text-[9px] font-mono text-emerald-400/80">
@@ -2510,11 +2546,18 @@ export default function HomeDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {cveBrowserItems.map((item, i) => {
-                            const col = sevColor(item.severity.toUpperCase());
-                            const sc = SRC_COLORS[item.source] ?? "#ffffff40";
-                            return (
-                              <tr key={i} className="border-b hover:bg-white/3 cursor-pointer transition-colors" style={{ borderColor: "rgba(255,255,255,0.04)" }} onClick={() => setSelectedCve(item)}>
+                          {(() => {
+                            // بند 3 (2026-11-09): عزل بصري صادق — صفوف «المعمل» (سيناريوهات/فرضيات
+                            // من إنتاجنا) ما تعدّاش جنب سجلات الكالات الرسمية في صمت.
+                            const LAB_SOURCES = new Set(["CyberNova-Vault","CyberNova-Pattern-Library","CyberNova-Scenario-Lab","AI-Mutated"]);
+                            const isLab = (it: { source?: string }) => LAB_SOURCES.has(String(it.source ?? ""));
+                            const realRows = cveBrowserItems.filter((it) => !isLab(it));
+                            const labRows = cveBrowserItems.filter(isLab);
+                            const renderRow = (item: (typeof cveBrowserItems)[number], i: number, dim: boolean) => {
+                              const col = sevColor(item.severity.toUpperCase());
+                              const sc = SRC_COLORS[item.source] ?? "#ffffff40";
+                              return (
+                              <tr key={`${i}-${dim?"lab":"real"}`} className="border-b hover:bg-white/3 cursor-pointer transition-colors" style={{ borderColor: "rgba(255,255,255,0.04)", opacity: dim ? 0.62 : 1 }} onClick={() => setSelectedCve(item)}>
                                 <td className="px-3 py-2"><span className="text-[10px] font-black font-mono" style={{ color: col }}>{item.id}</span></td>
                                 <td className="px-3 py-2"><span className="text-[8px] font-black px-1.5 py-0.5 rounded" style={{ background: `${col}18`, color: col, border: `1px solid ${col}33` }}>{item.severity}</span></td>
                                 <td className="px-3 py-2"><span className="text-[10px] font-bold font-mono" style={{ color: col }}>{item.cvss.toFixed(1)}</span></td>
@@ -2524,8 +2567,22 @@ export default function HomeDashboard() {
                                 <td className="px-3 py-2"><span className="text-[8px] font-mono text-white/30">{item.publishedAt ? new Date(item.publishedAt).toLocaleDateString("ar-SA") : "—"}</span></td>
                                 <td className="px-3 py-2"><ChevronRight className="w-3.5 h-3.5 text-white/15" /></td>
                               </tr>
+                              );
+                            };
+                            return (
+                              <>
+                                {realRows.map((it, r) => renderRow(it, r, false))}
+                                {labRows.length > 0 && (
+                                  <tr key="__lab_divider">
+                                    <td colSpan={8} className="px-3 py-2" style={{ background: "rgba(168,85,247,0.06)" }}>
+                                      <div className="text-[9px] font-mono" style={{ color: "#c084fc" }}>🧪 معمل السيناريوهات — {labRows.length} صف أنماط/فرضيات من إنتاجنا الداخلي (للتعلم والربط — مش سجلات رسمية من الكالات)</div>
+                                    </td>
+                                  </tr>
+                                )}
+                                {labRows.map((it, l) => renderRow(it, l, true))}
+                              </>
                             );
-                          })}
+                          })()}
                         </tbody>
                       </table>
                       {cveBrowserItems.length < cveBrowserTotal && (

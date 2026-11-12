@@ -1,5 +1,6 @@
 import { lazy, Suspense, Component, type ReactNode } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { OpsTokenBanner } from "@/components/OpsTokenBanner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Bug, FileText, Github, Globe, ShieldAlert, Terminal, Shield,
@@ -49,6 +50,7 @@ const NovaCore = lazy(() => import("@/pages/NovaCore"));
 const NovaMemory = lazy(() => import("@/pages/NovaMemory"));
 const SelfCheckPage = lazy(() => import("@/pages/SelfCheckPage"));
 const NovaFleetUnified = lazy(() => import("@/pages/NovaFleetUnified"));
+const NovaAgentPro = lazy(() => import("@/pages/NovaAgentPro"));
 const NovaAgentPage = lazy(() => import("@/pages/NovaAgentPage"));
 const Shodan = lazy(() => import("@/pages/shodan"));
 const Mitre = lazy(() => import("@/pages/mitre"));
@@ -57,6 +59,14 @@ const Cron = lazy(() => import("@/pages/cron"));
 const Webhooks = lazy(() => import("@/pages/webhooks"));
 const Audit = lazy(() => import("@/pages/audit"));
 const Bookmarks = lazy(() => import("@/pages/bookmarks"));
+// ── بند 7 (2026-11-09): صفحات تراثية كانت يتيمة بلا مسارات — متوصَّلة تحت /legacy/*
+// من غير ما تزاحم البديل الحديث ولا تتحذف (قاعدتنا: مافيش حذف للتراث).
+const LegacyCveDb = lazy(() => import("@/pages/cve-db"));
+const LegacyCves = lazy(() => import("@/pages/cves"));
+const LegacyExploitDb = lazy(() => import("@/pages/exploit-db"));
+const LegacyGithub = lazy(() => import("@/pages/github"));
+const LegacyWebSearch = lazy(() => import("@/pages/web-search"));
+const LegacyNovaSentinelV3 = lazy(() => import("@/pages/nova-sentinel-v3"));
 const Jobs = lazy(() => import("@/pages/jobs"));
 const Memory = lazy(() => import("@/pages/memory"));
 const Status = lazy(() => import("@/pages/status"));
@@ -97,6 +107,7 @@ const MissionTrackerPage = lazy(() => import("@/pages/MissionTracker"));
 const LocalDeviceControl = lazy(() => import("@/pages/LocalDeviceControl"));
 const NovaKnowledge = lazy(() => import("@/pages/nova-knowledge"));
 const AgentV3 = lazy(() => import("@/pages/agent-v3"));
+const HeadersTool = lazy(() => import("@/pages/tools/headers"));
 import { Placeholder } from "@/pages/Placeholder";
 import NotFound from "@/pages/not-found";
 
@@ -249,6 +260,8 @@ function InnerRoutes() {
       <Route path="/nova-core" component={NovaCore} />
       <Route path="/self-check" component={SelfCheckPage} />
       <Route path="/nova-fleet" component={NovaFleetUnified} />
+      {/* «الأجينت المطوّر — مكتب نوفا»: شات حي + قياسات العقدة + المهمات + الأسطول */}
+      <Route path="/agent-pro" component={NovaAgentPro} />
       <Route path="/nova-agent" component={NovaAgentPage} />
       <Route path="/nova-memory" component={NovaMemory} />
       <Route path="/nova-agent-chat" component={NovaAgentChat} />
@@ -351,7 +364,7 @@ function InnerRoutes() {
       <Route path="/compliance-checker"><Placeholder title="Compliance Checker" subtitle="فحص الامتثال" icon={CheckCircle} /></Route>
       <Route path="/risk-assessment" component={RiskCenter} />
       <Route path="/incident-response"><Placeholder title="Incident Response" subtitle="استجابة الحوادث" icon={AlertCircle} /></Route>
-      <Route path="/header-analyzer"><Placeholder title="Header Analyzer" subtitle="تحليل رؤوس HTTP" icon={Terminal} /></Route>
+      <Route path="/header-analyzer"><HeadersTool /></Route>
       <Route path="/ip-tracker"><Placeholder title="IP Tracker" subtitle="تتبع عناوين IP" icon={Target} /></Route>
       <Route path="/bandwidth-tester"><Placeholder title="Bandwidth Tester" subtitle="اختبار سرعة الشبكة" icon={Activity} /></Route>
       <Route path="/wifi-analyzer"><Placeholder title="WiFi Analyzer" subtitle="تحليل الشبكات اللاسلكية" icon={Globe} /></Route>
@@ -389,6 +402,14 @@ function InnerRoutes() {
       <Route path="/github-legacy"><Placeholder title="GitHub Search" subtitle="بحث في GitHub" icon={Github} /></Route>
 
       <Route component={NotFound} />
+          {/* ── Legacy (بند 7): تراث متوصَّل مش متصلق ────────────────── */}
+      <Route path="/legacy/cve-db" component={LegacyCveDb} />
+      <Route path="/legacy/cves" component={LegacyCves} />
+      <Route path="/legacy/exploit-db" component={LegacyExploitDb} />
+      <Route path="/legacy/github" component={LegacyGithub} />
+      <Route path="/legacy/web-search" component={LegacyWebSearch} />
+      <Route path="/legacy/nova-sentinel-v3" component={LegacyNovaSentinelV3} />
+
     </Switch>
   );
 }
@@ -437,6 +458,7 @@ function App() {
         <LanguageProvider>
           <SystemProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <OpsTokenBanner />
               <AppRouter />
             </WouterRouter>
             <Toaster />

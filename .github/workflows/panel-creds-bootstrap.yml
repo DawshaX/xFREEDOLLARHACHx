@@ -1,0 +1,59 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PANEL CREDS DELIVERY — يوصّل يوزر/باسورد بوابة الدخول للسيرفر مرة واحدة.
+#
+# ليه بالشكل ده: المستودع public ⇒ الباسورد عمره ما يدخل في كود أو لوج. فالقيم
+# بتعيش في Actions Secrets (متقنّعة في اللوجات)، وCI بيبعتها POST مباشرة لواجهة
+# runtime-config المقفولة بالتوكن التنفيذي — والسيرفر بيحفظها في الذاكرة الدائمة
+# (Supabase Edge) وبيشتغل بيها لحظيًا من غير ريستارت.
+#
+# بيشتغل فقط لما الملف ده نفسه يتلمس (push-paths) — يعني حدثة واحدة لكل ضبط.
+# لو السيرفر لسه على نسخة قديمة مش فاهمة مفاتيح panel.*، يلاقي 400 «مفتاح مش
+# مسموح» ويعيد المحاولة لحد 20 دقيقة — أطول من زمن بناء الحزمة + التحديث الذاتي.
+# ─────────────────────────────────────────────────────────────────────────────
+name: panel-creds-bootstrap
+
+on:
+  push:
+    paths:
+      - ".github/workflows/panel-creds-bootstrap.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deliver:
+    name: deliver panel creds to the hub
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HUB: ${{ vars.NOVA_HUB_HTTP || 'https://nova.waifly.com' }}
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      U: ${{ secrets.NOVA_PANEL_USER }}
+      P: ${{ secrets.NOVA_PANEL_PASS }}
+    steps:
+      - name: Push panel.user + panel.pass through ops/config (retry till the new build is live)
+        run: |
+          set -u
+          if [ -z "${TOKEN:-}" ]; then echo "::error::NOVA_EXEC_TOKEN missing"; exit 1; fi
+          if [ -z "${U:-}" ] || [ -z "${P:-}" ]; then
+            echo "::notice::NOVA_PANEL_USER/PASS secrets مش متظبطة — ساكت من غير فشل"
+            exit 0
+          fi
+          for i in $(seq 1 40); do
+            cu=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 12 -X POST "$HUB/api/ops/config" \
+                 -H "x-nova-token: $TOKEN" -H "content-type: application/json" \
+                 --data "{\"key\":\"panel.user\",\"value\":\"$U\"}" || true)
+            cp=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 12 -X POST "$HUB/api/ops/config" \
+                 -H "x-nova-token: $TOKEN" -H "content-type: application/json" \
+                 --data "{\"key\":\"panel.pass\",\"value\":\"$P\"}" || true)
+            echo "المحاولة $i → panel.user:$cu panel.pass:$cp"
+            if [ "$cu" = "200" ] && [ "$cp" = "200" ]; then
+              echo "✓ اتوصّلوا واتطبّقوا لحظيًا على بوابة الدخول"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::السيرفر ماستلمش الإعدادات في 20 دقيقة"
+          exit 1
+
+# زناد التوصيل: 2026-11-12 00:58Z — السيكرتس اتظبطت، ابعت الإعدادات للهب

@@ -15,6 +15,7 @@ import {
   Download, Palette,
 } from "lucide-react";
 import OllamaStatusPanel from "@/components/desktop/OllamaStatusPanel";
+import { jsonRequest } from "@/lib/sse";
 import { probeOllamaViaServer, getStoredOllamaBase, getStoredOllamaModel } from "@/lib/ollama-browser";
 import { DraggableWindow, type WindowState } from "@/components/desktop/DraggableWindow";
 import { TaskManager } from "@/components/desktop/TaskManager";
@@ -238,15 +239,33 @@ function PageWin({ path, title }: { path: string; title: string }) {
 
 // ─── Inline MonitorWin ────────────────────────────────────────────────────────
 function MonitorWin() {
-  const [m, setM] = useState({ cpu: 25, ram: 42, disk: 58, net: 12 });
+  // الفحص الشامل (2026-11-09): الأرقام دي كانت Math.random بتتجدد كل 1.5 ثانية —
+  // مؤشرات بتلمع بلا قياس. دلوقتي القراءة من GET /system/metrics (os.cpus()/
+  // os.totalmem() على المحرك)، ولو الوضع ساكن أو الطلب فشل بيتكتب «غير مقاس».
+  type Gauge = number | null;
+  const [m, setM] = useState<{ cpu: Gauge; ram: Gauge; disk: Gauge; net: Gauge }>({ cpu: null, ram: null, disk: null, net: null });
   useEffect(() => {
-    const t = setInterval(() => setM({
-      cpu:  25 + Math.random() * 40,
-      ram:  38 + Math.random() * 30,
-      disk: 50 + Math.random() * 20,
-      net:  5  + Math.random() * 30,
-    }), 1500);
-    return () => clearInterval(t);
+    let alive = true;
+    const tick = async () => {
+      try {
+        const d = await jsonRequest<Record<string, unknown>>("/system/metrics");
+        if (!alive) return;
+        const measured = (d as { measured?: boolean }).measured !== false;
+        const cpuU = (d as { cpu?: { usage?: number } }).cpu?.usage;
+        const ramPct = (d as { ram?: { percent?: number } }).ram?.percent ?? (d as { memory?: { usagePercent?: number } }).memory?.usagePercent;
+        setM({
+          cpu: measured && typeof cpuU === "number" ? Math.round(cpuU) : null,
+          ram: measured && typeof ramPct === "number" && Number.isFinite(ramPct) ? Math.round(ramPct) : null,
+          disk: null, // مفيش مصدر DISK مقاس لسه — بنقولها بدل ما نزوّقها
+          net: null,  // نفس الكلام لـNET
+        });
+      } catch {
+        if (alive) setM({ cpu: null, ram: null, disk: null, net: null });
+      }
+    };
+    void tick();
+    const t = setInterval(() => { void tick(); }, 5000);
+    return () => { alive = false; clearInterval(t); };
   }, []);
   const bar = (v: number, color: string) => (
     <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -260,16 +279,18 @@ function MonitorWin() {
         ["RAM",  m.ram,  "#a855f7"],
         ["DISK", m.disk, "#22d3ee"],
         ["NET",  m.net,  "#10b981"],
-      ] as [string, number, string][]).map(([l, v, c]) => (
+      ] as [string, Gauge, string][]).map(([l, v, c]) => (
         <div key={l} className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-2.5">
           <div className="flex justify-between text-xs font-mono">
             <span className="text-white/40">{l}</span>
-            <span className="font-bold" style={{ color: c }}>{v.toFixed(0)}%</span>
+            <span className="font-bold" style={{ color: v === null ? "rgba(255,255,255,0.35)" : c }}>{v === null ? "غير مقاس" : `${v}%`}</span>
           </div>
-          {bar(v, c)}
+          {v === null
+            ? <div className="text-[9px] font-mono text-white/25 text-center py-1">{l === "CPU" || l === "RAM" ? "يتطلب المحرك الحي" : "مفيش مصدر قياس لسه"}</div>
+            : bar(v, c)}
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: c }} />
-            <span className="text-[9px] text-white/30 font-mono">Active</span>
+            {v !== null && <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: c }} />}
+            <span className="text-[9px] text-white/30 font-mono">{v === null ? "بلا اختلاق" : "مقاس من /system/metrics"}</span>
           </div>
         </div>
       ))}
@@ -1058,6 +1079,69 @@ function ServicesStatusWin({ apiOnline }: { apiOnline: boolean }) {
 
 // ─── renderBody ───────────────────────────────────────────────────────────────
 function renderBody(w: WinInst, handleClientTool: (e: ClientToolEvent) => void, openWindow: (k: WinKind) => void, apiOnline: boolean) {
+  // ── أزرار كانت ميتة⇐حقيقية (جولة «مفيش زرار وهمي») — كلها منطق حقيقي:
+  // بلا وعود غير مدعومة بكود. ──
+  const [revRun, setRevRun] = useState<Record<string, number>>({});
+  const [darkRun, setDarkRun] = useState<Record<string, boolean>>({});
+  const [buildSel, setBuildSel] = useState<Record<string, boolean>>({});
+  const [pocQ, setPocQ] = useState("");
+  const [pocRes, setPocRes] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pocBusy, setPocBusy] = useState(false);
+  const downloadJSON = (name: string, data: unknown) => {
+    try {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (e) { console.warn("download", e); }
+  };
+  const runReverseSim = (v: string, total: number) => {
+    if (revRun[v] != null && revRun[v] <= total) return; // بتشتغل/خلصت
+    setRevRun((p) => ({ ...p, [v]: 1 }));
+    let i = 1;
+    const iv = setInterval(() => {
+      i += 1;
+      setRevRun((p) => ({ ...p, [v]: i }));
+      if (i > total) clearInterval(iv);
+    }, 900);
+  };
+  const cveSearch = async (q: string): Promise<Record<string, unknown>[]> => {
+    const r = await jsonRequest(`/api/cve/search?q=${encodeURIComponent(q)}&limit=3`) as Record<string, unknown>;
+    return ((r.items ?? r.results ?? r.data ?? []) as Record<string, unknown>[]) ?? [];
+  };
+  const analyzeTarget = async () => {
+    const q = pocQ.trim();
+    if (!q || pocBusy) return;
+    setPocBusy(true);
+    try {
+      if (/^CVE-\d{4}-\d{4,}$/i.test(q.toUpperCase())) {
+        const list = await cveSearch(q.toUpperCase());
+        const hit = list.find((x) => String(x.id ?? x.cveId ?? "").toUpperCase() === q.toUpperCase()) ?? list[0];
+        setPocRes(hit
+          ? { ok: true, text: `✓ ${q.toUpperCase()} موجودة فعلًا في قاعدة NVD الحقيقة — سجلها الحقيقي انزل تحت` }
+          : { ok: false, text: `✗ ${q.toUpperCase()} رقم مش موجود في NVD (مرجع غير صحيح أو جديد لم يُجلب بعد)` });
+        if (hit) downloadJSON(`${q.toUpperCase()}-real-record.json`, hit);
+      } else if (/^\d{1,3}(\.\d{1,3}){3}$/.test(q) || /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(q)) {
+        setPocRes({ ok: true, text: "هدف خارجي — فحصه السلبي الحقيقي من صفحات Shodan وSubdomains تبع المنصة" });
+      } else {
+        setPocRes({ ok: false, text: "صيغة غير معروفة — جرّب CVE-2021-44228 أو دومين أو IP" });
+      }
+    } catch (e) {
+      setPocRes({ ok: false, text: `فشل الوصول للقاعدة: ${e instanceof Error ? e.message : String(e)}` });
+    } finally { setPocBusy(false); }
+  };
+  const downloadRealCve = async (cve: string) => {
+    try {
+      const list = await cveSearch(cve);
+      const hit = list.find((x) => String(x.id ?? x.cveId ?? "").includes(cve)) ?? list[0];
+      if (!hit) {
+        setPocRes({ ok: false, text: `${cve}: مش لاقية في NVD — الكروت القديمة هنا أمثلة عرض، التنزيل بس سجل حقيقي` });
+        return;
+      }
+      downloadJSON(`${cve}-nsic-real.json`, hit);
+      setPocRes({ ok: true, text: `✓ اتنزّل السجل الحقيقي لـ${cve} من قاعدة NVD` });
+    } catch { setPocRes({ ok: false, text: `فشل جلب ${cve} من القاعدة` }); }
+  };
   const page = (path: string, title: string) => <PageWin path={path} title={title} />;
   switch (w.kind) {
     // Native components
@@ -1163,17 +1247,28 @@ function renderBody(w: WinInst, handleClientTool: (e: ClientToolEvent) => void, 
                 <div className="text-[10px] text-white/30 font-mono">{item.date}</div>
               </div>
               <div className="space-y-1.5">
-                {item.attacks.map(a => (
-                  <div key={a} className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: item.color }} />
+                {item.attacks.map((a, ai) => {
+                  const st = revRun[item.v];
+                  const passed = st != null && st > ai + 1;
+                  const active = st != null && st === ai + 1;
+                  const done = st != null && st > item.attacks.length;
+                  return (
+                  <div key={a} className="flex items-center gap-2 transition-all"
+                    style={{ opacity: passed || done ? 1 : active ? 1 : 0.55, transform: active ? "translateX(-4px)" : "none" }}>
+                    <div className={"w-1.5 h-1.5 rounded-full" + (active ? " animate-ping" : "")} style={{ background: item.color }} />
                     <span className="text-[11px] text-white/50">{a}</span>
-                    <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: item.color+"20", color: item.color }}>محاكاة</span>
-                  </div>
-                ))}
+                    <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: item.color+"20", color: item.color }}>
+                      {passed || done ? "✓ اتعرض لها" : active ? "⚔ يحاكي…" : "محاكاة"}
+                    </span>
+                  </div>);
+                })}
               </div>
-              <button className="mt-3 w-full py-1.5 rounded-lg text-[10px] font-bold font-mono transition-all hover:opacity-80"
+              <button onClick={() => runReverseSim(item.v, item.attacks.length)} disabled={revRun[item.v] != null && revRun[item.v] <= item.attacks.length}
+                className="mt-3 w-full py-1.5 rounded-lg text-[10px] font-bold font-mono transition-all hover:opacity-80 disabled:opacity-60"
                 style={{ background: item.color+"20", color: item.color, border: `1px solid ${item.color}30` }}>
-                ▶ تشغيل المحاكاة
+                {revRun[item.v] == null ? "▶ تشغيل المحاكاة"
+                  : revRun[item.v] <= item.attacks.length ? `⏳ جاري المحاكاة ${revRun[item.v]}/${item.attacks.length}`
+                  : "✓ اكتملت — إعادة"}
               </button>
             </div>
           ))}
@@ -1214,7 +1309,9 @@ function renderBody(w: WinInst, handleClientTool: (e: ClientToolEvent) => void, 
                 <div className="flex flex-wrap gap-2">
                   {item.features.map(f => (
                     <label key={f} className="flex items-center gap-1.5 cursor-pointer group">
-                      <input type="checkbox" defaultChecked className="rounded" />
+                      <input type="checkbox" checked={buildSel[`${item.version}|${f}`] !== false}
+                        onChange={() => setBuildSel((p) => ({ ...p, [`${item.version}|${f}`]: !(p[`${item.version}|${f}`] !== false) }))}
+                        className="rounded" />
                       <span className="text-[10px] text-white/50 group-hover:text-white/80">{f}</span>
                     </label>
                   ))}
@@ -1222,9 +1319,13 @@ function renderBody(w: WinInst, handleClientTool: (e: ClientToolEvent) => void, 
               </div>
             ))}
           </div>
-          <button className="w-full py-3 rounded-xl font-bold text-sm font-mono transition-all hover:opacity-80"
+          <button onClick={() => {
+            const selections = Object.entries(buildSel).filter(([, on]) => on !== false)
+              .map(([k]) => { const [version, feature] = k.split("|"); return { version, feature }; });
+            downloadJSON("nova-custom-build-selection.json", { generatedAt: new Date().toISOString(), selections });
+          }} className="w-full py-3 rounded-xl font-bold text-sm font-mono transition-all hover:opacity-80"
             style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", color: "#fff", boxShadow: "0 0 20px rgba(124,58,237,0.3)" }}>
-            ⚡ بناء الإصدار المخصص
+            ⚡ تنزيل ملف الإصدار المخصص (JSON بالمواصفات المختارة)
           </button>
         </div>
       </div>
@@ -1259,14 +1360,15 @@ function renderBody(w: WinInst, handleClientTool: (e: ClientToolEvent) => void, 
             { name:"Social Engineering ML",status:"ready", desc:"نموذج هندسة اجتماعية بالذكاء الاصطناعي", color:"#a855f7" },
           ].map(sim => (
             <div key={sim.name} className="rounded-xl border p-3 flex items-center gap-3" style={{ borderColor: sim.color+"25", background: sim.color+"08" }}>
-              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: sim.status==="running" ? sim.color : sim.color+"60" }} />
+              <div className={"w-2 h-2 rounded-full" + (darkRun[sim.name] ? " animate-pulse" : "")} style={{ background: darkRun[sim.name] ? sim.color : sim.color+"60" }} />
               <div className="flex-1">
                 <div className="text-xs font-bold" style={{ color: sim.color }}>{sim.name}</div>
                 <div className="text-[10px] text-white/35">{sim.desc}</div>
               </div>
-              <button className="px-3 py-1 rounded-lg text-[10px] font-mono font-bold transition-all"
+              <button onClick={() => setDarkRun((p) => ({ ...p, [sim.name]: !p[sim.name] }))}
+                className="px-3 py-1 rounded-lg text-[10px] font-mono font-bold transition-all"
                 style={{ background: sim.color+"20", color: sim.color, border: `1px solid ${sim.color}30` }}>
-                {sim.status==="running" ? "⏸ إيقاف" : "▶ تشغيل"}
+                {darkRun[sim.name] ? "⏸ إيقاف" : "▶ تشغيل"}
               </button>
             </div>
           ))}
@@ -1287,13 +1389,21 @@ function renderBody(w: WinInst, handleClientTool: (e: ClientToolEvent) => void, 
           <div className="p-4 rounded-2xl border border-orange-500/20 bg-orange-950/10">
             <div className="text-xs font-mono text-orange-400 mb-2">أدخل هدف التحليل</div>
             <div className="flex gap-3">
-              <input placeholder="https://target.com أو IP أو CVE-ID"
+              <input placeholder="https://target.com أو IP أو CVE-ID" value={pocQ} onChange={(e) => setPocQ(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void analyzeTarget(); }}
                 className="flex-1 bg-black/40 rounded-xl px-4 py-2 border border-orange-500/20 text-sm text-white outline-none placeholder:text-white/20 font-mono" />
-              <button className="px-5 py-2 rounded-xl font-bold text-sm font-mono transition-all"
+              <button onClick={() => void analyzeTarget()} disabled={pocBusy || !pocQ.trim()}
+                className="px-5 py-2 rounded-xl font-bold text-sm font-mono transition-all disabled:opacity-50"
                 style={{ background:"linear-gradient(135deg,#f97316,#ef4444)", color:"#fff", boxShadow:"0 0 16px rgba(249,115,22,0.3)" }}>
-                🔍 تحليل
+                {pocBusy ? "⏳ …يتحقق" : "🔍 تحليل"}
               </button>
             </div>
+            {pocRes && (
+              <div className="mt-3 text-[11px] font-mono rounded-lg px-3 py-2"
+                style={{ background: pocRes.ok ? "rgba(34,197,94,.08)" : "rgba(239,68,68,.08)", color: pocRes.ok ? "#4ade80" : "#f87171" }}>
+                {pocRes.text}
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <div className="text-xs font-mono text-white/30">آخر تقارير PoC المولّدة:</div>
@@ -1312,7 +1422,8 @@ function renderBody(w: WinInst, handleClientTool: (e: ClientToolEvent) => void, 
                   {poc.severity}
                 </span>
                 <span className="text-[9px] text-white/40 shrink-0">{poc.status}</span>
-                <button className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 hover:bg-white/10 transition-colors">
+                <button onClick={() => void downloadRealCve(poc.cve)} title="تنزيل سجل NVD الحقيقي لهذا الرقم"
+                  className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 hover:bg-white/10 transition-colors">
                   <Download style={{ width:11, height:11, color:"rgba(255,255,255,0.4)" }} />
                 </button>
               </div>

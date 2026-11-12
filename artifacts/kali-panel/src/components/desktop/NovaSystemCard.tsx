@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Activity, Brain, CheckCircle2, Database, Loader2, Network, Power, RefreshCw, Server, ShieldAlert, XCircle } from "lucide-react";
 import { effectiveBase, isRemoteConfigured } from "@/lib/remote";
+import { novaAuthHeaders } from "@/lib/ops-client";
 
 interface SystemMachine {
   name: string;
@@ -115,7 +116,7 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/fleet/system", { signal: AbortSignal.timeout(12000) });
+      const res = await fetch("/api/fleet/system", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(12000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = (await res.json()) as SystemSnapshot & { static?: boolean };
       if (body?.static) {
@@ -133,14 +134,14 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
     // Same request pattern, different question: is the running code the
     // shipped code? Failures here are silent — the system card still stands.
     try {
-      const res = await fetch("/api/nova-core/version", { signal: AbortSignal.timeout(8000) });
+      const res = await fetch("/api/nova-core/version", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(8000) });
       if (res.ok) setVer((await res.json()) as VersionSnapshot);
       else setVer(null);
     } catch {
       setVer(null);
     }
     try {
-      const res = await fetch("/api/nova-core/auto-update", { signal: AbortSignal.timeout(8000) });
+      const res = await fetch("/api/nova-core/auto-update", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(8000) });
       if (res.ok) setUpd((await res.json()) as UpdateSnapshot);
       else setUpd(null);
     } catch {
@@ -149,7 +150,7 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
     // The doctor is the only call that measures everything at once. It can be
     // slow (it probes every machine), so it runs last and its absence is silent.
     try {
-      const res = await fetch("/api/fleet/doctor", { signal: AbortSignal.timeout(20000) });
+      const res = await fetch("/api/fleet/doctor", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(20000) });
       if (res.ok) {
         const body = (await res.json()) as DoctorReport & { static?: boolean };
         setDoc(body?.static ? null : body);
@@ -165,7 +166,7 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
     try {
       // force=1 only matters on a bundle with no supervisor (it swaps the
       // process out itself); under boot.mjs the marker is enough.
-      const res = await fetch("/api/nova-core/restart", { method: "POST", signal: AbortSignal.timeout(10000) });
+      const res = await fetch("/api/nova-core/restart", { method: "POST", headers: novaAuthHeaders(), signal: AbortSignal.timeout(10000) });
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; note?: string; forced?: boolean };
       setRestartNote(body.note ?? (res.ok ? "اتبعت طلب إعادة التشغيل" : `HTTP ${res.status}`));
     } catch {

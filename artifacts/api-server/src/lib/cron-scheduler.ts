@@ -187,6 +187,8 @@ async function selfHealProviders(): Promise<void> {
   }
 }
 
+let ollamaDownCount = 0;
+
 async function keepaliveCheck(): Promise<void> {
   // Lightweight HTTP probe only — do NOT make inference calls that block Ollama
   const { getOllamaBaseUrl } = await import("./ollama-settings");
@@ -197,13 +199,21 @@ async function keepaliveCheck(): Promise<void> {
     const r = await fetch(`${ollamaBase}/api/tags`, { signal: ctrl.signal });
     clearTimeout(t);
     if (r.ok) {
+      if (ollamaDownCount > 0) logger.info({ afterStreak: ollamaDownCount }, "Keepalive: Ollama اتصل تاني — العداد اتصفّر");
+      ollamaDownCount = 0;
       logger.debug("Keepalive: Ollama OK");
     } else {
       logger.warn({ status: r.status }, "Keepalive: Ollama returned non-OK status");
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
-    logger.warn({ err: msg }, "Keepalive: Ollama unreachable");
+    // N4 (2026-11-09): على هوست بلا Ollama أصلاً (كونتينر مجاني) كان التحذير بيتكرر
+    // كل كراون للأبد (سبام اللوج في لوج TEST2). القياس بيفضل (العدّاد بيعدّي)،
+    // بس الصوت بينزل لتحذير أول + ملخص كل 30 مرة — ويسترد صوته لما Ollama يرجع.
+    ollamaDownCount += 1;
+    if (ollamaDownCount === 1 || ollamaDownCount % 30 === 0) {
+      logger.warn({ err: msg, streak: ollamaDownCount }, "Keepalive: Ollama unreachable (مكتوم التكرار — يطلع كل 30 دورة)");
+    }
     try {
       await db.insert(botAlerts).values({
         severity: "warning",

@@ -563,6 +563,9 @@ export async function scanHeaders(
   });
 }
 
+/** كم اسم بيجرّبها scanSubdomains — بيتقاس من المصفوفة نفسها، مش رقم متخزّن. */
+export const SUB_WORDLIST_SIZE = SUB_WORDLIST.length;
+
 export async function scanSubdomains(
   domain: string,
 ): Promise<{ subdomain: string; ips: string[] }[]> {

@@ -2,7 +2,7 @@
  * CVE table migrations — adds new enrichment columns safely (IF NOT EXISTS).
  * Called once at server startup before any CVE operations.
  */
-import { pool } from "@workspace/db";
+import { pgConnectWithRetry } from "@workspace/db";
 import { logger } from "./logger";
 
 const COLUMNS: string[] = [
@@ -32,7 +32,7 @@ const BACKFILL: string[] = [
 ];
 
 export async function runCveMigrations(): Promise<void> {
-  const client = await pool.connect();
+  const client = await pgConnectWithRetry();
   try {
     for (const sql of COLUMNS)  { try { await client.query(sql); } catch { /* ignore if column exists */ } }
     for (const sql of INDEXES)  { try { await client.query(sql); } catch { /* ignore */ } }

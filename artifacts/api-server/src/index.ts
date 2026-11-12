@@ -16,6 +16,7 @@ import { scheduleGC } from "./lib/gc-scheduler";
 import { forceOllamaDefault } from "./lib/ai";
 import { initLocalAgentWss, registerEmbeddedAgent } from "./routes/local-agent";
 import { wsUpgradeAllowed } from "./lib/ops/gate";
+import { wsSessionUser } from "./lib/panel-auth";
 import {
   registerHubClient,
   removeHubClient,
@@ -276,6 +277,16 @@ function routeUpgrade(req: http.IncomingMessage, socket: import("node:stream").D
     url === "/ws" ||
     url.startsWith("/ws?")
   ) {
+    // قناة اللايف بتاعة الواجهة جزء من «اللي جواه» — تقفل بجلسة الدخول أو التوكن،
+    // زي أي صفحة تانية (بوابة panel-auth بتغطي الـHTTP، وهنا الـupgrade).
+    const sessUser = wsSessionUser(req.headers.cookie ?? undefined);
+    const wsTok = new URL(url, "http://x").searchParams.get("token") ?? "";
+    const tokOk = wsTok && (process.env.NOVA_EXEC_TOKEN ?? "") && wsTok === (process.env.NOVA_EXEC_TOKEN ?? "").trim();
+    if (sessUser === null && !tokOk) {
+      socket.write("HTTP/1.1 401 Unauthorized\r\nX-NOVA-Reason: login_required\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
     hubWss.handleUpgrade(req, socket, head, (ws) => {
       hubWss.emit("connection", ws, req);
     });
@@ -376,6 +387,34 @@ if (portWasInvalid) {
 
 server.listen(port, host, () => {
   logger.info({ port, host }, `Server listening on ${host} (HTTP + /api/ws + /api/local-agent/ws)`);
+  // تليجرام: إشعار الإقلاع + تعلّم chat_id من أول /start لو مش محفوظ.
+  // معزول بالكامل — لو تليجرام مش مفعّل أو واقِع، السيرفر ما بيحسش.
+  void (async () => {
+    try {
+      const { hydrateRuntimeConfig } = await import("./lib/ops/runtime-config");
+      await hydrateRuntimeConfig();
+      // تنظيف القرص اليومي: سياسة معلنة (آخر 400 مهمة/14 يوم) — القرص مش وعاء بلا قاعة.
+      try {
+        const { pruneState } = await import("./lib/ops/state-prune");
+        // تنظيف فوري بعد 5s من الإقلاع (مش 60): القياس اللي علّمنا ده — القرص امتلأ
+        // فوق الحصة والديمون رفض التشغيل (2026-11-10). أول إقلاع ناجح لازم يفضّي
+        // المساحة قبل ما أي حاجة تانية تكبّرها. واليومي بيفضل حارس الخلفية.
+        setTimeout(() => { try { const r = pruneState(); if (r.removed > 0) logger.info({ removed: r.removed, freedBytes: r.freedBytes }, "boot prune pass"); } catch { /* ok */ } }, 5_000).unref?.();
+        setInterval(() => { try { const r = pruneState(); if (r.removed > 0) logger.info({ removed: r.removed, freedBytes: r.freedBytes }, "state prune pass"); } catch { /* ok */ } }, 24 * 3600_000).unref?.();
+      } catch { /* state-prune مش جوه أول حزمة — مش شرط إقلاع */ }
+      // ── «مافيش حاجة بتتخزن على السيرفر» — الحالة الحيّة على GitHub كل 15 دقيقة
+      // (الذاكرة/الإعدادات على Supabase من زمان، والكوربوس والأدوات كاش بيتعاد).
+      try {
+        const sb = await import("./lib/ops/state-backup");
+        const r = await sb.restoreStateFromGithubIfNeeded();
+        if (r.restored) logger.info({ files: r.files }, "state-backup: استرجاع تمام — الكونتينر كان فاضي");
+        sb.scheduleStateBackup();
+      } catch { /* state-backup مش جوه الحزمة القديمة */ } // الإعدادات المقفولة دائمًا قبل أي إشعار
+      const { ensureChatId, notifyBoot } = await import("./lib/ops/telegram");
+      ensureChatId();
+      void notifyBoot(String(process.env.NOVA_BUILD_SHA || process.env.KALI_BUILD_SHA || "dev").slice(0, 12));
+    } catch { /* تليجرام والإعدادات رفاهية — السيرفر يقلع من غيرهم */ }
+  })();
   // Plain line too: panel consoles (Pterodactyl) sometimes swallow JSON logs,
   // which made a perfectly healthy process look dead.
   console.log(`✓ NOVA listening on http://${host}:${port} — open /self-check`);
@@ -521,15 +560,21 @@ server.listen(port, host, () => {
     logger.info("Running in standalone mode (no DATABASE_URL configured)");
   }
 
-  if (process.env.NOVA_AUTONOMOUS_DAEMON === "1") {
+  // 2026-11-08: الافتراضي اتقلب بعد طلب المشغّل صراحةً — اللايف أجينت «متصل دايمًا
+  // بالخلفية وشغّال دايمًا». الدايمن بيبدأ مع الإقلاع على عمق passive: مراقبة
+  // ومصادر عامة (DNS/CT-logs/OSINT) بلا أي لمس للخدمات، وبرامج passive_only
+  // متترفعش أبدًا، وكل مرفوض/متخطّى بيتسجّل في دفتر صريح. نبضة كل 3 دقايق —
+  // خفيفة على كوتا الـCPU. الإيقاف الكامل: NOVA_AUTONOMOUS_DAEMON=0 في البيئة،
+  // أو تقليل العمق لـoff من لوحة التحكم (بيتخزّن في state/autonomy.json).
+  if (process.env.NOVA_AUTONOMOUS_DAEMON !== "0") {
     try {
       startAutonomousBackgroundDaemon();
-      logger.info("Autonomous background daemon enabled by NOVA_AUTONOMOUS_DAEMON=1");
+      logger.info("Autonomous background daemon started (default-on · passive depth · NOVA_AUTONOMOUS_DAEMON=0 يعطّله)");
     } catch (e) {
       logger.error({ err: e }, "Failed to start autonomous background daemon");
     }
   } else {
-    logger.info("Autonomous background daemon is disabled; set NOVA_AUTONOMOUS_DAEMON=1 to opt in");
+    logger.info("Autonomous background daemon disabled by NOVA_AUTONOMOUS_DAEMON=0");
   }
 
   scheduleGC();
