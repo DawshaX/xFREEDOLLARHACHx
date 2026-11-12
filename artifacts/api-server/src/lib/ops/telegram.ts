@@ -20,7 +20,7 @@ const GLOBAL_SPACING_MS = 2_500;
 
 let cachedChatId: string | null = null;
 let lastTgError: { at: string; status: number | null; desc: string; method: string } | null = null;
-let botSelfId: string | null = null; // رقم البوت نفسه —任何 chat_id بيساويه = إعداد غلط مثبت
+let botSelfId: string | null = null; // رقم البوت نفسه — أي chat_id بيساويه = إعداد غلط مثبت
 export function lastTelegramError() { return lastTgError; }
 let chatPollerStarted = false;
 const lastSentByTopic = new Map<string, number>();
