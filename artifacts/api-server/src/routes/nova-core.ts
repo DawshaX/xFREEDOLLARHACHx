@@ -43,7 +43,7 @@ import { CAPABILITIES, capabilityPromptLine } from "../lib/agent/capabilities";
 import { claimCommands, uiQueueStats } from "../lib/agent/ui-bridge";
 import { logger } from "../lib/logger";
 
-import { requireOps } from "../lib/ops/gate";
+import { requireOps, tokenConfigured, checkGate } from "../lib/ops/gate";
 import { awareness } from "../lib/awareness";
 
 const router = Router();
@@ -55,7 +55,12 @@ router.use((req, res, next) => {
   const sensitive =
     p.startsWith("/nova-core/restart") ||
     p.startsWith("/nova-core/auto-update") ||
-    p.startsWith("/nova-core/storage");
+    p.startsWith("/nova-core/storage") ||
+    // The tool catalogue, the persona card and the version banner are the
+    // brain's own map of itself — gated like every other powerful surface.
+    p.startsWith("/nova-core/tools") ||
+    p.startsWith("/nova-core/persona") ||
+    p.startsWith("/nova-core/version");
   if (!sensitive) return next();
   return requireOps("nova-core")(req, res, next);
 });
@@ -154,7 +159,13 @@ router.post("/nova-core/chat", async (req: Request, res: Response) => {
       // الموافقة مابقتش تتقبل من قائمة يجيبها العميل: أي زائر كان يقدر يقول
       // «approve: [fleet_exec]» ويفتح تنفيذ على جهاز متصل. الأدوات الحساسة
       // تفضل محجوبة لحد ما يبقى فيه مسار موافقة سيرفري مربوط بالجلسة.
-      approved: [],
+      // The client's approve list is trusted ONLY when the caller proved it holds
+      // NOVA_EXEC_TOKEN (x-nova-token header) — otherwise any visitor could forge
+      // `approve:[fleet_exec]` and run commands on a connected machine.
+      approved: (() => {
+        const gate = tokenConfigured() ? checkGate(req as never, "nova-core chat") : null;
+        return gate && gate.ok && gate.code === "allowed" && Array.isArray(body.approve) ? body.approve : [];
+      })(),
       emit,
     });
     broadcastEvent({ type: "agent_run_complete", agent: "nova", mode: result.mode, tools: result.toolsUsed, ts: Date.now() });
@@ -374,6 +385,12 @@ router.get("/nova-core/version", (_req: Request, res: Response) => {
       ? `الملفات على الديسك من ${drift.disk.builtAt} والعملية الشغّالة (pid ${process.pid}) بدأت من ${drift.boot.builtAt} — محتاج إعادة تشغيل`
       : null,
     source: from,
+    // S10: صوت الأجينت (NOVA_VOICE) كان شغّال سيرفرياً بس اللوحة ما كانتش تعرضه.
+    // دلوقتي بنكشف حالته عشان اللوحة تقدر تقول «الصوت: مفعّل/مقفول» بصدق.
+    voice: {
+      enabled: process.env.NOVA_VOICE !== "0",
+      flag: process.env.NOVA_VOICE ?? "(default: on)",
+    },
     runtime: {
       node: process.version,
       platform: `${process.platform}/${process.arch}`,

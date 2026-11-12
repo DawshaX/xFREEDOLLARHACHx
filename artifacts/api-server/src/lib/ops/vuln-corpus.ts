@@ -620,3 +620,76 @@ export async function provisionCorpus(opts: { url?: string; force?: boolean; min
     };
   }
 }
+
+/**
+ * تخفيف المضيف (`NOVA_CVE_SOURCE=ci`): الـCI (`vuln-corpus.yml` — كل 30 دقيقة على
+ * رانرات جيت هاب المجانية) هو اللي بيبني الكوربوس من NVD/KEV/EPSS وبينشره release
+ * asset. المكنة الضعيفة (0.4 CPU / ~460MB مقاسين) مش لازم تعيد ده بنفسها كل 5
+ * دقايق: بنقرا فهرس المرآة الصغير، ولو مش أجدد من اللي عندنا نرجّع «fresh» — يعني
+ * الخطوة المكررة بتكلّف GET واحدة صغيرة بدل 4 مصادر + zlib + كتابة قرص.
+ * ولو أجدد: بننزّل بـ`provisionCorpus({force:true})` وبنكتب معاه الفهرس اللي
+ * قريناه — لأن provision ما بيلمسش فهرس موجود، وفهرس قديم فوق بايتات جديدة =
+ * إحصائيات بتكدب بصمت.
+ */
+export async function refreshCorpusFromRelease(opts: { url?: string } = {}): Promise<{
+  ok: boolean;
+  action: "fresh" | "downloaded" | "failed";
+  remoteAt?: string;
+  localAt?: string;
+  total?: number;
+  error?: string;
+  says_ar: string;
+}> {
+  const url = opts.url ?? defaultCorpusUrl();
+  const idxUrl = url.replace(/cves\.jsonl\.gz$/, "vuln-corpus-index.json");
+  const localAt = String(readIndex()?.at || "");
+  let idx: CorpusIndex | null = null;
+  let remoteAt = "";
+  let remoteTotal = 0;
+  try {
+    const res = await fetch(idxUrl, { redirect: "follow", signal: AbortSignal.timeout(60_000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    idx = (await res.json()) as CorpusIndex;
+    remoteAt = String(idx?.at || "");
+    remoteTotal = Number(idx?.total ?? 0);
+    if (!remoteAt) throw new Error("فهرس المرآة مفيهوش at");
+  } catch (err) {
+    return {
+      ok: false,
+      action: "failed",
+      error: (err as Error).message,
+      says_ar: `فحص مرآة الكوربوس فشل (${(err as Error).message}) — الكوربوس المحلي باقي في الخدمة`,
+    };
+  }
+  const remoteMs = Date.parse(remoteAt);
+  const localMs = Date.parse(localAt);
+  const haveCorpus = fs.existsSync(corpusFile()) && fs.statSync(corpusFile()).size > 1024;
+  if (haveCorpus && Number.isFinite(remoteMs) && Number.isFinite(localMs) && remoteMs <= localMs) {
+    return {
+      ok: true,
+      action: "fresh",
+      remoteAt,
+      localAt,
+      total: remoteTotal,
+      says_ar: `الكوربوس بجدّة المرآة أو أجدد (${localAt}) — مفيش تنزيل`,
+    };
+  }
+  const dl = await provisionCorpus({ url, force: true });
+  if (dl.ok && idx) {
+    try {
+      fs.mkdirSync(path.dirname(indexFile()), { recursive: true });
+      fs.writeFileSync(indexFile(), JSON.stringify(idx, null, 2));
+    } catch {
+      /* القرص ضدنا — rebuildIndex بيلملم الفهرس من البايتات في أول قراية */
+    }
+  }
+  return {
+    ok: dl.ok,
+    action: dl.ok ? "downloaded" : "failed",
+    remoteAt,
+    localAt,
+    total: dl.total,
+    error: dl.error,
+    says_ar: dl.says_ar,
+  };
+}

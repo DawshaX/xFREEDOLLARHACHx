@@ -14,7 +14,7 @@ export default function WhoisTool() {
       return "";
     }
   });
-  const [data, setData] = useState<{ domain: string; registrar: string; createdAt: string; expiresAt: string; nameservers: string[]; status: string[] } | null>(null);
+  const [data, setData] = useState<{ domain: string; measured?: boolean; registrar: string | null; createdAt: string | null; expiresAt: string | null; nameservers: string[]; status: string[]; saysAr?: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,8 +30,11 @@ export default function WhoisTool() {
         title: `WHOIS Lookup: ${domainInput.trim()}`,
         target: domainInput.trim(),
       });
-    } catch {
-      setData({ domain: domainInput, registrar: "GoDaddy.com, LLC", createdAt: new Date(Date.now() - 365 * 24 * 3600000).toISOString(), expiresAt: new Date(Date.now() + 365 * 24 * 3600000).toISOString(), nameservers: ["ns1.example.com", "ns2.example.com"], status: ["clientTransferProhibited", "clientUpdateProhibited"] });
+    } catch (e) {
+      // قبل كده كان الفشل بيتملّى بـ GoDaddy وتواريخ محسوبة من Date.now().
+      // دلوقتي الفشل بيبان فشل — مفيش مسجّل وهمي.
+      setData(null);
+      setError(e instanceof Error ? e.message : "فشل استعلام WHOIS");
     } finally { setIsLoading(false); }
   };
 
@@ -58,7 +61,14 @@ export default function WhoisTool() {
 
       {error && <div className="rounded-xl p-4 font-mono text-sm" style={{ background: "rgba(255,68,68,0.08)", border: "1px solid rgba(255,68,68,0.2)", color: "#ff8888" }}>حدث خطأ أثناء البحث.</div>}
 
-      {data && (
+      {data && data.measured === false && (
+        <div className="rounded-xl p-4 space-y-1 font-mono text-[11px]" style={{ background: "rgba(255,170,68,0.07)", border: "1px solid rgba(255,170,68,0.25)", color: "#ffaa44" }}>
+          <div>مفيش whois حقيقي — البيانات مش مقاسة</div>
+          {data.saysAr && <div style={{ color: "rgba(255,255,255,0.5)" }}>{data.saysAr}</div>}
+        </div>
+      )}
+
+      {data && data.measured !== false && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="rounded-2xl overflow-hidden" style={DARK}>
             <div className="px-4 py-3 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.4)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
@@ -68,12 +78,12 @@ export default function WhoisTool() {
             <div className="p-4 space-y-4">
               <div>
                 <div className="text-[9px] font-black font-mono uppercase mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>المسجل (Registrar)</div>
-                <div className="font-mono font-black text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>{data.registrar}</div>
+                <div className="font-mono font-black text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>{data.registrar ?? "غير مقاس"}</div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: "تاريخ الإنشاء", value: new Date(data.createdAt).toLocaleDateString("ar-EG") },
-                  { label: "تاريخ الانتهاء", value: new Date(data.expiresAt).toLocaleDateString("ar-EG") },
+                  { label: "تاريخ الإنشاء", value: data.createdAt ? new Date(data.createdAt).toLocaleDateString("ar-EG") : "غير مقاس" },
+                  { label: "تاريخ الانتهاء", value: data.expiresAt ? new Date(data.expiresAt).toLocaleDateString("ar-EG") : "غير مقاس" },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <div className="text-[9px] font-black font-mono uppercase mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>{label}</div>

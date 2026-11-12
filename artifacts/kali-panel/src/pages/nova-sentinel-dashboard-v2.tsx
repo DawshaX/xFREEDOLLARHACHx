@@ -7,15 +7,27 @@ const DARK = { background: "rgba(5,0,12,0.85)", border: "1px solid rgba(255,255,
 
 export default function NovaSentinelDashboardV2() {
   const [agentThoughts, setAgentThoughts] = useState<string[]>([]);
-  const [systemMetrics, setSystemMetrics] = useState({ cpu: 0, ram: 0, ollama: "OFFLINE" });
+  // بند 5 (2026-11-09): CPU/RAM كانوا Math.random بتتجدد كل ثانيتين — أرقام
+  // بتتعرض كأنها قياس. دلوقتي: كمون العقل الحقيقي عبر /healthz كل 15 ثانية،
+  // وCPU/RAM بيتكتب عليهم «غير مقاس من المتصفح» بدل الأرقام الملعوبة.
+  const [systemMetrics, setSystemMetrics] = useState<{ brainMs: number | null; ollama: string }>({ brainMs: null, ollama: "OFFLINE" });
   const [threats, setThreats] = useState<Array<{ severity: string; message: string }>>([]);
   const [commandInput, setCommandInput] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSystemMetrics({ cpu: Math.random() * 100, ram: Math.random() * 100, ollama: Math.random() > 0.1 ? "ONLINE" : "OFFLINE" });
-    }, 2000);
+    const probe = async () => {
+      const t0 = performance.now();
+      try {
+        const r = await fetch(`${BASE}/api/healthz`, { headers: { Accept: "application/json" } });
+        const ms = Math.round(performance.now() - t0);
+        setSystemMetrics({ brainMs: r.ok ? ms : null, ollama: r.ok ? "ONLINE" : "OFFLINE" });
+      } catch {
+        setSystemMetrics({ brainMs: null, ollama: "OFFLINE" });
+      }
+    };
+    void probe();
+    const interval = setInterval(() => { void probe(); }, 15_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -67,8 +79,8 @@ export default function NovaSentinelDashboardV2() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "CPU Usage", value: `${systemMetrics.cpu.toFixed(1)}%`, color: "#44eebb", rgb: "68,238,187", icon: Activity },
-          { label: "RAM Usage", value: `${systemMetrics.ram.toFixed(1)}%`, color: "#aa44ff", rgb: "170,68,255", icon: Zap },
+          { label: "Brain API Latency (مقاس)", value: systemMetrics.brainMs === null ? "غير متاح" : `${systemMetrics.brainMs} ms`, color: "#44eebb", rgb: "68,238,187", icon: Activity },
+          { label: "CPU/RAM", value: "غير مقاس من المتصفح", color: "#888888", rgb: "136,136,136", icon: Zap },
           { label: "Threats", value: threats.length, color: "#ff8844", rgb: "255,136,68", icon: AlertCircle },
           { label: "Status", value: "Active", color: "#44ff88", rgb: "68,255,136", icon: Shield },
         ].map(({ label, value, color, rgb, icon: Icon }) => (

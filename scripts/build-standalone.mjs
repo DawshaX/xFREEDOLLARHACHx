@@ -37,6 +37,139 @@ function fail(msg) {
   process.exit(1);
 }
 
+const START_SH = `#!/bin/sh
+# NOVA — start (no install needed)
+# PORT is taken from PORT or SERVER_PORT; the panel is served from ./public.
+#
+# The cd is load-bearing. A panel egg runs its startup command from /home/container
+# (or whatever its workdir is), not from inside the bundle, so "sh app/start.sh"
+# used to die with "Cannot find module '/home/container/boot.mjs'" while the files
+# sat right there. Measured 2026-11-05 from /tmp before this line existed.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+cd "$HERE" || exit 1
+export NODE_ENV=production
+export HOST=0.0.0.0
+export NOVA_STATIC_DIR="$HERE/public"
+[ -z "$NOVA_TOOLCHAIN_FETCH" ] && export NOVA_TOOLCHAIN_FETCH=1
+[ -z "$NOVA_PROVISION_TOOLS" ] && export NOVA_PROVISION_TOOLS=1
+[ -z "$NOVA_AUTO_UPDATE_MINUTES" ] && export NOVA_AUTO_UPDATE_MINUTES=5
+export NOVA_MEMORY_FILE="$HERE/state/nova-memory.json"
+export NOVA_JOBS_REL="$HERE/state/jobs"
+export NOVA_PROGRAMS_FILE="$HERE/state/programs.json"
+mkdir -p "$HERE/state/jobs"
+# ── core dumps = قاتل القرص (مقاس 2026-11-11) ──────────────────────────────
+# كل OOM crash بـSIGABRT كان بيكتب core.* على القرص: 8 ملفات بمجموع ~2.5GB
+# (core.178 وحده 493MB) فجّروا حصة waifly وPterodactyl قتل السيرفر. القرص هنا
+# ~2GB، فكور واحد كفيل يقفل السلوت. ulimit -c 0 بيوقف توليد أي core جديد لكل
+# العمليات الفرعية (boot.mjs → التطبيق يرثان الحد)، وrm بيمسح اللي اتكتب قبل
+# الإصلاح ده عند أول إقلاع — self-healing بلا تدخل يدوي.
+ulimit -c 0 2>/dev/null || true
+rm -f "$HERE"/core.* 2>/dev/null || true
+# ── الحلقة دي هي موضوع الملف ده كله ──────────────────────────────────────────
+# boot.mjs بيراقب التطبيق، بس مافيش حاجة بتراقب boot.mjs نفسه. على بيضة
+# Pterodactyl (Waifly) العملية اللي بتخلص هنا هي العملية الرئيسية للحاوية كلها،
+# فموتها معناه السلوت بيتعلّم «offline» ومافيش حاجة بترجّعه: قِيس 2026-11-07 —
+# 502 من 20:41Z لأكتر من تلات ساعات، وكل الإصلاحات اللي في العالم ما كانتش
+# هتوصل غير بزرّار من صاحب الحساب. الحلقة دي بتحوّل «موت مؤقت» لقيام تلقائي.
+#
+# الزرّار الحقيقي بيفضل شغال: SIGTERM/INT من اللوحة بيتحوّل لـ stop نظيف بلا
+# respawn، ولو التطبيق نفسه عايز ينام (state/NOVA_HALT) الحلقة بتسلم وتخرج.
+NOVA_PID=""
+NOVA_STOP=0
+NOVA_TRIES=0
+NOVA_CODE=0
+trap 'NOVA_STOP=1; if [ -n "$NOVA_PID" ]; then kill -TERM "$NOVA_PID" 2>/dev/null; fi' TERM INT
+
+# NOVA_RESPAWN_MIN/HEALTHY للتستات والاضطرار؛ الافتراضي محسوب على مكنة 300MB.
+# (بنكتب $VAR بلا أقواس: أي dollar-brace جوه template literal بتاع JS بتتفسّر interp.)
+NOVA_MIN_SLEEP="$NOVA_RESPAWN_MIN"
+[ -z "$NOVA_MIN_SLEEP" ] && NOVA_MIN_SLEEP=2
+NOVA_HEALTHY="$NOVA_RESPAWN_HEALTHY"
+[ -z "$NOVA_HEALTHY" ] && NOVA_HEALTHY=300
+NOVA_FAST="$NOVA_RESPAWN_FASTCRASH"
+[ -z "$NOVA_FAST" ] && NOVA_FAST=60
+
+while : ; do
+  if [ -f "$HERE/state/NOVA_HALT" ]; then
+    echo "[start] state/NOVA_HALT موجود — بنسلّم ومافيش إعادة تشغيل"
+    exit 0
+  fi
+  NOVA_T0=$(date +%s)
+  node boot.mjs &
+  NOVA_PID=$!
+  wait "$NOVA_PID"
+  NOVA_CODE=$?
+  NOVA_PID=""
+  if [ "$NOVA_STOP" = 1 ]; then
+    echo "[start] اتقفلت بأمر من اللوحة (SIGTERM) — مافيش إعادة تشغيل"
+    exit 0
+  fi
+  NOVA_UP=$(( $(date +%s) - NOVA_T0 ))
+  if [ "$NOVA_UP" -ge "$NOVA_HEALTHY" ]; then NOVA_TRIES=0; fi
+  NOVA_TRIES=$((NOVA_TRIES + 1))
+  NOVA_SLEEP=$NOVA_MIN_SLEEP
+  if [ "$NOVA_TRIES" -ge 2 ]; then NOVA_SLEEP=4; fi
+  if [ "$NOVA_TRIES" -ge 3 ]; then NOVA_SLEEP=8; fi
+  if [ "$NOVA_TRIES" -ge 4 ]; then NOVA_SLEEP=16; fi
+  if [ "$NOVA_TRIES" -ge 5 ]; then NOVA_SLEEP=30; fi
+  if [ "$NOVA_TRIES" -ge 7 ]; then NOVA_SLEEP=60; fi
+  if [ "$NOVA_UP" -lt 10 ] && [ "$NOVA_SLEEP" -lt "$NOVA_FAST" ]; then
+    # أقل من 10 ثانية = الملفات نفسها مكسورة؛ الدوّر على طول بيحرق القرص والنت.
+    NOVA_SLEEP="$NOVA_FAST"
+  fi
+  echo "[start] boot.mjs خرج بكود $NOVA_CODE بعد $NOVA_UP ثانية — إعادة تشغيل في $NOVA_SLEEP ثانية (محاولة $NOVA_TRIES)"
+  sleep "$NOVA_SLEEP"
+done
+
+exit $NOVA_CODE
+`;
+
+
+/**
+ * `node scripts/build-standalone.mjs --selftest-respawn`
+ *
+ * الحلقة اللي فوق مش تعليق — بننفّذها فعلاً على boot.mjs وهمي بيموت على طول،
+ * وبنقيس إن قام تاني. من غير القطعة دي أي حد يقدر يكسر الـwhile loop بسطر واحد
+ * والحزمة تمشي لل الإنتاج وهي بتقول «شغّال مرة واحدة وبس».
+ */
+if (process.argv.includes("--selftest-respawn")) {
+  const os = await import("node:os");
+  const cp = await import("node:child_process");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nova-respawn-"));
+  fs.mkdirSync(path.join(dir, "state"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "start.sh"), START_SH, { mode: 0o755 });
+  fs.writeFileSync(
+    path.join(dir, "boot.mjs"),
+    'import { appendFileSync, readFileSync, existsSync } from "node:fs";\n' +
+      'const f = process.cwd() + "/state/kicks";\n' +
+      'appendFileSync(f, "kick\\n");\n' +
+      "console.log(\"[stub] alive \" + (existsSync(f) ? readFileSync(f, \"utf8\").trim().split(\"\\n\").length : 0));\n" +
+      "process.exit(1);\n",
+  );
+  const p = cp.spawnSync("sh", ["start.sh"], {
+    cwd: dir,
+    encoding: "utf8",
+    // بنوقف الحلقة بعد 6 ثواني — الكفاية إننا شفنا ثلاث قامات؛ من غير كده الحلقة
+    // بتلف مئات المرات والـselftest بيستنى الـtimeout كله.
+    timeout: 6_000,
+    env: { ...process.env, NOVA_RESPAWN_MIN: "0", NOVA_RESPAWN_FASTCRASH: "0", NOVA_RESPAWN_HEALTHY: "300", PORT: "0" },
+  });
+  const log = (p.stdout || "") + (p.stderr || "");
+  let kicks = 0;
+  try {
+    kicks = fs.readFileSync(path.join(dir, "state/kicks"), "utf8").trim().split("\n").length;
+  } catch {
+    /* مافيش ولا محاولة */
+  }
+    const respawned = log.includes("boot.mjs خرج بكود 1");
+  if (kicks < 3 || !respawned) {
+    console.error("\u2717 selftest-respawn: tries=" + kicks + " respawn-line=" + respawned + "\n" + log.slice(0, 400));
+    process.exit(1);
+  }
+  console.log("\u2713 selftest-respawn: boot.mjs الميت قام " + kicks + " مرات لوحده والـlog بيقول السبب");
+  process.exit(0);
+}
+
 if (!fs.existsSync(SERVER)) {
   fail("no server bundle. Run: pnpm --filter @workspace/api-server run build");
 }
@@ -284,7 +417,7 @@ if (role === "node" || role === "agent") {
   //      state/.nova-restart — no panel button, no manual step;
   //   2. if the app ever crashes the container stay up and the app comes back.
   const { spawn } = await import("node:child_process");
-  const { statSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync, existsSync } = await import("node:fs");
+  const { statSync, statfsSync, readFileSync, readdirSync, copyFileSync, mkdirSync, unlinkSync, writeFileSync, renameSync, existsSync } = await import("node:fs");
   const { get: httpGet } = await import("node:http");
   const MARK = join(HERE, "state", ".nova-restart");
   const ENTRY = join(HERE, "nova-app.mjs");
@@ -295,24 +428,94 @@ if (role === "node" || role === "agent") {
 
   let child = null;
   let leaving = false;
+  // القياس 2026-11-11: التطبيق بيموت OOM بعد 25s بالظبط كل مرة — والموت ده
+  // ينجح في خدمة /api/health لللحظات دي، فـ«healthy» بتبقى true ومؤقّت الإنقاذ
+  // مش بينطلق أبدًا. الحارس الحقيقي: موت متتالي سريع (fastDeaths) = مرض.
+  let firstFastDeathAt = 0;
   let mark = stamp();
+  let vendorRunning = false;   // تنزيل الأدوات شغال؟ (ممنوع يتداخل مع إقلاع التطبيق)
+  let fastDeaths = 0;          // موتات متتالية < 10s → crash-loop مثبت
+  let bootDelays = 0;          // تأجيلات RAM متتالية — بعد 5 بنقلع على أي حال
+
+  const cgroupMb = () => {
+    // قياس حقيقي للحاوية (v2 ثم v1) — و«الحقيقي» معناه: نستبعد page cache.
+    // القياس اللي علّمنا ده (2026-11-10): memory.current كان 420/460MB والإقلاع اتأجل
+    // للأبد — بس الرقم ده بيعدّي inactive_file (كاش ملفات الأدوات 628MB اللي النظام
+    // بيرميه فورًا تحت أي ضغط حقيقي). الضغط الصادق = anon memory مش المجموع الخام.
+    // التفصيلة: v2 في memory.stat حقل «inactive_file»؛ v1 في memory.stat حقل
+    // «total_inactive_file». لو مقدرناش نستبعده بنرجع للمجموع (أحسن من العمى).
+    try {
+      for (const [cur, max, stat, field] of [
+        ["/sys/fs/cgroup/memory.current", "/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory.stat", "inactive_file"],
+        ["/sys/fs/cgroup/memory/memory.usage_in_bytes", "/sys/fs/cgroup/memory/memory.limit_in_bytes", "/sys/fs/cgroup/memory/memory.stat", "total_inactive_file"],
+      ]) {
+        if (existsSync(cur) && existsSync(max)) {
+          const c = Number(readFileSync(cur, "utf8")), m = Number(readFileSync(max, "utf8"));
+          if (!(isFinite(c) && isFinite(m) && m > 0 && m < 9007199254740991)) continue;
+          let cache = 0;
+          try {
+            const st = readFileSync(stat, "utf8");
+            const hit = st.match(new RegExp("^" + field + " (\\d+)$", "m"));
+            if (hit) cache = Number(hit[1]);
+          } catch { /* stat مش مقروء — نكمل بالمجموع */ }
+          const anon = Math.max(0, c - cache);
+          return { usedMb: Math.round(anon / 1048576), rawMb: Math.round(c / 1048576), cacheMb: Math.round(cache / 1048576), maxMb: Math.round(m / 1048576) };
+        }
+      }
+    } catch { /* بلا cgroup ظاهر — بنقول ماقسنا */ }
+    return null;
+  };
 
   const launch = () => {
+    if (vendorRunning) { setTimeout(launch, 5000); return; } // التنزيل أولاً: مش هنضرب نفسنا
     // Re-read .env first: a key added in the panel takes effect on reload.
     const fresh = loadEnvFile();
     if (fresh) console.log("[supervisor] picked up " + fresh + " new env var(s) from .env");
+    const mem = cgroupMb();
+    if (mem && mem.usedMb > mem.maxMb * 0.88) {
+      bootDelays += 1;
+      // fail-open: القياس الكذاب (page cache محسوس كضغط) علّمنا إن التأجيل الأبدي
+      // أسوأ من OOM محتمل — 502 دائمة أقسى على صاحب المنصة من إعادة تحت ضغط.
+      // بعد 5 × 20s = 100s من «فوق 88%» بنقلع على أي حال: الـheap سقفه 200MB
+      // والـOOM-killer لو تدخل هيبقى على قرار صادق مش على كاش.
+      if (bootDelays >= 5) {
+        console.log("[supervisor] RAM عالية بثبات (" + mem.usedMb + "/" + mem.maxMb + "MB anon · كاش " + mem.cacheMb + "MB خام " + mem.rawMb + "MB) — تأجل 100s. بنقلع على أي حال: 502 الأبدية أسوأ من ضغط مؤقت.");
+        bootDelays = 0;
+      } else {
+        console.log("[supervisor] RAM " + mem.usedMb + "/" + mem.maxMb + "MB anon فوق 88% (خام " + mem.rawMb + " · كاش " + mem.cacheMb + "MB) — إقلاع مأجل 20s (" + bootDelays + "/5 قبل الإقلاع القسري)");
+        setTimeout(launch, 20_000);
+        return;
+      }
+    }
+    const heap = process.env.NOVA_APP_HEAP_MB || "200"; // سقف V8 < سقف الـcgroup فالـGC يسبق الـSIGKILL
+    const inherited = process.env.NODE_OPTIONS || "";
+    const appNodeOptions = /max-old-space-size/.test(inherited) ? inherited : (inherited + " --max-old-space-size=" + heap).trim();
+    bootDelays = 0;
     child = spawn(process.execPath, [ENTRY], {
       stdio: "inherit",
-      env: Object.assign({}, process.env, { NOVA_SUPERVISED: "1" }),
+      env: Object.assign({}, process.env, { NOVA_SUPERVISED: "1", NODE_OPTIONS: appNodeOptions }),
     });
     const started = Date.now();
     child.on("exit", (code, signal) => {
       child = null;
       if (leaving) { process.exit(0); return; }
       const lived = Date.now() - started;
-      console.log("[supervisor] app exited (" + (signal || code) + ") after " + Math.round(lived / 1000) + "s — restarting");
-      // Crash-loop guard: back off when the app dies instantly.
-      setTimeout(launch, lived < 5000 ? 3000 : 300);
+      if (lived < 10_000) {
+        fastDeaths += 1;
+        // backoff متصاعد: 3s → 6 → 12 → … → سقف 120s — الدوّار يهدى بدل ما يفرم الموارد
+        const wait = Math.min(120_000, 3000 * Math.pow(2, Math.min(fastDeaths - 1, 5)));
+        const m = cgroupMb();
+        console.log("[supervisor] app exited (" + (signal || code) + ") after " + Math.round(lived / 1000) + "s — موت سريع رقم " + fastDeaths
+          + (m ? " ، RAM الآن " + m.usedMb + "/" + m.maxMb + "MB" : "") + " — إعادة بعد " + Math.round(wait / 1000) + "s");
+        if (fastDeaths === 8) {
+          console.log("[supervisor] ⚠ crash-loop مثبت (8 موتات متتالية سريعة). الكود بيحني الضغط، بس لو وصلت هنا: امسح state/ أو سجّل تذكرة للمضيف — المُشرف هيكمّل بمحاولات متباعدة.");
+        }
+        setTimeout(launch, wait);
+      } else {
+        if (fastDeaths > 0) fastDeaths = 0;
+        console.log("[supervisor] app exited (" + (signal || code) + ") after " + Math.round(lived / 1000) + "s — restarting");
+        setTimeout(launch, 300);
+      }
     });
     child.on("error", (err) => {
       console.log("[supervisor] could not start the app: " + err.message);
@@ -321,6 +524,119 @@ if (role === "node" || role === "agent") {
   };
 
   launch();
+
+  /* ── الأيادي: المُشرف هو اللي بينزّل الأدوات، مش التطبيق ────────────────────
+   * القياس اللي علّمنا ده مرتين في نفس الساعة (2026-11-07): التنزيل متحطّ في هوك
+   * إقلاع التطبيق → الحاوية دخلت حلقة موت (nginx بيردّ 502 على كل حاجة، و
+   * المُحدِّث جوه التطبيق فمافيش مخرج ذاتي)، لأن التطبيق رافع ~115–167MB RSS
+   * والمرآة 219MB في حاوية سقفها 256MB. في المُشرف الابن بياخد 64MB والثانية
+   * التانية التطبيق بيخدم — والأداة اللي محتاجها المحرك تبقى موجودة قبل الإقلاع
+   * الجاي. مفيش تعطيل لأول طلب، ومفيش إعادة تشغيل.
+   */
+  // المحاولة الأولى بتحصل قبل ما أرشيف المرآة يخلص نشر أحيانًا (قِيس على
+  // المكنة الحيّة 2026-11-08 01:01:54Z: «المرآة ما وصلتش: HTTP 404» — والثانية
+  // 01:01:53Z كانت النشر نفسه). فالمكان ده بيعيد الناقص 3 مرات ب_backoff، وده
+  // بيخلّي «5 أدوات من 16» حالة مؤقتة مش قدر.
+  let toolchainTries = 0;
+  const toolchainPass = () => {
+    if (process.env.NOVA_TOOLCHAIN_AT_BOOT === "0") return;
+    // التنزيل وقت الإقلاع بقى بموافقة صريحة (NOVA_TOOLCHAIN_AT_BOOT=1) — مابقناش
+    // نعتمد على «المسار startsWith /home/container». والسبب مقيس على المكنة نفسها:
+    // 01:01:54Z (404 لكل الـ16) و01:52:20Z — بعدها المكنة وقعت تاني و/api/health
+    // رجّع 502 من 02:0xZ. الأب (التطبيق، 213MB وقت الإقلاع) والابن (المنزّل + tar
+    // على أرشيف 296MB) في نفس سقف الـcgroup (460MB)، والقرص سلوت 1024MB مايلحقش
+    // 296MB أرشيف + ~500MB أدوات. فالتنزيل يبقى بطلب POST /api/ops/tools/provision
+    // والمكان فاضي (RSS وقت الهدوء متقاس: 92MB).
+    if (process.env.NOVA_TOOLCHAIN_AT_BOOT !== "1") {
+      console.log("[supervisor] التنزيل وقت الإقلاع متقفل افتراضيًا — NOVA_TOOLCHAIN_AT_BOOT=1 يفتحه، أو POST /api/ops/tools/provision");
+      return;
+    }
+    const script = join(HERE, "scripts", "fetch-toolchain.mjs");
+    if (!existsSync(script)) {
+      console.log("[supervisor] مفيش scripts/fetch-toolchain.mjs في الحزمة — اتخطّيت");
+      return;
+    }
+    const recordFile = join(HERE, "state", "toolchain-provision.json");
+    const writeRecord = (rec) => {
+      // نفس شكل ProvisionRecord في lib/ops/toolchain.ts — فاللوحة تقرّى محاولة
+      // المُشرف زي ما تقرّى محاولة التطبيق بالظبط (مافيش "آخر محاولة" قديمة تخدع).
+      try {
+        mkdirSync(join(HERE, "state"), { recursive: true });
+        const tmp = recordFile + "." + process.pid + ".tmp";
+        writeFileSync(tmp, JSON.stringify(rec, null, 2));
+        renameSync(tmp, recordFile);
+      } catch { /* قرص مقفول — المحرّج لسه بيقرا المجلد نفسه */ }
+    };
+    const t0 = Date.now();
+    let free = null;
+    try {
+      const fst = statfsSync(join(HERE, "state"));
+      free = Math.round((fst.bsize * fst.bavail) / 1048576);
+    } catch {
+      free = null; // ماقدرناش نقيس — مانمنعش الحاجة، بس بنقول إننا ما قسناش
+    }
+    if (free !== null && free < 1500) {
+      console.log("[supervisor] القرص الفاضي " + free + "MB تحت 1500MB — التنزيل اتخطّى");
+      return;
+    }
+    const mem2 = cgroupMb();
+    if (mem2 && mem2.usedMb > mem2.maxMb * 0.85) {
+      console.log("[supervisor] RAM " + mem2.usedMb + "/" + mem2.maxMb + "MB فوق 85% — التنزيل اتأجل للدورة الجاية بدل ما يضرب الأب");
+      return;
+    }
+    console.log("[supervisor] toolchain pass: بنكمّل vendor/bin من مِرر جيت هاب");
+    vendorRunning = true;
+    const cp = spawn(process.execPath, [script, "--into", join(HERE, "vendor", "bin"), "--json"], {
+      cwd: HERE,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: Object.assign({}, process.env, { NODE_OPTIONS: "--max-old-space-size=64" }),
+    });
+    let out = "";
+    let err = "";
+    cp.stdout.on("data", (d) => { out += d.toString(); });
+    cp.stderr.on("data", (d) => { err += d.toString(); });
+    const killer = setTimeout(() => { try { cp.kill("SIGKILL"); } catch { /* already gone */ } }, 900_000);
+    cp.on("exit", (code, signal) => {
+      clearTimeout(killer);
+      vendorRunning = false;
+      let doc = null;
+      const i = out.lastIndexOf("{");
+      for (let s2 = i; s2 >= 0; s2 -= 1) {
+        try { doc = JSON.parse(out.slice(s2, out.lastIndexOf("}") + 1)); break; } catch { /* جرّب أقرب } */ }
+      }
+      if (doc) console.log("[supervisor] toolchain pass: " + doc.ok + "/" + doc.total + " جاهز في " + doc.into);
+      else console.log("[supervisor] toolchain pass: مفيش JSON (exit " + (signal || code) + ") — " + err.slice(0, 160).replace(/\\n/g, " "));
+      writeRecord({
+        at: new Date().toISOString(),
+        ok: doc ? Number(doc.ok) > 0 : false,
+        exitCode: typeof code === "number" ? code : null,
+        ms: Date.now() - t0,
+        into: join(HERE, "vendor", "bin"),
+        installed: doc ? Number(doc.ok) || 0 : 0,
+        total: doc ? Number(doc.total) || 16 : 16,
+        results: doc && Array.isArray(doc.results) ? doc.results : [],
+        ran: true,
+        by: "supervisor",
+        error: doc ? null : "no-json",
+        reasonAr: doc ? null : "المُشرف شغّل المنزّل بس ماطلعش JSON (exit " + (signal || code) + ")",
+      });
+      const w = err.indexOf("::warning::");
+      if (w >= 0) console.log("[toolchain] " + err.slice(w + 11, w + 260).split("\\n")[0]);
+      const total = doc ? Number(doc.total) : -1;
+      const okN = doc ? Number(doc.ok) : -1;
+      const missing = total > 0 ? total - okN : 1;
+      if (missing > 0 && toolchainTries < 3) {
+        const waitMin = [10, 30, 60][toolchainTries];
+        toolchainTries += 1;
+        console.log("[supervisor] فاضل " + missing + " أداة — هاعيد المحاولة بعد " + waitMin + " دقيقة (" + toolchainTries + "/3)");
+        const t2 = setTimeout(toolchainPass, waitMin * 60000);
+        if (t2.unref) t2.unref();
+      }
+    });
+  };
+  // 25 ثانية: أول طلب والـhealth يخلّصوا الأول، وبعدين الشبكة.
+  const toolchainTimer = setTimeout(toolchainPass, 25000);
+  toolchainTimer.unref?.();
 
   setInterval(() => {
     const now = stamp();
@@ -449,7 +765,92 @@ if (role === "node" || role === "agent") {
     setTimeout(tick, 4000);
   };
 
-  const pendingAtBoot = readPending();
+  // ── الإنقاذ الذاتي للمُشرف ─────────────────────────────────────────────
+  // الفخ اللي علّمنا ده جاي (2026-11-10): بوابة الرام أجّلت الإقلاع للأبد ⇒
+  // 502 متواصلة، والمُحدِّث جوه التطبيق — والتطبيق مش شغال ⇒ مافيش إصلاح بيوصل.
+  // الحلقة دي بتقفل الفخ: لو /api/health فضل ميّت 4+ دقائق ومفيش طفل شغال،
+  // المُشرف نفسه بينزّل أحدث nova-24-7.zip من GitHub Releases، بياخد نسخة أمان،
+  // بيستبدل الملفات (متخطّيًا state/ و .env)، بيسجّل .update-pending (عشان الـ
+  // watchdog فوق يرجّع لو الجديد ما صحّش)، وبيخرج بكود 42 ⇒ حلقة start.sh تعيد
+  // تشغيل boot.mjs بالنسخة الجديدة. التعطيل: NOVA_RESCUE_OFF=1.
+  let downSince = 0;
+  let rescuing = false;
+  let lastRescueTry = 0;
+  const rescuePort = Number(process.env.PORT || process.env.SERVER_PORT || 8080);
+  const rescueUrl = process.env.NOVA_UPDATE_ASSET_URL
+    || "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-portable/nova-24-7.zip";
+
+  const rescueSwap = async () => {
+    console.log("[supervisor] التطبيق ميّت 4+ دقائق ومفيش طفل — إنقاذ ذاتي: بنزّل أحدث حزمة وبستبدل نفسي");
+    const res = await fetch(rescueUrl, { redirect: "follow", signal: AbortSignal.timeout(180_000) });
+    if (!res.ok) throw new Error("asset " + res.status);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 1_000_000) throw new Error("asset صغير أوي (" + buf.length + "B) — مش هنستبدل بحاجة مشكوك فيها");
+    const stamp2 = Date.now();
+    const zipPath = "/tmp/nova-rescue-" + stamp2 + ".zip";
+    const outDir = "/tmp/nova-rescue-" + stamp2;
+    writeFileSync(zipPath, buf);
+    await new Promise((resolve, reject) => {
+      // python3 موجود فعلًا على المكنة (live-update.py بيشتغل عليه)
+      const py = spawn("python3", ["-c", "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])", zipPath, outDir], { stdio: "inherit" });
+      py.on("exit", (c) => (c === 0 ? resolve() : reject(new Error("unzip code " + c))));
+      py.on("error", reject);
+    });
+    try { unlinkSync(zipPath); } catch {}
+    // الأرشيف أحيانًا بيبقى جواه فولدر رئيسي — بنلاقي اللي فيه nova-app.mjs
+    let root = outDir;
+    if (!existsSync(join(root, "nova-app.mjs"))) {
+      for (const s of readdirSync(root, { withFileTypes: true })) {
+        const cand = join(root, s.name);
+        if (s.isDirectory() && existsSync(join(cand, "nova-app.mjs"))) { root = cand; break; }
+      }
+    }
+    if (!existsSync(join(root, "nova-app.mjs"))) throw new Error("الأرشيف مفيهوش nova-app.mjs — أبطل الإنقاذ");
+    // نسخة أمان من الحالة الحالية قبل الاستبدال (نفس قواعد تخطّي الرول-باك + backups)
+    const bk = join(HERE, "backups", "nova-backup-" + new Date().toISOString().replace(/[:.]/g, "-"));
+    mkdirSync(bk, { recursive: true });
+    const skipBk = new Set([".env", ".env.txt", ".npm", "logs", "state", "node_modules", "backups"]);
+    const toBackup = (sd, dd) => {
+      for (const entry of readdirSync(sd, { withFileTypes: true })) {
+        if (sd === HERE && skipBk.has(entry.name)) continue;
+        const s2 = join(sd, entry.name), d2 = join(dd, entry.name);
+        if (entry.isDirectory()) { mkdirSync(d2, { recursive: true }); toBackup(s2, d2); }
+        else copyFileSync(s2, d2);
+      }
+    };
+    toBackup(HERE, bk);
+    writeFileSync(PENDING, JSON.stringify({ at: new Date().toISOString(), from: "rescue", to: rescueUrl, backup: bk }, null, 2));
+    const files = copyBack(root);
+    console.log("[supervisor] rescue بدّل " + files + " ملف من آخر إصدار — خروج بكود 42 عشان حلقة start.sh ترجّع النسخة الجديدة");
+    process.exit(42);
+  };
+
+  const rescueTick = async () => {
+    if (process.env.NOVA_RESCUE_OFF === "1" || rescuing || vendorRunning) { downSince = 0; return; }
+    // flap أولاً: 3+ موتات سريعة في 120s = التطبيق بيلف على ذيله — الإنقاذ مش
+    // بيستنى صحّة غائبة، بيرأي المرض.
+    if (fastDeaths >= 3) {
+      if (Date.now() - lastRescueTry < 300_000) return; // كل 5 دقايق سقف
+      rescuing = true; lastRescueTry = Date.now();
+      console.log("[supervisor] crash-loop مثبت (" + fastDeaths + " موتات متتالية سريعة) — إنقاذ ذاتي بيستبدل الحزمة");
+      try { await rescueSwap(); }
+      catch (e) { console.log("[supervisor] rescue فشل: " + (e && e.message)); }
+      rescuing = false;
+      return;
+    }
+    if (child) { downSince = 0; return; }
+    if (await healthy(rescuePort)) { downSince = 0; return; }
+    if (!downSince) { downSince = Date.now(); return; }
+    if (Date.now() - downSince < 240_000) return;   // 4 دقائق موت متواصل قبل التدخل
+    if (Date.now() - lastRescueTry < 900_000) return; // محاولة كل ربع ساعة سقف — مش فرم
+    rescuing = true; lastRescueTry = Date.now();
+    try { await rescueSwap(); }
+    catch (e) { console.log("[supervisor] rescue فشل: " + (e && e.message)); }
+    rescuing = false;
+  };
+  setInterval(() => { void rescueTick(); }, 30_000).unref?.();
+
+    const pendingAtBoot = readPending();
   if (pendingAtBoot && pendingAtBoot.backup) {
     console.log("[supervisor] an update is pending verification (from " + pendingAtBoot.from + ")");
     watch(pendingAtBoot);
@@ -494,32 +895,8 @@ import "./boot.mjs";
 );
 
 /* ── 2. launch scripts ───────────────────────────────────────────────────── */
-fs.writeFileSync(
-  path.join(OUT, "start.sh"),
-  `#!/bin/sh
-# NOVA — start (no install needed)
-# PORT is taken from PORT or SERVER_PORT; the panel is served from ./public.
-#
-# The cd is load-bearing. A panel egg runs its startup command from /home/container
-# (or whatever its workdir is), not from inside the bundle, so "sh app/start.sh"
-# used to die with "Cannot find module '/home/container/boot.mjs'" while the files
-# sat right there. Measured 2026-11-05 from /tmp before this line existed.
-HERE="$(cd "$(dirname "$0")" && pwd)"
-cd "$HERE" || exit 1
-export NODE_ENV=production
-export HOST=0.0.0.0
-export NOVA_STATIC_DIR="$HERE/public"
-[ -z "$NOVA_TOOLCHAIN_FETCH" ] && export NOVA_TOOLCHAIN_FETCH=1
-[ -z "$NOVA_PROVISION_TOOLS" ] && export NOVA_PROVISION_TOOLS=1
-[ -z "$NOVA_AUTO_UPDATE_MINUTES" ] && export NOVA_AUTO_UPDATE_MINUTES=5
-export NOVA_MEMORY_FILE="$HERE/state/nova-memory.json"
-export NOVA_JOBS_REL="$HERE/state/jobs"
-export NOVA_PROGRAMS_FILE="$HERE/state/programs.json"
-mkdir -p "$HERE/state/jobs"
-exec node boot.mjs
-`,
-  { mode: 0o755 },
-);
+fs.writeFileSync(path.join(OUT, "start.sh"), START_SH, { mode: 0o755 });
+
 
 /**
  * `run` — the launcher with no dot in its name.
@@ -543,6 +920,14 @@ exec sh "$HERE/start.sh" "$@"
 `,
   { mode: 0o755 },
 );
+
+// `sh -n` على الملفين المنبثقين: الحلقة لو اتكتبت غلط الحزمة بتترموَّج عادي
+// (مافيش JS بينده على shell)، والموت بيبان على المكنة بس — يعني بعد ما توصل.
+// الفحص ده بيخليها تفشل هنا بدل هناك. وبعد `run` تحديدًا: أول مرة حطيته بعد
+// `start.sh` طلع «cannot open run» لأن الملف ده بيتكتب تحت.
+for (const sh of ["start.sh", "run"]) {
+  execFileSync("sh", ["-n", path.join(OUT, sh)], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+}
 
 fs.writeFileSync(
   path.join(OUT, "start-tunnel.sh"),
@@ -747,6 +1132,11 @@ NOVA_ROLE=node
 NOVA_AGENT_ID=waifly-2
 # عنوان الهاب (البروكسي بـHTTPS ينفع، والبورت المخصص غالباً ممنوع من داخل نفس الشبكة)
 NOVA_SERVER=wss://xdaw.waifly.com/api/local-agent/ws
+
+# تخفيف الحمل على مضيف ضعيف (الـCI بيبني الكوربوس كل 30 دقيقة والمكنة تستهلكه):
+# NOVA_CVE_SOURCE=ci
+# وقفل مهمة كرون بالاسم من غير تعديل كود:
+# NOVA_CRON_OFF=nova_learn
 
 # اجعل هذا المجلد "هاب" بدل النود: احذف السطور فوق أو خليها
 # NOVA_ROLE=hub

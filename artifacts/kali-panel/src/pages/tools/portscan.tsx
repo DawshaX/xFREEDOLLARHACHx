@@ -36,14 +36,11 @@ export default function PortScanTool() {
         title: `PortScan: ${targetInput.trim()} (${res?.ports?.filter(p => p.state === "open").length || 0} مفتوحة)`,
         target: targetInput.trim(),
       });
-    } catch {
-      setData({ target: targetInput, ports: [
-        { port: 22, state: "open", service: "ssh" },
-        { port: 80, state: "open", service: "http" },
-        { port: 443, state: "open", service: "https" },
-        { port: 3306, state: "closed", service: "mysql" },
-        { port: 8080, state: "filtered", service: "http-proxy" },
-      ]});
+    } catch (e) {
+      // قبل كده كان الفشل بيتملّى بمنافذ ملفّقة (22/80/443 مفتوحة).
+      // دلوقتي الفشل بيبان فشل — مفيش منافذ وهمية.
+      setData(null);
+      setError(e instanceof Error ? e.message : "فشل فحص المنافذ");
     } finally { setIsLoading(false); }
   };
 

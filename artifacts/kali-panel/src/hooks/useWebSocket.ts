@@ -1,4 +1,5 @@
 import { corpusTotal, corpusSaysAr } from "../lib/corpus-live";
+import { LOCAL_BRAIN_TOOL_COUNT } from "../lib/local-brain";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { resolveStandaloneApi } from "@/lib/standalone-api";
 import { getRemoteBase, remoteWsUrl } from "@/lib/remote";
@@ -106,7 +107,7 @@ function simulateStandaloneWsChat(
       type: "chat_tool_result",
       requestId,
       toolCallId,
-      result: JSON.stringify({ synced: true, bus: "internal-ws-active", galaxyCves: corpusTotal() ?? 0, tools: 78, primitives: 28 }, null, 2),
+      result: JSON.stringify({ synced: true, bus: "internal-ws-active", galaxyCves: corpusTotal() ?? 0, tools: LOCAL_BRAIN_TOOL_COUNT, primitives: 28 }, null, 2),
       isError: false,
     });
   }, 110);
@@ -224,8 +225,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       };
 
       ws.onclose = () => {
-        // Fall back to internal bus so UI remains functional even if WS reconnects
-        setConnected(true);
+        // قبل كده: setConnected(true) هنا — يعني السوكيت قفل والواجهة لسه بتقول
+        // «متصل». دلوقتي بنقول الحقيقة (false) وبنعيد المحاولة؛ الباص الداخلي
+        // بيفضل شغّال للواجهة لكن المؤشر ما بيكدبش.
+        setConnected(false);
         wsRef.current = null;
         reconnectTimer.current = setTimeout(() => {
           connect();
@@ -233,11 +236,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       };
 
       ws.onerror = () => {
-        setConnected(true);
+        setConnected(false);
         ws.close();
       };
     } catch {
-      setConnected(true);
+      setConnected(false);
     }
   }, [sessionId, isStaticHost, dispatchLocal]);
 

@@ -240,7 +240,7 @@ export default function NovaSentinelV10() {
     else if (lower.includes("osint"))
       steps.push({ step: 2, thought: "جمع معلومات مفتوحة OSINT", action: "osint_gather", expectedOutcome: "بيانات مجمّعة", confidence: 0.92 });
     if (threatForecasts.length > 0)
-      steps.push({ step: steps.length + 1, thought: `تكامل threat intelligence: ${threatForecasts[0]?.probability}% خطر ${threatForecasts[0]?.threatType}`, action: "threat_mitigation", expectedOutcome: "دفاعات محسّنة", confidence: 0.95 });
+      steps.push({ step: steps.length + 1, thought: `🧪 محاكاة سيناريو تدريبي (مش قياس): ${threatForecasts[0]?.probability}% خطر ${threatForecasts[0]?.threatType}`, action: "threat_mitigation_sim", expectedOutcome: "تدريب دفاعي", confidence: 0.5 });
     return steps;
   }, [deepThinkingEnabled, threatForecasts]);
 
@@ -905,11 +905,11 @@ export default function NovaSentinelV10() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Network Pulse</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Network Pulse · محاكاة</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[8px] font-mono text-emerald-500">LIVE</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="text-[8px] font-mono text-amber-500">SIM — مش قياس حقيقي</span>
                 </div>
               </div>
               <div className="h-16 flex items-end gap-0.5 px-1">
@@ -922,11 +922,11 @@ export default function NovaSentinelV10() {
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-black/20 rounded-xl p-2 border border-white/5">
                   <div className="text-[8px] text-muted-foreground font-bold mb-0.5">Inbound</div>
-                  <div className="text-xs font-mono text-primary">{((networkTraffic[networkTraffic.length - 1] ?? 0) * 0.8).toFixed(1)} MB/s</div>
+                  <div className="text-xs font-mono text-primary">{((networkTraffic[networkTraffic.length - 1] ?? 0) * 0.8).toFixed(1)} <span className="text-amber-500/70 text-[8px]">sim</span></div>
                 </div>
                 <div className="bg-black/20 rounded-xl p-2 border border-white/5">
                   <div className="text-[8px] text-muted-foreground font-bold mb-0.5">Outbound</div>
-                  <div className="text-xs font-mono text-cyan-400">{((networkTraffic[networkTraffic.length - 1] ?? 0) * 0.4).toFixed(1)} MB/s</div>
+                  <div className="text-xs font-mono text-cyan-400">{((networkTraffic[networkTraffic.length - 1] ?? 0) * 0.4).toFixed(1)} <span className="text-amber-500/70 text-[8px]">sim</span></div>
                 </div>
               </div>
             </div>
@@ -936,6 +936,7 @@ export default function NovaSentinelV10() {
               <div className="flex items-center gap-2">
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-[10px] font-bold uppercase tracking-widest">Threat Intel</span>
+                <span className="text-[8px] font-mono text-amber-500/80">🧪 سيناريوهات محاكاة تدريبية — مش تنبؤ مقاس</span>
               </div>
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {threatForecasts.length === 0 ? (

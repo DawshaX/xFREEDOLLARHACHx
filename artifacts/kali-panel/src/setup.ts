@@ -205,9 +205,12 @@ function buildStaticSseResponse(rawUrl: string, body: Record<string, unknown> | 
         await new Promise((r) => setTimeout(r, 80));
         send("action", "تشغيل محرك الاستطلاع السلبي وبوابة البرهان Zero-FP Gate");
         await new Promise((r) => setTimeout(r, 80));
-        send("observation", "تم التحقق من السلسلة الرباعية [P01 JS] ➔ [P05 GraphQL] ➔ [P04 Mass Assign] ➔ [P02 BOLA] (CVSS 9.9).");
+        // صدق 2026-11-08: السطر اللي كان هنا كان بيختلق «سلسلة ثغرات CVSS 9.9» كأنها
+        // نتيجة فحص اتعملت — والمتصفح ما نفّذش أي أداة. الوضع الساكن يقول الحقيقة:
+        // عقل المتصفح بيحلّل نظريًا بس، والتنفيذ الحقيقي محلّه المحرك/العقدة.
+        send("observation", "الوضع المستقل (متصفح فقط): لا أدوات تنفيذ هنا — التحليل نظري من عقل المتصفح، وليس نتيجة فحص. للتنفيذ الحقيقي: اربط عقدة من «محطة نوفا».");
         await new Promise((r) => setTimeout(r, 80));
-        send("final", "اكتمل التنفيذ التكتيكي وتم التوثيق في الذاكرة المشتركة.");
+        send("final", "اتحلّل الأمر نظريًا بالعقل المحلي. عايز تنفيذ حقيقي بالأدوات (nuclei/httpx…): فعّل ماكينة من الأسطول وهتتنفّذ هناك وتظهر نتايجها مقاسة.");
         controller.close();
       },
     });
@@ -791,7 +794,21 @@ const cybernovaFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     }
 
     try {
-      const resp = await originalFetch(input, init);
+      // Same-origin engine: attach the ops token too, so a page served by the
+      // engine itself is authenticated on every `/api/*` call (the linked-server
+      // branch above already does this for a remote base).
+      const patched: RequestInit = { ...(init ?? {}) };
+      try {
+        const token = localStorage.getItem("cybernova_ops_token") ?? "";
+        if (token) {
+          const headers = new Headers(patched.headers ?? undefined);
+          if (!headers.has("x-nova-token")) headers.set("x-nova-token", token);
+          patched.headers = headers;
+        }
+      } catch {
+        /* no localStorage (SSR/tests) */
+      }
+      const resp = await originalFetch(input, patched);
       if (!resp.ok) {
         if (urlStr.includes("/api/ollama/chat/stream")) {
           return buildStaticOllamaStreamResponse(parsedBody);

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { novaAuthHeaders } from "@/lib/ops-client";
 import {
   Target, Plus, Trash2, ChevronRight, Flag, Clock,
   CheckCircle, XCircle, AlertCircle, Shield, Zap, Eye,
@@ -146,7 +147,7 @@ export default function MissionTracker() {
 
   const deleteMission = async (id: number) => {
     try {
-      await fetch(API(`/missions/${id}`), { method: "DELETE" });
+      await fetch(API(`/missions/${id}`), { method: "DELETE", headers: novaAuthHeaders() });
       setMissions(prev => prev.filter(x => x.id !== id));
       if (selected?.id === id) { setSelected(null); setView("list"); }
     } catch { /* ignore */ }
@@ -171,7 +172,7 @@ export default function MissionTracker() {
   const removeFinding = async (fid: number) => {
     if (!selected) return;
     try {
-      await fetch(API(`/missions/${selected.id}/findings/${fid}`), { method: "DELETE" });
+      await fetch(API(`/missions/${selected.id}/findings/${fid}`), { method: "DELETE", headers: novaAuthHeaders() });
       await fetchDetail(selected.id);
     } catch { /* ignore */ }
   };

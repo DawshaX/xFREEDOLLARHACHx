@@ -242,6 +242,8 @@ router.get("/cve/db/daily", async (_req, res) => {
 router.post("/cve/hunt/trigger", async (_req, res) => {
   const result = await cveMonitor.hunt();
   res.json(result);
+  // إشعار تليجرام خارج حبل الطلب (نار ونسيان): بس لو في حصيلة حقيقية
+  void import("../lib/ops/telegram").then((m) => m.notifyCveHunt(result)).catch(() => {});
 });
 
 // ── Legacy hunt endpoint (kept for compat) ────────────────────────────────────
@@ -250,6 +252,7 @@ router.get("/cve/hunt", async (_req, res) => {
     const result = await cveMonitor.hunt();
     const [stats] = await db.select({ c: sql<number>`count(*)` }).from(cves);
     res.json({ ...result, totalInDb: Number(stats?.c ?? 0), huntedAt: new Date().toISOString() });
+    void import("../lib/ops/telegram").then((m) => m.notifyCveHunt(result)).catch(() => {});
   } catch (err) { res.status(500).json({ error: String(err) }); }
 });
 

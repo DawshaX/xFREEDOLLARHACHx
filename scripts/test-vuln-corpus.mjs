@@ -11,6 +11,8 @@
  *      reads more than `maxScan`
  *   6. an empty corpus reports "not ingested", not "zero vulnerabilities"
  *   7. a fresh deploy provisions the corpus over HTTP and rebuilds its own index
+ *   8. NOVA_CVE_SOURCE=ci: a weak box polls the small index (one GET when fresh)
+ *      and only downloads when the mirror is actually newer, index in hand
  *
  * Run: node scripts/test-vuln-corpus.mjs
  */
@@ -199,6 +201,53 @@ check(
 );
 const incr = runIngest("--incremental", "--pages=1");
 check("--incremental runs and keeps the rows", incr.status === 0 && lib.corpusStatus().total === afterFirst, `total=${lib.corpusStatus().total}`);
+
+/* 10 · NOVA_CVE_SOURCE=ci — a weak box must CONSUME the CI-built corpus, not
+      rebuild it every 5 minutes (0.4 CPU / ~460MB measured on the Waifly
+      container; the CI runner has 2 cores / 7GB, free). The poll reads the
+      small remote index first: a no-op costs exactly ONE small GET (count the
+      requests). And when the mirror IS newer, the index on disk must be the one
+      we just read — a stale index over new bytes is a silent lie. */
+const http2 = await import("node:http");
+const padRows = [];
+for (let i = 0; i < 200; i++) {
+  padRows.push(lib.rowFromNvd(nvd(`CVE-2099-${String(i).padStart(4, "0")}`, 9.8, "CRITICAL", `cpe:2.3:a:padv${i}:padp${i}:1.0.${i}:*:*:*:*:*:*:*`, `padding row ${i} with enough entropy to resist gzip`), undefined, undefined));
+}
+const padGz = zlib.gzipSync(Buffer.from(padRows.filter(Boolean).map((r) => JSON.stringify(r)).join("\n") + "\n", "utf8"), { level: 9 });
+check("fixture corpus clears the 1KB anti-stub floor", padGz.length > 1024, `${padGz.length} bytes gz`);
+const refreshDir = path.join(work, "refresh");
+process.env.NOVA_CORPUS_DIR = refreshDir;
+process.env.NOVA_CORPUS_INDEX = path.join(work, "refresh-index.json");
+fs.mkdirSync(refreshDir, { recursive: true });
+fs.writeFileSync(path.join(refreshDir, "cves.jsonl.gz"), padGz);
+let remoteAt = "2024-01-01T00:00:00.000Z";
+const remoteIndex = () => ({ version: 1, at: remoteAt, sources: ["fixture"], total: padRows.filter(Boolean).length, bySeverity: {}, byYear: {}, kev: 0, epssScored: 0, products: 0, topProducts: [], files: { corpus: "cves.jsonl.gz", bytes: padGz.length }, mode: "full", says_ar: "" });
+let hits = 0;
+const srv2 = http2.createServer((req, res) => {
+  hits += 1;
+  if (String(req.url).endsWith("cves.jsonl.gz")) { res.writeHead(200, { "content-type": "application/gzip" }); res.end(padGz); return; }
+  res.writeHead(200, { "content-type": "application/json" });
+  res.end(JSON.stringify(remoteIndex()));
+});
+const port2 = await new Promise((r) => srv2.listen(0, "127.0.0.1", () => r(srv2.address().port)));
+const base2 = `http://127.0.0.1:${port2}/cves.jsonl.gz`;
+// the local index is NEWER than the mirror → a no-op: one request, bytes untouched
+fs.writeFileSync(process.env.NOVA_CORPUS_INDEX, JSON.stringify({ ...remoteIndex(), at: "2099-01-01T00:00:00.000Z" }, null, 2));
+hits = 0;
+const noop = await lib.refreshCorpusFromRelease({ url: base2 });
+check("a non-newer mirror is a one-GET no-op, not a rebuild", noop.action === "fresh" && hits === 1, `${noop.action} · hits=${hits} · ${noop.says_ar}`);
+// the mirror is NEWER → pull it, and the index on disk must carry that timestamp
+remoteAt = "2099-06-01T00:00:00.000Z";
+hits = 0;
+const got = await lib.refreshCorpusFromRelease({ url: base2 });
+const writtenIdx = JSON.parse(fs.readFileSync(process.env.NOVA_CORPUS_INDEX, "utf8"));
+check("a newer mirror is pulled and the index follows the new bytes", got.action === "downloaded" && writtenIdx.at === "2099-06-01T00:00:00.000Z", `${got.action} · hits=${hits} · indexAt=${writtenIdx.at}`);
+check("the pulled corpus is measurable, not a stub", lib.corpusStatus().measured === true && lib.corpusStatus().total === padRows.filter(Boolean).length, `total=${lib.corpusStatus().total}`);
+srv2.close();
+// and the cron wiring itself: the box jobs answer to the two knobs
+const cronSrc = fs.readFileSync(path.join(root, "artifacts/api-server/src/lib/nova-cron.ts"), "utf8");
+check("cve_hunt can consume CI instead of re-hunting (NOVA_CVE_SOURCE=ci)", /NOVA_CVE_SOURCE/.test(cronSrc) && /refreshCorpusFromRelease/.test(cronSrc));
+check("any cron job switches off without a code change (NOVA_CRON_OFF)", /NOVA_CRON_OFF/.test(cronSrc));
 
 let bad = 0;
 for (const [name, ok, detail] of checks) {

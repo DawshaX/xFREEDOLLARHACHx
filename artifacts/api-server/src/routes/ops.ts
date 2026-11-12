@@ -59,8 +59,11 @@ import {
   verifyFinding,
 } from "../lib/ops/runner";
 import { KIND_LIST, toolStatus } from "../lib/ops/tools";
+import { fetchList, listInventory, listSources, readFreeStore } from "../lib/ops/wordlist";
 import { provisionToolchain, toolchainStatus, VENDORABLE } from "../lib/ops/toolchain";
 import { checkGate, opsExposure } from "../lib/ops/gate";
+import { ALLOWED_KEYS, hydrateRuntimeConfig, runtimeConfigStatus, setRuntimeConfig } from "../lib/ops/runtime-config";
+import { measureStateFootprint, pruneState, lastPrune } from "../lib/ops/state-prune";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
 import { maskProgram, maskSession, hasSession } from "../lib/ops/session";
@@ -605,6 +608,60 @@ router.get("/ops/stats", (req: Request, res: Response) => {
  * خلف البوابة لأنه spawn فعلي. مافيش رد هنا بيؤكد نجاح من غير قياس —
  * toolchainStatus() بيقرا القرص، والحالة بعد provisioning بتتقاس من جديد. */
 
+/* ── قناة الضبط الدائمة (POST gated · GET booleans فقط — القيم عمرها ما ترجع) ──
+ * السبب المقاس: توكن تليجرام اتسلّم في الشات 2026-11-09، وحوّالين الـenv على
+ * المضيف المجاني محتاجين إيد. ده بديل آمن: CI بدفع الإعداد بالتوكن التنفيذي،
+ * والسيرفر يقفله في الذاكرة الدائمة (Supabase Edge) فينجو من الريستارت. */
+
+router.get("/ops/config/status", (_req: Request, res: Response) => {
+  res.json({
+    ok: true,
+    // بيرجع «موجود؟» بس — عمر أي رد ما يحتوي القيمة نفسها.
+    keys: runtimeConfigStatus(),
+    allowedKeys: Object.entries(ALLOWED_KEYS).map(([k, s]) => ({ key: k, labelAr: s.labelAr, sensitive: Boolean(s.sensitive) })),
+    hydrated: true,
+  });
+});
+
+router.post("/ops/config", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "ضبط إعدادات دائمة = كتابة على المكنة، فمحتاج NOVA_EXEC_TOKEN زي أي كتابة تانية."); return; }
+  const key = String(req.body?.key || "").trim();
+  const value = String(req.body?.value ?? "");
+  const r = await setRuntimeConfig(key, value);
+  if (!r.ok) { res.status(400).json({ ok: false, error: "invalid", reasonAr: r.reasonAr, status: runtimeConfigStatus() }); return; }
+  broadcastEvent("nova-ops", { type: "runtime-config", key, set: Boolean(value.trim()) });
+  res.json({ ok: true, key, status: runtimeConfigStatus() });
+});
+
+/* رسالة اختبار حقيقية عبر القناة بعد الضبط — تقيس end-to-end لا تتظاهر. */
+/* حالة قناة التليجرام الحقيقية — getMe/getUpdates متقاسَين لحظيًا، من غير التوكن نفسه. */
+router.get("/ops/telegram/status", async (_req: Request, res: Response) => {
+  try {
+    const { telegramStatus } = await import("../lib/ops/telegram");
+    res.json({ ok: true, ...(await telegramStatus()) });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+
+router.post("/ops/config/test-telegram", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "إرسال اختباري = كتابة، فمحتاج NOVA_EXEC_TOKEN زي أي كتابة تانية."); return; }
+  const { notifyTelegram, telegramConfigured } = await import("../lib/ops/telegram");
+  if (!telegramConfigured()) {
+    res.status(400).json({ ok: false, reasonAr: "مفيش botToken عند العقدة — احفظه الأول (من هنا أو من خطوة CI اليدوية)" });
+    return;
+  }
+  const sent = await notifyTelegram(
+    "config.test",
+    "🧪 <b>NOVA</b> — رسالة اختبار من لوحة الإعدادات: قناة التليجرام شغالة end-to-end ✓",
+    { minIntervalMs: 15_000 },
+  );
+  res.json({
+    ok: sent,
+    ...(sent ? {} : { reasonAr: "التليجرام لم يقبل أو الـchat_id لسه مجهول — ابعت /start للبوت من تليجرامك ثم أعد المحاولة" }),
+  });
+});
+
 router.get("/ops/tools", (_req: Request, res: Response) => {
   const st = toolchainStatus();
   res.json({ ok: true, ...st, kinds: toolStatus(), catalogue: [...VENDORABLE], env: { NOVA_TOOL_DIR: process.env.NOVA_TOOL_DIR || null } });
@@ -622,6 +679,87 @@ router.post("/ops/tools/provision", async (req: Request, res: Response) => {
   const rec = await provisionToolchain({ only: only.length ? only : undefined });
   broadcastEvent("nova-ops", { type: "toolchain", ok: rec.ok, installed: rec.installed, total: rec.total, ms: rec.ms });
   res.status(rec.ok ? 200 : 502).json({ ok: rec.ok, ran: rec.ran ?? false, record: rec, status: toolchainStatus() });
+});
+
+/* ── القرايات: إيه المدمج، إيه المنجلب، وإيه اللي ماجاش ────────────────────────
+ * التخزين المجاني (جيت هاب/درايف/دروبوكس) بقى جزء من التصميم لأن سلوت المكنة
+ * 1024MB و460MB رام (متقاس)، فملف 1.9MB مش من العقل إنه يركب في كل حزمة. والقراءة
+ * هنا مفتوحة زي `/api/ops/tools`: كل رقم فيها محسوب من القرص، والمرآات المُعلَنة
+ * بتتقال كأسماء — «مبنزّلهاش» مش «نزّلناها فاضية». */
+
+/* ── القرص: قياس بصمة الحالة + تنظيف سياسي معلن (مش حذف عشوائي) ─────── */
+router.get("/ops/state", async (_req: Request, res: Response) => {
+  let githubBackup: unknown = null;
+  try { githubBackup = (await import("../lib/ops/state-backup")).stateBackupInfo(); } catch { /* أقدم من الباك-أب */ }
+  // ── قوة الأسطول الموحّدة: كل الأجهزة حيًّا، ودمج فعلي للأنوية والرام ──────
+  // الطلب المقاس (2026-11-11): «ادمج امكانيات كلهم». الدمج الحقيقي موجود أصلاً
+  // (المهام بتتوزع على الأسطول) — وهنا بنعرضه كرقم واحد صادق: مجموع الأنوية
+  // والرام اللي شافها الـprofile الحي لكل عقدة + موارد الهب من الـcgroup.
+  let fleetPower: unknown = null;
+  try {
+    const agents = (await import("./local-agent")).getConnectedAgentList();
+    let cpu = 0, memMb = 0;
+    const nodes: Array<{ id: string; hostname: string; cpus: number; ramMb: number }> = [];
+    for (const a of agents) {
+      const c = typeof a.cpus === "number" ? a.cpus : 0;
+      const m = typeof a.totalMemory === "number" ? Math.round(a.totalMemory / 1048576) : 0;
+      cpu += c; memMb += m;
+      nodes.push({ id: a.id, hostname: a.hostname, cpus: c, ramMb: m });
+    }
+    fleetPower = {
+      agentsConnected: agents.length,
+      totalVCpu: cpu,
+      totalRamMb: memMb,
+      summaryAr: agents.length > 0
+        ? `الأسطول المدمج الآن: ${agents.length} عقدة × مجموع ${cpu} أنوية / ${Math.round(memMb / 1024)}GB رام — كل المهام التقيلة بتتوزع عليهم تلقائيًا`
+        : "مفيش عقد متصلة في اللحظة دي — الموجة الجاية من Actions (8 عقد × 4vCPU/16GB) على الجدول كل 5 ساعات",
+      nodes: nodes.slice(0, 12),
+    };
+  } catch { /* الأسطول قبل التوصيل */ }
+  res.json({ ok: true, footprint: measureStateFootprint(), lastPrune: lastPrune(), githubBackup, fleetPower, noteAr: "الذاكرة/الإعدادات على Supabase Edge، وstate/ النظيفة بتترفع على GitHub Releases كل 15 دقيقة؛ اللي فاضل محلي كاش قابل للتوليد (vendor من الإصدارات، corpus من release vuln-corpus) — بيتمسح ويرجع بدون خسارة. القوة المدمجة للأسطول في fleetPower." });
+});
+
+router.post("/ops/state/github-backup", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "رفع نسخة بيدك مفتاح النسخ — NOVA_EXEC_TOKEN مطلوب."); return; }
+  try {
+    const out = await (await import("../lib/ops/state-backup")).backupStateToGithub();
+    res.status(out.ok ? 200 : 502).json(out);
+  } catch (e) { res.status(500).json({ ok: false, detail: e instanceof Error ? e.message : "خطأ غير معروف" }); }
+});
+
+router.post("/ops/state/prune", (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "حذف أدلة = كتابة على قرص المكنة، فمحتاج NOVA_EXEC_TOKEN زي أي كتابة تانية."); return; }
+  const report = pruneState();
+  broadcastEvent("nova-ops", { type: "state-prune", removed: report.removed, freedBytes: report.freedBytes, kept: report.kept });
+  res.json({ ok: true, report });
+});
+
+router.get("/ops/wordlists", (_req: Request, res: Response) => {
+  const inv = listInventory();
+  const store = readFreeStore();
+  res.json({
+    ok: true,
+    ...inv,
+    provenance: store?.source ?? null,
+    policy: store?.policy ?? null,
+    declared: store ? Object.keys(store.files || {}).map((n) => ({ name: n, sources: listSources(store, n).map((x) => x.provider) })) : [],
+    env: { NOVA_WORDLIST: process.env.NOVA_WORDLIST || null, NOVA_WORDLIST_SIZE: process.env.NOVA_WORDLIST_SIZE || null },
+  });
+});
+
+/**
+ * `POST /api/ops/wordlists/fetch {name?, timeoutMs?, maxBytes?}`
+ * بيجيب ملفًا من المرآة ويحقّق `sha256` المستودع **قبل** أي استعمال؛ الفشل بيرجّع
+ * سطر لكل مصدر. الكتابة دي شبكة على المكنة فهي ورا `NOVA_EXEC_TOKEN` زي provisioning.
+ */
+router.post("/ops/wordlists/fetch", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "تنزيل قايمة من التخزين المجاني = عملية شبكة على المكنة، فمحتاج NOVA_EXEC_TOKEN."); return; }
+  const name = String(req.body?.name || "nova-subdomains-xl.txt").trim();
+  const timeoutMs = Number(req.body?.timeoutMs) || undefined;
+  const maxBytes = Number(req.body?.maxBytes) || undefined;
+  const rec = await fetchList(name, { timeoutMs, maxBytes });
+  broadcastEvent("nova-ops", { type: "wordlist", name, verified: rec.verified, bytes: rec.bytes, source: rec.source });
+  res.status(rec.verified ? 200 : 502).json({ ok: rec.verified, record: rec, inventory: listInventory() });
 });
 
 export default router;

@@ -368,8 +368,9 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
 | أدلة الصيد | `state/hunt/evidence/*.txt.gz` | مضغوطة (8.4MB → 1.15MB) بميزانية `HUNT_EVIDENCE_MAX_MB=32`؛ اللي عليه مرجع في حالة دائمة بيتحمى |
 | لوج التحديث | `state/auto-update.log` | بيلف عند 256KB (قِيس: 359KB → 24KB) |
 | نسخة رجوع التحديث | `<install>/backups/` | آخر 3، وبس الملفات اللي اتغيّرت فعلًا (قِيس: 93 بايت مكان 11.8MB) |
-| أدوات الأمان | `/home/container/vendor/bin` | 12 أداة؛ `auto` على مكنة مُشرَفة مع حارس قرص 1.5GB |
-
+| أدوات الأمان | `/home/container/vendor/bin` | 16 أداة في الشجرة (المِرر المنشور وقت كتابة السطر لسه 12؛ CI بيعيده لـ16 في أول ضمّة بعد الدفعة دي)؛ `auto` على مكنة مُشرَّفة مع حارس قرص 1.5GB وحارس رام (`--max-old-space-size` = 60% من حد cgroup) |
+| مِرر الأدوات | release `nova-toolchain` (أرشيف + SHA-256) | CI بينزّل من api.github.com، والمكنة تسحب أرشيف واحد — لأن `api.github.com` محجوب من الحاوية (متقاس 17:32:23Z: 12/12 `failed · api.github.com ماردّش`). `NOVA_TOOLCHAIN_MIRROR` يغيّره و`--no-mirror` يرجّع للمسار الأصلي |
+| قائمة المسارات | `ops/wordlists/` | 3 قوائم مضمّنين في الحزمة: `nova-paths.txt` 215 سطر (الافتراضي)، `paths-medium.txt` 7207، `params-burp.txt` 6453 باراميتر — الاتنين الكبيرين من `danielmiessler/SecLists` (`Discovery/Web-Content`: common.txt + quickhits.txt، وburp-parameter-names.txt) متفروزين هنا عشان المكنة مايفرضش عليها تحميل 375KB+ من بره. `NOVA_WORDLIST` بياخد الأولوية، و`NOVA_WORDLIST_SIZE=medium|params` يبدّل بينهم |
 ليه مافيش مفتاح على المكنة: الحزمة بتتنزّل من release **عام** (المستودع عام —
 متقاس من `gh api repos/... → visibility: public`)، فأي سر جواها بقى مقروء لأي
 حد. الكتابة للقاعدة بتعدي علي `supabase/functions/nova-state/index.ts` اللي
@@ -391,3 +392,81 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
 `NOVA_SUPABASE_SERVICE_KEY` في اللوحة — المسار ده بياخد الأولوية و`via` بتبقى
 `rest`. قفل additive: `NOVA_STATE_EDGE=0`.
 
+| قيام ذاتي بعد الموت | `start.sh` في الحزمة (مش `boot.mjs`) | `boot.mjs` بيراقب التطبيق بس مافيش حاجة بتراقبه — وعلى بيضة Pterodactyl اللي بتخلص هناك هي العملية الرئيسية للحاوية، فموتها = «offline» للأبد. `start.sh` بقى فيه حلقة `while : ; do` بـ backoff (2/4/8/16/30/60 ثانية)، وSIGTERM من اللوحة بيوقف بلا إعادة تشغيل، وملف `state/NOVA_HALT` بيسلّمها. للتستات: `NOVA_RESPAWN_MIN` و`NOVA_RESPAWN_FASTCRASH` و`NOVA_RESPAWN_HEALTHY`. بتتقاس بـ `node scripts/build-standalone.mjs --selftest-respawn` (بوابة `test-respawn-loop`) |
+| إعادة تشغيل من بُعد | `scripts/nova-panel-restart.mjs` | أمر طاقة Pterodactyl: `POST {panel}/api/client/servers/{id}/power` بـ `{"signal":"restart"}` ومفتاح `PTSV_…`. `uptime-watchdog` بينفّذه كل نص ساعة لما الـhealth مابيردّش، لو `NOVA_PANEL_TOKEN` موجود في أسرار المستودع. `--when-down` بيمنع إعادة تشغيل عبثية، والملف بيقيس رجوع الـhealth بعد الأمر (`--wait 180`) مش بس بعت الطلب. المفتاح مابيطلعش في أي لوج. البوابة: `node scripts/test-panel-restart.mjs` على لوحة وهمية محلّية |
+
+
+---
+
+## التخزين المجاني كطبقة رسمية (2026-11-08)
+
+**المشكلة مقاسة:** المكنة سلوت 1024MB قرص و460MB رام، والحزمة المحمولة بينزّلها
+الـupdater كل بناء — فكل ميجا في الحزمة بتتدفع في كل تحديث. والقرايات الكبيرة
+(150 ألف اسم نطاق = 1.9MB) مش محتاجاه كل مكنة.
+
+**الحل اللي اتشغّل النهارده:** الملفات اللي لازم توجد تبقى في المستودع/الحزمة
+(60 ألف مسار، 7,746 مسار حسّاس، 6,115 بارامتر)، والباقي على تخزين مجاني عام
+(Google Drive + Dropbox، اتقاست روابطهم من شبكة خارجية: `drive.usercontent.google.com`
+رجّع نفس الـJSON، و`dl.dropboxusercontent.com` رجّع الملف 1,997,427 بايت كاملًا).
+المرآة **ناقل**: `ops/wordlists/free-store.json` فيه `sha256` كل ملف، والكود بيرفض أي
+بايت مش مطابق (`scripts/test-free-store.mjs` بيثبت الرفض، 9/9).
+
+**واجهات:** `GET /api/ops/wordlists` = جرد محسوب من القرص (سطور/بايت/بصمة/مصدر)،
+و`POST /api/ops/wordlists/fetch {name}` = جلب من المرآة + تحقّق، ورا `NOVA_EXEC_TOKEN`
+زي provisioning. الحارس الدوري: `.github/workflows/free-store.yml` (كل أربعاء + أي دفع
+يعدّل القرايات) — بصمة اختلفت = الوظيفة تفشل، مش تحذير.
+
+**الأدوات (نفس الفلسفة):** حزمة المرآة بتنشر **أصل لكل أداة** (`bin-<اسم>`) + أرشيف كامل
+كاحتياطي. `scripts/fetch-toolchain.mjs` بيقرا المانيفست بس، واللي ناقص بيingلب من أصله
+(10–176MB) وببصمته؛ والأرشيف مابيقريهوش غير لو الأصل ماثبتش. القياس اللي خلّاني
+أعمل ده: `present: 5/16` على المكنة 01:42Z — يعني 11 مرة كان ممكن تنزل واحدة واحدة.
+
+**سقفين لازم يختلفوا:** `NOVA_VENDOR_MAX_MB=700` على المكنة (الـ16 أداة = 541 MB
+مقاسة، فالسقف القديم 500 كان بيقصّ الليستا في الصمت لأن «skipped» كان بيتحسب ok)،
+وفي الريان بيترفع ملغيًا (`NOVA_VENDOR_MAX_MB: "0"`) لأن القرص هناك 40 جيجا.
+`node scripts/check-mirror-coverage.mjs --manifest out/mirror/nova-toolchain.json`
+بيقارن وعد المكنة √ ليستا الباني √ المانيفست المنشورة — أي ضلع أنقص من اللي قبله
+بيوقف النشر بالاسماء.
+
+**الافتراضي قاصدًا:** `NOVA_WORDLIST_SIZE` بياخد `xl|large|vuln|params|params-xl|subdomains-xl`،
+والسريع (215 سطر) لسه الافتراضي لأن على مكنة نواة واحدة القايمة الكبيرة تاخد دقائق —
+قرار المشغّل، مش قرارنا. resolver بتاع JS في الاستطلاع السلبي لسه على سقفه المقيس؛
+القرايات الكبيرة دي للأدوات السريعة (ffuf/gobuster/dalfox).
+
+## توزيع الحمل: المكنة الضعيفة تستهلك، ورّشة جيت هاب تنتج
+
+القياس على حاوية Waifly: **0.4 CPU / ~460MB RAM / 1024MB قرص** (أرقام «المُضيف» في
+اللوحة مش أرقام الكونتينر، والـGPU مش متاح من جوه Pterodactyl). في المقابل رانر
+جيت هاب المجاني 2 نواة / 7GB. فالقاعدة: أي شغل «إنتاج بيانات» يتعمل في CI ويتنشر،
+والمكنة تستهلكه بأرخص شكل ممكن:
+
+- **الكوربوس**: `vuln-corpus.yml` بيبنيه كل 30 دقيقة وينشره release asset. على
+  المكنة `NOVA_CVE_SOURCE=ci` بيحوّل كرون `cve_hunt` من «اجري على 4 مصادر كل 5
+  دقايق» لـ«اقرا فهرس المرآة الصغير، ونزّل بس لما تكون أجدد» — الخطوة المكررة
+  بتكلّف GET واحدة صغيرة (`refreshCorpusFromRelease` في `lib/ops/vuln-corpus.ts`).
+- **أي كرون يتقفل بالاسم من غير كود**: `NOVA_CRON_OFF=cve_hunt,nova_learn`
+  (الأسماء من جدول `nova-cron.ts`). الكرونات المحلية الصغيرة (self_heal /
+  sys_watchdog / mem_consolidate) تفضل شغالة — تكلفتها قريبة من الصفر أصلًا.
+- اللي يفضل على المكنة بالضرورة: خدمة اللوحة والـWebSocket للأسطول، تنفيذ مهام
+  الأدوات اللي المشغّل بيطلبها (دي طبيعتها execution plane)، والحراسة الذاتية.
+
+## قاعدة البيانات (Supabase Postgres مجاني — 500MB)
+
+`DATABASE_URL` لو موجود (`index.ts` ~510) بيقلّع migrations ذاتية + scheduler بتاع
+الـDB + مراقب CVE بتاع الـDB + مدير المفاتيح؛ ولو غايب أو مش راضي يوصل، التطبيق
+بيرجع standalone من غير ما يقع (الأخطاء بتتسجّل بس، والـpool timeout 1.5s).
+الخطوات على أي مشروع Supabase:
+
+1. Dashboard → Settings → Database → خد **Session pooler** string (مش Direct —
+   دايركت IPv6 بس على الخطة المجانية، وWaifly IPv4):
+   `postgresql://postgres.<ref>:<pass>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require`
+2. SQL Editor → الصق محتوى `lib/db/drizzle/0000_nova_init.sql` (38 جدول — متولّد
+   من `lib/db/src/schema` بـdrizzle-kit، يعني مصدر الحقيقة واحد) → Run.
+3. حط السطر في `.env` على المكنة وRestart. علامة النجاح في اللوج:
+   `CVE schema migrations applied` واختفاء سطر standalone mode.
+
+**مش محتاجين GitHub token على المكنة**: أصول الـreleases عامة بتتقري من غير
+مصادقة، والـstate بيتكتب من الـCI مش من المكنة، والطابور بيتحرّر من واجهة ويب
+جيت هوب. توكن من غير وظيفة = سطح تسريب زيادة. لو يومًا عايزين المكنة ترمي مهمات
+في `state/nova-queue.json` بنفسها، ساعتها fine-grained PAT بـcontents:write على
+الريبو ده بس.

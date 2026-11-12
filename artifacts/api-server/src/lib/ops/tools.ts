@@ -20,12 +20,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
+import { paramsList, resolveList, wordlistPath } from "./wordlist";
 import {
   scanDns,
   scanHeaders,
   scanPorts,
   scanSsl,
-  scanSubdomains,
+  scanSubdomains,  SUB_WORDLIST_SIZE,
   nvdSearch,
 } from "../security-tools";
 import { fetchSecurityTxt, type Program } from "./scope";
@@ -33,6 +34,7 @@ import { HOSTS, freeHostSummary, type FreeHost } from "./free-hosts";
 import { execOnLocalAgent } from "../../routes/local-agent";
 import { sessionArgs, sessionHeaders, redactSecrets, hasSession } from "./session";
 import { libraryStatus, lookupProduct } from "./advisory-library";
+import { ensureToolBinary } from "./tool-ondemand";
 import { corpusStatus, queryCorpus } from "./vuln-corpus";
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
@@ -371,6 +373,44 @@ function nucleiEtaMs(p: Record<string, unknown>, rps: number): { templates: numb
   return { profile, templates: NUCLEI_PROFILES[profile].templates, rps: Math.round(r), etaMs: Math.ceil(NUCLEI_PROFILES[profile].templates / r) * 1000 };
 }
 
+/**
+ * سؤال crt.sh عن أسماء الشهادات الصادرة للنطاق. بياتراجع هنا بدل ما يكون في
+ * `security-tools.ts` عشان الفشل لازم يوصل للمكان اللي بيحكي عنه في الـsummary —
+ * «صفر اسم» و«سجل الشهادات ماردّش» حاجتين مختلفتين خالص.
+ */
+async function ctLogNames(host: string): Promise<{ names: string[]; error: string | null }> {
+  const url = `https://crt.sh/?q=%25.${encodeURIComponent(host)}&output=json`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(20_000), headers: { accept: "application/json", "user-agent": "NOVA-recon/1.0" } });
+    if (!res.ok) return { names: [], error: `HTTP ${res.status}` };
+    const doc = (await res.json()) as Array<{ name_value?: string }>;
+    const set = new Set<string>();
+    for (const row of Array.isArray(doc) ? doc : []) {
+      for (const line of String(row?.name_value ?? "").split(/\r?\n/)) {
+        const n = line.trim().toLowerCase().replace(/^\*\.?/, "");
+        if (n) set.add(n);
+      }
+    }
+    return { names: [...set].sort(), error: null };
+  } catch (e) {
+    return { names: [], error: String((e as Error)?.message ?? e).slice(0, 120) };
+  }
+}
+
+/** قفل الاعتماديات بتاعنا — نفس الملف اللي البوابات بتمشي عليه (مابيخترعش مسار). */
+function lockfilePath(): string {
+  for (const base of [process.cwd(), path.resolve(process.cwd(), ".."), path.resolve(process.cwd(), "../..")]) {
+    const p = path.join(base, "pnpm-lock.yaml");
+    try {
+      if (fs.statSync(p).isFile()) return p;
+    } catch {
+      /* جرّب اللي بعده */
+    }
+  }
+  // مالقيناشش قفل = رجّع فاضي؛ المستدعي بيقرر يعمل scan -r ولا يفوت بهدوء.
+  return "";
+}
+
 export const KINDS: Record<string, KindDef> = {
   /* ── builtin · passive or single-request, work anywhere ───────────────── */
   "recon.dns": {
@@ -603,13 +643,24 @@ export const KINDS: Record<string, KindDef> = {
 
   "recon.certspotter": {
     id: "recon.certspotter",
-    titleAr: "تعداد نطاقات فرعية من سجلات الشهادات (سلبي)",
+    titleAr: "نطاقات فرعية: سجل شهادات crt.sh + تجربة أسماء على DNS (سلبي)",
     active: false,
     run: async (ctx) => {
+      // الاسم كان بيقول «سجل الشهادات» وهو ما بيسألش سجل الشهادات خالص — كان
+      // بيعمل تجربة 34 اسم على DNS وبس. بقى الاتنين: سؤال crt.sh الحقيقي،
+      // وتجربة الأسماء، وكل مصدر بيقول هو جه من فين ولو فشل بيقول فشل.
+      const ct = await ctLogNames(ctx.host);
       const rows = await scanSubdomains(ctx.host);
-      const ev = writeEvidence(ctx, "recon.certspotter", `crt.sh?q=%.${ctx.host}`, JSON.stringify(rows, null, 2));
+      const ev = writeEvidence(
+        ctx,
+        "recon.certspotter",
+        `crt.sh?q=%.${ctx.host} + dns-brute(${SUB_WORDLIST_SIZE})`,
+        JSON.stringify({ source: ct.error ? `failed: ${ct.error}` : "crt.sh", ct: ct.names, dns: rows }, null, 2),
+      );
       const apex = ctx.host;
       const findings: Finding[] = [];
+      const seen = new Set(rows.map((r) => r.subdomain));
+      const ghost = ct.names.filter((n) => !seen.has(n.toLowerCase()) && /(^|\.)(dev|staging|test|uat|internal|admin)[-.]|[-.](dev|staging|test|internal)\./i.test(n));
       const dangling = rows.filter((r) => /(^|\.)((dev|staging|test|uat|internal|admin)-|-(dev|staging|test|internal)\.)/i.test(r.subdomain) && r.ips.length === 0);
       for (const d of dangling.slice(0, 5)) {
         findings.push(
@@ -627,7 +678,25 @@ export const KINDS: Record<string, KindDef> = {
           }),
         );
       }
-      return { ok: true, summary: `${rows.length} نطاق فرعي من CT logs (سلبي) · ${findings.length} مرشّح`, findings, data: { count: rows.length, apex, subdomains: rows.map((r) => r.subdomain) }, };
+      return {
+        ok: true,
+        summary:
+          `${ct.names.length} اسم من crt.sh · ${rows.length} نطاق من تجربة ${SUB_WORDLIST_SIZE} اسم على DNS` +
+          (ct.error ? ` — crt.sh ماردّش (${ct.error}) فاللي فوق من DNS بس` : "") +
+          ` · ${findings.length} مرشّح`,
+        findings,
+        data: {
+          count: rows.length + ct.names.length,
+          fromCt: ct.names.length,
+          fromDns: rows.length,
+          ctError: ct.error ?? null,
+          tried: SUB_WORDLIST_SIZE,
+          ghostFromCt: ghost.length,
+          apex,
+          subdomains: rows.map((r) => r.subdomain),
+          ctNames: ct.names.slice(0, 80),
+        },
+      };
     },
   },
 
@@ -1086,6 +1155,428 @@ export const KINDS: Record<string, KindDef> = {
       return { findings: [], data };
     },
   },
+
+  /* ── أدوات المِرر الثابتة (2026-11-07) ───────────────────────────────────────
+   * دي بتيجي من `scripts/fetch-toolchain.mjs` (نسخ ثابتة بلا root) وبتتنزّل من
+   * مرآتنا على جيت هاب (`nova-toolchain`) لأن `api.github.com` محجوب من الحاوية
+   * (متقاس: `GET /api/ops/tools → last` يوم 17:32:23Z). مافيهاش رقم مكتوب:
+   * الأداة بتتنفّذ فعلاً، والدليل بيتكتب بـ`writeEvidence`، ولو الأداة رجّعت
+   * «flag provided but not defined» ده بيبان في stderr المسجّل مش يختفي.
+   */
+
+  "tools.amass": {
+    id: "tools.amass",
+    titleAr: "amass (تعداد أسماء فرعية من مصادر عامة)",
+    active: false, // passive: بيقرأ مصادر عامة، ما بيلمس الهدفش
+    binary: "amass",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only amass",
+    budgetMs: 150_000,
+    args: (ctx) => ["enum", "-passive", "-d", ctx.host, "-silent", "-timeout", "120"],
+    command: (ctx) => `amass enum -passive -d ${shQuote(ctx.host)} -silent`,
+    parse: (stdout, ctx) => {
+      const subs = new Set<string>();
+      for (const line of stdout.split(/\r?\n/)) {
+        const m = line.match(/\b([a-z0-9][a-z0-9._-]*\.[a-z]{2,})\b/i);
+        if (m && m[1].toLowerCase().endsWith(`.${ctx.host.toLowerCase()}`)) subs.add(m[1].toLowerCase());
+      }
+      writeEvidence(ctx, "tools.amass", `amass enum -passive -d ${ctx.host}`, stdout);
+      return { findings: [], data: { subdomains: [...subs].slice(0, 500), count: subs.size } };
+    },
+  },
+
+  "tools.naabu": {
+    id: "tools.naabu",
+    titleAr: "naabu (كشف بورتات مفتوحة — على مصرّح به بس)",
+    active: true, // بيلمس الهدف: الحارس `assertAuthorized(..., {active:true})` في runner.ts
+    binary: "naabu",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only naabu",
+    budgetMs: 90_000,
+    args: (ctx) => ["-host", ctx.host, "-top-ports", "100", "-json", "-silent", "-rate", "100", "-timeout", "3"],
+    command: (ctx) => `naabu -host ${shQuote(ctx.host)} -top-ports 100 -json -silent -rate 100`,
+    parse: (stdout, ctx) => {
+      const open: Array<{ port: number; transport: string }> = [];
+      for (const line of stdout.split(/\r?\n/)) {
+        if (!line.trim().startsWith("{")) continue;
+        try {
+          const j = JSON.parse(line) as { port?: number; transport?: string };
+          if (typeof j.port === "number") open.push({ port: j.port, transport: j.transport ?? "tcp" });
+        } catch { /* سطر وسطي من الأداة — نتجاهله ونكمل */ }
+      }
+      writeEvidence(ctx, "tools.naabu", `naabu -host ${ctx.host}`, stdout);
+      const findings = open.slice(0, 12).map((o) =>
+        mkFinding(ctx, {
+          kind: "tools.naabu",
+          title: `Open port ${o.port}/${o.transport}`,
+          titleAr: `بورت مفتوح: ${o.port}/${o.transport}`,
+          severity: o.port === 6379 || o.port === 3306 || o.port === 5432 || o.port === 27017 ? "high" : "info",
+          confidence: 0.9,
+          cwe: "CWE-200",
+          target: `${ctx.host}:${o.port}`,
+          reproduce: `nc -vz ${shQuote(ctx.host)} ${o.port}`,
+          remediationAr: "اقفل البورت على حدود الشبكة أو حطّه خلف VPN؛ مافيش معنى إن داتابيز تسمع على العنوان العام.",
+          evidence: [writeEvidence(ctx, "tools.naabu.hit", `port ${o.port}`, String(o.port))],
+        }),
+      );
+      return { findings, data: { openPorts: open.map((o) => o.port), count: open.length } };
+    },
+  },
+
+  "tools.ffuf": {
+    id: "tools.ffuf",
+    titleAr: "ffuf (بحث مسارات بالقائمة المدمجة)",
+    active: true,
+    binary: "ffuf",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only ffuf",
+    budgetMs: 120_000,
+    args: (ctx) => {
+      const wl = wordlistPath();
+      return ["-u", `${baseUrl(ctx)}/FUZZ`, "-w", wl || "/dev/null", "-t", "20", "-mc", "200,204,301,302,401,403,429", "-s", "-timeout", "10"];
+    },
+    command: (ctx) => `ffuf -u ${shQuote(`${baseUrl(ctx)}/FUZZ`)} -w ${shQuote(wordlistPath() || "— مفيش wordlist")} -t 20 -mc 200,301,302,401,403 -s`,
+    parse: (stdout, ctx) => {
+      const hits = [...stdout.matchAll(/^\/?(\S+)\s+\[Status: (\d+), Size: (\d+)/gm)].map((m) => ({ path: `/${m[1]}`, status: Number(m[2]), size: Number(m[3]) }));
+      writeEvidence(ctx, "tools.ffuf", `ffuf ${baseUrl(ctx)}/FUZZ`, stdout);
+      const findings = hits.slice(0, 10).map((h) =>
+        mkFinding(ctx, {
+          kind: "tools.ffuf",
+          title: `Discovered path ${h.path}`,
+          titleAr: `مسار مكشوف: ${h.path}`,
+          severity: /\.(env|git|sql|bak)|admin|actuator|config|backup/i.test(h.path) ? "medium" : "info",
+          confidence: 0.55,
+          cwe: "CWE-538",
+          target: `${baseUrl(ctx)}${h.path}`,
+          reproduce: `curl -si ${shQuote(`${baseUrl(ctx)}${h.path}`)}`,
+          remediationAr: "المسارات الإدارية ما تتكشفش بالعشوائية: حطّها خلف تصريح وسجّل الدخول الفاشل.",
+          evidence: [writeEvidence(ctx, "tools.ffuf.hit", h.path, `status=${h.status} size=${h.size}`)],
+        }),
+      );
+      return { findings, data: { paths: hits.length, sample: hits.slice(0, 60), wordlist: wordlistPath() || null } };
+    },
+  },
+
+  "tools.gobuster": {
+    id: "tools.gobuster",
+    titleAr: "gobuster (تأكيد مسارات — أداة تانية، نفس الهدف)",
+    active: true,
+    binary: "gobuster",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only gobuster",
+    budgetMs: 110_000,
+    args: (ctx) => ["dir", "-u", `${baseUrl(ctx)}/`, "-w", wordlistPath() || "/dev/null", "-q", "-t", "10", "--timeout", "10s", "-k"],
+    command: (ctx) => `gobuster dir -u ${shQuote(`${baseUrl(ctx)}/`)} -w ${shQuote(wordlistPath() || "— مفيش wordlist")} -q -t 10`,
+    parse: (stdout, ctx) => {
+      const hits = [...stdout.matchAll(/^\/(\S+)\s+\(Status:\s*(\d+)/gm)].map((m) => ({ path: `/${m[1]}`, status: Number(m[2]) }));
+      writeEvidence(ctx, "tools.gobuster", `gobuster dir ${baseUrl(ctx)}`, stdout);
+      return { findings: [], data: { paths: hits.length, sample: hits.slice(0, 60), wordlist: wordlistPath() || null } };
+    },
+  },
+
+  "tools.dalfox": {
+    id: "tools.dalfox",
+    titleAr: "dalfox (فحص XSS على مصرّح به)",
+    active: true,
+    binary: "dalfox",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only dalfox",
+    budgetMs: 120_000,
+    args: (ctx) => ["url", `${baseUrl(ctx)}/`, "--only-poc=s", "--quiet", "--no-color"],
+    command: (ctx) => `dalfox url ${shQuote(`${baseUrl(ctx)}/`)} --only-poc=s --quiet`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.dalfox", `dalfox url ${baseUrl(ctx)}`, stdout);
+      const poc = [...stdout.matchAll(/\[POC]\s*(\S+)/g)].map((m) => m[1]);
+      const findings = poc.slice(0, 8).map((u) =>
+        mkFinding(ctx, {
+          kind: "tools.dalfox",
+          title: "Reflected XSS confirmed by payload",
+          titleAr: "XSA منعكس مؤكَّد ببيلود نُفّذ",
+          severity: "high",
+          confidence: 0.6,
+          cwe: "CWE-79",
+          target: u.slice(0, 300),
+          reproduce: `dalfox url ${shQuote(u)}`,
+          remediationAr: "اِهروب السياق (HTML/attribute/JS) حسب موضع الإدخال، ومحتوى صارم للـCSP على الصفحة دي.",
+          evidence: [writeEvidence(ctx, "tools.dalfox.hit", u, stdout.slice(0, 4000))],
+        }),
+      );
+      return { findings, data: { poc: poc.length } };
+    },
+  },
+
+  "tools.gitleaks": {
+    id: "tools.gitleaks",
+    titleAr: "gitleaks (تدقيق المستودع بتاعنا: مفاتيح اتسرّبت)",
+    active: false, // على الشجرة المحلية، مش على هدف خارجي
+    binary: "gitleaks",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only gitleaks",
+    budgetMs: 180_000,
+    args: () => ["detect", "--no-git", "--source", process.cwd(), "-f", "json", "--exit-code", "0", "--redact"],
+    command: () => `gitleaks detect --no-git --source ${shQuote(process.cwd())} -f json --exit-code 0 --redact`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.gitleaks", `gitleaks detect ${process.cwd()}`, stdout);
+      let rows: Array<{ RuleID?: string; File?: string; Line?: number; Match?: string }> = [];
+      try {
+        const parsed = JSON.parse(stdout.slice(stdout.indexOf("["), stdout.lastIndexOf("]") + 1));
+        if (Array.isArray(parsed)) rows = parsed as typeof rows;
+      } catch {
+        /* مفيش نتائج = مفيش JSON — مش خطأ نعلنه كصفر */
+      }
+      const findings = rows.slice(0, 12).map((r) =>
+        mkFinding(ctx, {
+          kind: "tools.gitleaks",
+          title: `Leaked secret in our own tree: ${r.RuleID ?? "rule?"}`,
+          titleAr: `سر مسرّب في المستودع بتاعنا: ${r.RuleID ?? "قاعدة مجهولة"}`,
+          severity: "critical",
+          confidence: 0.8,
+          cwe: "CWE-798",
+          target: `${String(r.File ?? "?")}:${String(r.Line ?? "?")}`,
+          reproduce: `gitleaks detect --no-git --source . -f json`,
+          remediationAr: "ادوّر المفتاح (rotation) وامسحه من التاريخ، وسيلّه في CI — القالب اللي بيقبض على أي pattern بيموت بعد أول يوم، فالبصمة بتاعتنا مقصودة.",
+          evidence: [writeEvidence(ctx, "tools.gitleaks.hit", String(r.File ?? "?"), String(r.Match ?? "redacted").slice(0, 200))],
+        }),
+      );
+      return { findings, data: { leaks: rows.length, scanned: process.cwd(), redacted: true } };
+    },
+  },
+
+  /* ── إضافات 2026-11-07: أدوات جاية من المِرر، بنفس قواعد الإذن ─────────────
+   * تلاتة منها بتشتغل علي الشجرة بتاعتنا (osv/trufflehog) — يعني الفحص مابيرجعش
+   * «صفر» لأن النت مقفول، وواحدة بتكلّم شهادات TLS، وواحدة بتعدّي بارامترات من
+   * قائمة SecLists مدمجة. الأعلام هنا من وثايق كل أداة؛ ولو واحدة منهم غلط،
+   * الأداة بترجع exit != 0 وstderr بيتسجّل في الدليل — مافيش «نجح» من غير قياس.
+   */
+
+  "tools.tlsx": {
+    id: "tools.tlsx",
+    titleAr: "tlsx (شهادات TLS: انتهاء، توقيع ذاتي، سلاسل ناقصة)",
+    active: true, // بيفتح يد على بورت 443 بتاع الهدف
+    binary: "tlsx",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only tlsx",
+    budgetMs: 60_000,
+    args: (ctx) => ["-host", ctx.host, "-port", "443", "-json", "-silent"],
+    command: (ctx) => `tlsx -host ${shQuote(ctx.host)} -port 443 -json -silent`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.tlsx", `tlsx ${ctx.host}`, stdout);
+      const rows: Record<string, unknown>[] = [];
+      for (const line of stdout.split(/\r?\n/)) {
+        if (!line.trim().startsWith("{")) continue;
+        try {
+          rows.push(JSON.parse(line) as Record<string, unknown>);
+        } catch { /* سطر وسطي */ }
+      }
+      const findings: Finding[] = [];
+      for (const r of rows.slice(0, 8)) {
+        const expired = r.expired === true || r.Expired === true;
+        const selfSigned = String(r.cert_chain ?? "").length === 0 || r.self_signed === true;
+        if (!expired && !selfSigned) continue;
+        findings.push(
+          mkFinding(ctx, {
+            kind: "tools.tlsx",
+            title: expired ? "TLS certificate is expired" : "TLS certificate has an incomplete chain",
+            titleAr: expired ? "شهادة TLS منتهية الصلاحية" : "سلسلة الشهادة ناقصة/توقيع ذاتي",
+            severity: expired ? "high" : "medium",
+            confidence: 0.9,
+            cwe: "CWE-295",
+            target: `${ctx.host}:443`,
+            reproduce: `echo | openssl s_client -connect ${shQuote(`${ctx.host}:443`)} -servername ${shQuote(ctx.host)} 2>/dev/null | openssl x509 -noout -dates -issuer`,
+            remediationAr: "جدّد الشهادة واثبت السلسلة الكاملة (intermediate)؛ المتصفح بيحذّر ومش بيغلطش لمصلحتك.",
+            evidence: [writeEvidence(ctx, "tools.tlsx.hit", `${ctx.host}:443`, JSON.stringify(r).slice(0, 2000))],
+          }),
+        );
+      }
+      return { findings, data: { certs: rows.length } };
+    },
+  },
+
+  "tools.uncover": {
+    id: "tools.uncover",
+    titleAr: "uncover (أصول مكشوفة للنطاق على محركات بحث عامة)",
+    active: false, // بيبحث في مصادر عامة عن النطاق، ما بيلمسش الهدف
+    binary: "uncover",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only uncover",
+    budgetMs: 75_000,
+    args: (ctx) => ["-q", `domain:${ctx.host}`, "-silent", "-json"],
+    command: (ctx) => `uncover -q ${shQuote(`domain:${ctx.host}`)} -silent -json`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.uncover", `uncover domain:${ctx.host}`, stdout);
+      const hits: Array<{ ip: string; port: string; proto: string; src: string }> = [];
+      for (const line of stdout.split(/\r?\n/)) {
+        if (!line.trim().startsWith("{")) continue;
+        try {
+          const j = JSON.parse(line) as Record<string, unknown>;
+          hits.push({
+            ip: String(j.ip ?? j.URL ?? "?"),
+            port: String(j.port ?? ""),
+            proto: String(j.proto ?? j.protocol ?? ""),
+            src: String(j.source ?? ""),
+          });
+        } catch { /* سطر وسطي */ }
+      }
+      const risky = hits.filter((h) => /^(22|23|3389|5900|6379|9200|27017|554|8545)$/.test(h.port));
+      const findings = risky.slice(0, 8).map((h) =>
+        mkFinding(ctx, {
+          kind: "tools.uncover",
+          title: `Exposed service in public indexes: ${h.ip}:${h.port}`,
+          titleAr: `خدمة مكشوفة مسجّلة في محركات بحث عامة: ${h.ip}:${h.port}`,
+          severity: "high",
+          confidence: 0.7,
+          cwe: "CWE-200",
+          target: `${h.ip}:${h.port}`,
+          reproduce: `uncover -q ${shQuote(`domain:${ctx.host}`)} -silent -json | grep ${shQuote(String(h.port))}`,
+          remediationAr: "المؤشر العام معناه إن المنفذ كان مفتوح للعالم: اقفلُه أو طلعه خلف VPN، واطلب مسح من المحركات.",
+          evidence: [writeEvidence(ctx, "tools.uncover.hit", `${h.ip}:${h.port}`, JSON.stringify(h))],
+        }),
+      );
+      return { findings, data: { results: hits.length, risky: risky.length, sample: hits.slice(0, 40) } };
+    },
+  },
+
+  "tools.osv": {
+    id: "tools.osv",
+    titleAr: "osv-scanner (ثغرات قفلنا نفسه — من غير قاعدة بيانات ولا نت)",
+    active: false, // محلي 100%
+    binary: "osv-scanner",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only osv-scanner",
+    budgetMs: 180_000,
+    args: () => {
+      // الصيغة الموثّقة في v2 (`docs/usage.md`): `scan -L <قفل> --format json`، أو
+      // `scan -r <مجلد>` لو مالقيناوش (حزمة standalone). `--no-resolve` عشان
+      // ميعملش شبكة لنبني شجرة — على البوكس اللي النت فيه محدود ده فرق جوهري.
+      const lock = lockfilePath();
+      if (lock) return ["scan", "-L", lock, "--format", "json", "--no-resolve"];
+      // البوكس ماإلوش قفل في الجذر (huly: ROOT=artifacts/api-server) — نلقّيه في
+      // الشجرة ونمسك أول قفل npm/pnpm، ولو مافيشش نعمل scan -r على الجذر نفسه.
+      for (const base of [path.resolve(process.cwd(), ".."), path.resolve(process.cwd(), "../..")]) {
+        for (const name of ["pnpm-lock.yaml", "package-lock.json", "yarn.lock"]) {
+          const p = path.join(base, name);
+          try {
+            if (fs.statSync(p).isFile()) return ["scan", "-L", p, "--format", "json", "--no-resolve"];
+          } catch {
+            /* كمّل */
+          }
+        }
+      }
+      return ["scan", "-r", ".", "--format", "json", "--no-resolve"];
+    },
+    command: () => `osv-scanner scan ${lockfilePath() ? `-L ${path.basename(lockfilePath())}` : "-r ."} --format json`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.osv", `osv-scanner ${path.basename(lockfilePath() || ".")}`, stdout);
+      const vulns: Array<{ id?: string; package?: { name?: string; version?: string }; aliases?: string[]; severity?: string }> = [];
+      try {
+        const doc = JSON.parse(stdout.slice(stdout.indexOf("{"), stdout.lastIndexOf("}") + 1)) as { results?: Array<{ packages?: Array<{ packagePath?: unknown; vulnerabilities?: typeof vulns }> }> };
+        for (const r of doc?.results ?? []) for (const pkg of r?.packages ?? []) vulns.push(...(pkg?.vulnerabilities ?? []));
+      } catch {
+        /* مفيش JSON = الأداة ما خلّصتش؛ stderr بيتسجّل فوق في الدليل */
+      }
+      const findings = vulns.slice(0, 15).map((v) =>
+        mkFinding(ctx, {
+          kind: "tools.osv",
+          title: `${v.package?.name ?? "?"}@${v.package?.version ?? "?"} — ${v.id ?? "?"}`,
+          titleAr: `اعتمادية فيها ثغرة معروفة: ${v.package?.name ?? "?"}@${v.package?.version ?? "?"} (${v.id ?? "?"})`,
+          severity: "high",
+          confidence: 0.9,
+          cwe: "CWE-1104",
+          target: String(v.package?.name ?? "dependency"),
+          reproduce: "osv-scanner scan -L pnpm-lock.yaml --format json",
+          remediationAr: "ارفع النسخة في pnpm-lock واعمل commit للقفل، وسيب البوابة تقيسه.",
+          evidence: [writeEvidence(ctx, "tools.osv.hit", String(v.package?.name ?? "?"), JSON.stringify(v).slice(0, 1500))],
+        }),
+      );
+      return { findings, data: { vulns: vulns.length, source: path.basename(lockfilePath() || "scan -r .") } };
+    },
+  },
+
+  "tools.trufflehog": {
+    id: "tools.trufflehog",
+    titleAr: "trufflehog (مفاتيح حقيقية في شجرتنا — المتحقق منها بس)",
+    active: false,
+    binary: "trufflehog",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only trufflehog",
+    budgetMs: 240_000,
+    // `--results=verified` بدل `--only-verified` اللي اتغير اسمها في v3،
+    // و`--no-update-check` يمنع الأداة تلمّ نفسها من النت وقت التشغيل.
+    args: () => ["filesystem", process.cwd(), "--json", "--results=verified", "--no-update-check"],
+    command: () => `trufflehog filesystem ${shQuote(process.cwd())} --json --results=verified`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.trufflehog", `trufflehog filesystem ${process.cwd()}`, stdout);
+      const rows: Array<Record<string, unknown>> = [];
+      for (const line of stdout.split(/\r?\n/)) {
+        if (!line.trim().startsWith("{")) continue;
+        try {
+          rows.push(JSON.parse(line) as Record<string, unknown>);
+        } catch { /* سطر وسطي */ }
+      }
+      const findings = rows.slice(0, 10).map((r) => {
+        const det = (r.detector_name as string) || (r.DecoderName as string) || "secret";
+        const loc = (r.SourceMetadata as { Source?: { Raw?: string } })?.Source?.Raw || String(r.location ?? "?");
+        return mkFinding(ctx, {
+          kind: "tools.trufflehog",
+          title: `Verified ${det} credential in our own tree`,
+          titleAr: `مفتاح ${det} متحقق منه في شجرتنا`,
+          severity: "critical",
+          confidence: 0.95,
+          cwe: "CWE-798",
+          target: loc.slice(0, 200),
+          reproduce: `trufflehog filesystem . --json --results=verified`,
+          remediationAr: "ادوّر المفتاح حالا وامسحه من التاريخ (git filter-repo) وسيلّه في CI.",
+          evidence: [writeEvidence(ctx, "tools.trufflehog.hit", loc, JSON.stringify(r).slice(0, 2000))],
+        });
+      });
+      return { findings, data: { verifiedLeaks: rows.length } };
+    },
+  },
+
+  "tools.parammine": {
+    id: "tools.parammine",
+    titleAr: "صيد بارامترات (ffuf + قائمة burp المدمجة)",
+    active: true,
+    binary: "ffuf",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only ffuf",
+    budgetMs: 120_000,
+    args: (ctx) => ["-u", `${baseUrl(ctx)}/?FUZZ=1`, "-w", paramsList() || "/dev/null", "-t", "20", "-mc", "200,204,301,302,400,401,403,429", "-s", "-timeout", "8"],
+    command: (ctx) => `ffuf -u ${shQuote(`${baseUrl(ctx)}/?FUZZ=1`)} -w ${shQuote(paramsList() || "— مفيش قائمة بارامترات")} -t 20 -mc 200,400,401,403 -s`,
+    parse: (stdout, ctx) => {
+      const names = [...stdout.matchAll(/^\/(\S+?)\s+\[Status: (\d+)/gm)].map((m) => ({ name: m[1], status: Number(m[2]) }));
+      writeEvidence(ctx, "tools.parammine", `ffuf ?FUZZ ${baseUrl(ctx)}`, stdout);
+      return {
+        findings: [],
+        data: { params: names.length, sample: names.slice(0, 80), list: paramsList() || null },
+      };
+    },
+  },
+
+  "tools.trivy": {
+    id: "tools.trivy",
+    titleAr: "trivy (ثغرات الحزم في شجرتنا + أسرار)",
+    active: false,
+    binary: "trivy",
+    installHint: "GET /api/ops/tools · node scripts/fetch-toolchain.mjs --only trivy",
+    budgetMs: 240_000,
+    args: () => ["fs", "--scanners", "vuln,secret", "--severity", "CRITICAL,HIGH", "--format", "json", "--quiet", "--exit-code", "0", process.cwd()],
+    command: () => `trivy fs --scanners vuln,secret --severity CRITICAL,HIGH --format json .`,
+    parse: (stdout, ctx) => {
+      writeEvidence(ctx, "tools.trivy", `trivy fs ${process.cwd()}`, stdout);
+      let vulns: Array<{ VulnerabilityID?: string; PkgName?: string; InstalledVersion?: string; FixedVersion?: string; Severity?: string }> = [];
+      try {
+        const doc = JSON.parse(stdout.slice(stdout.indexOf("{"), stdout.lastIndexOf("}") + 1)) as { Results?: Array<{ Vulnerabilities?: typeof vulns }> };
+        for (const r of doc?.Results ?? []) vulns.push(...(r?.Vulnerabilities ?? []));
+      } catch {
+        /* مفيش مخرجات JSON = الأداة ما خلّصتش، وده بيتسجّل في stderr */
+      }
+      const findings = vulns.slice(0, 15).map((v) =>
+        mkFinding(ctx, {
+          kind: "tools.trivy",
+          title: `${v.PkgName ?? "?"}@${v.InstalledVersion ?? "?"} — ${v.VulnerabilityID ?? "?"}`,
+          titleAr: `حزمة فيها ثغرة: ${v.PkgName ?? "?"}@${v.InstalledVersion ?? "?"} (${v.VulnerabilityID ?? "?"})`,
+          severity: v.Severity === "CRITICAL" ? "critical" : "high",
+          confidence: 0.85,
+          cwe: "CWE-1104",
+          target: String(v.PkgName ?? "dependency"),
+          reproduce: `trivy fs --scanners vuln --severity CRITICAL,HIGH .`,
+          remediationAr: v.FixedVersion ? `ارفع النسخة لـ${v.FixedVersion} في pnpm-lock وسجّل القفل.` : "مافيش نسخة مُصلَحة بعد: شيل الاعتمادية أو قيّدها.",
+          evidence: [writeEvidence(ctx, "tools.trivy.hit", String(v.PkgName ?? "?"), JSON.stringify(v).slice(0, 1500))],
+        }),
+      );
+      return { findings, data: { vulns: vulns.length, packages: new Set(vulns.map((v) => v.PkgName)).size } };
+    },
+  },
 };
 
 export const KIND_LIST = Object.values(KINDS).map((k) => ({
@@ -1133,7 +1624,7 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
   // tool the exec then killed with 127 (measured: Actions run 41451529132, `tools.*: tool-missing`
   // for binaries /ops/kinds had just reported present). Spawn the resolved path, and put its
   // directory first on the child's PATH so tools that shell out to siblings still work.
-  const abs = findBinary(bin) ?? bin;
+  let abs = findBinary(bin) ?? bin;
   const runLocal = async (): Promise<KindResult> => {
     const res = await runArgv(abs, argv, {
       cwd: ctx.jobDir,
@@ -1196,6 +1687,17 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
     if (!out) {
       return { ok: false, summary: `الجهاز ${agentId} ماردّش على ${bin}`, findings: [], error: "agent-unreachable" };
     }
+    // 127 على جهاز تاني معناه الأداة مش منصّبة هناك — «0 نتيجة» لوحدها كانت
+    // بتبان كأن الفحص اتعمل ومافيش حاجة، وده أخطر سكوت ممكن يكون في ماسح.
+    if (out.exitCode === 127) {
+      return {
+        ok: false,
+        summary: `الأداة «${bin}» مش على الجهاز ${agentId} (exit=127). أمر التثبيت: ${kind.installHint ?? "/api/installer/tools"}`,
+        findings: [],
+        error: "tool-missing",
+        data: { exit: 127, command: display, agent: agentId },
+      };
+    }
     const parsed = kind.parse ? kind.parse(out.stdout, ctx) : { findings: [] };
     writeEvidence(ctx, `${kindId}.${agentId}`, display, out.stdout, out.exitCode);
     return {
@@ -1205,6 +1707,18 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
       data: { ...(parsed.data ?? {}), exit: out.exitCode, stderr: (out.stderr || "").slice(0, 2_000) },
     };
   };
+
+  // العقدة الذاتية = نفس الجهاز ونفس القرص، بس الأمر بيمرّ على shell مش عارف
+  // vendor/bin. القياس (state/verified-live.json @ 05:44:25Z): كل مهام tools.*
+  // رجّعت «[self-node] <bin> exit=127 · 4–7ms · 0 نتيجة» — أي إن الأداة كانت
+  // اتحلت بمسارها الحقيقي في `abs` (وسطحها /ops/kinds كـpresent)، بس الفرع ده
+  // بيرمي `display` الخام فيخسر المسار ويموت بـ127 قبل ما يبدأ. نفس الغلط اللي
+  // التعليق فوق حارس منه، بس على الفرع التاني.
+  const selfNodeId = process.env.NOVA_SELF_NODE_ID || "self-node";
+  if (ctx.agentId && ctx.agentId === selfNodeId && abs !== bin) {
+    ctx.log(`tools: «${bin}» اتحلت من ${path.dirname(abs)} — تنفيذ محلي بدل قفزة العقدة الذاتية`);
+    return await runLocal();
+  }
 
   if (ctx.agentId) {
     try {
@@ -1223,13 +1737,21 @@ export async function runKind(kindId: string, params: Record<string, unknown>, c
     };
   }
   if (!findBinary(bin)) {
-    return {
-      ok: false,
-      summary: `الأداة «${bin}» مش على النود ولا على نود متصل. ثبّتها: ${kind.installHint ?? "/api/installer/tools"}`,
-      findings: [],
-      error: "tool-missing",
-      data: { command: display },
-    };
+    // قبل ما نقول «مش موجودة»: الأداة القابلة للبيع بتتجاب من مرآة الريليز أول ما
+    // تتطلب فعلًا — on-demand مع كاش LRU بيتدوّر تحت سقف (ops/tool-ondemand.ts).
+    // فالبرنامج كامل على كوتا قرص صغيرة: 16 أداة متاحين، مش 16 أداة ساكنين. لو
+    // الجلب نفسه تعذّر بنرجع نفس الرد الصريح القديم — مفيش وعد كاذب هنا.
+    const fetched = await ensureToolBinary(bin);
+    if (!fetched) {
+      return {
+        ok: false,
+        summary: `الأداة «${bin}» مش على النود ولا على نود متصل. ثبّتها: ${kind.installHint ?? "/api/installer/tools"}`,
+        findings: [],
+        error: "tool-missing",
+        data: { command: display },
+      };
+    }
+    abs = fetched;
   }
   return await runLocal();
 }

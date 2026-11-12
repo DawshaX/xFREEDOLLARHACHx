@@ -15,6 +15,7 @@
  * Every decision is logged so the panel can show WHY something was refused.
  */
 import { logger } from "../logger";
+import { userFromCookieHeader } from "../panel-auth";
 
 export interface GateRequest {
   method?: string;
@@ -52,6 +53,14 @@ function tokenOk(req: GateRequest): boolean {
   return queryValue(req, "token") === expected || header(req, "x-nova-token") === expected;
 }
 
+function sessionOk(req: GateRequest): boolean {
+  try {
+    return userFromCookieHeader(header(req, "cookie")) !== null;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Same-origin check for browsers. Browsers set `Sec-Fetch-Site` themselves and page
  * scripts cannot forge it, so it is the strongest header-only signal available.
@@ -63,6 +72,18 @@ export function sameOriginOk(req: GateRequest): boolean {
   const host = header(req, "host");
   if (!host) return false;
   if (header(req, "sec-fetch-site") === "same-origin") return true;
+  // مشغّل محلي على نفس الجهاز (مهمة CI حية، cron، curl من صاحب المضيف): المتصفح
+  // هو اللي بيضيف Origin/Referer — السكربت المحلي بيبعت طلب نضيف من اللوباك.
+  // قيسنا الكسر: «NOVA live mission» على جيت-هَب فشلت 5 مرات متتالية (2026-11-09)
+  // لأن نفس سكربت الريبو اتصدّ بـsame_origin_required وهو على 127.0.0.1 مع السيرفر!
+  // ثقة اللوباك = اصطلاح أدوات الأمن المحلية كلها (من داخل الجهاز = من داخل الجهاز)،
+  // والمهاجم عن بُعد عمره ما يبان 127.0.0.1. بس لو فيه وكيل عكسي على نفس الجهاز
+  // هيتنكّر في اللوباك — عشان كده أي هيدر تمرير (XFF/X-Real-IP/CF) بيلغي الثقة.
+  if (!header(req, "origin") && !header(req, "referer")
+      && !header(req, "x-forwarded-for") && !header(req, "x-real-ip") && !header(req, "cf-connecting-ip")) {
+    const ra = String(req.socket?.remoteAddress ?? "");
+    if (ra === "127.0.0.1" || ra === "::1" || ra === "::ffff:127.0.0.1") return true;
+  }
   const origins = [header(req, "origin"), header(req, "referer")].filter(Boolean);
   if (origins.length === 0) return false;
   return origins.some((o) => {
@@ -89,6 +110,9 @@ export function checkGate(req: GateRequest, scope: string): GateVerdict {
   const readOnly = !req.method || READONLY_METHODS.has(req.method.toUpperCase());
   if (tokenConfigured()) {
     if (tokenOk(req)) return { ok: true, code: "allowed", reason: "token ok", how: "" };
+    // جلسة اللوحة (كوكي الدخول من panel-auth) بقوة التوكن لطلبات المتصفح:
+    // صاحب اللوحة سجّل دخوله — الأزرار كلها لازم تشتغل من غير ما يكتب التوكن كل مرة.
+    if (sessionOk(req)) return { ok: true, code: "allowed", reason: "panel session", how: "" };
     // reads of status pages never break; anything that acts requires the token.
     // A sensitive read is also satisfied by same-origin — the same signal the write
     // path trusts, since a foreign page cannot forge `Origin`/`Sec-Fetch-Site`.
@@ -117,6 +141,18 @@ export function checkGate(req: GateRequest, scope: string): GateVerdict {
       how: "على أي استضافة عامة سيّر NOVA_EXEC_TOKEN وإلا كل مسارات التنفيذ هترجع 403.",
     };
   }
+  // A sensitive read is not a public read. Even with no token configured, the
+  // device inventory / tool catalogue / event bus stay behind the same-origin
+  // wall, so a stranger's curl gets 403 instead of the fleet's internals.
+  if (scopeRequiresTokenForRead(scope) && !sameOriginOk(req)) {
+    logger.warn({ scope }, "ops gate blocked: sensitive read, no token, not same-origin");
+    return {
+      ok: false,
+      code: "same_origin_required",
+      reason: "قراءة حساسة مقفولة على زوار من خارج اللوحة",
+      how: "افتح الصفحة من نفس أصل السيرفر، أو سيّر NOVA_EXEC_TOKEN وأرسله في هيدر `x-nova-token` (أو ?token=).",
+    };
+  }
   return { ok: true, code: "allowed", reason: "read-only", how: "" };
 }
 
@@ -134,6 +170,16 @@ const SENSITIVE_READS: RegExp[] = [
   /\/api\/ops\/stats$/,
   /\/api\/keys\b/,
   /\/api\/settings\b/,
+  // The brain's own catalogue and identity: the full tool schema (an attacker's
+  // map of exactly what can be run), the persona card, and the build/version
+  // banner. These were readable by anyone who could reach the host.
+  /\/api\/nova-core\/(tools|persona|version)\b/,
+  // The device inventory: hostname, platform, arch, RAM and user of every
+  // connected box. A stranger must not be able to enumerate the fleet.
+  /\/api\/local-agent\/agents\b/,
+  // The platform event bus: a live firehose of what the engine is doing right
+  // now (tool runs, targets, results).
+  /\/api\/(live-events|agent\/events)\b/,
 ];
 
 // NOTE: `/local-agent/download-nova-agent` and `/download-agent` are deliberately

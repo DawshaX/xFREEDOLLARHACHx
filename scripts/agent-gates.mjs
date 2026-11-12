@@ -39,6 +39,19 @@ const AGENT_GATES = [
   ["scripts/test-memory-mirror.mjs", "memory: local + Supabase mirror"],
   ["scripts/test-self-restart.mjs", "self-restart: update marker and boot"],
   ["scripts/test-update-backoff.mjs", "update back-off: a dead loop parks itself"],
+  ["scripts/test-toolchain-mirror.mjs", "toolchain mirror: packed layout, hashes, wordlist, new kinds"],
+  ["scripts/test-tool-ondemand.mjs", "on-demand tools: fetch-on-use, LRU cache ceiling, inflight dedupe"],
+  ["scripts/test-free-store.mjs", "free store: sha256-verified mirrors, tamper refused, caps enforced"],
+  ["scripts/test-panel-restart.mjs", "panel power: a remote restart with no human in it"],
+  ["scripts/test-fetch-db-ca-handshake.mjs", "db ca pin: real Postgres SSLRequest dance, N-refusal honest, dead host loud"],
+  ["scripts/test-runtime-config.mjs", "runtime config: allowlist-only, values never leak, durable across restart"],
+  ["scripts/test-state-prune.mjs", "state prune: القرص يتقاس ويتنضف بسياسة معلنة — أرقام مش نصوص"],
+  ["scripts/test-state-backup.mjs", "state backup: GitHub نسخة حيّة — بلا توكن بيقول مفعّل لأ بصراحة"],
+  ["scripts/test-telegram-hub.mjs", "telegram hub: throttle, /start pairing, dead-silent without token"],
+  ["scripts/test-visitor-intel.mjs", "visitor intel: every visit reported to telegram with passive enrichment, api/assets/private-ip skipped"],
+  ["scripts/test-fetch-auth-patch.mjs", "panel auth: every same-origin /api fetch carries x-nova-token, cross-origin never leaks"],
+  ["scripts/test-respawn-loop.mjs", "respawn loop: a dead boot.mjs gets raised again, measured"],
+  ["scripts/test-commit-recipe.mjs", "push recipe: a stale index cannot silently delete files from main"],
 ];
 
 /** Structural audits: cheaper to read than to run, and they catch drift. */
@@ -49,16 +62,28 @@ const STRUCTURAL_GATES = [
   ["scripts/audit-twins.mjs", "twin files match, drift is declared"],
   ["scripts/audit-route-integrity.mjs", "route wiring: symbols imported, host hands gated, bundle not hollow"],
   ["scripts/audit-stub-honesty.mjs", "no live stub claims success for work it never did"],
+  ["scripts/audit-source-claims.mjs", "no kind names an outside source it never queries"],
   ["scripts/audit-no-invented-intel.mjs", "no invented CVE ids and no number without a measurement"],
   ["scripts/audit-boot-hooks.mjs", "every boot hook wired in both modes — no half-wired organ, no dead loop"],
   ["scripts/audit-src-secrets.mjs", "no credential written literally in tracked source"],
   ["scripts/audit-no-cjk-in-text.mjs", "no stray CJK in prompt-facing or operator-facing Arabic text"],
   ["scripts/ops-selftest.mjs", "scope gate, ops gate, throttle, evidence chain"],
   ["scripts/typecheck-ratchet.mjs", "no new type errors"],
+  ["scripts/check-mirror-coverage.mjs", "mirror coverage: وعد المكنة ⊆ ليستا الباني ⊆ المانيفست اللي اتنشر"],
 ];
 
 const gates = fast ? [...AGENT_GATES] : [...AGENT_GATES, ...STRUCTURAL_GATES];
 const results = [];
+
+// أول حاجة بأمانة: الرملة بتسترجع بلا node_modules بين اللفات — بدونها
+// كل بوابة esbuild بتحمر وهميًا. نرجّعها لو ناقصة، وسريع لو موجودة.
+{
+  const d = spawnSync(process.execPath, [join(ROOT, "scripts/ensure-deps.mjs")], { stdio: "inherit" });
+  if (d.status !== 0) {
+    console.error("agent-gates: الاعتمادات مش موجودة والتنصيب فشل — باقي الحصيلة غير مؤتمنة ✗");
+    process.exit(1);
+  }
+}
 
 for (const [file, what] of gates) {
   const full = join(ROOT, file);
