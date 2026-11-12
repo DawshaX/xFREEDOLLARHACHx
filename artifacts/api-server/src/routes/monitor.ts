@@ -3,10 +3,62 @@ import { desc, eq } from "drizzle-orm";
 import { db, agentSessions, agentSessionMessages, botAlerts, botCronJobs } from "@workspace/db";
 import { listProcesses } from "../lib/processes";
 import os from "node:os";
+import fs from "node:fs";
+import { execFile } from "node:child_process";
 
 const router: IRouter = Router();
 
-router.get("/monitor/system", (_req, res) => {
+/**
+ * GPU مقاس مش متخمّن: nvidia-smi بس (لو موجود). غياب الملف أو فشله = مفيش GPU
+ * مخصّص — وبنقولها بصراحة في الحقل noteAr بدل خانات صفرية توحي بوجود كارت.
+ * النتيجة متخزنة مؤقتًا 60ث عشان المراقبة الحية ما تطلّعش process كل ثانية.
+ */
+export interface GpuReading {
+  present: boolean;
+  name?: string;
+  memoryTotalMb?: number;
+  memoryUsedMb?: number;
+  utilizationPercent?: number;
+  noteAr: string;
+  measuredAt: string;
+}
+let gpuCache: GpuReading | null = null;
+let gpuCacheAt = 0;
+
+export function probeGpu(force = false): Promise<GpuReading> {
+  if (!force && gpuCache && Date.now() - gpuCacheAt < 60_000) return Promise.resolve(gpuCache);
+  return new Promise((resolvePromise) => {
+    execFile(
+      "nvidia-smi",
+      ["--query-gpu=name,memory.total,memory.used,utilization.gpu", "--format=csv,noheader,nounits"],
+      { timeout: 4_000 },
+      (err, stdout) => {
+        if (err || !stdout.trim()) {
+          gpuCache = {
+            present: false,
+            noteAr: "لا يوجد GPU مخصّص على هذه الخطة (nvidia-smi غير موجود) — المقاسات المتاحة: CPU/RAM/Disk.",
+            measuredAt: new Date().toISOString(),
+          };
+        } else {
+          const parts = stdout.trim().split("\n")[0].split(",").map((s) => s.trim());
+          gpuCache = {
+            present: true,
+            name: parts[0],
+            memoryTotalMb: Number(parts[1]),
+            memoryUsedMb: Number(parts[2]),
+            utilizationPercent: Number(parts[3]),
+            noteAr: "GPU مخصّص موجود ومقاس من nvidia-smi.",
+            measuredAt: new Date().toISOString(),
+          };
+        }
+        gpuCacheAt = Date.now();
+        resolvePromise(gpuCache);
+      },
+    );
+  });
+}
+
+router.get("/monitor/system", async (_req, res) => {
   const cpus = os.cpus();
   const totalMem = os.totalmem();
   const freeMem = os.freemem();
@@ -27,9 +79,28 @@ router.get("/monitor/system", (_req, res) => {
     loadAvg: os.loadavg(),
     cpu: { model: cpus[0]?.model ?? "Unknown", cores: cpus.length, usage: avgCpu, perCore: cpuUsage },
     memory: { total: totalMem, used: usedMem, free: freeMem, usagePercent: Math.round((usedMem / totalMem) * 100) },
+    gpu: await probeGpu(),
+    disk: probeDiskSafe(),
+    process: {
+      pid: process.pid,
+      rssMb: Math.round(process.memoryUsage().rss / 1048576),
+      heapUsedMb: Math.round(process.memoryUsage().heapUsed / 1048576),
+      uptimeSec: Math.round(process.uptime()),
+      node: process.version,
+    },
     timestamp: new Date().toISOString(),
   });
 });
+
+/** قراءة قرص صامتة — statfs لو متاحة (Node 22: fs.statfsSync)، ولو فشلت بنقولها مش بنكمّر. */
+function probeDiskSafe(): { present: boolean; totalMb?: number; freeMb?: number; noteAr: string } {
+  try {
+    const s = fs.statfsSync("/");
+    return { present: true, totalMb: Math.round((s.blocks * s.bsize) / 1048576), freeMb: Math.round((s.bavail * s.bsize) / 1048576), noteAr: "مساحة القرص الجذري مقاسة من statfs." };
+  } catch {
+    return { present: false, noteAr: "تعذّر قياس القرص على هذا المضيف." };
+  }
+}
 
 router.get("/monitor/processes", (_req, res) => {
   const procs = listProcesses();

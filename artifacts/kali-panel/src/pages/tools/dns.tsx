@@ -32,12 +32,11 @@ export default function DnsTool() {
         title: `DNS Lookup: ${domainInput.trim()} (${res?.records?.length || 0} سجلات)`,
         target: domainInput.trim(),
       });
-    } catch {
-      setData({ domain: domainInput, records: [
-        { type: "A", value: "93.184.216.34", ttl: 3600 },
-        { type: "MX", value: "mail.example.com", ttl: 3600 },
-        { type: "TXT", value: "v=spf1 include:_spf.google.com ~all", ttl: 3600 },
-      ]});
+    } catch (e) {
+      // قبل كده كان الفشل بيتملّى ببيانات DNS ملفّقة (93.184.216.34...).
+      // دلوقتي الفشل بيبان فشل — مفيش سجل وهمي.
+      setData(null);
+      setError(e instanceof Error ? e.message : "فشل استعلام DNS");
     } finally { setIsLoading(false); }
   };
 

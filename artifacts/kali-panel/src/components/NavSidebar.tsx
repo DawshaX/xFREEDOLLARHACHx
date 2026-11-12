@@ -50,6 +50,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "نوفا · المخ والمدير",  icon: BrainCircuit, path: "/nova-fleet",        iconColor: "#e879f9", badge: "CORE", hot: true, skull: true },
       { label: "نوفا — مساحة عمل الوكيل", icon: Radio,     path: "/nova-fleet#work",   iconColor: "#22d3ee", badge: "LIVE", hot: true, skull: true },
+      { label: "الأجينت المطوّر — مكتب نوفا", icon: Bot,   path: "/agent-pro",         iconColor: "#4ade80", badge: "PRO", hot: true, skull: true },
       { label: "Live Agent Panel", icon: Activity,         path: "/live-agent",        iconColor: "#ff4444" },
       { label: "AI Agent V3",      icon: Brain,           path: "/nova-agent-v3",     iconColor: "#ff7722", badge: "V3" },
       { label: "Nova Agent V6",    icon: Sparkles,        path: "/nova-agent-v6",     iconColor: "#ffaa00", badge: "V6" },
@@ -57,7 +58,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "ذاكرة نوفا",        icon: Brain,           path: "/nova-memory",       iconColor: "#a78bfa", badge: "LTM" },
       { label: "الفحص الذاتي — شغّال؟", icon: Activity,     path: "/self-check",        iconColor: "#34d399", badge: "LIVE", hot: true },
       { label: "Nova Agent Chat",  icon: Bot,             path: "/nova-agent-chat",   iconColor: "#aa66ff", badge: "NEW", hot: true },
-      { label: "Nova Intelligence",icon: Eye,             path: "/nova-intelligence", iconColor: "#ff5555" },
       { label: "Nova Sentinel",    icon: Shield,          path: "/nova-sentinel",     iconColor: "#ff3333" },
       { label: "xDAW Sequencer",   icon: Music2,          path: "/nova-modules",      iconColor: "#ff66aa" },
       { label: "KaliGPT",          icon: Terminal,        path: "/kaligpt",           iconColor: "#ff8833" },
@@ -165,16 +165,15 @@ function GlitchText() {
   );
 }
 
-/* ─── Animated threat ticker ──────────────────────────────────────── */
+/* ─── Animated status ticker ──────────────────────────────────────── */
 function Ticker() {
   const msgs = [
-    "☠ SCANNING NETWORK...",
-    "⚡ CVE FEED ACTIVE",
-    "☢ THREAT LEVEL: CRITICAL",
+    "◈ NOVA ONLINE",
+    "⚡ CVE FEED READY",
     "⚔ MONITORING ENDPOINTS",
     "◈ AUTH VERIFIED · OK",
-    "☠ EXPLOIT DB SYNCED",
-    "⚠ INTRUDER DETECTED",
+    "☢ EXPLOIT DB SYNCED",
+    "◈ FLEET LINKED",
   ];
   const [idx, setIdx] = useState(0);
   const [show, setShow] = useState(true);

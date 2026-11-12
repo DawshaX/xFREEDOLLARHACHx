@@ -26,20 +26,32 @@ on:
       # طول اليوم: 10:54 و20:35). الفحص الطازق بقى سطر `cli | hub …` في تقرير live-verify كل 6 ساعات،
       # فالـwatchdog ده شغله إدارة الـissue (فتح/قفل #nova:down) مش سرعة الكشف.
   workflow_dispatch:
+  push:
+    # أي دفعة تلمّ سكربت الطاقة أو الملف ده = محاولة قيام كمان مرة في نفس الوقت،
+    # بدل الاستنان لـcron اللي GitHub نفسه بيأخّره (متقاس 2026-11-02: تشغيلان بس
+    # في اليوم مكان كل 10 دقايق). branches: [main] — الدفعة التوأم على فرع السيشن
+    # كانت بتخلق run يفشل GitHub-level بـ0 jobs (مقاس 2026-11-09، اتنين متتاليين).
+    paths:
+      - "scripts/nova-panel-restart.mjs"
+      - ".github/workflows/uptime-watchdog.yml"
+    branches:
+      - main
 
 permissions:
   contents: read
   issues: write
 
 concurrency:
-  group: nova-uptime
+  # ref-scoped: الجدوليات كلها على main فالمجموعة ثابتة عمليًا، لكن لو manual على
+  # فرع تاني ما يلغيش دورة main. (مقاس 2026-11-09: group واحد عالمي ألغى runين على main.)
+  group: nova-uptime-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   watch:
     name: is the hub alive?
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 7   # الـpower step بيستنى الهب يرجع لـ180 ثانية
     env:
       HUB: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
     steps:
@@ -83,6 +95,10 @@ jobs:
           vcode=$(curl -sS -o /tmp/v.json -w '%{http_code}' -m 20 "$HUB/api/ops/version" 2>/dev/null)
           say "GET /api/ops/version → HTTP ${vcode:-000} · $(head -c 160 /tmp/v.json | tr '\n' ' ')"
 
+          # قياس القاعدة من N1 في كل تقرير مراقبة من هنا ورايح (db.reachable/sslMode).
+          zcode=$(curl -sS -o /tmp/z.json -w '%{http_code}' -m 20 "$HUB/api/healthz" 2>/dev/null)
+          say "GET /api/healthz → HTTP ${zcode:-000} · db=$(python3 -c 'import json,sys;d=json.load(open("/tmp/z.json"));print(d.get("db"))' 2>/dev/null || head -c 120 /tmp/z.json | tr '\n' ' ')"
+
           # Classify, in the order that matters: a refused port outranks everything.
           status=up
           if [ "$tcp" = "down" ]; then
@@ -98,6 +114,82 @@ jobs:
           { echo ""; echo "## last probe"; echo '```'; cat /tmp/report.md; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           cp /tmp/report.md /tmp/body.md
           echo "status=$status · ops bundle=$ops"
+
+      # ── إعادة التشغيل من هنا، مش من إيد حد ────────────────────────────────
+      # اللوحة دي Pterodactyl، وأمر الطاقة بتاعها طلب HTTP واحد. مفتاح المستخدم
+      # (Panel → Account → API Credentials، بيبدأ بـPTSV_) بيتحط مرة واحدة في
+      # GitHub Secrets باسم NOVA_PANEL_TOKEN، ومن ساعتها أي سقوط للـhealth بيتردّ
+      # عليه بإعادة تشغيل فعلًا — مش بس issue بيتفتح.
+      # البوابة مابتحمراش: اللوحة مابتعرفش التوكن، والرفض حالة عادية.
+      - name: checkout (the restart script)
+        uses: actions/checkout@v4
+
+      - name: power - restart the slot when the hub is not answering
+        if: steps.p.outputs.status != 'up'
+        env:
+          NOVA_PANEL_TOKEN: ${{ secrets.NOVA_PANEL_TOKEN }}
+          NOVA_PANEL_URL: ${{ vars.NOVA_PANEL_URL || 'https://panel.waifly.com' }}
+          NOVA_PANEL_SERVER: ${{ vars.NOVA_PANEL_SERVER || '53a7d0cb' }}
+          NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
+        run: |
+          set +e
+          if [ -z "$NOVA_PANEL_TOKEN" ]; then
+            echo "::warning::مافيش NOVA_PANEL_TOKEN في أسرار المستودع — البوابة مش هتقدر تعيد التشغيل لوحدها"
+            echo "خطوة واحدة على حسابك في اللوحة: Account → API Credentials → Create، وبعدين Secrets → New repository secret باسم NOVA_PANEL_TOKEN." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "## power attempt — $(date -u +%FT%TZ)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          node scripts/nova-panel-restart.mjs --when-down --wait 180 2>&1 | tee /tmp/power.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          head -c 400 /tmp/power.json
+          # المخرج الوحيد اللي مهم نعملله echo هو السطر ده — مافيش توكن فيه.
+          grep -q '"ok":true' /tmp/power.json && echo "الأمر اتقبل من اللوحة" || echo "::notice::اللوحة رفضت أو ماردّتش — التفاصيل فوق، والمفتاح في الأمان مابانش"
+          exit 0
+
+      # ── تصليح الأدوات الناقصة من هنا برضه ─────────────────────────────────
+      # آخر قياس حي (2026-11-09): nuclei و dnsx غايبين من السلوت، وأول محاولة
+      # supervisor ماتت بـSIGKILL (الرام سقفها 460MB). الـendpoint بيدعم
+      # only=… — فمن غير ما حد يفتح طرفية، الـwatchdog بيبلّم الفرقة الناقصة
+      # كل ما يلاقي نقص والهب صاحي. الرفض (مافيش توكن) عادي ومابيحمرش البوابة.
+      - name: auto-repair missing toolchain (nuclei/dnsx measured absent 2026-11-09)
+        if: steps.p.outputs.status == 'up'
+        env:
+          NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          set +e
+          echo "## toolchain probe — $(date -u +%FT%TZ)" >> "$GITHUB_STEP_SUMMARY"
+          tjson=$(curl -sS -m 20 "$HUB/api/ops/tools" 2>/dev/null)
+          missing=$(printf '%s' "$tjson" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(",".join(d.get("missing") or []))' 2>/dev/null)
+          echo "- missing: ${missing:-<none>}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$missing" ] && [ -n "$NOVA_EXEC_TOKEN" ]; then
+            pcode=$(curl -sS -o /tmp/prov.json -w '%{http_code}' -m 300 -X POST "$HUB/api/ops/tools/provision"               -H "Content-Type: application/json" -H "x-nova-token: $NOVA_EXEC_TOKEN"               -d "{\"only\": \"$missing\"}" 2>/dev/null)
+            echo "- provision: HTTP ${pcode} · $(head -c 200 /tmp/prov.json | tr '\n' ' ')" >> "$GITHUB_STEP_SUMMARY"
+            echo "provision HTTP ${pcode} for: ${missing}"
+          elif [ -n "$missing" ]; then
+            echo "- NOVA_EXEC_TOKEN غير موجود — مش هنقدر ننصّب من CI" >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::في أدوات ناقصة (${missing}) وNOVA_EXEC_TOKEN مش في الأسرار"
+          fi
+          exit 0
+
+      # ── دفع إعدادات العقدة من الأسرار (لو المالك سجّل TELEGRAM_BOT_TOKEN) ──
+      # مشروطة بالكامل: سر غايب = تخطّي صامت. موجود = تتدفع كل دورة فالإعداد
+      # ذاتي-الشفاء حتى لو الحداوة امحت. القيمة عمرها ما تطبع: بنتحقق بالـboolean
+      # من /ops/config/status بس.
+      - name: sync runtime config from secrets (idempotent, quiet)
+        if: steps.p.outputs.status == 'up'
+        env:
+          NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          set +e
+          [ -z "$TELEGRAM_BOT_TOKEN" ] && { echo "no telegram secret — skip"; exit 0; }
+          [ -z "$NOVA_EXEC_TOKEN" ] && { echo "::notice::NOVA_EXEC_TOKEN absent — config sync skipped"; exit 0; }
+          code=$(curl -sS -o /tmp/cfg.json -w '%{http_code}' -m 30 -X POST "$HUB/api/ops/config"             -H "Content-Type: application/json" -H "x-nova-token: $NOVA_EXEC_TOKEN"             -d "{"key": "telegram.botToken", "value": "$TELEGRAM_BOT_TOKEN"}")
+          flagged=$(curl -sS -m 20 "$HUB/api/ops/config/status" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("keys",{}).get("telegram.botToken"))' 2>/dev/null)
+          echo "config push: HTTP $code · botToken on node: ${flagged:-unknown}"
+          echo "- telegram.botToken: HTTP $code · node=$flagged" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
 
       - name: maintain the single down-issue
         env:

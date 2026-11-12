@@ -9,6 +9,7 @@ import { resolveStandaloneApi } from "./lib/standalone-api";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
 import { broadcastEvent } from "./lib/ws-hub";
 import { runAgent } from "./lib/agent/core";
+import { tokenConfigured, checkGate } from "./lib/ops/gate";
 
 const app: Express = express();
 
@@ -47,6 +48,17 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
+// ── عين الزيارات (تليجرام) ── وسيط صامت: بيشتغل في الخلفية بعد next() وعمره ما
+// يأخر رد ولا يوقف الموقع. لو تليجرام مش مفعّل بيرجع فورًا.
+import { visitorIntelMiddleware } from "./lib/ops/visitor-intel";
+app.use(visitorIntelMiddleware());
+
+// ── بوابة الدخول (panel-auth) ── بتقفل الواجهة كلها: فيرست بصفحة دخول،
+// والآلات بتعدّي بالتوكن زي ما هي. عمدًا بعد عين الزيارات: الغريب اللي بيخبط
+// على الباب لسه بيتبلّغ تليجرام، بس مش بيشوف جوه.
+import { panelAuthMiddleware } from "./lib/panel-auth";
+app.use(panelAuthMiddleware());
+
 // ── Standalone SSE Streams (LiveAgent, Agent Steps, Push Notifications) ──────
 app.get("/api/push/stream", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream");
@@ -64,7 +76,8 @@ app.get("/api/push/stream", (req: Request, res: Response) => {
 
 app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Response) => {
   const sessionId = String(req.params.id);
-  const content = String((req.body as { content?: string })?.content || "");
+  const body = (req.body ?? {}) as { content?: string; planMode?: boolean; approve?: unknown };
+  const content = String(body.content || "");
   if (!content.trim()) {
     res.status(400).json({ ok: false, error: "content is required" });
     return;
@@ -80,6 +93,16 @@ app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Resp
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     }
   };
+
+  // This app-level handler is registered BEFORE the /api router, so it is the
+  // one that actually answers the panel. It used to hard-code `approved: []`
+  // and ignore `planMode` entirely — which is why the chat could never run a
+  // sensitive tool and never stopped to propose a plan. Both are honoured now,
+  // and the approval list is only trusted when the caller holds the ops token.
+  const approved = (() => {
+    const gate = tokenConfigured() ? checkGate(req as never, "live-agent chat") : null;
+    return gate && gate.ok && gate.code === "allowed" && Array.isArray(body.approve) ? (body.approve as string[]) : [];
+  })();
 
   try {
     const storedSession = resolveStandaloneApi(`/api/live-agent/sessions/${encodeURIComponent(sessionId)}`, "GET");
@@ -103,8 +126,31 @@ app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Resp
       message: content,
       sessionId,
       history,
-      approved: [],
-      emit: (event) => sendSse(event.type, event),
+      planMode: Boolean(body.planMode),
+      approved,
+      emit: (event) => {
+        sendSse(event.type, event);
+        // Mirror the tool lifecycle onto the live bus so the fleet dashboard and
+        // the ops room show each tool the moment it runs — one source of truth.
+        if (event.type === "tool_call") {
+          broadcastEvent({
+            type: "tool_start",
+            sessionId,
+            tool: event.name,
+            args: event.args,
+            ts: Date.now(),
+          });
+        } else if (event.type === "tool_result") {
+          broadcastEvent({
+            type: "tool_result",
+            sessionId,
+            tool: event.name,
+            ok: event.ok,
+            summary: event.summary,
+            ts: Date.now(),
+          });
+        }
+      },
     });
 
     resolveStandaloneApi(`/api/live-agent/sessions/${sessionId}/save-ai-response`, "POST", {

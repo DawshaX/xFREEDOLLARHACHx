@@ -12,15 +12,35 @@ export default function NovaSentinelV3() {
   const [metrics, setMetrics] = useState<MetricEntry[]>([]);
   const [command, setCommand] = useState("");
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState({ cpu: 0, ram: 0, ollama: "ONLINE", db: "NEON-CONNECTED" });
+  // صفحة تراثية بتشتغل على Pages: مفيش cpu/ram/db يتقاسوا من المتصفح هنا.
+  // «ONLINE/NEON-CONNECTED» الثابتين كانوا وعد فاضي — بقت القيم «غير مقاس» لحد
+  // ما البروب الحقيقي (تحت) يرد بقياس أو فشل صريح.
+  const [status, setStatus] = useState<{ cpu: number | null; ram: number | null; ollama: string; db: string }>({ cpu: null, ram: null, ollama: "غير مقاس", db: "غير مقاس" });
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const m = { time: new Date().toLocaleTimeString(), cpu: Math.floor(Math.random() * 100), ram: Math.floor(Math.random() * 100) };
-      setMetrics(prev => [...prev.slice(-20), m]);
-      setStatus(prev => ({ ...prev, cpu: m.cpu, ram: m.ram }));
-    }, 2000);
-    return () => clearInterval(interval);
+    let alive = true;
+    const tick = async () => {
+      try {
+        const { jsonRequest } = await import("@/lib/sse");
+        const d = await jsonRequest<Record<string, unknown>>("/system/metrics");
+        if (!alive) return;
+        const measured = (d as { measured?: boolean }).measured !== false;
+        const cpuU = (d as { cpu?: { usage?: number } }).cpu?.usage;
+        const ramPct = (d as { ram?: { percent?: number } }).ram?.percent ?? (d as { memory?: { usagePercent?: number } }).memory?.usagePercent;
+        const cpu = measured && typeof cpuU === "number" ? Math.round(cpuU) : null;
+        const ram = measured && typeof ramPct === "number" && Number.isFinite(ramPct) ? Math.round(ramPct) : null;
+        if (cpu !== null && ram !== null) {
+          const m = { time: new Date().toLocaleTimeString(), cpu, ram };
+          setMetrics(prev => [...prev.slice(-20), m]);
+        }
+        setStatus(prev => ({ ...prev, cpu, ram }));
+      } catch {
+        if (alive) setStatus(prev => ({ ...prev, cpu: null, ram: null }));
+      }
+    };
+    void tick();
+    const interval = setInterval(() => { void tick(); }, 8000);
+    return () => { alive = false; clearInterval(interval); };
   }, []);
 
   const runCommand = async () => {
@@ -56,8 +76,8 @@ export default function NovaSentinelV3() {
       {/* Status Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "CPU LOAD", value: `${status.cpu}%`, color: "#44eebb", rgb: "68,238,187", icon: Cpu },
-          { label: "RAM USAGE", value: `${status.ram}%`, color: "#aa44ff", rgb: "170,68,255", icon: Activity },
+          { label: "CPU LOAD", value: status.cpu === null ? "غير مقاس — يتطلب المحرك" : `${status.cpu}%`, color: "#44eebb", rgb: "68,238,187", icon: Cpu },
+          { label: "RAM USAGE", value: status.ram === null ? "غير مقاس — يتطلب المحرك" : `${status.ram}%`, color: "#aa44ff", rgb: "170,68,255", icon: Activity },
           { label: "DATABASE", value: status.db, color: "#44ff88", rgb: "68,255,136", icon: Database },
           { label: "OLLAMA STATUS", value: status.ollama, color: "#ff8844", rgb: "255,136,68", icon: Radar },
         ].map(({ label, value, color, rgb, icon: Icon }) => (

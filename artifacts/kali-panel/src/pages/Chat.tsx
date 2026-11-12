@@ -14,7 +14,7 @@ import {
 } from "@/lib/ollama-browser";
 
 interface Conversation { id: number; title: string; createdAt: string; }
-interface Message { id: number; conversationId: number; role: string; content: string; createdAt: string; }
+interface Message { id: number; conversationId: number; role: string; content: string; createdAt: string; /** مقعد/مسار الرد الفعلي للرسائل الحية (رسائل القاعدة القديمة ماعندهاش — وبتتقال «نوفا» بصراحة) */ seat?: string; }
 interface MemoryItem { id: string; kind: string; title: string; content: string; pinned: boolean; createdAt: string; }
 
 const NEON_CARD = { background: "rgba(8,0,18,0.95)", border: "1px solid rgba(180,0,255,0.12)", borderRadius: 16, boxShadow: "0 0 20px rgba(150,0,255,0.04)" };
@@ -61,6 +61,23 @@ export default function Chat() {
   }, []);
 
   useEffect(() => { void checkOllama(); }, [checkOllama]);
+
+  // «روقة» الاستقبال: بروب المقاعد المجانية مرة عند الفتح (مش بس من الزر اليدوي)
+  // عشان كارت الترحيب يقول «2/3 مقعد بيردّ» بقياس حقيقي قبل أول حرف تكتبه.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await probeKeylessSeats();
+        if (!alive) return;
+        setSeats(res);
+        const first = res.find(r => r.ok);
+        if (first && !activeSeat) setActiveSeat(first.label);
+      } catch { /* الفشل بيفضل ساكت — الترحيب بيقول الأساسيات من غير نبضة */ }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadConvs = async () => {
     const list = await jsonRequest<Conversation[]>("/anthropic/conversations");
@@ -229,6 +246,9 @@ export default function Chat() {
       }
 
       }
+      // نسب الرد للمسار اللي ردّ فعلًا (باك إند/مقعد مجاني/Ollama/قياس مباشر) —
+      // البابل كان دايمًا مكتوب عليه «Ollama · model» حتى لما groq هي اللي ردّت.
+      if (servedBy) setMessages(prev => prev.map(m => m.id === aId ? { ...m, seat: servedBy } : m));
       // Persistence is best-effort: on Pages there is no engine, and losing the
       // save must not lose the answer that is already on screen.
       try {
@@ -309,10 +329,11 @@ export default function Chat() {
           actions={
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-mono"
-                style={{ background: "rgba(0,0,0,0.3)", border: `1px solid ${ollamaStatus === "ok" ? "rgba(68,255,136,0.3)" : ollamaStatus === "error" ? "rgba(255,68,68,0.3)" : "rgba(255,255,255,0.1)"}` }}>
-                {ollamaStatus === "ok" ? <Wifi className="w-3 h-3 text-emerald-400" /> : ollamaStatus === "error" ? <WifiOff className="w-3 h-3 text-red-400" /> : <Loader2 className="w-3 h-3 animate-spin text-white/40" />}
-                <span style={{ color: ollamaStatus === "ok" ? "#44ff88" : ollamaStatus === "error" ? "#ff5555" : "rgba(255,255,255,0.4)" }}>
-                  {ollamaStatus === "ok" ? `${getStoredOllamaModel()} · Online` : ollamaStatus === "error" ? "Ollama Offline" : "جاري الفحص..."}
+                style={{ background: "rgba(0,0,0,0.3)", border: `1px solid ${ollamaStatus === "ok" ? "rgba(68,255,136,0.3)" : "rgba(255,255,255,0.1)"}` }}>
+                {ollamaStatus === "ok" ? <Wifi className="w-3 h-3 text-emerald-400" /> : ollamaStatus === "error" ? <WifiOff className="w-3 h-3" style={{ color: "rgba(255,255,255,0.35)" }} /> : <Loader2 className="w-3 h-3 animate-spin text-white/40" />}
+                <span style={{ color: ollamaStatus === "ok" ? "#44ff88" : ollamaStatus === "error" ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.4)" }}>
+                  {/* «روقة»: غياب Ollama المحلي مش كارثة — المقاعد/الباك إند بيردّوا؛ الخط الصادق بهيبة هادية بدل الأحمر المفزع */}
+                  {ollamaStatus === "ok" ? `${getStoredOllamaModel()} · Online` : ollamaStatus === "error" ? "Ollama محلي: مش متصل (مش مطلوب للرد)" : "جاري الفحص..."}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-mono"
@@ -433,9 +454,40 @@ export default function Chat() {
 
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3" style={{ scrollbarWidth: "thin" }} data-testid="messages">
                 {messages.length === 0 && (
-                  <div className="text-center py-16 space-y-3">
-                    <Skull className="w-12 h-12 mx-auto" style={{ color: "rgba(255,255,255,0.05)" }} />
-                    <p className="font-mono text-[11px]" style={{ color: "rgba(255,255,255,0.2)" }}>ابدأ المحادثة بكتابة رسالة...</p>
+                  // «روقة الشات» (2026-11-09): الاستقبال كان جمجمة رمادية وسطر
+                  // «اكتب رسالة». دلوقتي: ترحيب هادي + زركشات بتملى السؤال من
+                  // أسئلة الأمعاء الحقيقية (الكوربوس/الحالة) + نبضة مقاعد مقاسة
+                  // من المتصفح، مفيش فيها رقم مكتوب بإيدنا.
+                  <div className="flex flex-col items-center justify-center py-14 px-6 text-center space-y-5">
+                    <div className="relative">
+                      <div className="absolute inset-0 rounded-full blur-2xl" style={{ background: "rgba(170,0,255,0.15)" }} />
+                      <Brain className="w-10 h-10 relative" style={{ color: "#c084fc" }} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="font-black text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>أهلًا بيك — ده شات نوفا على العقل الحقيقي</p>
+                      <p className="font-mono text-[10px] leading-relaxed" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        الرد بيطلع من أقرب مسار شغّال: باك إند نوفا ← مقاعد مجانية بلا مفتاح ← Ollama ← قياس مباشر.
+                        <br />وكل رقم في الرد مقاس من الأمعاء، مش مولّد.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {[
+                        "كم عدد ثغرات الكوربوس الحقيقي دلوقتي؟",
+                        "إيه حالة العقدة والمقاعد دلوقتي؟",
+                        "فهّمني الفرق بين CVEs الحقيقية وسيناريوهات المعمل",
+                      ].map((q) => (
+                        <button key={q} type="button" onClick={() => setInput(q)} disabled={streaming}
+                          className="px-3 py-1.5 rounded-xl font-mono text-[10px] transition-all hover:scale-[1.03] disabled:opacity-40"
+                          style={{ background: "rgba(170,0,255,0.07)", border: "1px solid rgba(170,0,255,0.18)", color: "rgba(216,180,254,0.9)" }}>
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                    {seats.length > 0 && (
+                      <p className="font-mono text-[9px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+                        المقاعد المجانية حاليًا: {seats.filter(x => x.ok).length}/{seats.length} بيردّ — قياس حي من متصفحك قبل ما تكتب حرف
+                      </p>
+                    )}
                   </div>
                 )}
                 {messages.map((m) => (
@@ -446,7 +498,7 @@ export default function Chat() {
                         : { background: "rgba(170,0,255,0.08)", border: "1px solid rgba(170,0,255,0.18)" }}>
                       <div className="text-[9px] font-black font-mono uppercase mb-1 flex items-center gap-1.5 justify-between"
                         style={{ color: m.role === "user" ? "#ff6666" : "#cc66ff" }}>
-                        <span>{m.role === "user" ? "أنت" : `☠ Ollama · ${getStoredOllamaModel()}`}</span>
+                        <span>{m.role === "user" ? "أنت" : m.seat ? `☠ نوفا · ${m.seat}` : "☠ نوفا"}</span>
                         {m.role === "assistant" && m.content && (
                           <button
                             onClick={() => {

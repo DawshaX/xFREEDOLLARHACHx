@@ -17,7 +17,7 @@ import { buildIntelligentSecurityReply } from "./ollama-proxy";
 // the catch, which is exactly how a capability question ended as a canned bubble.
 import { runAgent, type AgentEvent } from "../lib/agent/core";
 import { runAgentTool } from "../lib/agent/tools";
-import { requireOps } from "../lib/ops/gate";
+import { requireOps, tokenConfigured, checkGate } from "../lib/ops/gate";
 
 const router = Router();
 
@@ -378,109 +378,70 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
 
   const sse = makeSSE(res);
 
-  const memResults = searchMemory(content).slice(0, 5);
-  let memContext = "";
-  if (memResults.length > 0) {
-    memContext = `\n\n[من الذاكرة — ${memResults.length} إدخال ذو صلة]:\n` +
-      memResults.map((m) => `- [${m.memoryType}] ${m.key}: ${m.content.slice(0, 200)}`).join("\n");
-  }
-
-  // ── Minimal dynamic context (keeps tokens low for faster responses) ─────────
-  const agentOnline = isLocalAgentConnected();
-  const dynamicCtx = agentOnline
-    ? "\n[KALI متصل — استخدم AGENT_EXEC]"
-    : "";
-
-  // ── Context window management: keep last 18 messages + system prompt ────────
-  if (sess.messages.length > 20) {
-    sess.messages = [sess.messages[0], ...sess.messages.slice(-18)];
-  }
-
-  sess.messages.push({ role: "user", content: content + memContext + dynamicCtx });
-
-  let fullResponse = "";
+  // ── The real agent loop ────────────────────────────────────────────────────
+  // This route used to hand the turn to `callDolphin` (a hand-written Ollama
+  // wrapper) and then scrape its prose with regexes for [EXECUTE: …] blocks.
+  // When the external model was down — which is most of the time on a public
+  // host — the catch fell through to `runAgent({ forceHeuristic: true })`, whose
+  // greeting/identity branches answer from a fixed string. That is exactly the
+  // "canned reply, no real agent" the user reported: the chat was never talking
+  // to the 66-tool mind at all.
+  //
+  // Now the turn goes straight to `runAgent` — the same brain `/nova-core/chat`
+  // uses: LLM planner → real tools → explanation, with plan mode and the
+  // approval gate. Every event is forwarded to the SSE stream AND mirrored onto
+  // the live bus, so the fleet dashboard shows each tool the moment it runs.
+  const approved = (() => {
+    const gate = tokenConfigured() ? checkGate(req as never, "live-agent chat") : null;
+    const body = req.body as { approve?: unknown };
+    return gate && gate.ok && gate.code === "allowed" && Array.isArray(body.approve) ? (body.approve as string[]) : [];
+  })();
 
   try {
-    await callDolphin(sess.messages, (tok) => {
-      fullResponse += tok;
-      sse("delta", { text: tok });
-
-      const plan = extractPlan(fullResponse);
-      if (plan && sess.planMode) {
-        sse("plan_ready", { text: plan });
-      }
+    let reply = "";
+    await runAgent({
+      message: content,
+      sessionId: id,
+      history: sess.messages
+        .filter((m) => m.role !== "system")
+        .slice(-8)
+        .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+      planMode,
+      approved,
+      emit: (ev: AgentEvent) => {
+        // Forward the event verbatim to the panel (its fields match the SSE
+        // contract the panel already parses)…
+        sse(ev.type, ev as unknown as Record<string, unknown>);
+        // …and mirror the tool lifecycle onto the live bus so the ops room and
+        // the fleet dashboard show it in real time, from one source of truth.
+        if (ev.type === "tool_call") {
+          broadcastLiveEvent({
+            type: "tool_start",
+            data: { tool: ev.name, args: ev.args, agent: "nova", ts: Date.now() },
+            ts: new Date().toISOString(),
+          });
+        } else if (ev.type === "tool_result") {
+          broadcastLiveEvent({
+            type: "tool_result",
+            data: { tool: ev.name, ok: ev.ok, summary: ev.summary, ms: ev.ms, ts: Date.now() },
+            ts: new Date().toISOString(),
+          });
+        } else if (ev.type === "delta") {
+          reply += ev.text;
+        }
+      },
     });
 
-    sess.messages.push({ role: "assistant", content: fullResponse });
-
-    const plan = extractPlan(fullResponse);
-    if (plan) {
-      sess.pendingPlan = plan;
-      sse("plan_ready", { text: plan });
+    if (reply.trim()) {
+      sess.messages.push({ role: "assistant", content: reply });
     }
+    sess.updatedAt = Date.now();
 
-    const serverCmds = extractCommands(fullResponse);
-    const agentCmds = extractAgentExec(fullResponse);
-    const memorySaves = extractMemorySave(fullResponse);
-    let commandsRun = 0;
-
-    for (const mem of memorySaves) {
-      try { saveMemory(mem.type, mem.key, mem.content); } catch { }
-    }
-
-    const memSearchMatch = fullResponse.match(/\[MEMORY_SEARCH:\s*([^\]]+)\]/);
-    if (memSearchMatch) {
-      const results = searchMemory(memSearchMatch[1].trim()).slice(0, 10);
-      const resultText = results.length > 0
-        ? results.map((m) => `[${m.memoryType}] ${m.key}: ${m.content.slice(0, 300)}`).join("\n")
-        : "لا نتائج في الذاكرة";
-      sse("tool_result", { name: "memory_search", result: resultText });
-    }
-
-    for (const cmd of agentCmds) {
-      sse("exec_start", { command: cmd, on: "kali-agent" });
-      broadcastLiveEvent({
-        type: "tool_start",
-        data: { tool: "agent_shell", message: cmd, ts: Date.now() },
-        ts: new Date().toISOString(),
-      });
-      const result = await runCommand(cmd, 90_000);
-      commandsRun++;
-      const output = (result.stdout + (result.stderr ? `\n[stderr] ${result.stderr}` : "")).slice(0, 8000);
-      sse("exec_result", { command: cmd, output, success: result.success, durationMs: 0, on: result.on });
-      broadcastLiveEvent({
-        type: "shell_output",
-        data: { tool: "agent_shell", command: cmd, output: output.slice(0, 500), isError: !result.success, ts: Date.now() },
-        ts: new Date().toISOString(),
-      });
-
-      if (result.success && result.stdout.trim()) {
-        const summary = `تنفيذ "${cmd.slice(0, 60)}": ${result.stdout.slice(0, 300)}`;
-        try { saveMemory("exec_result", `cmd:${Date.now()}`, summary); } catch { }
-      }
-    }
-
-    for (const cmd of serverCmds) {
-      sse("exec_start", { command: cmd, on: "server" });
-      broadcastLiveEvent({
-        type: "tool_start",
-        data: { tool: "shell", message: cmd, ts: Date.now() },
-        ts: new Date().toISOString(),
-      });
-      const result = await runCommand(cmd, 60_000);
-      commandsRun++;
-      const output = (result.stdout + (result.stderr ? `\n[stderr] ${result.stderr}` : "")).slice(0, 8000);
-      sse("exec_result", { command: cmd, output, success: result.success, durationMs: 0, on: result.on });
-      broadcastLiveEvent({
-        type: "shell_output",
-        data: { tool: "shell", command: cmd, output: output.slice(0, 500), isError: !result.success, ts: Date.now() },
-        ts: new Date().toISOString(),
-      });
-    }
-
-    // ── Auto-detect and save intel patterns from response ──────────────────
-    const detectedCves = fullResponse.match(/CVE-\d{4}-\d+/g) ?? [];
-    const detectedIPs = (fullResponse.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) ?? []).filter((ip: string) => !ip.startsWith("0.") && !ip.startsWith("127."));
+    // ── Auto-detect and save intel patterns from the reply ──────────────────
+    const detectedCves = reply.match(/CVE-\d{4}-\d+/g) ?? [];
+    const detectedIPs = (reply.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) ?? []).filter(
+      (ip: string) => !ip.startsWith("0.") && !ip.startsWith("127."),
+    );
     if (detectedCves.length > 0) {
       try { saveMemory("intel", `cves:${Date.now()}`, `CVEs: ${[...new Set(detectedCves)].slice(0, 10).join(", ")}`); } catch { }
     }
@@ -488,7 +449,7 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
       try { saveMemory("intel", `ips:${Date.now()}`, `IPs: ${[...new Set(detectedIPs)].slice(0, 10).join(", ")}`); } catch { }
     }
 
-    sse("done", { commandsRun, memoryEntries: getMemoryCount(), detectedCves: detectedCves.length, detectedIPs: detectedIPs.length });
+    sse("done", { commandsRun: 0, memoryEntries: getMemoryCount(), detectedCves: detectedCves.length, detectedIPs: detectedIPs.length });
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

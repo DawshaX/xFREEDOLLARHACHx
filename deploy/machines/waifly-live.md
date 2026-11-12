@@ -27,6 +27,36 @@
 > **ملحوظة على المسار:** نسختك مفكوكة في **جذر** `/home/container` (مش جوه مجلد `nova-24-7`)،
 > والـself-update بيحدّث `/home/container` افتراضيًا — يعني ده متوافق والتحديثات الجاية هتوصل لوحدها.
 
+
+---
+
+## لو السلوت وقع: مافيش زرار محتاجك (من 2026-11-08)
+
+القياس اللي كتّب الفصل ده: 2026-11-07 من 20:41Z ولسّه بعد تلات ساعات `nginx` بيردّ
+`502 Bad Gateway` على كل مسار (`/api/health`، `/api/ops/tools`، `/api/nova-core/version`) —
+يعني الحاوية قائمة والمنفذ مفتوح بس مافيش عملية بتسمع. الطبقتين دول اللي وصلحوا الوضع:
+
+1. **قيام ذاتي جوه الحاوية.** `start.sh` بقى حلقة سطر بأمر: `node boot.mjs` بيموت؟
+   الحلقة بترفعه تاني بعد 2 ثانية، و4، و8، و16، و30، و60 — وكل مرة بتطبع سطر في
+   لوج اللوحة فيه كود الخروج وعدد الثواني. `SIGTERM` من زرار Stop بيوقف الحلقة
+   (فالحاجة اللي عايز تقفلها بتتقفل فعلاً)، وملف `state/NOVA_HALT` بيخليها تسلّم.
+   دي متقاسة بالتنفيذ مش بالعين: `node scripts/build-standalone.mjs --selftest-respawn`
+   بيشغّل `boot.mjs` وهمي بيموت على طول وبيأكد إنه قام تلات مرات لوحده (بوابة
+   `scripts/test-respawn-loop.mjs` في `agent-gates`).
+2. **أمر طاقة من بُعد لما الحلقة نفسها مااشتغلتش.** اللوحة بتاعتك Pterodactyl،
+   وأمر الطاقة طلب HTTP واحد: `POST https://panel.waifly.com/api/client/servers/53a7d0cb/power`
+   بـ `{"signal":"restart"}`. المستودع فيه `scripts/nova-panel-restart.mjs` اللي بيعمل
+   ده، و`uptime-watchdog.yml` بينفّذه كل 30 دقيقة على طول ما الـ`/api/health` مابيردّش 200.
+   اللي محتاجه مرة واحدة في حياتك: **Panel → Account → API Credentials → Create**
+   (المفتاح بيبدأ بـ`PTSV_`)، و**GitHub → Settings → Secrets and variables → Actions →
+   New repository secret** باسم `NOVA_PANEL_TOKEN`. من غيره السكربت بيقول
+   «مافيش NOVA_PANEL_TOKEN» ويسلّم من غير ما يحمرّ CI — دي الحالة المتوقعة، مش عطل.
+   لو السلوت اتنقل أو اتعملّه ID جديد: `NOVA_PANEL_SERVER` (variable) يعدّل الـUUID.
+
+ملاحظة أمان قصيرة: المفتاح ده صلاحيته تحكم كامل في حسابك في اللوحة (مش السلوت ده بس) —
+محفور في بيئة الـworkflow بس، ومافيش سطر في `nova-panel-restart.mjs` بيطبعه، والبوابة
+`test-panel-restart.mjs` بتأكد على توكن علامي إن مافيش مخرج فيه الحرف ده.
+
 ---
 
 ## الملف اللي هترفعه

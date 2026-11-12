@@ -54,9 +54,12 @@ function TopMarquee({ lastWsText }: { lastWsText: string | null }) {
 export function AppShell({ children }: AppShellProps) {
   const [location, navigate] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const [apiAlive, setApiAlive] = useState(true);
-  const [cpu, setCpu] = useState<number | null>(14);
-  const [ram, setRam] = useState<number | null>(23);
+  // قبل كده: apiAlive بدأ true و cpu/ram بدأوا 14/23 — أرقام مكتوبة في الكود
+  // بتظهر «API LIVE» و«14% CPU» قبل أي قياس. دلوقتي بيبدأوا null = «غير مقاس»
+  // لحد ما /api/healthz و /api/monitor/system يردّوا فعلاً.
+  const [apiAlive, setApiAlive] = useState<boolean | null>(null);
+  const [cpu, setCpu] = useState<number | null>(null);
+  const [ram, setRam] = useState<number | null>(null);
   const [now, setNow] = useState(new Date());
   const scanPos = 50;
   const pulse = true;
@@ -150,8 +153,8 @@ export function AppShell({ children }: AppShellProps) {
         const r = await fetch("/api/monitor/system");
         if (r.ok) {
           const d = (await r.json()) as { cpu?: { usage?: number }; memory?: { usagePercent?: number; pct?: number } };
-          setCpu(d?.cpu?.usage ?? 14);
-          setRam(d?.memory?.usagePercent ?? d?.memory?.pct ?? 23);
+          setCpu(d?.cpu?.usage ?? null);
+          setRam(d?.memory?.usagePercent ?? d?.memory?.pct ?? null);
         }
       } catch {
         // ignore
@@ -228,20 +231,22 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           </div>
 
-          {/* API pill */}
+          {/* API pill — 3 حالات: مقاس/غير مقاس/offline */}
           <div
             className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black font-mono"
             style={
-              apiAlive
+              apiAlive === true
                 ? { background: "rgba(0,255,100,0.08)", border: "1px solid rgba(0,255,100,0.25)", color: "#44ff88" }
-                : { background: "rgba(255,0,0,0.1)", border: "1px solid rgba(255,0,0,0.3)", color: "#ff4444" }
+                : apiAlive === false
+                  ? { background: "rgba(255,0,0,0.1)", border: "1px solid rgba(255,0,0,0.3)", color: "#ff4444" }
+                  : { background: "rgba(255,170,34,0.08)", border: "1px solid rgba(255,170,34,0.25)", color: "#ffaa22" }
             }
           >
             <div
-              className={`w-1.5 h-1.5 rounded-full ${apiAlive ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`}
-              style={apiAlive ? { boxShadow: "0 0 6px #00ff88" } : { boxShadow: "0 0 6px #ff0000" }}
+              className={`w-1.5 h-1.5 rounded-full ${apiAlive === true ? "bg-emerald-400 animate-pulse" : apiAlive === false ? "bg-red-500" : "bg-amber-400"}`}
+              style={apiAlive === true ? { boxShadow: "0 0 6px #00ff88" } : apiAlive === false ? { boxShadow: "0 0 6px #ff0000" } : { boxShadow: "0 0 6px #ffaa22" }}
             />
-            {apiAlive ? "API LIVE" : "OFFLINE"}
+            {apiAlive === true ? "API LIVE" : apiAlive === false ? "OFFLINE" : "غير مقاس"}
           </div>
 
           {/* Internal WebSocket Hub Pill */}

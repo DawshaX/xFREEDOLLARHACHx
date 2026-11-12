@@ -14,6 +14,7 @@
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { getRemoteBase, isRemoteConfigured, remoteWsUrl } from "@/lib/remote";
+import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
 import { LOCAL_BRAIN_TOOL_COUNT } from "@/lib/local-brain";
 
 export interface FleetMachine {
@@ -66,15 +67,18 @@ function apiBase(): string {
 function wsUrl(): string {
   // A linked NOVA server owns the realtime channel. Without one we still try
   // same-origin, and the UI reports the truth instead of a fake green dot.
+  // The token rides as a query param because a WebSocket handshake cannot set
+  // an `x-nova-token` header from the browser.
+  const q = novaTokenQuery();
   try {
     const remote = getRemoteBase();
-    if (remote) return remoteWsUrl(`/api/ws`);
+    if (remote) return remoteWsUrl(`/api/ws${q}`);
   } catch {
     /* fall through to same-origin */
   }
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-  return `${proto}//${location.host}${base}${API}/ws`.replace(/([^:])\/+/g, "$1/");
+  return `${proto}//${location.host}${base}${API}/ws${q}`.replace(/([^:])\/+/g, "$1/");
 }
 
 /* ────────────────────────────── store ────────────────────────────── */
@@ -172,6 +176,14 @@ function ingest(payload: any) {
   const type = String(payload.type ?? payload.kind ?? "");
   publish({ lastBeat: Date.now() });
 
+  // The server's live bus wraps the interesting fields under `data`
+  // (`{type:"tool_start", data:{tool, args, ts}}`). Flatten it so every branch
+  // below reads the same shape whether the event came from the bus or a direct
+  // broadcast — otherwise the ops room would show a tool with no name.
+  if (payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)) {
+    payload = { ...payload.data, type, ts: payload.ts ?? payload.data.ts };
+  }
+
   if (type === "fleet" || type === "agents" || Array.isArray(payload.agents)) {
     const machines: FleetMachine[] = (payload.agents ?? []).map((a: any) => ({
       id: a.id ?? a.agentId,
@@ -210,6 +222,39 @@ function ingest(payload: any) {
     publish({ toolsRun: state.toolsRun + 1 });
   }
 
+  // ── The agent's own tool lifecycle, mirrored from the chat ────────────────
+  // When the brain runs a tool it broadcasts `tool_start` / `tool_result` on
+  // this same bus. Turning them into tasks is what makes the ops room show the
+  // agent working in real time — the tool name, its target, and the outcome —
+  // instead of a static list. One source of truth: the same events the chat
+  // renders inline.
+  if (type === "tool_start") {
+    const tool = String(payload.tool ?? payload.name ?? "أداة");
+    const target = payload.target ?? payload.args ?? payload.message;
+    upsertTask({
+      id: String(payload.id ?? `tool-${tool}-${payload.ts ?? Date.now()}`),
+      title: tool,
+      status: "running",
+      tool,
+      target: target ? String(typeof target === "string" ? target : JSON.stringify(target)).slice(0, 120) : undefined,
+      startedAt: Number(payload.ts ?? Date.now()),
+    });
+  }
+  if (type === "tool_result") {
+    const tool = String(payload.tool ?? payload.name ?? "أداة");
+    const ok = payload.ok !== false;
+    upsertTask({
+      id: String(payload.id ?? `tool-${tool}-${payload.ts ?? Date.now()}`),
+      title: tool,
+      status: ok ? "done" : "failed",
+      tool,
+      target: payload.summary ? String(payload.summary).slice(0, 120) : undefined,
+      startedAt: Number(payload.ts ?? Date.now()),
+      endedAt: Number(payload.ts ?? Date.now()),
+      ms: typeof payload.ms === "number" ? payload.ms : undefined,
+    });
+  }
+
   if (type === "task_start" || type === "task_done" || type === "task_failed") {
     upsertTask({
       id: String(payload.id ?? payload.taskId ?? `${type}-${Date.now()}`),
@@ -229,9 +274,13 @@ function ingest(payload: any) {
     payload.summary ??
     (type === "agent_tool_result"
       ? `${payload.tool ?? "أداة"} ${payload.ok ? "نجحت" : "فشلت"}`
-      : type === "local_agent_status"
-        ? `الأسطول اتحدّث: ${(payload.agents ?? []).length} جهاز`
-        : undefined);
+      : type === "tool_start"
+        ? `▶ ${payload.tool ?? "أداة"}${payload.target ? ` ← ${String(payload.target).slice(0, 80)}` : ""}`
+        : type === "tool_result"
+          ? `${payload.ok === false ? "❌" : "✅"} ${payload.tool ?? "أداة"}${payload.summary ? ` — ${String(payload.summary).slice(0, 100)}` : ""}`
+          : type === "local_agent_status"
+            ? `الأسطول اتحدّث: ${(payload.agents ?? []).length} جهاز`
+            : undefined);
   if (message) {
     pushEvent({
       at: payload.at ?? Date.now(),
@@ -249,7 +298,7 @@ let timers: ReturnType<typeof setTimeout>[] = [];
 async function refreshFleet() {
   const dbg = (window as unknown as { __novaFleetDebug?: Record<string, unknown> }).__novaFleetDebug ?? {};
   try {
-    const r = await fetch(`${apiBase()}/agents`, { headers: { accept: "application/json" } });
+    const r = await fetch(`${apiBase()}/agents`, { headers: novaAuthHeaders({ accept: "application/json" }) });
     dbg.url = `${apiBase()}/agents`;
     dbg.status = r.status;
     if (!r.ok) return;
@@ -441,6 +490,82 @@ export function NovaLiveBar({ onOpen }: { onOpen?: () => void }) {
             ))
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Live Operations Feed — the real-time step log for the Ops Room: every tool
+ * the brain actually ran (name, target, step, result) plus what is running and
+ * what just finished. Fed by the same permanent `/api/ws` socket, never a mock.
+ */
+export function NovaOpsFeed() {
+  const live = useNovaLive();
+  const fmt = (ts: number) =>
+    new Date(ts).toLocaleTimeString("ar-EG", { hour12: false }) ?? "";
+
+  const levelBadge = (l?: string) =>
+    l === "ok"
+      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+      : l === "error"
+        ? "bg-red-500/15 text-red-300 border-red-500/40"
+        : l === "warn"
+          ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
+          : "bg-sky-500/15 text-sky-300 border-sky-500/40";
+
+  return (
+    <div dir="rtl" className="rounded-xl border border-emerald-500/20 bg-black/25 p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${live.socket === "open" ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : live.socket === "connecting" ? "bg-amber-400 animate-pulse" : "bg-red-500"}`} />
+          <h2 className="text-[13px] font-black">سجل العمليات الحية</h2>
+        </div>
+        <span className="text-[9px] font-mono text-white/40">WS /api/ws · {live.events.length} حدث</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="rounded-lg p-2 bg-black/30 border border-white/5">
+          <div className="text-[9px] font-black text-amber-300 mb-1">شغّال دلوقتي</div>
+          {live.running.length === 0 ? (
+            <div className="text-[9px] text-white/35">مفيش أدوات شغالة</div>
+          ) : (
+            live.running.slice(0, 6).map((t) => (
+              <div key={t.id} className="text-[9px] text-white/75 truncate">
+                ⏳ <b className="text-amber-200">{t.tool || t.title}</b>
+                {t.target ? <span className="text-white/40"> ← {t.target}</span> : null}
+              </div>
+            ))
+          )}
+        </div>
+        <div className="rounded-lg p-2 bg-black/30 border border-white/5">
+          <div className="text-[9px] font-black text-sky-300 mb-1">خلص للتو</div>
+          {live.done.length === 0 ? (
+            <div className="text-[9px] text-white/35">لسه مفيش نتائج</div>
+          ) : (
+            live.done.slice(0, 6).map((t) => (
+              <div key={t.id} className="text-[9px] text-white/75 truncate">
+                {t.status === "failed" ? "❌" : "✅"} <b className="text-sky-200">{t.tool || t.title}</b>
+                {t.ms != null ? <span className="text-white/30"> · {t.ms}ms</span> : null}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-lg p-2 bg-black/30 border border-white/5 max-h-72 overflow-y-auto">
+        <div className="text-[9px] font-black text-white/60 mb-1">سجل الخطوات</div>
+        {live.events.length === 0 ? (
+          <div className="text-[9px] text-white/35">مستني أول حدث…</div>
+        ) : (
+          live.events.slice(0, 40).map((e) => (
+            <div key={e.id} className="flex items-start gap-2 py-1 border-b border-white/5 last:border-0">
+              <span className="text-[8px] font-mono text-white/30 whitespace-nowrap pt-0.5">{fmt(e.at)}</span>
+              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap ${levelBadge(e.level)}`}>{e.kind}</span>
+              <span className="text-[9px] text-white/70 leading-snug break-words" title={e.message}>{e.message}</span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

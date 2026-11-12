@@ -18,9 +18,21 @@ on:
       - "artifacts/api-server/**"
       - "artifacts/kali-panel/**"
       - "scripts/build-standalone.mjs"
+      # الملفين دول بيتنسخوا جوه الحزمة نفسها (build-standalone.mjs:154 بينسخ
+      # `ops/` و`scripts/fetch-toolchain.mjs`) — أي تعديل فيهم لازم يبعت حزمة
+      # جديدة، ومن غير السطرين دول المكنة فضلت بشكر نسخةvendorer قديمة بعد
+      # a184874 (اللي صلّح `const latest` الناقص) والفرق كان 12 أداة مش منصوبة.
+      - "scripts/fetch-toolchain.mjs"
+      - "ops/**"
       - "state/**"
       - ".github/workflows/standalone-bundle.yml"
   workflow_dispatch:
+  # دفعات GITHUB_TOKEN (زي تثبيت الـCA) مبتفجّرش push events — لكن workflow_run
+  # بيشتغل عليها طبيعي (نفس النمط اللي deploy-pages بعتمد عليه)، فالشهادة
+  # المثبّتة تركب الحزمة في الدقيقة نفسها مش على أول دفعة كود جاية.
+  workflow_run:
+    workflows: ["DB CA pin sync"]
+    types: [completed]
 
 concurrency:
   group: nova-standalone

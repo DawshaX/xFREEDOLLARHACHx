@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Hash as HashIcon, Copy, Check, Loader2 } from "lucide-react";
+import { jsonRequest } from "@/lib/sse";
 
 type HashAlgo = "md5" | "sha1" | "sha256" | "sha512";
 const ALGOS: HashAlgo[] = ["md5", "sha1", "sha256", "sha512"];
@@ -13,14 +14,26 @@ export default function HashTool() {
   const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCompute = () => {
+  // الحساب الحقيقي على السيرفر (node:crypto) — قبل كده كان بيولّد هاش وهمي
+  // من reduce على أحرف النص، فكان أي هاش بيتعرض غلط. دلوقتي بننادي /tools/hash.
+  const handleCompute = async () => {
     if (!text) return;
     setIsLoading(true);
-    setTimeout(() => {
-      setResult(`HASH_${algorithm.toUpperCase()}_${Array.from(text).reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 0).toString(16).padStart(8, "0")}${text.length.toString(16).padStart(8, "0")}${"a".repeat(algorithm === "sha512" ? 80 : algorithm === "sha256" ? 48 : algorithm === "sha1" ? 28 : 16)}`);
+    setError(null);
+    try {
+      const res = await jsonRequest<{ algorithm: string; hash: string }>("/tools/hash", {
+        method: "POST",
+        body: JSON.stringify({ text, algorithm }),
+      });
+      setResult(res.hash);
+    } catch (e) {
+      setResult(null);
+      setError(e instanceof Error ? e.message : "فشل حساب الهاش");
+    } finally {
       setIsLoading(false);
-    }, 400);
+    }
   };
 
   const handleCopy = () => {
@@ -58,6 +71,12 @@ export default function HashTool() {
           style={{ background: "rgba(255,170,68,0.1)", border: "1px solid rgba(255,170,68,0.3)", color: "#ffaa44" }}>
           {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" />جاري الحساب...</> : <><HashIcon className="w-4 h-4" />توليد الهاش</>}
         </button>
+
+        {error && (
+          <div className="rounded-xl p-3 font-mono text-[11px]" style={{ background: "rgba(255,68,68,0.08)", border: "1px solid rgba(255,68,68,0.2)", color: "#ff8888" }}>
+            الحساب ما اتعملش: {error}
+          </div>
+        )}
 
         {result && (
           <div className="space-y-2">

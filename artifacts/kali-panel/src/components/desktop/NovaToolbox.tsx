@@ -7,6 +7,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Search, Server, Terminal, Wrench } from "lucide-react";
+import { novaAuthHeaders } from "@/lib/ops-client";
 
 interface ToolRow {
   name: string;
@@ -29,7 +30,7 @@ export function NovaToolbox({ onUse }: { onUse?: (prompt: string) => void }) {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/nova-core/tools")
+    fetch("/api/nova-core/tools", { headers: novaAuthHeaders() })
       .then((r) => r.json())
       .then((j) => {
         if (!alive) return;
