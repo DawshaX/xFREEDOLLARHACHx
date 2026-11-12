@@ -53,6 +53,12 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 import { visitorIntelMiddleware } from "./lib/ops/visitor-intel";
 app.use(visitorIntelMiddleware());
 
+// ── بوابة الدخول (panel-auth) ── بتقفل الواجهة كلها: فيرست بصفحة دخول،
+// والآلات بتعدّي بالتوكن زي ما هي. عمدًا بعد عين الزيارات: الغريب اللي بيخبط
+// على الباب لسه بيتبلّغ تليجرام، بس مش بيشوف جوه.
+import { panelAuthMiddleware } from "./lib/panel-auth";
+app.use(panelAuthMiddleware());
+
 // ── Standalone SSE Streams (LiveAgent, Agent Steps, Push Notifications) ──────
 app.get("/api/push/stream", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream");
