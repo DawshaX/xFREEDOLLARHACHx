@@ -1,0 +1,57 @@
+name: NOVA telegram provision
+
+# ─────────────────────────────────────────────────────────────────────────────
+# تشغيلة يدوية واحدة: Actions → NOVA telegram provision → Run workflow →
+# الصق توكن البوت → Run. الخطوة بتدفّعه للعقدة الحية عبر POST /api/ops/config
+# (موقّع بـNOVA_EXEC_TOKEN)، والعقدة بتقفله في الذاكرة الدائمة (Supabase Edge)
+# — يبقى باقي بعد أي ريستارت. التوكن متقنع ::add-mask:: فور دخوله، ومابيتكتبش
+# في أي رد ولا لوج. بعد النجاح اعمل /revoke في BotFather وخد الجديد — التوكن
+# اللي اتلصق في المحادثات يُعتبر متعرّض.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      botToken:
+        description: "توكن البوت من BotFather (رقم:خلطة طويلة)"
+        required: true
+        type: string
+
+permissions:
+  contents: none
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      HUB: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
+    steps:
+      - name: push the token into the node + verify acceptance (value never printed)
+        env:
+          NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          BOT_TOKEN: ${{ inputs.botToken }}
+        run: |
+          set -euo pipefail
+          if [ -z "$NOVA_EXEC_TOKEN" ]; then
+            echo "::error::NOVA_EXEC_TOKEN مش موجود في الأسرار — القناة مكسورة"
+            exit 1
+          fi
+          echo "::add-mask::$BOT_TOKEN"
+          # 1) دفع الإعداد
+          code=$(curl -sS -o /tmp/cfg.json -w '%{http_code}' -m 30 -X POST "$HUB/api/ops/config" \
+            -H "Content-Type: application/json" -H "x-nova-token: $NOVA_EXEC_TOKEN" \
+            -d "{\"key\": \"telegram.botToken\", \"value\": \"$BOT_TOKEN\"}")
+          echo "provision HTTP $code"
+          grep -q '"ok":true' /tmp/cfg.json || { echo "::error::السيرفر رفض الإعداد: $(head -c 200 /tmp/cfg.json)"; exit 1; }
+          # 2) التحقق: الحالة بترجع boolean فقط — بذلك مفيش قيمة في اللوج أبدًا
+          st=$(curl -sS -m 20 "$HUB/api/ops/config/status")
+          echo "$st" | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)
+          ok=d.get('keys',{}).get('telegram.botToken')
+          print('botToken on node:', '✓ set' if ok else '✗ still empty')
+          raise SystemExit(0 if ok else 1)"
+          echo "## telegram provision ✓ — $(date -u +%FT%TZ)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- الإعداد اتقبل والعقدة ماسكاه (verified من /ops/config/status)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- الخطوة التالية عندك: افتح تليجرام وابعت /start للبوت — الـchat_id بيتقفل لوحده" >> "$GITHUB_STEP_SUMMARY"
