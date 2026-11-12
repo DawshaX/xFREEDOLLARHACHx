@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { Link } from "wouter";
 import { jsonRequest } from "@/lib/sse";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -1321,7 +1322,7 @@ export function LiveAgentPanel({
                   <MapIcon className="w-4 h-4 text-violet-400" />
                   <span className="text-xs font-bold uppercase tracking-widest">Attack Map</span>
                 </div>
-                <a href="/monitor" className="text-[9px] text-muted-foreground hover:text-primary font-bold transition">FULL VIEW</a>
+                <Link href="/monitor" className="text-[9px] text-muted-foreground hover:text-primary font-bold transition">FULL VIEW</Link>
               </div>
               <div className="flex-1 relative bg-black/40 rounded-2xl border border-white/5 overflow-hidden">
                 <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, #3b82f6 1px, transparent 1px)', backgroundSize: '20px 20px' }} />

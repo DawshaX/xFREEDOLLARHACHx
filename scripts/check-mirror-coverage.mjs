@@ -82,7 +82,7 @@ export function check({ repo = REPO, manifestPath = null } = {}) {
     }
   }
   if (manifest) {
-    const have = (manifest.tools || []).map((t) => t?.name).filter(Boolean);
+    const have = (manifest.tools || []).map((t) => t?.bin || t?.name).filter(Boolean);
     if (!have.length) errors.push("المانيفست اتبنى من غير أي أداة — أحسن حاجة نلغي النشر.");
     const missing = (promised || []).filter((b) => !have.includes(b));
     if (missing.length)
@@ -95,7 +95,7 @@ export function check({ repo = REPO, manifestPath = null } = {}) {
     errors,
     promised: promised || [],
     buildable: buildable || [],
-    packed: manifest ? (manifest.tools || []).map((t) => t?.name).filter(Boolean) : null,
+    packed: manifest ? (manifest.tools || []).map((t) => t?.bin || t?.name).filter(Boolean) : null,
   };
 }
 
@@ -159,6 +159,16 @@ if (process.argv.includes("--selftest")) {
     writeFileSync(mf, JSON.stringify({ total: 2, tools: [{ name: "a" }, { name: "b" }] }));
     const r = check({ repo, manifestPath: mf });
     if (r.ok || !r.errors.some((x) => x.includes("منشورة ناقصة"))) throw new Error("حارسنا الجديد هيخلي نفس الغلط يعدّي");
+  });
+  t("مانيفست بصيغة المِرر الفعلية (t.bin بدل t.name) → مقروءة تمام", () => {
+    mk("artifacts/api-server/src/lib/ops/toolchain.ts", app(["a", "b", "d"]));
+    mk("scripts/fetch-toolchain.mjs", builder(["a", "b", "d"]));
+    const mf = join(dir, "m-bin.json");
+    writeFileSync(mf, JSON.stringify({ tools: [{ bin: "a" }, { bin: "b" }, { bin: "d" }] }));
+    if (!check({ repo, manifestPath: mf }).ok) throw new Error("مانيفست build-toolchain-mirror الفعلية (bin) اترفضت!");
+    writeFileSync(mf, JSON.stringify({ tools: [{ bin: "a" }, { bin: "b" }] }));
+    const r = check({ repo, manifestPath: mf });
+    if (r.ok || !r.errors.some((x) => x.includes("الناقص: d"))) throw new Error("الناقص في صيغة bin عدّى");
   });
   t("مانيفست فاضية → رُفضت", () => {
     const mf = join(dir, "m3.json");

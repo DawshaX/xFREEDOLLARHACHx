@@ -62,7 +62,12 @@ jobs:
           hostport=$(printf '%s' "$HUB" | sed -E 's#^https?://##; s#/.*$##')
           host="${hostport%%:*}"
           port="${hostport##*:}"
-          [ "$port" = "$host" ] && port=80
+          if [ "$port" = "$host" ]; then
+            case "$HUB" in
+              https://*) port=443 ;;
+              *) port=80 ;;
+            esac
+          fi
 
           getent hosts "$host" >/tmp/dns.txt 2>&1
           dns=$?
@@ -185,7 +190,10 @@ jobs:
           set +e
           [ -z "$TELEGRAM_BOT_TOKEN" ] && { echo "no telegram secret — skip"; exit 0; }
           [ -z "$NOVA_EXEC_TOKEN" ] && { echo "::notice::NOVA_EXEC_TOKEN absent — config sync skipped"; exit 0; }
-          code=$(curl -sS -o /tmp/cfg.json -w '%{http_code}' -m 30 -X POST "$HUB/api/ops/config"             -H "Content-Type: application/json" -H "x-nova-token: $NOVA_EXEC_TOKEN"             -d "{"key": "telegram.botToken", "value": "$TELEGRAM_BOT_TOKEN"}")
+          payload=$(jq -nc --arg k "telegram.botToken" --arg v "$TELEGRAM_BOT_TOKEN" '{key:$k,value:$v}')
+          code=$(curl -sS -o /tmp/cfg.json -w '%{http_code}' -m 30 -X POST "$HUB/api/ops/config" \
+            -H "Content-Type: application/json" -H "x-nova-token: $NOVA_EXEC_TOKEN" \
+            -d "$payload")
           flagged=$(curl -sS -m 20 "$HUB/api/ops/config/status" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("keys",{}).get("telegram.botToken"))' 2>/dev/null)
           echo "config push: HTTP $code · botToken on node: ${flagged:-unknown}"
           echo "- telegram.botToken: HTTP $code · node=$flagged" >> "$GITHUB_STEP_SUMMARY"

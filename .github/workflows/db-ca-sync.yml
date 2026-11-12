@@ -54,12 +54,14 @@ jobs:
           } 2>&1 | tee /tmp/pin.log
 
       # سجلات Actions مش متقروءة من الرملة الحرة (egress محصور) — فالفشل بيفتح
-      # issue بنص الخطأ كامل بدل ما يفضل أصم. النجاح مش بيفتح حاجة.
-      - name: Self-report failure as an issue (the only log channel we can read)
+      # issue بنص الخطأ كامل بدل ما يفضل أصم، والنجاح بيقفل أي issue قديم مفتوح تلقائيًا.
+      - name: Self-report failure as an issue (deduped)
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
+          TITLE="db-ca-sync: تعذّر قراءة/تثبيت شهادة Neon"
           LOG="$(tail -c 3000 /tmp/pin.log 2>/dev/null || echo 'no log captured')"
           {
             echo "تشغيل ${{ github.run_id }} فشل — آخر اللوج:"
@@ -67,7 +69,28 @@ jobs:
             echo "$LOG"
             echo '```'
           } > /tmp/issue-body.md
-          gh issue create --title "db-ca-sync: تعذّر قراءة/تثبيت شهادة Neon" --body-file /tmp/issue-body.md || true
+          existing=$(gh api "repos/$REPO/issues?state=open&per_page=50" \
+            --jq ".[] | select(.title == \"$TITLE\") | .number" 2>/dev/null | head -n 1 || true)
+          if [ -n "$existing" ]; then
+            gh api -X POST "repos/$REPO/issues/$existing/comments" -F body=@/tmp/issue-body.md >/dev/null 2>&1 || true
+          else
+            gh issue create --title "$TITLE" --body-file /tmp/issue-body.md || true
+          fi
+
+      - name: Auto-close stale db-ca-sync failure issues on recovery
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          TITLE="db-ca-sync: تعذّر قراءة/تثبيت شهادة Neon"
+          ids=$(gh api "repos/$REPO/issues?state=open&per_page=50" \
+            --jq ".[] | select(.title == \"$TITLE\") | .number" 2>/dev/null || true)
+          for id in $ids; do
+            gh api -X POST "repos/$REPO/issues/$id/comments" \
+              -f body="✅ تم قراءة وتثبيت شهادة TLS بنجاح في التشغيل ${{ github.run_id }} ($(date -u +%FT%TZ)). تم الإغلاق تلقائيًا." >/dev/null 2>&1 || true
+            gh api -X PATCH "repos/$REPO/issues/$id" -f state=closed >/dev/null 2>&1 || true
+          done
 
       - name: Commit if the pin actually rotated
         id: pin

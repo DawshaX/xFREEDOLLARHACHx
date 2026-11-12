@@ -71,6 +71,8 @@ jobs:
           # authenticated api.github.com: anonymous calls are rate-limited per
           # runner IP, and a 403 here reports as "0 tools" without an error
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # CI runner has 40 GB disk and check-toolchain requires nuclei
+          NOVA_HEAVY_TOOLS: "1"
         run: node scripts/fetch-toolchain.mjs --into vendor/bin
 
       - name: PATH for the vendored binaries

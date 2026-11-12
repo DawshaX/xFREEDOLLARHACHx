@@ -1,5 +1,6 @@
 import { Bell, Search, Shield, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 export function Header() {
@@ -33,11 +34,11 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-4">
-        <a href={health.ok ? "/ops/live-monitor" : "#"} title={health.ok ? `السيرفر واصل · healthz ${health.ms}ms${health.db === true ? " · DB واصلة" : health.db === false ? " · DB مش واصلة" : ""}` : "السيرفر مش واصل دلوقتي (مقاس لحظي)"}
+        <Link href="/monitor" title={health.ok ? `السيرفر واصل · healthz ${health.ms}ms${health.db === true ? " · DB واصلة" : health.db === false ? " · DB مش واصلة" : ""}` : "السيرفر مش واصل دلوقتي (مقاس لحظي)"}
           className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border ${health.ok ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>
           {health.ok ? <Shield className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
           <span>{health.ok ? `السيرفر واصل · ${health.ms}ms` : "السيرفر مش واصل"}</span>
-        </a>
+        </Link>
 
         <div className="relative">
           <Button variant="ghost" size="icon" onClick={() => setBellOpen((v) => !v)}
@@ -56,8 +57,8 @@ export function Header() {
                 <li>· قاعدة البيانات: {health.db === null ? "⏳ يتقاس…" : health.db ? "واصلة" : "مش واصلة"}</li>
               </ul>
               <div className="mt-2 grid grid-cols-2 gap-1.5 text-center">
-                <a href="/live-agent" className="rounded-md border border-primary/30 text-primary text-[10px] font-bold py-1 hover:bg-primary/10">📡 المراقبة الحية</a>
-                <a href="/cve-live" className="rounded-md border border-border text-muted-foreground text-[10px] font-bold py-1 hover:bg-white/5">🛰 لوحة العمليات</a>
+                <Link href="/live-agent" onClick={() => setBellOpen(false)} className="rounded-md border border-primary/30 text-primary text-[10px] font-bold py-1 hover:bg-primary/10">📡 المراقبة الحية</Link>
+                <Link href="/cve-live" onClick={() => setBellOpen(false)} className="rounded-md border border-border text-muted-foreground text-[10px] font-bold py-1 hover:bg-white/5">🛰 لوحة العمليات</Link>
               </div>
             </div>
           )}
