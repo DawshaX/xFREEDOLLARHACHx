@@ -3,6 +3,9 @@ import { eq } from "drizzle-orm";
 import { db, botCronJobs, botMemory, botAlerts, settings } from "@workspace/db";
 import { resolveAi, markProviderFailed, getProviderStatus } from "./ai";
 import { AGENT_TOOLS, runTool, CLIENT_TOOL_NAMES } from "./tools";
+import { llmComplete } from "./agent/llm";
+import { runAgent } from "./agent/core";
+import { getOllamaBaseUrl } from "./ollama-settings";
 import { logger } from "./logger";
 import {
   learnFromRecentCves,
@@ -18,6 +21,46 @@ const tasks = new Map<number, ScheduledTask>();
 // Global flag to track if a user chat is in progress
 let _ollamaBusy = false;
 export function setOllamaBusy(val: boolean): void { _ollamaBusy = val; }
+
+/** فحص سريع: هل Ollama المحلية بترد فعلاً؟ ثانيتين كحد — والجواب يحدد المسار. */
+async function ollamaReachable(): Promise<boolean> {
+  try {
+    const base = await getOllamaBaseUrl();
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 2_500);
+    const r = await fetch(`${base}/api/tags`, { signal: ctrl.signal });
+    clearTimeout(t);
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * نواة runAgent الاحتياطية: لما مفيش ولا مزوّد LLM متاح (لا Ollama ولا سحابي)،
+ * المهمة لسه بتتنفذ — المخطط الحتمي بيشغّل الأدوات الحقيقية (فحص صحة، NVD، ذاكرة…)
+ * وبنرجّع نص ـالرد كمخلص. ده بيحوّل «failed» لـ«نجحت بأداة حقيقية» على أي مضيف
+ * بلا أولاما — زي واي فلي حيث 205 مهمة كانت بتفشل كلها لأن resolveAi بيروّح لـ
+ * 127.0.0.1:11434 مش موجود.
+ */
+async function runHeuristicCronTurn(name: string, prompt: string): Promise<string> {
+  let buf = "";
+  const collect = (ev: { type?: string; text?: string; message?: string }) => {
+    if (ev.type === "delta" && typeof ev.text === "string") buf += ev.text;
+    if (ev.type === "error" && typeof ev.message === "string") buf += `\nخطأ: ${ev.message}`;
+  };
+  const result = await Promise.race([
+    runAgent({
+      message: `[مهمة مجدولة: ${name}] ${prompt}`,
+      sessionId: `cron-${name.replace(/\W+/g, "-").slice(0, 24)}`,
+      forceHeuristic: true,
+      emit: collect,
+    }),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("مهلة النواة الاحتياطية (90s)")), 90_000)),
+  ]);
+  const text = buf.trim() || result.reply || "";
+  return text;
+}
 
 async function executeJob(jobId: number): Promise<void> {
   const [job] = await db.select().from(botCronJobs).where(eq(botCronJobs.id, jobId));
@@ -36,6 +79,70 @@ async function executeJob(jobId: number): Promise<void> {
     .update(botCronJobs)
     .set({ lastRunAt: new Date(), lastStatus: "running" })
     .where(eq(botCronJobs.id, jobId));
+
+  /* TEST2-4: كل المهام على واي فلي failed ×205 — resolveAi بيروّح لـOllama
+   * محلي مش موجود على المضيف. المسار الصادق:
+   *   1) Ollama محلي (لو ردّ خلال فحص 2.5s) — zي الكود الأصلي بالأدوات.
+   *   2) llmComplete — نفس سلسلة نواة الشات (10 مزودين سحابيين انتشروا لايف).
+   *   3) runAgent forceHeuristic — أدوات حقيقية حتمية حتى لو صفر LLM.
+   * أي طبقة بتنجح ⇒ success، والسطر بتاع الذاكرة بيسجل مصدرها. */
+  const ollamaUp = await ollamaReachable();
+  if (!ollamaUp) {
+    logger.info({ jobId, name: job.name }, "Cron job: Ollama offline — trying cloud providers, then heuristic core");
+    try {
+      const systemPrompt = `أنت CyberNova Bot — وكيل أمني ذاتي يعمل 24/7. تنفّذ المهمة المجدولة باستخدام الأدوات الحقيقية.
+المهمة: ${job.name}
+الوصف: ${job.description}
+نفّذ، واشرح النتيجة باختصار (حسب الأرقام المقاسة فقط — ممنوع الاختراع).`;
+
+      let summary = "";
+      let pathUsed = "";
+      const llm = await llmComplete(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: job.prompt },
+        ],
+        { temperature: 0.3, maxTokens: 1200, timeoutMs: 45_000 },
+      );
+      if (llm && llm.text.trim()) {
+        summary = llm.text.trim();
+        pathUsed = `${llm.provider} · ${llm.model}`;
+      } else {
+        summary = await runHeuristicCronTurn(job.name, job.prompt);
+        pathUsed = "nova-brain (حتمي — بلا LLM)";
+      }
+
+      await db
+        .update(botCronJobs)
+        .set({ lastStatus: "success", runCount: job.runCount + 1, lastRunAt: new Date() })
+        .where(eq(botCronJobs.id, jobId));
+
+      if (summary.length > 50) {
+        await db.insert(botMemory).values({
+          memoryType: "success_pattern",
+          key: `cron_${job.name}_${Date.now()}`,
+          content: summary.slice(0, 2000),
+          context: `Cron job: ${job.name} (${pathUsed})`,
+          tags: "cron,auto,scheduled",
+        });
+      }
+      logger.info({ jobId, name: job.name, path: pathUsed, summaryLen: summary.length }, "Cron job done");
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      logger.error({ jobId, err: errMsg }, "Cron job failed");
+      await db
+        .update(botCronJobs)
+        .set({ lastStatus: "failed", runCount: job.runCount + 1, lastRunAt: new Date() })
+        .where(eq(botCronJobs.id, jobId));
+      await db.insert(botAlerts).values({
+        severity: "high",
+        title: `Cron job failed: ${job.name}`,
+        message: errMsg.slice(0, 500),
+        source: "cron",
+      });
+    }
+    return;
+  }
 
   try {
     const { client, model } = await resolveAi();

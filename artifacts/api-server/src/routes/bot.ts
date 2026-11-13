@@ -122,11 +122,13 @@ router.post("/bot/cron/:id/trigger", async (req, res) => {
 
   send("cron_started", { jobId: id, name: job.name, prompt: job.prompt });
 
-  try {
-    const systemPrompt = `أنت CyberNova Bot — وكيل أمني ذاتي يعمل على مدار الساعة. تم تشغيلك بواسطة مهمة مجدولة (Cron Job).
+  // خارج الـtry: المسار الاحتياطي في catch بيستخدم نفس النص
+  const systemPrompt = `أنت CyberNova Bot — وكيل أمني ذاتي يعمل على مدار الساعة. تم تشغيلك بواسطة مهمة مجدولة (Cron Job).
 المهمة: ${job.name}
 الوصف: ${job.description}
 لديك أدوات حقيقية لتنفيذ المهمة. نفّذ المطلوب وأرسل تقريراً موجزاً.`;
+
+  try {
 
     const toolDefs = AGENT_TOOLS.filter((t) => !CLIENT_TOOL_NAMES.has(t.name));
 
@@ -204,11 +206,65 @@ router.post("/bot/cron/:id/trigger", async (req, res) => {
 
     send("cron_completed", { jobId: id, status: "success" });
   } catch (err) {
-    await db
-      .update(botCronJobs)
-      .set({ lastRunAt: new Date(), lastStatus: "failed", runCount: job.runCount + 1 })
-      .where(eq(botCronJobs.id, id));
-    send("cron_error", { error: String(err) });
+    /* TEST2-4: التشغيل اليدوي كان بيفشل على المضيف بلا أولاما محلية (واي فلي) —
+     * نفس سلم الجدولة: سلسلة LLM السحابية أولاً، وبعدين النواة الحتمية
+     * بتشغّل أدوات حقيقية. ممنوع «failed» وإيد المالك على الزر لمجرد إن
+     * 127.0.0.1:11434 مش شغّالة. */
+    const errMsg = err instanceof Error ? err.message : String(err);
+    let fallbackText = "";
+    let pathUsed = "";
+    try {
+      const { llmComplete } = await import("../lib/agent/llm");
+      const llm = await llmComplete(
+        [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: job.prompt },
+        ],
+        { temperature: 0.3, maxTokens: 1200, timeoutMs: 45_000 },
+      );
+      if (llm && llm.text.trim()) {
+        fallbackText = llm.text.trim();
+        pathUsed = `${llm.provider} · ${llm.model}`;
+      }
+    } catch {
+      /* واصل للنواة */
+    }
+    if (!fallbackText) {
+      try {
+        const { runAgent } = await import("../lib/agent/core");
+        const chunks: string[] = [];
+        await Promise.race([
+          runAgent({
+            message: `[مهمة مجدولة: ${job.name}] ${job.prompt}`,
+            sessionId: `cron-manual-${id}`,
+            forceHeuristic: true,
+            emit: (ev) => {
+              const t = (ev as { type?: string; text?: string }).text;
+              if ((ev as { type?: string }).type === "delta" && typeof t === "string") chunks.push(t);
+            },
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("مهلة النواة الاحتياطية (90s)")), 90_000)),
+        ]);
+        fallbackText = chunks.join("").trim();
+        pathUsed = fallbackText ? "nova-brain (حتمي — بلا LLM)" : "";
+      } catch {
+        /* واصل للفشل */
+      }
+    }
+    if (fallbackText) {
+      send("cron_delta", { text: `\n_(أولا مضيفها بلا Ollama محلية — اتنفذت عبر ${pathUsed})_\n\n${fallbackText}` });
+      await db
+        .update(botCronJobs)
+        .set({ lastRunAt: new Date(), lastStatus: "success", runCount: job.runCount + 1 })
+        .where(eq(botCronJobs.id, id));
+      send("cron_completed", { jobId: id, status: "success", path: pathUsed });
+    } else {
+      await db
+        .update(botCronJobs)
+        .set({ lastRunAt: new Date(), lastStatus: "failed", runCount: job.runCount + 1 })
+        .where(eq(botCronJobs.id, id));
+      send("cron_error", { error: errMsg });
+    }
   }
 
   res.end();

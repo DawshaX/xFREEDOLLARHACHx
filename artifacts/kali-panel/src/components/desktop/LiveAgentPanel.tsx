@@ -1596,7 +1596,19 @@ export function LiveAgentPanel({
   const [systemWindow, setSystemWindow] = useState<"monitor" | "files" | "registry" | null>(null);
 
   // ── 2099 — Agent Mode ──────────────────────────────────────────────────────
-  const [agentMode, setAgentMode] = useState<AgentMode>("defensive");
+  /* TEST2-4: «لسة دفاعي وقولتلك عيب كدا». الوضع كان بيرجع «دفاعي» مع كل
+   * ريفريش — دلوقتي الاختيار ثابت في localStorage، والافتراضي «مستقل»
+   * طالع من لسان المالك («الوضع المستقل ثابت»). */
+  const [agentMode, setAgentMode] = useState<AgentMode>(() => {
+    try {
+      const saved = localStorage.getItem("nova-agent-mode");
+      if (saved && AGENT_MODES.some((m) => m.id === saved)) return saved as AgentMode;
+    } catch { /* ignore */ }
+    return "autonomous";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("nova-agent-mode", agentMode); } catch { /* ignore */ }
+  }, [agentMode]);
   const [showModeSelector, setShowModeSelector] = useState(false);
 
   // ── 2099 — Mission Queue ───────────────────────────────────────────────────

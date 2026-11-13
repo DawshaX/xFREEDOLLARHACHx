@@ -32,6 +32,8 @@ interface CronRow {
   lastRunAt?: string | null;
   lastStatus?: string;
   runCount?: number;
+  /** مصدر الليستة — `bot` هي جدولة نوفا الحقيقية في قاعدة البيانات (المعروضة في /cron). */
+  src?: "bot" | "daemon";
 }
 interface NotifRow {
   id: number | string;
@@ -95,18 +97,25 @@ export function AgentCommandDeck() {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
-    const [lv, aw, tk, cr, nf, mem] = await Promise.all([
+    const [lv, aw, tk, cr, nf, mem, botCr] = await Promise.all([
       getJson<LiveStatus>("/live-agent/status"),
       getJson<Awareness>("/nova-core/awareness"),
       getJson<AgentTaskRow[]>("/agent/tasks"),
       getJson<CronRow[]>("/autonomous/tasks"),
       getJson<NotifRow[]>("/notifications"),
       getJson<MemRow[]>("/memory"),
+      /* /bot/cron هي جدولة نوفا الحقيقية اللي بيعرضها مركز التعلم (/cron) —
+       * أي مهمة failed هنا ظاهرة في اللوحة بالـrunCount بتاعها، مش مكتومة. */
+      getJson<CronRow[]>("/bot/cron"),
     ]);
     setLive(lv);
     setAware(aw);
     setTasks(Array.isArray(tk) ? tk : tk === null ? null : []);
-    setCrons(Array.isArray(cr) ? cr : cr === null ? null : []);
+    const merged: CronRow[] = [
+      ...(Array.isArray(botCr) ? botCr.map((c) => ({ ...c, src: "bot" as const })) : []),
+      ...(Array.isArray(cr) ? cr.map((c) => ({ ...c, src: "daemon" as const })) : []),
+    ];
+    setCrons(merged.length ? merged : (cr === null && botCr === null ? null : []));
     setNotifs(Array.isArray(nf) ? nf : nf === null ? null : []);
     if (Array.isArray(mem)) {
       setMemCount(mem.length);
@@ -192,10 +201,18 @@ export function AgentCommandDeck() {
             </div>
             <div className="space-y-1 max-h-28 overflow-y-auto">
               {(crons ?? []).map((c) => (
-                <div key={c.id} className="flex items-center gap-2 text-[9px] px-2 py-1 rounded bg-black/15 border border-white/5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${c.isEnabled === true || c.isEnabled === "true" ? "bg-emerald-400" : "bg-muted"}`} />
+                <div key={`${c.src ?? "daemon"}-${c.id}`} className="flex items-center gap-2 text-[9px] px-2 py-1 rounded bg-black/15 border border-white/5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    c.lastStatus === "failed" ? "bg-rose-400" :
+                    c.lastStatus === "success" ? "bg-emerald-400" :
+                    c.isEnabled === true || c.isEnabled === "true" ? "bg-amber-400 animate-pulse" : "bg-muted"
+                  }`} />
                   <span className="flex-1 truncate">{c.name ?? `#${c.id}`}</span>
-                  <span className="font-mono text-muted-foreground">{c.cronExpression ?? ""}</span>
+                  {c.lastStatus && (
+                    <span className={`text-[8px] font-mono ${c.lastStatus === "failed" ? "text-rose-300" : c.lastStatus === "success" ? "text-emerald-300" : "text-amber-300"}`}>
+                      {c.lastStatus}{typeof c.runCount === "number" && c.runCount > 0 ? ` ×${c.runCount}` : ""}
+                    </span>
+                  )}
                   <span className="font-mono text-muted-foreground">{fmtWhen(c.lastRunAt)}</span>
                 </div>
               ))}
