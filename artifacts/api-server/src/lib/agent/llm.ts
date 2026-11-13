@@ -467,10 +467,13 @@ async function attemptWithRetry(
 export async function completeWithProvider(
   provider: LlmProviderInfo,
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; timeoutMs?: number; tries?: number; signal?: AbortSignal } = {},
+  opts: { temperature?: number; maxTokens?: number; timeoutMs?: number; tries?: number; signal?: AbortSignal; modelOverride?: string } = {},
 ): Promise<{ text: string; model: string; ms: number; healed?: boolean }> {
   const started = Date.now();
-  const model = await resolveModel(provider);
+  /* اختيار المالك من اللوحة بيوصل هنا (modelOverride): لو المزود المقصود
+   * فعلاً — نبدأ بموديله المختار حتى لو مختلف عن الإعداد. الانهيار الذاتي
+   * (isModelRejection → discoverModel) شغال حتى مع الاختيار اليدوي. */
+  const model = opts.modelOverride?.trim() || (await resolveModel(provider));
 
   const attempt = async (useModel: string): Promise<string> =>
     provider.kind === "ollama"
@@ -622,10 +625,10 @@ async function callOllama(
  */
 export async function llmComplete(
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; prefer?: string; timeoutMs?: number; tries?: number; signal?: AbortSignal } = {},
+  opts: { temperature?: number; maxTokens?: number; prefer?: string; modelOverride?: string; timeoutMs?: number; tries?: number; signal?: AbortSignal } = {},
 ): Promise<LlmResult | null> {
   const providers = await listConfiguredProviders();
-  logger.info({ providers: providers.map((p) => `${p.id}:${p.baseUrl}`) }, "llm: providers resolved");
+  logger.info({ providers: providers.map((p) => `${p.id}:${p.baseUrl}`), prefer: opts.prefer ?? null, modelOverride: opts.modelOverride ?? null }, "llm: providers resolved");
   const ordered = opts.prefer
     ? [...providers.filter((p) => p.id === opts.prefer), ...providers.filter((p) => p.id !== opts.prefer)]
     : providers;
@@ -645,6 +648,7 @@ export async function llmComplete(
         timeoutMs: opts.timeoutMs,
         tries,
         signal: opts.signal,
+        modelOverride: opts.prefer === provider.id ? opts.modelOverride : undefined,
       });
       logger.info({ provider: provider.id, model: out.model, healed: out.healed, ms: Date.now() - started }, "llm: success");
       return { text: out.text, provider: provider.id, model: out.model, ms: Date.now() - started };
