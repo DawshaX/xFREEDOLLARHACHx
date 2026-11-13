@@ -121,12 +121,14 @@ export function findPending(messages) {
   return answered ? null : lastUser;
 }
 
-/* ── the mouth: keyless model, three seats, real fallbacks ───────────────── */
+/* ── the mouth: keyless models spread across independent providers ──────── */
 
-const SEATS = [
-  { id: "openai", model: "openai" },
-  { id: "mistral", model: "mistral" },
-  { id: "llama", model: "llama" },
+export const SEATS = [
+  { id: "openai", model: "openai", url: "https://text.pollinations.ai/openai", kind: "pollinations" },
+  { id: "mistral", model: "mistral", url: "https://text.pollinations.ai/openai", kind: "pollinations" },
+  { id: "ovh-llama", model: "Meta-Llama-3_3-70B-Instruct", url: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions", kind: "openai" },
+  { id: "ovh-ai", model: "Qwen3.6-27B", url: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions", kind: "openai" },
+  { id: "llama", model: "llama", url: "https://text.pollinations.ai/openai", kind: "pollinations" },
 ];
 
 export function systemPrompt(senses) {
@@ -175,7 +177,7 @@ export function sanitizePlan(raw) {
   return plan;
 }
 
-export async function think({ senses, pending, fetchImpl = fetch }) {
+export async function think({ senses, pending, fetchImpl = fetch, seats = SEATS }) {
   const messages = [
     { role: "system", content: systemPrompt(senses) },
     {
@@ -186,21 +188,27 @@ export async function think({ senses, pending, fetchImpl = fetch }) {
     },
   ];
   const failures = [];
-  for (const seat of SEATS) {
+  for (const seat of seats) {
     try {
-      const res = await fetchImpl("https://text.pollinations.ai/openai", {
+      const payload =
+        seat.kind === "pollinations" || seat.url.includes("pollinations")
+          ? { model: seat.model, messages, private: true, referrer: "cybernova" }
+          : { model: seat.model, messages, temperature: 0.35, max_tokens: 900 };
+      const res = await fetchImpl(seat.url, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ model: seat.model, messages, private: true, referrer: "cybernova" }),
-        signal: AbortSignal.timeout(75_000),
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(25_000),
       });
       if (!res.ok) {
         failures.push(`${seat.id}: HTTP ${res.status}`);
         continue;
       }
       const body = await res.json();
-      const text = body?.choices?.[0]?.message?.content ?? body?.choices?.[0]?.text ?? "";
-      const plan = sanitizePlan(extractJson(text));
+      const rawText = (body?.choices?.[0]?.message?.content ?? body?.choices?.[0]?.text ?? "")
+        .replace(/<(?:think|thought|reasoning)>[\s\S]*?<\/(?:think|thought|reasoning)>/gi, " ")
+        .replace(/[\u0250-\u02AF]/g, "");
+      const plan = sanitizePlan(extractJson(rawText));
       if (!plan.reply) {
         failures.push(`${seat.id}: no reply in payload`);
         continue;
@@ -275,7 +283,14 @@ export function brainDoc({ at, seat, plan, action, pending, senses, failures }) 
     says_ar: plan
       ? `${seat ? `فكّرت على ${seat}` : "فكّرت"} · ${plan.reply.split("\n")[0].slice(0, 180)}`
       : "المحاولة فشلت — التفاصيل في failures",
-    sources: ["state/vuln-corpus-index.json", "state/hunt-latest.json", "state/advisory-cache.json", "supabase:chat_messages", "text.pollinations.ai"],
+    sources: [
+      "state/vuln-corpus-index.json",
+      "state/hunt-latest.json",
+      "state/advisory-cache.json",
+      "supabase:chat_messages",
+      "text.pollinations.ai",
+      "oai.endpoints.kepler.ai.cloud.ovh.net",
+    ],
   };
 }
 

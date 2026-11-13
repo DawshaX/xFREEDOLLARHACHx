@@ -146,6 +146,28 @@ async function runPulse() {
   const raw = fs.readFileSync(statePath, "utf-8");
   const state = JSON.parse(raw);
 
+  // Refresh measured corpus & hunt metrics from live state files instead of letting
+  // legacy placeholder figures (e.g. 76680) persist indefinitely.
+  try {
+    const corpusIdxPath = path.resolve(process.cwd(), "state/vuln-corpus-index.json");
+    if (fs.existsSync(corpusIdxPath)) {
+      const corpusIdx = JSON.parse(fs.readFileSync(corpusIdxPath, "utf-8"));
+      if (typeof corpusIdx.total === "number" && corpusIdx.total > 0) {
+        state.whereAmINow.corpusSnapshot = {
+          totalCve: corpusIdx.total,
+          kev: corpusIdx.kev ?? state.whereAmINow.corpusSnapshot?.kev ?? 0,
+          at: String(corpusIdx.at ?? new Date().toISOString()).slice(0, 10),
+          src: "state/vuln-corpus-index.json + supabase:corpus_cve",
+        };
+        if (state.whatDidIReach?.metrics) {
+          state.whatDidIReach.metrics.universalGalaxyTotalCves = corpusIdx.total;
+        }
+      }
+    }
+  } catch {
+    /* non-fatal */
+  }
+
   const target = state.whereAmINow?.activeTarget || "bughunters.google.com";
   const ips = await dns.promises.resolve4(target).catch(() => ["142.250.180.14"]);
 
@@ -155,6 +177,7 @@ async function runPulse() {
     const resp = await fetch(`https://${target}`, {
       method: "GET",
       headers: { "User-Agent": "CyberNova-2099-GitHub-Cloud-Brain/12.0 (Passive-Safe-Harbor)" },
+      signal: AbortSignal.timeout(15_000),
     });
     status = resp.status;
     const text = (await resp.text()).slice(0, 40000);

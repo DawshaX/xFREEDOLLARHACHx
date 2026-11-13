@@ -18,7 +18,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readSenses, findPending, extractJson, sanitizePlan, think, runAction, brainDoc, systemPrompt } from "./nova-brain.mjs";
+import { readSenses, findPending, extractJson, sanitizePlan, think, runAction, brainDoc, systemPrompt, SEATS } from "./nova-brain.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const checks = [];
@@ -69,7 +69,7 @@ const throwing = async () => {
   throw Object.assign(new Error("fetch failed"), { cause: { code: "ENOTFOUND" } });
 };
 const failing = await think({ senses, pending: null, fetchImpl: throwing });
-check("every seat failing → no plan, reasons kept", failing.plan === null && failing.failures.length === 3, failing.failures.join(" | "));
+check("every seat failing → no plan, reasons kept", failing.plan === null && failing.failures.length === SEATS.length, failing.failures.join(" | "));
 
 let calls = 0;
 const flaky = async (url, init) => {
@@ -87,6 +87,26 @@ const flaky = async (url, init) => {
 const second = await think({ senses, pending: { content: "مرحبا" }, fetchImpl: flaky });
 check("a 429 falls through to the next seat", second.seat === "mistral" && second.plan.reply.includes("mistral"), String(second.seat));
 check("the first seat's failure is still reported", second.failures[0]?.includes("429"), second.failures[0]);
+
+const seenUrls = [];
+const host402 = async (url, init) => {
+  seenUrls.push(url);
+  if (url.includes("pollinations")) return { ok: false, status: 402, json: async () => ({}) };
+  const asked = JSON.parse(init.body);
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({
+      choices: [{ message: { content: JSON.stringify({ reply: `<think>hidden</think>رد من ${asked.model}`, action: { kind: "none", arg: "" }, why: "تبديل" }) } }],
+    }),
+  };
+};
+const external = await think({ senses, pending: { content: "أهلاً" }, fetchImpl: host402 });
+check(
+  "a 402 on Pollinations switches to an independent host (ovh) and strips <think>",
+  external.seat === "ovh-llama" && seenUrls.some((u) => u.includes("ovh.net")) && !external.plan.reply.includes("<think>"),
+  `${external.seat} · ${external.plan?.reply}`,
+);
 
 /* 6 · the hands */
 const okFetch = async () => ({

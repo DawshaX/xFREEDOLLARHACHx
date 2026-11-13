@@ -38,11 +38,13 @@ function isService(req: Request): boolean {
   return token.length > 20 && token === SERVICE;
 }
 
-// ── keyless seats (no key, no card) ────────────────────────────────────────
+// ── keyless seats (no key, no card, spread across independent hosts) ────────
 const SEATS = [
-  { id: "pollinations-openai", model: "openai" },
-  { id: "pollinations-mistral", model: "mistral" },
-  { id: "pollinations-llama", model: "llama" },
+  { id: "pollinations-openai", model: "openai", url: "https://text.pollinations.ai/openai" },
+  { id: "pollinations-fast", model: "openai-fast", url: "https://text.pollinations.ai/openai" },
+  { id: "ovh-llama", model: "Meta-Llama-3_3-70B-Instruct", url: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions" },
+  { id: "ovh-ai", model: "Qwen3.6-27B", url: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions" },
+  { id: "pollinations-mistral", model: "mistral", url: "https://text.pollinations.ai/openai" },
 ];
 
 async function chatStream(messages: Array<{ role: string; content: string }>): Promise<Response> {
@@ -50,13 +52,14 @@ async function chatStream(messages: Array<{ role: string; content: string }>): P
   for (const seat of SEATS) {
     const started = Date.now();
     try {
-      const res = await fetch("https://text.pollinations.ai/openai", {
+      const res = await fetch(seat.url, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ model: seat.model, messages, stream: true }),
-        signal: AbortSignal.timeout(60_000),
+        signal: AbortSignal.timeout(18_000),
       });
       if (!res.ok || !res.body) {
+        await res.body?.cancel().catch(() => {});
         failures.push(`${seat.id}: HTTP ${res.status}`);
         continue;
       }

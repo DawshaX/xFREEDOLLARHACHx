@@ -59,31 +59,38 @@ function withDeadline<T>(promise: Promise<T>, ms: number, fallback: T): Promise<
 export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
   const providers: LlmProviderInfo[] = [];
 
-  // 1. Local Ollama — free, private, and auto-discovered (works inside Docker too)
+  // 1. Local Ollama — free, private, and auto-discovered. Only put it first
+  // when it is genuinely reachable (or explicitly configured via OLLAMA_BASE_URL),
+  // so servers/CI runners without Ollama never burn seconds on a dead port.
+  const explicitOllama = Boolean(process.env.OLLAMA_BASE_URL?.trim());
   try {
-    const envBase = (process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
     const discovered = await resolveOllamaBase();
-    const baseUrl = discovered ?? (await withDeadline(getOllamaBaseUrl(), SETTINGS_TIMEOUT_MS, envBase));
-    const model = discovered
-      ? await preferredOllamaModel()
-      : await withDeadline(getOllamaModel(), SETTINGS_TIMEOUT_MS, process.env.OLLAMA_MODEL || "qwen2.5:3b");
-    providers.push({
-      id: "ollama",
-      label: "Ollama (محلي مجاني)",
-      model,
-      kind: "ollama",
-      baseUrl,
-      free: true,
-    });
+    if (discovered || explicitOllama) {
+      const envBase = (process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
+      const baseUrl = discovered ?? (await withDeadline(getOllamaBaseUrl(), SETTINGS_TIMEOUT_MS, envBase));
+      const model = discovered
+        ? await preferredOllamaModel()
+        : await withDeadline(getOllamaModel(), SETTINGS_TIMEOUT_MS, process.env.OLLAMA_MODEL || "qwen2.5:3b");
+      providers.push({
+        id: "ollama",
+        label: "Ollama (محلي مجاني)",
+        model,
+        kind: "ollama",
+        baseUrl,
+        free: true,
+      });
+    }
   } catch {
-    providers.push({
-      id: "ollama",
-      label: "Ollama (محلي مجاني)",
-      model: process.env.OLLAMA_MODEL || "qwen2.5:3b",
-      kind: "ollama",
-      baseUrl: (process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434").replace(/\/$/, ""),
-      free: true,
-    });
+    if (explicitOllama) {
+      providers.push({
+        id: "ollama",
+        label: "Ollama (محلي مجاني)",
+        model: process.env.OLLAMA_MODEL || "qwen2.5:3b",
+        kind: "ollama",
+        baseUrl: (process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434").replace(/\/$/, ""),
+        free: true,
+      });
+    }
   }
 
   // 2. Free-tier cloud providers (only when the user supplies a key)
@@ -150,16 +157,40 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
       model: process.env.GITHUB_MODELS_MODEL || "openai/gpt-4o-mini",
       keys: ["GITHUB_MODELS_TOKEN"],
     },
+    {
+      id: "llm7",
+      label: "LLM7 · gpt-oss:20b",
+      baseUrl: String(process.env.LLM7_BASE_URL || "https://api.llm7.io/v1").replace(/\/$/, ""),
+      model: String(process.env.LLM7_MODEL || "gpt-oss:20b"),
+      keys: ["LLM7_API_KEY"],
+    },
   ];
 
-  // OpenAI stays last: it is the only paid option, so it is a true last resort.
+  // Paid OpenAI is added last after keyless options so it stays a true last resort.
+  const paidOpenAi: Array<{ id: string; label: string; baseUrl: string; model: string; keys: string[] }> = [];
   if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim().length > 8) {
-    envProviders.push({
+    paidOpenAi.push({
       id: "openai",
       label: "OpenAI (مدفوع — آخر خيار)",
       baseUrl: "https://api.openai.com/v1",
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
       keys: ["OPENAI_API_KEY"],
+    });
+  }
+
+  // Configured free-tier cloud keys run BEFORE anonymous keyless endpoints.
+  for (const p of envProviders) {
+    const key = p.keys.map((k) => process.env[k]).find((v) => v && v.trim().length > 8);
+    if (!key) continue;
+    const override = (process.env[`${p.id.toUpperCase().replace(/-/g, "_")}_BASE_URL`] || "").trim();
+    providers.push({
+      id: p.id,
+      label: p.label,
+      model: process.env[`${p.id.toUpperCase().replace(/-/g, "_")}_MODEL`] || p.model,
+      kind: "openai-compatible",
+      baseUrl: override ? override.replace(/\/$/, "") : p.baseUrl,
+      apiKey: key.trim(),
+      free: true,
     });
   }
 
@@ -170,19 +201,6 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
    * behind a signup: it keeps the council alive on a fresh install where the
    * only .env is the one we shipped. Pollinations serves GPT-OSS-20B on its
    * anonymous tier through an OpenAI-compatible endpoint — no key, no card.
-   *
-   * Verified before wiring (2026-11-01): POST /openai with model "openai-fast"
-   * → {"choices":[{"message":{"content":"ready"}}],"model":"gpt-oss-20b"}.
-   * Disable with NOVA_KEYLESS_LLM=0 if it ever misbehaves.
-   */
-  /**
-   * Keyless seats are ONE PER MODEL, not one per provider, because the council
-   * needs ≥2 independent voices and a single endpoint with a single model gives
-   * it one. text.pollinations.ai answers different model ids on the same
-   * OpenAI-compatible route with no account, so `openai-fast` + `mistral` +
-   * `llama` = three real voters for $0. Override the list with
-   * NOVA_KEYLESS_SEATS="openai-fast,mistral" (comma separated) if a model is
-   * retired — a dead seat is skipped at call time, never fatal.
    */
   const keylessModels = String(process.env.NOVA_KEYLESS_SEATS ?? "openai-fast,mistral,llama")
     .split(",")
@@ -198,27 +216,12 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
     }),
   );
 
-  /**
-   * More keyless seats, on other providers — because one provider is one point
-   * of failure. Both are OpenAI-compatible with an anonymous tier, verified
-   * against their docs on 2026-11-05:
-   *
-   *   • LLM7  — https://api.llm7.io/v1      · `gpt-oss:20b` answers with no
-   *              Authorization header at all (~30 RPM anonymous).
-   *   • OVH   — https://oai.endpoints.kepler.ai.cloud.ovh.net/v1 · OVHcloud's
-   *              own docs show the keyless examples at ~2 RPM per model.
-   *
-   * They cost nothing and need no account, which is the only kind of capacity
-   * this project is allowed to depend on. `NOVA_EXTRA_KEYLESS=0` removes them
-   * if a host ever blocks them; a seat that fails is skipped at call time, so a
-   * dead route can never take the brain down with it.
-   */
   const extraKeyless: Array<{ id: string; label: string; baseUrl: string; model: string }> = [
     {
-      id: "llm7",
-      label: "LLM7 · gpt-oss:20b (بدون مفتاح)",
-      baseUrl: String(process.env.LLM7_BASE_URL || "https://api.llm7.io/v1").replace(/\/$/, ""),
-      model: String(process.env.LLM7_MODEL || "gpt-oss:20b"),
+      id: "ovh-llama",
+      label: "OVH AI Endpoints · Llama 3.3 70B (بدون مفتاح)",
+      baseUrl: String(process.env.OVH_AI_BASE_URL || "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1").replace(/\/$/, ""),
+      model: String(process.env.OVH_LLAMA_MODEL || "Meta-Llama-3_3-70B-Instruct"),
     },
     {
       id: "ovh-ai",
@@ -228,35 +231,43 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
     },
   ];
 
-  if (String(process.env.NOVA_KEYLESS_LLM ?? "1") !== "0" && String(process.env.NOVA_EXTRA_KEYLESS ?? "1") !== "0") {
-    for (const p of extraKeyless) {
+  // Try fastest anonymous route first (pollinations:openai-fast ~220ms), then
+  // alternate hosts (ovh-llama, ovh-ai), then remaining pollinations models.
+  if (String(process.env.NOVA_KEYLESS_LLM ?? "1") !== "0") {
+    const soloSeat = keyless.length === 1 ? String(process.env.POLLINATIONS_MODEL ?? "").trim() : "";
+    const first = keyless[0];
+    if (first) {
+      const upper = first.id.split(":")[0].toUpperCase().replace(/-/g, "_");
       providers.push({
-        id: p.id,
-        label: p.label,
-        model: p.model,
+        id: first.id,
+        label: first.label,
+        model: soloSeat || first.model,
         kind: "openai-compatible",
-        baseUrl: p.baseUrl,
-        // Empty string is meaningful here: no Authorization header is sent.
+        baseUrl: (process.env[`${upper}_BASE_URL`] || first.baseUrl).replace(/\/$/, ""),
         apiKey: "",
         free: true,
       });
     }
-  }
-
-  if (String(process.env.NOVA_KEYLESS_LLM ?? "1") !== "0") {
-    // POLLINATIONS_MODEL is honoured only when a single seat is configured: with
-    // several seats a global override would put the same model on every seat and
-    // the council would be one voice arguing with itself.
-    const soloSeat = keyless.length === 1 ? String(process.env.POLLINATIONS_MODEL ?? "").trim() : "";
-    for (const p of keyless) {
+    if (String(process.env.NOVA_EXTRA_KEYLESS ?? "1") !== "0") {
+      for (const p of extraKeyless) {
+        providers.push({
+          id: p.id,
+          label: p.label,
+          model: p.model,
+          kind: "openai-compatible",
+          baseUrl: p.baseUrl,
+          apiKey: "",
+          free: true,
+        });
+      }
+    }
+    for (const p of keyless.slice(1)) {
       const upper = p.id.split(":")[0].toUpperCase().replace(/-/g, "_");
       providers.push({
         id: p.id,
         label: p.label,
         model: soloSeat || p.model,
         kind: "openai-compatible",
-        // The endpoint IS the chat route (there is no /v1 base), so mark it and
-        // let the caller append nothing.
         baseUrl: (process.env[`${upper}_BASE_URL`] || p.baseUrl).replace(/\/$/, ""),
         apiKey: "",
         free: true,
@@ -264,12 +275,9 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
     }
   }
 
-  for (const p of envProviders) {
+  for (const p of paidOpenAi) {
     const key = p.keys.map((k) => process.env[k]).find((v) => v && v.trim().length > 8);
     if (!key) continue;
-    // Any OpenAI-compatible endpoint can be substituted at runtime, e.g.
-    // GROQ_BASE_URL=http://my-proxy/v1 — useful for a self-hosted gateway, a
-    // mirror, or pointing a slot at another machine in the fleet.
     const override = (process.env[`${p.id.toUpperCase().replace(/-/g, "_")}_BASE_URL`] || "").trim();
     providers.push({
       id: p.id,
@@ -278,7 +286,7 @@ export async function listConfiguredProviders(): Promise<LlmProviderInfo[]> {
       kind: "openai-compatible",
       baseUrl: override ? override.replace(/\/$/, "") : p.baseUrl,
       apiKey: key.trim(),
-      free: true,
+      free: false,
     });
   }
 
@@ -319,6 +327,7 @@ const MODEL_PREFERENCE: Record<string, string[]> = {
   together: ["Llama-3.3-70B", "gpt-oss-120b"],
   "github-models": ["gpt-4o-mini", "gpt-4.1-mini", "Phi-4"],
   llm7: ["gpt-oss:20b", "codestral-latest", "mistral-nemo", "minimax", "deepseek"],
+  "ovh-llama": ["Meta-Llama-3_3-70B-Instruct", "Llama-3.3", "Mistral-Small", "Qwen3.6-27B"],
   "ovh-ai": ["Qwen3.6-27B", "Meta-Llama-3_3-70B-Instruct", "Mistral-Small", "mistral", "Qwen"],
 };
 
@@ -418,9 +427,16 @@ export async function resolveModel(provider: LlmProviderInfo): Promise<string> {
  * knows how to heal or disable the provider.
  */
 function isTransient(message: string): boolean {
-  return /\b(429|500|502|503|504)\b|high demand|temporar|timeout|timed out|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|network error|fetch failed|empty response/i.test(
+  if (/ECONNREFUSED|ENOTFOUND|AbortError|aborted/i.test(message)) return false;
+  return /\b(429|500|502|503|504)\b|high demand|temporar|timeout|timed out|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|network error|empty response/i.test(
     message,
   );
+}
+
+function combineSignal(timeoutMs: number, external?: AbortSignal): AbortSignal {
+  const timer = AbortSignal.timeout(timeoutMs);
+  if (!external) return timer;
+  return typeof AbortSignal.any === "function" ? AbortSignal.any([timer, external]) : timer;
 }
 
 async function attemptWithRetry(
@@ -451,24 +467,26 @@ async function attemptWithRetry(
 export async function completeWithProvider(
   provider: LlmProviderInfo,
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; timeoutMs?: number } = {},
+  opts: { temperature?: number; maxTokens?: number; timeoutMs?: number; tries?: number; signal?: AbortSignal } = {},
 ): Promise<{ text: string; model: string; ms: number; healed?: boolean }> {
   const started = Date.now();
   const model = await resolveModel(provider);
 
   const attempt = async (useModel: string): Promise<string> =>
     provider.kind === "ollama"
-      ? callOllama({ ...provider, model: useModel }, messages, opts.temperature)
-      : callOpenAiCompatible({ ...provider, model: useModel }, messages, opts.temperature, opts.maxTokens, opts.timeoutMs);
+      ? callOllama({ ...provider, model: useModel }, messages, opts.temperature, opts.timeoutMs, opts.signal)
+      : callOpenAiCompatible({ ...provider, model: useModel }, messages, opts.temperature, opts.maxTokens, opts.timeoutMs, opts.signal);
 
   const rejected = AUTH_REJECTED.get(provider.id);
   if (rejected) throw new Error(`${provider.id}: المفتاح مرفوض (${rejected}) — تم تجاهله`);
 
   try {
-    const text = await attemptWithRetry(attempt, model);
+    const text = await attemptWithRetry(attempt, model, opts.tries ?? 3);
     return { text, model, ms: Date.now() - started };
   } catch (err) {
     const msg = String((err as Error).message ?? "");
+
+    if (opts.signal?.aborted) throw err;
 
     if (isAuthRejection(msg)) {
       AUTH_REJECTED.set(provider.id, msg.slice(0, 90));
@@ -490,7 +508,7 @@ export async function completeWithProvider(
 
     // A rate-limited free model is not a broken provider: the next free one on
     // the same key usually answers immediately.
-    if (isRateLimited(msg)) {
+    if (isRateLimited(msg) && provider.apiKey) {
       const candidates = (await discoverModelList(provider)).filter((id) => id !== model).slice(0, 3);
       for (const alt of candidates) {
         try {
@@ -535,43 +553,62 @@ async function callOpenAiCompatible(
   temperature = 0.6,
   maxTokens = 1400,
   timeoutMs = TIMEOUT_MS,
+  signal?: AbortSignal,
 ): Promise<string> {
-  const res = await fetch(chatUrl(provider), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(provider),
-    },
-    body: JSON.stringify({
-      model: provider.model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+  let res: Response;
+  try {
+    res = await fetch(chatUrl(provider), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(provider),
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      }),
+      signal: combineSignal(timeoutMs, signal),
+    });
+  } catch (err) {
+    const code = (err as { cause?: { code?: string } })?.cause?.code;
+    throw new Error(`${provider.id}: ${(err as Error).message}${code ? ` (${code})` : ""}`);
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`${provider.id} HTTP ${res.status}: ${body.slice(0, 160)}`);
   }
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  const text = data.choices?.[0]?.message?.content ?? "";
-  if (!text.trim()) throw new Error(`${provider.id}: empty response`);
+  const text = (data.choices?.[0]?.message?.content ?? "").replace(/<(?:think|thought|reasoning)>[\s\S]*?<\/(?:think|thought|reasoning)>/gi, " ").trim();
+  if (!text) throw new Error(`${provider.id}: empty response`);
   return text;
 }
 
-async function callOllama(provider: LlmProviderInfo, messages: LlmMessage[], temperature = 0.6): Promise<string> {
-  const res = await fetch(`${provider.baseUrl}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1" },
-    body: JSON.stringify({
-      model: provider.model,
-      messages,
-      stream: false,
-      options: { temperature, num_predict: 1400 },
-    }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
+async function callOllama(
+  provider: LlmProviderInfo,
+  messages: LlmMessage[],
+  temperature = 0.6,
+  timeoutMs = TIMEOUT_MS,
+  signal?: AbortSignal,
+): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch(`${provider.baseUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1" },
+      body: JSON.stringify({
+        model: provider.model,
+        messages,
+        stream: false,
+        options: { temperature, num_predict: 1400 },
+      }),
+      signal: combineSignal(timeoutMs, signal),
+    });
+  } catch (err) {
+    const code = (err as { cause?: { code?: string } })?.cause?.code;
+    throw new Error(`ollama: ${(err as Error).message}${code ? ` (${code})` : ""}`);
+  }
   if (!res.ok) throw new Error(`ollama HTTP ${res.status}`);
   const data = (await res.json()) as { message?: { content?: string }; response?: string };
   const text = data.message?.content ?? data.response ?? "";
@@ -585,7 +622,7 @@ async function callOllama(provider: LlmProviderInfo, messages: LlmMessage[], tem
  */
 export async function llmComplete(
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; prefer?: string } = {},
+  opts: { temperature?: number; maxTokens?: number; prefer?: string; timeoutMs?: number; tries?: number; signal?: AbortSignal } = {},
 ): Promise<LlmResult | null> {
   const providers = await listConfiguredProviders();
   logger.info({ providers: providers.map((p) => `${p.id}:${p.baseUrl}`) }, "llm: providers resolved");
@@ -593,18 +630,25 @@ export async function llmComplete(
     ? [...providers.filter((p) => p.id === opts.prefer), ...providers.filter((p) => p.id !== opts.prefer)]
     : providers;
 
+  // Fail over across providers on first failure when multiple providers exist,
+  // unless the caller specified `tries` explicitly.
+  const tries = opts.tries ?? (ordered.length > 1 ? 1 : 2);
+
   for (const provider of ordered) {
+    if (opts.signal?.aborted) break;
     const started = Date.now();
     logger.info({ provider: provider.id, kind: provider.kind }, "llm: attempt");
     try {
       const out = await completeWithProvider(provider, messages, {
         temperature: opts.temperature,
         maxTokens: opts.maxTokens,
+        timeoutMs: opts.timeoutMs,
+        tries,
+        signal: opts.signal,
       });
       logger.info({ provider: provider.id, model: out.model, healed: out.healed, ms: Date.now() - started }, "llm: success");
       return { text: out.text, provider: provider.id, model: out.model, ms: Date.now() - started };
     } catch (err) {
-      // Trying the next provider is a normal path (Ollama off, quota, offline…).
       logger.debug(
         { provider: provider.id, err: String((err as Error).message).slice(0, 120), ms: Date.now() - started },
         "llm provider unavailable",

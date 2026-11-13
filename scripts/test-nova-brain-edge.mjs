@@ -267,6 +267,24 @@ await testAsync("a no-model turn still answers with a real row, never a guess", 
   assert.doesNotMatch(text, /CVE-2021-44228/);
 });
 
+test("orderSeatsForRound2 prefers seats on a different host after Round 1", () => {
+  const ordered = mod.orderSeatsForRound2("text.pollinations.ai");
+  assert.ok(ordered.length >= 3);
+  assert.notEqual(ordered[0].host, "text.pollinations.ai");
+  assert.equal(ordered[ordered.length - 1].host, "text.pollinations.ai");
+});
+
+test("cleanReplyText strips reasoning blocks and stray IPA glitches", () => {
+  const out = mod.cleanReplyText("<think>plan</think> نحتاج توسيع وʀِّفّع النطاقات.");
+  assert.doesNotMatch(out, /<think>|plan|ʀ/);
+  assert.match(out, /نحتاج توسيع/);
+});
+
+test("candidatesFrom filters generic English words like latest and status", () => {
+  const cands = mod.candidatesFrom("what is the latest platform status for nginx");
+  assert.deepEqual(cands, ["nginx"]);
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   for (const f of failures) console.log(` - ${f}`);

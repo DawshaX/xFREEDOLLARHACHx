@@ -33,10 +33,33 @@ const json = (body: unknown, status = 200) =>
     headers: { ...CORS, "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
 
-/** Keyless seats, tried in order. Measured 2026-11-04: `mistral` and `llama`
- *  answer HTTP 402 through this gateway, so `openai` carries the voice — and
- *  step 4 above means one working seat is enough. */
-const SEATS = [{ id: "openai", model: "openai" }];
+/** Keyless seats spread across independent endpoints so one IP throttle (402)
+ *  cannot silence Round 2 right after Round 1 succeeds on the same host. */
+export interface Seat {
+  id: string;
+  model: string;
+  url: string;
+  host: string;
+  kind: "openai" | "pollinations";
+}
+
+export const SEATS: Seat[] = [
+  { id: "pollinations-fast", model: "openai-fast", url: "https://text.pollinations.ai/openai", host: "text.pollinations.ai", kind: "pollinations" },
+  { id: "ovh-llama", model: "Meta-Llama-3_3-70B-Instruct", url: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions", host: "oai.endpoints.kepler.ai.cloud.ovh.net", kind: "openai" },
+  { id: "ovh-ai", model: "Qwen3.6-27B", url: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions", host: "oai.endpoints.kepler.ai.cloud.ovh.net", kind: "openai" },
+  { id: "openai", model: "openai", url: "https://text.pollinations.ai/openai", host: "text.pollinations.ai", kind: "pollinations" },
+  { id: "mistral", model: "mistral", url: "https://text.pollinations.ai/openai", host: "text.pollinations.ai", kind: "pollinations" },
+];
+
+/** Prefer seats on a different host for Round 2 so a per-IP cooldown (such as
+ *  Pollinations 45s 402 after Round 1) is sidestepped cleanly. */
+export function orderSeatsForRound2(round1Host: string | null, seats: Seat[] = SEATS): Seat[] {
+  if (!round1Host) return [...seats];
+  return [
+    ...seats.filter((s) => s.host !== round1Host),
+    ...seats.filter((s) => s.host === round1Host),
+  ];
+}
 
 const MIN_GAP_MS = 5 * 60_000;
 const ALLOWED = new Set(["none", "corpus_search", "cve_lookup"]);
@@ -167,6 +190,10 @@ async function act(action: Action): Promise<ActionResult | null> {
 const NOISE = new Set([
   "the", "and", "for", "with", "what", "how", "many", "cve", "cves", "nova", "test", "http",
   "https", "api", "json", "row", "rows", "log", "you", "are", "can", "please", "show", "find",
+  "latest", "status", "report", "today", "summary", "current", "platform", "check", "recent",
+  "new", "critical", "high", "low", "medium", "info", "count", "total", "percentage", "percent",
+  "about", "help", "tell", "give", "list", "which", "there", "have", "has", "need", "score",
+  "alert", "update", "scan", "hunt",
 ]);
 
 export function candidatesFrom(question: string): string[] {
@@ -221,31 +248,46 @@ function systemPrompt(state: unknown, evidence: ActionResult | null): string {
   ].join("\n");
 }
 
-async function seatCall(seat: { id: string; model: string }, messages: unknown[], failures: string[]) {
+/** Strip model reasoning fences and stray IPA/token glitches next to Arabic text. */
+export function cleanReplyText(raw: string): string {
+  return String(raw ?? "")
+    .replace(/<(?:think|thought|reasoning)>[\s\S]*?<\/(?:think|thought|reasoning)>/gi, " ")
+    // Some quantized OSS models occasionally inject a stray IPA character inside Arabic words (e.g. ʀ).
+    .replace(/[\u0250-\u02AF]/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+async function seatCall(seat: Seat, messages: unknown[], failures: string[]) {
   try {
-    const res = await fetch("https://text.pollinations.ai/openai", {
+    const body =
+      seat.kind === "pollinations"
+        ? { model: seat.model, messages, private: true, referrer: "cybernova" }
+        : { model: seat.model, messages, temperature: 0.35, max_tokens: 900 };
+    const res = await fetch(seat.url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model: seat.model, messages, private: true, referrer: "cybernova" }),
-      signal: AbortSignal.timeout(70_000),
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(25_000),
     });
     if (!res.ok) {
       failures.push(`${seat.id}: HTTP ${res.status}`);
       return null;
     }
     const payload = await res.json();
-    const text: string = payload?.choices?.[0]?.message?.content ?? "";
-    const a = text.indexOf("{");
-    const b = text.lastIndexOf("}");
+    const rawText: string = cleanReplyText(payload?.choices?.[0]?.message?.content ?? "");
+    const a = rawText.indexOf("{");
+    const b = rawText.lastIndexOf("}");
     if (a < 0 || b <= a) {
       failures.push(`${seat.id}: no JSON in reply`);
       return null;
     }
-    const raw = JSON.parse(text.slice(a, b + 1));
+    const raw = JSON.parse(rawText.slice(a, b + 1));
     const kind = ALLOWED.has(raw?.action?.kind) ? raw.action.kind : "none";
+    const reply = cleanReplyText(String(raw?.reply ?? "")).slice(0, 2000);
     return {
-      reply: String(raw?.reply ?? "").trim().slice(0, 2000),
-      why: String(raw?.why ?? "").trim().slice(0, 240),
+      reply,
+      why: cleanReplyText(String(raw?.why ?? "")).slice(0, 240),
       action: { kind, arg: kind === "none" ? "" : String(raw?.action?.arg ?? "").trim().slice(0, 120) } as Action,
     };
   } catch (err) {
@@ -358,6 +400,7 @@ async function tick(force: boolean) {
     : "مفيش رسالة جديدة. اكتب سطر حالة واحد عن أهم حاجة في المنصة، والأكشن اللي شايفه أهم خطوة جاية.";
 
   /* round 1 — plan, then act, so the answer can be built on a real row */
+  let round1Seat: Seat | null = null;
   let seat: string | null = null;
   let plan: { reply: string; why: string; action: Action } | null = null;
   for (const s of SEATS) {
@@ -366,6 +409,7 @@ async function tick(force: boolean) {
       { role: "user", content: ask },
     ], failures);
     if (got) {
+      round1Seat = s;
       seat = s.id;
       plan = got;
       break;
@@ -385,18 +429,28 @@ async function tick(force: boolean) {
     }
   }
 
-  /* round 2 — speak again, this time with the evidence, then verify.
-   * If an action did run, only a reply written *after* seeing the evidence may be
-   * used: a plan from round 1 never saw the row, so falling back to it would
-   * publish a sentence written before the lookup. Measured 2026-11-04 23:44Z,
-   * that fallback produced a one-line shrug instead of the evidence. */
+  /* round 2 — speak again ONLY when an action returned new evidence (or Round 1
+   * itself needs a grounded rewrite). When action === null and Round 1 already
+   * passed verifyClaims, calling the model a second time in the same second just
+   * trips the 45s per-IP 402 cooldown for zero new information. */
   let finalPlan = plan;
   let spokeWithEvidence = plan === null;
-  if (seat) {
+  let needsRound2 = action !== null || !plan?.reply;
+  if (!needsRound2 && plan?.reply) {
+    const check1 = await verifyClaims(plan.reply, { state, action: null });
+    if (!check1.ok) {
+      failures.push(`${seat} (رد أولي): ادّعى ${check1.invented.slice(0, 4).join(" · ")}`);
+      needsRound2 = true;
+      finalPlan = null;
+    } else {
+      spokeWithEvidence = true;
+    }
+  }
+  if (needsRound2 && (seat || action !== null)) {
     const evidenceNote = action
       ? `الدليل اللي رجع من القاعدة: ${JSON.stringify(action)}. اكتب الرد النهائي مبنيًا عليه.`
       : "مفيش أكشن اتنفّذ. اكتب الرد النهائي من الحالة بس.";
-    for (const s of SEATS.filter((x) => x.id === seat)) {
+    for (const s of orderSeatsForRound2(round1Seat?.host ?? null)) {
       const got = await seatCall(s, [
         { role: "system", content: systemPrompt(state, action) },
         { role: "user", content: `${ask}\n\n${evidenceNote}` },
@@ -407,6 +461,7 @@ async function tick(force: boolean) {
         failures.push(`${s.id} (رد نهائي): ادّعى ${check.invented.slice(0, 4).join(" · ")}`);
         continue;
       }
+      seat = s.id;
       finalPlan = got;
       spokeWithEvidence = true;
       break;
@@ -469,26 +524,24 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === "GET" && url.searchParams.get("probe") === "1" && isService(req)) {
-      // Measure the keyless gateway instead of guessing why NOVA went quiet.
-      const seats = ["openai", "openai-fast", "mistral", "qwen-coder", "llama"];
+      // Measure every configured keyless seat instead of guessing why NOVA went quiet.
       const results = [];
-      for (const model of seats) {
+      for (const s of SEATS) {
         const t0 = Date.now();
         try {
-          const res = await fetch("https://text.pollinations.ai/openai", {
+          const body =
+            s.kind === "pollinations"
+              ? { model: s.model, messages: [{ role: "user", content: "قل كلمة واحدة: تمام" }], private: true, referrer: "cybernova" }
+              : { model: s.model, messages: [{ role: "user", content: "قل كلمة واحدة: تمام" }], max_tokens: 32 };
+          const res = await fetch(s.url, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              model,
-              messages: [{ role: "user", content: "قل كلمة واحدة: تمام" }],
-              private: true,
-              referrer: "cybernova",
-            }),
-            signal: AbortSignal.timeout(30_000),
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(20_000),
           });
-          results.push({ model, status: res.status, ms: Date.now() - t0 });
+          results.push({ id: s.id, model: s.model, host: s.host, status: res.status, ms: Date.now() - t0 });
         } catch (err) {
-          results.push({ model, status: 0, error: (err as Error).message, ms: Date.now() - t0 });
+          results.push({ id: s.id, model: s.model, host: s.host, status: 0, error: (err as Error).message, ms: Date.now() - t0 });
         }
       }
       return json({ seats: results });

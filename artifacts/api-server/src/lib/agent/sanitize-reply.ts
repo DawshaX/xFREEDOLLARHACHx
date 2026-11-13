@@ -22,6 +22,7 @@
 
 /** Markers a model uses to fence off its private reasoning. */
 const FENCED = [
+  /<think>[\s\S]*?<\/think>/gi,
   /<thought>[\s\S]*?<\/thought>/gi,
   /<thinking>[\s\S]*?<\/thinking>/gi,
   /<reasoning>[\s\S]*?<\/reasoning>/gi,
@@ -146,6 +147,13 @@ export function sanitizeReply(raw: string): SanitizeResult {
   const deduped = dedupeParagraphs(text);
   if (deduped !== text) removed.push("duplicate-paragraph");
   text = deduped;
+
+  // Strip stray IPA characters injected inside Arabic words by quantized models (e.g. ʀ).
+  const strippedIpa = text.replace(/[\u0250-\u02AF]/g, "");
+  if (strippedIpa !== text) {
+    removed.push("stray-ipa-char");
+    text = strippedIpa;
+  }
 
   text = text.replace(/^\s+/, "").replace(/\s+$/, "");
 
