@@ -42,6 +42,7 @@ import {
   initSessionNexus,
   buildNexusContext,
   recordNexusTurn,
+  getNexusSession,
 } from "./session-nexus";
 import { getMissionsState, recordMissionCommand } from "../standalone-api";
 import { broadcastEvent } from "../ws-hub";
@@ -714,7 +715,7 @@ function buildLine(model: SelfModel): string {
   return `_(الأرقام دي مقاسة من بناء \`${b.label}\`${age}${fresh}، مش من ذاكرة)_`;
 }
 
-export function greetingAnswer(model: SelfModel = buildSelfModel(), opts: { repeated?: boolean } = {}): string {
+export function greetingAnswer(model: SelfModel = buildSelfModel(), opts: { repeated?: boolean; sessionId?: string } = {}): string {
   const corpus = model.corpus.measured
     ? `فهرس **${model.corpus.total.toLocaleString("en-US")}** ثغرة حقيقية`
     : "فهرس ثغرات لسه بيتزامن";
@@ -725,15 +726,20 @@ export function greetingAnswer(model: SelfModel = buildSelfModel(), opts: { repe
   const opener = opts.repeated
     ? "أهلاً تاني 👋 — مش هكرر نفسي: الحالة دلوقتي كده:"
     : "أهلاً بيك 👋 أنا **نوفا** — بشتغل مش بتتكلم بس.";
+  /* TEST3 «مكمل معايا على نفس الخط»: الترحيب بيجيب آخر موضوع حقيقي من خط
+   * المحادثة (لو فيه) — فاكرك واقفين فين، مش افتتاحية عامة كل مرة. */
+  const thread = opts.sessionId ? getNexusSession(opts.sessionId)?.thread?.filter(Boolean) ?? [] : [];
+  const lastTopic = thread.length >= 1 ? thread[thread.length - 1] : null;
   return [
     opener,
     "",
     `معايا دلوقتي **${model.tools.count}** أداة حقيقية، و${corpus}، و${fleet}.`,
+    lastTopic ? `وفاكرك آخر حاجة كنا واقفين عندها: «${lastTopic}» — تحب نكمل منها؟` : "",
     "",
     buildLine(model),
     "",
     "اكتب «انت مين» لو عايز التفاصيل كاملة، أو ابعتلي نطاق زي `example.com` وأنا أبدأ استطلاع حقيقي حالاً.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 export function identityAnswer(model: SelfModel = buildSelfModel()): string {
@@ -1057,19 +1063,27 @@ function heuristicAnswer(
   message: string,
   results: Array<{ name: string; ok: boolean; summary: string; data: unknown }>,
   agentMode?: string,
+  sessionId = ROOT_SESSION_ID,
 ): string {
   if (results.length === 0) {
     if (SMALL_TALK.test(message.trim())) {
       const sm = buildSelfModel();
+      /* TEST3 «مكمل معايا على نفس الخط»: الترحيب مش جملة ثابتة — بيجيب آخر
+       * حاجة كنا واقفين عندها من خط المحادثة، فالكيان فاكر شغلنا مش بوت أوامر. */
+      const thread = getNexusSession(sessionId)?.thread?.filter(Boolean) ?? [];
+      const lastTopic = thread.length >= 1 ? thread[thread.length - 1] : null;
+      const ownerFacts = memoryStats().total;
       return [
         `أهلاً بيك 👋 أنا **نوفا** — شريكك في المنصة، مش مجرد بوت أوامر.`,
         "",
         `عندي دلوقتي **${sm.tools.count} أداة حقيقية**، و${sm.corpus.measured ? `فهرس **${sm.corpus.total.toLocaleString("en-US")} ثغرة**` : "فهرس ثغرات لسه مش متزامن"}، و${sm.machines.connected ? `**${sm.machines.connected} جهاز متصل الآن**` : sm.machines.registered ? `${sm.machines.registered} ماكينة **مسجّلة** (صفر متصل الآن)` : "مفيش ماكينة متصلة"}.`,
+        lastTopic ? `فاكرك آخر حاجة كنا واقفين عندها: «${lastTopic}» — تحب نكمل منها؟` : "",
+        ownerFacts ? `(ذاكرتي طويلة الأمد فيها ${ownerFacts} عنصر من شغلنا — كلها محفوظة.)` : "",
         "",
         capabilityTruthLine(),
         "",
-        "**الخطوة التالية المقترحة:** ابعتلي نطاق مثل `example.com` وأقولك نتيجة الاستطلاع كاملة.",
-      ].join("\n");
+        "**الخطوة التالية المقترحة:** ابعتلي نطاق مثل `example.com` وأقولك نتيجة الاستطلاع كاملة، أو كمّل من آخر موضوع فوق.",
+      ].filter(Boolean).join("\n");
     }
     const tech = technicalGuideFor(message, agentMode);
     if (tech) return tech;
@@ -1323,7 +1337,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       // التنويع الصادق أمانة: نفس الأرقام المقاسة، افتتاحية مختلفة.
       const lastAssistant = [...history].reverse().find((m) => m.role === "assistant");
       const repeated = Boolean(lastAssistant && lastAssistant.content.includes("بشتغل مش بتتكلم بس"));
-      reply = greetingAnswer(selfModel, { repeated });
+      reply = greetingAnswer(selfModel, { repeated, sessionId });
       provider = `${provider}+self-model`;
     } else if (reply) {
       const voiced = await voiceAnswer(reply, message, selfModel, history, runMeta.modelChoice);
@@ -1341,7 +1355,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
         ],
         { temperature: 0.7, ...runMeta.modelChoice },
       );
-      reply = llm?.text?.trim() || heuristicAnswer(message, [], opts.agentMode);
+      reply = llm?.text?.trim() || heuristicAnswer(message, [], opts.agentMode, sessionId);
       if (llm) provider = llm.provider;
     }
     if (!reply.trim()) {
@@ -1568,7 +1582,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     if (llm) provider = llm.provider;
   }
   if (!reply.trim()) {
-    reply = heuristicAnswer(message, results, opts.agentMode);
+    reply = heuristicAnswer(message, results, opts.agentMode, sessionId);
     if (!reply.trim()) {
       reply = `نفّذت ${results.length} أداة بس مقدرتش أصيغ ملخص من المزوّد. النتائج الخام في تبويب الأدوات فوق.\n\n**الخطوة التالية المقترحة:** اطلب مني نتيجة أداة واحدة بالاسم وأنا أشرحها بالتفصيل.`;
     }
@@ -1660,6 +1674,24 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
         provider,
       });
     } catch { /* best-effort */ }
+  }
+
+  /* TEST3 «المفروض يعرفني ويخزن»: المالك لما يقول معلومة عن نفسه (اسمه، شغله،
+   * تفضيلاته) — بتتحفظ تلقائيًا في الذاكرة الدائمة بنطاق owner وبتظهر في
+   * سياق كل دورة جاية (memoryContextFor بيسحبها). مفيش تعريف يدوي. */
+  const ownerSelf = message.match(/(?:اسمي\s+\S{2,30}|my\s+name\s+is\s+\S{2,40}|(?:انا|أنا)\s+(?:المالك|صاحب\s+المنصة)|i\s*am\s+the\s*owner)/i);
+  if (ownerSelf && message.length < 200) {
+    try {
+      const rec = remember({
+        kind: "fact",
+        title: `المالك: ${message.replace(/\s+/g, " ").slice(0, 60)}`,
+        content: message.trim(),
+        scope: "owner",
+        importance: 0.85,
+        source: "owner",
+      });
+      try { saveMemory("fact", rec.title, rec.content, "owner,profile,longterm", 8, false); } catch { /* mirror best-effort */ }
+    } catch { /* best-effort — التخزين مايفشّلش الرد */ }
   }
 
   const out: AgentRunResult = {

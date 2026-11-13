@@ -49,6 +49,12 @@ export interface NexusSession {
   pendingPlan: string | null;
   messages: NexusMessage[];
   summary: string;
+  /* TEST3 «لو موديل خلص أو بدل هو ميبقاش تايه ومكمل معايا على نفس الخط»:
+   * خط المحادثة (جست آخر رسائل المالك) + آخر موديل جاب رد + ملاحظة تبديل —
+   * بتتحقن في سياق أي مزوّد يخطف الدور، فالكيان واحد والموديل دعم بس. */
+  thread?: string[];
+  lastModel?: string;
+  modelSwitchNote?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -391,6 +397,25 @@ export function recordNexusTurn(
   sess.updatedAt = Date.now();
   if (userMsg) {
     sess.summary = `${userMsg.slice(0, 90)}${opts.toolsUsed?.length ? ` [${opts.toolsUsed.join(", ")}]` : ""}`;
+    /* خط المحادثة المستمر: جست رسالة المالك — بيفضل موجود مهما اتبدل الموديل.
+     * الترحيبات/الردود القصيرة مش مواضيع — بتتستبعد عشان «فاكرك واقفين فين»
+     * مايقولش «فاكرك قلت مرحبا». */
+    const gist = userMsg.replace(/\s+/g, " ").slice(0, 80);
+    const smallTalkish = /^(?:مرحبا|أهلاً?|اهلاً?|هاي|هلا|سلام|صباح\s+\S+|مساء\s+\S+|ازيك|إزيك|شكراً?|تمام|طيب|ماشي|يلا|ok|okay|hi|hello|hey|thanks|yo)\b/i;
+    if (gist && !smallTalkish.test(gist)) {
+      if (!sess.thread) sess.thread = [];
+      if (sess.thread[sess.thread.length - 1] !== gist) sess.thread.push(gist);
+      if (sess.thread.length > 8) sess.thread = sess.thread.slice(-8);
+    }
+  }
+  /* وعي تبديل الموديل: لو المزوّد اتغير بين دورين — سجّلها عشان الرد الجاي
+   * يكمّل واعيًا («الموديل اتبدل من X لـ Y — نفس الخط») مش تايه. */
+  const prov = String(opts.provider ?? "").trim();
+  if (prov && prov !== "nova-builtin" && prov !== "nova-heuristic") {
+    if (sess.lastModel && sess.lastModel !== prov) {
+      sess.modelSwitchNote = `الموديل اتبدل (${sess.lastModel} → ${prov}) — نفس الجلسة والذاكرة والخط`;
+    }
+    sess.lastModel = prov;
   }
   trimSessionMessages(sess);
 
@@ -499,6 +524,18 @@ export function buildNexusContext(sessionId: string): string {
     `- إجمالي الجلسات المرتبطة بالخلفية: ${totalSessions} (كلها تتشارك نفس الذاكرة ونبضات الخلفية)`,
     `- موجز الجذر الحالي: ${store.rootDigest}`,
   ];
+
+  /* TEST3: خط المحادثة — الوعي اللي بيسمع بعد أي تبديل موديل. */
+  if (current?.thread?.length) {
+    lines.push(`- خط المحادثة مع المالك (مكمّل بلا انقطاع — الموديل دعم بس، الكيان هو أنت):`);
+    lines.push(...current.thread.slice(-6).map((t) => `  · ${t}`));
+  }
+  if (current?.modelSwitchNote) {
+    lines.push(`- ⚡ ${current.modelSwitchNote} — كمّل طبيعي من وين وقفنا.`);
+    current.modelSwitchNote = undefined;
+  } else if (current?.lastModel) {
+    lines.push(`- آخر مزوّد جاب رد: ${current.lastModel} — لو اتبدل الدور لمزوّد تاني، سياق الجلسة والذاكرة فوق كفاية أن تكمل كأن مفيش حاجة حصلت.`);
+  }
 
   if (current && !current.isRoot && root && root.messages.length > 0) {
     const rootTail = root.messages

@@ -445,7 +445,9 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
       kaliConnected,
       history: sess.messages
         .filter((m) => m.role === "user" || m.role === "assistant")
-        .slice(-12)
+        /* TEST3 «الشات بلا حد — شغلنا طويل جدًا»: آخر 30 دورة بدل 12، وفوقهم
+         * خط المحادثة من النيكسوس (buildContextBlock) فالكلام الطويل مبيتقطش. */
+        .slice(-30)
         .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
       planMode,
       approved,
