@@ -4,10 +4,11 @@
  * Creates/reuses a session automatically on open.
  */
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Bot, X, Maximize2, Sparkles, Brain, Zap, Wrench, ChevronDown, Loader2, Send, AlertCircle } from "lucide-react";
+import { X, Maximize2, Sparkles, Wrench, ChevronDown, Loader2, Send, AlertCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { jsonRequest } from "@/lib/sse";
+import { DAW_SKULL } from "@/lib/skull";
 
 const BASE_API = "/api";
 
@@ -249,50 +250,59 @@ export function FloatingNovaButton() {
     <div className="fixed z-[9999]" style={{ bottom: "24px", right: "24px" }}>
       {open && (
         <div
-          className="absolute bottom-16 right-0 w-80 sm:w-96 rounded-2xl border border-fuchsia-500/30 bg-black/96 backdrop-blur-xl shadow-2xl shadow-fuchsia-900/20 flex flex-col overflow-hidden"
-          style={{ height: "520px" }}
+          className="absolute bottom-16 right-0 w-80 sm:w-96 rounded-2xl border border-rose-500/45 bg-[#07030a]/96 backdrop-blur-xl shadow-2xl shadow-rose-950/50 flex flex-col overflow-hidden"
+          style={{ height: "520px", boxShadow: "0 0 40px rgba(255,20,70,0.22), inset 0 1px 0 rgba(255,60,110,0.2)" }}
           dir="rtl"
         >
           {/* Header */}
-          <div className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-fuchsia-900/40 to-purple-900/30 border-b border-fuchsia-500/20 shrink-0">
+          <div className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-rose-950/60 via-[#120518]/80 to-cyan-950/35 border-b border-rose-500/30 shrink-0">
             <div className="relative">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center">
-                <Bot className="w-4 h-4 text-white" />
-              </div>
-              <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-black ${wsConnected ? "bg-emerald-400 animate-pulse" : "bg-yellow-400"}`} />
+              <img
+                src={DAW_SKULL}
+                alt="Dawsha Skull"
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-rose-500/80 skull-halo"
+              />
+              <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-black ${wsConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
             </div>
-            <div className="flex-1">
-              <div className="text-sm font-bold text-fuchsia-200">Live Agent</div>
-              <div className="text-[9px] flex items-center gap-1" style={{ color: wsConnected ? "#44ff88" : "#ffaa22" }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-black text-rose-100 flex items-center gap-1.5">
+                <span>☠ نوفا الجذرية</span>
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300">24/7</span>
+              </div>
+              <div className="text-[9px] flex items-center gap-1 font-mono" style={{ color: wsConnected ? "#22d3ee" : "#fbbf24" }}>
                 <Sparkles className="w-2.5 h-2.5" />
-                {wsConnected ? "WS متصل · dolphin-llama3" : "WS جاري الاتصال..."}
-                {streaming && <><Loader2 className="w-2.5 h-2.5 animate-spin" /><span>يفكر...</span></>}
+                {wsConnected ? "متصل · nova-root · العقل الموحد" : "WS جاري الربط بالجذر..."}
+                {streaming && <><Loader2 className="w-2.5 h-2.5 animate-spin text-rose-400" /><span className="text-rose-300">يفكر...</span></>}
               </div>
             </div>
-            <button onClick={() => { setOpen(false); setLocation("/nova-fleet"); window.location.hash = "work"; }}
-              className="text-slate-500 hover:text-fuchsia-300 p-1 transition-colors" title="فتح مساحة عمل الوكيل الكاملة">
+            <button onClick={() => { setOpen(false); setLocation("/agent-pro"); }}
+              className="text-slate-400 hover:text-cyan-300 p-1 transition-colors" title="فتح مركز القيادة الكامل">
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
-            <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-red-400 p-1 transition-colors">
+            <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-rose-400 p-1 transition-colors">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-3" style={{ fontFamily: "monospace" }}>
+          <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-3 cyber-hud-grid" style={{ fontFamily: "monospace" }}>
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-32 text-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-fuchsia-500/20 to-purple-600/20 border border-fuchsia-500/30 flex items-center justify-center">
-                  <Brain className="w-6 h-6 text-fuchsia-400" />
+              <div className="flex flex-col items-center justify-center h-40 text-center gap-3">
+                <div className="relative">
+                  <img
+                    src={DAW_SKULL}
+                    alt="Dawsha Skull"
+                    className="w-14 h-14 rounded-full object-cover ring-2 ring-rose-500/75 skull-halo"
+                  />
                 </div>
-                <div className="text-xs text-slate-400">
-                  <span className="text-fuchsia-300 font-bold">Live Agent</span> جاهز<br />
-                  <span className="text-slate-600 text-[10px]">يتصل بـ Ollama عبر ngrok</span>
+                <div className="text-xs text-slate-300">
+                  <span className="text-rose-300 font-black">☠ nova-root</span> متصل 24/7<br />
+                  <span className="text-cyan-300/70 text-[10px]">أدوات حقيقية · ذاكرة دائمة · مجلس عقول</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5 w-full mt-1">
-                  {["ما حالة النظام؟", "افحص google.com", "ابحث CVE-2024", "شغّل: whoami"].map(q => (
+                  {["ما حالة النظام؟", "فحص أمني سريع", "أهم CVEs اليوم", "ملخص الذاكرة"].map(q => (
                     <button key={q} onClick={() => { setInput(q); setTimeout(() => inputRef.current?.focus(), 50); }}
-                      className="text-[10px] px-2 py-1.5 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg text-fuchsia-300 hover:bg-fuchsia-500/20 transition-all text-right">
+                      className="text-[10px] px-2 py-1.5 bg-rose-500/10 border border-rose-500/25 rounded-lg text-rose-200 hover:bg-rose-500/20 hover:border-cyan-400/40 transition-all text-right">
                       {q}
                     </button>
                   ))}
@@ -311,12 +321,12 @@ export function FloatingNovaButton() {
                 <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-start" : "justify-end"}`}>
                   <div className={`max-w-[85%] rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
                     msg.role === "user"
-                      ? "bg-fuchsia-500/15 border border-fuchsia-500/20 text-white"
-                      : "bg-slate-800/80 border border-slate-700/50 text-slate-200"
+                      ? "bg-rose-500/18 border border-rose-500/35 text-white"
+                      : "bg-[#09121d]/90 border border-cyan-500/25 text-slate-200"
                   }`}>
                     {msg.role === "assistant" && !msg.content && streaming ? (
                       <span className="flex items-center gap-1 text-slate-500">
-                        <Loader2 className="w-3 h-3 animate-spin text-fuchsia-400" />
+                        <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
                         <span>يفكر…</span>
                       </span>
                     ) : (
@@ -329,16 +339,16 @@ export function FloatingNovaButton() {
           </div>
 
           {/* Input */}
-          <div className="p-3 border-t border-fuchsia-500/10 bg-black/40 shrink-0">
+          <div className="p-3 border-t border-rose-500/20 bg-black/60 shrink-0">
             <div className="flex gap-2 items-center">
               <input
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && !e.shiftKey && void sendMessage()}
-                placeholder={wsConnected ? "اسأل Agent أي شيء…" : "جاري الاتصال..."}
+                placeholder={wsConnected ? "أمر أو سؤال لـ nova-root…" : "جاري الربط بالجذر..."}
                 disabled={streaming || !wsConnected}
-                className="flex-1 bg-black/50 border border-fuchsia-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none placeholder:text-slate-600 focus:border-fuchsia-500/50 transition-colors disabled:opacity-50"
+                className="flex-1 bg-black/60 border border-rose-500/30 rounded-xl px-3 py-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/60 transition-colors disabled:opacity-50"
               />
               {streaming ? (
                 <button onClick={() => { setStreaming(false); activeReqRef.current = null; }}
@@ -347,15 +357,15 @@ export function FloatingNovaButton() {
                 </button>
               ) : (
                 <button onClick={() => void sendMessage()} disabled={!input.trim() || !wsConnected}
-                  className="w-8 h-8 bg-gradient-to-br from-fuchsia-600 to-purple-700 rounded-xl flex items-center justify-center disabled:opacity-40 hover:from-fuchsia-500 hover:to-purple-600 transition-all shadow-lg shadow-fuchsia-900/30">
+                  className="w-8 h-8 bg-gradient-to-br from-rose-600 to-cyan-600 rounded-xl flex items-center justify-center disabled:opacity-40 hover:from-rose-500 hover:to-cyan-500 transition-all shadow-lg shadow-rose-900/40">
                   <Send className="w-3.5 h-3.5 text-white" />
                 </button>
               )}
             </div>
             <div className="flex gap-2 mt-2">
               <button onClick={() => { setOpen(false); setLocation("/live-agent"); }}
-                className="flex-1 text-[9px] text-fuchsia-500/60 hover:text-fuchsia-400 transition-colors">
-                فتح الصفحة الكاملة →
+                className="flex-1 text-[9px] text-cyan-400/75 hover:text-cyan-300 transition-colors">
+                فتح الوكيل الحي الكامل →
               </button>
             </div>
           </div>
@@ -364,24 +374,28 @@ export function FloatingNovaButton() {
 
       {/* Floating Button */}
       <button onClick={() => setOpen(v => !v)}
-        className={`relative w-14 h-14 rounded-full shadow-2xl transition-all duration-300 group ${
+        className={`relative w-14 h-14 rounded-full shadow-2xl transition-all duration-300 group overflow-visible ${
           open
-            ? "bg-gradient-to-br from-red-600 to-rose-700 shadow-red-900/40"
-            : "bg-gradient-to-br from-fuchsia-600 to-purple-700 shadow-fuchsia-900/40 hover:scale-110"
+            ? "bg-gradient-to-br from-red-600 to-rose-800 shadow-red-900/50 ring-2 ring-rose-400/80"
+            : "bg-[#0a0308] ring-2 ring-rose-500/85 skull-halo hover:scale-110"
         }`}
       >
         {!open && (
           <>
-            <span className={`absolute inset-0 rounded-full bg-fuchsia-500/30 ${pulse ? "animate-ping" : ""}`} />
-            <span className="absolute inset-[-4px] rounded-full border border-fuchsia-500/20 animate-pulse" />
+            <span className={`absolute inset-0 rounded-full bg-rose-500/25 ${pulse ? "animate-ping" : ""}`} />
+            <span className="absolute -inset-1 rounded-full border border-cyan-400/30 animate-pulse pointer-events-none" />
           </>
         )}
-        <div className="relative z-10 flex items-center justify-center w-full h-full">
-          {open ? <X className="w-6 h-6 text-white" /> : <Bot className="w-7 h-7 text-white drop-shadow-lg" />}
+        <div className="relative z-10 flex items-center justify-center w-full h-full rounded-full overflow-hidden">
+          {open ? (
+            <X className="w-6 h-6 text-white" />
+          ) : (
+            <img src={DAW_SKULL} alt="Dawsha Skull" className="w-full h-full object-cover" />
+          )}
         </div>
         {!open && (
-          <div className="absolute bottom-full right-0 mb-2 whitespace-nowrap bg-black/90 border border-fuchsia-500/30 text-fuchsia-200 text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" dir="rtl">
-            كلّم Live Agent الآن
+          <div className="absolute bottom-full right-0 mb-2 whitespace-nowrap bg-black/95 border border-rose-500/50 text-rose-200 text-[10px] px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg shadow-rose-950/60" dir="rtl">
+            ☠ كلّم nova-root الآن
           </div>
         )}
       </button>

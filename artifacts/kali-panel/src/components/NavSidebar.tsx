@@ -1,3 +1,4 @@
+import { DAW_SKULL } from "@/lib/skull";
 import { useState, useEffect } from "react";
 import { useI18n } from "@/context/LanguageContext";
 import type { TKey } from "@/lib/i18n";
@@ -702,15 +703,14 @@ export function NavSidebar({ collapsed, onToggle }: NavSidebarProps) {
           <div className="flex items-center gap-2.5 min-w-0">
             {/* Logo */}
             <div className="relative shrink-0">
-              <div className="absolute -inset-1 rounded-xl opacity-30 animate-pulse"
-                style={{ background: "radial-gradient(circle, rgba(255,0,0,0.6), transparent 70%)" }} />
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center relative"
+              <div className="absolute -inset-1 rounded-xl opacity-45 animate-pulse"
+                style={{ background: "radial-gradient(circle, rgba(255,20,60,0.7), transparent 70%)" }} />
+              <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center relative"
                 style={{
-                  background: "linear-gradient(135deg, rgba(200,0,0,0.5), rgba(80,0,0,0.7))",
-                  border: "1px solid rgba(255,40,40,0.7)",
-                  boxShadow: "0 0 20px rgba(255,20,20,0.4), inset 0 0 12px rgba(255,20,20,0.15)",
+                  border: "1px solid rgba(255,40,60,0.85)",
+                  boxShadow: "0 0 22px rgba(255,20,40,0.5), inset 0 0 12px rgba(255,20,40,0.2)",
                 }}>
-                <Skull style={{ width: 16, height: 16, color: "#ff4444", filter: "drop-shadow(0 0 6px rgba(255,40,40,1))" }} />
+                <img src={DAW_SKULL} alt="Dawsha Skull" className="w-full h-full object-cover" />
               </div>
               <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 bg-red-500 animate-pulse"
                 style={{ borderColor: "#030003", boxShadow: "0 0 10px #ff0000, 0 0 20px rgba(255,0,0,0.5)" }} />
@@ -728,11 +728,11 @@ export function NavSidebar({ collapsed, onToggle }: NavSidebarProps) {
 
         {collapsed && (
           <div className="relative">
-            <div className="absolute -inset-1 rounded-xl opacity-25 animate-pulse"
-              style={{ background: "radial-gradient(circle, rgba(255,0,0,0.6), transparent 70%)" }} />
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(200,0,0,0.5), rgba(80,0,0,0.7))", border: "1px solid rgba(255,40,40,0.7)", boxShadow: "0 0 20px rgba(255,20,20,0.4)" }}>
-              <Skull style={{ width: 16, height: 16, color: "#ff4444", filter: "drop-shadow(0 0 6px rgba(255,40,40,1))" }} />
+            <div className="absolute -inset-1 rounded-xl opacity-35 animate-pulse"
+              style={{ background: "radial-gradient(circle, rgba(255,20,60,0.7), transparent 70%)" }} />
+            <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center"
+              style={{ border: "1px solid rgba(255,40,60,0.8)", boxShadow: "0 0 20px rgba(255,20,40,0.45)" }}>
+              <img src={DAW_SKULL} alt="Dawsha Skull" className="w-full h-full object-cover" />
             </div>
           </div>
         )}

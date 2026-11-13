@@ -5828,6 +5828,14 @@ if (path === "/fleet/system") {
     };
   }
 
+  if (path === "/autonomous/tick" && m === "POST") {
+    return {
+      ok: false, standalone: true, notWired: true, skipped: true,
+      error: "no_execution_plane",
+      reason: "التوأم الساكن (GitHub Pages) مفيهوش ديمون — النبضة الحقيقية بتشتغل على السيرفر: POST /api/autonomous/tick.",
+    };
+  }
+
   if (path === "/agent/autonomous/run" && m === "POST") {
     const prompt = String(body?.prompt || "فحص تلقائي للهدف النشط");
     const run = buildStandaloneAgentRun(prompt);

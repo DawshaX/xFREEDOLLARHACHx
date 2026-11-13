@@ -5,6 +5,7 @@ import { NotificationCenter } from "./NotificationCenter";
 import { FloatingNovaButton } from "./FloatingNovaButton";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { LanguagePicker } from "./LanguagePicker";
+import { novaAuthHeaders } from "@/lib/ops-client";
 import {
   Cpu, MemoryStick, Clock, Monitor, Skull,
   AlertTriangle, Radio, Target, ShieldCheck,
@@ -72,9 +73,10 @@ export function AppShell({ children }: AppShellProps) {
   });
   const [sessionCycles, setSessionCycles] = useState<number>(() => {
     try {
-      return Number(localStorage.getItem("cybernova_session_cycles_v15") || "35") || 35;
+      const saved = Number(localStorage.getItem("cybernova_session_cycles_v15") || "0");
+      return Number.isFinite(saved) ? saved : 0;
     } catch {
-      return 35;
+      return 0;
     }
   });
   const [wsEventCount, setWsEventCount] = useState(1);
@@ -99,20 +101,21 @@ export function AppShell({ children }: AppShellProps) {
 
   const triggerGlobalPulse = async () => {
     try {
+      const res = await fetch("/api/autonomous/tick", {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ target: activeTarget }),
+      });
+      const d = (await res.json().catch(() => null)) as { cycle?: number; skipped?: boolean; reason?: string } | null;
       await fetch("/api/agent/tasks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ action: "advance_cycle", target: activeTarget }),
-      });
-      await fetch("/api/deep-research/workstation-multitask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "tick", target: activeTarget }),
-      });
-      const next = sessionCycles + 1;
+      }).catch(() => {});
+      const next = typeof d?.cycle === "number" ? d.cycle : sessionCycles + 1;
       setSessionCycles(next);
       localStorage.setItem("cybernova_session_cycles_v15", String(next));
-      setLastWsText(`تم تنفيذ دورة عمل ذاتية #${next} وحفظ حالة الجلسة بالكامل`);
+      setLastWsText(d?.skipped ? `نبضة: ${d.reason || "تم التخطي"}` : `تم تنفيذ دورة عمل ذاتية #${next} وحفظ حالة الجلسة في الجذر`);
     } catch {
       // ignore
     }
@@ -155,6 +158,18 @@ export function AppShell({ children }: AppShellProps) {
           const d = (await r.json()) as { cpu?: { usage?: number }; memory?: { usagePercent?: number; pct?: number } };
           setCpu(d?.cpu?.usage ?? null);
           setRam(d?.memory?.usagePercent ?? d?.memory?.pct ?? null);
+        }
+      } catch {
+        // ignore
+      }
+      try {
+        const r = await fetch("/api/autonomous/status", { headers: novaAuthHeaders() });
+        if (r.ok) {
+          const d = (await r.json()) as { daemon?: { cycles?: number } };
+          if (typeof d?.daemon?.cycles === "number") {
+            setSessionCycles(d.daemon.cycles);
+            try { localStorage.setItem("cybernova_session_cycles_v15", String(d.daemon.cycles)); } catch { /* */ }
+          }
         }
       } catch {
         // ignore

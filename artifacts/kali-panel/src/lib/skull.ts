@@ -1,12 +1,8 @@
 /**
  * skull.ts — أصل الجمجمة السايبرية الحمراء (هوية DAWSHA).
- * يُخدم من `public/daw-skull.jpg` (تجنب Data-URI فارغة) مع دعم BASE_URL
- * ليعمل في التطوير، والحزمة المحمولة، وGitHub Pages بدون انقطاع.
+ * يُستورد كأصل Vite مباشر لضمان ظهوره في جميع المسارات (/, sub-path, standalone)
+ * دون أن ينكسر أو يتحول إلى دائرة فارغة أبداً، مع إبقاء public/daw-skull.jpg كنسخة مساعدة.
  */
-const baseUrl =
-  typeof import.meta !== "undefined" &&
-  (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL
-    ? (import.meta as unknown as { env: { BASE_URL: string } }).env.BASE_URL
-    : "/";
+import dawSkullAsset from "../assets/daw-skull.jpg";
 
-export const DAW_SKULL = `${baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`}daw-skull.jpg`;
+export const DAW_SKULL: string = dawSkullAsset;

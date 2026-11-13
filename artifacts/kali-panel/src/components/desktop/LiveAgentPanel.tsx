@@ -21,6 +21,7 @@ import { NovaFleetPanel, NovaProjectPulse } from "./NovaFleetPanel";
 import { novaTask, novaLog } from "./NovaFleetLive";
 import { runLocalBrain, toolLabelAr } from "@/lib/local-brain";
 import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
+import { DAW_SKULL } from "@/lib/skull";
 import { RealTimeSystemMonitor } from "./RealTimeSystemMonitor";
 import { AdvancedFileManager } from "./AdvancedFileManager";
 import { RegistryEditor } from "./RegistryEditor";
@@ -1000,6 +1001,14 @@ export function LiveAgentPanel({
   const [ollamaOnline, setOllamaOnline] = useState(false);
   const [ollamaModel, setOllamaModel] = useState("nova-brain (Auto)");
   const [ollamaPulse, setOllamaPulse] = useState(false);
+  const [coreBrainReady, setCoreBrainReady] = useState(false);
+  const [coreCloudCount, setCoreCloudCount] = useState(0);
+  const [coreToolsCount, setCoreToolsCount] = useState<number>(67);
+  const [serverCronJobs, setServerCronJobs] = useState<Array<{
+    id: string; name: string; cronExpr: string; enabled: boolean;
+    runCount: number; errorCount: number; lastRun?: string; nextRun?: string; lastResult?: string;
+  }>>([]);
+  const [serverCronBusy, setServerCronBusy] = useState<string | null>(null);
 
   // Direct provider execution is disabled; chat turns use the server-side NOVA Core.
   const directMode = false;
@@ -1111,8 +1120,8 @@ export function LiveAgentPanel({
   const [multiAITaskType, setMultiAITaskType] = useState<"fast" | "security" | "code" | "analysis" | "creative">("fast");
   const multiAIScrollRef = useRef<HTMLDivElement>(null);
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([
-    { kind: "system", text: "CyberNova Director Terminal — المدير الهاكر التنفيذي v7", ts: Date.now() },
-    { kind: "system", text: `ngrok endpoint: ${LLAMA_NGROK_URL} → Llama Dolphin`, ts: Date.now() },
+    { kind: "system", text: "CyberNova Director Terminal — نواة NOVA الموحدة v8", ts: Date.now() },
+    { kind: "system", text: "الجذر الدائم: nova-root 24/7 · مرتبط بـ 67 أداة وأجهزة الأسطول", ts: Date.now() },
     { kind: "info", text: "في انتظار أوامر الوكيل... اكتب أمراً أو اطلب من Nova تنفيذه", ts: Date.now() },
   ]);
   const [terminalInput, setTerminalInput] = useState("");
@@ -1797,7 +1806,7 @@ export function LiveAgentPanel({
   const deleteSession = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await fetch(`${API_BASE}/live-agent/sessions/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE}/live-agent/sessions/${id}`, { method: "DELETE", headers: novaAuthHeaders() });
       if (id === sessionId) void newSession();
       else void loadSessions();
     } catch { /* ignore */ }
@@ -1863,13 +1872,51 @@ export function LiveAgentPanel({
     try {
       const res = await fetch(`${API_BASE}/nova/telegram-alert`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ botToken: telegramBotToken, chatId: telegramChatId, message }),
       });
       const d = await res.json() as { ok: boolean; error?: string };
       setTelegramLog(prev => [{ ts: new Date().toISOString(), msg: message.slice(0, 80), ok: d.ok }, ...prev.slice(0, 19)]);
       if (d.ok) setLastTelegramSent(new Date().toLocaleTimeString("ar-EG"));
     } catch { /* silent */ }
+  };
+
+  // ── Server Cron Jobs (/api/nova/cron/jobs) ────────────────────────────────
+  const loadServerCron = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/nova/cron/jobs`, { headers: novaAuthHeaders() });
+      if (!res.ok) return;
+      const d = (await res.json()) as { jobs?: typeof serverCronJobs };
+      if (Array.isArray(d.jobs)) setServerCronJobs(d.jobs);
+    } catch { /* ignore */ }
+  }, []);
+
+  const triggerServerCron = async (id: string) => {
+    setServerCronBusy(id);
+    try {
+      const res = await fetch(`${API_BASE}/nova/cron/jobs/${encodeURIComponent(id)}/trigger`, {
+        method: "POST",
+        headers: novaAuthHeaders(),
+      });
+      if (res.ok) addToast("⚡ تم تشغيل مهمة الكرون على السيرفر", "success");
+      else addToast(`⚠ تعذر تشغيل المهمة (${res.status})`, "warn");
+    } catch { addToast("⚠ تعذر الاتصال بالسيرفر", "error"); }
+    await loadServerCron();
+    setServerCronBusy(null);
+  };
+
+  const toggleServerCron = async (id: string, enabled: boolean) => {
+    setServerCronBusy(id);
+    try {
+      const res = await fetch(`${API_BASE}/nova/cron/jobs/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ enabled: !enabled }),
+      });
+      if (res.ok) addToast(enabled ? "⏸ تم إيقاف المهمة" : "▶ تم تفعيل المهمة", "success");
+    } catch { /* ignore */ }
+    await loadServerCron();
+    setServerCronBusy(null);
   };
 
   // ── OpenClaw Chat Helper ───────────────────────────────────────────────────
@@ -1880,7 +1927,7 @@ export function LiveAgentPanel({
     try {
       const res = await fetch(`${API_BASE}/nova/openclaw/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ message: text, model: selectedModel, token: OPENCLAW_TOKEN }),
       });
       const d = await res.json() as { ok: boolean; reply?: string; error?: string };
@@ -1898,7 +1945,7 @@ export function LiveAgentPanel({
     try {
       const res = await fetch(`${API_BASE}/nova/browser`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(actionPayload),
       });
       const d = await res.json() as { ok: boolean; data?: Record<string,unknown>; error?: string; action: string };
@@ -1918,7 +1965,7 @@ export function LiveAgentPanel({
     try {
       const res = await fetch(`${API_BASE}/nova/scheduler/run`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ command: task.command, taskName: task.name }),
       });
       const d = await res.json() as { ok: boolean; output?: string; error?: string };
@@ -2153,7 +2200,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             try {
               const r = await fetch(`${API_BASE}/local-agent/exec`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify({ command: cmd, agentId: kaliSelectedAgentId, timeout: 90_000 }),
               });
               if (r.ok) {
@@ -2184,7 +2231,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           try {
             await fetch(`${API_BASE}/memory`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: novaAuthHeaders({ "Content-Type": "application/json" }),
               body: JSON.stringify({ memoryType: type.trim(), key: key.trim(), content: memContent.trim() }),
             });
           } catch { /* ignore */ }
@@ -2214,7 +2261,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           try {
             await fetch(`${API_BASE}/memory`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: novaAuthHeaders({ "Content-Type": "application/json" }),
               body: JSON.stringify({ memoryType: "intel", key: `cves:${Date.now()}`, content: `CVEs مكتشفة: ${detectedCves.join(", ")}` }),
             });
           } catch { /* ignore */ }
@@ -2484,16 +2531,17 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Poll provider + bot status + Ollama (via API, not localhost) ───────────
+  // ── Poll provider + bot status + Ollama + Nova Core (via API) ─────────────
   useEffect(() => {
     let active = true;
     const tick = async () => {
       try {
-        const [pr, br, sr, or_] = await Promise.all([
-          fetch(`${API_BASE}/providers/status`),
-          fetch(`${API_BASE}/bot/status`),
-          fetch(`${API_BASE}/settings`),
-          fetch(`${API_BASE}/ollama/probe`),
+        const [pr, br, sr, or_, nc] = await Promise.all([
+          fetch(`${API_BASE}/providers/status`, { headers: novaAuthHeaders() }),
+          fetch(`${API_BASE}/bot/status`, { headers: novaAuthHeaders() }),
+          fetch(`${API_BASE}/settings`, { headers: novaAuthHeaders() }),
+          fetch(`${API_BASE}/ollama/probe`, { headers: novaAuthHeaders() }),
+          fetch(`${API_BASE}/nova-core/status`, { headers: novaAuthHeaders() }),
         ]);
         if (pr.ok && active) {
           const j = (await pr.json()) as { providers: ProviderStatus[] };
@@ -2506,19 +2554,35 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         }
         if (or_.ok && active) {
           const oj = await or_.json() as { connected?: boolean; online?: boolean; ok?: boolean; models?: string[] };
-          // API returns { connected, models, latencyMs }
           const isOnline = oj.connected === true || oj.online === true || oj.ok === true;
           setOllamaOnline(isOnline);
           if (Array.isArray(oj.models) && oj.models.length > 0) {
             setAvailableModels(oj.models);
           }
         }
+        if (nc.ok && active) {
+          const ncj = await nc.json() as {
+            ok?: boolean;
+            tools?: number | unknown[];
+            brain?: { ollamaOnline?: boolean; ollamaModel?: string | null; cloudProviders?: unknown[] };
+          };
+          const clouds = Array.isArray(ncj.brain?.cloudProviders) ? ncj.brain.cloudProviders.length : 0;
+          const tCount = Array.isArray(ncj.tools) ? ncj.tools.length : typeof ncj.tools === "number" ? ncj.tools : 67;
+          setCoreCloudCount(clouds);
+          setCoreToolsCount(tCount);
+          setCoreBrainReady(Boolean(ncj.ok !== false && (clouds > 0 || ncj.brain?.ollamaOnline || tCount > 0)));
+          if (ncj.brain?.ollamaOnline && ncj.brain.ollamaModel) {
+            setOllamaOnline(true);
+            setOllamaModel(ncj.brain.ollamaModel);
+          }
+        }
       } catch { /* ignore */ }
     };
     void tick();
-    const t = setInterval(tick, 15_000);
+    void loadServerCron();
+    const t = setInterval(() => { void tick(); }, 15_000);
     return () => { active = false; clearInterval(t); };
-  }, []);
+  }, [loadServerCron]);
 
 
   // ── Brain status polling every 15s ─────────────────────────────────────────
@@ -2533,7 +2597,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     if (kaliRemoteTab !== "processes" || !kaliSelectedAgentId || !kaliAgentConnected) return;
     const poll = async () => {
       try {
-        const r = await fetch(`${API_BASE}/local-agent/processes?agentId=${kaliSelectedAgentId}`);
+        const r = await fetch(`${API_BASE}/local-agent/processes?agentId=${kaliSelectedAgentId}`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { processes?: Array<{ pid: string; user: string; cpu: string; mem: string; command: string }> };
           if (d.processes) setKaliProcesses(d.processes);
@@ -2561,7 +2625,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   useEffect(() => {
     const fetchConnectInfo = async () => {
       try {
-        const r = await fetch(`${API_BASE}/local-agent/connect-info`);
+        const r = await fetch(`${API_BASE}/local-agent/connect-info`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { wsUrl?: string; wsHost?: string };
           if (d.wsUrl) setKaliWssUrl(d.wsUrl);
@@ -2585,7 +2649,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
     const poll = async () => {
       try {
-        const r = await fetch(`${API_BASE}/local-agent/status`);
+        const r = await fetch(`${API_BASE}/local-agent/status`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { connected: boolean; agents: Array<{ id: string; hostname: string; platform: string; user: string; connectedAt: number }> };
           setKaliAgentConnected(d.connected);
@@ -2612,7 +2676,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     const fetchProfile = async () => {
       setKaliDeepProfileLoading(true);
       try {
-        const r = await fetch(`${API_BASE}/kali-command/device-profile`);
+        const r = await fetch(`${API_BASE}/kali-command/device-profile`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { connected: boolean; profile?: typeof kaliDeepProfile };
           if (d.connected && d.profile) setKaliDeepProfile(d.profile);
@@ -3347,7 +3411,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   useEffect(() => {
     const pollIQ = async () => {
       try {
-        const r = await fetch(`${API_BASE}/live-agent/iq`);
+        const r = await fetch(`${API_BASE}/live-agent/iq`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { iq: number; latencyMs: number; connected: boolean };
           setServerIQ(d.iq);
@@ -3369,7 +3433,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     try {
       await fetch(`${API_BASE}/kill-switch`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ sessionId }),
       });
     } catch { /* ignore */ }
@@ -3377,7 +3441,11 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     setLines((arr) => [...arr, { role: "system", text: "⛔ Kill Switch نشط — كل العمليات متوقفة", isError: true }]);
     setTimeout(() => {
       setKillActive(false);
-      fetch(`${API_BASE}/kill-switch/reset`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId }) }).catch(() => {});
+      fetch(`${API_BASE}/kill-switch/reset`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ sessionId }),
+      }).catch(() => {});
     }, 10_000);
   };
 
@@ -4006,28 +4074,29 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
         {/* ── Header ── */}
         <div
-          className={`${panelMode === "background" ? "border-b border-primary/15" : ""} px-3 py-2 flex items-center gap-2 ${panelMode === "window" && !embedded ? "cursor-move select-none" : ""} shrink-0`}
+          className={`${panelMode === "background" ? "border-b border-rose-500/20" : ""} px-3 py-2 flex items-center gap-2 border-b border-rose-500/20 bg-gradient-to-l from-rose-950/35 via-[#07020c]/95 to-cyan-950/25 ${panelMode === "window" && !embedded ? "cursor-move select-none" : ""} shrink-0`}
           onMouseDown={panelMode === "window" && !embedded ? startDrag : undefined}
         >
           <div className="relative shrink-0">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-emerald-500/30 to-cyan-500/20 border ${ollamaOnline ? "border-emerald-400/50" : "border-rose-400/40"} transition-all`}
-              style={{ boxShadow: busy && ollamaPulse ? `0 0 12px rgba(${ollamaOnline ? "52,211,153" : "248,113,113"},0.5)` : "none" }}>
-              <Brain className={`w-4 h-4 ${ollamaOnline ? "text-emerald-300" : "text-rose-300"}`} />
-            </div>
-            <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background ${ollamaOnline ? "bg-emerald-400" : "bg-rose-400"}`} />
-            {busy && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-60" />}
+            <img
+              src={DAW_SKULL}
+              alt="Dawsha Skull"
+              className={`w-8 h-8 rounded-full object-cover ring-2 ${ollamaOnline || coreBrainReady ? "ring-rose-500/85 skull-halo" : "ring-amber-400/70"} transition-all`}
+            />
+            <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background ${ollamaOnline || coreBrainReady ? "bg-emerald-400" : "bg-amber-400"}`} />
+            {busy && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping opacity-75" />}
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-sm font-bold text-foreground tracking-tight">
-                {embedded ? "نوفا · الجذر الحي" : "NOVA AGENT"}
+              <span className="text-sm font-black text-rose-100 tracking-tight">
+                {embedded ? "☠ نوفا · الجذر الحي" : "☠ NOVA AGENT"}
               </span>
               {!embedded && (
-                <span className="text-[9px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-400/30 rounded px-1">v7</span>
+                <span className="text-[9px] font-mono text-rose-300 bg-rose-500/15 border border-rose-400/35 rounded px-1">v8</span>
               )}
               {sessionId === "nova-root" && (
-                <span className="text-[8px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-400/30 rounded px-1">
+                <span className="text-[8px] font-mono text-cyan-200 bg-cyan-500/15 border border-cyan-400/40 rounded px-1">
                   24/7 Root
                 </span>
               )}
@@ -4079,10 +4148,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 ))}
               </div>
             )}
-            <div className="flex items-center gap-1.5 mt-0.5 text-[9px] font-mono">
-              <span className={`inline-flex items-center gap-1 ${ollamaOnline ? "text-emerald-300" : "text-rose-300"}`}>
-                {ollamaOnline ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-                {ollamaOnline ? "متصل" : "غير متصل"}
+            <div className="flex items-center gap-1.5 mt-0.5 text-[9px] font-mono flex-wrap">
+              <span className={`inline-flex items-center gap-1 ${ollamaOnline || coreBrainReady ? "text-emerald-300" : "text-amber-300"}`}>
+                {ollamaOnline || coreBrainReady ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
+                {ollamaOnline || coreBrainReady ? "متصل · نواة حية" : "جاري الربط…"}
               </span>
               <span className="text-muted-foreground">·</span>
               {/* Model switcher */}
@@ -4090,32 +4159,34 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 <button
                   onClick={() => setShowModelPicker(v => !v)}
                   className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border transition-all ${
-                    ollamaOnline
-                      ? "text-emerald-200 border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20"
-                      : "text-rose-300 border-rose-400/30 bg-rose-500/10"
+                    ollamaOnline || coreBrainReady
+                      ? "text-cyan-200 border-cyan-400/35 bg-cyan-500/10 hover:bg-cyan-500/20"
+                      : "text-amber-300 border-amber-400/30 bg-amber-500/10"
                   }`}
                   title="تغيير النموذج"
                 >
                   <CpuIcon className="w-2.5 h-2.5" />
-                  <span className="max-w-[90px] truncate">{ollamaModel}</span>
+                  <span className="max-w-[130px] truncate">
+                    {ollamaOnline ? ollamaModel : coreCloudCount > 0 ? `nova-brain · ${coreCloudCount} سحابي` : selectedModel}
+                  </span>
                   <ChevronDown className="w-2 h-2 opacity-60" />
                 </button>
-                {showModelPicker && availableModels.length > 0 && (
+                {showModelPicker && (
                   <>
                     <div className="fixed inset-0 z-[998]" onClick={() => setShowModelPicker(false)} />
-                    <div className="absolute bottom-full mb-1 left-0 z-[999] min-w-[160px] bg-[#050a15]/98 backdrop-blur-xl border border-emerald-400/30 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.8)] p-1 flex flex-col gap-0.5">
-                      <div className="px-2 py-1 text-[9px] font-mono text-emerald-400/60 uppercase tracking-wider border-b border-emerald-400/10 mb-0.5">الموديلات المتاحة</div>
-                      {availableModels.map(m => (
+                    <div className="absolute top-full mt-1 left-0 z-[999] min-w-[180px] bg-[#07030e]/98 backdrop-blur-xl border border-rose-500/40 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.85)] p-1 flex flex-col gap-0.5">
+                      <div className="px-2 py-1 text-[9px] font-mono text-rose-300/75 uppercase tracking-wider border-b border-rose-500/20 mb-0.5">النماذج المتاحة</div>
+                      {(availableModels.length > 0 ? availableModels : OPENCLAW_MODELS.map(m => m.id)).map(m => (
                         <button
                           key={m}
                           onClick={() => void switchModel(m)}
                           className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-mono text-left transition-all ${
-                            m === ollamaModel
-                              ? "bg-emerald-500/20 text-emerald-200 border border-emerald-400/30"
-                              : "text-white/60 hover:bg-white/5 hover:text-white/90 border border-transparent"
+                            m === selectedModel || m === ollamaModel
+                              ? "bg-rose-500/20 text-rose-100 border border-rose-400/40"
+                              : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent"
                           }`}
                         >
-                          {m === ollamaModel && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
+                          {(m === selectedModel || m === ollamaModel) && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
                           <span className="truncate">{m}</span>
                         </button>
                       ))}
@@ -4124,7 +4195,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </div>
               <span className="text-muted-foreground">·</span>
-              <span className="text-amber-300">🛠 {botStatus?.availableTools ?? "…"}</span>
+              <span className="text-amber-300">🛠 {coreToolsCount || botStatus?.availableTools || 67} أداة</span>
             </div>
           </div>
 
@@ -4473,7 +4544,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         ["apps", "تطبيقات"],
                         ["topology", "طوبولوجيا"],
                         ["kali", `Kali (${KALI_TOOLS.length})`],
-                        ["scheduler", "⏰ Scheduler"],
+                        ["scheduler", `⏰ الجدولة (${serverCronJobs.filter(j=>j.enabled).length}/${serverCronJobs.length || 6})`],
                         ["openclaw", "🦅 OpenClaw"],
                         ["browser", "🌐 Browser"],
                         ["multiAI", "🧠 Multi-AI"],
@@ -4483,11 +4554,12 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                           onClick={() => {
                             setActiveTab(key as typeof activeTab);
                             setShowMoreTabs(false);
+                            if (key === "scheduler") void loadServerCron();
                             if (key === "multiAI" && multiAIProviders.length === 0) {
                               void (async () => {
                                 setMultiAILoading(true);
                                 try {
-                                  const r = await fetch(`${API_BASE}/multi-ai/providers`);
+                                  const r = await fetch(`${API_BASE}/multi-ai/providers`, { headers: novaAuthHeaders() });
                                   if (r.ok) {
                                     const d = (await r.json()) as { providers: MultiAIProvider[] };
                                     setMultiAIProviders(d.providers);
@@ -4532,7 +4604,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   </span>
                 </button>
                 {/* ── New Intelligence Tabs ── */}
-                <button onClick={() => setActiveTab("scheduler" as typeof activeTab)}
+                <button onClick={() => { setActiveTab("scheduler" as typeof activeTab); void loadServerCron(); }}
                   className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "scheduler" ? "border-amber-500 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                   <span className="flex items-center gap-1">⏰ Scheduler</span>
                 </button>
@@ -4544,7 +4616,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "browser" ? "border-sky-400 text-sky-300 bg-sky-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                   <span className="flex items-center gap-1">🌐 Browser</span>
                 </button>
-                <button onClick={() => { setActiveTab("multiAI" as typeof activeTab); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
+                <button onClick={() => { setActiveTab("multiAI" as typeof activeTab); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`, { headers: novaAuthHeaders() }); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
                   className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "multiAI" ? "border-fuchsia-400 text-fuchsia-300 bg-fuchsia-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                   <span className="flex items-center gap-1">
                     🧠 Multi-AI
@@ -8642,7 +8714,61 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 </div>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              {/* ── Real Server Cron Jobs (/api/nova/cron/jobs) ── */}
+              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.04] p-2 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-emerald-300 font-mono">
+                    ⚡ كرون السيرفر الحقيقي 24/7 ({serverCronJobs.filter(j => j.enabled).length}/{serverCronJobs.length})
+                  </span>
+                  <button
+                    onClick={() => void loadServerCron()}
+                    className="text-[8px] font-mono px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/15"
+                  >
+                    تحديث
+                  </button>
+                </div>
+                {serverCronJobs.length === 0 ? (
+                  <div className="text-[8px] font-mono text-white/40 py-1">جاري جلب مهام السيرفر…</div>
+                ) : (
+                  serverCronJobs.map((job) => {
+                    const busyJob = serverCronBusy === job.id;
+                    return (
+                      <div key={job.id} className="rounded-lg border border-white/10 bg-black/40 p-1.5 space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${job.enabled ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
+                            <span className="text-[9px] font-bold text-white/90 truncate">{job.name}</span>
+                            <span className="text-[7px] font-mono text-cyan-300/75" dir="ltr">{job.cronExpr}</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              disabled={busyJob}
+                              onClick={() => void triggerServerCron(job.id)}
+                              className="text-[7px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/40 hover:bg-emerald-500/30 disabled:opacity-40"
+                            >
+                              {busyJob ? "…" : "⚡ تشغيل"}
+                            </button>
+                            <button
+                              disabled={busyJob}
+                              onClick={() => void toggleServerCron(job.id, job.enabled)}
+                              className={`text-[7px] px-1.5 py-0.5 rounded border ${job.enabled ? "bg-amber-500/15 text-amber-200 border-amber-400/35" : "bg-cyan-500/15 text-cyan-200 border-cyan-400/35"} disabled:opacity-40`}
+                            >
+                              {job.enabled ? "إيقاف" : "تفعيل"}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-[7px] font-mono text-white/45">
+                          <span>تشغيلات ×{job.runCount}</span>
+                          {job.lastResult && <span className="truncate text-emerald-200/70">↳ {job.lastResult}</span>}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="text-[8px] font-mono text-amber-300/70 px-1 pt-1">مهام مخصصة:</div>
               {scheduledTasks.map((task) => (
                 <div key={task.id} className={`rounded-xl p-2 border transition-all ${task.lastStatus === "running" ? "border-amber-400/50 bg-amber-500/8 animate-pulse" : task.lastStatus === "success" ? "border-emerald-500/30 bg-emerald-500/5" : task.lastStatus === "error" ? "border-rose-500/30 bg-rose-500/5" : "border-primary/10 bg-primary/3"}`}>
                   <div className="flex items-center justify-between mb-1">
@@ -9482,30 +9608,33 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
         {/* ── Chat Thread ── */}
         {(activeTab === "chat" || panelSize === "mini") && (
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2 min-h-0">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2 min-h-0 cyber-hud-grid">
             {lines.length === 0 && (
-              <div className="text-center py-6 px-4">
-                <div className="relative inline-block">
-                  <Sparkles className="w-10 h-10 mx-auto text-primary/60 mb-3" />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 animate-ping opacity-60" />
+              <div className="text-center py-4 px-3">
+                <div className="relative inline-block mb-2">
+                  <img
+                    src={DAW_SKULL}
+                    alt="Dawsha Skull"
+                    className="w-12 h-12 mx-auto rounded-full object-cover ring-2 ring-rose-500/85 skull-halo"
+                  />
+                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 animate-ping opacity-75" />
                 </div>
-                <div className="text-xs font-bold text-foreground mb-1">NOVA — المحرك المركزي</div>
-                <div className="text-[10px] text-muted-foreground leading-relaxed mb-3">
-                  أجيب باستخدام سياق المنصة وأدواتها الآمنة المتاحة.<br />
-                  الأدوات النشطة وأوامر الأجهزة لا تُنفذ تلقائياً، والموافقة عليها غير متاحة من هذه المحادثة حالياً.<br />
-                  إغلاق الصفحة يوقف هذه الجلسة؛ التشغيل المستمر يحتاج خدمة خلفية مستقلة.
+                <div className="text-xs font-black text-rose-100 mb-1">☠ NOVA — الجذر الحي (nova-root 24/7)</div>
+                <div className="text-[10px] text-cyan-100/65 leading-relaxed mb-3 max-w-md mx-auto">
+                  جلسة مستمرة 24/7 مربوطة بالذاكرة الدائمة (auto-dream) وبـ {coreToolsCount || 67} أداة حقيقية.<br />
+                  الموافقات الأمنية (Approval Gate) والأوامر والمهام الجارية محفوظة في الخلفية حتى لو أغلقت المتصفح.
                 </div>
-                <div className="grid grid-cols-2 gap-1.5 text-right">
+                <div className="grid grid-cols-2 gap-1.5 text-right max-w-md mx-auto">
                   {[
                     { text: "حالة النظام", desc: "platform_status" },
                     { text: "ابحث عن CVE", desc: "cve_lookup" },
                     { text: "حالة الأسطول", desc: "fleet_list" },
-                    { text: "ابحث في الويب", desc: "web_search" },
+                    { text: "ملخص الذاكرة والجذر", desc: "memory_recall" },
                   ].map((s) => (
                     <button key={s.text} onClick={() => setInput(s.text)}
-                      className="text-[10px] px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-foreground hover:bg-primary/10 transition text-right">
-                      <div className="font-medium">{s.text}</div>
-                      <div className="text-muted-foreground font-mono text-[8px]">{s.desc}</div>
+                      className="text-[10px] px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-100 hover:bg-rose-500/20 hover:border-cyan-400/45 transition text-right">
+                      <div className="font-bold">{s.text}</div>
+                      <div className="text-cyan-300/65 font-mono text-[8px]">{s.desc}</div>
                     </button>
                   ))}
                 </div>
