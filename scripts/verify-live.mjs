@@ -45,7 +45,7 @@ const WORDLIST = arg("wordlist", "");
 // الحلقة كل 6 ساعات، بدل ما نعتمد على watchdog أسبوعي. GitHub بيأجّل/بيحذف جدوليات الـ*/10
 // (مقاس 2026-11-02: cron كل 10 دقايق طلع منه تشغيلان بس في اليوم: 10:54 و20:35) — فالفحص
 // اللاصق أصدق من الـcron.
-const HUB = String(arg("hub", process.env.NOVA_HUB_URL || "http://node.waifly.com:27214")).replace(/\/+$/, "");
+const HUB = String(arg("hub", process.env.NOVA_HUB_URL || "https://nova.waifly.com")).replace(/\/+$/, "");
 
 const log = (...a) => console.log("[verify]", ...a);
 const warn = (m) => console.log(`::warning::${m}`);
@@ -532,6 +532,28 @@ async function engineChecks(cfg) {
     refused ? `HTTP ${negCreated.status} · ${short(refusal || "refused before execution", 160)}`
       : `اتقبلت المهمة (job=${negJob?.id}) — البوابة ماسكةوش، لازم تتقفل`, { negative: true });
   if (!refused && negJob?.id) await api(`/ops/jobs/${negJob.id}/cancel`, { method: "POST", body: {} }).catch(() => {});
+
+  // ── الأسطول + المجلس اللغوي عبر المحرك (مقاسة لـ readiness-report.mjs) ──────
+  const agentsRes = await api("/local-agent/agents");
+  const agentsList = Array.isArray(agentsRes.body) ? agentsRes.body : (agentsRes.body?.agents ?? []);
+  add("engine", "fleet agents registered",
+    agentsRes.ok && agentsList.length > 0 ? "pass" : agentsRes.ok ? "review" : "fail",
+    agentsRes.ok
+      ? `${agentsList.length} عقدة (${short(agentsList.map((a) => a.id || a.name).join(", ") || "مفيش", 120)})`
+      : `HTTP ${agentsRes.status} · ${short(agentsRes.text, 100)}`,
+    { agents: agentsList.length });
+
+  const councilRes = await api("/nova-core/council");
+  const seats = Array.isArray(councilRes.body?.seats) ? councilRes.body.seats : [];
+  const chatRes = await api("/nova-core/chat", {
+    method: "POST",
+    body: { message: "في جملة واحدة: إيه وضعك؟", sessionId: "verify-live" },
+  });
+  const chatHasDelta = /"type"\s*:\s*"delta"/.test(chatRes.text || "") || /[\u0600-\u06FF]/.test(chatRes.text || "");
+  add("engine", "council llm seats answer",
+    councilRes.ok && seats.length > 0 && chatRes.ok && chatHasDelta ? "pass" : (councilRes.ok && chatRes.ok) ? "review" : "fail",
+    `${seats.length} مقعد · chat HTTP ${chatRes.status} · ${chatHasDelta ? "delta ✓" : "مفيش رد"} (${short(seats.slice(0, 3).map((s) => s.id).join(", "), 90)})`,
+    { seats: seats.length, chatStatus: chatRes.status });
 }
 
 /* ── report writers ── */

@@ -24,8 +24,8 @@ const HEADERS = { apikey: ANON, authorization: `Bearer ${ANON}`, "content-type":
 
 export interface BackendHealth {
   ok: boolean;
-  at: string;
-  counts: { cves: number; huntRuns: number; findings: number };
+  at?: string;
+  counts?: { cves?: number; huntRuns?: number; findings?: number };
 }
 
 export interface BackendFinding {

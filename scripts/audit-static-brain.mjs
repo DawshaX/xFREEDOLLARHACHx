@@ -166,6 +166,17 @@ async function readSse(res, timeoutMs = 20000) {
   return events;
 }
 
+async function waitForDom(check, timeoutMs = 10_000, intervalMs = 120) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try {
+      if (check()) return true;
+    } catch { /* keep polling until mounted */ }
+    if (Date.now() >= deadline) return false;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
+
 /* ── 1. browser brain ───────────────────────────────────────────────────── */
 
 async function phaseBrowserBrain() {
@@ -266,22 +277,38 @@ async function phaseLinkedServer() {
 }
 
 
-/* ── 3. work page really renders ────────────────────────────────────────── */
+/* ── 3. station + work tabs really render ───────────────────────────────── */
 
 async function phaseWorkUi() {
-  // /nova-fleet is a TABGED page now: it opens on «المخ» and each tab mounts its
-  // own component (`view === "work" && <NovaWorkstation/>`). Rendering the page and
-  // demanding the workstation's bands in the same DOM was a false failure — the
-  // harness has to deep-link the tab it means to test. `bootDom` appends `search`
-  // raw to the URL, and the app reads the tab from location.hash.
-  const { window } = bootDom({ search: "#work" });
+  // /nova-fleet is a TABGED page: `#station` renders <NovaWorkstation/> (which
+  // hosts `محطة العمل`, `وسّع القدرات`, `خطة العمل`, `حالة الاتصالات`, and the
+  // session-backed chat), while `#work` renders `<LiveAgentPanel embedded />`.
+  // Wait via waitForDom because lazy-loaded chunks mount asynchronously in jsdom.
+  const { window } = bootDom({ search: "#station" });
   await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
-  await new Promise((r) => setTimeout(r, 2500));
+  const need = [
+    "المخ · الكيان",
+    "الشات الموحّد",
+    "وكيل حي · مساحة العمل",
+    "محطة النظام",
+    "المهمات",
+    "الأدوات",
+    "غرفة العمليات",
+    "خريطة الشبكة",
+    "محطة العمل",
+    "وسّع القدرات",
+    "خطة العمل",
+    "حالة الاتصالات",
+    "العقل السحابي 24/7",
+  ];
+  await waitForDom(() => {
+    const t = window.document.body.textContent || "";
+    const hasInputs = window.document.querySelectorAll("textarea, input").length > 0;
+    return hasInputs && need.every((n) => t.includes(n));
+  }, 10_000);
 
   const text = window.document.body.textContent || "";
   const inputs = window.document.querySelectorAll("textarea, input").length;
-  // sidebar labels (always mounted) + the workstation's own bands
-  const need = ["محطة العمل", "المهمات", "الأدوات", "خريطة الشبكة", "الليف بانل", "وسّع القدرات", "خطة العمل", "حالة الاتصالات", "العقل السحابي 24/7"];
   const missing = need.filter((n) => !text.includes(n));
 
   let storeMachines = null;
@@ -308,7 +335,24 @@ async function phaseWorkUi() {
     if (!honestLocal) findings.push({ kind: "no-honest-label", detail: "no honest static-mode label on the live bar" });
   }
   if (missing.length) findings.push({ kind: "work-page-incomplete", detail: `missing: ${missing.join(", ")}` });
-  if (inputs === 0) findings.push({ kind: "no-chat-input", detail: "work page rendered no input/textarea" });
+  if (inputs === 0) findings.push({ kind: "no-chat-input", detail: "station tab rendered no input/textarea" });
+  window.close?.();
+}
+
+async function phaseWorkPanel() {
+  const { window } = bootDom({ search: "#work" });
+  await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
+  await waitForDom(() => {
+    const t = window.document.body.textContent || "";
+    const hasInputs = window.document.querySelectorAll("textarea, input").length > 0;
+    return hasInputs && t.includes("وكيل حي · مساحة العمل") && t.length > 1000;
+  }, 10_000);
+  const text = window.document.body.textContent || "";
+  const inputs = window.document.querySelectorAll("textarea, input").length;
+  results.workPanel = { chars: text.length, inputs };
+  if (inputs === 0 || text.length < 500) {
+    findings.push({ kind: "work-panel-incomplete", detail: `#work LiveAgentPanel failed to mount (${text.length} chars, ${inputs} inputs)` });
+  }
   window.close?.();
 }
 
@@ -482,16 +526,18 @@ async function phaseMissions() {
 /* ── 7. chat that survives a reload ─────────────────────────────────────── */
 
 async function phasePersist() {
-  // the chat box lives on the work tab (the page is tabbed) — deep-link it, or this
-  // phase is asserting a textarea exists on the awareness room, which it never did.
-  const { window } = bootDom({ search: "#work" });
+  // The session-backed chat box (`cybernova_chat_sessions_v1`) lives on the
+  // `#station` (`NovaWorkstation`) tab — deep-link `#station` and wait for mount.
+  const { window } = bootDom({ search: "#station" });
   await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
-  await new Promise((r) => setTimeout(r, 2200));
 
   const doc = window.document;
-  const textarea = doc.querySelector("textarea");
+  const findVisibleTextarea = () =>
+    [...doc.querySelectorAll("textarea")].find((el) => !el.closest('[aria-hidden="true"]')) ?? null;
+  await waitForDom(() => Boolean(findVisibleTextarea()), 10_000);
+  const textarea = findVisibleTextarea();
   if (!textarea) {
-    findings.push({ kind: "no-textarea", detail: "work page has no chat input to drive" });
+    findings.push({ kind: "no-textarea", detail: "station tab has no visible chat input to drive" });
     window.close?.();
     return;
   }
@@ -504,14 +550,21 @@ async function phasePersist() {
   textarea.dispatchEvent(new window.Event("input", { bubbles: true }));
   await new Promise((r) => setTimeout(r, 150));
 
-  const sendBtn = [...doc.querySelectorAll("button")].find((b) => /إرسال/.test(b.textContent || ""));
+  const sendBtn = [...doc.querySelectorAll("button")].find(
+    (b) => !b.closest('[aria-hidden="true"]') && /إرسال/.test(b.textContent || ""),
+  );
   if (!sendBtn) {
     findings.push({ kind: "no-send", detail: "no send button found" });
     window.close?.();
     return;
   }
   sendBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-  await new Promise((r) => setTimeout(r, 3500));
+  await waitForDom(() => {
+    const raw = window.localStorage.getItem("cybernova_chat_sessions_v1");
+    const st = raw ? JSON.parse(raw) : [];
+    const lines = st[0]?.lines?.length ?? 0;
+    return st.length > 0 && lines >= 2 && (doc.body.textContent || "").includes("أنا نوفا");
+  }, 10_000);
 
   const raw = window.localStorage.getItem("cybernova_chat_sessions_v1");
   const stored = raw ? JSON.parse(raw) : [];
@@ -546,10 +599,13 @@ async function phaseRestore() {
     return;
   }
   const seed = JSON.parse(fs.readFileSync(snapPath, "utf8"));
-  // same tab the chat was written from — the conversation UI is the work tab
-  const { window } = bootDom({ seed, search: "#work" });
+  // same tab the chat was written from — `#station` (NovaWorkstation)
+  const { window } = bootDom({ seed, search: "#station" });
   await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
-  await new Promise((r) => setTimeout(r, 2000));
+  await waitForDom(() => {
+    const b = window.document.body.textContent || "";
+    return b.includes("أنا نوفا") && b.includes("مرحبا");
+  }, 10_000);
   const body = window.document.body.textContent || "";
   const restored = body.includes("أنا نوفا") && body.includes("مرحبا");
   results.restore = { restored };
@@ -566,6 +622,11 @@ if (MODE === "brain") {
 }
 if (MODE === "ui") {
   await phaseWorkUi();
+  fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
+  process.exit(findings.length ? 1 : 0);
+}
+if (MODE === "workpanel") {
+  await phaseWorkPanel();
   fs.writeFileSync(PHASE_OUT, JSON.stringify({ findings, results }));
   process.exit(findings.length ? 1 : 0);
 }
@@ -626,6 +687,7 @@ if (MODE === "linked") {
   run("persist");
   run("restore");
   run("ui");
+  run("workpanel");
   if (SERVER) run("linked");
 }
 
@@ -671,8 +733,12 @@ if (asJson) {
   }
   if (results.workUi) {
     const u = results.workUi;
-    console.log(`Work page     : ${u.chars} chars, ${u.inputs} inputs, ${u.machines ?? "?"} node(s)${u.missing.length ? ` — missing: ${u.missing.join(", ")}` : " ✓"}`);
+    console.log(`Station tab   : ${u.chars} chars, ${u.inputs} inputs, ${u.machines ?? "?"} node(s)${u.missing.length ? ` — missing: ${u.missing.join(", ")}` : " ✓"}`);
     if (u.fleetDebug) console.log(`  fleet debug : ${JSON.stringify(u.fleetDebug)}`);
+  }
+  if (results.workPanel) {
+    const p3 = results.workPanel;
+    console.log(`Work tab      : ${p3.chars} chars, ${p3.inputs} inputs ✓`);
   }
   console.log("");
   if (findings.length) {

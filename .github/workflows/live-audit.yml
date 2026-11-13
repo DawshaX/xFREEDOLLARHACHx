@@ -67,6 +67,7 @@ jobs:
     timeout-minutes: 10
     env:
       AUDIT_URL: ${{ secrets.NOVA_URL }}
+      NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
       AUDIT_TIMEOUT_MS: "25000"
     steps:
       - uses: actions/checkout@v4

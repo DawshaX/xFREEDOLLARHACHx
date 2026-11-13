@@ -68,14 +68,20 @@ interface Catalog {
 
 let cache: { file: string; mtime: number; data: Catalog | null } | null = null;
 
-/** `NOVA_BOUNTY_CATALOG` للتستات؛ غير كده بنلف من cwd و من ملف البناء لفوق لحد جذر المستودع. */
+/** `NOVA_BOUNTY_CATALOG` للتستات؛ غير كده بنلف من cwd و من مسار التشغيل لفوق لحد جذر المستودع. */
 export function catalogPath(): string {
   const env = process.env.NOVA_BOUNTY_CATALOG;
   if (env) return path.resolve(env);
-  const start = [process.cwd(), path.resolve(import.meta.dirname, "../../../.."), path.resolve(import.meta.dirname, "../../..")];
-  for (const base of start) {
+  const gDir = (globalThis as { __dirname?: unknown }).__dirname;
+  const start = [
+    process.cwd(),
+    ...(typeof __dirname === "string" && __dirname ? [__dirname] : []),
+    ...(typeof gDir === "string" && gDir ? [gDir] : []),
+    ...(process.argv[1] ? [path.dirname(path.resolve(process.argv[1]))] : []),
+  ];
+  for (const base of new Set(start)) {
     let dir = base;
-    for (let up = 0; up < 6; up++) {
+    for (let up = 0; up < 7; up++) {
       const p = path.join(dir, "ops/bounty/programs-catalog.json");
       try {
         if (fs.existsSync(p)) return p;

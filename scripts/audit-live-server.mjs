@@ -24,6 +24,7 @@ import net from "node:net";
 import crypto from "node:crypto";
 
 const BASE = (process.env.AUDIT_URL || process.env.NOVA_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
+const TOKEN = process.env.NOVA_EXEC_TOKEN || "";
 const AS_JSON = process.argv.includes("--json");
 const TIMEOUT_MS = Number(process.env.AUDIT_TIMEOUT_MS || 15000);
 
@@ -40,7 +41,9 @@ async function req(path, init = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const r = await fetch(`${BASE}${path}`, { ...init, signal: ctrl.signal });
+    const authHeaders = TOKEN ? { "x-nova-token": TOKEN, authorization: `Bearer ${TOKEN}` } : {};
+    const headers = { ...authHeaders, ...(init.headers || {}) };
+    const r = await fetch(`${BASE}${path}`, { ...init, headers, signal: ctrl.signal });
     const text = await r.text();
     let body = null;
     try { body = JSON.parse(text); } catch { body = text; }
@@ -123,22 +126,31 @@ async function wsProbe(baseUrl, pathAndQuery, timeoutMs) {
         handshakeOk = true;
         buffer = buffer.subarray(end + 4);
       }
-      const frame = readFrame(buffer);
-      if (!frame) return;
-      if (frame.opcode === 0x9) return; // ping — ignore, server heartbeat
-      if (frame.opcode === 0x1) {
-        let msg = {};
-        try { msg = JSON.parse(frame.payload.toString("utf8")); } catch {}
-        return finish(msg.type === "connected", `type=${msg.type} sessionId=${msg.sessionId} hubClients=${msg.hubClients} memories=${msg.memoriesCount}`);
+      for (;;) {
+        const frame = readFrame(buffer);
+        if (!frame) break;
+        buffer = buffer.subarray(frame.totalLen);
+        if (frame.opcode === 0x9) continue; // ping — ignore, server heartbeat
+        if (frame.opcode === 0x8) return finish(false, "server closed websocket");
+        if (frame.opcode === 0x1) {
+          let msg = {};
+          try { msg = JSON.parse(frame.payload.toString("utf8")); } catch {}
+          if (msg.type === "connected") {
+            return finish(true, `type=${msg.type} sessionId=${msg.sessionId} hubClients=${msg.hubClients} memories=${msg.memoriesCount}`);
+          }
+          // `registerHubClient` sends `platform_snapshot` right before `connected` — keep reading frames.
+          if (msg.type === "platform_snapshot") continue;
+          return finish(false, `unexpected type=${msg.type}`);
+        }
+        return finish(false, `unexpected opcode ${frame.opcode}`);
       }
-      finish(false, `unexpected opcode ${frame.opcode}`);
     });
     socket.on("error", (e) => finish(false, e.message));
     socket.on("close", () => finish(false, "socket closed before a frame arrived"));
   });
 }
 
-/** Returns {opcode, payload} if a complete frame is buffered, else null. */
+/** Returns {opcode, payload, totalLen} if a complete frame is buffered, else null. */
 function readFrame(buf) {
   if (buf.length < 2) return null;
   const opcode = buf[0] & 0x0f;
@@ -155,17 +167,19 @@ function readFrame(buf) {
     offset = 10;
   }
   const maskLen = masked ? 4 : 0;
-  if (buf.length < offset + maskLen + len) return null;
-  let payload = buf.subarray(offset + maskLen, offset + maskLen + len);
+  const totalLen = offset + maskLen + len;
+  if (buf.length < totalLen) return null;
+  let payload = buf.subarray(offset + maskLen, totalLen);
   if (masked) {
     const mask = buf.subarray(offset, offset + 4);
     payload = Buffer.from(payload.map((b, i) => b ^ mask[i % 4]));
   }
-  return { opcode, payload };
+  return { opcode, payload, totalLen };
 }
 
 async function checkSocket() {
-  const r = await wsProbe(BASE, "/api/ws?sessionId=audit-live", TIMEOUT_MS);
+  const qs = TOKEN ? `sessionId=audit-live&token=${encodeURIComponent(TOKEN)}` : "sessionId=audit-live";
+  const r = await wsProbe(BASE, `/api/ws?${qs}`, TIMEOUT_MS);
   record("socket", "WebSocket /api/ws handshake", r.ok, r.detail);
   return r;
 }

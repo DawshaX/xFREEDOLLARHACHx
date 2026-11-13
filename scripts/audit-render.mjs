@@ -128,35 +128,70 @@ async function renderRoute(route) {
 }
 
 async function runAll() {
-const results = [];
-for (const route of ROUTES) {
-  // Each route needs a pristine module graph; run it in a child process.
-  const child = await import("node:child_process");
-  const code = `
-    const { renderRoute } = await import(${JSON.stringify(pathToFileURL(import.meta.filename).href)});
-    const r = await renderRoute(${JSON.stringify(route)});
-    console.log("__RESULT__" + JSON.stringify(r));
-    process.exit(0);
-  `;
-  const out = child.spawnSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", timeout: 60_000 });
-  const line = (out.stdout || "").split("\n").find((l) => l.startsWith("__RESULT__"));
-  if (line) {
-    results.push(JSON.parse(line.slice("__RESULT__".length)));
-  } else {
-    results.push({ route, ok: false, phase: "child-process", error: (out.stderr || "").slice(0, 300) });
-  }
-}
+  const { spawn } = await import("node:child_process");
+  const selfHref = pathToFileURL(import.meta.filename).href;
+  const CONCURRENCY = Math.max(1, Number(process.env.AUDIT_CONCURRENCY || 6));
 
-const failed = results.filter((r) => !r.ok);
-if (asJson) {
-  console.log(JSON.stringify({ total: results.length, ok: results.length - failed.length, failed: failed.length, results }, null, 2));
-} else {
-  for (const r of results) {
-    console.log(`${r.ok ? "✓" : "✗"} ${r.route.padEnd(28)} ${r.ok ? `${r.htmlLength} bytes` : (r.error ?? r.phase ?? "empty render")}`);
+  function runOne(route) {
+    return new Promise((resolve) => {
+      const code = `
+        const { renderRoute } = await import(${JSON.stringify(selfHref)});
+        const r = await renderRoute(${JSON.stringify(route)});
+        console.log("__RESULT__" + JSON.stringify(r));
+        process.exit(0);
+      `;
+      const child = spawn(process.execPath, ["--input-type=module", "-e", code], {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let stdout = "";
+      let stderr = "";
+      let settled = false;
+      const done = (res) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(res);
+      };
+      const timer = setTimeout(() => {
+        try { child.kill("SIGKILL"); } catch { /* ignore */ }
+        done({ route, ok: false, phase: "timeout", error: "child-process timed out after 60s" });
+      }, 60_000);
+      child.stdout.on("data", (d) => { stdout += d; });
+      child.stderr.on("data", (d) => { stderr += d; });
+      child.on("error", (err) => done({ route, ok: false, phase: "spawn-error", error: String(err?.message ?? err).slice(0, 300) }));
+      child.on("close", () => {
+        const line = stdout.split("\n").find((l) => l.startsWith("__RESULT__"));
+        if (line) {
+          try {
+            done(JSON.parse(line.slice("__RESULT__".length)));
+            return;
+          } catch { /* fall through */ }
+        }
+        done({ route, ok: false, phase: "child-process", error: stderr.slice(0, 300) });
+      });
+    });
   }
-  console.log(`\n${results.length - failed.length}/${results.length} routes rendered.`);
-}
-process.exit(failed.length === 0 ? 0 : 1);
+
+  const results = new Array(ROUTES.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(CONCURRENCY, ROUTES.length) }, async () => {
+    while (cursor < ROUTES.length) {
+      const idx = cursor++;
+      results[idx] = await runOne(ROUTES[idx]);
+    }
+  });
+  await Promise.all(workers);
+
+  const failed = results.filter((r) => !r.ok);
+  if (asJson) {
+    console.log(JSON.stringify({ total: results.length, ok: results.length - failed.length, failed: failed.length, results }, null, 2));
+  } else {
+    for (const r of results) {
+      console.log(`${r.ok ? "✓" : "✗"} ${r.route.padEnd(28)} ${r.ok ? `${r.htmlLength} bytes` : (r.error ?? r.phase ?? "empty render")}`);
+    }
+    console.log(`\n${results.length - failed.length}/${results.length} routes rendered.`);
+  }
+  process.exit(failed.length === 0 ? 0 : 1);
 }
 
 export { renderRoute };

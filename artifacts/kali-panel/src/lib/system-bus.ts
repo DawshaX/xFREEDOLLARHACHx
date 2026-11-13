@@ -81,7 +81,7 @@ export function buildOrgans(
     organ(
       "executor",
       "محرك التنفيذ (GitHub Actions)",
-      runsError ? "unknown" : running.length ? "live" : "live",
+      runsError ? "unknown" : "live",
       runsError
         ? `القياس فشل: ${runsError}`
         : running.length
@@ -165,12 +165,15 @@ export async function refreshSystem(force = false): Promise<SystemSnapshot> {
     backendHealth(),
   ]);
   const corpus = corpusSnapshot();
+  const healthData = health.ok ? health.data : null;
+  const counts = healthData && typeof healthData === "object" ? healthData.counts : undefined;
+  const backendOk = Boolean(health.ok && counts && typeof counts === "object");
   const organs = buildOrgans(corpus, hunt, runs.runs, runs.ok ? undefined : runs.error, {
-    ok: health.ok,
-    at: health.ok ? health.data.at : undefined,
-    cves: health.ok ? health.data.counts.cves : undefined,
-    findings: health.ok ? health.data.counts.findings : undefined,
-    error: health.ok ? undefined : health.error,
+    ok: backendOk,
+    at: backendOk ? healthData?.at : undefined,
+    cves: counts?.cves,
+    findings: counts?.findings,
+    error: health.ok ? (counts ? undefined : "invalid /health payload") : health.error,
   });
   const live = organs.filter((o) => o.status === "live").length;
   const unknown = organs.filter((o) => o.status === "unknown").length;
@@ -201,8 +204,9 @@ export function onSystemChange(fn: (s: SystemSnapshot) => void): () => void {
 /** The backend's stored hunt (Postgres), used when the static file is stale. */
 export async function backendHuntSummary() {
   const res = await backendHunt();
-  if (!res.ok || !res.data.run) return null;
-  return { at: res.data.run.at, findings: res.data.findings.length, verified: res.data.findings.filter((f) => f.verified).length };
+  if (!res.ok || !res.data?.run) return null;
+  const findings = Array.isArray(res.data.findings) ? res.data.findings : [];
+  return { at: res.data.run.at, findings: findings.length, verified: findings.filter((f) => f.verified).length };
 }
 
 export function knownPages(): Array<{ path: string; label: string }> {
