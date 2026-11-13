@@ -29,7 +29,7 @@ const ZIP = path.join(OUT_DIR, "nova-node-kit.zip");
 const argHub = process.argv.indexOf("--hub");
 const HUB =
   (argHub > -1 ? process.argv[argHub + 1] : process.env.NOVA_HUB) ||
-  "ws://node.waifly.com:27214/api/local-agent/ws";
+  "wss://nova.waifly.com/api/local-agent/ws";
 
 const agentSrc = path.join(ROOT, "nova-agent.js");
 if (!fs.existsSync(agentSrc)) {

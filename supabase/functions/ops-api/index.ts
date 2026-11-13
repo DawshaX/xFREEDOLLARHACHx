@@ -169,9 +169,10 @@ Deno.serve(async (req) => {
 
     // ── POST /corpus-sync ──────────────────────────────────────────────────
     // Loads the published corpus (release asset, gzip JSONL) straight into the
-    // database. Postgres cannot un-gzip, so the decompression happens here in
-    // Deno and rows go in through the service client in batches.
-    //   ?limit=6000&offset=0   → ingest a window (edge functions have a wall clock)
+    // database. Postgres cannot un-gzip, so decompression streams chunk-by-chunk
+    // in Deno (<10 MB RAM instead of buffering a >250 MB string that hits 546
+    // WORKER_LIMIT), and rows go in through the service client in batches.
+    //   ?limit=3000&offset=0   → ingest a window and cancel the stream early
     if (req.method === "POST" && path === "/corpus-sync") {
       const started = Date.now();
       // Authorised two ways: the service key, or an unattended scheduler. The
@@ -190,23 +191,46 @@ Deno.serve(async (req) => {
         { key: "sync", value: { at: new Date().toISOString(), by: service ? "service" : "scheduler" }, updated_at: new Date().toISOString() },
         { onConflict: "key" },
       );
-      const offset = Math.max(Number(url.searchParams.get("offset") ?? 0), 0);
-      const limit = Math.min(Number(url.searchParams.get("limit") ?? 6000), 20000);
+      const offset = Math.max(Number(url.searchParams.get("offset") ?? 0) || 0, 0);
+      const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") ?? 2500) || 2500, 6000));
       const asset =
         "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/vuln-corpus/cves.jsonl.gz";
+      const indexUrls = [
+        "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/vuln-corpus/vuln-corpus-index.json",
+        "https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/state/vuln-corpus-index.json",
+      ];
 
-      const res = await fetch(asset, { redirect: "follow", signal: AbortSignal.timeout(90_000) });
-      if (!res.ok || !res.body) return json({ error: `asset HTTP ${res.status}` }, 502);
+      // Fetch the 4 KB index metadata in parallel so `corpus_meta.index` stays
+      // accurate (332k+) without decompressing all 332k lines in RAM.
+      const indexPromise = (async () => {
+        for (const iu of indexUrls) {
+          try {
+            const ir = await fetch(iu, { redirect: "follow", signal: AbortSignal.timeout(12_000) });
+            if (!ir.ok) continue;
+            const ij = await ir.json().catch(() => null) as { total?: number; at?: string } | null;
+            if (ij && typeof ij.total === "number" && ij.total > 0) return ij;
+          } catch { /* try next index URL */ }
+        }
+        return null;
+      })();
 
-      const text = await new Response(
-        res.body.pipeThrough(new DecompressionStream("gzip")),
-      ).text();
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 90_000);
+      const res = await fetch(asset, { redirect: "follow", signal: ctrl.signal });
+      if (!res.ok || !res.body) {
+        clearTimeout(timer);
+        return json({ error: `asset HTTP ${res.status}` }, 502);
+      }
 
-      const lines = text.split("\n");
+      const decompressed = res.body.pipeThrough(new DecompressionStream("gzip"));
+      const reader = decompressed.getReader();
+      const decoder = new TextDecoder();
+
       const batch: Record<string, unknown>[] = [];
       let seen = 0;
       let parsed = 0;
       let written = 0;
+      let timedOutEarly = false;
       const failures: string[] = [];
 
       const flush = async () => {
@@ -217,18 +241,16 @@ Deno.serve(async (req) => {
         else written += rows.length;
       };
 
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        seen++;
-        if (seen <= offset) continue;
-        if (parsed >= limit) break;
+      const processLine = async (lineBytes: Uint8Array) => {
+        const line = decoder.decode(lineBytes).trim();
+        if (!line) return;
         let r: Record<string, any>;
         try {
           r = JSON.parse(line);
         } catch {
-          continue;
+          return;
         }
-        if (typeof r.id !== "string" || !r.id.startsWith("CVE-")) continue;
+        if (typeof r.id !== "string" || !r.id.startsWith("CVE-")) return;
         const products = Array.isArray(r.cpe)
           ? [...new Set(r.cpe.map((c: any) => c?.product).filter(Boolean))].slice(0, 12)
           : [];
@@ -249,32 +271,133 @@ Deno.serve(async (req) => {
         });
         parsed++;
         if (batch.length >= 500) await flush();
+      };
+
+      const hasNonWs = (buf: Uint8Array, start: number, end: number): boolean => {
+        for (let i = start; i < end; i++) {
+          if (buf[i] > 32) return true;
+        }
+        return false;
+      };
+
+      let parts: Uint8Array[] = [];
+      let partsBytes = 0;
+      let lineNonWs = false;
+      let eof = false;
+
+      try {
+        for (;;) {
+          if (parsed >= limit) break;
+          if (Date.now() - started > 45_000) {
+            timedOutEarly = true;
+            break;
+          }
+          const { done, value } = await reader.read();
+          if (done) {
+            eof = true;
+            break;
+          }
+          if (!value || value.length === 0) continue;
+
+          let pos = 0;
+          while (pos < value.length) {
+            const nl = value.indexOf(10, pos);
+            if (nl === -1) {
+              const tailHasContent = hasNonWs(value, pos, value.length);
+              if (tailHasContent) lineNonWs = true;
+              if (seen >= offset && (partsBytes > 0 || tailHasContent)) {
+                const slice = value.slice(pos);
+                parts.push(slice);
+                partsBytes += slice.length;
+              }
+              break;
+            }
+
+            const nonEmpty = lineNonWs || hasNonWs(value, pos, nl);
+            if (nonEmpty) {
+              if (seen < offset) {
+                seen++;
+              } else {
+                seen++;
+                let lineBytes: Uint8Array;
+                if (parts.length === 0) {
+                  lineBytes = value.subarray(pos, nl);
+                } else {
+                  const tail = value.subarray(pos, nl);
+                  lineBytes = new Uint8Array(partsBytes + tail.length);
+                  let off = 0;
+                  for (const p of parts) {
+                    lineBytes.set(p, off);
+                    off += p.length;
+                  }
+                  lineBytes.set(tail, off);
+                }
+                await processLine(lineBytes);
+                if (parsed >= limit || Date.now() - started > 45_000) {
+                  if (Date.now() - started > 45_000) timedOutEarly = true;
+                  parts = [];
+                  partsBytes = 0;
+                  lineNonWs = false;
+                  break;
+                }
+              }
+            }
+            parts = [];
+            partsBytes = 0;
+            lineNonWs = false;
+            pos = nl + 1;
+          }
+        }
+
+        if (eof && parsed < limit && !timedOutEarly && parts.length > 0 && seen >= offset && lineNonWs) {
+          seen++;
+          const lineBytes = new Uint8Array(partsBytes);
+          let off = 0;
+          for (const p of parts) {
+            lineBytes.set(p, off);
+            off += p.length;
+          }
+          await processLine(lineBytes);
+        }
+      } finally {
+        clearTimeout(timer);
+        try { await reader.cancel(); } catch { /* ignore */ }
+        try { ctrl.abort(); } catch { /* ignore */ }
       }
+
       await flush();
 
-      const { count: inDb } = await db.from("corpus_cve").select("*", { count: "exact", head: true });
-      // Counted once, from the same lines: `lines.length` includes blank ones, so
-      // the index total and the reported `lines` could disagree with each other.
-      const totalLines = lines.filter((l) => l.trim()).length;
-      await db.from("corpus_meta").upsert(
-        {
-          key: "index",
-          value: {
-            total: totalLines,
-            at: new Date().toISOString(),
-            source: "release:vuln-corpus/cves.jsonl.gz",
+      const [{ count: inDb }, indexDoc, prevIndexRow] = await Promise.all([
+        db.from("corpus_cve").select("*", { count: "exact", head: true }),
+        indexPromise,
+        db.from("corpus_meta").select("value").eq("key", "index").maybeSingle(),
+      ]);
+
+      const totalLines = indexDoc?.total ?? (eof ? seen : (prevIndexRow.data?.value?.total ?? null));
+      if (indexDoc?.total || eof) {
+        await db.from("corpus_meta").upsert(
+          {
+            key: "index",
+            value: {
+              total: totalLines,
+              at: indexDoc?.at ?? new Date().toISOString(),
+              source: "release:vuln-corpus/cves.jsonl.gz",
+            },
+            updated_at: new Date().toISOString(),
           },
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "key" },
-      );
+          { onConflict: "key" },
+        );
+      }
 
       return json({
         ok: failures.length === 0,
         parsed,
         written,
         offset,
+        nextOffset: offset + parsed,
         limit,
+        eof,
+        timedOutEarly,
         lines: totalLines,
         inDb: inDb ?? null,
         ms: Date.now() - started,

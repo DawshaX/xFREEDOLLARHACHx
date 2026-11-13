@@ -73,13 +73,28 @@ function exists(rel: string): boolean {
 export function permanentVaultPath(): string {
   const env = process.env.NOVA_PERMANENT_VAULT;
   if (env) return path.resolve(env);
-  const candidates = [
-    path.resolve(process.cwd(), "state/discovered-vulnerabilities-vault.json"),
-    path.resolve(import.meta.dirname, "../../../../state/discovered-vulnerabilities-vault.json"),
-    path.resolve(import.meta.dirname, "../../../state/discovered-vulnerabilities-vault.json"),
+  const gDir = (globalThis as { __dirname?: unknown }).__dirname;
+  const starts = [
+    process.cwd(),
+    ...(typeof __dirname === "string" && __dirname ? [__dirname] : []),
+    ...(typeof gDir === "string" && gDir ? [gDir] : []),
+    ...(process.argv[1] ? [path.dirname(path.resolve(process.argv[1]))] : []),
   ];
-  for (const p of candidates) if (fs.existsSync(p)) return p;
-  return candidates[0]!;
+  for (const base of new Set(starts)) {
+    let dir = base;
+    for (let up = 0; up < 7; up++) {
+      const p = path.join(dir, "state/discovered-vulnerabilities-vault.json");
+      try {
+        if (fs.existsSync(p)) return p;
+      } catch {
+        /* ignore */
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  }
+  return path.resolve(process.cwd(), "state/discovered-vulnerabilities-vault.json");
 }
 
 export function readPermanentVault(limit = 5): PermanentVaultDoc {
