@@ -3012,6 +3012,65 @@ if (path === "/nova-core/version") {
     return { ok: true };
   }
 
+  // الليحة بتنده /api/notifications/:id/read مباشرة (مركز الإشعارات في /agent-pro) —
+  // نفس المعنى بتاع /push/notifications/:id/read: متابعة القراءة على نفس المخزن.
+  const notifReadRoot = path.match(/^\/notifications\/([^/]+)\/read$/);
+  if (notifReadRoot && (m === "PATCH" || m === "POST")) {
+    const nid = notifReadRoot[1];
+    notificationsState = notificationsState.map((n) => (n.id === nid ? { ...n, read: true } : n));
+    saveState("cybernova_notifs_v1", notificationsState);
+    return { id: nid, ok: true };
+  }
+
+  // ── دفاتر نوفا (/api/nova/notes) — static build: مخزن localStorage بنفس شكل
+  // السيرفر (state/nova-notes.json) — الدفاتر تستمر وتتزامن مع المخ لما السيرفر يبان.
+  if (path === "/nova/notes" && m === "GET") {
+    const list = loadState("cybernova_nova_notes_v1", [] as Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string; updatedat: string }>);
+    const sorted = [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedat.localeCompare(a.updatedat));
+    return { ok: true, count: sorted.length, notes: sorted, static: true };
+  }
+  if (path === "/nova/notes" && m === "POST") {
+    const list = loadState("cybernova_nova_notes_v1", [] as Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string; updatedat: string }>);
+    const text = String((body?.body as string) ?? "").trim();
+    if (!text) return { ok: false, error: "body required — الدفتر مش بيحفظ فراغ" };
+    const now2 = new Date().toISOString();
+    const note = {
+      id: `note-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      title: String((body?.title as string) ?? "").trim() || "ملاحظة بدون عنوان",
+      body: text,
+      pinned: !!body?.pinned,
+      createdAt: now2,
+      updatedat: now2,
+    };
+    saveState("cybernova_nova_notes_v1", [note, ...list]);
+    return { ok: true, note, static: true };
+  }
+  const notePatch = path.match(/^\/nova\/notes\/([^/]+)$/);
+  if (notePatch && (m === "PATCH" || m === "PUT")) {
+    const nid = notePatch[1];
+    const list = loadState("cybernova_nova_notes_v1", [] as Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string; updatedat: string }>);
+    const idx = list.findIndex((n) => n.id === nid);
+    if (idx < 0) return { ok: false, error: "note not found" };
+    const cur = list[idx];
+    const next = {
+      ...cur,
+      title: typeof body?.title === "string" ? (body.title as string) : cur.title,
+      body: typeof body?.body === "string" ? (body.body as string) : cur.body,
+      pinned: typeof body?.pinned === "boolean" ? (body.pinned as boolean) : cur.pinned,
+      updatedat: new Date().toISOString(),
+    };
+    const out = [...list]; out[idx] = next;
+    saveState("cybernova_nova_notes_v1", out);
+    return { ok: true, note: next, static: true };
+  }
+  if (notePatch && m === "DELETE") {
+    const nid = notePatch[1];
+    const list = loadState("cybernova_nova_notes_v1", [] as Array<{ id: string }>);
+    const next = list.filter((n) => n.id !== nid);
+    saveState("cybernova_nova_notes_v1", next);
+    return { ok: true, deleted: nid, remaining: next.length, static: true };
+  }
+
   // ── Universal 75,000+ Vulnerability Galaxy & Smart AI Mutator State ────────
   // Derived, never typed: an empty corpus means zeros here, not a pretty galaxy.
   const corpus = corpusSnapshot();
