@@ -303,6 +303,19 @@ export default function NovaAgentPro() {
     return () => clearTimeout(t);
   }, [prefs]);
 
+  // واكتب الأرينا الحالية — الصفحة تفتح فين ما سابتها مش من cockpit كل مرة.
+  useEffect(() => {
+    if (!prefsHydrated.current) return;
+    const t = setTimeout(() => {
+      void fetch("/api/panel/prefs", {
+        method: "PUT",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ prefs: { arenaDefault: arena }, by: "owner" }),
+      }).catch(() => { /* */ });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [arena]);
+
   // أول تفتّح: بقراءة التفضيلات من السيرفر لو فيه — السيرفر هو الأصل، الـlocal fallback.
   useEffect(() => {
     let alive = true;
@@ -310,6 +323,8 @@ export default function NovaAgentPro() {
     void opsFetch<{ prefs?: Partial<Prefs> & Record<string, unknown> }>("/panel/prefs").then((r) => {
       prefsHydrated.current = true;
       if (!alive || !r.ok || !r.data?.prefs) return;
+      const arenaDef = (r.data.prefs as Record<string, unknown>).arenaDefault;
+      if (typeof arenaDef === "string" && ARENAS.some((a) => a.key === arenaDef) && arenaDef !== "cockpit") setArena(arenaDef as ArenaKey);
       const sp = r.data.prefs as Partial<Prefs> & { autonomyMode?: string; offensivePosture?: boolean; rootSessionId?: string };
       setPrefs((p) => ({
         ...p,

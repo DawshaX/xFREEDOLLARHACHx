@@ -418,6 +418,9 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       p.startsWith("/mcp") ||
       p.startsWith("/openclaw") ||
       p.startsWith("/nova-intel") ||
+      // قياس `/system/*` حقيقي من os/statfs — من غيره الـmock بيرد cpu:0/platform:"browser"
+      // والواجهة كانت بتعرض «Unmeasured» والمالك عايز «المساحة المُستخدمة والحقيقية».
+      p.startsWith("/system") ||
       p.startsWith("/cve-live") ||
       p === "/agent/root/stream" ||
       (p.startsWith("/tools") && p !== "/tools/shell" && p !== "/tools/webfetch") ||

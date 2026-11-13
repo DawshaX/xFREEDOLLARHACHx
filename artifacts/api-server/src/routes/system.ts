@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import os from "node:os";
 import { execSync } from "node:child_process";
 import { requireOps } from "../lib/ops/gate";
+import fs from "node:fs";
 
 const router: IRouter = Router();
 // execAsync(cmd) بأمر من الـbody = تنفيذ تعليمات على المكنة من أي حد. محطوط ورا بوّابة ops.
@@ -61,6 +62,21 @@ router.get("/system/metrics", (_req, res) => {
         percent: Math.round((usedMem / totalMem) * 100),
       },
       gpu: getGpuInfo(),
+      // القرص الحقيقي من statfs على الجذر (كان «Unmeasured» في الواجهة لأن
+      // المسار مش متوفر). بيرجع الحاضر/الفارغ/المستخدم بنسبة — والواجهة بتحسب
+      // «بلا حد» من الإجمال.
+      disk: (() => {
+        try {
+          const st = fs.statfsSync("/");
+          const totalMb = Math.round((st.blocks * st.bsize) / 1048576);
+          const freeMb = Math.round((st.bavail * st.bsize) / 1048576);
+          const usedMb = totalMb - freeMb;
+          const usedPct = totalMb > 0 ? Math.round((usedMb / totalMb) * 100) : 0;
+          return { present: true, totalMb, freeMb, usedMb, usedPct, noteAr: "statfs(/) مقاس مباشر" };
+        } catch {
+          return { present: false, noteAr: "statfs فشل على هذا المضيف" };
+        }
+      })(),
       uptime: Math.round(os.uptime()),
       platform: os.platform(),
       hostname: os.hostname(),
