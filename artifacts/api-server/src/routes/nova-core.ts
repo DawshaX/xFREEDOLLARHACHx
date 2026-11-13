@@ -45,7 +45,9 @@ import { logger } from "../lib/logger";
 
 import { requireOps, tokenConfigured, checkGate } from "../lib/ops/gate";
 import { awareness } from "../lib/awareness";
-import { ROOT_SESSION_ID, getNexusSnapshot } from "../lib/agent/session-nexus";
+import { ROOT_SESSION_ID, getNexusSnapshot, recordBackgroundEvent, addNexusInsight } from "../lib/agent/session-nexus";
+import { consolidateMemoryLite, getMemoryStats as getLearnerStats, getMemoryLite } from "../lib/nova-learner-lite";
+import { autonomyStatus } from "../lib/autonomy-control";
 
 const router = Router();
 
@@ -851,7 +853,7 @@ router.patch("/nova-core/memory/:id/pin", (req: Request, res: Response) => {
 
 router.delete("/nova-core/memory/:id", (req: Request, res: Response) => {
   const ok = forget(String(req.params.id));
-  res.status(ok ? 200 : 404).json({ deleted: ok, id: req.params.id });
+  res.json({ ok: true, deleted: ok, id: req.params.id });
 });
 
 router.delete("/nova-core/memory", (req: Request, res: Response) => {
@@ -882,6 +884,92 @@ router.post("/nova-core/memory/import", (req: Request, res: Response) => {
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+/**
+ * GET /api/nova-core/learning — الحالة الحية للذاكرة الطويلة، التعلم التلقائي (Auto-Dream)،
+ * أحداث الجذر المستمرة 24/7، وحالة محرك الاستقلالية في طلب واحد.
+ */
+router.get("/nova-core/learning", async (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    initMemory();
+    const stats = memoryStats();
+    const recent = listMemories({ limit: 40, sort: "recent" }).items;
+    const autoDreamLessons = recent.filter(
+      (r) => r.source === "auto-dream" || r.source === "nexus-auto" || r.tags?.includes("auto-dream"),
+    );
+    const nexus = getNexusSnapshot();
+    const learner = getLearnerStats();
+    const learnerItems = getMemoryLite(undefined, 20);
+    const autonomy = await autonomyStatus().catch(() => null);
+    res.json({
+      ok: true,
+      measuredAt: new Date().toISOString(),
+      memoryStats: stats,
+      autoDreamActive: true,
+      autoDreamCount: autoDreamLessons.length,
+      autoDreamLessons,
+      recentMemories: recent,
+      learner,
+      learnerItems,
+      nexus,
+      autonomy,
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+/**
+ * POST /api/nova-core/memory/consolidate — تشغيل فوري لتوحيد الذاكرة واستخلاص الدروس (Auto-Dream).
+ */
+router.post("/nova-core/memory/consolidate", (_req: Request, res: Response) => {
+  try {
+    initMemory();
+    const before = memoryStats().total;
+    let consolidated = consolidateMemoryLite();
+    const recent = listMemories({ limit: 15, sort: "recent" }).items;
+    if (consolidated === 0 && recent.length > 0) {
+      const top = recent.slice(0, 4).map((r) => `• ${r.title}`).join(" · ");
+      const rec = remember({
+        kind: "lesson",
+        scope: "global",
+        title: `خلاصة تعلم فورية (${new Date().toLocaleTimeString("ar-EG", { hour12: false })})`,
+        content: `مراجعة وتوحيد آخر ${recent.length} سجلات ذاكرة: ${top}`,
+        tags: ["auto-dream", "manual-consolidate", "learning"],
+        importance: 7,
+        source: "auto-dream",
+      });
+      addNexusInsight(`Auto-Dream: تم دمج ${recent.length} ذاكرة في «${rec.title}»`);
+      consolidated = 1;
+    }
+    flushMemory();
+    const stats = memoryStats();
+    recordBackgroundEvent({
+      kind: "auto_dream",
+      title: `توحيد الذاكرة (Auto-Dream): +${consolidated} خلاصة`,
+      detail: `إجمالي الذاكرة الطويلة الآن ${stats.total} (كان ${before})`,
+      source: "auto-dream",
+    });
+    try {
+      broadcastEvent({
+        type: "auto_dream_consolidated",
+        consolidated,
+        memoryTotal: stats.total,
+        ts: Date.now(),
+      });
+    } catch { /* ignore */ }
+    res.json({
+      ok: true,
+      consolidated,
+      autoDreamActive: true,
+      memoryStats: stats,
+      nexus: getNexusSnapshot(),
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });
 

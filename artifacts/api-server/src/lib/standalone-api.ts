@@ -1756,7 +1756,7 @@ if (path === "/nova-core/version") {
     };
   }
 
-  if (path === "/nova-core/tools") {
+  if (path === "/nova-core/tools" || path === "/nova-core/catalogue") {
     const names = [
       ["recon_target", "استطلاع هدف", "استطلاع سلبي شامل لنطاق (يتطلب سيرفر)"],
       ["dns_lookup", "فحص DNS", "سجلات A/AAAA/MX/TXT (يتطلب سيرفر)"],
@@ -1793,7 +1793,9 @@ if (path === "/nova-core/version") {
       ["device_control_map", "خريطة التحكم", "أوامر تركيب الوكيل"],
     ];
     return {
+      ok: true,
       total: names.length,
+      categories: ["recon", "intel", "memory", "mission", "system"],
       tools: names.map(([name, title, description], i) => ({
         name,
         title,
@@ -1805,6 +1807,20 @@ if (path === "/nova-core/version") {
       mode: "static",
       note: "الأدوات اللي مكتوب عليها «يتطلب سيرفر» بتحتاج ربط سيرفر من محطة العمل.",
     };
+  }
+
+  if (path === "/mcp/tools") {
+    const mcpTools = [
+      { name: "kali_exec", description: "تنفيذ أمر على جهاز كالي المتصل" },
+      { name: "kali_system_info", description: "قراءة معلومات نظام كالي" },
+      { name: "kali_network_scan", description: "فحص شبكة عبر كالي" },
+      { name: "kali_file_read", description: "قراءة ملف من العقدة" },
+      { name: "kali_file_write", description: "كتابة ملف على العقدة" },
+      { name: "kali_dir_list", description: "تصفح مجلد على العقدة" },
+      { name: "nova_memory_search", description: "بحث في ذاكرة نوفا" },
+      { name: "nova_knowledge_search", description: "بحث في قاعدة المعرفة الأمنية" },
+    ];
+    return { ok: true, count: mcpTools.length, tools: mcpTools, mode: "static" };
   }
 
   if (path === "/nova-core/persona") {
@@ -1867,6 +1883,67 @@ if (path === "/nova-core/version") {
     };
     if (path.endsWith("/stats")) return stats;
     return { total: records.length, items: records.slice(0, 100), stats };
+  }
+
+  if (path === "/nova-core/memory/search") {
+    const q = (u.searchParams.get("q") || "").trim().toLowerCase();
+    const limit = Math.min(100, Math.max(1, Number(u.searchParams.get("limit") || 40)));
+    const records = readBrowserMemories();
+    const items = q
+      ? records.filter((r) =>
+          `${r.title} ${r.content} ${(r.tags || []).join(" ")} ${r.scope}`.toLowerCase().includes(q)
+        )
+      : records;
+    return { items: items.slice(0, limit), total: items.length };
+  }
+
+  const novaMemPin = path.match(/^\/nova-core\/memory\/([^/]+)\/pin$/);
+  if (novaMemPin && (m === "PATCH" || m === "POST")) {
+    const id = decodeURIComponent(novaMemPin[1]);
+    const records = readBrowserMemories();
+    const target = records.find((r) => String(r.id) === id);
+    const nextPinned = body?.pinned !== undefined ? Boolean(body.pinned) : !(target?.pinned ?? true);
+    const next = records.map((r) => (String(r.id) === id ? { ...r, pinned: nextPinned } : r));
+    try { if (typeof localStorage !== "undefined") localStorage.setItem("cybernova_nova_memories", JSON.stringify(next)); } catch { /* ignore */ }
+    return { ok: true, id, pinned: nextPinned };
+  }
+
+  const novaMemDel = path.match(/^\/nova-core\/memory\/([^/]+)$/);
+  if (novaMemDel && m === "DELETE") {
+    const id = decodeURIComponent(novaMemDel[1]);
+    const records = readBrowserMemories();
+    const next = records.filter((r) => String(r.id) !== id);
+    try { if (typeof localStorage !== "undefined") localStorage.setItem("cybernova_nova_memories", JSON.stringify(next)); } catch { /* ignore */ }
+    return { ok: true, deleted: next.length < records.length, id };
+  }
+
+  if (path === "/nova-core/learning" || path === "/nova-core/memory/consolidate") {
+    const records = readBrowserMemories();
+    const byKind = { fact: 0, preference: 0, lesson: 0, event: 0, session: 0 };
+    for (const r of records) byKind[r.kind] = (byKind[r.kind] ?? 0) + 1;
+    const stats = { total: records.length, byKind, pinned: records.filter((r) => r.pinned).length, storage: "browser" };
+    const lessons = records.filter((r) => r.kind === "lesson");
+    return {
+      ok: true,
+      consolidated: path.endsWith("/consolidate") ? 1 : 0,
+      measuredAt: new Date().toISOString(),
+      memoryStats: stats,
+      autoDreamActive: true,
+      autoDreamCount: lessons.length,
+      autoDreamLessons: lessons.slice(0, 12),
+      recentMemories: records.slice(0, 30),
+      nexus: {
+        rootSessionId: "nova-root",
+        totalSessions: 1,
+        rootMessageCount: 0,
+        backgroundFeedCount: 0,
+        learnedInsightsCount: lessons.length,
+        memoryTotal: records.length,
+        rootDigest: "وضع المتصفح المحلي — الذاكرة محفوظة محلياً.",
+        recentBackground: [],
+        learnedInsights: lessons.slice(0, 8).map((l) => l.title),
+      },
+    };
   }
 
   if (path === "/nova-core/ollama") {

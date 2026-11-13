@@ -41,7 +41,7 @@ router.use((req, res, next) => {
 });
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const DEFAULT_NGROK = "https://nucleus-uninjured-tusk.ngrok-free.dev";
+const DEFAULT_NGROK = "";
 
 function getConfig() {
   const map = getAllSettings();
@@ -70,7 +70,7 @@ function startNgrokKeepalive(): void {
   if (_ngrokKeepaliveTimer) return;
   _ngrokKeepaliveTimer = setInterval(async () => {
     const { baseUrl, isNgrok } = getConfig();
-    if (!isNgrok) return;
+    if (!isNgrok || !baseUrl) return;
     try {
       const r = await fetch(`${baseUrl}/api/tags`, {
         headers: makeHeaders(baseUrl),
@@ -689,6 +689,12 @@ router.post("/kali-command/chat", async (req, res) => {
   session.updatedAt = Date.now();
 
   const { baseUrl, model } = getConfig();
+  if (!baseUrl) {
+    sse(res, "error", { error: "لم يتم ضبط رابط Ollama / ngrok في الإعدادات (NGROK_URL)." });
+    sse(res, "done", { content: "" });
+    res.end();
+    return;
+  }
   const headers = makeHeaders(baseUrl);
 
   let assistantContent = "";

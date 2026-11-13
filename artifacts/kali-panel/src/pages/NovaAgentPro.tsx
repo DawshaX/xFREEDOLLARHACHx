@@ -20,6 +20,7 @@ import {
   ChevronUp, ChevronDown, Flame, Radio,
 } from "lucide-react";
 import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
+import { AgentWorkCockpit } from "@/components/desktop/AgentWorkCockpit";
 import { NovaOpsRoom, NovaHuntSurface } from "@/components/desktop/NovaBrainOps";
 import { RealTimeSystemMonitor } from "@/components/desktop/RealTimeSystemMonitor";
 import { NovaMissions } from "@/components/desktop/NovaMissions";
@@ -31,7 +32,7 @@ import { DAW_SKULL } from "@/lib/skull";
 import { useSystem } from "@/context/SystemContext";
 
 /* ─── أنواع ─── */
-type ArenaKey = "launch" | "chat" | "events" | "cron" | "work" | "missions" | "brain" | "hardware" | "hunt" | "channels" | "nav";
+type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "missions" | "brain" | "hardware" | "hunt" | "channels" | "nav";
 
 interface FleetAgentInfo {
   id: string; hostname: string; platform: string; user?: string; cpus?: number; connectedAt?: string;
@@ -85,17 +86,18 @@ const LAUNCH_GROUPS: Array<{ group: string; color: string; tiles: Tile[] }> = [
 ];
 
 const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color: string }> = [
-  { key: "launch",   labelAr: "التحكم السريع", icon: Flame,             color: "#ff2e63" },
-  { key: "chat",     labelAr: "الشات الكامل",   icon: MessageSquare,     color: "#22d3ee" },
-  { key: "work",     labelAr: "مكان الشغل",     icon: MonitorSmartphone, color: "#14b8a6" },
-  { key: "cron",     labelAr: "الجدولة",       icon: CalendarClock,     color: "#34d399" },
-  { key: "events",   labelAr: "نبض الأحداث",   icon: Activity,          color: "#4ade80" },
-  { key: "missions", labelAr: "المهمات",       icon: ListChecks,        color: "#fbbf24" },
-  { key: "brain",    labelAr: "المخ والمجلس",  icon: Brain,             color: "#a78bfa" },
-  { key: "hardware", labelAr: "العتاد الحي",   icon: Cpu,               color: "#38bdf8" },
-  { key: "hunt",     labelAr: "الصيد",         icon: Crosshair,         color: "#f43f5e" },
-  { key: "channels", labelAr: "القنوات",       icon: Cable,             color: "#f59e0b" },
-  { key: "nav",      labelAr: "كل الأقسام",    icon: Compass,           color: "#60a5fa" },
+  { key: "cockpit",  labelAr: "⚡ الشغل والشات الحي", icon: Sparkles,          color: "#ff2e63" },
+  { key: "launch",   labelAr: "التحكم السريع",       icon: Flame,             color: "#fb7185" },
+  { key: "chat",     labelAr: "الشات الكامل",        icon: MessageSquare,     color: "#22d3ee" },
+  { key: "work",     labelAr: "مكان الشغل",          icon: MonitorSmartphone, color: "#14b8a6" },
+  { key: "cron",     labelAr: "الجدولة",             icon: CalendarClock,     color: "#34d399" },
+  { key: "events",   labelAr: "نبض الأحداث",         icon: Activity,          color: "#4ade80" },
+  { key: "missions", labelAr: "المهمات",             icon: ListChecks,        color: "#fbbf24" },
+  { key: "brain",    labelAr: "المخ والمجلس",        icon: Brain,             color: "#a78bfa" },
+  { key: "hardware", labelAr: "العتاد الحي",         icon: Cpu,               color: "#38bdf8" },
+  { key: "hunt",     labelAr: "الصيد",               icon: Crosshair,         color: "#f43f5e" },
+  { key: "channels", labelAr: "القنوات",             icon: Cable,             color: "#f59e0b" },
+  { key: "nav",      labelAr: "كل الأقسام",          icon: Compass,           color: "#60a5fa" },
 ];
 
 const NAV_GROUPS: Array<{ group: string; color: string; items: Array<{ path: string; label: string }> }> = [
@@ -213,7 +215,7 @@ function MeterCompact({ label, value }: { label: string; value: number | null })
 
 const DOT: Record<string, string> = { ok: "#34d399", bad: "#ff2e63", wait: "#64748b" };
 
-const LS_KEY = "daw.agentPro.v8";
+const LS_KEY = "daw.agentPro.v9";
 interface Prefs { hiddenHud: HudCardId[]; hudOpen: boolean; chatOpen: boolean; chatWide?: boolean; }
 const loadPrefs = (): Prefs => {
   try {
@@ -222,17 +224,17 @@ const loadPrefs = (): Prefs => {
       const j = JSON.parse(raw) as Partial<Prefs>;
       return {
         hiddenHud: Array.isArray(j.hiddenHud) ? (j.hiddenHud as HudCardId[]) : [],
-        hudOpen: j.hudOpen !== false,
+        hudOpen: j.hudOpen === true,
         chatOpen: j.chatOpen !== false,
         chatWide: Boolean(j.chatWide),
       };
     }
   } catch { /* تفضيلات أول مرة */ }
-  return { hiddenHud: [], hudOpen: true, chatOpen: true, chatWide: false };
+  return { hiddenHud: [], hudOpen: false, chatOpen: true, chatWide: false };
 };
 
 export default function NovaAgentPro() {
-  const [arena, setArena] = useState<ArenaKey>("launch");
+  const [arena, setArena] = useState<ArenaKey>("cockpit");
   const [, navigate] = useLocation();
   const sys = useSystem();
   const [vit, setVit] = useState<{ ok: boolean | null; ms: number | null; db: boolean | null; sha: string; up: number | null; tools: number }>({ ok: null, ms: null, db: null, sha: "", up: null, tools: 0 });
@@ -260,7 +262,7 @@ export default function NovaAgentPro() {
   const [cronBusy, setCronBusy] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
-  const [prefs, setPrefs] = useState<Prefs>(() => (typeof window === "undefined" ? { hiddenHud: [], hudOpen: true, chatOpen: true } : loadPrefs()));
+  const [prefs, setPrefs] = useState<Prefs>(() => (typeof window === "undefined" ? { hiddenHud: [], hudOpen: false, chatOpen: true } : loadPrefs()));
   const [notes, setNotes] = useState<string>(() => { try { return localStorage.getItem("daw.agentPro.notes") ?? ""; } catch { return ""; } });
   const [notesSaved, setNotesSaved] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -358,7 +360,7 @@ export default function NovaAgentPro() {
     if (a.kind === "win") navigate(`/desktop?open=${encodeURIComponent(a.win)}`);
     else if (a.kind === "arena") setArena(a.arena);
     else {
-      if (!prefs.chatOpen && arena !== "chat") setPrefs((p) => ({ ...p, chatOpen: true }));
+      if (!prefs.chatOpen && arena !== "chat" && arena !== "cockpit") setPrefs((p) => ({ ...p, chatOpen: true }));
       window.dispatchEvent(new CustomEvent("nova:qa-prompt", { detail: { text: a.text } }));
     }
   }, [navigate, prefs.chatOpen, arena]);
@@ -622,7 +624,7 @@ export default function NovaAgentPro() {
               className="inline-flex items-center gap-1 rounded-lg border border-rose-500/45 bg-rose-500/15 px-2.5 py-1 text-[10px] font-black text-rose-200 hover:bg-rose-500/25 transition shadow-[0_0_12px_rgba(255,46,99,0.2)]">
               <Command className="w-3 h-3" /> Ctrl+K
             </button>
-            {arena !== "chat" && (
+            {arena !== "chat" && arena !== "cockpit" && (
               <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: !p.chatOpen }))}
                 title={prefs.chatOpen ? "إخفاء الشات الجانبي" : "إظهار الشات الجانبي"}
                 className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-black transition ${prefs.chatOpen ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200" : "border-white/15 bg-white/5 text-white/50"}`}>
@@ -860,7 +862,8 @@ export default function NovaAgentPro() {
             })}
           </nav>
 
-          <div className={`min-h-0 flex-1 ${arena === "chat" ? "flex flex-col overflow-hidden p-2" : "overflow-y-auto p-3"}`}>
+          <div className={`min-h-0 flex-1 ${arena === "cockpit" ? "flex flex-col overflow-hidden p-0" : arena === "chat" ? "flex flex-col overflow-hidden p-2" : "overflow-y-auto p-3"}`}>
+            {arena === "cockpit" && <AgentWorkCockpit />}
             {arena === "launch" && (
               <div className="space-y-4">
                 <div className="rounded-xl border border-rose-500/30 bg-gradient-to-l from-rose-500/10 via-black/40 to-cyan-500/10 px-3.5 py-2 text-[10px] font-mono text-rose-100/80 flex flex-wrap items-center gap-2">
@@ -1068,7 +1071,7 @@ export default function NovaAgentPro() {
         </section>
 
         {/* ── الشات الجانبي بتحكم إظهار/إخفاء كامل ── */}
-        {prefs.chatOpen && arena !== "chat" && (
+        {prefs.chatOpen && arena !== "chat" && arena !== "cockpit" && (
           <aside className={`w-full h-[46vh] lg:h-auto ${prefs.chatWide ? "lg:w-[560px] xl:w-[620px]" : "lg:w-[450px] xl:w-[480px]"} shrink-0 border-t lg:border-t-0 lg:border-r border-rose-500/25 flex flex-col min-h-0 bg-[#050209] transition-all duration-200`}>
             <div className="shrink-0 flex items-center gap-1.5 px-3 py-1 border-b border-rose-500/20 bg-gradient-to-l from-rose-900/25 to-cyan-950/20">
               <Sparkles className="w-3.5 h-3.5 text-rose-400" />
@@ -1090,7 +1093,7 @@ export default function NovaAgentPro() {
             </div>
           </aside>
         )}
-        {!prefs.chatOpen && arena !== "chat" && (
+        {!prefs.chatOpen && arena !== "chat" && arena !== "cockpit" && (
           <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: true }))}
             className="shrink-0 flex lg:flex-col items-center justify-center gap-2 h-9 lg:h-auto lg:w-10 border-t lg:border-t-0 lg:border-r border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 transition text-rose-200"
             title="إظهار الشات">

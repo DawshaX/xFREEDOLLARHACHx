@@ -123,9 +123,8 @@ function writeSecret(key: string, value: string): void {
   }
 }
 
-// ── Llama Dolphin Direct via ngrok ───────────────────────────────────────────
-// Default URL — dynamically updated from /api/settings on mount
-const LLAMA_NGROK_URL_DEFAULT = "https://nucleus-uninjured-tusk.ngrok-free.dev";
+// ── Llama Dolphin Direct via configured tunnel (empty unless set in Settings) ─
+const LLAMA_NGROK_URL_DEFAULT = "";
 // Keep LLAMA_NGROK_URL as a fallback constant for non-KALI-AI uses
 const LLAMA_NGROK_URL = LLAMA_NGROK_URL_DEFAULT;
 const NGROK_BYPASS_HEADERS = { "ngrok-skip-browser-warning": "1", "Content-Type": "application/json" };
@@ -944,18 +943,33 @@ export function LiveAgentPanel({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
 
-  /* جسر الأفعال السريعة: مركز القيادة (agent-pro) يملأ صندوق الإدخال من أي
-   * بلاط تشغيل عبر حدث DOM — التعبئة بس، الإرسال دايمًا بيدك لأن البرومبتات
-   * بتستنى اسم الهدف. مش إرسال تلقائي — مفيش أوامر بتطلع من وراك. */
+  /* جسر الأفعال السريعة: مركز القيادة (agent-pro / Cockpit) يملأ صندوق الإدخال أو يرسله فوراً عبر حدث DOM. */
+  const sendBridgeRef = useRef<((t: string) => Promise<void>) | null>(null);
   useEffect(() => {
     const onQa = (ev: Event) => {
-      const detail = (ev as CustomEvent<{ text?: unknown }>).detail;
+      const detail = (ev as CustomEvent<{ text?: unknown; autoSend?: boolean }>).detail;
       if (detail && typeof detail.text === "string" && detail.text.trim()) {
-        setInput(detail.text);
+        if (detail.autoSend && sendBridgeRef.current) {
+          void sendBridgeRef.current(detail.text.trim());
+        } else {
+          setInput(detail.text);
+        }
+        setActiveTab("chat");
+      }
+    };
+    const onQaSend = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ text?: unknown }>).detail;
+      if (detail && typeof detail.text === "string" && detail.text.trim() && sendBridgeRef.current) {
+        setActiveTab("chat");
+        void sendBridgeRef.current(detail.text.trim());
       }
     };
     window.addEventListener("nova:qa-prompt", onQa);
-    return () => window.removeEventListener("nova:qa-prompt", onQa);
+    window.addEventListener("nova:qa-send", onQaSend);
+    return () => {
+      window.removeEventListener("nova:qa-prompt", onQa);
+      window.removeEventListener("nova:qa-send", onQaSend);
+    };
   }, []);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [busy, setBusy] = useState(false);
@@ -1030,7 +1044,7 @@ export function LiveAgentPanel({
   const [selectedModel, setSelectedModel] = useState<string>("nova-brain (Auto)");
   const [modelCtxWindow, setModelCtxWindow] = useState<number>(128000);
   const [showModelPicker, setShowModelPicker] = useState(false);
-  const [showQuickActions, setShowQuickActions] = useState<boolean>(!embedded);
+  const [showQuickActions, setShowQuickActions] = useState<boolean>(false);
   const [showMoreTabs, setShowMoreTabs] = useState<boolean>(false);
   // ── NOVA Scheduler States ─────────────────────────────────────────────────
   const [scheduledTasks, setScheduledTasks] = useState<Array<{
@@ -3664,6 +3678,13 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   const localIQ = Math.min(200, 85 + (brainStatus?.memoryCount ?? 0) * 2 + (missions.filter(m => m.status === "done").length) * 5 + Math.round(latencyBonus));
   const agentIQ = serverIQ ?? localIQ;
 
+  // ── Broadcast live agent activity to the side-by-side Cockpit stage ────────
+  const emitLiveActivity = useCallback((detail: Record<string, unknown>) => {
+    try {
+      window.dispatchEvent(new CustomEvent("nova:live-activity", { detail: { ts: Date.now(), ...detail } }));
+    } catch { /* ignore */ }
+  }, []);
+
   // ── Main send function ─────────────────────────────────────────────────────
   const send = async (text: string, opts?: { planMode?: boolean; approve?: string[] }) => {
     // Route to direct Llama Dolphin (always if directMode, even if probe not yet done)
@@ -3673,6 +3694,13 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     setInput(""); setBusy(true); setThinkingPhase("thinking");
     setStepCount(0); setToolHistory([]); setCurrentTool(null);
     lastSpokenLenRef.current = 0;
+    setLiveChatOps((prev) => ({
+      ...prev,
+      mode: agentMode,
+      model: selectedModel,
+      thought: `يحلّل الطلب: ${text.trim().slice(0, 90)}`,
+    }));
+    emitLiveActivity({ kind: "turn_start", phase: "thinking", prompt: text.trim(), mode: agentMode, model: selectedModel });
     if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
     let assistantBuf = "";
     const abortCtrl = new AbortController();
@@ -3685,6 +3713,9 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           content: text,
           planMode: opts?.planMode ?? planMode,
           autonomousMode,
+          agentMode,
+          model: selectedModel,
+          kaliConnected: kaliAgentConnected,
           ...(opts?.approve ? { approve: opts.approve } : {}),
         }),
         signal: abortCtrl.signal,
@@ -3707,7 +3738,9 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 const data = JSON.parse(line.slice(6));
                 // ── Streaming text (delta or token) ────────────────────────
                 if ((pendingEvent === "delta" || pendingEvent === "token") && data.text) {
+                  const hadBuf = assistantBuf.length > 0;
                   assistantBuf += data.text; setThinkingPhase("writing"); setCurrentTool(null);
+                  if (!hadBuf) emitLiveActivity({ kind: "phase", phase: "writing", text: "يكتب الرد النهائي..." });
                   setLines((arr) => {
                     const last = arr[arr.length - 1];
                     if (last && last.role === "assistant") return [...arr.slice(0, -1), { ...last, text: assistantBuf }];
@@ -3722,10 +3755,17 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   setToolHistory((h) => [...h, cmd.slice(0, 30)].slice(-12));
                   setStepCount((n) => n + 1);
                   setLines((arr) => [...arr, { role: "tool", toolName: "shell", text: label }]);
-                  // Push to terminal tab + dispatch CustomEvent for DesktopAgentTerminal
+                  setLiveChatOps((prev) => ({
+                    ...prev,
+                    thought: label,
+                    toolsRun: prev.toolsRun + 1,
+                    recent: [{ at: Date.now(), label: `shell: ${cmd.slice(0, 24)}` }, ...prev.recent].slice(0, 6),
+                  }));
+                  emitLiveActivity({ kind: "exec_start", phase: "tool", tool: "shell", command: cmd, label });
+                  // Push to terminal tab + dispatch CustomEvent for DesktopAgentTerminal & Cockpit
                   setTerminalLines(prev => [...prev.slice(-500), { kind: "cmd", text: cmd, ts: Date.now() }]);
                   window.dispatchEvent(new CustomEvent("agent:exec_start", { detail: { cmd } }));
-                  if (activeTab !== "terminal") setActiveTab("terminal");
+                  if (!embedded && activeTab !== "terminal") setActiveTab("terminal");
                   // Push to live feed
                   const execEvt: WsLiveEvent = {
                     id: `exec-${Date.now()}`, type: "tool_start",
@@ -3733,7 +3773,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   };
                   setWsLiveEvents((prev) => [...prev.slice(-99), execEvt]);
                   setNewWsEventCount((n) => n + 1);
-                  if (activeTab !== "live") addToast(`⚡ ${cmd.slice(0, 60)}`, "info");
+                  if (!embedded && activeTab !== "live") addToast(`⚡ ${cmd.slice(0, 60)}`, "info");
                 // ── Command execution result ────────────────────────────────
                 } else if (pendingEvent === "exec_result") {
                   const output = String(data.output || "");
@@ -3780,41 +3820,66 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 } else if (pendingEvent === "tool_call") {
                   assistantBuf = "";
                   const inputStr = JSON.stringify(data.args ?? data.input ?? {}).slice(0, 200);
+                  const toolLabel = String(data.title || data.name || "أداة");
                   setStepCount((n) => n + 1); setThinkingPhase("tool");
-                  setCurrentTool({ name: String(data.title || data.name), input: inputStr, startedAt: Date.now() });
+                  setCurrentTool({ name: toolLabel, input: inputStr, startedAt: Date.now() });
                   setToolHistory((h) => [...h, String(data.name)].slice(-12));
-                  setLines((arr) => [...arr, { role: "tool", toolName: data.title || data.name, text: `▶ ${data.title || data.name}(${inputStr.slice(0, 120)})` }]);
+                  setLines((arr) => [...arr, { role: "tool", toolName: toolLabel, text: `▶ ${toolLabel}(${inputStr.slice(0, 120)})` }]);
+                  setLiveChatOps((prev) => ({
+                    ...prev,
+                    thought: `يشغّل الأداة: ${toolLabel}`,
+                    toolsRun: prev.toolsRun + 1,
+                    recent: [{ at: Date.now(), label: `▶ ${String(data.name || toolLabel).slice(0, 22)}` }, ...prev.recent].slice(0, 6),
+                  }));
+                  emitLiveActivity({ kind: "tool_call", phase: "tool", tool: String(data.name || toolLabel), title: toolLabel, input: inputStr });
                 } else if (pendingEvent === "tool_result") {
                   const result = String(data.summary ?? data.result ?? "").slice(0, 800);
                   const isError = data.isError === undefined ? data.ok === false : Boolean(data.isError);
+                  const tName = String(data.name || "tool");
                   setCurrentTool(null); setThinkingPhase("thinking");
-                  setLines((arr) => [...arr, { role: "tool_result", toolName: data.name, text: result || "(لا توجد تفاصيل)", isError }]);
-                  if (isError) addToast(`لم تنجح الأداة: ${data.name}`, "error");
+                  setLines((arr) => [...arr, { role: "tool_result", toolName: tName, text: result || "(لا توجد تفاصيل)", isError }]);
+                  setLiveChatOps((prev) => ({
+                    ...prev,
+                    lastMs: Number(data.ms ?? prev.lastMs),
+                    recent: [{ at: Date.now(), label: `${isError ? "✗" : "✓"} ${tName.slice(0, 20)}`, ok: !isError }, ...prev.recent].slice(0, 6),
+                  }));
+                  emitLiveActivity({ kind: "tool_result", phase: "thinking", tool: tName, summary: result, isError, ms: data.ms });
+                  if (isError) addToast(`لم تنجح الأداة: ${tName}`, "error");
                   void refreshBrainStatus();
                 } else if (pendingEvent === "confirm_required") {
                   setCurrentTool(null); setThinkingPhase("thinking");
-                  // A sensitive tool stopped for approval. Remember it so the
-                  // «موافق — نفّذ» button re-sends with `approve:[tool]` and the
-                  // server actually runs it, instead of pausing forever.
                   pendingToolApprovalRef.current = [String(data.name)];
                   setLines((arr) => [...arr, {
                     role: "plan",
                     text: `⏸️ **أداة حساسة محتاجة موافقتك:** ${String(data.title || data.name || "الأداة")}\n\n${String(data.reason || "الأداة تتطلب موافقة صريحة قبل التنفيذ.")}`,
                     awaitingApproval: true,
                   }]);
+                  emitLiveActivity({ kind: "confirm_required", phase: "idle", tool: String(data.name), reason: String(data.reason || "") });
                 } else if (pendingEvent === "plan") {
                   const steps = Array.isArray(data.steps) ? data.steps : [];
                   if (steps.length) {
-                    setLines((arr) => [...arr, {
-                      role: "plan",
-                      text: steps.map((step: { tool?: string }, index: number) => `${index + 1}. ${step.tool || "أداة"}`).join("\n"),
-                    }]);
+                    const planTxt = steps.map((step: { tool?: string }, index: number) => `${index + 1}. ${step.tool || "أداة"}`).join("\n");
+                    setLines((arr) => [...arr, { role: "plan", text: planTxt }]);
+                    emitLiveActivity({ kind: "plan", phase: "thinking", steps });
                   }
-                } else if (pendingEvent === "thought" && String(data.text || "").includes("التشغيل المستمر بعد إغلاق الصفحة")) {
-                  setLines((arr) => [...arr, { role: "system", text: String(data.text), isError: true }]);
+                } else if (pendingEvent === "thought" || pendingEvent === "phase" || pendingEvent === "ready") {
+                  const tText = String(data.text || data.label || (pendingEvent === "ready" ? "الجذر متّصل — يبدأ المعالجة" : "")).trim();
+                  if (tText) {
+                    setLiveChatOps((prev) => ({
+                      ...prev,
+                      thought: tText,
+                      ...(data.provider ? { provider: String(data.provider) } : {}),
+                      ...(data.model ? { model: String(data.model) } : {}),
+                    }));
+                    emitLiveActivity({ kind: "thought", phase: "thinking", text: tText, provider: data.provider, model: data.model });
+                    if (tText.includes("التشغيل المستمر بعد إغلاق الصفحة")) {
+                      setLines((arr) => [...arr, { role: "system", text: tText, isError: true }]);
+                    }
+                  }
                 } else if (pendingEvent === "memory") {
                   setMemorySaveFlash(true);
                   setTimeout(() => setMemorySaveFlash(false), 3000);
+                  emitLiveActivity({ kind: "memory", title: String(data.title || "ذاكرة جديدة"), kindMem: String(data.kind || "fact") });
                 } else if (pendingEvent === "client_tool") {
                   assistantBuf = "";
                   const inputStr = JSON.stringify(data.input ?? {}).slice(0, 200);
@@ -3860,8 +3925,19 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   }
                   // ── END intelligence ──────────────────────────────────────
                   const toolCount = Number(data?.toolCount ?? data?.commandsRun ?? 0);
-                  if (data?.mode !== "plan") {
-                    setLines((arr) => [...arr, { role: "system", text: `انتهى دور NOVA${toolCount > 0 ? ` — ${toolCount} أداة` : ""}.` }]);
+                  const providerUsed = String(data?.provider || liveChatOps.provider || "nova-core");
+                  const modelUsed = String(data?.model || liveChatOps.model || selectedModel);
+                  const msUsed = Number(data?.ms ?? 0);
+                  setLiveChatOps((prev) => ({
+                    ...prev,
+                    provider: providerUsed,
+                    model: modelUsed,
+                    lastMs: msUsed || prev.lastMs,
+                    thought: `مكتمل (${providerUsed}${toolCount > 0 ? ` · ${toolCount} أداة` : ""}${msUsed ? ` · ${msUsed}ms` : ""}) — جاهز للأمر التالي.`,
+                  }));
+                  emitLiveActivity({ kind: "done", phase: "idle", toolCount, provider: providerUsed, model: modelUsed, ms: msUsed });
+                  if (data?.mode !== "plan" && toolCount > 0) {
+                    setLines((arr) => [...arr, { role: "system", text: `✓ اكتملت المهمة — ${toolCount} أداة (${providerUsed})` }]);
                   }
                   if (sessionId) void refreshFiles(sessionId);
                   setPendingAttachments([]);
@@ -3870,6 +3946,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   setCurrentTool(null); setThinkingPhase("idle");
                   const message = String(data.message ?? data.error ?? "غير معروف");
                   setLines((arr) => [...arr, { role: "system", text: `⚠ خطأ: ${message}`, isError: true }]);
+                  emitLiveActivity({ kind: "error", phase: "idle", text: message });
                   addToast(`خطأ: ${message}`, "error");
                 }
               } catch { /* ignore */ }
@@ -3881,12 +3958,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     } catch (e) {
       if ((e as Error)?.name !== "AbortError") {
         setLines((arr) => [...arr, { role: "assistant", text: `خطأ: ${e instanceof Error ? e.message : "غير معروف"}` }]);
+        emitLiveActivity({ kind: "error", phase: "idle", text: e instanceof Error ? e.message : "خطأ غير معروف" });
       }
     } finally {
       setBusy(false); setThinkingPhase("idle"); setCurrentTool(null);
       currentAbortRef.current = null;
     }
   };
+  sendBridgeRef.current = (t: string) => send(t);
 
   // ── Panel styles ───────────────────────────────────────────────────────────
   const getPanelStyles = (): React.CSSProperties => {
@@ -4307,6 +4386,18 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               <PlusCircle className="w-3.5 h-3.5" />
             </button>
 
+            <button
+              onClick={() => setShowQuickActions((v) => !v)}
+              className={`h-6 px-1.5 rounded border text-[9px] font-mono flex items-center gap-0.5 transition-colors ${
+                showQuickActions
+                  ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
+                  : "border-white/10 text-muted-foreground hover:text-amber-300 hover:border-amber-400/30"
+              }`}
+              title="قائمة الأوامر السريعة"
+            >
+              ⚡
+            </button>
+
             {!embedded && (
               <>
                 {/* Open in window */}
@@ -4407,8 +4498,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Provider status strip ── */}
-        {panelSize !== "mini" && (
+        {/* ── Provider status strip (hidden in compact embedded mode to maximize chat space) ── */}
+        {panelSize !== "mini" && !embedded && (
           <div className="px-3 py-1 border-b border-primary/10 flex items-center gap-1.5 overflow-x-auto shrink-0">
             <span className="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border border-cyan-400/40 text-cyan-200 bg-cyan-500/5">
               NOVA CORE · محرك موحّد
@@ -9102,7 +9193,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               {browserLog.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
                   <span className="text-3xl">🌐</span>
-                  <div className="text-[9px] text-muted-foreground">Browser Automation عبر OpenClaw</div>
+                  <div className="text-[9px] text-muted-foreground">Browser Automation · أتمتة المتصفح المتقدمة</div>
                   <div className="flex flex-wrap gap-1 justify-center mt-1">
                     {["https://google.com","https://shodan.io","https://exploit-db.com","https://nvd.nist.gov"].map(url => (
                       <button key={url} onClick={() => { setBrowserInput(url); setBrowserAction("open"); }}
