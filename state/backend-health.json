@@ -1,15 +1,15 @@
 {
-  "at": "2026-11-13T16:58:56.759Z",
+  "at": "2026-11-13T22:29:14.745Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "GREEN",
   "counts": {
     "cves": 344021,
-    "huntRuns": 25,
+    "huntRuns": 26,
     "findings": 0
   },
   "corpusSample": 3,
   "corpusSearched": 344021,
-  "corpusIndexTotal": 104386,
+  "corpusIndexTotal": 129208,
   "corpusSlice": false,
   "negativeSearchOk": true,
   "negativeSearched": 344021,
@@ -20,8 +20,8 @@
     "seat": "pollinations-openai",
     "chunks": 8,
     "streamed": true,
-    "firstChunkMs": 274,
-    "totalMs": 275,
+    "firstChunkMs": 322,
+    "totalMs": 323,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
@@ -29,51 +29,51 @@
     {
       "name": "health",
       "status": 200,
-      "ms": 3329,
+      "ms": 3825,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-13T16:58:53.563Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":344021,\"huntRuns\":25,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-13T22:29:11.509Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":344021,\"huntRuns\":26,\"findings\":0}}"
     },
     {
       "name": "hunt",
       "status": 200,
-      "ms": 990,
+      "ms": 1146,
       "ok": true,
-      "sample": "{\"run\":{\"id\":25,\"at\":\"2026-11-13T06:57:48.658+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":23266,\"katana\":99311,\"nuclei:root\":701221,\"nuc"
+      "sample": "{\"run\":{\"id\":26,\"at\":\"2026-11-13T19:53:17.771+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":23453,\"katana\":99793,\"nuclei:root\":695112,\"nuc"
     },
     {
       "name": "organs",
       "status": 200,
-      "ms": 434,
+      "ms": 265,
       "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"344021 CVE · 104386 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-13T16:57:00.283288+00:00\",\"updated_at\":\"2"
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"344021 CVE · 129208 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-13T22:27:00.267815+00:00\",\"updated_at\":\"2"
     },
     {
       "name": "corpus?q=nginx",
       "status": 200,
-      "ms": 882,
+      "ms": 982,
       "ok": true,
-      "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2026-9508\",\"severity\":\"critical\",\"cvss\":10,\"kev\":false,\"epss\":0.00341,\"products\":[],\"summary\":\"Incorrect permission settings on a critical resource in Suprema BioStar 2 (versions 2.9.3 th"
+      "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2026-75784\",\"severity\":\"critical\",\"cvss\":10,\"kev\":false,\"epss\":0.01096,\"products\":[],\"summary\":\"A vulnerability was detected in TRENDnet TEW-WLC100 1v2.07b01. Affected by this issue is th"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
       "status": 200,
-      "ms": 573,
+      "ms": 498,
       "ok": true,
-      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":344021,\"indexTotal\":104386,\"syncedAt\":\"2026-11-13T15:46:05.521Z\",\"slice\":false,\"at\":\"2026-11-13T16:58:56.453Z\"}"
+      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":344021,\"indexTotal\":129208,\"syncedAt\":\"2026-11-13T21:54:33.817Z\",\"slice\":false,\"at\":\"2026-11-13T22:29:14.412Z\"}"
     },
     {
       "name": "corpus dated (published)",
       "status": 200,
       "ms": 0,
       "ok": true,
-      "sample": "published=2026-05-29,2026-08-18,2026-09-14"
+      "sample": "published=2026-08-18,2026-05-29,2026-06-10"
     },
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 275,
+      "ms": 323,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=8 first=274ms total=275ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=8 first=322ms total=323ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
