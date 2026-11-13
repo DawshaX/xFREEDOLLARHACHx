@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-12T18:33:32.278Z",
+  "at": "2026-11-13T00:03:29.409Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 332183,
+  "total": 332268,
   "bySeverity": {
-    "high": 126995,
-    "medium": 145030,
-    "low": 14886,
-    "unknown": 17621,
-    "critical": 27580,
+    "high": 127065,
+    "medium": 145096,
+    "low": 14899,
+    "unknown": 17547,
+    "critical": 27590,
     "none": 71
   },
   "byYear": {
@@ -41,17 +41,17 @@
     "2021": 1977,
     "2022": 4754,
     "2023": 27438,
-    "2024": 38931,
-    "2025": 44995,
-    "2026": 90404
+    "2024": 38934,
+    "2025": 44998,
+    "2026": 90483
   },
   "kev": 1131,
-  "epssScored": 318245,
+  "epssScored": 318647,
   "products": 60932,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 65710
+      "count": 65895
     },
     {
       "product": "android",
@@ -59,7 +59,7 @@
     },
     {
       "product": "chrome",
-      "count": 10820
+      "count": 10848
     },
     {
       "product": "firefox",
@@ -212,17 +212,17 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 40408720,
-    "sha256": "c9b317eae9dcb2c97f13c0eebdadb54c0d1984f507b744522f80ed6dc75262a7"
+    "bytes": 40422828,
+    "sha256": "aa93759a4137cfa54b89372594dc93a3b3cb171cfb810e75c3b2d8c90906c37c"
   },
   "mode": "deepen",
-  "says_ar": "332183 ثغرة حقيقية · critical 27580 · high 126995 · 1131 مستغلّة فعلياً (KEV) · 318245 لها EPSS · 60932 منتج بـCPE · مزامنة 2026-11-12T18:33:32.278Z",
+  "says_ar": "332268 ثغرة حقيقية · critical 27590 · high 127065 · 1131 مستغلّة فعلياً (KEV) · 318647 لها EPSS · 60932 منتج بـCPE · مزامنة 2026-11-13T00:03:29.409Z",
   "deepen": {
-    "nextStartIndex": 403907,
-    "windowPages": 12,
-    "walkedFrom": 379907,
-    "nvdTotal": 424814,
-    "coverage": 0.7819,
-    "at": "2026-11-12T18:33:32.279Z"
+    "nextStartIndex": 0,
+    "windowPages": 11,
+    "walkedFrom": 403907,
+    "nvdTotal": 424899,
+    "coverage": 0.782,
+    "at": "2026-11-13T00:03:29.410Z"
   }
 }
