@@ -82,8 +82,21 @@ const agentDeepProfiles = new Map<string, AgentDeepProfile>();
 
 export function getAgentDeepProfile(agentId?: string): AgentDeepProfile | null {
   if (agentId) return agentDeepProfiles.get(agentId) ?? null;
+  // TEST6: البروفايل الافتراضي كان أول ماب (self-node بـ0 أداة) — بيتبع
+  // اختيار pickAgent دلوقتي: الوكيل الحي الحقيقي الأول، self-node احتياط.
+  const chosen = pickAgent();
+  if (chosen) {
+    const p = agentDeepProfiles.get(chosen.id);
+    if (p) return p;
+  }
   const first = [...agentDeepProfiles.values()][0];
   return first ?? null;
+}
+
+/** هوية الوكيل المفضّل بنفس قواعد pickAgent — للأدوات والراوتات اللي بتبني
+ * ليستة وتحتاج id صريح: الوكيل الحي الحقيقي، وself-node لما مفيش غيره. */
+export function preferredAgentId(): string | null {
+  return pickAgent()?.id ?? null;
 }
 
 export interface FleetAgent {
@@ -121,12 +134,26 @@ export function isLocalAgentConnected(): boolean {
   return connectedAgents.size > 0;
 }
 
+/** TEST6 «اللايف أجينت متوصل صح»: التوجيه الافتراضي كان بيمشي لأول وكيل في
+ * الماب — وself-node المدمج بيتسجّل عند الإقلاع فدايمًا الأول — فأوامر مالك
+ * الجهاز الحقيقي (ملفات/عمليات/شاشة/PTY) كانت بتروح للسيرفر نفسه وترجع
+ * honest-fail رغم إن الوكيل الحي متصل. القاعدة: الوكيل الحقيقي الأولوية،
+ * وself-node احتياط لما مفيش حاجة متصلة، والـagentId الصريح بيسود دايمًا. */
+export function pickAgent(agentId?: string): AgentConnection | null {
+  if (agentId) return connectedAgents.get(agentId) ?? null;
+  const real = [...connectedAgents.values()].find(
+    (a) => !(a.capabilities ?? []).includes("self-node"),
+  );
+  if (real) return real;
+  return connectedAgents.get(process.env.NOVA_SELF_NODE_ID || "self-node") ?? null;
+}
+
 export function execOnLocalAgent(
   cmd: string,
   agentId?: string,
   timeout = 30_000,
 ): Promise<{ stdout: string; stderr: string; exitCode: number; durationMs: number } | null> {
-  const agent = agentId ? connectedAgents.get(agentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(agentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) return Promise.resolve(null);
   return sendToAgent<{ stdout: string; stderr: string; exitCode: number; durationMs: number }>(
     agent.id,
@@ -145,7 +172,7 @@ export function execStreamOnLocalAgent(
   timeout = 30_000,
   onData?: (streamType: string, data: string) => void,
 ): Promise<{ stdout: string; stderr: string; exitCode: number; durationMs: number } | null> {
-  const agent = agentId ? connectedAgents.get(agentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(agentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) return Promise.resolve(null);
 
   const requestId = `execstream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -511,7 +538,7 @@ router.post("/local-agent/exec", async (req, res) => {
   const { command, agentId: reqAgentId, timeout = 60_000 } = req.body as { command: string; agentId?: string; timeout?: number };
   if (!command) { res.status(400).json({ error: "missing command" }); return; }
 
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     res.status(503).json({ error: "no local agent connected", connected: false }); return;
   }
@@ -532,7 +559,7 @@ router.post("/local-agent/pty/create", async (req, res) => {
   const { agentId: reqAgentId, cols = 220, rows = 50, shell = "/bin/bash" } = req.body as {
     agentId?: string; cols?: number; rows?: number; shell?: string;
   };
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     res.status(503).json({ error: "no local agent connected" }); return;
   }
@@ -584,6 +611,7 @@ router.delete("/local-agent/pty/:sessionId", (req, res) => {
 
 router.get("/local-agent/pty/:sessionId/stream", (req, res) => {
   const { sessionId } = req.params;
+  const reqAgentId = (req.query as { agentId?: string }).agentId;
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -592,7 +620,7 @@ router.get("/local-agent/pty/:sessionId/stream", (req, res) => {
 
   let sess = ptySessions.get(sessionId);
   if (!sess) {
-    const agent = [...connectedAgents.values()][0];
+    const agent = pickAgent(reqAgentId as string | undefined);
     if (!agent) {
       res.write(`data: ${JSON.stringify({ type: "error", error: "no agent" })}\n\n`);
       res.end();
@@ -618,7 +646,7 @@ router.get("/local-agent/pty/:sessionId/stream", (req, res) => {
 
 router.get("/local-agent/fs/list", async (req, res) => {
   const { dir = "~", agentId: reqAgentId } = req.query as { dir?: string; agentId?: string };
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     noAgentRead(res, "ملفات الجهاز");
     return;
@@ -632,7 +660,7 @@ router.get("/local-agent/fs/list", async (req, res) => {
 router.post("/local-agent/fs/read", async (req, res) => {
   const { filePath, agentId: reqAgentId, maxBytes } = req.body as { filePath: string; agentId?: string; maxBytes?: number };
   if (!filePath) { res.status(400).json({ error: "missing filePath" }); return; }
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     res.status(503).json({ error: "no local agent connected" }); return;
   }
@@ -645,7 +673,7 @@ router.post("/local-agent/fs/read", async (req, res) => {
 router.post("/local-agent/fs/write", async (req, res) => {
   const { filePath, content, agentId: reqAgentId, append } = req.body as { filePath: string; content: string; agentId?: string; append?: boolean };
   if (!filePath || content === undefined) { res.status(400).json({ error: "missing filePath or content" }); return; }
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     res.status(503).json({ error: "no local agent connected" }); return;
   }
@@ -657,7 +685,7 @@ router.post("/local-agent/fs/write", async (req, res) => {
 
 router.get("/local-agent/processes", async (req, res) => {
   const { agentId: reqAgentId } = req.query as { agentId?: string };
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     noAgentRead(res, "العمليات الجارية");
     return;
@@ -671,7 +699,7 @@ router.get("/local-agent/processes", async (req, res) => {
 router.post("/local-agent/kill-process", async (req, res) => {
   const { pid, signal = "SIGTERM", agentId: reqAgentId } = req.body as { pid: number | string; signal?: string; agentId?: string };
   if (!pid) { res.status(400).json({ error: "missing pid" }); return; }
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     res.status(503).json({ error: "no local agent connected" }); return;
   }
@@ -683,7 +711,7 @@ router.post("/local-agent/kill-process", async (req, res) => {
 
 router.get("/local-agent/screenshot", async (req, res) => {
   const { agentId: reqAgentId } = req.query as { agentId?: string };
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     noAgentRead(res, "لقطة الشاشة");
     return;
@@ -698,7 +726,7 @@ router.get("/local-agent/screenshot", async (req, res) => {
 
 router.get("/local-agent/sysinfo", async (req, res) => {
   const { agentId: reqAgentId } = req.query as { agentId?: string };
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     res.json({ agents: getConnectedAgentList(), connected: connectedAgents.size > 0 });
     return;
@@ -727,7 +755,7 @@ async function handleExecStream(
     try { res.write(`data: ${JSON.stringify(data)}\n\n`); (res as any).flush?.(); } catch { /* closed */ }
   };
 
-  const agent = agentId ? connectedAgents.get(agentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(agentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     sseWrite({ type: "error", text: "لا يوجد وكيل كالي متصل — شغّل nova-agent.js على الجهاز المستهدف" });
     res.end();
@@ -790,7 +818,7 @@ router.get("/local-agent/screen-stream", async (req, res) => {
   const { agentId: reqAgentId, fps } = req.query as { agentId?: string; fps?: string };
   const intervalMs = Math.max(500, Math.round(1000 / Math.min(parseFloat(fps || "1"), 5)));
 
-  const agent = reqAgentId ? connectedAgents.get(reqAgentId) : [...connectedAgents.values()][0];
+  const agent = pickAgent(reqAgentId);
   if (!agent || agent.ws.readyState !== WebSocket.OPEN) {
     res.write(`data: ${JSON.stringify({ type: "error", text: "لا يوجد وكيل متصل" })}\n\n`);
     res.end();

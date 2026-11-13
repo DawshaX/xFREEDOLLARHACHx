@@ -103,7 +103,9 @@ function ensureLoaded(): void {
     cache.firstTs = turns.length ? turns[0].ts : null;
     cache.topics = new Map();
     for (const t of turns) {
-      if (t.role !== "user") continue;
+      // TEST6: الموضوعات كانت بتتحسب من دورات المالك بس — لكن الاستخراج بيلتقط
+      // الأنتليج الحقيقي (أهداف/CVEs/أدوات) من ردود نوفا كمان، فالوعي الكامل
+      // كان بيطلع فاضي رغم إن الدفتر مليان. كل الدورات بتتحسب دلوقتي.
       for (const topic of t.topics ?? []) cache.topics.set(topic, (cache.topics.get(topic) ?? 0) + 1);
     }
     cache.mtimeMs = st.mtimeMs;

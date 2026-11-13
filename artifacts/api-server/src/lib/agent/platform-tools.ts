@@ -18,7 +18,7 @@
  */
 
 import { buildSelfModel } from "./self-model";
-import { getConnectedAgentList, getAgentDeepProfile, execOnLocalAgent } from "../../routes/local-agent";
+import { getConnectedAgentList, getAgentDeepProfile, execOnLocalAgent, preferredAgentId } from "../../routes/local-agent";
 import { listMemories, memoryStats } from "./memory-store";
 import { navigatePanel, panelAction, openUrl } from "./ui-bridge";
 
@@ -43,7 +43,8 @@ export function platformSelfReport(): PlatformToolResult {
   const m = buildSelfModel();
 
   const agents = getConnectedAgentList();
-  const deep = agents.length ? getAgentDeepProfile(agents[0].id) : null;
+  // TEST6: البروفايل الافتراضي بيمشي على الوكيل الحي مش self-node.
+  const deep = agents.length ? getAgentDeepProfile(preferredAgentId() ?? undefined) : null;
 
   const data = {
     measuredAt: new Date().toISOString(),

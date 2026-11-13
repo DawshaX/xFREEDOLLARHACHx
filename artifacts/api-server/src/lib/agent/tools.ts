@@ -33,6 +33,7 @@ import { searchCyberCorpus2400, getCorpusStats, KALI_ARSENAL_64 } from "../cyber
 import {
   getConnectedAgentList,
   getAgentDeepProfile,
+  preferredAgentId,
   execOnLocalAgent,
 } from "../../routes/local-agent";
 import { saveMemory, searchMemory, getAllMemories } from "../../routes/memory";
@@ -1517,7 +1518,9 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         if (agents.length === 0) {
           return done(false, "مفيش جهاز متصل — شغّل وكيل NOVA الأول.", null);
         }
-        const agentId = rawArgs.agentId ? String(rawArgs.agentId) : agents[0].id;
+        // TEST6: كان بيجيب أول ليستة = self-node المدمج — الأمر كان بيتنفذ على
+        // السيرفر مش على جهاز المالك. التوجيه بيمشي على الوكيل الحي الحقيقي.
+        const agentId = rawArgs.agentId ? String(rawArgs.agentId) : (preferredAgentId() ?? agents[0].id);
         const timeout = Math.min(Number(rawArgs.timeout ?? 30_000) || 30_000, 180_000);
         const result = await execOnLocalAgent(command, agentId, timeout);
         if (!result) return done(false, `الجهاز ${agentId} ماردّش (منفصل أو لا يدعم التنفيذ)`, null);
