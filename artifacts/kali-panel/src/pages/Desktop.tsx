@@ -18,6 +18,7 @@ import OllamaStatusPanel from "@/components/desktop/OllamaStatusPanel";
 import { jsonRequest } from "@/lib/sse";
 import { probeOllamaViaServer, getStoredOllamaBase, getStoredOllamaModel } from "@/lib/ollama-browser";
 import { DraggableWindow, type WindowState } from "@/components/desktop/DraggableWindow";
+import ErrorIsland from "@/components/ErrorIsland";
 import { TaskManager } from "@/components/desktop/TaskManager";
 import { KeysWindow } from "@/components/desktop/KeysWindow";
 import { AgentWindow, type ClientToolEvent } from "@/components/desktop/AgentWindow";
@@ -1078,7 +1079,16 @@ function ServicesStatusWin({ apiOnline }: { apiOnline: boolean }) {
 }
 
 // ─── renderBody ───────────────────────────────────────────────────────────────
-function renderBody(w: WinInst, handleClientTool: (e: ClientToolEvent) => void, openWindow: (k: WinKind) => void, apiOnline: boolean) {
+// ⚠ WinBody كانت «renderBody» — فانكشن عادية بتستدعي useState جوا جسم Desktop.
+// يعني كل نافذة مفتوحة كانت بتضيف 6 هوكات لصفّ الـhooks بتاع Desktop، وأول ضغطة
+// تفتح/تقفل نافذة ⇒ عدد الهوكات بيتغير ⇒ React #310 ⇒ الشاشة البيضا اللي بتقفل
+// الكون. بقت Component حقيقية: كل نافذة ليها نسختها المعزولة من الحالة.
+function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
+  w: WinInst;
+  handleClientTool: (e: ClientToolEvent) => void;
+  openWindow: (k: WinKind) => void;
+  apiOnline: boolean;
+}) {
   // ── أزرار كانت ميتة⇐حقيقية (جولة «مفيش زرار وهمي») — كلها منطق حقيقي:
   // بلا وعود غير مدعومة بكود. ──
   const [revRun, setRevRun] = useState<Record<string, number>>({});
@@ -2923,7 +2933,7 @@ export default function Desktop() {
                 onMove={(x, y) => moveWin(w.id, x, y)}
                 onResize={(ww, hh) => resizeWin(w.id, ww, hh)}
               >
-                {renderBody(w, handleClientTool, openWindow, apiStatus === "online")}
+                <ErrorIsland title={w.kind}><WinBody w={w} handleClientTool={handleClientTool} openWindow={openWindow} apiOnline={apiStatus === "online"} /></ErrorIsland>
               </DraggableWindow>
             );
           })}

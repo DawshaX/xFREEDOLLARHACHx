@@ -18,7 +18,7 @@ interface FileItem {
     execute: boolean;
   };
   owner: string;
-  attributes: {
+  attributes?: {
     hidden: boolean;
     system: boolean;
     encrypted: boolean;
@@ -372,14 +372,14 @@ export function AdvancedFileManager() {
               >
                 <div className="flex items-center gap-2">
                   {file.type === 'directory' ? (
-                    <Folder className={`w-4 h-4 ${file.attributes.hidden ? 'text-muted-foreground/50' : 'text-blue-400'}`} />
+                    <Folder className={`w-4 h-4 ${file.attributes?.hidden ? 'text-muted-foreground/50' : 'text-blue-400'}`} />
                   ) : (
-                    <FileText className={`w-4 h-4 ${file.attributes.hidden ? 'text-muted-foreground/50' : 'text-foreground'}`} />
+                    <FileText className={`w-4 h-4 ${file.attributes?.hidden ? 'text-muted-foreground/50' : 'text-foreground'}`} />
                   )}
-                  <span className={`text-sm ${file.attributes.hidden ? 'text-muted-foreground/50 italic' : 'text-foreground'}`}>
+                  <span className={`text-sm ${file.attributes?.hidden ? 'text-muted-foreground/50 italic' : 'text-foreground'}`}>
                     {file.name}
                   </span>
-                  {file.attributes.system && (
+                  {file.attributes?.system && (
                     <span title="ملف نظام">
                       <Shield className="w-3 h-3 text-amber-400" />
                     </span>
