@@ -219,7 +219,7 @@ function MeterCompact({ label, value }: { label: string; value: number | null })
 const DOT: Record<string, string> = { ok: "#34d399", bad: "#ff2e63", wait: "#64748b" };
 
 const LS_KEY = "daw.agentPro.v9";
-interface Prefs { hiddenHud: HudCardId[]; hudOpen: boolean; chatOpen: boolean; chatWide?: boolean; }
+interface Prefs { hiddenHud: HudCardId[]; hudOpen: boolean; chatOpen: boolean; chatWide?: boolean; autonomyMode?: "autonomous" | "assist" | "off"; offensivePosture?: boolean; rootSessionId?: string; }
 const loadPrefs = (): Prefs => {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -230,10 +230,13 @@ const loadPrefs = (): Prefs => {
         hudOpen: j.hudOpen === true,
         chatOpen: j.chatOpen !== false,
         chatWide: Boolean(j.chatWide),
+        autonomyMode: (j as Record<string, unknown>).autonomyMode as Prefs["autonomyMode"],
+        offensivePosture: Boolean((j as Record<string, unknown>).offensivePosture),
+        rootSessionId: typeof (j as Record<string, unknown>).rootSessionId === "string" ? (j as Record<string, unknown>).rootSessionId as string : undefined,
       };
     }
   } catch { /* تفضيلات أول مرة */ }
-  return { hiddenHud: [], hudOpen: false, chatOpen: true, chatWide: false };
+  return { hiddenHud: [], hudOpen: false, chatOpen: true, chatWide: false, autonomyMode: "autonomous" as const, offensivePosture: true, rootSessionId: "nova-root" };
 };
 
 export default function NovaAgentPro() {
@@ -283,7 +286,38 @@ export default function NovaAgentPro() {
   const mounted = useRef(Date.now());
 
   useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 20_000); return () => clearInterval(iv); }, []);
-  useEffect(() => { try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch { /* */ } }, [prefs]);
+  useEffect(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch { /* */ }
+    // التفضيلات بقت محفوظة على السيرفر كمان — لو البراوزر اتمسح، المرة الجاية ترجع.
+    const t = setTimeout(() => {
+      void fetch("/api/panel/prefs", {
+        method: "PUT",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ prefs: { chatOpen: prefs.chatOpen, chatWide: prefs.chatWide, hudOpen: prefs.hudOpen, hiddenHud: prefs.hiddenHud, autonomyMode: prefs.autonomyMode ?? "autonomous", offensivePosture: prefs.offensivePosture ?? true, rootSessionId: prefs.rootSessionId ?? "nova-root" }, by: "owner" }),
+      }).catch(() => { /* بعيد عن الأنترنت — من localStorage مش ضايع */ });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [prefs]);
+
+  // أول تفتّح: بقراءة التفضيلات من السيرفر لو فيه — السيرفر هو الأصل، الـlocal fallback.
+  useEffect(() => {
+    let alive = true;
+    void opsFetch<{ prefs?: Partial<Prefs> & Record<string, unknown> }>("/panel/prefs").then((r) => {
+      if (!alive || !r.ok || !r.data?.prefs) return;
+      const sp = r.data.prefs as Partial<Prefs> & { autonomyMode?: string; offensivePosture?: boolean; rootSessionId?: string };
+      setPrefs((p) => ({
+        ...p,
+        hiddenHud: Array.isArray(sp.hiddenHud) ? (sp.hiddenHud as HudCardId[]) : p.hiddenHud,
+        hudOpen: typeof sp.hudOpen === "boolean" ? sp.hudOpen : p.hudOpen,
+        chatOpen: typeof sp.chatOpen === "boolean" ? sp.chatOpen : p.chatOpen,
+        chatWide: typeof sp.chatWide === "boolean" ? sp.chatWide : p.chatWide,
+        autonomyMode: (sp.autonomyMode === "autonomous" || sp.autonomyMode === "assist" || sp.autonomyMode === "off") ? sp.autonomyMode : "autonomous",
+        offensivePosture: typeof sp.offensivePosture === "boolean" ? sp.offensivePosture : true,
+        rootSessionId: typeof sp.rootSessionId === "string" && sp.rootSessionId ? sp.rootSessionId : "nova-root",
+      }));
+    });
+    return () => { alive = false; };
+  }, []);
   useEffect(() => {
     const t = setTimeout(() => { try { localStorage.setItem("daw.agentPro.notes", notes); setNotesSaved(true); } catch { /* */ } }, 400);
     return () => clearTimeout(t);

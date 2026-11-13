@@ -429,6 +429,14 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       p.startsWith("/fetch") ||
       (p.startsWith("/scan") && p !== "/scan/full") ||
       p.startsWith("/cisa") ||
+
+      // تفضيلات اللوحة + دفاتر نوفا + مركز الإشعارات: routers حقيقية على ملف
+      // state/ — الـmock هنا كان بيوضّح «اتحفظت» والحقيقة لا (الملكية للمالك: الإعداد
+      // يعيش على السيرفر مش البراوزر).
+      p.startsWith("/panel/prefs") ||
+      p.startsWith("/nova/notes") ||
+      p.startsWith("/notifications") ||
+      p.startsWith("/cisa") ||
       p.startsWith("/exploitdb");
 
     if (!letRouterHandle) {

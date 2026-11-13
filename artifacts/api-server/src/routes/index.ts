@@ -68,6 +68,7 @@ import networkRouter from "./network";
 import notificationsRouter from "./notifications";
 import novaCronRouter from "./nova-cron";
 import novaNotesRouter from "./nova-notes";
+import panelPrefsRouter from "./panel-prefs";
 import novaIntelRouter from "./nova-intel";
 import novaAgentV2Router from "./novaAgentV2";
 import playbooksRouter from "./playbooks";
@@ -216,6 +217,7 @@ router.use(keysRouter);
 router.use(mcpRouter);
 router.use(notificationsRouter);
 router.use(novaNotesRouter);
+router.use(panelPrefsRouter);
 router.use(jobsRouter);
 
 // ── Intel & Security Data ────────────────────────────────────────────────────
