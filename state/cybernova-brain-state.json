@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 129,
-    "lastHeartbeatAt": "2026-11-12T22:59:16.029Z",
+    "autonomousCyclesCompleted": 130,
+    "lastHeartbeatAt": "2026-11-13T03:14:37.468Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,354 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,15 +16,15 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #129 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #130 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب",
     "notesAr": "",
     "corpusSnapshot": {
-      "totalCve": 331907,
+      "totalCve": 332268,
       "kev": 1131,
-      "at": "2026-11-12",
-      "src": "/api/ops/corpus (waifly live)"
+      "at": "2026-11-13",
+      "src": "state/vuln-corpus-index.json + supabase:corpus_cve"
     }
   },
   "whatDidIReach": {
@@ -38,10 +38,17 @@
       "extractedArtifactsCount": 40,
       "parallelTasksActive": 4,
       "zeroFpVerifiedCount": 6,
-      "universalGalaxyTotalCves": 76680
+      "universalGalaxyTotalCves": 332268
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794539697494",
+      "ts": "2026-11-13 03:14:57 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #130 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 142.251.167.141 | HTTP 200 | SHA256: 6f77369191ff70e6 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 43 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:6)"
+    },
     {
       "id": "pulse-1794524356846",
       "ts": "2026-11-12 22:59:16 UTC",
@@ -209,13 +216,6 @@
       "category": "GITHUB_CLOUD_PULSE",
       "titleAr": "نبضة العقل السحابي التلقائية #106 على الهدف (bughunters.google.com)",
       "detailAr": "IP: 142.251.34.209 | HTTP 200 | SHA256: b07c0c805c6ffb61 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 17 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:20)"
-    },
-    {
-      "id": "pulse-1793982593680",
-      "ts": "2026-11-06 16:29:53 UTC",
-      "category": "GITHUB_CLOUD_PULSE",
-      "titleAr": "نبضة العقل السحابي التلقائية #105 على الهدف (bughunters.google.com)",
-      "detailAr": "IP: 142.251.214.209 | HTTP 200 | SHA256: a245dd81cc040c50 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 2 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:21)"
     }
   ],
   "extractedArtifactsVault": [
@@ -868,6 +868,26 @@
       "source": "GitHub Advisories",
       "url": "https://github.com/advisories/GHSA-9j25-mm2h-2f76",
       "at": "2026-11-06T21:53:21.130Z"
+    },
+    {
+      "id": "CVE-2026-100397",
+      "title": "CVE-2026-100397",
+      "description": "Rucio: Unauthenticated administrator impersonation through SSH challenge tokens",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-x585-4vv8-2mh2",
+      "at": "2026-11-13T03:14:57.494Z"
+    },
+    {
+      "id": "CVE-2026-122006",
+      "title": "CVE-2026-122006",
+      "description": "Active Storage: Possible arbitrary file write and read in image analysis",
+      "cvss": 9.8,
+      "severity": "CRITICAL",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-f3w6-w445-fwh9",
+      "at": "2026-11-13T03:14:57.494Z"
     },
     {
       "id": "CVE-2026-125120",
@@ -1910,6 +1930,26 @@
       "at": "2026-11-06T01:56:03.641Z"
     },
     {
+      "id": "CVE-2026-126190",
+      "title": "CVE-2026-126190",
+      "description": "Soup Sieve: Polynomial-time denial of service in the descendant combinator",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-mmhr-3c5m-f64f",
+      "at": "2026-11-13T03:14:57.494Z"
+    },
+    {
+      "id": "CVE-2026-126081",
+      "title": "CVE-2026-126081",
+      "description": "Action Pack: Possible Strong Parameters Bypass in Parameters#each_key",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-wm3x-v3qw-4jh3",
+      "at": "2026-11-13T03:14:57.494Z"
+    },
+    {
       "id": "CVE-2026-126366",
       "title": "CVE-2026-126366",
       "description": "msgpack-ruby JRuby decoder makes uncapped header-count allocations; a 5-byte message forces multi-GiB OOM",
@@ -2618,56 +2658,16 @@
       "source": "NVD",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-27792",
       "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-3567",
-      "title": "CVE-2023-3567",
-      "description": "A use-after-free flaw was found in vcs_read in drivers/tty/vt/vc_screen.c in vc_screen in the Linux Kernel. This issue may allow an attacker with local user access to cause a system crash or leak internal kernel information.",
-      "cvss": 7.1,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-3567",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-4387",
-      "title": "CVE-2023-4387",
-      "description": "A use-after-free flaw was found in vmxnet3_rq_alloc_rx_buf in drivers/net/vmxnet3/vmxnet3_drv.c in VMware's vmxnet3 ethernet NIC driver in the Linux Kernel. This issue could allow a local attacker to crash the system due to a double-free while cleaning up vmxnet3_rq_cleanup_all, which could also lead to a kernel information leak problem.",
-      "cvss": 7.1,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-4387",
-      "at": "2026-11-07T15:16:38.228Z"
-    },
-    {
-      "id": "CVE-2023-6610",
-      "title": "CVE-2023-6610",
-      "description": "An out-of-bounds read vulnerability was found in smb2_dump_detail in fs/smb/client/smb2ops.c in the Linux Kernel. This issue could allow a local attacker to crash the system or leak internal kernel information.",
-      "cvss": 7.1,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6610",
-      "at": "2026-11-07T01:27:41.993Z"
-    },
-    {
-      "id": "CVE-2023-5764",
-      "title": "CVE-2023-5764",
-      "description": "A template injection flaw was found in Ansible where a user's controller internal templating operations may remove the unsafe designation from template data. This issue could allow an attacker to use a specially crafted file to introduce templating injection when supplying templating data.",
-      "cvss": 7.1,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5764",
-      "at": "2026-11-07T01:27:41.993Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 41,
+    "freshThisPulse": 43,
     "sourcesAnswered": [
       "NVD:40",
       "KEV:15",
-      "GHSA:3"
+      "GHSA:6"
     ],
-    "at": "2026-11-12T22:59:16.846Z"
+    "at": "2026-11-13T03:14:57.494Z"
   }
 }
