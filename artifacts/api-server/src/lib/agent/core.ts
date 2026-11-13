@@ -37,6 +37,12 @@ import {
 import { llmComplete, extractJson } from "./llm";
 import { saveMemory, getAllMemories } from "../../routes/memory";
 import { remember, memoryContextFor, memoryStats, initMemory } from "./memory-store";
+import {
+  ROOT_SESSION_ID,
+  initSessionNexus,
+  buildNexusContext,
+  recordNexusTurn,
+} from "./session-nexus";
 import { getMissionsState, recordMissionCommand } from "../standalone-api";
 import { broadcastEvent } from "../ws-hub";
 import { broadcastLiveEvent } from "./../../routes/live-events";
@@ -212,23 +218,10 @@ export interface AgentRunOptions {
   /** Force the deterministic brain (used by tests / air-gapped mode). */
   forceHeuristic?: boolean;
   maxSteps?: number;
-  /**
-   * Plan mode \u2014 the mediator the user asked for.
-   *
-   * When true the turn stops after planning: the steps are emitted as
-   * `plan_ready` with `awaitingApproval: true` and NOT ONE tool runs. The human
-   * reads the plan, edits it or says yes, and the next turn (with planMode off)
-   * executes. Without this the agent either ran everything immediately or
-   * answered with a canned line \u2014 neither is a conversation.
-   */
   planMode?: boolean;
-  /**
-   * Tools the human has already approved for this turn. Anything that declares
-   * `risk: "sensitive"` (running commands on a real machine, killing processes…)
-   * is NOT executed until its name shows up here, so the chat can never touch a
-   * connected box by surprise — it must ask first and be told "yes".
-   */
   approved?: string[];
+  /** Override skip saving into session-nexus (used only when caller handles persistence itself). */
+  skipNexusRecord?: boolean;
 }
 
 interface PlannedStep {
@@ -264,20 +257,27 @@ function safeFleetSummary(): string {
  * Everything NOVA knows before it answers: live platform state + the durable
  * long-term memory (ranked against the current question and target).
  */
-function buildContextBlock(query = ""): string {
+function buildContextBlock(query = "", sessionId = ROOT_SESSION_ID): string {
   const missions = getMissionsState();
   const active = missions[0];
   const stats = memoryStats();
   const longTerm = memoryContextFor(query, active?.target ?? undefined, 8);
   const fleet = safeFleetSummary();
+  let nexusBlock = "";
+  try {
+    nexusBlock = buildNexusContext(sessionId);
+  } catch {
+    nexusBlock = "";
+  }
   return [
     `# سياق المنصة الآن`,
     `- الهدف النشط: ${active?.target ?? "غير محدد"} (${active?.name ?? "—"})`,
     `- الأجهزة المتصلة الآن: ${fleet}`,
     `- نتائج مسجلة في المهمة: ${active?.findings.length ?? 0}`,
     `- ذاكرتك طويلة الأمد: ${stats.total} ذكرى (${stats.pinned} مثبتة) — تفضل بعد إعادة التشغيل`,
+    nexusBlock,
     longTerm || "# الذاكرة طويلة الأمد فارغة حتى الآن",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 /* ── heuristic planner (works with zero models) ──────────────────────────── */
@@ -755,11 +755,12 @@ async function llmPlan(
   message: string,
   history: Array<{ role: "user" | "assistant"; content: string }>,
   selfModel: ReturnType<typeof buildSelfModel>,
+  sessionId = ROOT_SESSION_ID,
 ): Promise<{ thought: string; steps: PlannedStep[]; directAnswer?: string; provider: string; model: string } | null> {
   const messages = [
     {
       role: "system" as const,
-      content: `${NOVA_SYSTEM_PROMPT_SHORT}\n\n${selfModelPrompt(selfModel)}\n\n# أدواتك\n${toolCatalogueForPrompt()}\n\n${buildContextBlock(message)}\n\n${PLAN_INSTRUCTIONS}`,
+      content: `${NOVA_SYSTEM_PROMPT_SHORT}\n\n${selfModelPrompt(selfModel)}\n\n# أدواتك\n${toolCatalogueForPrompt()}\n\n${buildContextBlock(message, sessionId)}\n\n${PLAN_INSTRUCTIONS}`,
     },
     ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
     { role: "user" as const, content: message },
@@ -1008,9 +1009,14 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     } catch {
       /* store failures must never block a reply */
     }
+    try {
+      initSessionNexus();
+    } catch {
+      /* nexus failures must never block a reply */
+    }
   }
   const started = Date.now();
-  const sessionId = opts.sessionId || `nova-${Date.now()}`;
+  const sessionId = opts.sessionId?.trim() || ROOT_SESSION_ID;
   const history = opts.history ?? [];
   const message = (opts.message ?? "").trim();
 
@@ -1088,7 +1094,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   let model = "nova-heuristic";
 
   if (!opts.forceHeuristic && !capTurn && !measuredDirectTurn) {
-    const llm = await llmPlan(message, history, selfModel);
+    const llm = await llmPlan(message, history, selfModel, sessionId);
     if (llm && (llm.steps.length > 0 || llm.directAnswer)) {
       plan = llm;
       mode = "llm";
@@ -1135,7 +1141,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     if (!reply) {
       const llm = await llmComplete(
         [
-          { role: "system", content: `${NOVA_SYSTEM_PROMPT}\n\n${selfModelPrompt(selfModel)}\n\n${buildContextBlock(message)}` },
+          { role: "system", content: `${NOVA_SYSTEM_PROMPT}\n\n${selfModelPrompt(selfModel)}\n\n${buildContextBlock(message, sessionId)}` },
           ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
           { role: "user", content: message },
         ],
@@ -1189,6 +1195,11 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     // SSE frames the chunks; no artificial sleep between them — fast reception.
     for (const chunk of splitChunks(reply)) {
       opts.emit({ type: "delta", text: chunk });
+    }
+    if (!opts.skipNexusRecord) {
+      try {
+        recordNexusTurn(sessionId, { userMessage: message, assistantReply: reply, toolsUsed: [], mode, provider });
+      } catch { /* best-effort */ }
     }
     opts.emit({ type: "done", sessionId, mode, toolCount: 0, ms: Date.now() - started, provider });
     return { mode, provider, toolsUsed: [], reply, ms: Date.now() - started };
@@ -1353,7 +1364,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
           role: "system",
           content: `${NOVA_SYSTEM_PROMPT}\n\n${selfModelPrompt(selfModel)}\n\n# مخرجات أدواتك الحقيقية الآن (استخدمها كما هي، لا تخترع غيرها)\n${results
             .map((r) => `## ${r.name} (${r.ok ? "نجحت" : "فشلت"}): ${r.summary}\n${preview(r.data).slice(0, 1500)}`)
-            .join("\n\n")}\n\n# سياق\n${buildContextBlock(message)}`,
+            .join("\n\n")}\n\n# سياق\n${buildContextBlock(message, sessionId)}`,
         },
         { role: "user", content: `${message}\n\nفسّر النتائج باختصار، اذكر المهم والخطورة، واختم بخطوة تالية واحدة.` },
       ],
@@ -1443,6 +1454,18 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     opts.emit({ type: "memory", id: sessionRec.id, title: sessionRec.title });
   } catch {
     /* memory is best-effort — never fail a run because of it */
+  }
+
+  if (!opts.skipNexusRecord) {
+    try {
+      recordNexusTurn(sessionId, {
+        userMessage: message,
+        assistantReply: reply,
+        toolsUsed: results.map((r) => r.name),
+        mode,
+        provider,
+      });
+    } catch { /* best-effort */ }
   }
 
   const out: AgentRunResult = {

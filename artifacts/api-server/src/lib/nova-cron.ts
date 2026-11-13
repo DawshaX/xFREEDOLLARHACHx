@@ -6,6 +6,7 @@
 import { logger } from "./logger";
 import { runHunt } from "./nova-cve-monitor";
 import { consolidateMemoryLite } from "./nova-learner-lite";
+import { recordBackgroundEvent } from "./agent/session-nexus";
 
 export interface CronJob {
   id: string; name: string; cronExpr: string; enabled: boolean;
@@ -109,6 +110,15 @@ function scheduleJob(job: CronJob): void {
     try {
       const result = await runJob(job.id);
       job.lastResult = result; job.runCount++;
+      try {
+        recordBackgroundEvent({
+          kind: `cron:${job.id}`,
+          title: `خلفية: ${job.name}`,
+          detail: result,
+          source: "nova-cron",
+          persistMemory: job.id === "mem_consolidate" || job.id === "nova_learn",
+        });
+      } catch { /* best-effort */ }
       logger.info({ id: job.id, result, ms: Date.now()-start }, "Cron job done");
     } catch (e: any) {
       job.lastResult = `ERROR: ${e.message}`; job.errorCount++;
@@ -136,7 +146,21 @@ export async function triggerJob(id: string): Promise<{ ok: boolean; result?: st
   if (!job) return { ok: false, error: "job not found" };
   const start = Date.now();
   job.lastRun = new Date().toISOString();
-  try { const result = await runJob(id); job.lastResult = result; job.runCount++; return { ok: true, result }; }
+  try {
+    const result = await runJob(id);
+    job.lastResult = result;
+    job.runCount++;
+    try {
+      recordBackgroundEvent({
+        kind: `cron:${job.id}`,
+        title: `تشغيل فوري: ${job.name}`,
+        detail: result,
+        source: "nova-cron",
+        persistMemory: job.id === "mem_consolidate" || job.id === "nova_learn",
+      });
+    } catch { /* best-effort */ }
+    return { ok: true, result };
+  }
   catch (e: any) { job.lastResult = `ERROR: ${e.message}`; job.errorCount++; return { ok: false, error: e.message }; }
 }
 

@@ -887,21 +887,52 @@ let kaliConvsState = loadState("cybernova_kaliconvs_v1", [
 
 let liveSessionsState = loadState("cybernova_livesessions_v1", [
   {
-    id: "session-default",
-    title: "جلسة القيادة الحية — NOVA Director",
+    id: "nova-root",
+    title: "الجذر الدائم — NOVA Root (24/7)",
     status: "active",
+    isRoot: true,
+    parentId: null as string | null,
+    backgroundLinked: true,
     createdAt: new Date().toISOString(),
     messages: [
       {
         id: 1,
         role: "assistant",
         content:
-          "نظام **NOVA Live Agent** متصل وجاهز. جميع الأحداث والملاحظات متزامنة مع الذاكرة ومتتبع المهام.",
+          "نظام **NOVA Live Agent** متصل بالجذر الدائم. جميع الجلسات والمهام والخلفية 24/7 متزامنة ضمن سياق واحد.",
         createdAt: new Date().toISOString(),
       },
     ],
   },
 ]);
+
+function ensureRootSessionInStandalone() {
+  const hasRoot = liveSessionsState.some((s) => String(s.id) === "nova-root");
+  if (!hasRoot) {
+    liveSessionsState = [
+      {
+        id: "nova-root",
+        title: "الجذر الدائم — NOVA Root (24/7)",
+        status: "active",
+        isRoot: true,
+        parentId: null,
+        backgroundLinked: true,
+        createdAt: new Date().toISOString(),
+        messages: [
+          {
+            id: 1,
+            role: "assistant",
+            content:
+              "نظام **NOVA Live Agent** متصل بالجذر الدائم. جميع الجلسات والمهام والخلفية 24/7 متزامنة ضمن سياق واحد.",
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      },
+      ...liveSessionsState,
+    ];
+    saveState("cybernova_livesessions_v1", liveSessionsState);
+  }
+}
 
 // صدق الجلسة (الفحص الشامل 2026-11-09): كل إدخال هنا قالب تمريني للمتصفح —
 // مش تاريخ فحوصات وقعت فعلاً. علامة simulated:true هي الفرق بين المسرح والقياس:
@@ -1546,6 +1577,33 @@ if (path === "/nova-core/version") {
       at: new Date().toISOString(),
       reasonAr: "الباوندل الثابت (Pages / standalone) مفيهوش محرك — القياس ده بيتعمل على سيرفر فيه طبقة ops.",
       howAr: "اربط سيرفر (Waifly / Oracle / Tailscale) أو شغّل `node server.mjs` من nova-24-7.zip؛ ساعتها السطر ده يختفي.",
+    };
+  }
+
+  if (path === "/nova-core/nexus") {
+    ensureRootSessionInStandalone();
+    const root = liveSessionsState.find((s) => String(s.id) === "nova-root") || liveSessionsState[0];
+    return {
+      ok: true,
+      standalone: true,
+      rootSessionId: "nova-root",
+      rootTitle: root?.title || "الجذر الدائم — NOVA Root (24/7)",
+      rootMessageCount: Array.isArray(root?.messages) ? root.messages.length : 0,
+      rootDigest: "",
+      totalSessions: liveSessionsState.length,
+      backgroundFeedCount: 0,
+      learnedInsightsCount: 0,
+      recentBackground: [],
+      learnedInsights: [],
+      sessions: liveSessionsState.map((s) => ({
+        id: String(s.id),
+        title: String(s.title),
+        isRoot: String(s.id) === "nova-root",
+        parentId: String(s.id) === "nova-root" ? null : "nova-root",
+        messageCount: Array.isArray(s.messages) ? s.messages.length : 0,
+        updatedAt: String(s.createdAt || new Date().toISOString()),
+        summary: "",
+      })),
     };
   }
 
@@ -2681,23 +2739,36 @@ if (path === "/nova-core/version") {
 
   // ── Live Agent Sessions (/api/live-agent/sessions) ─────────────────────────
   if (path === "/live-agent/sessions") {
+    ensureRootSessionInStandalone();
     if (m === "POST") {
       const sess = {
         id: `session-${Date.now()}`,
         title: String(body?.title || `جلسة ${new Date().toLocaleTimeString("ar-EG")}`),
         status: "active",
+        isRoot: false,
+        parentId: "nova-root" as string | null,
+        backgroundLinked: true,
         createdAt: new Date().toISOString(),
         messages: [],
       };
-      liveSessionsState = [sess, ...liveSessionsState];
+      const root = liveSessionsState.find((s) => String(s.id) === "nova-root");
+      const children = liveSessionsState.filter((s) => String(s.id) !== "nova-root");
+      liveSessionsState = root ? [root, sess, ...children] : [sess, ...children];
       saveState("cybernova_livesessions_v1", liveSessionsState);
       return sess;
     }
-    return liveSessionsState;
+    return liveSessionsState.map((s) => ({
+      ...s,
+      isRoot: String(s.id) === "nova-root",
+      parentId: String(s.id) === "nova-root" ? null : (s.parentId ?? "nova-root"),
+      backgroundLinked: true,
+      messageCount: Array.isArray(s.messages) ? s.messages.length : 0,
+    }));
   }
 
   const liveSaveMatch = path.match(/^\/live-agent\/sessions\/([^/]+)\/save-ai-response$/);
   if (liveSaveMatch && m === "POST" && body) {
+    ensureRootSessionInStandalone();
     const sid = liveSaveMatch[1];
     const sess = liveSessionsState.find((s) => String(s.id) === sid) || liveSessionsState[0];
     if (sess) {
@@ -2724,8 +2795,10 @@ if (path === "/nova-core/version") {
 
   const liveIdMatch = path.match(/^\/live-agent\/sessions\/([^/]+)$/);
   if (liveIdMatch) {
+    ensureRootSessionInStandalone();
     const sid = liveIdMatch[1];
     if (m === "DELETE") {
+      if (sid === "nova-root") return { ok: true, preservedRoot: true };
       liveSessionsState = liveSessionsState.filter((s) => String(s.id) !== sid);
       saveState("cybernova_livesessions_v1", liveSessionsState);
       return { ok: true };
@@ -5625,6 +5698,7 @@ if (path === "/fleet/system") {
   }
 
   if (path === "/live-agent/status" || path === "/live-agent/brain-status" || path === "/live-agent/iq" || path === "/nova/iq") {
+    ensureRootSessionInStandalone();
     // One payload shape for every consumer. The panel reads memoryCount /
     // activeProcesses / cronJobsEnabled / alertsUnread / ts, and the IQ widgets
     // read iqScore / level — dropping either group breaks a screen.
@@ -5638,6 +5712,9 @@ if (path === "/fleet/system") {
       knowledgeItems: getCorpusStats().totalIndexedKnowledgeItems,
       memoryCount: memoriesState.length,
       activeSessions: liveSessionsState.length,
+      rootSessionId: "nova-root",
+      backgroundFeedCount: 0,
+      learnedInsightsCount: 0,
       activeProcesses: [] as Array<{ id: string; command: string; startedAt?: string }>,
       cronJobsEnabled: 1,
       alertsUnread: 0,

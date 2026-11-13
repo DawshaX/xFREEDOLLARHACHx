@@ -84,9 +84,10 @@ export function FloatingNovaButton() {
       };
     }
     try {
-      const existing = await jsonRequest<Session[]>("/live-agent/sessions");
+      const existing = await jsonRequest<Array<Session & { isRoot?: boolean }>>("/live-agent/sessions");
       if (existing.length > 0) {
-        const id = existing[0].id;
+        const preferred = existing.find((s) => s.id === "nova-root" || s.isRoot) ?? existing[0];
+        const id = preferred.id;
         const session = await jsonRequest<{ messages?: SessionMessage[] }>(`/live-agent/sessions/${id}`);
         const history = (session.messages ?? [])
           .filter((message) => message.role === "user" || message.role === "assistant")

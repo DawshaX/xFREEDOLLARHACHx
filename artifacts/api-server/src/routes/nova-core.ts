@@ -45,6 +45,7 @@ import { logger } from "../lib/logger";
 
 import { requireOps, tokenConfigured, checkGate } from "../lib/ops/gate";
 import { awareness } from "../lib/awareness";
+import { ROOT_SESSION_ID, getNexusSnapshot } from "../lib/agent/session-nexus";
 
 const router = Router();
 
@@ -153,7 +154,7 @@ router.post("/nova-core/chat", async (req: Request, res: Response) => {
 
     const result = await runAgent({
       message,
-      sessionId: body.sessionId,
+      sessionId: body.sessionId?.trim() || ROOT_SESSION_ID,
       history: Array.isArray(body.history) ? body.history.slice(-8) : [],
       forceHeuristic: body.forceHeuristic === true,
       // الموافقة مابقتش تتقبل من قائمة يجيبها العميل: أي زائر كان يقدر يقول
@@ -269,6 +270,19 @@ router.get("/nova-core/awareness", async (req: Request, res: Response) => {
       organs: [],
       error: (err as Error).message,
     });
+  }
+});
+
+/**
+ * GET /api/nova-core/nexus
+ * الجلسة الجذر المستمرة مدى الحياة + الجلسات الفرعية + أحداث الخلفية + التعلم الذاتي.
+ */
+router.get("/nova-core/nexus", (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    res.json({ ok: true, ...getNexusSnapshot() });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });
 

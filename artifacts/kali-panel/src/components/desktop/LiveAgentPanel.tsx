@@ -190,6 +190,10 @@ interface BrainStatus {
   cronJobsEnabled: number;
   activeProcesses: Array<{ id: string; command: string; startedAt?: string }>;
   ts: string;
+  rootSessionId?: string;
+  backgroundFeedCount?: number;
+  learnedInsightsCount?: number;
+  activeModel?: string;
 }
 
 /** Coerce any wire payload into a real array — `.length`/`.map` must never see undefined. */
@@ -234,6 +238,10 @@ function normalizeBrainStatus(raw: unknown): BrainStatus {
     cronJobsEnabled: num(r.cronJobsEnabled),
     activeProcesses,
     ts: typeof r.ts === "string" && r.ts ? r.ts : new Date().toISOString(),
+    rootSessionId: typeof r.rootSessionId === "string" ? r.rootSessionId : undefined,
+    backgroundFeedCount: typeof r.backgroundFeedCount === "number" ? r.backgroundFeedCount : undefined,
+    learnedInsightsCount: typeof r.learnedInsightsCount === "number" ? r.learnedInsightsCount : undefined,
+    activeModel: typeof r.activeModel === "string" ? r.activeModel : undefined,
   };
 }
 
@@ -988,20 +996,21 @@ export function LiveAgentPanel({
   const [showSessions, setShowSessions] = useState(false);
   const [allSessions, setAllSessions] = useState<Session[]>([]);
 
-  // ── Ollama Status ─────────────────────────────────────────────────────────
+  // ── Ollama / Active Brain Status ──────────────────────────────────────────
   const [ollamaOnline, setOllamaOnline] = useState(false);
-  const [ollamaModel, setOllamaModel] = useState("dolphin-llama3:latest");
+  const [ollamaModel, setOllamaModel] = useState("nova-brain (Auto)");
   const [ollamaPulse, setOllamaPulse] = useState(false);
 
   // Direct provider execution is disabled; chat turns use the server-side NOVA Core.
   const directMode = false;
   const [ngrokOnline, setNgrokOnline] = useState(false);
   const [ngrokModels, setNgrokModels] = useState<string[]>([]);
-  const [ngrokModel, setNgrokModel] = useState("dolphin-llama3:latest");
+  const [ngrokModel, setNgrokModel] = useState("nova-brain (Auto)");
   const [ngrokPing, setNgrokPing] = useState<number | null>(null);
 
   // ── OpenClaw Integration States ───────────────────────────────────────────
   const OPENCLAW_MODELS = [
+    { id: "nova-brain (Auto)", label: "NOVA Brain (Auto) 🧠", ctx: 128000, color: "text-emerald-400" },
     { id: "dolphin-llama3:latest", label: "Dolphin 🐬", ctx: 8192, color: "text-cyan-400" },
     { id: "gemma4", label: "Gemma4 ⚡", ctx: 128000, color: "text-emerald-400" },
     { id: "kimi-k2.5:cloud", label: "Kimi K2.5 🌙", ctx: 128000, color: "text-violet-400" },
@@ -1009,9 +1018,11 @@ export function LiveAgentPanel({
     { id: "glm-5.1:cloud", label: "GLM-5.1 🔥", ctx: 128000, color: "text-orange-400" },
     { id: "gemma3:270m", label: "Gemma3 Mini 💨", ctx: 32768, color: "text-yellow-400" },
   ] as const;
-  const [selectedModel, setSelectedModel] = useState<string>("dolphin-llama3:latest");
-  const [modelCtxWindow, setModelCtxWindow] = useState<number>(8192);
+  const [selectedModel, setSelectedModel] = useState<string>("nova-brain (Auto)");
+  const [modelCtxWindow, setModelCtxWindow] = useState<number>(128000);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState<boolean>(!embedded);
+  const [showMoreTabs, setShowMoreTabs] = useState<boolean>(false);
   // ── NOVA Scheduler States ─────────────────────────────────────────────────
   const [scheduledTasks, setScheduledTasks] = useState<Array<{
     id: string; name: string; cron: string; command: string; enabled: boolean;
@@ -2237,7 +2248,13 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   const refreshBrainStatus = async () => {
     try {
       const r = await fetch(`${API_BASE}/live-agent/brain-status`, { headers: novaAuthHeaders() });
-      if (r.ok) setBrainStatus(normalizeBrainStatus(await r.json()));
+      if (r.ok) {
+        const normalized = normalizeBrainStatus(await r.json());
+        setBrainStatus(normalized);
+        if (normalized.activeModel && ollamaModel === "nova-brain (Auto)") {
+          setOllamaModel(normalized.activeModel);
+        }
+      }
     } catch { /* ignore */ }
   };
 
@@ -2353,8 +2370,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
       try {
         const listResponse = await fetch(`${API_BASE}/live-agent/sessions`, { headers: novaAuthHeaders() });
         if (!listResponse.ok) throw new Error(`HTTP ${listResponse.status}`);
-        const sessions = asArray<Session>(await listResponse.json());
-        const latest = sessions[0];
+        const sessions = asArray<Session & { isRoot?: boolean }>(await listResponse.json());
+        const latest = sessions.find((s) => s.id === "nova-root" || s.isRoot) ?? sessions[0];
         let id: string;
 
         if (latest) {
@@ -2485,7 +2502,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         if (br.ok && active) setBotStatus((await br.json()) as BotStatus);
         if (sr.ok && active) {
           const s = await sr.json();
-          setOllamaModel(s.ollamaModel || "dolphin-llama3:latest");
+          if (s.ollamaModel) setOllamaModel(s.ollamaModel);
         }
         if (or_.ok && active) {
           const oj = await or_.json() as { connected?: boolean; online?: boolean; ok?: boolean; models?: string[] };
@@ -4003,8 +4020,17 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-sm font-bold text-foreground tracking-tight">NOVA AGENT</span>
-              <span className="text-[9px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-400/30 rounded px-1">v7</span>
+              <span className="text-sm font-bold text-foreground tracking-tight">
+                {embedded ? "نوفا · الجذر الحي" : "NOVA AGENT"}
+              </span>
+              {!embedded && (
+                <span className="text-[9px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-400/30 rounded px-1">v7</span>
+              )}
+              {sessionId === "nova-root" && (
+                <span className="text-[8px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-400/30 rounded px-1">
+                  24/7 Root
+                </span>
+              )}
               {/* Agent Mode Badge */}
               <button onClick={() => setShowModeSelector(v => !v)}
                 className={`text-[8px] font-mono px-1.5 py-0.5 rounded border transition flex items-center gap-0.5 ${AGENT_MODES.find(m=>m.id===agentMode)?.color ?? ""}`}>
@@ -4173,49 +4199,53 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
             {/* New session */}
             <button onClick={() => void newSession()}
-              className="w-6 h-6 rounded flex items-center justify-center hover:bg-emerald-500/15 text-muted-foreground hover:text-emerald-400 transition-colors" title="جلسة جديدة">
+              className="w-6 h-6 rounded flex items-center justify-center hover:bg-emerald-500/15 text-muted-foreground hover:text-emerald-400 transition-colors" title="جلسة فرعية جديدة مرتبطة بالجذر">
               <PlusCircle className="w-3.5 h-3.5" />
             </button>
 
-            {/* Open in window */}
-            <button onClick={onOpenAgentWindow} className="text-[10px] px-2 py-1 rounded-md border border-primary/30 text-primary/80 hover:bg-primary/10" data-testid="open-agent-window">
-              نافذة
-            </button>
-
-            {/* Mode toggle */}
-            <button onClick={() => setPanelMode(panelMode === "window" ? "column" : panelMode === "column" ? "background" : "window")}
-              className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="تغيير وضع العرض">
-              {panelMode === "window" ? <LayoutGrid className="w-3 h-3" /> : panelMode === "column" ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-            </button>
-
-            {panelMode === "background" && (
-              <button onClick={() => setIsMinimized(!isMinimized)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
-                {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
-              </button>
-            )}
-
-            {panelMode === "window" && (
+            {!embedded && (
               <>
-                <button onClick={() => setPanelSize(panelSize === "mini" ? "normal" : "mini")}
-                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
-                  <Minimize2 className="w-3 h-3" />
+                {/* Open in window */}
+                <button onClick={onOpenAgentWindow} className="text-[10px] px-2 py-1 rounded-md border border-primary/30 text-primary/80 hover:bg-primary/10" data-testid="open-agent-window">
+                  نافذة
                 </button>
-                <button onClick={() => setPanelSize(panelSize === "large" ? "normal" : "large")}
-                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
-                  <Maximize2 className="w-3 h-3" />
+
+                {/* Mode toggle */}
+                <button onClick={() => setPanelMode(panelMode === "window" ? "column" : panelMode === "column" ? "background" : "window")}
+                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="تغيير وضع العرض">
+                  {panelMode === "window" ? <LayoutGrid className="w-3 h-3" /> : panelMode === "column" ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                </button>
+
+                {panelMode === "background" && (
+                  <button onClick={() => setIsMinimized(!isMinimized)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                    {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
+                  </button>
+                )}
+
+                {panelMode === "window" && (
+                  <>
+                    <button onClick={() => setPanelSize(panelSize === "mini" ? "normal" : "mini")}
+                      className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                      <Minimize2 className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => setPanelSize(panelSize === "large" ? "normal" : "large")}
+                      className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                      <Maximize2 className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+
+                <button onClick={() => setPanelVisible(false)}
+                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-rose-500/20 text-muted-foreground hover:text-rose-400 transition-colors" title="إخفاء اللوحة ← سهم يسار">
+                  <ChevronRight className="w-3 h-3" />
                 </button>
               </>
             )}
-
-                <button onClick={() => setPanelVisible(false)}
-              className="w-5 h-5 rounded flex items-center justify-center hover:bg-rose-500/20 text-muted-foreground hover:text-rose-400 transition-colors" title="إخفاء اللوحة ← سهم يسار">
-              <ChevronRight className="w-3 h-3" />
-            </button>
           </div>
         </div>
 
         {/* ── Brain Status Bar ── */}
-        {brainStatus && panelSize !== "mini" && (
+        {brainStatus && panelSize !== "mini" && !embedded && (
           <div className="shrink-0 border-b border-primary/10">
             <button
               onClick={() => setBrainExpanded((v) => !v)}
@@ -4315,12 +4345,23 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 ⚔ KALI ROUTE
               </span>
             )}
+            <button
+              onClick={() => setShowQuickActions((v) => !v)}
+              className={`ms-auto shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-lg border flex items-center gap-1 transition-all ${
+                showQuickActions
+                  ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
+                  : "border-white/15 text-white/55 hover:text-white/90 hover:bg-white/5"
+              }`}
+              title="إظهار أو إخفاء الأوامر السريعة"
+            >
+              ⚡ أوامر {showQuickActions ? "▾" : "▸"}
+            </button>
           </div>
         )}
 
         {/* ── Quick actions grid ── */}
-        {panelSize !== "mini" && (
-          <div className="p-2 grid grid-cols-4 gap-1 border-b border-primary/10 shrink-0">
+        {panelSize !== "mini" && showQuickActions && (
+          <div className="p-2 grid grid-cols-4 gap-1 border-b border-primary/10 shrink-0 max-h-44 overflow-y-auto">
             {QUICK_ACTIONS.map((a) => (
               <button
                 key={a.id}
@@ -4345,20 +4386,24 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
         {/* ── Tab bar ── */}
         {panelSize !== "mini" && (
-          <div className="px-2 pt-1.5 flex items-center gap-0.5 border-b border-primary/10 shrink-0 overflow-x-auto">
-            <button onClick={() => setActiveTab("chat")}
+          <div className="relative px-2 pt-1.5 flex items-center gap-0.5 border-b border-primary/10 shrink-0 overflow-x-auto">
+            <button onClick={() => { setActiveTab("chat"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "chat" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" />شات</span>
             </button>
-            <button onClick={() => { setActiveTab("pulse"); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "pulse" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />نبض المشروع</span>
-            </button>
-            <button onClick={() => { setActiveTab("fleet"); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "fleet" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Server className="w-2.5 h-2.5" />الأجهزة</span>
-            </button>
-            <button onClick={() => setActiveTab("missions")}
+            {!embedded && (
+              <>
+                <button onClick={() => { setActiveTab("pulse"); }}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "pulse" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />نبض المشروع</span>
+                </button>
+                <button onClick={() => { setActiveTab("fleet"); }}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "fleet" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1"><Server className="w-2.5 h-2.5" />الأجهزة</span>
+                </button>
+              </>
+            )}
+            <button onClick={() => { setActiveTab("missions"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "missions" ? "border-amber-400 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
                 <Target className="w-2.5 h-2.5" />
@@ -4368,7 +4413,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </span>
             </button>
-            <button onClick={() => setActiveTab("processes")}
+            <button onClick={() => { setActiveTab("processes"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "processes" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
                 <CpuIcon className="w-2.5 h-2.5" />
@@ -4378,7 +4423,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </span>
             </button>
-            <button onClick={() => { setActiveTab("live"); setNewWsEventCount(0); }}
+            <button onClick={() => { setActiveTab("live"); setNewWsEventCount(0); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "live" ? "border-violet-400 text-violet-300 bg-violet-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
                 <Radio className="w-2.5 h-2.5" />
@@ -4389,7 +4434,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 {wsConnected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
               </span>
             </button>
-            <button onClick={() => setActiveTab("terminal")}
+            <button onClick={() => { setActiveTab("terminal"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "terminal" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
                 <TerminalIcon className="w-2.5 h-2.5" />
@@ -4401,53 +4446,117 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </span>
             </button>
-            <button onClick={() => setActiveTab("capabilities")}
+            <button onClick={() => { setActiveTab("capabilities"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "capabilities" ? "border-teal-400 text-teal-300 bg-teal-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1"><Wrench className="w-2.5 h-2.5" />أدوات</span>
             </button>
-            <button onClick={() => setActiveTab("apps")}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "apps" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Monitor className="w-2.5 h-2.5" />تطبيقات</span>
-            </button>
-            <button onClick={() => setActiveTab("topology")}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "topology" ? "border-green-400 text-green-300 bg-green-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Network className="w-2.5 h-2.5" />طوبولوجيا</span>
-            </button>
-            <button onClick={() => setActiveTab("kali")}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "kali" ? "border-rose-400 text-rose-300 bg-rose-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                <Skull className="w-2.5 h-2.5" />
-                Kali
-                {kaliAgentConnected
-                  ? <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" title="جهاز كالي متصل" />
-                  : <span className="text-[7px] px-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">{KALI_TOOLS.length}</span>
-                }
-              </span>
-            </button>
-            {/* ── New Intelligence Tabs ── */}
-            <button onClick={() => setActiveTab("scheduler" as typeof activeTab)}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "scheduler" ? "border-amber-500 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">⏰ Scheduler</span>
-            </button>
-            <button onClick={() => setActiveTab("openclaw" as typeof activeTab)}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "openclaw" ? "border-orange-400 text-orange-300 bg-orange-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🦅 OpenClaw</span>
-            </button>
-            <button onClick={() => setActiveTab("browser" as typeof activeTab)}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "browser" ? "border-sky-400 text-sky-300 bg-sky-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🌐 Browser</span>
-            </button>
-            <button onClick={() => { setActiveTab("multiAI" as typeof activeTab); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "multiAI" ? "border-fuchsia-400 text-fuchsia-300 bg-fuchsia-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                🧠 Multi-AI
-                {multiAIProviders.filter(p => p.available).length > 0 && (
-                  <span className="w-3.5 h-3.5 rounded-full bg-fuchsia-500 text-white text-[7px] flex items-center justify-center font-bold">
-                    {multiAIProviders.filter(p => p.available).length}
-                  </span>
+            {embedded ? (
+              <div className="relative ms-auto shrink-0">
+                <button
+                  onClick={() => setShowMoreTabs((v) => !v)}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap flex items-center gap-1 ${
+                    ["pulse", "fleet", "apps", "topology", "kali", "scheduler", "openclaw", "browser", "multiAI"].includes(activeTab as string)
+                      ? "border-cyan-400 text-cyan-300 bg-cyan-500/5"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>المزيد</span>
+                  <ChevronDown className="w-2.5 h-2.5" />
+                </button>
+                {showMoreTabs && (
+                  <>
+                    <div className="fixed inset-0 z-[990]" onClick={() => setShowMoreTabs(false)} />
+                    <div className="absolute left-0 top-full mt-1 z-[995] min-w-[165px] rounded-xl border border-primary/25 bg-[#070b14]/98 p-1 shadow-2xl backdrop-blur-xl flex flex-col gap-0.5">
+                      {([
+                        ["pulse", "نبض المشروع"],
+                        ["fleet", "الأجهزة"],
+                        ["apps", "تطبيقات"],
+                        ["topology", "طوبولوجيا"],
+                        ["kali", `Kali (${KALI_TOOLS.length})`],
+                        ["scheduler", "⏰ Scheduler"],
+                        ["openclaw", "🦅 OpenClaw"],
+                        ["browser", "🌐 Browser"],
+                        ["multiAI", "🧠 Multi-AI"],
+                      ] as const).map(([key, label]) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            setActiveTab(key as typeof activeTab);
+                            setShowMoreTabs(false);
+                            if (key === "multiAI" && multiAIProviders.length === 0) {
+                              void (async () => {
+                                setMultiAILoading(true);
+                                try {
+                                  const r = await fetch(`${API_BASE}/multi-ai/providers`);
+                                  if (r.ok) {
+                                    const d = (await r.json()) as { providers: MultiAIProvider[] };
+                                    setMultiAIProviders(d.providers);
+                                  }
+                                } catch { /* ignore */ }
+                                setMultiAILoading(false);
+                              })();
+                            }
+                          }}
+                          className={`text-right text-[10px] font-mono px-2.5 py-1.5 rounded-lg transition-all ${
+                            (activeTab as string) === key
+                              ? "bg-primary/20 text-primary border border-primary/30"
+                              : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 )}
-              </span>
-            </button>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => setActiveTab("apps")}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "apps" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1"><Monitor className="w-2.5 h-2.5" />تطبيقات</span>
+                </button>
+                <button onClick={() => setActiveTab("topology")}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "topology" ? "border-green-400 text-green-300 bg-green-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1"><Network className="w-2.5 h-2.5" />طوبولوجيا</span>
+                </button>
+                <button onClick={() => setActiveTab("kali")}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "kali" ? "border-rose-400 text-rose-300 bg-rose-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">
+                    <Skull className="w-2.5 h-2.5" />
+                    Kali
+                    {kaliAgentConnected
+                      ? <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" title="جهاز كالي متصل" />
+                      : <span className="text-[7px] px-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">{KALI_TOOLS.length}</span>
+                    }
+                  </span>
+                </button>
+                {/* ── New Intelligence Tabs ── */}
+                <button onClick={() => setActiveTab("scheduler" as typeof activeTab)}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "scheduler" ? "border-amber-500 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">⏰ Scheduler</span>
+                </button>
+                <button onClick={() => setActiveTab("openclaw" as typeof activeTab)}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "openclaw" ? "border-orange-400 text-orange-300 bg-orange-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">🦅 OpenClaw</span>
+                </button>
+                <button onClick={() => setActiveTab("browser" as typeof activeTab)}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "browser" ? "border-sky-400 text-sky-300 bg-sky-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">🌐 Browser</span>
+                </button>
+                <button onClick={() => { setActiveTab("multiAI" as typeof activeTab); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "multiAI" ? "border-fuchsia-400 text-fuchsia-300 bg-fuchsia-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">
+                    🧠 Multi-AI
+                    {multiAIProviders.filter(p => p.available).length > 0 && (
+                      <span className="w-3.5 h-3.5 rounded-full bg-fuchsia-500 text-white text-[7px] flex items-center justify-center font-bold">
+                        {multiAIProviders.filter(p => p.available).length}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </>
+            )}
           </div>
         )}
 

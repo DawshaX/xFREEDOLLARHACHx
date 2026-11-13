@@ -28,6 +28,8 @@ import { getMemoryCount } from "../routes/memory";
 import { getLiveEventHistory } from "../routes/live-events";
 import { getHubClientCount } from "./ws-hub";
 import { loadPrograms } from "./ops/scope";
+import { catalogStatus } from "./ops/bounty-catalog";
+import { getNexusSnapshot } from "./agent/session-nexus";
 import { listJobs, runnerStats } from "./ops/runner";
 import { throttleStats } from "./ops/ratelimit";
 import { KIND_LIST, toolStatus } from "./ops/tools";
@@ -112,6 +114,14 @@ export interface AwarenessSnapshot {
     };
     gate: ReturnType<typeof opsExposure>;
     keysLoaded: number;
+    catalogPrograms?: number;
+    nexus?: {
+      rootSessionId: string;
+      totalSessions: number;
+      rootMessages: number;
+      backgroundFeed: number;
+      learnedInsights: number;
+    };
   };
   /** the bundle identity (sha + age) — same payload as /api/ops/version */
   build?: NovaBuildStamp | null;
@@ -272,6 +282,9 @@ export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
   const enabledPrograms = programs.filter((p) => p.enabled);
   const activePrograms = enabledPrograms.filter((p) => !p.passive_only);
   const runningJobs = jobs.filter((j) => /running|queued/.test(String(j.status))).length;
+  const catalog = guardSafe(() => catalogStatus());
+  const catalogTotal = catalog?.programs ?? 0;
+  const nexus = guardSafe(() => getNexusSnapshot());
 
   /* Sites: probe the public ones (cached with the net check), never this host. */
   let sites = publicSites(reqHost);
@@ -325,11 +338,17 @@ export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
       id: "scope",
       label: "بوابة التصريح",
       route: "/nova-fleet",
-      state: enabledPrograms.length > 0 ? (activePrograms.length > 0 ? "up" : "partial") : "down",
+      state: enabledPrograms.length > 0 ? (activePrograms.length > 0 ? "up" : "partial") : catalogTotal > 0 ? "partial" : "down",
       says: enabledPrograms.length
-        ? `${enabledPrograms.length} برنامج مفعّل (${activePrograms.length} يسمح بفحص نشط)`
-        : "مفيش برنامج مسجّل — أي فحص نشط مرفوض",
-      fixAr: enabledPrograms.length ? undefined : "قول «اكتشف برنامج example.com» (أداة program_discover) أو POST /api/ops/programs/discover",
+        ? `${enabledPrograms.length} برنامج مفعّل (${activePrograms.length} يسمح بفحص نشط)${catalogTotal > 0 ? ` · ${catalogTotal} في الكتالوج` : ""}`
+        : catalogTotal > 0
+          ? `حماية نشطة (وضع الاستطلاع الآمن) · ${catalogTotal} برنامج مسجّل في الكتالوج العام — أضف تصريح هدف لفتح الفحص النشط`
+          : "مفيش برنامج مسجّل — أي فحص نشط مرفوض",
+      fixAr: enabledPrograms.length
+        ? undefined
+        : catalogTotal > 0
+          ? "اختر هدفاً من الكتالوج (GET /api/ops/bounty/candidates) أو أضف تصريحاً لهدفك عبر POST /api/ops/programs/discover"
+          : "قول «اكتشف برنامج example.com» (أداة program_discover) أو POST /api/ops/programs/discover",
     },
     {
       id: "proof",
@@ -419,13 +438,22 @@ export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
           ? "الدورة الخلفية مقفولة (NOVA_OPS_AUTONOMY=off)"
           : `عمق ${autonomy.level} · آخر دورة ${autonomy.lastSweep ?? "لسه"} · ${autonomy.programs} برنامج تحت المتابعة`,
     },
+    {
+      id: "nexus",
+      label: "الجذر والاستمرار 24/7",
+      route: "/agent-pro",
+      state: "up",
+      says: nexus
+        ? `جلسة الجذر (${nexus.rootSessionId}) دائمة · ${nexus.totalSessions} جلسة متصلة · ${nexus.backgroundFeedCount} نبضة خلفية · ${nexus.learnedInsightsCount} تعلّم ذاتي`
+        : "جلسة الجذر الدائمة مفعّلة",
+    },
   ];
 
   const down = organs.filter((o) => o.state === "down");
   const partial = organs.filter((o) => o.state === "partial");
   const verdict: AwarenessSnapshot["verdict"] = !net.outbound && !net.tlsBlocked
     ? "blind"
-    : providers.length === 0 && nodes.length === 0 && enabledPrograms.length === 0
+    : providers.length === 0 && nodes.length === 0 && enabledPrograms.length === 0 && catalogTotal === 0
       ? "asleep"
       : down.length === 0
         ? "alive"
@@ -492,6 +520,16 @@ export async function awareness(reqHost?: string): Promise<AwarenessSnapshot> {
     },
       gate,
       keysLoaded: keys,
+      catalogPrograms: catalogTotal,
+      nexus: nexus
+        ? {
+            rootSessionId: nexus.rootSessionId,
+            totalSessions: nexus.totalSessions,
+            rootMessages: nexus.rootMessageCount,
+            backgroundFeed: nexus.backgroundFeedCount,
+            learnedInsights: nexus.learnedInsightsCount,
+          }
+        : undefined,
     },
   };
   // stamped on the snapshot, not on a side channel, so the panel can say

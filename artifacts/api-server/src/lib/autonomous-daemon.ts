@@ -27,6 +27,7 @@ import { runOpsSweep } from "./ops/autonomy";
 import { emitAutonomyEvent } from "./autonomy-events";
 import { logger } from "./logger";
 import { broadcastLiveEvent } from "../routes/live-events";
+import { recordBackgroundEvent } from "./agent/session-nexus";
 
 export interface WorkstationEnvironmentProfile {
   id: string;
@@ -937,6 +938,14 @@ export async function tickAutonomousDaemon(customTarget?: string): Promise<Brain
   }
 
   persistBrainState(state);
+  try {
+    recordBackgroundEvent({
+      kind: "daemon",
+      source: "autonomous-daemon",
+      title: `دورة الديمون #${cycleNum} على ${target} (${master.synthesizedChain.combinedSeverity})`,
+      detail: `Chain: ${master.synthesizedChain.architecturalGraph} | Tools ready: ${KALI_ARSENAL_64.length}`,
+    });
+  } catch { /* non-fatal */ }
   return state;
 }
 

@@ -9,6 +9,7 @@ import { resolveStandaloneApi } from "./lib/standalone-api";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
 import { broadcastEvent } from "./lib/ws-hub";
 import { runAgent } from "./lib/agent/core";
+import { ROOT_SESSION_ID, getOrCreateNexusSession } from "./lib/agent/session-nexus";
 import { tokenConfigured, checkGate } from "./lib/ops/gate";
 
 const app: Express = express();
@@ -105,26 +106,23 @@ app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Resp
   })();
 
   try {
-    const storedSession = resolveStandaloneApi(`/api/live-agent/sessions/${encodeURIComponent(sessionId)}`, "GET");
-    const storedMessages =
-      storedSession && typeof storedSession === "object" && "messages" in storedSession && Array.isArray(storedSession.messages)
-        ? storedSession.messages
-        : [];
-    const history = storedMessages
+    const sess = getOrCreateNexusSession(sessionId);
+    const history = sess.messages
       .filter(
-        (message): message is { role: "user" | "assistant"; content: string } =>
-          message !== null &&
-          typeof message === "object" &&
+        (message) =>
           (message.role === "user" || message.role === "assistant") &&
           typeof message.content === "string" &&
           message.content.trim().length > 0,
       )
       .slice(-8)
-      .map(({ role, content: previousContent }) => ({ role, content: previousContent.slice(-1200) }));
+      .map((message) => ({
+        role: message.role as "user" | "assistant",
+        content: message.content.slice(-1200),
+      }));
 
-    const result = await runAgent({
+    await runAgent({
       message: content,
-      sessionId,
+      sessionId: sess.id,
       history,
       planMode: Boolean(body.planMode),
       approved,
@@ -135,7 +133,7 @@ app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Resp
         if (event.type === "tool_call") {
           broadcastEvent({
             type: "tool_start",
-            sessionId,
+            sessionId: sess.id,
             tool: event.name,
             args: event.args,
             ts: Date.now(),
@@ -143,7 +141,7 @@ app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Resp
         } else if (event.type === "tool_result") {
           broadcastEvent({
             type: "tool_result",
-            sessionId,
+            sessionId: sess.id,
             tool: event.name,
             ok: event.ok,
             summary: event.summary,
@@ -153,13 +151,9 @@ app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Resp
       },
     });
 
-    resolveStandaloneApi(`/api/live-agent/sessions/${sessionId}/save-ai-response`, "POST", {
-      userContent: content,
-      assistantContent: result.reply,
-    });
     broadcastEvent({
       type: "live_agent_message",
-      sessionId,
+      sessionId: sess.id,
       prompt: content.slice(0, 120),
       ts: Date.now(),
     });
@@ -208,7 +202,7 @@ app.post("/api/nova-agent-v3/chat", async (req: Request, res: Response) => {
     send("thought", "NOVA يعالج الطلب عبر أدوات الخادم المتاحة؛ لن يُفحص هدف غير محدد.");
     await runAgent({
       message: command,
-      sessionId: String((req.body as { sessionId?: string })?.sessionId || "nova-agent-v3"),
+      sessionId: String((req.body as { sessionId?: string })?.sessionId || ROOT_SESSION_ID),
       approved: [],
       emit: (event) => {
         if (event.type === "tool_call") send("action", `استدعاء الأداة: ${event.title}`);
@@ -382,6 +376,11 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       // answer these with a DIFFERENT payload shape, which crashed the panel
       // (brainStatus.activeProcesses was undefined → ".length of undefined").
       p.startsWith("/live-agent") ||
+      // Cron jobs (mem_consolidate, nova_learn, cve_hunt, self_heal, sys_watchdog)
+      // and root agent stream run on disk/memory in standalone mode and emit
+      // background events directly into session-nexus.ts.
+      p.startsWith("/nova/cron") ||
+      p === "/agent/root/stream" ||
       (p.startsWith("/tools") && p !== "/tools/shell" && p !== "/tools/webfetch") ||
       p.startsWith("/proxy") ||
       p.startsWith("/scanner") ||

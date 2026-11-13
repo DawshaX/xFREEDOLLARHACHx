@@ -216,6 +216,15 @@ export default function NovaAgentPro() {
   const [hw, setHw] = useState<{ cpu: number | null; mem: number | null; cores: number | null }>({ cpu: null, mem: null, cores: null });
   const [vault, setVault] = useState<number | null>(null);
   const [corpus, setCorpus] = useState<{ total: number | null; kev: number | null }>({ total: null, kev: null });
+  const [nexus, setNexus] = useState<{
+    rootSessionId: string;
+    totalSessions: number;
+    rootMessageCount: number;
+    backgroundFeedCount: number;
+    learnedInsightsCount: number;
+    rootDigest: string;
+    recentBackground: Array<{ id: string; at: number | string; kind: string; title: string; detail: string; source: string }>;
+  } | null>(null);
   const [cronJobs, setCronJobs] = useState<CronJob[]>([]);
   const [cronErr, setCronErr] = useState<string | null>(null);
   const [cronBusy, setCronBusy] = useState<string | null>(null);
@@ -357,6 +366,27 @@ export default function NovaAgentPro() {
       total: typeof cr.data.total === "number" ? cr.data.total : null,
       kev: typeof cr.data.kev === "number" ? cr.data.kev : null,
     });
+    const nx = await opsFetch<{
+      ok?: boolean;
+      rootSessionId?: string;
+      totalSessions?: number;
+      rootMessageCount?: number;
+      backgroundFeedCount?: number;
+      learnedInsightsCount?: number;
+      rootDigest?: string;
+      recentBackground?: Array<{ id: string; at: number | string; kind: string; title: string; detail: string; source: string }>;
+    }>("/nova-core/nexus");
+    if (nx.ok && nx.data?.rootSessionId) {
+      setNexus({
+        rootSessionId: nx.data.rootSessionId,
+        totalSessions: nx.data.totalSessions ?? 1,
+        rootMessageCount: nx.data.rootMessageCount ?? 0,
+        backgroundFeedCount: nx.data.backgroundFeedCount ?? 0,
+        learnedInsightsCount: nx.data.learnedInsightsCount ?? 0,
+        rootDigest: nx.data.rootDigest ?? "",
+        recentBackground: Array.isArray(nx.data.recentBackground) ? nx.data.recentBackground : [],
+      });
+    }
     void refreshCron();
   }, [refreshCron]);
   useEffect(() => { void refresh(); const iv = setInterval(refresh, 12_000); return () => clearInterval(iv); }, [refresh]);
@@ -454,6 +484,7 @@ export default function NovaAgentPro() {
             {pill(agents.length > 0 ? true : agentsErr == null ? null : false, `عُقد ×${agents.length}`)}
             {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools}`)}
             {pill(cronOn > 0 ? true : null, `كرون ${cronOn}/${cronJobs.length}`)}
+            {nexus && pill(true, `الجذر 24/7`, ` · خلفية ×${nexus.backgroundFeedCount} · تعلم ×${nexus.learnedInsightsCount}`)}
             <button onClick={() => setPaletteOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[10px] font-black text-rose-200 hover:bg-rose-500/20 transition">
               <Command className="w-3 h-3" /> Ctrl+K
@@ -701,13 +732,31 @@ export default function NovaAgentPro() {
                   <div className="mr-auto text-[9px] font-mono text-pink-200/50">هنا مكانك الثابت للكلام ⌨</div>
                 </div>
                 <div className="relative z-10 flex-1 min-h-0">
-                  <NovaUnifiedChat title="نوفا — الشات الكامل" subtitle="جلسة كاملة الصورة · أدلة مؤرشفة · رد مباشر" hideRail />
+                  <NovaUnifiedChat title="نوفا — الشات الكامل" subtitle="جلسة كاملة الصورة · أدلة مؤرشفة · رد مباشر" hideRail compact />
                 </div>
               </div>
             )}
 
             {arena === "events" && (
-              <div className="space-y-1" dir="ltr">
+              <div className="space-y-3">
+                {nexus && nexus.recentBackground.length > 0 && (
+                  <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/[0.04] p-3 space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-black text-cyan-200">
+                      <span>🧠 ذاكرة الخلفية 24/7 — محفوظة في الجذر الدائم ({nexus.rootSessionId})</span>
+                      <span className="font-mono text-[9px] text-cyan-300/70">خلفية ×{nexus.backgroundFeedCount} · تعلم ×{nexus.learnedInsightsCount}</span>
+                    </div>
+                    <div className="space-y-1 max-h-44 overflow-y-auto">
+                      {nexus.recentBackground.map((b) => (
+                        <div key={b.id} className="flex items-baseline gap-2 rounded-lg border border-cyan-400/10 bg-black/40 px-2.5 py-1.5 text-[10px]">
+                          <span className="shrink-0 font-mono text-[9px] text-white/35">{fmtClock(b.at)}</span>
+                          <span className="shrink-0 font-mono text-[9px] font-bold text-cyan-300 uppercase">[{b.source || b.kind}]</span>
+                          <span className="text-white/80 truncate flex-1">{b.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-1" dir="ltr">
                 {lastEvents.length === 0 && (
                   <div className="rounded-xl border border-white/8 bg-white/[0.02] p-6 text-center text-[11px] font-mono text-white/35" dir="rtl">
                     قناة الأحداث مفتوحة (SSE) — أول حدث هيظهر هنا لحظيًا: مهمة بتبدأ، ذكرى بتتخزن، عقدة بتدخل.
@@ -720,6 +769,7 @@ export default function NovaAgentPro() {
                     {ev.data && <span className="truncate font-mono text-[9px] text-white/40">{JSON.stringify(ev.data).slice(0, 140)}</span>}
                   </div>
                 ))}
+                </div>
               </div>
             )}
 
@@ -819,6 +869,7 @@ export default function NovaAgentPro() {
                 title="نوفا — مركز التحكم"
                 subtitle="عقل واحد · أدوات حقيقية · أدلة SHA-256"
                 hideRail
+                compact
               />
             </div>
           </aside>

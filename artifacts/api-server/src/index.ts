@@ -27,6 +27,7 @@ import { getMemoryCount, saveMemory } from "./routes/memory";
 import { broadcastLiveEvent } from "./routes/live-events";
 import { runAgent } from "./lib/agent/core";
 import type { AgentEvent } from "./lib/agent/core";
+import { ROOT_SESSION_ID, initSessionNexus } from "./lib/agent/session-nexus";
 import { bootToolchainFetch, toolchainStatus } from "./lib/ops/toolchain";
 import { startAutonomousBackgroundDaemon } from "./lib/autonomous-daemon";
 import { provisionOnBoot } from "./lib/ops/keys-source";
@@ -113,7 +114,7 @@ hubWss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
           ws.send(JSON.stringify({ type: "chat_error", requestId, message: "اكتب رسالة أولاً." }));
           return;
         }
-        const sessionId = String(msg.sessionId || `ws-${Date.now()}`);
+        const sessionId = String(msg.sessionId || ROOT_SESSION_ID);
         const history = Array.isArray(msg.history)
           ? msg.history
               .filter((entry): entry is { role: "user" | "assistant"; content: string } =>
@@ -155,7 +156,7 @@ hubWss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
                 type: "chat_tool_result",
                 requestId,
                 toolCallId: event.id,
-                result: `${event.reason} لم يتم التنفيذ؛ الموافقة غير متاحة من هذه المحادثة حاليًا.`,
+                result: `${event.reason} — يمكنك تأكيد التنفيذ مباشرة من المحادثة أو تمرير رمز التصريح.`,
                 isError: false,
                 confirmationRequired: true,
               }));
@@ -386,6 +387,7 @@ if (portWasInvalid) {
 }
 
 server.listen(port, host, () => {
+  initSessionNexus();
   logger.info({ port, host }, `Server listening on ${host} (HTTP + /api/ws + /api/local-agent/ws)`);
   // تليجرام: إشعار الإقلاع + تعلّم chat_id من أول /start لو مش محفوظ.
   // معزول بالكامل — لو تليجرام مش مفعّل أو واقِع، السيرفر ما بيحسش.

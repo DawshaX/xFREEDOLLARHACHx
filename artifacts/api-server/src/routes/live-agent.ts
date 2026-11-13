@@ -16,8 +16,23 @@ import { buildIntelligentSecurityReply } from "./ollama-proxy";
 // `runAgent(...)` without importing it — TS2304, and at runtime a ReferenceError inside
 // the catch, which is exactly how a capability question ended as a canned bubble.
 import { runAgent, type AgentEvent } from "../lib/agent/core";
-import { runAgentTool } from "../lib/agent/tools";
+import { AGENT_TOOLS, runAgentTool } from "../lib/agent/tools";
+import { listConfiguredProviders } from "../lib/agent/llm";
+import { getJobs } from "../lib/nova-cron";
+import {
+  ROOT_SESSION_ID,
+  initSessionNexus,
+  listNexusSessions,
+  getNexusSession,
+  getOrCreateNexusSession,
+  createNexusSession,
+  deleteNexusSession,
+  appendNexusRawMessage,
+  getNexusSnapshot,
+} from "../lib/agent/session-nexus";
 import { requireOps, tokenConfigured, checkGate } from "../lib/ops/gate";
+
+initSessionNexus();
 
 const router = Router();
 
@@ -113,33 +128,10 @@ const NOVA_SYSTEM = `أنت NOVA — مدير الأمن السيبراني ال
 - كل 5 تبادلات: [MEMORY_SEARCH: أنماط النجاح الأخيرة]
 - قبل أي مهمة معقدة: [MEMORY_SEARCH: موضوع_المهمة] للاستفادة مما تعلّمته`;
 
-interface Message { role: "system" | "user" | "assistant"; content: string; ts?: number; }
-interface SessionData {
-  id: string;
-  title: string;
-  messages: Message[];
-  planMode: boolean;
-  pendingPlan: string | null;
-  createdAt: number;
-  updatedAt: number;
-}
+interface Message { role: "system" | "user" | "assistant" | "background"; content: string; ts?: number; }
 
-const sessions = new Map<string, SessionData>();
-
-function getOrCreate(id: string, title?: string): SessionData {
-  if (!sessions.has(id)) {
-    sessions.set(id, {
-      id,
-      title: title || `جلسة ${new Date().toLocaleTimeString("ar-SA")}`,
-      messages: [{ role: "system", content: NOVA_SYSTEM }],
-      planMode: false,
-      pendingPlan: null,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-  }
-  return sessions.get(id)!;
-}
+// الجلسات أصبحت مخزّنة ودائمة في session-nexus.ts (`state/nova-sessions.json`)
+// لضمان الجلسة الجذر المستمرة مدى الحياة (nova-root) وربط جميع الجلسات بالخلفية.
 
 type SSEWriter = (event: string, data: unknown) => void;
 function makeSSE(res: import("express").Response): SSEWriter {
@@ -268,35 +260,41 @@ async function runCommand(cmd: string, timeout = 60_000): Promise<{ stdout: stri
 
 router.post("/live-agent/sessions", (req, res) => {
   const { title } = req.body as { title?: string };
-  const id = `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const sess = getOrCreate(id, title);
-  return res.json({ id: sess.id, title: sess.title, createdAt: new Date(sess.createdAt).toISOString() });
-});
-
-router.get("/live-agent/sessions", (_req, res) => {
-  const list = [...sessions.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, 50).map((s) => ({
-    id: s.id,
-    title: s.title,
-    createdAt: new Date(s.createdAt).toISOString(),
-    messageCount: s.messages.length,
-  }));
-  return res.json(list);
-});
-
-router.get("/live-agent/sessions/:id", (req, res) => {
-  const sess = sessions.get(req.params.id);
-  if (!sess) { res.status(404).json({ error: "not found" }); return; }
+  const sess = createNexusSession(title);
   return res.json({
     id: sess.id,
     title: sess.title,
-    messages: sess.messages.filter((m) => m.role !== "system"),
+    isRoot: sess.isRoot,
+    parentId: sess.parentId,
+    backgroundLinked: sess.backgroundLinked,
+    summary: sess.summary,
     createdAt: new Date(sess.createdAt).toISOString(),
   });
 });
 
+router.get("/live-agent/sessions", (_req, res) => {
+  return res.json(listNexusSessions());
+});
+
+router.get("/live-agent/sessions/:id", (req, res) => {
+  const id = req.params.id;
+  const sess = id === ROOT_SESSION_ID ? getOrCreateNexusSession(ROOT_SESSION_ID) : getNexusSession(id);
+  if (!sess) { res.status(404).json({ error: "not found" }); return; }
+  return res.json({
+    id: sess.id,
+    title: sess.title,
+    isRoot: sess.isRoot,
+    parentId: sess.parentId,
+    backgroundLinked: sess.backgroundLinked,
+    summary: sess.summary,
+    messages: sess.messages.filter((m) => m.role !== "system"),
+    createdAt: new Date(sess.createdAt).toISOString(),
+    updatedAt: new Date(sess.updatedAt).toISOString(),
+  });
+});
+
 router.delete("/live-agent/sessions/:id", (req, res) => {
-  sessions.delete(req.params.id);
-  return res.json({ ok: true });
+  return res.json(deleteNexusSession(req.params.id));
 });
 
 /**
@@ -307,7 +305,7 @@ router.delete("/live-agent/sessions/:id", (req, res) => {
  * throw "Cannot read properties of undefined (reading 'length')" and blank the
  * whole page. Keep the shape in sync with the static engine copy.
  */
-router.get("/live-agent/brain-status", (_req, res) => {
+router.get("/live-agent/brain-status", async (_req, res) => {
   let processes: Array<{ id: string; command: string; startedAt?: string }> = [];
   try {
     processes = listProcesses()
@@ -320,15 +318,32 @@ router.get("/live-agent/brain-status", (_req, res) => {
   } catch {
     processes = [];
   }
+  const nexus = getNexusSnapshot();
+  let providers: Array<{ id: string; label: string; model: string }> = [];
+  try {
+    providers = (await listConfiguredProviders()).map((p) => ({ id: p.id, label: p.label, model: p.model }));
+  } catch {
+    providers = [];
+  }
+  const enabledCron = (() => {
+    try { return getJobs().filter((j) => j.enabled).length; } catch { return Number(process.env.NOVA_CRON_ENABLED === "0" ? 0 : 1); }
+  })();
   return res.json({
     ok: true,
     online: true,
     status: "active",
     memoryCount: getMemoryCount(),
-    activeSessions: sessions.size,
+    activeSessions: nexus.totalSessions,
     activeProcesses: processes,
-    cronJobsEnabled: Number(process.env.NOVA_CRON_ENABLED === "0" ? 0 : 1),
+    cronJobsEnabled: enabledCron,
     alertsUnread: 0,
+    toolsCount: AGENT_TOOLS.length,
+    rootSessionId: nexus.rootSessionId,
+    backgroundFeedCount: nexus.backgroundFeedCount,
+    learnedInsightsCount: nexus.learnedInsightsCount,
+    rootDigest: nexus.rootDigest,
+    providers,
+    activeModel: providers[0]?.model || "nova-builtin",
     ts: new Date().toISOString(),
   });
 });
@@ -336,6 +351,7 @@ router.get("/live-agent/brain-status", (_req, res) => {
 /** حالة الوكيل الحيّ: لقطة المنصة + العمليّات الجارية مقاسة من `listProcesses`. */
 router.get("/live-agent/status", (_req, res) => {
   const platform = getPlatformControlSnapshot();
+  const nexus = getNexusSnapshot();
   let processes: Array<{ id: string; command: string; startedAt?: string }> = [];
   try {
     processes = listProcesses()
@@ -351,17 +367,20 @@ router.get("/live-agent/status", (_req, res) => {
     measured: true,
     ts: new Date().toISOString(),
     agentConnected: isLocalAgentConnected(),
-    activeSessions: sessions.size,
-    sessions: sessions.size,
+    activeSessions: nexus.totalSessions,
+    sessions: nexus.totalSessions,
     memoryCount: getMemoryCount(),
     memories: getMemoryCount(),
+    toolsCount: AGENT_TOOLS.length,
+    rootSessionId: nexus.rootSessionId,
+    backgroundFeedCount: nexus.backgroundFeedCount,
     activeProcesses: processes,
     platform,
   });
 });
 
 router.post("/live-agent/sessions/:id/messages", async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id || ROOT_SESSION_ID;
   const { content, planMode = false, autonomousMode = false } = req.body as {
     content: string;
     planMode?: boolean;
@@ -370,7 +389,7 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
 
   if (!content?.trim()) { res.status(400).json({ error: "content required" }); return; }
 
-  const sess = getOrCreate(id);
+  const sess = getOrCreateNexusSession(id);
   sess.planMode = planMode;
   sess.updatedAt = Date.now();
 
@@ -382,19 +401,6 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
 
   const sse = makeSSE(res);
 
-  // ── The real agent loop ────────────────────────────────────────────────────
-  // This route used to hand the turn to `callDolphin` (a hand-written Ollama
-  // wrapper) and then scrape its prose with regexes for [EXECUTE: …] blocks.
-  // When the external model was down — which is most of the time on a public
-  // host — the catch fell through to `runAgent({ forceHeuristic: true })`, whose
-  // greeting/identity branches answer from a fixed string. That is exactly the
-  // "canned reply, no real agent" the user reported: the chat was never talking
-  // to the 66-tool mind at all.
-  //
-  // Now the turn goes straight to `runAgent` — the same brain `/nova-core/chat`
-  // uses: LLM planner → real tools → explanation, with plan mode and the
-  // approval gate. Every event is forwarded to the SSE stream AND mirrored onto
-  // the live bus, so the fleet dashboard shows each tool the moment it runs.
   const approved = (() => {
     const gate = tokenConfigured() ? checkGate(req as never, "live-agent chat") : null;
     const body = req.body as { approve?: unknown };
@@ -405,29 +411,25 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
     let reply = "";
     await runAgent({
       message: content,
-      sessionId: id,
+      sessionId: sess.id,
       history: sess.messages
-        .filter((m) => m.role !== "system")
+        .filter((m) => m.role === "user" || m.role === "assistant")
         .slice(-8)
         .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
       planMode,
       approved,
       emit: (ev: AgentEvent) => {
-        // Forward the event verbatim to the panel (its fields match the SSE
-        // contract the panel already parses)…
         sse(ev.type, ev as unknown as Record<string, unknown>);
-        // …and mirror the tool lifecycle onto the live bus so the ops room and
-        // the fleet dashboard show it in real time, from one source of truth.
         if (ev.type === "tool_call") {
           broadcastLiveEvent({
             type: "tool_start",
-            data: { tool: ev.name, args: ev.args, agent: "nova", ts: Date.now() },
+            data: { tool: ev.name, args: ev.args, agent: "nova", sessionId: sess.id, ts: Date.now() },
             ts: new Date().toISOString(),
           });
         } else if (ev.type === "tool_result") {
           broadcastLiveEvent({
             type: "tool_result",
-            data: { tool: ev.name, ok: ev.ok, summary: ev.summary, ms: ev.ms, ts: Date.now() },
+            data: { tool: ev.name, ok: ev.ok, summary: ev.summary, ms: ev.ms, sessionId: sess.id, ts: Date.now() },
             ts: new Date().toISOString(),
           });
         } else if (ev.type === "delta") {
@@ -435,11 +437,6 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
         }
       },
     });
-
-    if (reply.trim()) {
-      sess.messages.push({ role: "assistant", content: reply });
-    }
-    sess.updatedAt = Date.now();
 
     // ── Auto-detect and save intel patterns from the reply ──────────────────
     const detectedCves = reply.match(/CVE-\d{4}-\d+/g) ?? [];
@@ -453,7 +450,7 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
       try { saveMemory("intel", `ips:${Date.now()}`, `IPs: ${[...new Set(detectedIPs)].slice(0, 10).join(", ")}`); } catch { }
     }
 
-    sse("done", { commandsRun: 0, memoryEntries: getMemoryCount(), detectedCves: detectedCves.length, detectedIPs: detectedIPs.length });
+    sse("done", { commandsRun: 0, memoryEntries: getMemoryCount(), detectedCves: detectedCves.length, detectedIPs: detectedIPs.length, sessionId: sess.id });
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -539,17 +536,16 @@ router.get("/live-agent/files/:id/download", (req, res) => {
 
 /** Persisted assistant turn — the panel saves each AI reply here. */
 router.post("/live-agent/sessions/:id/save-ai-response", (req, res) => {
-  const session = getOrCreate(req.params.id);
+  const session = getOrCreateNexusSession(req.params.id);
   const body = (req.body ?? {}) as { userContent?: string; assistantContent?: string };
-  const now = Date.now();
   if (body.userContent) {
-    session.messages.push({ role: "user", content: String(body.userContent), ts: now });
+    appendNexusRawMessage(session.id, { role: "user", content: String(body.userContent) });
   }
   if (body.assistantContent) {
-    session.messages.push({ role: "assistant", content: String(body.assistantContent), ts: now + 1 });
+    appendNexusRawMessage(session.id, { role: "assistant", content: String(body.assistantContent) });
   }
-  session.updatedAt = now;
-  return res.json({ ok: true, messages: session.messages.length, updatedAt: session.updatedAt });
+  const updated = getNexusSession(session.id) ?? session;
+  return res.json({ ok: true, messages: updated.messages.length, updatedAt: updated.updatedAt });
 });
 
 /**
@@ -579,27 +575,27 @@ router.get("/live-agent/iq", (_req, res) => {
   });
 });
 
-router.get("/providers/status", (_req, res) => {
-  const { baseUrl } = (() => {
-    const map = getAllSettings();
-    const provider = map.provider || "ollama-ngrok";
-    const isNgrok = provider === "ollama-ngrok" || provider === "ngrok";
-    const baseUrl = isNgrok ? (map.ngrokUrl || DEFAULT_NGROK) : (map.ollamaBaseUrl || "http://127.0.0.1:11434");
-    return { baseUrl };
-  })();
-
+router.get("/providers/status", async (_req, res) => {
+  const configured = await listConfiguredProviders().catch(() => []);
   return res.json({
-    providers: [
-      { provider: "dolphin-llama3", configured: true, baseUrl },
-    ],
+    providers: configured.map((p) => ({
+      provider: p.id,
+      label: p.label,
+      model: p.model,
+      configured: true,
+      baseUrl: p.baseUrl,
+    })),
   });
 });
 
 router.get("/bot/status", (_req, res) => {
+  const enabledCron = (() => {
+    try { return getJobs().filter((j) => j.enabled).length; } catch { return 0; }
+  })();
   return res.json({
     status: "online",
-    availableTools: 90,
-    cronJobs: { enabled: 0 },
+    availableTools: AGENT_TOOLS.length,
+    cronJobs: { enabled: enabledCron },
     alerts: { unread: 0 },
   });
 });
