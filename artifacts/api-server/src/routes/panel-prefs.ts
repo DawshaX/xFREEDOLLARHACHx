@@ -21,6 +21,7 @@ export interface PanelPrefs {
   hudOpen: boolean;
   hiddenHud: string[];
   arenaDefault: string;
+  planMode: boolean;
   pinnedByOwnerAt: string | null;
 }
 
@@ -36,6 +37,7 @@ export function ownerDefaults(): PanelPrefs {
     hudOpen: false,
     hiddenHud: [],
     arenaDefault: "cockpit",
+    planMode: true,
     pinnedByOwnerAt: null,
   };
 }
@@ -95,6 +97,7 @@ router.put("/panel/prefs", (req: Request, res: Response) => {
     hudOpen: typeof incoming.hudOpen === "boolean" ? incoming.hudOpen : cur.hudOpen,
     hiddenHud: Array.isArray(incoming.hiddenHud) ? incoming.hiddenHud.filter((x): x is string => typeof x === "string") : cur.hiddenHud,
     arenaDefault: typeof incoming.arenaDefault === "string" && incoming.arenaDefault.trim() ? incoming.arenaDefault.trim() : cur.arenaDefault,
+    planMode: typeof incoming.planMode === "boolean" ? incoming.planMode : cur.planMode,
     pinnedByOwnerAt: body.by === "owner" ? new Date().toISOString() : cur.pinnedByOwnerAt,
   };
   if (!writePanelPrefs(next)) { res.status(500).json({ ok: false, error: "write failed" }); return; }

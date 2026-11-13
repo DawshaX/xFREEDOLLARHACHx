@@ -988,7 +988,27 @@ export function LiveAgentPanel({
   const lastSpokenLenRef = useRef(0);
 
   // ── Plan / Files ─────────────────────────────────────────────────────────
-  const [planMode, setPlanMode] = useState(false);
+  // مثبت من السيرفر (PUT/GET /api/panel/prefs) — المالك طلب «خطة ON» وضع ثابت.
+  const [planMode, setPlanMode] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    void fetch("/api/panel/prefs", { headers: { "Content-Type": "application/json" } }).then((r) => r.json()).then((j: { prefs?: { planMode?: boolean } }) => {
+      if (!alive) return;
+      if (typeof j?.prefs?.planMode === "boolean") setPlanMode(j.prefs.planMode);
+    }).catch(() => { /* السيرفر Best-effort — احتفظ بالـON */ });
+    return () => { alive = false; };
+  }, []);
+  const togglePlanMode = useCallback(() => {
+    setPlanMode((v) => {
+      const next = !v;
+      void fetch("/api/panel/prefs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prefs: { planMode: next }, by: "owner" }),
+      }).catch(() => { /* */ });
+      return next;
+    });
+  }, []);
   // A sensitive tool that asked for approval this turn. The next «موافق» must
   // re-send with `approve:[tool]` so the server actually runs it — otherwise the
   // gate refuses again and the user sees the same pause forever.
@@ -10083,7 +10103,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         {/* ── Input area ── */}
         <div className="p-3 border-t border-primary/15 bg-card/40 shrink-0">
           <div className="mb-2 flex items-center justify-between text-[10px]">
-            <button type="button" onClick={() => setPlanMode((v) => !v)}
+            <button type="button" onClick={togglePlanMode}
               title="اطلب من الوكيل خطة مرقّمة قبل التنفيذ"
               className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition ${planMode ? "bg-violet-500/20 border-violet-400/60 text-violet-200" : "bg-background/40 border-border/40 text-muted-foreground hover:text-foreground hover:border-primary/40"}`}>
               <ListChecks className="w-3 h-3" />
