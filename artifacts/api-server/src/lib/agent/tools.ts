@@ -1074,20 +1074,76 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         if (!asked) throw new Error("keyword مطلوب");
         const q = vulnQuery(asked);
         if (!q.usable) {
-          // صفر من غير استعلام صالح مش دليل على حاجة — بنقول كده صراحة وبنلفّ
-          // على الفهرس المحلي اللي بيحتاج نص طبيعي أصلاً.
           return done(false, `NVD ما اتسألش: «${asked.slice(0, 48)}» ملوش مصطلح منتج/تقنية (${q.reason}). ` +
             `NVD بيبحث بـ«Apache Tomcat 9.0.10» أو CVE-ID، مش بجُملة. جرّب knowledge_search بنفس الجملة أو عرّف المنتج.`,
             { skipped: true, reason: "bad_keyword", suggestTool: "knowledge_search" });
         }
         const limit = Math.min(Number(rawArgs.limit ?? 8) || 8, 20);
-        const res = (await nvdSearch(q.cveId && !q.keyword ? { cveId: q.cveId, limit } : { keyword: q.keyword!, limit })) as {
-          totalResults?: number; vulnerabilities?: unknown[];
-        };
-        const n = res.totalResults ?? res.vulnerabilities?.length ?? 0;
         const label = q.cveId && !q.keyword ? q.cveId : q.keyword!;
-        const tail = n === 0 ? " — الصفر هنا معناه مافيش تطابق للمصطلح في NVD، مش إن البحث باظ" : "";
-        return done(true, `NVD "${label}": ${n} نتيجة${tail}`, { keywordUsed: label, totalResults: n, source: q.reason, items: res.vulnerabilities ?? [] });
+
+        /* TEST2-4: «الكوربوس أولًا» — عندنا فهرس محلي مقاس (330k+ سطر من NVD/KEV/EPSS
+         * مُتزامن من الـCI) قبل ما نضرب الشبكة. لو الكوربوس مقاس وطلّع نتائج —
+         * خلاص، الرد منه وواضح إنه منه. لو طلّع صفر أو الكوربوس مش مقاس —
+         * بنضرب NVD لايف كـfallback وتصريح المصدر بيبقى في الرد. */
+        const st = corpusStatus();
+        if (st.measured && st.total > 0) {
+          const probe = (q.cveId && !q.keyword)
+            ? ({ cve: q.cveId, limit } as const)
+            : ({ text: q.keyword!, limit } as const);
+          const local = await queryCorpus(probe);
+          if (local.rows.length > 0) {
+            const items = local.rows.map((r) => ({
+              cve: { id: r.id, descriptions: [{ lang: "en", value: r.desc }] },
+              cvss: r.cvss ?? null, severity: r.sev, kev: r.kev === true, epss: r.epss ?? null,
+            }));
+            return done(
+              true,
+              `كوربوس نوفا (${st.total.toLocaleString("en-US")} ثغرة · متزامن من ${st.ageMin ?? "?"} دقيقة): ` +
+              `"${label}" → ${local.rows.length} نتيجة${local.complete === false ? " (أعلى أولوية — الفحص وقف عند سقف القراءة)" : ""}`,
+              {
+                source: "corpus-local",
+                keywordUsed: label,
+                totalResults: local.rows.length,
+                scanned: local.scanned,
+                corpusTotal: st.total,
+                corpusAgeMin: st.ageMin,
+                items,
+              },
+            );
+          }
+          /* صفر من الكوربوس مقروءة: نجرب NVD no أول fallback — والرد هيقول
+           * إنه جاء من NVD مش من الكوربوس. */
+        }
+
+        if (!process.env.NVD_API_KEY && q.cveId && !q.keyword) {
+          // CVE-ID مباشر ممكن يتحل من الكوربوس حتى لو النتيجة فاضية فوق — لكن
+          // من غير مفتاح NVD قصّرنا الكلفة: رد صادق بدل timeout طويل.
+          return done(false, `كوربوس نوفا مفيهوش "${label}"، ومفيش NVD_API_KEY لاستعلام لايف — ` +
+            `لو عايز أتأكّد من المصدر العالمي زوّد المفتاح أو ابعت المنتج بدل CVE-ID.`,
+            { source: "none", keywordUsed: label, corpusChecked: st.measured });
+        }
+        try {
+          const res = (await nvdSearch(q.cveId && !q.keyword ? { cveId: q.cveId, limit } : { keyword: q.keyword!, limit })) as {
+            totalResults?: number; vulnerabilities?: unknown[];
+          };
+          const n = res.totalResults ?? res.vulnerabilities?.length ?? 0;
+          const tail = n === 0 ? " — الصفر هنا معناه مافيش تطابق للمصطلح في NVD، مش إن البحث باظ" : "";
+          const corpusNote = st.measured && st.total > 0
+            ? ` – (الكوربوس المحلي (${st.total.toLocaleString("en-US")}) كان صفر لهذا المصطلح، فرجعت NVD لايف)` : "";
+          return done(true, `NVD لايف "${label}": ${n} نتيجة${tail}${corpusNote}`, {
+            source: "nvd-live-fallback",
+            keywordUsed: label,
+            totalResults: n,
+            items: res.vulnerabilities ?? [],
+          });
+        } catch (e) {
+          return done(false, `كوربوس نوفا صفر لـ"${label}"، وNVD لايف فشل: ${e instanceof Error ? e.message : String(e)}`, {
+            source: "failed",
+            keywordUsed: label,
+            corpusChecked: st.measured,
+            corpusTotal: st.measured ? st.total : null,
+          });
+        }
       }
 
       case "exploit_search": {

@@ -14,11 +14,12 @@ import {
   Code, Package, ChevronLeft, Flame, Star, Map,
   Network, Lock, FlaskConical, Crosshair, Swords,
   Folder, FolderOpen, Camera, FileCode, FolderUp,
-  TrendingUp,
+  TrendingUp, Compass,
 } from "lucide-react";
 import type { ClientToolEvent } from "./AgentWindow";
 import { NovaFleetPanel, NovaProjectPulse } from "./NovaFleetPanel";
 import { novaTask, novaLog } from "./NovaFleetLive";
+import { AgentCommandDeck } from "./AgentCommandDeck";
 import { runLocalBrain, toolLabelAr } from "@/lib/local-brain";
 import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
 import { DAW_SKULL } from "@/lib/skull";
@@ -1135,7 +1136,7 @@ export function LiveAgentPanel({
   const [activeTab, setActiveTab] = useState<
     | "chat" | "processes" | "live" | "missions" | "capabilities" | "terminal"
     | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser"
-    | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel"
+    | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel" | "cockpit"
   >("chat");
 
   // ── Real 67-tool Core Catalogue + Live Chat Ops Dashboard ─────────────────
@@ -4649,6 +4650,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 {wsConnected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
               </span>
             </button>
+            <button onClick={() => { setActiveTab("cockpit"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "cockpit" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Compass className="w-2.5 h-2.5" />قيادة</span>
+            </button>
             <button onClick={() => { setActiveTab("terminal"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "terminal" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
@@ -5111,6 +5116,11 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               }))}
             </div>
           </div>
+        )}
+
+        {/* ── Agent Command Deck: سجل لحظي + لوحة موحدة (TEST2-4) ── */}
+        {activeTab === "cockpit" && panelSize !== "mini" && (
+          <AgentCommandDeck />
         )}
 
         {/* ── Live WS Events Feed Tab ── */}
