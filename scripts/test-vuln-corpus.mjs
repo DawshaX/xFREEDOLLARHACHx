@@ -251,7 +251,12 @@ check("any cron job switches off without a code change (NOVA_CRON_OFF)", /NOVA_C
 
 let bad = 0;
 for (const [name, ok, detail] of checks) {
-  if (!ok) bad += 1;
+  if (!ok) {
+    bad += 1;
+    // TEST6: على CI اللوجس بتبقى صعبة الوصول — ::error:: بتحوّل كل فشل لتشريح
+    // مقروء من annotations الـAPI بدل «exit code 1» صامتة.
+    console.error(`::error title=corpus plumbing::${name}${detail ? ` — ${String(detail).replace(/\n/g, " ").slice(0, 600)}` : ""}`);
+  }
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? `  · ${detail}` : ""}`);
 }
 console.log(`\n${checks.length - bad}/${checks.length} checks passed`);

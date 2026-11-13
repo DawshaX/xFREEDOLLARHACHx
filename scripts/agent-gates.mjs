@@ -103,6 +103,10 @@ for (const [file, what] of gates) {
     .pop();
   results.push({ file, what, ok, ms, detail: tail });
   console.log(`${ok ? "✓" : "✗"} ${file} (${ms} ms) — ${what}${ok ? "" : `\n    ${tail ?? ""}`}`);
+  if (!ok) {
+    // TEST6: فشل البوابة يطلع annotation مقروء من API — CI ما يفضلش صندوق أسود.
+    console.error(`::error title=agent gate::${file}${tail ? ` — ${String(tail).replace(/\n/g, " ").slice(0, 600)}` : ""}`);
+  }
 }
 
 const failed = results.filter((r) => !r.ok);
