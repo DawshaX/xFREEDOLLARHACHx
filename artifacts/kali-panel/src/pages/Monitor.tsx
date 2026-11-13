@@ -67,7 +67,7 @@ export default function Monitor() {
           jsonRequest<BotAlert[]>("/bot/alerts?limit=30"),
           jsonRequest<{ recentMessages: ActivityMessage[] }>("/monitor/activity"),
         ]);
-        setDashboard(dash); setAlerts(al); setActivity(ac.recentMessages);
+        setDashboard(dash); setAlerts(Array.isArray(al) ? al : []); setActivity(Array.isArray(ac?.recentMessages) ? ac.recentMessages : []);
         addLog("✅ تم تحميل بيانات لوحة المراقبة");
       } catch { addLog("⚠ فشل تحميل البيانات الأولية"); }
     })();
@@ -109,9 +109,9 @@ export default function Monitor() {
     catch { addLog("⚠ فشل تحديث التنبيهات"); }
   }
 
-  const cpu = liveStats?.cpu ?? dashboard?.system.cpu ?? 0;
-  const mem = liveStats?.memUsed ?? dashboard?.system.memUsed ?? 0;
-  const uptime = liveStats?.uptime ?? dashboard?.system.uptime ?? 0;
+  const cpu = liveStats?.cpu ?? dashboard?.system?.cpu ?? 0;
+  const mem = liveStats?.memUsed ?? dashboard?.system?.memUsed ?? 0;
+  const uptime = liveStats?.uptime ?? dashboard?.system?.uptime ?? 0;
   const unread = alerts.filter((a) => a.isRead === "false").length;
 
   function logColor(line: string): string {
@@ -142,8 +142,8 @@ export default function Monitor() {
         {[
           { label: "المعالج", value: `${cpu}%`, subLabel: "CPU", icon: Cpu, color: cpu > 80 ? "#ff4444" : "#44eebb", gauge: cpu },
           { label: "الذاكرة", value: `${mem}%`, subLabel: "RAM", icon: MemoryStick, color: mem > 80 ? "#ff4444" : "#aa44ff", gauge: mem },
-          { label: "وقت التشغيل", value: formatUptime(uptime), subLabel: dashboard?.system.hostname ?? "—", icon: Zap, color: "#ffaa44", gauge: null },
-          { label: "التنبيهات", value: String(unread), subLabel: `${dashboard?.alerts.critical ?? 0} حرجة`, icon: Bell, color: unread > 0 ? "#ff4444" : "#44ff88", gauge: null },
+          { label: "وقت التشغيل", value: formatUptime(uptime), subLabel: dashboard?.system?.hostname ?? "—", icon: Zap, color: "#ffaa44", gauge: null },
+          { label: "التنبيهات", value: String(unread), subLabel: `${dashboard?.alerts?.critical ?? 0} حرجة`, icon: Bell, color: unread > 0 ? "#ff4444" : "#44ff88", gauge: null },
         ].map(({ label, value, subLabel, icon: Icon, color, gauge }) => (
           <div key={label} className="rounded-xl p-4 space-y-2" style={NEON_CARD}>
             <div className="flex items-center gap-2 text-[9px] font-black font-mono uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
@@ -159,9 +159,9 @@ export default function Monitor() {
       {/* ── Secondary Stats ── */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "البوت", icon: Bot, main: `${dashboard?.agent.activeSessions ?? 0} جلسة`, sub: `${dashboard?.agent.totalSessions ?? 0} إجمالي`, color: "#aa44ff" },
+          { label: "البوت", icon: Bot, main: `${dashboard?.agent?.activeSessions ?? 0} جلسة`, sub: `${dashboard?.agent?.totalSessions ?? 0} إجمالي`, color: "#aa44ff" },
           { label: "العمليات", icon: Terminal, main: `${liveProcs.filter((p) => p.status === "running").length} جارية`, sub: `${liveProcs.length} إجمالي`, color: "#44ff88" },
-          { label: "Cron Jobs", icon: Zap, main: `${dashboard?.cronJobs.enabled ?? 0} مفعّل`, sub: "مهام مجدولة", color: "#ffaa44" },
+          { label: "Cron Jobs", icon: Zap, main: `${dashboard?.cronJobs?.enabled ?? 0} مفعّل`, sub: "مهام مجدولة", color: "#ffaa44" },
         ].map(({ label, icon: Icon, main, sub, color }) => (
           <div key={label} className="rounded-xl p-4" style={NEON_CARD}>
             <div className="flex items-center gap-2 mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>

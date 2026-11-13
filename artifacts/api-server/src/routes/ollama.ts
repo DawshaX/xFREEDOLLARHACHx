@@ -3,18 +3,22 @@ import { logger } from "../lib/logger";
 
 const router = Router();
 
-// Default ngrok URL pointing to Ollama on the user's machine
-const DEFAULT_OLLAMA_BASE = "https://nucleus-uninjured-tusk.ngrok-free.dev";
+// Default remote Ollama base (empty unless OLLAMA_BASE_URL is configured)
+const DEFAULT_OLLAMA_BASE = "";
 const NGROK_HEADERS = { "ngrok-skip-browser-warning": "1", "Content-Type": "application/json" };
 
 function getOllamaBase(): string {
   return process.env.OLLAMA_BASE_URL || DEFAULT_OLLAMA_BASE;
 }
 
-// GET /api/ollama/probe — check if Ollama is reachable via ngrok
+// GET /api/ollama/probe — check if Ollama is reachable via configured remote URL
 router.get("/ollama/probe", async (_req, res) => {
   const base = getOllamaBase().replace(/\/$/, "");
   const t0 = Date.now();
+  if (!base) {
+    res.json({ connected: false, models: [], error: "لم يُضبط OLLAMA_BASE_URL بعد", latencyMs: 0, baseUrl: "" });
+    return;
+  }
   try {
     const r = await fetch(`${base}/api/tags`, {
       headers: NGROK_HEADERS,
@@ -37,6 +41,10 @@ router.get("/ollama/probe", async (_req, res) => {
 // GET /api/ollama/status
 router.get("/ollama/status", async (_req, res) => {
   const base = getOllamaBase().replace(/\/$/, "");
+  if (!base) {
+    res.json({ online: false, baseUrl: "", model: "dolphin-llama3", models: [], error: "لم يُضبط OLLAMA_BASE_URL" });
+    return;
+  }
   try {
     const r = await fetch(`${base}/api/tags`, {
       headers: NGROK_HEADERS,
@@ -57,6 +65,7 @@ router.get("/ollama/status", async (_req, res) => {
 // GET /api/ollama/models
 router.get("/ollama/models", async (_req, res) => {
   const base = getOllamaBase().replace(/\/$/, "");
+  if (!base) { res.json({ models: [] }); return; }
   try {
     const r = await fetch(`${base}/api/tags`, {
       headers: NGROK_HEADERS,

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import { novaTokenQuery } from "@/lib/ops-client";
+import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
 
 export interface SystemEvent {
   type: string;
@@ -24,6 +24,8 @@ export interface AutonomousStatus {
   tasksCompleted: number;
   tasksErrored: number;
   isRunning: boolean;
+  level?: string;
+  lastHeartbeatAt?: string;
 }
 
 interface SystemContextValue {
@@ -67,7 +69,7 @@ function toMemoryEvent(value: unknown): MemoryEvent | null {
 }
 
 async function fetchMemoryEvents(): Promise<MemoryEvent[]> {
-  const response = await fetch("/api/memory?limit=50", { cache: "no-store" });
+  const response = await fetch("/api/memory?limit=50", { cache: "no-store", headers: novaAuthHeaders() });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const payload: unknown = await response.json();
   const record = asRecord(payload);
@@ -92,6 +94,25 @@ const SystemContext = createContext<SystemContextValue>({
   refreshAll: () => {},
 });
 
+function parseAutonomousPayload(payload: unknown, prev: AutonomousStatus): AutonomousStatus {
+  const rec = asRecord(payload);
+  if (!rec) return prev;
+  const daemon = asRecord(rec.daemon);
+  const enabled = Boolean(
+    rec.enabled ?? rec.active ?? (rec.level && rec.level !== "off") ?? daemon?.running ?? prev.enabled,
+  );
+  const cycles = Number(daemon?.cycles ?? rec.cycles ?? rec.tasksCompleted ?? prev.tasksCompleted);
+  const isRunning = Boolean(rec.isRunning ?? daemon?.running ?? enabled);
+  return {
+    enabled,
+    tasksCompleted: Number.isFinite(cycles) ? cycles : prev.tasksCompleted,
+    tasksErrored: Number(rec.tasksErrored ?? prev.tasksErrored),
+    isRunning,
+    level: typeof rec.level === "string" ? rec.level : prev.level,
+    lastHeartbeatAt: typeof daemon?.lastHeartbeatAt === "string" ? daemon.lastHeartbeatAt : prev.lastHeartbeatAt,
+  };
+}
+
 export function SystemProvider({ children }: { children: ReactNode }) {
   const [autonomousStatus, setAutonomousStatus] = useState<AutonomousStatus>(DEFAULT_STATUS);
   const [systemEvents, setSystemEvents] = useState<SystemEvent[]>([]);
@@ -101,34 +122,68 @@ export function SystemProvider({ children }: { children: ReactNode }) {
     setSystemEvents(prev => [{ type, ts: Date.now(), data }, ...prev].slice(0, 200));
   }, []);
 
+  const syncAutonomousStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/autonomous/status", { cache: "no-store", headers: novaAuthHeaders() });
+      if (!res.ok) return;
+      const data: unknown = await res.json();
+      setAutonomousStatus(prev => parseAutonomousPayload(data, prev));
+    } catch { /* ignore transient offline errors */ }
+  }, []);
+
   const enableAutonomous = useCallback(() => {
-    setAutonomousStatus(s => ({ ...s, enabled: true }));
     addEvent("autonomous_enabled");
-    void fetch("/api/agent/autonomous/enable", { method: "POST" }).catch(() => {});
+    void fetch("/api/autonomous/enable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+      body: JSON.stringify({ level: "active" }),
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data: unknown = await res.json().catch(() => null);
+        setAutonomousStatus(prev => parseAutonomousPayload(data, { ...prev, enabled: true }));
+      })
+      .catch(() => {});
   }, [addEvent]);
 
   const disableAutonomous = useCallback(() => {
-    setAutonomousStatus(s => ({ ...s, enabled: false }));
     addEvent("autonomous_disabled");
-    void fetch("/api/agent/autonomous/disable", { method: "POST" }).catch(() => {});
+    void fetch("/api/autonomous/disable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data: unknown = await res.json().catch(() => null);
+        setAutonomousStatus(prev => parseAutonomousPayload(data, { ...prev, enabled: false, isRunning: false }));
+      })
+      .catch(() => {});
   }, [addEvent]);
 
   const runAutonomousTask = useCallback(async (prompt: string) => {
     addEvent("task_started", { prompt: prompt.slice(0, 100) });
     setAutonomousStatus(s => ({ ...s, isRunning: true }));
     try {
-      await fetch("/api/agent/autonomous/run", {
+      const res = await fetch("/api/autonomous/tick", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
         body: JSON.stringify({ prompt }),
       });
+      if (!res.ok) {
+        await fetch("/api/agent/autonomous/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+          body: JSON.stringify({ prompt }),
+        });
+      }
       setAutonomousStatus(s => ({ ...s, tasksCompleted: s.tasksCompleted + 1, isRunning: false }));
       addEvent("task_completed");
+      void syncAutonomousStatus();
     } catch {
       setAutonomousStatus(s => ({ ...s, tasksErrored: s.tasksErrored + 1, isRunning: false }));
       addEvent("task_error");
     }
-  }, [addEvent]);
+  }, [addEvent, syncAutonomousStatus]);
 
   const loadMemories = useCallback(() => {
     fetchMemoryEvents()
@@ -141,13 +196,17 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   const refreshAll = useCallback(() => {
     addEvent("refresh");
     loadMemories();
-  }, [addEvent, loadMemories]);
+    void syncAutonomousStatus();
+  }, [addEvent, loadMemories, syncAutonomousStatus]);
 
   // الذكريات المحفوظة كانت بتبان بس بعد حدث memory_saved — يعني أول ما تفتح
   // اللوحة القائمة فاضية. التحميل بقى عند الفتح، والفشل معلن مش مبتلوع.
   useEffect(() => {
     loadMemories();
-  }, [loadMemories]);
+    void syncAutonomousStatus();
+    const timer = setInterval(() => void syncAutonomousStatus(), 20000);
+    return () => clearInterval(timer);
+  }, [loadMemories, syncAutonomousStatus]);
 
   useEffect(() => {
     const es = new EventSource(`/api/agent/events${novaTokenQuery()}`);
@@ -171,10 +230,13 @@ export function SystemProvider({ children }: { children: ReactNode }) {
         if (d.type === "task_error") {
           setAutonomousStatus(s => ({ ...s, tasksErrored: s.tasksErrored + 1 }));
         }
+        if (d.type === "autonomous_enabled" || d.type === "autonomous_disabled" || d.type === "autonomous_tick") {
+          void syncAutonomousStatus();
+        }
       } catch { /* ignore */ }
     };
     return () => es.close();
-  }, [addEvent]);
+  }, [addEvent, syncAutonomousStatus]);
 
   return (
     <SystemContext.Provider value={{ autonomousStatus, systemEvents, memoryEvents, enableAutonomous, disableAutonomous, runAutonomousTask, refreshAll }}>

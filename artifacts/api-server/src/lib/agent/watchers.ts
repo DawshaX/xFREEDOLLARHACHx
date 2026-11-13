@@ -27,6 +27,7 @@ import { readPermanentVault, permanentVaultDrift } from "../ops/permanent-vault"
 import { libraryStatus } from "../ops/advisory-library";
 import { liveVerifyView } from "../ops/live-verify";
 import { getJobs } from "../nova-cron";
+import { recordBackgroundEvent } from "./session-nexus";
 
 export interface WatchNote {
   id: string;
@@ -271,6 +272,15 @@ function watchCron(prevErrors: number): Candidate {
 
 async function deliver(note: WatchNote): Promise<Record<string, unknown>> {
   broadcastEvent("watch_note", note);
+  try {
+    recordBackgroundEvent({
+      kind: `watch:${note.kind}`,
+      title: `رصد ذاتي (${note.kind})`,
+      detail: note.text,
+      source: "watchers",
+      persistMemory: true,
+    });
+  } catch { /* best-effort */ }
   const token = process.env.TELEGRAM_BOT_TOKEN ?? "";
   const chat = process.env.TELEGRAM_CHAT_ID ?? "";
   if (!token || !chat) {

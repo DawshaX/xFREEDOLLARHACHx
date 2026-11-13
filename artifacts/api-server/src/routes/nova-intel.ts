@@ -9,6 +9,16 @@ import {
 
 const router = Router();
 
+// GET /api/nova-intel/status
+router.get("/nova-intel/status", (_req, res) => {
+  res.json({
+    ok: true,
+    status: "active",
+    stats: getMemoryStats(),
+    ts: new Date().toISOString(),
+  });
+});
+
 // ── Memory ────────────────────────────────────────────────────────────────────
 
 // GET /api/nova-intel/memory

@@ -484,6 +484,14 @@ router.post("/openclaw/chat", async (req, res) => {
   }
 });
 
+router.get("/mcp/tools", (_req, res) => {
+  res.json({ ok: true, count: MCP_TOOLS.length, tools: MCP_TOOLS });
+});
+
+router.get("/openclaw/tools", (_req, res) => {
+  res.json({ ok: true, count: MCP_TOOLS.length, tools: MCP_TOOLS });
+});
+
 // ── GET /api/openclaw/status — Quick status for OpenClaw ─────────────────────
 router.get("/openclaw/status", (_req, res) => {
   const agents = getConnectedAgentList();

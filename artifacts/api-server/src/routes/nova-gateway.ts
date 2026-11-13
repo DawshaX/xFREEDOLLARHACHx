@@ -163,10 +163,18 @@ async function probeOllamaLocal(): Promise<OllamaLocalStatus> {
 }
 
 async function buildGatewayStatus(): Promise<GatewayStatus> {
-  const ngrokUrl = (await getDbSetting("ngrokUrl")) || "https://nucleus-uninjured-tusk.ngrok-free.dev";
+  const ngrokUrl = (await getDbSetting("ngrokUrl")) || process.env.NGROK_URL || "";
 
   const [ngrok, ollamaLocal, multiProviders] = await Promise.all([
-    probeNgrokUrl(ngrokUrl),
+    ngrokUrl
+      ? probeNgrokUrl(ngrokUrl)
+      : Promise.resolve({
+          online: false,
+          url: "",
+          latencyMs: 0,
+          error: "لم يُضبط رابط ngrok في الإعدادات",
+          checkedAt: new Date().toISOString(),
+        }),
     probeOllamaLocal(),
     listMultiProviders(),
   ]);

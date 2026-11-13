@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Link } from "wouter";
 import { jsonRequest } from "@/lib/sse";
+import { DAW_SKULL } from "@/lib/skull";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -550,7 +551,7 @@ export function LiveAgentPanel({
 
   const notify = (title: string, body: string) => {
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(title, { body, icon: "/bot-icon.png" });
+      new Notification(title, { body, icon: DAW_SKULL });
     }
   };
 

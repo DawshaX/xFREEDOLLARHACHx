@@ -614,6 +614,34 @@ export const VULN_PRIMITIVES_24: VulnPrimitive[] = [
     safeVerifyCmd: "halmos --contract BridgeSignatureSymbolicTest",
     remediationAr: "استخدام مكتبة OpenZeppelin ECDSA وEIP712 القياسية مع تضمين chainId وnonce وعنوان العقد ومنع التواقيع المكررة.",
   },
+  {
+    id: "P29-SQLI-INJECTION",
+    code: "P29",
+    nameAr: "حقن قواعد البيانات واستخراج البيانات الأعمى (SQL Injection / SQLi)",
+    nameEn: "SQL Injection & Blind Data Extraction (SQLi)",
+    cwe: "CWE-89",
+    layer: "4. واجهات الـ API والصلاحيات (API & Access Control)",
+    baseCvss: 9.8,
+    roleInChain: "entry",
+    signalAr: "دمج مدخلات المستخدم (query, sort, filter, id) مباشرة في استعلام SQL بدون Prepared Statements أو معالجة معلمات ORDER BY.",
+    outputArtifactAr: "تفاوت زمن الاستجابة أو أخطاء بنية SQL تؤكد القابلية لحقن الاستعلامات في نقطة النهاية.",
+    safeVerifyCmd: "sqlmap -u \"https://{target}/api/items?id=1\" --batch --level=1 --risk=1 --technique=B",
+    remediationAr: "استخدام الاستعلامات المعلمة (Parameterized Queries / Prepared Statements) وقائمة بيضاء صارمة لأسماء الأعمدة.",
+  },
+  {
+    id: "P30-XSS-DOM-STORED",
+    code: "P30",
+    nameAr: "حقن السكربتات العابرة للمواقع (Stored & DOM XSS)",
+    nameEn: "Stored & DOM-Based Cross-Site Scripting (XSS)",
+    cwe: "CWE-79",
+    layer: "2. المتصفح والواجهة (Client & Origin)",
+    baseCvss: 7.5,
+    roleInChain: "pivot",
+    signalAr: "حقن HTML أو JavaScript غير معقّم عبر innerHTML / dangerouslySetInnerHTML أو حفظه وإعادة عرضه في لوحة الإدارة.",
+    outputArtifactAr: "تنفيذ سياق جافاسكريبت داخل المتصفح يمكّن من قراءة الرموز الحساسة غير المحمية بـ HttpOnly.",
+    safeVerifyCmd: "nuclei -u https://{target} -t exposures,misconfiguration -rl 15",
+    remediationAr: "ترميز المخرجات حسب السياق واستخدام مكتبة DOMPurify وتفعيل Content-Security-Policy صارم.",
+  },
 ];
 
 // ── 4. Combinatorial Multi-Vulnerability Synthesizer (Creative Chaining Engine) ─
@@ -786,40 +814,116 @@ export function getCorpusStats() {
   };
 }
 
+const CORPUS_SYNONYMS: Array<[string, string[]]> = [
+  ["sql injection", ["sqli", "cwe-89", "union select", "حقن sql", "حقن قواعد البيانات"]],
+  ["sqli", ["sql injection", "cwe-89", "sqlmap", "حقن sql"]],
+  ["xss", ["cross-site scripting", "cwe-79", "dom xss", "حقن xss"]],
+  ["cross-site scripting", ["xss", "cwe-79", "dom xss"]],
+  ["rce", ["command injection", "deserialization", "ssti", "cwe-94", "cwe-78"]],
+  ["idor", ["bola", "cwe-639", "broken object level"]],
+  ["ssrf", ["server-side request forgery", "cwe-918", "metadata"]],
+  ["jwt", ["token", "signature", "cwe-347", "alg none"]],
+  ["graphql", ["introspection", "batching"]],
+];
+
+function expandCorpusQueries(q: string): string[][] {
+  if (!q) return [];
+  const variants = new Set<string>([q]);
+  for (const [k, syns] of CORPUS_SYNONYMS) {
+    if (q.includes(k)) {
+      for (const s of syns) variants.add(s);
+    }
+  }
+  return [...variants].map((v) =>
+    v.split(/[\s/+_-]+/).map((t) => t.trim()).filter((t) => t.length >= 2),
+  ).filter((tokens) => tokens.length > 0);
+}
+
 export function searchCyberCorpus2400(query = "", layerFilter = "all", limit = 24): {
   stats: ReturnType<typeof getCorpusStats>;
   totalMatched: number;
   items: IndexedSecurityPattern[];
 } {
   const q = query.trim().toLowerCase();
-  const matched: IndexedSecurityPattern[] = [];
+  const queryTokenSets = expandCorpusQueries(q);
+  const scored: Array<{ score: number; item: IndexedSecurityPattern }> = [];
   let totalMatched = 0;
+
+  const scoreText = (primHay: string, fullHay: string): number => {
+    if (!q) return 1;
+    if (primHay.includes(q)) return 100;
+    for (let i = 0; i < queryTokenSets.length; i++) {
+      const tokens = queryTokenSets[i]!;
+      if (tokens.every((tk) => primHay.includes(tk))) {
+        return i === 0 ? 80 : 60;
+      }
+    }
+    if (fullHay.includes(q)) return 25;
+    for (const tokens of queryTokenSets) {
+      if (tokens.every((tk) => fullHay.includes(tk))) return 10;
+    }
+    return 0;
+  };
 
   for (const prim of VULN_PRIMITIVES_24) {
     if (layerFilter !== "all" && prim.layer !== layerFilter) continue;
+    const primHay = `${prim.code} ${prim.id} ${prim.cwe} ${prim.layer} ${prim.nameAr} ${prim.nameEn} ${prim.signalAr} ${prim.remediationAr} ${prim.safeVerifyCmd}`.toLowerCase();
     for (const surf of TARGET_SURFACES_17) {
       for (const phase of AUDIT_PHASES_6) {
         const titleAr = `[${prim.code}] ${prim.nameAr} في ${surf.nameAr} — ${phase.nameAr}`;
         const titleEn = `${prim.nameEn} on ${surf.stack} (${phase.id})`;
-        const searchable = `${titleAr} ${titleEn} ${prim.cwe} ${prim.layer} ${surf.stack} ${prim.signalAr}`.toLowerCase();
-        if (!q || searchable.includes(q)) {
+        const fullHay = `${primHay} ${titleAr} ${titleEn}`.toLowerCase();
+        const score = scoreText(primHay, fullHay);
+        if (score > 0) {
           totalMatched++;
-          if (matched.length < limit) {
+          // Keep top-scoring entries bounded without scanning unlimited heap
+          if (scored.length < limit * 8 || score >= 60) {
             const partner = VULN_PRIMITIVES_24[(VULN_PRIMITIVES_24.indexOf(prim) + 1) % VULN_PRIMITIVES_24.length]!;
-            matched.push({
-              id: `${prim.code}-${surf.id}-${phase.id}`,
-              titleAr,
-              titleEn,
-              category: prim.layer,
-              cwe: prim.cwe,
-              surface: `${surf.nameAr} (${surf.stack})`,
-              auditPhase: phase.nameAr,
-              cvss: Number(Math.min(9.9, prim.baseCvss + 0.8).toFixed(1)),
-              chainFormula: `${prim.code} (${prim.cwe}) ➔ ${partner.code} (${partner.cwe}) on ${surf.id}`,
-              safeCheckAr: `${prim.signalAr} | أمر التحقق الآمن: ${prim.safeVerifyCmd}`,
-              remediationAr: prim.remediationAr,
+            scored.push({
+              score,
+              item: {
+                id: `${prim.code}-${surf.id}-${phase.id}`,
+                titleAr,
+                titleEn,
+                category: prim.layer,
+                cwe: prim.cwe,
+                surface: `${surf.nameAr} (${surf.stack})`,
+                auditPhase: phase.nameAr,
+                cvss: Number(Math.min(9.9, prim.baseCvss + 0.8).toFixed(1)),
+                chainFormula: `${prim.code} (${prim.cwe}) ➔ ${partner.code} (${partner.cwe}) on ${surf.id}`,
+                safeCheckAr: `${prim.signalAr} | أمر التحقق الآمن: ${prim.safeVerifyCmd}`,
+                remediationAr: prim.remediationAr,
+              },
             });
           }
+        }
+      }
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+  const matched = scored.slice(0, limit).map((s) => s.item);
+
+  // Fallback to Kali Arsenal & GitHub Projects if a tool/project name was queried directly
+  if (matched.length < limit && q) {
+    for (const tool of KALI_ARSENAL_64) {
+      const hay = `${tool.id} ${tool.name} ${tool.category} ${tool.purposeAr} ${tool.commandTemplate}`.toLowerCase();
+      if (scoreText(hay, hay) > 0) {
+        totalMatched++;
+        if (matched.length < limit) {
+          matched.push({
+            id: `kali-${tool.id}`,
+            titleAr: `[Kali] ${tool.name}`,
+            titleEn: tool.name,
+            category: tool.category,
+            cwe: "TOOL",
+            surface: tool.safeEquivalent,
+            auditPhase: "أداة فحص ميداني",
+            cvss: 7.0,
+            chainFormula: `${tool.id} -> ${tool.safeEquivalent}`,
+            safeCheckAr: `${tool.purposeAr} | ${tool.commandTemplate}`,
+            remediationAr: "توثيق المخرجات وتأكيدها ببوابة Zero-FP قبل التقرير.",
+          });
         }
       }
     }

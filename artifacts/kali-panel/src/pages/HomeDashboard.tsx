@@ -1567,6 +1567,14 @@ export default function HomeDashboard() {
             )}
           </button>
 
+          {/* Work + Chat Cockpit */}
+          <button onClick={() => { navigate("/agent-pro"); addLog("nav", "دخول مكتب الشغل والشات الحي"); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black font-mono transition-all hover:scale-105"
+            style={{ background: "rgba(34,211,238,0.16)", border: "1px solid rgba(34,211,238,0.45)", color: "#67e8f9", boxShadow: "0 0 14px rgba(34,211,238,0.15)" }}>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>الشغل والشات</span>
+          </button>
+
           {/* Desktop */}
           <button onClick={() => { navigate("/desktop"); addLog("nav", "انتقال إلى xDaw Desktop"); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold font-mono transition-all hover:scale-105 group"
@@ -1596,7 +1604,7 @@ export default function HomeDashboard() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               {[
-                { n: "1", t: "كلّم نوفا", d: "غرفة العمليات — شات حقيقي بـ66 أداة", p: "/nova-fleet#work", c: "#22d3ee" },
+                { n: "1", t: "⚡ مكتب الشغل والشات الحي", d: "اشتغل مع الأجينت وشوف التنفيذ والذاكرة والتعلّم قدامك", p: "/agent-pro", c: "#22d3ee" },
                 { n: "2", t: "شوف الأسطول", d: "الوكلاء والأجهزة والسلوات والباص", p: "/nova-fleet", c: "#e879f9" },
                 { n: "3", t: "افحص هدف", d: "استوديو البج باونتي — فحص حقيقي", p: "/bug-bounty-studio", c: "#00ff88" },
                 { n: "4", t: "افهم المكنة", d: "الفحص الذاتي — شغّال؟ من القياس", p: "/self-check", c: "#34d399" },

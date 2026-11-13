@@ -486,14 +486,6 @@ export default function NovaFleetUnified() {
 
   return (
     <div dir="rtl" className="min-h-[calc(100vh-64px)] bg-[#050208] text-white p-3 space-y-3">
-      {/* the always-on body: live Actions runs + the last real hunt */}
-      <LiveBodyCard />
-      {/* one measured picture of the whole program: machines · brain · corpus · mesh */}
-      <NovaSystemCard />
-      {/* the machines the program actually runs on: Codespace · Render · Waifly */}
-      <NovaServerRegistry />
-      <CorpusPanel compact />
-
       {/* header */}
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <div className="flex items-center gap-2">
@@ -505,11 +497,11 @@ export default function NovaFleetUnified() {
               نوفا · المخ والمدير
               <span className="text-[9px] px-1.5 py-0.5 rounded border border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-200">BRAIN</span>
             </h1>
-            <p className="text-[9px] text-white/45">مخ واعي لكل أعضاء البرنامج: حالته، أعضاؤه، مواقعى، عملياته الحقيقية — اتصال حقيقي، مش رسمة.</p>
+            <p className="text-[9px] text-white/45">مخ واعي لكل أعضاء البرنامج: حالته، أعضاؤه، مواقعه، عملياته الحقيقية — اتصال حقيقي، مش رسمة.</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
-          <div className="flex items-center gap-1 rounded-xl border border-white/10 p-0.5">
+          <div className="flex items-center gap-1 rounded-xl border border-white/10 p-0.5 flex-wrap">
             {([
               ["brain", "المخ · الكيان"],
               ["chat", "الشات الموحّد"],
@@ -538,14 +530,24 @@ export default function NovaFleetUnified() {
         </div>
       </div>
 
-      {/* the organism's own state — visible in every tab, because a manager that
-          only reports when you ask is a log file. */}
-      <NovaAwarenessCard />
-
       <NovaLiveBar onOpen={() => navigate("/nova-agent")} />
+
+      {view === "brain" && (
+        <div className="space-y-3">
+          <NovaAwarenessCard />
+          {/* the always-on body: live Actions runs + the last real hunt */}
+          <LiveBodyCard />
+          {/* one measured picture of the whole program: machines · brain · corpus · mesh */}
+          <NovaSystemCard />
+          {/* the machines the program actually runs on: Codespace · Render · Waifly */}
+          <NovaServerRegistry />
+          <CorpusPanel compact />
+        </div>
+      )}
 
       {view === "ops" && (
         <>
+          <NovaAwarenessCard />
           <NovaOpsFeed />
           <NovaContextBridge />
           <NovaOpsRoom />
@@ -554,16 +556,17 @@ export default function NovaFleetUnified() {
       )}
 
       {view === "chat" && (
-        <div className="rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[78vh] min-h-[520px]">
+        <div className="rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[calc(100vh-195px)] min-h-[520px]">
           <NovaUnifiedChat
             title="نوفا — الشات الموحّد"
             subtitle="نفس العقل ونفس الأدوات — متصل بالأسطول والذاكرة والباص وبوابة الموافقة"
             hideRail
+            compact
           />
         </div>
       )}
 
-      <div className={view === "work" ? "rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[78vh] min-h-[520px]" : "hidden"} aria-hidden={view !== "work"}>
+      <div className={view === "work" ? "rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 h-[calc(100vh-195px)] min-h-[520px]" : "hidden"} aria-hidden={view !== "work"}>
         <LiveAgentPanel embedded onClientTool={handlePanelClientTool} onOpenAgentWindow={openAgentWindow} />
       </div>
 

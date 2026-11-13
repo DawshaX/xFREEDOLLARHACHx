@@ -423,3 +423,65 @@
   0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
   30%            { transform: translateY(-4px); opacity: 1; }
 }
+
+/* ── Ethical-Hacker Cyber-Horror Neon HUD ───────────────────── */
+.cyber-hud-grid {
+  background-image:
+    linear-gradient(rgba(255, 25, 70, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+@keyframes skull-halo-pulse {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(255, 25, 70, 0.55), 0 0 42px rgba(255, 25, 70, 0.25), inset 0 0 12px rgba(255, 25, 70, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(255, 35, 85, 0.9), 0 0 65px rgba(34, 211, 238, 0.35), inset 0 0 16px rgba(255, 45, 95, 0.45);
+  }
+}
+.skull-halo {
+  animation: skull-halo-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes cyber-top-sweep {
+  0%   { transform: translateX(-100%); opacity: 0.1; }
+  50%  { opacity: 0.9; }
+  100% { transform: translateX(100%); opacity: 0.1; }
+}
+.cyber-top-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.cyber-top-sweep::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 30, 80, 0.9), rgba(34, 211, 238, 0.9), transparent);
+  animation: cyber-top-sweep 4.5s linear infinite;
+  pointer-events: none;
+}
+
+.cyber-card-crimson {
+  background: linear-gradient(145deg, rgba(28, 6, 14, 0.92), rgba(8, 5, 12, 0.96));
+  border: 1px solid rgba(255, 36, 86, 0.35);
+  box-shadow: 0 0 20px rgba(255, 20, 70, 0.08), inset 0 1px 0 rgba(255, 80, 120, 0.14);
+}
+.cyber-card-crimson:hover {
+  border-color: rgba(255, 45, 96, 0.72);
+  box-shadow: 0 0 28px rgba(255, 25, 75, 0.24), inset 0 0 14px rgba(255, 25, 75, 0.08);
+}
+
+.cyber-card-cyan {
+  background: linear-gradient(145deg, rgba(6, 20, 30, 0.92), rgba(5, 8, 16, 0.96));
+  border: 1px solid rgba(34, 211, 238, 0.32);
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.08), inset 0 1px 0 rgba(34, 211, 238, 0.12);
+}
+.cyber-card-cyan:hover {
+  border-color: rgba(34, 211, 238, 0.7);
+  box-shadow: 0 0 26px rgba(34, 211, 238, 0.22);
+}
+

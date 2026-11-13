@@ -5,9 +5,10 @@ import { NotificationCenter } from "./NotificationCenter";
 import { FloatingNovaButton } from "./FloatingNovaButton";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { LanguagePicker } from "./LanguagePicker";
+import { novaAuthHeaders } from "@/lib/ops-client";
 import {
   Cpu, MemoryStick, Clock, Monitor, Skull,
-  AlertTriangle, Radio, Target, ShieldCheck,
+  AlertTriangle, Radio, Target, ShieldCheck, Sparkles, Maximize2,
 } from "lucide-react";
 
 interface AppShellProps {
@@ -53,7 +54,22 @@ function TopMarquee({ lastWsText }: { lastWsText: string | null }) {
 
 export function AppShell({ children }: AppShellProps) {
   const [location, navigate] = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
+  const isWorkCockpit = location === "/agent-pro" || location === "/workspace" || location === "/cockpit";
+  const [collapsed, setCollapsed] = useState<boolean>(isWorkCockpit);
+  const [focusMode, setFocusMode] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isWorkCockpit) setCollapsed(true);
+  }, [isWorkCockpit]);
+
+  useEffect(() => {
+    const onFocus = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ focus?: boolean }>).detail;
+      setFocusMode((prev) => (typeof detail?.focus === "boolean" ? detail.focus : !prev));
+    };
+    window.addEventListener("nova:focus-mode", onFocus);
+    return () => window.removeEventListener("nova:focus-mode", onFocus);
+  }, []);
   // قبل كده: apiAlive بدأ true و cpu/ram بدأوا 14/23 — أرقام مكتوبة في الكود
   // بتظهر «API LIVE» و«14% CPU» قبل أي قياس. دلوقتي بيبدأوا null = «غير مقاس»
   // لحد ما /api/healthz و /api/monitor/system يردّوا فعلاً.
@@ -72,9 +88,10 @@ export function AppShell({ children }: AppShellProps) {
   });
   const [sessionCycles, setSessionCycles] = useState<number>(() => {
     try {
-      return Number(localStorage.getItem("cybernova_session_cycles_v15") || "35") || 35;
+      const saved = Number(localStorage.getItem("cybernova_session_cycles_v15") || "0");
+      return Number.isFinite(saved) ? saved : 0;
     } catch {
-      return 35;
+      return 0;
     }
   });
   const [wsEventCount, setWsEventCount] = useState(1);
@@ -99,20 +116,21 @@ export function AppShell({ children }: AppShellProps) {
 
   const triggerGlobalPulse = async () => {
     try {
+      const res = await fetch("/api/autonomous/tick", {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ target: activeTarget }),
+      });
+      const d = (await res.json().catch(() => null)) as { cycle?: number; skipped?: boolean; reason?: string } | null;
       await fetch("/api/agent/tasks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ action: "advance_cycle", target: activeTarget }),
-      });
-      await fetch("/api/deep-research/workstation-multitask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "tick", target: activeTarget }),
-      });
-      const next = sessionCycles + 1;
+      }).catch(() => {});
+      const next = typeof d?.cycle === "number" ? d.cycle : sessionCycles + 1;
       setSessionCycles(next);
       localStorage.setItem("cybernova_session_cycles_v15", String(next));
-      setLastWsText(`تم تنفيذ دورة عمل ذاتية #${next} وحفظ حالة الجلسة بالكامل`);
+      setLastWsText(d?.skipped ? `نبضة: ${d.reason || "تم التخطي"}` : `تم تنفيذ دورة عمل ذاتية #${next} وحفظ حالة الجلسة في الجذر`);
     } catch {
       // ignore
     }
@@ -159,6 +177,18 @@ export function AppShell({ children }: AppShellProps) {
       } catch {
         // ignore
       }
+      try {
+        const r = await fetch("/api/autonomous/status", { headers: novaAuthHeaders() });
+        if (r.ok) {
+          const d = (await r.json()) as { daemon?: { cycles?: number } };
+          if (typeof d?.daemon?.cycles === "number") {
+            setSessionCycles(d.daemon.cycles);
+            try { localStorage.setItem("cybernova_session_cycles_v15", String(d.daemon.cycles)); } catch { /* */ }
+          }
+        }
+      } catch {
+        // ignore
+      }
     };
     void check();
     const interval = setInterval(() => void check(), 30000);
@@ -174,7 +204,8 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="h-screen bg-[#030008] text-white flex flex-col overflow-hidden">
-      {/* ── Top Bar ──────────────────────────────────────────────────────────── */}
+      {/* ── Top Bar (hidden in Focus Mode) ──────────────────────────────────── */}
+      {!focusMode && (
       <div
         ref={barRef}
         className="h-9 shrink-0 flex items-center justify-between px-3 gap-2 z-30 relative overflow-hidden"
@@ -377,6 +408,20 @@ export function AppShell({ children }: AppShellProps) {
             <span className="font-black tracking-wider">{t}</span>
           </div>
 
+          {/* Dedicated Work + Chat Cockpit button */}
+          <button
+            onClick={() => navigate("/agent-pro")}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black font-mono transition-all hover:scale-[1.02]"
+            style={{
+              background: isWorkCockpit ? "rgba(34,211,238,0.22)" : "rgba(34,211,238,0.12)",
+              border: isWorkCockpit ? "1px solid rgba(34,211,238,0.7)" : "1px solid rgba(34,211,238,0.35)",
+              color: "#67e8f9",
+            }}
+          >
+            <Sparkles style={{ width: 11, height: 11 }} />
+            الشغل والشات
+          </button>
+
           {/* Dashboard nav */}
           <button
             onClick={() => navigate("/")}
@@ -403,9 +448,19 @@ export function AppShell({ children }: AppShellProps) {
           </button>
         </div>
       </div>
+      )}
 
       {/* ── Body ─────────────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden" style={{ flexDirection: "row" }}>
+      <div className="flex-1 flex overflow-hidden relative" style={{ flexDirection: "row" }}>
+        {focusMode && (
+          <button
+            onClick={() => setFocusMode(false)}
+            className="fixed bottom-3 left-3 z-50 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black font-mono bg-[#0b0414]/95 border border-rose-500/60 text-rose-200 shadow-xl hover:bg-rose-500/20"
+            title="إظهار الشريط العلوي والقائمة الجانبية"
+          >
+            <Maximize2 style={{ width: 11, height: 11 }} /> إظهار القوائم
+          </button>
+        )}
         <main
           className="flex-1 overflow-y-auto"
           style={{
@@ -416,7 +471,7 @@ export function AppShell({ children }: AppShellProps) {
         >
           {children}
         </main>
-        <NavSidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+        {!focusMode && <NavSidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />}
       </div>
 
       {/* Global Floating Live Agent connected via Internal WebSocket */}

@@ -3,6 +3,7 @@
  * يحلل الأنماط، يدمج الذاكرة، يصنف الثغرات تلقائياً
  */
 import { logger } from "./logger";
+import { listMemories, remember } from "./agent/memory-store";
 
 interface MemoryEntry {
   id: string; type: string; key: string; content: string;
@@ -102,10 +103,44 @@ export async function learnFromCves(cves: Array<{id: string; description: string
 }
 
 export function consolidateMemoryLite(): number {
+  let added = 0;
   const successes = MEMORY.filter(m => m.type === "success_pattern").slice(-20);
-  if (successes.length < 3) return 0;
-  saveMemoryLite({ type:"consolidated_insight", key:`consol_${Date.now()}`, content:`ملخص موحّد (${successes.length} نتيجة): ${successes.slice(0,5).map(s=>s.content.slice(0,100)).join(" | ")}`, context:"auto-consolidation", tags:["consolidation","auto"], confidence:0.85 });
-  return 1;
+  if (successes.length >= 3) {
+    saveMemoryLite({
+      type: "consolidated_insight",
+      key: `consol_${Date.now()}`,
+      content: `ملخص موحّد (${successes.length} نتيجة): ${successes.slice(0, 5).map(s => s.content.slice(0, 100)).join(" | ")}`,
+      context: "auto-consolidation",
+      tags: ["consolidation", "auto"],
+      confidence: 0.85,
+    });
+    added++;
+  }
+  try {
+    const allItems = listMemories({ limit: 40, sort: "recent" }).items;
+    const lastDreamAt = allItems.find((r) => r.source === "auto-dream")?.updatedAt ?? "";
+    const recent = allItems.filter(
+      (r) =>
+        (r.kind === "lesson" || r.kind === "event" || r.kind === "fact") &&
+        r.source !== "auto-dream" &&
+        (!lastDreamAt || r.updatedAt > lastDreamAt),
+    );
+    if (recent.length >= 2) {
+      const topScopes = [...new Set(recent.map((r) => r.scope).filter(Boolean))].slice(0, 4);
+      const digest = recent.slice(0, 5).map((r) => `• ${r.title}: ${r.content.slice(0, 90)}`).join("\n");
+      remember({
+        kind: "lesson",
+        scope: topScopes[0] || "global",
+        title: `توحيد ذاتي (${recent.length} تجربة · ${topScopes.join(", ")})`,
+        content: `دمج وتلخيص تلقائي لأحدث ما تعلّمته المنصة في الخلفية:\n${digest}`,
+        tags: ["auto-dream", "consolidated", ...topScopes],
+        importance: 7,
+        source: "auto-dream",
+      });
+      added++;
+    }
+  } catch { /* memory store optional */ }
+  return added;
 }
 
 // ── Background runner ─────────────────────────────────────────────────────────

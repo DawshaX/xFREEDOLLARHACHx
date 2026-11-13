@@ -1,3 +1,4 @@
+import { DAW_SKULL } from "@/lib/skull";
 import { useState, useEffect } from "react";
 import { useI18n } from "@/context/LanguageContext";
 import type { TKey } from "@/lib/i18n";
@@ -34,6 +35,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: "general", title: "مركز القيادة", titleEn: "COMMAND CENTER",
     neonColor: "#ff2222", neonRgb: "255,34,34", symbol: "☠",
     items: [
+      { label: "⚡ الشغل والشات الحي",   icon: Sparkles,        path: "/agent-pro",         iconColor: "#22d3ee", badge: "WORK", hot: true, skull: true },
       { label: "لوحة التحكم",          icon: LayoutDashboard, path: "/",                  iconColor: "#ff4444" },
       { label: "استوديو البج باونتي",   icon: Shield,          path: "/bug-bounty-studio", iconColor: "#00ff88", badge: "VRP", hot: true },
       { label: "موسوعة الثغرات والكود", icon: BookOpen,        path: "/vuln-encyclopedia", iconColor: "#38bdf8", badge: "PRO", hot: true },
@@ -50,7 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "نوفا · المخ والمدير",  icon: BrainCircuit, path: "/nova-fleet",        iconColor: "#e879f9", badge: "CORE", hot: true, skull: true },
       { label: "نوفا — مساحة عمل الوكيل", icon: Radio,     path: "/nova-fleet#work",   iconColor: "#22d3ee", badge: "LIVE", hot: true, skull: true },
-      { label: "★ المركز الرئيسي — دولاب دوشة", icon: Bot, path: "/agent-pro",         iconColor: "#fb7185", badge: "MAIN", hot: true, skull: true },
+      { label: "مكتب الشغل والشات (دوشة)", icon: Bot, path: "/agent-pro",         iconColor: "#fb7185", badge: "MAIN", hot: true, skull: true },
       { label: "Live Agent Panel", icon: Activity,         path: "/live-agent",        iconColor: "#ff4444" },
       { label: "AI Agent V3 (قديم)", icon: Brain,          path: "/nova-agent-v3",     iconColor: "#87552f", badge: "قديم" },
       { label: "Nova Agent V6 (قديم)", icon: Sparkles,     path: "/nova-agent-v6",     iconColor: "#87552f", badge: "قديم" },
@@ -555,7 +557,7 @@ function FooterCard() {
           <div style={{ flex:1, minWidth:0, overflow:"hidden" }}>
             {/* حمو دوشة — main title */}
             <div style={{
-              fontSize:17, fontWeight:900, lineHeight:1.1,
+              fontSize:14, fontWeight:900, lineHeight:1.15,
               fontFamily:"'Cairo', 'Tajawal', Arial, sans-serif",
               color: glitch ? "#ff8888" : "#ffffff",
               textShadow: glitch
@@ -564,6 +566,8 @@ function FooterCard() {
               letterSpacing:"0.02em",
               transition:"color 0.06s, text-shadow 0.06s",
               whiteSpace:"nowrap",
+              overflow:"hidden",
+              textOverflow:"ellipsis",
               WebkitFontSmoothing:"antialiased",
               MozOsxFontSmoothing:"grayscale",
             }}>
@@ -571,14 +575,16 @@ function FooterCard() {
             </div>
 
             {/* 🔥 كيمو العسلية */}
-            <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:3 }}>
-              <span style={{ fontSize:13, lineHeight:1, filter:"drop-shadow(0 0 5px rgba(255,130,0,0.9))" }}>🔥</span>
+            <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:3, minWidth:0 }}>
+              <span style={{ fontSize:12, lineHeight:1, flexShrink:0, filter:"drop-shadow(0 0 5px rgba(255,130,0,0.9))" }}>🔥</span>
               <span style={{
-                fontSize:12, fontWeight:800, lineHeight:1,
+                fontSize:11, fontWeight:800, lineHeight:1.1,
                 fontFamily:"'Cairo', 'Tajawal', Arial, sans-serif",
                 color:"#ffaa55",
                 textShadow:"0 0 12px rgba(255,150,0,0.85), 0 0 4px rgba(255,100,0,0.5), 0 1px 3px rgba(0,0,0,0.9)",
                 whiteSpace:"nowrap",
+                overflow:"hidden",
+                textOverflow:"ellipsis",
                 WebkitFontSmoothing:"antialiased",
               }}>كيمو العسلية</span>
             </div>
@@ -660,7 +666,7 @@ export function NavSidebar({ collapsed, onToggle }: NavSidebarProps) {
 
   return (
     <aside
-      className={`${collapsed ? "w-13" : "w-[230px]"} shrink-0 flex flex-col transition-all duration-300 overflow-hidden relative`}
+      className={`${collapsed ? "w-14" : "w-[228px]"} shrink-0 flex flex-col transition-all duration-300 overflow-hidden relative`}
       style={{
         background: "linear-gradient(180deg, #030003 0%, #06000a 50%, #030003 100%)",
         borderLeft: "1px solid rgba(255,20,20,0.45)",
@@ -702,15 +708,14 @@ export function NavSidebar({ collapsed, onToggle }: NavSidebarProps) {
           <div className="flex items-center gap-2.5 min-w-0">
             {/* Logo */}
             <div className="relative shrink-0">
-              <div className="absolute -inset-1 rounded-xl opacity-30 animate-pulse"
-                style={{ background: "radial-gradient(circle, rgba(255,0,0,0.6), transparent 70%)" }} />
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center relative"
+              <div className="absolute -inset-1 rounded-xl opacity-45 animate-pulse"
+                style={{ background: "radial-gradient(circle, rgba(255,20,60,0.7), transparent 70%)" }} />
+              <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center relative"
                 style={{
-                  background: "linear-gradient(135deg, rgba(200,0,0,0.5), rgba(80,0,0,0.7))",
-                  border: "1px solid rgba(255,40,40,0.7)",
-                  boxShadow: "0 0 20px rgba(255,20,20,0.4), inset 0 0 12px rgba(255,20,20,0.15)",
+                  border: "1px solid rgba(255,40,60,0.85)",
+                  boxShadow: "0 0 22px rgba(255,20,40,0.5), inset 0 0 12px rgba(255,20,40,0.2)",
                 }}>
-                <Skull style={{ width: 16, height: 16, color: "#ff4444", filter: "drop-shadow(0 0 6px rgba(255,40,40,1))" }} />
+                <img src={DAW_SKULL} alt="Dawsha Skull" className="w-full h-full object-cover" />
               </div>
               <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 bg-red-500 animate-pulse"
                 style={{ borderColor: "#030003", boxShadow: "0 0 10px #ff0000, 0 0 20px rgba(255,0,0,0.5)" }} />
@@ -728,11 +733,11 @@ export function NavSidebar({ collapsed, onToggle }: NavSidebarProps) {
 
         {collapsed && (
           <div className="relative">
-            <div className="absolute -inset-1 rounded-xl opacity-25 animate-pulse"
-              style={{ background: "radial-gradient(circle, rgba(255,0,0,0.6), transparent 70%)" }} />
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(200,0,0,0.5), rgba(80,0,0,0.7))", border: "1px solid rgba(255,40,40,0.7)", boxShadow: "0 0 20px rgba(255,20,20,0.4)" }}>
-              <Skull style={{ width: 16, height: 16, color: "#ff4444", filter: "drop-shadow(0 0 6px rgba(255,40,40,1))" }} />
+            <div className="absolute -inset-1 rounded-xl opacity-35 animate-pulse"
+              style={{ background: "radial-gradient(circle, rgba(255,20,60,0.7), transparent 70%)" }} />
+            <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center"
+              style={{ border: "1px solid rgba(255,40,60,0.8)", boxShadow: "0 0 20px rgba(255,20,40,0.45)" }}>
+              <img src={DAW_SKULL} alt="Dawsha Skull" className="w-full h-full object-cover" />
             </div>
           </div>
         )}

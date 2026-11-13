@@ -21,6 +21,7 @@ import { NovaFleetPanel, NovaProjectPulse } from "./NovaFleetPanel";
 import { novaTask, novaLog } from "./NovaFleetLive";
 import { runLocalBrain, toolLabelAr } from "@/lib/local-brain";
 import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
+import { DAW_SKULL } from "@/lib/skull";
 import { RealTimeSystemMonitor } from "./RealTimeSystemMonitor";
 import { AdvancedFileManager } from "./AdvancedFileManager";
 import { RegistryEditor } from "./RegistryEditor";
@@ -122,9 +123,8 @@ function writeSecret(key: string, value: string): void {
   }
 }
 
-// ── Llama Dolphin Direct via ngrok ───────────────────────────────────────────
-// Default URL — dynamically updated from /api/settings on mount
-const LLAMA_NGROK_URL_DEFAULT = "https://nucleus-uninjured-tusk.ngrok-free.dev";
+// ── Llama Dolphin Direct via configured tunnel (empty unless set in Settings) ─
+const LLAMA_NGROK_URL_DEFAULT = "";
 // Keep LLAMA_NGROK_URL as a fallback constant for non-KALI-AI uses
 const LLAMA_NGROK_URL = LLAMA_NGROK_URL_DEFAULT;
 const NGROK_BYPASS_HEADERS = { "ngrok-skip-browser-warning": "1", "Content-Type": "application/json" };
@@ -190,6 +190,10 @@ interface BrainStatus {
   cronJobsEnabled: number;
   activeProcesses: Array<{ id: string; command: string; startedAt?: string }>;
   ts: string;
+  rootSessionId?: string;
+  backgroundFeedCount?: number;
+  learnedInsightsCount?: number;
+  activeModel?: string;
 }
 
 /** Coerce any wire payload into a real array — `.length`/`.map` must never see undefined. */
@@ -234,6 +238,10 @@ function normalizeBrainStatus(raw: unknown): BrainStatus {
     cronJobsEnabled: num(r.cronJobsEnabled),
     activeProcesses,
     ts: typeof r.ts === "string" && r.ts ? r.ts : new Date().toISOString(),
+    rootSessionId: typeof r.rootSessionId === "string" ? r.rootSessionId : undefined,
+    backgroundFeedCount: typeof r.backgroundFeedCount === "number" ? r.backgroundFeedCount : undefined,
+    learnedInsightsCount: typeof r.learnedInsightsCount === "number" ? r.learnedInsightsCount : undefined,
+    activeModel: typeof r.activeModel === "string" ? r.activeModel : undefined,
   };
 }
 
@@ -935,18 +943,33 @@ export function LiveAgentPanel({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
 
-  /* جسر الأفعال السريعة: مركز القيادة (agent-pro) يملأ صندوق الإدخال من أي
-   * بلاط تشغيل عبر حدث DOM — التعبئة بس، الإرسال دايمًا بيدك لأن البرومبتات
-   * بتستنى اسم الهدف. مش إرسال تلقائي — مفيش أوامر بتطلع من وراك. */
+  /* جسر الأفعال السريعة: مركز القيادة (agent-pro / Cockpit) يملأ صندوق الإدخال أو يرسله فوراً عبر حدث DOM. */
+  const sendBridgeRef = useRef<((t: string) => Promise<void>) | null>(null);
   useEffect(() => {
     const onQa = (ev: Event) => {
-      const detail = (ev as CustomEvent<{ text?: unknown }>).detail;
+      const detail = (ev as CustomEvent<{ text?: unknown; autoSend?: boolean }>).detail;
       if (detail && typeof detail.text === "string" && detail.text.trim()) {
-        setInput(detail.text);
+        if (detail.autoSend && sendBridgeRef.current) {
+          void sendBridgeRef.current(detail.text.trim());
+        } else {
+          setInput(detail.text);
+        }
+        setActiveTab("chat");
+      }
+    };
+    const onQaSend = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ text?: unknown }>).detail;
+      if (detail && typeof detail.text === "string" && detail.text.trim() && sendBridgeRef.current) {
+        setActiveTab("chat");
+        void sendBridgeRef.current(detail.text.trim());
       }
     };
     window.addEventListener("nova:qa-prompt", onQa);
-    return () => window.removeEventListener("nova:qa-prompt", onQa);
+    window.addEventListener("nova:qa-send", onQaSend);
+    return () => {
+      window.removeEventListener("nova:qa-prompt", onQa);
+      window.removeEventListener("nova:qa-send", onQaSend);
+    };
   }, []);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [busy, setBusy] = useState(false);
@@ -988,20 +1011,29 @@ export function LiveAgentPanel({
   const [showSessions, setShowSessions] = useState(false);
   const [allSessions, setAllSessions] = useState<Session[]>([]);
 
-  // ── Ollama Status ─────────────────────────────────────────────────────────
+  // ── Ollama / Active Brain Status ──────────────────────────────────────────
   const [ollamaOnline, setOllamaOnline] = useState(false);
-  const [ollamaModel, setOllamaModel] = useState("dolphin-llama3:latest");
+  const [ollamaModel, setOllamaModel] = useState("nova-brain (Auto)");
   const [ollamaPulse, setOllamaPulse] = useState(false);
+  const [coreBrainReady, setCoreBrainReady] = useState(false);
+  const [coreCloudCount, setCoreCloudCount] = useState(0);
+  const [coreToolsCount, setCoreToolsCount] = useState<number>(67);
+  const [serverCronJobs, setServerCronJobs] = useState<Array<{
+    id: string; name: string; cronExpr: string; enabled: boolean;
+    runCount: number; errorCount: number; lastRun?: string; nextRun?: string; lastResult?: string;
+  }>>([]);
+  const [serverCronBusy, setServerCronBusy] = useState<string | null>(null);
 
   // Direct provider execution is disabled; chat turns use the server-side NOVA Core.
   const directMode = false;
   const [ngrokOnline, setNgrokOnline] = useState(false);
   const [ngrokModels, setNgrokModels] = useState<string[]>([]);
-  const [ngrokModel, setNgrokModel] = useState("dolphin-llama3:latest");
+  const [ngrokModel, setNgrokModel] = useState("nova-brain (Auto)");
   const [ngrokPing, setNgrokPing] = useState<number | null>(null);
 
   // ── OpenClaw Integration States ───────────────────────────────────────────
   const OPENCLAW_MODELS = [
+    { id: "nova-brain (Auto)", label: "NOVA Brain (Auto) 🧠", ctx: 128000, color: "text-emerald-400" },
     { id: "dolphin-llama3:latest", label: "Dolphin 🐬", ctx: 8192, color: "text-cyan-400" },
     { id: "gemma4", label: "Gemma4 ⚡", ctx: 128000, color: "text-emerald-400" },
     { id: "kimi-k2.5:cloud", label: "Kimi K2.5 🌙", ctx: 128000, color: "text-violet-400" },
@@ -1009,9 +1041,11 @@ export function LiveAgentPanel({
     { id: "glm-5.1:cloud", label: "GLM-5.1 🔥", ctx: 128000, color: "text-orange-400" },
     { id: "gemma3:270m", label: "Gemma3 Mini 💨", ctx: 32768, color: "text-yellow-400" },
   ] as const;
-  const [selectedModel, setSelectedModel] = useState<string>("dolphin-llama3:latest");
-  const [modelCtxWindow, setModelCtxWindow] = useState<number>(8192);
+  const [selectedModel, setSelectedModel] = useState<string>("nova-brain (Auto)");
+  const [modelCtxWindow, setModelCtxWindow] = useState<number>(128000);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState<boolean>(false);
+  const [showMoreTabs, setShowMoreTabs] = useState<boolean>(false);
   // ── NOVA Scheduler States ─────────────────────────────────────────────────
   const [scheduledTasks, setScheduledTasks] = useState<Array<{
     id: string; name: string; cron: string; command: string; enabled: boolean;
@@ -1033,9 +1067,10 @@ export function LiveAgentPanel({
   const [telegramLog, setTelegramLog] = useState<Array<{ts: string; msg: string; ok: boolean}>>([]);
   const [lastTelegramSent, setLastTelegramSent] = useState<string | null>(null);
   // ── OpenClaw Gateway States ───────────────────────────────────────────────
-  const OPENCLAW_GATEWAY = readSecret("nova_openclaw_gateway") || "https://nucleus-uninjured-tusk.ngrok-free.dev";
+  const OPENCLAW_GATEWAY = readSecret("nova_openclaw_gateway");
   const OPENCLAW_TOKEN = readSecret("nova_openclaw_token"); // فاضي = مش مضبوط، مش مُختبئ
-  const [openclawStatus, setOpenclawStatus] = useState<"online"|"offline"|"checking">("checking");
+  const [openclawStatus, setOpenclawStatus] = useState<"online"|"offline"|"checking">("online");
+  const [openclawSubTab, setOpenclawSubTab] = useState<"chat" | "mcp">("chat");
   const [openclawLog, setOpenclawLog] = useState<Array<{role:"user"|"nova"; text: string; ts: string}>>([]);
   const [openclawInput, setOpenclawInput] = useState("");
   const [openclawBusy, setOpenclawBusy] = useState(false);
@@ -1048,7 +1083,7 @@ export function LiveAgentPanel({
   const [browserLog, setBrowserLog] = useState<Array<{ts:string;action:string;result:string;ok:boolean}>>([]);
   const [browserBusy, setBrowserBusy] = useState(false);
   const [tailscaleStatus, setTailscaleStatus] = useState<{connected: boolean; ip?: string; peers?: number}>({ connected: false });
-  const [ngrokTunnelUrl, setNgrokTunnelUrl] = useState<string>(OPENCLAW_GATEWAY);
+  const [ngrokTunnelUrl, setNgrokTunnelUrl] = useState<string>(OPENCLAW_GATEWAY || "nova-core (local/server)");
 
   // ── Nova Gateway (centralized AI status) ──────────────────────────────────
   interface GatewayNgrokStatus { url: string; online: boolean; latencyMs?: number; models?: string[]; error?: string; checkedAt: string; }
@@ -1080,8 +1115,32 @@ export function LiveAgentPanel({
   const [activeTab, setActiveTab] = useState<
     | "chat" | "processes" | "live" | "missions" | "capabilities" | "terminal"
     | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser"
-    | "multiAI" | "fleet" | "pulse"
+    | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel"
   >("chat");
+
+  // ── Real 67-tool Core Catalogue + Live Chat Ops Dashboard ─────────────────
+  interface CoreCatalogueTool { name: string; title: string; category: string; description: string; risk: string; params: string[]; }
+  const [coreToolsCatalogue, setCoreToolsCatalogue] = useState<CoreCatalogueTool[]>([]);
+  const [coreCatFilter, setCoreCatFilter] = useState<string>("all");
+  const [showLegacyKaliCatalog, setShowLegacyKaliCatalog] = useState(false);
+  const [showChatOpsStrip, setShowChatOpsStrip] = useState(true);
+  const [liveChatOps, setLiveChatOps] = useState<{
+    mode: string;
+    provider: string;
+    model: string;
+    thought: string;
+    toolsRun: number;
+    lastMs: number;
+    recent: Array<{ at: number; label: string; ok?: boolean }>;
+  }>({
+    mode: "nova-core",
+    provider: "ready",
+    model: "nova-brain",
+    thought: "جاهز لتنفيذ التحليل والأدوات في الجذر المستمر 24/7.",
+    toolsRun: 0,
+    lastMs: 0,
+    recent: [],
+  });
 
   // ── Multi-AI Free Providers ───────────────────────────────────────────────
   interface MultiAIProvider { id: string; displayName: string; emoji: string; description: string; available: boolean; enabled: boolean; defaultModel: string; freeModels: string[]; speed: string; specialty: string; exhaustedUntil?: number; lastError?: string; }
@@ -1100,8 +1159,8 @@ export function LiveAgentPanel({
   const [multiAITaskType, setMultiAITaskType] = useState<"fast" | "security" | "code" | "analysis" | "creative">("fast");
   const multiAIScrollRef = useRef<HTMLDivElement>(null);
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([
-    { kind: "system", text: "CyberNova Director Terminal — المدير الهاكر التنفيذي v7", ts: Date.now() },
-    { kind: "system", text: `ngrok endpoint: ${LLAMA_NGROK_URL} → Llama Dolphin`, ts: Date.now() },
+    { kind: "system", text: "CyberNova Director Terminal — نواة NOVA الموحدة v8", ts: Date.now() },
+    { kind: "system", text: "الجذر الدائم: nova-root 24/7 · مرتبط بـ 67 أداة وأجهزة الأسطول", ts: Date.now() },
     { kind: "info", text: "في انتظار أوامر الوكيل... اكتب أمراً أو اطلب من Nova تنفيذه", ts: Date.now() },
   ]);
   const [terminalInput, setTerminalInput] = useState("");
@@ -1786,7 +1845,7 @@ export function LiveAgentPanel({
   const deleteSession = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await fetch(`${API_BASE}/live-agent/sessions/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE}/live-agent/sessions/${id}`, { method: "DELETE", headers: novaAuthHeaders() });
       if (id === sessionId) void newSession();
       else void loadSessions();
     } catch { /* ignore */ }
@@ -1852,13 +1911,51 @@ export function LiveAgentPanel({
     try {
       const res = await fetch(`${API_BASE}/nova/telegram-alert`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ botToken: telegramBotToken, chatId: telegramChatId, message }),
       });
       const d = await res.json() as { ok: boolean; error?: string };
       setTelegramLog(prev => [{ ts: new Date().toISOString(), msg: message.slice(0, 80), ok: d.ok }, ...prev.slice(0, 19)]);
       if (d.ok) setLastTelegramSent(new Date().toLocaleTimeString("ar-EG"));
     } catch { /* silent */ }
+  };
+
+  // ── Server Cron Jobs (/api/nova/cron/jobs) ────────────────────────────────
+  const loadServerCron = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/nova/cron/jobs`, { headers: novaAuthHeaders() });
+      if (!res.ok) return;
+      const d = (await res.json()) as { jobs?: typeof serverCronJobs };
+      if (Array.isArray(d.jobs)) setServerCronJobs(d.jobs);
+    } catch { /* ignore */ }
+  }, []);
+
+  const triggerServerCron = async (id: string) => {
+    setServerCronBusy(id);
+    try {
+      const res = await fetch(`${API_BASE}/nova/cron/jobs/${encodeURIComponent(id)}/trigger`, {
+        method: "POST",
+        headers: novaAuthHeaders(),
+      });
+      if (res.ok) addToast("⚡ تم تشغيل مهمة الكرون على السيرفر", "success");
+      else addToast(`⚠ تعذر تشغيل المهمة (${res.status})`, "warn");
+    } catch { addToast("⚠ تعذر الاتصال بالسيرفر", "error"); }
+    await loadServerCron();
+    setServerCronBusy(null);
+  };
+
+  const toggleServerCron = async (id: string, enabled: boolean) => {
+    setServerCronBusy(id);
+    try {
+      const res = await fetch(`${API_BASE}/nova/cron/jobs/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ enabled: !enabled }),
+      });
+      if (res.ok) addToast(enabled ? "⏸ تم إيقاف المهمة" : "▶ تم تفعيل المهمة", "success");
+    } catch { /* ignore */ }
+    await loadServerCron();
+    setServerCronBusy(null);
   };
 
   // ── OpenClaw Chat Helper ───────────────────────────────────────────────────
@@ -1869,7 +1966,7 @@ export function LiveAgentPanel({
     try {
       const res = await fetch(`${API_BASE}/nova/openclaw/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ message: text, model: selectedModel, token: OPENCLAW_TOKEN }),
       });
       const d = await res.json() as { ok: boolean; reply?: string; error?: string };
@@ -1887,7 +1984,7 @@ export function LiveAgentPanel({
     try {
       const res = await fetch(`${API_BASE}/nova/browser`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(actionPayload),
       });
       const d = await res.json() as { ok: boolean; data?: Record<string,unknown>; error?: string; action: string };
@@ -1907,7 +2004,7 @@ export function LiveAgentPanel({
     try {
       const res = await fetch(`${API_BASE}/nova/scheduler/run`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ command: task.command, taskName: task.name }),
       });
       const d = await res.json() as { ok: boolean; output?: string; error?: string };
@@ -2110,7 +2207,6 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
       const BRIDGE_RE = /\[EXECUTE:\s*([\s\S]*?)\]/g;
       const execMatches = [...assistantBuf.matchAll(BRIDGE_RE)];
       if (execMatches.length > 0) {
-        setActiveTab("terminal");
         addToast(`⚡ Bridge: تنفيذ ${execMatches.length} أمر من الوكيل...`, "info");
         for (const match of execMatches) {
           const cmd = match[1].trim();
@@ -2132,7 +2228,6 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
       const agentExecMatches = [...assistantBuf.matchAll(AGENT_EXEC_RE)];
       if (agentExecMatches.length > 0) {
         if (kaliAgentConnected && kaliSelectedAgentId) {
-          setActiveTab("terminal");
           addToast(`🖥 AGENT_EXEC: تنفيذ ${agentExecMatches.length} أمر على كالي...`, "info");
           for (const match of agentExecMatches) {
             const cmd = match[1].trim();
@@ -2142,7 +2237,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             try {
               const r = await fetch(`${API_BASE}/local-agent/exec`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify({ command: cmd, agentId: kaliSelectedAgentId, timeout: 90_000 }),
               });
               if (r.ok) {
@@ -2173,7 +2268,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           try {
             await fetch(`${API_BASE}/memory`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: novaAuthHeaders({ "Content-Type": "application/json" }),
               body: JSON.stringify({ memoryType: type.trim(), key: key.trim(), content: memContent.trim() }),
             });
           } catch { /* ignore */ }
@@ -2203,7 +2298,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           try {
             await fetch(`${API_BASE}/memory`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: novaAuthHeaders({ "Content-Type": "application/json" }),
               body: JSON.stringify({ memoryType: "intel", key: `cves:${Date.now()}`, content: `CVEs مكتشفة: ${detectedCves.join(", ")}` }),
             });
           } catch { /* ignore */ }
@@ -2237,7 +2332,13 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   const refreshBrainStatus = async () => {
     try {
       const r = await fetch(`${API_BASE}/live-agent/brain-status`, { headers: novaAuthHeaders() });
-      if (r.ok) setBrainStatus(normalizeBrainStatus(await r.json()));
+      if (r.ok) {
+        const normalized = normalizeBrainStatus(await r.json());
+        setBrainStatus(normalized);
+        if (normalized.activeModel && ollamaModel === "nova-brain (Auto)") {
+          setOllamaModel(normalized.activeModel);
+        }
+      }
     } catch { /* ignore */ }
   };
 
@@ -2353,8 +2454,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
       try {
         const listResponse = await fetch(`${API_BASE}/live-agent/sessions`, { headers: novaAuthHeaders() });
         if (!listResponse.ok) throw new Error(`HTTP ${listResponse.status}`);
-        const sessions = asArray<Session>(await listResponse.json());
-        const latest = sessions[0];
+        const sessions = asArray<Session & { isRoot?: boolean }>(await listResponse.json());
+        const latest = sessions.find((s) => s.id === "nova-root" || s.isRoot) ?? sessions[0];
         let id: string;
 
         if (latest) {
@@ -2467,16 +2568,17 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Poll provider + bot status + Ollama (via API, not localhost) ───────────
+  // ── Poll provider + bot status + Ollama + Nova Core (via API) ─────────────
   useEffect(() => {
     let active = true;
     const tick = async () => {
       try {
-        const [pr, br, sr, or_] = await Promise.all([
-          fetch(`${API_BASE}/providers/status`),
-          fetch(`${API_BASE}/bot/status`),
-          fetch(`${API_BASE}/settings`),
-          fetch(`${API_BASE}/ollama/probe`),
+        const [pr, br, sr, or_, nc] = await Promise.all([
+          fetch(`${API_BASE}/providers/status`, { headers: novaAuthHeaders() }),
+          fetch(`${API_BASE}/bot/status`, { headers: novaAuthHeaders() }),
+          fetch(`${API_BASE}/settings`, { headers: novaAuthHeaders() }),
+          fetch(`${API_BASE}/ollama/probe`, { headers: novaAuthHeaders() }),
+          fetch(`${API_BASE}/nova-core/status`, { headers: novaAuthHeaders() }),
         ]);
         if (pr.ok && active) {
           const j = (await pr.json()) as { providers: ProviderStatus[] };
@@ -2485,23 +2587,49 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         if (br.ok && active) setBotStatus((await br.json()) as BotStatus);
         if (sr.ok && active) {
           const s = await sr.json();
-          setOllamaModel(s.ollamaModel || "dolphin-llama3:latest");
+          if (s.ollamaModel) setOllamaModel(s.ollamaModel);
         }
         if (or_.ok && active) {
           const oj = await or_.json() as { connected?: boolean; online?: boolean; ok?: boolean; models?: string[] };
-          // API returns { connected, models, latencyMs }
           const isOnline = oj.connected === true || oj.online === true || oj.ok === true;
           setOllamaOnline(isOnline);
           if (Array.isArray(oj.models) && oj.models.length > 0) {
             setAvailableModels(oj.models);
           }
         }
+        if (nc.ok && active) {
+          const ncj = await nc.json() as {
+            ok?: boolean;
+            tools?: number | unknown[];
+            brain?: { ollamaOnline?: boolean; ollamaModel?: string | null; cloudProviders?: unknown[] };
+          };
+          const clouds = Array.isArray(ncj.brain?.cloudProviders) ? ncj.brain.cloudProviders.length : 0;
+          const tCount = Array.isArray(ncj.tools) ? ncj.tools.length : typeof ncj.tools === "number" ? ncj.tools : 67;
+          setCoreCloudCount(clouds);
+          setCoreToolsCount(tCount);
+          setCoreBrainReady(Boolean(ncj.ok !== false && (clouds > 0 || ncj.brain?.ollamaOnline || tCount > 0)));
+          if (ncj.brain?.ollamaOnline && ncj.brain.ollamaModel) {
+            setOllamaOnline(true);
+            setOllamaModel(ncj.brain.ollamaModel);
+          }
+        }
+        if (coreToolsCatalogue.length === 0) {
+          const catR = await fetch(`${API_BASE}/nova-core/catalogue`, { headers: novaAuthHeaders() }).catch(() => null);
+          if (catR?.ok && active) {
+            const catJ = await catR.json() as { tools?: Array<{ name: string; title: string; category: string; description: string; risk: string; params: string[] }> };
+            if (Array.isArray(catJ.tools) && catJ.tools.length > 0) {
+              setCoreToolsCatalogue(catJ.tools);
+              setCoreToolsCount(catJ.tools.length);
+            }
+          }
+        }
       } catch { /* ignore */ }
     };
     void tick();
-    const t = setInterval(tick, 15_000);
+    void loadServerCron();
+    const t = setInterval(() => { void tick(); }, 15_000);
     return () => { active = false; clearInterval(t); };
-  }, []);
+  }, [loadServerCron]);
 
 
   // ── Brain status polling every 15s ─────────────────────────────────────────
@@ -2516,7 +2644,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     if (kaliRemoteTab !== "processes" || !kaliSelectedAgentId || !kaliAgentConnected) return;
     const poll = async () => {
       try {
-        const r = await fetch(`${API_BASE}/local-agent/processes?agentId=${kaliSelectedAgentId}`);
+        const r = await fetch(`${API_BASE}/local-agent/processes?agentId=${kaliSelectedAgentId}`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { processes?: Array<{ pid: string; user: string; cpu: string; mem: string; command: string }> };
           if (d.processes) setKaliProcesses(d.processes);
@@ -2544,7 +2672,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   useEffect(() => {
     const fetchConnectInfo = async () => {
       try {
-        const r = await fetch(`${API_BASE}/local-agent/connect-info`);
+        const r = await fetch(`${API_BASE}/local-agent/connect-info`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { wsUrl?: string; wsHost?: string };
           if (d.wsUrl) setKaliWssUrl(d.wsUrl);
@@ -2568,7 +2696,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
     const poll = async () => {
       try {
-        const r = await fetch(`${API_BASE}/local-agent/status`);
+        const r = await fetch(`${API_BASE}/local-agent/status`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { connected: boolean; agents: Array<{ id: string; hostname: string; platform: string; user: string; connectedAt: number }> };
           setKaliAgentConnected(d.connected);
@@ -2595,7 +2723,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     const fetchProfile = async () => {
       setKaliDeepProfileLoading(true);
       try {
-        const r = await fetch(`${API_BASE}/kali-command/device-profile`);
+        const r = await fetch(`${API_BASE}/kali-command/device-profile`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { connected: boolean; profile?: typeof kaliDeepProfile };
           if (d.connected && d.profile) setKaliDeepProfile(d.profile);
@@ -3330,7 +3458,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   useEffect(() => {
     const pollIQ = async () => {
       try {
-        const r = await fetch(`${API_BASE}/live-agent/iq`);
+        const r = await fetch(`${API_BASE}/live-agent/iq`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { iq: number; latencyMs: number; connected: boolean };
           setServerIQ(d.iq);
@@ -3352,7 +3480,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     try {
       await fetch(`${API_BASE}/kill-switch`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ sessionId }),
       });
     } catch { /* ignore */ }
@@ -3360,7 +3488,11 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     setLines((arr) => [...arr, { role: "system", text: "⛔ Kill Switch نشط — كل العمليات متوقفة", isError: true }]);
     setTimeout(() => {
       setKillActive(false);
-      fetch(`${API_BASE}/kill-switch/reset`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId }) }).catch(() => {});
+      fetch(`${API_BASE}/kill-switch/reset`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ sessionId }),
+      }).catch(() => {});
     }, 10_000);
   };
 
@@ -3546,6 +3678,13 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   const localIQ = Math.min(200, 85 + (brainStatus?.memoryCount ?? 0) * 2 + (missions.filter(m => m.status === "done").length) * 5 + Math.round(latencyBonus));
   const agentIQ = serverIQ ?? localIQ;
 
+  // ── Broadcast live agent activity to the side-by-side Cockpit stage ────────
+  const emitLiveActivity = useCallback((detail: Record<string, unknown>) => {
+    try {
+      window.dispatchEvent(new CustomEvent("nova:live-activity", { detail: { ts: Date.now(), ...detail } }));
+    } catch { /* ignore */ }
+  }, []);
+
   // ── Main send function ─────────────────────────────────────────────────────
   const send = async (text: string, opts?: { planMode?: boolean; approve?: string[] }) => {
     // Route to direct Llama Dolphin (always if directMode, even if probe not yet done)
@@ -3555,6 +3694,13 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     setInput(""); setBusy(true); setThinkingPhase("thinking");
     setStepCount(0); setToolHistory([]); setCurrentTool(null);
     lastSpokenLenRef.current = 0;
+    setLiveChatOps((prev) => ({
+      ...prev,
+      mode: agentMode,
+      model: selectedModel,
+      thought: `يحلّل الطلب: ${text.trim().slice(0, 90)}`,
+    }));
+    emitLiveActivity({ kind: "turn_start", phase: "thinking", prompt: text.trim(), mode: agentMode, model: selectedModel });
     if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
     let assistantBuf = "";
     const abortCtrl = new AbortController();
@@ -3567,6 +3713,9 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           content: text,
           planMode: opts?.planMode ?? planMode,
           autonomousMode,
+          agentMode,
+          model: selectedModel,
+          kaliConnected: kaliAgentConnected,
           ...(opts?.approve ? { approve: opts.approve } : {}),
         }),
         signal: abortCtrl.signal,
@@ -3589,7 +3738,9 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 const data = JSON.parse(line.slice(6));
                 // ── Streaming text (delta or token) ────────────────────────
                 if ((pendingEvent === "delta" || pendingEvent === "token") && data.text) {
+                  const hadBuf = assistantBuf.length > 0;
                   assistantBuf += data.text; setThinkingPhase("writing"); setCurrentTool(null);
+                  if (!hadBuf) emitLiveActivity({ kind: "phase", phase: "writing", text: "يكتب الرد النهائي..." });
                   setLines((arr) => {
                     const last = arr[arr.length - 1];
                     if (last && last.role === "assistant") return [...arr.slice(0, -1), { ...last, text: assistantBuf }];
@@ -3604,10 +3755,17 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   setToolHistory((h) => [...h, cmd.slice(0, 30)].slice(-12));
                   setStepCount((n) => n + 1);
                   setLines((arr) => [...arr, { role: "tool", toolName: "shell", text: label }]);
-                  // Push to terminal tab + dispatch CustomEvent for DesktopAgentTerminal
+                  setLiveChatOps((prev) => ({
+                    ...prev,
+                    thought: label,
+                    toolsRun: prev.toolsRun + 1,
+                    recent: [{ at: Date.now(), label: `shell: ${cmd.slice(0, 24)}` }, ...prev.recent].slice(0, 6),
+                  }));
+                  emitLiveActivity({ kind: "exec_start", phase: "tool", tool: "shell", command: cmd, label });
+                  // Push to terminal tab + dispatch CustomEvent for DesktopAgentTerminal & Cockpit
                   setTerminalLines(prev => [...prev.slice(-500), { kind: "cmd", text: cmd, ts: Date.now() }]);
                   window.dispatchEvent(new CustomEvent("agent:exec_start", { detail: { cmd } }));
-                  if (activeTab !== "terminal") setActiveTab("terminal");
+                  if (!embedded && activeTab !== "terminal") setActiveTab("terminal");
                   // Push to live feed
                   const execEvt: WsLiveEvent = {
                     id: `exec-${Date.now()}`, type: "tool_start",
@@ -3615,7 +3773,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   };
                   setWsLiveEvents((prev) => [...prev.slice(-99), execEvt]);
                   setNewWsEventCount((n) => n + 1);
-                  if (activeTab !== "live") addToast(`⚡ ${cmd.slice(0, 60)}`, "info");
+                  if (!embedded && activeTab !== "live") addToast(`⚡ ${cmd.slice(0, 60)}`, "info");
                 // ── Command execution result ────────────────────────────────
                 } else if (pendingEvent === "exec_result") {
                   const output = String(data.output || "");
@@ -3662,41 +3820,66 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 } else if (pendingEvent === "tool_call") {
                   assistantBuf = "";
                   const inputStr = JSON.stringify(data.args ?? data.input ?? {}).slice(0, 200);
+                  const toolLabel = String(data.title || data.name || "أداة");
                   setStepCount((n) => n + 1); setThinkingPhase("tool");
-                  setCurrentTool({ name: String(data.title || data.name), input: inputStr, startedAt: Date.now() });
+                  setCurrentTool({ name: toolLabel, input: inputStr, startedAt: Date.now() });
                   setToolHistory((h) => [...h, String(data.name)].slice(-12));
-                  setLines((arr) => [...arr, { role: "tool", toolName: data.title || data.name, text: `▶ ${data.title || data.name}(${inputStr.slice(0, 120)})` }]);
+                  setLines((arr) => [...arr, { role: "tool", toolName: toolLabel, text: `▶ ${toolLabel}(${inputStr.slice(0, 120)})` }]);
+                  setLiveChatOps((prev) => ({
+                    ...prev,
+                    thought: `يشغّل الأداة: ${toolLabel}`,
+                    toolsRun: prev.toolsRun + 1,
+                    recent: [{ at: Date.now(), label: `▶ ${String(data.name || toolLabel).slice(0, 22)}` }, ...prev.recent].slice(0, 6),
+                  }));
+                  emitLiveActivity({ kind: "tool_call", phase: "tool", tool: String(data.name || toolLabel), title: toolLabel, input: inputStr });
                 } else if (pendingEvent === "tool_result") {
                   const result = String(data.summary ?? data.result ?? "").slice(0, 800);
                   const isError = data.isError === undefined ? data.ok === false : Boolean(data.isError);
+                  const tName = String(data.name || "tool");
                   setCurrentTool(null); setThinkingPhase("thinking");
-                  setLines((arr) => [...arr, { role: "tool_result", toolName: data.name, text: result || "(لا توجد تفاصيل)", isError }]);
-                  if (isError) addToast(`لم تنجح الأداة: ${data.name}`, "error");
+                  setLines((arr) => [...arr, { role: "tool_result", toolName: tName, text: result || "(لا توجد تفاصيل)", isError }]);
+                  setLiveChatOps((prev) => ({
+                    ...prev,
+                    lastMs: Number(data.ms ?? prev.lastMs),
+                    recent: [{ at: Date.now(), label: `${isError ? "✗" : "✓"} ${tName.slice(0, 20)}`, ok: !isError }, ...prev.recent].slice(0, 6),
+                  }));
+                  emitLiveActivity({ kind: "tool_result", phase: "thinking", tool: tName, summary: result, isError, ms: data.ms });
+                  if (isError) addToast(`لم تنجح الأداة: ${tName}`, "error");
                   void refreshBrainStatus();
                 } else if (pendingEvent === "confirm_required") {
                   setCurrentTool(null); setThinkingPhase("thinking");
-                  // A sensitive tool stopped for approval. Remember it so the
-                  // «موافق — نفّذ» button re-sends with `approve:[tool]` and the
-                  // server actually runs it, instead of pausing forever.
                   pendingToolApprovalRef.current = [String(data.name)];
                   setLines((arr) => [...arr, {
                     role: "plan",
                     text: `⏸️ **أداة حساسة محتاجة موافقتك:** ${String(data.title || data.name || "الأداة")}\n\n${String(data.reason || "الأداة تتطلب موافقة صريحة قبل التنفيذ.")}`,
                     awaitingApproval: true,
                   }]);
+                  emitLiveActivity({ kind: "confirm_required", phase: "idle", tool: String(data.name), reason: String(data.reason || "") });
                 } else if (pendingEvent === "plan") {
                   const steps = Array.isArray(data.steps) ? data.steps : [];
                   if (steps.length) {
-                    setLines((arr) => [...arr, {
-                      role: "plan",
-                      text: steps.map((step: { tool?: string }, index: number) => `${index + 1}. ${step.tool || "أداة"}`).join("\n"),
-                    }]);
+                    const planTxt = steps.map((step: { tool?: string }, index: number) => `${index + 1}. ${step.tool || "أداة"}`).join("\n");
+                    setLines((arr) => [...arr, { role: "plan", text: planTxt }]);
+                    emitLiveActivity({ kind: "plan", phase: "thinking", steps });
                   }
-                } else if (pendingEvent === "thought" && String(data.text || "").includes("التشغيل المستمر بعد إغلاق الصفحة")) {
-                  setLines((arr) => [...arr, { role: "system", text: String(data.text), isError: true }]);
+                } else if (pendingEvent === "thought" || pendingEvent === "phase" || pendingEvent === "ready") {
+                  const tText = String(data.text || data.label || (pendingEvent === "ready" ? "الجذر متّصل — يبدأ المعالجة" : "")).trim();
+                  if (tText) {
+                    setLiveChatOps((prev) => ({
+                      ...prev,
+                      thought: tText,
+                      ...(data.provider ? { provider: String(data.provider) } : {}),
+                      ...(data.model ? { model: String(data.model) } : {}),
+                    }));
+                    emitLiveActivity({ kind: "thought", phase: "thinking", text: tText, provider: data.provider, model: data.model });
+                    if (tText.includes("التشغيل المستمر بعد إغلاق الصفحة")) {
+                      setLines((arr) => [...arr, { role: "system", text: tText, isError: true }]);
+                    }
+                  }
                 } else if (pendingEvent === "memory") {
                   setMemorySaveFlash(true);
                   setTimeout(() => setMemorySaveFlash(false), 3000);
+                  emitLiveActivity({ kind: "memory", title: String(data.title || "ذاكرة جديدة"), kindMem: String(data.kind || "fact") });
                 } else if (pendingEvent === "client_tool") {
                   assistantBuf = "";
                   const inputStr = JSON.stringify(data.input ?? {}).slice(0, 200);
@@ -3742,8 +3925,19 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   }
                   // ── END intelligence ──────────────────────────────────────
                   const toolCount = Number(data?.toolCount ?? data?.commandsRun ?? 0);
-                  if (data?.mode !== "plan") {
-                    setLines((arr) => [...arr, { role: "system", text: `انتهى دور NOVA${toolCount > 0 ? ` — ${toolCount} أداة` : ""}.` }]);
+                  const providerUsed = String(data?.provider || liveChatOps.provider || "nova-core");
+                  const modelUsed = String(data?.model || liveChatOps.model || selectedModel);
+                  const msUsed = Number(data?.ms ?? 0);
+                  setLiveChatOps((prev) => ({
+                    ...prev,
+                    provider: providerUsed,
+                    model: modelUsed,
+                    lastMs: msUsed || prev.lastMs,
+                    thought: `مكتمل (${providerUsed}${toolCount > 0 ? ` · ${toolCount} أداة` : ""}${msUsed ? ` · ${msUsed}ms` : ""}) — جاهز للأمر التالي.`,
+                  }));
+                  emitLiveActivity({ kind: "done", phase: "idle", toolCount, provider: providerUsed, model: modelUsed, ms: msUsed });
+                  if (data?.mode !== "plan" && toolCount > 0) {
+                    setLines((arr) => [...arr, { role: "system", text: `✓ اكتملت المهمة — ${toolCount} أداة (${providerUsed})` }]);
                   }
                   if (sessionId) void refreshFiles(sessionId);
                   setPendingAttachments([]);
@@ -3752,6 +3946,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   setCurrentTool(null); setThinkingPhase("idle");
                   const message = String(data.message ?? data.error ?? "غير معروف");
                   setLines((arr) => [...arr, { role: "system", text: `⚠ خطأ: ${message}`, isError: true }]);
+                  emitLiveActivity({ kind: "error", phase: "idle", text: message });
                   addToast(`خطأ: ${message}`, "error");
                 }
               } catch { /* ignore */ }
@@ -3763,12 +3958,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     } catch (e) {
       if ((e as Error)?.name !== "AbortError") {
         setLines((arr) => [...arr, { role: "assistant", text: `خطأ: ${e instanceof Error ? e.message : "غير معروف"}` }]);
+        emitLiveActivity({ kind: "error", phase: "idle", text: e instanceof Error ? e.message : "خطأ غير معروف" });
       }
     } finally {
       setBusy(false); setThinkingPhase("idle"); setCurrentTool(null);
       currentAbortRef.current = null;
     }
   };
+  sendBridgeRef.current = (t: string) => send(t);
 
   // ── Panel styles ───────────────────────────────────────────────────────────
   const getPanelStyles = (): React.CSSProperties => {
@@ -3989,22 +4186,32 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
         {/* ── Header ── */}
         <div
-          className={`${panelMode === "background" ? "border-b border-primary/15" : ""} px-3 py-2 flex items-center gap-2 ${panelMode === "window" && !embedded ? "cursor-move select-none" : ""} shrink-0`}
+          className={`${panelMode === "background" ? "border-b border-rose-500/20" : ""} px-3 py-2 flex items-center gap-2 border-b border-rose-500/20 bg-gradient-to-l from-rose-950/35 via-[#07020c]/95 to-cyan-950/25 ${panelMode === "window" && !embedded ? "cursor-move select-none" : ""} shrink-0`}
           onMouseDown={panelMode === "window" && !embedded ? startDrag : undefined}
         >
           <div className="relative shrink-0">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-emerald-500/30 to-cyan-500/20 border ${ollamaOnline ? "border-emerald-400/50" : "border-rose-400/40"} transition-all`}
-              style={{ boxShadow: busy && ollamaPulse ? `0 0 12px rgba(${ollamaOnline ? "52,211,153" : "248,113,113"},0.5)` : "none" }}>
-              <Brain className={`w-4 h-4 ${ollamaOnline ? "text-emerald-300" : "text-rose-300"}`} />
-            </div>
-            <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background ${ollamaOnline ? "bg-emerald-400" : "bg-rose-400"}`} />
-            {busy && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-60" />}
+            <img
+              src={DAW_SKULL}
+              alt="Dawsha Skull"
+              className={`w-8 h-8 rounded-full object-cover ring-2 ${ollamaOnline || coreBrainReady ? "ring-rose-500/85 skull-halo" : "ring-amber-400/70"} transition-all`}
+            />
+            <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background ${ollamaOnline || coreBrainReady ? "bg-emerald-400" : "bg-amber-400"}`} />
+            {busy && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping opacity-75" />}
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-sm font-bold text-foreground tracking-tight">NOVA AGENT</span>
-              <span className="text-[9px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-400/30 rounded px-1">v7</span>
+              <span className="text-sm font-black text-rose-100 tracking-tight">
+                {embedded ? "☠ نوفا · الجذر الحي" : "☠ NOVA AGENT"}
+              </span>
+              {!embedded && (
+                <span className="text-[9px] font-mono text-rose-300 bg-rose-500/15 border border-rose-400/35 rounded px-1">v8</span>
+              )}
+              {sessionId === "nova-root" && (
+                <span className="text-[8px] font-mono text-cyan-200 bg-cyan-500/15 border border-cyan-400/40 rounded px-1">
+                  24/7 Root
+                </span>
+              )}
               {/* Agent Mode Badge */}
               <button onClick={() => setShowModeSelector(v => !v)}
                 className={`text-[8px] font-mono px-1.5 py-0.5 rounded border transition flex items-center gap-0.5 ${AGENT_MODES.find(m=>m.id===agentMode)?.color ?? ""}`}>
@@ -4053,10 +4260,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 ))}
               </div>
             )}
-            <div className="flex items-center gap-1.5 mt-0.5 text-[9px] font-mono">
-              <span className={`inline-flex items-center gap-1 ${ollamaOnline ? "text-emerald-300" : "text-rose-300"}`}>
-                {ollamaOnline ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
-                {ollamaOnline ? "متصل" : "غير متصل"}
+            <div className="flex items-center gap-1.5 mt-0.5 text-[9px] font-mono flex-wrap">
+              <span className={`inline-flex items-center gap-1 ${ollamaOnline || coreBrainReady ? "text-emerald-300" : "text-amber-300"}`}>
+                {ollamaOnline || coreBrainReady ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
+                {ollamaOnline || coreBrainReady ? "متصل · نواة حية" : "جاري الربط…"}
               </span>
               <span className="text-muted-foreground">·</span>
               {/* Model switcher */}
@@ -4064,32 +4271,34 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 <button
                   onClick={() => setShowModelPicker(v => !v)}
                   className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border transition-all ${
-                    ollamaOnline
-                      ? "text-emerald-200 border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20"
-                      : "text-rose-300 border-rose-400/30 bg-rose-500/10"
+                    ollamaOnline || coreBrainReady
+                      ? "text-cyan-200 border-cyan-400/35 bg-cyan-500/10 hover:bg-cyan-500/20"
+                      : "text-amber-300 border-amber-400/30 bg-amber-500/10"
                   }`}
                   title="تغيير النموذج"
                 >
                   <CpuIcon className="w-2.5 h-2.5" />
-                  <span className="max-w-[90px] truncate">{ollamaModel}</span>
+                  <span className="max-w-[130px] truncate">
+                    {ollamaOnline ? ollamaModel : coreCloudCount > 0 ? `nova-brain · ${coreCloudCount} سحابي` : selectedModel}
+                  </span>
                   <ChevronDown className="w-2 h-2 opacity-60" />
                 </button>
-                {showModelPicker && availableModels.length > 0 && (
+                {showModelPicker && (
                   <>
                     <div className="fixed inset-0 z-[998]" onClick={() => setShowModelPicker(false)} />
-                    <div className="absolute bottom-full mb-1 left-0 z-[999] min-w-[160px] bg-[#050a15]/98 backdrop-blur-xl border border-emerald-400/30 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.8)] p-1 flex flex-col gap-0.5">
-                      <div className="px-2 py-1 text-[9px] font-mono text-emerald-400/60 uppercase tracking-wider border-b border-emerald-400/10 mb-0.5">الموديلات المتاحة</div>
-                      {availableModels.map(m => (
+                    <div className="absolute top-full mt-1 left-0 z-[999] min-w-[180px] bg-[#07030e]/98 backdrop-blur-xl border border-rose-500/40 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.85)] p-1 flex flex-col gap-0.5">
+                      <div className="px-2 py-1 text-[9px] font-mono text-rose-300/75 uppercase tracking-wider border-b border-rose-500/20 mb-0.5">النماذج المتاحة</div>
+                      {(availableModels.length > 0 ? availableModels : OPENCLAW_MODELS.map(m => m.id)).map(m => (
                         <button
                           key={m}
                           onClick={() => void switchModel(m)}
                           className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-mono text-left transition-all ${
-                            m === ollamaModel
-                              ? "bg-emerald-500/20 text-emerald-200 border border-emerald-400/30"
-                              : "text-white/60 hover:bg-white/5 hover:text-white/90 border border-transparent"
+                            m === selectedModel || m === ollamaModel
+                              ? "bg-rose-500/20 text-rose-100 border border-rose-400/40"
+                              : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent"
                           }`}
                         >
-                          {m === ollamaModel && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
+                          {(m === selectedModel || m === ollamaModel) && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
                           <span className="truncate">{m}</span>
                         </button>
                       ))}
@@ -4098,7 +4307,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </div>
               <span className="text-muted-foreground">·</span>
-              <span className="text-amber-300">🛠 {botStatus?.availableTools ?? "…"}</span>
+              <span className="text-amber-300">🛠 {coreToolsCount || botStatus?.availableTools || 67} أداة</span>
             </div>
           </div>
 
@@ -4173,49 +4382,65 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
             {/* New session */}
             <button onClick={() => void newSession()}
-              className="w-6 h-6 rounded flex items-center justify-center hover:bg-emerald-500/15 text-muted-foreground hover:text-emerald-400 transition-colors" title="جلسة جديدة">
+              className="w-6 h-6 rounded flex items-center justify-center hover:bg-emerald-500/15 text-muted-foreground hover:text-emerald-400 transition-colors" title="جلسة فرعية جديدة مرتبطة بالجذر">
               <PlusCircle className="w-3.5 h-3.5" />
             </button>
 
-            {/* Open in window */}
-            <button onClick={onOpenAgentWindow} className="text-[10px] px-2 py-1 rounded-md border border-primary/30 text-primary/80 hover:bg-primary/10" data-testid="open-agent-window">
-              نافذة
+            <button
+              onClick={() => setShowQuickActions((v) => !v)}
+              className={`h-6 px-1.5 rounded border text-[9px] font-mono flex items-center gap-0.5 transition-colors ${
+                showQuickActions
+                  ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
+                  : "border-white/10 text-muted-foreground hover:text-amber-300 hover:border-amber-400/30"
+              }`}
+              title="قائمة الأوامر السريعة"
+            >
+              ⚡
             </button>
 
-            {/* Mode toggle */}
-            <button onClick={() => setPanelMode(panelMode === "window" ? "column" : panelMode === "column" ? "background" : "window")}
-              className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="تغيير وضع العرض">
-              {panelMode === "window" ? <LayoutGrid className="w-3 h-3" /> : panelMode === "column" ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-            </button>
-
-            {panelMode === "background" && (
-              <button onClick={() => setIsMinimized(!isMinimized)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
-                {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
-              </button>
-            )}
-
-            {panelMode === "window" && (
+            {!embedded && (
               <>
-                <button onClick={() => setPanelSize(panelSize === "mini" ? "normal" : "mini")}
-                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
-                  <Minimize2 className="w-3 h-3" />
+                {/* Open in window */}
+                <button onClick={onOpenAgentWindow} className="text-[10px] px-2 py-1 rounded-md border border-primary/30 text-primary/80 hover:bg-primary/10" data-testid="open-agent-window">
+                  نافذة
                 </button>
-                <button onClick={() => setPanelSize(panelSize === "large" ? "normal" : "large")}
-                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
-                  <Maximize2 className="w-3 h-3" />
+
+                {/* Mode toggle */}
+                <button onClick={() => setPanelMode(panelMode === "window" ? "column" : panelMode === "column" ? "background" : "window")}
+                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="تغيير وضع العرض">
+                  {panelMode === "window" ? <LayoutGrid className="w-3 h-3" /> : panelMode === "column" ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                </button>
+
+                {panelMode === "background" && (
+                  <button onClick={() => setIsMinimized(!isMinimized)} className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                    {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
+                  </button>
+                )}
+
+                {panelMode === "window" && (
+                  <>
+                    <button onClick={() => setPanelSize(panelSize === "mini" ? "normal" : "mini")}
+                      className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                      <Minimize2 className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => setPanelSize(panelSize === "large" ? "normal" : "large")}
+                      className="w-5 h-5 rounded flex items-center justify-center hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                      <Maximize2 className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+
+                <button onClick={() => setPanelVisible(false)}
+                  className="w-5 h-5 rounded flex items-center justify-center hover:bg-rose-500/20 text-muted-foreground hover:text-rose-400 transition-colors" title="إخفاء اللوحة ← سهم يسار">
+                  <ChevronRight className="w-3 h-3" />
                 </button>
               </>
             )}
-
-                <button onClick={() => setPanelVisible(false)}
-              className="w-5 h-5 rounded flex items-center justify-center hover:bg-rose-500/20 text-muted-foreground hover:text-rose-400 transition-colors" title="إخفاء اللوحة ← سهم يسار">
-              <ChevronRight className="w-3 h-3" />
-            </button>
           </div>
         </div>
 
         {/* ── Brain Status Bar ── */}
-        {brainStatus && panelSize !== "mini" && (
+        {brainStatus && panelSize !== "mini" && !embedded && (
           <div className="shrink-0 border-b border-primary/10">
             <button
               onClick={() => setBrainExpanded((v) => !v)}
@@ -4273,8 +4498,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Provider status strip ── */}
-        {panelSize !== "mini" && (
+        {/* ── Provider status strip (hidden in compact embedded mode to maximize chat space) ── */}
+        {panelSize !== "mini" && !embedded && (
           <div className="px-3 py-1 border-b border-primary/10 flex items-center gap-1.5 overflow-x-auto shrink-0">
             <span className="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border border-cyan-400/40 text-cyan-200 bg-cyan-500/5">
               NOVA CORE · محرك موحّد
@@ -4315,12 +4540,23 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 ⚔ KALI ROUTE
               </span>
             )}
+            <button
+              onClick={() => setShowQuickActions((v) => !v)}
+              className={`ms-auto shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-lg border flex items-center gap-1 transition-all ${
+                showQuickActions
+                  ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
+                  : "border-white/15 text-white/55 hover:text-white/90 hover:bg-white/5"
+              }`}
+              title="إظهار أو إخفاء الأوامر السريعة"
+            >
+              ⚡ أوامر {showQuickActions ? "▾" : "▸"}
+            </button>
           </div>
         )}
 
         {/* ── Quick actions grid ── */}
-        {panelSize !== "mini" && (
-          <div className="p-2 grid grid-cols-4 gap-1 border-b border-primary/10 shrink-0">
+        {panelSize !== "mini" && showQuickActions && (
+          <div className="p-2 grid grid-cols-4 gap-1 border-b border-primary/10 shrink-0 max-h-44 overflow-y-auto">
             {QUICK_ACTIONS.map((a) => (
               <button
                 key={a.id}
@@ -4345,20 +4581,24 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
         {/* ── Tab bar ── */}
         {panelSize !== "mini" && (
-          <div className="px-2 pt-1.5 flex items-center gap-0.5 border-b border-primary/10 shrink-0 overflow-x-auto">
-            <button onClick={() => setActiveTab("chat")}
+          <div className="relative px-2 pt-1.5 flex items-center gap-0.5 border-b border-primary/10 shrink-0 overflow-x-auto">
+            <button onClick={() => { setActiveTab("chat"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "chat" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" />شات</span>
             </button>
-            <button onClick={() => { setActiveTab("pulse"); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "pulse" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />نبض المشروع</span>
-            </button>
-            <button onClick={() => { setActiveTab("fleet"); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "fleet" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Server className="w-2.5 h-2.5" />الأجهزة</span>
-            </button>
-            <button onClick={() => setActiveTab("missions")}
+            {!embedded && (
+              <>
+                <button onClick={() => { setActiveTab("pulse"); }}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "pulse" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />نبض المشروع</span>
+                </button>
+                <button onClick={() => { setActiveTab("fleet"); }}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "fleet" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1"><Server className="w-2.5 h-2.5" />الأجهزة</span>
+                </button>
+              </>
+            )}
+            <button onClick={() => { setActiveTab("missions"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "missions" ? "border-amber-400 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
                 <Target className="w-2.5 h-2.5" />
@@ -4368,7 +4608,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </span>
             </button>
-            <button onClick={() => setActiveTab("processes")}
+            <button onClick={() => { setActiveTab("processes"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "processes" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
                 <CpuIcon className="w-2.5 h-2.5" />
@@ -4378,7 +4618,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </span>
             </button>
-            <button onClick={() => { setActiveTab("live"); setNewWsEventCount(0); }}
+            <button onClick={() => { setActiveTab("live"); setNewWsEventCount(0); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "live" ? "border-violet-400 text-violet-300 bg-violet-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
                 <Radio className="w-2.5 h-2.5" />
@@ -4389,7 +4629,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 {wsConnected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
               </span>
             </button>
-            <button onClick={() => setActiveTab("terminal")}
+            <button onClick={() => { setActiveTab("terminal"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "terminal" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
                 <TerminalIcon className="w-2.5 h-2.5" />
@@ -4401,53 +4641,127 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </span>
             </button>
-            <button onClick={() => setActiveTab("capabilities")}
+            <button onClick={() => { setActiveTab("capabilities"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "capabilities" ? "border-teal-400 text-teal-300 bg-teal-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Wrench className="w-2.5 h-2.5" />أدوات</span>
+              <span className="flex items-center gap-1"><Wrench className="w-2.5 h-2.5" />أدوات ({coreToolsCatalogue.length || coreToolsCount || 67})</span>
             </button>
-            <button onClick={() => setActiveTab("apps")}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "apps" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Monitor className="w-2.5 h-2.5" />تطبيقات</span>
+            <button onClick={() => { setActiveTab("cveLive"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "cveLive" ? "border-red-400 text-red-300 bg-red-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">🔴 CVE</span>
             </button>
-            <button onClick={() => setActiveTab("topology")}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "topology" ? "border-green-400 text-green-300 bg-green-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Network className="w-2.5 h-2.5" />طوبولوجيا</span>
-            </button>
-            <button onClick={() => setActiveTab("kali")}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "kali" ? "border-rose-400 text-rose-300 bg-rose-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                <Skull className="w-2.5 h-2.5" />
-                Kali
-                {kaliAgentConnected
-                  ? <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" title="جهاز كالي متصل" />
-                  : <span className="text-[7px] px-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">{KALI_TOOLS.length}</span>
-                }
-              </span>
-            </button>
-            {/* ── New Intelligence Tabs ── */}
-            <button onClick={() => setActiveTab("scheduler" as typeof activeTab)}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "scheduler" ? "border-amber-500 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">⏰ Scheduler</span>
-            </button>
-            <button onClick={() => setActiveTab("openclaw" as typeof activeTab)}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "openclaw" ? "border-orange-400 text-orange-300 bg-orange-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🦅 OpenClaw</span>
-            </button>
-            <button onClick={() => setActiveTab("browser" as typeof activeTab)}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "browser" ? "border-sky-400 text-sky-300 bg-sky-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🌐 Browser</span>
-            </button>
-            <button onClick={() => { setActiveTab("multiAI" as typeof activeTab); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "multiAI" ? "border-fuchsia-400 text-fuchsia-300 bg-fuchsia-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                🧠 Multi-AI
-                {multiAIProviders.filter(p => p.available).length > 0 && (
-                  <span className="w-3.5 h-3.5 rounded-full bg-fuchsia-500 text-white text-[7px] flex items-center justify-center font-bold">
-                    {multiAIProviders.filter(p => p.available).length}
-                  </span>
+            {embedded ? (
+              <div className="relative ms-auto shrink-0">
+                <button
+                  onClick={() => setShowMoreTabs((v) => !v)}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap flex items-center gap-1 ${
+                    ["pulse", "fleet", "apps", "topology", "kali", "scheduler", "openclaw", "browser", "multiAI", "intel"].includes(activeTab as string)
+                      ? "border-cyan-400 text-cyan-300 bg-cyan-500/5"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>المزيد</span>
+                  <ChevronDown className="w-2.5 h-2.5" />
+                </button>
+                {showMoreTabs && (
+                  <>
+                    <div className="fixed inset-0 z-[990]" onClick={() => setShowMoreTabs(false)} />
+                    <div className="absolute left-0 top-full mt-1 z-[995] min-w-[165px] rounded-xl border border-primary/25 bg-[#070b14]/98 p-1 shadow-2xl backdrop-blur-xl flex flex-col gap-0.5">
+                      {([
+                        ["pulse", "نبض المشروع"],
+                        ["fleet", "الأجهزة"],
+                        ["apps", "تطبيقات"],
+                        ["topology", "طوبولوجيا"],
+                        ["kali", `Kali (${KALI_TOOLS.length})`],
+                        ["scheduler", `⏰ الجدولة (${serverCronJobs.filter(j=>j.enabled).length}/${serverCronJobs.length || 6})`],
+                        ["openclaw", "🦅 OpenClaw / MCP"],
+                        ["browser", "🌐 Browser"],
+                        ["multiAI", "🧠 Multi-AI"],
+                        ["intel", "🎯 Intel / Bounties"],
+                      ] as const).map(([key, label]) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            setActiveTab(key as typeof activeTab);
+                            setShowMoreTabs(false);
+                            if (key === "scheduler") void loadServerCron();
+                            if (key === "multiAI" && multiAIProviders.length === 0) {
+                              void (async () => {
+                                setMultiAILoading(true);
+                                try {
+                                  const r = await fetch(`${API_BASE}/multi-ai/providers`, { headers: novaAuthHeaders() });
+                                  if (r.ok) {
+                                    const d = (await r.json()) as { providers: MultiAIProvider[] };
+                                    setMultiAIProviders(d.providers);
+                                  }
+                                } catch { /* ignore */ }
+                                setMultiAILoading(false);
+                              })();
+                            }
+                          }}
+                          className={`text-right text-[10px] font-mono px-2.5 py-1.5 rounded-lg transition-all ${
+                            (activeTab as string) === key
+                              ? "bg-primary/20 text-primary border border-primary/30"
+                              : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 )}
-              </span>
-            </button>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => setActiveTab("intel")}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "intel" ? "border-amber-400 text-amber-300 bg-amber-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">🎯 Intel</span>
+                </button>
+                <button onClick={() => setActiveTab("apps")}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "apps" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1"><Monitor className="w-2.5 h-2.5" />تطبيقات</span>
+                </button>
+                <button onClick={() => setActiveTab("topology")}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "topology" ? "border-green-400 text-green-300 bg-green-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1"><Network className="w-2.5 h-2.5" />طوبولوجيا</span>
+                </button>
+                <button onClick={() => setActiveTab("kali")}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "kali" ? "border-rose-400 text-rose-300 bg-rose-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">
+                    <Skull className="w-2.5 h-2.5" />
+                    Kali
+                    {kaliAgentConnected
+                      ? <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" title="جهاز كالي متصل" />
+                      : <span className="text-[7px] px-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">{KALI_TOOLS.length}</span>
+                    }
+                  </span>
+                </button>
+                {/* ── New Intelligence Tabs ── */}
+                <button onClick={() => { setActiveTab("scheduler" as typeof activeTab); void loadServerCron(); }}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "scheduler" ? "border-amber-500 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">⏰ Scheduler</span>
+                </button>
+                <button onClick={() => setActiveTab("openclaw" as typeof activeTab)}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "openclaw" ? "border-orange-400 text-orange-300 bg-orange-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">🦅 OpenClaw</span>
+                </button>
+                <button onClick={() => setActiveTab("browser" as typeof activeTab)}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "browser" ? "border-sky-400 text-sky-300 bg-sky-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">🌐 Browser</span>
+                </button>
+                <button onClick={() => { setActiveTab("multiAI" as typeof activeTab); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`, { headers: novaAuthHeaders() }); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "multiAI" ? "border-fuchsia-400 text-fuchsia-300 bg-fuchsia-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">
+                    🧠 Multi-AI
+                    {multiAIProviders.filter(p => p.available).length > 0 && (
+                      <span className="w-3.5 h-3.5 rounded-full bg-fuchsia-500 text-white text-[7px] flex items-center justify-center font-bold">
+                        {multiAIProviders.filter(p => p.available).length}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -4595,20 +4909,81 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Capabilities Tab ── */}
+        {/* ── Capabilities Tab (Real 67-tool Core Catalogue + Legacy Kali) ── */}
         {activeTab === "capabilities" && panelSize !== "mini" && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="shrink-0 p-2 border-b border-teal-400/15 bg-teal-500/3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <Wrench className="w-3 h-3 text-teal-400" />
-                <span className="text-[10px] font-bold text-teal-300">كتالوج الأدوات — {TOOL_CATALOG.reduce((acc,c)=>acc+c.tools.length,0)} أداة حقيقية</span>
+            <div className="shrink-0 p-2 border-b border-teal-400/15 bg-teal-500/5 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Wrench className="w-3.5 h-3.5 text-teal-400" />
+                  <span className="text-[10px] font-bold text-teal-200">
+                    أدوات النواة الحية — {coreToolsCatalogue.length || coreToolsCount || 67} أداة فعلية
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowLegacyKaliCatalog((v) => !v)}
+                  className="text-[9px] font-mono px-2 py-0.5 rounded border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                >
+                  {showLegacyKaliCatalog ? "عرض أدوات النواة (67)" : `أوامر كالي السريعة (${TOOL_CATALOG.reduce((a, c) => a + c.tools.length, 0)})`}
+                </button>
               </div>
               <input value={capFilter} onChange={e=>setCapFilter(e.target.value)}
-                placeholder="ابحث عن أداة..."
+                placeholder="ابحث بالاسم أو الوظيفة أو الفئة (مثلاً: cve, recon, memory, fleet)..."
                 className="w-full text-[10px] font-mono px-2 py-1 rounded-lg bg-background/60 border border-border/40 focus:border-teal-400/50 focus:outline-none text-foreground placeholder:text-muted-foreground" />
+              {!showLegacyKaliCatalog && coreToolsCatalogue.length > 0 && (
+                <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+                  {["all", ...Array.from(new Set(coreToolsCatalogue.map((t) => t.category)))].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCoreCatFilter(cat)}
+                      className={`text-[8px] font-mono px-1.5 py-0.5 rounded border whitespace-nowrap ${
+                        coreCatFilter === cat
+                          ? "border-teal-400/50 bg-teal-500/15 text-teal-200"
+                          : "border-white/10 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {cat === "all" ? `الكل (${coreToolsCatalogue.length})` : cat}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0">
-              {TOOL_CATALOG.map((cat) => {
+              {!showLegacyKaliCatalog && coreToolsCatalogue.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {coreToolsCatalogue
+                    .filter((t) => (coreCatFilter === "all" || t.category === coreCatFilter))
+                    .filter((t) => {
+                      const q = capFilter.trim().toLowerCase();
+                      if (!q) return true;
+                      return t.name.toLowerCase().includes(q) || t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q);
+                    })
+                    .map((tool) => (
+                      <button
+                        key={tool.name}
+                        onClick={() => {
+                          setInput(`استخدم أداة ${tool.name} (${tool.title}): `);
+                          setActiveTab("chat");
+                        }}
+                        className="text-right p-2 rounded-xl bg-white/[0.03] border border-white/10 hover:border-teal-400/45 hover:bg-teal-500/10 transition group"
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="text-[10px] font-mono font-bold text-teal-300 group-hover:text-teal-200 truncate">{tool.name}</span>
+                          <span className={`text-[7px] font-mono px-1 py-0.5 rounded border shrink-0 ${
+                            tool.risk === "sensitive" || tool.risk === "confirm"
+                              ? "border-rose-500/35 bg-rose-500/15 text-rose-300"
+                              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                          }`}>
+                            {tool.risk === "sensitive" || tool.risk === "confirm" ? "approval" : tool.category}
+                          </span>
+                        </div>
+                        <div className="text-[9px] font-semibold text-foreground/90 truncate">{tool.title}</div>
+                        <div className="text-[8px] text-muted-foreground line-clamp-2 mt-0.5">{tool.description}</div>
+                      </button>
+                    ))}
+                </div>
+              ) : (
+              TOOL_CATALOG.map((cat) => {
                 const filtered = capFilter ? cat.tools.filter(t => t.name.includes(capFilter) || t.desc.includes(capFilter)) : cat.tools;
                 if (filtered.length === 0) return null;
                 const Icon = cat.icon;
@@ -4713,7 +5088,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                     </div>
                   </div>
                 );
-              })}
+              }))}
             </div>
           </div>
         )}
@@ -8533,7 +8908,61 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 </div>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              {/* ── Real Server Cron Jobs (/api/nova/cron/jobs) ── */}
+              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.04] p-2 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-emerald-300 font-mono">
+                    ⚡ كرون السيرفر الحقيقي 24/7 ({serverCronJobs.filter(j => j.enabled).length}/{serverCronJobs.length})
+                  </span>
+                  <button
+                    onClick={() => void loadServerCron()}
+                    className="text-[8px] font-mono px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/15"
+                  >
+                    تحديث
+                  </button>
+                </div>
+                {serverCronJobs.length === 0 ? (
+                  <div className="text-[8px] font-mono text-white/40 py-1">جاري جلب مهام السيرفر…</div>
+                ) : (
+                  serverCronJobs.map((job) => {
+                    const busyJob = serverCronBusy === job.id;
+                    return (
+                      <div key={job.id} className="rounded-lg border border-white/10 bg-black/40 p-1.5 space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${job.enabled ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`} />
+                            <span className="text-[9px] font-bold text-white/90 truncate">{job.name}</span>
+                            <span className="text-[7px] font-mono text-cyan-300/75" dir="ltr">{job.cronExpr}</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              disabled={busyJob}
+                              onClick={() => void triggerServerCron(job.id)}
+                              className="text-[7px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/40 hover:bg-emerald-500/30 disabled:opacity-40"
+                            >
+                              {busyJob ? "…" : "⚡ تشغيل"}
+                            </button>
+                            <button
+                              disabled={busyJob}
+                              onClick={() => void toggleServerCron(job.id, job.enabled)}
+                              className={`text-[7px] px-1.5 py-0.5 rounded border ${job.enabled ? "bg-amber-500/15 text-amber-200 border-amber-400/35" : "bg-cyan-500/15 text-cyan-200 border-cyan-400/35"} disabled:opacity-40`}
+                            >
+                              {job.enabled ? "إيقاف" : "تفعيل"}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-[7px] font-mono text-white/45">
+                          <span>تشغيلات ×{job.runCount}</span>
+                          {job.lastResult && <span className="truncate text-emerald-200/70">↳ {job.lastResult}</span>}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="text-[8px] font-mono text-amber-300/70 px-1 pt-1">مهام مخصصة:</div>
               {scheduledTasks.map((task) => (
                 <div key={task.id} className={`rounded-xl p-2 border transition-all ${task.lastStatus === "running" ? "border-amber-400/50 bg-amber-500/8 animate-pulse" : task.lastStatus === "success" ? "border-emerald-500/30 bg-emerald-500/5" : task.lastStatus === "error" ? "border-rose-500/30 bg-rose-500/5" : "border-primary/10 bg-primary/3"}`}>
                   <div className="flex items-center justify-between mb-1">
@@ -8600,47 +9029,71 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         )}
 
         {/* ══════════════════════════════════════════════════ */}
-        {/* ── OPENCLAW TAB ──────────────────────────────── */}
+        {/* ── OPENCLAW & MCP TAB ────────────────────────── */}
         {/* ══════════════════════════════════════════════════ */}
         {(activeTab as string) === "openclaw" && panelSize !== "mini" && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="shrink-0 p-2 border-b border-orange-500/15 bg-orange-500/3">
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] font-bold text-orange-300 font-mono">🦅 OpenClaw Gateway</span>
+            <div className="shrink-0 p-2 border-b border-orange-500/15 bg-orange-500/5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-bold text-orange-300 font-mono">🦅 OpenClaw & MCP</span>
+                  <button
+                    onClick={() => setOpenclawSubTab("chat")}
+                    className={`text-[8px] font-mono px-1.5 py-0.5 rounded border ${openclawSubTab === "chat" ? "border-orange-400/50 bg-orange-500/20 text-orange-200" : "border-white/10 text-muted-foreground"}`}
+                  >
+                    Gateway Chat
+                  </button>
+                  <button
+                    onClick={() => setOpenclawSubTab("mcp")}
+                    className={`text-[8px] font-mono px-1.5 py-0.5 rounded border ${openclawSubTab === "mcp" ? "border-cyan-400/50 bg-cyan-500/20 text-cyan-200" : "border-white/10 text-muted-foreground"}`}
+                  >
+                    MCP Tools & Audit
+                  </button>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <span className={`w-2 h-2 rounded-full ${openclawStatus === "online" ? "bg-emerald-400 animate-pulse" : openclawStatus === "checking" ? "bg-amber-400 animate-pulse" : "bg-rose-400"}`} />
                   <span className="text-[7px] text-muted-foreground">{ngrokTunnelUrl.replace("https://","").slice(0,30)}</span>
                 </div>
               </div>
-              {/* Model + ACP Selector */}
-              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                {OPENCLAW_MODELS.slice(0,4).map(m => (
-                  <button key={m.id} onClick={() => switchModel(m.id)}
-                    className={`text-[7px] px-1.5 py-0.5 rounded border transition-all ${selectedModel === m.id ? "border-primary/50 bg-primary/15 text-primary" : "border-muted/20 text-muted-foreground hover:border-muted/40"}`}>
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-              {/* ACP Harness Row */}
-              <div className="flex items-center gap-1 mt-1 flex-wrap">
-                <span className="text-[7px] text-muted-foreground">ACP:</span>
-                {acpAgents.map(a => (
-                  <button key={a} onClick={() => setSelectedAcpAgent(a)}
-                    className={`text-[7px] px-1.5 py-0.5 rounded border ${selectedAcpAgent === a ? "border-orange-400/50 text-orange-300 bg-orange-500/10" : "border-muted/20 text-muted-foreground hover:border-muted/40"}`}>
-                    {a}
-                  </button>
-                ))}
-              </div>
+              {openclawSubTab === "chat" && (
+                <>
+                  {/* Model + ACP Selector */}
+                  <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                    {OPENCLAW_MODELS.slice(0,4).map(m => (
+                      <button key={m.id} onClick={() => switchModel(m.id)}
+                        className={`text-[7px] px-1.5 py-0.5 rounded border transition-all ${selectedModel === m.id ? "border-primary/50 bg-primary/15 text-primary" : "border-muted/20 text-muted-foreground hover:border-muted/40"}`}>
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* ACP Harness Row */}
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    <span className="text-[7px] text-muted-foreground">ACP:</span>
+                    {acpAgents.map(a => (
+                      <button key={a} onClick={() => setSelectedAcpAgent(a)}
+                        className={`text-[7px] px-1.5 py-0.5 rounded border ${selectedAcpAgent === a ? "border-orange-400/50 text-orange-300 bg-orange-500/10" : "border-muted/20 text-muted-foreground hover:border-muted/40"}`}>
+                        {a}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+            {openclawSubTab === "mcp" ? (
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <OpenClawPanel apiBase={API_BASE} agentConnected={kaliAgentConnected} />
+              </div>
+            ) : (
+            <>
             {/* Chat Log */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
               {openclawLog.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
                   <span className="text-4xl">🦅</span>
-                  <div className="text-[9px] text-muted-foreground">OpenClaw Gateway جاهز</div>
+                  <div className="text-[9px] text-muted-foreground">OpenClaw Gateway متصل بـ nova-core</div>
                   <div className="text-[8px] text-orange-400/70 font-mono">{ngrokTunnelUrl.slice(0,40)}</div>
                   <div className="text-[7px] text-muted-foreground/60 max-w-[200px]">
-                    تحدث مع النماذج عبر OpenClaw أو شغّل ACP harness مع Claude/Codex/Cursor
+                    تحدث مباشرة مع العقل المركزي والأدوات الـ 67 أو انتقل إلى تبويب MCP Tools & Audit
                   </div>
                   <div className="flex flex-wrap gap-1 justify-center mt-1">
                     {["امسح الشبكة", "ابحث عن ثغرات", "حلل النظام", `شغّل ${selectedAcpAgent} على المشروع`].map(s => (
@@ -8679,6 +9132,22 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 {openclawBusy ? "⟳" : "إرسال"}
               </button>
             </div>
+            </>
+            )}
+          </div>
+        )}
+
+        {/* ── Live CVE Stream Tab ── */}
+        {activeTab === "cveLive" && panelSize !== "mini" && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <NovaCveLiveTab />
+          </div>
+        )}
+
+        {/* ── Intelligence & Bug Bounty Tab ── */}
+        {activeTab === "intel" && panelSize !== "mini" && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <NovaIntelPanel />
           </div>
         )}
 
@@ -8724,7 +9193,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               {browserLog.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
                   <span className="text-3xl">🌐</span>
-                  <div className="text-[9px] text-muted-foreground">Browser Automation عبر OpenClaw</div>
+                  <div className="text-[9px] text-muted-foreground">Browser Automation · أتمتة المتصفح المتقدمة</div>
                   <div className="flex flex-wrap gap-1 justify-center mt-1">
                     {["https://google.com","https://shodan.io","https://exploit-db.com","https://nvd.nist.gov"].map(url => (
                       <button key={url} onClick={() => { setBrowserInput(url); setBrowserAction("open"); }}
@@ -9240,7 +9709,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                       const body = multiAIMode === "consensus"
                         ? { messages: history, maxProviders: 3, timeoutMs: 30000 }
                         : { messages: history, preferProvider: multiAISelectedProvider === "auto" ? undefined : multiAISelectedProvider, taskType: multiAITaskType };
-                      fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(async r => {
+                      fetch(endpoint, { method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(body) }).then(async r => {
                         if (!r.body) throw new Error("No body");
                         const reader = r.body.getReader();
                         const dec = new TextDecoder();
@@ -9310,7 +9779,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                     const body = multiAIMode === "consensus"
                       ? { messages: history, maxProviders: 3, timeoutMs: 30000 }
                       : { messages: history, preferProvider: multiAISelectedProvider === "auto" ? undefined : multiAISelectedProvider, taskType: multiAITaskType };
-                    fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(async r => {
+                    fetch(endpoint, { method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(body) }).then(async r => {
                       if (!r.body) throw new Error("No body");
                       const reader = r.body.getReader();
                       const dec = new TextDecoder();
@@ -9371,32 +9840,111 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Chat Thread ── */}
+        {/* ── Chat Thread + Live Chat Ops Dashboard ── */}
         {(activeTab === "chat" || panelSize === "mini") && (
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2 min-h-0">
+          <div className="flex-1 flex flex-col min-h-0">
+            {panelSize !== "mini" && (
+              <div className="shrink-0 border-b border-rose-500/20 bg-gradient-to-l from-[#120710]/90 via-[#070b14]/95 to-[#06131c]/90 px-2.5 py-1.5">
+                <div className="flex items-center justify-between gap-2 text-[9px] font-mono">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                    <span className={`px-1.5 py-0.5 rounded border ${
+                      thinkingPhase !== "idle"
+                        ? "border-amber-400/45 bg-amber-500/15 text-amber-200 animate-pulse"
+                        : coreBrainReady
+                        ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                        : "border-rose-400/40 bg-rose-500/10 text-rose-200"
+                    }`}>
+                      {thinkingPhase === "idle" ? "● LIVE" : `⚡ ${thinkingPhase}`}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded border border-cyan-500/25 bg-cyan-500/10 text-cyan-200 truncate max-w-[140px]">
+                      {liveChatOps.provider}/{liveChatOps.model}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/75">
+                      الوضع: {agentMode}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded border border-teal-500/25 bg-teal-500/10 text-teal-200">
+                      أدوات: {liveChatOps.toolsRun}
+                    </span>
+                    {liveChatOps.lastMs > 0 && (
+                      <span className="text-white/45">{liveChatOps.lastMs}ms</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => setActiveTab("capabilities")}
+                      className="px-1.5 py-0.5 rounded border border-teal-500/30 bg-teal-500/10 text-teal-200 hover:bg-teal-500/20"
+                      title="عرض الأدوات الـ 67"
+                    >
+                      🛠 {coreToolsCatalogue.length || coreToolsCount || 67}
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("terminal")}
+                      className="px-1.5 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                      title="Terminal"
+                    >
+                      ❯_
+                    </button>
+                    <button
+                      onClick={() => setShowChatOpsStrip((v) => !v)}
+                      className="px-1.5 py-0.5 rounded border border-white/10 text-white/60 hover:text-white"
+                      title="إظهار/إخفاء نبض العمليات"
+                    >
+                      {showChatOpsStrip ? "▴" : "▾"}
+                    </button>
+                  </div>
+                </div>
+                {showChatOpsStrip && (
+                  <div className="mt-1.5 flex items-center justify-between gap-2 text-[9px] font-mono">
+                    <div className="truncate text-cyan-100/75 flex-1" title={liveChatOps.thought}>
+                      <span className="text-rose-400/90">◈</span> {liveChatOps.thought}
+                    </div>
+                    {liveChatOps.recent.length > 0 && (
+                      <div className="hidden sm:flex items-center gap-1 shrink-0">
+                        {liveChatOps.recent.slice(0, 3).map((ev, idx) => (
+                          <span
+                            key={`${ev.at}-${idx}`}
+                            className={`px-1.5 py-0.5 rounded border truncate max-w-[110px] ${
+                              ev.ok === false
+                                ? "border-rose-500/35 bg-rose-500/10 text-rose-200"
+                                : "border-white/10 bg-black/35 text-white/70"
+                            }`}
+                          >
+                            {ev.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2 min-h-0 cyber-hud-grid">
             {lines.length === 0 && (
-              <div className="text-center py-6 px-4">
-                <div className="relative inline-block">
-                  <Sparkles className="w-10 h-10 mx-auto text-primary/60 mb-3" />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 animate-ping opacity-60" />
+              <div className="text-center py-4 px-3">
+                <div className="relative inline-block mb-2">
+                  <img
+                    src={DAW_SKULL}
+                    alt="Dawsha Skull"
+                    className="w-12 h-12 mx-auto rounded-full object-cover ring-2 ring-rose-500/85 skull-halo"
+                  />
+                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 animate-ping opacity-75" />
                 </div>
-                <div className="text-xs font-bold text-foreground mb-1">NOVA — المحرك المركزي</div>
-                <div className="text-[10px] text-muted-foreground leading-relaxed mb-3">
-                  أجيب باستخدام سياق المنصة وأدواتها الآمنة المتاحة.<br />
-                  الأدوات النشطة وأوامر الأجهزة لا تُنفذ تلقائياً، والموافقة عليها غير متاحة من هذه المحادثة حالياً.<br />
-                  إغلاق الصفحة يوقف هذه الجلسة؛ التشغيل المستمر يحتاج خدمة خلفية مستقلة.
+                <div className="text-xs font-black text-rose-100 mb-1">☠ NOVA — الجذر الحي (nova-root 24/7)</div>
+                <div className="text-[10px] text-cyan-100/65 leading-relaxed mb-3 max-w-md mx-auto">
+                  جلسة مستمرة 24/7 مربوطة بالذاكرة الدائمة (auto-dream) وبـ {coreToolsCount || 67} أداة حقيقية.<br />
+                  الموافقات الأمنية (Approval Gate) والأوامر والمهام الجارية محفوظة في الخلفية حتى لو أغلقت المتصفح.
                 </div>
-                <div className="grid grid-cols-2 gap-1.5 text-right">
+                <div className="grid grid-cols-2 gap-1.5 text-right max-w-md mx-auto">
                   {[
                     { text: "حالة النظام", desc: "platform_status" },
                     { text: "ابحث عن CVE", desc: "cve_lookup" },
                     { text: "حالة الأسطول", desc: "fleet_list" },
-                    { text: "ابحث في الويب", desc: "web_search" },
+                    { text: "ملخص الذاكرة والجذر", desc: "memory_recall" },
                   ].map((s) => (
                     <button key={s.text} onClick={() => setInput(s.text)}
-                      className="text-[10px] px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-foreground hover:bg-primary/10 transition text-right">
-                      <div className="font-medium">{s.text}</div>
-                      <div className="text-muted-foreground font-mono text-[8px]">{s.desc}</div>
+                      className="text-[10px] px-2.5 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-100 hover:bg-rose-500/20 hover:border-cyan-400/45 transition text-right">
+                      <div className="font-bold">{s.text}</div>
+                      <div className="text-cyan-300/65 font-mono text-[8px]">{s.desc}</div>
                     </button>
                   ))}
                 </div>
@@ -9497,6 +10045,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </div>
             )}
+          </div>
           </div>
         )}
 

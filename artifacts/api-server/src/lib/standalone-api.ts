@@ -887,21 +887,52 @@ let kaliConvsState = loadState("cybernova_kaliconvs_v1", [
 
 let liveSessionsState = loadState("cybernova_livesessions_v1", [
   {
-    id: "session-default",
-    title: "جلسة القيادة الحية — NOVA Director",
+    id: "nova-root",
+    title: "الجذر الدائم — NOVA Root (24/7)",
     status: "active",
+    isRoot: true,
+    parentId: null as string | null,
+    backgroundLinked: true,
     createdAt: new Date().toISOString(),
     messages: [
       {
         id: 1,
         role: "assistant",
         content:
-          "نظام **NOVA Live Agent** متصل وجاهز. جميع الأحداث والملاحظات متزامنة مع الذاكرة ومتتبع المهام.",
+          "نظام **NOVA Live Agent** متصل بالجذر الدائم. جميع الجلسات والمهام والخلفية 24/7 متزامنة ضمن سياق واحد.",
         createdAt: new Date().toISOString(),
       },
     ],
   },
 ]);
+
+function ensureRootSessionInStandalone() {
+  const hasRoot = liveSessionsState.some((s) => String(s.id) === "nova-root");
+  if (!hasRoot) {
+    liveSessionsState = [
+      {
+        id: "nova-root",
+        title: "الجذر الدائم — NOVA Root (24/7)",
+        status: "active",
+        isRoot: true,
+        parentId: null,
+        backgroundLinked: true,
+        createdAt: new Date().toISOString(),
+        messages: [
+          {
+            id: 1,
+            role: "assistant",
+            content:
+              "نظام **NOVA Live Agent** متصل بالجذر الدائم. جميع الجلسات والمهام والخلفية 24/7 متزامنة ضمن سياق واحد.",
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      },
+      ...liveSessionsState,
+    ];
+    saveState("cybernova_livesessions_v1", liveSessionsState);
+  }
+}
 
 // صدق الجلسة (الفحص الشامل 2026-11-09): كل إدخال هنا قالب تمريني للمتصفح —
 // مش تاريخ فحوصات وقعت فعلاً. علامة simulated:true هي الفرق بين المسرح والقياس:
@@ -1549,6 +1580,33 @@ if (path === "/nova-core/version") {
     };
   }
 
+  if (path === "/nova-core/nexus") {
+    ensureRootSessionInStandalone();
+    const root = liveSessionsState.find((s) => String(s.id) === "nova-root") || liveSessionsState[0];
+    return {
+      ok: true,
+      standalone: true,
+      rootSessionId: "nova-root",
+      rootTitle: root?.title || "الجذر الدائم — NOVA Root (24/7)",
+      rootMessageCount: Array.isArray(root?.messages) ? root.messages.length : 0,
+      rootDigest: "",
+      totalSessions: liveSessionsState.length,
+      backgroundFeedCount: 0,
+      learnedInsightsCount: 0,
+      recentBackground: [],
+      learnedInsights: [],
+      sessions: liveSessionsState.map((s) => ({
+        id: String(s.id),
+        title: String(s.title),
+        isRoot: String(s.id) === "nova-root",
+        parentId: String(s.id) === "nova-root" ? null : "nova-root",
+        messageCount: Array.isArray(s.messages) ? s.messages.length : 0,
+        updatedAt: String(s.createdAt || new Date().toISOString()),
+        summary: "",
+      })),
+    };
+  }
+
   // The free-host catalogue is the engine's opinion + the engine's probes. On a
   // static bundle there is nothing to probe from, so the shape is complete and
   // the lists are empty — with the reason, never a fabricated "0 hosts exist".
@@ -1698,7 +1756,7 @@ if (path === "/nova-core/version") {
     };
   }
 
-  if (path === "/nova-core/tools") {
+  if (path === "/nova-core/tools" || path === "/nova-core/catalogue") {
     const names = [
       ["recon_target", "استطلاع هدف", "استطلاع سلبي شامل لنطاق (يتطلب سيرفر)"],
       ["dns_lookup", "فحص DNS", "سجلات A/AAAA/MX/TXT (يتطلب سيرفر)"],
@@ -1735,7 +1793,9 @@ if (path === "/nova-core/version") {
       ["device_control_map", "خريطة التحكم", "أوامر تركيب الوكيل"],
     ];
     return {
+      ok: true,
       total: names.length,
+      categories: ["recon", "intel", "memory", "mission", "system"],
       tools: names.map(([name, title, description], i) => ({
         name,
         title,
@@ -1747,6 +1807,20 @@ if (path === "/nova-core/version") {
       mode: "static",
       note: "الأدوات اللي مكتوب عليها «يتطلب سيرفر» بتحتاج ربط سيرفر من محطة العمل.",
     };
+  }
+
+  if (path === "/mcp/tools") {
+    const mcpTools = [
+      { name: "kali_exec", description: "تنفيذ أمر على جهاز كالي المتصل" },
+      { name: "kali_system_info", description: "قراءة معلومات نظام كالي" },
+      { name: "kali_network_scan", description: "فحص شبكة عبر كالي" },
+      { name: "kali_file_read", description: "قراءة ملف من العقدة" },
+      { name: "kali_file_write", description: "كتابة ملف على العقدة" },
+      { name: "kali_dir_list", description: "تصفح مجلد على العقدة" },
+      { name: "nova_memory_search", description: "بحث في ذاكرة نوفا" },
+      { name: "nova_knowledge_search", description: "بحث في قاعدة المعرفة الأمنية" },
+    ];
+    return { ok: true, count: mcpTools.length, tools: mcpTools, mode: "static" };
   }
 
   if (path === "/nova-core/persona") {
@@ -1809,6 +1883,67 @@ if (path === "/nova-core/version") {
     };
     if (path.endsWith("/stats")) return stats;
     return { total: records.length, items: records.slice(0, 100), stats };
+  }
+
+  if (path === "/nova-core/memory/search") {
+    const q = (u.searchParams.get("q") || "").trim().toLowerCase();
+    const limit = Math.min(100, Math.max(1, Number(u.searchParams.get("limit") || 40)));
+    const records = readBrowserMemories();
+    const items = q
+      ? records.filter((r) =>
+          `${r.title} ${r.content} ${(r.tags || []).join(" ")} ${r.scope}`.toLowerCase().includes(q)
+        )
+      : records;
+    return { items: items.slice(0, limit), total: items.length };
+  }
+
+  const novaMemPin = path.match(/^\/nova-core\/memory\/([^/]+)\/pin$/);
+  if (novaMemPin && (m === "PATCH" || m === "POST")) {
+    const id = decodeURIComponent(novaMemPin[1]);
+    const records = readBrowserMemories();
+    const target = records.find((r) => String(r.id) === id);
+    const nextPinned = body?.pinned !== undefined ? Boolean(body.pinned) : !(target?.pinned ?? true);
+    const next = records.map((r) => (String(r.id) === id ? { ...r, pinned: nextPinned } : r));
+    try { if (typeof localStorage !== "undefined") localStorage.setItem("cybernova_nova_memories", JSON.stringify(next)); } catch { /* ignore */ }
+    return { ok: true, id, pinned: nextPinned };
+  }
+
+  const novaMemDel = path.match(/^\/nova-core\/memory\/([^/]+)$/);
+  if (novaMemDel && m === "DELETE") {
+    const id = decodeURIComponent(novaMemDel[1]);
+    const records = readBrowserMemories();
+    const next = records.filter((r) => String(r.id) !== id);
+    try { if (typeof localStorage !== "undefined") localStorage.setItem("cybernova_nova_memories", JSON.stringify(next)); } catch { /* ignore */ }
+    return { ok: true, deleted: next.length < records.length, id };
+  }
+
+  if (path === "/nova-core/learning" || path === "/nova-core/memory/consolidate") {
+    const records = readBrowserMemories();
+    const byKind = { fact: 0, preference: 0, lesson: 0, event: 0, session: 0 };
+    for (const r of records) byKind[r.kind] = (byKind[r.kind] ?? 0) + 1;
+    const stats = { total: records.length, byKind, pinned: records.filter((r) => r.pinned).length, storage: "browser" };
+    const lessons = records.filter((r) => r.kind === "lesson");
+    return {
+      ok: true,
+      consolidated: path.endsWith("/consolidate") ? 1 : 0,
+      measuredAt: new Date().toISOString(),
+      memoryStats: stats,
+      autoDreamActive: true,
+      autoDreamCount: lessons.length,
+      autoDreamLessons: lessons.slice(0, 12),
+      recentMemories: records.slice(0, 30),
+      nexus: {
+        rootSessionId: "nova-root",
+        totalSessions: 1,
+        rootMessageCount: 0,
+        backgroundFeedCount: 0,
+        learnedInsightsCount: lessons.length,
+        memoryTotal: records.length,
+        rootDigest: "وضع المتصفح المحلي — الذاكرة محفوظة محلياً.",
+        recentBackground: [],
+        learnedInsights: lessons.slice(0, 8).map((l) => l.title),
+      },
+    };
   }
 
   if (path === "/nova-core/ollama") {
@@ -2681,23 +2816,36 @@ if (path === "/nova-core/version") {
 
   // ── Live Agent Sessions (/api/live-agent/sessions) ─────────────────────────
   if (path === "/live-agent/sessions") {
+    ensureRootSessionInStandalone();
     if (m === "POST") {
       const sess = {
         id: `session-${Date.now()}`,
         title: String(body?.title || `جلسة ${new Date().toLocaleTimeString("ar-EG")}`),
         status: "active",
+        isRoot: false,
+        parentId: "nova-root" as string | null,
+        backgroundLinked: true,
         createdAt: new Date().toISOString(),
         messages: [],
       };
-      liveSessionsState = [sess, ...liveSessionsState];
+      const root = liveSessionsState.find((s) => String(s.id) === "nova-root");
+      const children = liveSessionsState.filter((s) => String(s.id) !== "nova-root");
+      liveSessionsState = root ? [root, sess, ...children] : [sess, ...children];
       saveState("cybernova_livesessions_v1", liveSessionsState);
       return sess;
     }
-    return liveSessionsState;
+    return liveSessionsState.map((s) => ({
+      ...s,
+      isRoot: String(s.id) === "nova-root",
+      parentId: String(s.id) === "nova-root" ? null : (s.parentId ?? "nova-root"),
+      backgroundLinked: true,
+      messageCount: Array.isArray(s.messages) ? s.messages.length : 0,
+    }));
   }
 
   const liveSaveMatch = path.match(/^\/live-agent\/sessions\/([^/]+)\/save-ai-response$/);
   if (liveSaveMatch && m === "POST" && body) {
+    ensureRootSessionInStandalone();
     const sid = liveSaveMatch[1];
     const sess = liveSessionsState.find((s) => String(s.id) === sid) || liveSessionsState[0];
     if (sess) {
@@ -2724,8 +2872,10 @@ if (path === "/nova-core/version") {
 
   const liveIdMatch = path.match(/^\/live-agent\/sessions\/([^/]+)$/);
   if (liveIdMatch) {
+    ensureRootSessionInStandalone();
     const sid = liveIdMatch[1];
     if (m === "DELETE") {
+      if (sid === "nova-root") return { ok: true, preservedRoot: true };
       liveSessionsState = liveSessionsState.filter((s) => String(s.id) !== sid);
       saveState("cybernova_livesessions_v1", liveSessionsState);
       return { ok: true };
@@ -5625,6 +5775,7 @@ if (path === "/fleet/system") {
   }
 
   if (path === "/live-agent/status" || path === "/live-agent/brain-status" || path === "/live-agent/iq" || path === "/nova/iq") {
+    ensureRootSessionInStandalone();
     // One payload shape for every consumer. The panel reads memoryCount /
     // activeProcesses / cronJobsEnabled / alertsUnread / ts, and the IQ widgets
     // read iqScore / level — dropping either group breaks a screen.
@@ -5638,6 +5789,9 @@ if (path === "/fleet/system") {
       knowledgeItems: getCorpusStats().totalIndexedKnowledgeItems,
       memoryCount: memoriesState.length,
       activeSessions: liveSessionsState.length,
+      rootSessionId: "nova-root",
+      backgroundFeedCount: 0,
+      learnedInsightsCount: 0,
       activeProcesses: [] as Array<{ id: string; command: string; startedAt?: string }>,
       cronJobsEnabled: 1,
       alertsUnread: 0,
@@ -5748,6 +5902,14 @@ if (path === "/fleet/system") {
       level: "off", tasksCompleted: 0, tasksErrored: 0, isRunning: false,
       daemon: { running: false, state: "no_daemon_in_static_twin", cycles: 0, lastHeartbeatAt: "" },
       reasonAr: "التوأم الساكن مفيهوش ديمون؛ مفيش دورات ذاتية بتتم هنا.",
+    };
+  }
+
+  if (path === "/autonomous/tick" && m === "POST") {
+    return {
+      ok: false, standalone: true, notWired: true, skipped: true,
+      error: "no_execution_plane",
+      reason: "التوأم الساكن (GitHub Pages) مفيهوش ديمون — النبضة الحقيقية بتشتغل على السيرفر: POST /api/autonomous/tick.",
     };
   }
 

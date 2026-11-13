@@ -262,6 +262,8 @@ function InnerRoutes() {
       <Route path="/nova-fleet" component={NovaFleetUnified} />
       {/* «الأجينت المطوّر — مكتب نوفا»: شات حي + قياسات العقدة + المهمات + الأسطول */}
       <Route path="/agent-pro" component={NovaAgentPro} />
+      <Route path="/workspace" component={NovaAgentPro} />
+      <Route path="/cockpit" component={NovaAgentPro} />
       {/* /nova-agent محجوز لـNovaAgent (المستخدم في Dashboard/الأسطول) —
           النسخة التانية بتاخد مسارها الخاص بدل ما تكون ميتة تحت التكرار */}
       <Route path="/nova-agent-page" component={NovaAgentPage} />

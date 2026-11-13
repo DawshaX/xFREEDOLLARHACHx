@@ -37,6 +37,12 @@ import {
 import { llmComplete, extractJson } from "./llm";
 import { saveMemory, getAllMemories } from "../../routes/memory";
 import { remember, memoryContextFor, memoryStats, initMemory } from "./memory-store";
+import {
+  ROOT_SESSION_ID,
+  initSessionNexus,
+  buildNexusContext,
+  recordNexusTurn,
+} from "./session-nexus";
 import { getMissionsState, recordMissionCommand } from "../standalone-api";
 import { broadcastEvent } from "../ws-hub";
 import { broadcastLiveEvent } from "./../../routes/live-events";
@@ -212,23 +218,18 @@ export interface AgentRunOptions {
   /** Force the deterministic brain (used by tests / air-gapped mode). */
   forceHeuristic?: boolean;
   maxSteps?: number;
-  /**
-   * Plan mode \u2014 the mediator the user asked for.
-   *
-   * When true the turn stops after planning: the steps are emitted as
-   * `plan_ready` with `awaitingApproval: true` and NOT ONE tool runs. The human
-   * reads the plan, edits it or says yes, and the next turn (with planMode off)
-   * executes. Without this the agent either ran everything immediately or
-   * answered with a canned line \u2014 neither is a conversation.
-   */
   planMode?: boolean;
-  /**
-   * Tools the human has already approved for this turn. Anything that declares
-   * `risk: "sensitive"` (running commands on a real machine, killing processes…)
-   * is NOT executed until its name shows up here, so the chat can never touch a
-   * connected box by surprise — it must ask first and be told "yes".
-   */
   approved?: string[];
+  /** Selected panel operating mode: defensive | offensive | analyst | stealth. */
+  agentMode?: string;
+  /** Preferred model label selected in UI. */
+  preferredModel?: string;
+  /** Whether continuous autonomous loop is enabled. */
+  autonomousMode?: boolean;
+  /** Whether a Kali node is actively linked. */
+  kaliConnected?: boolean;
+  /** Override skip saving into session-nexus (used only when caller handles persistence itself). */
+  skipNexusRecord?: boolean;
 }
 
 interface PlannedStep {
@@ -260,24 +261,52 @@ function safeFleetSummary(): string {
   }
 }
 
+function modeDirective(agentMode?: string): string {
+  switch ((agentMode || "").toLowerCase()) {
+    case "offensive":
+      return "الوضع الحالي: هجومي أخلاقي (Red-Ops) — ركّز على سطح الهجوم، نقاط الدخول، الاستغلالات المصرّح بفحصها، والتحقق الدقيق قبل أي استنتاج.";
+    case "analyst":
+      return "الوضع الحالي: محلل استخبارات (Analyst) — ركّز على فرز الأدلة، تصنيف الخطورة CVSS/CWE، الربط بين المعطيات، وتوثيق المخرجات.";
+    case "stealth":
+      return "الوضع الحالي: تخفّي واستطلاع صامت (Stealth) — أعطِ الأولوية للجمع السلبي (OSINT/DNS/TLS/Headers) وتجنب الضوضاء الزائدة.";
+    case "defensive":
+    default:
+      return "الوضع الحالي: دفاعي (Defensive) — ركّز على كشف الثغرات، التصلب الأمني، الترقيع، وحماية الأصول.";
+  }
+}
+
 /**
  * Everything NOVA knows before it answers: live platform state + the durable
  * long-term memory (ranked against the current question and target).
  */
-function buildContextBlock(query = ""): string {
+function buildContextBlock(
+  query = "",
+  sessionId = ROOT_SESSION_ID,
+  opts?: { agentMode?: string; autonomousMode?: boolean; kaliConnected?: boolean },
+): string {
   const missions = getMissionsState();
   const active = missions[0];
   const stats = memoryStats();
   const longTerm = memoryContextFor(query, active?.target ?? undefined, 8);
   const fleet = safeFleetSummary();
+  let nexusBlock = "";
+  try {
+    nexusBlock = buildNexusContext(sessionId);
+  } catch {
+    nexusBlock = "";
+  }
   return [
     `# سياق المنصة الآن`,
+    `- ${modeDirective(opts?.agentMode)}`,
+    opts?.autonomousMode ? `- الوضع المستقل: مفعّل 24/7` : "",
+    opts?.kaliConnected ? `- عقدة كالي متصلة ومستعدة للتنفيذ عند الموافقة` : "",
     `- الهدف النشط: ${active?.target ?? "غير محدد"} (${active?.name ?? "—"})`,
     `- الأجهزة المتصلة الآن: ${fleet}`,
     `- نتائج مسجلة في المهمة: ${active?.findings.length ?? 0}`,
     `- ذاكرتك طويلة الأمد: ${stats.total} ذكرى (${stats.pinned} مثبتة) — تفضل بعد إعادة التشغيل`,
+    nexusBlock,
     longTerm || "# الذاكرة طويلة الأمد فارغة حتى الآن",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 /* ── heuristic planner (works with zero models) ──────────────────────────── */
@@ -440,7 +469,13 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
   },
   {
     test: /(?:كيف أحمي|إصلاح|ترقيع|remediat|fix|حماية)/i,
-    tools: (msg) => [{ tool: "knowledge_search", args: { query: cleanQuery(msg) } }],
+    tools: (msg) => [{ tool: "knowledge_search", args: { query: extractKnowledgeTopic(msg) } }],
+  },
+  {
+    // Technical / bug bounty / vulnerability explanation questions should search
+    // security knowledge instead of falling back to generic status + memory!
+    test: /(?:اشرح|شرح|إزاي|ازاي|كيف|ما هي|ما هو|الفرق بين|طريقة|تقرير|خطة|فحص|صيد|بج باونتي|bug\s*bounty|xss|sqli|sql\s*injection|ssrf|idor|csrf|xxe|ssti|rce|lfi|jwt|oauth|cors|owasp|pentest|privilege|تصعيد)/i,
+    tools: (msg) => [{ tool: "knowledge_search", args: { query: extractKnowledgeTopic(msg) } }],
   },
   {
     // General "look it up" is the request people send most, and it used to
@@ -463,6 +498,17 @@ function cleanQuery(msg: string): string {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 90) || "أمن سيبراني";
+}
+
+function extractKnowledgeTopic(msg: string): string {
+  const m = msg.match(/\b(sqlmap|sql\s*injection|sqli|xss|ssrf|idor|bola|csrf|xxe|ssti|rce|lfi|rfi|jwt|oauth|cors|nmap|nuclei|hydra|nikto|gobuster|ffuf|feroxbuster|linpeas|metasploit|burp|owasp|pentest|docker|kubernetes|graphql|grpc|redis|mongodb|postgres|smb|ldap|kerberos)\b/i);
+  if (m) return m[1].toLowerCase().replace(/\bsqli\b/i, "sql injection");
+  const asciiWords = msg.match(/[a-zA-Z0-9._-]{3,}/g)?.filter((w) => !/^(?:http|https|www)$/i.test(w));
+  if (asciiWords && asciiWords.length > 0) return asciiWords.slice(0, 3).join(" ");
+  return cleanQuery(msg)
+    .replace(/(?:ازاي|إزاي|كيف|اشرح|شرح|ما هو|ما هي|طريقة|فحص|أحمي|احمي|الفرق بين|？|\?)/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim() || "owasp";
 }
 
 /**
@@ -551,6 +597,7 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
     if (/ثغرات|vuln/i.test(src)) return "بحث ثغرات";
     if (/ذاكرت|memory|فاكر/i.test(src)) return "ذاكرتي";
     if (/مهم|mission|target|هدف/i.test(src)) return "مهمة نشطة";
+    if (/اشرح|xss|ssrf|owasp/i.test(src)) return "قاعدة المعرفة التقنية";
     if (/ابحث|دوّر|search/i.test(src)) return "بحث في النت";
     if (/حالة المنصة|status|health/i.test(src)) return "حالة المنصة";
     return "تحليل الطلب";
@@ -755,11 +802,13 @@ async function llmPlan(
   message: string,
   history: Array<{ role: "user" | "assistant"; content: string }>,
   selfModel: ReturnType<typeof buildSelfModel>,
+  sessionId = ROOT_SESSION_ID,
+  runMeta?: { agentMode?: string; autonomousMode?: boolean; kaliConnected?: boolean },
 ): Promise<{ thought: string; steps: PlannedStep[]; directAnswer?: string; provider: string; model: string } | null> {
   const messages = [
     {
       role: "system" as const,
-      content: `${NOVA_SYSTEM_PROMPT_SHORT}\n\n${selfModelPrompt(selfModel)}\n\n# أدواتك\n${toolCatalogueForPrompt()}\n\n${buildContextBlock(message)}\n\n${PLAN_INSTRUCTIONS}`,
+      content: `${NOVA_SYSTEM_PROMPT_SHORT}\n\n${selfModelPrompt(selfModel)}\n\n# أدواتك\n${toolCatalogueForPrompt()}\n\n${buildContextBlock(message, sessionId, runMeta)}\n\n${PLAN_INSTRUCTIONS}`,
     },
     ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
     { role: "user" as const, content: message },
@@ -891,7 +940,91 @@ function preview(data: unknown): string {
   }
 }
 
-function heuristicAnswer(message: string, results: Array<{ name: string; ok: boolean; summary: string; data: unknown }>): string {
+function technicalGuideFor(message: string, agentMode?: string): string | null {
+  const q = message.toLowerCase();
+  const modeNote =
+    agentMode === "offensive"
+      ? "⚔️ **منظور الهجوم الأخلاقي (Red-Ops):** ركّز على نقاط الدخول والتحقق العملي بأقل ضوضاء وبدون إضرار."
+      : agentMode === "analyst"
+        ? "📊 **منظور التحليل (Analyst):** رتّب الأدلة، قيّم الأثر (CVSS/CWE)، وتأكد من قابلية التكرار."
+        : agentMode === "stealth"
+          ? "🕵️ **منظور التخفّي (Stealth):** اعتمد أولاً على القراءة السلبية ووسائط الأمان والاختبار الهادئ."
+          : "🛡️ **منظور الدفاع والحماية (Defensive):** اربط كل نقطة ضعف بطريقة ترقيعها وكشفها في السجلات.";
+
+  if (/\bssrf\b|server.?side request/i.test(q)) {
+    return [
+      "### دليل فحص واستغلال SSRF بأمان",
+      modeNote,
+      "- **أين تبحث؟** معاملات URL مثل `url=`, `webhook=`, `callback=`, `redirect=`, `proxy=`, `image=`, `avatar=`, استيراد الملفات عبر رابط، محولات PDF/HTML.",
+      "- **التحقق الآمن:** ابدأ برابط خارجي خاص بك (OAST / Canary) للتحقق من الطلب الصادر + فحص `DNS` و`HTTP User-Agent` قبل أي اختبار داخلي.",
+      "- **تجاوز الفلاتر الشائعة:** صيغ IP البديلة، إعادة التوجيه HTTP `302`، تباين تحليل `@` و`#`، واختلاف الـ Parser بين Validator وFetcher.",
+      "- **الحماية المطلوبة:** Allowlist صارمة للـ Schemes/Hosts، حل DNS ثم فحص النطاق الخاص قبل الاتصال، وتعطيل redirects غير المصرح بها.",
+    ].join("\n");
+  }
+  if (/\bxss\b|cross.?site scripting/i.test(q)) {
+    return [
+      "### منهجية اكتشاف وتوثيق XSS بدقة",
+      modeNote,
+      "- **حدد السياق أولاً:** HTML Body أم Attribute أم داخل `<script>` أم DOM (`innerHTML`, `location.hash`, `postMessage`) أم المخزّن في PDF/Logs.",
+      "- **تحقق من الفلتر بتكنيك النظيف:** ابعت وسم اختباري بريء (مثل `nova\"'<>test`) ولاحظ ما ينجو غير مشفر في الـ DOM/Source قبل أي payload.",
+      "- **تصعيد الأثر في الباونتي:** تأكد هل `HttpOnly` غائب، أو هل يمكن تنفيذ إجراء حساس باسم الضحية (Account Takeover / Token Read / CSRF Bypass).",
+      "- **الترقيع:** ترميز حسب السياق (Context-aware Encoding)، تفعيل `CSP` صارم بدون `unsafe-inline`، واستبدال `innerHTML` بـ `textContent`.",
+    ].join("\n");
+  }
+  if (/\bsqli\b|sql.?injection|sqlmap/i.test(q)) {
+    return [
+      "### فحص SQL Injection باحترافية بدون إزعاج",
+      modeNote,
+      "- **المواضع الأكثر احتمالاً:** فلاتر البحث، الترتيب (`ORDER BY`/`sort=`)، الـ pagination (`limit`/`offset`)، ترويسات `X-Forwarded-For`/`User-Agent` المخزنة في السجلات.",
+      "- **الاختبار غير التدميري:** قارن الاستجابة بين `id=1` و`id=1'` و`id=1 AND 1=1` vs `1 AND 1=2` أو `SLEEP(3)` في الوقت، وتجنب أوامر الحذف/التعديل دائماً.",
+      "- **الترقيع الحقيقي:** الاستعلامات المُحضّرة (Parameterized Queries) بنسبة 100% + قوائم بيضاء لأسماء الأعمدة والترتيب.",
+    ].join("\n");
+  }
+  if (/\bidor\b|\bbola\b|broken object|صلاحيات|تصعيد/i.test(q)) {
+    return [
+      "### منهجية صيد IDOR / Broken Access Control",
+      modeNote,
+      "- **أنشئ حسابين في نفس الدور وأدوار مختلفة** (User A, User B, Admin) وقارن طلبات `GET/POST/PUT/PATCH/DELETE`.",
+      "- **افحص المعرفات غير المباشرة:** لا تكتفِ بأرقام `123` — جرّب `UUID` مسربة في استجابات أخرى، مصفوفات `[id1, id2]`، وتبديل `HTTP Method` أو تغيير `Content-Type`.",
+      "- **الاختبار الأفقي والعمودي:** تحقق من الـ API Endpoints الثانوية (تصدير CSV، فواتير PDF، تذاكر الدعم، ملفات المرفقات).",
+    ].join("\n");
+  }
+  if (/\bjwt\b|\boauth\b|auth|جلسة|تسجيل/i.test(q)) {
+    return [
+      "### نقاط فحص المصادقة وJWT / OAuth",
+      modeNote,
+      "- **JWT:** تحقّق من قبول `alg: none`، ضعف سر HS256، حقن `kid`، حقن `jku`/`x5u`، وانتهاء صلاحية `exp` وعدم إبطال التوكن بعد Logout/Password Reset.",
+      "- **OAuth 2.0:** فحص `redirect_uri` المفتوح/الجزئي، غياب `state` (CSRF على الربط)، وإعادة استخدام `authorization_code`.",
+    ].join("\n");
+  }
+  if (/bug\s*bounty|بج باونتي|صيد|خطة|منهجية|recon|استطلاع/i.test(q)) {
+    return [
+      "### خطة عمل Bug Bounty / استطلاع احترافية",
+      modeNote,
+      "1. **تحديد النطاق (Scope First):** تأكد من الأصول المسموحة وقواعد البرنامج (`in-scope`, `out-of-scope`, حدود الطلبات).",
+      "2. **الاستطلاع الذكي:** جمع النطاقات الفرعية (`subdomain_enum`)، فحص الأحياء وترويسات الأمان (`recon_target`)، قراءة ملفات JS لاستخراج المسارات الخفية والـ APIs.",
+      "3. **تحليل منطق الأعمال والصلاحيات:** جرب الوظائف الحقيقية للتطبيق (الدفع، الدعوات، الصلاحيات، رفع الملفات، التكاملات) — هنا تسكن أغلب الثغرات عالية القيمة.",
+      "4. **التوثيق الفوري:** سجّل الطلب/الاستجابة وأعد التحقق قبل كتابة التقرير — ولا تضخم الخطورة بدون PoC واضح.",
+    ].join("\n");
+  }
+  if (/تقرير|report|cvss/i.test(q)) {
+    return [
+      "### هيكل تقرير ثغرة احترافي مقبول في منصات المكافآت",
+      modeNote,
+      "1. **العنوان (Title):** `[النوع] في [المسار/الميزة] يؤدي إلى [الأثر الفعلي]`.",
+      "2. **الملخص التنفيذي والخطورة (Summary + CVSS/CWE):** وصف من سطرين + الأثر الحقيقي.",
+      "3. **خطوات إعادة الإنتاج (Steps to Reproduce):** خطوة بخطوة مع الطلبات والردود الكاملة بدون حذف مهم.",
+      "4. **الدليل (PoC) + الأثر (Impact) + الترقيع المقترح (Remediation):** لقطات/Curl واضحة + إصلاح عملي.",
+    ].join("\n");
+  }
+  return null;
+}
+
+function heuristicAnswer(
+  message: string,
+  results: Array<{ name: string; ok: boolean; summary: string; data: unknown }>,
+  agentMode?: string,
+): string {
   if (results.length === 0) {
     if (SMALL_TALK.test(message.trim())) {
       const sm = buildSelfModel();
@@ -905,6 +1038,8 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
         "**الخطوة التالية المقترحة:** ابعتلي نطاق مثل `example.com` وأقولك نتيجة الاستطلاع كاملة.",
       ].join("\n");
     }
+    const tech = technicalGuideFor(message, agentMode);
+    if (tech) return tech;
     // Built from the measured self-model, not from a paragraph typed once:
     // «33 أداة» lived in this string long after the registry said 47.
     const m = buildSelfModel();
@@ -948,6 +1083,20 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
     ].join("\n");
   }
 
+  const knowledgeOnly = results.length === 1 && results[0].name === "knowledge_search";
+  const techGuide = technicalGuideFor(message, agentMode);
+  if (knowledgeOnly && techGuide) {
+    lines.push(techGuide);
+    lines.push("");
+    if (results[0].ok && results[0].summary) {
+      lines.push("### من قاعدة المعرفة المحلية");
+      lines.push(results[0].summary);
+      lines.push("");
+    }
+    lines.push("**الخطوة التالية المقترحة:** حدّد لي هدفاً مصرّحاً به (`domain` أو `URL`) لتطبيق الفحص العملي فوراً، أو اطلب تفصيل أي جزء من الخطوات.");
+    return lines.join("\n");
+  }
+
   lines.push(`تمام، نفّذت **${results.length}** أداة (${okCount} نجحت${failed.length ? ` · ${failed.length} فشلت` : ""}). دي القراءة:`);
   lines.push("");
 
@@ -987,8 +1136,10 @@ function heuristicAnswer(message: string, results: Array<{ name: string; ok: boo
     lines.push("نكمّل بفحص المنافذ المحدود + تعداد النطاقات الفرعية، وبعدها نسجّل النتائج في المهمة ونولّد تقرير قانوني جاهز للإرسال.");
   } else if (results.some((r) => r.name === "cve_lookup" || r.name === "vuln_search")) {
     lines.push("نشوف لو الثغرة لسه مؤثرة على نسختك الفعلية، ونجهّز كود الترقيع (Remediation) قبل أي إبلاغ.");
+  } else if (techGuide) {
+    lines.push("لو حابب نطبّق عملياً على هدف مصرّح به، ابعتلي الـ URL/Domain أو تفاصيل الطلب.");
   } else {
-    lines.push("ابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD.");
+    lines.push("ابعتلي نطاقاً لاستطلاعه فعلياً، أو CVE لنبحث عنها في NVD، أو اسألني في أي موضوع تقني مباشر.");
   }
   return lines.join("\n");
 }
@@ -1008,9 +1159,14 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     } catch {
       /* store failures must never block a reply */
     }
+    try {
+      initSessionNexus();
+    } catch {
+      /* nexus failures must never block a reply */
+    }
   }
   const started = Date.now();
-  const sessionId = opts.sessionId || `nova-${Date.now()}`;
+  const sessionId = opts.sessionId?.trim() || ROOT_SESSION_ID;
   const history = opts.history ?? [];
   const message = (opts.message ?? "").trim();
 
@@ -1087,8 +1243,14 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   let provider = "nova-builtin";
   let model = "nova-heuristic";
 
+  const runMeta = {
+    agentMode: opts.agentMode,
+    autonomousMode: opts.autonomousMode,
+    kaliConnected: opts.kaliConnected,
+  };
+
   if (!opts.forceHeuristic && !capTurn && !measuredDirectTurn) {
-    const llm = await llmPlan(message, history, selfModel);
+    const llm = await llmPlan(message, history, selfModel, sessionId, runMeta);
     if (llm && (llm.steps.length > 0 || llm.directAnswer)) {
       plan = llm;
       mode = "llm";
@@ -1135,13 +1297,13 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     if (!reply) {
       const llm = await llmComplete(
         [
-          { role: "system", content: `${NOVA_SYSTEM_PROMPT}\n\n${selfModelPrompt(selfModel)}\n\n${buildContextBlock(message)}` },
+          { role: "system", content: `${NOVA_SYSTEM_PROMPT}\n\n${selfModelPrompt(selfModel)}\n\n${buildContextBlock(message, sessionId, runMeta)}` },
           ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
           { role: "user", content: message },
         ],
         { temperature: 0.7 },
       );
-      reply = llm?.text?.trim() || heuristicAnswer(message, []);
+      reply = llm?.text?.trim() || heuristicAnswer(message, [], opts.agentMode);
       if (llm) provider = llm.provider;
     }
     if (!reply.trim()) {
@@ -1189,6 +1351,11 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     // SSE frames the chunks; no artificial sleep between them — fast reception.
     for (const chunk of splitChunks(reply)) {
       opts.emit({ type: "delta", text: chunk });
+    }
+    if (!opts.skipNexusRecord) {
+      try {
+        recordNexusTurn(sessionId, { userMessage: message, assistantReply: reply, toolsUsed: [], mode, provider });
+      } catch { /* best-effort */ }
     }
     opts.emit({ type: "done", sessionId, mode, toolCount: 0, ms: Date.now() - started, provider });
     return { mode, provider, toolsUsed: [], reply, ms: Date.now() - started };
@@ -1353,7 +1520,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
           role: "system",
           content: `${NOVA_SYSTEM_PROMPT}\n\n${selfModelPrompt(selfModel)}\n\n# مخرجات أدواتك الحقيقية الآن (استخدمها كما هي، لا تخترع غيرها)\n${results
             .map((r) => `## ${r.name} (${r.ok ? "نجحت" : "فشلت"}): ${r.summary}\n${preview(r.data).slice(0, 1500)}`)
-            .join("\n\n")}\n\n# سياق\n${buildContextBlock(message)}`,
+            .join("\n\n")}\n\n# سياق\n${buildContextBlock(message, sessionId, runMeta)}`,
         },
         { role: "user", content: `${message}\n\nفسّر النتائج باختصار، اذكر المهم والخطورة، واختم بخطوة تالية واحدة.` },
       ],
@@ -1363,7 +1530,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     if (llm) provider = llm.provider;
   }
   if (!reply.trim()) {
-    reply = heuristicAnswer(message, results);
+    reply = heuristicAnswer(message, results, opts.agentMode);
     if (!reply.trim()) {
       reply = `نفّذت ${results.length} أداة بس مقدرتش أصيغ ملخص من المزوّد. النتائج الخام في تبويب الأدوات فوق.\n\n**الخطوة التالية المقترحة:** اطلب مني نتيجة أداة واحدة بالاسم وأنا أشرحها بالتفصيل.`;
     }
@@ -1443,6 +1610,18 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     opts.emit({ type: "memory", id: sessionRec.id, title: sessionRec.title });
   } catch {
     /* memory is best-effort — never fail a run because of it */
+  }
+
+  if (!opts.skipNexusRecord) {
+    try {
+      recordNexusTurn(sessionId, {
+        userMessage: message,
+        assistantReply: reply,
+        toolsUsed: results.map((r) => r.name),
+        mode,
+        provider,
+      });
+    } catch { /* best-effort */ }
   }
 
   const out: AgentRunResult = {

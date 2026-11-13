@@ -20,11 +20,12 @@
  */
 import { useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
-import { Activity, Radio, Server, ShieldCheck, Sparkles } from "lucide-react";
+import { Activity, Radio, Server, ShieldCheck } from "lucide-react";
 import { LiveAgentPanel } from "./LiveAgentPanel";
 import type { ClientToolEvent } from "./AgentWindow";
 import { NovaFleetPanel, NovaProjectPulse } from "./NovaFleetPanel";
 import { NovaLiveBar, useNovaLive } from "./NovaFleetLive";
+import { DAW_SKULL } from "@/lib/skull";
 
 export interface NovaUnifiedChatProps {
   /** Title shown in the header. Defaults to the primary agent workspace. */
@@ -35,6 +36,8 @@ export interface NovaUnifiedChatProps {
   defaultSide?: "pulse" | "fleet";
   /** Hide the side rail entirely (for a narrow embed). */
   hideRail?: boolean;
+  /** Compact embedded mode: hides duplicate top bar & header when mounted inside a deck. */
+  compact?: boolean;
 }
 
 export function NovaUnifiedChat({
@@ -42,6 +45,7 @@ export function NovaUnifiedChat({
   subtitle = "كلام + تنفيذ حقيقي + ذاكرة دائمة + تحكم في كل الأجهزة المتصلة",
   defaultSide = "pulse",
   hideRail = false,
+  compact = false,
 }: NovaUnifiedChatProps) {
   const [, navigate] = useLocation();
   const live = useNovaLive();
@@ -107,37 +111,43 @@ export function NovaUnifiedChat({
   const socketOpen = live.socket === "open";
 
   return (
-    <div dir="rtl" className="flex h-[calc(100vh-64px)] min-h-0 flex-col bg-[#050208] text-white">
-      <div className="px-3 pt-2">
-        <NovaLiveBar />
-      </div>
+    <div dir="rtl" className={`flex ${compact ? "h-full" : "h-[calc(100vh-64px)]"} min-h-0 flex-col bg-[#050208] text-white`}>
+      {!compact && (
+        <>
+          <div className="px-3 pt-2">
+            <NovaLiveBar />
+          </div>
 
-      <header className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/40 bg-cyan-400/10">
-          <Sparkles className="h-4 w-4 text-cyan-300" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-sm font-bold">
-            {title}
-            <span className="rounded border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[9px] text-emerald-200">
-              LIVE
-            </span>
-          </h1>
-          <p className="truncate text-[10px] text-white/40">{subtitle}</p>
-        </div>
-        <div className="ms-auto flex items-center gap-2 text-[10px] font-mono text-white/45">
-          <span className="flex items-center gap-1">
-            <Server className="h-3 w-3 text-cyan-300" /> {fleetLine}
-          </span>
-          <span className="flex items-center gap-1">
-            <Radio className={`h-3 w-3 ${socketOpen ? "text-emerald-300" : "text-white/30"}`} />
-            {socketOpen ? "بث حي" : "غير متصل"}
-          </span>
-          <span className="hidden items-center gap-1 sm:flex">
-            <ShieldCheck className="h-3 w-3" /> بوابة الموافقة مفعّلة
-          </span>
-        </div>
-      </header>
+          <header className="flex flex-wrap items-center gap-2 border-b border-rose-500/20 bg-gradient-to-l from-rose-950/30 via-[#07030b] to-cyan-950/20 px-3 py-2">
+            <img
+              src={DAW_SKULL}
+              alt="Dawsha Skull"
+              className="h-8 w-8 rounded-full object-cover ring-2 ring-rose-500/75 skull-halo shrink-0"
+            />
+            <div className="min-w-0">
+              <h1 className="flex items-center gap-2 text-sm font-black text-rose-100">
+                <span>☠ {title}</span>
+                <span className="rounded border border-emerald-400/40 bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-mono text-emerald-200">
+                  24/7 ROOT
+                </span>
+              </h1>
+              <p className="truncate text-[10px] text-cyan-200/50">{subtitle}</p>
+            </div>
+            <div className="ms-auto flex items-center gap-2 text-[10px] font-mono text-white/45">
+              <span className="flex items-center gap-1">
+                <Server className="h-3 w-3 text-cyan-300" /> {fleetLine}
+              </span>
+              <span className="flex items-center gap-1">
+                <Radio className={`h-3 w-3 ${socketOpen ? "text-emerald-300" : "text-white/30"}`} />
+                {socketOpen ? "بث حي" : "غير متصل"}
+              </span>
+              <span className="hidden items-center gap-1 sm:flex">
+                <ShieldCheck className="h-3 w-3" /> بوابة الموافقة مفعّلة
+              </span>
+            </div>
+          </header>
+        </>
+      )}
 
       <div className="flex min-h-0 flex-1">
         <div className="min-w-0 flex-1 overflow-hidden">
