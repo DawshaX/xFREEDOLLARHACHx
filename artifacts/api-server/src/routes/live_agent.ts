@@ -108,19 +108,28 @@ const SYSTEM_PROMPT = `أنت "CyberNova Live Agent v6" — وكيل ذكاء ا
 
 router.get("/live-agent/sessions", requireDb, async (_req, res) => {
   try {
-    // Check if agentSessions table exists by trying a count or simple select
+    // الشات بيكتب في session-nexus (الجذر nova-root ورسايله هناك) — لما الـDB
+    // متفضية، الليستا من غيرها بترجع فاضية والواجهة بتظهر «من الصفر». الاتحاد
+    // ده هو الصح: nexus أولاً، وبعده سجلات الـDB غير المكررة.
+    let nexusList: Array<Record<string, unknown>> = [];
+    try {
+      const { listNexusSessions } = await import("../lib/agent/session-nexus");
+      nexusList = listNexusSessions() as unknown as Array<Record<string, unknown>>;
+    } catch { /* nexus غير متاح — كمّل بـDB بس */ }
     const rows = await db
       .select()
       .from(agentSessions)
       .orderBy(desc(agentSessions.createdAt))
       .catch((err) => {
         console.error("Database query for sessions failed:", err);
-        return []; // Return empty array if table doesn't exist yet
+        return [];
       });
-    res.json(rows);
+    const seen = new Set(nexusList.map((x) => String(x.id)));
+    const dbOnly = (rows as unknown as Array<Record<string, unknown>>).filter((r) => !seen.has(String(r.id)));
+    res.json([...nexusList, ...dbOnly]);
   } catch (err: any) {
     console.error("GET /live-agent/sessions error:", err);
-    res.status(200).json([]); // Always return 200 with empty array to prevent UI crash
+    res.status(200).json([]);
   }
 });
 
@@ -147,7 +156,26 @@ router.get("/live-agent/sessions/:id", requireDb, async (req, res) => {
     const id = String(req.params.id);
     const s = await db.select().from(agentSessions).where(eq(agentSessions.id, id)).then(rows => rows[0]).catch(() => null);
     if (!s) {
-      // If session not in DB, return a mock empty session to prevent 404/500
+      // الجلسة مش في قاعدة البيانات ≠ فاضية: الشات الحقيقي بينكتب في
+      // session-nexus (nova-root على الديسك). ارجّع ده بدل الوهم الفاضي.
+      try {
+        const { getNexusSession, getOrCreateNexusSession, ROOT_SESSION_ID } = await import("../lib/agent/session-nexus");
+        const nx = id === ROOT_SESSION_ID ? getOrCreateNexusSession(ROOT_SESSION_ID) : getNexusSession(id);
+        if (nx) {
+          res.json({
+            id: nx.id,
+            title: nx.title,
+            isRoot: nx.isRoot,
+            parentId: nx.parentId,
+            backgroundLinked: nx.backgroundLinked,
+            summary: nx.summary,
+            messages: nx.messages.filter((m) => m.role !== "system"),
+            createdAt: new Date(nx.createdAt).toISOString(),
+            updatedAt: new Date(nx.updatedAt).toISOString(),
+          });
+          return;
+        }
+      } catch { /* الـnexus مش جاهز */ }
       res.json({ id, title: "Session", messages: [] });
       return;
     }

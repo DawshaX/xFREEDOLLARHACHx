@@ -27,6 +27,7 @@ interface ServerMetrics {
   uptime?: number;
   platform?: string;
   hostname?: string;
+  disk?: { present?: boolean; totalMb?: number; freeMb?: number; usedMb?: number; usedPct?: number; noteAr?: string };
   timestamp?: string;
 }
 /** `/api/network/interfaces` */
@@ -278,10 +279,30 @@ export function RealTimeSystemMonitor() {
             <span className="text-sm font-semibold text-foreground">القرص</span>
           </div>
           <div className="space-y-1">
-            <div className="flex justify-between text-xs" title="statfs() على المجلد ده ممكن نضيفه في السيرفر — لسه مضافش">
+            <div className="flex justify-between text-xs" title={metrics?.disk?.noteAr ?? "statfs(/) مقاس مباشر من السيرفر"}>
               <span className="text-muted-foreground">المستخدم:</span>
-              <Unmeasured why="مفيش /system/disk" />
+              {metrics?.disk?.present ? (
+                <span className="font-mono text-foreground" dir="ltr">{Math.round((metrics.disk.usedMb ?? 0) / 1024)} / {Math.round((metrics.disk.totalMb ?? 0) / 1024)} GB · {metrics.disk.usedPct}%</span>
+              ) : (
+                <Unmeasured why={metrics?.disk?.noteAr ?? "مفيش قياس"} />
+              )}
             </div>
+            <div className="flex justify-between text-xs" title="المساحة الفارغة المتبقية — العرض «بلا حد» يعني إني مش بقبّل حدًا معينًا، بس المستهلكة مقاسة بصراحة">
+              <span className="text-muted-foreground">الفارغ:</span>
+              {metrics?.disk?.present ? (
+                <span className="font-mono text-emerald-300" dir="ltr">{Math.round((metrics.disk.freeMb ?? 0) / 1024)} GB</span>
+              ) : (
+                <Unmeasured why={metrics?.disk?.noteAr ?? "مفيش قياس"} />
+              )}
+            </div>
+            {metrics?.disk?.present && (
+              <div className="h-1 rounded-full bg-white/8 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${((metrics.disk.usedPct ?? 0) > 85) ? "bg-rose-500" : ((metrics.disk.usedPct ?? 0) > 65) ? "bg-amber-500" : "bg-emerald-500"}`}
+                  style={{ width: `${Math.min(100, metrics.disk.usedPct ?? 0)}%` }}
+                />
+              </div>
+            )}
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">الهوست:</span>
               <span className="font-mono text-foreground truncate max-w-[9rem]" title={metrics?.hostname ?? ""}>

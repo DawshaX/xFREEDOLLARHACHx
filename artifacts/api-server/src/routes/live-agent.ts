@@ -31,6 +31,7 @@ import {
   getNexusSnapshot,
 } from "../lib/agent/session-nexus";
 import { requireOps, tokenConfigured, checkGate } from "../lib/ops/gate";
+import fs from "node:fs";
 
 initSessionNexus();
 
@@ -360,6 +361,16 @@ router.get("/live-agent/status", (_req, res) => {
   } catch (err) {
     logger.warn(`live-agent/status: listProcesses فشل — ${(err as Error).message}`);
   }
+  // القرص الحقيقي + كشف «بلا حد» للجلسة — العقل يحس كم باقٌ قبل ما يسرح
+  let diskFreeGb: number | null = null;
+  let diskTotalGb: number | null = null;
+  try {
+    const st = fs.statfsSync("/");
+    const freeMb = Math.round((st.bavail * st.bsize) / 1048576);
+    const totalMb = Math.round((st.blocks * st.bsize) / 1048576);
+    diskFreeGb = Math.round(freeMb / 1024 * 10) / 10;
+    diskTotalGb = Math.round(totalMb / 1024 * 10) / 10;
+  } catch { /* */ }
   res.json({
     ok: true,
     online: true,
@@ -376,6 +387,12 @@ router.get("/live-agent/status", (_req, res) => {
     backgroundFeedCount: nexus.backgroundFeedCount,
     activeProcesses: processes,
     platform,
+    resources: {
+      diskFreeGb,
+      diskTotalGb,
+      diskUnbounded: true,
+      noteAr: "المساحة مقاسة من statfs(/) — العقل يستخدمها بلا حد معبرش.",
+    },
   });
 });
 
