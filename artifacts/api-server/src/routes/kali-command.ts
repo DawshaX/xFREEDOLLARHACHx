@@ -15,7 +15,7 @@ import { exec as cpExec } from "child_process";
 import { logger } from "../lib/logger";
 import { broadcastLiveEvent } from "./live-events";
 import { saveMemory, searchMemory, getAllMemory } from "./memory";
-import { execOnLocalAgent, execStreamOnLocalAgent, isLocalAgentConnected, getConnectedAgentList, getAgentDeepProfile } from "./local-agent";
+import { execOnLocalAgent, execStreamOnLocalAgent, isLocalAgentConnected, getConnectedAgentList, getAgentDeepProfile, preferredAgentId } from "./local-agent";
 import { getAllSettings } from "./settings";
 import os from "os";
 import { auditLog } from "../lib/audit";
@@ -515,7 +515,8 @@ function sanitizeCommand(cmd: string, hasDisplay: boolean): { ok: boolean; fixed
 // ── Extract display status from agent profile ─────────────────────────────────
 function getAgentHasDisplay(agents: ReturnType<typeof getConnectedAgentList>): boolean {
   if (agents.length === 0) return false;
-  const profile = getAgentDeepProfile(agents[0].id);
+  // TEST6: البروفايل بيمشي على الوكيل الحي الحقيقي مش أول ليستة.
+  const profile = getAgentDeepProfile(preferredAgentId() ?? agents[0]?.id);
   if (!profile) return false;
   return !!(profile.system as any)?.display;
 }
@@ -1296,8 +1297,10 @@ router.get("/kali-command/device-context", async (_req, res) => {
 router.get("/kali-command/device-profile", (_req, res) => {
   const agents = getConnectedAgentList();
   if (agents.length === 0) { res.json({ connected: false }); return; }
-  const profile = getAgentDeepProfile(agents[0].id);
-  res.json({ connected: true, agentId: agents[0].id, profile });
+  // TEST6: البروفايل الحي بيمشي على الوكيل المفضّل (الوكيل الحقيقي مش self-node).
+  const chosenId = preferredAgentId() ?? agents[0]?.id;
+  const profile = getAgentDeepProfile(chosenId);
+  res.json({ connected: agents.length > 0, agentId: chosenId, profile });
 });
 
 // ── GET /kali-command/memories ────────────────────────────────────────────────
