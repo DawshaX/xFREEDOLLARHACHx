@@ -1150,11 +1150,38 @@ export function LiveAgentPanel({
   const [activeTab, setActiveTab] = useState<
     | "chat" | "processes" | "live" | "missions" | "capabilities" | "terminal"
     | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser"
-    | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel" | "cockpit"
+    | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel" | "cockpit" | "awareness"
   >("chat");
 
   // ── Real 67-tool Core Catalogue + Live Chat Ops Dashboard ─────────────────
   interface CoreCatalogueTool { name: string; title: string; category: string; description: string; risk: string; params: string[]; }
+  /* TEST4: الوعي الكامل — كل اللي نوفا عارفه عن المالك في استدعاء واحد */
+  interface AwarenessData {
+    ok: boolean;
+    thread: string[];
+    lastModel: string | null;
+    owner: Array<{ title: string; content: string; at: string; importance: number }>;
+    observations: Array<{ title: string; content: string; at: string }>;
+    journal: { turns: number; userTurns: number; bytes: number; file: string; durable: boolean; since: string | null };
+    topics: Array<{ topic: string; count: number }>;
+    memoryTotal: number;
+  }
+  const [awareness, setAwareness] = useState<AwarenessData | null>(null);
+  const [awarenessCount, setAwarenessCount] = useState(0);
+  const loadAwareness = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/awareness`, { headers: novaAuthHeaders() });
+      if (!r.ok) return;
+      const d = (await r.json()) as AwarenessData;
+      setAwareness(d);
+      setAwarenessCount((d.owner?.length ?? 0) + (d.observations?.length ?? 0));
+    } catch { /* السيرفر مش لسه — الشارة تفضل صفر بصدق */ }
+  }, [API_BASE]);
+  useEffect(() => {
+    void loadAwareness();
+    const t = setInterval(() => void loadAwareness(), 20_000);
+    return () => clearInterval(t);
+  }, [loadAwareness]);
   const [coreToolsCatalogue, setCoreToolsCatalogue] = useState<CoreCatalogueTool[]>([]);
   const [coreCatFilter, setCoreCatFilter] = useState<string>("all");
   const [showLegacyKaliCatalog, setShowLegacyKaliCatalog] = useState(false);
@@ -4744,6 +4771,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         ["browser", "🌐 Browser"],
                         ["multiAI", "🧠 Multi-AI"],
                         ["intel", "🎯 Intel / Bounties"],
+                        ["awareness", `🧬 الوعي الكامل${awarenessCount ? ` (${awarenessCount})` : ""}`],
                       ] as const).map(([key, label]) => (
                         <button
                           key={key}
@@ -9216,6 +9244,76 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         {activeTab === "intel" && panelSize !== "mini" && (
           <div className="flex-1 min-h-0 overflow-hidden">
             <NovaIntelPanel />
+          </div>
+        )}
+
+        {/* ═══ TEST4: الوعي الكامل — «ظاهر كل حاجة وأكتر» ═══ */}
+        {activeTab === "awareness" && panelSize !== "mini" && (
+          <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2">
+            {!awareness ? (
+              <div className="text-[10px] text-muted-foreground p-3">جاري تحميل الوعي…</div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-violet-300">🧬 الوعي الكامل — كل اللي نوفا عارفه عنك</span>
+                  <span className="text-[8px] font-mono text-muted-foreground">
+                    دفتر: {awareness.journal.turns} دورة ({awareness.journal.userTurns} منك) · {awareness.journal.durable ? "دائم على القرص ✓" : "جلسة تجريبية (مافيش تخزين دائم هنا)"}
+                  </span>
+                </div>
+
+                <div className="rounded-lg border border-violet-400/25 bg-violet-500/5 p-2">
+                  <div className="text-[9px] font-bold text-violet-300 mb-1">🔗 خط المحادثة — مكملين من وين وقفنا</div>
+                  {awareness.thread.length ? (
+                    <div className="space-y-0.5">
+                      {awareness.thread.slice(-6).reverse().map((t, i) => (
+                        <div key={i} className="text-[9px] text-white/75 flex gap-1"><span className="text-violet-400/60">·</span><span className="truncate">{t}</span></div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[9px] text-muted-foreground">الخط فاضي لسه — ابدأ أي كلام وهيفضل محفوظ.</div>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/5 p-2">
+                  <div className="text-[9px] font-bold text-emerald-300 mb-1">👤 ما حفظته عنك ({awareness.owner.length})</div>
+                  {awareness.owner.length ? (
+                    <div className="space-y-1">
+                      {awareness.owner.map((o, i) => (
+                        <div key={i} className="text-[9px] leading-relaxed"><span className="text-emerald-300/90">{o.title}</span><span className="text-muted-foreground"> — {o.content.slice(0, 120)}</span></div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[9px] text-muted-foreground">قول له اسمك أو أي حاجة عنك — هتحفظ هنا تلقائي وتفضل معاه للأبد.</div>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-amber-400/25 bg-amber-500/5 p-2">
+                  <div className="text-[9px] font-bold text-amber-300 mb-1">👁 ملاحظات الراصد — اللي أنا ملاحظه ومش ملاحظه ({awareness.observations.length})</div>
+                  {awareness.observations.length ? (
+                    <div className="space-y-1">
+                      {awareness.observations.map((o, i) => (
+                        <div key={i} className="text-[9px] leading-relaxed"><span className="text-amber-300/90">{o.title}</span><span className="text-muted-foreground"> — {o.content.slice(0, 140)}</span></div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[9px] text-muted-foreground">الراصد بيكتب كل 30 دقيقة من الدفتر — أول ما يجمع أنماط هتظهر هنا.</div>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-cyan-400/25 bg-cyan-500/5 p-2">
+                  <div className="text-[9px] font-bold text-cyan-300 mb-1">📌 مواضيعك الثابتة</div>
+                  {awareness.topics.length ? (
+                    <div className="flex flex-wrap gap-1">
+                      {awareness.topics.map((t) => (
+                        <span key={t.topic} className="text-[8px] font-mono px-1.5 py-0.5 rounded border border-cyan-400/30 text-cyan-200 bg-cyan-500/10">{t.topic} ×{t.count}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[9px] text-muted-foreground">لسه مفيش مواضيع متكررة كفاية.</div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 

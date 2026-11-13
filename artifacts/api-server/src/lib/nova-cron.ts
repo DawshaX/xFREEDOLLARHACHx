@@ -58,7 +58,14 @@ async function runJob(id: string): Promise<string> {
     }
     case "mem_consolidate": {
       const n = consolidateMemoryLite();
-      return `Consolidated ${n} entries`;
+      /* TEST4 «ملاحظة اللي أنا مش ملاحظه»: كل 30 دقيقة الراصد بيقرا دفتر
+       * المالك ويكتب الأنماط (إيقاع الساعات، مواضيع ثابتة، عمق السجل). */
+      let patterns = 0;
+      try {
+        const { observeOwner } = await import("./agent/owner-journal");
+        patterns = observeOwner().length;
+      } catch { /* الراصد best-effort */ }
+      return `Consolidated ${n} entries${patterns ? ` · الراصد كتب ${patterns} نمط` : ""}`;
     }
     case "self_heal": {
       const { exec } = await import("child_process");
