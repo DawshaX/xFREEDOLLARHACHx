@@ -769,11 +769,15 @@ async function llmPlan(
    * `llmComplete` وطلع غلط في الآخر. الردّ الحتمي بعد 12 ثانية أحسن من ردّ متخيَّل
    * بعد دقيقة — فالتخطيط مابيحبسش المحادثة وراه.
    */
-  const budgetMs = Math.min(60_000, Math.max(3_000, Number(process.env.NOVA_PLAN_TIMEOUT_MS ?? 12_000) || 12_000));
+  const budgetMs = Math.min(60_000, Math.max(3_000, Number(process.env.NOVA_PLAN_TIMEOUT_MS ?? 15_000) || 15_000));
+  const ac = new AbortController();
   const raced = await Promise.race([
-    llmComplete(messages, { temperature: 0.3, maxTokens: 700 }),
+    llmComplete(messages, { temperature: 0.3, maxTokens: 700, timeoutMs: 5_500, tries: 1, signal: ac.signal }),
     new Promise<null>((resolve) => {
-      const timer = setTimeout(() => resolve(null), budgetMs);
+      const timer = setTimeout(() => {
+        ac.abort();
+        resolve(null);
+      }, budgetMs);
       (timer as unknown as { unref?: () => void }).unref?.();
     }),
   ]);

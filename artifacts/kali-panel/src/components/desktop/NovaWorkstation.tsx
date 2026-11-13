@@ -637,7 +637,11 @@ export function NovaWorkstation() {
   const [brain, setBrain] = useState<"auto" | "server" | "browser">("auto");
   const [items, setItems] = useState<RunningItem[]>([]);
   const [planVersion, setPlanVersion] = useState(0);
-  const [health, setHealth] = useState<{ server: boolean; checked: boolean }>({ server: false, checked: false });
+  const [health, setHealth] = useState<{ server: boolean; checked: boolean; toolsCount?: number | null }>({
+    server: false,
+    checked: false,
+    toolsCount: null,
+  });
   const bottom = useRef<HTMLDivElement>(null);
 
   const linked = isRemoteConfigured();
@@ -678,9 +682,13 @@ export function NovaWorkstation() {
       const j = await r.json();
       const alive = r.ok && j && typeof j === "object" && j.ok === true;
       // In static mode the engine answers with `mode: "static"` — that is not a server.
-      setHealth({ server: Boolean(alive) && j?.mode !== "static", checked: true });
+      setHealth({
+        server: Boolean(alive) && j?.mode !== "static",
+        checked: true,
+        toolsCount: typeof j?.tools === "number" ? j.tools : null,
+      });
     } catch {
-      setHealth({ server: false, checked: true });
+      setHealth({ server: false, checked: true, toolsCount: null });
     }
   }, []);
 
@@ -1022,7 +1030,13 @@ export function NovaWorkstation() {
         />
         <LiveRail items={items} />
         <PlanBox onPlan={() => setPlanVersion((v) => v + 1)} version={planVersion} />
-        <HealthCard linked={linked} server={health.server} checked={health.checked} onRecheck={() => void checkHealth()} />
+        <HealthCard
+          linked={linked}
+          server={health.server}
+          checked={health.checked}
+          toolsCount={health.toolsCount ?? null}
+          onRecheck={() => void checkHealth()}
+        />
         <CloudBrainCard />
       </div>
     </div>
@@ -1035,11 +1049,13 @@ function HealthCard({
   linked,
   server,
   checked,
+  toolsCount,
   onRecheck,
 }: {
   linked: boolean;
   server: boolean;
   checked: boolean;
+  toolsCount: number | null;
   onRecheck: () => void;
 }) {
   // Ordered by what the user actually has: the browser engine first (it always
@@ -1056,7 +1072,15 @@ function HealthCard({
       hint: "الأحداث والنتائج بتمر فيها لحظياً",
     },
     linked
-      ? { label: "سيرفر مربوط", ok: server, hint: server ? "شغّال — 33 أداة + أسطول" : "مربوط بس مش راد" }
+      ? {
+          label: "سيرفر مربوط",
+          ok: server,
+          hint: server
+            ? toolsCount
+              ? `شغّال — ${toolsCount} أداة + أسطول`
+              : "شغّال — أدوات السيرفر + الأسطول"
+            : "مربوط بس مش راد",
+        }
       : { label: "سيرفر خارجي", ok: null, hint: "مش مربوط — اختياري، بيوسّع القدرات بس" },
     linked
       ? { label: "WebSocket على السيرفر", ok: server, hint: server ? "wss:// مفتوح" : "مش راد" }

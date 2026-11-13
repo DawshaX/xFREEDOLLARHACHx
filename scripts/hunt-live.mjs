@@ -304,47 +304,58 @@ for (const t of allowed) {
    * look where the site actually has pages, not only at "/") */
   let endpoints = [];
   if (tools.katana) {
-    const r = await run(tools.katana, ["-u", url, "-jsonl", "-silent", "-depth", "3", "-concurrency", "5", "-rate-limit", "10", "-timeout", "8", "-crawl-duration", "60s"], budget(120_000));
+    const r = await run(tools.katana, ["-u", url, "-fs", "dn", "-jsonl", "-silent", "-depth", "3", "-concurrency", "5", "-rate-limit", "10", "-timeout", "8", "-crawl-duration", "60s"], budget(120_000));
     const urls = new Set();
+    const targetHost = t.host.toLowerCase();
     for (const line of r.stdout.split("\n")) {
       const m = line.match(/"endpoint"\s*:\s*"([^"]+)"/) ?? line.match(/"url"\s*:\s*"([^"]+)"/) ?? line.match(/^(https?:\/\/\S+)$/);
-      if (m) urls.add(m[1]);
+      if (!m) continue;
+      try {
+        const u = new URL(m[1]);
+        const h = u.hostname.toLowerCase();
+        // Stay strictly within the permitted target host — never bleed onto linked domains.
+        if ((u.protocol === "http:" || u.protocol === "https:") && (h === targetHost || h.endsWith(`.${targetHost}`))) {
+          urls.add(u.href);
+        }
+      } catch {
+        /* ignore malformed URLs */
+      }
     }
-    endpoints = [...urls].filter((u) => u.startsWith("http"));
+    endpoints = [...urls];
     entry.steps.push({
       tool: "katana",
       exit: r.code,
       ms: r.ms,
       endpoints: endpoints.length,
       sample: endpoints.slice(0, 25),
-      evidence: evidence(`katana-${t.host}`, r.stdout || r.stderr, `katana -u ${url} -depth 3 -rate-limit 10 -crawl-duration 60s`),
+      evidence: evidence(`katana-${t.host}`, r.stdout || r.stderr, `katana -u ${url} -fs dn -depth 3 -rate-limit 10 -crawl-duration 60s`),
     });
   }
 
   /* 3 · nuclei — the profile the engine already proved finishes inside a budget
    * (1,034 templates = high|critical ∩ exposure|misconfig|takeover|default-login,
-   *  no OAST → ~258s at rl=4). The old broad run asked for 7,885 templates at
-   *  rl=3 and simply never finished: measured 300s timeout, 0 matches, twice. */
+   *  no OAST → finishes cleanly inside the target budget without leaking outside scope). */
   if (tools.nuclei) {
-    const NUCLEI = (list, cap) => [
+    const NUCLEI = (list) => [
       ...list,
       "-jsonl", "-silent", "-no-color", "-stats", "-stats-json",
       "-severity", "high,critical",
       "-type", "http",
       "-tags", "exposure,misconfig,takeover,default-login",
       "-no-interactsh",
-      "-rl", "4", "-c", "2", "-timeout", "6", "-retries", "1",
+      "-rl", "6", "-c", "4", "-timeout", "5", "-retries", "0",
     ];
-    // pass 1: the root URL. pass 2: the pages katana found, if time is left.
-    const passes = [{ label: "root", list: ["-u", url], cap: 460_000 }];
+    // pass 1: the root URL. pass 2: up to 25 non-static in-scope endpoints katana found.
+    const passes = [{ label: "root", list: ["-u", url], cap: 420_000 }];
+    const STATIC_EXT = /\.(?:css|js|mjs|map|png|jpe?g|gif|svg|ico|webp|woff2?|ttf|eot|pdf|mp4|webm)(?:$|\?)/i;
     const picked = endpoints
-      .filter((u) => /^https?:\/\/[^/]+/.test(u))
-      .slice(0, 150);
+      .filter((u) => !STATIC_EXT.test(u))
+      .slice(0, 25);
     if (picked.length > 0) {
       const listFile = path.join(evidenceDir, `targets-${t.host}.txt`);
       fs.mkdirSync(evidenceDir, { recursive: true });
       fs.writeFileSync(listFile, picked.join("\n") + "\n");
-      passes.push({ label: "endpoints", list: ["-l", listFile], cap: 300_000 });
+      passes.push({ label: "endpoints", list: ["-l", listFile], cap: 240_000 });
     }
     let matched = 0;
     for (const pass of passes) {

@@ -9,8 +9,8 @@ import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 if (existsSync("artifacts/api-server/node_modules/.bin/esbuild")
- && existsSync("artifacts/kali-panel/node_modules/.bin/esbuild")
- && existsSync("node_modules/.bin")) {
+ && existsSync("artifacts/kali-panel/node_modules/.bin/vite")
+ && existsSync("node_modules/.bin/tsc")) {
   process.exit(0);
 }
 console.log("ensure-deps: node_modules مش موجودة (snapshot strip) — corepack pnpm install --frozen-lockfile");
