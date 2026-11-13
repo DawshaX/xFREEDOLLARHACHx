@@ -36,7 +36,7 @@ import {
 } from "./tools";
 import { llmComplete, extractJson } from "./llm";
 import { saveMemory, getAllMemories } from "../../routes/memory";
-import { remember, memoryContextFor, memoryStats, initMemory } from "./memory-store";
+import { remember, memoryContextFor, memoryStats, initMemory, listMemories } from "./memory-store";
 import {
   ROOT_SESSION_ID,
   initSessionNexus,
@@ -44,6 +44,7 @@ import {
   recordNexusTurn,
   getNexusSession,
 } from "./session-nexus";
+import { appendOwnerTurn, journalStats } from "./owner-journal";
 import { getMissionsState, recordMissionCommand } from "../standalone-api";
 import { broadcastEvent } from "../ws-hub";
 import { broadcastLiveEvent } from "./../../routes/live-events";
@@ -314,6 +315,22 @@ function buildContextBlock(
   } catch {
     nexusBlock = "";
   }
+  /* TEST4 «ملاحظة اللي أنا مش ملاحظه»: ملف المالك + أنماط الراصد في سياق كل دورة. */
+  let ownerBlock = "";
+  try {
+    const ownerRecords = listMemories({ scope: "owner", sort: "important", limit: 5 });
+    const observerRecords = listMemories({ scope: "observer", sort: "recent", limit: 3 });
+    const ownerLines = ownerRecords.items.map((r) => `- ${r.title}: ${r.content.replace(/\s+/g, " ").slice(0, 140)}`);
+    const observerLines = observerRecords.items.map((r) => `- ${r.title}: ${r.content.replace(/\s+/g, " ").slice(0, 140)}`);
+    const js = journalStats();
+    const parts: string[] = [];
+    if (ownerLines.length) parts.push(`# ما حفظته عن المالك\n${ownerLines.join("\n")}`);
+    if (observerLines.length) parts.push(`# ملاحظاتك عليه هو نفسه (الراصد)\n${observerLines.join("\n")}`);
+    if (js.turns) parts.push(`- الدفتر الدائم: ${js.turns} دورة مسجلة (${js.userTurns} من المالك) — دايمًا ماينساش.`);
+    ownerBlock = parts.join("\n\n");
+  } catch {
+    ownerBlock = "";
+  }
   return [
     `# سياق المنصة الآن`,
     `- ${modeDirective(opts?.agentMode)}`,
@@ -324,6 +341,7 @@ function buildContextBlock(
     `- نتائج مسجلة في المهمة: ${active?.findings.length ?? 0}`,
     `- ذاكرتك طويلة الأمد: ${stats.total} ذكرى (${stats.pinned} مثبتة) — تفضل بعد إعادة التشغيل`,
     nexusBlock,
+    ownerBlock,
     longTerm || "# الذاكرة طويلة الأمد فارغة حتى الآن",
   ].filter(Boolean).join("\n");
 }
@@ -1687,7 +1705,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
         title: `المالك: ${message.replace(/\s+/g, " ").slice(0, 60)}`,
         content: message.trim(),
         scope: "owner",
-        importance: 0.85,
+        importance: 9,
         source: "owner",
       });
       try { saveMemory("fact", rec.title, rec.content, "owner,profile,longterm", 8, false); } catch { /* mirror best-effort */ }

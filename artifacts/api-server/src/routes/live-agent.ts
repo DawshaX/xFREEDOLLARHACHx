@@ -16,6 +16,8 @@ import { buildIntelligentSecurityReply } from "./ollama-proxy";
 // `runAgent(...)` without importing it — TS2304, and at runtime a ReferenceError inside
 // the catch, which is exactly how a capability question ended as a canned bubble.
 import { runAgent, type AgentEvent } from "../lib/agent/core";
+import { listMemories } from "../lib/agent/memory-store";
+import { journalStats, journalTopTopics } from "../lib/agent/owner-journal";
 import { AGENT_TOOLS, runAgentTool } from "../lib/agent/tools";
 import { listConfiguredProviders } from "../lib/agent/llm";
 import { getJobs } from "../lib/nova-cron";
@@ -350,6 +352,27 @@ router.get("/live-agent/brain-status", async (_req, res) => {
 });
 
 /** حالة الوكيل الحيّ: لقطة المنصة + العمليّات الجارية مقاسة من `listProcesses`. */
+/* ── الوعي الكامل عن المالك (TEST4: «ظاهر كل حاجة») ─────────────────────────
+ * استدعاء واحد يرجّع كل اللي نوفا عارفه: خط المحادثة، ما حفظته عنك،
+ * ملاحظات الراصد عليك، الدفتر الدائم، والمواضيع الثابتة. */
+router.get("/live-agent/awareness", (_req, res) => {
+  const root = getNexusSession(ROOT_SESSION_ID);
+  const ownerRecords = listMemories({ scope: "owner", sort: "important", limit: 10 });
+  const observerRecords = listMemories({ scope: "observer", sort: "recent", limit: 8 });
+  const js = journalStats();
+  res.json({
+    ok: true,
+    at: new Date().toISOString(),
+    thread: root?.thread ?? [],
+    lastModel: root?.lastModel ?? null,
+    owner: ownerRecords.items.map((r) => ({ title: r.title, content: r.content.slice(0, 300), at: r.updatedAt, importance: r.importance })),
+    observations: observerRecords.items.map((r) => ({ title: r.title, content: r.content.slice(0, 300), at: r.updatedAt })),
+    journal: js,
+    topics: journalTopTopics(8),
+    memoryTotal: ownerRecords.total,
+  });
+});
+
 router.get("/live-agent/status", (_req, res) => {
   const platform = getPlatformControlSnapshot();
   const nexus = getNexusSnapshot();

@@ -17,6 +17,7 @@ import path from "node:path";
 import { logger } from "../logger";
 import { broadcastEvent } from "../ws-hub";
 import { memoryStats, remember } from "./memory-store";
+import { appendOwnerTurn } from "./owner-journal";
 import { detectPatterns, saveMemoryLite } from "../nova-learner-lite";
 
 export const ROOT_SESSION_ID = "nova-root";
@@ -395,6 +396,12 @@ export function recordNexusTurn(
     });
   }
   sess.updatedAt = Date.now();
+  /* TEST4 «ديما مينساش ومينفعش»: الدفتر الدائم append-only — كل دورة بتتكتب
+   * سطر مايتمسحش أبدًا، مستقل عن التدبير بتاع الجلسات. */
+  try {
+    appendOwnerTurn({ role: "user", text: userMsg, sessionId });
+    if (reply) appendOwnerTurn({ role: "assistant", text: reply, provider: String(opts.provider ?? ""), sessionId });
+  } catch { /* best-effort */ }
   if (userMsg) {
     sess.summary = `${userMsg.slice(0, 90)}${opts.toolsUsed?.length ? ` [${opts.toolsUsed.join(", ")}]` : ""}`;
     /* خط المحادثة المستمر: جست رسالة المالك — بيفضل موجود مهما اتبدل الموديل.
