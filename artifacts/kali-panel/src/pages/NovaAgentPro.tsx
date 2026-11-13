@@ -1047,7 +1047,7 @@ export default function NovaAgentPro() {
                     <div className="space-y-1 max-h-44 overflow-y-auto">
                       {nexus.recentBackground.map((b) => (
                         <div key={b.id} className="flex items-baseline gap-2 rounded-lg border border-cyan-400/15 bg-black/45 px-2.5 py-1.5 text-[10px]">
-                          <span className="shrink-0 font-mono text-[9px] text-white/35">{fmtClock(b.at)}</span>
+                          <span className="shrink-0 font-mono text-[9px] text-white/35">{fmtClock(b.at ?? b.ts ?? Date.now())}</span>
                           <span className="shrink-0 font-mono text-[9px] font-bold text-cyan-300 uppercase">[{b.source || b.kind}]</span>
                           <span className="text-white/85 truncate flex-1">{b.title}</span>
                         </div>
