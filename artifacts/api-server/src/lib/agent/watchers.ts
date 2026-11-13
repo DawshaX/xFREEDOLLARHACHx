@@ -22,7 +22,7 @@ import path from "node:path";
 import { logger } from "../logger";
 import { broadcastEvent, getHubClientCount } from "../ws-hub";
 import { toolchainStatus } from "../ops/toolchain";
-import { vaultStatus } from "../ops/findings-vault";
+import { vaultStatus, syncFromJobs } from "../ops/findings-vault";
 import { readPermanentVault, permanentVaultDrift } from "../ops/permanent-vault";
 import { libraryStatus } from "../ops/advisory-library";
 import { liveVerifyView } from "../ops/live-verify";
@@ -340,6 +340,28 @@ export async function watchTick(
     counters.emitted += emitted.length;
     counters.lastTickAt = at;
     counters.writeFailed = !logWritten;
+
+    /* ── حصاد الخزنة التلقائي (مرحلة الحصاد): كل سادس نبضة (~30 دقيقة على
+     * الإيقاع الافتراضي) النتايج المؤرشفة من الجوبز بتتحرك من مخزن الجوبز إلى
+     * ops/findings-vault — العداد على /ops/findings/status بيعكس الحقيقة مش
+     * الشغل اليدوي. مفيش اختراع: syncFromJobs بتاخد بس من findings اللي
+     * المحرك نفسه سجّلها بدليل (SHA-256). لو مفيش جديد — سكوت تام. */
+    if (counters.ticks % 6 === 1) {
+      try {
+        const harvest = syncFromJobs({ limit: 250 });
+        if (harvest.added > 0) {
+          recordBackgroundEvent({
+            kind: "vault:harvest",
+            title: "حصاد الخزنة التلقائي",
+            detail: `اتضافت ${harvest.added} نتيجة موثقة للخزنة (الإجمالي ${harvest.total} · فُحص ${harvest.scanned} جوب)`,
+            source: "watchers",
+          });
+          logger.info({ added: harvest.added, total: harvest.total }, "findings-vault: auto-harvest");
+        }
+      } catch (err) {
+        logger.warn({ err: (err as Error).message }, "findings-vault: harvest failed — tick مكمّل");
+      }
+    }
     logger.info({ emitted: emitted.length, checked: candidates.length }, "watchers: tick");
     return { ok: true, at, emitted, checked: candidates.length, logWritten, delivery };
   } finally {

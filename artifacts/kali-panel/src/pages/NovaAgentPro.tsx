@@ -16,7 +16,7 @@ import {
   Server, Zap, ZapOff, Sparkles, Globe, ScanLine, Shield,
   Terminal as TerminalIcon, Search, Folder, BookOpen, Network, FlaskConical,
   Crosshair, Swords, FileCode, Wifi, CalendarClock, Play, PowerCircle,
-  Command, Eye, EyeOff, MessageSquare, Skull, ArrowLeft, RotateCcw,
+  Command, Eye, EyeOff, MessageSquare, Skull, ArrowLeft, RotateCcw, Radar,
   ChevronUp, ChevronDown, Flame, Radio,
 } from "lucide-react";
 import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
@@ -32,7 +32,7 @@ import { DAW_SKULL } from "@/lib/skull";
 import { useSystem } from "@/context/SystemContext";
 
 /* ─── أنواع ─── */
-type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "missions" | "brain" | "hardware" | "hunt" | "channels" | "nav";
+type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "missions" | "brain" | "nexus" | "hardware" | "hunt" | "channels" | "nav";
 
 interface FleetAgentInfo {
   id: string; hostname: string; platform: string; user?: string; cpus?: number; connectedAt?: string;
@@ -94,6 +94,7 @@ const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color:
   { key: "events",   labelAr: "نبض الأحداث",         icon: Activity,          color: "#4ade80" },
   { key: "missions", labelAr: "المهمات",             icon: ListChecks,        color: "#fbbf24" },
   { key: "brain",    labelAr: "المخ والمجلس",        icon: Brain,             color: "#a78bfa" },
+  { key: "nexus",    labelAr: "الخلفية ٢٤/٧",        icon: Radar,             color: "#2dd4bf" },
   { key: "hardware", labelAr: "العتاد الحي",         icon: Cpu,               color: "#38bdf8" },
   { key: "hunt",     labelAr: "الصيد",               icon: Crosshair,         color: "#f43f5e" },
   { key: "channels", labelAr: "القنوات",             icon: Cable,             color: "#f59e0b" },
@@ -254,12 +255,16 @@ export default function NovaAgentPro() {
     rootMessageCount: number;
     backgroundFeedCount: number;
     learnedInsightsCount: number;
+    memoryTotal: number;
     rootDigest: string;
-    recentBackground: Array<{ id: string; at: number | string; kind: string; title: string; detail: string; source: string }>;
+    recentBackground: Array<{ id: string; at?: number | string; ts?: string; kind: string; title: string; detail: string; source: string }>;
+    learnedInsights: Array<{ id?: string; title?: string; detail?: string; ts?: string }>;
+    sessions: Array<{ id: string; title: string; isRoot?: boolean; messageCount?: number; backgroundLinked?: boolean }>;
   } | null>(null);
   const [cronJobs, setCronJobs] = useState<CronJob[]>([]);
   const [cronErr, setCronErr] = useState<string | null>(null);
   const [cronBusy, setCronBusy] = useState<string | null>(null);
+
   const [flash, setFlash] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [prefs, setPrefs] = useState<Prefs>(() => (typeof window === "undefined" ? { hiddenHud: [], hudOpen: false, chatOpen: true } : loadPrefs()));
@@ -488,8 +493,11 @@ export default function NovaAgentPro() {
       rootMessageCount?: number;
       backgroundFeedCount?: number;
       learnedInsightsCount?: number;
+      memoryTotal?: number;
       rootDigest?: string;
-      recentBackground?: Array<{ id: string; at: number | string; kind: string; title: string; detail: string; source: string }>;
+      recentBackground?: Array<{ id: string; at?: number | string; ts?: string; kind: string; title: string; detail: string; source: string }>;
+      learnedInsights?: Array<{ id?: string; title?: string; detail?: string; ts?: string }>;
+      sessions?: Array<{ id: string; title: string; isRoot?: boolean; messageCount?: number; backgroundLinked?: boolean }>;
     }>("/nova-core/nexus");
     if (nx.ok && nx.data?.rootSessionId) {
       setNexus({
@@ -498,8 +506,11 @@ export default function NovaAgentPro() {
         rootMessageCount: nx.data.rootMessageCount ?? 0,
         backgroundFeedCount: nx.data.backgroundFeedCount ?? 0,
         learnedInsightsCount: nx.data.learnedInsightsCount ?? 0,
+        memoryTotal: nx.data.memoryTotal ?? 0,
         rootDigest: nx.data.rootDigest ?? "",
         recentBackground: Array.isArray(nx.data.recentBackground) ? nx.data.recentBackground : [],
+        learnedInsights: Array.isArray(nx.data.learnedInsights) ? nx.data.learnedInsights : [],
+        sessions: Array.isArray(nx.data.sessions) ? nx.data.sessions : [],
       });
     }
     void refreshCron();
@@ -955,6 +966,76 @@ export default function NovaAgentPro() {
               </div>
             )}
 
+            {arena === "nexus" && (
+              <div className="space-y-3">
+                <div className="text-[10px] font-mono text-teal-100/50">
+                  الجذر الدائم (nova-root) — كل حاجة في البرنامج بتتحدث هنا: الجلسات، النبض الخلفي، والتعلم. الأعداد من /api/nova-core/nexus عيش.
+                </div>
+                {!nexus && <div className="text-center text-[11px] font-mono text-white/35 py-6">يتقاس…</div>}
+                {nexus && (<>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { v: nexus.totalSessions ?? 0, l: "جلسة", c: "#2dd4bf" },
+                      { v: nexus.backgroundFeedCount ?? 0, l: "نبض خلفي", c: "#34d399" },
+                      { v: nexus.learnedInsightsCount ?? 0, l: "رؤية متعلمة", c: "#a78bfa" },
+                      { v: nexus.memoryTotal ?? 0, l: "ذكرى محفوظة", c: "#fb7185" },
+                    ].map((x) => (
+                      <div key={x.l} className="rounded-xl border text-center py-3" style={{ borderColor: x.c + "30", background: x.c + "08" }}>
+                        <div className="text-lg font-black font-mono" style={{ color: x.c }}>{x.v}</div>
+                        <div className="text-[8px] font-mono text-white/40">{x.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {nexus.rootDigest && (
+                    <div className="rounded-xl border border-teal-400/25 bg-teal-500/[0.06] px-4 py-3 text-[11px] font-bold text-teal-100/90 leading-5">
+                      🧠 خلاصة الجذر: {nexus.rootDigest}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <section className="rounded-xl border border-emerald-400/20 bg-black/40 overflow-hidden">
+                      <header className="px-3 py-2 border-b border-emerald-400/15 bg-emerald-500/[0.07] text-[10px] font-black text-emerald-300">النبض الخلفي (المراقبون · الحصاد · الأحداث)</header>
+                      <div className="p-2 space-y-1 max-h-72 overflow-y-auto">
+                        {(nexus.recentBackground ?? []).length === 0 && <div className="text-[9px] font-mono text-white/30 px-2 py-3">النبض هادي — أول حدث هيظهر هنا فورًا (المراقبون بتنبض كل 5 دقائق)</div>}
+                        {(nexus.recentBackground ?? []).slice(0, 20).map((ev) => (
+                          <div key={ev.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="rounded border border-emerald-400/30 bg-emerald-500/10 px-1 text-[8px] font-mono text-emerald-300" dir="ltr">{ev.kind}</span>
+                              <span className="text-[10px] font-bold text-white/75 flex-1 truncate">{ev.title}</span>
+                              <span className="text-[8px] font-mono text-white/30 shrink-0">{ago(ev.ts, now)}</span>
+                            </div>
+                            <div className="mt-0.5 text-[9px] font-mono text-white/45 leading-4">{ev.detail}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                    <section className="rounded-xl border border-violet-400/20 bg-black/40 overflow-hidden">
+                      <header className="px-3 py-2 border-b border-violet-400/15 bg-violet-500/[0.07] text-[10px] font-black text-violet-300">الجلسات المتصلة بالجذر</header>
+                      <div className="p-2 space-y-1 max-h-72 overflow-y-auto">
+                        {(nexus.sessions ?? []).map((sess) => (
+                          <div key={sess.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-1.5 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: sess.isRoot ? "#fb7185" : "#2dd4bf", boxShadow: `0 0 6px ${sess.isRoot ? "#fb7185" : "#2dd4bf"}` }} />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[10px] font-bold text-white/80 truncate">{sess.title}</div>
+                              <div className="text-[8px] font-mono text-white/35">{sess.id} · رسايل {sess.messageCount ?? 0}{sess.backgroundLinked ? " · مربوطة بالخلفية 🔗" : ""}</div>
+                            </div>
+                            {sess.isRoot && <span className="text-[8px] font-black text-rose-300 border border-rose-500/40 bg-rose-500/10 rounded px-1 py-0.5">الجذر</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
+                  {(nexus.learnedInsights ?? []).length > 0 && (
+                    <section className="rounded-xl border border-violet-400/20 bg-violet-500/[0.05] px-3 py-2.5">
+                      <div className="text-[10px] font-black text-violet-300 mb-1.5">رؤى متعلمة (auto-dream)</div>
+                      {(nexus.learnedInsights ?? []).slice(0, 8).map((li, i) => (
+                        <div key={li.id ?? i} className="text-[9px] font-mono text-white/55 py-0.5 border-b border-white/[0.04] last:border-0">💡 {li.title ?? li.detail ?? JSON.stringify(li).slice(0, 120)}</div>
+                      ))}
+                    </section>
+                  )}
+                </>)}
+              </div>
+            )}
+
             {arena === "events" && (
               <div className="space-y-3">
                 {nexus && nexus.recentBackground.length > 0 && (
@@ -966,7 +1047,7 @@ export default function NovaAgentPro() {
                     <div className="space-y-1 max-h-44 overflow-y-auto">
                       {nexus.recentBackground.map((b) => (
                         <div key={b.id} className="flex items-baseline gap-2 rounded-lg border border-cyan-400/15 bg-black/45 px-2.5 py-1.5 text-[10px]">
-                          <span className="shrink-0 font-mono text-[9px] text-white/35">{fmtClock(b.at)}</span>
+                          <span className="shrink-0 font-mono text-[9px] text-white/35">{fmtClock(b.at ?? b.ts ?? Date.now())}</span>
                           <span className="shrink-0 font-mono text-[9px] font-bold text-cyan-300 uppercase">[{b.source || b.kind}]</span>
                           <span className="text-white/85 truncate flex-1">{b.title}</span>
                         </div>
