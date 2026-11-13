@@ -1,64 +1,39 @@
 {
-  "at": "2026-11-13T08:32:52.718Z",
-  "seat": "openai",
+  "at": "2026-11-13T15:23:50.226Z",
+  "seat": "ovh-llama",
   "thinking": {
-    "reply": "التغطية الحالية 78.2٪، وملفات الأداهو وجدت كود عادي بدون ثغرات، فالأفضل نوسع البحث لـمنتج شائع زي Chrome لزيادة التغطية.",
-    "why": "تركز المنصة الآن على توسيع قاعدة البيانات وتحسين تغطية المنتجات ذات التردد العالي",
+    "reply": "المنصة قامت بفحص 3 أهداف بصراحة، ولم تجد أي مطابقات للثغرات الأمنية. التغطية الحالية للمنصة تبلغ 18.81% من الإجمالي.",
+    "why": "المنصة تحتاج إلى تحسين التغطية وتوسيع نطاق الفحص لاكتشاف المزيد من الثغرات الأمنية.",
     "action": {
-      "kind": "corpus_search",
-      "arg": "chrome"
+      "kind": "none",
+      "arg": ""
     }
   },
-  "action": {
-    "kind": "corpus_search",
-    "ok": true,
-    "arg": "chrome",
-    "hits": 5,
-    "examples": [
-      {
-        "cve": "CVE-2025-10585",
-        "severity": "critical",
-        "cvss": 9.8,
-        "kev": true
-      },
-      {
-        "cve": "CVE-2022-4135",
-        "severity": "critical",
-        "cvss": 9.6,
-        "kev": true
-      },
-      {
-        "cve": "CVE-2022-3075",
-        "severity": "critical",
-        "cvss": 9.6,
-        "kev": true
-      }
-    ]
-  },
+  "action": null,
   "answered": null,
   "senses": {
     "corpus": {
-      "total": 332347,
-      "at": "2026-11-13T07:20:32.260Z",
-      "critical": 27599,
-      "high": 127081,
-      "kev": 1131,
-      "coverage": 0.782,
-      "nextStartIndex": 352347,
+      "total": 80000,
+      "at": "2026-11-13T10:50:12.330Z",
+      "critical": 822,
+      "high": 32241,
+      "kev": 227,
+      "coverage": 0.1881,
+      "nextStartIndex": 356347,
       "newestYear": 2026,
       "topProducts": [
         "linux_kernel",
-        "android",
-        "chrome",
         "firefox",
-        "ubuntu_linux",
-        "debian_linux",
-        "windows_server_2012",
-        "iphone_os",
+        "chrome",
         "mac_os_x",
-        "safari",
         "flash_player",
-        "macos"
+        "safari",
+        "ubuntu_linux",
+        "internet_explorer",
+        "iphone_os",
+        "wireshark",
+        "php",
+        "moodle"
       ]
     },
     "hunt": {
@@ -351,13 +326,16 @@
       "says": "اتفحص 3 هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل."
     },
     "advisories": {
-      "total": 1051,
-      "at": "2026-11-12T12:44:17.107Z",
-      "critical": 197
+      "total": 1038,
+      "at": "2026-11-13T12:13:54.636Z",
+      "critical": 196
     }
   },
-  "failures": [],
-  "says_ar": "فكّرت على openai · التغطية الحالية 78.2٪، وملفات الأداهو وجدت كود عادي بدون ثغرات، فالأفضل نوسع البحث لـمنتج شائع زي Chrome لزيادة التغطية.",
+  "failures": [
+    "openai: The operation was aborted due to timeout",
+    "mistral: HTTP 402"
+  ],
+  "says_ar": "فكّرت على ovh-llama · المنصة قامت بفحص 3 أهداف بصراحة، ولم تجد أي مطابقات للثغرات الأمنية. التغطية الحالية للمنصة تبلغ 18.81% من الإجمالي.",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
