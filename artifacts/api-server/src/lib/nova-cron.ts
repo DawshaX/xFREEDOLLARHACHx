@@ -37,12 +37,20 @@ const INTERVALS = new Map<string, ReturnType<typeof setInterval>>();
 async function runJob(id: string): Promise<string> {
   switch (id) {
     case "cve_hunt": {
-      // NOVA_CVE_SOURCE=ci: الصيد يبقى استهلاك مش إنتاج. بدل جولات كل 5 دقايق على
-      // NVD/CISA/EDB/CIRCL (كانوا بياكلوا سقف الـCPU في حاوية صغيرة)، المكنة بتقرا
-      // فهرس المرآة الصغير وبتنزّل بس لما تكون فعلًا أجدد — الـCI هو صاحب البناء.
-      if (String(process.env.NOVA_CVE_SOURCE || "").trim().toLowerCase() === "ci") {
-        const { refreshCorpusFromRelease } = await import("./ops/vuln-corpus");
+      // الافتراضي = استهلاك مرآة الـCI (تحدّث كل 30 د). NOVA_CVE_SOURCE=direct هو
+      // اللي يرجّع الصيد المباشر (NVD/CISA/EDB/CIRCL كل 5 دقايق = سقف CPU على طور
+      // الاستضافات).
+      if (String(process.env.NOVA_CVE_SOURCE || "ci").trim().toLowerCase() !== "direct") {
+        const { refreshCorpusFromRelease, corpusStatus } = await import("./ops/vuln-corpus");
         const r = await refreshCorpusFromRelease();
+        // لو فعلاً نزّل أجدد — ابعت SSE عشان اللايف يتحدّث قدام المالك
+        if (r.action === "downloaded") {
+          try {
+            const { broadcastCorpusRefresh } = await import("./cve-monitor");
+            const st = corpusStatus();
+            broadcastCorpusRefresh({ total: st.total, at: st.at ?? r.remoteAt ?? "", remoteAt: r.remoteAt ?? "", kev: st.kev });
+          } catch { /* البث مش مانع */ }
+        }
         return `corpus-from-ci:${r.action} (${r.says_ar})`;
       }
       const r = await runHunt();

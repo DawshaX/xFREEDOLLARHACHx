@@ -165,3 +165,52 @@ export function permanentVaultDrift(doc: PermanentVaultDoc = readPermanentVault(
     detail: listed < 0 ? "الملف مقروء بس مصفوفة السجلات مش موجودة" : `المكتوب في الملف: ${declared} · الموجود في المصفوفة: ${listed}`,
   };
 }
+
+/* ── كاتب الخزنة الدائمة ────────────────────────────────────────────────────
+ * الخزنة كانت للقراءة فقط (readPermanentVault) — فالأجنت كان يشوف الماضي وما
+ * يقدرش يسجّل اكتشاف جديد. السجلّ ده بيكتب افتراضات الدمج/الزيرو داي (*فرضية*،
+ * مش استغلال إثباتي) بحيث تراكم "اكتشاف" حقيقي يقراه الأجنت والمالك وڤودفة.
+ */
+export interface VaultFindingInput {
+  titleAr: string;
+  titleEn?: string;
+  combinedFrom?: string[];
+  hypothesisAr: string;
+  impactAr?: string;
+  severity?: "critical" | "high" | "medium" | "low";
+  evidence?: Record<string, unknown>;
+  confidence?: number;
+}
+
+export function appendPermanentVaultFinding(f: VaultFindingInput): { id: string; total: number; path: string } {
+  const file = permanentVaultPath();
+  let doc: Record<string, unknown> = {};
+  try {
+    if (fs.existsSync(file)) doc = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+  } catch { doc = {}; }
+  const arr = Array.isArray(doc.discoveredVulnerabilities) ? (doc.discoveredVulnerabilities as unknown[]) : [];
+  const id = `NOVA-LAB-${String(arr.length + 1).padStart(3, "0")}`;
+  const record = {
+    id,
+    program: "NOVA Zero-Day Lab (self-evolved)",
+    platform: "CyberNova Internal",
+    titleEn: f.titleEn ?? f.titleAr,
+    titleAr: f.titleAr,
+    severity: f.severity ?? "medium",
+    discoveredAt: new Date().toISOString(),
+    kind: "combined-hypothesis",
+    combinedFrom: f.combinedFrom ?? [],
+    hypothesisAr: f.hypothesisAr,
+    impactAr: f.impactAr ?? "",
+    confidence: f.confidence ?? 0.5,
+    evidence: f.evidence ?? {},
+    status: "hypothesis-pending-retest",
+  };
+  arr.push(record);
+  doc.discoveredVulnerabilities = arr;
+  doc.totalDiscoveredVulnerabilities = arr.length;
+  doc.updatedAt = new Date().toISOString();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(doc, null, 2));
+  return { id, total: arr.length, path: file };
+}
