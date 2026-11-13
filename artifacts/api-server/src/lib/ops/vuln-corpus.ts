@@ -631,10 +631,17 @@ export async function provisionCorpus(opts: { url?: string; force?: boolean; min
   }
   // سلسلة المصادر: الـrelease الأول (الأساس)، وبعده مرايا raw المجانية. أول
   // مصدر يجيب gzip سليم يفوز — والرسالة بتقول بصراحة مين اللي خدم.
-  const sources: Array<{ url: string; kind: string }> = [
-    { url, kind: "release" },
-    ...fallbackCorpusSources().filter((s) => s.kind !== "release").map((s) => ({ url: s.url, kind: s.kind })),
-  ];
+  // TEST6 قِيس 2026-11-13 (CI، تشيك «provision refuses a stub payload»):
+  // لما المنادي يمرّر url صريح كان الـfallback بيتدخل ويستكوي الـstub —
+  // url صريح = طلب مصدر واحد بالظبط (اختبار أو refresh بيتجرب مصدر معين)،
+  // والسلسلة الكاملة للمكالمة الافتراضية بس.
+  const explicit = Boolean(opts.url);
+  const sources: Array<{ url: string; kind: string }> = explicit
+    ? [{ url, kind: "explicit" }]
+    : [
+        { url, kind: "release" },
+        ...fallbackCorpusSources().filter((s) => s.kind !== "release").map((s) => ({ url: s.url, kind: s.kind })),
+      ];
   let lastErr = "";
   for (const src of sources) {
     try {
