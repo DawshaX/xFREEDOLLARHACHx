@@ -13,6 +13,9 @@ name: vuln corpus (real NVD + KEV + EPSS)
 on:
   schedule:
     - cron: "*/30 * * * *" # incremental: pick up CVEs published/modified since last run
+    - cron: "7 1,5,9,13,17,21 * * *" # hourly-ish retry band — GitHub delays scheduled runs
+      # heavily on busy repos (measured: the */30 cron landed once per ~6-8h),
+      # so extra slots give the ingest more chances to land fresh data.
     - cron: "0 3 * * 0" # weekly full pass
   push:
     branches: [main]
@@ -22,6 +25,12 @@ on:
       - "scripts/ci-commit.mjs"
       - "scripts/record-failure.mjs"
       - "artifacts/api-server/src/lib/ops/vuln-corpus.ts"
+  # TEST5 «لسة 104 ومفيش تحديث لحظي»: كل دمج على main بيخلص نشره ⇒ أمشي الكوربوس
+  # على طول. الدمجات بتتم بأدوات تكرار أعلى من كرون GitHub المتأخر، فالتتبّع ده
+  # هو اللي يخلي الفهرس يتنفس بدل ما يقعد ساعات جامد.
+  workflow_run:
+    workflows: ["NOVA portable bundle (24/7)"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       mode:
@@ -179,3 +188,20 @@ jobs:
             state/vuln-corpus/cves.jsonl.gz
             state/vuln-corpus-index.json
           fail_on_unmatched_files: false
+
+      - name: mirror the corpus onto an orphan branch (raw.githubusercontent fallback)
+        # تحميل الـrelease بيعدي على release-assets.githubusercontent.com بعد
+        # redirect — على بعض المضيفات المجانية بيعمل «fetch failed» فيبقى الكوربوس
+        # جامد على رقم قديم. الفرع اليتيم ده (ملف واحد، commit واحد بينreplace كل
+        # مرة) بينشر نفس البايتات عبر raw.githubusercontent.com — CDN مختلف
+        # أوسع انتشارًا. السيرفر بيجرب الـrelease الأول وبعده المرآة دي.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rm -rf /tmp/corpus-mirror && mkdir -p /tmp/corpus-mirror
+          cp state/vuln-corpus/cves.jsonl.gz state/vuln-corpus-index.json /tmp/corpus-mirror/
+          cd /tmp/corpus-mirror
+          git init -q -b vuln-corpus-data
+          git add -A
+          git -c user.email=ci@cybernova.local -c user.name="corpus mirror" commit -qm "corpus data $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:vuln-corpus-data
