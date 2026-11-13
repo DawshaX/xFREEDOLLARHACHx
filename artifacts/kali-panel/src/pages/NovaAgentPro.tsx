@@ -230,9 +230,9 @@ const loadPrefs = (): Prefs => {
         hudOpen: j.hudOpen === true,
         chatOpen: j.chatOpen !== false,
         chatWide: Boolean(j.chatWide),
-        autonomyMode: (j as Record<string, unknown>).autonomyMode as Prefs["autonomyMode"],
-        offensivePosture: Boolean((j as Record<string, unknown>).offensivePosture),
-        rootSessionId: typeof (j as Record<string, unknown>).rootSessionId === "string" ? (j as Record<string, unknown>).rootSessionId as string : undefined,
+        autonomyMode: ((j as Record<string, unknown>).autonomyMode as Prefs["autonomyMode"]) ?? "autonomous",
+        offensivePosture: (j as Record<string, unknown>).offensivePosture !== false,
+        rootSessionId: typeof (j as Record<string, unknown>).rootSessionId === "string" ? (j as Record<string, unknown>).rootSessionId as string : "nova-root",
       };
     }
   } catch { /* تفضيلات أول مرة */ }
@@ -275,6 +275,7 @@ export default function NovaAgentPro() {
   const [novaNotes, setNovaNotes] = useState<Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string }>>([]);
   const [noteDraft, setNoteDraft] = useState<{ title: string; body: string }>({ title: "", body: "" });
   const [noteBusy, setNoteBusy] = useState(false);
+  const prefsHydrated = useRef(false);
   const [now, setNow] = useState(Date.now());
   const [prefs, setPrefs] = useState<Prefs>(() => (typeof window === "undefined" ? { hiddenHud: [], hudOpen: false, chatOpen: true } : loadPrefs()));
   const [notes, setNotes] = useState<string>(() => { try { return localStorage.getItem("daw.agentPro.notes") ?? ""; } catch { return ""; } });
@@ -289,6 +290,8 @@ export default function NovaAgentPro() {
   useEffect(() => {
     try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch { /* */ }
     // التفضيلات بقت محفوظة على السيرفر كمان — لو البراوزر اتمسح، المرة الجاية ترجع.
+    // بس مش قبل ما السيرفر يحمّي أول قراءة (والإا هيبعت إعدادات متصفح قديمة تستبدل pin المالك).
+    if (!prefsHydrated.current) return;
     const t = setTimeout(() => {
       void fetch("/api/panel/prefs", {
         method: "PUT",
@@ -302,7 +305,9 @@ export default function NovaAgentPro() {
   // أول تفتّح: بقراءة التفضيلات من السيرفر لو فيه — السيرفر هو الأصل، الـlocal fallback.
   useEffect(() => {
     let alive = true;
+    const fallbackHydrate = setTimeout(() => { prefsHydrated.current = true; }, 8000);
     void opsFetch<{ prefs?: Partial<Prefs> & Record<string, unknown> }>("/panel/prefs").then((r) => {
+      prefsHydrated.current = true;
       if (!alive || !r.ok || !r.data?.prefs) return;
       const sp = r.data.prefs as Partial<Prefs> & { autonomyMode?: string; offensivePosture?: boolean; rootSessionId?: string };
       setPrefs((p) => ({
@@ -316,7 +321,7 @@ export default function NovaAgentPro() {
         rootSessionId: typeof sp.rootSessionId === "string" && sp.rootSessionId ? sp.rootSessionId : "nova-root",
       }));
     });
-    return () => { alive = false; };
+    return () => { alive = false; clearTimeout(fallbackHydrate); };
   }, []);
   useEffect(() => {
     const t = setTimeout(() => { try { localStorage.setItem("daw.agentPro.notes", notes); setNotesSaved(true); } catch { /* */ } }, 400);

@@ -380,9 +380,16 @@ try {
 if (process.env.NOVA_AUTONOMY_PIN !== "0") {
   void (async () => {
     try {
-      const { readPanelPrefs } = await import("./routes/panel-prefs");
+      const { readPanelPrefs, writePanelPrefs } = await import("./routes/panel-prefs");
       const prefs = readPanelPrefs();
-      if (prefs.autonomyMode === "autonomous" && prefs.offensivePosture) {
+      if (prefs.autonomyMode === "autonomous") {
+        // علاج ذاتي للملف: الضغطة الأولى من اللوحة القديمة كانت بترمي
+        // offensivePosture=false قبل التهيّة — نرجّعه true طالما الوضع autonomous
+        // (وضع المالك المعلن) ومفيش واجهة بتغيّره يدويًا حاليًا.
+        if (!prefs.offensivePosture) {
+          const healed = { ...prefs, offensivePosture: true };
+          if (writePanelPrefs(healed)) prefs.offensivePosture = true;
+        }
         const { setAutonomy } = await import("./lib/autonomy-control");
         const r = await setAutonomy({ enabled: true, level: "deep", note: "pinned-by-owner (panel-prefs at boot)" });
         logger.info({ ok: r.ok, level: r.status.level }, "الوضع المثبت للمالك طُبّق (autonomous+offensive → deep)");
