@@ -81,6 +81,14 @@ async function runJob(id: string): Promise<string> {
     }
     case "nova_learn": {
       const n = consolidateMemoryLite();
+      // لو الكيان استخرج أنماط جديدة — سجّل الاستنتاج في الـNexus فورًا عشان
+      // عداد «تعلّم» في اللوحة يتحرك بحقائق مش باسطوانة صمت.
+      if (n > 0) {
+        try {
+          const { addNexusInsight } = await import("./agent/session-nexus");
+          addNexusInsight(`Auto-Learner: اكتشف ${n} نمط جديد من الأنماط المتراكمة`);
+        } catch { /* best-effort */ }
+      }
       return `nova_learn: ${n} new patterns`;
     }
     default: return "unknown job";

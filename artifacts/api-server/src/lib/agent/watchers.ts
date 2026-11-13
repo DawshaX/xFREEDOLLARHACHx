@@ -357,6 +357,15 @@ export async function watchTick(
             source: "watchers",
           });
           logger.info({ added: harvest.added, total: harvest.total }, "findings-vault: auto-harvest");
+          // التعلم لما الكيان يحصد: استنتاج حقيقي مشتق من مقياس الخزنة نفسه —
+          // يظهر في /nova-core/nexus ويلوّن عداد «تعلّم» في الواجهة.
+          try {
+            const { listVault } = await import("../ops/findings-vault");
+            const sev = listVault({ limit: 1 }).counts.bySeverity;
+            const parts = Object.entries(sev).filter(([, n]) => n > 0).map(([k, n]) => `${k}:${n}`).join(" · ");
+            const { addNexusInsight } = await import("./session-nexus");
+            addNexusInsight(`حصاد ${new Date().toISOString().slice(0, 16).replace("T", " ")}: ${harvest.added} نتيجة دخلت الخزنة — الصورة الكاملة ${parts || "لسه فاضي"}`);
+          } catch { /* الاستنتاج زينة على الحدث — حدثه اتسجّل فوق */ }
         }
       } catch (err) {
         logger.warn({ err: (err as Error).message }, "findings-vault: harvest failed — tick مكمّل");
