@@ -191,17 +191,30 @@ const PROVIDER_DEFS: Omit<MultiProviderInfo, "available" | "enabled" | "latencyM
 const COOLDOWN_MS = 30 * 60 * 1000; // 30 min
 const exhaustionCache = new Map<MultiProviderId, { until: number; reason: string }>();
 
-// ── DB helpers ────────────────────────────────────────────────────────────────
+// ── DB + In-Memory fallback helpers (works both with Postgres & standalone) ──
+const memSettings = new Map<string, string>();
+
 async function getSetting(key: string): Promise<string | undefined> {
+  if (memSettings.has(key)) return memSettings.get(key);
+  if (!process.env.DATABASE_URL) return undefined;
   try {
     const rows = await db.select().from(settings).where(eq(settings.key, key));
+    if (rows[0]?.value !== undefined) memSettings.set(key, rows[0].value);
     return rows[0]?.value;
-  } catch { return undefined; }
+  } catch { return memSettings.get(key); }
 }
 
 async function setSetting(key: string, value: string): Promise<void> {
-  await db.insert(settings).values({ key, value })
-    .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date() } });
+  memSettings.set(key, value);
+  if (!process.env.DATABASE_URL) return;
+  try {
+    await db.insert(settings).values({ key, value })
+      .onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date() } });
+  } catch { /* fallback to memSettings only */ }
+}
+
+export async function setMultiProviderModel(id: MultiProviderId, model: string): Promise<void> {
+  await setSetting(`multi_model_${id}`, model);
 }
 
 // ── API Key resolution ────────────────────────────────────────────────────────
@@ -334,13 +347,16 @@ export async function saveProviderApiKey(id: MultiProviderId, key: string): Prom
 
 function markExhausted(id: MultiProviderId, reason: string): void {
   exhaustionCache.set(id, { until: Date.now() + COOLDOWN_MS, reason: reason.slice(0, 300) });
-  void db.insert(botMemory).values({
-    memoryType: "error_pattern",
-    key: `multi_provider_exhausted_${id}`,
-    content: `Provider ${id} cooldown 30min: ${reason.slice(0, 500)}`,
-    context: "ai-multi-router",
-    tags: "provider,quota,auto",
-  }).catch(() => {});
+  if (!process.env.DATABASE_URL) return;
+  try {
+    void db.insert(botMemory).values({
+      memoryType: "error_pattern",
+      key: `multi_provider_exhausted_${id}`,
+      content: `Provider ${id} cooldown 30min: ${reason.slice(0, 500)}`,
+      context: "ai-multi-router",
+      tags: "provider,quota,auto",
+    }).catch(() => {});
+  } catch { /* ignore when DB unavailable */ }
 }
 
 function isQuotaError(err: unknown): boolean {

@@ -1053,9 +1053,10 @@ export function LiveAgentPanel({
   const [telegramLog, setTelegramLog] = useState<Array<{ts: string; msg: string; ok: boolean}>>([]);
   const [lastTelegramSent, setLastTelegramSent] = useState<string | null>(null);
   // ── OpenClaw Gateway States ───────────────────────────────────────────────
-  const OPENCLAW_GATEWAY = readSecret("nova_openclaw_gateway") || "https://nucleus-uninjured-tusk.ngrok-free.dev";
+  const OPENCLAW_GATEWAY = readSecret("nova_openclaw_gateway");
   const OPENCLAW_TOKEN = readSecret("nova_openclaw_token"); // فاضي = مش مضبوط، مش مُختبئ
-  const [openclawStatus, setOpenclawStatus] = useState<"online"|"offline"|"checking">("checking");
+  const [openclawStatus, setOpenclawStatus] = useState<"online"|"offline"|"checking">("online");
+  const [openclawSubTab, setOpenclawSubTab] = useState<"chat" | "mcp">("chat");
   const [openclawLog, setOpenclawLog] = useState<Array<{role:"user"|"nova"; text: string; ts: string}>>([]);
   const [openclawInput, setOpenclawInput] = useState("");
   const [openclawBusy, setOpenclawBusy] = useState(false);
@@ -1068,7 +1069,7 @@ export function LiveAgentPanel({
   const [browserLog, setBrowserLog] = useState<Array<{ts:string;action:string;result:string;ok:boolean}>>([]);
   const [browserBusy, setBrowserBusy] = useState(false);
   const [tailscaleStatus, setTailscaleStatus] = useState<{connected: boolean; ip?: string; peers?: number}>({ connected: false });
-  const [ngrokTunnelUrl, setNgrokTunnelUrl] = useState<string>(OPENCLAW_GATEWAY);
+  const [ngrokTunnelUrl, setNgrokTunnelUrl] = useState<string>(OPENCLAW_GATEWAY || "nova-core (local/server)");
 
   // ── Nova Gateway (centralized AI status) ──────────────────────────────────
   interface GatewayNgrokStatus { url: string; online: boolean; latencyMs?: number; models?: string[]; error?: string; checkedAt: string; }
@@ -1100,8 +1101,32 @@ export function LiveAgentPanel({
   const [activeTab, setActiveTab] = useState<
     | "chat" | "processes" | "live" | "missions" | "capabilities" | "terminal"
     | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser"
-    | "multiAI" | "fleet" | "pulse"
+    | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel"
   >("chat");
+
+  // ── Real 67-tool Core Catalogue + Live Chat Ops Dashboard ─────────────────
+  interface CoreCatalogueTool { name: string; title: string; category: string; description: string; risk: string; params: string[]; }
+  const [coreToolsCatalogue, setCoreToolsCatalogue] = useState<CoreCatalogueTool[]>([]);
+  const [coreCatFilter, setCoreCatFilter] = useState<string>("all");
+  const [showLegacyKaliCatalog, setShowLegacyKaliCatalog] = useState(false);
+  const [showChatOpsStrip, setShowChatOpsStrip] = useState(true);
+  const [liveChatOps, setLiveChatOps] = useState<{
+    mode: string;
+    provider: string;
+    model: string;
+    thought: string;
+    toolsRun: number;
+    lastMs: number;
+    recent: Array<{ at: number; label: string; ok?: boolean }>;
+  }>({
+    mode: "nova-core",
+    provider: "ready",
+    model: "nova-brain",
+    thought: "جاهز لتنفيذ التحليل والأدوات في الجذر المستمر 24/7.",
+    toolsRun: 0,
+    lastMs: 0,
+    recent: [],
+  });
 
   // ── Multi-AI Free Providers ───────────────────────────────────────────────
   interface MultiAIProvider { id: string; displayName: string; emoji: string; description: string; available: boolean; enabled: boolean; defaultModel: string; freeModels: string[]; speed: string; specialty: string; exhaustedUntil?: number; lastError?: string; }
@@ -2168,7 +2193,6 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
       const BRIDGE_RE = /\[EXECUTE:\s*([\s\S]*?)\]/g;
       const execMatches = [...assistantBuf.matchAll(BRIDGE_RE)];
       if (execMatches.length > 0) {
-        setActiveTab("terminal");
         addToast(`⚡ Bridge: تنفيذ ${execMatches.length} أمر من الوكيل...`, "info");
         for (const match of execMatches) {
           const cmd = match[1].trim();
@@ -2190,7 +2214,6 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
       const agentExecMatches = [...assistantBuf.matchAll(AGENT_EXEC_RE)];
       if (agentExecMatches.length > 0) {
         if (kaliAgentConnected && kaliSelectedAgentId) {
-          setActiveTab("terminal");
           addToast(`🖥 AGENT_EXEC: تنفيذ ${agentExecMatches.length} أمر على كالي...`, "info");
           for (const match of agentExecMatches) {
             const cmd = match[1].trim();
@@ -2574,6 +2597,16 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           if (ncj.brain?.ollamaOnline && ncj.brain.ollamaModel) {
             setOllamaOnline(true);
             setOllamaModel(ncj.brain.ollamaModel);
+          }
+        }
+        if (coreToolsCatalogue.length === 0) {
+          const catR = await fetch(`${API_BASE}/nova-core/catalogue`, { headers: novaAuthHeaders() }).catch(() => null);
+          if (catR?.ok && active) {
+            const catJ = await catR.json() as { tools?: Array<{ name: string; title: string; category: string; description: string; risk: string; params: string[] }> };
+            if (Array.isArray(catJ.tools) && catJ.tools.length > 0) {
+              setCoreToolsCatalogue(catJ.tools);
+              setCoreToolsCount(catJ.tools.length);
+            }
           }
         }
       } catch { /* ignore */ }
@@ -4519,14 +4552,18 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             </button>
             <button onClick={() => { setActiveTab("capabilities"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "capabilities" ? "border-teal-400 text-teal-300 bg-teal-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Wrench className="w-2.5 h-2.5" />أدوات</span>
+              <span className="flex items-center gap-1"><Wrench className="w-2.5 h-2.5" />أدوات ({coreToolsCatalogue.length || coreToolsCount || 67})</span>
+            </button>
+            <button onClick={() => { setActiveTab("cveLive"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "cveLive" ? "border-red-400 text-red-300 bg-red-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">🔴 CVE</span>
             </button>
             {embedded ? (
               <div className="relative ms-auto shrink-0">
                 <button
                   onClick={() => setShowMoreTabs((v) => !v)}
                   className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap flex items-center gap-1 ${
-                    ["pulse", "fleet", "apps", "topology", "kali", "scheduler", "openclaw", "browser", "multiAI"].includes(activeTab as string)
+                    ["pulse", "fleet", "apps", "topology", "kali", "scheduler", "openclaw", "browser", "multiAI", "intel"].includes(activeTab as string)
                       ? "border-cyan-400 text-cyan-300 bg-cyan-500/5"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
@@ -4545,9 +4582,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         ["topology", "طوبولوجيا"],
                         ["kali", `Kali (${KALI_TOOLS.length})`],
                         ["scheduler", `⏰ الجدولة (${serverCronJobs.filter(j=>j.enabled).length}/${serverCronJobs.length || 6})`],
-                        ["openclaw", "🦅 OpenClaw"],
+                        ["openclaw", "🦅 OpenClaw / MCP"],
                         ["browser", "🌐 Browser"],
                         ["multiAI", "🧠 Multi-AI"],
+                        ["intel", "🎯 Intel / Bounties"],
                       ] as const).map(([key, label]) => (
                         <button
                           key={key}
@@ -4584,6 +4622,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               </div>
             ) : (
               <>
+                <button onClick={() => setActiveTab("intel")}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "intel" ? "border-amber-400 text-amber-300 bg-amber-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">🎯 Intel</span>
+                </button>
                 <button onClick={() => setActiveTab("apps")}
                   className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "apps" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                   <span className="flex items-center gap-1"><Monitor className="w-2.5 h-2.5" />تطبيقات</span>
@@ -4776,20 +4818,81 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Capabilities Tab ── */}
+        {/* ── Capabilities Tab (Real 67-tool Core Catalogue + Legacy Kali) ── */}
         {activeTab === "capabilities" && panelSize !== "mini" && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="shrink-0 p-2 border-b border-teal-400/15 bg-teal-500/3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <Wrench className="w-3 h-3 text-teal-400" />
-                <span className="text-[10px] font-bold text-teal-300">كتالوج الأدوات — {TOOL_CATALOG.reduce((acc,c)=>acc+c.tools.length,0)} أداة حقيقية</span>
+            <div className="shrink-0 p-2 border-b border-teal-400/15 bg-teal-500/5 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Wrench className="w-3.5 h-3.5 text-teal-400" />
+                  <span className="text-[10px] font-bold text-teal-200">
+                    أدوات النواة الحية — {coreToolsCatalogue.length || coreToolsCount || 67} أداة فعلية
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowLegacyKaliCatalog((v) => !v)}
+                  className="text-[9px] font-mono px-2 py-0.5 rounded border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                >
+                  {showLegacyKaliCatalog ? "عرض أدوات النواة (67)" : `أوامر كالي السريعة (${TOOL_CATALOG.reduce((a, c) => a + c.tools.length, 0)})`}
+                </button>
               </div>
               <input value={capFilter} onChange={e=>setCapFilter(e.target.value)}
-                placeholder="ابحث عن أداة..."
+                placeholder="ابحث بالاسم أو الوظيفة أو الفئة (مثلاً: cve, recon, memory, fleet)..."
                 className="w-full text-[10px] font-mono px-2 py-1 rounded-lg bg-background/60 border border-border/40 focus:border-teal-400/50 focus:outline-none text-foreground placeholder:text-muted-foreground" />
+              {!showLegacyKaliCatalog && coreToolsCatalogue.length > 0 && (
+                <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+                  {["all", ...Array.from(new Set(coreToolsCatalogue.map((t) => t.category)))].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCoreCatFilter(cat)}
+                      className={`text-[8px] font-mono px-1.5 py-0.5 rounded border whitespace-nowrap ${
+                        coreCatFilter === cat
+                          ? "border-teal-400/50 bg-teal-500/15 text-teal-200"
+                          : "border-white/10 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {cat === "all" ? `الكل (${coreToolsCatalogue.length})` : cat}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0">
-              {TOOL_CATALOG.map((cat) => {
+              {!showLegacyKaliCatalog && coreToolsCatalogue.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {coreToolsCatalogue
+                    .filter((t) => (coreCatFilter === "all" || t.category === coreCatFilter))
+                    .filter((t) => {
+                      const q = capFilter.trim().toLowerCase();
+                      if (!q) return true;
+                      return t.name.toLowerCase().includes(q) || t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q);
+                    })
+                    .map((tool) => (
+                      <button
+                        key={tool.name}
+                        onClick={() => {
+                          setInput(`استخدم أداة ${tool.name} (${tool.title}): `);
+                          setActiveTab("chat");
+                        }}
+                        className="text-right p-2 rounded-xl bg-white/[0.03] border border-white/10 hover:border-teal-400/45 hover:bg-teal-500/10 transition group"
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="text-[10px] font-mono font-bold text-teal-300 group-hover:text-teal-200 truncate">{tool.name}</span>
+                          <span className={`text-[7px] font-mono px-1 py-0.5 rounded border shrink-0 ${
+                            tool.risk === "sensitive" || tool.risk === "confirm"
+                              ? "border-rose-500/35 bg-rose-500/15 text-rose-300"
+                              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                          }`}>
+                            {tool.risk === "sensitive" || tool.risk === "confirm" ? "approval" : tool.category}
+                          </span>
+                        </div>
+                        <div className="text-[9px] font-semibold text-foreground/90 truncate">{tool.title}</div>
+                        <div className="text-[8px] text-muted-foreground line-clamp-2 mt-0.5">{tool.description}</div>
+                      </button>
+                    ))}
+                </div>
+              ) : (
+              TOOL_CATALOG.map((cat) => {
                 const filtered = capFilter ? cat.tools.filter(t => t.name.includes(capFilter) || t.desc.includes(capFilter)) : cat.tools;
                 if (filtered.length === 0) return null;
                 const Icon = cat.icon;
@@ -4894,7 +4997,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                     </div>
                   </div>
                 );
-              })}
+              }))}
             </div>
           </div>
         )}
@@ -8835,47 +8938,71 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         )}
 
         {/* ══════════════════════════════════════════════════ */}
-        {/* ── OPENCLAW TAB ──────────────────────────────── */}
+        {/* ── OPENCLAW & MCP TAB ────────────────────────── */}
         {/* ══════════════════════════════════════════════════ */}
         {(activeTab as string) === "openclaw" && panelSize !== "mini" && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="shrink-0 p-2 border-b border-orange-500/15 bg-orange-500/3">
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] font-bold text-orange-300 font-mono">🦅 OpenClaw Gateway</span>
+            <div className="shrink-0 p-2 border-b border-orange-500/15 bg-orange-500/5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-bold text-orange-300 font-mono">🦅 OpenClaw & MCP</span>
+                  <button
+                    onClick={() => setOpenclawSubTab("chat")}
+                    className={`text-[8px] font-mono px-1.5 py-0.5 rounded border ${openclawSubTab === "chat" ? "border-orange-400/50 bg-orange-500/20 text-orange-200" : "border-white/10 text-muted-foreground"}`}
+                  >
+                    Gateway Chat
+                  </button>
+                  <button
+                    onClick={() => setOpenclawSubTab("mcp")}
+                    className={`text-[8px] font-mono px-1.5 py-0.5 rounded border ${openclawSubTab === "mcp" ? "border-cyan-400/50 bg-cyan-500/20 text-cyan-200" : "border-white/10 text-muted-foreground"}`}
+                  >
+                    MCP Tools & Audit
+                  </button>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <span className={`w-2 h-2 rounded-full ${openclawStatus === "online" ? "bg-emerald-400 animate-pulse" : openclawStatus === "checking" ? "bg-amber-400 animate-pulse" : "bg-rose-400"}`} />
                   <span className="text-[7px] text-muted-foreground">{ngrokTunnelUrl.replace("https://","").slice(0,30)}</span>
                 </div>
               </div>
-              {/* Model + ACP Selector */}
-              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                {OPENCLAW_MODELS.slice(0,4).map(m => (
-                  <button key={m.id} onClick={() => switchModel(m.id)}
-                    className={`text-[7px] px-1.5 py-0.5 rounded border transition-all ${selectedModel === m.id ? "border-primary/50 bg-primary/15 text-primary" : "border-muted/20 text-muted-foreground hover:border-muted/40"}`}>
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-              {/* ACP Harness Row */}
-              <div className="flex items-center gap-1 mt-1 flex-wrap">
-                <span className="text-[7px] text-muted-foreground">ACP:</span>
-                {acpAgents.map(a => (
-                  <button key={a} onClick={() => setSelectedAcpAgent(a)}
-                    className={`text-[7px] px-1.5 py-0.5 rounded border ${selectedAcpAgent === a ? "border-orange-400/50 text-orange-300 bg-orange-500/10" : "border-muted/20 text-muted-foreground hover:border-muted/40"}`}>
-                    {a}
-                  </button>
-                ))}
-              </div>
+              {openclawSubTab === "chat" && (
+                <>
+                  {/* Model + ACP Selector */}
+                  <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                    {OPENCLAW_MODELS.slice(0,4).map(m => (
+                      <button key={m.id} onClick={() => switchModel(m.id)}
+                        className={`text-[7px] px-1.5 py-0.5 rounded border transition-all ${selectedModel === m.id ? "border-primary/50 bg-primary/15 text-primary" : "border-muted/20 text-muted-foreground hover:border-muted/40"}`}>
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* ACP Harness Row */}
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    <span className="text-[7px] text-muted-foreground">ACP:</span>
+                    {acpAgents.map(a => (
+                      <button key={a} onClick={() => setSelectedAcpAgent(a)}
+                        className={`text-[7px] px-1.5 py-0.5 rounded border ${selectedAcpAgent === a ? "border-orange-400/50 text-orange-300 bg-orange-500/10" : "border-muted/20 text-muted-foreground hover:border-muted/40"}`}>
+                        {a}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+            {openclawSubTab === "mcp" ? (
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <OpenClawPanel apiBase={API_BASE} agentConnected={kaliAgentConnected} />
+              </div>
+            ) : (
+            <>
             {/* Chat Log */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
               {openclawLog.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
                   <span className="text-4xl">🦅</span>
-                  <div className="text-[9px] text-muted-foreground">OpenClaw Gateway جاهز</div>
+                  <div className="text-[9px] text-muted-foreground">OpenClaw Gateway متصل بـ nova-core</div>
                   <div className="text-[8px] text-orange-400/70 font-mono">{ngrokTunnelUrl.slice(0,40)}</div>
                   <div className="text-[7px] text-muted-foreground/60 max-w-[200px]">
-                    تحدث مع النماذج عبر OpenClaw أو شغّل ACP harness مع Claude/Codex/Cursor
+                    تحدث مباشرة مع العقل المركزي والأدوات الـ 67 أو انتقل إلى تبويب MCP Tools & Audit
                   </div>
                   <div className="flex flex-wrap gap-1 justify-center mt-1">
                     {["امسح الشبكة", "ابحث عن ثغرات", "حلل النظام", `شغّل ${selectedAcpAgent} على المشروع`].map(s => (
@@ -8914,6 +9041,22 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 {openclawBusy ? "⟳" : "إرسال"}
               </button>
             </div>
+            </>
+            )}
+          </div>
+        )}
+
+        {/* ── Live CVE Stream Tab ── */}
+        {activeTab === "cveLive" && panelSize !== "mini" && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <NovaCveLiveTab />
+          </div>
+        )}
+
+        {/* ── Intelligence & Bug Bounty Tab ── */}
+        {activeTab === "intel" && panelSize !== "mini" && (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <NovaIntelPanel />
           </div>
         )}
 
@@ -9475,7 +9618,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                       const body = multiAIMode === "consensus"
                         ? { messages: history, maxProviders: 3, timeoutMs: 30000 }
                         : { messages: history, preferProvider: multiAISelectedProvider === "auto" ? undefined : multiAISelectedProvider, taskType: multiAITaskType };
-                      fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(async r => {
+                      fetch(endpoint, { method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(body) }).then(async r => {
                         if (!r.body) throw new Error("No body");
                         const reader = r.body.getReader();
                         const dec = new TextDecoder();
@@ -9545,7 +9688,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                     const body = multiAIMode === "consensus"
                       ? { messages: history, maxProviders: 3, timeoutMs: 30000 }
                       : { messages: history, preferProvider: multiAISelectedProvider === "auto" ? undefined : multiAISelectedProvider, taskType: multiAITaskType };
-                    fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(async r => {
+                    fetch(endpoint, { method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(body) }).then(async r => {
                       if (!r.body) throw new Error("No body");
                       const reader = r.body.getReader();
                       const dec = new TextDecoder();
@@ -9606,8 +9749,84 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Chat Thread ── */}
+        {/* ── Chat Thread + Live Chat Ops Dashboard ── */}
         {(activeTab === "chat" || panelSize === "mini") && (
+          <div className="flex-1 flex flex-col min-h-0">
+            {panelSize !== "mini" && (
+              <div className="shrink-0 border-b border-rose-500/20 bg-gradient-to-l from-[#120710]/90 via-[#070b14]/95 to-[#06131c]/90 px-2.5 py-1.5">
+                <div className="flex items-center justify-between gap-2 text-[9px] font-mono">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                    <span className={`px-1.5 py-0.5 rounded border ${
+                      thinkingPhase !== "idle"
+                        ? "border-amber-400/45 bg-amber-500/15 text-amber-200 animate-pulse"
+                        : coreBrainReady
+                        ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                        : "border-rose-400/40 bg-rose-500/10 text-rose-200"
+                    }`}>
+                      {thinkingPhase === "idle" ? "● LIVE" : `⚡ ${thinkingPhase}`}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded border border-cyan-500/25 bg-cyan-500/10 text-cyan-200 truncate max-w-[140px]">
+                      {liveChatOps.provider}/{liveChatOps.model}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-white/75">
+                      الوضع: {agentMode}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded border border-teal-500/25 bg-teal-500/10 text-teal-200">
+                      أدوات: {liveChatOps.toolsRun}
+                    </span>
+                    {liveChatOps.lastMs > 0 && (
+                      <span className="text-white/45">{liveChatOps.lastMs}ms</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => setActiveTab("capabilities")}
+                      className="px-1.5 py-0.5 rounded border border-teal-500/30 bg-teal-500/10 text-teal-200 hover:bg-teal-500/20"
+                      title="عرض الأدوات الـ 67"
+                    >
+                      🛠 {coreToolsCatalogue.length || coreToolsCount || 67}
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("terminal")}
+                      className="px-1.5 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                      title="Terminal"
+                    >
+                      ❯_
+                    </button>
+                    <button
+                      onClick={() => setShowChatOpsStrip((v) => !v)}
+                      className="px-1.5 py-0.5 rounded border border-white/10 text-white/60 hover:text-white"
+                      title="إظهار/إخفاء نبض العمليات"
+                    >
+                      {showChatOpsStrip ? "▴" : "▾"}
+                    </button>
+                  </div>
+                </div>
+                {showChatOpsStrip && (
+                  <div className="mt-1.5 flex items-center justify-between gap-2 text-[9px] font-mono">
+                    <div className="truncate text-cyan-100/75 flex-1" title={liveChatOps.thought}>
+                      <span className="text-rose-400/90">◈</span> {liveChatOps.thought}
+                    </div>
+                    {liveChatOps.recent.length > 0 && (
+                      <div className="hidden sm:flex items-center gap-1 shrink-0">
+                        {liveChatOps.recent.slice(0, 3).map((ev, idx) => (
+                          <span
+                            key={`${ev.at}-${idx}`}
+                            className={`px-1.5 py-0.5 rounded border truncate max-w-[110px] ${
+                              ev.ok === false
+                                ? "border-rose-500/35 bg-rose-500/10 text-rose-200"
+                                : "border-white/10 bg-black/35 text-white/70"
+                            }`}
+                          >
+                            {ev.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2 min-h-0 cyber-hud-grid">
             {lines.length === 0 && (
               <div className="text-center py-4 px-3">
@@ -9735,6 +9954,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </div>
             )}
+          </div>
           </div>
         )}
 

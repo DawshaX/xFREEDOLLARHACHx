@@ -214,7 +214,7 @@ function MeterCompact({ label, value }: { label: string; value: number | null })
 const DOT: Record<string, string> = { ok: "#34d399", bad: "#ff2e63", wait: "#64748b" };
 
 const LS_KEY = "daw.agentPro.v8";
-interface Prefs { hiddenHud: HudCardId[]; hudOpen: boolean; chatOpen: boolean; }
+interface Prefs { hiddenHud: HudCardId[]; hudOpen: boolean; chatOpen: boolean; chatWide?: boolean; }
 const loadPrefs = (): Prefs => {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -224,10 +224,11 @@ const loadPrefs = (): Prefs => {
         hiddenHud: Array.isArray(j.hiddenHud) ? (j.hiddenHud as HudCardId[]) : [],
         hudOpen: j.hudOpen !== false,
         chatOpen: j.chatOpen !== false,
+        chatWide: Boolean(j.chatWide),
       };
     }
   } catch { /* تفضيلات أول مرة */ }
-  return { hiddenHud: [], hudOpen: true, chatOpen: true };
+  return { hiddenHud: [], hudOpen: true, chatOpen: true, chatWide: false };
 };
 
 export default function NovaAgentPro() {
@@ -839,7 +840,7 @@ export default function NovaAgentPro() {
       </section>
 
       {/* ── جسم المنصة: المنضدة الكاملة + الشات الجانبي القابل للطيّ ── */}
-      <main className="relative z-10 flex min-h-0 flex-1 overflow-hidden">
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row overflow-hidden">
         <section className="flex min-w-0 flex-1 flex-col min-h-0">
           <nav className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 border-b border-rose-500/15 overflow-x-auto bg-[#07020b]/85">
             {ARENAS.map(({ key, labelAr, icon: Icon, color }) => {
@@ -1068,10 +1069,17 @@ export default function NovaAgentPro() {
 
         {/* ── الشات الجانبي بتحكم إظهار/إخفاء كامل ── */}
         {prefs.chatOpen && arena !== "chat" && (
-          <aside className="w-full lg:w-[440px] xl:w-[470px] shrink-0 border-r border-rose-500/25 lg:border-r lg:border-l-0 flex flex-col min-h-0 bg-[#050209]">
-            <div className="shrink-0 flex items-center gap-2 px-3 py-1 border-b border-rose-500/20 bg-gradient-to-l from-rose-900/25 to-cyan-950/20">
+          <aside className={`w-full h-[46vh] lg:h-auto ${prefs.chatWide ? "lg:w-[560px] xl:w-[620px]" : "lg:w-[450px] xl:w-[480px]"} shrink-0 border-t lg:border-t-0 lg:border-r border-rose-500/25 flex flex-col min-h-0 bg-[#050209] transition-all duration-200`}>
+            <div className="shrink-0 flex items-center gap-1.5 px-3 py-1 border-b border-rose-500/20 bg-gradient-to-l from-rose-900/25 to-cyan-950/20">
               <Sparkles className="w-3.5 h-3.5 text-rose-400" />
-              <span className="text-[10px] font-black text-rose-100 flex-1">☠ جلسة الجذر الذكية — nova-root</span>
+              <span className="text-[10px] font-black text-rose-100 flex-1 truncate">☠ جلسة الجذر الذكية — nova-root</span>
+              <button
+                onClick={() => setPrefs((p) => ({ ...p, chatWide: !p.chatWide }))}
+                title={prefs.chatWide ? "ضبط العرض القياسي" : "توسيع الشات"}
+                className="hidden lg:inline-flex rounded-md border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-mono text-cyan-200 hover:bg-cyan-500/20 transition"
+              >
+                {prefs.chatWide ? "⇄ ضيق" : "⇄ وسّع"}
+              </button>
               <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: false }))} title="إخفاء الشات"
                 className="rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-white/50 hover:text-white transition">
                 <EyeOff className="w-3 h-3" />
@@ -1084,10 +1092,11 @@ export default function NovaAgentPro() {
         )}
         {!prefs.chatOpen && arena !== "chat" && (
           <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: true }))}
-            className="shrink-0 flex flex-col items-center justify-center gap-2 w-10 border-r border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 transition text-rose-200"
+            className="shrink-0 flex lg:flex-col items-center justify-center gap-2 h-9 lg:h-auto lg:w-10 border-t lg:border-t-0 lg:border-r border-rose-500/25 bg-rose-500/10 hover:bg-rose-500/20 transition text-rose-200"
             title="إظهار الشات">
             <MessageSquare className="w-4 h-4" />
-            <span className="text-[8px] font-black" style={{ writingMode: "vertical-rl" }}>الشات</span>
+            <span className="text-[8px] font-black hidden lg:inline" style={{ writingMode: "vertical-rl" }}>الشات</span>
+            <span className="text-[10px] font-black lg:hidden">إظهار الشات ☠</span>
           </button>
         )}
       </main>

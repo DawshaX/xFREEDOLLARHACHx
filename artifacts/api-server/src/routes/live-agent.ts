@@ -53,7 +53,7 @@ router.use((req, res, next) => {
   return requireOps("nova-workstation")(req as never, res as never, next);
 });
 
-const DEFAULT_NGROK = "https://nucleus-uninjured-tusk.ngrok-free.dev";
+const DEFAULT_NGROK = process.env.OPENCLAW_GATEWAY || process.env.NGROK_URL || "";
 
 async function getOllamaConfig(): Promise<{ baseUrl: string; model: string }> {
   const map = getAllSettings();
@@ -381,10 +381,20 @@ router.get("/live-agent/status", (_req, res) => {
 
 router.post("/live-agent/sessions/:id/messages", async (req, res) => {
   const id = req.params.id || ROOT_SESSION_ID;
-  const { content, planMode = false, autonomousMode = false } = req.body as {
+  const {
+    content,
+    planMode = false,
+    autonomousMode = false,
+    agentMode = "defensive",
+    model,
+    kaliConnected = false,
+  } = req.body as {
     content: string;
     planMode?: boolean;
     autonomousMode?: boolean;
+    agentMode?: string;
+    model?: string;
+    kaliConnected?: boolean;
   };
 
   if (!content?.trim()) { res.status(400).json({ error: "content required" }); return; }
@@ -412,9 +422,13 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
     await runAgent({
       message: content,
       sessionId: sess.id,
+      agentMode,
+      preferredModel: model,
+      autonomousMode,
+      kaliConnected,
       history: sess.messages
         .filter((m) => m.role === "user" || m.role === "assistant")
-        .slice(-8)
+        .slice(-12)
         .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
       planMode,
       approved,
@@ -667,68 +681,114 @@ router.post("/nova/scheduler/run", async (req, res) => {
   }
 });
 
-// ── OpenClaw MCP Bridge ───────────────────────────────────────────────────────
+// ── OpenClaw MCP Bridge (Gateway if configured, otherwise real NOVA Core) ────
 router.post("/nova/openclaw/chat", async (req, res) => {
-  const { message, model, token } = req.body as { message: string; model: string; token: string };
-  const baseUrl = process.env.OPENCLAW_GATEWAY || "https://nucleus-uninjured-tusk.ngrok-free.dev";
+  const { message, model, token } = req.body as { message?: string; model?: string; token?: string };
+  if (!message?.trim()) return res.status(400).json({ ok: false, error: "message required" });
+  const configuredGateway = (process.env.OPENCLAW_GATEWAY || "").trim();
+  if (configuredGateway) {
+    try {
+      const r = await fetch(`${configuredGateway.replace(/\/$/, "")}/v1/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { "Authorization": `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: message }],
+          stream: false,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (r.ok) {
+        const data = await r.json() as { choices?: Array<{ message: { content: string } }>; error?: string };
+        const reply = data.choices?.[0]?.message?.content;
+        if (reply) return res.json({ ok: true, reply, model, via: "openclaw-gateway", ts: new Date().toISOString() });
+      }
+    } catch { /* fall through to real NOVA Core */ }
+  }
+
   try {
-    const r = await fetch(`${baseUrl}/v1/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: message }],
-        stream: false,
-      }),
-      signal: AbortSignal.timeout(30000),
+    const result = await runAgent({
+      message: message.trim(),
+      sessionId: ROOT_SESSION_ID,
+      emit: () => {},
     });
-    if (!r.ok) {
-      const txt = await r.text();
-      return res.json({ ok: false, error: `HTTP ${r.status}: ${txt.slice(0,200)}` });
-    }
-    const data = await r.json() as { choices?: Array<{message:{content:string}}>; error?: string };
-    const reply = data.choices?.[0]?.message?.content ?? data.error ?? "لا رد";
-    return res.json({ ok: true, reply, model, ts: new Date().toISOString() });
+    return res.json({
+      ok: true,
+      reply: result.reply,
+      model: `${result.provider} (nova-core)`,
+      toolsUsed: result.toolsUsed,
+      via: "nova-core",
+      ts: new Date().toISOString(),
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return res.json({ ok: false, error: msg });
   }
 });
 
-// ── Browser Automation Endpoint (via OpenClaw) ─────────────────────────────────
+// ── Browser Automation Endpoint (Gateway if configured, otherwise real web_fetch) ──
 router.post("/nova/browser", async (req, res) => {
   const { action, url, targetId, selector, value, token } = req.body as {
-    action: string; url?: string; targetId?: string; selector?: string; value?: string; token: string;
+    action: string; url?: string; targetId?: string; selector?: string; value?: string; token?: string;
   };
-  const baseUrl = process.env.OPENCLAW_GATEWAY || "https://nucleus-uninjured-tusk.ngrok-free.dev";
-  try {
-    const r = await fetch(`${baseUrl}/api/tools/browser`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-      body: JSON.stringify({ action, url, targetId, selector, value }),
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!r.ok) {
-      return res.json({ ok: false, error: `Browser API HTTP ${r.status}`, action });
-    }
-    const data = await r.json() as Record<string, unknown>;
-    return res.json({ ok: true, data, action, ts: new Date().toISOString() });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return res.json({ ok: false, error: msg, action });
+  const configuredGateway = (process.env.OPENCLAW_GATEWAY || "").trim();
+  if (configuredGateway) {
+    try {
+      const r = await fetch(`${configuredGateway.replace(/\/$/, "")}/api/tools/browser`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { "Authorization": `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ action, url, targetId, selector, value }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (r.ok) {
+        const data = await r.json() as Record<string, unknown>;
+        return res.json({ ok: true, data, action, via: "openclaw-gateway", ts: new Date().toISOString() });
+      }
+    } catch { /* fallback to server web_fetch */ }
   }
+
+  if (action === "open" || action === "navigate" || action === "snapshot") {
+    const targetUrl = String(url || "").trim();
+    if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
+      return res.json({ ok: false, error: "أدخل رابطاً صحيحاً يبدأ بـ http:// أو https:// لجلبه بأداة web_fetch الحقيقية.", action });
+    }
+    try {
+      const toolOut = await runAgentTool("web_fetch", { url: targetUrl });
+      return res.json({
+        ok: toolOut.ok,
+        action,
+        via: "server-web-fetch",
+        summary: toolOut.summary,
+        data: toolOut.data,
+        ts: new Date().toISOString(),
+      });
+    } catch (err) {
+      return res.json({ ok: false, error: err instanceof Error ? err.message : String(err), action });
+    }
+  }
+
+  return res.json({
+    ok: false,
+    action,
+    error: `إجراء "${action}" للتفاعل مع DOM يتطلب بوابة OpenClaw Browser خارجية (OPENCLAW_GATEWAY). استخدم open/navigate/snapshot لجلب الصفحات مباشرة من الخادم عبر web_fetch الحقيقي.`,
+  });
 });
 
 // ── Tailscale / Ngrok Status ───────────────────────────────────────────────────
 router.get("/nova/tunnel-status", async (_req, res) => {
-  const baseUrl = process.env.OPENCLAW_GATEWAY || "https://nucleus-uninjured-tusk.ngrok-free.dev";
-  const results: Record<string, unknown> = { ngrok: false, tailscale: false, gateway: false };
-  try {
-    const r = await fetch(`${baseUrl}/api/health`, { signal: AbortSignal.timeout(5000) });
-    results.gateway = r.ok;
-    results.ngrok = r.ok;
-    results.ngrokUrl = baseUrl;
-  } catch { results.ngrok = false; }
+  const configuredGateway = (process.env.OPENCLAW_GATEWAY || "").trim();
+  const baseUrl = configuredGateway || (() => {
+    const map = getAllSettings();
+    return (map.ngrokUrl || process.env.NGROK_URL || "").trim();
+  })();
+  const results: Record<string, unknown> = { ngrok: false, tailscale: false, gateway: false, ngrokUrl: baseUrl || null };
+  if (baseUrl) {
+    try {
+      const r = await fetch(`${baseUrl.replace(/\/$/, "")}/api/health`, { signal: AbortSignal.timeout(3000) });
+      results.gateway = r.ok;
+      results.ngrok = r.ok;
+    } catch { results.ngrok = false; }
+  }
   try {
     const { execSync } = await import("child_process");
     const ts = execSync("tailscale status --json 2>/dev/null || echo '{}'", { timeout: 3000 }).toString();

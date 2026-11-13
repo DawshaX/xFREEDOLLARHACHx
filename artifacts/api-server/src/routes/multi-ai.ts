@@ -13,6 +13,7 @@ import { Router } from "express";
 import {
   listMultiProviders,
   setMultiProviderEnabled,
+  setMultiProviderModel,
   saveProviderApiKey,
   streamFromBestProvider,
   queryMultipleProviders,
@@ -21,8 +22,6 @@ import {
   type MultiProviderId,
 } from "../lib/ai-multi-router";
 import { logger } from "../lib/logger";
-import { db, settings } from "@workspace/db";
-import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -72,8 +71,7 @@ router.post("/multi-ai/providers/:id/model", async (req, res) => {
   const id = req.params.id as MultiProviderId;
   const { model } = req.body as { model?: string };
   if (!model?.trim()) { res.status(400).json({ error: "model is required" }); return; }
-  await db.insert(settings).values({ key: `multi_model_${id}`, value: model.trim() })
-    .onConflictDoUpdate({ target: settings.key, set: { value: model.trim(), updatedAt: new Date() } });
+  await setMultiProviderModel(id, model.trim());
   res.json({ id, model: model.trim() });
 });
 
@@ -117,22 +115,70 @@ router.post("/multi-ai/chat", async (req, res) => {
     send("status", { status: "thinking", provider: preferred ?? "auto" });
 
     let fullText = "";
-    const result = await streamFromBestProvider({
-      system: system ?? NOVA_SYSTEM_PROMPT,
-      messages,
-      maxTokens,
-      preferProvider: preferred,
-      onText: (delta, providerId) => {
-        fullText += delta;
-        send("delta", { delta, provider: providerId });
-      },
-    });
+    try {
+      const result = await streamFromBestProvider({
+        system: system ?? NOVA_SYSTEM_PROMPT,
+        messages,
+        maxTokens,
+        preferProvider: preferred,
+        onText: (delta, providerId) => {
+          fullText += delta;
+          send("delta", { delta, provider: providerId });
+        },
+      });
 
-    send("done", {
-      text: fullText,
-      provider: result.provider,
-      chars: fullText.length,
-    });
+      send("done", {
+        text: fullText,
+        provider: result.provider,
+        chars: fullText.length,
+      });
+    } catch (providerErr) {
+      // Fallback 1: zero-key cloud LLM bridge (`llmComplete`)
+      const { llmComplete } = await import("../lib/agent/llm");
+      const fallback = await llmComplete(
+        [
+          { role: "system", content: system ?? NOVA_SYSTEM_PROMPT },
+          ...messages.slice(-8),
+        ],
+        { temperature: 0.6, maxTokens: Math.min(maxTokens ?? 1200, 1400) },
+      ).catch(() => null);
+      if (fallback?.text?.trim()) {
+        fullText = fallback.text.trim();
+        for (let i = 0; i < fullText.length; i += 48) {
+          send("delta", { delta: fullText.slice(i, i + 48), provider: fallback.provider });
+        }
+        send("done", {
+          text: fullText,
+          provider: `${fallback.provider} (${fallback.model})`,
+          chars: fullText.length,
+        });
+      } else {
+        // Fallback 2: real built-in CyberNova deterministic brain (`runAgent`)
+        const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+        if (!lastUser.trim()) throw providerErr;
+        const { runAgent } = await import("../lib/agent/core");
+        let agentText = "";
+        const agentOut = await runAgent({
+          sessionId: "multi-ai",
+          message: lastUser,
+          history: messages.slice(0, -1),
+          agentMode: taskType === "security" ? "offensive" : taskType === "analysis" ? "analyst" : "standard",
+          skipNexusRecord: true,
+          emit: (ev) => {
+            if (ev.type === "delta" && ev.text) {
+              agentText += ev.text;
+              send("delta", { delta: ev.text, provider: "nova-builtin" });
+            }
+          },
+        });
+        fullText = agentText || agentOut.reply;
+        send("done", {
+          text: fullText,
+          provider: `${agentOut.provider} (${agentOut.mode})`,
+          chars: fullText.length,
+        });
+      }
+    }
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

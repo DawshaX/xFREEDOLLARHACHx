@@ -722,6 +722,27 @@ router.get("/nova-core/tools", (_req: Request, res: Response) => {
   });
 });
 
+/**
+ * Public read-only catalogue metadata for the control panel UI (name, title,
+ * category, description, risk) — safe metadata only, zero execution.
+ */
+router.get("/nova-core/catalogue", (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    total: AGENT_TOOLS.length,
+    categories: [...new Set(AGENT_TOOLS.map((t) => t.category))],
+    tools: AGENT_TOOLS.map((t) => ({
+      name: t.name,
+      title: t.title,
+      category: t.category,
+      description: t.description,
+      risk: t.risk,
+      params: Object.keys(t.input_schema?.properties ?? {}),
+    })),
+  });
+});
+
 router.get("/nova-core/persona", (req: Request, res: Response) => {
   const isHttps = req.protocol === "https" || req.get("x-forwarded-proto") === "https";
   const publicUrl = `${isHttps ? "https" : "http"}://${req.get("host") || ""}`;

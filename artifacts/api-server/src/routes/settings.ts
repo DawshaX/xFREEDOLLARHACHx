@@ -3,11 +3,11 @@ import { Router } from "express";
 const router = Router();
 
 const DEFAULT_SETTINGS: Record<string, string> = {
-  provider: "ollama-ngrok",
+  provider: "nova-core",
   ollamaModel: "dolphin-llama3:latest",
-  ngrokUrl: "https://nucleus-uninjured-tusk.ngrok-free.dev",
+  ngrokUrl: "",
   ngrokModel: "dolphin-llama3:latest",
-  activeEndpoint: "ngrok",
+  activeEndpoint: "local",
 };
 
 const store = new Map<string, string>(Object.entries(DEFAULT_SETTINGS));
@@ -25,12 +25,12 @@ export function getAllSettings(): Record<string, string> {
 router.get("/settings", (_req, res) => {
   const map = getAllSettings();
   res.json({
-    provider: map.provider || "ollama-ngrok",
+    provider: map.provider || "nova-core",
     model: map.ngrokModel || map.ollamaModel || "dolphin-llama3:latest",
     ollamaModel: map.ollamaModel || "dolphin-llama3:latest",
-    ngrokUrl: map.ngrokUrl || "https://nucleus-uninjured-tusk.ngrok-free.dev",
+    ngrokUrl: map.ngrokUrl || "",
     ngrokModel: map.ngrokModel || "dolphin-llama3:latest",
-    activeEndpoint: map.activeEndpoint || "ngrok",
+    activeEndpoint: map.activeEndpoint || "local",
     hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
     hasOpenaiKey: !!process.env.OPENAI_API_KEY,
     useReplitDefault: map.useReplitDefault !== "false",
