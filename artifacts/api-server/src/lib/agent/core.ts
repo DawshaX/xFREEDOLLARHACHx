@@ -688,13 +688,19 @@ function buildLine(model: SelfModel): string {
   return `_(الأرقام دي مقاسة من بناء \`${b.label}\`${age}${fresh}، مش من ذاكرة)_`;
 }
 
-export function greetingAnswer(model: SelfModel = buildSelfModel()): string {
+export function greetingAnswer(model: SelfModel = buildSelfModel(), opts: { repeated?: boolean } = {}): string {
   const corpus = model.corpus.measured
     ? `فهرس **${model.corpus.total.toLocaleString("en-US")}** ثغرة حقيقية`
     : "فهرس ثغرات لسه بيتزامن";
   const fleet = model.machines.registered ? `**${model.machines.registered}** ماكينة مسجّلة` : "مفيش ماكينة متصلة لسه";
+  /* TEST2-4: «الشات بيكرر نفس الرد حرفيًا». لو آخر رد مني كان نفس الترحيب،
+   * التكرار الحرفي بيقراه المستخدم «عبط». التنوية نفسها لازم تبقى صادقة —
+   * فالافتتاحية بتتغير بس الأرقام تفضل مقاسة من السجل الحي زي ما هي. */
+  const opener = opts.repeated
+    ? "أهلاً تاني 👋 — مش هكرر نفسي: الحالة دلوقتي كده:"
+    : "أهلاً بيك 👋 أنا **نوفا** — بشتغل مش بتتكلم بس.";
   return [
-    "أهلاً بيك 👋 أنا **نوفا** — بشتغل مش بتتكلم بس.",
+    opener,
     "",
     `معايا دلوقتي **${model.tools.count}** أداة حقيقية، و${corpus}، و${fleet}.`,
     "",
@@ -1285,7 +1291,11 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       provider = `${provider}+self-model`;
     } else if (greetingOnly(message) && !extractTarget(message) && !extractFleetCommand(message)) {
       // A greeting is an introduction, not a question to the model.
-      reply = greetingAnswer(selfModel);
+      // لو آخر رد مني كان نفس الترحيب (المستخدم بيرد «مرحبا» على «أهلاً»)،
+      // التنويع الصادق أمانة: نفس الأرقام المقاسة، افتتاحية مختلفة.
+      const lastAssistant = [...history].reverse().find((m) => m.role === "assistant");
+      const repeated = Boolean(lastAssistant && lastAssistant.content.includes("بشتغل مش بتتكلم بس"));
+      reply = greetingAnswer(selfModel, { repeated });
       provider = `${provider}+self-model`;
     } else if (reply) {
       const voiced = await voiceAnswer(reply, message, selfModel, history);
