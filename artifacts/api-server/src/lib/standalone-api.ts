@@ -3022,6 +3022,32 @@ if (path === "/nova-core/version") {
     return { id: nid, ok: true };
   }
 
+  // ── تفضيلات اللوحة (/api/panel/prefs) — static: localStorage بنفس الشكل.
+  // الوضع المثبت افتراضيًا: مستقل + هجومي + الجلسة الجذر — زي ضبط المالك.
+  const PANEL_PREFS_KEY = "cybernova_panel_prefs_v1";
+  const panelPrefsDefaults = {
+    autonomyMode: "autonomous" as const,
+    offensivePosture: true,
+    rootSessionId: "nova-root",
+    chatOpen: true,
+    chatWide: false,
+    hudOpen: false,
+    hiddenHud: [] as string[],
+    arenaDefault: "cockpit",
+    pinnedByOwnerAt: null as string | null,
+  };
+  if (path === "/panel/prefs" && m === "GET") {
+    const saved = loadState(PANEL_PREFS_KEY, panelPrefsDefaults);
+    return { ok: true, prefs: { ...panelPrefsDefaults, ...(saved as object) }, defaults: panelPrefsDefaults, static: true };
+  }
+  if (path === "/panel/prefs" && (m === "PUT" || m === "POST" || m === "PATCH")) {
+    const saved = loadState(PANEL_PREFS_KEY, panelPrefsDefaults);
+    const incoming = (body?.prefs as Record<string, unknown> | undefined) ?? {};
+    const next = { ...panelPrefsDefaults, ...(saved as object), ...Object.fromEntries(Object.entries(incoming).filter(([, v]) => v !== undefined)) };
+    saveState(PANEL_PREFS_KEY, next);
+    return { ok: true, prefs: next, static: true };
+  }
+
   // ── دفاتر نوفا (/api/nova/notes) — static build: مخزن localStorage بنفس شكل
   // السيرفر (state/nova-notes.json) — الدفاتر تستمر وتتزامن مع المخ لما السيرفر يبان.
   if (path === "/nova/notes" && m === "GET") {
