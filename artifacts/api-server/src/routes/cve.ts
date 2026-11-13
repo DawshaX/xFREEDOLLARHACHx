@@ -124,7 +124,7 @@ router.get("/cve/db/stats", async (_req, res) => {
         dbRows: 0,
         dbOffline: true,
         dbError: String(err).slice(0, 200),
-        corpus: { measured: true, total: corpus.total, kev: corpus.kev, products: corpus.products, at: corpus.at, says_ar: corpus.says_ar, sources: ["NVD 2.0", "CISA KEV", "EPSS"] },
+        corpus: { measured: true, total: corpus.total, kev: corpus.kev, products: corpus.products, at: corpus.at, says_ar: corpus.says_ar, sources: ["NVD 2.0", "CISA KEV", "EPSS"], nvdTotal: corpus.nvdTotal ?? null, coverage: corpus.coverage ?? null },
       });
       return;
     }

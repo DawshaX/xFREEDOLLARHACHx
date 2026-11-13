@@ -150,7 +150,7 @@ jobs:
           CORPUS_TIME_BUDGET_MIN: "14"
         run: |
           set -o pipefail
-          node scripts/ingest-vuln-corpus.mjs --deepen --pages=12 2>&1 | tee "$RUNNER_TEMP/deepen.log"
+          node scripts/ingest-vuln-corpus.mjs --deepen --pages=32 2>&1 | tee "$RUNNER_TEMP/deepen.log"
 
       # Runs only when the step above failed, and commits what it captured, so the
       # reason survives the run (measured: two deepen failures left nothing behind).

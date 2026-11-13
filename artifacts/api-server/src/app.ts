@@ -421,6 +421,9 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       // قياس `/system/*` حقيقي من os/statfs — من غيره الـmock بيرد cpu:0/platform:"browser"
       // والواجهة كانت بتعرض «Unmeasured» والمالك عايز «المساحة المُستخدمة والحقيقية».
       p.startsWith("/system") ||
+      // TEST7 قِيس 2026-11-13: /monitor/system كان بيلسق من الفولباك الساكن
+      // (cpu:0 · cores:0) على السيرفر الحي نفسه — الراوتر بيقيس os.cpus فعلًا.
+      p.startsWith("/monitor") ||
       // الخزنة: كل راوترات /cve/* بقت بترد من الكوربوس (332k+) حتى لو الـDB نايمة —
       // ومن غير القيد ده الوضع بلا DB كان بياخد رد «المجرة» المزيّف من standalone-api.
       (p.startsWith("/cve/") ) ||
