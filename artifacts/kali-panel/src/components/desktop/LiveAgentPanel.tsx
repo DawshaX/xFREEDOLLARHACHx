@@ -1067,6 +1067,20 @@ export function LiveAgentPanel({
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState<boolean>(false);
   const [showMoreTabs, setShowMoreTabs] = useState<boolean>(false);
+  // موضع قائمة «المزيد» مقاس من الزر نفسه: الشريط الأب overflow-x-auto بيقصّ
+  // أي قائمة absolute جواه (overflow أفقي بيفرض قصّ راسي) — فبنرسمها fixed برّه
+  // بإحداثيات getBoundingClientRect. (TEST2-4: «المزيد مابيظهرش حاجة».)
+  const moreTabsAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const [moreTabsPos, setMoreTabsPos] = useState<{ right: number; top: number } | null>(null);
+  const toggleMoreTabs = () => {
+    setShowMoreTabs((v) => {
+      if (!v && moreTabsAnchorRef.current) {
+        const r = moreTabsAnchorRef.current.getBoundingClientRect();
+        setMoreTabsPos({ right: Math.max(4, window.innerWidth - r.right), top: r.bottom + 4 });
+      }
+      return !v;
+    });
+  };
   // ── NOVA Scheduler States ─────────────────────────────────────────────────
   const [scheduledTasks, setScheduledTasks] = useState<Array<{
     id: string; name: string; cron: string; command: string; enabled: boolean;
@@ -4296,11 +4310,25 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                       ? "text-cyan-200 border-cyan-400/35 bg-cyan-500/10 hover:bg-cyan-500/20"
                       : "text-amber-300 border-amber-400/30 bg-amber-500/10"
                   }`}
-                  title="تغيير النموذج"
+                  title={liveChatOps.provider !== "ready" ? `آخر رد فعليًا من: ${liveChatOps.provider} — اضغط لتغيير النموذج` : "تغيير النموذج"}
                 >
                   <CpuIcon className="w-2.5 h-2.5" />
-                  <span className="max-w-[130px] truncate">
-                    {ollamaOnline ? ollamaModel : coreCloudCount > 0 ? `nova-brain · ${coreCloudCount} سحابي` : selectedModel}
+                  <span className="max-w-[150px] truncate">
+                    {/* الشارة = المزوّد الفعلي لآخر رد (TEST2-4: «dolphin-llama3 لسة متغيّرش»).
+                        «ollamaOnline ? ollamaModel» كان بيعرض اسم دولفين الساكن من localStorage
+                        حتى لو الرد جاي من نواة/سحابي — دلوقتي الأولوية لآخر ready event
+                        اللي السيرفر صرّح فيه بالمزود والموديل اللي رد فعلاً. */}
+                    {liveChatOps.provider !== "ready"
+                      ? (() => {
+                          const prov = liveChatOps.provider.replace(/\+self-model$/, "");
+                          const mdl = liveChatOps.model && liveChatOps.model !== prov ? ` · ${liveChatOps.model}` : "";
+                          return `${prov}${mdl}`;
+                        })()
+                      : coreCloudCount > 0
+                        ? `nova-brain · ${coreCloudCount} سحابي`
+                        : ollamaOnline
+                          ? `${ollamaModel} (متصل محليًا)`
+                          : selectedModel}
                   </span>
                   <ChevronDown className="w-2 h-2 opacity-60" />
                 </button>
@@ -4677,7 +4705,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             {embedded ? (
               <div className="relative ms-auto shrink-0">
                 <button
-                  onClick={() => setShowMoreTabs((v) => !v)}
+                  ref={moreTabsAnchorRef}
+                  onClick={toggleMoreTabs}
                   className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap flex items-center gap-1 ${
                     ["pulse", "fleet", "apps", "topology", "kali", "scheduler", "openclaw", "browser", "multiAI", "intel"].includes(activeTab as string)
                       ? "border-cyan-400 text-cyan-300 bg-cyan-500/5"
@@ -4687,10 +4716,13 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   <span>المزيد</span>
                   <ChevronDown className="w-2.5 h-2.5" />
                 </button>
-                {showMoreTabs && (
+                {showMoreTabs && moreTabsPos && (
                   <>
                     <div className="fixed inset-0 z-[990]" onClick={() => setShowMoreTabs(false)} />
-                    <div className="absolute left-0 top-full mt-1 z-[995] min-w-[165px] rounded-xl border border-primary/25 bg-[#070b14]/98 p-1 shadow-2xl backdrop-blur-xl flex flex-col gap-0.5">
+                    <div
+                      className="fixed z-[995] min-w-[165px] rounded-xl border border-primary/25 bg-[#070b14]/98 p-1 shadow-2xl backdrop-blur-xl flex flex-col gap-0.5"
+                      style={{ right: moreTabsPos.right, top: moreTabsPos.top, direction: "rtl" }}
+                    >
                       {([
                         ["pulse", "نبض المشروع"],
                         ["fleet", "الأجهزة"],
