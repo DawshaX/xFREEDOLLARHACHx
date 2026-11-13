@@ -5,6 +5,7 @@
 import { Router, type IRouter } from "express";
 import { desc, eq, like, sql } from "drizzle-orm";
 import { db, botMemory, knowledgeTable, cves, botAlerts } from "@workspace/db";
+import { corpusStatus } from "../lib/ops/vuln-corpus";
 import {
   learnFromRecentCves,
   consolidateMemory,
@@ -40,7 +41,7 @@ router.get("/intelligence/stats", async (_req, res) => {
     cvePatterns:     patternCount?.c ?? 0,
     githubMemories:  githubCount?.c ?? 0,
     webIntelItems:   webCount?.c ?? 0,
-    totalCves:       cveTotal?.c ?? 0,
+    totalCves:       (() => { const c = corpusStatus(); return c.measured ? Math.max(cveTotal?.c ?? 0, c.total) : (cveTotal?.c ?? 0); })(),
     memoryByType:    memByType,
   });
 });

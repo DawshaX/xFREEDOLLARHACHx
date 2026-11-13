@@ -421,7 +421,10 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       // قياس `/system/*` حقيقي من os/statfs — من غيره الـmock بيرد cpu:0/platform:"browser"
       // والواجهة كانت بتعرض «Unmeasured» والمالك عايز «المساحة المُستخدمة والحقيقية».
       p.startsWith("/system") ||
-      p.startsWith("/cve-live") ||
+      // الخزنة: كل راوترات /cve/* بقت بترد من الكوربوس (332k+) حتى لو الـDB نايمة —
+      // ومن غير القيد ده الوضع بلا DB كان بياخد رد «المجرة» المزيّف من standalone-api.
+      (p.startsWith("/cve/") ) ||
+
       p === "/agent/root/stream" ||
       (p.startsWith("/tools") && p !== "/tools/shell" && p !== "/tools/webfetch") ||
       p.startsWith("/proxy") ||

@@ -342,6 +342,12 @@ export interface CorpusQuery {
   minCvss?: number;
   kevOnly?: boolean;
   limit?: number;
+  /**
+   * نص حر: بيتطابق على id/الوصف/CWE — ده اللي يخلي /cve/db/search وagents
+   * يدوروا جوا الخزنة الكاملة (332k+) مش بس باسم منتج.
+   */
+  text?: string;
+  severity?: string;
   /** hard ceiling on rows read, so a lookup can never hang a job */
   maxScan?: number;
 }
@@ -353,6 +359,8 @@ export async function queryCorpus(q: CorpusQuery): Promise<{ rows: CorpusCve[]; 
   if (!fs.existsSync(file)) return { rows: [], scanned: 0, complete: false };
   const productNeedle = q.product?.trim().toLowerCase();
   const cveNeedle = q.cve?.trim().toUpperCase();
+  const textNeedle = q.text?.trim().toLowerCase();
+  const sevNeedle = q.severity?.trim().toLowerCase();
   const rows: CorpusCve[] = [];
   let scanned = 0;
   const stream = fs.createReadStream(file).pipe(zlib.createGunzip());
@@ -372,8 +380,13 @@ export async function queryCorpus(q: CorpusQuery): Promise<{ rows: CorpusCve[]; 
       const hit =
         (cveNeedle && r.id === cveNeedle) ||
         (productNeedle &&
-          r.cpe.some((c) => c.product.toLowerCase() === productNeedle || c.product.toLowerCase().includes(productNeedle)));
+          r.cpe.some((c) => c.product.toLowerCase() === productNeedle || c.product.toLowerCase().includes(productNeedle))) ||
+        (textNeedle &&
+          (r.id.toLowerCase().includes(textNeedle) ||
+            r.desc.toLowerCase().includes(textNeedle) ||
+            r.cwe.some((w) => w.toLowerCase().includes(textNeedle))));
       if (!hit) continue;
+      if (sevNeedle && sevNeedle !== "all" && r.sev.toLowerCase() !== sevNeedle) continue;
       if (q.kevOnly && !r.kev) continue;
       if (q.minCvss !== undefined && (r.cvss ?? 0) < q.minCvss) continue;
       rows.push(r);

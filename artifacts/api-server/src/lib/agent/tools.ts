@@ -55,7 +55,7 @@ import {
 import { assertAuthorized, discoverProgram, fetchSecurityTxt, loadPrograms, upsertProgram, normalizeHost } from "../ops/scope";
 import { provisionToolchainOnce } from "../ops/toolchain";
 import { listVault, draftReport } from "../ops/findings-vault";
-import { readPermanentVault, permanentVaultDrift } from "../ops/permanent-vault";
+import { readPermanentVault, permanentVaultDrift, appendPermanentVaultFinding } from "../ops/permanent-vault";
 import { libraryStatus, lookupCve, lookupProduct } from "../ops/advisory-library";
 import { liveVerifyView } from "../ops/live-verify";
 import { freeHostSummary, probeCatalogue } from "../ops/free-hosts";
@@ -476,7 +476,7 @@ export const AGENT_TOOLS: AgentTool[] = [
     name: "corpus_query",
     title: "بحث في الكوربوس الحقيقي (211K ثغرة)",
     description:
-      "يبحث في الكوربوس الحقيقي المسحوب من NVD 2.0 + CISA KEV + EPSS (211,256 ثغرة) بالمنتج أو رقم CVE، مع CVSS وKEV وEPSS. ده المصدر الحقيقي مش الفهرس المُصنَّع.",
+      "يبحث في الكوربوس الحقيقي المسحوب من NVD 2.0 + CISA KEV + EPSS عبر product/cve/minCvss/kevOnly — العدد الحقيقي من corpus_stats (بيتحدث كل ٣٠ د من الـCI) مش رقم مكتوب هنا.",
     category: "intel",
     risk: "safe",
     input_schema: {
@@ -514,6 +514,23 @@ export const AGENT_TOOLS: AgentTool[] = [
     category: "intel",
     risk: "sensitive",
     input_schema: { type: "object", properties: { key: { type: "string", description: "مفتاح السجل زي SKY-VULN-01" } }, required: ["key"] },
+  },
+  {
+    name: "vuln_combine",
+    title: "دمج ثغرات → فرضية زيرو داي",
+    description:
+      "يجمع 2+ ثغرات من الكوربوس الحقيقي (NVD+KEV+EPSS) ويحلّل دمجها كسلسلة استغلال (تقاطع CWE/المنتجات/CVSS) ويسجّل فرضية الدمج في الخزنة الدائمة (state/discovered-vulnerabilities-vault.json) عشان يتراجعها المالك أو يتحقق منها بفحص فعلي لاحقًا — اكتشاف تراكمي مش كلام.",
+    category: "intel",
+    risk: "sensitive",
+    input_schema: {
+      type: "object",
+      properties: {
+        cves: { type: "array", items: { type: "string" }, minItems: 2, description: "قائمة معرّفات CVE مثل ['CVE-2024-3400','CVE-2024-9474']" },
+        noteAr: { type: "string", description: "ملاحظة/هجوم مقترح بالمصري" },
+        confidence: { type: "number", minimum: 0, maximum: 1 },
+      },
+      required: ["cves"],
+    },
   },
   {
     name: "advisory_search",
@@ -1339,6 +1356,69 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
             query: { product, cve },
             ...res,
             corpus: { total: real.total, at: real.at, sources: ["NVD 2.0", "CISA KEV", "EPSS"] },
+          },
+        );
+      }
+
+      case "vuln_combine": {
+        const ids = Array.isArray(rawArgs.cves) ? (rawArgs.cves as unknown[]).map((x) => String(x).trim().toUpperCase()).filter(Boolean) : [];
+        if (ids.length < 2) return done(false, "محتاج 2+ معرّفات CVE عشان أدمجهم — مثال: cves: ['CVE-2024-3400','CVE-2024-9474'].", { need: "cves" });
+
+        // قلُب كل ثغرة من الكوربوس الحقيقي (332,347+) — مش من جدول قديم ولا خيال.
+        const found: Array<{ cve: string; cvss: number; sev: string; desc: string; cwe: string[]; kev: boolean; epss: number | null; products: string[] }> = [];
+        const missing: string[] = [];
+        for (const id of ids) {
+          const r = await queryCorpus({ cve: id, limit: 1 });
+          const row = r.rows[0];
+          if (!row) { missing.push(id); continue; }
+          found.push({
+            cve: row.id,
+            cvss: row.cvss ?? 0,
+            sev: row.sev,
+            desc: row.desc.slice(0, 280),
+            cwe: row.cwe,
+            kev: row.kev === true,
+            epss: row.epss ?? null,
+            products: [...new Set(row.cpe.map((c) => `${c.vendor}:${c.product}`))].slice(0, 8),
+          });
+        }
+        if (found.length < 2) {
+          return done(false, `جبت ${found.length} بس من ${ids.length} — مفيش دمج: ${missing.join(", ") || "?"}`, { found, missing });
+        }
+
+        // التحليل: تقاطع CWEs + المنتجات + أقصى CVSS + مقياس KEV
+        const cweSets = found.map((f) => new Set(f.cwe.map((x) => x.toUpperCase())));
+        const sharedCwes = [...cweSets[0]].filter((w) => cweSets.every((st) => st.has(w)));
+        const sharedProducts = [...new Set(found.flatMap((f) => f.products))]
+          .filter((prod) => found.every((f) => f.products.includes(prod)));
+        const maxCvss = Math.max(...found.map((f) => f.cvss));
+        const kevCount = found.filter((f) => f.kev).length;
+        const chainSev = maxCvss >= 9 ? "critical" : maxCvss >= 7 ? "high" : maxCvss >= 4 ? "medium" : "low";
+        const noteAr = String(rawArgs.noteAr ?? "").trim();
+        const hypothesisAr =
+          noteAr ||
+          `سلسلة دمج مقترحة بين ${found.map((f) => f.cve).join(" + ")}: ${sharedCwes.length ? `CWE مشتركة (${sharedCwes.join(", ")})` : "CWEs متباينة"}${sharedProducts.length ? ` على نفس المنتجات (${sharedProducts.slice(0, 3).join(", ")})` : ""} — أقصى CVSS = ${maxCvss}${kevCount ? ` · ${kevCount} مستغلة فعليًا (KEV)` : ""}. سلسلة لازم تتحقق بفحص حقيقي قبل الاستغلال.`;
+
+        const rec = appendPermanentVaultFinding({
+          titleAr: `فرضية دمج ${found.map((f) => f.cve).join(" + ")}`,
+          titleEn: `Chain Hypothesis: ${found.map((f) => f.cve).join(" + ")}`,
+          combinedFrom: found.map((f) => f.cve),
+          hypothesisAr,
+          impactAr: `أقصى CVSS = ${maxCvss} · ${chainSev.toUpperCase()} · KEV: ${kevCount} من ${found.length}`,
+          severity: chainSev as "critical" | "high" | "medium" | "low",
+          confidence: rawArgs.confidence === undefined ? 0.5 : Math.max(0, Math.min(1, Number(rawArgs.confidence))),
+          evidence: { components: found, sharedCwes, sharedProducts, epss: found.map((f) => ({ cve: f.cve, epss: f.epss })) },
+        });
+
+        return done(
+          true,
+          `اتسجّلت في الخزنة باسم ${rec.id} — السلسلة: ${found.map((f) => `${f.cve} (${f.cvss})`).join(" + ")} = chain ${chainSev.toUpperCase()} (${maxCvss}). ${hypothesisAr}`,
+          {
+            recordId: rec.id,
+            vaultPath: rec.path,
+            vaultTotal: rec.total,
+            chain: { ids: found.map((f) => f.cve), maxCvss, severity: chainSev, kevCount, sharedCwes, sharedProducts },
+            components: found,
           },
         );
       }

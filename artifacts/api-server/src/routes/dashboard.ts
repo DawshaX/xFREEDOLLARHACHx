@@ -48,9 +48,12 @@ router.get("/dashboard/stats", async (_req, res) => {
   res.json({
     knowledgeFiles: dbCounts.knowledgeFiles ?? 0,
     agentTasks: dbCounts.agentTasks ?? 0,
-    // the CVE corpus we can actually query
-    totalCves: dbCounts.totalCves ?? 0,
-    criticalCves: dbCounts.criticalCves ?? 0,
+    // «إجمالي CVEs» = المخزن الكامل (الكوربوس) مش صفوف الجدول المتزامن لوحده —
+    // كان بيعرض 39,815 والحقيقة 332,347.
+    totalCves: corpus.measured ? Math.max(dbCounts.totalCves ?? 0, corpus.total) : (dbCounts.totalCves ?? 0),
+    criticalCves: corpus.measured
+      ? Math.max(dbCounts.criticalCves ?? 0, corpus.bySeverity["critical"] ?? 0)
+      : (dbCounts.criticalCves ?? 0),
     // the real advisory corpus (GitHub Advisory DB sync) — 0 until a sync happens
     advisoryLibrary: {
       measured: library.measured,

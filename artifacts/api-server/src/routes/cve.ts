@@ -2,6 +2,15 @@ import { Router, type IRouter } from "express";
 import { and, count, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { db, cves, cveSyncJobs, pool } from "@workspace/db";
 import { cveMonitor } from "../lib/cve-monitor";
+import { corpusStatus, queryCorpus } from "../lib/ops/vuln-corpus";
+
+/**
+ * قاعدة البيانات «الحقيقية» للمنصة مش جدول Postgres لوحده — هي **الكوربوس**
+ * الكامل (NVD 2.0 + CISA KEV + EPSS — يتجدد كل 30 دقيقة من الـCI ويُنشر
+ * release asset) + الجدول المتزامن جزئيًا. كل نقطة إحصاء/بحث هنا بتوحّد
+ * الاثنين: `total` = ما هو في المخزن الكامل، `dbRows` = الصفوف المفهرسة
+ * محليًا للبحث السريع، والبحث يقع على الكوربوس لما قاعدة البيانات تقصّر.
+ */
 
 const router: IRouter = Router();
 
@@ -32,13 +41,38 @@ router.get("/cve/db/stats", async (_req, res) => {
       const byExploitType: Record<string, number> = {};
       for (const r of etRows as Array<Record<string,unknown>>) byExploitType[String(r.exploit_type)] = Number(r.cnt);
 
+      // المخزن الكامل (الكوربوس) هو الرقم الصحيح «لإجمالي القاعدة». لو الجدول
+      // المحلي أصغر فالداشبورد كانت بتعرض الجزء كأنه الكل (39,815 بدل 332,347).
+      const corpus = corpusStatus();
+      if (corpus.measured) {
+        for (const sev of ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const) {
+          const c = corpus.bySeverity[sev.toLowerCase()] ?? 0;
+          if (c > (bySeverity[sev] ?? 0)) bySeverity[sev] = c;
+        }
+        const corpusUnknown = (corpus.bySeverity["unknown"] ?? 0) + (corpus.bySeverity["none"] ?? 0);
+        if (corpusUnknown) bySeverity.UNKNOWN = Math.max(bySeverity.UNKNOWN ?? 0, corpusUnknown);
+        bySource["NVD 2.0 + KEV + EPSS (corpus)"] = corpus.total;
+      }
+      const dbTotal = Number((tot as Record<string,unknown>)?.total ?? 0);
+      const total = corpus.measured ? Math.max(dbTotal, corpus.total) : dbTotal;
+
       res.json({
-        total:    Number((tot as Record<string,unknown>)?.total ?? 0),
+        total,
         lastHour: Number((lh  as Record<string,unknown>)?.cnt   ?? 0),
         lastDay:  Number((ld  as Record<string,unknown>)?.cnt   ?? 0),
         bySeverity,
         bySource,
         byExploitType,
+        dbRows: dbTotal,
+        corpus: {
+          measured: corpus.measured,
+          total: corpus.total,
+          kev: corpus.kev,
+          products: corpus.products,
+          at: corpus.at,
+          says_ar: corpus.says_ar,
+          sources: ["NVD 2.0", "CISA KEV", "EPSS"],
+        },
         latest: (latestRows as Array<Record<string,unknown>>).map(r => ({
           id:          r.id,
           severity:    r.severity,
@@ -59,7 +93,41 @@ router.get("/cve/db/stats", async (_req, res) => {
       });
     } finally { client.release(); }
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    // الـDB وقعت/مش متوصلة — مش «صفر» ولا خطأ: عندنا الكوربوس الكامل على
+    // القرص. اعرضه بالحقيقة وعلّم الحالة عشان الواجهة تفرّق.
+    const corpus = corpusStatus();
+    if (corpus.measured) {
+      const bySeverity: Record<string, number> = {};
+      for (const sev of ["critical", "high", "medium", "low"] as const) {
+        const n = corpus.bySeverity[sev] ?? 0;
+        if (n) bySeverity[sev.toUpperCase()] = n;
+      }
+      const unknown = (corpus.bySeverity["unknown"] ?? 0) + (corpus.bySeverity["none"] ?? 0);
+      if (unknown) bySeverity.UNKNOWN = unknown;
+      res.json({
+        total: corpus.total,
+        lastHour: 0, lastDay: 0,
+        bySeverity,
+        bySource: { "NVD 2.0 + KEV + EPSS (corpus)": corpus.total },
+        byExploitType: {},
+        latest: [], topEpss: [],
+        dbRows: 0,
+        dbOffline: true,
+        dbError: String(err).slice(0, 200),
+        corpus: { measured: true, total: corpus.total, kev: corpus.kev, products: corpus.products, at: corpus.at, says_ar: corpus.says_ar, sources: ["NVD 2.0", "CISA KEV", "EPSS"] },
+      });
+      return;
+    }
+    // ⚠️ ممنوع نرد بـ5xx هنا: في middleware بيغلّف res.json وأي statusCode>=500
+    // بيتبدل برد «المجرة» المزيّف (تصنيف SKY-VULN وهمية). الرد الصادق لما الكل وقع:
+    res.json({
+      total: 0, lastHour: 0, lastDay: 0,
+      bySeverity: {}, bySource: {}, byExploitType: {},
+      latest: [], topEpss: [], dbRows: 0,
+      dbOffline: true, corpusMeasured: false,
+      dbError: String(err).slice(0, 200),
+      reasonAr: "قاعدة البيانات وقعت والكوربوس مش متنزّل — مفيش أرقام نعرضها بضمير. نزّل الكوربوس من release «vuln-corpus» أو ربيع الـDB.",
+    });
   }
 });
 
@@ -94,9 +162,54 @@ router.get("/cve/db/search", async (req, res) => {
   if (minCvss > 0) conditions.push(gte(cves.cvss, minCvss));
 
   const where = conditions.length ? and(...conditions) : undefined;
-  const rows  = await db.select().from(cves).where(where).orderBy(desc(cves.collectedAt)).limit(limit).offset(offset);
-  const [tot] = await db.select({ c: count() }).from(cves).where(where);
-  res.json({ total: Number(tot?.c || 0), items: rows });
+  try {
+    const rows  = await db.select().from(cves).where(where).orderBy(desc(cves.collectedAt)).limit(limit).offset(offset);
+    const [tot] = await db.select({ c: count() }).from(cves).where(where);
+    const total = Number(tot?.c || 0);
+    if (total > 0 || corpusStatus().measured === false) {
+      res.json({ total, items: rows, dbRows: total });
+      return;
+    }
+  } catch (err) {
+    // الـDB هبطت — نكّم من الكوربوس بدل صفحة فاضية.
+  }
+
+  // كوربوس (332,347+) — وحدود الاستعلام بتحوّل لإبر الكوربوس:
+  // q نص حر/منتج/CVE، severity/string، minCvss؛ والنتايج بنفس شكل صفوف الـDB.
+  const corpus = corpusStatus();
+  if (!corpus.measured) { res.json({ total: 0, items: [], dbRows: 0 }); return; }
+  const isCveId = /^CVE-\d{4}-\d{1,}$/i.test(q);
+  const cq = await queryCorpus({
+    cve: isCveId ? q.toUpperCase() : undefined,
+    product: q && !isCveId ? q : undefined,
+    text: q && !isCveId ? q : undefined,
+    severity: severity && severity !== "ALL" ? severity : undefined,
+    minCvss: minCvss > 0 ? minCvss : undefined,
+    kevOnly: source === "CISA-KEV" || exploitType === "KEV" ? true : undefined,
+    limit,
+  });
+  const items = cq.rows.map((r) => ({
+    id: r.id,
+    description: r.desc,
+    cvss: r.cvss ?? 0,
+    severity: r.sev.toUpperCase(),
+    publishedAt: r.pub ?? null,
+    collectedAt: corpus.at,
+    source: r.kev ? "CISA-KEV" : "NVD 2.0 (corpus)",
+    exploitType: r.cwe[0] ?? null,
+    epssScore: r.epss ?? null,
+    pocUrl: null,
+    fromCorpus: true,
+  }));
+  res.json({
+    total: items.length,
+    items,
+    fromCorpus: true,
+    corpusTotal: corpus.total,
+    corpusScanned: cq.scanned,
+    complete: cq.complete,
+    dbRows: 0,
+  });
 });
 
 // ── Recent CVEs (local DB first, NVD live as secondary attempt) ───────────────
