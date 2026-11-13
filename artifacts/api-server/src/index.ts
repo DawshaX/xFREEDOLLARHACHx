@@ -371,6 +371,29 @@ try {
   logger.warn({ e }, "self-node registration failed — fleet stays empty until a remote agent connects");
 }
 
+// ── Owner-pinned autonomy (2026-11-13) ───────────────────────────────────────
+// المالك ثبّت البرنامج على «مستقل + هجومي» من تبويب التفضيلات، وطلب يفضل كده
+// على كل إقلاع من غير ما يعيد الضبط. لو الـprefs بتقول autonomous+offensive
+// بنفعّل المستوى الأعلى (deep) فورًا — طالما مفيش قفل env بيمنع (setAutonomy
+// بيرفض لو NOVA_AUTONOMY_LOCK). التعطيل اليدوي: NOVA_AUTONOMY_PIN=0 إو
+// اتغيير التفضيل من اللوحة (PUT /api/panel/prefs).
+if (process.env.NOVA_AUTONOMY_PIN !== "0") {
+  void (async () => {
+    try {
+      const { readPanelPrefs } = await import("./routes/panel-prefs");
+      const prefs = readPanelPrefs();
+      if (prefs.autonomyMode === "autonomous" && prefs.offensivePosture) {
+        const { setAutonomy } = await import("./lib/autonomy-control");
+        const r = await setAutonomy({ enabled: true, level: "deep", note: "pinned-by-owner (panel-prefs at boot)" });
+        logger.info({ ok: r.ok, level: r.status.level }, "الوضع المثبت للمالك طُبّق (autonomous+offensive → deep)");
+        if (!r.ok) logger.warn({ err: r.error ?? null }, "owner autonomy pin لم يُطبق — في قفل أعلى");
+      }
+    } catch (e) {
+      logger.warn({ e }, "owner autonomy pin فشل — البرنامج كامل شغال، بس الضبط مش مفعّل");
+    }
+  })();
+}
+
 const corpusAtBoot = corpusStatus();
 if (corpusAtBoot.measured) {
   console.log(`✓ corpus: ${corpusAtBoot.total} CVEs (${corpusAtBoot.kev} KEV) @ ${corpusAtBoot.at}`);
