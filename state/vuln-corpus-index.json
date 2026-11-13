@@ -1,228 +1,226 @@
 {
   "version": 1,
-  "at": "2026-11-13T07:20:32.260Z",
+  "at": "2026-11-13T10:50:12.330Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 332347,
+  "total": 80000,
   "bySeverity": {
-    "high": 127081,
-    "medium": 145115,
-    "low": 14912,
-    "unknown": 17569,
-    "critical": 27599,
-    "none": 71
+    "high": 32241,
+    "medium": 40558,
+    "low": 5512,
+    "unknown": 867,
+    "critical": 822
   },
   "byYear": {
     "1999": 1573,
-    "2000": 1238,
-    "2001": 1551,
-    "2002": 2385,
-    "2003": 1549,
-    "2004": 2702,
-    "2005": 4754,
-    "2006": 7130,
-    "2007": 6557,
-    "2008": 7152,
-    "2009": 4991,
-    "2010": 5124,
-    "2011": 4686,
-    "2012": 5647,
-    "2013": 6301,
-    "2014": 8544,
-    "2015": 8137,
-    "2016": 10002,
-    "2017": 15648,
-    "2018": 14997,
-    "2019": 1914,
-    "2020": 1102,
-    "2021": 1977,
-    "2022": 4754,
-    "2023": 27438,
-    "2024": 38934,
-    "2025": 44998,
-    "2026": 90562
+    "2000": 1236,
+    "2001": 1540,
+    "2002": 2371,
+    "2003": 1518,
+    "2004": 2671,
+    "2005": 4685,
+    "2006": 7047,
+    "2007": 6510,
+    "2008": 7033,
+    "2009": 4888,
+    "2010": 4949,
+    "2011": 4438,
+    "2012": 5195,
+    "2013": 5704,
+    "2014": 7378,
+    "2015": 6130,
+    "2016": 1134,
+    "2018": 77,
+    "2019": 29,
+    "2020": 2,
+    "2021": 8,
+    "2022": 7,
+    "2023": 6,
+    "2024": 28,
+    "2025": 156,
+    "2026": 3687
   },
-  "kev": 1131,
-  "epssScored": 318647,
-  "products": 60932,
+  "kev": 227,
+  "epssScored": 79133,
+  "products": 27603,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 65895
-    },
-    {
-      "product": "android",
-      "count": 14699
-    },
-    {
-      "product": "chrome",
-      "count": 10848
+      "count": 9922
     },
     {
       "product": "firefox",
-      "count": 10433
+      "count": 7894
     },
     {
-      "product": "ubuntu_linux",
-      "count": 8238
-    },
-    {
-      "product": "debian_linux",
-      "count": 7863
-    },
-    {
-      "product": "windows_server_2012",
-      "count": 6843
-    },
-    {
-      "product": "iphone_os",
-      "count": 5833
+      "product": "chrome",
+      "count": 6301
     },
     {
       "product": "mac_os_x",
-      "count": 5792
-    },
-    {
-      "product": "safari",
-      "count": 5432
+      "count": 5173
     },
     {
       "product": "flash_player",
-      "count": 5297
+      "count": 5012
     },
     {
-      "product": "macos",
-      "count": 4712
+      "product": "safari",
+      "count": 4835
     },
     {
-      "product": "php",
-      "count": 4412
-    },
-    {
-      "product": "wireshark",
-      "count": 4080
+      "product": "ubuntu_linux",
+      "count": 3694
     },
     {
       "product": "internet_explorer",
-      "count": 4027
+      "count": 3498
     },
     {
-      "product": "windows_10_22h2",
-      "count": 3825
+      "product": "iphone_os",
+      "count": 3169
     },
     {
-      "product": "windows_10_1809",
-      "count": 3804
+      "product": "wireshark",
+      "count": 3020
     },
     {
-      "product": "windows_10_21h2",
-      "count": 3801
-    },
-    {
-      "product": "windows_server_2008",
-      "count": 3793
+      "product": "php",
+      "count": 2942
     },
     {
       "product": "moodle",
-      "count": 3737
-    },
-    {
-      "product": "windows_11_24h2",
-      "count": 3570
-    },
-    {
-      "product": "windows_server_2016",
-      "count": 3483
-    },
-    {
-      "product": "windows_11_23h2",
-      "count": 3429
+      "count": 2813
     },
     {
       "product": "acrobat",
-      "count": 3342
+      "count": 2557
     },
     {
       "product": "jre",
-      "count": 3270
-    },
-    {
-      "product": "windows_10_1607",
-      "count": 3237
-    },
-    {
-      "product": "junos",
-      "count": 3132
-    },
-    {
-      "product": "fedora",
-      "count": 3104
-    },
-    {
-      "product": "jdk",
-      "count": 2917
-    },
-    {
-      "product": "ios",
-      "count": 2843
-    },
-    {
-      "product": "windows_11_25h2",
-      "count": 2828
-    },
-    {
-      "product": "windows_11_26h1",
-      "count": 2753
-    },
-    {
-      "product": "windows_server_2019",
-      "count": 2750
+      "count": 2544
     },
     {
       "product": "websphere_application_server",
-      "count": 2723
+      "count": 2338
     },
     {
-      "product": "windows_10",
-      "count": 2618
-    },
-    {
-      "product": "mysql",
-      "count": 2546
-    },
-    {
-      "product": "experience_manager",
-      "count": 2499
+      "product": "opera_browser",
+      "count": 2326
     },
     {
       "product": "itunes",
-      "count": 2464
+      "count": 2269
+    },
+    {
+      "product": "ios",
+      "count": 2155
+    },
+    {
+      "product": "jdk",
+      "count": 2128
     },
     {
       "product": "acrobat_reader",
-      "count": 2390
+      "count": 2001
     },
     {
-      "product": "enterprise_linux",
-      "count": 2380
+      "product": "mysql",
+      "count": 1973
+    },
+    {
+      "product": "opensuse",
+      "count": 1825
+    },
+    {
+      "product": "ffmpeg",
+      "count": 1801
+    },
+    {
+      "product": "shockwave_player",
+      "count": 1761
+    },
+    {
+      "product": "debian_linux",
+      "count": 1731
+    },
+    {
+      "product": "quicktime",
+      "count": 1611
+    },
+    {
+      "product": "mac_os_x_server",
+      "count": 1489
+    },
+    {
+      "product": "phpmyadmin",
+      "count": 1419
+    },
+    {
+      "product": "database_server",
+      "count": 1363
+    },
+    {
+      "product": "bugzilla",
+      "count": 1269
+    },
+    {
+      "product": "mediawiki",
+      "count": 1268
+    },
+    {
+      "product": "xen",
+      "count": 1268
+    },
+    {
+      "product": "drupal",
+      "count": 1216
+    },
+    {
+      "product": "openssl",
+      "count": 1162
+    },
+    {
+      "product": "realplayer",
+      "count": 1127
+    },
+    {
+      "product": "sunos",
+      "count": 1107
+    },
+    {
+      "product": "tomcat",
+      "count": 1097
+    },
+    {
+      "product": "freebsd",
+      "count": 1077
+    },
+    {
+      "product": "wordpress",
+      "count": 1067
+    },
+    {
+      "product": "solaris",
+      "count": 1065
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 40443277,
-    "sha256": "ef43aee66fc414787d7546a7342bde3befa4712ed38faf61b3ecacaced3b7967"
+    "bytes": 8377943,
+    "sha256": "57cb45468258871ee4a254f322fa3d6aec75b5bbd8fe90da1af20ca5fa4aaefb"
   },
   "mode": "deepen",
-  "says_ar": "332347 ثغرة حقيقية · critical 27599 · high 127081 · 1131 مستغلّة فعلياً (KEV) · 318647 لها EPSS · 60932 منتج بـCPE · مزامنة 2026-11-13T07:20:32.260Z",
+  "says_ar": "80000 ثغرة حقيقية · critical 822 · high 32241 · 227 مستغلّة فعلياً (KEV) · 79133 لها EPSS · 27603 منتج بـCPE · مزامنة 2026-11-13T10:50:12.330Z",
   "deepen": {
-    "nextStartIndex": 352347,
-    "windowPages": 10,
-    "walkedFrom": 332347,
-    "nvdTotal": 424979,
-    "coverage": 0.782,
-    "at": "2026-11-13T07:20:32.261Z"
+    "nextStartIndex": 356347,
+    "windowPages": 2,
+    "walkedFrom": 352347,
+    "nvdTotal": 425352,
+    "coverage": 0.1881,
+    "at": "2026-11-13T10:50:12.331Z"
   }
 }
