@@ -6256,6 +6256,10 @@ export function getPlatformControlSnapshot(): PlatformControlSnapshot {
     reportCount: getReportsState().length,
     evidenceCount: getEvidenceState().length,
     corpus,
-    cronEnabled: env?.NOVA_CRON_ENABLED === "1",
+    // المجدوِل بيسجّل نفسه على globalThis لما يشتغل (nova-cron.ts) — مش env var.
+    // في المتصفح مفيش مجدوِل أصلاً → false صادق.
+    cronEnabled:
+      (globalThis as { __novaCron?: { running?: boolean } }).__novaCron?.running === true ||
+      env?.NOVA_CRON_ENABLED === "1",
   };
 }
