@@ -30,6 +30,7 @@ import { TelegramConfigCard } from "@/components/TelegramConfigCard";
 import { opsFetch, novaAuthHeaders } from "@/lib/ops-client";
 import { DAW_SKULL } from "@/lib/skull";
 import { useSystem } from "@/context/SystemContext";
+import ErrorIsland from "@/components/ErrorIsland";
 
 /* ─── أنواع ─── */
 type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "missions" | "brain" | "nexus" | "alerts" | "notes" | "hardware" | "hunt" | "channels" | "nav";
@@ -952,6 +953,7 @@ export default function NovaAgentPro() {
           </nav>
 
           <div className={`min-h-0 flex-1 ${arena === "cockpit" ? "flex flex-col overflow-hidden p-0" : arena === "chat" ? "flex flex-col overflow-hidden p-2" : "overflow-y-auto p-3"}`}>
+            <ErrorIsland title={arena}>
             {arena === "cockpit" && <AgentWorkCockpit />}
             {arena === "launch" && (
               <div className="space-y-4">
@@ -1276,6 +1278,7 @@ export default function NovaAgentPro() {
                 ))}
               </div>
             )}
+            </ErrorIsland>
           </div>
         </section>
 
