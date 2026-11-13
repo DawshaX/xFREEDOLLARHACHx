@@ -4322,7 +4322,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                       ? "text-cyan-200 border-cyan-400/35 bg-cyan-500/10 hover:bg-cyan-500/20"
                       : "text-amber-300 border-amber-400/30 bg-amber-500/10"
                   }`}
-                  title={liveChatOps.provider !== "ready" ? `آخر رد فعليًا من: ${liveChatOps.provider} — اضغط لتغيير النموذج` : "تغيير النموذج"}
+                  title={liveChatOps.provider !== "ready" ? `آخر رد فعليًا من: ${liveChatOps.provider}` : "الموديل تلقائي — نوفا بتديره"}
                 >
                   <CpuIcon className="w-2.5 h-2.5" />
                   <span className="max-w-[150px] truncate">
@@ -4347,22 +4347,20 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 {showModelPicker && (
                   <>
                     <div className="fixed inset-0 z-[998]" onClick={() => setShowModelPicker(false)} />
-                    <div className="absolute top-full mt-1 left-0 z-[999] min-w-[180px] bg-[#07030e]/98 backdrop-blur-xl border border-rose-500/40 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.85)] p-1 flex flex-col gap-0.5">
-                      <div className="px-2 py-1 text-[9px] font-mono text-rose-300/75 uppercase tracking-wider border-b border-rose-500/20 mb-0.5">النماذج المتاحة</div>
-                      {(availableModels.length > 0 ? availableModels : OPENCLAW_MODELS.map(m => m.id)).map(m => (
-                        <button
-                          key={m}
-                          onClick={() => void switchModel(m)}
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-mono text-left transition-all ${
-                            m === selectedModel || m === ollamaModel
-                              ? "bg-rose-500/20 text-rose-100 border border-rose-400/40"
-                              : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent"
-                          }`}
-                        >
-                          {(m === selectedModel || m === ollamaModel) && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
-                          <span className="truncate">{m}</span>
-                        </button>
-                      ))}
+                    {/* TEST3: «الموديل هو برحتو تلقائي انا مليش فيه» — مفيش قايمة اختيار.
+                     * نوفا بتدير الموديل: سلسلة مزوّدين بتفشل بالتتابع، ولو واحد خلص
+                     * أو اتشال بتنقل الكلام للمزوّد اللي بعده على نفس الخط والجلسة. */}
+                    <div className="absolute top-full mt-1 left-0 z-[999] min-w-[210px] bg-[#07030e]/98 backdrop-blur-xl border border-rose-500/40 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.85)] p-2.5 flex flex-col gap-1.5">
+                      <div className="px-1 text-[9px] font-mono text-rose-300/80 uppercase tracking-wider border-b border-rose-500/20 pb-1">🧠 إدارة الموديل — تلقائية بالكامل</div>
+                      <p className="text-[9px] leading-relaxed text-white/70 px-1">
+                        الموديل على مسؤوليتي أنا مش عليك: بجرّب السحابيين بالتتابع، ولو واحد خلص أو رفض بنقل الشغل للّي بعده <span className="text-rose-300">على نفس الخط</span> — الجلسة والذاكرة وشخصيتي مش بتتأثر.
+                      </p>
+                      <div className="px-1 text-[9px] font-mono text-emerald-300/90">
+                        آخر رد فعليًا: {liveChatOps.provider !== "ready" ? `${liveChatOps.provider}${liveChatOps.model ? ` · ${liveChatOps.model}` : ""}` : "nova-brain"}
+                      </div>
+                      <div className="px-1 text-[8px] text-white/40 font-mono">
+                        {coreCloudCount > 0 ? `${coreCloudCount} مزوّد سحابي جاهز` : "السلسلة الحرة (pollinations · OVH) دايمًا متاحة"}
+                      </div>
                     </div>
                   </>
                 )}
@@ -4565,12 +4563,12 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             <span className="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border border-cyan-400/40 text-cyan-200 bg-cyan-500/5">
               NOVA CORE · محرك موحّد
             </span>
-            {/* ── Model Switcher Button ── */}
+            {/* ── Model Status Button (TEST3: تلقائي — بيشوف مين شغّال فعلاً) ── */}
             <button onClick={() => setShowModelPicker(p => !p)}
-              title={`نموذج نشط: ${selectedModel} | ctx: ${(modelCtxWindow/1000).toFixed(0)}K`}
+              title="الموديل تلقائي — نوفا بتدير السلسلة وبتكمّل على نفس الخط حتى لو الموديل خلص أو اتبدل"
               className={`shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-lg border flex items-center gap-1 transition-all ${showModelPicker ? "border-primary/50 bg-primary/15 text-primary" : "border-primary/20 text-primary/70 bg-primary/5 hover:bg-primary/10"}`}>
-              🧠 {OPENCLAW_MODELS.find(m => m.id === selectedModel)?.label?.split(" ")[0] ?? "Model"}
-              <span className="text-[6px] opacity-60 font-mono">{modelCtxWindow >= 100000 ? "128K" : modelCtxWindow >= 30000 ? "32K" : "8K"}</span>
+              🧠 تلقائي
+              <span className="text-[7px] opacity-70 font-mono">{liveChatOps.provider !== "ready" ? liveChatOps.provider.slice(0, 18) : "nova-brain"}</span>
               <span className="text-[7px]">▾</span>
             </button>
             {directMode && (
@@ -4834,20 +4832,19 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Model Switcher Dropdown (overlay) ── */}
+        {/* ── Model Status (overlay) — TEST3: تلقائي بالكامل، مفيش اختيار يدوي ── */}
         {showModelPicker && panelSize !== "mini" && (
-          <div className="absolute top-12 left-2 z-50 bg-background border border-primary/30 rounded-xl shadow-2xl p-2 min-w-[200px]">
+          <div className="absolute top-12 left-2 z-50 bg-background border border-primary/30 rounded-xl shadow-2xl p-2.5 min-w-[210px]">
             <div className="text-[8px] text-muted-foreground font-mono px-1 mb-1.5 flex items-center justify-between">
-              <span>🧠 اختر نموذج NOVA</span>
+              <span>🧠 الموديل — إدارة تلقائية</span>
               <button onClick={() => setShowModelPicker(false)} className="text-[10px] hover:text-primary">✕</button>
             </div>
-            {OPENCLAW_MODELS.map((m) => (
-              <button key={m.id} onClick={() => switchModel(m.id)}
-                className={`w-full text-left text-[8px] font-mono px-2 py-1.5 rounded-lg hover:bg-primary/10 flex items-center justify-between gap-2 mb-0.5 ${selectedModel === m.id ? "bg-primary/15 border border-primary/30" : ""}`}>
-                <span className={m.color}>{m.label}</span>
-                <span className="text-[7px] opacity-50 font-mono">{m.ctx >= 100000 ? "128K" : m.ctx >= 30000 ? "32K" : "8K"} ctx</span>
-              </button>
-            ))}
+            <p className="text-[9px] leading-relaxed text-muted-foreground px-1 mb-1">
+              متنساش تختار — أنا بدير الموديل لوحدي. لو واحد خلص أو اتشال بنكمل معاك على نفس الخط من السيلزي اللي بعده.
+            </p>
+            <div className="text-[9px] font-mono text-emerald-300 px-1">
+              الشغّال الآن: {liveChatOps.provider !== "ready" ? liveChatOps.provider : "nova-brain"}
+            </div>
           </div>
         )}
 
@@ -9131,14 +9128,11 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               </div>
               {openclawSubTab === "chat" && (
                 <>
-                  {/* Model + ACP Selector */}
+                  {/* TEST3: الموديل تلقائي — بدل شرائح الاختيار، سطر حالة صادق */}
                   <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                    {OPENCLAW_MODELS.slice(0,4).map(m => (
-                      <button key={m.id} onClick={() => switchModel(m.id)}
-                        className={`text-[7px] px-1.5 py-0.5 rounded border transition-all ${selectedModel === m.id ? "border-primary/50 bg-primary/15 text-primary" : "border-muted/20 text-muted-foreground hover:border-muted/40"}`}>
-                        {m.label}
-                      </button>
-                    ))}
+                    <span className="text-[7px] px-1.5 py-0.5 rounded border border-emerald-400/40 bg-emerald-500/10 text-emerald-300">
+                      🧠 الموديل تلقائي — نوفا بتديره وبتكمّل على نفس الخط
+                    </span>
                   </div>
                   {/* ACP Harness Row */}
                   <div className="flex items-center gap-1 mt-1 flex-wrap">
