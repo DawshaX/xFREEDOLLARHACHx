@@ -182,5 +182,15 @@ export async function triggerJob(id: string): Promise<{ ok: boolean; result?: st
 
 export function startCronScheduler(): void {
   for (const job of JOBS) scheduleJob(job);
-  logger.info(`Nova Cron Scheduler started — ${JOBS.filter(j=>j.enabled).length}/${JOBS.length} jobs active`);
+  // الحالة الحقيقية للمجدوِل على globalThis — standalone-api.ts (التوأم المشترك مع
+  // اللوحة) ما يقدرش يستورد من هنا، فالقناة دي هي الجسر. قبل الإصلاح كان
+  // cronEnabled بيرجع env var مشالة («false» على لايف شغال بالفعل) = كدبة على المالك.
+  const enabled = JOBS.filter((j) => j.enabled).length;
+  (globalThis as { __novaCron?: { running: boolean; enabledJobs: number; totalJobs: number; startedAt: string } }).__novaCron = {
+    running: true,
+    enabledJobs: enabled,
+    totalJobs: JOBS.length,
+    startedAt: new Date().toISOString(),
+  };
+  logger.info(`Nova Cron Scheduler started — ${enabled}/${JOBS.length} jobs active`);
 }
