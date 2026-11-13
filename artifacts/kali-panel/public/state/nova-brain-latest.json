@@ -1,9 +1,9 @@
 {
-  "at": "2026-11-13T21:29:50.239Z",
-  "seat": "openai",
+  "at": "2026-11-13T22:29:30.112Z",
+  "seat": null,
   "thinking": {
-    "reply": "الحالة دلوقتي: خزنة المفاجآت فيها 104k ثغرة، التغطية 24.5٪، و3 أهداف جربنا وما لقيناش حاجة. الخطوة الجاية هي نزود التغطية بمحاولة فحص أهداف جديدة وننقل التوت الدقيق لما نوصل لـ50٪.",
-    "why": "لا حاجة لأكشن خاص دلوقتي، منصتنا مستمرة في الفحص، نكمل بس بتوسع المنظر",
+    "reply": null,
+    "why": "مفيش مقعد رد",
     "action": {
       "kind": "none",
       "arg": ""
@@ -13,13 +13,13 @@
   "answered": null,
   "senses": {
     "corpus": {
-      "total": 104386,
-      "at": "2026-11-13T15:46:05.521Z",
-      "critical": 4009,
-      "high": 42792,
-      "kev": 281,
-      "coverage": 0.2453,
-      "nextStartIndex": 380347,
+      "total": 129208,
+      "at": "2026-11-13T21:54:33.817Z",
+      "critical": 6704,
+      "high": 52741,
+      "kev": 327,
+      "coverage": 0.3036,
+      "nextStartIndex": 404347,
       "newestYear": 2026,
       "topProducts": [
         "linux_kernel",
@@ -331,8 +331,14 @@
       "critical": 196
     }
   },
-  "failures": [],
-  "says_ar": "فكّرت على openai · الحالة دلوقتي: خزنة المفاجآت فيها 104k ثغرة، التغطية 24.5٪، و3 أهداف جربنا وما لقيناش حاجة. الخطوة الجاية هي نزود التغطية بمحاولة فحص أهداف جديدة وننقل التوت الدقيق لما نوصل لـ50٪.",
+  "failures": [
+    "openai: The operation was aborted due to timeout",
+    "mistral: HTTP 402",
+    "ovh-llama: The operation was aborted due to timeout",
+    "ovh-ai: no reply in payload",
+    "llama: HTTP 404"
+  ],
+  "says_ar": "المحاولة فشلت — التفاصيل في failures",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
