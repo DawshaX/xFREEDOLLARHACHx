@@ -16,7 +16,7 @@ import {
   Server, Zap, ZapOff, Sparkles, Globe, ScanLine, Shield,
   Terminal as TerminalIcon, Search, Folder, BookOpen, Network, FlaskConical,
   Crosshair, Swords, FileCode, Wifi, CalendarClock, Play, PowerCircle,
-  Command, Eye, EyeOff, MessageSquare, Skull, ArrowLeft, RotateCcw, Radar,
+  Command, Eye, EyeOff, MessageSquare, Skull, ArrowLeft, RotateCcw, Radar, Bell, Trash2, Pin,
   ChevronUp, ChevronDown, Flame, Radio,
 } from "lucide-react";
 import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
@@ -32,7 +32,7 @@ import { DAW_SKULL } from "@/lib/skull";
 import { useSystem } from "@/context/SystemContext";
 
 /* ─── أنواع ─── */
-type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "missions" | "brain" | "nexus" | "hardware" | "hunt" | "channels" | "nav";
+type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "missions" | "brain" | "nexus" | "alerts" | "notes" | "hardware" | "hunt" | "channels" | "nav";
 
 interface FleetAgentInfo {
   id: string; hostname: string; platform: string; user?: string; cpus?: number; connectedAt?: string;
@@ -95,6 +95,8 @@ const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color:
   { key: "missions", labelAr: "المهمات",             icon: ListChecks,        color: "#fbbf24" },
   { key: "brain",    labelAr: "المخ والمجلس",        icon: Brain,             color: "#a78bfa" },
   { key: "nexus",    labelAr: "الخلفية ٢٤/٧",        icon: Radar,             color: "#2dd4bf" },
+  { key: "alerts",   labelAr: "الإشعارات 🔔",          icon: Bell,              color: "#fb923c" },
+  { key: "notes",    labelAr: "الدفاتر 📓",            icon: BookOpen,          color: "#fde047" },
   { key: "hardware", labelAr: "العتاد الحي",         icon: Cpu,               color: "#38bdf8" },
   { key: "hunt",     labelAr: "الصيد",               icon: Crosshair,         color: "#f43f5e" },
   { key: "channels", labelAr: "القنوات",             icon: Cable,             color: "#f59e0b" },
@@ -266,6 +268,10 @@ export default function NovaAgentPro() {
   const [cronBusy, setCronBusy] = useState<string | null>(null);
 
   const [flash, setFlash] = useState<string | null>(null);
+  const [notifs, setNotifs] = useState<Array<{ id: string; title: string; body?: string; kind?: string; read?: boolean; createdAt?: string; source?: string }>>([]);
+  const [novaNotes, setNovaNotes] = useState<Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string }>>([]);
+  const [noteDraft, setNoteDraft] = useState<{ title: string; body: string }>({ title: "", body: "" });
+  const [noteBusy, setNoteBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [prefs, setPrefs] = useState<Prefs>(() => (typeof window === "undefined" ? { hiddenHud: [], hudOpen: false, chatOpen: true } : loadPrefs()));
   const [notes, setNotes] = useState<string>(() => { try { return localStorage.getItem("daw.agentPro.notes") ?? ""; } catch { return ""; } });
@@ -360,6 +366,35 @@ export default function NovaAgentPro() {
       setAutoBusy(false);
     }
   }, [flashSay]);
+
+  const noteCreate = useCallback(async () => {
+    if (!noteDraft.body.trim()) return;
+    setNoteBusy(true);
+    try {
+      const r = await fetch("/api/nova/notes", { method: "POST", headers: novaAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(noteDraft) });
+      const j = (await r.json().catch(() => null)) as { ok?: boolean } | null;
+      if (r.ok && j?.ok) { setNoteDraft({ title: "", body: "" }); flashSay("📓 اتخزن في دفاتر نوفا — حاضر في كل جلسة"); }
+    } catch { /* الفشل يبان */ }
+    const nt = await opsFetch<{ notes?: Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string }> }>("/nova/notes");
+    if (nt.ok && Array.isArray(nt.data?.notes)) setNovaNotes(nt.data.notes);
+    setNoteBusy(false);
+  }, [noteDraft, flashSay]);
+
+  const noteDelete = useCallback(async (id: string) => {
+    await fetch(`/api/nova/notes/${encodeURIComponent(id)}`, { method: "DELETE", headers: novaAuthHeaders({}) });
+    setNovaNotes((arr) => arr.filter((n) => n.id !== id));
+  }, []);
+
+  const notePin = useCallback(async (id: string, pinned: boolean) => {
+    await fetch(`/api/nova/notes/${encodeURIComponent(id)}`, { method: "PATCH", headers: novaAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ pinned: !pinned }) });
+    const nt = await opsFetch<{ notes?: Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string }> }>("/nova/notes");
+    if (nt.ok && Array.isArray(nt.data?.notes)) setNovaNotes(nt.data.notes);
+  }, []);
+
+  const notifRead = useCallback(async (id: string) => {
+    await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: "POST", headers: novaAuthHeaders({}) });
+    setNotifs((arr) => arr.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  }, []);
 
   const launch = useCallback((a: LaunchAction) => {
     if (a.kind === "win") navigate(`/desktop?open=${encodeURIComponent(a.win)}`);
@@ -513,6 +548,10 @@ export default function NovaAgentPro() {
         sessions: Array.isArray(nx.data.sessions) ? nx.data.sessions : [],
       });
     }
+    const nf = await opsFetch<Array<Record<string, unknown>>>("/notifications");
+    if (nf.ok && Array.isArray(nf.data)) setNotifs(nf.data as typeof notifs);
+    const nt = await opsFetch<{ notes?: Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string }> }>("/nova/notes");
+    if (nt.ok && Array.isArray(nt.data?.notes)) setNovaNotes(nt.data.notes);
     void refreshCron();
   }, [refreshCron]);
 
@@ -1127,6 +1166,56 @@ export default function NovaAgentPro() {
                 </div>
               </div>
             )}
+            {arena === "alerts" && (
+              <div className="space-y-2">
+                <div className="text-[10px] font-mono text-orange-100/50">مركز الإشعارات — متصل بكل المصادر: الكرون، المراقبون، الصيد، حصاد الخزنة، الجلسات. ({notifs.length} إشعار)</div>
+                {notifs.length === 0 && <div className="rounded-xl border border-white/8 bg-white/[0.02] p-6 text-center text-[11px] font-mono text-white/35">لسه هادي — أول نبضة من الكرون/المراقبين هتبان هنا فورًا.</div>}
+                {notifs.slice(0, 60).map((n) => (
+                  <div key={n.id} className={`rounded-xl border px-3 py-2 flex items-center gap-3 ${n.read ? "opacity-50" : ""}`}
+                    style={{ borderColor: "#fb923c22", background: n.read ? "transparent" : "#fb923c0a" }}>
+                    <Bell className="w-3.5 h-3.5 text-orange-300 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-bold text-white/85 truncate">{n.title}</div>
+                      {n.body && <div className="text-[9px] font-mono text-white/45 leading-4 break-words">{n.body}</div>}
+                      <div className="text-[8px] font-mono text-white/30 mt-0.5">{n.kind ? `[${n.kind}] ` : ""}{n.createdAt ? ago(n.createdAt, now) : ""}{n.source ? ` · ${n.source}` : ""}</div>
+                    </div>
+                    {!n.read && (
+                      <button onClick={() => void notifRead(n.id)} className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[8px] font-bold text-white/50 hover:text-white/85 transition">قرأتها</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {arena === "notes" && (
+              <div className="space-y-3">
+                <div className="text-[10px] font-mono text-yellow-100/50">دفاتر نوفا — ملاحظات بتتحفظ على السيرفر (state/nova-notes.json) وتفضل مع الأجينت في كل الجلسات والخلفية.</div>
+                <div className="rounded-xl border border-yellow-400/25 bg-yellow-500/[0.05] p-3 space-y-2">
+                  <input value={noteDraft.title} onChange={(e) => setNoteDraft((d) => ({ ...d, title: e.target.value }))}
+                    placeholder="عنوان الملاحظة (اختياري)" className="w-full rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-[12px] font-bold text-white/85 placeholder:text-white/25 outline-none" />
+                  <textarea value={noteDraft.body} onChange={(e) => setNoteDraft((d) => ({ ...d, body: e.target.value }))}
+                    placeholder="اكتب الملاحظة… هدف، أمر مهم، نتيجة حصلت— الأجينت هيشوفها معاك دايمًا"
+                    className="w-full h-24 rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-[12px] font-mono text-white/85 placeholder:text-white/25 outline-none resize-y leading-5" />
+                  <button onClick={() => void noteCreate()} disabled={noteBusy || !noteDraft.body.trim()}
+                    className="rounded-lg border border-yellow-400/40 bg-yellow-500/15 px-4 py-2 text-[11px] font-black text-yellow-200 hover:bg-yellow-500/25 transition disabled:opacity-40">
+                    {noteBusy ? "بيتحفظ…" : "📓 حفّظها في دفاتر نوفا"}
+                  </button>
+                </div>
+                {novaNotes.length === 0 && <div className="rounded-xl border border-white/8 bg-white/[0.02] p-6 text-center text-[11px] font-mono text-white/35">لسه فاضية — أول ملاحظة هتنزل هنا وتفضل صاحبة الأجينت.</div>}
+                {novaNotes.map((n) => (
+                  <div key={n.id} className="rounded-xl border px-3 py-2.5" style={{ borderColor: n.pinned ? "#fde04745" : "#ffffff12", background: n.pinned ? "#fde04708" : "rgba(255,255,255,0.015)" }}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-black text-yellow-100/90 flex-1 truncate">{n.pinned ? "📌 " : ""}{n.title}</span>
+                      <span className="text-[8px] font-mono text-white/30 shrink-0">{ago(n.createdAt, now)}</span>
+                      <button onClick={() => void notePin(n.id, n.pinned)} title={n.pinned ? "شيل التثبيت" : "ثبّتها"} className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-white/40 hover:text-yellow-200 transition"><Pin className="w-3 h-3" /></button>
+                      <button onClick={() => void noteDelete(n.id)} title="امسحها" className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-white/40 hover:text-rose-300 transition"><Trash2 className="w-3 h-3" /></button>
+                    </div>
+                    <div className="mt-1 text-[10px] font-mono text-white/65 whitespace-pre-wrap leading-5">{n.body}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {arena === "nav" && (
               <div className="space-y-4">
                 {NAV_GROUPS.map(({ group, color, items }) => (

@@ -611,7 +611,7 @@ router.get("/local-agent/pty/:sessionId/stream", (req, res) => {
   };
   sess.subscribers.add(onOutput);
 
-  req.on("close", () => {
+  res.on("close", () => {
     ptySessions.get(sessionId)?.subscribers.delete(onOutput);
   });
 });
@@ -737,7 +737,7 @@ async function handleExecStream(
   auditLog({ ts: new Date().toISOString(), action: "exec_stream_start", data: { agentId: agent.id, command } });
 
   let closed = false;
-  req.on?.("close", () => { closed = true; });
+  res.on("close", () => { closed = true; });
 
   const t0 = Date.now();
   const result = await execStreamOnLocalAgent(
@@ -798,7 +798,7 @@ router.get("/local-agent/screen-stream", async (req, res) => {
   }
 
   let closed = false;
-  req.on("close", () => { closed = true; });
+  res.on("close", () => { closed = true; });
 
   const captureFrame = async () => {
     if (closed) return;
@@ -822,7 +822,7 @@ router.get("/local-agent/screen-stream", async (req, res) => {
     await captureFrame();
   }, intervalMs);
 
-  req.on("close", () => { clearInterval(interval); });
+  res.on("close", () => { clearInterval(interval); });
 });
 
 router.get("/local-agent/download-nova-agent", (_req, res) => {
@@ -961,7 +961,7 @@ router.get("/local-agent/download-project-zip", (req, res) => {
     if (code !== 0) logger.warn({ code }, "tar exited non-zero");
     res.end();
   });
-  req.on("close", () => { try { tar.kill(); } catch {} });
+  res.on("close", () => { try { tar.kill(); } catch {} });
 });
 
 // ── GET /local-agent/connect-info ── Returns the WSS URL for nova-agent.js ──
