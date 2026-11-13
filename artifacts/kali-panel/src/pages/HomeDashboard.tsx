@@ -39,6 +39,12 @@ interface AgentTask { simulated?: boolean; // علامة صدق: مهام قال
    id: number; title: string; description?: string; status: string; createdAt: string; }
 interface CveDbStats {
   total: number; lastHour: number; lastDay: number;
+  /* TEST5/TEST7 «مركز نتايج حية»: حقول الطروة من /cve/db/stats — اختيارية
+   * لأن الوضع الساكن مافيهوش قياس، والصفحة لازم تعيش من غيرهم. */
+  lastSync?: string | null;
+  corpusAgeMin?: number | null;
+  corpusGain?: { gained: number; at: string; via: string } | null;
+  corpus?: { measured: boolean; total: number; kev: number; products?: number; at?: string; says_ar?: string; nvdTotal?: number | null; coverage?: number | null };
   /** optional on purpose: an engine that has rows but no buckets yet omits it, and the page must survive that */
   bySeverity?: Record<string, number>;
   bySource?: Record<string, number>;
@@ -320,6 +326,50 @@ function Sparkline({ data, color, height = 32 }: { data: number[]; color: string
       <polygon points={`0,${height} ${pts} 100,${height}`} fill={`url(#spk-${id})`} />
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </svg>
+  );
+}
+
+// ─── TEST7: شريط مؤشرات الحياة — كل رقم فيه مقاس حي (مش مكتوب) ──────────────
+function LiveVitalsStrip({ sys, cveDbStats, snapshotTotal, corpusAgeMin, corpusGain, onNavigate }: {
+  sys: SystemInfo | null;
+  cveDbStats: CveDbStats | null;
+  snapshotTotal: number | null;
+  corpusAgeMin: number | null;
+  corpusGain: { gained: number; at: string; via: string } | null;
+  onNavigate: (p: string) => void;
+}) {
+  const total = cveDbStats?.total ?? snapshotTotal ?? null;
+  const ageColor = corpusAgeMin == null ? "#64748b" : corpusAgeMin <= 90 ? "#34d399" : corpusAgeMin <= 360 ? "#facc15" : "#f87171";
+  const ageText = corpusAgeMin == null ? "غير مقاس" : corpusAgeMin <= 0 ? "مزامَن الآن ✓" : corpusAgeMin < 60 ? `قبل ${corpusAgeMin} دقيقة` : corpusAgeMin < 1440 ? `قبل ${Math.round(corpusAgeMin / 60)} ساعة` : `قبل ${Math.round(corpusAgeMin / 1440)} يوم`;
+  const chips: Array<{ label: string; value: string; color: string; hint: string; to?: string }> = [
+    { label: "⏱ المعالج", value: sys ? `${sys.cpu.usage}% · ${sys.cpu.cores} نواة` : "غير مقاس (ساكن)", color: sys ? "#22d3ee" : "#64748b", hint: "قياس os.cpus() من المحرك الحي", to: "/monitor" },
+    { label: "🧠 الذاكرة", value: sys ? `${sys.memory.usagePercent}% مستخدم` : "غير مقاس (ساكن)", color: sys ? "#a78bfa" : "#64748b", hint: "قياس os.totalmem/os.freemem", to: "/monitor" },
+    { label: "📚 الكوربوس", value: total == null ? "غير مقاس" : `${total.toLocaleString("en-US")} ثغرة`, color: "#00ff88", hint: "NVD 2.0 + CISA KEV + EPSS — الرقم الحي من /cve/db/stats", to: "/cve-db" },
+    { label: "⟳ الطروة", value: ageText, color: ageColor, hint: "عمر آخر مزامنة كوربوس — أخضر ≤90د", to: "/cve-live" },
+    { label: "⚡ آخر كسب", value: corpusGain ? `+${corpusGain.gained.toLocaleString("en-US")}` : "—", color: "#e879f9", hint: corpusGain ? `عبر ${corpusGain.via}` : "أول مزامنة لسه ما حصلتش", to: "/cve-live" },
+    { label: "🎯 KEV", value: cveDbStats?.corpus?.kev != null ? `${cveDbStats.corpus.kev}` : "—", color: "#f59e0b", hint: "ثغرات CISA KEV المقاسة في الكوربوس", to: "/cve-db" },
+    // TEST7 «اجمع الثغرات»: التغطية من قاعدة NVD الكاملة — قِيس من كيرسر الـwalk
+    { label: "🗺️ تغطية NVD", value: (() => { const cov = cveDbStats?.corpus?.coverage; const nvd = cveDbStats?.corpus?.nvdTotal; return cov != null && nvd ? `${Math.round(cov * 100)}% من ${nvd.toLocaleString("en-US")}` : "—"; })(), color: "#38bdf8", hint: "الكوربوس بيكمّل قاعدة NVD جولة ورا جولة (walk) — كل دمج بيزود", to: "/cve-db" },
+  ];
+  return (
+    <div className="rounded-xl p-3 anim-fade-up relative overflow-hidden" style={{ background: "linear-gradient(135deg,rgba(0,255,136,0.05),rgba(34,211,238,0.04),rgba(168,85,247,0.05))", border: "1px solid rgba(0,255,136,0.3)", boxShadow: "0 0 18px rgba(0,255,136,0.08) inset" }}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="w-2 h-2 rounded-full animate-ping" style={{ background: "#00ff88" }} />
+        <span className="text-[12px] font-black" style={{ color: "#00ff88", textShadow: "0 0 8px rgba(0,255,136,0.5)" }}>مؤشرات الحياة</span>
+        <span className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>كل رقم مقاس الآن — لا شيء مكتوب في الكود</span>
+        <button onClick={() => onNavigate("/self-check")} className="ml-auto text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10" style={{ color: "#94a3b8" }}>افحص بنفسك ←</button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        {chips.map((c) => (
+          <button key={c.label} onClick={() => c.to && onNavigate(c.to)} title={c.hint}
+            className="text-right px-2.5 py-2 rounded-lg bg-black/55 hover:bg-black/75 transition-colors"
+            style={{ border: `1px solid ${c.color}40` }}>
+            <div className="text-[9px] font-bold" style={{ color: `${c.color}cc` }}>{c.label}</div>
+            <div className="text-[13px] font-black font-mono" style={{ color: c.color, textShadow: `0 0 6px ${c.color}66` }}>{c.value}</div>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1596,6 +1646,7 @@ export default function HomeDashboard() {
               🚀 ابدأ من هنا — جولة سريعة للزائر (بند 8)
               بتوجّه المستخدم الجديد للمسارات الحقيقية بالترتيب الصح.
           ══════════════════════════════════════════════════════════════ */}
+          <LiveVitalsStrip sys={sys} cveDbStats={cveDbStats} snapshotTotal={corpusTotal()} corpusAgeMin={cveDbStats?.corpusAgeMin ?? null} corpusGain={cveDbStats?.corpusGain ?? null} onNavigate={(p) => navigate(p)} />
           <div className="rounded-xl p-3 anim-fade-up" style={{ background: "linear-gradient(135deg,rgba(34,211,238,0.06),rgba(168,85,247,0.05))", border: "1px solid rgba(34,211,238,0.25)" }}>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-base">🚀</span>
@@ -1712,7 +1763,7 @@ export default function HomeDashboard() {
                       {opsProbe.findings !== null ? `${opsProbe.findings}` : "غير مقاس"}
                     </div>
                     <div className="p-1.5 rounded bg-black/40 border border-emerald-500/20">
-                      📚 قاعدة المعرفة المحمّلة: {corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} — المصدر:{corpusLabelAr()}
+                      📚 قاعدة المعرفة المحمّلة: {(cveDbStats?.total ?? corpusTotal())?.toLocaleString("en-US") ?? "غير مقاس"} — المصدر:{corpusLabelAr()}
                     </div>
                     <div className="p-1.5 rounded bg-black/40 border border-cyan-500/25 text-cyan-200">
                       🗂️ تفريق المخازن: <span className="text-emerald-300">الكوربوس الحقيقي</span> (state/vuln-corpus-live.json — NVD 2.0 + CISA KEV + EPSS، بيتحدّث من الوركفلو) ≠ <span className="text-amber-300">مخزن المتصفح الحي</span> (مزامنة الجلسة، بيبدأ فاضي). الرقم فوق من الكوربوس الحقيقي بس.

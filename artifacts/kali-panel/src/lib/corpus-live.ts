@@ -35,6 +35,10 @@ export interface CorpusLive {
   sources: string[];
   rows: CorpusRow[];
   saysAr: string;
+  /* TEST7: نفس سطح السيرفر — السناب الساكن ما بيحملهمش فبيفضلوا undefined
+   * والواجهة بتقول «غير مقاس» بدل رقم مخترع. */
+  nvdTotal?: number | null;
+  coverage?: number | null;
 }
 
 const NOT_MEASURED: CorpusLive = {

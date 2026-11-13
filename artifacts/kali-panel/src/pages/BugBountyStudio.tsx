@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   Shield, ShieldCheck, BookOpen, Code, CheckSquare, FileText, Globe, AlertTriangle,
@@ -1778,6 +1778,50 @@ export default function BugBountyStudio() {
 
   // Tab 0 (2099 Engine) state: Deep Research Pipeline, JS Analyzer, Auth Matrix, Config Auditor, Zero-FP Gate & GitHub Arsenal
   const [deepLoading, setDeepLoading] = useState<string | null>(null);
+
+  /** TEST7 «زراير مش شغالة»: كان كل catch صامتي — الزرار يضغط ويلهب بلا أي
+   * رسالة (قياس 2026-11-13: 33 بلوك catch مكتوم). كل فشل بقى بيقول سببه
+   * بالعربي، والسبب الأشهر (login_required/token_required) بيتشرح فيه الحل. */
+  const reportFail = (where: string, e: unknown) => {
+    const msg = e instanceof Error ? e.message : String(e);
+    const login = msg.includes("login_required");
+    const tok = msg.includes("token_required") || msg.includes("مطلوب توكن");
+    const hint = login
+      ? " · الحل: سجّل الدخول من /login"
+      : tok
+        ? " · الحل: اكتب توكن التنفيذ في الإعدادات أو الطرفية العائمة"
+        : "";
+    setSyncStatusMsg(`❌ ${where} فشل: ${msg.slice(0, 180)}${hint}`);
+  };
+
+  /* TEST7 «مؤشرات الحياة»: شريط حي في رأس الاستوديو — كل رقم بيتقاس من
+   * /cve/db/stats (الكوربوس+KEV) و/deep-research/discovered-vault (الخزنة)
+   * و/local-agent/status (الوكلاء). مافيش رقم مكتوب في الكود، والفشل صادق. */
+  const [vitals, setVitals] = useState<{
+    corpusTotal: number | null; kev: number | null;
+    vaultVulns: number | null; vaultRules: number | null; agents: number | null;
+  }>({ corpusTotal: null, kev: null, vaultVulns: null, vaultRules: null, agents: null });
+  const refreshVitals = useCallback(() => {
+    void (async () => {
+      const next: typeof vitals = { corpusTotal: null, kev: null, vaultVulns: null, vaultRules: null, agents: null };
+      try {
+        const st = await jsonRequest<{ total: number; corpus?: { kev?: number } }>("/cve/db/stats");
+        next.corpusTotal = st.total ?? null;
+        next.kev = st.corpus?.kev ?? null;
+      } catch { /* صادق: يفضل «غير مقاس» */ }
+      try {
+        const v = await jsonRequest<{ totalDiscoveredVulnerabilities?: number; totalLifelongLearningRules?: number }>("/deep-research/discovered-vault");
+        next.vaultVulns = v.totalDiscoveredVulnerabilities ?? null;
+        next.vaultRules = v.totalLifelongLearningRules ?? null;
+      } catch { /* صادق */ }
+      try {
+        const a = await jsonRequest<{ count: number }>("/local-agent/status");
+        next.agents = a.count ?? null;
+      } catch { /* صادق */ }
+      setVitals(next);
+    })();
+  }, []);
+  useEffect(() => { refreshVitals(); }, [refreshVitals]);
   const [pipelineResult, setPipelineResult] = useState<{
     target: string;
     hostname: string;
@@ -2332,7 +2376,7 @@ ${reportFix}
     if (programName) setReportProgram(programName);
     try {
       localStorage.setItem("cybernova_active_target", cleanTarget);
-    } catch {
+    } catch (e) { reportFail("تفعيل الهدف", e);
       // ignore
     }
 
@@ -2354,7 +2398,7 @@ ${reportFix}
           name: `فحص قانوني: ${programName || cleanTarget}`,
         }),
       });
-    } catch {
+    } catch (e) { reportFail("تفعيل الهدف", e);
       // ignore
     }
 
@@ -2392,7 +2436,7 @@ ${reportFix}
           tool: "BugBountyStudio",
         }),
       });
-    } catch {
+    } catch (e) { reportFail("حفظ الملاحظة السريعة", e);
       // ignore
     }
     emitPlatformWsEvent({
@@ -2432,7 +2476,7 @@ ${reportFix}
           }),
         });
       }
-    } catch {
+    } catch (e) { reportFail("مزامنة نتايج الكود-أوديت", e);
       // ignore
     }
     emitPlatformWsEvent({
@@ -2465,7 +2509,7 @@ ${reportFix}
           pinned: true,
         }),
       });
-    } catch {
+    } catch (e) { reportFail("حفظ التقرير في المنصة", e);
       // ignore
     }
     emitPlatformWsEvent({
@@ -2483,7 +2527,7 @@ ${reportFix}
       const t = encodeURIComponent(targetOverride || activeTarget);
       const data = await jsonRequest<NonNullable<typeof selfAwareness>>(`/deep-research/self-awareness?target=${t}`);
       setSelfAwareness(data);
-    } catch {
+    } catch (e) { reportFail("تحديث الوعي الذاتي", e);
       // ignore
     }
   };
@@ -2505,7 +2549,7 @@ ${reportFix}
         `✅ اكتمل التشغيل الذاتي الشامل للقائد الذكي (5 مراحل حية + سلسلة ثغرات رباعية + برهان Zero-FP) على ${activeTarget}!`,
       );
       void refreshSelfAwareness(activeTarget);
-    } catch {
+    } catch (e) { reportFail("الوكيل الماستر", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2520,7 +2564,7 @@ ${reportFix}
         `/deep-research/corpus-search?q=${q}&layer=${l}&limit=18`,
       );
       setCorpusData(data);
-    } catch {
+    } catch (e) { reportFail("بحث الكوربوس 2400", e);
       // ignore
     }
   };
@@ -2543,11 +2587,11 @@ ${reportFix}
             data.brainState = ghBrain;
           }
         }
-      } catch {
+      } catch (e) { reportFail("تحديث حالة ورشة الشغل", e);
         // use local/server state
       }
       setWorkstationData(data);
-    } catch {
+    } catch (e) { reportFail("تحديث حالة ورشة الشغل", e);
       // ignore
     }
   };
@@ -2568,7 +2612,7 @@ ${reportFix}
       setRepeaterResult(res);
       setSyncStatusMsg(`✅ تم تنفيذ طلب Burp/Caido Repeater على ${res.hostname} (HTTP ${res.status} · SHA256=${res.sha256}) وحفظه في خزنة المستخرجات!`);
       void refreshWorkstationState();
-    } catch {
+    } catch (e) { reportFail("البروكسي/الريبيتر", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2589,7 +2633,7 @@ ${reportFix}
       setMsfResult(res);
       setSyncStatusMsg(`✅ تم تشغيل وحدة التحقق [${res.activeModule.path}] في كونسول msf6-verify وحفظ النتيجة في المستخرجات!`);
       void refreshWorkstationState();
-    } catch {
+    } catch (e) { reportFail("كونسول MSF", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2610,7 +2654,7 @@ ${reportFix}
       setTermOutput(res.output);
       setSyncStatusMsg(`✅ تم تنفيذ أمر الطرفية (${res.command}) وتحديث سجل المستخرجات!`);
       void refreshWorkstationState();
-    } catch {
+    } catch (e) { reportFail("أمر الطرفية", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2634,7 +2678,7 @@ ${reportFix}
       }
       setSyncStatusMsg(`✅ اكتملت نبضة العمل والتطوير الذاتي 24/7 وتم تحديث خزنة المستخرجات وذاكرة GitHub السحابية!`);
       void refreshSelfAwareness(activeTarget);
-    } catch {
+    } catch (e) { reportFail("نبضة الدايمون 24/7", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2661,7 +2705,7 @@ ${reportFix}
         void refreshWorkstationState();
       }
       setSyncStatusMsg(`✅ تمت إضافة المهمة المتوازية (${tTitle}) إلى طابور العمل المستمر 24/7!`);
-    } catch {
+    } catch (e) { reportFail("إضافة مهمة موازية", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2722,7 +2766,7 @@ ${reportFix}
       });
       setSyncStatusMsg(`✅ تم تنفيذ الفحص الآمن لأداة [${res.toolName}] على ${activeTarget} وتسجيل المخرجات في الذاكرة ومتتبع المهام!`);
       void refreshSelfAwareness();
-    } catch {
+    } catch (e) { reportFail("محاكاة أداة كالي", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2745,7 +2789,7 @@ ${reportFix}
       });
       setSyncStatusMsg(`✅ تم دمج (${prims.length}) ثغرات في نفس الوقت وبناء ${res.chains.length} سلاسل أثر مركب على ${activeTarget}!`);
       void refreshSelfAwareness();
-    } catch {
+    } catch (e) { reportFail("مُخلّق السلاسل", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2779,7 +2823,7 @@ ${reportFix}
         title: `OSINT (CRT.SH + Shodan InternetDB + Wayback): ${res.crtSubdomains.length} نطاق فرعي`,
       });
       setSyncStatusMsg(`✅ تم سحب استخبارات CRT.SH وShodan InternetDB وWayback Machine لـ ${activeTarget} وتسجيلها في الذاكرة!`);
-    } catch {
+    } catch (e) { reportFail("الـOSINT الحي", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2800,7 +2844,7 @@ ${reportFix}
         title: `فحص JWT & Cookie: رصد ${res.issues.length} ملاحظات أمنية`,
       });
       setSyncStatusMsg(`✅ اكتمل تدقيق JWT وSet-Cookie (${res.issues.length} ملاحظات) وتم حفظه في الذاكرة!`);
-    } catch {
+    } catch (e) { reportFail("تدقيق JWT/الكوكيز", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2821,7 +2865,7 @@ ${reportFix}
         title: `فحص GraphQL & OpenAPI Schema: ${activeTarget}`,
       });
       setSyncStatusMsg(`✅ اكتمل فحص مخططات GraphQL وOpenAPI على ${activeTarget}!`);
-    } catch {
+    } catch (e) { reportFail("تدقيق الـSchema", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2846,7 +2890,7 @@ ${reportFix}
         title: `مسار البحث الذاتي (4 مراحل) اكتمل على ${activeTarget}`,
       });
       setSyncStatusMsg(`✅ اكتمل مسار البحث الذاتي (4 مراحل) على ${activeTarget} وتم حفظ الأدلة والفرضيات في الذاكرة ومتتبع المهام!`);
-    } catch {
+    } catch (e) { reportFail("الخط الإنتاجي الكامل", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2867,7 +2911,7 @@ ${reportFix}
         title: `تحليل JS والمسارات المخفية: ${res.endpoints.length} مسار مكتشف`,
       });
       setSyncStatusMsg(`✅ تم استخراج ${res.endpoints.length} مسار API و${res.parameters.length} معامل من ملفات JS وتسجيلها في الذاكرة!`);
-    } catch {
+    } catch (e) { reportFail("تشريح ملفات JS", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2892,7 +2936,7 @@ ${reportFix}
         title: `مصفوفة الصلاحيات التفاضلية: ${res.verdict} (${res.similarityPercent}%)`,
       });
       setSyncStatusMsg(`✅ اكتملت المقارنة التفاضلية للصلاحيات (BOLA/IDOR) — التشابه الهيكلي: ${res.similarityPercent}%`);
-    } catch {
+    } catch (e) { reportFail("مصفوفة الصلاحيات", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2913,7 +2957,7 @@ ${reportFix}
         title: `فحص الإعدادات المعمارية (CORS / CNAME / security.txt): ${activeTarget}`,
       });
       setSyncStatusMsg(`✅ اكتمل تدقيق CORS وبصمات CNAME وملف security.txt لـ ${activeTarget}!`);
-    } catch {
+    } catch (e) { reportFail("تدقيق الإعدادات", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2938,7 +2982,7 @@ ${reportFix}
         title: `بوابة البرهان (Zero-FP): CVSS ${res.cvssScore} — ${zeroFpTitle}`,
       });
       setSyncStatusMsg(`✅ تم التحقق عبر بوابة البرهان (Zero-FP Gate) وحفظ حزمة الدليل الرقمي في خزنة الأدلة (/evidence)!`);
-    } catch {
+    } catch (e) { reportFail("بوابة الصفر-إيجابي", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -2953,7 +2997,7 @@ ${reportFix}
         `/github/search?q=${encodeURIComponent(ghSearchQuery.trim())}&type=repositories&per_page=8`,
       );
       setGhSearchResults(res.items || []);
-    } catch {
+    } catch (e) { reportFail("بحث ترسانة GitHub", e);
       // ignore
     } finally {
       setDeepLoading(null);
@@ -3119,6 +3163,29 @@ ${reportFix}
               </div>
             </div>
           )}
+        </div>
+
+        {/* TEST7: مؤشرات الحياة — نيون حي فوق التبويبات */}
+        <div className="flex flex-wrap items-center gap-2 mt-4 p-2.5 rounded-xl" style={{ background: "linear-gradient(90deg,rgba(0,255,136,0.06),rgba(34,211,238,0.05),rgba(168,85,247,0.06))", border: "1px solid rgba(0,255,136,0.28)", boxShadow: "0 0 14px rgba(0,255,136,0.06) inset" }}>
+          <span className="flex items-center gap-1.5 text-[10px] font-black" style={{ color: "#00ff88", textShadow: "0 0 6px rgba(0,255,136,0.5)" }}>
+            <span className="w-1.5 h-1.5 rounded-full animate-ping" style={{ background: "#00ff88" }} />
+            مؤشرات حية
+          </span>
+          {[
+            { label: "📚 الكوربوس", value: vitals.corpusTotal == null ? "غير مقاس" : vitals.corpusTotal.toLocaleString("en-US"), c: "#00ff88" },
+            { label: "🎯 KEV", value: vitals.kev == null ? "—" : String(vitals.kev), c: "#f59e0b" },
+            { label: "💎 خزنة الاكتشافات", value: vitals.vaultVulns == null ? "غير مقاس" : `${vitals.vaultVulns} ثغرة`, c: "#e879f9" },
+            { label: "🧠 قواعد التعلّم", value: vitals.vaultRules == null ? "غير مقاس" : `${vitals.vaultRules} قاعدة`, c: "#22d3ee" },
+            { label: "🖥️ الوكلاء", value: vitals.agents == null ? "غير مقاس" : `${vitals.agents} متصل`, c: "#a78bfa" },
+          ].map((x) => (
+            <button key={x.label} onClick={refreshVitals} title="اضغط للقياس من جديد — من نقاط النهاية الحية"
+              className="px-2.5 py-1.5 rounded-lg bg-black/60 hover:bg-black/80 transition-colors"
+              style={{ border: `1px solid ${x.c}3d` }}>
+              <span className="text-[9px] font-bold" style={{ color: `${x.c}bb` }}>{x.label}</span>
+              <span className="text-[12px] font-black font-mono mr-1.5" style={{ color: x.c, textShadow: `0 0 6px ${x.c}55` }}>{x.value}</span>
+            </button>
+          ))}
+          <button onClick={refreshVitals} className="text-[9px] font-bold px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-white/60">⟳ قِيس</button>
         </div>
 
         {/* Navigation Tabs */}

@@ -36,6 +36,10 @@ export interface CorpusLive {
   sources: string[];
   rows: CorpusRow[];
   saysAr: string;
+  /* TEST7 «اجمع الثغرات»: تقدم تغطية قاعدة NVD من كيرسر الـwalk — الحقلان
+   * مش موجودين في سناب اللوحة الساكنة فبيفضلوا undefined هناك (صدق). */
+  nvdTotal?: number | null;
+  coverage?: number | null;
 }
 
 const NOT_MEASURED: CorpusLive = {
@@ -68,6 +72,8 @@ function refresh(): CorpusLive {
         sources: idx?.sources ?? ["NVD 2.0", "CISA KEV", "EPSS"],
         rows: [],
         saysAr: st.says_ar,
+        nvdTotal: st.nvdTotal,
+        coverage: st.coverage,
       }
     : { ...NOT_MEASURED, saysAr: st.says_ar };
   return snapshot;

@@ -330,6 +330,10 @@ export function corpusStatus(): {
   bytes: number;
   filePresent: boolean;
   says_ar: string;
+  /* TEST7 «اجمع الثغرات»: تقدم الـwalk من الفهرس — عشان اللوحة تعرض
+   * التغطية الحقيقية من قاعدة NVD بدل ما تبدو المجموعة كل المجموعة. */
+  nvdTotal: number | null;
+  coverage: number | null;
 } {
   const idx = readIndex();
   const filePresent = fs.existsSync(corpusFile());
@@ -345,6 +349,8 @@ export function corpusStatus(): {
       bytes: 0,
       filePresent,
       says_ar: "مفيش كوربوس — شغّل scripts/ingest-vuln-corpus.mjs (أو الـworkflow) الأول",
+      nvdTotal: null,
+      coverage: null,
     };
   }
   const ageMin = Number.isFinite(Date.parse(idx.at)) ? Math.round((Date.now() - Date.parse(idx.at)) / 60_000) : null;
@@ -359,6 +365,8 @@ export function corpusStatus(): {
     bytes: idx.files.bytes,
     filePresent,
     says_ar: idx.says_ar,
+    nvdTotal: idx.deepen?.nvdTotal ?? null,
+    coverage: idx.deepen?.coverage ?? null,
   };
 }
 
@@ -383,7 +391,17 @@ export interface CorpusQuery {
 export async function queryCorpus(q: CorpusQuery): Promise<{ rows: CorpusCve[]; scanned: number; complete: boolean }> {
   const limit = Math.max(1, Math.min(q.limit ?? 20, 200));
   const maxScan = Math.max(1, q.maxScan ?? 400_000);
-  const file = corpusFile();
+  let file = corpusFile();
+  if (!fs.existsSync(file)) {
+    /* TEST7 قِيس 2026-11-13: الفهرس بيقول «مقاس 137,341» والملف مفقود (نشر ساكن/
+     * قرص نضيف) ⇒ البحث كان بيرجع فاضي بصمت (corpusScanned:0) والمالك يشوف
+     * «الثغرات مش ظاهرة». الشفاء الذاتي: تجربة توفير من السلسلة مرة واحدة،
+     * ولو فشلت رد صادق مفيهوش اختراع أرقام. */
+    if (corpusStatus().measured) {
+      const healed = await provisionCorpus({}).catch(() => null);
+      if (healed?.ok && fs.existsSync(corpusFile())) file = corpusFile();
+    }
+  }
   if (!fs.existsSync(file)) return { rows: [], scanned: 0, complete: false };
   const productNeedle = q.product?.trim().toLowerCase();
   const cveNeedle = q.cve?.trim().toUpperCase();

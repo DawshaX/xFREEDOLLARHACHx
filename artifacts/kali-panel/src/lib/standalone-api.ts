@@ -3365,6 +3365,9 @@ if (path === "/nova-core/version") {
           lastSync: corpus.at ?? new Date().toISOString(),
           corpusAgeMin: Number.isFinite(ageMs) ? Math.round(ageMs / 60_000) : null,
           corpusGain: gain ? { gained: gain.gained, at: gain.at, via: gain.via } : null,
+          /* TEST7 «اجمع الثغرات»: تقدم تغطية NVD من الفهرس — نفس حقول السيرفر الحي. */
+          corpusNvdTotal: corpus.nvdTotal ?? null,
+          corpusCoverage: corpus.coverage ?? null,
         };
       })(),
       lastUpdated: new Date().toISOString(),
