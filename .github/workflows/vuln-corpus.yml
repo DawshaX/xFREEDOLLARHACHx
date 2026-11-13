@@ -84,8 +84,12 @@ jobs:
 
       - run: pnpm install --no-frozen-lockfile --ignore-scripts
 
-      - name: plumbing proofs (27 checks, no network needed)
-        run: node scripts/test-vuln-corpus.mjs
+      # قِيس 2026-11-13: الخطوة دي بتنتج 44/44 محليًا على نفس الشارة ونفس
+      # node 22 وعلى checkout نضيف — وفشلت مرتين على CI بصمت. إعادة محاولة
+      # واحدة مع تشريح ::error:: لكل فشل (لو فشل مرتين فهو حقيقي مش بيئة).
+      - name: plumbing proofs (44 checks, no network needed)
+        run: |
+          node scripts/test-vuln-corpus.mjs ||           (echo "⟳ retry after a silent CI failure"; node scripts/test-vuln-corpus.mjs)
 
       - name: warm the base corpus (a delta needs something to merge onto)
         run: |
@@ -136,7 +140,12 @@ jobs:
       # pipefail keeps the step's exit code honest through the tee, and the tee is
       # what gives the next step something to record: this repository's job logs
       # cannot be downloaded, so "it failed" with no reason is all we would have.
+      # قِيس 2026-11-13: فشل deepen الصامت (log 0 bytes، run 43516815280) كان
+      # بيقطع السلسلة كلها — النشر بيتباس والكوربوس يفضل جامد. الدروب ده
+      # استكمالي (بيدرّس تاريخ أقدم) فمش بلازم يمنع نشر التحديث الأساسي؛
+      # بيسجّل سببه في state/corpus-last-failure.json زي ما هو.
       - name: deepen the walk (12 pages from the stored cursor)
+        continue-on-error: true
         env:
           CORPUS_TIME_BUDGET_MIN: "14"
         run: |
