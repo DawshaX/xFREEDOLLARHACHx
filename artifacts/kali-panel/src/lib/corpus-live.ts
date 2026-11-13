@@ -131,3 +131,11 @@ export function corpusSaysAr(): string {
   const when = age == null ? "" : age < 60 ? ` · قبل ${age} دقيقة` : ` · قبل ${Math.round(age / 60)} ساعة`;
   return `${snapshot.total.toLocaleString("en-US")} ثغرة حقيقية (KEV ${snapshot.kev}) · ${snapshot.sources.join(" + ")}${when}`;
 }
+
+/** TEST5 «مركز نتايج حية»: نفس السطح مع السيرفر — المتصفح ما بيقدرش يقرا
+ * state، فالقيمة بتوصله جاهزة جوه استجابة /api/cve/db/stats (corpusGain). */
+export interface CorpusLastGain { at: string; before: number; after: number; gained: number; via: string }
+
+export function corpusLastGain(): CorpusLastGain | null {
+  return null;
+}

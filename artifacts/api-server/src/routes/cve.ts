@@ -3,6 +3,7 @@ import { and, count, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { db, cves, cveSyncJobs, pool } from "@workspace/db";
 import { cveMonitor } from "../lib/cve-monitor";
 import { corpusStatus, queryCorpus } from "../lib/ops/vuln-corpus";
+import { corpusLastGain } from "../lib/corpus-live";
 
 /**
  * قاعدة البيانات «الحقيقية» للمنصة مش جدول Postgres لوحده — هي **الكوربوس**
@@ -104,9 +105,18 @@ router.get("/cve/db/stats", async (_req, res) => {
       }
       const unknown = (corpus.bySeverity["unknown"] ?? 0) + (corpus.bySeverity["none"] ?? 0);
       if (unknown) bySeverity.UNKNOWN = unknown;
+      /* TEST5 «مركز نتايج حية»: الكسب من آخر تنزيل مرآة مقاس (last-gain.json)،
+       * والطروة محسوبة من at الفهرس — الشارة في اللوحة بتعتمد عليهم. */
+      const gain = corpusLastGain();
+      const gainMs = gain ? Date.now() - Date.parse(gain.at) : Infinity;
+      const ageMs = corpus.at ? Date.now() - Date.parse(corpus.at) : Infinity;
       res.json({
         total: corpus.total,
-        lastHour: 0, lastDay: 0,
+        lastHour: gain && Number.isFinite(gainMs) && gainMs < 3_600_000 ? gain.gained : 0,
+        lastDay: gain && Number.isFinite(gainMs) && gainMs < 86_400_000 ? gain.gained : 0,
+        lastSync: corpus.at ?? null,
+        corpusAgeMin: Number.isFinite(ageMs) ? Math.round(ageMs / 60_000) : null,
+        corpusGain: gain ? { gained: gain.gained, at: gain.at, via: gain.via } : null,
         bySeverity,
         bySource: { "NVD 2.0 + KEV + EPSS (corpus)": corpus.total },
         byExploitType: {},

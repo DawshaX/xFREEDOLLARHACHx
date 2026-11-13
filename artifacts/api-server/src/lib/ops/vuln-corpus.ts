@@ -96,6 +96,34 @@ export function corpusDir(): string {
     path.resolve(process.cwd(), process.env.NOVA_CORPUS_REL || "state/vuln-corpus")
   );
 }
+
+/** TEST5 «مركز نتايج حية»: آخر كسب مقاس من تنزيل مرآة — عشان اللوحة تعرض
+ * «↑ N آخر ساعة» رقم مقاس مش دلو مكتوب. صفر يعني مفيش كسب — صادق. */
+export interface CorpusLastGain { at: string; before: number; after: number; gained: number; via: string }
+
+function gainFile(): string {
+  return path.join(corpusDir(), "last-gain.json");
+}
+
+export function corpusLastGain(): CorpusLastGain | null {
+  try {
+    const raw = JSON.parse(fs.readFileSync(gainFile(), "utf8")) as CorpusLastGain;
+    if (typeof raw?.at !== "string" || typeof raw?.gained !== "number") return null;
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+function recordGain(before: number, after: number, via: string): void {
+  try {
+    const rec: CorpusLastGain = { at: new Date().toISOString(), before, after, gained: Math.max(0, after - before), via };
+    fs.mkdirSync(path.dirname(gainFile()), { recursive: true });
+    fs.writeFileSync(gainFile(), JSON.stringify(rec, null, 2));
+  } catch {
+    /* القرص ضدنا — الكسب ده best-effort، الفهرس هو مصدر الحقيقة */
+  }
+}
 export function corpusFile(): string {
   return path.join(corpusDir(), "cves.jsonl.gz");
 }
@@ -531,6 +559,20 @@ export function defaultCorpusUrl(): string {
   );
 }
 
+/** مرايا بديلة مجانية — TEST5 «لسة 104 ومفيش تحديث».
+ * تحميل الـrelease بيعدي على release-assets.githubusercontent.com بعد redirect،
+ * وده على بعض المضيفات بيعطي fetch failed فيبقى الكوربوس جامد على رقم قديم
+ * رغم إن الـCI بينشر كل نص ساعة. الـCI دلوقتي بينشر نفس البايتات على فرع يتيم
+ * `vuln-corpus-data` — raw.githubusercontent بيوصل من شبه كل مكان وبلا مفتاح. */
+export function fallbackCorpusSources(): Array<{ url: string; kind: "release" | "raw-branch" | "raw-main" }> {
+  const repo = process.env.NOVA_CORPUS_REPO || "DawshaX/xFREEDOLLARHACHx";
+  return [
+    { url: defaultCorpusUrl(), kind: "release" },
+    { url: `https://raw.githubusercontent.com/${repo}/vuln-corpus-data/cves.jsonl.gz`, kind: "raw-branch" },
+    { url: `https://raw.githubusercontent.com/${repo}/main/state/vuln-corpus/cves.jsonl.gz`, kind: "raw-main" },
+  ];
+}
+
 /**
  * Rebuild the index from the corpus file on disk.
  * Needed whenever the corpus arrives without its index (a manual download, a fresh
@@ -587,51 +629,70 @@ export async function provisionCorpus(opts: { url?: string; force?: boolean; min
   if (process.env.NOVA_CORPUS_AUTODOWNLOAD === "0") {
     return { ok: false, action: "skipped", bytes: 0, total: st.total, says_ar: "التحميل التلقائي مقفول (NOVA_CORPUS_AUTODOWNLOAD=0)" };
   }
-  try {
-    const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(180_000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length <= minBytes) throw new Error(`file too small (${buf.length} bytes) — refusing to install a stub`);
-    if (!(buf[0] === 0x1f && buf[1] === 0x8b)) throw new Error("not a gzip payload");
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, buf);
-    // Without an index the corpus is unreadable-by-number: download it, and if the
-    // release did not carry one, count the rows we just received.
-    if (!fs.existsSync(indexFile())) {
-      const idxUrl = url.replace(/cves\.jsonl\.gz$/, "vuln-corpus-index.json");
-      let gotIndex = false;
-      try {
-        const idxRes = await fetch(idxUrl, { redirect: "follow", signal: AbortSignal.timeout(60_000) });
-        if (idxRes.ok) {
-          const idxBuf = Buffer.from(await idxRes.arrayBuffer());
-          JSON.parse(idxBuf.toString("utf8"));
-          fs.mkdirSync(path.dirname(indexFile()), { recursive: true });
-          fs.writeFileSync(indexFile(), idxBuf);
-          gotIndex = true;
+  // سلسلة المصادر: الـrelease الأول (الأساس)، وبعده مرايا raw المجانية. أول
+  // مصدر يجيب gzip سليم يفوز — والرسالة بتقول بصراحة مين اللي خدم.
+  const sources: Array<{ url: string; kind: string }> = [
+    { url, kind: "release" },
+    ...fallbackCorpusSources().filter((s) => s.kind !== "release").map((s) => ({ url: s.url, kind: s.kind })),
+  ];
+  let lastErr = "";
+  for (const src of sources) {
+    try {
+      const res = await fetch(src.url, { redirect: "follow", signal: AbortSignal.timeout(180_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length <= minBytes) throw new Error(`file too small (${buf.length} bytes) — refusing to install a stub`);
+      if (!(buf[0] === 0x1f && buf[1] === 0x8b)) throw new Error("not a gzip payload");
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, buf);
+      // Without an index the corpus is unreadable-by-number: download it (نفس
+      // مصدر البايتات الأول، وبعده المرايا)، ولو مافيش فهرس خالص عدد السطور.
+      if (!fs.existsSync(indexFile())) {
+        const idxCandidates = [
+          src.url.replace(/cves\.jsonl\.gz$/, "vuln-corpus-index.json"),
+          ...sources.map((s) => s.url.replace(/cves\.jsonl\.gz$/, "vuln-corpus-index.json")),
+        ];
+        let gotIndex = false;
+        for (const idxUrl of [...new Set(idxCandidates)]) {
+          try {
+            const idxRes = await fetch(idxUrl, { redirect: "follow", signal: AbortSignal.timeout(60_000) });
+            if (idxRes.ok) {
+              const idxBuf = Buffer.from(await idxRes.arrayBuffer());
+              JSON.parse(idxBuf.toString("utf8"));
+              fs.mkdirSync(path.dirname(indexFile()), { recursive: true });
+              fs.writeFileSync(indexFile(), idxBuf);
+              gotIndex = true;
+              break;
+            }
+          } catch {
+            continue;
+          }
         }
-      } catch {
-        gotIndex = false;
+        if (!gotIndex) await rebuildIndex({ mode: "unknown" });
       }
-      if (!gotIndex) await rebuildIndex({ mode: "unknown" });
+      const after = corpusStatus();
+      const via = src.kind === "release" ? "" : ` (عبر مرآة ${src.kind})`;
+      recordGain(st.total, after.total, src.kind);
+      return {
+        ok: true,
+        action: "downloaded",
+        bytes: buf.length,
+        total: after.total,
+        says_ar: `اتنزّل كوربوس ${(buf.length / 1048576).toFixed(2)} MB — الفهرس بيقول ${after.total} CVE${via}`,
+      };
+    } catch (err) {
+      lastErr = `${src.kind}: ${(err as Error).message}`;
+      continue;
     }
-    const after = corpusStatus();
-    return {
-      ok: true,
-      action: "downloaded",
-      bytes: buf.length,
-      total: after.total,
-      says_ar: `اتنزّل كوربوس ${(buf.length / 1048576).toFixed(2)} MB — الفهرس بيقول ${after.total} CVE`,
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      action: "failed",
-      bytes: 0,
-      total: st.total,
-      error: (err as Error).message,
-      says_ar: `تحميل الكوربوس فشل (${(err as Error).message}) — البرنامج شغال بس الاستعلام بيرجّع «مفيش بيانات» بصراحة`,
-    };
   }
+  return {
+    ok: false,
+    action: "failed",
+    bytes: 0,
+    total: st.total,
+    error: lastErr,
+    says_ar: `تحميل الكوربوس فشل من كل المصادر (release + مرايا raw) — آخر رسالة: ${lastErr}`,
+  };
 }
 
 /**
@@ -654,26 +715,46 @@ export async function refreshCorpusFromRelease(opts: { url?: string } = {}): Pro
   says_ar: string;
 }> {
   const url = opts.url ?? defaultCorpusUrl();
-  const idxUrl = url.replace(/cves\.jsonl\.gz$/, "vuln-corpus-index.json");
   const localAt = String(readIndex()?.at || "");
   let idx: CorpusIndex | null = null;
   let remoteAt = "";
   let remoteTotal = 0;
-  try {
-    const res = await fetch(idxUrl, { redirect: "follow", signal: AbortSignal.timeout(60_000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    idx = (await res.json()) as CorpusIndex;
-    remoteAt = String(idx?.at || "");
-    remoteTotal = Number(idx?.total ?? 0);
-    if (!remoteAt) throw new Error("فهرس المرآة مفيهوش at");
-  } catch (err) {
+  let servedBy = "release";
+  // فحص الفهرس بنفس فلسفة السلسلة: release → فرع المرآة → main.
+  const idxCandidates = [
+    { url: url.replace(/cves\.jsonl\.gz$/, "vuln-corpus-index.json"), kind: "release" },
+    ...fallbackCorpusSources()
+      .filter((s) => s.kind !== "release")
+      .map((s) => ({ url: s.url.replace(/cves\.jsonl\.gz$/, "vuln-corpus-index.json"), kind: s.kind })),
+    { url: `https://raw.githubusercontent.com/${process.env.NOVA_CORPUS_REPO || "DawshaX/xFREEDOLLARHACHx"}/main/state/vuln-corpus-index.json`, kind: "raw-main-index" },
+  ];
+  let lastIdxErr = "";
+  for (const cand of idxCandidates) {
+    try {
+      const res = await fetch(cand.url, { redirect: "follow", signal: AbortSignal.timeout(60_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const parsed = (await res.json()) as CorpusIndex;
+      const at = String(parsed?.at || "");
+      if (!at) throw new Error("فهرس المرآة مفيهوش at");
+      idx = parsed;
+      remoteAt = at;
+      remoteTotal = Number(parsed?.total ?? 0);
+      servedBy = cand.kind;
+      break;
+    } catch (err) {
+      lastIdxErr = `${cand.kind}: ${(err as Error).message}`;
+      continue;
+    }
+  }
+  if (!idx) {
     return {
       ok: false,
       action: "failed",
-      error: (err as Error).message,
-      says_ar: `فحص مرآة الكوربوس فشل (${(err as Error).message}) — الكوربوس المحلي باقي في الخدمة`,
+      error: lastIdxErr,
+      says_ar: `فحص مرآة الكوربوس فشل من كل المصادر — الكوربوس المحلي (${localAt}) باقي في الخدمة`,
     };
   }
+  const viaNote = servedBy === "release" ? "" : ` (الفهرس جاي من مرآة ${servedBy})`;
   const remoteMs = Date.parse(remoteAt);
   const localMs = Date.parse(localAt);
   const haveCorpus = fs.existsSync(corpusFile()) && fs.statSync(corpusFile()).size > 1024;
@@ -684,7 +765,7 @@ export async function refreshCorpusFromRelease(opts: { url?: string } = {}): Pro
       remoteAt,
       localAt,
       total: remoteTotal,
-      says_ar: `الكوربوس بجدّة المرآة أو أجدد (${localAt}) — مفيش تنزيل`,
+      says_ar: `الكوربوس بجدّة المرآة أو أجدد (${localAt}) — مفيش تنزيل${viaNote}`,
     };
   }
   const dl = await provisionCorpus({ url, force: true });

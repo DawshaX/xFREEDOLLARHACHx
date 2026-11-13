@@ -8,7 +8,9 @@
  *
  * Same rule on both sides: no corpus → `null`, never a pretty number.
  */
-import { corpusStatus, readIndex } from "./ops/vuln-corpus";
+import fs from "node:fs";
+import path from "node:path";
+import { corpusStatus, readIndex, corpusDir } from "./ops/vuln-corpus";
 
 export interface CorpusRow {
   id: string;
@@ -106,4 +108,21 @@ export function corpusKev(): number | null {
 export function corpusSaysAr(): string {
   const s = corpusSnapshot();
   return s.measured ? s.saysAr : s.saysAr;
+}
+
+/** TEST5 «مركز نتايج حية»: آخر كسب مقاس من تنزيل مرآة الكوربوس.
+ * السيرفر يقرأ state/vuln-corpus/last-gain.json (بكتبه provisionCorpus بعد
+ * كل تنزيل ناجح) — نسخة اللوحة في التوأم يخليها null لأنها بتاخد الأرقام
+ * جاهزة من /api/cve/db/stats. */
+export interface CorpusLastGain { at: string; before: number; after: number; gained: number; via: string }
+
+export function corpusLastGain(): CorpusLastGain | null {
+  try {
+    const file = path.join(corpusDir(), "last-gain.json");
+    const raw = JSON.parse(fs.readFileSync(file, "utf8")) as CorpusLastGain;
+    if (typeof raw?.at !== "string" || typeof raw?.gained !== "number") return null;
+    return raw;
+  } catch {
+    return null;
+  }
 }

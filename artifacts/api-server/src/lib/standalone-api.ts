@@ -11,7 +11,7 @@
  * Persists state in localStorage when running in the browser.
  */
 
-import { corpusSnapshot, loadCorpusLive, corpusTotal } from "./corpus-live";
+import { corpusSnapshot, corpusLastGain, loadCorpusLive, corpusTotal } from "./corpus-live";
 import {
   KALI_ARSENAL_64,
   GITHUB_ARSENAL_40,
@@ -3350,9 +3350,23 @@ if (path === "/nova-core/version") {
       low: galaxyStats.low,
       withExploit: galaxyStats.withExploit,
       inKev: galaxyStats.inKev,
-      lastHour: galaxyStats.lastHour,
-      lastDay: galaxyStats.lastDay,
-      lastSync: new Date().toISOString(),
+      /* TEST5 «مركز نتايج حية»: الكسب مقاس من آخر تنزيل مرآة (corpusLastGain)
+       * مش دلو مكتوب، وlastSync وقت الفهرس الحقيقي مش «الآن» الكاذب، والطروة
+       * بالدقيقة عشان الشارة تعرف تقول الصدق. النسختين متطابقتين — التوأم. */
+      ...(() => {
+        const gain = corpusLastGain();
+        const gainMs = gain ? Date.now() - Date.parse(gain.at) : Infinity;
+        const gain1h = gain && Number.isFinite(gainMs) && gainMs < 3_600_000 ? gain.gained : 0;
+        const gain1d = gain && Number.isFinite(gainMs) && gainMs < 86_400_000 ? gain.gained : 0;
+        const ageMs = corpus.at ? Date.now() - Date.parse(corpus.at) : Infinity;
+        return {
+          lastHour: Math.max(galaxyStats.lastHour ?? 0, gain1h),
+          lastDay: Math.max(galaxyStats.lastDay ?? 0, gain1d),
+          lastSync: corpus.at ?? new Date().toISOString(),
+          corpusAgeMin: Number.isFinite(ageMs) ? Math.round(ageMs / 60_000) : null,
+          corpusGain: gain ? { gained: gain.gained, at: gain.at, via: gain.via } : null,
+        };
+      })(),
       lastUpdated: new Date().toISOString(),
       bySeverity: galaxyStats.bySeverity,
       bySource: galaxyStats.bySource,

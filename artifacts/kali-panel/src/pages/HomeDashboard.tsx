@@ -2235,13 +2235,26 @@ export default function HomeDashboard() {
                     <div className="font-black font-mono leading-none transition-all" style={{ fontSize: "clamp(32px,4vw,56px)", color: "#60a5fa", textShadow: "0 0 30px rgba(59,130,246,0.6),0 0 60px rgba(59,130,246,0.2)" }}>
                       {(cveDbStats?.total ?? 0).toLocaleString()}
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap justify-center">
                       <span className="text-[8px] font-mono" style={{ color: "rgba(147,197,253,0.28)" }}>ثغرة مُخزّنة</span>
                       {cveDbStats?.lastHour ? (
                         <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(250,204,21,0.1)", color: "#facc15", border: "1px solid rgba(250,204,21,0.2)" }}>
                           ↑ {cveDbStats.lastHour} آخر ساعة
                         </span>
                       ) : null}
+                      {/* TEST5 «مركز نتايج حية»: شارة طروة المرآة — أخضر ≤90د، أصفر ≤6س، أحمر جامدة */}
+                      {(() => {
+                        const age = (cveDbStats as { corpusAgeMin?: number | null } | null)?.corpusAgeMin ?? null;
+                        if (age === null || !Number.isFinite(age)) return null;
+                        const color = age <= 90 ? "#34d399" : age <= 360 ? "#facc15" : "#f87171";
+                        const bg = age <= 90 ? "rgba(52,211,153,0.1)" : age <= 360 ? "rgba(250,204,21,0.1)" : "rgba(248,113,113,0.1)";
+                        const label = age <= 0 ? "مزامَن الآن ✓" : age < 60 ? `مزامَن قبل ${age} دقيقة` : age < 1440 ? `مزامَن قبل ${Math.round(age / 60)} ساعة` : `مزامَن قبل ${Math.round(age / 1440)} يوم`;
+                        return (
+                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: bg, color, border: `1px solid ${color}33` }} title="عمر آخر مزامنة مرآة الكوربوس (CI كل 30 دقيقة + بعد كل دمج)">
+                            ⟳ {label}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                   {/* Hour */}

@@ -50,6 +50,13 @@ async function runJob(id: string): Promise<string> {
             const st = corpusStatus();
             broadcastCorpusRefresh({ total: st.total, at: st.at ?? r.remoteAt ?? "", remoteAt: r.remoteAt ?? "", kev: st.kev });
           } catch { /* البث مش مانع */ }
+          try {
+            /* TEST5: نفس التحديث لازم يوصل لعملاء /cve-live/stream الحيّين
+             * (اللوحة بتسمع من هنا مش من سجل cve-monitor القديم). */
+            const { broadcastCorpusRefreshLive } = await import("./nova-cve-monitor");
+            const st = corpusStatus();
+            broadcastCorpusRefreshLive({ total: st.total, at: st.at ?? r.remoteAt ?? "", remoteAt: r.remoteAt ?? "", kev: st.kev });
+          } catch { /* البث مش مانع */ }
         }
         return `corpus-from-ci:${r.action} (${r.says_ar})`;
       }
