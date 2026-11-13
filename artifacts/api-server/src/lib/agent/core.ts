@@ -237,6 +237,24 @@ interface PlannedStep {
   args: Record<string, unknown>;
 }
 
+/** اختيار الموديل من اللوحة ← تفضيل حقيقي في سلسلة المزوّدين.
+ *  قبل ده كان preferredModel بيتبعت من اللوحة وبيتدفن هنا بلا أثر (TEST2-4:
+ *  «النمازج عايزة تتظبظ»). «nova-brain (Auto)» يفضل بلا تفضيل (السلسلة
+ *  تقرر)، رقم id مزوّد يشدّ السلسلة ليه، واسم موديل (dolphin-llama3…)
+ *  يعني «جرّبه على Ollama بالاسم» والانهيار الذاتي يكمّل لو رفضته. */
+function interpretModelChoice(sel?: string): { prefer?: string; modelOverride?: string } {
+  const s = String(sel ?? "").trim();
+  if (!s || /auto/i.test(s) || /nova-brain/i.test(s)) return {};
+  const knownProviders = new Set([
+    "groq", "openrouter", "gemini", "mistral", "together", "cerebras",
+    "github-models", "llm7", "ovh-llama", "ovh-ai", "ollama", "openai",
+  ]);
+  const lower = s.toLowerCase();
+  if (knownProviders.has(lower)) return { prefer: lower };
+  if (lower.startsWith("pollinations")) return { prefer: lower };
+  return { prefer: "ollama", modelOverride: s };
+}
+
 export interface AgentRunResult {
   mode: "llm" | "heuristic";
   provider: string;
@@ -464,8 +482,12 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
     tools: () => [{ tool: "mission_status", args: {} }],
   },
   {
-    test: /(?:حالة المنصة|status|صحة|health|إحصائ)/i,
-    tools: () => [{ tool: "platform_status", args: {} }],
+    /* «افحص حالة النظام» كانت بتقع في خانة «فحص» التقنية (knowledge_search
+     * بـ«ا حالة النظام» → صفر نمط — شكلها برنامج عبيط للمالك في TEST2-4).
+     * أي سؤال عن حالة/صحة النظام أو المنصة يروّح للتقرير المقاس: أدوات،
+     * كوربوس، ماكينات، ذاكرة — بصمة تحته. */
+    test: /(?:حالة\s*(?:النظام|المنصة|الجهاز|السيرفر)|افحص\s+(?:حالة|النظام|صحة)|صحة|health|status|إحصائ)/i,
+    tools: () => [{ tool: "platform_self_report", args: {} }],
   },
   {
     test: /(?:كيف أحمي|إصلاح|ترقيع|remediat|fix|حماية)/i,
@@ -620,6 +642,10 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
     for (const step of planned) {
       if (!AGENT_TOOL_NAMES.includes(step.tool)) continue;
       if (steps.some((s) => s.tool === step.tool && JSON.stringify(s.args) === JSON.stringify(step.args))) continue;
+      /* «افحص حالة النظام» كانت بتطلّع platform_self_report وأداة knowledge_search
+       * باستعلام مشوّه («ا حالة النظام» → صفر). أي سؤال طارده حالة المنصة مايضبهوش
+       * على فهرس المعرفة التقنية — التقرير المقاس هو الإجابة، مش بحث نصي فاضي. */
+      if (step.tool === "knowledge_search" && steps.some((s) => s.tool === "platform_self_report")) continue;
       steps.push(step);
     }
     labels.push(INTENT_LABEL(rule.test));
@@ -809,7 +835,7 @@ async function llmPlan(
   history: Array<{ role: "user" | "assistant"; content: string }>,
   selfModel: ReturnType<typeof buildSelfModel>,
   sessionId = ROOT_SESSION_ID,
-  runMeta?: { agentMode?: string; autonomousMode?: boolean; kaliConnected?: boolean },
+  runMeta?: { agentMode?: string; autonomousMode?: boolean; kaliConnected?: boolean; modelChoice?: { prefer?: string; modelOverride?: string } },
 ): Promise<{ thought: string; steps: PlannedStep[]; directAnswer?: string; provider: string; model: string } | null> {
   const messages = [
     {
@@ -827,7 +853,7 @@ async function llmPlan(
   const budgetMs = Math.min(60_000, Math.max(3_000, Number(process.env.NOVA_PLAN_TIMEOUT_MS ?? 15_000) || 15_000));
   const ac = new AbortController();
   const raced = await Promise.race([
-    llmComplete(messages, { temperature: 0.3, maxTokens: 700, timeoutMs: 5_500, tries: 1, signal: ac.signal }),
+    llmComplete(messages, { temperature: 0.3, maxTokens: 700, timeoutMs: 5_500, tries: 1, signal: ac.signal, ...runMeta?.modelChoice }),
     new Promise<null>((resolve) => {
       const timer = setTimeout(() => {
         ac.abort();
@@ -903,6 +929,7 @@ async function voiceAnswer(
   message: string,
   selfModel: SelfModel,
   history: Array<{ role: "user" | "assistant"; content: string }>,
+  modelChoice?: { prefer?: string; modelOverride?: string },
 ): Promise<{ text: string; provider: string } | null> {
   if (process.env.NOVA_VOICE === "0") return null;
   const trimmed = draft.trim();
@@ -927,7 +954,7 @@ async function voiceAnswer(
       ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
       { role: "user" as const, content: `سؤال المستخدم: ${message}\n\n--- المسودة ---\n${trimmed.slice(0, 900)}` },
     ],
-    { temperature: 0.55, maxTokens: 420 },
+    { temperature: 0.55, maxTokens: 420, ...modelChoice },
   );
   const text = res?.text?.trim() ?? "";
   // مسودة أقصر من إنك تتسعادت، أو الموديل رجع نفس السطر حرفيًا → ما نهدرش وقت المستخدم
@@ -1253,6 +1280,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     agentMode: opts.agentMode,
     autonomousMode: opts.autonomousMode,
     kaliConnected: opts.kaliConnected,
+    modelChoice: interpretModelChoice(opts.preferredModel),
   };
 
   if (!opts.forceHeuristic && !capTurn && !measuredDirectTurn) {
@@ -1298,7 +1326,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       reply = greetingAnswer(selfModel, { repeated });
       provider = `${provider}+self-model`;
     } else if (reply) {
-      const voiced = await voiceAnswer(reply, message, selfModel, history);
+      const voiced = await voiceAnswer(reply, message, selfModel, history, runMeta.modelChoice);
       if (voiced) {
         reply = voiced.text;
         provider = `${provider}→${voiced.provider}`;
@@ -1311,7 +1339,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
           ...history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 1200) })),
           { role: "user", content: message },
         ],
-        { temperature: 0.7 },
+        { temperature: 0.7, ...runMeta.modelChoice },
       );
       reply = llm?.text?.trim() || heuristicAnswer(message, [], opts.agentMode);
       if (llm) provider = llm.provider;
@@ -1534,7 +1562,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
         },
         { role: "user", content: `${message}\n\nفسّر النتائج باختصار، اذكر المهم والخطورة، واختم بخطوة تالية واحدة.` },
       ],
-      { temperature: 0.5, maxTokens: 1200 },
+      { temperature: 0.5, maxTokens: 1200, ...runMeta.modelChoice },
     );
     reply = llm?.text?.trim() ?? "";
     if (llm) provider = llm.provider;
