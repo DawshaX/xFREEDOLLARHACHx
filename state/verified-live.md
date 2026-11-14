@@ -3,29 +3,30 @@
 > اتولّد من `scripts/verify-live.mjs` (شغّله `.github/workflows/live-verify.yml`).
 > كل هدف هنا صاحبه منشور صراحة إن فحصه مسموح — الوثيقة في العمود الأخير.
 
-آخر تشغيل: `2026-11-13T20:10:32.574Z` · الحكم: **GREEN** · ✓23 · ✗0 · ؟0 · (محجوب)0
+آخر تشغيل: `2026-11-14T07:11:31.334Z` · الحكم: **AMBER** · ✓23 · ✗0 · ؟1 · (محجوب)0
 الأدوات المرصودة: dnsx, subfinder, httpx, nuclei, katana, nmap, naabu, ffuf · المحرك: `http://127.0.0.1:8090/api` · هدف التمرين: `scanme.nmap.org`
 
 | الطبقة | الفحص | الحالة | التفصيل |
 |---|---|---|---|
 | cli | dns resolution | ✓ pass | 2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present |
-| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · www.vulnweb.com, u003etestasp.vulnweb.com, virus.vulnweb.com |
+| cli | subfinder -d vulnweb.com | ✓ pass | 19 سوبدومين (المطلوب ≥2) · testasp.vulnweb.com, testaspnet.vulnweb.com, testhtml5.vulnweb.com |
 | cli | httpx https://demo.testfire.net/ | ✓ pass | 200 · Altoro Mutual · |
 | cli | katana crawl testphp.vulnweb.com | ✓ pass | 1 رابط متكرول (المطلوب ≥1) |
 | cli | nuclei -u testphp.vulnweb.com (high,critical) | ✓ pass | 4 طلب اتفحص و0 نتيجة high/critical · exit=0 · قوالب: [[34mINF[0m] No new updates found for nuclei templates |
 | cli | nmap scanme.nmap.org:80,22 | ✓ pass | 2 بورت مفتوح · 22/tcp open · 80/tcp open |
-| cli | hub nova.waifly.com | ✓ pass | https://nova.waifly.com/api/health → HTTP 200 · JSON 93B · ops bundle ✓ · 695ms |
+| cli | hub nova.waifly.com | ✓ pass | https://nova.waifly.com/api/health → HTTP 200 · JSON 93B · ops bundle ✓ · 723ms |
 | cli | ffuf fuzz testphp.vulnweb.com | ✓ pass | 61 طلب مُرسل و0 مطابقة (1 سطر مخرجات) |
 | engine | engine reachable | ✓ pass | HTTP 200 |
 | engine | kinds report tool presence | ✓ pass | 27 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap, tools.amass, tools.naabu, tools.ffuf,… |
-| engine | bounty catalog served | ✓ pass | 747 برنامج (511 بمكافأة) · آخر تحديث 0.8 يوم · ops/bounty/programs-catalog.json |
+| engine | bounty catalog served | ✓ pass | 747 برنامج (511 بمكافأة) · آخر تحديث 1.3 يوم · ops/bounty/programs-catalog.json |
 | engine | catalog lookup over HTTP | ✓ pass | aces-dev.wnba.com → hackerone:nba-public (domain · استقبال open) · ونطاق مجهول → match:null |
 | engine | program registered active (demo.testfire.net) | ✓ pass | id=demo.testfire.net · policy=https://demo.testfire.net/ |
-| engine | job created | ✓ pass | job=20261113-f76df9 · 7 مهمة |
-| engine | job executed | ✓ pass | 7/7 done · 0 failed · 11 finding · done |
-| engine | evidence hashed on disk | ✓ pass | 6 ملف في state/jobs/20261113-f76df9/evidence · 5 فيهم بايتات · فاضي: tools.subfinder-e3b0c44298fc.txt (1 — 1 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية) |
-| engine | report is honest about coverage | ✓ pass | 614 بايت · فيه «Coverage gaps»=true · «reportable»=true |
-| engine | findings vault is idempotent | ✓ pass | أول sync: +15/-26 (من مهام 24 · من الكتالوج القديم 11) · تاني: +0/-26 ومحدّثة 35 · متأكَّدة 0 |
+| engine | job created | ✓ pass | job=20261114-d10af3 · 7 مهمة |
+| engine | job executed | ✓ pass | 4/7 done · 3 failed · 4 finding · done |
+| engine | failed tasks | ? review | recon.headers: الطلب لـdemo.testfire.net موصّلش (timeout) — النتيجة «مجهولة» مش «ناقصة» · recon.tls: handshake لـdemo.testfire.net فشل (Error: connect ECONNREFUSED 65.61.137.117:443) — مفيش استنتاج عن الشهادة · tools.nuclei: nuclei اتقطع بعد 540016ms (ميزانية النوع) · 0 نتيجة لحد هنا — «اتقطع» مش «… |
+| engine | evidence hashed on disk | ✓ pass | 4 ملف في state/jobs/20261114-d10af3/evidence · 3 فيهم بايتات · فاضي: tools.subfinder-e3b0c44298fc.txt (1 — 1 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية) |
+| engine | report is honest about coverage | ✓ pass | 708 بايت · فيه «Coverage gaps»=true · «reportable»=true |
+| engine | findings vault is idempotent | ✓ pass | أول sync: +20/-31 (من مهام 22 · من الكتالوج القديم 11) · تاني: +0/-31 ومحدّثة 33 · متأكَّدة 0 |
 | engine | report draft gated on reproduction | ✓ pass | 3 مفتاح: 0 مسودة (200) · 3 مرفوضة (409) · البنية=true · سبب الرفض موجود=true |
 | engine | hunt candidates stay context-only | ✓ pass | 12 مرشّح من 747 برنامج · أعلى استجابة 100% · مفلوت {"notBounty":236,"pausedOrClosed":0,"lowEfficiency":376,"platform":0,"query":0} · CIDR سياق بس=true · ترتيب=true |
 | engine | negative control refuses example.com | ✓ pass | HTTP 403 · برنامج Negative control (must never be scanned actively) محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة. للتفعيل لازم تأكيد إذن مكتوب: program_d… |
