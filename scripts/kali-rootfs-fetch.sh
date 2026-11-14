@@ -61,8 +61,8 @@ cd "$GDIR"
       else echo "   ✗ $p متنزلش (محاولة $try)" >&2; fi
       sleep 5
     done
-    if [ -z "$OK" ]; then echo "✗ الجزء $p فشل 3 محاولات — بصراحة، جرّب تاني"; exit 5; fi
-    echo "   ✓ $p ($(stat -c%s "$TMP_PART") bytes)"
+    if [ -z "$OK" ]; then echo "✗ الجزء $p فشل 3 محاولات — بصراحة، جرّب تاني" >&2; exit 5; fi
+    echo "   ✓ $p ($(stat -c%s "$TMP_PART") bytes)" >&2
     cat "$TMP_PART"
     rm -f "$TMP_PART"
   done
