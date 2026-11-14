@@ -60,7 +60,7 @@ const SERVER_ONLY = new Set([
   "app_google_docs", "app_google_sheets", "app_google_slides",
   "app_notion", "app_linear", "app_supabase", "app_vercel", "app_dropbox",
   /* TEST10: الشفاء الذاتي (بيشغل إصلاحات على السيرفر) وأوامر جهاز كالي */
-  "self_heal", "kali_node_setup", "kali_run", "kali_desktop",
+  "self_heal", "kali_node_setup", "kali_run", "kali_desktop", "kali_provision",
 ]);
 
 export const TOOL_TITLES_AR: Record<string, string> = {
@@ -157,6 +157,7 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   kali_node_setup: "جهاز كالي — التركيب والربط",
   kali_run: "كالي المدمجة — نفّذ أمر حقيقي",
   kali_desktop: "ديسكتوب كالي — شغّل/اطفي/حالة",
+  kali_provision: "تجهيز كالي الذاتي على سيرفر الهَب",
 };
 
 /**
