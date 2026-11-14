@@ -70,6 +70,8 @@ import { kaliStatus, kaliRoot, runKali, startDesktop, stopDesktop, buildDesktopU
 startKaliWatchdog();
 import { ALLOWED_KEYS, hydrateRuntimeConfig, runtimeConfigStatus, setRuntimeConfig } from "../lib/ops/runtime-config";
 import { measureStateFootprint, pruneState, lastPrune } from "../lib/ops/state-prune";
+import { stateBackupInfo, backupStateToGithub, restoreStateFromGithubIfNeeded } from "../lib/ops/state-backup";
+import { quotaFlag, clearQuotaFlag } from "../lib/ops/kali-env";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
 import { maskProgram, maskSession, hasSession } from "../lib/ops/session";
@@ -835,6 +837,25 @@ router.post("/ops/kali/provision", async (req: Request, res: Response) => {
   // fire-and-forget: الحالة الحية على GET /ops/kali/provision/status — الPOST مايتعلقش دقايق
   provisionKali().catch(() => {});
   res.json({ ok: true, detail: "بدأ التجهيز الذاتي — الحالة الحية على /api/ops/kali/provision/status", state: provisionState() });
+});
+/* ── الحالة السحابية: «المساحة تتنقل على الجيت هوب وقواعد البيانات» — مقاس ── */
+router.get("/ops/state-backup", (_req: Request, res: Response) => {
+  res.json({ ok: true, backup: stateBackupInfo(), footprint: measureStateFootprint(), quotaFlag: quotaFlag(), lastPrune: lastPrune() });
+});
+router.post("/ops/state-backup/backup", async (_req: Request, res: Response) => {
+  const r = await backupStateToGithub();
+  broadcastEvent("nova-ops", { type: "state-backup", ok: r.ok, detail: r.detail });
+  res.json({ ...r, ok: r.ok });
+});
+router.post("/ops/state-backup/restore", async (_req: Request, res: Response) => {
+  const r = await restoreStateFromGithubIfNeeded({ force: true });
+  broadcastEvent("nova-ops", { type: "state-restore", restored: r.restored, detail: r.detail });
+  res.json({ ok: r.restored, ...r });
+});
+router.post("/ops/state-backup/clean", (_req: Request, res: Response) => {
+  const report = pruneState();
+  broadcastEvent("nova-ops", { type: "state-clean", freedBytes: report.freedBytes, removed: report.removed });
+  res.json(report);
 });
 
 router.get("/ops/kali/provision/status", (_req: Request, res: Response) => {

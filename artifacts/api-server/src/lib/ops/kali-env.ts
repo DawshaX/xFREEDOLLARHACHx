@@ -62,6 +62,45 @@ export function kaliDestDir(): string {
   return process.env.NOVA_KALI_ROOT ?? path.join(os.homedir(), "kali-rootfs/rootfs");
 }
 
+/** كل أماكن rootfs كالي المحتملة — للحالة والفضي (بقايا التجهيز الناقص أكلت الحصة على waifly). */
+export function kaliCandidateRoots(): string[] { return repoRoots(); }
+
+/** حجم شجرة فعلي على الدسك (walk حقيقي — مش تقدير). */
+export function treeBytes(dir: string): number {
+  let bytes = 0;
+  const stack = [dir];
+  while (stack.length) {
+    const d = stack.pop()!;
+    let ents: fs.Dirent[] = [];
+    try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
+    for (const e of ents) {
+      const p = path.join(d, e.name);
+      try {
+        if (e.isDirectory()) stack.push(p);
+        else if (e.isFile()) bytes += fs.statSync(p).size;
+      } catch { /* اتنقل وهو بيقيس */ }
+    }
+  }
+  return bytes;
+}
+
+/* ── علم الحصة: statfs بيكذب على Pterodactyl (بيشوف دسك الفيزياء مش حصة
+   الكونتينر 3.24GiB) — أول ما الكتابة تفشل بـENOSPC/EDQUOT بيتعلم وبيرفض
+   كل التجهيزات الجاية فورًا بدل ما يغرق السيرفر تاني. */
+const quotaFlagPath = () => path.join(process.cwd(), "state", "kali-quota-flag.json");
+export function quotaFlag(): { at: string; partsDone: number; partsTotal: number; reason: string } | null {
+  try { return JSON.parse(fs.readFileSync(quotaFlagPath(), "utf8")); } catch { return null; }
+}
+function writeQuotaFlag(partsDone: number, partsTotal: number, reason: string): void {
+  try {
+    fs.mkdirSync(path.dirname(quotaFlagPath()), { recursive: true });
+    fs.writeFileSync(quotaFlagPath(), JSON.stringify({ at: new Date().toISOString(), partsDone, partsTotal, reason }, null, 2));
+  } catch { /* مش شرط حياة */ }
+}
+export function clearQuotaFlag(): boolean {
+  try { fs.unlinkSync(quotaFlagPath()); return true; } catch { return false; }
+}
+
 function repoRoots(): string[] {
   const cwd = process.cwd();
   const up2 = path.resolve(cwd, "../..");
@@ -349,7 +388,7 @@ export function startKaliWatchdog(intervalMs = 90_000): void {
 /* ═══════════ التجهيز الذاتي — الهَب يبني بيئته بنفسه ═══════════ */
 
 export interface ProvisionState {
-  resources?: { ramTotalGB: number; ramFreeGB: number; cpuCores: number; diskFreeGB: number | null };
+  resources?: { ramTotalGB: number; ramFreeGB: number; cpuCores: number; diskFreeGB: number | null; usedGB?: number; quotaGB?: number | null; quotaFreeGB?: number | null };
   running: boolean;
   phase: string;
   partsDone: number;
@@ -511,6 +550,20 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
     if (free !== null && free < 15 * 2 ** 30) {
       throw new Error(`المساحة مش كفاية: ${Math.round(free / 2 ** 30)}GB فاضية والتجهيز محتاج ~15GB. حرّر مساحة أو وسّع الدسك وجرّب تاني.`);
     }
+    // علم الحصة من فشل سابق — رفض فوري بصراحة بدل ما يغرق السيرفر تاني
+    const qflag = quotaFlag();
+    if (qflag) {
+      throw new Error(`حصة الدسك اتكشفت فعليًا (${qflag.at}): التجهيز وقف عند ${qflag.partsDone}/${qflag.partsTotal} أجزاء (${qflag.reason}) — statfs بيشوف دسك الفيزياء بس، الحصة الحقيقية للكونتينر أقل من الـ~15GB المطلوبة. حرر مساحة أو ارفع حصة السيرفر، وبعدها kali_provision action:clear_quota`);
+    }
+    // حصة معلنة (NOVA_DISK_QUOTA_GB) — حساب فعلي: الحصة ناقص استخدامنا الحالي
+    const usedGB = Math.round(treeBytes(path.dirname(dest)) / 2 ** 30);
+    const quotaGB = Number(process.env.NOVA_DISK_QUOTA_GB || 0);
+    const quotaFreeGB = quotaGB > 0 ? Math.round((quotaGB * 2 ** 30 - treeBytes(path.dirname(dest))) / 2 ** 30) : null;
+    if (quotaFreeGB !== null && quotaFreeGB < 15) {
+      provision.resources = { ...provision.resources, usedGB, quotaGB, quotaFreeGB };
+      throw new Error(`حصة الكونتينر ${quotaGB}GB والاستخدام الحالي ${usedGB}GB — الحصة مش هتحمل التبيئة (~15GB) حتى لو statfs بيقول فاضي (${Math.round(free === null ? 0 : free / 2 ** 30)}GB). التبيئة الكاملة متخزنة على فرع kali-rootfs سحابي، والتشغيل المحلي محتاج سيرفر بحصة أكبر.`);
+    }
+    provision.resources = { ...provision.resources, usedGB, quotaGB: quotaGB || null, quotaFreeGB };
 
     /* المانيفست + SHA256SUMS */
     const git = await gitPrepare();
@@ -623,6 +676,12 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
       }
       provision.partsDone += 1;
       provision.bytesDone += buf.length;
+      // أرضية أمان وسط التشغيل — ماتصفّرش الدسك أبدًا (الوضع المستقل لا يتصفّر)
+      const freeNow = diskFreeBytes(dest);
+      if (freeNow !== null && freeNow < 300 * 2 ** 20) {
+        writeQuotaFlag(provision.partsDone, provision.partsTotal, `أرضية الأمان: فاضي ${Math.round(freeNow / 2 ** 20)}MB بس`);
+        throw new Error(`وقّفت بدري: المساحة الفاضية نزلت ${Math.round(freeNow / 2 ** 20)}MB عند ${provision.partsDone}/${provision.partsTotal} أجزاء — السيرفر مستقل ماحتاجش يتصفّر. البقايا هتتفضى والفشل متسجل`);
+      }
       if (provision.partsDone % 10 === 0 || provision.partsDone === parts.length) {
         plog(`${provision.partsDone}/${parts.length} أجزاء ✓ · ${provision.entries} ملفات`);
         if (provision.partsDone % 20 === 0) {
@@ -680,11 +739,19 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
     createPushNotification({ kind: "success", title: "🐉 بيئة كالي جاهزة على الهَب", body: `${st.packages} حزمة كاملة — افتح تبويب بيئة كالي وشغّل الديسكتوب`, link: "/kali-env" });
     return { ok: true, detail: `اتجهزت في ${mins} دقيقة — ${st.packages} حزمة كاملة` };
   } catch (e) {
-    const msg = (e as Error).message.slice(0, 300);
+    const raw = (e as Error).message;
+    const msg = raw.slice(0, 300);
     provision.error = msg;
     provision.phase = "failed";
     provision.finishedAt = new Date().toISOString();
     plog(`فشل: ${msg}`);
+    // فشل مساحة فعلي (ENOSPC/EDQUOT) — سجّل علم الحصة وفضّي البقايا عشان السيرفر يتنفس.
+    // الرفض المتعمدة (العلم/الحصة) بتحدث قبل تحميل أي جزء — مش فشل مساحة — ماتسجلش نفسها
+    if (provision.partsDone > 0 && /ENOSPC|EDQUOT|No space|space left/i.test(raw)) {
+      writeQuotaFlag(provision.partsDone, provision.partsTotal, msg.slice(0, 160));
+      try { fs.rmSync(dest, { recursive: true, force: true }); plog("بقايا التجهيز الناقص اتحذفت — المساحة اتحررت"); } catch { /* */ }
+      createPushNotification({ kind: "error", title: "⚠️ حصة الدسك خلصت وسط تجهيز كالي", body: `وقّف عند ${provision.partsDone}/${provision.partsTotal} أجزاء — البقايا اتفضّيت تلقائيًا والتجهيزات الجاية هترفض فورًا بالعلم`, link: "/kali-env" });
+    }
     createPushNotification({ kind: "error", title: "⚠️ تجهيز كالي فشل", body: msg, link: "/kali-env" });
     return { ok: false, detail: msg };
   } finally {

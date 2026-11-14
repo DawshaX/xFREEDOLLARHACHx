@@ -19,6 +19,7 @@ const JOBS: CronJob[] = [
   { id: "self_heal",       name: "Self-Heal Probe",                cronExpr: "*/10 * * * *", enabled: true, runCount: 0, errorCount: 0 },
   { id: "tg_pulse",        name: "Telegram Heartbeat",             cronExpr: "0 * * * *",    enabled: false, runCount: 0, errorCount: 0 },
   { id: "sys_watchdog",    name: "System Watchdog",                cronExpr: "*/15 * * * *", enabled: true, runCount: 0, errorCount: 0 },
+  { id: "state_sync",      name: "State Sync",                     cronExpr: "0 */6 * * *",  enabled: true, runCount: 0, errorCount: 0 },
   { id: "nova_learn",      name: "Nova Auto-Learner",              cronExpr: "0 */6 * * *",  enabled: true, runCount: 0, errorCount: 0 },
 ];
 
@@ -98,8 +99,29 @@ async function runJob(id: string): Promise<string> {
       const execP = promisify(exec);
       try {
         const { stdout } = await execP("df -h / | tail -1 | awk '{print $5}' && free -m | awk 'NR==2{printf \"%s/%s MB\", $3, $2}'", { timeout: 5000 });
+        // مش بس قراية — تنظيف فعلي بالسياسة المعلنة (بقايا كالي الناقصة/اللوجات/النسخ القديمة)
+        try {
+          const { pruneState } = await import("./ops/state-prune");
+          const r = pruneState();
+          if (r.removed > 0) {
+            const freedMB = Math.round(r.freedBytes / 1048576);
+            const { createPushNotification } = await import("./push-hub");
+            createPushNotification({ kind: "ops", title: "🧹 حارس المساحة حرر دسك", body: `${freedMB}MB اتفرجت (${r.removed} عنصر) — السياسة المعلنة: بقايا كالي الناقصة، اللوجات فوق 5MB، النسخ القديمة`, link: "/kali-env" });
+            return `disk/mem: ${stdout.trim()} · prune: freed ${freedMB}MB (${r.removed})`;
+          }
+        } catch { /* state-prune مش جوه أول حزمة */ }
         return `disk/mem: ${stdout.trim()}`;
       } catch { return "watchdog: stat unavailable"; }
+    }
+    case "state_sync": {
+      // «المساحة تتنقل على الجيت هوب وقواعد البيانات والبرنامج والأجينت يقراها» — مقاس
+      try {
+        const sb = await import("./ops/state-backup");
+        const r = await sb.backupStateToGithub();
+        return `state_sync: ${r.detail}`;
+      } catch (err) {
+        return `state_sync: فشل — ${String(err).slice(0, 120)}`;
+      }
     }
     case "nova_learn": {
       const n = consolidateMemoryLite();

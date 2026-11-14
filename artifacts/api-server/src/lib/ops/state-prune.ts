@@ -8,10 +8,12 @@
  *  · أي ملف غير معروف = ماتمسّوش. بس اللي تحت jobs/ القديم هو اللي بيتمشى.
  *  · التقارير للسطح: bytes وعدّادات و«آخر تنظيف» — مش «مسحنا» كلامًا.
  */
-import { readdirSync, statSync, unlinkSync, mkdirSync, readFileSync, writeFileSync, renameSync, rmSync } from "node:fs";
+import { readdirSync, statSync, unlinkSync, mkdirSync, readFileSync, writeFileSync, renameSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { kaliCandidateRoots, provisionState } from "./kali-env";
 
-const stateRoot = () => process.env.NOVA_STATE_ROOT || "/home/container";
+const stateRoot = () => process.env.NOVA_STATE_ROOT
+  || (existsSync("/home/container") ? "/home/container" : process.cwd());
 const jobsDir = () => join(stateRoot(), "state", "jobs");
 const recordPath = () => join(stateRoot(), "state", "state-prune.json");
 const keepJobs = () => Number(process.env.NOVA_STATE_KEEP_JOBS || 400);
@@ -173,6 +175,26 @@ export function pruneState(now = Date.now()): PruneReport {
       }
     } catch { /* مفيش */ }
   }
+
+  // ── طبقة 6: بقايا كالي الناقصة — partial rootfs أكل الحصة على waifly
+  // (2026-11-15: وقف عند 10/64 أجزاء والسيرفر وقف كله). القاعدة:
+  // كالي **الناقصة** فقط (packages<400) ومافيش تجهيز شغال حالًا —
+  // الكاملة (packages≥400) ماتمسّش أبدًا.
+  try {
+    if (!provisionState().running) {
+      for (const root of kaliCandidateRoots()) {
+        try {
+          let pkgs = 0;
+          try { pkgs = readFileSync(join(root, "var/lib/dpkg/status"), "utf8").split("\n").filter((l) => l.startsWith("Package:")).length; } catch { /* ناقصة */ }
+          if (pkgs >= 400) continue;
+          const sz = dirBytes(root).bytes;
+          if (sz <= 0) continue;
+          rmSync(root, { recursive: true, force: true });
+          removed += 1; freedBytes += sz;
+        } catch { /* اتقفل وهو بيتشال */ }
+      }
+    }
+  } catch { /* kali-env مش جوه أول حزمة — مش شرط حياة */ }
 
   // ── طبقة 5: العدة الرشيقة — القرص 1.5GB امتلأ فوق الحصة (1.61GiB) والديمون
   // رفض التشغيل (2026-11-10). vendor/bin كان 628MB. الافتراضي امسح الستة التقيلين

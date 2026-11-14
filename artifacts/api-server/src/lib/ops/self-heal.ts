@@ -66,6 +66,22 @@ export async function runSelfHeal(): Promise<HealReport> {
     steps.push({ layer: "الجلسات المستمرة", ok: false, fixed: false, measured: "فشل init", detail: String(err).slice(0, 160) });
   }
 
+  /* ②½ الحالة السحابية — «المساحة تتنقل على الجيت هوب» بمقاييس حقيقية */
+  try {
+    const sb = await import("./state-backup");
+    const info = sb.stateBackupInfo();
+    steps.push({
+      layer: "الحالة السحابية (GitHub)",
+      ok: true,
+      fixed: false,
+      measured: info.enabled
+        ? `مفعّلة ✓ · آخر نسخة ${info.lastBackupAt ?? "لسه"} · ${info.lastBackupFiles ?? "?"} ملفات · آخر استرجاع ${info.lastRestoreAt ?? "لسه"}`
+        : "محتاجة GITHUB_TOKEN في .env — النسخ متعطّل بصراحة (الذاكرة على Supabase شغالة)",
+    });
+  } catch (err) {
+    steps.push({ layer: "الحالة السحابية (GitHub)", ok: false, fixed: false, measured: "فشل القراية", detail: String(err).slice(0, 160) });
+  }
+
   /* ③ الكوربوس — لو ناقص أو غايب بيتوفر من السلسلة (شفاء فعلي) */
   try {
     const before = corpusStatus();
