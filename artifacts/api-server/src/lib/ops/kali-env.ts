@@ -349,6 +349,7 @@ export function startKaliWatchdog(intervalMs = 90_000): void {
 /* ═══════════ التجهيز الذاتي — الهَب يبني بيئته بنفسه ═══════════ */
 
 export interface ProvisionState {
+  resources?: { ramTotalGB: number; ramFreeGB: number; cpuCores: number; diskFreeGB: number | null };
   running: boolean;
   phase: string;
   partsDone: number;
@@ -500,6 +501,12 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
 
     const free = diskFreeBytes(path.dirname(dest));
     plog(`المساحة الفاضية: ${free ? Math.round(free / 2 ** 30) + "GB" : "مش معروفة (statfs)"}`);
+    // ضمان الموارد — مقاس ومعلن بصراحة (مساحة/RAM/CPU، والرسوميات برمجية جوه البيئة)
+    const cpuCores = os.cpus().length;
+    const ramTotalGB = Math.round(os.totalmem() / 2 ** 30);
+    const ramFreeGB = Math.round(os.freemem() / 2 ** 30);
+    provision.resources = { ramTotalGB, ramFreeGB, cpuCores, diskFreeGB: free !== null ? Math.round(free / 2 ** 30) : null };
+    plog(`الموارد المقاسة: RAM ${ramTotalGB}GB (فاضي ${ramFreeGB}GB) · CPU ${cpuCores} نواة · الرسوميات برمجية جوه البيئة (Xvfb/llvmpipe — مش محتاج GPU)`);
     // قيس: الاستخراج ~14GB — والنقل raw/api بلا أي كاش دسك (القياس المقاس)
     if (free !== null && free < 15 * 2 ** 30) {
       throw new Error(`المساحة مش كفاية: ${Math.round(free / 2 ** 30)}GB فاضية والتجهيز محتاج ~15GB. حرّر مساحة أو وسّع الدسك وجرّب تاني.`);
