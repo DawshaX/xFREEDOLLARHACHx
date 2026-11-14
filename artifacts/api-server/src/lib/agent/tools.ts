@@ -37,6 +37,8 @@ import {
   execOnLocalAgent,
 } from "../../routes/local-agent";
 import { saveMemory, searchMemory, getAllMemories } from "../../routes/memory";
+import { INTEGRATION_APPS, integrationsStatus, runIntegration } from "../ops/integrations";
+import { createPushNotification } from "../push-hub";
 import {
   remember,
   recall,
@@ -933,6 +935,34 @@ export const AGENT_TOOLS: AgentTool[] = [
     risk: "safe",
     input_schema: { type: "object", properties: { limit: { type: "number" } } },
   },
+  /* ── TEST9: التطبيقات المتصلة — اللايف أجينت بيدّه على كل التطبيقات ───────── */
+  {
+    name: "integrations_status",
+    title: "حالة التطبيقات المتصلة",
+    description: "يجيب حالة الربط الحقيقية لكل التطبيقات (GitHub/Gmail/Google×5/Notion/Linear/Supabase/Vercel/Dropbox): متصل من فين، آخر اختبار، والعمليات المتاحة.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
+  ...INTEGRATION_APPS.flatMap((app) => [
+    ({
+      name: `app_${app.id}`,
+      title: `${app.nameAr} (${app.name})`,
+      description: `تشغيل عمليات ${app.nameAr} الحقيقية عبر API الرسمي. العمليات: ${app.ops.map((o) => o.id).join(" · ")}. لو مش متصل هيرجع رسالة تشرح طلب الربط بالعربي.`,
+      category: "platform",
+      risk: app.id === "supabase" ? ("sensitive" as const) : ("active" as const),
+      input_schema: {
+        type: "object",
+        properties: {
+          op: { type: "string", enum: app.ops.map((o) => o.id), description: "العملية المطلوبة" },
+          ...Object.fromEntries(
+            app.ops.flatMap((o) => (o.args ?? []).map((a) => [a.replace(/\?$/, ""), { type: "string", description: `وسيط ${a} لعملية ${o.id}` }])),
+          ),
+        },
+        required: ["op"],
+      },
+    }) as AgentTool,
+  ]),
 ];
 
 export const AGENT_TOOL_NAMES = AGENT_TOOLS.map((t) => t.name);
@@ -958,6 +988,25 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
   });
 
   try {
+    /* ── TEST9: أدوات التطبيقات المتصلة (app_gmail/app_notion/…) — قبل الswitch
+     * لأن الأسماء ديناميكية من INTEGRATION_APPS. كل تشغيل بيرفع إشعارًا حيًا
+     * بالـlink اللي يودّي المالك لمكان التطبيق في اللوحة. ── */
+    if (name.startsWith("app_")) {
+      const appId = name.slice(4);
+      const op = String(rawArgs.op ?? "");
+      const { op: _op, ...rest } = rawArgs;
+      const r = await runIntegration(appId, op, rest);
+      const app = INTEGRATION_APPS.find((a) => a.id === appId);
+      try {
+        createPushNotification({
+          kind: r.ok ? "success" : "error",
+          title: `الأجينت → ${app?.nameAr ?? appId}`,
+          body: r.saysAr,
+          link: r.link,
+        });
+      } catch { /* الإشعار مايوقفش الأداة */ }
+      return done(r.ok, r.saysAr, r.ok ? r.data : { error: r.saysAr });
+    }
     switch (name) {
       case "recon_target": {
         const host = normaliseHost(rawArgs.target);
@@ -2057,6 +2106,15 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         return done(r.ok, r.summary, r.data);
       }
 
+      case "integrations_status": {
+        const st = integrationsStatus();
+        const connected = st.filter((s) => s.connected);
+        return done(
+          true,
+          `التطبيقات المتصلة: ${connected.length}/${st.length} — ${connected.map((s) => s.icon + s.nameAr).join(" · ") || "ولا واحد لسه"} — العمليات متاحة عبر أدوات app_*`,
+          st,
+        );
+      }
       default:
         return done(false, `أداة غير معروفة: ${name}`, { available: AGENT_TOOL_NAMES });
     }

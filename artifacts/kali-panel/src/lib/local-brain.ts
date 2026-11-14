@@ -51,7 +51,15 @@ const LOCAL_TOOLS = new Set([
   "nvd_search",
 ]);
 /** Tools that exist but need the server (reported honestly, never faked). */
-const SERVER_ONLY = new Set(["recon_target", "tls_audit", "http_headers_audit", "port_scan", "fleet_list", "fleet_profile", "fleet_exec", "device_control_map", "report_generate"]);
+const SERVER_ONLY = new Set([
+  "recon_target", "tls_audit", "http_headers_audit", "port_scan",
+  "fleet_list", "fleet_profile", "fleet_exec", "device_control_map", "report_generate",
+  /* TEST9: أدوات التطبيقات المتصلة — توكناتها على السيرفر بس، الساكن مايقدرش يمثّلها */
+  "integrations_status",
+  "app_github", "app_gmail", "app_google_calendar", "app_google_drive",
+  "app_google_docs", "app_google_sheets", "app_google_slides",
+  "app_notion", "app_linear", "app_supabase", "app_vercel", "app_dropbox",
+]);
 
 export const TOOL_TITLES_AR: Record<string, string> = {
   memory_search: "بحث في الذاكرة",
@@ -128,6 +136,20 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   browser_open: "فتح رابط في المتصفح",
   ui_action: "تنفيذ إجراء في اللوحة",
   memory_recall: "استرجاع آخر الذاكرة",
+  /* TEST9 — التطبيقات المتصلة باللايف أجينت */
+  integrations_status: "حالة التطبيقات المتصلة",
+  app_github: "جيت هاب — مستودعات وIssues",
+  app_gmail: "جيميل — قراءة وإرسال",
+  app_google_calendar: "تقويم جوجل — مواعيد",
+  app_google_drive: "جوجل درايف — ملفات",
+  app_google_docs: "جوجل دوكس — مستندات",
+  app_google_sheets: "جوجل شيتس — جداول",
+  app_google_slides: "جوجل سلايدز — عروض",
+  app_notion: "نوشن — صفحات وقواعد",
+  app_linear: "لينير — تاسكات",
+  app_supabase: "سوپا بيس — قاعدة البيانات",
+  app_vercel: "ڤرسل — النشر",
+  app_dropbox: "دروب بوكس — ملفات",
 };
 
 /**

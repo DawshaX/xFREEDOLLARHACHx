@@ -18,6 +18,8 @@ export interface PushNotification {
   kind: string;
   title: string;
   body: string;
+  /** TEST9: مسار اللوحة اللي الضغط على الإشعار يودّي له (deep link). */
+  link?: string;
   read: boolean;
   createdAt: string;
 }
@@ -69,12 +71,15 @@ export function listPushNotifications(): PushNotification[] {
 }
 
 /** إنشاء إشعار حقيقي: بيتخزن دائمًا + بيتبث لحظيًا لكل مراكز الإشعارات المفتوحة. */
-export function createPushNotification(input: { kind?: string; title: string; body?: string }): PushNotification {
+export function createPushNotification(input: { kind?: string; title: string; body?: string; link?: string }): PushNotification {
   const n: PushNotification = {
     id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     kind: ["info", "success", "error", "warning"].includes(String(input.kind)) ? String(input.kind) : "info",
     title: String(input.title).slice(0, 140),
     body: String(input.body ?? "").slice(0, 600),
+    // TEST9 «الإشعار يودّيني للمكان»: الروابط دي اللي بتحوّل الإشعار من كلام
+    // لتنقّل حقيقي — NotificationCenter بيقرأها ويمشي بها.
+    ...(input.link ? { link: String(input.link).slice(0, 120) } : {}),
     read: false,
     createdAt: new Date().toISOString(),
   };

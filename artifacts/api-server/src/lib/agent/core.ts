@@ -349,6 +349,58 @@ function buildContextBlock(
 /* ── heuristic planner (works with zero models) ──────────────────────────── */
 
 const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
+  /* ── TEST9: التطبيقات المتصلة — الأجينت يفهم «ابعت/دوّن/اكتب في» ويشغّل
+   * التطبيق الحقيقي بأدوات app_* — حتى بلا LLM (المخطّط الاستدلالي). ── */
+  {
+    test: /(?:جيميل|gmail|الرسايل|الرسائل|ايميلات)/i,
+    tools: () => [{ tool: "app_gmail", args: { op: "list_messages", max: "5" } }],
+  },
+  {
+    test: /(?:نوشن|notion)/i,
+    tools: (msg) => {
+      const q = msg.replace(/(?:نوشن|notion)/gi, "").trim();
+      return [{ tool: "app_notion", args: { op: "search", query: q.slice(0, 60) || "" } }];
+    },
+  },
+  {
+    test: /(?:لينير|linear|تاسكات لينير)/i,
+    tools: () => [{ tool: "app_linear", args: { op: "list_issues", limit: "5" } }],
+  },
+  {
+    test: /(?:التقويم|مواعيدي|calendar|اجتماع)/i,
+    tools: () => [{ tool: "app_google_calendar", args: { op: "list_events", max: "5" } }],
+  },
+  {
+    test: /(?:درايف|drive|ملفاتي على جوجل)/i,
+    tools: () => [{ tool: "app_google_drive", args: { op: "list_files", max: "5" } }],
+  },
+  {
+    test: /(?:شيتس|sheets|الجدول)/i,
+    tools: () => [{ tool: "app_google_sheets", args: { op: "read_range", spreadsheetId: "", range: "A1:D5" } }],
+  },
+  {
+    test: /(?:سوپا|سوبا|supabase)/i,
+    tools: (msg) => {
+      const t = (msg.match(/(?:جدول|table)\s+([\w_]+)/i) ?? ["", ""])[1];
+      return t ? [{ tool: "app_supabase", args: { op: "select", table: t, limit: "5" } }] : [{ tool: "integrations_status", args: {} }];
+    },
+  },
+  {
+    test: /(?:ڤرسل|فيرسيل|vercel|النشرات|ديبلوي)/i,
+    tools: () => [{ tool: "app_vercel", args: { op: "list_deployments", limit: "5" } }],
+  },
+  {
+    test: /(?:دروب بوكس|دروببوكس|dropbox)/i,
+    tools: () => [{ tool: "app_dropbox", args: { op: "list_folder", path: "" } }],
+  },
+  {
+    test: /(?:مستودعاتي|ريبو|repos?|جيت هاب)/i,
+    tools: () => [{ tool: "app_github", args: { op: "list_repos" } }],
+  },
+  {
+    test: /(?:التطبيقات المتصلة|ربط التطبيقات|integrations)/i,
+    tools: () => [{ tool: "integrations_status", args: {} }],
+  },
   {
     test: /(?:نطاقات فرعية|subdomains?|subdomain)/i,
     tools: (msg) => {
