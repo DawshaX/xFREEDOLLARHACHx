@@ -382,21 +382,37 @@ function rawUrl(branch: string, file: string): string {
   return `https://raw.githubusercontent.com/${REPO_SLUG}/${branch}/${file}`;
 }
 
-/** stream جزء من الفرع: raw HTTP أولًا (الإنتاج)، fallback git (السانبوكس/الdev). */
+/** جزء من الفرع بطبقات نقل: raw (الإنتاج) → api.github contents raw (بلا كاش
+ * دسك — الحل المقاس لضغط المساحة) → git cat-file (آخر fallback — بيخزن blobs
+ * فبيتفحص المساحة وسط التشغيل بصدق). */
 async function fetchPartBuffer(branch: string, ref: string | null, gdir: string | null, file: string): Promise<Buffer> {
-  // 1) raw HTTP — أسرع وأبسط على الإنتاج
+  // 1) raw.githubusercontent — أسرع وأبسط على الإنتاج (نت مفتوح)
   try {
-    const r = await fetch(rawUrl(branch, file), { signal: AbortSignal.timeout(120_000) });
+    const r = await fetch(rawUrl(branch, file), { headers: { Connection: "close" }, signal: AbortSignal.timeout(120_000) });
     if (r.ok) {
-      const ab = await r.arrayBuffer();
       provision.transport = provision.transport ?? "raw";
-      return Buffer.from(ab);
+      return Buffer.from(await r.arrayBuffer());
     }
-    plog(`raw ${file}: HTTP ${r.status} — جرب git`);
+    plog(`raw ${file}: HTTP ${r.status} — جرب api`);
   } catch (e) {
-    plog(`raw ${file}: ${(e as Error).message.slice(0, 80)} — جرب git`);
+    plog(`raw ${file}: ${(e as Error).message.slice(0, 60)} — جرب api`);
   }
-  // 2) git cat-file (بيشتغل أينما كان git + github.com مسموح)
+  // 2) api.github.com contents (raw accept) — بلا أي كاش على الدسك
+  const ghTok = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? process.env.NOVA_GITHUB_TOKEN ?? "";
+  try {
+    const r = await fetch(`https://api.github.com/repos/${REPO_SLUG}/contents/${file}?ref=${branch}`, {
+      headers: { Accept: "application/vnd.github.raw", Connection: "close", ...(ghTok ? { Authorization: `Bearer ${ghTok}` } : {}) },
+      signal: AbortSignal.timeout(180_000),
+    });
+    if (r.ok) {
+      provision.transport = provision.transport ?? "api";
+      return Buffer.from(await r.arrayBuffer());
+    }
+    plog(`api ${file}: HTTP ${r.status} — جرب git`);
+  } catch (e) {
+    plog(`api ${file}: ${(e as Error).message.slice(0, 60)} — جرب git`);
+  }
+  // 3) git cat-file — آخر fallback (بيكش blobs محليًا ⇒ فحص مساحة وسط التشغيل)
   if (!gdir) throw new Error(`مافيش transport متاح لـ${file}`);
   const out = await new Promise<Buffer>((resolve, reject) => {
     const c = spawn("git", ["-C", gdir, "cat-file", "blob", `${ref ?? "FETCH_HEAD"}:${file}`], { timeout: 180_000 });
@@ -406,6 +422,10 @@ async function fetchPartBuffer(branch: string, ref: string | null, gdir: string 
     c.on("close", (code) => code === 0 ? resolve(Buffer.concat(chunks)) : reject(new Error(`git cat-file ${file}: exit ${code}`)));
   });
   provision.transport = "git";
+  const free = diskFreeBytes(gdir);
+  if (free !== null && free < 2 * 2 ** 30) {
+    throw new Error(`مساحة النقل (git) بقت ${Math.round(free / 2 ** 30)}GB بس — النقل عبر git بيخزن blobs؛ حرّر مساحة أو فعّل raw/api`);
+  }
   return out;
 }
 
@@ -480,8 +500,9 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
 
     const free = diskFreeBytes(path.dirname(dest));
     plog(`المساحة الفاضية: ${free ? Math.round(free / 2 ** 30) + "GB" : "مش معروفة (statfs)"}`);
-    if (free !== null && free < 17 * 2 ** 30) {
-      throw new Error(`المساحة مش كفاية: ${Math.round(free / 2 ** 30)}GB فاضية والاستخراج محتاج ~17GB. حرّر مساحة أو وسّع الدسك وجرّب تاني.`);
+    // قيس: الاستخراج ~14GB — والنقل raw/api بلا أي كاش دسك (القياس المقاس)
+    if (free !== null && free < 15 * 2 ** 30) {
+      throw new Error(`المساحة مش كفاية: ${Math.round(free / 2 ** 30)}GB فاضية والتجهيز محتاج ~15GB. حرّر مساحة أو وسّع الدسك وجرّب تاني.`);
     }
 
     /* المانيفست + SHA256SUMS */
@@ -495,28 +516,83 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
     plog(`الأجزاء: ${parts.length} · ref ${ref ?? "raw"}`);
     plog(manifest.split("\n").slice(0, 4).join(" · "));
 
-    /* خط الأنابيب: gunzip → tar (مرة واحدة على طول الأجزاء) */
+    /* proot-static بدري — 1.7MB بس، قبل الأجزاء الثقيلة عشان مايتأثرش بضغط الدسك */
+    provision.phase = "proot";
+    let staticRef: string | null = null;
+    if (git?.gdir) {
+      const sf = await new Promise<{ code: number | null; ref: string }>((resolve) => {
+        const c = spawn("git", ["-C", git.gdir, "-c", "protocol.version=2", "fetch", "-q", "--depth=1", "--filter=blob:none", "origin", STATIC_BRANCH], { timeout: 300_000 });
+        c.on("error", () => resolve({ code: -1, ref: "" }));
+        c.on("close", async (code) => {
+          if (code !== 0) { resolve({ code, ref: "" }); return; }
+          const r2 = spawn("git", ["-C", git.gdir, "rev-parse", "FETCH_HEAD"], { timeout: 20_000 });
+          let out = "";
+          r2.stdout.on("data", (d: Buffer) => { out += d.toString(); });
+          r2.on("close", () => resolve({ code: 0, ref: out.trim().split(/\s/)[0] }));
+          r2.on("error", () => resolve({ code: -1, ref: "" }));
+        });
+      });
+      staticRef = sf.code === 0 && sf.ref ? sf.ref : null;
+      plog(`kali-static: fetch ${staticRef ? "✓ " + staticRef.slice(0, 10) : "✗"}`);
+    }
+    const prootTmp = `/tmp/nova-proot-static.${Date.now()}`;
+    let prootBuf: Buffer | null = null;
+    try {
+      prootBuf = await fetchPartBuffer(STATIC_BRANCH, staticRef, git?.gdir ?? null, "proot-static");
+      fs.writeFileSync(prootTmp, prootBuf);
+      plog(`proot-static اتسحب مبكرًا ✓ (${prootBuf.length} bytes)`);
+    } catch (e) {
+      plog(`proot-static فشل مبكرًا: ${(e as Error).message.slice(0, 100)}`);
+    }
+
+    /* الاستخراج — tar النظام أولًا (باتل-تيستد على الملايين)، fallback node-tar */
     fs.rmSync(dest, { recursive: true, force: true });
     fs.mkdirSync(dest, { recursive: true });
-    const gunzip = zlib.createGunzip();
-    const extractor = tar.x({ cwd: dest, strict: false });
-    extractor.on("entry", () => { provision.entries += 1; });
-    const extractDone = new Promise<void>((resolve, reject) => {
-      extractor.on("finish", resolve);
-      extractor.on("error", reject);
-      gunzip.on("error", reject);
-    });
-    gunzip.pipe(extractor);
+    provision.phase = "parts";
+    plog(`الأجزاء: ${parts.length} · tar النظام ${fs.existsSync("/usr/bin/tar") ? "✓" : "✗ (fallback node-tar)"}`);
 
-    const pipeBuf = (buf: Buffer) =>
+    // gzip صريح (-z) — GNU tar مش بيكتشف الضغط من stdin (مقاس: "Archive is compressed. Use -z option")
+    const tarChild = fs.existsSync("/usr/bin/tar")
+      ? spawn("tar", ["-xzf", "-", "-C", dest], { timeout: 0 })
+      : null;
+    let tarErr = "";
+    const pipeTar = (buf: Buffer) =>
       new Promise<void>((resolve, reject) => {
-        if (!gunzip.write(buf)) gunzip.once("drain", resolve);
+        if (!tarChild) { reject(new Error("no tar child")); return; }
+        if (tarChild.exitCode !== null) { reject(new Error(`tar مات وسط الاستخراج: ${tarErr.slice(0, 150)}`)); return; }
+        const ok = tarChild.stdin.write(buf);
+        if (ok) resolve();
+        else tarChild.stdin.once("drain", resolve);
+      });
+    if (tarChild) {
+      tarChild.stderr.on("data", (d: Buffer) => { tarErr += d.toString(); });
+      tarChild.on("error", (e) => { tarErr += ` ${e.message}`; });
+      tarChild.stdin.on("error", (e) => { tarErr += ` stdin:${e.message.slice(0, 60)}`; });
+    }
+
+    const pipeNodeTar = (buf: Buffer) =>
+      new Promise<void>((resolve) => {
+        if (!nodeTar.write(buf)) nodeTar.once("drain", resolve);
         else resolve();
       });
+    const gunzip = zlib.createGunzip();
+    const extractor = tar.x({ cwd: dest, strict: false });
+    const topLevel = new Set<string>();
+    extractor.on("entry", (e: { path: string }) => {
+      provision.entries += 1;
+      const top = e.path?.replace(/^\.\//, "").split("/")[0];
+      if (top) topLevel.add(top);
+    });
+    const extractorError = new Promise<Error | null>((resolve) => {
+      extractor.once("error", (err: Error) => resolve(err));
+      extractor.once("finish", () => resolve(null));
+    });
+    gunzip.pipe(extractor);
+    const nodeTar = gunzip; // مسمى واضح للـfallback
 
     for (const part of parts) {
       provision.current = part;
-      const expect = new RegExp(`([0-9a-f]{64})\\s+${part}\\s*$`).exec(shasTxt)?.[1];
+      const expect = new RegExp(`([0-9a-f]{64})\\s+${part}\\s*$`, "m").exec(shasTxt)?.[1];
       if (!expect) throw new Error(`${part} مش في SHA256SUMS`);
       let buf: Buffer | null = null;
       for (let tryn = 1; tryn <= 3; tryn++) {
@@ -533,7 +609,11 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
         await new Promise((r) => setTimeout(r, 5000));
       }
       if (!buf) throw new Error(`${part} فشل 3 محاولات — النقل مش مستقر، جرّب تاني`);
-      await pipeBuf(buf);
+      if (tarChild) {
+        await pipeTar(buf);
+      } else {
+        await pipeNodeTar(buf);
+      }
       provision.partsDone += 1;
       provision.bytesDone += buf.length;
       if (provision.partsDone % 10 === 0 || provision.partsDone === parts.length) {
@@ -543,41 +623,42 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
         }
       }
     }
-    await new Promise<void>((resolve) => { gunzip.end(() => resolve()); });
-    await extractDone;
-
-    /* proot-static من فرع kali-static (إجباري — قيس) */
-    provision.phase = "proot";
-    // فرع kali-static محتاج fetch بنفسه جوه الrepo المؤقت
-    let staticRef: string | null = ref;
-    if (git?.gdir && STATIC_BRANCH !== KALI_BRANCH) {
-      const sf = await new Promise<{ code: number | null; ref: string }>((resolve) => {
-        const c = spawn("git", ["-C", git.gdir, "-c", "protocol.version=2", "fetch", "-q", "--depth=1", "--filter=blob:none", "origin", STATIC_BRANCH], { timeout: 300_000 });
-        c.on("error", () => resolve({ code: -1, ref: "" }));
-        c.on("close", async (code) => {
-          if (code !== 0) { resolve({ code, ref: "" }); return; }
-          const r2 = spawn("git", ["-C", git.gdir, "rev-parse", "FETCH_HEAD"], { timeout: 20_000 });
-          let out = "";
-          r2.stdout.on("data", (d: Buffer) => { out += d.toString(); });
-          r2.on("close", () => resolve({ code: 0, ref: out.trim().split(/\s/)[0] }));
-          r2.on("error", () => resolve({ code: -1, ref: "" }));
-        });
+    if (tarChild) {
+      const endTar = new Promise<{ code: number | null }>((resolve) => {
+        tarChild.on("close", (code) => resolve({ code }));
+        tarChild.on("error", () => resolve({ code: -1 }));
       });
-      staticRef = sf.code === 0 && sf.ref ? sf.ref : null;
-      plog(`kali-static: fetch ${staticRef ? "✓ " + staticRef.slice(0, 10) : "✗ — هنجرب raw بس"}`);
+      tarChild.stdin.end();
+      const r = await endTar;
+      if (r.code !== 0) throw new Error(`tar النظام خرج بكود ${r.code}${tarErr ? ": " + tarErr.slice(0, 200) : ""}`);
+    } else {
+      await new Promise<void>((resolve) => { gunzip.end(() => resolve()); });
+      const exErr = await extractorError;
+      if (exErr) throw new Error(`node-tar extract: ${exErr.message.slice(0, 160)}`);
     }
-    const staticBuf = await fetchPartBuffer(STATIC_BRANCH, staticRef, git?.gdir ?? null, "proot-static");
+    // الحقيقة من الدسك نفسه — قيس الهيكل المكتوب فعلًا
+    const onDisk = fs.readdirSync(dest);
+    plog(`الهيكل المكتوب فعليًا على الدسك: ${onDisk.sort().join(" ")}`);
+    for (const need of ["etc", "usr", "var"]) {
+      if (!onDisk.includes(need)) throw new Error(`الاستخراج ناقص: ${need} مش مكتوبة — بصراحة`);
+    }
+
+    /* proot-static — اتنزل مبكرًا قبل الأجزاء (1.7MB) — نسخه جوه البيئة */
+    provision.phase = "proot";
+    if (!prootBuf || !fs.existsSync(prootTmp)) throw new Error("proot-static مش متاح (raw+git فشلوا) — جرّب تاني");
     const binDir = path.join(dest, "usr/local/bin");
     fs.mkdirSync(binDir, { recursive: true });
     const binPath = path.join(binDir, "proot-static");
-    fs.writeFileSync(binPath, staticBuf);
+    fs.copyFileSync(prootTmp, binPath);
+    fs.rmSync(prootTmp, { force: true });
     fs.chmodSync(binPath, 0o755);
     const works = await new Promise<boolean>((resolve) => {
       const c = spawn(binPath, ["--version"], { timeout: 15_000 });
       c.on("error", () => resolve(false));
       c.on("close", (code) => resolve(code === 0));
     });
-    plog(`proot-static ${works ? "شغّال ✓" : "اتكتب بس مش شغّال ✗"}`);
+    if (!works) throw new Error("proot-static اتكتب بس مش شغّال — بصراحة");
+    plog("proot-static شغّال ✓");
 
     /* التحقق النهائي */
     provision.phase = "verify";
