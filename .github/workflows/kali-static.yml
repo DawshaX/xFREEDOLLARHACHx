@@ -20,10 +20,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          URL=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" https://api.github.com/repos/nohajc/proot-static/releases/latest | grep browser_download_url | grep x86_64-static | grep -v '\.sig' | head -1 | cut -d'"' -f4)
+          # القياس الحي: nohajc/proot-static أصلًا مش موجود (404) — المرشحات الحقيقية:
+          # ysdragon/proot-static v5.4.0 (proot-x86_64-static) ثم proot-me الرسمي v5.1.1.
+          URL=""
+          for CAND in "https://github.com/ysdragon/proot-static/releases/latest/download/proot-x86_64-static"; do
+            if curl -fsSL "$CAND" -o "$RUNNER_TEMP/proot-static" 2>/dev/null; then URL="$CAND"; break; fi
+          done
+          if [ -z "$URL" ]; then
+            URL=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" https://api.github.com/repos/proot-me/proot-static-build/releases 2>/dev/null | grep browser_download_url | grep 'proot_5' | grep x86_64 | grep -v 'no-seccomp\|care' | head -1 | cut -d'"' -f4)
+            [ -n "$URL" ] && curl -fsSL "$URL" -o "$RUNNER_TEMP/proot-static" || true
+          fi
           echo "::notice::asset=$URL"
-          [ -n "$URL" ] || { echo "::error::مافيش asset x86_64-static في آخر release"; exit 1; }
-          curl -fsSL "$URL" -o "$RUNNER_TEMP/proot-static"
+          [ -s "$RUNNER_TEMP/proot-static" ] || { echo "::error::مافيش binary static اتنزل"; exit 1; }
           chmod +x "$RUNNER_TEMP/proot-static"
           "$RUNNER_TEMP/proot-static" --version || { echo "::error::الbinary مش شغال — مش static فعلًا"; exit 1; }
           mkdir -p /tmp/br && cd /tmp/br
