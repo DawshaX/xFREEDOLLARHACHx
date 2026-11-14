@@ -1,0 +1,57 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# بيئة كالي الحقيقية المدمجة — rootfs كامل بيتبنى هنا ويترفع لفرع kali-rootfs.
+# ليه هنا؟ السانبوكس/البرنامج نتّه محجوب على kali CDN، لكن الRunner نتّه مفتوح
+# ⇒ بنبني هنا وننقل بالgit (github.com مسموح محليًا). الأجزاء ≤90MB
+# (حد جيت هب للملف الواحد 100MB). الاستخراج المحلي: scripts/kali-rootfs-fetch.sh
+# ─────────────────────────────────────────────────────────────────────────────
+name: Kali embedded env (real rootfs)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/kali-rootfs.yml"
+      - "scripts/kali-rootfs-build.sh"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: kalilinux/kali-rolling
+    steps:
+      - name: Bootstrap git (الcheckout محتاجه)
+        run: apt-get update -qq && apt-get install -y --no-install-recommends git ca-certificates
+
+      - uses: actions/checkout@v4
+
+      - name: سطب كالي الحقيقي وابني الأجزاء
+        run: bash scripts/kali-rootfs-build.sh
+        env:
+          RUN_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+
+      - name: ارفع الفرع kali-rootfs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/branchrepo && cd /tmp/branchrepo
+          git init -q -b kali-rootfs
+          cp /out/MANIFEST.txt /out/PACKAGES.txt /out/SHA256SUMS .
+          cp /out/part-* .
+          git config user.name "nova-builder"
+          git config user.email "nova@ci.local"
+          git add -A
+          git commit -qm "kali rootfs build $(cat /out/MANIFEST.txt | grep built_at)"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" kali-rootfs
+          echo "✔ الفرع kali-rootfs اترفع — مقاس من نجاح الpush نفسه"
+
+      - name: أجزاء البناء (للتنزيل اليدوي كمان)
+        uses: actions/upload-artifact@v4
+        with:
+          name: kali-rootfs-parts
+          path: |
+            /out/part-*
+            /out/MANIFEST.txt
+          retention-days: 7
