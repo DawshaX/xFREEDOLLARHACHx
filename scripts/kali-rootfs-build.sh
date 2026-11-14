@@ -153,7 +153,8 @@ dpkg-query -W -f='${Package}\n' > "$OUT/PACKAGES.txt"
 
 echo "== [6/6] tar + zstd + split ≤90MB =="
 cd /
-# الاستبعاد دي خفّضت الحجم: قِيس run 43570109294 طلع 28 جزء (2.4GB) —
+# gzip مش zstd عمدًا: Node وفكه أصلاً بلا مكتبات ⇒ التجهيز الذاتي على أي سيرفر إنتاج جوه الهَب.
+# الاستبعاد خفّضت الحجم: قِيس run 43570109294 طلع 28 جزء (2.4GB) —
 # الdoc/man/locale/log/cache حشو مش محتاجه أجينت بيشغل أدوات.
 # __* = مخلفات آلة الrunner (hosted tools/temp) — مش أدوات كالي؛ قيس:
 # ./__t لوحده كان فيه python3.12 بتاع الجهاز مش البيئة.
@@ -165,9 +166,9 @@ tar -cf - \
   --exclude=./usr/share/doc --exclude=./usr/share/man \
   --exclude=./usr/share/locale \
   --exclude=./var/log --exclude=./var/cache --exclude=./var/tmp \
-  . | zstd -T0 -10 > "$OUT/rootfs.tar.zst"
+  . | gzip -3 > "$OUT/rootfs.tar.gz"
 cd "$OUT"
-split -b 90m -d rootfs.tar.zst part-
+split -b 90m -d rootfs.tar.gz part-
 rm -f rootfs.tar.zst
 sha256sum part-* > SHA256SUMS
 echo "parts: $(ls part-* | wc -l)"

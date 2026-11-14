@@ -47,7 +47,7 @@ if git -C "$GDIR" -c protocol.version=2 fetch -q --depth=1 --filter=blob:none or
 else echo "   ✗ فرع kali-static مش متاح"; fi
 
 echo "── [4/5] البث: جزء-بجزء (تحقق SHA256 لكل جزء) → zstd → tar → $DEST ──"
-python3 -c "import zstandard" 2>/dev/null || pip install --break-system-packages -q zstandard
+# gzip الأصلي في python3 — مفيش أي تثبيت
 mkdir -p "$DEST"
 cd "$GDIR"
 {
@@ -68,14 +68,10 @@ cd "$GDIR"
     rm -f "$TMP_PART"
   done
 } | python3 -c "
-import sys, zstandard as zstd
-d = zstd.ZstdDecompressor()
-with d.stream_reader(sys.stdin.buffer) as r:
-    while True:
-        chunk = r.read(1 << 20)
-        if not chunk:
-            break
-        sys.stdout.buffer.write(chunk)
+import sys, gzip, shutil
+src = gzip.open(sys.stdin.buffer, 'rb')
+shutil.copyfileobj(src, sys.stdout.buffer, 1 << 20)
+src.close()
 " | tar -xf - -C "$DEST"
 TARST=$?
 [ $TARST -eq 0 ] || { echo "✗ tar خرج بكود $TARST — مفيش مساحة؟ df -h / وشوف"; exit 6; }

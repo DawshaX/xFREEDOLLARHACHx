@@ -64,7 +64,7 @@ import { provisionToolchain, toolchainStatus, VENDORABLE } from "../lib/ops/tool
 import { checkGate, opsExposure } from "../lib/ops/gate";
 import { tokenConfigured } from "../lib/ops/gate";
 import { runSelfHeal } from "../lib/ops/self-heal";
-import { kaliStatus, kaliRoot, runKali, startDesktop, stopDesktop, buildDesktopUrl, startKaliWatchdog } from "../lib/ops/kali-env";
+import { kaliStatus, kaliRoot, runKali, startDesktop, stopDesktop, buildDesktopUrl, startKaliWatchdog, provisionKali, provisionState } from "../lib/ops/kali-env";
 
 /* ضمان استمرار العمل — الساعة بتترفع مع أول تحميل للراوتر */
 startKaliWatchdog();
@@ -824,6 +824,20 @@ router.post("/ops/kali/exec", async (req: Request, res: Response) => {
     createPushNotification({ kind: "ops", title: r.exitCode === 0 ? "🖥️ كالي نفّذت أمر حقيقي" : "⚠️ أمر كالي خرج بكود خطأ", body: cmd.slice(0, 120), link: "/kali-command" });
   } catch { /* الإشعار مش هيوقف النتيجة */ }
   res.json(r);
+});
+
+router.post("/ops/kali/provision", async (req: Request, res: Response) => {
+  const gate = checkGate(req as never, "kali-provision");
+  if (!(gate && gate.ok && gate.code === "allowed")) {
+    res.status(403).json({ ok: false, error: "owner_gate_required", what: "kali-provision" });
+    return;
+  }
+  const r = await provisionKali();
+  res.json(r);
+});
+
+router.get("/ops/kali/provision/status", (_req: Request, res: Response) => {
+  res.json({ ok: true, provision: provisionState() });
 });
 
 router.post("/ops/kali/desktop", async (req: Request, res: Response) => {
