@@ -1,6 +1,6 @@
 {
   "measured": true,
-  "at": "2026-11-14T02:40:31.970Z",
+  "at": "2026-11-14T03:09:34.072Z",
   "total": 245693,
   "bySeverity": {
     "medium": 107456,
@@ -1163,6 +1163,25 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-7593",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Incorrect implementation of an authentication algorithm in Ivanti vTM other than versions 22.2R1 or 22.7R2 allows a remote unauthenticated attacker to bypass authentication of the admin panel.",
+      "cwe": [
+        "CWE-287",
+        "CWE-303"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2024-08-13T19:15:16.940",
+      "products": [
+        "virtual_traffic_manager",
+        "virtual_traffic_manager",
+        "virtual_traffic_manager"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-53770",
       "cvss": 9.8,
       "sev": "critical",
@@ -1197,25 +1216,6 @@
         "php",
         "php",
         "php"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-7593",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Incorrect implementation of an authentication algorithm in Ivanti vTM other than versions 22.2R1 or 22.7R2 allows a remote unauthenticated attacker to bypass authentication of the admin panel.",
-      "cwe": [
-        "CWE-287",
-        "CWE-303"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2024-08-13T19:15:16.940",
-      "products": [
-        "virtual_traffic_manager",
-        "virtual_traffic_manager",
-        "virtual_traffic_manager"
       ],
       "refs": []
     },
@@ -1900,6 +1900,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-4358",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "In Progress Telerik Report Server, version 2024 Q1 (10.0.24.305) or earlier, on IIS, an unauthenticated attacker can gain access to Telerik Report Server restricted functionality via an authentication bypass vulnerability.",
+      "cwe": [
+        "CWE-290"
+      ],
+      "kev": true,
+      "epss": 0.97482,
+      "pub": "2024-05-29T15:16:06.477",
+      "products": [
+        "report_server_2024"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-56145",
       "cvss": 9.8,
       "sev": "critical",
@@ -1914,22 +1930,6 @@
         "craft_cms",
         "craft_cms",
         "craft_cms"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-4358",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "In Progress Telerik Report Server, version 2024 Q1 (10.0.24.305) or earlier, on IIS, an unauthenticated attacker can gain access to Telerik Report Server restricted functionality via an authentication bypass vulnerability.",
-      "cwe": [
-        "CWE-290"
-      ],
-      "kev": true,
-      "epss": 0.97482,
-      "pub": "2024-05-29T15:16:06.477",
-      "products": [
-        "report_server_2024"
       ],
       "refs": []
     },
@@ -3387,22 +3387,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2025-4632",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Improper limitation of a pathname to a restricted directory vulnerability in Samsung MagicINFO 9 Server version before 21.1052 allows attackers to write arbitrary file as system authority.",
-      "cwe": [
-        "CWE-22"
-      ],
-      "kev": true,
-      "epss": 0.22377,
-      "pub": "2025-05-13T06:15:36.537",
-      "products": [
-        "magicinfo_9_server"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2024-37079",
       "cvss": 9.8,
       "sev": "critical",
@@ -3417,6 +3401,22 @@
         "cloud_foundation",
         "vcenter_server",
         "vcenter_server"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2025-4632",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Improper limitation of a pathname to a restricted directory vulnerability in Samsung MagicINFO 9 Server version before 21.1052 allows attackers to write arbitrary file as system authority.",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.22377,
+      "pub": "2025-05-13T06:15:36.537",
+      "products": [
+        "magicinfo_9_server"
       ],
       "refs": []
     },
@@ -5778,6 +5778,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-44308",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "The issue was addressed with improved checks. This issue is fixed in Safari 18.1.1, iOS 17.7.2 and iPadOS 17.7.2, iOS 18.1.1 and iPadOS 18.1.1, macOS Sequoia 15.1.1, visionOS 2.1.1. Processing maliciously crafted web content may lead to arbitrary code executio",
+      "cwe": [],
+      "kev": true,
+      "epss": 0.09852,
+      "pub": "2024-11-20T00:15:17.080",
+      "products": [
+        "debian_linux",
+        "safari",
+        "ipados"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-65660",
       "cvss": 8.8,
       "sev": "high",
@@ -5792,22 +5808,6 @@
         "sharepoint_server",
         "sharepoint_server",
         "sharepoint_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-44308",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "The issue was addressed with improved checks. This issue is fixed in Safari 18.1.1, iOS 17.7.2 and iPadOS 17.7.2, iOS 18.1.1 and iPadOS 18.1.1, macOS Sequoia 15.1.1, visionOS 2.1.1. Processing maliciously crafted web content may lead to arbitrary code executio",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.09852,
-      "pub": "2024-11-20T00:15:17.080",
-      "products": [
-        "debian_linux",
-        "safari",
-        "ipados"
       ],
       "refs": []
     },
@@ -13858,5 +13858,5 @@
       "refs": []
     }
   ],
-  "says_ar": "245693 ثغرة حقيقية من NVD · 688 مستغلّة فعلياً (KEV) · 39638 منتج · مزامنة 2026-11-14T02:40:31.970Z"
+  "says_ar": "245693 ثغرة حقيقية من NVD · 688 مستغلّة فعلياً (KEV) · 39638 منتج · مزامنة 2026-11-14T03:09:34.072Z"
 }
