@@ -144,13 +144,17 @@ jobs:
       # بيقطع السلسلة كلها — النشر بيتباس والكوربوس يفضل جامد. الدروب ده
       # استكمالي (بيدرّس تاريخ أقدم) فمش بلازم يمنع نشر التحديث الأساسي؛
       # بيسجّل سببه في state/corpus-last-failure.json زي ما هو.
-      - name: deepen the walk (32 pages from the stored cursor)
+      # قِيس 2026-11-14 (شكوى المالك للمرة الخامسة «لسة مزادوش فوق ال300 ألف»):
+      # نافذة 32 صفحة = 64K/جولة بتاخد دمجات كتير. نافذة 90 = 180K/جولة —
+      # جولة واحدة تعدي 300K من 156K، والميزانية 28 دقيقة تكفي سرعة NVD
+      # بلا مفتاح (~7 ثواني/صفحة). الـjob نفسه timeout 45 دقيقة.
+      - name: deepen the walk (90 pages from the stored cursor)
         continue-on-error: true
         env:
-          CORPUS_TIME_BUDGET_MIN: "14"
+          CORPUS_TIME_BUDGET_MIN: "28"
         run: |
           set -o pipefail
-          node scripts/ingest-vuln-corpus.mjs --deepen --pages=32 2>&1 | tee "$RUNNER_TEMP/deepen.log"
+          node scripts/ingest-vuln-corpus.mjs --deepen --pages=90 2>&1 | tee "$RUNNER_TEMP/deepen.log"
 
       # Runs only when the step above failed, and commits what it captured, so the
       # reason survives the run (measured: two deepen failures left nothing behind).
