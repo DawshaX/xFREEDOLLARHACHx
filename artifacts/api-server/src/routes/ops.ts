@@ -71,7 +71,7 @@ startKaliWatchdog();
 import { ALLOWED_KEYS, hydrateRuntimeConfig, runtimeConfigStatus, setRuntimeConfig } from "../lib/ops/runtime-config";
 import { measureStateFootprint, pruneState, lastPrune } from "../lib/ops/state-prune";
 import { stateBackupInfo, backupStateToGithub, restoreStateFromGithubIfNeeded } from "../lib/ops/state-backup";
-import { quotaFlag, clearQuotaFlag } from "../lib/ops/kali-env";
+import { quotaFlag, clearQuotaFlag, kaliLocalAllowed } from "../lib/ops/kali-env";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
 import { autonomySummary, runOpsSweep } from "../lib/ops/autonomy";
 import { maskProgram, maskSession, hasSession } from "../lib/ops/session";
@@ -835,7 +835,12 @@ router.post("/ops/kali/provision", async (req: Request, res: Response) => {
     return;
   }
   // fire-and-forget: الحالة الحية على GET /ops/kali/provision/status — الPOST مايتعلقش دقايق
-  provisionKali().catch(() => {});
+  if (kaliLocalAllowed() || req.body?.confirm === "yes") {
+    provisionKali({ force: true }).catch(() => {});
+  } else {
+    res.status(202).json({ ok: false, cloudFirst: true, detail: "وضع سحابي أولًا: المخزن على فرع kali-rootfs والتنفيذ على الطائرة الخارجية — التحميل المحلي محتاج تأكيد: أعد الطلب بconfirm:yes أو NOVA_KALI_LOCAL_ALLOW=1 في .env" });
+    return;
+  }
   res.json({ ok: true, detail: "بدأ التجهيز الذاتي — الحالة الحية على /api/ops/kali/provision/status", state: provisionState() });
 });
 /* ── الحالة السحابية: «المساحة تتنقل على الجيت هوب وقواعد البيانات» — مقاس ── */
