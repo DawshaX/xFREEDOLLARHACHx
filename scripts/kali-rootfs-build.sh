@@ -53,11 +53,14 @@ for pkg in "${EXTRA[@]}"; do
 done
 
 echo "== [4/6] proot-static (حماية توافق glibc مع السانبوكس — best-effort) =="
-PROOT_URL=$(curl -fsSL "https://api.github.com/repos/nohajc/proot-static/releases/latest" 2>/dev/null | grep browser_download_url | grep x86_64 | grep -v sig | head -1 | cut -d'"' -f4 || true)
-if [ -n "$PROOT_URL" ] && curl -fsSL "$PROOT_URL" -o /usr/local/bin/proot-static 2>/dev/null && chmod +x /usr/local/bin/proot-static; then
-  echo "  proot-static ✓ ← $PROOT_URL"
+# قِيس: الاستدعاء بدون توكن بيرجع rate-limit من IP الRunner المشترك ⇒ لازم
+# Authorization بتوكن الworkflow. والتحقق الحقيقي: تشغيل --version نفسها.
+PROOT_URL=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN:-}" "https://api.github.com/repos/nohajc/proot-static/releases/latest" 2>/dev/null | grep browser_download_url | grep x86_64-static | grep -v '\.sig' | head -1 | cut -d'"' -f4 || true)
+if [ -n "$PROOT_URL" ] && curl -fsSL "$PROOT_URL" -o /usr/local/bin/proot-static && chmod +x /usr/local/bin/proot-static && /usr/local/bin/proot-static --version > /dev/null 2>&1; then
+  echo "  proot-static ✓ شغّال فعليًا ← $PROOT_URL"
 else
-  echo "  proot-static مش متاح — هنعتمد proot بتاع كالي (مقاس وقت التشغيل)"
+  echo "  proot-static مش متاح في البناء ده — هيتسحب لاحقًا من فرع kali-static (best-effort)"
+  rm -f /usr/local/bin/proot-static
 fi
 
 echo "== [5/6] تنظيف + المانيفست المقاس (كل رقم من الأمر نفسه) =="
