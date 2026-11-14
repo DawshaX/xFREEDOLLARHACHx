@@ -1,219 +1,200 @@
 {
   "version": 1,
-  "at": "2026-11-14T00:42:34.824Z",
+  "at": "2026-11-14T00:45:42.274Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 118000,
+  "total": 10000,
   "bySeverity": {
-    "high": 46898,
-    "medium": 52449,
-    "low": 5748,
-    "unknown": 4669,
-    "critical": 8231,
-    "none": 5
+    "high": 4563,
+    "medium": 4450,
+    "low": 840,
+    "unknown": 97,
+    "critical": 50
   },
   "byYear": {
-    "1999": 1573,
-    "2000": 1236,
-    "2001": 1538,
-    "2002": 2370,
-    "2003": 1518,
-    "2004": 2669,
-    "2005": 4689,
-    "2006": 7052,
-    "2007": 6513,
-    "2008": 7046,
-    "2009": 4901,
-    "2010": 4908,
-    "2011": 4186,
-    "2012": 3944,
-    "2013": 75,
-    "2014": 128,
-    "2015": 202,
-    "2016": 189,
-    "2017": 495,
-    "2018": 443,
-    "2019": 699,
-    "2020": 5326,
-    "2021": 21687,
-    "2022": 23893,
-    "2023": 10720
+    "1999": 1568,
+    "2000": 1233,
+    "2001": 1535,
+    "2002": 2355,
+    "2003": 1483,
+    "2004": 1816,
+    "2005": 10
   },
-  "kev": 504,
-  "epssScored": 113333,
-  "products": 42799,
+  "kev": 3,
+  "epssScored": 9903,
+  "products": 3929,
   "topProducts": [
     {
-      "product": "linux_kernel",
-      "count": 6857
-    },
-    {
-      "product": "firefox",
-      "count": 6116
-    },
-    {
-      "product": "android",
-      "count": 5870
-    },
-    {
-      "product": "windows_10",
-      "count": 5864
-    },
-    {
-      "product": "mac_os_x",
-      "count": 5183
-    },
-    {
-      "product": "fedora",
-      "count": 4749
-    },
-    {
-      "product": "debian_linux",
-      "count": 4131
-    },
-    {
-      "product": "safari",
-      "count": 3516
-    },
-    {
-      "product": "chrome",
-      "count": 3412
-    },
-    {
-      "product": "php",
-      "count": 2356
-    },
-    {
-      "product": "junos",
-      "count": 2242
-    },
-    {
-      "product": "iphone_os",
-      "count": 2130
-    },
-    {
-      "product": "opera_browser",
-      "count": 2086
-    },
-    {
-      "product": "flash_player",
-      "count": 1960
-    },
-    {
-      "product": "itunes",
-      "count": 1959
-    },
-    {
-      "product": "ios",
-      "count": 1842
-    },
-    {
-      "product": "ubuntu_linux",
-      "count": 1752
-    },
-    {
-      "product": "websphere_application_server",
-      "count": 1700
-    },
-    {
-      "product": "acrobat",
-      "count": 1694
-    },
-    {
-      "product": "windows_server_2008",
-      "count": 1683
-    },
-    {
-      "product": "moodle",
-      "count": 1639
-    },
-    {
-      "product": "internet_explorer",
-      "count": 1569
-    },
-    {
-      "product": "shockwave_player",
-      "count": 1569
-    },
-    {
-      "product": "mysql",
-      "count": 1565
-    },
-    {
-      "product": "macos",
-      "count": 1480
-    },
-    {
-      "product": "jre",
-      "count": 1451
-    },
-    {
-      "product": "wireshark",
-      "count": 1444
-    },
-    {
-      "product": "mac_os_x_server",
-      "count": 1436
-    },
-    {
-      "product": "emui",
-      "count": 1372
-    },
-    {
-      "product": "quicktime",
-      "count": 1320
-    },
-    {
-      "product": "tensorflow",
-      "count": 1316
-    },
-    {
-      "product": "acrobat_reader",
-      "count": 1256
-    },
-    {
-      "product": "gitlab",
-      "count": 1156
-    },
-    {
-      "product": "bugzilla",
-      "count": 1106
-    },
-    {
-      "product": "jdk",
-      "count": 1101
-    },
-    {
       "product": "irix",
-      "count": 1051
+      "count": 1025
     },
     {
-      "product": "database_server",
-      "count": 1042
+      "product": "linux_kernel",
+      "count": 642
     },
     {
-      "product": "opensolaris",
-      "count": 1041
+      "product": "sunos",
+      "count": 622
     },
     {
-      "product": "realplayer",
-      "count": 1039
+      "product": "linux",
+      "count": 593
     },
     {
       "product": "freebsd",
-      "count": 996
+      "count": 564
+    },
+    {
+      "product": "hp-ux",
+      "count": 560
+    },
+    {
+      "product": "internet_explorer",
+      "count": 497
+    },
+    {
+      "product": "solaris",
+      "count": 470
+    },
+    {
+      "product": "http_server",
+      "count": 464
+    },
+    {
+      "product": "ios",
+      "count": 413
+    },
+    {
+      "product": "aix",
+      "count": 391
+    },
+    {
+      "product": "mac_os_x",
+      "count": 385
+    },
+    {
+      "product": "php-nuke",
+      "count": 299
+    },
+    {
+      "product": "bugzilla",
+      "count": 280
+    },
+    {
+      "product": "windows_nt",
+      "count": 243
+    },
+    {
+      "product": "ethereal",
+      "count": 230
+    },
+    {
+      "product": "mozilla",
+      "count": 229
+    },
+    {
+      "product": "windows_2000",
+      "count": 222
+    },
+    {
+      "product": "suse_linux",
+      "count": 217
+    },
+    {
+      "product": "php",
+      "count": 215
+    },
+    {
+      "product": "mandrake_linux",
+      "count": 210
+    },
+    {
+      "product": "application_server",
+      "count": 210
+    },
+    {
+      "product": "openbsd",
+      "count": 193
+    },
+    {
+      "product": "debian_linux",
+      "count": 181
+    },
+    {
+      "product": "phpbb",
+      "count": 175
+    },
+    {
+      "product": "netbsd",
+      "count": 173
+    },
+    {
+      "product": "mysql",
+      "count": 172
+    },
+    {
+      "product": "tru64",
+      "count": 159
+    },
+    {
+      "product": "sendmail",
+      "count": 158
+    },
+    {
+      "product": "vpn_3000_concentrator_series_software",
+      "count": 151
+    },
+    {
+      "product": "kde",
+      "count": 145
+    },
+    {
+      "product": "bind",
+      "count": 144
+    },
+    {
+      "product": "communicator",
+      "count": 140
+    },
+    {
+      "product": "samba",
+      "count": 134
+    },
+    {
+      "product": "ssh",
+      "count": 129
+    },
+    {
+      "product": "oracle9i",
+      "count": 125
+    },
+    {
+      "product": "optical_networking_systems_software",
+      "count": 122
+    },
+    {
+      "product": "internet_information_server",
+      "count": 115
+    },
+    {
+      "product": "unixware",
+      "count": 112
+    },
+    {
+      "product": "ie",
+      "count": 111
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 12129658,
-    "sha256": "2dcae47c80d30a45b3ac39546ea076ef33c75759edff615a00c365e008b82435"
+    "bytes": 937336,
+    "sha256": "daaca280e75af07dd2527e6ff6faf305c8d25a22870e94013ff8b42c0c707d5a"
   },
-  "mode": "deepen",
-  "says_ar": "118000 ثغرة حقيقية · critical 8231 · high 46898 · 504 مستغلّة فعلياً (KEV) · 113333 لها EPSS · 42799 منتج بـCPE · مزامنة 2026-11-14T00:42:34.824Z",
+  "mode": "full",
+  "says_ar": "10000 ثغرة حقيقية · critical 50 · high 4563 · 3 مستغلّة فعلياً (KEV) · 9903 لها EPSS · 3929 منتج بـCPE · مزامنة 2026-11-14T00:45:42.274Z",
   "deepen": {
     "nextStartIndex": 220000,
     "windowPages": 32,
