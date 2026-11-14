@@ -260,12 +260,27 @@ if (rows.size === 0) {
 }
 
 /* ── 3 · write ── */
-const merges = (mode === "incremental" || mode === "deepen") && Boolean(previous?.at);
 const baseTotal = Number(previous?.total ?? 0);
-// Declared before the guard that reads it: the first version of this patch had it
-// below, so `merges` was in its temporal dead zone and every ingest died with
-// "Cannot access 'merges' before initialization" (measured: run 41877458865).
-if (merges && previous?.at && baseTotal > 0 && rows.size < baseTotal * 0.5 && !fs.existsSync(lib.corpusFile())) {
+// قِيس 2026-11-14 (شكوى المالك الخامسة): جولات الـpush بتشغّل MODE=full وmerge:false،
+// ولما NVD خانقت النافذة جمعت 5 صفحات بس (10,000 صف) — والكتابة استبدلت كوربوس
+// 118,000 صف بعشرة آلاف! (release+mirror+index اتضغطوا في run 43534463693 00:45Z،
+// و before كده 156K→118K في run 43533574132). full المخنوق لازم يتراجع لدمج،
+// مش يستبدل: الكوربوس اللي على القرص (الم provisions) أغلى من أي نافذة جزئية.
+const fullThrottled = mode === "full" && Boolean(previous?.at) && baseTotal > 0 && rows.size < baseTotal;
+if (fullThrottled) {
+  console.log(
+    `full pass collected ${rows.size} rows < ${baseTotal} already held — NVD throttled the walk; ` +
+      `degrading this pass to a merge so a partial rebuild can never replace a bigger corpus`,
+  );
+}
+const merges = ((mode === "incremental" || mode === "deepen") && Boolean(previous?.at)) || fullThrottled;
+// The invariant is not "half the base" — it is: a write that ends below what we
+// already held is a shrink, full stop. With the corpus file on disk, merge:true
+// keeps every existing row (writeCorpus), so it can only grow — no guard needed.
+// Without the file, a delta smaller than the base would REPLACE the held corpus
+// (measured: 104,000 rows replaced by 72 at 04:42Z, and again 118,000 → 10,000
+// on 2026-11-14) — that is a die, not a write.
+if (merges && previous?.at && baseTotal > 0 && rows.size < baseTotal && !fs.existsSync(lib.corpusFile())) {
   die("refusing to write a shrink", {
     rows: rows.size,
     baseTotal,
@@ -274,6 +289,8 @@ if (merges && previous?.at && baseTotal > 0 && rows.size < baseTotal * 0.5 && !f
     previousAt: previous?.at ?? null,
   });
 }
+// The merges line sits directly above its first read (the guard), so `merges`
+// cannot hit a temporal dead zone — that TDZ killed run 41877458865.
 
 const index = lib.writeCorpus([...rows.values()], {
   mode: merges ? mode : "full",

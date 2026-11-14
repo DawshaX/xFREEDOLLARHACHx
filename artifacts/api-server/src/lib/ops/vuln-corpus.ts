@@ -623,7 +623,7 @@ export async function rebuildIndex(opts: { mode?: CorpusIndex["mode"] } = {}): P
   return index;
 }
 
-export async function provisionCorpus(opts: { url?: string; force?: boolean; minBytes?: number } = {}): Promise<{
+export async function provisionCorpus(opts: { url?: string; force?: boolean; minBytes?: number; minTotal?: number } = {}): Promise<{
   ok: boolean;
   action: "present" | "downloaded" | "skipped" | "failed";
   bytes: number;
@@ -668,6 +668,23 @@ export async function provisionCorpus(opts: { url?: string; force?: boolean; min
       const buf = Buffer.from(await res.arrayBuffer());
       if (buf.length <= minBytes) throw new Error(`file too small (${buf.length} bytes) — refusing to install a stub`);
       if (!(buf[0] === 0x1f && buf[1] === 0x8b)) throw new Error("not a gzip payload");
+      // minTotal: the caller knows how many rows the last measured index held.
+      // A source serving fewer rows is a SHRUNKEN corpus — measured 2026-11-14:
+      // the release asset itself got overwritten 118K→10K by a throttled full
+      // pass, and provisioning from it would drag every later merge down. A
+      // source below the floor is skipped exactly like a broken download, so
+      // the next source (the raw mirror) gets its turn.
+      if (opts.minTotal != null && opts.minTotal > 0) {
+        const lines = zlib
+          .gunzipSync(buf)
+          .toString("utf8")
+          .split("\n")
+          .filter((l) => l.trim())
+          .length;
+        if (lines < opts.minTotal) {
+          throw new Error(`source holds ${lines} rows < required ${opts.minTotal} — refusing a shrunken base`);
+        }
+      }
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, buf);
       // Without an index the corpus is unreadable-by-number: download it (نفس
