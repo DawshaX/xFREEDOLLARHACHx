@@ -144,7 +144,7 @@ jobs:
       # بيقطع السلسلة كلها — النشر بيتباس والكوربوس يفضل جامد. الدروب ده
       # استكمالي (بيدرّس تاريخ أقدم) فمش بلازم يمنع نشر التحديث الأساسي؛
       # بيسجّل سببه في state/corpus-last-failure.json زي ما هو.
-      - name: deepen the walk (12 pages from the stored cursor)
+      - name: deepen the walk (32 pages from the stored cursor)
         continue-on-error: true
         env:
           CORPUS_TIME_BUDGET_MIN: "14"
