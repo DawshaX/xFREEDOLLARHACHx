@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 258,
-    "lastHeartbeatAt": "2026-11-14T19:58:12.601Z",
+    "autonomousCyclesCompleted": 220,
+    "lastHeartbeatAt": "2026-11-14T19:36:33.802Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,584 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,12 +16,12 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: اكتملت الدورة الذاتية #258 على (bughunters.google.com) — جميع المراحل الـ 6 والسلاسل المركبة موثقة 100%",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #220 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب",
     "notesAr": "",
     "corpusSnapshot": {
-      "totalCve": 425727,
+      "totalCve": 425751,
       "kev": 1781,
       "at": "2026-11-14",
       "src": "state/vuln-corpus-index.json + supabase:corpus_cve"
@@ -38,612 +38,187 @@
       "extractedArtifactsCount": 40,
       "parallelTasksActive": 4,
       "zeroFpVerifiedCount": 6,
-      "universalGalaxyTotalCves": 425727
+      "universalGalaxyTotalCves": 425751
     }
   },
   "whatsNewLog": [
     {
-      "id": "new-1794686292600-1h2i",
-      "ts": "2026-11-14 19:58:12 UTC",
+      "id": "pulse-1794684994375",
+      "ts": "2026-11-14 19:36:34 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #220 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 142.251.163.141 | HTTP 200 | SHA256: ad22dddeb6c7b9c8 — تم التحديث والحفظ في ذاكرة GitHub الدائمة."
+    },
+    {
+      "id": "pulse-1794667143549",
+      "ts": "2026-11-14 14:39:03 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #219 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 192.178.142.141 | HTTP 200 | SHA256: 769b495d268c1ca5 — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 38 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:9)"
+    },
+    {
+      "id": "new-1794659982971-s3rf",
+      "ts": "2026-11-14 12:39:42 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #258 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #218 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794686112618-ceye",
-      "ts": "2026-11-14 19:55:12 UTC",
+      "id": "pulse-1794640414019",
+      "ts": "2026-11-14 07:13:34 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #217 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 172.253.63.141 | HTTP 200 | SHA256: 7f7e1f9cc98c6c1c — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 46 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:9)"
+    },
+    {
+      "id": "new-1794634006885-mt0g",
+      "ts": "2026-11-14 05:26:46 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #257 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #216 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794685932669-nxvx",
-      "ts": "2026-11-14 19:52:12 UTC",
+      "id": "new-1794633826880-phb2",
+      "ts": "2026-11-14 05:23:46 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #256 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #215 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794685752623-oiou",
-      "ts": "2026-11-14 19:49:12 UTC",
+      "id": "new-1794633646875-4qhb",
+      "ts": "2026-11-14 05:20:46 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #255 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #214 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794685572598-9ynd",
-      "ts": "2026-11-14 19:46:12 UTC",
+      "id": "new-1794633466875-5xe2",
+      "ts": "2026-11-14 05:17:46 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #254 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #213 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794685392638-wnzj",
-      "ts": "2026-11-14 19:43:12 UTC",
+      "id": "new-1794633286894-sofw",
+      "ts": "2026-11-14 05:14:46 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #253 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #212 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794685180262-ec4a",
-      "ts": "2026-11-14 19:39:40 UTC",
+      "id": "new-1794631717566-mnqx",
+      "ts": "2026-11-14 04:48:37 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #252 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #211 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794684932429-11yt",
-      "ts": "2026-11-14 19:35:32 UTC",
+      "id": "new-1794631537567-0fpi",
+      "ts": "2026-11-14 04:45:37 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #251 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #210 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794684752424-glsm",
-      "ts": "2026-11-14 19:32:32 UTC",
+      "id": "new-1794631357558-v5hs",
+      "ts": "2026-11-14 04:42:37 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #250 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #209 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794684572453-6ovh",
-      "ts": "2026-11-14 19:29:32 UTC",
+      "id": "new-1794631177557-txa8",
+      "ts": "2026-11-14 04:39:37 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #249 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #208 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794684392420-mb1f",
-      "ts": "2026-11-14 19:26:32 UTC",
+      "id": "new-1794630997592-gj6l",
+      "ts": "2026-11-14 04:36:37 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #248 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #207 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794684212424-hwnz",
-      "ts": "2026-11-14 19:23:32 UTC",
+      "id": "new-1794628275210-deil",
+      "ts": "2026-11-14 03:51:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #247 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #206 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794684032423-k395",
-      "ts": "2026-11-14 19:20:32 UTC",
+      "id": "new-1794628095204-q23r",
+      "ts": "2026-11-14 03:48:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #246 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #205 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794683852549-64ds",
-      "ts": "2026-11-14 19:17:32 UTC",
+      "id": "new-1794627915203-103g",
+      "ts": "2026-11-14 03:45:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #245 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #204 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794683401442-15o4",
-      "ts": "2026-11-14 19:10:01 UTC",
+      "id": "new-1794627735202-gwlc",
+      "ts": "2026-11-14 03:42:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #244 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #203 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794683221092-ohnq",
-      "ts": "2026-11-14 19:07:01 UTC",
+      "id": "new-1794627555200-pzmf",
+      "ts": "2026-11-14 03:39:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #243 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #202 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794683041158-sr5r",
-      "ts": "2026-11-14 19:04:01 UTC",
+      "id": "new-1794627375200-96bg",
+      "ts": "2026-11-14 03:36:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #242 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #201 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794682861109-kfi2",
-      "ts": "2026-11-14 19:01:01 UTC",
+      "id": "new-1794627195198-fw87",
+      "ts": "2026-11-14 03:33:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #241 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #200 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794682681222-fvv3",
-      "ts": "2026-11-14 18:58:01 UTC",
+      "id": "new-1794627015222-6rt1",
+      "ts": "2026-11-14 03:30:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #240 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #199 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794682492942-aphp",
-      "ts": "2026-11-14 18:54:52 UTC",
+      "id": "new-1794626835214-wpzd",
+      "ts": "2026-11-14 03:27:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #239 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #198 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794682313066-s09w",
-      "ts": "2026-11-14 18:51:53 UTC",
+      "id": "new-1794626655211-asmt",
+      "ts": "2026-11-14 03:24:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #238 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #197 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     },
     {
-      "id": "new-1794682133015-xcg7",
-      "ts": "2026-11-14 18:48:53 UTC",
+      "id": "new-1794626475195-5ze7",
+      "ts": "2026-11-14 03:21:15 UTC",
       "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #237 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794681845529-98ea",
-      "ts": "2026-11-14 18:44:05 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #236 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794681665396-x4xp",
-      "ts": "2026-11-14 18:41:05 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #235 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794681373330-sltv",
-      "ts": "2026-11-14 18:36:13 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #234 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794681193368-nh7p",
-      "ts": "2026-11-14 18:33:13 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #233 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794681013256-rv8g",
-      "ts": "2026-11-14 18:30:13 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #232 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794680628169-vluf",
-      "ts": "2026-11-14 18:23:48 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #231 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794680448176-l6vn",
-      "ts": "2026-11-14 18:20:48 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #230 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794680268170-ylgp",
-      "ts": "2026-11-14 18:17:48 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #229 في الخلفية على الهدف (bughunters.google.com)",
+      "titleAr": "اكتمال الدورة الذاتية #196 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     }
   ],
   "extractedArtifactsVault": [
-    {
-      "id": "art-1794686292596-r3ub",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #258 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:58:12 UTC"
-    },
-    {
-      "id": "art-1794686112611-tfse",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #257 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:55:12 UTC"
-    },
-    {
-      "id": "art-1794685932664-ve4u",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #256 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:52:12 UTC"
-    },
-    {
-      "id": "art-1794685752620-fdzk",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #255 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:49:12 UTC"
-    },
-    {
-      "id": "art-1794685572595-naan",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #254 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:46:12 UTC"
-    },
-    {
-      "id": "art-1794685392634-9awn",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #253 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:43:12 UTC"
-    },
-    {
-      "id": "art-1794685180256-e2c8",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #252 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:39:40 UTC"
-    },
-    {
-      "id": "art-1794684932426-zor2",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #251 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:35:32 UTC"
-    },
-    {
-      "id": "art-1794684752419-6gle",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #250 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:32:32 UTC"
-    },
-    {
-      "id": "art-1794684572446-vt44",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #249 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:29:32 UTC"
-    },
-    {
-      "id": "art-1794684392416-7cqn",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #248 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:26:32 UTC"
-    },
-    {
-      "id": "art-1794684212420-5f8r",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #247 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:23:32 UTC"
-    },
-    {
-      "id": "art-1794684032419-ab60",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #246 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:20:32 UTC"
-    },
-    {
-      "id": "art-1794683852544-7l92",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #245 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:17:32 UTC"
-    },
-    {
-      "id": "art-1794683401437-pmoc",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #244 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:10:01 UTC"
-    },
-    {
-      "id": "art-1794683221086-cq9u",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #243 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:07:01 UTC"
-    },
-    {
-      "id": "art-1794683041149-ig7f",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #242 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:04:01 UTC"
-    },
-    {
-      "id": "art-1794682861094-gw58",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #241 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 19:01:01 UTC"
-    },
-    {
-      "id": "art-1794682681219-uqb8",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #240 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:58:01 UTC"
-    },
-    {
-      "id": "art-1794682492929-5ssp",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #239 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:54:52 UTC"
-    },
-    {
-      "id": "art-1794682313057-i2bw",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #238 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:51:53 UTC"
-    },
-    {
-      "id": "art-1794682133012-z5c7",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #237 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:48:53 UTC"
-    },
-    {
-      "id": "art-1794681845515-vbrl",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #236 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:44:05 UTC"
-    },
-    {
-      "id": "art-1794681665389-zidz",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #235 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:41:05 UTC"
-    },
-    {
-      "id": "art-1794681373317-fzy3",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #234 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:36:13 UTC"
-    },
-    {
-      "id": "art-1794681193356-gmxm",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #233 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:33:13 UTC"
-    },
-    {
-      "id": "art-1794681013250-clnq",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #232 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:30:13 UTC"
-    },
-    {
-      "id": "art-1794680628166-g2e3",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #231 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:23:48 UTC"
-    },
-    {
-      "id": "art-1794680448172-zyw5",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #230 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:20:48 UTC"
-    },
-    {
-      "id": "art-1794680268165-pwrv",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #229 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:17:48 UTC"
-    },
-    {
-      "id": "art-1794680088186-t7o9",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #228 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:14:48 UTC"
-    },
-    {
-      "id": "art-1794679908166-b6wl",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #227 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:11:48 UTC"
-    },
-    {
-      "id": "art-1794679728167-v1nb",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #226 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:08:48 UTC"
-    },
-    {
-      "id": "art-1794679548168-upgm",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #225 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:05:48 UTC"
-    },
-    {
-      "id": "art-1794679368162-prjl",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #224 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 18:02:48 UTC"
-    },
-    {
-      "id": "art-1794679188148-va89",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #223 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 17:59:48 UTC"
-    },
-    {
-      "id": "art-1794679008160-as36",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #222 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 17:56:48 UTC"
-    },
-    {
-      "id": "art-1794678828160-1j1e",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #221 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 17:53:48 UTC"
-    },
-    {
-      "id": "art-1794678648205-f5ia",
-      "type": "AUTONOMOUS_CYCLE",
-      "target": "bughunters.google.com",
-      "titleAr": "دورة الفحص والتطوير الذاتي #220 على bughunters.google.com",
-      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
-      "tool": "24/7 Autonomous Daemon",
-      "verified": true,
-      "ts": "2026-11-14 17:50:48 UTC"
-    },
     {
       "id": "art-1794659982963-26wc",
       "type": "AUTONOMOUS_CYCLE",
@@ -653,6 +228,396 @@
       "tool": "24/7 Autonomous Daemon",
       "verified": true,
       "ts": "2026-11-14 12:39:42 UTC"
+    },
+    {
+      "id": "art-1794634006878-l75z",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #216 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 05:26:46 UTC"
+    },
+    {
+      "id": "art-1794633826874-fkpf",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #215 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 05:23:46 UTC"
+    },
+    {
+      "id": "art-1794633646871-n4rf",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #214 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 05:20:46 UTC"
+    },
+    {
+      "id": "art-1794633466872-wr8a",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #213 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 05:17:46 UTC"
+    },
+    {
+      "id": "art-1794633286890-hrqg",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #212 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 05:14:46 UTC"
+    },
+    {
+      "id": "art-1794631717560-mzm4",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #211 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 04:48:37 UTC"
+    },
+    {
+      "id": "art-1794631537561-2e6c",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #210 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 04:45:37 UTC"
+    },
+    {
+      "id": "art-1794631357555-476x",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #209 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 04:42:37 UTC"
+    },
+    {
+      "id": "art-1794631177553-xe8w",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #208 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 04:39:37 UTC"
+    },
+    {
+      "id": "art-1794630997587-dlnm",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #207 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 04:36:37 UTC"
+    },
+    {
+      "id": "art-1794628275207-7cvh",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #206 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:51:15 UTC"
+    },
+    {
+      "id": "art-1794628095200-9c5l",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #205 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:48:15 UTC"
+    },
+    {
+      "id": "art-1794627915200-x8ow",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #204 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:45:15 UTC"
+    },
+    {
+      "id": "art-1794627735197-etq8",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #203 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:42:15 UTC"
+    },
+    {
+      "id": "art-1794627555196-yid0",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #202 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:39:15 UTC"
+    },
+    {
+      "id": "art-1794627375196-zayk",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #201 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:36:15 UTC"
+    },
+    {
+      "id": "art-1794627195195-f95g",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #200 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:33:15 UTC"
+    },
+    {
+      "id": "art-1794627015218-1mp3",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #199 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:30:15 UTC"
+    },
+    {
+      "id": "art-1794626835211-gcwq",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #198 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:27:15 UTC"
+    },
+    {
+      "id": "art-1794626655206-6jla",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #197 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:24:15 UTC"
+    },
+    {
+      "id": "art-1794626475191-6c1p",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #196 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:21:15 UTC"
+    },
+    {
+      "id": "art-1794626295188-6dd6",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #195 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:18:15 UTC"
+    },
+    {
+      "id": "art-1794626115186-amig",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #194 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:15:15 UTC"
+    },
+    {
+      "id": "art-1794625935183-dz9d",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #193 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:12:15 UTC"
+    },
+    {
+      "id": "art-1794625755182-1wqf",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #192 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:09:15 UTC"
+    },
+    {
+      "id": "art-1794625575182-hb7e",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #191 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:06:15 UTC"
+    },
+    {
+      "id": "art-1794625395179-ig3v",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #190 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:03:15 UTC"
+    },
+    {
+      "id": "art-1794625215176-kq05",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #189 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 03:00:15 UTC"
+    },
+    {
+      "id": "art-1794625035174-fau3",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #188 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:57:15 UTC"
+    },
+    {
+      "id": "art-1794624855195-qibj",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #187 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:54:15 UTC"
+    },
+    {
+      "id": "art-1794624675170-nab3",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #186 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:51:15 UTC"
+    },
+    {
+      "id": "art-1794624495172-8ex5",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #185 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:48:15 UTC"
+    },
+    {
+      "id": "art-1794624315174-16wx",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #184 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:45:15 UTC"
+    },
+    {
+      "id": "art-1794624135172-qdue",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #183 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:42:15 UTC"
+    },
+    {
+      "id": "art-1794623955178-6h70",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #182 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:39:15 UTC"
+    },
+    {
+      "id": "art-1794623775185-awof",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #181 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:36:15 UTC"
+    },
+    {
+      "id": "art-1794623595174-955h",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #180 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:33:15 UTC"
+    },
+    {
+      "id": "art-1794623415171-0bj2",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #179 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:30:15 UTC"
+    },
+    {
+      "id": "art-1794623235136-cex4",
+      "type": "AUTONOMOUS_CYCLE",
+      "target": "bughunters.google.com",
+      "titleAr": "دورة الفحص والتطوير الذاتي #178 على bughunters.google.com",
+      "value": "Zero-FP SHA256=ce8551dd0aacdcbb | Chain: [Hop 1: P01 CWE-540] ➔ [Hop 2: P05 CWE-200] ➔ [Hop 3: P04 CWE-915] ➔ [Hop 4: P02 CWE-639] (CRITICAL (CVSS 9.5))",
+      "tool": "24/7 Autonomous Daemon",
+      "verified": true,
+      "ts": "2026-11-14 02:27:15 UTC"
     }
   ],
   "multiTaskQueue": [
@@ -663,7 +628,7 @@
       "engine": "Subfinder + Shodan InternetDB Daemon",
       "status": "running_continuous",
       "progress": 100,
-      "lastOutput": "Cycle #258 verified on bughunters.google.com at ٧:٥٨:١٢ م"
+      "lastOutput": "Cycle #218 verified on bughunters.google.com at ١٢:٣٩:٤٢ م"
     },
     {
       "id": "task-2",
@@ -672,7 +637,7 @@
       "engine": "Katana + LinkFinder + GraphX",
       "status": "running_continuous",
       "progress": 100,
-      "lastOutput": "Cycle #258 verified on bughunters.google.com at ٧:٥٨:١٢ م"
+      "lastOutput": "Cycle #218 verified on bughunters.google.com at ١٢:٣٩:٤٢ م"
     },
     {
       "id": "task-3",
@@ -681,7 +646,7 @@
       "engine": "Combinatorial Synthesizer (24 Primitives)",
       "status": "running_continuous",
       "progress": 100,
-      "lastOutput": "Cycle #258 verified on bughunters.google.com at ٧:٥٨:١٢ م"
+      "lastOutput": "Cycle #218 verified on bughunters.google.com at ١٢:٣٩:٤٢ م"
     },
     {
       "id": "task-4",
@@ -690,7 +655,7 @@
       "engine": "GitHub Cloud Memory Sync Engine",
       "status": "running_continuous",
       "progress": 100,
-      "lastOutput": "Cycle #258 verified on bughunters.google.com at ٧:٥٨:١٢ م"
+      "lastOutput": "Cycle #218 verified on bughunters.google.com at ١٢:٣٩:٤٢ م"
     }
   ],
   "intelFeed": [
@@ -2697,12 +2662,11 @@
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 38,
+    "freshThisPulse": 0,
     "sourcesAnswered": [
-      "NVD:40",
       "KEV:15",
       "GHSA:9"
     ],
-    "at": "2026-11-14T14:39:03.549Z"
+    "at": "2026-11-14T19:36:34.375Z"
   }
 }
