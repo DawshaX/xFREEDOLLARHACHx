@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-14T03:52:23.739Z",
-  "total": 403693,
+  "at": "2026-11-14T04:13:37.594Z",
+  "total": 425693,
   "bySeverity": {
-    "medium": 172726,
-    "low": 16726,
-    "high": 155335,
-    "critical": 37336,
-    "none": 70,
-    "unknown": 21500
+    "medium": 182435,
+    "critical": 39857,
+    "high": 162297,
+    "unknown": 23267,
+    "low": 17762,
+    "none": 75
   },
-  "kev": 1675,
-  "epssScored": 385951,
-  "products": 77012,
+  "kev": 1781,
+  "epssScored": 406184,
+  "products": 81948,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -1644,24 +1644,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2023-35078",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "An authentication bypass vulnerability in Ivanti EPMM allows unauthorized users to access restricted functionality or resources of the application without proper authentication.",
-      "cwe": [
-        "CWE-287"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2023-07-25T07:15:10.897",
-      "products": [
-        "endpoint_manager_mobile",
-        "endpoint_manager_mobile",
-        "endpoint_manager_mobile"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2023-35082",
       "cvss": 9.8,
       "sev": "critical",
@@ -2024,6 +2006,58 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-1671",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A pre-auth command injection vulnerability in the warn-proceed handler of Sophos Web Appliance older than version 4.3.10.4 allows execution of arbitrary code.",
+      "cwe": [
+        "CWE-77"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2023-04-04T10:15:07.197",
+      "products": [
+        "web_appliance"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-27350",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "This vulnerability allows remote attackers to bypass authentication on affected installations of PaperCut NG 22.0.5 (Build 63914). Authentication is not required to exploit this vulnerability. The specific flaw exists within the SetupCompleted class. The issue",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2023-04-20T16:15:07.653",
+      "products": [
+        "papercut_mf",
+        "papercut_mf",
+        "papercut_mf"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-35078",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "An authentication bypass vulnerability in Ivanti EPMM allows unauthorized users to access restricted functionality or resources of the application without proper authentication.",
+      "cwe": [
+        "CWE-287"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2023-07-25T07:15:10.897",
+      "products": [
+        "endpoint_manager_mobile",
+        "endpoint_manager_mobile",
+        "endpoint_manager_mobile"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2012-1823",
       "cvss": 9.8,
       "sev": "critical",
@@ -2130,6 +2164,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2022-44877",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "login/index.php in CWP (aka Control Web Panel or CentOS Web Panel) 7 before 0.9.8.1147 allows remote attackers to execute arbitrary OS commands via shell metacharacters in the login parameter.",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.99995,
+      "pub": "2023-01-05T23:15:09.150",
+      "products": [
+        "webpanel"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-34102",
       "cvss": 9.8,
       "sev": "critical",
@@ -2219,24 +2269,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2023-29300",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Adobe ColdFusion versions 2018u16 (and earlier), 2021u6 (and earlier) and 2023.0.0.330468 (and earlier) are affected by a Deserialization of Untrusted Data vulnerability that could result in Arbitrary code execution. Exploitation of this issue does not require",
-      "cwe": [
-        "CWE-502"
-      ],
-      "kev": true,
-      "epss": 0.99991,
-      "pub": "2023-07-12T16:15:11.733",
-      "products": [
-        "coldfusion",
-        "coldfusion",
-        "coldfusion"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2018-7600",
       "cvss": 9.8,
       "sev": "critical",
@@ -2251,6 +2283,24 @@
         "drupal",
         "drupal",
         "drupal"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-29300",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Adobe ColdFusion versions 2018u16 (and earlier), 2021u6 (and earlier) and 2023.0.0.330468 (and earlier) are affected by a Deserialization of Untrusted Data vulnerability that could result in Arbitrary code execution. Exploitation of this issue does not require",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.99991,
+      "pub": "2023-07-12T16:15:11.733",
+      "products": [
+        "coldfusion",
+        "coldfusion",
+        "coldfusion"
       ],
       "refs": []
     },
@@ -2375,6 +2425,22 @@
         "fortiproxy",
         "fortiproxy",
         "fortiswitchmanager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-29357",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Microsoft SharePoint Server Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-303"
+      ],
+      "kev": true,
+      "epss": 0.99984,
+      "pub": "2023-06-14T00:15:09.903",
+      "products": [
+        "sharepoint_server"
       ],
       "refs": []
     },
@@ -2514,6 +2580,23 @@
       "pub": "2021-02-02T13:15:12.570",
       "products": [
         "dns-320_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2022-47986",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "IBM Aspera Faspex 4.4.2 Patch Level 1 and earlier could allow a remote attacker to execute arbitrary code on the system, caused by a YAML deserialization flaw. By sending a specially crafted obsolete API call, an attacker could exploit this vulnerability to ex",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.99965,
+      "pub": "2023-02-17T16:15:10.873",
+      "products": [
+        "aspera_faspex",
+        "aspera_faspex"
       ],
       "refs": []
     },
@@ -2757,6 +2840,24 @@
         "spring_cloud_function",
         "banking_branch",
         "banking_cash_management"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-34362",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attack",
+      "cwe": [
+        "CWE-89"
+      ],
+      "kev": true,
+      "epss": 0.99934,
+      "pub": "2023-06-02T14:15:09.487",
+      "products": [
+        "moveit_cloud",
+        "moveit_cloud",
+        "moveit_cloud"
       ],
       "refs": []
     },
@@ -3089,6 +3190,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2022-46169",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Cacti is an open source platform which provides a robust and extensible operational monitoring and fault management framework for users. In affected versions a command injection vulnerability allows an unauthenticated user to execute arbitrary code on a server",
+      "cwe": [
+        "CWE-74",
+        "CWE-78",
+        "CWE-863"
+      ],
+      "kev": true,
+      "epss": 0.99826,
+      "pub": "2022-12-05T21:15:10.527",
+      "products": [
+        "cacti"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2021-37415",
       "cvss": 9.8,
       "sev": "critical",
@@ -3223,6 +3342,24 @@
       "pub": "2025-10-05T04:15:40.340",
       "products": [
         "concurrent_processing"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2022-47966",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Multiple Zoho ManageEngine on-premise products, such as ServiceDesk Plus through 14003, allow remote code execution due to use of Apache Santuario xmlsec (aka XML Security for Java) 1.4.1, because the xmlsec XSLT features, by design in that version, make the a",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": true,
+      "epss": 0.99753,
+      "pub": "2023-01-18T18:15:10.570",
+      "products": [
+        "manageengine_access_manager_plus",
+        "manageengine_access_manager_plus",
+        "manageengine_ad360"
       ],
       "refs": []
     },
@@ -3517,6 +3654,25 @@
       "refs": []
     },
     {
+      "id": "CVE-2022-42475",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A heap-based buffer overflow vulnerability [CWE-122] in FortiOS SSL-VPN 7.2.0 through 7.2.2, 7.0.0 through 7.0.8, 6.4.0 through 6.4.10, 6.2.0 through 6.2.11, 6.0.15 and earlier  and FortiProxy SSL-VPN 7.2.0 through 7.2.1, 7.0.7 and earlier may allow a remote u",
+      "cwe": [
+        "CWE-197",
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.99474,
+      "pub": "2023-01-02T09:15:09.490",
+      "products": [
+        "fortios",
+        "fortios",
+        "fortios"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2017-7494",
       "cvss": 9.8,
       "sev": "critical",
@@ -3596,6 +3752,24 @@
       "pub": "2024-06-25T20:15:12.970",
       "products": [
         "whatsup_gold"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-28771",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Improper error message handling in Zyxel ZyWALL/USG series firmware versions 4.60 through 4.73, VPN series firmware versions 4.60 through 5.35, USG FLEX series firmware versions 4.60 through 5.35, and ATP series firmware versions 4.60 through 5.35, which could",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.99284,
+      "pub": "2023-04-25T02:15:08.743",
+      "products": [
+        "atp100_firmware",
+        "atp100w_firmware",
+        "atp200_firmware"
       ],
       "refs": []
     },
@@ -4156,6 +4330,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-20887",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Aria Operations for Networks contains a command injection vulnerability. A malicious actor with network access to VMware Aria Operations for Networks may be able to perform a command injection attack resulting in remote code execution.",
+      "cwe": [
+        "CWE-77"
+      ],
+      "kev": true,
+      "epss": 0.98281,
+      "pub": "2023-06-07T15:15:09.190",
+      "products": [
+        "aria_operations_for_networks"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2022-26138",
       "cvss": 9.8,
       "sev": "critical",
@@ -4244,6 +4434,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-25717",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Ruckus Wireless Admin through 10.4 allows Remote Code Execution via an unauthenticated HTTP GET Request, as demonstrated by a /forms/doLogin?login_username=admin&password=password$(curl substring.",
+      "cwe": [
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.98069,
+      "pub": "2023-02-13T20:15:10.973",
+      "products": [
+        "ruckus_wireless_admin",
+        "smartzone_ap",
+        "smartzone_ap"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2021-35395",
       "cvss": 9.8,
       "sev": "critical",
@@ -4284,6 +4492,22 @@
       "pub": "2018-11-21T16:29:00.347",
       "products": [
         "prtg_network_monitor"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-25280",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "OS Command injection vulnerability in D-Link DIR820LA1_FW105B03 allows attackers to escalate privileges to root via a crafted payload with the ping_addr parameter to ping.ccp.",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.97864,
+      "pub": "2023-03-16T01:15:46.780",
+      "products": [
+        "dir-820l_firmware"
       ],
       "refs": []
     },
@@ -4424,6 +4648,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-24489",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A vulnerability has been discovered in the customer-managed ShareFile storage zones controller which, if exploited, could allow an unauthenticated attacker to remotely compromise the customer-managed ShareFile storage zones controller.",
+      "cwe": [
+        "CWE-284"
+      ],
+      "kev": true,
+      "epss": 0.97343,
+      "pub": "2023-07-10T22:15:09.197",
+      "products": [
+        "sharefile_storage_zones_controller"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-2747",
       "cvss": 9.8,
       "sev": "critical",
@@ -4436,6 +4676,25 @@
       "pub": "2025-03-24T19:15:51.967",
       "products": [
         "xperience"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-23397",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Microsoft Outlook Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-20",
+        "CWE-294"
+      ],
+      "kev": true,
+      "epss": 0.97159,
+      "pub": "2023-03-14T17:15:13.263",
+      "products": [
+        "365_apps",
+        "office",
+        "office_long_term_servicing_channel"
       ],
       "refs": []
     },
@@ -4681,6 +4940,23 @@
         "salt",
         "salt",
         "leap"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-33246",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "For RocketMQ versions 5.1.0 and below, under certain conditions, there is a risk of remote command execution. \n\nSeveral components of RocketMQ, including NameServer, Broker, and Controller, are leaked on the extranet and lack permission verification, an attack",
+      "cwe": [
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.96568,
+      "pub": "2023-05-24T15:15:09.553",
+      "products": [
+        "rocketmq",
+        "rocketmq"
       ],
       "refs": []
     },
@@ -6140,6 +6416,25 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-27997",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A heap-based buffer overflow vulnerability [CWE-122] in FortiOS version 7.2.4 and below, version 7.0.11 and below, version 6.4.12 and below, version 6.0.16 and below and FortiProxy version 7.2.3 and below, version 7.0.9 and below, version 2.0.12 and below, ver",
+      "cwe": [
+        "CWE-122",
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.8675,
+      "pub": "2023-06-13T09:15:16.613",
+      "products": [
+        "fortiproxy",
+        "fortios",
+        "fortios"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-24858",
       "cvss": 9.8,
       "sev": "critical",
@@ -6602,6 +6897,24 @@
         "brotli",
         "brotli",
         "brotli"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-27992",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "The pre-authentication command injection vulnerability in the Zyxel NAS326 firmware versions prior to V5.21(AAZF.14)C0, NAS540 firmware versions prior to V5.21(AATB.11)C0, and NAS542 firmware versions prior to V5.21(ABAG.11)C0 could allow an unauthenticated at",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.82264,
+      "pub": "2023-06-19T12:15:09.433",
+      "products": [
+        "nas326_firmware",
+        "nas540_firmware",
+        "nas542_firmware"
       ],
       "refs": []
     },
@@ -7125,6 +7438,23 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-28461",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Array Networks Array AG Series and vxAG (9.4.0.481 and earlier) allow remote code execution. An attacker can browse the filesystem on the SSL VPN gateway using a flags attribute in an HTTP header without authentication. The product could then be exploited thro",
+      "cwe": [
+        "CWE-287",
+        "CWE-306"
+      ],
+      "kev": true,
+      "epss": 0.68079,
+      "pub": "2023-03-15T23:15:10.070",
+      "products": [
+        "arrayos_ag"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2013-2729",
       "cvss": 9.8,
       "sev": "critical",
@@ -7156,6 +7486,22 @@
       "products": [
         "routeros",
         "routeros"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2016-20017",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "D-Link DSL-2750B devices before 1.05 allow remote unauthenticated command injection via the login.cgi cli parameter, as exploited in the wild in 2016 through 2022.",
+      "cwe": [
+        "CWE-77"
+      ],
+      "kev": true,
+      "epss": 0.65777,
+      "pub": "2022-10-19T05:15:08.817",
+      "products": [
+        "dsl-2750b_firmware"
       ],
       "refs": []
     },
@@ -7780,6 +8126,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2022-31199",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Remote code execution vulnerabilities exist in the Netwrix Auditor User Activity Video Recording component affecting both the Netwrix Auditor server and agents installed on monitored systems. The remote code execution vulnerabilities exist within the underlyin",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.36009,
+      "pub": "2022-11-08T01:15:09.767",
+      "products": [
+        "auditor"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2020-2509",
       "cvss": 9.8,
       "sev": "critical",
@@ -7993,6 +8355,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-33010",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A buffer overflow vulnerability in the ID processing function in Zyxel ATP series firmware versions 4.32 through 5.36 Patch 1, USG FLEX series firmware versions 4.50 through 5.36 Patch 1, USG FLEX 50(W) firmware versions 4.25 through 5.36 Patch 1, USG20(W)-VPN",
+      "cwe": [
+        "CWE-120"
+      ],
+      "kev": true,
+      "epss": 0.29024,
+      "pub": "2023-05-24T13:15:09.640",
+      "products": [
+        "atp100_firmware",
+        "atp100_firmware",
+        "atp200_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2014-3931",
       "cvss": 9.8,
       "sev": "critical",
@@ -8039,6 +8419,24 @@
         "gv-vs12_firmware",
         "gv-vs11_firmware",
         "gv-dsp_lpr_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-33009",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A buffer overflow vulnerability in the notification function in Zyxel ATP series firmware versions 4.60 through 5.36 Patch 1, USG FLEX series firmware versions 4.60 through 5.36 Patch 1, USG FLEX 50(W) firmware versions 4.60 through 5.36 Patch 1, USG20(W)-VPN ",
+      "cwe": [
+        "CWE-120"
+      ],
+      "kev": true,
+      "epss": 0.28144,
+      "pub": "2023-05-24T13:15:09.560",
+      "products": [
+        "atp100_firmware",
+        "atp100_firmware",
+        "atp200_firmware"
       ],
       "refs": []
     },
@@ -8448,6 +8846,23 @@
       "products": [
         "litespeed_cpanel_plugin",
         "litespeed_whm_plugin"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-26359",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Adobe ColdFusion versions 2018 Update 15 (and earlier) and 2021 Update 5 (and earlier) are affected by a Deserialization of Untrusted Data vulnerability that could result in arbitrary code execution in the context of the current user. Exploitation of this issu",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.16988,
+      "pub": "2023-03-23T20:15:15.167",
+      "products": [
+        "coldfusion",
+        "coldfusion"
       ],
       "refs": []
     },
@@ -8911,6 +9326,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2022-27518",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Unauthenticated remote arbitrary code execution",
+      "cwe": [
+        "CWE-664"
+      ],
+      "kev": true,
+      "epss": 0.06858,
+      "pub": "2022-12-13T17:15:14.350",
+      "products": [
+        "application_delivery_controller_firmware",
+        "application_delivery_controller_firmware",
+        "application_delivery_controller_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-86060",
       "cvss": 9.8,
       "sev": "critical",
@@ -9125,6 +9558,38 @@
         "lanscope_endpoint_manager",
         "lanscope_endpoint_manager",
         "lanscope_endpoint_manager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2022-42948",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Cobalt Strike 4.7.1 fails to properly escape HTML tags when they are displayed on Swing components. By injecting crafted HTML code, it is possible to remotely execute code in the Cobalt Strike UI.",
+      "cwe": [
+        "CWE-116"
+      ],
+      "kev": true,
+      "epss": 0.02706,
+      "pub": "2023-03-24T14:15:09.927",
+      "products": [
+        "cobalt_strike"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-29492",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Novi Survey before 8.9.43676 allows remote attackers to execute arbitrary code on the server in the context of the service account. This does not provide access to stored survey or response data.",
+      "cwe": [
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.0269,
+      "pub": "2023-04-11T05:15:07.393",
+      "products": [
+        "novi_survey"
       ],
       "refs": []
     },
@@ -9393,6 +9858,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2022-4135",
+      "cvss": 9.6,
+      "sev": "critical",
+      "desc": "Heap buffer overflow in GPU in Google Chrome prior to 107.0.5304.121 allowed a remote attacker who had compromised the renderer process to potentially perform a sandbox escape via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.31864,
+      "pub": "2022-11-25T01:15:09.957",
+      "products": [
+        "chrome",
+        "edge",
+        "edge_chromium"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2024-7971",
       "cvss": 9.6,
       "sev": "critical",
@@ -9517,6 +10000,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-2136",
+      "cvss": 9.6,
+      "sev": "critical",
+      "desc": "Integer overflow in Skia in Google Chrome prior to 112.0.5615.137 allowed a remote attacker who had compromised the renderer process to potentially perform a sandbox escape via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-190"
+      ],
+      "kev": true,
+      "epss": 0.05786,
+      "pub": "2023-04-19T04:15:31.607",
+      "products": [
+        "chrome",
+        "debian_linux",
+        "fedora"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2022-3075",
       "cvss": 9.6,
       "sev": "critical",
@@ -9568,6 +10069,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2022-26486",
+      "cvss": 9.6,
+      "sev": "critical",
+      "desc": "An unexpected message in the WebGPU IPC framework could lead to a use-after-free and exploitable sandbox escape. We have had reports of attacks in the wild abusing this flaw. This vulnerability affects Firefox < 97.0.2, Firefox ESR < 91.6.1, Firefox for Androi",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.02362,
+      "pub": "2022-12-22T20:15:22.797",
+      "products": [
+        "firefox",
+        "firefox",
+        "firefox_focus"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-4966",
       "cvss": 9.4,
       "sev": "critical",
@@ -9598,6 +10117,25 @@
       "pub": "2024-09-19T18:15:10.600",
       "products": [
         "endpoint_manager_cloud_services_appliance"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-2868",
+      "cvss": 9.4,
+      "sev": "critical",
+      "desc": "A remote command injection vulnerability exists in the Barracuda Email Security Gateway (appliance form factor only) product effecting versions 5.1.3.001-9.2.0.006. The vulnerability arises out of a failure to comprehensively sanitize the processing of .tar fi",
+      "cwe": [
+        "CWE-20",
+        "CWE-77"
+      ],
+      "kev": true,
+      "epss": 0.86841,
+      "pub": "2023-05-24T19:15:09.363",
+      "products": [
+        "email_security_gateway_300_firmware",
+        "email_security_gateway_400_firmware",
+        "email_security_gateway_600_firmware"
       ],
       "refs": []
     },
@@ -10375,6 +10913,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-34192",
+      "cvss": 9,
+      "sev": "critical",
+      "desc": "Cross Site Scripting vulnerability in Zimbra ZCS v.8.8.15 allows a remote authenticated attacker to execute arbitrary code via a crafted script to the /h/autoSaveDraft function.",
+      "cwe": [
+        "CWE-79"
+      ],
+      "kev": true,
+      "epss": 0.77266,
+      "pub": "2023-07-06T16:15:10.047",
+      "products": [
+        "zimbra_collaboration_suite"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-53690",
       "cvss": 9,
       "sev": "critical",
@@ -10429,6 +10983,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-27524",
+      "cvss": 8.9,
+      "sev": "high",
+      "desc": "Session Validation attacks in Apache Superset versions up to and including 2.0.1. Installations that have not altered the default configured SECRET_KEY according to installation instructions allow for an attacker to authenticate and access unauthorized resourc",
+      "cwe": [
+        "CWE-1188"
+      ],
+      "kev": true,
+      "epss": 0.98148,
+      "pub": "2023-04-24T16:15:07.843",
+      "products": [
+        "superset"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-73570",
       "cvss": 8.9,
       "sev": "high",
@@ -10441,6 +11011,22 @@
       "pub": "2026-08-13T16:19:06.003",
       "products": [
         "zimbra_collaboration_suite"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-1389",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "TP-Link Archer AX21 (AX1800) firmware versions before 1.1.4 Build 20230219 contained a command injection vulnerability in the country form of the /cgi-bin/luci;stok=/locale endpoint on the web management interface. Specifically, the country parameter of the wr",
+      "cwe": [
+        "CWE-77"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2023-03-15T23:15:09.403",
+      "products": [
+        "archer_ax21_firmware"
       ],
       "refs": []
     },
@@ -10758,6 +11344,24 @@
         "windows_10_1507",
         "windows_10_1607",
         "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2022-43769",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Hitachi Vantara Pentaho Business Analytics Server prior to versions 9.4.0.1 and 9.3.0.2, including 8.3.x allow certain web services to set property values which contain Spring templates that are interpreted downstream.",
+      "cwe": [
+        "CWE-74",
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.9767,
+      "pub": "2023-04-03T18:15:07.703",
+      "products": [
+        "vantara_pentaho_business_analytics_server",
+        "vantara_pentaho_business_analytics_server"
       ],
       "refs": []
     },
@@ -11474,6 +12078,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-22952",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "In SugarCRM before 12.0. Hotfix 91155, a crafted request can inject custom PHP code through the EmailTemplates because of missing input validation.",
+      "cwe": [
+        "CWE-20",
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.80139,
+      "pub": "2023-01-11T09:15:08.787",
+      "products": [
+        "sugarcrm",
+        "sugarcrm"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2016-7201",
       "cvss": 8.8,
       "sev": "high",
@@ -11570,6 +12192,22 @@
       "pub": "2013-05-05T11:07:00.527",
       "products": [
         "internet_explorer"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2022-41080",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Microsoft Exchange Server Elevation of Privilege Vulnerability",
+      "cwe": [],
+      "kev": true,
+      "epss": 0.77326,
+      "pub": "2022-11-09T22:15:21.550",
+      "products": [
+        "exchange_server",
+        "exchange_server",
+        "exchange_server"
       ],
       "refs": []
     },
@@ -12144,6 +12782,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-21529",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Microsoft Exchange Server Remote Code Execution Vulnerability",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.59294,
+      "pub": "2023-02-14T20:15:11.743",
+      "products": [
+        "exchange_server",
+        "exchange_server",
+        "exchange_server"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2019-1068",
       "cvss": 8.8,
       "sev": "high",
@@ -12638,6 +13294,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-33538",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "TP-Link TL-WR940N V2/V4, TL-WR841N V8/V10, and TL-WR740N V1/V2 was discovered to contain a command injection vulnerability via the component /userRpm/WlanNetworkRpm .",
+      "cwe": [
+        "CWE-77"
+      ],
+      "kev": true,
+      "epss": 0.41606,
+      "pub": "2023-06-07T04:15:10.623",
+      "products": [
+        "tl-wr940n_firmware",
+        "tl-wr841n_firmware",
+        "tl-wr740n_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-4762",
       "cvss": 8.8,
       "sev": "high",
@@ -12670,6 +13344,24 @@
       "products": [
         "connect_secure",
         "connect_secure"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-2033",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Type confusion in V8 in Google Chrome prior to 112.0.5615.121 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-843"
+      ],
+      "kev": true,
+      "epss": 0.40648,
+      "pub": "2023-04-14T19:15:09.453",
+      "products": [
+        "chrome",
+        "debian_linux",
+        "fedora"
       ],
       "refs": []
     },
@@ -12830,6 +13522,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-3079",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Type confusion in V8 in Google Chrome prior to 114.0.5735.110 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page. (Chromium security severity: High)",
+      "cwe": [
+        "CWE-843"
+      ],
+      "kev": true,
+      "epss": 0.37858,
+      "pub": "2023-06-05T22:15:12.383",
+      "products": [
+        "chrome",
+        "fedora",
+        "fedora"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2020-5735",
       "cvss": 8.8,
       "sev": "high",
@@ -12969,6 +13679,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-21674",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Windows Advanced Local Procedure Call (ALPC) Elevation of Privilege Vulnerability",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.34206,
+      "pub": "2023-01-10T22:15:16.307",
+      "products": [
+        "windows_10_1507",
+        "windows_10_1607",
+        "windows_10_1809"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2016-5198",
       "cvss": 8.8,
       "sev": "high",
@@ -12983,6 +13711,22 @@
         "chrome",
         "chrome",
         "chrome"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2022-40799",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Data Integrity Failure in 'Backup Config' in D-Link DNR-322L <= 2.60B15 allows an authenticated attacker to execute OS level commands on the device.",
+      "cwe": [
+        "CWE-494"
+      ],
+      "kev": true,
+      "epss": 0.3365,
+      "pub": "2022-11-29T05:15:11.310",
+      "products": [
+        "dnr-322l_firmware"
       ],
       "refs": []
     },
@@ -13092,6 +13836,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2023-28205",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "A use after free issue was addressed with improved memory management. This issue is fixed in Safari 16.4.1, iOS 15.7.5 and iPadOS 15.7.5, iOS 16.4.1 and iPadOS 16.4.1, macOS Ventura 13.3.1. Processing maliciously crafted web content may lead to arbitrary code ",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.27076,
+      "pub": "2023-04-10T19:15:07.237",
+      "products": [
+        "safari",
+        "ipados",
+        "ipados"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2014-2817",
       "cvss": 8.8,
       "sev": "high",
@@ -13106,760 +13868,7 @@
         "internet_explorer"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2026-86950",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "An out-of-bounds write issue was addressed with improved bounds checking. This issue is fixed in iOS 18.7.11 and iPadOS 18.7.11, iOS 26.7.1 and iPadOS 26.7.1, macOS Sequoia 15.8.1, macOS Tahoe 26.7.1. Processing a maliciously crafted file may lead to arbitrary",
-      "cwe": [
-        "CWE-787"
-      ],
-      "kev": true,
-      "epss": 0.26166,
-      "pub": "2026-09-28T20:17:11.193",
-      "products": [
-        "ipados",
-        "ipados",
-        "iphone_os"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2025-43529",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A use-after-free issue was addressed with improved memory management. This issue is fixed in Safari 26.2, iOS 18.7.3 and iPadOS 18.7.3, iOS 26.2 and iPadOS 26.2, macOS Tahoe 26.2, tvOS 26.2, visionOS 26.2, watchOS 26.2. Processing maliciously crafted web conte",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.2565,
-      "pub": "2025-12-17T21:16:11.570",
-      "products": [
-        "safari",
-        "ipados",
-        "ipados"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2019-9875",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Deserialization of Untrusted Data in the anti CSRF module in Sitecore through 9.1 allows an authenticated attacker to execute arbitrary code by sending a serialized .NET object in an HTTP POST parameter.",
-      "cwe": [
-        "CWE-502"
-      ],
-      "kev": true,
-      "epss": 0.25436,
-      "pub": "2019-05-31T21:29:06.187",
-      "products": [
-        "cms"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2016-7855",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Use-after-free vulnerability in Adobe Flash Player before 23.0.0.205 on Windows and OS X and before 11.2.202.643 on Linux allows remote attackers to execute arbitrary code via unspecified vectors, as exploited in the wild in October 2016.",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.25198,
-      "pub": "2016-11-01T22:59:00.167",
-      "products": [
-        "flash_player",
-        "enterprise_linux_desktop",
-        "enterprise_linux_desktop"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2022-3038",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Use after free in Network Service in Google Chrome prior to 105.0.5195.52 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page.",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.24925,
-      "pub": "2022-09-26T16:15:11.793",
-      "products": [
-        "chrome",
-        "fedora"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2014-0502",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Double free vulnerability in Adobe Flash Player before 11.7.700.269 and 11.8.x through 12.0.x before 12.0.0.70 on Windows and Mac OS X and before 11.2.202.341 on Linux, Adobe AIR before 4.0.0.1628 on Android, Adobe AIR SDK before 4.0.0.1628, and Adobe AIR SDK ",
-      "cwe": [
-        "CWE-415"
-      ],
-      "kev": true,
-      "epss": 0.24817,
-      "pub": "2014-02-21T05:07:00.017",
-      "products": [
-        "flash_player",
-        "flash_player",
-        "adobe_air_sdk"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2022-1096",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Type confusion in V8 in Google Chrome prior to 99.0.4844.84 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page.",
-      "cwe": [
-        "CWE-843"
-      ],
-      "kev": true,
-      "epss": 0.24726,
-      "pub": "2022-07-23T00:15:08.333",
-      "products": [
-        "chrome"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2021-21166",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Data race in audio in Google Chrome prior to 89.0.4389.72 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page.",
-      "cwe": [
-        "CWE-362"
-      ],
-      "kev": true,
-      "epss": 0.24027,
-      "pub": "2021-03-09T18:15:16.297",
-      "products": [
-        "chrome",
-        "fedora",
-        "fedora"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2021-27878",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "An issue was discovered in Veritas Backup Exec before 21.2. The communication between a client and an Agent requires successful authentication, which is typically completed over a secure TLS communication. However, due to a vulnerability in the SHA Authenticat",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.23952,
-      "pub": "2021-03-01T22:15:14.537",
-      "products": [
-        "backup_exec"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-41993",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "The issue was addressed with improved checks. This issue is fixed in macOS Sonoma 14. Processing web content may lead to arbitrary code execution. Apple is aware of a report that this issue may have been actively exploited against versions of iOS before iOS 16",
-      "cwe": [
-        "CWE-754"
-      ],
-      "kev": true,
-      "epss": 0.23709,
-      "pub": "2023-09-21T19:15:11.660",
-      "products": [
-        "ipados",
-        "iphone_os",
-        "macos"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2022-0609",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Use after free in Animation in Google Chrome prior to 98.0.4758.102 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page.",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.22933,
-      "pub": "2022-04-05T00:15:17.680",
-      "products": [
-        "chrome"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2021-22899",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A command injection vulnerability exists in Pulse Connect Secure before 9.1R11.4 allows a remote authenticated attacker to perform remote code execution via Windows Resource Profiles Feature",
-      "cwe": [
-        "CWE-77"
-      ],
-      "kev": true,
-      "epss": 0.22915,
-      "pub": "2021-05-27T12:15:07.963",
-      "products": [
-        "connect_secure",
-        "connect_secure"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-40891",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "**UNSUPPORTED WHEN ASSIGNED**\nA post-authentication command injection vulnerability in the management commands of the legacy DSL CPE Zyxel VMG4325-B10A firmware version 1.00(AAFR.4)C0_20170615 could allow an authenticated attacker to execute operating system (",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": true,
-      "epss": 0.22748,
-      "pub": "2025-02-04T10:15:08.920",
-      "products": [
-        "vmg1312-b10a_firmware",
-        "vmg1312-b10b_firmware",
-        "vmg1312-b10e_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2017-0210",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "An elevation of privilege vulnerability exists when Internet Explorer does not properly enforce cross-domain policies, which could allow an attacker to access information from one domain and inject it into another domain, aka \"Internet Explorer Elevation of Pr",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.22334,
-      "pub": "2017-04-12T14:59:01.420",
-      "products": [
-        "internet_explorer",
-        "internet_explorer"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2020-24363",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "TP-Link TL-WA855RE V5 20200415-rel37464 devices allow an unauthenticated attacker (on the same network) to submit a TDDP_RESET POST request for a factory reset and reboot. The attacker can then obtain incorrect access control by setting a new administrative pa",
-      "cwe": [
-        "CWE-306"
-      ],
-      "kev": true,
-      "epss": 0.22187,
-      "pub": "2020-08-31T16:15:15.380",
-      "products": [
-        "tl-wa855re_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2020-9377",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "D-Link DIR-610 devices allow Remote Command Execution via the cmd parameter to command.php. NOTE: This vulnerability only affects products that are no longer supported by the maintainer",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": true,
-      "epss": 0.21888,
-      "pub": "2020-07-09T13:15:10.653",
-      "products": [
-        "dir-610_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2019-1297",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A remote code execution vulnerability exists in Microsoft Excel software when the software fails to properly handle objects in memory, aka 'Microsoft Excel Remote Code Execution Vulnerability'.",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.21805,
-      "pub": "2019-09-11T22:15:18.773",
-      "products": [
-        "excel",
-        "excel",
-        "excel"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2019-0903",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A remote code execution vulnerability exists in the way that the Windows Graphics Device Interface (GDI) handles objects in the memory, aka 'GDI+ Remote Code Execution Vulnerability'.",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.21713,
-      "pub": "2019-05-16T19:29:02.303",
-      "products": [
-        "windows_10_1507",
-        "windows_10_1607",
-        "windows_10_1703"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2017-6742",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A vulnerability in the SNMP implementation of could allow an authenticated, remote attacker to cause a reload of the affected system or to remotely execute code. An attacker could exploit this vulnerability by sending a crafted SNMP packet to the affected devi",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": true,
-      "epss": 0.21261,
-      "pub": "2017-07-17T21:29:00.447",
-      "products": [
-        "ios",
-        "ios_xe"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2012-5054",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Integer overflow in the copyRawDataTo method in the Matrix3D class in Adobe Flash Player before 11.4.402.265 allows remote attackers to execute arbitrary code via malformed arguments.",
-      "cwe": [
-        "CWE-190"
-      ],
-      "kev": true,
-      "epss": 0.21194,
-      "pub": "2012-09-24T17:55:07.217",
-      "products": [
-        "flash_player"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-40890",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "**UNSUPPORTED WHEN ASSIGNED**\nA post-authentication command injection vulnerability in the CGI program of the legacy DSL CPE Zyxel VMG4325-B10A firmware version 1.00(AAFR.4)C0_20170615 could allow an authenticated attacker to execute operating system (OS) comm",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": true,
-      "epss": 0.20575,
-      "pub": "2025-02-04T10:15:08.717",
-      "products": [
-        "vmg1312-b10a_firmware",
-        "vmg1312-b10b_firmware",
-        "vmg1312-b10e_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2014-8439",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Adobe Flash Player before 13.0.0.258 and 14.x and 15.x before 15.0.0.239 on Windows and OS X and before 11.2.202.424 on Linux, Adobe AIR before 15.0.0.293, Adobe AIR SDK before 15.0.0.302, and Adobe AIR SDK & Compiler before 15.0.0.302 allow attackers to execu",
-      "cwe": [
-        "CWE-119",
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.20369,
-      "pub": "2014-11-25T23:59:00.053",
-      "products": [
-        "flash_player",
-        "air",
-        "air_sdk"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2021-21148",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Heap buffer overflow in V8 in Google Chrome prior to 88.0.4324.150 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page.",
-      "cwe": [
-        "CWE-787"
-      ],
-      "kev": true,
-      "epss": 0.19968,
-      "pub": "2021-02-09T16:15:12.390",
-      "products": [
-        "chrome",
-        "fedora",
-        "fedora"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2016-1010",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Integer overflow in Adobe Flash Player before 18.0.0.333 and 19.x through 21.x before 21.0.0.182 on Windows and OS X and before 11.2.202.577 on Linux, Adobe AIR before 21.0.0.176, Adobe AIR SDK before 21.0.0.176, and Adobe AIR SDK & Compiler before 21.0.0.176 ",
-      "cwe": [
-        "CWE-190"
-      ],
-      "kev": true,
-      "epss": 0.19333,
-      "pub": "2016-03-12T15:59:25.090",
-      "products": [
-        "flash_player",
-        "air",
-        "air_sdk"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2016-7892",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Adobe Flash Player versions 23.0.0.207 and earlier, 11.2.202.644 and earlier have an exploitable use after free vulnerability in the TextField class. Successful exploitation could lead to arbitrary code execution.",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.19078,
-      "pub": "2016-12-15T06:59:56.313",
-      "products": [
-        "flash_player_desktop_runtime",
-        "flash_player"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2023-37450",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "The issue was addressed with improved checks. This issue is fixed in iOS 16.6 and iPadOS 16.6, Safari 16.5.2, tvOS 16.6, macOS Ventura 13.5, watchOS 9.6. Processing web content may lead to arbitrary code execution. Apple is aware of a report that this issue ma",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.1895,
-      "pub": "2023-07-27T00:15:15.497",
-      "products": [
-        "safari",
-        "ipados",
-        "iphone_os"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-7965",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Inappropriate implementation in V8 in Google Chrome prior to 128.0.6613.84 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page. (Chromium security severity: High)",
-      "cwe": [
-        "CWE-787",
-        "CWE-358"
-      ],
-      "kev": true,
-      "epss": 0.18528,
-      "pub": "2024-08-21T21:15:08.947",
-      "products": [
-        "chrome",
-        "edge_chromium"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2022-22620",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A use after free issue was addressed with improved memory management. This issue is fixed in macOS Monterey 12.2.1, iOS 15.3.1 and iPadOS 15.3.1, Safari 15.3 (v. 16612.4.9.1.8 and 15612.4.9.1.8). Processing maliciously crafted web content may lead to arbitrary",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.16342,
-      "pub": "2022-03-18T18:15:13.787",
-      "products": [
-        "safari",
-        "ipados",
-        "iphone_os"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2019-8506",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A type confusion issue was addressed with improved memory handling. This issue is fixed in iOS 12.2, tvOS 12.2, watchOS 5.2, Safari 12.1, iTunes 12.9.4 for Windows, iCloud for Windows 7.11. Processing maliciously crafted web content may lead to arbitrary code ",
-      "cwe": [
-        "CWE-843"
-      ],
-      "kev": true,
-      "epss": 0.16159,
-      "pub": "2019-12-18T18:15:22.880",
-      "products": [
-        "icloud",
-        "itunes",
-        "safari"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-21513",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Protection mechanism failure in MSHTML Framework allows an unauthorized attacker to bypass a security feature over a network.",
-      "cwe": [
-        "CWE-693"
-      ],
-      "kev": true,
-      "epss": 0.15852,
-      "pub": "2026-02-10T18:16:33.643",
-      "products": [
-        "windows_10_1607",
-        "windows_10_1809",
-        "windows_10_21h2"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-2360",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "win32k.sys in the kernel-mode drivers in Microsoft Windows Server 2003 SP2 and R2 SP2, Windows Vista SP2, Windows Server 2008 SP2 and R2 SP1, Windows 7 SP1, Windows 8, Windows 8.1, Windows Server 2012 Gold and R2, and Windows RT Gold and 8.1 allows local users",
-      "cwe": [
-        "CWE-119",
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.1484,
-      "pub": "2015-06-10T01:59:38.890",
-      "products": [
-        "windows_7",
-        "windows_8",
-        "windows_8.1"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-49039",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Windows Task Scheduler Elevation of Privilege Vulnerability",
-      "cwe": [
-        "CWE-287"
-      ],
-      "kev": true,
-      "epss": 0.14179,
-      "pub": "2024-11-12T18:15:44.160",
-      "products": [
-        "windows_10_1507",
-        "windows_10_1607",
-        "windows_10_1809"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2021-1789",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A type confusion issue was addressed with improved state handling. This issue is fixed in macOS Big Sur 11.2, Security Update 2021-001 Catalina, Security Update 2021-001 Mojave, tvOS 14.4, watchOS 7.3, iOS 14.4 and iPadOS 14.4, Safari 14.0.3. Processing malici",
-      "cwe": [
-        "CWE-843"
-      ],
-      "kev": true,
-      "epss": 0.13975,
-      "pub": "2021-04-02T18:15:21.747",
-      "products": [
-        "ipados",
-        "iphone_os",
-        "mac_os_x"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2022-1364",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Type confusion in V8 Turbofan in Google Chrome prior to 100.0.4896.127 allowed a remote attacker to potentially exploit heap corruption via a crafted HTML page.",
-      "cwe": [
-        "CWE-843"
-      ],
-      "kev": true,
-      "epss": 0.13921,
-      "pub": "2022-07-26T22:15:09.147",
-      "products": [
-        "chrome"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-5281",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Use after free in Dawn in Google Chrome prior to 146.0.7680.178 allowed a remote attacker who had compromised the renderer process to execute arbitrary code via a crafted HTML page. (Chromium security severity: High)",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.13743,
-      "pub": "2026-04-01T05:16:01.440",
-      "products": [
-        "chrome"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2019-3010",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Vulnerability in the Oracle Solaris product of Oracle Systems (component: XScreenSaver). The supported version that is affected is 11. Easily exploitable vulnerability allows low privileged attacker with logon to the infrastructure where Oracle Solaris execute",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.13506,
-      "pub": "2019-10-16T18:15:34.293",
-      "products": [
-        "solaris"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2021-30858",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A use after free issue was addressed with improved memory management. This issue is fixed in iOS 14.8 and iPadOS 14.8, macOS Big Sur 11.6. Processing maliciously crafted web content may lead to arbitrary code execution. Apple is aware of a report that this iss",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.13379,
-      "pub": "2021-08-24T19:15:14.253",
-      "products": [
-        "ipados",
-        "iphone_os",
-        "iphone_os"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2021-28663",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "The Arm Mali GPU kernel driver allows privilege escalation or information disclosure because GPU memory operations are mishandled, leading to a use-after-free. This affects Bifrost r0p0 through r28p0 before r29p0, Valhall r19p0 through r28p0 before r29p0, and ",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.12084,
-      "pub": "2021-05-10T15:15:07.557",
-      "products": [
-        "bifrost_gpu_kernel_driver",
-        "midgard_gpu_kernel_driver",
-        "valhall_gpu_kernel_driver"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2020-3118",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A vulnerability in the Cisco Discovery Protocol implementation for Cisco IOS XR Software could allow an unauthenticated, adjacent attacker to execute arbitrary code or cause a reload on an affected device. The vulnerability is due to improper validation of str",
-      "cwe": [
-        "CWE-134",
-        "CWE-787"
-      ],
-      "kev": true,
-      "epss": 0.11685,
-      "pub": "2020-02-05T18:15:10.907",
-      "products": [
-        "ios_xr",
-        "ios_xr",
-        "ios_xr"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2017-11292",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Adobe Flash Player version 27.0.0.159 and earlier has a flawed bytecode verification procedure, which allows for an untrusted value to be used in the calculation of an array index. This can lead to type confusion, and successful exploitation could lead to arbi",
-      "cwe": [
-        "CWE-843"
-      ],
-      "kev": true,
-      "epss": 0.11214,
-      "pub": "2017-10-22T19:29:00.237",
-      "products": [
-        "flash_player_desktop_runtime",
-        "flash_player",
-        "enterprise_linux_desktop"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2017-6740",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "The Simple Network Management Protocol (SNMP) subsystem of Cisco IOS and IOS XE Software contains multiple vulnerabilities that could allow an authenticated, remote attacker to remotely execute code on an affected system or cause an affected system to reload. ",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": true,
-      "epss": 0.111,
-      "pub": "2017-07-17T21:29:00.370",
-      "products": [
-        "ios",
-        "ios_xe"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2013-0648",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Unspecified vulnerability in the ExternalInterface ActionScript functionality in Adobe Flash Player before 10.3.183.67 and 11.x before 11.6.602.171 on Windows and Mac OS X, and before 10.3.183.67 and 11.x before 11.2.202.273 on Linux, allows remote attackers t",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.11094,
-      "pub": "2013-02-27T00:55:01.160",
-      "products": [
-        "flash_player",
-        "flash_player",
-        "flash_player"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-4761",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Out of bounds write in V8 in Google Chrome prior to 124.0.6367.207 allowed a remote attacker to perform an out of bounds memory write via a crafted HTML page. (Chromium security severity: High)",
-      "cwe": [
-        "CWE-787"
-      ],
-      "kev": true,
-      "epss": 0.11007,
-      "pub": "2024-05-14T16:17:35.810",
-      "products": [
-        "chrome",
-        "fedora",
-        "fedora"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2021-30762",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A use after free issue was addressed with improved memory management. This issue is fixed in iOS 12.5.4. Processing maliciously crafted web content may lead to arbitrary code execution. Apple is aware of a report that this issue may have been actively exploite",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.10986,
-      "pub": "2021-09-08T14:15:10.300",
-      "products": [
-        "iphone_os"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "403693 ثغرة حقيقية من NVD · 1675 مستغلّة فعلياً (KEV) · 77012 منتج · مزامنة 2026-11-14T03:52:23.739Z"
+  "says_ar": "425693 ثغرة حقيقية من NVD · 1781 مستغلّة فعلياً (KEV) · 81948 منتج · مزامنة 2026-11-14T04:13:37.594Z"
 }
