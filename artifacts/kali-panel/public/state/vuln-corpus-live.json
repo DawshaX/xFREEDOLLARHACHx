@@ -1,6 +1,6 @@
 {
   "measured": true,
-  "at": "2026-11-14T04:13:37.594Z",
+  "at": "2026-11-14T04:58:10.708Z",
   "total": 425693,
   "bySeverity": {
     "medium": 182435,
@@ -2809,22 +2809,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2024-27198",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "In JetBrains TeamCity before 2023.11.4 authentication bypass allowing to perform admin actions was possible",
-      "cwe": [
-        "CWE-288"
-      ],
-      "kev": true,
-      "epss": 0.99938,
-      "pub": "2024-03-04T18:15:09.040",
-      "products": [
-        "teamcity"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2022-22963",
       "cvss": 9.8,
       "sev": "critical",
@@ -2840,6 +2824,22 @@
         "spring_cloud_function",
         "banking_branch",
         "banking_cash_management"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2024-27198",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "In JetBrains TeamCity before 2023.11.4 authentication bypass allowing to perform admin actions was possible",
+      "cwe": [
+        "CWE-288"
+      ],
+      "kev": true,
+      "epss": 0.99938,
+      "pub": "2024-03-04T18:15:09.040",
+      "products": [
+        "teamcity"
       ],
       "refs": []
     },
@@ -13870,5 +13870,5 @@
       "refs": []
     }
   ],
-  "says_ar": "425693 ثغرة حقيقية من NVD · 1781 مستغلّة فعلياً (KEV) · 81948 منتج · مزامنة 2026-11-14T04:13:37.594Z"
+  "says_ar": "425693 ثغرة حقيقية من NVD · 1781 مستغلّة فعلياً (KEV) · 81948 منتج · مزامنة 2026-11-14T04:58:10.708Z"
 }
