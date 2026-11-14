@@ -37,6 +37,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # TEST10 قِيس 05:20Z: GHCR بيرفض أي حرف كبير في الtag
+      # («repository name must be lowercase») — المالك DawshaX ⇒ نحوّله lowercase.
+      - name: Set lowercase image ref
+        id: img
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/xfreedollarhachx/nova-kali:latest" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -50,13 +58,13 @@ jobs:
           context: .
           file: Dockerfile.kali
           push: ${{ github.event_name == 'push' }}
-          tags: ghcr.io/${{ github.repository_owner }}/xfreedollarhachx/nova-kali:latest
+          tags: ${{ steps.img.outputs.ref }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: measured smoke (the image proves itself)
         run: |
-          docker run --rm ghcr.io/${{ github.repository_owner }}/xfreedollarhachx/nova-kali:latest 2>&1 | tee /tmp/smoke.txt
+          docker run --rm "${{ steps.img.outputs.ref }}" 2>&1 | tee /tmp/smoke.txt
           OK=$(grep -c "  OK " /tmp/smoke.txt || true)
           echo "tools OK: ${OK}"
           if [ "${OK:-0}" -lt 5 ]; then
@@ -84,7 +92,7 @@ jobs:
           timeout 75 docker run --rm \
             -e NOVA_HUB_URL="${NOVA_HUB_URL}" \
             -e NOVA_EXEC_TOKEN="${NOVA_EXEC_TOKEN}" \
-            ghcr.io/${{ github.repository_owner }}/xfreedollarhachx/nova-kali:latest 2>&1 | tee "$LOG" || true
+            "${{ steps.img.outputs.ref }}" 2>&1 | tee "$LOG" || true
           if grep -qiE "connected|registered|open|hello|agent" "$LOG"; then
             echo "✔ العقدة اتصلت بالهَب من داخل السحابة (output فوق مقاس)"
           else
