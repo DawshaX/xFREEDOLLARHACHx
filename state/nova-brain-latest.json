@@ -1,64 +1,39 @@
 {
-  "at": "2026-11-14T01:41:21.222Z",
-  "seat": "ovh-llama",
+  "at": "2026-11-14T02:39:12.655Z",
+  "seat": "openai",
   "thinking": {
-    "reply": "المنصة قامت بفحص 3 أهداف وأكدت عدم وجود أي ثغرات جديدة، وأهم خطوة قادمة هي استمرار الفحص الدوري للكشف عن أي ثغرات محتملة.",
-    "why": "التحقق من وجود أي تحديثات أو ثغرات جديدة في نظام التشغيل linux_kernel",
+    "reply": "المنصة في وضع استقرار: حجم المعجم 245,693 وثغرات تناظرية 1,038، تغطية 57.72٪، ثمينا الإحصائيات الأخير لعدد أهداف الماسح 3، مع صفر نتائج كشف، والجدول الزمني للبحث جاري بنظام الواقع للـ 2026-11-14.",
+    "why": "الكائن يُوضح وضع المنصة ولا يحتاج إلى عملية بحث مستقبلي",
     "action": {
-      "kind": "corpus_search",
-      "arg": "linux_kernel"
+      "kind": "none",
+      "arg": ""
     }
   },
-  "action": {
-    "kind": "corpus_search",
-    "ok": true,
-    "arg": "linux_kernel",
-    "hits": 5,
-    "examples": [
-      {
-        "cve": "CVE-2025-39682",
-        "severity": "critical",
-        "cvss": 9.8,
-        "kev": true
-      },
-      {
-        "cve": "CVE-2021-3493",
-        "severity": "high",
-        "cvss": 8.8,
-        "kev": true
-      },
-      {
-        "cve": "CVE-2013-6282",
-        "severity": "high",
-        "cvss": 8.8,
-        "kev": true
-      }
-    ]
-  },
+  "action": null,
   "answered": null,
   "senses": {
     "corpus": {
-      "total": 170000,
-      "at": "2026-11-14T01:31:09.441Z",
-      "critical": 16371,
-      "high": 63503,
-      "kev": 589,
-      "coverage": 0.3993,
-      "nextStartIndex": 380000,
+      "total": 245693,
+      "at": "2026-11-14T02:30:05.442Z",
+      "critical": 20825,
+      "high": 95515,
+      "kev": 688,
+      "coverage": 0.5772,
+      "nextStartIndex": 0,
       "newestYear": 2026,
       "topProducts": [
         "linux_kernel",
         "android",
-        "macos",
         "windows_server_2012",
         "chrome",
+        "firefox",
+        "macos",
         "windows_10_22h2",
         "windows_10_21h2",
         "windows_10_1809",
-        "experience_manager",
-        "debian_linux",
         "windows_11_24h2",
-        "windows_11_23h2"
+        "windows_11_23h2",
+        "windows_10_1607"
       ]
     },
     "hunt": {
@@ -356,11 +331,8 @@
       "critical": 196
     }
   },
-  "failures": [
-    "openai: no reply in payload",
-    "mistral: HTTP 402"
-  ],
-  "says_ar": "فكّرت على ovh-llama · المنصة قامت بفحص 3 أهداف وأكدت عدم وجود أي ثغرات جديدة، وأهم خطوة قادمة هي استمرار الفحص الدوري للكشف عن أي ثغرات محتملة.",
+  "failures": [],
+  "says_ar": "فكّرت على openai · المنصة في وضع استقرار: حجم المعجم 245,693 وثغرات تناظرية 1,038، تغطية 57.72٪، ثمينا الإحصائيات الأخير لعدد أهداف الماسح 3، مع صفر نتائج كشف، والجدول الزمني للبحث جاري بنظام الواقع ",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
