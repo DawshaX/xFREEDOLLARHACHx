@@ -105,19 +105,9 @@ else
   rm -f /usr/local/bin/proot-static
 fi
 
-echo "== [4.7/6] autoremove + تقليم الحشو المقاس (الفرق بين 15GB و11GB بيحصل هنا) =="
+echo "== [4.7/6] صفر تقليم قدرات (أمر المالك الصريح: seclists كاملة وكل المكتبات — مفيش حذف من دماغي) =="
 apt-get autoremove --purge -y > /dev/null 2>&1 || true
-if [ -d /usr/share/seclists ]; then
-  cd /usr/share/seclists
-  for d in Fuzzing Dictionaries Patterns Payloads Honeypots Stress-testing Techniques; do rm -rf "$d"; done
-  [ -d Passwords ] && find Passwords -mindepth 1 -maxdepth 1 -type d ! -name 'Common-Credentials' -exec rm -rf {} +
-  cd - >/dev/null
-fi
-rm -rf /usr/share/ghostscript /usr/share/mingw-w64 /usr/share/pocl /usr/share/i18n 2>/dev/null || true
-find /usr/lib/ruby -type d -name rdoc -prune -exec rm -rf {} + 2>/dev/null || true
-find /usr -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
-# locale-archive كبير و مش محتاج — C.UTF-8 مضمّن في glibc
-[ -f /usr/lib/locale/locale-archive ] && localedef --list-archive 2>/dev/null | grep -vE '^(ar_|en_)' | xargs -r localedef --delete-from-archive 2>/dev/null || rm -f /usr/lib/locale/locale-archive
+# بندقف بس كاش الapt نفسه — مفيش أي أداة أو مكتبة أو قايمة بتتحذف نهائيًا
 
 echo "== [5/6] تنظيف + المانيفست المقاس (كل رقم من الأمر نفسه) =="
 rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /root/.cache 2>/dev/null || true
