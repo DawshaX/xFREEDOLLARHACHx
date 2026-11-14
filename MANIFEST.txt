@@ -1,0 +1,48 @@
+PRETTY_NAME=Kali GNU/Linux Rolling
+packages=2113
+bytes=19972681362
+built_at=2026-11-14T18:05Z
+commit=39931ae1f6c1c49b1bc5ea238162a82201ea5e47
+run_id=43623722719
+failed_extra=ولا حاجة
+failed_heavy=owasp-zap
+-- heavy measured (من الداخل) --
+Version: 6.5.7-0kali1
+zap: n/a
+Version: 2026.10.1-0kali1
+Version: 2025.3-0kali1
+-rwxr-xr-x 1 root root 219 Nov  2 10:04 /usr/bin/burpsuite
+lrwxrwxrwx 1 root root  28 Oct 19 13:10 /usr/bin/msfconsole -> /etc/alternatives/msfconsole
+-rwxr-xr-x 1 root root  69 Dec 16  2025 /usr/bin/owasp-zap
+openjdk version "25.0.5" 2026-10-20
+Discovery
+Fuzzing
+Miscellaneous
+Passwords
+proot_static=no
+full_sets= info=kali-tools-information-gathering vuln=kali-tools-vulnerability web=kali-tools-web db=kali-tools-database passwords=kali-tools-passwords wireless=kali-tools-wireless reverse=kali-tools-reverse-engineering exploit=kali-tools-exploitation social=kali-tools-social-engineering postex=kali-tools-post-exploitation forensics=kali-tools-forensics
+-- biggest dirs after prune (مقاس) --
+5.9G	/usr/share
+6.3G	/usr/lib
+79M	/opt
+1.9G	/usr/share/seclists
+654M	/usr/share/metasploit-framework
+353M	/usr/share/burpsuite
+-- measured versions (من الداخل) --
+nmap: n/a
+1.10.10#stable
+Nikto 2.6.1 (LW 2.5) 
+Hydra v9.7 (c) 2023 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).
+hydra: n/a
+john: n/a
+v7.1.2
+
+No help topic for 'version'
+gobuster: n/a
+TShark (Wireshark) 4.6.9.
+Python 3.14.8
+ruby 3.3.8 (2025-04-09 revision b200bad6cd) [x86_64-linux-gnu]
+ _____ _____              ___
+Error: Can't open display: (null)
+xdotool: n/a
+Mozilla Firefox 153.5.1esr
