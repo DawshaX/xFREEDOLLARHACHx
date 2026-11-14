@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { pushNotify } from "@/lib/sse";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 const API = "/api";
@@ -715,28 +716,41 @@ export default function KaliCommandCenter() {
         isError: isErr, isCmd: false, ts: Date.now(),
       }]);
       if (d.stderr) setTermLog(prev => [...prev, { text: d.stderr, isError: true, isCmd: false, ts: Date.now() }]);
+      pushNotify(
+        isErr ? "error" : "success",
+        tgt === "agent" ? "مركز كالي — الجهاز" : "مركز كالي — السيرفر",
+        isErr ? `الأمر فشل: ${cmd.slice(0, 60)}` : `الأمر اتنفّذ: ${cmd.slice(0, 60)}`,
+      );
     } catch (e: unknown) {
       setTermLog(prev => [...prev, {
         text: `خطأ: ${e instanceof Error ? e.message : String(e)}`,
         isError: true, isCmd: false, ts: Date.now(),
       }]);
+      pushNotify("error", "مركز كالي", `الأمر ما وصلش: ${cmd.slice(0, 60)} — ${e instanceof Error ? e.message : String(e)}`);
     } finally { setCmdBusy(false); }
   };
 
   const resetSession = async () => {
-    await fetch(`${API}/kali-command/session/reset`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: sessionId.current }),
-    });
-    setMsgs([]);
-    setTasks([]);
-    sessionId.current = `kali-${Date.now()}`;
+    try {
+      const rr = await fetch(`${API}/kali-command/session/reset`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: sessionId.current }),
+      });
+      if (!rr.ok) throw new Error(`HTTP ${rr.status}`);
+      setMsgs([]);
+      setTasks([]);
+      sessionId.current = `kali-${Date.now()}`;
+      pushNotify("success", "مركز كالي", "الجلسة اتصفّرت — بداية نظيفة");
+    } catch (e: unknown) {
+      pushNotify("error", "مركز كالي", `تصفير الجلسة فشل: ${e instanceof Error ? e.message : String(e)}`);
+    }
   };
 
   const copyCmd = (txt: string) => {
     navigator.clipboard.writeText(txt).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+    pushNotify("info", "مركز كالي", "أمر الاتصال اتنسخ — شغّله على جهاز كالي لربط الجهاز");
   };
 
   const runningTasks = tasks.filter(t => t.status === "running").length;
@@ -933,7 +947,7 @@ export default function KaliCommandCenter() {
             badge={runningTasks}
             defaultOpen={true}
             extra={tasks.length > 0
-              ? <button onClick={async (e) => { e.stopPropagation(); await fetch(`${API}/kali-command/tasks`, { method: "DELETE" }); setTasks([]); }}
+              ? <button onClick={async (e) => { e.stopPropagation(); try { const rr = await fetch(`${API}/kali-command/tasks`, { method: "DELETE" }); if (!rr.ok) throw new Error(`HTTP ${rr.status}`); setTasks([]); pushNotify("success", "مركز كالي", `اتمسحت ${tasks.length} مهمة من القائمة`); } catch (err) { pushNotify("error", "مركز كالي", `مسح المهام فشل: ${err instanceof Error ? err.message : String(err)}`); } }}
                   className="text-[8px] font-mono px-1.5 py-0.5 rounded ml-1"
                   style={{ color: "rgba(255,60,60,0.5)", border: "1px solid rgba(255,60,60,0.2)" }}>
                   مسح
@@ -944,8 +958,14 @@ export default function KaliCommandCenter() {
                   ابدأ محادثة مع KALI AI لإنشاء المهام
                 </div>
               : tasks.map(task => <TaskCard key={task.id} task={task} onDelete={async (id) => {
-                  await fetch(`${API}/kali-command/tasks/${id}`, { method: "DELETE" });
-                  setTasks(prev => prev.filter(t => t.id !== id));
+                  try {
+                    const rr = await fetch(`${API}/kali-command/tasks/${id}`, { method: "DELETE" });
+                    if (!rr.ok) throw new Error(`HTTP ${rr.status}`);
+                    setTasks(prev => prev.filter(t => t.id !== id));
+                    pushNotify("success", "مركز كالي", `المهمة ${id.slice(0, 8)} اتمسحت`);
+                  } catch (err) {
+                    pushNotify("error", "مركز كالي", `مسح المهمة فشل: ${err instanceof Error ? err.message : String(err)}`);
+                  }
                 }} />)
             }
           </CollapsibleSection>

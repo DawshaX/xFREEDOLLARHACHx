@@ -9,7 +9,7 @@ import {
   Bolt, BarChart2, Globe, Play, X,
 } from "lucide-react";
 import { PageHeader } from "@/components/Layout";
-import { jsonRequest } from "@/lib/sse";
+import { jsonRequest, pushNotify } from "@/lib/sse";
 import { useWebSocket, emitPlatformWsEvent } from "@/hooks/useWebSocket";
 import { runLiveMultiSiteVulnerabilitySync } from "@/lib/live-vuln-ingestor";
 import {
@@ -226,14 +226,19 @@ export default function VulnCenter() {
         }),
       });
       pushLog("تزامن", `✅ اكتمل السحب الحي: +${liveRes.totalAdded} ثغرة جديدة من 9 مواقع عالمية`);
+      pushNotify("success", "مركز الثغرات", `اكتمل السحب الحي: +${liveRes.totalAdded.toLocaleString("en-US")} ثغرة جديدة من 9 مواقع عالمية`);
       emitPlatformWsEvent({ type: "cve_live_ingested", ingestedCount: liveRes.totalAdded });
       void refetchJob();
       void refetchStats();
       if (triggered) void refetchSearch();
       setSyncing(false);
-    } catch {
+    } catch (err) {
       setSyncing(false);
-      pushLog("تزامن", "✅ اكتملت المزامنة الذكية عبر مكتبة المجرة المدمجة");
+      // قِيس TEST8: الـcatch كان بيقول «✅ اكتملت المزامنة» على الخطأ — ادعاء
+      // كذب. الفشل هنا بيتقال زي ما هو وبينبّه المالك في مركز الإشعارات.
+      const reason = err instanceof Error ? err.message : String(err);
+      pushLog("تزامن", `⚠️ المزامنة الذكية فشلت — ${reason}`);
+      pushNotify("error", "مركز الثغرات", `المزامنة فشلت: ${reason}`);
       void refetchStats();
     }
   };

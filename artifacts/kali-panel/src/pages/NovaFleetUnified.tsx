@@ -34,6 +34,7 @@ import { NovaAwarenessCard, NovaHuntSurface, NovaOpsRoom } from "@/components/de
 import { NovaContextBridge } from "@/components/desktop/NovaContextBridge";
 import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
 import { novaAuthHeaders } from "@/lib/ops-client";
+import { pushNotify } from "@/lib/sse";
 
 const API = "/api";
 
@@ -174,14 +175,19 @@ function BroadcastConsole({ hasTargets }: { hasTargets: boolean }) {
         if (j.needsApproval) {
           setPending({ command: j.command, targets: j.targets ?? [], reason: j.reason ?? "" });
           setResult(null);
+          pushNotify("warning", "أسطول نوفا", `البث محتاج موافقتك على ${command.slice(0, 60)}`);
         } else if (j.ok === false && j.error) {
           setError(String(j.error));
+          pushNotify("error", "أسطول نوفا", `البث فشل: ${String(j.error)}`);
         } else {
           setPending(null);
           setResult(j.results ?? []);
+          const okCount = (j.results ?? []).filter((x: { ok: boolean }) => x.ok).length;
+          pushNotify("success", "أسطول نوفا", `البث نُفّذ على ${okCount}/${(j.results ?? []).length} جهاز: ${command.slice(0, 60)}`);
         }
       } catch (e) {
         setError((e as Error).message);
+        pushNotify("error", "أسطول نوفا", `البث فشل: ${(e as Error).message}`);
       } finally {
         setBusy(false);
       }
@@ -268,7 +274,10 @@ function PlanBoard({ plan, onRefresh }: { plan: FleetPlan | null; onRefresh: () 
         body: JSON.stringify({ goal }),
       });
       setGoal("");
+      pushNotify("success", "أسطول نوفا", `خطة جديدة اتسجّلت: ${goal.slice(0, 80)}`);
       onRefresh();
+    } catch (e) {
+      pushNotify("error", "أسطول نوفا", `إنشاء الخطة فشل: ${(e as Error).message}`);
     } finally {
       setBusy(false);
     }
@@ -276,11 +285,16 @@ function PlanBoard({ plan, onRefresh }: { plan: FleetPlan | null; onRefresh: () 
 
   const advance = async (stepId: string, status: PlanStep["status"]) => {
     if (!plan) return;
-    await fetch(`${API}/fleet/plan/${plan.id}/step/${stepId}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
+    try {
+      await fetch(`${API}/fleet/plan/${plan.id}/step/${stepId}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      pushNotify("info", "أسطول نوفا", `خطوة الخطة اتحدّثت إلى ${status === "done" ? "منجزة ✅" : status}`);
+    } catch (e) {
+      pushNotify("error", "أسطول نوفا", `تحديث الخطوة فشل: ${(e as Error).message}`);
+    }
     onRefresh();
   };
 
