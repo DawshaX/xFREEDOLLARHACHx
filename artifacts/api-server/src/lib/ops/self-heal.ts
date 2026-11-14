@@ -13,6 +13,7 @@ import { initSessionNexus } from "../agent/session-nexus";
 import { integrationsStatus, runIntegration, INTEGRATION_APPS } from "./integrations";
 import { platformSelfReport } from "../agent/platform-tools";
 import { createPushNotification } from "../push-hub";
+import { kaliStatus } from "./kali-env";
 
 export interface HealStep {
   layer: string;
@@ -123,6 +124,25 @@ export async function runSelfHeal(): Promise<HealReport> {
     });
   } catch (err) {
     steps.push({ layer: "التطبيقات المتصلة", ok: false, fixed: false, measured: "فشل", detail: String(err).slice(0, 160) });
+  }
+
+  /* ⑦ TEST12 — بيئة كالي المدمجة: قياس حقيقي (rootfs + الأدوات الثقيلة + الديسكتوب) */
+  try {
+    const kst = await kaliStatus(false);
+    const heavy = kst.tools
+      ? Object.entries(kst.tools).map(([k, v]) => `${k}:${v.present ? "✓" : "✗"}`).join(" ")
+      : "";
+    const kaliOk = kst.present && (kst.packages ?? 0) > 400;
+    steps.push({
+      layer: "بيئة كالي المدمجة",
+      ok: kaliOk,
+      fixed: false,
+      measured: kst.present
+        ? `${kst.packages} حزمة · الثقيلة ${heavy} · الديسكتوب ${kst.desktop?.running ? "شغّال" : kst.desktop?.desired ? "مطلوب بسايطي — الضمان بيرجّعه" : "مطفي"}`
+        : "مش مستخرجة على الهَب — scripts/kali-rootfs-fetch.sh بيسحبها من فرع kali-rootfs",
+    });
+  } catch (err) {
+    steps.push({ layer: "بيئة كالي المدمجة", ok: false, fixed: false, measured: "فشل القياس", detail: String(err).slice(0, 160) });
   }
 
   const fixedCount = steps.filter((s) => s.fixed).length;
