@@ -155,9 +155,12 @@ echo "== [6/6] tar + zstd + split ≤90MB =="
 cd /
 # الاستبعاد دي خفّضت الحجم: قِيس run 43570109294 طلع 28 جزء (2.4GB) —
 # الdoc/man/locale/log/cache حشو مش محتاجه أجينت بيشغل أدوات.
+# __* = مخلفات آلة الrunner (hosted tools/temp) — مش أدوات كالي؛ قيس:
+# ./__t لوحده كان فيه python3.12 بتاع الجهاز مش البيئة.
+# doc/man/locale = توثيق مش أدوات (الأدوات وكل قدراتها كاملة 100%).
 tar -cf - \
   --exclude=./proc --exclude=./sys --exclude=./dev --exclude=./run \
-  --exclude=./tmp --exclude=./out --exclude=./__w --exclude=/.git \
+  --exclude=./tmp --exclude=./out --exclude='./__*' --exclude=/.git \
   --exclude=./.dockerenv --exclude=./etc/mtab \
   --exclude=./usr/share/doc --exclude=./usr/share/man \
   --exclude=./usr/share/locale \

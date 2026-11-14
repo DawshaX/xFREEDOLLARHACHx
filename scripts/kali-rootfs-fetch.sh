@@ -13,6 +13,7 @@ BRANCH="${NOVA_KALI_BRANCH:-kali-rootfs}"
 REPO_SLUG="${NOVA_KALI_REPO_SLUG:-DawshaX/xFREEDOLLARHACHx}"
 DEST="${NOVA_KALI_ROOT:-${HOME:-/home/user}/kali-rootfs/rootfs}"
 TMP_PART="/tmp/kali-part.tmp"
+trap 'rm -rf "$GDIR" "$TMP_PART" /tmp/kali-files.* 2>/dev/null' EXIT
 TOKEN=$(gh auth token 2>/dev/null || true)
 URL="https://github.com/${REPO_SLUG}.git"
 [ -n "$TOKEN" ] && URL="https://x-access-token:${TOKEN}@github.com/${REPO_SLUG}.git"
@@ -30,7 +31,7 @@ git -C "$GDIR" archive "$REF" -- MANIFEST.txt SHA256SUMS PACKAGES.txt 2>/dev/nul
 [ -f "$GDIR/MANIFEST.txt" ] || { echo "✗ MANIFEST مفقود — الفرع مش بناء rootfs"; exit 2; }
 cat "$GDIR/MANIFEST.txt"
 [ -f "$GDIR/SHA256SUMS" ] || { echo "✗ SHA256SUMS مفقود"; exit 2; }
-PARTS=$(grep -oE 'part-[0-9]+' "$GDIR/SHA256SUMS" | sort -u)
+PARTS=$(grep -oE 'part-[0-9]+' "$GDIR/SHA256SUMS" | sort -u | sort -t- -k2 -n)
 N=$(echo "$PARTS" | wc -l)
 echo "   الأجزاء: $N"
 
@@ -61,8 +62,8 @@ cd "$GDIR"
       else echo "   ✗ $p متنزلش (محاولة $try)" >&2; fi
       sleep 5
     done
-    if [ -z "$OK" ]; then echo "✗ الجزء $p فشل 3 محاولات — بصراحة، جرّب تاني"; exit 5; fi
-    echo "   ✓ $p ($(stat -c%s "$TMP_PART") bytes)"
+    if [ -z "$OK" ]; then echo "✗ الجزء $p فشل 3 محاولات — بصراحة، جرّب تاني" >&2; exit 5; fi
+    echo "   ✓ $p ($(stat -c%s "$TMP_PART") bytes)" >&2
     cat "$TMP_PART"
     rm -f "$TMP_PART"
   done
@@ -78,8 +79,6 @@ with d.stream_reader(sys.stdin.buffer) as r:
 " | tar -xf - -C "$DEST"
 TARST=$?
 [ $TARST -eq 0 ] || { echo "✗ tar خرج بكود $TARST — مفيش مساحة؟ df -h / وشوف"; exit 6; }
-rm -rf "$GDIR" "$TMP_PART"
-
 echo "── [5/5] تحقق مقاس ──"
 PRETTY=$(grep PRETTY_NAME "$DEST/etc/os-release" | cut -d'"' -f2)
 echo "   PRETTY_NAME: $PRETTY"
