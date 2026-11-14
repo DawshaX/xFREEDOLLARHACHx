@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, BellRing, BrainCircuit, CheckCircle2, Clock4, Compass, Lightbulb, ListTodo, Radar, RefreshCw, Sparkles } from "lucide-react";
 import { novaAuthHeaders } from "@/lib/ops-client";
+import { pushNotify } from "@/lib/sse";
 
 /**
  * AgentCommandDeck — «لوحة القيادة الموحّدة» للوكيل الحي.
@@ -122,6 +123,7 @@ export function AgentCommandDeck() {
       setMemories(mem.slice(0, 6));
     }
     setFetchedAt(new Date());
+    return lv;
   }, []);
 
   useEffect(() => {
@@ -145,7 +147,11 @@ export function AgentCommandDeck() {
         </div>
         <div className="flex items-center gap-2 text-[9px] font-mono text-muted-foreground">
           <span>{fetchedAt ? `آخر قياس ${fetchedAt.toLocaleTimeString("ar")}` : "…"}</span>
-          <button onClick={() => void load()} className="px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/10 flex items-center gap-1">
+          <button onClick={() => { void load().then((lv) => {
+              if (lv == null) pushNotify("warning", "لوحة القيادة الموحّدة", "التحديث لم يجلب حالة الوكيل — السيرفر أو الوكيل غير متاح");
+              else if (lv.agentConnected) pushNotify("info", "لوحة القيادة الموحّدة", `تحديث يدوي — ${lv.toolsCount ?? "?"} أداة حقيقية، الوكيل متصل`);
+              else pushNotify("warning", "لوحة القيادة الموحّدة", "تحديث يدوي — الوكيل غير متصل الآن");
+            }); }} className="px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/10 flex items-center gap-1">
             <RefreshCw className="w-3 h-3" /> تحديث
           </button>
         </div>

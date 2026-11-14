@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
+import { pushNotify } from "@/lib/sse";
 
 export interface SystemEvent {
   type: string;
@@ -139,11 +140,17 @@ export function SystemProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ level: "active" }),
     })
       .then(async (res) => {
-        if (!res.ok) return;
+        if (!res.ok) {
+          pushNotify("error", "الوكيل المستقل", `تفعيل الوضع المستقل فشل (HTTP ${res.status})`);
+          return;
+        }
         const data: unknown = await res.json().catch(() => null);
         setAutonomousStatus(prev => parseAutonomousPayload(data, { ...prev, enabled: true }));
+        pushNotify("success", "الوكيل المستقل", "الوضع المستقل اشتغل — الوكالة بتنفّذ بنفسها الآن");
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        pushNotify("error", "الوكيل المستقل", `تفعيل الوضع المستقل فشل: ${err instanceof Error ? err.message : String(err)}`);
+      });
   }, [addEvent]);
 
   const disableAutonomous = useCallback(() => {
@@ -153,11 +160,17 @@ export function SystemProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
     })
       .then(async (res) => {
-        if (!res.ok) return;
+        if (!res.ok) {
+          pushNotify("error", "الوكيل المستقل", `إيقاف الوضع المستقل فشل (HTTP ${res.status})`);
+          return;
+        }
         const data: unknown = await res.json().catch(() => null);
         setAutonomousStatus(prev => parseAutonomousPayload(data, { ...prev, enabled: false, isRunning: false }));
+        pushNotify("info", "الوكيل المستقل", "الوضع المستقل اتوقف — التنفيذ اليدوي تحت تحكمك");
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        pushNotify("error", "الوكيل المستقل", `إيقاف الوضع المستقل فشل: ${err instanceof Error ? err.message : String(err)}`);
+      });
   }, [addEvent]);
 
   const runAutonomousTask = useCallback(async (prompt: string) => {
@@ -178,10 +191,12 @@ export function SystemProvider({ children }: { children: ReactNode }) {
       }
       setAutonomousStatus(s => ({ ...s, tasksCompleted: s.tasksCompleted + 1, isRunning: false }));
       addEvent("task_completed");
+      pushNotify("success", "الوكيل المستقل", `المهمة اكتملت: ${prompt.slice(0, 80)}`);
       void syncAutonomousStatus();
-    } catch {
+    } catch (err) {
       setAutonomousStatus(s => ({ ...s, tasksErrored: s.tasksErrored + 1, isRunning: false }));
       addEvent("task_error");
+      pushNotify("error", "الوكيل المستقل", `المهمة فشلت: ${err instanceof Error ? err.message : String(err)}`);
     }
   }, [addEvent, syncAutonomousStatus]);
 
