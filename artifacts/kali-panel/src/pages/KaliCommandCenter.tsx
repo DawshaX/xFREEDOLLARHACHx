@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import {
   Activity, Bot, Brain, ChevronDown, ChevronUp, ChevronRight,
   Cpu, Eye, HardDrive, Loader2, Monitor, Network,
@@ -957,6 +958,9 @@ export default function KaliCommandCenter() {
               <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
                 الأجينت بيستخدمها بأداة kali_run — والتحرك بالماوس بـxdotool داخل البيئة. الأوامر تنفّذ فعلًا مش محاكاة.
               </p>
+              <button onClick={() => setLocation("/kali-env")} className="mt-1.5 text-[8px] px-1.5 py-0.5 rounded" style={{ color: "#22d3ee", border: "1px solid rgba(34,211,238,0.4)" }}>
+                التبيبة المخصصة: بيئة كالي + الديسكتوب الحي ↗
+              </button>
             </div>
           ) : (
             <div className="mt-2 rounded-xl p-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)" }}>

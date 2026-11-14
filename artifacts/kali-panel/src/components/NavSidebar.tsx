@@ -4,6 +4,7 @@ import { useI18n } from "@/context/LanguageContext";
 import type { TKey } from "@/lib/i18n";
 import { useLocation } from "wouter";
 import {
+  Swords,
   Activity, Bookmark, BookOpen, Brain, Bug, ChevronDown,
   ChevronLeft, ChevronRight, Clock, Code, ClipboardList,
   Database, Eye, FileSearch, FileText, GitBranch,
@@ -36,6 +37,7 @@ export const NAV_SECTIONS: NavSection[] = [
     neonColor: "#ff2222", neonRgb: "255,34,34", symbol: "☠",
     items: [
       { label: "⚡ الشغل والشات الحي",   icon: Sparkles,        path: "/agent-pro",         iconColor: "#22d3ee", badge: "WORK", hot: true, skull: true },
+      { label: "🐉 بيئة كالي المدمجة",  icon: Swords,          path: "/kali-env",          iconColor: "#ff5533", badge: "LIVE", hot: true },
       { label: "لوحة التحكم",          icon: LayoutDashboard, path: "/",                  iconColor: "#ff4444" },
       { label: "استوديو البج باونتي",   icon: Shield,          path: "/bug-bounty-studio", iconColor: "#00ff88", badge: "VRP", hot: true },
       { label: "موسوعة الثغرات والكود", icon: BookOpen,        path: "/vuln-encyclopedia", iconColor: "#38bdf8", badge: "PRO", hot: true },
