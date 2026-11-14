@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "at": "2026-11-14T21:52:17.206Z",
+  "at": "2026-11-14T22:33:16.246Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
@@ -212,17 +212,17 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 50197030,
-    "sha256": "3a466a617856dc1b8b5a5044f615293a9c4ec5f975ed74bc6c962a85b25a55b0"
+    "bytes": 50197157,
+    "sha256": "0efcd03bcecb5fdd4fb455cb708994502399ab06dd90af5951bda3b0ead0ff15"
   },
   "mode": "deepen",
-  "says_ar": "425755 ثغرة حقيقية · critical 39863 · high 162308 · 1781 مستغلّة فعلياً (KEV) · 406185 لها EPSS · 81948 منتج بـCPE · مزامنة 2026-11-14T21:52:17.206Z",
+  "says_ar": "425755 ثغرة حقيقية · critical 39863 · high 162308 · 1781 مستغلّة فعلياً (KEV) · 406185 لها EPSS · 81948 منتج بـCPE · مزامنة 2026-11-14T22:33:16.246Z",
   "deepen": {
-    "nextStartIndex": 0,
-    "windowPages": 12,
+    "nextStartIndex": 200000,
+    "windowPages": 5,
     "walkedFrom": 0,
     "nvdTotal": 425755,
     "coverage": 1,
-    "at": "2026-11-14T21:52:17.207Z"
+    "at": "2026-11-14T22:33:16.247Z"
   }
 }
