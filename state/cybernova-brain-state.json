@@ -5,8 +5,8 @@
   "liveUrl": "https://dawshax.github.io/xFREEDOLLARHACHx/",
   "daemonStatus": {
     "state": "RUNNING_24_7_AUTONOMOUS",
-    "autonomousCyclesCompleted": 216,
-    "lastHeartbeatAt": "2026-11-14T05:26:46.885Z",
+    "autonomousCyclesCompleted": 217,
+    "lastHeartbeatAt": "2026-11-14T07:13:19.231Z",
     "cloudMemorySynced": true,
     "activeWorkers": 4,
     "selfEvolutionLevel": "v18.0 — Live 9-Site Real-Time Vulnerability Ingestor + 76,680+ Universal CVE Galaxy + 3,584 Indexed Patterns + 78 Kali/Web3 Tools"
@@ -16,13 +16,13 @@
     "activeProgram": "Google VRP + Immunefi Web3 & Smart Contract Safe Harbor",
     "currentStageNumber": 6,
     "totalStages": 6,
-    "currentStageTitleAr": "المرحلة 6/6: اكتملت الدورة الذاتية #216 على (bughunters.google.com) — جميع المراحل الـ 6 والسلاسل المركبة موثقة 100%",
+    "currentStageTitleAr": "المرحلة 6/6: نبضة العقل السحابي #217 مكتملة على (bughunters.google.com) — المراقبة والتطوير الذاتي نشط 24/7",
     "overallProgressPercent": 100,
     "nextAutonomousActionAr": "مزامنة حية مستمرة من 9 مصادر عالمية (NVD, GitHub Advisories, CISA KEV, ExploitDB, Immunefi-Web3) وتوليد وتعديل سلاسل الثغرات ذكياً حسب الطلب",
     "notesAr": "",
     "corpusSnapshot": {
-      "totalCve": 92000,
-      "kev": 308,
+      "totalCve": 425695,
+      "kev": 1781,
       "at": "2026-11-14",
       "src": "state/vuln-corpus-index.json + supabase:corpus_cve"
     }
@@ -38,10 +38,17 @@
       "extractedArtifactsCount": 40,
       "parallelTasksActive": 4,
       "zeroFpVerifiedCount": 6,
-      "universalGalaxyTotalCves": 92000
+      "universalGalaxyTotalCves": 425695
     }
   },
   "whatsNewLog": [
+    {
+      "id": "pulse-1794640414019",
+      "ts": "2026-11-14 07:13:34 UTC",
+      "category": "GITHUB_CLOUD_PULSE",
+      "titleAr": "نبضة العقل السحابي التلقائية #217 على الهدف (bughunters.google.com)",
+      "detailAr": "IP: 172.253.63.141 | HTTP 200 | SHA256: 7f7e1f9cc98c6c1c — تم التحديث والحفظ في ذاكرة GitHub الدائمة. | 46 ثغرة جديدة (NVD:40 · KEV:15 · GHSA:9)"
+    },
     {
       "id": "new-1794634006885-mt0g",
       "ts": "2026-11-14 05:26:46 UTC",
@@ -208,48 +215,6 @@
       "ts": "2026-11-14 03:12:15 UTC",
       "category": "AUTONOMOUS_PULSE",
       "titleAr": "اكتمال الدورة الذاتية #193 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794625755187-cfj4",
-      "ts": "2026-11-14 03:09:15 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #192 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794625575186-m86j",
-      "ts": "2026-11-14 03:06:15 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #191 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794625395182-54fb",
-      "ts": "2026-11-14 03:03:15 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #190 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794625215180-v34u",
-      "ts": "2026-11-14 03:00:15 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #189 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794625035177-2nxr",
-      "ts": "2026-11-14 02:57:15 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #188 في الخلفية على الهدف (bughunters.google.com)",
-      "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
-    },
-    {
-      "id": "new-1794624855198-xrsv",
-      "ts": "2026-11-14 02:54:15 UTC",
-      "category": "AUTONOMOUS_PULSE",
-      "titleAr": "اكتمال الدورة الذاتية #187 في الخلفية على الهدف (bughunters.google.com)",
       "detailAr": "تم فحص DNS/Shodan وترويسات HTTP ومسارات الـ JS وبناء سلسلة رباعية (CRITICAL (CVSS 9.5)) وتحديث ملف الذاكرة السحابية."
     }
   ],
@@ -1965,6 +1930,86 @@
       "at": "2026-11-06T01:56:03.641Z"
     },
     {
+      "id": "CVE-2026-126299",
+      "title": "CVE-2026-126299",
+      "description": "NLTK: Quadratic-time CPU denial of service in CCG lexicon parser (fromstring) on wide bracket bodies and operator chains",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-89p3-fcch-88ph",
+      "at": "2026-11-14T07:13:34.018Z"
+    },
+    {
+      "id": "CVE-2026-126298",
+      "title": "CVE-2026-126298",
+      "description": "NLTK: Quadratic-time CPU denial of service in Tree.chomsky_normal_form right-factor binarization via list.pop(0)",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-r53h-rw34-8h97",
+      "at": "2026-11-14T07:13:34.018Z"
+    },
+    {
+      "id": "CVE-2026-126297",
+      "title": "CVE-2026-126297",
+      "description": "NLTK: Quadratic-time CPU denial of service in ConllCorpusReader SRL instance builder via nested span rescan",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-v8f3-6phw-6mh9",
+      "at": "2026-11-14T07:13:34.018Z"
+    },
+    {
+      "id": "CVE-2026-62297",
+      "title": "CVE-2026-62297",
+      "description": "ag-psd can exhaust memory when parsing crafted PSD dimensions",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-qfx6-q44v-9qqw",
+      "at": "2026-11-14T07:13:34.018Z"
+    },
+    {
+      "id": "CVE-2026-126303",
+      "title": "CVE-2026-126303",
+      "description": "NLTK: Unbounded CPU consumption in SteppingRecursiveDescentParser.parse() with ambiguous or self-embedding grammars",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-8fx7-8jr8-84rv",
+      "at": "2026-11-14T07:13:34.019Z"
+    },
+    {
+      "id": "CVE-2026-126304",
+      "title": "CVE-2026-126304",
+      "description": "NLTK: Symlink escape in YCOECorpusReader lets a psd/pos directory symlink read files outside the corpus root within the data sandbox",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-qg35-44qx-7vrr",
+      "at": "2026-11-14T07:13:34.019Z"
+    },
+    {
+      "id": "CVE-2026-128089",
+      "title": "CVE-2026-128089",
+      "description": "dnspython has excessive memory and CPU use",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-vvf4-9x63-8xvv",
+      "at": "2026-11-14T07:13:34.019Z"
+    },
+    {
+      "id": "CVE-2026-128082",
+      "title": "CVE-2026-128082",
+      "description": "AutoMapper: Uncontrolled Recursion with Constructor Parameters",
+      "cvss": 7.5,
+      "severity": "HIGH",
+      "source": "GitHub Advisories",
+      "url": "https://github.com/advisories/GHSA-6vhm-j9h7-f9gh",
+      "at": "2026-11-14T07:13:34.019Z"
+    },
+    {
       "id": "CVE-2026-128081",
       "title": "CVE-2026-128081",
       "description": "AutoMapper: Denial of Service via uncontrolled recursion that bypasses MaxDepth",
@@ -2613,95 +2658,16 @@
       "source": "GitHub Advisories",
       "url": "https://github.com/advisories/GHSA-5x38-2vff-x55p",
       "at": "2026-11-02T03:30:53.772Z"
-    },
-    {
-      "id": "CVE-2026-120792",
-      "title": "CVE-2026-120792",
-      "description": "Microsoft Security Advisory CVE-2026-120792 - Aspire Information Disclosure Vulnerability",
-      "cvss": 7.3,
-      "severity": "HIGH",
-      "source": "GitHub Advisories",
-      "url": "https://github.com/advisories/GHSA-q6jf-24jf-m3cg",
-      "at": "2026-11-11T02:24:47.025Z"
-    },
-    {
-      "id": "CVE-2026-120778",
-      "title": "CVE-2026-120778",
-      "description": "Microsoft Security Advisory CVE-2026-120778 - Aspire Elevation of Privilege Vulnerability",
-      "cvss": 7.3,
-      "severity": "HIGH",
-      "source": "GitHub Advisories",
-      "url": "https://github.com/advisories/GHSA-m63f-xhvm-6mv5",
-      "at": "2026-11-11T02:24:47.025Z"
-    },
-    {
-      "id": "CVE-2022-23552",
-      "title": "CVE-2022-23552",
-      "description": "Grafana is an open-source platform for monitoring and observability. Starting with the 8.1 branch and prior to versions 8.5.16, 9.2.10, and 9.3.4, Grafana had a stored XSS vulnerability affecting the core plugin GeoMap. The stored XSS vulnerability was possible because SVG files weren't properly sanitized and allowed arbitrary JavaScript to be executed in the context of the currently authorized us",
-      "cvss": 7.3,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-23552",
-      "at": "2026-11-06T01:56:03.641Z"
-    },
-    {
-      "id": "CVE-2023-0507",
-      "title": "CVE-2023-0507",
-      "description": "Grafana is an open-source platform for monitoring and observability. \n\nStarting with the 8.1 branch, Grafana had a stored XSS vulnerability affecting the core plugin GeoMap. \n\nThe stored XSS vulnerability was possible due to map attributions weren't properly sanitized and allowed arbitrary JavaScript to be executed in the context of the currently authorized user of the Grafana instance. \n\nAn attac",
-      "cvss": 7.3,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-0507",
-      "at": "2026-11-06T01:56:03.641Z"
-    },
-    {
-      "id": "CVE-2022-1292",
-      "title": "CVE-2022-1292",
-      "description": "The c_rehash script does not properly sanitise shell metacharacters to prevent command injection. This script is distributed by some operating systems in a manner where it is automatically executed. On such operating systems, an attacker could execute arbitrary commands with the privileges of the script. Use of the c_rehash script is considered obsolete and should be replaced by the OpenSSL rehash",
-      "cvss": 7.3,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-1292",
-      "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2022-2068",
-      "title": "CVE-2022-2068",
-      "description": "In addition to the c_rehash shell command injection identified in CVE-2022-1292, further circumstances where the c_rehash script does not properly sanitise shell metacharacters to prevent command injection were found by code review. When the CVE-2022-1292 was fixed it was not discovered that there are other places in the script where the file names of certificates being hashed were possibly passed",
-      "cvss": 7.3,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-2068",
-      "at": "2026-11-05T21:45:37.064Z"
-    },
-    {
-      "id": "CVE-2026-62848",
-      "title": "CVE-2026-62848",
-      "description": "Metalama: Unsafe deserialization over Metalama's Visual Studio inter-process named pipe enables local code execution",
-      "cvss": 7.3,
-      "severity": "HIGH",
-      "source": "GitHub Advisories",
-      "url": "https://github.com/advisories/GHSA-h26j-4vp7-x9w2",
-      "at": "2026-11-03T18:50:34.961Z"
-    },
-    {
-      "id": "CVE-2022-38074",
-      "title": "CVE-2022-38074",
-      "description": "SQL Injection vulnerability in VeronaLabs WP Statistics plugin <= 13.2.10 versions.",
-      "cvss": 7.1,
-      "severity": "HIGH",
-      "source": "NVD",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-38074",
-      "at": "2026-11-10T16:48:40.410Z"
     }
   ],
   "intelStats": {
     "total": 200,
-    "freshThisPulse": 38,
+    "freshThisPulse": 46,
     "sourcesAnswered": [
       "NVD:40",
-      "KEV:15"
+      "KEV:15",
+      "GHSA:9"
     ],
-    "at": "2026-11-14T00:09:06.978Z"
+    "at": "2026-11-14T07:13:34.019Z"
   }
 }
