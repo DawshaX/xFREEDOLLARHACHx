@@ -396,10 +396,10 @@ async function fetchPartBuffer(branch: string, ref: string | null, gdir: string 
   } catch (e) {
     plog(`raw ${file}: ${(e as Error).message.slice(0, 80)} — جرب git`);
   }
-  // 2) git archive/cat-file (بيشتغل أينما كان git + github.com مسموح)
-  if (!gdir || !ref) throw new Error(`مافيش transport متاح لـ${file}`);
+  // 2) git cat-file (بيشتغل أينما كان git + github.com مسموح)
+  if (!gdir) throw new Error(`مافيش transport متاح لـ${file}`);
   const out = await new Promise<Buffer>((resolve, reject) => {
-    const c = spawn("git", ["-C", gdir, "cat-file", "blob", `${ref}:${file}`], { timeout: 180_000 });
+    const c = spawn("git", ["-C", gdir, "cat-file", "blob", `${ref ?? "FETCH_HEAD"}:${file}`], { timeout: 180_000 });
     const chunks: Buffer[] = [];
     c.stdout.on("data", (d: Buffer) => chunks.push(d));
     c.on("error", reject);
@@ -548,7 +548,25 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
 
     /* proot-static من فرع kali-static (إجباري — قيس) */
     provision.phase = "proot";
-    const staticBuf = await fetchPartBuffer(STATIC_BRANCH, null, git?.gdir ?? null, "proot-static");
+    // فرع kali-static محتاج fetch بنفسه جوه الrepo المؤقت
+    let staticRef: string | null = ref;
+    if (git?.gdir && STATIC_BRANCH !== KALI_BRANCH) {
+      const sf = await new Promise<{ code: number | null; ref: string }>((resolve) => {
+        const c = spawn("git", ["-C", git.gdir, "-c", "protocol.version=2", "fetch", "-q", "--depth=1", "--filter=blob:none", "origin", STATIC_BRANCH], { timeout: 300_000 });
+        c.on("error", () => resolve({ code: -1, ref: "" }));
+        c.on("close", async (code) => {
+          if (code !== 0) { resolve({ code, ref: "" }); return; }
+          const r2 = spawn("git", ["-C", git.gdir, "rev-parse", "FETCH_HEAD"], { timeout: 20_000 });
+          let out = "";
+          r2.stdout.on("data", (d: Buffer) => { out += d.toString(); });
+          r2.on("close", () => resolve({ code: 0, ref: out.trim().split(/\s/)[0] }));
+          r2.on("error", () => resolve({ code: -1, ref: "" }));
+        });
+      });
+      staticRef = sf.code === 0 && sf.ref ? sf.ref : null;
+      plog(`kali-static: fetch ${staticRef ? "✓ " + staticRef.slice(0, 10) : "✗ — هنجرب raw بس"}`);
+    }
+    const staticBuf = await fetchPartBuffer(STATIC_BRANCH, staticRef, git?.gdir ?? null, "proot-static");
     const binDir = path.join(dest, "usr/local/bin");
     fs.mkdirSync(binDir, { recursive: true });
     const binPath = path.join(binDir, "proot-static");
