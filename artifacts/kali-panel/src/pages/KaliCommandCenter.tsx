@@ -158,6 +158,26 @@ const QUICK_PROMPTS = [
   { icon: Zap,      label: "استقلالية كاملة",color: "#ffaa00", prompt: "وضع الاستقلالية الكاملة — قيّم النظام وضع خطة تحسين أمني ونفّذها." },
 ];
 
+/* TEST11 — كالي الحقيقية المدمجة في البرنامج (rootfs كاملة على الهَب) */
+type KaliEnvStatus = {
+  ok: boolean;
+  status: {
+    present: boolean;
+    prettyName?: string;
+    packages?: number;
+    builtAt?: string;
+    probe?: { ok: boolean; version?: string; detail?: string };
+    desktop?: { running: boolean; vncPort: boolean; novncPort: boolean };
+  };
+  desktopUrl?: string | null;
+};
+
+const KALI_CMDS = [
+  "nmap --version", "sqlmap --version", "nikto -Version 2>&1 | head -2",
+  "hydra 2>&1 | head -1", "john --version", "hashcat --version",
+  "tshark --version 2>/dev/null | head -1", "python3 --version",
+];
+
 const DEVICE_CMDS = [
   "uname -a", "whoami && id", "ip addr", "ps aux | head -25",
   "df -h", "free -h", "netstat -an 2>/dev/null | head -20",
@@ -522,7 +542,8 @@ export default function KaliCommandCenter() {
 
   const [termLog,  setTermLog]  = useState<TermLine[]>([]);
   const [cmdInput, setCmdInput] = useState("");
-  const [cmdTarget, setCmdTarget] = useState<"agent" | "server">("agent");
+  const [cmdTarget, setCmdTarget] = useState<"agent" | "server" | "kali">("agent");
+  const [kaliEnv, setKaliEnv] = useState<KaliEnvStatus | null>(null);
   const [cmdBusy,  setCmdBusy]  = useState(false);
   const termRef = useRef<HTMLDivElement>(null);
 
@@ -575,11 +596,35 @@ export default function KaliCommandCenter() {
     } catch {}
   }, []);
 
+  /* TEST11 — حالة كالي المدمجة (الحالة مقاسة من الهَب نفسه) */
+  const loadKaliEnv = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/ops/kali`);
+      if (r.ok) setKaliEnv(await r.json());
+      else setKaliEnv({ ok: false, status: { present: false } });
+    } catch { setKaliEnv({ ok: false, status: { present: false } }); }
+  }, []);
+
+  const kaliDesktop = useCallback(async (action: "start" | "stop") => {
+    try {
+      const r = await fetch(`${API}/ops/kali/desktop`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const d = await r.json() as { ok?: boolean; detail?: string };
+      pushNotify(r.ok && d.ok ? "success" : "warning", action === "start" ? "ديسكتوب كالي" : "ديسكتوب كالي — اطفاء", d.detail ?? `HTTP ${r.status}`);
+    } catch (e: unknown) {
+      pushNotify("error", "ديسكتوب كالي", e instanceof Error ? e.message : String(e));
+    }
+    loadKaliEnv();
+  }, [loadKaliEnv]);
+
   useEffect(() => {
-    loadIntel(); loadTasks(); loadConnectInfo();
+    loadIntel(); loadTasks(); loadConnectInfo(); loadKaliEnv();
     const iv = setInterval(() => { loadIntel(); loadTasks(); }, 5000);
-    return () => clearInterval(iv);
-  }, [loadIntel, loadTasks, loadConnectInfo]);
+    const ivKali = setInterval(loadKaliEnv, 20000);
+    return () => { clearInterval(iv); clearInterval(ivKali); };
+  }, [loadIntel, loadTasks, loadConnectInfo, loadKaliEnv]);
 
   // Load profile when agent connects
   const hasDevice = (intel?.agentCount ?? 0) > 0;
@@ -693,33 +738,35 @@ export default function KaliCommandCenter() {
   };
 
   /* ── Direct exec ──────────────────────────────────────────────────────────── */
-  const execCmd = async (cmd: string, target?: "agent" | "server") => {
+  const execCmd = async (cmd: string, target?: "agent" | "server" | "kali") => {
     const tgt = target ?? cmdTarget;
     if (!cmd.trim() || cmdBusy) return;
     setCmdBusy(true);
     setCmdInput("");
+    const tgtLabel = tgt === "kali" ? "KALI-البيئة المدمجة" : tgt === "agent" ? intel?.agents[0]?.hostname ?? "DEVICE" : "SERVER";
     setTermLog(prev => [...prev, {
-      text: `$ [${tgt === "agent" ? intel?.agents[0]?.hostname ?? "DEVICE" : "SERVER"}] ${cmd}`,
+      text: `$ [${tgtLabel}] ${cmd}`,
       isError: false, isCmd: true, ts: Date.now(),
     }]);
     try {
-      const endpoint = tgt === "agent" ? "/kali-command/agent/exec" : "/kali-command/server/exec";
+      const endpoint = tgt === "kali" ? "/ops/kali/exec" : tgt === "agent" ? "/kali-command/agent/exec" : "/kali-command/server/exec";
+      const body = tgt === "kali" ? { cmd } : { command: cmd };
       const r = await fetch(`${API}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ command: cmd }),
+        body: JSON.stringify(body),
       });
       const d = await r.json();
-      const out = d.stdout || d.result?.stdout || d.result || d.error || JSON.stringify(d);
+      const out = tgt === "kali" ? (d.stdout || d.stderr || (d.exitCode === 0 ? "(بلا مخرجات)" : `exit=${d.exitCode}`)) : (d.stdout || d.result?.stdout || d.result || d.error || JSON.stringify(d));
       const isErr = !r.ok || d.exitCode !== 0 || !!d.error;
       setTermLog(prev => [...prev, {
         text: String(out).substring(0, 4000),
         isError: isErr, isCmd: false, ts: Date.now(),
       }]);
-      if (d.stderr) setTermLog(prev => [...prev, { text: d.stderr, isError: true, isCmd: false, ts: Date.now() }]);
+      if (d.stderr && tgt !== "kali") setTermLog(prev => [...prev, { text: d.stderr, isError: true, isCmd: false, ts: Date.now() }]);
       pushNotify(
         isErr ? "error" : "success",
-        tgt === "agent" ? "مركز كالي — الجهاز" : "مركز كالي — السيرفر",
+        tgt === "kali" ? "كالي المدمجة — تنفيذ حقيقي" : tgt === "agent" ? "مركز كالي — الجهاز" : "مركز كالي — السيرفر",
         isErr ? `الأمر فشل: ${cmd.slice(0, 60)}` : `الأمر اتنفّذ: ${cmd.slice(0, 60)}`,
       );
     } catch (e: unknown) {
@@ -875,6 +922,51 @@ export default function KaliCommandCenter() {
               </button>
             </div>
           )}
+          {/* TEST11 «احنا معانا كل شيئ» — كالي حقيقية مدمجة جوه البرنامج نفسه، مش على أجهزة خارجية */}
+          {kaliEnv?.status.present ? (
+            <div className="mt-2 rounded-xl p-2" style={{ background: "rgba(255,60,60,0.05)", border: "1px solid rgba(255,60,60,0.3)" }}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[9px] font-black" style={{ color: "#ff6655" }}>🐉 كالي حقيقية مدمجة في البرنامج — جاهزة للشغل</p>
+                <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>{kaliEnv.status.packages ?? "?"} حزمة</span>
+              </div>
+              <p className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>
+                {kaliEnv.status.prettyName}{kaliEnv.status.builtAt ? ` · بناء ${kaliEnv.status.builtAt}` : ""}
+              </p>
+              {kaliEnv.status.probe && (
+                <p className="text-[8px] font-mono mt-0.5" style={{ color: kaliEnv.status.probe.ok ? "rgba(68,255,136,0.75)" : "#ffaa44" }}>
+                  بروب تنفيذ حقيقي: {kaliEnv.status.probe.version ?? kaliEnv.status.probe.detail}
+                </p>
+              )}
+              <div className="flex gap-1.5 mt-1.5 flex-wrap items-center">
+                <button onClick={() => kaliDesktop("start")} disabled={cmdBusy || kaliEnv.status.desktop?.running}
+                  className="text-[8px] px-1.5 py-0.5 rounded" style={{ color: "#44ff88", border: "1px solid rgba(68,255,136,0.4)" }}>
+                  ▶️ شغّل الديسكتوب
+                </button>
+                <button onClick={() => kaliDesktop("stop")} disabled={cmdBusy || !kaliEnv.status.desktop?.running}
+                  className="text-[8px] px-1.5 py-0.5 rounded" style={{ color: "rgba(255,170,80,0.8)", border: "1px solid rgba(255,170,80,0.3)" }}>
+                  ⏹️ اطفّي
+                </button>
+                {kaliEnv.desktopUrl && (
+                  <a href={kaliEnv.desktopUrl} target="_blank" rel="noreferrer"
+                    className="text-[8px] px-1.5 py-0.5 rounded" style={{ color: "#ff8866", border: "1px solid rgba(255,100,80,0.5)" }}>
+                    🖥️ افتح الديسكتوب في المتصفح ↗
+                  </a>
+                )}
+                {kaliEnv.status.desktop?.running && <span className="text-[8px] font-mono" style={{ color: "#44ff88" }}>● شغّال (noVNC :6080)</span>}
+              </div>
+              <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+                الأجينت بيستخدمها بأداة kali_run — والتحرك بالماوس بـxdotool داخل البيئة. الأوامر تنفّذ فعلًا مش محاكاة.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-2 rounded-xl p-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)" }}>
+              <p className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.45)" }}>
+                كالي المدمجة مش مستخرجة على السيرفر لسه — أمر واحد على الهَب:
+                <code className="mx-1" style={{ color: "#ffaa44" }}>bash scripts/kali-rootfs-fetch.sh</code>
+                (بيسحب فرع kali-rootfs اللي CI بناه — صادق عن مكانها)
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -1018,21 +1110,21 @@ export default function KaliCommandCenter() {
               {/* Target toggle */}
               <div className="flex rounded-lg overflow-hidden"
                 style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
-                {(["agent", "server"] as const).map(tgt => (
+                {(["agent", "server", "kali"] as const).map(tgt => (
                   <button key={tgt} onClick={() => setCmdTarget(tgt)}
                     className="flex-1 py-1 text-[9px] font-mono font-bold transition-all"
                     style={cmdTarget === tgt
-                      ? { background: tgt === "agent" ? "rgba(68,255,136,0.15)" : "rgba(100,150,255,0.15)", color: tgt === "agent" ? "#44ff88" : "#6699ff", borderBottom: `2px solid ${tgt === "agent" ? "#44ff88" : "#6699ff"}` }
+                      ? { background: tgt === "agent" ? "rgba(68,255,136,0.15)" : tgt === "kali" ? "rgba(255,60,60,0.18)" : "rgba(100,150,255,0.15)", color: tgt === "agent" ? "#44ff88" : tgt === "kali" ? "#ff6655" : "#6699ff", borderBottom: `2px solid ${tgt === "agent" ? "#44ff88" : tgt === "kali" ? "#ff6655" : "#6699ff"}` }
                       : { color: "rgba(255,255,255,0.3)" }}>
-                    {tgt === "agent" ? `🖥️ ${agent0?.hostname ?? "DEVICE"}` : "⚡ SERVER"}
+                    {tgt === "agent" ? `🖥️ ${agent0?.hostname ?? "DEVICE"}` : tgt === "kali" ? "🐉 KALI المدمجة" : "⚡ SERVER"}
                   </button>
                 ))}
               </div>
 
               {/* Quick commands */}
               <div className="flex flex-wrap gap-1">
-                {DEVICE_CMDS.slice(0, 6).map(cmd => (
-                  <button key={cmd} onClick={() => execCmd(cmd)} disabled={cmdBusy || (cmdTarget === "agent" && !hasDevice)}
+                {(cmdTarget === "kali" ? KALI_CMDS : DEVICE_CMDS.slice(0, 6)).map(cmd => (
+                  <button key={cmd} onClick={() => execCmd(cmd)} disabled={cmdBusy || (cmdTarget === "agent" && !hasDevice) || (cmdTarget === "kali" && kaliEnv?.status.present !== true)}
                     className="px-2 py-1 rounded text-[8px] font-mono transition-all disabled:opacity-30"
                     style={{ background: "rgba(255,170,0,0.05)", border: "1px solid rgba(255,170,0,0.15)", color: "rgba(255,170,0,0.6)" }}
                     onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,170,0,0.12)")}
@@ -1065,13 +1157,13 @@ export default function KaliCommandCenter() {
                   value={cmdInput}
                   onChange={e => setCmdInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") execCmd(cmdInput); }}
-                  placeholder={cmdTarget === "agent" && !hasDevice ? "لا يوجد جهاز..." : "اكتب أمراً..."}
-                  disabled={cmdBusy || (cmdTarget === "agent" && !hasDevice)}
+                  placeholder={cmdTarget === "agent" && !hasDevice ? "لا يوجد جهاز..." : cmdTarget === "kali" && kaliEnv?.status.present !== true ? "كالي مش مستخرجة على السيرفر..." : "اكتب أمراً داخل كالي الحقيقية..."}
+                  disabled={cmdBusy || (cmdTarget === "agent" && !hasDevice) || (cmdTarget === "kali" && kaliEnv?.status.present !== true)}
                   className="flex-1 rounded-lg px-2.5 py-1.5 text-[10px] font-mono disabled:opacity-40"
                   style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,170,0,0.25)", color: "#ffaa44", outline: "none" }}
                 />
                 <button onClick={() => execCmd(cmdInput)}
-                  disabled={!cmdInput.trim() || cmdBusy || (cmdTarget === "agent" && !hasDevice)}
+                  disabled={!cmdInput.trim() || cmdBusy || (cmdTarget === "agent" && !hasDevice) || (cmdTarget === "kali" && kaliEnv?.status.present !== true)}
                   className="px-2.5 py-1.5 rounded-lg text-[9px] font-mono font-bold transition-all disabled:opacity-30"
                   style={{ background: "rgba(255,170,0,0.1)", border: "1px solid rgba(255,170,0,0.3)", color: "#ffaa44" }}>
                   <Play className="w-3 h-3" />

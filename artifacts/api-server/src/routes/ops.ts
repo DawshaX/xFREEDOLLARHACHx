@@ -64,6 +64,7 @@ import { provisionToolchain, toolchainStatus, VENDORABLE } from "../lib/ops/tool
 import { checkGate, opsExposure } from "../lib/ops/gate";
 import { tokenConfigured } from "../lib/ops/gate";
 import { runSelfHeal } from "../lib/ops/self-heal";
+import { kaliStatus, kaliRoot, runKali, startDesktop, stopDesktop, desktopUrlFromHost } from "../lib/ops/kali-env";
 import { ALLOWED_KEYS, hydrateRuntimeConfig, runtimeConfigStatus, setRuntimeConfig } from "../lib/ops/runtime-config";
 import { measureStateFootprint, pruneState, lastPrune } from "../lib/ops/state-prune";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
@@ -74,6 +75,7 @@ import { corpusStatus, readIndex, queryCorpus } from "../lib/ops/vuln-corpus";
 import { buildStamp } from "../lib/ops/version";
 import { throttleStats } from "../lib/ops/ratelimit";
 import { broadcastEvent } from "../lib/ws-hub";
+import { createPushNotification } from "../lib/push-hub";
 
 const router = Router();
 
@@ -780,6 +782,66 @@ router.post("/ops/self-heal", async (req: Request, res: Response) => {
 
 router.get("/ops/self-heal/hint", (_req: Request, res: Response) => {
   res.json({ ok: true, says_ar: "الشفاء الذاتي بيتشغّل بـPOST /api/ops/self-heal ويقيس فعلًا — طبقة طبقة" });
+});
+
+/* ── TEST11: كالي الحقيقية المدمجة — الحالة مقاسة، التنفيذ حقيقي بproot ── */
+router.get("/ops/kali", async (req: Request, res: Response) => {
+  const st = await kaliStatus();
+  const desktopUrl = st.desktop?.running ? desktopUrlFromHost(req.headers.host) : null;
+  res.json({ ok: st.present, status: st, desktopUrl });
+});
+
+router.get("/ops/kali/hint", (_req: Request, res: Response) => {
+  res.json({
+    ok: true,
+    says_ar: "كالي الحقيقية المدمجة: GET /api/ops/kali للحالة المقاسة · POST /api/ops/kali/exec بأمر داخل كالي · POST /api/ops/kali/desktop {action: start|stop|status}",
+  });
+});
+
+router.post("/ops/kali/exec", async (req: Request, res: Response) => {
+  const gate = checkGate(req as never, "kali-exec");
+  if (!(gate && gate.ok && gate.code === "allowed")) {
+    res.status(403).json({ ok: false, error: "owner_gate_required", what: "kali-exec" });
+    return;
+  }
+  if (!kaliRoot()) {
+    res.status(404).json({ ok: false, error: "kali_rootfs_missing", says_ar: "البيئة مش مستخرجة — شغّل scripts/kali-rootfs-fetch.sh أولًا" });
+    return;
+  }
+  const cmd = String((req.body as Record<string, unknown> | undefined)?.cmd ?? "").trim().slice(0, 500);
+  if (!cmd) {
+    res.status(400).json({ ok: false, error: "cmd_required" });
+    return;
+  }
+  const r = await runKali(cmd, 60_000);
+  try {
+    createPushNotification({ kind: "ops", title: r.exitCode === 0 ? "🖥️ كالي نفّذت أمر حقيقي" : "⚠️ أمر كالي خرج بكود خطأ", body: cmd.slice(0, 120), link: "/kali-command" });
+  } catch { /* الإشعار مش هيوقف النتيجة */ }
+  res.json(r);
+});
+
+router.post("/ops/kali/desktop", async (req: Request, res: Response) => {
+  const gate = checkGate(req as never, "kali-desktop");
+  if (!(gate && gate.ok && gate.code === "allowed")) {
+    res.status(403).json({ ok: false, error: "owner_gate_required", what: "kali-desktop" });
+    return;
+  }
+  const action = String((req.body as Record<string, unknown> | undefined)?.action ?? "status");
+  if (action === "start") {
+    if (!kaliRoot()) {
+      res.status(404).json({ ok: false, error: "kali_rootfs_missing" });
+      return;
+    }
+    const r = await startDesktop();
+    res.json(r);
+    return;
+  }
+  if (action === "stop") {
+    res.json(stopDesktop());
+    return;
+  }
+  const st = await kaliStatus(false);
+  res.json({ ok: st.present, desktop: st.desktop });
 });
 
 export default router;
