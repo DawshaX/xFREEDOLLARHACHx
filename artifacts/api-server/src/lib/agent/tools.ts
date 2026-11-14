@@ -2216,10 +2216,38 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         const { kaliRoot: kRoot, runKali: kRun } = await import("../ops/kali-env");
         const kcmd = String(rawArgs.cmd ?? "").trim();
         if (!kcmd) throw new Error("cmd مطلوب");
-        if (!kRoot()) {
-          return done(false, "كالي مش مستخرجة على الهَب — نفّذ أداة kali_provision (بتجهّز 2113 حزمة في ~6 دقايق) أو زرار 🚀 في تبويب /kali-env", { missing: true, next: "kali_provision" });
-        }
         const tmo = Math.min(Math.max(Number(rawArgs.timeoutMs ?? 90_000) || 90_000, 5_000), 600_000);
+        // التحويل التلقائي لطائرة التنفيذ: المخزن سحابي دايمًا (فرع kali-rootfs على GitHub)،
+        // والتنفيذ محلي لو الحصة كفت — وإلا عقدة كالية متصلة — وإلا رفض صادق بالخطة.
+        if (!kRoot()) {
+          const agents = getConnectedAgentList().filter((a) => !(a.capabilities ?? []).includes("self-node"));
+          for (const a of agents) {
+            // العقدة إما نظام كالي حقيقي (bare) أو rootfs سحابية مستخرجة تشتغل بproot
+            const probe = await execOnLocalAgent(
+              "grep -qi kali /etc/os-release 2>/dev/null && echo MODE_BARE || (test -x $HOME/kali-rootfs/rootfs/usr/local/bin/proot-static && echo MODE_PROOT)",
+              a.id,
+              10_000,
+            );
+            const mode = probe ? String(probe.stdout).trim() : "";
+            if (mode === "MODE_BARE" || mode === "MODE_PROOT") {
+              const wrapped = mode === "MODE_PROOT"
+                ? `$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static -R $HOME/kali-rootfs/rootfs /bin/sh -c '${kcmd.replace(/'/g, `'\''`)}'`
+                : kcmd;
+              const r = await execOnLocalAgent(wrapped, a.id, tmo);
+              if (r) {
+                try { recordMissionCommand(`kali@${a.hostname}: ${kcmd}`, String(r.stdout ?? "").slice(0, 300)); } catch { /* سجل سالم */ }
+                return done(
+                  r.exitCode === 0,
+                  `[${a.hostname} — عقدة كالي خارجية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${r.exitCode} · ${r.durationMs}ms · التحويل التلقائي اشتغل: المخزن سحابي والتنفيذ بره السيرفر`,
+                  { ...r, plane: `fleet:${a.id}`, mode },
+                );
+              }
+            }
+          }
+          return done(false,
+            `كالي مش مستخرجة على الهَب (حصة الدسك مش هتحمل ~15GB) ومافيش عقدة كالية متصلة للتحويل التلقائي. الخطة المقاسة: المخزن سحابي دايمًا (فرع kali-rootfs على GitHub) — للتنفيذ يا kali_provision على سيرفر بحصة أكبر يا kali_node_setup على جهازك (التخزين بره السيرفر) والـkali_run هيتحول عليه تلقائيًا`,
+            { missing: true, planes: { local: false, fleetConnected: agents.length } });
+        }
         const kr = await kRun(kcmd, tmo);
         try { recordMissionCommand(`kali: ${kcmd}`, kr.stdout.slice(0, 300)); } catch { /* سجل سالم */ }
         return done(
@@ -2273,7 +2301,8 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         if (qGB > 0) {
           const qFree = qGB - Math.round(qTree(path.dirname(qDest())) / 2 ** 30);
           if (qFree < 15) {
-            return done(false, `حصة الكونتينر ${qGB}GB مش هتحمل التبيئة (~15GB) — الفاضي الفعلي بالحصة ${qFree}GB. التبيئة متخزنة سحابي على فرع kali-rootfs، والتشغيل المحلي محتاج سيرفر بحصة أكبر`, { quotaGB: qGB, quotaFreeGB: qFree });
+            const agentsNow = getConnectedAgentList().filter((a) => !(a.capabilities ?? []).includes("self-node")).length;
+            return done(false, `حصة الكونتينر ${qGB}GB مش هتحمل التبيئة (~15GB) — الفاضي الفعلي بالحصة ${qFree}GB. التبيئة متخزنة سحابي على فرع kali-rootfs: ${agentsNow > 0 ? `${agentsNow} عقدة متصلة — kali_run هيتحول عليها تلقائيًا لو فيها كالي` : "شغّل kali_node_setup على جهازك (التخزين بره السيرفر) وkali_run هيتحول عليه تلقائيًا"}`, { quotaGB: qGB, quotaFreeGB: qFree, fleetConnected: agentsNow });
           }
         }
         pKali().catch(() => {}); // الحالة الحية: kali_provision action:status — بياخد ~6 دقايق
@@ -2309,6 +2338,19 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         const info = sb.stateBackupInfo();
         const fp = measureStateFootprint();
         const qf = quotaFlag();
+        // خريطة التخزين المقاسة — «التخزين برة السيرفر والتحويل تلقائي» بالأرقام
+        const dbMode = Boolean(process.env.DATABASE_URL);
+        const fleetNow = getConnectedAgentList().filter((a) => !(a.capabilities ?? []).includes("self-node")).length;
+        const storageMap = {
+          db: dbMode ? "postgres (DATABASE_URL موجود) — الذاكرة والإعدادات مصدرها قاعدة البيانات" : "standalone — ملفات محلية + نسخة GitHub كل 15 دقيقة",
+          github: {
+            stateZip: info.enabled ? `release nova-state — كل 15 دقيقة (${info.lastBackupFiles ?? "?"} ملفات آخر نسخة)` : "محتاج GITHUB_TOKEN (Contents: read+write) — النسخ واقف بصراحة",
+            kaliRootfs: "فرع kali-rootfs (2,113 حزمة) + فرع kali-static (proot) — المخزن سحابي دايمًا",
+            corpus: "release vuln-corpus — كاش محلي قابل لإعادة التنزيل",
+          },
+          fleet: `${fleetNow} عقدة متصلة${fleetNow > 0 ? " — kali_run بيتحول تلقائيًا للعقدة اللي فيها كالي" : ""}`,
+          local: qf ? `علم حصة موجود (${qf.partsDone}/${qf.partsTotal}) — البقايا بتتفضى تلقائيًا` : "ملفات التشغيل بس — بتنضف بالسياسة المعلنة",
+        };
         const lastBackupLine = info.lastBackupAt
           ? (info.lastResult === "ok"
             ? `آخر نسخة ناجحة: ${info.lastBackupAt} (${info.lastBackupFiles ?? "?"} ملفات)`
@@ -2317,7 +2359,7 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         const summary = info.enabled
           ? `الحالة السحابية مفعّلة ✓ · ${lastBackupLine} · آخر استرجاع: ${info.lastRestoreAt ?? "لسه"}${qf ? ` · علم حصة كالي موجود (${qf.partsDone}/${qf.partsTotal})` : " · مافيش علم حصة"}`
           : `الحالة السحابية محتاجة GITHUB_TOKEN في .env عشان النسخ يشتغل — والذاكرة نفسها على Supabase شغالة من زمان${qf ? ` · علم حصة كالي: وقف عند ${qf.partsDone}/${qf.partsTotal}` : ""}`;
-        return done(true, summary, { backup: info, footprint: fp, quotaFlag: qf });
+        return done(true, summary, { backup: info, footprint: fp, quotaFlag: qf, storageMap });
       }
       case "integrations_status": {
         const st = integrationsStatus();
