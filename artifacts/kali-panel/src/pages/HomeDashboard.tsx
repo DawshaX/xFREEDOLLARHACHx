@@ -1,4 +1,5 @@
 import { corpusLabelAr, corpusSaysAr, corpusTotal } from "../lib/corpus-live";
+import { pushNotify } from "@/lib/sse";
 import { novaAuthHeaders } from "@/lib/ops-client";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -1204,6 +1205,8 @@ export default function HomeDashboard() {
       setNewSseCount(prev => prev + addedCount);
       const onlineCount = multiSiteRes.siteStatuses.filter(s => s.status === "online").length;
       setHuntLog(`✅ متصل بـ ${onlineCount}/9 مواقع حية — تم سحب وتوليد +${addedCount} ثغرة جديدة · الإجمالي: ${totalCount.toLocaleString()}`);
+      // TEST8: رد فعل حقيقي في مركز الإشعارات — البوب-أب بيوصل فورًا.
+      pushNotify("success", "الصيد الشامل اكتمل", `متصل بـ ${onlineCount}/9 مواقع حية · +${addedCount} ثغرة جديدة · الإجمالي ${totalCount.toLocaleString("en-US")}`);
 
       addLog(
         "hunt",
@@ -1230,6 +1233,7 @@ export default function HomeDashboard() {
       setLastHuntAt(new Date());
       setSessionFound(prev => prev + 18);
       setHuntLog(`✅ اكتملت المزامنة الذكية من الكوربوس المدمج (${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة)`);
+      pushNotify("success", "المزامنة الذكية اكتملت", `الكوربوس المدمج: ${corpusTotal()?.toLocaleString("en-US") ?? "غير مقاس"} ثغرة`);
       addLog("hunt", "✅ اكتملت المزامنة الذكية وتحديث مكتبة المجرة بنجاح", "high");
     }
     setHunting(false);

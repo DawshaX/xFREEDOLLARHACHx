@@ -32,6 +32,7 @@ const TWINS = ["standalone-api.ts", "cyber-corpus-2099.ts", "live-vuln-ingestor.
 const DRIFT_OK = {
   "awareness.ts": "السيرفر بيقيس حالتها (probes/كتابة state)، اللوحة بتقرأ الـsnapshot بس — العقد مشترك والمنطق لا",
   "corpus-live.ts": "السيرفر يقرأ corpus المحلي، واللوحة الساكنة تستخدم snapshot منشوراً؛ اختلاف مصدر البيانات مقصود حسب بيئة التشغيل",
+  "push-hub.ts": "سطح الإشعارات مشترك (list/create/markRead) والتنفيذ بيئي: السيرفر ملف+SSE بث لحظي، واللوحة الساكنة localStorage+window event — TEST8 قِيس 2026-11-14",
 };
 
 const rel = (p) => path.relative(ROOT, p);
