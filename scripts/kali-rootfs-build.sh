@@ -65,6 +65,35 @@ for pkg in "${HEAVY[@]}"; do
   fi
 done
 
+echo "== [3.6/6] FULL — كل مجموعات أدوات كالي الميتا («كل الأدوات — هاكر محترف») =="
+# المالك طلب نسخة كاملة شاملة: أقسام كالي الرسمية كلها. أسماء متعددة للمرشحات
+# (كالي بيغيّر أسماء الميتا بين الإصدارات — نجرب كل المرشحين بترتيب).
+declare -A FULLSETS=(
+  [info]="kali-tools-information-gathering"
+  [vuln]="kali-tools-vulnerability-analysis kali-tools-vulnerability"
+  [web]="kali-tools-web"
+  [db]="kali-tools-database"
+  [passwords]="kali-tools-passwords"
+  [wireless]="kali-tools-wireless"
+  [reverse]="kali-tools-reverse-engineering kali-tools-reversing"
+  [exploit]="kali-tools-exploitation"
+  [sniff]="kali-tools-sniffing-spoffing kali-tools-sniffing"
+  [social]="kali-tools-social-engineering"
+  [postex]="kali-tools-post-exploitation"
+  [forensics]="kali-tools-forensics"
+)
+FULL_INSTALLED=""
+for tier in info vuln web db passwords wireless reverse exploit sniff social postex forensics; do
+  GOT=""
+  for cand in ${FULLSETS[$tier]}; do
+    if apt-get install -y --no-install-recommends "$cand" > /tmp/apt-full-$tier.log 2>&1; then GOT="$cand"; break; fi
+  done
+  if [ -n "$GOT" ]; then echo "  ✓ $tier ← $GOT"; FULL_INSTALLED="$FULL_INSTALLED $tier=$GOT"; else
+    echo "  ✗ $tier — مرشحاته كلها مش موجودة (مسجلة بصراحة)"
+    grep -E "^E: " /tmp/apt-full-$tier.log | head -1 | while IFS= read -r l; do echo "::error::FULL $tier: $l"; done
+  fi
+done
+
 echo "== [4/6] proot-static (حماية توافق glibc مع السانبوكس — best-effort) =="
 # قِيس: الاستدعاء بدون توكن بيرجع rate-limit من IP الRunner المشترك ⇒ لازم
 # Authorization بتوكن الworkflow. والتحقق الحقيقي: تشغيل --version نفسها.
@@ -75,6 +104,20 @@ else
   echo "  proot-static مش متاح في البناء ده — هيتسحب لاحقًا من فرع kali-static (best-effort)"
   rm -f /usr/local/bin/proot-static
 fi
+
+echo "== [4.7/6] autoremove + تقليم الحشو المقاس (الفرق بين 15GB و11GB بيحصل هنا) =="
+apt-get autoremove --purge -y > /dev/null 2>&1 || true
+if [ -d /usr/share/seclists ]; then
+  cd /usr/share/seclists
+  for d in Fuzzing Dictionaries Patterns Payloads Honeypots Stress-testing Techniques; do rm -rf "$d"; done
+  [ -d Passwords ] && find Passwords -mindepth 1 -maxdepth 1 -type d ! -name 'Common-Credentials' -exec rm -rf {} +
+  cd - >/dev/null
+fi
+rm -rf /usr/share/ghostscript /usr/share/mingw-w64 /usr/share/pocl /usr/share/i18n 2>/dev/null || true
+find /usr/lib/ruby -type d -name rdoc -prune -exec rm -rf {} + 2>/dev/null || true
+find /usr -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+# locale-archive كبير و مش محتاج — C.UTF-8 مضمّن في glibc
+[ -f /usr/lib/locale/locale-archive ] && localedef --list-archive 2>/dev/null | grep -vE '^(ar_|en_)' | xargs -r localedef --delete-from-archive 2>/dev/null || rm -f /usr/lib/locale/locale-archive
 
 echo "== [5/6] تنظيف + المانيفست المقاس (كل رقم من الأمر نفسه) =="
 rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /root/.cache 2>/dev/null || true
@@ -96,6 +139,10 @@ rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /root/.cache 2>/dev/nu
   java -version 2>&1 | head -1 || echo "java: n/a"
   ls /usr/share/seclists/ 2>/dev/null | head -4 || true
   echo "proot_static=$([ -x /usr/local/bin/proot-static ] && echo yes || echo no)"
+  echo "full_sets=${FULL_INSTALLED:-ولا حاجة}"
+  echo "-- biggest dirs after prune (مقاس) --"
+  du -sh /usr/share /usr/lib /opt 2>/dev/null | head -3
+  du -sh /usr/share/seclists /usr/share/metasploit-framework /usr/share/burpsuite 2>/dev/null || true
   echo "-- measured versions (من الداخل) --"
   nmap --version 2>/dev/null | head -1 || echo "nmap: n/a"
   sqlmap --version 2>/dev/null | head -1 || echo "sqlmap: n/a"
