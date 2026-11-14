@@ -988,7 +988,7 @@ export const AGENT_TOOLS: AgentTool[] = [
     risk: "sensitive",
     input_schema: {
       type: "object",
-      properties: { cmd: { type: "string", description: "الأمر اللي يتشغل داخل كالي، مثال: nmap -sV scanme.nmap.org" } },
+      properties: { timeoutMs: { type: "number", description: "أقصى زمن تنفيذ (5s-600s، الافتراضي 90s)" }, cmd: { type: "string", description: "الأمر اللي يتشغل داخل كالي، مثال: nmap -sV scanme.nmap.org" } },
       required: ["cmd"],
     },
   },
@@ -1002,6 +1002,18 @@ export const AGENT_TOOLS: AgentTool[] = [
     input_schema: {
       type: "object",
       properties: { action: { type: "string", enum: ["status", "start", "stop"], description: "الحالة افتراضيًا" } },
+    },
+  },
+  {
+    name: "kali_provision",
+    title: "تجهيز كالي الذاتي على سيرفر الهَب",
+    description:
+      "يجهّز بيئة كالي الكاملة (2113 حزمة — 64 جزء من فرع kali-rootfs على جيت هب) على سيرفر الهَب نفسه: SHA256 لكل جزء، استخراج tar مباشر، proot-static بيتقاس بالتشغيل. start يبدأ ويرجع فورًا، status بيرجع التقدم الحي (أجزاء/ملفات/طبقة النقل/اللوج). دي أول خطوة لو kali_run قال مش مستخرجة — بتاخد ~6 دقايق.",
+    category: "platform",
+    risk: "sensitive",
+    input_schema: {
+      type: "object",
+      properties: { action: { type: "string", enum: ["start", "status"], description: "start افتراضيًا" } },
     },
   },
 ];
@@ -2168,7 +2180,7 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
           true,
           emb.present
             ? `بيئة كالي مدمجة كاملة جاهزة في البرنامج نفسه (${emb.packages} حزمة · الثقيلة: ${heavyLine}) — نفّذ بأداة kali_run وافتح الديسكتوب من تبويب /kali-env. وعقدة خارجية اختيارية بأمر واحد.`
-            : `عقد كالي المتصلة: ${agentsLine}. البيئة المدمجة مش مستخرجة على الهَب لسه — bash scripts/kali-rootfs-fetch.sh بيسحبها من فرع kali-rootfs. والجهاز الخارجي بيركّب بأمر واحد.`,
+            : `عقد كالي المتصلة: ${agentsLine}. البيئة المدمجة مش مستخرجة على الهَب لسه — نفّذ أداة kali_provision والهَب يسحبها بنفسه من فرع kali-rootfs (~6 دقايق). والجهاز الخارجي بيركّب بأمر واحد.`,
           {
             embedded: {
               present: emb.present,
@@ -2192,9 +2204,10 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         const kcmd = String(rawArgs.cmd ?? "").trim();
         if (!kcmd) throw new Error("cmd مطلوب");
         if (!kRoot()) {
-          return done(false, "كالي مش مستخرجة على الهَب — scripts/kali-rootfs-fetch.sh بيسحبها من فرع kali-rootfs", { missing: true });
+          return done(false, "كالي مش مستخرجة على الهَب — نفّذ أداة kali_provision (بتجهّز 2113 حزمة في ~6 دقايق) أو زرار 🚀 في تبويب /kali-env", { missing: true, next: "kali_provision" });
         }
-        const kr = await kRun(kcmd, 90_000);
+        const tmo = Math.min(Math.max(Number(rawArgs.timeoutMs ?? 90_000) || 90_000, 5_000), 600_000);
+        const kr = await kRun(kcmd, tmo);
         try { recordMissionCommand(`kali: ${kcmd}`, kr.stdout.slice(0, 300)); } catch { /* سجل سالم */ }
         return done(
           kr.exitCode === 0,
@@ -2218,6 +2231,27 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         const st = await kStatus(false);
         const running = st.desktop?.running ?? false;
         return done(st.present, running ? "الديسكتوب شغّال الآن (5901+6080 مفتوحين مقاس)" : st.present ? "البيئة جاهزة والديسكتوب مطفي — action:start يشغّله" : "كالي مش مستخرجة", { desktop: st.desktop });
+      }
+      case "kali_provision": {
+        const { provisionKali: pKali, provisionState: pState, kaliStatus: pEmb } = await import("../ops/kali-env");
+        const paction = String(rawArgs.action ?? "start");
+        if (paction === "status") {
+          const st = pState();
+          if (!st.running && st.phase !== "done" && st.phase !== "failed") {
+            const emb2 = await pEmb(false);
+            if (emb2.present) return done(true, `كالي جاهزة أصلًا (${emb2.packages} حزمة) — التجهيز ماكانش محتاج في الجلسة دي`, { present: true, packages: emb2.packages ?? 0 });
+          }
+          const line = st.running
+            ? `شغّال الآن · ${st.phase} · ${st.partsDone}/${st.partsTotal} أجزاء · طبقة: ${st.transport ?? "?"}`
+            : st.phase === "done" ? "خلص ✓ — كالي كاملة جاهزة، استخدم kali_run وkali_desktop" : st.phase === "failed" ? `فشل: ${st.error ?? "بلا تفصيل"} — جرّب start تاني` : st.phase;
+          return done(st.phase !== "failed", `التجهيز الذاتي: ${line}`, st);
+        }
+        const emb = await pEmb(false);
+        if (emb.present) {
+          return done(true, `كالي جاهزة أصلًا (${emb.packages} حزمة) — مفيش تجهيز محتاج؛ استخدم kali_run وkali_desktop`, { present: true, packages: emb.packages ?? 0 });
+        }
+        pKali().catch(() => {}); // الحالة الحية: kali_provision action:status — بياخد ~6 دقايق
+        return done(true, "بدأ التجهيز الذاتي على الهَب (64 جزء — ~6 دقايق) — تابع الحالة بأداة kali_provision action:status أو شاشة /kali-env الحية", { started: true, tab: "/kali-env" });
       }
       case "integrations_status": {
         const st = integrationsStatus();

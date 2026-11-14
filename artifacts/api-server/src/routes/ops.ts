@@ -832,8 +832,9 @@ router.post("/ops/kali/provision", async (req: Request, res: Response) => {
     res.status(403).json({ ok: false, error: "owner_gate_required", what: "kali-provision" });
     return;
   }
-  const r = await provisionKali();
-  res.json(r);
+  // fire-and-forget: الحالة الحية على GET /ops/kali/provision/status — الPOST مايتعلقش دقايق
+  provisionKali().catch(() => {});
+  res.json({ ok: true, detail: "بدأ التجهيز الذاتي — الحالة الحية على /api/ops/kali/provision/status", state: provisionState() });
 });
 
 router.get("/ops/kali/provision/status", (_req: Request, res: Response) => {
