@@ -1,0 +1,3 @@
+PRETTY_NAME=Kali mini3
+packages=450
+built_at=2026-11-14T18:37Z
