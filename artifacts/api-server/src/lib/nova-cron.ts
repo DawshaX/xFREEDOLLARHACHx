@@ -19,7 +19,7 @@ const JOBS: CronJob[] = [
   { id: "self_heal",       name: "Self-Heal Probe",                cronExpr: "*/10 * * * *", enabled: true, runCount: 0, errorCount: 0 },
   { id: "tg_pulse",        name: "Telegram Heartbeat",             cronExpr: "0 * * * *",    enabled: false, runCount: 0, errorCount: 0 },
   { id: "sys_watchdog",    name: "System Watchdog",                cronExpr: "*/15 * * * *", enabled: true, runCount: 0, errorCount: 0 },
-  { id: "state_sync",      name: "State Sync",                     cronExpr: "0 */6 * * *",  enabled: true, runCount: 0, errorCount: 0 },
+  { id: "state_sync",      name: "State Sync",                     cronExpr: "0 * * * *",    enabled: true, runCount: 0, errorCount: 0 },
   { id: "nova_learn",      name: "Nova Auto-Learner",              cronExpr: "0 */6 * * *",  enabled: true, runCount: 0, errorCount: 0 },
 ];
 
