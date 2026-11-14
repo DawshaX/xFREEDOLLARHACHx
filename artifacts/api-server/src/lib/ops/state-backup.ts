@@ -25,7 +25,8 @@ import { logger } from "../logger";
 const REPO = process.env.NOVA_RELEASE_REPO || "DawshaX/xFREEDOLLARHACHx";
 const TAG = process.env.NOVA_STATE_BACKUP_TAG || "nova-state";
 const ASSET = "state.zip";
-const stateRoot = () => process.env.NOVA_STATE_ROOT || "/home/container";
+const stateRoot = () => process.env.NOVA_STATE_ROOT
+  || (existsSync("/home/container") ? "/home/container" : process.cwd());
 const stateDir = () => join(stateRoot(), "state");
 /** كاشات مش بنضمّها للنسخة: مصدرها GitHub/الشبكة أصلًا وبترجع لوحدها. */
 const SKIP_IN_ZIP = new Set(["vuln-corpus", "vuln-corpus-index.json", ".nova-restart", ".update-pending", ".update-failed"]);
@@ -176,10 +177,10 @@ export async function backupStateToGithub(): Promise<{ ok: boolean; bytes: numbe
  * استرجاع عند الإقلاع: لو state/ فاضية (كونتينر جديد/ريإينستال) نجيب آخر نسخة
  * من GitHub ونفكها — ولو الملفات موجودة محليًا بنسيب الطازة تكسب (GitHub أقدم).
  */
-export async function restoreStateFromGithubIfNeeded(): Promise<{ restored: boolean; files: number; detail: string }> {
+export async function restoreStateFromGithubIfNeeded(opts?: { force?: boolean }): Promise<{ restored: boolean; files: number; detail: string }> {
   if (!backupEnabled()) return { restored: false, files: 0, detail: "مفيش توكن — الاسترجاع متعطّل بصراحة" };
   const localHasState = (() => { try { return readdirSync(stateDir()).length > 3; } catch { return false; } })();
-  if (localHasState) return { restored: false, files: 0, detail: "الحالة المحلية سليمة — الطازة بتكسب (استرجاع مش محتاج)" };
+  if (localHasState && !opts?.force) return { restored: false, files: 0, detail: "الحالة المحلية سليمة — الطازة بتكسب (استرجاع مش محتاج)" };
   try {
     const buf = await downloadAsset();
     if (!buf || buf.length < 100) return { restored: false, files: 0, detail: "مفيش نسخة على GitHub لسه (أول تشغيل؟)" };

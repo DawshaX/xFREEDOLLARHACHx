@@ -1016,6 +1016,19 @@ export const AGENT_TOOLS: AgentTool[] = [
       properties: { action: { type: "string", enum: ["start", "status"], description: "start افتراضيًا" } },
     },
   },
+  {
+    name: "state_backup",
+    title: "الحالة السحابية (GitHub + DB)",
+    description: "حالة NOVA الحية بتتنقل على الجيت هوب وقواعد البيانات والبرنامج والأجينت بيقراها عشان يصلح ويفهم. العمليات: status (الحالة المقاسة) · backup (رفع state/ على GitHub) · restore (استرجاع من GitHub بقوة) · clean (فضي مساحة بالسياسة المعلنة) · clear_quota (مسح علم حصة كالي بعد ما المساحة تتحرر).",
+    category: "platform",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["status", "backup", "restore", "clean", "clear_quota"], description: "الافتراضي status" },
+      },
+    },
+  },
 ];
 
 export const AGENT_TOOL_NAMES = AGENT_TOOLS.map((t) => t.name);
@@ -2250,8 +2263,61 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         if (emb.present) {
           return done(true, `كالي جاهزة أصلًا (${emb.packages} حزمة) — مفيش تجهيز محتاج؛ استخدم kali_run وkali_desktop`, { present: true, packages: emb.packages ?? 0 });
         }
+        // رفض فوري في نفس الرد — مش مدفون في الحالة: علم الحصة أو حصة معلنة مش هتحمل
+        const { quotaFlag: qFlagRead, treeBytes: qTree, kaliDestDir: qDest } = await import("../ops/kali-env");
+        const qflagNow = qFlagRead();
+        if (qflagNow) {
+          return done(false, `حصة الدسك اتكشفت فعليًا (${qflagNow.at}): الوقفة الأخيرة عند ${qflagNow.partsDone}/${qflagNow.partsTotal} أجزاء — حرر مساحة أو ارفع الحصة وبعدها state_backup action:clear_quota`, qflagNow);
+        }
+        const qGB = Number(process.env.NOVA_DISK_QUOTA_GB || 0);
+        if (qGB > 0) {
+          const qFree = qGB - Math.round(qTree(path.dirname(qDest())) / 2 ** 30);
+          if (qFree < 15) {
+            return done(false, `حصة الكونتينر ${qGB}GB مش هتحمل التبيئة (~15GB) — الفاضي الفعلي بالحصة ${qFree}GB. التبيئة متخزنة سحابي على فرع kali-rootfs، والتشغيل المحلي محتاج سيرفر بحصة أكبر`, { quotaGB: qGB, quotaFreeGB: qFree });
+          }
+        }
         pKali().catch(() => {}); // الحالة الحية: kali_provision action:status — بياخد ~6 دقايق
         return done(true, "بدأ التجهيز الذاتي على الهَب (64 جزء — ~6 دقايق) — تابع الحالة بأداة kali_provision action:status أو شاشة /kali-env الحية", { started: true, tab: "/kali-env" });
+      }
+      case "state_backup": {
+        const action = String(rawArgs.action ?? "status");
+        if (action === "backup") {
+          const sb = await import("../ops/state-backup");
+          const r = await sb.backupStateToGithub();
+          return done(r.ok, r.ok ? `الحالة اترفعت على GitHub ✓ — ${r.detail}` : `النسخ للسحاب: ${r.detail}`, r);
+        }
+        if (action === "restore") {
+          const sb = await import("../ops/state-backup");
+          const r = await sb.restoreStateFromGithubIfNeeded({ force: true });
+          return done(r.restored, r.restored ? `الحالة اترجّعت من GitHub ✓ — ${r.detail}` : `الاسترجاع: ${r.detail}`, r);
+        }
+        if (action === "clean") {
+          const { pruneState } = await import("../ops/state-prune");
+          const r = pruneState();
+          const mb = Math.round(r.freedBytes / 1048576);
+          return done(true, mb > 0 ? `حررنا ${mb}MB فعليًا (${r.removed} عنصر — بقايا كالي الناقصة واللوجات الكبيرة والنسخ القديمة)` : `مافيش حاجة تتمسح — القرص ملتزم بالسياسة (${r.kept} عنصر محفوظين)`, r);
+        }
+        if (action === "clear_quota") {
+          const { clearQuotaFlag, quotaFlag } = await import("../ops/kali-env");
+          const was = quotaFlag();
+          const ok = clearQuotaFlag();
+          return done(ok, was ? (ok ? "علم الحصة اتمسح — kali_provision start يقدر يجرب تاني" : "فشل مسح العلم") : "مافيش علم محفوظ — الحصة متسجلةش أصلًا", { cleared: ok, was });
+        }
+        const sb = await import("../ops/state-backup");
+        const { measureStateFootprint } = await import("../ops/state-prune");
+        const { quotaFlag } = await import("../ops/kali-env");
+        const info = sb.stateBackupInfo();
+        const fp = measureStateFootprint();
+        const qf = quotaFlag();
+        const lastBackupLine = info.lastBackupAt
+          ? (info.lastResult === "ok"
+            ? `آخر نسخة ناجحة: ${info.lastBackupAt} (${info.lastBackupFiles ?? "?"} ملفات)`
+            : `آخر محاولة نسخ **فشلت**: ${info.lastBackupAt} (${info.lastError ?? "بلا تفصيل"})`)
+          : "لسه ما نسختش أصلًا";
+        const summary = info.enabled
+          ? `الحالة السحابية مفعّلة ✓ · ${lastBackupLine} · آخر استرجاع: ${info.lastRestoreAt ?? "لسه"}${qf ? ` · علم حصة كالي موجود (${qf.partsDone}/${qf.partsTotal})` : " · مافيش علم حصة"}`
+          : `الحالة السحابية محتاجة GITHUB_TOKEN في .env عشان النسخ يشتغل — والذاكرة نفسها على Supabase شغالة من زمان${qf ? ` · علم حصة كالي: وقف عند ${qf.partsDone}/${qf.partsTotal}` : ""}`;
+        return done(true, summary, { backup: info, footprint: fp, quotaFlag: qf });
       }
       case "integrations_status": {
         const st = integrationsStatus();
