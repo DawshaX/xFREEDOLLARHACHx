@@ -528,6 +528,7 @@ export default function KaliCommandCenter() {
 
   const [connectInfo, setConnectInfo] = useState<{
     wsUrl: string; oneLineBash: string; agentUrl: string;
+    heavyNode?: { image: string; dockerCmd: string; bareMetal: string; tools_ar: string };
   } | null>(null);
   const [showConnect, setShowConnect] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -854,6 +855,26 @@ export default function KaliCommandCenter() {
           <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.2)" }}>
             يتطلب: Node.js + npm. سيتصل تلقائياً ويبقى متصلاً.
           </p>
+          {/* TEST10 «جهاز الشغل» — كالي كامل بأدوات ثقيلة، بأمر واحد على أي سيرفر */}
+          {connectInfo.heavyNode && (
+            <div className="mt-2 rounded-xl p-2" style={{ background: "rgba(68,255,136,0.04)", border: "1px solid rgba(68,255,136,0.25)" }}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[9px] font-black" style={{ color: "#44ff88" }}>🖥️ جهاز الشغل الثقيل — كالي لينكس كامل</p>
+                <button onClick={() => copyCmd(connectInfo.heavyNode!.dockerCmd)} className="text-[8px] px-1.5 py-0.5 rounded" style={{ color: "#44ff88", border: "1px solid rgba(68,255,136,0.4)" }}>
+                  {copied ? "تم النسخ ✓" : "نسخ أمر Docker"}
+                </button>
+              </div>
+              <code className="block text-[8px] font-mono break-safe" style={{ color: "rgba(68,255,136,0.75)" }}>
+                {connectInfo.heavyNode.dockerCmd}
+              </code>
+              <p className="text-[8px] font-mono mt-1 leading-relaxed break-safe" style={{ color: "rgba(255,255,255,0.35)" }}>
+                {connectInfo.heavyNode.tools_ar}
+              </p>
+              <button onClick={() => copyCmd(connectInfo.heavyNode!.bareMetal)} className="mt-1 text-[8px] px-1.5 py-0.5 rounded" style={{ color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.2)" }}>
+                نسخ أمر bare-metal (بدون Docker)
+              </button>
+            </div>
+          )}
         </div>
       )}
 

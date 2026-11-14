@@ -1,4 +1,22 @@
 import { novaAuthHeaders, novaTokenQuery } from "./ops-client";
+import { resolveStandaloneApi } from "./standalone-api";
+
+/* TEST10 «الشفاء الذاتي»: أي نداء JSON بيرجع HTML (سيرفر قديم بيخدم الصفحة
+ * الرئيسة، أو وضع ساكن، أو سيرفر في نص تحديث) — بيتعالج بالترتيب:
+ *  ① GET → الشيم المحلي (نفس البيانات الصادقة، بلا شبكة).
+ *  ② retry واحد بعد ثانية (نافذة إعادة تشغيل الـauto-update).
+ *  ③ خطأ عربي صادق بيسمّي المسار والحل — مش رسالة إنجليزي مشفّرة.
+ * المندسون (dedup) بيمنعوا إزعاج الإشعارات بنفس العلة كل ثانية. */
+const htmlHealReported = new Set<string>();
+function reportHtmlHeal(path: string, method: string, via: string): void {
+  const key = `${method} ${path}`;
+  if (htmlHealReported.has(key)) return;
+  htmlHealReported.add(key);
+  setTimeout(() => htmlHealReported.delete(key), 120_000);
+  try {
+    window.dispatchEvent(new CustomEvent("nova:api-html", { detail: { path, method, via } }));
+  } catch { /* بيئة اختبار */ }
+}
 
 export interface SseEvent {
   event: string;
@@ -91,8 +109,31 @@ export async function jsonRequest<T>(
   // Check if response is actually JSON
   const contentType = res.headers.get("content-type");
   if (!contentType || !contentType.includes("application/json")) {
-    const text = await res.text();
-    throw new Error(`Expected JSON response but got ${contentType || "unknown"}: ${text.substring(0, 100)}...`);
+    const bodyText = await res.text();
+    // ── الشفاء الذاتي بدل الخطأ المشفّر ──
+    const isGet = !init.method || init.method.toUpperCase() === "GET";
+    if (isGet) {
+      const shim = resolveStandaloneApi(path, "GET", null) as unknown | null;
+      if (shim !== null && shim !== undefined) {
+        reportHtmlHeal(path, "GET", "shim");
+        return shim as T;
+      }
+      try {
+        await new Promise((r) => setTimeout(r, 1_000));
+        const retry = await fetch(`${API_BASE}${path}`, { ...init, headers: authHeaders(init) });
+        if (retry.ok && (retry.headers.get("content-type") ?? "").includes("application/json")) {
+          reportHtmlHeal(path, "GET", "retry");
+          return (await retry.json()) as T;
+        }
+      } catch { /* المحاولة التانية فشلت — الخطأ الصادق تحت */ }
+    }
+    reportHtmlHeal(path, init.method ?? "GET", "error");
+    const wasHtml = (contentType ?? "").includes("text/html") || bodyText.trimStart().startsWith("<");
+    throw new Error(
+      wasHtml
+        ? `النقطة ${path} رجّعت صفحة HTML بدل JSON — السيرفر بيحدّث أو النسخة أقدم من اللوحة. ${isGet ? "البيانات الأساسية اتعرضت من المخزن المحلي." : "جرب تاني بعد دقيقة أو حدّث السيرفر."}`
+        : `Expected JSON response but got ${contentType || "unknown"}: ${bodyText.substring(0, 100)}...`,
+    );
   }
 
   try {

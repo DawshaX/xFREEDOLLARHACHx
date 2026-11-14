@@ -65,14 +65,21 @@ RUN set -eux; \
 # nuclei templates — without these nuclei runs but finds nothing
 RUN nuclei -update-templates -silent || true
 
+# ── TEST10 «جهاز الشغل»: node + عميل الاتصال — الصورة بقت عقدة موصولة ب الهَب
+# مش مشغل أدوات بس. من غير NOVA_HUB_URL بتشتغل وضع الفحص الذاتي (زي الأول). ──
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
+COPY scripts/kali-node-entrypoint.sh /opt/nova/entrypoint.sh
+COPY scripts/kali-node-install.sh /opt/nova/kali-node-install.sh
+RUN chmod +x /opt/nova/entrypoint.sh /opt/nova/kali-node-install.sh \
+    && mkdir -p /home/nova/.nova && chown -R nova:nova /home/nova /opt/nova
+
 # Non-root by default: a scanner should not need root to be useful, and the
 # platform's own gate refuses to hand out root anyway.
 RUN useradd -m -u 10001 nova
 USER nova
 WORKDIR /home/nova
 
-# Smoke test baked into the image: `docker run nova-kali:latest` proves itself.
-CMD ["sh", "-c", "echo '--- NOVA kali plane ---'; \
-  for b in nmap sqlmap nikto whatweb gobuster semgrep nuclei httpx subfinder katana dnsx naabu ffuf; do \
-    if command -v $b >/dev/null 2>&1; then echo \"  OK   $b\"; else echo \"  MISS $b\"; fi; \
-  done"]
+# من غير NOVA_HUB_URL: فحص ذاتي مقاس (بيثبت نفسه). مع NOVA_HUB_URL:
+# عميل nova-agent بيتنزل من الهَب نفسه ويتصل دائم (--reconnect) = جهاز الشغل.
+ENTRYPOINT ["/opt/nova/entrypoint.sh"]

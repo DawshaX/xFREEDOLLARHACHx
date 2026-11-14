@@ -937,6 +937,22 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   /* ── TEST9: التطبيقات المتصلة — اللايف أجينت بيدّه على كل التطبيقات ───────── */
   {
+    name: "self_heal",
+    title: "الشفاء الذاتي",
+    description: "يقيس كل طبقات المنصة (الذاكرة · الجلسات · الكوربوس · الإشعارات · الأدوات · التطبيقات المتصلة)، ويصلّح اللي ينفع فعليًا (توفير كوربوس مفقود)، ويسجّل الدروس — «يلاقي خطأ يصلحه من نفسه ويكبّر نفسه».",
+    category: "platform",
+    risk: "sensitive",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "kali_node_setup",
+    title: "جهاز كالي — التركيب والربط",
+    description: "يرجّع أوامر التركيب الحقيقية لجهاز الشغل (كالي لينكس كامل): صورة Docker جاهزة من GHCR أو تركيب bare-metal على أي سيرفر، وحالة عقد كالي المتصلة الآن — بلا أي ادعاء بجهاز وهمي.",
+    category: "platform",
+    risk: "safe",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
     name: "integrations_status",
     title: "حالة التطبيقات المتصلة",
     description: "يجيب حالة الربط الحقيقية لكل التطبيقات (GitHub/Gmail/Google×5/Notion/Linear/Supabase/Vercel/Dropbox): متصل من فين، آخر اختبار، والعمليات المتاحة.",
@@ -2106,6 +2122,30 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         return done(r.ok, r.summary, r.data);
       }
 
+      case "self_heal": {
+        const { runSelfHeal } = await import("../ops/self-heal");
+        const report = await runSelfHeal();
+        return done(report.ok, report.says_ar, report);
+      }
+      case "kali_node_setup": {
+        const connected = getConnectedAgentList();
+        const agentsLine = connected.length
+          ? connected.map((a: { id?: string; hostname?: string; meta?: { platform?: string } }) => `${a.hostname ?? a.id ?? "node"}(${a.meta?.platform ?? "?"})`).join(" · ")
+          : "مافيش عقدة متصلة لسه";
+        const hub = process.env.NOVA_PUBLIC_URL ?? process.env.NOVA_HUB_URL ?? "";
+        const ghcr = "ghcr.io/dawshax/xfreedollarhachx/nova-kali:latest";
+        return done(
+          true,
+          `عقد كالي المتصلة الآن: ${agentsLine}. جهاز الشغل الثقيل بيركّب بأمر واحد: docker run GHCR أو bash kali-node-install.sh (الأوامر كاملة في data).`,
+          {
+            dockerOneLiner: `docker run -d --name nova-kali --restart unless-stopped -e NOVA_HUB_URL="${hub}" -e NOVA_EXEC_TOKEN="⟨التوكن⟩" ${ghcr}`,
+            bareMetal: "curl -fsSL https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/scripts/kali-node-install.sh | bash -s -- ⟨HUB_URL⟩ ⟨TOKEN⟩",
+            image: ghcr,
+            connectedAgents: connected,
+            honestNote: "الأوامر دى للمالك ينفذها على سيرفره — الأداة مش بتدّعى إنها ركّبت حاجة",
+          },
+        );
+      }
       case "integrations_status": {
         const st = integrationsStatus();
         const connected = st.filter((s) => s.connected);

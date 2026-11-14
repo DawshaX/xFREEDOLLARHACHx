@@ -62,6 +62,8 @@ import { KIND_LIST, toolStatus } from "../lib/ops/tools";
 import { fetchList, listInventory, listSources, readFreeStore } from "../lib/ops/wordlist";
 import { provisionToolchain, toolchainStatus, VENDORABLE } from "../lib/ops/toolchain";
 import { checkGate, opsExposure } from "../lib/ops/gate";
+import { tokenConfigured } from "../lib/ops/gate";
+import { runSelfHeal } from "../lib/ops/self-heal";
 import { ALLOWED_KEYS, hydrateRuntimeConfig, runtimeConfigStatus, setRuntimeConfig } from "../lib/ops/runtime-config";
 import { measureStateFootprint, pruneState, lastPrune } from "../lib/ops/state-prune";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
@@ -760,6 +762,24 @@ router.post("/ops/wordlists/fetch", async (req: Request, res: Response) => {
   const rec = await fetchList(name, { timeoutMs, maxBytes });
   broadcastEvent("nova-ops", { type: "wordlist", name, verified: rec.verified, bytes: rec.bytes, source: rec.source });
   res.status(rec.verified ? 200 : 502).json({ ok: rec.verified, record: rec, inventory: listInventory() });
+});
+
+
+/* ── TEST10: الشفاء الذاتي — «يلاقي خطأ يصلحه من نفسه ويكبّر نفسه».
+ * التقرير مقاس طبقة طبقة، والإصلاحات الفعلية (توفير كوربوس مفقود) بتحصل
+ * هنا. الأجينت بيناديها بأداة self_heal، والإشعار بيرفع النتيجة. */
+router.post("/ops/self-heal", async (req: Request, res: Response) => {
+  const gate = checkGate(req as never, "self-heal");
+  if (!(gate && gate.ok && gate.code === "allowed")) {
+    res.status(403).json({ ok: false, error: "owner_gate_required", what: "self-heal" });
+    return;
+  }
+  const report = await runSelfHeal();
+  res.json({ ok: report.ok, report });
+});
+
+router.get("/ops/self-heal/hint", (_req: Request, res: Response) => {
+  res.json({ ok: true, says_ar: "الشفاء الذاتي بيتشغّل بـPOST /api/ops/self-heal ويقيس فعلًا — طبقة طبقة" });
 });
 
 export default router;

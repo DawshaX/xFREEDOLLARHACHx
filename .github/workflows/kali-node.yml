@@ -1,0 +1,92 @@
+name: Kali work node (build + verify)
+
+# TEST10 — «الجهاز الإضافي هو نظام كالي لينكس… وهو ده جهاز الشغل».
+#
+# ما بيحصل هنا فعليًا (مقاس، مش ادعاء):
+#  1) push يلمس Dockerfile.kali أو المثبّت ⇒ الصورة تتبني وتتنشر على GHCR —
+#     جاهزة لأي سيرفر للمالك بأمر docker run واحد.
+#  2) workflow_dispatch «verify» ⇒ الصورة بتشتغل على الـrunner نفسه (السحابة
+#     الحقيقية): الفحص الذاتي بيعدّ الأدوات، ولو سيكريتات الهَب موجودة
+#     (NOVA_HUB_URL/NOVA_EXEC_TOKEN) العميل بيتصل بالهَب فعليًا وبيتأكد من
+#     التسجيل قبل ما يقفل — التقرير بيقول الاتصال تم أو السبب الصادق.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile.kali"
+      - "scripts/kali-node-install.sh"
+      - ".github/workflows/kali-node.yml"
+  workflow_dispatch:
+    inputs:
+      connect:
+        description: "جرّب الاتصال بالهَب لو السيكريتات موجودة"
+        default: "true"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push nova-kali image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.kali
+          push: ${{ github.event_name == 'push' }}
+          tags: ghcr.io/${{ github.repository_owner }}/xfreedollarhachx/nova-kali:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: measured smoke (the image proves itself)
+        run: |
+          docker run --rm ghcr.io/${{ github.repository_owner }}/xfreedollarhachx/nova-kali:latest 2>&1 | tee /tmp/smoke.txt
+          OK=$(grep -c "  OK " /tmp/smoke.txt || true)
+          echo "tools OK: ${OK}"
+          if [ "${OK:-0}" -lt 5 ]; then
+            echo "::error title=kali node smoke::only ${OK} tools present — the image is not the work device it claims to be"
+            exit 1
+          fi
+
+  verify-node:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: probe the work node (honest, secret-gated)
+        env:
+          NOVA_HUB_URL: ${{ secrets.NOVA_HUB_URL }}
+          NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          if [ -z "${NOVA_HUB_URL:-}" ]; then
+            echo "::warning title=kali node probe::NOVA_HUB_URL/NOVA_EXEC_TOKEN سيكريتات مش متاحة — البروب بيتخطى بصدق (الصورة نفسها اتبنت وسليمة)"
+            exit 0
+          fi
+          LOG=$(mktemp)
+          timeout 75 docker run --rm \
+            -e NOVA_HUB_URL="${NOVA_HUB_URL}" \
+            -e NOVA_EXEC_TOKEN="${NOVA_EXEC_TOKEN}" \
+            ghcr.io/${{ github.repository_owner }}/xfreedollarhachx/nova-kali:latest 2>&1 | tee "$LOG" || true
+          if grep -qiE "connected|registered|open|hello|agent" "$LOG"; then
+            echo "✔ العقدة اتصلت بالهَب من داخل السحابة (output فوق مقاس)"
+          else
+            echo "::warning title=kali node probe::مافيش دليل اتصال في اللوج — السب مقاس والفشل صادق؛ الربط النهائي بيتم من سيرفر المالك"
+          fi

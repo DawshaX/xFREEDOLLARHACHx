@@ -1019,6 +1019,14 @@ router.get("/local-agent/connect-info", (req, res) => {
     oneLineWget,
     pm2Cmd,
     manualCmd: `node /tmp/nova-agent.js --server "${wsUrl}" --reconnect`,
+    /* TEST10 «جهاز الشغل» — كالي كامل: الصورة الجاهزة على GHCR أو bare-metal،
+     * وأمر docker للسيرفر بتاع المالك. الأوامر صادقة (بتنفذ هناك مش هنا). */
+    heavyNode: {
+      image: "ghcr.io/dawshax/xfreedollarhachx/nova-kali:latest",
+      dockerCmd: `docker run -d --name nova-kali --restart unless-stopped -e NOVA_HUB_URL="https://${primaryDomain}"${process.env.NOVA_EXEC_TOKEN ? ` -e NOVA_EXEC_TOKEN="${process.env.NOVA_EXEC_TOKEN}"` : " -e NOVA_EXEC_TOKEN=\"<التوكن>\""} ghcr.io/dawshax/xfreedollarhachx/nova-kali:latest`,
+      bareMetal: `curl -fsSL https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/scripts/kali-node-install.sh | bash -s -- "${wsUrl}" "https://${primaryDomain}" "<التوكن>"`,
+      tools_ar: "nmap · sqlmap · nikto · whatweb · gobuster · nuclei · httpx · subfinder · katana · dnsx · naabu · ffuf · semgrep + الكوربوس والجلسة الموصولة بالهَب",
+    },
   });
 });
 

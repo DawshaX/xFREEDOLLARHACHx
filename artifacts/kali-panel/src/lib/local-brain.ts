@@ -59,6 +59,8 @@ const SERVER_ONLY = new Set([
   "app_github", "app_gmail", "app_google_calendar", "app_google_drive",
   "app_google_docs", "app_google_sheets", "app_google_slides",
   "app_notion", "app_linear", "app_supabase", "app_vercel", "app_dropbox",
+  /* TEST10: الشفاء الذاتي (بيشغل إصلاحات على السيرفر) وأوامر جهاز كالي */
+  "self_heal", "kali_node_setup",
 ]);
 
 export const TOOL_TITLES_AR: Record<string, string> = {
@@ -150,6 +152,9 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   app_supabase: "سوپا بيس — قاعدة البيانات",
   app_vercel: "ڤرسل — النشر",
   app_dropbox: "دروب بوكس — ملفات",
+  /* TEST10 */
+  self_heal: "الشفاء الذاتي — يقيس ويصلح ويكبر",
+  kali_node_setup: "جهاز كالي — التركيب والربط",
 };
 
 /**
