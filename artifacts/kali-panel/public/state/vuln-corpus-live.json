@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-14T03:19:40.075Z",
-  "total": 271693,
+  "at": "2026-11-14T03:22:53.974Z",
+  "total": 273693,
   "bySeverity": {
-    "medium": 121999,
-    "low": 13211,
-    "high": 104453,
+    "medium": 123355,
+    "low": 13356,
+    "high": 104921,
     "critical": 20922,
     "none": 70,
-    "unknown": 11038
+    "unknown": 11069
   },
-  "kev": 805,
-  "epssScored": 264411,
-  "products": 47410,
+  "kev": 812,
+  "epssScored": 266380,
+  "products": 48264,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -5559,6 +5559,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2014-6332",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "OleAut32.dll in OLE in Microsoft Windows Server 2003 SP2, Windows Vista SP2, Windows Server 2008 SP2 and R2 SP1, Windows 7 SP1, Windows 8, Windows 8.1, Windows Server 2012 Gold and R2, and Windows RT Gold and 8.1 allows remote attackers to execute arbitrary co",
+      "cwe": [
+        "CWE-119"
+      ],
+      "kev": true,
+      "epss": 0.94918,
+      "pub": "2014-11-11T22:55:05.200",
+      "products": [
+        "windows_7",
+        "windows_8",
+        "windows_8.1"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-8088",
       "cvss": 8.8,
       "sev": "high",
@@ -5694,6 +5712,22 @@
         "internet_explorer",
         "internet_explorer",
         "internet_explorer"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2014-6324",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "The Kerberos Key Distribution Center (KDC) in Microsoft Windows Server 2003 SP2, Windows Vista SP2, Windows Server 2008 SP2 and R2 SP1, Windows 7 SP1, Windows 8, Windows 8.1, and Windows Server 2012 Gold and R2 allows remote authenticated domain users to obtai",
+      "cwe": [],
+      "kev": true,
+      "epss": 0.87335,
+      "pub": "2014-11-18T23:59:02.503",
+      "products": [
+        "windows_7",
+        "windows_8",
+        "windows_8.1"
       ],
       "refs": []
     },
@@ -6626,6 +6660,25 @@
         "vmg1312-b10a_firmware",
         "vmg1312-b10b_firmware",
         "vmg1312-b10e_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2014-8439",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Adobe Flash Player before 13.0.0.258 and 14.x and 15.x before 15.0.0.239 on Windows and OS X and before 11.2.202.424 on Linux, Adobe AIR before 15.0.0.293, Adobe AIR SDK before 15.0.0.302, and Adobe AIR SDK & Compiler before 15.0.0.302 allow attackers to execu",
+      "cwe": [
+        "CWE-119",
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.20369,
+      "pub": "2014-11-25T23:59:00.053",
+      "products": [
+        "flash_player",
+        "air",
+        "air_sdk"
       ],
       "refs": []
     },
@@ -8362,6 +8415,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2014-100005",
+      "cvss": 8,
+      "sev": "high",
+      "desc": "Multiple cross-site request forgery (CSRF) vulnerabilities in D-Link DIR-600 router (rev. Bx) with firmware before 2.17b02 allow remote attackers to hijack the authentication of administrators for requests that (1) create an administrator account or (2) enable",
+      "cwe": [
+        "CWE-352"
+      ],
+      "kev": true,
+      "epss": 0.43456,
+      "pub": "2015-01-13T11:59:04.477",
+      "products": [
+        "dir-600_firmware"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-23209",
       "cvss": 8,
       "sev": "high",
@@ -8761,6 +8830,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2014-6352",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Microsoft Windows Vista SP2, Windows Server 2008 SP2 and R2 SP1, Windows 7 SP1, Windows 8, Windows 8.1, Windows Server 2012 Gold and R2, and Windows RT Gold and 8.1 allow remote attackers to execute arbitrary code via a crafted OLE object, as exploited in the ",
+      "cwe": [],
+      "kev": true,
+      "epss": 0.77485,
+      "pub": "2014-10-22T14:55:06.247",
+      "products": [
+        "windows_7",
+        "windows_8",
+        "windows_8.1"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-21509",
       "cvss": 7.8,
       "sev": "high",
@@ -8904,6 +8989,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2014-4077",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Microsoft Windows Server 2003 SP2, Windows Vista SP2, Windows Server 2008 SP2 and R2 SP1, Windows 7 SP1, and Office 2007 SP3, when IMJPDCT.EXE (aka IME for Japanese) is installed, allow remote attackers to bypass a sandbox protection mechanism via a crafted PD",
+      "cwe": [],
+      "kev": true,
+      "epss": 0.54577,
+      "pub": "2014-11-11T22:55:04.637",
+      "products": [
+        "office_2007_ime",
+        "windows_7",
+        "windows_server_2003"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2023-41064",
       "cvss": 7.8,
       "sev": "high",
@@ -8972,6 +9073,24 @@
         "iphone_os",
         "mac_os_x",
         "mac_os_x"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2014-9163",
+      "cvss": 7.8,
+      "sev": "high",
+      "desc": "Stack-based buffer overflow in Adobe Flash Player before 13.0.0.259 and 14.x and 15.x before 15.0.0.246 on Windows and OS X and before 11.2.202.425 on Linux allows attackers to execute arbitrary code via unspecified vectors, as exploited in the wild in Decembe",
+      "cwe": [
+        "CWE-121"
+      ],
+      "kev": true,
+      "epss": 0.4488,
+      "pub": "2014-12-10T21:59:35.163",
+      "products": [
+        "flash_player",
+        "flash_player",
+        "flash_player"
       ],
       "refs": []
     },
@@ -13864,121 +13983,7 @@
         "wing_ftp_server"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2026-96652",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Plex Media Server before 1.43.3.10861 allows SSRF via '/player/timeline'. An attacker using any X-Plex-Token value can include a full URL in the 'protocol' parameter and force the Plex server to POST to the attacker's chosen destination.",
-      "cwe": [
-        "CWE-918"
-      ],
-      "kev": true,
-      "epss": 0.11886,
-      "pub": "2026-09-23T17:17:23.363",
-      "products": [
-        "media_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-96655",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Plex Media Server before 1.43.3.10861 allows an authenticated user to request arbitrary internal or external addresses via the '/video/:/transcode/universal' path parameter.",
-      "cwe": [
-        "CWE-918"
-      ],
-      "kev": true,
-      "epss": 0.10724,
-      "pub": "2026-09-23T17:17:23.677",
-      "products": [
-        "media_server"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-118527",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Use of predictable filenames in Ivanti Connect Secure before versions 25.1.1.3 and 22.8R2.6 allows a remote authenticated attacker to upload files with attacker-controlled content to a known location on disk.",
-      "cwe": [
-        "CWE-340"
-      ],
-      "kev": true,
-      "epss": 0.00822,
-      "pub": "2026-11-03T15:17:24.920",
-      "products": [
-        "connect_secure",
-        "connect_secure"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-111793",
-      "cvss": 4.3,
-      "sev": "medium",
-      "desc": "Openwave Webtop Media Transcoder does not enforce administrator-defined file type restrictions to restrict the file-types to be converted. This may allow an authenticated user to process and convert unintended document types if bypassing the Webmail experience",
-      "cwe": [
-        "CWE-669"
-      ],
-      "kev": true,
-      "epss": 0.00638,
-      "pub": "2026-10-16T19:17:05.680",
-      "products": [
-        "webtop_media_transcoder"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2025-43200",
-      "cvss": 4.2,
-      "sev": "medium",
-      "desc": "This issue was addressed with improved checks. This issue is fixed in iOS 15.8.4 and iPadOS 15.8.4, iOS 16.7.11 and iPadOS 16.7.11, iOS 18.3.1 and iPadOS 18.3.1, iPadOS 17.7.5, macOS Sequoia 15.3.1, macOS Sonoma 14.7.4, macOS Ventura 13.7.4, visionOS 2.3.1, wa",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.00999,
-      "pub": "2025-06-16T22:16:41.120",
-      "products": [
-        "ipados",
-        "ipados",
-        "ipados"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-45498",
-      "cvss": 4,
-      "sev": "medium",
-      "desc": "Microsoft Defender Denial of Service Vulnerability",
-      "cwe": [
-        "CWE-400"
-      ],
-      "kev": true,
-      "epss": 0.63076,
-      "pub": "2026-05-20T13:16:36.780",
-      "products": [
-        "defender_antimalware_platform"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2025-48928",
-      "cvss": 4,
-      "sev": "medium",
-      "desc": "The TeleMessage service through 2025-05-05 is based on a JSP application in which the heap content is roughly equivalent to a \"core dump\" in which a password previously sent over HTTP would be included in this dump, as exploited in the wild in May 2025.",
-      "cwe": [
-        "CWE-528",
-        "CWE-552"
-      ],
-      "kev": true,
-      "epss": 0.00577,
-      "pub": "2025-05-28T17:15:25.020",
-      "products": [
-        "telemessage"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "271693 ثغرة حقيقية من NVD · 805 مستغلّة فعلياً (KEV) · 47410 منتج · مزامنة 2026-11-14T03:19:40.075Z"
+  "says_ar": "273693 ثغرة حقيقية من NVD · 812 مستغلّة فعلياً (KEV) · 48264 منتج · مزامنة 2026-11-14T03:22:53.974Z"
 }
