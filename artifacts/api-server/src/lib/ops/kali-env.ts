@@ -162,7 +162,7 @@ export function runKali(cmd: string, timeoutMs = 60_000): Promise<KaliExecResult
 const HEAVY_PKGS: Array<[keyof NonNullable<KaliStatus["tools"]>, string, string]> = [
   ["metasploit", "metasploit-framework", "/usr/bin/msfconsole"],
   ["burpsuite", "burpsuite", "/usr/bin/burpsuite"],
-  ["owasp_zap", "owasp-zap", "/usr/bin/owasp-zap"],
+  ["owasp_zap", "zaproxy", "/usr/bin/owasp-zap"], // قيس: الحزمة zaproxy هي اللي بتوفر /usr/bin/owasp-zap
   ["seclists", "seclists", "/usr/share/seclists"],
 ];
 
