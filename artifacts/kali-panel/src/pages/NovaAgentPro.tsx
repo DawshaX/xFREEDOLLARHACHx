@@ -24,6 +24,7 @@ import { AgentWorkCockpit } from "@/components/desktop/AgentWorkCockpit";
 import { NovaOpsRoom, NovaHuntSurface } from "@/components/desktop/NovaBrainOps";
 import { RealTimeSystemMonitor } from "@/components/desktop/RealTimeSystemMonitor";
 import { NovaMissions } from "@/components/desktop/NovaMissions";
+import { ServerTasks } from "@/components/desktop/ServerTasks";
 import { KaliTerminal } from "@/components/desktop/KaliTerminal";
 import { AdvancedFileManager } from "@/components/desktop/AdvancedFileManager";
 import { TelegramConfigCard } from "@/components/TelegramConfigCard";
@@ -1207,7 +1208,14 @@ export default function NovaAgentPro() {
               </div>
             )}
 
-            {arena === "missions" && <NovaMissions />}
+            {arena === "missions" && (
+              <div className="space-y-3 min-w-0">
+                <NovaMissions />
+                {/* TEST9: مهمات السيرفر الحقيقية بفروع ودوينات — «وكل الي عملو
+                    وبيعملو وهيعلمو» في قسم واحد تحت مهمات الجهاز مباشرة. */}
+                <ServerTasks />
+              </div>
+            )}
             {arena === "brain" && <NovaOpsRoom />}
             {arena === "hardware" && <RealTimeSystemMonitor />}
             {arena === "hunt" && <NovaHuntSurface />}

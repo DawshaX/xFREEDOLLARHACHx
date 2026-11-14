@@ -82,12 +82,12 @@ app.get("/api/push/stream", (req: Request, res: Response) => {
 /* إنشاء إشعار حقيقي — بوابة كل أزرار اللوحة (النجاح والفشل): بيتخزن دائمًا
  * وبيتبث لحظيًا. الكتابة محمية بنفس بوابة ops (توكن/جلسة المالك). */
 app.post("/api/push/notify", (req: Request, res: Response) => {
-  const body = (req.body ?? {}) as { kind?: string; title?: string; body?: string };
+  const body = (req.body ?? {}) as { kind?: string; title?: string; body?: string; link?: string };
   if (!body.title || !String(body.title).trim()) {
     res.status(400).json({ ok: false, error: "title is required" });
     return;
   }
-  const n = createPushNotification({ kind: body.kind, title: body.title, body: body.body });
+  const n = createPushNotification({ kind: body.kind, title: body.title, body: body.body, link: body.link });
   res.json({ ok: true, notification: n, clients: undefined });
 });
 
@@ -459,6 +459,9 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       // state/ — الـmock هنا كان بيوضّح «اتحفظت» والحقيقة لا (الملكية للمالك: الإعداد
       // يعيش على السيرفر مش البراوزر).
       p.startsWith("/panel/prefs") ||
+      // TEST9: التكاملات router حقيقي على state/ — يخدم حتى بلا DB (الشيم
+      // الساكن بيرفض الربط فقط، مش الحالة).
+      p.startsWith("/integrations") ||
       p.startsWith("/nova/notes") ||
       p.startsWith("/notifications") ||
       p.startsWith("/cisa") ||

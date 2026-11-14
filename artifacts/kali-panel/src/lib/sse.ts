@@ -110,10 +110,11 @@ export function pushNotify(
   kind: "info" | "success" | "error" | "warning",
   title: string,
   body = "",
+  link?: string,
 ): void {
   void jsonRequest("/push/notify", {
     method: "POST",
-    body: JSON.stringify({ kind, title, body }),
+    body: JSON.stringify({ kind, title, body, ...(link ? { link } : {}) }),
   }).catch(() => {});
 }
 

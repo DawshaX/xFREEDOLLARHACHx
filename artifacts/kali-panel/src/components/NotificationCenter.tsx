@@ -3,6 +3,7 @@
  * يتلقى إشعارات Nova وهي تعمل في الخلفية.
  */
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { Bell, X, CheckCheck, BellRing, AlertCircle, CheckCircle2, Info, Zap } from "lucide-react";
 
 const BASE = "/api";
@@ -12,6 +13,8 @@ interface Notification {
   kind: string;
   title: string;
   body: string;
+  /* TEST9 «الإشعار يودّيني للمكان»: رابط الحاوية اللي الضغط بيودّي لها. */
+  link?: string;
   read: boolean;
   createdAt: string;
 }
@@ -28,6 +31,7 @@ function getKind(k: string) {
 }
 
 export function NotificationCenter() {
+  const [, navigate] = useLocation();
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -115,6 +119,18 @@ export function NotificationCenter() {
             <div className="flex-1 min-w-0">
               <div className="text-xs font-bold text-white">{newPop.title}</div>
               <div className="text-[10px] text-slate-400 mt-0.5">{newPop.body}</div>
+              {/* TEST9: الضغط على البوب-أب نفسه بيودّي لمكان الإشعار. */}
+              {newPop.link && (
+                <button
+                  onClick={() => {
+                    setNewPop(null);
+                    navigate(newPop.link!);
+                  }}
+                  className="mt-1.5 text-[10px] font-bold text-fuchsia-300 hover:text-fuchsia-200 underline underline-offset-2"
+                >
+                  افتح المكان ←
+                </button>
+              )}
             </div>
             <button onClick={() => setNewPop(null)} className="text-slate-600 hover:text-slate-400">
               <X className="w-3 h-3" />
@@ -171,7 +187,14 @@ export function NotificationCenter() {
                 return (
                   <div
                     key={n.id}
-                    onClick={() => !n.read && void markRead(n.id)}
+                    onClick={() => {
+                      if (!n.read) void markRead(n.id);
+                      // TEST9: الإشعار بيتحول لتنقّل حقيقي — الضغط بيودّي للمكان.
+                      if (n.link) {
+                        setOpen(false);
+                        navigate(n.link);
+                      }
+                    }}
                     className={`flex items-start gap-2 px-3 py-2.5 border-b border-white/5 cursor-pointer hover:bg-white/3 transition-all ${!n.read ? "bg-white/3" : ""}`}
                   >
                     <Icon className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${n.kind === "error" ? "text-red-400" : n.kind === "success" ? "text-emerald-400" : "text-fuchsia-400"}`} />
@@ -181,6 +204,7 @@ export function NotificationCenter() {
                       <div className="text-[9px] text-slate-700 mt-0.5">{new Date(n.createdAt).toLocaleString("ar-SA")}</div>
                     </div>
                     {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shrink-0 mt-1.5" />}
+                    {n.link && <span className="text-[8px] text-fuchsia-400/70 shrink-0 mt-1.5">افتح ←</span>}
                   </div>
                 );
               })}

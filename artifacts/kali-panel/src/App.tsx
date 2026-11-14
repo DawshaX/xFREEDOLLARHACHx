@@ -51,6 +51,7 @@ const NovaMemory = lazy(() => import("@/pages/NovaMemory"));
 const SelfCheckPage = lazy(() => import("@/pages/SelfCheckPage"));
 const NovaFleetUnified = lazy(() => import("@/pages/NovaFleetUnified"));
 const NovaAgentPro = lazy(() => import("@/pages/NovaAgentPro"));
+const IntegrationsPage = lazy(() => import("@/pages/IntegrationsPage"));
 const NovaAgentPage = lazy(() => import("@/pages/NovaAgentPage"));
 const Shodan = lazy(() => import("@/pages/shodan"));
 const Mitre = lazy(() => import("@/pages/mitre"));
@@ -262,6 +263,8 @@ function InnerRoutes() {
       <Route path="/nova-fleet" component={NovaFleetUnified} />
       {/* «الأجينت المطوّر — مكتب نوفا»: شات حي + قياسات العقدة + المهمات + الأسطول */}
       <Route path="/agent-pro" component={NovaAgentPro} />
+      {/* TEST9: التطبيقات المتصلة باللايف أجينت — ربط واختبار حي وحالة مقاسة */}
+      <Route path="/integrations" component={IntegrationsPage} />
       <Route path="/workspace" component={NovaAgentPro} />
       <Route path="/cockpit" component={NovaAgentPro} />
       {/* /nova-agent محجوز لـNovaAgent (المستخدم في Dashboard/الأسطول) —

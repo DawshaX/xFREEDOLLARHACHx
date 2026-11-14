@@ -93,6 +93,7 @@ import fleetServersRouter from "./fleet-servers";
 import fleetCapacityRouter from "./fleet-capacity";
 import panelGapsRouter from "./panel-gaps";
 import opsRouter from "./ops";
+import integrationsRouter from "./integrations";
 
 const router: IRouter = Router();
 
@@ -152,6 +153,7 @@ router.use(fleetCapacityRouter);
 router.use(panelGapsRouter);
 // Ops = the real execution spine: authorized programs → durable jobs → evidence → report.
 router.use(opsRouter);
+router.use(integrationsRouter);
 
 // ── AI / Chat ────────────────────────────────────────────────────────────────
 router.use(liveAgentRouter);

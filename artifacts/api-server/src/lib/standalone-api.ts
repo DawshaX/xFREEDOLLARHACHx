@@ -2867,6 +2867,93 @@ if (path === "/nova-core/version") {
     return liveSessionsState.find((s) => String(s.id) === sid) || liveSessionsState[0] || { id: sid, title: "جلسة", messages: [] };
   }
 
+  // ── TEST9: التطبيقات المتصلة (/api/integrations) — الوضع الساكن بيقول
+  // الحقيقة: مافيش توكنات هنا، الربط على السيرفر الحي. نفس القائمة
+  // والخطوات بالعربي زي السيرفر عشان الواجهة تترسم زي ما هي. ──
+  if (path === "/integrations" && (m === "GET" || !m)) {
+    const apps = [
+      ["github", "GitHub", "جيت هاب", "🐙", "اعمل PAT من GitHub → Developer settings → Tokens والصقه في اللوحة الحية."],
+      ["gmail", "Gmail", "جيميل", "✉️", "OAuth2 access token بنطاق gmail.readonly + gmail.send."],
+      ["google_calendar", "Google Calendar", "تقويم جوجل", "📅", "OAuth2 access token بنطاق calendar.events."],
+      ["google_drive", "Google Drive", "جوجل درايف", "🗄️", "OAuth2 access token بنطاق drive.file."],
+      ["google_docs", "Google Docs", "جوجل دوكس", "📄", "OAuth2 access token بنطاق documents."],
+      ["google_sheets", "Google Sheets", "جوجل شيتس", "📊", "OAuth2 access token بنطاق spreadsheets."],
+      ["google_slides", "Google Slides", "جوجل سلايدز", "🖼️", "OAuth2 access token بنطاق presentations."],
+      ["notion", "Notion", "نوشن", "📓", "Integration token من notion.so/my-integrations."],
+      ["linear", "Linear", "لينير", "📐", "API key من Linear → Settings → API."],
+      ["supabase", "Supabase", "سوپا بيس", "⚡", "SUPABASE_URL + service_role key من إعدادات المشروع."],
+      ["vercel", "Vercel", "ڤرسل", "▲", "Token من vercel.com/account/tokens."],
+      ["dropbox", "Dropbox", "دروب بوكس", "📦", "Access token من dropbox.com/developers/apps."],
+    ];
+    return {
+      ok: true,
+      static_mode: true,
+      total: apps.length,
+      apps: apps.map(([id, name, nameAr, icon, setupAr]) => ({
+        id, name, nameAr, icon,
+        connected: false,
+        source: null,
+        testedAt: null,
+        lastError: null,
+        ops: [],
+        setupAr,
+        panelLink: "/integrations",
+      })),
+      says_ar: "الوضع الساكن: الحالة الحقيقية والربط على السيرفر الحي (/integrations)",
+    };
+  }
+  // عمليات الربط والتشغيل في الوضع الساكن = رفض صادق مش صفحة فاضية.
+  if (path === "/integrations/connect" || path === "/integrations/run") {
+    return { ok: false, server_required: true, error: "التكاملات بتشتغل على السيرفر الحي — افتح النسخة الحية (novafly) واربط هناك", says_ar: "الربط والتشغيل على السيرفر الحي بس — التوكنات ما بتتخزنش في الوضع الساكن" };
+  }
+  // ── TEST9: فروع المهمات + الدوّن — في الوضع الساكن بيتخزنوا فعليًا محليًا
+  // (نفس مخزن المهمات + مخزن دوّن جديد) — مش رفض ولا شكل. ──
+  if (/^\/agent\/tasks\/[\w-]+\/branches$/.test(path) && m === "GET") {
+    const id = path.split("/")[3];
+    return { ok: true, branches: agentTasksState.filter((t) => t && (t as Record<string, unknown>).metadata && ((t as Record<string, unknown>).metadata as Record<string, unknown>).parentTaskId === id) };
+  }
+  if (/^\/agent\/tasks\/[\w-]+\/branches$/.test(path) && m === "POST" && body) {
+    const id = path.split("/")[3];
+    const parent = agentTasksState.find((t) => String(t.id) === String(id));
+    const goal = String(body.goal || "").trim();
+    if (!goal) return { ok: false, error: "goal مطلوب" };
+    const bid = Date.now() + Math.floor(Math.random() * 999);
+    const branch = {
+      simulated: true,
+      id: bid,
+      title: goal.slice(0, 80),
+      description: `⤷ فرع من «${parent?.title ?? id}»: ${goal}`,
+      status: "planned",
+      createdAt: new Date().toISOString(),
+      steps: [{ id: bid + 1, taskId: bid, orderIndex: 0, title: goal.slice(0, 80), description: "الوضع الساكن — خطوة واحدة صادقة", status: "pending", output: "" }],
+      metadata: { parentTaskId: id },
+    };
+    agentTasksState.unshift(branch as never);
+    saveState("cybernova_agenttasks_v2", agentTasksState);
+    return { ok: true, branch };
+  }
+  if (/^\/agent\/tasks\/[\w-]+\/notes$/.test(path) && m === "POST" && body) {
+    const id = path.split("/")[3];
+    const content = String(body.content || "").trim();
+    if (!content) return { ok: false, error: "content مطلوب" };
+    const notes = loadState<Array<Record<string, unknown>>>("cybernova_tasknotes_v1", []);
+    const note = { id: `note-${Date.now()}`, taskId: id, title: String(body.title || "دوّن").slice(0, 80), content, kind: "lesson", at: new Date().toISOString() };
+    notes.unshift(note);
+    saveState("cybernova_tasknotes_v1", notes);
+    return { ok: true, note };
+  }
+  // يومية المهمة في الوضع الساكن: من مخزن المهمات المحلي بصدق (بلا فروع).
+  if (/^\/agent\/tasks\/[\w-]+\/journal$/.test(path) && m === "GET") {
+    const id = path.split("/")[3];
+    const task = agentTasksState.find((t) => String(t.id) === String(id));
+    const branches = agentTasksState
+      .filter((t) => t && (t as Record<string, unknown>).metadata && ((t as Record<string, unknown>).metadata as Record<string, unknown>).parentTaskId === id)
+      .map((t) => ({ id: String(t.id), title: String(t.title), status: String(t.status) }));
+    const learnings = loadState<Array<Record<string, unknown>>>("cybernova_tasknotes_v1", [])
+      .filter((n) => String(n.taskId) === String(id))
+      .map((n) => ({ id: String(n.id), title: String(n.title), content: String(n.content), kind: String(n.kind ?? "lesson") }));
+    return { ok: true, steps: task?.steps ?? [], branches, learnings };
+  }
   // ── Agent Tasks (/api/agent/tasks) ─────────────────────────────────────────
   if (path === "/agent/tasks") {
     if (m === "POST" && body) {

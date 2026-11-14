@@ -1,7 +1,77 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, BellRing, BrainCircuit, CheckCircle2, Clock4, Compass, Lightbulb, ListTodo, Radar, RefreshCw, Sparkles } from "lucide-react";
 import { novaAuthHeaders } from "@/lib/ops-client";
-import { pushNotify } from "@/lib/sse";
+import { pushNotify, novaTokenQuery } from "@/lib/sse";
+import { useLocation } from "wouter";
+
+/* ── TEST9: مركز التحكم الفوري — نشاط لحظي من نفس قناة الإشعارات + حالة
+ * التطبيقات المتصلة مقاسة. كل سطر بيتفتح بالمكان اللي حصل فيه. ── */
+interface LiveNotif { id: string; kind: string; title: string; body?: string; link?: string; createdAt: string }
+interface IntStatus { id: string; nameAr: string; icon: string; connected: boolean; source: string | null }
+
+function LiveControlCenter() {
+  const [, navigate] = useLocation();
+  const [feed, setFeed] = useState<LiveNotif[]>([]);
+  const [apps, setApps] = useState<IntStatus[]>([]);
+  const esRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    fetch("/api/integrations", { headers: novaAuthHeaders() })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.apps) setApps(d.apps); })
+      .catch(() => { /* الحالة هتتحدث في الدور الجاي */ });
+    const es = new EventSource(`/api/push/stream${novaTokenQuery()}`);
+    esRef.current = es;
+    es.addEventListener("push", (e) => {
+      try {
+        const n = JSON.parse((e as MessageEvent).data) as LiveNotif;
+        setFeed((prev) => [n, ...prev].slice(0, 25));
+      } catch { /* frame تالف — نكمل */ }
+    });
+    return () => { es.close(); };
+  }, []);
+
+  const connected = apps.filter((a) => a.connected);
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div className={cardCls}>
+        <div className={headCls}>
+          <span className="text-[10px] font-bold text-cyan-200">مركز التحكم الفوري — اللي بيحصل الآن</span>
+          <span className="text-[8px] font-mono text-white/35">{feed.length} حدث</span>
+        </div>
+        {feed.length === 0 && <div className="text-[9px] text-white/40 py-2">القناة مفتوحة — أول حدث حي هيظهر هنا لحظيًا</div>}
+        <div className="space-y-1 max-h-40 overflow-y-auto">
+          {feed.map((n) => (
+            <div
+              key={n.id}
+              onClick={() => { if (n.link) navigate(n.link); }}
+              className={`text-[9px] rounded bg-black/40 px-1.5 py-1 break-safe ${n.link ? "cursor-pointer hover:bg-black/60" : ""}`}
+            >
+              <span className={n.kind === "error" ? "text-red-400" : n.kind === "success" ? "text-emerald-300" : n.kind === "warning" ? "text-amber-300" : "text-cyan-300"}>{n.title}</span>
+              <span className="text-white/50"> — {n.body?.slice(0, 90)}</span>
+              {n.link && <span className="text-fuchsia-400/70"> ← افتح</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className={cardCls}>
+        <div className={headCls}>
+          <span className="text-[10px] font-bold text-fuchsia-200">التطبيقات المتصلة بالأجينت</span>
+          <button onClick={() => navigate("/integrations")} className="text-[9px] text-fuchsia-300 hover:text-fuchsia-200">إدارة ←</button>
+        </div>
+        {apps.length === 0 && <div className="text-[9px] text-white/40 py-2">… بحمّل الحالة الحقيقية</div>}
+        <div className="flex flex-wrap gap-1.5">
+          {apps.map((a) => (
+            <span key={a.id} className={`text-[9px] font-bold rounded px-1.5 py-0.5 border ${a.connected ? "text-emerald-300 border-emerald-500/30 bg-emerald-500/10" : "text-white/40 border-white/10"}`}>
+              {a.icon} {a.nameAr}{a.connected ? " ✓" : ""}
+            </span>
+          ))}
+        </div>
+        {apps.length > 0 && <div className="text-[8px] text-white/35 mt-1.5">{connected.length}/{apps.length} متصل — الأجينت بيشتغلهم بأدوات app_* من الشات</div>}
+      </div>
+    </div>
+  );
+}
 
 /**
  * AgentCommandDeck — «لوحة القيادة الموحّدة» للوكيل الحي.
@@ -139,6 +209,7 @@ export function AgentCommandDeck() {
 
   return (
     <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-3" dir="rtl" data-testid="agent-command-deck">
+      <LiveControlCenter />
       {/* شريط الحالة العلوي */}
       <div className="flex items-center justify-between gap-2 rounded-xl border border-cyan-400/15 bg-cyan-500/5 px-3 py-2">
         <div className="flex items-center gap-2 text-[11px] font-bold text-cyan-200">
