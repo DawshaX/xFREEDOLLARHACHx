@@ -108,7 +108,18 @@ jobs:
                 console.log("base corpus already present:", lib.corpusFile());
                 return;
               }
-              const r = await lib.provisionCorpus();
+              // The committed index knows how many rows the last measured write
+              // held. A source (release or mirror) serving fewer rows is a
+              // shrunken corpus — measured 2026-11-14: a throttled full pass
+              // overwrote the 118K release asset with 10K, and provisioning
+              // from it would have merged the next walk onto a 10K base.
+              const committed = JSON.parse(fs.readFileSync("state/vuln-corpus-index.json", "utf8"));
+              const minTotal = Number(committed.total || 0);
+              let r = await lib.provisionCorpus({ minTotal });
+              if (!r.ok && minTotal > 0) {
+                console.log(`no source reached ${minTotal} rows (${r.error}) — falling back to the biggest available base; the ingest write-guards stop a shrink`);
+                r = await lib.provisionCorpus();
+              }
               console.log(`provision: ${r.action} · ${r.says_ar}`);
               if (!r.ok) process.exit(1);
             })();
@@ -119,8 +130,12 @@ jobs:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           # push = someone changed the pipeline itself → take the opportunity to
           # rebuild the corpus properly (a delta cannot repair a damaged base).
+          # PAGES=110: rows 0..220,000 — قِيس 2026-11-14: نافذة الاسترجاع بعد ما
+          # جولة full مخنوقة مسحت 118K وكتبت 10K (run 43534463693). الـ110 صفحة
+          # بتبني القاعدة فوق 220K تاني في جولة واحدة، وfull المخنوق بقى بيتحول
+          # لدمج بدل استبدال (حارس fullThrottled في ingest-vuln-corpus.mjs).
           MODE: ${{ github.event.inputs.mode || (github.event_name == 'push' && 'full' || (github.event.schedule == '0 3 * * 0' && 'full' || 'incremental')) }}
-          PAGES: ${{ github.event.inputs.pages || (github.event_name == 'push' && '60' || '0') }}
+          PAGES: ${{ github.event.inputs.pages || (github.event_name == 'push' && '110' || '0') }}
         run: |
           if [ "$MODE" = "full" ]; then
             if [ "$PAGES" = "0" ]; then

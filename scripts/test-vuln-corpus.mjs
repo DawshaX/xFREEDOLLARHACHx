@@ -199,6 +199,23 @@ check(
   fullAfterDeepen.status === 0 && idxAfterFull.deepen?.nextStartIndex === idxAfterDeepen.deepen.nextStartIndex,
   `before=${idxAfterDeepen.deepen.nextStartIndex} after=${idxAfterFull.deepen?.nextStartIndex ?? "dropped"}`,
 );
+// قِيس 2026-11-14: جولة full مخنوقة (5 صفحات = 10,000 صف) استبدلت كوربوس 118,000
+// صف — الـrelease والـmirror والـindex اتضغطوا في run 43534463693. الانحدار ده:
+// full اللي بيجمع أقل من اللي محتفظين بيه لازم يتراجع لدمج، والناتج مينفعش يصغّر.
+const smallFixture = path.join(scriptDir, "nvd-small.json");
+fs.writeFileSync(smallFixture, JSON.stringify({ vulnerabilities: items.slice(0, 2).map((i) => ({ cve: i })) }));
+const throttled = runIngest(`--fixture=${smallFixture}`, "--pages=1");
+check(
+  "a throttled full pass merges instead of replacing a bigger corpus",
+  throttled.status === 0 && lib.corpusStatus().total >= afterFirst,
+  `status=${throttled.status} total=${lib.corpusStatus().total} base=${afterFirst} — ${(throttled.stderr || throttled.stdout).split("\n").filter(Boolean).slice(-1)[0] ?? ""}`,
+);
+const idxAfterThrottled = JSON.parse(fs.readFileSync(process.env.NOVA_CORPUS_INDEX, "utf8"));
+check(
+  "the throttled merge still carries the deepen cursor",
+  idxAfterThrottled.deepen?.nextStartIndex === idxAfterDeepen.deepen.nextStartIndex,
+  `before=${idxAfterDeepen.deepen.nextStartIndex} after=${idxAfterThrottled.deepen?.nextStartIndex ?? "dropped"}`,
+);
 const incr = runIngest("--incremental", "--pages=1");
 check("--incremental runs and keeps the rows", incr.status === 0 && lib.corpusStatus().total === afterFirst, `total=${lib.corpusStatus().total}`);
 
