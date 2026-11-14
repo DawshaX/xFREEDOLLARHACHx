@@ -27,6 +27,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import zlib from "node:zlib";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -143,7 +144,16 @@ let pages = 0;
 // fetched, 0 new, byYear unchanged. Advancing the cursor is the whole point, so the
 // window starts at the end of what we hold, whichever is further along.
 const deepenCursor = Number(previous?.deepen?.nextStartIndex ?? 0);
-const deepenFrom = mode === "deepen" ? Math.max(deepenCursor, Number(previous?.total ?? 0)) : 0;
+// The old `Math.max(deepenCursor, previous.total)` assumed the corpus is a
+// contiguous publish-ordered prefix — measured FALSE (byYear hole 2010-2022;
+// runs 01:57/02:28/02:40 orbited held regions with +172K cursor and ZERO new
+// rows, and the wrap-to-0 kept snapping back to total). Skip-ahead over
+// heldIds makes ANY start position safe — held windows cost ~2 pages of 40K
+// jumps — so the cursor is now followed honestly, wherever it points.
+const deepenFrom = mode === "deepen" ? deepenCursor : 0;
+// الموضع الفعلي للمشي (module scope عشان كتلة الكيرسر تقراه حتى في fixture mode):
+// بيتقدم بصفوف حقيقية أو بقفزة 40K على منطقة dupes — مش بـpages×perPage.
+let walkIndex = deepenFrom;
 
 if (fixture) {
   const raw = JSON.parse(fs.readFileSync(fixture, "utf8"));
@@ -154,6 +164,9 @@ if (fixture) {
   }
   totalResults = items.length;
   pages = 1;
+  // fixture mode "walks" the whole window in one shot: the cursor must record
+  // that we passed it, exactly like a real walk past these rows would.
+  walkIndex = deepenFrom + totalResults;
   console.log(`fixture: ${rows.size} rows parsed from ${fixture}`);
 } else {
   // A fresh CI runner has no corpus file (it is gitignored). Merging a delta onto
@@ -179,6 +192,37 @@ if (fixture) {
 
   // A deepen run is a window of the same walk, not a new one: it starts where the
   // previous run stopped (deepenFrom, module scope) and merges onto the corpus.
+  // قِيس 2026-11-14 02:40 (شكوى المالك «لسة مزادوش فوق ال300 ألف»): قاعدة
+  // `deepenFrom + page*perPage` بتفترض أن الكوربوس prefix متصل بترتيب النشر —
+  // والقياس أثبت العكس: byYear على الكوربوس الفعلي بيبيّن ثقب 2010-2022 كامل
+  // (85,693..220,000) والكيرسر كان بيدور في المنطقة المحفوظة (كل صفحة dupes)
+  // فيتقدم الـcursor بلا أي صفوف جديدة (جولتا 01:57 و02:28: +172K cursor،
+  // صفر صفوف). العلاج المقاس: حمّل معرّفات الموجود مرة واحدة، ولو صفحة كام
+  // dupes اقفز 40,000 بدل ما تزحف، والكيرسر يسجّل الموضع الفعلي للمشي.
+  let heldIds = null;
+  if (mode === "deepen" && fs.existsSync(lib.corpusFile()) && fs.statSync(lib.corpusFile()).size > 1024) {
+    try {
+      heldIds = new Set(
+        zlib
+          .gunzipSync(fs.readFileSync(lib.corpusFile()))
+          .toString("utf8")
+          .split("\n")
+          .filter(Boolean)
+          .map((l) => {
+            try {
+              return JSON.parse(l).id;
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean),
+      );
+      console.log(`held-ids loaded for the deepen walk: ${heldIds.size} rows already on disk`);
+    } catch (err) {
+      heldIds = null;
+      console.log(`held-ids load failed (${err.message}) — the walk crawls without skip-ahead`);
+    }
+  }
   const maxPages = flag("all") ? 10_000 : wantedPages;
   const startedAt = Date.now();
   for (let page = 0; page < maxPages; page += 1) {
@@ -186,7 +230,7 @@ if (fixture) {
       console.log(`time budget (${timeBudgetMin} min) reached after ${pages} page(s) — writing what we have`);
       break;
     }
-    const startIndex = deepenFrom + page * perPage;
+    const startIndex = walkIndex;
     if (startIndex > 0) await sleep(delayMs);
     let res;
     for (let attempt = 1; attempt <= 4; attempt += 1) {
@@ -215,10 +259,16 @@ if (fixture) {
     pages += 1;
     totalResults = res.totalResults || totalResults;
     for (const r of res.rows) rows.set(r.id, { ...r, kev: kev.has(r.id) ? true : r.kev, epss: epss.get(r.id) ?? r.epss });
+    const newCount = heldIds ? res.rows.filter((r) => !heldIds.has(r.id)).length : res.rows.length;
     console.log(
-      `page ${pages}: +${res.rows.length} rows (startIndex=${startIndex}) · total in NVD=${totalResults} · collected=${rows.size}`,
+      `page ${pages}: +${res.rows.length} rows (${newCount} NEW, startIndex=${startIndex}) · total in NVD=${totalResults} · collected=${rows.size}`,
     );
     if (res.rows.length === 0) break;
+    // الصفحة كلها dupes = بنمشي في منطقة محفوظة — اقفز بدل ما تزحف 2K/صفحة
+    // (قِيس: 43 صفحة dupes كانت هتاكل 4.7 دقيقة قبل الثقب). قفزة 40K توصل
+    // أول صف جديد في ~3 صفحات، وتسيب جولات الميزانية للصفوف الفعلية.
+    if (newCount === 0 && res.rows.length > 0 && !flag("all")) walkIndex += 40_000;
+    else walkIndex += res.rows.length || perPage;
     if (!flag("all") && startIndex + res.perPage >= totalResults) break;
   }
 }
@@ -306,7 +356,7 @@ const index = lib.writeCorpus([...rows.values()], {
 // which is why no test ever saw the ReferenceError this block threw.
 if (mode === "deepen") {
   try {
-    const next = deepenFrom + pages * perPage;
+    const next = walkIndex;
     const wrapped = totalResults > 0 && next >= totalResults ? 0 : next;
     const file = lib.indexFile();
     const cur = JSON.parse(fs.readFileSync(file, "utf8"));

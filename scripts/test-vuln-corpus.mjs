@@ -183,10 +183,18 @@ check(
 // A window that starts inside the prefix we already hold re-fetches rows we have:
 // run 41909776140 deepened from 24,000 with a 120,000-row corpus — 16,000 rows
 // fetched, 0 new, byYear unchanged. The window must start at the end of the prefix.
+// The OLD contract (walkedFrom ≥ total) assumed a contiguous publish-ordered
+// prefix — measured FALSE 2026-11-14: the corpus had a byYear hole 2010-2022
+// and the max(cursor,total) rule orbited held regions (+172K cursor, zero rows,
+// runs 01:57/02:28/02:40). The new contract: skip-ahead over heldIds makes any
+// start safe, so walkedFrom records where the walk honestly STARTED and
+// nextStartIndex where it stopped (or 0 when the dataset wrapped).
 check(
-  "--deepen starts past the rows the corpus already holds",
-  idxAfterDeepen.deepen.walkedFrom >= idxAfterDeepen.total && idxAfterDeepen.deepen.walkedFrom > 0,
-  `walkedFrom=${idxAfterDeepen.deepen.walkedFrom} corpus=${idxAfterDeepen.total}`,
+  "--deepen records the walked window honestly (start ≤ next, wrap→0)",
+  typeof idxAfterDeepen.deepen.nextStartIndex === "number" &&
+    (idxAfterDeepen.deepen.nextStartIndex === 0 ||
+      idxAfterDeepen.deepen.nextStartIndex >= idxAfterDeepen.deepen.walkedFrom),
+  `walkedFrom=${idxAfterDeepen.deepen.walkedFrom} next=${idxAfterDeepen.deepen.nextStartIndex} corpus=${idxAfterDeepen.total}`,
 );
 // A full pass runs as its own CI step, before the deepen step, on the same runner.
 // buildIndex() cannot recompute the cursor, so a write that dropped it sent the next
