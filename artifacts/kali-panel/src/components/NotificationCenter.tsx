@@ -30,14 +30,51 @@ function getKind(k: string) {
   return KIND_CONFIG[k] ?? KIND_CONFIG["info"];
 }
 
+/* TEST10 «حسب الخطورة»: الخطأ أعلى من التحذير أعلى من النجاح — المهم أولًا
+ * في القائمة، والبوب-أب الفوري للأهم بس (error/warning) عشان مركز الإشعارات
+ * يفضل غير متطفل زي ما اتفقنا. */
+function severityRank(k: string): number {
+  return k === "error" ? 3 : k === "warning" ? 2 : k === "success" ? 1 : 0;
+}
+function severityLabel(k: string): string {
+  return k === "error" ? "حرج" : k === "warning" ? "مهم" : k === "success" ? "نجاح" : "معلومة";
+}
+const SEV_CHIP: Record<string, string> = {
+  error: "text-red-300 border-red-500/40 bg-red-500/10",
+  warning: "text-amber-300 border-amber-500/40 bg-amber-500/10",
+  success: "text-emerald-300 border-emerald-500/40 bg-emerald-500/10",
+  info: "text-cyan-300 border-cyan-500/40 bg-cyan-500/10",
+};
+
 export function NotificationCenter() {
   const [, navigate] = useLocation();
+  const bellRef = useRef<HTMLButtonElement | null>(null);
+  const [ddPos, setDdPos] = useState<{ top: number; right: number }>({ top: 56, right: 12 });
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const [newPop, setNewPop] = useState<Notification | null>(null);
   const sseRef = useRef<EventSource | null>(null);
   const popTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const healWarned = useRef<Set<string>>(new Set());
+  const pushCenterOnce = (path: string) => {
+    if (healWarned.current.has(path)) return;
+    healWarned.current.add(path);
+    setTimeout(() => healWarned.current.delete(path), 180_000);
+    setNotifs((prev) => [
+      {
+        id: `heal-${Date.now()}`,
+        kind: "warning",
+        title: "شفاء ذاتي — السيرفر واللوحة مش متزامنين",
+        body: `النقطة ${path} رجّعت HTML — البيانات اتعرضت من المخزن المحلي والسيرفر محتاج تحديث لأحدث نسخة.`,
+        read: false,
+        createdAt: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+    setUnread((u) => u + 1);
+  };
 
   const fetchNotifs = async () => {
     try {
@@ -51,6 +88,18 @@ export function NotificationCenter() {
   };
 
   useEffect(() => {
+    // TEST10 الشفاء الذاتي: الـjsonRequest لما يعالج رد HTML بيبعت الحدث ده —
+    // بنرفع تحذير واحد (مقيّد) لمركز الإشعارات: السيرفر محتاج تحديث.
+    const onHtml = (e: Event) => {
+      const d = (e as CustomEvent).detail as { path?: string; via?: string } | undefined;
+      pushCenterOnce(d?.path ?? "api");
+    };
+    window.addEventListener("nova:api-html", onHtml);
+    return () => window.removeEventListener("nova:api-html", onHtml);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     void fetchNotifs();
     // Connect to live push SSE
     const es = new EventSource(`${BASE}/push/stream`);
@@ -60,8 +109,9 @@ export function NotificationCenter() {
         const n: Notification = JSON.parse((e as MessageEvent).data);
         setNotifs((prev) => [n, ...prev].slice(0, 50));
         setUnread((prev) => prev + 1);
-        // Show popup
-        setNewPop(n);
+        // TEST10: البوب-أب الفوري للأهم بس (حرج/مهم) — الباقي بيدخل القائمة
+        // بدون مقاطعة، وأهميته بتتقاس من درجة الخطورة مش من ترتيب الوصول.
+        if (n.kind === "error" || n.kind === "warning") setNewPop(n);
         if (popTimerRef.current) clearTimeout(popTimerRef.current);
         popTimerRef.current = setTimeout(() => setNewPop(null), 5000);
         // Browser notification if permission granted
@@ -142,7 +192,14 @@ export function NotificationCenter() {
       {/* Bell button */}
       <div className="relative">
         <button
-          onClick={() => { setOpen(!open); if (!open) void requestPermission(); }}
+          ref={bellRef}
+          onClick={() => {
+            const r = bellRef.current?.getBoundingClientRect();
+            if (r) setDdPos({ top: Math.min(r.bottom + 8, window.innerHeight - 24), right: Math.max(window.innerWidth - r.right, 8) });
+            const next = !open;
+            setOpen(next);
+            if (next) void requestPermission();
+          }}
           className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors"
         >
           <Bell className={`w-4 h-4 ${unread > 0 ? "text-fuchsia-400" : "text-slate-500"}`} />
@@ -156,7 +213,10 @@ export function NotificationCenter() {
         {/* Dropdown panel */}
         {open && (
           <div
-            className="absolute top-full left-0 mt-2 w-80 max-h-96 rounded-xl border border-white/10 bg-black/95 backdrop-blur-xl shadow-2xl overflow-hidden z-[9990]"
+            /* TEST9/10: fixed جنب الجرس نفسه مهما كانت الحاوية بتتنصّف —
+             * القايمة بتحسب مكانها من الجرس وتتلزق جنبه على أي صفحة. */
+            className="fixed w-80 max-w-[calc(100vw-24px)] max-h-96 rounded-xl border border-white/10 bg-black/95 backdrop-blur-xl shadow-2xl overflow-hidden z-[9990]"
+            style={{ top: ddPos.top, right: ddPos.right }}
             dir="rtl"
           >
             <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
@@ -181,7 +241,15 @@ export function NotificationCenter() {
                   <span className="text-xs">لا توجد إشعارات</span>
                 </div>
               )}
-              {notifs.map((n) => {
+              {[...notifs]
+                .sort((a, b) => {
+                  const ua = a.read ? 0 : 1, ub = b.read ? 0 : 1;
+                  if (ua !== ub) return ub - ua;
+                  const sa = severityRank(a.kind), sb = severityRank(b.kind);
+                  if (sa !== sb) return sb - sa;
+                  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                })
+                .map((n) => {
                 const cfg = getKind(n.kind);
                 const Icon = cfg.icon;
                 return (
@@ -199,7 +267,10 @@ export function NotificationCenter() {
                   >
                     <Icon className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${n.kind === "error" ? "text-red-400" : n.kind === "success" ? "text-emerald-400" : "text-fuchsia-400"}`} />
                     <div className="flex-1 min-w-0">
-                      <div className={`text-[11px] font-medium ${n.read ? "text-slate-400" : "text-white"}`}>{n.title}</div>
+                      <div className={`text-[11px] font-medium ${n.read ? "text-slate-400" : "text-white"} flex items-center gap-1.5 flex-wrap`}>
+                        <span className={`text-[8px] font-black rounded px-1 py-px border ${SEV_CHIP[n.kind] ?? SEV_CHIP.info}`}>{severityLabel(n.kind)}</span>
+                        <span className="break-safe min-w-0">{n.title}</span>
+                      </div>
                       <div className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">{n.body}</div>
                       <div className="text-[9px] text-slate-700 mt-0.5">{new Date(n.createdAt).toLocaleString("ar-SA")}</div>
                     </div>
@@ -207,7 +278,7 @@ export function NotificationCenter() {
                     {n.link && <span className="text-[8px] text-fuchsia-400/70 shrink-0 mt-1.5">افتح ←</span>}
                   </div>
                 );
-              })}
+                })}
             </div>
           </div>
         )}
