@@ -91,10 +91,15 @@ dpkg-query -W -f='${Package}\n' > "$OUT/PACKAGES.txt"
 
 echo "== [6/6] tar + zstd + split ≤90MB =="
 cd /
+# الاستبعاد دي خفّضت الحجم: قِيس run 43570109294 طلع 28 جزء (2.4GB) —
+# الdoc/man/locale/log/cache حشو مش محتاجه أجينت بيشغل أدوات.
 tar -cf - \
   --exclude=./proc --exclude=./sys --exclude=./dev --exclude=./run \
   --exclude=./tmp --exclude=./out --exclude=./__w --exclude=/.git \
   --exclude=./.dockerenv --exclude=./etc/mtab \
+  --exclude=./usr/share/doc --exclude=./usr/share/man \
+  --exclude=./usr/share/locale \
+  --exclude=./var/log --exclude=./var/cache --exclude=./var/tmp \
   . | zstd -T0 -10 > "$OUT/rootfs.tar.zst"
 cd "$OUT"
 split -b 90m -d rootfs.tar.zst part-
