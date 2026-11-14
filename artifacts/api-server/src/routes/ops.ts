@@ -64,7 +64,10 @@ import { provisionToolchain, toolchainStatus, VENDORABLE } from "../lib/ops/tool
 import { checkGate, opsExposure } from "../lib/ops/gate";
 import { tokenConfigured } from "../lib/ops/gate";
 import { runSelfHeal } from "../lib/ops/self-heal";
-import { kaliStatus, kaliRoot, runKali, startDesktop, stopDesktop, desktopUrlFromHost } from "../lib/ops/kali-env";
+import { kaliStatus, kaliRoot, runKali, startDesktop, stopDesktop, buildDesktopUrl, startKaliWatchdog } from "../lib/ops/kali-env";
+
+/* ضمان استمرار العمل — الساعة بتترفع مع أول تحميل للراوتر */
+startKaliWatchdog();
 import { ALLOWED_KEYS, hydrateRuntimeConfig, runtimeConfigStatus, setRuntimeConfig } from "../lib/ops/runtime-config";
 import { measureStateFootprint, pruneState, lastPrune } from "../lib/ops/state-prune";
 import { provisionOnBoot, provisionStatus } from "../lib/ops/keys-source";
@@ -787,7 +790,10 @@ router.get("/ops/self-heal/hint", (_req: Request, res: Response) => {
 /* ── TEST11: كالي الحقيقية المدمجة — الحالة مقاسة، التنفيذ حقيقي بproot ── */
 router.get("/ops/kali", async (req: Request, res: Response) => {
   const st = await kaliStatus();
-  const desktopUrl = st.desktop?.running ? desktopUrlFromHost(req.headers.host) : null;
+  // الرابط نسبي عبر الهَب نفسه — يشتغل من nova.waifly.com ومن أي دومين بيوصله.
+  const reqTok = String(req.query?.token ?? "") || String(req.headers["x-nova-token"] ?? "");
+  const tok = process.env.NOVA_EXEC_TOKEN && reqTok && reqTok === process.env.NOVA_EXEC_TOKEN.trim() ? reqTok : "";
+  const desktopUrl = st.desktop?.running ? buildDesktopUrl(tok || undefined) : null;
   res.json({ ok: st.present, status: st, desktopUrl });
 });
 

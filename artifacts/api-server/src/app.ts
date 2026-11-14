@@ -59,7 +59,19 @@ app.use(visitorIntelMiddleware());
 // والآلات بتعدّي بالتوكن زي ما هي. عمدًا بعد عين الزيارات: الغريب اللي بيخبط
 // على الباب لسه بيتبلّغ تليجرام، بس مش بيشوف جوه.
 import { panelAuthMiddleware } from "./lib/panel-auth";
+import { kaliNovncDir } from "./lib/ops/kali-env";
 app.use(panelAuthMiddleware());
+
+// TEST12 — ملفات noVNC من جوه rootfs كالي نفسها (بعد بوابة الدخول — الجلسة
+// أو التوكن بتحميها). لو البيئة مش مستخرجة بيرجع JSON صادق بدل مسار ميت.
+app.use("/api/ops/kali/novnc", (req: Request, res: Response, next: NextFunction) => {
+  const dir = kaliNovncDir();
+  if (!dir) {
+    res.status(404).json({ ok: false, error: "kali_rootfs_missing", says_ar: "بيئة كالي مش مستخرجة — scripts/kali-rootfs-fetch.sh بيسحبها من فرع kali-rootfs" });
+    return;
+  }
+  express.static(dir, { index: "vnc.html" })(req, res, next);
+});
 
 // ── Standalone SSE Streams (LiveAgent, Agent Steps, Push Notifications) ──────
 app.get("/api/push/stream", (req: Request, res: Response) => {

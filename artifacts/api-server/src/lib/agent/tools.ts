@@ -2159,15 +2159,31 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
           : "مافيش عقدة متصلة لسه";
         const hub = process.env.NOVA_PUBLIC_URL ?? process.env.NOVA_HUB_URL ?? "";
         const ghcr = "ghcr.io/dawshax/xfreedollarhachx/nova-kali:latest";
+        const { kaliStatus: embStatus, buildDesktopUrl: embUrl } = await import("../ops/kali-env");
+        const emb = await embStatus(false);
+        const heavyLine = emb.tools
+          ? Object.entries(emb.tools).map(([k, v]) => `${k}${v.present ? "✓" : "✗"}`).join("·")
+          : "";
         return done(
           true,
-          `عقد كالي المتصلة الآن: ${agentsLine}. جهاز الشغل الثقيل بيركّب بأمر واحد: docker run GHCR أو bash kali-node-install.sh (الأوامر كاملة في data).`,
+          emb.present
+            ? `بيئة كالي مدمجة كاملة جاهزة في البرنامج نفسه (${emb.packages} حزمة · الثقيلة: ${heavyLine}) — نفّذ بأداة kali_run وافتح الديسكتوب من تبويب /kali-env. وعقدة خارجية اختيارية بأمر واحد.`
+            : `عقد كالي المتصلة: ${agentsLine}. البيئة المدمجة مش مستخرجة على الهَب لسه — bash scripts/kali-rootfs-fetch.sh بيسحبها من فرع kali-rootfs. والجهاز الخارجي بيركّب بأمر واحد.`,
           {
+            embedded: {
+              present: emb.present,
+              packages: emb.packages ?? 0,
+              heavyTools: emb.tools ?? null,
+              execTool: "kali_run",
+              desktopTool: "kali_desktop",
+              tab: "/kali-env",
+            },
             dockerOneLiner: `docker run -d --name nova-kali --restart unless-stopped -e NOVA_HUB_URL="${hub}" -e NOVA_EXEC_TOKEN="⟨التوكن⟩" ${ghcr}`,
             bareMetal: "curl -fsSL https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/scripts/kali-node-install.sh | bash -s -- ⟨HUB_URL⟩ ⟨TOKEN⟩",
             image: ghcr,
             connectedAgents: connected,
-            honestNote: "الأوامر دى للمالك ينفذها على سيرفره — الأداة مش بتدّعى إنها ركّبت حاجة",
+            honestNote: "البيئة المدمجة قياسها من rootfs نفسها؛ والأوامر الخارجية للمالك ينفذها — الأداة مش بتدّعى إنها ركّبت حاجة",
+            ...(emb.desktop?.running ? { desktopUrl: embUrl() } : {}),
           },
         );
       }

@@ -1,6 +1,7 @@
 import { config as loadEnv } from "dotenv";
 loadEnv({ override: true });
 import http from "http";
+import net from "net";
 import { WebSocketServer, WebSocket } from "ws";
 import app from "./app";
 import { logger } from "./lib/logger";
@@ -290,6 +291,30 @@ function routeUpgrade(req: http.IncomingMessage, socket: import("node:stream").D
     }
     hubWss.handleUpgrade(req, socket, head, (ws) => {
       hubWss.emit("connection", ws, req);
+    });
+  } else if (url.startsWith("/api/ops/kali/novnc/websockify")) {
+    // TEST12 — نفق noVNC عبر الهَب نفسه: الديسكتوب بيفتح من أي دومين بيوصل
+    // للهَب (nova.waifly.com) بنفس هوية /api/ws — جلسة أو توكن.
+    const sessUserN = wsSessionUser(req.headers.cookie ?? undefined);
+    const wsTokN = new URL(url, "http://x").searchParams.get("token") ?? "";
+    const tokOkN = wsTokN && (process.env.NOVA_EXEC_TOKEN ?? "") && wsTokN === (process.env.NOVA_EXEC_TOKEN ?? "").trim();
+    if (!sessUserN && !tokOkN) {
+      socket.write("HTTP/1.1 401 Unauthorized\r\nX-NOVA-Reason: login_required\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    const up = net.connect({ port: 6080, host: "127.0.0.1" });
+    up.on("error", () => socket.destroy());
+    socket.on("error", () => up.destroy());
+    socket.pause();
+    up.once("connect", () => {
+      const lines = [`${req.method} ${url} HTTP/1.1`];
+      for (let i = 0; i < req.rawHeaders.length; i += 2) lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
+      up.write(lines.join("\r\n") + "\r\n\r\n");
+      if (head?.length) up.write(head);
+      up.pipe(socket);
+      socket.pipe(up);
+      socket.resume();
     });
   } else {
     socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
