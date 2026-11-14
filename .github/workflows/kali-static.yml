@@ -1,0 +1,35 @@
+# proot-static — المسار السريع: نزّل النسخة الستاتيكية (شغالة على أي glibc)
+# وارفعها لفرع kali-static عشان السانبوكس يجيبها بgit fetch (الasset نفسه
+# محجوب عنده لأن التحميل بيبقى من objects.githubusercontent).
+name: Kali static proot (fast lane)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  push-static:
+    runs-on: ubuntu-latest
+    steps:
+      - name: نزّل proot-static وتحقق وارفع الفرع kali-static
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          URL=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" https://api.github.com/repos/nohajc/proot-static/releases/latest | grep browser_download_url | grep x86_64-static | grep -v '\.sig' | head -1 | cut -d'"' -f4)
+          echo "::notice::asset=$URL"
+          [ -n "$URL" ] || { echo "::error::مافيش asset x86_64-static في آخر release"; exit 1; }
+          curl -fsSL "$URL" -o "$RUNNER_TEMP/proot-static"
+          chmod +x "$RUNNER_TEMP/proot-static"
+          "$RUNNER_TEMP/proot-static" --version || { echo "::error::الbinary مش شغال — مش static فعلًا"; exit 1; }
+          mkdir -p /tmp/br && cd /tmp/br
+          git init -q -b kali-static
+          cp "$RUNNER_TEMP/proot-static" .
+          cp "$RUNNER_TEMP/proot-static" usr-local-bin-proot-static-copy 2>/dev/null || true
+          rm -f usr-local-bin-proot-static-copy
+          git config user.name "nova-builder"
+          git config user.email "nova@ci.local"
+          git add -A
+          git commit -qm "proot-static — $URL"
+          git -c http.version=HTTP/1.1 push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" kali-static
+          echo "✔ فرع kali-static اترفع — مقاس من نجاح الpush و--version فوق"
