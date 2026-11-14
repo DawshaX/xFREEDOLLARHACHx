@@ -30,7 +30,7 @@ git -C "$GDIR" archive "$REF" -- MANIFEST.txt SHA256SUMS PACKAGES.txt 2>/dev/nul
 [ -f "$GDIR/MANIFEST.txt" ] || { echo "✗ MANIFEST مفقود — الفرع مش بناء rootfs"; exit 2; }
 cat "$GDIR/MANIFEST.txt"
 [ -f "$GDIR/SHA256SUMS" ] || { echo "✗ SHA256SUMS مفقود"; exit 2; }
-PARTS=$(grep -oE 'part-[0-9]+' "$GDIR/SHA256SUMS" | sort -u)
+PARTS=$(grep -oE 'part-[0-9]+' "$GDIR/SHA256SUMS" | sort -u | sort -t- -k2 -n)
 N=$(echo "$PARTS" | wc -l)
 echo "   الأجزاء: $N"
 
