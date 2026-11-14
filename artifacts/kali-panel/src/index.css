@@ -485,3 +485,19 @@
   box-shadow: 0 0 26px rgba(34, 211, 238, 0.22);
 }
 
+
+/* ── TEST8 «كلام خارج عن الإطارات» — قِيس 2026-11-14 ─────────────────────────
+ * النصوص العربية الطويلة والروابط والأوامر الإنجليزية كانت بتكسر الحاويات
+ * (كلام خارج عن الإطار). أي حاوية رسائل/سجلات/إشعارات تاخد .break-safe:
+ * الكلمة الطويلة بتلف جوه بدل ما تطلع، والمين-ويدث صفر يمنع الـflex overflow. */
+.break-safe,
+.break-safe * {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
+.break-safe pre,
+.break-safe code {
+  white-space: pre-wrap;
+  word-break: break-all;
+}

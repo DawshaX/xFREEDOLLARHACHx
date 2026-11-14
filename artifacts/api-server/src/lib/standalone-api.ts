@@ -12,6 +12,7 @@
  */
 
 import { corpusSnapshot, corpusLastGain, loadCorpusLive, corpusTotal } from "./corpus-live";
+import { listPushNotifications, createPushNotification, markAllPushRead, markPushRead } from "./push-hub";
 import {
   KALI_ARSENAL_64,
   GITHUB_ARSENAL_40,
@@ -1062,24 +1063,7 @@ if (agentTasksState.length === 0) agentTasksState = [
   },
 ];
 
-let notificationsState = loadState("cybernova_notifs_v1", [
-  {
-    id: "notif-1",
-    kind: "success",
-    title: "مركز الإشعارات",
-    body: "سطر ترحيبي: الإشعارات الحية بتظهر هنا فور تسجيلها فعلاً — مش محفوظة عن أحداث ما حصلتش.",
-    read: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "notif-2",
-    kind: "info",
-    title: "تلميح البداية",
-    body: "اختَر هدفاً من استوديو البج باونتي — أي فحص حقيقي هيتسجّل هنا بنفسه.",
-    read: false,
-    createdAt: new Date().toISOString(),
-  },
-]);
+
 
 export function getMissionsState() {
   return missionsState;
@@ -2993,22 +2977,32 @@ if (path === "/nova-core/version") {
     return { id: bid };
   }
 
+  if (path === "/push/notify" && m === "POST" && body) {
+    // TEST8: إنشاء إشعار — حي في الوضع الساكن (localStorage + window event)،
+    // وعلى السيرفر الراوت المباشر بيسبق ده فمش بينفذ هنا أبدًا.
+    return createPushNotification({
+      kind: String(body.kind || "info"),
+      title: String(body.title || "إشعار"),
+      body: String(body.body || ""),
+    });
+  }
+
   // ── Notifications (/api/push/notifications) ────────────────────────────────
   if (path === "/push/notifications" || path === "/notifications") {
-    return notificationsState;
+    // TEST8: القراية من الـhub مباشرة — مخزن واحد حي (السيرفر: ملف+SSE،
+    // الساكن: localStorage) بدل مخزنين يتعارضوا.
+    return listPushNotifications();
   }
 
   if (path === "/push/notifications/read-all" && m === "POST") {
-    notificationsState = notificationsState.map((n) => ({ ...n, read: true }));
-    saveState("cybernova_notifs_v1", notificationsState);
+    markAllPushRead();
     return { ok: true };
   }
 
   const notifReadMatch = path.match(/^\/push\/notifications\/([^/]+)\/read$/);
   if (notifReadMatch && (m === "PATCH" || m === "POST")) {
     const nid = notifReadMatch[1];
-    notificationsState = notificationsState.map((n) => (n.id === nid ? { ...n, read: true } : n));
-    saveState("cybernova_notifs_v1", notificationsState);
+    markPushRead(nid);
     return { ok: true };
   }
 
@@ -3017,8 +3011,7 @@ if (path === "/nova-core/version") {
   const notifReadRoot = path.match(/^\/notifications\/([^/]+)\/read$/);
   if (notifReadRoot && (m === "PATCH" || m === "POST")) {
     const nid = notifReadRoot[1];
-    notificationsState = notificationsState.map((n) => (n.id === nid ? { ...n, read: true } : n));
-    saveState("cybernova_notifs_v1", notificationsState);
+    markPushRead(nid);
     return { id: nid, ok: true };
   }
 
@@ -3319,7 +3312,7 @@ if (path === "/nova-core/version") {
         low: galaxyStats.low,
       },
       nodes: { total: nodesState.length, active: nodesState.length, offline: 0 },
-      alerts: { unread: notificationsState.filter((n) => !n.read).length, total: notificationsState.length },
+      alerts: (() => { const all = listPushNotifications(); return { unread: all.filter((n) => !n.read).length, total: all.length }; })(),
       uptime: measuredUptimeSec(),
       ts: new Date().toISOString(),
     };

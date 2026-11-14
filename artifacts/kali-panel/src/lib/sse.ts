@@ -103,6 +103,20 @@ export async function jsonRequest<T>(
   }
 }
 
+/* TEST8 «كل زرار له رد فعل حقيقي»: إشعار لمركز الإشعارات الحي (SSE popup +
+ * سجل دائم). fire-and-forget — الإشعار ما يفشلش الفعل نفسه ولا يعلّقه،
+ * والفشل بتاعه صامت لأن المهمة هي رد الفعل مش التنفيذ. */
+export function pushNotify(
+  kind: "info" | "success" | "error" | "warning",
+  title: string,
+  body = "",
+): void {
+  void jsonRequest("/push/notify", {
+    method: "POST",
+    body: JSON.stringify({ kind, title, body }),
+  }).catch(() => {});
+}
+
 // Re-export the query helper so callers that open raw EventSource / WebSocket
 // connections (e.g. SystemContext, NovaFleetLive) use the same token source.
 export { novaTokenQuery };

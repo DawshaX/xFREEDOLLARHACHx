@@ -66,7 +66,22 @@ export function NotificationCenter() {
         }
       } catch {}
     });
-    return () => { es.close(); };
+    // TEST8: الوضع الساكن (بلا سيرفر) — push-hub بيضرب window event "nova:push"
+    // والإشعار يوصل للبوب-أب برضه (نفس قناة الـSSE الحية على السيرفر).
+    const onLocalPush = (ev: Event) => {
+      const n = (ev as CustomEvent<Notification>).detail;
+      if (!n?.id) return;
+      setNotifs((prev) => [n, ...prev].slice(0, 50));
+      setUnread((prev) => prev + 1);
+      setNewPop(n);
+      if (popTimerRef.current) clearTimeout(popTimerRef.current);
+      popTimerRef.current = setTimeout(() => setNewPop(null), 5000);
+    };
+    window.addEventListener("nova:push", onLocalPush);
+    return () => {
+      window.removeEventListener("nova:push", onLocalPush);
+      es.close();
+    };
   }, []);
 
   const markRead = async (id: string) => {
@@ -92,7 +107,7 @@ export function NotificationCenter() {
       {/* Floating popup for new notifications */}
       {newPop && (
         <div
-          className="fixed z-[9998] bottom-24 right-24 max-w-72 rounded-xl border border-fuchsia-500/30 bg-black/95 backdrop-blur-xl shadow-2xl p-3 animate-in slide-in-from-bottom-2 duration-300"
+          className="fixed z-[9998] bottom-24 right-4 md:right-24 max-w-72 rounded-xl border border-fuchsia-500/30 bg-black/95 backdrop-blur-xl shadow-2xl p-3 animate-in slide-in-from-bottom-2 duration-300 break-safe"
           dir="rtl"
         >
           <div className="flex items-start gap-2">

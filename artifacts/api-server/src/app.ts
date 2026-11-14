@@ -8,6 +8,7 @@ import { logger } from "./lib/logger";
 import { resolveStandaloneApi } from "./lib/standalone-api";
 import { buildIntelligentSecurityReply } from "./routes/ollama-proxy";
 import { broadcastEvent } from "./lib/ws-hub";
+import { addPushClient, createPushNotification } from "./lib/push-hub";
 import { runAgent } from "./lib/agent/core";
 import { ROOT_SESSION_ID, getOrCreateNexusSession } from "./lib/agent/session-nexus";
 import { tokenConfigured, checkGate } from "./lib/ops/gate";
@@ -67,12 +68,27 @@ app.get("/api/push/stream", (req: Request, res: Response) => {
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders?.();
   res.write(`: connected\n\n`);
+  // TEST8 قِيس 2026-11-14: كان SSE ميت (بينبّه بس) — مركز الإشعارات ما كانش
+  // بيستقبل أي حدث أصلًا. دلوقتي عميل حي على الـhub: كل إشعار بيوصل لحظيًا.
+  addPushClient(res);
   const timer = setInterval(() => {
     if (!res.writableEnded) {
       res.write(`: ping\n\n`);
     }
   }, 20_000);
   req.on("close", () => clearInterval(timer));
+});
+
+/* إنشاء إشعار حقيقي — بوابة كل أزرار اللوحة (النجاح والفشل): بيتخزن دائمًا
+ * وبيتبث لحظيًا. الكتابة محمية بنفس بوابة ops (توكن/جلسة المالك). */
+app.post("/api/push/notify", (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { kind?: string; title?: string; body?: string };
+  if (!body.title || !String(body.title).trim()) {
+    res.status(400).json({ ok: false, error: "title is required" });
+    return;
+  }
+  const n = createPushNotification({ kind: body.kind, title: body.title, body: body.body });
+  res.json({ ok: true, notification: n, clients: undefined });
 });
 
 app.post("/api/live-agent/sessions/:id/messages", async (req: Request, res: Response) => {

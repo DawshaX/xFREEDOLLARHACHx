@@ -7,6 +7,7 @@ import {
   Radio, Save, Target, Zap, Database, Activity, Cpu, Clock, Play,
 } from "lucide-react";
 import { emitPlatformWsEvent, useWebSocket } from "@/hooks/useWebSocket";
+import { pushNotify } from "@/lib/sse";
 import { jsonRequest } from "@/lib/sse";
 import { resolveStandaloneApi } from "@/lib/standalone-api";
 
@@ -1791,7 +1792,15 @@ export default function BugBountyStudio() {
       : tok
         ? " · الحل: اكتب توكن التنفيذ في الإعدادات أو الطرفية العائمة"
         : "";
-    setSyncStatusMsg(`❌ ${where} فشل: ${msg.slice(0, 180)}${hint}`);
+    const text = `❌ ${where} فشل: ${msg.slice(0, 180)}${hint}`;
+    setSyncStatusMsg(text);
+    // TEST8: الفشل يوصل مركز الإشعارات لحظيًا — مش لون نص بس.
+    pushNotify("error", `${where} فشل`, `${msg.slice(0, 220)}${hint}`);
+  };
+  /** كل نجاح: حالة inline + إشعار حي في المركز (بوب-أب + سجل دائم). */
+  const notifyOk = (msg: string) => {
+    setSyncStatusMsg(msg);
+    pushNotify("success", "استوديو البج باونتي", msg.replace(/^✅\s*/, ""));
   };
 
   /* TEST7 «مؤشرات الحياة»: شريط حي في رأس الاستوديو — كل رقم بيتقاس من
@@ -2409,7 +2418,7 @@ ${reportFix}
       detail: noteContent,
       saveToMemory: true,
     });
-    setSyncStatusMsg(`✅ تم تفعيل الهدف (${cleanTarget}) ومزامنته مع الذاكرة ومتتبع المهام وجميع الوكلاء!`);
+    notifyOk(`✅ تم تفعيل الهدف (${cleanTarget}) ومزامنته مع الذاكرة ومتتبع المهام وجميع الوكلاء!`);
   };
 
   const handleSaveQuickNote = async () => {
@@ -2446,7 +2455,7 @@ ${reportFix}
       detail: text,
       saveToMemory: true,
     });
-    setSyncStatusMsg("✅ تم حفظ الملاحظة في الذاكرة (/memory) وسجل المهام (/mission-tracker) وبثها للوكلاء!");
+    notifyOk("✅ تم حفظ الملاحظة في الذاكرة (/memory) وسجل المهام (/mission-tracker) وبثها للوكلاء!");
   };
 
   const handleSyncAuditFindings = async () => {
@@ -2486,7 +2495,7 @@ ${reportFix}
       detail: summaryText,
       saveToMemory: true,
     });
-    setSyncStatusMsg(`✅ تم تسجيل ${auditResult.findings.length} نتائج في الذاكرة ومتتبع المهام وبثها عبر WebSocket!`);
+    notifyOk(`✅ تم تسجيل ${auditResult.findings.length} نتائج في الذاكرة ومتتبع المهام وبثها عبر WebSocket!`);
   };
 
   const handleSaveReportToPlatform = async () => {
@@ -2519,7 +2528,7 @@ ${reportFix}
       detail: markdownReport.slice(0, 300),
       saveToMemory: true,
     });
-    setSyncStatusMsg("✅ تم حفظ التقرير بالكامل في صفحة التقارير (/reports) وفي الذاكرة المشتركة (/memory)!");
+    notifyOk("✅ تم حفظ التقرير بالكامل في صفحة التقارير (/reports) وفي الذاكرة المشتركة (/memory)!");
   };
 
   const refreshSelfAwareness = async (targetOverride?: string) => {
@@ -2610,7 +2619,7 @@ ${reportFix}
         }),
       });
       setRepeaterResult(res);
-      setSyncStatusMsg(`✅ تم تنفيذ طلب Burp/Caido Repeater على ${res.hostname} (HTTP ${res.status} · SHA256=${res.sha256}) وحفظه في خزنة المستخرجات!`);
+      notifyOk(`✅ تم تنفيذ طلب Burp/Caido Repeater على ${res.hostname} (HTTP ${res.status} · SHA256=${res.sha256}) وحفظه في خزنة المستخرجات!`);
       void refreshWorkstationState();
     } catch (e) { reportFail("البروكسي/الريبيتر", e);
       // ignore
@@ -2631,7 +2640,7 @@ ${reportFix}
         }),
       });
       setMsfResult(res);
-      setSyncStatusMsg(`✅ تم تشغيل وحدة التحقق [${res.activeModule.path}] في كونسول msf6-verify وحفظ النتيجة في المستخرجات!`);
+      notifyOk(`✅ تم تشغيل وحدة التحقق [${res.activeModule.path}] في كونسول msf6-verify وحفظ النتيجة في المستخرجات!`);
       void refreshWorkstationState();
     } catch (e) { reportFail("كونسول MSF", e);
       // ignore
@@ -2652,7 +2661,7 @@ ${reportFix}
         }),
       });
       setTermOutput(res.output);
-      setSyncStatusMsg(`✅ تم تنفيذ أمر الطرفية (${res.command}) وتحديث سجل المستخرجات!`);
+      notifyOk(`✅ تم تنفيذ أمر الطرفية (${res.command}) وتحديث سجل المستخرجات!`);
       void refreshWorkstationState();
     } catch (e) { reportFail("أمر الطرفية", e);
       // ignore
@@ -2676,7 +2685,7 @@ ${reportFix}
       } else {
         void refreshWorkstationState();
       }
-      setSyncStatusMsg(`✅ اكتملت نبضة العمل والتطوير الذاتي 24/7 وتم تحديث خزنة المستخرجات وذاكرة GitHub السحابية!`);
+      notifyOk(`✅ اكتملت نبضة العمل والتطوير الذاتي 24/7 وتم تحديث خزنة المستخرجات وذاكرة GitHub السحابية!`);
       void refreshSelfAwareness(activeTarget);
     } catch (e) { reportFail("نبضة الدايمون 24/7", e);
       // ignore
@@ -2704,7 +2713,7 @@ ${reportFix}
       } else {
         void refreshWorkstationState();
       }
-      setSyncStatusMsg(`✅ تمت إضافة المهمة المتوازية (${tTitle}) إلى طابور العمل المستمر 24/7!`);
+      notifyOk(`✅ تمت إضافة المهمة المتوازية (${tTitle}) إلى طابور العمل المستمر 24/7!`);
     } catch (e) { reportFail("إضافة مهمة موازية", e);
       // ignore
     } finally {
@@ -2764,7 +2773,7 @@ ${reportFix}
         target: activeTarget,
         title: `Kali Tool [${res.toolName}]: ${res.command}`,
       });
-      setSyncStatusMsg(`✅ تم تنفيذ الفحص الآمن لأداة [${res.toolName}] على ${activeTarget} وتسجيل المخرجات في الذاكرة ومتتبع المهام!`);
+      notifyOk(`✅ تم تنفيذ الفحص الآمن لأداة [${res.toolName}] على ${activeTarget} وتسجيل المخرجات في الذاكرة ومتتبع المهام!`);
       void refreshSelfAwareness();
     } catch (e) { reportFail("محاكاة أداة كالي", e);
       // ignore
@@ -2787,7 +2796,7 @@ ${reportFix}
         target: activeTarget,
         title: `دمج متزامن لـ (${prims.length}) ثغرات وبناء ${res.chains.length} سلاسل مركبة على ${activeTarget}`,
       });
-      setSyncStatusMsg(`✅ تم دمج (${prims.length}) ثغرات في نفس الوقت وبناء ${res.chains.length} سلاسل أثر مركب على ${activeTarget}!`);
+      notifyOk(`✅ تم دمج (${prims.length}) ثغرات في نفس الوقت وبناء ${res.chains.length} سلاسل أثر مركب على ${activeTarget}!`);
       void refreshSelfAwareness();
     } catch (e) { reportFail("مُخلّق السلاسل", e);
       // ignore
@@ -2806,7 +2815,7 @@ ${reportFix}
     setReportSteps(chain.steps.join("\n"));
     setReportFix(chain.remediation);
     setActiveTab("report");
-    setSyncStatusMsg("✅ تم نقل سلسلة الثغرات المركبة إلى مولّد التقارير وحاسبة CVSS 3.1!");
+    notifyOk("✅ تم نقل سلسلة الثغرات المركبة إلى مولّد التقارير وحاسبة CVSS 3.1!");
   };
 
   const handleRunLiveOsint = async () => {
@@ -2822,7 +2831,7 @@ ${reportFix}
         target: activeTarget,
         title: `OSINT (CRT.SH + Shodan InternetDB + Wayback): ${res.crtSubdomains.length} نطاق فرعي`,
       });
-      setSyncStatusMsg(`✅ تم سحب استخبارات CRT.SH وShodan InternetDB وWayback Machine لـ ${activeTarget} وتسجيلها في الذاكرة!`);
+      notifyOk(`✅ تم سحب استخبارات CRT.SH وShodan InternetDB وWayback Machine لـ ${activeTarget} وتسجيلها في الذاكرة!`);
     } catch (e) { reportFail("الـOSINT الحي", e);
       // ignore
     } finally {
@@ -2843,7 +2852,7 @@ ${reportFix}
         target: activeTarget,
         title: `فحص JWT & Cookie: رصد ${res.issues.length} ملاحظات أمنية`,
       });
-      setSyncStatusMsg(`✅ اكتمل تدقيق JWT وSet-Cookie (${res.issues.length} ملاحظات) وتم حفظه في الذاكرة!`);
+      notifyOk(`✅ اكتمل تدقيق JWT وSet-Cookie (${res.issues.length} ملاحظات) وتم حفظه في الذاكرة!`);
     } catch (e) { reportFail("تدقيق JWT/الكوكيز", e);
       // ignore
     } finally {
@@ -2864,7 +2873,7 @@ ${reportFix}
         target: activeTarget,
         title: `فحص GraphQL & OpenAPI Schema: ${activeTarget}`,
       });
-      setSyncStatusMsg(`✅ اكتمل فحص مخططات GraphQL وOpenAPI على ${activeTarget}!`);
+      notifyOk(`✅ اكتمل فحص مخططات GraphQL وOpenAPI على ${activeTarget}!`);
     } catch (e) { reportFail("تدقيق الـSchema", e);
       // ignore
     } finally {
@@ -2889,7 +2898,7 @@ ${reportFix}
         target: activeTarget,
         title: `مسار البحث الذاتي (4 مراحل) اكتمل على ${activeTarget}`,
       });
-      setSyncStatusMsg(`✅ اكتمل مسار البحث الذاتي (4 مراحل) على ${activeTarget} وتم حفظ الأدلة والفرضيات في الذاكرة ومتتبع المهام!`);
+      notifyOk(`✅ اكتمل مسار البحث الذاتي (4 مراحل) على ${activeTarget} وتم حفظ الأدلة والفرضيات في الذاكرة ومتتبع المهام!`);
     } catch (e) { reportFail("الخط الإنتاجي الكامل", e);
       // ignore
     } finally {
@@ -2910,7 +2919,7 @@ ${reportFix}
         target: activeTarget,
         title: `تحليل JS والمسارات المخفية: ${res.endpoints.length} مسار مكتشف`,
       });
-      setSyncStatusMsg(`✅ تم استخراج ${res.endpoints.length} مسار API و${res.parameters.length} معامل من ملفات JS وتسجيلها في الذاكرة!`);
+      notifyOk(`✅ تم استخراج ${res.endpoints.length} مسار API و${res.parameters.length} معامل من ملفات JS وتسجيلها في الذاكرة!`);
     } catch (e) { reportFail("تشريح ملفات JS", e);
       // ignore
     } finally {
@@ -2935,7 +2944,7 @@ ${reportFix}
         target: matrixEndpoint,
         title: `مصفوفة الصلاحيات التفاضلية: ${res.verdict} (${res.similarityPercent}%)`,
       });
-      setSyncStatusMsg(`✅ اكتملت المقارنة التفاضلية للصلاحيات (BOLA/IDOR) — التشابه الهيكلي: ${res.similarityPercent}%`);
+      notifyOk(`✅ اكتملت المقارنة التفاضلية للصلاحيات (BOLA/IDOR) — التشابه الهيكلي: ${res.similarityPercent}%`);
     } catch (e) { reportFail("مصفوفة الصلاحيات", e);
       // ignore
     } finally {
@@ -2956,7 +2965,7 @@ ${reportFix}
         target: activeTarget,
         title: `فحص الإعدادات المعمارية (CORS / CNAME / security.txt): ${activeTarget}`,
       });
-      setSyncStatusMsg(`✅ اكتمل تدقيق CORS وبصمات CNAME وملف security.txt لـ ${activeTarget}!`);
+      notifyOk(`✅ اكتمل تدقيق CORS وبصمات CNAME وملف security.txt لـ ${activeTarget}!`);
     } catch (e) { reportFail("تدقيق الإعدادات", e);
       // ignore
     } finally {
@@ -2981,7 +2990,7 @@ ${reportFix}
         target: activeTarget,
         title: `بوابة البرهان (Zero-FP): CVSS ${res.cvssScore} — ${zeroFpTitle}`,
       });
-      setSyncStatusMsg(`✅ تم التحقق عبر بوابة البرهان (Zero-FP Gate) وحفظ حزمة الدليل الرقمي في خزنة الأدلة (/evidence)!`);
+      notifyOk(`✅ تم التحقق عبر بوابة البرهان (Zero-FP Gate) وحفظ حزمة الدليل الرقمي في خزنة الأدلة (/evidence)!`);
     } catch (e) { reportFail("بوابة الصفر-إيجابي", e);
       // ignore
     } finally {
@@ -3086,8 +3095,8 @@ ${reportFix}
           </div>
 
           {syncStatusMsg && (
-            <div className="text-xs font-mono text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center justify-between">
-              <span>{syncStatusMsg}</span>
+            <div className="text-xs font-mono text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center justify-between break-safe">
+              <span className="leading-relaxed">{syncStatusMsg}</span>
               <button onClick={() => setSyncStatusMsg("")} className="text-gray-400 hover:text-white text-[10px]">
                 إغلاق ✕
               </button>
