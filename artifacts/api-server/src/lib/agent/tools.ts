@@ -979,6 +979,31 @@ export const AGENT_TOOLS: AgentTool[] = [
       },
     }) as AgentTool,
   ]),
+  {
+    name: "kali_run",
+    title: "كالي المدمجة — نفّذ أمر حقيقي",
+    description:
+      "نفّذ أمر داخل بيئة كالي لينكس الحقيقية المدمجة في البرنامج (nmap sqlmap nikto hydra john hashcat aircrack tshark gobuster + python3-pip وgit لتحميل أدوات جديدة داخل البيئة). المخرجات فعلية من التنفيذ مش محاكاة.",
+    category: "platform",
+    risk: "sensitive",
+    input_schema: {
+      type: "object",
+      properties: { cmd: { type: "string", description: "الأمر اللي يتشغل داخل كالي، مثال: nmap -sV scanme.nmap.org" } },
+      required: ["cmd"],
+    },
+  },
+  {
+    name: "kali_desktop",
+    title: "ديسكتوب كالي — شغّل/اطفي/حالة",
+    description:
+      "التحكم في ديسكتوب كالي الحقيقي (Xvfb + fluxbox + x11vnc + noVNC): status بيرجع الحالة المقاسة من البورتات، start بيشغّل ويرجّع الرابط، stop بيطفّي. الأجينت بيتحرك بالماوس ويفتح أي حاجة بأوامر xdotool داخل البيئة.",
+    category: "platform",
+    risk: "sensitive",
+    input_schema: {
+      type: "object",
+      properties: { action: { type: "string", enum: ["status", "start", "stop"], description: "الحالة افتراضيًا" } },
+    },
+  },
 ];
 
 export const AGENT_TOOL_NAMES = AGENT_TOOLS.map((t) => t.name);
@@ -2145,6 +2170,38 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
             honestNote: "الأوامر دى للمالك ينفذها على سيرفره — الأداة مش بتدّعى إنها ركّبت حاجة",
           },
         );
+      }
+      case "kali_run": {
+        const { kaliRoot: kRoot, runKali: kRun } = await import("../ops/kali-env");
+        const kcmd = String(rawArgs.cmd ?? "").trim();
+        if (!kcmd) throw new Error("cmd مطلوب");
+        if (!kRoot()) {
+          return done(false, "كالي مش مستخرجة على الهَب — scripts/kali-rootfs-fetch.sh بيسحبها من فرع kali-rootfs", { missing: true });
+        }
+        const kr = await kRun(kcmd, 90_000);
+        try { recordMissionCommand(`kali: ${kcmd}`, kr.stdout.slice(0, 300)); } catch { /* سجل سالم */ }
+        return done(
+          kr.exitCode === 0,
+          kr.exitCode === 0
+            ? `كالي نفّذت فعليًا (${kr.durationMs}ms): ${kcmd.slice(0, 100)}`
+            : `الأمر خرج بكود ${kr.exitCode} — المخرجات صادقة`,
+          kr,
+        );
+      }
+      case "kali_desktop": {
+        const { kaliStatus: kStatus, startDesktop: kStart, stopDesktop: kStop } = await import("../ops/kali-env");
+        const action = String(rawArgs.action ?? "status");
+        if (action === "start") {
+          const r = await kStart();
+          return done(r.ok, r.detail, r);
+        }
+        if (action === "stop") {
+          const r = kStop();
+          return done(r.ok, r.detail, r);
+        }
+        const st = await kStatus(false);
+        const running = st.desktop?.running ?? false;
+        return done(st.present, running ? "الديسكتوب شغّال الآن (5901+6080 مفتوحين مقاس)" : st.present ? "البيئة جاهزة والديسكتوب مطفي — action:start يشغّله" : "كالي مش مستخرجة", { desktop: st.desktop });
       }
       case "integrations_status": {
         const st = integrationsStatus();
