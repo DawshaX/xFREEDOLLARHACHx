@@ -36,6 +36,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          N=$(ls /out/part-* 2>/dev/null | wc -l)
+          echo "::notice::parts=$N"
+          if [ "$N" -lt 1 ]; then
+            echo "::error::مافيش أجزاء في /out — البناء ماحسّبش أصلًا"
+            exit 1
+          fi
           mkdir -p /tmp/branchrepo && cd /tmp/branchrepo
           git init -q -b kali-rootfs
           cp /out/MANIFEST.txt /out/PACKAGES.txt /out/SHA256SUMS .
@@ -43,11 +49,22 @@ jobs:
           git config user.name "nova-builder"
           git config user.email "nova@ci.local"
           git add -A
-          git commit -qm "kali rootfs build $(cat /out/MANIFEST.txt | grep built_at)"
-          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" kali-rootfs
-          echo "✔ الفرع kali-rootfs اترفع — مقاس من نجاح الpush نفسه"
+          git commit -qm "kali rootfs build $(grep built_at /out/MANIFEST.txt | cut -d= -f2) — parts=$N"
+          PUSHED=""
+          for i in 1 2 3; do
+            if git -c http.version=HTTP/1.1 -c http.postBuffer=157286400 push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" kali-rootfs > /tmp/push.log 2>&1; then
+              echo "✔ الفرع kali-rootfs اترفع (محاولة $i) — مقاس من نجاح الpush نفسه"
+              exit 0
+            fi
+            echo "── محاولة $i فشلت، آخر السطور ──"
+            tail -6 /tmp/push.log
+            sleep 10
+          done
+          tail -3 /tmp/push.log | while IFS= read -r l; do echo "::error::push: $l"; done
+          exit 1
 
       - name: أجزاء البناء (للتنزيل اليدوي كمان)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: kali-rootfs-parts
