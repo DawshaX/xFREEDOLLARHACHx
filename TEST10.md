@@ -68,6 +68,19 @@
 - typecheck الاتنين 0 · `pnpm gates` **42/42 green** · بناء الاتنين ✓ ·
   audit-twins 3+3 ✓ · audit-connections 0 فجوات ✓ · YAML الworkflow مفحوص 0.
 
+## الدليل المقاس من CI — الصورة منشورة فعلاً
+
+- **PR #287** gates green (run 43560569103) ⇒ merged. **main `87bc5ac`**.
+- **بناء الصورة**: أول run فشل بصراحة — «repository name must be lowercase»
+  (المالك DawshaX فيه كبير) ⇒ إصلاح #288 (lowercase ref). تاني run فشل —
+  «unknown user nova» (chown قبل useradd) ⇒ إصلاح #289 (ترتيب الطبقات).
+  **run 43562866720: build=success · push=success · smoke=success** —
+  `ghcr.io/dawshax/xfreedollarhachx/nova-kali:latest` **منشورة** (الخطوات
+  مقاسة بالنجاح). verify-node skipped بتصميم (dispatch بس).
+- **ملاحظة صادقة**: أول دفعة GHCR بتبقى **private** وتوكن الجلسة من غير
+  صلاحية packages (404 من API الباكدج) — المالك يقدر يجعلها public من
+  إعدادات الباكدج أو يسحبها ب`docker login ghcr.io` مرة واحدة.
+
 ## بانتظار المالك
 
 - تشغيل جهاز الشغل على سيرفره: أمر Docker (جاهز للنسخ من مركز كالي) أو
