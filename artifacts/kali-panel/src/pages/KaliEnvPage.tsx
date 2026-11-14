@@ -13,6 +13,20 @@ import { pushNotify } from "@/lib/sse";
 const API = "/api";
 
 type HeavyTool = { present: boolean; version?: string };
+type ProvisionState = {
+  running: boolean;
+  phase: string;
+  partsDone: number;
+  partsTotal: number;
+  entries: number;
+  bytesDone: number;
+  current: string;
+  error: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  log: string[];
+  transport: string | null;
+};
 type KaliStatus = {
   present: boolean;
   prettyName?: string;
@@ -60,6 +74,8 @@ export default function KaliEnvPage() {
   const [cmd, setCmd] = useState("");
   const [execBusy, setExecBusy] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [prov, setProv] = useState<ProvisionState | null>(null);
+  const [provBusy, setProvBusy] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -79,6 +95,40 @@ export default function KaliEnvPage() {
     return () => clearInterval(iv);
   }, [load]);
   useEffect(() => { logRef.current?.scrollTo({ top: logRef.current.scrollHeight }); }, [log]);
+
+  /* TEST13 — حالة التجهيز الذاتي (الهَب بيسحب البيئة بنفسه) */
+  const loadProv = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/ops/kali/provision/status`);
+      if (r.ok) {
+        const d = (await r.json()) as { provision: ProvisionState };
+        setProv(d.provision);
+        return d.provision.running;
+      }
+    } catch { /* سالمة */ }
+    return false;
+  }, []);
+  useEffect(() => { void loadProv(); }, [loadProv]);
+  useEffect(() => {
+    const iv = setInterval(async () => {
+      const running = await loadProv();
+      if (!running) load();
+    }, 3000);
+    return () => clearInterval(iv);
+  }, [loadProv, load]);
+
+  const startProv = async () => {
+    setProvBusy(true);
+    try {
+      const r = await fetch(`${API}/ops/kali/provision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const d = (await r.json()) as { ok?: boolean; detail?: string; skipped?: boolean };
+      pushNotify(r.ok && d.ok ? "success" : "warning", d.skipped ? "كالي جاهزة بالفعل" : "تجهيز بيئة كالي", d.detail ?? `HTTP ${r.status}`);
+    } catch (e: unknown) {
+      pushNotify("error", "تجهيز بيئة كالي", e instanceof Error ? e.message : String(e));
+    }
+    setProvBusy(false);
+    await loadProv();
+  };
 
   const desktop = async (action: "start" | "stop") => {
     setBusy(true);
@@ -138,12 +188,32 @@ export default function KaliEnvPage() {
 
       {!st?.present ? (
         <div className="rounded-xl p-4" style={{ background: "rgba(255,170,0,0.05)", border: "1px solid rgba(255,170,0,0.3)" }}>
-          <p className="text-[11px] font-bold" style={{ color: "#ffaa44" }}>البيئة مش مستخرجة على السيرفر الحالي</p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-[11px] font-bold" style={{ color: "#ffaa44" }}>البيئة مش مستخرجة على السيرفر ده لسه</p>
+            <button onClick={startProv} disabled={provBusy || prov?.running === true}
+              className="text-[10px] font-black px-3 py-1.5 rounded-lg"
+              style={{ background: "rgba(68,255,136,0.12)", border: "1px solid rgba(68,255,136,0.5)", color: "#44ff88" }}>
+              {prov?.running ? "⏳ التجهيز شغال…" : provBusy ? "بدين…" : "🚀 جهّز البيئة الآن على السيرفر"}
+            </button>
+          </div>
           <p className="text-[10px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.55)" }}>
-            أمر واحد بيسحبها من فرع kali-rootfs (بناء CI الرسمي — ببث streaming بيتحقق SHA256 لكل جزء):
-            <code className="mx-1" style={{ color: "#ffdd88" }}>bash scripts/kali-rootfs-fetch.sh</code>
-            — صادق عن مكانها: مفيش بيئة وهمية هنا.
+            الضغطة دي بتجيب rootfs كالي الكاملة من فرع kali-rootfs (جيت هب = التخزين السحابي) — بيتحقق SHA256 لكل جزء وبيفك gzip مباشرة. محتاج ~17GB مساحة فاضية و20-40 دقيقة.
           </p>
+          {prov && (prov.running || prov.phase !== "idle") && (
+            <div className="mt-2 rounded-lg p-2 font-mono text-[9px]" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <div className="flex items-center justify-between" style={{ color: prov.error ? "#ff6666" : "#44ff88" }}>
+                <span>{prov.error ? `✗ ${prov.error}` : `الحالة: ${prov.phase} · ${prov.partsDone}/${prov.partsTotal || "?"} أجزاء · ${prov.entries} ملفات${prov.transport ? ` · عبر ${prov.transport}` : ""}`}</span>
+              </div>
+              <div className="mt-1 h-1.5 rounded" style={{ background: "rgba(255,255,255,0.1)" }}>
+                <div className="h-full rounded transition-all" style={{ width: `${prov.partsTotal ? Math.round((prov.partsDone / prov.partsTotal) * 100) : prov.running ? 4 : 0}%`, background: prov.error ? "#ff5555" : "linear-gradient(90deg,#ff5533,#ffaa44)" }} />
+              </div>
+              {prov.log.length > 0 && (
+                <div className="mt-1.5 max-h-24 overflow-y-auto" style={{ color: "rgba(255,255,255,0.45)" }}>
+                  {prov.log.slice(-8).map((l, i) => <div key={i} className="break-all">{l}</div>)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <>
