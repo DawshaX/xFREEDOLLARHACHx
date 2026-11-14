@@ -157,8 +157,6 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   kali_node_setup: "جهاز كالي — التركيب والربط",
   kali_run: "كالي المدمجة — نفّذ أمر حقيقي",
   kali_desktop: "ديسكتوب كالي — شغّل/اطفي/حالة",
-  kali_run: "كالي المدمجة — نفّذ أمر حقيقي",
-  kali_desktop: "ديسكتوب كالي — شغّل/اطفي/حالة",
 };
 
 /**

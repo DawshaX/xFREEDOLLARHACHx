@@ -252,6 +252,8 @@ export default function NovaAgentPro() {
   const [hw, setHw] = useState<{ cpu: number | null; mem: number | null; cores: number | null }>({ cpu: null, mem: null, cores: null });
   const [vault, setVault] = useState<number | null>(null);
   const [corpus, setCorpus] = useState<{ total: number | null; kev: number | null }>({ total: null, kev: null });
+  /* TEST12 — بيئة كالي المدمجة: شريط مقاس في مكتب الشغل بيوصل للتبويبة */
+  const [kaliEnv, setKaliEnv] = useState<{ present: boolean; packages?: number; running?: boolean; heavy?: string } | null>(null);
   const [autoState, setAutoState] = useState<{ enabled: boolean; running: boolean; cycles: number; level: string }>({
     enabled: false, running: false, cycles: 0, level: "off",
   });
@@ -577,6 +579,18 @@ export default function NovaAgentPro() {
       kev: typeof cr.data.kev === "number" ? cr.data.kev : null,
     });
 
+    /* TEST12 — بيئة كالي المدمجة: شريط مقاس في مكتب الشغل */
+    const kr = await opsFetch<{ ok?: boolean; status?: { present?: boolean; packages?: number; desktop?: { running?: boolean }; tools?: Record<string, { present?: boolean }> } }>("/ops/kali");
+    if (kr.ok && kr.data?.status) {
+      const t = kr.data.status.tools ?? {};
+      setKaliEnv({
+        present: kr.data.status.present === true,
+        packages: kr.data.status.packages,
+        running: kr.data.status.desktop?.running === true,
+        heavy: Object.entries(t).map(([k, v]) => `${k}${v.present ? "✓" : "✗"}`).join("·"),
+      });
+    } else setKaliEnv({ present: false });
+
     const nx = await opsFetch<{
       ok?: boolean;
       rootSessionId?: string;
@@ -845,6 +859,26 @@ export default function NovaAgentPro() {
                   <div>
                     <div className="text-xs font-black text-amber-300">{corpus.kev != null ? corpus.kev.toLocaleString("en") : "—"}</div>
                     <div className="text-[7px] text-white/45">KEV</div>
+                  </div>
+                </div>
+              </HudCard>
+            )}
+
+            {/* TEST12 — بيئة كالي المدمجة: القياس حي والديسكتوب يفتح من التبيبة */}
+            {kaliEnv && (
+              <HudCard
+                title="بيئة كالي المدمجة"
+                icon={Swords}
+                color="#ff5533"
+                badge={kaliEnv.present ? `${kaliEnv.packages ?? "?"} حزمة` : "غير مستخرجة"}
+                onClick={() => navigate("/kali-env")}
+              >
+                <div className="space-y-1">
+                  <div className="text-[8px] font-mono" style={{ color: kaliEnv.present ? "rgba(68,255,136,0.85)" : "rgba(255,255,255,0.4)" }}>
+                    {kaliEnv.present ? `الثقيلة: ${kaliEnv.heavy ?? "—"}` : "scripts/kali-rootfs-fetch.sh بيسحبها"}
+                  </div>
+                  <div className="text-[8px] font-mono" style={{ color: kaliEnv.running ? "#44ff88" : "rgba(255,255,255,0.4)" }}>
+                    {kaliEnv.running ? "● الديسكتوب شغّال — افتحه من التبيبة" : "الديسكتوب مطفي — التبيبة بتشغّله"}
                   </div>
                 </div>
               </HudCard>

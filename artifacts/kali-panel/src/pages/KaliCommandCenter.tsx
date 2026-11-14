@@ -528,6 +528,7 @@ function DeviceProfilePanel({ agent, profile }: { agent: AgentInfo; profile: Dee
    KALI AI v7 Command Center
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function KaliCommandCenter() {
+  const [, setLocation] = useLocation();
   const sessionId = useRef(`kali-${Date.now()}`);
 
   const [msgs,       setMsgs]       = useState<ChatMsg[]>([]);
