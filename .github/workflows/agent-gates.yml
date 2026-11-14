@@ -18,10 +18,9 @@ on:
     # أي مفعال في scripts/ يفعّل الفحص — القوائم المفصلة دي هي اللي خلّت بوابة
     # جديدة توتم في المستودع من غير ما CI يجربها.
     paths:
-      - "artifacts/api-server/src/lib/agent/**"
-      - "artifacts/api-server/src/lib/ops/**"
-      - "artifacts/api-server/src/routes/**"
-      - "artifacts/api-server/src/lib/standalone-api.ts"
+      # src/** كاملة — أي ضييق هنا معناه تغيير حي (cron/ops/routes) بيعدي بلا فحص
+      # (مقاس 2026-11-15: nova-cron.ts عدّى بلا بوابة)
+      - "artifacts/api-server/src/**"
       - "artifacts/kali-panel/src/**"
       - "scripts/**"
       - "deploy/**"
@@ -31,10 +30,9 @@ on:
     # نفس قوائم `push` بالظبط — أي ضيق هنا معناه PR يدمج من غير ما البوابات تتشغّل
     # (قِيس 2026-11-06: PR عدّل `deploy/live-update.py` وقال «no checks reported»).
     paths:
-      - "artifacts/api-server/src/lib/agent/**"
-      - "artifacts/api-server/src/lib/ops/**"
-      - "artifacts/api-server/src/routes/**"
-      - "artifacts/api-server/src/lib/standalone-api.ts"
+      # src/** كاملة — أي ضييق هنا معناه تغيير حي (cron/ops/routes) بيعدي بلا فحص
+      # (مقاس 2026-11-15: nova-cron.ts عدّى بلا بوابة)
+      - "artifacts/api-server/src/**"
       - "artifacts/kali-panel/src/**"
       - "scripts/**"
       - "deploy/**"
