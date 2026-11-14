@@ -559,7 +559,7 @@ export async function provisionKali(): Promise<{ ok: boolean; detail: string; sk
     const pipeTar = (buf: Buffer) =>
       new Promise<void>((resolve, reject) => {
         if (!tarChild) { reject(new Error("no tar child")); return; }
-        if (tarChild.exitCode !== null) { reject(new Error(`tar مات قبل ${part}: ${tarErr.slice(0, 150)}`)); return; }
+        if (tarChild.exitCode !== null) { reject(new Error(`tar مات وسط الاستخراج: ${tarErr.slice(0, 150)}`)); return; }
         const ok = tarChild.stdin.write(buf);
         if (ok) resolve();
         else tarChild.stdin.once("drain", resolve);
