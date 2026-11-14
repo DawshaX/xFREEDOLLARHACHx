@@ -69,6 +69,9 @@ RUN nuclei -update-templates -silent || true
 # مش مشغل أدوات بس. من غير NOVA_HUB_URL بتشتغل وضع الفحص الذاتي (زي الأول). ──
 RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm \
     && rm -rf /var/lib/apt/lists/*
+# TEST10 قِيس (run 43562576609): chown nova:nova كان بييجي قبل useradd ⇒
+# «unknown user nova» exit 1 — اليوزر لازم يتعمل قبل أي chown باسمه.
+RUN useradd -m -u 10001 nova
 COPY scripts/kali-node-entrypoint.sh /opt/nova/entrypoint.sh
 COPY scripts/kali-node-install.sh /opt/nova/kali-node-install.sh
 RUN chmod +x /opt/nova/entrypoint.sh /opt/nova/kali-node-install.sh \
@@ -76,7 +79,6 @@ RUN chmod +x /opt/nova/entrypoint.sh /opt/nova/kali-node-install.sh \
 
 # Non-root by default: a scanner should not need root to be useful, and the
 # platform's own gate refuses to hand out root anyway.
-RUN useradd -m -u 10001 nova
 USER nova
 WORKDIR /home/nova
 
