@@ -47,6 +47,7 @@ const START_SH = `#!/bin/sh
 # sat right there. Measured 2026-11-05 from /tmp before this line existed.
 HERE="$(cd "$(dirname "$0")" && pwd)"
 cd "$HERE" || exit 1
+PARENT="$(dirname "$HERE")"
 export NODE_ENV=production
 export HOST=0.0.0.0
 export NOVA_STATIC_DIR="$HERE/public"
@@ -65,6 +66,77 @@ mkdir -p "$HERE/state/jobs"
 # الإصلاح ده عند أول إقلاع — self-healing بلا تدخل يدوي.
 ulimit -c 0 2>/dev/null || true
 rm -f "$HERE"/core.* 2>/dev/null || true
+# ── فضي المساحة قبل الإقلاع (مقاس 2026-11-15: waifly وقفت فوق الحصة 3GB/1.5GB) ──
+# الإقلاع نفسه بيحتاج يكتب، فالتنضيف ده بيجري قبل أي node. القواعد كلها معلنة:
+#   بقايا كالي الناقصة = زبالة دايمًا (الأصل سحابي على فرع kali-rootfs)
+#   كالي كاملة + الفاضي < 250MB = مابتشتغلش في الحصة دي أصلًا — بتفضّى عشان السيرفر يقلع
+#   backups: آخر نسخة بس بتفضل
+#   لوج فوق 5MB = يتقص لـ1MB
+#   .env.txt = نسخة مفاتيح مكررة جنب .env — خطر أمني قبل ما يكون مساحة
+#   vendor الثقيلة تتشال بس لو الفاضي واقف (بتتنزل عند الطلب)
+NOVA_CLEANED=0
+for BASE in "$PARENT" "$HERE" /home/container; do
+  [ -d "$BASE" ] || continue
+  # بقايا كالي: ناقصة = تمسح دايمًا؛ كاملة بتفضل إلا لو الفاضي واقف تحت 250MB
+  KR="$BASE/kali-rootfs"
+  if [ -d "$KR" ]; then
+    PKGS=0
+    if [ -f "$KR/rootfs/var/lib/dpkg/status" ]; then
+      PKGS=$(grep -c '^Package:' "$KR/rootfs/var/lib/dpkg/status" 2>/dev/null) || PKGS=0
+    fi
+    FREE_KB=$(df -Pk "$BASE" 2>/dev/null | awk 'NR==2{print $4}') || FREE_KB=999999
+    if [ "\${PKGS:-0}" -lt 400 ] || [ "\${FREE_KB:-999999}" -lt 250000 ]; then
+      KB=$(du -sk "$KR" 2>/dev/null | cut -f1) || KB=0
+      rm -rf "$KR" 2>/dev/null || true
+      NOVA_CLEANED=$((NOVA_CLEANED + \${KB:-0}))
+      echo "[boot-clean] kali-rootfs (packages=\${PKGS:-0}) اتبحتاج \${KB:-0}KB — الأصل سحابي على فرع kali-rootfs"
+    fi
+  fi
+  # backups: آخر نسخة بس بتفضل
+  if [ -d "$BASE/backups" ]; then
+    for D in $(ls -1dt "$BASE"/backups/nova-backup-*/ 2>/dev/null | tail -n +2); do
+      KB=$(du -sk "$D" 2>/dev/null | cut -f1) || KB=0
+      rm -rf "$D" 2>/dev/null || true
+      NOVA_CLEANED=$((NOVA_CLEANED + \${KB:-0}))
+    done
+  fi
+  # بقايا الإنقاذ في /tmp
+  for T in /tmp/nova-rescue-* /tmp/nova-backup-* /tmp/nova-state-* /tmp/nova-proot-static.*; do
+    [ -e "$T" ] || continue
+    KB=$(du -sk "$T" 2>/dev/null | cut -f1) || KB=0
+    rm -rf "$T" 2>/dev/null || true
+    NOVA_CLEANED=$((NOVA_CLEANED + \${KB:-0}))
+  done
+  # لوجات فوق 5MB تتقص لآخر 1MB
+  for F in "$BASE"/logs/*.log "$BASE"/state/*.log; do
+    [ -f "$F" ] || continue
+    KB=$(du -sk "$F" 2>/dev/null | cut -f1) || KB=0
+    if [ "\${KB:-0}" -gt 5000 ]; then
+      tail -c 1048576 "$F" > "$F.trim" 2>/dev/null && mv "$F.trim" "$F" 2>/dev/null || true
+      NOVA_CLEANED=$((NOVA_CLEANED + KB - 1024))
+    fi
+  done
+  # .env.txt — نسخة مفاتيح مش مفروض تقعد جنب .env أصلًا
+  if [ -f "$BASE/.env.txt" ]; then
+    rm -f "$BASE/.env.txt" 2>/dev/null || true
+    echo "[boot-clean] .env.txt اتمسح — نسخة مفاتيح مكررة (خطر أمني مش مساحة)"
+  fi
+  # vendor الثقيلة — بس لو الفاضي واقف (بتتنزل عند الطلب الصريح)
+  if [ -d "$BASE/vendor/bin" ] && [ "\${FREE_KB:-999999}" -lt 250000 ]; then
+    for H in amass nuclei trivy trufflehog osv-scanner gobuster; do
+      if [ -f "$BASE/vendor/bin/$H" ]; then
+        KB=$(du -sk "$BASE/vendor/bin/$H" 2>/dev/null | cut -f1) || KB=0
+        rm -f "$BASE/vendor/bin/$H" 2>/dev/null || true
+        NOVA_CLEANED=$((NOVA_CLEANED + \${KB:-0}))
+      fi
+    done
+  fi
+done
+if [ "$NOVA_CLEANED" -gt 0 ]; then
+  echo "[boot-clean] اتحرر ~$((NOVA_CLEANED / 1024))MB قبل الإقلاع — القواعد المعلنة فوق، state/ والذاكرة ماتمسّوش"
+fi
+FREE_NOW=$(df -Pk "$HERE" 2>/dev/null | awk 'NR==2{print $4}')
+echo "[boot-clean] الفاضي بعد التنضيف: $((FREE_NOW / 1024))MB"
 # ── الحلقة دي هي موضوع الملف ده كله ──────────────────────────────────────────
 # boot.mjs بيراقب التطبيق، بس مافيش حاجة بتراقب boot.mjs نفسه. على بيضة
 # Pterodactyl (Waifly) العملية اللي بتخلص هنا هي العملية الرئيسية للحاوية كلها،
