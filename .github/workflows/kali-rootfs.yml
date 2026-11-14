@@ -32,36 +32,43 @@ jobs:
           RUN_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
 
-      - name: ارفع الفرع kali-rootfs
+      - name: ارفع الفرع kali-rootfs (رفع تجزيدي — جزء لكل push، الضخامة الواحدة قتلت run 43570109294)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           N=$(ls /out/part-* 2>/dev/null | wc -l)
           echo "::notice::parts=$N"
           if [ "$N" -lt 1 ]; then
-            echo "::error::مافيش أجزاء في /out — البناء ماحسّبش أصلًا"
+            echo "::error::مافيش أجزاء في /out"
             exit 1
           fi
           mkdir -p /tmp/branchrepo && cd /tmp/branchrepo
           git init -q -b kali-rootfs
           cp /out/MANIFEST.txt /out/PACKAGES.txt /out/SHA256SUMS .
-          cp /out/part-* .
           git config user.name "nova-builder"
           git config user.email "nova@ci.local"
           git add -A
-          git commit -qm "kali rootfs build $(grep built_at /out/MANIFEST.txt | cut -d= -f2) — parts=$N"
-          PUSHED=""
-          for i in 1 2 3; do
-            if git -c http.version=HTTP/1.1 -c http.postBuffer=157286400 push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" kali-rootfs > /tmp/push.log 2>&1; then
-              echo "✔ الفرع kali-rootfs اترفع (محاولة $i) — مقاس من نجاح الpush نفسه"
-              exit 0
+          git commit -qm "kali rootfs manifest — $(grep built_at /out/MANIFEST.txt | cut -d= -f2) parts=$N"
+          git -c http.version=HTTP/1.1 -c http.postBuffer=157286400 push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" kali-rootfs > /tmp/push0.log 2>&1 || { tail -4 /tmp/push0.log | while IFS= read -r l; do echo "::error::manifest push: $l"; done; exit 1; }
+          echo "✔ المانيفست اترفع"
+          i=0
+          for f in /out/part-*; do
+            i=$((i+1))
+            cp "$f" .
+            git add "$(basename "$f")"
+            git commit -qm "kali part $(basename "$f") — $i/$N"
+            OK=""
+            for try in 1 2 3; do
+              git -c http.version=HTTP/1.1 -c http.postBuffer=157286400 push -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" kali-rootfs > /tmp/push.log 2>&1 && OK=1 && break
+              sleep 8
+            done
+            if [ -z "$OK" ]; then
+              tail -3 /tmp/push.log | while IFS= read -r l; do echo "::error::push $(basename "$f"): $l"; done
+              exit 1
             fi
-            echo "── محاولة $i فشلت، آخر السطور ──"
-            tail -6 /tmp/push.log
-            sleep 10
+            echo "  ✔ $(basename "$f") ($i/$N)"
           done
-          tail -3 /tmp/push.log | while IFS= read -r l; do echo "::error::push: $l"; done
-          exit 1
+          echo "✔ كل الأجزاء ($N) اترفعت تجزيديًا — مقاس من نجاح آخر push"
 
       - name: أجزاء البناء (للتنزيل اليدوي كمان)
         if: always()
