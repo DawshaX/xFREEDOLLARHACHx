@@ -1,206 +1,228 @@
 {
   "version": 1,
-  "at": "2026-11-14T00:45:42.274Z",
+  "at": "2026-11-14T01:31:09.441Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 10000,
+  "total": 170000,
   "bySeverity": {
-    "high": 4563,
-    "medium": 4450,
-    "low": 840,
-    "unknown": 97,
-    "critical": 50
+    "high": 63503,
+    "medium": 75866,
+    "low": 7428,
+    "unknown": 6771,
+    "critical": 16371,
+    "none": 61
   },
   "byYear": {
     "1999": 1568,
-    "2000": 1233,
+    "2000": 1234,
     "2001": 1535,
-    "2002": 2355,
-    "2003": 1483,
+    "2002": 2356,
+    "2003": 1485,
     "2004": 1816,
-    "2005": 10
+    "2005": 15,
+    "2006": 3,
+    "2007": 1,
+    "2008": 5,
+    "2009": 25,
+    "2010": 49,
+    "2011": 65,
+    "2012": 85,
+    "2013": 126,
+    "2014": 29,
+    "2015": 59,
+    "2016": 106,
+    "2017": 214,
+    "2018": 849,
+    "2019": 707,
+    "2020": 822,
+    "2021": 1623,
+    "2022": 3633,
+    "2023": 20525,
+    "2024": 39223,
+    "2025": 45152,
+    "2026": 46690
   },
-  "kev": 3,
-  "epssScored": 9903,
-  "products": 3929,
+  "kev": 589,
+  "epssScored": 164826,
+  "products": 27749,
   "topProducts": [
+    {
+      "product": "linux_kernel",
+      "count": 57147
+    },
+    {
+      "product": "android",
+      "count": 5785
+    },
+    {
+      "product": "macos",
+      "count": 3413
+    },
+    {
+      "product": "windows_server_2012",
+      "count": 2990
+    },
+    {
+      "product": "chrome",
+      "count": 2845
+    },
+    {
+      "product": "windows_10_22h2",
+      "count": 2169
+    },
+    {
+      "product": "windows_10_21h2",
+      "count": 2140
+    },
+    {
+      "product": "windows_10_1809",
+      "count": 2097
+    },
+    {
+      "product": "experience_manager",
+      "count": 2002
+    },
+    {
+      "product": "debian_linux",
+      "count": 1950
+    },
+    {
+      "product": "windows_11_24h2",
+      "count": 1930
+    },
+    {
+      "product": "windows_11_23h2",
+      "count": 1860
+    },
+    {
+      "product": "harmonyos",
+      "count": 1794
+    },
+    {
+      "product": "windows_10_1607",
+      "count": 1752
+    },
+    {
+      "product": "junos",
+      "count": 1732
+    },
+    {
+      "product": "qts",
+      "count": 1664
+    },
+    {
+      "product": "gitlab",
+      "count": 1648
+    },
+    {
+      "product": "windows_server_2019",
+      "count": 1611
+    },
+    {
+      "product": "windows_server_2008",
+      "count": 1571
+    },
+    {
+      "product": "firefox",
+      "count": 1497
+    },
+    {
+      "product": "ipados",
+      "count": 1472
+    },
+    {
+      "product": "windows_server_2016",
+      "count": 1461
+    },
+    {
+      "product": "iphone_os",
+      "count": 1400
+    },
+    {
+      "product": "fedora",
+      "count": 1372
+    },
+    {
+      "product": "windows_11_22h2",
+      "count": 1308
+    },
+    {
+      "product": "enterprise_linux",
+      "count": 1302
+    },
+    {
+      "product": "windows_server_2022",
+      "count": 1213
+    },
+    {
+      "product": "windows_11_25h2",
+      "count": 1190
+    },
+    {
+      "product": "commerce",
+      "count": 1142
+    },
+    {
+      "product": "windows_11_26h1",
+      "count": 1122
+    },
     {
       "product": "irix",
       "count": 1025
     },
     {
-      "product": "linux_kernel",
-      "count": 642
+      "product": "thunderbird",
+      "count": 953
     },
     {
-      "product": "sunos",
-      "count": 622
+      "product": "windows_10_1507",
+      "count": 937
     },
     {
-      "product": "linux",
-      "count": 593
+      "product": "windows_server_2025",
+      "count": 872
+    },
+    {
+      "product": "mattermost_server",
+      "count": 864
     },
     {
       "product": "freebsd",
-      "count": 564
+      "count": 790
     },
     {
-      "product": "hp-ux",
-      "count": 560
+      "product": "digital_experience_platform",
+      "count": 768
     },
     {
-      "product": "internet_explorer",
-      "count": 497
+      "product": "windows_server_2022_23h2",
+      "count": 767
     },
     {
-      "product": "solaris",
-      "count": 470
+      "product": "emui",
+      "count": 749
     },
     {
-      "product": "http_server",
-      "count": 464
-    },
-    {
-      "product": "ios",
-      "count": 413
-    },
-    {
-      "product": "aix",
-      "count": 391
-    },
-    {
-      "product": "mac_os_x",
-      "count": 385
-    },
-    {
-      "product": "php-nuke",
-      "count": 299
-    },
-    {
-      "product": "bugzilla",
-      "count": 280
-    },
-    {
-      "product": "windows_nt",
-      "count": 243
-    },
-    {
-      "product": "ethereal",
-      "count": 230
-    },
-    {
-      "product": "mozilla",
-      "count": 229
-    },
-    {
-      "product": "windows_2000",
-      "count": 222
-    },
-    {
-      "product": "suse_linux",
-      "count": 217
-    },
-    {
-      "product": "php",
-      "count": 215
-    },
-    {
-      "product": "mandrake_linux",
-      "count": 210
-    },
-    {
-      "product": "application_server",
-      "count": 210
-    },
-    {
-      "product": "openbsd",
-      "count": 193
-    },
-    {
-      "product": "debian_linux",
-      "count": 181
-    },
-    {
-      "product": "phpbb",
-      "count": 175
-    },
-    {
-      "product": "netbsd",
-      "count": 173
-    },
-    {
-      "product": "mysql",
-      "count": 172
-    },
-    {
-      "product": "tru64",
-      "count": 159
-    },
-    {
-      "product": "sendmail",
-      "count": 158
-    },
-    {
-      "product": "vpn_3000_concentrator_series_software",
-      "count": 151
-    },
-    {
-      "product": "kde",
-      "count": 145
-    },
-    {
-      "product": "bind",
-      "count": 144
-    },
-    {
-      "product": "communicator",
-      "count": 140
-    },
-    {
-      "product": "samba",
-      "count": 134
-    },
-    {
-      "product": "ssh",
-      "count": 129
-    },
-    {
-      "product": "oracle9i",
-      "count": 125
-    },
-    {
-      "product": "optical_networking_systems_software",
-      "count": 122
-    },
-    {
-      "product": "internet_information_server",
-      "count": 115
-    },
-    {
-      "product": "unixware",
-      "count": 112
-    },
-    {
-      "product": "ie",
-      "count": 111
+      "product": "ios_xe",
+      "count": 727
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 937336,
-    "sha256": "daaca280e75af07dd2527e6ff6faf305c8d25a22870e94013ff8b42c0c707d5a"
+    "bytes": 22219235,
+    "sha256": "512f591b76172936164c0aea940dca1e413bf27b643c7f4948994376f0dc8781"
   },
-  "mode": "full",
-  "says_ar": "10000 ثغرة حقيقية · critical 50 · high 4563 · 3 مستغلّة فعلياً (KEV) · 9903 لها EPSS · 3929 منتج بـCPE · مزامنة 2026-11-14T00:45:42.274Z",
+  "mode": "deepen",
+  "says_ar": "170000 ثغرة حقيقية · critical 16371 · high 63503 · 589 مستغلّة فعلياً (KEV) · 164826 لها EPSS · 27749 منتج بـCPE · مزامنة 2026-11-14T01:31:09.441Z",
   "deepen": {
-    "nextStartIndex": 220000,
-    "windowPages": 32,
-    "walkedFrom": 156000,
+    "nextStartIndex": 380000,
+    "windowPages": 80,
+    "walkedFrom": 220000,
     "nvdTotal": 425693,
-    "coverage": 0.2772,
-    "at": "2026-11-14T00:42:34.825Z"
+    "coverage": 0.3993,
+    "at": "2026-11-14T01:31:09.442Z"
   }
 }
