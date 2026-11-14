@@ -519,7 +519,26 @@ async function gitPrepare(): Promise<{ gdir: string; ref: string } | null> {
 }
 
 /** التجهيز الكامل: SHA256SUMS → أجزاء متحققة → gunzip → tar → proot-static. */
-export async function provisionKali(): Promise<{ ok: boolean; detail: string; skipped?: boolean }> {
+/* ── وضع سحابي أولًا: التحميل المحلي لكالي على السيرفر استثناء بتأكيد مزدوج ──
+ * المقاس (2026-11-15): waifly وقفت مرتين عشان التجهيز بيحمل 15GB على حصة
+ * 1.5GB. القاعدة الجديدة: مافيش تحميل تلقائي ولا زرار عابر — التحميل المحلي
+ * محتاج NOVA_KALI_LOCAL_ALLOW=1 في .env أو confirm صريح من نادي الأداة/الroute.
+ * المخزن سحابي دايمًا (فرع kali-rootfs) والتنفيذ بيتحول للطائرة الخارجية. */
+export function kaliLocalAllowed(): boolean {
+  return process.env.NOVA_KALI_LOCAL_ALLOW === "1";
+}
+
+export async function provisionKali(opts?: { force?: boolean }): Promise<{ ok: boolean; detail: string; skipped?: boolean }> {
+  if (!kaliLocalAllowed() && !opts?.force) {
+    provision.running = false;
+    provision.phase = "blocked";
+    provision.error = null;
+    return {
+      ok: false,
+      skipped: true,
+      detail: "وضع سحابي أولًا (مقاس: التجهيز المحلي وقف waifly مرتين): المخزن على فرع kali-rootfs على GitHub والتنفيذ بيتحول تلقائيًا للطائرة الخارجية (kali_run). لو عايز نسخة محلية على السيرفر ده فعلًا — تأكيد مزدوج: ناد kali_provision بـconfirm:yes، أو حط NOVA_KALI_LOCAL_ALLOW=1 في .env",
+    };
+  }
   if (provision.running) return { ok: false, detail: "التجهيز شغال بالفعل — شوف provision/status" };
   if (kaliRoot()) return { ok: true, detail: "البيئة موجودة بالفعل — مفيش حاجة تتسحب", skipped: true };
   provision.running = true;

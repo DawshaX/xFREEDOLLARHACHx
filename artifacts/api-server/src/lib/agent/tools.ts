@@ -1008,12 +1008,15 @@ export const AGENT_TOOLS: AgentTool[] = [
     name: "kali_provision",
     title: "تجهيز كالي الذاتي على سيرفر الهَب",
     description:
-      "يجهّز بيئة كالي الكاملة (2113 حزمة — 64 جزء من فرع kali-rootfs على جيت هب) على سيرفر الهَب نفسه: SHA256 لكل جزء، استخراج tar مباشر، proot-static بيتقاس بالتشغيل. start يبدأ ويرجع فورًا، status بيرجع التقدم الحي (أجزاء/ملفات/طبقة النقل/اللوج). دي أول خطوة لو kali_run قال مش مستخرجة — بتاخد ~6 دقايق.",
+      "وضع سحابي أولًا: المخزن على فرع kali-rootfs على GitHub والتنفيذ بيتحول تلقائيًا لعقدة كالية متصلة (kali_run). التحميل المحلي على السيرفر استثناء بتأكيد مزدوج (confirm:yes) لأنه وقف سيرفرات بحصة صغيرة مرتين — لو الحصة تكفي فعلاً: 2113 حزمة · SHA256 لكل جزء · proot-static بيتقاس · ~6 دقايق. status بيرجع التقدم الحي.",
     category: "platform",
     risk: "sensitive",
     input_schema: {
       type: "object",
-      properties: { action: { type: "string", enum: ["start", "status"], description: "start افتراضيًا" } },
+      properties: {
+        action: { type: "string", enum: ["start", "status", "clear_quota"], description: "start افتراضيًا" },
+        confirm: { type: "string", description: "تأكيد مزدوج للتحميل المحلي: اكتب yes فقط لو متأكد إن حصة السيرفر تكفي ~15GB — مافيش تحميل تلقائي (وضع سحابي أولًا)" },
+      },
     },
   },
   {
@@ -2305,7 +2308,13 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
             return done(false, `حصة الكونتينر ${qGB}GB مش هتحمل التبيئة (~15GB) — الفاضي الفعلي بالحصة ${qFree}GB. التبيئة متخزنة سحابي على فرع kali-rootfs: ${agentsNow > 0 ? `${agentsNow} عقدة متصلة — kali_run هيتحول عليها تلقائيًا لو فيها كالي` : "شغّل kali_node_setup على جهازك (التخزين بره السيرفر) وkali_run هيتحول عليه تلقائيًا"}`, { quotaGB: qGB, quotaFreeGB: qFree, fleetConnected: agentsNow });
           }
         }
-        pKali().catch(() => {}); // الحالة الحية: kali_provision action:status — بياخد ~6 دقايق
+        if (String(rawArgs.confirm ?? "").trim() !== "yes" && process.env.NOVA_KALI_LOCAL_ALLOW !== "1") {
+          // سحابي أولًا — مافيش تحميل تلقائي على السيرفر أبدًا (المقاس: وقف waifly مرتين)
+          return done(false,
+            "وضع سحابي أولًا: المخزن على فرع kali-rootfs (سحابي) والتنفيذ بيتحول تلقائيًا لعقدة كالية متصلة — kali_run جربها على طول. التحميل المحلي على السيرفر ده استثناء بتأكيد مزدوج: ناد kali_provision تاني بconfirm:yes لو متأكد إن الحصة تكفي ~15GB",
+            { cloudFirst: true, confirmRequired: "yes" });
+        }
+        pKali({ force: true }).catch(() => {}); // الحالة الحية: kali_provision action:status — بياخد ~6 دقايق
         return done(true, "بدأ التجهيز الذاتي على الهَب (64 جزء — ~6 دقايق) — تابع الحالة بأداة kali_provision action:status أو شاشة /kali-env الحية", { started: true, tab: "/kali-env" });
       }
       case "state_backup": {
