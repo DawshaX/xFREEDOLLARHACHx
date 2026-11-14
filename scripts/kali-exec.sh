@@ -5,7 +5,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ROOT="${NOVA_KALI_ROOT:-$REPO_DIR/.cache/kali/rootfs}"
+ROOT="${NOVA_KALI_ROOT:-${HOME:-/home/user}/kali-rootfs/rootfs}"
+[ -f "$ROOT/etc/os-release" ] || ROOT="$REPO_DIR/.cache/kali/rootfs"
 
 if [ ! -f "$ROOT/etc/os-release" ]; then
   echo "kali-rootfs-missing: $ROOT"
