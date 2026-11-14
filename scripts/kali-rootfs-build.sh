@@ -52,6 +52,19 @@ for pkg in "${EXTRA[@]}"; do
   fi
 done
 
+echo "== [3.5/6] HEAVY — burpsuite + owasp-zap + metasploit-framework (طلب المالك الصريح) =="
+HEAVY=(default-jre-headless metasploit-framework owasp-zap burpsuite seclists)
+FAILED_HEAVY=()
+for pkg in "${HEAVY[@]}"; do
+  if apt-get install -y --no-install-recommends "$pkg" > /tmp/apt-heavy-$pkg.log 2>&1; then
+    echo "  ✓ $pkg ($(dpkg -s "$pkg" 2>/dev/null | grep ^Version | cut -d" " -f2))"
+  else
+    echo "  ✗ $pkg — الخطأ بيتطلع annotation بصراحة"
+    grep -E "^E: " /tmp/apt-heavy-$pkg.log | head -2 | while IFS= read -r l; do echo "::error::HEAVY $pkg: $l"; done
+    FAILED_HEAVY+=("$pkg")
+  fi
+done
+
 echo "== [4/6] proot-static (حماية توافق glibc مع السانبوكس — best-effort) =="
 # قِيس: الاستدعاء بدون توكن بيرجع rate-limit من IP الRunner المشترك ⇒ لازم
 # Authorization بتوكن الworkflow. والتحقق الحقيقي: تشغيل --version نفسها.
@@ -73,6 +86,15 @@ rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /root/.cache 2>/dev/nu
   echo "commit=${RUN_SHA:-unknown}"
   echo "run_id=${RUN_ID:-unknown}"
   echo "failed_extra=${FAILED_EXTRA[*]:-ولا حاجة}"
+  echo "failed_heavy=${FAILED_HEAVY[*]:-ولا حاجة}"
+  echo "-- heavy measured (من الداخل) --"
+  dpkg -s metasploit-framework 2>/dev/null | grep ^Version || echo "metasploit: n/a"
+  dpkg -s owasp-zap 2>/dev/null | grep ^Version || echo "zap: n/a"
+  dpkg -s burpsuite 2>/dev/null | grep ^Version || echo "burp: n/a"
+  dpkg -s seclists 2>/dev/null | grep ^Version || echo "seclists: n/a"
+  ls -la /usr/bin/msfconsole /usr/bin/owasp-zap /usr/bin/burpsuite 2>/dev/null || true
+  java -version 2>&1 | head -1 || echo "java: n/a"
+  ls /usr/share/seclists/ 2>/dev/null | head -4 || true
   echo "proot_static=$([ -x /usr/local/bin/proot-static ] && echo yes || echo no)"
   echo "-- measured versions (من الداخل) --"
   nmap --version 2>/dev/null | head -1 || echo "nmap: n/a"
