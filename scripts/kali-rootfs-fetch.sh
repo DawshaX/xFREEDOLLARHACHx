@@ -13,6 +13,7 @@ BRANCH="${NOVA_KALI_BRANCH:-kali-rootfs}"
 REPO_SLUG="${NOVA_KALI_REPO_SLUG:-DawshaX/xFREEDOLLARHACHx}"
 DEST="${NOVA_KALI_ROOT:-${HOME:-/home/user}/kali-rootfs/rootfs}"
 TMP_PART="/tmp/kali-part.tmp"
+trap 'rm -rf "$GDIR" "$TMP_PART" /tmp/kali-files.* 2>/dev/null' EXIT
 TOKEN=$(gh auth token 2>/dev/null || true)
 URL="https://github.com/${REPO_SLUG}.git"
 [ -n "$TOKEN" ] && URL="https://x-access-token:${TOKEN}@github.com/${REPO_SLUG}.git"
@@ -78,8 +79,6 @@ with d.stream_reader(sys.stdin.buffer) as r:
 " | tar -xf - -C "$DEST"
 TARST=$?
 [ $TARST -eq 0 ] || { echo "✗ tar خرج بكود $TARST — مفيش مساحة؟ df -h / وشوف"; exit 6; }
-rm -rf "$GDIR" "$TMP_PART"
-
 echo "── [5/5] تحقق مقاس ──"
 PRETTY=$(grep PRETTY_NAME "$DEST/etc/os-release" | cut -d'"' -f2)
 echo "   PRETTY_NAME: $PRETTY"
