@@ -1,6 +1,6 @@
 {
   "measured": true,
-  "at": "2026-11-15T09:44:13.798Z",
+  "at": "2026-11-15T13:55:38.726Z",
   "total": 425784,
   "bySeverity": {
     "medium": 182458,
@@ -13,7 +13,7 @@
   "kev": 1781,
   "epssScored": 406185,
   "products": 81948,
-  "mode": "deepen",
+  "mode": "full",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
@@ -42,24 +42,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2019-11510",
-      "cvss": 10,
-      "sev": "critical",
-      "desc": "In Pulse Secure Pulse Connect Secure (PCS) 8.2 before 8.2R12.1, 8.3 before 8.3R7.1, and 9.0 before 9.0R3.4, an unauthenticated remote attacker can send a specially crafted URI to perform an arbitrary file reading vulnerability .",
-      "cwe": [
-        "CWE-22"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2019-05-08T17:29:00.630",
-      "products": [
-        "connect_secure",
-        "connect_secure",
-        "connect_secure"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2021-44228",
       "cvss": 10,
       "sev": "critical",
@@ -76,6 +58,24 @@
         "6bk1602-0aa12-0tp0_firmware",
         "6bk1602-0aa22-0tp0_firmware",
         "6bk1602-0aa32-0tp0_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2019-11510",
+      "cvss": 10,
+      "sev": "critical",
+      "desc": "In Pulse Secure Pulse Connect Secure (PCS) 8.2 before 8.2R12.1, 8.3 before 8.3R7.1, and 9.0 before 9.0R3.4, an unauthenticated remote attacker can send a specially crafted URI to perform an arbitrary file reading vulnerability .",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2019-05-08T17:29:00.630",
+      "products": [
+        "connect_secure",
+        "connect_secure",
+        "connect_secure"
       ],
       "refs": []
     },
@@ -1733,132 +1733,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2014-6271",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "GNU Bash through 4.3 processes trailing strings after function definitions in the values of environment variables, which allows remote attackers to execute arbitrary code via a crafted environment, as demonstrated by vectors involving the ForceCommand feature ",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2014-09-24T18:48:04.477",
-      "products": [
-        "bash",
-        "eos",
-        "eos"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2015-1635",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "HTTP.sys in Microsoft Windows 7 SP1, Windows Server 2008 R2 SP1, Windows 8, Windows 8.1, and Windows Server 2012 Gold and R2 allows remote attackers to execute arbitrary code via crafted HTTP requests, aka \"HTTP.sys Remote Code Execution Vulnerability.\"",
-      "cwe": [
-        "CWE-94"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2015-04-14T20:59:01.263",
-      "products": [
-        "windows_7",
-        "windows_8",
-        "windows_8.1"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2017-5638",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "The Jakarta Multipart parser in Apache Struts 2 2.3.x before 2.3.32 and 2.5.x before 2.5.10.1 has incorrect exception handling and error-message generation during file-upload attempts, which allows remote attackers to execute arbitrary commands via a crafted C",
-      "cwe": [
-        "CWE-755"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2017-03-11T02:59:00.150",
-      "products": [
-        "struts",
-        "struts",
-        "storwize_v3500_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2017-9841",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Util/PHP/eval-stdin.php in PHPUnit before 4.8.28 and 5.x before 5.6.3 allows remote attackers to execute arbitrary PHP code via HTTP POST data beginning with a \"<?php \" substring, as demonstrated by an attack on a site with an exposed /vendor folder, i.e., ext",
-      "cwe": [
-        "CWE-94"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2017-06-27T17:29:00.177",
-      "products": [
-        "phpunit",
-        "phpunit",
-        "communications_diameter_signaling_router"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2019-0708",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "A remote code execution vulnerability exists in Remote Desktop Services formerly known as Terminal Services when an unauthenticated attacker connects to the target system using RDP and sends specially crafted requests, aka 'Remote Desktop Services Remote Code ",
-      "cwe": [
-        "CWE-416"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2019-05-16T19:29:00.427",
-      "products": [
-        "windows_7",
-        "windows_server_2008",
-        "windows_server_2008"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2019-19781",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "An issue was discovered in Citrix Application Delivery Controller (ADC) and Gateway 10.5, 11.1, 12.0, 12.1, and 13.0. They allow Directory Traversal.",
-      "cwe": [
-        "CWE-22"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2019-12-27T14:15:12.070",
-      "products": [
-        "application_delivery_controller_firmware",
-        "application_delivery_controller_firmware",
-        "application_delivery_controller_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2020-5902",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "In BIG-IP versions 15.0.0-15.1.0.3, 14.1.0-14.1.2.5, 13.1.0-13.1.3.3, 12.1.0-12.1.5.1, and 11.6.1-11.6.5.1, the Traffic Management User Interface (TMUI), also referred to as the Configuration utility, has a Remote Code Execution (RCE) vulnerability in undisclo",
-      "cwe": [
-        "CWE-22"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2020-07-01T15:15:15.360",
-      "products": [
-        "big-ip_access_policy_manager",
-        "big-ip_access_policy_manager",
-        "big-ip_access_policy_manager"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2021-1498",
       "cvss": 9.8,
       "sev": "critical",
@@ -2058,6 +1932,150 @@
       "refs": []
     },
     {
+      "id": "CVE-2014-6271",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "GNU Bash through 4.3 processes trailing strings after function definitions in the values of environment variables, which allows remote attackers to execute arbitrary code via a crafted environment, as demonstrated by vectors involving the ForceCommand feature ",
+      "cwe": [
+        "CWE-78"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2014-09-24T18:48:04.477",
+      "products": [
+        "bash",
+        "eos",
+        "eos"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2015-1635",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "HTTP.sys in Microsoft Windows 7 SP1, Windows Server 2008 R2 SP1, Windows 8, Windows 8.1, and Windows Server 2012 Gold and R2 allows remote attackers to execute arbitrary code via crafted HTTP requests, aka \"HTTP.sys Remote Code Execution Vulnerability.\"",
+      "cwe": [
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2015-04-14T20:59:01.263",
+      "products": [
+        "windows_7",
+        "windows_8",
+        "windows_8.1"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2017-5638",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "The Jakarta Multipart parser in Apache Struts 2 2.3.x before 2.3.32 and 2.5.x before 2.5.10.1 has incorrect exception handling and error-message generation during file-upload attempts, which allows remote attackers to execute arbitrary commands via a crafted C",
+      "cwe": [
+        "CWE-755"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2017-03-11T02:59:00.150",
+      "products": [
+        "struts",
+        "struts",
+        "storwize_v3500_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2017-9841",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Util/PHP/eval-stdin.php in PHPUnit before 4.8.28 and 5.x before 5.6.3 allows remote attackers to execute arbitrary PHP code via HTTP POST data beginning with a \"<?php \" substring, as demonstrated by an attack on a site with an exposed /vendor folder, i.e., ext",
+      "cwe": [
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2017-06-27T17:29:00.177",
+      "products": [
+        "phpunit",
+        "phpunit",
+        "communications_diameter_signaling_router"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2019-0708",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A remote code execution vulnerability exists in Remote Desktop Services formerly known as Terminal Services when an unauthenticated attacker connects to the target system using RDP and sends specially crafted requests, aka 'Remote Desktop Services Remote Code ",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2019-05-16T19:29:00.427",
+      "products": [
+        "windows_7",
+        "windows_server_2008",
+        "windows_server_2008"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2019-19781",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "An issue was discovered in Citrix Application Delivery Controller (ADC) and Gateway 10.5, 11.1, 12.0, 12.1, and 13.0. They allow Directory Traversal.",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2019-12-27T14:15:12.070",
+      "products": [
+        "application_delivery_controller_firmware",
+        "application_delivery_controller_firmware",
+        "application_delivery_controller_firmware"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2020-5902",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "In BIG-IP versions 15.0.0-15.1.0.3, 14.1.0-14.1.2.5, 13.1.0-13.1.3.3, 12.1.0-12.1.5.1, and 11.6.1-11.6.5.1, the Traffic Management User Interface (TMUI), also referred to as the Configuration utility, has a Remote Code Execution (RCE) vulnerability in undisclo",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2020-07-01T15:15:15.360",
+      "products": [
+        "big-ip_access_policy_manager",
+        "big-ip_access_policy_manager",
+        "big-ip_access_policy_manager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2022-22954",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "VMware Workspace ONE Access and Identity Manager contain a remote code execution vulnerability due to server-side template injection. A malicious actor with network access can trigger a server-side template injection that may result in remote code execution.",
+      "cwe": [
+        "CWE-94"
+      ],
+      "kev": true,
+      "epss": 0.99998,
+      "pub": "2022-04-11T20:15:19.890",
+      "products": [
+        "identity_manager",
+        "identity_manager",
+        "identity_manager"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2012-1823",
       "cvss": 9.8,
       "sev": "critical",
@@ -2108,24 +2126,6 @@
         "ds-2cd2032-i_firmware",
         "ds-2cd2112-i_firmware",
         "ds-2cd2132-i_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2022-22954",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "VMware Workspace ONE Access and Identity Manager contain a remote code execution vulnerability due to server-side template injection. A malicious actor with network access can trigger a server-side template injection that may result in remote code execution.",
-      "cwe": [
-        "CWE-94"
-      ],
-      "kev": true,
-      "epss": 0.99998,
-      "pub": "2022-04-11T20:15:19.890",
-      "products": [
-        "identity_manager",
-        "identity_manager",
-        "identity_manager"
       ],
       "refs": []
     },
@@ -2269,24 +2269,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2018-7600",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Drupal before 7.58, 8.x before 8.3.9, 8.4.x before 8.4.6, and 8.5.x before 8.5.1 allows remote attackers to execute arbitrary code because of an issue affecting multiple subsystems with default or common module configurations.",
-      "cwe": [
-        "CWE-20"
-      ],
-      "kev": true,
-      "epss": 0.99991,
-      "pub": "2018-03-29T07:29:00.260",
-      "products": [
-        "drupal",
-        "drupal",
-        "drupal"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2023-29300",
       "cvss": 9.8,
       "sev": "critical",
@@ -2301,6 +2283,24 @@
         "coldfusion",
         "coldfusion",
         "coldfusion"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2018-7600",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Drupal before 7.58, 8.x before 8.3.9, 8.4.x before 8.4.6, and 8.5.x before 8.5.1 allows remote attackers to execute arbitrary code because of an issue affecting multiple subsystems with default or common module configurations.",
+      "cwe": [
+        "CWE-20"
+      ],
+      "kev": true,
+      "epss": 0.99991,
+      "pub": "2018-03-29T07:29:00.260",
+      "products": [
+        "drupal",
+        "drupal",
+        "drupal"
       ],
       "refs": []
     },
@@ -8680,6 +8680,22 @@
       "refs": []
     },
     {
+      "id": "CVE-2016-4171",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Unspecified vulnerability in Adobe Flash Player 21.0.0.242 and earlier allows remote attackers to execute arbitrary code via unknown vectors, as exploited in the wild in June 2016.",
+      "cwe": [],
+      "kev": true,
+      "epss": 0.20211,
+      "pub": "2016-06-16T14:59:51.017",
+      "products": [
+        "flash_player",
+        "enterprise_linux_desktop",
+        "enterprise_linux_desktop"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-48939",
       "cvss": 9.8,
       "sev": "critical",
@@ -8693,22 +8709,6 @@
       "products": [
         "icagenda",
         "icagenda"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2016-4171",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Unspecified vulnerability in Adobe Flash Player 21.0.0.242 and earlier allows remote attackers to execute arbitrary code via unknown vectors, as exploited in the wild in June 2016.",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.20055,
-      "pub": "2016-06-16T14:59:51.017",
-      "products": [
-        "flash_player",
-        "enterprise_linux_desktop",
-        "enterprise_linux_desktop"
       ],
       "refs": []
     },
@@ -10311,24 +10311,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2018-13379",
-      "cvss": 9.1,
-      "sev": "critical",
-      "desc": "An Improper Limitation of a Pathname to a Restricted Directory (\"Path Traversal\") in Fortinet FortiOS 6.0.0 to 6.0.4, 5.6.3 to 5.6.7 and 5.4.6 to 5.4.12 and FortiProxy 2.0.0, 1.2.0 to 1.2.8, 1.1.0 to 1.1.6, 1.0.0 to 1.0.7 under SSL VPN web portal allows an una",
-      "cwe": [
-        "CWE-22"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2019-06-04T21:29:00.233",
-      "products": [
-        "fortiproxy",
-        "fortiproxy",
-        "fortios"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2021-34473",
       "cvss": 9.1,
       "sev": "critical",
@@ -10343,6 +10325,24 @@
         "exchange_server",
         "exchange_server",
         "exchange_server"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2018-13379",
+      "cvss": 9.1,
+      "sev": "critical",
+      "desc": "An Improper Limitation of a Pathname to a Restricted Directory (\"Path Traversal\") in Fortinet FortiOS 6.0.0 to 6.0.4, 5.6.3 to 5.6.7 and 5.4.6 to 5.4.12 and FortiProxy 2.0.0, 1.2.0 to 1.2.8, 1.1.0 to 1.1.6, 1.0.0 to 1.0.7 under SSL VPN web portal allows an una",
+      "cwe": [
+        "CWE-22"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2019-06-04T21:29:00.233",
+      "products": [
+        "fortiproxy",
+        "fortiproxy",
+        "fortios"
       ],
       "refs": []
     },
@@ -12170,7 +12170,7 @@
       "desc": "Unspecified vulnerability in the TrueType font parsing engine in win32k.sys in the kernel-mode drivers in Microsoft Windows XP SP2 and SP3, Windows Server 2003 SP2, Windows Vista SP2, Windows Server 2008 SP2, R2, and R2 SP1, and Windows 7 Gold and SP1 allows r",
       "cwe": [],
       "kev": true,
-      "epss": 0.78138,
+      "epss": 0.78285,
       "pub": "2011-11-04T21:55:04.693",
       "products": [
         "windows_7",
@@ -12323,7 +12323,7 @@
         "CWE-787"
       ],
       "kev": true,
-      "epss": 0.73693,
+      "epss": 0.73872,
       "pub": "2013-11-12T14:35:11.713",
       "products": [
         "windows_7",
@@ -13870,5 +13870,5 @@
       "refs": []
     }
   ],
-  "says_ar": "425784 ثغرة حقيقية من NVD · 1781 مستغلّة فعلياً (KEV) · 81948 منتج · مزامنة 2026-11-15T09:44:13.798Z"
+  "says_ar": "425784 ثغرة حقيقية من NVD · 1781 مستغلّة فعلياً (KEV) · 81948 منتج · مزامنة 2026-11-15T13:55:38.726Z"
 }
