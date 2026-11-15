@@ -70,6 +70,7 @@ const STRUCTURAL_GATES = [
   ["scripts/ops-selftest.mjs", "scope gate, ops gate, throttle, evidence chain"],
   ["scripts/typecheck-ratchet.mjs", "no new type errors"],
   ["scripts/check-mirror-coverage.mjs", "mirror coverage: وعد المكنة ⊆ ليستا الباني ⊆ المانيفست اللي اتنشر"],
+  ["scripts/check-kali-node-installer.mjs", "kali node installer: المدمج في الحزمة = الكانوني في scripts/ حرفيًا"],
 ];
 
 const gates = fast ? [...AGENT_GATES] : [...AGENT_GATES, ...STRUCTURAL_GATES];

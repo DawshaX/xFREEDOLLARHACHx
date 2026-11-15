@@ -150,6 +150,29 @@ jobs:
           echo "dig: $(command -v dig || echo missing) · whois: $(command -v whois || echo missing) · jq: $(command -v jq || echo missing)"
           echo "::notice::active scanners are intentionally absent on GitHub runners (source IP = GitHub). Use a permanent node for those."
 
+      # ── Kali pre-warm (TEST22) ──────────────────────────────────────────────
+      # نوفا بتثبت كالي على العقدة بنفسها — بلا أي صورة محمّلة على السيرفر ولا
+      # أي جهاز للمالك: المُثبِّت يسحب الـrootfs من فرع kali-rootfs (سحابي،
+      # SHA256 لكل جزء، tar streaming) وproot-static من فرع kali-static.
+      # بعد التثبيت kali_run بيتحول على العقدة تلقائيًا (MODE_PROOT): أوامر
+      # الهَب للعقدة كلها بتبدأ بـnode/grep — متوافقة مع الallowlist المقصودة
+      # أدناه، والماسحات النشطة مش بتتركب هنا على مستوى النظام أبدًا (كالي
+      # بتعيش جوه rootfs proot على $HOME — طبقة تشغيل مؤقتة زي TEST19).
+      # الدليل المقاس حي (2026-11-15): 64 جزء × 90MB · 2113 حزمة · nmap 7.991
+      # داخل proot · ~7 دقايق على المسار البطيء.
+      - name: Pre-warm Kali rootfs on the node (cloud-only, ~7 min, best effort)
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/kali-node-install.mjs "$HOME/kali-rootfs/rootfs" || \
+            echo "::warning::kali pre-warm skipped this wave — kali_run على العقدة هيثبته بنفسه أول ما ينطلب (من فرع kali-rootfs)"
+          if [ -f "$HOME/kali-rootfs/.kali-node-installed" ]; then
+            echo "::notice::kali ready on node — $(head -1 "$HOME/kali-rootfs/.kali-node-installed")"
+          fi
+
       - name: Resolve the hub token
         if: steps.gate.outputs.run == 'true'
         env:
