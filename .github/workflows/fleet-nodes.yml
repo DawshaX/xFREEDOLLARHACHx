@@ -66,6 +66,11 @@ jobs:
         env:
           INPUT_NODES: ${{ github.event.inputs.nodes }}
           GITHUB_TOKEN: ${{ github.token }}
+          # TEST34 — الـ run اللي بيحسب لازم يعرف نفسه عشان مايحسبش ضد نفسه.
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          # TEST34 — FLEET_NODES بقى مقروء فعلًا (كان متبعت ومش مستخدم،
+          # والرقم 19 كان hardcoded في سطر النداء فالمتغير مكانش بيعمل حاجة).
+          FLEET_NODES: ${{ vars.FLEET_NODES }}
           VAR_NODES: ${{ vars.FLEET_NODES }}
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
           EVENT: ${{ github.event_name }}
@@ -113,7 +118,11 @@ jobs:
             # TEST33 — ميزانية السلوت (مقاس حي 10:39Z: occupied=23 → nodes=0 سكب ذاتي):
             # الموجة المجدولة/ب-push متكدّدش فوق الموجات الحية — قرار المالك 19/19
             # محفوظ بالسقف (occupied=0 → nodes=19)، اللي اتمنع هو التكدس اللي جوّع CI.
-            n="$(node scripts/fleet-slot-budget.mjs 19 1 | tail -1 | grep -oE '[0-9]+' || true)"
+            # TEST34 — WANTED من FLEET_NODES (افتراضي 19)، مش رقم مكتوب في السطر.
+            WANT="${FLEET_NODES:-19}"
+            case "$WANT" in ''|*[!0-9]*) WANT=19 ;; esac
+            if [ "$WANT" -gt 19 ]; then WANT=19; fi
+            n="$(node scripts/fleet-slot-budget.mjs "$WANT" 1 | tail -1 | grep -oE '[0-9]+' || true)"
             case "$n" in ''|*[!0-9]*) n=0 ;; esac
           fi
           echo "nodes=$n" >> "$GITHUB_OUTPUT"
