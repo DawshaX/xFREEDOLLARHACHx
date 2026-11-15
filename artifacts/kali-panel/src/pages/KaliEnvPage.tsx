@@ -36,6 +36,7 @@ type KaliNodes = {
   hub: { kali: boolean; packages: number };
   nodes: KaliNodeRow[];
   tools?: { from: string; tools: Record<string, { present: boolean; version?: string }>; sysinfo?: { packages: number; executables: number; kaliGroups: string[] } } | null;
+  stats?: { total: number; ok: number; fail: number; last: { at: string; plane: string; cmd: string; ok: boolean; bytes: number } | null; byPlane: Record<string, number> } | null;
   install: KaliNodeInstall;
   probedAt: string;
 };
@@ -492,6 +493,26 @@ export default function KaliEnvPage() {
               {live.exitCode === null ? "البث اتقطع" : `exit=${live.exitCode} · ${live.durationMs ?? 0}ms`} — النتيجة كاملة في الطرفية تحت
             </p>
           )}
+        </div>
+      )}
+
+      {/* TEST29 — إحصائيات الشغل الحقيقي: عدّاد من أداة التسجيل — مش ادعاء */}
+      {nodes?.stats && nodes.stats.total > 0 && (
+        <div className="rounded-xl p-3" style={{ background: "rgba(255,170,68,0.04)", border: "1px solid rgba(255,170,68,0.3)" }}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-[11px] font-black" style={{ color: "#ffaa44" }}>📊 إحصائيات الشغل الحقيقي على كالي — عدّاد من كل تنفيذ فعلًا</p>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,170,68,0.1)", color: "#ffc76b" }}>
+              {nodes.stats.total} تنفيذ · ✓{nodes.stats.ok} · ✗{nodes.stats.fail}
+            </span>
+          </div>
+          {nodes.stats.last && (
+            <p className="text-[9px] font-mono mt-1.5 break-all" style={{ color: "rgba(255,255,255,0.55)" }}>
+              آخر تنفيذ: <b style={{ color: nodes.stats.last.ok ? "#44ff88" : "#ff8888" }}>{nodes.stats.last.cmd.slice(0, 90)}</b> — على {nodes.stats.last.plane} · {new Date(nodes.stats.last.at).toLocaleTimeString("en-GB")}
+            </p>
+          )}
+          <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+            {Object.entries(nodes.stats.byPlane).map(([p, n]) => `${p}: ${n}`).join(" · ") || "—"} — كل تنفيذ بيتسجل من نواة الاتصال الموحدة (هَب أو عقدة).
+          </p>
         </div>
       )}
 

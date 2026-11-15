@@ -46,6 +46,7 @@ export async function kaliAnywhereExecStream(
   if (!cmd.trim()) return null;
   if (kaliRoot()) {
     const r = await runKali(cmd, timeoutMs, onData);
+    try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane("hub", cmd, r.exitCode === 0, r.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
     return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode, durationMs: r.durationMs, plane: "الهَب — كالي المدمجة (rootfs + proot)" };
   }
   const agents = getConnectedAgentList().filter(isLinuxFleetNode);
@@ -55,6 +56,7 @@ export async function kaliAnywhereExecStream(
     if (mode !== "MODE_BARE" && mode !== "MODE_PROOT") continue;
     const rr = await execStreamOnLocalAgent(remoteRunCmdStream(cmd, mode, timeoutMs), a.id, timeoutMs + 10_000, onData);
     if (!rr) continue;
+    try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane(a.hostname, cmd, rr.exitCode === 0, rr.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
     return {
       stdout: rr.stdout,
       stderr: rr.stderr,
@@ -71,6 +73,7 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise
   if (!cmd.trim()) return null;
   if (kaliRoot()) {
     const r = await runKali(cmd, timeoutMs);
+    try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane("hub", cmd, r.exitCode === 0, r.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
     return { ...r, plane: "الهَب — كالي المدمجة (rootfs + proot)" };
   }
   const agents = getConnectedAgentList().filter(isLinuxFleetNode);
@@ -80,6 +83,7 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise
     if (mode !== "MODE_BARE" && mode !== "MODE_PROOT") continue;
     const rr = await execOnLocalAgent(remoteRunCmd(cmd, mode, timeoutMs), a.id, timeoutMs + 10_000);
     if (!rr) continue;
+    try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane(a.hostname, cmd, rr.exitCode === 0, rr.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
     return {
       stdout: rr.stdout,
       stderr: rr.stderr,
