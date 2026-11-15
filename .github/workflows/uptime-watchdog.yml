@@ -186,6 +186,14 @@ jobs:
       - name: checkout (the deploy probe)
         uses: actions/checkout@v4
 
+      # قاعدة stateful (مقاس في backend-health: run قفط في الصف بياخد على commit قديم
+        # ويرجع يكتب الحالة الغريمة فوق الجديدة) — نبدأ من رأس main قبل ما نقيس ونكتب.
+      - name: move to the current origin/main (a queued run starts on a stale commit)
+        run: |
+          git fetch --prune origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+          git log -1 --format='deploy probe on %h · %s'
+
       - name: deploy freshness — force update + restart when the running code is older than the published bundle
         if: always()
         env:
