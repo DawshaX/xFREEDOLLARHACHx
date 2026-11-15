@@ -17,7 +17,10 @@ const PROJECT =
   (import.meta.env?.VITE_NOVA_SUPABASE_PROJECT as string | undefined) || "dbaaclqycsiefjwjfavf";
 export const BACKEND_URL = `https://${PROJECT}.supabase.co/functions/v1/ops-api`;
 /** publishable/anon — safe in a browser bundle by design */
+// 2026-11-15: overridable so a fork never inherits this project's key.
+// Set VITE_NOVA_SUPABASE_ANON in the build env to point at your own project.
 const ANON =
+  (import.meta.env?.VITE_NOVA_SUPABASE_ANON as string | undefined) ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRiYWFjbHF5Y3NpZWZqd2pmYXZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3OTg2MzUsImV4cCI6MjEwOTM3NDYzNX0.Xl9wkwocQctksHXZJiugpj29JD_9O1q-_ztDNfU42gA";
 
 const HEADERS = { apikey: ANON, authorization: `Bearer ${ANON}`, "content-type": "application/json" };

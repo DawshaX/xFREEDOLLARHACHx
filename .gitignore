@@ -155,4 +155,14 @@ state/proactive-log.json
 state/state-github-backup.json
 state/state-prune.json
 state/toolchain-provision.json
-state/kali_node_probes_v1.json
+# ── 2026-11-15: runtime artifacts that must never be committed ────────────────
+# Downloaded security tool binaries (hundreds of MB, platform-specific, and a
+# supply-chain surface if a stale one is committed). Provisioned at runtime by
+# scripts/toolchain-provision.mjs.
+artifacts/api-server/vendor/bin/
+artifacts/api-server/vendor/
+# Live daemon state — rewritten every 15 minutes by the brain loop, so committing
+# it produces a meaningless diff on every run and can leak operational data.
+artifacts/api-server/state/
+state/
+*.log

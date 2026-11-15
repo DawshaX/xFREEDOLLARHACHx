@@ -634,6 +634,21 @@ server.listen(port, host, () => {
     logger.info("Autonomous background daemon disabled by NOVA_AUTONOMOUS_DAEMON=0");
   }
 
+  // 2026-11-15: say out loud when the execution plane is running without a
+  // token. In that mode the ops gate falls back to a same-origin check, which
+  // stops drive-by scanners but is NOT authentication — a raw client can forge
+  // the header. Every public deployment should set NOVA_EXEC_TOKEN.
+  if (!(process.env.NOVA_EXEC_TOKEN || "").trim() && process.env.NOVA_OPEN_OPS !== "1") {
+    logger.warn(
+      "SECURITY: NOVA_EXEC_TOKEN is not set. Execution routes (/api/exec, /api/processes, " +
+        "/api/kali-terminal, /api/local-agent, /api/kali-env) are protected only by a " +
+        "same-origin check, which is a speed bump, not authentication. Set NOVA_EXEC_TOKEN " +
+        "before exposing this server publicly.",
+    );
+  }
+
+  logger.info("24/7 Autonomous Background Daemon & Cloud Brain State initialized");
+
   scheduleGC();
 });
 
