@@ -83,6 +83,7 @@ import { broadcastEvent } from "../lib/ws-hub";
 import { createPushNotification } from "../lib/push-hub";
 import { getConnectedAgentList, execOnLocalAgent } from "./local-agent";
 import { KALI_NODE_PROBE, remoteWriteCmd, remoteRunCmd } from "../lib/ops/kali-node-installer";
+import { kaliAnywhereExec } from "../lib/ops/kali-anywhere";
 
 const router = Router();
 
@@ -819,36 +820,22 @@ router.post("/ops/kali/exec", async (req: Request, res: Response) => {
     res.status(400).json({ ok: false, error: "cmd_required" });
     return;
   }
-  // TEST24 — الطاير التلقائي للطايرة السحابية: لو مافيش كالي على الهَب، نفس الأمر
-  // بيتنفّذ حرفيًا على أول عقدة كالي سحابية (نفس قناة الأجينت المقيّسة) — الطرفية
-  // في الصفحة بتشتغل دايمًا، والطايرة بتظهر في الرد (plane).
-  if (!kaliRoot()) {
-    const agents = getConnectedAgentList().filter(isLinuxFleetNode);
-    for (const a of agents) {
-      const probe = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
-      const mode = probe ? String(probe.stdout).trim() : "";
-      if (mode !== "MODE_BARE" && mode !== "MODE_PROOT") continue;
-      const rr = await execOnLocalAgent(remoteRunCmd(cmd, mode, 60_000), a.id, 70_000);
-      if (!rr) continue;
-      const plane = `${a.hostname} — عقدة كالي سحابية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
-      try {
-        createPushNotification({ kind: "ops", title: rr.exitCode === 0 ? "🖥️ كالي نفّذت أمر حقيقي (عقدة سحابية)" : "⚠️ أمر كالي خرج بكود خطأ", body: `${plane}: ${cmd.slice(0, 120)}`, link: "/kali-env" });
-      } catch { /* الإشعار مش هيوقف النتيجة */ }
-      res.json({ stdout: rr.stdout, stderr: rr.stderr, exitCode: rr.exitCode, durationMs: rr.durationMs, plane });
-      return;
-    }
-    res.status(404).json({
-      ok: false,
-      error: "kali_rootfs_missing",
-      says_ar: "مافيش كالي على الهَب ولا عقدة سحابية جاهزة متصلة دلوقتي — موجة fleet-nodes بتحط عقد كل 5 ساعات (كالي بتتثبت عليها تلقائيًا)، أو دوس «ثبّت كالي على أول عقدة» فوق",
-    });
+  // TEST24/25 — الاتصالات كلها واحدة: أي طرفية في البرنامج بتمر من kaliAnywhereExec
+  // (كالي على الهَب → أو أول عقدة كالي سحابية عبر قناة الأجينت) — والطايرة الحقيقية
+  // بتظهر في الرد (plane).
+  const anywhere = await kaliAnywhereExec(cmd, 60_000);
+  if (anywhere) {
+    try {
+      createPushNotification({ kind: "ops", title: anywhere.exitCode === 0 ? "🖥️ كالي نفّذت أمر حقيقي" : "⚠️ أمر كالي خرج بكود خطأ", body: `${anywhere.plane}: ${cmd.slice(0, 120)}`, link: "/kali-env" });
+    } catch { /* الإشعار مش هيوقف النتيجة */ }
+    res.json(anywhere);
     return;
   }
-  const r = await runKali(cmd, 60_000);
-  try {
-    createPushNotification({ kind: "ops", title: r.exitCode === 0 ? "🖥️ كالي نفّذت أمر حقيقي" : "⚠️ أمر كالي خرج بكود خطأ", body: cmd.slice(0, 120), link: "/kali-command" });
-  } catch { /* الإشعار مش هيوقف النتيجة */ }
-  res.json(r);
+  res.status(404).json({
+    ok: false,
+    error: "kali_no_plane",
+    says_ar: "مافيش كالي على الهَب ولا عقدة سحابية جاهزة متصلة دلوقتي — موجة fleet-nodes بتحط عقد كل 5 ساعات (كالي بتتثبت عليها تلقائيًا)، أو دوس «ثبّت كالي على أول عقدة» فوق",
+  });
 });
 
 router.post("/ops/kali/provision", async (req: Request, res: Response) => {

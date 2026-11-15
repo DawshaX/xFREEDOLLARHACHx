@@ -1506,6 +1506,34 @@ export function resolveStandaloneApi(
  * like the update loop was broken. Answer with the shape the card reads, and
  * with `enabled:false` — the honest state of a bundle with no process.
  */
+// ── TEST25 — كالي السحابية (static build): الإجابة الصادقة — الباندل الثابت مفيهوش
+// هَب ولا WebSocket ولا عقد؛ القياس الحي على وضع السيرفر. الطرفية في الصفحات الثابتة
+// بتقول ده بدل ما تتخيل نتائج.
+if (path === "/ops/kali/nodes" && m === "GET") {
+  return {
+    ok: true,
+    hub: { kali: false, packages: 0 },
+    nodes: [],
+    tools: null,
+    install: { running: false, node: "", startedAt: null, finishedAt: null, done: true, exitCode: 0, log: [] },
+    probedAt: new Date().toISOString(),
+    staticMode: true,
+  };
+}
+if (path === "/ops/kali/exec" && m === "POST") {
+  return {
+    ok: false,
+    error: "kali_no_plane",
+    says_ar: "الوضع الثابت (GitHub Pages) مفيهوش هَب تنفيذ — افتح البرنامج من الهَب (nova.waifly.com) واكتب في الطرفية هناك، هتشتغل على عقد كالي الأسطول فعليًا",
+    stdout: "",
+    stderr: "",
+    exitCode: null,
+    durationMs: 0,
+  };
+}
+if (path === "/ops/storage-hub" && m === "GET") {
+  return { ok: true, repo: "DawshaX/xFREEDOLLARHACHx", rows: [], totalBytes: 0, totalHuman: "—", measuredAt: new Date().toISOString(), tokenUsed: false, staticMode: true };
+}
 if (path === "/nova-core/auto-update") {
   return {
     ok: true,

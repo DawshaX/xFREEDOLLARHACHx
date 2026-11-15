@@ -49,6 +49,7 @@ import { getMissionsState, recordMissionCommand } from "../standalone-api";
 import { broadcastEvent } from "../ws-hub";
 import { broadcastLiveEvent } from "./../../routes/live-events";
 import { getConnectedAgentList } from "../../routes/local-agent";
+import { kaliAnywhereSummary } from "../ops/kali-anywhere";
 
 export type AgentEvent =
   | { type: "ready"; sessionId: string; mode: "llm" | "heuristic"; provider: string; model: string; tools: number }
@@ -299,6 +300,35 @@ function modeDirective(agentMode?: string): string {
  * Everything NOVA knows before it answers: live platform state + the durable
  * long-term memory (ranked against the current question and target).
  */
+
+/* TEST25 — «الصورة من بره»: حالة كالي والأسطول في سياق كل رسالة.
+ * المزامنة أثناء الإقلاع، والقراءة من الكاش فورًا — مافيش تعطيل في المسار الحرج. */
+let kaliSnapCache = { at: 0, text: "", packages: -1 };
+async function refreshKaliSnap(): Promise<void> {
+  try {
+    const { kaliStatus } = await import("../ops/kali-env");
+    const st = await kaliStatus(false);
+    const sum = kaliAnywhereSummary();
+    const pk = st.present ? st.packages ?? 0 : 0;
+    kaliSnapCache = {
+      at: Date.now(),
+      packages: pk,
+      text: [
+        `- كالي على الهَب: ${st.present ? `جاهزة (${pk} حزمة)` : "مش محمّلة — الوضع سحابي أولًا"}`,
+        `- عقد لينكس متصلة: ${sum.linuxNodes} — وأي أمر كالي بيتحوّل تلقائيًا لأول عقدة فيها كالي (المقاس: 4/4 عقد أسطول على كالي 2026-11-15)`,
+        `- مساحتك كلها على جيت هوب: ‎~12.4GB مقاس (فرع kali-rootfs 5.62GB · repo 5.70GB · toolchain 1.02GB · كوربوس) — المخزن سحابي دايمًا`,
+        `- المساحة على الهَب نفسه محدودة (1.5GB) — ماتحملش عليها بيئات؛ كل الحاجات الكبيرة بره`,
+      ].join("\n"),
+    };
+  } catch {
+    kaliSnapCache = { at: Date.now(), packages: -1, text: "- حالة كالي: مش متاحة حالًا (قياس فاشل — قول الصدق)" };
+  }
+}
+function kaliStateBlock(): string {
+  if (Date.now() - kaliSnapCache.at > 60_000) void refreshKaliSnap();
+  return kaliSnapCache.text ? `# كالي والمساحة (الوضع الحي)\n${kaliSnapCache.text}` : "";
+}
+
 function buildContextBlock(
   query = "",
   sessionId = ROOT_SESSION_ID,
@@ -338,6 +368,7 @@ function buildContextBlock(
     opts?.kaliConnected ? `- عقدة كالي متصلة ومستعدة للتنفيذ عند الموافقة` : "",
     `- الهدف النشط: ${active?.target ?? "غير محدد"} (${active?.name ?? "—"})`,
     `- الأجهزة المتصلة الآن: ${fleet}`,
+    kaliStateBlock(),
     `- نتائج مسجلة في المهمة: ${active?.findings.length ?? 0}`,
     `- ذاكرتك طويلة الأمد: ${stats.total} ذكرى (${stats.pinned} مثبتة) — تفضل بعد إعادة التشغيل`,
     nexusBlock,

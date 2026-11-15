@@ -34,7 +34,7 @@ import { useSystem } from "@/context/SystemContext";
 import ErrorIsland from "@/components/ErrorIsland";
 
 /* ─── أنواع ─── */
-type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "missions" | "brain" | "nexus" | "alerts" | "notes" | "hardware" | "hunt" | "channels" | "nav";
+type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "kali" | "missions" | "brain" | "nexus" | "alerts" | "notes" | "hardware" | "hunt" | "channels" | "nav";
 
 interface FleetAgentInfo {
   id: string; hostname: string; platform: string; user?: string; cpus?: number; connectedAt?: string;
@@ -92,6 +92,7 @@ const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color:
   { key: "launch",   labelAr: "التحكم السريع",       icon: Flame,             color: "#fb7185" },
   { key: "chat",     labelAr: "الشات الكامل",        icon: MessageSquare,     color: "#22d3ee" },
   { key: "work",     labelAr: "مكان الشغل",          icon: MonitorSmartphone, color: "#14b8a6" },
+  { key: "kali",     labelAr: "🐉 كالي السحابية",     icon: TerminalIcon,      color: "#ff6655" },
   { key: "cron",     labelAr: "الجدولة",             icon: CalendarClock,     color: "#34d399" },
   { key: "events",   labelAr: "نبض الأحداث",         icon: Activity,          color: "#4ade80" },
   { key: "missions", labelAr: "المهمات",             icon: ListChecks,        color: "#fbbf24" },
@@ -240,6 +241,84 @@ const loadPrefs = (): Prefs => {
   } catch { /* تفضيلات أول مرة */ }
   return { hiddenHud: [], hudOpen: false, chatOpen: true, chatWide: false, autonomyMode: "autonomous" as const, offensivePosture: true, rootSessionId: "nova-root" };
 };
+
+/* ═══ TEST25 — ساحة كالي السحابية: الطرفية الموحّدة داخل اللايف أجينت ═══
+ * نفس نداء كل طرفيات البرنامج (POST /api/ops/kali/exec — هَب أو عقد الأسطول
+ * بالطاير التلقائي) + حالة العقد حي كل 20ث. الأجينت بيكلم الطرفية من هنا أو
+ * بأداته kali_run — الاتصال واحد في الاتنين. */
+type KaliNodeRow = { id: string; hostname: string; kali: boolean; mode: string; probed: boolean; connectedAt: string };
+const KALI_QUICK = ["nmap --version", "python3 --version", "sqlmap --version | head -1", "ls /usr/share/seclists | head -5", "uname -a", "id"];
+function KaliFleetArena() {
+  const [nodes, setNodes] = useState<{ hub: { kali: boolean; packages: number }; nodes: KaliNodeRow[] } | null>(null);
+  const [log, setLog] = useState<Array<{ t: string; err?: boolean; plane?: boolean }>>([]);
+  const [cmd, setCmd] = useState("");
+  const [busy, setBusy] = useState(false);
+  const logRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const load = async () => { try { const r = await fetch("/api/ops/kali/nodes"); if (r.ok) setNodes(await r.json()); } catch { /* الجاي */ } };
+    void load();
+    const iv = setInterval(load, 20000);
+    return () => clearInterval(iv);
+  }, []);
+  useEffect(() => { logRef.current?.scrollTo({ top: logRef.current.scrollHeight }); }, [log]);
+  const run = async (c: string) => {
+    if (!c.trim() || busy) return;
+    setBusy(true); setCmd("");
+    setLog(p => [...p, { t: `kali@fleet:~$ ${c}` }]);
+    try {
+      const r = await fetch("/api/ops/kali/exec", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cmd: c }) });
+      if (r.status === 404) {
+        const d = (await r.json().catch(() => ({}))) as { says_ar?: string };
+        setLog(p => [...p, { t: d.says_ar || "مافيش طايرة كالي", err: true }]);
+      } else {
+        const d = (await r.json()) as { stdout?: string; stderr?: string; exitCode?: number | null; plane?: string };
+        const out = d.stdout || d.stderr || (d.exitCode === 0 ? "(بلا مخرجات)" : `exit=${d.exitCode}`);
+        setLog(p => [...p, { t: String(out).slice(0, 2500), err: d.exitCode !== 0 }]);
+        if (d.plane) setLog(p => [...p, { t: `↳ اتنفّذ على: ${d.plane}`, plane: true }]);
+      }
+    } catch (e) { setLog(p => [...p, { t: e instanceof Error ? e.message : String(e), err: true }]); }
+    setBusy(false);
+  };
+  const ready = nodes?.nodes.filter(n => n.kali).length ?? 0;
+  return (
+    <div className="space-y-2" dir="rtl">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-[11px] font-black" style={{ color: "#ff6655" }}>🐉 كالي السحابية — الطرفية الموحّدة (من أي مكان في البرنامج)</p>
+        {nodes && (
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.05)", color: ready > 0 ? "#44ff88" : "rgba(255,170,68,0.9)" }}>
+            {ready > 0 ? `${ready}/${nodes.nodes.length} عقدة على كالي` + (nodes.hub.kali ? " · الهَب كالي كاملة" : "") : "مافيش عقدة جاهزة — موجة كل 5 ساعات"}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {nodes?.nodes.map(n => (
+          <span key={n.id} className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: n.kali ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: n.kali ? "#44ff88" : "rgba(255,255,255,0.4)" }}>
+            {n.hostname} · {n.mode === "proot" ? "rootfs ✓" : n.mode === "bare" ? "نظام ✓" : "—"}
+          </span>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {KALI_QUICK.map(c => (
+          <button key={c} onClick={() => run(c)} disabled={busy} className="px-2 py-0.5 rounded text-[8px] font-mono" style={{ background: "rgba(255,102,85,0.06)", border: "1px solid rgba(255,102,85,0.25)", color: "rgba(255,136,119,0.9)" }}>{c.split(" ")[0]}</button>
+        ))}
+      </div>
+      <div ref={logRef} className="rounded-lg p-2 h-56 overflow-y-auto font-mono text-[9px]" style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,102,85,0.2)" }} dir="ltr">
+        {log.length === 0 ? <span style={{ color: "rgba(255,255,255,0.25)" }}>جاهز… كل أمر بيتنفّذ فعليًا جوه كالي (هَب أو عقدة الأسطول) — والطايرة بتظهر تحت النتيجة</span> :
+          log.map((l, i) => <div key={i} className="whitespace-pre-wrap break-all leading-relaxed" style={{ color: l.plane ? "#22d3ee" : l.t.startsWith("kali@") ? "#ff8877" : l.err ? "#ff6666" : "rgba(255,255,255,0.75)" }}>{l.t}</div>)}
+        {busy && <span style={{ color: "rgba(255,136,119,0.6)" }}>تنفيذ…</span>}
+      </div>
+      <div className="flex gap-1.5">
+        <input value={cmd} onChange={e => setCmd(e.target.value)} onKeyDown={e => { if (e.key === "Enter") run(cmd); }}
+          placeholder="أمر داخل كالي… مثال: nmap -sV scanme.nmap.org"
+          className="flex-1 rounded-lg px-2.5 py-1.5 text-[10px] font-mono" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,102,85,0.3)", color: "#ff8877", outline: "none" }} />
+        <button onClick={() => run(cmd)} disabled={!cmd.trim() || busy} className="px-3 py-1.5 rounded-lg text-[9px] font-bold" style={{ background: "rgba(255,102,85,0.12)", border: "1px solid rgba(255,102,85,0.4)", color: "#ff8877" }}>نفّذ</button>
+      </div>
+      <p className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+        الاتصال موحّد: نفس النداء اللي بيمشي عليه /kali-env وLive Terminal واللايف أجينت (kali_run) — هَب أولًا، وإلا أول عقدة كالي سحابية تلقائيًا.
+      </p>
+    </div>
+  );
+}
 
 export default function NovaAgentPro() {
   const [arena, setArena] = useState<ArenaKey>("cockpit");
@@ -1242,6 +1321,7 @@ export default function NovaAgentPro() {
               </div>
             )}
 
+            {arena === "kali" && <KaliFleetArena />}
             {arena === "missions" && (
               <div className="space-y-3 min-w-0">
                 <NovaMissions />
