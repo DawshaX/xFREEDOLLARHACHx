@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import fs from "node:fs";
 import {
   clearProcess,
   getEmitter,
@@ -7,8 +8,14 @@ import {
   listProcesses,
   startProcess,
 } from "../lib/processes";
+// 2026-11-15: this router spawns `bash -lc <anything>` on the platform host and
+// had NO gate — POST /api/processes was an unauthenticated RCE. It now goes
+// through the same ops gate as /api/exec and /api/local-agent.
+import { requireOps } from "../lib/ops/gate";
 
 const router: IRouter = Router();
+
+router.use(requireOps("processes"));
 
 router.get("/processes", (_req, res) => {
   res.json(listProcesses().map((p) => ({ ...p, output: p.output.slice(-4000) })));
@@ -20,7 +27,28 @@ router.post("/processes", (req, res) => {
     res.status(400).json({ error: "command required" });
     return;
   }
-  const cwd = req.body?.cwd ? String(req.body.cwd) : undefined;
+  // A caller-supplied cwd was passed straight to spawn(). A relative or
+  // non-existent path made the child fail with a confusing ENOENT, and an
+  // absolute path let a caller run commands in any directory on the host.
+  // It is now required to be an existing absolute directory.
+  const rawCwd = req.body?.cwd ? String(req.body.cwd) : undefined;
+  let cwd: string | undefined;
+  if (rawCwd) {
+    if (!rawCwd.startsWith("/")) {
+      res.status(400).json({ error: "cwd must be an absolute path" });
+      return;
+    }
+    try {
+      if (!fs.statSync(rawCwd).isDirectory()) {
+        res.status(400).json({ error: "cwd is not a directory" });
+        return;
+      }
+    } catch {
+      res.status(400).json({ error: "cwd does not exist" });
+      return;
+    }
+    cwd = rawCwd;
+  }
   try {
     const rec = startProcess({ command, cwd });
     res.status(201).json(rec);

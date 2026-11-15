@@ -1,4 +1,8 @@
 import { Router, type IRouter } from "express";
+// 2026-11-15: this proxy fetched any http(s) URL from the server with no
+// address check — /api/proxy?url=http://169.254.169.254/... returned cloud IAM
+// credentials (CWE-918). Every outbound fetch now goes through the SSRF guard.
+import { ssrfError } from "../lib/ops/ssrf-guard";
 
 const router: IRouter = Router();
 
@@ -13,6 +17,11 @@ router.get("/", async (req, res) => {
   }
   if (!/^https?:\/\//i.test(url)) {
     res.status(400).type("text/html").send("url must start with http(s)://");
+    return;
+  }
+  const blocked = await ssrfError(url);
+  if (blocked) {
+    res.status(403).type("text/html").send(`blocked: ${blocked}`);
     return;
   }
   try {

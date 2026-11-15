@@ -11,8 +11,13 @@ import {
   type ProviderKeyStatus,
 } from "../lib/key-manager";
 import { type ProviderId } from "../lib/ai-router-ollama-only";
+// 2026-11-15: this router reads and writes provider API keys. It had no gate,
+// so GET /api/keys/status and POST /api/keys/:id were open to any caller.
+import { requireOps } from "../lib/ops/gate";
 
 const router: IRouter = Router();
+
+router.use(requireOps("keys"));
 
 const VALID_PROVIDER_IDS: ProviderId[] = ["ollama-local"];
 

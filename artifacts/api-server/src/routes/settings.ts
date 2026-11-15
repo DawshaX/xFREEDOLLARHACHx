@@ -1,4 +1,8 @@
 import { Router } from "express";
+// 2026-11-15: PUT /api/settings rewrote the AI endpoint (ngrokUrl) with no gate —
+// an unauthenticated caller could point the whole platform's model traffic at a
+// host they control. Reads stay open (the panel needs them); writes are gated.
+import { requireOps } from "../lib/ops/gate";
 
 const router = Router();
 
@@ -37,7 +41,7 @@ router.get("/settings", (_req, res) => {
   });
 });
 
-router.put("/settings", (req, res) => {
+router.put("/settings", requireOps("settings"), (req, res) => {
   const body = req.body as Record<string, string | boolean | undefined>;
   const allowed = ["provider", "model", "ollamaModel", "ollamaBaseUrl", "ngrokUrl", "ngrokModel", "activeEndpoint", "useReplitDefault"];
   for (const key of allowed) {

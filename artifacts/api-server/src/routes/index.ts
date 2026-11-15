@@ -85,6 +85,9 @@ import dashboardRouter from "./dashboard";
 import jobsRouter from "./jobs";
 import novaAgentRouter from "./novaAgent";
 import kaliTerminalRouter from "./kali-terminal";
+// 2026-11-15: the /kali-env page had no backend — it was a static mock. This
+// mounts the real proot-backed Kali plane (health / tools / exec).
+import kaliEnvRouter from "./kali-env";
 import multiAiRouter from "./multi-ai";
 import novaGatewayRouter from "./nova-gateway";
 import novaCoreRouter from "./nova-core";
@@ -134,6 +137,7 @@ router.use(novaAgentV2Router);
 router.use(novaAgentV3Router);
 router.use(rootAgentRouter);
 router.use(kaliTerminalRouter);
+router.use(kaliEnvRouter);
 
 // ── Multi-AI Free Providers ───────────────────────────────────────────────────
 router.use(multiAiRouter);

@@ -477,7 +477,18 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
       p.startsWith("/nova/notes") ||
       p.startsWith("/notifications") ||
       p.startsWith("/cisa") ||
-      p.startsWith("/exploitdb");
+      p.startsWith("/exploitdb") ||
+      // 2026-11-15: these were answered by the static mock BEFORE the real
+      // routers ran, so the security gates added to them never executed —
+      // POST /api/processes returned a fake "proc-1042" object with a 200 while
+      // the real (gated) handler was never reached. That made the fix look
+      // applied while the hole stayed open. The real routers own these paths.
+      p.startsWith("/processes") ||
+      p.startsWith("/keys") ||
+      p.startsWith("/settings") ||
+      p.startsWith("/kali-terminal") ||
+      p.startsWith("/kali-env") ||
+      p.startsWith("/files");
 
     if (!letRouterHandle) {
       const standaloneData = resolveStandaloneApi(

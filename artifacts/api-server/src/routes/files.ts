@@ -2,6 +2,9 @@ import { Router, type IRouter } from "express";
 import { desc, eq } from "drizzle-orm";
 import { db, files } from "@workspace/db";
 import { z } from "zod";
+// 2026-11-15: file upload/download/delete had no gate — any caller could read or
+// delete every stored file. Writes and deletes now go through the ops gate.
+import { requireOps } from "../lib/ops/gate";
 const UploadFileBody = z.object({
   name: z.string(),
   mimeType: z.string().default("application/octet-stream"),
@@ -24,7 +27,7 @@ router.get("/files", async (_req, res) => {
   res.json(rows);
 });
 
-router.post("/files", async (req, res) => {
+router.post("/files", requireOps("files"), async (req, res) => {
   const body = UploadFileBody.parse(req.body);
   const buf = Buffer.from(body.contentBase64, "base64");
   const [row] = await db
@@ -65,7 +68,7 @@ router.get("/files/:id/download", async (req, res) => {
   res.send(buf);
 });
 
-router.delete("/files/:id", async (req, res) => {
+router.delete("/files/:id", requireOps("files"), async (req, res) => {
   const id = Number(req.params.id);
   await db.delete(files).where(eq(files.id, id));
   res.status(204).end();
