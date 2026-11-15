@@ -41,6 +41,16 @@ type KaliNodes = {
 };
 type StorageRow = { id: string; label: string; kind: string; bytes: number; items: number; updatedAt: string | null; link: string };
 type StorageHub = { ok: boolean; repo: string; rows: StorageRow[]; totalBytes: number; totalHuman: string; measuredAt: string };
+/* TEST28 — شاشة المراقبة الحية: الأمر الشغّال حالًا على كالي بكل حالاته */
+type LiveJob = {
+  cmd: string;
+  plane: string | null;
+  running: boolean;
+  startedAt: number;
+  chunks: number;
+  exitCode: number | null;
+  durationMs: number | null;
+};
 const GB = (b: number) => (b >= 2 ** 30 ? `${(b / 2 ** 30).toFixed(2)}GB` : `${(b / 2 ** 20).toFixed(1)}MB`);
 type ProvisionState = {
   running: boolean;
@@ -109,6 +119,8 @@ export default function KaliEnvPage() {
   const [nodes, setNodes] = useState<KaliNodes | null>(null);
   const [installBusy, setInstallBusy] = useState(false);
   const [store, setStore] = useState<StorageHub | null>(null);
+  const [live, setLive] = useState<LiveJob | null>(null);
+  const [bytesIn, setBytesIn] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
 
   /* TEST23 — عقد كالي السحابية: قياس حي كل 20ث من الهَب نفسه (probe عبر قناة الأجينتات) */
@@ -223,6 +235,9 @@ export default function KaliEnvPage() {
     setExecBusy(true); setCmd("");
     setLog((p) => [...p, { text: `$ ${c}`, isCmd: true }]);
     /* TEST27 — الظهور اللحظي: بث حي عبر SSE — chunks حرف بحرف زي ما بتتولد */
+    /* TEST28 — شاشة المراقبة: نفس البث بيتصور في بطاقة حية فوق الطرفية */
+    setLive({ cmd: c, plane: null, running: true, startedAt: Date.now(), chunks: 0, exitCode: null, durationMs: null });
+    setBytesIn(0);
     let finalExit: number | null = null;
     try {
       await new Promise<void>((resolve) => {
@@ -230,21 +245,34 @@ export default function KaliEnvPage() {
         es.onmessage = (ev) => {
           try {
             const d = JSON.parse(ev.data) as { type: string; text?: string; exitCode?: number | null; durationMs?: number; plane?: string };
-            if (d.type === "stdout" && d.text) setLog((p) => [...p.slice(0, 400), { text: d.text as string }]);
-            else if (d.type === "stderr" && d.text) setLog((p) => [...p.slice(0, 400), { text: d.text as string, isErr: true }]);
+            if (d.type === "stdout" && d.text) {
+              setLog((p) => [...p.slice(0, 400), { text: d.text as string }]);
+              setBytesIn((b) => b + (d.text as string).length);
+              setLive((j) => (j ? { ...j, chunks: j.chunks + 1 } : j));
+            }
+            else if (d.type === "stderr" && d.text) {
+              setLog((p) => [...p.slice(0, 400), { text: d.text as string, isErr: true }]);
+              setBytesIn((b) => b + (d.text as string).length);
+              setLive((j) => (j ? { ...j, chunks: j.chunks + 1 } : j));
+            }
             else if (d.type === "error" && d.text) setLog((p) => [...p, { text: `⚠ ${d.text}`, isErr: true }]);
             else if (d.type === "done") {
               finalExit = d.exitCode ?? null;
-              if (d.plane) setLog((p) => [...p, { text: `↳ اتنفّذ على: ${d.plane}` }]);
+              if (d.plane) {
+                setLog((p) => [...p, { text: `↳ اتنفّذ على: ${d.plane}` }]);
+                setLive((j) => (j ? { ...j, plane: d.plane ?? null } : j));
+              }
+              setLive((j) => (j ? { ...j, running: false, exitCode: d.exitCode ?? null, durationMs: d.durationMs ?? null } : j));
               es.close(); resolve();
             }
           } catch { /* chunk مش JSON — تجاهل */ }
         };
-        es.onerror = () => { es.close(); resolve(); };
+        es.onerror = () => { es.close(); resolve(); setLive((j) => (j && j.running ? { ...j, running: false, exitCode: null } : j)); };
       });
       pushNotify(finalExit === null || finalExit === 0 ? "success" : "error", "كالي المدمجة", finalExit === null ? "البث اتقطع" : `اتنفّذ: ${c.slice(0, 50)}`);
     } catch (e: unknown) {
       setLog((p) => [...p, { text: e instanceof Error ? e.message : String(e), isErr: true }]);
+      setLive((j) => (j && j.running ? { ...j, running: false, exitCode: null } : j));
     }
     setExecBusy(false);
     load();
@@ -434,6 +462,37 @@ export default function KaliEnvPage() {
             </p>
           </div>
         </>
+      )}
+
+      {/* TEST28 — شاشة المراقبة الحية: اللي شغّال في كالي دلوقتي — عرض + تحكم */}
+      {live && (
+        <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.05)", border: `1px solid ${live.running ? "rgba(68,255,136,0.55)" : "rgba(255,255,255,0.12)"}` }}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-[11px] font-black flex items-center gap-1.5" style={{ color: live.running ? "#44ff88" : "rgba(255,255,255,0.6)" }}>
+              <Monitor className="w-3.5 h-3.5" />
+              {live.running ? <span className="animate-pulse">● شغّال حالًا</span> : "■ خلص"}
+              <span className="font-mono text-[9px]" style={{ color: "rgba(255,255,255,0.55)" }}> مراقبة كالي الحية</span>
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}>
+                {(Date.now() - live.startedAt) / 1000 < 60 ? `${Math.round((Date.now() - live.startedAt) / 1000)} ث` : `${Math.round((Date.now() - live.startedAt) / 60000)} د`} · {live.chunks} chunk · {(bytesIn / 1024).toFixed(1)}KB بث
+              </span>
+              {live.plane && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(34,211,238,0.1)", color: "#22d3ee" }}>{live.plane}</span>}
+            </div>
+          </div>
+          <p className="mt-1.5 font-mono text-[9px] break-all" style={{ color: "#ffaa44" }}>$ {live.cmd}</p>
+          {live.running ? (
+            <div className="mt-1.5 flex gap-1.5">
+              <button onClick={() => exec("pkill -f '" + live.cmd.slice(0, 24).replace(/'/g, "") + "' 2>/dev/null; echo KILLED")} disabled={execBusy}
+                className="text-[9px] font-black px-2 py-1 rounded" style={{ background: "rgba(255,85,85,0.12)", border: "1px solid rgba(255,85,85,0.4)", color: "#ff8888" }}>⏹ قتل الأمر</button>
+              <span className="text-[8px] font-mono py-1" style={{ color: "rgba(255,255,255,0.4)" }}>البث الحي تحت في الطرفية — الحرف بيطلع لحظة تولده</span>
+            </div>
+          ) : (
+            <p className="mt-1 text-[8px] font-mono" style={{ color: live.exitCode === 0 ? "rgba(68,255,136,0.8)" : live.exitCode === null ? "rgba(255,170,68,0.8)" : "#ff8888" }}>
+              {live.exitCode === null ? "البث اتقطع" : `exit=${live.exitCode} · ${live.durationMs ?? 0}ms`} — النتيجة كاملة في الطرفية تحت
+            </p>
+          )}
+        </div>
       )}
 
       {/* الأدوات — مقاسة من حيث كالي عايشة فعلًا (الهَب أو عقدة الأسطول) — دايمًا ظاهرة */}
