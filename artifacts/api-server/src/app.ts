@@ -13,6 +13,7 @@ import { runAgent } from "./lib/agent/core";
 import { ROOT_SESSION_ID, getOrCreateNexusSession } from "./lib/agent/session-nexus";
 import { tokenConfigured, checkGate } from "./lib/ops/gate";
 import { realRouterOwns } from "./lib/ops/mock-policy";
+import { corsMiddleware, securityHeaders, hidePoweredBy, apiLimiter, authLimiter } from "./lib/ops/http-hardening";
 
 const app: Express = express();
 
@@ -35,9 +36,20 @@ app.use(
     },
   }),
 );
-app.use(cors());
+/* ── TEST35 · HTTP hardening ──────────────────────────────────────────────────
+ * Before this, the server ran `cors()` with no options (Access-Control-Allow-
+ * Origin: * on every response), had no security headers at all, and had no rate
+ * limiting on any endpoint — including the login. See lib/ops/http-hardening.ts
+ * for the full reasoning. Order matters and is deliberate:
+ *   helmet → cors → body limits → rate limit → routes
+ * so the headers attach even to 4xx, preflights complete before auth, and the
+ * limiter runs before any expensive handler. */
+app.use(securityHeaders());
+app.use(hidePoweredBy);
+app.use(corsMiddleware());
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+app.use(apiLimiter());
 
 // ── Body safety net ───────────────────────────────────────────────────────────
 // Several routes destructure `req.body` directly. When a client fires a POST
@@ -61,6 +73,13 @@ app.use(visitorIntelMiddleware());
 // على الباب لسه بيتبلّغ تليجرام، بس مش بيشوف جوه.
 import { panelAuthMiddleware } from "./lib/panel-auth";
 import { kaliNovncDir } from "./lib/ops/kali-env";
+/* TEST35 — the login handler lives inside panelAuthMiddleware, so the tight
+ * limiter has to be mounted in front of it. Without this, /api/panel/login
+ * accepted unlimited password guesses (measured: no limiter anywhere in the
+ * server). Only the login path is limited here; the general apiLimiter above
+ * already covers everything else. */
+app.use("/api/panel/login", authLimiter());
+app.use("/login", authLimiter());
 app.use(panelAuthMiddleware());
 
 // TEST12 — ملفات noVNC من جوه rootfs كالي نفسها (بعد بوابة الدخول — الجلسة

@@ -94,6 +94,33 @@ type KaliStatus = {
   };
 };
 
+/* ── TEST32 — the real proot plane, measured by /api/kali-env ────────────────
+ * The page used to read only /api/ops/kali (the hub's own view). The proot
+ * runner added in lib/ops/proot.ts exposes its own honest health + tool probe
+ * at /api/kali-env, and nothing consumed it. This is that consumer: it shows
+ * whether proot+rootfs exist, whether the guest shell actually answers, and
+ * which of the real Kali tools are installed — each measured with `command -v`
+ * inside the guest, never assumed. */
+type KaliEnvHealth = {
+  ok: boolean;
+  ready: boolean;
+  prootBin: string | null;
+  rootfs: string | null;
+  guestShell: boolean;
+  detail: string;
+  searched?: string[];
+};
+type KaliEnvTools = {
+  ok: boolean;
+  ready: boolean;
+  reason?: string;
+  searched?: string[];
+  groups: Record<string, { present: string[]; missing: string[] }>;
+  total: number;
+  present: number;
+  measuredAt?: string;
+};
+
 const QUICK = [
   "nmap --version",
   "sqlmap --version",
@@ -139,6 +166,10 @@ export default function KaliEnvPage() {
   const [store, setStore] = useState<StorageHub | null>(null);
   const [live, setLive] = useState<LiveJob | null>(null);
   const [bytesIn, setBytesIn] = useState(0);
+  /* TEST32 — the real proot plane (lib/ops/proot.ts) via /api/kali-env */
+  const [envHealth, setEnvHealth] = useState<KaliEnvHealth | null>(null);
+  const [envTools, setEnvTools] = useState<KaliEnvTools | null>(null);
+  const [envBusy, setEnvBusy] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   /* TEST23 — عقد كالي السحابية: قياس حي كل 20ث من الهَب نفسه (probe عبر قناة الأجينتات) */
@@ -190,6 +221,27 @@ export default function KaliEnvPage() {
     const iv = setInterval(() => void loadStore(), 60000);
     return () => clearInterval(iv);
   }, [loadStore]);
+
+  /* TEST32 — the real proot plane: health + a measured tool probe.
+   * Both endpoints are behind the ops gate, so we send the same auth headers
+   * the rest of the panel uses. `tools` is the expensive one (it starts the
+   * guest), so it is only re-run on demand, not on a timer. */
+  const loadEnv = useCallback(async (withTools = false) => {
+    setEnvBusy(true);
+    try {
+      const h = await fetch(`${API}/kali-env/health`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(20000) });
+      if (h.ok) setEnvHealth((await h.json()) as KaliEnvHealth);
+      else setEnvHealth({ ok: false, ready: false, prootBin: null, rootfs: null, guestShell: false, detail: `HTTP ${h.status}` });
+      if (withTools) {
+        const t = await fetch(`${API}/kali-env/tools`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(60000) });
+        if (t.ok) setEnvTools((await t.json()) as KaliEnvTools);
+      }
+    } catch (e: unknown) {
+      setEnvHealth({ ok: false, ready: false, prootBin: null, rootfs: null, guestShell: false, detail: e instanceof Error ? e.message : String(e) });
+    }
+    setEnvBusy(false);
+  }, []);
+  useEffect(() => { void loadEnv(false); }, [loadEnv]);
 
   const installOnNode = async () => {
     setInstallBusy(true);
@@ -663,7 +715,98 @@ export default function KaliEnvPage() {
             </div>
           </div>
 
-          {/* الربط بالأجينت */}
+          {/* TEST32 — the real proot plane (lib/ops/proot.ts) via /api/kali-env.
+          This is the honest view: `ready` means proot+rootfs exist on disk,
+          `guestShell` means the guest actually answered. The tool list is
+          measured with `command -v` inside the guest, not read from a table. */}
+      <div className="rounded-xl p-3" style={{ background: "rgba(34,211,238,0.04)", border: `1px solid ${envHealth?.ok ? "rgba(68,255,136,0.4)" : "rgba(34,211,238,0.3)"}` }}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-[11px] font-black flex items-center gap-1.5" style={{ color: "#22d3ee" }}>
+            🐧 بروب الحقيقي (proot) — قياس مباشر من /api/kali-env
+            {envHealth && (
+              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded"
+                style={{ background: envHealth.ok ? "rgba(68,255,136,0.12)" : "rgba(255,170,68,0.12)", color: envHealth.ok ? "#44ff88" : "#ffaa44" }}>
+                {envHealth.ok ? "● شغّال" : envHealth.ready ? "◐ ناقص" : "○ مش منصّب"}
+              </span>
+            )}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => void loadEnv(true)} disabled={envBusy}
+              className="text-[9px] font-black px-2.5 py-1 rounded flex items-center gap-1"
+              style={{ background: "rgba(34,211,238,0.1)", border: "1px solid rgba(34,211,238,0.4)", color: "#22d3ee", opacity: envBusy ? 0.5 : 1 }}>
+              <RefreshCw className={`w-3 h-3 ${envBusy ? "animate-spin" : ""}`} /> {envBusy ? "بيقيس…" : "اقيس الأدوات الحقيقية"}
+            </button>
+          </div>
+        </div>
+
+        {envHealth ? (
+          <>
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-1.5">
+              <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${envHealth.ready ? "rgba(68,255,136,0.3)" : "rgba(255,255,255,0.1)"}` }}>
+                <div className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.45)" }}>proot + rootfs</div>
+                <div className="text-[10px] font-black" style={{ color: envHealth.ready ? "#44ff88" : "#ff8888" }}>{envHealth.ready ? "موجودين ✓" : "ناقص ✗"}</div>
+              </div>
+              <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${envHealth.guestShell ? "rgba(68,255,136,0.3)" : "rgba(255,255,255,0.1)"}` }}>
+                <div className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.45)" }}>صدفة الضيف</div>
+                <div className="text-[10px] font-black" style={{ color: envHealth.guestShell ? "#44ff88" : "#ff8888" }}>{envHealth.guestShell ? "بتردّ ✓" : "مش بتردّ ✗"}</div>
+              </div>
+              <div className="rounded-lg px-2 py-1.5 col-span-2" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <div className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.45)" }}>rootfs</div>
+                <div className="text-[9px] font-mono break-all" style={{ color: "rgba(255,255,255,0.7)" }}>{envHealth.rootfs ?? "—"}</div>
+              </div>
+            </div>
+            <p className="text-[9px] font-mono mt-1.5" style={{ color: envHealth.ok ? "rgba(68,255,136,0.8)" : "rgba(255,170,68,0.85)" }}>
+              {envHealth.detail}
+            </p>
+            {!envHealth.ready && envHealth.searched?.length ? (
+              <p className="text-[8px] font-mono mt-1 break-all" style={{ color: "rgba(255,255,255,0.35)" }}>
+                دوّرنا في: {envHealth.searched.join(" · ")} — ثبّت بـ <b style={{ color: "#22d3ee" }}>node scripts/kali-rootfs.mjs --install</b>
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.45)" }}>…بيقيس حالة proot</p>
+        )}
+
+        {envTools ? (
+          envTools.ready ? (
+            <>
+              <div className="mt-2 flex items-center justify-between flex-wrap gap-2">
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(34,211,238,0.1)", color: "#7ce8ff" }}>
+                  {envTools.present}/{envTools.total} أداة حقيقية موجودة
+                </span>
+                {envTools.measuredAt && <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>قياس {new Date(envTools.measuredAt).toLocaleTimeString("en-GB")}</span>}
+              </div>
+              <div className="mt-1.5 space-y-1.5">
+                {Object.entries(envTools.groups).map(([group, g]) => (
+                  <div key={group} className="rounded-lg px-2 py-1.5" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-[9px] font-black" style={{ color: "#22d3ee" }}>{group}</span>
+                      <span className="text-[8px] font-mono" style={{ color: g.missing.length ? "rgba(255,170,68,0.8)" : "rgba(68,255,136,0.8)" }}>
+                        {g.present.length}/{g.present.length + g.missing.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {g.present.map((t) => (
+                        <span key={t} className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#44ff88" }}>✓ {t}</span>
+                      ))}
+                      {g.missing.map((t) => (
+                        <span key={t} className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)" }}>✗ {t}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,170,68,0.85)" }}>
+              {envTools.reason ?? "proot/rootfs مش منصّب"} — القياس الحقيقي بيبدأ أول ما البيئة تتثبّت.
+            </p>
+          )
+        ) : null}
+      </div>
+
+      {/* الربط بالأجينت */}
           <div className="rounded-xl p-3" style={{ background: "rgba(34,211,238,0.04)", border: "1px solid rgba(34,211,238,0.25)" }}>
             <p className="text-[10px] font-black" style={{ color: "#22d3ee" }}>🔗 الربط باللايف أجينت</p>
             <p className="text-[9px] font-mono mt-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>

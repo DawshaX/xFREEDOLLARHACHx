@@ -121,6 +121,11 @@ const NAV_GROUPS: Array<{ group: string; color: string; items: Array<{ path: str
     { path: "/terminal", label: "كونسول الأسطول" }, { path: "/port-scanner", label: "ماسح المنافذ" },
     { path: "/dns-lookup", label: "DNS" }, { path: "/whois-lookup", label: "WHOIS" },
     { path: "/subdomains", label: "النطاقات الفرعية" }, { path: "/hash-calculator", label: "الهاشات" },
+    /* TEST33 — the network map and the fleet were reachable only by typing the
+       URL. They are the two surfaces the operator asked to be wired in, so they
+       belong in the navigation the agent-pro page actually renders. */
+    { path: "/network", label: "🗺️ خريطة الشبكة" }, { path: "/nova-fleet", label: "🛰️ الأسطول الموحّد" },
+    { path: "/kali-env", label: "🐉 بيئة كالي" },
   ] },
   { group: "الإدارة", color: "#4ade80", items: [
     { path: "/settings", label: "الإعدادات" }, { path: "/webhooks", label: "Webhooks" },
@@ -361,6 +366,15 @@ export default function NovaAgentPro() {
   const [cronBusy, setCronBusy] = useState<string | null>(null);
 
   const [flash, setFlash] = useState<string | null>(null);
+  /* TEST33 — real ops statistics (GET /api/ops/stats): running jobs, the
+     throttle snapshot, exposure and autonomy. The page showed none of it, so
+     "is the machine busy / is it exposed / is autonomy on" had no answer here. */
+  const [opsStats, setOpsStats] = useState<{
+    runningJobs?: number;
+    throttle?: { active?: number; queued?: number; limit?: number };
+    exposure?: { exposed?: boolean; reason?: string };
+    autonomy?: { enabled?: boolean; mode?: string };
+  } | null>(null);
   const [notifs, setNotifs] = useState<Array<{ id: string; title: string; body?: string; kind?: string; read?: boolean; createdAt?: string; source?: string }>>([]);
   const [novaNotes, setNovaNotes] = useState<Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string }>>([]);
   const [noteDraft, setNoteDraft] = useState<{ title: string; body: string }>({ title: "", body: "" });
@@ -708,6 +722,10 @@ export default function NovaAgentPro() {
     if (nf.ok && Array.isArray(nf.data)) setNotifs(nf.data as typeof notifs);
     const nt = await opsFetch<{ notes?: Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string }> }>("/nova/notes");
     if (nt.ok && Array.isArray(nt.data?.notes)) setNovaNotes(nt.data.notes);
+    /* TEST33 — the machine's own numbers, from the same ops surface the rest
+       of the panel uses. Read-only, so it is safe on the 12s refresh. */
+    const st = await opsFetch<typeof opsStats>("/ops/stats");
+    if (st.ok && st.data) setOpsStats(st.data);
     void refreshCron();
   }, [refreshCron]);
 
@@ -1353,6 +1371,36 @@ export default function NovaAgentPro() {
             )}
             {arena === "alerts" && (
               <div className="space-y-2">
+                {/* TEST33 — real machine statistics, from GET /api/ops/stats.
+                    Every number here is read from the running server, not
+                    invented: running jobs, the throttle snapshot, whether the
+                    port is exposed, and whether autonomy is on. */}
+                {opsStats && (
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    <div className="rounded-xl border border-cyan-400/25 bg-cyan-500/[0.06] p-2.5">
+                      <div className="text-[9px] font-mono text-cyan-100/50">مهام جارية</div>
+                      <div className="text-lg font-black text-cyan-200">{opsStats.runningJobs ?? 0}</div>
+                    </div>
+                    <div className="rounded-xl border border-violet-400/25 bg-violet-500/[0.06] p-2.5">
+                      <div className="text-[9px] font-mono text-violet-100/50">خانق (نشط/منتظر)</div>
+                      <div className="text-lg font-black text-violet-200">
+                        {opsStats.throttle?.active ?? 0}<span className="text-[11px] text-violet-200/50">/{opsStats.throttle?.queued ?? 0}</span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-2.5" style={{ border: `1px solid ${opsStats.exposure?.exposed ? "rgba(255,85,85,0.35)" : "rgba(68,255,136,0.25)"}`, background: opsStats.exposure?.exposed ? "rgba(255,85,85,0.06)" : "rgba(68,255,136,0.06)" }}>
+                      <div className="text-[9px] font-mono text-white/45">التعرّض</div>
+                      <div className="text-[13px] font-black" style={{ color: opsStats.exposure?.exposed ? "#ff8888" : "#44ff88" }}>
+                        {opsStats.exposure?.exposed ? "مكشوف ⚠" : "محمي ✓"}
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-2.5" style={{ border: `1px solid ${opsStats.autonomy?.enabled ? "rgba(68,255,136,0.25)" : "rgba(255,255,255,0.1)"}`, background: opsStats.autonomy?.enabled ? "rgba(68,255,136,0.06)" : "rgba(255,255,255,0.02)" }}>
+                      <div className="text-[9px] font-mono text-white/45">الاستقلالية</div>
+                      <div className="text-[13px] font-black" style={{ color: opsStats.autonomy?.enabled ? "#44ff88" : "rgba(255,255,255,0.5)" }}>
+                        {opsStats.autonomy?.enabled ? `مفعّلة${opsStats.autonomy.mode ? ` · ${opsStats.autonomy.mode}` : ""}` : "مطفية"}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="text-[10px] font-mono text-orange-100/50">مركز الإشعارات — متصل بكل المصادر: الكرون، المراقبون، الصيد، حصاد الخزنة، الجلسات. ({notifs.length} إشعار)</div>
                 {notifs.length === 0 && <div className="rounded-xl border border-white/8 bg-white/[0.02] p-6 text-center text-[11px] font-mono text-white/35">لسه هادي — أول نبضة من الكرون/المراقبين هتبان هنا فورًا.</div>}
                 {notifs.slice(0, 60).map((n) => (
