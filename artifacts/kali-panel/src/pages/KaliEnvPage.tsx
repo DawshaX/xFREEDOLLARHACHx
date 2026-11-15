@@ -158,11 +158,19 @@ export default function KaliEnvPage() {
       } catch { /* الساكن مافيهوش version حي */ }
     })();
     (async () => {
-      try {
-        const r = await fetch(`https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/state/waifly-deploy.json?t=${Date.now()}`, { signal: AbortSignal.timeout(9000) });
-        if (r.ok) { setDeployMirror(await r.json()); setDeployChecked(new Date().toLocaleTimeString("en-GB")); }
-        else setDeployMirror(null);
-      } catch { setDeployMirror(null); }
+      // المرآة الحية من raw (الrunner بيدفعها كل 30د) — ولو الاتصال بيها وقع:
+      // النسخة اللي جوّه الحزمة نفسها (public/state — build-standalone بيشحنها).
+      const urls = [
+        `https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/state/waifly-deploy.json?t=${Date.now()}`,
+        "/state/waifly-deploy.json",
+      ];
+      for (const u of urls) {
+        try {
+          const r = await fetch(u, { signal: AbortSignal.timeout(9000) });
+          if (r.ok) { setDeployMirror(await r.json()); setDeployChecked(new Date().toLocaleTimeString("en-GB")); return; }
+        } catch { /* المحاولة الجاية */ }
+      }
+      setDeployMirror(null);
     })();
   }, [loadNodes]);
   useEffect(() => {

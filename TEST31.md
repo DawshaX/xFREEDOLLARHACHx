@@ -44,6 +44,10 @@
 - **التشخيص الباقي (المقاس بالمنطق):** كاش الshell — index.html القديم في المتصفح/الedge («Cloud-Edge» قدام السلوت) بيخليك تشوف الصفحة القديمة رغم إن الباندل الجديد وصل. **الإصلاح المطبق من المنبع:** `Cache-Control: no-store` لكل HTML + SPA fallback، و`immutable` للassets المقصوصة (بهاش في الاسم) — الedge المفروض يحترم هيدرات الأصل، ومن الباندل الجاي الهيدرات دي هتكون هي القاعدة.
 - **المرآة بقى بتقيس الصفحة نفسها** (`result.page`): status + هيدر الكاش + اسم الasset المقصوص اللي الshell بياخده — أول قياس جاي هيثبت هل الصفحة المسervة هي آخر build ولا لأ، بالحرف.
 
-## 7. البوابات
+## 7. البوابات — وسبب فشل `43699183405` اتحدد بالقياس
+
+**السبب (مقاس محليًا 09:35Z على نفس الشجرة `e7cc2eb`):** `scripts/agent-gates.mjs` فشل في `audit-route-integrity` — `[hollow-ship] KaliEnvPage.tsx:162`: البانل بيقرا `state/waifly-deploy.json` وقت التشغيل لكن `build-standalone.mjs` مابينسخوش جوّه الحزمة → على المكنة المنشورة البطاقة هتررد «مفيش بيانات» (نفس درس hunt-latest.json/advisory-cache.json). نفس الفشل مؤكد على main كمان (run `43699364668` = failure · job step «agent + structural gates») — يعني مش سباق ولا فليك: عيب حقيقي في كودنا دخل مع بطاقة «حالة النشر»، والبوابة لقطته. *(جلب لوج الjob من API رجّع 0 بايت — التشخيص اتعمل بإعادة تشغيل البوابات محليًا على نفس الشجرة، اللي أصدق لأنها نفس الكود بالحرف.)*
+
+**الإصلاح (مقاس):** `build-standalone.mjs` بيunschن نسخة `state/waifly-deploy.json` جوّه `public/state/` في الحزمة · والصفحة عملت fallback: raw أولًا → لو فشل `/state/waifly-deploy.json` المحلي. بعد الفكس: `audit-route-integrity` ✓ · tsc 0 · build ✓ · **agent-gates 43/43 (87.7s)**.
 
 tsc الاتنين ✓ · builds ✓ · check-workflows على الYAML المعدل · probe smoke-tested محليًا. مرآة `state/waifly-deploy.json` بتتكتب من الrunner وبتتكومت كل 30د (`[skip ci]` عشان مالوفش الدورة).
