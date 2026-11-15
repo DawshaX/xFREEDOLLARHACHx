@@ -671,8 +671,23 @@ if (process.env.NODE_ENV === "production") {
   const staticDir = candidates.find((p) => fs.existsSync(p));
   if (staticDir) {
     logger.info({ staticDir }, "Serving static frontend");
-    app.use(express.static(staticDir));
+    // TEST31 — الكاش المقاس على سلوت waifly (edge "Cloud-Edge" قدام السلوت): الindex.html
+    // القديم بيخلي المالك يشوف الصفحة «زي ما هي» بعد ما الباندل الجديد يوصل فعلًا.
+    // القاعدة الصحيحة: HTML مافيش كاش أبدًا (الshell بيغير مع كل build) · assets المقصوصة
+    // (بهاش في الاسم) كاش أبدًا. Origin headers هي اللي الedge بيفترض يحترمها.
+    app.use(
+      express.static(staticDir, {
+        setHeaders(res, filePath) {
+          if (filePath.endsWith(".html") || filePath.endsWith("service-worker.js")) {
+            res.setHeader("Cache-Control", "no-store");
+          } else if (/-[A-Za-z0-9_-]{8,}\.(js|css|woff2?|png|svg|jpg|webp|ico)$/.test(filePath)) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          }
+        },
+      }),
+    );
     app.get("/{*splat}", (_req, res) => {
+      res.setHeader("Cache-Control", "no-store"); // SPA shell — أبدًا مش كاش
       res.sendFile(path.join(staticDir, "index.html"));
     });
   } else {
