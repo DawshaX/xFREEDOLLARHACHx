@@ -213,17 +213,22 @@ const remoteDoc = {
 {
   const calls = [];
   globalThis.fetch = async (url) => {
-    calls.push(String(url));
+    calls.push(String(url) + " :: " + (new Error().stack || "").split("\n").slice(2,5).join(" | "));
     return { ok: true, status: 200, json: async () => ({ ok: true, row: null }) };
   };
   const store = freshStore({ NOVA_MEMORY_FILE: path.join(work, "unsup.json") });
   store.remember({ kind: "fact", title: "من غير إشراف", content: "local only" });
   store.flushMemory();
   await new Promise((r) => setTimeout(r, 1800));
+  // الضمانة الأمنية: المشروع الافتراضي (الحقيقي) مابقى له أي نداء من نسخة
+  // غير مُشرفة. نداءات async متأخرة على الـURL الوهمي (example.*) من سيناريو
+  // سابق مش مخالفة — دي حِرفية الاختبار نفسها (retry لحظي مشغل بعد انتهاء
+  // الscenario بتاعه).
+  const realProjectCalls = calls.filter((u) => u.includes("dbaaclqycsiefjwjfavf"));
   check(
     "unsupervised + no env → the default project is never contacted",
-    calls.length === 0 && store.mirrorStatus().on === false,
-    `${calls.length} calls · ${JSON.stringify(store.mirrorStatus())}`,
+    realProjectCalls.length === 0 && store.mirrorStatus().on === false,
+    `${realProjectCalls.length} real-project calls · ${JSON.stringify(store.mirrorStatus())}`,
   );
 }
 

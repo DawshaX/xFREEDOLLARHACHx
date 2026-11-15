@@ -144,7 +144,7 @@ async function mirrorLoad(): Promise<MemoryFile | null> {
       MIRROR_KEY
         ? `${MIRROR_URL}/rest/v1/nova_memory?id=eq.${encodeURIComponent(MIRROR_ROW)}&select=doc`
         : EDGE_STATE,
-      { headers: mirrorHeaders(), signal: AbortSignal.timeout(8000) },
+      { headers: mirrorHeaders(), signal: AbortSignal.timeout(20_000) },
     );
     if (!res.ok) {
       mirrorState = "error";
@@ -192,16 +192,63 @@ async function mirrorPush(): Promise<void> {
         body: MIRROR_KEY
           ? JSON.stringify([{ id: MIRROR_ROW, doc: store, updated_at: new Date().toISOString() }])
           : JSON.stringify({ doc: store, records: store.records.length }),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(20_000),
       },
     );
-    mirrorState = res.ok ? "ok" : "error";
-    mirrorError = res.ok ? null : `push HTTP ${res.status}`;
+    if (res.ok) {
+      mirrorState = "ok";
+      mirrorError = null;
+    } else if (res.status >= 500) {
+      // خطأ سيرفر لحظي (cold-start للـedge مقاس على waifly) — محاولة تانية
+      const res2 = await retryMirrorPush();
+      mirrorState = res2.ok ? "ok" : "error";
+      mirrorError = res2.ok ? null : `push HTTP ${res.status} → إعادة ${res2.ok ? "نجحت" : "HTTP " + res2.status}`;
+    } else {
+      mirrorState = "error";
+      mirrorError = `push HTTP ${res.status}`;
+    }
   } catch (err) {
-    mirrorState = "error";
-    mirrorError = (err as Error).message;
+    const msg = (err as Error).message;
+    // الأخطاء اللحظية بس (timeout/شبكة) بتتعاد — الحتمية (4xx بعد الاستجابة) لأ
+    if (/timeout|abort|fetch failed|network|ECONN|ENOTFOUND|EAI_AGAIN|socket/i.test(msg)) {
+      try {
+        const res2 = await retryMirrorPush();
+        mirrorState = res2.ok ? "ok" : "error";
+        mirrorError = res2.ok ? null : `push: ${msg.slice(0, 80)} → إعادة ${res2.ok ? "نجحت" : "فشلت"}`;
+      } catch (err2) {
+        mirrorState = "error";
+        mirrorError = (err2 as Error).message.slice(0, 120);
+      }
+    } else {
+      mirrorState = "error";
+      mirrorError = msg.slice(0, 120);
+    }
   }
 }
+
+/** محاولة push واحدة إضافية بعد مهلة قصيرة — للأخطاء اللحظية بس. */
+async function retryMirrorPush(): Promise<Response> {
+  await new Promise((r) => setTimeout(r, 3000));
+  return fetch(
+    MIRROR_KEY ? `${MIRROR_URL}/rest/v1/nova_memory?on_conflict=id` : EDGE_STATE,
+    {
+      method: "POST",
+      headers: MIRROR_KEY
+        ? { ...mirrorHeaders(), prefer: "resolution=merge-duplicates,return=minimal" }
+        : mirrorHeaders(),
+      body: MIRROR_KEY
+        ? JSON.stringify([{ id: MIRROR_ROW, doc: store, updated_at: new Date().toISOString() }])
+        : JSON.stringify({ doc: store, records: store.records.length }),
+      signal: AbortSignal.timeout(20_000),
+    },
+  );
+}
+
+// شفاء ذاتي: فشل المرآة (شبكة/cold-start) مابيقفلهاش للأبد — كل 10 دقايق محاولة
+// تانية لوحدها، عشان «التخزين برة السيرفر وشغال ديما» يبقى حقيقة مش أمنية.
+setInterval(() => {
+  if (mirrorOn && mirrorState === "error") { void mirrorPush(); }
+}, 10 * 60_000).unref?.();
 
 /** Hydrate from the mirror once at boot (no-op with the file present). */
 export async function hydrateMemoryFromMirror(): Promise<{ hydrated: boolean; records: number; bootstrapped?: boolean }> {

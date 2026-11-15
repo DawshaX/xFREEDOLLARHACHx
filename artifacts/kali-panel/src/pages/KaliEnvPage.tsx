@@ -73,6 +73,8 @@ export default function KaliEnvPage() {
   const [log, setLog] = useState<Array<{ text: string; isCmd?: boolean; isErr?: boolean }>>([]);
   const [cmd, setCmd] = useState("");
   const [execBusy, setExecBusy] = useState(false);
+  const [showNodeCmd, setShowNodeCmd] = useState(false);
+  const [nodeCopied, setNodeCopied] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [prov, setProv] = useState<ProvisionState | null>(null);
   const [provBusy, setProvBusy] = useState(false);
@@ -120,9 +122,9 @@ export default function KaliEnvPage() {
   const startProv = async () => {
     setProvBusy(true);
     try {
-      const r = await fetch(`${API}/ops/kali/provision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-      const d = (await r.json()) as { ok?: boolean; detail?: string; skipped?: boolean };
-      pushNotify(r.ok && d.ok ? "success" : "warning", d.skipped ? "كالي جاهزة بالفعل" : "تجهيز بيئة كالي", d.detail ?? `HTTP ${r.status}`);
+      const r = await fetch(`${API}/ops/kali/provision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "yes" }) });
+      const d = (await r.json()) as { ok?: boolean; detail?: string; skipped?: boolean; cloudFirst?: boolean };
+      pushNotify(r.ok && d.ok ? "success" : "warning", d.cloudFirst ? "وضع سحابي أولًا" : d.skipped ? "كالي جاهزة بالفعل" : "تجهيز بيئة كالي محليًا (استثناء)", d.detail ?? `HTTP ${r.status}`);
     } catch (e: unknown) {
       pushNotify("error", "تجهيز بيئة كالي", e instanceof Error ? e.message : String(e));
     }
@@ -187,18 +189,40 @@ export default function KaliEnvPage() {
       </div>
 
       {!st?.present ? (
-        <div className="rounded-xl p-4" style={{ background: "rgba(255,170,0,0.05)", border: "1px solid rgba(255,170,0,0.3)" }}>
+        <div className="rounded-xl p-4" style={{ background: "rgba(34,211,238,0.04)", border: "1px solid rgba(34,211,238,0.35)" }}>
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="text-[11px] font-bold" style={{ color: "#ffaa44" }}>البيئة مش مستخرجة على السيرفر ده لسه</p>
-            <button onClick={startProv} disabled={provBusy || prov?.running === true}
+            <p className="text-[11px] font-black" style={{ color: "#22d3ee" }}>☁️ الوضع السحابي — التبيئة مش على السيرفر ومش هتنزل عليه</p>
+            <button onClick={() => setShowNodeCmd((v) => !v)}
               className="text-[10px] font-black px-3 py-1.5 rounded-lg"
               style={{ background: "rgba(68,255,136,0.12)", border: "1px solid rgba(68,255,136,0.5)", color: "#44ff88" }}>
-              {prov?.running ? "⏳ التجهيز شغال…" : provBusy ? "بدين…" : "🚀 جهّز البيئة الآن على السيرفر"}
+              {showNodeCmd ? "إخفاء أمر الربط" : "🔗 اربط عقدة كالي (جهازك)"}
             </button>
           </div>
-          <p className="text-[10px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.55)" }}>
-            الضغطة دي بتجيب rootfs كالي الكاملة من فرع kali-rootfs (جيت هب = التخزين السحابي) — بيتحقق SHA256 لكل جزء وبيفك gzip مباشرة. محتاج ~17GB مساحة فاضية و20-40 دقيقة.
+          <p className="text-[10px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+            المخزن سحابي دايمًا: فرع <b>kali-rootfs</b> على جيت هب (2,113 حزمة) — والتنفيذ بيتحول تلقائيًا لعقدة كالية متصلة (الأجينت بيعمل ده لوحده في kali_run). التحميل المحلي على السيرفر ده استثناء بتأكيد مزدوج — بيعطل سيرفرات بحصة صغيرة (مقاس).
           </p>
+          {showNodeCmd && (
+            <div className="mt-2 rounded-lg p-2.5 font-mono text-[9px]" style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
+              <p className="mb-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>شغّل على جهازك (Linux/Mac/Windows بNode 18+) — العقدة بتتسجل هنا وتفضل شغالة بالخلفية، وkali_run بيتحول عليها تلقائيًا:</p>
+              <div className="break-all" style={{ color: "#44ff88" }}>
+                curl -fsSL {API}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server {API.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1
+              </div>
+              <button
+                onClick={() => { try { void navigator.clipboard.writeText(`curl -fsSL ${API}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server ${API.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1`); setNodeCopied(true); setTimeout(() => setNodeCopied(false), 2000); } catch { /* الحقل ظاهر للنسخ اليدوي */ } }}
+                className="mt-1.5 text-[9px] font-black px-2 py-1 rounded"
+                style={{ background: "rgba(68,255,136,0.15)", border: "1px solid rgba(68,255,136,0.4)", color: "#44ff88" }}>
+                {nodeCopied ? "✓ اتنسخ" : "نسخ الأمر"}
+              </button>
+            </div>
+          )}
+          <details className="mt-2">
+            <summary className="text-[9px] font-mono cursor-pointer" style={{ color: "rgba(255,170,68,0.75)" }}>استثناء: تحميل التبيئة محليًا على السيرفر ده (تأكيد مزدوج — خطر على الحصة)</summary>
+            <button onClick={startProv} disabled={provBusy || prov?.running === true}
+              className="mt-1.5 text-[10px] font-black px-3 py-1.5 rounded-lg"
+              style={{ background: "rgba(255,170,68,0.1)", border: "1px solid rgba(255,170,68,0.5)", color: "#ffaa44" }}>
+              {prov?.running ? "⏳ التجهيز شغال…" : provBusy ? "بدين…" : "⚠️ اعرف المخاطرة — جهّز محليًا"}
+            </button>
+          </details>
           {prov && (prov.running || prov.phase !== "idle") && (
             <div className="mt-2 rounded-lg p-2 font-mono text-[9px]" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
               <div className="flex items-center justify-between" style={{ color: prov.error ? "#ff6666" : "#44ff88" }}>
