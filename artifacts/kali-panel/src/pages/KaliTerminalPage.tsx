@@ -212,19 +212,26 @@ export default function KaliTerminalPage() {
       writeToTerm(`\r\n\x1b[1;31mkali@fleet\x1b[0m\x1b[32m:~$\x1b[0m \x1b[1;37m${cmd}\x1b[0m\r\n`);
       if (cmd.trim() === "clear" || cmd.trim() === "cls") { xtermRef.current?.clear(); return; }
       setBusy(true);
+      /* TEST27 — الظهور اللحظي: بث حي عبر SSE */
       try {
-        const r = await fetch("/api/ops/kali/exec", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cmd }) });
-        if (r.status === 404) {
-          const d = await r.json().catch(() => ({}));
-          writeLineToTerm(`⚠ ${d.says_ar || "مافيش طايرة كالي متاحة"}`, "\x1b[33m");
-        } else {
-          const d = (await r.json()) as { stdout?: string; stderr?: string; exitCode?: number | null; durationMs?: number; plane?: string };
-          if (d.stdout) writeToTerm(d.stdout.replace(/\n/g, "\r\n"));
-          if (d.stderr) writeToTerm("\x1b[33m" + d.stderr.replace(/\n/g, "\r\n") + "\x1b[0m");
-          const exitOk = (d.exitCode ?? 0) === 0;
-          writeToTerm(`\r\n\x1b[${exitOk ? "32" : "31"}m[exit ${d.exitCode ?? 0} | ${d.durationMs ?? 0}ms]\x1b[0m\r\n`);
-          if (d.plane) writeLineToTerm(`↳ اتنفّذ على: ${d.plane}`, "\x1b[36m");
-        }
+        await new Promise<void>((resolve) => {
+          const es = new EventSource(`/api/ops/kali/exec-stream?command=${encodeURIComponent(cmd)}&timeout=120000`);
+          es.onmessage = (e) => {
+            try {
+              const d = JSON.parse(e.data) as { type: string; text?: string; exitCode?: number | null; durationMs?: number; plane?: string };
+              if (d.type === "stdout" && d.text) writeToTerm(d.text.replace(/\n/g, "\r\n"));
+              else if (d.type === "stderr" && d.text) writeToTerm("\x1b[33m" + d.text.replace(/\n/g, "\r\n") + "\x1b[0m");
+              else if (d.type === "error" && d.text) writeLineToTerm(`⚠ ${d.text}`, "\x1b[33m");
+              else if (d.type === "done") {
+                const exitOk = (d.exitCode ?? 0) === 0;
+                writeToTerm(`\r\n\x1b[${exitOk ? "32" : "31"}m[exit ${d.exitCode ?? 0} | ${d.durationMs ?? 0}ms]\x1b[0m\r\n`);
+                if (d.plane) writeLineToTerm(`↳ اتنفّذ على: ${d.plane}`, "\x1b[36m");
+                es.close(); resolve();
+              }
+            } catch { /* تجاهل */ }
+          };
+          es.onerror = () => { es.close(); resolve(); };
+        });
       } catch (e) {
         writeLineToTerm(`Error: ${(e as Error).message}`, "\x1b[31m");
       } finally { setBusy(false); }

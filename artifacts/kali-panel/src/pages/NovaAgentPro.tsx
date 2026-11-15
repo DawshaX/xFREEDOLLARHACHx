@@ -265,17 +265,24 @@ function KaliFleetArena() {
     if (!c.trim() || busy) return;
     setBusy(true); setCmd("");
     setLog(p => [...p, { t: `kali@fleet:~$ ${c}` }]);
+    /* TEST27 — الظهور اللحظي: بث حي عبر SSE */
     try {
-      const r = await fetch("/api/ops/kali/exec", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cmd: c }) });
-      if (r.status === 404) {
-        const d = (await r.json().catch(() => ({}))) as { says_ar?: string };
-        setLog(p => [...p, { t: d.says_ar || "مافيش طايرة كالي", err: true }]);
-      } else {
-        const d = (await r.json()) as { stdout?: string; stderr?: string; exitCode?: number | null; plane?: string };
-        const out = d.stdout || d.stderr || (d.exitCode === 0 ? "(بلا مخرجات)" : `exit=${d.exitCode}`);
-        setLog(p => [...p, { t: String(out).slice(0, 2500), err: d.exitCode !== 0 }]);
-        if (d.plane) setLog(p => [...p, { t: `↳ اتنفّذ على: ${d.plane}`, plane: true }]);
-      }
+      await new Promise<void>((resolve) => {
+        const es = new EventSource(`/api/ops/kali/exec-stream?command=${encodeURIComponent(c)}&timeout=120000`);
+        es.onmessage = ev => {
+          try {
+            const d = JSON.parse(ev.data) as { type: string; text?: string; exitCode?: number | null; plane?: string };
+            if (d.type === "stdout" && d.text) setLog(p => [...p.slice(0, 400), { t: d.text as string }]);
+            else if (d.type === "stderr" && d.text) setLog(p => [...p.slice(0, 400), { t: d.text as string, err: true }]);
+            else if (d.type === "error" && d.text) setLog(p => [...p, { t: `⚠ ${d.text}`, err: true }]);
+            else if (d.type === "done") {
+              if (d.plane) setLog(p => [...p, { t: `↳ اتنفّذ على: ${d.plane}`, plane: true }]);
+              es.close(); resolve();
+            }
+          } catch { /* تجاهل */ }
+        };
+        es.onerror = () => { es.close(); resolve(); };
+      });
     } catch (e) { setLog(p => [...p, { t: e instanceof Error ? e.message : String(e), err: true }]); }
     setBusy(false);
   };

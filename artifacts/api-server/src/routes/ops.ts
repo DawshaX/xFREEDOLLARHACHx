@@ -83,7 +83,7 @@ import { broadcastEvent } from "../lib/ws-hub";
 import { createPushNotification } from "../lib/push-hub";
 import { getConnectedAgentList, execOnLocalAgent } from "./local-agent";
 import { KALI_NODE_PROBE, remoteWriteCmd, remoteRunCmd } from "../lib/ops/kali-node-installer";
-import { kaliAnywhereExec } from "../lib/ops/kali-anywhere";
+import { kaliAnywhereExec, kaliAnywhereExecStream } from "../lib/ops/kali-anywhere";
 
 const router = Router();
 
@@ -984,6 +984,57 @@ router.get("/ops/storage-hub", async (_req: Request, res: Response) => {
   }
   const total = rows.reduce((a, r) => a + r.bytes, 0);
   res.json({ ok: true, repo: REPO, rows, totalBytes: total, totalHuman: gb(total), measuredAt: new Date().toISOString(), tokenUsed: Boolean(process.env.GITHUB_TOKEN) });
+});
+
+/* ── TEST27 — «الظهور اللحظي»: بث حي موحّد عبر SSE — نفس مسار كل الطرفيات ──
+ * الهَب أولًا، وإلا أول عقدة كالي سحابية — chunks حرف بحرف زي ما بتتولد. */
+async function handleKaliStream(cmd: string, timeoutMs: number, res: Response): Promise<void> {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders?.();
+  const sseWrite = (data: unknown) => {
+    try { res.write(`data: ${JSON.stringify(data)}\n\n`); (res as unknown as { flush?: () => void }).flush?.(); } catch { /* closed */ }
+  };
+  let closed = false;
+  res.on("close", () => { closed = true; });
+  const r = await kaliAnywhereExecStream(cmd, timeoutMs, (streamType, chunk) => {
+    if (!closed) sseWrite({ type: streamType, text: chunk });
+  });
+  if (closed) return;
+  if (!r) {
+    sseWrite({ type: "error", text: "مافيش كالي على الهَب ولا عقدة سحابية جاهزة متصلة دلوقتي — موجة fleet-nodes كل 5 ساعات بتثبتها تلقائيًا، أو دوس «ثبّت كالي على أول عقدة»" });
+    res.end();
+    return;
+  }
+  sseWrite({ type: "done", exitCode: r.exitCode, durationMs: r.durationMs, plane: r.plane });
+  res.end();
+}
+
+router.get("/ops/kali/exec-stream", async (req: Request, res: Response) => {
+  const gate = checkGate(req as never, "kali-exec");
+  if (!(gate && gate.ok && gate.code === "allowed")) {
+    res.status(403).json({ ok: false, error: "owner_gate_required", what: "kali-exec" });
+    return;
+  }
+  const cmd = String(req.query.command ?? "").trim().slice(0, 500);
+  if (!cmd) { res.status(400).json({ ok: false, error: "cmd_required" }); return; }
+  const tmo = req.query.timeout ? Math.min(parseInt(String(req.query.timeout), 10) || 120_000, 600_000) : 120_000;
+  await handleKaliStream(cmd, tmo, res);
+});
+
+router.post("/ops/kali/exec-stream", async (req: Request, res: Response) => {
+  const gate = checkGate(req as never, "kali-exec");
+  if (!(gate && gate.ok && gate.code === "allowed")) {
+    res.status(403).json({ ok: false, error: "owner_gate_required", what: "kali-exec" });
+    return;
+  }
+  const body = (req.body as Record<string, unknown> | undefined) ?? {};
+  const cmd = String(body.command ?? body.cmd ?? "").trim().slice(0, 500);
+  if (!cmd) { res.status(400).json({ ok: false, error: "cmd_required" }); return; }
+  const tmo = Math.min(Number(body.timeout) || 120_000, 600_000);
+  await handleKaliStream(cmd, tmo, res);
 });
 
 router.get("/ops/kali/nodes", async (_req: Request, res: Response) => {

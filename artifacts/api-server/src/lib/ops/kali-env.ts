@@ -172,7 +172,11 @@ function prootArgs(root: string, cmd: string): string[] {
 }
 
 /** تنفيذ أمر حقيقي داخل كالي — spawn مباشر لproot، timeout صارم، قص محفوظ. */
-export function runKali(cmd: string, timeoutMs = 60_000): Promise<KaliExecResult> {
+export function runKali(
+  cmd: string,
+  timeoutMs = 60_000,
+  onData?: (streamType: "stdout" | "stderr", chunk: string) => void,
+): Promise<KaliExecResult> {
   const root = kaliRoot();
   const t0 = Date.now();
   if (!root) {
@@ -189,12 +193,16 @@ export function runKali(cmd: string, timeoutMs = 60_000): Promise<KaliExecResult
     let truncated = false;
     const cap = 64 * 1024;
     child.stdout.on("data", (d: Buffer) => {
-      if (out.length < cap) out += d.toString();
+      const text = d.toString();
+      if (out.length < cap) out += text;
       else truncated = true;
+      if (onData) onData("stdout", text);
     });
     child.stderr.on("data", (d: Buffer) => {
-      if (err.length < cap) err += d.toString();
+      const text = d.toString();
+      if (err.length < cap) err += text;
       else truncated = true;
+      if (onData) onData("stderr", text);
     });
     child.on("error", (e) => {
       resolve({ ok: false, cmd, exitCode: null, stdout: out, stderr: `${err}\n${e.message}`.trim(), durationMs: Date.now() - t0 });
