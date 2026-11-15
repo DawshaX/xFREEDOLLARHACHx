@@ -12,6 +12,7 @@ import { addPushClient, createPushNotification } from "./lib/push-hub";
 import { runAgent } from "./lib/agent/core";
 import { ROOT_SESSION_ID, getOrCreateNexusSession } from "./lib/agent/session-nexus";
 import { tokenConfigured, checkGate } from "./lib/ops/gate";
+import { realRouterOwns } from "./lib/ops/mock-policy";
 
 const app: Express = express();
 
@@ -392,103 +393,18 @@ app.post("/api/bot/cron/:id/trigger", async (req: Request, res: Response) => {
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   if (!process.env.DATABASE_URL) {
     const p = req.path;
-    // Let dedicated in-memory/streaming/network routers handle their routes first
-    const letRouterHandle =
-      // NOVA Core owns its own durable memory + agent stream — never mock it.
-      p.startsWith("/nova-core") ||
-      // The gateway does live probes (Ollama, ngrok, every provider). The mock
-      // used to answer it with hardcoded "online: true" values, which is how a
-      // machine with no Ollama reported five installed models.
-      p.startsWith("/nova/gateway") ||
-      p.startsWith("/memory") ||
-      p.startsWith("/ollama") ||
-      p.startsWith("/events") ||
-      [
-        "/autonomous/status",
-        "/autonomous/enable",
-        "/autonomous/disable",
-        "/autonomous/tick",
-        "/autonomous/stream",
-      ].includes(p) ||
-      // The whole local-agent namespace is a real router (fleet of machines,
-      // PTY, files, screenshots, downloads) — none of it may be mocked.
-      p.startsWith("/local-agent") ||
-      // Fleet mesh = the live network between all agents; must never be mocked.
-      p.startsWith("/fleet") ||
-      // Ops is the execution spine — authorized programs → durable jobs → evidence
-      // → report. It persists on the filesystem, NOT on Postgres, so the "no
-      // DATABASE_URL" case is exactly the free-host case (Silly/Waifly render this
-      // app with no DB). Shadowing /ops with the static mock is what made
-      // /ops/kinds answer `total: 0` and a real job POST read as "no engine",
-      // which is indistinguishable from an unmounted router. Never mock it.
-      p.startsWith("/ops") ||
-      // The live-agent router owns sessions + brain-status. The mock used to
-      // answer these with a DIFFERENT payload shape, which crashed the panel
-      // (brainStatus.activeProcesses was undefined → ".length of undefined").
-      p.startsWith("/live-agent") ||
-      // Cron jobs (mem_consolidate, nova_learn, cve_hunt, self_heal, sys_watchdog)
-      // and root agent stream run on disk/memory in standalone mode and emit
-      // background events directly into session-nexus.ts.
-      p.startsWith("/nova/cron") ||
-      p.startsWith("/nova/openclaw") ||
-      p === "/nova/browser" ||
-      p === "/nova/iq" ||
-      p.startsWith("/nova/kill") ||
-      p.startsWith("/nova/sessions") ||
-      p.startsWith("/nova/workspace") ||
-      p === "/nova/tunnel-status" ||
-      p === "/nova/telegram-alert" ||
-      p.startsWith("/nova/scheduler") ||
-      p === "/providers/status" ||
-      p === "/bot/status" ||
-      p.startsWith("/kali-command") ||
-      p.startsWith("/multi-ai") ||
-      p.startsWith("/mcp") ||
-      p.startsWith("/openclaw") ||
-      p.startsWith("/nova-intel") ||
-      // قياس `/system/*` حقيقي من os/statfs — من غيره الـmock بيرد cpu:0/platform:"browser"
-      // والواجهة كانت بتعرض «Unmeasured» والمالك عايز «المساحة المُستخدمة والحقيقية».
-      p.startsWith("/system") ||
-      // TEST7 قِيس 2026-11-13: /monitor/system كان بيلسق من الفولباك الساكن
-      // (cpu:0 · cores:0) على السيرفر الحي نفسه — الراوتر بيقيس os.cpus فعلًا.
-      p.startsWith("/monitor") ||
-      // الخزنة: كل راوترات /cve/* بقت بترد من الكوربوس (332k+) حتى لو الـDB نايمة —
-      // ومن غير القيد ده الوضع بلا DB كان بياخد رد «المجرة» المزيّف من standalone-api.
-      (p.startsWith("/cve/") ) ||
-
-      p === "/agent/root/stream" ||
-      (p.startsWith("/tools") && p !== "/tools/shell" && p !== "/tools/webfetch") ||
-      p.startsWith("/proxy") ||
-      p.startsWith("/scanner") ||
-      p.startsWith("/deep-research") ||
-      p.startsWith("/nuclei") ||
-      p.startsWith("/github") ||
-      p.startsWith("/fetch") ||
-      (p.startsWith("/scan") && p !== "/scan/full") ||
-      p.startsWith("/cisa") ||
-
-      // تفضيلات اللوحة + دفاتر نوفا + مركز الإشعارات: routers حقيقية على ملف
-      // state/ — الـmock هنا كان بيوضّح «اتحفظت» والحقيقة لا (الملكية للمالك: الإعداد
-      // يعيش على السيرفر مش البراوزر).
-      p.startsWith("/panel/prefs") ||
-      // TEST9: التكاملات router حقيقي على state/ — يخدم حتى بلا DB (الشيم
-      // الساكن بيرفض الربط فقط، مش الحالة).
-      p.startsWith("/integrations") ||
-      p.startsWith("/nova/notes") ||
-      p.startsWith("/notifications") ||
-      p.startsWith("/cisa") ||
-      p.startsWith("/exploitdb") ||
-      // 2026-11-15: these were answered by the static mock BEFORE the real
-      // routers ran, so the security gates added to them never executed —
-      // POST /api/processes returned a fake "proc-1042" object with a 200 while
-      // the real (gated) handler was never reached. That made the fix look
-      // applied while the hole stayed open. The real routers own these paths.
-      p.startsWith("/processes") ||
-      p.startsWith("/keys") ||
-      p.startsWith("/settings") ||
-      p.startsWith("/kali-terminal") ||
-      p.startsWith("/kali-env") ||
-      p.startsWith("/files");
+    // ── Who answers this request? ────────────────────────────────────────────
+    // This used to be a hand-written prefix allowlist (`letRouterHandle`). It
+    // could not stay correct against 85 router files: on 2026-11-15, 202 declared
+    // routes were not covered, 120 of them writes. The mock answered them with a
+    // canned 200 BEFORE the real handler ran — which is how a security gate added
+    // to POST /api/processes never executed while the diff looked correct.
+    //
+    // Now the question is answered by Express's own route table (route-registry)
+    // plus one explicit policy (mock-policy): the mock may answer only when no
+    // real route exists, or when the real route is DB-backed and this build has
+    // no database. Everything else belongs to the real router, permanently.
+    const letRouterHandle = realRouterOwns(router, req.method, p);
 
     if (!letRouterHandle) {
       const standaloneData = resolveStandaloneApi(
