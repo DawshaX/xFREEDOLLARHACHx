@@ -141,3 +141,18 @@ state/kali-quota-flag.json
 
 # TEST29 — عدّاد تنفيذ كالي (runtime state)
 state/kali_scan_stats_v1.jsonl
+
+# TEST30 — كاش قياس العقد (runtime state)
+state/kali_node_probes_v1.json
+
+# runtime state — مش كود
+logs/
+state/auth-log.jsonl
+state/autonomy.json
+state/cybernova_notifs_v1.json
+state/nova-sessions.json
+state/proactive-log.json
+state/state-github-backup.json
+state/state-prune.json
+state/toolchain-provision.json
+state/kali_node_probes_v1.json

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, Monitor, Play, RefreshCw, Square, Terminal, Wrench, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { pushNotify } from "@/lib/sse";
+import { novaAuthHeaders } from "@/lib/ops-client";
 
 /**
  * TEST12 — «شغل نظام الكالي واعملو مكان وتبويب» — التبويبة المخصصة لبيئة كالي
@@ -33,7 +34,7 @@ type KaliNodeInstall = {
 };
 type KaliNodes = {
   ok: boolean;
-  hub: { kali: boolean; packages: number };
+  hub: { kali: boolean; packages: number; executables?: number };
   nodes: KaliNodeRow[];
   tools?: { from: string; tools: Record<string, { present: boolean; version?: string }>; sysinfo?: { packages: number; executables: number; kaliGroups: string[] } } | null;
   stats?: { total: number; ok: number; fail: number; last: { at: string; plane: string; cmd: string; ok: boolean; bytes: number } | null; byPlane: Record<string, number> } | null;
@@ -71,6 +72,7 @@ type KaliStatus = {
   present: boolean;
   prettyName?: string;
   packages?: number;
+  executables?: number;
   builtAt?: string;
   probe?: { ok: boolean; version?: string; detail?: string };
   desktop?: { running: boolean; vncPort: boolean; novncPort: boolean; desired: boolean };
@@ -117,6 +119,7 @@ export default function KaliEnvPage() {
   const [iframeKey, setIframeKey] = useState(0);
   const [prov, setProv] = useState<ProvisionState | null>(null);
   const [provBusy, setProvBusy] = useState(false);
+  const [buildStamp, setBuildStamp] = useState<{ commit?: string; builtAt?: string } | null>(null);
   const [nodes, setNodes] = useState<KaliNodes | null>(null);
   const [installBusy, setInstallBusy] = useState(false);
   const [store, setStore] = useState<StorageHub | null>(null);
@@ -131,7 +134,16 @@ export default function KaliEnvPage() {
       if (r.ok) setNodes((await r.json()) as KaliNodes);
     } catch { /* البولينج الجاي يجرب */ }
   }, []);
-  useEffect(() => { void loadNodes(); }, [loadNodes]);
+  useEffect(() => {
+    void loadNodes();
+    // TEST30 — بصمة البنية الشغالة (من build.json) — المالك يشوف فورًا إن التحديث وصل
+    (async () => {
+      try {
+        const r = await fetch("/api/nova-core/version", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(8000) });
+        if (r.ok) { const v = await r.json(); setBuildStamp({ commit: v?.commit || v?.build?.commit, builtAt: v?.builtAt || v?.build?.builtAt }); }
+      } catch { /* الساكن مافيهوش version حي */ }
+    })();
+  }, [loadNodes]);
   useEffect(() => {
     const iv = setInterval(() => void loadNodes(), 20000);
     return () => clearInterval(iv);
@@ -322,7 +334,7 @@ export default function KaliEnvPage() {
           </div>
         </div>
         <p className="text-[9px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
-          كل عقدة runner بتبني كالي كاملة بنفسها من فرع <b>kali-rootfs</b> (2,113 حزمة · SHA256 لكل جزء · صفر تحميل على السيرفر وصفر جهاز ليك) قبل ما تتصل بالهَب — وkali_run بيتحول عليها تلقائيًا.
+          كل عقدة runner بتبني كالي كاملة بنفسها من فرع <b>kali-rootfs</b> (~2,246 أداة تنفيذية · 2,113 حزمة · SHA256 لكل جزء · صفر تحميل على السيرفر وصفر جهاز ليك) قبل ما تتصل بالهَب — وkali_run بيتحول عليها تلقائيًا.
         </p>
         {nodes && nodes.nodes.length > 0 ? (
           <div className="mt-2 space-y-1.5">
@@ -358,7 +370,7 @@ export default function KaliEnvPage() {
             <p className="text-[11px] font-black" style={{ color: "#22d3ee" }}>☁️ الوضع السحابي — التبيئة مش على السيرفر ومش هتنزل عليه</p>
           </div>
           <p className="text-[10px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>
-            المخزن سحابي دايمًا: فرع <b>kali-rootfs</b> على جيت هب (2,113 حزمة) — والتنفيذ بيتحول تلقائيًا لعقدة كالية متصلة (الأجينت بيعمل ده لوحده في kali_run). التحميل المحلي على السيرفر ده استثناء بتأكيد مزدوج — بيعطل سيرفرات بحصة صغيرة (مقاس).
+            المخزن سحابي دايمًا: فرع <b>kali-rootfs</b> على جيت هب (~2,246 أداة تنفيذية · 2,113 حزمة) — والتنفيذ بيتحول تلقائيًا لعقدة كالية متصلة (الأجينت بيعمل ده لوحده في kali_run). التحميل المحلي على السيرفر ده استثناء بتأكيد مزدوج — بيعطل سيرفرات بحصة صغيرة (مقاس).
           </p>
           <details className="mt-2">
             <summary className="text-[9px] font-mono cursor-pointer" style={{ color: "rgba(255,255,255,0.45)" }}>استثناء قديم: ربط عقدة كالي من جهازك — مش مطلوب أبدًا (الأسطول السحابي فوق هو الطريق الرسمي)</summary>
@@ -407,7 +419,7 @@ export default function KaliEnvPage() {
           <div className="rounded-xl p-3" style={{ background: "rgba(255,60,60,0.04)", border: "1px solid rgba(255,60,60,0.3)" }}>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span className="text-[11px] font-black" style={{ color: "#ff6655" }}>{st.prettyName ?? "Kali"}</span>
-              <span className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>{st.packages ?? "?"} حزمة {st.builtAt ? `· بناء ${st.builtAt}` : ""}</span>
+              <span className="text-[9px] font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>{st.executables ? `${st.executables.toLocaleString("en")} أداة تنفيذية · ` : ""}{st.packages ?? "?"} حزمة {st.builtAt ? `· بناء ${st.builtAt}` : ""}</span>
             </div>
             {st.probe && (
               <p className="text-[9px] font-mono mt-1" style={{ color: st.probe.ok ? "rgba(68,255,136,0.8)" : "#ffaa44" }}>
@@ -496,25 +508,34 @@ export default function KaliEnvPage() {
         </div>
       )}
 
-      {/* TEST29 — إحصائيات الشغل الحقيقي: عدّاد من أداة التسجيل — مش ادعاء */}
-      {nodes?.stats && nodes.stats.total > 0 && (
-        <div className="rounded-xl p-3" style={{ background: "rgba(255,170,68,0.04)", border: "1px solid rgba(255,170,68,0.3)" }}>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="text-[11px] font-black" style={{ color: "#ffaa44" }}>📊 إحصائيات الشغل الحقيقي على كالي — عدّاد من كل تنفيذ فعلًا</p>
-            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,170,68,0.1)", color: "#ffc76b" }}>
-              {nodes.stats.total} تنفيذ · ✓{nodes.stats.ok} · ✗{nodes.stats.fail}
-            </span>
-          </div>
-          {nodes.stats.last && (
-            <p className="text-[9px] font-mono mt-1.5 break-all" style={{ color: "rgba(255,255,255,0.55)" }}>
-              آخر تنفيذ: <b style={{ color: nodes.stats.last.ok ? "#44ff88" : "#ff8888" }}>{nodes.stats.last.cmd.slice(0, 90)}</b> — على {nodes.stats.last.plane} · {new Date(nodes.stats.last.at).toLocaleTimeString("en-GB")}
-            </p>
-          )}
-          <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-            {Object.entries(nodes.stats.byPlane).map(([p, n]) => `${p}: ${n}`).join(" · ") || "—"} — كل تنفيذ بيتسجل من نواة الاتصال الموحدة (هَب أو عقدة).
-          </p>
+      {/* TEST30 — إحصائيات الشغل الحقيقي: دايمًا ظاهرة (الأصفار صادقة) — كانت بتتخبي لما total=0
+          فالصفحة بقت شكلها «زي ما هي» حتى بعد التحديث. + بصمة البنية تحت عشان المالك يشوف فورًا
+          إن الكود اللي شغال على waifly هو آخر build (commit + builtAt من /api/nova-core/version). */}
+      <div className="rounded-xl p-3" style={{ background: "rgba(255,170,68,0.04)", border: "1px solid rgba(255,170,68,0.3)" }}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-[11px] font-black" style={{ color: "#ffaa44" }}>📊 إحصائيات الشغل الحقيقي على كالي — عدّاد من كل تنفيذ فعلًا</p>
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,170,68,0.1)", color: "#ffc76b" }}>
+            {nodes?.stats ? `${nodes.stats.total} تنفيذ · ✓${nodes.stats.ok} · ✗${nodes.stats.fail}` : "…"}
+          </span>
         </div>
-      )}
+        {nodes?.stats?.last ? (
+          <p className="text-[9px] font-mono mt-1.5 break-all" style={{ color: "rgba(255,255,255,0.55)" }}>
+            آخر تنفيذ: <b style={{ color: nodes.stats.last.ok ? "#44ff88" : "#ff8888" }}>{nodes.stats.last.cmd.slice(0, 90)}</b> — على {nodes.stats.last.plane} · {new Date(nodes.stats.last.at).toLocaleTimeString("en-GB")}
+          </p>
+        ) : (
+          <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.45)" }}>
+            مافيش تنفيذ مسجّل لسه — افتح الطرفية تحت وشغّل أي أمر، وهيتحسب هنا فورًا (هَب وعقد وأجينت: كل مسار بيتسجل).
+          </p>
+        )}
+        <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+          {nodes?.stats ? Object.entries(nodes.stats.byPlane).map(([p, n]) => `${p}: ${n}`).join(" · ") : "—"} — كل تنفيذ بيتسجل من نواة الاتصال الموحدة (هَب أو عقدة).
+        </p>
+        {buildStamp && (
+          <p className="text-[8px] font-mono mt-1.5 pt-1.5" style={{ color: "rgba(120,220,255,0.5)", borderTop: "1px dashed rgba(120,220,255,0.15)" }}>
+            🏷️ البنية الشغالة: commit {buildStamp.commit?.slice(0, 7) || "؟"} · اتبنت {buildStamp.builtAt || "؟"} — لو التاريخ ده قديم، الـself-update (كرون 5د) لسه ماوصلش لآخر بنية.
+          </p>
+        )}
+      </div>
 
       {/* الأدوات — مقاسة من حيث كالي عايشة فعلًا (الهَب أو عقدة الأسطول) — دايمًا ظاهرة */}
       <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.1)" }}>

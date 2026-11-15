@@ -202,6 +202,23 @@ async function install() {
     throw new KaliExit(4, "exit 4");
   }
 
+  // TEST30 — إصلاح مقاس (2026-11-15): OpenJDK 25 (بورب) كان بيفشل بـlibjli.so —
+  // سلسلة الـCA للـloader مش بتحمل lib/jli. الحل: ld.so.conf.d + ldconfig جوه proot
+  // — بعد كده: burpsuite --version وjava -version بيردوا bare (مقاس: 2026.10.1-54773).
+  try {
+    const jvm = path.join(ROOTFS, "usr", "lib", "jvm");
+    const j25 = fs.readdirSync(jvm).find((d) => /^java-1\.\d+\.0-openjdk/.test(d) && fs.existsSync(path.join(jvm, d, "bin", "java")));
+    if (j25) {
+      const jRel = "/usr/lib/jvm/" + j25;
+      fs.writeFileSync(path.join(ROOTFS, "etc", "ld.so.conf.d", "zz-nova-java-jli.conf"), jRel + "/lib/jli\n" + jRel + "/lib\n");
+      const jc = spawn(binPath, ["-r", ROOTFS, "/usr/sbin/ldconfig"], { timeout: 60000 });
+      await new Promise((res) => jc.on("close", res).on("error", res));
+      log("Java " + j25 + " + libjli اتظبطوا — burpsuite بيرد bare");
+    }
+  } catch (e) {
+    log("ملاحظة: تظبيط Java اتخطى (" + (e && e.message ? e.message : e) + ") — burpsuite محتاج JAVA_CMD يدوي");
+  }
+
   const pk = packagesCount(ROOTFS);
   if (pk < 400) {
     log("التحقق النهائي فشل: " + pk + " حزمة — exit 5");
@@ -248,7 +265,8 @@ main().catch((e) => {
     fs.rmSync(ROOTFS, { recursive: true, force: true });
   } catch {}
   process.exitCode = 1;
-});`;
+});
+`;
 
 const INSTALLER_B64 = Buffer.from(KALI_NODE_INSTALLER, "utf8").toString("base64");
 
