@@ -107,6 +107,9 @@ export default function KaliTerminalPage() {
   const [histIdx, setHistIdx] = useState(-1);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  /* TEST25 — الاتصالات كلها واحدة: الوضع الافتراضي كالي السحابية (نفس مسار كل طرفيات
+   * البرنامج عبر /api/ops/kali/exec — هَب أو عقدة الأسطول بالطاير التلقائي). */
+  const [kaliMode, setKaliMode] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
 
   // File browser
@@ -202,6 +205,31 @@ export default function KaliTerminalPage() {
   // ── Execute command ──────────────────────────────────────────────────────────
   const executeCmd = useCallback(async (cmd: string) => {
     if (!cmd.trim() || busy) return;
+    if (kaliMode) {
+      // الطريق الموحّد — كالي السحابية (هَب أو عقدة الأسطول): نفس النداء اللي بتمشي عليه كل طرفيات البرنامج
+      setCmdHistory(h => { const next = h[h.length - 1] === cmd ? h : [...h, cmd]; return next.slice(-200); });
+      setHistIdx(-1); setInput("");
+      writeToTerm(`\r\n\x1b[1;31mkali@fleet\x1b[0m\x1b[32m:~$\x1b[0m \x1b[1;37m${cmd}\x1b[0m\r\n`);
+      if (cmd.trim() === "clear" || cmd.trim() === "cls") { xtermRef.current?.clear(); return; }
+      setBusy(true);
+      try {
+        const r = await fetch("/api/ops/kali/exec", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cmd }) });
+        if (r.status === 404) {
+          const d = await r.json().catch(() => ({}));
+          writeLineToTerm(`⚠ ${d.says_ar || "مافيش طايرة كالي متاحة"}`, "\x1b[33m");
+        } else {
+          const d = (await r.json()) as { stdout?: string; stderr?: string; exitCode?: number | null; durationMs?: number; plane?: string };
+          if (d.stdout) writeToTerm(d.stdout.replace(/\n/g, "\r\n"));
+          if (d.stderr) writeToTerm("\x1b[33m" + d.stderr.replace(/\n/g, "\r\n") + "\x1b[0m");
+          const exitOk = (d.exitCode ?? 0) === 0;
+          writeToTerm(`\r\n\x1b[${exitOk ? "32" : "31"}m[exit ${d.exitCode ?? 0} | ${d.durationMs ?? 0}ms]\x1b[0m\r\n`);
+          if (d.plane) writeLineToTerm(`↳ اتنفّذ على: ${d.plane}`, "\x1b[36m");
+        }
+      } catch (e) {
+        writeLineToTerm(`Error: ${(e as Error).message}`, "\x1b[31m");
+      } finally { setBusy(false); }
+      return;
+    }
     if (!connected || !selectedAgent) {
       writeLineToTerm("⚠ لا يوجد جهاز متصل. شغّل nova-agent.js على الجهاز المحلي.", "\x1b[33m");
       return;
@@ -260,7 +288,7 @@ export default function KaliTerminalPage() {
       setBusy(false);
       abortRef.current = null;
     }
-  }, [busy, connected, selectedAgent, agents, writeToTerm, writeLineToTerm]);
+  }, [busy, connected, selectedAgent, agents, writeToTerm, writeLineToTerm, kaliMode]);
 
   // ── File browser ─────────────────────────────────────────────────────────────
   const loadDir = useCallback(async (dir: string) => {
@@ -377,6 +405,13 @@ export default function KaliTerminalPage() {
       <div className="shrink-0 flex items-center gap-3 px-4 py-2 border-b border-green-900/40 bg-[#010a04]">
         <Skull className="w-4 h-4 text-red-400" />
         <span className="text-sm font-bold text-red-300 tracking-wider">NOVA AGENT TERMINAL</span>
+        {/* TEST25 — مفتاح الطايرة الموحدة: كالي السحابية (افتراضي) أو الطايرة الخام للجهاز */}
+        <button onClick={() => setKaliMode(v => !v)}
+          className="text-[11px] font-bold px-2 py-0.5 rounded border transition ms-2"
+          style={kaliMode ? { background: "rgba(255,102,85,0.12)", borderColor: "rgba(255,102,85,0.5)", color: "#ff8877" } : { background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.5)" }}
+          title="كالي السحابية: نفس مسار كل طرفيات البرنامج — هَب أو عقدة الأسطول">
+          {kaliMode ? "🐉 كالي السحابية (موحّد)" : "⚙️ الطايرة الخام للجهاز"}
+        </button>
         <div className="flex items-center gap-1.5 ms-2">
           <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-400 animate-pulse" : "bg-red-900"}`} />
           <span className={`text-xs ${connected ? "text-green-400" : "text-red-700"}`}>
