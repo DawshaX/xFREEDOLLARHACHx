@@ -180,10 +180,19 @@ export function pruneState(now = Date.now()): PruneReport {
   // (2026-11-15: وقف عند 10/64 أجزاء والسيرفر وقف كله). القاعدة:
   // كالي **الناقصة** فقط (packages<400) ومافيش تجهيز شغال حالًا —
   // الكاملة (packages≥400) ماتمسّش أبدًا.
+  // TEST23 (مقاس): المُثبِّت الذاتي للعقد بيستخرج في نفس المسارات المحتملة —
+  // الاستخراج بياخد ~7 دقايق والـpackages خلاله 0 — المسح هنا كان بيقتل
+  // التثبيت وسطه (tar «Cannot stat» بعد 434s لأن الملفات بتتشال تحته).
+  // الحارس: لوك المُثبِّت النضيف (<30د — نفس نافذة المُثبِّت نفسه) يوقف
+  // طبقة دي تمامًا. بعد فشل حقيقي اللوك بيتشال في finally والمسح بيرجع شرعي.
   try {
     if (!provisionState().running) {
       for (const root of kaliCandidateRoots()) {
         try {
+          try {
+            const lockSt = statSync(join(root, "..", ".kali-node-lock"));
+            if (Date.now() - lockSt.mtimeMs < 30 * 60 * 1000) continue;
+          } catch { /* مفيش لوك تثبيت عقدة — كمّل الفحص */ }
           let pkgs = 0;
           try { pkgs = readFileSync(join(root, "var/lib/dpkg/status"), "utf8").split("\n").filter((l) => l.startsWith("Package:")).length; } catch { /* ناقصة */ }
           if (pkgs >= 400) continue;
