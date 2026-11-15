@@ -32,6 +32,18 @@
 
 `01cdbb7` = merge #324 (TEST29) → `a2c27e9` = merge #325 (TEST30) — والبناءات بعدهم: bundle 08:54:49Z · Pages deploy نجح (`🌐 نشر المنصة على GitHub Pages` run 43696632844 ✓ + workflow_run 43696706728 ✓). يعني «الكل مدفوع» — والناقص كان وصول الكود للعملية الشغالة، وده اللي بتقفله حلقة النضارة دي.
 
-## 5. البوابات
+## 6. القياس الحي الأول من الrunner (بعد دمج TEST31 — المرآة على main `aa8b3ec`)
+
+**الحقيقة المقاسة على waifly الحي (09:20:55Z):**
+```json
+{"reachable": true, "boot": {"commit": "a2c27e9…", "builtAt": "2026-11-15T08:54:26Z"},
+ "stale": false, "updater": {"enabled": true, "lastResult": "up-to-date", "restartNeeded": false},
+ "action": "fresh", "fresh": true}
+```
+- **الهَب شغّال ببنية TEST30 فعلاً** — الأبديتر اشتغل صح المرة دي («up-to-date · فرق 23 ثانية»). يعني «الصفحة زي ما هي» ماكانتش بنية قديمة على السيرفر.
+- **التشخيص الباقي (المقاس بالمنطق):** كاش الshell — index.html القديم في المتصفح/الedge («Cloud-Edge» قدام السلوت) بيخليك تشوف الصفحة القديمة رغم إن الباندل الجديد وصل. **الإصلاح المطبق من المنبع:** `Cache-Control: no-store` لكل HTML + SPA fallback، و`immutable` للassets المقصوصة (بهاش في الاسم) — الedge المفروض يحترم هيدرات الأصل، ومن الباندل الجاي الهيدرات دي هتكون هي القاعدة.
+- **المرآة بقى بتقيس الصفحة نفسها** (`result.page`): status + هيدر الكاش + اسم الasset المقصوص اللي الshell بياخده — أول قياس جاي هيثبت هل الصفحة المسervة هي آخر build ولا لأ، بالحرف.
+
+## 7. البوابات
 
 tsc الاتنين ✓ · builds ✓ · check-workflows على الYAML المعدل · probe smoke-tested محليًا. مرآة `state/waifly-deploy.json` بتتكتب من الrunner وبتتكومت كل 30د (`[skip ci]` عشان مالوفش الدورة).

@@ -133,6 +133,21 @@ if (result.reachable && (result.stale === true || bootBehindAsset)) {
 
 result.fresh = result.action === "fresh" || result.action === "updated_ok" || result.action === "restarted_ok";
 
+// 5) الصفحة المسervة نفسها: status + كاش الهيدر + اسم الasset المقصوص (الshell اللي المتصفح بياخده)
+try {
+  const r = await fetch(`${HUB}/kali-env`, { headers: HEADERS, signal: AbortSignal.timeout(20_000) });
+  const html = await r.text();
+  const assetMatch = /(?:src|href)="([^"]*\/assets\/[A-Za-z0-9_.-]+\.(?:js|css))"/.exec(html);
+  result.page = {
+    status: r.status,
+    cacheControl: r.headers.get("cache-control") || null,
+    servedAsset: assetMatch ? assetMatch[1] : null,
+    htmlBytes: html.length,
+  };
+} catch (e) {
+  result.page = { error: String((e && e.message) || e).slice(0, 120) };
+}
+
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, JSON.stringify(result, null, 2) + "\n");
 console.log(
