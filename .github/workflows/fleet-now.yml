@@ -1,0 +1,202 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# NOVA FLEET NOW — موجة متوازية تملي السلوت الفاضية فورًا (TEST32)
+#
+# العطل اللي هصلحه (مقاس 2026-11-15T09:48Z): موجة 19/19 الجاهزة بتقعد قافطة
+# وراء concurrency group «nova-fleet» لحد ما آخر عقدة من الموجة القديمة تموت —
+# بالقياس: 4 عقد حية (latch 350د → تموت ~12:40Z) + 19 عقدة pending رغم إن
+# الحد الأعلى للخطة المجانية 20 concurrent والمستخدم 4 بس. يعني 16 سلوت
+# فاضية ساعٍة كاملة والأسطول ناقص — ومرة تانية نفس المشهد كل ما موجة تلحق
+# موجة (الجدولة كل 5 ساعات > عمر العقدة 6 ساعات فبيبقى فيه دايمًا ذيل حي).
+#
+# الحل: نفس جسم fleet-nodes.yml بالحرف، بس بمجموعة concurrency مستقلة
+# («nova-fleet-now») وفهارس 20-38 عشان الهوية ماتتصادمش مع موجات 1-19
+# (المعرّف أصلاً gh-<IDX>-<HHMM> فمافيش تصادم حتى لو تكرر الفهرس — الفهارس
+# المزاحة بتخلي العد في البانل مقروء: غ-1..4 قديمة + غ-20..38 جديدة).
+# عند الإطلاق: 4 حية + 19 مطلوبة = 23 > 20 → GitHub يشغّل 16 فورًا ويصفّي
+# 3 في الطابور لحد ما سلوت يفضى — الأسطول الحي بيرجع ~20 عقدة خلال ~8 دقايق.
+# الموجة المصممة (fleet-nodes.yml) شغالة زي ما هي كخط الدفاع عند ~12:40Z.
+#
+# الأمان نفسه: push محتاج FLEET_ENABLED=1 + NOVA_EXEC_TOKEN (مقاس 2026-11-02:
+# هَب بلا توكن = بوتنّت لأي حد). مافيش schedule هنا عشان ماتضاعفش الموجات —
+# الجدولة الرسمية في fleet-nodes.yml، وده أكcelerator للـpush فقط.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: fleet-now
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fleet-now.yml"
+  workflow_dispatch:
+    inputs:
+      nodes:
+        description: How many extra nodes to start (1-19)
+        required: false
+        default: "19"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nova-fleet-now
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: plan the extra wave
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      nodes: ${{ steps.plan.outputs.nodes }}
+    steps:
+      - id: plan
+        env:
+          INPUT_NODES: ${{ github.event.inputs.nodes }}
+          FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
+          EVENT: ${{ github.event_name }}
+          TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          # نفس قفل الأمان المقاس في fleet-nodes.yml — بالحرف.
+          if [ "$EVENT" != "workflow_dispatch" ]; then
+            if [ "$FLEET_ENABLED" != "1" ]; then
+              echo "::notice::no wave — set Actions variable FLEET_ENABLED=1 to let push waves spawn nodes"
+              echo "nodes=0" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ -z "$TOKEN" ]; then
+              echo "::error::no wave — NOVA_EXEC_TOKEN secret is empty. Attach nodes only to a hub that requires it."
+              echo "nodes=0" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            if [ -z "$TOKEN" ]; then echo "::warning::manual wave without NOVA_EXEC_TOKEN — a hardened hub will refuse these nodes (401)"; fi
+          fi
+
+          n="${INPUT_NODES:-19}"
+          case "$n" in ''|*[!0-9]*) n=19 ;; esac
+          if [ "$n" -lt 1 ]; then n=1; fi
+          # 20 concurrent على الخطة المجانية، والموجة الأساسية ممكن تكون ماسكة سلوت —
+          # كل اللي نقدر عليه هنا 19 إضافية؛ الزيادة GitHub نفسه بيصفّيها في الطابور.
+          if [ "$n" -gt 19 ]; then n=19; fi
+          echo "nodes=$n" >> "$GITHUB_OUTPUT"
+          echo "::notice::starting $n extra fleet node(s) (indices 20-38)"
+
+  node:
+    name: node ${{ matrix.i }}
+    needs: prepare
+    if: needs.prepare.outputs.nodes != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      max-parallel: 19
+      matrix:
+        # فهارس مزاحة 20-38: الموجة الأساسية بتعيش في 1-19 — العد في البانل بيفضل مقروء
+        # (المعرّف النهائي gh-<IDX>-<HHMM> فمافيش تصادم أصلًا، دي قراءة بس).
+        i: [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
+    steps:
+      - name: Skip if this index is beyond the requested count
+        id: gate
+        env:
+          WANTED: ${{ needs.prepare.outputs.nodes }}
+        run: |
+          off=$(( ${{ matrix.i }} - 19 ))
+          if [ "$off" -gt "$WANTED" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::node ${{ matrix.i }} not needed this wave"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: 22
+
+      # نفس عدّة القراءة فقط — الماسحات النشطة ممنوعة على runner GitHub (IP المصدر
+      # بتاع GitHub = abuse على الحساب). مقاسة ومعلنة في fleet-nodes.yml.
+      - name: Give the node its read-only toolchain (best effort, ~40 s)
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          sudo apt-get update -qq || true
+          sudo apt-get install -y -qq --no-install-recommends \
+            dnsutils whois netcat-openbsd jq curl openssl >/dev/null 2>&1 || true
+          echo "dig: $(command -v dig || echo missing) · whois: $(command -v whois || echo missing) · jq: $(command -v jq || echo missing)"
+
+      # ── Kali pre-warm (نفس المثبّت السحابي المقاس: 64 جزء · 2113 حزمة · ~7د) ──
+      - name: Pre-warm Kali rootfs on the node (cloud-only, ~7 min, best effort)
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/kali-node-install.mjs "$HOME/kali-rootfs/rootfs" || \
+            echo "::warning::kali pre-warm skipped this wave — kali_run هيثبته بنفسه أول ما ينطلب"
+          if [ -f "$HOME/kali-rootfs/.kali-node-installed" ]; then
+            echo "::notice::kali ready on node — $(head -1 "$HOME/kali-rootfs/.kali-node-installed")"
+          fi
+
+      # ── الأدوات الإضافية الـ12 (نفس خط fleet-nodes.yml) ──────────────────────
+      - name: Install extra Kali tools into the rootfs (best effort, ~2 min)
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          if [ -f "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" ]; then
+            P="$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static"
+            R="$HOME/kali-rootfs/rootfs"
+            "$P" -R "$R" /bin/sh -c "apt-get update -qq && apt-get install -y -qq amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john 2>&1 | tail -1" || \
+              echo "::warning::extra tools skipped — kali_run بيسأل apt جوه كالي عند الطلب"
+            "$P" -R "$R" /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null && echo OK:\$t; done" | tee /tmp/kali-extras.txt || true
+            echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12"
+          fi
+
+      - name: Resolve the hub token
+        if: steps.gate.outputs.run == 'true'
+        env:
+          TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::NOVA_EXEC_TOKEN secret is empty — a hardened hub refuses agent registration (401) unless it runs with NOVA_OPEN_OPS=1."
+            echo "token-set=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "token-set=true" >> "$GITHUB_OUTPUT"
+          fi
+        id: tok
+
+      - name: Join the fleet
+        if: steps.gate.outputs.run == 'true'
+        env:
+          HUB: ${{ vars.NOVA_HUB }}
+          IDX: ${{ matrix.i }}
+          NOVA_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          HUB="${HUB:-wss://nova.waifly.com/api/local-agent/ws}"
+          echo "hub: $HUB"
+          NODE_ID="gh-${IDX}-$(date +%H%M)"
+
+          # ── keep-alive loop (نفس الحلقة المثبتة) ─────────────────────────────
+          DEADLINE=$(( $(date +%s) + 20300 ))   # 5 h 38 m, under the 6 h cap
+          runs=0
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            runs=$((runs + 1))
+            echo "::notice::node $NODE_ID · run #$runs"
+
+            remaining=$(( DEADLINE - $(date +%s) ))
+            set +e
+            timeout "$remaining" node nova-agent.js \
+              --server "$HUB" \
+              --id "$NODE_ID" \
+              --allow "dig,host,nslookup,whois,curl,openssl,jq,timeout,sort,uniq,grep,head,tail,awk,node,cat,wc" \
+              --log /tmp/nova-agent.log
+            code=$?
+            set -e
+            echo "agent exited with code $code after $(( DEADLINE - $(date +%s) ))s of wave time left"
+            tail -5 /tmp/nova-agent.log 2>/dev/null || true
+            if [ "$code" -ne 124 ] && [ "$code" -ne 143 ]; then sleep 10; fi
+          done
+          echo "node leaving the fleet (wave finished)"
