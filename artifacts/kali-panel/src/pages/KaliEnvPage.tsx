@@ -13,6 +13,31 @@ import { pushNotify } from "@/lib/sse";
 const API = "/api";
 
 type HeavyTool = { present: boolean; version?: string };
+type KaliNodeRow = {
+  id: string;
+  hostname: string;
+  platform: string;
+  connectedAt: string;
+  kali: boolean;
+  mode: string;
+  probed: boolean;
+};
+type KaliNodeInstall = {
+  running: boolean;
+  node: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  done: boolean;
+  exitCode: number | null;
+  log: string[];
+};
+type KaliNodes = {
+  ok: boolean;
+  hub: { kali: boolean; packages: number };
+  nodes: KaliNodeRow[];
+  install: KaliNodeInstall;
+  probedAt: string;
+};
 type ProvisionState = {
   running: boolean;
   phase: string;
@@ -73,12 +98,39 @@ export default function KaliEnvPage() {
   const [log, setLog] = useState<Array<{ text: string; isCmd?: boolean; isErr?: boolean }>>([]);
   const [cmd, setCmd] = useState("");
   const [execBusy, setExecBusy] = useState(false);
-  const [showNodeCmd, setShowNodeCmd] = useState(false);
   const [nodeCopied, setNodeCopied] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [prov, setProv] = useState<ProvisionState | null>(null);
   const [provBusy, setProvBusy] = useState(false);
+  const [nodes, setNodes] = useState<KaliNodes | null>(null);
+  const [installBusy, setInstallBusy] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
+
+  /* TEST23 — عقد كالي السحابية: قياس حي كل 20ث من الهَب نفسه (probe عبر قناة الأجينتات) */
+  const loadNodes = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/ops/kali/nodes`);
+      if (r.ok) setNodes((await r.json()) as KaliNodes);
+    } catch { /* البولينج الجاي يجرب */ }
+  }, []);
+  useEffect(() => { void loadNodes(); }, [loadNodes]);
+  useEffect(() => {
+    const iv = setInterval(() => void loadNodes(), 20000);
+    return () => clearInterval(iv);
+  }, [loadNodes]);
+
+  const installOnNode = async () => {
+    setInstallBusy(true);
+    try {
+      const r = await fetch(`${API}/ops/kali/nodes/install`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      const d = (await r.json()) as { ok?: boolean; already?: boolean; detail?: string };
+      pushNotify("success", d.already ? "التثبيت شغال بالفعل" : "التثبيت السحابي بدأ", d.detail ?? `HTTP ${r.status}`);
+    } catch (e: unknown) {
+      pushNotify("error", "تثبيت كالي على العقدة", e instanceof Error ? e.message : String(e));
+    }
+    setInstallBusy(false);
+    void loadNodes();
+  };
 
   const load = useCallback(async () => {
     try {
@@ -188,22 +240,71 @@ export default function KaliEnvPage() {
         </button>
       </div>
 
+      {/* TEST23 — عقد كالي السحابية: المكان الحي اللي المالك يشوف فيه كالي على الأسطول —
+          قياس حي كل 20ث (الهَب بيعمل probe لكل عقدة عبر قناة الأجينتات نفسها) */}
+      <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.03)", border: "1px solid rgba(68,255,136,0.3)" }}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-[11px] font-black" style={{ color: "#44ff88" }}>🐙 عقد كالي السحابية — أسطول GitHub (بتتثبت وتتفعل لوحدها)</p>
+          <div className="flex items-center gap-1.5">
+            {nodes && (
+              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)" }}>
+                probe {new Date(nodes.probedAt).toLocaleTimeString("en-GB")} · {nodes.nodes.filter((n) => n.kali).length}/{nodes.nodes.length} فيها كالي
+              </span>
+            )}
+            <button onClick={() => void loadNodes()} className="text-[9px] px-2 py-1 rounded flex items-center gap-1"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}>
+              <RefreshCw className="w-3 h-3" /> حدّث
+            </button>
+            <button onClick={installOnNode} disabled={installBusy || nodes?.install.running === true}
+              className="text-[9px] font-black px-2.5 py-1 rounded"
+              style={{ background: "rgba(68,255,136,0.12)", border: "1px solid rgba(68,255,136,0.5)", color: "#44ff88", opacity: installBusy || nodes?.install.running === true ? 0.5 : 1 }}>
+              {nodes?.install.running ? "⏳ التثبيت شغال…" : installBusy ? "بدين…" : "⚙️ ثبّت كالي على أول عقدة فاضية"}
+            </button>
+          </div>
+        </div>
+        <p className="text-[9px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+          كل عقدة runner بتبني كالي كاملة بنفسها من فرع <b>kali-rootfs</b> (2,113 حزمة · SHA256 لكل جزء · صفر تحميل على السيرفر وصفر جهاز ليك) قبل ما تتصل بالهَب — وkali_run بيتحول عليها تلقائيًا.
+        </p>
+        {nodes && nodes.nodes.length > 0 ? (
+          <div className="mt-2 space-y-1.5">
+            {nodes.nodes.map((n) => (
+              <div key={n.id} className="rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2 flex-wrap"
+                style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${n.kali ? "rgba(68,255,136,0.4)" : "rgba(255,255,255,0.12)"}` }}>
+                <span className="text-[10px] font-black" style={{ color: "#e0e0e0" }}>🖥️ {n.hostname}</span>
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                  style={{ background: n.kali ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: n.kali ? "#44ff88" : "rgba(255,170,68,0.9)" }}>
+                  {n.probed ? (n.mode === "bare" ? "نظام كالي ✓" : n.mode === "proot" ? "rootfs كالي سحابية + proot ✓" : "جاهزة للتثبيت — الزر فوق") : "مش بردّ على الprobe"}
+                </span>
+                <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>متصل من {new Date(n.connectedAt).toLocaleTimeString("en-GB")}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>
+            {nodes
+              ? "مافيش عقدة لينكس متصلة دلوقتي — موجة fleet-nodes بتحط عقد جديدة كل 5 ساعات (أو شغّلها من Actions)، وأول ما توصل تظهر هنا وكالي تكون مثبتة عليها جاهزة."
+              : "بيقيس العقد المتصلة…"}
+          </p>
+        )}
+        {nodes?.install.log?.length ? (
+          <div className="mt-2 rounded-lg p-2 font-mono text-[9px] max-h-28 overflow-y-auto" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            {nodes.install.log.slice(-8).map((l, i) => <div key={i} className="break-all" style={{ color: "rgba(255,255,255,0.55)" }}>{l}</div>)}
+          </div>
+        ) : null}
+      </div>
+
       {!st?.present ? (
         <div className="rounded-xl p-4" style={{ background: "rgba(34,211,238,0.04)", border: "1px solid rgba(34,211,238,0.35)" }}>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-[11px] font-black" style={{ color: "#22d3ee" }}>☁️ الوضع السحابي — التبيئة مش على السيرفر ومش هتنزل عليه</p>
-            <button onClick={() => setShowNodeCmd((v) => !v)}
-              className="text-[10px] font-black px-3 py-1.5 rounded-lg"
-              style={{ background: "rgba(68,255,136,0.12)", border: "1px solid rgba(68,255,136,0.5)", color: "#44ff88" }}>
-              {showNodeCmd ? "إخفاء أمر الربط" : "🔗 اربط عقدة كالي (جهازك)"}
-            </button>
           </div>
           <p className="text-[10px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>
             المخزن سحابي دايمًا: فرع <b>kali-rootfs</b> على جيت هب (2,113 حزمة) — والتنفيذ بيتحول تلقائيًا لعقدة كالية متصلة (الأجينت بيعمل ده لوحده في kali_run). التحميل المحلي على السيرفر ده استثناء بتأكيد مزدوج — بيعطل سيرفرات بحصة صغيرة (مقاس).
           </p>
-          {showNodeCmd && (
-            <div className="mt-2 rounded-lg p-2.5 font-mono text-[9px]" style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
-              <p className="mb-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>شغّل على جهازك (Linux/Mac/Windows بNode 18+) — العقدة بتتسجل هنا وتفضل شغالة بالخلفية، وkali_run بيتحول عليها تلقائيًا:</p>
+          <details className="mt-2">
+            <summary className="text-[9px] font-mono cursor-pointer" style={{ color: "rgba(255,255,255,0.45)" }}>استثناء قديم: ربط عقدة كالي من جهازك — مش مطلوب أبدًا (الأسطول السحابي فوق هو الطريق الرسمي)</summary>
+            <div className="mt-1.5 rounded-lg p-2.5 font-mono text-[9px]" style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
+              <p className="mb-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>شغّل على جهازك (Linux/Mac/Windows بNode 18+) — العقدة بتتسجل هنا وkali_run بيتحول عليها تلقائيًا:</p>
               <div className="break-all" style={{ color: "#44ff88" }}>
                 curl -fsSL {API}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server {API.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1
               </div>
@@ -214,7 +315,7 @@ export default function KaliEnvPage() {
                 {nodeCopied ? "✓ اتنسخ" : "نسخ الأمر"}
               </button>
             </div>
-          )}
+          </details>
           <details className="mt-2">
             <summary className="text-[9px] font-mono cursor-pointer" style={{ color: "rgba(255,170,68,0.75)" }}>استثناء: تحميل التبيئة محليًا على السيرفر ده (تأكيد مزدوج — خطر على الحصة)</summary>
             <button onClick={startProv} disabled={provBusy || prov?.running === true}

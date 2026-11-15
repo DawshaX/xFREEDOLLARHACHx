@@ -81,6 +81,8 @@ import { buildStamp } from "../lib/ops/version";
 import { throttleStats } from "../lib/ops/ratelimit";
 import { broadcastEvent } from "../lib/ws-hub";
 import { createPushNotification } from "../lib/push-hub";
+import { getConnectedAgentList, execOnLocalAgent } from "./local-agent";
+import { KALI_NODE_PROBE, remoteWriteCmd } from "../lib/ops/kali-node-installer";
 
 const router = Router();
 
@@ -865,6 +867,133 @@ router.post("/ops/state-backup/clean", (_req: Request, res: Response) => {
 
 router.get("/ops/kali/provision/status", (_req: Request, res: Response) => {
   res.json({ ok: true, provision: provisionState() });
+});
+
+/* ── TEST23 — عقد كالي السحابية: المكان اللي المالك يشوف فيه كالي على الأسطول ──
+ * «بوص الصفحة القديمة ومفيش أي حاجة ولا نظام اتثبت» — الصفحة كانت مبتعرضش
+ * عقد الأسطول إطلاقًا. المكان الحي هنا: الهَب بيprobe كل عقدة لينكس متصلة
+ * (نفس قناة اللايف أجينت المقيّسة) ويرجّع حالة كالي الحقيقية لكل عقدة،
+ * + تثبيت ذاتي عند الطلب. كل القيم مقاسات — مافيش ادعاء. */
+type KaliNodeInstallState = {
+  running: boolean;
+  node: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  done: boolean;
+  exitCode: number | null;
+  log: string[];
+};
+const kaliNodeInstall: KaliNodeInstallState = {
+  running: false, node: "", startedAt: null, finishedAt: null, done: false, exitCode: null, log: [],
+};
+
+function isLinuxFleetNode(a: { platform: string; capabilities?: string[] }): boolean {
+  return a.platform === "linux" && !(a.capabilities ?? []).includes("self-node");
+}
+
+router.get("/ops/kali/nodes", async (_req: Request, res: Response) => {
+  const st = await kaliStatus(false);
+  const agents = getConnectedAgentList().filter(isLinuxFleetNode);
+  const rows = await Promise.all(
+    agents.map(async (a) => {
+      const p = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
+      const mode = p ? String(p.stdout).trim() : "";
+      return {
+        id: a.id,
+        hostname: a.hostname,
+        platform: a.platform,
+        connectedAt: new Date(a.connectedAt).toISOString(),
+        kali: mode === "MODE_BARE" || mode === "MODE_PROOT",
+        mode: mode === "MODE_BARE" ? "bare" : mode === "MODE_PROOT" ? "proot" : "none",
+        probed: p !== null,
+      };
+    }),
+  );
+  res.json({
+    ok: true,
+    hub: { kali: st.present, packages: st.packages ?? 0 },
+    nodes: rows,
+    install: kaliNodeInstall,
+    probedAt: new Date().toISOString(),
+  });
+});
+
+router.post("/ops/kali/nodes/install", async (req: Request, res: Response) => {
+  const gate = checkGate(req as never, "kali-node-install");
+  if (!(gate && gate.ok && gate.code === "allowed")) {
+    res.status(403).json({ ok: false, error: "owner_gate_required", what: "kali-node-install" });
+    return;
+  }
+  if (kaliNodeInstall.running) {
+    res.json({ ok: true, already: true, install: kaliNodeInstall });
+    return;
+  }
+  kaliNodeInstall.running = true;
+  kaliNodeInstall.done = false;
+  kaliNodeInstall.exitCode = null;
+  kaliNodeInstall.node = "";
+  kaliNodeInstall.startedAt = new Date().toISOString();
+  kaliNodeInstall.finishedAt = null;
+  kaliNodeInstall.log = [];
+  const push = (line: string) => {
+    kaliNodeInstall.log.push(`[${new Date().toISOString().slice(11, 19)}Z] ${line}`);
+    if (kaliNodeInstall.log.length > 14) kaliNodeInstall.log.shift();
+  };
+  // fire-and-forget: الحالة الحية على GET /api/ops/kali/nodes — الPOST مايتعلقش دقايق
+  void (async () => {
+    try {
+      const agents = getConnectedAgentList().filter(isLinuxFleetNode);
+      if (!agents.length) {
+        push("مافيش عقدة لينكس متصلة — موجة fleet-nodes بتحط عقد كل 5 ساعات (أو شغّلها من Actions)");
+        kaliNodeInstall.exitCode = 1;
+        return;
+      }
+      for (const a of agents) {
+        const probe = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
+        const mode = probe ? String(probe.stdout).trim() : "";
+        if (mode === "MODE_BARE" || mode === "MODE_PROOT") {
+          kaliNodeInstall.node = a.hostname;
+          push(`${a.hostname}: فيها كالي جاهزة (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"}) — kali_run بيتحول عليها تلقائيًا`);
+          kaliNodeInstall.exitCode = 0;
+          return;
+        }
+        kaliNodeInstall.node = a.hostname;
+        push(`${a.hostname}: بيكتب المُثبِّت (من فرع kali-rootfs — سحابي)…`);
+        const w = await execOnLocalAgent(remoteWriteCmd(), a.id, 15_000);
+        if (!w || w.exitCode !== 0) {
+          push(`${a.hostname}: كتابة المُثبِّت فشلت — بيجرب التالية`);
+          continue;
+        }
+        push(`${a.hostname}: التثبيت السحابي بدأ (64 جزء SHA256 — ~5-8 دقايق)…`);
+        const inst = await execOnLocalAgent("node /tmp/nova-kali-node-install.mjs", a.id, 600_000);
+        const out = inst ? ((inst.stdout || "") + "\n" + (inst.stderr || "")).trim() : "";
+        for (const line of out.split("\n").slice(-4)) if (line.trim()) push(line.trim().slice(0, 140));
+        kaliNodeInstall.exitCode = inst?.exitCode ?? 1;
+        push(
+          inst?.exitCode === 0
+            ? `${a.hostname}: كالي اتبنت واتفعلت ✓ — kali_run بيتحول عليها تلقائيًا`
+            : `${a.hostname}: التثبيت وقف بكود ${inst?.exitCode ?? "?"} — جرّب تاني (بيبدأ من جديد بالقياس)`,
+        );
+        void createPushNotification({
+          kind: "ops",
+          title: inst?.exitCode === 0 ? "🐉 كالي اتبنت على عقدة الأسطول" : "⚠️ تثبيت كالي على العقدة وقف",
+          body: `${a.hostname}: ${inst?.exitCode === 0 ? "التثبيت السحابي اكتمل — kali_run بيتحول عليها تلقائيًا" : `exit=${inst?.exitCode ?? "?"} — الحالة على /kali-env`}`,
+          link: "/kali-env",
+        });
+        return;
+      }
+      push("كل العقد فشلت في الكتابة — الحالة على اللوج");
+      kaliNodeInstall.exitCode = 1;
+    } catch (e) {
+      push("فشل: " + String((e as Error)?.message ?? e).slice(0, 140));
+      kaliNodeInstall.exitCode = 1;
+    } finally {
+      kaliNodeInstall.running = false;
+      kaliNodeInstall.done = true;
+      kaliNodeInstall.finishedAt = new Date().toISOString();
+    }
+  })();
+  res.status(202).json({ ok: true, detail: "التثبيت الذاتي بدأ — الحالة الحية على GET /api/ops/kali/nodes (الصفحة بتعمل refresh كل 20ث)", install: kaliNodeInstall });
 });
 
 router.post("/ops/kali/desktop", async (req: Request, res: Response) => {
