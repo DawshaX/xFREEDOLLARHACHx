@@ -11,7 +11,7 @@
 - **`remoteRunCmdStream`** — غلاف العقدة القابل للبث: `node -e` بـspawn + `process.stdout.write` لكل chunk (node أولًا — الallowlist المقصودة آمنة).
 - **`kaliAnywhereExecStream`** في نواة التوحدة: نفس منطق «هَب → أول عقدة كالي» لكن ببث حي.
 - **`GET/POST /api/ops/kali/exec-stream`** — SSE بنفس شكل أحداث `/local-agent/exec-stream` (stdout · stderr · error · **done + plane**) — gate `kali-exec` نفسه.
-- **الطرفيات التلاتة كلها بقت EventSource حي**: ‎/kali-env · ساحة كالي في /agent-pro · Live Terminal (وضع كالي الموحّد) — الحرف بيطلع في اللحظة اللي بي接ولد فيه، وسطر الطايرة مع النهاية.
+- **الطرفيات التلاتة كلها بقت EventSource حي**: ‎/kali-env · ساحة كالي في /agent-pro · Live Terminal (وضع كالي الموحّد) — الحرف بيطلع في اللحظة اللي بيتولد فيه، وسطر الطايرة مع النهاية.
 
 ## 2. القياس الحي
 
