@@ -82,7 +82,7 @@ import { throttleStats } from "../lib/ops/ratelimit";
 import { broadcastEvent } from "../lib/ws-hub";
 import { createPushNotification } from "../lib/push-hub";
 import { getConnectedAgentList, execOnLocalAgent } from "./local-agent";
-import { KALI_NODE_PROBE, remoteWriteCmd } from "../lib/ops/kali-node-installer";
+import { KALI_NODE_PROBE, remoteWriteCmd, remoteRunCmd } from "../lib/ops/kali-node-installer";
 
 const router = Router();
 
@@ -814,13 +814,34 @@ router.post("/ops/kali/exec", async (req: Request, res: Response) => {
     res.status(403).json({ ok: false, error: "owner_gate_required", what: "kali-exec" });
     return;
   }
-  if (!kaliRoot()) {
-    res.status(404).json({ ok: false, error: "kali_rootfs_missing", says_ar: "البيئة مش مستخرجة — شغّل scripts/kali-rootfs-fetch.sh أولًا" });
-    return;
-  }
   const cmd = String((req.body as Record<string, unknown> | undefined)?.cmd ?? "").trim().slice(0, 500);
   if (!cmd) {
     res.status(400).json({ ok: false, error: "cmd_required" });
+    return;
+  }
+  // TEST24 — الطاير التلقائي للطايرة السحابية: لو مافيش كالي على الهَب، نفس الأمر
+  // بيتنفّذ حرفيًا على أول عقدة كالي سحابية (نفس قناة الأجينت المقيّسة) — الطرفية
+  // في الصفحة بتشتغل دايمًا، والطايرة بتظهر في الرد (plane).
+  if (!kaliRoot()) {
+    const agents = getConnectedAgentList().filter(isLinuxFleetNode);
+    for (const a of agents) {
+      const probe = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
+      const mode = probe ? String(probe.stdout).trim() : "";
+      if (mode !== "MODE_BARE" && mode !== "MODE_PROOT") continue;
+      const rr = await execOnLocalAgent(remoteRunCmd(cmd, mode, 60_000), a.id, 70_000);
+      if (!rr) continue;
+      const plane = `${a.hostname} — عقدة كالي سحابية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
+      try {
+        createPushNotification({ kind: "ops", title: rr.exitCode === 0 ? "🖥️ كالي نفّذت أمر حقيقي (عقدة سحابية)" : "⚠️ أمر كالي خرج بكود خطأ", body: `${plane}: ${cmd.slice(0, 120)}`, link: "/kali-env" });
+      } catch { /* الإشعار مش هيوقف النتيجة */ }
+      res.json({ stdout: rr.stdout, stderr: rr.stderr, exitCode: rr.exitCode, durationMs: rr.durationMs, plane });
+      return;
+    }
+    res.status(404).json({
+      ok: false,
+      error: "kali_rootfs_missing",
+      says_ar: "مافيش كالي على الهَب ولا عقدة سحابية جاهزة متصلة دلوقتي — موجة fleet-nodes بتحط عقد كل 5 ساعات (كالي بتتثبت عليها تلقائيًا)، أو دوس «ثبّت كالي على أول عقدة» فوق",
+    });
     return;
   }
   const r = await runKali(cmd, 60_000);
@@ -891,6 +912,80 @@ function isLinuxFleetNode(a: { platform: string; capabilities?: string[] }): boo
   return a.platform === "linux" && !(a.capabilities ?? []).includes("self-node");
 }
 
+/* قياس الأدوات من أول عقدة كالي — مقاس حي (تنفيذ فعلي) مع كاش دقيقتين
+ * عشان البولينج كل 20ث مايتكررش على العقدة بلا داعي. */
+type NodeTool = { present: boolean; version?: string };
+let nodeToolsCache: { at: number; tools: Record<string, NodeTool> | null; from: string } = { at: 0, tools: null, from: "" };
+const TOOLS_PROBE_CMD =
+  "nmap --version 2>/dev/null | head -1; echo ---; python3 --version 2>/dev/null | head -1; echo ---; ls /usr/share/seclists 2>/dev/null | wc -l; echo ---; msfconsole --version 2>/dev/null | head -1; echo ---; sqlmap --version 2>/dev/null | head -1; echo ---; nikto -Version 2>&1 | head -1";
+async function measureNodeTools(rows: Array<{ kali: boolean; mode: string; id: string; hostname: string }>): Promise<{ from: string; tools: Record<string, NodeTool> } | null> {
+  if (Date.now() - nodeToolsCache.at < 120_000 && nodeToolsCache.tools) {
+    return { from: nodeToolsCache.from, tools: nodeToolsCache.tools };
+  }
+  const first = rows.find((r) => r.kali);
+  if (!first) return null;
+  const rr = await execOnLocalAgent(remoteRunCmd(TOOLS_PROBE_CMD, first.mode === "bare" ? "MODE_BARE" : "MODE_PROOT", 25_000), first.id, 30_000);
+  if (!rr) return null;
+  const parts = String(rr.stdout || "").split("---").map((x) => x.trim());
+  const tool = (line: string, name: string): NodeTool => {
+    if (!line || /bash:|not found|command/i.test(line)) return { present: false };
+    return { present: true, version: `${name}: ${line.slice(0, 44)}`.trim() };
+  };
+  const tools: Record<string, NodeTool> = {
+    nmap: parts[0] ? tool(parts[0], "nmap") : { present: false },
+    python3: parts[1] ? tool(parts[1], "python3") : { present: false },
+    seclists: parts[2] && Number(parts[2]) > 0 ? { present: true, version: `${parts[2]} مجلدات` } : { present: false },
+    metasploit: parts[3] ? tool(parts[3], "metasploit") : { present: false },
+    sqlmap: parts[4] ? tool(parts[4], "sqlmap") : { present: false },
+    nikto: parts[5] ? tool(parts[5], "nikto") : { present: false },
+  };
+  nodeToolsCache = { at: Date.now(), tools, from: first.hostname };
+  return { from: first.hostname, tools };
+}
+
+/* ── TEST24 — المخزن الموحّد: «فين اللي عملتو وفين الشغل» — كل مساحاتك على جيت هوب
+ * بمقاسات حية من GitHub API (حجم فعلي بالبايت · آخر تحديث · لينك يفتح المكان). ── */
+router.get("/ops/storage-hub", async (_req: Request, res: Response) => {
+  const REPO = process.env.NOVA_KALI_REPO_SLUG || "DawshaX/xFREEDOLLARHACHx";
+  const H: Record<string, string> = { "User-Agent": "nova-storage-hub", Accept: "application/vnd.github+json" };
+  if (process.env.GITHUB_TOKEN) H.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const gh = async (path: string): Promise<unknown | null> => {
+    try {
+      const r = await fetch(`https://api.github.com${path}`, { headers: H, signal: AbortSignal.timeout(15_000) });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch {
+      return null;
+    }
+  };
+  const gb = (b: number) => (b >= 2 ** 30 ? `${(b / 2 ** 30).toFixed(2)}GB` : `${(b / 2 ** 20).toFixed(1)}MB`);
+  const rows: Array<{ id: string; label: string; kind: string; bytes: number; items: number; updatedAt: string | null; link: string }> = [];
+  const repo = (await gh(`/repos/${REPO}`)) as { size?: number; html_url?: string; private?: boolean } | null;
+  if (repo) rows.push({ id: "repo", label: `المستودع ${REPO}`, kind: "repo", bytes: (repo.size ?? 0) * 1024, items: 1, updatedAt: null, link: repo.html_url ?? `https://github.com/${REPO}` });
+  // فرع كالي — مقاس: الأجزاء + SHA256SUMS من contents API
+  const kf = (await gh(`/repos/${REPO}/contents/?ref=kali-rootfs`)) as Array<{ name: string; size: number }> | null;
+  if (Array.isArray(kf)) {
+    const bytes = kf.reduce((a, f) => a + (f.size ?? 0), 0);
+    const parts = kf.filter((f) => /^part-\d+$/.test(f.name)).length;
+    rows.push({ id: "kali-rootfs", label: "فرع kali-rootfs — بيئة كالي الكاملة", kind: "branch", bytes, items: parts, updatedAt: null, link: `https://github.com/${REPO}/tree/kali-rootfs` });
+  }
+  for (const [id, label] of [
+    ["nova-portable", "باندل nova-24-7 — البرنامج الكامل اللي بيشتغل عندك"],
+    ["nova-state", "نسخ احتياطي الحالة — الذاكرة والإعدادات (كل 15د)"],
+    ["nova-toolchain", "مرآة الأدوات (kali static linux/amd64)"],
+    ["vuln-corpus", "كوربوس الثغرات (NVD + KEV + EPSS)"],
+  ] as const) {
+    const rel = (await gh(`/repos/${REPO}/releases/tags/${id}`)) as { assets?: Array<{ name: string; size: number; updated_at: string }>; html_url?: string } | null;
+    if (rel && Array.isArray(rel.assets)) {
+      const bytes = rel.assets.reduce((a, x) => a + (x.size ?? 0), 0);
+      const last = rel.assets.map((x) => x.updated_at).sort().pop() ?? null;
+      rows.push({ id, label, kind: "release", bytes, items: rel.assets.length, updatedAt: last, link: rel.html_url ?? `https://github.com/${REPO}/releases/tag/${id}` });
+    }
+  }
+  const total = rows.reduce((a, r) => a + r.bytes, 0);
+  res.json({ ok: true, repo: REPO, rows, totalBytes: total, totalHuman: gb(total), measuredAt: new Date().toISOString(), tokenUsed: Boolean(process.env.GITHUB_TOKEN) });
+});
+
 router.get("/ops/kali/nodes", async (_req: Request, res: Response) => {
   const st = await kaliStatus(false);
   const agents = getConnectedAgentList().filter(isLinuxFleetNode);
@@ -913,6 +1008,7 @@ router.get("/ops/kali/nodes", async (_req: Request, res: Response) => {
     ok: true,
     hub: { kali: st.present, packages: st.packages ?? 0 },
     nodes: rows,
+    tools: await measureNodeTools(rows),
     install: kaliNodeInstall,
     probedAt: new Date().toISOString(),
   });

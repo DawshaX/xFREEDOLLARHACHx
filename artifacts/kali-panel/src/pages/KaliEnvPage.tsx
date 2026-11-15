@@ -35,9 +35,13 @@ type KaliNodes = {
   ok: boolean;
   hub: { kali: boolean; packages: number };
   nodes: KaliNodeRow[];
+  tools?: { from: string; tools: Record<string, { present: boolean; version?: string }> } | null;
   install: KaliNodeInstall;
   probedAt: string;
 };
+type StorageRow = { id: string; label: string; kind: string; bytes: number; items: number; updatedAt: string | null; link: string };
+type StorageHub = { ok: boolean; repo: string; rows: StorageRow[]; totalBytes: number; totalHuman: string; measuredAt: string };
+const GB = (b: number) => (b >= 2 ** 30 ? `${(b / 2 ** 30).toFixed(2)}GB` : `${(b / 2 ** 20).toFixed(1)}MB`);
 type ProvisionState = {
   running: boolean;
   phase: string;
@@ -104,6 +108,7 @@ export default function KaliEnvPage() {
   const [provBusy, setProvBusy] = useState(false);
   const [nodes, setNodes] = useState<KaliNodes | null>(null);
   const [installBusy, setInstallBusy] = useState(false);
+  const [store, setStore] = useState<StorageHub | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
   /* TEST23 — عقد كالي السحابية: قياس حي كل 20ث من الهَب نفسه (probe عبر قناة الأجينتات) */
@@ -118,6 +123,19 @@ export default function KaliEnvPage() {
     const iv = setInterval(() => void loadNodes(), 20000);
     return () => clearInterval(iv);
   }, [loadNodes]);
+
+  /* TEST24 — المخزن الموحد: «فين اللي عملتو» — مقاس حي كل 60ث */
+  const loadStore = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/ops/storage-hub`);
+      if (r.ok) setStore((await r.json()) as StorageHub);
+    } catch { /* الجاي يجرب */ }
+  }, []);
+  useEffect(() => { void loadStore(); }, [loadStore]);
+  useEffect(() => {
+    const iv = setInterval(() => void loadStore(), 60000);
+    return () => clearInterval(iv);
+  }, [loadStore]);
 
   const installOnNode = async () => {
     setInstallBusy(true);
@@ -209,9 +227,10 @@ export default function KaliEnvPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cmd: c }),
       });
-      const d = (await r.json()) as { stdout?: string; stderr?: string; exitCode?: number | null };
+      const d = (await r.json()) as { stdout?: string; stderr?: string; exitCode?: number | null; plane?: string };
       const out = d.stdout || d.stderr || (d.exitCode === 0 ? "(بلا مخرجات)" : `exit=${d.exitCode}`);
       setLog((p) => [...p, { text: String(out).slice(0, 3000), isErr: d.exitCode !== 0 }]);
+      if (d.plane) setLog((p) => [...p, { text: `↳ اتنفّذ على: ${d.plane}` }]);
       pushNotify(d.exitCode === 0 ? "success" : "error", "كالي المدمجة", d.exitCode === 0 ? `اتنفّذ: ${c.slice(0, 50)}` : `خرج بكود ${d.exitCode}`);
     } catch (e: unknown) {
       setLog((p) => [...p, { text: e instanceof Error ? e.message : String(e), isErr: true }]);
@@ -231,7 +250,7 @@ export default function KaliEnvPage() {
             🐉 بيئة كالي الحقيقية المدمجة — جوه البرنامج نفسه
           </h1>
           <p className="text-[10px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-            rootfs كالي كاملة 100% بتشتغل بproot على الهَب · الديسكتوب بيتفتح من أي دومين بيوصل للهَب (nova.waifly.com) · الأجينت بيستخدمها بأداة kali_run
+            {st?.present ? "rootfs كالي كاملة 100% بتشتغل بproot على الهَب · الديسكتوب بيتفتح من أي دومين بيوصل للهَب (nova.waifly.com) · الأجينت بيستخدمها بأداة kali_run" : "كالي شغالة فعليًا على عقد الأسطول السحابية (rootfs + proot) — المخزن على جيت هوب وصفر على السيرفر · الطرفية تحت بتنفّذ على العقد مباشرة وkali_run بيتحول عليها تلقائيًا"}
           </p>
         </div>
         <button onClick={() => navigate("/agent-pro")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
@@ -293,7 +312,7 @@ export default function KaliEnvPage() {
         ) : null}
       </div>
 
-      {!st?.present ? (
+      {!st?.present && (
         <div className="rounded-xl p-4" style={{ background: "rgba(34,211,238,0.04)", border: "1px solid rgba(34,211,238,0.35)" }}>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-[11px] font-black" style={{ color: "#22d3ee" }}>☁️ الوضع السحابي — التبيئة مش على السيرفر ومش هتنزل عليه</p>
@@ -340,9 +359,11 @@ export default function KaliEnvPage() {
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {st?.present && (
         <>
-          {/* الحالة المقاسة */}
+          {/* الحالة المقاسة (محلية على الهَب) */}
           <div className="rounded-xl p-3" style={{ background: "rgba(255,60,60,0.04)", border: "1px solid rgba(255,60,60,0.3)" }}>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span className="text-[11px] font-black" style={{ color: "#ff6655" }}>{st.prettyName ?? "Kali"}</span>
@@ -401,10 +422,49 @@ export default function KaliEnvPage() {
               التغذية بتمر عبر الهَب نفسه (نفق WebSocket) — يشتغل من nova.waifly.com ومن أي دومين بيوصل للهَب، ومحجوب عن الغرباء بنفس بوابة الدخول.
             </p>
           </div>
+        </>
+      )}
 
-          {/* طرفية التنفيذ الحقيقي */}
-          <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,170,0,0.2)" }}>
-            <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}><Terminal className="w-3.5 h-3.5" /> طرفية كالي — تنفيذ حقيقي</p>
+      {/* الأدوات — مقاسة من حيث كالي عايشة فعلًا (الهَب أو عقدة الأسطول) — دايمًا ظاهرة */}
+      <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.1)" }}>
+        {st?.present ? (
+          <>
+            <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}><Wrench className="w-3.5 h-3.5" /> الأدوات الثقيلة (القياس من سجل dpkg — على الهَب)</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <ToolCell name="Metasploit" t={st.tools?.metasploit} />
+              <ToolCell name="Burp Suite" t={st.tools?.burpsuite} />
+              <ToolCell name="OWASP ZAP" t={st.tools?.owasp_zap} />
+              <ToolCell name="SecLists" t={st.tools?.seclists} />
+            </div>
+            <p className="text-[8px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+              + كل مجموعات كالي (information-gathering · vulnerability · web · database · passwords · wireless · reverse-engineering · exploitation · sniffing · social-engineering · post-exploitation · forensics) والتحميل الجديد جوه البيئة بـpip/git.
+            </p>
+          </>
+        ) : nodes?.tools ? (
+          <>
+            <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}><Wrench className="w-3.5 h-3.5" /> الأدوات (مقاسة بتنفيذ فعلي على عقدة {nodes.tools.from} — كالي السحابية)</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {Object.entries(nodes.tools.tools).map(([k, v]) => <ToolCell key={k} name={k} t={v} />)}
+            </div>
+            <p className="text-[8px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+              القياس ده بيتنفّذ فعليًا جوه كالي على العقدة كل دقيقتين — كل أداة موجودة تشتغل فورًا من الطرفية تحت.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[10px] font-black mb-1 flex items-center gap-1.5" style={{ color: "#ffaa44" }}><Wrench className="w-3.5 h-3.5" /> الأدوات</p>
+            <p className="text-[9px] font-mono" style={{ color: "rgba(255,170,68,0.85)" }}>
+              القياس بيبدأ تلقائيًا أول ما عقدة كالي تتصل (القسم فوق) — البناء بيعملها بنفسها من فرع kali-rootfs بأدواتها الكاملة.
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* طرفية التنفيذ الحقيقي — دايمًا ظاهرة: على الهَب أو على العقد السحابية */}
+      <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,170,0,0.2)" }}>
+        <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}>
+          <Terminal className="w-3.5 h-3.5" /> {st?.present ? "طرفية كالي — تنفيذ حقيقي على الهَب" : "🐉 طرفية كالي الحية — بتنفّذ فعليًا على عقد الأسطول السحابية"}
+        </p>
             <div className="flex flex-wrap gap-1 mb-2">
               {QUICK.map((c) => (
                 <button key={c} onClick={() => exec(c)} disabled={execBusy} className="px-2 py-0.5 rounded text-[8px] font-mono" style={{ background: "rgba(255,170,0,0.05)", border: "1px solid rgba(255,170,0,0.2)", color: "rgba(255,170,0,0.75)" }}>
@@ -413,7 +473,7 @@ export default function KaliEnvPage() {
               ))}
             </div>
             <div ref={logRef} className="rounded-lg p-2 h-44 overflow-y-auto font-mono text-[9px] mb-2" style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,170,0,0.15)" }}>
-              {log.length === 0 ? <span style={{ color: "rgba(255,255,255,0.2)" }}>جاهز… كل أمر هنا بيتنفّذ فعليًا داخل البيئة</span> :
+              {log.length === 0 ? <span style={{ color: "rgba(255,255,255,0.25)" }}>{st?.present ? "جاهز… كل أمر هنا بيتنفّذ فعليًا داخل البيئة" : "جاهز… كل أمر هنا بيتنفّذ فعليًا جوه كالي على العقدة السحابية (الطايرة بتظهر تحت كل نتيجة)"}</span> :
                 log.slice(-100).map((l, i) => (
                   <div key={i} className="whitespace-pre-wrap break-all leading-relaxed" style={{ color: l.isCmd ? "#ffaa44" : l.isErr ? "#ff6666" : "rgba(255,255,255,0.75)" }}>{l.text}</div>
                 ))}
@@ -433,14 +493,47 @@ export default function KaliEnvPage() {
           <div className="rounded-xl p-3" style={{ background: "rgba(34,211,238,0.04)", border: "1px solid rgba(34,211,238,0.25)" }}>
             <p className="text-[10px] font-black" style={{ color: "#22d3ee" }}>🔗 الربط باللايف أجينت</p>
             <p className="text-[9px] font-mono mt-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>
-              الأجينت في <b>/agent-pro</b> عنده أداتين على البيئة دي مباشرة: <b>kali_run</b> (تنفيذ أي أمر) و<b>kali_desktop</b> (تشغيل/إطفاء/حالة + تحرك بالماوس بـxdotool) — وكل تنفيذ بيرفع إشعار حي بالlink.
+              الأجينت في <b>/agent-pro</b> عنده أداتين على البيئة دي مباشرة: <b>kali_run</b> (تنفيذ أي أمر — <b>بيتحول تلقائيًا لعقد كالي الأسطول</b> لو الهَب من غير كالي، وقناة العقد متقاسة حيًا) و<b>kali_node_setup</b> (فحص/تثبيت العقد بنفسه) — وكل تنفيذ بيرفع إشعار حي بالlink.
             </p>
             <button onClick={() => navigate("/agent-pro")} className="mt-1.5 text-[9px] px-2 py-1 rounded" style={{ background: "rgba(34,211,238,0.1)", border: "1px solid rgba(34,211,238,0.4)", color: "#22d3ee" }}>
               افتح مكتب الشغل وجرّبها مع الأجينت ↗
             </button>
           </div>
-        </>
-      )}
+
+          {/* TEST24 — المخزن الموحد على جيت هوب: «فين اللي عملتو وفين الشغل» — مقاس حي */}
+          <div className="rounded-xl p-3" style={{ background: "rgba(153,102,255,0.04)", border: "1px solid rgba(153,102,255,0.3)" }}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="text-[10px] font-black" style={{ color: "#9966ff" }}>🗄️ كل مساحتك على جيت هوب — المخزن الموحّد (مقاس حي بالبايت)</p>
+              {store && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(153,102,255,0.12)", color: "#c9a8ff" }}>الإجمالي: {store.totalHuman}</span>}
+            </div>
+            <p className="text-[9px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+              المساحة مش على السيرفر خالص — دي كل أماكن شغلك على جيت هوب: البيئة، النسخ، الكوربوس، والباندل. كل سطر بيفتح مكانه.
+            </p>
+            {store ? (
+              <div className="mt-2 space-y-1.5">
+                {store.rows.map((r) => (
+                  <a key={r.id} href={r.link} target="_blank" rel="noreferrer"
+                    className="rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2 flex-wrap transition-all hover:opacity-80"
+                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(153,102,255,0.25)", display: "flex" }}>
+                    <span className="text-[10px] font-black" style={{ color: "#e0e0e0" }}>
+                      {r.kind === "release" ? "📦" : r.kind === "branch" ? "🌿" : "🏠"} {r.label}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {r.items > 1 && <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>{r.items} ملف</span>}
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(153,102,255,0.12)", color: "#c9a8ff" }}>{GB(r.bytes)}</span>
+                      {r.updatedAt && <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>آخر تحديث {new Date(r.updatedAt).toLocaleTimeString("en-GB")}</span>}
+                      <span className="text-[9px]" style={{ color: "#9966ff" }}>↗</span>
+                    </span>
+                  </a>
+                ))}
+                <p className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  القياس من GitHub API مباشرة ({store.repo}) · {new Date(store.measuredAt).toLocaleTimeString("en-GB")} — والنسخ الاحتياطي للحالة شغال كل 15 دقيقة لوحده.
+                </p>
+              </div>
+            ) : (
+              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>بيقيس المساحات من جيت هوب…</p>
+            )}
+          </div>
     </div>
   );
 }
