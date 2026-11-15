@@ -376,6 +376,13 @@ export default function NovaAgentPro() {
     autonomy?: { enabled?: boolean; mode?: string };
   } | null>(null);
   const [notifs, setNotifs] = useState<Array<{ id: string; title: string; body?: string; kind?: string; read?: boolean; createdAt?: string; source?: string }>>([]);
+  /* TEST34 — الهدف مقابل الواقع. الصفحة كانت بتعرض «4 عقد» والمالك قرر 19،
+     ومفيش حاجة كانت بتقول الفرق ده معناه إيه. /api/fleet/target بيرجّع
+     الاتنين مع بعض + سبب الفجوة، فالرقم بقى حقيقة تقدر تتصرف عليها. */
+  const [fleetTarget, setFleetTarget] = useState<{
+    connected?: number; configured?: number | null; shortfall?: number | null;
+    enabled?: boolean | null; why?: string;
+  } | null>(null);
   const [novaNotes, setNovaNotes] = useState<Array<{ id: string; title: string; body: string; pinned: boolean; createdAt: string }>>([]);
   const [noteDraft, setNoteDraft] = useState<{ title: string; body: string }>({ title: "", body: "" });
   const [noteBusy, setNoteBusy] = useState(false);
@@ -726,6 +733,12 @@ export default function NovaAgentPro() {
        of the panel uses. Read-only, so it is safe on the 12s refresh. */
     const st = await opsFetch<typeof opsStats>("/ops/stats");
     if (st.ok && st.data) setOpsStats(st.data);
+    /* TEST34 — الهدف مقابل الواقع. قراءة مستقلة: لو فشلت، الكارت بيختفي
+       بدل ما يعرض رقم مخمّن. */
+    try {
+      const ft = await fetch("/api/fleet/target", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(12000) });
+      if (ft.ok) setFleetTarget(await ft.json());
+    } catch { /* الأسطول مش متاح — الكارت يختفي، مش يكذب */ }
     void refreshCron();
   }, [refreshCron]);
 
@@ -1375,6 +1388,37 @@ export default function NovaAgentPro() {
                     Every number here is read from the running server, not
                     invented: running jobs, the throttle snapshot, whether the
                     port is exposed, and whether autonomy is on. */}
+                {/* TEST34 — الهدف مقابل الواقع. «4 عقد» و«19 عقدة» كانوا
+                    الاتنين صح وبيجاوبوا على سؤالين مختلفين، ومفيش حاجة كانت
+                    بتقول الفرق معناه إيه. الكارت ده بيحطهم جنب بعض + السبب. */}
+                {fleetTarget && (
+                  <div className="rounded-xl border border-cyan-400/25 bg-cyan-500/[0.06] p-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="text-[10px] font-mono text-cyan-100/60">الأسطول — الهدف مقابل المتصل</div>
+                      <div className="text-[9px] font-mono text-cyan-100/40">
+                        {fleetTarget.enabled === false ? "FLEET_ENABLED مطفّي" : fleetTarget.enabled ? "الموجات مفعّلة" : "—"}
+                      </div>
+                    </div>
+                    <div className="mt-1.5 flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-cyan-200">{fleetTarget.connected ?? 0}</span>
+                      <span className="text-sm font-bold text-cyan-100/40">/</span>
+                      <span className="text-lg font-black text-cyan-100/70">
+                        {fleetTarget.configured ?? "?"}
+                      </span>
+                      {typeof fleetTarget.shortfall === "number" && fleetTarget.shortfall > 0 && (
+                        <span className="ml-1 rounded-md border border-amber-400/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
+                          ناقص {fleetTarget.shortfall}
+                        </span>
+                      )}
+                      {fleetTarget.shortfall === 0 && (
+                        <span className="ml-1 rounded-md border border-emerald-400/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-200">كامل ✓</span>
+                      )}
+                    </div>
+                    {fleetTarget.why && (
+                      <div className="mt-1 text-[9px] font-mono leading-4 text-cyan-100/45 break-words">{fleetTarget.why}</div>
+                    )}
+                  </div>
+                )}
                 {opsStats && (
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                     <div className="rounded-xl border border-cyan-400/25 bg-cyan-500/[0.06] p-2.5">
