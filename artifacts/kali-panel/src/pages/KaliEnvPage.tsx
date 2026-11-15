@@ -119,6 +119,9 @@ type KaliEnvTools = {
   total: number;
   present: number;
   measuredAt?: string;
+  /* TEST37 — منين اتقاست الأدوات: الهَب (rootfs) أو عقدة كالي حية من الأسطول. */
+  measuredOn?: string;
+  fleet?: { connected: number; kaliReady: number; nodes?: Array<{ id: string; mode: string; kali: boolean }> };
 };
 
 const QUICK = [
@@ -776,6 +779,16 @@ export default function KaliEnvPage() {
                   {envTools.present}/{envTools.total} أداة حقيقية موجودة
                 </span>
                 {envTools.measuredAt && <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>قياس {new Date(envTools.measuredAt).toLocaleTimeString("en-GB")}</span>}
+                {envTools.measuredOn && (
+                  <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.08)", color: "rgba(68,255,136,0.9)" }}>
+                    الطايرة: {envTools.measuredOn}
+                  </span>
+                )}
+                {envTools.fleet && (
+                  <span className="text-[8px] font-mono" style={{ color: envTools.fleet.kaliReady > 0 ? "rgba(68,255,136,0.85)" : "rgba(255,170,68,0.8)" }}>
+                    أسطول كالي: {envTools.fleet.kaliReady}/{envTools.fleet.connected} عقدة جاهزة
+                  </span>
+                )}
               </div>
               <div className="mt-1.5 space-y-1.5">
                 {Object.entries(envTools.groups).map(([group, g]) => (

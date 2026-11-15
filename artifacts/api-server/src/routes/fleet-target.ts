@@ -27,20 +27,85 @@
  */
 import { Router, type Request, type Response } from "express";
 import { getConnectedAgentList } from "./local-agent";
+import { createPushNotification } from "../lib/push-hub";
+/* TEST37 — تنبيه الموجة العالقة (اقتراح جولة 12 المقاس: موجة عاشت 7.3س وهي
+ * «بتموت» و16 عقدة خلصت بصمت). العمر بيقرا من الruns الحية نفسها، والإشعار
+ * بيصعد قناة واحدة: مركز الإشعارات الموحد (session-nexus) + push-hub. */
+const NODE_TTL_MIN = Number(process.env.NOVA_NODE_TTL_MIN || 360);
 
 const router = Router();
 
 const REPO = process.env.NOVA_GITHUB_REPO || "DawshaX/xFREEDOLLARHACHx";
 const CACHE_MS = 60_000;
 
+type WaveInfo = { workflow: string; runId: number; ageMin: number; url: string };
 type TargetCache = {
   at: number;
   configured: number | null;
   enabled: boolean | null;
   error: string | null;
+  waves: WaveInfo[] | null;
 };
 
-let cache: TargetCache = { at: 0, configured: null, enabled: null, error: null };
+let cache: TargetCache = { at: 0, configured: null, enabled: null, error: null, waves: null };
+
+const alertedStaleRuns = new Set<number>();
+
+/** الموجات الحية بالحرف: run بتاع fleet-nodes/fleet-now لسه in_progress؟
+ * بلا توكن/بلا نت → null (مش مصفوفة فاضية — فاضية معناها «مافيش موجات»
+ * وده ادعاء؛ null معناها «مغيرقدرش أقيس» زي ما القاعدة بتقول). */
+async function readLiveWaves(token: string): Promise<WaveInfo[] | null> {
+  try {
+    const waves: WaveInfo[] = [];
+    for (const wf of ["fleet-nodes.yml", "fleet-now.yml"]) {
+      const r = await fetch(
+        `https://api.github.com/repos/${REPO}/actions/workflows/${wf}/runs?status=in_progress&per_page=20`,
+        {
+          headers: {
+            authorization: `Bearer ${token}`,
+            accept: "application/vnd.github+json",
+            "user-agent": "nova-fleet-target",
+          },
+          signal: AbortSignal.timeout(10_000),
+        },
+      );
+      if (!r.ok) throw new Error(`github ${r.status}`);
+      const d = (await r.json()) as {
+        workflow_runs?: Array<{ id: number; created_at: string; html_url: string }>;
+      };
+      for (const run of d.workflow_runs ?? []) {
+        const started = Date.parse(run.created_at);
+        const ageMin = Number.isFinite(started) ? Math.round((Date.now() - started) / 60_000) : 0;
+        waves.push({ workflow: wf, runId: run.id, ageMin, url: run.html_url });
+      }
+    }
+    return waves;
+  } catch {
+    return null;
+  }
+}
+
+/** التنبيه مرة واحدة لكل موجة — نفس run مابينبّهش تاني (الحرس ده + دوب
+ * ال10 دقايق المدمج في recordBackgroundEvent بيمنع السبام). */
+function alertStaleWaves(waves: WaveInfo[]): number {
+  let fresh = 0;
+  for (const w of waves) {
+    if (w.ageMin <= NODE_TTL_MIN || alertedStaleRuns.has(w.runId)) continue;
+    alertedStaleRuns.add(w.runId);
+    fresh++;
+    const title = `🌊 موجة أسطول تجاوزت عمرها (${w.ageMin} دقيقة) — ${w.workflow}#${w.runId}`;
+    const detail = `الموجة شغالة ${w.ageMin} دقيقة وعمر العقدة الافتراضي ${NODE_TTL_MIN} دقيقة — عقدة متعلقة أو GitHub طايعة الحالة. عقد الخليفة مش هتتنافس على السلوتات دي (البودجت بيتجاهل الموجات المنتهية).`;
+    void import("../lib/agent/session-nexus").then(({ recordBackgroundEvent }) =>
+      recordBackgroundEvent({ kind: "fleet", title, detail, source: "fleet-target" }),
+    );
+    try {
+      createPushNotification({ kind: "fleet-stale-wave", title, body: detail, link: w.url });
+    } catch {
+      /* push غير مظبوط — مركز الإشعارات شايف الحدث برضه */
+    }
+  }
+  return fresh;
+}
 
 async function readGithubVars(): Promise<TargetCache> {
   const now = Date.now();
@@ -53,6 +118,7 @@ async function readGithubVars(): Promise<TargetCache> {
       configured: null,
       enabled: null,
       error: "no GITHUB_TOKEN on this host — configured target is unknown, not assumed",
+      waves: null,
     };
     return cache;
   }
@@ -71,18 +137,22 @@ async function readGithubVars(): Promise<TargetCache> {
     const vars = new Map((d.variables ?? []).map((v) => [v.name, v.value]));
     const raw = vars.get("FLEET_NODES");
     const n = raw === undefined ? null : Number(raw);
+    const waves = await readLiveWaves(token);
     cache = {
       at: now,
       configured: Number.isFinite(n) && (n as number) > 0 ? (n as number) : null,
       enabled: vars.get("FLEET_ENABLED") === "1",
       error: null,
+      waves,
     };
+    if (waves) alertStaleWaves(waves);
   } catch (err) {
     cache = {
       at: now,
       configured: null,
       enabled: null,
       error: err instanceof Error ? err.message : String(err),
+      waves: null,
     };
   }
   return cache;
@@ -124,6 +194,9 @@ router.get("/fleet/target", async (_req: Request, res: Response) => {
     configured,
     shortfall,
     enabled: gh.enabled,
+    waves: gh.waves,
+    staleWaves: gh.waves ? gh.waves.filter((w) => w.ageMin > NODE_TTL_MIN) : null,
+    nodeTtlMin: NODE_TTL_MIN,
     why,
     nodes: agents.map((a) => ({
       id: String(a.id ?? "agent"),
@@ -134,6 +207,7 @@ router.get("/fleet/target", async (_req: Request, res: Response) => {
     source: {
       connected: "WebSocket registry (/api/local-agent/agents)",
       configured: `GitHub Actions variable FLEET_NODES in ${REPO}`,
+      waves: `GitHub Actions runs (in_progress) of fleet-nodes.yml + fleet-now.yml in ${REPO}`,
       cachedForMs: CACHE_MS,
     },
   });
