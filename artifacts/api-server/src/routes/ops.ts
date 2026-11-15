@@ -84,6 +84,7 @@ import { createPushNotification } from "../lib/push-hub";
 import { getConnectedAgentList, execOnLocalAgent } from "./local-agent";
 import { KALI_NODE_PROBE, remoteWriteCmd, remoteRunCmd } from "../lib/ops/kali-node-installer";
 import { kaliAnywhereExec, kaliAnywhereExecStream } from "../lib/ops/kali-anywhere";
+import { readScanStats } from "../lib/ops/kali-scan-stats";
 
 const router = Router();
 
@@ -1055,11 +1056,14 @@ router.get("/ops/kali/nodes", async (_req: Request, res: Response) => {
       };
     }),
   );
+  let stats: ReturnType<typeof readScanStats> | null = null;
+  try { stats = readScanStats(); } catch { /* سالمة */ }
   res.json({
     ok: true,
     hub: { kali: st.present, packages: st.packages ?? 0 },
     nodes: rows,
     tools: await measureNodeTools(rows),
+    stats,
     install: kaliNodeInstall,
     probedAt: new Date().toISOString(),
   });

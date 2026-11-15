@@ -2104,7 +2104,7 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
 
       /* ── platform tools (أدوات المنصة) ──────────────────────────────────── */
       case "platform_self_report": {
-        const r = platformSelfReport();
+        const r = await platformSelfReport();
         return done(r.ok, r.summary, r.data);
       }
 
@@ -2248,6 +2248,8 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
               const rr = await execOnLocalAgent(remoteRunCmd(kcmd, mode, tmo), a.id, tmo);
               if (!rr) continue;
               try { recordMissionCommand(`kali@${a.hostname}: ${kcmd}`, String(rr.stdout ?? "").slice(0, 300)); } catch { /* سجل سالم */ }
+            try { const { scanRunFromPlane } = await import("../ops/kali-scan-stats"); scanRunFromPlane(a.hostname, kcmd, rr.exitCode === 0, (rr.stdout || "").length); } catch { /* إحصائية مش شرط نجاح */ }
+              try { const { scanRunFromPlane } = await import("../ops/kali-scan-stats"); scanRunFromPlane(a.hostname, kcmd, rr.exitCode === 0, (rr.stdout || "").length); } catch { /* إحصائية مش شرط نجاح */ }
               return done(
                 rr.exitCode === 0,
                 `[${a.hostname} — عقدة كالي خارجية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${rr.exitCode} · ${rr.durationMs}ms${installedAt ? ` · التثبيت السحابي اتعمل بنفسه (${installedAt} دقيقة أول مرة)` : ""} — المخزن سحابي والتنفيذ بره السيرفر`,
@@ -2257,6 +2259,7 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
             const rr = await execOnLocalAgent(remoteRunCmd(kcmd, mode, tmo), a.id, tmo);
             if (!rr) continue;
             try { recordMissionCommand(`kali@${a.hostname}: ${kcmd}`, String(rr.stdout ?? "").slice(0, 300)); } catch { /* سجل سالم */ }
+            try { const { scanRunFromPlane } = await import("../ops/kali-scan-stats"); scanRunFromPlane(a.hostname, kcmd, rr.exitCode === 0, (rr.stdout || "").length); } catch { /* إحصائية مش شرط نجاح */ }
             return done(
               rr.exitCode === 0,
               `[${a.hostname} — عقدة كالي خارجية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${rr.exitCode} · ${rr.durationMs}ms · التحويل التلقائي اشتغل`,
@@ -2269,6 +2272,7 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         }
         const kr = await kRun(kcmd, tmo);
         try { recordMissionCommand(`kali: ${kcmd}`, kr.stdout.slice(0, 300)); } catch { /* سجل سالم */ }
+        try { const { scanRunFromPlane } = await import("../ops/kali-scan-stats"); scanRunFromPlane("hub", kcmd, kr.exitCode === 0, kr.stdout.length); } catch { /* إحصائية مش شرط نجاح */ }
         return done(
           kr.exitCode === 0,
           kr.exitCode === 0

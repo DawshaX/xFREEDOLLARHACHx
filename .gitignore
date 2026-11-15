@@ -138,3 +138,6 @@ __pycache__/
 # Dropbox connector download-cache — فيه ملفات env بأسرار، ممنوع تدخل الشجرة
 /dropbox/
 state/kali-quota-flag.json
+
+# TEST29 — عدّاد تنفيذ كالي (runtime state)
+state/kali_scan_stats_v1.jsonl

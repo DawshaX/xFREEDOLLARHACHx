@@ -38,7 +38,7 @@ export interface PlatformToolResult {
  * capabilities. It is also what the claim guard compares a reply against, so
  * the two can never disagree.
  */
-export function platformSelfReport(): PlatformToolResult {
+export async function platformSelfReport(): Promise<PlatformToolResult> {
   const started = Date.now();
   const m = buildSelfModel();
 
@@ -98,11 +98,33 @@ export function platformSelfReport(): PlatformToolResult {
     },
   };
 
+  /* TEST29 — كالي في التقرير الذاتي: العقد + العدادات + إحصائيات الماسح
+   * (اكتشافات الخطر الحي) — نفس النواة الموحدة المستخدمة في كل طرفيات البرنامج. */
+  let kaliCloud: Record<string, unknown> | null = null;
+  try {
+    const { kaliAnywhereSummary } = await import("../ops/kali-anywhere");
+    const { kaliStatus } = await import("../ops/kali-env");
+    const { corpusStatus } = await import("../ops/vuln-corpus");
+    const { readScanStats } = await import("../ops/kali-scan-stats");
+    const sum = kaliAnywhereSummary();
+    const ks = await kaliStatus(false);
+    const cs = corpusStatus();
+    const scans = readScanStats();
+    kaliCloud = {
+      hub: { present: ks.present, packages: ks.packages ?? 0 },
+      linuxNodes: sum.linuxNodes,
+      corpus: { total: cs.total, kev: cs.kev, coverage: cs.coverage, measured: cs.measured },
+      scans: { total: scans.total, ok: scans.ok, fail: scans.fail, last: scans.last, byPlane: scans.byPlane },
+    };
+  } catch {
+    kaliCloud = null;
+  }
+
   const summary = agents.length
-    ? `حالة المنصة: ${m.machines.connected} جهاز متصل · ${m.tools.count} أداة · ${m.memory.total} ذكرى`
+    ? `حالة المنصة: ${m.machines.connected} جهاز متصل · ${m.tools.count} أداة · ${m.memory.total} ذكرى${kaliCloud ? ` · كالي: ${((kaliCloud.hub as Record<string, unknown>).present ? "على الهَب" : "سحابية") + " · " + (kaliCloud.linuxNodes as number) + " عقدة لينكس"}` : ""}`
     : `حالة المنصة: صفر جهاز متصل (${m.machines.registered} مسجّل) · ${m.tools.count} أداة · ${m.memory.total} ذكرى`;
 
-  return { ok: true, summary, data, ms: Date.now() - started };
+  return { ok: true, summary, data: { ...data, kaliCloud }, ms: Date.now() - started };
 }
 
 /* ── terminal_exec ────────────────────────────────────────────────────────── */
