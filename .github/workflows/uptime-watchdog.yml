@@ -33,12 +33,13 @@ on:
     # كانت بتخلق run يفشل GitHub-level بـ0 jobs (مقاس 2026-11-09، اتنين متتاليين).
     paths:
       - "scripts/nova-panel-restart.mjs"
+      - "scripts/waifly-deploy-probe.mjs"
       - ".github/workflows/uptime-watchdog.yml"
     branches:
       - main
 
 permissions:
-  contents: read
+  contents: write # مرآة state/waifly-deploy.json — الصفحة بتقراها وتعرض حالة النشر للمالك
   issues: write
 
 concurrency:
@@ -176,6 +177,40 @@ jobs:
             echo "::notice::في أدوات ناقصة (${missing}) وNOVA_EXEC_TOKEN مش في الأسرار"
           fi
           exit 0
+
+      # ── TEST31 — نضارة النشر: «مستطب على الديسك والعملية شغالة على القديم» ──
+      # العطل المقاس (2026-11-05): الأبديتر قال installed والعملية فضلت بكود أقدم 70د —
+      # وده اللي خلى ‎/kali-env تبان «زي ما هي» بعد تلات بناءات. الwatchdog كان بيعيد
+      # التشغيل بس لما الهَب يقع؛ ده يقفل الثغرة: هَب صاحي ببنية قديمة = إعادة تشغيل
+      # فعلية + مرآة مكتبوكة الصفحة بتعرضها للمالك.
+      - name: checkout (the deploy probe)
+        uses: actions/checkout@v4
+
+      # قاعدة stateful (مقاس في backend-health: run قفط في الصف بياخد على commit قديم
+        # ويرجع يكتب الحالة الغريمة فوق الجديدة) — نبدأ من رأس main قبل ما نقيس ونكتب.
+      - name: move to the current origin/main (a queued run starts on a stale commit)
+        run: |
+          git fetch --prune origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+          git log -1 --format='deploy probe on %h · %s'
+
+      - name: deploy freshness — force update + restart when the running code is older than the published bundle
+        if: always()
+        env:
+          NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
+        run: |
+          node scripts/waifly-deploy-probe.mjs state/waifly-deploy.json
+          python3 -c 'import json;d=json.load(open("state/waifly-deploy.json"));print("boot:",(d.get("bootAfter") or d.get("boot") or {}).get("builtAt"),"· asset:",(d.get("asset") or {}).get("updatedAt"),"· action:",d.get("action"))'
+          echo "## deploy freshness — $(date -u +%FT%TZ)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"; head -c 900 state/waifly-deploy.json >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: commit the deploy mirror (the /kali-env page reads this file)
+        if: always()
+        env:
+          MSG: "chore(waifly): deploy freshness probe [skip ci]"
+        run: node scripts/ci-commit.mjs --message "$MSG" state/waifly-deploy.json
 
       # ── دفع إعدادات العقدة من الأسرار (لو المالك سجّل TELEGRAM_BOT_TOKEN) ──
       # مشروطة بالكامل: سر غايب = تخطّي صامت. موجود = تتدفع كل دورة فالإعداد

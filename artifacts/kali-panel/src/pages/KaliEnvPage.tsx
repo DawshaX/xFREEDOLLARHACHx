@@ -68,6 +68,16 @@ type ProvisionState = {
   log: string[];
   transport: string | null;
 };
+type DeployMirror = {
+  at?: string;
+  reachable?: boolean;
+  boot?: { commit?: string; builtAt?: string } | null;
+  bootAfter?: { commit?: string; builtAt?: string } | null;
+  asset?: { updatedAt?: string; size?: number } | null;
+  action?: string;
+  fresh?: boolean;
+};
+
 type KaliStatus = {
   present: boolean;
   prettyName?: string;
@@ -120,6 +130,10 @@ export default function KaliEnvPage() {
   const [prov, setProv] = useState<ProvisionState | null>(null);
   const [provBusy, setProvBusy] = useState(false);
   const [buildStamp, setBuildStamp] = useState<{ commit?: string; builtAt?: string } | null>(null);
+  // TEST31 — مرآة النشر الحي: runner بيفحص waifly كل 30د ويدفع state/waifly-deploy.json للمستودع،
+  // والصفحة بتقراه بfetch مباشر — المالك يشوف بنية الهَب الشغالة بعينه على الموقع.
+  const [deployMirror, setDeployMirror] = useState<DeployMirror | null | "pending">("pending");
+  const [deployChecked, setDeployChecked] = useState<string | null>(null);
   const [nodes, setNodes] = useState<KaliNodes | null>(null);
   const [installBusy, setInstallBusy] = useState(false);
   const [store, setStore] = useState<StorageHub | null>(null);
@@ -142,6 +156,13 @@ export default function KaliEnvPage() {
         const r = await fetch("/api/nova-core/version", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(8000) });
         if (r.ok) { const v = await r.json(); setBuildStamp({ commit: v?.commit || v?.build?.commit, builtAt: v?.builtAt || v?.build?.builtAt }); }
       } catch { /* الساكن مافيهوش version حي */ }
+    })();
+    (async () => {
+      try {
+        const r = await fetch(`https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/state/waifly-deploy.json?t=${Date.now()}`, { signal: AbortSignal.timeout(9000) });
+        if (r.ok) { setDeployMirror(await r.json()); setDeployChecked(new Date().toLocaleTimeString("en-GB")); }
+        else setDeployMirror(null);
+      } catch { setDeployMirror(null); }
     })();
   }, [loadNodes]);
   useEffect(() => {
@@ -533,6 +554,34 @@ export default function KaliEnvPage() {
         {buildStamp && (
           <p className="text-[8px] font-mono mt-1.5 pt-1.5" style={{ color: "rgba(120,220,255,0.5)", borderTop: "1px dashed rgba(120,220,255,0.15)" }}>
             🏷️ البنية الشغالة: commit {buildStamp.commit?.slice(0, 7) || "؟"} · اتبنت {buildStamp.builtAt || "؟"} — لو التاريخ ده قديم، الـself-update (كرون 5د) لسه ماوصلش لآخر بنية.
+          </p>
+        )}
+      </div>
+
+      {/* TEST31 — حالة النشر الحي على waifly: runner بيقيس وبيدفع المرآة — الإثبات بيشوفه عينه */}
+      <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.04)", border: `1px solid ${deployMirror && deployMirror !== "pending" && deployMirror.fresh ? "rgba(68,255,136,0.35)" : "rgba(255,170,68,0.3)"}` }}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <p className="text-[11px] font-black" style={{ color: "#44ff88" }}>🚀 حالة النشر على nova.waifly.com — فحص runner حي كل 30 دقيقة</p>
+          {deployChecked && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#7cffb0" }}>قرأت المرآة {deployChecked}</span>}
+        </div>
+        {deployMirror && deployMirror !== "pending" ? (
+          <>
+            <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.65)" }}>
+              الهَب شغّال ببنية: <b style={{ color: "#7cffb0" }}>commit {(deployMirror.bootAfter || deployMirror.boot)?.commit?.slice(0, 7) || "؟"} · اتبنت {(deployMirror.bootAfter || deployMirror.boot)?.builtAt || "؟"}</b>
+              {" · "}آخر باندل منشور: {deployMirror.asset?.updatedAt || "؟"}
+            </p>
+            <p className="text-[9px] font-mono mt-1" style={{ color: deployMirror.fresh ? "#44ff88" : "#ffaa44" }}>
+              {deployMirror.action === "fresh" && "الهَب شغّال بآخر بنية ✓ — الباندل والعملية متطابقين"}
+              {deployMirror.action === "restarted_ok" && "اتصلحت — الهَب كان شغّال ببنية أقدم فأعاد تشغيل نفسه على الباندل الجديد ✓"}
+              {deployMirror.action === "updated_ok" && "الباندل الجديد اتسطب واتشغّل أثناء الفحص ✓"}
+              {deployMirror.action === "restart_requested" && "إعادة التشغيل اتبعتت للهَب — الفحص الجاي (30د) هيتأكد أنها نفذت"}
+              {deployMirror.action === "unreachable" && "الهَب مش متاح للفحص دلوقتي — خطوة الطاقة في الwatchdog بتتكفل بالسقوط الكامل"}
+              {deployMirror.action === "none" && "…"}{" · آخر فحص: "}{deployMirror.at || "؟"}
+            </p>
+          </>
+        ) : (
+          <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+            {deployMirror === "pending" ? "…بجيب مرآة النشر من المستودع" : "مرآة النشر لسه مااتبنتش — أول فحص runner بعد دمج TEST31 هيبنيها (المرآة: state/waifly-deploy.json في المستودع)"}
           </p>
         )}
       </div>

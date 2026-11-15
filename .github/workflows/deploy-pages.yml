@@ -12,6 +12,7 @@ on:
   # commit exists either way), so the site rebuilds from the new branch head.
   workflow_run:
     workflows:
+      - NOVA uptime watchdog
       - "vuln corpus (real NVD + KEV + EPSS)"
       - "advisory library (real GHSA corpus)"
       - "hunt live (real scan · permitted targets)"
