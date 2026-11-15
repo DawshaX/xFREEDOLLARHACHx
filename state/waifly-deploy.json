@@ -1,32 +1,32 @@
 {
-  "at": "2026-11-15T09:27:57.156Z",
+  "at": "2026-11-15T09:43:39.334Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-15T09:21:30Z",
-    "size": 4170518
+    "updatedAt": "2026-11-15T09:38:59Z",
+    "size": 4171444
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "5f26be71c48b340883d7331c70fcc753621b54dc",
-    "builtAt": "2026-11-15T09:21:08.415Z",
-    "files": 188,
+    "commit": "1221ff8b770f3a52c0c758b3e7a080535f524dce",
+    "builtAt": "2026-11-15T09:38:36.329Z",
+    "files": 189,
     "builtBy": "github-actions"
   },
   "boot": {
-    "commit": "5f26be71c48b340883d7331c70fcc753621b54dc",
-    "builtAt": "2026-11-15T09:21:08.415Z",
+    "commit": "1221ff8b770f3a52c0c758b3e7a080535f524dce",
+    "builtAt": "2026-11-15T09:38:36.329Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 22 ثانية)",
-    "lastCheckAt": "2026-11-15T09:26:53.913Z",
-    "currentBuiltAt": "2026-11-15T09:21:08.415Z",
-    "latestReleaseAt": "2026-11-15T09:21:30Z",
+    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 23 ثانية)",
+    "lastCheckAt": "2026-11-15T09:43:23.377Z",
+    "currentBuiltAt": "2026-11-15T09:38:36.329Z",
+    "latestReleaseAt": "2026-11-15T09:38:59Z",
     "restartNeeded": false
   },
   "updaterInstall": null,
@@ -37,8 +37,8 @@
   "notes": [],
   "page": {
     "status": 200,
-    "cacheControl": "public, max-age=0",
-    "servedAsset": "/assets/index-B3P0n_Pp.js",
+    "cacheControl": "no-store",
+    "servedAsset": "/assets/index-BaShDmv4.js",
     "htmlBytes": 2484
   }
 }
