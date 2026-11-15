@@ -16,6 +16,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { requireOps } from "../lib/ops/gate";
 import { detectProotLayout, prootHealth, runInProot } from "../lib/ops/proot";
+import { kaliAnywhereExec } from "../lib/ops/kali-anywhere";
+import { readProbeCache, probeAllKaliNodes } from "../lib/ops/kali-node-probe";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -34,25 +36,87 @@ const TOOL_GROUPS: Record<string, string[]> = {
   utils: ["curl", "wget", "git", "python3", "node", "jq", "netcat", "socat", "openssl"],
 };
 
+/** TEST37 — أسطول كالي الحقيقي: العقد المتصلة وأيها جاهزة فعلاً (مقاس بالبروب،
+ * كاش 3د). ده اللي يخلي الصفحة تعرض «كالي حقيقية شغالة في الخلفية» حتى لو
+ * rootfs مش منصّبة على الهَب نفسه (حصة 1.5GB) — الكالي بتعيش على عقد الأسطول
+ * وkaliAnywhereExec بيوصّل ليها failover تلقائي. */
+async function fleetKaliSummary() {
+  const cached = readProbeCache();
+  let rows = cached.rows;
+  if (!cached.fresh) {
+    try {
+      type ProbeRows = Awaited<ReturnType<typeof probeAllKaliNodes>>;
+      rows = await Promise.race<ProbeRows>([
+        probeAllKaliNodes(),
+        new Promise<ProbeRows>((resolve) => setTimeout(() => resolve(rows), 8_000)),
+      ]);
+    } catch {
+      /* الكاش الأقدم أنضف من «مفيش» — بيرجع زي ما هو */
+    }
+  }
+  const kaliNodes = rows.filter((r) => r.kali);
+  return {
+    connected: rows.length,
+    kaliReady: kaliNodes.length,
+    nodes: rows.map((r) => ({ id: r.id, hostname: r.hostname, mode: r.mode, kali: r.kali, at: r.at })),
+  };
+}
+
 router.get("/kali-env/health", async (_req, res) => {
   const layout = detectProotLayout();
   const health = await prootHealth();
+  const fleet = await fleetKaliSummary();
   res.json({
     ...health,
     searched: layout.searched,
     // Honest: `ready` means proot+rootfs exist; `guestShell` means it actually ran.
     ok: health.ready && health.guestShell,
+    // TEST37 — الطايرة التانية الحقيقية: عقد كالي السحابية (الأسطول).
+    fleet,
+    // الجاهزية الكاملة: إما rootfs على الهَب أو عقدة كالي حية جاهزة — والتين
+    // مقاسين، مافيش تخمين.
+    readyAnywhere: (health.ready && health.guestShell) || fleet.kaliReady > 0,
   });
 });
 
 router.get("/kali-env/tools", async (_req, res) => {
   const layout = detectProotLayout();
   if (!layout.ready) {
+    // TEST37 — مافيش rootfs على الهَب؟ قيس الأدوات من عقدة كالي حية (نفس
+    // أمر command -v، نفس التجميع) — القياس حقيقي من الطايرة السحابية بدل
+    // «صفر أدوات» اللي بيظهر معاه إن كالي مش موجودة وهي موجودة على الأسطول.
+    const all = [...new Set(Object.values(TOOL_GROUPS).flat())];
+    const probe = all.map((t) => `command -v ${t} >/dev/null 2>&1 && echo "OK:${t}"`).join("; ");
+    const fleet = await fleetKaliSummary();
+    const r = await kaliAnywhereExec(probe, 30_000);
+    if (r && r.exitCode === 0) {
+      const found = new Set(
+        r.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)),
+      );
+      const groups: Record<string, { present: string[]; missing: string[] }> = {};
+      for (const [group, tools] of Object.entries(TOOL_GROUPS)) {
+        groups[group] = { present: tools.filter((t) => found.has(t)), missing: tools.filter((t) => !found.has(t)) };
+      }
+      const present = [...found].filter((t) => all.includes(t)).length;
+      res.json({
+        ok: true,
+        ready: true,
+        measuredOn: r.plane,
+        hubRootfs: false,
+        fleet,
+        searched: layout.searched,
+        groups,
+        total: all.length,
+        present,
+      });
+      return;
+    }
     res.json({
       ok: false,
       ready: false,
-      reason: "proot/rootfs not installed",
+      reason: "proot/rootfs not installed AND no live Kali node answered",
       searched: layout.searched,
+      fleet,
       groups: {},
       total: 0,
       present: 0,

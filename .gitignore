@@ -92,6 +92,7 @@ state/hunt-findings.csv
 state/hunt/
 state/discovered-vulnerabilities-vault.json
 state/cybernova-brain-state.json
+artifacts/kali-panel/public/state/cybernova-brain-state.json
 state/advisory-cache.json
 state/advisory-last-failure.json
 state/corpus-last-failure.json
@@ -166,3 +167,5 @@ artifacts/api-server/vendor/
 artifacts/api-server/state/
 state/
 *.log
+state/cybernova-brain-state.json
+artifacts/kali-panel/public/state/cybernova-brain-state.json
