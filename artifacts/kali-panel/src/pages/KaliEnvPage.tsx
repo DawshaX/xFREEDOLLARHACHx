@@ -170,6 +170,12 @@ export default function KaliEnvPage() {
   const [envHealth, setEnvHealth] = useState<KaliEnvHealth | null>(null);
   const [envTools, setEnvTools] = useState<KaliEnvTools | null>(null);
   const [envBusy, setEnvBusy] = useState(false);
+  /* TEST35 — the terminal had exactly one plane: the remote Kali node. The
+   * local proot guest (the one this page measures two cards above) was never
+   * reachable from the input box, so `/api/kali-env/exec` shipped with no
+   * consumer at all. `plane` picks where a command actually runs, and the
+   * choice is visible on every result line — never implied. */
+  const [plane, setPlane] = useState<"auto" | "proot" | "node">("auto");
   const logRef = useRef<HTMLDivElement>(null);
 
   /* TEST23 — عقد كالي السحابية: قياس حي كل 20ث من الهَب نفسه (probe عبر قناة الأجينتات) */
@@ -324,6 +330,97 @@ export default function KaliEnvPage() {
     load();
   };
 
+  /* ── TEST35 · the two real planes, one input box ──────────────────────────
+   *
+   * `node`  → POST-free SSE on /api/ops/kali/exec-stream (the remote Kali node
+   *           attached to the hub over WebSocket).
+   * `proot` → POST /api/kali-env/exec (the local rootfs guest on THIS host).
+   *
+   * EventSource cannot POST, so the proot plane is read with fetch() and a
+   * manual SSE frame parser. Both paths emit the same {type,text,exitCode}
+   * shape, so the log/live cards stay identical whichever plane ran.
+   *
+   * `auto` prefers proot when it is measured ready, and says so in the log —
+   * it never silently falls back without telling you which plane answered.
+   */
+  const execOnProot = async (c: string): Promise<number | null> => {
+    const r = await fetch(`${API}/kali-env/exec`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+      body: JSON.stringify({ command: c, timeoutMs: 120000 }),
+      signal: AbortSignal.timeout(180000),
+    });
+    if (!r.ok || !r.body) {
+      const t = await r.text().catch(() => "");
+      setLog((p) => [...p, { text: `⚠ proot ${r.status}: ${t.slice(0, 200)}`, isErr: true }]);
+      return null;
+    }
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    let exit: number | null = null;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const frames = buf.split("\n\n");
+      buf = frames.pop() ?? "";
+      for (const f of frames) {
+        const line = f.split("\n").find((l) => l.startsWith("data: "));
+        if (!line) continue;
+        const raw = line.slice(6);
+        if (raw === "[DONE]") continue;
+        let d: { type?: string; text?: string; exitCode?: number | null; durationMs?: number; error?: string; message?: string };
+        try { d = JSON.parse(raw); } catch { continue; }
+        if ((d.type === "stdout" || d.type === "stderr") && d.text) {
+          setLog((p) => [...p.slice(0, 400), { text: d.text as string, isErr: d.type === "stderr" }]);
+          setBytesIn((b) => b + (d.text as string).length);
+          setLive((j) => (j ? { ...j, chunks: j.chunks + 1 } : j));
+        } else if (d.type === "error") {
+          setLog((p) => [...p, { text: `⚠ ${d.message ?? d.error ?? "proot error"}`, isErr: true }]);
+        } else if (d.type === "done") {
+          exit = d.exitCode ?? null;
+          setLive((j) => (j ? { ...j, running: false, exitCode: d.exitCode ?? null, durationMs: d.durationMs ?? null } : j));
+        }
+      }
+    }
+    return exit;
+  };
+
+  const execOnNode = async (c: string): Promise<number | null> => {
+    let finalExit: number | null = null;
+    await new Promise<void>((resolve) => {
+      const es = new EventSource(`${API}/ops/kali/exec-stream?command=${encodeURIComponent(c)}&timeout=120000`);
+      es.onmessage = (ev) => {
+        try {
+          const d = JSON.parse(ev.data) as { type: string; text?: string; exitCode?: number | null; durationMs?: number; plane?: string };
+          if (d.type === "stdout" && d.text) {
+            setLog((p) => [...p.slice(0, 400), { text: d.text as string }]);
+            setBytesIn((b) => b + (d.text as string).length);
+            setLive((j) => (j ? { ...j, chunks: j.chunks + 1 } : j));
+          }
+          else if (d.type === "stderr" && d.text) {
+            setLog((p) => [...p.slice(0, 400), { text: d.text as string, isErr: true }]);
+            setBytesIn((b) => b + (d.text as string).length);
+            setLive((j) => (j ? { ...j, chunks: j.chunks + 1 } : j));
+          }
+          else if (d.type === "error" && d.text) setLog((p) => [...p, { text: `⚠ ${d.text}`, isErr: true }]);
+          else if (d.type === "done") {
+            finalExit = d.exitCode ?? null;
+            if (d.plane) {
+              setLog((p) => [...p, { text: `↳ اتنفّذ على: ${d.plane}` }]);
+              setLive((j) => (j ? { ...j, plane: d.plane ?? null } : j));
+            }
+            setLive((j) => (j ? { ...j, running: false, exitCode: d.exitCode ?? null, durationMs: d.durationMs ?? null } : j));
+            es.close(); resolve();
+          }
+        } catch { /* chunk مش JSON — تجاهل */ }
+      };
+      es.onerror = () => { es.close(); resolve(); setLive((j) => (j && j.running ? { ...j, running: false, exitCode: null } : j)); };
+    });
+    return finalExit;
+  };
+
   const exec = async (c: string) => {
     if (!c.trim() || execBusy) return;
     setExecBusy(true); setCmd("");
@@ -332,37 +429,27 @@ export default function KaliEnvPage() {
     /* TEST28 — شاشة المراقبة: نفس البث بيتصور في بطاقة حية فوق الطرفية */
     setLive({ cmd: c, plane: null, running: true, startedAt: Date.now(), chunks: 0, exitCode: null, durationMs: null });
     setBytesIn(0);
+
+    /* Which plane will actually run this? Decided once, announced in the log. */
+    const prootReady = envHealth?.ok === true;
+    const chosen: "proot" | "node" =
+      plane === "proot" ? "proot" : plane === "node" ? "node" : prootReady ? "proot" : "node";
+    setLive((j) => (j ? { ...j, plane: chosen === "proot" ? "proot (rootfs محلي)" : "node (عقدة كالي)" } : j));
+    setLog((p) => [...p, { text: `↳ الخطة: ${chosen === "proot" ? "proot — rootfs محلي على نفس الهوست" : "node — عقدة كالي المتصلة بالهب"}`, isCmd: false }]);
+
     let finalExit: number | null = null;
     try {
-      await new Promise<void>((resolve) => {
-        const es = new EventSource(`${API}/ops/kali/exec-stream?command=${encodeURIComponent(c)}&timeout=120000`);
-        es.onmessage = (ev) => {
-          try {
-            const d = JSON.parse(ev.data) as { type: string; text?: string; exitCode?: number | null; durationMs?: number; plane?: string };
-            if (d.type === "stdout" && d.text) {
-              setLog((p) => [...p.slice(0, 400), { text: d.text as string }]);
-              setBytesIn((b) => b + (d.text as string).length);
-              setLive((j) => (j ? { ...j, chunks: j.chunks + 1 } : j));
-            }
-            else if (d.type === "stderr" && d.text) {
-              setLog((p) => [...p.slice(0, 400), { text: d.text as string, isErr: true }]);
-              setBytesIn((b) => b + (d.text as string).length);
-              setLive((j) => (j ? { ...j, chunks: j.chunks + 1 } : j));
-            }
-            else if (d.type === "error" && d.text) setLog((p) => [...p, { text: `⚠ ${d.text}`, isErr: true }]);
-            else if (d.type === "done") {
-              finalExit = d.exitCode ?? null;
-              if (d.plane) {
-                setLog((p) => [...p, { text: `↳ اتنفّذ على: ${d.plane}` }]);
-                setLive((j) => (j ? { ...j, plane: d.plane ?? null } : j));
-              }
-              setLive((j) => (j ? { ...j, running: false, exitCode: d.exitCode ?? null, durationMs: d.durationMs ?? null } : j));
-              es.close(); resolve();
-            }
-          } catch { /* chunk مش JSON — تجاهل */ }
-        };
-        es.onerror = () => { es.close(); resolve(); setLive((j) => (j && j.running ? { ...j, running: false, exitCode: null } : j)); };
-      });
+      if (chosen === "proot") {
+        finalExit = await execOnProot(c);
+        if (finalExit === null && plane === "auto") {
+          /* auto + proot failed → say so, then try the node rather than
+             leaving the user with a dead box and no explanation. */
+          setLog((p) => [...p, { text: "↳ proot ما رجّعش نتيجة — بجرّب عقدة كالي", isErr: true }]);
+          finalExit = await execOnNode(c);
+        }
+      } else {
+        finalExit = await execOnNode(c);
+      }
       pushNotify(finalExit === null || finalExit === 0 ? "success" : "error", "كالي المدمجة", finalExit === null ? "البث اتقطع" : `اتنفّذ: ${c.slice(0, 50)}`);
     } catch (e: unknown) {
       setLog((p) => [...p, { text: e instanceof Error ? e.message : String(e), isErr: true }]);
@@ -691,6 +778,31 @@ export default function KaliEnvPage() {
         <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}>
           <Terminal className="w-3.5 h-3.5" /> {st?.present ? "طرفية كالي — تنفيذ حقيقي على الهَب" : "🐉 طرفية كالي الحية — بتنفّذ فعليًا على عقد الأسطول السحابية"}
         </p>
+            {/* TEST35 — pick the plane explicitly. Before this the box could only
+                ever reach the remote node, so the local rootfs guest was
+                unreachable from the one place a user types commands. */}
+            <div className="flex items-center gap-1 mb-2 flex-wrap">
+              <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>الخطة:</span>
+              {([
+                { k: "auto", label: "تلقائي", hint: "proot لو جاهز، وإلا عقدة كالي" },
+                { k: "proot", label: "proot محلي", hint: "rootfs على نفس الهوست — /api/kali-env/exec" },
+                { k: "node", label: "عقدة كالي", hint: "العقدة المتصلة بالهب — /api/ops/kali/exec-stream" },
+              ] as const).map((o) => (
+                <button key={o.k} onClick={() => setPlane(o.k)} title={o.hint}
+                  className="px-2 py-0.5 rounded text-[8px] font-mono"
+                  style={{
+                    background: plane === o.k ? "rgba(255,170,0,0.18)" : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${plane === o.k ? "rgba(255,170,0,0.6)" : "rgba(255,255,255,0.12)"}`,
+                    color: plane === o.k ? "#ffaa44" : "rgba(255,255,255,0.5)",
+                  }}>
+                  {o.label}
+                </button>
+              ))}
+              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded"
+                style={{ background: envHealth?.ok ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: envHealth?.ok ? "#44ff88" : "rgba(255,255,255,0.4)" }}>
+                proot {envHealth?.ok ? "جاهز" : "مش جاهز"}
+              </span>
+            </div>
             <div className="flex flex-wrap gap-1 mb-2">
               {QUICK.map((c) => (
                 <button key={c} onClick={() => exec(c)} disabled={execBusy} className="px-2 py-0.5 rounded text-[8px] font-mono" style={{ background: "rgba(255,170,0,0.05)", border: "1px solid rgba(255,170,0,0.2)", color: "rgba(255,170,0,0.75)" }}>

@@ -1151,6 +1151,7 @@ export function LiveAgentPanel({
     | "chat" | "processes" | "live" | "missions" | "capabilities" | "terminal"
     | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser"
     | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel" | "cockpit" | "awareness"
+    | "control"
   >("chat");
 
   // ── Real 67-tool Core Catalogue + Live Chat Ops Dashboard ─────────────────
@@ -1249,6 +1250,66 @@ export function LiveAgentPanel({
   const [kaliEnvHealth, setKaliEnvHealth] = useState<{
     ok: boolean; ready: boolean; guestShell: boolean; rootfs: string | null; detail: string;
   } | null>(null);
+
+  /* ── TEST36 · the unified control surface ─────────────────────────────────
+   *
+   * The Live Agent had a tab per subsystem (fleet, topology, kali, cveLive…)
+   * but no single place that answered "what is the state of the whole system
+   * right now". Each tab knew its own slice and nothing joined them, so the
+   * agent could not reason across fleet + mesh + kali + notifications + stats
+   * in one read — which is exactly what "make it the full control interface"
+   * means. This block reads all five real endpoints in parallel and renders
+   * one board; every number is measured, and a failed read says so instead of
+   * showing a zero.
+   */
+  interface ControlBoard {
+    fleet: { connected?: number; configured?: number | null; shortfall?: number | null; enabled?: boolean | null; why?: string } | null;
+    stats: { runningJobs?: number; exposure?: unknown; autonomy?: unknown; throttle?: unknown } | null;
+    mesh: { nodes?: unknown[]; peers?: unknown[]; ok?: boolean } | null;
+    notifs: Array<{ id: string; title: string; body?: string; kind?: string; read?: boolean; createdAt?: string }>;
+    kali: { ok: boolean; ready: boolean; detail: string } | null;
+    errors: string[];
+    at: number | null;
+  }
+  const [board, setBoard] = useState<ControlBoard>({ fleet: null, stats: null, mesh: null, notifs: [], kali: null, errors: [], at: null });
+  const [boardBusy, setBoardBusy] = useState(false);
+
+  const loadBoard = useCallback(async () => {
+    setBoardBusy(true);
+    const errors: string[] = [];
+    const grab = async <T,>(path: string): Promise<T | null> => {
+      try {
+        const r = await fetch(`${API_BASE}${path}`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(12000) });
+        if (!r.ok) { errors.push(`${path} → ${r.status}`); return null; }
+        return (await r.json()) as T;
+      } catch (e) {
+        errors.push(`${path} → ${e instanceof Error ? e.message : "failed"}`);
+        return null;
+      }
+    };
+    const [fleet, stats, mesh, notifs, kali] = await Promise.all([
+      grab<ControlBoard["fleet"]>("/fleet/target"),
+      grab<ControlBoard["stats"]>("/ops/stats"),
+      grab<ControlBoard["mesh"]>("/fleet/mesh"),
+      grab<Array<{ id: string; title: string; body?: string; kind?: string; read?: boolean; createdAt?: string }>>("/notifications"),
+      grab<{ ok: boolean; ready: boolean; detail: string }>("/kali-env/health"),
+    ]);
+    setBoard({
+      fleet, stats, mesh,
+      notifs: Array.isArray(notifs) ? notifs.slice(0, 12) : [],
+      kali,
+      errors,
+      at: Date.now(),
+    });
+    setBoardBusy(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== "control") return;
+    void loadBoard();
+    const iv = setInterval(() => { void loadBoard(); }, 20_000);
+    return () => clearInterval(iv);
+  }, [activeTab, loadBoard]);
   const [kaliAgentList, setKaliAgentList] = useState<KaliAgent[]>([]);
   const [kaliWssUrl, setKaliWssUrl] = useState<string>("");
   const [kaliConnectModalOpen, setKaliConnectModalOpen] = useState(false);
@@ -4840,6 +4901,18 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 <button onClick={() => setActiveTab("topology")}
                   className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "topology" ? "border-green-400 text-green-300 bg-green-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                   <span className="flex items-center gap-1"><Network className="w-2.5 h-2.5" />طوبولوجيا</span>
+                </button>
+                {/* TEST36 — one board that joins fleet + mesh + kali + notifications
+                    + stats. Every other tab shows one slice; this is the only
+                    place the whole system is visible at once. */}
+                <button onClick={() => setActiveTab("control")}
+                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "control" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  <span className="flex items-center gap-1">
+                    <Activity className="w-2.5 h-2.5" />لوحة التحكم
+                    {board.errors.length > 0 && (
+                      <span className="w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[7px] flex items-center justify-center font-bold">{board.errors.length}</span>
+                    )}
+                  </span>
                 </button>
                 <button onClick={() => setActiveTab("kali")}
                   className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "kali" ? "border-rose-400 text-rose-300 bg-rose-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
@@ -8967,6 +9040,160 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Unified Control Board (TEST36) ── */}
+        {activeTab === "control" && panelSize !== "mini" && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="shrink-0 px-3 py-2 border-b border-emerald-400/20 bg-emerald-500/5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-xs font-bold text-emerald-200">لوحة التحكم الموحّدة</span>
+                <span className="text-[8px] font-mono text-emerald-300/50">
+                  أسطول · شبكة · كالي · إشعارات · إحصائيات
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {board.at && (
+                  <span className="text-[8px] font-mono text-muted-foreground">
+                    {new Date(board.at).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                  </span>
+                )}
+                <button onClick={() => void loadBoard()} disabled={boardBusy}
+                  className="text-[9px] font-mono px-2 py-0.5 rounded border border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-40">
+                  {boardBusy ? "…" : "تحديث"}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0">
+              {/* read failures are shown, never swallowed into a zero */}
+              {board.errors.length > 0 && (
+                <div className="rounded-lg border border-amber-400/30 bg-amber-500/5 p-2">
+                  <div className="text-[9px] font-bold text-amber-300 mb-1">⚠ {board.errors.length} قراءة فشلت</div>
+                  {board.errors.map((e, i) => (
+                    <div key={i} className="text-[8px] font-mono text-amber-200/60 break-all">{e}</div>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                {/* Fleet */}
+                <div className="rounded-lg border border-cyan-400/25 bg-cyan-500/5 p-2">
+                  <div className="text-[9px] font-bold text-cyan-300 mb-1 flex items-center gap-1">
+                    <Server className="w-2.5 h-2.5" /> الأسطول
+                  </div>
+                  {board.fleet ? (
+                    <>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xl font-black text-cyan-200">{board.fleet.connected ?? 0}</span>
+                        <span className="text-[9px] text-cyan-300/50">/ {board.fleet.configured ?? "?"} متصل</span>
+                      </div>
+                      {typeof board.fleet.shortfall === "number" && board.fleet.shortfall > 0 && (
+                        <div className="text-[8px] font-mono text-amber-300 mt-0.5">ناقص {board.fleet.shortfall}</div>
+                      )}
+                      {board.fleet.why && (
+                        <div className="text-[8px] font-mono text-cyan-100/40 mt-1 break-words leading-3">{board.fleet.why}</div>
+                      )}
+                    </>
+                  ) : <div className="text-[9px] text-muted-foreground">— مش متاح</div>}
+                </div>
+
+                {/* Kali */}
+                <div className="rounded-lg border border-rose-400/25 bg-rose-500/5 p-2">
+                  <div className="text-[9px] font-bold text-rose-300 mb-1 flex items-center gap-1">
+                    <Skull className="w-2.5 h-2.5" /> كالي المدمجة
+                  </div>
+                  {board.kali ? (
+                    <>
+                      <div className={`text-sm font-black ${board.kali.ok ? "text-emerald-300" : "text-rose-300"}`}>
+                        {board.kali.ok ? "جاهزة" : "مش جاهزة"}
+                      </div>
+                      <div className="text-[8px] font-mono text-rose-100/40 mt-1 break-words leading-3">{board.kali.detail}</div>
+                    </>
+                  ) : <div className="text-[9px] text-muted-foreground">— مش متاح</div>}
+                </div>
+
+                {/* Stats */}
+                <div className="rounded-lg border border-violet-400/25 bg-violet-500/5 p-2">
+                  <div className="text-[9px] font-bold text-violet-300 mb-1 flex items-center gap-1">
+                    <Activity className="w-2.5 h-2.5" /> الإحصائيات
+                  </div>
+                  {board.stats ? (
+                    <div className="space-y-0.5">
+                      <div className="flex justify-between text-[9px]">
+                        <span className="text-violet-200/60">مهام جارية</span>
+                        <span className="font-mono font-bold text-violet-200">{board.stats.runningJobs ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between text-[9px]">
+                        <span className="text-violet-200/60">التعرّض</span>
+                        <span className="font-mono text-violet-200/80">
+                          {typeof board.stats.exposure === "object" && board.stats.exposure
+                            ? String((board.stats.exposure as { level?: string }).level ?? "—")
+                            : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  ) : <div className="text-[9px] text-muted-foreground">— مش متاح</div>}
+                </div>
+
+                {/* Mesh */}
+                <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/5 p-2">
+                  <div className="text-[9px] font-bold text-emerald-300 mb-1 flex items-center gap-1">
+                    <Network className="w-2.5 h-2.5" /> شبكة الأسطول
+                  </div>
+                  {board.mesh ? (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xl font-black text-emerald-200">
+                        {Array.isArray(board.mesh.nodes) ? board.mesh.nodes.length : Array.isArray(board.mesh.peers) ? board.mesh.peers.length : 0}
+                      </span>
+                      <span className="text-[9px] text-emerald-300/50">عقدة في المِش</span>
+                    </div>
+                  ) : <div className="text-[9px] text-muted-foreground">— مش متاح</div>}
+                </div>
+              </div>
+
+              {/* Notifications */}
+              <div className="rounded-lg border border-amber-400/25 bg-amber-500/5 p-2">
+                <div className="text-[9px] font-bold text-amber-300 mb-1 flex items-center justify-between">
+                  <span>🔔 الإشعارات</span>
+                  <span className="text-[8px] font-mono text-amber-300/50">{board.notifs.length}</span>
+                </div>
+                {board.notifs.length === 0 ? (
+                  <div className="text-[9px] text-muted-foreground">مفيش إشعارات</div>
+                ) : (
+                  <div className="space-y-1">
+                    {board.notifs.map((n) => (
+                      <div key={n.id} className="flex items-start gap-1.5 text-[9px]">
+                        <span className={`w-1 h-1 rounded-full mt-1 shrink-0 ${n.read ? "bg-muted-foreground/30" : "bg-amber-400"}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className={`truncate ${n.read ? "text-muted-foreground" : "text-amber-100"}`}>{n.title}</div>
+                          {n.body && <div className="text-[8px] text-muted-foreground/60 truncate">{n.body}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Jump links — the board is a hub, not a dead end */}
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  { tab: "fleet", label: "🛰️ الأسطول" },
+                  { tab: "topology", label: "🗺️ الخريطة" },
+                  { tab: "kali", label: "🐉 كالي" },
+                  { tab: "cveLive", label: "🛡️ CVE" },
+                  { tab: "missions", label: "🎯 المهام" },
+                  { tab: "live", label: "📡 البث" },
+                ] as const).map((l) => (
+                  <button key={l.tab} onClick={() => setActiveTab(l.tab as typeof activeTab)}
+                    className="text-[9px] font-mono py-1.5 rounded-lg border border-white/10 text-white/60 hover:bg-white/5 hover:text-white transition">
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

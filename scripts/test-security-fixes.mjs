@@ -159,11 +159,36 @@ check("settings.ts gates the write path", () => {
 });
 
 // ── 5. the mock layer must not shadow the gated routers ───────────────────────
-check("app.ts does not let the mock answer gated paths", () => {
+//
+// This used to assert a hand-written prefix list (`p.startsWith("/processes")`).
+// That list was the *old* fix and it was the wrong shape: it covered 55 prefixes
+// while the real routers register 583 paths, so 202 paths stayed shadowed and
+// every gate added to one of them was dead code. The replacement asks Express's
+// own route table (route-registry) plus one explicit policy (mock-policy), so a
+// new router is covered the moment it is mounted.
+//
+// The assertion is therefore stronger, not weaker: it requires the dynamic
+// mechanism to be wired AND the old hand-list to be gone (a leftover hand-list
+// would mean two sources of truth drifting apart again).
+check("app.ts delegates mock suppression to the route registry", () => {
   const src = read("artifacts/api-server/src/app.ts");
-  for (const p of ["/processes", "/keys", "/settings", "/kali-terminal", "/kali-env"]) {
-    if (!src.includes(`p.startsWith("${p}")`)) return `mock still shadows ${p}`;
-  }
+  if (!/realRouterOwns\s*\(/.test(src)) return "app.ts does not call realRouterOwns()";
+  if (!/from\s+["']\.\/lib\/ops\/mock-policy["']/.test(src)) return "mock-policy is not imported";
+  if (/p\.startsWith\("\/processes"\)/.test(src)) return "the old hand-written prefix list is still present";
+  return true;
+});
+
+check("route-registry walks the real Express route table", () => {
+  const src = read("artifacts/api-server/src/lib/ops/route-registry.ts");
+  if (!/router\.stack|_router\.stack/.test(src)) return "does not read the router stack";
+  if (!/Array\.isArray/.test(src)) return "does not handle Express 5 array paths (route.path can be string[])";
+  return true;
+});
+
+check("mock-policy refuses to answer a path a real router owns", () => {
+  const src = read("artifacts/api-server/src/lib/ops/mock-policy.ts");
+  if (!/export function realRouterOwns/.test(src)) return "realRouterOwns is not exported";
+  if (!/return false/.test(src)) return "no refusal path";
   return true;
 });
 
