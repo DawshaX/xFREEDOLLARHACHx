@@ -1,44 +1,27 @@
 {
-  "at": "2026-11-15T09:43:39.334Z",
+  "at": "2026-11-15T10:09:29.271Z",
   "hub": "https://nova.waifly.com",
-  "reachable": true,
-  "asset": {
-    "updatedAt": "2026-11-15T09:38:59Z",
-    "size": 4171444
-  },
-  "disk": {
-    "name": "nova-24-7",
-    "version": "2099.1",
-    "commit": "1221ff8b770f3a52c0c758b3e7a080535f524dce",
-    "builtAt": "2026-11-15T09:38:36.329Z",
-    "files": 189,
-    "builtBy": "github-actions"
-  },
-  "boot": {
-    "commit": "1221ff8b770f3a52c0c758b3e7a080535f524dce",
-    "builtAt": "2026-11-15T09:38:36.329Z",
-    "dir": "/home/container"
-  },
-  "stale": false,
+  "reachable": false,
+  "asset": null,
+  "disk": null,
+  "boot": null,
+  "stale": null,
   "updater": {
-    "enabled": true,
-    "lastResult": "up-to-date",
-    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 23 ثانية)",
-    "lastCheckAt": "2026-11-15T09:43:23.377Z",
-    "currentBuiltAt": "2026-11-15T09:38:36.329Z",
-    "latestReleaseAt": "2026-11-15T09:38:59Z",
-    "restartNeeded": false
+    "http": 0
   },
   "updaterInstall": null,
   "restartHttp": null,
-  "action": "fresh",
+  "action": "unreachable",
   "bootAfter": null,
-  "fresh": true,
-  "notes": [],
+  "fresh": false,
+  "notes": [
+    "مافيش أصل nova-24-7.zip في الإصدار nova-portable (HTTP 0)",
+    "version HTTP 0 · fetch failed"
+  ],
   "page": {
-    "status": 200,
-    "cacheControl": "no-store",
-    "servedAsset": "/assets/index-BaShDmv4.js",
-    "htmlBytes": 2484
+    "error": "fetch failed"
+  },
+  "fleet": {
+    "error": "fetch failed"
   }
 }

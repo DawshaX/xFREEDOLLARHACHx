@@ -150,6 +150,20 @@ try {
   result.page = { error: String((e && e.message) || e).slice(0, 120) };
 }
 
+// 6) الأسطول الحي — عدّ العقد المسجلة فعلًا على الهَب (TEST32): الowner يسأل
+// «الـ19 عقدة فين؟» فالمرآة بتجيب الرقم من الهَب نفسه مش من jobs API.
+try {
+  const r = await fetch(`${HUB}/api/local-agent/agents`, { headers: HEADERS, signal: AbortSignal.timeout(15_000) });
+  const b = await r.json().catch(() => null);
+  result.fleet = {
+    status: r.status,
+    count: (b && b.count) ?? null,
+    ids: b && Array.isArray(b.agents) ? b.agents.map((a) => a.id).slice(0, 45) : null,
+  };
+} catch (e) {
+  result.fleet = { error: String((e && e.message) || e).slice(0, 120) };
+}
+
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, JSON.stringify(result, null, 2) + "\n");
 console.log(
