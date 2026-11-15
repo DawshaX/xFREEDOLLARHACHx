@@ -902,10 +902,23 @@ function isLinuxFleetNode(a: { platform: string; capabilities?: string[] }): boo
 /* قياس الأدوات من أول عقدة كالي — مقاس حي (تنفيذ فعلي) مع كاش دقيقتين
  * عشان البولينج كل 20ث مايتكررش على العقدة بلا داعي. */
 type NodeTool = { present: boolean; version?: string };
-let nodeToolsCache: { at: number; tools: Record<string, NodeTool> | null; from: string } = { at: 0, tools: null, from: "" };
+let nodeToolsCache: { at: number; tools: Record<string, NodeTool> | null; from: string; sysinfo?: { packages: number; executables: number; kaliGroups: string[] } } = { at: 0, tools: null, from: "" };
+/* TEST26 — قياس الأدوات الكامل: كل أداة تُقاس بوجودها الفعلي على دسك النظام
+ * (command -v — أسرع وأصدق من --version اللي بيوتّه على بطء إقلاع بعض الأدوات
+ * زي msfconsole)، والعدّادات من سجل dpkg نفسه: حزم · مجموعات كالي الرسمية ·
+ * تنفيذية في PATH. مافيش عيّنة من 6 — كل السطور حقيقية من النظام الشغال. */
+const TOOL_NAMES = [
+  "nmap","masscan","sqlmap","nikto","hydra","john","hashcat","wireshark","tcpdump",
+  "gobuster","dirb","ffuf","feroxbuster","wpscan","whatweb","wafw00f","nuclei","amass",
+  "sublist3r","dnsrecon","whois","dig","aircrack-ng","reaver","binwalk","exiftool",
+  "steghide","volatility3","impacket-smbclient","responder","netexec","crackmapexec",
+  "metasploit-framework|msfconsole","burpsuite","zaproxy|owasp-zap","setoolkit",
+  "maltego","beef-xss","ophcrack","cewl","enum4linux","arp-scan","hping3","socat",
+  "msfvenom","searchsploit","sherlock","proxychains","proxychains4","ssh","openssl",
+] as const;
 const TOOLS_PROBE_CMD =
-  "nmap --version 2>/dev/null | head -1; echo ---; python3 --version 2>/dev/null | head -1; echo ---; ls /usr/share/seclists 2>/dev/null | wc -l; echo ---; msfconsole --version 2>/dev/null | head -1; echo ---; sqlmap --version 2>/dev/null | head -1; echo ---; nikto -Version 2>&1 | head -1";
-async function measureNodeTools(rows: Array<{ kali: boolean; mode: string; id: string; hostname: string }>): Promise<{ from: string; tools: Record<string, NodeTool> } | null> {
+  "for t in " + TOOL_NAMES.flatMap((x) => x.split("|")).join(" ") + "; do command -v \"$t\" >/dev/null 2>&1 && echo \"OK:$t\"; done; echo ---; grep -c '^Package:' /var/lib/dpkg/status; echo ---; ls /usr/bin /usr/sbin /bin /sbin 2>/dev/null | sort -u | wc -l; echo ---; grep '^Package: kali-tools' /var/lib/dpkg/status | sed 's/^Package: //' | sort | tr '\\n' ' '";
+async function measureNodeTools(rows: Array<{ kali: boolean; mode: string; id: string; hostname: string }>): Promise<{ from: string; tools: Record<string, NodeTool>; sysinfo?: { packages: number; executables: number; kaliGroups: string[] } } | null> {
   if (Date.now() - nodeToolsCache.at < 120_000 && nodeToolsCache.tools) {
     return { from: nodeToolsCache.from, tools: nodeToolsCache.tools };
   }
@@ -914,20 +927,20 @@ async function measureNodeTools(rows: Array<{ kali: boolean; mode: string; id: s
   const rr = await execOnLocalAgent(remoteRunCmd(TOOLS_PROBE_CMD, first.mode === "bare" ? "MODE_BARE" : "MODE_PROOT", 25_000), first.id, 30_000);
   if (!rr) return null;
   const parts = String(rr.stdout || "").split("---").map((x) => x.trim());
-  const tool = (line: string, name: string): NodeTool => {
-    if (!line || /bash:|not found|command/i.test(line)) return { present: false };
-    return { present: true, version: `${name}: ${line.slice(0, 44)}`.trim() };
+  const okSet = new Set(String(parts[0] || "").split("\n").map((l) => l.trim().replace(/^OK:/, "")).filter((l) => l && !l.startsWith("---")));
+  const tools: Record<string, NodeTool> = {};
+  for (const alias of TOOL_NAMES) {
+    const [name, alt] = alias.split("|");
+    const found = okSet.has(name) || (alt ? okSet.has(alt) : false);
+    tools[name] = { present: found, version: found ? (name === "metasploit-framework" ? "msfconsole جاهز" : "موجودة على النظام") : undefined };
+  }
+  const sysinfo = {
+    packages: Number(parts[1]) || 0,
+    executables: Number(parts[2]) || 0,
+    kaliGroups: (parts[3] || "").split(" ").filter(Boolean),
   };
-  const tools: Record<string, NodeTool> = {
-    nmap: parts[0] ? tool(parts[0], "nmap") : { present: false },
-    python3: parts[1] ? tool(parts[1], "python3") : { present: false },
-    seclists: parts[2] && Number(parts[2]) > 0 ? { present: true, version: `${parts[2]} مجلدات` } : { present: false },
-    metasploit: parts[3] ? tool(parts[3], "metasploit") : { present: false },
-    sqlmap: parts[4] ? tool(parts[4], "sqlmap") : { present: false },
-    nikto: parts[5] ? tool(parts[5], "nikto") : { present: false },
-  };
-  nodeToolsCache = { at: Date.now(), tools, from: first.hostname };
-  return { from: first.hostname, tools };
+  nodeToolsCache = { at: Date.now(), tools, from: first.hostname, sysinfo };
+  return { from: first.hostname, tools, sysinfo };
 }
 
 /* ── TEST24 — المخزن الموحّد: «فين اللي عملتو وفين الشغل» — كل مساحاتك على جيت هوب

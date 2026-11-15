@@ -35,7 +35,7 @@ type KaliNodes = {
   ok: boolean;
   hub: { kali: boolean; packages: number };
   nodes: KaliNodeRow[];
-  tools?: { from: string; tools: Record<string, { present: boolean; version?: string }> } | null;
+  tools?: { from: string; tools: Record<string, { present: boolean; version?: string }>; sysinfo?: { packages: number; executables: number; kaliGroups: string[] } } | null;
   install: KaliNodeInstall;
   probedAt: string;
 };
@@ -442,12 +442,17 @@ export default function KaliEnvPage() {
           </>
         ) : nodes?.tools ? (
           <>
-            <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}><Wrench className="w-3.5 h-3.5" /> الأدوات (مقاسة بتنفيذ فعلي على عقدة {nodes.tools.from} — كالي السحابية)</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}><Wrench className="w-3.5 h-3.5" /> كل أدوات النظام — مقاسة بوجودها الفعلي على عقدة {nodes.tools.from} (كالي السحابية)</p>
+            {nodes.tools.sysinfo && (
+              <p className="text-[9px] font-mono mb-2" style={{ color: "rgba(68,255,136,0.85)" }}>
+                النظام الكامل: {nodes.tools.sysinfo.packages} حزمة · {nodes.tools.sysinfo.executables} أمر تنفيذي في PATH · مجموعات كالي الرسمية: {nodes.tools.sysinfo.kaliGroups.length} ({nodes.tools.sysinfo.kaliGroups.join(" · ")}) — كل أداة من المجموعات دي منصّبة وقابلة للتشغيل من الطرفية تحت.
+              </p>
+            )}
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
               {Object.entries(nodes.tools.tools).map(([k, v]) => <ToolCell key={k} name={k} t={v} />)}
             </div>
             <p className="text-[8px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-              القياس ده بيتنفّذ فعليًا جوه كالي على العقدة كل دقيقتين — كل أداة موجودة تشتغل فورًا من الطرفية تحت.
+              القياس بيتنفّذ فعليًا جوه كالي على العقدة كل دقيقتين — العدّاد الفعلي هو سجل dpkg نفسه ({nodes.tools.sysinfo?.packages ?? "?"} حزمة). الأداة بتتقاس بوجود التنفيذ بتاعها على النظام — واللي مش منصّبة بيتقال عليها صريح.
             </p>
           </>
         ) : (

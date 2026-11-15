@@ -173,6 +173,25 @@ jobs:
             echo "::notice::kali ready on node — $(head -1 "$HOME/kali-rootfs/.kali-node-installed")"
           fi
 
+      # ── TEST26 — الأدوات الإضافية (مقاسة ناقصة في القياس الحي 2026-11-15) ──────
+      # الفئة دي مش في rootfs الأساسية: amass ffuf sublist3r exiftool steghide
+      # volatility3 responder netexec crackmapexec sherlock arp-scan hping3 —
+      # بتنزل من مرايا كالي على الـrunner (شبكته كاملة) جوه rootfs proot نفسها.
+      # continue-on-error: الموجة ماتقفش — والقياس بيقول الصدق على الموجودة.
+      - name: Install extra Kali tools into the rootfs (best effort, ~2 min)
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          if [ -f "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" ]; then
+            P="$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static"
+            R="$HOME/kali-rootfs/rootfs"
+            "$P" -R "$R" /bin/sh -c "apt-get update -qq && apt-get install -y -qq amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john 2>&1 | tail -1" || \
+              echo "::warning::extra tools skipped — kali_run بيسأل apt جوه كالي عند الطلب"
+            "$P" -R "$R" /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null && echo OK:\$t; done" | tee /tmp/kali-extras.txt || true
+            echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12"
+          fi
+
       - name: Resolve the hub token
         if: steps.gate.outputs.run == 'true'
         env:
