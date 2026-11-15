@@ -257,6 +257,26 @@ function nodeEval(script: string): string {
   return "node -e 'eval(Buffer.from(\"" + Buffer.from(script, "utf8").toString("base64") + "\",\"base64\").toString())'";
 }
 
+/** نسخة بث حي من غلاف التنفيذ: نفس المعنى لكن chunks بتخرج لحظيًا على stdout/stderr (node أولًا — allowlist آمن). */
+export function remoteRunCmdStream(kcmd: string, mode: string, timeoutMs: number): string {
+  const proot = '"$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static"';
+  const rootfs = '"$HOME/kali-rootfs/rootfs"';
+  const inner =
+    mode === "MODE_PROOT"
+      ? proot + " -R " + rootfs + " /bin/sh -c '" + kcmd.replace(/'/g, "'\''") + "'"
+      : kcmd;
+  const script =
+    "const {spawn}=require('child_process');" +
+    "const c=spawn('/bin/sh',['-c'" + JSON.stringify(inner) + "],{stdio:['ignore','pipe','pipe'],cwd:'/'});" +
+    "c.stdout.on('data',d=>process.stdout.write(d));c.stderr.on('data',d=>process.stderr.write(d));" +
+    // cwd في الجست مالوش وجود — نبدأ من / عشان تحذير proot ميبانش في الطرفية
+    "{stdio:['ignore','pipe','pipe'],cwd:'/'});" +
+    "const t=setTimeout(()=>c.kill('SIGKILL')," + timeoutMs + ");" +
+    "c.on('close',(x)=>{clearTimeout(t);process.exit(x===null?1:x);});" +
+    "c.on('error',()=>process.exit(127));";
+  return nodeEval(script);
+}
+
 /** أمر كتابة المُثبِّت على العقدة (يبدأ بـnode — allowlist آمن). */
 export function remoteWriteCmd(): string {
   const script =

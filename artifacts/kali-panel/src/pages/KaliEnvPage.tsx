@@ -222,16 +222,27 @@ export default function KaliEnvPage() {
     if (!c.trim() || execBusy) return;
     setExecBusy(true); setCmd("");
     setLog((p) => [...p, { text: `$ ${c}`, isCmd: true }]);
+    /* TEST27 — الظهور اللحظي: بث حي عبر SSE — chunks حرف بحرف زي ما بتتولد */
+    let finalExit: number | null = null;
     try {
-      const r = await fetch(`${API}/ops/kali/exec`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cmd: c }),
+      await new Promise<void>((resolve) => {
+        const es = new EventSource(`${API}/ops/kali/exec-stream?command=${encodeURIComponent(c)}&timeout=120000`);
+        es.onmessage = (ev) => {
+          try {
+            const d = JSON.parse(ev.data) as { type: string; text?: string; exitCode?: number | null; durationMs?: number; plane?: string };
+            if (d.type === "stdout" && d.text) setLog((p) => [...p.slice(0, 400), { text: d.text as string }]);
+            else if (d.type === "stderr" && d.text) setLog((p) => [...p.slice(0, 400), { text: d.text as string, isErr: true }]);
+            else if (d.type === "error" && d.text) setLog((p) => [...p, { text: `⚠ ${d.text}`, isErr: true }]);
+            else if (d.type === "done") {
+              finalExit = d.exitCode ?? null;
+              if (d.plane) setLog((p) => [...p, { text: `↳ اتنفّذ على: ${d.plane}` }]);
+              es.close(); resolve();
+            }
+          } catch { /* chunk مش JSON — تجاهل */ }
+        };
+        es.onerror = () => { es.close(); resolve(); };
       });
-      const d = (await r.json()) as { stdout?: string; stderr?: string; exitCode?: number | null; plane?: string };
-      const out = d.stdout || d.stderr || (d.exitCode === 0 ? "(بلا مخرجات)" : `exit=${d.exitCode}`);
-      setLog((p) => [...p, { text: String(out).slice(0, 3000), isErr: d.exitCode !== 0 }]);
-      if (d.plane) setLog((p) => [...p, { text: `↳ اتنفّذ على: ${d.plane}` }]);
-      pushNotify(d.exitCode === 0 ? "success" : "error", "كالي المدمجة", d.exitCode === 0 ? `اتنفّذ: ${c.slice(0, 50)}` : `خرج بكود ${d.exitCode}`);
+      pushNotify(finalExit === null || finalExit === 0 ? "success" : "error", "كالي المدمجة", finalExit === null ? "البث اتقطع" : `اتنفّذ: ${c.slice(0, 50)}`);
     } catch (e: unknown) {
       setLog((p) => [...p, { text: e instanceof Error ? e.message : String(e), isErr: true }]);
     }

@@ -7,9 +7,9 @@
  * — الطايرة اللي اتنفّذ عليها فعلًا. مافيش 404 خامل: إما تنفيذ حقيقي أو null
  * والنداء بيرد برسالة صادقة بخطوات الإصلاح.
  */
-import { getConnectedAgentList, execOnLocalAgent } from "../../routes/local-agent";
+import { getConnectedAgentList, execOnLocalAgent, execStreamOnLocalAgent } from "../../routes/local-agent";
 import { kaliRoot, runKali } from "./kali-env";
-import { KALI_NODE_PROBE, remoteRunCmd } from "./kali-node-installer";
+import { KALI_NODE_PROBE, remoteRunCmd, remoteRunCmdStream } from "./kali-node-installer";
 
 export type KaliAnywhereResult = {
   stdout: string;
@@ -32,6 +32,38 @@ export function kaliAnywhereSummary(): { hub: boolean; linuxNodes: number } {
     linuxNodes = 0;
   }
   return { hub: Boolean(kaliRoot()), linuxNodes };
+}
+
+/**
+ * البث الموحّد (TEST27 — «الظهور اللحظي»): نفس منطق kaliAnywhereExec لكن chunks
+ * بتوصل لحظيًا عبر onData (SSE فوقه). null = مافيش طايرة كالي متاحة حالًا.
+ */
+export async function kaliAnywhereExecStream(
+  cmd: string,
+  timeoutMs: number,
+  onData: (streamType: "stdout" | "stderr", chunk: string) => void,
+): Promise<KaliAnywhereResult | null> {
+  if (!cmd.trim()) return null;
+  if (kaliRoot()) {
+    const r = await runKali(cmd, timeoutMs, onData);
+    return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode, durationMs: r.durationMs, plane: "الهَب — كالي المدمجة (rootfs + proot)" };
+  }
+  const agents = getConnectedAgentList().filter(isLinuxFleetNode);
+  for (const a of agents) {
+    const probe = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
+    const mode = probe ? String(probe.stdout).trim() : "";
+    if (mode !== "MODE_BARE" && mode !== "MODE_PROOT") continue;
+    const rr = await execStreamOnLocalAgent(remoteRunCmdStream(cmd, mode, timeoutMs), a.id, timeoutMs + 10_000, onData);
+    if (!rr) continue;
+    return {
+      stdout: rr.stdout,
+      stderr: rr.stderr,
+      exitCode: rr.exitCode,
+      durationMs: rr.durationMs,
+      plane: `${a.hostname} — عقدة كالي سحابية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`,
+    };
+  }
+  return null;
 }
 
 /** التنفيذ الموحّد: هَب → عقدة. null = مافيش طايرة كالي متاحة حالًا. */
