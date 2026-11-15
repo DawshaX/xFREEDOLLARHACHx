@@ -44,6 +44,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # ميزانية السلوت (TEST33): تعدّاد jobs الموجات الحية
 
 concurrency:
   group: nova-fleet
@@ -57,9 +58,14 @@ jobs:
     outputs:
       nodes: ${{ steps.plan.outputs.nodes }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - id: plan
         env:
           INPUT_NODES: ${{ github.event.inputs.nodes }}
+          GITHUB_TOKEN: ${{ github.token }}
           VAR_NODES: ${{ vars.FLEET_NODES }}
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
           EVENT: ${{ github.event_name }}
@@ -97,14 +103,19 @@ jobs:
           # الدقائق مجانية على repo public، والتوفير الوحيد المقصود بيفضل في الـskipped الجُرّة
           # (شوف تعليق gate تحت). workflow_dispatch لسه بياخد input المالك حرفيًا.
           if [ "$EVENT" = "workflow_dispatch" ]; then
+            # dispatch = قرار المالك الصريح — الرقم حرفيًا بلا ميزانية.
             n="${INPUT_NODES:-19}"
+            case "$n" in ''|*[!0-9]*) n=19 ;; esac
+            if [ "$n" -lt 1 ];  then n=1;  fi
+            # GitHub free plan: 20 concurrent jobs. Leave one for other workflows.
+            if [ "$n" -gt 19 ]; then n=19; fi
           else
-            n=19
+            # TEST33 — ميزانية السلوت (مقاس حي 10:39Z: occupied=23 → nodes=0 سكب ذاتي):
+            # الموجة المجدولة/ب-push متكدّدش فوق الموجات الحية — قرار المالك 19/19
+            # محفوظ بالسقف (occupied=0 → nodes=19)، اللي اتمنع هو التكدس اللي جوّع CI.
+            n="$(node scripts/fleet-slot-budget.mjs 19 1 | tail -1 | grep -oE '[0-9]+' || true)"
+            case "$n" in ''|*[!0-9]*) n=0 ;; esac
           fi
-          case "$n" in ''|*[!0-9]*) n=19 ;; esac
-          if [ "$n" -lt 1 ];  then n=1;  fi
-          # GitHub free plan: 20 concurrent jobs. Leave one for other workflows.
-          if [ "$n" -gt 19 ]; then n=19; fi
           echo "nodes=$n" >> "$GITHUB_OUTPUT"
           echo "::notice::starting $n fleet node(s)"
 
