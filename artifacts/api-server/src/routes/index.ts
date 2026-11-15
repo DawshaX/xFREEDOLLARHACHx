@@ -94,6 +94,8 @@ import novaCoreRouter from "./nova-core";
 import fleetMeshRouter from "./fleet-mesh";
 import fleetServersRouter from "./fleet-servers";
 import fleetCapacityRouter from "./fleet-capacity";
+// TEST34 — الهدف (FLEET_NODES من GitHub) مقابل المتصل فعلًا، في مكان واحد.
+import fleetTargetRouter from "./fleet-target";
 import panelGapsRouter from "./panel-gaps";
 import opsRouter from "./ops";
 import integrationsRouter from "./integrations";
@@ -153,6 +155,7 @@ router.use(fleetMeshRouter);
 // (Was imported but never mounted, so /api/fleet/* 404'd while the code sat there —
 //  and a duplicate mount later made it look like two different routers were needed.)
 router.use(fleetCapacityRouter);
+router.use(fleetTargetRouter);
 // Endpoints the panel calls that used to fall through to the SPA HTML.
 router.use(panelGapsRouter);
 // Ops = the real execution spine: authorized programs → durable jobs → evidence → report.

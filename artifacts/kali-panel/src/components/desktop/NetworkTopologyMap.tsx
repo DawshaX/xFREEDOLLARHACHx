@@ -139,6 +139,62 @@ export function NetworkTopologyMap({ onSendToAgent }: { onSendToAgent?: (msg: st
     addHost(localHost);
   }, [addHost]);
 
+  // ── Fleet overlay: the map shows the REAL fleet, not just localhost ───────
+  //
+  // Before this, the topology only ever contained 127.0.0.1 plus whatever a
+  // manual nmap found — so the "network map" and the "fleet" were two unrelated
+  // pictures of the same system. The fleet mesh already knows every real node
+  // (brains, machines, agent slots) with a measured status, so the map reads it
+  // and draws those nodes too. Nothing is invented: a node appears only because
+  // /api/fleet/mesh reported it, and its risk level comes from its real state.
+  const [fleetCount, setFleetCount] = useState<{ online: number; total: number; target: number } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const sync = async () => {
+      try {
+        const r = await fetch(`${API_BASE}/fleet/mesh`, { signal: AbortSignal.timeout(15000) });
+        if (!r.ok) return;
+        const d = (await r.json()) as {
+          nodes?: Array<{
+            id: string; name?: string; kind?: string; role?: string;
+            status?: string; host?: string; platform?: string; tools?: number;
+          }>;
+          capacity?: { agents?: { target?: number; connected?: number } };
+          stats?: { online?: number; nodes?: number };
+        };
+        if (!alive) return;
+        const list = d.nodes ?? [];
+        setFleetCount({
+          online: d.stats?.online ?? list.filter(n => n.status === "online").length,
+          total: d.stats?.nodes ?? list.length,
+          target: d.capacity?.agents?.target ?? 0,
+        });
+        for (const n of list) {
+          // Only real, addressable nodes become map hosts. A "slot" is a capacity
+          // placeholder, not a machine — drawing it as a host would be a lie.
+          if (n.kind === "slot") continue;
+          const online = n.status === "online";
+          addHost({
+            id: `fleet:${n.id}`,
+            ip: n.host || n.name || n.id,
+            hostname: n.name || n.id,
+            os: n.platform || n.role,
+            ports: [],
+            status: online ? "up" : "down",
+            riskLevel: online ? "info" : "medium",
+            discoveredAt: Date.now(),
+            lastSeen: Date.now(),
+            tags: ["fleet", n.kind || "node", ...(n.tools ? [`${n.tools} tools`] : [])],
+          });
+        }
+      } catch { /* a dead mesh must never break the map */ }
+    };
+    void sync();
+    const t = setInterval(() => void sync(), 20_000);
+    return () => { alive = false; clearInterval(t); };
+  }, [addHost]);
+
   // ── Scan via agent shell ──────────────────────────────────────────────────
   const runScan = useCallback(async (target: string) => {
     setScanning(true);
@@ -230,6 +286,14 @@ export function NetworkTopologyMap({ onSendToAgent }: { onSendToAgent?: (msg: st
         <Wifi className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
         <span className="text-emerald-300 font-bold text-[11px]">خريطة الشبكة الحية — Network Topology</span>
         <span className="text-muted-foreground ml-1">({nodes.length} host{nodes.length !== 1 ? "s" : ""})</span>
+        {fleetCount && (
+          <span
+            className="text-[9px] px-1.5 py-0.5 rounded border border-cyan-700/40 text-cyan-300 bg-cyan-900/20"
+            title="عقد الأسطول الحقيقية من /api/fleet/mesh — الهدف مقابل المتصل"
+          >
+            fleet {fleetCount.online}/{fleetCount.target || fleetCount.total}
+          </span>
+        )}
         <div className="flex items-center gap-1 ms-auto">
           {(["critical","high","medium","low","info"] as const).map(r => (
             <span key={r} className={`text-[8px] px-1.5 py-0.5 rounded border ${riskBadge[r]}`}>

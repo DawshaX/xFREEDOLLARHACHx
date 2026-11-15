@@ -58,6 +58,9 @@ jobs:
         env:
           INPUT_NODES: ${{ github.event.inputs.nodes }}
           GITHUB_TOKEN: ${{ github.token }}
+          # TEST34 — استبعاد الـ run الحالي من عدّ السلوتات (عدّ ذاتي).
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          FLEET_NODES: ${{ vars.FLEET_NODES }}
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
           EVENT: ${{ github.event_name }}
           TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
