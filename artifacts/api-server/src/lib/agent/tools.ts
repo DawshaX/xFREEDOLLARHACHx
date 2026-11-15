@@ -946,11 +946,11 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: "kali_node_setup",
-    title: "جهاز كالي — التركيب والربط",
-    description: "يرجّع أوامر التركيب الحقيقية لجهاز الشغل (كالي لينكس كامل): صورة Docker جاهزة من GHCR أو تركيب bare-metal على أي سيرفر، وحالة عقد كالي المتصلة الآن — بلا أي ادعاء بجهاز وهمي.",
+    title: "عقد كالي — التثبيت الذاتي والربط",
+    description: "نوفا بتثبت كالي على عقدة الأسطول بنفسها وتفعلها مع اللايف أجينت: action:status (فحص كل عقدة — نظام كالي/rootfs سحابية/جاهزة للتثبيت) · action:install (تثبيت سحابي كامل على أول عقدة — من فرع kali-rootfs على GitHub بـSHA256، ~5-8 دقايق، بلا أي جهاز للمالك وبلا أي تحميل على الهَب). بعد التثبيت kali_run بيتحول على العقدة تلقائيًا.",
     category: "platform",
     risk: "safe",
-    input_schema: { type: "object", properties: {} },
+    input_schema: { type: "object", properties: { action: { type: "string", enum: ["status", "install"], description: "status: فحص العقد · install: تثبيت كالي على أول عقدة متصلة — نوفا بتعمله بنفسها" } } },
   },
   {
     name: "integrations_status",
@@ -2181,74 +2181,90 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         return done(report.ok, report.says_ar, report);
       }
       case "kali_node_setup": {
-        const connected = getConnectedAgentList();
-        const agentsLine = connected.length
-          ? connected.map((a: { id?: string; hostname?: string; meta?: { platform?: string } }) => `${a.hostname ?? a.id ?? "node"}(${a.meta?.platform ?? "?"})`).join(" · ")
-          : "مافيش عقدة متصلة لسه";
-        const hub = process.env.NOVA_PUBLIC_URL ?? process.env.NOVA_HUB_URL ?? "";
-        const ghcr = "ghcr.io/dawshax/xfreedollarhachx/nova-kali:latest";
-        const { kaliStatus: embStatus, buildDesktopUrl: embUrl } = await import("../ops/kali-env");
+        const { KALI_NODE_PROBE, remoteWriteCmd, remoteRunCmd } = await import("../ops/kali-node-installer");
+        const action = String(rawArgs.action ?? "status");
+        const agents = getConnectedAgentList().filter((a) => a.platform === "linux" && !(a.capabilities ?? []).includes("self-node"));
+        const { kaliStatus: embStatus } = await import("../ops/kali-env");
         const emb = await embStatus(false);
-        const heavyLine = emb.tools
-          ? Object.entries(emb.tools).map(([k, v]) => `${k}${v.present ? "✓" : "✗"}`).join("·")
-          : "";
-        return done(
-          true,
-          emb.present
-            ? `بيئة كالي مدمجة كاملة جاهزة في البرنامج نفسه (${emb.packages} حزمة · الثقيلة: ${heavyLine}) — نفّذ بأداة kali_run وافتح الديسكتوب من تبويب /kali-env. وعقدة خارجية اختيارية بأمر واحد.`
-            : `عقد كالي المتصلة: ${agentsLine}. البيئة المدمجة مش مستخرجة على الهَب لسه — نفّذ أداة kali_provision والهَب يسحبها بنفسه من فرع kali-rootfs (~6 دقايق). والجهاز الخارجي بيركّب بأمر واحد.`,
-          {
-            embedded: {
-              present: emb.present,
-              packages: emb.packages ?? 0,
-              heavyTools: emb.tools ?? null,
-              execTool: "kali_run",
-              desktopTool: "kali_desktop",
-              tab: "/kali-env",
-            },
-            dockerOneLiner: `docker run -d --name nova-kali --restart unless-stopped -e NOVA_HUB_URL="${hub}" -e NOVA_EXEC_TOKEN="⟨التوكن⟩" ${ghcr}`,
-            bareMetal: "curl -fsSL https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/scripts/kali-node-install.sh | bash -s -- ⟨HUB_URL⟩ ⟨TOKEN⟩",
-            image: ghcr,
-            connectedAgents: connected,
-            honestNote: "البيئة المدمجة قياسها من rootfs نفسها؛ والأوامر الخارجية للمالك ينفذها — الأداة مش بتدّعى إنها ركّبت حاجة",
-            ...(emb.desktop?.running ? { desktopUrl: embUrl() } : {}),
-          },
-        );
+        if (action === "status") {
+          const rows: Array<{ node: string; mode: string }> = [];
+          for (const a of agents) {
+            const probe = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
+            const mode = probe ? String(probe.stdout).trim() : "";
+            rows.push({ node: a.hostname ?? a.id, mode: mode === "MODE_BARE" ? "نظام كالي" : mode === "MODE_PROOT" ? "rootfs سحابية + proot" : "مافيش كالي (جاهزة للتثبيت)" });
+          }
+          const line = rows.length ? rows.map((r) => `${r.node}: ${r.mode}`).join(" · ") : "مافيش عقدة لينكس متصلة لسه — موجة fleet-nodes بتيجي كل 5 ساعات";
+          return done(true, emb.present ? `الهَب نفسه: كالي كاملة (${emb.packages} حزمة) ✓ · العقد: ${line}` : `العقد: ${line} — وkali_run بيثبت على أي عقدة منهم بنفسه وينفّذ (المخزن سحابي على فرع kali-rootfs)`, { embedded: emb.present, packages: emb.packages ?? 0, nodes: rows });
+        }
+        if (action === "install") {
+          for (const a of agents) {
+            const probe = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
+            const mode = probe ? String(probe.stdout).trim() : "";
+            if (mode === "MODE_BARE" || mode === "MODE_PROOT") {
+              return done(true, `العقدة ${a.hostname} فيها كالي جاهزة (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"}) — kali_run بيتحول عليها تلقائيًا`, { node: a.hostname, mode });
+            }
+            const w = await execOnLocalAgent(remoteWriteCmd(), a.id, 15_000);
+            if (!w || w.exitCode !== 0) continue;
+            const inst = await execOnLocalAgent("node /tmp/nova-kali-node-install.mjs", a.id, 600_000);
+            const out = inst ? ((inst.stdout || "") + "\n" + (inst.stderr || "")).trim() : "";
+            const mins = /تم في (\d+) دقيقة/.exec(out)?.[1];
+            if (!inst || inst.exitCode !== 0) {
+              return done(false, `التثبيت على ${a.hostname} وقف: ${out.slice(-200) || "بلا تفصيل"}`, { node: a.hostname, exit: inst?.exitCode ?? null });
+            }
+            return done(true, `التثبيت السحابي اكتمل على ${a.hostname} (${mins ?? "?"} دقيقة) — كالي شغالة ومفعّلة مع اللايف أجينت، kali_run بيتحول عليها تلقائيًا`, { node: a.hostname, packagesMeasured: true });
+          }
+          return done(false, "مافيش عقدة لينكس متصلة للتثبيت — موجة fleet-nodes بتيجي كل 5 ساعات أو شغّلها يدوي من Actions", { fleetConnected: agents.length });
+        }
+        return done(true, emb.present
+          ? `كالي كاملة مدمجة في الهَب (${emb.packages} حزمة) — kali_run شغال محلي، والعقد الخارجية احتياط بالتحويل التلقائي`
+          : `الوضع سحابي أولًا: المخزن على فرع kali-rootfs (سحابي) — kali_run بيثبت على عقدة الأسطول بنفسه وينفّذ (action:install للتثبيت الفوري · action:status لفحص العقد). مافيش تحميل على الهَب ولا على جهازك`, { agents: agents.length, embedded: emb.present });
       }
       case "kali_run": {
         const { kaliRoot: kRoot, runKali: kRun } = await import("../ops/kali-env");
         const kcmd = String(rawArgs.cmd ?? "").trim();
         if (!kcmd) throw new Error("cmd مطلوب");
         const tmo = Math.min(Math.max(Number(rawArgs.timeoutMs ?? 90_000) || 90_000, 5_000), 600_000);
-        // التحويل التلقائي لطائرة التنفيذ: المخزن سحابي دايمًا (فرع kali-rootfs على GitHub)،
-        // والتنفيذ محلي لو الحصة كفت — وإلا عقدة كالية متصلة — وإلا رفض صادق بالخطة.
         if (!kRoot()) {
-          const agents = getConnectedAgentList().filter((a) => !(a.capabilities ?? []).includes("self-node"));
+          // التحويل التلقائي لطائرة التنفيذ — نوفا بتثبت كالي على عقدة الأسطول بنفسها
+          // (المخزن سحابي على فرع kali-rootfs — مافيش أي تحميل على الهَب ولا على جهاز المالك)
+          const { KALI_NODE_PROBE, remoteWriteCmd, remoteRunCmd } = await import("../ops/kali-node-installer");
+          const agents = getConnectedAgentList().filter((a) => a.platform === "linux" && !(a.capabilities ?? []).includes("self-node"));
           for (const a of agents) {
-            // العقدة إما نظام كالي حقيقي (bare) أو rootfs سحابية مستخرجة تشتغل بproot
-            const probe = await execOnLocalAgent(
-              "grep -qi kali /etc/os-release 2>/dev/null && echo MODE_BARE || (test -x $HOME/kali-rootfs/rootfs/usr/local/bin/proot-static && echo MODE_PROOT)",
-              a.id,
-              10_000,
-            );
-            const mode = probe ? String(probe.stdout).trim() : "";
-            if (mode === "MODE_BARE" || mode === "MODE_PROOT") {
-              const wrapped = mode === "MODE_PROOT"
-                ? `$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static -R $HOME/kali-rootfs/rootfs /bin/sh -c '${kcmd.replace(/'/g, `'\''`)}'`
-                : kcmd;
-              const r = await execOnLocalAgent(wrapped, a.id, tmo);
-              if (r) {
-                try { recordMissionCommand(`kali@${a.hostname}: ${kcmd}`, String(r.stdout ?? "").slice(0, 300)); } catch { /* سجل سالم */ }
-                return done(
-                  r.exitCode === 0,
-                  `[${a.hostname} — عقدة كالي خارجية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${r.exitCode} · ${r.durationMs}ms · التحويل التلقائي اشتغل: المخزن سحابي والتنفيذ بره السيرفر`,
-                  { ...r, plane: `fleet:${a.id}`, mode },
-                );
+            const probe = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
+            let mode = probe ? String(probe.stdout).trim() : "";
+            if (mode !== "MODE_BARE" && mode !== "MODE_PROOT") {
+              const w = await execOnLocalAgent(remoteWriteCmd(), a.id, 15_000);
+              if (!w || w.exitCode !== 0) continue; // العقدة دي مش قادرة — التالية
+              const ptmo = Math.max(tmo, 600_000);
+              const inst = await execOnLocalAgent("node /tmp/nova-kali-node-install.mjs", a.id, ptmo);
+              const out = inst ? ((inst.stdout || "") + "\n" + (inst.stderr || "")).trim() : "";
+              if (!inst || inst.exitCode !== 0) {
+                return done(false, `التثبيت على العقدة ${a.hostname} وقف: ${out.slice(-220) || "بلا تفصيل"} — جرّب kali_run تاني (هيبدأ من جديد بالقياس)`, { plane: "fleet:" + a.id, exit: inst?.exitCode ?? null });
               }
+              const probe2 = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
+              mode = probe2 ? String(probe2.stdout).trim() : "";
+              if (mode !== "MODE_BARE" && mode !== "MODE_PROOT") continue;
+              const installedAt = /تم في (\d+) دقيقة/.exec(out)?.[1];
+              const rr = await execOnLocalAgent(remoteRunCmd(kcmd, mode, tmo), a.id, tmo);
+              if (!rr) continue;
+              try { recordMissionCommand(`kali@${a.hostname}: ${kcmd}`, String(rr.stdout ?? "").slice(0, 300)); } catch { /* سجل سالم */ }
+              return done(
+                rr.exitCode === 0,
+                `[${a.hostname} — عقدة كالي خارجية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${rr.exitCode} · ${rr.durationMs}ms${installedAt ? ` · التثبيت السحابي اتعمل بنفسه (${installedAt} دقيقة أول مرة)` : ""} — المخزن سحابي والتنفيذ بره السيرفر`,
+                { ...rr, plane: "fleet:" + a.id, mode, provisionedNow: Boolean(installedAt) },
+              );
             }
+            const rr = await execOnLocalAgent(remoteRunCmd(kcmd, mode, tmo), a.id, tmo);
+            if (!rr) continue;
+            try { recordMissionCommand(`kali@${a.hostname}: ${kcmd}`, String(rr.stdout ?? "").slice(0, 300)); } catch { /* سجل سالم */ }
+            return done(
+              rr.exitCode === 0,
+              `[${a.hostname} — عقدة كالي خارجية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${rr.exitCode} · ${rr.durationMs}ms · التحويل التلقائي اشتغل`,
+              { ...rr, plane: "fleet:" + a.id, mode },
+            );
           }
           return done(false,
-            `كالي مش مستخرجة على الهَب (حصة الدسك مش هتحمل ~15GB) ومافيش عقدة كالية متصلة للتحويل التلقائي. الخطة المقاسة: المخزن سحابي دايمًا (فرع kali-rootfs على GitHub) — للتنفيذ يا kali_provision على سيرفر بحصة أكبر يا kali_node_setup على جهازك (التخزين بره السيرفر) والـkali_run هيتحول عليه تلقائيًا`,
+            `مافيش عقدة لينكس متصلة للتحويل التلقائي — أسطول fleet-nodes (GitHub runners) بيتصل بالهَب كل موجة (كل 5 ساعات) وبعدها kali_run بيثبت كالي على العقدة بنفسه وينفّذ. المخزن سحابي دايمًا على فرع kali-rootfs`,
             { missing: true, planes: { local: false, fleetConnected: agents.length } });
         }
         const kr = await kRun(kcmd, tmo);
