@@ -104,7 +104,20 @@ export function corsMiddleware() {
 export function securityHeaders() {
   const cspOff = process.env.NOVA_CSP_OFF === "1";
   return helmet({
-    contentSecurityPolicy: cspOff ? false : undefined,
+    contentSecurityPolicy: cspOff
+      ? false
+      : {
+          directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            // TEST34 — قِيس على البناء المحلي (2026-11-15T12:34Z): CSP الافتراضي
+            // مافيهوش connect-src → بيرجع لـdefault-src 'self' → المتصفح بيسدّ
+            // فetch raw.githubusercontent.com اللي بطاقة «حالة النشر» على ‎/kali-env
+            // بتعمله كل 30د (المرآة الحية من الrunner). من غير السطر ده الميزة
+            // بتسقط بصمت على النسخة المخبّأة جوّه الباندل. img-src سبنا 'self' data:
+            // زي ما هو — الصور كلها أصول محلية مقيسة.
+            connectSrc: ["'self'", "https://raw.githubusercontent.com"],
+          },
+        },
     crossOriginEmbedderPolicy: false,
     // The panel is served from this origin and is not meant to be framed.
     frameguard: { action: "sameorigin" },
