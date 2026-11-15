@@ -48,6 +48,28 @@ const START_SH = `#!/bin/sh
 HERE="$(cd "$(dirname "$0")" && pwd)"
 cd "$HERE" || exit 1
 PARENT="$(dirname "$HERE")"
+# ── TEST36 — الإقلاع من أي تخليط مجلدات (مقاس 2026-11-15) ─────────────────────
+# المرآة الحية قالت boot.dir=/home/container (الباندل مفكوك في الجذر) بينما
+# الREADME بيقول nova-24-7/ — فأمر التشغيل بيّت حسب مكان الفك وماتفتحش.
+# القاعدة دلوقتي: لو boot.mjs مش جنب دي، دوّر جنبك (المجلد الجُوّاني أو الأب)
+# ولو مالقيتش — اصرخ بالعربي على الكونسول بالفك الصح بدل «No such file» صامت.
+if [ ! -f "$HERE/boot.mjs" ]; then
+  if [ -f "$HERE/nova-24-7/boot.mjs" ]; then
+    echo "[run] الملفات في $HERE/nova-24-7 — بنكمل من هناك"
+    exec sh "$HERE/nova-24-7/run" "$@"
+  fi
+  if [ -f "$PARENT/boot.mjs" ]; then
+    echo "[run] الملفات في $PARENT — بنكمل من هناك"
+    exec sh "$PARENT/run" "$@"
+  fi
+  echo "[run] ✗ مافيش boot.mjs في $HERE ولا $HERE/nova-24-7 ولا $PARENT"
+  echo "[run] الفك الصح: ازل الzip جوّه /home/container —"
+  echo "[run]   unzip -o nova-24-7.zip -d /home/container"
+  echo "[run] وبعدها أمر التشغيل (أي واحد فيهم بيشتغل):"
+  echo "[run]   sh /home/container/run"
+  echo "[run]   sh /home/container/nova-24-7/run"
+  exit 1
+fi
 export NODE_ENV=production
 export HOST=0.0.0.0
 export NOVA_STATIC_DIR="$HERE/public"
@@ -994,9 +1016,30 @@ fs.writeFileSync(
   path.join(OUT, "run"),
   `#!/bin/sh
 # NOVA launcher — same thing as start.sh, with a name nothing linkifies.
-# Usage (Pterodactyl / Waifly Startup Command):
-#   sh /home/container/nova-24-7/run
+# Usage (Pterodactyl / Waifly Startup Command) — التخطيطان المقاسان، الاتنين بيشتغلوا:
+#   sh /home/container/run              ← المقاس على الهوست: الباندل مفكوك في الجذر
+#   sh /home/container/nova-24-7/run    ← لو فكيت الzip بالـ-d زي الREADME
+# run بيتعامل مع التخطيطين لوحده — مافيش تخليط مجلدات بيقتل الإقلاع تاني.
 HERE="$(cd "$(dirname "$0")" && pwd)"
+PARENT="$(dirname "$HERE")"
+# نفس حرس start.sh — التخطيط المكسور مافيهوش start.sh أصلًا، فالصراخ لازم يبقى هنا.
+if [ ! -f "$HERE/start.sh" ]; then
+  if [ -f "$HERE/nova-24-7/start.sh" ]; then
+    echo "[run] الملفات في $HERE/nova-24-7 — بنكمل من هناك"
+    exec sh "$HERE/nova-24-7/run" "$@"
+  fi
+  if [ -f "$PARENT/start.sh" ]; then
+    echo "[run] الملفات في $PARENT — بنكمل من هناك"
+    exec sh "$PARENT/run" "$@"
+  fi
+  echo "[run] ✗ مافيش start.sh في $HERE ولا $HERE/nova-24-7 ولا $PARENT"
+  echo "[run] الفك الصح: ازل الzip جوّه /home/container —"
+  echo "[run]   unzip -o nova-24-7.zip -d /home/container"
+  echo "[run] وبعدها أمر التشغيل (أي واحد فيهم بيشتغل):"
+  echo "[run]   sh /home/container/run"
+  echo "[run]   sh /home/container/nova-24-7/run"
+  exit 1
+fi
 exec sh "$HERE/start.sh" "$@"
 `,
   { mode: 0o755 },
@@ -1006,6 +1049,21 @@ exec sh "$HERE/start.sh" "$@"
 // (مافيش JS بينده على shell)، والموت بيبان على المكنة بس — يعني بعد ما توصل.
 // الفحص ده بيخليها تفشل هنا بدل هناك. وبعد `run` تحديدًا: أول مرة حطيته بعد
 // `start.sh` طلع «cannot open run» لأن الملف ده بيتكتب تحت.
+fs.writeFileSync(
+  path.join(OUT, "WAIFLY-STARTUP-COMMAND.txt"),
+  `# أمر التشغيل الصحيح (مقاس 2026-11-15 من مرآة الهوست نفسها — boot.dir=/home/container):
+#
+#   sh /home/container/run
+#
+# لو فكيت الzip في مجلد nova-24-7 بالحرف فده بيشتغل برضه:
+#   sh /home/container/nova-24-7/run
+#
+# قواعد اللوحة (مقاسة): lowercase بالحرف (Sh غلط — الحروف الكبيرة بتقتل) ·
+# أقل من 256 حرف · من غير نقاط في آخر الاسم (start.sh بيتلخبط كماركداون لينك).
+`,
+  { mode: 0o644 },
+);
+
 for (const sh of ["start.sh", "run"]) {
   execFileSync("sh", ["-n", path.join(OUT, sh)], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
