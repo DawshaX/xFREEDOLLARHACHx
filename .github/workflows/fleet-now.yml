@@ -36,6 +36,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # ميزانية السلوت (TEST33): تعدّاد jobs الموجات الحية
 
 concurrency:
   group: nova-fleet-now
@@ -49,9 +50,14 @@ jobs:
     outputs:
       nodes: ${{ steps.plan.outputs.nodes }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - id: plan
         env:
           INPUT_NODES: ${{ github.event.inputs.nodes }}
+          GITHUB_TOKEN: ${{ github.token }}
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
           EVENT: ${{ github.event_name }}
           TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
@@ -72,12 +78,11 @@ jobs:
             if [ -z "$TOKEN" ]; then echo "::warning::manual wave without NOVA_EXEC_TOKEN — a hardened hub will refuse these nodes (401)"; fi
           fi
 
-          n="${INPUT_NODES:-19}"
-          case "$n" in ''|*[!0-9]*) n=19 ;; esac
-          if [ "$n" -lt 1 ]; then n=1; fi
-          # 20 concurrent على الخطة المجانية، والموجة الأساسية ممكن تكون ماسكة سلوت —
-          # كل اللي نقدر عليه هنا 19 إضافية؛ الزيادة GitHub نفسه بيصفّيها في الطابور.
-          if [ "$n" -gt 19 ]; then n=19; fi
+          # TEST33 — ميزانية السلوت (مقاس حي 10:39Z: occupied=23 → nodes=0 سكب ذاتي):
+          # البودجت بيعدّ كل jobs الموجات (running+queued) ويرجّع min(WANTED, 20−occupied−1)
+          # → تكدس الموجات فوق حد الخطة مستحيل رياضيًا والCI له سلوت دوار دايمًا.
+          n="$(node scripts/fleet-slot-budget.mjs "${INPUT_NODES:-19}" 1 | tail -1 | grep -oE '[0-9]+' || true)"
+          case "$n" in ''|*[!0-9]*) n=0 ;; esac
           echo "nodes=$n" >> "$GITHUB_OUTPUT"
           echo "::notice::starting $n extra fleet node(s) (indices 20-38)"
 
