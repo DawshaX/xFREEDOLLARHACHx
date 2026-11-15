@@ -91,8 +91,17 @@ jobs:
 
           # الضعف المجاني المقاس (2026-11-11): المستودع public = دقائق Actions بلا حدود،
           # فـ8 عقد × 4vCPU/16G = 32vCPU / 128GB رام في كل موجة — الافتراضي 8 بدل 4.
-          n="${INPUT_NODES:-${VAR_NODES:-8}}"
-          case "$n" in ''|*[!0-9]*) n=8 ;; esac
+          # TEST30 (2026-11-15 — قرار المالك بعد شكوى «4/19 prewarm و79% تنفيذات بتاخد 5-8د»):
+          # الموجات المجدولة وب-push بتطلع 19/19 عقدة (الحد الأعلى للخطة المجانية 20 concurrent).
+          # متغير FLEET_NODES القديم (=4) كان بيقص الموجة ويسيب 15 عقدة skipped — اتشال من القرار:
+          # الدقائق مجانية على repo public، والتوفير الوحيد المقصود بيفضل في الـskipped الجُرّة
+          # (شوف تعليق gate تحت). workflow_dispatch لسه بياخد input المالك حرفيًا.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            n="${INPUT_NODES:-19}"
+          else
+            n=19
+          fi
+          case "$n" in ''|*[!0-9]*) n=19 ;; esac
           if [ "$n" -lt 1 ];  then n=1;  fi
           # GitHub free plan: 20 concurrent jobs. Leave one for other workflows.
           if [ "$n" -gt 19 ]; then n=19; fi
@@ -115,6 +124,13 @@ jobs:
         # literal list is easier to read than nested join/split gymnastics.
         i: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
     steps:
+      # ليه فهرس > المطلوب بيسكب؟ (شرح بالحرف بعد شكوى «15/19 skipped»):
+      # المصفوفة ثابتة 1..19 (GitHub مافيهوش range() في الexpressions) وprepare بيحسب
+      # WANTED قبل تشغيل العقد — فالوظايف فوق WANTED بتفضّل نفسها عمدًا عشان ميقلعش
+      # runner لينكس كامل علشان يتخطاه (كل runner بيبدأ بvm بارد ~40ث). من 2026-11-15
+      # WANTED = 19 دايمًا في الموجات المجدولة/b-push — فمافيش skipped أصلًا، وكل الـ19
+      # بتاخد prewarm. الدليل المقاس: موجة TEST22 كانت 1-4 prewarm=success و5-19 skipped
+      # لأن FLEET_NODES=4 — القرار اتغيّر بالحرف فوق.
       - name: Skip if this index is beyond the requested count
         id: gate
         env:

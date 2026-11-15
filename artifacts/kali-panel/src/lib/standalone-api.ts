@@ -1974,15 +1974,15 @@ if (path === "/nova-core/version") {
 
   // ── Network & Recon Tools (/proxy/* & /tools/*) ────────────────────────────
   if (path === "/proxy/dns" || path === "/tools/dns") {
-    const domain = u.searchParams.get("domain") || "example.com";
+    // كان بيرجّع سجلات DNS مختلقة (93.184.216.34 وMX وTXT مفبركين) لأي دومين من غير ما يسأل حد — اتشالت.
+    const domain = u.searchParams.get("domain") || "";
     return {
       domain,
-      records: [
-        { type: "A", value: "93.184.216.34", ttl: 3600 },
-        { type: "MX", value: `mail.${domain}`, ttl: 3600 },
-        { type: "TXT", value: "v=spf1 include:_spf.google.com ~all", ttl: 3600 },
-        { type: "NS", value: `ns1.${domain}`, ttl: 3600 },
-      ],
+      records: [],
+      noSource: true,
+      error: "no_execution_plane",
+      reasonAr: "توأم Pages الساكن مفيهوش مصدر DNS حقيقي — أي سجل هنا كان مفبرك.",
+      howAr: "القياس الحقيقي على السيرفر الحيّ: GET /api/tools/dns?domain=… (نفّذ dig/DoH فعلي ويرجّع measured:true).",
     };
   }
 
@@ -2022,29 +2022,28 @@ if (path === "/nova-core/version") {
   }
 
   if (path === "/proxy/subdomains" || path === "/tools/subdomains") {
-    const domain = u.searchParams.get("domain") || "example.com";
+    // كان بيرجّع سابدومينات مفبركة (www/api/auth/dev + IPs مخترعة) — اتشالت: مافيش تعداد من غير مصدر.
+    const domain = u.searchParams.get("domain") || "";
     return {
       domain,
-      subdomains: [
-        { host: `www.${domain}`, ip: "93.184.216.34", source: "DNS" },
-        { host: `api.${domain}`, ip: "93.184.216.35", source: "CRT.SH" },
-        { host: `auth.${domain}`, ip: "93.184.216.36", source: "CRT.SH" },
-        { host: `dev.${domain}`, ip: "93.184.216.37", source: "DNS" },
-      ],
+      subdomains: [],
+      noSource: true,
+      error: "no_execution_plane",
+      reasonAr: "تعداد السابدومينات محتاج مصادر حية (CRT.sh/DNS) — التوأم الساكن مش مصدر.",
+      howAr: "القياس الحقيقي على السيرفر الحيّ: GET /api/tools/subdomains?domain=…",
     };
   }
 
   if (path === "/proxy/portscan" || path === "/tools/portscan") {
-    const target = u.searchParams.get("target") || "example.com";
+    // كان بيرجّع منافذ «مفتوحة» مفبركة (80/443 open و3306 closed…) لأي هدف من غير scan — اتشالت.
+    const target = u.searchParams.get("target") || "";
     return {
       target,
-      ports: [
-        { port: 22, state: "filtered", service: "ssh" },
-        { port: 80, state: "open", service: "http" },
-        { port: 443, state: "open", service: "https" },
-        { port: 3306, state: "closed", service: "mysql" },
-        { port: 8080, state: "filtered", service: "http-proxy" },
-      ],
+      ports: [],
+      noSource: true,
+      error: "no_execution_plane",
+      reasonAr: "فحص المنافذ محتاج nmap/TCP حقيقي — التوأم الساكن مايقدرش يفتح socket، وأي «open» هنا كانت مفبركة.",
+      howAr: "القياس الحقيقي على السيرفر الحيّ: kali_run {cmd:\"nmap -Pn …\"} أو GET /api/tools/portscan?target=…",
     };
   }
 
@@ -3905,7 +3904,7 @@ async function notifyStandaloneCveHunt(sum: Record<string, number>): Promise<voi
         epssScore: c.epss ?? 0,
         isInKev: Boolean(c.inKev),
         hasPublicExploit: Boolean(c.exploitAvailable),
-        hasPoc: true,
+        hasPoc: Boolean((c as { pocAvailable?: boolean }).pocAvailable),
         aiSummary: `تحليل ذكي: ${c.description.slice(0, 120)}`,
         aiTarget: `${c.vendor} ${c.product}`,
         aiPayload: "Passive Non-Destructive Verification Only",
@@ -3918,25 +3917,30 @@ async function notifyStandaloneCveHunt(sum: Record<string, number>): Promise<voi
       source: c.source || "NVD",
       url: proofUrl(c),
     }));
+    // TEST30 — الأرقام دي كانت مكتوبة بإيد (2140 CRITICAL و1120 KEV وavgScore 7.8 بلا مصدر)
+    // — بقت محسوبة من نفس العناصر المقاسة، وmeasured بيصرّح بالمصدر.
+    const labelCount = (label: string) => scoredItems.filter((x) => x.rs.riskLabel === label).length;
+    const avg = scoredItems.length ? scoredItems.reduce((acc, x) => acc + x.rs.cvss, 0) / scoredItems.length : 0;
     return {
       total: STANDALONE_CVES.length,
-      scored: STANDALONE_CVES.length,
-      critical: 2140,
-      high: 5430,
-      medium: 5120,
-      low: 2130,
-      kev: 1120,
-      inKev: 1120,
-      withExploit: 3290,
-      avgScore: 7.8,
+      scored: scoredItems.length,
+      critical: labelCount("CRITICAL"),
+      high: labelCount("HIGH"),
+      medium: labelCount("MEDIUM"),
+      low: labelCount("LOW"),
+      kev: scoredItems.filter((x) => x.rs.isInKev).length,
+      inKev: scoredItems.filter((x) => x.rs.isInKev).length,
+      withExploit: scoredItems.filter((x) => x.rs.hasPublicExploit).length,
+      avgScore: Math.round(avg * 10) / 10,
+      measured: true,
       byLabel: [
-        { riskLabel: "CRITICAL", count: 2140 },
-        { riskLabel: "HIGH", count: 5430 },
-        { riskLabel: "MEDIUM", count: 5120 },
-        { riskLabel: "LOW", count: 2130 },
+        { riskLabel: "CRITICAL", count: labelCount("CRITICAL") },
+        { riskLabel: "HIGH", count: labelCount("HIGH") },
+        { riskLabel: "MEDIUM", count: labelCount("MEDIUM") },
+        { riskLabel: "LOW", count: labelCount("LOW") },
       ],
       topRisk: scoredItems,
-      ollama: { available: true, models: ["dolphin-llama3:latest", "cybernova-sec-brain:2099"] },
+      ollama: { available: false, models: [] as string[], noteAr: "التوأم الساكن مفيهوش ollama — الحالة الحية من السيرفر: GET /api/nova-core/status" },
       lastScored: new Date().toISOString(),
     };
   }
@@ -3952,7 +3956,7 @@ async function notifyStandaloneCveHunt(sum: Record<string, number>): Promise<voi
         epssScore: c.epss ?? 0,
         isInKev: Boolean(c.inKev),
         hasPublicExploit: Boolean(c.exploitAvailable),
-        hasPoc: true,
+        hasPoc: Boolean((c as { pocAvailable?: boolean }).pocAvailable),
         aiSummary: `تحليل CyberNova: ثغرة ${c.cveId} في ${c.product} تتطلب التحديث الفوري وعزل نقطة النهاية.`,
         aiTarget: `${c.vendor} ${c.product}`,
         aiPayload: "Safe Passive Version & Header Check",

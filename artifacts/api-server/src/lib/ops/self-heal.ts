@@ -11,7 +11,6 @@ import { corpusStatus, provisionCorpus } from "./vuln-corpus";
 import { initMemory, memoryStats, remember } from "../agent/memory-store";
 import { initSessionNexus } from "../agent/session-nexus";
 import { integrationsStatus, runIntegration, INTEGRATION_APPS } from "./integrations";
-import { platformSelfReport } from "../agent/platform-tools";
 import { createPushNotification } from "../push-hub";
 import { kaliStatus } from "./kali-env";
 

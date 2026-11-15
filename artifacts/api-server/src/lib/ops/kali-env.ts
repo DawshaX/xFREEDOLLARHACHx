@@ -40,6 +40,7 @@ export interface KaliStatus {
   present: boolean;
   prettyName?: string;
   packages?: number;
+  executables?: number; // TEST30 — عدد الأدوات التنفيذية المقاسة (مش الحزم)
   builtAt?: string;
   root: string | null;
   engine?: string;
@@ -261,6 +262,23 @@ function writeDesired(v: { desktopEnabled: boolean }): void {
 }
 
 /** حالة مقاسة بالكامل — من الملفات والبورتات والبروب الفعلي. */
+/** عدد التنفيذيات الحقيقية في usr/bin + usr/sbin (مقاس بالأمر: find … -type f -executable). */
+export function countExecutables(root: string): number {
+  let n = 0;
+  for (const d of ["usr/bin", "usr/sbin"]) {
+    try {
+      const dir = path.join(root, d);
+      for (const f of fs.readdirSync(dir)) {
+        try {
+          const stx = fs.statSync(path.join(dir, f));
+          if (stx.isFile() && (stx.mode & 0o111) !== 0) n++;
+        } catch { /* ملف اختفى بين السطور */ }
+      }
+    } catch { /* مجلد مش موجود */ }
+  }
+  return n;
+}
+
 export async function kaliStatus(withProbe = true): Promise<KaliStatus> {
   const root = kaliRoot();
   if (!root) return { present: false, root: null, tools: measureHeavy("/") };
@@ -272,6 +290,12 @@ export async function kaliStatus(withProbe = true): Promise<KaliStatus> {
   try {
     packages = fs.readFileSync(path.join(root, "var/lib/dpkg/status"), "utf8").split("\n").filter((l) => l.startsWith("Package:")).length;
   } catch { /* سالمة */ }
+  // TEST30 — التسمية الصح بعد شكوى المالك: الحزم (dpkg) ≠ الأدوات (تنفيذية في /usr/bin و/usr/sbin).
+  // الاتنين بيتقاسوا وبيتعرضوا مع بعض: «X أداة تنفيذية · Y حزمة» — مافيش استبدال رقم برقم.
+  let executables: number | undefined;
+  try {
+    executables = countExecutables(root);
+  } catch { /* سالمة */ }
   let builtAt: string | undefined;
   try {
     builtAt = /built_at=(\S+)/.exec(fs.readFileSync(path.join(root, "MANIFEST.txt"), "utf8"))?.[1];
@@ -280,7 +304,7 @@ export async function kaliStatus(withProbe = true): Promise<KaliStatus> {
   const proot = prootBinary(root);
   const [vnc, novnc] = await Promise.all([tcpOpen(5901), tcpOpen(6080)]);
   const st: KaliStatus = {
-    present: true, prettyName, packages, builtAt, root,
+    present: true, prettyName, packages, executables, builtAt, root,
     engine: proot ?? undefined,
     desktop: { running: vnc && novnc, vncPort: vnc, novncPort: novnc, desired: readDesired().desktopEnabled },
     tools: measureHeavy(root),
@@ -762,9 +786,9 @@ export async function provisionKali(opts?: { force?: boolean }): Promise<{ ok: b
     provision.phase = "done";
     provision.finishedAt = new Date().toISOString();
     const mins = Math.round((Date.now() - t0) / 60_000);
-    plog(`تم في ${mins} دقيقة · ${st.packages} حزمة · ${provision.entries} ملفات`);
-    createPushNotification({ kind: "success", title: "🐉 بيئة كالي جاهزة على الهَب", body: `${st.packages} حزمة كاملة — افتح تبويب بيئة كالي وشغّل الديسكتوب`, link: "/kali-env" });
-    return { ok: true, detail: `اتجهزت في ${mins} دقيقة — ${st.packages} حزمة كاملة` };
+    plog(`تم في ${mins} دقيقة · ${st.executables ?? "?"} أداة تنفيذية · ${st.packages} حزمة · ${provision.entries} ملفات`);
+    createPushNotification({ kind: "success", title: "🐉 بيئة كالي جاهزة على الهَب", body: `${st.executables ?? "?"} أداة تنفيذية · ${st.packages} حزمة — افتح تبويب بيئة كالي وشغّل الديسكتوب`, link: "/kali-env" });
+    return { ok: true, detail: `اتجهزت في ${mins} دقيقة — ${st.executables ?? "?"} أداة تنفيذية · ${st.packages} حزمة` };
   } catch (e) {
     const raw = (e as Error).message;
     const msg = raw.slice(0, 300);

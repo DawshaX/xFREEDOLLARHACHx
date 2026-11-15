@@ -46,6 +46,15 @@ export async function platformSelfReport(): Promise<PlatformToolResult> {
   // TEST6: البروفايل الافتراضي بيمشي على الوكيل الحي مش self-node.
   const deep = agents.length ? getAgentDeepProfile(preferredAgentId() ?? undefined) : null;
 
+  /* TEST30 — عدد العقد اللي فيها كالي فعلاً (probe مقاس، كاش ≤3د) */
+  let kaliNodeCount = 0;
+  try {
+    const { probeAllKaliNodes, readProbeCache } = await import("../ops/kali-node-probe");
+    const cache = readProbeCache();
+    const rows = cache.fresh && cache.rows.length ? cache.rows : await probeAllKaliNodes();
+    kaliNodeCount = rows.filter((r) => r.kali).length;
+  } catch { /* الكاش/القياس مش شرط للتقرير */ }
+
   const data = {
     measuredAt: new Date().toISOString(),
     fleet: {
@@ -88,9 +97,13 @@ export async function platformSelfReport(): Promise<PlatformToolResult> {
           docker: deep.docker ?? null,
         }
       : null,
+    // TEST30 — القياس مش الادعاء: canExecuteKali من probe حقيقي (كاش ≤3د) —
+    // كانت بتعدي: agents.length>0 بتعدّ عقدة Ubuntu «كالي» (شكوى المالك #1).
     capabilities: {
       canExecuteOnNode: agents.length > 0,
       canReadWriteFiles: agents.length > 0,
+      canExecuteKali: kaliNodeCount > 0,
+      kaliNodeCount,
       // Stated, not hidden: this image has neither, and the agent must say so
       // rather than promise a capability it cannot deliver.
       canBrowse: false,

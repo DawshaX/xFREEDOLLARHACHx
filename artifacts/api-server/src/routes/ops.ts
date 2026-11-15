@@ -824,7 +824,10 @@ router.post("/ops/kali/exec", async (req: Request, res: Response) => {
   // TEST24/25 — الاتصالات كلها واحدة: أي طرفية في البرنامج بتمر من kaliAnywhereExec
   // (كالي على الهَب → أو أول عقدة كالي سحابية عبر قناة الأجينت) — والطايرة الحقيقية
   // بتظهر في الرد (plane).
-  const anywhere = await kaliAnywhereExec(cmd, 60_000);
+  // TEST30 — مهلة بباراميتر (5-300ث، الافتراضي 60): أدوات تقيلة زي msfconsole
+  // بتبدأ في ~60-70ث فكانت بتقطع عند ال60 — المقاس: msfconsole 63ث على rootfs v11.
+  const tmo = Math.min(Math.max(Number((req.body as Record<string, unknown> | undefined)?.timeout ?? 60_000) || 60_000, 5_000), 300_000);
+  const anywhere = await kaliAnywhereExec(cmd, tmo);
   if (anywhere) {
     try {
       createPushNotification({ kind: "ops", title: anywhere.exitCode === 0 ? "🖥️ كالي نفّذت أمر حقيقي" : "⚠️ أمر كالي خرج بكود خطأ", body: `${anywhere.plane}: ${cmd.slice(0, 120)}`, link: "/kali-env" });
@@ -1062,6 +1065,8 @@ router.get("/ops/kali/nodes", async (_req: Request, res: Response) => {
     ok: true,
     hub: { kali: st.present, packages: st.packages ?? 0 },
     nodes: rows,
+    linuxNodeCount: agents.length,
+    kaliNodeCount: rows.filter((r) => r.kali).length, // TEST30 — العدد المقاس مش الادعاء
     tools: await measureNodeTools(rows),
     stats,
     install: kaliNodeInstall,

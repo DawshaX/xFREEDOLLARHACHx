@@ -1008,7 +1008,7 @@ export const AGENT_TOOLS: AgentTool[] = [
     name: "kali_provision",
     title: "تجهيز كالي الذاتي على سيرفر الهَب",
     description:
-      "وضع سحابي أولًا: المخزن على فرع kali-rootfs على GitHub والتنفيذ بيتحول تلقائيًا لعقدة كالية متصلة (kali_run). التحميل المحلي على السيرفر استثناء بتأكيد مزدوج (confirm:yes) لأنه وقف سيرفرات بحصة صغيرة مرتين — لو الحصة تكفي فعلاً: 2113 حزمة · SHA256 لكل جزء · proot-static بيتقاس · ~6 دقايق. status بيرجع التقدم الحي.",
+      "وضع سحابي أولًا: المخزن على فرع kali-rootfs على GitHub والتنفيذ بيتحول تلقائيًا لعقدة كالية متصلة (kali_run). التحميل المحلي على السيرفر استثناء بتأكيد مزدوج (confirm:yes) لأنه وقف سيرفرات بحصة صغيرة مرتين — لو الحصة تكفي فعلاً: ~2246 أداة تنفيذية · 2113 حزمة · SHA256 لكل جزء · proot-static بيتقاس · ~6 دقايق. status بيرجع التقدم الحي.",
     category: "platform",
     risk: "sensitive",
     input_schema: {
@@ -2194,7 +2194,7 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
             rows.push({ node: a.hostname ?? a.id, mode: mode === "MODE_BARE" ? "نظام كالي" : mode === "MODE_PROOT" ? "rootfs سحابية + proot" : "مافيش كالي (جاهزة للتثبيت)" });
           }
           const line = rows.length ? rows.map((r) => `${r.node}: ${r.mode}`).join(" · ") : "مافيش عقدة لينكس متصلة لسه — موجة fleet-nodes بتيجي كل 5 ساعات";
-          return done(true, emb.present ? `الهَب نفسه: كالي كاملة (${emb.packages} حزمة) ✓ · العقد: ${line}` : `العقد: ${line} — وkali_run بيثبت على أي عقدة منهم بنفسه وينفّذ (المخزن سحابي على فرع kali-rootfs)`, { embedded: emb.present, packages: emb.packages ?? 0, nodes: rows });
+          return done(true, emb.present ? `الهَب نفسه: كالي كاملة (${emb.executables ?? emb.packages} أداة تنفيذية · ${emb.packages} حزمة) ✓ · العقد: ${line}` : `العقد: ${line} — وkali_run بيثبت على أي عقدة منهم بنفسه وينفّذ (المخزن سحابي على فرع kali-rootfs)`, { embedded: emb.present, packages: emb.packages ?? 0, nodes: rows });
         }
         if (action === "install") {
           for (const a of agents) {
@@ -2216,7 +2216,7 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
           return done(false, "مافيش عقدة لينكس متصلة للتثبيت — موجة fleet-nodes بتيجي كل 5 ساعات أو شغّلها يدوي من Actions", { fleetConnected: agents.length });
         }
         return done(true, emb.present
-          ? `كالي كاملة مدمجة في الهَب (${emb.packages} حزمة) — kali_run شغال محلي، والعقد الخارجية احتياط بالتحويل التلقائي`
+          ? `كالي كاملة مدمجة في الهَب (${emb.executables ?? emb.packages} أداة تنفيذية · ${emb.packages} حزمة) — kali_run شغال محلي، والعقد الخارجية احتياط بالتحويل التلقائي`
           : `الوضع سحابي أولًا: المخزن على فرع kali-rootfs (سحابي) — kali_run بيثبت على عقدة الأسطول بنفسه وينفّذ (action:install للتثبيت الفوري · action:status لفحص العقد). مافيش تحميل على الهَب ولا على جهازك`, { agents: agents.length, embedded: emb.present });
       }
       case "kali_run": {
@@ -2225,50 +2225,68 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
         if (!kcmd) throw new Error("cmd مطلوب");
         const tmo = Math.min(Math.max(Number(rawArgs.timeoutMs ?? 90_000) || 90_000, 5_000), 600_000);
         if (!kRoot()) {
-          // التحويل التلقائي لطائرة التنفيذ — نوفا بتثبت كالي على عقدة الأسطول بنفسها
+          // التحويل التلقائي لطائرة التنفيذ — TEST30 إصلاح شكوى المالك:
+          //  (أ) العقد الجاهزة (كالي مقاسة بـprobe) بتتجرب الأول — التنفيذ الجاهز مفيهوش 7-8 دقايق تثبيت.
+          //  (ب) فشل التثبيت على عقدة مش فشل العملية — continue للعقدة اللي بعدها، والفشل الكلي بس لما كل العقد تفشل (مع تفصيل كل محاولة).
           // (المخزن سحابي على فرع kali-rootfs — مافيش أي تحميل على الهَب ولا على جهاز المالك)
           const { KALI_NODE_PROBE, remoteWriteCmd, remoteRunCmd } = await import("../ops/kali-node-installer");
+          const { probeAllKaliNodes, orderPrewarmedFirst } = await import("../ops/kali-node-probe");
           const agents = getConnectedAgentList().filter((a) => a.platform === "linux" && !(a.capabilities ?? []).includes("self-node"));
-          for (const a of agents) {
-            const probe = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
-            let mode = probe ? String(probe.stdout).trim() : "";
-            if (mode !== "MODE_BARE" && mode !== "MODE_PROOT") {
-              const w = await execOnLocalAgent(remoteWriteCmd(), a.id, 15_000);
-              if (!w || w.exitCode !== 0) continue; // العقدة دي مش قادرة — التالية
-              const ptmo = Math.max(tmo, 600_000);
-              const inst = await execOnLocalAgent("node /tmp/nova-kali-node-install.mjs", a.id, ptmo);
-              const out = inst ? ((inst.stdout || "") + "\n" + (inst.stderr || "")).trim() : "";
-              if (!inst || inst.exitCode !== 0) {
-                return done(false, `التثبيت على العقدة ${a.hostname} وقف: ${out.slice(-220) || "بلا تفصيل"} — جرّب kali_run تاني (هيبدأ من جديد بالقياس)`, { plane: "fleet:" + a.id, exit: inst?.exitCode ?? null });
-              }
-              const probe2 = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
-              mode = probe2 ? String(probe2.stdout).trim() : "";
-              if (mode !== "MODE_BARE" && mode !== "MODE_PROOT") continue;
-              const installedAt = /تم في (\d+) دقيقة/.exec(out)?.[1];
-              const rr = await execOnLocalAgent(remoteRunCmd(kcmd, mode, tmo), a.id, tmo);
-              if (!rr) continue;
-              try { recordMissionCommand(`kali@${a.hostname}: ${kcmd}`, String(rr.stdout ?? "").slice(0, 300)); } catch { /* سجل سالم */ }
-            try { const { scanRunFromPlane } = await import("../ops/kali-scan-stats"); scanRunFromPlane(a.hostname, kcmd, rr.exitCode === 0, (rr.stdout || "").length); } catch { /* إحصائية مش شرط نجاح */ }
-              try { const { scanRunFromPlane } = await import("../ops/kali-scan-stats"); scanRunFromPlane(a.hostname, kcmd, rr.exitCode === 0, (rr.stdout || "").length); } catch { /* إحصائية مش شرط نجاح */ }
-              return done(
-                rr.exitCode === 0,
-                `[${a.hostname} — عقدة كالي خارجية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${rr.exitCode} · ${rr.durationMs}ms${installedAt ? ` · التثبيت السحابي اتعمل بنفسه (${installedAt} دقيقة أول مرة)` : ""} — المخزن سحابي والتنفيذ بره السيرفر`,
-                { ...rr, plane: "fleet:" + a.id, mode, provisionedNow: Boolean(installedAt) },
-              );
-            }
-            const rr = await execOnLocalAgent(remoteRunCmd(kcmd, mode, tmo), a.id, tmo);
-            if (!rr) continue;
+          if (!agents.length) {
+            return done(false,
+              `مافيش عقدة لينكس متصلة للتحويل التلقائي — أسطول fleet-nodes (GitHub runners) بيتصل بالهَب كل موجة (كل 5 ساعات) وبعدها kali_run بيثبت كالي على العقدة بنفسه وينفّذ. المخزن سحابي دايمًا على فرع kali-rootfs`,
+              { missing: true, planes: { local: false, fleetConnected: 0 } });
+          }
+          const probes = orderPrewarmedFirst(await probeAllKaliNodes()).filter((r) => agents.some((a) => a.id === r.id));
+          const attempts: Array<{ node: string; step: string; ok: boolean; note: string }> = [];
+          const scanHook = (plane: string, rr: { exitCode: number; stdout: string }) => {
+            void (async () => {
+              try { const { scanRunFromPlane } = await import("../ops/kali-scan-stats"); scanRunFromPlane(plane, kcmd, rr.exitCode === 0, rr.stdout.length); } catch { /* إحصائية مش شرط نجاح */ }
+            })();
+          };
+          // 1) العقد الجاهزة الأول — تنفيذ فوري بلا تثبيت
+          for (const p of probes) {
+            if (!p.kali) break; // الترتيب: الجاهزة الأول — أول غير-جاهزة يعني خلصنا الجاهزين
+            const a = agents.find((x) => x.id === p.id)!;
+            const rr = await execOnLocalAgent(remoteRunCmd(kcmd, p.mode, tmo), a.id, tmo);
+            if (!rr) { attempts.push({ node: a.hostname, step: "تنفيذ", ok: false, note: "قناة الأجينت رجّعت null" }); continue; }
             try { recordMissionCommand(`kali@${a.hostname}: ${kcmd}`, String(rr.stdout ?? "").slice(0, 300)); } catch { /* سجل سالم */ }
-            try { const { scanRunFromPlane } = await import("../ops/kali-scan-stats"); scanRunFromPlane(a.hostname, kcmd, rr.exitCode === 0, (rr.stdout || "").length); } catch { /* إحصائية مش شرط نجاح */ }
+            scanHook(a.hostname, rr);
             return done(
               rr.exitCode === 0,
-              `[${a.hostname} — عقدة كالي خارجية (${mode === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${rr.exitCode} · ${rr.durationMs}ms · التحويل التلقائي اشتغل`,
-              { ...rr, plane: "fleet:" + a.id, mode },
+              `[${a.hostname} — عقدة كالي خارجية (${p.mode === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${rr.exitCode} · ${rr.durationMs}ms · جاهزة من prewarm — تنفيذ فوري من غير تثبيت`,
+              { ...rr, plane: "fleet:" + a.id, mode: p.mode, prewarmed: true, attempts },
+            );
+          }
+          // 2) مافيش جاهزة (أو القناة فصلت على كل جاهزة) — التثبيت الذاتي، وفشل عقدة بيكمل لللي بعدها
+          for (const a of agents) {
+            if (probes.some((p) => p.id === a.id && p.kali)) continue; // جاهزة واتجربت فوق
+            const w = await execOnLocalAgent(remoteWriteCmd(), a.id, 15_000);
+            if (!w || w.exitCode !== 0) { attempts.push({ node: a.hostname, step: "نقل المُثبِّت", ok: false, note: "القناة رفضت الكتابة" }); continue; }
+            const ptmo = Math.max(tmo, 600_000);
+            const inst = await execOnLocalAgent("node /tmp/nova-kali-node-install.mjs", a.id, ptmo);
+            const out = inst ? ((inst.stdout || "") + "\n" + (inst.stderr || "")).trim() : "";
+            if (!inst || inst.exitCode !== 0) {
+              attempts.push({ node: a.hostname, step: "تثبيت", ok: false, note: `exit=${inst?.exitCode ?? "?"} · ${out.slice(-140) || "بلا تفصيل"}` });
+              continue; // ← الإصلاح: مش فشل كلي — العقدة اللي بعدها
+            }
+            const probe2 = await execOnLocalAgent(KALI_NODE_PROBE, a.id, 10_000);
+            const mode2 = probe2 ? String(probe2.stdout).trim() : "";
+            if (mode2 !== "MODE_BARE" && mode2 !== "MODE_PROOT") { attempts.push({ node: a.hostname, step: "قياس بعد التثبيت", ok: false, note: mode2 || "مافيش وضع" }); continue; }
+            const installedAt = /تم في (\d+) دقيقة/.exec(out)?.[1];
+            const rr = await execOnLocalAgent(remoteRunCmd(kcmd, mode2, tmo), a.id, tmo);
+            if (!rr) { attempts.push({ node: a.hostname, step: "تنفيذ", ok: false, note: "قناة الأجينت رجّعت null" }); continue; }
+            try { recordMissionCommand(`kali@${a.hostname}: ${kcmd}`, String(rr.stdout ?? "").slice(0, 300)); } catch { /* سجل سالم */ }
+            scanHook(a.hostname, rr);
+            return done(
+              rr.exitCode === 0,
+              `[${a.hostname} — عقدة كالي خارجية (${mode2 === "MODE_BARE" ? "نظام كالي" : "rootfs سحابية + proot"})] exit=${rr.exitCode} · ${rr.durationMs}ms${installedAt ? ` · التثبيت السحابي اتعمل بنفسه (${installedAt} دقيقة أول مرة)` : ""} — المخزن سحابي والتنفيذ بره السيرفر${attempts.length ? ` · فشل قبله على: ${attempts.map((t) => t.node).join(", ")}` : ""}`,
+              { ...rr, plane: "fleet:" + a.id, mode: mode2, provisionedNow: Boolean(installedAt), attempts },
             );
           }
           return done(false,
-            `مافيش عقدة لينكس متصلة للتحويل التلقائي — أسطول fleet-nodes (GitHub runners) بيتصل بالهَب كل موجة (كل 5 ساعات) وبعدها kali_run بيثبت كالي على العقدة بنفسه وينفّذ. المخزن سحابي دايمًا على فرع kali-rootfs`,
-            { missing: true, planes: { local: false, fleetConnected: agents.length } });
+            `كل العقد جُرّبت وفشلت (${attempts.length} محاولة): ${attempts.map((t) => `${t.node}/${t.step}: ${t.note}`).join(" · ") || "بلا تفصيل"} — جرّب kali_run تاني (التثبيت بيكمل بالقياس)، أو استنى موجة fleet-nodes الجاية`,
+            { missing: true, planes: { local: false, fleetConnected: agents.length }, attempts });
         }
         const kr = await kRun(kcmd, tmo);
         try { recordMissionCommand(`kali: ${kcmd}`, kr.stdout.slice(0, 300)); } catch { /* سجل سالم */ }
