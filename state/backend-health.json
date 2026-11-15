@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-15T07:37:00.617Z",
+  "at": "2026-11-15T12:44:57.548Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "GREEN",
   "counts": {
@@ -9,7 +9,7 @@
   },
   "corpusSample": 3,
   "corpusSearched": 423738,
-  "corpusIndexTotal": 425770,
+  "corpusIndexTotal": 425784,
   "corpusSlice": true,
   "negativeSearchOk": true,
   "negativeSearched": 423738,
@@ -18,10 +18,10 @@
     "ok": true,
     "status": 200,
     "seat": "pollinations-openai",
-    "chunks": 8,
+    "chunks": 9,
     "streamed": true,
-    "firstChunkMs": 614,
-    "totalMs": 615,
+    "firstChunkMs": 282,
+    "totalMs": 283,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
@@ -29,37 +29,37 @@
     {
       "name": "health",
       "status": 200,
-      "ms": 5826,
+      "ms": 5412,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-15T07:36:56.818Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":423738,\"huntRuns\":30,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-15T12:44:46.972Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":423738,\"huntRuns\":30,\"findings\":0}}"
     },
     {
       "name": "hunt",
       "status": 200,
-      "ms": 1133,
+      "ms": 931,
       "ok": true,
       "sample": "{\"run\":{\"id\":35,\"at\":\"2026-11-15T06:52:24.15+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":23265,\"katana\":99671,\"nuclei:root\":708670,\"nucl"
     },
     {
       "name": "organs",
       "status": 200,
-      "ms": 320,
+      "ms": 575,
       "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"423738 CVE · 425770 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-15T07:32:00.25767+00:00\",\"updated_at\":\"20"
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"423738 CVE · 425784 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-15T12:42:00.222673+00:00\",\"updated_at\":\"2"
     },
     {
       "name": "corpus?q=nginx",
       "status": 200,
-      "ms": 898,
+      "ms": 7818,
       "ok": true,
       "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2026-9508\",\"severity\":\"critical\",\"cvss\":10,\"kev\":false,\"epss\":0.00341,\"products\":[],\"summary\":\"Incorrect permission settings on a critical resource in Suprema BioStar 2 (versions 2.9.3 th"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
       "status": 200,
-      "ms": 810,
+      "ms": 935,
       "ok": true,
-      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":423738,\"indexTotal\":425770,\"syncedAt\":\"2026-11-15T04:54:07.441Z\",\"slice\":true,\"at\":\"2026-11-15T07:36:59.991Z\"}"
+      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":423738,\"indexTotal\":425784,\"syncedAt\":\"2026-11-15T09:44:13.798Z\",\"slice\":true,\"at\":\"2026-11-15T12:44:57.250Z\"}"
     },
     {
       "name": "corpus dated (published)",
@@ -71,9 +71,9 @@
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 615,
+      "ms": 283,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=8 first=614ms total=615ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=9 first=282ms total=283ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
