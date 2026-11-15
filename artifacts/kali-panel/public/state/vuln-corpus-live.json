@@ -1,10 +1,10 @@
 {
   "measured": true,
-  "at": "2026-11-15T01:07:34.104Z",
-  "total": 425758,
+  "at": "2026-11-15T02:17:53.953Z",
+  "total": 425760,
   "bySeverity": {
-    "medium": 182451,
-    "critical": 39866,
+    "medium": 182452,
+    "critical": 39867,
     "high": 162308,
     "unknown": 23293,
     "low": 17765,
@@ -1733,26 +1733,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2026-109618",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The su",
-      "cwe": [
-        "CWE-416",
-        "CWE-755",
-        "CWE-824"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2026-10-21T14:17:09.357",
-      "products": [
-        "php",
-        "php",
-        "php"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2014-6271",
       "cvss": 9.8,
       "sev": "critical",
@@ -2054,6 +2034,26 @@
         "endpoint_manager_mobile",
         "endpoint_manager_mobile",
         "endpoint_manager_mobile"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-109618",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The su",
+      "cwe": [
+        "CWE-416",
+        "CWE-755",
+        "CWE-824"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2026-10-21T14:17:09.357",
+      "products": [
+        "php",
+        "php",
+        "php"
       ],
       "refs": []
     },
@@ -13870,5 +13870,5 @@
       "refs": []
     }
   ],
-  "says_ar": "425758 ثغرة حقيقية من NVD · 1781 مستغلّة فعلياً (KEV) · 81948 منتج · مزامنة 2026-11-15T01:07:34.104Z"
+  "says_ar": "425760 ثغرة حقيقية من NVD · 1781 مستغلّة فعلياً (KEV) · 81948 منتج · مزامنة 2026-11-15T02:17:53.953Z"
 }
