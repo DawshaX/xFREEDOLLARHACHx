@@ -1241,6 +1241,14 @@ export function LiveAgentPanel({
   // ── Local Kali Machine (WebSocket Agent) ─────────────────────────────────
   interface KaliAgent { id: string; hostname: string; platform: string; user: string; connectedAt: number; }
   const [kaliAgentConnected, setKaliAgentConnected] = useState(false);
+  /* TEST34 — the proot plane (lib/ops/proot.ts) had no consumer in the Live
+     Agent at all: the "kali" tab talked to the remote Kali *device* agent but
+     never to the local proot rootfs, so the agent could not see whether the
+     embedded Kali was actually installed. This reads /api/kali-env/health and
+     shows it in the tab, so "is the embedded Kali ready" has a real answer. */
+  const [kaliEnvHealth, setKaliEnvHealth] = useState<{
+    ok: boolean; ready: boolean; guestShell: boolean; rootfs: string | null; detail: string;
+  } | null>(null);
   const [kaliAgentList, setKaliAgentList] = useState<KaliAgent[]>([]);
   const [kaliWssUrl, setKaliWssUrl] = useState<string>("");
   const [kaliConnectModalOpen, setKaliConnectModalOpen] = useState(false);
@@ -2738,6 +2746,19 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     // Auto-load CVE feed when kali dashboard opens
     if (activeTab === "kali" && kaliRemoteTab === "dashboard" && !dashCVELoaded) {
       void loadDashCVEs();
+    }
+    /* TEST34 — read the embedded proot plane's real health when the tab opens.
+       This is the local rootfs, distinct from the remote Kali device agent. */
+    if (activeTab === "kali") {
+      void (async () => {
+        try {
+          const r = await fetch(`${API_BASE}/kali-env/health`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(15000) });
+          if (r.ok) setKaliEnvHealth(await r.json());
+          else setKaliEnvHealth({ ok: false, ready: false, guestShell: false, rootfs: null, detail: `HTTP ${r.status}` });
+        } catch (e) {
+          setKaliEnvHealth({ ok: false, ready: false, guestShell: false, rootfs: null, detail: e instanceof Error ? e.message : String(e) });
+        }
+      })();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, kaliRemoteTab]);
@@ -5413,6 +5434,28 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         {/* ── Kali Panel (Remote + Tools) ── */}
         {activeTab === "kali" && panelSize !== "mini" && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative" style={{ background: "rgba(2,0,4,0.98)" }}>
+
+            {/* TEST34 — the embedded proot plane, measured live. Distinct from
+                the remote Kali device agent below: this is the local rootfs the
+                agent's `kali_run` tool actually executes inside. */}
+            {kaliEnvHealth && (
+              <div className="flex items-center gap-2 px-3 py-1.5 border-b border-rose-900/30 flex-wrap"
+                style={{ background: kaliEnvHealth.ready ? "rgba(68,255,136,0.04)" : "rgba(255,170,68,0.05)" }}>
+                <span className="text-[9px] font-black tracking-wider" style={{ color: "#ffb0b0" }}>🐉 كالي المدمجة (proot)</span>
+                <span className="text-[8px] font-mono px-1.5 py-0.5 rounded"
+                  style={{ background: kaliEnvHealth.ready ? "rgba(68,255,136,0.12)" : "rgba(255,170,68,0.12)", color: kaliEnvHealth.ready ? "#44ff88" : "#ffaa44" }}>
+                  {kaliEnvHealth.ready ? (kaliEnvHealth.guestShell ? "● جاهزة — الصدفة بتردّ" : "◐ منصّبة — الصدفة مش بتردّ") : "○ مش منصّبة"}
+                </span>
+                {kaliEnvHealth.rootfs && (
+                  <span className="text-[8px] font-mono truncate max-w-[280px]" style={{ color: "rgba(255,255,255,0.4)" }}>{kaliEnvHealth.rootfs}</span>
+                )}
+                {!kaliEnvHealth.ready && (
+                  <span className="text-[8px] font-mono" style={{ color: "rgba(255,170,68,0.8)" }}>
+                    ثبّت بـ: node scripts/kali-rootfs.mjs --install
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* ══ Connect Device Modal ══ */}
             {kaliConnectModalOpen && (

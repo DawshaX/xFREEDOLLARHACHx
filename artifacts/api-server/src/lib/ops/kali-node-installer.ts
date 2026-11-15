@@ -275,20 +275,53 @@ function nodeEval(script: string): string {
   return "node -e 'eval(Buffer.from(\"" + Buffer.from(script, "utf8").toString("base64") + "\",\"base64\").toString())'";
 }
 
+/**
+ * ── THE PROOT BUG, FIXED AT THE SOURCE ────────────────────────────────────────
+ * The operator's error was:
+ *
+ *   const c=spawn('/bin/sh',['-c'"\"$HOME/...proot-static\" -R ..."],{...});...;{stdio:[...],cwd:'/'});
+ *   SyntaxError: Unexpected string
+ *
+ * Two independent defects, both in the string this file used to build:
+ *   1. `['-c'` + JSON.stringify(inner) — a string literal immediately followed
+ *      by another string literal with no operator. That IS the SyntaxError.
+ *   2. `{stdio:['ignore','pipe','pipe'],cwd:'/'});` pasted a SECOND time after
+ *      the statement — a duplicated fragment from a bad template edit.
+ *
+ * The fix is not "escape the quotes better". It is to stop building a shell
+ * string at all: `spawn()` takes an argv ARRAY, and each element goes to
+ * execve() verbatim. So the proot binary, the rootfs path and the guest
+ * command are separate argv elements — nothing to quote, nothing to escape,
+ * and no way for a path to become code (CWE-78 closed as a side effect, since
+ * `$HOME` is no longer interpolated into a shell string).
+ *
+ * The guest command is still a real shell command, because the guest's own
+ * `/bin/sh -c` is what interprets it — which is the entire point of a terminal.
+ */
+function prootArgv(kcmd: string, mode: string): string[] {
+  if (mode !== "MODE_PROOT") return ["/bin/sh", "-c", kcmd];
+  // $HOME is expanded by the guest shell on purpose: the node process may run
+  // as a different user than the one that installed the rootfs, and the
+  // installer always writes to $HOME/kali-rootfs. The command itself is passed
+  // as "$1" — a positional parameter, never spliced into the script text.
+  return [
+    "/bin/sh",
+    "-c",
+    'exec "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" -R "$HOME/kali-rootfs/rootfs" /bin/sh -c "$1"',
+    "nova-proot",
+    kcmd,
+  ];
+}
+
 /** نسخة بث حي من غلاف التنفيذ: نفس المعنى لكن chunks بتخرج لحظيًا على stdout/stderr (node أولًا — allowlist آمن). */
 export function remoteRunCmdStream(kcmd: string, mode: string, timeoutMs: number): string {
-  const proot = '"$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static"';
-  const rootfs = '"$HOME/kali-rootfs/rootfs"';
-  const inner =
-    mode === "MODE_PROOT"
-      ? proot + " -R " + rootfs + " /bin/sh -c '" + kcmd.replace(/'/g, "'\''") + "'"
-      : kcmd;
+  const argv = prootArgv(kcmd, mode);
   const script =
     "const {spawn}=require('child_process');" +
-    "const c=spawn('/bin/sh',['-c'" + JSON.stringify(inner) + "],{stdio:['ignore','pipe','pipe'],cwd:'/'});" +
+    // argv array — JSON.stringify of an ARRAY is a valid JS array literal, so
+    // there is no adjacent-string-literal bug and no duplicated options object.
+    "const c=spawn(" + JSON.stringify(argv[0]) + "," + JSON.stringify(argv.slice(1)) + ",{stdio:['ignore','pipe','pipe'],cwd:'/'});" +
     "c.stdout.on('data',d=>process.stdout.write(d));c.stderr.on('data',d=>process.stderr.write(d));" +
-    // cwd في الجست مالوش وجود — نبدأ من / عشان تحذير proot ميبانش في الطرفية
-    "{stdio:['ignore','pipe','pipe'],cwd:'/'});" +
     "const t=setTimeout(()=>c.kill('SIGKILL')," + timeoutMs + ");" +
     "c.on('close',(x)=>{clearTimeout(t);process.exit(x===null?1:x);});" +
     "c.on('error',()=>process.exit(127));";
@@ -306,20 +339,12 @@ export function remoteWriteCmd(): string {
 
 /** أمر تنفيذ كالي على العقدة — proot-wrap للـrootfs السحابية أو bare (يبدأ بـnode). */
 export function remoteRunCmd(kcmd: string, mode: string, timeoutMs: number): string {
-  const proot = '"$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static"';
-  const rootfs = '"$HOME/kali-rootfs/rootfs"';
-  const inner =
-    mode === "MODE_PROOT"
-      ? proot + " -R " + rootfs + " /bin/sh -c '" + kcmd.replace(/'/g, "'\\''") + "'"
-      : kcmd;
+  const argv = prootArgv(kcmd, mode);
   const script =
-    "const {execSync}=require('child_process');" +
-    "try{const o=execSync(" +
-    JSON.stringify(inner) +
-    ",{timeout:" +
-    timeoutMs +
-    ",maxBuffer:32*1024*1024,stdio:['ignore','pipe','pipe']});" +
-    "process.stdout.write(o.toString());}" +
-    "catch(e){if(e.stdout)process.stdout.write(e.stdout.toString());if(e.stderr)process.stderr.write((e.stderr||'').toString());process.exit((e.status===null||e.status===undefined)?1:e.status);}";
+    "const {spawnSync}=require('child_process');" +
+    "const r=spawnSync(" + JSON.stringify(argv[0]) + "," + JSON.stringify(argv.slice(1)) + ",{timeout:" + timeoutMs + ",maxBuffer:32*1024*1024,stdio:['ignore','pipe','pipe']});" +
+    "if(r.stdout)process.stdout.write(r.stdout);" +
+    "if(r.stderr)process.stderr.write(r.stderr);" +
+    "process.exit(r.status===null||r.status===undefined?1:r.status);";
   return nodeEval(script);
 }
