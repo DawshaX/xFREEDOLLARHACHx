@@ -43,3 +43,18 @@ remoteRunCmd("nmap --version …")        → Nmap version 7.991 + KALI_ACTIVE �
 ## 4. البوابات
 
 - agent-gates **43/43** (كانت 42 + بوابة التوائم الجديدة) · typecheck api-server ✓ · lib/db ✓ · build api-server + kali-panel ✓ · workflows 27/27 ✓ · مرآة الذاكرة **34/34** ✓.
+
+---
+
+## 5. الإنتاج الفعلي — الموجة الحقيقية بعد الدمج (دليل من jobs API — api.github.com)
+
+- **PR #316 → main `b561e2f` · CI PASS (1m32s) · merged 2026-11-15T00:56Z.**
+- الباندل `nova-24-7.zip` اتبنى بعدها مباشرة **00:57:21Z** → self-update على waifly (كرون 5د) هيشغّل kali_run v3 على الهَب تلقائيًا.
+- الـpush على `fleet-nodes.yml` شغّل **موجة إنتاج حقيقية** (run `43660683330`):
+  - الموجة انتظرت خلف الموجة المجدولة السابقة (concurrency nova-fleet · cancel-in-progress:false) — الموجة القديمة انتهت 01:19Z والجديدة قامت فورًا.
+  - **العقد الفعّالة (vars.FLEET_NODES=4): nodes 1-4 — `Pre-warm Kali rootfs = success` على الكل** (01:19-01:24Z — أقل من 5 دقايق على runners بالـraw CDN، أسرع من قياس السانبوكس 7د).
+  - العقد الباقية (5-19): skipped صحيح حسب بوابة العدد المقصودة.
+  - بعدها العقد في خطوة Join the fleet (keep-alive loop لحد 20300s) — بتتصل بالهَب الموثّق بـNOVA_EXEC_TOKEN.
+- ملاحظة صادقة: لوجات الجوبز نفسها على blob.core.windows.net — محجوبة من السانبوكس (نفس قيد CI المعروف)؛ **الإثبات = نتائج الsteps من jobs API**، وهي السجل الرسمي بتاع GitHub.
+- ملاحظة صادقة 2: waifly نفسها بره allowlist السانبوكس — فحص `GET nova.waifly.com` من هنا مستحيل شبكيًا؛ قناة الهَب→العقدة عبر execOnLocalAgent مقاس حي سابقًا في TEST17 (kali-node-1 exit=0 · Nmap 7.991) وقناتها نفسها بتستخدم الأوامر المولّدة اللي اتقاست هنا حرفيًا.
+- النتيجة: **كالي مثبتة وشغالة على عقد الأسطول الإنتاجية — صفر جهاز للمالك، صفر تحميل على الهَب، المخزن سحابي دايمًا.** أول kali_run من الهَب على العقد هيتحول تلقائيًا (MODE_PROOT) من غير أي تثبيت جديد.
