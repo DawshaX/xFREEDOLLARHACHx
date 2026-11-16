@@ -33,6 +33,7 @@ import { NodesWindow } from "@/components/desktop/NodesWindow";
 import { ScannerWindow } from "@/components/desktop/ScannerWindow";
 import { TerminalWindow } from "@/components/desktop/TerminalWindow";
 import { GpuParticleCanvas, PerformanceMonitor } from "@/components/desktop/DesktopGpuEngine";
+import { useLiveEvent } from "@/hooks/useWebSocket";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const API_URL = (p: string) => `/api${p}`;
@@ -245,8 +246,10 @@ function MonitorWin() {
   // os.totalmem() على المحرك)، ولو الوضع ساكن أو الطلب فشل بيتكتب «غير مقاس».
   type Gauge = number | null;
   const [m, setM] = useState<{ cpu: Gauge; ram: Gauge; disk: Gauge; net: Gauge }>({ cpu: null, ram: null, disk: null, net: null });
+  const aliveRef = useRef(true);
   useEffect(() => {
     let alive = true;
+    aliveRef.current = true;
     const tick = async () => {
       try {
         const d = await jsonRequest<Record<string, unknown>>("/system/metrics");
@@ -265,9 +268,21 @@ function MonitorWin() {
       }
     };
     void tick();
-    const t = setInterval(() => { void tick(); }, 5000);
-    return () => { alive = false; clearInterval(t); };
+    const t = setInterval(() => { void tick(); }, 15_000);
+    return () => { alive = false; aliveRef.current = false; clearInterval(t); };
   }, []);
+  useLiveEvent("hw_metrics", (ev) => {
+    const d = ev as { cpu?: { usage?: number }; memory?: { usagePercent?: number } };
+    if (!aliveRef.current) return;
+    const cpuU = d?.cpu?.usage;
+    const ramPct = d?.memory?.usagePercent;
+    setM({
+      cpu: typeof cpuU === "number" ? Math.round(cpuU) : null,
+      ram: typeof ramPct === "number" && Number.isFinite(ramPct) ? Math.round(ramPct) : null,
+      disk: null, // مفيش مصدر DISK مقاس لسه — بنقولها بدل ما نزوّقها
+      net: null,  // نفس الكلام لـNET
+    });
+  });
   const bar = (v: number, color: string) => (
     <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
       <div className="h-full rounded-full transition-all duration-700" style={{ width: `${v}%`, background: color }} />
@@ -2010,9 +2025,13 @@ export default function Desktop() {
       } catch { /* offline */ setLiveProgress(0); }
     };
     void fetchSys();
-    const t = setInterval(() => void fetchSys(), 8000);
+    const t = setInterval(() => void fetchSys(), 15_000);
     return () => clearInterval(t);
   }, []);
+  useLiveEvent("hw_metrics", (ev) => {
+    const d = ev as { cpu?: { usage?: number } };
+    if (typeof d?.cpu?.usage === "number") setLiveProgress(Math.max(0, Math.min(100, d.cpu.usage)));
+  });
 
   // ── API health ─────────────────────────────────────────────────────────
   useEffect(() => {

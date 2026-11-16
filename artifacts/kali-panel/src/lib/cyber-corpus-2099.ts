@@ -2,7 +2,9 @@
  * CyberNova 2099 — Universal Security Intelligence Corpus & Combinatorial Vulnerability Synthesizer
  *
  * Contains:
- * 1. KALI_ARSENAL_64: 64 Kali Linux & Open-Source Security Tools across 12 Categories
+ * 1. KALI_ARSENAL_64: 82 Kali Linux & Open-Source Security Tools across 14 Categories
+ *    (قياس 2026-11-16 — العدد بيتحسب وقت التشغيل في getCorpusStats، الأسماء
+ *    المكررة للفئات اتوحدت والاستغلال رجّع رقمه الصحيح 14)
  * 2. GITHUB_ARSENAL_40: 40 Elite GitHub Security Projects (including 2025-2026 AI & Recon engines)
  * 3. VULN_PRIMITIVES_24: 24 Architectural Vulnerability Primitives across 8 Layers
  * 4. Combinatorial Multi-Vulnerability Synthesizer (merges 2, 3, 4, or 5+ primitives simultaneously)
@@ -138,10 +140,10 @@ export const KALI_ARSENAL_64: KaliToolEntry[] = [
   { id: "s3scanner", name: "S3Scanner Bucket ACL Verifier", category: "11. أمان السحابة والحاويات وKubernetes (Cloud, IAM & Container Audit)", commandTemplate: "s3scanner -bucket {target}-assets -enumerate", purposeAr: "التحقق من عدم ترك حاويات التخزين السحابية مفتوحة للقراءة أو الكتابة العامة.", safeEquivalent: "config-auditor" },
 
   // Category 13: Exploitation & Payloads (إضافة المالك — صفر تقليم، عقدة TEST12/13)
-  { id: "metasploit", name: "Metasploit Framework (msfconsole)", category: "13. الاستغلال والحشوات (Exploitation & Payloads)", commandTemplate: "msfconsole -q -x 'search cve:2026 type:exploit'", purposeAr: "إطار الاستغلال الأشهر: آلاف الاستغلالات الجاهزة والبايلودات مع قاعدة بيانات للجلسات — مقاس في البيئة المدمجة 6.5.7.", safeEquivalent: "exploit_search" },
-  { id: "msfvenom", name: "MSFvenom Payload Generator", category: "13. الاستغلال والحشوات (Exploitation & Payloads)", commandTemplate: "msfvenom -p linux/x64/shell_reverse_tcp LHOST={target} -f elf -o /tmp/p.elf", purposeAr: "توليد الحشوات الموقعة لكل المنصات (elf/exe/js/py/php) مع التشفير والتهريب — مقاس في البيئة المدمجة.", safeEquivalent: "exploit_search" },
-  { id: "meterpreter", name: "Meterpreter Post-Exploitation", category: "13. الاستغلال والحشوات (Exploitation & Payloads)", commandTemplate: "msfconsole -q -x 'use post/multi/recon/local_exploit_suggester'", purposeAr: "طبقة ما بعد الاستغلال التفاعلية: صلاحيات، تنقل شبكي، تجميع أدلة، واقتراح استغلالات التصعيد — جزء من Metasploit داخل البيئة.", safeEquivalent: "exploit_search" },
-  { id: "searchsploit", name: "Exploit-DB Searchsploit", category: "13. الاستغلال والحشوات (Exploitation & Payloads)", commandTemplate: "searchsploit --id linux kernel 6.x local", purposeAr: "بحث محلي أوفلاين في أرشيف Exploit-DB الكامل عن استغلالات جاهزة بالكود المصدري.", safeEquivalent: "exploit_search" },
+  { id: "metasploit", name: "Metasploit Framework (msfconsole)", category: "14. الاستغلال والحشوات (Exploitation & Payloads)", commandTemplate: "msfconsole -q -x 'search cve:2026 type:exploit'", purposeAr: "إطار الاستغلال الأشهر: آلاف الاستغلالات الجاهزة والبايلودات مع قاعدة بيانات للجلسات — مقاس في البيئة المدمجة 6.5.7.", safeEquivalent: "exploit_search" },
+  { id: "msfvenom", name: "MSFvenom Payload Generator", category: "14. الاستغلال والحشوات (Exploitation & Payloads)", commandTemplate: "msfvenom -p linux/x64/shell_reverse_tcp LHOST={target} -f elf -o /tmp/p.elf", purposeAr: "توليد الحشوات الموقعة لكل المنصات (elf/exe/js/py/php) مع التشفير والتهريب — مقاس في البيئة المدمجة.", safeEquivalent: "exploit_search" },
+  { id: "meterpreter", name: "Meterpreter Post-Exploitation", category: "14. الاستغلال والحشوات (Exploitation & Payloads)", commandTemplate: "msfconsole -q -x 'use post/multi/recon/local_exploit_suggester'", purposeAr: "طبقة ما بعد الاستغلال التفاعلية: صلاحيات، تنقل شبكي، تجميع أدلة، واقتراح استغلالات التصعيد — جزء من Metasploit داخل البيئة.", safeEquivalent: "exploit_search" },
+  { id: "searchsploit", name: "Exploit-DB Searchsploit", category: "14. الاستغلال والحشوات (Exploitation & Payloads)", commandTemplate: "searchsploit --id linux kernel 6.x local", purposeAr: "بحث محلي أوفلاين في أرشيف Exploit-DB الكامل عن استغلالات جاهزة بالكود المصدري.", safeEquivalent: "exploit_search" },
 
   // Category 12: AI/LLM Security & Digital Forensics (4 tools)
   { id: "llmrecon", name: "LLMrecon (OWASP LLM Top 10 2025/2026)", category: "12. أمان الذكاء الاصطناعي والوكلاء والجنائيات الرقمية (AI/LLM & Forensics)", commandTemplate: "llmrecon --owasp-2025 --target https://{target}", purposeAr: "فحص واجهات الذكاء الاصطناعي والوكلاء ضد Prompt Injection وتجاوز صلاحيات الأدوات (Excessive Agency).", safeEquivalent: "pipeline" },
@@ -149,11 +151,11 @@ export const KALI_ARSENAL_64: KaliToolEntry[] = [
   { id: "yara-forensics", name: "YARA Pattern & Indicator Engine", category: "12. أمان الذكاء الاصطناعي والوكلاء والجنائيات الرقمية (AI/LLM & Forensics)", commandTemplate: "yara -r security-rules.yar ./artifacts", purposeAr: "مطابقة القواعد الجنائية الرقمية لاكتشاف البرمجيات الخبيثة أو المفاتيح المسربة في الملفات.", safeEquivalent: "js-analyzer" },
   { id: "exiftool-binwalk", name: "ExifTool & Binwalk Metadata Inspector", category: "12. أمان الذكاء الاصطناعي والوكلاء والجنائيات الرقمية (AI/LLM & Forensics)", commandTemplate: "exiftool -a -u -g1 document.pdf", purposeAr: "تحليل البيانات الوصفية (Metadata) في الملفات العامة لاكتشاف تسريب أسماء المستخدمين والمسارات الداخلية.", safeEquivalent: "js-analyzer" },
   { id: "uncover", name: "ProjectDiscovery Uncover (Multi-Engine OSINT)", category: "1. جمع المعلومات واستطلاع النطاقات (Subdomain & OSINT Recon)", commandTemplate: "uncover -q 'ssl:\"{target}\"' -e shodan,censys,fofa -silent", purposeAr: "اكتشاف الأصول والخوادم المكشوفة المرتبطة بالهدف سلبياً عبر محركات البحث الأمنية العالمية بدون لمس الخادم.", safeEquivalent: "live-osint" },
-  { id: "jshunter", name: "JShunter (2026 Go JS Endpoint & Secret Miner)", category: "4. زحف الويب وتحليل ملفات الـ JavaScript (Web Crawling & JS Mining)", commandTemplate: "jshunter -u https://{target} -t 10 --only-endpoints", purposeAr: "تحليل ملفات JavaScript بسرعة عالية بلغة Go لاستخراج نقاط نهاية الـ API والمفاتيح المنسية.", safeEquivalent: "js-analyzer" },
-  { id: "nettacker", name: "OWASP Nettacker (Automated ASM Framework)", category: "3. الفحص القائم على القوالب وكشف الثغرات (Template & Vuln Scanning)", commandTemplate: "nettacker -i {target} -m http_status_scan,ssl_certificate_expired_vuln", purposeAr: "إطار عمل OWASP الرسمي لإدارة سطح الهجوم وفحص الترويسات والشهادات والإعدادات الأمنية.", safeEquivalent: "config-auditor" },
-  { id: "sstimap", name: "SSTImap (Template Injection Safe Auditor)", category: "5. اكتشاف المعاملات والمجلدات المخفية (Parameter & Content Discovery)", commandTemplate: "sstimap -u 'https://{target}/render?tpl=test' --verify-safe", purposeAr: "فحص آمن لتقييم مدى عزل محركات القوالب (Jinja2, Twig, Freemarker, Handlebars) ضد حقن القوالب.", safeEquivalent: "config-auditor" },
+  { id: "jshunter", name: "JShunter (2026 Go JS Endpoint & Secret Miner)", category: "4. زحف تطبيقات الويب وتشريح ملفات JS (Web Crawling & JS Mining)", commandTemplate: "jshunter -u https://{target} -t 10 --only-endpoints", purposeAr: "تحليل ملفات JavaScript بسرعة عالية بلغة Go لاستخراج نقاط نهاية الـ API والمفاتيح المنسية.", safeEquivalent: "js-analyzer" },
+  { id: "nettacker", name: "OWASP Nettacker (Automated ASM Framework)", category: "3. تحليل الثغرات والقوالب الأمنية (Template & Vuln Scanning)", commandTemplate: "nettacker -i {target} -m http_status_scan,ssl_certificate_expired_vuln", purposeAr: "إطار عمل OWASP الرسمي لإدارة سطح الهجوم وفحص الترويسات والشهادات والإعدادات الأمنية.", safeEquivalent: "config-auditor" },
+  { id: "sstimap", name: "SSTImap (Template Injection Safe Auditor)", category: "5. اكتشاف المسارات والمعاملات الخفية (Parameter & Content Discovery)", commandTemplate: "sstimap -u 'https://{target}/render?tpl=test' --verify-safe", purposeAr: "فحص آمن لتقييم مدى عزل محركات القوالب (Jinja2, Twig, Freemarker, Handlebars) ضد حقن القوالب.", safeEquivalent: "config-auditor" },
   { id: "julius", name: "Praetorian Julius (AI/LLM Service Fingerprinter)", category: "12. أمان الذكاء الاصطناعي والوكلاء والجنائيات الرقمية (AI/LLM & Forensics)", commandTemplate: "julius scan https://{target}", purposeAr: "تحديد وتوصيف خدمات الذكاء الاصطناعي والنماذج اللغوية (Ollama, vLLM, LiteLLM, OpenAI Proxy) على الهدف.", safeEquivalent: "pipeline" },
-  { id: "kosty", name: "Kosty Cloud Attack-Surface & IAM Auditor", category: "11. أمان السحابة والحاويات وKubernetes (Cloud & Container Security)", commandTemplate: "kosty audit --domain {target} --checks iam,s3,apigateway", purposeAr: "رسم خريطة سطح الهجوم السحابي واكتشاف فجوات الصلاحيات وإعدادات API Gateway وS3 الخاطئة.", safeEquivalent: "config-auditor" },
+  { id: "kosty", name: "Kosty Cloud Attack-Surface & IAM Auditor", category: "11. أمان السحابة والحاويات وKubernetes (Cloud, IAM & Container Audit)", commandTemplate: "kosty audit --domain {target} --checks iam,s3,apigateway", purposeAr: "رسم خريطة سطح الهجوم السحابي واكتشاف فجوات الصلاحيات وإعدادات API Gateway وS3 الخاطئة.", safeEquivalent: "config-auditor" },
 
   // Category 13: Immunefi Web3, DeFi & Smart Contract Auditing (8 tools)
   { id: "foundry-forge", name: "Foundry Forge (Immunefi Local Mainnet Fork PoC)", category: "13. أمان العقود الذكية وبرامج Immunefi Web3/DeFi (Smart Contract & DeFi Audit)", commandTemplate: "forge test --fork-url $ETH_RPC_URL --match-test testImmunefiPoC -vvvv", purposeAr: "بناء وتشغيل براهين إثبات الثغرات (Immunefi PoC) على نسخة Fork محلية معزولة 100% دون لمس الشبكة الحية.", safeEquivalent: "github-auditor" },
@@ -807,16 +809,19 @@ const AUDIT_PHASES_6 = [
 ];
 
 export function getCorpusStats() {
-  const patternCount = VULN_PRIMITIVES_24.length * TARGET_SURFACES_17.length * AUDIT_PHASES_6.length; // 28 * 19 * 6 = 3,192
+  // TEST46 — كل رقم هنا بيتحسب وقت التشغيل من المصفوفات الفعلية، مش مكتوب
+  // حرفًا (التعليقات القديمة كانت بتقول 78 أداة/13 فئة والقياس المقاس: 82
+  // أداة/14 فئة بعد توحيد الأسماء المكررة). مافيش رقم بيتقدم حرفًا.
+  const patternCount = VULN_PRIMITIVES_24.length * TARGET_SURFACES_17.length * AUDIT_PHASES_6.length;
   return {
-    kaliToolsCount: KALI_ARSENAL_64.length, // 78
-    kaliCategoriesCount: 13,
-    githubProjectsCount: GITHUB_ARSENAL_40.length, // 56
-    vulnPrimitivesCount: VULN_PRIMITIVES_24.length, // 28
-    targetSurfacesCount: TARGET_SURFACES_17.length, // 19
-    synthesizedPatternsCount: patternCount, // 3,192
+    kaliToolsCount: KALI_ARSENAL_64.length,
+    kaliCategoriesCount: new Set(KALI_ARSENAL_64.map((t) => t.category)).size,
+    githubProjectsCount: GITHUB_ARSENAL_40.length,
+    vulnPrimitivesCount: VULN_PRIMITIVES_24.length,
+    targetSurfacesCount: TARGET_SURFACES_17.length,
+    synthesizedPatternsCount: patternCount,
     totalIndexedKnowledgeItems:
-      patternCount + KALI_ARSENAL_64.length + GITHUB_ARSENAL_40.length + VULN_PRIMITIVES_24.length, // 3,354
+      patternCount + KALI_ARSENAL_64.length + GITHUB_ARSENAL_40.length + VULN_PRIMITIVES_24.length,
   };
 }
 

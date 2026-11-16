@@ -40,7 +40,7 @@ export default function ProcessesPage() {
 
   const handleKill = (pid: number) => {
     if (!confirm(`Send SIGKILL to PID ${pid}?`)) return;
-    void fetch(`/api/monitor/processes/${pid}/kill`, {
+    void fetch(`/api/processes/${pid}/kill`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ signal: "SIGKILL" }),

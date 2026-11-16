@@ -1,5 +1,7 @@
 // NOVA SENTINEL V10 ULTIMATE — Adapted for Vite/React (removed "use client")
 // V8 + V9 + V10 Fully Merged — Arabic Cybersecurity AI Agent
+import { useLiveEvent } from "@/hooks/useWebSocket";
+import { novaAuthHeaders } from "@/lib/ops-client";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { streamOllamaViaServer } from "@/lib/ollama-browser";
 import ReactMarkdown from "react-markdown";
@@ -32,6 +34,7 @@ interface PerformanceMetrics {
 }
 interface ThreatForecast {
   id: string; threatType: string; probability: number; impact: string; timestamp: number;
+  cvss?: number; // TEST46 — الرقم المعروض CVSS مقاس (probability مجرد طول شريط بصري)
 }
 interface AttackNode {
   id: string; type: "agent" | "target" | "proxy";
@@ -120,6 +123,7 @@ export default function NovaSentinelV10() {
 
   // V8 Extreme
   const [threatForecasts, setThreatForecasts] = useState<ThreatForecast[]>([]);
+  const [exposure, setExposure] = useState<{ guarded?: boolean; open?: boolean; detail?: string } | null>(null);
   const [stealthLevel, setStealthLevel] = useState(100);
   const [panicMode, setPanicMode] = useState(false);
   const [attackNodes, setAttackNodes] = useState<AttackNode[]>([
@@ -240,7 +244,7 @@ export default function NovaSentinelV10() {
     else if (lower.includes("osint"))
       steps.push({ step: 2, thought: "جمع معلومات مفتوحة OSINT", action: "osint_gather", expectedOutcome: "بيانات مجمّعة", confidence: 0.92 });
     if (threatForecasts.length > 0)
-      steps.push({ step: steps.length + 1, thought: `🧪 محاكاة سيناريو تدريبي (مش قياس): ${threatForecasts[0]?.probability}% خطر ${threatForecasts[0]?.threatType}`, action: "threat_mitigation_sim", expectedOutcome: "تدريب دفاعي", confidence: 0.5 });
+      steps.push({ step: steps.length + 1, thought: `⚠️ ثغرة حرجة قياسها الكوربوس: ${threatForecasts[0]?.id ?? ""} — CVSS ${threatForecasts[0]?.cvss ?? "?"} — المراجعة والترقيع مطلوب`, action: "vuln_review", expectedOutcome: "تقييم التعرض الفعلي", confidence: 1 });
     return steps;
   }, [deepThinkingEnabled, threatForecasts]);
 
@@ -279,40 +283,85 @@ export default function NovaSentinelV10() {
   }, [lines, performanceMetrics, ollamaConfig, longTermMemory]);
 
   // ── Effects: Threats / Stealth / Network ─────────────────────
-  useEffect(() => {
-    const id = setInterval(() => {
-      setThreatForecasts(prev => [{
-        id: `tf-${Date.now()}`, timestamp: Date.now(),
-        threatType: THREAT_TYPES[Math.floor(Math.random() * THREAT_TYPES.length)]!,
-        probability: Math.floor(Math.random() * 60) + 30,
-        impact: IMPACTS[Math.floor(Math.random() * IMPACTS.length)]!,
-      }, ...prev].slice(0, 5));
-    }, 12000);
-    return () => clearInterval(id);
+  /* TEST46 — Threat Intel بقت حقيقية: أحدث سجلات الكوربوس المقاس (NVD/KEV)
+   * من /api/cve/recent — معرّف حقيقي · خطورة حقيقية · CVSS حقيقي. مولّد
+   * Math.random اتشال بالكامل — مافيش «تهديد» بلا سجل فعلي وراه. */
+  const loadThreatIntel = useCallback(async () => {
+    try {
+      const r = await fetch("/api/cve/recent?severity=CRITICAL&limit=6", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(12000) });
+      if (!r.ok) return;
+      const rows = (await r.json()) as Array<{ id: string; description?: string; cvss?: number; severity?: string; publishedAt?: string }>;
+      if (!Array.isArray(rows)) return;
+      setThreatForecasts(rows.map(c => ({
+        id: c.id,
+        timestamp: c.publishedAt ? new Date(c.publishedAt).getTime() : Date.now(),
+        threatType: c.id + (c.description ? ` — ${c.description.slice(0, 80)}` : ""),
+        probability: Math.round((Number(c.cvss) || 0) * 10), // طول الشريط البصري من CVSS المقاس (الرقم المعروض CVSS نفسه)
+        impact: (c.severity || "MEDIUM").toUpperCase(),
+        cvss: Number(c.cvss) || 0,
+      })));
+    } catch { /* القايت الجاي يجرب — مافيش اختراع */ }
   }, []);
+  useEffect(() => { void loadThreatIntel(); const id = setInterval(() => void loadThreatIntel(), 60_000); return () => clearInterval(id); }, [loadThreatIntel]);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (!busy) setStealthLevel(prev => Math.min(100, prev + 1));
-    }, 3000);
-    return () => clearInterval(id);
-  }, [busy]);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setNetworkTraffic(prev => [...prev.slice(1), Math.floor(Math.random() * 100)]);
-    }, 2000);
-    return () => clearInterval(id);
+  /* TEST46 — «Stealth» كان عدّاد وهمي بيزيد لوحده. اتبدل بحماية مقاسة
+   * فعليًا من /api/ops/stats (opsExposure: توكن محفوظ/وضع مفتوح). */
+  const loadExposure = useCallback(async () => {
+    try {
+      const r = await fetch("/api/ops/stats", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(8000) });
+      if (!r.ok) { setExposure(null); return; }
+      const d = (await r.json()) as { exposure?: { guarded?: boolean; open?: boolean; detail?: string } };
+      setExposure(d.exposure ?? null);
+    } catch { setExposure(null); }
   }, []);
+  useEffect(() => { void loadExposure(); const id = setInterval(() => void loadExposure(), 60_000); return () => clearInterval(id); }, [loadExposure]);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setAttackNodes(prev => prev.map(n =>
-        n.type === "proxy" ? { ...n, pos: { x: Math.max(10, Math.min(90, n.pos.x + (Math.random() - 0.5) * 15)), y: Math.max(10, Math.min(90, n.pos.y + (Math.random() - 0.5) * 15)) } } : n
-      ));
-    }, 4000);
-    return () => clearInterval(id);
+  /* TEST46 — الترافيك بقت مقاسة: عدّادات RX/TX من /proc/net/dev بتيجي على
+   * قناة hw_metrics (السيرفر بيقيس مرة ويدفع للكل) — والسرعة = الفرق بين
+   * نبضتين على الوقت الفعلي بينهم. مافيش ضرب في عوامل مخترعة. */
+  const netLastRef = useRef<{ t: number; rx: number; tx: number } | null>(null);
+  const [netRate, setNetRate] = useState<{ inKBps: number | null; outKBps: number | null; present: boolean }>({ inKBps: null, outKBps: null, present: false });
+  useLiveEvent("hw_metrics", (ev) => {
+    const net = (ev as { net?: { present?: boolean; rxBytes?: number; txBytes?: number } }).net;
+    const rx = net?.rxBytes, tx = net?.txBytes;
+    if (!net || net.present !== true || typeof rx !== "number" || typeof tx !== "number") { setNetRate({ inKBps: null, outKBps: null, present: false }); return; }
+    const now = Date.now();
+    const last = netLastRef.current;
+    netLastRef.current = { t: now, rx, tx };
+    if (last && now > last.t) {
+      const dt = (now - last.t) / 1000;
+      setNetRate({
+        inKBps: Math.max(0, (rx - last.rx) / 1024 / dt),
+        outKBps: Math.max(0, (tx - last.tx) / 1024 / dt),
+        present: true,
+      });
+      setNetworkTraffic((prev) => [...prev.slice(1), Math.min(100, ((tx - last.tx) / 1024 / dt) / 10)]);
+    }
+  });
+
+  /* TEST46 — خريطة العقد بقت الأسطول الحقيقي: /api/fleet/mesh (بروبس مقاسة).
+   * الموضع ترتيب دائري ثابت (تنسيق عرض بس) — الحالة اللي معروضة هي حالة العقدة
+   * الفعلية. مافيش حركة عشوائية ولا عقدة مخترعة. */
+  const loadMesh = useCallback(async () => {
+    try {
+      const r = await fetch("/api/fleet/mesh", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(12000) });
+      if (!r.ok) return;
+      const d = (await r.json()) as { nodes?: Array<{ id?: string; label?: string; kind?: string; status?: string }> };
+      const real = (d.nodes ?? []).filter((n) => n.kind === "machine").slice(0, 8);
+      const mapped: AttackNode[] = real.map((n, i) => {
+        const angle = (i / Math.max(1, real.length)) * Math.PI * 2;
+        return {
+          id: String(n.id ?? `mesh-${i}`),
+          type: "proxy" as const,
+          label: String(n.label ?? n.id ?? `node-${i}`).slice(0, 18),
+          status: n.status === "online" ? ("active" as const) : ("idle" as const),
+          pos: { x: 50 + 38 * Math.cos(angle), y: 50 + 38 * Math.sin(angle) },
+        };
+      });
+      setAttackNodes([{ id: "agent", type: "agent", label: "NOVA-CORE", status: "active", pos: { x: 50, y: 50 } }, ...mapped]);
+    } catch { /* الشبكة وقعت — الكارت بيبقى NOVA-CORE بس */ }
   }, []);
+  useEffect(() => { void loadMesh(); const id = setInterval(() => void loadMesh(), 60_000); return () => clearInterval(id); }, [loadMesh]);
 
   // Auto-scroll
   useEffect(() => {
@@ -690,11 +739,11 @@ export default function NovaSentinelV10() {
             <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${performanceMetrics.successRate}%` }} />
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-[9px] text-muted-foreground">Stealth</span>
-            <span className={`text-[9px] font-mono ${stealthLevel > 70 ? "text-cyan-400" : stealthLevel > 40 ? "text-amber-400" : "text-rose-400"}`}>{stealthLevel}%</span>
+            <span className="text-[9px] text-muted-foreground">الحماية (مقاسة)</span>
+            <span className={`text-[9px] font-mono ${exposure == null ? "text-muted-foreground" : exposure.open ? "text-amber-400" : "text-emerald-400"}`}>{exposure == null ? "غير مقاس" : exposure.open ? "وضع مفتوح ⚠" : "محمي بالتوكن ✓"}</span>
           </div>
           <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-            <div className={`h-full transition-all duration-500 ${stealthLevel > 70 ? "bg-cyan-500" : stealthLevel > 40 ? "bg-amber-500" : "bg-rose-500"}`} style={{ width: `${stealthLevel}%` }} />
+            <div className={`h-full transition-all duration-500 ${exposure == null ? "bg-white/10" : exposure.open ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: exposure == null ? "4%" : exposure.open ? "35%" : "100%" }} />
           </div>
           <div className="flex items-center gap-2 pt-1">
             <div className={`w-2 h-2 rounded-full ${wsOnline ? "bg-emerald-500" : "bg-rose-500 animate-pulse"}`} />
@@ -909,7 +958,7 @@ export default function NovaSentinelV10() {
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  <span className="text-[8px] font-mono text-amber-500">SIM — مش قياس حقيقي</span>
+                  <span className="text-[8px] font-mono text-emerald-400">{netRate.present ? "قياس حي من /proc/net/dev" : "غير مقاس على هذا المضيف"}</span>
                 </div>
               </div>
               <div className="h-16 flex items-end gap-0.5 px-1">
@@ -922,11 +971,11 @@ export default function NovaSentinelV10() {
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-black/20 rounded-xl p-2 border border-white/5">
                   <div className="text-[8px] text-muted-foreground font-bold mb-0.5">Inbound</div>
-                  <div className="text-xs font-mono text-primary">{((networkTraffic[networkTraffic.length - 1] ?? 0) * 0.8).toFixed(1)} <span className="text-amber-500/70 text-[8px]">sim</span></div>
+                  <div className="text-xs font-mono text-primary">{netRate.inKBps != null ? `${netRate.inKBps.toFixed(1)} KB/s` : "غير مقاس"}</div>
                 </div>
                 <div className="bg-black/20 rounded-xl p-2 border border-white/5">
                   <div className="text-[8px] text-muted-foreground font-bold mb-0.5">Outbound</div>
-                  <div className="text-xs font-mono text-cyan-400">{((networkTraffic[networkTraffic.length - 1] ?? 0) * 0.4).toFixed(1)} <span className="text-amber-500/70 text-[8px]">sim</span></div>
+                  <div className="text-xs font-mono text-cyan-400">{netRate.outKBps != null ? `${netRate.outKBps.toFixed(1)} KB/s` : "غير مقاس"}</div>
                 </div>
               </div>
             </div>
@@ -936,7 +985,7 @@ export default function NovaSentinelV10() {
               <div className="flex items-center gap-2">
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-[10px] font-bold uppercase tracking-widest">Threat Intel</span>
-                <span className="text-[8px] font-mono text-amber-500/80">🧪 سيناريوهات محاكاة تدريبية — مش تنبؤ مقاس</span>
+                <span className="text-[8px] font-mono text-emerald-400/90">📡 أحدث الحرجة من الكوربوس المقاس (NVD/KEV)</span>
               </div>
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {threatForecasts.length === 0 ? (
@@ -949,9 +998,9 @@ export default function NovaSentinelV10() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="flex-1 h-0.5 bg-white/10 rounded-full">
-                        <div className="h-full bg-amber-500" style={{ width: `${tf.probability}%` }} />
+                        <div className="h-full bg-amber-500" style={{ width: `${Math.min(100, tf.probability)}%` }} />
                       </div>
-                      <span className="text-[8px] font-mono text-muted-foreground">{tf.probability}%</span>
+                      <span className="text-[8px] font-mono text-muted-foreground">CVSS {tf.cvss ?? "?"}</span>
                     </div>
                   </div>
                 ))}

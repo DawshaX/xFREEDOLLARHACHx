@@ -24,6 +24,7 @@ import {
   broadcastEvent,
   getHubClientCount,
 } from "./lib/ws-hub";
+import { ensureHwBroadcast } from "./routes/monitor";
 import { getMemoryCount, saveMemory } from "./routes/memory";
 import { broadcastLiveEvent } from "./routes/live-events";
 import { runAgent } from "./lib/agent/core";
@@ -83,6 +84,8 @@ hubWss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
   const urlObj = new URL(req.url ?? "/api/ws", "http://127.0.0.1");
   const sessionId = urlObj.searchParams.get("sessionId") || `ws-${Date.now()}`;
   registerHubClient(ws, sessionId);
+  // TEST46 — أول عميل WS = نبضة الهاردوير الموحدة تشتغل (صفر عملاء = صفر شغل).
+  ensureHwBroadcast();
 
   try {
     ws.send(

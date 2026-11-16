@@ -58,6 +58,7 @@ const AGENT_GATES = [
 const STRUCTURAL_GATES = [
   ["scripts/check-workflows.mjs", "workflows parse and republish their state"],
   ["scripts/audit-connections.mjs", "no dead connections between layers"],
+  ["scripts/audit-api-freshness.mjs", "كل زرار في الواجهة له راوتر حي — مافيش صفحة بزوار ميتة (TEST46)"],
   ["scripts/audit-contracts.mjs", "contracts between panel and API"],
   ["scripts/audit-twins.mjs", "twin files match, drift is declared"],
   ["scripts/audit-route-integrity.mjs", "route wiring: symbols imported, host hands gated, bundle not hollow"],

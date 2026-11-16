@@ -28,6 +28,7 @@ import { AdvancedFileManager } from "./AdvancedFileManager";
 import { RegistryEditor } from "./RegistryEditor";
 import { NetworkTopologyMap } from "./NetworkTopologyMap";
 import { KaliTerminal } from "./KaliTerminal";
+import { useLiveRefetch } from "@/hooks/useWebSocket";
 import {
   generateKaliReport,
   generateKaliReportHTML,
@@ -1153,6 +1154,9 @@ export function LiveAgentPanel({
     | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel" | "cockpit" | "awareness"
     | "control"
   >("chat");
+  // TEST46 — مرجع لحظي لتاب اللوحة: أحداث WS تعرف لو اللوحة مفتوحة فعلاً.
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
 
   // ── Real 67-tool Core Catalogue + Live Chat Ops Dashboard ─────────────────
   interface CoreCatalogueTool { name: string; title: string; category: string; description: string; risk: string; params: string[]; }
@@ -1306,10 +1310,16 @@ export function LiveAgentPanel({
 
   useEffect(() => {
     if (activeTab !== "control") return;
-    void loadBoard();
+    // TEST46 — القناة الأولى بقت WS: كل حدث مؤثر في اللوحة (أسطول/وكيل/
+    // إشعار/وضع مستقل) بيعيد الجلب لحظة حدوثه، والعدّاد هنا خطة أمان.
     const iv = setInterval(() => { void loadBoard(); }, 20_000);
     return () => clearInterval(iv);
   }, [activeTab, loadBoard]);
+  useLiveRefetch(
+    ["fleet_mesh_message", "local_agent_status", "notification", "autonomous_status", "autonomous_tick"],
+    () => { if (activeTabRef.current === "control") void loadBoard(); },
+    20_000,
+  );
   const [kaliAgentList, setKaliAgentList] = useState<KaliAgent[]>([]);
   const [kaliWssUrl, setKaliWssUrl] = useState<string>("");
   const [kaliConnectModalOpen, setKaliConnectModalOpen] = useState(false);

@@ -130,6 +130,71 @@ function simulateStandaloneWsChat(
   });
 }
 
+/**
+ * TEST46 — useLiveRefetch: العداد الحي الموحد.
+ * عند أي حدث مطابق من الناقل العام → إعادة جلب فورية (بخنق 800ms ضد العواصف)،
+ * وبالتبعية جولة استطلاع بطيئة (fallbackMs، حد أدنى 20ث) كخطة أمان لو القناة
+ * وقعت. ده اللي بيخلي عدّادات البطاقات لحظية من قناة /api/ws بدل ما تلفّ
+ * على السيرفر كل 4-5 ثواني.
+ */
+const MAX_REFETCH_GAP_MS = 800;
+export function useLiveRefetch(eventTypes: string[], refetch: () => void, fallbackMs: number) {
+  const ref = useRef(refetch);
+  ref.current = refetch;
+  const lastRef = useRef(0);
+  useEffect(() => {
+    const fire = () => {
+      const now = Date.now();
+      if (now - lastRef.current < MAX_REFETCH_GAP_MS) return;
+      lastRef.current = now;
+      try { void ref.current(); } catch { /* جلب خاص — مافيش تسريب */ }
+    };
+    const fns = eventTypes.map((t) => {
+      const fn: WsEventHandler = (ev) => { if (ev.type === t) fire(); };
+      localListeners.add(fn);
+      return fn;
+    });
+    // خطة الأمان: أول جلب فوري + عدّاد بطيء (الحدث الحي هو القناة الأساسية).
+    fire();
+    const interval = Math.max(fallbackMs, 20_000);
+    const timer = setInterval(fire, interval);
+    return () => {
+      for (const fn of fns) localListeners.delete(fn);
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventTypes.join("|"), fallbackMs]);
+}
+
+/**
+ * TEST46 — useLiveEvent: اشتراك في حدث واحد من الناقل العام.
+ * بيسمع من localListeners (بما فيها رسائل السيرفر الواردة عبر /api/ws بعد
+ * توحيد onmessage) + من BroadcastChannel في الوضع المستقل — من غير ما يفتح
+ * سوكيت جديد ولا يعيد الاستطلاع. العدادات الحية بتعتمد عليه.
+ */
+export function useLiveEvent(type: string, onEvent: WsEventHandler) {
+  const ref = useRef(onEvent);
+  ref.current = onEvent;
+  useEffect(() => {
+    const fn: WsEventHandler = (ev) => {
+      if (ev.type !== type) return;
+      try { ref.current(ev); } catch { /* handler خاص — مافيش تسريب */ }
+    };
+    localListeners.add(fn);
+    const bc = getBroadcastChannel();
+    if (bc) {
+      bc.onmessage = (e) => {
+        const d = e.data as { type?: string } | null;
+        if (d && typeof d === "object" && d.type === type) fn(d as { type: string; [key: string]: unknown });
+      };
+    }
+    return () => {
+      localListeners.delete(fn);
+      if (bc) bc.close();
+    };
+  }, [type]);
+}
+
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const { sessionId = "global", onMessage, autoConnect = true } = options;
   const [connected, setConnected] = useState(false);
@@ -218,7 +283,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       ws.onmessage = (evt) => {
         try {
           const data = JSON.parse(evt.data as string) as { type: string; [key: string]: unknown };
-          dispatchLocal(data);
+          // TEST46 — توحيد الطبقة: رسالة السيرفر كانت بتوصل لمالك السوكيت
+          // وحده (dispatchLocal بتاع الinstance ده بس). دلوقتي كل رسالة واردة
+          // تدخل الباص العام (localListeners + BroadcastChannel + SSE hook)
+          // فكل شاشة/تاب/عداد يسمع نفس الأحداث فورًا — ناقل واحد لكل الكل.
+          emitPlatformWsEvent(data);
         } catch {
           // ignore
         }

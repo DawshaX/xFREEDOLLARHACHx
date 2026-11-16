@@ -16,6 +16,10 @@ import KaliSystemsPanel from "./KaliSystemsPanel";
  * كل رقم هنا جاي من GET /api/ops/kali — بلا ادعاء.
  */
 const API = "/api";
+/* TEST46 — الأوامر اللي المالك بينسخها لتشغيلها على جهازه لازم تبقى مطلقة:
+ * API نسبي ("/api") فكانت بتطلع /api/api/... → 404. نفس صيغة الراوتر نفسه
+ * (routes/local-agent.ts بيبني الأوامر بـ${origin}/api/...). */
+const ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
 
 type HeavyTool = { present: boolean; version?: string };
 type KaliNodeRow = {
@@ -543,7 +547,11 @@ export default function KaliEnvPage() {
             🐉 بيئة كالي الحقيقية المدمجة — جوه البرنامج نفسه
           </h1>
           <p className="text-[10px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-            {st?.present ? "rootfs كالي كاملة 100% بتشتغل بproot على الهَب · الديسكتوب بيتفتح من أي دومين بيوصل للهَب (nova.waifly.com) · الأجينت بيستخدمها بأداة kali_run" : "كالي شغالة فعليًا على عقد الأسطول السحابية (rootfs + proot) — المخزن على جيت هوب وصفر على السيرفر · الطرفية تحت بتنفّذ على العقد مباشرة وkali_run بيتحول عليها تلقائيًا"}
+            {st?.present
+              ? `rootfs كالي على الهَب (${st.packages ? `${st.packages.toLocaleString("en")} حزمة مقاسة` : "مقاسة"}) بتشتغل بproot · الديسكتوب بيتفتح من أي دومين بيوصل للهَب (nova.waifly.com) · الأجينت بيستخدمها بأداة kali_run`
+              : nodes?.nodes.some((n) => n.kali)
+                ? "كالي شغالة فعليًا على عقد الأسطول السحابية (rootfs + proot) — المخزن على جيت هوب وصفر على السيرفر · الطرفية تحت بتنفّذ على العقد مباشرة وkali_run بيتحول عليها تلقائيًا"
+                : "مافيش كالي على الهَب ولا عقدة كالية متصلة دلوقتي (قياس حي) — موجة fleet-nodes كل 5 ساعات بتبني وتوصّل عقدة كالية تلقائيًا، والطرفية تحت هتنفّذ عليها أول ما توصل"}
           </p>
         </div>
         <button onClick={() => navigate("/agent-pro")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
@@ -618,10 +626,10 @@ export default function KaliEnvPage() {
             <div className="mt-1.5 rounded-lg p-2.5 font-mono text-[9px]" style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
               <p className="mb-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>شغّل على جهازك (Linux/Mac/Windows بNode 18+) — العقدة بتتسجل هنا وkali_run بيتحول عليها تلقائيًا:</p>
               <div className="break-all" style={{ color: "#44ff88" }}>
-                curl -fsSL {API}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server {API.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1
+                curl -fsSL {ORIGIN}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server {ORIGIN.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1
               </div>
               <button
-                onClick={() => { try { void navigator.clipboard.writeText(`curl -fsSL ${API}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server ${API.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1`); setNodeCopied(true); setTimeout(() => setNodeCopied(false), 2000); } catch { /* الحقل ظاهر للنسخ اليدوي */ } }}
+                onClick={() => { try { void navigator.clipboard.writeText(`curl -fsSL ${ORIGIN}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server ${ORIGIN.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1`); setNodeCopied(true); setTimeout(() => setNodeCopied(false), 2000); } catch { /* الحقل ظاهر للنسخ اليدوي */ } }}
                 className="mt-1.5 text-[9px] font-black px-2 py-1 rounded"
                 style={{ background: "rgba(68,255,136,0.15)", border: "1px solid rgba(68,255,136,0.4)", color: "#44ff88" }}>
                 {nodeCopied ? "✓ اتنسخ" : "نسخ الأمر"}
@@ -679,7 +687,7 @@ export default function KaliEnvPage() {
               <ToolCell name="SecLists" t={st.tools?.seclists} />
             </div>
             <p className="text-[8px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-              + كل مجموعات كالي (information-gathering · vulnerability · web · database · passwords · wireless · reverse-engineering · exploitation · sniffing · social-engineering · post-exploitation · forensics) والتحميل الجديد جوه البيئة بـpip/git.
+              + مجموعات كالي الرسمية (metapackages kali-tools-*) متاحة جوه البيئة عبر apt، والتحميل الجديد بـpip/git — والقياس الفعلي لكل أداة في الكتالوج والمخزن تحت.
             </p>
           </div>
 
@@ -818,7 +826,7 @@ export default function KaliEnvPage() {
               <ToolCell name="SecLists" t={st.tools?.seclists} />
             </div>
             <p className="text-[8px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-              + كل مجموعات كالي (information-gathering · vulnerability · web · database · passwords · wireless · reverse-engineering · exploitation · sniffing · social-engineering · post-exploitation · forensics) والتحميل الجديد جوه البيئة بـpip/git.
+              + مجموعات كالي الرسمية (metapackages kali-tools-*) متاحة جوه البيئة عبر apt، والتحميل الجديد بـpip/git — والقياس الفعلي لكل أداة في الكتالوج والمخزن تحت.
             </p>
           </>
         ) : nodes?.tools ? (
@@ -1130,7 +1138,7 @@ export default function KaliEnvPage() {
           {/* ── TEST41 · 📦 مخزن كالي الكامل — البحث + التثبيت عند الطلب ─────── */}
           <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(153,102,255,0.22)" }}>
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-[10px] font-black" style={{ color: "#c9a8ff" }}>📦 مخزن كالي الكامل — {cat ? Object.values(cat).flat().length : 0} حزمة في {cat ? Object.keys(cat).length : 0} فئة رسمية</span>
+              <span className="text-[10px] font-black" style={{ color: "#c9a8ff" }}>📦 مخزن كالي الكامل — {cat ? cat.reduce((n, c) => n + c.tools.length, 0) : 0} أداة في {cat?.length ?? 0} فئة رسمية</span>
               <input value={catQ} onChange={(e) => setCatQ(e.target.value)} placeholder="دوّر على أداة…"
                 className="text-[10px] font-mono px-2 py-1 rounded outline-none" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(153,102,255,0.3)", color: "#e0d0ff", width: 180 }} />
             </div>
