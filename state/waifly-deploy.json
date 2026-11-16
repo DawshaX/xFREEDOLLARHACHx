@@ -1,32 +1,32 @@
 {
-  "at": "2026-11-16T15:53:39.707Z",
+  "at": "2026-11-16T21:40:27.184Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-16T10:04:52Z",
-    "size": 4194645
+    "updatedAt": "2026-11-16T15:57:58Z",
+    "size": 4196629
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "f4545ea6e8cdd94d077bb3eed812945ea2cdeeb4",
-    "builtAt": "2026-11-16T10:04:30.449Z",
+    "commit": "91102f62d4af3f20bf1a8b96ba66e6dd1a591c2e",
+    "builtAt": "2026-11-16T15:57:36.661Z",
     "files": 188,
     "builtBy": "github-actions"
   },
   "boot": {
-    "commit": "f4545ea6e8cdd94d077bb3eed812945ea2cdeeb4",
-    "builtAt": "2026-11-16T10:04:30.449Z",
+    "commit": "91102f62d4af3f20bf1a8b96ba66e6dd1a591c2e",
+    "builtAt": "2026-11-16T15:57:36.661Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 22 ثانية)",
-    "lastCheckAt": "2026-11-16T15:49:52.269Z",
-    "currentBuiltAt": "2026-11-16T10:04:30.449Z",
-    "latestReleaseAt": "2026-11-16T10:04:52Z",
+    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 21 ثانية)",
+    "lastCheckAt": "2026-11-16T21:40:01.687Z",
+    "currentBuiltAt": "2026-11-16T15:57:36.661Z",
+    "latestReleaseAt": "2026-11-16T15:57:58Z",
     "restartNeeded": false
   },
   "updaterInstall": null,
@@ -38,28 +38,25 @@
   "page": {
     "status": 200,
     "cacheControl": "no-store",
-    "servedAsset": "/assets/index-BCYI1yI-.js",
+    "servedAsset": "/assets/index-CoSOkjNR.js",
     "htmlBytes": 2484
   },
   "fleet": {
     "status": 200,
-    "count": 15,
+    "count": 12,
     "ids": [
       "self-node",
-      "gh-10-1015",
-      "gh-12-1021",
-      "gh-8-1015",
-      "gh-16-1018",
-      "gh-2-1015",
-      "gh-7-1017",
-      "gh-13-1016",
-      "gh-15-1016",
-      "gh-11-1018",
-      "gh-3-1016",
-      "gh-9-1016",
-      "gh-1-1016",
-      "gh-4-1017",
-      "gh-18-1017"
+      "gh-15-1633",
+      "gh-7-1607",
+      "gh-1-1700",
+      "gh-5-1604",
+      "gh-6-1604",
+      "gh-2-1604",
+      "gh-10-1604",
+      "gh-13-1605",
+      "gh-14-1603",
+      "gh-4-1603",
+      "gh-3-1603"
     ]
   }
 }
