@@ -5918,6 +5918,10 @@ if (path === "/fleet/system") {
     return { ok: true, static: true, note: staticNote };
   }
 
+  if (path === "/kali-env/catalog") {
+    return { ok: true, categories: [], static: true, note: "الوضع الثابت: مافيش سيرفر — الكتالوج المقاس بيشتغل على الهَب." };
+  }
+
   if (path === "/kali-env/health") {
     /* TEST42 — كارت كالي في NovaAgentPro بيقرا /health حتى في الوضع الساكن:
      * الرد الصادق هنا «القياس الحي على الهَب» — مافيش rootfs ولا أسطول
