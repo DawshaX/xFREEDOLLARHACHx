@@ -26,6 +26,14 @@ on:
       # طول اليوم: 10:54 و20:35). الفحص الطازق بقى سطر `cli | hub …` في تقرير live-verify كل 6 ساعات،
       # فالـwatchdog ده شغله إدارة الـissue (فتح/قفل #nova:down) مش سرعة الكشف.
   workflow_dispatch:
+  # TEST44 — قِيس 2026-11-16: الجدوليات وقفت بصمت تاني (آخر run 07:04 واللي بعدها
+  # ماحصلتش رغم ال*/30) وrerun رفض «workflow file may be broken» والYAML سليم —
+  # يعني الكشف بيتجمّد على مزاج الجدولة. البديل المقاس: أي دفعة تلمّ الملف ده =
+  # بروبس فوري (الpush paths تحت)، + repository_dispatch عشان أي session تعرف
+  # تنادي البروبس في أي لحظة بغصن عن جدولة GitHub:
+  #   gh api -X POST repos/OWNER/REPO/dispatches -f event_type=nova-probe
+  repository_dispatch:
+    types: [nova-probe]
   push:
     # أي دفعة تلمّ سكربت الطاقة أو الملف ده = محاولة قيام كمان مرة في نفس الوقت،
     # بدل الاستنان لـcron اللي GitHub نفسه بيأخّره (متقاس 2026-11-02: تشغيلان بس
