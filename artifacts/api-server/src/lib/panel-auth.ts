@@ -251,7 +251,8 @@ const LOGIN_PAGE = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset
   <input id="p" name="pass" type="password" required>
   <button id="b" type="submit">دخول</button>
   <div class="err" id="e"></div>
-  <div class="foot">كل محاولة دخول <b>بتتسجّل</b> بالوقت والـIP</div>
+  <div class="foot">كل محاولة دخول <b>بتتسجّل</b> بالوقت والـIP<br>
+  <span style="opacity:.75">كلمة السر الافتراضية = قيمة <b>NOVA_EXEC_TOKEN</b> (إلا لو ظبطت <b>NOVA_PANEL_PASS</b>) · وبتدخل من الرابط نفسه: ‎/?user=…&amp;pass=…</span></div>
 </form>
 <script>
 var F=document.getElementById("f"),E=document.getElementById("e"),B=document.getElementById("b");
@@ -349,6 +350,45 @@ export function panelAuthMiddleware() {
     const p = req.path || "/";
     const ip = clientIp(req);
     const ua = String(req.headers["user-agent"] ?? "").slice(0, 160);
+
+    /* TEST39 — الدخول من الرابط نفسه: ‎/?user=…&pass=…‎ (سير سلوك المالك المقاس:
+     * بيفتح اللوحة بالبيانات في الURL والميدلوير كان بيتجاهلهم تمامًا فيرجعله
+     * صفحة الدخول كأنهم مش موجودين). قاعدة القرار:
+     *   • صفحات HTML بس (مش API — الآلات بيتعاملوا بـ?token= زي ما هما).
+     *   • بلا جلسة سابقة (الجلسة السليمة أهم من البيانات في الرابط).
+     *   • صح؟ كوكي جلسة + ريدايركت 302 لنفس الصفحة من غير البيانات (ماتقعدش
+     *     في شريط العنوان ولا الهيستوري بعد الحركة).
+     *   • غلط؟ recordFail زي الفورم بالحرف (نفس الحدود، نفس السجل) وبنكمل
+     *     لصفحة الدخول العادية — مافيش تنازل أمني، ده نفس الباب بمفتاح تاني. */
+    if (req.method === "GET" && !p.startsWith("/api")) {
+      const q = (req.query ?? {}) as { user?: string; pass?: string };
+      const urlUser = typeof q.user === "string" ? q.user : "";
+      const urlPass = typeof q.pass === "string" ? q.pass : "";
+      const hasCreds = urlUser !== "" && urlPass !== "";
+      const alreadyIn = userFromCookieHeader(String(req.headers.cookie ?? ""));
+      if (hasCreds && !alreadyIn) {
+        const okUser = safeEq(urlUser, panelUser());
+        const okPass = safeEq(urlPass, panelPass());
+        if (okUser && okPass && panelPass() !== "") {
+          const sess = issueSession(panelUser());
+          const cleaned = new URL(req.originalUrl || req.url, "http://nova.local");
+          cleaned.searchParams.delete("user");
+          cleaned.searchParams.delete("pass");
+          const next = cleaned.pathname + (cleaned.search || "");
+          res.setHeader("Cache-Control", "no-store");
+          res.setHeader(
+            "Set-Cookie",
+            `${COOKIE_NAME}=${encodeURIComponent(sess)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(sessionTtlMs() / 1000)}`,
+          );
+          authLog({ kind: "login_ok", user: panelUser(), ip, ua, detail: "url-creds" });
+          res.redirect(302, next || "/");
+          return;
+        }
+        recordFail(ip);
+        authLog({ kind: "login_fail", user: urlUser.slice(0, 64), ip, ua, detail: "url-creds" });
+        /* بنكمل عادي — صفحة /login هتترسم وهتكلمه بنفس رسالة الغلط الموحدة */
+      }
+    }
 
     /* صفحة الدخول نفسها */
     if (p === "/login") {
