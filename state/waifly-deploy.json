@@ -1,32 +1,29 @@
 {
-  "at": "2026-11-16T00:18:42.201Z",
+  "at": "2026-11-16T07:13:11.043Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
-  "asset": {
-    "updatedAt": "2026-11-15T21:28:49Z",
-    "size": 4167413
-  },
+  "asset": null,
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "0fe51415679db3c7750d2020dacc29a83742dea2",
-    "builtAt": "2026-11-15T21:28:28.020Z",
-    "files": 188,
-    "builtBy": "github-actions"
+    "commit": "d1abc5f26094d61675571050c4fee583f9befd49",
+    "builtAt": "2026-11-16T03:49:01.557Z",
+    "files": 189,
+    "builtBy": "local"
   },
   "boot": {
-    "commit": "0fe51415679db3c7750d2020dacc29a83742dea2",
-    "builtAt": "2026-11-15T21:28:28.020Z",
+    "commit": "d1abc5f26094d61675571050c4fee583f9befd49",
+    "builtAt": "2026-11-16T03:49:01.557Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 21 ثانية)",
-    "lastCheckAt": "2026-11-16T00:15:48.454Z",
-    "currentBuiltAt": "2026-11-15T21:28:28.020Z",
-    "latestReleaseAt": "2026-11-15T21:28:49Z",
+    "lastDetail": "مفيش أحدث من اللي شغّال (فرق -1310872 ثانية)",
+    "lastCheckAt": "2026-11-16T07:10:08.278Z",
+    "currentBuiltAt": "2026-11-16T03:49:01.557Z",
+    "latestReleaseAt": "2026-10-31T23:41:10Z",
     "restartNeeded": false
   },
   "updaterInstall": null,
@@ -34,11 +31,13 @@
   "action": "fresh",
   "bootAfter": null,
   "fresh": true,
-  "notes": [],
+  "notes": [
+    "مافيش أصل nova-24-7.zip في الإصدار nova-portable (HTTP 200)"
+  ],
   "page": {
     "status": 200,
     "cacheControl": "no-store",
-    "servedAsset": "/assets/index-3J5i78de.js",
+    "servedAsset": "/assets/index-BvwaYWWH.js",
     "htmlBytes": 2484
   },
   "fleet": {
@@ -46,9 +45,9 @@
     "count": 4,
     "ids": [
       "self-node",
-      "gh-14-1915",
-      "gh-19-1950",
-      "gh-20-2153"
+      "gh-10-0244",
+      "gh-5-0145",
+      "gh-1-0434"
     ]
   }
 }
