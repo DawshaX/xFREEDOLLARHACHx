@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-16T21:41:18.588Z",
+  "at": "2026-11-16T21:42:31.061Z",
   "seat": "openai",
   "thinking": {
     "reply": "المنصة حالياً مع تغطية 1٪ فقط وتحتاج توسعة بحث الثغرات لزيادة الفعالية.",
@@ -12,7 +12,7 @@
   "action": {
     "kind": "corpus_search",
     "ok": false,
-    "error": "The operation was aborted due to timeout"
+    "error": "HTTP 400"
   },
   "answered": null,
   "senses": {
