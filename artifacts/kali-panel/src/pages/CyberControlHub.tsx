@@ -34,6 +34,7 @@ import {
 import { LiveAgentPanel } from "@/components/desktop/LiveAgentPanel";
 import type { ClientToolEvent } from "@/components/desktop/AgentWindow";
 import NovaCommanderPage from "./NovaCommander";
+import { useLiveEvent, useLiveRefetch } from "@/hooks/useWebSocket";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 const API = "/api";
@@ -422,9 +423,12 @@ function KaliAiPanel({ intel, hasDevice, loadIntel, ctx }: {
 
   useEffect(() => {
     loadIntel(); loadTasks();
-    const iv = setInterval(() => { loadIntel(); loadTasks(); }, 8000);
+    const iv = setInterval(() => { loadIntel(); loadTasks(); }, 30_000);
     return () => clearInterval(iv);
   }, [loadIntel, loadTasks]);
+  // TEST46 — مهام/عقل كالي لحظيًا من الناقل الموحد + خطة أمان.
+  useLiveRefetch(["kali_tasks_changed"], loadTasks, 30_000);
+  useLiveRefetch(["agent_deep_profile", "hw_metrics"], loadIntel, 30_000);
 
   useEffect(() => {
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -774,7 +778,15 @@ function LocalControlPanel({ intel, ctx }: { intel: SystemIntel | null; ctx: Hub
     } catch {}
   }, [selectedAgent]);
 
-  useEffect(() => { void pollAgents(); const t = setInterval(pollAgents, 5000); return () => clearInterval(t); }, [pollAgents]);
+  useEffect(() => { void pollAgents(); const t = setInterval(pollAgents, 30_000); return () => clearInterval(t); }, [pollAgents]);
+  // TEST46 — اتصال/قطع الوكلاء بيبث لحظيًا من السيرفر (local_agent_status) وبايلوده
+  // نفس شكل النداء — نعرضه مباشرة بلا جلب. والعدّاد خطة أمان 30ث.
+  useLiveEvent("local_agent_status", (ev) => {
+    const d = ev as { connected?: boolean; agents?: AgentInfo[] };
+    setConnected(Boolean(d.connected));
+    if (d.agents && d.agents.length > 0) { setAgents(d.agents); setSelectedAgent((sel) => sel ?? d.agents![0].id); }
+    else if (!d.connected) setAgents([]);
+  });
 
   // When active mission changes, show it in terminal
   useEffect(() => {
