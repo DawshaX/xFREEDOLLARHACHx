@@ -247,9 +247,18 @@ router.use(bookmarksRouter);
 router.use(playbooksRouter);
 router.use(workspacesRouter);
 router.use(webhooksRouter);
+/* TEST45 — الأزرار الميتة بقوا حقيقية: محرر الريجستري · مدير الملفات · شات AI ·
+ * الدايمون الذاتي · قاعدة المعرفة · سجل الثغرات · لقطة الشاشة */
+import registryRouter from "./registry";
+import filesysRouter from "./filesys";
+import extrasRouter from "./extras";
+router.use(registryRouter);
+router.use(filesysRouter);
+router.use(extrasRouter);
 router.use(installerRouter);
 
 // ── Stubs (fallback compatibility) ───────────────────────────────────────────
 router.use(stubsRouter);
-
+/* TEST45 — الأزرار الميتة بقوا حقيقية (الماونتس قبل الstubs عشان الحقيقية
+ * تتقدم على أي stub قديم — قِيس 09:57Z: screenshot كان بيلتقطه stub) */
 export default router;

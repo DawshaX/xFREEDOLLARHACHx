@@ -541,7 +541,12 @@ app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     const method = String(req.method || "GET").toUpperCase();
     const path = req.originalUrl || req.url || "";
     const isRead = method === "GET" || method === "HEAD";
-    const realNamespace = /\/api\/(exec|local-agent|local-agent-input|live-agent|live-events|nova-core|ops|fleet|nodes|kill-switch|memory|evidence|reports|settings|keys|ollama|tools|scanner|proxy|deep-research|installer|jobs)\b/.test(path);
+    /* TEST45 — قِيس 09:58Z: الاعتراض ده كان بيستبدل أي 404/500 لـGETs بره القايمة
+ * برد الstub الوهمي (1px PNG وغيره) — يعني الأخطاء الصادقة من registry/files/
+ * vulns/ai/agent/system/nova/knowledge كانت بتتشال وتتبدل ببيانات وهمية = باظت
+ * الصفحات. القايمة بقت تشمل كل الnamespaces الحقيقية (أو توسعت كلها):
+ * كل namespace له راوتر حي على الجهاز رده الحقيقي أهم من أي fallback. */
+const realNamespace = /\/api\/(exec|local-agent|local-agent-input|live-agent|live-events|nova-core|ops|fleet|nodes|kill-switch|memory|evidence|reports|settings|keys|ollama|tools|scanner|proxy|deep-research|installer|jobs|system|registry|files|vulns|ai|agent|nova|knowledge)\b/.test(path);
     if (!isRead || realNamespace) {
       return origJson(body);
     }
