@@ -71,7 +71,7 @@ app.use(visitorIntelMiddleware());
 // ── بوابة الدخول (panel-auth) ── بتقفل الواجهة كلها: فيرست بصفحة دخول،
 // والآلات بتعدّي بالتوكن زي ما هي. عمدًا بعد عين الزيارات: الغريب اللي بيخبط
 // على الباب لسه بيتبلّغ تليجرام، بس مش بيشوف جوه.
-import { panelAuthMiddleware } from "./lib/panel-auth";
+import { panelAuthMiddleware, panelAuthDiagnostics, clearLoginLockout } from "./lib/panel-auth";
 import { kaliNovncDir } from "./lib/ops/kali-env";
 /* TEST35 — the login handler lives inside panelAuthMiddleware, so the tight
  * limiter has to be mounted in front of it. Without this, /api/panel/login
@@ -80,6 +80,26 @@ import { kaliNovncDir } from "./lib/ops/kali-env";
  * already covers everything else. */
 app.use("/api/panel/login", authLimiter());
 app.use("/login", authLimiter());
+
+/*
+ * تشخيص الدخول — قبل البوابة بقصد، عشان يشتغل حتى لو المستخدم مش قادر يدخل.
+ * مافيش سر بيرجع: أعلام true/false بس (شوف panelAuthDiagnostics).
+ * تصفير القفل محتاج توكن الآلة — مش أي زائر.
+ */
+app.get("/api/panel/diag", (req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ ok: true, ...panelAuthDiagnostics(req) });
+});
+app.post("/api/panel/unlock", (req: Request, res: Response) => {
+  const tok = String(req.headers["x-nova-token"] ?? req.query.token ?? "");
+  const expected = String(process.env.NOVA_EXEC_TOKEN ?? "");
+  if (!expected || tok !== expected) {
+    res.status(403).json({ ok: false, error: "forbidden", says_ar: "محتاج NOVA_EXEC_TOKEN في الهيدر x-nova-token" });
+    return;
+  }
+  res.json({ ok: true, cleared: clearLoginLockout(req) });
+});
+
 app.use(panelAuthMiddleware());
 
 // TEST12 — ملفات noVNC من جوه rootfs كالي نفسها (بعد بوابة الدخول — الجلسة
