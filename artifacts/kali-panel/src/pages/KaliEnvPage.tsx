@@ -3,6 +3,10 @@ import { Activity, Monitor, Play, RefreshCw, Square, Terminal, Wrench, ArrowLeft
 import { useLocation } from "wouter";
 import { pushNotify } from "@/lib/sse";
 import { novaAuthHeaders } from "@/lib/ops-client";
+/* TEST38 — لوحة الأنظمة الحقيقية: حالة النظام (CPU/RAM/قرص/عمليات/شبكة/GPU/rootfs)
+ * + كتالوج الـ 11 تصنيف رسمي لكل أدوات كالي + تشغيل أداة بضغطة. مكوّن منفصل
+ * عشان الصفحة الأصلية تفضل زي ما هي — إضافة فوق الموجود، مش استبدال. */
+import KaliSystemsPanel from "./KaliSystemsPanel";
 
 /**
  * TEST12 — «شغل نظام الكالي واعملو مكان وتبويب» — التبويبة المخصصة لبيئة كالي
@@ -930,6 +934,10 @@ export default function KaliEnvPage() {
           )
         ) : null}
       </div>
+
+      {/* TEST38 — لوحة الأنظمة الحقيقية: حالة النظام المقاسة + كتالوج الـ 11
+          تصنيف + تشغيل أداة بضغطة. مضافة فوق كل حاجة موجودة، مش بديلة عنها. */}
+      <KaliSystemsPanel />
 
       {/* الربط بالأجينت */}
           <div className="rounded-xl p-3" style={{ background: "rgba(34,211,238,0.04)", border: "1px solid rgba(34,211,238,0.25)" }}>

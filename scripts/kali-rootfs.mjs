@@ -77,7 +77,55 @@ const REQUIRED_TOOLS = [
   "john", "hashcat", "tshark", "burpsuite", "nuclei", "subfinder",
   "httpx", "katana", "dnsx", "naabu", "ffuf", "nikto", "whatweb",
   "wireshark", "zaproxy", "searchsploit", "netcat", "socat", "proxychains4",
+  /* TEST38 — the rest of the 11 Kali categories, so `--tools` covers the whole
+     catalogue the /kali-env page shows instead of a 25-tool subset. */
+  "masscan", "whois", "dig", "dnsenum", "recon-ng",
+  "lynis", "dirb", "dirsearch", "wfuzz", "wpscan", "commix",
+  "medusa", "crunch", "patator", "ncrack", "cewl", "wordlists",
+  "airmon-ng", "airodump-ng", "aireplay-ng", "reaver", "kismet", "wifite", "hcxdumptool",
+  "msfvenom", "setoolkit", "crackmapexec", "routersploit",
+  "bettercap", "ettercap", "mitmproxy", "responder", "dsniff", "arpspoof", "macchanger",
+  "ncat", "chisel", "bloodhound",
+  "tcpdump", "binwalk", "foremost", "exiftool", "volatility", "autopsy", "sleuthkit",
+  "radare2", "ghidra", "gdb", "objdump", "readelf", "strings", "strace", "ltrace", "apktool", "jadx",
+  "pandoc", "wkhtmltopdf", "cutycapt", "cherrytree",
 ];
+
+/**
+ * Debian/Kali packages that actually provide each tool. `--tools` probes the
+ * binary; this map lets the report say WHICH package to install when it is
+ * missing, instead of leaving the operator to guess.
+ */
+const TOOL_PACKAGE = {
+  nmap: "nmap", masscan: "masscan", whois: "whois", dig: "dnsutils",
+  dnsenum: "dnsenum", "recon-ng": "recon-ng", subfinder: "subfinder",
+  httpx: "httpx-toolkit", naabu: "naabu", dnsx: "dnsx", katana: "katana",
+  whatweb: "whatweb", "theHarvester": "theharvester",
+  nuclei: "nuclei", nikto: "nikto", lynis: "lynis", searchsploit: "exploitdb",
+  gobuster: "gobuster", ffuf: "ffuf", feroxbuster: "feroxbuster", dirb: "dirb",
+  dirsearch: "dirsearch", wfuzz: "wfuzz", sqlmap: "sqlmap", wpscan: "wpscan",
+  commix: "commix", burpsuite: "burpsuite", zaproxy: "zaproxy",
+  hydra: "hydra", john: "john", hashcat: "hashcat", medusa: "medusa",
+  crunch: "crunch", patator: "patator", ncrack: "ncrack", cewl: "cewl",
+  wordlists: "wordlists", seclists: "seclists",
+  "aircrack-ng": "aircrack-ng", "airmon-ng": "aircrack-ng", "airodump-ng": "aircrack-ng",
+  "aireplay-ng": "aircrack-ng", reaver: "reaver", kismet: "kismet",
+  wifite: "wifite", hcxdumptool: "hcxdumptool",
+  msfconsole: "metasploit-framework", msfvenom: "metasploit-framework",
+  setoolkit: "set", crackmapexec: "crackmapexec", routersploit: "routersploit",
+  bettercap: "bettercap", ettercap: "ettercap-text-only", mitmproxy: "mitmproxy",
+  responder: "responder", dsniff: "dsniff", arpspoof: "dsniff", macchanger: "macchanger",
+  netcat: "netcat-traditional", ncat: "ncat", socat: "socat",
+  chisel: "chisel", bloodhound: "bloodhound", proxychains4: "proxychains4",
+  wireshark: "wireshark", tshark: "tshark", tcpdump: "tcpdump",
+  binwalk: "binwalk", foremost: "foremost", exiftool: "libimage-exiftool-perl",
+  volatility: "volatility3", autopsy: "autopsy", sleuthkit: "sleuthkit",
+  radare2: "radare2", ghidra: "ghidra", gdb: "gdb", objdump: "binutils",
+  readelf: "binutils", strings: "binutils", strace: "strace", ltrace: "ltrace",
+  apktool: "apktool", jadx: "jadx",
+  pandoc: "pandoc", wkhtmltopdf: "wkhtmltopdf", cutycapt: "cutycapt",
+  cherrytree: "cherrytree",
+};
 
 // ── tiny helpers ─────────────────────────────────────────────────────────────
 const C = {
@@ -322,6 +370,7 @@ function cmdTools() {
   }
 
   let present = 0;
+  const missing = [];
   for (const t of REQUIRED_TOOLS) {
     const where = found.get(t);
     if (where) {
@@ -329,12 +378,21 @@ function cmdTools() {
       ok(`${t.padEnd(14)} ${C.dim(where)}`);
     } else {
       bad(`${t.padEnd(14)} ${C.dim("not installed")}`);
+      const pkg = TOOL_PACKAGE[t];
+      if (pkg) missing.push(pkg);
     }
   }
   log(
     `\n  ${present}/${REQUIRED_TOOLS.length} tools present` +
       (present === REQUIRED_TOOLS.length ? C.green(" — complete") : C.yellow(" — incomplete")),
   );
+  /* TEST38 — name the packages instead of leaving the operator to guess which
+     apt package provides `httpx` (it is httpx-toolkit) or `setoolkit` (`set`). */
+  const uniq = [...new Set(missing)];
+  if (uniq.length > 0) {
+    log(C.bold("\n  Install the missing ones with:"));
+    log(C.dim(`    proot -R ${DEST} apt-get install -y ${uniq.join(" ")}`));
+  }
   return present === REQUIRED_TOOLS.length ? 0 : 1;
 }
 

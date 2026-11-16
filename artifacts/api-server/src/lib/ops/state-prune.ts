@@ -196,6 +196,17 @@ export function pruneState(now = Date.now()): PruneReport {
           let pkgs = 0;
           try { pkgs = readFileSync(join(root, "var/lib/dpkg/status"), "utf8").split("\n").filter((l) => l.startsWith("Package:")).length; } catch { /* ناقصة */ }
           if (pkgs >= 400) continue;
+          /* TEST38 — a rootfs that is structurally complete but has a small
+             package count is NOT a half-extracted one. The old rule deleted
+             anything under 400 packages, which also deleted a deliberately
+             minimal rootfs (and any test fixture) on every boot. A real
+             half-extraction is missing the shell or proot; a complete one has
+             both. Only delete when the structure itself is broken. */
+          const hasShell = existsSync(join(root, "bin", "sh")) || existsSync(join(root, "usr", "bin", "sh"));
+          const hasProot = existsSync(join(root, "usr", "local", "bin", "proot-static"))
+            || existsSync(join(root, "usr", "bin", "proot"))
+            || existsSync(join(root, "..", "proot-static"));
+          if (hasShell && hasProot) continue;
           const sz = dirBytes(root).bytes;
           if (sz <= 0) continue;
           rmSync(root, { recursive: true, force: true });

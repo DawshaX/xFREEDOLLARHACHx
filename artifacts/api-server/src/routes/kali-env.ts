@@ -18,23 +18,126 @@ import { requireOps } from "../lib/ops/gate";
 import { detectProotLayout, prootHealth, runInProot } from "../lib/ops/proot";
 import { kaliAnywhereExec } from "../lib/ops/kali-anywhere";
 import { readProbeCache, probeAllKaliNodes } from "../lib/ops/kali-node-probe";
+import { kaliSysInfo } from "../lib/ops/kali-sysinfo";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
 router.use(requireOps("kali-env"));
 
-/** The tools the operator asked for, grouped the way the page shows them. */
+/**
+ * TEST38 — the eleven official Kali categories, in Kali's own order.
+ *
+ * The page used to show eight ad-hoc buckets (`recon`, `web`, `mitm`, `utils`…)
+ * that did not match the menu a Kali user knows. These are the real ones, and
+ * every tool the operator named is present in the group it belongs to.
+ *
+ * Additive only: the old keys are kept as aliases at the bottom so anything
+ * that already reads `groups.recon` keeps working.
+ */
 const TOOL_GROUPS: Record<string, string[]> = {
+  "information-gathering": [
+    "nmap", "masscan", "subfinder", "amass", "dnsx", "naabu", "httpx", "whatweb",
+    "theHarvester", "whois", "dig", "dnsenum", "fierce", "recon-ng", "maltego",
+  ],
+  "vulnerability-analysis": [
+    "nuclei", "nikto", "openvas", "lynis", "searchsploit", "nmap", "vulners",
+  ],
+  "web-applications": [
+    "gobuster", "ffuf", "feroxbuster", "dirb", "dirsearch", "wfuzz", "sqlmap",
+    "wpscan", "katana", "burpsuite", "zaproxy", "commix", "xsser", "arjun",
+  ],
+  "password-attacks": [
+    "hydra", "john", "hashcat", "medusa", "crunch", "wordlists", "seclists",
+    "patator", "ncrack", "cewl",
+  ],
+  wireless: [
+    "aircrack-ng", "airmon-ng", "airodump-ng", "aireplay-ng", "airbase-ng",
+    "reaver", "kismet", "wifite", "bully", "pixiewps", "hcxdumptool", "hcxtools",
+  ],
+  exploitation: [
+    "msfconsole", "msfvenom", "msfdb", "metasploit", "armitage", "beef-xss",
+    "setoolkit", "routersploit", "crackmapexec", "impacket-smbserver",
+  ],
+  "sniffing-spoofing": [
+    "bettercap", "ettercap", "mitmproxy", "responder", "dsniff", "arpspoof",
+    "macchanger", "yersinia", "wireshark", "tcpdump",
+  ],
+  "post-exploitation": [
+    "mimikatz", "empire", "powersploit", "bloodhound", "chisel", "ligolo-ng",
+    "socat", "netcat", "ncat", "proxychains4",
+  ],
+  forensics: [
+    "wireshark", "tshark", "tcpdump", "binwalk", "foremost", "exiftool",
+    "volatility", "autopsy", "sleuthkit", "guymager", "dcfldd", "scalpel",
+  ],
+  "reverse-engineering": [
+    "radare2", "r2", "ghidra", "gdb", "objdump", "readelf", "strings", "ltrace",
+    "strace", "apktool", "jadx", "dex2jar", "nasm",
+  ],
+  reporting: [
+    "cutycapt", "wkhtmltopdf", "pandoc", "faraday", "dradis", "cherrytree",
+    "recordmydesktop", "libreoffice",
+  ],
+  /* ── aliases kept for existing consumers (additive, never removed) ── */
   recon: ["nmap", "masscan", "subfinder", "amass", "dnsx", "naabu", "httpx", "whatweb", "theHarvester"],
   web: ["gobuster", "ffuf", "feroxbuster", "dirb", "nikto", "nuclei", "katana", "sqlmap", "wpscan"],
   exploit: ["msfconsole", "msfvenom", "searchsploit", "metasploit"],
   password: ["hydra", "john", "hashcat", "medusa", "crunch"],
-  wireless: ["aircrack-ng", "airmon-ng", "airodump-ng", "aireplay-ng", "reaver", "kismet"],
   mitm: ["bettercap", "ettercap", "mitmproxy", "responder"],
-  forensics: ["wireshark", "tshark", "tcpdump", "binwalk", "foremost", "exiftool", "volatility"],
   utils: ["curl", "wget", "git", "python3", "node", "jq", "netcat", "socat", "openssl"],
 };
+
+/** The eleven real categories, in display order — aliases excluded. */
+export const KALI_CATEGORIES = [
+  "information-gathering", "vulnerability-analysis", "web-applications",
+  "password-attacks", "wireless", "exploitation", "sniffing-spoofing",
+  "post-exploitation", "forensics", "reverse-engineering", "reporting",
+] as const;
+
+/**
+ * One-click run recipes. Each tool gets the argument shape it actually takes,
+ * so the page can offer a target box instead of making the operator memorise
+ * flags. `{target}` is substituted; the value is quoted by `shellQuote` before
+ * it reaches the guest, so a target can never become a second command.
+ */
+export const TOOL_RECIPES: Record<string, { args: string; targetLabel: string; hint: string }> = {
+  nmap: { args: "-sV -T4 {target}", targetLabel: "host / CIDR", hint: "فحص منافذ وخدمات" },
+  masscan: { args: "{target} -p1-1000 --rate=1000", targetLabel: "host / CIDR", hint: "فحص سريع جدًا" },
+  subfinder: { args: "-d {target}", targetLabel: "domain", hint: "تعداد النطاقات الفرعية" },
+  httpx: { args: "-u {target} -status-code -title", targetLabel: "URL", hint: "فحص HTTP حي" },
+  naabu: { args: "-host {target} -top-ports 100", targetLabel: "host", hint: "فحص منافذ سريع" },
+  dnsx: { args: "-d {target} -a -resp", targetLabel: "domain", hint: "استعلامات DNS" },
+  whatweb: { args: "{target}", targetLabel: "URL", hint: "بصمة التقنيات" },
+  nuclei: { args: "-u {target} -severity critical,high", targetLabel: "URL", hint: "قوالب ثغرات" },
+  nikto: { args: "-h {target}", targetLabel: "URL", hint: "فحص ويب كلاسيكي" },
+  gobuster: { args: "dir -u {target} -w /usr/share/wordlists/dirb/common.txt", targetLabel: "URL", hint: "تعداد مسارات" },
+  ffuf: { args: "-u {target}/FUZZ -w /usr/share/wordlists/dirb/common.txt -mc 200,301,302", targetLabel: "URL", hint: "فَزِّر مسارات" },
+  feroxbuster: { args: "-u {target} -w /usr/share/wordlists/dirb/common.txt", targetLabel: "URL", hint: "تعداد متكرر" },
+  sqlmap: { args: "-u {target} --batch --level=1 --risk=1", targetLabel: "URL", hint: "فحص حقن SQL" },
+  wpscan: { args: "--url {target} --enumerate vp", targetLabel: "URL", hint: "فحص ووردبريس" },
+  katana: { args: "-u {target} -d 2", targetLabel: "URL", hint: "زحف روابط" },
+  hydra: { args: "-L /usr/share/wordlists/users.txt -P /usr/share/wordlists/passwords.txt {target} ssh", targetLabel: "host", hint: "تخمين اعتماد SSH" },
+  john: { args: "--wordlist=/usr/share/wordlists/rockyou.txt {target}", targetLabel: "ملف هاش", hint: "كسر هاش" },
+  hashcat: { args: "-m 0 -a 0 {target} /usr/share/wordlists/rockyou.txt", targetLabel: "ملف هاش", hint: "كسر هاش" },
+  "aircrack-ng": { args: "{target}", targetLabel: "ملف .cap", hint: "كسر WPA" },
+  "airodump-ng": { args: "{target}", targetLabel: "interface", hint: "التقاط شبكات" },
+  msfconsole: { args: "-q -x 'search {target}; exit'", targetLabel: "كلمة بحث", hint: "بحث في Metasploit" },
+  searchsploit: { args: "{target}", targetLabel: "اسم برنامج/إصدار", hint: "بحث في Exploit-DB" },
+  tshark: { args: "-i {target} -c 20", targetLabel: "interface", hint: "التقاط حزم" },
+  tcpdump: { args: "-i {target} -c 20 -nn", targetLabel: "interface", hint: "التقاط حزم" },
+  binwalk: { args: "{target}", targetLabel: "ملف", hint: "تحليل فيرموير" },
+  exiftool: { args: "{target}", targetLabel: "ملف", hint: "ميتاداتا" },
+  radare2: { args: "-q -c 'iI; q' {target}", targetLabel: "ملف تنفيذي", hint: "تحليل ثنائي" },
+  strings: { args: "{target} | head -40", targetLabel: "ملف", hint: "نصوص داخل ثنائي" },
+  whois: { args: "{target}", targetLabel: "domain / IP", hint: "بيانات التسجيل" },
+  dig: { args: "{target} ANY +short", targetLabel: "domain", hint: "استعلام DNS" },
+};
+
+/** POSIX single-quote escaping — the only quoting that survives every shell. */
+export function shellQuote(v: string): string {
+  return `'${v.replace(/'/g, `'\\''`)}'`;
+}
 
 /** TEST37 — أسطول كالي الحقيقي: العقد المتصلة وأيها جاهزة فعلاً (مقاس بالبروب،
  * كاش 3د). ده اللي يخلي الصفحة تعرض «كالي حقيقية شغالة في الخلفية» حتى لو
@@ -153,6 +256,226 @@ router.get("/kali-env/tools", async (_req, res) => {
     present: found.size,
     measuredAt: new Date().toISOString(),
   });
+});
+
+/**
+ * TEST38 — real system telemetry (CPU/RAM/disk/procs/net/GPU/rootfs).
+ *
+ * The page could say "proot exists" but not "what is this box doing". Every
+ * number here is read from /proc and statfs; anything unreadable comes back as
+ * `null` plus a reason in `unmeasured`, never as a zero the page would render
+ * as a real measurement.
+ */
+router.get("/kali-env/sysinfo", async (_req, res) => {
+  try {
+    res.json(await kaliSysInfo());
+  } catch (e) {
+    logger.error({ e }, "kali-env sysinfo failed");
+    res.status(500).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+/**
+ * TEST38 — the full tool catalogue with per-tool version, measured in one pass.
+ *
+ * `/tools` answers "present or missing" per group. This answers the richer
+ * question the page needs: for every tool in every one of the eleven
+ * categories, is it installed, what version, and what is the one-click recipe.
+ *
+ * One `command -v` + one `--version` sweep inside the guest — not 200 round
+ * trips. A tool that is present but whose version cannot be parsed reports
+ * `version: null` with `versionReason`, rather than a fabricated string.
+ */
+router.get("/kali-env/catalog", async (_req, res) => {
+  const layout = detectProotLayout();
+  const all = [...new Set(KALI_CATEGORIES.flatMap((c) => TOOL_GROUPS[c] ?? []))];
+
+  const measure = async (run: (cmd: string) => Promise<{ stdout: string; exitCode: number | null }>, plane: string) => {
+    // Presence sweep: one shell, one line per hit.
+    const presenceCmd = all.map((t) => `command -v ${t} >/dev/null 2>&1 && echo "OK:${t}"`).join("; ");
+    const pr = await run(presenceCmd);
+    const found = new Set(
+      pr.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)),
+    );
+    // Version sweep: only for tools that exist, so we never pay for 200 misses.
+    //
+    // Two measured bugs are fixed here:
+    //  1. No `head` — a minimal rootfs may not have coreutils' head, and the
+    //     probe then failed with "head: not found" instead of a version.
+    //  2. Records are separated by \x1e (ASCII record separator) rather than
+    //     newlines, so a tool that prints nothing cannot let the next `printf`
+    //     land on the same line and be read as this tool's version.
+    const RS = "\u001e";
+    const versionCmd = [...found]
+      .map((t) => `printf 'V:${t}='; (${t} --version 2>/dev/null || ${t} -V 2>/dev/null || ${t} -v 2>/dev/null || echo unknown); printf '${RS}'`)
+      .join("; ");
+    const vr = versionCmd ? await run(versionCmd) : { stdout: "", exitCode: 0 };
+    const versions: Record<string, string> = {};
+    for (const rec of vr.stdout.split(RS)) {
+      const m = /^V:([^=]+)=([\s\S]*)$/.exec(rec.trim());
+      if (!m) continue;
+      // First non-empty line only — some tools print a banner then details.
+      const first = m[2].split("\n").map((l) => l.trim()).find((l) => l.length > 0) ?? "";
+      versions[m[1]] = first.slice(0, 80);
+    }
+    const categories = KALI_CATEGORIES.map((cat) => {
+      const tools = TOOL_GROUPS[cat] ?? [];
+      return {
+        id: cat,
+        tools: tools.map((t) => {
+          const present = found.has(t);
+          const v = versions[t];
+          return {
+            name: t,
+            present,
+            version: present ? (v && v !== "unknown" ? v : null) : null,
+            versionReason: present && (!v || v === "unknown") ? "الأداة موجودة بس مش بتطبع إصدارها بالشكل المعتاد" : undefined,
+            recipe: TOOL_RECIPES[t] ?? null,
+          };
+        }),
+        present: tools.filter((t) => found.has(t)).length,
+        total: tools.length,
+      };
+    });
+    return {
+      ok: true,
+      ready: true,
+      measuredOn: plane,
+      measuredAt: new Date().toISOString(),
+      categories,
+      total: all.length,
+      present: [...found].filter((t) => all.includes(t)).length,
+    };
+  };
+
+  try {
+    if (layout.ready) {
+      const r = await measure(
+        async (cmd) => {
+          const out = await runInProot({ command: cmd, timeoutMs: 60_000 });
+          return { stdout: out.stdout, exitCode: out.exitCode };
+        },
+        "proot (rootfs على الهوست)",
+      );
+      res.json(r);
+      return;
+    }
+    // No local rootfs — measure on a live fleet Kali node instead of returning
+    // an empty catalogue the page would show as "0 tools".
+    const fleet = await fleetKaliSummary();
+    if (fleet.kaliReady > 0) {
+      const r = await measure(
+        async (cmd) => {
+          const out = await kaliAnywhereExec(cmd, 60_000);
+          return { stdout: out?.stdout ?? "", exitCode: out?.exitCode ?? null };
+        },
+        "عقدة كالي من الأسطول",
+      );
+      res.json({ ...r, fleet });
+      return;
+    }
+    res.json({
+      ok: false,
+      ready: false,
+      reason: "proot/rootfs مش منصّب على الهوست، ومفيش عقدة كالي حية في الأسطول ردّت",
+      searched: layout.searched,
+      fleet,
+      categories: KALI_CATEGORIES.map((c) => ({
+        id: c,
+        tools: (TOOL_GROUPS[c] ?? []).map((t) => ({ name: t, present: false, version: null, recipe: TOOL_RECIPES[t] ?? null })),
+        present: 0,
+        total: (TOOL_GROUPS[c] ?? []).length,
+      })),
+      total: all.length,
+      present: 0,
+    });
+  } catch (e) {
+    logger.error({ e }, "kali-env catalog failed");
+    res.status(500).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+/**
+ * TEST38 — one-click tool run.
+ *
+ * The page sends `{ tool, target }`; this builds the argv from the recipe and
+ * quotes the target with `shellQuote`, so a target of `1.2.3.4; rm -rf /`
+ * becomes a single literal argument instead of a second command. The tool name
+ * is validated against the catalogue — an unknown name is refused, never
+ * passed through.
+ */
+router.post("/kali-env/run", async (req: Request, res: Response) => {
+  const { tool, target, timeoutMs } = (req.body ?? {}) as {
+    tool?: string;
+    target?: string;
+    timeoutMs?: number;
+  };
+  const known = new Set(KALI_CATEGORIES.flatMap((c) => TOOL_GROUPS[c] ?? []));
+  if (typeof tool !== "string" || !known.has(tool)) {
+    res.status(400).json({ error: `أداة غير معروفة: ${String(tool).slice(0, 40)}` });
+    return;
+  }
+  const recipe = TOOL_RECIPES[tool];
+  if (!recipe) {
+    res.status(400).json({ error: `مفيش وصفة تشغيل لـ ${tool} — استخدم /kali-env/exec` });
+    return;
+  }
+  const tgt = typeof target === "string" ? target.trim() : "";
+  if (!tgt) {
+    res.status(400).json({ error: "target مطلوب" });
+    return;
+  }
+  // Reject anything that is not a plausible host/URL/path token. This is a
+  // second layer behind shellQuote — belt and braces, not the only defence.
+  if (tgt.length > 300 || /[\n\r\0]/.test(tgt)) {
+    res.status(400).json({ error: "target فيه محارف مرفوضة" });
+    return;
+  }
+  const command = `${tool} ${recipe.args.replace("{target}", shellQuote(tgt))}`;
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders?.();
+
+  const send = (data: unknown) => {
+    if (res.writableEnded || res.destroyed) return;
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch {
+      /* client gone */
+    }
+  };
+  const tmo = typeof timeoutMs === "number" ? Math.min(Math.max(timeoutMs, 1000), 600_000) : 180_000;
+  send({ type: "start", command, tool, target: tgt, hint: recipe.hint });
+
+  try {
+    const layout = detectProotLayout();
+    if (layout.ready) {
+      const result = await runInProot({
+        command,
+        timeoutMs: tmo,
+        onData: (stream, chunk) => send({ type: stream, text: chunk }),
+      });
+      send({ type: "done", plane: "proot", exitCode: result.exitCode, durationMs: result.durationMs, error: result.error });
+    } else {
+      const result = await kaliAnywhereExec(command, tmo);
+      if (!result) {
+        send({ type: "error", message: "مفيش طائرة تنفيذ: لا rootfs محلي ولا عقدة كالي حية" });
+      } else {
+        if (result.stdout) send({ type: "stdout", text: result.stdout });
+        if (result.stderr) send({ type: "stderr", text: result.stderr });
+        send({ type: "done", plane: result.plane, exitCode: result.exitCode, durationMs: result.durationMs });
+      }
+    }
+  } catch (e) {
+    logger.error({ e }, "kali-env run failed");
+    send({ type: "error", message: (e as Error).message });
+  } finally {
+    res.write("data: [DONE]\n\n");
+    res.end();
+  }
 });
 
 router.post("/kali-env/exec", async (req: Request, res: Response) => {
