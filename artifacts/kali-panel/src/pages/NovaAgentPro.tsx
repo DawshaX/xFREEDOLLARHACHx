@@ -253,6 +253,48 @@ const loadPrefs = (): Prefs => {
  * بأداته kali_run — الاتصال واحد في الاتنين. */
 type KaliNodeRow = { id: string; hostname: string; kali: boolean; mode: string; probed: boolean; connectedAt: string };
 const KALI_QUICK = ["nmap --version", "python3 --version", "sqlmap --version | head -1", "ls /usr/share/seclists | head -5", "uname -a", "id"];
+/* TEST43 — وصفات التشغيل بضغطة داخل أرينا كالي بتاع الشغل: الكتالوج المقاس
+ * (بتاع /kali-env) بيوصّل هنا — الأداة + الهدف = أمر واحد على نفس قناة البث. */
+type RecipeRow = { name: string; present: boolean; version: string | null; recipe: { args: string; targetLabel: string; hint: string } | null };
+
+function KaliQuickRecipes({ run, busy }: { run: (c: string) => Promise<void>; busy: boolean }) {
+  const [rows, setRows] = useState<RecipeRow[]>([]);
+  const [target, setTarget] = useState("");
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/kali-env/catalog", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(12000) });
+        if (!r.ok) return;
+        const d = await r.json() as { categories?: Array<{ tools?: RecipeRow[] }> };
+        setRows((d.categories ?? []).flatMap((c) => c.tools ?? []).filter((t) => t.recipe));
+      } catch { /* الجاي */ }
+    })();
+  }, []);
+  const q = (v: string) => `'${v.replace(/'/g, "'\\''")}'`;
+  const top = rows.slice(0, 14);
+  if (!top.length) return null;
+  return (
+    <div className="rounded-xl p-2.5 mb-2" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,102,85,0.2)" }}>
+      <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+        <span className="text-[9px] font-black" style={{ color: "#ff8a75" }}>⚡ تشغيل بضغطة — {rows.length} وصفة من الكتالوج المقاس</span>
+        <input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="الهدف (domain / URL / host…)"
+          className="text-[10px] font-mono px-2 py-1 rounded outline-none" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,102,85,0.3)", color: "#ffd0c8", width: 210 }} />
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {top.map((t) => (
+          <button key={t.name} disabled={busy || !target.trim()} title={`${t.recipe!.hint} · ${t.recipe!.targetLabel}${t.version ? ` · ${t.version}` : ""}`}
+            onClick={() => void run(t.recipe!.args.replace("{target}", q(target.trim())))}
+            className="text-[8px] font-mono px-1.5 py-0.5 rounded transition-all hover:opacity-80 disabled:opacity-40"
+            style={{ background: t.present ? "rgba(68,255,136,0.1)" : "rgba(255,170,68,0.08)", color: t.present ? "#44ff88" : "rgba(255,170,68,0.85)", border: "1px solid rgba(255,255,255,0.12)" }}>
+            {t.present ? "▶" : "＋"} {t.name}
+          </button>
+        ))}
+        {rows.length > top.length && <span className="text-[8px] font-mono self-center" style={{ color: "rgba(255,255,255,0.35)" }}>+{rows.length - top.length} وصفة في ‎/kali-env</span>}
+      </div>
+    </div>
+  );
+}
+
 function KaliFleetArena() {
   const [nodes, setNodes] = useState<{ hub: { kali: boolean; packages: number }; nodes: KaliNodeRow[] } | null>(null);
   const [log, setLog] = useState<Array<{ t: string; err?: boolean; plane?: boolean }>>([]);
@@ -294,6 +336,7 @@ function KaliFleetArena() {
   const ready = nodes?.nodes.filter(n => n.kali).length ?? 0;
   return (
     <div className="space-y-2" dir="rtl">
+      <KaliQuickRecipes run={run} busy={busy} />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-[11px] font-black" style={{ color: "#ff6655" }}>🐉 كالي السحابية — الطرفية الموحّدة (من أي مكان في البرنامج)</p>
         {nodes && (
