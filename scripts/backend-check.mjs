@@ -18,7 +18,12 @@ let failed = 0;
 async function probe(name, pathname, expect) {
   const started = Date.now();
   try {
-    const res = await fetch(`${BASE}${pathname}`, { signal: AbortSignal.timeout(15_000) });
+    /* TEST38 — قِيس 00:20Z: health بتاع ops-api (Supabase edge free) ردّ timeout
+ * بعد 15ث → verdict RED بدورة كاملة، والمسبب المرجح cold-start (الوظيفة نايمة
+ * فأول استيقاظ بياخد أكتر من 15ث). المهلة لـ30ث عشان القياس يميّز «نايمة
+ * واستيقظت» (GREEN بتأخير) عن «باقعًا» (RED حقيقي) — القياس الصادق مش
+ * المتسرع. */
+const res = await fetch(`${BASE}${pathname}`, { signal: AbortSignal.timeout(30_000) });
     const body = await res.json().catch(() => null);
     const ok = res.ok && expect(body);
     if (!ok) failed += 1;
