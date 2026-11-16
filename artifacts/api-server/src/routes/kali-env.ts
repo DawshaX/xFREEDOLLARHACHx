@@ -39,7 +39,7 @@ router.use(requireOps("kali-env"));
 const TOOL_GROUPS: Record<string, string[]> = {
   "information-gathering": [
     "nmap", "masscan", "subfinder", "amass", "dnsx", "naabu", "httpx", "whatweb",
-    "theHarvester", "whois", "dig", "dnsenum", "fierce", "recon-ng", "maltego",
+    "theHarvester", "whois", "dig", "dnsenum", "fierce", "recon-ng", "maltego", "sublist3r", "sherlock"
   ],
   "vulnerability-analysis": [
     "nuclei", "nikto", "openvas", "lynis", "searchsploit", "nmap", "vulners",
@@ -62,13 +62,16 @@ const TOOL_GROUPS: Record<string, string[]> = {
   ],
   "sniffing-spoofing": [
     "bettercap", "ettercap", "mitmproxy", "responder", "dsniff", "arpspoof",
-    "macchanger", "yersinia", "wireshark", "tcpdump",
+    "macchanger", "yersinia", "wireshark", "tcpdump", "arp-scan"
   ],
   "post-exploitation": [
     "mimikatz", "empire", "powersploit", "bloodhound", "chisel", "ligolo-ng",
-    "socat", "netcat", "ncat", "proxychains4",
+    "socat", "netcat", "ncat", "proxychains4", "netexec"
   ],
   forensics: [
+    /* TEST47 — steghide وvolatility3 مضافين: كانوا مستحيلي التثبيت من الواجهة
+     * (مش في الكتالوج أصلًا). مقاسين وتثبيتهم متاح الآن. */
+    "steghide", "volatility3",
     "wireshark", "tshark", "tcpdump", "binwalk", "foremost", "exiftool",
     "volatility", "autopsy", "sleuthkit", "guymager", "dcfldd", "scalpel",
   ],
@@ -369,7 +372,131 @@ router.get("/kali-env/sysinfo", async (_req, res) => {
  * trips. A tool that is present but whose version cannot be parsed reports
  * `version: null` with `versionReason`, rather than a fabricated string.
  */
+/* TEST47 — كاش الكتالوج: الفحص الحي (166 أداة × إصدارات) بياخد دقايق على
+ * عقدة مشغولة (لود 9.5) فكان المتصفح بيقطع بعد 10ث ويعرض «فشل جلب». القياس
+ * بقى واحد مشترك: أول نداء يقيس، والباقي ياخد آخر قياس فورًا مع measuredAt
+ * وcachedFrom — والقياس الخلفي بيتجدد كل 10 دقايق لو فيه طايرة حية. */
+type CatalogPayload = Record<string, unknown>;
+let catalogCache: { at: number; payload: CatalogPayload } | null = null;
+let catalogInflight: Promise<CatalogPayload> | null = null;
+const CATALOG_TTL_MS = 10 * 60_000;
+
+async function measureCatalog(): Promise<CatalogPayload> {
+  if (catalogInflight) return catalogInflight;
+  catalogInflight = (async () => {
+    const layout = detectProotLayout();
+    return await new Promise<CatalogPayload>((resolve) => {
+      void (async () => {
+        try {
+          const all = [...new Set(KALI_CATEGORIES.flatMap((c) => TOOL_GROUPS[c] ?? []))];
+          const measure = async (run: (cmd: string) => Promise<{ stdout: string; exitCode: number | null }>, plane: string) => {
+            const presenceCmd = all.map((t) => `command -v ${t} >/dev/null 2>&1 && echo "OK:${t}"`).join("; ");
+            const pr = await run(presenceCmd);
+            const found = new Set(
+              pr.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)),
+            );
+            const RS = "\u001e";
+            const versionCmd = [...found]
+              .map((t) => `printf 'V:${t}='; (${t} --version 2>/dev/null || ${t} -V 2>/dev/null || ${t} -v 2>/dev/null || echo unknown); printf '${RS}'`)
+              .join("; ");
+            const vr = versionCmd ? await run(versionCmd) : { stdout: "", exitCode: 0 };
+            const versions: Record<string, string> = {};
+            for (const m of vr.stdout.split(RS)) {
+              const mm = m.match(/^V:([^=]+)=(.*)$/s);
+              if (!mm) continue;
+              const first = mm[2].split("\n").map((l) => l.trim()).find((l) => l.length > 0) ?? "";
+              versions[mm[1]] = first.slice(0, 80);
+            }
+            const categories = KALI_CATEGORIES.map((cat) => {
+              const tools = TOOL_GROUPS[cat] ?? [];
+              return {
+                id: cat,
+                tools: tools.map((t) => ({
+                  name: t,
+                  present: found.has(t),
+                  version: found.has(t) ? (versions[t] && versions[t] !== "unknown" ? versions[t] : null) : null,
+                  recipe: TOOL_RECIPES[t] ?? null,
+                })),
+                present: tools.filter((t) => found.has(t)).length,
+                total: tools.length,
+              };
+            });
+            return {
+              ok: true,
+              ready: true,
+              measuredOn: plane,
+              measuredAt: new Date().toISOString(),
+              categories,
+              total: all.length,
+              present: [...found].filter((t) => all.includes(t)).length,
+            } as CatalogPayload;
+          };
+          if (layout.ready) {
+            resolve(await measure(async (cmd) => {
+              const out = await runInProot({ command: cmd, timeoutMs: 60_000 });
+              return { stdout: out.stdout, exitCode: out.exitCode };
+            }, "proot (rootfs على الهوست)"));
+            return;
+          }
+          const fleet = await fleetKaliSummary();
+          if (fleet.kaliReady > 0) {
+            const nodePayload = await measure(async (cmd) => {
+              const out = await kaliAnywhereExec(cmd, 60_000);
+              return { stdout: out?.stdout ?? "", exitCode: out?.exitCode ?? null };
+            }, "عقدة كالي من الأسطول");
+            resolve({ ...nodePayload, fleet } as CatalogPayload);
+            return;
+          }
+          resolve({
+            ok: false,
+            ready: false,
+            reason: "proot/rootfs مش منصّب على الهوست، ومفيش عقدة كالي حية في الأسطول ردّت",
+            searched: layout.searched,
+            fleet,
+            categories: KALI_CATEGORIES.map((c) => ({
+              id: c,
+              tools: (TOOL_GROUPS[c] ?? []).map((t) => ({ name: t, present: false, version: null, recipe: TOOL_RECIPES[t] ?? null })),
+              present: 0,
+              total: (TOOL_GROUPS[c] ?? []).length,
+            })),
+            total: KALI_CATEGORIES.reduce((n, c) => n + (TOOL_GROUPS[c] ?? []).length, 0),
+            present: 0,
+          } as CatalogPayload);
+        } catch (e) {
+          resolve({ ok: false, ready: false, reason: `فشل قياس الكتالوج: ${e instanceof Error ? e.message : String(e)}` });
+        } finally {
+          catalogInflight = null;
+        }
+      })();
+    });
+  })();
+  return catalogInflight;
+}
+
 router.get("/kali-env/catalog", async (_req, res) => {
+  const fresh = catalogCache && Date.now() - catalogCache.at < CATALOG_TTL_MS;
+  if (fresh && catalogCache) {
+    res.json({ ...catalogCache.payload, cachedFrom: new Date(catalogCache.at).toISOString() });
+    return;
+  }
+  // فيه كاش قديم؟ قدّمه فورًا وقيّس في الخلفية — المتصفح مش بيستنى أبدًا.
+  if (catalogCache) {
+    res.json({ ...catalogCache.payload, cachedFrom: new Date(catalogCache.at).toISOString(), refreshing: true });
+    void measureCatalog().then((p) => { catalogCache = { at: Date.now(), payload: p }; }).catch(() => {});
+    return;
+  }
+  try {
+    const payload = await measureCatalog();
+    catalogCache = { at: Date.now(), payload };
+    res.json(payload);
+  } catch (e) {
+    res.status(503).json({ ok: false, ready: false, reason: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+/* الراوتر القديم اتشال بالحرف — منطق القياس نفسه اتنقل لmeasureCatalog أعلاه
+ * (مافيش حذف سلوك: نفس الاختيارات proot→عقدة→بصمة صادقة). */
+router.get("/kali-env/catalog-legacy-disabled", async (_req, res) => {
   const layout = detectProotLayout();
   const all = [...new Set(KALI_CATEGORIES.flatMap((c) => TOOL_GROUPS[c] ?? []))];
 
@@ -674,7 +801,11 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   if (!PKG_RE.test(tool)) { res.status(400).json({ ok: false, error: "اسم حزمة غير صالح" }); return; }
   const inCatalog = Object.values(APT_CATALOG).flat().includes(tool) || Object.values(TOOL_GROUPS).flat().includes(tool);
   if (!inCatalog) { res.status(400).json({ ok: false, error: "الحزمة مش في مخزن كالي المعروف — استخدم الطرفية للأدوات الخاصة" }); return; }
-  const cmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -1; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${tool} 2>&1 | tail -5; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+  /* TEST47 — اسم الأمر ≠ اسم الحزمة أحيانًا: exiftool أمر والحزمة
+   * libimage-exiftool-perl. التثبيت بيستخدم الحزمة الصح والتحقق بيستخدم الأمر. */
+  const APT_ALIAS: Record<string, string> = { exiftool: "libimage-exiftool-perl" };
+  const pkg = APT_ALIAS[tool] ?? tool;
+  const cmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -1; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -5; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   const r = await kaliAnywhereExec(cmd, 420_000);
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
   const ok = /INSTALL_OK:/.test(r.stdout);
