@@ -1531,6 +1531,18 @@ if (path === "/ops/kali/exec" && m === "POST") {
     durationMs: 0,
   };
 }
+/* TEST46 — /ops/stats في الوضع المستقل: صادقة بلا سيرفر — مافيش exposure
+ * حقيقي بلا مصدر، فبنقولها مش متاحة بدل رقم مخترع (nova-sentinel بتعرف
+ * تعرض «غير مقاس»). */
+if (path === "/ops/stats" && m === "GET") {
+  return {
+    ok: true,
+    static: true,
+    note: "الوضع الثابت: مفيش سيرفر — إحصائيات التشغيل والحماية بتحتاج الهَب شغال.",
+    exposure: null,
+    autonomy: { level: "off", lastSweep: null, programs: 0 },
+  };
+}
 if (path === "/ops/storage-hub" && m === "GET") {
   return { ok: true, repo: "DawshaX/xFREEDOLLARHACHx", rows: [], totalBytes: 0, totalHuman: "—", measuredAt: new Date().toISOString(), tokenUsed: false, staticMode: true };
 }

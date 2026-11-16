@@ -85,6 +85,7 @@ export async function measureSystemSnapshot(): Promise<Record<string, unknown>> 
     memory: { total: totalMem, used: usedMem, free: freeMem, usagePercent: Math.round((usedMem / totalMem) * 100) },
     gpu: await probeGpu(),
     disk: probeDiskSafe(),
+    net: probeNetSafe(),
     process: {
       pid: process.pid,
       rssMb: Math.round(process.memoryUsage().rss / 1048576),
@@ -94,6 +95,26 @@ export async function measureSystemSnapshot(): Promise<Record<string, unknown>> 
     },
     timestamp: new Date().toISOString(),
   };
+}
+
+/* TEST46 — عدّادات الشبكة مقاسة (ليست عشوائية): /proc/net/dev على لينكس —
+ * لو المضيف مش لينكس أو القراءة فشلت بنرجّع present:false وبنقولها بصراحة. */
+function probeNetSafe(): { present: boolean; rxBytes: number; txBytes: number; noteAr: string } {
+  try {
+    const raw = fs.readFileSync("/proc/net/dev", "utf8");
+    let rx = 0, tx = 0;
+    for (const line of raw.split("\n").slice(2)) {
+      const cols = line.trim().split(/\s+/);
+      if (cols.length < 10) continue;
+      const iface = (cols[0] ?? "").replace(":", "");
+      if (!iface || iface === "lo") continue;
+      rx += Number(cols[1]) || 0;
+      tx += Number(cols[9]) || 0;
+    }
+    return { present: true, rxBytes: rx, txBytes: tx, noteAr: "مقاس من /proc/net/dev (كل الواجهات عدا lo)." };
+  } catch {
+    return { present: false, rxBytes: 0, txBytes: 0, noteAr: "عدّادات الشبكة غير متاحة على هذا المضيف." };
+  }
 }
 
 router.get("/monitor/system", async (_req, res) => {
