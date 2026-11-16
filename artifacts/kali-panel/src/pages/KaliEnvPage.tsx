@@ -179,6 +179,14 @@ export default function KaliEnvPage() {
    * consumer at all. `plane` picks where a command actually runs, and the
    * choice is visible on every result line — never implied. */
   const [plane, setPlane] = useState<"auto" | "proot" | "node">("auto");
+  /* TEST41 — بث حي من كالي + المخزن الكامل بالتثبيت عند الطلب */
+  const [liveOn, setLiveOn] = useState(false);
+  const [sysLive, setSysLive] = useState<{ at: string; plane: string; raw: string[] } | null>(null);
+  const [liveBusy, setLiveBusy] = useState(false);
+  const [cat, setCat] = useState<Record<string, string[]> | null>(null);
+  const [catQ, setCatQ] = useState("");
+  const [instBusy, setInstBusy] = useState<string | null>(null);
+  const [instLog, setInstLog] = useState<string[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
 
   /* TEST23 — عقد كالي السحابية: قياس حي كل 20ث من الهَب نفسه (probe عبر قناة الأجينتات) */
@@ -251,6 +259,61 @@ export default function KaliEnvPage() {
     setEnvBusy(false);
   }, []);
   useEffect(() => { void loadEnv(false); }, [loadEnv]);
+
+  /* TEST41 — الكتالوج الثابت (سريع — بلا قياس) */
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${API}/kali-env/catalog`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(10000) });
+        if (r.ok) { const d = await r.json() as { groups?: Record<string, string[]> }; setCat(d.groups ?? {}); }
+      } catch { /* المجموعة الافتراضية من envTools بتكفي */ }
+    })();
+  }, []);
+
+  /* TEST41 — البث الحي: نبضة كل 12ث من قلب الجست (نواة · قرص · رام · حزم) */
+  useEffect(() => {
+    if (!liveOn) return;
+    let stop = false;
+    const tick = async () => {
+      setLiveBusy(true);
+      try {
+        const r = await fetch(`${API}/kali-env/sysinfo`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(25000) });
+        if (r.ok) {
+          const d = await r.json() as { at?: string; plane?: string; raw?: string[] };
+          setSysLive({ at: d.at ?? new Date().toISOString(), plane: d.plane ?? "?", raw: d.raw ?? [] });
+        }
+      } catch { /* النبضة الجاية — مافيش كذب */ }
+      if (!stop) setLiveBusy(false);
+    };
+    void tick();
+    const t = setInterval(() => { void tick(); }, 12_000);
+    return () => { stop = true; clearInterval(t); };
+  }, [liveOn]);
+
+  /* TEST41 — التثبيت عند الطلب: apt جوه الجست على الطايرة الفايزة + إعادة قياس */
+  const installTool = useCallback(async (tool: string) => {
+    setInstBusy(tool);
+    try {
+      const r = await fetch(`${API}/kali-env/install`, {
+        method: "POST", headers: { ...novaAuthHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ tool }), signal: AbortSignal.timeout(430_000),
+      });
+      const d = await r.json() as { ok?: boolean; output?: string; plane?: string; error?: string };
+      setInstLog((p) => [
+        `${d.ok ? "✓" : "✗"} ${tool} — ${d.ok ? `اتثبت على ${d.plane}` : (d.error || "فشل")}`,
+        ...(d.output ? d.output.split("\n").slice(-4).map((l) => `   ${l}`) : []),
+        ...p,
+      ].slice(0, 30));
+      void loadEnv(true);
+    } catch {
+      setInstLog((p) => [`✗ ${tool} — انقطع الاتصال أثناء التثبيت`, ...p].slice(0, 30));
+    }
+    setInstBusy(null);
+  }, [loadEnv]);
+
+  /* المجموعات المقاسة → مجموعة «موجود» واحدة للبحث السريع */
+  const presentSet = new Set<string>();
+  if (envTools?.groups) for (const g of Object.values(envTools.groups)) for (const t of g.present) presentSet.add(t);
 
   const installOnNode = async () => {
     setInstallBusy(true);
@@ -974,6 +1037,84 @@ export default function KaliEnvPage() {
               </div>
             ) : (
               <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>بيقيس المساحات من جيت هوب…</p>
+            )}
+          </div>
+
+          {/* ── TEST41 · 🎛️ بث حي من كالي — نبضة كل 12ث من قلب الجست ────────── */}
+          <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(68,255,136,0.22)" }}>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-[10px] font-black" style={{ color: "#44ff88" }}>🎛️ بث حي من كالي — النظام نفسه كل 12 ثانية</span>
+              <button onClick={() => setLiveOn((v) => !v)} disabled={liveBusy}
+                className="text-[9px] font-black px-2 py-1 rounded transition-all"
+                style={{ background: liveOn ? "rgba(239,68,68,0.15)" : "rgba(68,255,136,0.15)", color: liveOn ? "#ff6b6b" : "#44ff88", border: `1px solid ${liveOn ? "rgba(239,68,68,0.4)" : "rgba(68,255,136,0.4)"}` }}>
+                {liveOn ? "■ إيقاف البث" : "▶ ابدأ البث الحي"}
+              </button>
+            </div>
+            {liveOn && sysLive ? (
+              <div className="mt-2 space-y-1">
+                <div className="flex flex-wrap gap-1.5">
+                  {sysLive.raw.map((l, i) => (
+                    <span key={i} className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: "rgba(68,255,136,0.06)", color: "#a8ffc8", border: "1px solid rgba(68,255,136,0.18)" }}>{l}</span>
+                  ))}
+                </div>
+                <p className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  🔴 لايف · قِيس {new Date(sysLive.at).toLocaleTimeString("en-GB")} من: {sysLive.plane}
+                </p>
+              </div>
+            ) : (
+              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>
+                {liveOn ? "بينبّض… أول قياس جاي في ثواني" : "البث مقفول — اضغط «ابدأ البث الحي» وتشوف النظام يتنفس لايف"}
+              </p>
+            )}
+          </div>
+
+          {/* ── TEST41 · 📦 مخزن كالي الكامل — البحث + التثبيت عند الطلب ─────── */}
+          <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(153,102,255,0.22)" }}>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-[10px] font-black" style={{ color: "#c9a8ff" }}>📦 مخزن كالي الكامل — {cat ? Object.values(cat).flat().length : 0} حزمة في {cat ? Object.keys(cat).length : 0} فئة رسمية</span>
+              <input value={catQ} onChange={(e) => setCatQ(e.target.value)} placeholder="دوّر على أداة…"
+                className="text-[10px] font-mono px-2 py-1 rounded outline-none" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(153,102,255,0.3)", color: "#e0d0ff", width: 180 }} />
+            </div>
+            {cat && (
+              <div className="mt-2 space-y-1.5">
+                {Object.entries(cat).map(([group, tools]) => {
+                  const q = catQ.trim().toLowerCase();
+                  const shown = q ? tools.filter((t) => t.includes(q)) : tools;
+                  if (!shown.length) return null;
+                  const present = shown.filter((t) => presentSet.has(t)).length;
+                  return (
+                    <details key={group} className="rounded-lg px-2 py-1.5" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(153,102,255,0.14)" }}>
+                      <summary className="cursor-pointer flex items-center justify-between gap-2">
+                        <span className="text-[9px] font-black" style={{ color: "#9966ff" }}>{group}</span>
+                        <span className="text-[8px] font-mono" style={{ color: present === shown.length ? "rgba(68,255,136,0.85)" : "rgba(255,170,68,0.8)" }}>
+                          {present}/{shown.length} جاهزة
+                        </span>
+                      </summary>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {shown.map((t) => presentSet.has(t) ? (
+                          <span key={t} className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#44ff88" }}>✓ {t}</span>
+                        ) : (
+                          <button key={t} onClick={() => void installTool(t)} disabled={instBusy !== null}
+                            className="text-[8px] font-mono px-1.5 py-0.5 rounded transition-all hover:opacity-80"
+                            style={{ background: "rgba(255,170,68,0.08)", color: instBusy === t ? "#ffd08a" : "rgba(255,255,255,0.55)", border: "1px solid rgba(255,170,68,0.2)" }}>
+                            {instBusy === t ? `⏳ ${t}` : `＋ ${t}`}
+                          </button>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })}
+                <p className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  ✓ = مقاسة موجودة على طايرة كالي · ＋ = ناقصة وبتتثبت عند الطلب (apt جوه الجست) — القياس من {envTools?.measuredOn ?? "طايرة كالي"}
+                </p>
+              </div>
+            )}
+            {instLog.length > 0 && (
+              <div className="mt-2 rounded-lg p-2" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(153,102,255,0.18)" }}>
+                {instLog.map((l, i) => (
+                  <p key={i} className="text-[8px] font-mono whitespace-pre-wrap" style={{ color: l.startsWith("✓") ? "#44ff88" : l.startsWith("✗") ? "#ff6b6b" : "rgba(255,255,255,0.45)" }}>{l}</p>
+                ))}
+              </div>
             )}
           </div>
     </div>
