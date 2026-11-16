@@ -914,12 +914,17 @@ let nodeToolsCache: { at: number; tools: Record<string, NodeTool> | null; from: 
 const TOOL_NAMES = [
   "nmap","masscan","sqlmap","nikto","hydra","john","hashcat","wireshark","tcpdump",
   "gobuster","dirb","ffuf","feroxbuster","wpscan","whatweb","wafw00f","nuclei","amass",
-  "sublist3r","dnsrecon","whois","dig","aircrack-ng","reaver","binwalk","exiftool",
+  "sublist3r","dnsrecon","whois","dig","aircrack-ng","reaver","binwalk",
+  /* TEST48 — الاسم البديل: الحزمة libimage-exiftool-perl والأمر exiftool */
+  "libimage-exiftool-perl|exiftool",
   "steghide","volatility3","impacket-smbclient","responder","netexec","crackmapexec",
   "metasploit-framework|msfconsole","burpsuite","zaproxy|owasp-zap","setoolkit",
   "maltego","beef-xss","ophcrack","cewl","enum4linux","arp-scan","hping3","socat",
   "msfvenom","searchsploit","sherlock","proxychains","proxychains4","ssh","openssl",
 ] as const;
+/* TEST48 — exiftool أمر والحزمة libimage-exiftool-perl: الفحص بيجرب الاسم
+ * الأساسي وحين يفشل يجرب الاسم البديل (نفس صيغة metasploit-framework|msfconsole
+ * اللي موجودة في الليستا). */
 const TOOLS_PROBE_CMD =
   "for t in " + TOOL_NAMES.flatMap((x) => x.split("|")).join(" ") + "; do command -v \"$t\" >/dev/null 2>&1 && echo \"OK:$t\"; done; echo ---; grep -c '^Package:' /var/lib/dpkg/status; echo ---; ls /usr/bin /usr/sbin /bin /sbin 2>/dev/null | sort -u | wc -l; echo ---; grep '^Package: kali-tools' /var/lib/dpkg/status | sed 's/^Package: //' | sort | tr '\\n' ' '";
 async function measureNodeTools(rows: Array<{ kali: boolean; mode: string; id: string; hostname: string }>): Promise<{ from: string; tools: Record<string, NodeTool>; sysinfo?: { packages: number; executables: number; kaliGroups: string[] } } | null> {
