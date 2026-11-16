@@ -138,7 +138,11 @@ jobs:
     timeout-minutes: 350          # < 6 h hard cap, so the job ends cleanly
     strategy:
       fail-fast: false
-      max-parallel: 20
+      # TEST49 — كانت 20: الموجة بتحجز كل سلات الحساب فأي فحص/جدولة (المرآة
+      # كل 30د · gates · catalog) بيستنى ساعات أو يتأجل نهائيًا (مقاس 3 مرات
+      # 2026-11-16). 12 عقدة تكفي التغطية 24/7 (كل عقدة تعيش ~6 ساعات) وسيب
+      # ~8 سلات فاضية دايمًا للصيانة — النظام يتنفس.
+      max-parallel: 12
       matrix:
         # A plain list: GitHub's expression language has no range(), and a
         # literal list is easier to read than nested join/split gymnastics.
