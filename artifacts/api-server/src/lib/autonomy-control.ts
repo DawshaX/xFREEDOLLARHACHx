@@ -6,6 +6,7 @@
  */
 import { effectiveAutonomy, writeAutonomyRecord, envLock, isAutonomyLevel, autonomyStateFile, type AutonomyLevel } from "./autonomy-state";
 import { emitAutonomyEvent, autonomyListenerCount } from "./autonomy-events";
+import { broadcastEvent } from "./ws-hub";
 
 export interface AutonomyStatus {
   enabled: boolean;
@@ -95,8 +96,12 @@ export async function setAutonomy(opts: { enabled: boolean; level?: string; note
   }
   const after = await autonomyStatus();
   if (after.enabled !== opts.enabled) {
+    broadcastEvent("autonomous_status", { status: after });
     return { ok: false, status: after, error: `الحالة بعد القراءة (${after.level}) مش مطابقة للطلب — في قفل تاني بيتحكم.` };
   }
+  // TEST46 — بث الحالة الجديدة فورًا على قناة WS العامة: كل شاشة مفتوحة
+  // تتحدث لحظيًا بدل ما تستنى عدّاد الاستطلاع بتاعها (الاستطلاع بقى خطة أمان).
+  broadcastEvent("autonomous_status", { status: after });
   return { ok: true, status: after };
 }
 
@@ -107,6 +112,7 @@ export async function runAutonomyTickNow(target?: string): Promise<{ ok: boolean
     emitAutonomyEvent("tick_start", { manual: true, target: target ?? null });
     const st = await mod.tickAutonomousDaemon(target);
     emitAutonomyEvent("tick_done", { cycles: st.daemonStatus?.autonomousCyclesCompleted ?? null });
+    broadcastEvent("autonomous_status", { status: await autonomyStatus() });
     return { ok: true, cycles: Number(st.daemonStatus?.autonomousCyclesCompleted ?? 0) };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

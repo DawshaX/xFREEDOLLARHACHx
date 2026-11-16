@@ -32,6 +32,7 @@ import { opsFetch, novaAuthHeaders } from "@/lib/ops-client";
 import { DAW_SKULL } from "@/lib/skull";
 import { useSystem } from "@/context/SystemContext";
 import ErrorIsland from "@/components/ErrorIsland";
+import { useLiveRefetch } from "@/hooks/useWebSocket";
 
 /* ─── أنواع ─── */
 type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "kali" | "missions" | "brain" | "nexus" | "alerts" | "notes" | "hardware" | "hunt" | "channels" | "nav";
@@ -815,7 +816,15 @@ export default function NovaAgentPro() {
     void refreshCron();
   }, [refreshCron]);
 
-  useEffect(() => { void refresh(); const iv = setInterval(refresh, 12_000); return () => clearInterval(iv); }, [refresh]);
+  useEffect(() => { void refresh(); const iv = setInterval(refresh, 30_000); return () => clearInterval(iv); }, [refresh]);
+  // TEST46 — اللايف أجينت مش بستنى الrefresh: أي حدث حي من الناقل الموحد
+  // (اتصال عقدة · وضع مستقل · إشعار · مهام كالي · أسطول) بيعيد الجلب لحظة
+  // حدوثه — الصفحة تبقى عين النظام الحية، والعدّاد خطة أمان 30ث بس.
+  useLiveRefetch(
+    ["local_agent_status", "autonomous_status", "autonomous_tick", "notification", "kali_tasks_changed", "fleet_mesh_message", "nexus_background", "watch_note", "agent_tool_result"],
+    refresh,
+    30_000,
+  );
 
   const lastEvents = sys.systemEvents.slice(0, 36);
   const ticker = sys.systemEvents.slice(0, 2);
