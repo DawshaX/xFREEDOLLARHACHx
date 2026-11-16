@@ -345,6 +345,12 @@ export default function NovaAgentPro() {
   const [corpus, setCorpus] = useState<{ total: number | null; kev: number | null }>({ total: null, kev: null });
   /* TEST12 — بيئة كالي المدمجة: شريط مقاس في مكتب الشغل بيوصل للتبويبة */
   const [kaliEnv, setKaliEnv] = useState<{ present: boolean; packages?: number; running?: boolean; heavy?: string } | null>(null);
+  /* TEST38 — الـ proot الحقيقي، مقاس من /api/kali-env/health. لو القراءة فشلت
+     بنحفظ الخطأ نفسه (error) بدل ما نعرض «غير جاهز» كأنها قياس. */
+  const [kaliProot, setKaliProot] = useState<{
+    ready?: boolean; guestShell?: boolean; rootfs?: string | null;
+    fleetKali?: number | null; fleetConnected?: number | null; error?: string;
+  } | null>(null);
   const [autoState, setAutoState] = useState<{ enabled: boolean; running: boolean; cycles: number; level: string }>({
     enabled: false, running: false, cycles: 0, level: "off",
   });
@@ -698,6 +704,30 @@ export default function NovaAgentPro() {
       });
     } else setKaliEnv({ present: false });
 
+    /* TEST38 — حالة كالي الحقيقية من /api/kali-env (proot + rootfs)، مش من
+       كارت /ops/kali اللي بيقيس الهَب بس. الاتنين بيفضلوا معروضين: ده بيثري
+       الكارت برقم مقاس، ولو فشل بيبقى خطأ صريح — مش صفر. */
+    try {
+      const kh = await fetch("/api/kali-env/health", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(20_000) });
+      if (kh.ok) {
+        const h = (await kh.json()) as {
+          ready?: boolean; guestShell?: boolean; rootfs?: string | null;
+          fleet?: { connected?: number; kaliReady?: number };
+        };
+        setKaliProot({
+          ready: h.ready === true,
+          guestShell: h.guestShell === true,
+          rootfs: h.rootfs ?? null,
+          fleetKali: h.fleet?.kaliReady ?? null,
+          fleetConnected: h.fleet?.connected ?? null,
+        });
+      } else {
+        setKaliProot({ error: `HTTP ${kh.status}` });
+      }
+    } catch (e) {
+      setKaliProot({ error: (e as Error).message.slice(0, 80) });
+    }
+
     const nx = await opsFetch<{
       ok?: boolean;
       rootSessionId?: string;
@@ -997,6 +1027,24 @@ export default function NovaAgentPro() {
                   <div className="text-[8px] font-mono" style={{ color: kaliEnv.running ? "#44ff88" : "rgba(255,255,255,0.4)" }}>
                     {kaliEnv.running ? "● الديسكتوب شغّال — افتحه من التبيبة" : "الديسكتوب مطفي — التبيبة بتشغّله"}
                   </div>
+                  {/* TEST38 — الـ proot المقاس من /api/kali-env/health. لو القراءة
+                      فشلت بنقول الخطأ نفسه، مش «غير جاهز» كأنها قياس. */}
+                  {kaliProot && (
+                    <div className="text-[8px] font-mono pt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                      {kaliProot.error ? (
+                        <span style={{ color: "#ff8888" }}>✗ فشل قياس proot: {kaliProot.error}</span>
+                      ) : (
+                        <>
+                          <div style={{ color: kaliProot.guestShell ? "#44ff88" : "#ffaa44" }}>
+                            proot: {kaliProot.ready ? "موجود" : "مش منصّب"} · الضيف {kaliProot.guestShell ? "بيرد ✓" : "ما ردّش ✗"}
+                          </div>
+                          <div style={{ color: "rgba(255,255,255,0.4)" }}>
+                            أسطول كالي: {kaliProot.fleetKali ?? "?"}/{kaliProot.fleetConnected ?? "?"} عقدة جاهزة
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </HudCard>
             )}
