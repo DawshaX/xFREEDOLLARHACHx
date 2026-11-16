@@ -108,7 +108,14 @@ export function securityHeaders() {
       ? false
       : {
           directives: {
-            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            /* الافتراضي فيه script-src أصلاً — بنشيله الأول عشان ميبانش duplicate
+             * (helmet بيرمي على التكرار — قِيس 02:58Z: السيرفر ماقبلش يقعد)
+             * وبنرجّعه بالقيمة الجديدة تحت مع connect-src. */
+            ...(() => {
+              const d = { ...helmet.contentSecurityPolicy.getDefaultDirectives() };
+              delete d["script-src"];
+              return d;
+            })(),
             // TEST34 — قِيس على البناء المحلي (2026-11-15T12:34Z): CSP الافتراضي
             // مافيهوش connect-src → بيرجع لـdefault-src 'self' → المتصفح بيسدّ
             // فetch raw.githubusercontent.com اللي بطاقة «حالة النشر» على ‎/kali-env
@@ -116,6 +123,14 @@ export function securityHeaders() {
             // بتسقط بصمت على النسخة المخبّأة جوّه الباندل. img-src سبنا 'self' data:
             // زي ما هو — الصور كلها أصول محلية مقيسة.
             connectSrc: ["'self'", "https://raw.githubusercontent.com"],
+            // TEST40 — قِيس حي (2026-11-16T02:56Z): صفحة الدخول بتاعتها <script>
+            // inline (panel-auth LOGIN_PAGE) وCSP الافتراضي script-src 'self'
+            // بيمنعها في المتصفح → زر «دخول» بييدوس وماتحصلش حاجة (شكوى
+            // المالك المقاسة). 'unsafe-inline' للسكريبتات المدمجة في الصفحات
+            // الداخلية (login · auth-log) — والباقي زي ما هو (object-src none
+            // · frame-ancestors self · nosniff). سكريبتات اللوحة نفسها خارجية
+            // من نفس الأصل فمابتتأثرش.
+            scriptSrc: ["'self'", "'unsafe-inline'"],
           },
         },
     crossOriginEmbedderPolicy: false,

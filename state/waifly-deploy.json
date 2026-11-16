@@ -1,32 +1,32 @@
 {
-  "at": "2026-11-15T15:34:02.473Z",
+  "at": "2026-11-16T00:18:42.201Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-15T09:38:59Z",
-    "size": 4171444
+    "updatedAt": "2026-11-15T21:28:49Z",
+    "size": 4167413
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "1221ff8b770f3a52c0c758b3e7a080535f524dce",
-    "builtAt": "2026-11-15T09:38:36.329Z",
-    "files": 189,
+    "commit": "0fe51415679db3c7750d2020dacc29a83742dea2",
+    "builtAt": "2026-11-15T21:28:28.020Z",
+    "files": 188,
     "builtBy": "github-actions"
   },
   "boot": {
-    "commit": "1221ff8b770f3a52c0c758b3e7a080535f524dce",
-    "builtAt": "2026-11-15T09:38:36.329Z",
+    "commit": "0fe51415679db3c7750d2020dacc29a83742dea2",
+    "builtAt": "2026-11-15T21:28:28.020Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 23 ثانية)",
-    "lastCheckAt": "2026-11-15T15:32:25.296Z",
-    "currentBuiltAt": "2026-11-15T09:38:36.329Z",
-    "latestReleaseAt": "2026-11-15T09:38:59Z",
+    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 21 ثانية)",
+    "lastCheckAt": "2026-11-16T00:15:48.454Z",
+    "currentBuiltAt": "2026-11-15T21:28:28.020Z",
+    "latestReleaseAt": "2026-11-15T21:28:49Z",
     "restartNeeded": false
   },
   "updaterInstall": null,
@@ -38,27 +38,17 @@
   "page": {
     "status": 200,
     "cacheControl": "no-store",
-    "servedAsset": "/assets/index-BaShDmv4.js",
+    "servedAsset": "/assets/index-3J5i78de.js",
     "htmlBytes": 2484
   },
   "fleet": {
     "status": 200,
-    "count": 14,
+    "count": 4,
     "ids": [
       "self-node",
-      "gh-31-1004",
-      "gh-37-0957",
-      "gh-33-0956",
-      "gh-29-0958",
-      "gh-35-0957",
-      "gh-25-0956",
-      "gh-22-0956",
-      "gh-38-0956",
-      "gh-32-0956",
-      "gh-34-1247",
-      "gh-26-1250",
-      "gh-21-1358",
-      "gh-24-1458"
+      "gh-14-1915",
+      "gh-19-1950",
+      "gh-20-2153"
     ]
   }
 }
