@@ -5,8 +5,8 @@
   {
    "platform": "hackerone",
    "ok": true,
-   "raw": 451,
-   "kept": 451
+   "raw": 449,
+   "kept": 449
   },
   {
    "platform": "bugcrowd",
@@ -15,13 +15,13 @@
    "kept": 296
   }
  ],
- "fetched_at": "2026-11-13T00:27:48.710Z",
+ "fetched_at": "2026-11-16T15:53:54.769Z",
  "counts": {
-  "programs": 747,
-  "bounty_programs": 511,
-  "active_programs": 747,
-  "programs_with_domains": 636,
-  "domains": 4927,
+  "programs": 745,
+  "bounty_programs": 509,
+  "active_programs": 745,
+  "programs_with_domains": 634,
+  "domains": 4923,
   "wildcards": 1589
  },
  "programs": [
@@ -38,7 +38,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 84,
+   "response_efficiency": 85,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -279,7 +279,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 76,
+   "response_efficiency": 75,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -362,7 +362,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 91,
+   "response_efficiency": 92,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -437,7 +437,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 58,
+   "response_efficiency": 57,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -845,7 +845,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 74,
+   "response_efficiency": 75,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -1056,7 +1056,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 78,
+   "response_efficiency": 77,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -1135,7 +1135,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 87,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -1523,7 +1523,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 57,
+   "response_efficiency": 56,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -1669,7 +1669,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 70,
+   "response_efficiency": 77,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -1758,7 +1758,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 97,
+   "response_efficiency": 96,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -1957,7 +1957,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 87,
+   "response_efficiency": 86,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -2030,7 +2030,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 73,
+   "response_efficiency": 74,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -2095,7 +2095,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 85,
+   "response_efficiency": 84,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -2724,7 +2724,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 70,
+   "response_efficiency": 72,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -2788,7 +2788,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 90,
+   "response_efficiency": 89,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -3044,7 +3044,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 100,
+   "response_efficiency": 99,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -3200,7 +3200,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 73,
+   "response_efficiency": 74,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -3476,7 +3476,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 87,
+   "response_efficiency": 85,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -3546,7 +3546,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 63,
+   "response_efficiency": 64,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -3656,7 +3656,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 88,
+   "response_efficiency": 89,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -3801,7 +3801,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 74,
+   "response_efficiency": 77,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -3974,7 +3974,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 85,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -4035,7 +4035,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 95,
+   "response_efficiency": 94,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -4218,7 +4218,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 32,
+   "response_efficiency": 35,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -4698,7 +4698,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 93,
+   "response_efficiency": 94,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -5029,7 +5029,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 71,
+   "response_efficiency": 72,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -5230,7 +5230,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 85,
+   "response_efficiency": 89,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -5512,7 +5512,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 41,
+   "response_efficiency": 42,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -5560,60 +5560,6 @@
     "shopify.plus",
     "shopifyinbox.com",
     "your-store.myshopify.com"
-   ],
-   "ips": [],
-   "cidrs": [],
-   "consented": false,
-   "mode": "passive_only"
-  },
-  {
-   "handle": "simplisafe",
-   "name": "SimpliSafe Managed Bug Bounty Engagement",
-   "platform": "bugcrowd",
-   "url": "https://bugcrowd.com/engagements/simplisafe",
-   "bounties": true,
-   "max_payout_usd": 6000,
-   "safe_harbor": "full",
-   "disclosure": true,
-   "swag": false,
-   "managed": true,
-   "paused": false,
-   "submission_state": null,
-   "response_efficiency": null,
-   "avg_hours_to_bounty": null,
-   "severities": [],
-   "asset_total": 24,
-   "eligible_assets": 24,
-   "non_host_assets": 12,
-   "domains": [
-    "bb1.simplisafe.com",
-    "bb2.simplisafe.com",
-    "cb.simplisafe.com",
-    "webapp.simplisafe.com",
-    "webapp.simplisafe.co.uk",
-    "mfa.simplisafe.com",
-    "prd.aser.simplisafe.com",
-    "prd.webapps.simplisafe.com",
-    "media.simplisafe.com",
-    "simplisafe.com",
-    "simplisafe.co.uk",
-    "api.prd.commerce.simplisafe.com"
-   ],
-   "wildcards": [
-    "*.prd.aser.simplisafe.com",
-    "*.prd.webapps.simplisafe.com"
-   ],
-   "urls": [
-    "bb1.simplisafe.com",
-    "bb2.simplisafe.com",
-    "cb.simplisafe.com",
-    "webapp.simplisafe.com",
-    "webapp.simplisafe.co.uk",
-    "mfa.simplisafe.com",
-    "media.simplisafe.com",
-    "simplisafe.com",
-    "simplisafe.co.uk",
-    "api.prd.commerce.simplisafe.com"
    ],
    "ips": [],
    "cidrs": [],
@@ -5812,7 +5758,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 92,
+   "response_efficiency": 93,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -5862,7 +5808,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 73,
+   "response_efficiency": 74,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -5928,7 +5874,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 89,
+   "response_efficiency": 90,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -6121,57 +6067,6 @@
    "mode": "passive_only"
   },
   {
-   "handle": "binance",
-   "name": "Binance",
-   "platform": "bugcrowd",
-   "url": "https://bugcrowd.com/engagements/binance",
-   "bounties": true,
-   "max_payout_usd": 10000,
-   "safe_harbor": "partial",
-   "disclosure": true,
-   "swag": false,
-   "managed": true,
-   "paused": false,
-   "submission_state": null,
-   "response_efficiency": null,
-   "avg_hours_to_bounty": null,
-   "severities": [],
-   "asset_total": 21,
-   "eligible_assets": 21,
-   "non_host_assets": 10,
-   "domains": [
-    "api.coinmarketcap.com",
-    "pro-api.coinmarketcap.com",
-    "www.binance.com",
-    "api.binance.com",
-    "pro.coinmarketcap.com",
-    "portal-api.coinmarketcap.com",
-    "coinmarketcap.com",
-    "3rdparty-apis.coinmarketcap.com",
-    "www.binance.us",
-    "binance.tr",
-    "binance.th"
-   ],
-   "wildcards": [],
-   "urls": [
-    "api.coinmarketcap.com",
-    "pro-api.coinmarketcap.com",
-    "www.binance.com",
-    "api.binance.com",
-    "pro.coinmarketcap.com",
-    "portal-api.coinmarketcap.com",
-    "coinmarketcap.com",
-    "3rdparty-apis.coinmarketcap.com",
-    "www.binance.us",
-    "binance.tr",
-    "binance.th"
-   ],
-   "ips": [],
-   "cidrs": [],
-   "consented": false,
-   "mode": "passive_only"
-  },
-  {
    "handle": "mastercard",
    "name": "Mastercard Public Bug Bounty ",
    "platform": "bugcrowd",
@@ -6239,7 +6134,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 97,
+   "response_efficiency": 96,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -6328,6 +6223,54 @@
    "mode": "passive_only"
   },
   {
+   "handle": "simplisafe",
+   "name": "SimpliSafe Managed Bug Bounty Engagement",
+   "platform": "bugcrowd",
+   "url": "https://bugcrowd.com/engagements/simplisafe",
+   "bounties": true,
+   "max_payout_usd": 6000,
+   "safe_harbor": "full",
+   "disclosure": true,
+   "swag": false,
+   "managed": true,
+   "paused": false,
+   "submission_state": null,
+   "response_efficiency": null,
+   "avg_hours_to_bounty": null,
+   "severities": [],
+   "asset_total": 21,
+   "eligible_assets": 21,
+   "non_host_assets": 12,
+   "domains": [
+    "bb1.simplisafe.com",
+    "bb2.simplisafe.com",
+    "cb.simplisafe.com",
+    "webapp.simplisafe.com",
+    "webapp.simplisafe.co.uk",
+    "mfa.simplisafe.com",
+    "prd.aser.simplisafe.com",
+    "prd.webapps.simplisafe.com",
+    "media.simplisafe.com"
+   ],
+   "wildcards": [
+    "*.prd.aser.simplisafe.com",
+    "*.prd.webapps.simplisafe.com"
+   ],
+   "urls": [
+    "bb1.simplisafe.com",
+    "bb2.simplisafe.com",
+    "cb.simplisafe.com",
+    "webapp.simplisafe.com",
+    "webapp.simplisafe.co.uk",
+    "mfa.simplisafe.com",
+    "media.simplisafe.com"
+   ],
+   "ips": [],
+   "cidrs": [],
+   "consented": false,
+   "mode": "passive_only"
+  },
+  {
    "handle": "valve",
    "name": "Valve",
    "platform": "hackerone",
@@ -6340,7 +6283,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 65,
+   "response_efficiency": 63,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -6455,6 +6398,57 @@
     "www.vwfs.nl",
     "www.vwfs.kr",
     "www.vwfs.com.tw"
+   ],
+   "ips": [],
+   "cidrs": [],
+   "consented": false,
+   "mode": "passive_only"
+  },
+  {
+   "handle": "binance",
+   "name": "Binance",
+   "platform": "bugcrowd",
+   "url": "https://bugcrowd.com/engagements/binance",
+   "bounties": true,
+   "max_payout_usd": 10000,
+   "safe_harbor": "partial",
+   "disclosure": true,
+   "swag": false,
+   "managed": true,
+   "paused": false,
+   "submission_state": null,
+   "response_efficiency": null,
+   "avg_hours_to_bounty": null,
+   "severities": [],
+   "asset_total": 20,
+   "eligible_assets": 20,
+   "non_host_assets": 9,
+   "domains": [
+    "api.coinmarketcap.com",
+    "pro-api.coinmarketcap.com",
+    "www.binance.com",
+    "api.binance.com",
+    "pro.coinmarketcap.com",
+    "portal-api.coinmarketcap.com",
+    "coinmarketcap.com",
+    "3rdparty-apis.coinmarketcap.com",
+    "www.binance.us",
+    "binance.tr",
+    "binance.th"
+   ],
+   "wildcards": [],
+   "urls": [
+    "api.coinmarketcap.com",
+    "pro-api.coinmarketcap.com",
+    "www.binance.com",
+    "api.binance.com",
+    "pro.coinmarketcap.com",
+    "portal-api.coinmarketcap.com",
+    "coinmarketcap.com",
+    "3rdparty-apis.coinmarketcap.com",
+    "www.binance.us",
+    "binance.tr",
+    "binance.th"
    ],
    "ips": [],
    "cidrs": [],
@@ -6799,6 +6793,36 @@
    "mode": "passive_only"
   },
   {
+   "handle": "anker",
+   "name": "Anker",
+   "platform": "hackerone",
+   "url": "https://hackerone.com/anker",
+   "bounties": true,
+   "max_payout_usd": null,
+   "safe_harbor": null,
+   "disclosure": null,
+   "swag": false,
+   "managed": true,
+   "paused": false,
+   "submission_state": "open",
+   "response_efficiency": 56,
+   "avg_hours_to_bounty": 0,
+   "severities": [
+    "critical",
+    "high"
+   ],
+   "asset_total": 19,
+   "eligible_assets": 19,
+   "non_host_assets": 19,
+   "domains": [],
+   "wildcards": [],
+   "urls": [],
+   "ips": [],
+   "cidrs": [],
+   "consented": false,
+   "mode": "passive_only"
+  },
+  {
    "handle": "chime",
    "name": "Chime Managed Bug Bounty Engagement",
    "platform": "bugcrowd",
@@ -6855,36 +6879,6 @@
    "mode": "passive_only"
   },
   {
-   "handle": "eufy_security",
-   "name": "eufy Security",
-   "platform": "hackerone",
-   "url": "https://hackerone.com/eufy_security",
-   "bounties": true,
-   "max_payout_usd": null,
-   "safe_harbor": null,
-   "disclosure": null,
-   "swag": false,
-   "managed": true,
-   "paused": false,
-   "submission_state": "open",
-   "response_efficiency": 54,
-   "avg_hours_to_bounty": 0,
-   "severities": [
-    "critical",
-    "high"
-   ],
-   "asset_total": 19,
-   "eligible_assets": 19,
-   "non_host_assets": 19,
-   "domains": [],
-   "wildcards": [],
-   "urls": [],
-   "ips": [],
-   "cidrs": [],
-   "consented": false,
-   "mode": "passive_only"
-  },
-  {
    "handle": "gitlab",
    "name": "GitLab",
    "platform": "hackerone",
@@ -6897,7 +6891,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 78,
+   "response_efficiency": 79,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -7006,7 +7000,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 91,
+   "response_efficiency": 93,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -7116,7 +7110,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 97,
+   "response_efficiency": 98,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -7305,7 +7299,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 77,
+   "response_efficiency": 79,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -7573,7 +7567,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 82,
+   "response_efficiency": 80,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -7633,7 +7627,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 41,
+   "response_efficiency": 46,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -7663,6 +7657,53 @@
     "eu.cloud.com",
     "onboarding.cloud.com",
     "us.cloud.com"
+   ],
+   "ips": [],
+   "cidrs": [],
+   "consented": false,
+   "mode": "passive_only"
+  },
+  {
+   "handle": "deviniti",
+   "name": "Deviniti",
+   "platform": "bugcrowd",
+   "url": "https://bugcrowd.com/engagements/deviniti",
+   "bounties": true,
+   "max_payout_usd": 1500,
+   "safe_harbor": "full",
+   "disclosure": false,
+   "swag": false,
+   "managed": true,
+   "paused": false,
+   "submission_state": null,
+   "response_efficiency": null,
+   "avg_hours_to_bounty": null,
+   "severities": [],
+   "asset_total": 17,
+   "eligible_assets": 17,
+   "non_host_assets": 0,
+   "domains": [
+    "marketplace.atlassian.com"
+   ],
+   "wildcards": [],
+   "urls": [
+    "marketplace.atlassian.com/apps/1229958/issue-sync-lite",
+    "marketplace.atlassian.com/apps/1213697/actions-for-jira-service-management",
+    "marketplace.atlassian.com/apps/1210820/dynamic-forms-for-jira",
+    "marketplace.atlassian.com/apps/1219647/my-requests-extension-for-jira-service-management",
+    "marketplace.atlassian.com/apps/1216386/queues-for-jira-service-management",
+    "marketplace.atlassian.com/apps/1213346/issue-sync-integration-for-jira",
+    "marketplace.atlassian.com/apps/1224763/coji-confluence-pages-for-jira",
+    "marketplace.atlassian.com/apps/1220300/theme-extension-for-jira-service-management",
+    "marketplace.atlassian.com/apps/1212161/extension-for-jira-service-desk",
+    "marketplace.atlassian.com/apps/1211044/issue-templates-for-jira",
+    "marketplace.atlassian.com/apps/1220294/requirements-test-management-for-jira",
+    "marketplace.atlassian.com/apps/1238286/ai-ticket-assistant",
+    "marketplace.atlassian.com/apps/1237787",
+    "marketplace.atlassian.com/apps/1220477/entra-id-azure-ad-attributes-sync-for-jira",
+    "marketplace.atlassian.com/apps/1233642/workflow-building-blocks-for-jira",
+    "marketplace.atlassian.com/apps/22817756/procuro-complete-procurement-management-in-jsm",
+    "marketplace.atlassian.com/apps/2831389750/requira-requirements-traceability-for-jira"
    ],
    "ips": [],
    "cidrs": [],
@@ -7790,7 +7831,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 55,
+   "response_efficiency": 57,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -8245,7 +8286,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 92,
+   "response_efficiency": 93,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -8271,52 +8312,6 @@
    "cidrs": [
     "54.175.255.192/27"
    ],
-   "consented": false,
-   "mode": "passive_only"
-  },
-  {
-   "handle": "deviniti",
-   "name": "Deviniti",
-   "platform": "bugcrowd",
-   "url": "https://bugcrowd.com/engagements/deviniti",
-   "bounties": true,
-   "max_payout_usd": 1500,
-   "safe_harbor": "full",
-   "disclosure": false,
-   "swag": false,
-   "managed": true,
-   "paused": false,
-   "submission_state": null,
-   "response_efficiency": null,
-   "avg_hours_to_bounty": null,
-   "severities": [],
-   "asset_total": 16,
-   "eligible_assets": 16,
-   "non_host_assets": 0,
-   "domains": [
-    "marketplace.atlassian.com"
-   ],
-   "wildcards": [],
-   "urls": [
-    "marketplace.atlassian.com/apps/1229958/issue-sync-lite",
-    "marketplace.atlassian.com/apps/1213697/actions-for-jira-service-management",
-    "marketplace.atlassian.com/apps/1210820/dynamic-forms-for-jira",
-    "marketplace.atlassian.com/apps/1219647/my-requests-extension-for-jira-service-management",
-    "marketplace.atlassian.com/apps/1216386/queues-for-jira-service-management",
-    "marketplace.atlassian.com/apps/1213346/issue-sync-integration-for-jira",
-    "marketplace.atlassian.com/apps/1224763/coji-confluence-pages-for-jira",
-    "marketplace.atlassian.com/apps/1220300/theme-extension-for-jira-service-management",
-    "marketplace.atlassian.com/apps/1212161/extension-for-jira-service-desk",
-    "marketplace.atlassian.com/apps/1211044/issue-templates-for-jira",
-    "marketplace.atlassian.com/apps/1220294/requirements-test-management-for-jira",
-    "marketplace.atlassian.com/apps/1238286/ai-ticket-assistant",
-    "marketplace.atlassian.com/apps/1237787",
-    "marketplace.atlassian.com/apps/1220477/entra-id-azure-ad-attributes-sync-for-jira",
-    "marketplace.atlassian.com/apps/1233642/workflow-building-blocks-for-jira",
-    "marketplace.atlassian.com/apps/22817756/procuro-complete-procurement-management-in-jsm"
-   ],
-   "ips": [],
-   "cidrs": [],
    "consented": false,
    "mode": "passive_only"
   },
@@ -8379,7 +8374,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 68,
+   "response_efficiency": 65,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -8431,6 +8426,61 @@
    "domains": [],
    "wildcards": [],
    "urls": [],
+   "ips": [],
+   "cidrs": [],
+   "consented": false,
+   "mode": "passive_only"
+  },
+  {
+   "handle": "meesho_bbp",
+   "name": "Meesho",
+   "platform": "hackerone",
+   "url": "https://hackerone.com/meesho_bbp",
+   "bounties": true,
+   "max_payout_usd": null,
+   "safe_harbor": null,
+   "disclosure": null,
+   "swag": false,
+   "managed": false,
+   "paused": false,
+   "submission_state": "open",
+   "response_efficiency": 70,
+   "avg_hours_to_bounty": 0,
+   "severities": [
+    "critical",
+    "high",
+    "low"
+   ],
+   "asset_total": 16,
+   "eligible_assets": 16,
+   "non_host_assets": 5,
+   "domains": [
+    "admin.meeshosupply.com",
+    "affiliate.meesho.com",
+    "console.valmo.in",
+    "grocery-supplier.meesho.com",
+    "investor.meesho.com",
+    "meesho.io",
+    "prod.meeshoapi.com",
+    "superstoreapp.meesho.com",
+    "supplier.meesho.com",
+    "www.meesho.com",
+    "www.valmo.in"
+   ],
+   "wildcards": [],
+   "urls": [
+    "admin.meeshosupply.com",
+    "affiliate.meesho.com",
+    "console.valmo.in",
+    "grocery-supplier.meesho.com",
+    "investor.meesho.com",
+    "meesho.io",
+    "prod.meeshoapi.com",
+    "superstoreapp.meesho.com",
+    "supplier.meesho.com",
+    "www.meesho.com",
+    "www.valmo.in"
+   ],
    "ips": [],
    "cidrs": [],
    "consented": false,
@@ -8495,7 +8545,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 89,
+   "response_efficiency": 90,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -8530,6 +8580,53 @@
     "*.vliegwinkel.nl"
    ],
    "urls": [],
+   "ips": [],
+   "cidrs": [],
+   "consented": false,
+   "mode": "passive_only"
+  },
+  {
+   "handle": "vinted-uab-mbb",
+   "name": "Vinted Bug Bounty",
+   "platform": "bugcrowd",
+   "url": "https://bugcrowd.com/engagements/vinted-uab-mbb",
+   "bounties": true,
+   "max_payout_usd": 8000,
+   "safe_harbor": "full",
+   "disclosure": false,
+   "swag": false,
+   "managed": true,
+   "paused": false,
+   "submission_state": null,
+   "response_efficiency": null,
+   "avg_hours_to_bounty": null,
+   "severities": [],
+   "asset_total": 16,
+   "eligible_assets": 16,
+   "non_host_assets": 7,
+   "domains": [
+    "www.vinted.com",
+    "www.vinted.net",
+    "www.vintedgo.com",
+    "sandbox.vintedgo.com",
+    "test-escalations.vintedgo.com",
+    "badger.it.vinted.com",
+    "careers.vinted.com",
+    "company.vinted.com",
+    "news.vinted.com"
+   ],
+   "wildcards": [],
+   "urls": [
+    "www.vinted.com",
+    "www.vinted.net",
+    "www.vintedgo.com",
+    "sandbox.vintedgo.com",
+    "test-escalations.vintedgo.com",
+    "badger.it.vinted.com",
+    "careers.vinted.com",
+    "company.vinted.com",
+    "news.vinted.com"
+   ],
    "ips": [],
    "cidrs": [],
    "consented": false,
@@ -8687,7 +8784,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 73,
+   "response_efficiency": 70,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -8961,7 +9058,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 91,
+   "response_efficiency": 90,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -9008,7 +9105,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 96,
+   "response_efficiency": 97,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -9051,7 +9148,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 90,
+   "response_efficiency": 93,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -9102,7 +9199,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 98,
+   "response_efficiency": 100,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -9153,7 +9250,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 87,
+   "response_efficiency": 86,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -9394,7 +9491,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 87,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -9812,7 +9909,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 88,
+   "response_efficiency": 87,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -10019,7 +10116,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 88,
+   "response_efficiency": 91,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -10310,7 +10407,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 89,
+   "response_efficiency": 88,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -10443,7 +10540,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 85,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -10476,57 +10573,6 @@
     "www.momondo.com",
     "www.mundi.com.br",
     "www.swoodoo.com"
-   ],
-   "ips": [],
-   "cidrs": [],
-   "consented": false,
-   "mode": "passive_only"
-  },
-  {
-   "handle": "meesho_bbp",
-   "name": "Meesho",
-   "platform": "hackerone",
-   "url": "https://hackerone.com/meesho_bbp",
-   "bounties": true,
-   "max_payout_usd": null,
-   "safe_harbor": null,
-   "disclosure": null,
-   "swag": false,
-   "managed": false,
-   "paused": false,
-   "submission_state": "open",
-   "response_efficiency": 70,
-   "avg_hours_to_bounty": 0,
-   "severities": [
-    "critical",
-    "high",
-    "low"
-   ],
-   "asset_total": 12,
-   "eligible_assets": 12,
-   "non_host_assets": 3,
-   "domains": [
-    "admin.meeshosupply.com",
-    "affiliate.meesho.com",
-    "investor.meesho.com",
-    "meesho.io",
-    "prod.meeshoapi.com",
-    "superstoreapp.meesho.com",
-    "supplier.meesho.com",
-    "www.meesho.com",
-    "www.valmo.in"
-   ],
-   "wildcards": [],
-   "urls": [
-    "admin.meeshosupply.com",
-    "affiliate.meesho.com",
-    "investor.meesho.com",
-    "meesho.io",
-    "prod.meeshoapi.com",
-    "superstoreapp.meesho.com",
-    "supplier.meesho.com",
-    "www.meesho.com",
-    "www.valmo.in"
    ],
    "ips": [],
    "cidrs": [],
@@ -10593,7 +10639,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 90,
+   "response_efficiency": 88,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -10863,7 +10909,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 73,
+   "response_efficiency": 72,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -10912,7 +10958,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 99,
+   "response_efficiency": 100,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -11228,53 +11274,6 @@
    "mode": "passive_only"
   },
   {
-   "handle": "vinted-uab-mbb",
-   "name": "Vinted Bug Bounty",
-   "platform": "bugcrowd",
-   "url": "https://bugcrowd.com/engagements/vinted-uab-mbb",
-   "bounties": true,
-   "max_payout_usd": 8000,
-   "safe_harbor": "full",
-   "disclosure": false,
-   "swag": false,
-   "managed": true,
-   "paused": false,
-   "submission_state": null,
-   "response_efficiency": null,
-   "avg_hours_to_bounty": null,
-   "severities": [],
-   "asset_total": 11,
-   "eligible_assets": 11,
-   "non_host_assets": 2,
-   "domains": [
-    "www.vinted.com",
-    "www.vinted.net",
-    "www.vintedgo.com",
-    "sandbox.vintedgo.com",
-    "test-escalations.vintedgo.com",
-    "badger.it.vinted.com",
-    "careers.vinted.com",
-    "company.vinted.com",
-    "news.vinted.com"
-   ],
-   "wildcards": [],
-   "urls": [
-    "www.vinted.com",
-    "www.vinted.net",
-    "www.vintedgo.com",
-    "sandbox.vintedgo.com",
-    "test-escalations.vintedgo.com",
-    "badger.it.vinted.com",
-    "careers.vinted.com",
-    "company.vinted.com",
-    "news.vinted.com"
-   ],
-   "ips": [],
-   "cidrs": [],
-   "consented": false,
-   "mode": "passive_only"
-  },
-  {
    "handle": "walt_io",
    "name": "Walt.io",
    "platform": "hackerone",
@@ -11486,7 +11485,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 64,
+   "response_efficiency": 68,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -11599,7 +11598,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 77,
+   "response_efficiency": 76,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -11766,7 +11765,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 71,
+   "response_efficiency": 67,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -12159,7 +12158,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 65,
+   "response_efficiency": 66,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -12263,7 +12262,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 66,
+   "response_efficiency": 67,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -12348,7 +12347,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 89,
+   "response_efficiency": 90,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -12391,7 +12390,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 77,
+   "response_efficiency": 76,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -12479,7 +12478,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 81,
+   "response_efficiency": 82,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -12555,7 +12554,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 85,
+   "response_efficiency": 84,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -12633,7 +12632,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 89,
+   "response_efficiency": 90,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -12855,7 +12854,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 3,
+   "response_efficiency": 10,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -12900,7 +12899,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 91,
+   "response_efficiency": 92,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -13093,7 +13092,7 @@
    "platform": "bugcrowd",
    "url": "https://bugcrowd.com/engagements/bitso-mbb-og",
    "bounties": true,
-   "max_payout_usd": 15000,
+   "max_payout_usd": 7500,
    "safe_harbor": "full",
    "disclosure": false,
    "swag": false,
@@ -13255,7 +13254,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 12,
+   "response_efficiency": 16,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -13294,8 +13293,8 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 69,
-   "avg_hours_to_bounty": null,
+   "response_efficiency": 63,
+   "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
     "medium"
@@ -13480,7 +13479,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 70,
+   "response_efficiency": 71,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -13522,7 +13521,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 68,
+   "response_efficiency": 71,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -13722,7 +13721,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 49,
+   "response_efficiency": 50,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -13823,7 +13822,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 81,
+   "response_efficiency": 80,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -13866,7 +13865,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 76,
+   "response_efficiency": 82,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -13948,7 +13947,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 70,
+   "response_efficiency": 68,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -13985,7 +13984,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 54,
+   "response_efficiency": 59,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -14024,7 +14023,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 79,
+   "response_efficiency": 80,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -14169,7 +14168,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 84,
+   "response_efficiency": 80,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -14400,7 +14399,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 71,
+   "response_efficiency": 78,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -14579,7 +14578,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 63,
+   "response_efficiency": 62,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -14620,7 +14619,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 67,
+   "response_efficiency": 70,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -14657,7 +14656,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 74,
+   "response_efficiency": 77,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -14741,7 +14740,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 97,
+   "response_efficiency": 98,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -14863,7 +14862,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 67,
+   "response_efficiency": 66,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -15233,7 +15232,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 65,
+   "response_efficiency": 66,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -15304,7 +15303,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 74,
+   "response_efficiency": 72,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -15422,7 +15421,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 41,
+   "response_efficiency": 23,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -15543,7 +15542,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 91,
+   "response_efficiency": 92,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -15578,7 +15577,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 64,
+   "response_efficiency": 65,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -15622,7 +15621,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 69,
+   "response_efficiency": 72,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -15662,7 +15661,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 87,
+   "response_efficiency": 88,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -15734,7 +15733,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 83,
+   "response_efficiency": 84,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -15962,35 +15961,6 @@
    "mode": "passive_only"
   },
   {
-   "handle": "brave",
-   "name": "Brave Software",
-   "platform": "hackerone",
-   "url": "https://hackerone.com/brave",
-   "bounties": true,
-   "max_payout_usd": null,
-   "safe_harbor": null,
-   "disclosure": null,
-   "swag": false,
-   "managed": false,
-   "paused": false,
-   "submission_state": "open",
-   "response_efficiency": 99,
-   "avg_hours_to_bounty": 0,
-   "severities": [
-    "critical"
-   ],
-   "asset_total": 5,
-   "eligible_assets": 5,
-   "non_host_assets": 5,
-   "domains": [],
-   "wildcards": [],
-   "urls": [],
-   "ips": [],
-   "cidrs": [],
-   "consented": false,
-   "mode": "passive_only"
-  },
-  {
    "handle": "cloudinary",
    "name": "Cloudinary",
    "platform": "bugcrowd",
@@ -16077,7 +16047,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 58,
+   "response_efficiency": 62,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -16153,7 +16123,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 75,
+   "response_efficiency": 77,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -16188,7 +16158,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 55,
+   "response_efficiency": 56,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -16297,7 +16267,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 65,
+   "response_efficiency": 64,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -16496,7 +16466,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 67,
+   "response_efficiency": 69,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -16828,7 +16798,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 85,
+   "response_efficiency": 86,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -16861,7 +16831,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 85,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -16969,7 +16939,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 96,
+   "response_efficiency": 95,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -17056,7 +17026,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 98,
+   "response_efficiency": 100,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -17128,7 +17098,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 95,
+   "response_efficiency": 96,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -17728,7 +17698,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 75,
+   "response_efficiency": 72,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -17790,7 +17760,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 76,
+   "response_efficiency": 77,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -18028,7 +17998,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 19,
+   "response_efficiency": 22,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -18166,7 +18136,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 67,
+   "response_efficiency": 66,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical",
@@ -18309,7 +18279,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 84,
+   "response_efficiency": 85,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -18342,8 +18312,8 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 90,
-   "avg_hours_to_bounty": 0,
+   "response_efficiency": 89,
+   "avg_hours_to_bounty": null,
    "severities": [
     "critical"
    ],
@@ -18811,7 +18781,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 59,
+   "response_efficiency": 62,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -19189,7 +19159,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 79,
+   "response_efficiency": 82,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -19578,7 +19548,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 14,
+   "response_efficiency": 13,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -19940,7 +19910,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 65,
+   "response_efficiency": 66,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -20139,41 +20109,6 @@
    "urls": [
     "marketplace.atlassian.com/apps/1226453/secureflag-knowledge-base",
     "marketplace.atlassian.com/apps/1232491"
-   ],
-   "ips": [],
-   "cidrs": [],
-   "consented": false,
-   "mode": "passive_only"
-  },
-  {
-   "handle": "sheer_bbp",
-   "name": "Sheer",
-   "platform": "hackerone",
-   "url": "https://hackerone.com/sheer_bbp",
-   "bounties": true,
-   "max_payout_usd": null,
-   "safe_harbor": null,
-   "disclosure": null,
-   "swag": false,
-   "managed": true,
-   "paused": false,
-   "submission_state": "open",
-   "response_efficiency": 86,
-   "avg_hours_to_bounty": 0,
-   "severities": [
-    "critical"
-   ],
-   "asset_total": 2,
-   "eligible_assets": 2,
-   "non_host_assets": 0,
-   "domains": [
-    "my.sheer.com",
-    "www.sheer.com"
-   ],
-   "wildcards": [],
-   "urls": [
-    "my.sheer.com",
-    "www.sheer.com"
    ],
    "ips": [],
    "cidrs": [],
@@ -20419,7 +20354,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 81,
+   "response_efficiency": 77,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -20689,7 +20624,7 @@
    "platform": "bugcrowd",
    "url": "https://bugcrowd.com/engagements/axis-os-public",
    "bounties": true,
-   "max_payout_usd": 40000,
+   "max_payout_usd": 20000,
    "safe_harbor": "full",
    "disclosure": false,
    "swag": false,
@@ -20750,7 +20685,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 87,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -21331,7 +21266,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 71,
+   "response_efficiency": 73,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -21365,14 +21300,10 @@
    "severities": [],
    "asset_total": 1,
    "eligible_assets": 1,
-   "non_host_assets": 0,
-   "domains": [
-    "marketplace.atlassian.com"
-   ],
+   "non_host_assets": 1,
+   "domains": [],
    "wildcards": [],
-   "urls": [
-    "marketplace.atlassian.com/apps/1233908/connectors-for-jira-free"
-   ],
+   "urls": [],
    "ips": [],
    "cidrs": [],
    "consented": false,
@@ -21625,7 +21556,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 90,
+   "response_efficiency": 91,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -21880,7 +21811,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 76,
+   "response_efficiency": 75,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -22065,7 +21996,7 @@
    "paused": false,
    "submission_state": "open",
    "response_efficiency": 100,
-   "avg_hours_to_bounty": 0,
+   "avg_hours_to_bounty": null,
    "severities": [],
    "asset_total": 0,
    "eligible_assets": 0,
@@ -22091,7 +22022,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 7,
+   "response_efficiency": 8,
    "avg_hours_to_bounty": null,
    "severities": [],
    "asset_total": 0,
@@ -22499,7 +22430,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 67,
+   "response_efficiency": 71,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -22862,7 +22793,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 41,
+   "response_efficiency": 42,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -23027,9 +22958,10 @@
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
+    "high",
     "medium"
    ],
-   "asset_total": 480,
+   "asset_total": 482,
    "eligible_assets": 0,
    "non_host_assets": 33,
    "domains": [
@@ -23046,6 +22978,7 @@
     "bodyform.co.uk",
     "brand.tena.com",
     "brandzone.essity.com",
+    "campus.hm.essity.com",
     "ccevaluation.tena.com",
     "cinder.app.essity.com",
     "dedicatoame.it",
@@ -23055,8 +22988,7 @@
     "delta-cast.de",
     "delta-cast.dk",
     "delta-cast.fi",
-    "delta-cast.nl",
-    "delta-cast.no"
+    "delta-cast.nl"
    ],
    "wildcards": [],
    "urls": [
@@ -23075,6 +23007,7 @@
     "bodyform.co.uk",
     "brand.tena.com",
     "brandzone.essity.com",
+    "campus.hm.essity.com",
     "ccevaluation.tena.com",
     "cinder.app.essity.com",
     "dedicatoame.it",
@@ -23082,8 +23015,7 @@
     "delta-cast.co.uk",
     "delta-cast.com.au",
     "delta-cast.de",
-    "delta-cast.dk",
-    "delta-cast.fi"
+    "delta-cast.dk"
    ],
    "ips": [],
    "cidrs": [],
@@ -23286,7 +23218,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 89,
+   "response_efficiency": 90,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -23346,6 +23278,110 @@
     "api-des.olympicair.com",
     "api.aegeanair.com",
     "apiuat.aegeanair.com"
+   ],
+   "ips": [],
+   "cidrs": [],
+   "consented": false,
+   "mode": "passive_only"
+  },
+  {
+   "handle": "henkel_vdp",
+   "name": "Henkel",
+   "platform": "hackerone",
+   "url": "https://hackerone.com/henkel_vdp",
+   "bounties": false,
+   "max_payout_usd": null,
+   "safe_harbor": null,
+   "disclosure": null,
+   "swag": false,
+   "managed": true,
+   "paused": false,
+   "submission_state": "open",
+   "response_efficiency": 100,
+   "avg_hours_to_bounty": null,
+   "severities": [
+    "critical"
+   ],
+   "asset_total": 284,
+   "eligible_assets": 0,
+   "non_host_assets": 28,
+   "domains": [
+    "academyofhairsalon.com",
+    "agorex.cl",
+    "allyoucare-byhenkel.com",
+    "auth.eshop-henkel-adhesives.cn",
+    "bloo.com",
+    "canusacps.com",
+    "cascola.com.br",
+    "cimsec.at",
+    "clubedocabelopro.com.br",
+    "colorsmith.ie",
+    "colorsmithco.ca",
+    "combatbugs.com",
+    "concorsi.loctite-consumer.it",
+    "cs-nri.com",
+    "demert.com",
+    "demertbrands.com",
+    "detergente-mas.com",
+    "devacurl.com",
+    "devacurlpro.com",
+    "dhatec.nl",
+    "dialprofessional.com",
+    "dixan.it",
+    "donnad.it",
+    "dylon.se"
+   ],
+   "wildcards": [
+    "*.academyofhairsalon.com",
+    "*.agorex.cl",
+    "*.allyoucare-byhenkel.com",
+    "*.auth.eshop-henkel-adhesives.cn",
+    "*.bloo.com",
+    "*.canusacps.com",
+    "*.cascola.com.br",
+    "*.cimsec.at",
+    "*.clubedocabelopro.com.br",
+    "*.colorsmith.ie",
+    "*.colorsmithco.ca",
+    "*.combatbugs.com",
+    "*.concorsi.loctite-consumer.it",
+    "*.cs-nri.com",
+    "*.demert.com",
+    "*.demertbrands.com",
+    "*.detergente-mas.com",
+    "*.devacurl.com",
+    "*.devacurlpro.com",
+    "*.dhatec.nl",
+    "*.dialprofessional.com",
+    "*.dixan.it",
+    "*.donnad.it",
+    "*.dylon.se"
+   ],
+   "urls": [
+    "aigc.henkel.cn",
+    "aigc.magic-mirror.cn",
+    "aliportal-dev.henkel.cn",
+    "aliportal.henkel.cn",
+    "aliyunportal-dev.henkel.cn",
+    "aliyunportal.henkel.cn",
+    "api.ar.magic-mirror.cn",
+    "api.mini.magic-mirror.cn",
+    "auth.eshop-henkel-adhesives.cn",
+    "barnangen.dk",
+    "barnangen.fi",
+    "barnangen.no",
+    "barnangen.nu",
+    "barnangen.se",
+    "base-qa.henkel-consumer-brands.cn",
+    "base.henkel-consumer-brands.cn",
+    "chatbotdatacon.wechat-henkel-adhesives.cn",
+    "console.ar.magic-mirror.cn",
+    "dev-aip.henkel-adhesives.com.cn",
+    "digitalplatform.qr-henkel-a.cn",
+    "dmeops.schwarzkopfclub.com.cn",
+    "docdownload-webinar.tryloctite.cn",
+    "factory.qr-henkel-a.cn",
+    "fc-qa.henkel-consumer-brands.cn"
    ],
    "ips": [],
    "cidrs": [],
@@ -23458,110 +23494,6 @@
    "mode": "passive_only"
   },
   {
-   "handle": "henkel_vdp",
-   "name": "Henkel",
-   "platform": "hackerone",
-   "url": "https://hackerone.com/henkel_vdp",
-   "bounties": false,
-   "max_payout_usd": null,
-   "safe_harbor": null,
-   "disclosure": null,
-   "swag": false,
-   "managed": true,
-   "paused": false,
-   "submission_state": "open",
-   "response_efficiency": 100,
-   "avg_hours_to_bounty": null,
-   "severities": [
-    "critical"
-   ],
-   "asset_total": 279,
-   "eligible_assets": 0,
-   "non_host_assets": 27,
-   "domains": [
-    "academyofhairsalon.com",
-    "agorex.cl",
-    "allyoucare-byhenkel.com",
-    "auth.eshop-henkel-adhesives.cn",
-    "bloo.com",
-    "canusacps.com",
-    "cascola.com.br",
-    "cimsec.at",
-    "clubedocabelopro.com.br",
-    "colorsmith.ie",
-    "colorsmithco.ca",
-    "combatbugs.com",
-    "concorsi.loctite-consumer.it",
-    "cs-nri.com",
-    "demert.com",
-    "demertbrands.com",
-    "detergente-mas.com",
-    "devacurl.com",
-    "devacurlpro.com",
-    "dhatec.nl",
-    "dialprofessional.com",
-    "dixan.it",
-    "donnad.it",
-    "dylon.se"
-   ],
-   "wildcards": [
-    "*.academyofhairsalon.com",
-    "*.agorex.cl",
-    "*.allyoucare-byhenkel.com",
-    "*.auth.eshop-henkel-adhesives.cn",
-    "*.bloo.com",
-    "*.canusacps.com",
-    "*.cascola.com.br",
-    "*.cimsec.at",
-    "*.clubedocabelopro.com.br",
-    "*.colorsmith.ie",
-    "*.colorsmithco.ca",
-    "*.combatbugs.com",
-    "*.concorsi.loctite-consumer.it",
-    "*.cs-nri.com",
-    "*.demert.com",
-    "*.demertbrands.com",
-    "*.detergente-mas.com",
-    "*.devacurl.com",
-    "*.devacurlpro.com",
-    "*.dhatec.nl",
-    "*.dialprofessional.com",
-    "*.dixan.it",
-    "*.donnad.it",
-    "*.dylon.se"
-   ],
-   "urls": [
-    "aigc.henkel.cn",
-    "aigc.magic-mirror.cn",
-    "aliportal-dev.henkel.cn",
-    "aliportal.henkel.cn",
-    "aliyunportal-dev.henkel.cn",
-    "aliyunportal.henkel.cn",
-    "api.ar.magic-mirror.cn",
-    "api.mini.magic-mirror.cn",
-    "auth.eshop-henkel-adhesives.cn",
-    "barnangen.dk",
-    "barnangen.fi",
-    "barnangen.no",
-    "barnangen.nu",
-    "barnangen.se",
-    "base-qa.henkel-consumer-brands.cn",
-    "base.henkel-consumer-brands.cn",
-    "chatbotdatacon.wechat-henkel-adhesives.cn",
-    "console.ar.magic-mirror.cn",
-    "dev-aip.henkel-adhesives.com.cn",
-    "digitalplatform.qr-henkel-a.cn",
-    "dmeops.schwarzkopfclub.com.cn",
-    "docdownload-webinar.tryloctite.cn",
-    "factory.qr-henkel-a.cn",
-    "fc-qa.henkel-consumer-brands.cn"
-   ],
-   "ips": [],
-   "cidrs": [],
-   "consented": false,
-   "mode": "passive_only"
-  },
-  {
    "handle": "daimler_truck",
    "name": "Daimler Truck",
    "platform": "hackerone",
@@ -23574,7 +23506,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 64,
+   "response_efficiency": 66,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -23880,7 +23812,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 55,
+   "response_efficiency": 53,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -23964,7 +23896,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 76,
+   "response_efficiency": 75,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -24071,7 +24003,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 79,
+   "response_efficiency": 78,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -24286,7 +24218,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 64,
+   "response_efficiency": 70,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -24373,7 +24305,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 82,
+   "response_efficiency": 81,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -24459,7 +24391,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 81,
+   "response_efficiency": 83,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -24699,7 +24631,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 87,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -24805,7 +24737,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 85,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -25151,7 +25083,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 50,
+   "response_efficiency": null,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -25311,7 +25243,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 83,
+   "response_efficiency": 82,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -25393,7 +25325,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 60,
+   "response_efficiency": 58,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -25591,7 +25523,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 74,
+   "response_efficiency": 73,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -25664,7 +25596,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 82,
+   "response_efficiency": 84,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -25746,7 +25678,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 64,
+   "response_efficiency": 60,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -25832,7 +25764,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 68,
+   "response_efficiency": 69,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -26783,7 +26715,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 80,
+   "response_efficiency": 74,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -27193,7 +27125,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 81,
+   "response_efficiency": 82,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -27257,7 +27189,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 83,
+   "response_efficiency": 88,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -27372,7 +27304,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 71,
+   "response_efficiency": 70,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -27756,7 +27688,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 66,
+   "response_efficiency": 69,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -27805,7 +27737,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 54,
+   "response_efficiency": 46,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -27866,7 +27798,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 70,
+   "response_efficiency": 68,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -28174,7 +28106,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 80,
+   "response_efficiency": 90,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -28295,7 +28227,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 82,
+   "response_efficiency": 83,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -28384,7 +28316,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 100,
+   "response_efficiency": 95,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -28440,7 +28372,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 41,
+   "response_efficiency": 44,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -28634,7 +28566,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 95,
+   "response_efficiency": 91,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -28683,7 +28615,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 69,
+   "response_efficiency": 65,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -28742,7 +28674,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 67,
+   "response_efficiency": 69,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -28983,7 +28915,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 71,
+   "response_efficiency": 100,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -29097,7 +29029,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 67,
+   "response_efficiency": 71,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -29198,7 +29130,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 75,
+   "response_efficiency": 79,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -29426,7 +29358,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 87,
+   "response_efficiency": 78,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -29635,7 +29567,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 78,
+   "response_efficiency": 79,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -29725,7 +29657,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 70,
+   "response_efficiency": 71,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -29774,7 +29706,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 47,
+   "response_efficiency": 50,
    "avg_hours_to_bounty": 0,
    "severities": [
     "critical"
@@ -30163,7 +30095,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 88,
+   "response_efficiency": 89,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -30241,7 +30173,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 69,
+   "response_efficiency": 68,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -30280,7 +30212,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 95,
+   "response_efficiency": 96,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -30584,7 +30516,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 85,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -30664,7 +30596,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 59,
+   "response_efficiency": 55,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -30809,7 +30741,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 98,
+   "response_efficiency": 86,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -30848,7 +30780,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 76,
+   "response_efficiency": 78,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -31035,7 +30967,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 56,
+   "response_efficiency": 57,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -31257,7 +31189,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 50,
+   "response_efficiency": 17,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -31370,7 +31302,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 80,
+   "response_efficiency": 67,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -31579,7 +31511,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 80,
+   "response_efficiency": 77,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -31653,7 +31585,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 75,
+   "response_efficiency": 71,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -31866,7 +31798,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 42,
+   "response_efficiency": 40,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical",
@@ -31937,7 +31869,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 68,
+   "response_efficiency": 74,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32011,7 +31943,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 59,
+   "response_efficiency": 66,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32121,7 +32053,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 63,
+   "response_efficiency": 58,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32294,7 +32226,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 92,
+   "response_efficiency": 93,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32329,7 +32261,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 86,
+   "response_efficiency": 100,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32364,7 +32296,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 50,
+   "response_efficiency": 42,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32467,7 +32399,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 85,
+   "response_efficiency": 84,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32532,7 +32464,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 59,
+   "response_efficiency": 63,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32602,7 +32534,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 78,
+   "response_efficiency": 77,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32637,7 +32569,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 96,
+   "response_efficiency": 93,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32695,7 +32627,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 63,
+   "response_efficiency": 57,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32757,7 +32689,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 67,
+   "response_efficiency": 68,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -32848,7 +32780,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 54,
+   "response_efficiency": 59,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -33001,7 +32933,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 63,
+   "response_efficiency": 60,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -33359,7 +33291,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 24,
+   "response_efficiency": 36,
    "avg_hours_to_bounty": null,
    "severities": [
     "critical"
@@ -33481,7 +33413,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 79,
+   "response_efficiency": 80,
    "avg_hours_to_bounty": null,
    "severities": [],
    "asset_total": 0,
@@ -33697,7 +33629,7 @@
    "managed": true,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 79,
+   "response_efficiency": 78,
    "avg_hours_to_bounty": null,
    "severities": [],
    "asset_total": 0,
@@ -33913,7 +33845,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 25,
+   "response_efficiency": 40,
    "avg_hours_to_bounty": null,
    "severities": [],
    "asset_total": 0,
@@ -33940,7 +33872,7 @@
    "managed": false,
    "paused": false,
    "submission_state": "open",
-   "response_efficiency": 91,
+   "response_efficiency": 92,
    "avg_hours_to_bounty": null,
    "severities": [],
    "asset_total": 0,
