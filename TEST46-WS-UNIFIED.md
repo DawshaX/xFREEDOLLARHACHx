@@ -84,3 +84,11 @@ tasks-clear: 200
 | **لستة المجموعات الثابتة** («كل مجموعات كالي» + 12 اسم) كانت إشهار غير مقاس | المجموعات الحقيقية metapackages kali-tools-* | صياغة مقاسة: متاحة عبر apt + القياس الفعلي في الكتالوج |
 
 التحقق المقاس: بناء البانل ✓ 13s · typecheck baseline ✓ · api-freshness 152/665 ✓ · **gates 44/44 green (89.6s)** · cron fleet-nodes «كل 5 ساعات» متحقق بالحرف (0 */5 * * *).
+
+## 7) نبضة الهاردوير الموحدة (آخر عدّاد 3ث استطلاعي)
+
+- `measureSystemSnapshot()` مشتركة بين GET /monitor/system وباثر WS جديد.
+- `ensureHwBroadcast()`: نبضة `hw_metrics` كل 3ث على القناة العامة — **بس لو فيه مستمعين** (صفر عملاء = صفر شغل · unref). أول عميل WS يشغّلها.
+- `HardwareMonitorWidget`: 3ث استطلاع → حدث حي + خطة أمان 15ث.
+- **قياس E2E حي:** `hw_metrics وصل بعد 3015ms — CPU 13% · RAM 11% · gpu:false · disk 20GB` (سيرفر مبني + عميل WS حقيقي).
+- gates 44/44 green · بناء البانل 13.45s ✓.

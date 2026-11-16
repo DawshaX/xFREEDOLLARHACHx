@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { Cpu, MemoryStick, Activity, Clock, Zap, TrendingUp } from "lucide-react";
+import { useLiveRefetch } from "@/hooks/useWebSocket";
 
 const BASE = "/api";
 
@@ -75,9 +76,12 @@ export function HardwareMonitorWidget() {
 
   useEffect(() => {
     void fetchInfo();
-    timerRef.current = setInterval(() => void fetchInfo(), 3000);
+    // TEST46 — القناة الأولى بقت WS: السيرفر بيقيس مرة كل 3ث ويدفع hw_metrics
+    // للكل، والعدّاد هنا خطة أمان بطيئة (15ث) لو القناة وقعت فقط.
+    timerRef.current = setInterval(() => void fetchInfo(), 15_000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
+  useLiveRefetch(["hw_metrics"], fetchInfo, 15_000);
 
   if (!info) return null;
 
