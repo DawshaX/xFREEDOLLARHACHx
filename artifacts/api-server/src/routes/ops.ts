@@ -947,6 +947,39 @@ async function measureNodeTools(rows: Array<{ kali: boolean; mode: string; id: s
   return { from: first.hostname, tools, sysinfo };
 }
 
+/* TEST47 — مرآة النشر من الهَب نفسه: الصفحة كانت بتجيب state/waifly-deploy.json
+ * من raw.githubusercontent مباشرة — ومتصفحات على بعض الشبكات (مصر حرفيًا)
+ * محجوب عليها الraw فكانت تعرض «مرآة النشر لسه مااتبنتش» كذبًا والمرآة موجودة.
+ * الهَب بيقراها سيرفرًا من GitHub API ويخزنها 10د — نفس الأصل بالحرف. */
+let deployMirrorCache: { at: number; payload: Record<string, unknown> | null } = { at: 0, payload: null };
+router.get("/ops/deploy-mirror", async (_req: Request, res: Response) => {
+  if (deployMirrorCache.payload && Date.now() - deployMirrorCache.at < 10 * 60_000) {
+    res.json({ ...deployMirrorCache.payload, servedFrom: "hub-cache" });
+    return;
+  }
+  try {
+    const r = await fetch("https://api.github.com/repos/DawshaX/xFREEDOLLARHACHx/contents/state/waifly-deploy.json", {
+      headers: {
+        Accept: "application/vnd.github.raw+json",
+        "User-Agent": "CyberNova-Hub",
+        ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
+      },
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!r.ok) throw new Error(`GitHub ${r.status}`);
+    const text = await r.text();
+    const payload = JSON.parse(text) as Record<string, unknown>;
+    deployMirrorCache = { at: Date.now(), payload };
+    res.json({ ...payload, servedFrom: "hub-fetch" });
+  } catch (e) {
+    if (deployMirrorCache.payload) {
+      res.json({ ...deployMirrorCache.payload, servedFrom: "hub-cache-stale" });
+      return;
+    }
+    res.status(502).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
 /* ── TEST24 — المخزن الموحّد: «فين اللي عملتو وفين الشغل» — كل مساحاتك على جيت هوب
  * بمقاسات حية من GitHub API (حجم فعلي بالبايت · آخر تحديث · لينك يفتح المكان). ── */
 router.get("/ops/storage-hub", async (_req: Request, res: Response) => {

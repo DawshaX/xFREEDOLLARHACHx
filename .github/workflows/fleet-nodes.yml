@@ -219,13 +219,29 @@ jobs:
         continue-on-error: true
         timeout-minutes: 8
         run: |
+          # TEST47 — قياس 2026-11-16 21:18Z على العقد الحية: 14 أداة من الليستا
+          # دي ناقصة. السبب: apt جوه proot بيفشل بصمت — الجست مافيهوش
+          # /etc/resolv.conf فapt-get update مايسألش DNS أصلًا. الترقيع:
+          # (1) كتابة DNS في الجست قبل apt (2) تقسيم التثبيت مجموعتين عشان
+          # فشل حزمة ضخمة (amass ~100MB) مايموتش الباقي (3) محاولة تانية
+          # (4) التحقق يطبع الاسم المفقود بالحرف — مافيش «skipped» عمياء.
           if [ -f "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" ]; then
             P="$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static"
             R="$HOME/kali-rootfs/rootfs"
-            "$P" -R "$R" /bin/sh -c "apt-get update -qq && apt-get install -y -qq amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john 2>&1 | tail -1" || \
-              echo "::warning::extra tools skipped — kali_run بيسأل apt جوه كالي عند الطلب"
+            printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$R/etc/resolv.conf"
+            # exiftool الحزمة بتاعته libimage-exiftool-perl — apt بحزمة واحدة غلط بيأجّل المجموعة كلها (سبب ال14 ✗ المقاسة)
+            G2="responder netexec sherlock arp-scan hping3 john"
+            for G in "$G1" "$G2"; do
+              for ATTEMPT in 1 2; do
+                if "$P" -R "$R" /bin/sh -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $G" >/tmp/apt-extra.log 2>&1; then
+                  break
+                fi
+                [ "$ATTEMPT" = "2" ] && echo "::warning::group failed (تاني محاولة): $(tail -2 /tmp/apt-extra.log | tr '\n' ' ')"
+              done
+            done
             "$P" -R "$R" /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null && echo OK:\$t; done" | tee /tmp/kali-extras.txt || true
-            echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12"
+            MISSING="$("$P" -R "$R" /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null || echo MISSING:\$t; done" 2>/dev/null | tr '\n' ' ')"
+            echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12 ${MISSING:+— مفقود: $MISSING}"
           fi
 
       - name: Resolve the hub token

@@ -217,9 +217,11 @@ export default function KaliEnvPage() {
       } catch { /* الساكن مافيهوش version حي */ }
     })();
     (async () => {
-      // المرآة الحية من raw (الrunner بيدفعها كل 30د) — ولو الاتصال بيها وقع:
-      // النسخة اللي جوّه الحزمة نفسها (public/state — build-standalone بيشحنها).
+      // TEST47 — المرآة الحية: الهَب بيقراها سيرفرًا من GitHub API ويخزنها 10د
+      // (raw.githubusercontent محجوب على بعض الشبكات في مصر فكانت تعرض
+      // «مااتبنتش» كذبًا والمرآة موجودة). بعد الهَب: raw ثم النسخة المحلية.
       const urls = [
+        `${API}/ops/deploy-mirror`,
         `https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/state/waifly-deploy.json?t=${Date.now()}`,
         "/state/waifly-deploy.json",
       ];
@@ -575,11 +577,18 @@ export default function KaliEnvPage() {
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}>
               <RefreshCw className="w-3 h-3" /> حدّث
             </button>
-            <button onClick={installOnNode} disabled={installBusy || nodes?.install.running === true}
-              className="text-[9px] font-black px-2.5 py-1 rounded"
-              style={{ background: "rgba(68,255,136,0.12)", border: "1px solid rgba(68,255,136,0.5)", color: "#44ff88", opacity: installBusy || nodes?.install.running === true ? 0.5 : 1 }}>
-              {nodes?.install.running ? "⏳ التثبيت شغال…" : installBusy ? "بدين…" : "⚙️ ثبّت كالي على أول عقدة فاضية"}
-            </button>
+            {nodes && nodes.nodes.length > 0 && nodes.nodes.every((n) => n.kali) ? (
+              <span className="text-[9px] font-black px-2.5 py-1 rounded"
+                style={{ background: "rgba(68,255,136,0.06)", border: "1px solid rgba(68,255,136,0.3)", color: "#7cffb0" }}>
+                ✓ كل العقد عندها كالي بالفعل ({nodes.nodes.filter((n) => n.kali).length}/{nodes.nodes.length})
+              </span>
+            ) : (
+              <button onClick={installOnNode} disabled={installBusy || nodes?.install.running === true}
+                className="text-[9px] font-black px-2.5 py-1 rounded"
+                style={{ background: "rgba(68,255,136,0.12)", border: "1px solid rgba(68,255,136,0.5)", color: "#44ff88", opacity: installBusy || nodes?.install.running === true ? 0.5 : 1 }}>
+                {nodes?.install.running ? "⏳ التثبيت شغال…" : installBusy ? "بدين…" : "⚙️ ثبّت كالي على أول عقدة فاضية"}
+              </button>
+            )}
           </div>
         </div>
         <p className="text-[9px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
@@ -590,7 +599,7 @@ export default function KaliEnvPage() {
             {nodes.nodes.map((n) => (
               <div key={n.id} className="rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2 flex-wrap"
                 style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${n.kali ? "rgba(68,255,136,0.4)" : "rgba(255,255,255,0.12)"}` }}>
-                <span className="text-[10px] font-black" style={{ color: "#e0e0e0" }}>🖥️ {n.hostname}</span>
+                <span className="text-[10px] font-black" style={{ color: "#e0e0e0" }} title={n.id}>🖥️ {n.hostname}<span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}> · {n.id.slice(0, 8)}</span></span>
                 <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
                   style={{ background: n.kali ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: n.kali ? "#44ff88" : "rgba(255,170,68,0.9)" }}>
                   {n.probed ? (n.mode === "bare" ? "نظام كالي ✓" : n.mode === "proot" ? "rootfs كالي سحابية + proot ✓" : "جاهزة للتثبيت — الزر فوق") : "مش بردّ على الprobe"}
@@ -777,7 +786,7 @@ export default function KaliEnvPage() {
           </p>
         )}
         <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-          {nodes?.stats ? Object.entries(nodes.stats.byPlane).map(([p, n]) => `${p}: ${n}`).join(" · ") : "—"} — كل تنفيذ بيتسجل من نواة الاتصال الموحدة (هَب أو عقدة).
+          {nodes?.stats ? Object.entries(nodes.stats.byPlane).map(([p, n]) => `${p}: ${n}`).join(" · ") : "—"} — كل تنفيذ بيتسجل من نواة الاتصال الموحدة (هَب أو عقدة) · العدّاد يشمل نبضات الفحص التلقائي (probe الأدوات) مش بس تنفيذك اليدوي — فشل الفحص أثناء انقطاع عقدة بيتسجل ✗ صادق.
         </p>
         {buildStamp && (
           <p className="text-[8px] font-mono mt-1.5 pt-1.5" style={{ color: "rgba(120,220,255,0.5)", borderTop: "1px dashed rgba(120,220,255,0.15)" }}>
@@ -838,7 +847,18 @@ export default function KaliEnvPage() {
               </p>
             )}
             <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
-              {Object.entries(nodes.tools.tools).map(([k, v]) => <ToolCell key={k} name={k} t={v} />)}
+              {Object.entries(nodes.tools.tools).map(([k, v]) => v.present ? (
+                <ToolCell key={k} name={k} t={v} />
+              ) : (
+                <button key={k} onClick={() => void installTool(k)} disabled={instBusy !== null} title={`ثبّت ${k} على العقدة (apt جوه كالي — قد ياخد دقايق)`}
+                  className="rounded-lg px-2 py-1.5 text-right transition-all hover:opacity-80"
+                  style={{ background: "rgba(255,170,68,0.06)", border: "1px dashed rgba(255,170,68,0.35)" }}>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] font-black" style={{ color: instBusy === k ? "#ffd08a" : "rgba(255,170,68,0.9)" }}>{instBusy === k ? "⏳ بتثبت…" : `＋ ${k}`}</span>
+                  </div>
+                  <div className="text-[8px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>مش منصّبة — دوس تثبت</div>
+                </button>
+              ))}
             </div>
             <p className="text-[8px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
               القياس بيتنفّذ فعليًا جوه كالي على العقدة كل دقيقتين — العدّاد الفعلي هو سجل dpkg نفسه ({nodes.tools.sysinfo?.packages ?? "?"} حزمة). الأداة بتتقاس بوجود التنفيذ بتاعها على النظام — واللي مش منصّبة بيتقال عليها صريح.
