@@ -5918,6 +5918,23 @@ if (path === "/fleet/system") {
     return { ok: true, static: true, note: staticNote };
   }
 
+  if (path === "/kali-env/health") {
+    /* TEST42 — كارت كالي في NovaAgentPro بيقرا /health حتى في الوضع الساكن:
+     * الرد الصادق هنا «القياس الحي على الهَب» — مافيش rootfs ولا أسطول
+     * يقدر المتصفح الساكن يدّعيه. أصفار كاذبة أقل صدق من «غير متاح هنا». */
+    return {
+      ok: true,
+      ready: false,
+      readyAnywhere: false,
+      prootBin: null,
+      rootfs: null,
+      guestShell: false,
+      reason: "static-preview — القياس الحي (proot/rootfs/الأسطول) بيتقاس على الهَب نفسه",
+      static: true,
+      note: "الوضع الثابت: مفيش سيرفر — القياس الحي بيشتغل لما تشغّل المنصة.",
+    };
+  }
+
   if (path === "/local-agent/agents") {
     // One real node, no pretending: this browser tab, running the engine right
     // now. It is the only machine a static page can honestly claim.
