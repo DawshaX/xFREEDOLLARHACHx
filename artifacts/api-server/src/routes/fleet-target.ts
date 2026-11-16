@@ -50,6 +50,7 @@ type TargetCache = {
 let cache: TargetCache = { at: 0, configured: null, enabled: null, error: null, waves: null };
 
 const alertedStaleRuns = new Set<number>();
+const alertedLowAttach = new Set<number>();
 
 /** الموجات الحية بالحرف: run بتاع fleet-nodes/fleet-now لسه in_progress؟
  * بلا توكن/بلا نت → null (مش مصفوفة فاضية — فاضية معناها «مافيش موجات»
@@ -105,6 +106,28 @@ function alertStaleWaves(waves: WaveInfo[]): number {
     }
   }
   return fresh;
+}
+
+/** TEST38 — «موجة حية والاتصال قليل»: قِيس 02:27Z — موجة 20:07Z ماسكة 17
+ * runner والهَب شايف 3-4 بس. ده مش نفس تنبيه العمر: العقدة ممكن تكون في
+ * prewarm لسه، فالإنذار بينطلق بعد 45د من عمر الموجة (prewarm 7د + هامش)
+ * والاتصال أقل من 5 — مرة واحدة لكل موجة، بنفس القنوات الموحدة. */
+function alertLowAttach(waves: WaveInfo[], connected: number): void {
+  if (connected >= 5) return;
+  for (const w of waves) {
+    if (w.ageMin < 45 || alertedLowAttach.has(w.runId)) continue;
+    alertedLowAttach.add(w.runId);
+    const title = `🔌 الأسطول متصل جزئيًا: ${connected} عقدة وصلت من موجة شغالة ${w.ageMin} دقيقة (${w.workflow}#${w.runId})`;
+    const detail = `الrun ماسك سلوتات وjobs شغالة، بس الاتصال بالهَب أقل من 5 — العقد اللي ما وصلتش إما لسه في prewarm أو اتحادها فشل بصمت. اللوج الكامل للعقدة في صفحة Actions.`;
+    void import("../lib/agent/session-nexus").then(({ recordBackgroundEvent }) =>
+      recordBackgroundEvent({ kind: "fleet", title, detail, source: "fleet-target" }),
+    );
+    try {
+      createPushNotification({ kind: "fleet-low-attach", title, body: detail, link: w.url });
+    } catch {
+      /* push غير مظبوط — مركز الإشعارات شايف الحدث برضه */
+    }
+  }
 }
 
 async function readGithubVars(): Promise<TargetCache> {
@@ -172,6 +195,7 @@ router.get("/fleet/target", async (_req: Request, res: Response) => {
 
   const configured = gh.configured;
   const shortfall = configured === null ? null : Math.max(0, configured - connected);
+  if (gh.waves) alertLowAttach(gh.waves, connected);
 
   let why: string;
   if (configured === null) {
