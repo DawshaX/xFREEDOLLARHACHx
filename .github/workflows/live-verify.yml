@@ -61,6 +61,12 @@ jobs:
   verify:
     name: run the real toolchain and the real ops spine
     runs-on: ubuntu-latest
+    # ⚠ على مستوى الـjob مش الخطوة (مقاس 2026-11-17): ده كان على خطوة التنزيل بس،
+    # وخطوة الإقلاع اللي بعدها كانت بتشوفه غايب → `pruneState()` في الـboot بيمسح
+    # nuclei من vendor/bin → الصف الأحمر «nuclei present: مش موجود» وسببه التنظيف
+    # مش التنزيل. دلوقتي الـengine بيعرف إن المكنة دي مقصود إنها تشيل العدة التقيلة.
+    env:
+      NOVA_HEAVY_TOOLS: "1"
     # ~4 min normal (tool updates dominate), and the nuclei row alone is allowed 165 s — so the
     # ceiling has to stay well above the sum. Measured: run 41454924776 spent ~6 min total.
     timeout-minutes: 26
@@ -110,7 +116,13 @@ jobs:
           NOVA_HEAVY_TOOLS: "1"
           NOVA_TOOLCHAIN_MIRROR: https://github.com/${{ github.repository }}/releases/download/nova-toolchain
         run: |
-          node scripts/fetch-toolchain.mjs --into vendor/bin --mirror "$NOVA_TOOLCHAIN_MIRROR" || true
+          # `|| true` remained from the era when the fetcher was allowed to be a no-op; the
+          # missing-binary loop right after is the real gate, and it stays — but the fetcher's
+          # own exit code is printed so a crash there ("TypeError: ...") is visible instead of
+          # looking like a network miss.
+          rc=0
+          node scripts/fetch-toolchain.mjs --into vendor/bin --mirror "$NOVA_TOOLCHAIN_MIRROR" || rc=$?
+          echo "fetch-toolchain exit=$rc (non-zero is survivable — the loop below is the gate)"
           missing=""
           for b in nuclei httpx subfinder katana dnsx naabu ffuf; do
             if [ ! -x "vendor/bin/$b" ]; then missing="$missing $b"; fi

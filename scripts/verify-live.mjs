@@ -334,7 +334,17 @@ async function cliChecks(cfg) {
 
 async function engineChecks(cfg) {
   const health = await api("/health");
-  if (!health.ok) { add("engine", "engine reachable", "fail", `GET ${ENGINE}/health → ${health.status} ${short(health.text, 90)}`); return; }
+  if (!health.ok) {
+    add("engine", "engine reachable", "fail", `GET ${ENGINE}/health → ${health.status} ${short(health.text, 90)}`);
+    // A dead engine used to end the engine layer with ONE row and no explanation of what
+    // the report then means — and `verify-live.mjs` exits 0 even when it crashes (the catch
+    // at the bottom exists so a harness bug never masks a tool result). Result: the CI step
+    // went green, the artifact was 5 KB, and the only red was step 17 "Commit the report".
+    // Name the consequence in the report itself.
+    add("engine", "report completeness", "blocked",
+      `المحرك مردّش، فكل فحوص السلسلة (كتالوج/مهمة/خزنة/بوابة المسودة/الأسطول/المجلس) ماقيستش — التقرير ده ناقص مش ناجح`);
+    return;
+  }
   add("engine", "engine reachable", "pass", `HTTP ${health.status}`);
 
   const kinds = await api("/ops/kinds");
