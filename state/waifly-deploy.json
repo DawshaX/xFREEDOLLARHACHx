@@ -1,32 +1,32 @@
 {
-  "at": "2026-11-17T05:03:53.350Z",
+  "at": "2026-11-17T05:33:58.321Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-17T05:02:36Z",
-    "size": 4200943
+    "updatedAt": "2026-11-17T05:32:40Z",
+    "size": 4192831
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "d8013700401712ffd3b33339b5e7ade6be999bbf",
-    "builtAt": "2026-11-17T03:45:02.058Z",
+    "commit": "32094575bb6d93f38d3f1cd5f4139a7c86e6a58a",
+    "builtAt": "2026-11-17T05:02:13.970Z",
     "files": 189,
     "builtBy": "github-actions"
   },
   "boot": {
-    "commit": "d8013700401712ffd3b33339b5e7ade6be999bbf",
-    "builtAt": "2026-11-17T03:45:02.058Z",
+    "commit": "32094575bb6d93f38d3f1cd5f4139a7c86e6a58a",
+    "builtAt": "2026-11-17T05:02:13.970Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 23 ثانية)",
-    "lastCheckAt": "2026-11-17T05:00:53.873Z",
-    "currentBuiltAt": "2026-11-17T03:45:02.058Z",
-    "latestReleaseAt": "2026-11-17T03:45:25Z",
+    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 22 ثانية)",
+    "lastCheckAt": "2026-11-17T05:30:08.104Z",
+    "currentBuiltAt": "2026-11-17T05:02:13.970Z",
+    "latestReleaseAt": "2026-11-17T05:02:36Z",
     "restartNeeded": false
   },
   "updaterInstall": {
@@ -37,8 +37,8 @@
   "restartHttp": 200,
   "action": "restart_requested",
   "bootAfter": {
-    "commit": "d8013700401712ffd3b33339b5e7ade6be999bbf",
-    "builtAt": "2026-11-17T03:45:02.058Z",
+    "commit": "32094575bb6d93f38d3f1cd5f4139a7c86e6a58a",
+    "builtAt": "2026-11-17T05:02:13.970Z",
     "dir": "/home/container"
   },
   "fresh": false,
@@ -60,10 +60,10 @@
       "gh-9-0300",
       "gh-3-0302",
       "gh-1-0301",
-      "gh-12-0302",
       "gh-6-0300",
       "gh-10-0300",
       "gh-2-0301",
+      "gh-12-0302",
       "gh-11-0300",
       "gh-5-0301"
     ]
