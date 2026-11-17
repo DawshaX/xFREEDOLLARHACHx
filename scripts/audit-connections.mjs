@@ -254,7 +254,19 @@ async function main() {
             const listRes = await fetch(serverBase + parent, { signal: AbortSignal.timeout(8000), headers: auditHeaders() });
             const json = await listRes.json().catch(() => null);
             await listRes.body?.cancel().catch(() => {});
-            if (Array.isArray(json) && json.length === 0) {
+            // A collection is either a bare array (`[]`) or the panel's usual
+            // envelope (`{ ok, count, notes: [] }`, `{ items: [] }` …). The bare
+            // array was the only shape accepted, so `DELETE /api/nova/notes/1`
+            // was reported as a broken connection while the route was healthy and
+            // the store was simply empty (measured 2026-11-17: 4 findings, all of
+            // them this shape). Any non-empty array in the envelope means the
+            // store has data, so a 404 there is a real finding again.
+            const emptyCollection =
+              (Array.isArray(json) && json.length === 0) ||
+              (json && typeof json === "object" && !Array.isArray(json) &&
+                Object.values(json).some((v) => Array.isArray(v)) &&
+                Object.values(json).every((v) => !Array.isArray(v) || v.length === 0));
+            if (emptyCollection) {
               skipped.push({ endpoint: `${site.method} ${site.path}`, reason: `${parent} is empty` });
               continue;
             }

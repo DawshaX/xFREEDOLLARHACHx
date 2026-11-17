@@ -398,6 +398,22 @@ async function fetchOne(tool, manifest) {
     if (fromMirror) return fromMirror;
     return { bin: tool.bin, status: "failed", why: "api.github.com ماردّش (rate limit أو مفيش خروج من هنا)" };
   }
+  // المرآة بتتسأل *الآن* في ثلاث حالات، مش حالة واحدة:
+  //   1. `latest` = null (السلوك القديم — api.github.com محجوب على المكنة).
+  //   2. التنزيل من CDN الأصول فشل (تحت، في نفس الدالة).
+  //   3. NOVA_TOOLCHAIN_MIRROR_FIRST=1 — تشخيص أو مكنة المرآة عندها أرخص.
+  // السبب المقاس (2026-11-17، live-verify run 44011381539): الـAPI ردّ، الإصدار
+  // اتحدد، والتنزيل من CDN الأصول فشل — فـnuclei فضل ناقص والسطر الوحيد الأحمر
+  // في التقرير كله كان «nuclei present». الحالة ٢ هي اللي بتغطي ده. المرآة مش
+  // الاختيار الافتراضي الأول عن قصد: أصولها غير مضغوطة (~660MB للسبعة) والمسار
+  // العادي بينزّل أرشيفات مضغوطة أصغر — والاتنين بيتحققوا بنفس الصرامة.
+  if (MIRROR && String(process.env.NOVA_TOOLCHAIN_MIRROR_FIRST || "") === "1") {
+    const mirrored = await tryMirror(tool, manifest);
+    if (mirrored && mirrored.status === "installed") return mirrored;
+    if (mirrored && mirrored.status === "failed") {
+      log(`· ${tool.bin}: المرآة ما كفّتش (${mirrored.why}) — بنكمّل على المنبع`);
+    }
+  }
   const asset = (latest.assets || []).find((a) => tool.match.test(a.name));
   if (!asset) return { bin: tool.bin, status: "failed", tag, why: `مفيش asset بيطابق linux/amd64 من بين ${(latest.assets || []).length} ملف` };
 
@@ -407,6 +423,10 @@ async function fetchOne(tool, manifest) {
   if (DRY) return { bin: tool.bin, status: "dry", tag, url: asset.browser_download_url };
   if (!(await download(asset.browser_download_url, archive))) {
     fs.rmSync(tmp, { recursive: true, force: true });
+    // نفس الفتحة بالحرف في الاتجاه التاني (مقاس 2026-11-17): الـAPI بيردّ بس
+    // CDN الأصول بيرفض/يقطع — قبل كده ده كان «failed» نهائي والمرآة ما بتتسألش.
+    const fromMirror = await tryMirror(tool, manifest);
+    if (fromMirror && fromMirror.status === "installed") return fromMirror;
     return { bin: tool.bin, status: "failed", tag, why: "التنزيل فشل من " + new URL(asset.browser_download_url).host };
   }
   // `raw`: الأصل نفسه هو الباينري (osv-scanner بينشر ملف واحد) — مفيش أرشيف يّفك.

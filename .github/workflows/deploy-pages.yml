@@ -25,6 +25,11 @@ on:
       - "NOVA live mission"
       - "probe-live-llm"
       - "NOVA brain (keyless · thinks every 15 min)"
+      # fleet-nodes commits its per-node tool reports with `[skip ci]`
+      # (state/fleet-wave-report-*.json). Without this line those commits never
+      # reach Pages and the panel keeps reading yesterday's wave — measured by
+      # scripts/check-workflows.mjs as `10/11 skip-ci state commits republished`.
+      - "fleet-nodes"
     types: [completed]
   workflow_dispatch:
 

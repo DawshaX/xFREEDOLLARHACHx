@@ -325,6 +325,28 @@ curl https://nova.waifly.com/api/autonomous/status | jq '.daemon, .level, .sourc
 - `NOVA_UPDATE_ASSET_URL`: أصل الحزمة اللي بنعمله `HEAD` ونقرا `Last-Modified` لو
   الـAPI رفض. الافتراضي `github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-portable/nova-24-7.zip`.
 
+- `NOVA_FRAME_ANCESTORS` (اختياري — فاضي = أمان أعلى): الأصول المسموح لها تعرض
+  اللوحة داخل `iframe`. الافتراضي `frame-ancestors 'self'` + `X-Frame-Options: SAMEORIGIN`،
+  فالاستضافة اللي بتعرض الصفحة في إطار من دومين تاني هتلاقي شاشة بيضاء. الحل مش `'*'`،
+  هو تسمية الأصل: `NOVA_FRAME_ANCESTORS="https://8123-abc.e2b.app https://*.arena.dev"`.
+  المدخل بيعدّي على `new URL()` فيتقصّر لـ`origin` (CSP بيقارن أصل مش مسار)،
+  والشرطة العريضة بتبقى زي ما هي، والمدخل البايظ بيتسجل ويتم تجاهله —
+  `frameAncestorsConfig()` في `lib/ops/http-hardening.ts`. مقاس 2026-11-17:
+  أول إقلاع بالقيمة وقع بـ«duplicate directive frame-ancestors» لأن helmet بيرمي
+  على التكرار — الافتراضي بيشيله قبل ما يتحط، وبعد الإصلاح الهيدر بقى
+  `frame-ancestors 'self' https://8123-abc.e2b.app https://*.arena.dev` والصفحة 200.
+- `NOVA_CORS_EXTRA` (اختياري): أصول إضافية مسموح لها تقرا ردود الـAPI (CORS) —
+  مفيدة لما اللوحة بتتقدّم عبر أصل تاني (معاينة/بروكسي). بتتقري وقت كل طلب
+  (مش وقت الإقلاع) وبتقصّر المسار لـ`origin`. مثال:
+  `NOVA_CORS_EXTRA="https://8080-abc.e2b.app"`. القايمة الأصلية
+  `NOVA_ALLOWED_ORIGINS` زي ما هي، والبوابة (token/session) هي المصادقة الحقيقية
+  — CORS بس بتمنع صفحة غريبة من **قراءة** الرد.
+- `NOVA_TOOLCHAIN_MIRROR_FIRST=1` (تشخيص فقط): بيخلّي `scripts/fetch-toolchain.mjs`
+  يجرب المرآة قبل المنبع. الافتراضي منبع-أولًا (أرشيفات مضغوطة أصغر)، والمرآة
+  بتتسأل دلوقتي في حالتين كانت بتسقط فيهم: `api.github.com` مش بيردّ **أو**
+  تنزيل أصل الإصدار من CDN الأصول فشل (مقاس 2026-11-17، live-verify run
+  44011381539: nuclei ناقص والسطر الوحيد الأحمر في التقرير كله كان «nuclei present»).
+
 ## الأسرار: مش في الكود (من المرحلة 58)
 
 `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `OPENCLAW_GATEWAY` / `OPENCLAW_TOKEN` كانت مكتوبة
