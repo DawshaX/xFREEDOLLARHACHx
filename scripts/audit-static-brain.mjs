@@ -33,10 +33,24 @@ const HOST = "https://dawshax.github.io/xFREEDOLLARHACHx";
 const args = process.argv.slice(2);
 const asJson = args.includes("--json");
 const serverArg = args.find((a) => a.startsWith("--server="));
-const SERVER = serverArg ? serverArg.split("=")[1].replace(/\/$/, "") : "";
+// `--server=127.0.0.1:8080` is accepted as shorthand for http:// — a bare host
+// is not a URL, and the old code fed it straight to fetch (the failure read as
+// "server down" when the real message was "Failed to parse URL").
+const SERVER = (() => {
+  const raw = serverArg ? serverArg.split("=").slice(1).join("=").replace(/\/$/, "") : "";
+  if (!raw) return "";
+  return /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
+})();
 const MODE = (args.find((a) => a.startsWith("--mode=")) || "").split("=")[1] || "";
 const MESSAGE = (args.find((a) => a.startsWith("--message=")) || "").split("=").slice(1).join("=") || "ابحث عن CVE-2025-29927 وإيه حالة المنصة؟";
 const PHASE_OUT = "/tmp/nova-static-brain-phase.json";
+
+// Node's own fetch, captured before bootDom() replaces globalThis.fetch with the
+// app shim. The liveness probe below asks "is the server up?" — if it went
+// through the shim, a shim bug reported itself as a dead server (measured:
+// "phase 2 · [server-down] did not answer /api/nova-core/status" while curl and
+// a bare Node fetch both got 200 in 17 ms / 52 ms).
+const NATIVE_FETCH = globalThis.fetch.bind(globalThis);
 
 if (!fs.existsSync(path.join(DIST, "index.html"))) {
   console.error(`✗ No build at ${DIST}\n  Run: BASE_PATH=/xFREEDOLLARHACHx/ pnpm --filter @workspace/kali-panel run build`);
@@ -223,12 +237,24 @@ async function phaseLinkedServer() {
     findings.push({ kind: "no-server", detail: "phase 2 needs --server=" });
     return;
   }
-  const probe = await fetch(`${SERVER}/api/nova-core/status`, { signal: AbortSignal.timeout(6000) }).catch(() => null);
+  const probe = await NATIVE_FETCH(`${SERVER}/api/nova-core/status`, {
+    signal: AbortSignal.timeout(6000),
+  }).catch((err) => ({ ok: false, reason: err?.message ?? String(err) }));
   if (!probe?.ok) {
-    findings.push({ kind: "server-down", detail: `${SERVER} did not answer /api/nova-core/status` });
+    const why = probe?.reason ? ` (${probe.reason})` : probe?.status ? ` (HTTP ${probe.status})` : "";
+    findings.push({ kind: "server-down", detail: `${SERVER} did not answer /api/nova-core/status${why}` });
   } else {
     await probe.body?.cancel().catch(() => {});
-    const { window, sockets } = bootDom({ remoteBase: SERVER, search: "?standalone=1" });
+    // A server started with NOVA_EXEC_TOKEN gates every write on `x-nova-token`,
+    // so a linked chat without one is a 403 — which used to look like "no events"
+    // (an empty reply) instead of "the gate said no". Seed the token the same way
+    // the ops room does; if none is configured the diagnostic below says so.
+    const opsToken = (process.env.NOVA_EXEC_TOKEN || process.env.NOVA_AUDIT_TOKEN || "").trim();
+    const { window, sockets } = bootDom({
+      remoteBase: SERVER,
+      search: "?standalone=1",
+      seed: opsToken ? { cybernova_ops_token: opsToken } : null,
+    });
     await import(pathToFileURL(path.join(DIST, "assets", mainJs)).href);
     await new Promise((r) => setTimeout(r, 400));
 
@@ -243,13 +269,26 @@ async function phaseLinkedServer() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: "إيه الأجهزة المتصلة؟" }),
     });
-    const events = await readSse(chatRes, 30000);
+    const chatStatus = chatRes?.status ?? 0;
+    const events = chatStatus === 200 ? await readSse(chatRes, 30000) : [];
+    if (chatStatus !== 200) {
+      const body = await chatRes.text().catch(() => "");
+      findings.push({
+        kind: "linked-chat-status",
+        detail:
+          `linked-server chat answered HTTP ${chatStatus}: ${body.slice(0, 160)}` +
+          (chatStatus === 403 && !opsToken
+            ? " — the engine's gate needs a token: rerun with NOVA_EXEC_TOKEN=<same value the server uses>"
+            : ""),
+      });
+    }
     const text = events.filter((e) => e.type === "delta").map((e) => e.text).join("");
 
     results.linkedServer = {
       base: SERVER,
       statusFromRealServer: realServer,
       brainMode: status?.brain?.mode ?? null,
+      chatStatus,
       chatEvents: events.length,
       chatReplyChars: text.length,
       chatTools: events.filter((e) => e.type === "tool_result").length,
