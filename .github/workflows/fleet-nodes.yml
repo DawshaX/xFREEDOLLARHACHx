@@ -80,6 +80,8 @@ jobs:
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
           EVENT: ${{ github.event_name }}
           TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          # TEST56 — رسالة كوميت الدفع: علامة [force-wave] فيها = قرار صريح بتجاوز ميزانية السلات
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # A fleet node is a machine that runs whatever the hub sends it. Spawning
           # one against a hub that does not require a token is how "our free fleet"
@@ -129,6 +131,15 @@ jobs:
             if [ "$WANT" -gt 19 ]; then WANT=19; fi
             n="$(node scripts/fleet-slot-budget.mjs "$WANT" 1 | tail -1 | grep -oE '[0-9]+' || true)"
             case "$n" in ''|*[!0-9]*) n=0 ;; esac
+            # TEST56 — تنفيذ فوري: كوميت رسالته فيها [force-wave] بيتجاوز ميزانية
+            # السلات عمدًا (نفس فلسفة dispatch — «القرار الصريح بلا ميزانية»).
+            # الجدولة بتاع GitHub بترتب السلات الفاضية حالًا والباقي في الطابور بنظام.
+            case "$COMMIT_MSG" in
+              *"[force-wave]"*)
+                n=19
+                echo "::notice::force wave — تجاوز ميزانية السلات بقرار صريح من المالك (علامة [force-wave])"
+                ;;
+            esac
           fi
           echo "nodes=$n" >> "$GITHUB_OUTPUT"
           echo "::notice::starting $n fleet node(s)"
@@ -227,6 +238,9 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         continue-on-error: true
         timeout-minutes: 8
+        env:
+          # TEST56 — فهرس العقدة للتقرير المقاس
+          MI: ${{ matrix.i }}
         run: |
           # TEST47 — قياس 2026-11-16 21:18Z على العقد الحية: 14 أداة من الليستا
           # دي ناقصة. السبب: apt جوه proot بيفشل بصمت — الجست مافيهوش
@@ -256,7 +270,24 @@ jobs:
             "$P" -R "$R" /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null && echo OK:\$t; done" | tee /tmp/kali-extras.txt || true
             MISSING="$("$P" -R "$R" /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null || echo MISSING:\$t; done" 2>/dev/null | tr '\n' ' ')"
             echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12 ${MISSING:+— مفقود: $MISSING}"
+            # TEST56 — التقرير المقاس من العقدة نفسها: ملف per-node عشان مافيش
+            # تعارض كتابة بين العقد — الرد بيتبني من المقاس مش من الادعاء.
+            OKCOUNT="$(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)"
+            mkdir -p state
+            printf '{"at":"%s","run":%s,"node":"node-%s","ok":%s,"missing":"%s"}\n' "$(date -u +%FT%TZ)" "$GITHUB_RUN_ID" "$MI" "$OKCOUNT" "${MISSING:-}" > "state/fleet-wave-report-$GITHUB_RUN_ID-$MI.json"
           fi
+
+      - name: Commit the wave tools report (measured proof, per node)
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MSG: "chore(fleet): wave tools report [skip ci]"
+        run: |
+          shopt -s nullglob
+          for f in state/fleet-wave-report-*.json; do
+            node scripts/ci-commit.mjs --message "$MSG" "$f" || true
+          done
 
       - name: Resolve the hub token
         if: steps.gate.outputs.run == 'true'
