@@ -173,11 +173,13 @@ export default function KaliTerminalPage() {
   const fetchAgents = useCallback(async () => {
     try {
       const r = await fetch("/api/local-agent/status");
-      const d = await r.json() as { connected: boolean; agents: AgentInfo[] };
-      setAgents(d.agents || []);
-      setConnected(d.connected);
-      if (d.agents.length > 0 && !selectedAgent) {
-        setSelectedAgent(d.agents[0].id);
+      const d = await r.json() as { connected: boolean; agents?: AgentInfo[] };
+      //  `d.agents` ممكن تيجي غايبة (بوابة/خطأ) — `d.agents.length` وقتها بترمي.
+      const list = Array.isArray(d.agents) ? d.agents : [];
+      setAgents(list);
+      setConnected(Boolean(d.connected));
+      if (list.length > 0 && !selectedAgent) {
+        setSelectedAgent(list[0].id);
       }
     } catch { /* ignore */ }
   }, [selectedAgent]);

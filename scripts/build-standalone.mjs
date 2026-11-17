@@ -362,13 +362,13 @@ if (fs.existsSync(missionLog)) {
   fs.copyFileSync(missionLog, path.join(OUT, "public", "state", "nova-mission-log.json"));
 }
 
-// TEST31 — مرآة حالة النشر: الصفحة بتقرا state/waifly-deploy.json وقت التشغيل
+// مرآة حالة النشر (اختيارية): state/deploy.json — بيقراها اللي عايز يعرف بنية الهَب
 // (fetch مباشر من raw كتحديث حي) — والنسخة دي fallback جوّه الحزمة عشان الميزة
 // ماتردّش «مفيش بيانات» على مكنة منشورة من غير اتصال بالraw (نفس درس hunt-latest).
-const deployMirror = path.join(STATE, "waifly-deploy.json");
+const deployMirror = path.join(STATE, "deploy.json");
 if (fs.existsSync(deployMirror)) {
   fs.mkdirSync(path.join(OUT, "public", "state"), { recursive: true });
-  fs.copyFileSync(deployMirror, path.join(OUT, "public", "state", "waifly-deploy.json"));
+  fs.copyFileSync(deployMirror, path.join(OUT, "public", "state", "deploy.json"));
 }
 
 // The agent must travel with the bundle: /api/local-agent/download-nova-agent

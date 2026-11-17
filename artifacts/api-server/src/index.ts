@@ -1,3 +1,12 @@
+/* ── TLS: لازم يتستورد قبل أي موديول بيعمل fetch ──────────────────────────
+ *  القياس 2026-11-17: بيئة فيها بروكسي بيعيد التوقيع بشهادة جذر في
+ *  `/usr/local/share/ca-certificates` — `curl` بيوصل، و`fetch` بيرمي
+ *  `UNABLE_TO_VERIFY_LEAF_SIGNATURE`. النتيجة كانت 5.4GB من rootfs كالي
+ *  بتفشل عند الجزء 57، وكل أداة بتقول «api.github.com ماردّش» والشبكة شغالة.
+ *  الإصلاح سطر واحد كان مستخبي في التوثيق (`NODE_EXTRA_CA_CERTS`) — هنا بيتعمل
+ *  لوحده. الموديول ده بيعمل الشغل عند تحميله (side effect)، ولازم يبقى أول
+ *  import في الملف: ESM بتنفّذ imports الموديولات التانية قبل أي سطر هنا. */
+import "./lib/ops/tls-trust";
 import { config as loadEnv } from "dotenv";
 loadEnv({ override: true });
 import http from "http";

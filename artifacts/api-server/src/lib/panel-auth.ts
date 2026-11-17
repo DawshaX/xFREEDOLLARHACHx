@@ -38,11 +38,11 @@ const LOGIN_MAX_FAILS = 5;
 
 function panelGateEnabled(): boolean {
   if (String(process.env.NOVA_PANEL_AUTH ?? "") === "0") return false;
-  // البوابة محتاجة سرّ توقيع على الأقل: التوكن الحالي بيغطي (مضبوط على waifly).
+  // البوابة محتاجة سرّ توقيع على الأقل: التوكن الحالي بيغطي (بيتقرا من env الاستضافة).
   return Boolean(sessionSecret());
 }
 
-// الأولوية: env (waifly Variables) → الإعداد الدائم (runtime-config على الذاكرة
+// الأولوية: env (متغيرات الاستضافة) → الإعداد الدائم (runtime-config على الذاكرة
 // الخارجية — بيتغيّر من اللوحة من غير ريستارت) → الافتراضي. كده صاحب اللوحة
 // يبدّل الباسورد من جوّه، والاستضافة عمرها ما بتتحرم منه.
 function panelUser(): string {

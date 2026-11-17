@@ -133,7 +133,7 @@ export async function runDoctor(opts: { origin?: string | null } = {}): Promise<
       state: "warn",
       value: `${upCount}/${servers.length} · بلا HTTPS`,
       says_ar: `فيه ${upCount} ماكينة بترد، بس كلها http — أي متصفح على https هيمنع الطلبات (mixed content).`,
-      fix_ar: "اعمل subdomain مجاني بـHTTPS في لوحة الاستضافة (خطوات Waifly في deploy/machines/waifly-live.md §6).",
+      fix_ar: "اعمل subdomain مجاني بـHTTPS من لوحة الاستضافة بتاعتك (أو Cloudflare Tunnel) — خطوات النشر في deploy/machines/.",
     });
   } else {
     checks.push({

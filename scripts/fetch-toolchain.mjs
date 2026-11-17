@@ -121,11 +121,21 @@ export const NOT_VENDORABLE = [
  * `NOVA_TOOLCHAIN_MIRROR` بياخد الأولوية، و`--no-mirror` بيرجع للمسار القديم.
  */
 const CI_ENV = ["GITHUB_ACTIONS", "CI"].some((k) => /^(1|true)$/i.test(String(process.env[k] ?? "")));
+/**
+ * ⚠ 2026-11-17: المرآة كانت مشتغلة **بس** لو `NOVA_SUPERVISED=1`. يعني أي تنصيب
+ * عادي (زي السلوت الحيّ أو أي حد بيشغّل الحزمة بنفسه) كان بيحاول المنبع بس،
+ * ولو TLS/الشهادة أو rate limit وقع، كل أداة تفشل ومعاها رسالة مضللة. المرآة
+ * موجودة أصلًا (release `nova-toolchain` بـ18 أصل + manifest بأختام SHA-256)،
+ * ومحتاجة إنها تكون **افتراضية** مش استثناء: مصدر أول سريع، والأصل بديل.
+ * `NOVA_TOOLCHAIN_MIRROR=off` بيقفلها لو حد عايز المنبع بس.
+ */
+const MIRROR_DEFAULT = "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-toolchain";
+const mirrorSetting = String(process.env.NOVA_TOOLCHAIN_MIRROR ?? "").trim().toLowerCase();
 const MIRROR_BASE = String(
-  arg("mirror", process.env.NOVA_TOOLCHAIN_MIRROR
-    ?? (process.env.NOVA_SUPERVISED === "1" && !CI_ENV
-      ? "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-toolchain"
-      : "")),
+  arg("mirror",
+    mirrorSetting === "off" || mirrorSetting === "0"
+      ? ""
+      : (process.env.NOVA_TOOLCHAIN_MIRROR || MIRROR_DEFAULT)),
 ).replace(/\/+$/, "");
 const MIRROR = has("no-mirror") ? "" : MIRROR_BASE;
 /** سقف الأرشيف: الحزمة كلها ~200-400MB؛ فوق ده بنقول فشل صريح بدل ما ننفخ القرص. */
@@ -151,13 +161,47 @@ function run(file, args, { cwd, timeout = 20_000 } = {}) {
   });
 }
 
+/**
+ * آخر سبب فشل لـapi.github.com — بيطلع في تقرير الأداة.
+ *
+ * ⚠ 2026-11-17: `gh()` كانت بترجّع null في أي فشل، وكل أداة كانت بتتكتب
+ * «api.github.com ماردّش (rate limit أو مفيش خروج من هنا)». على الساندبوكس
+ * الحقيقي الـAPI بيرد **200** بcurl، والـfetch بيفشل بـ
+ * `UNABLE_TO_VERIFY_LEAF_SIGNATURE` (TLS interception في البيئة). يعني الرسالة
+ * كانت بتشاور على اتجاه غلط تمامًا (rate limit / مفيش شبكة) وتخفي السبب
+ * اللي بيتصلّح. السبب الحقيقي بقى بيتسجل ويطلع في `why`.
+ */
+let ghLastError = null;
 async function gh(pathname) {
-  const res = await fetch(`https://api.github.com${pathname}`, {
-    headers: { "user-agent": "nova-toolchain", accept: "application/vnd.github+json", ...(process.env.GITHUB_TOKEN ? { authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}) },
-    signal: AbortSignal.timeout(25_000),
-  }).catch((e) => null);
-  if (!res || !res.ok) return null;
-  return res.json().catch(() => null);
+  try {
+    const res = await fetch(`https://api.github.com${pathname}`, {
+      headers: { "user-agent": "nova-toolchain", accept: "application/vnd.github+json", ...(process.env.GITHUB_TOKEN ? { authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}) },
+      signal: AbortSignal.timeout(25_000),
+    });
+    if (!res.ok) {
+      ghLastError = res.status === 403 || res.status === 429
+        ? `api.github.com: HTTP ${res.status} (rate limit) · متبقّي ${res.headers.get("x-ratelimit-remaining") ?? "?"}`
+        : `api.github.com: HTTP ${res.status}`;
+      return null;
+    }
+    ghLastError = null;
+    return await res.json().catch(() => null);
+  } catch (e) {
+    // cause.code هو اللي بيقول الحقيقة (شهادة؟ DNS؟ مهلة؟) — message لوحده «fetch failed».
+    const code = e?.cause?.code || e?.code || e?.name || "unknown";
+    const detail = e?.cause?.message || e?.message || "";
+    ghLastError = `api.github.com: ${code}${detail ? ` (${String(detail).slice(0, 120)})` : ""}`;
+    return null;
+  }
+}
+
+/** سبب الفشل اللي هيطلع للمستخدم — بيوضّح إن المشكلة في TLS/الشهادة لو ده اللي حصل. */
+function ghFailureWhy() {
+  const base = ghLastError || "api.github.com ماردّش";
+  if (/CERT|TLS|SSL|LEAF|SELF_SIGNED|UNABLE_TO_VERIFY/i.test(base)) {
+    return `${base} — شهادة TLS مش متحققة (بروكسي/Man-in-the-middle على الشبكة دي). سيبك من الـAPI: الأداة بتتجاب من مرآتنا أو من أصل GitHub مباشرة.`;
+  }
+  return base;
 }
 
 /**
@@ -173,7 +217,15 @@ function downloadStream(url, to, { timeoutMs = 240_000, maxBytes = 0 } = {}) {
     const timer = setTimeout(() => { try { ac.abort(); } catch { /* already */ } finish({ ok: false, why: `انتهت المهلة (${Math.round(timeoutMs / 1000)}s)` }); }, timeoutMs);
     const ac = new AbortController();
     fetch(url, { redirect: "follow", signal: ac.signal })
+      .catch((e) => {
+        clearTimeout(timer);
+        const code = e?.cause?.code || e?.code || e?.name || "network";
+        const detail = e?.cause?.message || e?.message || "";
+        finish({ ok: false, why: `fetch فشل (${code}${detail ? `: ${String(detail).slice(0, 100)}` : ""})`, code });
+        return null;
+      })
       .then((res) => {
+        if (!res) return null;
         if (!res.ok || !res.body) { clearTimeout(timer); return finish({ ok: false, why: `HTTP ${res.status ?? "?"}` }); }
         const declared = Number(res.headers.get("content-length") || 0);
         if (maxBytes && declared && declared > maxBytes) { clearTimeout(timer); return finish({ ok: false, why: `المعلن ${declared} بايت أكبر من السقف` }); }
@@ -197,9 +249,9 @@ function downloadStream(url, to, { timeoutMs = 240_000, maxBytes = 0 } = {}) {
 }
 
 /** التنزيل العادي بقى علي نفس مسار البث — القياس: `exitCode:null · ms 6395` على حاوية 256MB. */
+/** بترجّع نتيجة كاملة ({ok, why, code}) — المستدعي محتاج السبب مش boolean. */
 async function download(url, to) {
-  const got = await downloadStream(url, to, { timeoutMs: 180_000, maxBytes: 400 * 1048576 });
-  return got.ok;
+  return downloadStream(url, to, { timeoutMs: 180_000, maxBytes: 400 * 1048576 });
 }
 
 /** Find the executable inside an extracted tree (archives nest it in a folder). */
@@ -286,7 +338,15 @@ async function loadMirror() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nova-mirror-"));
   const man = path.join(tmp, "nova-toolchain.json");
   const got = await downloadStream(`${MIRROR}/nova-toolchain.json`, man, { timeoutMs: 30_000, maxBytes: 4 * 1048576 });
-  if (!got.ok) { fs.rmSync(tmp, { recursive: true, force: true }); mirrorIndex = { error: got.why }; return mirrorIndex; }
+  if (!got.ok) {
+    fs.rmSync(tmp, { recursive: true, force: true });
+    // «fetch failed» لوحدها مبتقولش حاجة — بنفكّك السبب زي gh(): كود الشبكة
+    // الحقيقي (شهادة TLS؟ DNS؟ مهلة؟) + العنوان اللي فشل. مقاس 2026-11-17:
+    // المرآة على release CDN، والبيئة اللي بتعترض TLS بتخلي كل تنزيل يفشل
+    // بنفس الرسالة العامة بينما curl بيوصل — الفرق كله في الـcause.
+    mirrorIndex = { error: `${got.why} — ${MIRROR}/nova-toolchain.json${got.code ? ` [${got.code}]` : ""}` };
+    return mirrorIndex;
+  }
   let doc = null;
   try { doc = JSON.parse(fs.readFileSync(man, "utf8")); } catch (e) { doc = null; }
   if (!doc || !Array.isArray(doc.tools) || !doc.archive) {
@@ -396,7 +456,7 @@ async function fetchOne(tool, manifest) {
     // محلول عندنا: الأرشيف المرآتي. بنحاوله قبل ما نعلن الفشل.
     const fromMirror = await tryMirror(tool, manifest);
     if (fromMirror) return fromMirror;
-    return { bin: tool.bin, status: "failed", why: "api.github.com ماردّش (rate limit أو مفيش خروج من هنا)" };
+    return { bin: tool.bin, status: "failed", why: ghFailureWhy() };
   }
   // المرآة بتتسأل *الآن* في ثلاث حالات، مش حالة واحدة:
   //   1. `latest` = null (السلوك القديم — api.github.com محجوب على المكنة).
@@ -421,13 +481,19 @@ async function fetchOne(tool, manifest) {
   const archive = path.join(tmp, path.basename(asset.name));
   log(`↓ ${tool.bin} ${tag || ""} (${(asset.size / 1e6).toFixed(1)} MB)`);
   if (DRY) return { bin: tool.bin, status: "dry", tag, url: asset.browser_download_url };
-  if (!(await download(asset.browser_download_url, archive))) {
+  const dl = await download(asset.browser_download_url, archive);
+  if (!dl?.ok) {
     fs.rmSync(tmp, { recursive: true, force: true });
     // نفس الفتحة بالحرف في الاتجاه التاني (مقاس 2026-11-17): الـAPI بيردّ بس
     // CDN الأصول بيرفض/يقطع — قبل كده ده كان «failed» نهائي والمرآة ما بتتسألش.
+    //
+    // ⚠ والسبب كان بيتوه: «التنزيل فشل من github.com» مش بتقول لا شهادة ولا
+    // مهلة ولا 403. بقى معاه كود الفشل الحقيقي اللي رجع من downloadStream.
     const fromMirror = await tryMirror(tool, manifest);
     if (fromMirror && fromMirror.status === "installed") return fromMirror;
-    return { bin: tool.bin, status: "failed", tag, why: "التنزيل فشل من " + new URL(asset.browser_download_url).host };
+    const host = new URL(asset.browser_download_url).host;
+    const detail = dl?.why ? ` (${dl.why}${dl.code ? ` [${dl.code}]` : ""})` : "";
+    return { bin: tool.bin, status: "failed", tag, why: `التنزيل فشل من ${host}${detail}` };
   }
   // `raw`: الأصل نفسه هو الباينري (osv-scanner بينشر ملف واحد) — مفيش أرشيف يّفك.
   if (tool.asset === "raw") {

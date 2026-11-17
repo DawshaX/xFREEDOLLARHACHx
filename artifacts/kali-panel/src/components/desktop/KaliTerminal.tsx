@@ -134,7 +134,23 @@ function streamAgentChat(
   return streamSSE(`${API_BASE}/kali-terminal/chat`, body, onEvent, signal);
 }
 
-async function getAgentHealth(): Promise<{ status: string; model: string; tools: string[]; agents: Array<{ id: string; hostname: string; user: string; capabilities: string[] }> }> {
+/**
+ * ⚠ مقاس 2026-11-17: `/api/kali-terminal/health` بيعدّي على `requireOps("kali-terminal")`،
+ * فلو التوكن ناقص أو الـgate قافل بيرد **جسم تاني خالص** (بدون `agents`). الكود
+ * بعد كده كان بيعمل `h.agents[0]` → `Cannot read properties of undefined (reading '0')`
+ * و`/cockpit` (اللي جواه الطرفية) كانت بتقع في ErrorIsland وتقول «القسم وقّف».
+ * الـoptional chaining على `h` بس مش كفاية — لازم `h.agents?.[0]` كمان.
+ */
+type AgentHealth = {
+  status?: string;
+  model?: string;
+  tools?: string[];
+  agents?: Array<{ id: string; hostname: string; user: string; capabilities: string[] }>;
+  error?: string;
+  hint_ar?: string;
+};
+
+async function getAgentHealth(): Promise<AgentHealth> {
   const res = await fetch(`${API_BASE}/kali-terminal/health`);
   if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
   return res.json();
@@ -163,7 +179,7 @@ export function KaliTerminal({ agentConnected, agentHostname, agentUser }: KaliT
   const [lines, setLines] = useState<Line[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [health, setHealth] = useState<{ status: string; model: string; tools: string[]; agents: Array<{ hostname: string; user: string }> } | null>(null);
+  const [health, setHealth] = useState<AgentHealth | null>(null);
   const [history, setHistory] = useState<string[]>(() => loadHistory());
   const [historyIdx, setHistoryIdx] = useState<number>(-1);
 
@@ -190,10 +206,10 @@ export function KaliTerminal({ agentConnected, agentHostname, agentUser }: KaliT
     getAgentHealth()
       .then((h) => {
         setHealth(h);
-        const host = h.agents[0]?.hostname || agentHostname || "kali";
-        const user = h.agents[0]?.user || agentUser || "kali";
+        const host = h.agents?.[0]?.hostname || agentHostname || "kali";
+        const user = h.agents?.[0]?.user || agentUser || "kali";
         append("system", `☠ KaliGPT Terminal v8 — connected to ${user}@${host}`);
-        append("system", `Model: ${h.model} · Tools: ${h.tools.join(", ")}`);
+        append("system", `Model: ${h.model ?? "—"} · Tools: ${(h.tools ?? []).join(", ") || "—"}`);
         append("info", `Type a goal in agent mode, or switch to shell mode (Ctrl+M) for direct bash. Session: ${sessionId.slice(0, 12)}`);
       })
       .catch((err) => {
@@ -213,8 +229,8 @@ export function KaliTerminal({ agentConnected, agentHostname, agentUser }: KaliT
   }, [busy, mode]);
 
   const promptLabel = useMemo(() => {
-    const host = health?.agents[0]?.hostname || agentHostname || "kali";
-    const user = health?.agents[0]?.user || agentUser || "kali";
+    const host = health?.agents?.[0]?.hostname || agentHostname || "kali";
+    const user = health?.agents?.[0]?.user || agentUser || "kali";
     return `${user}@${host}${mode === "agent" ? " 🤖" : " #"}`;
   }, [health, agentHostname, agentUser, mode]);
 
@@ -456,7 +472,7 @@ export function KaliTerminal({ agentConnected, agentHostname, agentUser }: KaliT
   }, [append, busy, handleSubmit, history, historyIdx]);
 
   const isConnected = agentConnected || (health?.status === "ok");
-  const hostName = health?.agents[0]?.hostname || agentHostname || "kali";
+  const hostName = health?.agents?.[0]?.hostname || agentHostname || "kali";
 
   return (
     <div className="flex flex-col h-full w-full bg-[#0a0a0f] text-[#e0e0e0] font-mono" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace" }}>

@@ -286,4 +286,39 @@ router.get("/monitor/dashboard", async (_req, res) => {
   });
 });
 
+/**
+ * /monitor/health — «السيرفر ده صحّته إيه؟» — مسار كان في عقد الـAPI ومش موجود،
+ * فـ`scripts/audit-contracts` كان بيقيسه على الـstatic engine بس ويقول shape ok،
+ * والسيرفر الحقيقي بيرد 404 (مقاس في لوج 2026-11-17T15:36Z). أي شاشة أو مراقب
+ * بينده عليه كانت هتظهر «محتاجة روت».
+ *
+ * الرد مقاس فعلاً من العملية نفسها: عمر التشغيل، الذاكرة، الحمل، وهل الـWS فيه
+ * عملاء. مافيش توقّع ولا قيمة ثابتة.
+ */
+router.get("/monitor/health", (_req, res) => {
+  const mem = process.memoryUsage();
+  const load = os.loadavg();
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    status: "up",
+    uptimeSec: Math.round(process.uptime()),
+    pid: process.pid,
+    node: process.version,
+    hostname: os.hostname(),
+    load: { one: Number(load[0].toFixed(2)), five: Number(load[1].toFixed(2)), fifteen: Number(load[2].toFixed(2)) },
+    memory: {
+      rssMB: Math.round(mem.rss / 1048576),
+      heapUsedMB: Math.round(mem.heapUsed / 1048576),
+      systemFreeMB: Math.round(freeMem / 1048576),
+      systemTotalMB: Math.round(totalMem / 1048576),
+      systemUsedPct: Math.round(((totalMem - freeMem) / totalMem) * 100),
+    },
+    wsClients: getHubClientCount(),
+    measuredAt: new Date().toISOString(),
+  });
+});
+
 export default router;

@@ -7,6 +7,9 @@ import { novaAuthHeaders } from "@/lib/ops-client";
  * + كتالوج الـ 11 تصنيف رسمي لكل أدوات كالي + تشغيل أداة بضغطة. مكوّن منفصل
  * عشان الصفحة الأصلية تفضل زي ما هي — إضافة فوق الموجود، مش استبدال. */
 import KaliSystemsPanel from "./KaliSystemsPanel";
+/* «مكان الشغل في كالي» — مساحات حقيقية على الدسك جوه الـrootfs: ملفات بتفضل،
+ * أوامر بتتنفذ في سياق المساحة، ونتايج المسح بتتعرض جوه البرنامج. */
+import KaliWorkspacePanel from "@/components/desktop/KaliWorkspacePanel";
 
 /**
  * TEST12 — «شغل نظام الكالي واعملو مكان وتبويب» — التبويبة المخصصة لبيئة كالي
@@ -76,14 +79,22 @@ type ProvisionState = {
   log: string[];
   transport: string | null;
 };
-type DeployMirror = {
-  at?: string;
-  reachable?: boolean;
-  boot?: { commit?: string; builtAt?: string } | null;
-  bootAfter?: { commit?: string; builtAt?: string } | null;
-  asset?: { updatedAt?: string; size?: number } | null;
-  action?: string;
-  fresh?: boolean;
+/**
+ *  بنية الهَب الحيّة — من `/api/ops/version` بتاع الهَب اللي الصفحة مكلّماها.
+ *
+ *  قبل كده الكارت ده كان بيقرا مرآة نشر بيكتبها runner
+ *  GitHub كل 30 دقيقة بعد ما يفحص `nova.waifly.com`. يعني حاجة من برّه — هوست
+ *  مش بتاعنا — والأسوأ: أي مستخدم بيشغّل نوفا عنده كان بيشوف كارت «حالة النشر
+ *  على nova.waifly.com» وهو عمره ما نشر هناك. القياس الصح بيتجاب من نفس
+ *  السيرفر اللي بيرد على الصفحة، مافيش ملف ولا runner ولا هوست تالت.
+ */
+type HubVersion = {
+  sha?: string;
+  shaSource?: string;
+  entryMtime?: string | null;
+  uptimeSec?: number;
+  node?: string;
+  stale?: { suspect?: boolean; why?: string };
 };
 
 type KaliStatus = {
@@ -168,10 +179,10 @@ export default function KaliEnvPage() {
   const [prov, setProv] = useState<ProvisionState | null>(null);
   const [provBusy, setProvBusy] = useState(false);
   const [buildStamp, setBuildStamp] = useState<{ commit?: string; builtAt?: string } | null>(null);
-  // TEST31 — مرآة النشر الحي: runner بيفحص waifly كل 30د ويدفع state/waifly-deploy.json للمستودع،
+  // (اتشال TEST31 — كان بيقيس Waifly) بنية الهَب الحيّة من الهَب نفسه،
   // والصفحة بتقراه بfetch مباشر — المالك يشوف بنية الهَب الشغالة بعينه على الموقع.
-  const [deployMirror, setDeployMirror] = useState<DeployMirror | null | "pending">("pending");
-  const [deployChecked, setDeployChecked] = useState<string | null>(null);
+  const [hubVersion, setHubVersion] = useState<HubVersion | null | "pending">("pending");
+  const [hubVersionAt, setHubVersionAt] = useState<string | null>(null);
   const [nodes, setNodes] = useState<KaliNodes | null>(null);
   const [installBusy, setInstallBusy] = useState(false);
   const [store, setStore] = useState<StorageHub | null>(null);
@@ -183,7 +194,8 @@ export default function KaliEnvPage() {
   const [envBusy, setEnvBusy] = useState(false);
   const [identity, setIdentity] = useState<{ root?: boolean; uid?: number | null; prettyName?: string | null; plane?: string; apt?: boolean; error?: string } | null>(null);
   const [pkgName, setPkgName] = useState("");
-  const [face, setFace] = useState<"system" | "term" | "tools" | "desk" | "store">("system");
+  /* «مكان الشغل» هو الافتراضي: ده اللي المالك طلبه وبيسأل عنه. باقي التبويبات موجودة. */
+  const [face, setFace] = useState<"system" | "term" | "tools" | "desk" | "store" | "work">("work");
   /* TEST35 — the terminal had exactly one plane: the remote Kali node. The
    * local proot guest (the one this page measures two cards above) was never
    * reachable from the input box, so `/api/kali-env/exec` shipped with no
@@ -220,21 +232,18 @@ export default function KaliEnvPage() {
       } catch { /* الساكن مافيهوش version حي */ }
     })();
     (async () => {
-      // TEST47 — المرآة الحية: الهَب بيقراها سيرفرًا من GitHub API ويخزنها 10د
-      // (raw.githubusercontent محجوب على بعض الشبكات في مصر فكانت تعرض
-      // «مااتبنتش» كذبًا والمرآة موجودة). بعد الهَب: raw ثم النسخة المحلية.
-      const urls = [
-        `${API}/ops/deploy-mirror`,
-        `https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/state/waifly-deploy.json?t=${Date.now()}`,
-        "/state/waifly-deploy.json",
-      ];
-      for (const u of urls) {
-        try {
-          const r = await fetch(u, { signal: AbortSignal.timeout(9000) });
-          if (r.ok) { setDeployMirror(await r.json()); setDeployChecked(new Date().toLocaleTimeString("en-GB")); return; }
-        } catch { /* المحاولة الجاية */ }
-      }
-      setDeployMirror(null);
+      // بنية الهَب من الهَب نفسه: `ops/version` بيقول الـcommit اللي اتبنى منه
+      // والعمر الحقيقي للـbundle اللي Node حمّله. مفيش قراءة من GitHub ولا من
+      // أي هوست برّه — القياس من السيرفر اللي الصفحة بتكلّمه.
+      try {
+        const r = await fetch(`${API}/ops/version`, { signal: AbortSignal.timeout(9000) });
+        if (r.ok) {
+          setHubVersion(await r.json());
+          setHubVersionAt(new Date().toLocaleTimeString("en-GB"));
+          return;
+        }
+      } catch { /* الهَب مش متاح — بنقولها */ }
+      setHubVersion(null);
     })();
   }, [loadNodes]);
   useEffect(() => {
@@ -611,6 +620,7 @@ export default function KaliEnvPage() {
 
       <div className="sticky top-0 z-20 flex flex-wrap gap-1.5 rounded-xl p-2" style={{ background: "rgba(6,0,16,0.92)", border: "1px solid rgba(255,255,255,0.12)" }}>
         {([
+          ["work", "مكان الشغل ★"],
           ["system", "النظام والعقد"],
           ["term", "الطرفية"],
           ["tools", "الأدوات"],
@@ -859,30 +869,31 @@ export default function KaliEnvPage() {
         )}
       </div>
 
-      {/* TEST31 — حالة النشر الحي على waifly: runner بيقيس وبيدفع المرآة — الإثبات بيشوفه عينه */}
-      <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.04)", border: `1px solid ${deployMirror && deployMirror !== "pending" && deployMirror.fresh ? "rgba(68,255,136,0.35)" : "rgba(255,170,68,0.3)"}` }}>
+      {/* بنية الهَب الحيّة — من `/api/ops/version` بتاع نفس السيرفر اللي بيرد.
+          مفيش Waifly ولا runner برّه: اللي بيقيس هو اللي بيشتغل. */}
+      <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.04)", border: `1px solid ${hubVersion && hubVersion !== "pending" && !hubVersion.stale?.suspect ? "rgba(68,255,136,0.35)" : "rgba(255,170,68,0.3)"}` }}>
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <p className="text-[11px] font-black" style={{ color: "#44ff88" }}>🚀 حالة النشر على nova.waifly.com — فحص runner حي كل 30 دقيقة</p>
-          {deployChecked && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#7cffb0" }}>قرأت المرآة {deployChecked}</span>}
+          <p className="text-[11px] font-black" style={{ color: "#44ff88" }}>🏷️ البنية الشغّالة على الهَب — قياس حي من /api/ops/version</p>
+          {hubVersionAt && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#7cffb0" }}>قرأت {hubVersionAt}</span>}
         </div>
-        {deployMirror && deployMirror !== "pending" ? (
+        {hubVersion && hubVersion !== "pending" ? (
           <>
             <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.65)" }}>
-              الهَب شغّال ببنية: <b style={{ color: "#7cffb0" }}>commit {(deployMirror.bootAfter || deployMirror.boot)?.commit?.slice(0, 7) || "؟"} · اتبنت {(deployMirror.bootAfter || deployMirror.boot)?.builtAt || "؟"}</b>
-              {" · "}آخر باندل منشور: {deployMirror.asset?.updatedAt || "؟"}
+              commit <b style={{ color: "#7cffb0" }}>{hubVersion.sha?.slice(0, 7) || "؟"}</b>
+              {" · "}مصدر الـsha: {hubVersion.shaSource || "؟"}
+              {" · "}عمر الـbundle: {hubVersion.entryMtime ? hubVersion.entryMtime.slice(0, 19).replace("T", " ") : "؟"}
+              {" · "}شغّال بقاله {(hubVersion.uptimeSec ?? 0) >= 3600 ? `${Math.floor((hubVersion.uptimeSec ?? 0) / 3600)} ساعة` : `${Math.floor((hubVersion.uptimeSec ?? 0) / 60)} دقيقة`}
             </p>
-            <p className="text-[9px] font-mono mt-1" style={{ color: deployMirror.fresh ? "#44ff88" : "#ffaa44" }}>
-              {deployMirror.action === "fresh" && "الهَب شغّال بآخر بنية ✓ — الباندل والعملية متطابقين"}
-              {deployMirror.action === "restarted_ok" && "اتصلحت — الهَب كان شغّال ببنية أقدم فأعاد تشغيل نفسه على الباندل الجديد ✓"}
-              {deployMirror.action === "updated_ok" && "الباندل الجديد اتسطب واتشغّل أثناء الفحص ✓"}
-              {deployMirror.action === "restart_requested" && "إعادة التشغيل اتبعتت للهَب — الفحص الجاي (30د) هيتأكد أنها نفذت"}
-              {deployMirror.action === "unreachable" && "الهَب مش متاح للفحص دلوقتي — خطوة الطاقة في الwatchdog بتتكفل بالسقوط الكامل"}
-              {deployMirror.action === "none" && "…"}{" · آخر فحص: "}{deployMirror.at || "؟"}
+            <p className="text-[9px] font-mono mt-1" style={{ color: hubVersion.stale?.suspect ? "#ffaa44" : "#44ff88" }}>
+              {hubVersion.stale?.suspect ? `⚠ ${hubVersion.stale.why}` : `✓ ${hubVersion.stale?.why || "البنية حديثة"}`}
+              {" · "}Node {hubVersion.node || "؟"}
             </p>
           </>
+        ) : hubVersion === "pending" ? (
+          <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>…بجيب بنية الهَب</p>
         ) : (
-          <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
-            {deployMirror === "pending" ? "…بجيب مرآة النشر من المستودع" : "مرآة النشر لسه مااتبنتش — أول فحص runner بعد دمج TEST31 هيبنيها (المرآة: state/waifly-deploy.json في المستودع)"}
+          <p className="text-[9px] font-mono mt-1.5" style={{ color: "#ffaa44" }}>
+            الهَب مش بيرد على /api/ops/version دلوقتي — ممكن يكون لسه بيقوم، أو الـAPI مقفول. الصفحة نفسها شغالة؛ ده قياس للسيرفر مش ليها.
           </p>
         )}
       </div>
@@ -1151,6 +1162,10 @@ export default function KaliEnvPage() {
             )}
           </div>
 
+      </div>
+
+      <div style={{ display: face === "work" ? "block" : "none" }}>
+        <KaliWorkspacePanel />
       </div>
 
       <div style={{ display: face === "desk" ? "block" : "none" }}>

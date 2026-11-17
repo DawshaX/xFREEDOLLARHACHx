@@ -61,7 +61,8 @@ const suspects = rows.filter((r) => r.cls === "STATIC-SUSPECT");
 const unrouted = rows.filter((r) => !r.routed);
 
 if (asJson) {
-  console.log(JSON.stringify({ total: rows.length, classes: by, suspects, unrouted }, null, 2));
+  //  كل الصفوف مش المرشحين بس: «بايظ» حكم على صفحة، ومحتاج تشوف الـ86 كلهم.
+  console.log(JSON.stringify({ total: rows.length, classes: by, rows, suspects, unrouted }, null, 2));
 } else {
   console.log(`page-census: ${rows.length} صفحة · routed=${rows.filter((r) => r.routed).length}`);
   console.log(`  classes: ${JSON.stringify(by)}`);
