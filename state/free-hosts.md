@@ -1,39 +1,39 @@
 # المضيفون المجانيون — آخر قياس آلي
 > اتولّد من `scripts/free-host-survey.mjs` (شغّله workflow `free-host-survey.yml`).
 > **مفيش رقم هنا مقس من غير ما يضرب الموقع نفسه.**
-آخر قياس: `2026-11-16T21:57:13.516Z` · المصدر: `engine:http://127.0.0.1:8080` · بيردّ: **14/14**
+آخر قياس: `2026-11-17T07:50:37.164Z` · المصدر: `engine:http://127.0.0.1:8080` · بيردّ: **14/14**
 «reachable» = موقع المورد بيردّ من المكان اللي اتقاس منه. مش ضمان تسجيل، ولا ضمان خدمة، ولا ضمان استمرارية.
 | المورد | رام | دائم؟ | بطاقة | نود؟ | مسح نشط | القياس |
 |---|---|---|---|---|---|---|
-| GitHub نفسه (Pages + Actions + Releases) — القاعدة اللي مغنية عن السيرفر | 16 GB · 4 vCPU لكل job (ولحد 20 job مع بعض) | ❌ | ✅ بلا | ephemeral | ممنوع في شروطهم | ✓ 200 · 41ms |
-| Waifly | 300 MB · 1 GB disk | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 415ms |
-| Render | 512 MB · 0.1 CPU | ⚠️ بينام | ✅ بلا | ephemeral | مش مذكور | ✓ 200 · 142ms |
-| Zeabur | حسب الرصيد | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 463ms |
-| Back4App Containers | 256–512 MB | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 714ms |
-| SnapDeploy | 4 × 512 MB | ⚠️ بينام | ✅ بلا | ephemeral | مش مذكور | ✓ 200 · 320ms |
-| Bonto | 512 MB | ⚠️ بينام | ✅ بلا | ephemeral | مش مذكور | ✓ 200 · 1087ms |
-| Oracle Cloud Always Free | 24 GB ARM · 4 vCPU | ✅ | ❌ مطلوب | permanent | ممنوع في شروطهم | ✓ 200 · 176ms |
-| Koyeb / Northflank / Fly.io | — | ❌ | ❌ مطلوب | no | مش مذكور | ✓ 200 · 406ms |
-| Cloudflare / Vercel / Netlify | 128 MB / request | ✅ | ✅ بلا | no | مش مذكور | ✓ 200 · 582ms |
-| GratisVPS.net — VPS كامل بلا كارت | 2 GB · 2 vCPU KVM · NVMe | ✅ | ✅ بلا | permanent | ممنوع في شروطهم | ✓ 200 · 876ms |
-| FreeVPS.edu.pl — KVM للطلاب والمطورين | KVM مستقل · Ryzen 9 · DDR5 ECC · NVMe | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 787ms |
-| Silly Development — الحاوية اللي مابتنامش | 256 MB · 25% core · 512 MB disk | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 643ms |
-| Azure for Students — $100 كرِدِت من غير كارت | حسب الاختيار (B1s = 1 GB · D-series أعلى) | ✅ | ✅ بلا | permanent | ممنوع في شروطهم | ✓ 200 · 685ms |
+| GitHub نفسه (Pages + Actions + Releases) — القاعدة اللي مغنية عن السيرفر | 16 GB · 4 vCPU لكل job (ولحد 20 job مع بعض) | ❌ | ✅ بلا | ephemeral | ممنوع في شروطهم | ✓ 200 · 67ms |
+| Waifly | 300 MB · 1 GB disk | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 444ms |
+| Render | 512 MB · 0.1 CPU | ⚠️ بينام | ✅ بلا | ephemeral | مش مذكور | ✓ 200 · 110ms |
+| Zeabur | حسب الرصيد | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 1179ms |
+| Back4App Containers | 256–512 MB | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 885ms |
+| SnapDeploy | 4 × 512 MB | ⚠️ بينام | ✅ بلا | ephemeral | مش مذكور | ✓ 200 · 325ms |
+| Bonto | 512 MB | ⚠️ بينام | ✅ بلا | ephemeral | مش مذكور | ✓ 200 · 374ms |
+| Oracle Cloud Always Free | 24 GB ARM · 4 vCPU | ✅ | ❌ مطلوب | permanent | ممنوع في شروطهم | ✓ 200 · 459ms |
+| Koyeb / Northflank / Fly.io | — | ❌ | ❌ مطلوب | no | مش مذكور | ✓ 200 · 869ms |
+| Cloudflare / Vercel / Netlify | 128 MB / request | ✅ | ✅ بلا | no | مش مذكور | ✓ 200 · 865ms |
+| GratisVPS.net — VPS كامل بلا كارت | 2 GB · 2 vCPU KVM · NVMe | ✅ | ✅ بلا | permanent | ممنوع في شروطهم | ✓ 200 · 1217ms |
+| FreeVPS.edu.pl — KVM للطلاب والمطورين | KVM مستقل · Ryzen 9 · DDR5 ECC · NVMe | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 796ms |
+| Silly Development — الحاوية اللي مابتنامش | 256 MB · 25% core · 512 MB disk | ✅ | ✅ بلا | permanent | مش مذكور | ✓ 200 · 814ms |
+| Azure for Students — $100 كرِدِت من غير كارت | حسب الاختيار (B1s = 1 GB · D-series أعلى) | ✅ | ✅ بلا | permanent | ممنوع في شروطهم | ✓ 200 · 877ms |
 ## أدق تفاصيل مقاسة (ادّعاء المورد + نتيجة القياس)
-- **GitHub نفسه (Pages + Actions + Releases) — القاعدة اللي مغنية عن السيرفر** — `gh-actions`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 41ms
-- **Waifly** — `waifly`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 415ms
-- **Render** — `render`: الخطة المجانية لسه موجودة: 750 ساعة/شهر، بس الـbandwidth اتقصّف لـ5GB في أبريل 2026 وخدمة الويب المجانية بتنام بعد 15 دقيقة (صحوتها ~دقيقة). متحقق من شاشة New W · القياس: ردّ HTTP 200 في 142ms
-- **Zeabur** — `zeabur`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 463ms
-- **Back4App Containers** — `back4app`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 714ms
-- **SnapDeploy** — `snapdeploy`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 320ms
-- **Bonto** — `bonto`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 1087ms
-- **Oracle Cloud Always Free** — `oracle-always-free`: مقارنة مضيفين مجانية (نشر أكتوبر 2026) بتقول: Always Free Arm لحد 2 OCPU/12 جيجا أو اتنين AMD micro (1 جيجا) + 200 جيجا ديسك، بطاقة للائتمان وقت التسجيل، و«idle · القياس: ردّ HTTP 200 في 176ms
-- **Koyeb / Northflank / Fly.io** — `koyeb-northflank-fly`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 406ms
-- **Cloudflare / Vercel / Netlify** — `cloudflare-pages`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 582ms
-- **GratisVPS.net — VPS كامل بلا كارت** — `gratisvps`: صفحة أكتوبر 2026: تسجيل ببريد بس (مفيش كارت/PayPal/تليفون)، Ubuntu 24.04 / Debian 12 / AlmaLinux 9 أو Windows، 3 ريجيونز US/Frankfurt/Singapore، و«No fixed end  · القياس: ردّ HTTP 200 في 876ms
-- **FreeVPS.edu.pl — KVM للطلاب والمطورين** — `freevps-edu`: الموقع (2026): الطالب بريد `.edu` بيوافق فورًا، والمطور بمراجعة GitHub/Portfolio — يعني حسابك على GitHub هو مفتاحك، ومفيش بطاقة · القياس: ردّ HTTP 200 في 787ms
-- **Silly Development — الحاوية اللي مابتنامش** — `sillydev`: صفحتهم (نوفمبر 2026): بلا كارت، بلا تجديد، Node/Python/Bun، قواعد بيانات مجانية. الاستثناء الوحيد: سيرفر مااتستخدموش في أول 7 أيام بيتشيل بعد إيميل تحذير. Trust · القياس: ردّ HTTP 200 في 643ms
-- **Azure for Students — $100 كرِدِت من غير كارت** — `azure-students`: مقارنات 2026 بتسمّيه الاستثناء الحقيقي على قاعدة «كل كرِدِت محتاج بطاقة»: التحقق ببريد جامعة بس، و«Zero credit or debit card details required» مع root وIPv4 مخص · القياس: ردّ HTTP 200 في 685ms
+- **GitHub نفسه (Pages + Actions + Releases) — القاعدة اللي مغنية عن السيرفر** — `gh-actions`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 67ms
+- **Waifly** — `waifly`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 444ms
+- **Render** — `render`: الخطة المجانية لسه موجودة: 750 ساعة/شهر، بس الـbandwidth اتقصّف لـ5GB في أبريل 2026 وخدمة الويب المجانية بتنام بعد 15 دقيقة (صحوتها ~دقيقة). متحقق من شاشة New W · القياس: ردّ HTTP 200 في 110ms
+- **Zeabur** — `zeabur`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 1179ms
+- **Back4App Containers** — `back4app`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 885ms
+- **SnapDeploy** — `snapdeploy`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 325ms
+- **Bonto** — `bonto`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 374ms
+- **Oracle Cloud Always Free** — `oracle-always-free`: مقارنة مضيفين مجانية (نشر أكتوبر 2026) بتقول: Always Free Arm لحد 2 OCPU/12 جيجا أو اتنين AMD micro (1 جيجا) + 200 جيجا ديسك، بطاقة للائتمان وقت التسجيل، و«idle · القياس: ردّ HTTP 200 في 459ms
+- **Koyeb / Northflank / Fly.io** — `koyeb-northflank-fly`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 869ms
+- **Cloudflare / Vercel / Netlify** — `cloudflare-pages`: مفيش status2026 مسجل · القياس: ردّ HTTP 200 في 865ms
+- **GratisVPS.net — VPS كامل بلا كارت** — `gratisvps`: صفحة أكتوبر 2026: تسجيل ببريد بس (مفيش كارت/PayPal/تليفون)، Ubuntu 24.04 / Debian 12 / AlmaLinux 9 أو Windows، 3 ريجيونز US/Frankfurt/Singapore، و«No fixed end  · القياس: ردّ HTTP 200 في 1217ms
+- **FreeVPS.edu.pl — KVM للطلاب والمطورين** — `freevps-edu`: الموقع (2026): الطالب بريد `.edu` بيوافق فورًا، والمطور بمراجعة GitHub/Portfolio — يعني حسابك على GitHub هو مفتاحك، ومفيش بطاقة · القياس: ردّ HTTP 200 في 796ms
+- **Silly Development — الحاوية اللي مابتنامش** — `sillydev`: صفحتهم (نوفمبر 2026): بلا كارت، بلا تجديد، Node/Python/Bun، قواعد بيانات مجانية. الاستثناء الوحيد: سيرفر مااتستخدموش في أول 7 أيام بيتشيل بعد إيميل تحذير. Trust · القياس: ردّ HTTP 200 في 814ms
+- **Azure for Students — $100 كرِدِت من غير كارت** — `azure-students`: مقارنات 2026 بتسمّيه الاستثناء الحقيقي على قاعدة «كل كرِدِت محتاج بطاقة»: التحقق ببريد جامعة بس، و«Zero credit or debit card details required» مع root وIPv4 مخص · القياس: ردّ HTTP 200 في 877ms
 ## إزاي تعيد القياس
 ```bash
 # من غير أي حاجة (قياس مباشر من الشبكة اللي أنت فيها)
