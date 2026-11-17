@@ -144,8 +144,13 @@ async function cliChecks(cfg) {
   const dnsx = findBinary("dnsx");
   const probe = await runBin(findBinary("getent") || "/usr/bin/getent", ["hosts", "scanme.nmap.org"], 20);
   const okDns = probe.code === 0 && /\d/.test(probe.out);
-  add("cli", "dns resolution", okDns ? "pass" : NET_ERRORS.test(probe.err + probe.out) ? "blocked" : "review",
+  // ⚠ الاسم كان «dns resolution» والنجاح بيتقاس بـ`getent` (أداة نظام موجودة دايمًا)
+  // و`dnsx` مجرد نص في التفصيل — فالصف كان **بيقول pass وماسح الـDNS مش منصّب
+  // خالص** (مقاس 2026-11-17: dnsx=absent والصف أخضر). دلوقتي الصف اسمه getent
+  // وبيقول اللي قاسه بالحرف، و`dnsx` له صفّه المستقل اللي يقول حاضر ولا غايب.
+  add("cli", "dns resolution (getent — the resolver, not the scanner)", okDns ? "pass" : NET_ERRORS.test(probe.err + probe.out) ? "blocked" : "review",
     `${okDns ? short(probe.out, 80) : short(probe.err || probe.out || "مفيش رد", 90)} · dnsx=${dnsx ? "present" : "absent"}`);
+  if (!dnsx) add("cli", "dnsx present", "fail", "مش موجود — الـvendor فشل؟ (الصف فوق بيقيس الموتور مش الأداة)");
 
   const subfinder = findBinary("subfinder");
   if (!subfinder) add("cli", "subfinder present", "fail", "مش موجود");
