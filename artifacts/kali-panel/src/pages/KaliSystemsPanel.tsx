@@ -116,7 +116,13 @@ export default function KaliSystemsPanel() {
         setSysErr(`HTTP ${r.status} — ${r.statusText}`);
         return;
       }
-      setSys((await r.json()) as SysInfo);
+      const d = (await r.json()) as Partial<SysInfo> & { note?: string; error?: string };
+      if (!d?.host || !d.cpu || !d.mem || !d.gpu || !Array.isArray(d.disks)) {
+        setSys(null);
+        setSysErr(d?.note || d?.error || "الرد ناقص حالة النظام — مش هعرض أرقام متخيلة");
+        return;
+      }
+      setSys(d as SysInfo);
       setSysErr(null);
     } catch (e) {
       setSysErr((e as Error).message.slice(0, 160));
@@ -214,7 +220,7 @@ export default function KaliSystemsPanel() {
           <div className="flex items-center gap-1.5">
             {sys && (
               <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
-                {sys.host.hostname} · {sys.host.platform} {sys.host.release} · {sys.host.arch} · node {sys.host.node}
+                {sys.host?.hostname ?? "غير مقيس"} · {sys.host?.platform ?? "—"} {sys.host?.release ?? ""} · {sys.host?.arch ?? "—"} · node {sys.host?.node ?? "—"}
               </span>
             )}
             <button onClick={() => void loadSys()} className="text-[9px] px-2 py-1 rounded flex items-center gap-1"
@@ -403,7 +409,7 @@ export default function KaliSystemsPanel() {
 
         {cat && (
           <div className="mt-2 space-y-1.5">
-            {cat.categories.map((c) => {
+            {(cat.categories ?? []).map((c) => {
               const open = openCat === c.id;
               return (
                 <div key={c.id} className="rounded-lg overflow-hidden" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>

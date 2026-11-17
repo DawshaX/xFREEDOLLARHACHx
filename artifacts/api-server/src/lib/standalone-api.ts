@@ -5939,6 +5939,26 @@ if (path === "/fleet/system") {
     return { ok: true, categories: [], static: true, note: "الوضع الثابت: مافيش سيرفر — الكتالوج المقاس بيشتغل على الهَب." };
   }
 
+  if (path === "/kali-env/sysinfo") {
+    const reason = "الوضع الثابت: مافيش جيست كالي يتقاس من المتصفح. الأرقام دي مش صفر — غير مقيسة.";
+    return {
+      ok: true,
+      static: true,
+      measuredAt: new Date().toISOString(),
+      host: { hostname: "static-preview", platform: "browser", release: "—", arch: "—", node: "—" },
+      uptimeSec: null,
+      cpu: { usedPct: null, cores: 0, model: null, load1: null, load5: null, load15: null, reason },
+      mem: { totalBytes: null, availableBytes: null, usedBytes: null, usedPct: null, swapTotalBytes: null, swapUsedBytes: null, reason },
+      disks: [],
+      procs: { total: 0, rows: [], reason },
+      net: { ifaces: [], reason },
+      gpu: { present: false, devices: [], renderer: "غير مقيس", note: reason },
+      rootfs: { present: false, root: null, prootBin: null, guestShell: false, bytes: null, packages: null, executables: null, prettyName: null, reason },
+      unmeasured: [reason],
+      note: reason,
+    };
+  }
+
   if (path === "/kali-env/identity") {
     return {
       ok: false,
