@@ -448,6 +448,36 @@ await tA("a job's clock is longer than its slowest tool, and CI is longer than t
   assert.ok(ciMin > waitMin, `CI job ceiling ${ciMin}min must be larger than the harness wait ${waitMin}min, or the run is killed mid-measurement`);
 });
 
+await tA("an empty memory is not a healthy state", async () => {
+  //  القياس (2026-11-17، كونتينر جديد): state/ فيه 37 ملف (كوربوس/كتالوجات/كاشات) و
+  //  state/nova-memory.json صفر بايت. البوابة القديمة كانت بتعدّ الملفات: 37 > 3 ⇒
+  //  «الحالة المحلية سليمة» ⇒ تخطّي الاسترجاع ⇒ كل محادثات الفريق فضلت على GitHub.
+  const src = fs.readFileSync(path.join(SRC, "state-backup.ts"), "utf8");
+  assert.match(src, /function memoryHasRecords\(/, "restore must judge the thing that can be lost (memory), not the file count");
+  //  الكود الحقيقي بس — الشرح في التعليقات بيذكر السطر القديم بالحرف عشان السبب يفضل مقروء.
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/readdirSync\(stateDir\(\)\)\.length > 3/.test(code),
+    "counting state/ files as 'healthy' skips the restore whenever corpora exist — measured with 37 files and 0 memories");
+
+  //  وبالسلوك مش بالكود: ملف ذاكرة فاضي/غايب = محتاج استرجاع، وفيه سجلات = مفيش.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nova-mem-"));
+  const memPath = path.join(dir, "nova-memory.json");
+  const memHasRecords = () => {
+    try {
+      const j = JSON.parse(fs.readFileSync(memPath, "utf8"));
+      return Array.isArray(j.records) && j.records.length > 0;
+    } catch { return false; }
+  };
+  assert.equal(memHasRecords(), false, "no file → must ask for a restore");
+  fs.writeFileSync(memPath, JSON.stringify({ version: 2, records: [] }));
+  assert.equal(memHasRecords(), false, "empty records → must ask for a restore");
+  fs.writeFileSync(memPath, "{ broken");
+  assert.equal(memHasRecords(), false, "unreadable json → must ask for a restore");
+  fs.writeFileSync(memPath, JSON.stringify({ version: 2, records: [{ id: "a", content: "x" }] }));
+  assert.equal(memHasRecords(), true, "records present → local wins, no restore");
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 await tA("the nuclei row cannot pass on printed text alone", async () => {
   //  القياس (2026-11-17): سكربت بيطبع سطر واحد كان بياخد pass. السطر دلوقتي لازم
   //  يبان سطر نتيجة حقيقي، والتوقع 0 في targets.json معناه «إثبات مسح» (طلبات من
