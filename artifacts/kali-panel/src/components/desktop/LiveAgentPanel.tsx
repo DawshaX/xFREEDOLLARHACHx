@@ -1283,7 +1283,7 @@ export function LiveAgentPanel({
     const errors: string[] = [];
     const grab = async <T,>(path: string): Promise<T | null> => {
       try {
-        const r = await fetch(`${API_BASE}${path}`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(12000) });
+        const r = await fetch(`${API_BASE}${path}`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(30000) });
         if (!r.ok) { errors.push(`${path} → ${r.status}`); return null; }
         return (await r.json()) as T;
       } catch (e) {

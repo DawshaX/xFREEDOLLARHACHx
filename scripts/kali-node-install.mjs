@@ -154,6 +154,13 @@ async function install() {
   }
   log("الاستخراج خلص — الهيكل: " + fs.readdirSync(ROOTFS).sort().join(" "));
 
+  // TEST51 — بَق مقاس 2026-11-17: جيت مايخزنش المجلدات الفاضية ففرع kali-rootfs
+  // فالجست بيولّد من غير /var/cache/apt/archives/partial — أول apt-get بيفشل
+  // بـ«E: Archives directory ... is missing». بنعملهم هنا بعد الاستخراج.
+  for (const d of ["var/cache/apt/archives/partial", "var/lib/apt/lists/partial"]) {
+    try { fs.mkdirSync(path.join(ROOTFS, ...d.split("/")), { recursive: true }); } catch { /* موجود أصلًا */ }
+  }
+
   let proot = null;
   for (let a = 1; a <= 3; a++) {
     try {
