@@ -229,6 +229,10 @@ jobs:
           # (1) كتابة DNS في الجست قبل apt (2) تقسيم التثبيت مجموعتين عشان
           # فشل حزمة ضخمة (amass ~100MB) مايموتش الباقي (3) محاولة تانية
           # (4) التحقق يطبع الاسم المفقود بالحرف — مافيش «skipped» عمياء.
+          # TEST51 — بَق مقاس 2026-11-17: «E: Archives directory
+          # /var/cache/apt/archives/partial is missing» — جيت مايخزنش المجلدات
+          # الفاضية ففرع kali-rootfs فالجست بيولّد من غيرها، وأول apt-get
+          # بيفشل. الترقيع: mkdir للمجلدين قبل أي apt-get جوه الجست.
           if [ -f "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" ]; then
             P="$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static"
             R="$HOME/kali-rootfs/rootfs"
@@ -237,7 +241,7 @@ jobs:
             G2="responder netexec sherlock arp-scan hping3 john"
             for G in "$G1" "$G2"; do
               for ATTEMPT in 1 2; do
-                if "$P" -R "$R" /bin/sh -c "DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $G" >/tmp/apt-extra.log 2>&1; then
+                if "$P" -R "$R" /bin/sh -c "mkdir -p /var/cache/apt/archives/partial /var/lib/apt/lists/partial && DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $G" >/tmp/apt-extra.log 2>&1; then
                   break
                 fi
                 [ "$ATTEMPT" = "2" ] && echo "::warning::group failed (تاني محاولة): $(tail -2 /tmp/apt-extra.log | tr '\n' ' ')"

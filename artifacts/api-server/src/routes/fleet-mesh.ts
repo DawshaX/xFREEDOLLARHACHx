@@ -346,8 +346,15 @@ export function meshSnapshot() {
 router.get("/fleet/mesh", async (_req: Request, res: Response) => {
   // Refresh registered-server probes first (cached 20 s), so the nodes below are
   // as fresh as this request rather than as fresh as the last page visit.
+  // TEST51 — بَق «signal timed out» المقاس 2026-11-17: probeAll بيتسلسل على
+  // أصول سيرفرات ميتة (كل أصل لمهلة كاملة) فالراوت كان بيعدي مهلة اللوحة (12ث)
+  // والبطاقة تطلع فاضية. حدّثنا الميزانية على 8ث — اللي ما ردش بياخد كاشه
+  // والزيارة الجاية تلقاه، والراوت بيرد دايمًا في الوقت.
   try {
-    await probeAll(loadServers());
+    await Promise.race([
+      probeAll(loadServers()),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 8_000)),
+    ]);
   } catch {
     /* a dead probe must never break the mesh */
   }
