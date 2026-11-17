@@ -31,6 +31,9 @@
  *   GET   /api/ops/tools                الأدوات المقاسة على المكنة دي (موجود/ناقص)
  *   POST  /api/ops/tools/provision      ينزّل الأدوات الثابتة في vendor/bin (مُبوّب)
  */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Router, type Request, type Response } from "express";
 import { catalogStatus, lookupBountyProgram, huntCandidates } from "../lib/ops/bounty-catalog";
 import { listVault, syncFromJobs, draftReport, vaultStatus } from "../lib/ops/findings-vault";
@@ -675,6 +678,95 @@ router.post("/ops/config/test-telegram", async (req: Request, res: Response) => 
   });
 });
 
+/**
+ * أدوات بايثون — المسار اللي **شغال فعلًا** في البيئة دي.
+ *
+ * `POST /ops/tools/provision` بينزّل نسخ ثابتة من GitHub Releases، واتقاس
+ * 2026-11-17 إن `release-assets.githubusercontent.com` محجوب هنا (ECONNRESET)
+ * ⇒ 16 أداة ليها assets مش قابلة للتنزيل من المكنة دي أبدًا، مهما اتعادت.
+ *
+ * لكن pypi.org وfiles.pythonhosted.org **200**. فأي أداة أمنية ليها حزمة
+ * PyPI (impacket, certipy, sqlmap, pwntools, volatility3, pypykatz, frida…)
+ * بتتنزّل وتشتغل فعلًا. السكربت `scripts/fetch-python-tools.mjs` هو اللي
+ * بينفّذ ده، والمانيفست بيخرج من تشغيل كل أداة — مش من وجود ملف.
+ */
+/* جذر الريبو من مكان الباندل. الباندل بيتنفّذ من artifacts/api-server/dist/index.mjs،
+ * والـscripts/ على الجذر — فبنطلع 3 مستويات. لو الباندل في مكان تاني،
+ * NOVA_REPO_ROOT بيحسم الموضوع بدل التخمين. */
+const REPO_ROOT = (() => {
+  if (process.env.NOVA_REPO_ROOT) return process.env.NOVA_REPO_ROOT;
+  try {
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+  } catch {
+    return process.cwd();
+  }
+})();
+
+router.get("/ops/tools/python", (_req: Request, res: Response) => {
+  const manifestPath = path.join(REPO_ROOT, "vendor", "python-tools.json");
+  let manifest: unknown = null;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    manifest = null;
+  }
+  const venv = process.env.NOVA_PY_VENV || path.join(REPO_ROOT, "vendor", "pyenv");
+  res.json({
+    ok: true,
+    venv,
+    venvPresent: fs.existsSync(path.join(venv, "bin", "python")),
+    manifest,
+    hint: manifest
+      ? null
+      : "لسه ما اتنزّلش — POST /api/ops/tools/python/provision أو شغّل scripts/fetch-python-tools.mjs",
+  });
+});
+
+router.post("/ops/tools/python/provision", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "تنزيل أدوات = تشغيل عملية على المكنة، محتاج NOVA_EXEC_TOKEN."); return; }
+  const only = String(req.body?.only || "").trim();
+  const all = Boolean(req.body?.all);
+  const script = path.join(REPO_ROOT, "scripts", "fetch-python-tools.mjs");
+  if (!fs.existsSync(script)) {
+    // الحزمة المستقلة (standalone) مابيكون فيهاش scripts/ — بنقولها بصراحة
+    res.status(501).json({ ok: false, error: "vendorer-missing", detail: `السكربت مش في الباندة: ${script}` });
+    return;
+  }
+  const argv = [script, "--json"];
+  if (only) argv.push(`--only=${only}`);
+  else if (all) argv.push("--all");
+  const started = Date.now();
+  const run = await new Promise<{ code: number | null; out: string; err: string }>((resolve) => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { spawn } = require("node:child_process") as typeof import("node:child_process");
+    const c = spawn(process.execPath, argv, { cwd: REPO_ROOT, stdio: ["ignore", "pipe", "pipe"], timeout: 1_800_000 });
+    let out = "";
+    let err = "";
+    c.stdout.on("data", (d: Buffer) => { out += d.toString(); });
+    c.stderr.on("data", (d: Buffer) => { err += d.toString(); });
+    c.on("error", (e) => resolve({ code: -1, out, err: String(e.message) }));
+    c.on("close", (code) => resolve({ code, out, err }));
+  });
+  const ms = Date.now() - started;
+  let parsed: { installed?: number; total?: number; results?: unknown[]; pythonPackages?: number } | null = null;
+  try {
+    parsed = JSON.parse(run.out);
+  } catch {
+    parsed = null;
+  }
+  const ok = run.code === 0 && (parsed?.installed ?? 0) > 0;
+  broadcastEvent("nova-ops", { type: "python-tools", ok, installed: parsed?.installed ?? 0, total: parsed?.total ?? 0, ms });
+  res.status(ok ? 200 : 502).json({
+    ok,
+    ms,
+    installed: parsed?.installed ?? 0,
+    total: parsed?.total ?? 0,
+    pythonPackages: parsed?.pythonPackages ?? null,
+    results: parsed?.results ?? [],
+    stderr: ok ? undefined : run.err.slice(-1200),
+  });
+});
+
 router.get("/ops/tools", (_req: Request, res: Response) => {
   const st = toolchainStatus();
   res.json({ ok: true, ...st, kinds: toolStatus(), catalogue: [...VENDORABLE], env: { NOVA_TOOL_DIR: process.env.NOVA_TOOL_DIR || null } });
@@ -952,37 +1044,38 @@ async function measureNodeTools(rows: Array<{ kali: boolean; mode: string; id: s
   return { from: first.hostname, tools, sysinfo };
 }
 
-/* TEST47 — مرآة النشر من الهَب نفسه: الصفحة كانت بتجيب state/waifly-deploy.json
- * من raw.githubusercontent مباشرة — ومتصفحات على بعض الشبكات (مصر حرفيًا)
- * محجوب عليها الraw فكانت تعرض «مرآة النشر لسه مااتبنتش» كذبًا والمرآة موجودة.
- * الهَب بيقراها سيرفرًا من GitHub API ويخزنها 10د — نفس الأصل بالحرف. */
-let deployMirrorCache: { at: number; payload: Record<string, unknown> | null } = { at: 0, payload: null };
-router.get("/ops/deploy-mirror", async (_req: Request, res: Response) => {
-  if (deployMirrorCache.payload && Date.now() - deployMirrorCache.at < 10 * 60_000) {
-    res.json({ ...deployMirrorCache.payload, servedFrom: "hub-cache" });
-    return;
-  }
-  try {
-    const r = await fetch("https://api.github.com/repos/DawshaX/xFREEDOLLARHACHx/contents/state/waifly-deploy.json", {
-      headers: {
-        Accept: "application/vnd.github.raw+json",
-        "User-Agent": "CyberNova-Hub",
-        ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
-      },
-      signal: AbortSignal.timeout(12_000),
-    });
-    if (!r.ok) throw new Error(`GitHub ${r.status}`);
-    const text = await r.text();
-    const payload = JSON.parse(text) as Record<string, unknown>;
-    deployMirrorCache = { at: Date.now(), payload };
-    res.json({ ...payload, servedFrom: "hub-fetch" });
-  } catch (e) {
-    if (deployMirrorCache.payload) {
-      res.json({ ...deployMirrorCache.payload, servedFrom: "hub-cache-stale" });
-      return;
-    }
-    res.status(502).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
-  }
+/* مرآة النشر — من الهَب نفسه، من غير ما نسأل GitHub خالص.
+ *
+ *  كان فيه هنا مسار قديم (TEST47) بيقرا مرآة النشر القديمة من GitHub API
+ *  ويخزنه 10 دقايق. المشكلة مش في الكاش — المشكلة إن «حالة النشر» كانت بتتقاس
+ *  من هوست تالت (nova.waifly.com) عن طريق runner برّه، فأي تنصيب لنوفا كان
+ *  بيشوف كارت بيحكي عن سيرفر مش بتاعه. الصح إن الهَب يقول بنيته هو.
+ *
+ *  الرد دلوقتي من `/api/ops/version` بتاع نفس العملية: الـcommit اللي اتبنى منه،
+ *  عمر الـbundle اللي Node حمّله، والوقت اللي قاعد فيه. مافيش شبكة، مافيش توكن،
+ *  مافيش 502 لما النت يقطع.
+ *
+ *  الراوت والاسم `deploy-mirror` اتسابوا زي ما هما لأن الصفحات القديمة بتنده
+ *  عليهم — الشكل هو الشكل اللي `DeployMirror` في اللوحة بيقراه. */
+router.get("/ops/deploy-mirror", (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  const v = buildStamp();
+  const boot = { commit: v.sha, builtAt: v.entryMtime };
+  res.json({
+    ok: true,
+    at: new Date().toISOString(),
+    reachable: true,
+    boot,
+    bootAfter: null,
+    asset: v.entryMtime ? { updatedAt: v.entryMtime, size: null } : null,
+    action: v.stale.suspect ? "stale" : "fresh",
+    fresh: !v.stale.suspect,
+    stale: v.stale.suspect,
+    notes: [v.stale.why],
+    uptimeSec: v.uptimeSec,
+    node: v.node,
+    servedFrom: "the-hub-itself",
+  });
 });
 
 /* ── TEST24 — المخزن الموحّد: «فين اللي عملتو وفين الشغل» — كل مساحاتك على جيت هوب

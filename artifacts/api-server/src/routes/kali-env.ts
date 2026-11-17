@@ -21,6 +21,16 @@ import { readProbeCache, probeAllKaliNodes, orderPrewarmedFirst } from "../lib/o
 import { PROOT_GUEST_EXEC } from "../lib/ops/kali-node-installer";
 import { execStreamOnLocalAgent, execOnLocalAgent } from "./local-agent";
 import { kaliSysInfo } from "../lib/ops/kali-sysinfo";
+import {
+  createWorkspace,
+  deleteWorkspace,
+  getWorkspace,
+  listWorkspaces,
+  readWorkspaceFile,
+  runInWorkspace,
+  workspaceSelfTest,
+  workspaceShellCommand,
+} from "../lib/ops/kali-workspace";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -294,7 +304,18 @@ router.get("/kali-env/tools", async (_req, res) => {
     // «صفر أدوات» اللي بيظهر معاه إن كالي مش موجودة وهي موجودة على الأسطول.
     // TEST41 — الاتحاد مع المخزن الكامل: القياس بيغطي الفئات الرسمية الـ14.
     const all = [...new Set([...Object.values(TOOL_GROUPS).flat(), ...Object.values(APT_CATALOG).flat()])];
-    const probe = all.map((t) => `command -v ${t} >/dev/null 2>&1 && echo "OK:${t}"`).join("; ");
+    /* نفس منطق measureCatalog: بنسأل عن **الأمر الحقيقي** لكل أداة عبر
+     * TOOL_BIN_ALIASES. اتقاس 2026-11-17: metasploit موجود كـmsfconsole،
+     * volatility3 كـvol — والـprobe القديم كان بيسأل بالاسم في الكتالوج فيقول
+     * «ناقص» لأدوات شغالة. */
+    const probe = all
+      .map((t) => {
+        const anyOf = binCandidates(t)
+          .map((bin) => (bin.startsWith("/") ? `[ -e '${bin}' ]` : `command -v ${bin} >/dev/null 2>&1`))
+          .join(" || ");
+        return `{ ${anyOf} ; } && echo "OK:${t}"`;
+      })
+      .join("; ");
     const fleet = await fleetKaliSummary();
     const r = await kaliAnywhereExec(probe, 60_000);
     if (r && r.exitCode === 0) {
@@ -338,8 +359,19 @@ router.get("/kali-env/tools", async (_req, res) => {
 
   // One `command -v` pass for every tool — measured, not assumed.
   const all = [...new Set(Object.values(TOOL_GROUPS).flat())];
-  const probe = all.map((t) => `command -v ${t} >/dev/null 2>&1 && echo "OK:${t}"`).join("; ");
-  const r = await runInProot({ command: probe, timeoutMs: 30_000 });
+  /* نفس منطق measureCatalog: بنسأل عن **الأمر الحقيقي** لكل أداة عبر
+   * TOOL_BIN_ALIASES. اتقاس 2026-11-17: metasploit موجود كـmsfconsole،
+   * volatility3 كـvol — والـprobe القديم كان بيسأل بالاسم في الكتالوج فيقول
+   * «ناقص» لأدوات شغالة. */
+  const probe = all
+    .map((t) => {
+      const anyOf = binCandidates(t)
+        .map((bin) => (bin.startsWith("/") ? `[ -e '${bin}' ]` : `command -v ${bin} >/dev/null 2>&1`))
+        .join(" || ");
+      return `{ ${anyOf} ; } && echo "OK:${t}"`;
+    })
+    .join("; ");
+  const r = await runInProot({ command: probe, timeoutMs: 60_000 });
 
   const found = new Set(
     r.stdout
@@ -404,6 +436,46 @@ let catalogCache: { at: number; payload: CatalogPayload } | null = null;
 let catalogInflight: Promise<CatalogPayload> | null = null;
 const CATALOG_TTL_MS = 10 * 60_000;
 
+/**
+ * ★ خريطة الاسم في الكتالوج → الأمر الحقيقي على الدسك.
+ *
+ * المشكلة اللي دي بتحلها (مقاسة 2026-11-17): الكتالوج بيقول «volatility3 ناقص»
+ * بينما `vol` شغال تمام في `/usr/local/bin/vol` — لأن `command -v volatility3`
+ * مابيلاقيش حاجة. نفس الحكاية: `metasploit` (الأمر msfconsole) و`bloodhound`
+ * (الأمر bloodhound-ce-python) و`dirsearch` (ساعات بيتسطب كـ`dirsearch`).
+ *
+ * النتيجة كانت إن الواجهة تقول «ناقص» لأدوات موجودة فعلًا — وده بالظبط نوع
+ * «الادعاء الغلط» اللي المالك رفضه. الخريطة دي بتخلّي القياس يسأل عن الأمر
+ * الصح. مافيش تخمين: كل مرادف مذكور صراحة، واللي مش في الخريطة بيتقاس باسمه.
+ */
+const TOOL_BIN_ALIASES: Record<string, string[]> = {
+  volatility3: ["vol", "vol.py", "volatility3"],
+  volatility: ["volatility", "vol.py"],
+  metasploit: ["msfconsole", "msfvenom"],
+  bloodhound: ["bloodhound-ce-python", "bloodhound-python", "bloodhound.py"],
+  crackmapexec: ["crackmapexec", "cme"],
+  netexec: ["nxc", "netexec"],
+  wordlists: ["/usr/share/wordlists", "dirb"],
+  seclists: ["/usr/share/seclists"],
+  zaproxy: ["zaproxy", "zap.sh"],
+  burpsuite: ["burpsuite", "burpsuite_pro"],
+  "beef-xss": ["beef-xss", "beef"],
+  routersploit: ["rsf.py", "routersploit"],
+  empire: ["empire", "powershell-empire"],
+  dex2jar: ["d2j-dex2jar.sh", "d2j-dex2jar", "dex2jar"],
+  "arp-scan": ["arp-scan"],
+  "openvas": ["gvm-cli", "openvas", "omp"],
+  vulners: ["vulners", "nmap-vulners"],
+  wpscan: ["wpscan"],
+  "ida": ["ida64", "ida", "retdec"],
+};
+
+/** الأمر الحقيقي (الأول المتاح) لأداة — بلا تخمين. */
+function binCandidates(name: string): string[] {
+  const al = TOOL_BIN_ALIASES[name];
+  return al && al.length ? al : [name];
+}
+
 async function measureCatalog(): Promise<CatalogPayload> {
   if (catalogInflight) return catalogInflight;
   catalogInflight = (async () => {
@@ -413,7 +485,16 @@ async function measureCatalog(): Promise<CatalogPayload> {
         try {
           const all = [...new Set(KALI_CATEGORIES.flatMap((c) => TOOL_GROUPS[c] ?? []))];
           const measure = async (run: (cmd: string) => Promise<{ stdout: string; exitCode: number | null }>, plane: string) => {
-            const presenceCmd = all.map((t) => `command -v ${t} >/dev/null 2>&1 && echo "OK:${t}"`).join("; ");
+            /* بنسأل عن كل مرادف ونطبع اسم الكتالوج لما أي مرادف يتلاقى —
+             * كده الأداة بتتحسب موجودة بأمرها الحقيقي مش باسمها في القائمة. */
+            const presenceCmd = all
+              .map((t) => {
+                const probe = binCandidates(t)
+                  .map((bin) => (bin.startsWith("/") ? `[ -e '${bin}' ]` : `command -v ${bin} >/dev/null 2>&1`))
+                  .join(" || ");
+                return `{ ${probe} ; } && echo "OK:${t}"`;
+              })
+              .join("; ");
             const pr = await run(presenceCmd);
             const found = new Set(
               pr.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)),
@@ -882,7 +963,7 @@ router.post("/kali-env/exec", async (req: Request, res: Response) => {
   };
 
   const tmo = typeof timeoutMs === "number" ? Math.min(Math.max(timeoutMs, 1000), 600_000) : 120_000;
-  send({ type: "start", command, cwd: cwd ?? "/root" });
+  send({ type: "start", command, cwd: cwd ?? "/opt" /* /root مملوك root:root 700 — مافيش كتابة هناك (اتقاس 2026-11-17) */ });
 
   try {
     const result = await runInProot({
@@ -904,6 +985,103 @@ router.post("/kali-env/exec", async (req: Request, res: Response) => {
     res.write("data: [DONE]\n\n");
     res.end();
   }
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * مكان الشغل في كالي — Workspaces
+ * ──────────────────────────────────────────────────────────────────────────
+ * «اعملي مكان للشغل في كالي» — اللي فات كان /exec أمر واحد بلا حالة،
+ * و/sessions بيرجّع فاضي بصراحة. دي المساحات الحقيقية: مجلد جوه كالي،
+ * ملفات بتفضل، أوامر بتتنفذ في سياق المساحة، وسجل شغل محفوظ على الدسك.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+router.get("/kali-env/workspaces", (_req: Request, res: Response) => {
+  try {
+    const rows = listWorkspaces();
+    res.json({
+      ok: true,
+      root: "/opt/nova-workspaces",
+      workspaces: rows,
+      total: rows.length,
+      // الحقيقة: لو rootfs مش موجود، الليستة فاضية *لأن* مافيش بيئة — بنقول كده
+      ready: (() => {
+        try {
+          return detectProotLayout().ready;
+        } catch {
+          return false;
+        }
+      })(),
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: (e as Error).message, workspaces: [] });
+  }
+});
+
+router.post("/kali-env/workspaces", async (req: Request, res: Response) => {
+  const { name, template } = (req.body ?? {}) as { name?: string; template?: string };
+  if (typeof name !== "string" || !name.trim()) {
+    res.status(400).json({ ok: false, error: "اسم المساحة مطلوب" });
+    return;
+  }
+  try {
+    const ws = await createWorkspace(name, { template });
+    res.json({ ok: true, workspace: ws });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+router.get("/kali-env/workspaces/:slug", (req: Request, res: Response) => {
+  try {
+    res.json({ ok: true, workspace: getWorkspace(String(req.params.slug)) });
+  } catch (e) {
+    res.status(404).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+router.delete("/kali-env/workspaces/:slug", (req: Request, res: Response) => {
+  try {
+    res.json({ ok: true, ...deleteWorkspace(String(req.params.slug)) });
+  } catch (e) {
+    res.status(404).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+/** تنفيذ جوه المساحة — ده الفرق عن /exec: cwd = مجلد المساحة، والمخرجات بتفضل. */
+router.post("/kali-env/workspaces/:slug/run", async (req: Request, res: Response) => {
+  const { command, timeoutMs } = (req.body ?? {}) as { command?: string; timeoutMs?: number };
+  if (typeof command !== "string" || !command.trim()) {
+    res.status(400).json({ ok: false, error: "الأمر مطلوب" });
+    return;
+  }
+  try {
+    const r = await runInWorkspace(String(req.params.slug), command, { timeoutMs });
+    res.json({ ...r, ok: r.ok });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+/** قراءة ملف من المساحة — عشان النتيجة تتعرض جوه البرنامج. */
+router.get("/kali-env/workspaces/:slug/file", (req: Request, res: Response) => {
+  try {
+    const rel = String((req.query.path as string | undefined) ?? "");
+    res.json({ ok: true, ...readWorkspaceFile(String(req.params.slug), rel) });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+/** أوامر جاهزة للنسخ — تفتح نفس المساحة في طرفية على جهاز المستخدم. */
+router.get("/kali-env/workspaces/:slug/shell", (req: Request, res: Response) => {
+  const r = workspaceShellCommand(String(req.params.slug));
+  res.status(r.ok ? 200 : 400).json(r);
+});
+
+/** فحص حقيقي: بيفتح شل جوه مساحة ويشوف لازم يطلع المسار الصح. */
+router.get("/kali-env/workspaces-selftest", async (_req: Request, res: Response) => {
+  const r = await workspaceSelfTest();
+  res.status(r.ok ? 200 : 503).json(r);
 });
 
 router.get("/kali-env/sessions", (_req, res) => {
