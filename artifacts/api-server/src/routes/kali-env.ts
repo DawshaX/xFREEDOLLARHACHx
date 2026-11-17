@@ -756,8 +756,8 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
 
   const kcmd =
     'export DEBIAN_FRONTEND=noninteractive;' +
-    /* TEST51 — نفس بَق archives/partial: mkdir قبل أي apt-get جوه الجست. */
-    'mkdir -p /var/cache/apt/archives/partial /var/lib/apt/lists/partial 2>/dev/null;' +
+    /* TEST53 — نفس فكس الجذر: ال13 مجلد قبل أي apt-get جوه الجست (نفس قائمة المثبّت). */
+    'for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p "/$d" 2>/dev/null; done;' +
     'command -v Xvfb >/dev/null 2>&1 || { apt-get update -qq >/dev/null 2>&1; apt-get install -y -qq xvfb ffmpeg fluxbox xterm >/dev/null 2>&1; };' +
     'pkill -f "Xvfb :99" 2>/dev/null; pkill -f "x11grab" 2>/dev/null; sleep 0.4;' +
     'Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 & sleep 1.5;' +
@@ -807,10 +807,12 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
    * libimage-exiftool-perl. التثبيت بيستخدم الحزمة الصح والتحقق بيستخدم الأمر. */
   const APT_ALIAS: Record<string, string> = { exiftool: "libimage-exiftool-perl" };
   const pkg = APT_ALIAS[tool] ?? tool;
-  /* TEST51 — بَق مقاس 2026-11-17: «E: Archives directory /var/cache/apt/archives/partial
-   * is missing» — جيت مايخزنش المجلدات الفاضية ففرع kali-rootfs، فأول apt-get جوه
-   * الجست بيفشل قبل ما ينزّل أي حاجة. mkdir للمجلدين قبل أي apt-get. */
-  const cmd = `mkdir -p /var/cache/apt/archives/partial /var/lib/apt/lists/partial 2>/dev/null; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -1; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -5; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+  /* TEST53 — فكس الجذر (مقاس 2026-11-17): جيت مايخزنش المجلدات الفاضية فالجست
+   * بيولّد من غيرها — apt/dpkg بيحتاجوها كلها وبيفشلوا واحد-واحد
+   * («E: Directory '/var/log/apt/' missing» · «archives/partial is missing» ·
+   * «dpkg returned an error code (2)»). نفس قائمة المثبّت بالحرف — ال13 مجلد. */
+  const GUEST_DIRS = "var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail";
+  const cmd = `for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -1; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -5; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   const r = await kaliAnywhereExec(cmd, 420_000);
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
   const ok = /INSTALL_OK:/.test(r.stdout);
