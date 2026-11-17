@@ -72,6 +72,18 @@ jobs:
     timeout-minutes: 26
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # ci-commit rebases onto origin/<branch>; a shallow clone cannot
+
+      # check-workflows rule: a job that queues (concurrency) AND commits state must
+      # start from the current origin/<branch> — a queued run keeps the SHA it was
+      # queued with (measured today: a 12:35 run started at 14:21). Without this the
+      # measurement can be taken against a tree that is hours stale.
+      - name: move to the current origin/${{ github.ref_name }} (a queued run starts on a stale commit)
+        run: |
+          git fetch --prune origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+          echo "working from $(git rev-parse --short HEAD)"
 
       - uses: pnpm/action-setup@v4
         with:
@@ -248,53 +260,16 @@ jobs:
         # is FALSE on push/schedule because GitHub coerces null == false, which silently
         # disabled every scheduled commit. Skip ONLY when a human unchecked the box.
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.commit == false) }}
+        #
+        # ⚠ ده كان loop مكتوب بالإيد (checkout قوي + 3 محاولات) وفشل **8 تشغيلات متتالية**،
+        # وكل مرة برسالة واحدة: «القياس ما نشرش حاجة». القياس نفسه كان سليم (الـartifact
+        # 5.3KB = تقرير كامل مضغوط) — يعني المشكلة في النشر مش في القياس.
+        # `scripts/ci-commit.mjs` هو الناشر اللي 9 workflows بتستخدمه، وهو بيعمل الحاجة
+        # اللي الـloop ده ما كانش بيعملها: بيتحقق من `origin/<branch>` بعد الدفع، وبيقول
+        # آخر مخرج من git في `::error` مقروء من الـAPI، وبيستخدم `--autostash` بدل
+        # `checkout -qf` اللي بيرمي الشغل المقاس لو الشجرة فيها تغييرات من خطوة تانية.
         run: |
-          git config user.name "nova-verify-bot"
-          git config user.email "bot@arena.local"
-          git add state/verified-live.json state/verified-live.md 2>/dev/null || true
-          # A run that measures and publishes nothing is a run that never happened: the step fails
-          # loudly (step conclusions are the only CI output readable from a sandbox, since Actions
-          # logs and artifacts answer 403). Measured: run 41485616989 finished green having published
-          # nothing; run 41488048782 published nothing and finally said so.
-          if git diff --cached --quiet; then
-            echo "── ما فيش تغيير؟ ده محتوى state/ بعد التشغيل:"
-            ls -la state/verified-live.* 2>/dev/null || echo "(الملفين مش موجودين — الـharness فشل قبل الكتابة)"
-            tail -3 state/verified-live.md 2>/dev/null || true
-            echo "::error::القياس ما نشرش حاجة — شوف سطر «Verify live» في الـlog."
-            exit 1
-          fi
-          # لا rebase ولا commit على شجرة التشغيل دي: المحرك الشغال بيكتب state/cybernova-brain-state.json
-          # في نفس اللحظة، و`git rebase` بيرفض مع unstaged changes — وده بالظبط اللي خلي try loop الأول
-          # يفشل 4 مرات على run 41488048782 (`cannot rebase: You have unstaged changes`).
-          # بدل كده: ناخد القياس (الملفين بس)، نعمل checkout قوي لـآخر ${GITHUB_REF_NAME}، نكتب فوقه،
-          # ونشيل أي commit وسيط — فالمسابقة مع بوت التوثيق بتتحل بالبناء من الصفر مش بالـrebase.
-          cp state/verified-live.json /tmp/verified-live.json
-          cp state/verified-live.md /tmp/verified-live.md
-          branch="${GITHUB_REF_NAME}"
-          published=0
-          for try in 1 2 3; do
-            git fetch --quiet origin "$branch" || true
-            git checkout -qf -B "publish-live-verify" "origin/$branch" 2>/dev/null || git checkout -qf "$branch" 2>/dev/null || true
-            cp /tmp/verified-live.json state/verified-live.json
-            cp /tmp/verified-live.md state/verified-live.md
-            git add state/verified-live.json state/verified-live.md
-            if git diff --cached --quiet; then
-              echo "القياس مطابق لآخر تقرير على ${branch} — مفيش حاجة تنشر، والـrun ما بيحصلش على الفاضي"
-              published=1
-              break
-            fi
-            git commit -q -m "live verify: $(date -u +%Y-%m-%dT%H:%MZ) [live-verify]" || true
-            if git push --quiet origin "HEAD:refs/heads/${branch}"; then
-              echo "measurement published on attempt $try"
-              published=1
-              break
-            fi
-            echo "push rejected — ${branch} تحرك تحتنا؛ أعيد المحاولة فوق آخر نسخة"
-            sleep $((try * 5))
-          done
-          if [ "$published" != 1 ]; then
-            echo "::error::القياس اتعمل بس مانشئرفش على ${branch} بعد 3 محاولات — ده فشل للحلقة كلها، مش تحذير."
-            exit 1
-          fi
+          node scripts/ci-commit.mjs --message "live verify [live-verify]" \
+            state/verified-live.json state/verified-live.md
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI_BRANCH: ${{ github.ref_name }}
