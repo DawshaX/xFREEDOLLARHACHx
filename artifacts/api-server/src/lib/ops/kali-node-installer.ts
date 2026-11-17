@@ -234,7 +234,7 @@ async function install() {
     if (j25) {
       const jRel = "/usr/lib/jvm/" + j25;
       fs.writeFileSync(path.join(ROOTFS, "etc", "ld.so.conf.d", "zz-nova-java-jli.conf"), jRel + "/lib/jli\n" + jRel + "/lib\n");
-      const jc = spawn(binPath, ["-r", ROOTFS, "/usr/sbin/ldconfig"], { timeout: 60000 });
+      const jc = spawn(binPath, ["-0", "-r", ROOTFS, "/usr/sbin/ldconfig"], { timeout: 60000 });
       await new Promise((res) => jc.on("close", res).on("error", res));
       log("Java " + j25 + " + libjli اتظبطوا — burpsuite بيرد bare");
     }
@@ -320,19 +320,22 @@ function nodeEval(script: string): string {
  * The guest command is still a real shell command, because the guest's own
  * `/bin/sh -c` is what interprets it — which is the entire point of a terminal.
  */
+/**
+ * TEST57 — dpkg قال بالحرف: `requested operation requires superuser privilege`
+ * ثم `INSTALL_FAIL:ffuf`. السبب: الغلاف كان `proot -R` من غير `-0`، فالجست
+ * مش root وapt/dpkg بيرفضوا. `-0` هو fake-root بتاع proot (نفس أعلام
+ * `lib/ops/proot.ts`). الأمر لسه `$1` — مش متلزق في نص السكربت.
+ */
+export const PROOT_GUEST_EXEC =
+  'exec "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" -R "$HOME/kali-rootfs/rootfs" -w /root -0 -b /dev -b /proc -b /sys /bin/sh -c "$1"';
+
 function prootArgv(kcmd: string, mode: string): string[] {
   if (mode !== "MODE_PROOT") return ["/bin/sh", "-c", kcmd];
   // $HOME is expanded by the guest shell on purpose: the node process may run
   // as a different user than the one that installed the rootfs, and the
   // installer always writes to $HOME/kali-rootfs. The command itself is passed
   // as "$1" — a positional parameter, never spliced into the script text.
-  return [
-    "/bin/sh",
-    "-c",
-    'exec "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" -R "$HOME/kali-rootfs/rootfs" /bin/sh -c "$1"',
-    "nova-proot",
-    kcmd,
-  ];
+  return ["/bin/sh", "-c", PROOT_GUEST_EXEC, "nova-proot", kcmd];
 }
 
 /** نسخة بث حي من غلاف التنفيذ: نفس المعنى لكن chunks بتخرج لحظيًا على stdout/stderr (node أولًا — allowlist آمن). */

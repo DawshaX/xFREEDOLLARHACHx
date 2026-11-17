@@ -214,7 +214,7 @@ async function install() {
     if (j25) {
       const jRel = "/usr/lib/jvm/" + j25;
       fs.writeFileSync(path.join(ROOTFS, "etc", "ld.so.conf.d", "zz-nova-java-jli.conf"), jRel + "/lib/jli\n" + jRel + "/lib\n");
-      const jc = spawn(binPath, ["-r", ROOTFS, "/usr/sbin/ldconfig"], { timeout: 60000 });
+      const jc = spawn(binPath, ["-0", "-r", ROOTFS, "/usr/sbin/ldconfig"], { timeout: 60000 });
       await new Promise((res) => jc.on("close", res).on("error", res));
       log("Java " + j25 + " + libjli اتظبطوا — burpsuite بيرد bare");
     }

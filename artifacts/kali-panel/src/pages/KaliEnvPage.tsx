@@ -181,6 +181,8 @@ export default function KaliEnvPage() {
   const [envHealth, setEnvHealth] = useState<KaliEnvHealth | null>(null);
   const [envTools, setEnvTools] = useState<KaliEnvTools | null>(null);
   const [envBusy, setEnvBusy] = useState(false);
+  const [identity, setIdentity] = useState<{ root?: boolean; uid?: number | null; prettyName?: string | null; plane?: string; apt?: boolean; error?: string } | null>(null);
+  const [pkgName, setPkgName] = useState("");
   /* TEST35 — the terminal had exactly one plane: the remote Kali node. The
    * local proot guest (the one this page measures two cards above) was never
    * reachable from the input box, so `/api/kali-env/exec` shipped with no
@@ -303,6 +305,17 @@ export default function KaliEnvPage() {
     return () => { stop = true; clearInterval(t); };
   }, [liveOn]);
 
+  const loadIdentity = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/kali-env/identity`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(28000) });
+      const d = await r.json() as { root?: boolean; uid?: number | null; prettyName?: string | null; plane?: string; apt?: boolean; error?: string };
+      setIdentity(d);
+    } catch {
+      setIdentity({ root: false, error: "ما قدرتش أقيس هوية الجست" });
+    }
+  }, []);
+  useEffect(() => { void loadIdentity(); }, [loadIdentity]);
+
   /* TEST41 — التثبيت عند الطلب: apt جوه الجست على الطايرة الفايزة + إعادة قياس */
   const installTool = useCallback(async (tool: string) => {
     setInstBusy(tool);
@@ -318,11 +331,12 @@ export default function KaliEnvPage() {
         ...p,
       ].slice(0, 30));
       void loadEnv(true);
+      void loadIdentity();
     } catch {
       setInstLog((p) => [`✗ ${tool} — انقطع الاتصال أثناء التثبيت`, ...p].slice(0, 30));
     }
     setInstBusy(null);
-  }, [loadEnv]);
+  }, [loadEnv, loadIdentity]);
 
   /* المجموعات المقاسة → مجموعة «موجود» واحدة للبحث السريع (من الكتالوج المُقاس) */
   const presentSet = new Set<string>();
@@ -546,20 +560,52 @@ export default function KaliEnvPage() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-lg font-black flex items-center gap-2" style={{ color: "#ff5544", textShadow: "0 0 14px rgba(255,60,40,0.5)" }}>
-            🐉 بيئة كالي الحقيقية المدمجة — جوه البرنامج نفسه
+            🐉 كالي الحقيقية — نظام متثبت على GitHub، بيتشغّل من العقد
           </h1>
           <p className="text-[10px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-            {st?.present
-              ? `rootfs كالي على الهَب (${st.packages ? `${st.packages.toLocaleString("en")} حزمة مقاسة` : "مقاسة"}) بتشتغل بproot · الديسكتوب بيتفتح من أي دومين بيوصل للهَب (nova.waifly.com) · الأجينت بيستخدمها بأداة kali_run`
-              : nodes?.nodes.some((n) => n.kali)
-                ? "كالي شغالة فعليًا على عقد الأسطول السحابية (rootfs + proot) — المخزن على جيت هوب وصفر على السيرفر · الطرفية تحت بتنفّذ على العقد مباشرة وkali_run بيتحول عليها تلقائيًا"
-                : "مافيش كالي على الهَب ولا عقدة كالية متصلة دلوقتي (قياس حي) — موجة fleet-nodes كل 5 ساعات بتبني وتوصّل عقدة كالية تلقائيًا، والطرفية تحت هتنفّذ عليها أول ما توصل"}
+            القرص الدايم فرع kali-rootfs (2113 حزمة، مش على سيرفر الموقع). العقدة بتفتح النظام كـ root وتقدر تثبّت أي حزمة بـ apt. اللايف أجينت بيستخدم نفس الطايرة عبر kali_run.
           </p>
         </div>
         <button onClick={() => navigate("/agent-pro")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
           style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.4)", color: "#22d3ee" }}>
-          <ArrowLeft className="w-3.5 h-3.5" /> مكتب الشغل الحي (/agent-pro)
+          <ArrowLeft className="w-3.5 h-3.5" /> افتح اللايف أجينت
         </button>
+      </div>
+
+      <div className="rounded-xl p-3" style={{ background: "rgba(255,85,68,0.05)", border: "1px solid rgba(255,85,68,0.35)" }}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <p className="text-[11px] font-black" style={{ color: "#ff8866" }}>نظام الجست — قياس حي، مش شكل</p>
+          <button onClick={() => void loadIdentity()} className="text-[9px] px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.75)" }}>
+            أعد قياس الجذر
+          </button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: identity?.root ? "rgba(68,255,136,0.12)" : "rgba(255,80,60,0.12)", color: identity?.root ? "#44ff88" : "#ff8877", border: "1px solid rgba(255,255,255,0.12)" }}>
+            {identity == null ? "بقاس الجذر…" : identity.root ? `root uid=${identity.uid ?? 0}` : `مش root${identity.uid != null ? ` uid=${identity.uid}` : ""} — apt هيفشل`}
+          </span>
+          {identity?.prettyName && (
+            <span className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.7)" }}>{identity.prettyName}</span>
+          )}
+          {identity?.apt && (
+            <span className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: "rgba(68,255,136,0.08)", color: "#9dffc0" }}>apt موجود</span>
+          )}
+          {identity?.plane && (
+            <span className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)" }}>{identity.plane}</span>
+          )}
+        </div>
+        {identity?.error && !identity.root && (
+          <p className="text-[9px] font-mono mt-1" style={{ color: "#ffaa66" }}>{identity.error}</p>
+        )}
+        <form className="mt-2 flex flex-wrap gap-1.5" onSubmit={(e) => { e.preventDefault(); const name = pkgName.trim().toLowerCase(); if (name) void installTool(name); }}>
+          <input value={pkgName} onChange={(e) => setPkgName(e.target.value)} placeholder="ثبّت أي حزمة، مثال: ffuf"
+            className="text-[10px] font-mono px-2 py-1 rounded outline-none flex-1 min-w-[160px]" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,85,68,0.35)", color: "#ffe0d8" }} />
+          <button type="submit" disabled={instBusy !== null || !pkgName.trim()} className="text-[9px] font-black px-2.5 py-1 rounded" style={{ background: "rgba(255,85,68,0.16)", border: "1px solid rgba(255,85,68,0.45)", color: "#ff8866", opacity: instBusy || !pkgName.trim() ? 0.5 : 1 }}>
+            {instBusy ? `بيثبت ${instBusy}` : "ثبّت جوه كالي"}
+          </button>
+        </form>
+        <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+          خطأ dpkg «requires superuser privilege» كان لأن proot فاتح من غير -0. التثبيت دلوقتي بيدخل root. لو لسه uid≠0 يبقى الهَب لسه على النسخة القديمة.
+        </p>
       </div>
 
       {/* TEST23 — عقد كالي السحابية: المكان الحي اللي المالك يشوف فيه كالي على الأسطول —

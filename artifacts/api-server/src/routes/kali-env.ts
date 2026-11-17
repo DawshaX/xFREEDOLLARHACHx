@@ -18,6 +18,7 @@ import { requireOps } from "../lib/ops/gate";
 import { detectProotLayout, prootHealth, runInProot } from "../lib/ops/proot";
 import { kaliAnywhereExec } from "../lib/ops/kali-anywhere";
 import { readProbeCache, probeAllKaliNodes, orderPrewarmedFirst } from "../lib/ops/kali-node-probe";
+import { PROOT_GUEST_EXEC } from "../lib/ops/kali-node-installer";
 import { execStreamOnLocalAgent, execOnLocalAgent } from "./local-agent";
 import { kaliSysInfo } from "../lib/ops/kali-sysinfo";
 import { logger } from "../lib/logger";
@@ -260,6 +261,28 @@ router.get("/kali-env/health", async (_req, res) => {
     // الجاهزية الكاملة: إما rootfs على الهَب أو عقدة كالي حية جاهزة — والتين
     // مقاسين، مافيش تخمين.
     readyAnywhere: (health.ready && health.guestShell) || fleet.kaliReady > 0,
+  });
+});
+
+/** TEST57 — هوية الجست المقاسة: uid لازم يبقى 0 عشان apt/dpkg يشتغلوا. */
+router.get("/kali-env/identity", async (_req, res) => {
+  const cmd = "echo UID:$(id -u); id; . /etc/os-release 2>/dev/null; echo PRETTY:${PRETTY_NAME:-unknown}; command -v apt-get >/dev/null && echo APT:yes || echo APT:no; command -v dpkg >/dev/null && echo DPKG:yes || echo DPKG:no";
+  const r = await kaliAnywhereExec(cmd, 25_000);
+  if (!r) {
+    res.status(503).json({ ok: false, root: false, error: "مافيش طايرة كالي متصلة دلوقتي" });
+    return;
+  }
+  const uid = Number((r.stdout.match(/^UID:(\d+)$/m) ?? [])[1]);
+  const pretty = (r.stdout.match(/^PRETTY:(.*)$/m) ?? [])[1] ?? null;
+  res.json({
+    ok: true,
+    uid: Number.isFinite(uid) ? uid : null,
+    root: uid === 0,
+    prettyName: pretty,
+    apt: /APT:yes/.test(r.stdout),
+    dpkg: /DPKG:yes/.test(r.stdout),
+    plane: r.plane,
+    raw: r.stdout.slice(0, 600),
   });
 });
 
@@ -701,7 +724,7 @@ const DESKTOP_FRAME_TEST = Buffer.from(
 function desktopStreamScript(kcmd: string, mode: string): string {
   const argv =
     mode === "MODE_PROOT"
-      ? ["/bin/sh", "-c", 'exec "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" -R "$HOME/kali-rootfs/rootfs" /bin/sh -c "$1"', "nova-desktop", kcmd]
+      ? ["/bin/sh", "-c", PROOT_GUEST_EXEC, "nova-desktop", kcmd]
       : ["/bin/sh", "-c", kcmd];
   return (
     "const {spawn}=require('child_process');" +
@@ -800,9 +823,8 @@ const PKG_RE = /^[a-z0-9][a-z0-9.+_-]{0,48}$/;
 router.post("/kali-env/install", async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as { tool?: string };
   const tool = String(body.tool ?? "").trim();
-  if (!PKG_RE.test(tool)) { res.status(400).json({ ok: false, error: "اسم حزمة غير صالح" }); return; }
+  if (!PKG_RE.test(tool)) { res.status(400).json({ ok: false, error: "اسم حزمة غير صالح — حروف وأرقام و .-_+ بس، من غير مسافة" }); return; }
   const inCatalog = Object.values(APT_CATALOG).flat().includes(tool) || Object.values(TOOL_GROUPS).flat().includes(tool);
-  if (!inCatalog) { res.status(400).json({ ok: false, error: "الحزمة مش في مخزن كالي المعروف — استخدم الطرفية للأدوات الخاصة" }); return; }
   /* TEST47 — اسم الأمر ≠ اسم الحزمة أحيانًا: exiftool أمر والحزمة
    * libimage-exiftool-perl. التثبيت بيستخدم الحزمة الصح والتحقق بيستخدم الأمر. */
   const APT_ALIAS: Record<string, string> = { exiftool: "libimage-exiftool-perl" };
@@ -812,16 +834,23 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
    * («E: Directory '/var/log/apt/' missing» · «archives/partial is missing» ·
    * «dpkg returned an error code (2)»). نفس قائمة المثبّت بالحرف — ال13 مجلد. */
   const GUEST_DIRS = "var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail";
-  const cmd = `for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -1; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -5; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+  const cmd = `echo ROOT_UID:$(id -u); for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
   const r = await kaliAnywhereExec(cmd, 420_000);
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
   const ok = /INSTALL_OK:/.test(r.stdout);
+  const uid = Number((r.stdout.match(/^ROOT_UID:(\d+)$/m) ?? [])[1]);
+  const tail = [r.stdout, r.stderr].filter(Boolean).join("\n").split("\n").slice(-12).join("\n");
   res.json({
     ok,
     tool,
+    pkg,
+    inCatalog,
+    root: uid === 0,
+    uid: Number.isFinite(uid) ? uid : null,
     plane: r.plane,
     exitCode: r.exitCode,
-    output: r.stdout.split("\n").slice(-8).join("\n"),
+    output: tail,
+    error: ok ? undefined : (uid === 0 ? "التثبيت فشل جوه الجست — الناتج تحت" : "الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"),
   });
 });
 

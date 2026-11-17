@@ -5939,6 +5939,19 @@ if (path === "/fleet/system") {
     return { ok: true, categories: [], static: true, note: "الوضع الثابت: مافيش سيرفر — الكتالوج المقاس بيشتغل على الهَب." };
   }
 
+  if (path === "/kali-env/identity") {
+    return {
+      ok: false,
+      root: false,
+      uid: null,
+      prettyName: null,
+      apt: false,
+      dpkg: false,
+      static: true,
+      error: "الوضع الثابت: هوية الجست بتتقاس على الهَب، مش من المتصفح.",
+    };
+  }
+
   if (path === "/kali-env/health") {
     /* TEST42 — كارت كالي في NovaAgentPro بيقرا /health حتى في الوضع الساكن:
      * الرد الصادق هنا «القياس الحي على الهَب» — مافيش rootfs ولا أسطول
