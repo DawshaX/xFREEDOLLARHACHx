@@ -264,14 +264,14 @@ jobs:
             G2="responder netexec sherlock arp-scan hping3 john"
             for G in "$G1" "$G2"; do
               for ATTEMPT in 1 2; do
-                if "$P" -R "$R" /bin/sh -c "for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p \"/\$d\" 2>/dev/null; done && DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $G" >/tmp/apt-extra.log 2>&1; then
+                if "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p \"/\$d\" 2>/dev/null; done && DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $G" >/tmp/apt-extra.log 2>&1; then
                   break
                 fi
                 [ "$ATTEMPT" = "2" ] && echo "::warning::group failed (تاني محاولة): $(tail -2 /tmp/apt-extra.log | tr '\n' ' ')"
               done
             done
-            "$P" -R "$R" /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null && echo OK:\$t; done" | tee /tmp/kali-extras.txt || true
-            MISSING="$("$P" -R "$R" /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null || echo MISSING:\$t; done" 2>/dev/null | tr '\n' ' ')"
+            "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null && echo OK:\$t; done" | tee /tmp/kali-extras.txt || true
+            MISSING="$("$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null || echo MISSING:\$t; done" 2>/dev/null | tr '\n' ' ')"
             echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12 ${MISSING:+— مفقود: $MISSING}"
             # TEST56 — التقرير المقاس من العقدة نفسها: ملف per-node عشان مافيش
             # تعارض كتابة بين العقد — الرد بيتبني من المقاس مش من الادعاء.

@@ -1011,6 +1011,18 @@ router.get("/ops/storage-hub", async (_req: Request, res: Response) => {
     const parts = kf.filter((f) => /^part-\d+$/.test(f.name)).length;
     rows.push({ id: "kali-rootfs", label: "فرع kali-rootfs — بيئة كالي الكاملة", kind: "branch", bytes, items: parts, updatedAt: null, link: `https://github.com/${REPO}/tree/kali-rootfs` });
   }
+  const spare = (await gh("/repos/DawshaX/Hack-STORAGE")) as { size?: number; html_url?: string; pushed_at?: string } | null;
+  if (spare) {
+    rows.push({
+      id: "hack-storage",
+      label: "Hack-STORAGE — تخزين احتياطي (فاضي لحد ما يتسجل فيه)",
+      kind: "repo",
+      bytes: (spare.size ?? 0) * 1024,
+      items: 1,
+      updatedAt: spare.pushed_at ?? null,
+      link: spare.html_url ?? "https://github.com/DawshaX/Hack-STORAGE",
+    });
+  }
   for (const [id, label] of [
     ["nova-portable", "باندل nova-24-7 — البرنامج الكامل اللي بيشتغل عندك"],
     ["nova-state", "نسخ احتياطي الحالة — الذاكرة والإعدادات (كل 15د)"],
