@@ -662,7 +662,26 @@ async function main() {
 }
 
 main().then(() => process.exit(0)).catch((e) => {
+  // ⚠ الخروج بـ0 بعد انهيار كان بيجعل خطوة «Verify live» خضرا وتقرير 5KB ما فيهوش
+  // إلا 1-2 صف — والأحمر الوحيد يبان في خطوة «Commit the report»، ورسالتها
+  // «القياس ما نشرش حاجة» وهي مش السبب الحقيقي. مقاس 2026-11-17: run 44046587138
+  // قضى 174 ثانية في الخطوة بدل ~20 دقيقة، والـartifact 5.4KB، والتقرير المنشور
+  // فضل من 2026-11-15.
+  //
+  // القرار: الانهار = فشل **مُعلن** (خروج 2)، مع تقرير جزئي مكتوب عشان السبب يفضل
+  // مقروء، ومع صف صريح «harness crashed» جوه نفس التقرير. الأدوات اللي مردّتش
+  // (blocked/review) مش انهيار — دول لسه بيخرجوا 0 زي ما كانوا.
   console.log(`::error::verify-live crashed: ${String(e?.stack || e)}`);
-  try { fs.appendFileSync(OUT_MD, `\n> انهار الفحص: \`${String(e?.message || e)}\` — السطور اللي فوق دي آخر نتيجة كاملة.\n`); } catch { /* ignore */ }
-  process.exit(0);
+  const payload = {
+    version: 1, at: new Date().toISOString(), verdict: "HARNESS_CRASHED",
+    counts: { pass: 0, fail: 0, blocked: 0, review: 0, crashed: 1 },
+    meta: { engine: ENGINE, crash: String(e?.message || e) },
+    rows: [{ layer: "harness", check: "run completed", status: "fail", detail: `انهار: ${String(e?.message || e)}`, at: new Date().toISOString() }],
+  };
+  try {
+    fs.mkdirSync(path.dirname(OUT_JSON), { recursive: true });
+    fs.writeFileSync(OUT_JSON, JSON.stringify(payload, null, 2) + "\n");
+    fs.writeFileSync(OUT_MD, `# التحقق الحي — HARNESS_CRASHED\n\n> انهار الفحص: \`${String(e?.message || e)}\`\n> ده **مش** قياس؛ ده انهيار في الـharness نفسه. مفيش صف بيتقري هنا.\n`);
+  } catch { /* مفيش قرص؟ */ }
+  process.exit(2);
 });
