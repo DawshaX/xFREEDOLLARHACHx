@@ -275,9 +275,19 @@ jobs:
             echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12 ${MISSING:+— مفقود: $MISSING}"
             # TEST56 — التقرير المقاس من العقدة نفسها: ملف per-node عشان مافيش
             # تعارض كتابة بين العقد — الرد بيتبني من المقاس مش من الادعاء.
+            # + نفس القياس في $GITHUB_STEP_SUMMARY — بيظهر في check-run output
+            # عبر الAPI فورًا (قراءة بس، مافيش حاجة push).
             OKCOUNT="$(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)"
             mkdir -p state
             printf '{"at":"%s","run":%s,"node":"node-%s","ok":%s,"missing":"%s"}\n' "$(date -u +%FT%TZ)" "$GITHUB_RUN_ID" "$MI" "$OKCOUNT" "${MISSING:-}" > "state/fleet-wave-report-$GITHUB_RUN_ID-$MI.json"
+            {
+              echo "### node-$MI — القياس المقاس"
+              echo '```'
+              echo "extra tools present: $OKCOUNT/12"
+              [ -n "${MISSING:-}" ] && echo "مفقود: $MISSING"
+              echo "at: $(date -u +%FT%TZ)"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Commit the wave tools report (measured proof, per node)
