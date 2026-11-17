@@ -60,6 +60,10 @@ jobs:
     name: plan the wave
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    # main only, stated per job (not only in the commit's branches filter):
+    # a push or a manual run on a feature branch must never commit its report
+    # to that branch — the report belongs on the branch the site reads.
+    if: github.ref == 'refs/heads/main'
     outputs:
       nodes: ${{ steps.plan.outputs.nodes }}
     steps:
@@ -147,9 +151,9 @@ jobs:
   node:
     name: node ${{ matrix.i }}
     needs: prepare
+    if: needs.prepare.outputs.nodes != '0' && github.ref == 'refs/heads/main'
     # With nodes=0 the whole matrix must not even be scheduled: otherwise every
     # push to this file queues 19 jobs that each boot a runner just to skip.
-    if: needs.prepare.outputs.nodes != '0'
     runs-on: ubuntu-latest
     timeout-minutes: 350          # < 6 h hard cap, so the job ends cleanly
     # TEST56 — التقرير المقاس بيندفع من العقدة نفسها (ci-commit) فمحتاجة write
@@ -188,6 +192,22 @@ jobs:
 
       - uses: actions/checkout@v4
         if: steps.gate.outputs.run == 'true'
+        with:
+          fetch-depth: 0
+
+      # check-workflows rule (same one vuln-corpus/nova-brain follow): a job that
+      # BOTH queues (concurrency) and commits state with scripts/ci-commit.mjs
+      # must move to the current origin/<branch> first — a queued run keeps the
+      # SHA it was queued with, so a stale tree reads a stale index. Measured on
+      # this repo before the fix: scripts/check-workflows.mjs listed exactly this
+      # file (`7/8 stateful jobs start from origin/main`) and `agent-gates` stayed
+      # red at 43/44 on every run.
+      - name: move to the current origin/${{ github.ref_name }} (a queued run starts on a stale commit)
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          git fetch --prune origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+          echo "working from $(git rev-parse --short HEAD)"
 
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.run == 'true'

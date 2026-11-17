@@ -28,6 +28,8 @@ on:
   # purpose: the Arena GitHub integration can read runs but cannot create them
   # (workflow_dispatch → 403), so a push trigger is the only way to ask for one.
   push:
+    # main only — a branch push must never publish a measurement.
+    branches: [main]
     paths:
       - ".github/workflows/live-verify.yml"
       - "scripts/verify-live.mjs"
@@ -89,10 +91,35 @@ jobs:
       - name: Vendor the real toolchain
         # Same fetcher Render runs — with NOVA_HEAVY_TOOLS=1 on the 40 GB CI runner
         # so nuclei is installed and verified alongside the slim set.
+        #
+        # Run 44011381539 (2026-11-17T03:36Z) measured the hole this fixes: the
+        # step went GREEN, `Is it there?` printed `nuclei → missing`, and the whole
+        # report went RED on one row (`nuclei present: مش موجود`) — so the readiness
+        # number sat at 97.5% while every other row was a real pass. Two causes:
+        #   1. the mirror (assets per tool, SHA-256 checked) was only consulted when
+        #      the api.github.com lookup FAILED — a green API plus a dead
+        #      release-asset CDN (the exact thing a mirror exists for) never fell
+        #      back to it;
+        #   2. a failed fetch is a warning inside the script, so the step stayed
+        #      green and nothing said the toolchain was incomplete.
+        # Order is now mirror-first, then upstream for anything the mirror lacks,
+        # and the step goes RED (with the tool named) when a required binary is
+        # still missing after both paths.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NOVA_HEAVY_TOOLS: "1"
-        run: node scripts/fetch-toolchain.mjs --into vendor/bin
+          NOVA_TOOLCHAIN_MIRROR: https://github.com/${{ github.repository }}/releases/download/nova-toolchain
+        run: |
+          node scripts/fetch-toolchain.mjs --into vendor/bin --mirror "$NOVA_TOOLCHAIN_MIRROR" || true
+          missing=""
+          for b in nuclei httpx subfinder katana dnsx naabu ffuf; do
+            if [ ! -x "vendor/bin/$b" ]; then missing="$missing $b"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::toolchain incomplete —$missing (mirror + upstream both failed; see the step log)"
+            exit 1
+          fi
+          echo "vendored: $(ls vendor/bin | tr '\n' ' ')"
 
       - name: What the runner actually has
         run: |
