@@ -220,23 +220,47 @@ async function cliChecks(cfg) {
     // which is the same lie in the other direction).
     const budget = Math.max(PER_TIMEOUT, 165);
     const r = await runBin(nuclei, ["-u", testUrl, "-severity", "high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1", "-stats"], budget);
-    const lines = r.out.split("\n").map((s) => s.trim()).filter(Boolean);
+    // ⚠ أي سطر مش نتيجة: القياس اللي كشفها (2026-11-17) — حطّيت نص تنفيذي
+    // بيطبع سطر واحد ("nuclei v3.11.1-fake-test") فالصف طلع **pass** بـ«1 نتيجة».
+    // nuclei الحقيقي بيطبع JSON (مع -json) أو [template-id] [proto] [severity] host.
+    // الشرط بقى: السطر يبان نتائج فعلية، والعدد يتقاس من السطور المطابقة بس.
+    const RESULT_LINE = /^(?:\{"(?:template-id|templateID|matched-at|host)")|^\[[^\]]+\]\s*\[/;
+    const lines = r.out.split("\n").map((s) => s.trim()).filter((s) => s && RESULT_LINE.test(s));
     // The CLI row measures the BINARY, so it runs on the host built to be found (testphp) with
     // only high/critical templates — the full set with `low` cannot finish in any job budget, and
     // "cut off" would then be the only result we ever report. The spine runs medium,high,critical
     // on demo.testfire.net (where it produced 11 findings, run 41455864503): one tier wider than
     // this row on purpose, so a spine/CLI disagreement is a signal and not a scheduling artifact.
-    const min = testRow.expects?.nucleiFindings ?? 1;
+    // `nucleiFindings: 0` معناه **مقصود** (testphp في targets.json): السطر بيقيس إن
+    // الماسح نفّذ القوالب فعلًا — بعدد الطلبات من إحصاء الأداة — مش إن الموقع واقع
+    // النهاردة. الفخ اللي كان مستخبي: `lines.length >= 0` = نجاح دايم، فالـpass ما
+    // كانش بيقيس حاجة أصلًا (مقاس: أداة مزيفة تطبع «Requests 999» وخط واحد → pass).
+    // القاعدة دلوقتي: لو التوقع 0، النجاح لازم ييجي من إحصائية الأداة (طلبات > 50)،
+    // ولو التوقع >= 1، لازم سطر نتيجة حقيقي.
+    const min = Number(testRow.expects?.nucleiFindings ?? 1);
+    const byFindings = Number.isFinite(min) && min >= 1;
     const cutOff = r.code === null;
     // nuclei prints its stats panel on stderr. Counting requests is what separates "scanned and
     // found nothing today" (a result) from "never scanned" (a fault) — the finding-count question
     // belongs to the spine, which produced 11 of them on demo.testfire.net.
     const reqs = Number(((r.err + "\n" + r.out).match(/(?:total\s+)?requests[^\d]{0,12}([\d,]{1,9})/i) || [0, "0"])[1].replace(/,/g, ""));
+    const scannedProof = reqs > 50;
     add("cli", `nuclei -u ${testSite} (high,critical)`,
-      lines.length >= min ? "pass" : r.code === 0 && reqs > 50 ? "pass" : cutOff ? "review" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
-      lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}`
+      // `reqs > 50 → pass` كان باب خلفي مقاس (2026-11-17): حطّيت سكربت بيطبع سطر
+      // "Requests 999" والصف طلع pass من غير أي نتيجة مسح. عدّ الطلبات بيطبعوه
+      // nuclei بنفسه، وسهل يتزوّر — فهو **بيانات في التفصيل**، مش شرط نجاح.
+      // pass بقى = نتيجة واحدة على الأقل بالسطر المطابق، وبس.
+      // نجاح = دليل مسح، بأي من الطريقتين: عدد نتائج ≥ التوقع (لما التوقع ≥1)،
+      // أو إثبات من الأداة نفسها (سطر نتيجة / عدّاد طلبات >50) لما التوقع 0.
+      (byFindings ? lines.length >= min : scannedProof || lines.length > 0)
+        ? "pass"
+        : cutOff ? "review" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
+      !byFindings
+        ? `${reqs} طلب اتفحص (المطلوب >50) و${lines.length} نتيجة high/critical · exit=${r.code}`
+        : lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}`
         : cutOff ? `اتقطع بعد ${r.ms}ms (سقفي ${budget}s) و${lines.length} نتيجة لحد هنا · قوالب: ${updTail}`
-          : `${reqs || "?"} طلب اتفحص و0 نتيجة high/critical · exit=${r.code} · قوالب: ${updTail}`,
+          : `${reqs || "?"} طلب اتفحص و0 نتيجة high/critical · exit=${r.code} · قوالب: ${updTail}` +
+            (r.code === 0 && reqs > 50 ? " · (طلبات اتعدّت من غير سطر نتيجة — مش إثبات مسح لوحده)" : ""),
       { count: lines.length, ms: r.ms, cutOff });
   }
 

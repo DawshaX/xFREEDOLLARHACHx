@@ -448,6 +448,23 @@ await tA("a job's clock is longer than its slowest tool, and CI is longer than t
   assert.ok(ciMin > waitMin, `CI job ceiling ${ciMin}min must be larger than the harness wait ${waitMin}min, or the run is killed mid-measurement`);
 });
 
+await tA("the nuclei row cannot pass on printed text alone", async () => {
+  //  القياس (2026-11-17): سكربت بيطبع سطر واحد كان بياخد pass. السطر دلوقتي لازم
+  //  يبان سطر نتيجة حقيقي، والتوقع 0 في targets.json معناه «إثبات مسح» (طلبات من
+  //  إحصاء الأداة أو سطر نتيجة)، مش «أي حاجة تعدّي».
+  const harness = fs.readFileSync(path.join(ROOT0, "scripts/verify-live.mjs"), "utf8");
+  assert.match(harness, /RESULT_LINE/, "the nuclei row must filter output through RESULT_LINE — a bare line is not a finding");
+  //  المطلوب: الفرع بتاع التوقع 0 ما يعدّيش بـlines.length لوحده — لازم scannedProof.
+  //  الشكل المرفوض: `byFindings ? (lines.length >= min ? "pass" : ...)` أو أي فرع
+  //  «تحقق من العدد» من غير scannedProof جوه نفس السطر.
+  const proofLine = (harness.match(/^.*byFindings \? lines\.length >= min.*$/m) || [""])[0];
+  assert.match(proofLine, /scannedProof/, "the pass condition must combine the finding count with the tool's scan proof — one line count alone passes on printed text");
+  assert.match(harness, /scannedProof/, "the nucleiFindings:0 branch must require the tool's own scan proof");
+  const targets = JSON.parse(fs.readFileSync(path.join(ROOT0, "ops/verify/targets.json"), "utf8"));
+  const testphp = targets.targets.find((t) => t.host.startsWith("testphp"));
+  assert.equal(testphp.expects.nucleiFindings, 0, "testphp's 0 is deliberate (scanner ran, not site pwned) — its note explains why");
+});
+
 await tA("the toolchain the job verifies is the toolchain the engine boots with", async () => {
   //  القياس اللي علّمنا (2026-11-17): `NOVA_HEAVY_TOOLS=1` كان على خطوة التنزيل بس،
   //  وخطوة الإقلاع بعدها كانت بتشغّل pruneState() واللي بيمسح nuclei من vendor/bin
