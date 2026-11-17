@@ -47,7 +47,12 @@ permissions:
   actions: read # ميزانية السلوت (TEST33): تعدّاد jobs الموجات الحية
 
 concurrency:
-  group: nova-fleet
+  # TEST52 — دوران الgroup: الموجة الجاية لازم ما تستناش ورا موجة قديمة لسه
+  # عايشة (سلات محجوزة من كود قبل الفكس لحد ما تكمل عمرها) — الgroup الجديد
+  # بيخلي الموجة المصلّحة تشتغل فورًا على السلات الفاضية (~8) بدل انتظار
+  # الموجة القديمة لساعات. max-parallel 12 + خطة prepare (TEST34) بتحسب
+  # الموجود فمافيش تجاوز للحد 20 jobs.
+  group: nova-fleet-r2
   cancel-in-progress: false
 
 jobs:
