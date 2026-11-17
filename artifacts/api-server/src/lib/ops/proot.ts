@@ -206,7 +206,22 @@ export function runInProot(opts: ProotRunOptions): Promise<ProotRunResult> {
      *   المستدعي HOME صراحةً — ومساحات الشغل بتحدد HOME لمجلدها. */
     HOME: "/tmp",
     TERM: "xterm-256color",
-    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    /* ★ JAVA_HOME ضروري لأدوات Java: burpsuite وzaproxy وjadx وghidra بتقراه.
+     *   اتقاس 2026-11-17: `burpsuite --version` طلع
+     *   "[warning] No JAVA_CMD set for run_java" ووقف، مع إن Java 25 موجودة
+     *   في /usr/lib/jvm/java-25-openjdk-amd64. تحطيط JAVA_HOME هنا بيخلي
+     *   **كل** أداة Java تشتغل من غير ما المستخدم يظبط حاجة بنفسه. */
+    JAVA_HOME: "/usr/lib/jvm/java-25-openjdk-amd64",
+    /* burpsuite بالتحديد بيدوّر على JAVA_CMD مش JAVA_HOME — اتقاس:
+     * "No JAVA_CMD set for run_java, falling back to JAVA_CMD = java" وبيوقف
+     * لو java مش في PATH بأمر صريح. الاتنين مع بعض بيغطوا كل أدوات Java. */
+    JAVA_CMD: "/usr/lib/jvm/java-25-openjdk-amd64/bin/java",
+    /* ★ أدوات impacket الكاملة (74 أداة) في /opt/nova-py — نسخة v0.13.1 من
+     *   pip. نسخة الـrootfs كانت ناقصة: examples/ فيه 12 ملف بس من 74،
+     *   فـpsexec/wmiexec/ntlmrelayx/GetNPUsers كانوا بيقولوا
+     *   "can't open file" — عطل حقيقي اتكشف بجرد أداة-أداة. */
+    PYTHONPATH: "/opt/nova-py",
+    PATH: "/usr/lib/jvm/java-25-openjdk-amd64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     LANG: "C.UTF-8",
   };
   for (const [k, v] of Object.entries(opts.env ?? {})) {

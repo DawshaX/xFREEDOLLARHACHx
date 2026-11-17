@@ -69,7 +69,10 @@ jobs:
         run: node scripts/build-standalone.mjs
 
       - name: Build the fleet-node kit (one upload = a new node)
-        run: node scripts/make-node-kit.mjs --hub wss://nova.waifly.com/api/local-agent/ws
+        # الحزمة بتتبني بهَبّها: NOVA_HUB (vars) أو مكان فاضي — مش عنوان حد تاني
+        run: node scripts/make-node-kit.mjs --hub "${NOVA_HUB:-}"
+        env:
+          NOVA_HUB: ${{ vars.NOVA_HUB }}
 
       - name: 🔒 No secret may ride into a public release
         # An `.env` once shipped inside `api-server-windows-*.zip` with a live NOVA_EXEC_TOKEN and

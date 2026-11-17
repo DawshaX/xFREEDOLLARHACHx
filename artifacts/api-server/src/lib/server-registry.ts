@@ -177,7 +177,26 @@ function filePath(): string {
  * Turn them off with NOVA_FLEET_SEED=0 (a test or a fresh deployment that must
  * start empty).
  */
-export const SEED_SERVERS: ReadonlyArray<Pick<NovaServer, "name" | "base" | "kind" | "note">> = [
+/**
+ *  ⚠ القرار (2026-11-17): مافيش ماكينات مزروعة. الصفحة كانت بتفتح بـ3 أجهزة
+ *  طلعوا كلهم `down` — كلها Waifly + Codespace قديم:
+ *
+ *    · Waifly · HTTPS      → https://nova.waifly.com     (سلوt مات)
+ *    · Waifly · Paris FR01 → http://node.waifly.com:27316 (بورت خاص، مابيتفتحش)
+ *    · Codespace الرئيسي   → ...app.github.dev            (كودسبيس اتقفل)
+ *
+ *  النتيجة المقاسة: `/api/fleet/servers` = 3 أجهزة · up=0 · down=3، وكل واحد
+ *  معاه رسالة «مفيش وصول للشبكة». يعني الكارت كان بيعرض **فشل** مش أسطول،
+ *  وأول انطباع عن المنصة إنها بايظة — والسبب إنها بتدور على ماكينات مش بتاعتنا.
+ *
+ *  الصح: الأسطول بيبدأ من اللي موجود فعلًا. الأجهزة بتتضاف من الصفحة نفسها
+ *  (`/nova-fleet` → «أضف ماكينة»)، وكودسبيس/رندر/أي هوست بيتضاف بنفس الطريقة.
+ *  وعشان ده ما يبقاش قرار مفروض: `NOVA_FLEET_SEED=1` بيرجّع القايمة القديمة
+ *  اللي معاها دليل ملكية (بيئة لسه معتمدة على waifly).
+ *
+ *  المفتاح: مافيش قيمة افتراضية بتوجّه المستخدم لهوست مش بتاعه.
+ */
+const LEGACY_SEEDS: ReadonlyArray<Pick<NovaServer, "name" | "base" | "kind" | "note">> = [
   {
     name: "Codespace الرئيسي",
     base: "https://animated-broccoli-gwx6wgpxvx5hv6gj-8080.app.github.dev",
@@ -201,19 +220,43 @@ export const SEED_SERVERS: ReadonlyArray<Pick<NovaServer, "name" | "base" | "kin
   },
 ];
 
+/** هل نزرع القايمة القديمة؟ افتراضيًا لأ. */
+export function seedEnabled(): boolean {
+  return process.env.NOVA_FLEET_SEED === "1";
+}
+
 /**
- * Bumped whenever SEED_SERVERS gains a machine.
+ * الأجهزة اللي الأسطول بيبدأ بيها.
+ *
+ *  ⚠ 2026-11-17: بقت **صفر** افتراضيًا. قبل كده كانت 3 أجهزة — اتنين Waifly
+ *  وكودسبيس قديم — وكلهم بيرجعوا `down` مع رسالة «مفيش وصول للشبكة». يعني
+ *  `/api/fleet/servers` كان بيقول `count:3 · up:0 · down:3` على أي تنصيب جديد،
+ *  وأول حاجة المستخدم بيشوفها إن الأسطول واقع. الحقيقة: الكود كان بيدوّر على
+ *  ماكينات مش بتاعته. الأسطول الصح هو اللي المستخدم ضافه؛ الضغط على «أضف
+ *  ماكينة» (أو `POST /api/fleet/servers`) هو اللي بيملاه.
+ *
+ *  و`NOVA_FLEET_SEED=1` بيرجّع القايمة القديمة لأي بيئة بتملك الأجهزة دي فعلًا.
+ */
+export function seeds(): ReadonlyArray<Pick<NovaServer, "name" | "base" | "kind" | "note">> {
+  return seedEnabled() ? LEGACY_SEEDS : [];
+}
+
+/** @deprecated استخدم `seeds()` — القايمة بقت متغيّرة على حسب البيئة. */
+export const SEED_SERVERS = LEGACY_SEEDS;
+
+/**
+ * Bumped whenever the seed list gains a machine.
  *
  * A registry that already exists is never re-seeded (that would resurrect hosts
  * the user deleted), but new seeds must reach machines that booted before they
  * existed — measured 2026-11-05: the live Waifly slot kept a two-machine file
  * and never learned about the HTTPS face added later that same hour.
  */
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3; // v3: القايمة الافتراضية بقت فاضية (2026-11-17)
 
 function seedServers(): NovaServer[] {
   const now = Date.now();
-  return SEED_SERVERS.map((s) => ({
+  return seeds().map((s) => ({
     id: makeId(normalizeServerBase(s.base)),
     name: s.name,
     base: normalizeServerBase(s.base),
@@ -234,7 +277,12 @@ export function loadServers(): NovaServer[] {
       .filter((s) => s.base);
     // Add seeds this file has never seen, and only those: a machine the user
     // removed stays removed until the seed list itself changes again.
-    if ((parsed.seedVersion ?? 0) < SEED_VERSION) {
+    //
+    // ⚠ ومعرفش يضيف حاجة لما القايمة المزروعة فاضية (الافتراضي بقى صفر أجهزة،
+    // 2026-11-17): `[]` مش «نسخة جديدة من القايمة» — هو «مافيش قايمة». الملفات
+    // اللي على المكنة دلوقتي `seedVersion: 2` وفيها الـ3 أجهزة الميتة، فلولا
+    // الشرط ده كانت هتفضل ترجعهم للأبد بعد ما شلناهم من الكود.
+    if (seedServers().length > 0 && (parsed.seedVersion ?? 0) < SEED_VERSION) {
       const known = new Set(stored.map((s) => s.base));
       const missing = seedServers().filter((s) => !known.has(s.base));
       const merged = [...stored, ...missing];
@@ -244,6 +292,29 @@ export function loadServers(): NovaServer[] {
         /* read-only disk — answer in memory for this process */
       }
       return merged;
+    }
+
+    // ── ترقية v2 → v3: شيل الأجهزة اللي زرعناها إحنا، وماتلمسش اللي ضافه المستخدم.
+    //  الملفات القديمة (seedVersion ≤ 2) فيها الـ3 أجهزة الميتة المكتوبة كأنها
+    //  أجهزة المستخدم. مفيش عندنا علم مين ضاف إيه، فالمعيار هو العنوان نفسه:
+    //  لو الـbase هو بالحرف واحد من عناوين الزرع القديمة، ده جهاز إحنا اللي حطّيناه.
+    //  (ومع `NOVA_FLEET_SEED=1` بنسيبهم — البيئة دي بتملكهم فعلًا.)
+    if ((parsed.seedVersion ?? 0) < SEED_VERSION && !seedEnabled()) {
+      const seededBases = new Set(LEGACY_SEEDS.map((s) => s.base));
+      const kept = stored.filter((s) => !seededBases.has(s.base));
+      if (kept.length !== stored.length) {
+        try {
+          saveServers(kept);
+        } catch {
+          /* read-only disk — answer in memory for this process */
+        }
+        return kept;
+      }
+      try {
+        saveServers(stored); // بصم الإصدار الجديد حتى ما نكررش الفحص كل قراءة
+      } catch {
+        /* read-only disk */
+      }
     }
     return stored;
   } catch (err) {

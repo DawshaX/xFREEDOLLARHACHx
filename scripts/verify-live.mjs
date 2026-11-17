@@ -45,7 +45,11 @@ const WORDLIST = arg("wordlist", "");
 // الحلقة كل 6 ساعات، بدل ما نعتمد على watchdog أسبوعي. GitHub بيأجّل/بيحذف جدوليات الـ*/10
 // (مقاس 2026-11-02: cron كل 10 دقايق طلع منه تشغيلان بس في اليوم: 10:54 و20:35) — فالفحص
 // اللاصق أصدق من الـcron.
-const HUB = String(arg("hub", process.env.NOVA_HUB_URL || "https://nova.waifly.com")).replace(/\/+$/, "");
+// ⚠ 2026-11-17: مافيش افتراضي لهوست برّه. كان `https://nova.waifly.com` — يعني أي
+// fork/tنصيب ما حدّدش هَب كان بيقيس سيرفر مش بتاعه ويكتب verdict أخضر عنه في
+// `state/verified-live.json`، واللي بيقرا التقرير بيحسب إن ده جهازه. لو النازل
+// فاضي، الصف بيقول `blocked` بصراحة بدل ما يخترع عنوانًا.
+const HUB = String(arg("hub", process.env.NOVA_HUB_URL || "")).replace(/\/+$/, "");
 
 const log = (...a) => console.log("[verify]", ...a);
 const warn = (m) => console.log(`::warning::${m}`);

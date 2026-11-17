@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      HUB: ${{ vars.NOVA_HUB_HTTP || 'https://nova.waifly.com' }}
+      HUB: ${{ vars.NOVA_HUB_HTTP }}   # مافيش افتراضي لهوست برّه — متغير المستودع أو مفيش
       TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
       U: ${{ secrets.NOVA_PANEL_USER }}
       P: ${{ secrets.NOVA_PANEL_PASS }}

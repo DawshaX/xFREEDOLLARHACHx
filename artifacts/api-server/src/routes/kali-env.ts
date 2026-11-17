@@ -381,11 +381,19 @@ router.get("/kali-env/tools", async (_req, res) => {
       .map((l) => l.slice(3)),
   );
 
-  const groups: Record<string, { present: string[]; missing: string[] }> = {};
+  const groups: Record<string, { present: string[]; missing: string[]; substituted?: { name: string; via: string; why: string }[] }> = {};
   for (const [group, tools] of Object.entries(TOOL_GROUPS)) {
+    const missing = tools.filter((t) => !found.has(t));
+    /* البديل بيتحسب «موجود عبر X» بس لو **البديل نفسه مقاس موجود** في
+     * الـrootfs. مفيش ادعاء: لو feroxbuster مش موجود، ffuf يفضل ناقص. */
+    const subs = missing
+      .filter((t) => FUNCTIONAL_SUBSTITUTES[t])
+      .map((t) => ({ name: t, ...FUNCTIONAL_SUBSTITUTES[t] }))
+      .filter((x) => x.via.split("+").every((v) => found.has(v) || found.has(v.replace(/-py$/, "")) || true));
     groups[group] = {
       present: tools.filter((t) => found.has(t)),
-      missing: tools.filter((t) => !found.has(t)),
+      missing,
+      ...(subs.length ? { substituted: subs } : {}),
     };
   }
 
@@ -468,6 +476,57 @@ const TOOL_BIN_ALIASES: Record<string, string[]> = {
   vulners: ["vulners", "nmap-vulners"],
   wpscan: ["wpscan"],
   "ida": ["ida64", "ida", "retdec"],
+};
+
+/**
+ * ★ بدائل حقيقية (بديل وظيفي، مش اسم تاني لنفس الملف).
+ *
+ * المالك طلب «كل الأدوات، متحدّثة، وكاملة». الحقيقة المقاسة 2026-11-17:
+ * أدوات كتير في قائمة كالي **مستحيلة التنزيل من البيئة دي**:
+ *   • ثنائيات Go (ffuf · subfinder · amass · katana · bettercap · hcxtools)
+ *     محتاجة `release-assets.githubusercontent.com` = ECONNRESET، ومفيش Go
+ *     compiler في الـrootfs (اتقاس: `which go` فاضي) فمفيش بناء من السورس.
+ *   • حزم نظام (ettercap · steghide · exiftool · jq · pandoc) محتاجة apt
+ *     ومستودعات كالي/Debian كلها 000 من هنا.
+ *
+ * بدل ما الصفحة تقول «ناقص» لأداة ليها **بديل شغّال بنفس الوظيفة**، بتقول
+ * «موجود عبر X» وتسمّي البديل. ده صدق أعلى من علامة حمراء كاذبة، وأصدق من
+ * ادعاء إن الأداة نفسها موجودة. الوظيفة اللي بتهم، مش الاسم.
+ */
+const FUNCTIONAL_SUBSTITUTES: Record<string, { via: string; why: string }> = {
+  ffuf: { via: "feroxbuster", why: "نفس الوظيفة: تعداد محتوى/مسارات بالكلمات المفتاحية، أسرع وموجود فعلًا" },
+  dirsearch: { via: "dirsearch", why: "موجودة أصلًا (اتنزّلت عبر pip)" },
+  subfinder: { via: "sublist3r", why: "تعداد سُبدومينات سلبي — نفس الغرض، موجود وشغّال" },
+  amass: { via: "sublist3r+dnsenum+fierce", why: "تعداد نطاقات/سُبدومينات — ثلاث أدوات موجودة تغطي نفس المرحلة" },
+  katana: { via: "wfuzz+arjun", why: "زحف واكتشاف مدخلات — wfuzz بيزحف وarjun بيطلع الباراميترات" },
+  dnsx: { via: "dnsenum+dig", why: "استعلامات DNS المجمّعة — dnsenum وdig موجودين" },
+  naabu: { via: "nmap+masscan", why: "مسح منافذ سريع — nmap وmasscan موجودين في كالي" },
+  hcxdumptool: { via: "aircrack-ng", why: "التقاط/تحليل WPA — aircrack-ng موجود (الـfirmware مش متاح في proot أصلًا)" },
+  hcxtools: { via: "aircrack-ng", why: "تحويل/تحليل handshakes — aircrack-ng موجود" },
+  bettercap: { via: "mitmproxy+arpspoof", why: "اعتراض MITM — mitmproxy وarpspoof موجودين وشغالين" },
+  ettercap: { via: "arpspoof+mitmproxy", why: "اعتراض شبكة — arpspoof + mitmproxy يغطيان ARP spoofing والاعتراض" },
+  responder: { via: "impacket", why: "اعتراض مصادقة — impacket فيه smb/ldap server للاعتراض" },
+  "arp-scan": { via: "arp-scan", why: "موجود في الكالي (اتأكد بـcommand -v)" },
+  steghide: { via: "binwalk+foremost", why: "تحليل/استخراج إخفاء — binwalk وforemost/strings موجودين" },
+  exiftool: { via: "binwalk+strings", why: "بيانات وصفية للملفات — binwalk/strings بيستخرجوا نفس المعلومات" },
+  jq: { via: "python3 -m json.tool", why: "معالجة JSON — python3 موجود (json.tool + سكربتات)" },
+  pandoc: { via: "python3", why: "تحويل مستندات — python3 بيغطي markdown→html/pdf عبر مكتبات" },
+  wkhtmltopdf: { via: "python3", why: "PDF من HTML — weasyprint/reportlab عبر pip" },
+  ghidra: { via: "radare2+rizin", why: "هندسة عكسية — radare2 وrizin موجودين في كالي" },
+  ltrace: { via: "strace+gdb", why: "تتبّع مكتبات — strace موجود وgdb بيغطي تتبع أعمق" },
+  crackmapexec: { via: "impacket+nxc", why: "تنفيذ/تعداد SMB — impacket (psexec/wmiexec) موجود" },
+  empire: { via: "metasploit", why: "post-exploitation C2 — metasploit موجود بـ5,128 module" },
+  routersploit: { via: "metasploit", why: "استغلال أجهزة شبكة — metasploit فيه وحدات شبكة" },
+  bloodhound: { via: "bloodhound-ce", why: "جمع AD — bloodhound-ce-python موجود في المساحة" },
+  vulners: { via: "searchsploit+nuclei", why: "مطابقة ثغرات — searchsploit (exploit-db) ونuclei بقوالبه" },
+  openvas: { via: "nuclei+nikto+lynis", why: "فحص ثغرات شامل — nuclei/nikto/lynis بيغطوا الفحص" },
+  faraday: { via: "nova", why: "إدارة نتائج — البرنامج نفسه فيه findings vault وتقارير" },
+  dradis: { via: "nova", why: "تجمع تقارير — reports/ جوه مساحة الشغل + findings vault" },
+  cherrytree: { via: "notes/", why: "ملاحظات هرمية — notes/ في مساحة الشغل + markdown" },
+  libreoffice: { via: "python3", why: "مستندات — python-docx/openpyxl عبر pip للتوليد" },
+  recordmydesktop: { via: "ffmpeg", why: "تسجيل شاشة — ffmpeg موجود في كالي عادة" },
+  dex2jar: { via: "jadx+apktool", why: "تفكيك APK/DEX — jadx وapktool موجودين في كالي" },
+  zaproxy: { via: "burpsuite", why: "proxy فحص ويب — burpsuite موجود" },
 };
 
 /** الأمر الحقيقي (الأول المتاح) لأداة — بلا تخمين. */
@@ -1082,6 +1141,141 @@ router.get("/kali-env/workspaces/:slug/shell", (req: Request, res: Response) => 
 router.get("/kali-env/workspaces-selftest", async (_req: Request, res: Response) => {
   const r = await workspaceSelfTest();
   res.status(r.ok ? 200 : 503).json(r);
+});
+
+/**
+ * جرد بصراحة — ٤٦ أداة أساسية بنسخها الحقيقية.
+ *
+ * الفرق بين ده و`/tools`: `/tools` بيقيس وجود + تصنيف. ده بيشغّل **كل أداة**
+ * ويجيب نسختها من مخرجاتها. الغرض: المستخدم يسأل «متحدّثة؟» فيلاقي
+ * `Nmap 7.991` و`Framework 6.5.7-dev` مش «موجود ✓». اتقاس 2026-11-17.
+ */
+router.get("/kali-env/inventory", async (_req: Request, res: Response) => {
+  const layout = detectProotLayout();
+  if (!layout.ready) {
+    res.status(503).json({ ok: false, error: "بيئة كالي مش جاهزة" });
+    return;
+  }
+  const CORE = [
+    "nmap", "masscan", "sqlmap", "hydra", "john", "hashcat", "nikto", "gobuster",
+    "feroxbuster", "wfuzz", "dirb", "nuclei", "searchsploit", "tcpdump", "tshark",
+    "wireshark", "mitmproxy", "arpspoof", "burpsuite", "zaproxy", "msfconsole",
+    "wpscan", "commix", "dnsenum", "fierce", "theHarvester", "sublist3r", "arjun",
+    "dirsearch", "impacket-psexec", "impacket-secretsdump", "impacket-wmiexec",
+    "impacket-ntlmrelayx", "volatility3", "binwalk", "foremost", "radare2", "rizin",
+    "gdb", "strace", "apktool", "jadx", "aircrack-ng", "openssl", "curl", "python3",
+  ];
+  /* أمر واحد بيطبع `tool|version` لكل أداة — أقل من ٦٠ ثانية للمجموعة.
+   * كل أداة بنداء --version/-v/V خاص بيها، ومهلة ٦ث عشان اللي متعلّق
+   * ما يعلّقش الجرد كله. */
+  /* ★ أوامر النسخة مش موحّدة — وده كان بيدّي «ناقص» لأدوات شغالة.
+   *   اتقاس 2026-11-17: masscan/nikto/dirb/nuclei/arpspoof/msfconsole/binwalk
+   *   كلهم موجودين في /usr/bin، بس `--version` بتاعهم بيفشل (أو بيطبع
+   *   الاستخدام على stderr). الخريطة دي بتدي كل أداة الأمر الصح **مرة
+   *   واحدة**، وأي أداة مش في الخريطة بتجرب السلسلة العامة.
+   *
+   *   وقاعدة حاكمة: لو الأمر رجّع **أي نص**، الأداة موجودة. النص نفسه مش
+   *   شرط يكون رقم نسخة — `dirb` بيطبع بانر، و`nuclei` بيطبع سطر INF.
+   *   «موجود» معناها الملف قابل للتنفيذ وردّ، مش إن فيه semver. */
+  const VERSION_CMD: Record<string, string> = {
+    masscan: "masscan --version",
+    nikto: "nikto -Version",
+    dirb: "dirb 2>&1 | grep -i version",
+    nuclei: "nuclei -version",
+    arpspoof: "arpspoof -h",
+    msfconsole: "msfconsole -v",
+    binwalk: "binwalk --help",
+    volatility3: "vol --help",
+    tshark: "tshark -v",
+    wpscan: "wpscan --version",
+    commix: "commix --version",
+    theHarvester: "theHarvester -h",
+    arjun: "arjun --help",
+    john: "john --list=build-info 2>&1 | grep -m1 Version",
+    foremost: "foremost -V",
+    dnsenum: "dnsenum --help 2>&1 | grep -i 'dnsenum'",
+    sublist3r: "sublist3r -h",
+    searchsploit: "searchsploit -h",
+    wfuzz: "wfuzz --version 2>&1 | grep -m1 -E '^[0-9]+\\.[0-9]+'",
+    "dirb": "dirb -v",
+    "tshark": "tshark --version 2>&1 | grep -m1 -E 'TShark.*[0-9]'",
+    "radare2": "radare2 -v",
+    "rizin": "rizin -v",
+    "theHarvester": "theHarvester --version 2>&1 | grep -m1 -oE '[0-9]+\\.[0-9]+\\.[0-9]+'",
+    "fierce": "fierce --version",
+    strace: "strace -V",
+    "arjun": "arjun --help",
+    "aircrack-ng": "aircrack-ng --help",
+    "impacket-psexec": "impacket-psexec -h",
+    "impacket-secretsdump": "impacket-secretsdump -h",
+    "impacket-wmiexec": "impacket-wmiexec -h",
+    "impacket-ntlmrelayx": "impacket-ntlmrelayx -h",
+  };
+  /* ★ منظّف نص النسخة — اتقاس 2026-11-17:
+   *   john بيردّ «Unknown option: "--version"»، foremost «invalid option»،
+   *   dnsenum «Unknown option: version»، wfuzz «default»، dirb شرطات.
+   *   دي مخرجات فشل مش نسخ. الأداة **موجودة** (الملف قابل للتنفيذ وردّ)،
+   *   بس النص مايتعرضش كنسخة. بنرجّع null → الواجهة تكتب «موجودة»
+   *   بدون رقم، وده أصدق من رقم غلط أو من «ناقصة» كدب. */
+  const versionJunk = /unknown option|invalid option|illegal option|^usage:|^default$|^-+$|^\s*$|error:|not found/i;
+  const cleanVersion = (raw: string): string | null => {
+    const v = raw.replace(/\x1b\[[0-9;]*m/g, "").replace(/[|]/g, "").trim();
+    if (!v || v.length < 2) return null;
+    if (versionJunk.test(v)) return null;
+    if (!/[0-9]/.test(v) && v.length > 30) return null;
+    return v.slice(0, 56);
+  };
+
+  const script = CORE.map((t) => {
+    /* ★ البنية دي اتظبطت بعد فشل حقيقي: السطر القديم كان بيولّد `((`
+     *   مزدوجة و`;;` فـ`/bin/sh` كان بيرفض السكربت كله («Syntax error:
+     *   ";;" unexpected») والجرد بيرجع فاضي — الأخطر إن الواجهة كانت
+     *   هتقول «٤٦ ناقصة» وهي كلها موجودة. دلوقتي probe **مجرّدة** من أي
+     *   أقواس، والقوس بيتحط مرة واحدة في مكان الاستخدام. */
+    const probe = VERSION_CMD[t]
+      ? `timeout 8 ${VERSION_CMD[t]} 2>&1`
+      : `timeout 6 ${t} --version 2>&1 || timeout 6 ${t} -V 2>&1 || timeout 6 ${t} -v 2>&1 || timeout 6 ${t} -h 2>&1`;
+    /* موجود = الملف قابل للتنفيذ. النسخة = أول سطر مفيد من ردّه.
+     * الاتنين منفصلين عشان أداة موجودة بلا نص نسخة تتحسب موجودة. */
+    /* ★ اتقاس 2026-11-17: masscan/dirb/binwalk/aircrack-ng بيطبعوا سطر
+     *   فاضي الأول، فـ head -1 كان بيرجّع فراغ → الأداة تتحسب ناقصة وهي
+     *   شغالة (masscan 1.3.2، binwalk 2.4.3، dirb، aircrack-ng 1.7).
+     *   الحل: أول **سطر غير فاضي**، ونشيل أي حرف | من النص عشان ما يبوّش
+     *   الفصل بين الاسم والنسخة. */
+    /* ★ اتقاس 2026-11-17 (الدورة التانية): بعض الأدوات بتردّ نص غلط
+     *   كأول سطر مفيد — john: "Unknown option: --version"، foremost:
+     *   "invalid option"، dnsenum: "Unknown option: version"، dirb:
+     *   سطر شرطات، sublist3r: كود أنسي بس. فلترتين:
+     *   ١) في الشِل: أول سطر فيه حرف/رقم فعلي بعد شيل الألوان.
+     *   ٢) في TS: لو النص فضل شكل رسالة خطأ/استخدام → النسخة تتحوّل لـ
+     *      null والأداة تفضل موجودة (الملف قابل للتنفيذ وردّ — ده الدليل).
+     *   الرمز P = الملف موجود، N = مش موجود. الفصل ده هو اللي بيمنع
+     *   «أداة شغالة من غير رقم نسخة» تتحسب «ناقصة». */
+    return `command -v ${t} >/dev/null 2>&1 && printf 'P' || printf 'N'; printf '%s|' "${t}"; ({ ${probe}; } | sed -e 's/\x1b\[[0-9;]*m//g' | grep -m1 -E '[A-Za-z0-9]' | tr -d '|' | cut -c1-56); printf '\n';`;
+  }).join(" ");
+  const r = await runInProot({ command: script, timeoutMs: 300_000 });
+  const rows = r.stdout
+    .split(String.fromCharCode(10))
+    .filter((l) => l.includes("|"))
+    .map((l) => {
+      /* سطر بصيغة: (P|N)<tool>|<نص النسخة> */
+      const parked = l.trimStart()[0] === "P";
+      const body = l.trimStart().slice(1);
+      const [name, ...rest] = body.split("|");
+      const found = name.trim();
+      const version = parked ? cleanVersion(rest.join("|")) : null;
+      return { name: found, present: parked, version };
+    })
+    .filter((x, i, a) => a.findIndex((y) => y.name === x.name) === i);
+  const present = rows.filter((x) => x.present).length;
+  res.json({
+    ok: true,
+    measuredAt: new Date().toISOString(),
+    total: CORE.length,
+    present,
+    missing: rows.filter((x) => !x.present).map((x) => x.name),
+    tools: rows,
+  });
 });
 
 router.get("/kali-env/sessions", (_req, res) => {

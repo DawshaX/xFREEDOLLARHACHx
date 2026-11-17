@@ -19,7 +19,7 @@ export function TelegramConfigCard() {
   const [showToken, setShowToken] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [execToken, setExecToken] = useState(""); // NOVA_EXEC_TOKEN — من env استضافة السيرفر (waifly)
+  const [execToken, setExecToken] = useState(""); // NOVA_EXEC_TOKEN — من env استضافة السيرفر بتاعتك (أي هوست)
 
   const refresh = useCallback(async () => {
     const r = await opsFetch<{ keys: Record<string, boolean> }>("/ops/config/status");
@@ -119,10 +119,10 @@ export function TelegramConfigCard() {
         <div className="space-y-1">
           <input
             type="password" value={execToken} onChange={(e) => setExecToken(e.target.value)}
-            placeholder="توكن التشغيل NOVA_EXEC_TOKEN (من env استضافة السيرفر — نفس اللي كتبته في waifly)"
+            placeholder="توكن التشغيل NOVA_EXEC_TOKEN (من env استضافة السيرفر — نفس اللي حطيته على الهَب بتاعك)"
             className="w-full bg-white/[0.03] border border-amber-500/20 rounded-[10px] text-white/80 text-[13px] font-mono px-3.5 py-2.5 outline-none"
           />
-          <div className="text-[9px] font-mono text-amber-200/40">مش موجود عندك؟ اعمله: لوحة waifly → Environment → NOVA_EXEC_TOKEN = أي خلطة طويلة، Restart، واكتب نفس الخلطة هنا — اللوحة بتحفظه محليًا في جهازك بس.</div>
+          <div className="text-[9px] font-mono text-amber-200/40">مش موجود عندك؟ اعمله: لوحة الاستضافة بتاعتك → Environment → NOVA_EXEC_TOKEN = أي خلطة طويلة، Restart، واكتب نفس الخلطة هنا — اللوحة بتحفظه محليًا في جهازك بس.</div>
         </div>
         <div className="flex gap-2">
           <div className="relative flex-1">

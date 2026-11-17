@@ -342,7 +342,15 @@ jobs:
           IDX: ${{ matrix.i }}
           NOVA_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
-          HUB="${HUB:-wss://nova.waifly.com/api/local-agent/ws}"
+          # مافيش fallback لهوست برّه: توكن بلا هَب = العقدة بتقعد مكانها.
+          # قبل كده كان الافتراضي wss://nova.waifly.com — يعني أي fork للمستودع
+          # كان بيوصّل عُقده بهَب مش بتاعه، وأي مستخدم بيشوف «hub: nova.waifly.com»
+          # في اللوج ويحسب إنه اتوصل وهو ماعندهوش أي حاجة هناك.
+          # الحل: المتغير `NOVA_HUB` (Actions → Variables) أو إدخال التشغيل اليدوي.
+          if [ -z "$HUB" ]; then
+            echo "::warning::مافيش NOVA_HUB مضبوط — العقدة مش هتوصل لهَب. حط wss://<هَبك>/api/local-agent/ws في Settings → Actions → Variables."
+            exit 0
+          fi
           echo "hub: $HUB"
           NODE_ID="gh-${IDX}-$(date +%H%M)"
 

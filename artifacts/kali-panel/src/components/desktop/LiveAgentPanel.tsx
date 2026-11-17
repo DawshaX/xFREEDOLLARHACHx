@@ -5957,7 +5957,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 {/* Connected Agents */}
                 <div className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,50,50,0.1)" }}>
                   <div className="text-[7px] font-black tracking-widest mb-1.5" style={{ color: "rgba(255,80,80,0.5)" }}>CONNECTED AGENTS</div>
-                  {kaliCmdIntel && kaliCmdIntel.agentCount > 0 ? (
+                  {kaliCmdIntel && (kaliCmdIntel.agentCount ?? 0) > 0 ? (
                     kaliCmdIntel.agents.map((a, i) => (
                       <div key={i} className="flex items-center gap-2 py-1 border-b border-rose-900/20 last:border-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shrink-0" />
@@ -6963,10 +6963,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         {kaliAutonomousKali ? "إيقاف AUTO" : "AUTO"}
                       </button>
                       {/* Agent status */}
-                      {kaliCmdIntel && kaliCmdIntel.agentCount > 0 ? (
+                      {kaliCmdIntel && (kaliCmdIntel.agentCount ?? 0) > 0 ? (
                         <span className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-green-500/40 text-green-300 flex items-center gap-1">
                           <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
-                          {kaliCmdIntel.agents[0]?.hostname ?? "جهاز"}
+                          {kaliCmdIntel.agents?.[0]?.hostname ?? "جهاز"}
                         </span>
                       ) : (
                         <span className="text-[7px] font-mono text-rose-900/60">لا جهاز</span>

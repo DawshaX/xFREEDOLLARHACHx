@@ -553,7 +553,7 @@ export default function NovaFleetUnified() {
           <LiveBodyCard />
           {/* one measured picture of the whole program: machines · brain · corpus · mesh */}
           <NovaSystemCard />
-          {/* the machines the program actually runs on: Codespace · Render · Waifly */}
+          {/* the machines the program actually runs on — whatever the owner added, no seeded hosts */}
           <NovaServerRegistry />
           <CorpusPanel compact />
         </div>

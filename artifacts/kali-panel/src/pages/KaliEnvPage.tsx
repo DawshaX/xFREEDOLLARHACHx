@@ -194,7 +194,8 @@ export default function KaliEnvPage() {
   const [envBusy, setEnvBusy] = useState(false);
   const [identity, setIdentity] = useState<{ root?: boolean; uid?: number | null; prettyName?: string | null; plane?: string; apt?: boolean; error?: string } | null>(null);
   const [pkgName, setPkgName] = useState("");
-  const [face, setFace] = useState<"system" | "term" | "tools" | "desk" | "store" | "work">("system");
+  /* «مكان الشغل» هو الافتراضي: ده اللي المالك طلبه وبيسأل عنه. باقي التبويبات موجودة. */
+  const [face, setFace] = useState<"system" | "term" | "tools" | "desk" | "store" | "work">("work");
   /* TEST35 — the terminal had exactly one plane: the remote Kali node. The
    * local proot guest (the one this page measures two cards above) was never
    * reachable from the input box, so `/api/kali-env/exec` shipped with no
@@ -619,11 +620,11 @@ export default function KaliEnvPage() {
 
       <div className="sticky top-0 z-20 flex flex-wrap gap-1.5 rounded-xl p-2" style={{ background: "rgba(6,0,16,0.92)", border: "1px solid rgba(255,255,255,0.12)" }}>
         {([
+          ["work", "مكان الشغل ★"],
           ["system", "النظام والعقد"],
           ["term", "الطرفية"],
           ["tools", "الأدوات"],
           ["desk", "الديسكتوب"],
-          ["work", "مكان الشغل"],
           ["store", "المخزن"],
         ] as const).map(([id, label]) => (
           <button key={id} type="button" onClick={() => setFace(id)}
