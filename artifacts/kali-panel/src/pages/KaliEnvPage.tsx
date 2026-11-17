@@ -183,6 +183,7 @@ export default function KaliEnvPage() {
   const [envBusy, setEnvBusy] = useState(false);
   const [identity, setIdentity] = useState<{ root?: boolean; uid?: number | null; prettyName?: string | null; plane?: string; apt?: boolean; error?: string } | null>(null);
   const [pkgName, setPkgName] = useState("");
+  const [face, setFace] = useState<"system" | "term" | "tools" | "desk" | "store">("system");
   /* TEST35 — the terminal had exactly one plane: the remote Kali node. The
    * local proot guest (the one this page measures two cards above) was never
    * reachable from the input box, so `/api/kali-env/exec` shipped with no
@@ -608,6 +609,23 @@ export default function KaliEnvPage() {
         </p>
       </div>
 
+      <div className="sticky top-0 z-20 flex flex-wrap gap-1.5 rounded-xl p-2" style={{ background: "rgba(6,0,16,0.92)", border: "1px solid rgba(255,255,255,0.12)" }}>
+        {([
+          ["system", "النظام والعقد"],
+          ["term", "الطرفية"],
+          ["tools", "الأدوات"],
+          ["desk", "الديسكتوب"],
+          ["store", "المخزن"],
+        ] as const).map(([id, label]) => (
+          <button key={id} type="button" onClick={() => setFace(id)}
+            className="text-[10px] font-black px-2.5 py-1 rounded"
+            style={{ background: face === id ? "rgba(255,85,68,0.2)" : "rgba(255,255,255,0.04)", color: face === id ? "#ff8866" : "rgba(255,255,255,0.65)", border: `1px solid ${face === id ? "rgba(255,85,68,0.5)" : "rgba(255,255,255,0.12)"}` }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: face === "system" ? "block" : "none" }}>
       {/* TEST23 — عقد كالي السحابية: المكان الحي اللي المالك يشوف فيه كالي على الأسطول —
           قياس حي كل 20ث (الهَب بيعمل probe لكل عقدة عبر قناة الأجينتات نفسها) */}
       <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.03)", border: "1px solid rgba(68,255,136,0.3)" }}>
@@ -642,10 +660,10 @@ export default function KaliEnvPage() {
         </p>
         {nodes && nodes.nodes.length > 0 ? (
           <div className="mt-2 space-y-1.5">
-            {nodes.nodes.map((n) => (
+            {nodes.nodes.filter((n) => n && n.id).map((n) => (
               <div key={n.id} className="rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2 flex-wrap"
                 style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${n.kali ? "rgba(68,255,136,0.4)" : "rgba(255,255,255,0.12)"}` }}>
-                <span className="text-[10px] font-black" style={{ color: "#e0e0e0" }} title={n.id}>🖥️ {n.hostname}<span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}> · {n.id.slice(0, 8)}</span></span>
+                <span className="text-[10px] font-black" style={{ color: "#e0e0e0" }} title={n.id}>🖥️ {n.hostname || "عقدة بدون اسم"}<span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}> · {n.id.slice(0, 8)}</span></span>
                 <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
                   style={{ background: n.kali ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: n.kali ? "#44ff88" : "rgba(255,170,68,0.9)" }}>
                   {n.probed ? (n.mode === "bare" ? "نظام كالي ✓" : n.mode === "proot" ? "rootfs كالي سحابية + proot ✓" : "جاهزة للتثبيت — الزر فوق") : "مش بردّ على الprobe"}
@@ -920,6 +938,9 @@ export default function KaliEnvPage() {
         )}
       </div>
 
+      </div>
+
+      <div style={{ display: face === "term" ? "block" : "none" }}>
       {/* طرفية التنفيذ الحقيقي — دايمًا ظاهرة: على الهَب أو على العقد السحابية */}
       <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,170,0,0.2)" }}>
         <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}>
@@ -1075,6 +1096,9 @@ export default function KaliEnvPage() {
         ) : null}
       </div>
 
+      </div>
+
+      <div style={{ display: face === "tools" ? "block" : "none" }}>
       {/* TEST38 — لوحة الأنظمة الحقيقية: حالة النظام المقاسة + كتالوج الـ 11
           تصنيف + تشغيل أداة بضغطة. مضافة فوق كل حاجة موجودة، مش بديلة عنها. */}
       <KaliSystemsPanel />
@@ -1089,7 +1113,9 @@ export default function KaliEnvPage() {
               افتح مكتب الشغل وجرّبها مع الأجينت ↗
             </button>
           </div>
+      </div>
 
+      <div style={{ display: face === "store" ? "block" : "none" }}>
           {/* TEST24 — المخزن الموحد على جيت هوب: «فين اللي عملتو وفين الشغل» — مقاس حي */}
           <div className="rounded-xl p-3" style={{ background: "rgba(153,102,255,0.04)", border: "1px solid rgba(153,102,255,0.3)" }}>
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1125,6 +1151,9 @@ export default function KaliEnvPage() {
             )}
           </div>
 
+      </div>
+
+      <div style={{ display: face === "desk" ? "block" : "none" }}>
           {/* ── TEST42 · 🖥️ سطح المكتب الحي — بث MJPEG من عقدة كالي ──────────── */}
           <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,204,0,0.25)" }}>
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1159,6 +1188,9 @@ export default function KaliEnvPage() {
             )}
           </div>
 
+      </div>
+
+      <div style={{ display: face === "system" ? "block" : "none" }}>
           {/* ── TEST41 · 🎛️ بث حي من كالي — نبضة كل 12ث من قلب الجست ────────── */}
           <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(68,255,136,0.22)" }}>
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1201,6 +1233,9 @@ export default function KaliEnvPage() {
             )}
           </div>
 
+      </div>
+
+      <div style={{ display: face === "tools" ? "block" : "none" }}>
           {/* ── TEST41 · 📦 مخزن كالي الكامل — البحث + التثبيت عند الطلب ─────── */}
           <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(153,102,255,0.22)" }}>
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1250,6 +1285,7 @@ export default function KaliEnvPage() {
               </div>
             )}
           </div>
+      </div>
     </div>
   );
 }
