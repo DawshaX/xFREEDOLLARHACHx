@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-17T03:52:50.137Z",
+  "at": "2026-11-17T04:30:04.229Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
@@ -24,7 +24,7 @@
     "enabled": true,
     "lastResult": "up-to-date",
     "lastDetail": "مفيش أحدث من اللي شغّال (فرق 23 ثانية)",
-    "lastCheckAt": "2026-11-17T03:50:52.565Z",
+    "lastCheckAt": "2026-11-17T04:25:53.870Z",
     "currentBuiltAt": "2026-11-17T03:45:02.058Z",
     "latestReleaseAt": "2026-11-17T03:45:25Z",
     "restartNeeded": false
