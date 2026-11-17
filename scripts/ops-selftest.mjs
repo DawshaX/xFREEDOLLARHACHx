@@ -448,6 +448,22 @@ await tA("a job's clock is longer than its slowest tool, and CI is longer than t
   assert.ok(ciMin > waitMin, `CI job ceiling ${ciMin}min must be larger than the harness wait ${waitMin}min, or the run is killed mid-measurement`);
 });
 
+await tA("the toolchain the job verifies is the toolchain the engine boots with", async () => {
+  //  القياس اللي علّمنا (2026-11-17): `NOVA_HEAVY_TOOLS=1` كان على خطوة التنزيل بس،
+  //  وخطوة الإقلاع بعدها كانت بتشغّل pruneState() واللي بيمسح nuclei من vendor/bin
+  //  لأن المتغير غايب — فالصف الأحمر «nuclei present: مش موجود» سببه التنظيف.
+  //  البوابة دي بتقفل الباب من ناحيتين: الـenv على مستوى الـjob، والتنظيف مايمسحش
+  //  مجلد مش بتاعه.
+  const { pathToFileURL } = await import("node:url");
+  const { pruneState } = await import(pathToFileURL(path.join(SRC, "state-prune.ts")).href);
+  assert.equal(typeof pruneState, "function");
+
+  const wf = fs.readFileSync(path.join(ROOT0, ".github/workflows/live-verify.yml"), "utf8");
+  const jobEnv = wf.split(/\n {4}steps:/)[0];
+  assert.match(jobEnv, /NOVA_HEAVY_TOOLS:\s*"1"/, "live-verify: NOVA_HEAVY_TOOLS must be job-wide — on the vendor step alone the boot prune deletes what the next step asserts");
+  assert.ok(!/fetch-toolchain\.mjs[^\n]*\|\|\s*true/.test(wf), "the fetcher's exit code must not be swallowed by `|| true`");
+});
+
 await tA("the bounty catalog is measured data and never a permission slip", async () => {
   const root = path.resolve(import.meta.dirname, "..");
   const file = path.join(root, "ops/bounty/programs-catalog.json");
