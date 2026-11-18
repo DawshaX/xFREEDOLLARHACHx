@@ -8,15 +8,19 @@
 # القنوات لكل أداة: apt → pip → تحميل من جيت هوب (release) — بالترتيب.
 set -u
 export DEBIAN_FRONTEND=noninteractive
-REPORT=/tmp/nova-tools-report.json
-LOG=/tmp/nova-builder.log
+REPORT=/root/nova-tools-report.json
+LOG=/root/nova-builder.log
 : > "$LOG"
 
-# ── إصلاح dpkg الجذري (مقاس: «dpkg-statoverride ... error code (2)») ──────
-# الجست بيتفك من tar فstatoverride بيضيع → dpkg-statoverride بيفشل وكل apt install بيموت.
+# ── إصلاح dpkg الجذري (مقاس 10:19Z: «unknown system user 'redis' in statoverride») ──
+# الجست بيتفك من tar فstatoverride بيفضل فيه يوزرز مش موجودين → كل apt install بيموت.
+# الحل القياسي: تفريغ statoverride (الـsuid overrides بتتصلح لوحدها في proot -0).
 remedy_dpkg() {
-  echo "[remedy] dpkg repair: statoverride + dirs + configure -a + -f install" >> "$LOG"
-  touch /var/lib/dpkg/statoverride 2>/dev/null; chmod 644 /var/lib/dpkg/statoverride 2>/dev/null
+  echo "[remedy] dpkg repair: statoverride-truncate + dirs + configure -a + -f install" >> "$LOG"
+  if [ -f /var/lib/dpkg/statoverride ]; then
+    cp /var/lib/dpkg/statoverride /var/lib/dpkg/statoverride.bak 2>/dev/null || true
+    : > /var/lib/dpkg/statoverride
+  fi
   touch /var/lib/dpkg/arch 2>/dev/null
   for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated \
            var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial \
@@ -97,14 +101,14 @@ while IFS=$'\t' read -r tool pkg; do
     fail="$fail $tool"; DETAIL[$tool]="FAIL"
     echo "FAIL:$tool"
   fi
-done < /tmp/nova-missing.tsv
+done < /root/nova-missing.tsv
 
 # ── التحقق النهائي: كل الكتالوج (الموجودة قبل + المثبتة) لازم تفضل موجودة ──
 allok=0; allover=""
 while read -r t; do
   [ -z "${t:-}" ] && continue
   if command -v "$t" >/dev/null 2>&1; then allok=$((allok+1)); else allover="$allover $t"; fi
-done < /tmp/nova-verify.txt
+done < /root/nova-verify.txt
 
 cat > "$REPORT" << EOF
 {"installedOk": $ok, "installFailed": "$fail", "verifyOk": $allok, "verifyTotal": $(wc -l < /tmp/nova-verify.txt), "verifyOverdue": "$allover", "builtAt": "$(date -u +%FT%TZ)"}

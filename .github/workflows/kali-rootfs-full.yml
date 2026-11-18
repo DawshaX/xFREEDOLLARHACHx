@@ -108,10 +108,11 @@ jobs:
         run: |
           P=$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static
           R=$HOME/kali-rootfs/rootfs
-          cp scripts/kali-rootfs-full-build.sh "$R/tmp/build.sh"
-          cp /tmp/nova-missing.tsv /tmp/nova-verify.txt "$R/tmp/"
-          chmod +x "$R/tmp/build.sh"
-          "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c '/tmp/build.sh' \
+          # proot -R بيربط /tmp الخاصة بالهوست جوه الجست (مقاس) — فالملفات في /root
+          cp scripts/kali-rootfs-full-build.sh "$R/root/build.sh"
+          cp /tmp/nova-missing.tsv /tmp/nova-verify.txt "$R/root/"
+          chmod +x "$R/root/build.sh"
+          "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c '/root/build.sh' \
             > /tmp/build-out.txt 2>&1 || echo "::warning::builder exit غير صفر — التقرير هو الحقيقة"
           OKN=$(grep -cE "^OK:" /tmp/build-out.txt || echo 0)
           echo "::notice::BUILD: $(cat /tmp/nova-counts.txt) · مثبتت بنجاح OK=$OKN"
@@ -119,7 +120,7 @@ jobs:
           for C in /tmp/buildc_*; do
             echo "::notice::bld: $(cat $C | tr -d '\n\r' | tail -c 600)"
           done
-          REPORT="$R/tmp/nova-tools-report.json"
+          REPORT="$R/root/nova-tools-report.json"
           [ -f "$REPORT" ] && cp "$REPORT" ./tools-report.json
 
       - name: إعادة التغليف → أجزاء 90MB → staging → تبديل atomic للمخزن
