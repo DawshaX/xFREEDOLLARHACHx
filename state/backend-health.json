@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-18T01:53:13.400Z",
+  "at": "2026-11-18T01:57:46.379Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "GREEN",
   "counts": {
@@ -9,7 +9,7 @@
   },
   "corpusSample": 3,
   "corpusSearched": 425934,
-  "corpusIndexTotal": 426509,
+  "corpusIndexTotal": 427497,
   "corpusSlice": true,
   "negativeSearchOk": true,
   "negativeSearched": 425934,
@@ -20,8 +20,8 @@
     "seat": "pollinations-openai",
     "chunks": 8,
     "streamed": true,
-    "firstChunkMs": 459,
-    "totalMs": 460,
+    "firstChunkMs": 299,
+    "totalMs": 300,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
@@ -29,37 +29,37 @@
     {
       "name": "health",
       "status": 200,
-      "ms": 9308,
+      "ms": 3408,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-18T01:53:07.312Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":425934,\"huntRuns\":35,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-18T01:57:34.863Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":425934,\"huntRuns\":35,\"findings\":0}}"
     },
     {
       "name": "hunt",
       "status": 200,
-      "ms": 1661,
+      "ms": 1283,
       "ok": true,
       "sample": "{\"run\":{\"id\":45,\"at\":\"2026-11-17T21:08:35.813+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":34273,\"katana\":120404,\"nuclei:root\":3323,\"nucl"
     },
     {
       "name": "organs",
       "status": 200,
-      "ms": 599,
+      "ms": 322,
       "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"425934 CVE · 426509 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-18T01:52:00.253108+00:00\",\"updated_at\":\"2"
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"425934 CVE · 426509 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-18T01:57:00.253574+00:00\",\"updated_at\":\"2"
     },
     {
       "name": "corpus?q=nginx",
       "status": 200,
-      "ms": 2079,
+      "ms": 1788,
       "ok": true,
       "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2021-32637\",\"severity\":\"critical\",\"cvss\":10,\"kev\":false,\"epss\":0.02151,\"products\":[\"authelia\"],\"summary\":\"Authelia is a a single sign-on multi-factor portal for web apps. This affects use"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
       "status": 200,
-      "ms": 1266,
+      "ms": 7796,
       "ok": true,
-      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":425934,\"indexTotal\":426509,\"syncedAt\":\"2026-11-17T19:45:11.878Z\",\"slice\":true,\"at\":\"2026-11-18T01:53:12.926Z\"}"
+      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":425934,\"indexTotal\":427497,\"syncedAt\":\"2026-11-18T01:51:58.515Z\",\"slice\":true,\"at\":\"2026-11-18T01:57:46.057Z\"}"
     },
     {
       "name": "corpus dated (published)",
@@ -71,9 +71,9 @@
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 460,
+      "ms": 300,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=8 first=459ms total=460ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=8 first=299ms total=300ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
