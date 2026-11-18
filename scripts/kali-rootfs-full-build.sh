@@ -1,117 +1,101 @@
 #!/bin/bash
-# nova-kali-full-builder — TEST64 (أمر المالك 09:45Z): «كل الادوات كاملة من الاخر
-# + دور عالجيت هوب ووصلو اون لاين».
-# بيشتغل جوه proot guest (كالي حقيقية 2113 حزمة) على الCI — نفس بيئة العقدة بالحرف.
-# المدخل:  /tmp/nova-missing.tsv   (tool [TAB] pkg-override أو -)
-#          /tmp/nova-verify.txt   (كل أسماء الأدوات في الكتالوج — التحقق النهائي)
-# المخرج:  /tmp/nova-tools-report.json  (ok / failed / per-tool)
-# القنوات لكل أداة: apt → pip → تحميل من جيت هوب (release) — بالترتيب.
+# nova-kali-full-builder — TEST64e (host-side, crash-safe).
+# proot-static بيقع signal 6 تحت الحمل الطويل (مقاس 10:33Z بعد 35 أداة) — فالحل:
+# أداة واحدة = proot invocation واحد قصير فيه القنوات الثلاثة (apt → pip → جيت هوب).
+# الكراش بيقتل أداة بس — والhost يعيد المحاولة ويكمل. مافيش موت للكل أبدًا.
+# الاستدعاء: bash kali-rootfs-full-build.sh <rootfs-path>
+# المدخلات: <rootfs>/root/nova-missing.tsv (tool TAB pkg) · <rootfs>/root/nova-verify.txt
+# المخرجات: <rootfs>/root/nova-tools-report.json + stdout بOK:/FAIL: لكل أداة
 set -u
-export DEBIAN_FRONTEND=noninteractive
-REPORT=/root/nova-tools-report.json
-LOG=/root/nova-builder.log
+R="${1:?rootfs path}"
+P="$R/usr/local/bin/proot-static"
+TSV="$R/root/nova-missing.tsv"
+VERIFY="$R/root/nova-verify.txt"
+REPORT="$R/root/nova-tools-report.json"
+LOG="$R/root/nova-builder.log"
 : > "$LOG"
 
-# ── إصلاح dpkg الجذري (مقاس 10:19Z: «unknown system user 'redis' in statoverride») ──
-# الجست بيتفك من tar فstatoverride بيفضل فيه يوزرز مش موجودين → كل apt install بيموت.
-# الحل القياسي: تفريغ statoverride (الـsuid overrides بتتصلح لوحدها في proot -0).
-remedy_dpkg() {
-  echo "[remedy] dpkg repair: statoverride-truncate + dirs + configure -a + -f install" >> "$LOG"
-  if [ -f /var/lib/dpkg/statoverride ]; then
-    cp /var/lib/dpkg/statoverride /var/lib/dpkg/statoverride.bak 2>/dev/null || true
-    : > /var/lib/dpkg/statoverride
-  fi
-  touch /var/lib/dpkg/arch 2>/dev/null
-  for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated \
-           var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial \
-           var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do
-    mkdir -p "/$d" 2>/dev/null
-  done
-  dpkg --configure -a >> "$LOG" 2>&1 || true
-  apt-get -f install -y -qq >> "$LOG" 2>&1 || true
+prun() {  # prun "<guest-script>" — invocation قصير معزول
+  "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "$1"
 }
 
-echo "[*] apt-get update (full)" >> "$LOG"
-apt-get update >> "$LOG" 2>&1 || echo "[!] apt-get update رجع خطأ — هنشوف في التثبيت" >> "$LOG"
-remedy_dpkg
-
-# ── قناة جيت هوب: tool → (repo, asset-template ب{ver}, dest) ────────────────
-gh_fetch() {
-  local tool="$1" repo="$2" tpl="$3" dest="$4"
-  local ver url
-  ver=$(curl -sfL --max-time 30 "https://api.github.com/repos/$repo/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
-  [ -z "$ver" ] && return 1
-  url=$(echo "$tpl" | sed "s/{ver}/$ver/g")
-  mkdir -p "/usr/local/bin" "/tmp/ghdl.$$"
-  case "$url" in
-    *.gz|*.tgz|*.tar.gz)
-      curl -sfL --max-time 120 "$url" -o "/tmp/ghdl.$$/d" || { rm -rf "/tmp/ghdl.$$"; return 1; }
-      case "$url" in
-        *.tar.gz|*.tgz) tar -xzf "/tmp/ghdl.$$/d" -C "/tmp/ghdl.$$" 2>/dev/null;;
-        *.gz) gunzip -c "/tmp/ghdl.$$/d" > "/tmp/ghdl.$$/d.out"; mv "/tmp/ghdl.$$/d.out" "/tmp/ghdl.$$/d";;
-      esac
-      local bin
-      bin=$(find "/tmp/ghdl.$$" -type f | head -1)
-      [ -n "$bin" ] && cp "$bin" "$dest" && chmod +x "$dest"
-      rm -rf "/tmp/ghdl.$$"; command -v "$tool" >/dev/null 2>&1 || [ -x "$dest" ];;
-    *)  curl -sfL --max-time 120 "$url" -o "$dest" && chmod +x "$dest" && command -v "$tool" >/dev/null 2>&1;;
+# ── خريطة جيت هوب (host-side) — أمر المالك: «دور عالجيت هوب ووصلو أون لاين» ──
+gh_map() {  # $1=tool → "URL<TAB>DEST" (فاضي = مافيش)
+  case "$1" in
+    chisel)      echo -e "https://github.com/jpillora/chisel/releases/download/v1.10.1/chisel_1.10.1_linux_amd64.gz\t/usr/local/bin/chisel";;
+    ligolo-ng)   echo -e "https://github.com/sysdreamo/ligolo-ng/releases/download/v0.8.2/ligolo-ng_linux_amd64.tar.gz\t/usr/local/bin/ligolo-ng";;
+    pspy)        echo -e "https://github.com/DominicBreuker/pspy/releases/download/v1.2.1/pspy64\t/usr/local/bin/pspy";;
+    grype)
+      V=$(curl -sfL --max-time 30 "https://api.github.com/repos/anchore/grype/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+      [ -n "$V" ] && echo -e "https://github.com/anchore/grype/releases/download/$V/grype_${V}_linux_amd64.tar.gz\t/usr/local/bin/grype";;
+    trivy)
+      V=$(curl -sfL --max-time 30 "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+      [ -n "$V" ] && echo -e "https://github.com/aquasecurity/trivy/releases/download/$V/trivy_${V}_Linux-64bit.tar.gz\t/usr/local/bin/trivy";;
+    phoneinfoga)
+      V=$(curl -sfL --max-time 30 "https://api.github.com/repos/radsecurity/phoneinfoga/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+      [ -n "$V" ] && echo -e "https://github.com/radsecurity/phoneinfoga/releases/download/$V/phoneinfoga_Linux_x86_64.tar.gz\t/usr/local/bin/phoneinfoga";;
   esac
 }
 
-# ── خريطة جيت هوب (دور عالجيت هوب ووصّل أونلاين — أمر المالك) ────────────────
-gh_install() {
-  local tool="$1"
-  case "$tool" in
-    chisel)      gh_fetch chisel "jpillora/chisel"        "https://github.com/jpillora/chisel/releases/download/{ver}/chisel_1.10.1_linux_amd64.gz" "/usr/local/bin/chisel";;
-    ligolo-ng)   gh_fetch ligolo-ng "sysdreamo/ligolo-ng"  "https://github.com/sysdreamo/ligolo-ng/releases/download/{ver}/ligolo-ng_linux_amd64.tar.gz" "/usr/local/bin/ligolo-ng";;
-    grype)       gh_fetch grype "anchore/grype"            "https://github.com/anchore/grype/releases/download/{ver}/grype_{ver}_linux_amd64.tar.gz" "/usr/local/bin/grype";;
-    trivy)       gh_fetch trivy "aquasecurity/trivy"       "https://github.com/aquasecurity/trivy/releases/download/{ver}/trivy_{ver}_Linux-64bit.tar.gz" "/usr/local/bin/trivy";;
-    phoneinfoga) gh_fetch phoneinfoga "radsecurity/phoneinfoga" "https://github.com/radsecurity/phoneinfoga/releases/download/{ver}/phoneinfoga_Linux_x86_64.tar.gz" "/usr/local/bin/phoneinfoga";;
-    pspy)        gh_fetch pspy "DominicBreuker/pspy"       "https://github.com/DominicBreuker/pspy/releases/download/{ver}/pspy64" "/usr/local/bin/pspy";;
-    *) return 1;;
-  esac
+install_one() {  # $1=tool $2=pkg → يطبع CH:<channel> أو فاضي (كراش)
+  local tool="$1" pkg="$2" spec url dest=""
+  spec=$(gh_map "$tool"); url=""; [ -n "$spec" ] && { url="${spec%%$'\t'*}"; dest="${spec##*$'\t'}"; }
+  local guest
+  guest=$(cat <<GOSEOF
+export DEBIAN_FRONTEND=noninteractive
+TOOL='$tool'; PKG='$pkg'
+have() { command -v "\$TOOL" >/dev/null 2>&1 && return 0; dpkg -s "\$PKG" 2>/dev/null | grep -q 'install ok installed' && return 0; pip3 show "\$PKG" >/dev/null 2>&1 && return 0; return 1; }
+remedy() { [ -f /var/lib/dpkg/statoverride ] && : > /var/lib/dpkg/statoverride; dpkg --configure -a 2>/dev/null; for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p "/\$d" 2>/dev/null; done; apt-get -f install -y >/dev/null 2>&1; }
+have && { echo CH:already; exit 0; }
+remedy
+apt-get install -y -o Dpkg::Options::=--force-confnew "\$PKG" >/dev/null 2>&1 && have && { echo CH:apt; exit 0; }
+remedy
+pip3 install --break-system-packages -q "\$PKG" >/dev/null 2>&1 || pip3 install -q "\$PKG" >/dev/null 2>&1
+have && { echo CH:pip; exit 0; }
+URL='$url'; DEST='$dest'
+if [ -n "\$URL" ]; then
+  mkdir -p /usr/local/bin /tmp/ghdl
+  curl -sfL --max-time 180 "\$URL" -o /tmp/ghdl/d && {
+    case "\$URL" in *.tar.gz|*.tgz) tar -xzf /tmp/ghdl/d -C /tmp/ghdl;; *.gz) gunzip -c /tmp/ghdl/d > /tmp/ghdl/b;; *) cp /tmp/ghdl/d /tmp/ghdl/b;; esac
+    B=\$(ls /tmp/ghdl/b 2>/dev/null || find /tmp/ghdl -type f | head -1)
+    [ -n "\$B" ] && cp "\$B" "\$DEST" && chmod +x "\$DEST"
+  }
+fi
+have && { echo CH:github; exit 0; }
+echo CH:none
+GOSEOF
+)
+  timeout 660 prun "$guest" 2>> "$LOG" | tail -1
 }
 
-# ── التثبيت: كل أداة = apt → pip → جيت هوب، مع فكس dpkg بين المحاولات ───────
-ok=0; fail=""
-declare -A DETAIL
+ok=0; fail=""; n=0
 while IFS=$'\t' read -r tool pkg; do
   [ -z "${tool:-}" ] && continue
   [ "$pkg" = "-" ] && pkg="$tool"
-  st=""
-  # 1) apt (الحزم الجاهزة من كالي)
-  if DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::="--force-confnew" "$pkg" >> "$LOG" 2>&1; then
-    st="apt"
-  else
-    echo "[retry] $pkg apt فشلت — remedy + محاولة pip" >> "$LOG"
-    remedy_dpkg
-    # 2) pip (أدوات بايثون)
-    if pip3 install --break-system-packages -q "$pkg" >> "$LOG" 2>&1 || pip3 install -q "$pkg" >> "$LOG" 2>&1; then
-      st="pip"
-    else
-      # 3) جيت هوب (releases — أمر المالك)
-      if gh_install "$tool"; then st="github"; fi
-    fi
+  n=$((n+1))
+  CH=$(install_one "$tool" "$pkg")
+  # كراش proot (فاضي) أو فشل كامل → محاولة ثانية واحدة
+  if [ -z "$CH" ] || [ "$CH" = "CH:none" ]; then
+    sleep 2
+    CH=$(install_one "$tool" "$pkg")
   fi
-  # تحقق نهائي للأداة نفسها
-  if command -v "$tool" >/dev/null 2>&1 || dpkg -s "$pkg" 2>/dev/null | grep -q "install ok installed" || pip3 show "${pkg%%=*}" 2>/dev/null | grep -q "^Name:"; then
-    ok=$((ok+1)); DETAIL[$tool]="OK($st)"
-    echo "OK:$tool ($st)"
-  else
-    fail="$fail $tool"; DETAIL[$tool]="FAIL"
-    echo "FAIL:$tool"
-  fi
-done < /root/nova-missing.tsv
+  case "$CH" in
+    CH:already) ok=$((ok+1)); echo "OK:$tool (already)";;
+    CH:apt)     ok=$((ok+1)); echo "OK:$tool (apt)";;
+    CH:pip)     ok=$((ok+1)); echo "OK:$tool (pip)";;
+    CH:github)  ok=$((ok+1)); echo "OK:$tool (github)";;
+    *)          fail="$fail $tool"; echo "FAIL:$tool";;
+  esac
+done < "$TSV"
 
-# ── التحقق النهائي: كل الكتالوج (الموجودة قبل + المثبتة) لازم تفضل موجودة ──
-allok=0; allover=""
-while read -r t; do
-  [ -z "${t:-}" ] && continue
-  if command -v "$t" >/dev/null 2>&1; then allok=$((allok+1)); else allover="$allover $t"; fi
-done < /root/nova-verify.txt
+# التحقق النهائي: كل الكتالوج (القديم + الجديد) — invocation واحد (سريع)
+VOUT=$(prun 'while read -r t; do [ -z "$t" ] && continue; command -v "$t" >/dev/null 2>&1 && echo "VOK:$t" || echo "VOVER:$t"; done < /root/nova-verify.txt' 2>> "$LOG")
+[ -z "$VOUT" ] && VOUT=$(prun 'while read -r t; do [ -z "$t" ] && continue; command -v "$t" >/dev/null 2>&1 && echo "VOK:$t" || echo "VOVER:$t"; done < /root/nova-verify.txt' 2>> "$LOG")
+VOK=$(echo "$VOUT" | grep -c "^VOK:" || true)
+VOVER=$(echo "$VOUT" | grep "^VOVER:" | awk '{printf "%s ", $1}' || true)
+VTOTAL=$(wc -l < "$VERIFY")
 
 cat > "$REPORT" << EOF
-{"installedOk": $ok, "installFailed": "$fail", "verifyOk": $allok, "verifyTotal": $(wc -l < /tmp/nova-verify.txt), "verifyOverdue": "$allover", "builtAt": "$(date -u +%FT%TZ)"}
+{"installTotal": $n, "installedOk": $ok, "installFailed": "$fail", "verifyOk": $VOK, "verifyTotal": $VTOTAL, "verifyOverdue": "$VOVER", "builtAt": "$(date -u +%FT%TZ)"}
 EOF
-echo "[✓] التقرير: $REPORT"
 cat "$REPORT"
