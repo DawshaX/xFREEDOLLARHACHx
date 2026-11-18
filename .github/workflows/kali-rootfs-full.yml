@@ -28,13 +28,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: guest كامل من المخزن (نفس سكربت العقدة)
+      - name: guest كامل من المخزن (نفس سكربت العقدة — capture كامل)
+        env:
+          NOVA_KALI_SOFT_DEADLINE_MS: "1800000"
         run: |
-          node scripts/kali-node-install.mjs /mnt/kali-rootfs/rootfs || {
-            echo "::error::guest install فشل — المخزن مش مقروء"
+          df -h / /mnt | sed 's/^/::notice::disk: /' || true
+          node scripts/kali-node-install.mjs /mnt/kali-rootfs/rootfs > /tmp/guest.log 2>&1 ||             echo "::warning::guest install exit غير صفر — اللوج تحت هو الحقيقة"
+          split -b 700 /tmp/guest.log /tmp/guestc_ || true
+          for C in /tmp/guestc_*; do
+            echo "::notice::guest: $(cat $C | tr -d '\n\r')"
+          done
+          [ -f /mnt/kali-rootfs/.kali-node-installed ] && cat /mnt/kali-rootfs/.kali-node-installed || {
+            echo "::error::مافيش marker — guest فشل فعلاً (اللوج فوق بيقول السطر بالحرف)"
             exit 1
           }
-          cat /mnt/kali-rootfs/.kali-node-installed
 
       - name: تشخيص dpkg بالحرف (محاولة ffuf — المخرج كامل annotations)
         run: |
