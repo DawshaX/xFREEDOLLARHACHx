@@ -1,11 +1,11 @@
 {
-  "at": "2026-11-18T15:57:19.994Z",
+  "at": "2026-11-18T16:00:49.954Z",
   "hub": "https://nova.waifly.com",
   "checks": [
     {
       "name": "login+page",
       "ok": true,
-      "ms": 739,
+      "ms": 701,
       "detail": "200 · shell=index-C4lVA_5G.js",
       "loginStatus": 302,
       "pageStatus": 200,
@@ -15,53 +15,53 @@
     {
       "name": "ops/kali/nodes",
       "ok": true,
-      "ms": 1604,
-      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=10/10 · stats.ok=162/319",
+      "ms": 1541,
+      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=10/10 · stats.ok=166/324",
       "hubPackages": 0,
       "kaliNodes": 10
     },
     {
       "name": "kali-env/health",
       "ok": true,
-      "ms": 2087,
+      "ms": 2008,
       "detail": "readyAnywhere=true · fleet.kaliReady=10/10"
     },
     {
       "name": "kali-env/tools",
       "ok": true,
-      "ms": 2789,
+      "ms": 2684,
       "detail": "present=186/248 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)",
       "present": 186,
       "total": 248
     },
     {
       "name": "kali-env/catalog",
-      "ok": false,
-      "ms": 62790,
-      "detail": "0 · فاضي",
-      "present": 0,
-      "total": 0
+      "ok": true,
+      "ms": 2773,
+      "detail": "120/127 عبر 11 فئة · cachedFrom=2026-11-18T15:58:33.448Z",
+      "present": 120,
+      "total": 127
     },
     {
       "name": "terminal exec",
       "ok": true,
-      "ms": 63461,
-      "detail": "200 · 671ms · Linux runnervmccnms 7.0.0-1019-azure #20-Ubuntu SMP PREEMPT Mon Oct 19 22:41:16 UTC 2"
+      "ms": 3163,
+      "detail": "200 · 390ms · Linux runnervmccnms 7.0.0-1019-azure #20-Ubuntu SMP PREEMPT Mon Oct 19 22:41:16 UTC 2"
     },
     {
       "name": "install button (ffuf)",
       "ok": true,
-      "ms": 65000,
-      "detail": "200 · 2s · exit=0 · plane=runnervmccnms — عقدة كالي سحابية (rootfs + proot) · E: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem.  | INSTALL_OK:ffuf | ",
+      "ms": 4420,
+      "detail": "200 · 1s · exit=0 · plane=runnervmccnms — عقدة كالي سحابية (rootfs + proot) · E: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem.  | INSTALL_OK:ffuf | ",
       "installOk": true
     },
     {
       "name": "ops/storage-hub",
       "ok": true,
-      "ms": 68005,
+      "ms": 7314,
       "detail": "total=36.14GB · rows=7"
     }
   ],
-  "ok": false,
-  "summary": "7/8 ✓ · فاشل: kali-env/catalog"
+  "ok": true,
+  "summary": "8/8 ✓"
 }
