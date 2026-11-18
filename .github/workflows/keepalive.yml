@@ -13,7 +13,13 @@ name: NOVA keep-alive & memory backup
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # every 10 minutes — keep the free instance awake
+    # ★ اتقاس 2026-11-18: كل 10 دقايق = 144 تشغيل/يوم، وهو **أكبر مستهلك
+    #   للسعة** (27% من كل الحمل) — وأسوأ من كده إنه بينده live-verify
+    #   وdeploy-pages، فالتشغيل الواحد بيولّد 3 jobs. اليوم اللي فيه 26 run
+    #   واقف كان ده أولهم.
+    #   30 دقيقة كافية جدًا: الاستضافة المجانية بتنام بعد ~15 دقيقة خمول،
+    #   والحاجة الوحيدة اللي بتتأثر هي سرعة ملاحظة النوم — مش صحتها.
+    - cron: "*/30 * * * *"   # every 30 minutes — keep the free instance awake
     - cron: "20 3 * * *"     # daily — snapshot the long-term memory
   workflow_dispatch:
 

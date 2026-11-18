@@ -165,7 +165,12 @@ jobs:
       # كل 30د · gates · catalog) بيستنى ساعات أو يتأجل نهائيًا (مقاس 3 مرات
       # 2026-11-16). 12 عقدة تكفي التغطية 24/7 (كل عقدة تعيش ~6 ساعات) وسيب
       # ~8 سلات فاضية دايمًا للصيانة — النظام يتنفس.
-      max-parallel: 12
+      # ★ اتقاس 2026-11-18: 12 هنا + 19 في fleet-now = 31 runner محجوز في
+      #   نفس اللحظة (وكل واحد لحد 6 ساعات) → «All runners are busy» و26 run
+      #   واقف. الريبو عام فالدقايق مجانية؛ اللي بيخلص هو **السعة المتزامنة**.
+      #   نزّلناها لـ4: التغطية 24/7 زي ما هي (الmatrix بتلف بالدور)، بس
+      #   الحساب بيفضل فيه سلات فاضية للبناء والصيانة.
+      max-parallel: 4
       matrix:
         # A plain list: GitHub's expression language has no range(), and a
         # literal list is easier to read than nested join/split gymnastics.

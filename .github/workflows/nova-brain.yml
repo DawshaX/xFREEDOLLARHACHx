@@ -16,7 +16,7 @@ name: NOVA brain (keyless · thinks every 15 min)
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/30 * * * *"
   # GitHub drops or delays scheduled runs (measured 2026-11-04: the 22:15 and
   # 22:30 ticks never started, and neither did the corpus or backend-health
   # schedules at 22:00/22:30). Piggy-backing on the workflows that DO complete
