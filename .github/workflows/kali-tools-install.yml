@@ -1,0 +1,45 @@
+# TEST63 — أمر المالك: «كل الادوات كاملة من الاخر» — تثبيت ال11 أداة الناقصة
+# على عقدة كالي حية عبر الAPI الرسمي (/api/kali-env/install — نفس زر ثبت في
+# اللوحة) · جيت هوب مخزن ووايفلي تحكم — التثبيت بيحصل عال_node مش عال_هَب.
+name: kali tools install (missing 11 — one-shot)
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-tools-install.yml"
+permissions:
+  contents: read
+concurrency:
+  group: kali-tools-install
+  cancel-in-progress: false
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - name: install the 11 missing tools on a live Kali node (real /install API)
+        run: |
+          TOOLS="ffuf amass sublist3r libimage-exiftool-perl steghide volatility3 responder netexec crackmapexec arp-scan sherlock"
+          OK=0; FAIL=""
+          for T in $TOOLS; do
+            echo "════════ install $T ════════"
+            R=$(curl -s --max-time 450 -X POST "$HUB/api/kali-env/install" \
+              -H "x-nova-token: $TOKEN" -H "content-type: application/json" \
+              -d "{\"tool\":\"$T\"}")
+            echo "$R" | tail -c 300; echo
+            if echo "$R" | grep -q "INSTALL_OK:$T"; then
+              OK=$((OK+1)); echo "✓ $T مثبتة"
+            else
+              FAIL="$FAIL $T"; echo "✗ $T فشلت"
+            fi
+          done
+          echo "::notice::installed=$OK/11 · failed=[$FAIL]"
+          if [ -n "$FAIL" ]; then
+            echo "::warning::أدوات فشلت:$FAIL — أعد التشغيل أو فكس الحزمة"
+          fi
+      - name: verify (measure the node's real tools after install)
+        run: |
+          sleep 15
+          curl -s "$HUB/api/kali-env/tools" -H "x-nova-token: $TOKEN" | tail -c 400
