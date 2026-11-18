@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-18T02:41:51.584Z",
+  "at": "2026-11-18T02:49:48.242Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
@@ -9,65 +9,52 @@
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "58f87577e916ec9d500f248a7200ca71c4437e22",
-    "builtAt": "2026-11-18T02:28:55.029Z",
+    "commit": "9504b4f9b109751ae01ab6b2b681121138678aff",
+    "builtAt": "2026-11-18T02:39:39.851Z",
     "files": 189,
     "builtBy": "github-actions"
   },
   "boot": {
-    "commit": "58f87577e916ec9d500f248a7200ca71c4437e22",
-    "builtAt": "2026-11-18T02:28:55.029Z",
+    "commit": "9504b4f9b109751ae01ab6b2b681121138678aff",
+    "builtAt": "2026-11-18T02:39:39.851Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "مفيش أحدث من اللي شغّال (فرق -1478865 ثانية)",
-    "lastCheckAt": "2026-11-18T02:38:51.968Z",
-    "currentBuiltAt": "2026-11-18T02:28:55.029Z",
-    "latestReleaseAt": "2026-10-31T23:41:10Z",
+    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 22 ثانية)",
+    "lastCheckAt": "2026-11-18T02:48:06.168Z",
+    "currentBuiltAt": "2026-11-18T02:39:39.851Z",
+    "latestReleaseAt": "2026-11-18T02:40:02Z",
     "restartNeeded": false
   },
-  "updaterInstall": {
-    "status": 200,
-    "lastResult": "installing",
-    "detail": "بينزّل النسخة الجديدة ويطبّقها — البرنامج هيعيد تشغيل نفسه"
-  },
-  "restartHttp": 200,
-  "action": "restart_requested",
-  "bootAfter": {
-    "commit": "58f87577e916ec9d500f248a7200ca71c4437e22",
-    "builtAt": "2026-11-18T02:28:55.029Z",
-    "dir": "/home/container"
-  },
-  "fresh": false,
+  "updaterInstall": null,
+  "restartHttp": null,
+  "action": "fresh",
+  "bootAfter": null,
+  "fresh": true,
   "notes": [],
   "page": {
     "status": 200,
     "cacheControl": "no-store",
-    "servedAsset": "/assets/index-BYPGCGre.js",
+    "servedAsset": "/assets/index-BwjDR2Fe.js",
     "htmlBytes": 2484
   },
   "fleet": {
     "status": 200,
-    "count": 15,
+    "count": 10,
     "ids": [
       "self-node",
       "gh-18-2134",
-      "gh-13-2109",
-      "gh-4-2111",
-      "gh-5-2111",
       "gh-13-0226",
       "gh-19-2332",
-      "gh-3-2109",
-      "gh-11-2110",
       "gh-15-2116",
-      "gh-9-2110",
       "gh-16-2130",
-      "gh-14-2111",
       "gh-17-2135",
-      "gh-12-2109"
+      "gh-14-2111",
+      "gh-27-0243",
+      "gh-14-0248"
     ]
   }
 }
