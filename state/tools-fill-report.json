@@ -1,11 +1,11 @@
 {
-  "at": "2026-11-18T19:05:21.842948+00:00",
+  "at": "2026-11-18T19:11:58.984096+00:00",
   "before": {
-    "present": 192,
+    "present": 195,
     "total": 266
   },
   "after": {
-    "present": 195,
+    "present": 198,
     "total": 266,
     "measuredOn": "runnervmccnms — عقدة كالي سحابية (rootfs + proot)"
   },
@@ -35,10 +35,8 @@
     "gh-dork",
     "ghidra",
     "gotator",
-    "grype",
     "gvm",
     "hcxtools",
-    "katana",
     "keepnote",
     "king-phisher",
     "legs",
@@ -51,7 +49,6 @@
     "naabu",
     "netexec",
     "osintgram",
-    "pacu",
     "pandoc",
     "peass-ng",
     "pentestly",
