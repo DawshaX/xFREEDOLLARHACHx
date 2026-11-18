@@ -65,7 +65,7 @@ have && { echo CH:github; exit 0; }
 echo CH:none
 GOSEOF
 )
-  timeout 660 prun "$guest" 2>> "$LOG" | tail -1
+  timeout 660 "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "$guest" 2>> "$LOG" | tail -1
 }
 
 ok=0; fail=""; n=0
