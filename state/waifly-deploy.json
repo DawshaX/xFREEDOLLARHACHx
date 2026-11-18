@@ -1,34 +1,69 @@
 {
-  "at": "2026-11-18T08:55:24.262Z",
+  "at": "2026-11-18T12:10:07.610Z",
   "hub": "https://nova.waifly.com",
-  "reachable": false,
+  "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-18T08:20:07Z",
-    "size": 4240174
+    "updatedAt": "2026-11-18T11:49:10Z",
+    "size": 4239974
   },
-  "disk": null,
-  "boot": null,
-  "stale": null,
+  "disk": {
+    "name": "nova-24-7",
+    "version": "2099.1",
+    "commit": "900fd3079efb61c0f634bab6950c6bd9218435c2",
+    "builtAt": "2026-11-18T07:55:43.600Z",
+    "files": 189,
+    "builtBy": "local"
+  },
+  "boot": {
+    "commit": "900fd3079efb61c0f634bab6950c6bd9218435c2",
+    "builtAt": "2026-11-18T07:55:43.600Z",
+    "dir": "/home/container"
+  },
+  "stale": false,
   "updater": {
-    "http": 502
+    "enabled": true,
+    "lastResult": "installed",
+    "lastDetail": "اتطبّقت النسخة الجديدة — طلبنا إعادة التشغيل، بنتأكد إنها حصلت",
+    "lastCheckAt": "2026-11-18T12:09:35.386Z",
+    "currentBuiltAt": "2026-11-18T07:55:43.600Z",
+    "latestReleaseAt": "2026-11-18T11:49:10Z",
+    "restartNeeded": false
   },
-  "updaterInstall": null,
-  "restartHttp": null,
-  "action": "unreachable",
-  "bootAfter": null,
+  "updaterInstall": {
+    "status": 200,
+    "lastResult": "installing",
+    "detail": "بينزّل النسخة الجديدة ويطبّقها — البرنامج هيعيد تشغيل نفسه"
+  },
+  "restartHttp": 200,
+  "action": "restart_requested",
+  "bootAfter": {
+    "commit": "900fd3079efb61c0f634bab6950c6bd9218435c2",
+    "builtAt": "2026-11-18T07:55:43.600Z",
+    "dir": "/home/container"
+  },
   "fresh": false,
-  "notes": [
-    "version HTTP 502 · <html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>ngin"
-  ],
+  "notes": [],
   "page": {
-    "status": 502,
-    "cacheControl": null,
-    "servedAsset": null,
-    "htmlBytes": 150
+    "status": 200,
+    "cacheControl": "no-store",
+    "servedAsset": "/assets/index-C4lVA_5G.js",
+    "htmlBytes": 2484
   },
   "fleet": {
-    "status": 502,
-    "count": null,
-    "ids": null
+    "status": 200,
+    "count": 11,
+    "ids": [
+      "self-node",
+      "gh-27-1155",
+      "gh-29-1155",
+      "gh-22-1159",
+      "gh-24-1159",
+      "gh-21-1201",
+      "gh-26-1155",
+      "gh-20-1157",
+      "gh-25-1157",
+      "gh-23-1158",
+      "gh-28-1158"
+    ]
   }
 }
