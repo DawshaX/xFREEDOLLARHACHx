@@ -1509,12 +1509,29 @@ export function resolveStandaloneApi(
 // ── TEST25 — كالي السحابية (static build): الإجابة الصادقة — الباندل الثابت مفيهوش
 // هَب ولا WebSocket ولا عقد؛ القياس الحي على وضع السيرفر. الطرفية في الصفحات الثابتة
 // بتقول ده بدل ما تتخيل نتائج.
+/* TEST58 — الكونتكست الجديد (KaliContext) بيندّي على 5 مسارات ما كانتش في
+ * الخريطة الساكنة → كانت بترجع empty payload كذبًا (بوابة audit-connections
+ * مسكتها). الردود دي صادقة: الوضع الساكن مفيش عنده محرك ولا نظام. */
+if (path === "/ops/kali" && m === "GET") {
+  return { ok: false, measured: false, reasonAr: "الوضع الساكن مفيش عنده كالي — القياس الحي على الهَب (nova.waifly.com)" };
+}
+if (path === "/kali-env/exec" && (m === "GET" || m === "POST")) {
+  return { ok: false, reasonAr: "الطرفية بتشتغل على الهَب الحي — الوضع الساكن مفيش عنده shell" };
+}
+if (path === "/ops/kali/desktop" && m === "POST") {
+  return { ok: false, reasonAr: "بث الديسكتوب شغل الهَب الحي (Xvfb + ffmpeg) — الوضع الساكن مفيش عنده ديسكتوب" };
+}
+if (path === "/ops/kali/files" && m === "GET") {
+  return { ok: false, items: [], reasonAr: "مدير الملفات بيقيس على الهَب الحي — الوضع الساكن مفيش عنده ملفات" };
+}
+if (path === "/ops/kali/processes" && m === "GET") {
+  return { ok: false, items: [], reasonAr: "العمليات بتنقاس على الهَب الحي — الوضع الساكن مفيش عنده نظام تشغيل" };
+}
 if (path === "/ops/kali/nodes" && m === "GET") {
   return {
     ok: true,
     hub: { kali: false, packages: 0 },
-    nodes: [],
-    tools: null,
+    nodes: [],    tools: null,
     install: { running: false, node: "", startedAt: null, finishedAt: null, done: true, exitCode: 0, log: [] },
     probedAt: new Date().toISOString(),
     staticMode: true,

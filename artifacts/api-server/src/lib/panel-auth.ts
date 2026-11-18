@@ -299,8 +299,7 @@ const LOGIN_PAGE = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset
   <input id="p" name="pass" type="password" required>
   <button id="b" type="submit">دخول</button>
   <div class="err" id="e"></div>
-  <div class="foot">كل محاولة دخول <b>بتتسجّل</b> بالوقت والـIP<br>
-  <span style="opacity:.75">كلمة السر الافتراضية = قيمة <b>NOVA_EXEC_TOKEN</b> (إلا لو ظبطت <b>NOVA_PANEL_PASS</b>) · وبتدخل من الرابط نفسه: ‎/?user=…&amp;pass=…</span></div>
+  <div class="foot">كل محاولة دخول <b>بتتسجّل</b> بالوقت والـIP</div>
 </form>
 <script>
 var F=document.getElementById("f"),E=document.getElementById("e"),B=document.getElementById("b");

@@ -400,7 +400,7 @@ export function KaliProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ action: "start" }),
     });
     await refresh();
-    return r.ok;
+
   }, [refresh]);
 
   const closeDesktop = useCallback(async () => {
@@ -410,8 +410,9 @@ export function KaliProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ action: "stop" }),
     });
     await refresh();
-    return r.ok;
-  }, [refresh]);
+
+
+}, [refresh]);
 
   const browseFiles = useCallback(async (path: string) => {
     try {
