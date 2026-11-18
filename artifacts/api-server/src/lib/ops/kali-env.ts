@@ -20,6 +20,7 @@ import path from "node:path";
 import zlib from "node:zlib";
 import * as tar from "tar";
 import { createPushNotification } from "../push-hub";
+import { localKaliEnabled } from "./proot";
 
 export interface HeavyTool {
   present: boolean;
@@ -114,8 +115,11 @@ function repoRoots(): string[] {
   ];
 }
 
-/** أول مسار فيه rootfs كالي فعلية (os-release فيها kali). */
+/** أول مسار فيه rootfs كالي فعلية (os-release فيها kali).
+ * TEST73 — على الهَب مقفولة (مافيش كالي على الهَب — قرار المالك):
+ * بقايا rootfs كانت بتخدع المسار ده وتكسر exec/catalog. NOVA_KALI_LOCAL=1 يفتحها صراحة. */
 export function kaliRoot(): string | null {
+  if (!localKaliEnabled()) return null;
   for (const r of repoRoots()) {
     try {
       const rel = fs.readFileSync(path.join(r, "etc/os-release"), "utf8");

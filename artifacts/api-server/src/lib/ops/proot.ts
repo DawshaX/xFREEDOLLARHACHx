@@ -67,7 +67,26 @@ function candidateRoots(): string[] {
  * Returns `ready: false` with the list of places searched when something is
  * missing, so the UI can say exactly what to install instead of failing vaguely.
  */
+/**
+ * TEST73 (2026-11-18) — قاطع الكالي المحلية، بقرار المالك:
+ * «مافيش كالي على الهَب/وايفلي نهائيًا — كالي على جيت هوب والتنفيذ على العقد».
+ * الAPI server (الهَب) مايعترفش بrootfs محلي إلا لو NOVA_KALI_LOCAL=1 صراحة.
+ * مقاس: بقايا rootfs عالهَب (os-release كالي بلا proot) كانت بتخلي كل مسار
+ * بيفضّل الكالي المحلية المكسورة → exec 127 فوري · catalog 0/127 · health كاذبة.
+ */
+export function localKaliEnabled(): boolean {
+  return process.env.NOVA_KALI_LOCAL === "1";
+}
+
 export function detectProotLayout(): ProotLayout {
+  if (!localKaliEnabled()) {
+    return {
+      prootBin: null,
+      rootfs: null,
+      searched: [],
+      ready: false,
+    };
+  }
   const searched: string[] = [];
   let prootBin: string | null = null;
   let rootfs: string | null = null;
@@ -162,9 +181,10 @@ export function runInProot(opts: ProotRunOptions): Promise<ProotRunResult> {
       stderr: "",
       exitCode: 127,
       durationMs: Date.now() - started,
-      error:
-        "proot/rootfs not installed. Run `node scripts/kali-rootfs.mjs --install` " +
-        `(searched: ${layout.searched.join(", ")})`,
+      error: localKaliEnabled()
+        ? "proot/rootfs not installed. Run `node scripts/kali-rootfs.mjs --install` " +
+          `(searched: ${layout.searched.join(", ")})`
+        : "الكالي المحلية مقفولة على الهَب (TEST73 — قرار المالك: التنفيذ على عقد الأسطول عبر جيت هوب)",
     });
   }
 
