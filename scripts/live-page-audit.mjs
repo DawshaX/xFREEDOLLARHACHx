@@ -103,7 +103,7 @@ async function main() {
     tools.json?.ok ? `present=${tools.json.present}/${tools.json.total} · measuredOn=${tools.json.measuredOn ?? "?"}` : `${tools.status} · ${tools.json?.reason ?? tools.error ?? tools.body?.slice(0, 160)}`,
     { present: tools.json?.present ?? null, total: tools.json?.total ?? null });
 
-  const catalog = await apiGet("/api/kali-env/catalog", 60_000);
+  const catalog = await apiGet("/api/kali-env/catalog", 150_000);
   const cats = catalog.json?.categories ?? [];
   const tot = cats.reduce((a, c) => a + (c.tools?.length ?? 0), 0);
   const pres = cats.reduce((a, c) => a + (c.tools ?? []).filter((t) => t.present).length, 0);

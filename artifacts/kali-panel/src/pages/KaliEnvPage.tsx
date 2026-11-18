@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { Activity, Monitor, Play, RefreshCw, Square, Terminal, Wrench, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { pushNotify } from "@/lib/sse";
@@ -9,6 +10,18 @@ import { KaliLiveTicker, KaliStatusCard } from "@/components/desktop/KaliLiveBri
  * + كتالوج الـ 11 تصنيف رسمي لكل أدوات كالي + تشغيل أداة بضغطة. مكوّن منفصل
  * عشان الصفحة الأصلية تفضل زي ما هي — إضافة فوق الموجود، مش استبدال. */
 import KaliSystemsPanel from "./KaliSystemsPanel";
+/* MEGAUI — ستايل النيون لأقوى مختبر كالي في الكون (أمر المالك 2026-11-18) */
+import "@/kali-neon.css";
+
+/** ألوان نيون لكل تبويب — كل وجه لهويته زي شاشات MEGAUI */
+const FACE_NEON: Record<string, string> = {
+  work: "#fbbf24",      // ذهبي
+  system: "#22d3ee",    // سماوي
+  term: "#44ff88",      // أخضر طرفية
+  tools: "#a78bfa",     // بنفسجي
+  desk: "#38bdf8",      // أزرق بث
+  store: "#f472b6",     // وردي مخزن
+};
 /* «مكان الشغل في كالي» — مساحات حقيقية على الدسك جوه الـrootfs: ملفات بتفضل،
  * أوامر بتتنفذ في سياق المساحة، ونتايج المسح بتتعرض جوه البرنامج. */
 import KaliWorkspacePanel from "@/components/desktop/KaliWorkspacePanel";
@@ -568,24 +581,37 @@ export default function KaliEnvPage() {
   const running = st?.desktop?.running === true;
 
   return (
-    <div className="h-full overflow-y-auto p-4 space-y-3" style={{ background: "radial-gradient(1200px 500px at 85% -5%, rgba(255,50,30,0.10), transparent 60%), radial-gradient(900px 400px at 5% 110%, rgba(120,40,255,0.08), transparent 55%), linear-gradient(180deg,#03000a 0%,#060010 100%)", color: "#e0e0e0" }} dir="rtl">
-      {/* الرأس — لوجو NOVA (Daw) + الهوية */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+    <div className="kali-neon-root h-full overflow-y-auto p-4 space-y-3" style={{ color: "#e6e6f0" }} dir="rtl">
+      {/* الرأس — لوجو NOVA في حلقة نيون + عنوان MEGAUI + عدّادات حية */}
+      <div className="kali-neon-card p-3 flex items-center justify-between gap-3 flex-wrap" style={{ "--neon": "#a78bfa" } as CSSProperties}>
         <div className="flex items-center gap-3">
-          <img src="/daw-skull.jpg" alt="NOVA" className="w-14 h-14 rounded-xl object-cover shrink-0" style={{ border: "1px solid rgba(255,60,40,0.45)", boxShadow: "0 0 18px rgba(255,60,40,0.35)" }} />
+          <div className="kali-neon-logo-ring shrink-0">
+            <img src="/daw-skull.jpg" alt="NOVA" className="w-14 h-14 object-cover" />
+          </div>
           <div>
-            <h1 className="text-lg font-black flex items-center gap-2" style={{ color: "#ff5544", textShadow: "0 0 14px rgba(255,60,40,0.5)" }}>
-              كالي الحقيقية — نظام متثبت على GitHub، بيتشغّل من العقد
+            <h1 className="kali-neon-title text-xl flex items-center gap-2">
+              🥷 NOVA KALI LAB — أقوى مختبر كالي في الكون
             </h1>
-            <p className="text-[10px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-              القرص الدايم فرع kali-rootfs (2113 حزمة، مش على سيرفر الموقع). العقدة بتفتح النظام كـ root وتقدر تثبّت أي حزمة بـ apt. اللايف أجينت بيستخدم نفس الطايرة عبر kali_run.
+            <p className="text-[10px] font-mono mt-1" style={{ color: "rgba(230,230,240,0.55)" }}>
+              كل الأدوات عالجيت هوب (فرع kali-rootfs) · التنفيذ على 10 عقد كالية حية · بث مباشر للديسكتوب · كل زرار بيشتغل فعلًا
             </p>
           </div>
         </div>
-        <button onClick={() => navigate("/agent-pro")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
-          style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.4)", color: "#22d3ee" }}>
-          <ArrowLeft className="w-3.5 h-3.5" /> افتح اللايف أجينت
-        </button>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="kali-neon-stat text-[9px] font-black flex items-center gap-1.5" style={{ "--neon": "#44ff88" } as CSSProperties}>
+            <span className="kali-neon-live-dot" /> عقد حية {nodes?.nodes?.filter((n) => n.kali).length ?? "—"}
+          </span>
+          <span className="kali-neon-stat text-[9px] font-black" style={{ "--neon": "#22d3ee" } as CSSProperties}>
+            أدوات {envTools ? `${envTools.present}/${envTools.total}` : "…"}
+          </span>
+          <span className="kali-neon-stat text-[9px] font-black" style={{ "--neon": "#f472b6" } as CSSProperties}>
+            تخزين {store ? store.totalHuman : "…"}
+          </span>
+          <button onClick={() => navigate("/agent-pro")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+            style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.4)", color: "#22d3ee" }}>
+            <ArrowLeft className="w-3.5 h-3.5" /> اللايف أجينت
+          </button>
+        </div>
       </div>
 
       {/* الجسر الحي الموحد — أي أمر من agent-pro يظهر هنا فورًا (فوق كل التبويبات) */}
@@ -650,16 +676,17 @@ export default function KaliEnvPage() {
 
       <div className="sticky top-0 z-20 flex flex-wrap gap-1.5 rounded-xl p-2" style={{ background: "rgba(6,0,16,0.92)", border: "1px solid rgba(255,255,255,0.12)" }}>
         {([
-          ["work", "مكان الشغل ★"],
-          ["system", "النظام والعقد"],
-          ["term", "الطرفية"],
-          ["tools", "الأدوات"],
-          ["desk", "الديسكتوب"],
-          ["store", "المخزن"],
+          ["work", "★ مكان الشغل"],
+          ["system", "🌐 النظام والعقد"],
+          ["term", "⌨️ الطرفية"],
+          ["tools", "🧰 الأدوات"],
+          ["desk", "📡 البث المباشر"],
+          ["store", "🗄️ المخزن"],
         ] as const).map(([id, label]) => (
           <button key={id} type="button" onClick={() => setFace(id)}
-            className="text-[10px] font-black px-2.5 py-1 rounded"
-            style={{ background: face === id ? "rgba(255,85,68,0.2)" : "rgba(255,255,255,0.04)", color: face === id ? "#ff8866" : "rgba(255,255,255,0.65)", border: `1px solid ${face === id ? "rgba(255,85,68,0.5)" : "rgba(255,255,255,0.12)"}` }}>
+            data-active={face === id ? "1" : "0"}
+            className="kali-neon-tab text-[10px] font-black px-3 py-1.5 rounded"
+            style={{ "--neon": FACE_NEON[id] ?? "#a78bfa", background: face === id ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.02)", color: face === id ? (FACE_NEON[id] ?? "#a78bfa") : "rgba(255,255,255,0.6)", border: `1px solid ${face === id ? (FACE_NEON[id] ?? "#a78bfa") : "rgba(255,255,255,0.12)"}` } as CSSProperties}>
             {label}
           </button>
         ))}

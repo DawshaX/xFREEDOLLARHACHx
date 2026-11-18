@@ -48,6 +48,27 @@ router.use(requireOps("kali-env"));
  * that already reads `groups.recon` keeps working.
  */
 const TOOL_GROUPS: Record<string, string[]> = {
+  /* TEST77 (2026-11-18 — أمر المالك «أضف كل الأدوات في العالم واكتر وادوات متخخصة اكتر»):
+   * فئات متخصصة جديدة — مصادرها apt كالي، pip، وGitHub releases (كلها من الجيت هوب).
+   * المثبّت بيقع على سلسلة apt → pip → GitHub binary حسب الخريطة تحت. */
+  "15-osint-متقدم": [
+    "photon", "maigret", "h8mail", "osintgram", "gh-dork",
+  ],
+  "16-سحابة-وحاويات": [
+    "prowler", "scoutsuite", "pacu", "trufflehog", "dockle",
+  ],
+  "17-ويب-الجيل-الجديد": [
+    "katana", "cariddi", "subzy", "gotator",
+  ],
+  "18-شبكات-موجهة": [
+    "netexec", "certipy", "bloodhound-python", "ssh-audit",
+  ],
+  "19-فورنسك-متقدم": [
+    "sleuthkit", "steghide", "exiftool", "dc3dd", "missidentify",
+  ],
+  "20-تحليل-ثغرات-حديث": [
+    "semgrep", "grype", "syft", "trivy",
+  ],
   "information-gathering": [
     "nmap", "masscan", "subfinder", "amass", "dnsx", "naabu", "httpx", "whatweb",
     "theHarvester", "whois", "dig", "dnsenum", "fierce", "recon-ng", "maltego", "sublist3r", "sherlock"
@@ -981,13 +1002,47 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   /* TEST47 — اسم الأمر ≠ اسم الحزمة أحيانًا: exiftool أمر والحزمة
    * libimage-exiftool-perl. التثبيت بيستخدم الحزمة الصح والتحقق بيستخدم الأمر. */
   const APT_ALIAS: Record<string, string> = { exiftool: "libimage-exiftool-perl" };
+  /* TEST77 — سلسلة المصادر: apt كالي أولًا، لو فشل → pip، لو فشل → GitHub release
+   * (من الجيت هوب مباشرة — القرار المعماري: جيت هوب مخزن كل حاجة). */
+  const PIP_TOOLS: Record<string, string> = {
+    photon: "photon", maigret: "maigret", h8mail: "h8mail",
+    prowler: "prowler", scoutsuite: "scoutsuite", pacu: "pacu",
+    netexec: "netexec", certipy: "certipy-ad", "bloodhound-python": "bloodhound",
+    "ssh-audit": "ssh-audit", semgrep: "semgrep", sublist3r: "sublist3r",
+    sherlock: "sherlock", volatility3: "volatility3",
+  };
+  const GITHUB_TOOLS: Record<string, { repo: string; pattern: string; flat?: string }> = {
+    katana: { repo: "projectdiscovery/katana", pattern: "linux_amd64.zip", flat: "katana" },
+    cariddi: { repo: "edoardottt/cariddi", pattern: "linux_amd64.tar.gz", flat: "cariddi" },
+    subzy: { repo: "LukaSikter/subzy", pattern: "linux_amd64.tar.gz", flat: "subzy" },
+    grype: { repo: "anchore/grype", pattern: "linux_amd64.tar.gz", flat: "grype" },
+    syft: { repo: "anchore/syft", pattern: "linux_amd64.tar.gz", flat: "syft" },
+    trufflehog: { repo: "trufflesecurity/trufflehog", pattern: "linux_amd64.tar.gz", flat: "trufflehog" },
+    dockle: { repo: "goodwithtech/dockle", pattern: "linux-amd64.tar.gz", flat: "dockle" },
+    gotator: { repo: "Josue87/Gotator", pattern: "linux_amd64.tar.gz", flat: "gotator" },
+    osintgram: { repo: "Datalux/Osintgram", pattern: "", flat: "" }, // clone بدل release
+  };
   const pkg = APT_ALIAS[tool] ?? tool;
   /* TEST53 — فكس الجذر (مقاس 2026-11-17): جيت مايخزنش المجلدات الفاضية فالجست
    * بيولّد من غيرها — apt/dpkg بيحتاجوها كلها وبيفشلوا واحد-واحد
    * («E: Directory '/var/log/apt/' missing» · «archives/partial is missing» ·
    * «dpkg returned an error code (2)»). نفس قائمة المثبّت بالحرف — ال13 مجلد. */
   const GUEST_DIRS = "var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail";
-  const cmd = `echo ROOT_UID:$(id -u); for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
+  /* TEST77 — الأمر حسب المصدر: apt → pip → GitHub release. كل سلسلة بتنتهي
+   * بنفس بوابة INSTALL_OK — مافيش تغيير في بروتوكول الرد. */
+  const GIT = GITHUB_TOOLS[tool];
+  const PIP = PIP_TOOLS[tool];
+  let installCmd: string;
+  if (GIT && GIT.repo) {
+    installCmd = !GIT.pattern
+      ? `rm -rf /tmp/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${GIT.repo} /tmp/${tool} 2>&1 | tail -2 && echo CLONE_OK:${tool} || echo CLONE_FAIL:${tool}`
+      : `cd /tmp && rm -rf ${tool}-dl && mkdir -p ${tool}-dl && cd ${tool}-dl && URL=$(curl -s -m 30 https://api.github.com/repos/${GIT.repo}/releases/latest | tr "," "\n" | grep browser_download_url | grep "${GIT.pattern}" | head -1 | cut -d '"' -f4) && echo "URL=$URL" && curl -sL -m 180 "$URL" -o pkg.bin && ls -la pkg.bin && (tar -xzf pkg.bin 2>/dev/null || unzip -o pkg.bin >/dev/null 2>&1) ; BIN=$(find . -type f -name "${GIT.flat ?? tool}*" 2>/dev/null | head -1) && echo "BIN=$BIN" && cp "$BIN" /usr/local/bin/${tool} && chmod +x /usr/local/bin/${tool} && command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+  } else if (PIP) {
+    installCmd = `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${PIP} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${PIP} 2>&1) | tail -5; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+  } else {
+    installCmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
+  }
+  const cmd = `echo ROOT_UID:$(id -u); for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; ${installCmd}`;
   const r = await kaliAnywhereExec(cmd, 420_000);
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
   const ok = /INSTALL_OK:/.test(r.stdout);

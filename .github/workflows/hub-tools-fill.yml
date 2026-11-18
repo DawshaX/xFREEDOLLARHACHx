@@ -3,7 +3,7 @@
 # (curl من runner لنوفا مقاس شغال — العكس من السانبوكس المقطوع).
 # الميكانيكا: GET tools → الناقص من كل الفئات → POST install لكل أداة (الهَب
 # بيسلسلها بنفسه install.running) → remedy dpkg لو لزم → إعادة قياس → تقرير.
-name: kali tools fill (install every missing tool → 248/248)
+name: kali tools fill v7 (squeeze — 68 missing)
 on:
   push:
     paths:
@@ -26,12 +26,12 @@ jobs:
         run: |
           L=state/tools-fill-log.txt
           echo "=== fill started $(date -u +%FT%TZ) ===" > $L
-          curl -s -m 400 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json || true
+          curl -s -m 400 -H "x-nova-token: $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json || true
           echo "try1-bytes=$(wc -c < /tmp/tools-before.json 2>/dev/null || echo 0)" >> $L
           if ! python3 -c 'import json,sys; json.load(open("/tmp/tools-before.json")); print("json ok")' 2>/dev/null; then
             echo "الرد مش JSON — محاولة تانية fresh" >> $L
             sleep 15
-            curl -s -m 400 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools?fresh=$RANDOM" -o /tmp/tools-before.json || true
+            curl -s -m 400 -H "x-nova-token: $TOKEN" "$HUB/api/kali-env/tools?fresh=$RANDOM" -o /tmp/tools-before.json || true
             echo "try2-bytes=$(wc -c < /tmp/tools-before.json 2>/dev/null || echo 0)" >> $L
           fi
           head -c 300 /tmp/tools-before.json >> $L 2>/dev/null; echo >> $L
@@ -46,6 +46,17 @@ jobs:
           PY
           ) 2>&1 | tee -a $L || true
           wc -l /tmp/missing.txt >> $L 2>/dev/null || true; cat /tmp/missing.txt >> $L 2>/dev/null || true
+          true
+      - name: remedy dpkg الكامل على العقدة الخادمة (القفل المقطوع علامة العطل المقاسة)
+        run: |
+          L=state/tools-fill-log.txt
+          (
+          set +e
+          echo "=== dpkg remedy start ===" >> $L
+          curl -s -m 500 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d '{"command":"for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p \"/$d\" 2>/dev/null; done; rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock; DEBIAN_FRONTEND=noninteractive dpkg --configure -a --force-confold 2>&1 | tail -4; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; echo REMEDY_EXIT=$?","timeoutMs":420000}' "$HUB/api/kali-env/exec" | tail -4 >> $L
+          echo "=== dpkg remedy end ===" >> $L
+          true
+          ) 2>&1 | tee -a $L || true
           true
       - name: كوميت اللوج الجزئي (دايمًا — مستحيل تفشل)
         run: |
@@ -63,7 +74,7 @@ jobs:
           while IFS= read -r tool; do
             [ -z "$tool" ] && continue
             i=$((i+1))
-            R=$(curl -s -m 470 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
+            R=$(curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
             verdict=$(echo "$R" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("OK" if d.get("ok") else "FAIL·"+str(d.get("error",""))[:120])' 2>/dev/null || echo "BAD·parse")
             echo "[$i/$total] $tool → $verdict"
             echo "[$i/$total] $tool → $verdict" >> $L
@@ -75,11 +86,11 @@ jobs:
         run: |
           L=state/tools-fill-log.txt
           [ -s /tmp/failures.txt ] || { echo "مافيش فاشل — skip"; exit 0; }
-          curl -s -m 120 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"command":"dpkg --configure -a 2>&1 | tail -3; echo REMEDY_DONE","timeoutMs":90000}' "$HUB/api/kali-env/exec" | tail -2 || true
+          curl -s -m 120 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d '{"command":"dpkg --configure -a 2>&1 | tail -3; echo REMEDY_DONE","timeoutMs":90000}' "$HUB/api/kali-env/exec" | tail -2 || true
           okc=0; failc=0
           while IFS= read -r tool; do
             [ -z "$tool" ] && continue
-            R=$(curl -s -m 470 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
+            R=$(curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
             verdict=$(echo "$R" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("OK" if d.get("ok") else "FAIL·"+str(d.get("error",""))[:120])' 2>/dev/null || echo "BAD·parse")
             echo "[retry] $tool → $verdict"
             case "$verdict" in OK*) okc=$((okc+1));; *) failc=$((failc+1)); echo "$tool" >> /tmp/still.txt;; esac
@@ -98,7 +109,7 @@ jobs:
           (
           set +e
           sleep 10
-          curl -s -m 280 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-after.json
+          curl -s -m 280 -H "x-nova-token: $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-after.json
           true
           echo "after-bytes=$(wc -c < /tmp/tools-after.json)" >> $L
           head -c 200 /tmp/tools-after.json >> $L; echo >> $L

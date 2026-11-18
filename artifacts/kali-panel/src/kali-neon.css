@@ -1,0 +1,135 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   KALI NEON — ستايل MEGAUI لأقوى مختبر كالي في الكون (أمر المالك 2026-11-18)
+   شبكة نيون متحركة · حواف متوهجة بألوان كل تبويب · عناوين شريط متوهجة
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.kali-neon-root {
+  position: relative;
+  background:
+    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(124, 58, 237, 0.22), transparent),
+    radial-gradient(ellipse 60% 40% at 10% 20%, rgba(34, 211, 238, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 60%, rgba(236, 72, 153, 0.10), transparent),
+    linear-gradient(180deg, #0b0724 0%, #090418 55%, #05020f 100%);
+}
+
+/* شبكة النيون — زي MEGAUI، حركة بطيئة */
+.kali-neon-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(124, 58, 237, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 58, 237, 0.09) 1px, transparent 1px);
+  background-size: 44px 44px;
+  animation: neon-grid-drift 26s linear infinite;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 100%);
+  z-index: 0;
+}
+
+@keyframes neon-grid-drift {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 44px 88px, 88px 44px; }
+}
+
+.kali-neon-root > * { position: relative; z-index: 1; }
+
+/* بطاقة متوهجة */
+.kali-neon-card {
+  border-radius: 14px;
+  background: rgba(10, 6, 30, 0.72);
+  backdrop-filter: blur(6px);
+  box-shadow:
+    0 0 0 1px var(--neon, rgba(124, 58, 237, 0.5)),
+    0 0 18px -4px var(--neon, rgba(124, 58, 237, 0.55)),
+    inset 0 0 22px -14px var(--neon, rgba(124, 58, 237, 0.8));
+}
+
+/* عنوان شريط متوهج */
+.kali-neon-ribbon {
+  display: inline-block;
+  padding: 3px 16px;
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  background: linear-gradient(90deg, var(--neon, #a78bfa), transparent 160%);
+  color: #fff;
+  text-shadow: 0 0 8px var(--neon, #a78bfa);
+}
+
+/* تبويبات نيون — كل تبويب لونه */
+.kali-neon-tab {
+  position: relative;
+  border-radius: 10px;
+  transition: all 0.18s ease;
+  letter-spacing: 0.02em;
+}
+.kali-neon-tab:hover { transform: translateY(-1px); filter: brightness(1.25); }
+.kali-neon-tab[data-active="1"] {
+  background: color-mix(in srgb, var(--neon) 18%, transparent);
+  color: var(--neon);
+  box-shadow: 0 0 14px -2px var(--neon), inset 0 0 12px -6px var(--neon);
+  border-color: var(--neon) !important;
+}
+
+/* شعار في حلقة نيون */
+.kali-neon-logo-ring {
+  border-radius: 50%;
+  padding: 2px;
+  background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #ec4899, #f59e0b, #22d3ee);
+  animation: neon-logo-spin 8s linear infinite;
+  box-shadow: 0 0 22px -4px rgba(167, 139, 250, 0.8);
+}
+.kali-neon-logo-ring > img {
+  border-radius: 50%;
+  display: block;
+  background: #05020f;
+}
+@keyframes neon-logo-spin { to { filter: hue-rotate(360deg); } }
+
+/* عنوان رئيسي متوهج */
+.kali-neon-title {
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  background: linear-gradient(90deg, #fbbf24, #f472b6 40%, #a78bfa 70%, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.55));
+}
+
+/* عدّادات حية */
+.kali-neon-stat {
+  border-radius: 10px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--neon, rgba(124, 58, 237, 0.4));
+  box-shadow: 0 0 12px -6px var(--neon, rgba(124, 58, 237, 0.6));
+  font-variant-numeric: tabular-nums;
+}
+
+/* نبض حي */
+.kali-neon-live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #44ff88;
+  box-shadow: 0 0 10px #44ff88;
+  animation: neon-pulse 1.6s ease-in-out infinite;
+}
+@keyframes neon-pulse { 50% { opacity: 0.35; transform: scale(0.8); } }
+
+/* شريحة أداة */
+.kali-neon-chip-ok {
+  background: rgba(68, 255, 136, 0.08);
+  color: #44ff88;
+  border: 1px solid rgba(68, 255, 136, 0.25);
+  box-shadow: 0 0 8px -3px rgba(68, 255, 136, 0.7);
+}
+.kali-neon-chip-miss {
+  background: rgba(255, 170, 68, 0.07);
+  color: #ffb36b;
+  border: 1px solid rgba(255, 170, 68, 0.3);
+  transition: all 0.15s ease;
+}
+.kali-neon-chip-miss:hover {
+  box-shadow: 0 0 12px -3px rgba(255, 170, 68, 0.8);
+  transform: translateY(-1px);
+  color: #ffd08a;
+}
