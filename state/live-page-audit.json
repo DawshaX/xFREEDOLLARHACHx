@@ -1,67 +1,67 @@
 {
-  "at": "2026-11-18T12:11:16.958Z",
+  "at": "2026-11-18T12:33:57.113Z",
   "hub": "https://nova.waifly.com",
   "checks": [
     {
       "name": "login+page",
-      "ok": false,
-      "ms": 796,
-      "detail": "200 · shell=?",
-      "loginStatus": 502,
-      "pageStatus": 502,
-      "cookieSent": false,
-      "shellAsset": null
+      "ok": true,
+      "ms": 1014,
+      "detail": "200 · shell=index-C4lVA_5G.js",
+      "loginStatus": 302,
+      "pageStatus": 200,
+      "cookieSent": true,
+      "shellAsset": "index-C4lVA_5G.js"
     },
     {
       "name": "ops/kali/nodes",
-      "ok": false,
-      "ms": 906,
-      "detail": "hub.kali=undefined · hub.packages=null · عقد كالي=0/0 · stats.ok=undefined/undefined",
-      "hubPackages": null,
-      "kaliNodes": 0
+      "ok": true,
+      "ms": 1486,
+      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=10/10 · stats.ok=134/282",
+      "hubPackages": 0,
+      "kaliNodes": 10
     },
     {
       "name": "kali-env/health",
-      "ok": false,
-      "ms": 1017,
-      "detail": "readyAnywhere=undefined · fleet.kaliReady=undefined/undefined"
+      "ok": true,
+      "ms": 1645,
+      "detail": "readyAnywhere=true · fleet.kaliReady=10/10"
     },
     {
       "name": "kali-env/tools",
       "ok": false,
-      "ms": 1126,
-      "detail": "502 · <html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
-      "present": null,
-      "total": null
-    },
-    {
-      "name": "kali-env/catalog",
-      "ok": false,
-      "ms": 1236,
-      "detail": "502 · فاضي",
+      "ms": 2155,
+      "detail": "200 · proot/rootfs not installed AND no live Kali node answered",
       "present": 0,
       "total": 0
     },
     {
+      "name": "kali-env/catalog",
+      "ok": true,
+      "ms": 2570,
+      "detail": "0/127 عبر 11 فئة · cachedFrom=-",
+      "present": 0,
+      "total": 127
+    },
+    {
       "name": "terminal exec",
       "ok": false,
-      "ms": 1346,
-      "detail": "502 · 110ms · <html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>ngin"
+      "ms": 2744,
+      "detail": "200 · 174ms · data: {\"type\":\"start\",\"command\":\"uname -a\",\"cwd\":\"/opt\"}\n\ndata: {\"type\":\"done\",\"exitCode\":127,\"durationMs\":0,\"error\":\"pr"
     },
     {
       "name": "install button (ffuf)",
       "ok": false,
-      "ms": 1455,
-      "detail": "502 · 0s · exit=undefined · plane=? · <html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+      "ms": 3148,
+      "detail": "200 · 0s · exit=1 · plane=ip-10-0-129-246 — عقدة كالي سحابية (rootfs + proot) · proot error: '/bin/sh' not found (root = /home/runner/kali-rootfs/rootfs, cwd = /, $PATH=(null)) | fatal error: see `proot-static --help`. | ",
       "installOk": false
     },
     {
       "name": "ops/storage-hub",
-      "ok": false,
-      "ms": 1564,
-      "detail": "total=undefined · rows=0"
+      "ok": true,
+      "ms": 6367,
+      "detail": "total=23.57GB · rows=7"
     }
   ],
   "ok": false,
-  "summary": "0/8 ✓ · فاشل: login+page, ops/kali/nodes, kali-env/health, kali-env/tools, kali-env/catalog, terminal exec, install button (ffuf), ops/storage-hub"
+  "summary": "5/8 ✓ · فاشل: kali-env/tools, terminal exec, install button (ffuf)"
 }
