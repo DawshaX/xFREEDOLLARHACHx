@@ -1,7 +1,7 @@
 # TEST80g — الهجوم المينيمالي المضمون: مافيش دوال ولا python — curl خام بأوامر
 # بدائية جدًا (dpkg --configure -a وحده — ما اتنفذش ولا مرة مقاس) + continue-on-error
 # على كل خطوة عشان الكل يتنفذ محكم.
-name: kali root attack v3 (binaries path on TEST81 hub — amass via GitHub release)
+name: kali root attack v3 (TEST83 hub — amass x86_64 binary + clone pip)
 on:
   push:
     paths:
