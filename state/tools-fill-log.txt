@@ -200,3 +200,12 @@ zsh[1/65] amass → FAIL·التثبيت فشل جوه الجست — النات
 {"ok":false,"tool":"wkhtmltopdf","pkg":"wkhtmltopdf","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --conf
 pass1: ok=10 fail=55
 retry: ok=0 fail=55
+after-bytes=7392
+{"ok":true,"ready":true,"measuredOn":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","hubRootfs":false,"fleet":{"connected":12,"kaliReady":12,"nodes":[{"id":"gh-8-1618","hostname":
+بعد: present=182/248 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)
+لسه ناقص: 66 → ['amass', 'aria2', 'arjun', 'arp-scan', 'asnmap', 'bettercap', 'bloodhound', 'casefile', 'cherrytree', 'chisel', 'crackmapexec', 'dirsearch', 'dnsx', 'dradis', 'dvcs-ripper', 'elfutils', 'empire', 'ettercap', 'evilgrade', 'exiftool', 'faraday', 'fernet', 'ghidra', 'grype', 'gvm', 'hcxtools', 'katana', 'keepnote', 'king-phisher', 'legs', 'libreoffice', 'ligolo-ng', 'ltrace', 'maigret', 'maskprocessor', 'metasploit-framework', 'mongosh', 'naabu', 'netexec', 'pandoc']
+بعد: present=182/248 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)
+لسه ناقص: 66 → ['amass', 'aria2', 'arjun', 'arp-scan', 'asnmap', 'bettercap', 'bloodhound', 'casefile', 'cherrytree', 'chisel', 'crackmapexec', 'dirsearch', 'dnsx', 'dradis', 'dvcs-ripper', 'elfutils', 'empire', 'ettercap', 'evilgrade', 'exiftool', 'faraday', 'fernet', 'ghidra', 'grype', 'gvm', 'hcxtools', 'katana', 'keepnote', 'king-phisher', 'legs', 'libreoffice', 'ligolo-ng', 'ltrace', 'maigret', 'maskprocessor', 'metasploit-framework', 'mongosh', 'naabu', 'netexec', 'pandoc']
+python-exit=0
+=== fill ended 2026-11-18T17:43:33Z ===
+step-exit=0
