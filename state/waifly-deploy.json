@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-18T12:10:07.610Z",
+  "at": "2026-11-18T12:33:47.469Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
@@ -9,39 +9,31 @@
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "900fd3079efb61c0f634bab6950c6bd9218435c2",
-    "builtAt": "2026-11-18T07:55:43.600Z",
+    "commit": "7dd761d7386e47c893e1150d1a1b02169dd9d07b",
+    "builtAt": "2026-11-18T12:25:31.459Z",
     "files": 189,
     "builtBy": "local"
   },
   "boot": {
-    "commit": "900fd3079efb61c0f634bab6950c6bd9218435c2",
-    "builtAt": "2026-11-18T07:55:43.600Z",
+    "commit": "7dd761d7386e47c893e1150d1a1b02169dd9d07b",
+    "builtAt": "2026-11-18T12:25:31.459Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
-    "lastResult": "installed",
-    "lastDetail": "اتطبّقت النسخة الجديدة — طلبنا إعادة التشغيل، بنتأكد إنها حصلت",
-    "lastCheckAt": "2026-11-18T12:09:35.386Z",
-    "currentBuiltAt": "2026-11-18T07:55:43.600Z",
+    "lastResult": "up-to-date",
+    "lastDetail": "مفيش أحدث من اللي شغّال (فرق -2181 ثانية)",
+    "lastCheckAt": "2026-11-18T12:30:10.027Z",
+    "currentBuiltAt": "2026-11-18T12:25:31.459Z",
     "latestReleaseAt": "2026-11-18T11:49:10Z",
     "restartNeeded": false
   },
-  "updaterInstall": {
-    "status": 200,
-    "lastResult": "installing",
-    "detail": "بينزّل النسخة الجديدة ويطبّقها — البرنامج هيعيد تشغيل نفسه"
-  },
-  "restartHttp": 200,
-  "action": "restart_requested",
-  "bootAfter": {
-    "commit": "900fd3079efb61c0f634bab6950c6bd9218435c2",
-    "builtAt": "2026-11-18T07:55:43.600Z",
-    "dir": "/home/container"
-  },
-  "fresh": false,
+  "updaterInstall": null,
+  "restartHttp": null,
+  "action": "fresh",
+  "bootAfter": null,
+  "fresh": true,
   "notes": [],
   "page": {
     "status": 200,
@@ -56,13 +48,13 @@
       "self-node",
       "gh-27-1155",
       "gh-29-1155",
-      "gh-22-1159",
-      "gh-24-1159",
       "gh-21-1201",
       "gh-26-1155",
+      "gh-22-1159",
+      "gh-24-1159",
+      "gh-23-1158",
       "gh-20-1157",
       "gh-25-1157",
-      "gh-23-1158",
       "gh-28-1158"
     ]
   }
