@@ -1,0 +1,7 @@
+PRETTY_NAME=Kali GNU/Linux Rolling
+packages=2563
+bytes=19026969551
+built_at=2026-11-18T12:54:46Z
+commit=96af137
+run_id=44305737242
+failed_extra= vulners ettercap libreoffice spiderfoot maigret asnmap shuffledns evilgrade legs checksec pentestly pip-audit trivy grype droopescan paramspider x8 xsstrike dalfox w3af ssrfmap mongosh brutespray fernet wifipumpkin3 eaphammer retdec evilginx2 venom elfutils driftnet ferret netsniff-ng pspy dvcs-ripper peass-ng testdisk photorec keepnote casefile king-phisher gophish phishery phoneinfoga socialanalyzer openvpn docker vim aria2
