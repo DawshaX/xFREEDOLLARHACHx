@@ -328,10 +328,10 @@ router.get("/kali-env/tools", async (_req, res) => {
           .join(" || ");
         return `{ ${anyOf} ; } && echo "OK:${t}"`;
       })
-      .join("; ");
+      .join("; ") + "; true"; /* TEST60 — exit code بتاع آخر أداة مش مطلوب: القياس من سطور OK: — لو آخر أداة ناقصة كان الرد كله بيرمي ويبقى total:0 (مقاس حي 07:25Z) */
     const fleet = await fleetKaliSummary();
     const r = await kaliAnywhereExec(probe, 60_000);
-    if (r && r.exitCode === 0) {
+    if (r && r.stdout && r.stdout.includes("OK:")) {
       const found = new Set(
         r.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)),
       );
