@@ -1,67 +1,67 @@
 {
-  "at": "2026-11-18T19:27:32.427Z",
+  "at": "2026-11-18T19:36:01.406Z",
   "hub": "https://nova.waifly.com",
   "checks": [
     {
       "name": "login+page",
-      "ok": true,
-      "ms": 911,
-      "detail": "200 · shell=index-pzpaVnPF.js",
-      "loginStatus": 302,
-      "pageStatus": 200,
-      "cookieSent": true,
-      "shellAsset": "index-pzpaVnPF.js"
+      "ok": false,
+      "ms": 1165,
+      "detail": "200 · shell=?",
+      "loginStatus": 502,
+      "pageStatus": 502,
+      "cookieSent": false,
+      "shellAsset": null
     },
     {
       "name": "ops/kali/nodes",
-      "ok": true,
-      "ms": 1714,
-      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=12/12 · stats.ok=496/500",
-      "hubPackages": 0,
-      "kaliNodes": 12
+      "ok": false,
+      "ms": 1340,
+      "detail": "hub.kali=undefined · hub.packages=null · عقد كالي=0/0 · stats.ok=undefined/undefined",
+      "hubPackages": null,
+      "kaliNodes": 0
     },
     {
       "name": "kali-env/health",
-      "ok": true,
-      "ms": 2154,
-      "detail": "readyAnywhere=true · fleet.kaliReady=12/12"
+      "ok": false,
+      "ms": 1519,
+      "detail": "readyAnywhere=undefined · fleet.kaliReady=undefined/undefined"
     },
     {
       "name": "kali-env/tools",
-      "ok": true,
-      "ms": 2866,
-      "detail": "present=198/266 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)",
-      "present": 198,
-      "total": 266
+      "ok": false,
+      "ms": 1695,
+      "detail": "502 · <html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+      "present": null,
+      "total": null
     },
     {
       "name": "kali-env/catalog",
       "ok": false,
-      "ms": 62866,
-      "detail": "0 · فاضي",
+      "ms": 1880,
+      "detail": "502 · فاضي",
       "present": 0,
       "total": 0
     },
     {
       "name": "terminal exec",
-      "ok": true,
-      "ms": 63695,
-      "detail": "200 · 829ms · Linux runnervmccnms 7.0.0-1019-azure #20-Ubuntu SMP PREEMPT Mon Oct 19 22:41:16 UTC 2"
+      "ok": false,
+      "ms": 2061,
+      "detail": "502 · 180ms · <html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>ngin"
     },
     {
       "name": "install button (ffuf)",
-      "ok": true,
-      "ms": 65235,
-      "detail": "200 · 2s · exit=0 · plane=runnervmccnms — عقدة كالي سحابية (rootfs + proot) · E: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem.  | INSTALL_OK:ffuf | ",
-      "installOk": true
+      "ok": false,
+      "ms": 2247,
+      "detail": "502 · 0s · exit=undefined · plane=? · <html>\r\n<head><title>502 Bad Gateway</title></head>\r\n<body>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+      "installOk": false
     },
     {
       "name": "ops/storage-hub",
-      "ok": true,
-      "ms": 68513,
-      "detail": "total=36.14GB · rows=7"
+      "ok": false,
+      "ms": 2424,
+      "detail": "total=undefined · rows=0"
     }
   ],
   "ok": false,
-  "summary": "7/8 ✓ · فاشل: kali-env/catalog"
+  "summary": "0/8 ✓ · فاشل: login+page, ops/kali/nodes, kali-env/health, kali-env/tools, kali-env/catalog, terminal exec, install button (ffuf), ops/storage-hub"
 }
