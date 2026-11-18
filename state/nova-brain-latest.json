@@ -1,9 +1,9 @@
 {
-  "at": "2026-11-17T19:58:31.228Z",
+  "at": "2026-11-18T01:48:51.889Z",
   "seat": "openai",
   "thinking": {
-    "reply": "المعالجة الحالية لا وجدت ثغرات في الأهداف المسموح بها، وتغطية الـ corpus قريبة من 1%؛ أهم خطوة على الرحلة هي توسيع نطاق البحث للمنتجات الأكثر شيوعاً ثم متابعة الراحةف تكرارية للبحث لضمان كشف أية ثغرات غير مكتشفة.",
-    "why": "لا حاجة لمتابعة بحث أو تفاصيل إضافية في هذه المرحلة.",
+    "reply": "المنصة حالياً متحصّلة على 426509 وثيقة، مع تغطية 1% فقط. لا توجد مصادفات حتى الآن. الخطوة القادمة هي توسيع البحث في منتجات أخرى لمتمثّلة في القاعدة الحالية.",
+    "why": "لا يوجد حاجة لتشغيل أداة بحث أخرى في هذه المرحلة.",
     "action": {
       "kind": "none",
       "arg": ""
@@ -37,8 +37,8 @@
       ]
     },
     "hunt": {
-      "at": "2026-11-17T08:44:06.719Z",
-      "scanned": 3,
+      "at": "2026-11-17T21:08:35.813Z",
+      "scanned": 4,
       "findings": 0,
       "targets": [
         {
@@ -46,12 +46,12 @@
           "why": "مضيف مخصص لاختبار nmap — صاحبه (Gordon Lyon) كاتب صراحة إن المسح مسموح",
           "permission_url": "https://scanme.nmap.org/",
           "scheme": "http",
-          "startedAt": "2026-11-17T08:44:06.720Z",
+          "startedAt": "2026-11-17T21:08:35.813Z",
           "steps": [
             {
               "tool": "httpx",
               "exit": 0,
-              "ms": 1332,
+              "ms": 1249,
               "status": 200,
               "title": "Go ahead and ScanMe!",
               "tech": [
@@ -59,19 +59,19 @@
                 "Ubuntu"
               ],
               "evidence": {
-                "file": "state/hunt/evidence/httpx-scanme.nmap.org-029488f74cc9.txt.gz",
-                "sha256": "029488f74cc90681f5f5f76cb6a8bd52efcde79028c01340d56e09707926e601",
+                "file": "state/hunt/evidence/httpx-scanme.nmap.org-52f338a33196.txt.gz",
+                "sha256": "52f338a331966c95f0ae56244faf2db90990404dfa6f902389b946ba897c96c0",
                 "bytes": 587,
                 "gzBytes": 397,
                 "encoding": "gzip",
                 "probe": "httpx -u http://scanme.nmap.org/ -json -silent -status-code -title -tech-detect",
-                "at": "2026-11-17T08:44:08.054Z"
+                "at": "2026-11-17T21:08:37.064Z"
               }
             },
             {
               "tool": "katana",
               "exit": 0,
-              "ms": 60516,
+              "ms": 60575,
               "endpoints": 5,
               "sample": [
                 "http://scanme.nmap.org/",
@@ -81,65 +81,64 @@
                 "http://scanme.nmap.org/shared/css/nst.css?v=2"
               ],
               "evidence": {
-                "file": "state/hunt/evidence/katana-scanme.nmap.org-740e115e76df.txt.gz",
-                "sha256": "740e115e76dfb31969f00e9eee8b3c45ea76176c65d910afec760e3d0cb65fef",
-                "bytes": 8015263,
-                "gzBytes": 1140811,
+                "file": "state/hunt/evidence/katana-scanme.nmap.org-f486c26f225e.txt.gz",
+                "sha256": "f486c26f225efbcc2a5cca2e3564ab4c33a37245733fe6c99a5df7c65a17fb61",
+                "bytes": 8392521,
+                "gzBytes": 1176624,
                 "encoding": "gzip",
                 "probe": "katana -u http://scanme.nmap.org/ -fs dn -depth 3 -rate-limit 10 -crawl-duration 60s",
-                "at": "2026-11-17T08:45:09.288Z"
+                "at": "2026-11-17T21:09:37.935Z"
               }
             },
             {
               "tool": "nuclei",
               "pass": "root",
-              "exit": 0,
-              "ms": 333338,
+              "exit": 1,
+              "ms": 1263,
               "scanned": 1,
               "matched": 0,
               "evidence": {
-                "file": "state/hunt/evidence/nuclei-root-scanme.nmap.org-8f3792fbf71d.txt.gz",
-                "sha256": "8f3792fbf71d63b1d40edeac370bae8cb2e7213f03cc04681b6c3cd1eca73729",
-                "bytes": 12116,
-                "gzBytes": 726,
+                "file": "state/hunt/evidence/nuclei-root-scanme.nmap.org-4392f3df8981.txt.gz",
+                "sha256": "4392f3df89816a5cae59f099d2db485486ede97b04569f52f08313313d6a05d0",
+                "bytes": 263,
+                "gzBytes": 191,
                 "encoding": "gzip",
                 "probe": "nuclei -u http://scanme.nmap.org/ -severity high,critical -tags exposure,misconfig,takeover,default-login -no-interactsh -rl 4",
-                "at": "2026-11-17T08:50:42.628Z"
+                "at": "2026-11-17T21:09:39.199Z"
               }
             },
             {
               "tool": "nuclei",
               "pass": "endpoints",
-              "exit": -1,
-              "ms": 240017,
+              "exit": 1,
+              "ms": 689,
               "scanned": 1,
               "matched": 0,
               "evidence": {
-                "file": "state/hunt/evidence/nuclei-endpoints-scanme.nmap.org-4c6907c48eeb.txt.gz",
-                "sha256": "4c6907c48eeb65a409582cf0264afd60145761d9bbcbc8530be40cb93c31e201",
-                "bytes": 8617,
-                "gzBytes": 583,
+                "file": "state/hunt/evidence/nuclei-endpoints-scanme.nmap.org-4392f3df8981.txt.gz",
+                "sha256": "4392f3df89816a5cae59f099d2db485486ede97b04569f52f08313313d6a05d0",
+                "bytes": 263,
+                "gzBytes": 191,
                 "encoding": "gzip",
                 "probe": "nuclei -l /home/runner/work/xFREEDOLLARHACHx/xFREEDOLLARHACHx/state/hunt/evidence/targets-scanme.nmap.org.txt -severity high,critical -tags exposure,misconfig,takeover,default-login -no-interactsh -rl 4",
-                "at": "2026-11-17T08:54:42.645Z"
-              },
-              "timedOut": true
+                "at": "2026-11-17T21:09:39.888Z"
+              }
             }
           ],
           "findings": 0,
-          "finishedAt": "2026-11-17T08:54:42.645Z"
+          "finishedAt": "2026-11-17T21:09:39.888Z"
         },
         {
           "host": "testphp.vulnweb.com",
           "why": "موقع اختبار Acunetix — منشور للاستخدام مع الماسحات (nuclei/zap/burp) في وثائقهم",
           "permission_url": "https://www.acunetix.com/vulnerability-scanner/webscantest/",
           "scheme": "http",
-          "startedAt": "2026-11-17T08:54:42.645Z",
+          "startedAt": "2026-11-17T21:09:39.889Z",
           "steps": [
             {
               "tool": "httpx",
               "exit": 0,
-              "ms": 20856,
+              "ms": 20907,
               "status": null,
               "title": null,
               "tech": [],
@@ -150,76 +149,76 @@
                 "gzBytes": 20,
                 "encoding": "gzip",
                 "probe": "httpx -u http://testphp.vulnweb.com/ -json -silent -status-code -title -tech-detect",
-                "at": "2026-11-17T08:55:03.502Z"
+                "at": "2026-11-17T21:10:00.797Z"
               }
             },
             {
               "tool": "katana",
               "exit": 0,
-              "ms": 21475,
+              "ms": 21577,
               "endpoints": 1,
               "sample": [
                 "http://testphp.vulnweb.com/"
               ],
               "evidence": {
-                "file": "state/hunt/evidence/katana-testphp.vulnweb.com-8e1ad36dc016.txt.gz",
-                "sha256": "8e1ad36dc016815199494ad4b38e781a6e2f4c063671fc8c7e81146242e31895",
-                "bytes": 493,
-                "gzBytes": 341,
+                "file": "state/hunt/evidence/katana-testphp.vulnweb.com-4ddd17c20e67.txt.gz",
+                "sha256": "4ddd17c20e67875319e3afbedb4761c4f923aa312a7196594fdbd5bbc2abbc43",
+                "bytes": 566,
+                "gzBytes": 387,
                 "encoding": "gzip",
                 "probe": "katana -u http://testphp.vulnweb.com/ -fs dn -depth 3 -rate-limit 10 -crawl-duration 60s",
-                "at": "2026-11-17T08:55:24.977Z"
+                "at": "2026-11-17T21:10:22.374Z"
               }
             },
             {
               "tool": "nuclei",
               "pass": "root",
-              "exit": 0,
-              "ms": 5980,
+              "exit": 1,
+              "ms": 677,
               "scanned": 1,
               "matched": 0,
               "evidence": {
-                "file": "state/hunt/evidence/nuclei-root-testphp.vulnweb.com-a47608c04ac4.txt.gz",
-                "sha256": "a47608c04ac4ab95c73eb574130e8b5ed2547a1a2c6bfbcdb8f002bdf3a29a7e",
-                "bytes": 544,
-                "gzBytes": 170,
+                "file": "state/hunt/evidence/nuclei-root-testphp.vulnweb.com-4392f3df8981.txt.gz",
+                "sha256": "4392f3df89816a5cae59f099d2db485486ede97b04569f52f08313313d6a05d0",
+                "bytes": 263,
+                "gzBytes": 191,
                 "encoding": "gzip",
                 "probe": "nuclei -u http://testphp.vulnweb.com/ -severity high,critical -tags exposure,misconfig,takeover,default-login -no-interactsh -rl 4",
-                "at": "2026-11-17T08:55:30.959Z"
+                "at": "2026-11-17T21:10:23.051Z"
               }
             },
             {
               "tool": "nuclei",
               "pass": "endpoints",
-              "exit": 0,
-              "ms": 36078,
+              "exit": 1,
+              "ms": 678,
               "scanned": 1,
               "matched": 0,
               "evidence": {
-                "file": "state/hunt/evidence/nuclei-endpoints-testphp.vulnweb.com-64d2f2fb2a55.txt.gz",
-                "sha256": "64d2f2fb2a55a8c8219bc0f3921b9a3eb4747bf540e13643e207939e55cd6142",
-                "bytes": 1634,
-                "gzBytes": 231,
+                "file": "state/hunt/evidence/nuclei-endpoints-testphp.vulnweb.com-4392f3df8981.txt.gz",
+                "sha256": "4392f3df89816a5cae59f099d2db485486ede97b04569f52f08313313d6a05d0",
+                "bytes": 263,
+                "gzBytes": 191,
                 "encoding": "gzip",
                 "probe": "nuclei -l /home/runner/work/xFREEDOLLARHACHx/xFREEDOLLARHACHx/state/hunt/evidence/targets-testphp.vulnweb.com.txt -severity high,critical -tags exposure,misconfig,takeover,default-login -no-interactsh -rl 4",
-                "at": "2026-11-17T08:56:07.038Z"
+                "at": "2026-11-17T21:10:23.729Z"
               }
             }
           ],
           "findings": 0,
-          "finishedAt": "2026-11-17T08:56:07.038Z"
+          "finishedAt": "2026-11-17T21:10:23.729Z"
         },
         {
           "host": "demo.testfire.net",
           "why": "تطبيق اختبار IBM العام (AppScan) — مبني عشان يتفحص",
           "permission_url": "https://demo.testfire.net/",
           "scheme": "https",
-          "startedAt": "2026-11-17T08:56:07.038Z",
+          "startedAt": "2026-11-17T21:10:23.729Z",
           "steps": [
             {
               "tool": "httpx",
               "exit": 0,
-              "ms": 987,
+              "ms": 1214,
               "status": 200,
               "title": "Altoro Mutual",
               "tech": [
@@ -227,103 +226,177 @@
                 "Java"
               ],
               "evidence": {
-                "file": "state/hunt/evidence/httpx-demo.testfire.net-fe6230173b7a.txt.gz",
-                "sha256": "fe6230173b7a01df223b770964d75411141310493b4e5d64958fe8e9cb1a6ab9",
-                "bytes": 534,
-                "gzBytes": 354,
+                "file": "state/hunt/evidence/httpx-demo.testfire.net-539b8cd9ff83.txt.gz",
+                "sha256": "539b8cd9ff83260d8f97fd4a3fb47e408c669798a0fea7df413d7359c85f7ef7",
+                "bytes": 535,
+                "gzBytes": 355,
                 "encoding": "gzip",
                 "probe": "httpx -u https://demo.testfire.net/ -json -silent -status-code -title -tech-detect",
-                "at": "2026-11-17T08:56:08.026Z"
+                "at": "2026-11-17T21:10:24.944Z"
               }
             },
             {
               "tool": "katana",
               "exit": 0,
-              "ms": 17546,
+              "ms": 16682,
               "endpoints": 55,
               "sample": [
                 "https://demo.testfire.net/",
-                "https://demo.testfire.net/index.jsp?content=security.htm",
                 "https://demo.testfire.net/swagger/index.html",
-                "https://demo.testfire.net/style.css",
-                "https://demo.testfire.net/status_check.jsp",
                 "https://demo.testfire.net/survey_questions.jsp",
+                "https://demo.testfire.net/status_check.jsp",
+                "https://demo.testfire.net/style.css",
+                "https://demo.testfire.net/index.jsp?content=security.htm",
                 "https://demo.testfire.net/default.jsp?content=security.htm",
                 "https://demo.testfire.net/index.jsp?content=privacy.htm",
-                "https://demo.testfire.net/swagger/swagger-ui.css",
+                "https://demo.testfire.net/survey_questions.jsp?step=a",
                 "https://demo.testfire.net/swagger/swagger-ui-standalone-preset.js",
                 "https://demo.testfire.net/swagger/swagger-ui-bundle.js",
-                "https://demo.testfire.net/subscribe.jsp",
-                "https://demo.testfire.net/index.jsp?content=personal_savings.htm",
-                "https://demo.testfire.net/survey_questions.jsp?step=a",
                 "https://demo.testfire.net/index.jsp?content=inside_careers.htm",
+                "https://demo.testfire.net/index.jsp?content=personal_savings.htm",
+                "https://demo.testfire.net/subscribe.jsp",
                 "https://demo.testfire.net/index.jsp?content=inside_press.htm",
-                "https://demo.testfire.net/index.jsp?content=business_other.htm",
-                "https://demo.testfire.net/index.jsp?content=inside_investor.htm",
-                "https://demo.testfire.net/index.jsp?content=inside_about.htm",
-                "https://demo.testfire.net/index.jsp?content=pr/20060413.htm",
-                "https://demo.testfire.net/index.jsp?content=pr/20060518.htm",
-                "https://demo.testfire.net/index.jsp?content=pr/20060817.htm",
+                "https://demo.testfire.net/index.jsp?content=inside_trainee.htm",
+                "https://demo.testfire.net/index.jsp?content=inside_internships.htm",
+                "https://demo.testfire.net/swagger/swagger-ui.css",
                 "https://demo.testfire.net/index.jsp?content=pr/20060720.htm",
+                "https://demo.testfire.net/index.jsp?content=pr/20060413.htm",
                 "https://demo.testfire.net/index.jsp?content=pr/20060921.htm",
-                "https://demo.testfire.net/index.jsp?content=inside_executives.htm"
+                "https://demo.testfire.net/index.jsp?content=pr/20060817.htm",
+                "https://demo.testfire.net/index.jsp?content=pr/20060518.htm",
+                "https://demo.testfire.net/index.jsp?content=pr/20060928.htm",
+                "https://demo.testfire.net/index.jsp?content=pr/20061005.htm"
               ],
               "evidence": {
-                "file": "state/hunt/evidence/katana-demo.testfire.net-a4bce41d0a1b.txt.gz",
-                "sha256": "a4bce41d0a1b0a413565f4fbedc7b77fedab9e4365cc21538eddb8f580f5799d",
-                "bytes": 4139482,
-                "gzBytes": 836187,
+                "file": "state/hunt/evidence/katana-demo.testfire.net-da4d6a7d2982.txt.gz",
+                "sha256": "da4d6a7d2982b4f207759a1636fe3920c9d2c7851f2f5b6880bf2160cfcb595f",
+                "bytes": 4139477,
+                "gzBytes": 838039,
                 "encoding": "gzip",
                 "probe": "katana -u https://demo.testfire.net/ -fs dn -depth 3 -rate-limit 10 -crawl-duration 60s",
-                "at": "2026-11-17T08:56:25.670Z"
+                "at": "2026-11-17T21:10:41.743Z"
               }
             },
             {
               "tool": "nuclei",
               "pass": "root",
-              "exit": 0,
-              "ms": 321620,
+              "exit": 1,
+              "ms": 689,
               "scanned": 1,
               "matched": 0,
               "evidence": {
-                "file": "state/hunt/evidence/nuclei-root-demo.testfire.net-c302c040386b.txt.gz",
-                "sha256": "c302c040386b3c0c8dce1b88f8e38c6751b18c6dcfdcd7752f36a0fc0c856b68",
-                "bytes": 12115,
-                "gzBytes": 711,
+                "file": "state/hunt/evidence/nuclei-root-demo.testfire.net-4392f3df8981.txt.gz",
+                "sha256": "4392f3df89816a5cae59f099d2db485486ede97b04569f52f08313313d6a05d0",
+                "bytes": 263,
+                "gzBytes": 191,
                 "encoding": "gzip",
                 "probe": "nuclei -u https://demo.testfire.net/ -severity high,critical -tags exposure,misconfig,takeover,default-login -no-interactsh -rl 4",
-                "at": "2026-11-17T09:01:47.291Z"
+                "at": "2026-11-17T21:10:42.433Z"
               }
             },
             {
               "tool": "nuclei",
               "pass": "endpoints",
-              "exit": -1,
-              "ms": 139445,
+              "exit": 1,
+              "ms": 679,
               "scanned": 1,
               "matched": 0,
               "evidence": {
-                "file": "state/hunt/evidence/nuclei-endpoints-demo.testfire.net-0254ccdc3226.txt.gz",
-                "sha256": "0254ccdc32269c0cea7583934764ebfdfdc7e41e878a0c322d112dca9069304d",
-                "bytes": 5013,
-                "gzBytes": 401,
+                "file": "state/hunt/evidence/nuclei-endpoints-demo.testfire.net-4392f3df8981.txt.gz",
+                "sha256": "4392f3df89816a5cae59f099d2db485486ede97b04569f52f08313313d6a05d0",
+                "bytes": 263,
+                "gzBytes": 191,
                 "encoding": "gzip",
                 "probe": "nuclei -l /home/runner/work/xFREEDOLLARHACHx/xFREEDOLLARHACHx/state/hunt/evidence/targets-demo.testfire.net.txt -severity high,critical -tags exposure,misconfig,takeover,default-login -no-interactsh -rl 4",
-                "at": "2026-11-17T09:04:06.736Z"
-              },
-              "timedOut": true
+                "at": "2026-11-17T21:10:43.113Z"
+              }
             }
           ],
           "findings": 0,
-          "finishedAt": "2026-11-17T09:04:06.736Z"
+          "finishedAt": "2026-11-17T21:10:43.113Z"
         },
         {
           "host": "vulnweb.com",
-          "status": "skipped",
-          "why": "time budget exhausted before this target"
+          "why": "نطاق اختبار عام لتعداد النطاقات الفرعية (مصادر DNS/شهادات — بيلمس سجلات مش خدمة)",
+          "permission_url": "https://www.acunetix.com/vulnerability-scanner/webscantest/",
+          "scheme": "https",
+          "startedAt": "2026-11-17T21:10:43.113Z",
+          "steps": [
+            {
+              "tool": "httpx",
+              "exit": 0,
+              "ms": 10903,
+              "status": null,
+              "title": null,
+              "tech": [],
+              "evidence": {
+                "file": "state/hunt/evidence/httpx-vulnweb.com-e3b0c44298fc.txt.gz",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "bytes": 0,
+                "gzBytes": 20,
+                "encoding": "gzip",
+                "probe": "httpx -u https://vulnweb.com/ -json -silent -status-code -title -tech-detect",
+                "at": "2026-11-17T21:10:54.016Z"
+              }
+            },
+            {
+              "tool": "katana",
+              "exit": 0,
+              "ms": 21570,
+              "endpoints": 1,
+              "sample": [
+                "https://vulnweb.com/"
+              ],
+              "evidence": {
+                "file": "state/hunt/evidence/katana-vulnweb.com-ac948a669ccc.txt.gz",
+                "sha256": "ac948a669ccc982bc533cc1b25177cf5c8d001f06d16abed692fa88dbff67b23",
+                "bytes": 457,
+                "gzBytes": 339,
+                "encoding": "gzip",
+                "probe": "katana -u https://vulnweb.com/ -fs dn -depth 3 -rate-limit 10 -crawl-duration 60s",
+                "at": "2026-11-17T21:11:15.586Z"
+              }
+            },
+            {
+              "tool": "nuclei",
+              "pass": "root",
+              "exit": 1,
+              "ms": 694,
+              "scanned": 1,
+              "matched": 0,
+              "evidence": {
+                "file": "state/hunt/evidence/nuclei-root-vulnweb.com-4392f3df8981.txt.gz",
+                "sha256": "4392f3df89816a5cae59f099d2db485486ede97b04569f52f08313313d6a05d0",
+                "bytes": 263,
+                "gzBytes": 191,
+                "encoding": "gzip",
+                "probe": "nuclei -u https://vulnweb.com/ -severity high,critical -tags exposure,misconfig,takeover,default-login -no-interactsh -rl 4",
+                "at": "2026-11-17T21:11:16.282Z"
+              }
+            },
+            {
+              "tool": "nuclei",
+              "pass": "endpoints",
+              "exit": 1,
+              "ms": 683,
+              "scanned": 1,
+              "matched": 0,
+              "evidence": {
+                "file": "state/hunt/evidence/nuclei-endpoints-vulnweb.com-4392f3df8981.txt.gz",
+                "sha256": "4392f3df89816a5cae59f099d2db485486ede97b04569f52f08313313d6a05d0",
+                "bytes": 263,
+                "gzBytes": 191,
+                "encoding": "gzip",
+                "probe": "nuclei -l /home/runner/work/xFREEDOLLARHACHx/xFREEDOLLARHACHx/state/hunt/evidence/targets-vulnweb.com.txt -severity high,critical -tags exposure,misconfig,takeover,default-login -no-interactsh -rl 4",
+                "at": "2026-11-17T21:11:16.966Z"
+              }
+            }
+          ],
+          "findings": 0,
+          "finishedAt": "2026-11-17T21:11:16.966Z"
         }
       ],
-      "says": "اتفحص 3 هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل."
+      "says": "اتفحص 4 هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل."
     },
     "advisories": {
       "total": 1019,
@@ -332,7 +405,7 @@
     }
   },
   "failures": [],
-  "says_ar": "فكّرت على openai · المعالجة الحالية لا وجدت ثغرات في الأهداف المسموح بها، وتغطية الـ corpus قريبة من 1%؛ أهم خطوة على الرحلة هي توسيع نطاق البحث للمنتجات الأكثر شيوعاً ثم متابعة الراحةف تكرارية للبحث",
+  "says_ar": "فكّرت على openai · المنصة حالياً متحصّلة على 426509 وثيقة، مع تغطية 1% فقط. لا توجد مصادفات حتى الآن. الخطوة القادمة هي توسيع البحث في منتجات أخرى لمتمثّلة في القاعدة الحالية.",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
