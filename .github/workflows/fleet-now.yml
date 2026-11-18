@@ -148,6 +148,7 @@ jobs:
         timeout-minutes: 15
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          NOVA_KALI_SOFT_DEADLINE_MS: "1800000"  # TEST67 — 11 job × 8.5GB مع بعض = 9د بتكفيش (مقاس 13:44) — 30د
         run: |
           node scripts/kali-node-install.mjs "$HOME/kali-rootfs/rootfs" || \
             echo "::warning::kali pre-warm skipped this wave — kali_run هيثبته بنفسه أول ما ينطلب"
