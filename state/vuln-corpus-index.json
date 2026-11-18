@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "at": "2026-11-18T19:25:28.372Z",
+  "at": "2026-11-18T19:41:25.227Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
@@ -139,23 +139,23 @@
     },
     {
       "product": "windows_10_1809",
-      "count": 4081
+      "count": 4086
     },
     {
       "product": "windows_10_22h2",
-      "count": 4039
+      "count": 4044
     },
     {
       "product": "windows_10_21h2",
-      "count": 4033
+      "count": 4038
     },
     {
       "product": "windows_11_24h2",
-      "count": 3647
+      "count": 3652
     },
     {
       "product": "windows_server_2019",
-      "count": 3605
+      "count": 3610
     },
     {
       "product": "acrobat",
@@ -167,7 +167,7 @@
     },
     {
       "product": "windows_11_23h2",
-      "count": 3499
+      "count": 3504
     },
     {
       "product": "windows_10_1607",
@@ -195,7 +195,7 @@
     },
     {
       "product": "windows_11_25h2",
-      "count": 2905
+      "count": 2910
     },
     {
       "product": "ios_xe",
@@ -207,22 +207,22 @@
     },
     {
       "product": "windows_11_26h1",
-      "count": 2830
+      "count": 2835
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 50525038,
-    "sha256": "05ce22630483105167a73574c9ff3c484ce179d8437d68947a3701f17f0a923c"
+    "bytes": 50525328,
+    "sha256": "78531ed373fad3fc9c49404a138c2a07a5285aa3c160c54f2b03a7d4b8a07968"
   },
   "mode": "deepen",
-  "says_ar": "428069 ثغرة حقيقية · critical 40109 · high 163222 · 1782 مستغلّة فعلياً (KEV) · 407267 لها EPSS · 81953 منتج بـCPE · مزامنة 2026-11-18T19:25:28.372Z",
+  "says_ar": "428069 ثغرة حقيقية · critical 40109 · high 163222 · 1782 مستغلّة فعلياً (KEV) · 407267 لها EPSS · 81953 منتج بـCPE · مزامنة 2026-11-18T19:41:25.227Z",
   "deepen": {
     "nextStartIndex": 0,
     "windowPages": 12,
     "walkedFrom": 0,
     "nvdTotal": 428069,
     "coverage": 1,
-    "at": "2026-11-18T19:25:28.373Z"
+    "at": "2026-11-18T19:41:25.228Z"
   }
 }
