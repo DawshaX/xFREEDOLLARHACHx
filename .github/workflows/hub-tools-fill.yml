@@ -32,9 +32,9 @@ jobs:
           for grp in (d.get("groups") or {}).values():
               missing.update(grp.get("missing") or [])
           open("/tmp/missing.txt", "w").write("\n".join(sorted(missing)))
-          print(f"قبل: present={d.get('present')}/{d.get('total')} · الناقص={len(missing)}")
+          print("قبل: present=%s/%s · الناقص=%d" % (d.get("present"), d.get("total"), len(missing)))
           PY
-          head -70 /tmp/missing.txt
+          wc -l /tmp/missing.txt
       - name: تثبيت كل أداة ناقصة (مسلسل — الهَب بيسلسل بنفسه)
         run: |
           touch /tmp/failures.txt
@@ -42,36 +42,25 @@ jobs:
           while IFS= read -r tool; do
             [ -z "$tool" ] && continue
             i=$((i+1))
-            R=$(curl -s -m 470 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-                 -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
-            verdict=$(echo "$R" | python3 -c 'import json,sys
-try:
-  d=json.load(sys.stdin); print("OK" if d.get("ok") else "FAIL·"+str(d.get("error",""))[:120])
-except Exception as e: print("BAD·"+str(e)[:80])')
+            R=$(curl -s -m 470 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
+            verdict=$(echo "$R" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("OK" if d.get("ok") else "FAIL·"+str(d.get("error",""))[:120])' 2>/dev/null || echo "BAD·parse")
             echo "[$i/$total] $tool → $verdict"
             case "$verdict" in OK*) okc=$((okc+1));; *) failc=$((failc+1)); echo "$tool" >> /tmp/failures.txt;; esac
           done < /tmp/missing.txt
-          echo "ok=$okc fail=$failc" | tee /tmp/pass1.txt
+          echo "pass1: ok=$okc fail=$failc" | tee /tmp/pass1.txt
       - name: remedy dpkg + إعادة محاولة الفاشل (مرة)
         run: |
           [ -s /tmp/failures.txt ] || { echo "مافيش فاشل — skip"; exit 0; }
-          # الremedy على العقدة الحية (dpkg was interrupted كان علامة العطل المقاسة)
-          curl -s -m 120 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-            -d '{"command":"dpkg --configure -a 2>&1 | tail -3; echo REMEDY_DONE","timeoutMs":90000}' \
-            "$HUB/api/kali-env/exec" | tail -2 || true
+          curl -s -m 120 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"command":"dpkg --configure -a 2>&1 | tail -3; echo REMEDY_DONE","timeoutMs":90000}' "$HUB/api/kali-env/exec" | tail -2 || true
           okc=0; failc=0
           while IFS= read -r tool; do
             [ -z "$tool" ] && continue
-            R=$(curl -s -m 470 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-                 -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
-            verdict=$(echo "$R" | python3 -c 'import json,sys
-try:
-  d=json.load(sys.stdin); print("OK" if d.get("ok") else "FAIL·"+str(d.get("error",""))[:120])
-except Exception as e: print("BAD·"+str(e)[:80])')
+            R=$(curl -s -m 470 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
+            verdict=$(echo "$R" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("OK" if d.get("ok") else "FAIL·"+str(d.get("error",""))[:120])' 2>/dev/null || echo "BAD·parse")
             echo "[retry] $tool → $verdict"
             case "$verdict" in OK*) okc=$((okc+1));; *) failc=$((failc+1)); echo "$tool" >> /tmp/still.txt;; esac
           done < /tmp/failures.txt
-          echo "retry ok=$okc fail=$failc"
+          echo "retry: ok=$okc fail=$failc"
           if [ -s /tmp/still.txt ]; then echo "::notice::لسه ناقص بعد retry: $(tr '\n' ' ' < /tmp/still.txt)"; fi
       - name: القياس النهائي + التقرير
         run: |
@@ -80,22 +69,23 @@ except Exception as e: print("BAD·"+str(e)[:80])')
           python3 - <<'PY'
           import json, datetime
           d = json.load(open("/tmp/tools-after.json"))
+          b = json.load(open("/tmp/tools-before.json"))
           missing = set()
           for grp in (d.get("groups") or {}).values():
               missing.update(grp.get("missing") or [])
           report = {
             "at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            "before": {"present": json.load(open("/tmp/tools-before.json")).get("present")},
-            "after": {"present": d.get("present"), "total": d.get("total"), "measuredOn": d.get("measuredOn")},
+            "before": {"present": b.get("present"), "total": b.get("total")},
+            "after": {"present": d.get("present"), "total": d.get("total"), "measuredOn": str(d.get("measuredOn"))[:80]},
             "stillMissing": sorted(missing),
           }
           open("state/tools-fill-report.json", "w").write(json.dumps(report, ensure_ascii=False, indent=2))
-          print(f"بعد: present={d.get('present')}/{d.get('total')} · measuredOn={d.get('measuredOn')}")
-          print(f"لسه ناقص: {len(missing)} → {sorted(missing)[:40]}")
+          print("بعد: present=%s/%s · measuredOn=%s" % (d.get("present"), d.get("total"), d.get("measuredOn")))
+          print("لسه ناقص: %d → %s" % (len(missing), sorted(missing)[:40]))
           PY
           git config user.name "nova-bot"; git config user.email "nova@bot.local"
           git add state/tools-fill-report.json
-          git commit -m "state: tools-fill report — $(python3 -c 'import json; d=json.load(open("state/tools-fill-report.json")); print(d["after"]["present"], "/", d["after"]["total"])')" || true
+          git commit -m "state: tools-fill report" || true
           git push origin HEAD:arena/f288ad41-xfreedollarhachx || true
       - name: الخلاصة (gate الأدوات)
         run: |
@@ -103,9 +93,9 @@ except Exception as e: print("BAD·"+str(e)[:80])')
           import json
           d = json.load(open("/tmp/tools-after.json"))
           p, t = d.get("present"), d.get("total")
-          print(f"الأدوات النهائية: {p}/{t}")
+          print("الأدوات النهائية: %s/%s" % (p, t))
           if p == t:
-            print("::notice::كل الأدوات مثبتة 100% ✓")
+              print("::notice::كل الأدوات مثبتة 100% ✓")
           else:
-            print(f"::warning::ناقص {t-p} أداة — إعادة تشغيل الworkflow بتمر تانية")
+              print("::warning::ناقص %s أداة — إعادة تشغيل الworkflow بتمر تانية" % (t-p))
           PY
