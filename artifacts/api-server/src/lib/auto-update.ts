@@ -54,6 +54,14 @@ export interface AutoUpdateState {
   lastDetail: string;
   /** منين جه تاريخ النشر: api.github.com ولا Last-Modified لأصل الحزمة */
   updateSource?: "api" | "asset-head" | null;
+  /**
+   * TEST72 — حارس لوب التحديث: توقيت آخر أصل (asset) اتثبت بنجاح فعلًا.
+   * مقاس 2026-11-18: الأبديتر كان بيقارن توقيت الasset مع builtAt المحلي
+   * (نفس الzip!) فالفرق ثابت > 120s → «new build found» كل إقلاع → تنزيل
+   * → تثبيت → restart → ∞ (البوت بيتغير كل ~3.5د والهَب بيقع 502 كل مرة).
+   * التقارب الصح: نفس الأصل اللي اتثبت = مافيش جديد، مهما كان الفرق الزمني.
+   */
+  installedReleaseAt?: string | null;
   updatedAt: string | null;
   attempts: number;
   logFile: string;
@@ -397,6 +405,31 @@ export async function checkForUpdate(opts: { install?: boolean; force?: boolean 
       });
     }
 
+    /* TEST72 — حارس التقارب: نفس الأصل اللي اتثبت بنجاح = مافيش جديد.
+     * من غير ده: نفس الzip بيتنزّل ويتثبت ويعيد التشغيل للأبد لأن توقيت
+     * الأصل أكبر من builtAt المحلي بثبات (الحزمة اللي فيها نفس builtAt!). */
+    const storedNow = readState();
+    if (storedNow.installedReleaseAt && storedNow.installedReleaseAt === releaseAt) {
+      const boot = bootBuild().builtAt;
+      const disk = build.builtAt;
+      if (boot && disk && boot !== disk) {
+        return writeState({
+          lastCheckAt: new Date().toISOString(),
+          latestReleaseAt: releaseAt,
+          updateSource: releaseVia,
+          lastResult: "restart-needed",
+          lastDetail: `الملفات على الديسك أحدث من العملية الشغالة (${boot} مقابل ${disk}) — محتاج Restart`,
+        });
+      }
+      return writeState({
+        lastCheckAt: new Date().toISOString(),
+        latestReleaseAt: releaseAt,
+        updateSource: releaseVia,
+        lastResult: "up-to-date",
+        lastDetail: `نفس الحزمة اللي اتثبتت فعلًا (${releaseAt}) — حارس لوب التحديث`,
+      });
+    }
+
     const localMs = Date.parse(build.builtAt);
     const remoteMs = Date.parse(releaseAt);
     const deltaS = Math.round((remoteMs - localMs) / 1000);
@@ -508,6 +541,7 @@ function startInstaller(releaseAt: string): AutoUpdateState {
           lastResult: "installed",
           lastDetail: "اتطبّقت النسخة الجديدة — طلبنا إعادة التشغيل، بنتأكد إنها حصلت",
           updatedAt: new Date().toISOString(),
+          installedReleaseAt: releaseAt, // TEST72 — الجرس ده اتقرع وخلاص: الفحص الجاي يقول up-to-date
         });
         appendLog("files installed — writing the reload marker from the app itself");
         requestReload({
@@ -569,6 +603,7 @@ export function autoUpdateStatus(): AutoUpdateState {
     currentCommit: build?.commit ?? null,
     currentBuiltAt: build?.builtAt ?? null,
     latestReleaseAt: stored.latestReleaseAt ?? null,
+    installedReleaseAt: stored.installedReleaseAt ?? null,
     lastCheckAt: stored.lastCheckAt ?? null,
     lastResult: stored.lastResult ?? "idle",
     lastDetail: stored.lastDetail ?? "—",
