@@ -1,0 +1,45 @@
+# TEST59 — تثبيت كالي على الهَب الآن (POST /ops/kali/provision من runner —
+# شبكة runner مفتوحة والسانبوكس بيفصل POST). مؤقت حتى الأبديتر يسحب بنفسه.
+name: kali provision now (one-shot)
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-provision-now.yml"
+permissions:
+  contents: read
+concurrency:
+  group: kali-provision-now
+  cancel-in-progress: false
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HUB: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+    steps:
+      - name: fire the provision (owner gate + confirm)
+        run: |
+          set -e
+          echo "→ POST /api/ops/kali/provision (confirm=yes) إلى $HUB"
+          CODE=$(curl -s -o /tmp/prov.json -w "%{http_code}" -X POST \
+            "$HUB/api/ops/kali/provision?token=$TOKEN" \
+            -H "Content-Type: application/json" -H "x-nova-token: $TOKEN" \
+            -d '{"confirm":"yes"}' --max-time 60 || echo 000)
+          echo "HTTP $CODE"; cat /tmp/prov.json | head -c 400; echo
+          sleep 20
+          echo "→ الحالة الحية بعد التشغيل:"
+          curl -s "$HUB/api/ops/kali/provision/status?token=$TOKEN" --max-time 30 | head -c 500; echo
+      - name: wait for the install to finish (up to 10 min, poll status)
+        run: |
+          for i in $(seq 1 30); do
+            ST=$(curl -s "$HUB/api/ops/kali/provision/status?token=$TOKEN" --max-time 30)
+            PH=$(echo "$ST" | grep -oE '"phase":"[^"]*"' || echo '"phase":"?"')
+            RUN=$(echo "$ST" | grep -oE '"running":(true|false)' || echo 'running:?')
+            DONE=$(echo "$ST" | grep -oE '"partsDone":[0-9]+' || echo 'parts:?')
+            echo "[$i] $RUN · $PH · $DONE"
+            echo "$RUN" | grep -q false && break
+            sleep 20
+          done
+          echo "→ الحالة النهائية (rootfs على الهَب؟):"
+          curl -s "$HUB/api/kali-env/health?token=$TOKEN" --max-time 60 | head -c 600; echo
