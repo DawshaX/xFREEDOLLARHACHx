@@ -100,7 +100,11 @@ export async function kaliAnywhereExecStream(
       plane,
     };
   }
-  return null;
+  /* مافيش عقدة ردت — فشل محلي صادق (exitCode 127) بخصوص الاختناق إن وجد */
+  return {
+    stdout: "", stderr: lastErr ?? "مافيش عقدة كالي ردت", exitCode: 127, durationMs: 0,
+    plane: "الهَب — مافيش عقدة كالي ردت",
+  };
 }
 
 /** التنفيذ الموحّد: هَب → عقدة. null = مافيش طايرة كالي متاحة حالًا. */
@@ -134,12 +138,27 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise
       return { ...r, plane: "الهَب — كالي المدمجة (rootfs + proot)" };
     }
   }
-  const nodes = await orderedFleetNodes();
+  /* TEST71 — المسار كله fault-tolerant: مافيش throw بيقع العملية (كراش لوب
+   * مقاس 15:01 — كل استثناء غير معالج هنا = سقوط الهَب كله). */
+  let nodes: Array<{ id: string; hostname: string; mode: string }> = [];
+  try {
+    nodes = await orderedFleetNodes();
+  } catch (e) {
+    try { broadcastEvent("kali_exec_done", { id: execId, cmd: cmd.slice(0, 200), plane: "fleet-enumeration-failed", exitCode: 127, durationMs: Date.now() - Date.now(), running: false }); } catch {}
+    return { stdout: "", stderr: String(e?.message ?? e).slice(0, 300), exitCode: 127, durationMs: 0, plane: "الهَب — التعذّر على الأسطول" };
+  }
+  let lastErr: string | null = null;
   for (const a of nodes) {
     if (a.mode !== "MODE_BARE" && a.mode !== "MODE_PROOT") continue; // مش جاهزة — التالية (الجاهزة بتتجرب الأول)
     const plane = `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
     broadcastStart(plane);
-    const rr = await execOnLocalAgent(remoteRunCmd(cmd, a.mode, timeoutMs), a.id, timeoutMs + 10_000);
+    let rr: Awaited<ReturnType<typeof execOnLocalAgent>> = null;
+    try {
+      rr = await execOnLocalAgent(remoteRunCmd(cmd, a.mode, timeoutMs), a.id, timeoutMs + 10_000);
+    } catch (e) {
+      lastErr = String((e as Error)?.message ?? e).slice(0, 300);
+      continue; // العقدة دي وقعت — التالية
+    }
     if (!rr) continue;
     try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane(a.hostname, cmd, rr.exitCode === 0, rr.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
     broadcastDone(plane, rr.exitCode, rr.durationMs);
@@ -151,5 +170,9 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise
       plane,
     };
   }
-  return null;
+  /* مافيش عقدة ردت — فشل محلي صادق (exitCode 127) بخصوص الاختناق إن وجد */
+  return {
+    stdout: "", stderr: lastErr ?? "مافيش عقدة كالي ردت", exitCode: 127, durationMs: 0,
+    plane: "الهَب — مافيش عقدة كالي ردت",
+  };
 }
