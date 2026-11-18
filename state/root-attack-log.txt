@@ -63,3 +63,10 @@ data: [DONE]
 {"ok":false,"tool":"crackmapexec","pkg":"crackmapexec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:crackmapexec\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
 {"ok":false,"tool":"arp-scan","pkg":"arp-scan","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:arp-scan\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
 === INSTALLS DONE 2026-11-18T22:58:19Z ===
+=== القياس النهائي ===
+{
+  "present": 0,
+  "total": 0,
+  "measuredOn": null,
+  "stillMissing": null
+}
