@@ -22,7 +22,18 @@ prun() {  # prun "<guest-script>" — invocation قصير معزول
 # ── خريطة جيت هوب (host-side) — أمر المالك: «دور عالجيت هوب ووصلو أون لاين» ──
 gh_map() {  # $1=tool → "URL<TAB>DEST" (فاضي = مافيش)
   case "$1" in
+    ligolo-ng)
+      V=$(curl -sfL --max-time 30 "https://api.github.com/repos/sysdreamo/ligolo-ng/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+      [ -n "$V" ] && echo -e "https://github.com/sysdreamo/ligolo-ng/releases/download/$V/ligolo-ng_${V#v}_linux_amd64.tar.gz\t/usr/local/bin/ligolo-ng";;
+    asnmap)
+      V=$(curl -sfL --max-time 30 "https://api.github.com/repos/projectdiscovery/asnmap/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+      [ -n "$V" ] && echo -e "https://github.com/projectdiscovery/asnmap/releases/download/$V/asnmap_linux_amd64.zip\t/usr/local/bin/asnmap";;
+    shuffledns)
+      V=$(curl -sfL --max-time 30 "https://api.github.com/repos/projectdiscovery/shuffledns/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+      [ -n "$V" ] && echo -e "https://github.com/projectdiscovery/shuffledns/releases/download/$V/shuffledns_linux_amd64.zip\t/usr/local/bin/shuffledns";;
+    dvcs-ripper) echo -e "GITCLONE:https://github.com/kost/dvcs-ripper\t/usr/local/bin/dvcs-ripper";;
     chisel)      echo -e "https://github.com/jpillora/chisel/releases/download/v1.10.1/chisel_1.10.1_linux_amd64.gz\t/usr/local/bin/chisel";;
+    pspy)        echo -e "https://github.com/DominicBreuker/pspy/releases/download/v1.2.1/pspy64\t/usr/local/bin/pspy";;
     ligolo-ng)   echo -e "https://github.com/sysdreamo/ligolo-ng/releases/download/v0.8.2/ligolo-ng_linux_amd64.tar.gz\t/usr/local/bin/ligolo-ng";;
     pspy)        echo -e "https://github.com/DominicBreuker/pspy/releases/download/v1.2.1/pspy64\t/usr/local/bin/pspy";;
     grype)
@@ -45,7 +56,7 @@ install_one() {  # $1=tool $2=pkg → يطبع CH:<channel> أو فاضي (كر�
 export DEBIAN_FRONTEND=noninteractive
 TOOL='$tool'; PKG='$pkg'
 have() { command -v "\$TOOL" >/dev/null 2>&1 && return 0; dpkg -s "\$PKG" 2>/dev/null | grep -q 'install ok installed' && return 0; pip3 show "\$PKG" >/dev/null 2>&1 && return 0; return 1; }
-remedy() { [ -f /var/lib/dpkg/statoverride ] && : > /var/lib/dpkg/statoverride; dpkg --configure -a 2>/dev/null; for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p "/\$d" 2>/dev/null; done; apt-get -f install -y >/dev/null 2>&1; }
+remedy() { [ -f /var/lib/dpkg/statoverride ] && : > /var/lib/dpkg/statoverride; rm -f /var/lib/dpkg/lock* /var/lib/apt/lists/lock /var/cache/apt/archives/lock 2>/dev/null; dpkg --configure -a 2>/dev/null; for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p "/\$d" 2>/dev/null; done; apt-get -f install -y >/dev/null 2>&1; }
 have && { echo CH:already; exit 0; }
 remedy
 apt-get install -y -o Dpkg::Options::=--force-confnew "\$PKG" >/dev/null 2>&1 && have && { echo CH:apt; exit 0; }
@@ -65,10 +76,17 @@ have && { echo CH:github; exit 0; }
 echo CH:none
 GOSEOF
 )
-  timeout 660 "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "$guest" 2>> "$LOG" | tail -1
+  timeout 900 "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "$guest" 2>> "$LOG" | tail -1
 }
 
 ok=0; fail=""; n=0
+# BOOTSTRAP أولًا: pip3 + jq — القنوات التانية بتاعتهم
+for BT in python3-pip:python3-pip jq:jq; do
+  T="${BT%%:*}"; K="${BT##*:}"
+  CH=$(install_one "$T" "$K")
+  [ -z "$CH" ] && CH=$(install_one "$T" "$K")
+  case "$CH" in CH:*) ok=$((ok+1)); echo "OK:$T (${CH#CH:})";; *) fail="$fail $T"; echo "FAIL:$T";; esac
+done
 while IFS=$'\t' read -r tool pkg; do
   [ -z "${tool:-}" ] && continue
   [ "$pkg" = "-" ] && pkg="$tool"
