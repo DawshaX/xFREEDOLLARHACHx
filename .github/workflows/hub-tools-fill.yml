@@ -3,7 +3,7 @@
 # (curl من runner لنوفا مقاس شغال — العكس من السانبوكس المقطوع).
 # الميكانيكا: GET tools → الناقص من كل الفئات → POST install لكل أداة (الهَب
 # بيسلسلها بنفسه install.running) → remedy dpkg لو لزم → إعادة قياس → تقرير.
-name: kali tools fill (install every missing tool → 248/248)
+name: kali tools fill v3 (TEST78b installer — GitHub/pip fallbacks live)
 on:
   push:
     paths:
