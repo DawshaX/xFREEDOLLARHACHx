@@ -1,0 +1,84 @@
+# TEST80e — «أمر الروت والهجوم» — الجلسة المقاسة:
+# proot بيطير signal 6 (path.c:547 assertion) على الأوامر الطويلة → التنظيف
+# ما اتنفذش أبدًا وكل تثبيت بيرجع «dpkg was interrupted». العلاج المقاس:
+# أوامر قصيرة جدًا منفصلة، كل واحد بretry ×3، وتحقق نجاح قبل التالي.
+name: kali root attack v2 (short-invocation heal → then install criticals)
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-root-attack-v2.yml"
+permissions:
+  contents: write
+concurrency:
+  group: kali-root-attack-v2
+  cancel-in-progress: false
+jobs:
+  attack2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: التنظيف — أمر قصير واحد في كل مرة ×retry
+        run: |
+          L=state/root-attack-log.txt
+          echo "=== ROOT ATTACK v2 $(date -u +%FT%TZ) ===" > $L
+          heal_step() {
+            local name="$1"; local cmd="$2"; local tries=0
+            while [ $tries -lt 3 ]; do
+              tries=$((tries+1))
+              R=$(curl -s -m 300 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"command\":$(python3 -c "import json,sys;print(json.dumps(sys.argv[1]))" "$cmd"),\"timeoutMs\":240000}" "$HUB/api/kali-env/exec" 2>/dev/null)
+              OUT=$(echo "$R" | jq -r 'if type=="object" then "\(.exitCode) | \(.output // "" | .[0:180] | gsub("\n"; " ~ "))" else "PARSE_FAIL" end' 2>/dev/null)
+              echo "[$name try$tries] $OUT" >> $L
+              case "$OUT" in 0\ *) echo "✓ $name نجح" >> $L; return 0;; esac
+              sleep 2
+            done
+            echo "✗ $name فشل 3 محاولات — كمل على أي حال" >> $L
+            return 1
+          }
+          heal_step "root-check" "id -u"
+          heal_step "locks" "rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock && echo LOCKS_CLEAN"
+          heal_step "updates-dir" "rm -rf /var/lib/dpkg/updates && mkdir -p /var/lib/dpkg/updates && echo UPDATES_CLEAN"
+          heal_step "triggers" "rm -rf /var/lib/dpkg/triggers/File && mkdir -p /var/lib/dpkg/triggers/File && echo TRIG_CLEAN"
+          heal_step "configure-a" "dpkg --configure -a --force-confdef --force-confnew 2>&1 | tail -3 && echo CONFIG_DONE"
+          heal_step "configure-a2" "dpkg --configure -a --force-confdef --force-confnew 2>&1 | tail -2 && echo CONFIG2_DONE"
+          heal_step "apt-fix" "DEBIAN_FRONTEND=noninteractive apt-get -f install -y -qq 2>&1 | tail -3 && echo FIX_DONE"
+          heal_step "audit" "dpkg --audit 2>&1 | head -3; echo AUDIT_END"
+          heal_step "apt-update" "DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2 && echo UPDATE_DONE"
+          echo "=== HEAL FINISHED $(date -u +%FT%TZ) ===" >> $L
+          true
+      - name: تثبيت الأدوات الحرجة واحد واحد (بعد الشفاء)
+        run: |
+          L=state/root-attack-log.txt
+          for tool in amass dirsearch arjun subfinder naabu dnsx sherlock sublist3r bettercap hcxtools arp-scan steghide exiftool sleuthkit routersploit crackmapexec; do
+            curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>/dev/null || echo "REQ_FAIL:$tool" >> $L
+            echo "" >> $L
+          done
+          echo "=== INSTALLS DONE $(date -u +%FT%TZ) ===" >> $L
+          true
+      - name: كوميت اللوج (دايمًا)
+        run: |
+          git config user.name "nova-bot" || true
+          git config user.email "nova@bot.local" || true
+          git add -f state/root-attack-log.txt || true
+          git commit -m "state: root-attack v2 log" || true
+          git pull --no-rebase --no-edit origin arena/82d00f13-xfreedollarhachx || true
+          git push origin HEAD:arena/82d00f13-xfreedollarhachx || true
+          exit 0
+      - name: القياس النهائي (jq خالص)
+        run: |
+          L=state/root-attack-log.txt
+          sleep 8
+          curl -s -m 280 -H "x-nova-token: $TOKEN" "$HUB/api/kali-env/tools?fresh=$RANDOM" -o /tmp/tools-after.json || true
+          jq '{present, total, measuredOn, stillMissing: ([.groups[].missing] | add)}' /tmp/tools-after.json > state/root-attack-report.json 2>/dev/null || cp /tmp/tools-after.json state/root-attack-report.json
+          echo "=== القياس النهائي ===" >> $L
+          cat state/root-attack-report.json >> $L 2>/dev/null || true
+          git config user.name "nova-bot" || true
+          git config user.email "nova@bot.local" || true
+          git add -f state/root-attack-report.json state/root-attack-log.txt || true
+          git commit -m "state: root-attack v2 report" || true
+          git pull --no-rebase --no-edit origin arena/82d00f13-xfreedollarhachx || true
+          git push origin HEAD:arena/82d00f13-xfreedollarhachx || true
+          exit 0
