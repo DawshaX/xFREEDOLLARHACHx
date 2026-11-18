@@ -3,7 +3,7 @@
 # (curl من runner لنوفا مقاس شغال — العكس من السانبوكس المقطوع).
 # الميكانيكا: GET tools → الناقص من كل الفئات → POST install لكل أداة (الهَب
 # بيسلسلها بنفسه install.running) → remedy dpkg لو لزم → إعادة قياس → تقرير.
-name: kali tools fill v5 (stable hub — 76 missing)
+name: kali tools fill v6 (pip fix + confold remedy live)
 on:
   push:
     paths:
