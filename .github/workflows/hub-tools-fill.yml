@@ -69,13 +69,23 @@ jobs:
             echo "[retry] $tool → $verdict"
             case "$verdict" in OK*) okc=$((okc+1));; *) failc=$((failc+1)); echo "$tool" >> /tmp/still.txt;; esac
           done < /tmp/failures.txt
-          echo "retry: ok=$okc fail=$failc"
+          echo "retry: ok=$okc fail=$failc" | tee -a $L
           if [ -s /tmp/still.txt ]; then echo "::notice::لسه ناقص بعد retry: $(tr '\n' ' ' < /tmp/still.txt)"; fi
-      - name: القياس النهائي + التقرير
+          git config user.name "nova-bot" 2>/dev/null; git config user.email "nova@bot.local" 2>/dev/null
+          git add state/tools-fill-log.txt 2>/dev/null
+          git commit -m "state: tools-fill partial log" 2>/dev/null || true
+          git pull --rebase origin arena/f288ad41-xfreedollarhachx 2>/dev/null || true
+          git push origin HEAD:arena/f288ad41-xfreedollarhachx 2>/dev/null || true
+          exit 0
+      - name: القياس النهائي + التقرير (مستحيل تفشل — كل حاجة مسجلة)
         run: |
           L=state/tools-fill-log.txt
+          (
+          set +e
           sleep 10
-          curl -s -m 240 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-after.json
+          curl -s -m 280 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-after.json
+          echo "after-bytes=$(wc -c < /tmp/tools-after.json)" >> $L
+          head -c 200 /tmp/tools-after.json >> $L; echo >> $L
           python3 - <<'PY'
           import json, datetime
           d = json.load(open("/tmp/tools-after.json"))
@@ -93,12 +103,16 @@ jobs:
           print("بعد: present=%s/%s · measuredOn=%s" % (d.get("present"), d.get("total"), d.get("measuredOn")))
           print("لسه ناقص: %d → %s" % (len(missing), sorted(missing)[:40]))
           PY
+          echo "python-exit=$?" >> $L
           echo "=== fill ended $(date -u +%FT%TZ) ===" >> $L
-          git config user.name "nova-bot"; git config user.email "nova@bot.local"
-          git add state/tools-fill-report.json state/tools-fill-log.txt
-          git commit -m "state: tools-fill report + log" || true
-          git pull --rebase origin arena/f288ad41-xfreedollarhachx --quiet || true
-          git push origin HEAD:arena/f288ad41-xfreedollarhachx || true
+          ) 2>&1 | tee -a $L
+          echo "step-exit=$?" >> $L
+          git config user.name "nova-bot" 2>/dev/null; git config user.email "nova@bot.local" 2>/dev/null
+          git add state/tools-fill-report.json state/tools-fill-log.txt 2>/dev/null
+          git commit -m "state: tools-fill report + log" 2>/dev/null || true
+          git pull --rebase origin arena/f288ad41-xfreedollarhachx 2>/dev/null || true
+          git push origin HEAD:arena/f288ad41-xfreedollarhachx 2>/dev/null || true
+          exit 0
       - name: الخلاصة (gate الأدوات)
         run: |
           python3 - <<'PY'
