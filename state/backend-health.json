@@ -1,75 +1,79 @@
 {
-  "at": "2026-11-17T18:29:26.483Z",
+  "at": "2026-11-18T01:53:13.400Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
-  "verdict": "RED",
-  "counts": null,
-  "corpusSample": 0,
-  "corpusSearched": null,
-  "corpusIndexTotal": null,
-  "corpusSlice": null,
-  "negativeSearchOk": false,
-  "negativeSearched": null,
-  "corpusDated": null,
+  "verdict": "GREEN",
+  "counts": {
+    "cves": 425934,
+    "huntRuns": 35,
+    "findings": 0
+  },
+  "corpusSample": 3,
+  "corpusSearched": 425934,
+  "corpusIndexTotal": 426509,
+  "corpusSlice": true,
+  "negativeSearchOk": true,
+  "negativeSearched": 425934,
+  "corpusDated": true,
   "chat": {
     "ok": true,
     "status": 200,
     "seat": "pollinations-openai",
-    "chunks": 9,
+    "chunks": 8,
     "streamed": true,
-    "firstChunkMs": 870,
-    "totalMs": 871,
+    "firstChunkMs": 459,
+    "totalMs": 460,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
   "checks": [
     {
       "name": "health",
-      "status": 0,
-      "ms": 30003,
-      "ok": false,
-      "sample": "The operation was aborted due to timeout"
+      "status": 200,
+      "ms": 9308,
+      "ok": true,
+      "sample": "{\"ok\":true,\"at\":\"2026-11-18T01:53:07.312Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":425934,\"huntRuns\":35,\"findings\":0}}"
     },
     {
       "name": "hunt",
-      "status": 0,
-      "ms": 30001,
-      "ok": false,
-      "sample": "The operation was aborted due to timeout"
+      "status": 200,
+      "ms": 1661,
+      "ok": true,
+      "sample": "{\"run\":{\"id\":45,\"at\":\"2026-11-17T21:08:35.813+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":34273,\"katana\":120404,\"nuclei:root\":3323,\"nucl"
     },
     {
       "name": "organs",
       "status": 200,
-      "ms": 19938,
+      "ms": 599,
       "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"425934 CVE · 426410 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-17T16:02:00.174666+00:00\",\"updated_at\":\"2"
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"425934 CVE · 426509 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-18T01:52:00.253108+00:00\",\"updated_at\":\"2"
     },
     {
       "name": "corpus?q=nginx",
-      "status": 0,
-      "ms": 30001,
-      "ok": false,
-      "sample": "The operation was aborted due to timeout"
+      "status": 200,
+      "ms": 2079,
+      "ok": true,
+      "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2021-32637\",\"severity\":\"critical\",\"cvss\":10,\"kev\":false,\"epss\":0.02151,\"products\":[\"authelia\"],\"summary\":\"Authelia is a a single sign-on multi-factor portal for web apps. This affects use"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
-      "status": 0,
-      "ms": 30001,
-      "ok": false,
-      "sample": "The operation was aborted due to timeout"
+      "status": 200,
+      "ms": 1266,
+      "ok": true,
+      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":425934,\"indexTotal\":426509,\"syncedAt\":\"2026-11-17T19:45:11.878Z\",\"slice\":true,\"at\":\"2026-11-18T01:53:12.926Z\"}"
     },
     {
       "name": "corpus dated (published)",
-      "status": 0,
+      "status": 200,
       "ms": 0,
-      "ok": false,
-      "sample": "published="
+      "ok": true,
+      "sample": "published=2021-05-28,2022-07-06,2022-07-08"
     },
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 871,
+      "ms": 460,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=9 first=870ms total=871ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=8 first=459ms total=460ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
