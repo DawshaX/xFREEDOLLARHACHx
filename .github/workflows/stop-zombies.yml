@@ -1,0 +1,31 @@
+# TEST59c — التنضيف الفوري: إلغاء الزومبي والruns العالقة (بتنفذ من جوه
+# الActions حيث github.token عنده actions:write على نفس الrepo).
+name: cleanup stuck runs (one-shot)
+on:
+  push:
+    paths:
+      - ".github/workflows/stop-zombies.yml"
+permissions:
+  actions: write
+  contents: read
+concurrency:
+  group: stop-zombies
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: cancel the stuck fleet runs (they hold all 20 slots)
+        run: |
+          for R in 44153053870 44220384700 44215226019 44201214019 44215224793 44259043542; do
+            echo "→ cancel $R:"
+            curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$R/cancel" | head -c 120
+            echo
+          done
+      - name: self-checkout the cleanup file (so the next push removes it)
+        run: echo "done — الفحص الجاي هيشتغل على السلات الفاضية"
