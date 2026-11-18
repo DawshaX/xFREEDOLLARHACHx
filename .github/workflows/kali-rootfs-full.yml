@@ -1,0 +1,180 @@
+# TEST64 — أمر المالك 09:45Z: «كل الادوات كاملة من الاخر · دور عالجيت هوب ووصلو
+# اون لاين · كل التحميلات والتخزين عالجيت هوب».
+# بناء كالي rootfs كاملة على الCI (نفس بيئة العقدة بالحرف عبر kali-node-install.mjs):
+#   1) guest كامل من فرع kali-rootfs (2113 حزمة)
+#   2) تشخيص dpkg (statoverride) بالحرف — annotations كاملة
+#   3) كل الأدوات الناقصة المقاسة من الهَب الحي: apt → pip → جيت هوب releases
+#   4) تحقق كل الكتالوج (الموجود قبل + الجديد)
+#   5) إعادة تغليف rootfs → أجزاء 90MB → فرع kali-rootfs-staging → تبديل atomic
+#      للفرع kali-rootfs (مافيش عقدة تتكسر في نص التحديث)
+name: kali rootfs full (all missing tools → GitHub store)
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-rootfs-full.yml"
+permissions:
+  contents: write
+concurrency:
+  group: kali-rootfs-full
+  cancel-in-progress: false
+jobs:
+  full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      NOVA_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: guest كامل من المخزن (نفس سكربت العقدة)
+        run: |
+          node scripts/kali-node-install.mjs /mnt/kali-rootfs/rootfs || {
+            echo "::error::guest install فشل — المخزن مش مقروء"
+            exit 1
+          }
+          cat /mnt/kali-rootfs/.kali-node-installed
+
+      - name: تشخيص dpkg بالحرف (محاولة ffuf — المخرج كامل annotations)
+        run: |
+          P=/mnt/kali-rootfs/rootfs/usr/local/bin/proot-static
+          R=/mnt/kali-rootfs/rootfs
+          "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c '
+            export DEBIAN_FRONTEND=noninteractive
+            touch /var/lib/dpkg/statoverride 2>/dev/null; chmod 644 /var/lib/dpkg/statoverride 2>/dev/null
+            dpkg --configure -a 2>&1 | tail -3
+            apt-get update 2>&1 | tail -5
+            apt-get install -y ffuf 2>&1 | tail -25
+          ' > /tmp/diag.txt 2>&1 || true
+          split -b 700 /tmp/diag.txt /tmp/diagc_
+          for C in /tmp/diagc_*; do
+            MSG=$(cat "$C" | tr -d '\n\r')
+            echo "::warning::diag: $MSG"
+          done
+
+      - name: توليد قايمة الناقص + الكتالوج الكامل من الهَب الحي (fallback مدمج)
+        run: |
+          node --input-type=module << 'NOVAEOF'
+          import fs from "node:fs";
+          const ALIAS = { exiftool: "libimage-exiftool-perl", empire: "powershell-empire", redis: "redis-server" };
+          const FALLBACK_MISSING = ("ffuf amass sublist3r libimage-exiftool-perl steghide volatility3 responder netexec crackmapexec arp-scan sherlock " +
+            "subfinder dnsx naabu vulners dirsearch katana arjun hcxdumptool hcxtools routersploit bettercap ettercap empire " +
+            "bloodhound chisel ligolo-ng sleuthkit ghidra ltrace strace wkhtmltopdf pandoc faraday dradis cherrytree recordmydesktop libreoffice " +
+            "jq spiderfoot maigret asnmap shuffledns evilgrade legs checksec gvm pentestly pip-audit trivy grype droopescan paramspider x8 xsstrike dalfox w3af ssrfmap " +
+            "sidguesser mongosh maskprocessor rainbowcrack brutespray fernet wifipumpkin3 eaphammer retdec evilginx2 venom elfutils driftnet ferret netsniff-ng " +
+            "pspy dvcs-ripper peass-ng testdisk photorec keepnote casefile king-phisher gophish phishery phoneinfoga socialanalyzer python3-pip openvpn docker zsh vim aria2").split(/\s+/);
+          const FALLBACK_PRESENT = ("nmap masscan sqlmap nikto hydra john hashcat wireshark tcpdump gobuster dirb feroxbuster wpscan whatweb wafw00f nuclei dnsrecon whois dig " +
+            "aircrack-ng reaver binwalk impacket-smbclient metasploit-framework burpsuite zaproxy setoolkit maltego beef-xss ophcrack cewl enum4linux hping3 socat msfvenom " +
+            "searchsploit proxychains4 ssh openssl httpx theHarvester dnsenum fierce recon-ng mitmproxy dsniff arpspoof macchanger yersinia tshark foremost autopsy guymager " +
+            "dcfldd scalpel radare2 gdb objdump readelf strings apktool jadx dex2jar nasm cutycapt curl wget git python3 node netcat ncat medusa crunch wordlists seclists " +
+            "patator ncrack hashid hash-identifier airmon-ng airodump-ng aireplay-ng airbase-ng kismet wifite bully pixiewps fern-wifi-cracker hostapd-wpe rizin baksmali " +
+            "upx yara hakrawler joomscan skipfish padbuster sqldict tnscmd10g oscanner sqsh sqlitebrowser chntpw linpeas winpeas impacket-ntlmrelayx weevely gpp-decrypt " +
+            "bulk_extractor capinfos chkrootkit dc3dd galleta hashdeep p0f rkhunter pipal metagoofil wapiti unix-privesc-check openvas lynis netdiscover dnstracer dnsmap " +
+            "dnswalk dmitry censys shodan impacket-smbexec impacket-psexec impacket-wmiexec impacket-secretsdump shellter macof webspy urlsnarf nano htop tmux screen ruby").split(/\s+/);
+          let missing = [], present = [];
+          try {
+            const r = await fetch("https://nova.waifly.com/api/kali-env/tools?token=" + process.env.NOVA_TOKEN, { signal: AbortSignal.timeout(30000) });
+            const j = await r.json();
+            for (const g of Object.values(j.groups || {})) {
+              for (const m of g.missing || []) if (!missing.includes(m)) missing.push(m);
+              for (const p of g.present || []) if (!present.includes(p)) present.push(p);
+            }
+            console.log("من الهَب الحي: missing=" + missing.length + " present=" + present.length);
+          } catch (e) {
+            console.log("الهَب متوصلش (" + String(e.message).slice(0, 40) + ") — القايمة المدمجة");
+          }
+          if (!missing.length) missing = FALLBACK_MISSING;
+          const seen = new Set(present);
+          const toInstall = missing.filter((m) => !seen.has(m) && !FALLBACK_PRESENT.includes(m));
+          fs.writeFileSync("/tmp/nova-missing.tsv",
+            toInstall.map((t) => t + "\t" + (ALIAS[t] || t)).join("\n") + "\n");
+          const verify = [...new Set([...present, ...toInstall, ...FALLBACK_PRESENT])].filter(Boolean);
+          fs.writeFileSync("/tmp/nova-verify.txt", verify.join("\n") + "\n");
+          fs.writeFileSync("/tmp/nova-counts.txt", "install=" + toInstall.length + " verify=" + verify.length);
+          console.log("هيتثبت: " + toInstall.length + " · التحقق النهائي على: " + verify.length + " أداة");
+          NOVAEOF
+          echo "::notice::$(cat /tmp/nova-counts.txt)"
+
+      - name: التثبيت الكامل جوه الجست (apt → pip → جيت هوب)
+        timeout-minutes: 80
+        run: |
+          P=/mnt/kali-rootfs/rootfs/usr/local/bin/proot-static
+          R=/mnt/kali-rootfs/rootfs
+          cp scripts/kali-rootfs-full-build.sh "$R/tmp/build.sh"
+          cp /tmp/nova-missing.tsv /tmp/nova-verify.txt "$R/tmp/"
+          chmod +x "$R/tmp/build.sh"
+          "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c '/tmp/build.sh' \
+            > /tmp/build-out.txt 2>&1 || echo "::warning::builder exit غير صفر — التقرير هو الحقيقة"
+          OKN=$(grep -cE "^OK:" /tmp/build-out.txt || echo 0)
+          echo "::notice::BUILD: $(cat /tmp/nova-counts.txt) · مثبتت بنجاح OK=$OKN"
+          split -b 700 /tmp/build-out.txt /tmp/buildc_ || true
+          for C in /tmp/buildc_*; do
+            echo "::notice::bld: $(cat $C | tr -d '\n\r' | tail -c 600)"
+          done
+          REPORT="$R/tmp/nova-tools-report.json"
+          [ -f "$REPORT" ] && cp "$REPORT" ./tools-report.json
+
+      - name: إعادة التغليف → أجزاء 90MB → staging → تبديل atomic للمخزن
+        timeout-minutes: 60
+        run: |
+          set -e
+          cd /mnt/kali-rootfs
+          echo "[tar] guest → tar.gz (pigz — 4 cores)"
+          sudo apt-get install -y -qq pigz >/dev/null 2>&1 || true
+          tar -cf - rootfs | pigz -1 > rootfs-full.tar.gz
+          echo "[split] أجزاء 90MB"
+          split -b 90m -d -a 2 rootfs-full.tar.gz part- && rm rootfs-full.tar.gz
+          N=$(ls part-* | wc -l); SZ=$(du -sb rootfs | cut -f1)
+          echo "[verify-store] parts=$N bytes=$SZ"
+          sha256sum part-* > /tmp/SHA256SUMS.new
+          P2=/mnt/kali-rootfs/rootfs/usr/local/bin/proot-static
+          PKGC=$($P2 -0 -R /mnt/kali-rootfs/rootfs -w /root -b /dev -b /proc -b /sys /bin/sh -c 'dpkg -l 2>/dev/null | grep -c "^ii"' || echo 0)
+          PKGC=$(echo "$PKGC" | tr -dc '0-9')
+          FAILS=$(grep -o '"installFailed": "[^"]*"' /mnt/kali-rootfs/rootfs/tmp/nova-tools-report.json 2>/dev/null | cut -d'"' -f4 || true)
+          [ -z "$FAILS" ] && FAILS="ولا حاجة"
+          printf 'PRETTY_NAME=Kali GNU/Linux Rolling\npackages=%s\nbytes=%s\nbuilt_at=%s\ncommit=%s\nrun_id=%s\nfailed_extra=%s\n' \
+            "$PKGC" "$SZ" "$(date -u +%FT%TZ)" "${GITHUB_SHA::7}" "$GITHUB_RUN_ID" "$FAILS" > /tmp/MANIFEST.new
+          $P2 -0 -R /mnt/kali-rootfs/rootfs -w /root -b /dev -b /proc -b /sys /bin/sh -c 'dpkg -l 2>/dev/null | awk "/^ii/{print \$2}"' > /tmp/PACKAGES.new || true
+          echo "[store] packages=$PKGC · failed=[$FAILS]"
+          git config --global user.name "nova-ci-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git clone --filter=blob:none --no-checkout --quiet \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /mnt/push
+          cd /mnt/push
+          git branch staging origin/kali-rootfs
+          git symbolic-ref HEAD refs/heads/staging
+          git reset --mixed --quiet
+          git rm -r --cached --quiet . || true
+          i=0; BATCH=16
+          for f in /mnt/kali-rootfs/part-*; do
+            cp "$f" .
+            git add "$(basename "$f")"
+            i=$((i+1))
+            if [ $((i % BATCH)) -eq 0 ]; then
+              git commit -q -m "rootfs-full: batch $((i/BATCH)) ($i parts)"
+              git push --quiet --force origin staging:refs/heads/kali-rootfs-staging
+              echo "pushed batch $((i/BATCH))"
+            fi
+          done
+          git add -A
+          git commit -q -m "rootfs-full: remaining parts" || true
+          cp /tmp/SHA256SUMS.new SHA256SUMS
+          cp /tmp/MANIFEST.new MANIFEST.txt
+          cp /tmp/PACKAGES.new PACKAGES.txt
+          git add -A
+          git commit -q -m "rootfs-full: MANIFEST + SHA256SUMS — المخزن الكامل بكل الأدوات (أمر المالك)"
+          git push --quiet --force origin staging:refs/heads/kali-rootfs-staging
+          git push --quiet origin staging:kali-rootfs
+          NEW=$(git ls-remote origin kali-rootfs | cut -f1)
+          echo "::notice::✓ المخزن اتحدث atomic — kali-rootfs = ${NEW:0:7} · parts=$N · packages=$PKGC · bytes=$SZ · failed=[$FAILS]"
+
+      - name: التقرير artifact (للذاكرة)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tools-report
+          path: |
+            tools-report.json
+            nova-missing.tsv
+            nova-verify.txt
