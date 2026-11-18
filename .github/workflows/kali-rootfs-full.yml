@@ -108,18 +108,14 @@ jobs:
         run: |
           P=$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static
           R=$HOME/kali-rootfs/rootfs
-          # proot -R بيربط /tmp الخاصة بالهوست جوه الجست (مقاس) — فالملفات في /root
-          cp scripts/kali-rootfs-full-build.sh "$R/root/build.sh"
+          # الباني host-side: أداة واحدة = proot invocation واحد (crash-safe — مقاس 10:33Z)
           cp /tmp/nova-missing.tsv /tmp/nova-verify.txt "$R/root/"
-          chmod +x "$R/root/build.sh"
-          "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c '/root/build.sh' \
-            > /tmp/build-out.txt 2>&1 || echo "::warning::builder exit غير صفر — التقرير هو الحقيقة"
+          bash scripts/kali-rootfs-full-build.sh "$R" > /tmp/build-out.txt 2>&1 || \
+            echo "::warning::builder exit غير صفر — التقرير هو الحقيقة"
           OKN=$(grep -cE "^OK:" /tmp/build-out.txt || echo 0)
           echo "::notice::BUILD: $(cat /tmp/nova-counts.txt) · مثبتت بنجاح OK=$OKN"
-          split -b 700 /tmp/build-out.txt /tmp/buildc_ || true
-          for C in /tmp/buildc_*; do
-            echo "::notice::bld: $(cat $C | tr -d '\n\r' | tail -c 600)"
-          done
+          grep -E "^(OK|FAIL):" /tmp/build-out.txt > /tmp/tools-list.txt || true
+          echo "::notice::tools: $(tr '\n' ' ' < /tmp/tools-list.txt | tail -c 900)"
           REPORT="$R/root/nova-tools-report.json"
           [ -f "$REPORT" ] && cp "$REPORT" ./tools-report.json
 
