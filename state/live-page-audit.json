@@ -1,11 +1,11 @@
 {
-  "at": "2026-11-18T08:01:57.250Z",
+  "at": "2026-11-18T08:19:38.488Z",
   "hub": "https://nova.waifly.com",
   "checks": [
     {
       "name": "login+page",
       "ok": true,
-      "ms": 883,
+      "ms": 893,
       "detail": "200 · shell=index-NM1ZuQrP.js",
       "loginStatus": 302,
       "pageStatus": 200,
@@ -15,7 +15,7 @@
     {
       "name": "ops/kali/nodes",
       "ok": true,
-      "ms": 1002,
+      "ms": 1029,
       "detail": "hub.kali=false · hub.packages=0 · عقد كالي=0/0 · stats.ok=76/200",
       "hubPackages": 0,
       "kaliNodes": 0
@@ -23,13 +23,13 @@
     {
       "name": "kali-env/health",
       "ok": false,
-      "ms": 1114,
+      "ms": 1160,
       "detail": "readyAnywhere=false · fleet.kaliReady=0/0"
     },
     {
       "name": "kali-env/tools",
       "ok": false,
-      "ms": 1225,
+      "ms": 1292,
       "detail": "200 · proot/rootfs not installed AND no live Kali node answered",
       "present": 0,
       "total": 0
@@ -37,28 +37,28 @@
     {
       "name": "kali-env/catalog",
       "ok": true,
-      "ms": 1336,
-      "detail": "88/127 عبر 11 فئة · cachedFrom=2026-11-18T07:57:43.361Z",
-      "present": 88,
+      "ms": 1425,
+      "detail": "0/127 عبر 11 فئة · cachedFrom=2026-11-18T08:16:37.944Z",
+      "present": 0,
       "total": 127
     },
     {
       "name": "terminal exec",
       "ok": false,
-      "ms": 1454,
-      "detail": "200 · 117ms · data: {\"type\":\"start\",\"command\":\"uname -a\",\"cwd\":\"/opt\"}\n\ndata: {\"type\":\"done\",\"exitCode\":127,\"durationMs\":1,\"error\":\"pr"
+      "ms": 1566,
+      "detail": "200 · 141ms · data: {\"type\":\"start\",\"command\":\"uname -a\",\"cwd\":\"/opt\"}\n\ndata: {\"type\":\"done\",\"exitCode\":127,\"durationMs\":0,\"error\":\"pr"
     },
     {
       "name": "install button (ffuf)",
       "ok": false,
-      "ms": 1571,
+      "ms": 1697,
       "detail": "503 · 0s · exit=undefined · plane=? · {\"ok\":false,\"error\":\"مافيش طايرة كالي متاحة للتثبيت\"}",
       "installOk": false
     },
     {
       "name": "ops/storage-hub",
       "ok": true,
-      "ms": 4086,
+      "ms": 4201,
       "detail": "total=12.42GB · rows=7"
     }
   ],
