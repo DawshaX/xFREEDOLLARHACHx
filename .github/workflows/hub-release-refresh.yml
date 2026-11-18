@@ -1,7 +1,7 @@
 # TEST70c — حزمة الrelease على nova-portable مبنية من نفس كوميت البوت (7dd761d)
 # فالأبديتر بيقول "مافيش تحديث". هنشيل حزمة TEST70 من فرع nova-bundle (raw)
 # ونرفعها مكان حزمة الrelease (--clobber) — كوميت أحدث → الأبديتر يسحبها.
-name: hub release refresh (TEST77 — مختبر كالي الأقوى + MEGAUI)
+name: hub release refresh (TEST77b — الكتالوج الموسع + MEGAUI على الهَب)
 on:
   push:
     paths:
