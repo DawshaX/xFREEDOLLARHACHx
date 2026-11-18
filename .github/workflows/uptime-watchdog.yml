@@ -60,7 +60,7 @@ jobs:
   watch:
     name: is the hub alive?
     runs-on: ubuntu-latest
-    timeout-minutes: 7   # الـpower step بيستنى الهب يرجع لـ180 ثانية
+    timeout-minutes: 20  # TEST58: المدقق الحي (زر ثبت فعلي) ممكن ياخد دقايق — والـpower step بيستنى الهب لـ180 ثانية
     env:
       # TEST57 — الfallback رجع (كسره e9ffea7): هَبك هو waifly — من غيره الفحص
       # بيتخطى والمرآة بتتجمد (مقاس: جمّدة 18:25→02:30Z والصفحة بقت تعرض «المرآة
@@ -227,6 +227,28 @@ jobs:
           # TEST57 — «مافيش تغيير» مش فشل: المرآة زي ما هي = الهَب مستقر —
           # الjob يفضل أخضر (كان بيفشل كل دورة بعد كسر الfallback).
           node scripts/ci-commit.mjs --message "$MSG" state/waifly-deploy.json || echo "::notice::المرآة زي ما هي — مافيش تغيير (الهَب مستقر)"
+
+      # ── TEST58 — المدقق الحي: بيدخل الموقع بتوكن المالك ويجرب نفس الendpoints
+      # اللي الصفحة بتندها + زر ثبت فعليًا (POST) — التقرير المقاس بيتكتب في
+      # state/live-page-audit.json (مافيش كذب ممكن يعدي من غير قياس حي).
+      - name: live page audit (logs in and presses the real buttons)
+        if: always()
+        continue-on-error: true
+        env:
+          NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
+          NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          NOVA_PANEL_PASS: ${{ secrets.NOVA_PANEL_PASS }}
+          NOVA_PANEL_USER: Dawsha
+        run: node scripts/live-page-audit.mjs || true
+
+      - name: commit the live audit report (the measured truth)
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MSG: "chore(audit): live page audit [skip ci]"
+        run: |
+          node scripts/ci-commit.mjs --message "$MSG" state/live-page-audit.json || echo "::notice::تقرير المدقق زي ما هو"
+
 
       # ── دفع إعدادات العقدة من الأسرار (لو المالك سجّل TELEGRAM_BOT_TOKEN) ──
       # مشروطة بالكامل: سر غايب = تخطّي صامت. موجود = تتدفع كل دورة فالإعداد
