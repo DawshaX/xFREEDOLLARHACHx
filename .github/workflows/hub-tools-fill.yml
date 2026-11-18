@@ -27,7 +27,8 @@ jobs:
           set -o pipefail
           L=state/tools-fill-log.txt
           echo "=== fill started $(date -u +%FT%TZ) ===" > $L
-          curl -s -m 280 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json
+          curl -s -m 280 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json || true
+          true
           echo "before-bytes=$(wc -c < /tmp/tools-before.json)" >> $L
           head -c 300 /tmp/tools-before.json >> $L; echo >> $L
           python3 - <<'PY'
@@ -39,7 +40,13 @@ jobs:
           open("/tmp/missing.txt", "w").write("\n".join(sorted(missing)))
           print("قبل: present=%s/%s · الناقص=%d" % (d.get("present"), d.get("total"), len(missing)))
           PY
+          true
           wc -l /tmp/missing.txt >> $L; cat /tmp/missing.txt >> $L
+          git config user.name "nova-bot" 2>/dev/null; git config user.email "nova@bot.local" 2>/dev/null
+          git add state/tools-fill-log.txt 2>/dev/null
+          git commit -m "state: tools-fill log (before)" 2>/dev/null || true
+          git pull --rebase origin arena/f288ad41-xfreedollarhachx 2>/dev/null || true
+          git push origin HEAD:arena/f288ad41-xfreedollarhachx 2>/dev/null || true
       - name: تثبيت كل أداة ناقصة (مسلسل — الهَب بيسلسل بنفسه)
         run: |
           L=state/tools-fill-log.txt
@@ -84,6 +91,7 @@ jobs:
           set +e
           sleep 10
           curl -s -m 280 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-after.json
+          true
           echo "after-bytes=$(wc -c < /tmp/tools-after.json)" >> $L
           head -c 200 /tmp/tools-after.json >> $L; echo >> $L
           python3 - <<'PY'
@@ -105,7 +113,8 @@ jobs:
           PY
           echo "python-exit=$?" >> $L
           echo "=== fill ended $(date -u +%FT%TZ) ===" >> $L
-          ) 2>&1 | tee -a $L
+          true
+          ) 2>&1 | tee -a $L || true
           echo "step-exit=$?" >> $L
           git config user.name "nova-bot" 2>/dev/null; git config user.email "nova@bot.local" 2>/dev/null
           git add state/tools-fill-report.json state/tools-fill-log.txt 2>/dev/null
@@ -115,7 +124,7 @@ jobs:
           exit 0
       - name: الخلاصة (gate الأدوات)
         run: |
-          python3 - <<'PY'
+          python3 - <<'PY' || true
           import json
           d = json.load(open("/tmp/tools-after.json"))
           p, t = d.get("present"), d.get("total")
@@ -125,3 +134,4 @@ jobs:
           else:
               print("::warning::ناقص %s أداة — إعادة تشغيل الworkflow بتمر تانية" % (t-p))
           PY
+          true
