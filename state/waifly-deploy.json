@@ -1,32 +1,32 @@
 {
-  "at": "2026-11-18T08:19:34.627Z",
+  "at": "2026-11-18T19:27:28.636Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-18T05:12:55Z",
-    "size": 4240128
+    "updatedAt": "2026-11-18T18:56:44Z",
+    "size": 4243931
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "900fd3079efb61c0f634bab6950c6bd9218435c2",
-    "builtAt": "2026-11-18T07:06:36.970Z",
-    "files": 189,
+    "commit": "30139a8cd10616e9bb6818e9ada96a58579a4a4c",
+    "builtAt": "2026-11-18T18:56:29.419Z",
+    "files": 190,
     "builtBy": "local"
   },
   "boot": {
-    "commit": "900fd3079efb61c0f634bab6950c6bd9218435c2",
-    "builtAt": "2026-11-18T07:06:36.970Z",
+    "commit": "30139a8cd10616e9bb6818e9ada96a58579a4a4c",
+    "builtAt": "2026-11-18T18:56:29.419Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "مفيش أحدث من اللي شغّال (فرق -6822 ثانية)",
-    "lastCheckAt": "2026-11-18T08:19:16.482Z",
-    "currentBuiltAt": "2026-11-18T07:06:36.970Z",
-    "latestReleaseAt": "2026-11-18T05:12:55Z",
+    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-18T18:56:44Z) — حارس لوب التحديث",
+    "lastCheckAt": "2026-11-18T19:27:04.101Z",
+    "currentBuiltAt": "2026-11-18T18:56:29.419Z",
+    "latestReleaseAt": "2026-11-18T18:56:44Z",
     "restartNeeded": false
   },
   "updaterInstall": null,
@@ -38,14 +38,26 @@
   "page": {
     "status": 200,
     "cacheControl": "no-store",
-    "servedAsset": "/assets/index-NM1ZuQrP.js",
+    "servedAsset": "/assets/index-pzpaVnPF.js",
     "htmlBytes": 2484
   },
   "fleet": {
     "status": 200,
-    "count": 1,
+    "count": 13,
     "ids": [
-      "self-node"
+      "self-node",
+      "gh-9-1618",
+      "gh-1-1618",
+      "gh-3-1619",
+      "gh-7-1620",
+      "gh-8-1618",
+      "gh-12-1619",
+      "gh-10-1620",
+      "gh-11-1620",
+      "gh-6-1623",
+      "gh-5-1623",
+      "gh-4-1621",
+      "gh-13-1737"
     ]
   }
 }

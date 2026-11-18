@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-18T08:31:49.429Z",
+  "at": "2026-11-18T19:25:28.372Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 427569,
+  "total": 428069,
   "bySeverity": {
-    "medium": 183323,
-    "critical": 40032,
-    "high": 163023,
-    "unknown": 23215,
-    "low": 17901,
+    "medium": 183526,
+    "critical": 40109,
+    "high": 163222,
+    "unknown": 23197,
+    "low": 17940,
     "none": 75
   },
   "byYear": {
@@ -27,31 +27,31 @@
     "2007": 6580,
     "2008": 7179,
     "2009": 5054,
-    "2010": 5250,
+    "2010": 5251,
     "2011": 4900,
-    "2012": 5944,
+    "2012": 5946,
     "2013": 6836,
     "2014": 9011,
     "2015": 8787,
-    "2016": 10656,
+    "2016": 10658,
     "2017": 17113,
-    "2018": 17819,
-    "2019": 17684,
-    "2020": 21141,
-    "2021": 23494,
-    "2022": 27632,
-    "2023": 31510,
-    "2024": 39379,
-    "2025": 45532,
-    "2026": 93120
+    "2018": 17821,
+    "2019": 17689,
+    "2020": 21142,
+    "2021": 23501,
+    "2022": 27641,
+    "2023": 31517,
+    "2024": 39382,
+    "2025": 45540,
+    "2026": 93573
   },
   "kev": 1782,
-  "epssScored": 406778,
-  "products": 81952,
+  "epssScored": 407267,
+  "products": 81953,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 69163
+      "count": 69360
     },
     {
       "product": "android",
@@ -67,7 +67,7 @@
     },
     {
       "product": "chrome",
-      "count": 12208
+      "count": 12264
     },
     {
       "product": "ubuntu_linux",
@@ -103,7 +103,7 @@
     },
     {
       "product": "windows_server_2016",
-      "count": 5919
+      "count": 5958
     },
     {
       "product": "windows_server_2008",
@@ -139,43 +139,43 @@
     },
     {
       "product": "windows_10_1809",
-      "count": 4036
+      "count": 4081
     },
     {
       "product": "windows_10_22h2",
-      "count": 3993
+      "count": 4039
     },
     {
       "product": "windows_10_21h2",
-      "count": 3987
+      "count": 4033
+    },
+    {
+      "product": "windows_11_24h2",
+      "count": 3647
+    },
+    {
+      "product": "windows_server_2019",
+      "count": 3605
     },
     {
       "product": "acrobat",
       "count": 3595
     },
     {
-      "product": "windows_11_24h2",
-      "count": 3594
-    },
-    {
       "product": "jre",
       "count": 3561
     },
     {
-      "product": "windows_server_2019",
-      "count": 3557
+      "product": "windows_11_23h2",
+      "count": 3499
+    },
+    {
+      "product": "windows_10_1607",
+      "count": 3481
     },
     {
       "product": "enterprise_linux",
       "count": 3480
-    },
-    {
-      "product": "windows_11_23h2",
-      "count": 3450
-    },
-    {
-      "product": "windows_10_1607",
-      "count": 3445
     },
     {
       "product": "ios",
@@ -194,12 +194,12 @@
       "count": 2938
     },
     {
-      "product": "ios_xe",
-      "count": 2867
+      "product": "windows_11_25h2",
+      "count": 2905
     },
     {
-      "product": "windows_11_25h2",
-      "count": 2852
+      "product": "ios_xe",
+      "count": 2867
     },
     {
       "product": "websphere_application_server",
@@ -207,22 +207,22 @@
     },
     {
       "product": "windows_11_26h1",
-      "count": 2776
+      "count": 2830
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 50434067,
-    "sha256": "299514b8975e6c33b29a2737be9d79b05cf27e9c1ed1868d4e2fb9054c19ac43"
+    "bytes": 50525038,
+    "sha256": "05ce22630483105167a73574c9ff3c484ce179d8437d68947a3701f17f0a923c"
   },
   "mode": "deepen",
-  "says_ar": "427569 ثغرة حقيقية · critical 40032 · high 163023 · 1782 مستغلّة فعلياً (KEV) · 406778 لها EPSS · 81952 منتج بـCPE · مزامنة 2026-11-18T08:31:49.429Z",
+  "says_ar": "428069 ثغرة حقيقية · critical 40109 · high 163222 · 1782 مستغلّة فعلياً (KEV) · 407267 لها EPSS · 81953 منتج بـCPE · مزامنة 2026-11-18T19:25:28.372Z",
   "deepen": {
     "nextStartIndex": 0,
     "windowPages": 12,
     "walkedFrom": 0,
-    "nvdTotal": 427573,
+    "nvdTotal": 428069,
     "coverage": 1,
-    "at": "2026-11-18T08:31:49.430Z"
+    "at": "2026-11-18T19:25:28.373Z"
   }
 }
