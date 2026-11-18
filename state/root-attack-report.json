@@ -1,5 +1,5 @@
 {
-  "present": 186,
+  "present": 188,
   "total": 266,
   "measuredOn": "runnervmccnms — عقدة كالي سحابية (rootfs + proot)",
   "stillMissing": [
@@ -31,9 +31,7 @@
     "sublist3r",
     "sherlock",
     "vulners",
-    "dirsearch",
     "katana",
-    "arjun",
     "hcxtools",
     "routersploit",
     "crackmapexec",
@@ -75,9 +73,7 @@
     "gvm",
     "pentestly",
     "grype",
-    "dirsearch",
     "katana",
-    "arjun",
     "w3af",
     "ssrfmap",
     "sidguesser",
