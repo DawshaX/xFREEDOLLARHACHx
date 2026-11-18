@@ -1,0 +1,29 @@
+# TEST69 — تشخيص terminal exec (127 فوري): 3 variations — بالحرف
+name: hub exec debug (terminal exec 127)
+on:
+  push:
+    paths:
+      - ".github/workflows/hub-exec-debug.yml"
+permissions:
+  contents: read
+concurrency:
+  group: hub-exec-debug
+  cancel-in-progress: false
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - name: exec بدون cwd · مع cwd=/opt · مع cwd=/root
+        run: |
+          for BODY in '{"command":"echo HELLO_GUEST"}' '{"command":"echo HELLO_OPT","cwd":"/opt"}' '{"command":"echo HELLO_ROOT","cwd":"/root"}' '{"command":"uname -a; id"}'; do
+            R=$(curl -s --max-time 120 -X POST "$HUB/api/kali-env/exec" \
+              -H "x-nova-token: $TOKEN" -H "content-type: application/json" \
+              -d "$BODY")
+            CLEAN=$(echo "$R" | tr -d '\n\r' | tail -c 450)
+            echo "::notice::body=$BODY → $CLEAN"
+            sleep 2
+          done
