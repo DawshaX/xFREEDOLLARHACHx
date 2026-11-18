@@ -34,6 +34,7 @@ import { opsFetch, novaAuthHeaders } from "@/lib/ops-client";
 import { DAW_SKULL } from "@/lib/skull";
 import { useSystem } from "@/context/SystemContext";
 import ErrorIsland from "@/components/ErrorIsland";
+import { useLiveRefetch } from "@/hooks/useWebSocket";
 
 /* ─── أنواع ─── */
 type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "kali" | "kali-full" | "missions" | "brain" | "nexus" | "alerts" | "notes" | "hardware" | "hunt" | "channels" | "nav";
@@ -256,6 +257,48 @@ const loadPrefs = (): Prefs => {
  * بأداته kali_run — الاتصال واحد في الاتنين. */
 type KaliNodeRow = { id: string; hostname: string; kali: boolean; mode: string; probed: boolean; connectedAt: string };
 const KALI_QUICK = ["nmap --version", "python3 --version", "sqlmap --version | head -1", "ls /usr/share/seclists | head -5", "uname -a", "id"];
+/* TEST43 — وصفات التشغيل بضغطة داخل أرينا كالي بتاع الشغل: الكتالوج المقاس
+ * (بتاع /kali-env) بيوصّل هنا — الأداة + الهدف = أمر واحد على نفس قناة البث. */
+type RecipeRow = { name: string; present: boolean; version: string | null; recipe: { args: string; targetLabel: string; hint: string } | null };
+
+function KaliQuickRecipes({ run, busy }: { run: (c: string) => Promise<void>; busy: boolean }) {
+  const [rows, setRows] = useState<RecipeRow[]>([]);
+  const [target, setTarget] = useState("");
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/kali-env/catalog", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(12000) });
+        if (!r.ok) return;
+        const d = await r.json() as { categories?: Array<{ tools?: RecipeRow[] }> };
+        setRows((d.categories ?? []).flatMap((c) => c.tools ?? []).filter((t) => t.recipe));
+      } catch { /* الجاي */ }
+    })();
+  }, []);
+  const q = (v: string) => `'${v.replace(/'/g, "'\\''")}'`;
+  const top = rows.slice(0, 14);
+  if (!top.length) return null;
+  return (
+    <div className="rounded-xl p-2.5 mb-2" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,102,85,0.2)" }}>
+      <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+        <span className="text-[9px] font-black" style={{ color: "#ff8a75" }}>⚡ تشغيل بضغطة — {rows.length} وصفة من الكتالوج المقاس</span>
+        <input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="الهدف (domain / URL / host…)"
+          className="text-[10px] font-mono px-2 py-1 rounded outline-none" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,102,85,0.3)", color: "#ffd0c8", width: 210 }} />
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {top.map((t) => (
+          <button key={t.name} disabled={busy || !target.trim()} title={`${t.recipe!.hint} · ${t.recipe!.targetLabel}${t.version ? ` · ${t.version}` : ""}`}
+            onClick={() => void run(t.recipe!.args.replace("{target}", q(target.trim())))}
+            className="text-[8px] font-mono px-1.5 py-0.5 rounded transition-all hover:opacity-80 disabled:opacity-40"
+            style={{ background: t.present ? "rgba(68,255,136,0.1)" : "rgba(255,170,68,0.08)", color: t.present ? "#44ff88" : "rgba(255,170,68,0.85)", border: "1px solid rgba(255,255,255,0.12)" }}>
+            {t.present ? "▶" : "＋"} {t.name}
+          </button>
+        ))}
+        {rows.length > top.length && <span className="text-[8px] font-mono self-center" style={{ color: "rgba(255,255,255,0.35)" }}>+{rows.length - top.length} وصفة في ‎/kali-env</span>}
+      </div>
+    </div>
+  );
+}
+
 function KaliFleetArena() {
   const [nodes, setNodes] = useState<{ hub: { kali: boolean; packages: number }; nodes: KaliNodeRow[] } | null>(null);
   const [log, setLog] = useState<Array<{ t: string; err?: boolean; plane?: boolean }>>([]);
@@ -297,6 +340,7 @@ function KaliFleetArena() {
   const ready = nodes?.nodes.filter(n => n.kali).length ?? 0;
   return (
     <div className="space-y-2" dir="rtl">
+      <KaliQuickRecipes run={run} busy={busy} />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-[11px] font-black" style={{ color: "#ff6655" }}>🐉 كالي السحابية — الطرفية الموحّدة (من أي مكان في البرنامج)</p>
         {nodes && (
@@ -349,6 +393,12 @@ export default function NovaAgentPro() {
   const [corpus, setCorpus] = useState<{ total: number | null; kev: number | null }>({ total: null, kev: null });
   /* TEST12 — بيئة كالي المدمجة: شريط مقاس في مكتب الشغل بيوصل للتبويبة */
   const [kaliEnv, setKaliEnv] = useState<{ present: boolean; packages?: number; running?: boolean; heavy?: string } | null>(null);
+  /* TEST38 — الـ proot الحقيقي، مقاس من /api/kali-env/health. لو القراءة فشلت
+     بنحفظ الخطأ نفسه (error) بدل ما نعرض «غير جاهز» كأنها قياس. */
+  const [kaliProot, setKaliProot] = useState<{
+    ready?: boolean; guestShell?: boolean; rootfs?: string | null;
+    fleetKali?: number | null; fleetConnected?: number | null; error?: string;
+  } | null>(null);
   const [autoState, setAutoState] = useState<{ enabled: boolean; running: boolean; cycles: number; level: string }>({
     enabled: false, running: false, cycles: 0, level: "off",
   });
@@ -693,6 +743,30 @@ export default function NovaAgentPro() {
     // Kali state now comes from KaliContext (unified live) - no separate fetch needed
     // The HUD card below reads directly from kali.isConnected/kali.kaliStatus
 
+    /* TEST38 — حالة كالي الحقيقية من /api/kali-env (proot + rootfs)، مش من
+       كارت /ops/kali اللي بيقيس الهَب بس. الاتنين بيفضلوا معروضين: ده بيثري
+       الكارت برقم مقاس، ولو فشل بيبقى خطأ صريح — مش صفر. */
+    try {
+      const kh = await fetch("/api/kali-env/health", { headers: novaAuthHeaders(), signal: AbortSignal.timeout(20_000) });
+      if (kh.ok) {
+        const h = (await kh.json()) as {
+          ready?: boolean; guestShell?: boolean; rootfs?: string | null;
+          fleet?: { connected?: number; kaliReady?: number };
+        };
+        setKaliProot({
+          ready: h.ready === true,
+          guestShell: h.guestShell === true,
+          rootfs: h.rootfs ?? null,
+          fleetKali: h.fleet?.kaliReady ?? null,
+          fleetConnected: h.fleet?.connected ?? null,
+        });
+      } else {
+        setKaliProot({ error: `HTTP ${kh.status}` });
+      }
+    } catch (e) {
+      setKaliProot({ error: (e as Error).message.slice(0, 80) });
+    }
+
     const nx = await opsFetch<{
       ok?: boolean;
       rootSessionId?: string;
@@ -737,7 +811,15 @@ export default function NovaAgentPro() {
     void refreshCron();
   }, [refreshCron]);
 
-  useEffect(() => { void refresh(); const iv = setInterval(refresh, 12_000); return () => clearInterval(iv); }, [refresh]);
+  useEffect(() => { void refresh(); const iv = setInterval(refresh, 30_000); return () => clearInterval(iv); }, [refresh]);
+  // TEST46 — اللايف أجينت مش بستنى الrefresh: أي حدث حي من الناقل الموحد
+  // (اتصال عقدة · وضع مستقل · إشعار · مهام كالي · أسطول) بيعيد الجلب لحظة
+  // حدوثه — الصفحة تبقى عين النظام الحية، والعدّاد خطة أمان 30ث بس.
+  useLiveRefetch(
+    ["local_agent_status", "autonomous_status", "autonomous_tick", "notification", "kali_tasks_changed", "fleet_mesh_message", "nexus_background", "watch_note", "agent_tool_result"],
+    refresh,
+    30_000,
+  );
 
   const lastEvents = sys.systemEvents.slice(0, 36);
   const ticker = sys.systemEvents.slice(0, 2);
@@ -1001,6 +1083,24 @@ export default function NovaAgentPro() {
                       <span key={n.id} className="px-1 py-0.5 rounded" style={{ background: n.kali ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: n.kali ? "#44ff88" : "rgba(255,255,255,0.3)" }}>{n.hostname.slice(0,10)}</span>
                     ))}
                   </div>
+                  {/* TEST38 — الـ proot المقاس من /api/kali-env/health. لو القراءة
+                      فشلت بنقول الخطأ نفسه، مش «غير جاهز» كأنها قياس. */}
+                  {kaliProot && (
+                    <div className="text-[8px] font-mono pt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                      {kaliProot.error ? (
+                        <span style={{ color: "#ff8888" }}>✗ فشل قياس proot: {kaliProot.error}</span>
+                      ) : (
+                        <>
+                          <div style={{ color: kaliProot.guestShell ? "#44ff88" : "#ffaa44" }}>
+                            proot: {kaliProot.ready ? "موجود" : "مش منصّب"} · الضيف {kaliProot.guestShell ? "بيرد ✓" : "ما ردّش ✗"}
+                          </div>
+                          <div style={{ color: "rgba(255,255,255,0.4)" }}>
+                            أسطول كالي: {kaliProot.fleetKali ?? "?"}/{kaliProot.fleetConnected ?? "?"} عقدة جاهزة
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </HudCard>
             )}

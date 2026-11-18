@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-16T00:20:07.387Z",
+  "at": "2026-11-17T18:29:26.483Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "RED",
   "counts": null,
@@ -16,8 +16,8 @@
     "seat": "pollinations-openai",
     "chunks": 9,
     "streamed": true,
-    "firstChunkMs": 493,
-    "totalMs": 495,
+    "firstChunkMs": 870,
+    "totalMs": 871,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
@@ -25,35 +25,35 @@
     {
       "name": "health",
       "status": 0,
-      "ms": 15003,
+      "ms": 30003,
       "ok": false,
       "sample": "The operation was aborted due to timeout"
     },
     {
       "name": "hunt",
       "status": 0,
-      "ms": 15001,
+      "ms": 30001,
       "ok": false,
       "sample": "The operation was aborted due to timeout"
     },
     {
       "name": "organs",
-      "status": 0,
-      "ms": 15001,
-      "ok": false,
-      "sample": "The operation was aborted due to timeout"
+      "status": 200,
+      "ms": 19938,
+      "ok": true,
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"425934 CVE · 426410 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-17T16:02:00.174666+00:00\",\"updated_at\":\"2"
     },
     {
       "name": "corpus?q=nginx",
       "status": 0,
-      "ms": 15000,
+      "ms": 30001,
       "ok": false,
       "sample": "The operation was aborted due to timeout"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
       "status": 0,
-      "ms": 15000,
+      "ms": 30001,
       "ok": false,
       "sample": "The operation was aborted due to timeout"
     },
@@ -67,9 +67,9 @@
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 495,
+      "ms": 871,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=9 first=493ms total=495ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=9 first=870ms total=871ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }

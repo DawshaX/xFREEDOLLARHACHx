@@ -145,7 +145,18 @@ async function main() {
         const res = await fetch(SERVER + contract.path, { signal: AbortSignal.timeout(8000), headers: { accept: "application/json" } });
         const body = await res.json().catch(() => null);
         await res.body?.cancel().catch(() => {});
-        if (body === null) row.note = row.note ?? `live returns non-JSON (HTTP ${res.status})`;
+        row.liveStatus = res.status;
+        // ⚠ كان الاختبار بيسأل الـstatic engine بس عن المسار ده، فـ`/api/monitor/health`
+        // و`/api/stats` كانوا بيعدّوا «shape ok» والسيرفر الحقيقي بيرد **404** —
+        // مقاس في لوج تشغيل 2026-11-17. أي صفحة/مراقب بينده على مسار مش موجود
+        // كانت هتظهر «محتاجة روت» من غير ما أي جيت يقول حاجة. 404 = فشل، مش ملاحظة.
+        if (!res.ok) {
+          findings.push({
+            kind: "live-404",
+            endpoint: contract.path,
+            detail: `the live server answered HTTP ${res.status} — the path in this contract does not exist in the Express app`,
+          });
+        } else if (body === null) row.note = row.note ?? `live returns non-JSON (HTTP ${res.status})`;
         else row.liveKeys = keysOf(body);
       } catch (err) {
         findings.push({ kind: "live-throw", endpoint: contract.path, detail: String(err?.message ?? err).slice(0, 200) });
@@ -200,8 +211,8 @@ async function main() {
     console.log(`Contracts      : ${rows.length}`);
     console.log("");
     for (const r of rows) {
-      const status = r.missing.length ? "✗" : r.onlyStatic?.length || r.onlyLive?.length ? "~" : "✓";
-      console.log(`${status} ${r.path.padEnd(38)} ${r.missing.length ? r.missing.join(" ") : "shape ok"}`);
+      const status = r.liveStatus >= 400 ? "✗" : r.missing.length ? "✗" : r.onlyStatic?.length || r.onlyLive?.length ? "~" : "✓";
+      console.log(`${status} ${r.path.padEnd(38)} ${r.liveStatus >= 400 ? `HTTP ${r.liveStatus} على السيرفر الحقيقي` : r.missing.length ? r.missing.join(" ") : "shape ok"}`);
     }
     if (warns.length) {
       console.log("\nShape differences (informational — both sides answer, fields differ):");

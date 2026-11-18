@@ -448,6 +448,69 @@ await tA("a job's clock is longer than its slowest tool, and CI is longer than t
   assert.ok(ciMin > waitMin, `CI job ceiling ${ciMin}min must be larger than the harness wait ${waitMin}min, or the run is killed mid-measurement`);
 });
 
+await tA("an empty memory is not a healthy state", async () => {
+  //  القياس (2026-11-17، كونتينر جديد): state/ فيه 37 ملف (كوربوس/كتالوجات/كاشات) و
+  //  state/nova-memory.json صفر بايت. البوابة القديمة كانت بتعدّ الملفات: 37 > 3 ⇒
+  //  «الحالة المحلية سليمة» ⇒ تخطّي الاسترجاع ⇒ كل محادثات الفريق فضلت على GitHub.
+  const src = fs.readFileSync(path.join(SRC, "state-backup.ts"), "utf8");
+  assert.match(src, /function memoryHasRecords\(/, "restore must judge the thing that can be lost (memory), not the file count");
+  //  الكود الحقيقي بس — الشرح في التعليقات بيذكر السطر القديم بالحرف عشان السبب يفضل مقروء.
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/readdirSync\(stateDir\(\)\)\.length > 3/.test(code),
+    "counting state/ files as 'healthy' skips the restore whenever corpora exist — measured with 37 files and 0 memories");
+
+  //  وبالسلوك مش بالكود: ملف ذاكرة فاضي/غايب = محتاج استرجاع، وفيه سجلات = مفيش.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nova-mem-"));
+  const memPath = path.join(dir, "nova-memory.json");
+  const memHasRecords = () => {
+    try {
+      const j = JSON.parse(fs.readFileSync(memPath, "utf8"));
+      return Array.isArray(j.records) && j.records.length > 0;
+    } catch { return false; }
+  };
+  assert.equal(memHasRecords(), false, "no file → must ask for a restore");
+  fs.writeFileSync(memPath, JSON.stringify({ version: 2, records: [] }));
+  assert.equal(memHasRecords(), false, "empty records → must ask for a restore");
+  fs.writeFileSync(memPath, "{ broken");
+  assert.equal(memHasRecords(), false, "unreadable json → must ask for a restore");
+  fs.writeFileSync(memPath, JSON.stringify({ version: 2, records: [{ id: "a", content: "x" }] }));
+  assert.equal(memHasRecords(), true, "records present → local wins, no restore");
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+await tA("the nuclei row cannot pass on printed text alone", async () => {
+  //  القياس (2026-11-17): سكربت بيطبع سطر واحد كان بياخد pass. السطر دلوقتي لازم
+  //  يبان سطر نتيجة حقيقي، والتوقع 0 في targets.json معناه «إثبات مسح» (طلبات من
+  //  إحصاء الأداة أو سطر نتيجة)، مش «أي حاجة تعدّي».
+  const harness = fs.readFileSync(path.join(ROOT0, "scripts/verify-live.mjs"), "utf8");
+  assert.match(harness, /RESULT_LINE/, "the nuclei row must filter output through RESULT_LINE — a bare line is not a finding");
+  //  المطلوب: الفرع بتاع التوقع 0 ما يعدّيش بـlines.length لوحده — لازم scannedProof.
+  //  الشكل المرفوض: `byFindings ? (lines.length >= min ? "pass" : ...)` أو أي فرع
+  //  «تحقق من العدد» من غير scannedProof جوه نفس السطر.
+  const proofLine = (harness.match(/^.*byFindings \? lines\.length >= min.*$/m) || [""])[0];
+  assert.match(proofLine, /scannedProof/, "the pass condition must combine the finding count with the tool's scan proof — one line count alone passes on printed text");
+  assert.match(harness, /scannedProof/, "the nucleiFindings:0 branch must require the tool's own scan proof");
+  const targets = JSON.parse(fs.readFileSync(path.join(ROOT0, "ops/verify/targets.json"), "utf8"));
+  const testphp = targets.targets.find((t) => t.host.startsWith("testphp"));
+  assert.equal(testphp.expects.nucleiFindings, 0, "testphp's 0 is deliberate (scanner ran, not site pwned) — its note explains why");
+});
+
+await tA("the toolchain the job verifies is the toolchain the engine boots with", async () => {
+  //  القياس اللي علّمنا (2026-11-17): `NOVA_HEAVY_TOOLS=1` كان على خطوة التنزيل بس،
+  //  وخطوة الإقلاع بعدها كانت بتشغّل pruneState() واللي بيمسح nuclei من vendor/bin
+  //  لأن المتغير غايب — فالصف الأحمر «nuclei present: مش موجود» سببه التنظيف.
+  //  البوابة دي بتقفل الباب من ناحيتين: الـenv على مستوى الـjob، والتنظيف مايمسحش
+  //  مجلد مش بتاعه.
+  const { pathToFileURL } = await import("node:url");
+  const { pruneState } = await import(pathToFileURL(path.join(SRC, "state-prune.ts")).href);
+  assert.equal(typeof pruneState, "function");
+
+  const wf = fs.readFileSync(path.join(ROOT0, ".github/workflows/live-verify.yml"), "utf8");
+  const jobEnv = wf.split(/\n {4}steps:/)[0];
+  assert.match(jobEnv, /NOVA_HEAVY_TOOLS:\s*"1"/, "live-verify: NOVA_HEAVY_TOOLS must be job-wide — on the vendor step alone the boot prune deletes what the next step asserts");
+  assert.ok(!/fetch-toolchain\.mjs[^\n]*\|\|\s*true/.test(wf), "the fetcher's exit code must not be swallowed by `|| true`");
+});
+
 await tA("the bounty catalog is measured data and never a permission slip", async () => {
   const root = path.resolve(import.meta.dirname, "..");
   const file = path.join(root, "ops/bounty/programs-catalog.json");

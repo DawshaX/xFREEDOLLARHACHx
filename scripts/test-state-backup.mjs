@@ -39,9 +39,13 @@ await t("بلا توكن: الاسترجاع متعطّل بصراحة مش اس
   assert.match(out.detail, /توكن/);
 });
 
-await t("لو state محلية سليمة: الاسترجاع بيقول الطازة كسبت", async () => {
+await t("لو الذاكرة الحيّة فيها محادثات: الاسترجاع بيقول الطازة كسبت", async () => {
   process.env.GITHUB_TOKEN = "fake-for-test";
-  // لسه هيرجع restored=false بسبب الحالة المحلية قبل أي شبكة
+  //  القاعدة اتغيّرت 2026-11-17: البوابة القديمة كانت بتعدّ ملفات state/ (37 ملف
+  //  كوربوس/كتالوج = «سليمة») وده كان بيسكّت ذاكرة فاضية. الصح: الملف اللي فيه كلام.
+  //  فالتست ده بيحط سجل حقيقي الأول — من غير كده الاسترجاع بيحاول الشبكة (وهنا مقطوعة)
+  //  وبيرجع «فشل الاسترجاع»، وده سلوك صح كمان بس مش اللي بنقيسه هنا.
+  fs.writeFileSync(path.join(work, "state", "nova-memory.json"), JSON.stringify({ version: 2, records: [{ id: "t", content: "x" }] }));
   const out = await sb.restoreStateFromGithubIfNeeded();
   assert.equal(out.restored, false);
   assert.match(out.detail, /الطازة/);

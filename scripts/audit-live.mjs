@@ -85,6 +85,13 @@ export async function renderRoute(route) {
   window.console.warn = () => {};
 
   // Proxy every request to the live server so pages see production payloads.
+  //
+  // ⚠ القياس (2026-11-17): الـproxy كان **بيبلع كل فشل**. أي 4xx/5xx بيرجع body
+  // عادي، والصفحة بترسم «فاضية» وبتعدّي — فالـ170/170 كانت بتقول «نضيف» وهي مش
+  // شايفة إن الـendpoint بيرد 404. وفشل الشبكة كان بيرجع 200 {} (عشان `.json()`
+  // ما يقعش) — يعني صفحة معتمدة على endpoint ميت كانت بتعدّي.
+  // دلوقتي كل نداء بيتسجل: {url, status, ok, bodyBytes}، والفشل بيظهر في التقرير.
+  const apiCalls = [];
   const proxyFetch = async (input, init) => {
     let url = typeof input === "string" ? input : input?.url ?? String(input);
     try {
@@ -93,15 +100,18 @@ export async function renderRoute(route) {
       if (!url.startsWith(API)) {
         // Third-party host: behave like an offline browser, but answer JSON so
         // `.json()` callers do not explode with a network error.
+        apiCalls.push({ url, status: 0, thirdParty: true, ok: true, bodyBytes: 2 });
         return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
       }
       const res = await realFetch(url, { ...init, signal: AbortSignal.timeout(8000) });
       const body = await res.arrayBuffer();
+      apiCalls.push({ url, status: res.status, ok: res.ok, bodyBytes: body.byteLength });
       return new Response(body, {
         status: res.status,
         headers: { "content-type": res.headers.get("content-type") ?? "application/json" },
       });
     } catch (e) {
+      apiCalls.push({ url, status: "network", ok: false, error: String(e?.message ?? e).slice(0, 120) });
       return new Response(JSON.stringify({ error: String(e?.message ?? e) }), {
         status: 500,
         headers: { "content-type": "application/json" },
@@ -157,21 +167,46 @@ export async function renderRoute(route) {
   const root = window.document.getElementById("root");
   const html = root?.innerHTML ?? "";
   const text = (window.document.body.textContent ?? "").replace(/\s+/g, " ").trim();
-  const crashed = text.includes("تم التقاط خطأ تشغيلي") || text.includes("Unexpected Render Error");
-  const boundaryError = text.match(/تم التقاط خطأ تشغيلي[^]{0,160}/)?.[0] ?? null;
+  // ⚠ 2026-11-17: كان بيبص على نص الـErrorBoundary العام بس. لكن `ErrorIsland`
+  // (الحاجز المحلي) بيكتب «قسم «X» وقّف — لكن البرنامج شغال»، فالـ/agent-pro
+  // و/workspace و/cockpit كانوا بيقعوا فعليًا في حاجز محلي و**الشاشة سليمة
+  // الشكل**، والأوديت يقول 170/170 «clean». ده نفس نوع الغش اللي الأوديت ده
+  // موجود عشان يمنعه. دلوقتي أي قسم واقف = فشل، وكمان أي console.error بيقع
+  // الصفحة (مكانش بيتحسب في `ok` رغم إنه بيتسجل).
+  const sectionCrashes = [...text.matchAll(/قسم «([^»]+)» وقّف/g)].map((m) => m[1]);
+  const crashed =
+    text.includes("تم التقاط خطأ تشغيلي") ||
+    text.includes("Unexpected Render Error") ||
+    sectionCrashes.length > 0;
+  const boundaryError =
+    text.match(/تم التقاط خطأ تشغيلي[^]{0,160}/)?.[0] ??
+    (sectionCrashes.length ? `قسم «${sectionCrashes.join(" · ")}» وقّف` : null);
   window.close?.();
 
   const cleanErrors = errors.filter(
     (e) => !/Not implemented:|getContext|HTMLCanvasElement|ResizeObserver loop|WebSocket|EventSource/i.test(e),
   );
+  //  نداءات الـAPI اللي رجعت فشل (4xx/5xx/شبكة) — دي الحاجة اللي كانت مستخبية.
+  const apiFailures = apiCalls.filter((c) => c.thirdParty !== true && !c.ok);
+  const emptyBodies = apiCalls.filter((c) => c.thirdParty !== true && c.ok && c.bodyBytes === 0);
+
+  // console.error معناه استثناء اتلقّط — الصفحة «شكلها» شغال بس فيه جزء وقع.
+  // كان بيتسجل في `errors` وبيتجاهل في `ok`، فأي crash بيمسك نفسه بيمرق.
+  const runtimeErrors = cleanErrors.filter((e) => /^console\.error:|window\.error:/.test(e));
+
   return {
     route,
-    ok: !crashed && html.length > 200,
+    ok: !crashed && runtimeErrors.length === 0 && html.length > 200,
     crashed,
     boundaryError,
     htmlLength: html.length,
     textLength: text.length,
     errors: cleanErrors.slice(0, 6),
+    runtimeErrors: runtimeErrors.slice(0, 4),
+    sectionCrashes,
+    apiCalls: apiCalls.length,
+    apiFailures: apiFailures.slice(0, 8),
+    apiEmptyBodies: emptyBodies.slice(0, 8),
   };
 }
 
@@ -213,6 +248,7 @@ async function runAll() {
       const detail = r.boundaryError ?? r.error ?? "empty render";
       console.log(`✗ ${r.route.padEnd(30)} ${String(detail).slice(0, 160)}`);
       for (const e of (r.errors ?? []).slice(0, 2)) console.log(`    ${String(e).split("\n")[0].slice(0, 180)}`);
+      for (const c of (r.apiFailures ?? []).slice(0, 2)) console.log(`    api ${c.status} ${String(c.url).replace(/^https?:\/\/[^/]+/, "").slice(0, 110)}`);
     }
     console.log(`\n${results.length - failed.length}/${results.length} routes rendered clean against live data.`);
   }

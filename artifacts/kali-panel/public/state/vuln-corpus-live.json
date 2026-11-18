@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-16T00:57:11.140Z",
-  "total": 425858,
+  "at": "2026-11-17T19:45:11.878Z",
+  "total": 426509,
   "bySeverity": {
-    "medium": 182476,
-    "critical": 39873,
-    "high": 162343,
-    "unknown": 23325,
-    "low": 17766,
+    "medium": 182872,
+    "critical": 39949,
+    "high": 162645,
+    "unknown": 23142,
+    "low": 17826,
     "none": 75
   },
-  "kev": 1781,
-  "epssScored": 406188,
-  "products": 81948,
+  "kev": 1782,
+  "epssScored": 406708,
+  "products": 81949,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -1502,7 +1502,7 @@
         "CWE-502"
       ],
       "kev": true,
-      "epss": 0.9384,
+      "epss": 0.95208,
       "pub": "2025-02-10T20:15:42.540",
       "products": [
         "wazuh"
@@ -1912,26 +1912,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2026-109618",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The su",
-      "cwe": [
-        "CWE-416",
-        "CWE-755",
-        "CWE-824"
-      ],
-      "kev": true,
-      "epss": 0.99999,
-      "pub": "2026-10-21T14:17:09.357",
-      "products": [
-        "php",
-        "php",
-        "php"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2014-6271",
       "cvss": 9.8,
       "sev": "critical",
@@ -2054,6 +2034,26 @@
         "big-ip_access_policy_manager",
         "big-ip_access_policy_manager",
         "big-ip_access_policy_manager"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-109618",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The su",
+      "cwe": [
+        "CWE-416",
+        "CWE-755",
+        "CWE-824"
+      ],
+      "kev": true,
+      "epss": 0.99999,
+      "pub": "2026-10-21T14:17:09.357",
+      "products": [
+        "php",
+        "php",
+        "php"
       ],
       "refs": []
     },
@@ -10156,6 +10156,21 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-115731",
+      "cvss": 9.4,
+      "sev": "critical",
+      "desc": "Deserialization of untrusted data in the report-processing code of Puppet, as used by Puppet Server, in the affected releases, allows a client that holds any CA-signed agent certificate to execute arbitrary code on the Puppet Server as its service user by subm",
+      "cwe": [
+        "CWE-94",
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.00366,
+      "pub": "2026-11-03T21:17:01.867",
+      "products": [],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-50751",
       "cvss": 9.3,
       "sev": "critical",
@@ -13852,23 +13867,7 @@
         "ipados"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2014-2817",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Microsoft Internet Explorer 6 through 11 allows remote attackers to gain privileges via a crafted web site, aka \"Internet Explorer Elevation of Privilege Vulnerability.\"",
-      "cwe": [],
-      "kev": true,
-      "epss": 0.26349,
-      "pub": "2014-08-12T21:55:07.007",
-      "products": [
-        "internet_explorer",
-        "internet_explorer",
-        "internet_explorer"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "425858 ثغرة حقيقية من NVD · 1781 مستغلّة فعلياً (KEV) · 81948 منتج · مزامنة 2026-11-16T00:57:11.140Z"
+  "says_ar": "426509 ثغرة حقيقية من NVD · 1782 مستغلّة فعلياً (KEV) · 81949 منتج · مزامنة 2026-11-17T19:45:11.878Z"
 }

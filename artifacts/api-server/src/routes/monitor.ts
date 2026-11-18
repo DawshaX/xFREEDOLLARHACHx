@@ -5,6 +5,7 @@ import { listProcesses } from "../lib/processes";
 import os from "node:os";
 import fs from "node:fs";
 import { execFile } from "node:child_process";
+import { broadcastEvent, getHubClientCount } from "../lib/ws-hub";
 
 const router: IRouter = Router();
 
@@ -58,7 +59,10 @@ export function probeGpu(force = false): Promise<GpuReading> {
   });
 }
 
-router.get("/monitor/system", async (_req, res) => {
+/* TEST46 — قياس واحد مشترك: القايت راوت GET والباثر الموحد على /api/ws
+ * بيقيسوا من نفس الدالة — السيرفر يقيس مرة كل 3ث ويبث للكل بدل ما كل عميل
+ * يضرب الاستطلاع لوحده. */
+export async function measureSystemSnapshot(): Promise<Record<string, unknown>> {
   const cpus = os.cpus();
   const totalMem = os.totalmem();
   const freeMem = os.freemem();
@@ -71,7 +75,7 @@ router.get("/monitor/system", async (_req, res) => {
   });
   const avgCpu = Math.round(cpuUsage.reduce((a, b) => a + b, 0) / cpuUsage.length);
 
-  res.json({
+  return {
     hostname: os.hostname(),
     platform: os.platform(),
     arch: os.arch(),
@@ -81,6 +85,7 @@ router.get("/monitor/system", async (_req, res) => {
     memory: { total: totalMem, used: usedMem, free: freeMem, usagePercent: Math.round((usedMem / totalMem) * 100) },
     gpu: await probeGpu(),
     disk: probeDiskSafe(),
+    net: probeNetSafe(),
     process: {
       pid: process.pid,
       rssMb: Math.round(process.memoryUsage().rss / 1048576),
@@ -89,8 +94,46 @@ router.get("/monitor/system", async (_req, res) => {
       node: process.version,
     },
     timestamp: new Date().toISOString(),
-  });
+  };
+}
+
+/* TEST46 — عدّادات الشبكة مقاسة (ليست عشوائية): /proc/net/dev على لينكس —
+ * لو المضيف مش لينكس أو القراءة فشلت بنرجّع present:false وبنقولها بصراحة. */
+function probeNetSafe(): { present: boolean; rxBytes: number; txBytes: number; noteAr: string } {
+  try {
+    const raw = fs.readFileSync("/proc/net/dev", "utf8");
+    let rx = 0, tx = 0;
+    for (const line of raw.split("\n").slice(2)) {
+      const cols = line.trim().split(/\s+/);
+      if (cols.length < 10) continue;
+      const iface = (cols[0] ?? "").replace(":", "");
+      if (!iface || iface === "lo") continue;
+      rx += Number(cols[1]) || 0;
+      tx += Number(cols[9]) || 0;
+    }
+    return { present: true, rxBytes: rx, txBytes: tx, noteAr: "مقاس من /proc/net/dev (كل الواجهات عدا lo)." };
+  } catch {
+    return { present: false, rxBytes: 0, txBytes: 0, noteAr: "عدّادات الشبكة غير متاحة على هذا المضيف." };
+  }
+}
+
+router.get("/monitor/system", async (_req, res) => {
+  res.json(await measureSystemSnapshot());
 });
+
+/* الباثر الموحد: نبضة هاردوير كل 3ث على قناة WS العامة — بس لو فيه مستمعين
+ * فعلًا (صفر عملاء = صفر شغل). الودجت بتسمع hw_metrics والاستطلاع خطة أمان. */
+let hwBroadcastTimer: ReturnType<typeof setInterval> | null = null;
+export function ensureHwBroadcast(): void {
+  if (hwBroadcastTimer) return;
+  hwBroadcastTimer = setInterval(() => {
+    try {
+      if (getHubClientCount() === 0) return;
+      void measureSystemSnapshot().then((snap) => broadcastEvent("hw_metrics", snap)).catch(() => {});
+    } catch { /* نبضة فاشلة — الجاية تجرب */ }
+  }, 3_000);
+  hwBroadcastTimer.unref?.();
+}
 
 /** قراءة قرص صامتة — statfs لو متاحة (Node 22: fs.statfsSync)، ولو فشلت بنقولها مش بنكمّر. */
 function probeDiskSafe(): { present: boolean; totalMb?: number; freeMb?: number; noteAr: string } {
@@ -240,6 +283,41 @@ router.get("/monitor/dashboard", async (_req, res) => {
     alerts: { unread: unreadAlerts.length, critical: unreadAlerts.filter((a) => a.severity === "critical").length },
     cronJobs: { enabled: cronJobs.length },
     timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * /monitor/health — «السيرفر ده صحّته إيه؟» — مسار كان في عقد الـAPI ومش موجود،
+ * فـ`scripts/audit-contracts` كان بيقيسه على الـstatic engine بس ويقول shape ok،
+ * والسيرفر الحقيقي بيرد 404 (مقاس في لوج 2026-11-17T15:36Z). أي شاشة أو مراقب
+ * بينده عليه كانت هتظهر «محتاجة روت».
+ *
+ * الرد مقاس فعلاً من العملية نفسها: عمر التشغيل، الذاكرة، الحمل، وهل الـWS فيه
+ * عملاء. مافيش توقّع ولا قيمة ثابتة.
+ */
+router.get("/monitor/health", (_req, res) => {
+  const mem = process.memoryUsage();
+  const load = os.loadavg();
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    status: "up",
+    uptimeSec: Math.round(process.uptime()),
+    pid: process.pid,
+    node: process.version,
+    hostname: os.hostname(),
+    load: { one: Number(load[0].toFixed(2)), five: Number(load[1].toFixed(2)), fifteen: Number(load[2].toFixed(2)) },
+    memory: {
+      rssMB: Math.round(mem.rss / 1048576),
+      heapUsedMB: Math.round(mem.heapUsed / 1048576),
+      systemFreeMB: Math.round(freeMem / 1048576),
+      systemTotalMB: Math.round(totalMem / 1048576),
+      systemUsedPct: Math.round(((totalMem - freeMem) / totalMem) * 100),
+    },
+    wsClients: getHubClientCount(),
+    measuredAt: new Date().toISOString(),
   });
 });
 

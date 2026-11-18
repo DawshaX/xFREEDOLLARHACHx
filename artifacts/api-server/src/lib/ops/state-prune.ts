@@ -17,6 +17,22 @@ const stateRoot = () => process.env.NOVA_STATE_ROOT
 const jobsDir = () => join(stateRoot(), "state", "jobs");
 const recordPath = () => join(stateRoot(), "state", "state-prune.json");
 const keepJobs = () => Number(process.env.NOVA_STATE_KEEP_JOBS || 400);
+
+/**
+ * هل مجلد vendor/bin اللي هنمسح منه **بتاع المكنة دي**؟
+ *
+ * `fetch-toolchain.mjs` بيكتب `.vendored.json` جوه المجلد اللي بينزّل فيه.
+ * وجوده = المجلد ناتج تنزيل NOVA، فالتنظيف من حقه. غيابه = مجلد جه مع الكود
+ * أو مع chdir بتاع CI (زي حالة live-verify: الملفات في جذر المستودع والتنظيف
+ * شغال من cwd تاني) — وساعتها المسح بيمسح دليل الشغل مش زايدة القرص.
+ */
+function ownsVendorDir(): boolean {
+  try {
+    return existsSync(join(stateRoot(), "vendor", "bin", ".vendored.json"));
+  } catch {
+    return false;
+  }
+}
 const keepDays = () => Number(process.env.NOVA_STATE_KEEP_DAYS || 14);
 
 export interface Footprint {
@@ -119,6 +135,7 @@ export interface PruneReport {
   freedBytes: number;
   kept: number;
   policy: { keepJobs: number; keepDays: number };
+  heavyToolsSkipped?: string;
   at: string;
   measured: Footprint;
 }
@@ -196,6 +213,17 @@ export function pruneState(now = Date.now()): PruneReport {
           let pkgs = 0;
           try { pkgs = readFileSync(join(root, "var/lib/dpkg/status"), "utf8").split("\n").filter((l) => l.startsWith("Package:")).length; } catch { /* ناقصة */ }
           if (pkgs >= 400) continue;
+          /* TEST38 — a rootfs that is structurally complete but has a small
+             package count is NOT a half-extracted one. The old rule deleted
+             anything under 400 packages, which also deleted a deliberately
+             minimal rootfs (and any test fixture) on every boot. A real
+             half-extraction is missing the shell or proot; a complete one has
+             both. Only delete when the structure itself is broken. */
+          const hasShell = existsSync(join(root, "bin", "sh")) || existsSync(join(root, "usr", "bin", "sh"));
+          const hasProot = existsSync(join(root, "usr", "local", "bin", "proot-static"))
+            || existsSync(join(root, "usr", "bin", "proot"))
+            || existsSync(join(root, "..", "proot-static"));
+          if (hasShell && hasProot) continue;
           const sz = dirBytes(root).bytes;
           if (sz <= 0) continue;
           rmSync(root, { recursive: true, force: true });
@@ -209,7 +237,15 @@ export function pruneState(now = Date.now()): PruneReport {
   // رفض التشغيل (2026-11-10). vendor/bin كان 628MB. الافتراضي امسح الستة التقيلين
   // من vendor/bin (أماس 52MB، nuclei، trivy، trufflehog، osv-scanner، gobuster).
   // الاستثناء: NOVA_HEAVY_TOOLS=1 يخلّيهم. تنزّلهم عند الطلب الصريح شغال.
-  if (process.env.NOVA_HEAVY_TOOLS !== "1") {
+  //
+  // ⚠ الاستثناء لازم يبان في نفس البيئة اللي فيها الملف: `live-verify` بيصدّر
+  // NOVA_HEAVY_TOOLS=1 على خطوة التنزيل **بس**، فخطوة الإقلاع بعدها كانت بتشوفه
+  // غايب → التنظيف بيفحص cwd/stateRoot (جذر المستودع في CI، لأن /home/container
+  // مش موجود) → بيمسح vendor/bin/nuclei اللي لسه اتنزّل → `nuclei present` أحمر
+  // والسبب مش التنزيل خالص. مقاس 2026-11-17: شغّلت المحرك في مجلد فيه
+  // vendor/bin/nuclei، وبعد 5 ثواني (boot prune pass) الملف اختفى.
+  // العلاج مش تنطيط env على كل خطوة: لو الملف مش ملك التنظيف، التنظيف مايمسحهوش.
+  if (process.env.NOVA_HEAVY_TOOLS !== "1" && ownsVendorDir()) {
     const vdir = join(stateRoot(), "vendor", "bin");
     for (const heavy of ["amass", "nuclei", "trivy", "trufflehog", "osv-scanner", "gobuster"]) {
       try {
@@ -237,6 +273,8 @@ export function pruneState(now = Date.now()): PruneReport {
   const report: PruneReport = {
     ok: true, removed, freedBytes, kept,
     policy: { keepJobs: KEEP_JOBS, keepDays: KEEP_DAYS },
+    // ليه مالوش لازمة نخبّي السبب: "مسحنا 0" و"مالناش حق نمسح" حالتين مختلفتين.
+    heavyToolsSkipped: process.env.NOVA_HEAVY_TOOLS === "1" ? "env-heavy-kept" : ownsVendorDir() ? "pruned" : "foreign-vendor-dir",
     at: new Date().toISOString(),
     measured: measureStateFootprint(),
   };

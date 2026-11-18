@@ -168,6 +168,9 @@ item("node kit publishes", () => exists("scripts/make-node-kit.mjs"));
 item("live verification (real tools on permitted targets)", () => {
   if (!exists("state/verified-live.json")) return { ok: false, evidence: "no report" };
   const v = JSON.parse(read("state/verified-live.json"));
+  //  «الانهيار مش قياس» — التقرير اللي بيقول HARNESS_CRASHED مايتقريش لا نجاح
+  //  ولا فشل أدوات: هو صفر معلومة، ولازم يبان كده بدل ما يعدّي أو يتخفي.
+  if (v.verdict === "HARNESS_CRASHED") return { ok: false, evidence: `الـharness انهار (${v.meta?.crash ?? "?"}) — مفيش قياس` };
   return { ok: v.counts?.pass > 0 && v.counts?.fail === 0, evidence: `${v.counts?.pass} pass / ${v.counts?.fail} fail · ${v.verdict}` };
 });
 

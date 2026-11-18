@@ -132,7 +132,8 @@ export interface ProotRunOptions {
   command: string;
   /** Hard timeout in ms. Default 120s. */
   timeoutMs?: number;
-  /** Working directory inside the guest. Default "/root". */
+  /** Working directory inside the guest. Default "/opt" — `/root` مملوك
+   *  root:root بمودّ 700 والـuid الحقيقي 1001، فمفيش كتابة هناك. */
   cwd?: string;
   /** Extra environment for the guest. Names are validated. */
   env?: Record<string, string>;
@@ -168,7 +169,7 @@ export function runInProot(opts: ProotRunOptions): Promise<ProotRunResult> {
   }
 
   const timeoutMs = Math.max(1000, opts.timeoutMs ?? 120_000);
-  const guestCwd = opts.cwd && opts.cwd.startsWith("/") ? opts.cwd : "/root";
+  const guestCwd = opts.cwd && opts.cwd.startsWith("/") && !opts.cwd.includes("..") ? opts.cwd : "/opt";
 
   // ── argv, not a shell string ────────────────────────────────────────────────
   // -R  : bind the rootfs as / and set up the standard mounts
@@ -177,7 +178,7 @@ export function runInProot(opts: ProotRunOptions): Promise<ProotRunResult> {
   // -b  : bind /dev, /proc, /sys so tools that need them work
   const argv: string[] = [
     "-R", layout.rootfs,
-    "-w", guestCwd,
+    "-w", "/",
     "-0",
     "-b", "/dev",
     "-b", "/proc",
@@ -185,18 +186,53 @@ export function runInProot(opts: ProotRunOptions): Promise<ProotRunResult> {
   ];
 
   // Environment: only validated names, values passed through execve (no shell).
+  /* ★ عيب اتكشف باختبار حقيقي (2026-11-17 22:5xZ): `-w /root/…/self-test`
+   *   كان proot بيفشل فيه بـ`can't chdir(...): Permission denied` وبيرجع
+   *   للـ`/`، فالـcwd اللي الأمر بيتنفذ فيه يبقى غلط وكل ملفات الشغل بتنزل
+   *   في المكان الغلط. السبب: proot بيحاول يـchdir للمسار **قبل** ما يطبّق
+   *   تحويلات الربط، و`/root` مودّه 700 ومالكه root في الـguest بينما
+   *   الـuid الحقيقي 1001.
+   *   الحل: منخليش proot يتولى الموضوع. بنفتح على `/` (مضمونة) وبنعمل
+   *   `cd` جوه الـshell نفسه بعد ما الـrootfs يبقى مطبّق بالكامل. النتيجة
+   *   واحدة، والفشل مستحيل. */
   const env: Record<string, string> = {
     ...process.env as Record<string, string>,
-    HOME: "/root",
+    /* ★ HOME لازم يكون **قابل للكتابة** جوه الـguest. `/root` مملوك
+     *   root:root بمودّ 700 والـuid الحقيقي 1001 ⇒ أي أداة بتحاول تكتب
+     *   إعداداتها بتفشل. اتقاس 2026-11-17: metasploit طلع
+     *   "Failed bootsnap cache setup - Errno::EACCES ... /root/.msf4"،
+     *   ونفس الحكاية هتحصل مع .nmap، .sqlmap، .config، .cache… كلها.
+     *   فبنستخدم /tmp (داخل الـguest، قابل للكتابة دايمًا) ما لم يحدد
+     *   المستدعي HOME صراحةً — ومساحات الشغل بتحدد HOME لمجلدها. */
+    HOME: "/tmp",
     TERM: "xterm-256color",
-    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    /* ★ JAVA_HOME ضروري لأدوات Java: burpsuite وzaproxy وjadx وghidra بتقراه.
+     *   اتقاس 2026-11-17: `burpsuite --version` طلع
+     *   "[warning] No JAVA_CMD set for run_java" ووقف، مع إن Java 25 موجودة
+     *   في /usr/lib/jvm/java-25-openjdk-amd64. تحطيط JAVA_HOME هنا بيخلي
+     *   **كل** أداة Java تشتغل من غير ما المستخدم يظبط حاجة بنفسه. */
+    JAVA_HOME: "/usr/lib/jvm/java-25-openjdk-amd64",
+    /* burpsuite بالتحديد بيدوّر على JAVA_CMD مش JAVA_HOME — اتقاس:
+     * "No JAVA_CMD set for run_java, falling back to JAVA_CMD = java" وبيوقف
+     * لو java مش في PATH بأمر صريح. الاتنين مع بعض بيغطوا كل أدوات Java. */
+    JAVA_CMD: "/usr/lib/jvm/java-25-openjdk-amd64/bin/java",
+    /* ★ أدوات impacket الكاملة (74 أداة) في /opt/nova-py — نسخة v0.13.1 من
+     *   pip. نسخة الـrootfs كانت ناقصة: examples/ فيه 12 ملف بس من 74،
+     *   فـpsexec/wmiexec/ntlmrelayx/GetNPUsers كانوا بيقولوا
+     *   "can't open file" — عطل حقيقي اتكشف بجرد أداة-أداة. */
+    PYTHONPATH: "/opt/nova-py",
+    PATH: "/usr/lib/jvm/java-25-openjdk-amd64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     LANG: "C.UTF-8",
   };
   for (const [k, v] of Object.entries(opts.env ?? {})) {
     if (/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(k)) env[k] = String(v);
   }
 
-  argv.push("/bin/sh", "-c", opts.command);
+  /* الـcd هنا مش تجمييل: ده اللي بيضمن إن الأمر بيتنفذ في المجلد المطلوب
+   * حتى لو proot فشل في `-w`. المسار اتفحص فوق (لازم يبدأ بـ/ ومافيهوش ..)
+   * وبيتحط بين علامتي اقتباس مفردة مع تهريب أي اقتباس — مافيش حقن. */
+  const cdPrefix = guestCwd !== "/" ? `cd '${guestCwd.replace(/'/g, `'\\''`)}' 2>/dev/null || cd /; ` : "";
+  argv.push("/bin/sh", "-c", cdPrefix + opts.command);
 
   return new Promise<ProotRunResult>((resolve) => {
     let stdout = "";

@@ -14,6 +14,7 @@ import { Router } from "express";
 import { exec as cpExec } from "child_process";
 import { logger } from "../lib/logger";
 import { broadcastLiveEvent } from "./live-events";
+import { broadcastEvent } from "../lib/ws-hub";
 import { saveMemory, searchMemory, getAllMemory } from "./memory";
 import { execOnLocalAgent, execStreamOnLocalAgent, isLocalAgentConnected, getConnectedAgentList, getAgentDeepProfile, preferredAgentId } from "./local-agent";
 import { getAllSettings } from "./settings";
@@ -145,6 +146,11 @@ interface MissionContext {
 }
 
 const tasks = new Map<string, KaliTask>();
+// TEST46 — كل تغيير في المهام يتبث فورًا: العدادات الحية تتحدث لحظيًا
+// بدل استطلاع 5ث. الاستطلاع بقى خطة أمان بطيئة على الواجهة.
+function broadcastTaskChange(): void {
+  broadcastEvent("kali_tasks_changed", { count: tasks.size });
+}
 const sessions = new Map<string, KaliSession>();
 let autonomousActive = false;
 let autonomousSseClients = new Set<import("express").Response>();
@@ -893,7 +899,7 @@ router.post("/kali-command/chat", async (req, res) => {
     const runOnAgent = async (cmd: string, taskId: string, task: KaliTask, currentStepMatch?: RegExpMatchArray) => {
       if (!agentConnected) {
         task.status = "failed"; task.error = "لا يوجد جهاز كالي متصل";
-        tasks.set(taskId, task);
+        tasks.set(taskId, task); broadcastTaskChange();
         sse(res, "agent_error", { error: `⚠️ الأمر [${cmd.slice(0, 60)}] — لا يوجد وكيل كالي متصل.\nnode nova-agent.js --server wss://YOUR-DOMAIN/api/local-agent/ws --reconnect` });
         return;
       }
@@ -905,7 +911,7 @@ router.post("/kali-command/chat", async (req, res) => {
       if (!sanitized.ok) {
         task.status = "failed";
         task.error = sanitized.reason;
-        tasks.set(taskId, task);
+        tasks.set(taskId, task); broadcastTaskChange();
         sse(res, "exec_result", {
           command: cmd,
           result: sanitized.reason || "❌ الأمر محظور",
@@ -951,7 +957,7 @@ router.post("/kali-command/chat", async (req, res) => {
       task.status = isError && !streamedOutput ? "failed" : "done";
       task.progress = 100;
       task.result = finalOutput.slice(0, 5000);
-      tasks.set(taskId, task);
+      tasks.set(taskId, task); broadcastTaskChange();
       sse(res, "exec_result", { command: finalCmd, result: finalOutput.slice(0, 4000), isError, type: "agent", agentHost: agents[0]?.hostname, durationMs: result?.durationMs, taskId });
       // ── Advanced Output Parsing ─────────────────────────────────────────
       const parsedResult = detectAndParseToolOutput(finalCmd, finalOutput);
@@ -1019,7 +1025,7 @@ router.post("/kali-command/chat", async (req, res) => {
       sse(res, "phase", { phase: "executing", label: `▶ ${cmd.slice(0, 50)}` });
       const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const task: KaliTask = { id: taskId, title: cmd.slice(0, 80), description: `SAFE: ${cmd}`, status: "running", progress: 10, command: cmd, streamLines: [], createdAt: Date.now(), type: "agent", risk: "low", agentId: agents[0]?.id };
-      tasks.set(taskId, task);
+      tasks.set(taskId, task); broadcastTaskChange();
       sse(res, "task_created", { taskId, command: cmd, isSafe: true });
       await runOnAgent(cmd, taskId, task);
     }));
@@ -1072,7 +1078,7 @@ router.post("/kali-command/chat", async (req, res) => {
       }
       const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const task: KaliTask = { id: taskId, title: cmd.slice(0, 80), description: `KALI AI: ${cmd}`, status: "running", progress: 10, command: cmd, streamLines: [], createdAt: Date.now(), type: "agent", risk: "low", agentId: agents[0]?.id };
-      tasks.set(taskId, task);
+      tasks.set(taskId, task); broadcastTaskChange();
       sse(res, "task_created", { taskId, command: cmd });
       await runOnAgent(cmd, taskId, task, currentStepMatch);
       if (currentStepMatch) stepIndex++;
@@ -1091,7 +1097,7 @@ router.post("/kali-command/chat", async (req, res) => {
         id: taskId, title: cmd.slice(0, 80), description: `SERVER: ${cmd}`,
         status: "running", progress: 0, command: cmd, createdAt: Date.now(), type: "server",
       };
-      tasks.set(taskId, task);
+      tasks.set(taskId, task); broadcastTaskChange();
       sse(res, "task_created", { taskId, command: cmd });
 
       const result = await execServerCommand(cmd, 30_000);
@@ -1101,7 +1107,7 @@ router.post("/kali-command/chat", async (req, res) => {
       task.status = isError ? "failed" : "done";
       task.progress = 100;
       task.result = output.slice(0, 3000);
-      tasks.set(taskId, task);
+      tasks.set(taskId, task); broadcastTaskChange();
 
       // Extract findings from server output too
       const serverFindings = extractFindings(output, `server:${cmd.slice(0, 30)}`);
@@ -1200,6 +1206,7 @@ router.get("/kali-command/tasks", (_req, res) => {
 // ── DELETE /kali-command/tasks ────────────────────────────────────────────────
 router.delete("/kali-command/tasks", (_req, res) => {
   tasks.clear();
+  broadcastTaskChange();
   res.json({ ok: true });
 });
 

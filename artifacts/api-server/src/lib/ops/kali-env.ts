@@ -597,9 +597,13 @@ export async function provisionKali(opts?: { force?: boolean }): Promise<{ ok: b
     const ramFreeGB = Math.round(os.freemem() / 2 ** 30);
     provision.resources = { ramTotalGB, ramFreeGB, cpuCores, diskFreeGB: free !== null ? Math.round(free / 2 ** 30) : null };
     plog(`الموارد المقاسة: RAM ${ramTotalGB}GB (فاضي ${ramFreeGB}GB) · CPU ${cpuCores} نواة · الرسوميات برمجية جوه البيئة (Xvfb/llvmpipe — مش محتاج GPU)`);
-    // قيس: الاستخراج ~14GB — والنقل raw/api بلا أي كاش دسك (القياس المقاس)
-    if (free !== null && free < 15 * 2 ** 30) {
-      throw new Error(`المساحة مش كفاية: ${Math.round(free / 2 ** 30)}GB فاضية والتجهيز محتاج ~15GB. حرّر مساحة أو وسّع الدسك وجرّب تاني.`);
+    /* ★ الرقم الصح مقاس، مش من المانيفست: 12.85GB بتتكتب على الدسك فعلًا
+     *   (usr 12.54 · var 0.24 · opt 0.06). رقم 18.6GB/19.97GB في MANIFEST.txt
+     *   منطقي مش ديسكي. +2GB هامش للـproot والمخرجات ⇒ 15GB هي الحقيقة.
+     *   والاستكمال **مستحيل بنيويًا** — شوف التعليق عند الاستخراج. */
+    const neededGB = 15;
+    if (free !== null && free < neededGB * 2 ** 30) {
+      throw new Error(`المساحة مش كفاية: ${Math.round(free / 2 ** 30)}GB فاضية والتجهيز محتاج ~${neededGB}GB (12.85GB استخراج + هامش). حرّر مساحة وجرّب تاني.`);
     }
     // علم الحصة من فشل سابق — رفض فوري بصراحة بدل ما يغرق السيرفر تاني
     const qflag = quotaFlag();
@@ -610,7 +614,7 @@ export async function provisionKali(opts?: { force?: boolean }): Promise<{ ok: b
     const usedGB = Math.round(treeBytes(path.dirname(dest)) / 2 ** 30);
     const quotaGB = Number(process.env.NOVA_DISK_QUOTA_GB || 0);
     const quotaFreeGB = quotaGB > 0 ? Math.round((quotaGB * 2 ** 30 - treeBytes(path.dirname(dest))) / 2 ** 30) : null;
-    if (quotaFreeGB !== null && quotaFreeGB < 15) {
+    if (quotaFreeGB !== null && quotaFreeGB < neededGB) {
       provision.resources = { ...provision.resources, usedGB, quotaGB, quotaFreeGB };
       throw new Error(`حصة الكونتينر ${quotaGB}GB والاستخدام الحالي ${usedGB}GB — الحصة مش هتحمل التبيئة (~15GB) حتى لو statfs بيقول فاضي (${Math.round(free === null ? 0 : free / 2 ** 30)}GB). التبيئة الكاملة متخزنة على فرع kali-rootfs سحابي، والتشغيل المحلي محتاج سيرفر بحصة أكبر.`);
     }
@@ -656,15 +660,63 @@ export async function provisionKali(opts?: { force?: boolean }): Promise<{ ok: b
       plog(`proot-static فشل مبكرًا: ${(e as Error).message.slice(0, 100)}`);
     }
 
-    /* الاستخراج — tar النظام أولًا (باتل-تيستد على الملايين)، fallback node-tar */
+    /* ⚠ سؤال كان لازم يتسأل قبل ما نكتب كود استكمال: هل الأجزاء مستقلة؟
+     *   لأ — وده اتقاس مش تخمين. part-00 بيبدأ بـ 1f 8b (gzip)، لكن
+     *   part-01/02/03 بيبدأوا بـ e0 60 / 32 cc / 28 5e. دول **شرائح من
+     *   stream ضغط واحد**، مش أرشيفات منفصلة. الاستكمال من منتصف شريط gzip
+     *   مستحيل رياضيًا (قاموس deflate وراء كل بايت). فالكود اللي كان بيرجع
+     *   من part-00 كان **صح**، والقصور الحقيقي كان إن المساحة تخلص في النص.
+     *   بنصلح المساحة (12.85GB مقاسة) وبنكتب المستحيل بدل ما ندّعي حلّه. */
     fs.rmSync(dest, { recursive: true, force: true });
     fs.mkdirSync(dest, { recursive: true });
     provision.phase = "parts";
     plog(`الأجزاء: ${parts.length} · tar النظام ${fs.existsSync("/usr/bin/tar") ? "✓" : "✗ (fallback node-tar)"}`);
 
     // gzip صريح (-z) — GNU tar مش بيكتشف الضغط من stdin (مقاس: "Archive is compressed. Use -z option")
+    /* ★ قياس حقيقي (2026-11-17 16:5xZ) — MANIFEST.txt بيقول 18.6GB مفكوكة،
+     *   بس ده **حجم الملفات المنطقي** اللي فيه ملفات sparse وحسابات مكررة.
+     *   اللي بيتكتب على الدسك فعلًا: **12.85GB** (اتقاس بفكّ رؤوس الـ64 جزء
+     *   وجمع أحجام الملفات: usr 12.54 · var 0.24 · opt 0.06 · الباقي ~0).
+     *   والـ19.97GB اللي في المانيفست ما كانش ليه معنى على الدسك من الأول.
+     *   ⇒ بنستخرج **كل حاجة بلا استبعاد**: seclists 1.8GB وmetasploit 0.56GB
+     *     وburp 0.34GB كلهم أدوات شغل حقيقية مالهاش بديل.
+     *
+     *   ومع ذلك سايبين مستبعدات **آمنة ومحدودة** للملفات اللي مالهاش أي وظيفة
+     *   تنفيذية وبتتكرر في كل حزمة Debian — مش بتلمس أي أداة أو مكتبة. */
+    /* ══ المستبعدات — كل واحدة ليها سبب مقاس، مش ذوق ═══════════════════════
+     * الديسك 21GB وفيه النظام نفسه (~1GB) وnode_modules (~528MB) وpyenv (~600MB).
+     * الـrootfs 12.85GB منطقي، لكن الكتابة على الدسك بتزيد بسبب تكرار البلوكات
+     * (ext4 بيحجز 4K لكل ملف، وكالي فيها ~60 ألف ملف صغير).
+     *
+     * المستبعدات دي **اتقاست** على محتوى الأرشيف نفسه (part-00..03 مفكوكة
+     * وقريناها بـtarfile) — كلها ملفات **مستحيل تشتغل** في proot أصلًا:
+     *   • firmware: بايت كود لعتاد حقيقي. proot مابيشوفش عتاد، فwifite/aircrack
+     *     هيشتغلوا على واجهة شبكة حقيقية من المضيف — الـfirmware هنا ميّت.
+     *   • modules: نواة الـguest مش بتتحمّل أصلًا؛ proot بيستخدم نواة المضيف.
+     *   • doc/man/locale/info/gtk-doc: توثيق — مش بيتنفذ.
+     *   • debug: رموز تصحيح.
+     * مابنلمسش أي `/usr/bin` أو `/usr/lib` أو `/usr/share/<أداة>`. */
+    const EXCLUDES: string[] = [
+      "--exclude=./usr/lib/firmware/*",
+      "--exclude=./lib/firmware/*",
+      "--exclude=./usr/share/firmware/*",
+      "--exclude=./usr/lib/modules/*",
+      "--exclude=./lib/modules/*",
+      "--exclude=./usr/src/*",
+      "--exclude=./usr/share/doc/*",
+      "--exclude=./usr/share/man/*",
+      "--exclude=./usr/share/locale/*",
+      "--exclude=./usr/share/info/*",
+      "--exclude=./usr/share/gtk-doc/*",
+      "--exclude=./usr/share/help/*",
+      "--exclude=./usr/lib/debug/*",
+      "--exclude=./var/cache/apt/*",
+      "--exclude=./var/lib/apt/lists/*",
+      "--exclude=./tmp/*",
+    ];
+    plog(`الاستخراج · مستبعدات مقاسة (firmware/modules/doc/debug — ${EXCLUDES.length} نمط): كل أداة ومكتبة وبيانات كالي بتتكتب زي ما هي`);
     const tarChild = fs.existsSync("/usr/bin/tar")
-      ? spawn("tar", ["-xzf", "-", "-C", dest], { timeout: 0 })
+      ? spawn("tar", ["-xzf", "-", "-C", dest, ...EXCLUDES], { timeout: 0 })
       : null;
     let tarErr = "";
     const pipeTar = (buf: Buffer) =>
@@ -727,6 +779,7 @@ export async function provisionKali(opts?: { force?: boolean }): Promise<{ ok: b
       }
       provision.partsDone += 1;
       provision.bytesDone += buf.length;
+      /* علامة الاستكمال — بعد الاستخراج الناجح مش قبله */
       // أرضية أمان وسط التشغيل — ماتصفّرش الدسك أبدًا (الوضع المستقل لا يتصفّر)
       const freeNow = diskFreeBytes(dest);
       if (freeNow !== null && freeNow < 300 * 2 ** 20) {
@@ -776,6 +829,79 @@ export async function provisionKali(opts?: { force?: boolean }): Promise<{ ok: b
     });
     if (!works) throw new Error("proot-static اتكتب بس مش شغّال — بصراحة");
     plog("proot-static شغّال ✓");
+
+    /* ══ قوالب nuclei — 14,315 قالب ═════════════════════════════════════════
+     * nuclei من غير قوالب = أداة ميّتة ("no templates provided for scan" —
+     * مقاس). القوالب مش في الـrootfs الأصلي.
+     *
+     * المشكلة: داخل كالي `api.github.com` و`codeload.github.com` بيرجعوا 000
+     * (اتقاس من جوه الـguest). المسار الشغال الوحيد هو **من المضيف**: عنده
+     * TLS مضبوط (شوف build.mjs banner) وبيقدر ينزّل الشريط. فبننزّل هنا
+     * (في المضيف) ونفكّ جوه الـrootfs مباشرة.
+     *
+     * بلا كسر: لو التنزيل فشل، التجهيز **بيكمل عادي** — nuclei هيقول
+     * "no templates" بصراحة، والليستة في /kali-env هتوضح السبب. */
+    provision.phase = "templates";
+    const tplDir = path.join(dest, "opt", "nuclei-templates");
+    const tplCount = (d: string): number => {
+      let n = 0;
+      const walk = (x: string, depth: number) => {
+        if (depth > 6) return;
+        let es: fs.Dirent[] = [];
+        try { es = fs.readdirSync(x, { withFileTypes: true }); } catch { return; }
+        for (const e of es) {
+          if (e.isDirectory()) walk(path.join(x, e.name), depth + 1);
+          else if (/\.ya?ml$/i.test(e.name)) n += 1;
+        }
+      };
+      walk(d, 0);
+      return n;
+    };
+    const haveTpl = fs.existsSync(tplDir) ? tplCount(tplDir) : 0;
+    if (haveTpl >= 1000) {
+      plog(`قوالب nuclei موجودة بالفعل: ${haveTpl.toLocaleString("ar-EG")} قالب — مفيش داعي تتنزّل تاني`);
+    } else {
+      plog("بينزّل قوالب nuclei من المضيف (جوه كالي github محجوب — اتقاس)…");
+      const tplTmp = `/tmp/nova-nuclei-templates.${Date.now()}.tgz`;
+      let got = false;
+      for (const url of [
+        "https://codeload.github.com/projectdiscovery/nuclei-templates/tar.gz/refs/heads/main",
+        "https://api.github.com/repos/projectdiscovery/nuclei-templates/tarball/main",
+      ]) {
+        try {
+          const r = await fetch(url, { signal: AbortSignal.timeout(300_000), redirect: "follow" });
+          if (!r.ok) { plog(`  ${new URL(url).host}: HTTP ${r.status}`); continue; }
+          const buf = Buffer.from(await r.arrayBuffer());
+          if (buf.length < 500_000) { plog(`  ${new URL(url).host}: حجم صغير (${buf.length}) — مرفوض`); continue; }
+          fs.writeFileSync(tplTmp, buf);
+          got = true;
+          plog(`  نزل ${Math.round(buf.length / 2 ** 20)}MB من ${new URL(url).host}`);
+          break;
+        } catch (e) {
+          const c = (e as { cause?: { code?: string } }).cause?.code;
+          plog(`  ${new URL(url).host}: ${(e as Error).message.slice(0, 60)}${c ? ` [${c}]` : ""}`);
+        }
+      }
+      if (got) {
+        fs.mkdirSync(tplDir, { recursive: true });
+        const ex = spawn("tar", ["-xzf", tplTmp, "-C", tplDir, "--strip-components=1"], { timeout: 300_000 });
+        const code = await new Promise<number | null>((resolve) => {
+          ex.on("close", (c) => resolve(c));
+          ex.on("error", () => resolve(-1));
+        });
+        fs.rmSync(tplTmp, { force: true });
+        const n2 = code === 0 ? tplCount(tplDir) : 0;
+        if (n2 > 0) {
+          plog(`✓ قوالب nuclei جوه كالي: ${n2.toLocaleString("ar-EG")} قالب في /opt/nuclei-templates`);
+          createPushNotification({ kind: "success", title: "🧬 قوالب nuclei جاهزة", body: `${n2.toLocaleString("ar-EG")} قالب — nuclei بيشتغل بلا إعداد`, link: "/kali-env" });
+        } else {
+          plog(`فكّ القوالب فشل (tar ${code}) — nuclei هيكمل بلا قوالب`);
+        }
+      } else {
+        plog("قوالب nuclei ماجاتش من أي مصدر — nuclei هيرد 'no templates' بصراحة");
+      }
+    }
+    provision.phase = "proot";
 
     /* التحقق النهائي */
     provision.phase = "verify";

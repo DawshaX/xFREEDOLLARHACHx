@@ -38,11 +38,11 @@ const LOGIN_MAX_FAILS = 5;
 
 function panelGateEnabled(): boolean {
   if (String(process.env.NOVA_PANEL_AUTH ?? "") === "0") return false;
-  // البوابة محتاجة سرّ توقيع على الأقل: التوكن الحالي بيغطي (مضبوط على waifly).
+  // البوابة محتاجة سرّ توقيع على الأقل: التوكن الحالي بيغطي (بيتقرا من env الاستضافة).
   return Boolean(sessionSecret());
 }
 
-// الأولوية: env (waifly Variables) → الإعداد الدائم (runtime-config على الذاكرة
+// الأولوية: env (متغيرات الاستضافة) → الإعداد الدائم (runtime-config على الذاكرة
 // الخارجية — بيتغيّر من اللوحة من غير ريستارت) → الافتراضي. كده صاحب اللوحة
 // يبدّل الباسورد من جوّه، والاستضافة عمرها ما بتتحرم منه.
 function panelUser(): string {
@@ -186,6 +186,54 @@ function clientIp(req: Request): string {
   return raw.replace(/^::ffff:/, "").trim();
 }
 
+/**
+ * مفتاح القفل — بيختلف عن `clientIp` بقصد.
+ *
+ * `clientIp` بتقرا `x-forwarded-for` من غير شرط، والهيدر ده الزائر بيكتبه بنفسه.
+ * أي مهاجم يقدر يدور على الـIP بكل محاولة ويفلت من قفل الـ5/١٠دقايق تمامًا.
+ * المفتاح هنا هو عنوان السوكت — الشيء الوحيد اللي الزائر مش قادر يزوّره.
+ * لو السيرفر ورا بروكسي مضبوط (النشر العادي)، نفعّل الهيدر بـ NOVA_TRUST_PROXY=1.
+ */
+function lockoutKey(req: Request): string {
+  const socket = String(req.socket?.remoteAddress ?? "").replace(/^::ffff:/, "").trim();
+  // ورا بروكسي مضبوط كل الطلبات بتيجي من نفس السوكت — فلازم نستخدم الهيدر،
+  // وإلا كل الزوار هيتشاركوا نفس عدّاد المحاولات (وصاحب الحساب هيتقفل بسبب غيره).
+  if (String(process.env.NOVA_TRUST_PROXY ?? "") === "1") return clientIp(req) || socket;
+  return socket || clientIp(req);
+}
+
+function lockoutDisabled(): boolean {
+  return String(process.env.NOVA_LOGIN_LOCKOUT ?? "") === "0";
+}
+
+function queryLoginEnabled(): boolean {
+  return String(process.env.NOVA_ALLOW_QUERY_LOGIN ?? "1") !== "0";
+}
+
+/**
+ * فك تشفير واحد إضافي — Express بيفك الـquery مرة،
+ * لكن لو الرابط اتنسخ من مكان زي الـmail بيبقى %2523 مزدوج.
+ */
+function decodeOnce(v: string): string {
+  if (!v.includes("%")) return v;
+  try {
+    return decodeURIComponent(v);
+  } catch {
+    return v;
+  }
+}
+
+/**
+ * صفات الكوكي. SameSite=Strict + HttpOnly مثبّتين من الأول،
+ * وبنضيف Secure لما الطلب يكون HTTPS (الموقع الحي كده).
+ * من غير Secure، الكوكي بيسافر على أي http لنفس الدومين.
+ */
+function cookieAttrs(req: Request, ttlMs: number): string {
+  const proto = String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() || (req.secure ? "https" : "");
+  const secure = proto === "https" ? " Secure;" : "";
+  return `Path=/; HttpOnly;${secure} SameSite=Strict; Max-Age=${Math.floor(ttlMs / 1000)}`;
+}
+
 /* ─── صفحة الدخول (HTML داخلي — مفيش أصول مطلوبة قبل الجلسة) ─────────────── */
 
 // صورة الغلاف/اللوجو — مدفونة base64 عشان صفحة الدخول تكمل للزائر الغريب وهو قبل
@@ -267,6 +315,17 @@ F.addEventListener("submit",function(ev){
   })
   .catch(function(err){E.textContent=err.message;E.style.display="block";B.disabled=false;B.textContent="دخول";});
 });
+  /* لو الدخول اتفشل من الرابط — نقول السبب بصراحة */
+  var Q=new URLSearchParams(location.search);
+  if(Q.get("e")){
+    E.textContent="الدخول من الرابط مانجحش. لو كلمة السر فيها # اكتبها هنا في الفورم — المتصفح بيقطع الرابط عند #";
+    E.style.display="block";
+    try{history.replaceState(null,"","/login");}catch(_){}
+  }
+  /* أي باسورد وصل في الرابط لازم يختفي من شريط العنوان ومن الـhistory فورًا */
+  if(Q.get("user")!==null||Q.get("pass")!==null){
+    try{history.replaceState(null,"",location.pathname);}catch(_){}
+  }
 </script></body></html>`;
 
 function esc(s: string): string {
@@ -319,6 +378,8 @@ function isExempt(p: string): boolean {
   return (
     p === "/login" || p === "/logout" ||
     p === "/api/panel/login" || p === "/api/panel/logout" ||
+    // تشخيص الدخول لازم يشتغل قبل الدخول — مافيش سر فيه (أعلام true/false بس)
+    p === "/api/panel/diag" || p === "/api/panel/unlock" ||
     // مراقبة الـuptime (GitHub cron) لازم تفضل مفتوحة وإلا الهب يبان مقفول
     /^\/api\/healthz?\b/.test(p) ||
     // قناة الوكلاء: مصادق عليها بالتوكن في طبقة الـupgrade نفسها
@@ -350,6 +411,45 @@ export function panelAuthMiddleware() {
     const p = req.path || "/";
     const ip = clientIp(req);
     const ua = String(req.headers["user-agent"] ?? "").slice(0, 160);
+    const lockKey = lockoutKey(req);
+
+    /*
+     * دخول من رابط:  GET /?user=Dawsha&pass=...
+     *
+     * قبل كده الرابط ده ماكانش مدعوم خالص: مفيش أي كود بيقرا
+     * req.query.user/pass في المشروع كله، فالطلب كان بيرجع صفحة الدخول
+     * كأن حاجة محصلتش — وهو ده اللي شافه المستخدم بالظبط.
+     *
+     * أمانًا: مافيش أي حاجة من الرابط بترجع في الرد ولا في الريدايركت،
+     * والرد بيكون 302 لمسار نضيف — فالباسورد بيختفي من شريط العنوان ومن
+     * الـhistory بمجرد نجاح الدخول. وبنقفل الـReferrer عشان مايتبعتش لأي موقع تاني.
+     */
+    if (
+      req.method === "GET" &&
+      queryLoginEnabled() &&
+      (p === "/" || p === "/login") &&
+      (req.query.user !== undefined || req.query.pass !== undefined)
+    ) {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Referrer-Policy", "no-referrer");
+      const qUser = decodeOnce(String(req.query.user ?? ""));
+      const qPass = decodeOnce(String(req.query.pass ?? ""));
+      const okU = safeEq(qUser, panelUser());
+      const okP = safeEq(qPass, panelPass());
+      const locked = !lockoutDisabled() && failCount(lockKey) >= LOGIN_MAX_FAILS;
+      if (okU && okP && !locked) {
+        fails.delete(lockKey);
+        res.setHeader("Set-Cookie", `${COOKIE_NAME}=${encodeURIComponent(issueSession(panelUser()))}; ${cookieAttrs(req, sessionTtlMs())}`);
+        authLog({ kind: "login_ok", user: panelUser(), ip, ua, detail: "query-param login" });
+        logger.warn({ ip }, "panel login via URL query — الأفضل الدخول من الفورم");
+        res.redirect(302, "/");
+        return;
+      }
+      if (!(okU && okP)) recordFail(lockKey);
+      authLog({ kind: okU && okP ? "blocked" : "login_fail", user: qUser.slice(0, 64), ip, ua, detail: "query-param login" });
+      res.redirect(302, "/login?e=q");
+      return;
+    }
 
     /* TEST39 — الدخول من الرابط نفسه: ‎/?user=…&pass=…‎ (سير سلوك المالك المقاس:
      * بيفتح اللوحة بالبيانات في الURL والميدلوير كان بيتجاهلهم تمامًا فيرجعله
@@ -401,26 +501,31 @@ export function panelAuthMiddleware() {
     /* محاولة الدخول */
     if (p === "/api/panel/login" && req.method === "POST") {
       res.setHeader("Cache-Control", "no-store");
-      if (failCount(ip) >= LOGIN_MAX_FAILS) {
+      // التحقق من البيانات الأول، والقفل بعديه.
+      // الباسورد الصح لازم يفتح دايمًا — القفل بيعطّل التخمين، مش بيحبس صاحب الحساب.
+      // (قبل كده كان بيتحسب قبل المقارنة وماكانش بيتصفّر بعد النجاح — فـ 5 غلطات كانت بتقفل الحساب 10 دقايق
+      // حتى لو الباسورد اللي بعدها صحيح.)
+      const body = (req.body ?? {}) as { user?: string; pass?: string; next?: string };
+      const okUser = safeEq(String(body.user ?? ""), panelUser());
+      const okPass = safeEq(String(body.pass ?? ""), panelPass());
+      if (!(okUser && okPass) && !lockoutDisabled() && failCount(lockKey) >= LOGIN_MAX_FAILS) {
         authLog({ kind: "blocked", ip, ua, detail: "rate-limited: أكتر من 5 محاولات فاشلة" });
         res.status(429).json({ ok: false, error: "محاولات كتير — استنى 10 دقائق" });
         return;
       }
-      const body = (req.body ?? {}) as { user?: string; pass?: string; next?: string };
-      const okUser = safeEq(String(body.user ?? ""), panelUser());
-      const okPass = safeEq(String(body.pass ?? ""), panelPass());
       if (okUser && okPass) {
+        fails.delete(lockKey);
         const sess = issueSession(panelUser());
         res.setHeader(
           "Set-Cookie",
-          `${COOKIE_NAME}=${encodeURIComponent(sess)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(sessionTtlMs() / 1000)}`,
+          `${COOKIE_NAME}=${encodeURIComponent(sess)}; ${cookieAttrs(req, sessionTtlMs())}`,
         );
         authLog({ kind: "login_ok", user: panelUser(), ip, ua });
         const nxt = typeof body.next === "string" && body.next.startsWith("/") && !body.next.startsWith("//") ? body.next : "/";
         res.json({ ok: true, next: nxt });
         return;
       }
-      recordFail(ip);
+      recordFail(lockKey);
       // رد موحّد: مفيش «اليوزر غلط» منفصلة — الغريب ميعرفش أنهي خانة اللي غلط
       authLog({ kind: "login_fail", user: String(body.user ?? "").slice(0, 64), ip, ua });
       logger.warn({ ip, user: String(body.user ?? "").slice(0, 32) }, "panel login failed");
@@ -430,7 +535,7 @@ export function panelAuthMiddleware() {
 
     if (p === "/logout" || p === "/api/panel/logout") {
       const user = userFromCookieHeader(String(req.headers.cookie ?? ""));
-      res.setHeader("Set-Cookie", `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`);
+      res.setHeader("Set-Cookie", `${COOKIE_NAME}=; ${cookieAttrs(req, 0)}`);
       if (user) authLog({ kind: "logout", user, ip, ua });
       if (wantsHtml(req)) { res.redirect("/login"); return; }
       res.json({ ok: true });
@@ -500,4 +605,44 @@ export function panelAuthMiddleware() {
 export function wsSessionUser(cookieHeader: string | undefined): string | null {
   if (!panelGateEnabled()) return "gate-off";
   return userFromCookieHeader(cookieHeader ?? "");
+}
+
+/**
+ * تشخيص الدخول — بيرجّع حالة البوابة من غير ما يكشف أي سر.
+ *
+ * الغرض: صاحب اللوحة يقدر يعرف بنفسه ليه الدخول مش شغال (البوابة مقفولة؟
+ * الحساب مقفول من محاولات؟ الباسورد متظبّط أصلًا؟) بدل التخمين.
+ * مافيش باسورد ولا توكن ولا هاش بيرجع هنا — أعلام true/false بس.
+ */
+export function panelAuthDiagnostics(req: Request): Record<string, unknown> {
+  const key = lockoutKey(req);
+  const n = failCount(key);
+  return {
+    gate_enabled: panelGateEnabled(),
+    gate_off_reason: panelGateEnabled() ? null : "NOVA_PANEL_AUTH=0 أو مفيش NOVA_PANEL_SECRET/NOVA_EXEC_TOKEN",
+    user_configured: Boolean(panelUser()),
+    pass_configured: Boolean(panelPass()),
+    pass_source: process.env.NOVA_PANEL_PASS
+      ? "NOVA_PANEL_PASS"
+      : getRuntimeConfig("panel.pass")
+        ? "runtime-config"
+        : process.env.NOVA_EXEC_TOKEN
+          ? "NOVA_EXEC_TOKEN (fallback)"
+          : "none",
+    secret_configured: Boolean(sessionSecret()),
+    session_hours: Math.round(sessionTtlMs() / 3_600_000),
+    lockout_enabled: !lockoutDisabled(),
+    lockout_key_kind: String(process.env.NOVA_TRUST_PROXY ?? "") === "1" ? "forwarded-ip" : "socket-ip",
+    failed_attempts: n,
+    max_failed_attempts: LOGIN_MAX_FAILS,
+    locked_out: !lockoutDisabled() && n >= LOGIN_MAX_FAILS,
+    query_login_enabled: queryLoginEnabled(),
+    cookie_secure: String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() === "https" || req.secure,
+    session_valid: Boolean(userFromCookieHeader(String(req.headers.cookie ?? ""))),
+  };
+}
+
+/** تصفير عدّاد المحاولات لمفتاح الطلب الحالي — لصاحب اللوحة اللي اتقفل بالغلط. */
+export function clearLoginLockout(req: Request): boolean {
+  return fails.delete(lockoutKey(req));
 }

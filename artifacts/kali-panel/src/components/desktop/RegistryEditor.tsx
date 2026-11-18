@@ -39,6 +39,7 @@ export function RegistryEditor() {
   const [editingKey, setEditingKey] = useState<RegistryKey | null>(null);
   const [backupPath, setBackupPath] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [plane, setPlane] = useState<string>('');
 
   const hives: RegistryHive[] = [
     {
@@ -95,6 +96,7 @@ export function RegistryEditor() {
       if (response.ok) {
         const data = await response.json();
         setKeys(data.keys || []);
+        setPlane(data.plane || '');
       }
     } catch (error) {
       console.error('Failed to load registry keys:', error);
@@ -117,6 +119,7 @@ export function RegistryEditor() {
       if (response.ok) {
         const data = await response.json();
         setKeys(data.results || []);
+        setPlane(data.plane || '');
       }
     } catch (error) {
       console.error('Failed to search registry:', error);
@@ -342,6 +345,13 @@ export function RegistryEditor() {
           </button>
         ))}
       </div>
+
+      {/* TEST45 — بطاقة الطايرة: عقدة ويندوز حقيقية أو بيئة الرمل (صدق الصفحة) */}
+      {plane && (
+        <div className="text-[10px] font-mono px-2 py-1 rounded" style={{ background: 'rgba(68,255,136,0.08)', color: 'rgba(68,255,136,0.9)', border: '1px solid rgba(68,255,136,0.2)' }}>
+          🧭 الطايرة: {plane}
+        </div>
+      )}
 
       {/* Path Navigation */}
       <div className="flex items-center gap-2 bg-background/40 rounded p-2">

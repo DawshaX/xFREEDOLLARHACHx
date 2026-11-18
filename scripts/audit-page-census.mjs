@@ -39,11 +39,21 @@ for (const f of files) {
   const lines = s.split("\n").length;
   const base = f.replace(/\.tsx$/, "");
   const routes = (appSrc.match(new RegExp(`pages/${base}`, "g")) || []).length;
+  // مكوّن في pages/ بيتستخدم جوّه صفحة تانية = مركّب فعلًا مش صفحة يتيمة.
+  // (KaliSystemsPanel كان بيطلع UNROUTED وهو مركّب جوه KaliEnvPage — إنذار كاذب.)
+  let embeddedIn = null;
+  if (!routes) {
+    for (const g of files) {
+      if (g === f) continue;
+      const gs = fs.readFileSync(path.join(PAGES, g), "utf8");
+      if (new RegExp(`from ["']\\./${base}["']`).test(gs)) { embeddedIn = g; break; }
+    }
+  }
   let cls = "STATIC-SUSPECT";
   if (api > 0) cls = "REAL";
   else if (lines < 60) cls = "WRAPPER-OR-THIN";
   else if (state > 2 && inter > 3) cls = "LOCAL-LOGIC";
-  rows.push({ file: f, cls, routed: routes > 0, api, inter, state, lines });
+  rows.push({ file: f, cls, routed: routes > 0 || Boolean(embeddedIn), embeddedIn, api, inter, state, lines });
 }
 
 const by = rows.reduce((a, r) => { a[r.cls] = (a[r.cls] || 0) + 1; return a; }, {});
@@ -51,7 +61,8 @@ const suspects = rows.filter((r) => r.cls === "STATIC-SUSPECT");
 const unrouted = rows.filter((r) => !r.routed);
 
 if (asJson) {
-  console.log(JSON.stringify({ total: rows.length, classes: by, suspects, unrouted }, null, 2));
+  //  كل الصفوف مش المرشحين بس: «بايظ» حكم على صفحة، ومحتاج تشوف الـ86 كلهم.
+  console.log(JSON.stringify({ total: rows.length, classes: by, rows, suspects, unrouted }, null, 2));
 } else {
   console.log(`page-census: ${rows.length} صفحة · routed=${rows.filter((r) => r.routed).length}`);
   console.log(`  classes: ${JSON.stringify(by)}`);
@@ -60,4 +71,6 @@ if (asJson) {
     for (const r of suspects) console.log(`    - ${r.file} (lines=${r.lines} routed=${r.routed})`);
   }
   if (unrouted.length) console.log(`  UNROUTED: ${unrouted.map((r) => r.file).join(", ")}`);
+  const embedded = rows.filter((r) => r.embeddedIn);
+  if (embedded.length) console.log(`  EMBEDDED: ${embedded.map((r) => `${r.file} → ${r.embeddedIn}`).join(", ")}`);
 }

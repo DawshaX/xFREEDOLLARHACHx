@@ -77,8 +77,12 @@ interface SystemIntel {
     hostname: string; platform: string; arch: string; cpus: number;
     totalMemory: string; uptime: string; loadAvg: string; memUsage: string; openPorts: string;
   };
-  agents: AgentInfo[];
-  agentCount: number;
+  //  ⚠ 2026-11-17: `agents` اختيارية — نفس الفخ اللي وقعت فيه /cockpit في
+  //  KaliTerminal: الـendpoint بيرد جسم مختلف (gate / خطأ) بدون `agents`،
+  //  و`intel?.agents[0]` بترمي `Cannot read properties of undefined (reading '0')`
+  //  لأن `?.` بتحمي `intel` بس مش `agents`.
+  agents?: AgentInfo[];
+  agentCount?: number;
   knowledgeCount: number;
   tasks: { queued: number; running: number; done: number; failed: number };
 }
@@ -637,7 +641,7 @@ export default function KaliCommandCenter() {
       // Auto-scan announcement
       setMsgs(prev => [...prev, {
         id: uid(), role: "system",
-        text: `✅ جهاز متصل: **${intel?.agents[0]?.hostname}** (${intel?.agents[0]?.user}@${intel?.agents[0]?.platform}) — جاري بناء الملف الكامل...`,
+        text: `✅ جهاز متصل: **${intel?.agents?.[0]?.hostname ?? "—"}** (${intel?.agents?.[0]?.user ?? "—"}@${intel?.agents?.[0]?.platform ?? "—"}) — جاري بناء الملف الكامل...`,
         ts: Date.now(),
       }]);
     }
@@ -745,7 +749,7 @@ export default function KaliCommandCenter() {
     if (!cmd.trim() || cmdBusy) return;
     setCmdBusy(true);
     setCmdInput("");
-    const tgtLabel = tgt === "kali" ? "KALI-البيئة المدمجة" : tgt === "agent" ? intel?.agents[0]?.hostname ?? "DEVICE" : "SERVER";
+    const tgtLabel = tgt === "kali" ? "KALI-البيئة المدمجة" : tgt === "agent" ? intel?.agents?.[0]?.hostname ?? "DEVICE" : "SERVER";
     setTermLog(prev => [...prev, {
       text: `$ [${tgtLabel}] ${cmd}`,
       isError: false, isCmd: true, ts: Date.now(),
@@ -804,7 +808,7 @@ export default function KaliCommandCenter() {
   };
 
   const runningTasks = tasks.filter(t => t.status === "running").length;
-  const agent0 = intel?.agents[0];
+  const agent0 = intel?.agents?.[0];
 
   /* ═════════════════════════════════════════════════════════════════════════
      RENDER

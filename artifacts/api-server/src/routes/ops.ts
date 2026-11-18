@@ -31,6 +31,9 @@
  *   GET   /api/ops/tools                الأدوات المقاسة على المكنة دي (موجود/ناقص)
  *   POST  /api/ops/tools/provision      ينزّل الأدوات الثابتة في vendor/bin (مُبوّب)
  */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Router, type Request, type Response } from "express";
 import { catalogStatus, lookupBountyProgram, huntCandidates } from "../lib/ops/bounty-catalog";
 import { listVault, syncFromJobs, draftReport, vaultStatus } from "../lib/ops/findings-vault";
@@ -675,6 +678,95 @@ router.post("/ops/config/test-telegram", async (req: Request, res: Response) => 
   });
 });
 
+/**
+ * أدوات بايثون — المسار اللي **شغال فعلًا** في البيئة دي.
+ *
+ * `POST /ops/tools/provision` بينزّل نسخ ثابتة من GitHub Releases، واتقاس
+ * 2026-11-17 إن `release-assets.githubusercontent.com` محجوب هنا (ECONNRESET)
+ * ⇒ 16 أداة ليها assets مش قابلة للتنزيل من المكنة دي أبدًا، مهما اتعادت.
+ *
+ * لكن pypi.org وfiles.pythonhosted.org **200**. فأي أداة أمنية ليها حزمة
+ * PyPI (impacket, certipy, sqlmap, pwntools, volatility3, pypykatz, frida…)
+ * بتتنزّل وتشتغل فعلًا. السكربت `scripts/fetch-python-tools.mjs` هو اللي
+ * بينفّذ ده، والمانيفست بيخرج من تشغيل كل أداة — مش من وجود ملف.
+ */
+/* جذر الريبو من مكان الباندل. الباندل بيتنفّذ من artifacts/api-server/dist/index.mjs،
+ * والـscripts/ على الجذر — فبنطلع 3 مستويات. لو الباندل في مكان تاني،
+ * NOVA_REPO_ROOT بيحسم الموضوع بدل التخمين. */
+const REPO_ROOT = (() => {
+  if (process.env.NOVA_REPO_ROOT) return process.env.NOVA_REPO_ROOT;
+  try {
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+  } catch {
+    return process.cwd();
+  }
+})();
+
+router.get("/ops/tools/python", (_req: Request, res: Response) => {
+  const manifestPath = path.join(REPO_ROOT, "vendor", "python-tools.json");
+  let manifest: unknown = null;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    manifest = null;
+  }
+  const venv = process.env.NOVA_PY_VENV || path.join(REPO_ROOT, "vendor", "pyenv");
+  res.json({
+    ok: true,
+    venv,
+    venvPresent: fs.existsSync(path.join(venv, "bin", "python")),
+    manifest,
+    hint: manifest
+      ? null
+      : "لسه ما اتنزّلش — POST /api/ops/tools/python/provision أو شغّل scripts/fetch-python-tools.mjs",
+  });
+});
+
+router.post("/ops/tools/python/provision", async (req: Request, res: Response) => {
+  if (!opsAllowed(req)) { deny(res, "تنزيل أدوات = تشغيل عملية على المكنة، محتاج NOVA_EXEC_TOKEN."); return; }
+  const only = String(req.body?.only || "").trim();
+  const all = Boolean(req.body?.all);
+  const script = path.join(REPO_ROOT, "scripts", "fetch-python-tools.mjs");
+  if (!fs.existsSync(script)) {
+    // الحزمة المستقلة (standalone) مابيكون فيهاش scripts/ — بنقولها بصراحة
+    res.status(501).json({ ok: false, error: "vendorer-missing", detail: `السكربت مش في الباندة: ${script}` });
+    return;
+  }
+  const argv = [script, "--json"];
+  if (only) argv.push(`--only=${only}`);
+  else if (all) argv.push("--all");
+  const started = Date.now();
+  const run = await new Promise<{ code: number | null; out: string; err: string }>((resolve) => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { spawn } = require("node:child_process") as typeof import("node:child_process");
+    const c = spawn(process.execPath, argv, { cwd: REPO_ROOT, stdio: ["ignore", "pipe", "pipe"], timeout: 1_800_000 });
+    let out = "";
+    let err = "";
+    c.stdout.on("data", (d: Buffer) => { out += d.toString(); });
+    c.stderr.on("data", (d: Buffer) => { err += d.toString(); });
+    c.on("error", (e) => resolve({ code: -1, out, err: String(e.message) }));
+    c.on("close", (code) => resolve({ code, out, err }));
+  });
+  const ms = Date.now() - started;
+  let parsed: { installed?: number; total?: number; results?: unknown[]; pythonPackages?: number } | null = null;
+  try {
+    parsed = JSON.parse(run.out);
+  } catch {
+    parsed = null;
+  }
+  const ok = run.code === 0 && (parsed?.installed ?? 0) > 0;
+  broadcastEvent("nova-ops", { type: "python-tools", ok, installed: parsed?.installed ?? 0, total: parsed?.total ?? 0, ms });
+  res.status(ok ? 200 : 502).json({
+    ok,
+    ms,
+    installed: parsed?.installed ?? 0,
+    total: parsed?.total ?? 0,
+    pythonPackages: parsed?.pythonPackages ?? null,
+    results: parsed?.results ?? [],
+    stderr: ok ? undefined : run.err.slice(-1200),
+  });
+});
+
 router.get("/ops/tools", (_req: Request, res: Response) => {
   const st = toolchainStatus();
   res.json({ ok: true, ...st, kinds: toolStatus(), catalogue: [...VENDORABLE], env: { NOVA_TOOL_DIR: process.env.NOVA_TOOL_DIR || null } });
@@ -914,12 +1006,17 @@ let nodeToolsCache: { at: number; tools: Record<string, NodeTool> | null; from: 
 const TOOL_NAMES = [
   "nmap","masscan","sqlmap","nikto","hydra","john","hashcat","wireshark","tcpdump",
   "gobuster","dirb","ffuf","feroxbuster","wpscan","whatweb","wafw00f","nuclei","amass",
-  "sublist3r","dnsrecon","whois","dig","aircrack-ng","reaver","binwalk","exiftool",
+  "sublist3r","dnsrecon","whois","dig","aircrack-ng","reaver","binwalk",
+  /* TEST48 — الاسم البديل: الحزمة libimage-exiftool-perl والأمر exiftool */
+  "libimage-exiftool-perl|exiftool",
   "steghide","volatility3","impacket-smbclient","responder","netexec","crackmapexec",
   "metasploit-framework|msfconsole","burpsuite","zaproxy|owasp-zap","setoolkit",
   "maltego","beef-xss","ophcrack","cewl","enum4linux","arp-scan","hping3","socat",
   "msfvenom","searchsploit","sherlock","proxychains","proxychains4","ssh","openssl",
 ] as const;
+/* TEST48 — exiftool أمر والحزمة libimage-exiftool-perl: الفحص بيجرب الاسم
+ * الأساسي وحين يفشل يجرب الاسم البديل (نفس صيغة metasploit-framework|msfconsole
+ * اللي موجودة في الليستا). */
 const TOOLS_PROBE_CMD =
   "for t in " + TOOL_NAMES.flatMap((x) => x.split("|")).join(" ") + "; do command -v \"$t\" >/dev/null 2>&1 && echo \"OK:$t\"; done; echo ---; grep -c '^Package:' /var/lib/dpkg/status; echo ---; ls /usr/bin /usr/sbin /bin /sbin 2>/dev/null | sort -u | wc -l; echo ---; grep '^Package: kali-tools' /var/lib/dpkg/status | sed 's/^Package: //' | sort | tr '\\n' ' '";
 async function measureNodeTools(rows: Array<{ kali: boolean; mode: string; id: string; hostname: string }>): Promise<{ from: string; tools: Record<string, NodeTool>; sysinfo?: { packages: number; executables: number; kaliGroups: string[] } } | null> {
@@ -947,6 +1044,40 @@ async function measureNodeTools(rows: Array<{ kali: boolean; mode: string; id: s
   return { from: first.hostname, tools, sysinfo };
 }
 
+/* مرآة النشر — من الهَب نفسه، من غير ما نسأل GitHub خالص.
+ *
+ *  كان فيه هنا مسار قديم (TEST47) بيقرا مرآة النشر القديمة من GitHub API
+ *  ويخزنه 10 دقايق. المشكلة مش في الكاش — المشكلة إن «حالة النشر» كانت بتتقاس
+ *  من هوست تالت (nova.waifly.com) عن طريق runner برّه، فأي تنصيب لنوفا كان
+ *  بيشوف كارت بيحكي عن سيرفر مش بتاعه. الصح إن الهَب يقول بنيته هو.
+ *
+ *  الرد دلوقتي من `/api/ops/version` بتاع نفس العملية: الـcommit اللي اتبنى منه،
+ *  عمر الـbundle اللي Node حمّله، والوقت اللي قاعد فيه. مافيش شبكة، مافيش توكن،
+ *  مافيش 502 لما النت يقطع.
+ *
+ *  الراوت والاسم `deploy-mirror` اتسابوا زي ما هما لأن الصفحات القديمة بتنده
+ *  عليهم — الشكل هو الشكل اللي `DeployMirror` في اللوحة بيقراه. */
+router.get("/ops/deploy-mirror", (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "no-store");
+  const v = buildStamp();
+  const boot = { commit: v.sha, builtAt: v.entryMtime };
+  res.json({
+    ok: true,
+    at: new Date().toISOString(),
+    reachable: true,
+    boot,
+    bootAfter: null,
+    asset: v.entryMtime ? { updatedAt: v.entryMtime, size: null } : null,
+    action: v.stale.suspect ? "stale" : "fresh",
+    fresh: !v.stale.suspect,
+    stale: v.stale.suspect,
+    notes: [v.stale.why],
+    uptimeSec: v.uptimeSec,
+    node: v.node,
+    servedFrom: "the-hub-itself",
+  });
+});
+
 /* ── TEST24 — المخزن الموحّد: «فين اللي عملتو وفين الشغل» — كل مساحاتك على جيت هوب
  * بمقاسات حية من GitHub API (حجم فعلي بالبايت · آخر تحديث · لينك يفتح المكان). ── */
 router.get("/ops/storage-hub", async (_req: Request, res: Response) => {
@@ -972,6 +1103,18 @@ router.get("/ops/storage-hub", async (_req: Request, res: Response) => {
     const bytes = kf.reduce((a, f) => a + (f.size ?? 0), 0);
     const parts = kf.filter((f) => /^part-\d+$/.test(f.name)).length;
     rows.push({ id: "kali-rootfs", label: "فرع kali-rootfs — بيئة كالي الكاملة", kind: "branch", bytes, items: parts, updatedAt: null, link: `https://github.com/${REPO}/tree/kali-rootfs` });
+  }
+  const spare = (await gh("/repos/DawshaX/Hack-STORAGE")) as { size?: number; html_url?: string; pushed_at?: string } | null;
+  if (spare) {
+    rows.push({
+      id: "hack-storage",
+      label: "Hack-STORAGE — تخزين احتياطي (فاضي لحد ما يتسجل فيه)",
+      kind: "repo",
+      bytes: (spare.size ?? 0) * 1024,
+      items: 1,
+      updatedAt: spare.pushed_at ?? null,
+      link: spare.html_url ?? "https://github.com/DawshaX/Hack-STORAGE",
+    });
   }
   for (const [id, label] of [
     ["nova-portable", "باندل nova-24-7 — البرنامج الكامل اللي بيشتغل عندك"],

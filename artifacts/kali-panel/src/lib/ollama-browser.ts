@@ -1,4 +1,5 @@
 import { corpusTotal } from "./corpus-live";
+import { KALI_ARSENAL_64 } from "./cyber-corpus-2099";
 /**
  * Browser-side Ollama streaming client.
  *
@@ -41,7 +42,7 @@ function injectCyberNovaSelfAwareness(messages: OllamaMessage[]): OllamaMessage[
   } catch {
     // ignore
   }
-  const header = `[الوعي الذاتي لمنصة CyberNova 2099]: أنت العقل الأمني التكتيكي لمنصة CyberNova. تمتلك وصولاً حياً إلى مكتبة ${galaxyTotal.toLocaleString()}+ ثغرة من 9 مصادر عالمية (NVD, CISA KEV, GitHub Advisories, ExploitDB, PacketStorm, VulDB, CIRCL, Immunefi-Web3, AI-Mutated)، و78 أداة Kali Linux & Web3 (Foundry, Slither, Mythril, Echidna, Halmos, Nuclei, Subfinder, Katana, ffuf...)، و56 مشروع GitHub، و28 لبنة ثغرات أولية (P01-P28)، وناقل WebSocket الداخلي. الهدف النشط حالياً: ${activeTarget}. قدم تحليلاً تقنياً دقيقاً وعملياً باللغة العربية.`;
+  const header = `[الوعي الذاتي لمنصة CyberNova 2099]: أنت العقل الأمني التكتيكي لمنصة CyberNova. تمتلك وصولاً حياً إلى مكتبة ${galaxyTotal.toLocaleString()}+ ثغرة من 9 مصادر عالمية (NVD, CISA KEV, GitHub Advisories, ExploitDB, PacketStorm, VulDB, CIRCL, Immunefi-Web3, AI-Mutated)، و${KALI_ARSENAL_64.length} أداة Kali Linux & Web3 (Foundry, Slither, Mythril, Echidna, Halmos, Nuclei, Subfinder, Katana, ffuf...)، و56 مشروع GitHub، و28 لبنة ثغرات أولية (P01-P28)، وناقل WebSocket الداخلي. الهدف النشط حالياً: ${activeTarget}. قدم تحليلاً تقنياً دقيقاً وعملياً باللغة العربية.`;
   if (messages.some((m) => m.role === "system")) {
     return messages.map((m, idx) =>
       idx === 0 && m.role === "system" ? { ...m, content: `${header}\n\n${m.content}` } : m,

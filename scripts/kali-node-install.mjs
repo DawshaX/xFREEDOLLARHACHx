@@ -154,6 +154,29 @@ async function install() {
   }
   log("الاستخراج خلص — الهيكل: " + fs.readdirSync(ROOTFS).sort().join(" "));
 
+  // TEST53 — فكس الجذر (مقاس 2026-11-17): جيت مايخزنش المجلدات الفاضية فالجست
+  // بيولّد من غيرها — apt/dpkg بيحتاجوها كلها وبيفشلوا واحد-واحد
+  // («E: Directory '/var/log/apt/' missing» · «archives/partial is missing» ·
+  // «dpkg returned an error code (2)»). القائمة دي مقاسة من rootfs الفرع نفسه:
+  for (const d of [
+    "var/log/apt",
+    "var/lib/dpkg/updates",
+    "var/lib/dpkg/triggers/File",
+    "var/lib/dpkg/triggers/Unincorporated",
+    "var/lib/dpkg/alternatives",
+    "var/cache/apt/archives/partial",
+    "var/lib/apt/lists/partial",
+    "var/lib/ucf/cache",
+    "run/lock",
+    "tmp",
+    "var/tmp",
+    "var/lib/sudo",
+    "var/spool/mail",
+  ]) {
+    try { fs.mkdirSync(path.join(ROOTFS, ...d.split("/")), { recursive: true }); } catch { /* موجود أصلًا */ }
+  }
+  log("مجلدات الجست الحرجة (13) اتأكدت — apt/dpkg شغالين من أول مرة");
+
   let proot = null;
   for (let a = 1; a <= 3; a++) {
     try {
@@ -191,7 +214,7 @@ async function install() {
     if (j25) {
       const jRel = "/usr/lib/jvm/" + j25;
       fs.writeFileSync(path.join(ROOTFS, "etc", "ld.so.conf.d", "zz-nova-java-jli.conf"), jRel + "/lib/jli\n" + jRel + "/lib\n");
-      const jc = spawn(binPath, ["-r", ROOTFS, "/usr/sbin/ldconfig"], { timeout: 60000 });
+      const jc = spawn(binPath, ["-0", "-r", ROOTFS, "/usr/sbin/ldconfig"], { timeout: 60000 });
       await new Promise((res) => jc.on("close", res).on("error", res));
       log("Java " + j25 + " + libjli اتظبطوا — burpsuite بيرد bare");
     }

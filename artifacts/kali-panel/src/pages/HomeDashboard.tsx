@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
 import { useWebSocket, emitPlatformWsEvent } from "@/hooks/useWebSocket";
+import { useLiveEvent } from "@/hooks/useWebSocket";
 import {
   runLiveMultiSiteVulnerabilitySync,
   classifyAndEnrichCve,
@@ -1389,9 +1390,14 @@ export default function HomeDashboard() {
     const refresh = async () => {
       try { const r = await fetch(API("/monitor/system")); if (r.ok) setSys(await r.json() as SystemInfo); } catch { /* */ }
     };
-    const t = setInterval(refresh, 3000);
+    const t = setInterval(refresh, 15_000);
     return () => clearInterval(t);
   }, []);
+  // TEST46 — بايلود hw_metrics بيتعرض مباشرة من القناة الموحدة (صفر استطلاع).
+  useLiveEvent("hw_metrics", (ev) => {
+    const snap = ev as unknown as SystemInfo;
+    if (typeof snap?.cpu?.usage === "number") setSys(snap);
+  });
 
   // ── Sparkline history ─────────────────────────────────────────────────
   useEffect(() => {

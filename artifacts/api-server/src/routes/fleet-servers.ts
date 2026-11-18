@@ -81,7 +81,7 @@ router.get("/fleet/servers", async (req: Request, res: Response) => {
       : undefined,
     note:
       servers.length === 0
-        ? "مفيش سيرفرات مسجّلة — ضيف الـCodespace أو Render أو Waifly من نفس الصفحة، والقياس هنا حقيقي بيتصل بـ/api/health."
+        ? "مفيش ماكينات مسجّلة — اضغط «أضف ماكينة» وحدّد عنوان هَبك (Codespace / VPS / Render / أي هوست). القياس حقيقي: بيتصل بـ/api/health ويسجّل الكود اللي رجع. مافيش ماكينات مزروعة بالاسم — مافيش «down» من غير ما تكون ضفتها انت."
         : undefined,
   });
 });

@@ -200,7 +200,7 @@ test("loadServers survives a corrupt file instead of killing boot", () => {
   // Junk dropped, the valid one survives — and because that file predates the
   // current seed list (no seedVersion), the known machines are merged in once.
   assert.equal(back[0].base, "https://ok.onrender.com", "junk entries are dropped, the valid one survives");
-  assert.equal(back.length, 1 + mod.SEED_SERVERS.length, "an old file gains the new seeds");
+  assert.equal(back.length, 1 + mod.seeds().length, "an old file gains the new seeds");
 });
 
 test("replaceServers normalises and dedupes whatever the browser sends", () => {
@@ -284,13 +284,29 @@ await testAsync("probeServer stays down (and names the reason) when both schemes
   assert.match(probe.error, /النطاق/);
 });
 
-test("a missing registry file starts from the machines we know, not from nothing", () => {
+test("a fresh install starts with an EMPTY fleet, not with someone else's dead machines", () => {
+  //  مقاس 2026-11-17: الصفحة كانت بتفتح بـ3 أجهزة (Waifly ×2 + Codespace قديم)
+  //  كلهم down — أول انطباع «المنصة بايظة»، والسبب إنها بتدور على ماكينات مش
+  //  بتاعتنا. الماكينة اللي المستخدم بيضيفها من الصفحة بتتحفظ وبتتقاس؛ الافتراضي
+  //  بقى صفر بدل ما يكون قايمة ميتة. `NOVA_FLEET_SEED=1` بيرجّعها لو حد لسه
+  //  معتمد عليها.
   const previous = process.env.NOVA_SERVERS_FILE;
   process.env.NOVA_SERVERS_FILE = join(work, "never-written.json");
+  delete process.env.NOVA_FLEET_SEED;
   const list = mod.loadServers();
   process.env.NOVA_SERVERS_FILE = previous;
-  assert.ok(list.length >= 2, "the Codespace and the Waifly slot should be there");
-  assert.ok(list.some((s) => s.kind === "waifly" && s.base.includes("27316")));
+  assert.equal(mod.seeds().length, 0, "no Waifly/Codespace host is seeded by default");
+  assert.deepEqual(list, [], "an empty fleet is the honest starting point — the page asks you to add one");
+});
+
+test("NOVA_FLEET_SEED=1 restores the old seed list for environments that own those hosts", () => {
+  const previous = process.env.NOVA_SERVERS_FILE;
+  process.env.NOVA_SERVERS_FILE = join(work, "seeded-optin.json");
+  process.env.NOVA_FLEET_SEED = "1";
+  const list = mod.loadServers();
+  delete process.env.NOVA_FLEET_SEED;
+  process.env.NOVA_SERVERS_FILE = previous;
+  assert.ok(list.length >= 2, "opt-in brings the known machines back");
   assert.ok(list.every((s) => s.id.startsWith("srv-")), "seeded entries need real ids");
 });
 
@@ -319,15 +335,62 @@ test("a machine the user removed stays removed once the seed list is current", (
   assert.deepEqual(back.map((s) => s.base), ["https://keep.onrender.com"], "no resurrection after the seeds are current");
 });
 
+test("an empty seed list never re-injects machines a user removed", () => {
+  //  الحالة المقاسة: ملف فيه الأجهزة الـ3 وseedVersion: 2 — بعد ما شلنا الزرع،
+  //  لو الشرط `seedVersion < SEED_VERSION` شغال على [] كان هيفضل يدمج صفر للأبد
+  //  (ده صح) لكن أي إصدار زرع جديد كان هيضيف لملف المستخدم شغل هو شاله. الضمانة:
+  //  seedServers() فاضية ⇒ مافيش دمج خالص.
+  const previous = process.env.NOVA_SERVERS_FILE;
+  const file = join(work, "removed-by-user.json");
+  writeFileSync(file, JSON.stringify({ seedVersion: 0, servers: [{ id: "x", name: "mine", base: "https://mine.onrender.com", kind: "render", addedAt: 1 }] }));
+  process.env.NOVA_SERVERS_FILE = file;
+  delete process.env.NOVA_FLEET_SEED;
+  const back = mod.loadServers();
+  process.env.NOVA_SERVERS_FILE = previous;
+  assert.equal(back.length, 1, "the user's own machine survives untouched");
+  assert.equal(back[0].base, "https://mine.onrender.com");
+});
+
+test("an old file full of our dead seeds is cleaned on upgrade, and the user's own machines stay", () => {
+  //  الملف اللي على المكنة فعلًا: seedVersion 2 + الأجهزة الـ3 الميتة. بعد ما
+  //  الزرع بقى صفر، القايمة كانت هتفضل 3 أجهزة down للأبد. الترقية v3 بتشيل
+  //  بالعنوان بالحرف — مش بالاسم (المستخدم ممكن يسمّي جهازه «Waifly · HTTPS»
+  //  لو ده عنوانه هو).
+  const previous = process.env.NOVA_SERVERS_FILE;
+  const file = join(work, "v2-dead-seeds.json");
+  const mine = { id: "mine1", name: "جهازي", base: "https://my-vps.example.com", kind: "custom", addedAt: 5 };
+  writeFileSync(file, JSON.stringify({
+    seedVersion: 2,
+    servers: [
+      mine,
+      { id: "s1", name: "Codespace الرئيسي", base: "https://animated-broccoli-gwx6wgpxvx5hv6gj-8080.app.github.dev", kind: "codespace", addedAt: 1 },
+      { id: "s2", name: "Waifly · HTTPS", base: "https://nova.waifly.com", kind: "waifly", addedAt: 1 },
+      { id: "s3", name: "Waifly · Paris FR01", base: "http://node.waifly.com:27316", kind: "waifly", addedAt: 1 },
+    ],
+  }));
+  process.env.NOVA_SERVERS_FILE = file;
+  delete process.env.NOVA_FLEET_SEED;
+  const back = mod.loadServers();
+  const onDisk = JSON.parse(readFileSync(file, "utf8"));
+  process.env.NOVA_SERVERS_FILE = previous;
+  assert.equal(back.length, 1, "our three dead seeds are gone");
+  assert.equal(back[0].base, "https://my-vps.example.com", "the user's machine survives");
+  assert.equal(onDisk.seedVersion, mod.SEED_VERSION, "the cleanup is written down once, not every read");
+  assert.equal(onDisk.servers.length, 1);
+});
+
 test("a new seed reaches a machine that booted before it existed", () => {
   const previous = process.env.NOVA_SERVERS_FILE;
   const file = join(work, "old-file.json");
   writeFileSync(file, JSON.stringify({ servers: [{ id: "x", name: "x", base: "https://x.onrender.com", kind: "render", addedAt: 1 }] }));
   process.env.NOVA_SERVERS_FILE = file;
+  process.env.NOVA_FLEET_SEED = "1"; // الزرع بقى اختياريًا — بنقيس مساره بالاختيار
   const back = mod.loadServers();
   const again = mod.loadServers();
+  const seedCount = mod.seeds().length; // قبل ما نشيل الاختيار
   process.env.NOVA_SERVERS_FILE = previous;
-  assert.equal(back.length, 1 + mod.SEED_SERVERS.length);
+  delete process.env.NOVA_FLEET_SEED;
+  assert.equal(back.length, 1 + seedCount);
   assert.ok(back.some((s) => s.base.includes("nova.waifly.com")), "the HTTPS face is one of them");
   assert.equal(again.length, back.length, "merging happens once, not on every read");
 });

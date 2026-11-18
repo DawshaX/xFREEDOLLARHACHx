@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     env:
-      HUB: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
+      HUB: ${{ vars.NOVA_HUB_URL }}   # هَبك انت — مافيش افتراضي
     steps:
       - name: push the token into the node + verify acceptance (value never printed)
         env:

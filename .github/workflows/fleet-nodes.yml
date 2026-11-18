@@ -47,7 +47,12 @@ permissions:
   actions: read # ميزانية السلوت (TEST33): تعدّاد jobs الموجات الحية
 
 concurrency:
-  group: nova-fleet
+  # TEST52 — دوران الgroup: الموجة الجاية لازم ما تستناش ورا موجة قديمة لسه
+  # عايشة (سلات محجوزة من كود قبل الفكس لحد ما تكمل عمرها) — الgroup الجديد
+  # بيخلي الموجة المصلّحة تشتغل فورًا على السلات الفاضية (~8) بدل انتظار
+  # الموجة القديمة لساعات. max-parallel 12 + خطة prepare (TEST34) بتحسب
+  # الموجود فمافيش تجاوز للحد 20 jobs.
+  group: nova-fleet-r2
   cancel-in-progress: false
 
 jobs:
@@ -55,6 +60,10 @@ jobs:
     name: plan the wave
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    # main only, stated per job (not only in the commit's branches filter):
+    # a push or a manual run on a feature branch must never commit its report
+    # to that branch — the report belongs on the branch the site reads.
+    if: github.ref == 'refs/heads/main'
     outputs:
       nodes: ${{ steps.plan.outputs.nodes }}
     steps:
@@ -75,6 +84,8 @@ jobs:
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
           EVENT: ${{ github.event_name }}
           TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          # TEST56 — رسالة كوميت الدفع: علامة [force-wave] فيها = قرار صريح بتجاوز ميزانية السلات
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # A fleet node is a machine that runs whatever the hub sends it. Spawning
           # one against a hub that does not require a token is how "our free fleet"
@@ -124,6 +135,15 @@ jobs:
             if [ "$WANT" -gt 19 ]; then WANT=19; fi
             n="$(node scripts/fleet-slot-budget.mjs "$WANT" 1 | tail -1 | grep -oE '[0-9]+' || true)"
             case "$n" in ''|*[!0-9]*) n=0 ;; esac
+            # TEST56 — تنفيذ فوري: كوميت رسالته فيها [force-wave] بيتجاوز ميزانية
+            # السلات عمدًا (نفس فلسفة dispatch — «القرار الصريح بلا ميزانية»).
+            # الجدولة بتاع GitHub بترتب السلات الفاضية حالًا والباقي في الطابور بنظام.
+            case "$COMMIT_MSG" in
+              *"[force-wave]"*)
+                n=19
+                echo "::notice::force wave — تجاوز ميزانية السلات بقرار صريح من المالك (علامة [force-wave])"
+                ;;
+            esac
           fi
           echo "nodes=$n" >> "$GITHUB_OUTPUT"
           echo "::notice::starting $n fleet node(s)"
@@ -131,14 +151,21 @@ jobs:
   node:
     name: node ${{ matrix.i }}
     needs: prepare
+    if: needs.prepare.outputs.nodes != '0' && github.ref == 'refs/heads/main'
     # With nodes=0 the whole matrix must not even be scheduled: otherwise every
     # push to this file queues 19 jobs that each boot a runner just to skip.
-    if: needs.prepare.outputs.nodes != '0'
     runs-on: ubuntu-latest
     timeout-minutes: 350          # < 6 h hard cap, so the job ends cleanly
+    # TEST56 — التقرير المقاس بيندفع من العقدة نفسها (ci-commit) فمحتاجة write
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
-      max-parallel: 20
+      # TEST49 — كانت 20: الموجة بتحجز كل سلات الحساب فأي فحص/جدولة (المرآة
+      # كل 30د · gates · catalog) بيستنى ساعات أو يتأجل نهائيًا (مقاس 3 مرات
+      # 2026-11-16). 12 عقدة تكفي التغطية 24/7 (كل عقدة تعيش ~6 ساعات) وسيب
+      # ~8 سلات فاضية دايمًا للصيانة — النظام يتنفس.
+      max-parallel: 12
       matrix:
         # A plain list: GitHub's expression language has no range(), and a
         # literal list is easier to read than nested join/split gymnastics.
@@ -165,6 +192,22 @@ jobs:
 
       - uses: actions/checkout@v4
         if: steps.gate.outputs.run == 'true'
+        with:
+          fetch-depth: 0
+
+      # check-workflows rule (same one vuln-corpus/nova-brain follow): a job that
+      # BOTH queues (concurrency) and commits state with scripts/ci-commit.mjs
+      # must move to the current origin/<branch> first — a queued run keeps the
+      # SHA it was queued with, so a stale tree reads a stale index. Measured on
+      # this repo before the fix: scripts/check-workflows.mjs listed exactly this
+      # file (`7/8 stateful jobs start from origin/main`) and `agent-gates` stayed
+      # red at 43/44 on every run.
+      - name: move to the current origin/${{ github.ref_name }} (a queued run starts on a stale commit)
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          git fetch --prune origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+          echo "working from $(git rev-parse --short HEAD)"
 
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.run == 'true'
@@ -218,15 +261,66 @@ jobs:
         if: steps.gate.outputs.run == 'true'
         continue-on-error: true
         timeout-minutes: 8
+        env:
+          # TEST56 — فهرس العقدة للتقرير المقاس
+          MI: ${{ matrix.i }}
         run: |
+          # TEST47 — قياس 2026-11-16 21:18Z على العقد الحية: 14 أداة من الليستا
+          # دي ناقصة. السبب: apt جوه proot بيفشل بصمت — الجست مافيهوش
+          # /etc/resolv.conf فapt-get update مايسألش DNS أصلًا. الترقيع:
+          # (1) كتابة DNS في الجست قبل apt (2) تقسيم التثبيت مجموعتين عشان
+          # فشل حزمة ضخمة (amass ~100MB) مايموتش الباقي (3) محاولة تانية
+          # (4) التحقق يطبع الاسم المفقود بالحرف — مافيش «skipped» عمياء.
+          # TEST53 — فكس الجذر (مقاس 2026-11-17): جيت مايخزنش المجلدات الفاضية
+          # ففرع kali-rootfs فالجست بيولّد من غيرها — apt/dpkg بيحتاجوها كلها
+          # («E: Directory '/var/log/apt/' missing» · «archives/partial is missing» ·
+          # «dpkg returned an error code (2)»). ال13 مجلد قبل أي apt-get جوه الجست
+          # — نفس قائمة المثبّت بالحرف. لاحظ \$d عشان الشيل الخارجي مايبوظش الحلقة.
           if [ -f "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" ]; then
             P="$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static"
             R="$HOME/kali-rootfs/rootfs"
-            "$P" -R "$R" /bin/sh -c "apt-get update -qq && apt-get install -y -qq amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john 2>&1 | tail -1" || \
-              echo "::warning::extra tools skipped — kali_run بيسأل apt جوه كالي عند الطلب"
-            "$P" -R "$R" /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null && echo OK:\$t; done" | tee /tmp/kali-extras.txt || true
-            echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12"
+            printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$R/etc/resolv.conf"
+            # exiftool الحزمة بتاعته libimage-exiftool-perl — apt بحزمة واحدة غلط بيأجّل المجموعة كلها (سبب ال14 ✗ المقاسة)
+            G2="responder netexec sherlock arp-scan hping3 john"
+            for G in "$G1" "$G2"; do
+              for ATTEMPT in 1 2; do
+                if "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p \"/\$d\" 2>/dev/null; done && DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $G" >/tmp/apt-extra.log 2>&1; then
+                  break
+                fi
+                [ "$ATTEMPT" = "2" ] && echo "::warning::group failed (تاني محاولة): $(tail -2 /tmp/apt-extra.log | tr '\n' ' ')"
+              done
+            done
+            "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null && echo OK:\$t; done" | tee /tmp/kali-extras.txt || true
+            MISSING="$("$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c "for t in amass ffuf sublist3r exiftool steghide volatility3 responder netexec sherlock arp-scan hping3 john; do command -v \$t >/dev/null || echo MISSING:\$t; done" 2>/dev/null | tr '\n' ' ')"
+            echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12 ${MISSING:+— مفقود: $MISSING}"
+            # TEST56 — التقرير المقاس من العقدة نفسها: ملف per-node عشان مافيش
+            # تعارض كتابة بين العقد — الرد بيتبني من المقاس مش من الادعاء.
+            # + نفس القياس في $GITHUB_STEP_SUMMARY — بيظهر في check-run output
+            # عبر الAPI فورًا (قراءة بس، مافيش حاجة push).
+            OKCOUNT="$(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)"
+            mkdir -p state
+            printf '{"at":"%s","run":%s,"node":"node-%s","ok":%s,"missing":"%s"}\n' "$(date -u +%FT%TZ)" "$GITHUB_RUN_ID" "$MI" "$OKCOUNT" "${MISSING:-}" > "state/fleet-wave-report-$GITHUB_RUN_ID-$MI.json"
+            {
+              echo "### node-$MI — القياس المقاس"
+              echo '```'
+              echo "extra tools present: $OKCOUNT/12"
+              [ -n "${MISSING:-}" ] && echo "مفقود: $MISSING"
+              echo "at: $(date -u +%FT%TZ)"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Commit the wave tools report (measured proof, per node)
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MSG: "chore(fleet): wave tools report [skip ci]"
+        run: |
+          shopt -s nullglob
+          for f in state/fleet-wave-report-*.json; do
+            node scripts/ci-commit.mjs --message "$MSG" "$f" || true
+          done
 
       - name: Resolve the hub token
         if: steps.gate.outputs.run == 'true'
@@ -248,7 +342,15 @@ jobs:
           IDX: ${{ matrix.i }}
           NOVA_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
-          HUB="${HUB:-wss://nova.waifly.com/api/local-agent/ws}"
+          # مافيش fallback لهوست برّه: توكن بلا هَب = العقدة بتقعد مكانها.
+          # قبل كده كان الافتراضي wss://nova.waifly.com — يعني أي fork للمستودع
+          # كان بيوصّل عُقده بهَب مش بتاعه، وأي مستخدم بيشوف «hub: nova.waifly.com»
+          # في اللوج ويحسب إنه اتوصل وهو ماعندهوش أي حاجة هناك.
+          # الحل: المتغير `NOVA_HUB` (Actions → Variables) أو إدخال التشغيل اليدوي.
+          if [ -z "$HUB" ]; then
+            echo "::warning::مافيش NOVA_HUB مضبوط — العقدة مش هتوصل لهَب. حط wss://<هَبك>/api/local-agent/ws في Settings → Actions → Variables."
+            exit 0
+          fi
           echo "hub: $HUB"
           NODE_ID="gh-${IDX}-$(date +%H%M)"
 

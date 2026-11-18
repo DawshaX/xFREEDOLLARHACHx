@@ -3,6 +3,7 @@
  * كل الصلاحيات مفتوحة — تنفيذ أي أمر على الجهاز المتصل بدون قيود
  */
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useLiveRefetch } from "@/hooks/useWebSocket";
 import {
   Terminal, Brain, Zap, Activity, RefreshCw, Trash2,
   ChevronRight, Loader2, X, Search, Download, Camera,
@@ -181,46 +182,50 @@ export function NovaCommanderPanel() {
   const [intel, setIntel] = useState<Record<string, unknown> | null>(null);
 
   // ── Polling: agent status + AI status ──────────────────────────────────────
+  // TEST46 — الدوال عالية للscope: useLiveRefetch لازم يستدعيها من مستوى
+  // المكون (هو hook مستقل عن الuseEffect) — نفس الاستدعاءات بالحرف.
+  const pollAgent = useCallback(async () => {
+    try {
+      const r = await fetch(API("/local-agent/status"));
+      if (r.ok) {
+        const d = await r.json() as { connected: boolean; agents: AgentInfo[] };
+        setAgentConnected(d.connected);
+        setAgentList(d.agents ?? []);
+        if (d.agents?.length > 0) {
+          setSelectedAgentId(prev => prev ?? d.agents[0].id);
+        } else {
+          setSelectedAgentId(null);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
+  const pollAI = useCallback(async () => {
+    try {
+      const r = await fetch(API("/kali-command/system"));
+      if (r.ok) {
+        const d = await r.json() as { agentCount: number; knowledgeCount: number; server: Record<string, string>; agents: AgentInfo[] };
+        setAiOnline(true);
+        setIntel(d as unknown as Record<string, unknown>);
+      }
+    } catch { setAiOnline(false); }
+  }, []);
+  const pollTasks = useCallback(async () => {
+    try {
+      const r = await fetch(API("/kali-command/tasks"));
+      if (r.ok) setTasks(await r.json() as KaliTask[]);
+    } catch { /* ignore */ }
+  }, []);
   useEffect(() => {
-    const pollAgent = async () => {
-      try {
-        const r = await fetch(API("/local-agent/status"));
-        if (r.ok) {
-          const d = await r.json() as { connected: boolean; agents: AgentInfo[] };
-          setAgentConnected(d.connected);
-          setAgentList(d.agents ?? []);
-          if (d.agents?.length > 0) {
-            setSelectedAgentId(prev => prev ?? d.agents[0].id);
-          } else {
-            setSelectedAgentId(null);
-          }
-        }
-      } catch { /* ignore */ }
-    };
-    const pollAI = async () => {
-      try {
-        const r = await fetch(API("/kali-command/system"));
-        if (r.ok) {
-          const d = await r.json() as { agentCount: number; knowledgeCount: number; server: Record<string, string>; agents: AgentInfo[] };
-          setAiOnline(true);
-          setIntel(d as unknown as Record<string, unknown>);
-        }
-      } catch { setAiOnline(false); }
-    };
-    const pollTasks = async () => {
-      try {
-        const r = await fetch(API("/kali-command/tasks"));
-        if (r.ok) setTasks(await r.json() as KaliTask[]);
-      } catch { /* ignore */ }
-    };
     void pollAgent();
     void pollAI();
     void pollTasks();
-    const t1 = setInterval(pollAgent, 5_000);
+    // القناة الأولى بقت WS: local_agent_status وkali_tasks_changed بيتبثوا
+    // من السيرفر لحظة الحدث (تحت)، والعدادات هنا خطة أمان بطيئة (30ث) فقط.
     const t2 = setInterval(pollAI, 30_000);
-    const t3 = setInterval(pollTasks, 5_000);
-    return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3); };
-  }, []);
+    return () => clearInterval(t2);
+  }, [pollAgent, pollAI, pollTasks]);
+  useLiveRefetch(["local_agent_status", "agent_deep_profile"], pollAgent, 30_000);
+  useLiveRefetch(["kali_tasks_changed"], pollTasks, 30_000);
 
   // ── Fetch AI models ─────────────────────────────────────────────────────────
   useEffect(() => {

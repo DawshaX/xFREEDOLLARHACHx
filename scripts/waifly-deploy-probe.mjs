@@ -16,7 +16,7 @@
  *        b) لسه قديم؟ POST /api/nova-core/restart (و?force=1 لو مافيش مشرف) → المُشرف
  *           يقلع العملية بالكود الجديد اللي على الديسك.
  *        c) يقيس تاني كل 5ث لحد 60ث ويسجل bootAfter.
- *   5) يكتب state/waifly-deploy.json — مرآة مكتبوكة في المستودع: الصفحة ‎/kali-env
+ *   5) يكتب state/deploy.json — مرآة مكتبوكة في المستودع: الصفحة ‎/kali-env
  *      بتقراها بfetch مباشر وتعرضها للمالك («🚀 حالة النشر») — الإثبات بيشوفه عينه.
  *      TEST31b: الباندل نفسه بيشحن نسخة من المرآة جوّه public/state/ (fallback
  *      لو raw وقع) — build-standalone.mjs، أُغلق hollow-ship (بوابة مقاس 43/43).
@@ -31,7 +31,7 @@ const TAG = process.env.NOVA_RELEASE_TAG || "nova-portable";
 const HUB = (process.env.NOVA_HUB_URL || "https://nova.waifly.com").replace(/\/$/, "");
 const TOKEN = (process.env.NOVA_EXEC_TOKEN || "").trim();
 const GH = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
-const OUT = process.argv[2] || "state/waifly-deploy.json";
+const OUT = process.argv[2] || "state/deploy.json";
 
 const HEADERS = { "user-agent": "nova-deploy-probe", ...(TOKEN ? { "x-nova-token": TOKEN } : {}) };
 

@@ -45,7 +45,11 @@ const WORDLIST = arg("wordlist", "");
 // الحلقة كل 6 ساعات، بدل ما نعتمد على watchdog أسبوعي. GitHub بيأجّل/بيحذف جدوليات الـ*/10
 // (مقاس 2026-11-02: cron كل 10 دقايق طلع منه تشغيلان بس في اليوم: 10:54 و20:35) — فالفحص
 // اللاصق أصدق من الـcron.
-const HUB = String(arg("hub", process.env.NOVA_HUB_URL || "https://nova.waifly.com")).replace(/\/+$/, "");
+// ⚠ 2026-11-17: مافيش افتراضي لهوست برّه. كان `https://nova.waifly.com` — يعني أي
+// fork/tنصيب ما حدّدش هَب كان بيقيس سيرفر مش بتاعه ويكتب verdict أخضر عنه في
+// `state/verified-live.json`، واللي بيقرا التقرير بيحسب إن ده جهازه. لو النازل
+// فاضي، الصف بيقول `blocked` بصراحة بدل ما يخترع عنوانًا.
+const HUB = String(arg("hub", process.env.NOVA_HUB_URL || "")).replace(/\/+$/, "");
 
 const log = (...a) => console.log("[verify]", ...a);
 const warn = (m) => console.log(`::warning::${m}`);
@@ -144,8 +148,13 @@ async function cliChecks(cfg) {
   const dnsx = findBinary("dnsx");
   const probe = await runBin(findBinary("getent") || "/usr/bin/getent", ["hosts", "scanme.nmap.org"], 20);
   const okDns = probe.code === 0 && /\d/.test(probe.out);
-  add("cli", "dns resolution", okDns ? "pass" : NET_ERRORS.test(probe.err + probe.out) ? "blocked" : "review",
+  // ⚠ الاسم كان «dns resolution» والنجاح بيتقاس بـ`getent` (أداة نظام موجودة دايمًا)
+  // و`dnsx` مجرد نص في التفصيل — فالصف كان **بيقول pass وماسح الـDNS مش منصّب
+  // خالص** (مقاس 2026-11-17: dnsx=absent والصف أخضر). دلوقتي الصف اسمه getent
+  // وبيقول اللي قاسه بالحرف، و`dnsx` له صفّه المستقل اللي يقول حاضر ولا غايب.
+  add("cli", "dns resolution (getent — the resolver, not the scanner)", okDns ? "pass" : NET_ERRORS.test(probe.err + probe.out) ? "blocked" : "review",
     `${okDns ? short(probe.out, 80) : short(probe.err || probe.out || "مفيش رد", 90)} · dnsx=${dnsx ? "present" : "absent"}`);
+  if (!dnsx) add("cli", "dnsx present", "fail", "مش موجود — الـvendor فشل؟ (الصف فوق بيقيس الموتور مش الأداة)");
 
   const subfinder = findBinary("subfinder");
   if (!subfinder) add("cli", "subfinder present", "fail", "مش موجود");
@@ -220,23 +229,47 @@ async function cliChecks(cfg) {
     // which is the same lie in the other direction).
     const budget = Math.max(PER_TIMEOUT, 165);
     const r = await runBin(nuclei, ["-u", testUrl, "-severity", "high,critical", "-silent", "-no-color", "-irr", "-rl", "15", "-timeout", "6", "-retries", "1", "-stats"], budget);
-    const lines = r.out.split("\n").map((s) => s.trim()).filter(Boolean);
+    // ⚠ أي سطر مش نتيجة: القياس اللي كشفها (2026-11-17) — حطّيت نص تنفيذي
+    // بيطبع سطر واحد ("nuclei v3.11.1-fake-test") فالصف طلع **pass** بـ«1 نتيجة».
+    // nuclei الحقيقي بيطبع JSON (مع -json) أو [template-id] [proto] [severity] host.
+    // الشرط بقى: السطر يبان نتائج فعلية، والعدد يتقاس من السطور المطابقة بس.
+    const RESULT_LINE = /^(?:\{"(?:template-id|templateID|matched-at|host)")|^\[[^\]]+\]\s*\[/;
+    const lines = r.out.split("\n").map((s) => s.trim()).filter((s) => s && RESULT_LINE.test(s));
     // The CLI row measures the BINARY, so it runs on the host built to be found (testphp) with
     // only high/critical templates — the full set with `low` cannot finish in any job budget, and
     // "cut off" would then be the only result we ever report. The spine runs medium,high,critical
     // on demo.testfire.net (where it produced 11 findings, run 41455864503): one tier wider than
     // this row on purpose, so a spine/CLI disagreement is a signal and not a scheduling artifact.
-    const min = testRow.expects?.nucleiFindings ?? 1;
+    // `nucleiFindings: 0` معناه **مقصود** (testphp في targets.json): السطر بيقيس إن
+    // الماسح نفّذ القوالب فعلًا — بعدد الطلبات من إحصاء الأداة — مش إن الموقع واقع
+    // النهاردة. الفخ اللي كان مستخبي: `lines.length >= 0` = نجاح دايم، فالـpass ما
+    // كانش بيقيس حاجة أصلًا (مقاس: أداة مزيفة تطبع «Requests 999» وخط واحد → pass).
+    // القاعدة دلوقتي: لو التوقع 0، النجاح لازم ييجي من إحصائية الأداة (طلبات > 50)،
+    // ولو التوقع >= 1، لازم سطر نتيجة حقيقي.
+    const min = Number(testRow.expects?.nucleiFindings ?? 1);
+    const byFindings = Number.isFinite(min) && min >= 1;
     const cutOff = r.code === null;
     // nuclei prints its stats panel on stderr. Counting requests is what separates "scanned and
     // found nothing today" (a result) from "never scanned" (a fault) — the finding-count question
     // belongs to the spine, which produced 11 of them on demo.testfire.net.
     const reqs = Number(((r.err + "\n" + r.out).match(/(?:total\s+)?requests[^\d]{0,12}([\d,]{1,9})/i) || [0, "0"])[1].replace(/,/g, ""));
+    const scannedProof = reqs > 50;
     add("cli", `nuclei -u ${testSite} (high,critical)`,
-      lines.length >= min ? "pass" : r.code === 0 && reqs > 50 ? "pass" : cutOff ? "review" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
-      lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}`
+      // `reqs > 50 → pass` كان باب خلفي مقاس (2026-11-17): حطّيت سكربت بيطبع سطر
+      // "Requests 999" والصف طلع pass من غير أي نتيجة مسح. عدّ الطلبات بيطبعوه
+      // nuclei بنفسه، وسهل يتزوّر — فهو **بيانات في التفصيل**، مش شرط نجاح.
+      // pass بقى = نتيجة واحدة على الأقل بالسطر المطابق، وبس.
+      // نجاح = دليل مسح، بأي من الطريقتين: عدد نتائج ≥ التوقع (لما التوقع ≥1)،
+      // أو إثبات من الأداة نفسها (سطر نتيجة / عدّاد طلبات >50) لما التوقع 0.
+      (byFindings ? lines.length >= min : scannedProof || lines.length > 0)
+        ? "pass"
+        : cutOff ? "review" : r.code === 0 ? "review" : NET_ERRORS.test(r.err) ? "blocked" : "fail",
+      !byFindings
+        ? `${reqs} طلب اتفحص (المطلوب >50) و${lines.length} نتيجة high/critical · exit=${r.code}`
+        : lines.length ? `${lines.length} نتيجة · ${short(lines[0], 110)}`
         : cutOff ? `اتقطع بعد ${r.ms}ms (سقفي ${budget}s) و${lines.length} نتيجة لحد هنا · قوالب: ${updTail}`
-          : `${reqs || "?"} طلب اتفحص و0 نتيجة high/critical · exit=${r.code} · قوالب: ${updTail}`,
+          : `${reqs || "?"} طلب اتفحص و0 نتيجة high/critical · exit=${r.code} · قوالب: ${updTail}` +
+            (r.code === 0 && reqs > 50 ? " · (طلبات اتعدّت من غير سطر نتيجة — مش إثبات مسح لوحده)" : ""),
       { count: lines.length, ms: r.ms, cutOff });
   }
 
@@ -334,7 +367,17 @@ async function cliChecks(cfg) {
 
 async function engineChecks(cfg) {
   const health = await api("/health");
-  if (!health.ok) { add("engine", "engine reachable", "fail", `GET ${ENGINE}/health → ${health.status} ${short(health.text, 90)}`); return; }
+  if (!health.ok) {
+    add("engine", "engine reachable", "fail", `GET ${ENGINE}/health → ${health.status} ${short(health.text, 90)}`);
+    // A dead engine used to end the engine layer with ONE row and no explanation of what
+    // the report then means — and `verify-live.mjs` exits 0 even when it crashes (the catch
+    // at the bottom exists so a harness bug never masks a tool result). Result: the CI step
+    // went green, the artifact was 5 KB, and the only red was step 17 "Commit the report".
+    // Name the consequence in the report itself.
+    add("engine", "report completeness", "blocked",
+      `المحرك مردّش، فكل فحوص السلسلة (كتالوج/مهمة/خزنة/بوابة المسودة/الأسطول/المجلس) ماقيستش — التقرير ده ناقص مش ناجح`);
+    return;
+  }
   add("engine", "engine reachable", "pass", `HTTP ${health.status}`);
 
   const kinds = await api("/ops/kinds");
@@ -628,7 +671,26 @@ async function main() {
 }
 
 main().then(() => process.exit(0)).catch((e) => {
+  // ⚠ الخروج بـ0 بعد انهيار كان بيجعل خطوة «Verify live» خضرا وتقرير 5KB ما فيهوش
+  // إلا 1-2 صف — والأحمر الوحيد يبان في خطوة «Commit the report»، ورسالتها
+  // «القياس ما نشرش حاجة» وهي مش السبب الحقيقي. مقاس 2026-11-17: run 44046587138
+  // قضى 174 ثانية في الخطوة بدل ~20 دقيقة، والـartifact 5.4KB، والتقرير المنشور
+  // فضل من 2026-11-15.
+  //
+  // القرار: الانهار = فشل **مُعلن** (خروج 2)، مع تقرير جزئي مكتوب عشان السبب يفضل
+  // مقروء، ومع صف صريح «harness crashed» جوه نفس التقرير. الأدوات اللي مردّتش
+  // (blocked/review) مش انهيار — دول لسه بيخرجوا 0 زي ما كانوا.
   console.log(`::error::verify-live crashed: ${String(e?.stack || e)}`);
-  try { fs.appendFileSync(OUT_MD, `\n> انهار الفحص: \`${String(e?.message || e)}\` — السطور اللي فوق دي آخر نتيجة كاملة.\n`); } catch { /* ignore */ }
-  process.exit(0);
+  const payload = {
+    version: 1, at: new Date().toISOString(), verdict: "HARNESS_CRASHED",
+    counts: { pass: 0, fail: 0, blocked: 0, review: 0, crashed: 1 },
+    meta: { engine: ENGINE, crash: String(e?.message || e) },
+    rows: [{ layer: "harness", check: "run completed", status: "fail", detail: `انهار: ${String(e?.message || e)}`, at: new Date().toISOString() }],
+  };
+  try {
+    fs.mkdirSync(path.dirname(OUT_JSON), { recursive: true });
+    fs.writeFileSync(OUT_JSON, JSON.stringify(payload, null, 2) + "\n");
+    fs.writeFileSync(OUT_MD, `# التحقق الحي — HARNESS_CRASHED\n\n> انهار الفحص: \`${String(e?.message || e)}\`\n> ده **مش** قياس؛ ده انهيار في الـharness نفسه. مفيش صف بيتقري هنا.\n`);
+  } catch { /* مفيش قرص؟ */ }
+  process.exit(2);
 });

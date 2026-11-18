@@ -50,6 +50,22 @@ function allowedOrigins(): string[] {
     .filter(Boolean);
 }
 
+/** مثل allowedOrigins، بس من NOVA_CORS_EXTRA — تُقرأ وقت الطلب مش وقت الإقلاع
+ * فتقدر تضيف أصل من غير ريستارت، وبتقبل مسار كامل وبتقصّره لـorigin. */
+function extraOrigins(): string[] {
+  const raw = (process.env.NOVA_CORS_EXTRA || "").trim();
+  if (!raw) return [];
+  const out: string[] = [];
+  for (const part of raw.split(/[\s,]+/).filter(Boolean)) {
+    try {
+      out.push(new URL(part).origin);
+    } catch {
+      /* مدخل بايظ — يتجاهل */
+    }
+  }
+  return out;
+}
+
 /**
  * CORS with an explicit allowlist.
  *
@@ -68,6 +84,8 @@ export function corsMiddleware() {
       // browser cross-origin request, so CORS does not apply.
       if (!origin) return cb(null, true);
       if (list.includes(origin)) return cb(null, true);
+      // NOVA_CORS_EXTRA: أصل مسمّى بالاسم (معاينة/استضافة) — وقت الطلب.
+      if (extraOrigins().includes(origin)) return cb(null, true);
       // Same-origin requests from the panel: the browser sends the Origin of
       // the page, which is this server's own host. Compare host-to-host so a
       // port or scheme difference on the same host still counts as same-origin.
@@ -88,6 +106,40 @@ export function corsMiddleware() {
     allowedHeaders: ["Content-Type", "Authorization", "x-nova-token", "x-requested-with"],
     maxAge: 600,
   });
+}
+
+/**
+ * أصول الإطار المسموح لها — من NOVA_FRAME_ANCESTORS (مسافة أو فاصلة بينهم).
+ *
+ * الاستضافة بتحط المسار كامل (`https://8123-abc.e2b.app`)، وCSP بيقارن
+ * **أصل** (`origin`) مش مسار — فلو دخل الـURL زي ما هو، المتصفح بيرفض الإطار
+ * حتى لو مطابق حرفيًا. الحل: `new URL()` بيطلّع الـorigin، والشرطة العريضة
+ * (`https://*.example.dev`) بتفضل زي ما هي لأنها صيغة CSP صحيحة.
+ * مدخل غلط بيتم تسجيله ويتم تجاهله — إعداد بايظ مايكسرش الصفحة كلها.
+ */
+export function frameAncestorsConfig(): { list: string[]; raw: string; rejected: string[] } {
+  const raw = String(process.env.NOVA_FRAME_ANCESTORS || "").trim();
+  if (!raw) return { list: [], raw: "", rejected: [] };
+  const list: string[] = [];
+  const rejected: string[] = [];
+  for (const part of raw.split(/[\s,]+/).filter(Boolean)) {
+    if (part === "'self'" || part === "self") {
+      list.push("'self'");
+      continue;
+    }
+    if (/^https?:\/\/\*\.[A-Za-z0-9.-]+$/.test(part)) {
+      list.push(part);
+      continue;
+    }
+    try {
+      const u = new URL(part);
+      if (u.protocol === "http:" || u.protocol === "https:") list.push(u.origin);
+      else rejected.push(part);
+    } catch {
+      rejected.push(part);
+    }
+  }
+  return { list: [...new Set(list)], raw, rejected };
 }
 
 /**
@@ -114,6 +166,12 @@ export function securityHeaders() {
             ...(() => {
               const d = { ...helmet.contentSecurityPolicy.getDefaultDirectives() };
               delete d["script-src"];
+              // نفس قاعدة script-src بالحرف: helmet بيرمي على أي directive متكررة
+              // (وأول إقلاع بعد إضافة NOVA_FRAME_ANCESTORS وقع فعلًا بكده:
+              // "Content-Security-Policy received a duplicate directive frame-ancestors").
+              // الافتراضي شايل frame-ancestors أصلاً، فبنشيله وبنرجّعه بالقيمة النهائية
+              // تحت — سواء 'self' لوحده أو مع الأصول المسمّاة في الenv.
+              delete d["frame-ancestors"];
               return d;
             })(),
             // TEST34 — قِيس على البناء المحلي (2026-11-15T12:34Z): CSP الافتراضي
@@ -131,11 +189,29 @@ export function securityHeaders() {
             // · frame-ancestors self · nosniff). سكريبتات اللوحة نفسها خارجية
             // من نفس الأصل فمابتتأثرش.
             scriptSrc: ["'self'", "'unsafe-inline'"],
+            // NOVA_FRAME_ANCESTORS بيسمّي الأصول المسموح لها تعرض اللوحة في إطار
+            // (نفس السبب المقاس فوق). غيابه = 'self' زي helmet بالحرف.
+            ...((frameAncestorsConfig().list.length
+              ? { frameAncestors: ["'self'" as string, ...frameAncestorsConfig().list] }
+              : {}) as Record<string, string[]>),
           },
         },
     crossOriginEmbedderPolicy: false,
-    // The panel is served from this origin and is not meant to be framed.
-    frameguard: { action: "sameorigin" },
+    /* الإطار: نفس الأصل افتراضيًا، وقابل للتوسيع من env بقصد.
+     *
+     * مقاس 2026-11-17: الاستضافة (preview / إطار من دومين تاني) بتعرض اللوحة في
+     * iframe، والهيدرين دول (`frame-ancestors 'self'` + `X-Frame-Options:
+     * SAMEORIGIN`) بيمنعوا الإطار كله — الصفحة بتفضل بيضاء جوه المعاينة. الافتراضي
+     * الآمن ثابت زي ما هو، واللي عايز يسمح لدومين معيّن بيسمّيه بالاسم:
+     *   NOVA_FRAME_ANCESTORS="https://*.example.dev https://panel.example.com"
+     * الاسم `https://*.<دومين>` مش معناه «أي حد» — لسه دومين محدد.
+     */
+    frameguard: (() => {
+      const { list } = frameAncestorsConfig();
+      if (!list.length) return { action: "sameorigin" as const };
+      // X-Frame-Options مافيهوش قيم متعددة — مع CSP صريح بنشيله عشان مايغلبش الـCSP.
+      return false as const;
+    })(),
     referrerPolicy: { policy: "same-origin" },
     hsts: process.env.NOVA_HSTS_OFF === "1" ? false : { maxAge: 15552000, includeSubDomains: true },
   });

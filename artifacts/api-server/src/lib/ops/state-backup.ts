@@ -177,10 +177,34 @@ export async function backupStateToGithub(): Promise<{ ok: boolean; bytes: numbe
  * استرجاع عند الإقلاع: لو state/ فاضية (كونتينر جديد/ريإينستال) نجيب آخر نسخة
  * من GitHub ونفكها — ولو الملفات موجودة محليًا بنسيب الطازة تكسب (GitHub أقدم).
  */
+/**
+ * هل الذاكرة الحيّة (مش أي ملف في state/) موجودة فيها كلام؟
+ *
+ * القياس (2026-11-17، كونتينر جديد): `state/` كان فيه **37 ملف** — كوربوس،
+ * كتالوجات، كاشات — و`state/nova-memory.json` **صفر بايت**. البوابة القديمة
+ * (`readdirSync(stateDir()).length > 3`) شافت 37 ملف فقالت «الحالة المحلية سليمة»
+ * وتخطّت الاسترجاع — يعني كل محادثة الفريق فضلت على GitHub والمكنة فتحت بذاكرة
+ * فاضية، والـself-check قال `storage: warn — 0 ذكريات` من غير ما حد يبص.
+ *
+ * القاعدة الصح: الحالة اللي بتفرق هي اللي **ضاع فيها كلام**. الكوربوس والكتالوجات
+ * بترجع من مصادرها لوحدها، وأي ملف تاني في state/ مابيدّلش على إن الذاكرة موجودة.
+ */
+function memoryHasRecords(): boolean {
+  try {
+    const raw = readFileSync(join(stateDir(), "nova-memory.json"), "utf8");
+    const j = JSON.parse(raw) as { records?: unknown[] };
+    return Array.isArray(j.records) && j.records.length > 0;
+  } catch {
+    return false; // مفيش ملف، أو JSON بايظ، أو مقروش — كله «مفيش ذاكرة»
+  }
+}
+
 export async function restoreStateFromGithubIfNeeded(opts?: { force?: boolean }): Promise<{ restored: boolean; files: number; detail: string }> {
   if (!backupEnabled()) return { restored: false, files: 0, detail: "مفيش توكن — الاسترجاع متعطّل بصراحة" };
-  const localHasState = (() => { try { return readdirSync(stateDir()).length > 3; } catch { return false; } })();
-  if (localHasState && !opts?.force) return { restored: false, files: 0, detail: "الحالة المحلية سليمة — الطازة بتكسب (استرجاع مش محتاج)" };
+  // لو الذاكرة الحيّة فيها كلام، الطازة بتكسب مهما كان عدد الملفات.
+  if (!opts?.force && memoryHasRecords()) {
+    return { restored: false, files: 0, detail: "الذاكرة الحيّة فيها محادثات — الطازة بتكسب (استرجاع مش محتاج)" };
+  }
   try {
     const buf = await downloadAsset();
     if (!buf || buf.length < 100) return { restored: false, files: 0, detail: "مفيش نسخة على GitHub لسه (أول تشغيل؟)" };
@@ -192,7 +216,7 @@ export async function restoreStateFromGithubIfNeeded(opts?: { force?: boolean })
     try { files = readdirSync(stateDir()).length; } catch { files = 0; }
     try { (await import("node:fs")).unlinkSync(tmpZip); } catch { /* */ }
     writeRecord({ lastRestoreAt: new Date().toISOString(), lastRestoreFiles: files });
-    logger.info({ files, bytes: buf.length }, "state-backup: الحالة اترجّعت من GitHub بعد كونتينر فاضي");
+    logger.info({ files, bytes: buf.length }, "state-backup: الحالة اترجّعت من GitHub (الذاكرة الحيّة كانت فاضية)");
     return { restored: true, files, detail: `اترجّع ${files} عنصر من GitHub` };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

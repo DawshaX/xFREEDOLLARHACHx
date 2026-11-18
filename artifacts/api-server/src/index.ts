@@ -1,3 +1,12 @@
+/* ── TLS: لازم يتستورد قبل أي موديول بيعمل fetch ──────────────────────────
+ *  القياس 2026-11-17: بيئة فيها بروكسي بيعيد التوقيع بشهادة جذر في
+ *  `/usr/local/share/ca-certificates` — `curl` بيوصل، و`fetch` بيرمي
+ *  `UNABLE_TO_VERIFY_LEAF_SIGNATURE`. النتيجة كانت 5.4GB من rootfs كالي
+ *  بتفشل عند الجزء 57، وكل أداة بتقول «api.github.com ماردّش» والشبكة شغالة.
+ *  الإصلاح سطر واحد كان مستخبي في التوثيق (`NODE_EXTRA_CA_CERTS`) — هنا بيتعمل
+ *  لوحده. الموديول ده بيعمل الشغل عند تحميله (side effect)، ولازم يبقى أول
+ *  import في الملف: ESM بتنفّذ imports الموديولات التانية قبل أي سطر هنا. */
+import "./lib/ops/tls-trust";
 import { config as loadEnv } from "dotenv";
 loadEnv({ override: true });
 import http from "http";
@@ -24,6 +33,7 @@ import {
   broadcastEvent,
   getHubClientCount,
 } from "./lib/ws-hub";
+import { ensureHwBroadcast } from "./routes/monitor";
 import { getMemoryCount, saveMemory } from "./routes/memory";
 import { broadcastLiveEvent } from "./routes/live-events";
 import { runAgent } from "./lib/agent/core";
@@ -83,6 +93,8 @@ hubWss.on("connection", (ws: WebSocket, req: http.IncomingMessage) => {
   const urlObj = new URL(req.url ?? "/api/ws", "http://127.0.0.1");
   const sessionId = urlObj.searchParams.get("sessionId") || `ws-${Date.now()}`;
   registerHubClient(ws, sessionId);
+  // TEST46 — أول عميل WS = نبضة الهاردوير الموحدة تشتغل (صفر عملاء = صفر شغل).
+  ensureHwBroadcast();
 
   try {
     ws.send(

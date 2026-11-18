@@ -1524,11 +1524,28 @@ if (path === "/ops/kali/exec" && m === "POST") {
   return {
     ok: false,
     error: "kali_no_plane",
-    says_ar: "الوضع الثابت (GitHub Pages) مفيهوش هَب تنفيذ — افتح البرنامج من الهَب (nova.waifly.com) واكتب في الطرفية هناك، هتشتغل على عقد كالي الأسطول فعليًا",
+    says_ar: "الوضع الثابت (GitHub Pages) مفيهوش هَب تنفيذ — افتح البرنامج من هَبك انت (العنوان اللي شغّلت عليه نوفا) واكتب في الطرفية هناك، هتشتغل على عقد كالي الأسطول فعليًا",
     stdout: "",
     stderr: "",
     exitCode: null,
     durationMs: 0,
+  };
+}
+/* TEST46 — /ops/stats في الوضع المستقل: صادقة بلا سيرفر — مافيش exposure
+ * حقيقي بلا مصدر، فبنقولها مش متاحة بدل رقم مخترع (nova-sentinel بتعرف
+ * تعرض «غير مقاس»). */
+/* TEST47 — مرآة النشر في الوضع المستقل: Pages نفسها بتقدّم الملف من نفس
+ * المستودع (state/ مع باندل) — بلا سيرفر وبلا raw محجوب. */
+if (path === "/ops/deploy-mirror" && m === "GET") {
+  return { static: true, note: "الوضع الثابت: المرآة بتتقری من نفس الصفحة (state/ مع النشر) — الهَب هو اللي بيحدّثها كل 30د." };
+}
+if (path === "/ops/stats" && m === "GET") {
+  return {
+    ok: true,
+    static: true,
+    note: "الوضع الثابت: مفيش سيرفر — إحصائيات التشغيل والحماية بتحتاج الهَب شغال.",
+    exposure: null,
+    autonomy: { level: "off", lastSweep: null, programs: 0 },
   };
 }
 if (path === "/ops/storage-hub" && m === "GET") {
@@ -1588,7 +1605,7 @@ if (path === "/nova-core/version") {
       awarenessUnavailable: true,
       at: new Date().toISOString(),
       reasonAr: "الباوندل الثابت (Pages / standalone) مفيهوش محرك — القياس ده بيتعمل على سيرفر فيه طبقة ops.",
-      howAr: "اربط سيرفر (Waifly / Oracle / Tailscale) أو شغّل `node server.mjs` من nova-24-7.zip؛ ساعتها السطر ده يختفي.",
+      howAr: "اربط سيرفر (VPS / Oracle / Codespace / أي هوست بيدّيك URL) أو شغّل `node server.mjs` من nova-24-7.zip؛ ساعتها السطر ده يختفي.",
     };
   }
 
@@ -1685,7 +1702,7 @@ if (path === "/nova-core/version") {
       startedAt: null,
       hubClients: 0,
       reasonAr: "الوضع الساكن (GitHub Pages) مافيهوش عملية شغالة — المراقبين بيجروا على السيرفر الحيّ وبيكتبوا في state/proactive-log.json.",
-      howAr: "شغّل الحزمة الحيّة (nova-24-7.zip) أو اسأل على nova.waifly.com/api/nova-core/watch.",
+      howAr: "شغّل الحزمة الحيّة (nova-24-7.zip) على سيرفرك، أو اسأل /api/nova-core/watch على الهَب بتاعك.",
     };
   }
 
@@ -2076,7 +2093,7 @@ if (path === "/nova-core/version") {
         { key: "shodan.apiKey", labelAr: "مفتاح Shodan (إثراء الزوار سلبيًا)", sensitive: true },
         { key: "visitorAlerts", labelAr: "تنبيهات الزيارات على/قف", sensitive: false },
       ],
-      noteAr: "الوضع الساكن مابيحفظش إعدادات — اضبطها على العقدة الحية (nova.waifly.com)",
+      noteAr: "الوضع الساكن مابيحفظش إعدادات — اضبطها على العقدة الحية (هَبك)",
     };
   }
 
@@ -2086,7 +2103,7 @@ if (path === "/nova-core/version") {
       ok: true,
       mode: "standalone-static",
       tokenSet: false,
-      noteAr: "الفحص الحي (getMe/getUpdates) يتعمل على العقدة nova.waifly.com — هنا الصفحة الساكنة على Pages",
+      noteAr: "الفحص الحي (getMe/getUpdates) يتعمل على العقدة الحية بتاعتك — هنا الصفحة الساكنة على Pages",
       adviceAr: "افتح نفس الصفحة من رابط العقدة الحية عشان الفحص الحقيقي",
     };
   }
@@ -2167,7 +2184,7 @@ if (path === "/nova-core/version") {
     // `online: true / 14ms / 6 من 6 متاح` — وده بيخلي اللوحة تكذب على صاحبها.
     // القياس الحقيقي بيتم على المحرك الحيّ: `GET /api/nova/gateway/status`.
     const modelNames = ["dolphin-llama3:latest", "cybernova-sec-v10 (Built-in)", "qwen2.5-coder:32b", "deepseek-r1:14b", "llama3.3:70b"];
-    const NOT_MEASURED_AR = "غير مقاس في الوضع الساكن — افتح المحرك الحيّ (nova.waifly.com) للقياس الحقيقي";
+    const NOT_MEASURED_AR = "غير مقاس في الوضع الساكن — افتح المحرك الحيّ (هَبك) للقياس الحقيقي";
     const gwStatus = {
       ngrok: {
         url: customUrl,
@@ -3789,7 +3806,7 @@ async function notifyStandaloneCveHunt(sum: Record<string, number>): Promise<voi
       huntedAt: new Date().toISOString(),
       pagesDone: 0,
       reasonAr: "الحزمة الساكنة ما بتوصلش لـ NVD/GitHub/KEV (CORS) ومفيش خزنة بتتكتب هنا — فمفيش مزامنة تحصل أصلًا",
-      howAr: "المزامنة الحيّة على المحرك (nova.waifly.com/api/cve/sync)، ونتايج الصيد الحقيقية بتتنشر في state/hunt-latest.json من CI",
+      howAr: "المزامنة الحيّة على المحرك (/api/cve/sync على هَبك)، ونتايج الصيد الحقيقية بتتنشر في state/hunt-latest.json من CI",
       message: "مافيش مزامنة في الوضع الساكن: صفر جديد — وده مش فشل، ده مفيش مصدر.",
     };
   }
@@ -3814,7 +3831,7 @@ async function notifyStandaloneCveHunt(sum: Record<string, number>): Promise<voi
       arch: "",
       measured: false,
       reasonAr: "الوضع الساكن (Pages/file://) مفيش عنده نظام يقيسه — القياس ده شغل المحرك الحيّ",
-      howAr: "افتح nova.waifly.com وهتلاقي الرقم مقاس من os.cpus()/os.totalmem() فعلًا",
+      howAr: "افتح هَبك الحيّ وهتلاقي الرقم مقاس من os.cpus()/os.totalmem() فعلًا",
       ts: new Date().toISOString(),
     };
   }
@@ -5918,6 +5935,60 @@ if (path === "/fleet/system") {
     return { ok: true, static: true, note: staticNote };
   }
 
+  if (path === "/kali-env/catalog") {
+    return { ok: true, categories: [], static: true, note: "الوضع الثابت: مافيش سيرفر — الكتالوج المقاس بيشتغل على الهَب." };
+  }
+
+  if (path === "/kali-env/sysinfo") {
+    const reason = "الوضع الثابت: مافيش جيست كالي يتقاس من المتصفح. الأرقام دي مش صفر — غير مقيسة.";
+    return {
+      ok: true,
+      static: true,
+      measuredAt: new Date().toISOString(),
+      host: { hostname: "static-preview", platform: "browser", release: "—", arch: "—", node: "—" },
+      uptimeSec: null,
+      cpu: { usedPct: null, cores: 0, model: null, load1: null, load5: null, load15: null, reason },
+      mem: { totalBytes: null, availableBytes: null, usedBytes: null, usedPct: null, swapTotalBytes: null, swapUsedBytes: null, reason },
+      disks: [],
+      procs: { total: 0, rows: [], reason },
+      net: { ifaces: [], reason },
+      gpu: { present: false, devices: [], renderer: "غير مقيس", note: reason },
+      rootfs: { present: false, root: null, prootBin: null, guestShell: false, bytes: null, packages: null, executables: null, prettyName: null, reason },
+      unmeasured: [reason],
+      note: reason,
+    };
+  }
+
+  if (path === "/kali-env/identity") {
+    return {
+      ok: false,
+      root: false,
+      uid: null,
+      prettyName: null,
+      apt: false,
+      dpkg: false,
+      static: true,
+      error: "الوضع الثابت: هوية الجست بتتقاس على الهَب، مش من المتصفح.",
+    };
+  }
+
+  if (path === "/kali-env/health") {
+    /* TEST42 — كارت كالي في NovaAgentPro بيقرا /health حتى في الوضع الساكن:
+     * الرد الصادق هنا «القياس الحي على الهَب» — مافيش rootfs ولا أسطول
+     * يقدر المتصفح الساكن يدّعيه. أصفار كاذبة أقل صدق من «غير متاح هنا». */
+    return {
+      ok: true,
+      ready: false,
+      readyAnywhere: false,
+      prootBin: null,
+      rootfs: null,
+      guestShell: false,
+      reason: "static-preview — القياس الحي (proot/rootfs/الأسطول) بيتقاس على الهَب نفسه",
+      static: true,
+      note: "الوضع الثابت: مفيش سيرفر — القياس الحي بيشتغل لما تشغّل المنصة.",
+    };
+  }
+
   if (path === "/local-agent/agents") {
     // One real node, no pretending: this browser tab, running the engine right
     // now. It is the only machine a static page can honestly claim.
@@ -6319,6 +6390,43 @@ if (path === "/fleet/system") {
       accepted: true,
       engine: "standalone-shim",
       noteAr: "الوضع المستقل يرد بعقل المتصفح (تحليل نظري) — تنفيذ الأدوات الحقيقي على المحرك.",
+    };
+  }
+  // ── /monitor/health و /stats: الطلبين من عقد الـAPI (scripts/audit-contracts)
+  // والـstatic engine كان بيرجّع null — يعني على GitHub Pages أي شاشة بتسأل عنهم
+  // بتاخد «مفيش بيانات». على السيرفر بقى فيهم راوت حقيقي (/monitor/health في
+  // monitor.ts و /stats في stats.ts)؛ وهنا بنرد باللي المتصفح يعرفه فعلًا:
+  // ذاكرة المتصفح المقاسة، واللي `performance` بيقوله. مافيش اختراع أرقام.
+  if (path === "/monitor/health" && m === "GET") {
+    return {
+      ok: true,
+      status: "static",
+      mode: "static",
+      uptimeSec: null,
+      node: null,
+      memory: {
+        heapUsedMB: typeof performance !== "undefined" && (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
+          ? Math.round((performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize / 1048576)
+          : null,
+        note: "الوضع الثابت: مفيش عملية سيرفر — الذاكرة دي بتاعة المتصفح، والقيم مش مقاسة لو null",
+      },
+      wsClients: 0,
+      noteAr: "الوضع الثابت (GitHub Pages): مفيش سيرفر يشغل عملية. الصحة الحقيقية من الهَب: /api/monitor/health.",
+      measuredAt: new Date().toISOString(),
+    };
+  }
+  if (path === "/stats" && m === "GET") {
+    const memories = readBrowserMemories();
+    return {
+      ok: true,
+      mode: "static",
+      agentTasks: null,
+      filesStored: null,
+      conversations: null,
+      totalScans: null,
+      memoryRecords: memories.length,
+      hint_ar: "الوضع الثابت مفيش فيه قاعدة بيانات — الأرقام الحقيقية بتتقرا من الهَب على /api/stats.",
+      measuredAt: new Date().toISOString(),
     };
   }
   return null;

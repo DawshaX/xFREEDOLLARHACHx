@@ -5,6 +5,13 @@ import { pushNotify } from "@/lib/sse";
 import { novaAuthHeaders } from "@/lib/ops-client";
 import { useKali } from "@/context/KaliContext";
 import { KaliLiveTicker, KaliStatusCard } from "@/components/desktop/KaliLiveBridge";
+/* TEST38 — لوحة الأنظمة الحقيقية: حالة النظام (CPU/RAM/قرص/عمليات/شبكة/GPU/rootfs)
+ * + كتالوج الـ 11 تصنيف رسمي لكل أدوات كالي + تشغيل أداة بضغطة. مكوّن منفصل
+ * عشان الصفحة الأصلية تفضل زي ما هي — إضافة فوق الموجود، مش استبدال. */
+import KaliSystemsPanel from "./KaliSystemsPanel";
+/* «مكان الشغل في كالي» — مساحات حقيقية على الدسك جوه الـrootfs: ملفات بتفضل،
+ * أوامر بتتنفذ في سياق المساحة، ونتايج المسح بتتعرض جوه البرنامج. */
+import KaliWorkspacePanel from "@/components/desktop/KaliWorkspacePanel";
 
 /**
  * TEST12 — «شغل نظام الكالي واعملو مكان وتبويب» — التبويبة المخصصة لبيئة كالي
@@ -14,6 +21,10 @@ import { KaliLiveTicker, KaliStatusCard } from "@/components/desktop/KaliLiveBri
  * كل رقم هنا جاي من GET /api/ops/kali — بلا ادعاء.
  */
 const API = "/api";
+/* TEST46 — الأوامر اللي المالك بينسخها لتشغيلها على جهازه لازم تبقى مطلقة:
+ * API نسبي ("/api") فكانت بتطلع /api/api/... → 404. نفس صيغة الراوتر نفسه
+ * (routes/local-agent.ts بيبني الأوامر بـ${origin}/api/...). */
+const ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
 
 type HeavyTool = { present: boolean; version?: string };
 type KaliNodeRow = {
@@ -70,14 +81,22 @@ type ProvisionState = {
   log: string[];
   transport: string | null;
 };
-type DeployMirror = {
-  at?: string;
-  reachable?: boolean;
-  boot?: { commit?: string; builtAt?: string } | null;
-  bootAfter?: { commit?: string; builtAt?: string } | null;
-  asset?: { updatedAt?: string; size?: number } | null;
-  action?: string;
-  fresh?: boolean;
+/**
+ *  بنية الهَب الحيّة — من `/api/ops/version` بتاع الهَب اللي الصفحة مكلّماها.
+ *
+ *  قبل كده الكارت ده كان بيقرا مرآة نشر بيكتبها runner
+ *  GitHub كل 30 دقيقة بعد ما يفحص `nova.waifly.com`. يعني حاجة من برّه — هوست
+ *  مش بتاعنا — والأسوأ: أي مستخدم بيشغّل نوفا عنده كان بيشوف كارت «حالة النشر
+ *  على nova.waifly.com» وهو عمره ما نشر هناك. القياس الصح بيتجاب من نفس
+ *  السيرفر اللي بيرد على الصفحة، مافيش ملف ولا runner ولا هوست تالت.
+ */
+type HubVersion = {
+  sha?: string;
+  shaSource?: string;
+  entryMtime?: string | null;
+  uptimeSec?: number;
+  node?: string;
+  stale?: { suspect?: boolean; why?: string };
 };
 
 type KaliStatus = {
@@ -163,10 +182,10 @@ export default function KaliEnvPage() {
   const [prov, setProv] = useState<ProvisionState | null>(null);
   const [provBusy, setProvBusy] = useState(false);
   const [buildStamp, setBuildStamp] = useState<{ commit?: string; builtAt?: string } | null>(null);
-  // TEST31 — مرآة النشر الحي: runner بيفحص waifly كل 30د ويدفع state/waifly-deploy.json للمستودع،
+  // (اتشال TEST31 — كان بيقيس Waifly) بنية الهَب الحيّة من الهَب نفسه،
   // والصفحة بتقراه بfetch مباشر — المالك يشوف بنية الهَب الشغالة بعينه على الموقع.
-  const [deployMirror, setDeployMirror] = useState<DeployMirror | null | "pending">("pending");
-  const [deployChecked, setDeployChecked] = useState<string | null>(null);
+  const [hubVersion, setHubVersion] = useState<HubVersion | null | "pending">("pending");
+  const [hubVersionAt, setHubVersionAt] = useState<string | null>(null);
   const [nodes, setNodes] = useState<KaliNodes | null>(null);
   const [installBusy, setInstallBusy] = useState(false);
   const [store, setStore] = useState<StorageHub | null>(null);
@@ -176,12 +195,27 @@ export default function KaliEnvPage() {
   const [envHealth, setEnvHealth] = useState<KaliEnvHealth | null>(null);
   const [envTools, setEnvTools] = useState<KaliEnvTools | null>(null);
   const [envBusy, setEnvBusy] = useState(false);
+  const [identity, setIdentity] = useState<{ root?: boolean; uid?: number | null; prettyName?: string | null; plane?: string; apt?: boolean; error?: string } | null>(null);
+  const [pkgName, setPkgName] = useState("");
+  /* «مكان الشغل» هو الافتراضي: ده اللي المالك طلبه وبيسأل عنه. باقي التبويبات موجودة. */
+  const [face, setFace] = useState<"system" | "term" | "tools" | "desk" | "store" | "work">("work");
   /* TEST35 — the terminal had exactly one plane: the remote Kali node. The
    * local proot guest (the one this page measures two cards above) was never
    * reachable from the input box, so `/api/kali-env/exec` shipped with no
    * consumer at all. `plane` picks where a command actually runs, and the
    * choice is visible on every result line — never implied. */
   const [plane, setPlane] = useState<"auto" | "proot" | "node">("auto");
+  /* TEST41 — بث حي من كالي + المخزن الكامل بالتثبيت عند الطلب */
+  const [liveOn, setLiveOn] = useState(false);
+  const [sysLive, setSysLive] = useState<Record<string, unknown> | null>(null);
+  const [liveBusy, setLiveBusy] = useState(false);
+  const [cat, setCat] = useState<Array<{ id: string; tools: Array<{ name: string; present: boolean; version: string | null }> }> | null>(null);
+  const [catQ, setCatQ] = useState("");
+  const [instBusy, setInstBusy] = useState<string | null>(null);
+  const [instLog, setInstLog] = useState<string[]>([]);
+  /* TEST42 — بث سطح المكتب الحي: <img> بيقرا multipart MJPEG من /node-desktop */
+  const [deskOn, setDeskOn] = useState(false);
+  const [deskTick, setDeskTick] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
 
   /* TEST23 — عقد كالي السحابية: قياس حي كل 20ث من الهَب نفسه (probe عبر قناة الأجينتات) */
@@ -201,19 +235,18 @@ export default function KaliEnvPage() {
       } catch { /* الساكن مافيهوش version حي */ }
     })();
     (async () => {
-      // المرآة الحية من raw (الrunner بيدفعها كل 30د) — ولو الاتصال بيها وقع:
-      // النسخة اللي جوّه الحزمة نفسها (public/state — build-standalone بيشحنها).
-      const urls = [
-        `https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/main/state/waifly-deploy.json?t=${Date.now()}`,
-        "/state/waifly-deploy.json",
-      ];
-      for (const u of urls) {
-        try {
-          const r = await fetch(u, { signal: AbortSignal.timeout(9000) });
-          if (r.ok) { setDeployMirror(await r.json()); setDeployChecked(new Date().toLocaleTimeString("en-GB")); return; }
-        } catch { /* المحاولة الجاية */ }
-      }
-      setDeployMirror(null);
+      // بنية الهَب من الهَب نفسه: `ops/version` بيقول الـcommit اللي اتبنى منه
+      // والعمر الحقيقي للـbundle اللي Node حمّله. مفيش قراءة من GitHub ولا من
+      // أي هوست برّه — القياس من السيرفر اللي الصفحة بتكلّمه.
+      try {
+        const r = await fetch(`${API}/ops/version`, { signal: AbortSignal.timeout(9000) });
+        if (r.ok) {
+          setHubVersion(await r.json());
+          setHubVersionAt(new Date().toLocaleTimeString("en-GB"));
+          return;
+        }
+      } catch { /* الهَب مش متاح — بنقولها */ }
+      setHubVersion(null);
     })();
   }, [loadNodes]);
   useEffect(() => {
@@ -254,6 +287,73 @@ export default function KaliEnvPage() {
     setEnvBusy(false);
   }, []);
   useEffect(() => { void loadEnv(false); }, [loadEnv]);
+
+  /* TEST41 — الكتالوج الثابت (سريع — بلا قياس) */
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${API}/kali-env/catalog`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(10000) });
+        if (r.ok) {
+          const d = await r.json() as { categories?: Array<{ id: string; tools: Array<{ name: string; present: boolean; version: string | null }> }> };
+          setCat(d.categories ?? []);
+        }
+      } catch { /* المجموعة الافتراضية من envTools بتكفي */ }
+    })();
+  }, []);
+
+  /* TEST41 — البث الحي: نبضة كل 12ث من قلب الجست (نواة · قرص · رام · حزم) */
+  useEffect(() => {
+    if (!liveOn) return;
+    let stop = false;
+    const tick = async () => {
+      setLiveBusy(true);
+      try {
+        const r = await fetch(`${API}/kali-env/sysinfo`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(25000) });
+        if (r.ok) setSysLive((await r.json()) as Record<string, unknown>);
+      } catch { /* النبضة الجاية — مافيش كذب */ }
+      if (!stop) setLiveBusy(false);
+    };
+    void tick();
+    const t = setInterval(() => { void tick(); }, 12_000);
+    return () => { stop = true; clearInterval(t); };
+  }, [liveOn]);
+
+  const loadIdentity = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/kali-env/identity`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(28000) });
+      const d = await r.json() as { root?: boolean; uid?: number | null; prettyName?: string | null; plane?: string; apt?: boolean; error?: string };
+      setIdentity(d);
+    } catch {
+      setIdentity({ root: false, error: "ما قدرتش أقيس هوية الجست" });
+    }
+  }, []);
+  useEffect(() => { void loadIdentity(); }, [loadIdentity]);
+
+  /* TEST41 — التثبيت عند الطلب: apt جوه الجست على الطايرة الفايزة + إعادة قياس */
+  const installTool = useCallback(async (tool: string) => {
+    setInstBusy(tool);
+    try {
+      const r = await fetch(`${API}/kali-env/install`, {
+        method: "POST", headers: { ...novaAuthHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ tool }), signal: AbortSignal.timeout(430_000),
+      });
+      const d = await r.json() as { ok?: boolean; output?: string; plane?: string; error?: string };
+      setInstLog((p) => [
+        `${d.ok ? "✓" : "✗"} ${tool} — ${d.ok ? `اتثبت على ${d.plane}` : (d.error || "فشل")}`,
+        ...(d.output ? d.output.split("\n").slice(-4).map((l) => `   ${l}`) : []),
+        ...p,
+      ].slice(0, 30));
+      void loadEnv(true);
+      void loadIdentity();
+    } catch {
+      setInstLog((p) => [`✗ ${tool} — انقطع الاتصال أثناء التثبيت`, ...p].slice(0, 30));
+    }
+    setInstBusy(null);
+  }, [loadEnv, loadIdentity]);
+
+  /* المجموعات المقاسة → مجموعة «موجود» واحدة للبحث السريع (من الكتالوج المُقاس) */
+  const presentSet = new Set<string>();
+  if (cat) for (const c of cat) for (const t of c.tools) if (t.present) presentSet.add(t.name);
 
   const installOnNode = async () => {
     setInstallBusy(true);
@@ -473,19 +573,19 @@ export default function KaliEnvPage() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-lg font-black flex items-center gap-2" style={{ color: "#ff5544", textShadow: "0 0 14px rgba(255,60,40,0.5)" }}>
-            🐉 بيئة كالي الحقيقية المدمجة — جوه البرنامج نفسه
+            🐉 كالي الحقيقية — نظام متثبت على GitHub، بيتشغّل من العقد
           </h1>
           <p className="text-[10px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-            {st?.present ? "rootfs كالي كاملة 100% بتشتغل بproot على الهَب · الديسكتوب بيتفتح من أي دومين بيوصل للهَب (nova.waifly.com) · الأجينت بيستخدمها بأداة kali_run" : "كالي شغالة فعليًا على عقد الأسطول السحابية (rootfs + proot) — المخزن على جيت هوب وصفر على السيرفر · الطرفية تحت بتنفّذ على العقد مباشرة وkali_run بيتحول عليها تلقائيًا"}
+            القرص الدايم فرع kali-rootfs (2113 حزمة، مش على سيرفر الموقع). العقدة بتفتح النظام كـ root وتقدر تثبّت أي حزمة بـ apt. اللايف أجينت بيستخدم نفس الطايرة عبر kali_run.
           </p>
         </div>
         <button onClick={() => navigate("/agent-pro")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
           style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.4)", color: "#22d3ee" }}>
-          <ArrowLeft className="w-3.5 h-3.5" /> مكتب الشغل الحي (/agent-pro)
+          <ArrowLeft className="w-3.5 h-3.5" /> افتح اللايف أجينت
         </button>
       </div>
 
-      {/* الجسر الحي — أي أمر من agent-pro يظهر هنا فورًا */}
+      {/* الجسر الحي الموحد — أي أمر من agent-pro يظهر هنا فورًا (فوق كل التبويبات) */}
       <KaliLiveTicker />
       {kaliCtx.liveExec && (
         <div className="rounded-xl p-3 flex items-center gap-2" style={{ background: "rgba(255,68,0,0.06)", border: "1px solid rgba(255,68,0,0.2)" }}>
@@ -509,6 +609,60 @@ export default function KaliEnvPage() {
         </div>
       </div>
 
+      <div className="rounded-xl p-3" style={{ background: "rgba(255,85,68,0.05)", border: "1px solid rgba(255,85,68,0.35)" }}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <p className="text-[11px] font-black" style={{ color: "#ff8866" }}>نظام الجست — قياس حي، مش شكل</p>
+          <button onClick={() => void loadIdentity()} className="text-[9px] px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.75)" }}>
+            أعد قياس الجذر
+          </button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: identity?.root ? "rgba(68,255,136,0.12)" : "rgba(255,80,60,0.12)", color: identity?.root ? "#44ff88" : "#ff8877", border: "1px solid rgba(255,255,255,0.12)" }}>
+            {identity == null ? "بقاس الجذر…" : identity.root ? `root uid=${identity.uid ?? 0}` : `مش root${identity.uid != null ? ` uid=${identity.uid}` : ""} — apt هيفشل`}
+          </span>
+          {identity?.prettyName && (
+            <span className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.7)" }}>{identity.prettyName}</span>
+          )}
+          {identity?.apt && (
+            <span className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: "rgba(68,255,136,0.08)", color: "#9dffc0" }}>apt موجود</span>
+          )}
+          {identity?.plane && (
+            <span className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)" }}>{identity.plane}</span>
+          )}
+        </div>
+        {identity?.error && !identity.root && (
+          <p className="text-[9px] font-mono mt-1" style={{ color: "#ffaa66" }}>{identity.error}</p>
+        )}
+        <form className="mt-2 flex flex-wrap gap-1.5" onSubmit={(e) => { e.preventDefault(); const name = pkgName.trim().toLowerCase(); if (name) void installTool(name); }}>
+          <input value={pkgName} onChange={(e) => setPkgName(e.target.value)} placeholder="ثبّت أي حزمة، مثال: ffuf"
+            className="text-[10px] font-mono px-2 py-1 rounded outline-none flex-1 min-w-[160px]" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,85,68,0.35)", color: "#ffe0d8" }} />
+          <button type="submit" disabled={instBusy !== null || !pkgName.trim()} className="text-[9px] font-black px-2.5 py-1 rounded" style={{ background: "rgba(255,85,68,0.16)", border: "1px solid rgba(255,85,68,0.45)", color: "#ff8866", opacity: instBusy || !pkgName.trim() ? 0.5 : 1 }}>
+            {instBusy ? `بيثبت ${instBusy}` : "ثبّت جوه كالي"}
+          </button>
+        </form>
+        <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+          خطأ dpkg «requires superuser privilege» كان لأن proot فاتح من غير -0. التثبيت دلوقتي بيدخل root. لو لسه uid≠0 يبقى الهَب لسه على النسخة القديمة.
+        </p>
+      </div>
+
+      <div className="sticky top-0 z-20 flex flex-wrap gap-1.5 rounded-xl p-2" style={{ background: "rgba(6,0,16,0.92)", border: "1px solid rgba(255,255,255,0.12)" }}>
+        {([
+          ["work", "مكان الشغل ★"],
+          ["system", "النظام والعقد"],
+          ["term", "الطرفية"],
+          ["tools", "الأدوات"],
+          ["desk", "الديسكتوب"],
+          ["store", "المخزن"],
+        ] as const).map(([id, label]) => (
+          <button key={id} type="button" onClick={() => setFace(id)}
+            className="text-[10px] font-black px-2.5 py-1 rounded"
+            style={{ background: face === id ? "rgba(255,85,68,0.2)" : "rgba(255,255,255,0.04)", color: face === id ? "#ff8866" : "rgba(255,255,255,0.65)", border: `1px solid ${face === id ? "rgba(255,85,68,0.5)" : "rgba(255,255,255,0.12)"}` }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: face === "system" ? "block" : "none" }}>
       {/* TEST23 — عقد كالي السحابية: المكان الحي اللي المالك يشوف فيه كالي على الأسطول —
           قياس حي كل 20ث (الهَب بيعمل probe لكل عقدة عبر قناة الأجينتات نفسها) */}
       <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.03)", border: "1px solid rgba(68,255,136,0.3)" }}>
@@ -524,11 +678,18 @@ export default function KaliEnvPage() {
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}>
               <RefreshCw className="w-3 h-3" /> حدّث
             </button>
-            <button onClick={installOnNode} disabled={installBusy || nodes?.install.running === true}
-              className="text-[9px] font-black px-2.5 py-1 rounded"
-              style={{ background: "rgba(68,255,136,0.12)", border: "1px solid rgba(68,255,136,0.5)", color: "#44ff88", opacity: installBusy || nodes?.install.running === true ? 0.5 : 1 }}>
-              {nodes?.install.running ? "⏳ التثبيت شغال…" : installBusy ? "بدين…" : "⚙️ ثبّت كالي على أول عقدة فاضية"}
-            </button>
+            {nodes && nodes.nodes.length > 0 && nodes.nodes.every((n) => n.kali) ? (
+              <span className="text-[9px] font-black px-2.5 py-1 rounded"
+                style={{ background: "rgba(68,255,136,0.06)", border: "1px solid rgba(68,255,136,0.3)", color: "#7cffb0" }}>
+                ✓ كل العقد عندها كالي بالفعل ({nodes.nodes.filter((n) => n.kali).length}/{nodes.nodes.length})
+              </span>
+            ) : (
+              <button onClick={installOnNode} disabled={installBusy || nodes?.install.running === true}
+                className="text-[9px] font-black px-2.5 py-1 rounded"
+                style={{ background: "rgba(68,255,136,0.12)", border: "1px solid rgba(68,255,136,0.5)", color: "#44ff88", opacity: installBusy || nodes?.install.running === true ? 0.5 : 1 }}>
+                {nodes?.install.running ? "⏳ التثبيت شغال…" : installBusy ? "بدين…" : "⚙️ ثبّت كالي على أول عقدة فاضية"}
+              </button>
+            )}
           </div>
         </div>
         <p className="text-[9px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
@@ -536,10 +697,10 @@ export default function KaliEnvPage() {
         </p>
         {nodes && nodes.nodes.length > 0 ? (
           <div className="mt-2 space-y-1.5">
-            {nodes.nodes.map((n) => (
+            {nodes.nodes.filter((n) => n && n.id).map((n) => (
               <div key={n.id} className="rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2 flex-wrap"
                 style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${n.kali ? "rgba(68,255,136,0.4)" : "rgba(255,255,255,0.12)"}` }}>
-                <span className="text-[10px] font-black" style={{ color: "#e0e0e0" }}>🖥️ {n.hostname}</span>
+                <span className="text-[10px] font-black" style={{ color: "#e0e0e0" }} title={n.id}>🖥️ {n.hostname || "عقدة بدون اسم"}<span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}> · {n.id.slice(0, 8)}</span></span>
                 <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
                   style={{ background: n.kali ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: n.kali ? "#44ff88" : "rgba(255,170,68,0.9)" }}>
                   {n.probed ? (n.mode === "bare" ? "نظام كالي ✓" : n.mode === "proot" ? "rootfs كالي سحابية + proot ✓" : "جاهزة للتثبيت — الزر فوق") : "مش بردّ على الprobe"}
@@ -575,10 +736,10 @@ export default function KaliEnvPage() {
             <div className="mt-1.5 rounded-lg p-2.5 font-mono text-[9px]" style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
               <p className="mb-1.5" style={{ color: "rgba(255,255,255,0.6)" }}>شغّل على جهازك (Linux/Mac/Windows بNode 18+) — العقدة بتتسجل هنا وkali_run بيتحول عليها تلقائيًا:</p>
               <div className="break-all" style={{ color: "#44ff88" }}>
-                curl -fsSL {API}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server {API.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1
+                curl -fsSL {ORIGIN}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server {ORIGIN.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1
               </div>
               <button
-                onClick={() => { try { void navigator.clipboard.writeText(`curl -fsSL ${API}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server ${API.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1`); setNodeCopied(true); setTimeout(() => setNodeCopied(false), 2000); } catch { /* الحقل ظاهر للنسخ اليدوي */ } }}
+                onClick={() => { try { void navigator.clipboard.writeText(`curl -fsSL ${ORIGIN}/api/local-agent/download-nova-agent -o nova-agent.js && node nova-agent.js --server ${ORIGIN.replace(/^http/, "ws")}/api/local-agent/ws --id kali-1`); setNodeCopied(true); setTimeout(() => setNodeCopied(false), 2000); } catch { /* الحقل ظاهر للنسخ اليدوي */ } }}
                 className="mt-1.5 text-[9px] font-black px-2 py-1 rounded"
                 style={{ background: "rgba(68,255,136,0.15)", border: "1px solid rgba(68,255,136,0.4)", color: "#44ff88" }}>
                 {nodeCopied ? "✓ اتنسخ" : "نسخ الأمر"}
@@ -636,7 +797,7 @@ export default function KaliEnvPage() {
               <ToolCell name="SecLists" t={st.tools?.seclists} />
             </div>
             <p className="text-[8px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-              + كل مجموعات كالي (information-gathering · vulnerability · web · database · passwords · wireless · reverse-engineering · exploitation · sniffing · social-engineering · post-exploitation · forensics) والتحميل الجديد جوه البيئة بـpip/git.
+              + مجموعات كالي الرسمية (metapackages kali-tools-*) متاحة جوه البيئة عبر apt، والتحميل الجديد بـpip/git — والقياس الفعلي لكل أداة في الكتالوج والمخزن تحت.
             </p>
           </div>
 
@@ -726,7 +887,7 @@ export default function KaliEnvPage() {
           </p>
         )}
         <p className="text-[8px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-          {nodes?.stats ? Object.entries(nodes.stats.byPlane).map(([p, n]) => `${p}: ${n}`).join(" · ") : "—"} — كل تنفيذ بيتسجل من نواة الاتصال الموحدة (هَب أو عقدة).
+          {nodes?.stats ? Object.entries(nodes.stats.byPlane).map(([p, n]) => `${p}: ${n}`).join(" · ") : "—"} — كل تنفيذ بيتسجل من نواة الاتصال الموحدة (هَب أو عقدة) · العدّاد يشمل نبضات الفحص التلقائي (probe الأدوات) مش بس تنفيذك اليدوي — فشل الفحص أثناء انقطاع عقدة بيتسجل ✗ صادق.
         </p>
         {buildStamp && (
           <p className="text-[8px] font-mono mt-1.5 pt-1.5" style={{ color: "rgba(120,220,255,0.5)", borderTop: "1px dashed rgba(120,220,255,0.15)" }}>
@@ -735,30 +896,31 @@ export default function KaliEnvPage() {
         )}
       </div>
 
-      {/* TEST31 — حالة النشر الحي على waifly: runner بيقيس وبيدفع المرآة — الإثبات بيشوفه عينه */}
-      <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.04)", border: `1px solid ${deployMirror && deployMirror !== "pending" && deployMirror.fresh ? "rgba(68,255,136,0.35)" : "rgba(255,170,68,0.3)"}` }}>
+      {/* بنية الهَب الحيّة — من `/api/ops/version` بتاع نفس السيرفر اللي بيرد.
+          مفيش Waifly ولا runner برّه: اللي بيقيس هو اللي بيشتغل. */}
+      <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.04)", border: `1px solid ${hubVersion && hubVersion !== "pending" && !hubVersion.stale?.suspect ? "rgba(68,255,136,0.35)" : "rgba(255,170,68,0.3)"}` }}>
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <p className="text-[11px] font-black" style={{ color: "#44ff88" }}>🚀 حالة النشر على nova.waifly.com — فحص runner حي كل 30 دقيقة</p>
-          {deployChecked && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#7cffb0" }}>قرأت المرآة {deployChecked}</span>}
+          <p className="text-[11px] font-black" style={{ color: "#44ff88" }}>🏷️ البنية الشغّالة على الهَب — قياس حي من /api/ops/version</p>
+          {hubVersionAt && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#7cffb0" }}>قرأت {hubVersionAt}</span>}
         </div>
-        {deployMirror && deployMirror !== "pending" ? (
+        {hubVersion && hubVersion !== "pending" ? (
           <>
             <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.65)" }}>
-              الهَب شغّال ببنية: <b style={{ color: "#7cffb0" }}>commit {(deployMirror.bootAfter || deployMirror.boot)?.commit?.slice(0, 7) || "؟"} · اتبنت {(deployMirror.bootAfter || deployMirror.boot)?.builtAt || "؟"}</b>
-              {" · "}آخر باندل منشور: {deployMirror.asset?.updatedAt || "؟"}
+              commit <b style={{ color: "#7cffb0" }}>{hubVersion.sha?.slice(0, 7) || "؟"}</b>
+              {" · "}مصدر الـsha: {hubVersion.shaSource || "؟"}
+              {" · "}عمر الـbundle: {hubVersion.entryMtime ? hubVersion.entryMtime.slice(0, 19).replace("T", " ") : "؟"}
+              {" · "}شغّال بقاله {(hubVersion.uptimeSec ?? 0) >= 3600 ? `${Math.floor((hubVersion.uptimeSec ?? 0) / 3600)} ساعة` : `${Math.floor((hubVersion.uptimeSec ?? 0) / 60)} دقيقة`}
             </p>
-            <p className="text-[9px] font-mono mt-1" style={{ color: deployMirror.fresh ? "#44ff88" : "#ffaa44" }}>
-              {deployMirror.action === "fresh" && "الهَب شغّال بآخر بنية ✓ — الباندل والعملية متطابقين"}
-              {deployMirror.action === "restarted_ok" && "اتصلحت — الهَب كان شغّال ببنية أقدم فأعاد تشغيل نفسه على الباندل الجديد ✓"}
-              {deployMirror.action === "updated_ok" && "الباندل الجديد اتسطب واتشغّل أثناء الفحص ✓"}
-              {deployMirror.action === "restart_requested" && "إعادة التشغيل اتبعتت للهَب — الفحص الجاي (30د) هيتأكد أنها نفذت"}
-              {deployMirror.action === "unreachable" && "الهَب مش متاح للفحص دلوقتي — خطوة الطاقة في الwatchdog بتتكفل بالسقوط الكامل"}
-              {deployMirror.action === "none" && "…"}{" · آخر فحص: "}{deployMirror.at || "؟"}
+            <p className="text-[9px] font-mono mt-1" style={{ color: hubVersion.stale?.suspect ? "#ffaa44" : "#44ff88" }}>
+              {hubVersion.stale?.suspect ? `⚠ ${hubVersion.stale.why}` : `✓ ${hubVersion.stale?.why || "البنية حديثة"}`}
+              {" · "}Node {hubVersion.node || "؟"}
             </p>
           </>
+        ) : hubVersion === "pending" ? (
+          <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>…بجيب بنية الهَب</p>
         ) : (
-          <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
-            {deployMirror === "pending" ? "…بجيب مرآة النشر من المستودع" : "مرآة النشر لسه مااتبنتش — أول فحص runner بعد دمج TEST31 هيبنيها (المرآة: state/waifly-deploy.json في المستودع)"}
+          <p className="text-[9px] font-mono mt-1.5" style={{ color: "#ffaa44" }}>
+            الهَب مش بيرد على /api/ops/version دلوقتي — ممكن يكون لسه بيقوم، أو الـAPI مقفول. الصفحة نفسها شغالة؛ ده قياس للسيرفر مش ليها.
           </p>
         )}
       </div>
@@ -775,7 +937,7 @@ export default function KaliEnvPage() {
               <ToolCell name="SecLists" t={st.tools?.seclists} />
             </div>
             <p className="text-[8px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-              + كل مجموعات كالي (information-gathering · vulnerability · web · database · passwords · wireless · reverse-engineering · exploitation · sniffing · social-engineering · post-exploitation · forensics) والتحميل الجديد جوه البيئة بـpip/git.
+              + مجموعات كالي الرسمية (metapackages kali-tools-*) متاحة جوه البيئة عبر apt، والتحميل الجديد بـpip/git — والقياس الفعلي لكل أداة في الكتالوج والمخزن تحت.
             </p>
           </>
         ) : nodes?.tools ? (
@@ -787,7 +949,18 @@ export default function KaliEnvPage() {
               </p>
             )}
             <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
-              {Object.entries(nodes.tools.tools).map(([k, v]) => <ToolCell key={k} name={k} t={v} />)}
+              {Object.entries(nodes.tools.tools).map(([k, v]) => v.present ? (
+                <ToolCell key={k} name={k} t={v} />
+              ) : (
+                <button key={k} onClick={() => void installTool(k)} disabled={instBusy !== null} title={`ثبّت ${k} على العقدة (apt جوه كالي — قد ياخد دقايق)`}
+                  className="rounded-lg px-2 py-1.5 text-right transition-all hover:opacity-80"
+                  style={{ background: "rgba(255,170,68,0.06)", border: "1px dashed rgba(255,170,68,0.35)" }}>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] font-black" style={{ color: instBusy === k ? "#ffd08a" : "rgba(255,170,68,0.9)" }}>{instBusy === k ? "⏳ بتثبت…" : `＋ ${k}`}</span>
+                  </div>
+                  <div className="text-[8px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>مش منصّبة — دوس تثبت</div>
+                </button>
+              ))}
             </div>
             <p className="text-[8px] font-mono mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
               القياس بيتنفّذ فعليًا جوه كالي على العقدة كل دقيقتين — العدّاد الفعلي هو سجل dpkg نفسه ({nodes.tools.sysinfo?.packages ?? "?"} حزمة). الأداة بتتقاس بوجود التنفيذ بتاعها على النظام — واللي مش منصّبة بيتقال عليها صريح.
@@ -803,6 +976,9 @@ export default function KaliEnvPage() {
         )}
       </div>
 
+      </div>
+
+      <div style={{ display: face === "term" ? "block" : "none" }}>
       {/* طرفية التنفيذ الحقيقي — دايمًا ظاهرة: على الهَب أو على العقد السحابية */}
       <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,170,0,0.2)" }}>
         <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}>
@@ -958,6 +1134,13 @@ export default function KaliEnvPage() {
         ) : null}
       </div>
 
+      </div>
+
+      <div style={{ display: face === "tools" ? "block" : "none" }}>
+      {/* TEST38 — لوحة الأنظمة الحقيقية: حالة النظام المقاسة + كتالوج الـ 11
+          تصنيف + تشغيل أداة بضغطة. مضافة فوق كل حاجة موجودة، مش بديلة عنها. */}
+      <KaliSystemsPanel />
+
       {/* الربط بالأجينت */}
           <div className="rounded-xl p-3" style={{ background: "rgba(34,211,238,0.04)", border: "1px solid rgba(34,211,238,0.25)" }}>
             <p className="text-[10px] font-black" style={{ color: "#22d3ee" }}>🔗 الربط باللايف أجينت</p>
@@ -968,7 +1151,9 @@ export default function KaliEnvPage() {
               افتح مكتب الشغل وجرّبها مع الأجينت ↗
             </button>
           </div>
+      </div>
 
+      <div style={{ display: face === "store" ? "block" : "none" }}>
           {/* TEST24 — المخزن الموحد على جيت هوب: «فين اللي عملتو وفين الشغل» — مقاس حي */}
           <div className="rounded-xl p-3" style={{ background: "rgba(153,102,255,0.04)", border: "1px solid rgba(153,102,255,0.3)" }}>
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1003,6 +1188,146 @@ export default function KaliEnvPage() {
               <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>بيقيس المساحات من جيت هوب…</p>
             )}
           </div>
+
+      </div>
+
+      <div style={{ display: face === "work" ? "block" : "none" }}>
+        <KaliWorkspacePanel />
+      </div>
+
+      <div style={{ display: face === "desk" ? "block" : "none" }}>
+          {/* ── TEST42 · 🖥️ سطح المكتب الحي — بث MJPEG من عقدة كالي ──────────── */}
+          <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,204,0,0.25)" }}>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-[10px] font-black" style={{ color: "#ffcc00" }}>🖥️ سطح المكتب الحي — Xvfb + fluxbox من عقدة كالي (عرض مباشر)</span>
+              <div className="flex items-center gap-1.5">
+                {deskOn && (
+                  <button onClick={() => setDeskTick((t) => t + 1)} className="text-[9px] font-black px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.2)" }}>↻ إعادة توصيل</button>
+                )}
+                <button onClick={() => setDeskOn((v) => !v)}
+                  className="text-[9px] font-black px-2 py-1 rounded transition-all"
+                  style={{ background: deskOn ? "rgba(239,68,68,0.15)" : "rgba(255,204,0,0.15)", color: deskOn ? "#ff6b6b" : "#ffcc00", border: `1px solid ${deskOn ? "rgba(239,68,68,0.4)" : "rgba(255,204,0,0.4)"}` }}>
+                  {deskOn ? "■ إيقاف البث" : "▶ شغّل سطح المكتب"}
+                </button>
+              </div>
+            </div>
+            {deskOn ? (
+              <div className="mt-2 rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,204,0,0.25)", background: "#000" }}>
+                <img
+                  key={deskTick}
+                  src={`${API}/kali-env/node-desktop`}
+                  alt="بث سطح مكتب كالي الحي"
+                  className="w-full block"
+                  style={{ maxHeight: 480, objectFit: "contain" }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+                <p className="text-[8px] font-mono px-2 py-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  🔴 MJPEG لايف عبر الهَب → عقدة كالي · أول تشغيل بينزّل xvfb+ffmpeg داخل الجست (دقيقتين تقريبًا قبل أول إطار) · التفاعل من الطرفية فوق — ده بث مشاهدة
+                </p>
+              </div>
+            ) : (
+              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>البث مقفول — اضغط «شغّل سطح المكتب» وهتشوف شاشة كالي لايف من عقدة الأسطول</p>
+            )}
+          </div>
+
+      </div>
+
+      <div style={{ display: face === "system" ? "block" : "none" }}>
+          {/* ── TEST41 · 🎛️ بث حي من كالي — نبضة كل 12ث من قلب الجست ────────── */}
+          <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(68,255,136,0.22)" }}>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-[10px] font-black" style={{ color: "#44ff88" }}>🎛️ بث حي من كالي — النظام نفسه كل 12 ثانية</span>
+              <button onClick={() => setLiveOn((v) => !v)} disabled={liveBusy}
+                className="text-[9px] font-black px-2 py-1 rounded transition-all"
+                style={{ background: liveOn ? "rgba(239,68,68,0.15)" : "rgba(68,255,136,0.15)", color: liveOn ? "#ff6b6b" : "#44ff88", border: `1px solid ${liveOn ? "rgba(239,68,68,0.4)" : "rgba(68,255,136,0.4)"}` }}>
+                {liveOn ? "■ إيقاف البث" : "▶ ابدأ البث الحي"}
+              </button>
+            </div>
+            {liveOn && sysLive ? (() => {
+              const g = sysLive as { measuredAt?: string; uptimeSec?: number; cpu?: { percent?: number | null; load1?: number | null; model?: string | null }; mem?: { usedBytes?: number | null; totalBytes?: number | null; swapUsedBytes?: number | null }; disks?: Array<{ path?: string; usedHuman?: string | null; totalHuman?: string | null; percentUsed?: number | null }>; procs?: { total?: number | null }; rootfs?: { prettyName?: string | null; packages?: number | null }; gpu?: { present?: boolean; reason?: string } };
+              const GBn = (b?: number | null) => (typeof b === "number" ? `${(b / 1073741824).toFixed(1)}GB` : "؟");
+              const chips = [
+                g.rootfs?.prettyName ? `🧬 ${g.rootfs.prettyName}` : null,
+                g.cpu ? `⚙️ CPU ${g.cpu.percent != null ? `${g.cpu.percent.toFixed(0)}%` : "…"} (لود ${g.cpu.load1 ?? "?"})` : null,
+                g.mem ? `🧠 رام ${GBn(g.mem.usedBytes)}/${GBn(g.mem.totalBytes)}` : null,
+                g.disks?.[0] ? `💾 ${g.disks[0].path ?? "/"} ${g.disks[0].usedHuman ?? "?"}/${g.disks[0].totalHuman ?? "?"} (${g.disks[0].percentUsed != null ? `${g.disks[0].percentUsed}%` : "?"})` : null,
+                g.procs ? `⚙️ عمليات ${g.procs.total ?? "?"}` : null,
+                g.rootfs?.packages != null ? `📦 ${g.rootfs.packages} حزمة` : null,
+                g.gpu ? (g.gpu.present ? "🎮 GPU موجود" : `🎮 GPU: ${g.gpu.reason ?? "مفيش"}`) : null,
+                g.uptimeSec != null ? `⏱️ ${(g.uptimeSec / 3600).toFixed(1)} ساعة شغّال` : null,
+              ].filter(Boolean) as string[];
+              return (
+                <div className="mt-2 space-y-1">
+                  <div className="flex flex-wrap gap-1.5">
+                    {chips.map((c, i) => (
+                      <span key={i} className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: "rgba(68,255,136,0.06)", color: "#a8ffc8", border: "1px solid rgba(68,255,136,0.18)" }}>{c}</span>
+                    ))}
+                  </div>
+                  <p className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    🔴 لايف · قِيس {sysLive.measuredAt ? new Date(String(sysLive.measuredAt)).toLocaleTimeString("en-GB") : "—"} — كل رقم من /proc وstatfs (مش تقدير)
+                  </p>
+                </div>
+              );
+            })() : (
+              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>
+                {liveOn ? "بينبّض… أول قياس جاي في ثواني" : "البث مقفول — اضغط «ابدأ البث الحي» وتشوف النظام يتنفس لايف"}
+              </p>
+            )}
+          </div>
+
+      </div>
+
+      <div style={{ display: face === "tools" ? "block" : "none" }}>
+          {/* ── TEST41 · 📦 مخزن كالي الكامل — البحث + التثبيت عند الطلب ─────── */}
+          <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(153,102,255,0.22)" }}>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-[10px] font-black" style={{ color: "#c9a8ff" }}>📦 مخزن كالي الكامل — {cat ? cat.reduce((n, c) => n + c.tools.length, 0) : 0} أداة في {cat?.length ?? 0} فئة رسمية</span>
+              <input value={catQ} onChange={(e) => setCatQ(e.target.value)} placeholder="دوّر على أداة…"
+                className="text-[10px] font-mono px-2 py-1 rounded outline-none" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(153,102,255,0.3)", color: "#e0d0ff", width: 180 }} />
+            </div>
+            {cat && (
+              <div className="mt-2 space-y-1.5">
+                {cat.map(({ id: group, tools }) => {
+                  const q = catQ.trim().toLowerCase();
+                  const shown = (q ? tools.filter((t) => t.name.includes(q)) : tools);
+                  if (!shown.length) return null;
+                  const present = shown.filter((t) => t.present).length;
+                  return (
+                    <details key={group} className="rounded-lg px-2 py-1.5" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(153,102,255,0.14)" }}>
+                      <summary className="cursor-pointer flex items-center justify-between gap-2">
+                        <span className="text-[9px] font-black" style={{ color: "#9966ff" }}>{group} {(() => { const n = shown.find((t) => t.version)?.version; return n ? <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>· إصدارات مقروءة</span> : null; })()}</span>
+                        <span className="text-[8px] font-mono" style={{ color: present === shown.length ? "rgba(68,255,136,0.85)" : "rgba(255,170,68,0.8)" }}>
+                          {present}/{shown.length} جاهزة
+                        </span>
+                      </summary>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {shown.map((t) => t.present ? (
+                          <span key={t.name} title={t.version ?? ""} className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#44ff88" }}>✓ {t.name}{t.version ? <span style={{ color: "rgba(68,255,136,0.55)" }}> · {t.version.slice(0, 14)}</span> : null}</span>
+                        ) : (
+                          <button key={t.name} onClick={() => void installTool(t.name)} disabled={instBusy !== null}
+                            className="text-[8px] font-mono px-1.5 py-0.5 rounded transition-all hover:opacity-80"
+                            style={{ background: "rgba(255,170,68,0.08)", color: instBusy === t.name ? "#ffd08a" : "rgba(255,255,255,0.55)", border: "1px solid rgba(255,170,68,0.2)" }}>
+                            {instBusy === t.name ? `⏳ ${t.name}` : `＋ ${t.name}`}
+                          </button>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })}
+                <p className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  ✓ = مقاسة موجودة بإصدارها الحقيقي · ＋ = ناقصة وبتتثبت عند الطلب (apt جوه الجست) — القياس من {envTools?.measuredOn ?? "طايرة كالي"}
+                </p>
+              </div>
+            )}
+            {instLog.length > 0 && (
+              <div className="mt-2 rounded-lg p-2" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(153,102,255,0.18)" }}>
+                {instLog.map((l, i) => (
+                  <p key={i} className="text-[8px] font-mono whitespace-pre-wrap" style={{ color: l.startsWith("✓") ? "#44ff88" : l.startsWith("✗") ? "#ff6b6b" : "rgba(255,255,255,0.45)" }}>{l}</p>
+                ))}
+              </div>
+            )}
+          </div>
+      </div>
     </div>
   );
 }

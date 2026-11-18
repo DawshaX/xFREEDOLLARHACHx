@@ -94,7 +94,7 @@ export const HOSTS: FreeHost[] = [
       "NOVA_SERVER=wss://<hub>/api/local-agent/ws node nova-agent.js --id waifly-2",
     ],
     notes:
-      "ده نفس نوع سيرفرك الحالي. دائم فعلاً. لو النود offline 3 أيام بيتعلّق — الـ keepalive بيمنع ده.",
+      "من عروض الاستضافة المجانية اللي بتشغّل Node.js 24/7. لو النود offline 3 أيام بيتعلّق — الـkeepalive بيمنع ده. (ده كتالوج عروض، مش افتراض إنك عندك حساب هناك.)",
   },
   {
     id: "render",

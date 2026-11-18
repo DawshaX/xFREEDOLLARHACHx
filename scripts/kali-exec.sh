@@ -26,7 +26,8 @@ fi
 
 ENV_I="/usr/bin/env -i HOME=/root TERM=${TERM:-xterm} PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 SHELL=/bin/bash"
 
+# -0 : fake root. من غيره dpkg يقول requires superuser privilege (INSTALL_FAIL).
 if [ $# -eq 0 ]; then
-  exec "$PROOT" -R "$ROOT" $ENV_I /bin/bash -l
+  exec "$PROOT" -R "$ROOT" -w /root -0 -b /dev -b /proc -b /sys $ENV_I /bin/bash -l
 fi
-exec "$PROOT" -R "$ROOT" $ENV_I /bin/bash -lc "$*"
+exec "$PROOT" -R "$ROOT" -w /root -0 -b /dev -b /proc -b /sys $ENV_I /bin/bash -lc "$*"

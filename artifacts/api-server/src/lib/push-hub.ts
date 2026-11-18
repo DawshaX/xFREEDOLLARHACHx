@@ -12,6 +12,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Response } from "express";
+import { broadcastEvent } from "./ws-hub";
 
 export interface PushNotification {
   id: string;
@@ -55,6 +56,9 @@ export function addPushClient(res: Response): void {
 }
 
 function broadcast(n: PushNotification): void {
+  // TEST46 — الإشعار كمان على الناقل الموحد (/api/ws): كل العدادات والشاشات
+  // اللي على WS تسمعه لحظة حدوثه، مش بس عملاء SSE المخصوصين.
+  broadcastEvent("notification", { id: n.id, kind: n.kind, title: n.title, body: n.body, link: n.link, read: n.read, createdAt: n.createdAt });
   const frame = `event: push\ndata: ${JSON.stringify(n)}\n\n`;
   for (const res of clients) {
     try {

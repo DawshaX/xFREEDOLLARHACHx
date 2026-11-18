@@ -174,6 +174,29 @@ async function install() {
   }
   log("الاستخراج خلص — الهيكل: " + fs.readdirSync(ROOTFS).sort().join(" "));
 
+  // TEST53 — فكس الجذر (مقاس 2026-11-17): جيت مايخزنش المجلدات الفاضية فالجست
+  // بيولّد من غيرها — apt/dpkg بيحتاجوها كلها وبيفشلوا واحد-واحد
+  // («E: Directory '/var/log/apt/' missing» · «archives/partial is missing» ·
+  // «dpkg returned an error code (2)»). القائمة دي مقاسة من rootfs الفرع نفسه:
+  for (const d of [
+    "var/log/apt",
+    "var/lib/dpkg/updates",
+    "var/lib/dpkg/triggers/File",
+    "var/lib/dpkg/triggers/Unincorporated",
+    "var/lib/dpkg/alternatives",
+    "var/cache/apt/archives/partial",
+    "var/lib/apt/lists/partial",
+    "var/lib/ucf/cache",
+    "run/lock",
+    "tmp",
+    "var/tmp",
+    "var/lib/sudo",
+    "var/spool/mail",
+  ]) {
+    try { fs.mkdirSync(path.join(ROOTFS, ...d.split("/")), { recursive: true }); } catch { /* موجود أصلًا */ }
+  }
+  log("مجلدات الجست الحرجة (13) اتأكدت — apt/dpkg شغالين من أول مرة");
+
   let proot = null;
   for (let a = 1; a <= 3; a++) {
     try {
@@ -211,7 +234,7 @@ async function install() {
     if (j25) {
       const jRel = "/usr/lib/jvm/" + j25;
       fs.writeFileSync(path.join(ROOTFS, "etc", "ld.so.conf.d", "zz-nova-java-jli.conf"), jRel + "/lib/jli\n" + jRel + "/lib\n");
-      const jc = spawn(binPath, ["-r", ROOTFS, "/usr/sbin/ldconfig"], { timeout: 60000 });
+      const jc = spawn(binPath, ["-0", "-r", ROOTFS, "/usr/sbin/ldconfig"], { timeout: 60000 });
       await new Promise((res) => jc.on("close", res).on("error", res));
       log("Java " + j25 + " + libjli اتظبطوا — burpsuite بيرد bare");
     }
@@ -265,8 +288,7 @@ main().catch((e) => {
     fs.rmSync(ROOTFS, { recursive: true, force: true });
   } catch {}
   process.exitCode = 1;
-});
-`;
+});`;
 
 const INSTALLER_B64 = Buffer.from(KALI_NODE_INSTALLER, "utf8").toString("base64");
 
@@ -298,19 +320,22 @@ function nodeEval(script: string): string {
  * The guest command is still a real shell command, because the guest's own
  * `/bin/sh -c` is what interprets it — which is the entire point of a terminal.
  */
+/**
+ * TEST57 — dpkg قال بالحرف: `requested operation requires superuser privilege`
+ * ثم `INSTALL_FAIL:ffuf`. السبب: الغلاف كان `proot -R` من غير `-0`، فالجست
+ * مش root وapt/dpkg بيرفضوا. `-0` هو fake-root بتاع proot (نفس أعلام
+ * `lib/ops/proot.ts`). الأمر لسه `$1` — مش متلزق في نص السكربت.
+ */
+export const PROOT_GUEST_EXEC =
+  'exec "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" -R "$HOME/kali-rootfs/rootfs" -w /root -0 -b /dev -b /proc -b /sys /bin/sh -c "$1"';
+
 function prootArgv(kcmd: string, mode: string): string[] {
   if (mode !== "MODE_PROOT") return ["/bin/sh", "-c", kcmd];
   // $HOME is expanded by the guest shell on purpose: the node process may run
   // as a different user than the one that installed the rootfs, and the
   // installer always writes to $HOME/kali-rootfs. The command itself is passed
   // as "$1" — a positional parameter, never spliced into the script text.
-  return [
-    "/bin/sh",
-    "-c",
-    'exec "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static" -R "$HOME/kali-rootfs/rootfs" /bin/sh -c "$1"',
-    "nova-proot",
-    kcmd,
-  ];
+  return ["/bin/sh", "-c", PROOT_GUEST_EXEC, "nova-proot", kcmd];
 }
 
 /** نسخة بث حي من غلاف التنفيذ: نفس المعنى لكن chunks بتخرج لحظيًا على stdout/stderr (node أولًا — allowlist آمن). */

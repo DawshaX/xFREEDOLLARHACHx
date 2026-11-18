@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { resolveStandaloneApi } from "@/lib/standalone-api";
 import { isStandaloneHost } from "@/lib/env";
+import { KALI_ARSENAL_64 } from "@/lib/cyber-corpus-2099";
 import { getRemoteBase, remoteUrl, remoteWsUrl } from "@/lib/remote";
 import { runLocalBrain } from "@/lib/local-brain";
 
@@ -476,7 +477,7 @@ if (typeof window !== "undefined" && isStandaloneHost()) {
         this.dispatchEvent(new Event("open"));
 
         if (urlStr.includes("/local-agent/exec-stream")) {
-          emitNamed("message", { type: "stdout", data: "kali@cybernova-kali-sandbox:~$ Executed in Kali Sandbox (78 tools ready)\n" });
+          emitNamed("message", { type: "stdout", data: `kali@cybernova-kali-sandbox:~$ Executed in Kali Sandbox (${KALI_ARSENAL_64.length} tools ready)\n` });
           emitNamed("message", { type: "done", exitCode: 0 });
         } else if (urlStr.includes("/explorer/run")) {
           emitNamed("message", { type: "log", message: "⚡ تم جمع وتحديث 28 عنصر استخباراتي جديد في الفهرس المعرفي." });

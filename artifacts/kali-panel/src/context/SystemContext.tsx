@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { novaAuthHeaders, novaTokenQuery } from "@/lib/ops-client";
 import { pushNotify } from "@/lib/sse";
+import { useLiveEvent } from "@/hooks/useWebSocket";
 
 export interface SystemEvent {
   type: string;
@@ -219,9 +220,20 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadMemories();
     void syncAutonomousStatus();
-    const timer = setInterval(() => void syncAutonomousStatus(), 20000);
+    // TEST46 — الاستطلاع بقى خطة أمان بطيئة (60ث): التحديث اللحظي بيجي من
+    // قناة WS العامة (useLiveEvent تحت — autonomous_status بيتبث من
+    // autonomy-control عند كل enable/disable/tick). لو القناة وقعت، العداد
+    // ده يضمن أن الحالة ترجع صح خلال دقيقة — الوضع المستقل مابيتصفرش.
+    const timer = setInterval(() => void syncAutonomousStatus(), 60_000);
     return () => clearInterval(timer);
   }, [loadMemories, syncAutonomousStatus]);
+
+  // TEST46 — القناة اللحظية: أي تغيير حالة الوضع المستقل على السيرفر يوصل
+  // هنا فورًا (كل التابات والشاشات تسمع نفس الحدث من الناقل الموحد).
+  useLiveEvent("autonomous_status", (ev) => {
+    const status = (ev as { status?: unknown }).status;
+    if (status) setAutonomousStatus((prev) => parseAutonomousPayload({ ok: true, ...asRecord(status) }, prev));
+  });
 
   useEffect(() => {
     const es = new EventSource(`/api/agent/events${novaTokenQuery()}`);
