@@ -1,15 +1,16 @@
 {
-  "at": "2026-11-18T17:58:50.958090+00:00",
+  "at": "2026-11-18T18:22:14.144590+00:00",
   "before": {
     "present": 183,
     "total": 266
   },
   "after": {
-    "present": 189,
+    "present": 188,
     "total": 266,
     "measuredOn": "runnervmccnms — عقدة كالي سحابية (rootfs + proot)"
   },
   "stillMissing": [
+    "amass",
     "aria2",
     "arjun",
     "arp-scan",
