@@ -35,7 +35,7 @@ process.env.NOVA_STATE_DIR = state;
 const LEDGER = join(state, "nova-update-ledger.json");
 const MARK = join(state, ".nova-update-in-progress");
 // Must match ASSET_URL in the module (REPO/TAG defaults, no env override here).
-const ASSET = "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/nova-portable/nova-24-7.zip";
+const ASSET = "https://raw.githubusercontent.com/DawshaX/xFREEDOLLARHACHx/nova-bundle/bundle/nova-24-7.zip"; // TEST58 — متطابق مع ASSET_URL الجديد (فرع nova-bundle) — المفتاح القديم كان بيسجل مكان تاني فالسكّون مايبانش
 
 const { backoffReason } = await import(`file://${out}`);
 const iso = (secAgo) => new Date(Date.now() - secAgo * 1000).toISOString().replace(/\.\d+Z$/, "Z");

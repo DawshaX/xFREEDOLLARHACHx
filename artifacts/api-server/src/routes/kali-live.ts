@@ -72,7 +72,7 @@ router.get("/kali-live/status", async (_req, res) => {
 router.get("/kali-live/history", (_req, res) => {
   try {
     const stats = readScanStats();
-    res.json({ ok: true, ...stats, at: new Date().toISOString() });
+    res.json({ ...stats, ok: true, at: new Date().toISOString() });
   } catch (e) {
     res.status(500).json({ ok: false, error: (e as Error).message });
   }
