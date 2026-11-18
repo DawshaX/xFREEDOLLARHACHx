@@ -1,0 +1,7 @@
+PRETTY_NAME=Kali GNU/Linux Rolling
+packages=2568
+bytes=19491073139
+built_at=2026-11-18T11:09:53Z
+commit=a7180a2
+run_id=44289567209
+failed_extra=ولا حاجة
