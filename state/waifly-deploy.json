@@ -1,44 +1,44 @@
 {
-  "at": "2026-11-18T14:59:14.703Z",
+  "at": "2026-11-18T15:39:14.347Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-18T14:53:17Z",
-    "size": 4246049
+    "updatedAt": "2026-11-18T15:22:24Z",
+    "size": 4246277
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "ee455bee3de8939bafbf0e6307c592b6080c505a",
-    "builtAt": "2026-11-18T14:38:25.107Z",
+    "commit": "ee61d6bef1994867d95d9485e63193ebbccf966a",
+    "builtAt": "2026-11-18T15:16:45.042Z",
     "files": 191,
     "builtBy": "local"
   },
   "boot": {
-    "commit": "ee455bee3de8939bafbf0e6307c592b6080c505a",
-    "builtAt": "2026-11-18T14:38:25.107Z",
+    "commit": "ee61d6bef1994867d95d9485e63193ebbccf966a",
+    "builtAt": "2026-11-18T15:16:45.042Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
-    "lastResult": "installed",
-    "lastDetail": "اتطبّقت النسخة الجديدة — طلبنا إعادة التشغيل، بنتأكد إنها حصلت",
-    "lastCheckAt": "2026-11-18T14:59:04.122Z",
-    "currentBuiltAt": "2026-11-18T14:38:25.107Z",
-    "latestReleaseAt": "2026-11-18T14:53:17Z",
+    "lastResult": "up-to-date",
+    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-18T15:22:24Z) — حارس لوب التحديث",
+    "lastCheckAt": "2026-11-18T15:34:24.983Z",
+    "currentBuiltAt": "2026-11-18T15:16:45.042Z",
+    "latestReleaseAt": "2026-11-18T15:22:24Z",
     "restartNeeded": false
   },
   "updaterInstall": {
     "status": 200,
-    "lastResult": "installing",
-    "detail": "بينزّل النسخة الجديدة ويطبّقها — البرنامج هيعيد تشغيل نفسه"
+    "lastResult": "up-to-date",
+    "detail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-18T15:22:24Z) — حارس لوب التحديث"
   },
   "restartHttp": 200,
   "action": "restart_requested",
   "bootAfter": {
-    "commit": "ee455bee3de8939bafbf0e6307c592b6080c505a",
-    "builtAt": "2026-11-18T14:38:25.107Z",
+    "commit": "ee61d6bef1994867d95d9485e63193ebbccf966a",
+    "builtAt": "2026-11-18T15:16:45.042Z",
     "dir": "/home/container"
   },
   "fresh": false,
@@ -54,16 +54,16 @@
     "count": 11,
     "ids": [
       "self-node",
-      "gh-26-1422",
-      "gh-24-1422",
-      "gh-22-1425",
       "gh-20-1428",
+      "gh-24-1422",
+      "gh-26-1422",
       "gh-21-1425",
-      "gh-23-1424",
+      "gh-22-1425",
       "gh-27-1424",
-      "gh-28-1424",
+      "gh-23-1424",
       "gh-29-1424",
-      "gh-25-1424"
+      "gh-25-1424",
+      "gh-28-1424"
     ]
   }
 }
