@@ -127,7 +127,12 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise
     const r = await runKali(cmd, timeoutMs);
     try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane("hub", cmd, r.exitCode === 0, r.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
     broadcastDone("الهَب — كالي المدمجة (rootfs + proot)", r.exitCode, r.durationMs);
-    return { ...r, plane: "الهَب — كالي المدمجة (rootfs + proot)" };
+    /* TEST70 — فكس terminal exec (127 فوري مقاس 14:30): على الهَب بقايا rootfs
+     * ب/os-release كالي بس من غير proot → runKali بيفشل 127. الفشل المحلي مش
+     * نتيجة — بننزل للأسطول فورًا (نجاح محلي بس بيرجع). */
+    if (r.exitCode === 0) {
+      return { ...r, plane: "الهَب — كالي المدمجة (rootfs + proot)" };
+    }
   }
   const nodes = await orderedFleetNodes();
   for (const a of nodes) {
