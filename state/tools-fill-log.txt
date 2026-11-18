@@ -1,9 +1,8 @@
-=== fill started 2026-11-18T18:56:39Z ===
+=== fill started 2026-11-18T19:06:03Z ===
 try1-bytes=8011
-{"ok":true,"ready":true,"measuredOn":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","hubRootfs":false,"fleet":{"connected":12,"kaliReady":12,"nodes":[{"id":"gh-3-1619","hostname":"runnervmccnms","mode":"MODE_PROOT","kali":true,"at":"2026-11-18T18:55:11.261Z"},{"id":"gh-9-1618","
-قبل: present=192/266 · الناقص=74
-73 /tmp/missing.txt
-amass
+{"ok":true,"ready":true,"measuredOn":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","hubRootfs":false,"fleet":{"connected":12,"kaliReady":12,"nodes":[{"id":"gh-9-1618","hostname":"runnervmccnms","mode":"MODE_PROOT","kali":true,"at":"2026-11-18T19:04:45.365Z"},{"id":"gh-1-1618","
+قبل: present=195/266 · الناقص=71
+70 /tmp/missing.txt
 aria2
 arjun
 arp-scan
@@ -11,7 +10,6 @@ asnmap
 bettercap
 cariddi
 casefile
-certipy
 cherrytree
 chisel
 crackmapexec
@@ -30,15 +28,16 @@ fernet
 gh-dork
 ghidra
 gotator
+grype
 gvm
 hcxtools
+katana
 keepnote
 king-phisher
 legs
 libreoffice
 ligolo-ng
 ltrace
-maigret
 maskprocessor
 metasploit-framework
 mongosh
@@ -51,7 +50,6 @@ peass-ng
 pentestly
 pgcli
 photon
-prowler
 python3-pip
 rainbowcrack
 recordmydesktop
@@ -59,7 +57,6 @@ redis
 retdec
 routersploit
 scoutsuite
-semgrep
 sherlock
 shuffledns
 sidguesser
@@ -77,228 +74,8 @@ vulners
 w3af
 wkhtmltopdf
 zsh=== dpkg remedy start ===
-data: {"type":"done","exitCode":1,"durationMs":785,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","error":"proot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 155105\n"}
+data: {"type":"done","exitCode":1,"durationMs":621,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","error":"proot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 133507\n"}
 
 data: [DONE]
 
 === dpkg remedy end ===
-[1/73] amass → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"amass","pkg":"amass","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to
-[2/73] aria2 → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"aria2","pkg":"aria2","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to
-[3/73] arjun → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"arjun","pkg":"arjun","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to
-[4/73] arp-scan → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"arp-scan","pkg":"arp-scan","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure 
-[5/73] asnmap → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"asnmap","pkg":"asnmap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' 
-[6/73] bettercap → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"bettercap","pkg":"bettercap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configur
-[7/73] cariddi → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"cariddi","pkg":"cariddi","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=\nBIN=\nINSTALL_FAIL:cariddi\n\ncurl: option : blank argument w
-[8/73] casefile → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"casefile","pkg":"casefile","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure 
-[9/73] certipy → BAD·parse
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-[10/73] cherrytree → BAD·parse
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-[11/73] chisel → BAD·parse
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-[12/73] crackmapexec → BAD·parse
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-[13/73] dirsearch → BAD·parse
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-[14/73] dnsx → BAD·parse
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-[15/73] dockle → BAD·parse
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-[16/73] dradis → BAD·parse
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-[17/73] dvcs-ripper → BAD·parse
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-[18/73] elfutils → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"elfutils","pkg":"elfutils","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg 
-[19/73] empire → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"empire","pkg":"empire","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هي
-[20/73] ettercap → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"ettercap","pkg":"ettercap","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg 
-[21/73] evilgrade → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"evilgrade","pkg":"evilgrade","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpk
-[22/73] exiftool → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"exiftool","pkg":"libimage-exiftool-perl","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid�
-[23/73] faraday → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"faraday","pkg":"faraday","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg ه
-[24/73] fernet → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"fernet","pkg":"fernet","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هي
-[25/73] gh-dork → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"gh-dork","pkg":"gh-dork","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg ه
-[26/73] ghidra → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"ghidra","pkg":"ghidra","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هي
-[27/73] gotator → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"gotator","pkg":"gotator","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg ه
-[28/73] gvm → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"gvm","pkg":"gvm","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض
-[29/73] hcxtools → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"hcxtools","pkg":"hcxtools","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg 
-[30/73] keepnote → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"keepnote","pkg":"keepnote","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg 
-[31/73] king-phisher → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"king-phisher","pkg":"king-phisher","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) �
-[32/73] legs → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"legs","pkg":"legs","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرف
-[33/73] libreoffice → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"libreoffice","pkg":"libreoffice","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) —
-[34/73] ligolo-ng → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"ligolo-ng","pkg":"ligolo-ng","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpk
-[35/73] ltrace → FAIL·الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57
-{"ok":false,"tool":"ltrace","pkg":"ltrace","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هي
-[36/73] maigret → OK
-{"ok":true,"tool":"maigret","pkg":"maigret","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires asgiref<=3.11.1,>=3.2.10, but you have asg
-[37/73] maskprocessor → OK
-{"ok":true,"tool":"maskprocessor","pkg":"maskprocessor","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --c
-[38/73] metasploit-framework → OK
-{"ok":true,"tool":"metasploit-framework","pkg":"metasploit-framework","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually
-[39/73] mongosh → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"mongosh","pkg":"mongosh","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a
-[40/73] naabu → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"naabu","pkg":"naabu","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to
-[41/73] netexec → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"netexec","pkg":"netexec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nERROR: Could not find a version that satisfies the requirement nete
-[42/73] osintgram → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"osintgram","pkg":"osintgram","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/tmp/osintgram'...\nCLONE_OK:osintgram\n","error"
-[43/73] pacu → OK
-{"ok":true,"tool":"pacu","pkg":"pacu","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires Brotli<=1.2.0,>=1.0, but you have brotli 1.2.1 w
-[44/73] pandoc → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"pandoc","pkg":"pandoc","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' 
-[45/73] peass-ng → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"peass-ng","pkg":"peass-ng","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure 
-[46/73] pentestly → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"pentestly","pkg":"pentestly","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configur
-[47/73] pgcli → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"pgcli","pkg":"pgcli","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to
-[48/73] photon → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"photon","pkg":"photon","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires asgiref<=3.11.1,>=3.2.10, but you have asgi
-[49/73] prowler → OK
-{"ok":true,"tool":"prowler","pkg":"prowler","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpa
-[50/73] python3-pip → OK
-{"ok":true,"tool":"python3-pip","pkg":"python3-pip","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --confi
-[51/73] rainbowcrack → OK
-{"ok":true,"tool":"rainbowcrack","pkg":"rainbowcrack","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --con
-[52/73] recordmydesktop → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"recordmydesktop","pkg":"recordmydesktop","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpk
-[53/73] redis → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"redis","pkg":"redis","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to
-[54/73] retdec → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"retdec","pkg":"retdec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' 
-[55/73] routersploit → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"routersploit","pkg":"routersploit","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --co
-[56/73] scoutsuite → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"scoutsuite","pkg":"scoutsuite","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you hav
-[57/73] semgrep → OK
-{"ok":true,"tool":"semgrep","pkg":"semgrep","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpa
-[58/73] sherlock → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"sherlock","pkg":"sherlock","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nWARNING: Running pip as the 'root' user can result in broken perm
-[59/73] shuffledns → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"shuffledns","pkg":"shuffledns","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --config
-[60/73] sidguesser → OK
-{"ok":true,"tool":"sidguesser","pkg":"sidguesser","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configu
-[61/73] sleuthkit → OK
-{"ok":true,"tool":"sleuthkit","pkg":"sleuthkit","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure
-[62/73] socialanalyzer → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"socialanalyzer","pkg":"socialanalyzer","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg 
-[63/73] ssrfmap → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"ssrfmap","pkg":"ssrfmap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a
-[64/73] steghide → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"steghide","pkg":"steghide","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure 
-[65/73] strace → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"strace","pkg":"strace","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' 
-[66/73] subfinder → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"subfinder","pkg":"subfinder","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configur
-[67/73] subzy → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"subzy","pkg":"subzy","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=\nBIN=\nINSTALL_FAIL:subzy\n\ncurl: option : blank argument where c
-[68/73] venom → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"venom","pkg":"venom","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to
-[69/73] vim → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"vim","pkg":"vim","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to cor
-[70/73] volatility → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"volatility","pkg":"volatility","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --config
-[71/73] vulners → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"vulners","pkg":"vulners","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a
-[72/73] w3af → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"w3af","pkg":"w3af","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to c
-[73/73] wkhtmltopdf → FAIL·التثبيت فشل جوه الجست — الناتج تحت
-{"ok":false,"tool":"wkhtmltopdf","pkg":"wkhtmltopdf","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --conf
-pass1: ok=10 fail=63
-retry: ok=6 fail=57
-after-bytes=8011
-{"ok":true,"ready":true,"measuredOn":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","hubRootfs":false,"fleet":{"connected":12,"kaliReady":12,"nodes":[{"id":"gh-9-1618","hostname":
-بعد: present=195/266 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)
-لسه ناقص: 71 → ['aria2', 'arjun', 'arp-scan', 'asnmap', 'bettercap', 'cariddi', 'casefile', 'cherrytree', 'chisel', 'crackmapexec', 'dirsearch', 'dnsx', 'dockle', 'dradis', 'dvcs-ripper', 'elfutils', 'empire', 'ettercap', 'evilgrade', 'exiftool', 'faraday', 'fernet', 'gh-dork', 'ghidra', 'gotator', 'grype', 'gvm', 'hcxtools', 'katana', 'keepnote', 'king-phisher', 'legs', 'libreoffice', 'ligolo-ng', 'ltrace', 'maskprocessor', 'metasploit-framework', 'mongosh', 'naabu', 'netexec']
-بعد: present=195/266 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)
-لسه ناقص: 71 → ['aria2', 'arjun', 'arp-scan', 'asnmap', 'bettercap', 'cariddi', 'casefile', 'cherrytree', 'chisel', 'crackmapexec', 'dirsearch', 'dnsx', 'dockle', 'dradis', 'dvcs-ripper', 'elfutils', 'empire', 'ettercap', 'evilgrade', 'exiftool', 'faraday', 'fernet', 'gh-dork', 'ghidra', 'gotator', 'grype', 'gvm', 'hcxtools', 'katana', 'keepnote', 'king-phisher', 'legs', 'libreoffice', 'ligolo-ng', 'ltrace', 'maskprocessor', 'metasploit-framework', 'mongosh', 'naabu', 'netexec']
-python-exit=0
-=== fill ended 2026-11-18T19:05:21Z ===
-step-exit=0
