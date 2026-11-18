@@ -25,7 +25,19 @@ import { bootBuild, requestReload, restartHistory, selfRespawn } from "./self-re
 const REPO = process.env.NOVA_RELEASE_REPO || "DawshaX/xFREEDOLLARHACHx";
 const TAG = process.env.NOVA_RELEASE_TAG || "nova-portable";
 const SCRIPT_URL = `https://raw.githubusercontent.com/${REPO}/main/deploy/live-update.py`;
-const ASSET_URL = process.env.NOVA_UPDATE_ASSET_URL || `https://github.com/${REPO}/releases/download/${TAG}/nova-24-7.zip`;
+/* ★ اتقاس 2026-11-18 — قناة النشر البديلة:
+ *   `uploads.github.com` (اللي بترفع release assets) بيرجع **000 في 52 مللي
+ *   ثانية** من بيئات مقيّدة — رفض بروكسي فوري، مش timeout ومش مشكلة صلاحيات.
+ *   النتيجة: `nova-24-7.zip` اختفى من الـrelease ومفيش طريقة لإرجاعه من هناك.
+ *
+ *   لكن `git push` شغال (اتقاس: الفرع اترفع والحجم 4,238,579 بايت مطابق).
+ *   فالحزمة بقت تتخزّن على فرع `nova-bundle` وتتنزّل من raw.githubusercontent
+ *   — نفس القناة اللي المكنة بتستعملها أصلاً لأجزاء الـrootfs (67 ملف).
+ *
+ *   الترتيب: رابط الفرع أولًا (لأنه موجود ومتحقَّق)، والـrelease fallback
+ *   (لو رجع في يوم). أي واحد فيهم ينفع NOVA_UPDATE_ASSET_URL يتجاوزه. */
+const BUNDLE_BRANCH_URL = `https://raw.githubusercontent.com/${REPO}/nova-bundle/bundle/nova-24-7.zip`;
+const ASSET_URL = process.env.NOVA_UPDATE_ASSET_URL || BUNDLE_BRANCH_URL;
 
 /** Anything below this many seconds of difference is considered the same build. */
 const MIN_DELTA_S = 120;
@@ -254,6 +266,31 @@ export interface ReleaseReadout {
  */
 export async function latestReleaseAt(): Promise<ReleaseReadout> {
   let apiError: string | null = null;
+  /* ★ المصدر الأول: تاريخ الفرع نفسه.
+   *   `raw.githubusercontent.com` بيرد بـ`last-modified` صادق للملف، وهو
+   *   التاريخ اللي بيهم — مش تاريخ release عمره ساعات. اتقاس إن المكنة
+   *   بتستخدم نفس القناة لأجزاء الـrootfs، فهي متاحة عندها بالتأكيد. */
+  try {
+    const head = await fetch(ASSET_URL, {
+      method: "HEAD",
+      redirect: "follow",
+      headers: { "user-agent": "nova-self-update" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (head.ok) {
+      const lm = head.headers.get("last-modified");
+      const len = Number(head.headers.get("content-length") || 0);
+      if (lm && Number.isFinite(Date.parse(lm))) {
+        return {
+          at: new Date(lm).toISOString(),
+          via: "asset-head",
+          note: `الفرع: ${(len / 1048576).toFixed(1)} MB`,
+        };
+      }
+    }
+  } catch (err) {
+    apiError = `الفرع: ${String((err as Error).message).slice(0, 60)}`;
+  }
   try {
     const api = process.env.NOVA_RELEASE_API_URL || `https://api.github.com/repos/${REPO}/releases/tags/${TAG}`;
   const res = await fetch(api, {
