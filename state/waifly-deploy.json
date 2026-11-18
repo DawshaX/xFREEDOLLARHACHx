@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-18T15:57:16.978Z",
+  "at": "2026-11-18T16:00:46.937Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
@@ -24,7 +24,7 @@
     "enabled": true,
     "lastResult": "up-to-date",
     "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-18T15:47:54Z) — حارس لوب التحديث",
-    "lastCheckAt": "2026-11-18T15:53:14.384Z",
+    "lastCheckAt": "2026-11-18T15:58:13.978Z",
     "currentBuiltAt": "2026-11-18T15:47:09.695Z",
     "latestReleaseAt": "2026-11-18T15:47:54Z",
     "restartNeeded": false
