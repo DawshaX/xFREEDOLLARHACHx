@@ -34,9 +34,19 @@ on:
     workflows: ["DB CA pin sync"]
     types: [completed]
 
+# ★ اتقاس 2026-11-18 — ده كان بيقتل النشر بصمت:
+#   `cancel-in-progress: true` مع group ثابت معناه إن **أي** push جديد
+#   بيلغي البناء الشغّال. اتقاس على الريبو ده: 5 من 12 بناء اتلغوا، منهم
+#   44201890124 (23:43) اللي كان هيبني حزمة فيها 179 ملف متغيّر — اتلغى
+#   والـrelease فضل على بناء 15:16، والصفحة عند المالك فضلت قديمة يوم كامل.
+#   الحزمة بتاخد ~6 دقايق، فإلغاؤها بيتكرر مع أي دفعة سريعة.
+#
+#   الحل: `cancel-in-progress: false` = طابور. البناء القديم **يكمّل** وينشر
+#   أصله، واللي بعده يبني أحدث. الأسوأ إن الـrelease ياخد دقيقتين زيادة —
+#   مقابل إن الشغل مايضيعش.
 concurrency:
   group: nova-standalone
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
