@@ -25,14 +25,17 @@ jobs:
           OK=0; FAIL=""
           for T in $TOOLS; do
             echo "════════ install $T ════════"
-            R=$(curl -s --max-time 450 -X POST "$HUB/api/kali-env/install" \
+            R=$(curl -s --max-time 450 -w "\nHTTP_STATUS:%{http_code}" -X POST "$HUB/api/kali-env/install" \
               -H "x-nova-token: $TOKEN" -H "content-type: application/json" \
               -d "{\"tool\":\"$T\"}")
-            echo "$R" | tail -c 300; echo
+            ST=$(echo "$R" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
+            B=$(echo "$R" | sed "s/HTTP_STATUS:[0-9]*//" | tr -d "\n" | tail -c 180)
+            echo "$T → HTTP $ST · ${B:0:120}"
             if echo "$R" | grep -q "INSTALL_OK:$T"; then
               OK=$((OK+1)); echo "✓ $T مثبتة"
             else
-              FAIL="$FAIL $T"; echo "✗ $T فشلت"
+              FAIL="$FAIL $T"
+              echo "::error::$T فشلت → HTTP $ST · $B"
             fi
           done
           echo "::notice::installed=$OK/11 · failed=[$FAIL]"
