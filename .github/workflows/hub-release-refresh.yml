@@ -1,0 +1,51 @@
+# TEST70c — حزمة الrelease على nova-portable مبنية من نفس كوميت البوت (7dd761d)
+# فالأبديتر بيقول "مافيش تحديث". هنشيل حزمة TEST70 من فرع nova-bundle (raw)
+# ونرفعها مكان حزمة الrelease (--clobber) — كوميت أحدث → الأبديتر يسحبها.
+name: hub release refresh (TEST70 bundle → release)
+on:
+  push:
+    paths:
+      - ".github/workflows/hub-release-refresh.yml"
+permissions:
+  contents: write
+concurrency:
+  group: hub-release-refresh
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+    steps:
+      - name: نزّل حزمة nova-bundle (raw) وارفعها عالrelease
+        run: |
+          curl -sfL --max-time 300 "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/nova-bundle/bundle/nova-24-7.zip" -o nova-24-7.zip
+          ls -la nova-24-7.zip
+          gh release upload nova-portable nova-24-7.zip --clobber --repo "$GITHUB_REPOSITORY"
+          echo "::notice::✓ حزمة الrelease اتحدثت بTEST70"
+      - name: force=1 (عشان الدورة تجي حالًا مش بعد 5د)
+        run: |
+          sleep 10
+          R=$(curl -s --max-time 300 -X POST "https://nova.waifly.com/api/nova-core/auto-update?force=1" \
+            -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}')
+          echo "::notice::force: $(echo "$R" | tail -c 200 | tr -d '\n\r')"
+      - name: استنى البوت الجديد وقيس exec
+        run: |
+          for i in 1 2 3 4 5 6 7 8; do
+            sleep 45
+            V=$(curl -s --max-time 30 "https://nova.waifly.com/api/nova-core/version?token=$TOKEN&i=$i")
+            BOOT=$(echo "$V" | grep -o '"boot":{"commit":"[^"]*"' | cut -d'"' -f5)
+            echo "::notice::boot=$BOOT (محاولة $i)"
+            case "$BOOT" in
+              7dd761d*) echo "لسه القديم";;
+              "") echo "بنعيد التشغيل";;
+              *) echo "::notice::✓ بوت جديد: $BOOT"; break;;
+            esac
+          done
+          sleep 20
+          R=$(curl -s --max-time 120 -X POST "https://nova.waifly.com/api/kali-env/exec" \
+            -H "x-nova-token: $TOKEN" -H "content-type: application/json" \
+            -d '{"command":"echo TERMINAL_OK && uname -r"}')
+          echo "::notice::exec: $(echo "$R" | tr -d '\n\r' | tail -c 350)"
