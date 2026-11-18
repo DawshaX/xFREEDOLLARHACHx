@@ -8,6 +8,8 @@
  * والنداء بيرد برسالة صادقة بخطوات الإصلاح.
  */
 import { getConnectedAgentList, execOnLocalAgent, execStreamOnLocalAgent } from "../../routes/local-agent";
+import { broadcastEvent } from "../ws-hub";
+import { createPushNotification } from "../push-hub";
 import { kaliRoot, runKali } from "./kali-env";
 import { KALI_NODE_PROBE, remoteRunCmd, remoteRunCmdStream } from "./kali-node-installer";
 import { probeAllKaliNodes, orderPrewarmedFirst, readProbeCache, isFleetNode, type KaliProbeRow } from "./kali-node-probe";
@@ -64,23 +66,38 @@ export async function kaliAnywhereExecStream(
   onData: (streamType: "stdout" | "stderr", chunk: string) => void,
 ): Promise<KaliAnywhereResult | null> {
   if (!cmd.trim()) return null;
+  const execId = `kali-stream-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const broadcastStart = (plane: string) => {
+    try { broadcastEvent("kali_exec_start", { id: execId, cmd: cmd.slice(0, 200), plane, startedAt: Date.now(), running: true }); } catch {}
+  };
+  const broadcastChunk = (chunk: string) => {
+    try { broadcastEvent("kali_exec_chunk", { id: execId, chunk: chunk.slice(0, 4000), ts: Date.now() }); } catch {}
+  };
+
   if (kaliRoot()) {
-    const r = await runKali(cmd, timeoutMs, onData);
+    broadcastStart("الهَب — كالي المدمجة (rootfs + proot)");
+    const wrappedOnData = (t: "stdout" | "stderr", c: string) => { onData(t, c); broadcastChunk(c); };
+    const r = await runKali(cmd, timeoutMs, wrappedOnData);
     try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane("hub", cmd, r.exitCode === 0, r.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
+    try { broadcastEvent("kali_exec_done", { id: execId, cmd: cmd.slice(0, 200), plane: "الهَب — كالي المدمجة", exitCode: r.exitCode, durationMs: r.durationMs, running: false }); } catch {}
     return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode, durationMs: r.durationMs, plane: "الهَب — كالي المدمجة (rootfs + proot)" };
   }
   const nodes = await orderedFleetNodes();
   for (const a of nodes) {
     if (a.mode !== "MODE_BARE" && a.mode !== "MODE_PROOT") continue; // مش جاهزة — التالية (الجاهزة بتتجرب الأول)
-    const rr = await execStreamOnLocalAgent(remoteRunCmdStream(cmd, a.mode, timeoutMs), a.id, timeoutMs + 10_000, onData);
+    const plane = `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
+    broadcastStart(plane);
+    const wrappedOnData = (t: "stdout" | "stderr", c: string) => { onData(t, c); broadcastChunk(c); };
+    const rr = await execStreamOnLocalAgent(remoteRunCmdStream(cmd, a.mode, timeoutMs), a.id, timeoutMs + 10_000, wrappedOnData);
     if (!rr) continue;
     try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane(a.hostname, cmd, rr.exitCode === 0, rr.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
+    try { broadcastEvent("kali_exec_done", { id: execId, cmd: cmd.slice(0, 200), plane, exitCode: rr.exitCode, durationMs: rr.durationMs, running: false }); } catch {}
     return {
       stdout: rr.stdout,
       stderr: rr.stderr,
       exitCode: rr.exitCode,
       durationMs: rr.durationMs,
-      plane: `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`,
+      plane,
     };
   }
   return null;
@@ -89,23 +106,44 @@ export async function kaliAnywhereExecStream(
 /** التنفيذ الموحّد: هَب → عقدة. null = مافيش طايرة كالي متاحة حالًا. */
 export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise<KaliAnywhereResult | null> {
   if (!cmd.trim()) return null;
+  // ── بث حي لكل الصفحات: أي تنفيذ كالي يظهر فورًا في كل مكان ──────────
+  const execId = `kali-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const broadcastStart = (plane: string) => {
+    try {
+      broadcastEvent("kali_exec_start", { id: execId, cmd: cmd.slice(0, 200), plane, startedAt: Date.now(), running: true });
+    } catch {}
+  };
+  const broadcastDone = (plane: string, exitCode: number | null, durationMs: number) => {
+    try {
+      broadcastEvent("kali_exec_done", { id: execId, cmd: cmd.slice(0, 200), plane, exitCode, durationMs, running: false });
+    } catch {}
+    try {
+      if (exitCode === 0) createPushNotification({ kind: "success", title: `✓ كالي: ${cmd.slice(0, 40)}`, body: `اتنفّذ على ${plane} في ${durationMs}ms`, link: "/kali-env" });
+    } catch {}
+  };
+
   if (kaliRoot()) {
+    broadcastStart("الهَب — كالي المدمجة (rootfs + proot)");
     const r = await runKali(cmd, timeoutMs);
     try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane("hub", cmd, r.exitCode === 0, r.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
+    broadcastDone("الهَب — كالي المدمجة (rootfs + proot)", r.exitCode, r.durationMs);
     return { ...r, plane: "الهَب — كالي المدمجة (rootfs + proot)" };
   }
   const nodes = await orderedFleetNodes();
   for (const a of nodes) {
     if (a.mode !== "MODE_BARE" && a.mode !== "MODE_PROOT") continue; // مش جاهزة — التالية (الجاهزة بتتجرب الأول)
+    const plane = `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
+    broadcastStart(plane);
     const rr = await execOnLocalAgent(remoteRunCmd(cmd, a.mode, timeoutMs), a.id, timeoutMs + 10_000);
     if (!rr) continue;
     try { const { scanRunFromPlane } = await import("./kali-scan-stats"); scanRunFromPlane(a.hostname, cmd, rr.exitCode === 0, rr.stdout.length); } catch { /* الإحصائية ماتكسّرش التنفيذ */ }
+    broadcastDone(plane, rr.exitCode, rr.durationMs);
     return {
       stdout: rr.stdout,
       stderr: rr.stderr,
       exitCode: rr.exitCode,
       durationMs: rr.durationMs,
-      plane: `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`,
+      plane,
     };
   }
   return null;

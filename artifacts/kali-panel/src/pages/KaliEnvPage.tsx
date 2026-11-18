@@ -3,6 +3,8 @@ import { Activity, Monitor, Play, RefreshCw, Square, Terminal, Wrench, ArrowLeft
 import { useLocation } from "wouter";
 import { pushNotify } from "@/lib/sse";
 import { novaAuthHeaders } from "@/lib/ops-client";
+import { useKali } from "@/context/KaliContext";
+import { KaliLiveTicker, KaliStatusCard } from "@/components/desktop/KaliLiveBridge";
 
 /**
  * TEST12 — «شغل نظام الكالي واعملو مكان وتبويب» — التبويبة المخصصة لبيئة كالي
@@ -149,6 +151,7 @@ function ToolCell({ name, t }: { name: string; t?: HeavyTool }) {
 
 export default function KaliEnvPage() {
   const [, navigate] = useLocation();
+  const kaliCtx = useKali();
   const [st, setSt] = useState<KaliStatus | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -480,6 +483,30 @@ export default function KaliEnvPage() {
           style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.4)", color: "#22d3ee" }}>
           <ArrowLeft className="w-3.5 h-3.5" /> مكتب الشغل الحي (/agent-pro)
         </button>
+      </div>
+
+      {/* الجسر الحي — أي أمر من agent-pro يظهر هنا فورًا */}
+      <KaliLiveTicker />
+      {kaliCtx.liveExec && (
+        <div className="rounded-xl p-3 flex items-center gap-2" style={{ background: "rgba(255,68,0,0.06)", border: "1px solid rgba(255,68,0,0.2)" }}>
+          <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+          <span className="text-[10px] font-black" style={{ color: "#ff4400" }}>نشاط حي من {kaliCtx.liveExec.source}:</span>
+          <span className="text-[10px] font-mono flex-1 truncate" style={{ color: "#ffaa44" }}>$ {kaliCtx.liveExec.cmd}</span>
+          <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>{kaliCtx.liveExec.plane}</span>
+        </div>
+      )}
+      {/* شريط الوعي المتبادل — الصفحتين عارفين بعض */}
+      <div className="rounded-xl p-3 flex items-center justify-between flex-wrap gap-2" style={{ background: "rgba(34,211,238,0.04)", border: "1px solid rgba(34,211,238,0.15)" }}>
+        <span className="text-[10px] font-black flex items-center gap-2" style={{ color: "#22d3ee" }}>
+          🔗 الوعي المتبادل — كل الصفحات متصلة
+          <span className={`w-2 h-2 rounded-full ${kaliCtx.isConnected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
+        </span>
+        <div className="flex items-center gap-2 text-[8px] font-mono">
+          <span style={{ color: "rgba(255,255,255,0.5)" }}>متصل: {kaliCtx.isConnected ? "نعم ✓" : "لا"}</span>
+          <span style={{ color: "rgba(255,255,255,0.3)" }}>·</span>
+          <span style={{ color: "rgba(255,255,255,0.5)" }}>{kaliCtx.execHistory.length} أمر في السجل المشترك</span>
+          <button onClick={() => navigate("/agent-pro")} className="px-2 py-0.5 rounded text-[8px] font-black" style={{ background: "rgba(34,211,238,0.1)", border: "1px solid rgba(34,211,238,0.3)", color: "#22d3ee" }}>افتح agent-pro ↗</button>
+        </div>
       </div>
 
       {/* TEST23 — عقد كالي السحابية: المكان الحي اللي المالك يشوف فيه كالي على الأسطول —
