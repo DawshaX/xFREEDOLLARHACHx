@@ -22,16 +22,20 @@ jobs:
       HUB: https://nova.waifly.com
     steps:
       - uses: actions/checkout@v4
-      - name: القياس الحالي + استخراج الناقص (التقرير كله بيتسجل في الريبو)
+      - name: القياس الحالي + استخراج الناقص (بمحاولتين — الرد كله في اللوج)
         run: |
-          set -o pipefail
           L=state/tools-fill-log.txt
           echo "=== fill started $(date -u +%FT%TZ) ===" > $L
-          curl -s -m 280 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json || true
-          true
-          echo "before-bytes=$(wc -c < /tmp/tools-before.json)" >> $L
-          head -c 300 /tmp/tools-before.json >> $L; echo >> $L
-          python3 - <<'PY'
+          curl -s -m 400 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json || true
+          echo "try1-bytes=$(wc -c < /tmp/tools-before.json 2>/dev/null || echo 0)" >> $L
+          if ! python3 -c 'import json,sys; json.load(open("/tmp/tools-before.json")); print("json ok")' 2>/dev/null; then
+            echo "الرد مش JSON — محاولة تانية fresh" >> $L
+            sleep 15
+            curl -s -m 400 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools?fresh=$RANDOM" -o /tmp/tools-before.json || true
+            echo "try2-bytes=$(wc -c < /tmp/tools-before.json 2>/dev/null || echo 0)" >> $L
+          fi
+          head -c 300 /tmp/tools-before.json >> $L 2>/dev/null; echo >> $L
+          (python3 - <<'PY' || true
           import json
           d = json.load(open("/tmp/tools-before.json"))
           missing = set()
@@ -40,13 +44,17 @@ jobs:
           open("/tmp/missing.txt", "w").write("\n".join(sorted(missing)))
           print("قبل: present=%s/%s · الناقص=%d" % (d.get("present"), d.get("total"), len(missing)))
           PY
+          ) 2>&1 | tee -a $L || true
+          wc -l /tmp/missing.txt >> $L 2>/dev/null; cat /tmp/missing.txt >> $L 2>/dev/null || true
           true
-          wc -l /tmp/missing.txt >> $L; cat /tmp/missing.txt >> $L
-          git config user.name "nova-bot" 2>/dev/null; git config user.email "nova@bot.local" 2>/dev/null
-          git add state/tools-fill-log.txt 2>/dev/null
-          git commit -m "state: tools-fill log (before)" 2>/dev/null || true
+      - name: كوميت اللوج الجزئي (دايمًا — مستحيل تفشل)
+        run: |
+          git config user.name "nova-bot" 2>/dev/null || true; git config user.email "nova@bot.local" 2>/dev/null || true
+          git add state/tools-fill-log.txt 2>/dev/null || true
+          git commit -m "state: tools-fill log (partial)" 2>/dev/null || true
           git pull --rebase origin arena/f288ad41-xfreedollarhachx 2>/dev/null || true
           git push origin HEAD:arena/f288ad41-xfreedollarhachx 2>/dev/null || true
+          exit 0
       - name: تثبيت كل أداة ناقصة (مسلسل — الهَب بيسلسل بنفسه)
         run: |
           L=state/tools-fill-log.txt
@@ -94,7 +102,7 @@ jobs:
           true
           echo "after-bytes=$(wc -c < /tmp/tools-after.json)" >> $L
           head -c 200 /tmp/tools-after.json >> $L; echo >> $L
-          python3 - <<'PY'
+          (python3 - <<'PY' || true
           import json, datetime
           d = json.load(open("/tmp/tools-after.json"))
           b = json.load(open("/tmp/tools-before.json"))
@@ -111,6 +119,7 @@ jobs:
           print("بعد: present=%s/%s · measuredOn=%s" % (d.get("present"), d.get("total"), d.get("measuredOn")))
           print("لسه ناقص: %d → %s" % (len(missing), sorted(missing)[:40]))
           PY
+          ) 2>&1 | tee -a $L || true
           echo "python-exit=$?" >> $L
           echo "=== fill ended $(date -u +%FT%TZ) ===" >> $L
           true
