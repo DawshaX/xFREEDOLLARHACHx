@@ -64,7 +64,12 @@ type RunResult = {
 };
 type Inventory = {
   ok: boolean; total: number; present: number; missing: string[];
-  measuredAt: string; tools: { name: string; present: boolean; version: string | null }[];
+  measuredAt?: string;
+  /* ★ `measured:false` ≠ «فشل». معناها السؤال اترد عليه بصدق: مافيش كالي
+   *   في المدى. الواجهة لازم تقول السبب المقاس بدل شاشة فشل غامضة. */
+  measured?: boolean; reason?: string; measuredOn?: string; ready?: boolean;
+  searched?: string[]; fleet?: { connected: number; kaliReady: number };
+  tools: { name: string; present: boolean; version: string | null }[];
 };
 type PyTools = {
   ok: boolean; venvPresent: boolean;
@@ -176,8 +181,12 @@ export default function KaliWorkspacePanel() {
    * عشان الصفحة تفتح سريعة، ولما يطلبه بياخد الحقيقة كاملة. */
   const runInventory = useCallback(async () => {
     setInvBusy(true);
+    setErr(null);
     const r = await call<Inventory>("/kali-env/inventory", { timeoutMs: 300_000 });
-    if (r.ok) setInv(r.data); else setErr(r.error);
+    /* رفض الـHTTP مش هو اللي بنحكم بيه — الجسم نفسه هو الحقيقة. لو السيرفر
+     * ردّ بـ`measured:false` وسبب مقاس، ده **جواب** مش خطأ. */
+    if (r.ok && typeof r.data?.total === "number") setInv(r.data);
+    else if (!r.ok) setErr(r.error);
     setInvBusy(false);
   }, []);
   useEffect(() => { if (sel) void loadOne(sel); else setWs(null); }, [sel, loadOne]);
@@ -590,10 +599,29 @@ export default function KaliWorkspacePanel() {
             بيفتح ٤٦ أداة ويجيب نسخة كل واحدة من مخرجاتها — ممكن ياخد لحد ٣ دقايق. اضغط «اعمل جرد».
           </div>
         )}
-        {inv && (
+        {/* ★ الجواب الصادق: مافيش كالي في المدى. بنقول السبب المقاس والمسارات
+            اللي اتفتشت — مش «فشل» ولا شاشة فاضية. */}
+        {inv && inv.measured === false && (
+          <div className="rounded-lg p-2 text-[9px] leading-relaxed" style={{ background: "rgba(255,176,32,0.10)", border: "1px solid rgba(255,176,32,0.30)", color: "#ffd08a" }}>
+            <div className="font-black mb-1">مافيش كالي حقيقية في المدى — الجرد مش مقاس</div>
+            <div style={{ color: "rgba(255,255,255,0.70)" }}>{inv.reason}</div>
+            {inv.fleet && (
+              <div className="mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+                الأسطول: {inv.fleet.connected} عقدة متصلة · {inv.fleet.kaliReady} منهم كالي جاهزة
+              </div>
+            )}
+            {inv.searched && inv.searched.length > 0 && (
+              <details className="mt-1">
+                <summary className="cursor-pointer" style={{ color: "rgba(255,255,255,0.50)" }}>المسارات اللي اتفتشت ({inv.searched.length})</summary>
+                <div className="mt-0.5 font-mono" dir="ltr" style={{ color: "rgba(255,255,255,0.40)" }}>{inv.searched.join(" · ")}</div>
+              </details>
+            )}
+          </div>
+        )}
+        {inv && inv.measured !== false && inv.tools.length > 0 && (
           <>
             <div className="text-[9px] mb-1.5" style={{ color: "rgba(255,255,255,0.45)" }}>
-              قيس {new Date(inv.measuredAt).toLocaleString("ar-EG")}
+              {inv.measuredOn ? `قيس على ${inv.measuredOn}` : `قيس ${new Date(inv.measuredAt ?? Date.now()).toLocaleString("ar-EG")}`}
               {inv.missing.length > 0 && <span style={{ color: warn }}> · ناقص: {inv.missing.join(" · ")}</span>}
             </div>
             <div className="grid sm:grid-cols-2 gap-x-3 gap-y-0.5 max-h-64 overflow-auto">

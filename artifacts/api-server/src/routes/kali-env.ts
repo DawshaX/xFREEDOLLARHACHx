@@ -235,6 +235,19 @@ const APT_CATALOG: Record<string, string[]> = {
  * كاش 3د). ده اللي يخلي الصفحة تعرض «كالي حقيقية شغالة في الخلفية» حتى لو
  * rootfs مش منصّبة على الهَب نفسه (حصة 1.5GB) — الكالي بتعيش على عقد الأسطول
  * وkaliAnywhereExec بيوصّل ليها failover تلقائي. */
+/* ★ القائمة الأساسية اللي الجرد بيقيسها — ٤٦ أداة بتغطي كل مرحلة من
+ *   الاستطلاع للتقارير. رفعتها لثابت على مستوى الوحدة (كانت const جوه
+ *   الروت) لأن مسار الأسطول كمان محتاجها، وكان هيتكرر حرفيًا في مكانين. */
+const CORE_INVENTORY = [
+  "nmap", "masscan", "sqlmap", "hydra", "john", "hashcat", "nikto", "gobuster",
+  "feroxbuster", "wfuzz", "dirb", "nuclei", "searchsploit", "tcpdump", "tshark",
+  "wireshark", "mitmproxy", "arpspoof", "burpsuite", "zaproxy", "msfconsole",
+  "wpscan", "commix", "dnsenum", "fierce", "theHarvester", "sublist3r", "arjun",
+  "dirsearch", "impacket-psexec", "impacket-secretsdump", "impacket-wmiexec",
+  "impacket-ntlmrelayx", "volatility3", "binwalk", "foremost", "radare2", "rizin",
+  "gdb", "strace", "apktool", "jadx", "aircrack-ng", "openssl", "curl", "python3",
+];
+
 async function fleetKaliSummary() {
   const cached = readProbeCache();
   let rows = cached.rows;
@@ -1152,19 +1165,62 @@ router.get("/kali-env/workspaces-selftest", async (_req: Request, res: Response)
  */
 router.get("/kali-env/inventory", async (_req: Request, res: Response) => {
   const layout = detectProotLayout();
+  /* ★ اتقاس 2026-11-17 (الحزمة المنشورة على السلوت): الـrootfs الكالي
+   *   ~20 GB والسلوت 1024 MB قرص — يعني `layout.ready` **هيبقى false
+   *   للأبد** على nova.waifly.com. الرد القديم كان 503 «بيئة كالي مش جاهزة»،
+   *   والواجهة كانت بتقول «فشل القياس» — قارئها يفهم إن فيه عطل، والحقيقة
+   *   إن الجرد الحقيقي موجود على عقدة كالي في الأسطول. نفس اللي /tools بيعمله.
+   *   القاعدة: الجرد بيقيس **أي** كالي حقيقية متاحة (محلية أو أسطول)، ولو
+   *   مافيش ولا واحدة بيردّ 200 بـ`measured:false` + السبب المقاس، مش 503
+   *   يوهم بعطل. 503 معناها «استنى وحاول تاني»؛ هنا مافيش استنى. */
   if (!layout.ready) {
-    res.status(503).json({ ok: false, error: "بيئة كالي مش جاهزة" });
+    const fleet = await fleetKaliSummary();
+    if (fleet.kaliReady === 0) {
+      res.json({
+        ok: false,
+        measured: false,
+        ready: false,
+        reason:
+          "مافيش كالي حقيقية في المدى: لا rootfs محلي على دي المكنة " +
+          "(المساحة المتاحة أقل من ~20 GB اللي الـrootfs بيحتاجها)، ولا عقدة كالي متصلة بالأسطول",
+        searched: layout.searched,
+        fleet,
+        total: 0,
+        present: 0,
+        missing: [],
+        tools: [],
+      });
+      return;
+    }
+    // فيه عقدة كالي حية — الجرد بيتقاس عليها بنفس أوامر النسخة المحلية.
+    const fleetProbe = await kaliAnywhereExec(
+      CORE_INVENTORY.map((t) => `command -v ${t} >/dev/null 2>&1 && echo "P${t}"`).join(" "),
+      60_000,
+    );
+    const found = new Set(
+      fleetProbe?.stdout
+        .split(String.fromCharCode(10))
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith("P"))
+        .map((l) => l.slice(1)) ?? [],
+    );
+    const tools = CORE_INVENTORY.map((name) => ({ name, present: found.has(name), version: null }));
+    res.json({
+      ok: true,
+      measured: true,
+      measuredOn: fleetProbe?.plane ?? "fleet",
+      ready: true,
+      hubRootfs: false,
+      fleet,
+      measuredAt: new Date().toISOString(),
+      total: CORE_INVENTORY.length,
+      present: tools.filter((t) => t.present).length,
+      missing: tools.filter((t) => !t.present).map((t) => t.name),
+      tools,
+    });
     return;
   }
-  const CORE = [
-    "nmap", "masscan", "sqlmap", "hydra", "john", "hashcat", "nikto", "gobuster",
-    "feroxbuster", "wfuzz", "dirb", "nuclei", "searchsploit", "tcpdump", "tshark",
-    "wireshark", "mitmproxy", "arpspoof", "burpsuite", "zaproxy", "msfconsole",
-    "wpscan", "commix", "dnsenum", "fierce", "theHarvester", "sublist3r", "arjun",
-    "dirsearch", "impacket-psexec", "impacket-secretsdump", "impacket-wmiexec",
-    "impacket-ntlmrelayx", "volatility3", "binwalk", "foremost", "radare2", "rizin",
-    "gdb", "strace", "apktool", "jadx", "aircrack-ng", "openssl", "curl", "python3",
-  ];
+  const CORE = CORE_INVENTORY;
   /* أمر واحد بيطبع `tool|version` لكل أداة — أقل من ٦٠ ثانية للمجموعة.
    * كل أداة بنداء --version/-v/V خاص بيها، ومهلة ٦ث عشان اللي متعلّق
    * ما يعلّقش الجرد كله. */
