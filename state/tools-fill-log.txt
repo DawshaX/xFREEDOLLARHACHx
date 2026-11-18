@@ -3,3 +3,13 @@ try1-bytes=54
 {"ok":false,"error":"login_required","login":"/login"}
 قبل: present=None/None · الناقص=0
 0 /tmp/missing.txt
+pass1: ok=0 fail=0
+after-bytes=54
+{"ok":false,"error":"login_required","login":"/login"}
+بعد: present=None/None · measuredOn=None
+لسه ناقص: 0 → []
+بعد: present=None/None · measuredOn=None
+لسه ناقص: 0 → []
+python-exit=0
+=== fill ended 2026-11-18T17:27:45Z ===
+step-exit=0
