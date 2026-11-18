@@ -151,7 +151,7 @@ jobs:
   node:
     name: node ${{ matrix.i }}
     needs: prepare
-    if: needs.prepare.outputs.nodes != '0' && github.ref == 'refs/heads/main'
+    if: needs.prepare.outputs.nodes != '0' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/arena/f288ad41-xfreedollarhachx')
     # With nodes=0 the whole matrix must not even be scheduled: otherwise every
     # push to this file queues 19 jobs that each boot a runner just to skip.
     runs-on: ubuntu-latest
