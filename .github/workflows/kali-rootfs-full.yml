@@ -28,9 +28,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: guest كامل من المخزن (نفس سكربت العقدة — capture كامل)
+      - name: guest كامل من المخزن القديم الصحيح (037903de — الحالي مساراته nested)
         env:
           NOVA_KALI_SOFT_DEADLINE_MS: "1800000"
+          NOVA_KALI_BRANCH: "037903de2e724356f20b4f19c99d5f817a09d380"
         run: |
           df -h / /mnt | sed 's/^/::notice::disk: /' || true
           node scripts/kali-node-install.mjs $HOME/kali-rootfs/rootfs > /tmp/guest.log 2>&1 ||             echo "::warning::guest install exit غير صفر — اللوج تحت هو الحقيقة"
@@ -126,16 +127,26 @@ jobs:
           cd $HOME/kali-rootfs
           echo "[tar] guest → tar.gz (pigz — 4 cores)"
           sudo apt-get install -y -qq pigz >/dev/null 2>&1 || true
-          tar -cf - rootfs | pigz -1 > rootfs-full.tar.gz
+          tar -cf - -C "$HOME/kali-rootfs/rootfs" . | pigz -1 > rootfs-full.tar.gz
           echo "[split] أجزاء 90MB"
           split -b 90m -d -a 2 rootfs-full.tar.gz part- && rm rootfs-full.tar.gz
           N=$(ls part-* | wc -l); SZ=$(du -sb rootfs | cut -f1)
           echo "[verify-store] parts=$N bytes=$SZ"
+          echo "[verify-store] بوابة المسارات: أول جزء لازم يفك على ./bin/sh (بدون بادئة rootfs/)"
+          cat part-00 part-01 2>/dev/null | tar -tzf - 2>/dev/null | head -400 > /tmp/tar-list.txt || true
+          if grep -qE "^\./bin/sh$|^bin/sh$|^[^/]*bin/sh$" /tmp/tar-list.txt; then
+            echo "::notice::✓ المسارات سليمة (bin/sh على الجذر)"
+          elif grep -qE "^rootfs/" /tmp/tar-list.txt; then
+            echo "::error::✗ المسارات nested (rootfs/...) — ممنوع الرفع — نفس عطل 11:49"
+            exit 1
+          else
+            echo "::warning::ما لقيناش bin/sh في أول جزءين — نكمل بحذر (القائمة: $(head -3 /tmp/tar-list.txt))"
+          fi
           sha256sum part-* > /tmp/SHA256SUMS.new
           P2=$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static
           PKGC=$($P2 -0 -R $HOME/kali-rootfs/rootfs -w /root -b /dev -b /proc -b /sys /bin/sh -c 'dpkg -l 2>/dev/null | grep -c "^ii"' || echo 0)
           PKGC=$(echo "$PKGC" | tr -dc '0-9')
-          FAILS=$(grep -o '"installFailed": "[^"]*"' $HOME/kali-rootfs/rootfs/tmp/nova-tools-report.json 2>/dev/null | cut -d'"' -f4 || true)
+          FAILS=$(grep -o '"installFailed": "[^"]*"' $HOME/kali-rootfs/rootfs/root/nova-tools-report.json 2>/dev/null | cut -d'"' -f4 || true)
           [ -z "$FAILS" ] && FAILS="ولا حاجة"
           printf 'PRETTY_NAME=Kali GNU/Linux Rolling\npackages=%s\nbytes=%s\nbuilt_at=%s\ncommit=%s\nrun_id=%s\nfailed_extra=%s\n' \
             "$PKGC" "$SZ" "$(date -u +%FT%TZ)" "${GITHUB_SHA::7}" "$GITHUB_RUN_ID" "$FAILS" > /tmp/MANIFEST.new
