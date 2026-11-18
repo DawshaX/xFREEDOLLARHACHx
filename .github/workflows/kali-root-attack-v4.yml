@@ -1,7 +1,7 @@
 # TEST80v4 — الدقة النهائية المقاسة: dpkg --configure -a بيعلق على برومبت تفاعلي
 # (اللوج: start بدون أي ناتج ×3) — العلاج بالحرف: DEBIAN_FRONTEND=noninteractive
 # + --force-confdef --force-confnew + timeout كامل 540s. بعده فحص الفاصل amass.
-name: kali root attack v4 (noninteractive dpkg heal — the precise fix)
+name: kali root attack v4 (TEST81 deployment bell — binaries independent of dpkg)
 on:
   push:
     paths:
