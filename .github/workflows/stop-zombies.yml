@@ -1,6 +1,6 @@
-# TEST59c — التنضيف الفوري: إلغاء الزومبي والruns العالقة (بتنفذ من جوه
-# الActions حيث github.token عنده actions:write على نفس الrepo).
-name: cleanup stuck runs (one-shot)
+# TEST62 — إلغاء موجة ال19 عقدة (الأمر الجديد: 10 بس) — github.token جوه
+# الActions عنده actions:write على نفس الrepo (مقاس 08:14Z — أعقد طريقة نجحت).
+name: fleet rescale (cancel the 19-wave)
 on:
   push:
     paths:
@@ -18,14 +18,12 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: cancel the stuck fleet runs (they hold all 20 slots)
+      - name: cancel the old 19-node wave (superseded by the 10-node order)
         run: |
-          for R in 44153053870 44220384700 44215226019 44201214019 44215224793 44259043542; do
+          for R in 44266917184; do
             echo "→ cancel $R:"
             curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$R/cancel" | head -c 120
             echo
           done
-      - name: self-checkout the cleanup file (so the next push removes it)
-        run: echo "done — الفحص الجاي هيشتغل على السلات الفاضية"

@@ -60,8 +60,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           # TEST34 — استبعاد الـ run الحالي من عدّ السلوتات (عدّ ذاتي).
           GITHUB_RUN_ID: ${{ github.run_id }}
-          FLEET_NODES: ${{ vars.FLEET_NODES }}
-          FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
+          FLEET_NODES: ${{ vars.FLEET_NODES || '10' }}  # TEST62 — أمر المالك: 10 عقد بس
+          FLEET_ENABLED: ${{ vars.FLEET_ENABLED || '1' }}  # TEST61 — fallback: جيت هوب مخزن ووايفلي تحكم — الاتنين متصلين (مقاس)
           EVENT: ${{ github.event_name }}
           TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
@@ -84,7 +84,7 @@ jobs:
           # TEST33 — ميزانية السلوت (مقاس حي 10:39Z: occupied=23 → nodes=0 سكب ذاتي):
           # البودجت بيعدّ كل jobs الموجات (running+queued) ويرجّع min(WANTED, 20−occupied−1)
           # → تكدس الموجات فوق حد الخطة مستحيل رياضيًا والCI له سلوت دوار دايمًا.
-          n="$(node scripts/fleet-slot-budget.mjs "${INPUT_NODES:-19}" 1 | tail -1 | grep -oE '[0-9]+' || true)"
+          n="$(node scripts/fleet-slot-budget.mjs "${INPUT_NODES:-10}" 1 | tail -1 | grep -oE '[0-9]+' || true)"
           case "$n" in ''|*[!0-9]*) n=0 ;; esac
           echo "nodes=$n" >> "$GITHUB_OUTPUT"
           echo "::notice::starting $n extra fleet node(s) (indices 20-38)"
@@ -186,7 +186,7 @@ jobs:
       - name: Join the fleet
         if: steps.gate.outputs.run == 'true'
         env:
-          HUB: ${{ vars.NOVA_HUB }}
+          HUB: ${{ vars.NOVA_HUB || 'wss://nova.waifly.com/api/local-agent/ws' }}  # TEST61 — هَب التحكم
           IDX: ${{ matrix.i }}
           NOVA_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
