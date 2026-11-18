@@ -49,7 +49,7 @@ jobs:
           R=$HOME/kali-rootfs/rootfs
           "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c '
             export DEBIAN_FRONTEND=noninteractive
-            touch /var/lib/dpkg/statoverride 2>/dev/null; chmod 644 /var/lib/dpkg/statoverride 2>/dev/null
+            cp /var/lib/dpkg/statoverride /var/lib/dpkg/statoverride.bak 2>/dev/null; : > /var/lib/dpkg/statoverride
             dpkg --configure -a 2>&1 | tail -3
             apt-get update 2>&1 | tail -5
             apt-get install -y ffuf 2>&1 | tail -25
@@ -144,8 +144,8 @@ jobs:
           git config --global user.name "nova-ci-bot"
           git config --global user.email "bot@users.noreply.github.com"
           git clone --filter=blob:none --no-checkout --quiet \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /mnt/push
-          cd /mnt/push
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" $HOME/push-store
+          cd $HOME/push-store
           git branch staging origin/kali-rootfs
           git symbolic-ref HEAD refs/heads/staging
           git reset --mixed --quiet
