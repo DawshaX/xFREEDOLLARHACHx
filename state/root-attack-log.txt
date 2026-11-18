@@ -1,13 +1,48 @@
-=== ROOT ATTACK 2026-11-18T22:29:53Z ===
-data: {"type":"start","command":"echo ROOT_UID:$(id -u); rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock; rm -rf /var/lib/dpkg/updates/* /var/lib/dpkg/triggers/File/* 2>/dev/null; dpkg --configure -a --force-confdef --force-confnew 2>&1 | tail -6; dpkg --configure -a --force-confdef --force-confnew 2>&1 | tail -3; DEBIAN_FRONTEND=noninteractive apt-get -f install -y -qq 2>&1 | tail -4; AUD=$(dpkg --audit 2>&1 | head -3); echo AUDIT_START:${AUD:-CLEAN}; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; echo APT_UPDATE_EXIT:$?; echo HEAL_DONE","cwd":"/opt"}
+=== V3 2026-11-18T22:41:21Z ===
+data: {"type":"start","command":"dpkg --configure -a 2>&1 | tail -5; echo CONFIG_EXIT_$?","cwd":"/opt"}
 
-data: {"type":"stdout","text":"ROOT_UID:0\n"}
+data: {"type":"done","exitCode":0,"durationMs":232,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
 
-data: {"type":"stderr","text":"proot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 111793"}
+data: [DONE]
 
-data: {"type":"stderr","text":"\n"}
 
-data: {"type":"done","exitCode":1,"durationMs":557,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","error":"proot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 111793\n"}
+data: {"type":"start","command":"dpkg --configure -a 2>&1 | tail -5; echo CONFIG_EXIT_$?","cwd":"/opt"}
+
+data: {"type":"done","exitCode":0,"durationMs":219,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
+
+data: [DONE]
+
+
+data: {"type":"start","command":"dpkg --configure -a 2>&1 | tail -5; echo CONFIG_EXIT_$?","cwd":"/opt"}
+
+data: {"type":"done","exitCode":0,"durationMs":227,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
+
+data: [DONE]
+
+
+data: {"type":"start","command":"DEBIAN_FRONTEND=noninteractive apt-get -f install -y -qq 2>&1 | tail -3; echo FIX_$?","cwd":"/opt"}
+
+data: {"type":"stdout","text":"E: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \n"}
+
+data: {"type":"stdout","text":"FIX_0\n"}
+
+data: {"type":"done","exitCode":0,"durationMs":218,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
+
+data: [DONE]
+
+
+data: {"type":"start","command":"dpkg --audit 2>&1 | head -4; echo AUDIT_END","cwd":"/opt"}
+
+data: {"type":"stdout","text":"The following packages have been unpacked but not yet configured.\nThey must be configured using dpkg --configure or the configure\nmenu option in dselect for them to work:\n containerd           open and reliable container runtime\n"}
+
+data: {"type":"done","exitCode":0,"durationMs":257,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
+
+data: [DONE]
+
+
+data: {"type":"start","command":"DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; echo UPD_$?","cwd":"/opt"}
+
+data: {"type":"done","exitCode":0,"durationMs":773,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
 
 data: [DONE]
 
@@ -19,11 +54,147 @@ data: [DONE]
 {"ok":false,"tool":"naabu","pkg":"naabu","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:naabu\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
 {"ok":false,"tool":"dnsx","pkg":"dnsx","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:dnsx\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
 {"ok":false,"tool":"sherlock","pkg":"sherlock","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_FAIL:sherlock\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-{"ok":true,"tool":"sublist3r","pkg":"sublist3r","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires asgiref<=3.11.1,>=3.2.10, but you have asgiref 3.12.1 which is incompatible.\nmitmproxy 12.2.3 requires Brotli<=1.2.0,>=1.0, but you have brotli 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:sublist3r\n"}
 {"ok":false,"tool":"bettercap","pkg":"bettercap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:bettercap\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-{"ok":true,"tool":"hcxtools","pkg":"hcxtools","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_OK:hcxtools\n"}
 {"ok":false,"tool":"arp-scan","pkg":"arp-scan","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:arp-scan\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
 {"ok":false,"tool":"steghide","pkg":"steghide","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:steghide\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
 {"ok":false,"tool":"exiftool","pkg":"libimage-exiftool-perl","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:exiftool\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
 {"ok":true,"tool":"sleuthkit","pkg":"sleuthkit","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_OK:sleuthkit\n"}
-=== installs done 2026-11-18T22:30:19Z ===
+{"ok":false,"tool":"routersploit","pkg":"routersploit","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:routersploit\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+{"ok":false,"tool":"crackmapexec","pkg":"crackmapexec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:crackmapexec\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+{"ok":false,"tool":"arp-scan","pkg":"arp-scan","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:arp-scan\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+=== INSTALLS DONE 2026-11-18T22:41:58Z ===
+=== القياس النهائي ===
+{
+  "present": 184,
+  "total": 266,
+  "measuredOn": "runnervmccnms — عقدة كالي سحابية (rootfs + proot)",
+  "stillMissing": [
+    "photon",
+    "maigret",
+    "h8mail",
+    "osintgram",
+    "gh-dork",
+    "prowler",
+    "scoutsuite",
+    "pacu",
+    "trufflehog",
+    "dockle",
+    "katana",
+    "cariddi",
+    "subzy",
+    "gotator",
+    "netexec",
+    "certipy",
+    "bloodhound-python",
+    "ssh-audit",
+    "sleuthkit",
+    "steghide",
+    "exiftool",
+    "semgrep",
+    "grype",
+    "syft",
+    "subfinder",
+    "amass",
+    "dnsx",
+    "naabu",
+    "sherlock",
+    "vulners",
+    "dirsearch",
+    "katana",
+    "arjun",
+    "hcxtools",
+    "routersploit",
+    "crackmapexec",
+    "bettercap",
+    "ettercap",
+    "arp-scan",
+    "empire",
+    "bloodhound",
+    "chisel",
+    "ligolo-ng",
+    "netexec",
+    "steghide",
+    "exiftool",
+    "volatility",
+    "sleuthkit",
+    "ghidra",
+    "ltrace",
+    "strace",
+    "wkhtmltopdf",
+    "pandoc",
+    "faraday",
+    "dradis",
+    "cherrytree",
+    "recordmydesktop",
+    "libreoffice",
+    "subfinder",
+    "amass",
+    "dnsx",
+    "naabu",
+    "katana",
+    "bettercap",
+    "ettercap",
+    "arp-scan",
+    "subfinder",
+    "amass",
+    "sherlock",
+    "maigret",
+    "asnmap",
+    "naabu",
+    "shuffledns",
+    "evilgrade",
+    "legs",
+    "gvm",
+    "pentestly",
+    "grype",
+    "dirsearch",
+    "katana",
+    "arjun",
+    "w3af",
+    "ssrfmap",
+    "sidguesser",
+    "mongosh",
+    "redis",
+    "pgcli",
+    "maskprocessor",
+    "rainbowcrack",
+    "hcxtools",
+    "fernet",
+    "ghidra",
+    "retdec",
+    "ltrace",
+    "strace",
+    "volatility",
+    "bettercap",
+    "crackmapexec",
+    "netexec",
+    "venom",
+    "elfutils",
+    "bettercap",
+    "ettercap",
+    "metasploit-framework",
+    "empire",
+    "empire",
+    "bloodhound",
+    "netexec",
+    "crackmapexec",
+    "chisel",
+    "ligolo-ng",
+    "dvcs-ripper",
+    "peass-ng",
+    "sleuthkit",
+    "exiftool",
+    "faraday",
+    "dradis",
+    "cherrytree",
+    "keepnote",
+    "casefile",
+    "recordmydesktop",
+    "king-phisher",
+    "socialanalyzer",
+    "python3-pip",
+    "zsh",
+    "vim",
+    "aria2"
+  ]
+}
