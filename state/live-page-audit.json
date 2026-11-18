@@ -1,11 +1,11 @@
 {
-  "at": "2026-11-18T12:33:57.113Z",
+  "at": "2026-11-18T13:56:16.719Z",
   "hub": "https://nova.waifly.com",
   "checks": [
     {
       "name": "login+page",
       "ok": true,
-      "ms": 1014,
+      "ms": 792,
       "detail": "200 · shell=index-C4lVA_5G.js",
       "loginStatus": 302,
       "pageStatus": 200,
@@ -15,53 +15,53 @@
     {
       "name": "ops/kali/nodes",
       "ok": true,
-      "ms": 1486,
-      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=10/10 · stats.ok=134/282",
+      "ms": 1262,
+      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=3/10 · stats.ok=135/287",
       "hubPackages": 0,
-      "kaliNodes": 10
+      "kaliNodes": 3
     },
     {
       "name": "kali-env/health",
       "ok": true,
-      "ms": 1645,
-      "detail": "readyAnywhere=true · fleet.kaliReady=10/10"
+      "ms": 1375,
+      "detail": "readyAnywhere=true · fleet.kaliReady=3/10"
     },
     {
       "name": "kali-env/tools",
-      "ok": false,
-      "ms": 2155,
-      "detail": "200 · proot/rootfs not installed AND no live Kali node answered",
-      "present": 0,
-      "total": 0
+      "ok": true,
+      "ms": 2298,
+      "detail": "present=186/248 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)",
+      "present": 186,
+      "total": 248
     },
     {
       "name": "kali-env/catalog",
       "ok": true,
-      "ms": 2570,
-      "detail": "0/127 عبر 11 فئة · cachedFrom=-",
+      "ms": 2413,
+      "detail": "0/127 عبر 11 فئة · cachedFrom=2026-11-18T13:47:30.606Z",
       "present": 0,
       "total": 127
     },
     {
       "name": "terminal exec",
       "ok": false,
-      "ms": 2744,
-      "detail": "200 · 174ms · data: {\"type\":\"start\",\"command\":\"uname -a\",\"cwd\":\"/opt\"}\n\ndata: {\"type\":\"done\",\"exitCode\":127,\"durationMs\":0,\"error\":\"pr"
+      "ms": 2544,
+      "detail": "200 · 131ms · data: {\"type\":\"start\",\"command\":\"uname -a\",\"cwd\":\"/opt\"}\n\ndata: {\"type\":\"done\",\"exitCode\":127,\"durationMs\":0,\"error\":\"pr"
     },
     {
       "name": "install button (ffuf)",
-      "ok": false,
-      "ms": 3148,
-      "detail": "200 · 0s · exit=1 · plane=ip-10-0-129-246 — عقدة كالي سحابية (rootfs + proot) · proot error: '/bin/sh' not found (root = /home/runner/kali-rootfs/rootfs, cwd = /, $PATH=(null)) | fatal error: see `proot-static --help`. | ",
-      "installOk": false
+      "ok": true,
+      "ms": 4142,
+      "detail": "200 · 2s · exit=0 · plane=runnervmccnms — عقدة كالي سحابية (rootfs + proot) · E: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem.  | INSTALL_OK:ffuf | ",
+      "installOk": true
     },
     {
       "name": "ops/storage-hub",
       "ok": true,
-      "ms": 6367,
-      "detail": "total=23.57GB · rows=7"
+      "ms": 7052,
+      "detail": "total=28.92GB · rows=7"
     }
   ],
   "ok": false,
-  "summary": "5/8 ✓ · فاشل: kali-env/tools, terminal exec, install button (ffuf)"
+  "summary": "7/8 ✓ · فاشل: terminal exec"
 }
