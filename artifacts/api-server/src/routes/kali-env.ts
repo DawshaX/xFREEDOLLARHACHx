@@ -1013,7 +1013,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   };
   const GITHUB_TOOLS: Record<string, { repo: string; pattern: string; flat?: string }> = {
     /* أدوات بتوزع binaries جاهزة — مستقلة عن dpkg تمامًا (عقدة مريضة وما بتأثرش عليها) */
-    amass: { repo: "owasp-amass/amass", pattern: "linux_amd64.zip", flat: "amass" },
+    amass: { repo: "owasp-amass/amass", pattern: "linux_x86_64.zip", flat: "amass" },
     subfinder: { repo: "projectdiscovery/subfinder", pattern: "linux_amd64.zip", flat: "subfinder" },
     naabu: { repo: "projectdiscovery/naabu", pattern: "linux_amd64.zip", flat: "naabu" },
     dnsx: { repo: "projectdiscovery/dnsx", pattern: "linux_amd64.zip", flat: "dnsx" },
@@ -1042,8 +1042,9 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   const PIP = PIP_TOOLS[tool];
   let installCmd: string;
   if (GIT && GIT.repo) {
-    installCmd = !GIT.pattern
-      ? `rm -rf /tmp/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${GIT.repo} /tmp/${tool} 2>&1 | tail -2 && echo CLONE_OK:${tool} || echo CLONE_FAIL:${tool}`
+    const isCloneTool = tool === "dirsearch" || tool === "arjun" || tool === "osintgram";
+    installCmd = isCloneTool
+      ? `rm -rf /tmp/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${GIT.repo} /tmp/${tool} 2>&1 | tail -2; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed /tmp/${tool} 2>&1 || pip3 install -q /tmp/${tool} 2>&1) | tail -3; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`
       : `cd /tmp && rm -rf ${tool}-dl && mkdir -p ${tool}-dl && cd ${tool}-dl && URL=$(curl -s -m 30 https://api.github.com/repos/${GIT.repo}/releases/latest | tr "," "\n" | grep browser_download_url | grep "${GIT.pattern}" | head -1 | cut -d '"' -f4) && echo "URL=$URL" && curl -sL -m 180 "$URL" -o pkg.bin && ls -la pkg.bin && (tar -xzf pkg.bin 2>/dev/null || unzip -o pkg.bin >/dev/null 2>&1) ; BIN=$(find . -type f -name "${GIT.flat ?? tool}*" 2>/dev/null | head -1) && echo "BIN=$BIN" && cp "$BIN" /usr/local/bin/${tool} && chmod +x /usr/local/bin/${tool} && command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else if (PIP) {
     installCmd = `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${PIP} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${PIP} 2>&1) | tail -5; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
