@@ -1,18 +1,14 @@
 {
-  "at": "2026-11-18T08:56:01.513Z",
+  "at": "2026-11-18T17:54:06.044Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
   "verdict": "RED",
-  "counts": {
-    "cves": 0,
-    "huntRuns": 36,
-    "findings": 0
-  },
+  "counts": null,
   "corpusSample": 0,
   "corpusSearched": null,
   "corpusIndexTotal": null,
   "corpusSlice": null,
-  "negativeSearchOk": true,
-  "negativeSearched": 427138,
+  "negativeSearchOk": false,
+  "negativeSearched": null,
   "corpusDated": null,
   "chat": {
     "ok": true,
@@ -20,46 +16,46 @@
     "seat": "pollinations-openai",
     "chunks": 8,
     "streamed": true,
-    "firstChunkMs": 735,
-    "totalMs": 735,
+    "firstChunkMs": 363,
+    "totalMs": 365,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
   "checks": [
     {
       "name": "health",
-      "status": 200,
-      "ms": 9047,
-      "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-18T08:55:43.834Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":0,\"huntRuns\":36,\"findings\":0}}"
+      "status": 0,
+      "ms": 30003,
+      "ok": false,
+      "sample": "The operation was aborted due to timeout"
     },
     {
       "name": "hunt",
-      "status": 200,
-      "ms": 703,
-      "ok": true,
-      "sample": "{\"run\":{\"id\":46,\"at\":\"2026-11-18T08:03:16.141+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":23457,\"katana\":99327,\"nuclei:root\":710379,\"nuc"
+      "status": 0,
+      "ms": 30001,
+      "ok": false,
+      "sample": "The operation was aborted due to timeout"
     },
     {
       "name": "organs",
-      "status": 200,
-      "ms": 404,
-      "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"427138 CVE · 427569 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-18T08:52:00.243264+00:00\",\"updated_at\":\"2"
+      "status": 0,
+      "ms": 30000,
+      "ok": false,
+      "sample": "The operation was aborted due to timeout"
     },
     {
       "name": "corpus?q=nginx",
       "status": 400,
-      "ms": 8775,
+      "ms": 24567,
       "ok": false,
       "sample": "{\"error\":\"canceling statement due to statement timeout\"}"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
-      "status": 200,
-      "ms": 7046,
-      "ok": true,
-      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":427138,\"indexTotal\":427569,\"syncedAt\":\"2026-11-18T08:31:49.429Z\",\"slice\":true,\"at\":\"2026-11-18T08:56:00.404Z\"}"
+      "status": 400,
+      "ms": 26122,
+      "ok": false,
+      "sample": "{\"error\":\"canceling statement due to statement timeout\"}"
     },
     {
       "name": "corpus dated (published)",
@@ -71,9 +67,9 @@
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 735,
+      "ms": 365,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=8 first=735ms total=735ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=8 first=363ms total=365ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
