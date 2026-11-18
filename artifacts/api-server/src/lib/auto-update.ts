@@ -269,6 +269,32 @@ export async function latestReleaseAt(): Promise<ReleaseReadout> {
   } catch (err) {
     apiError = String((err as Error).message).slice(0, 80);
   }
+  /* ★ اتقاس 2026-11-18 (عطل حقيقي في الإنتاج): أصل الحزمة نفسه اتمسح من
+   *   الـrelease (404) — يعني `nova-24-7.zip` مش موجود خالص. الحلقة كانت
+   *   بتقول «مفيش جديد» بهدوء لأن `updated_at` القديم لسه في ذاكرة الحالة،
+   *   والنتيجة إن المكنة قاعدة على بناء أقدم يوم كامل ومفيش أي إشارة.
+   *
+   *   القاعدة من دلوقتي: **غياب الأصل = عطل، مش «مفيش تحديث»**. بنسأل عن
+   *   وجود الأصل بالـHEAD قبل أي قرار، ولو 404 بنرمي خطأ صريح بيوصل
+   *   للوحة والـlog بدل الصمت. ده أرخص من إن حد يفضل يستنى تحديث مستحيل. */
+  try {
+    const probe = await fetch(ASSET_URL, {
+      method: "HEAD",
+      redirect: "follow",
+      headers: { "user-agent": "nova-self-update" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (probe.status === 404) {
+      throw new Error(
+        "أصل الحزمة مفقود على GitHub (404 على nova-24-7.zip) — " +
+          "التحديث مستحيل لحد ما البناء ينشر أصل جديد. شغّل workflow " +
+          "«NOVA portable bundle» أو ارفع الحزمة يدويًا على الـrelease.",
+      );
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("404")) throw err;
+    /* فشل شبكة في الفحص مش دليل على غياب الأصل — بنكمّل للفحص العادي. */
+  }
   try {
     const head = await fetch(ASSET_URL, {
       method: "HEAD",
