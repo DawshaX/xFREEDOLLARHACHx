@@ -1,10 +1,10 @@
 {
-  "at": "2026-11-18T19:27:28.636Z",
+  "at": "2026-11-18T19:34:50.528Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-18T18:56:44Z",
-    "size": 4243931
+    "updatedAt": "2026-11-18T19:34:38Z",
+    "size": 4244382
   },
   "disk": {
     "name": "nova-24-7",
@@ -22,18 +22,26 @@
   "stale": false,
   "updater": {
     "enabled": true,
-    "lastResult": "up-to-date",
-    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-18T18:56:44Z) — حارس لوب التحديث",
-    "lastCheckAt": "2026-11-18T19:27:04.101Z",
+    "lastResult": "installing",
+    "lastDetail": "بينزّل النسخة الجديدة ويطبّقها — البرنامج هيعيد تشغيل نفسه",
+    "lastCheckAt": "2026-11-18T19:34:04.134Z",
     "currentBuiltAt": "2026-11-18T18:56:29.419Z",
-    "latestReleaseAt": "2026-11-18T18:56:44Z",
+    "latestReleaseAt": "2026-11-18T19:33:53Z",
     "restartNeeded": false
   },
-  "updaterInstall": null,
-  "restartHttp": null,
-  "action": "fresh",
-  "bootAfter": null,
-  "fresh": true,
+  "updaterInstall": {
+    "status": 200,
+    "lastResult": "installing",
+    "detail": "بينزّل النسخة الجديدة ويطبّقها — البرنامج هيعيد تشغيل نفسه"
+  },
+  "restartHttp": 200,
+  "action": "restart_requested",
+  "bootAfter": {
+    "commit": "30139a8cd10616e9bb6818e9ada96a58579a4a4c",
+    "builtAt": "2026-11-18T18:56:29.419Z",
+    "dir": "/home/container"
+  },
+  "fresh": false,
   "notes": [],
   "page": {
     "status": 200,
@@ -43,19 +51,18 @@
   },
   "fleet": {
     "status": 200,
-    "count": 13,
+    "count": 12,
     "ids": [
       "self-node",
-      "gh-9-1618",
-      "gh-1-1618",
       "gh-3-1619",
-      "gh-7-1620",
-      "gh-8-1618",
-      "gh-12-1619",
-      "gh-10-1620",
-      "gh-11-1620",
+      "gh-1-1618",
       "gh-6-1623",
       "gh-5-1623",
+      "gh-8-1618",
+      "gh-11-1620",
+      "gh-12-1619",
+      "gh-7-1620",
+      "gh-10-1620",
       "gh-4-1621",
       "gh-13-1737"
     ]
