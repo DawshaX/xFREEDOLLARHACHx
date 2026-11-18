@@ -1,11 +1,11 @@
 {
-  "at": "2026-11-18T18:41:50.208864+00:00",
+  "at": "2026-11-18T18:52:07.282415+00:00",
   "before": {
-    "present": 189,
+    "present": 190,
     "total": 266
   },
   "after": {
-    "present": 190,
+    "present": 192,
     "total": 266,
     "measuredOn": "runnervmccnms — عقدة كالي سحابية (rootfs + proot)"
   },
@@ -77,8 +77,6 @@
     "strace",
     "subfinder",
     "subzy",
-    "syft",
-    "trufflehog",
     "venom",
     "vim",
     "volatility",
