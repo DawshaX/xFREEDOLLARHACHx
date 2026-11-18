@@ -63,7 +63,7 @@ jobs:
     # main only, stated per job (not only in the commit's branches filter):
     # a push or a manual run on a feature branch must never commit its report
     # to that branch — the report belongs on the branch the site reads.
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/arena/f288ad41-xfreedollarhachx'
     outputs:
       nodes: ${{ steps.plan.outputs.nodes }}
     steps:
