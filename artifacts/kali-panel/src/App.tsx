@@ -13,6 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/AppShell";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { SystemProvider } from "@/context/SystemContext";
+import { KaliProvider } from "@/context/KaliContext";
 
 import Dashboard from "@/pages/Dashboard";
 import Desktop from "@/pages/Desktop";
@@ -468,11 +469,13 @@ function App() {
       <TooltipProvider>
         <LanguageProvider>
           <SystemProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <OpsTokenBanner />
-              <AppRouter />
-            </WouterRouter>
-            <Toaster />
+            <KaliProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <OpsTokenBanner />
+                <AppRouter />
+              </WouterRouter>
+              <Toaster />
+            </KaliProvider>
           </SystemProvider>
         </LanguageProvider>
       </TooltipProvider>

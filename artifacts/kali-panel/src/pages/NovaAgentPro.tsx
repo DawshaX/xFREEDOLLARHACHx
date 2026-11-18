@@ -17,7 +17,7 @@ import {
   Terminal as TerminalIcon, Search, Folder, BookOpen, Network, FlaskConical,
   Crosshair, Swords, FileCode, Wifi, CalendarClock, Play, PowerCircle,
   Command, Eye, EyeOff, MessageSquare, Skull, ArrowLeft, RotateCcw, Radar, Bell, Trash2, Pin,
-  ChevronUp, ChevronDown, Flame, Radio,
+  ChevronUp, ChevronDown, Flame, Radio, ExternalLink,
 } from "lucide-react";
 import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
 import { AgentWorkCockpit } from "@/components/desktop/AgentWorkCockpit";
@@ -28,6 +28,8 @@ import { ServerTasks } from "@/components/desktop/ServerTasks";
 import { KaliTerminal } from "@/components/desktop/KaliTerminal";
 import { AdvancedFileManager } from "@/components/desktop/AdvancedFileManager";
 import { TelegramConfigCard } from "@/components/TelegramConfigCard";
+import { useKali } from "@/context/KaliContext";
+import { KaliLiveTicker, KaliUnifiedTerminal, KaliFileManager, KaliProcessMonitor, KaliNetworkMonitor, KaliStatusCard } from "@/components/desktop/KaliLiveBridge";
 import { opsFetch, novaAuthHeaders } from "@/lib/ops-client";
 import { DAW_SKULL } from "@/lib/skull";
 import { useSystem } from "@/context/SystemContext";
@@ -35,7 +37,7 @@ import ErrorIsland from "@/components/ErrorIsland";
 import { useLiveRefetch } from "@/hooks/useWebSocket";
 
 /* ─── أنواع ─── */
-type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "kali" | "missions" | "brain" | "nexus" | "alerts" | "notes" | "hardware" | "hunt" | "channels" | "nav";
+type ArenaKey = "cockpit" | "launch" | "chat" | "events" | "cron" | "work" | "kali" | "kali-full" | "missions" | "brain" | "nexus" | "alerts" | "notes" | "hardware" | "hunt" | "channels" | "nav";
 
 interface FleetAgentInfo {
   id: string; hostname: string; platform: string; user?: string; cpus?: number; connectedAt?: string;
@@ -94,6 +96,7 @@ const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color:
   { key: "chat",     labelAr: "الشات الكامل",        icon: MessageSquare,     color: "#22d3ee" },
   { key: "work",     labelAr: "مكان الشغل",          icon: MonitorSmartphone, color: "#14b8a6" },
   { key: "kali",     labelAr: "🐉 كالي السحابية",     icon: TerminalIcon,      color: "#ff6655" },
+  { key: "kali-full",labelAr: "🐉 كالي المتكامل",    icon: TerminalIcon,      color: "#ff4400" },
   { key: "cron",     labelAr: "الجدولة",             icon: CalendarClock,     color: "#34d399" },
   { key: "events",   labelAr: "نبض الأحداث",         icon: Activity,          color: "#4ade80" },
   { key: "missions", labelAr: "المهمات",             icon: ListChecks,        color: "#fbbf24" },
@@ -380,6 +383,7 @@ export default function NovaAgentPro() {
   const [arena, setArena] = useState<ArenaKey>("cockpit");
   const [, navigate] = useLocation();
   const sys = useSystem();
+  const kali = useKali();
   const [vit, setVit] = useState<{ ok: boolean | null; ms: number | null; db: boolean | null; sha: string; up: number | null; tools: number }>({ ok: null, ms: null, db: null, sha: "", up: null, tools: 0 });
   const [agents, setAgents] = useState<FleetAgentInfo[]>([]);
   const [agentsErr, setAgentsErr] = useState<string | null>(null);
@@ -736,17 +740,8 @@ export default function NovaAgentPro() {
       kev: typeof cr.data.kev === "number" ? cr.data.kev : null,
     });
 
-    /* TEST12 — بيئة كالي المدمجة: شريط مقاس في مكتب الشغل */
-    const kr = await opsFetch<{ ok?: boolean; status?: { present?: boolean; packages?: number; desktop?: { running?: boolean }; tools?: Record<string, { present?: boolean }> } }>("/ops/kali");
-    if (kr.ok && kr.data?.status) {
-      const t = kr.data.status.tools ?? {};
-      setKaliEnv({
-        present: kr.data.status.present === true,
-        packages: kr.data.status.packages,
-        running: kr.data.status.desktop?.running === true,
-        heavy: Object.entries(t).map(([k, v]) => `${k}${v.present ? "✓" : "✗"}`).join("·"),
-      });
-    } else setKaliEnv({ present: false });
+    // Kali state now comes from KaliContext (unified live) - no separate fetch needed
+    // The HUD card below reads directly from kali.isConnected/kali.kaliStatus
 
     /* TEST38 — حالة كالي الحقيقية من /api/kali-env (proot + rootfs)، مش من
        كارت /ops/kali اللي بيقيس الهَب بس. الاتنين بيفضلوا معروضين: ده بيثري
@@ -955,6 +950,9 @@ export default function NovaAgentPro() {
         {flash && <div className="mt-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-[10px] font-mono text-emerald-200">{flash}</div>}
       </header>
 
+      {/* ── الجسر الحي الموحد — كالي يظهر في كل مكان ── */}
+      <KaliLiveTicker />
+
       {/* ── شريط القيادة العلوي الموحّد (نُقل من الجنب للأعلى) ── */}
       <section className="relative z-10 shrink-0 border-b border-rose-500/20 bg-[#06020b]/90 px-3 py-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -1063,21 +1061,27 @@ export default function NovaAgentPro() {
               </HudCard>
             )}
 
-            {/* TEST12 — بيئة كالي المدمجة: القياس حي والديسكتوب يفتح من التبيبة */}
-            {kaliEnv && (
+            {/* كالي المتكامل — مقاس حي من KaliContext الموحد */}
+            {!prefs.hiddenHud.includes("fleet") && (
               <HudCard
-                title="بيئة كالي المدمجة"
+                title="🐉 كالي المتكامل"
                 icon={Swords}
-                color="#ff5533"
-                badge={kaliEnv.present ? `${kaliEnv.packages ?? "?"} حزمة` : "غير مستخرجة"}
-                onClick={() => navigate("/kali-env")}
+                color="#ff4400"
+                badge={kali.isConnected ? `${kali.nodes.filter(n=>n.kali).length} عقدة` : "غير متصل"}
+                onClick={() => setArena("kali-full")}
               >
                 <div className="space-y-1">
-                  <div className="text-[8px] font-mono" style={{ color: kaliEnv.present ? "rgba(68,255,136,0.85)" : "rgba(255,255,255,0.4)" }}>
-                    {kaliEnv.present ? `الثقيلة: ${kaliEnv.heavy ?? "—"}` : "scripts/kali-rootfs-fetch.sh بيسحبها"}
+                  <div className="text-[9px] font-black flex items-center gap-1" style={{ color: kali.isConnected ? "#44ff88" : "#ff6644" }}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${kali.isConnected ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
+                    {kali.isConnected ? `متصل — ${kali.kaliStatus?.executables ?? kali.kaliStatus?.packages ?? "?"} أداة` : "غير متصل"}
                   </div>
-                  <div className="text-[8px] font-mono" style={{ color: kaliEnv.running ? "#44ff88" : "rgba(255,255,255,0.4)" }}>
-                    {kaliEnv.running ? "● الديسكتوب شغّال — افتحه من التبيبة" : "الديسكتوب مطفي — التبيبة بتشغّله"}
+                  <div className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    {kali.liveExec ? `● ${kali.liveExec.cmd.slice(0, 25)}` : kali.kaliStatus?.desktop?.running ? "● الديسكتوب شغّال" : "جاهز للأوامر"}
+                  </div>
+                  <div className="text-[7px] font-mono flex gap-1 flex-wrap">
+                    {kali.nodes.slice(0,3).map(n => (
+                      <span key={n.id} className="px-1 py-0.5 rounded" style={{ background: n.kali ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: n.kali ? "#44ff88" : "rgba(255,255,255,0.3)" }}>{n.hostname.slice(0,10)}</span>
+                    ))}
                   </div>
                   {/* TEST38 — الـ proot المقاس من /api/kali-env/health. لو القراءة
                       فشلت بنقول الخطأ نفسه، مش «غير جاهز» كأنها قياس. */}
@@ -1460,6 +1464,65 @@ export default function NovaAgentPro() {
             )}
 
             {arena === "kali" && <KaliFleetArena />}
+            {arena === "kali-full" && (
+              <div className="space-y-3">
+                <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: "linear-gradient(90deg, rgba(255,68,0,0.1), rgba(255,100,40,0.05))", border: "1px solid rgba(255,68,0,0.2)" }}>
+                  <div>
+                    <h2 className="text-[13px] font-black" style={{ color: "#ff4400" }}>🐉 كالي المتكامل — النظام الكامل في مكان واحد</h2>
+                    <p className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>تيرمنال + ملفات + عمليات + شبكة + ديسكتوب — كلهم متصلين حيًا ببعض</p>
+                  </div>
+                  <button onClick={() => window.open("/kali-env", "_blank")} className="text-[9px] px-3 py-1.5 rounded-lg flex items-center gap-1" style={{ background: "rgba(255,68,0,0.1)", border: "1px solid rgba(255,68,0,0.3)", color: "#ff4400" }}>
+                    <ExternalLink className="w-3 h-3" /> افتح كالي-env
+                  </button>
+                </div>
+
+                {/* Live Ticker is already at top, but show compact status */}
+                <KaliStatusCard />
+
+                {/* Terminal - Main */}
+                <KaliUnifiedTerminal embedded />
+
+                {/* Grid: Files + Processes + Network */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  <KaliFileManager />
+                  <KaliProcessMonitor />
+                  <KaliNetworkMonitor />
+                </div>
+
+                {/* Desktop if available */}
+                {kali.desktopUrl && kali.kaliStatus?.desktop?.running && (
+                  <div className="rounded-xl overflow-hidden" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,68,0,0.15)" }}>
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+                      <span className="text-[11px] font-black" style={{ color: "#ff4400" }}>🖥️ الديسكتوب الحي</span>
+                      <a href={kali.desktopUrl} target="_blank" rel="noreferrer" className="text-[9px] px-2 py-1 rounded" style={{ background: "rgba(255,68,0,0.1)", color: "#ff4400" }}>فتح في تبويب جديد ↗</a>
+                    </div>
+                    <iframe src={kali.desktopUrl} title="Kali Desktop" className="w-full" style={{ height: 400, border: "none", background: "#000" }} />
+                  </div>
+                )}
+
+                {/* Quick tools */}
+                <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <h3 className="text-[11px] font-black mb-2" style={{ color: "#ff4400" }}>⚡ أدوات سريعة — نفّذ بنقرة</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { label: "فحص سريع", cmd: "nmap -F scanme.nmap.org", color: "#ff4400" },
+                      { label: "معلومات النظام", cmd: "uname -a; cat /etc/os-release | head -3", color: "#44ff88" },
+                      { label: "فحص المنافذ", cmd: "ss -tulpn | head -20", color: "#6496ff" },
+                      { label: "الملفات الحساسة", cmd: "find /tmp -type f -name '*.txt' 2>/dev/null | head -10", color: "#ffaa44" },
+                      { label: "Nuclei سريع", cmd: "nuclei -version 2>&1 | head -2", color: "#a78bfa" },
+                      { label: "Subfinder", cmd: "subfinder -version 2>&1 | head -2", color: "#22d3ee" },
+                      { label: "Httpx", cmd: "httpx -version 2>&1 | head -2", color: "#f43f5e" },
+                      { label: "Katana", cmd: "katana -version 2>&1 | head -2", color: "#fbbf24" },
+                    ].map(t => (
+                      <button key={t.label} onClick={() => void kali.exec(t.cmd, { source: "kali-full:quick-tool" })} className="rounded-lg px-3 py-2 text-[10px] font-bold text-right" style={{ background: `${t.color}10`, border: `1px solid ${t.color}30`, color: t.color }}>
+                        <div>{t.label}</div>
+                        <div className="text-[7px] font-mono opacity-60 truncate">{t.cmd.slice(0, 25)}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             {arena === "missions" && (
               <div className="space-y-3 min-w-0">
                 <NovaMissions />
