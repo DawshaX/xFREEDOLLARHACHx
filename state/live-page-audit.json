@@ -1,11 +1,11 @@
 {
-  "at": "2026-11-18T13:56:16.719Z",
+  "at": "2026-11-18T14:30:46.877Z",
   "hub": "https://nova.waifly.com",
   "checks": [
     {
       "name": "login+page",
       "ok": true,
-      "ms": 792,
+      "ms": 699,
       "detail": "200 · shell=index-C4lVA_5G.js",
       "loginStatus": 302,
       "pageStatus": 200,
@@ -15,21 +15,21 @@
     {
       "name": "ops/kali/nodes",
       "ok": true,
-      "ms": 1262,
-      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=3/10 · stats.ok=135/287",
+      "ms": 1183,
+      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=10/10 · stats.ok=148/303",
       "hubPackages": 0,
-      "kaliNodes": 3
+      "kaliNodes": 10
     },
     {
       "name": "kali-env/health",
       "ok": true,
-      "ms": 1375,
-      "detail": "readyAnywhere=true · fleet.kaliReady=3/10"
+      "ms": 1275,
+      "detail": "readyAnywhere=true · fleet.kaliReady=10/10"
     },
     {
       "name": "kali-env/tools",
       "ok": true,
-      "ms": 2298,
+      "ms": 1992,
       "detail": "present=186/248 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)",
       "present": 186,
       "total": 248
@@ -37,28 +37,28 @@
     {
       "name": "kali-env/catalog",
       "ok": true,
-      "ms": 2413,
-      "detail": "0/127 عبر 11 فئة · cachedFrom=2026-11-18T13:47:30.606Z",
-      "present": 0,
+      "ms": 2084,
+      "detail": "120/127 عبر 11 فئة · cachedFrom=2026-11-18T14:15:28.357Z",
+      "present": 120,
       "total": 127
     },
     {
       "name": "terminal exec",
       "ok": false,
-      "ms": 2544,
-      "detail": "200 · 131ms · data: {\"type\":\"start\",\"command\":\"uname -a\",\"cwd\":\"/opt\"}\n\ndata: {\"type\":\"done\",\"exitCode\":127,\"durationMs\":0,\"error\":\"pr"
+      "ms": 2186,
+      "detail": "200 · 102ms · data: {\"type\":\"start\",\"command\":\"uname -a\",\"cwd\":\"/opt\"}\n\ndata: {\"type\":\"done\",\"exitCode\":127,\"durationMs\":0,\"error\":\"pr"
     },
     {
       "name": "install button (ffuf)",
       "ok": true,
-      "ms": 4142,
-      "detail": "200 · 2s · exit=0 · plane=runnervmccnms — عقدة كالي سحابية (rootfs + proot) · E: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem.  | INSTALL_OK:ffuf | ",
+      "ms": 3586,
+      "detail": "200 · 1s · exit=0 · plane=runnervmccnms — عقدة كالي سحابية (rootfs + proot) · E: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem.  | INSTALL_OK:ffuf | ",
       "installOk": true
     },
     {
       "name": "ops/storage-hub",
       "ok": true,
-      "ms": 7052,
+      "ms": 6324,
       "detail": "total=28.92GB · rows=7"
     }
   ],
