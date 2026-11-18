@@ -1,17 +1,17 @@
 {
   "version": 1,
-  "at": "2026-11-18T08:04:25.964Z",
+  "at": "2026-11-18T08:24:34.204Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 427563,
+  "total": 427569,
   "bySeverity": {
-    "medium": 183321,
+    "medium": 183323,
     "critical": 40032,
-    "high": 163017,
-    "unknown": 23217,
+    "high": 163023,
+    "unknown": 23215,
     "low": 17901,
     "none": 75
   },
@@ -42,8 +42,8 @@
     "2022": 27632,
     "2023": 31510,
     "2024": 39379,
-    "2025": 45530,
-    "2026": 93116
+    "2025": 45532,
+    "2026": 93120
   },
   "kev": 1782,
   "epssScored": 406778,
@@ -212,17 +212,17 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 50433318,
-    "sha256": "cfb3faa7b93f991ffe2421826d9d4aa2166c7fd3db8ed737bb218fd69e20256a"
+    "bytes": 50434067,
+    "sha256": "299514b8975e6c33b29a2737be9d79b05cf27e9c1ed1868d4e2fb9054c19ac43"
   },
-  "mode": "incremental",
-  "says_ar": "427563 ثغرة حقيقية · critical 40032 · high 163017 · 1782 مستغلّة فعلياً (KEV) · 406778 لها EPSS · 81952 منتج بـCPE · مزامنة 2026-11-18T08:04:25.964Z",
+  "mode": "deepen",
+  "says_ar": "427569 ثغرة حقيقية · critical 40032 · high 163023 · 1782 مستغلّة فعلياً (KEV) · 406778 لها EPSS · 81952 منتج بـCPE · مزامنة 2026-11-18T08:24:34.204Z",
   "deepen": {
     "nextStartIndex": 0,
     "windowPages": 12,
     "walkedFrom": 0,
-    "nvdTotal": 427520,
+    "nvdTotal": 427573,
     "coverage": 1,
-    "at": "2026-11-18T02:52:14.454Z"
+    "at": "2026-11-18T08:24:34.205Z"
   }
 }
