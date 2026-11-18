@@ -22,9 +22,14 @@ jobs:
       HUB: https://nova.waifly.com
     steps:
       - uses: actions/checkout@v4
-      - name: القياس الحالي + استخراج الناقص
+      - name: القياس الحالي + استخراج الناقص (التقرير كله بيتسجل في الريبو)
         run: |
-          curl -s -m 200 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json
+          set -o pipefail
+          L=state/tools-fill-log.txt
+          echo "=== fill started $(date -u +%FT%TZ) ===" > $L
+          curl -s -m 280 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json
+          echo "before-bytes=$(wc -c < /tmp/tools-before.json)" >> $L
+          head -c 300 /tmp/tools-before.json >> $L; echo >> $L
           python3 - <<'PY'
           import json
           d = json.load(open("/tmp/tools-before.json"))
@@ -34,7 +39,7 @@ jobs:
           open("/tmp/missing.txt", "w").write("\n".join(sorted(missing)))
           print("قبل: present=%s/%s · الناقص=%d" % (d.get("present"), d.get("total"), len(missing)))
           PY
-          wc -l /tmp/missing.txt
+          wc -l /tmp/missing.txt >> $L; cat /tmp/missing.txt >> $L
       - name: تثبيت كل أداة ناقصة (مسلسل — الهَب بيسلسل بنفسه)
         run: |
           touch /tmp/failures.txt
@@ -45,9 +50,11 @@ jobs:
             R=$(curl -s -m 470 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
             verdict=$(echo "$R" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("OK" if d.get("ok") else "FAIL·"+str(d.get("error",""))[:120])' 2>/dev/null || echo "BAD·parse")
             echo "[$i/$total] $tool → $verdict"
+            echo "[$i/$total] $tool → $verdict" >> $L
+            echo "$R" | head -c 260 >> $L; echo >> $L
             case "$verdict" in OK*) okc=$((okc+1));; *) failc=$((failc+1)); echo "$tool" >> /tmp/failures.txt;; esac
           done < /tmp/missing.txt
-          echo "pass1: ok=$okc fail=$failc" | tee /tmp/pass1.txt
+          echo "pass1: ok=$okc fail=$failc" | tee /tmp/pass1.txt | tee -a $L
       - name: remedy dpkg + إعادة محاولة الفاشل (مرة)
         run: |
           [ -s /tmp/failures.txt ] || { echo "مافيش فاشل — skip"; exit 0; }
@@ -83,9 +90,11 @@ jobs:
           print("بعد: present=%s/%s · measuredOn=%s" % (d.get("present"), d.get("total"), d.get("measuredOn")))
           print("لسه ناقص: %d → %s" % (len(missing), sorted(missing)[:40]))
           PY
+          echo "=== fill ended $(date -u +%FT%TZ) ===" >> $L
           git config user.name "nova-bot"; git config user.email "nova@bot.local"
-          git add state/tools-fill-report.json
-          git commit -m "state: tools-fill report" || true
+          git add state/tools-fill-report.json state/tools-fill-log.txt
+          git commit -m "state: tools-fill report + log" || true
+          git pull --rebase origin arena/f288ad41-xfreedollarhachx --quiet || true
           git push origin HEAD:arena/f288ad41-xfreedollarhachx || true
       - name: الخلاصة (gate الأدوات)
         run: |
