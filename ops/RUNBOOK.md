@@ -71,3 +71,22 @@ gh api -X POST "repos/DawshaX/xFREEDOLLARHACHx/actions/runs/<RUN>/cancel"
 - runs كتير `queued` **بمافيش أي** `in_progress` = الحد concurrent محجوز.
 - autocommits ب `[skip ci]` مش هيشغلوا `standalone-bundle` — لو محتاج bundle
   جديد، لازم push حقيقي يلمس `artifacts/**` أو `ops/**` أو `state/**`.
+
+## عطل 2026-11-17→18 (مقاس): الباندل عالق والمرآة مجمدة — الصفحة بتعرض نسخة قديمة
+
+**اللي حصل بالحرف:** آخر باندل ناجح `2e0c3c0` (15:16:42Z). كل builds بعده
+(23:43 · 00:09 · 00:35 · 01:38) queued/cancelled — الطابور اتعسكر مجددًا.
+والمرآة `state/waifly-deploy.json` جمّدة من 18:25Z لأن commit `e9ffea7` شال
+fallback هَب waifly من `uptime-watchdog.yml` → الفحص بيتخطى بلا قياس، وغير
+اسم المرآة لـ`deploy.json` اللي الصفحة ما بتقراهش، والفحص كان بيفشل على
+«nothing-to-commit» بدل ما يفضل أخضر.
+
+**الفكس المقاس (TEST57):**
+- الfallback رجع: `NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}`.
+- اسم المرآة رجع `waifly-deploy.json` (الصفحة بتقراه).
+- «مافيش تغيير» مش فشل — `|| echo notice` فالjob يفضل أخضر والقياس مستمر.
+- بعد أي دمج يلمس `ops/**` أو `artifacts/**`: الbundle يتبنى تلقائيًا، والفحص
+  اللي بعد كده بيقارن الهَب بالrelease وبيعمل force update + restart لو قديم.
+
+**الدرس:** أي تعديل على الwatchdog لازم يحافظ على: fallback الهَب + اسم المرآة
++ «مافيش تغيير» مش فشل. دول تلاتة الكسرة الواحدة فيهم بتجمّد الدليل المقاس كله.

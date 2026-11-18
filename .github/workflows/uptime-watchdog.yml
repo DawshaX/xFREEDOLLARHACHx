@@ -62,7 +62,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 7   # الـpower step بيستنى الهب يرجع لـ180 ثانية
     env:
-      HUB: ${{ vars.NOVA_HUB_URL }}   # هَبك انت — مافيش افتراضي لهوست برّه
+      # TEST57 — الfallback رجع (كسره e9ffea7): هَبك هو waifly — من غيره الفحص
+      # بيتخطى والمرآة بتتجمد (مقاس: جمّدة 18:25→02:30Z والصفحة بقت تعرض «المرآة
+      # مااتبنتش» وهي موجودة).
+      HUB: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
     steps:
       - name: probe
         id: p
@@ -144,7 +147,7 @@ jobs:
           NOVA_PANEL_TOKEN: ${{ secrets.NOVA_PANEL_TOKEN }}
           NOVA_PANEL_URL: ${{ vars.NOVA_PANEL_URL }}   # بوابة استضافتك — مش بوابة Waifly
           NOVA_PANEL_SERVER: ${{ vars.NOVA_PANEL_SERVER || '53a7d0cb' }}
-          NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL }}
+          NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
         run: |
           set +e
           if [ -z "$NOVA_PANEL_TOKEN" ]; then
@@ -207,22 +210,23 @@ jobs:
         env:
           NOVA_EXEC_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
-          NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL }}
+          NOVA_HUB_URL: ${{ vars.NOVA_HUB_URL || 'https://nova.waifly.com' }}
         run: |
-          if [ -z "$NOVA_HUB_URL" ]; then
-            echo "::warning::مافيش NOVA_HUB_URL — فحص النشر بيتخطّى بدل ما يقيس سيرفر حد تاني."
-            exit 0
-          fi
-          node scripts/waifly-deploy-probe.mjs state/deploy.json
-          python3 -c 'import json;d=json.load(open("state/deploy.json"));print("boot:",(d.get("bootAfter") or d.get("boot") or {}).get("builtAt"),"· asset:",(d.get("asset") or {}).get("updatedAt"),"· action:",d.get("action"))'
+          # TEST57 — مافيش skip: الهَب هو هَبك بالfallback، والفحص دايمًا بيقيس
+          # (مافيش فحص = مافيش مرآة = الصفحة بتكذب — ده اللي حصل 18:25→02:30Z).
+          node scripts/waifly-deploy-probe.mjs state/waifly-deploy.json
+          python3 -c 'import json;d=json.load(open("state/waifly-deploy.json"));print("boot:",(d.get("bootAfter") or d.get("boot") or {}).get("builtAt"),"· asset:",(d.get("asset") or {}).get("updatedAt"),"· action:",d.get("action"))'
           echo "## deploy freshness — $(date -u +%FT%TZ)" >> "$GITHUB_STEP_SUMMARY"
-          echo '```json' >> "$GITHUB_STEP_SUMMARY"; head -c 900 state/deploy.json >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"; head -c 900 state/waifly-deploy.json >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: commit the deploy mirror (the /kali-env page reads this file)
         if: always()
         env:
-          MSG: "chore(deploy): hub freshness probe [skip ci]"
-        run: node scripts/ci-commit.mjs --message "$MSG" state/deploy.json
+          MSG: "chore(waifly): deploy freshness probe [skip ci]"
+        run: |
+          # TEST57 — «مافيش تغيير» مش فشل: المرآة زي ما هي = الهَب مستقر —
+          # الjob يفضل أخضر (كان بيفشل كل دورة بعد كسر الfallback).
+          node scripts/ci-commit.mjs --message "$MSG" state/waifly-deploy.json || echo "::notice::المرآة زي ما هي — مافيش تغيير (الهَب مستقر)"
 
       # ── دفع إعدادات العقدة من الأسرار (لو المالك سجّل TELEGRAM_BOT_TOKEN) ──
       # مشروطة بالكامل: سر غايب = تخطّي صامت. موجود = تتدفع كل دورة فالإعداد
