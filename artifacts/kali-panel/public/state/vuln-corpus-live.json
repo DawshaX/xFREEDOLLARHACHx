@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-17T19:45:11.878Z",
-  "total": 426509,
+  "at": "2026-11-18T01:51:58.515Z",
+  "total": 427497,
   "bySeverity": {
-    "medium": 182872,
-    "critical": 39949,
-    "high": 162645,
-    "unknown": 23142,
-    "low": 17826,
+    "medium": 183302,
+    "critical": 40028,
+    "high": 162997,
+    "unknown": 23195,
+    "low": 17900,
     "none": 75
   },
   "kev": 1782,
-  "epssScored": 406708,
-  "products": 81949,
+  "epssScored": 406756,
+  "products": 81952,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -1640,6 +1640,25 @@
         "velocloud_orchestrator",
         "velocloud_orchestrator",
         "velocloud_orchestrator"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-115731",
+      "cvss": 9.9,
+      "sev": "critical",
+      "desc": "Deserialization of untrusted data in the report-processing code of Puppet, as used by Puppet Server, in the affected releases, allows a client that holds any CA-signed agent certificate to execute arbitrary code on the Puppet Server as its service user by subm",
+      "cwe": [
+        "CWE-94",
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.00366,
+      "pub": "2026-11-03T21:17:01.867",
+      "products": [
+        "puppet",
+        "puppet",
+        "puppet_enterprise"
       ],
       "refs": []
     },
@@ -10156,21 +10175,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2026-115731",
-      "cvss": 9.4,
-      "sev": "critical",
-      "desc": "Deserialization of untrusted data in the report-processing code of Puppet, as used by Puppet Server, in the affected releases, allows a client that holds any CA-signed agent certificate to execute arbitrary code on the Puppet Server as its service user by subm",
-      "cwe": [
-        "CWE-94",
-        "CWE-502"
-      ],
-      "kev": true,
-      "epss": 0.00366,
-      "pub": "2026-11-03T21:17:01.867",
-      "products": [],
-      "refs": []
-    },
-    {
       "id": "CVE-2026-50751",
       "cvss": 9.3,
       "sev": "critical",
@@ -13869,5 +13873,5 @@
       "refs": []
     }
   ],
-  "says_ar": "426509 ثغرة حقيقية من NVD · 1782 مستغلّة فعلياً (KEV) · 81949 منتج · مزامنة 2026-11-17T19:45:11.878Z"
+  "says_ar": "427497 ثغرة حقيقية من NVD · 1782 مستغلّة فعلياً (KEV) · 81952 منتج · مزامنة 2026-11-18T01:51:58.515Z"
 }
