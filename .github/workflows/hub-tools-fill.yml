@@ -47,6 +47,17 @@ jobs:
           ) 2>&1 | tee -a $L || true
           wc -l /tmp/missing.txt >> $L 2>/dev/null || true; cat /tmp/missing.txt >> $L 2>/dev/null || true
           true
+      - name: remedy dpkg الكامل على العقدة الخادمة (القفل المقطوع علامة العطل المقاسة)
+        run: |
+          L=state/tools-fill-log.txt
+          (
+          set +e
+          echo "=== dpkg remedy start ===" >> $L
+          curl -s -m 500 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d '{"command":"for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p \"/$d\" 2>/dev/null; done; rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock; dpkg --configure -a 2>&1 | tail -4; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; echo REMEDY_EXIT=$?","timeoutMs":420000}' "$HUB/api/kali-env/exec" | tail -4 >> $L
+          echo "=== dpkg remedy end ===" >> $L
+          true
+          ) 2>&1 | tee -a $L || true
+          true
       - name: كوميت اللوج الجزئي (دايمًا — مستحيل تفشل)
         run: |
           git config user.name "nova-bot" 2>/dev/null || true; git config user.email "nova@bot.local" 2>/dev/null || true
