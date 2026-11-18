@@ -16,7 +16,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { requireOps } from "../lib/ops/gate";
 import { detectProotLayout, prootHealth, runInProot } from "../lib/ops/proot";
-import { kaliAnywhereExec } from "../lib/ops/kali-anywhere";
+import { kaliAnywhereExec, kaliAnywhereExecStream } from "../lib/ops/kali-anywhere";
 import { readProbeCache, probeAllKaliNodes, orderPrewarmedFirst } from "../lib/ops/kali-node-probe";
 import { PROOT_GUEST_EXEC } from "../lib/ops/kali-node-installer";
 import { execStreamOnLocalAgent, execOnLocalAgent } from "./local-agent";
@@ -1038,18 +1038,22 @@ router.post("/kali-env/exec", async (req: Request, res: Response) => {
   send({ type: "start", command, cwd: cwd ?? "/opt" /* /root مملوك root:root 700 — مافيش كتابة هناك (اتقاس 2026-11-17) */ });
 
   try {
-    const result = await runInProot({
-      command,
-      timeoutMs: tmo,
-      cwd,
-      onData: (stream, chunk) => send({ type: stream, text: chunk }),
-    });
-    send({
-      type: "done",
-      exitCode: result.exitCode,
-      durationMs: result.durationMs,
-      error: result.error,
-    });
+    /* TEST73 — المسار الموحّد: المحلي مقفول على الهَب (قرار المالك «مافيش كالي
+     * على الهَب») → الأسطول عبر قناة الagents. الفشل الصادق لو مافيش عقدة. */
+    const result = await kaliAnywhereExecStream(command, tmo, (stream, chunk) =>
+      send({ type: stream, text: chunk }),
+    );
+    if (result) {
+      send({
+        type: "done",
+        exitCode: result.exitCode,
+        durationMs: result.durationMs,
+        plane: result.plane,
+        error: result.stderr ? result.stderr.slice(0, 400) : undefined,
+      });
+    } else {
+      send({ type: "error", message: "مافيش أمر تنفيذ — command مطلوب" });
+    }
   } catch (e) {
     logger.error({ e }, "kali-env exec failed");
     send({ type: "error", message: (e as Error).message });
