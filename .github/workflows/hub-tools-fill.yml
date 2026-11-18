@@ -26,12 +26,12 @@ jobs:
         run: |
           L=state/tools-fill-log.txt
           echo "=== fill started $(date -u +%FT%TZ) ===" > $L
-          curl -s -m 400 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json || true
+          curl -s -m 400 -H "x-nova-token: $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-before.json || true
           echo "try1-bytes=$(wc -c < /tmp/tools-before.json 2>/dev/null || echo 0)" >> $L
           if ! python3 -c 'import json,sys; json.load(open("/tmp/tools-before.json")); print("json ok")' 2>/dev/null; then
             echo "الرد مش JSON — محاولة تانية fresh" >> $L
             sleep 15
-            curl -s -m 400 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools?fresh=$RANDOM" -o /tmp/tools-before.json || true
+            curl -s -m 400 -H "x-nova-token: $TOKEN" "$HUB/api/kali-env/tools?fresh=$RANDOM" -o /tmp/tools-before.json || true
             echo "try2-bytes=$(wc -c < /tmp/tools-before.json 2>/dev/null || echo 0)" >> $L
           fi
           head -c 300 /tmp/tools-before.json >> $L 2>/dev/null; echo >> $L
@@ -63,7 +63,7 @@ jobs:
           while IFS= read -r tool; do
             [ -z "$tool" ] && continue
             i=$((i+1))
-            R=$(curl -s -m 470 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
+            R=$(curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
             verdict=$(echo "$R" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("OK" if d.get("ok") else "FAIL·"+str(d.get("error",""))[:120])' 2>/dev/null || echo "BAD·parse")
             echo "[$i/$total] $tool → $verdict"
             echo "[$i/$total] $tool → $verdict" >> $L
@@ -75,11 +75,11 @@ jobs:
         run: |
           L=state/tools-fill-log.txt
           [ -s /tmp/failures.txt ] || { echo "مافيش فاشل — skip"; exit 0; }
-          curl -s -m 120 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"command":"dpkg --configure -a 2>&1 | tail -3; echo REMEDY_DONE","timeoutMs":90000}' "$HUB/api/kali-env/exec" | tail -2 || true
+          curl -s -m 120 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d '{"command":"dpkg --configure -a 2>&1 | tail -3; echo REMEDY_DONE","timeoutMs":90000}' "$HUB/api/kali-env/exec" | tail -2 || true
           okc=0; failc=0
           while IFS= read -r tool; do
             [ -z "$tool" ] && continue
-            R=$(curl -s -m 470 -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
+            R=$(curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" || echo '{}')
             verdict=$(echo "$R" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("OK" if d.get("ok") else "FAIL·"+str(d.get("error",""))[:120])' 2>/dev/null || echo "BAD·parse")
             echo "[retry] $tool → $verdict"
             case "$verdict" in OK*) okc=$((okc+1));; *) failc=$((failc+1)); echo "$tool" >> /tmp/still.txt;; esac
@@ -98,7 +98,7 @@ jobs:
           (
           set +e
           sleep 10
-          curl -s -m 280 -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-after.json
+          curl -s -m 280 -H "x-nova-token: $TOKEN" "$HUB/api/kali-env/tools" -o /tmp/tools-after.json
           true
           echo "after-bytes=$(wc -c < /tmp/tools-after.json)" >> $L
           head -c 200 /tmp/tools-after.json >> $L; echo >> $L
