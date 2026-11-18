@@ -1,44 +1,52 @@
 {
-  "at": "2026-11-18T17:51:23.390Z",
+  "at": "2026-11-18T18:37:27.496Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-18T15:47:54Z",
-    "size": 4247916
+    "updatedAt": "2026-11-18T18:24:43Z",
+    "size": 4243923
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "8c5abf24412193b4c8503b63cd73d64020e33aa6",
-    "builtAt": "2026-11-18T15:47:09.695Z",
-    "files": 191,
+    "commit": "16f449568efcd84f1035740e0185dc668d3cae9a",
+    "builtAt": "2026-11-18T18:01:52.685Z",
+    "files": 190,
     "builtBy": "local"
   },
   "boot": {
-    "commit": "8c5abf24412193b4c8503b63cd73d64020e33aa6",
-    "builtAt": "2026-11-18T15:47:09.695Z",
+    "commit": "16f449568efcd84f1035740e0185dc668d3cae9a",
+    "builtAt": "2026-11-18T18:01:52.685Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-18T15:47:54Z) — حارس لوب التحديث",
-    "lastCheckAt": "2026-11-18T17:48:15.053Z",
-    "currentBuiltAt": "2026-11-18T15:47:09.695Z",
-    "latestReleaseAt": "2026-11-18T15:47:54Z",
+    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-18T18:24:43Z) — حارس لوب التحديث",
+    "lastCheckAt": "2026-11-18T18:35:02.592Z",
+    "currentBuiltAt": "2026-11-18T18:01:52.685Z",
+    "latestReleaseAt": "2026-11-18T18:24:43Z",
     "restartNeeded": false
   },
-  "updaterInstall": null,
-  "restartHttp": null,
-  "action": "fresh",
-  "bootAfter": null,
-  "fresh": true,
+  "updaterInstall": {
+    "status": 200,
+    "lastResult": "up-to-date",
+    "detail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-18T18:24:43Z) — حارس لوب التحديث"
+  },
+  "restartHttp": 200,
+  "action": "restart_requested",
+  "bootAfter": {
+    "commit": "16f449568efcd84f1035740e0185dc668d3cae9a",
+    "builtAt": "2026-11-18T18:01:52.685Z",
+    "dir": "/home/container"
+  },
+  "fresh": false,
   "notes": [],
   "page": {
     "status": 200,
     "cacheControl": "no-store",
-    "servedAsset": "/assets/index-C4lVA_5G.js",
+    "servedAsset": "/assets/index-pzpaVnPF.js",
     "htmlBytes": 2484
   },
   "fleet": {
@@ -46,17 +54,17 @@
     "count": 13,
     "ids": [
       "self-node",
-      "gh-8-1618",
+      "gh-3-1619",
       "gh-9-1618",
       "gh-1-1618",
-      "gh-3-1619",
       "gh-12-1619",
       "gh-10-1620",
+      "gh-8-1618",
       "gh-11-1620",
       "gh-7-1620",
-      "gh-4-1621",
-      "gh-6-1623",
       "gh-5-1623",
+      "gh-6-1623",
+      "gh-4-1621",
       "gh-13-1737"
     ]
   }
