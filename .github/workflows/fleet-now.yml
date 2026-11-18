@@ -61,7 +61,7 @@ jobs:
           # TEST34 — استبعاد الـ run الحالي من عدّ السلوتات (عدّ ذاتي).
           GITHUB_RUN_ID: ${{ github.run_id }}
           FLEET_NODES: ${{ vars.FLEET_NODES }}
-          FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
+          FLEET_ENABLED: ${{ vars.FLEET_ENABLED || '1' }}  # TEST61 — fallback: الهَب مقاس حي فالموجة مسموحة (القديمة كانت بتسكّت الموجة لو المتغير ناقص)
           EVENT: ${{ github.event_name }}
           TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
@@ -186,7 +186,7 @@ jobs:
       - name: Join the fleet
         if: steps.gate.outputs.run == 'true'
         env:
-          HUB: ${{ vars.NOVA_HUB }}
+          HUB: ${{ vars.NOVA_HUB || 'wss://nova.waifly.com/api/local-agent/ws' }}
           IDX: ${{ matrix.i }}
           NOVA_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
