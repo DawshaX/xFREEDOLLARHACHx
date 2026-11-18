@@ -568,16 +568,19 @@ export default function KaliEnvPage() {
   const running = st?.desktop?.running === true;
 
   return (
-    <div className="h-full overflow-y-auto p-4 space-y-3" style={{ background: "linear-gradient(180deg,#03000a 0%,#060010 100%)", color: "#e0e0e0" }} dir="rtl">
-      {/* الرأس */}
+    <div className="h-full overflow-y-auto p-4 space-y-3" style={{ background: "radial-gradient(1200px 500px at 85% -5%, rgba(255,50,30,0.10), transparent 60%), radial-gradient(900px 400px at 5% 110%, rgba(120,40,255,0.08), transparent 55%), linear-gradient(180deg,#03000a 0%,#060010 100%)", color: "#e0e0e0" }} dir="rtl">
+      {/* الرأس — لوجو NOVA (Daw) + الهوية */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div>
-          <h1 className="text-lg font-black flex items-center gap-2" style={{ color: "#ff5544", textShadow: "0 0 14px rgba(255,60,40,0.5)" }}>
-            🐉 كالي الحقيقية — نظام متثبت على GitHub، بيتشغّل من العقد
-          </h1>
-          <p className="text-[10px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-            القرص الدايم فرع kali-rootfs (2113 حزمة، مش على سيرفر الموقع). العقدة بتفتح النظام كـ root وتقدر تثبّت أي حزمة بـ apt. اللايف أجينت بيستخدم نفس الطايرة عبر kali_run.
-          </p>
+        <div className="flex items-center gap-3">
+          <img src="/daw-skull.jpg" alt="NOVA" className="w-14 h-14 rounded-xl object-cover shrink-0" style={{ border: "1px solid rgba(255,60,40,0.45)", boxShadow: "0 0 18px rgba(255,60,40,0.35)" }} />
+          <div>
+            <h1 className="text-lg font-black flex items-center gap-2" style={{ color: "#ff5544", textShadow: "0 0 14px rgba(255,60,40,0.5)" }}>
+              كالي الحقيقية — نظام متثبت على GitHub، بيتشغّل من العقد
+            </h1>
+            <p className="text-[10px] font-mono mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+              القرص الدايم فرع kali-rootfs (2113 حزمة، مش على سيرفر الموقع). العقدة بتفتح النظام كـ root وتقدر تثبّت أي حزمة بـ apt. اللايف أجينت بيستخدم نفس الطايرة عبر kali_run.
+            </p>
+          </div>
         </div>
         <button onClick={() => navigate("/agent-pro")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
           style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.4)", color: "#22d3ee" }}>
