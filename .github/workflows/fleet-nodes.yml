@@ -23,7 +23,7 @@
 #
 # Nodes appear in the panel under /api/local-agent/agents and /api/fleet/mesh.
 # ─────────────────────────────────────────────────────────────────────────────
-name: fleet-nodes
+name: fleet-nodes — مخزن كامل 46c9c68 (كل الأدوات)
 
 on:
   # Pushing a change to this file starts a wave — the only trigger available
