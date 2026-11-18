@@ -12,6 +12,7 @@ on:
   push:
     paths:
       - ".github/workflows/kali-rootfs-full.yml"
+      - "scripts/kali-rootfs-full-build.sh"
 permissions:
   contents: write
 concurrency:
@@ -65,7 +66,7 @@ jobs:
         run: |
           node --input-type=module << 'NOVAEOF'
           import fs from "node:fs";
-          const ALIAS = { exiftool: "libimage-exiftool-perl", empire: "powershell-empire", redis: "redis-server" };
+          const ALIAS = { exiftool: "libimage-exiftool-perl", empire: "powershell-empire", redis: "redis-server", photorec: "testdisk", volatility: "volatility3", docker: "docker.io" };
           const FALLBACK_MISSING = ("ffuf amass sublist3r libimage-exiftool-perl steghide volatility3 responder netexec crackmapexec arp-scan sherlock " +
             "subfinder dnsx naabu vulners dirsearch katana arjun hcxdumptool hcxtools routersploit bettercap ettercap empire " +
             "bloodhound chisel ligolo-ng sleuthkit ghidra ltrace strace wkhtmltopdf pandoc faraday dradis cherrytree recordmydesktop libreoffice " +
@@ -193,3 +194,4 @@ jobs:
             tools-report.json
             nova-missing.tsv
             nova-verify.txt
+            ${{ github.workspace }}/../builder-log.txt
