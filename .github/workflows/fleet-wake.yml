@@ -1,0 +1,28 @@
+# TEST61 — منبّه الأسطول: commit فاضي بيلمس fleet-nodes.yml عشان تطلع موجة
+# جديدة فورًا — بديل workflow_dispatch اللي الintegration ملوش صلاحية.
+name: fleet wake (touch the wave file)
+on:
+  push:
+    paths:
+      - ".github/workflows/fleet-wake.yml"
+permissions:
+  contents: write
+concurrency:
+  group: fleet-wake
+  cancel-in-progress: false
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: touch fleet-nodes.yml (same content — only mtime)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "nova-ci-bot"
+          git config user.email "bot@users.noreply.github.com"
+          echo "# woken $(date -u +%FT%TZ)" >> .github/workflows/fleet-nodes.yml
+          git add .github/workflows/fleet-nodes.yml
+          git commit -m "chore(fleet): wave wake [skip ci]" || echo "الملف زي ما هو — الموجة قامت بالفعل من الpush ده"
+          git push origin HEAD:main || echo "لازم push — جرّب مرة تانية"
