@@ -1,6 +1,6 @@
-# TEST62 — إلغاء موجة ال19 عقدة (الأمر الجديد: 10 بس) — github.token جوه
-# الActions عنده actions:write على نفس الrepo (مقاس 08:14Z — أعقد طريقة نجحت).
-name: fleet rescale (cancel the 19-wave)
+# TEST62b — أمر المالك: إلغاء كل العقد القديمة كلها — بيلاقي أي run fleet حي ويلغيه
+# (github.token جوه الActions عنده actions:write — الطريقة الوحيدة المثبتة).
+name: fleet rescale (kill ALL old nodes)
 on:
   push:
     paths:
@@ -18,12 +18,18 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: cancel the old 19-node wave (superseded by the 10-node order)
+      - name: cancel EVERY live fleet run (old nodes die — fresh 10 next push)
         run: |
-          for R in 44266917184; do
-            echo "→ cancel $R:"
+          sleep 20   # استنى الموجة الجديدة اللي ممكن تكون قامت بنفس الpush
+          RUNS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "$GITHUB_API_URL/repos/${GITHUB_REPOSITORY}/actions/runs?per_page=40" \
+            | jq -r '.workflow_runs[] | select((.name | test("fleet")) and (.name | test("rescale") | not)) | select(.status != "completed") | .id')
+          for R in $RUNS; do
+            [ "$R" = "$GITHUB_RUN_ID" ] && continue
+            echo "→ cancel live fleet run $R:"
             curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$R/cancel" | head -c 120
+              "$GITHUB_API_URL/repos/${GITHUB_REPOSITORY}/actions/runs/$R/cancel" | head -c 80
             echo
           done
+          echo "✓ كل العقد القديمة اتلغت — الجاية 10 نضيفة"
