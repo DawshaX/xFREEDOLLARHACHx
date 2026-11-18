@@ -38,6 +38,14 @@ jobs:
               *) echo "::notice::✓ الهَب اقفل على بوت جديد: $BOOT"; break;;
             esac
           done
+      - name: terminal exec test (TEST70 — الفشل المحلي ينزل للأسطول)
+        run: |
+          sleep 30
+          R=$(curl -s --max-time 120 -X POST "$HUB/api/kali-env/exec" \
+            -H "x-nova-token: $TOKEN" -H "content-type: application/json" \
+            -d '{"command":"echo TERMINAL_OK && uname -a"}')
+          echo "::notice::exec: $(echo "$R" | tr -d '\n\r' | tail -c 400)"
+
       - name: measure the tools route (the TEST60 fix — total>0؟)
         run: |
           sleep 20
