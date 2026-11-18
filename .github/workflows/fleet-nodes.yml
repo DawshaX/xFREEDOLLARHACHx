@@ -79,9 +79,9 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
           # TEST34 — FLEET_NODES بقى مقروء فعلًا (كان متبعت ومش مستخدم،
           # والرقم 19 كان hardcoded في سطر النداء فالمتغير مكانش بيعمل حاجة).
-          FLEET_NODES: ${{ vars.FLEET_NODES }}
-          VAR_NODES: ${{ vars.FLEET_NODES }}
-          FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}
+          FLEET_NODES: ${{ vars.FLEET_NODES || '10' }}  # TEST62 — أمر المالك: 10 عقد بس
+          VAR_NODES: ${{ vars.FLEET_NODES || '10' }}  # TEST62 — أمر المالك: 10 عقد
+          FLEET_ENABLED: ${{ vars.FLEET_ENABLED || '1' }}  # TEST61 — fallback: جيت هوب مخزن ووايفلي تحكم — الاتنين متصلين (مقاس)
           EVENT: ${{ github.event_name }}
           TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
           # TEST56 — رسالة كوميت الدفع: علامة [force-wave] فيها = قرار صريح بتجاوز ميزانية السلات
@@ -120,7 +120,7 @@ jobs:
           # (شوف تعليق gate تحت). workflow_dispatch لسه بياخد input المالك حرفيًا.
           if [ "$EVENT" = "workflow_dispatch" ]; then
             # dispatch = قرار المالك الصريح — الرقم حرفيًا بلا ميزانية.
-            n="${INPUT_NODES:-19}"
+            n="${INPUT_NODES:-10}"  # TEST62 — أمر المالك: 10 عقد بس
             case "$n" in ''|*[!0-9]*) n=19 ;; esac
             if [ "$n" -lt 1 ];  then n=1;  fi
             # GitHub free plan: 20 concurrent jobs. Leave one for other workflows.
@@ -130,7 +130,7 @@ jobs:
             # الموجة المجدولة/ب-push متكدّدش فوق الموجات الحية — قرار المالك 19/19
             # محفوظ بالسقف (occupied=0 → nodes=19)، اللي اتمنع هو التكدس اللي جوّع CI.
             # TEST34 — WANTED من FLEET_NODES (افتراضي 19)، مش رقم مكتوب في السطر.
-            WANT="${FLEET_NODES:-19}"
+            WANT="${FLEET_NODES:-10}"  # TEST62 — أمر المالك: 10 عقد بس
             case "$WANT" in ''|*[!0-9]*) WANT=19 ;; esac
             if [ "$WANT" -gt 19 ]; then WANT=19; fi
             n="$(node scripts/fleet-slot-budget.mjs "$WANT" 1 | tail -1 | grep -oE '[0-9]+' || true)"
@@ -170,7 +170,7 @@ jobs:
       #   واقف. الريبو عام فالدقايق مجانية؛ اللي بيخلص هو **السعة المتزامنة**.
       #   نزّلناها لـ4: التغطية 24/7 زي ما هي (الmatrix بتلف بالدور)، بس
       #   الحساب بيفضل فيه سلات فاضية للبناء والصيانة.
-      max-parallel: 4
+      max-parallel: 12  # TEST62c — أمر المالك: 10 عقد مع بعض (كان 4 فالعقد بتستنى ساعات)
       matrix:
         # A plain list: GitHub's expression language has no range(), and a
         # literal list is easier to read than nested join/split gymnastics.
@@ -343,7 +343,7 @@ jobs:
       - name: Join the fleet
         if: steps.gate.outputs.run == 'true'
         env:
-          HUB: ${{ vars.NOVA_HUB }}
+          HUB: ${{ vars.NOVA_HUB || 'wss://nova.waifly.com/api/local-agent/ws' }}  # TEST61 — هَب التحكم
           IDX: ${{ matrix.i }}
           NOVA_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
         run: |
