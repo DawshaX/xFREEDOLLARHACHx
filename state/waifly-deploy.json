@@ -1,39 +1,47 @@
 {
-  "at": "2026-11-18T14:30:44.167Z",
+  "at": "2026-11-18T14:59:14.703Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-18T11:49:10Z",
-    "size": 4239974
+    "updatedAt": "2026-11-18T14:53:17Z",
+    "size": 4246049
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "7dd761d7386e47c893e1150d1a1b02169dd9d07b",
-    "builtAt": "2026-11-18T12:25:31.459Z",
-    "files": 189,
+    "commit": "ee455bee3de8939bafbf0e6307c592b6080c505a",
+    "builtAt": "2026-11-18T14:38:25.107Z",
+    "files": 191,
     "builtBy": "local"
   },
   "boot": {
-    "commit": "7dd761d7386e47c893e1150d1a1b02169dd9d07b",
-    "builtAt": "2026-11-18T12:25:31.459Z",
+    "commit": "ee455bee3de8939bafbf0e6307c592b6080c505a",
+    "builtAt": "2026-11-18T14:38:25.107Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
-    "lastResult": "up-to-date",
-    "lastDetail": "مفيش أحدث من اللي شغّال (فرق -2181 ثانية)",
-    "lastCheckAt": "2026-11-18T14:29:11.375Z",
-    "currentBuiltAt": "2026-11-18T12:25:31.459Z",
-    "latestReleaseAt": "2026-11-18T11:49:10Z",
+    "lastResult": "installed",
+    "lastDetail": "اتطبّقت النسخة الجديدة — طلبنا إعادة التشغيل، بنتأكد إنها حصلت",
+    "lastCheckAt": "2026-11-18T14:59:04.122Z",
+    "currentBuiltAt": "2026-11-18T14:38:25.107Z",
+    "latestReleaseAt": "2026-11-18T14:53:17Z",
     "restartNeeded": false
   },
-  "updaterInstall": null,
-  "restartHttp": null,
-  "action": "fresh",
-  "bootAfter": null,
-  "fresh": true,
+  "updaterInstall": {
+    "status": 200,
+    "lastResult": "installing",
+    "detail": "بينزّل النسخة الجديدة ويطبّقها — البرنامج هيعيد تشغيل نفسه"
+  },
+  "restartHttp": 200,
+  "action": "restart_requested",
+  "bootAfter": {
+    "commit": "ee455bee3de8939bafbf0e6307c592b6080c505a",
+    "builtAt": "2026-11-18T14:38:25.107Z",
+    "dir": "/home/container"
+  },
+  "fresh": false,
   "notes": [],
   "page": {
     "status": 200,
@@ -46,16 +54,16 @@
     "count": 11,
     "ids": [
       "self-node",
-      "gh-24-1422",
       "gh-26-1422",
+      "gh-24-1422",
+      "gh-22-1425",
+      "gh-20-1428",
+      "gh-21-1425",
+      "gh-23-1424",
+      "gh-27-1424",
       "gh-28-1424",
       "gh-29-1424",
-      "gh-25-1424",
-      "gh-27-1424",
-      "gh-23-1424",
-      "gh-22-1425",
-      "gh-21-1425",
-      "gh-20-1428"
+      "gh-25-1424"
     ]
   }
 }
