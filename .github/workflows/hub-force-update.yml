@@ -1,0 +1,47 @@
+# TEST65 — فكس العطل الحي 12:06Z: الهَب شغال بكود قديم (900fd30) والأبديتر في
+# backoff (نفس الحزمة فشلت 7/7) — الكود نفسه بيقول الحل: POST ?force=1.
+# POST من الrunner شغال (مقاس 09:33-09:36 في kali-tools-install) — من السانبوكس مفصول.
+name: hub force update (bypass backoff → TEST60 bundle)
+on:
+  push:
+    paths:
+      - ".github/workflows/hub-force-update.yml"
+permissions:
+  contents: read
+concurrency:
+  group: hub-force-update
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - name: force the auto-update (bypass backoff)
+        run: |
+          R=$(curl -s --max-time 300 -w "\nHTTP:%{http_code}" -X POST "$HUB/api/nova-core/auto-update?force=1" \
+            -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}')
+          echo "::notice::force-update: $(echo "$R" | tail -c 400 | tr -d '\n\r')"
+      - name: wait for the reboot + read the new boot commit
+        run: |
+          sleep 100
+          for i in 1 2 3 4 5 6; do
+            V=$(curl -s --max-time 30 "$HUB/api/nova-core/version?token=$TOKEN&i=$i")
+            BOOT=$(echo "$V" | grep -o '"boot":{"commit":"[^"]*"' | cut -d'"' -f5)
+            UP=$(echo "$V" | grep -o '"uptimeSec":[0-9]*' | cut -d: -f2)
+            echo "::notice::boot=$BOOT uptime=${UP}s (محاولة $i)"
+            case "$BOOT" in
+              900fd30*) echo "لسه القديم — استنى"; sleep 60;;
+              "") echo "الهَب بيعيد التشغيل"; sleep 60;;
+              *) echo "::notice::✓ الهَب اقفل على بوت جديد: $BOOT"; break;;
+            esac
+          done
+      - name: measure the tools route (the TEST60 fix — total>0؟)
+        run: |
+          sleep 20
+          T=$(curl -s --max-time 120 "$HUB/api/kali-env/tools?token=$TOKEN")
+          echo "::notice::tools: $(echo "$T" | grep -o '"total":[0-9]*' | head -1) · $(echo "$T" | grep -o '"present":[0-9]*' | head -1)"
+          H=$(curl -s --max-time 60 "$HUB/api/kali-env/health?token=$TOKEN" | head -c 300)
+          echo "::notice::health: $(echo "$H" | tr -d '\n\r')"
