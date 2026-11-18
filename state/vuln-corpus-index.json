@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-18T11:53:28.677Z",
+  "at": "2026-11-18T18:05:31.402Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 427609,
+  "total": 428001,
   "bySeverity": {
-    "medium": 183334,
-    "critical": 40038,
-    "high": 163029,
-    "unknown": 23232,
-    "low": 17901,
+    "medium": 183487,
+    "critical": 40091,
+    "high": 163184,
+    "unknown": 23230,
+    "low": 17934,
     "none": 75
   },
   "byYear": {
@@ -27,31 +27,31 @@
     "2007": 6580,
     "2008": 7179,
     "2009": 5054,
-    "2010": 5250,
+    "2010": 5251,
     "2011": 4900,
-    "2012": 5944,
+    "2012": 5946,
     "2013": 6836,
     "2014": 9011,
     "2015": 8787,
-    "2016": 10656,
+    "2016": 10658,
     "2017": 17113,
-    "2018": 17819,
-    "2019": 17684,
-    "2020": 21141,
-    "2021": 23494,
-    "2022": 27632,
-    "2023": 31510,
-    "2024": 39379,
-    "2025": 45539,
-    "2026": 93153
+    "2018": 17821,
+    "2019": 17689,
+    "2020": 21142,
+    "2021": 23501,
+    "2022": 27641,
+    "2023": 31517,
+    "2024": 39382,
+    "2025": 45540,
+    "2026": 93505
   },
   "kev": 1782,
-  "epssScored": 406778,
-  "products": 81952,
+  "epssScored": 407018,
+  "products": 81953,
   "topProducts": [
     {
       "product": "linux_kernel",
-      "count": 69163
+      "count": 69273
     },
     {
       "product": "android",
@@ -67,7 +67,7 @@
     },
     {
       "product": "chrome",
-      "count": 12208
+      "count": 12228
     },
     {
       "product": "ubuntu_linux",
@@ -103,7 +103,7 @@
     },
     {
       "product": "windows_server_2016",
-      "count": 5919
+      "count": 5950
     },
     {
       "product": "windows_server_2008",
@@ -139,31 +139,31 @@
     },
     {
       "product": "windows_10_1809",
-      "count": 4036
+      "count": 4065
     },
     {
       "product": "windows_10_22h2",
-      "count": 3993
+      "count": 4022
     },
     {
       "product": "windows_10_21h2",
-      "count": 3987
+      "count": 4016
+    },
+    {
+      "product": "windows_11_24h2",
+      "count": 3628
     },
     {
       "product": "acrobat",
       "count": 3595
     },
     {
-      "product": "windows_11_24h2",
-      "count": 3594
+      "product": "windows_server_2019",
+      "count": 3588
     },
     {
       "product": "jre",
       "count": 3561
-    },
-    {
-      "product": "windows_server_2019",
-      "count": 3557
     },
     {
       "product": "enterprise_linux",
@@ -171,11 +171,11 @@
     },
     {
       "product": "windows_11_23h2",
-      "count": 3450
+      "count": 3480
     },
     {
       "product": "windows_10_1607",
-      "count": 3445
+      "count": 3474
     },
     {
       "product": "ios",
@@ -194,12 +194,12 @@
       "count": 2938
     },
     {
-      "product": "ios_xe",
-      "count": 2867
+      "product": "windows_11_25h2",
+      "count": 2886
     },
     {
-      "product": "windows_11_25h2",
-      "count": 2852
+      "product": "ios_xe",
+      "count": 2867
     },
     {
       "product": "websphere_application_server",
@@ -207,22 +207,22 @@
     },
     {
       "product": "windows_11_26h1",
-      "count": 2776
+      "count": 2811
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 50443881,
-    "sha256": "2cd9b1fd9be1b69641fb0d656e1a0c7d7331087af721be007a3335c1daabce0d"
+    "bytes": 50508070,
+    "sha256": "28d5191d38f79205257cb02c6e4fff030e438fbac9e9cb506681fda763415733"
   },
   "mode": "deepen",
-  "says_ar": "427609 ثغرة حقيقية · critical 40038 · high 163029 · 1782 مستغلّة فعلياً (KEV) · 406778 لها EPSS · 81952 منتج بـCPE · مزامنة 2026-11-18T11:53:28.677Z",
+  "says_ar": "428001 ثغرة حقيقية · critical 40091 · high 163184 · 1782 مستغلّة فعلياً (KEV) · 407018 لها EPSS · 81953 منتج بـCPE · مزامنة 2026-11-18T18:05:31.402Z",
   "deepen": {
     "nextStartIndex": 0,
     "windowPages": 12,
     "walkedFrom": 0,
-    "nvdTotal": 427613,
+    "nvdTotal": 428002,
     "coverage": 1,
-    "at": "2026-11-18T11:53:28.678Z"
+    "at": "2026-11-18T18:05:31.402Z"
   }
 }

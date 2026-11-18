@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-18T11:53:28.677Z",
-  "total": 427609,
+  "at": "2026-11-18T18:05:31.402Z",
+  "total": 428001,
   "bySeverity": {
-    "medium": 183334,
-    "critical": 40038,
-    "high": 163029,
-    "unknown": 23232,
-    "low": 17901,
+    "medium": 183487,
+    "critical": 40091,
+    "high": 163184,
+    "unknown": 23230,
+    "low": 17934,
     "none": 75
   },
   "kev": 1782,
-  "epssScored": 406778,
-  "products": 81952,
+  "epssScored": 407018,
+  "products": 81953,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -9353,7 +9353,7 @@
         "CWE-664"
       ],
       "kev": true,
-      "epss": 0.06858,
+      "epss": 0.06632,
       "pub": "2022-12-13T17:15:14.350",
       "products": [
         "application_delivery_controller_firmware",
@@ -11164,7 +11164,7 @@
         "CWE-352"
       ],
       "kev": true,
-      "epss": 0.99803,
+      "epss": 0.99845,
       "pub": "2016-12-14T16:59:00.350",
       "products": [
         "d6220_firmware",
@@ -13873,5 +13873,5 @@
       "refs": []
     }
   ],
-  "says_ar": "427609 ثغرة حقيقية من NVD · 1782 مستغلّة فعلياً (KEV) · 81952 منتج · مزامنة 2026-11-18T11:53:28.677Z"
+  "says_ar": "428001 ثغرة حقيقية من NVD · 1782 مستغلّة فعلياً (KEV) · 81953 منتج · مزامنة 2026-11-18T18:05:31.402Z"
 }
