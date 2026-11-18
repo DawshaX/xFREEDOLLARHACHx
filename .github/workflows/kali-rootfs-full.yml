@@ -33,20 +33,20 @@ jobs:
           NOVA_KALI_SOFT_DEADLINE_MS: "1800000"
         run: |
           df -h / /mnt | sed 's/^/::notice::disk: /' || true
-          node scripts/kali-node-install.mjs /mnt/kali-rootfs/rootfs > /tmp/guest.log 2>&1 ||             echo "::warning::guest install exit غير صفر — اللوج تحت هو الحقيقة"
+          node scripts/kali-node-install.mjs $HOME/kali-rootfs/rootfs > /tmp/guest.log 2>&1 ||             echo "::warning::guest install exit غير صفر — اللوج تحت هو الحقيقة"
           split -b 700 /tmp/guest.log /tmp/guestc_ || true
           for C in /tmp/guestc_*; do
             echo "::notice::guest: $(cat $C | tr -d '\n\r')"
           done
-          [ -f /mnt/kali-rootfs/.kali-node-installed ] && cat /mnt/kali-rootfs/.kali-node-installed || {
+          [ -f $HOME/kali-rootfs/.kali-node-installed ] && cat $HOME/kali-rootfs/.kali-node-installed || {
             echo "::error::مافيش marker — guest فشل فعلاً (اللوج فوق بيقول السطر بالحرف)"
             exit 1
           }
 
       - name: تشخيص dpkg بالحرف (محاولة ffuf — المخرج كامل annotations)
         run: |
-          P=/mnt/kali-rootfs/rootfs/usr/local/bin/proot-static
-          R=/mnt/kali-rootfs/rootfs
+          P=$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static
+          R=$HOME/kali-rootfs/rootfs
           "$P" -0 -R "$R" -w /root -b /dev -b /proc -b /sys /bin/sh -c '
             export DEBIAN_FRONTEND=noninteractive
             touch /var/lib/dpkg/statoverride 2>/dev/null; chmod 644 /var/lib/dpkg/statoverride 2>/dev/null
@@ -106,8 +106,8 @@ jobs:
       - name: التثبيت الكامل جوه الجست (apt → pip → جيت هوب)
         timeout-minutes: 80
         run: |
-          P=/mnt/kali-rootfs/rootfs/usr/local/bin/proot-static
-          R=/mnt/kali-rootfs/rootfs
+          P=$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static
+          R=$HOME/kali-rootfs/rootfs
           cp scripts/kali-rootfs-full-build.sh "$R/tmp/build.sh"
           cp /tmp/nova-missing.tsv /tmp/nova-verify.txt "$R/tmp/"
           chmod +x "$R/tmp/build.sh"
@@ -126,7 +126,7 @@ jobs:
         timeout-minutes: 60
         run: |
           set -e
-          cd /mnt/kali-rootfs
+          cd $HOME/kali-rootfs
           echo "[tar] guest → tar.gz (pigz — 4 cores)"
           sudo apt-get install -y -qq pigz >/dev/null 2>&1 || true
           tar -cf - rootfs | pigz -1 > rootfs-full.tar.gz
@@ -135,14 +135,14 @@ jobs:
           N=$(ls part-* | wc -l); SZ=$(du -sb rootfs | cut -f1)
           echo "[verify-store] parts=$N bytes=$SZ"
           sha256sum part-* > /tmp/SHA256SUMS.new
-          P2=/mnt/kali-rootfs/rootfs/usr/local/bin/proot-static
-          PKGC=$($P2 -0 -R /mnt/kali-rootfs/rootfs -w /root -b /dev -b /proc -b /sys /bin/sh -c 'dpkg -l 2>/dev/null | grep -c "^ii"' || echo 0)
+          P2=$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static
+          PKGC=$($P2 -0 -R $HOME/kali-rootfs/rootfs -w /root -b /dev -b /proc -b /sys /bin/sh -c 'dpkg -l 2>/dev/null | grep -c "^ii"' || echo 0)
           PKGC=$(echo "$PKGC" | tr -dc '0-9')
-          FAILS=$(grep -o '"installFailed": "[^"]*"' /mnt/kali-rootfs/rootfs/tmp/nova-tools-report.json 2>/dev/null | cut -d'"' -f4 || true)
+          FAILS=$(grep -o '"installFailed": "[^"]*"' $HOME/kali-rootfs/rootfs/tmp/nova-tools-report.json 2>/dev/null | cut -d'"' -f4 || true)
           [ -z "$FAILS" ] && FAILS="ولا حاجة"
           printf 'PRETTY_NAME=Kali GNU/Linux Rolling\npackages=%s\nbytes=%s\nbuilt_at=%s\ncommit=%s\nrun_id=%s\nfailed_extra=%s\n' \
             "$PKGC" "$SZ" "$(date -u +%FT%TZ)" "${GITHUB_SHA::7}" "$GITHUB_RUN_ID" "$FAILS" > /tmp/MANIFEST.new
-          $P2 -0 -R /mnt/kali-rootfs/rootfs -w /root -b /dev -b /proc -b /sys /bin/sh -c 'dpkg -l 2>/dev/null | awk "/^ii/{print \$2}"' > /tmp/PACKAGES.new || true
+          $P2 -0 -R $HOME/kali-rootfs/rootfs -w /root -b /dev -b /proc -b /sys /bin/sh -c 'dpkg -l 2>/dev/null | awk "/^ii/{print \$2}"' > /tmp/PACKAGES.new || true
           echo "[store] packages=$PKGC · failed=[$FAILS]"
           git config --global user.name "nova-ci-bot"
           git config --global user.email "bot@users.noreply.github.com"
@@ -154,7 +154,7 @@ jobs:
           git reset --mixed --quiet
           git rm -r --cached --quiet . || true
           i=0; BATCH=16
-          for f in /mnt/kali-rootfs/part-*; do
+          for f in $HOME/kali-rootfs/part-*; do
             cp "$f" .
             git add "$(basename "$f")"
             i=$((i+1))
