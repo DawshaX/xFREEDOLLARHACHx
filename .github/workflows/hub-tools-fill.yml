@@ -45,12 +45,12 @@ jobs:
           print("قبل: present=%s/%s · الناقص=%d" % (d.get("present"), d.get("total"), len(missing)))
           PY
           ) 2>&1 | tee -a $L || true
-          wc -l /tmp/missing.txt >> $L 2>/dev/null; cat /tmp/missing.txt >> $L 2>/dev/null || true
+          wc -l /tmp/missing.txt >> $L 2>/dev/null || true; cat /tmp/missing.txt >> $L 2>/dev/null || true
           true
       - name: كوميت اللوج الجزئي (دايمًا — مستحيل تفشل)
         run: |
           git config user.name "nova-bot" 2>/dev/null || true; git config user.email "nova@bot.local" 2>/dev/null || true
-          git add state/tools-fill-log.txt 2>/dev/null || true
+          git add -f state/tools-fill-log.txt 2>/dev/null || true
           git commit -m "state: tools-fill log (partial)" 2>/dev/null || true
           git pull --rebase origin arena/f288ad41-xfreedollarhachx 2>/dev/null || true
           git push origin HEAD:arena/f288ad41-xfreedollarhachx 2>/dev/null || true
@@ -87,7 +87,7 @@ jobs:
           echo "retry: ok=$okc fail=$failc" | tee -a $L
           if [ -s /tmp/still.txt ]; then echo "::notice::لسه ناقص بعد retry: $(tr '\n' ' ' < /tmp/still.txt)"; fi
           git config user.name "nova-bot" 2>/dev/null; git config user.email "nova@bot.local" 2>/dev/null
-          git add state/tools-fill-log.txt 2>/dev/null
+          git add -f state/tools-fill-log.txt 2>/dev/null
           git commit -m "state: tools-fill partial log" 2>/dev/null || true
           git pull --rebase origin arena/f288ad41-xfreedollarhachx 2>/dev/null || true
           git push origin HEAD:arena/f288ad41-xfreedollarhachx 2>/dev/null || true
@@ -126,7 +126,7 @@ jobs:
           ) 2>&1 | tee -a $L || true
           echo "step-exit=$?" >> $L
           git config user.name "nova-bot" 2>/dev/null; git config user.email "nova@bot.local" 2>/dev/null
-          git add state/tools-fill-report.json state/tools-fill-log.txt 2>/dev/null
+          git add -f state/tools-fill-report.json state/tools-fill-log.txt 2>/dev/null
           git commit -m "state: tools-fill report + log" 2>/dev/null || true
           git pull --rebase origin arena/f288ad41-xfreedollarhachx 2>/dev/null || true
           git push origin HEAD:arena/f288ad41-xfreedollarhachx 2>/dev/null || true

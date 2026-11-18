@@ -38,7 +38,7 @@ jobs:
         run: |
           git config user.name "nova-bot" || true
           git config user.email "nova@bot.local" || true
-          git add state/hub-raw-probe.txt || true
+          git add -f state/hub-raw-probe.txt || true
           git commit -m "state: hub raw probe" || true
           git pull --rebase origin arena/f288ad41-xfreedollarhachx || true
           git push origin HEAD:arena/f288ad41-xfreedollarhachx || true
