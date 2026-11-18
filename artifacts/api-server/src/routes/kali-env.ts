@@ -1009,11 +1009,11 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     prowler: "prowler", scoutsuite: "scoutsuite", pacu: "pacu",
     netexec: "netexec", certipy: "certipy-ad", "bloodhound-python": "bloodhound",
     "ssh-audit": "ssh-audit", semgrep: "semgrep", sublist3r: "sublist3r",
-    sherlock: "sherlock", volatility3: "volatility3",
+    sherlock: "sherlock-project", volatility3: "volatility3",
   };
   const GITHUB_TOOLS: Record<string, { repo: string; pattern: string; flat?: string }> = {
     /* أدوات بتوزع binaries جاهزة — مستقلة عن dpkg تمامًا (عقدة مريضة وما بتأثرش عليها) */
-    amass: { repo: "owasp-amass/amass", pattern: "linux_x86_64.zip", flat: "amass" },
+    amass: { repo: "owasp-amass/amass", pattern: "linux_amd64.tar.gz", flat: "amass" },
     subfinder: { repo: "projectdiscovery/subfinder", pattern: "linux_amd64.zip", flat: "subfinder" },
     naabu: { repo: "projectdiscovery/naabu", pattern: "linux_amd64.zip", flat: "naabu" },
     dnsx: { repo: "projectdiscovery/dnsx", pattern: "linux_amd64.zip", flat: "dnsx" },
