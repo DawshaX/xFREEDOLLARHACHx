@@ -1,0 +1,45 @@
+# TEST75 — تشخيص: هل الrunner يوصل للهَب أصلاً؟ يآخد إيه رد؟
+# يكتب الردود الخام في state/ ويكوميتها — عشان نقراها من الريبو مباشرة.
+name: hub reachability probe (raw answers → repo)
+on:
+  push:
+    paths:
+      - ".github/workflows/hub-probe-raw.yml"
+permissions:
+  contents: write
+concurrency:
+  group: hub-probe-raw
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: البروب الخام
+        run: |
+          {
+            echo "=== raw probe $(date -u +%FT%TZ) ==="
+            echo "--- version ---"
+            curl -s -m 60 -w "\nHTTP=%{http_code} time=%{time_total}s\n" -H "Authorization: Bearer $TOKEN" "$HUB/api/nova-core/version?fresh=$RANDOM" || echo "curl-fail=$?"
+            echo "--- tools (مقاس كامل — يدوم حتى 90ث) ---"
+            curl -s -m 200 -w "\nHTTP=%{http_code} time=%{time_total}s\n" -H "Authorization: Bearer $TOKEN" "$HUB/api/kali-env/tools?fresh=$RANDOM" | head -c 600 || echo "curl-fail=$?"
+            echo
+            echo "--- nodes ---"
+            curl -s -m 120 -w "\nHTTP=%{http_code} time=%{time_total}s\n" -H "Authorization: Bearer $TOKEN" "$HUB/api/ops/kali/nodes?fresh=$RANDOM" | head -c 400 || echo "curl-fail=$?"
+            echo
+            echo "=== end ==="
+          } > state/hub-raw-probe.txt 2>&1
+          true
+      - name: كوميت
+        run: |
+          git config user.name "nova-bot" || true
+          git config user.email "nova@bot.local" || true
+          git add state/hub-raw-probe.txt || true
+          git commit -m "state: hub raw probe" || true
+          git pull --rebase origin arena/f288ad41-xfreedollarhachx || true
+          git push origin HEAD:arena/f288ad41-xfreedollarhachx || true
+          exit 0
