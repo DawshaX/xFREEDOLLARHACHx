@@ -259,3 +259,12 @@ data: [DONE]
 {"ok":false,"tool":"wkhtmltopdf","pkg":"wkhtmltopdf","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --conf
 pass1: ok=14 fail=68
 retry: ok=1 fail=67
+after-bytes=8012
+{"ok":true,"ready":true,"measuredOn":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","hubRootfs":false,"fleet":{"connected":12,"kaliReady":12,"nodes":[{"id":"gh-9-1618","hostname":
+بعد: present=189/266 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)
+لسه ناقص: 77 → ['aria2', 'arjun', 'arp-scan', 'asnmap', 'bettercap', 'cariddi', 'casefile', 'certipy', 'cherrytree', 'chisel', 'crackmapexec', 'dirsearch', 'dnsx', 'dockle', 'dradis', 'dvcs-ripper', 'elfutils', 'empire', 'ettercap', 'evilgrade', 'exiftool', 'faraday', 'fernet', 'gh-dork', 'ghidra', 'gotator', 'grype', 'gvm', 'hcxtools', 'katana', 'keepnote', 'king-phisher', 'legs', 'libreoffice', 'ligolo-ng', 'ltrace', 'maigret', 'maskprocessor', 'metasploit-framework', 'mongosh']
+بعد: present=189/266 · measuredOn=runnervmccnms — عقدة كالي سحابية (rootfs + proot)
+لسه ناقص: 77 → ['aria2', 'arjun', 'arp-scan', 'asnmap', 'bettercap', 'cariddi', 'casefile', 'certipy', 'cherrytree', 'chisel', 'crackmapexec', 'dirsearch', 'dnsx', 'dockle', 'dradis', 'dvcs-ripper', 'elfutils', 'empire', 'ettercap', 'evilgrade', 'exiftool', 'faraday', 'fernet', 'gh-dork', 'ghidra', 'gotator', 'grype', 'gvm', 'hcxtools', 'katana', 'keepnote', 'king-phisher', 'legs', 'libreoffice', 'ligolo-ng', 'ltrace', 'maigret', 'maskprocessor', 'metasploit-framework', 'mongosh']
+python-exit=0
+=== fill ended 2026-11-18T17:58:50Z ===
+step-exit=0
