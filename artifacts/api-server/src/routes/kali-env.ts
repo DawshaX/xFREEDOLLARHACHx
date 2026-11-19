@@ -1003,13 +1003,17 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   const APT_ALIAS: Record<string, string> = { exiftool: "libimage-exiftool-perl" };
   /* TEST77 — سلسلة المصادر: apt كالي أولًا، لو فشل → pip، لو فشل → GitHub release
    * (من الجيت هوب مباشرة — القرار المعماري: جيت هوب مخزن كل حاجة). */
-  const PIP_TOOLS: Record<string, { pkg: string; cmd?: string }> = {
+  const PIP_TOOLS: Record<string, { pkg: string; cmd?: string | string[] }> = {
     /* TEST88 — pkg مقاس من pypi.org (2026-11-19): photon وnetexec مش على PyPI
      * (تحقق مباشر) — اتنقلوا لCLONE_EXTRA. scoutsuite بيتسطب كscout ·
      * volatility3 كvol · bloodhound-python باسمه (مش bloodhound). */
     maigret: { pkg: "maigret" }, h8mail: { pkg: "h8mail" },
     prowler: { pkg: "prowler" }, scoutsuite: { pkg: "scoutsuite", cmd: "scout" }, pacu: { pkg: "pacu" },
-    certipy: { pkg: "certipy-ad" }, "bloodhound-python": { pkg: "bloodhound-python" },
+    certipy: { pkg: "certipy-ad" },
+    /* TEST89 — الباقة pip الصح للـBloodHound.py هي bloodhound (الشفراء
+     * bloodhound-python/bloodhound) — قيست 00:42: pkg bloodhound-python مالهاش
+     * CLI فالgate فشل. */
+    "bloodhound-python": { pkg: "bloodhound", cmd: ["bloodhound-python", "bloodhound"] },
     "ssh-audit": { pkg: "ssh-audit" }, semgrep: { pkg: "semgrep" }, sublist3r: { pkg: "sublist3r" },
     sherlock: { pkg: "sherlock-project" },
     volatility3: { pkg: "volatility3", cmd: "vol" },
@@ -1017,7 +1021,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   };
   /* TEST88 — clone + pip محلي + wrapper (مقاس أساسه dirsearch/arjun ✓ TEST86):
    * أدوات مافيش منها pip ولا release — سورس مباشر + gate بالأمر الحقيقي. */
-  const CLONE_EXTRA: Record<string, { repo: string; cmd: string; wrap?: string; req?: boolean }> = {
+  const CLONE_EXTRA: Record<string, { repo: string; cmd: string | string[]; wrap?: string; req?: boolean }> = {
     netexec: { repo: "Pennyw0rth/NetExec", cmd: "nxc", req: true },
     routersploit: {
       repo: "threat9/routersploit", cmd: "routersploit", req: true,
@@ -1027,7 +1031,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
       repo: "s0md3v/Photon", cmd: "photon", req: true,
       wrap: `printf '#!/bin/sh\\nexec python3 /opt/photon/photon.py "$@"\\n' > /usr/local/bin/photon && chmod +x /usr/local/bin/photon`,
     },
-    osintgram: { repo: "Datalux/Osintgram", cmd: "osintgram" },
+    osintgram: {
+      repo: "Datalux/Osintgram", cmd: "osintgram",
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/osintgram/main.py "$@"\\n' > /usr/local/bin/osintgram && chmod +x /usr/local/bin/osintgram`,
+    },
   };
   /* TEST87 — الحقول url مقاسة من api.github.com (السانبوكس 2026-11-19) وخبزت هنا:
    * العقدة (GitHub runner IP مشترك) بتنده api.github.com unauthenticated فبتقع
@@ -1074,12 +1081,12 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const isCloneTool = tool === "dirsearch" || tool === "arjun";
     installCmd = isCloneTool
       ? `rm -rf /tmp/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${GIT.repo} /tmp/${tool} 2>&1 | tail -2; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed /tmp/${tool} 2>&1 || pip3 install -q /tmp/${tool} 2>&1) | tail -3; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`
-      : `cd /tmp && rm -rf ${tool}-dl && mkdir -p ${tool}-dl && cd ${tool}-dl && URL=${GIT.url ? GIT.url : `$(curl -s -m 30 https://api.github.com/repos/${GIT.repo}/releases/latest | tr "," "\\n" | grep browser_download_url | grep "${GIT.pattern}" | head -1 | cut -d '"' -f4)`} && echo "URL=$URL" && curl -sL -m 180 "$URL" -o pkg.bin && ls -la pkg.bin && (tar -xzf pkg.bin 2>/dev/null || unzip -o pkg.bin >/dev/null 2>&1 || gunzip -f pkg.bin 2>/dev/null) ; BIN=$(find . -type f -name "${GIT.flat ?? tool}*" 2>/dev/null | head -1) && echo "BIN=$BIN" && cp "$BIN" /usr/local/bin/${tool} && chmod +x /usr/local/bin/${tool} && command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+      : `cd /tmp && rm -rf ${tool}-dl && mkdir -p ${tool}-dl && cd ${tool}-dl && URL=${GIT.url ? GIT.url : `$(curl -s -m 30 https://api.github.com/repos/${GIT.repo}/releases/latest | tr "," "\\n" | grep browser_download_url | grep "${GIT.pattern}" | head -1 | cut -d '"' -f4)`} && echo "URL=$URL" && curl -sL -m 180 "$URL" -o pkg.bin && ls -la pkg.bin && (tar -xzf pkg.bin 2>/dev/null || unzip -o pkg.bin >/dev/null 2>&1 || gunzip -c pkg.bin > ${tool}-out.bin 2>/dev/null) ; BIN=$(find . -type f -name "${GIT.flat ?? tool}*" 2>/dev/null | head -1) && echo "BIN=$BIN" && cp "$BIN" /usr/local/bin/${tool} && chmod +x /usr/local/bin/${tool} && command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else if (PIP) {
-    installCmd = `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${PIP.pkg} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${PIP.pkg} 2>&1) | tail -5; command -v ${PIP.cmd ?? tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    installCmd = `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${PIP.pkg} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${PIP.pkg} 2>&1) | tail -5; ${(Array.isArray(PIP.cmd) ? PIP.cmd : [PIP.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ")} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else if (CLONE_EXTRA[tool] && CLONE_EXTRA[tool].repo) {
     const C = CLONE_EXTRA[tool];
-    installCmd = `rm -rf /opt/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${C.repo} /opt/${tool} 2>&1 | tail -2; ${C.req ? `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed -r /opt/${tool}/requirements.txt 2>&1 || true) | tail -2; ` : ""}${C.wrap ? `${C.wrap}; ` : ""}command -v ${C.cmd} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    installCmd = `rm -rf /opt/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${C.repo} /opt/${tool} 2>&1 | tail -2; ${C.req ? `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed -r /opt/${tool}/requirements.txt 2>&1 || true) | tail -2; ` : ""}${C.wrap ? `${C.wrap}; ` : ""}${(Array.isArray(C.cmd) ? C.cmd : [C.cmd]).map((c) => `command -v ${c}`).join(" || ")} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else {
     installCmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
   }
