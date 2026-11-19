@@ -67,7 +67,7 @@ jobs:
     # main only, stated per job (not only in the commit's branches filter):
     # a push or a manual run on a feature branch must never commit its report
     # to that branch — the report belongs on the branch the site reads.
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/arena/f288ad41-xfreedollarhachx'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/arena/')
     outputs:
       nodes: ${{ steps.plan.outputs.nodes }}
     steps:
@@ -155,7 +155,7 @@ jobs:
   node:
     name: node ${{ matrix.i }}
     needs: prepare
-    if: needs.prepare.outputs.nodes != '0' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/arena/f288ad41-xfreedollarhachx')
+    if: needs.prepare.outputs.nodes != '0' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/arena/'))
     # With nodes=0 the whole matrix must not even be scheduled: otherwise every
     # push to this file queues 19 jobs that each boot a runner just to skip.
     runs-on: ubuntu-latest
