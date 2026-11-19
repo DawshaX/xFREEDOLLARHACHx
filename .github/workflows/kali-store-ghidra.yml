@@ -26,6 +26,7 @@ jobs:
       - name: بناء ghidra.tar.gz + retdec.tar.gz
         run: |
           mkdir -p store state
+          WORK="$GITHUB_WORKSPACE"
           set -e
           # ── ghidra ──
           GURL=$(curl -s https://api.github.com/repos/NationalSecurityAgency/ghidra/releases/latest | grep browser_download_url | grep '_PUBLIC_.*\.zip' | head -1 | cut -d'"' -f4)
@@ -39,7 +40,7 @@ jobs:
             cp /usr/local/bin/ghidraRun /usr/local/bin/ghidra
             sed -i 's|/opt/ghidra/ghidraRun|/opt/ghidra/ghidraRun|' /usr/local/bin/ghidra
             chmod +x /usr/local/bin/ghidraRun /usr/local/bin/analyzeHeadless /usr/local/bin/ghidra
-            cd / && tar czf "$PWD/store/ghidra.tar.gz" opt/ghidra usr/local/bin/ghidraRun usr/local/bin/analyzeHeadless usr/local/bin/ghidra
+            cd / && tar czf "$WORK/store/ghidra.tar.gz" opt/ghidra usr/local/bin/ghidraRun usr/local/bin/analyzeHeadless usr/local/bin/ghidra
             echo "OK:ghidra $(stat -c%s store/ghidra.tar.gz)" | tee -a state/kali-store-ghidra.log
           else
             echo "MISS:ghidra (no release URL)" | tee -a state/kali-store-ghidra.log
@@ -53,7 +54,7 @@ jobs:
             [ -d /opt/retdec ] || mv /opt/retdec-* /opt/retdec
             ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec-decompiler
             ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec
-            cd / && tar czf "$PWD/store/retdec.tar.gz" opt/retdec usr/local/bin/retdec-decompiler usr/local/bin/retdec
+            cd / && tar czf "$WORK/store/retdec.tar.gz" opt/retdec usr/local/bin/retdec-decompiler usr/local/bin/retdec
             echo "OK:retdec $(stat -c%s store/retdec.tar.gz)" | tee -a state/kali-store-ghidra.log
           else
             echo "MISS:retdec (no release URL)" | tee -a state/kali-store-ghidra.log
