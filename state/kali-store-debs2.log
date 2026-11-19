@@ -1,13 +1,14 @@
-=== debs v7 2026-11-19T11:50:49Z ===
-Fetched 22.2 MB in 2s (12.4 MB/s)
+=== debs v7 2026-11-19T12:02:23Z ===
+Fetched 22.2 MB in 1s (15.6 MB/s)
 Reading package lists...
-MISS:ettercap
-MISS:maskprocessor
-pool-casefile=
-MISS:casefile (pool)
+try base=http://http.kali.org/kali/pool/main/c/casefile/
+try base=https://http.kali.org/kali/pool/main/c/casefile/
+try base=http://old.kali.org/kali/pool/main/c/casefile/
+pool-casefile=casefile_1.0.1-1kali0_all.deb
+OK:casefile(pool) size=41389881
 DEBS7_DONE
-total 16
-drwxr-xr-x  2 runner runner 4096 Nov 19 11:50 .
-drwxr-xr-x 15 runner runner 4096 Nov 19 11:50 ..
--rw-r--r--  1 root   root    176 Nov 19 11:51 build-debs2.log
--rw-r--r--  1 root   root     54 Nov 19 11:51 debs2.log
+total 40432
+drwxr-xr-x  2 runner runner     4096 Nov 19 12:02 .
+drwxr-xr-x 15 runner runner     4096 Nov 19 12:02 ..
+-rw-r--r--  1 root   root        354 Nov 19 12:02 build-debs2.log
+-rw-r--r--  1 root   root   41389881 Nov 19 12:02 casefile-debs.tar.gz
