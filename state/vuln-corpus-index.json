@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "at": "2026-11-19T14:26:44.266Z",
+  "at": "2026-11-19T18:38:43.664Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
     "EPSS"
   ],
-  "total": 428499,
+  "total": 428966,
   "bySeverity": {
-    "medium": 183787,
-    "critical": 40153,
-    "high": 163412,
-    "unknown": 23103,
-    "low": 17969,
+    "medium": 183907,
+    "critical": 40175,
+    "high": 163476,
+    "unknown": 23344,
+    "low": 17989,
     "none": 75
   },
   "byYear": {
@@ -42,11 +42,11 @@
     "2022": 27641,
     "2023": 31517,
     "2024": 39382,
-    "2025": 45541,
-    "2026": 94002
+    "2025": 45542,
+    "2026": 94468
   },
   "kev": 1786,
-  "epssScored": 407510,
+  "epssScored": 407787,
   "products": 81955,
   "topProducts": [
     {
@@ -67,7 +67,7 @@
     },
     {
       "product": "chrome",
-      "count": 12306
+      "count": 12325
     },
     {
       "product": "ubuntu_linux",
@@ -83,7 +83,7 @@
     },
     {
       "product": "windows_server_2012",
-      "count": 7791
+      "count": 7799
     },
     {
       "product": "mac_os_x",
@@ -103,7 +103,7 @@
     },
     {
       "product": "windows_server_2016",
-      "count": 5958
+      "count": 6009
     },
     {
       "product": "windows_server_2008",
@@ -139,23 +139,23 @@
     },
     {
       "product": "windows_10_1809",
-      "count": 4086
+      "count": 4130
     },
     {
       "product": "windows_10_22h2",
-      "count": 4044
+      "count": 4091
     },
     {
       "product": "windows_10_21h2",
-      "count": 4038
+      "count": 4085
     },
     {
       "product": "windows_11_24h2",
-      "count": 3652
+      "count": 3702
     },
     {
       "product": "windows_server_2019",
-      "count": 3610
+      "count": 3663
     },
     {
       "product": "acrobat",
@@ -167,15 +167,15 @@
     },
     {
       "product": "windows_11_23h2",
-      "count": 3504
+      "count": 3551
+    },
+    {
+      "product": "windows_10_1607",
+      "count": 3519
     },
     {
       "product": "enterprise_linux",
       "count": 3484
-    },
-    {
-      "product": "windows_10_1607",
-      "count": 3481
     },
     {
       "product": "ios",
@@ -190,12 +190,16 @@
       "count": 3045
     },
     {
+      "product": "windows_11_25h2",
+      "count": 2960
+    },
+    {
       "product": "ipados",
       "count": 2938
     },
     {
-      "product": "windows_11_25h2",
-      "count": 2910
+      "product": "windows_11_26h1",
+      "count": 2885
     },
     {
       "product": "ios_xe",
@@ -204,25 +208,21 @@
     {
       "product": "websphere_application_server",
       "count": 2843
-    },
-    {
-      "product": "windows_11_26h1",
-      "count": 2835
     }
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 50587489,
-    "sha256": "c987cebecb008db9550dc2eb75a4b3183edda24f0b3adde46443919045a4d09d"
+    "bytes": 50716228,
+    "sha256": "762c38aefb96113c875ac499faf53b7ab39d059e9f958964afd6d2132d61e4a3"
   },
   "mode": "deepen",
-  "says_ar": "428499 ثغرة حقيقية · critical 40153 · high 163412 · 1786 مستغلّة فعلياً (KEV) · 407510 لها EPSS · 81955 منتج بـCPE · مزامنة 2026-11-19T14:26:44.266Z",
+  "says_ar": "428966 ثغرة حقيقية · critical 40175 · high 163476 · 1786 مستغلّة فعلياً (KEV) · 407787 لها EPSS · 81955 منتج بـCPE · مزامنة 2026-11-19T18:38:43.664Z",
   "deepen": {
     "nextStartIndex": 0,
     "windowPages": 12,
     "walkedFrom": 0,
-    "nvdTotal": 428499,
+    "nvdTotal": 428966,
     "coverage": 1,
-    "at": "2026-11-19T14:26:44.267Z"
+    "at": "2026-11-19T18:38:43.665Z"
   }
 }
