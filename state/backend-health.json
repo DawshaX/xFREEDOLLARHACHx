@@ -1,27 +1,27 @@
 {
-  "at": "2026-11-19T16:43:19.507Z",
+  "at": "2026-11-19T23:26:52.541Z",
   "backend": "https://dbaaclqycsiefjwjfavf.supabase.co/functions/v1/ops-api",
-  "verdict": "GREEN",
+  "verdict": "RED",
   "counts": {
-    "cves": 427484,
-    "huntRuns": 37,
+    "cves": 0,
+    "huntRuns": 38,
     "findings": 0
   },
-  "corpusSample": 3,
-  "corpusSearched": 427484,
-  "corpusIndexTotal": 428499,
-  "corpusSlice": true,
-  "negativeSearchOk": true,
-  "negativeSearched": 427484,
-  "corpusDated": true,
+  "corpusSample": 0,
+  "corpusSearched": null,
+  "corpusIndexTotal": null,
+  "corpusSlice": null,
+  "negativeSearchOk": false,
+  "negativeSearched": null,
+  "corpusDated": null,
   "chat": {
     "ok": true,
     "status": 200,
     "seat": "pollinations-openai",
     "chunks": 9,
     "streamed": true,
-    "firstChunkMs": 252,
-    "totalMs": 253,
+    "firstChunkMs": 341,
+    "totalMs": 341,
     "chars": 8806,
     "text": "{\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
   },
@@ -29,51 +29,51 @@
     {
       "name": "health",
       "status": 200,
-      "ms": 7689,
+      "ms": 13111,
       "ok": true,
-      "sample": "{\"ok\":true,\"at\":\"2026-11-19T16:43:15.074Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":427484,\"huntRuns\":37,\"findings\":0}}"
+      "sample": "{\"ok\":true,\"at\":\"2026-11-19T23:26:09.222Z\",\"project\":\"dbaaclqycsiefjwjfavf\",\"counts\":{\"cves\":0,\"huntRuns\":38,\"findings\":0}}"
     },
     {
       "name": "hunt",
       "status": 200,
-      "ms": 1369,
+      "ms": 3493,
       "ok": true,
-      "sample": "{\"run\":{\"id\":47,\"at\":\"2026-11-19T07:45:47.165+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":23390,\"katana\":99599,\"nuclei:root\":662162,\"nuc"
+      "sample": "{\"run\":{\"id\":50,\"at\":\"2026-11-19T20:54:59.74+00:00\",\"tools\":{\"nmap\":\"present\",\"httpx\":\"present\",\"katana\":\"present\",\"nuclei\":\"present\"},\"totals\":{\"rated\":0,\"toolMs\":{\"httpx\":34731,\"katana\":112338,\"nuclei:root\":382196,\"nuc"
     },
     {
       "name": "organs",
       "status": 200,
-      "ms": 496,
+      "ms": 1643,
       "ok": true,
-      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"427484 CVE · 428499 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-19T16:42:00.270706+00:00\",\"updated_at\":\"2"
+      "sample": "{\"organs\":[{\"id\":\"database\",\"label_ar\":\"قاعدة البيانات (Postgres)\",\"status\":\"live\",\"detail\":\"427484 CVE · 428966 في الفهرس\",\"source\":\"supabase/dbaaclqycsiefjwjfavf\",\"at\":\"2026-11-19T20:32:00.270991+00:00\",\"updated_at\":\"2"
     },
     {
       "name": "corpus?q=nginx",
-      "status": 200,
-      "ms": 1279,
-      "ok": true,
-      "sample": "{\"q\":\"nginx\",\"rows\":[{\"cve\":\"CVE-2022-31125\",\"severity\":\"critical\",\"cvss\":10,\"kev\":false,\"epss\":0.20338,\"products\":[\"roxy-wi\"],\"summary\":\"Roxy-wi is an open source web interface for managing Haproxy, Nginx, Apache and Ke"
+      "status": 400,
+      "ms": 22738,
+      "ok": false,
+      "sample": "{\"error\":\"canceling statement due to statement timeout\"}"
     },
     {
       "name": "corpus?q=zzz-no-such-product",
-      "status": 200,
-      "ms": 1001,
-      "ok": true,
-      "sample": "{\"q\":\"zzz-no-such-product\",\"rows\":[],\"found\":0,\"searched\":427484,\"indexTotal\":428499,\"syncedAt\":\"2026-11-19T14:26:44.266Z\",\"slice\":true,\"at\":\"2026-11-19T16:43:19.233Z\"}"
+      "status": 400,
+      "ms": 15045,
+      "ok": false,
+      "sample": "{\"error\":\"canceling statement due to statement timeout\"}"
     },
     {
       "name": "corpus dated (published)",
       "status": 200,
       "ms": 0,
-      "ok": true,
-      "sample": "published=2022-07-06,2022-07-06,2022-07-08"
+      "ok": false,
+      "sample": "published="
     },
     {
       "name": "chat (stream)",
       "status": 200,
-      "ms": 253,
+      "ms": 341,
       "ok": true,
-      "sample": "seat=pollinations-openai streamed=true chunks=9 first=252ms total=253ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
+      "sample": "seat=pollinations-openai streamed=true chunks=9 first=341ms total=341ms · {\"id\":\"chatcmpl-a1f5f60b50f3788b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}],\"created\":1793813083,\"model\":\"gpt-oss-20b\",\"object\":\"chat.co"
     }
   ]
 }
