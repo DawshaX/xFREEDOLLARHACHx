@@ -1,7 +1,7 @@
 # TEST80g — الهجوم المينيمالي المضمون: مافيش دوال ولا python — curl خام بأوامر
 # بدائية جدًا (dpkg --configure -a وحده — ما اتنفذش ولا مرة مقاس) + continue-on-error
 # على كل خطوة عشان الكل يتنفذ محكم.
-name: "kali root attack v3 (TEST88 hub — pip+clone+binaries: 23 أداة مستقلة عن dpkg)"
+name: "kali root attack v3 (TEST89 hub — فكسات chisel/bloodhound/osintgram + عينة تأكيد)"
 on:
   push:
     paths:
@@ -53,7 +53,7 @@ jobs:
         continue-on-error: true
         run: |
           L=state/root-attack-log.txt
-          for tool in subfinder naabu dnsx httpx katana cariddi dockle grype syft trufflehog bettercap asnmap shuffledns chisel ligolo-ng mongosh maigret h8mail prowler scoutsuite pacu certipy bloodhound-python ssh-audit semgrep sublist3r volatility osintgram netexec routersploit photon; do
+          for tool in chisel bloodhound-python osintgram amass bettercap volatility routersploit scoutsuite; do
             curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>/dev/null || echo "REQ_FAIL:$tool" >> $L
             echo "" >> $L
           done
