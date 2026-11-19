@@ -5,7 +5,7 @@
 # النشر: release «kali-store» على نفس الريبو (github.token contents:write — مقاس
 # بنفس نمط hub-release-refresh). Hack-STORAGE لما صلاحية الكتابة تتفعل، المثبت
 # بيقبل KALI_STORE_URL — نفس الملفات تعمل there بلا أي تغيير كود.
-name: "kali store builder v2 (docker كالي نظيف → tarballs → release kali-store)"
+name: "kali store builder v3 (docker كالي نظيف → tarballs → release kali-store)"
 on:
   push:
     paths:
@@ -27,48 +27,62 @@ jobs:
     steps:
       - name: بناء tarballs داخل كالي نظيف (dpkg سليم هناك)
         run: |
-          mkdir -p store
+          mkdir -p store state
           docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
             export DEBIAN_FRONTEND=noninteractive
-            apt-get update -qq 2>&1 | tail -1 || true
+            echo "=== kali-store build $(date -u +%FT%TZ) ===" | tee /store/build.log
+            apt-get update 2>&1 | tail -3 | tee -a /store/build.log || true
             APT_PKGS="metasploit-framework ettercap exiftool libimage-exiftool-perl steghide arp-scan cherrytree casefile dradis recordmydesktop wkhtmltopdf evilgrade maskprocessor rainbowcrack redis-server elfutils ltrace strace zsh vim aria2 python3-pip dvcs-ripper king-phisher ghidra w3af sidguesser netexec crackmapexec powershell-empire faraday libreoffice gvm"
-            PIP_PKGS="fernet pgcli pentestly ssrfmap gh-dork social-analyzer netexec"
-            apt-get install -y --no-install-recommends curl ca-certificates >/dev/null 2>&1 || true
+            PIP_PKGS="pgcli pentestly ssrfmap gh-dork social-analyzer fernet"
+            apt-get install -y --no-install-recommends curl ca-certificates git python3-pip >/dev/null 2>&1 || true
             apt-get install -y --no-install-recommends $APT_PKGS > /store/apt.log 2>&1 || apt-get -f install -y >> /store/apt.log 2>&1 || true
+            tail -5 /store/apt.log >> /store/build.log || true
             PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --break-system-packages -q $PIP_PKGS > /store/pip.log 2>&1 || true
             git clone --depth 1 https://github.com/carlospolop/PEASS-ng /opt/PEASS-ng >/dev/null 2>&1 || true
             git clone --depth 1 https://github.com/vulnersCom/nmap-vulners /usr/share/nmap/vulners >/dev/null 2>&1 || true
+            SITE=$(python3 -c "import site;print(site.getsitepackages()[0])" 2>/dev/null || echo /usr/lib/python3/dist-packages)
             for p in $APT_PKGS; do
               if dpkg -s $p >/dev/null 2>&1; then
                 dpkg -L $p | grep -v -E "^/etc/|/usr/share/doc/|/usr/share/man/" > /tmp/fl.txt
                 tar czf /store/$p.tar.gz -T /tmp/fl.txt 2>/dev/null || true
-                echo "OK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)"
+                echo "OK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build.log
               else
-                echo "MISS:$p"
+                echo "MISS:$p" | tee -a /store/build.log
               fi
             done
-            # pip-in-container → tarball من الvenv النظامي
-            for p in $PIP_PKGS fernet pgcli pentestly ssrfmap gh-dork social-analyzer netexec; do
-              if command -v $p >/dev/null 2>&1 || pip3 show ${p} >/dev/null 2>&1; then
-                tar czf /store/$p.tar.gz $(python3 -c "import site;print(site.getsitepackages()[0])" 2>/dev/null) $(command -v $p 2>/dev/null) 2>/dev/null || true
-                echo "PIPOK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)"
+            for p in $PIP_PKGS; do
+              if command -v $p >/dev/null 2>&1 || pip3 show $p >/dev/null 2>&1; then
+                tar czf /store/$p.tar.gz "$SITE" $(command -v $p 2>/dev/null) 2>/dev/null || true
+                echo "PIPOK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build.log
               else
-                echo "PIPMISS:$p"
+                echo "PIPMISS:$p" | tee -a /store/build.log
               fi
             done
-            [ -d /opt/PEASS-ng ] && tar czf /store/peass-ng.tar.gz /opt/PEASS-ng $(command -v linpeas 2>/dev/null || true) 2>/dev/null && echo "OK:peass-ng $(stat -c%s /store/peass-ng.tar.gz)"
-            [ -d /usr/share/nmap/vulners ] && tar czf /store/vulners.tar.gz /usr/share/nmap/vulners 2>/dev/null && echo "OK:vulners $(stat -c%s /store/vulners.tar.gz)"
-            printf "%s\n" "kali-store manifest — built $(date -u +%FT%TZ)" > /store/manifest.txt
-            sort /store/*.txt 2>/dev/null > /store/manifest.txt || true
-            ls -la /store
+            [ -d /opt/PEASS-ng ] && tar czf /store/peass-ng.tar.gz /opt/PEASS-ng 2>/dev/null && echo "OK:peass-ng $(stat -c%s /store/peass-ng.tar.gz)" | tee -a /store/build.log
+            [ -d /usr/share/nmap/vulners ] && tar czf /store/vulners.tar.gz /usr/share/nmap/vulners 2>/dev/null && echo "OK:vulners $(stat -c%s /store/vulners.tar.gz)" | tee -a /store/build.log
+            { echo "=== manifest $(date -u +%FT%TZ) ==="; ls -la /store; } >> /store/build.log
+            cp /store/build.log /store/manifest.txt 2>/dev/null || true
           '
+          cp store/build.log state/kali-store-build.log 2>/dev/null || echo "لا لوج من الكونتينر" > state/kali-store-build.log
+      - name: كوميت لوج البناء (مسار اللوج المعروف — gh api logs EOF)
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot" || true
+          git config user.email "nova@bot.local" || true
+          git add -f state/kali-store-build.log || true
+          git commit -m "state: kali-store build log [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx || true
+          git push origin HEAD:arena/9552f54d-xfreedollarhachx || true
       - name: رفع الأصول على release kali-store
         run: |
+          shopt -s nullglob
+          ASSETS=(store/*.tar.gz)
+          echo "tarballs: ${#ASSETS[@]}"
           ls -la store || true
           gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
             gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف — تفريغ عند / على العقدة بلا dpkg (TEST91)"
-          gh release upload kali-store store/*.tar.gz store/manifest.txt --clobber -R "$GITHUB_REPOSITORY"
-          echo "::notice::kali-store assets: $(ls store/*.tar.gz | wc -l) tarballs"
+          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/manifest.txt --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ kali-store: ${#ASSETS[@]} tarballs مرفوعة"
+          exit 0
       - name: إبلاغ الهَب بالجرد (exec)
         run: |
           COUNT=$(ls store/*.tar.gz 2>/dev/null | wc -l)
