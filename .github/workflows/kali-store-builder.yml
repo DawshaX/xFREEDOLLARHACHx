@@ -1,0 +1,75 @@
+# TEST91 — مصنع المخزن: أدوات dpkg-only متبنية من docker كالي نظيف.
+# ليه docker؟ لأن dpkg على عقدة الأسطول المجروحة ميت (مقاس TEST80: بيموت بصمت)،
+# لكن runner نظيف فيه dpkg سليم — بنثبت الحزم هناك وبنفرّغها tarball جاهزة
+# للتفريغ عند / على العقدة بلا dpkg أصلًا. كل ملف = أداة واحدة.
+# النشر: release «kali-store» على نفس الريبو (github.token contents:write — مقاس
+# بنفس نمط hub-release-refresh). Hack-STORAGE لما صلاحية الكتابة تتفعل، المثبت
+# بيقبل KALI_STORE_URL — نفس الملفات تعمل there بلا أي تغيير كود.
+name: kali store builder (docker كالي نظيف → tarballs → release kali-store)
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-store-builder.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: kali-store-builder
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: بناء tarballs داخل كالي نظيف (dpkg سليم هناك)
+        run: |
+          mkdir -p store
+          docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq 2>&1 | tail -1 || true
+            APT_PKGS="metasploit-framework ettercap exiftool libimage-exiftool-perl steghide arp-scan cherrytree casefile dradis recordmydesktop wkhtmltopdf evilgrade maskprocessor rainbowcrack redis-server elfutils ltrace strace zsh vim aria2 python3-pip dvcs-ripper king-phisher ghidra w3af sidguesser netexec crackmapexec powershell-empire faraday libreoffice gvm"
+            PIP_PKGS="fernet pgcli pentestly ssrfmap gh-dork social-analyzer netexec"
+            apt-get install -y --no-install-recommends curl ca-certificates >/dev/null 2>&1 || true
+            apt-get install -y --no-install-recommends $APT_PKGS > /store/apt.log 2>&1 || apt-get -f install -y >> /store/apt.log 2>&1 || true
+            PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --break-system-packages -q $PIP_PKGS > /store/pip.log 2>&1 || true
+            git clone --depth 1 https://github.com/carlospolop/PEASS-ng /opt/PEASS-ng >/dev/null 2>&1 || true
+            git clone --depth 1 https://github.com/vulnersCom/nmap-vulners /usr/share/nmap/vulners >/dev/null 2>&1 || true
+            for p in $APT_PKGS; do
+              if dpkg -s $p >/dev/null 2>&1; then
+                dpkg -L $p | grep -v -E "^/etc/|/usr/share/doc/|/usr/share/man/" > /tmp/fl.txt
+                tar czf /store/$p.tar.gz -T /tmp/fl.txt 2>/dev/null || true
+                echo "OK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)"
+              else
+                echo "MISS:$p"
+              fi
+            done
+            # pip-in-container → tarball من الvenv النظامي
+            for p in $PIP_PKGS fernet pgcli pentestly ssrfmap gh-dork social-analyzer netexec; do
+              if command -v $p >/dev/null 2>&1 || pip3 show ${p} >/dev/null 2>&1; then
+                tar czf /store/$p.tar.gz $(python3 -c "import site;print(site.getsitepackages()[0])" 2>/dev/null) $(command -v $p 2>/dev/null) 2>/dev/null || true
+                echo "PIPOK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)"
+              else
+                echo "PIPMISS:$p"
+              fi
+            done
+            [ -d /opt/PEASS-ng ] && tar czf /store/peass-ng.tar.gz /opt/PEASS-ng $(command -v linpeas 2>/dev/null || true) 2>/dev/null && echo "OK:peass-ng $(stat -c%s /store/peass-ng.tar.gz)"
+            [ -d /usr/share/nmap/vulners ] && tar czf /store/vulners.tar.gz /usr/share/nmap/vulners 2>/dev/null && echo "OK:vulners $(stat -c%s /store/vulners.tar.gz)"
+            printf "%s\n" "kali-store manifest — built $(date -u +%FT%TZ)" > /store/manifest.txt
+            sort /store/*.txt 2>/dev/null > /store/manifest.txt || true
+            ls -la /store
+          '
+      - name: رفع الأصول على release kali-store
+        run: |
+          ls -la store || true
+          gh release upload kali-store store/*.tar.gz store/manifest.txt --clobber -R "$GITHUB_REPOSITORY" 2>&1 || {
+            gh release create kali-store store/*.tar.gz store/manifest.txt -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف — تفريغ عند / على العقدة بلا dpkg (TEST91)"; }
+      - name: إبلاغ الهَب بالجرد (exec)
+        run: |
+          COUNT=$(ls store/*.tar.gz 2>/dev/null | wc -l)
+          curl -s -m 120 -X POST "https://nova.waifly.com/api/kali-env/exec" \
+            -H "x-nova-token: ${{ secrets.NOVA_EXEC_TOKEN }}" -H "content-type: application/json" \
+            -d "{\"command\":\"echo KALI_STORE_BUILT assets=$COUNT $(date -u +%FT%TZ)\",\"timeoutMs\":60000}" | tail -c 400 || true

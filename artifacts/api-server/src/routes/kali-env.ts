@@ -515,6 +515,27 @@ const TOOL_BIN_ALIASES: Record<string, string[]> = {
   hcxtools: ["hcxpcapngtool", "hcxhashtool", "hcxwltool", "hcxtools"],
   scoutsuite: ["scout", "scoutsuite"],
   "ligolo-ng": ["ligolo-ng", "agent"],
+  /* TEST91 — أدوات المخزن: أمر التثبيت ≠ اسم الأداة في الكتالوج كثيرًا */
+  maskprocessor: ["maskprocessor", "mp"],
+  rainbowcrack: ["rcrack", "rainbowcrack"],
+  redis: ["redis-server", "redis-cli"],
+  elfutils: ["eu-readelf", "readelf"],
+  "python3-pip": ["pip3"],
+  "metasploit-framework": ["msfconsole", "msfvenom"],
+  libreoffice: ["libreoffice", "soffice"],
+  gvm: ["gvm-cli", "gvmd", "gvm-setup"],
+  w3af: ["w3af_console", "w3af_gui", "w3af"],
+  ghidra: ["ghidraRun", "ghidra", "analyzeHeadless"],
+  "dvcs-ripper": ["rip-git", "rip-svn"],
+  "peass-ng": ["linpeas", "linpeas.sh"],
+  socialanalyzer: ["social-analyzer", "socialanalyzer"],
+  "gh-dork": ["gh-dork"],
+  fernet: ["fernet"],
+  pentestly: ["pentestly"],
+  ssrfmap: ["ssrfmap"],
+  sidguesser: ["sidsweep", "sidguesser"],
+  aria2: ["aria2c", "aria2"],
+  "king-phisher": ["king-phisher"],
 };
 
 /**
@@ -1074,10 +1095,63 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   const GUEST_DIRS = "var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail";
   /* TEST77 — الأمر حسب المصدر: apt → pip → GitHub release. كل سلسلة بتنتهي
    * بنفس بوابة INSTALL_OK — مافيش تغيير في بروتوكول الرد. */
+  /* TEST91 — طبقة المخزن (الجديدة أول السلسلة): tarballs مبنية داخل docker
+   * كالي نظيف (kali-store-builder.yml — dpkg سليم هناك، ميت على عقدتنا) ومرفوعة
+   * على release «kali-store» بنفس الريبو — تفريغ عند / مباشرة بلا dpkg أصلًا.
+   * KALI_STORE_URL قابل للتحويل لHack-STORAGE لحظة صلاحية الكتابة تتفعل (مقاس:
+   * التوكِن الحالي بيقرأ لكن أي كتابة = 403 integration). */
+  const STORE_BASE = process.env.KALI_STORE_URL ?? "https://github.com/DawshaX/xFREEDOLLARHACHx/releases/download/kali-store";
+  const STORE_TOOLS: Record<string, { file: string; cmd?: string | string[]; pip?: string }> = {
+    "metasploit-framework": { file: "metasploit-framework.tar.gz", cmd: ["msfconsole", "msfvenom"] },
+    ettercap: { file: "ettercap.tar.gz", cmd: ["ettercap"] },
+    exiftool: { file: "exiftool.tar.gz", cmd: ["exiftool"] },
+    steghide: { file: "steghide.tar.gz", cmd: ["steghide"] },
+    "arp-scan": { file: "arp-scan.tar.gz", cmd: ["arp-scan"] },
+    cherrytree: { file: "cherrytree.tar.gz", cmd: ["cherrytree"] },
+    casefile: { file: "casefile.tar.gz", cmd: ["casefile"] },
+    dradis: { file: "dradis.tar.gz", cmd: ["dradis"] },
+    recordmydesktop: { file: "recordmydesktop.tar.gz", cmd: ["recordmydesktop"] },
+    wkhtmltopdf: { file: "wkhtmltopdf.tar.gz", cmd: ["wkhtmltopdf"] },
+    evilgrade: { file: "evilgrade.tar.gz", cmd: ["evilgrade"] },
+    maskprocessor: { file: "maskprocessor.tar.gz", cmd: ["maskprocessor", "mp"] },
+    rainbowcrack: { file: "rainbowcrack.tar.gz", cmd: ["rcrack", "rainbowcrack"] },
+    redis: { file: "redis-server.tar.gz", cmd: ["redis-server", "redis-cli"] },
+    elfutils: { file: "elfutils.tar.gz", cmd: ["eu-readelf", "readelf"] },
+    ltrace: { file: "ltrace.tar.gz", cmd: ["ltrace"] },
+    strace: { file: "strace.tar.gz", cmd: ["strace"] },
+    zsh: { file: "zsh.tar.gz", cmd: ["zsh"] },
+    vim: { file: "vim.tar.gz", cmd: ["vim"] },
+    aria2: { file: "aria2.tar.gz", cmd: ["aria2c", "aria2"] },
+    "python3-pip": { file: "python3-pip.tar.gz", cmd: ["pip3"] },
+    "dvcs-ripper": { file: "dvcs-ripper.tar.gz", cmd: ["rip-git", "rip-svn"] },
+    "king-phisher": { file: "king-phisher.tar.gz", cmd: ["king-phisher"] },
+    ghidra: { file: "ghidra.tar.gz", cmd: ["ghidraRun", "ghidra", "analyzeHeadless"] },
+    w3af: { file: "w3af.tar.gz", cmd: ["w3af_console", "w3af_gui", "w3af"] },
+    sidguesser: { file: "sidguesser.tar.gz", cmd: ["sidsweep", "sidguesser"] },
+    netexec: { file: "netexec.tar.gz", cmd: ["nxc", "netexec"] },
+    crackmapexec: { file: "crackmapexec.tar.gz", cmd: ["crackmapexec", "cme"] },
+    empire: { file: "powershell-empire.tar.gz", cmd: ["powershell-empire", "empire"] },
+    faraday: { file: "faraday.tar.gz", cmd: ["faraday-client", "faraday"] },
+    libreoffice: { file: "libreoffice.tar.gz", cmd: ["libreoffice", "soffice"] },
+    gvm: { file: "gvm.tar.gz", cmd: ["gvm-cli", "gvmd", "gvm-setup"] },
+    fernet: { file: "fernet.tar.gz", cmd: ["fernet"] },
+    pgcli: { file: "pgcli.tar.gz", cmd: ["pgcli"], pip: "pgcli" },
+    pentestly: { file: "pentestly.tar.gz", cmd: ["pentestly"] },
+    ssrfmap: { file: "ssrfmap.tar.gz", cmd: ["ssrfmap"] },
+    "gh-dork": { file: "gh-dork.tar.gz", cmd: ["gh-dork"] },
+    socialanalyzer: { file: "social-analyzer.tar.gz", cmd: ["social-analyzer", "socialanalyzer"], pip: "social-analyzer" },
+    "peass-ng": { file: "peass-ng.tar.gz", cmd: ["linpeas", "linpeas.sh"] },
+    vulners: { file: "vulners.tar.gz", cmd: ["vulners"] },
+  };
   const GIT = GITHUB_TOOLS[tool];
   const PIP = PIP_TOOLS[tool];
   let installCmd: string;
-  if (GIT && GIT.repo && !CLONE_EXTRA[tool]) {
+  if (STORE_TOOLS[tool] && STORE_TOOLS[tool].file) {
+    const S = STORE_TOOLS[tool];
+    const gate = (Array.isArray(S.cmd) ? S.cmd : [S.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ");
+    const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
+    installCmd = `cd /tmp && rm -f store-pkg.tar.gz && (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o store-pkg.tar.gz && ls -la store-pkg.tar.gz && tar xzf store-pkg.tar.gz -C / 2>&1 | tail -2 || echo STORE_MISS${pipFallback}); ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+  } else if (GIT && GIT.repo && !CLONE_EXTRA[tool]) {
     const isCloneTool = tool === "dirsearch" || tool === "arjun";
     installCmd = isCloneTool
       ? `rm -rf /tmp/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${GIT.repo} /tmp/${tool} 2>&1 | tail -2; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed /tmp/${tool} 2>&1 || pip3 install -q /tmp/${tool} 2>&1) | tail -3; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`
