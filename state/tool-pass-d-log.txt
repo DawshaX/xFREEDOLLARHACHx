@@ -1,108 +1,38 @@
-=== TEST92i-D 2026-11-19T06:09:06Z ===
---- INSTALL maigret 06:09:06 ---
+=== TEST92i-D 2026-11-19T06:20:35Z ===
+--- INSTALL maigret 06:20:35 ---
 {"ok":true,"tool":"maigret","pkg":"maigret","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires asgiref<=3.11.1,>=3.2.10, but you have asgiref 3.13.0 which is incompatible.\nmitmproxy 12.2.3 requires Brotli<=1.2.0,>=1.0, but you have brotli 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:maigret\n"}
---- INSTALL h8mail 06:09:28 ---
+--- INSTALL h8mail 06:20:53 ---
 {"ok":true,"tool":"h8mail","pkg":"h8mail","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires asgiref<=3.11.1,>=3.2.10, but you have asgiref 3.13.0 which is incompatible.\nmitmproxy 12.2.3 requires Brotli<=1.2.0,>=1.0, but you have brotli 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:h8mail\n"}
---- INSTALL prowler 06:09:31 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL scoutsuite 06:09:37 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL pacu 06:09:37 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL certipy 06:09:37 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL bloodhound-python 06:09:38 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL ssh-audit 06:09:38 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL semgrep 06:09:38 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL sherlock 06:09:39 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL sublist3r 06:09:39 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL dirsearch 06:09:39 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL arjun 06:09:40 ---
-{"ok":false,"tool":"arjun","pkg":"arjun","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
---- INSTALL photon 06:09:42 ---
-{"ok":false,"tool":"photon","pkg":"photon","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
---- INSTALL osintgram 06:09:43 ---
-{"ok":false,"tool":"osintgram","pkg":"osintgram","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
---- INSTALL gh-dork 06:09:44 ---
-{"ok":false,"tool":"gh-dork","pkg":"gh-dork","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
---- INSTALL amass 06:09:44 ---
-{"ok":false,"tool":"amass","pkg":"amass","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
---- INSTALL volatility 06:09:44 ---
-{"ok":false,"tool":"volatility","pkg":"volatility","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
-=== D DONE 2026-11-19T06:09:45Z ===
+--- INSTALL prowler 06:20:56 ---
+{"ok":true,"tool":"prowler","pkg":"prowler","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires pyparsing<=3.3.2,>=2.4.2, but you have pyparsing 3.3.3 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nfastapi 0.143.3 requires pydantic>=2.9.0, but you have pydantic 1.10.13 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:prowler\n"}
+--- INSTALL scoutsuite 06:21:24 ---
+{"ok":true,"tool":"scoutsuite","pkg":"scoutsuite","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires cryptography<=50.0.0,>=42.0, but you have cryptography 50.0.2 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires pyparsing<=3.3.2,>=2.4.2, but you have pyparsing 3.3.3 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:scoutsuite\n"}
+--- INSTALL pacu 06:23:25 ---
+{"ok":true,"tool":"pacu","pkg":"pacu","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires cryptography<=50.0.0,>=42.0, but you have cryptography 50.0.2 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires pyparsing<=3.3.2,>=2.4.2, but you have pyparsing 3.3.3 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:pacu\n"}
+--- INSTALL certipy 06:24:02 ---
+{"ok":true,"tool":"certipy","pkg":"certipy","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires Brotli<=1.2.0,>=1.0, but you have brotli 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires pyparsing<=3.3.2,>=2.4.2, but you have pyparsing 3.3.3 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:certipy\n"}
+--- INSTALL bloodhound-python 06:24:12 ---
+{"ok":true,"tool":"bloodhound-python","pkg":"bloodhound-python","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires cryptography<=50.0.0,>=42.0, but you have cryptography 50.0.2 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires pyparsing<=3.3.2,>=2.4.2, but you have pyparsing 3.3.3 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n/usr/local/bin/bloodhound-python\nINSTALL_OK:bloodhound-python\n"}
+--- INSTALL ssh-audit 06:24:19 ---
+{"ok":true,"tool":"ssh-audit","pkg":"ssh-audit","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:ssh-audit\n"}
+--- INSTALL semgrep 06:24:21 ---
+{"ok":true,"tool":"semgrep","pkg":"semgrep","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires pyparsing<=3.3.2,>=2.4.2, but you have pyparsing 3.3.3 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nfastapi 0.143.3 requires opentelemetry-api>=1.44.0, but you have opentelemetry-api 1.37.0 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:semgrep\n"}
+--- INSTALL sherlock 06:24:38 ---
+{"ok":true,"tool":"sherlock","pkg":"sherlock","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires cryptography<=50.0.0,>=42.0, but you have cryptography 50.0.2 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires pyparsing<=3.3.2,>=2.4.2, but you have pyparsing 3.3.3 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:sherlock\n"}
+--- INSTALL sublist3r 06:24:51 ---
+{"ok":true,"tool":"sublist3r","pkg":"sublist3r","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires cryptography<=50.0.0,>=42.0, but you have cryptography 50.0.2 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires pyparsing<=3.3.2,>=2.4.2, but you have pyparsing 3.3.3 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:sublist3r\n"}
+--- INSTALL dirsearch 06:24:54 ---
+{"ok":true,"tool":"dirsearch","pkg":"dirsearch","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/tmp/dirsearch'...\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nfastapi 0.143.3 requires opentelemetry-api>=1.44.0, but you have opentelemetry-api 1.37.0 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:dirsearch\n"}
+--- INSTALL arjun 06:25:02 ---
+{"ok":true,"tool":"arjun","pkg":"arjun","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/tmp/arjun'...\nmitmproxy 12.2.3 requires pyparsing<=3.3.2,>=2.4.2, but you have pyparsing 3.3.3 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:arjun\n"}
+--- INSTALL photon 06:25:11 ---
+{"ok":true,"tool":"photon","pkg":"photon","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/photon'...\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:photon\n"}
+--- INSTALL osintgram 06:25:14 ---
+{"ok":true,"tool":"osintgram","pkg":"osintgram","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/osintgram'...\nINSTALL_OK:osintgram\n"}
+--- INSTALL gh-dork 06:25:15 ---
+{"ok":false,"tool":"gh-dork","pkg":"gh-dork","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:gh-dork\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL amass 06:25:16 ---
+{"ok":true,"tool":"amass","pkg":"amass","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/owasp-amass/amass/releases/download/v5.1.3/amass_linux_amd64.tar.gz\n-rw-r--r-- 1 root root 16973513 Nov 19 06:25 pkg.bin\nBIN=./amass_linux_amd64/amass\nINSTALL_OK:amass\n"}
+--- INSTALL volatility 06:25:18 ---
+{"ok":true,"tool":"volatility","pkg":"volatility","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nplaso 20260119 requires libvsgpt-python>=20211115, which is not installed.\nplaso 20260119 requires libvshadow-python>=20160109, which is not installed.\nplaso 20260119 requires libvslvm-python>=20160109, which is not installed.\nplaso 20260119 requires opensearch-py, which is not installed.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:volatility\n"}
+=== D DONE 2026-11-19T06:25:21Z ===
