@@ -1,13 +1,6 @@
-=== debs2 2026-11-19T10:13:07Z ===
-Fetched 22.2 MB in 1s (21.4 MB/s)
+=== debs2 2026-11-19T10:42:32Z ===
+Fetched 22.2 MB in 1s (15.9 MB/s)
 Reading package lists...
-OK:wkhtmltopdf(fallback) 17329571
-MISS:dvcs-ripper
-MISS:king-phisher
-MISS:legs
-MISS:fernet
-MISS:venom
-MISS:keepnote
-OK:pandoc 29030774
-MISS:w3af
+OK:legion debs=1889 size=1808122895
+OK:fern debs=902 size=528100116
 DEBS2_DONE
