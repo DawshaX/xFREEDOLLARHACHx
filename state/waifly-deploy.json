@@ -1,32 +1,32 @@
 {
-  "at": "2026-11-19T16:22:18.021Z",
+  "at": "2026-11-19T23:09:53.918Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-19T13:32:32Z",
-    "size": 4248939
+    "updatedAt": "2026-11-19T21:17:52Z",
+    "size": 4249241
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "657d5ac13eb20cbce054c41d0457637d7540e796",
-    "builtAt": "2026-11-19T13:32:20.417Z",
+    "commit": "eea0978c58525561a7a67373c5f0e80046bb0437",
+    "builtAt": "2026-11-19T21:17:37.474Z",
     "files": 190,
     "builtBy": "local"
   },
   "boot": {
-    "commit": "657d5ac13eb20cbce054c41d0457637d7540e796",
-    "builtAt": "2026-11-19T13:32:20.417Z",
+    "commit": "eea0978c58525561a7a67373c5f0e80046bb0437",
+    "builtAt": "2026-11-19T21:17:37.474Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-19T13:32:32Z) — حارس لوب التحديث",
-    "lastCheckAt": "2026-11-19T16:17:51.426Z",
-    "currentBuiltAt": "2026-11-19T13:32:20.417Z",
-    "latestReleaseAt": "2026-11-19T13:32:32Z",
+    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-19T21:17:52Z) — حارس لوب التحديث",
+    "lastCheckAt": "2026-11-19T23:08:12.319Z",
+    "currentBuiltAt": "2026-11-19T21:17:37.474Z",
+    "latestReleaseAt": "2026-11-19T21:17:52Z",
     "restartNeeded": false
   },
   "updaterInstall": null,
@@ -46,18 +46,18 @@
     "count": 13,
     "ids": [
       "self-node",
-      "gh-9-1100",
-      "gh-1-1101",
-      "gh-4-1101",
-      "gh-10-1100",
-      "gh-5-1101",
-      "gh-8-1100",
-      "gh-3-1100",
-      "gh-11-1100",
-      "gh-12-1104",
-      "gh-7-1116",
-      "gh-2-1103",
-      "gh-6-1103"
+      "gh-5-2236",
+      "gh-3-2239",
+      "gh-2-2238",
+      "gh-9-2239",
+      "gh-10-2238",
+      "gh-7-2238",
+      "gh-11-2238",
+      "gh-8-2238",
+      "gh-1-2244",
+      "gh-4-2238",
+      "gh-6-2241",
+      "gh-12-2238"
     ]
   }
 }
