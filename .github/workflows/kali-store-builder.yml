@@ -1,7 +1,7 @@
 # TEST91 v6 — المصنع مقسوم نهائيًا: light فقط هنا (heavy له ملف مستقل kali-store-heavy.yml
 # عشان إعادة بناء light ما تعيدش الثقيل). الدرس المقاس (v5): آخر سطر git clone &&
 # بيقتل الحاوية بعد البناء فالتاربولات بتضيع — كل سطر هنا محمي والنهاية true.
-name: "kali store builder light v6 (حزم صغيرة → tarballs → release kali-store)"
+name: "kali store builder light v7 (حزم صغيرة → tarballs → release kali-store)"
 on:
   push:
     paths:

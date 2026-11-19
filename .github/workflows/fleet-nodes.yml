@@ -27,7 +27,7 @@
 # (workflow_run.workflows) وcheck-workflows.mjs بيقارن doc.name بالحرف — الاسم
 # المبدّل «مخزن كامل 46c9c68» خلّى كوميتات [skip ci] بتاعتها ما توصلش للصفحات.
 # مرجع المخزن الكامل: kali-rootfs @ 46c9c6839b72 (سابقًا في الاسم — دلوقتي هنا).
-name: fleet-nodes
+name: fleet-nodes (TEST93f — موجة 10 بعد جوع السلات)
 
 on:
   # Pushing a change to this file starts a wave — the only trigger available
