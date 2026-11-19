@@ -1,0 +1,82 @@
+# TEST80v4 — الدقة النهائية المقاسة: dpkg --configure -a بيعلق على برومبت تفاعلي
+# (اللوج: start بدون أي ناتج ×3) — العلاج بالحرف: DEBIAN_FRONTEND=noninteractive
+# + --force-confdef --force-confnew + timeout كامل 540s. بعده فحص الفاصل amass.
+name: kali root attack v4 (TEST81 deployment bell — binaries independent of dpkg)
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-root-attack-v4.yml"
+permissions:
+  contents: write
+concurrency:
+  group: kali-root-attack-v4
+  cancel-in-progress: false
+jobs:
+  attack4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: الشفاء الدقيق — dpkg noninteractive مع الوقت الكامل
+        continue-on-error: true
+        run: |
+          L=state/root-attack-log.txt
+          echo "=== V4 $(date -u +%FT%TZ) ===" > $L
+          for i in 1 2; do
+            curl -s -m 560 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d '{"command":"DEBIAN_FRONTEND=noninteractive dpkg --configure -a --force-confdef --force-confnew 2>&1 | tail -8; echo CONFIG_DONE_$?","timeoutMs":540000}' "$HUB/api/kali-env/exec" >> $L 2>&1 || echo "REQ_FAIL_$i" >> $L
+            echo "" >> $L
+            sleep 3
+          done
+          true
+      - name: التحقق الفاصل — amass
+        continue-on-error: true
+        run: |
+          L=state/root-attack-log.txt
+          echo "=== الفاصل: amass ===" >> $L
+          curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d '{"tool":"amass"}' "$HUB/api/kali-env/install" >> $L 2>&1 || echo REQ_FAIL >> $L
+          echo "" >> $L
+          true
+      - name: لو الفاصل نجح — باقي الحرجة
+        continue-on-error: true
+        run: |
+          L=state/root-attack-log.txt
+          if grep -q "INSTALL_OK:amass" $L; then
+            echo "=== amass نجحت — الكل ===" >> $L
+            for tool in dirsearch arjun subfinder naabu dnsx sherlock bettercap arp-scan steghide exiftool routersploit crackmapexec exiftool; do
+              curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>/dev/null || echo "REQ_FAIL:$tool" >> $L
+              echo "" >> $L
+            done
+          else
+            echo "=== amass لسه فاشلة — الشفاء ما كملش، محتاج موجة عقد جديدة (الطاقة النووية) ===" >> $L
+          fi
+          echo "=== DONE $(date -u +%FT%TZ) ===" >> $L
+          true
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot" || true
+          git config user.email "nova@bot.local" || true
+          git add -f state/root-attack-log.txt || true
+          git commit -m "state: root-attack v4 log" || true
+          git pull --no-rebase --no-edit origin arena/82d00f13-xfreedollarhachx || true
+          git push origin HEAD:arena/82d00f13-xfreedollarhachx || true
+          exit 0
+      - name: القياس النهائي
+        continue-on-error: true
+        run: |
+          L=state/root-attack-log.txt
+          sleep 8
+          curl -s -m 280 -H "x-nova-token: $TOKEN" "$HUB/api/kali-env/tools?fresh=$RANDOM" -o /tmp/tools-after.json || true
+          jq '{present, total, measuredOn, stillMissing: ([.groups[].missing] | add)}' /tmp/tools-after.json > state/root-attack-report.json 2>/dev/null || cp /tmp/tools-after.json state/root-attack-report.json
+          echo "=== القياس النهائي ===" >> $L
+          cat state/root-attack-report.json >> $L 2>/dev/null || true
+          git config user.name "nova-bot" || true
+          git config user.email "nova@bot.local" || true
+          git add -f state/root-attack-report.json state/root-attack-log.txt || true
+          git commit -m "state: root-attack v4 report" || true
+          git pull --no-rebase --no-edit origin arena/82d00f13-xfreedollarhachx || true
+          git push origin HEAD:arena/82d00f13-xfreedollarhachx || true
+          exit 0

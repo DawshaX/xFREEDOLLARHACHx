@@ -1,0 +1,69 @@
+# TEST80 — «أمر الروت والهجوم» (المالك 2026-11-18): amass فاشل بالحرف
+# «E: dpkg was interrupted — run dpkg --configure -a» مع ROOT_UID:0
+# الجذر: بقايا dpkg مقطوعة (ملفات /var/lib/dpkg/updates/) — الremedy السطحي
+# ما تنظفش. الهجوم: تنظيف جذر كامل + تحقق audit + تثبيت الأدوات الحرجة
+# واحد واحد بناتج كامل + قياس حي نهائي + تقرير في الريبو.
+name: kali root attack (deep dpkg heal + install critical tools → measured)
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-root-attack.yml"
+permissions:
+  contents: write
+concurrency:
+  group: kali-root-attack
+  cancel-in-progress: false
+jobs:
+  attack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: الهجوم 1 — التنظيف الجذري لdpkg
+        run: |
+          L=state/root-attack-log.txt
+          echo "=== ROOT ATTACK $(date -u +%FT%TZ) ===" > $L
+          export CMD='echo ROOT_UID:$(id -u); rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock; rm -rf /var/lib/dpkg/updates/* /var/lib/dpkg/triggers/File/* 2>/dev/null; dpkg --configure -a --force-confdef --force-confnew 2>&1 | tail -6; dpkg --configure -a --force-confdef --force-confnew 2>&1 | tail -3; DEBIAN_FRONTEND=noninteractive apt-get -f install -y -qq 2>&1 | tail -4; AUD=$(dpkg --audit 2>&1 | head -3); echo AUDIT_START:${AUD:-CLEAN}; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; echo APT_UPDATE_EXIT:$?; echo HEAL_DONE'
+          curl -s -m 500 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" --data-raw "$(python3 -c "import json; print(json.dumps({'command': __import__('os').environ.get('CMD',''), 'timeoutMs': 420000}))" 2>/dev/null || echo '{}')" "$HUB/api/kali-env/exec" >> $L || true
+          echo "" >> $L
+          tail -c 1500 $L
+          true
+      - name: الهجوم 2 — تثبيت الأدوات الحرجة واحد واحد
+        run: |
+          L=state/root-attack-log.txt
+          for tool in amass dirsearch arjun subfinder naabu dnsx sherlock sublist3r bettercap hcxtools arp-scan steghide exiftool sleuthkit; do
+            curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>/dev/null || echo "REQ_FAIL:$tool" >> $L
+            echo "" >> $L
+          done
+          echo "=== installs done $(date -u +%FT%TZ) ===" >> $L
+          grep -o '"tool":"[a-z0-9-]*","pkg":"[a-z0-9-]*","inCatalog":[a-z]*,"root":[a-z]*' $L | head -20 || true
+          true
+      - name: كوميت اللوج (دايمًا)
+        run: |
+          git config user.name "nova-bot" || true
+          git config user.email "nova@bot.local" || true
+          git add -f state/root-attack-log.txt || true
+          git commit -m "state: root-attack log" || true
+          git pull --no-rebase --no-edit origin arena/82d00f13-xfreedollarhachx || true
+          git push origin HEAD:arena/82d00f13-xfreedollarhachx || true
+          exit 0
+      - name: القياس النهائي + التقرير
+        run: |
+          L=state/root-attack-log.txt
+          sleep 8
+          curl -s -m 280 -H "x-nova-token: $TOKEN" "$HUB/api/kali-env/tools?fresh=$RANDOM" -o /tmp/tools-after.json || true
+          jq '{present, total, measuredOn, stillMissing: ([.groups[].missing] | add)}' /tmp/tools-after.json > state/root-attack-report.json 2>/dev/null || cp /tmp/tools-after.json state/root-attack-report.json
+          echo "=== القياس النهائي ===" >> $L
+          cat state/root-attack-report.json >> $L 2>/dev/null || true
+          cat /tmp/measure.py >> $L
+          python3 /tmp/measure.py >> $L 2>&1 || true
+          git config user.name "nova-bot" || true
+          git config user.email "nova@bot.local" || true
+          git add -f state/root-attack-report.json state/root-attack-log.txt || true
+          git commit -m "state: root-attack report + log" || true
+          git pull --no-rebase --no-edit origin arena/82d00f13-xfreedollarhachx || true
+          git push origin HEAD:arena/82d00f13-xfreedollarhachx || true
+          exit 0

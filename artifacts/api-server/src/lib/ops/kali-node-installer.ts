@@ -49,7 +49,7 @@ const BASE = path.dirname(ROOTFS);
 const MARKER = path.join(BASE, ".kali-node-installed");
 const LOCK = path.join(BASE, ".kali-node-lock");
 const T0 = Date.now();
-const SOFT_DEADLINE = 9 * 60 * 1000;
+const SOFT_DEADLINE = Number(process.env.NOVA_KALI_SOFT_DEADLINE_MS || 30 * 60 * 1000); // TEST67 — 30د افتراضي (المخزن 8.5GB والمنافسة بتخلي ال9د مش كفاية)
 
 /** خروج مُتسلسل: بيرمي عشان finally يشال اللوك قبل ما العملية تقفل — مافيش لوك يتيم أبدًا. */
 class KaliExit extends Error {
