@@ -1,0 +1,12 @@
+=== empire 2026-11-19T10:13:05Z ===
+Fetched 22.2 MB in 1s (22.2 MB/s)
+Reading package lists...
+OK:powershell-empire orig=1049706314 parts=1
+EMPIRE_DONE
+total 1025252
+drwxr-xr-x  2 runner runner       4096 Nov 19 10:15 .
+drwxr-xr-x 15 runner runner       4096 Nov 19 10:13 ..
+-rw-r--r--  1 root   root       132650 Nov 19 10:14 apt-empire.log
+-rw-r--r--  1 root   root          152 Nov 19 10:15 build-empire.log
+-rw-r--r--  1 root   root   1049706314 Nov 19 10:15 powershell-empire.tar.gz.part_00
+UP_OK:powershell-empire.tar.gz.part_00 try1
