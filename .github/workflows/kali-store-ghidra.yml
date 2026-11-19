@@ -3,7 +3,7 @@
 # بيثّب openjdk-21 لو ناقص — الجست ماعندهوش java). retdec tar.xz من releases
 # (avast/retdec) → /opt/retdec + symlinks. كل مرحلة بلوج صريح يتكوميت دايمًا
 # (الدرس: اللوج من results-receiver EOF — الكوميت هو اللوج الموثوق).
-name: "kali store ghidra+retdec v2 (gh api + بلوج كامل → release kali-store)"
+name: "kali store ghidra+retdec v3 (retdec v5.0 naming → release kali-store)"
 on:
   push:
     paths:
@@ -12,7 +12,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: kali-store-ghidra
+  group: kali-store-ghidra-v3
   cancel-in-progress: false
 jobs:
   re:
@@ -48,13 +48,13 @@ jobs:
             echo "MISS:ghidra (لا URL — rate limit؟)" | tee -a state/kali-store-ghidra.log
           fi
           # ── retdec ──
-          RURL=$(gh api repos/avast/retdec/releases/latest --jq '.assets[].browser_download_url' 2>/dev/null | grep 'linux-64b\.tar\.xz' | head -1)
+          RURL=$(gh api repos/avast/retdec/releases/latest --jq '.assets[].browser_download_url' 2>/dev/null | grep -i 'linux.*release\.tar\.xz' | head -1)
           echo "retdec URL=$RURL" | tee -a state/kali-store-ghidra.log
           if [ -n "$RURL" ]; then
             if curl -sfL --retry 3 -m 1200 "$RURL" -o /tmp/retdec.tar.xz; then
-              rm -rf /opt/retdec /opt/retdec-*
+              rm -rf /opt/retdec /opt/retdec-* /opt/RetDec-*
               tar xJf /tmp/retdec.tar.xz -C /opt
-              [ -d /opt/retdec ] || mv /opt/retdec-* /opt/retdec 2>/dev/null || true
+              [ -d /opt/retdec ] || { mv /opt/RetDec-* /opt/retdec 2>/dev/null || mv /opt/retdec-* /opt/retdec 2>/dev/null; true; }
               ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec-decompiler
               ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec
               (cd / && tar czf "$WORK/store/retdec.tar.gz" opt/retdec usr/local/bin/retdec-decompiler usr/local/bin/retdec) && echo "OK:retdec $(stat -c%s "$WORK/store/retdec.tar.gz")" | tee -a state/kali-store-ghidra.log || echo "FAIL:retdec-tar" | tee -a state/kali-store-ghidra.log

@@ -188,7 +188,7 @@ const APT_CATALOG: Record<string, string[]> = {
     "censys", "shodan", "isr-evilgrade".replace("isr-", ""),
   ],
   "02-تحليل-الثغرات": [
-    "nikto", "nuclei", "wapiti", "legs", "nmap", " Lynis".trim().toLowerCase(), "unix-privesc-check",
+    "nikto", "nuclei", "wapiti", "legion", "nmap", " Lynis".trim().toLowerCase(), "unix-privesc-check",
     "checksec", "gvm", "openvas", "pentestly", "pip-audit", "trivy", "grype",
   ],
   "03-تحليل-تطبيقات-الويب": [
@@ -208,7 +208,7 @@ const APT_CATALOG: Record<string, string[]> = {
   ],
   "06-هجمات-اللاسلكي": [
     "aircrack-ng", "airmon-ng", "airodump-ng", "aireplay-ng", "airbase-ng", "reaver",
-    "bully", "wifite", "kismet", "hcxdumptool", "hcxtools", "hashcat", "fernet",
+    "bully", "wifite", "kismet", "hcxdumptool", "hcxtools", "hashcat", "fern",
     "fern-wifi-cracker", "pixiewps", "wifipumpkin3", "eaphammer", "hostapd-wpe",
   ],
   "07-الهندسة-العكسية": [
@@ -547,7 +547,7 @@ const TOOL_BIN_ALIASES: Record<string, string[]> = {
   "peass-ng": ["linpeas", "linpeas.sh"],
   socialanalyzer: ["social-analyzer", "socialanalyzer"],
   "gh-dork": ["gh-dork"],
-  fernet: ["fernet"],
+  fern: ["fern"],
   pentestly: ["pentestly"],
   ssrfmap: ["ssrfmap"],
   sidguesser: ["sidsweep", "sidguesser"],
@@ -1094,6 +1094,18 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
       repo: "CrimsonForge-io/king-phisher", cmd: ["king-phisher"],
       wrap: `for f in /opt/king-phisher/tools/*.py; do [ -e "$f" ] || continue; b=$(basename "$f" .py); [ "$b" = "king-phisher" ] && cp "$f" /usr/local/bin/king-phisher && chmod +x /usr/local/bin/king-phisher; done; true`,
     },
+    venom: {
+      repo: "r00t-3xp10it/venom", cmd: "venom",
+      wrap: `cp /opt/venom/venom.sh /usr/local/bin/venom && chmod +x /usr/local/bin/venom`,
+    },
+    w3af: {
+      repo: "andresriancho/w3af", cmd: ["w3af_console", "w3af"], req: true,
+      wrap: `printf '#!/bin/sh\nexec python3 /opt/w3af/w3af_console "$@"\n' > /usr/local/bin/w3af_console && cp /usr/local/bin/w3af_console /usr/local/bin/w3af && chmod +x /usr/local/bin/w3af_console /usr/local/bin/w3af`,
+    },
+    keepnote: {
+      repo: "mdrasmus/keepnote", cmd: "keepnote",
+      wrap: `[ -f /opt/keepnote/bin/keepnote ] && cp /opt/keepnote/bin/keepnote /usr/local/bin/keepnote && chmod +x /usr/local/bin/keepnote; true`,
+    },
   };
   /* TEST87 — الحقول url مقاسة من api.github.com (السانبوكس 2026-11-19) وخبزت هنا:
    * العقدة (GitHub runner IP مشترك) بتنده api.github.com unauthenticated فبتقع
@@ -1173,11 +1185,9 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     faraday: { file: "faraday.tar.gz", cmd: ["faraday-client", "faraday"] },
     libreoffice: { file: "libreoffice.tar.gz", cmd: ["libreoffice", "soffice"] },
     gvm: { file: "gvm.tar.gz", cmd: ["gvm-cli", "gvmd", "gvm-setup"] },
-    fernet: { file: "fernet-debs.tar.gz", cmd: ["fernet"] },
-    legs: { file: "legs-debs.tar.gz", cmd: ["legs"] },
-    venom: { file: "venom-debs.tar.gz", cmd: ["venom"] },
-    keepnote: { file: "keepnote-debs.tar.gz", cmd: ["keepnote"] },
-    pandoc: { file: "pandoc-debs.tar.gz", cmd: ["pandoc"] },
+        pandoc: { file: "pandoc-debs.tar.gz", cmd: ["pandoc"] },
+    legion: { file: "legion-debs.tar.gz", cmd: ["legion"] },
+    fern: { file: "fern-debs.tar.gz", cmd: ["fern"] },
     pgcli: { file: "pgcli.tar.gz", cmd: ["pgcli"], pip: "pgcli" },
     pentestly: { file: "pentestly.tar.gz", cmd: ["pentestly"] },
     ssrfmap: { file: "ssrfmap.tar.gz", cmd: ["ssrfmap"] },
@@ -1191,7 +1201,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   /* TEST93o — المسار من مرحلتين قصيرتين للأدوات اللي ليها حزم deb: درس TEST80
    * المقاس مرة تانية 08:40/09:04 — الأمر المركب الطويل = proot signal 6 حتى
    * بعد نجاح dpkg نفسه (البوابة بتتقتل). التثبيت قصير ثم البوابة قصيرة. */
-  const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec", "wkhtmltopdf", "legs", "fernet", "venom", "keepnote", "pandoc", "w3af"]);
+  const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec", "wkhtmltopdf", "pandoc", "legion", "fern"]);
   const storeDebs = Boolean(STORE_TOOLS[tool] && DEBS_TOOLS.has(tool));
   const storeGate = STORE_TOOLS[tool] ? (Array.isArray(STORE_TOOLS[tool].cmd) ? STORE_TOOLS[tool].cmd : [STORE_TOOLS[tool].cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ") : "";
   let installCmd: string;
