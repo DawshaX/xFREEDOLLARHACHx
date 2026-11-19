@@ -1,35 +1,35 @@
-=== TEST93p-F 2026-11-19T12:02:50Z ===
---- INSTALL ettercap 12:02:50 ---
-{"ok":true,"tool":"ettercap","pkg":"ettercap","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nFailed to connect to system scope bus via local transport: Operation not permitted (consider using --machine=<user>@.host --user to connect to bus of other user)\nFailed to connect to system scope bus via local transport: Operation not permitted (consider using --machine=<user>@.host --user to connect to bus of other user)\n\nROOT_UID:0\nINSTALL_OK:ettercap\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 14364\n"}
---- INSTALL maskprocessor 12:03:09 ---
-{"ok":false,"tool":"maskprocessor","pkg":"maskprocessor","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nFailed to connect to system scope bus via local transport: Operation not permitted (consider using --machine=<user>@.host --user to connect to bus of other user)\nFailed to connect to system scope bus via local transport: Operation not permitted (consider using --machine=<user>@.host --user to connect to bus of other user)\n\nROOT_UID:0\nINSTALL_FAIL:maskprocessor\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 15733\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL sidguesser 12:03:21 ---
-{"ok":true,"tool":"sidguesser","pkg":"sidguesser","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nUnpacking sidguesser (1.0.5-1kali4) over (1.0.5-1kali4) ...\nSetting up sidguesser (1.0.5-1kali4) ...\n\nROOT_UID:0\n/usr/bin/sidguess\nINSTALL_OK:sidguesser\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 16974\n"}
---- INSTALL fern 12:03:26 ---
-{"ok":true,"tool":"fern","pkg":"fern","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n openrc\n systemd\n\nROOT_UID:0\nINSTALL_OK:fern\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 29964\n"}
---- INSTALL legion 12:10:31 ---
-{"ok":true,"tool":"legion","pkg":"legion","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_OK:legion\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 67578\n"}
---- INSTALL casefile 12:24:06 ---
-{"ok":true,"tool":"casefile","pkg":"casefile","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nSetting up casefile (1.0.1-1kali0) ...\n\nROOT_UID:0\nINSTALL_OK:casefile\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 99087\n"}
---- INSTALL retdec 12:24:46 ---
-{"ok":true,"tool":"retdec","pkg":"retdec","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/local/bin/retdec-decompiler\nINSTALL_OK:retdec\n"}
---- INSTALL gh-dork 12:25:04 ---
-{"ok":true,"tool":"gh-dork","pkg":"gh-dork","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/gh-dork'...\nsslyze 6.3.1 requires tls-parser<3,>=2, but you have tls-parser 1.2.2 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:gh-dork\n"}
---- INSTALL dvcs-ripper 12:25:10 ---
-{"ok":true,"tool":"dvcs-ripper","pkg":"dvcs-ripper","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/dvcs-ripper'...\n/usr/local/bin/rip-git\nINSTALL_OK:dvcs-ripper\n"}
---- INSTALL king-phisher 12:25:11 ---
-{"ok":false,"tool":"king-phisher","pkg":"king-phisher","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/king-phisher'...\nINSTALL_FAIL:king-phisher\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL pentestly 12:25:13 ---
-{"ok":true,"tool":"pentestly","pkg":"pentestly","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/pentestly'...\nfatal: could not read Username for 'https://github.com': No such device or address\nERROR: Could not open requirements file: [Errno 2] No such file or directory: '/opt/pentestly/requirements.txt'\nINSTALL_OK:pentestly\n"}
---- INSTALL ssrfmap 12:25:15 ---
-{"ok":true,"tool":"ssrfmap","pkg":"ssrfmap","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/ssrfmap'...\nINSTALL_OK:ssrfmap\n"}
---- INSTALL w3af 12:25:16 ---
-{"ok":true,"tool":"w3af","pkg":"w3af","inCatalog":true,"root":true,"uid":0,"plane":"runnervm0hi8g — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/w3af'...\nUpdating files:  85% (2445/2845)\rUpdating files:  86% (2447/2845)\rUpdating files:  87% (2476/2845)\rUpdating files:  88% (2504/2845)\rUpdating files:  89% (2533/2845)\rUpdating files:  90% (2561/2845)\rUpdating files:  91% (2589/2845)\rUpdating files:  92% (2618/2845)\rUpdating files:  93% (2646/2845)\rUpdating files:  94% (2675/2845)\rUpdating files:  95% (2703/2845)\rUpdating files:  96% (2732/2845)\rUpdating files:  97% (2760/2845)\rUpdating files:  98% (2789/2845)\rUpdating files:  99% (2817/2845)\rUpdating files: 100% (2845/2845)\rUpdating files: 100% (2845/2845), done.\nERROR: Could not open requirements file: [Errno 2] No such file or directory: '/opt/w3af/requirements.txt'\n/usr/local/bin/w3af_console\nINSTALL_OK:w3af\n"}
-=== F DONE 2026-11-19T12:25:21Z ===
-=== FINAL MEASURE (union) 12:25:21 ===
+=== TEST93p-F 2026-11-19T13:57:46Z ===
+--- INSTALL fern 13:57:46 ---
+{"ok":true,"tool":"fern","pkg":"fern","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n openrc\n systemd\n\nROOT_UID:0\nINSTALL_OK:fern\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 60232\n"}
+--- INSTALL maskprocessor 14:02:09 ---
+{"ok":false,"tool":"maskprocessor","pkg":"maskprocessor","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nProcessing triggers for man-db (2.13.1-1) ...\nsetpriv: setresgid failed: Operation not permitted\n\nROOT_UID:0\nINSTALL_FAIL:maskprocessor\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 73706\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL pgcli 14:02:25 ---
+{"ok":true,"tool":"pgcli","pkg":"pgcli","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nmycli 2.30.3 requires sqlglot~=30.25.0, but you have sqlglot 30.30.0 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:pgcli\n"}
+--- INSTALL routersploit 14:02:32 ---
+{"ok":true,"tool":"routersploit","pkg":"routersploit","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/routersploit'...\nsslyze 6.3.1 requires tls-parser<3,>=2, but you have tls-parser 1.2.2 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:routersploit\n"}
+--- INSTALL socialanalyzer 14:02:36 ---
+{"ok":true,"tool":"socialanalyzer","pkg":"socialanalyzer","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nlimits 4.4.1 requires packaging<25,>=21, but you have packaging 26.2 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/local/bin/social-analyzer\nINSTALL_OK:socialanalyzer\n"}
+--- INSTALL vulners 14:02:46 ---
+{"ok":false,"tool":"vulners","pkg":"vulners","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:vulners\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL subzy 14:02:59 ---
+{"ok":true,"tool":"subzy","pkg":"subzy","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:subzy\n"}
+--- INSTALL gotator 14:03:02 ---
+{"ok":true,"tool":"gotator","pkg":"gotator","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:gotator\n"}
+--- INSTALL evilgrade 14:03:05 ---
+{"ok":false,"tool":"evilgrade","pkg":"evilgrade","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:evilgrade\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL libreoffice 14:03:17 ---
+{"ok":false,"tool":"libreoffice","pkg":"libreoffice","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:libreoffice\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL faraday 14:03:18 ---
+{"ok":true,"tool":"faraday","pkg":"faraday","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:faraday\n"}
+--- INSTALL dradis 14:06:29 ---
+{"ok":true,"tool":"dradis","pkg":"dradis","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:dradis\n"}
+--- INSTALL king-phisher 14:08:22 ---
+{"ok":false,"tool":"king-phisher","pkg":"king-phisher","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/king-phisher'...\nINSTALL_FAIL:king-phisher\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+=== F DONE 2026-11-19T14:08:23Z ===
+=== FINAL MEASURE (union) 14:08:23 ===
 {
   "present": 209,
   "total": 266,
-  "measuredOn": "اتحاد 6 عقدة كالي حية — runnervm0hi8g (rootfs + proot) · runnervm0hi8g (rootfs + proot) · ip-10-0-139-97 (rootfs + proot) · runnervm0hi8g (rootfs + proot) …"
+  "measuredOn": "اتحاد 6 عقدة كالي حية — ip-10-0-139-97 (rootfs + proot) · runnervmccnms (rootfs + proot) · runnervm0hi8g (rootfs + proot) · runnervmccnms (rootfs + proot) …"
 }
 
