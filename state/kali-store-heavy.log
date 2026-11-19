@@ -1,0 +1,18 @@
+=== heavy 2026-11-19T03:52:32Z ===
+Fetched 22.2 MB in 1s (21.6 MB/s)
+Reading package lists...
+OK:powershell-empire 1049714783
+OK:dradis 2554911782
+OK:faraday 5585247457
+MISS:king-phisher
+OK:metasploit-framework 18180010584
+HEAVY_DONE
+total 26728684
+drwxr-xr-x  2 runner runner        4096 Nov 19 04:03 .
+drwxr-xr-x 15 runner runner        4096 Nov 19 03:52 ..
+-rw-r--r--  1 root   root        246913 Nov 19 04:03 apt-heavy.log
+-rw-r--r--  1 root   root           234 Nov 19 04:13 build-heavy.log
+-rw-r--r--  1 root   root    2554911782 Nov 19 03:58 dradis.tar.gz
+-rw-r--r--  1 root   root    5585247457 Nov 19 04:02 faraday.tar.gz
+-rw-r--r--  1 root   root   18180010584 Nov 19 04:13 metasploit-framework.tar.gz
+-rw-r--r--  1 root   root    1049714783 Nov 19 03:55 powershell-empire.tar.gz
