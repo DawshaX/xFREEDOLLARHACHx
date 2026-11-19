@@ -1,19 +1,21 @@
-=== TEST93p-F 2026-11-19T20:50:49Z ===
---- INSTALL evilgrade 20:50:49 ---
-{"ok":true,"tool":"evilgrade","pkg":"evilgrade","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/evilgrade'...\nINSTALL_OK:evilgrade\n"}
---- INSTALL king-phisher 20:50:50 ---
-{"ok":true,"tool":"king-phisher","pkg":"king-phisher","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/king-phisher'...\nINSTALL_OK:king-phisher\n"}
---- INSTALL libreoffice 20:50:52 ---
-{"ok":false,"tool":"libreoffice","pkg":"libreoffice","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 108159\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL maskprocessor 20:50:56 ---
-{"ok":false,"tool":"maskprocessor","pkg":"maskprocessor","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nFailed to connect to system scope bus via local transport: Operation not permitted (consider using --machine=<user>@.host --user to connect to bus of other user)\nFailed to connect to system scope bus via local transport: Operation not permitted (consider using --machine=<user>@.host --user to connect to bus of other user)\n\nROOT_UID:0\nINSTALL_FAIL:maskprocessor\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 108401\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL vulners 20:51:22 ---
-{"ok":false,"tool":"vulners","pkg":"vulners","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 109790\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-=== F DONE 2026-11-19T20:51:25Z ===
-=== FINAL MEASURE (union) 20:51:25 ===
+=== TEST93p-F 2026-11-19T21:27:03Z ===
+--- INSTALL ghidra 21:27:03 ---
+{"ok":true,"tool":"ghidra","pkg":"ghidra","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/local/bin/ghidraRun\nINSTALL_OK:ghidra\n"}
+--- INSTALL retdec 21:27:19 ---
+{"ok":true,"tool":"retdec","pkg":"retdec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/local/bin/retdec-decompiler\nINSTALL_OK:retdec\n"}
+--- INSTALL empire 21:27:29 ---
+{"ok":true,"tool":"empire","pkg":"empire","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/bin/powershell-empire\nINSTALL_OK:empire\n"}
+--- INSTALL dradis 21:28:56 ---
+{"ok":true,"tool":"dradis","pkg":"dradis","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:dradis\n"}
+--- INSTALL faraday 21:32:13 ---
+{"ok":true,"tool":"faraday","pkg":"faraday","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:faraday\n"}
+--- INSTALL libreoffice 21:36:18 ---
+{"ok":false,"tool":"libreoffice","pkg":"libreoffice","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 113608\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+=== F DONE 2026-11-19T21:36:21Z ===
+=== FINAL MEASURE (union) 21:36:21 ===
 {
-  "present": 247,
+  "present": 253,
   "total": 266,
-  "measuredOn": "اتحاد 7 عقدة كالي حية — runnervmccnms (rootfs + proot) · runnervmccnms (rootfs + proot) · runnervm0hi8g (rootfs + proot) · runnervmccnms (rootfs + proot) …"
+  "measuredOn": "اتحاد 7 عقدة كالي حية — runnervmccnms (rootfs + proot) · runnervm0hi8g (rootfs + proot) · runnervmccnms (rootfs + proot) · runnervmccnms (rootfs + proot) …"
 }
 
