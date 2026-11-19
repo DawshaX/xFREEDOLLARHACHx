@@ -1,7 +1,7 @@
 # TEST92h — مسار C: أدوات GitHub binaries (سريع — كل واحدة URL مخبوزة ~10-30ث).
 # العقد الجديدة (موجة TEST93i) مبنية من المخزن الكامل لكن أدوات الURL layer
 # كانت على العقد القديمة الميتة — بتركب من جديد واحد-واحد بretry الجست.
-name: "TEST93u — إعادة C: GitHub binaries على العقد الحية"
+name: "TEST93x-C — الموجة الحية: 18 binaries مسلسل"
 on:
   push:
     paths:
