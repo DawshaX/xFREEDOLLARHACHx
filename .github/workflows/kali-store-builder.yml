@@ -1,9 +1,7 @@
-# TEST91 v5 — مصنع المخزن مقسوم موازيًا: الدرس المقاس (v4): metasploit+libreoffice
-# +ghidra+gvm في job واحد = 55د سقف بيتضرب قبل الرفع. v5: مهمة heavy وlight
-# بالتوازي، كل واحدة ترفع أصولها لحظة الجاهزية — ما يضيعش وقت ولا أصول.
-# ليه docker؟ dpkg على عقدة الأسطول المجروحة ميت (مقاس TEST80) — بنثبت على
-# runner نظيف وبنفرّغ tarballs جاهزة للتفريغ عند / بلا dpkg أصلًا.
-name: "kali store builder v5 (heavy+light موازي → release kali-store)"
+# TEST91 v6 — المصنع مقسوم نهائيًا: light فقط هنا (heavy له ملف مستقل kali-store-heavy.yml
+# عشان إعادة بناء light ما تعيدش الثقيل). الدرس المقاس (v5): آخر سطر git clone &&
+# بيقتل الحاوية بعد البناء فالتاربولات بتضيع — كل سطر هنا محمي والنهاية true.
+name: "kali store builder light v6 (حزم صغيرة → tarballs → release kali-store)"
 on:
   push:
     paths:
@@ -12,19 +10,19 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: kali-store-builder
+  group: kali-store-builder-light
   cancel-in-progress: false
 jobs:
   light:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 45
     permissions:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-      - name: tarballs الخفيفة (26 حزمة صغيرة — حزمة-حزمة)
+      - name: tarballs الخفيفة (حزمة-حزمة — كل واحدة مستقلة)
         run: |
           mkdir -p store state
           docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
@@ -53,16 +51,24 @@ jobs:
                 echo "PIPMISS:$p" | tee -a /store/build-light.log
               fi
             done
-            git clone --depth 1 https://github.com/vulnersCom/nmap-vulners /usr/share/nmap/vulners >/dev/null 2>&1 && tar czf /store/vulners.tar.gz /usr/share/nmap/vulners 2>/dev/null && echo "OK:vulners" | tee -a /store/build-light.log
-          '
+            git clone --depth 1 https://github.com/vulnersCom/nmap-vulners /usr/share/nmap/vulners >/dev/null 2>&1 || true
+            if [ -d /usr/share/nmap/vulners ]; then
+              tar czf /store/vulners.tar.gz /usr/share/nmap/vulners 2>/dev/null || true
+              echo "OK:vulners" | tee -a /store/build-light.log
+            fi
+            echo "LIGHT_DONE" | tee -a /store/build-light.log
+            true
+          ' || echo "docker-exit:$?" | tee -a state/kali-store-light.log
           cp store/build-light.log state/kali-store-light.log 2>/dev/null || true
+          ls -la store | tee -a state/kali-store-light.log
       - name: رفع الأصول الخفيفة
+        continue-on-error: true
         run: |
           shopt -s nullglob
           ASSETS=(store/*.tar.gz)
           echo "light tarballs: ${#ASSETS[@]}"
           gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف — تفريغ عند / بلا dpkg (TEST91 v5)"
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف (TEST91 v6)"
           [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/build-light.log --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ light: ${#ASSETS[@]}"
           exit 0
       - name: كوميت لوج light
@@ -70,49 +76,4 @@ jobs:
         run: |
           git config user.name "nova-bot"; git config user.email "nova@bot.local"
           git add -f state/kali-store-light.log; git commit -m "state: kali-store light log [skip ci]" || true
-          git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx; git push origin HEAD:arena/9552f54d-xfreedollarhachx; exit 0
-  heavy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 50
-    permissions:
-      contents: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: tarballs الثقيلة (7 حزم ضخمة — حزمة-حزمة)
-        run: |
-          mkdir -p store state
-          docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
-            export DEBIAN_FRONTEND=noninteractive
-            echo "=== heavy $(date -u +%FT%TZ) ===" | tee /store/build-heavy.log
-            apt-get update 2>&1 | tail -2 | tee -a /store/build-heavy.log || true
-            PKGS="metasploit-framework libreoffice ghidra gvm powershell-empire dradis faraday ettercap-graphical"
-            apt-get install -y --no-install-recommends curl ca-certificates git >/dev/null 2>&1 || true
-            for p in $PKGS; do
-              if apt-get install -y --no-install-recommends $p >> /store/apt-heavy.log 2>&1; then
-                dpkg -L $p | grep -v -E "^/etc/|/usr/share/doc/|/usr/share/man/" > /tmp/fl.txt
-                tar czf /store/$p.tar.gz -T /tmp/fl.txt 2>/dev/null || true
-                echo "OK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-heavy.log
-              else
-                echo "MISS:$p" | tee -a /store/build-heavy.log
-              fi
-            done
-            git clone --depth 1 https://github.com/carlospolop/PEASS-ng /opt/PEASS-ng >/dev/null 2>&1 && tar czf /store/peass-ng.tar.gz /opt/PEASS-ng 2>/dev/null && echo "OK:peass-ng" | tee -a /store/build-heavy.log
-          '
-          cp store/build-heavy.log state/kali-store-heavy.log 2>/dev/null || true
-      - name: رفع الأصول الثقيلة
-        run: |
-          shopt -s nullglob
-          ASSETS=(store/*.tar.gz)
-          echo "heavy tarballs: ${#ASSETS[@]}"
-          gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف (TEST91 v5)"
-          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/build-heavy.log --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ heavy: ${#ASSETS[@]}"
-          exit 0
-      - name: كوميت لوج heavy
-        continue-on-error: true
-        run: |
-          git config user.name "nova-bot"; git config user.email "nova@bot.local"
-          git add -f state/kali-store-heavy.log; git commit -m "state: kali-store heavy log [skip ci]" || true
           git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx; git push origin HEAD:arena/9552f54d-xfreedollarhachx; exit 0
