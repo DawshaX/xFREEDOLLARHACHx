@@ -1,7 +1,7 @@
 # TEST93p — debs v2: الناقص من v1 (wkhtmltopdf/dvcs-ripper/king-phisher) + debs
 # جديدة (legs/fernet/venom/keepnote/pandoc/w3af). wkhtmltopdf اتشال من kali repo
 # → fallback: deb الرسمي من wkhtmltopdf/packaging releases (jammy amd64).
-name: "kali store debs v5 (ettercap+mp+casefile → release kali-store)"
+name: "kali store debs v6 (casefile من pool مباشرة → release kali-store)"
 on:
   push:
     paths:
@@ -10,7 +10,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: kali-store-debs5
+  group: kali-store-debs6
   cancel-in-progress: false
 jobs:
   debs2:
@@ -31,6 +31,14 @@ jobs:
             apt-get update 2>&1 | tail -2 | tee -a /store/build-debs2.log || true
             apt-get install -y --no-install-recommends curl ca-certificates apt-utils >/dev/null 2>&1 || true
             TOOLS="ettercap:ettercap-common,ettercap-text-only maskprocessor:maskprocessor casefile:casefile"
+            # casefile اتشال من kali-rolling index — جرب pool مباشرة
+            POOL_CASE=$(curl -sfL -m 60 "http://http.kali.org/kali/pool/main/c/casefile/" 2>/dev/null | grep -oE 'casefile_[^"\<]*\.deb' | sort -V | tail -1)
+            echo "pool casefile: $POOL_CASE" | tee -a /store/build-debs2.log
+            if [ -n "$POOL_CASE" ]; then
+              rm -rf /tmp/debs-casefile && mkdir -p /tmp/debs-casefile && cd /tmp/debs-casefile
+              curl -sfL -m 240 "http://http.kali.org/kali/pool/main/c/casefile/$POOL_CASE" -o casefile.deb && tar czf /store/casefile-debs.tar.gz casefile.deb && echo "OK:casefile(pool) $(stat -c%s /store/casefile-debs.tar.gz)" | tee -a /store/build-debs2.log
+              cd /store
+            fi
             for pair in $TOOLS; do
               tool="${pair%%:*}"; pkg="${pair##*:}"
               rm -rf /tmp/debs-$tool; mkdir -p /tmp/debs-$tool; cd /tmp/debs-$tool

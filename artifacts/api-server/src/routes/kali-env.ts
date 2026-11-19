@@ -1227,18 +1227,21 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   /* TEST93g — retry على الجست المكسور: المنافسة بتكسر guests (مقاس TEST66
    * ومقاس 05:38: proot execve Permission denied على جزء من العقد). أول محاولة
    * بتفشل بفشل proot → نعيد مرة تانية فبتروح عقدة تانية سليمة من الأسطول. */
-  let r = await kaliAnywhereExec(cmd, 420_000);
+  let r = await kaliAnywhereExec(cmd, 600_000);
   if (r && /proot error|Permission denied|fatal error: see `proot|signal 6|path\.c:547|Assertion/.test([r.stdout, r.stderr].join("\n"))) {
-    r = await kaliAnywhereExec(cmd, 420_000);
+    r = await kaliAnywhereExec(cmd, 600_000);
   }
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
+  /* TEST93t — العقدة اللي التثبيت حصل عليها: البوابة بتتثبت عليها (مقاس F2:
+   * البوابة على عقدة تانية طازة → INSTALL_FAIL كاذبة رغم «Setting up ✓») */
+  const installHost = (r.plane || "").split(" — ")[0].trim();
   /* المرحلة 2 قصيرة: بوابة منفصلة مع retry ×3 — بعد ما dpkg/الاستخراج خلص فعليًا
    * في المرحلة 1. proot signal 6 عشوائي بيقتل حتى الأوامر القصيرة (مقاس TEST92q:
    * sidguesser «Setting up ✓» والبوابة اتقتلت → INSTALL_FAIL كاذبة). */
   if ((storeDebs || (STORE_TOOLS[tool] && STORE_TOOLS[tool].file)) && r && storeGate) {
     let gout = "";
     for (let gi = 0; gi < 3; gi++) {
-      const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 1; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000);
+      const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 1; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000, installHost);
       if (gr) gout = gr.stdout;
       if (gout.includes(`INSTALL_OK:${tool}`)) break;
     }

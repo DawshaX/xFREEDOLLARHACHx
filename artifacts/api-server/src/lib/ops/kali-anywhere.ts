@@ -159,8 +159,11 @@ export async function kaliFleetUnionExec(
   return { planes, stdouts };
 }
 
-/** التنفيذ الموحّد: هَب → عقدة. null = مافيش طايرة كالي متاحة حالًا. */
-export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise<KaliAnywhereResult | null> {
+/** التنفيذ الموحّد: هَب → عقدة. null = مافيش طايرة كالي متاحة حالًا.
+ * TEST93t — preferHostname: بيثبت التنفيذ على عقدة معينة (hostname أول بالترتيب) —
+ * مقاس F2 11:17: مرحلة التثبيت على runnervmccnms والبوابة راحت على عقدة طازة
+ * تانية → INSTALL_FAIL كاذبة رغم «Setting up ✓». */
+export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000, preferHostname?: string): Promise<KaliAnywhereResult | null> {
   if (!cmd.trim()) return null;  // ── بث حي لكل الصفحات: أي تنفيذ كالي يظهر فورًا في كل مكان ──────────
   const execId = `kali-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const broadcastStart = (plane: string) => {
@@ -197,6 +200,11 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise
   } catch (e) {
     try { broadcastEvent("kali_exec_done", { id: execId, cmd: cmd.slice(0, 200), plane: "fleet-enumeration-failed", exitCode: 127, durationMs: Date.now() - Date.now(), running: false }); } catch {}
     return { stdout: "", stderr: String((e as Error)?.message ?? e).slice(0, 300), exitCode: 127, durationMs: 0, plane: "الهَب — التعذّر على الأسطول" };
+  }
+  /* TEST93t — التثبيت على عقدة معينة أولاً (البوابة لازم نفس عقدة التثبيت) */
+  if (preferHostname) {
+    const hit = nodes.find((n) => n.hostname === preferHostname);
+    if (hit) nodes = [hit, ...nodes.filter((n) => n.id !== hit.id)];
   }
   let lastErr: string | null = null;
   for (const a of nodes) {
