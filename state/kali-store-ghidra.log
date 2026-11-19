@@ -25,3 +25,16 @@ total 553608
 drwxr-xr-x  2 runner runner      4096 Nov 19 11:18 .
 drwxr-xr-x 15 runner runner      4096 Nov 19 11:18 ..
 -rw-r--r--  1 runner runner 566886248 Nov 19 11:18 ghidra.tar.gz
+ghidra URL=https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.2_build/ghidra_12.2_PUBLIC_20261016.zip
+OK:ghidra 566893440
+retdec URL=https://github.com/avast/retdec/releases/download/v5.0/RetDec-v5.0-Linux-Release.tar.xz
+retdec bin=
+FAIL:retdec-bin-not-found libretdec-LLVMAnalysis.a
+libretdec-LLVMAsmParser.a
+libretdec-LLVMBinaryFormat.a
+libretdec-LLVMBitReader.a
+libretdec-LLVMBitWriter.a
+total 553616
+drwxr-xr-x  2 runner runner      4096 Nov 19 11:35 .
+drwxr-xr-x 15 runner runner      4096 Nov 19 11:35 ..
+-rw-r--r--  1 runner runner 566893440 Nov 19 11:36 ghidra.tar.gz
