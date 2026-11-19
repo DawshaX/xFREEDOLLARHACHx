@@ -1,0 +1,48 @@
+=== TEST93p-F 2026-11-19T10:56:11Z ===
+--- INSTALL ettercap 10:56:11 ---
+{"ok":false,"tool":"ettercap","pkg":"ettercap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nProcessing triggers for man-db (2.13.1-1) ...\nsetpriv: setresgid failed: Operation not permitted\n\nROOT_UID:0\nINSTALL_FAIL:ettercap\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 25347\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL maskprocessor 10:56:20 ---
+{"ok":false,"tool":"maskprocessor","pkg":"maskprocessor","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nProcessing triggers for man-db (2.13.1-1) ...\nsetpriv: setresgid failed: Operation not permitted\n\nROOT_UID:0\nINSTALL_FAIL:maskprocessor\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 26495\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL sidguesser 10:56:27 ---
+{"ok":false,"tool":"sidguesser","pkg":"sidguesser","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nUnpacking sidguesser (1.0.5-1kali4) over (1.0.5-1kali4) ...\nSetting up sidguesser (1.0.5-1kali4) ...\n\nROOT_UID:0\nINSTALL_FAIL:sidguesser\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 27638\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL wkhtmltopdf 10:56:34 ---
+{"ok":true,"tool":"wkhtmltopdf","pkg":"wkhtmltopdf","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nProcessing triggers for man-db (2.13.1-1) ...\nsetpriv: setresgid failed: Operation not permitted\n\nROOT_UID:0\nINSTALL_OK:wkhtmltopdf\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 28784\n"}
+--- INSTALL pandoc 10:56:42 ---
+{"ok":true,"tool":"pandoc","pkg":"pandoc","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nProcessing triggers for man-db (2.13.1-1) ...\nsetpriv: setresgid failed: Operation not permitted\n\nROOT_UID:0\nINSTALL_OK:pandoc\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 29523\n"}
+--- INSTALL legion 10:56:51 ---
+REQ_FAIL:legion
+
+--- INSTALL fern 11:01:51 ---
+{"ok":false,"tool":"fern","pkg":"fern","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nNote: removing the lock file is always wrong, can damage the locked area\nand the entire system. See <https://wiki.debian.org/Teams/Dpkg/FAQ#db-lock>.\nand the entire system. See <https://wiki.debian.org/Teams/Dpkg/FAQ#db-lock>.\nDEBS_APPLIED\n\nROOT_UID:0\nINSTALL_FAIL:fern\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL casefile 11:02:05 ---
+{"ok":false,"tool":"casefile","pkg":"casefile","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:casefile\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL ghidra 11:02:10 ---
+{"ok":true,"tool":"ghidra","pkg":"ghidra","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/local/bin/ghidraRun\nINSTALL_OK:ghidra\n"}
+--- INSTALL retdec 11:02:24 ---
+{"ok":false,"tool":"retdec","pkg":"retdec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:retdec\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL empire 11:02:29 ---
+{"ok":true,"tool":"empire","pkg":"empire","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/bin/powershell-empire\nINSTALL_OK:empire\n"}
+--- INSTALL gh-dork 11:04:02 ---
+{"ok":false,"tool":"gh-dork","pkg":"gh-dork","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:gh-dork\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL dvcs-ripper 11:04:08 ---
+{"ok":false,"tool":"dvcs-ripper","pkg":"dvcs-ripper","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:dvcs-ripper\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL king-phisher 11:04:13 ---
+{"ok":false,"tool":"king-phisher","pkg":"king-phisher","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:king-phisher\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL pentestly 11:04:18 ---
+{"ok":false,"tool":"pentestly","pkg":"pentestly","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:pentestly\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL ssrfmap 11:04:22 ---
+{"ok":false,"tool":"ssrfmap","pkg":"ssrfmap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:ssrfmap\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL venom 11:04:28 ---
+{"ok":true,"tool":"venom","pkg":"venom","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/venom'...\nINSTALL_OK:venom\n"}
+--- INSTALL w3af 11:04:32 ---
+{"ok":false,"tool":"w3af","pkg":"w3af","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:w3af\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL keepnote 11:04:37 ---
+{"ok":true,"tool":"keepnote","pkg":"keepnote","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/keepnote'...\nUpdating files:  82% (2621/3160)\rUpdating files:  83% (2623/3160)\rUpdating files:  84% (2655/3160)\rUpdating files:  85% (2686/3160)\rUpdating files:  86% (2718/3160)\rUpdating files:  87% (2750/3160)\rUpdating files:  88% (2781/3160)\rUpdating files:  89% (2813/3160)\rUpdating files:  90% (2844/3160)\rUpdating files:  91% (2876/3160)\rUpdating files:  92% (2908/3160)\rUpdating files:  93% (2939/3160)\rUpdating files:  94% (2971/3160)\rUpdating files:  95% (3002/3160)\rUpdating files:  96% (3034/3160)\rUpdating files:  97% (3066/3160)\rUpdating files:  98% (3097/3160)\rUpdating files:  99% (3129/3160)\rUpdating files: 100% (3160/3160)\rUpdating files: 100% (3160/3160), done.\nINSTALL_OK:keepnote\n"}
+=== F DONE 2026-11-19T11:04:40Z ===
+=== FINAL MEASURE (union) 11:04:40 ===
+{
+  "present": 200,
+  "total": 266,
+  "measuredOn": "اتحاد 6 عقدة كالي حية — runnervmccnms (rootfs + proot) · runnervmccnms (rootfs + proot) · runnervmccnms (rootfs + proot) · runnervmccnms (rootfs + proot) …"
+}
+
