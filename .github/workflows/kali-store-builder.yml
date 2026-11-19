@@ -1,11 +1,9 @@
-# TEST91 — مصنع المخزن: أدوات dpkg-only متبنية من docker كالي نظيف.
-# ليه docker؟ لأن dpkg على عقدة الأسطول المجروحة ميت (مقاس TEST80: بيموت بصمت)،
-# لكن runner نظيف فيه dpkg سليم — بنثبت الحزم هناك وبنفرّغها tarball جاهزة
-# للتفريغ عند / على العقدة بلا dpkg أصلًا. كل ملف = أداة واحدة.
-# النشر: release «kali-store» على نفس الريبو (github.token contents:write — مقاس
-# بنفس نمط hub-release-refresh). Hack-STORAGE لما صلاحية الكتابة تتفعل، المثبت
-# بيقبل KALI_STORE_URL — نفس الملفات تعمل there بلا أي تغيير كود.
-name: "kali store builder v4 (docker كالي نظيف → tarballs → release kali-store)"
+# TEST91 v5 — مصنع المخزن مقسوم موازيًا: الدرس المقاس (v4): metasploit+libreoffice
+# +ghidra+gvm في job واحد = 55د سقف بيتضرب قبل الرفع. v5: مهمة heavy وlight
+# بالتوازي، كل واحدة ترفع أصولها لحظة الجاهزية — ما يضيعش وقت ولا أصول.
+# ليه docker؟ dpkg على عقدة الأسطول المجروحة ميت (مقاس TEST80) — بنثبت على
+# runner نظيف وبنفرّغ tarballs جاهزة للتفريغ عند / بلا dpkg أصلًا.
+name: "kali store builder v5 (heavy+light موازي → release kali-store)"
 on:
   push:
     paths:
@@ -17,88 +15,104 @@ concurrency:
   group: kali-store-builder
   cancel-in-progress: false
 jobs:
-  build:
+  light:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 50
     permissions:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: بناء tarballs داخل كالي نظيف (dpkg سليم هناك)
+      - uses: actions/checkout@v4
+      - name: tarballs الخفيفة (26 حزمة صغيرة — حزمة-حزمة)
         run: |
           mkdir -p store state
           docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
             export DEBIAN_FRONTEND=noninteractive
-            echo "=== kali-store build $(date -u +%FT%TZ) ===" | tee /store/build.log
-            apt-get update 2>&1 | tail -3 | tee -a /store/build.log || true
-            APT_PKGS="metasploit-framework ettercap exiftool libimage-exiftool-perl steghide arp-scan cherrytree casefile dradis recordmydesktop wkhtmltopdf evilgrade maskprocessor rainbowcrack redis-server elfutils ltrace strace zsh vim aria2 python3-pip dvcs-ripper king-phisher ghidra w3af sidguesser netexec crackmapexec powershell-empire faraday libreoffice gvm"
-            PIP_PKGS="pgcli pentestly ssrfmap gh-dork social-analyzer fernet"
+            echo "=== light $(date -u +%FT%TZ) ===" | tee /store/build-light.log
+            apt-get update 2>&1 | tail -2 | tee -a /store/build-light.log || true
+            PKGS="ettercap exiftool libimage-exiftool-perl steghide arp-scan cherrytree casefile recordmydesktop wkhtmltopdf evilgrade maskprocessor rainbowcrack redis-server elfutils ltrace strace zsh vim aria2 python3-pip dvcs-ripper king-phisher w3af sidguesser crackmapexec netexec"
             apt-get install -y --no-install-recommends curl ca-certificates git python3-pip unzip >/dev/null 2>&1 || true
-            # v4 — تثبيت حزمة-حزمة: اسم واحد غير موجود في kali-rolling كان بيقتل
-            # السطر كله (مقاس v3: كل الـ31 MISS بسبب w3af/king-phisher المزالة من
-            # كالي) — دلوقتي كل واحدة مستقلة والMISS بيتسجل صادح.
-            for p in $APT_PKGS; do
-              if apt-get install -y --no-install-recommends $p >> /store/apt.log 2>&1; then
-                echo "APTOK:$p" | tee -a /store/build.log
-              else
-                echo "APTMISS:$p" | tee -a /store/build.log
-              fi
-            done
-            tail -5 /store/apt.log >> /store/build.log || true
-            PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --break-system-packages -q $PIP_PKGS > /store/pip.log 2>&1 || true
-            for p in $PIP_PKGS; do echo "PIP:$p $(pip3 show $p >/dev/null 2>&1 && echo yes || echo no)" | tee -a /store/build.log; done
-            git clone --depth 1 https://github.com/carlospolop/PEASS-ng /opt/PEASS-ng >/dev/null 2>&1 || true
-            git clone --depth 1 https://github.com/vulnersCom/nmap-vulners /usr/share/nmap/vulners >/dev/null 2>&1 || true
-            SITE=$(python3 -c "import site;print(site.getsitepackages()[0])" 2>/dev/null || echo /usr/lib/python3/dist-packages)
-            for p in $APT_PKGS; do
-              if dpkg -s $p >/dev/null 2>&1; then
+            for p in $PKGS; do
+              if apt-get install -y --no-install-recommends $p >> /store/apt-light.log 2>&1; then
                 dpkg -L $p | grep -v -E "^/etc/|/usr/share/doc/|/usr/share/man/" > /tmp/fl.txt
                 tar czf /store/$p.tar.gz -T /tmp/fl.txt 2>/dev/null || true
-                echo "OK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build.log
+                echo "OK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-light.log
               else
-                echo "MISS:$p" | tee -a /store/build.log
+                echo "MISS:$p" | tee -a /store/build-light.log
               fi
             done
+            PIP_PKGS="pgcli pentestly ssrfmap gh-dork social-analyzer fernet"
+            PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --break-system-packages -q $PIP_PKGS > /store/pip-light.log 2>&1 || true
+            SITE=$(python3 -c "import site;print(site.getsitepackages()[0])" 2>/dev/null || echo /usr/lib/python3/dist-packages)
             for p in $PIP_PKGS; do
-              if command -v $p >/dev/null 2>&1 || pip3 show $p >/dev/null 2>&1; then
+              if pip3 show $p >/dev/null 2>&1; then
                 tar czf /store/$p.tar.gz "$SITE" $(command -v $p 2>/dev/null) 2>/dev/null || true
-                echo "PIPOK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build.log
+                echo "PIPOK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-light.log
               else
-                echo "PIPMISS:$p" | tee -a /store/build.log
+                echo "PIPMISS:$p" | tee -a /store/build-light.log
               fi
             done
-            [ -d /opt/PEASS-ng ] && tar czf /store/peass-ng.tar.gz /opt/PEASS-ng 2>/dev/null && echo "OK:peass-ng $(stat -c%s /store/peass-ng.tar.gz)" | tee -a /store/build.log
-            [ -d /usr/share/nmap/vulners ] && tar czf /store/vulners.tar.gz /usr/share/nmap/vulners 2>/dev/null && echo "OK:vulners $(stat -c%s /store/vulners.tar.gz)" | tee -a /store/build.log
-            { echo "=== manifest $(date -u +%FT%TZ) ==="; ls -la /store; } >> /store/build.log
-            cp /store/build.log /store/manifest.txt 2>/dev/null || true
+            git clone --depth 1 https://github.com/vulnersCom/nmap-vulners /usr/share/nmap/vulners >/dev/null 2>&1 && tar czf /store/vulners.tar.gz /usr/share/nmap/vulners 2>/dev/null && echo "OK:vulners" | tee -a /store/build-light.log
           '
-          cp store/build.log state/kali-store-build.log 2>/dev/null || echo "لا لوج من الكونتينر" > state/kali-store-build.log
-      - name: كوميت لوج البناء (مسار اللوج المعروف — gh api logs EOF)
-        continue-on-error: true
-        run: |
-          git config user.name "nova-bot" || true
-          git config user.email "nova@bot.local" || true
-          ls -la state/kali-store-build.log || true
-          git add -f state/kali-store-build.log
-          git commit -m "state: kali-store build log [skip ci]" || true
-          git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx
-          git push origin HEAD:arena/9552f54d-xfreedollarhachx
-          echo "::notice::لوج البناء متكوميت ✓"
-          exit 0
-      - name: رفع الأصول على release kali-store
+          cp store/build-light.log state/kali-store-light.log 2>/dev/null || true
+      - name: رفع الأصول الخفيفة
         run: |
           shopt -s nullglob
           ASSETS=(store/*.tar.gz)
-          echo "tarballs: ${#ASSETS[@]}"
-          ls -la store || true
+          echo "light tarballs: ${#ASSETS[@]}"
           gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف — تفريغ عند / على العقدة بلا dpkg (TEST91)"
-          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/manifest.txt --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ kali-store: ${#ASSETS[@]} tarballs مرفوعة"
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف — تفريغ عند / بلا dpkg (TEST91 v5)"
+          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/build-light.log --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ light: ${#ASSETS[@]}"
           exit 0
-      - name: إبلاغ الهَب بالجرد (exec)
+      - name: كوميت لوج light
+        continue-on-error: true
         run: |
-          COUNT=$(ls store/*.tar.gz 2>/dev/null | wc -l)
-          curl -s -m 120 -X POST "https://nova.waifly.com/api/kali-env/exec" \
-            -H "x-nova-token: ${{ secrets.NOVA_EXEC_TOKEN }}" -H "content-type: application/json" \
-            -d "{\"command\":\"echo KALI_STORE_BUILT assets=$COUNT $(date -u +%FT%TZ)\",\"timeoutMs\":60000}" | tail -c 400 || true
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/kali-store-light.log; git commit -m "state: kali-store light log [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx; git push origin HEAD:arena/9552f54d-xfreedollarhachx; exit 0
+  heavy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: tarballs الثقيلة (7 حزم ضخمة — حزمة-حزمة)
+        run: |
+          mkdir -p store state
+          docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
+            export DEBIAN_FRONTEND=noninteractive
+            echo "=== heavy $(date -u +%FT%TZ) ===" | tee /store/build-heavy.log
+            apt-get update 2>&1 | tail -2 | tee -a /store/build-heavy.log || true
+            PKGS="metasploit-framework libreoffice ghidra gvm powershell-empire dradis faraday ettercap-graphical"
+            apt-get install -y --no-install-recommends curl ca-certificates git >/dev/null 2>&1 || true
+            for p in $PKGS; do
+              if apt-get install -y --no-install-recommends $p >> /store/apt-heavy.log 2>&1; then
+                dpkg -L $p | grep -v -E "^/etc/|/usr/share/doc/|/usr/share/man/" > /tmp/fl.txt
+                tar czf /store/$p.tar.gz -T /tmp/fl.txt 2>/dev/null || true
+                echo "OK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-heavy.log
+              else
+                echo "MISS:$p" | tee -a /store/build-heavy.log
+              fi
+            done
+            git clone --depth 1 https://github.com/carlospolop/PEASS-ng /opt/PEASS-ng >/dev/null 2>&1 && tar czf /store/peass-ng.tar.gz /opt/PEASS-ng 2>/dev/null && echo "OK:peass-ng" | tee -a /store/build-heavy.log
+          '
+          cp store/build-heavy.log state/kali-store-heavy.log 2>/dev/null || true
+      - name: رفع الأصول الثقيلة
+        run: |
+          shopt -s nullglob
+          ASSETS=(store/*.tar.gz)
+          echo "heavy tarballs: ${#ASSETS[@]}"
+          gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف (TEST91 v5)"
+          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/build-heavy.log --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ heavy: ${#ASSETS[@]}"
+          exit 0
+      - name: كوميت لوج heavy
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/kali-store-heavy.log; git commit -m "state: kali-store heavy log [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx; git push origin HEAD:arena/9552f54d-xfreedollarhachx; exit 0
