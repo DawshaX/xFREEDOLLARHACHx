@@ -6,3 +6,6 @@ total 553608
 drwxr-xr-x  2 runner runner      4096 Nov 19 10:27 .
 drwxr-xr-x 15 runner runner      4096 Nov 19 10:27 ..
 -rw-r--r--  1 runner runner 566886248 Nov 19 10:27 ghidra.tar.gz
+ghidra URL=https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.2_build/ghidra_12.2_PUBLIC_20261016.zip
+OK:ghidra 566886247
+retdec URL=https://github.com/avast/retdec/releases/download/v5.0/RetDec-v5.0-Linux-Release.tar.xz
