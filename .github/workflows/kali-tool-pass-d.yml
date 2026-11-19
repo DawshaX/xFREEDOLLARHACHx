@@ -1,5 +1,5 @@
 # TEST92i — مسار D: pip + clone + amass/volatility (طبقات PIP/CLONE/STORE الفردية).
-name: "TEST92i — مسار D: pip+clone على الأسطول الجديد"
+name: "TEST92l — مسار D منفرد: pip+clone (بعد تفريغ الهَب)"
 on:
   push:
     paths:
