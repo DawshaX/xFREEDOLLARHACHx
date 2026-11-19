@@ -1,18 +1,30 @@
-=== heavy 2026-11-19T03:52:32Z ===
-Fetched 22.2 MB in 1s (21.6 MB/s)
+=== heavy v7 2026-11-19T04:53:36Z ===
+Fetched 22.2 MB in 1s (21.3 MB/s)
 Reading package lists...
-OK:powershell-empire 1049714783
-OK:dradis 2554911782
-OK:faraday 5585247457
-MISS:king-phisher
-OK:metasploit-framework 18180010584
+OK:powershell-empire orig=1049698676 parts=1
+OK:dradis orig=2554879101 parts=2
+OK:faraday orig=6146757696 parts=4
+OK:metasploit-framework orig=19695904160 parts=10
 HEAVY_DONE
-total 26728684
-drwxr-xr-x  2 runner runner        4096 Nov 19 04:03 .
-drwxr-xr-x 15 runner runner        4096 Nov 19 03:52 ..
--rw-r--r--  1 root   root        246913 Nov 19 04:03 apt-heavy.log
--rw-r--r--  1 root   root           234 Nov 19 04:13 build-heavy.log
--rw-r--r--  1 root   root    2554911782 Nov 19 03:58 dradis.tar.gz
--rw-r--r--  1 root   root    5585247457 Nov 19 04:02 faraday.tar.gz
--rw-r--r--  1 root   root   18180010584 Nov 19 04:13 metasploit-framework.tar.gz
--rw-r--r--  1 root   root    1049714783 Nov 19 03:55 powershell-empire.tar.gz
+total 28757396
+drwxr-xr-x  2 runner runner       4096 Nov 19 05:16 .
+drwxr-xr-x 15 runner runner       4096 Nov 19 04:53 ..
+-rw-r--r--  1 root   root       245596 Nov 19 05:03 apt-heavy.log
+-rw-r--r--  1 root   root          272 Nov 19 05:16 build-heavy.log
+-rw-r--r--  1 root   root   1992294400 Nov 19 04:58 dradis.tar.gz.part_00
+-rw-r--r--  1 root   root    562584701 Nov 19 04:58 dradis.tar.gz.part_01
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:02 faraday.tar.gz.part_00
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:02 faraday.tar.gz.part_01
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:02 faraday.tar.gz.part_02
+-rw-r--r--  1 root   root    169874496 Nov 19 05:02 faraday.tar.gz.part_03
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:14 metasploit-framework.tar.gz.part_00
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:14 metasploit-framework.tar.gz.part_01
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:15 metasploit-framework.tar.gz.part_02
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:15 metasploit-framework.tar.gz.part_03
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:15 metasploit-framework.tar.gz.part_04
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:15 metasploit-framework.tar.gz.part_05
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:16 metasploit-framework.tar.gz.part_06
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:16 metasploit-framework.tar.gz.part_07
+-rw-r--r--  1 root   root   1992294400 Nov 19 05:16 metasploit-framework.tar.gz.part_08
+-rw-r--r--  1 root   root   1765254560 Nov 19 05:16 metasploit-framework.tar.gz.part_09
+-rw-r--r--  1 root   root   1049698676 Nov 19 04:55 powershell-empire.tar.gz.part_00
