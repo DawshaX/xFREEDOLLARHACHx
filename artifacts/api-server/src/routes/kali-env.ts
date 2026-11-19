@@ -1056,6 +1056,15 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
       repo: "Datalux/Osintgram", cmd: "osintgram",
       wrap: `printf '#!/bin/sh\\nexec python3 /opt/osintgram/main.py "$@"\\n' > /usr/local/bin/osintgram && chmod +x /usr/local/bin/osintgram`,
     },
+    /* TEST93o — المتبقي بلا pypi ولا release: clone + wrapper */
+    pentestly: {
+      repo: "meatballs89/pentestly", cmd: "pentestly", req: true,
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/pentestly/pentestly.py "$@"\\n' > /usr/local/bin/pentestly && chmod +x /usr/local/bin/pentestly`,
+    },
+    ssrfmap: {
+      repo: "swisskyrepo/SSRFmap", cmd: "ssrfmap",
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/ssrfmap/ssrfmap.py "$@"\\n' > /usr/local/bin/ssrfmap && chmod +x /usr/local/bin/ssrfmap`,
+    },
   };
   /* TEST87 — الحقول url مقاسة من api.github.com (السانبوكس 2026-11-19) وخبزت هنا:
    * العقدة (GitHub runner IP مشترك) بتنده api.github.com unauthenticated فبتقع
@@ -1145,16 +1154,24 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   };
   const GIT = GITHUB_TOOLS[tool];
   const PIP = PIP_TOOLS[tool];
+  /* TEST93o — المسار من مرحلتين قصيرتين للأدوات اللي ليها حزم deb: درس TEST80
+   * المقاس مرة تانية 08:40/09:04 — الأمر المركب الطويل = proot signal 6 حتى
+   * بعد نجاح dpkg نفسه (البوابة بتتقتل). التثبيت قصير ثم البوابة قصيرة. */
+  const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec"]);
+  const storeDebs = Boolean(STORE_TOOLS[tool] && DEBS_TOOLS.has(tool));
+  const storeGate = STORE_TOOLS[tool] ? (Array.isArray(STORE_TOOLS[tool].cmd) ? STORE_TOOLS[tool].cmd : [STORE_TOOLS[tool].cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ") : "";
   let installCmd: string;
   if (STORE_TOOLS[tool] && STORE_TOOLS[tool].file) {
     const S = STORE_TOOLS[tool];
     const gate = (Array.isArray(S.cmd) ? S.cmd : [S.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ");
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
-    /* TEST93n — الأولوية: حزم deb الصغيرة (<100MB، dpkg -i على الجست الجديد
-     * النظيف) + تنظيف statoverride المكسورة (مقاس 08:40: «unknown system user
-     * redis in statoverride» بقت تكسر كل dpkg -i) → تاربولات parts → ملف
-     * مباشر → apt آخر الأبواب. */
-    installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -3; dpkg --configure -a 2>&1 | tail -2) ; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    if (storeDebs) {
+      /* المرحلة 1 قصيرة: تنظيف statoverride + deb + dpkg — بلا بوابة ولا fallback */
+      installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
+    } else {
+      /* تاربولات parts (metasploit/empire/faraday/dradis) → ملف مباشر → apt */
+      installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    }
   } else if (GIT && GIT.repo && !CLONE_EXTRA[tool]) {
     const isCloneTool = tool === "dirsearch" || tool === "arjun";
     installCmd = isCloneTool
@@ -1177,6 +1194,11 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     r = await kaliAnywhereExec(cmd, 420_000);
   }
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
+  /* المرحلة 2 قصيرة: بوابة منفصلة — بعد ما dpkg خلص فعليًا في المرحلة 1 */
+  if (storeDebs && r) {
+    const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000);
+    if (gr) r = { ...r, stdout: `${r.stdout}\n${gr.stdout}` };
+  }
   const ok = /INSTALL_OK:/.test(r.stdout);
   const uid = Number((r.stdout.match(/^ROOT_UID:(\d+)$/m) ?? [])[1]);
   const tail = [r.stdout, r.stderr].filter(Boolean).join("\n").split("\n").slice(-12).join("\n");
