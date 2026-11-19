@@ -1201,13 +1201,19 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
    * بعد نجاح dpkg نفسه (البوابة بتتقتل). التثبيت قصير ثم البوابة قصيرة. */
   const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec", "wkhtmltopdf", "pandoc", "legion", "fern", "casefile"]);
   const storeDebs = Boolean(STORE_TOOLS[tool] && DEBS_TOOLS.has(tool));
+  /* TEST93x — استخراج يدوي بدون dpkg: postinst بتاع maskprocessor بيحاول
+   * systemctl (مش موجود في proot) → bus fail → proot signal 6 دائم (مقاس ×6).
+   * الdeb فيه باينر واحد /usr/bin/mp — dpkg-deb -x وcp كفاية. */
+  const DEB_EXTRACT = new Set(["maskprocessor"]);
   const storeGate = STORE_TOOLS[tool] ? (Array.isArray(STORE_TOOLS[tool].cmd) ? STORE_TOOLS[tool].cmd : [STORE_TOOLS[tool].cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ") : "";
   let installCmd: string;
   if (STORE_TOOLS[tool] && STORE_TOOLS[tool].file) {
     const S = STORE_TOOLS[tool];
     const gate = (Array.isArray(S.cmd) ? S.cmd : [S.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ");
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
-    if (storeDebs) {
+    if (DEB_EXTRACT.has(tool)) {
+      installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && for d in *.deb; do dpkg-deb -x "$d" /tmp/debx 2>/dev/null; done; find /tmp/debx -type f \( -name "mp" -o -name "maskprocessor" \) -exec cp {} /usr/local/bin/ \; && chmod +x /usr/local/bin/mp /usr/local/bin/maskprocessor 2>/dev/null; echo EXTRACT_APPLIED`;
+    } else if (storeDebs) {
       /* المرحلة 1 قصيرة: تنظيف statoverride + deb + dpkg — بلا بوابة ولا fallback */
       installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
     } else {
@@ -1249,7 +1255,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   /* المرحلة 2 قصيرة: بوابة منفصلة مع retry ×3 — بعد ما dpkg/الاستخراج خلص فعليًا
    * في المرحلة 1. proot signal 6 عشوائي بيقتل حتى الأوامر القصيرة (مقاس TEST92q:
    * sidguesser «Setting up ✓» والبوابة اتقتلت → INSTALL_FAIL كاذبة). */
-  if ((storeDebs || (STORE_TOOLS[tool] && STORE_TOOLS[tool].file)) && r && storeGate) {
+  if ((storeDebs || (STORE_TOOLS[tool] && STORE_TOOLS[tool].file)) && r && storeGate && !DEB_EXTRACT.has(tool)) {
     let gout = "";
     for (let gi = 0; gi < 5; gi++) {
       const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 2; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000, installNodeId);
