@@ -1,5 +1,5 @@
 {
-  "present": 188,
+  "present": 189,
   "total": 266,
   "measuredOn": "runnervmccnms — عقدة كالي سحابية (rootfs + proot)",
   "stillMissing": [
@@ -29,7 +29,6 @@
     "syft",
     "amass",
     "sublist3r",
-    "sherlock",
     "vulners",
     "katana",
     "hcxtools",
@@ -64,7 +63,6 @@
     "arp-scan",
     "amass",
     "sublist3r",
-    "sherlock",
     "maigret",
     "asnmap",
     "shuffledns",
