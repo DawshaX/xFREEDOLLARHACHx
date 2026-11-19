@@ -1106,6 +1106,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
       repo: "mdrasmus/keepnote", cmd: "keepnote",
       wrap: `[ -f /opt/keepnote/bin/keepnote ] && cp /opt/keepnote/bin/keepnote /usr/local/bin/keepnote && chmod +x /usr/local/bin/keepnote; true`,
     },
+    evilgrade: {
+      repo: "infobyte/evilgrade", cmd: "evilgrade",
+      wrap: `[ -f /opt/evilgrade/evilgrade.sh ] && cp /opt/evilgrade/evilgrade.sh /usr/local/bin/evilgrade && chmod +x /usr/local/bin/evilgrade; true`,
+    },
   };
   /* TEST87 — الحقول url مقاسة من api.github.com (السانبوكس 2026-11-19) وخبزت هنا:
    * العقدة (GitHub runner IP مشترك) بتنده api.github.com unauthenticated فبتقع
@@ -1122,12 +1126,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     arjun: { repo: "s0md3v/Arjun", pattern: "", flat: "" },
     katana: { repo: "projectdiscovery/katana", pattern: "linux_amd64.zip", flat: "katana", url: "https://github.com/projectdiscovery/katana/releases/download/v1.8.0/katana_1.8.0_linux_amd64.zip" },
     cariddi: { repo: "edoardottt/cariddi", pattern: "linux_amd64.zip", flat: "cariddi", url: "https://github.com/edoardottt/cariddi/releases/download/v1.4.6/cariddi_1.4.6_linux_amd64.zip" },
-    subzy: { repo: "LukaSikter/subzy", pattern: "linux_amd64.tar.gz", flat: "subzy" },
     grype: { repo: "anchore/grype", pattern: "linux_amd64.tar.gz", flat: "grype", url: "https://github.com/anchore/grype/releases/download/v0.122.1/grype_0.122.1_linux_amd64.tar.gz" },
     syft: { repo: "anchore/syft", pattern: "linux_amd64.tar.gz", flat: "syft", url: "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz" },
     trufflehog: { repo: "trufflesecurity/trufflehog", pattern: "linux_amd64.tar.gz", flat: "trufflehog", url: "https://github.com/trufflesecurity/trufflehog/releases/download/v3.99.9/trufflehog_3.99.9_linux_amd64.tar.gz" },
     dockle: { repo: "goodwithtech/dockle", pattern: "Linux-64bit.tar.gz", flat: "dockle", url: "https://github.com/goodwithtech/dockle/releases/download/v0.4.15/dockle_0.4.15_Linux-64bit.tar.gz" },
-    gotator: { repo: "Josue87/Gotator", pattern: "linux_amd64.tar.gz", flat: "gotator" },
     osintgram: { repo: "Datalux/Osintgram", pattern: "", flat: "" }, // clone بدل release
     /* TEST88 — URLs مقاسة من api.github.com (السانبوكس 2026-11-19) */
     bettercap: { repo: "bettercap/bettercap", pattern: "linux_amd64.zip", flat: "bettercap", url: "https://github.com/bettercap/bettercap/releases/download/v2.41.7/bettercap_linux_amd64.zip" },
@@ -1180,10 +1182,11 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     crackmapexec: { file: "crackmapexec.tar.gz", cmd: ["crackmapexec", "cme"] },
     empire: { file: "powershell-empire.tar.gz", cmd: ["powershell-empire", "empire"] },
     faraday: { file: "faraday.tar.gz", cmd: ["faraday-client", "faraday"] },
-    libreoffice: { file: "libreoffice.tar.gz", cmd: ["libreoffice", "soffice"] },
     gvm: { file: "gvm.tar.gz", cmd: ["gvm-cli", "gvmd", "gvm-setup"] },
         pandoc: { file: "pandoc-debs.tar.gz", cmd: ["pandoc"] },
     legion: { file: "legion-debs.tar.gz", cmd: ["legion"] },
+    subzy: { file: "subzy.tar.gz", cmd: ["subzy"] },
+    gotator: { file: "gotator.tar.gz", cmd: ["gotator"] },
     fern: { file: "fern-debs.tar.gz", cmd: ["fern", "fern-wifi-cracker"] },
     pgcli: { file: "pgcli.tar.gz", cmd: ["pgcli"], pip: "pgcli" },
     socialanalyzer: { file: "social-analyzer.tar.gz", cmd: ["social-analyzer", "socialanalyzer"], pip: "social-analyzer" },
@@ -1240,8 +1243,8 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
    * sidguesser «Setting up ✓» والبوابة اتقتلت → INSTALL_FAIL كاذبة). */
   if ((storeDebs || (STORE_TOOLS[tool] && STORE_TOOLS[tool].file)) && r && storeGate) {
     let gout = "";
-    for (let gi = 0; gi < 3; gi++) {
-      const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 1; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000, installHost);
+    for (let gi = 0; gi < 5; gi++) {
+      const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 2; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000, installHost);
       if (gr) gout = gr.stdout;
       if (gout.includes(`INSTALL_OK:${tool}`)) break;
     }

@@ -1,0 +1,63 @@
+# TEST93t — بناء subzy + gotator (Go بلا releases على upstream — مقاس 13:2xZ:
+# PentestPad/subzy مافيش assets · Josue87/Gotator v1.1 مافيش assets). بناء من
+# المصدر في docker golang → binary واحد لكل أداة → usr/local/bin → tar.gz.
+name: "kali store subzy+gotator (go build من المصدر → release kali-store)"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-store-subzy.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: kali-store-subzy
+  cancel-in-progress: false
+jobs:
+  gopass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: بناء subzy + gotator
+        continue-on-error: true
+        run: |
+          mkdir -p store state
+          WORK="$GITHUB_WORKSPACE"
+          rm -rf /tmp/gobin && mkdir -p /tmp/gobin
+          docker run --rm -v /tmp/gobin:/out golang:1.22 bash -c '
+            export GOBIN=/out GOPATH=/go
+            (go install github.com/PentestPad/subzy@latest && echo "OK:subzy-build") || echo "FAIL:subzy-build"
+            (go install github.com/Josue87/Gotator@latest && echo "OK:gotator-build") || echo "FAIL:gotator-build"
+            ls -la /out
+          ' 2>&1 | tee -a state/kali-store-subzy.log
+          mkdir -p rootfs/usr/local/bin
+          cp /tmp/gobin/subzy rootfs/usr/local/bin/ 2>/dev/null && \
+            (cd rootfs && tar czf "$WORK/store/subzy.tar.gz" usr/local/bin/subzy) && \
+            echo "OK:subzy $(stat -c%s store/subzy.tar.gz)" | tee -a state/kali-store-subzy.log || \
+            echo "MISS:subzy (binary)" | tee -a state/kali-store-subzy.log
+          cp /tmp/gobin/Gotator rootfs/usr/local/bin/gotator 2>/dev/null || cp /tmp/gobin/gotator rootfs/usr/local/bin/ 2>/dev/null
+          [ -x rootfs/usr/local/bin/gotator ] && \
+            (cd rootfs && tar czf "$WORK/store/gotator.tar.gz" usr/local/bin/gotator) && \
+            echo "OK:gotator $(stat -c%s store/gotator.tar.gz)" | tee -a state/kali-store-subzy.log || \
+            echo "MISS:gotator (binary)" | tee -a state/kali-store-subzy.log
+          cp state/kali-store-subzy.log store/build-subzy.log 2>/dev/null || true
+          exit 0
+      - name: رفع التاربولات
+        continue-on-error: true
+        run: |
+          shopt -s nullglob
+          ASSETS=(store/subzy.tar.gz store/gotator.tar.gz store/build-subzy.log)
+          gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "TEST93t"
+          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ subzy+gotator"
+          exit 0
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/kali-store-subzy.log; git commit -m "state: subzy+gotator log [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/1aad5cfd-xfreedollarhachx; git push origin HEAD:arena/1aad5cfd-xfreedollarhachx; exit 0
