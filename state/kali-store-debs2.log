@@ -1,6 +1,7 @@
-=== debs2 2026-11-19T10:42:32Z ===
-Fetched 22.2 MB in 1s (15.9 MB/s)
+=== debs2 2026-11-19T11:17:19Z ===
+Fetched 22.2 MB in 1s (17.6 MB/s)
 Reading package lists...
-OK:legion debs=1889 size=1808122895
-OK:fern debs=902 size=528100116
+OK:ettercap debs=43 size=21718100
+OK:maskprocessor debs=5 size=3095356
+MISS:casefile
 DEBS2_DONE
