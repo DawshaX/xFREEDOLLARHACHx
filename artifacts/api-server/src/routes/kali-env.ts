@@ -1011,22 +1011,26 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     "ssh-audit": "ssh-audit", semgrep: "semgrep", sublist3r: "sublist3r",
     sherlock: "sherlock-project", volatility3: "volatility3",
   };
-  const GITHUB_TOOLS: Record<string, { repo: string; pattern: string; flat?: string }> = {
+  /* TEST87 — الحقول url مقاسة من api.github.com (السانبوكس 2026-11-19) وخبزت هنا:
+   * العقدة (GitHub runner IP مشترك) بتنده api.github.com unauthenticated فبتقع
+   * في 403 rate-limit → URL= فارغ → INSTALL_FAIL جماعي (مقاس TEST86). الخبز
+   * يشيل النداء وقت التثبيت — مافيش اعتماد على quota IP العقدة. */
+  const GITHUB_TOOLS: Record<string, { repo: string; pattern: string; flat?: string; url?: string }> = {
     /* أدوات بتوزع binaries جاهزة — مستقلة عن dpkg تمامًا (عقدة مريضة وما بتأثرش عليها) */
-    amass: { repo: "owasp-amass/amass", pattern: "linux_amd64.tar.gz", flat: "amass" },
-    subfinder: { repo: "projectdiscovery/subfinder", pattern: "linux_amd64.zip", flat: "subfinder" },
-    naabu: { repo: "projectdiscovery/naabu", pattern: "linux_amd64.zip", flat: "naabu" },
-    dnsx: { repo: "projectdiscovery/dnsx", pattern: "linux_amd64.zip", flat: "dnsx" },
-    httpx: { repo: "projectdiscovery/httpx", pattern: "linux_amd64.zip", flat: "httpx" },
+    amass: { repo: "owasp-amass/amass", pattern: "linux_amd64.tar.gz", flat: "amass", url: "https://github.com/owasp-amass/amass/releases/download/v5.1.3/amass_linux_amd64.tar.gz" },
+    subfinder: { repo: "projectdiscovery/subfinder", pattern: "linux_amd64.zip", flat: "subfinder", url: "https://github.com/projectdiscovery/subfinder/releases/download/v2.17.0/subfinder_2.17.0_linux_amd64.zip" },
+    naabu: { repo: "projectdiscovery/naabu", pattern: "linux_amd64.zip", flat: "naabu", url: "https://github.com/projectdiscovery/naabu/releases/download/v2.7.0/naabu_2.7.0_linux_amd64.zip" },
+    dnsx: { repo: "projectdiscovery/dnsx", pattern: "linux_amd64.zip", flat: "dnsx", url: "https://github.com/projectdiscovery/dnsx/releases/download/v1.3.1/dnsx_1.3.1_linux_amd64.zip" },
+    httpx: { repo: "projectdiscovery/httpx", pattern: "linux_amd64.zip", flat: "httpx", url: "https://github.com/projectdiscovery/httpx/releases/download/v1.12.0/httpx_1.12.0_linux_amd64.zip" },
     dirsearch: { repo: "maurosoria/dirsearch", pattern: "", flat: "" },
     arjun: { repo: "s0md3v/Arjun", pattern: "", flat: "" },
-    katana: { repo: "projectdiscovery/katana", pattern: "linux_amd64.zip", flat: "katana" },
-    cariddi: { repo: "edoardottt/cariddi", pattern: "linux_amd64.tar.gz", flat: "cariddi" },
+    katana: { repo: "projectdiscovery/katana", pattern: "linux_amd64.zip", flat: "katana", url: "https://github.com/projectdiscovery/katana/releases/download/v1.8.0/katana_1.8.0_linux_amd64.zip" },
+    cariddi: { repo: "edoardottt/cariddi", pattern: "linux_amd64.zip", flat: "cariddi", url: "https://github.com/edoardottt/cariddi/releases/download/v1.4.6/cariddi_1.4.6_linux_amd64.zip" },
     subzy: { repo: "LukaSikter/subzy", pattern: "linux_amd64.tar.gz", flat: "subzy" },
-    grype: { repo: "anchore/grype", pattern: "linux_amd64.tar.gz", flat: "grype" },
-    syft: { repo: "anchore/syft", pattern: "linux_amd64.tar.gz", flat: "syft" },
-    trufflehog: { repo: "trufflesecurity/trufflehog", pattern: "linux_amd64.tar.gz", flat: "trufflehog" },
-    dockle: { repo: "goodwithtech/dockle", pattern: "linux-amd64.tar.gz", flat: "dockle" },
+    grype: { repo: "anchore/grype", pattern: "linux_amd64.tar.gz", flat: "grype", url: "https://github.com/anchore/grype/releases/download/v0.122.1/grype_0.122.1_linux_amd64.tar.gz" },
+    syft: { repo: "anchore/syft", pattern: "linux_amd64.tar.gz", flat: "syft", url: "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz" },
+    trufflehog: { repo: "trufflesecurity/trufflehog", pattern: "linux_amd64.tar.gz", flat: "trufflehog", url: "https://github.com/trufflesecurity/trufflehog/releases/download/v3.99.9/trufflehog_3.99.9_linux_amd64.tar.gz" },
+    dockle: { repo: "goodwithtech/dockle", pattern: "Linux-64bit.tar.gz", flat: "dockle", url: "https://github.com/goodwithtech/dockle/releases/download/v0.4.15/dockle_0.4.15_Linux-64bit.tar.gz" },
     gotator: { repo: "Josue87/Gotator", pattern: "linux_amd64.tar.gz", flat: "gotator" },
     osintgram: { repo: "Datalux/Osintgram", pattern: "", flat: "" }, // clone بدل release
   };
@@ -1045,7 +1049,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const isCloneTool = tool === "dirsearch" || tool === "arjun" || tool === "osintgram";
     installCmd = isCloneTool
       ? `rm -rf /tmp/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${GIT.repo} /tmp/${tool} 2>&1 | tail -2; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed /tmp/${tool} 2>&1 || pip3 install -q /tmp/${tool} 2>&1) | tail -3; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`
-      : `cd /tmp && rm -rf ${tool}-dl && mkdir -p ${tool}-dl && cd ${tool}-dl && URL=$(curl -s -m 30 https://api.github.com/repos/${GIT.repo}/releases/latest | tr "," "\n" | grep browser_download_url | grep "${GIT.pattern}" | head -1 | cut -d '"' -f4) && echo "URL=$URL" && curl -sL -m 180 "$URL" -o pkg.bin && ls -la pkg.bin && (tar -xzf pkg.bin 2>/dev/null || unzip -o pkg.bin >/dev/null 2>&1) ; BIN=$(find . -type f -name "${GIT.flat ?? tool}*" 2>/dev/null | head -1) && echo "BIN=$BIN" && cp "$BIN" /usr/local/bin/${tool} && chmod +x /usr/local/bin/${tool} && command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+      : `cd /tmp && rm -rf ${tool}-dl && mkdir -p ${tool}-dl && cd ${tool}-dl && URL=${GIT.url ? GIT.url : `$(curl -s -m 30 https://api.github.com/repos/${GIT.repo}/releases/latest | tr "," "\\n" | grep browser_download_url | grep "${GIT.pattern}" | head -1 | cut -d '"' -f4)`} && echo "URL=$URL" && curl -sL -m 180 "$URL" -o pkg.bin && ls -la pkg.bin && (tar -xzf pkg.bin 2>/dev/null || unzip -o pkg.bin >/dev/null 2>&1) ; BIN=$(find . -type f -name "${GIT.flat ?? tool}*" 2>/dev/null | head -1) && echo "BIN=$BIN" && cp "$BIN" /usr/local/bin/${tool} && chmod +x /usr/local/bin/${tool} && command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else if (PIP) {
     installCmd = `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${PIP} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${PIP} 2>&1) | tail -5; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else {
