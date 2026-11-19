@@ -1,8 +1,9 @@
 # TEST93p — store ghidra+retdec: أدوات الهندسة العكسية الثقيلة. ghidra zip من
 # releases (NationalSecurityAgency/ghidra) → /opt/ghidra + wrappers (ghidraRun
 # بيثّب openjdk-21 لو ناقص — الجست ماعندهوش java). retdec tar.xz من releases
-# (avast/retdec) → /opt/retdec + symlinks. كل واحد < 1900M فمفيش split.
-name: "kali store ghidra+retdec (releases رسمية → release kali-store)"
+# (avast/retdec) → /opt/retdec + symlinks. كل مرحلة بلوج صريح يتكوميت دايمًا
+# (الدرس: اللوج من results-receiver EOF — الكوميت هو اللوج الموثوق).
+name: "kali store ghidra+retdec v2 (gh api + بلوج كامل → release kali-store)"
 on:
   push:
     paths:
@@ -24,48 +25,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: بناء ghidra.tar.gz + retdec.tar.gz
+        continue-on-error: true
         run: |
           mkdir -p store state
           WORK="$GITHUB_WORKSPACE"
-          set -e
           # ── ghidra ──
-          GURL=$(curl -s https://api.github.com/repos/NationalSecurityAgency/ghidra/releases/latest | grep browser_download_url | grep '_PUBLIC_.*\.zip' | head -1 | cut -d'"' -f4)
+          GURL=$(gh api repos/NationalSecurityAgency/ghidra/releases/latest --jq '.assets[].browser_download_url' 2>/dev/null | grep '_PUBLIC_.*\.zip' | head -1)
           echo "ghidra URL=$GURL" | tee -a state/kali-store-ghidra.log
           if [ -n "$GURL" ]; then
-            curl -sfL -m 1200 "$GURL" -o /tmp/ghidra.zip
-            rm -rf /tmp/gz && mkdir -p /tmp/gz && unzip -q /tmp/ghidra.zip -d /tmp/gz
-            rm -rf /opt/ghidra && mv /tmp/gz/ghidra_* /opt/ghidra
-            printf '#!/bin/sh\ncommand -v java >/dev/null 2>&1 || (DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openjdk-21-jre-headless >/dev/null 2>&1 || DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openjdk-17-jre-headless >/dev/null 2>&1 || true)\nexec /opt/ghidra/ghidraRun "$@"\n' > /usr/local/bin/ghidraRun
-            printf '#!/bin/sh\ncommand -v java >/dev/null 2>&1 || (DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openjdk-21-jre-headless >/dev/null 2>&1 || true)\nexec /opt/ghidra/support/analyzeHeadless "$@"\n' > /usr/local/bin/analyzeHeadless
-            cp /usr/local/bin/ghidraRun /usr/local/bin/ghidra
-            sed -i 's|/opt/ghidra/ghidraRun|/opt/ghidra/ghidraRun|' /usr/local/bin/ghidra
-            chmod +x /usr/local/bin/ghidraRun /usr/local/bin/analyzeHeadless /usr/local/bin/ghidra
-            cd / && tar czf "$WORK/store/ghidra.tar.gz" opt/ghidra usr/local/bin/ghidraRun usr/local/bin/analyzeHeadless usr/local/bin/ghidra
-            echo "OK:ghidra $(stat -c%s store/ghidra.tar.gz)" | tee -a state/kali-store-ghidra.log
+            if curl -sfL --retry 3 -m 1200 "$GURL" -o /tmp/ghidra.zip; then
+              rm -rf /tmp/gz /opt/ghidra && mkdir -p /tmp/gz
+              unzip -q /tmp/ghidra.zip -d /tmp/gz && mv /tmp/gz/ghidra_* /opt/ghidra
+              printf '#!/bin/sh\ncommand -v java >/dev/null 2>&1 || (DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openjdk-21-jre-headless >/dev/null 2>&1 || DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openjdk-17-jre-headless >/dev/null 2>&1 || true)\nexec /opt/ghidra/ghidraRun "$@"\n' > /usr/local/bin/ghidraRun
+              printf '#!/bin/sh\ncommand -v java >/dev/null 2>&1 || (DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openjdk-21-jre-headless >/dev/null 2>&1 || true)\nexec /opt/ghidra/support/analyzeHeadless "$@"\n' > /usr/local/bin/analyzeHeadless
+              cp /usr/local/bin/ghidraRun /usr/local/bin/ghidra
+              chmod +x /usr/local/bin/ghidraRun /usr/local/bin/analyzeHeadless /usr/local/bin/ghidra
+              (cd / && tar czf "$WORK/store/ghidra.tar.gz" opt/ghidra usr/local/bin/ghidraRun usr/local/bin/analyzeHeadless usr/local/bin/ghidra) && echo "OK:ghidra $(stat -c%s "$WORK/store/ghidra.tar.gz")" | tee -a state/kali-store-ghidra.log || echo "FAIL:ghidra-tar" | tee -a state/kali-store-ghidra.log
+            else
+              echo "FAIL:ghidra-download $(ls -la /tmp/ghidra.zip 2>/dev/null)" | tee -a state/kali-store-ghidra.log
+            fi
           else
-            echo "MISS:ghidra (no release URL)" | tee -a state/kali-store-ghidra.log
+            echo "MISS:ghidra (لا URL — rate limit؟)" | tee -a state/kali-store-ghidra.log
           fi
           # ── retdec ──
-          RURL=$(curl -s https://api.github.com/repos/avast/retdec/releases/latest | grep browser_download_url | grep 'linux-64b\.tar\.xz' | head -1 | cut -d'"' -f4)
+          RURL=$(gh api repos/avast/retdec/releases/latest --jq '.assets[].browser_download_url' 2>/dev/null | grep 'linux-64b\.tar\.xz' | head -1)
           echo "retdec URL=$RURL" | tee -a state/kali-store-ghidra.log
           if [ -n "$RURL" ]; then
-            curl -sfL -m 1200 "$RURL" -o /tmp/retdec.tar.xz
-            rm -rf /opt/retdec /opt/retdec-* && tar xJf /tmp/retdec.tar.xz -C /opt
-            [ -d /opt/retdec ] || mv /opt/retdec-* /opt/retdec
-            ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec-decompiler
-            ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec
-            cd / && tar czf "$WORK/store/retdec.tar.gz" opt/retdec usr/local/bin/retdec-decompiler usr/local/bin/retdec
-            echo "OK:retdec $(stat -c%s store/retdec.tar.gz)" | tee -a state/kali-store-ghidra.log
+            if curl -sfL --retry 3 -m 1200 "$RURL" -o /tmp/retdec.tar.xz; then
+              rm -rf /opt/retdec /opt/retdec-*
+              tar xJf /tmp/retdec.tar.xz -C /opt
+              [ -d /opt/retdec ] || mv /opt/retdec-* /opt/retdec 2>/dev/null || true
+              ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec-decompiler
+              ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec
+              (cd / && tar czf "$WORK/store/retdec.tar.gz" opt/retdec usr/local/bin/retdec-decompiler usr/local/bin/retdec) && echo "OK:retdec $(stat -c%s "$WORK/store/retdec.tar.gz")" | tee -a state/kali-store-ghidra.log || echo "FAIL:retdec-tar" | tee -a state/kali-store-ghidra.log
+            else
+              echo "FAIL:retdec-download $(ls -la /tmp/retdec.tar.xz 2>/dev/null)" | tee -a state/kali-store-ghidra.log
+            fi
           else
-            echo "MISS:retdec (no release URL)" | tee -a state/kali-store-ghidra.log
+            echo "MISS:retdec (لا URL — rate limit؟)" | tee -a state/kali-store-ghidra.log
           fi
           ls -la store | tee -a state/kali-store-ghidra.log
-          true
-      - name: رفع التاربولات
+          cp state/kali-store-ghidra.log store/build-ghidra.log 2>/dev/null || true
+          exit 0
+      - name: رفع التاربولات + اللوج
         continue-on-error: true
         run: |
           shopt -s nullglob
-          ASSETS=(store/*.tar.gz)
+          ASSETS=(store/*.tar.gz store/build-ghidra.log)
           echo "re bundles: ${#ASSETS[@]}"
           gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
             gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "TEST93p"
