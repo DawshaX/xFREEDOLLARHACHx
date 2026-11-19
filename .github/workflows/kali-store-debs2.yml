@@ -1,6 +1,6 @@
 # TEST93t v7 — debs النهائية: ettercap (common+text-only) + maskprocessor (mp)
 # + casefile من kali pool مباشرة (اتشال من الindex — الملف لسه في الميرور).
-name: "kali store debs v7 (ettercap+mp+casefile pool → release kali-store)"
+name: "kali store debs v8 (casefile pool ×3 → release kali-store)"
 on:
   push:
     paths:
@@ -9,7 +9,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: kali-store-debs7
+  group: kali-store-debs8
   cancel-in-progress: false
 jobs:
   debs7:
@@ -30,29 +30,20 @@ jobs:
             echo "=== debs v7 $(date -u +%FT%TZ) ===" | tee /store/build-debs2.log
             apt-get update 2>&1 | tail -2 | tee -a /store/build-debs2.log || true
             apt-get install -y --no-install-recommends curl ca-certificates apt-utils >/dev/null 2>&1 || true
-            TOOLS="ettercap:ettercap-common,ettercap-text-only maskprocessor:maskprocessor"
-            for pair in $TOOLS; do
-              tool="${pair%%:*}"; pkg="${pair##*:}"
-              rm -rf /tmp/debs-$tool; mkdir -p /tmp/debs-$tool; cd /tmp/debs-$tool
-              DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances $(echo $pkg | tr "," " ") 2>/dev/null | grep "^w" | grep -vE "^(metasploit|nmap$|hydra$|sqlmap$|wpscan$|nikto$|nuclei$|feroxbuster$|wordlists$)" | sort -u)
-              if apt-get download $DEPS >> /store/debs2.log 2>&1; then
-                tar czf /store/$tool-debs.tar.gz *.deb 2>/dev/null || true
-                echo "OK:$tool debs=$(ls *.deb 2>/dev/null | wc -l) size=$(stat -c%s /store/$tool-debs.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-debs2.log
-              else
-                echo "MISS:$tool" | tee -a /store/build-debs2.log
-              fi
-              cd /store
+            for BASE in "http://http.kali.org/kali/pool/main/c/casefile/" "https://http.kali.org/kali/pool/main/c/casefile/" "http://old.kali.org/kali/pool/main/c/casefile/"; do
+              echo "try base=$BASE" | tee -a /store/build-debs2.log
+              POOL_CASE=$(curl -sfL -m 60 "$BASE" 2>/dev/null | grep -oE "casefile_[A-Za-z0-9._~+-]+\.deb" | sort -V | tail -1)
+              [ -n "$POOL_CASE" ] && { echo "$BASE" > /tmp/casefile-base; echo "$POOL_CASE" > /tmp/casefile-name; break; }
             done
-            POOL_CASE=$(curl -sfL -m 60 "http://http.kali.org/kali/pool/main/c/casefile/" 2>/dev/null | grep -o "casefile_[^\"]*\\.deb" | sort -V | tail -1)
-            echo "pool-casefile=$POOL_CASE" | tee -a /store/build-debs2.log
-            if [ -n "$POOL_CASE" ]; then
+            echo "pool-casefile=$(cat /tmp/casefile-name 2>/dev/null)" | tee -a /store/build-debs2.log
+            if [ -f /tmp/casefile-name ]; then
               rm -rf /tmp/debs-casefile && mkdir -p /tmp/debs-casefile && cd /tmp/debs-casefile
-              curl -sfL -m 240 "http://http.kali.org/kali/pool/main/c/casefile/$POOL_CASE" -o casefile.deb
+              curl -sfL -m 240 "$(cat /tmp/casefile-base)$(cat /tmp/casefile-name)" -o casefile.deb
               tar czf /store/casefile-debs.tar.gz casefile.deb
               echo "OK:casefile(pool) size=$(stat -c%s /store/casefile-debs.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-debs2.log
               cd /store
             else
-              echo "MISS:casefile (pool)" | tee -a /store/build-debs2.log
+              echo "MISS:casefile (pool — مش موجود في الميرورات)" | tee -a /store/build-debs2.log
             fi
             echo "DEBS7_DONE" | tee -a /store/build-debs2.log
             true
