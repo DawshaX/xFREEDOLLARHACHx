@@ -355,7 +355,10 @@ router.get("/kali-env/tools", async (_req, res) => {
      * وunion للنتائج. عقدة طازة عمرها ما تتسطب عليها C/D كانت بتدبل كتالوج
      * العقد المتراكم (مقاس حي 10:2xZ: 205 عقدة E فوق 228 عقدة C/D/E). الاتحاد
      * هو الكتالوج الحقيقي: كل أداة «موجودة» بس لو **مقاسة موجودة على عقدة حية**. */
-    const union = await kaliFleetUnionExec(probe, 45_000, 6);
+        /* TEST93w — maxNodes 16: مقاس 14:28 — كاب ال6 كان بيستثني runnervm0hi8g
+     * (اللي عليها C/D/F كاملة) فالاتحاد كان 209 كاذبة بدل ~261. البروب رخيص
+     * (command -v ×266 لكل عقدة) — غطي كل الأسطول. */
+    const union = await kaliFleetUnionExec(probe, 90_000, 16);
     const foundUnion = new Set<string>();
     for (const so of union.stdouts) {
       for (const l of so.split("\n").map((x) => x.trim()).filter((x) => x.startsWith("OK:"))) foundUnion.add(l.slice(3));

@@ -130,31 +130,45 @@ export async function kaliAnywhereExecStream(
  * عندها فعلًا — مش آخر قياس اتكتب. */
 export async function kaliFleetUnionExec(
   cmd: string,
-  timeoutMs = 45_000,
-  maxNodes = 6,
+  timeoutMs = 90_000,
+  maxNodes = 16,
 ): Promise<{ planes: string[]; stdouts: string[] }> {
   if (!cmd.trim()) return { planes: [], stdouts: [] };
   let nodes: Array<{ id: string; hostname: string; mode: string }> = [];
   try {
-    nodes = (await orderedFleetNodes()).filter((a) => a.mode === "MODE_BARE" || a.mode === "MODE_PROOT").slice(0, maxNodes);
+    const all = (await orderedFleetNodes()).filter((a) => a.mode === "MODE_BARE" || a.mode === "MODE_PROOT");
+    /* TEST93w — dedupe بالid (مقاس: العقد مكررة في orderedFleetNodes) */
+    const seen = new Set<string>();
+    nodes = all.filter((a) => (seen.has(a.id) ? false : (seen.add(a.id), true))).slice(0, maxNodes);
   } catch {
     return { planes: [], stdouts: [] };
   }
   if (!nodes.length) return { planes: [], stdouts: [] };
-  const results = await Promise.allSettled(
-    nodes.map(async (a) => {
-      const rr = await execOnLocalAgent(remoteRunCmd(cmd, a.mode, timeoutMs), a.id, timeoutMs + 10_000);
-      if (!rr || !rr.stdout) throw new Error(`no-reply:${a.hostname}`);
-      return { plane: `${a.hostname} (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`, stdout: rr.stdout };
-    }),
-  );
+  const probe1 = async (a: { id: string; hostname: string; mode: string; }) => {
+    const rr = await execOnLocalAgent(remoteRunCmd(cmd, a.mode, timeoutMs), a.id, timeoutMs + 10_000);
+    if (!rr || !rr.stdout) throw new Error(`no-reply:${a.hostname}`);
+    return { plane: `${a.hostname} (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`, stdout: rr.stdout };
+  };
+  const results = await Promise.allSettled(nodes.map(probe1));
   const planes: string[] = [];
   const stdouts: string[] = [];
-  for (const x of results) {
+  const failed: typeof nodes = [];
+  results.forEach((x, i) => {
     if (x.status === "fulfilled") {
       planes.push(x.value.plane);
       stdouts.push(x.value.stdout);
+    } else {
+      failed.push(nodes[i]);
     }
+  });
+  /* TEST93w — retry تسلسلي للعقد اللي بورت (مقاس 14:08: العقد المرهقة بعد
+   * تثبيت ثقيل بوركت الprobe 45s فاتشالت من الاتحاد — 253 نزلت 209 كاذبة) */
+  for (const a of failed.slice(0, 3)) {
+    try {
+      const v = await probe1(a);
+      planes.push(v.plane);
+      stdouts.push(v.stdout);
+    } catch { /* وقعت فعلاً — من غيرها */ }
   }
   return { planes, stdouts };
 }
