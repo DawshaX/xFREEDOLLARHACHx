@@ -1,0 +1,61 @@
+# TEST92c — التفعيل واحد-واحد — الجزء B: النصف الثاني + provision + الجرد الحي.
+name: "TEST92c — تفعيل واحد-واحد B (22 أداة + جرد) على الأسطول الحي"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-tool-pass-b.yml"
+permissions:
+  contents: write
+concurrency:
+  group: kali-tool-pass-b
+  cancel-in-progress: false
+jobs:
+  pass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: تثبيت واحد-واحد (22 — مسلسل)
+        continue-on-error: true
+        run: |
+          L=state/tool-pass-b-log.txt
+          echo "=== TEST92c-B $(date -u +%FT%TZ) ===" > $L
+          for tool in vim aria2 python3-pip dvcs-ripper peass-ng keepnote casefile king-phisher socialanalyzer pgcli pentestly ssrfmap fernet retdec venom ghidra libreoffice gvm w3af sidguesser vulners pandoc; do
+            echo "--- INSTALL $tool $(date -u +%T) ---" >> $L
+            curl -s -m 120 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>&1 || echo "REQ_FAIL:$tool" >> $L
+            echo "" >> $L
+          done
+          echo "=== B DONE $(date -u +%FT%TZ) ===" >> $L
+          true
+      - name: provision أدوات بايثون
+        continue-on-error: true
+        run: |
+          L=state/tool-pass-b-log.txt
+          echo "=== PROVISION $(date -u +%T) ===" >> $L
+          curl -s -m 600 -X POST "$HUB/api/ops/tools/python/provision" \
+            -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}' >> $L 2>&1 || echo "PROVISION_REQ_FAIL" >> $L
+          echo "" >> $L
+          true
+      - name: الجرد الحي + قياس الكتالوج
+        continue-on-error: true
+        run: |
+          L=state/tool-pass-b-log.txt
+          echo "=== INVENTORY $(date -u +%T) ===" >> $L
+          curl -s -m 320 "$HUB/api/kali-env/inventory" -H "x-nova-token: $TOKEN" -o /tmp/inv.json || true
+          jq '{present, total, measured, measuredOn, missing}' /tmp/inv.json >> $L 2>/dev/null || head -c 400 /tmp/inv.json >> $L || true
+          echo "" >> $L
+          curl -s -m 280 "$HUB/api/kali-env/tools?fresh=$RANDOM" -H "x-nova-token: $TOKEN" -o /tmp/tools.json || true
+          jq '{present, total, measuredOn}' /tmp/tools.json >> $L 2>/dev/null || true
+          true
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/tool-pass-b-log.txt
+          git commit -m "state: TEST92c-B pass [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx
+          git push origin HEAD:arena/9552f54d-xfreedollarhachx
+          exit 0
