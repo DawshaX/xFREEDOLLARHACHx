@@ -1209,7 +1209,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
     if (storeDebs) {
       /* المرحلة 1 قصيرة: تنظيف statoverride + deb + dpkg — بلا بوابة ولا fallback */
-      installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; dpkg --configure -a 2>&1 | tail -1; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
+      installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
     } else {
       /* تاربولات parts (metasploit/empire/faraday/dradis) — TEST93p: بلا بوابة هنا (البوابة المنفصلة تحت مع retry — درس TEST80/TEST92q) */
       installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; echo STORE_EXTRACTED`;
