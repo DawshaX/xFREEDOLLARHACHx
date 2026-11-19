@@ -1,6 +1,6 @@
 # TEST62b — أمر المالك: إلغاء كل العقد القديمة كلها — بيلاقي أي run fleet حي ويلغيه
 # (github.token جوه الActions عنده actions:write — الطريقة الوحيدة المثبتة).
-name: fleet rescale (kill ALL old nodes) — TEST93 دفعة 10 نظيفة بعد جوع السلات
+name: "fleet rescale (kill ALL old nodes) — TEST93e سباتور الجمود"
 on:
   push:
     paths:
@@ -9,7 +9,9 @@ permissions:
   actions: write
   contents: read
 concurrency:
-  group: stop-zombies
+  # TEST93f — group فريد لكل commit: الrescale pushes المتعددة يتنافسوا كلهم
+  # على السلات بدل ما يطابوروا ورا بعض (الجمود المقاس: العقد ال19 ماسكة كل خانة)
+  group: "stop-zombies-${{ github.sha }}"
   cancel-in-progress: false
 jobs:
   cleanup:
