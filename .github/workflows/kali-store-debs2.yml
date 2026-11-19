@@ -1,7 +1,7 @@
 # TEST93p — debs v2: الناقص من v1 (wkhtmltopdf/dvcs-ripper/king-phisher) + debs
 # جديدة (legs/fernet/venom/keepnote/pandoc/w3af). wkhtmltopdf اتشال من kali repo
 # → fallback: deb الرسمي من wkhtmltopdf/packaging releases (jammy amd64).
-name: "kali store debs v3 (legion + fern بتبعياتهم → release kali-store)"
+name: "kali store debs v5 (ettercap+mp+casefile → release kali-store)"
 on:
   push:
     paths:
@@ -10,7 +10,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: kali-store-debs3
+  group: kali-store-debs5
   cancel-in-progress: false
 jobs:
   debs2:
@@ -30,11 +30,11 @@ jobs:
             echo "=== debs2 $(date -u +%FT%TZ) ===" | tee /store/build-debs2.log
             apt-get update 2>&1 | tail -2 | tee -a /store/build-debs2.log || true
             apt-get install -y --no-install-recommends curl ca-certificates apt-utils >/dev/null 2>&1 || true
-            TOOLS="legion:legion fern:fern-wifi-cracker"
+            TOOLS="ettercap:ettercap-common,ettercap-text-only maskprocessor:maskprocessor casefile:casefile"
             for pair in $TOOLS; do
               tool="${pair%%:*}"; pkg="${pair##*:}"
               rm -rf /tmp/debs-$tool; mkdir -p /tmp/debs-$tool; cd /tmp/debs-$tool
-              DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances $pkg 2>/dev/null | grep "^\w" | grep -v "^metasploit" | sort -u)
+              DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances $(echo $pkg | tr "," " ") 2>/dev/null | grep "^\w" | grep -vE "^(metasploit|nmap$|hydra$|sqlmap$|wpscan$|nikto$|nuclei$|feroxbuster$|wordlists$)" | sort -u)
               if apt-get download $DEPS >> /store/debs2.log 2>&1; then
                 tar czf /store/$tool-debs.tar.gz *.deb 2>/dev/null || true
                 echo "OK:$tool debs=$(ls *.deb 2>/dev/null | wc -l) size=$(stat -c%s /store/$tool-debs.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-debs2.log

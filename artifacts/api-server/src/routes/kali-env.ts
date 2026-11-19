@@ -550,7 +550,7 @@ const TOOL_BIN_ALIASES: Record<string, string[]> = {
   fern: ["fern"],
   pentestly: ["pentestly"],
   ssrfmap: ["ssrfmap"],
-  sidguesser: ["sidsweep", "sidguesser"],
+  sidguesser: ["sidguess", "sidguesser"],
   aria2: ["aria2c", "aria2"],
   "king-phisher": ["king-phisher"],
 };
@@ -1158,7 +1158,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     steghide: { file: "steghide.tar.gz", cmd: ["steghide"] },
     "arp-scan": { file: "arp-scan.tar.gz", cmd: ["arp-scan"] },
     cherrytree: { file: "cherrytree.tar.gz", cmd: ["cherrytree"] },
-    casefile: { file: "casefile.tar.gz", cmd: ["casefile"] },
+    casefile: { file: "casefile-debs.tar.gz", cmd: ["casefile"] },
     dradis: { file: "dradis.tar.gz", cmd: ["dradis"] },
     recordmydesktop: { file: "recordmydesktop.tar.gz", cmd: ["recordmydesktop"] },
     wkhtmltopdf: { file: "wkhtmltopdf-debs.tar.gz", cmd: ["wkhtmltopdf"] },
@@ -1173,12 +1173,9 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     vim: { file: "vim.tar.gz", cmd: ["vim"] },
     aria2: { file: "aria2.tar.gz", cmd: ["aria2c", "aria2"] },
     "python3-pip": { file: "python3-pip.tar.gz", cmd: ["pip3"] },
-    "dvcs-ripper": { file: "dvcs-ripper.tar.gz", cmd: ["rip-git", "rip-svn"] },
-    "king-phisher": { file: "king-phisher.tar.gz", cmd: ["king-phisher"] },
     ghidra: { file: "ghidra.tar.gz", cmd: ["ghidraRun", "ghidra", "analyzeHeadless"] },
     retdec: { file: "retdec.tar.gz", cmd: ["retdec-decompiler", "retdec"] },
-    w3af: { file: "w3af-debs.tar.gz", cmd: ["w3af_console", "w3af_gui", "w3af"] },
-    sidguesser: { file: "sidguesser.tar.gz", cmd: ["sidsweep", "sidguesser"] },
+    sidguesser: { file: "sidguesser.tar.gz", cmd: ["sidguess", "sidguesser"] },
     netexec: { file: "netexec.tar.gz", cmd: ["nxc", "netexec"] },
     crackmapexec: { file: "crackmapexec.tar.gz", cmd: ["crackmapexec", "cme"] },
     empire: { file: "powershell-empire.tar.gz", cmd: ["powershell-empire", "empire"] },
@@ -1187,11 +1184,8 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     gvm: { file: "gvm.tar.gz", cmd: ["gvm-cli", "gvmd", "gvm-setup"] },
         pandoc: { file: "pandoc-debs.tar.gz", cmd: ["pandoc"] },
     legion: { file: "legion-debs.tar.gz", cmd: ["legion"] },
-    fern: { file: "fern-debs.tar.gz", cmd: ["fern"] },
+    fern: { file: "fern-debs.tar.gz", cmd: ["fern", "fern-wifi-cracker"] },
     pgcli: { file: "pgcli.tar.gz", cmd: ["pgcli"], pip: "pgcli" },
-    pentestly: { file: "pentestly.tar.gz", cmd: ["pentestly"] },
-    ssrfmap: { file: "ssrfmap.tar.gz", cmd: ["ssrfmap"] },
-    "gh-dork": { file: "gh-dork.tar.gz", cmd: ["gh-dork"] },
     socialanalyzer: { file: "social-analyzer.tar.gz", cmd: ["social-analyzer", "socialanalyzer"], pip: "social-analyzer" },
     "peass-ng": { file: "peass-ng.tar.gz", cmd: ["linpeas", "linpeas.sh"] },
     vulners: { file: "vulners.tar.gz", cmd: ["vulners"] },
@@ -1201,7 +1195,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   /* TEST93o — المسار من مرحلتين قصيرتين للأدوات اللي ليها حزم deb: درس TEST80
    * المقاس مرة تانية 08:40/09:04 — الأمر المركب الطويل = proot signal 6 حتى
    * بعد نجاح dpkg نفسه (البوابة بتتقتل). التثبيت قصير ثم البوابة قصيرة. */
-  const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec", "wkhtmltopdf", "pandoc", "legion", "fern"]);
+  const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec", "wkhtmltopdf", "pandoc", "legion", "fern", "casefile"]);
   const storeDebs = Boolean(STORE_TOOLS[tool] && DEBS_TOOLS.has(tool));
   const storeGate = STORE_TOOLS[tool] ? (Array.isArray(STORE_TOOLS[tool].cmd) ? STORE_TOOLS[tool].cmd : [STORE_TOOLS[tool].cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ") : "";
   let installCmd: string;

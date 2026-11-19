@@ -3,7 +3,7 @@
 # بيثّب openjdk-21 لو ناقص — الجست ماعندهوش java). retdec tar.xz من releases
 # (avast/retdec) → /opt/retdec + symlinks. كل مرحلة بلوج صريح يتكوميت دايمًا
 # (الدرس: اللوج من results-receiver EOF — الكوميت هو اللوج الموثوق).
-name: "kali store ghidra+retdec v4 (retdec v4.1/v5.0 patterns → release kali-store)"
+name: "kali store ghidra+retdec v5 (retdec URL مخبوز → release kali-store)"
 on:
   push:
     paths:
@@ -12,7 +12,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: kali-store-ghidra-v4
+  group: kali-store-ghidra-v5
   cancel-in-progress: false
 jobs:
   re:
@@ -48,16 +48,23 @@ jobs:
             echo "MISS:ghidra (لا URL — rate limit؟)" | tee -a state/kali-store-ghidra.log
           fi
           # ── retdec ──
-          RURL=$(gh api repos/avast/retdec/releases/latest --jq '.assets[].browser_download_url' 2>/dev/null | grep -iE 'linux(-64b|.*release)\.tar\.xz' | head -1)
+          RURL="https://github.com/avast/retdec/releases/download/v5.0/RetDec-v5.0-Linux-Release.tar.xz"  # مخبوز — gh api للريبو ده بيقع على الrunner (مقاس v2/v3/v4)
           echo "retdec URL=$RURL" | tee -a state/kali-store-ghidra.log
           if [ -n "$RURL" ]; then
             if curl -sfL --retry 3 -m 1200 "$RURL" -o /tmp/retdec.tar.xz; then
               rm -rf /opt/retdec /opt/retdec-* /opt/RetDec-*
-              tar xJf /tmp/retdec.tar.xz -C /opt
-              [ -d /opt/retdec ] || { mv /opt/RetDec-* /opt/retdec 2>/dev/null || mv /opt/retdec-* /opt/retdec 2>/dev/null; true; }
-              ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec-decompiler
-              ln -sf /opt/retdec/bin/retdec-decompiler /usr/local/bin/retdec
-              (cd / && tar czf "$WORK/store/retdec.tar.gz" opt/retdec usr/local/bin/retdec-decompiler usr/local/bin/retdec) && echo "OK:retdec $(stat -c%s "$WORK/store/retdec.tar.gz")" | tee -a state/kali-store-ghidra.log || echo "FAIL:retdec-tar" | tee -a state/kali-store-ghidra.log
+              mkdir -p /opt/retdec && tar xJf /tmp/retdec.tar.xz -C /opt/retdec --strip-components=1
+              REBIN=$(find /opt/retdec -maxdepth 3 -name retdec-decompiler -path "*bin*" 2>/dev/null | head -1)
+              echo "retdec bin=$REBIN" | tee -a state/kali-store-ghidra.log
+              if [ -n "$REBIN" ]; then
+                ln -sf "$REBIN" /usr/local/bin/retdec-decompiler
+                ln -sf "$REBIN" /usr/local/bin/retdec
+                shopt -s nullglob
+                PATHS=(opt/retdec usr/local/bin/retdec usr/local/bin/retdec-decompiler)
+                (cd / && tar czf "$WORK/store/retdec.tar.gz" "${PATHS[@]}") && echo "OK:retdec $(stat -c%s "$WORK/store/retdec.tar.gz")" | tee -a state/kali-store-ghidra.log || echo "FAIL:retdec-tar" | tee -a state/kali-store-ghidra.log
+              else
+                echo "FAIL:retdec-bin-not-found $(ls /opt/retdec | head -5)" | tee -a state/kali-store-ghidra.log
+              fi
             else
               echo "FAIL:retdec-download $(ls -la /tmp/retdec.tar.xz 2>/dev/null)" | tee -a state/kali-store-ghidra.log
             fi
