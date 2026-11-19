@@ -1,7 +1,7 @@
 # TEST93p — المسار F: المتبقي الحقيقي على الأسطول كلّه (بعد فكس المرحلتين +
 # retry البوابة + debs2 + ghidra/retdec + empire كامل). مسلسل واحد-واحد (الدرس:
 # الازدحام بيقتل) — بعد ما store workflows تخلص (التاربولات لازم تكون مرفوعة).
-name: "TEST93x-F7b — الخفيفة: 15 أداة"
+name: "TEST93y-F — 5 مفقودة من D"
 on:
   push:
     paths:
@@ -26,7 +26,7 @@ jobs:
         run: |
           L=state/tool-pass-f-log.txt
           echo "=== TEST93p-F $(date -u +%FT%TZ) ===" > $L
-          for tool in libreoffice casefile wkhtmltopdf pandoc legion fern gh-dork dvcs-ripper pentestly ssrfmap venom w3af keepnote vulners maskprocessor; do
+          for tool in certipy bloodhound-python scoutsuite pacu ssh-audit; do
             echo "--- INSTALL $tool $(date -u +%T) ---" >> $L
             curl -s -m 900 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>&1 || echo "REQ_FAIL:$tool" >> $L
             echo "" >> $L
