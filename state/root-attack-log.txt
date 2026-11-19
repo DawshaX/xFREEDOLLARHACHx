@@ -1,11 +1,4 @@
-=== V3 2026-11-18T23:59:55Z ===
-data: {"type":"start","command":"dpkg --configure -a 2>&1 | tail -5; echo CONFIG_EXIT_$?","cwd":"/opt"}
-
-data: {"type":"done","exitCode":0,"durationMs":298,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
-
-data: [DONE]
-
-
+=== V3 2026-11-19T00:17:54Z ===
 data: {"type":"start","command":"dpkg --configure -a 2>&1 | tail -5; echo CONFIG_EXIT_$?","cwd":"/opt"}
 
 data: {"type":"done","exitCode":0,"durationMs":297,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
@@ -15,7 +8,14 @@ data: [DONE]
 
 data: {"type":"start","command":"dpkg --configure -a 2>&1 | tail -5; echo CONFIG_EXIT_$?","cwd":"/opt"}
 
-data: {"type":"done","exitCode":0,"durationMs":307,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
+data: {"type":"done","exitCode":0,"durationMs":301,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
+
+data: [DONE]
+
+
+data: {"type":"start","command":"dpkg --configure -a 2>&1 | tail -5; echo CONFIG_EXIT_$?","cwd":"/opt"}
+
+data: {"type":"done","exitCode":0,"durationMs":305,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
 
 data: [DONE]
 
@@ -26,7 +26,7 @@ data: {"type":"stdout","text":"E: dpkg was interrupted, you must manually run 'd
 
 data: {"type":"stdout","text":"FIX_0\n"}
 
-data: {"type":"done","exitCode":0,"durationMs":285,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
+data: {"type":"done","exitCode":0,"durationMs":291,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
 
 data: [DONE]
 
@@ -37,155 +37,30 @@ data: {"type":"stdout","text":"The following packages have been unpacked but not
 
 data: {"type":"stdout","text":"AUDIT_END\n"}
 
-data: {"type":"done","exitCode":0,"durationMs":294,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
+data: {"type":"done","exitCode":0,"durationMs":299,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
 
 data: [DONE]
 
 
 data: {"type":"start","command":"DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; echo UPD_$?","cwd":"/opt"}
 
-data: {"type":"stdout","text":"UPD_0\n"}
-
-data: {"type":"done","exitCode":0,"durationMs":1202,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
+data: {"type":"done","exitCode":0,"durationMs":999,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)"}
 
 data: [DONE]
 
 
-{"ok":false,"tool":"amass","pkg":"amass","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=\nBIN=\nINSTALL_FAIL:amass\n\ncurl: option : blank argument where content is expected\ncurl: try 'curl --help' or 'curl --manual' for more information\ncp: cannot stat '': No such file or directory\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+{"ok":true,"tool":"amass","pkg":"amass","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/owasp-amass/amass/releases/download/v5.1.3/amass_linux_amd64.tar.gz\n-rw-r--r-- 1 root root 16973513 Nov 19 00:18 pkg.bin\nBIN=./amass_linux_amd64/amass\nINSTALL_OK:amass\n"}
+{"ok":true,"tool":"subfinder","pkg":"subfinder","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/projectdiscovery/subfinder/releases/download/v2.17.0/subfinder_2.17.0_linux_amd64.zip\n-rw-r--r-- 1 root root 10308162 Nov 19 00:18 pkg.bin\nBIN=./subfinder\nINSTALL_OK:subfinder\n"}
+{"ok":true,"tool":"naabu","pkg":"naabu","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/projectdiscovery/naabu/releases/download/v2.7.0/naabu_2.7.0_linux_amd64.zip\n-rw-r--r-- 1 root root 11639228 Nov 19 00:18 pkg.bin\nBIN=./naabu\nINSTALL_OK:naabu\n"}
+{"ok":true,"tool":"dnsx","pkg":"dnsx","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/projectdiscovery/dnsx/releases/download/v1.3.1/dnsx_1.3.1_linux_amd64.zip\n-rw-r--r-- 1 root root 9829391 Nov 19 00:18 pkg.bin\nBIN=./dnsx\nINSTALL_OK:dnsx\n"}
+{"ok":true,"tool":"httpx","pkg":"httpx","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/projectdiscovery/httpx/releases/download/v1.12.0/httpx_1.12.0_linux_amd64.zip\n-rw-r--r-- 1 root root 19200026 Nov 19 00:18 pkg.bin\nBIN=./httpx\nINSTALL_OK:httpx\n"}
+{"ok":true,"tool":"katana","pkg":"katana","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/projectdiscovery/katana/releases/download/v1.8.0/katana_1.8.0_linux_amd64.zip\n-rw-r--r-- 1 root root 31910234 Nov 19 00:18 pkg.bin\nBIN=./katana\nINSTALL_OK:katana\n"}
+{"ok":true,"tool":"cariddi","pkg":"cariddi","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/edoardottt/cariddi/releases/download/v1.4.6/cariddi_1.4.6_linux_amd64.zip\n-rw-r--r-- 1 root root 4514783 Nov 19 00:18 pkg.bin\nBIN=./cariddi\nINSTALL_OK:cariddi\n"}
+{"ok":true,"tool":"dockle","pkg":"dockle","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/goodwithtech/dockle/releases/download/v0.4.15/dockle_0.4.15_Linux-64bit.tar.gz\n-rw-r--r-- 1 root root 7785144 Nov 19 00:18 pkg.bin\nBIN=./dockle\nINSTALL_OK:dockle\n"}
+{"ok":true,"tool":"grype","pkg":"grype","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/anchore/grype/releases/download/v0.122.1/grype_0.122.1_linux_amd64.tar.gz\n-rw-r--r-- 1 root root 32723797 Nov 19 00:18 pkg.bin\nBIN=./grype\nINSTALL_OK:grype\n"}
+{"ok":true,"tool":"syft","pkg":"syft","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz\n-rw-r--r-- 1 root root 31486443 Nov 19 00:18 pkg.bin\nBIN=./syft\nINSTALL_OK:syft\n"}
+{"ok":true,"tool":"trufflehog","pkg":"trufflehog","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=https://github.com/trufflesecurity/trufflehog/releases/download/v3.99.9/trufflehog_3.99.9_linux_amd64.tar.gz\n-rw-r--r-- 1 root root 36283707 Nov 19 00:18 pkg.bin\nBIN=./trufflehog\nINSTALL_OK:trufflehog\n"}
 {"ok":true,"tool":"dirsearch","pkg":"dirsearch","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/tmp/dirsearch'...\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:dirsearch\n"}
 {"ok":true,"tool":"arjun","pkg":"arjun","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/tmp/arjun'...\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:arjun\n"}
-{"ok":false,"tool":"subfinder","pkg":"subfinder","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=\nBIN=\nINSTALL_FAIL:subfinder\n\ncurl: option : blank argument where content is expected\ncurl: try 'curl --help' or 'curl --manual' for more information\ncp: cannot stat '': No such file or directory\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-{"ok":false,"tool":"naabu","pkg":"naabu","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=\nBIN=\nINSTALL_FAIL:naabu\n\ncurl: option : blank argument where content is expected\ncurl: try 'curl --help' or 'curl --manual' for more information\ncp: cannot stat '': No such file or directory\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-{"ok":false,"tool":"dnsx","pkg":"dnsx","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nURL=\nBIN=\nINSTALL_FAIL:dnsx\n\ncurl: option : blank argument where content is expected\ncurl: try 'curl --help' or 'curl --manual' for more information\ncp: cannot stat '': No such file or directory\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
 {"ok":true,"tool":"sherlock","pkg":"sherlock","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nmitmproxy 12.2.3 requires asgiref<=3.11.1,>=3.2.10, but you have asgiref 3.12.1 which is incompatible.\nmitmproxy 12.2.3 requires Brotli<=1.2.0,>=1.0, but you have brotli 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires msgpack<=1.1.2,>=1.0.0, but you have msgpack 1.2.1 which is incompatible.\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:sherlock\n"}
-{"ok":false,"tool":"bettercap","pkg":"bettercap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:bettercap\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-{"ok":false,"tool":"arp-scan","pkg":"arp-scan","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:arp-scan\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-{"ok":false,"tool":"steghide","pkg":"steghide","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:steghide\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-{"ok":false,"tool":"exiftool","pkg":"libimage-exiftool-perl","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:exiftool\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-{"ok":true,"tool":"sleuthkit","pkg":"sleuthkit","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_OK:sleuthkit\n"}
-{"ok":false,"tool":"routersploit","pkg":"routersploit","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:routersploit\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-{"ok":false,"tool":"crackmapexec","pkg":"crackmapexec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:crackmapexec\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-=== INSTALLS DONE 2026-11-19T00:01:03Z ===
-=== القياس النهائي ===
-{
-  "present": 189,
-  "total": 266,
-  "measuredOn": "runnervmccnms — عقدة كالي سحابية (rootfs + proot)",
-  "stillMissing": [
-    "photon",
-    "maigret",
-    "h8mail",
-    "osintgram",
-    "gh-dork",
-    "prowler",
-    "scoutsuite",
-    "pacu",
-    "trufflehog",
-    "dockle",
-    "katana",
-    "cariddi",
-    "subzy",
-    "gotator",
-    "netexec",
-    "certipy",
-    "bloodhound-python",
-    "ssh-audit",
-    "sleuthkit",
-    "steghide",
-    "exiftool",
-    "semgrep",
-    "grype",
-    "syft",
-    "amass",
-    "sublist3r",
-    "vulners",
-    "katana",
-    "hcxtools",
-    "routersploit",
-    "crackmapexec",
-    "bettercap",
-    "ettercap",
-    "arp-scan",
-    "empire",
-    "bloodhound",
-    "chisel",
-    "ligolo-ng",
-    "netexec",
-    "steghide",
-    "exiftool",
-    "volatility",
-    "sleuthkit",
-    "ghidra",
-    "ltrace",
-    "strace",
-    "wkhtmltopdf",
-    "pandoc",
-    "faraday",
-    "dradis",
-    "cherrytree",
-    "recordmydesktop",
-    "libreoffice",
-    "amass",
-    "katana",
-    "bettercap",
-    "ettercap",
-    "arp-scan",
-    "amass",
-    "sublist3r",
-    "maigret",
-    "asnmap",
-    "shuffledns",
-    "evilgrade",
-    "legs",
-    "gvm",
-    "pentestly",
-    "grype",
-    "katana",
-    "w3af",
-    "ssrfmap",
-    "sidguesser",
-    "mongosh",
-    "redis",
-    "pgcli",
-    "maskprocessor",
-    "rainbowcrack",
-    "hcxtools",
-    "fernet",
-    "ghidra",
-    "retdec",
-    "ltrace",
-    "strace",
-    "volatility",
-    "bettercap",
-    "crackmapexec",
-    "netexec",
-    "venom",
-    "elfutils",
-    "bettercap",
-    "ettercap",
-    "metasploit-framework",
-    "empire",
-    "empire",
-    "bloodhound",
-    "netexec",
-    "crackmapexec",
-    "chisel",
-    "ligolo-ng",
-    "dvcs-ripper",
-    "peass-ng",
-    "sleuthkit",
-    "exiftool",
-    "faraday",
-    "dradis",
-    "cherrytree",
-    "keepnote",
-    "casefile",
-    "recordmydesktop",
-    "king-phisher",
-    "socialanalyzer",
-    "python3-pip",
-    "zsh",
-    "vim",
-    "aria2"
-  ]
-}
+=== INSTALLS DONE 2026-11-19T00:19:01Z ===
