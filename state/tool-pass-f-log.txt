@@ -1,35 +1,49 @@
-=== TEST93p-F 2026-11-19T13:57:46Z ===
---- INSTALL fern 13:57:46 ---
-{"ok":true,"tool":"fern","pkg":"fern","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n openrc\n systemd\n\nROOT_UID:0\nINSTALL_OK:fern\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 60232\n"}
---- INSTALL maskprocessor 14:02:09 ---
-{"ok":false,"tool":"maskprocessor","pkg":"maskprocessor","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nProcessing triggers for man-db (2.13.1-1) ...\nsetpriv: setresgid failed: Operation not permitted\n\nROOT_UID:0\nINSTALL_FAIL:maskprocessor\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 73706\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL pgcli 14:02:25 ---
-{"ok":true,"tool":"pgcli","pkg":"pgcli","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nmycli 2.30.3 requires sqlglot~=30.25.0, but you have sqlglot 30.30.0 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:pgcli\n"}
---- INSTALL routersploit 14:02:32 ---
-{"ok":true,"tool":"routersploit","pkg":"routersploit","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/routersploit'...\nsslyze 6.3.1 requires tls-parser<3,>=2, but you have tls-parser 1.2.2 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:routersploit\n"}
---- INSTALL socialanalyzer 14:02:36 ---
-{"ok":true,"tool":"socialanalyzer","pkg":"socialanalyzer","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nlimits 4.4.1 requires packaging<25,>=21, but you have packaging 26.2 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/local/bin/social-analyzer\nINSTALL_OK:socialanalyzer\n"}
---- INSTALL vulners 14:02:46 ---
-{"ok":false,"tool":"vulners","pkg":"vulners","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:vulners\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL subzy 14:02:59 ---
-{"ok":true,"tool":"subzy","pkg":"subzy","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:subzy\n"}
---- INSTALL gotator 14:03:02 ---
-{"ok":true,"tool":"gotator","pkg":"gotator","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:gotator\n"}
---- INSTALL evilgrade 14:03:05 ---
-{"ok":false,"tool":"evilgrade","pkg":"evilgrade","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:evilgrade\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL libreoffice 14:03:17 ---
-{"ok":false,"tool":"libreoffice","pkg":"libreoffice","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:libreoffice\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL faraday 14:03:18 ---
-{"ok":true,"tool":"faraday","pkg":"faraday","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:faraday\n"}
---- INSTALL dradis 14:06:29 ---
-{"ok":true,"tool":"dradis","pkg":"dradis","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:dradis\n"}
---- INSTALL king-phisher 14:08:22 ---
-{"ok":false,"tool":"king-phisher","pkg":"king-phisher","inCatalog":true,"root":true,"uid":0,"plane":"ip-10-0-139-97 — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/king-phisher'...\nINSTALL_FAIL:king-phisher\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
-=== F DONE 2026-11-19T14:08:23Z ===
-=== FINAL MEASURE (union) 14:08:23 ===
-{
-  "present": 209,
-  "total": 266,
-  "measuredOn": "اتحاد 6 عقدة كالي حية — ip-10-0-139-97 (rootfs + proot) · runnervmccnms (rootfs + proot) · runnervm0hi8g (rootfs + proot) · runnervmccnms (rootfs + proot) …"
-}
+=== TEST93p-F 2026-11-19T17:32:52Z ===
+--- INSTALL evilgrade 17:32:52 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL king-phisher 17:32:55 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL libreoffice 17:32:55 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL maskprocessor 17:32:56 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL vulners 17:32:56 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+=== F DONE 2026-11-19T17:32:57Z ===
+=== FINAL MEASURE (union) 17:32:57 ===
 
