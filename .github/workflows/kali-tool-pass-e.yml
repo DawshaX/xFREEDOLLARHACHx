@@ -1,6 +1,6 @@
 # TEST92n — المسار النهائي E: أدوات DEBS (طبقة الجديدة — dpkg -i على الجست
 # النظيف) + بقية pip. مسلسل منفرد (الدرس: الازدحام بيقتل الردود).
-name: "TEST92n — مسار E النهائي: DEBS + pip منفرد"
+name: "TEST92o — مسار E بعد فكس statoverride+retry"
 on:
   push:
     paths:
