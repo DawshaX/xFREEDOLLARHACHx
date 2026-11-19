@@ -15,7 +15,7 @@ concurrency:
 jobs:
   pass:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 55
     env:
       TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
       HUB: https://nova.waifly.com
