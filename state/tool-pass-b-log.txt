@@ -1,0 +1,108 @@
+=== TEST92c-B 2026-11-19T04:56:11Z ===
+--- INSTALL vim 04:56:11 ---
+{"ok":false,"tool":"vim","pkg":"vim","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:vim\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL aria2 04:56:12 ---
+{"ok":false,"tool":"aria2","pkg":"aria2","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:aria2\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL python3-pip 04:56:13 ---
+{"ok":true,"tool":"python3-pip","pkg":"python3-pip","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_OK:python3-pip\n\nls: cannot access 'store-pkg.tar.gz': No such file or directory\n"}
+--- INSTALL dvcs-ripper 04:56:21 ---
+{"ok":false,"tool":"dvcs-ripper","pkg":"dvcs-ripper","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:dvcs-ripper\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL peass-ng 04:56:22 ---
+{"ok":true,"tool":"peass-ng","pkg":"peass-ng","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\n-rw-r--r-- 1 root root 40963865 Nov 19 04:56 store-pkg.tar.gz\n/usr/bin/linpeas\nINSTALL_OK:peass-ng\n"}
+--- INSTALL keepnote 04:56:24 ---
+{"ok":false,"tool":"keepnote","pkg":"keepnote","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:keepnote\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL casefile 04:56:26 ---
+{"ok":false,"tool":"casefile","pkg":"casefile","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:casefile\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL king-phisher 04:56:27 ---
+{"ok":false,"tool":"king-phisher","pkg":"king-phisher","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:king-phisher\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL socialanalyzer 04:56:28 ---
+{"ok":true,"tool":"socialanalyzer","pkg":"socialanalyzer","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nmitmproxy 12.2.3 requires urwid<=3.0.5,>=2.6.14, but you have urwid 4.2.5 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n/usr/local/bin/social-analyzer\nINSTALL_OK:socialanalyzer\n"}
+--- INSTALL pgcli 04:56:39 ---
+{"ok":true,"tool":"pgcli","pkg":"pgcli","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nmycli 2.30.3 requires sqlglot~=30.25.0, but you have sqlglot 30.30.0 which is incompatible.\nWARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\nINSTALL_OK:pgcli\n"}
+--- INSTALL pentestly 04:56:45 ---
+{"ok":false,"tool":"pentestly","pkg":"pentestly","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:pentestly\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL ssrfmap 04:56:46 ---
+{"ok":false,"tool":"ssrfmap","pkg":"ssrfmap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:ssrfmap\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL fernet 04:56:47 ---
+{"ok":false,"tool":"fernet","pkg":"fernet","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:fernet\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL retdec 04:56:48 ---
+{"ok":false,"tool":"retdec","pkg":"retdec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:retdec\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL venom 04:56:50 ---
+{"ok":false,"tool":"venom","pkg":"venom","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:venom\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL ghidra 04:56:51 ---
+{"ok":false,"tool":"ghidra","pkg":"ghidra","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:ghidra\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL libreoffice 04:56:53 ---
+{"ok":false,"tool":"libreoffice","pkg":"libreoffice","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:libreoffice\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL gvm 04:56:54 ---
+{"ok":true,"tool":"gvm","pkg":"gvm","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\n/usr/sbin/gvmd\nINSTALL_OK:gvm\n"}
+--- INSTALL w3af 04:56:55 ---
+{"ok":false,"tool":"w3af","pkg":"w3af","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:w3af\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL sidguesser 04:56:56 ---
+{"ok":false,"tool":"sidguesser","pkg":"sidguesser","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nINSTALL_FAIL:sidguesser\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL vulners 04:56:57 ---
+{"ok":false,"tool":"vulners","pkg":"vulners","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\n-rw-r--r-- 1 root root 1991528 Nov 19 04:56 store-pkg.tar.gz\nINSTALL_FAIL:vulners\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL pandoc 04:56:58 ---
+{"ok":false,"tool":"pandoc","pkg":"pandoc","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:pandoc\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+=== B DONE 2026-11-19T04:57:00Z ===
+=== PROVISION 04:57:00 ===
+{"ok":false,"error":"vendorer-missing","detail":"السكربت مش في الباندة: /scripts/fetch-python-tools.mjs"}
+=== INVENTORY 04:57:00 ===
+{
+  "present": 1,
+  "total": 46,
+  "measured": true,
+  "measuredOn": "runnervmccnms — عقدة كالي سحابية (rootfs + proot)",
+  "missing": [
+    "nmap",
+    "masscan",
+    "sqlmap",
+    "hydra",
+    "john",
+    "hashcat",
+    "nikto",
+    "gobuster",
+    "feroxbuster",
+    "wfuzz",
+    "dirb",
+    "nuclei",
+    "searchsploit",
+    "tcpdump",
+    "tshark",
+    "wireshark",
+    "mitmproxy",
+    "arpspoof",
+    "burpsuite",
+    "zaproxy",
+    "msfconsole",
+    "wpscan",
+    "commix",
+    "dnsenum",
+    "fierce",
+    "theHarvester",
+    "sublist3r",
+    "arjun",
+    "dirsearch",
+    "impacket-psexec",
+    "impacket-secretsdump",
+    "impacket-wmiexec",
+    "impacket-ntlmrelayx",
+    "volatility3",
+    "binwalk",
+    "foremost",
+    "radare2",
+    "rizin",
+    "gdb",
+    "strace",
+    "apktool",
+    "jadx",
+    "aircrack-ng",
+    "openssl",
+    "curl"
+  ]
+}
+
+{
+  "present": 198,
+  "total": 266,
+  "measuredOn": "runnervmccnms — عقدة كالي سحابية (rootfs + proot)"
+}

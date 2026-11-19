@@ -1,8 +1,8 @@
-# TEST92 — تمريرة التفعيل واحد-واحد (أمر المالك: «اداة اداة احسن واسرع»):
-# pip tools مباشرة على العقدة (مستقلة عن المخزن) + provision بايثون + الجرد
-# الحي. كل نتيجة بتنزل في state/tool-pass-log.txt (المسار المعمول به —
-# gh api logs EOF مقاس).
-name: "TEST92 — تفعيل واحد-واحد: pip tools + provision + جرد"
+# TEST92b — التفعيل واحد-واحد (أمر المالك: «اداة اداة احسن واسرع») — الجزء A:
+# النصف الأول من الـ47 الناقصة على عقد الأسطول الحية (الأسطول قام 04:02
+# بالمخزن الكامل — metasploit msfconsole جاهز مقاس). السلسلة الكاملة في
+# المثبت: STORE → GitHub → pip → clone → apt — كل أداة بتلاقي أطبق مصدر.
+name: "TEST92b — تفعيل واحد-واحد A (25 أداة على الأسطول الحي)"
 on:
   push:
     paths:
@@ -15,49 +15,37 @@ concurrency:
 jobs:
   pass:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 55
     env:
       TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
       HUB: https://nova.waifly.com
     steps:
       - uses: actions/checkout@v4
-      - name: provision أدوات بايثون (POST طويل — لحد 15د)
-        continue-on-error: true
+      - name: فحص العقد الحية أولًا
         run: |
           L=state/tool-pass-log.txt
-          echo "=== TEST92 provision $(date -u +%FT%TZ) ===" > $L
-          curl -s -m 900 -X POST "$HUB/api/ops/tools/python/provision" \
-            -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}' >> $L 2>&1 || echo "PROVISION_REQ_FAIL" >> $L
+          echo "=== TEST92b-A $(date -u +%FT%TZ) ===" > $L
+          curl -s -m 60 "$HUB/api/ops/kali/nodes" -H "x-nova-token: $TOKEN" -o /tmp/nodes.json || true
+          jq '{kaliNodeCount, tools: {total: .stats.total, ok: .stats.ok}}' /tmp/nodes.json >> $L 2>/dev/null || echo "NODES_FAIL" >> $L
           echo "" >> $L
           true
-      - name: تثبيت واحد-واحد (مسلسل — كل أداة لوحدها)
+      - name: تثبيت واحد-واحد (25 — مسلسل)
         continue-on-error: true
         run: |
           L=state/tool-pass-log.txt
-          for tool in pgcli socialanalyzer pentestly ssrfmap fernet subzy gotator osintgram netexec routersploit photon; do
+          for tool in metasploit-framework netexec crackmapexec steghide exiftool arp-scan ettercap sherlock amass sublist3r volatility empire cherrytree casefile dradis recordmydesktop wkhtmltopdf evilgrade maskprocessor rainbowcrack redis ltrace strace elfutils zsh; do
             echo "--- INSTALL $tool $(date -u +%T) ---" >> $L
-            curl -s -m 470 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>&1 || echo "REQ_FAIL:$tool" >> $L
+            curl -s -m 120 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>&1 || echo "REQ_FAIL:$tool" >> $L
             echo "" >> $L
           done
-          echo "=== INSTALLS DONE $(date -u +%FT%TZ) ===" >> $L
-          true
-      - name: الجرد الحي (46 أداة بنسخها)
-        continue-on-error: true
-        run: |
-          L=state/tool-pass-log.txt
-          echo "=== INVENTORY $(date -u +%FT%TZ) ===" >> $L
-          curl -s -m 320 "$HUB/api/kali-env/inventory" -H "x-nova-token: $TOKEN" -o /tmp/inv.json || true
-          jq '{present, total, measured, measuredOn, missing}' /tmp/inv.json >> $L 2>/dev/null || head -c 400 /tmp/inv.json >> $L || true
-          echo "" >> $L
-          curl -s -m 280 "$HUB/api/kali-env/tools?fresh=$RANDOM" -H "x-nova-token: $TOKEN" -o /tmp/tools.json || true
-          jq '{present, total}' /tmp/tools.json >> $L 2>/dev/null || true
+          echo "=== A DONE $(date -u +%FT%TZ) ===" >> $L
           true
       - name: كوميت اللوج
         continue-on-error: true
         run: |
           git config user.name "nova-bot"; git config user.email "nova@bot.local"
           git add -f state/tool-pass-log.txt
-          git commit -m "state: TEST92 tool pass [skip ci]" || true
+          git commit -m "state: TEST92b-A pass [skip ci]" || true
           git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx
           git push origin HEAD:arena/9552f54d-xfreedollarhachx
           exit 0
