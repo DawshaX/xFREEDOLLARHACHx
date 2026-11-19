@@ -546,10 +546,9 @@ export default function KaliWorkspacePanel() {
 
         {tools && (
           <div className="mt-2 text-[9px] rounded p-2" style={{ background: "rgba(140,255,220,0.05)", color: "rgba(255,255,255,0.6)" }}>
-            <b style={{ color: mint }}>ليه في ناقص؟</b> أدوات Go (ffuf · subfinder · amass · katana)
-            محتاجة ثنائيات من GitHub releases = محجوب، ومفيش Go compiler في الـrootfs.
-            حزم نظام (ettercap · steghide · exiftool) محتاجة apt ومستودعات كالي محجوبة.
-            البدائل اللي فوق <b>مقاسة موجودة وشغّالة</b> بنفس الوظيفة — مش ادعاء.
+            <b style={{ color: mint }}>الناقص بيتحل إزاي (مقاس حيًا):</b> أدوات Go (ffuf · subfinder · amass · katana) والحزم النظامية (ettercap · steghide · exiftool)
+            بتتسطب دلوقتي على عقد الأسطول من <b>kali-store</b> على الجيت هوب — tarballs جاهزة بتفريغ بلا dpkg، وطبقة STORE أول سلسلة التثبيت
+            (مقاس TEST91: subfinder · amass · bettercap · ligolo-ng · mongosh … INSTALL_OK). اللي بيقول «محجوب» بيكتب عن نسخة قديمة.
           </div>
         )}
       </div>
@@ -649,10 +648,10 @@ export default function KaliWorkspacePanel() {
         </div>
         <div className="grid sm:grid-cols-2 gap-1.5 text-[9px]" style={{ color: "rgba(255,255,255,0.65)" }}>
           {[
-            ["خروج الإنترنت من كالي", "pypi.org وnpm فقط — example.com/google.com = 000. المسح الخارجي محتاج شبكة."],
+            ["خروج الإنترنت", "من كالي المدمجة: pypi/npm. من عقد الأسطول: مفتوح — التثبيت من GitHub مقاس (subfinder/bettercap/amass…)."],
             ["raw sockets في proot", "nmap -sS محتاج CAP_NET_RAW — استخدم -sT. بقية الأدوات ما بتأثرش."],
             ["المنزل /root", "مملوك root:root 700 · HOME = المساحة فالإعدادات بتتحفظ مع شغلك."],
-            ["أدوات Go", "مستحيلة التنزيل هنا — بدائل مقاسة موجودة (feroxbuster بدل ffuf…)."],
+            ["dpkg على العقدة المجروحة", "ميت (مقاس TEST80 بصمت) — عشان كده kali-store tarballs بتفريغ بلا dpkg أصلًا."],
           ].map(([k, v]) => (
             <div key={k} className="rounded p-1.5" style={{ background: "rgba(255,255,255,0.03)" }}>
               <b style={{ color: "#fff" }}>{k}</b>
