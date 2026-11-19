@@ -56,7 +56,7 @@ concurrency:
   # بيخلي الموجة المصلّحة تشتغل فورًا على السلات الفاضية (~8) بدل انتظار
   # الموجة القديمة لساعات. max-parallel 12 + خطة prepare (TEST34) بتحسب
   # الموجود فمافيش تجاوز للحد 20 jobs.
-  group: nova-fleet-r2
+  group: nova-fleet-r3
   cancel-in-progress: false
 
 jobs:
