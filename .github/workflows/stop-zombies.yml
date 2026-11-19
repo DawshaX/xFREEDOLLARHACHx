@@ -1,6 +1,6 @@
 # TEST62b — أمر المالك: إلغاء كل العقد القديمة كلها — بيلاقي أي run fleet حي ويلغيه
 # (github.token جوه الActions عنده actions:write — الطريقة الوحيدة المثبتة).
-name: "fleet rescale (kill ALL old nodes) — TEST93e سباتور الجمود"
+name: "fleet rescale (kill ALL old nodes) — TEST93e سباتور الجمود 1"
 on:
   push:
     paths:
