@@ -1150,7 +1150,9 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const S = STORE_TOOLS[tool];
     const gate = (Array.isArray(S.cmd) ? S.cmd : [S.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ");
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
-    installCmd = `cd /tmp && rm -f store-pkg.tar.gz && (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o store-pkg.tar.gz && ls -la store-pkg.tar.gz && tar xzf store-pkg.tar.gz -C / 2>&1 | tail -2 || echo STORE_MISS${pipFallback}); ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    /* TEST91 v7 — مسار موحد: أجزاء .part_00.. (split 1900M — حد الasset 2GB
+     * مقاس) أولًا، ولو مافيش أجزاء → الملف المباشر. cat|tar بيفك عند / بلا dpkg. */
+    installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else if (GIT && GIT.repo && !CLONE_EXTRA[tool]) {
     const isCloneTool = tool === "dirsearch" || tool === "arjun";
     installCmd = isCloneTool

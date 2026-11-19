@@ -1,7 +1,7 @@
-# TEST91 v6 — مهمة الثقيل المستقلة (فصلها عن light: إعادة أي واحد ما تعيدش التاني).
-# الحزم الضخمة بسر الملف بتوصل الحاوية 4GB RAM — if needed يوقفها على v5 مقاس،
-# فالتاربولات بتتولد حزمة-حزمة والupload لحظة الجاهزية.
-name: "kali store builder heavy v6 (الحزم الضخمة → tarballs → release kali-store)"
+# TEST91 v7 — heavy مع split: الدرس المقاس (v6): tarball metasploit 18GB > حد
+# الasset 2GB فالرفع فشل بصمت. v7: كل tarball تتقسم split -b 1900M إلى
+# .part_aa/.part_ab/... والمثبت على العقدة بيعمل cat|tar — مسار واحد لكل الأدوات.
+name: "kali store builder heavy v7 (split 1900M → release kali-store)"
 on:
   push:
     paths:
@@ -22,20 +22,22 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-      - name: tarballs الثقيلة (حزمة-حزمة)
+      - name: tarballs الثقيلة + split
         run: |
           mkdir -p store state
           docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
             export DEBIAN_FRONTEND=noninteractive
-            echo "=== heavy $(date -u +%FT%TZ) ===" | tee /store/build-heavy.log
+            echo "=== heavy v7 $(date -u +%FT%TZ) ===" | tee /store/build-heavy.log
             apt-get update 2>&1 | tail -2 | tee -a /store/build-heavy.log || true
-            PKGS="powershell-empire dradis faraday king-phisher metasploit-framework"
+            PKGS="powershell-empire dradis faraday metasploit-framework"
             apt-get install -y --no-install-recommends curl ca-certificates git >/dev/null 2>&1 || true
             for p in $PKGS; do
               if apt-get install -y --no-install-recommends $p >> /store/apt-heavy.log 2>&1; then
                 dpkg -L $p | grep -v -E "^/etc/|/usr/share/doc/|/usr/share/man/" > /tmp/fl.txt
                 tar czf /store/$p.tar.gz -T /tmp/fl.txt 2>/dev/null || true
-                echo "OK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-heavy.log
+                SZ=$(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)
+                split -b 1900M -d /store/$p.tar.gz /store/$p.tar.gz.part_ && rm -f /store/$p.tar.gz
+                echo "OK:$p orig=$SZ parts=$(ls /store/$p.tar.gz.part_* 2>/dev/null | wc -l)" | tee -a /store/build-heavy.log
               else
                 echo "MISS:$p" | tee -a /store/build-heavy.log
               fi
@@ -45,19 +47,20 @@ jobs:
           ' || echo "docker-exit:$?" | tee -a state/kali-store-heavy.log
           cp store/build-heavy.log state/kali-store-heavy.log 2>/dev/null || true
           ls -la store | tee -a state/kali-store-heavy.log
-      - name: رفع الأصول الثقيلة
+      - name: رفع الأجزاء على release kali-store
         continue-on-error: true
         run: |
           shopt -s nullglob
-          ASSETS=(store/*.tar.gz)
-          echo "heavy tarballs: ${#ASSETS[@]}"
           gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "TEST91 v6"
-          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/build-heavy.log --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ heavy: ${#ASSETS[@]}"
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "TEST91 v7 — split 1900M"
+          PARTS=(store/*.part_*)
+          LOGS=(store/*.log)
+          echo "parts: ${#PARTS[@]}"
+          [ ${#PARTS[@]} -gt 0 ] && gh release upload kali-store "${PARTS[@]}" "${LOGS[@]}" --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ heavy v7: ${#PARTS[@]} parts"
           exit 0
       - name: كوميت لوج heavy
         continue-on-error: true
         run: |
           git config user.name "nova-bot"; git config user.email "nova@bot.local"
-          git add -f state/kali-store-heavy.log; git commit -m "state: kali-store heavy log [skip ci]" || true
+          git add -f state/kali-store-heavy.log; git commit -m "state: kali-store heavy v7 log [skip ci]" || true
           git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx; git push origin HEAD:arena/9552f54d-xfreedollarhachx; exit 0
