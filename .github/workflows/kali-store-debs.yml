@@ -1,0 +1,65 @@
+# TEST93l — طبقة DEBS: الدرس المقاس (light-a/b): تاربولات dpkg -L عملاقة
+# (25-49GB — بيسحب اللِبَراريس المشتركة) فتتجاوز حد الasset 2GB. الحل: حزم
+# deb لكل أداة (apt-get download — ميجات) + dpkg -i على الجست الجديد النظيف
+# (dpkg شغال على الجست الجديدة — المكسور كان الجست القديم الطويل).
+name: "kali store debs v1 (حزم deb صغيرة لكل أداة → release kali-store)"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-store-debs.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: kali-store-debs
+  cancel-in-progress: false
+jobs:
+  debs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: تحميل debs لكل أداة (apt-get download — سريع بلا install)
+        run: |
+          mkdir -p store state
+          docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
+            export DEBIAN_FRONTEND=noninteractive
+            echo "=== debs $(date -u +%FT%TZ) ===" | tee /store/build-debs.log
+            apt-get update 2>&1 | tail -2 | tee -a /store/build-debs.log || true
+            apt-get install -y --no-install-recommends curl ca-certificates apt-utils >/dev/null 2>&1 || true
+            TOOLS="ettercap:ettercap-common exiftool:libimage-exiftool-perl steghide:steghide arp-scan:arp-scan cherrytree:cherrytree recordmydesktop:recordmydesktop wkhtmltopdf:wkhtmltopdf maskprocessor:maskprocessor rainbowcrack:rainbowcrack redis:redis-server elfutils:elfutils ltrace:ltrace strace:strace zsh:zsh vim:vim aria2:aria2 dvcs-ripper:dvcs-ripper sidguesser:sidguesser netexec:netexec crackmapexec:crackmapexec king-phisher:king-phisher"
+            for pair in $TOOLS; do
+              tool="${pair%%:*}"; pkg="${pair##*:}"
+              mkdir -p /tmp/debs-$tool && cd /tmp/debs-$tool
+              if apt-get download $pkg >> /store/debs.log 2>&1; then
+                tar czf /store/$tool-debs.tar.gz *.deb 2>/dev/null || true
+                echo "OK:$tool $(stat -c%s /store/$tool-debs.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-debs.log
+              else
+                echo "MISS:$tool" | tee -a /store/build-debs.log
+              fi
+              cd /store
+            done
+            echo "DEBS_DONE" | tee -a /store/build-debs.log
+            true
+          ' || echo "docker-exit:$?" | tee -a state/kali-store-debs.log
+          cp store/build-debs.log state/kali-store-debs.log 2>/dev/null || true
+      - name: رفع حزم الdeb
+        continue-on-error: true
+        run: |
+          shopt -s nullglob
+          ASSETS=(store/*-debs.tar.gz)
+          echo "debs bundles: ${#ASSETS[@]}"
+          gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "TEST93l"
+          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/build-debs.log --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ debs: ${#ASSETS[@]}"
+          exit 0
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/kali-store-debs.log; git commit -m "state: debs log [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/1aad5cfd-xfreedollarhachx; git push origin HEAD:arena/1aad5cfd-xfreedollarhachx; exit 0
