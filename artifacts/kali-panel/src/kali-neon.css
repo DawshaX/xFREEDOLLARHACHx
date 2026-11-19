@@ -6,10 +6,10 @@
 .kali-neon-root {
   position: relative;
   background:
-    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(124, 58, 237, 0.22), transparent),
-    radial-gradient(ellipse 60% 40% at 10% 20%, rgba(34, 211, 238, 0.12), transparent),
-    radial-gradient(ellipse 60% 40% at 90% 60%, rgba(236, 72, 153, 0.10), transparent),
-    linear-gradient(180deg, #0b0724 0%, #090418 55%, #05020f 100%);
+    radial-gradient(ellipse 90% 50% at 50% -10%, rgba(124, 58, 237, 0.20), transparent),
+    radial-gradient(ellipse 60% 40% at 10% 20%, rgba(0, 255, 156, 0.10), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 60%, rgba(236, 72, 153, 0.09), transparent),
+    linear-gradient(180deg, #071410 0%, #08061c 55%, #04020e 100%);
 }
 
 /* شبكة النيون — زي MEGAUI، حركة بطيئة */
@@ -19,12 +19,29 @@
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(124, 58, 237, 0.09) 1px, transparent 1px),
+    linear-gradient(rgba(0, 255, 156, 0.07) 1px, transparent 1px),
     linear-gradient(90deg, rgba(124, 58, 237, 0.09) 1px, transparent 1px);
   background-size: 44px 44px;
   animation: neon-grid-drift 26s linear infinite;
   mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 100%);
   z-index: 0;
+}
+
+/* TEST91 — اللوجو خلفية + سكانلاينز CRT خفيفة: وجّهية المختبر الأخلاقي */
+.kali-neon-root::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0px, rgba(0, 0, 0, 0.16) 1px, transparent 1px, transparent 4px),
+    url("/daw-skull.jpg");
+  background-size: 100% 100%, 520px 520px;
+  background-repeat: no-repeat, repeat;
+  background-position: center, center;
+  opacity: 0.06;
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 40%, black 25%, transparent 95%);
 }
 
 @keyframes neon-grid-drift {
@@ -114,6 +131,20 @@
   animation: neon-pulse 1.6s ease-in-out infinite;
 }
 @keyframes neon-pulse { 50% { opacity: 0.35; transform: scale(0.8); } }
+
+/* TEST91 — التريمنال الحي: موناكو متوهجة، سطور بنيّة سكان-لاب */
+.kali-neon-term {
+  background: rgba(2, 10, 6, 0.82);
+  border: 1px solid rgba(0, 255, 156, 0.22);
+  box-shadow: inset 0 0 30px -18px rgba(0, 255, 156, 0.8), 0 0 16px -8px rgba(0, 255, 156, 0.5);
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  text-shadow: 0 0 6px rgba(0, 255, 156, 0.35);
+}
+.kali-neon-term-cmd { color: #6bffc7; }
+.kali-neon-term-err { color: #ff6b8b; text-shadow: 0 0 6px rgba(255, 107, 139, 0.4); }
+
+/* سطر لحظي في اللوج الحي */
+.kali-neon-logline { border-right: 2px solid rgba(0, 255, 156, 0.45); }
 
 /* شريحة أداة */
 .kali-neon-chip-ok {

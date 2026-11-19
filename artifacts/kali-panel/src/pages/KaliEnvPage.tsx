@@ -593,7 +593,7 @@ export default function KaliEnvPage() {
               🥷 NOVA KALI LAB — أقوى مختبر كالي في الكون
             </h1>
             <p className="text-[10px] font-mono mt-1" style={{ color: "rgba(230,230,240,0.55)" }}>
-              كل الأدوات عالجيت هوب (فرع kali-rootfs) · التنفيذ على 10 عقد كالية حية · بث مباشر للديسكتوب · كل زرار بيشتغل فعلًا
+              مخزن kali-store على الجيت هوب — tarballs جاهزة بلا dpkg · طبقة STORE أول سلسلة التثبيت · عقد كالية حية تنفّذ بروت · بث مباشر SSE حرف بحرف · كل زرار مقيس
             </p>
           </div>
         </div>
@@ -1010,8 +1010,8 @@ export default function KaliEnvPage() {
 
       <div style={{ display: face === "term" ? "block" : "none" }}>
       {/* طرفية التنفيذ الحقيقي — دايمًا ظاهرة: على الهَب أو على العقد السحابية */}
-      <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,170,0,0.2)" }}>
-        <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#ffaa44" }}>
+      <div className="rounded-xl p-3 kali-neon-term">
+        <p className="text-[10px] font-black mb-2 flex items-center gap-1.5" style={{ color: "#6bffc7" }}>
           <Terminal className="w-3.5 h-3.5" /> {st?.present ? "طرفية كالي — تنفيذ حقيقي على الهَب" : "🐉 طرفية كالي الحية — بتنفّذ فعليًا على عقد الأسطول السحابية"}
         </p>
             {/* TEST35 — pick the plane explicitly. Before this the box could only
@@ -1049,7 +1049,7 @@ export default function KaliEnvPage() {
             <div ref={logRef} className="rounded-lg p-2 h-44 overflow-y-auto font-mono text-[9px] mb-2" style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,170,0,0.15)" }}>
               {log.length === 0 ? <span style={{ color: "rgba(255,255,255,0.25)" }}>{st?.present ? "جاهز… كل أمر هنا بيتنفّذ فعليًا داخل البيئة" : "جاهز… كل أمر هنا بيتنفّذ فعليًا جوه كالي على العقدة السحابية (الطايرة بتظهر تحت كل نتيجة)"}</span> :
                 log.slice(-100).map((l, i) => (
-                  <div key={i} className="whitespace-pre-wrap break-all leading-relaxed" style={{ color: l.isCmd ? "#ffaa44" : l.isErr ? "#ff6666" : "rgba(255,255,255,0.75)" }}>{l.text}</div>
+                  <div key={i} className={`whitespace-pre-wrap break-all leading-relaxed ${l.isCmd ? "kali-neon-term-cmd" : l.isErr ? "kali-neon-term-err" : ""}`} style={{ color: l.isCmd ? "#6bffc7" : l.isErr ? "#ff6b8b" : "rgba(190,255,224,0.82)" }}>{l.text}</div>
                 ))}
               {execBusy && <span style={{ color: "rgba(255,170,0,0.6)" }}>تنفيذ…</span>}
             </div>
