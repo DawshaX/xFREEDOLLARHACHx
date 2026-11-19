@@ -1,6 +1,6 @@
 # TEST92n — المسار النهائي E: أدوات DEBS (طبقة الجديدة — dpkg -i على الجست
 # النظيف) + بقية pip. مسلسل منفرد (الدرس: الازدحام بيقتل الردود).
-name: "TEST93x-E5 — آخر 7 (ltrace strace zsh vim aria2 netexec mp)"
+name: "TEST93y-E — الموجة الجديدة: 20 DEBS+clone"
 on:
   push:
     paths:
@@ -24,7 +24,7 @@ jobs:
         run: |
           L=state/tool-pass-e-log.txt
           echo "=== TEST92n-E $(date -u +%FT%TZ) ===" > $L
-          for tool in ltrace strace zsh vim aria2 netexec maskprocessor; do
+          for tool in ettercap exiftool steghide arp-scan cherrytree recordmydesktop maskprocessor rainbowcrack redis elfutils ltrace strace zsh vim aria2 sidguesser netexec crackmapexec pentestly ssrfmap; do
             echo "--- INSTALL $tool $(date -u +%T) ---" >> $L
             curl -s -m 300 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>&1 || echo "REQ_FAIL:$tool" >> $L
             echo "" >> $L
