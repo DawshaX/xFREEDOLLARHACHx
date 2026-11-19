@@ -96,7 +96,6 @@ export async function kaliAnywhereExecStream(
     return { stdout: "", stderr: String((e as Error)?.message ?? e).slice(0, 300), exitCode: 127, durationMs: 0, plane: "الهَب — التعذّر على الأسطول" };
   }
   for (const a of nodes) {
-    if (a.mode !== "MODE_BARE" && a.mode !== "MODE_PROOT") continue; // مش جاهزة — التالية (الجاهزة بتتجرب الأول)
     const plane = `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
     broadcastStart(plane);
     const wrappedOnData = (t: "stdout" | "stderr", c: string) => { onData(t, c); broadcastChunk(c); };
@@ -180,7 +179,7 @@ export async function kaliFleetUnionExec(
  * TEST93t — preferHostname: بيثبت التنفيذ على عقدة معينة (hostname أول بالترتيب) —
  * مقاس F2 11:17: مرحلة التثبيت على runnervmccnms والبوابة راحت على عقدة طازة
  * تانية → INSTALL_FAIL كاذبة رغم «Setting up ✓». */
-export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000, preferNodeId?: string): Promise<KaliAnywhereResult | null> {
+export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000, preferNodeId?: string, excludeNodeIds?: Set<string>): Promise<KaliAnywhereResult | null> {
   if (!cmd.trim()) return null;  // ── بث حي لكل الصفحات: أي تنفيذ كالي يظهر فورًا في كل مكان ──────────
   const execId = `kali-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const broadcastStart = (plane: string) => {
@@ -226,6 +225,9 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000, preferNo
   let lastErr: string | null = null;
   for (const a of nodes) {
     if (a.mode !== "MODE_BARE" && a.mode !== "MODE_PROOT") continue; // مش جاهزة — التالية (الجاهزة بتتجرب الأول)
+    /* TEST93x — استبعاد العقد المكسورة (مقاس E 18:4x: جست عقدة signal 6 دائم
+     * على كل الأوامر — الretry بيضرب نفسها. المحاولة التالية على عقدة سليمة) */
+    if (excludeNodeIds?.has(a.id)) continue;
     const plane = `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
     broadcastStart(plane);
     let rr: Awaited<ReturnType<typeof execOnLocalAgent>> = null;

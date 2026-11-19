@@ -1232,8 +1232,15 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
    * ومقاس 05:38: proot execve Permission denied على جزء من العقد). أول محاولة
    * بتفشل بفشل proot → نعيد مرة تانية فبتروح عقدة تانية سليمة من الأسطول. */
   let r = await kaliAnywhereExec(cmd, 600_000);
-  if (r && /proot error|Permission denied|fatal error: see `proot|signal 6|path\.c:547|Assertion/.test([r.stdout, r.stderr].join("\n"))) {
-    r = await kaliAnywhereExec(cmd, 600_000);
+  /* TEST93x — retry مع استبعاد: العقدة اللي جستها بيسقّطها proot signal 6 دائم
+   * (مقاس E 18:4x: 14 أداة فشلت كلها على نفس العقدة والمحاولة التالية رجعت لها)
+   * → المحاولة التالية تستبعد nodeId الفاشل فتروح عقدة سليمة. */
+  const brokenNodes = new Set<string>();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (!r) break;
+    if (!/proot error|Permission denied|fatal error: see `proot|signal 6|path\.c:547|Assertion/.test([r.stdout, r.stderr].join("\n"))) break;
+    if (r.nodeId) brokenNodes.add(r.nodeId);
+    r = await kaliAnywhereExec(cmd, 600_000, undefined, brokenNodes);
   }
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
   /* TEST93t — العقدة اللي التثبيت حصل عليها: البوابة بتتثبت عليها (مقاس F2:
