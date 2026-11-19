@@ -1,7 +1,7 @@
 # TEST93p — المسار F: المتبقي الحقيقي على الأسطول كلّه (بعد فكس المرحلتين +
 # retry البوابة + debs2 + ghidra/retdec + empire كامل). مسلسل واحد-واحد (الدرس:
 # الازدحام بيقتل) — بعد ما store workflows تخلص (التاربولات لازم تكون مرفوعة).
-name: "TEST93w-F5 — آخر 5 (evilgrade king-phisher libreoffice mp vulners)"
+name: "TEST93w-F6 — آخر 5 بعد استقرار الهَب"
 on:
   push:
     paths:
