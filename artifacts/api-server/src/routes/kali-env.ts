@@ -1150,10 +1150,11 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const S = STORE_TOOLS[tool];
     const gate = (Array.isArray(S.cmd) ? S.cmd : [S.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ");
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
-    /* TEST93l — الأولوية: حزم deb الصغيرة (<100MB، dpkg -i على الجست الجديد
-     * النظيف — dpkg شغال هناك، المكسور كان الجست القديم) → تاربولات parts →
-     * ملف مباشر → apt آخر الأبواب. */
-    installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -3; dpkg --configure -a 2>&1 | tail -2) ; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    /* TEST93n — الأولوية: حزم deb الصغيرة (<100MB، dpkg -i على الجست الجديد
+     * النظيف) + تنظيف statoverride المكسورة (مقاس 08:40: «unknown system user
+     * redis in statoverride» بقت تكسر كل dpkg -i) → تاربولات parts → ملف
+     * مباشر → apt آخر الأبواب. */
+    installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -3; dpkg --configure -a 2>&1 | tail -2) ; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else if (GIT && GIT.repo && !CLONE_EXTRA[tool]) {
     const isCloneTool = tool === "dirsearch" || tool === "arjun";
     installCmd = isCloneTool
@@ -1172,7 +1173,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
    * ومقاس 05:38: proot execve Permission denied على جزء من العقد). أول محاولة
    * بتفشل بفشل proot → نعيد مرة تانية فبتروح عقدة تانية سليمة من الأسطول. */
   let r = await kaliAnywhereExec(cmd, 420_000);
-  if (r && /proot error|Permission denied|fatal error: see `proot/.test([r.stdout, r.stderr].join("\n"))) {
+  if (r && /proot error|Permission denied|fatal error: see `proot|signal 6|path\.c:547|Assertion/.test([r.stdout, r.stderr].join("\n"))) {
     r = await kaliAnywhereExec(cmd, 420_000);
   }
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
