@@ -1,0 +1,67 @@
+# TEST93p — debs v2: الناقص من v1 (wkhtmltopdf/dvcs-ripper/king-phisher) + debs
+# جديدة (legs/fernet/venom/keepnote/pandoc/w3af). wkhtmltopdf اتشال من kali repo
+# → fallback: deb الرسمي من wkhtmltopdf/packaging releases (jammy amd64).
+name: "kali store debs v2 (الناقص + جديدة → release kali-store)"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-store-debs2.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: kali-store-debs2
+  cancel-in-progress: false
+jobs:
+  debs2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: تحميل debs لكل أداة (+ fallback wkhtmltopdf من releases)
+        run: |
+          mkdir -p store state
+          docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
+            export DEBIAN_FRONTEND=noninteractive
+            echo "=== debs2 $(date -u +%FT%TZ) ===" | tee /store/build-debs2.log
+            apt-get update 2>&1 | tail -2 | tee -a /store/build-debs2.log || true
+            apt-get install -y --no-install-recommends curl ca-certificates apt-utils >/dev/null 2>&1 || true
+            TOOLS="wkhtmltopdf:wkhtmltopdf dvcs-ripper:dvcs-ripper king-phisher:king-phisher legs:legs fernet:fernet venom:venom keepnote:keepnote pandoc:pandoc w3af:w3af"
+            for pair in $TOOLS; do
+              tool="${pair%%:*}"; pkg="${pair##*:}"
+              rm -rf /tmp/debs-$tool; mkdir -p /tmp/debs-$tool; cd /tmp/debs-$tool
+              if apt-get download $pkg >> /store/debs2.log 2>&1; then
+                tar czf /store/$tool-debs.tar.gz *.deb 2>/dev/null || true
+                echo "OK:$tool $(stat -c%s /store/$tool-debs.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-debs2.log
+              elif [ "$tool" = "wkhtmltopdf" ] && curl -sfL -m 240 -o wkhtmltox.deb "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.jammy_amd64.deb"; then
+                tar czf /store/wkhtmltopdf-debs.tar.gz wkhtmltox.deb
+                echo "OK:wkhtmltopdf(fallback) $(stat -c%s /store/wkhtmltopdf-debs.tar.gz)" | tee -a /store/build-debs2.log
+              else
+                echo "MISS:$tool" | tee -a /store/build-debs2.log
+              fi
+              cd /store
+            done
+            echo "DEBS2_DONE" | tee -a /store/build-debs2.log
+            true
+          ' || echo "docker-exit:$?" | tee -a state/kali-store-debs2.log
+          cp store/build-debs2.log state/kali-store-debs2.log 2>/dev/null || true
+      - name: رفع حزم الdeb
+        continue-on-error: true
+        run: |
+          shopt -s nullglob
+          ASSETS=(store/*-debs.tar.gz)
+          echo "debs2 bundles: ${#ASSETS[@]}"
+          gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "TEST93p"
+          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/build-debs2.log --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ debs2: ${#ASSETS[@]}"
+          exit 0
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/kali-store-debs2.log; git commit -m "state: debs2 log [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/1aad5cfd-xfreedollarhachx; git push origin HEAD:arena/1aad5cfd-xfreedollarhachx; exit 0

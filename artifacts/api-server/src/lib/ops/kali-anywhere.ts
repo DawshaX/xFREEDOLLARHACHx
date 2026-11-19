@@ -123,10 +123,45 @@ export async function kaliAnywhereExecStream(
   };
 }
 
+/** TEST93q — القياس الاتحادي: نفس الأمر على كل العقد الجاهزة (حتى 6) بالتوازي،
+ * والرد = نتائج كل عقدة لوحدها. ليه؟ القياس الأحادي بيخلي عقدة طازة تدبل
+ * الكتالوج المتراكم (مقاس حي 10:2xZ: عقدة pass-E الطازة قاست 205 فوق 228 اللي
+ * قاستها عقدة C/D/E). الكتالوج الحقيقي للأسطول = اتحاد اللي كل عقدة **مقاسة**
+ * عندها فعلًا — مش آخر قياس اتكتب. */
+export async function kaliFleetUnionExec(
+  cmd: string,
+  timeoutMs = 45_000,
+  maxNodes = 6,
+): Promise<{ planes: string[]; stdouts: string[] }> {
+  if (!cmd.trim()) return { planes: [], stdouts: [] };
+  let nodes: Array<{ id: string; hostname: string; mode: string }> = [];
+  try {
+    nodes = (await orderedFleetNodes()).filter((a) => a.mode === "MODE_BARE" || a.mode === "MODE_PROOT").slice(0, maxNodes);
+  } catch {
+    return { planes: [], stdouts: [] };
+  }
+  if (!nodes.length) return { planes: [], stdouts: [] };
+  const results = await Promise.allSettled(
+    nodes.map(async (a) => {
+      const rr = await execOnLocalAgent(remoteRunCmd(cmd, a.mode, timeoutMs), a.id, timeoutMs + 10_000);
+      if (!rr || !rr.stdout) throw new Error(`no-reply:${a.hostname}`);
+      return { plane: `${a.hostname} (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`, stdout: rr.stdout };
+    }),
+  );
+  const planes: string[] = [];
+  const stdouts: string[] = [];
+  for (const x of results) {
+    if (x.status === "fulfilled") {
+      planes.push(x.value.plane);
+      stdouts.push(x.value.stdout);
+    }
+  }
+  return { planes, stdouts };
+}
+
 /** التنفيذ الموحّد: هَب → عقدة. null = مافيش طايرة كالي متاحة حالًا. */
 export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise<KaliAnywhereResult | null> {
-  if (!cmd.trim()) return null;
-  // ── بث حي لكل الصفحات: أي تنفيذ كالي يظهر فورًا في كل مكان ──────────
+  if (!cmd.trim()) return null;  // ── بث حي لكل الصفحات: أي تنفيذ كالي يظهر فورًا في كل مكان ──────────
   const execId = `kali-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const broadcastStart = (plane: string) => {
     try {

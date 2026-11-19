@@ -16,7 +16,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { requireOps } from "../lib/ops/gate";
 import { detectProotLayout, prootHealth, runInProot } from "../lib/ops/proot";
-import { kaliAnywhereExec, kaliAnywhereExecStream } from "../lib/ops/kali-anywhere";
+import { kaliAnywhereExec, kaliFleetUnionExec, kaliAnywhereExecStream } from "../lib/ops/kali-anywhere";
 import { readProbeCache, probeAllKaliNodes, orderPrewarmedFirst } from "../lib/ops/kali-node-probe";
 import { PROOT_GUEST_EXEC } from "../lib/ops/kali-node-installer";
 import { execStreamOnLocalAgent, execOnLocalAgent } from "./local-agent";
@@ -351,7 +351,24 @@ router.get("/kali-env/tools", async (_req, res) => {
       })
       .join("; ") + "; true"; /* TEST60 — exit code بتاع آخر أداة مش مطلوب: القياس من سطور OK: — لو آخر أداة ناقصة كان الرد كله بيرمي ويبقى total:0 (مقاس حي 07:25Z) */
     const fleet = await fleetKaliSummary();
-    const r = await kaliAnywhereExec(probe, 60_000);
+    /* TEST93q — القياس الاتحادي: probe على كل العقد الحية (حتى 6) بالتوازي
+     * وunion للنتائج. عقدة طازة عمرها ما تتسطب عليها C/D كانت بتدبل كتالوج
+     * العقد المتراكم (مقاس حي 10:2xZ: 205 عقدة E فوق 228 عقدة C/D/E). الاتحاد
+     * هو الكتالوج الحقيقي: كل أداة «موجودة» بس لو **مقاسة موجودة على عقدة حية**. */
+    const union = await kaliFleetUnionExec(probe, 45_000, 6);
+    const foundUnion = new Set<string>();
+    for (const so of union.stdouts) {
+      for (const l of so.split("\n").map((x) => x.trim()).filter((x) => x.startsWith("OK:"))) foundUnion.add(l.slice(3));
+    }
+    let r: { stdout: string; plane: string } | null = null;
+    if (foundUnion.size) {
+      r = {
+        stdout: [...foundUnion].map((t) => `OK:${t}`).join("\n"),
+        plane: `اتحاد ${union.planes.length} عقدة كالي حية — ${union.planes.slice(0, 4).join(" · ")}${union.planes.length > 4 ? " …" : ""}`,
+      };
+    } else {
+      r = await kaliAnywhereExec(probe, 60_000);
+    }
     if (r && r.stdout && r.stdout.includes("OK:")) {
       const found = new Set(
         r.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)),
@@ -1065,6 +1082,18 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
       repo: "swisskyrepo/SSRFmap", cmd: "ssrfmap",
       wrap: `printf '#!/bin/sh\\nexec python3 /opt/ssrfmap/ssrfmap.py "$@"\\n' > /usr/local/bin/ssrfmap && chmod +x /usr/local/bin/ssrfmap`,
     },
+    "gh-dork": {
+      repo: "molly/gh-dork", cmd: "gh-dork", req: true,
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/gh-dork/gh-dork.py "$@"\\n' > /usr/local/bin/gh-dork && chmod +x /usr/local/bin/gh-dork`,
+    },
+    "dvcs-ripper": {
+      repo: "kost/dvcs-ripper", cmd: ["rip-git", "rip-svn"],
+      wrap: `for f in rip-git rip-svn rip-hg rip-bzr; do cp /opt/dvcs-ripper/$f.pl /usr/local/bin/$f 2>/dev/null && chmod +x /usr/local/bin/$f; done; true`,
+    },
+    "king-phisher": {
+      repo: "CrimsonForge-io/king-phisher", cmd: ["king-phisher"],
+      wrap: `for f in /opt/king-phisher/tools/*.py; do [ -e "$f" ] || continue; b=$(basename "$f" .py); [ "$b" = "king-phisher" ] && cp "$f" /usr/local/bin/king-phisher && chmod +x /usr/local/bin/king-phisher; done; true`,
+    },
   };
   /* TEST87 — الحقول url مقاسة من api.github.com (السانبوكس 2026-11-19) وخبزت هنا:
    * العقدة (GitHub runner IP مشترك) بتنده api.github.com unauthenticated فبتقع
@@ -1120,7 +1149,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     casefile: { file: "casefile.tar.gz", cmd: ["casefile"] },
     dradis: { file: "dradis.tar.gz", cmd: ["dradis"] },
     recordmydesktop: { file: "recordmydesktop.tar.gz", cmd: ["recordmydesktop"] },
-    wkhtmltopdf: { file: "wkhtmltopdf.tar.gz", cmd: ["wkhtmltopdf"] },
+    wkhtmltopdf: { file: "wkhtmltopdf-debs.tar.gz", cmd: ["wkhtmltopdf"] },
     evilgrade: { file: "evilgrade.tar.gz", cmd: ["evilgrade"] },
     maskprocessor: { file: "maskprocessor.tar.gz", cmd: ["maskprocessor", "mp"] },
     rainbowcrack: { file: "rainbowcrack.tar.gz", cmd: ["rcrack", "rainbowcrack"] },
@@ -1135,7 +1164,8 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     "dvcs-ripper": { file: "dvcs-ripper.tar.gz", cmd: ["rip-git", "rip-svn"] },
     "king-phisher": { file: "king-phisher.tar.gz", cmd: ["king-phisher"] },
     ghidra: { file: "ghidra.tar.gz", cmd: ["ghidraRun", "ghidra", "analyzeHeadless"] },
-    w3af: { file: "w3af.tar.gz", cmd: ["w3af_console", "w3af_gui", "w3af"] },
+    retdec: { file: "retdec.tar.gz", cmd: ["retdec-decompiler", "retdec"] },
+    w3af: { file: "w3af-debs.tar.gz", cmd: ["w3af_console", "w3af_gui", "w3af"] },
     sidguesser: { file: "sidguesser.tar.gz", cmd: ["sidsweep", "sidguesser"] },
     netexec: { file: "netexec.tar.gz", cmd: ["nxc", "netexec"] },
     crackmapexec: { file: "crackmapexec.tar.gz", cmd: ["crackmapexec", "cme"] },
@@ -1143,7 +1173,11 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     faraday: { file: "faraday.tar.gz", cmd: ["faraday-client", "faraday"] },
     libreoffice: { file: "libreoffice.tar.gz", cmd: ["libreoffice", "soffice"] },
     gvm: { file: "gvm.tar.gz", cmd: ["gvm-cli", "gvmd", "gvm-setup"] },
-    fernet: { file: "fernet.tar.gz", cmd: ["fernet"] },
+    fernet: { file: "fernet-debs.tar.gz", cmd: ["fernet"] },
+    legs: { file: "legs-debs.tar.gz", cmd: ["legs"] },
+    venom: { file: "venom-debs.tar.gz", cmd: ["venom"] },
+    keepnote: { file: "keepnote-debs.tar.gz", cmd: ["keepnote"] },
+    pandoc: { file: "pandoc-debs.tar.gz", cmd: ["pandoc"] },
     pgcli: { file: "pgcli.tar.gz", cmd: ["pgcli"], pip: "pgcli" },
     pentestly: { file: "pentestly.tar.gz", cmd: ["pentestly"] },
     ssrfmap: { file: "ssrfmap.tar.gz", cmd: ["ssrfmap"] },
@@ -1157,7 +1191,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   /* TEST93o — المسار من مرحلتين قصيرتين للأدوات اللي ليها حزم deb: درس TEST80
    * المقاس مرة تانية 08:40/09:04 — الأمر المركب الطويل = proot signal 6 حتى
    * بعد نجاح dpkg نفسه (البوابة بتتقتل). التثبيت قصير ثم البوابة قصيرة. */
-  const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec"]);
+  const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec", "wkhtmltopdf", "legs", "fernet", "venom", "keepnote", "pandoc", "w3af"]);
   const storeDebs = Boolean(STORE_TOOLS[tool] && DEBS_TOOLS.has(tool));
   const storeGate = STORE_TOOLS[tool] ? (Array.isArray(STORE_TOOLS[tool].cmd) ? STORE_TOOLS[tool].cmd : [STORE_TOOLS[tool].cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ") : "";
   let installCmd: string;
@@ -1169,8 +1203,8 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
       /* المرحلة 1 قصيرة: تنظيف statoverride + deb + dpkg — بلا بوابة ولا fallback */
       installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
     } else {
-      /* تاربولات parts (metasploit/empire/faraday/dradis) → ملف مباشر → apt */
-      installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+      /* تاربولات parts (metasploit/empire/faraday/dradis) — TEST93p: بلا بوابة هنا (البوابة المنفصلة تحت مع retry — درس TEST80/TEST92q) */
+      installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; echo STORE_EXTRACTED`;
     }
   } else if (GIT && GIT.repo && !CLONE_EXTRA[tool]) {
     const isCloneTool = tool === "dirsearch" || tool === "arjun";
@@ -1194,10 +1228,17 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     r = await kaliAnywhereExec(cmd, 420_000);
   }
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
-  /* المرحلة 2 قصيرة: بوابة منفصلة — بعد ما dpkg خلص فعليًا في المرحلة 1 */
-  if (storeDebs && r) {
-    const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000);
-    if (gr) r = { ...r, stdout: `${r.stdout}\n${gr.stdout}` };
+  /* المرحلة 2 قصيرة: بوابة منفصلة مع retry ×3 — بعد ما dpkg/الاستخراج خلص فعليًا
+   * في المرحلة 1. proot signal 6 عشوائي بيقتل حتى الأوامر القصيرة (مقاس TEST92q:
+   * sidguesser «Setting up ✓» والبوابة اتقتلت → INSTALL_FAIL كاذبة). */
+  if ((storeDebs || (STORE_TOOLS[tool] && STORE_TOOLS[tool].file)) && r && storeGate) {
+    let gout = "";
+    for (let gi = 0; gi < 3; gi++) {
+      const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 1; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000);
+      if (gr) gout = gr.stdout;
+      if (gout.includes(`INSTALL_OK:${tool}`)) break;
+    }
+    if (gout) r = { ...r, stdout: `${r.stdout}\n${gout}` };
   }
   const ok = /INSTALL_OK:/.test(r.stdout);
   const uid = Number((r.stdout.match(/^ROOT_UID:(\d+)$/m) ?? [])[1]);
