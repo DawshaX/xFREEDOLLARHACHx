@@ -5,7 +5,7 @@
 # النشر: release «kali-store» على نفس الريبو (github.token contents:write — مقاس
 # بنفس نمط hub-release-refresh). Hack-STORAGE لما صلاحية الكتابة تتفعل، المثبت
 # بيقبل KALI_STORE_URL — نفس الملفات تعمل there بلا أي تغيير كود.
-name: "kali store builder v3 (docker كالي نظيف → tarballs → release kali-store)"
+name: "kali store builder v4 (docker كالي نظيف → tarballs → release kali-store)"
 on:
   push:
     paths:
@@ -34,10 +34,20 @@ jobs:
             apt-get update 2>&1 | tail -3 | tee -a /store/build.log || true
             APT_PKGS="metasploit-framework ettercap exiftool libimage-exiftool-perl steghide arp-scan cherrytree casefile dradis recordmydesktop wkhtmltopdf evilgrade maskprocessor rainbowcrack redis-server elfutils ltrace strace zsh vim aria2 python3-pip dvcs-ripper king-phisher ghidra w3af sidguesser netexec crackmapexec powershell-empire faraday libreoffice gvm"
             PIP_PKGS="pgcli pentestly ssrfmap gh-dork social-analyzer fernet"
-            apt-get install -y --no-install-recommends curl ca-certificates git python3-pip >/dev/null 2>&1 || true
-            apt-get install -y --no-install-recommends $APT_PKGS > /store/apt.log 2>&1 || apt-get -f install -y >> /store/apt.log 2>&1 || true
+            apt-get install -y --no-install-recommends curl ca-certificates git python3-pip unzip >/dev/null 2>&1 || true
+            # v4 — تثبيت حزمة-حزمة: اسم واحد غير موجود في kali-rolling كان بيقتل
+            # السطر كله (مقاس v3: كل الـ31 MISS بسبب w3af/king-phisher المزالة من
+            # كالي) — دلوقتي كل واحدة مستقلة والMISS بيتسجل صادح.
+            for p in $APT_PKGS; do
+              if apt-get install -y --no-install-recommends $p >> /store/apt.log 2>&1; then
+                echo "APTOK:$p" | tee -a /store/build.log
+              else
+                echo "APTMISS:$p" | tee -a /store/build.log
+              fi
+            done
             tail -5 /store/apt.log >> /store/build.log || true
             PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --break-system-packages -q $PIP_PKGS > /store/pip.log 2>&1 || true
+            for p in $PIP_PKGS; do echo "PIP:$p $(pip3 show $p >/dev/null 2>&1 && echo yes || echo no)" | tee -a /store/build.log; done
             git clone --depth 1 https://github.com/carlospolop/PEASS-ng /opt/PEASS-ng >/dev/null 2>&1 || true
             git clone --depth 1 https://github.com/vulnersCom/nmap-vulners /usr/share/nmap/vulners >/dev/null 2>&1 || true
             SITE=$(python3 -c "import site;print(site.getsitepackages()[0])" 2>/dev/null || echo /usr/lib/python3/dist-packages)
@@ -69,10 +79,13 @@ jobs:
         run: |
           git config user.name "nova-bot" || true
           git config user.email "nova@bot.local" || true
-          git add -f state/kali-store-build.log || true
+          ls -la state/kali-store-build.log || true
+          git add -f state/kali-store-build.log
           git commit -m "state: kali-store build log [skip ci]" || true
-          git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx || true
-          git push origin HEAD:arena/9552f54d-xfreedollarhachx || true
+          git pull --no-rebase --no-edit origin arena/9552f54d-xfreedollarhachx
+          git push origin HEAD:arena/9552f54d-xfreedollarhachx
+          echo "::notice::لوج البناء متكوميت ✓"
+          exit 0
       - name: رفع الأصول على release kali-store
         run: |
           shopt -s nullglob
