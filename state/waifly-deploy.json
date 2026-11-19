@@ -1,47 +1,39 @@
 {
-  "at": "2026-11-19T06:52:18.561Z",
+  "at": "2026-11-19T16:22:18.021Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-19T06:06:24Z",
-    "size": 4247366
+    "updatedAt": "2026-11-19T13:32:32Z",
+    "size": 4248939
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "379710e32fa68b3dcd4774489aa4d5baf450fddf",
-    "builtAt": "2026-11-19T05:53:36.710Z",
+    "commit": "657d5ac13eb20cbce054c41d0457637d7540e796",
+    "builtAt": "2026-11-19T13:32:20.417Z",
     "files": 190,
     "builtBy": "local"
   },
   "boot": {
-    "commit": "379710e32fa68b3dcd4774489aa4d5baf450fddf",
-    "builtAt": "2026-11-19T05:53:36.710Z",
+    "commit": "657d5ac13eb20cbce054c41d0457637d7540e796",
+    "builtAt": "2026-11-19T13:32:20.417Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-19T06:06:24Z) — حارس لوب التحديث",
-    "lastCheckAt": "2026-11-19T06:49:41.377Z",
-    "currentBuiltAt": "2026-11-19T05:53:36.710Z",
-    "latestReleaseAt": "2026-11-19T06:06:24Z",
+    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-19T13:32:32Z) — حارس لوب التحديث",
+    "lastCheckAt": "2026-11-19T16:17:51.426Z",
+    "currentBuiltAt": "2026-11-19T13:32:20.417Z",
+    "latestReleaseAt": "2026-11-19T13:32:32Z",
     "restartNeeded": false
   },
-  "updaterInstall": {
-    "status": 200,
-    "lastResult": "up-to-date",
-    "detail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-19T06:06:24Z) — حارس لوب التحديث"
-  },
-  "restartHttp": 200,
-  "action": "restart_requested",
-  "bootAfter": {
-    "commit": "379710e32fa68b3dcd4774489aa4d5baf450fddf",
-    "builtAt": "2026-11-19T05:53:36.710Z",
-    "dir": "/home/container"
-  },
-  "fresh": false,
+  "updaterInstall": null,
+  "restartHttp": null,
+  "action": "fresh",
+  "bootAfter": null,
+  "fresh": true,
   "notes": [],
   "page": {
     "status": 200,
@@ -51,24 +43,21 @@
   },
   "fleet": {
     "status": 200,
-    "count": 16,
+    "count": 13,
     "ids": [
       "self-node",
-      "gh-4-0353",
-      "gh-11-0352",
-      "gh-9-0355",
-      "gh-1-0515",
-      "gh-2-0355",
-      "gh-13-0500",
-      "gh-15-0522",
-      "gh-8-0359",
-      "gh-14-0503",
-      "gh-3-0513",
-      "gh-7-0357",
-      "gh-10-0358",
-      "gh-3-0355",
-      "gh-2-0510",
-      "gh-6-0400"
+      "gh-9-1100",
+      "gh-1-1101",
+      "gh-4-1101",
+      "gh-10-1100",
+      "gh-5-1101",
+      "gh-8-1100",
+      "gh-3-1100",
+      "gh-11-1100",
+      "gh-12-1104",
+      "gh-7-1116",
+      "gh-2-1103",
+      "gh-6-1103"
     ]
   }
 }
