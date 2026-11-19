@@ -1,18 +1,18 @@
 {
   "measured": true,
-  "at": "2026-11-19T02:36:09.476Z",
-  "total": 428225,
+  "at": "2026-11-18T19:41:25.227Z",
+  "total": 428069,
   "bySeverity": {
-    "medium": 183650,
-    "critical": 40136,
-    "high": 163296,
-    "unknown": 23116,
-    "low": 17952,
+    "medium": 183526,
+    "critical": 40109,
+    "high": 163222,
+    "unknown": 23197,
+    "low": 17940,
     "none": 75
   },
-  "kev": 1786,
-  "epssScored": 407399,
-  "products": 81955,
+  "kev": 1782,
+  "epssScored": 407267,
+  "products": 81953,
   "mode": "deepen",
   "sources": [
     "NVD 2.0",
@@ -9493,21 +9493,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2026-90817",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "An unauthenticated Remote Code Execution vulnerability was found in the survey passthrough routing and Data Import processing logic, in which a malicious user could potentially exploit it by manipulating HTTP requests to access an unintended controller route f",
-      "cwe": [
-        "CWE-73",
-        "CWE-94"
-      ],
-      "kev": true,
-      "epss": 0.03749,
-      "pub": "2026-09-20T13:17:44.973",
-      "products": [],
-      "refs": []
-    },
-    {
       "id": "CVE-2026-16232",
       "cvss": 9.8,
       "sev": "critical",
@@ -9733,24 +9718,6 @@
       "refs": []
     },
     {
-      "id": "CVE-2024-10441",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Improper encoding or escaping of output vulnerability in the system plugin daemon in Synology BeeStation OS (BSM) before 1.1-65374 and Synology DiskStation Manager (DSM) before 7.2-64570-4, 7.2.1-69057-6 and 7.2.2-72806-1 allows remote attackers to execute arb",
-      "cwe": [
-        "CWE-116"
-      ],
-      "kev": true,
-      "epss": 0.01251,
-      "pub": "2025-03-19T02:15:27.120",
-      "products": [
-        "beestation_os",
-        "beestation_os",
-        "beestation_os"
-      ],
-      "refs": []
-    },
-    {
       "id": "CVE-2025-59374",
       "cvss": 9.8,
       "sev": "critical",
@@ -9764,20 +9731,6 @@
       "products": [
         "live_update"
       ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-90436",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "** UNSUPPORTED WHEN ASSIGNED ** Deserialization of an inbound SOAP fault in Apache Axis 1.x allows unauthenticated remote class instantiation. When a SOAP <Fault> carries a <detail><exceptionName> element, Axis loads the named class and, if a String <data> ele",
-      "cwe": [
-        "CWE-470"
-      ],
-      "kev": true,
-      "epss": 0.01128,
-      "pub": "2026-11-06T16:18:59.763",
-      "products": [],
       "refs": []
     },
     {
@@ -13864,7 +13817,61 @@
         "internet_explorer"
       ],
       "refs": []
+    },
+    {
+      "id": "CVE-2017-0149",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "Microsoft Internet Explorer 9 through 11 allow remote attackers to execute arbitrary code or cause a denial of service (memory corruption) via a crafted web site, aka \"Internet Explorer Memory Corruption Vulnerability.\" This vulnerability is different from tho",
+      "cwe": [
+        "CWE-787"
+      ],
+      "kev": true,
+      "epss": 0.28489,
+      "pub": "2017-03-17T00:59:04.180",
+      "products": [
+        "internet_explorer",
+        "internet_explorer",
+        "internet_explorer"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2018-4063",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "An exploitable remote code execution vulnerability exists in the upload.cgi functionality of Sierra Wireless AirLink ES450 FW 4.9.3. A specially crafted HTTP request can upload a file, resulting in executable code being uploaded, and routable, to the webserver",
+      "cwe": [
+        "CWE-434"
+      ],
+      "kev": true,
+      "epss": 0.2726,
+      "pub": "2019-05-06T19:29:00.637",
+      "products": [
+        "aleos",
+        "aleos",
+        "aleos"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2023-28205",
+      "cvss": 8.8,
+      "sev": "high",
+      "desc": "A use after free issue was addressed with improved memory management. This issue is fixed in Safari 16.4.1, iOS 15.7.5 and iPadOS 15.7.5, iOS 16.4.1 and iPadOS 16.4.1, macOS Ventura 13.3.1. Processing maliciously crafted web content may lead to arbitrary code ",
+      "cwe": [
+        "CWE-416"
+      ],
+      "kev": true,
+      "epss": 0.27076,
+      "pub": "2023-04-10T19:15:07.237",
+      "products": [
+        "safari",
+        "ipados",
+        "ipados"
+      ],
+      "refs": []
     }
   ],
-  "says_ar": "428225 ثغرة حقيقية من NVD · 1786 مستغلّة فعلياً (KEV) · 81955 منتج · مزامنة 2026-11-19T02:36:09.476Z"
+  "says_ar": "428069 ثغرة حقيقية من NVD · 1782 مستغلّة فعلياً (KEV) · 81953 منتج · مزامنة 2026-11-18T19:41:25.227Z"
 }

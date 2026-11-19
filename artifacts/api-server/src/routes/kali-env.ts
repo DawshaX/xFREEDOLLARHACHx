@@ -1167,7 +1167,13 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     installCmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
   }
   const cmd = `echo ROOT_UID:$(id -u); for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; ${installCmd}`;
-  const r = await kaliAnywhereExec(cmd, 420_000);
+  /* TEST93g — retry على الجست المكسور: المنافسة بتكسر guests (مقاس TEST66
+   * ومقاس 05:38: proot execve Permission denied على جزء من العقد). أول محاولة
+   * بتفشل بفشل proot → نعيد مرة تانية فبتروح عقدة تانية سليمة من الأسطول. */
+  let r = await kaliAnywhereExec(cmd, 420_000);
+  if (r && /proot error|Permission denied|fatal error: see `proot/.test([r.stdout, r.stderr].join("\n"))) {
+    r = await kaliAnywhereExec(cmd, 420_000);
+  }
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
   const ok = /INSTALL_OK:/.test(r.stdout);
   const uid = Number((r.stdout.match(/^ROOT_UID:(\d+)$/m) ?? [])[1]);
