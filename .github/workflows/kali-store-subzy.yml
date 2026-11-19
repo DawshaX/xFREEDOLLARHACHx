@@ -1,7 +1,7 @@
 # TEST93t — بناء subzy + gotator (Go بلا releases على upstream — مقاس 13:2xZ:
 # PentestPad/subzy مافيش assets · Josue87/Gotator v1.1 مافيش assets). بناء من
 # المصدر في docker golang → binary واحد لكل أداة → usr/local/bin → tar.gz.
-name: "kali store subzy+gotator v2 (clone+go build → release kali-store)"
+name: "kali store subzy+gotator v3 (golang 1.23 → release kali-store)"
 on:
   push:
     paths:
@@ -10,7 +10,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: kali-store-subzy2
+  group: kali-store-subzy3
   cancel-in-progress: false
 jobs:
   gopass:
@@ -28,7 +28,7 @@ jobs:
           mkdir -p store state
           WORK="$GITHUB_WORKSPACE"
           rm -rf /tmp/gobin && mkdir -p /tmp/gobin
-          docker run --rm -v /tmp/gobin:/out golang:1.22 bash -c '
+          docker run --rm -v /tmp/gobin:/out golang:1.23 bash -c '
             export GOBIN=/out GOPATH=/go
             git clone --depth 1 https://github.com/PentestPad/subzy /go/src/subzy 2>&1 | tail -1
             (cd /go/src/subzy && go build -o /out/subzy . && echo "OK:subzy-build") || echo "FAIL:subzy-build"
