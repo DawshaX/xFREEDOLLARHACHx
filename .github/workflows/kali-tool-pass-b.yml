@@ -1,5 +1,5 @@
 # TEST92c — التفعيل واحد-واحد — الجزء B: النصف الثاني + provision + الجرد الحي.
-name: "TEST92e — تفعيل B + جرد على 15 عقدة حية"
+name: "TEST92g — تفعيل B + جرد retry"
 on:
   push:
     paths:
