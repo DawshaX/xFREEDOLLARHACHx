@@ -39,6 +39,8 @@ export type KaliAnywhereResult = {
   exitCode: number | null;
   durationMs: number;
   plane: string;
+  /** TEST93x — id العقدة الفعلي (hostnames بتتكرر — 11 عقدة runnervmccnms مقاس 17:33) */
+  nodeId?: string;
 };
 
 export function isLinuxFleetNode(a: { platform: string; capabilities?: string[] }): boolean {
@@ -114,6 +116,7 @@ export async function kaliAnywhereExecStream(
       exitCode: rr.exitCode,
       durationMs: rr.durationMs,
       plane,
+      nodeId: a.id,
     };
   }
   /* مافيش عقدة ردت — فشل محلي صادق (exitCode 127) بخصوص الاختناق إن وجد */
@@ -177,7 +180,7 @@ export async function kaliFleetUnionExec(
  * TEST93t — preferHostname: بيثبت التنفيذ على عقدة معينة (hostname أول بالترتيب) —
  * مقاس F2 11:17: مرحلة التثبيت على runnervmccnms والبوابة راحت على عقدة طازة
  * تانية → INSTALL_FAIL كاذبة رغم «Setting up ✓». */
-export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000, preferHostname?: string): Promise<KaliAnywhereResult | null> {
+export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000, preferNodeId?: string): Promise<KaliAnywhereResult | null> {
   if (!cmd.trim()) return null;  // ── بث حي لكل الصفحات: أي تنفيذ كالي يظهر فورًا في كل مكان ──────────
   const execId = `kali-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const broadcastStart = (plane: string) => {
@@ -216,8 +219,8 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000, preferHo
     return { stdout: "", stderr: String((e as Error)?.message ?? e).slice(0, 300), exitCode: 127, durationMs: 0, plane: "الهَب — التعذّر على الأسطول" };
   }
   /* TEST93t — التثبيت على عقدة معينة أولاً (البوابة لازم نفس عقدة التثبيت) */
-  if (preferHostname) {
-    const hit = nodes.find((n) => n.hostname === preferHostname);
+  if (preferNodeId) {
+    const hit = nodes.find((n) => n.id === preferNodeId) ?? nodes.find((n) => n.hostname === preferNodeId);
     if (hit) nodes = [hit, ...nodes.filter((n) => n.id !== hit.id)];
   }
   let lastErr: string | null = null;
@@ -241,6 +244,7 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000, preferHo
       exitCode: rr.exitCode,
       durationMs: rr.durationMs,
       plane,
+      nodeId: a.id,
     };
   }
   /* مافيش عقدة ردت — فشل محلي صادق (exitCode 127) بخصوص الاختناق إن وجد */

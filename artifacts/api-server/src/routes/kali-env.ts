@@ -1095,7 +1095,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     },
     "king-phisher": {
       repo: "CrimsonForge-io/king-phisher", cmd: ["king-phisher"],
-      wrap: `for f in /opt/king-phisher/tools/*.py; do [ -e "$f" ] || continue; b=$(basename "$f" .py); [ "$b" = "king-phisher" ] && cp "$f" /usr/local/bin/king-phisher && chmod +x /usr/local/bin/king-phisher; done; true`,
+      wrap: `[ -f /opt/king-phisher/KingPhisher ] && { printf "#!/bin/sh\nexec python3 /opt/king-phisher/KingPhisher \"$@\"\n" > /usr/local/bin/king-phisher; chmod +x /usr/local/bin/king-phisher; }; true`,
     },
     venom: {
       repo: "r00t-3xp10it/venom", cmd: "venom",
@@ -1167,7 +1167,6 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     dradis: { file: "dradis.tar.gz", cmd: ["dradis"] },
     recordmydesktop: { file: "recordmydesktop.tar.gz", cmd: ["recordmydesktop"] },
     wkhtmltopdf: { file: "wkhtmltopdf-debs.tar.gz", cmd: ["wkhtmltopdf"] },
-    evilgrade: { file: "evilgrade.tar.gz", cmd: ["evilgrade"] },
     maskprocessor: { file: "maskprocessor.tar.gz", cmd: ["maskprocessor", "mp"] },
     rainbowcrack: { file: "rainbowcrack.tar.gz", cmd: ["rcrack", "rainbowcrack"] },
     redis: { file: "redis-server.tar.gz", cmd: ["redis-server", "redis-cli"] },
@@ -1194,7 +1193,6 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     pgcli: { file: "pgcli.tar.gz", cmd: ["pgcli"], pip: "pgcli" },
     socialanalyzer: { file: "social-analyzer.tar.gz", cmd: ["social-analyzer", "socialanalyzer"], pip: "social-analyzer" },
     "peass-ng": { file: "peass-ng.tar.gz", cmd: ["linpeas", "linpeas.sh"] },
-    vulners: { file: "vulners.tar.gz", cmd: ["vulners"] },
   };
   const GIT = GITHUB_TOOLS[tool];
   const PIP = PIP_TOOLS[tool];
@@ -1211,7 +1209,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
     if (storeDebs) {
       /* المرحلة 1 قصيرة: تنظيف statoverride + deb + dpkg — بلا بوابة ولا fallback */
-      installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
+      installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; dpkg --configure -a 2>&1 | tail -1; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
     } else {
       /* تاربولات parts (metasploit/empire/faraday/dradis) — TEST93p: بلا بوابة هنا (البوابة المنفصلة تحت مع retry — درس TEST80/TEST92q) */
       installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; echo STORE_EXTRACTED`;
@@ -1227,7 +1225,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const C = CLONE_EXTRA[tool];
     installCmd = `rm -rf /opt/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${C.repo} /opt/${tool} 2>&1 | tail -2; ${C.req ? `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed -r /opt/${tool}/requirements.txt 2>&1 || true) | tail -2; ` : ""}${C.wrap ? `${C.wrap}; ` : ""}${(Array.isArray(C.cmd) ? C.cmd : [C.cmd]).map((c) => `command -v ${c}`).join(" || ")} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else {
-    installCmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
+    installCmd = `dpkg --configure -a 2>&1 | tail -1; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
   }
   const cmd = `echo ROOT_UID:$(id -u); for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; ${installCmd}`;
   /* TEST93g — retry على الجست المكسور: المنافسة بتكسر guests (مقاس TEST66
@@ -1240,14 +1238,14 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
   /* TEST93t — العقدة اللي التثبيت حصل عليها: البوابة بتتثبت عليها (مقاس F2:
    * البوابة على عقدة تانية طازة → INSTALL_FAIL كاذبة رغم «Setting up ✓») */
-  const installHost = (r.plane || "").split(" — ")[0].trim();
+  const installNodeId = r.nodeId ?? (r.plane || "").split(" — ")[0].trim();
   /* المرحلة 2 قصيرة: بوابة منفصلة مع retry ×3 — بعد ما dpkg/الاستخراج خلص فعليًا
    * في المرحلة 1. proot signal 6 عشوائي بيقتل حتى الأوامر القصيرة (مقاس TEST92q:
    * sidguesser «Setting up ✓» والبوابة اتقتلت → INSTALL_FAIL كاذبة). */
   if ((storeDebs || (STORE_TOOLS[tool] && STORE_TOOLS[tool].file)) && r && storeGate) {
     let gout = "";
     for (let gi = 0; gi < 5; gi++) {
-      const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 2; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000, installHost);
+      const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 2; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000, installNodeId);
       if (gr) gout = gr.stdout;
       if (gout.includes(`INSTALL_OK:${tool}`)) break;
     }
