@@ -1,49 +1,19 @@
-=== TEST93p-F 2026-11-19T17:32:52Z ===
---- INSTALL evilgrade 17:32:52 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL king-phisher 17:32:55 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL libreoffice 17:32:55 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL maskprocessor 17:32:56 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
---- INSTALL vulners 17:32:56 ---
-<html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
-
-=== F DONE 2026-11-19T17:32:57Z ===
-=== FINAL MEASURE (union) 17:32:57 ===
+=== TEST93p-F 2026-11-19T17:42:20Z ===
+--- INSTALL evilgrade 17:42:20 ---
+{"ok":false,"tool":"evilgrade","pkg":"evilgrade","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:evilgrade\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL king-phisher 17:42:33 ---
+{"ok":false,"tool":"king-phisher","pkg":"king-phisher","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/king-phisher'...\nINSTALL_FAIL:king-phisher\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL libreoffice 17:42:35 ---
+{"ok":false,"tool":"libreoffice","pkg":"libreoffice","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nE: dpkg was interrupted, you must manually run 'dpkg --configure -a' to correct the problem. \nINSTALL_FAIL:libreoffice\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL maskprocessor 17:42:36 ---
+{"ok":false,"tool":"maskprocessor","pkg":"maskprocessor","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nFailed to connect to system scope bus via local transport: Operation not permitted (consider using --machine=<user>@.host --user to connect to bus of other user)\nFailed to connect to system scope bus via local transport: Operation not permitted (consider using --machine=<user>@.host --user to connect to bus of other user)\n\nROOT_UID:0\nINSTALL_FAIL:maskprocessor\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 25430\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL vulners 17:42:55 ---
+{"ok":false,"tool":"vulners","pkg":"vulners","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_FAIL:vulners\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+=== F DONE 2026-11-19T17:43:11Z ===
+=== FINAL MEASURE (union) 17:43:11 ===
+{
+  "present": 195,
+  "total": 266,
+  "measuredOn": "اتحاد 7 عقدة كالي حية — runnervmccnms (rootfs + proot) · runnervm0hi8g (rootfs + proot) · runnervmccnms (rootfs + proot) · runnervmccnms (rootfs + proot) …"
+}
 
