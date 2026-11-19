@@ -101,11 +101,10 @@ jobs:
           #   secrets.NOVA_EXEC_TOKEN       (the hub actually authenticates agents)
           # A human pressing "Run workflow" is itself an explicit act, so it passes.
           if [ "$EVENT" != "workflow_dispatch" ]; then
-            if [ "$FLEET_ENABLED" != "1" ]; then
-              echo "::notice::no wave — set Actions variable FLEET_ENABLED=1 to let the schedule/push triggers spawn nodes"
-              echo "nodes=0" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+            # TEST93c — البوابة الأمنية الحقيقية = التوكِن (الهَب بيرفض الأجينت
+            # بلا NOVA_EXEC_TOKEN — مقاس). متغير FLEET_ENABLED بقى اختياري:
+            # مش متعرّف من integration (403 مقاس) وواقفه كان بيسكيب الموجات
+            # صامت رغم إن الثوابت الأمنية مغطاة بالتوكِن الإلزامي تحت.
             if [ -z "$TOKEN" ]; then
               echo "::error::no wave — NOVA_EXEC_TOKEN secret is empty. Attach nodes only to a hub that requires it."
               echo "nodes=0" >> "$GITHUB_OUTPUT"
