@@ -1,49 +1,86 @@
-=== TEST92n-E 2026-11-19T18:44:13Z ===
---- INSTALL ettercap 18:44:13 ---
-{"ok":false,"tool":"ettercap","pkg":"ettercap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:ettercap\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 68017\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL exiftool 18:44:27 ---
-{"ok":false,"tool":"exiftool","pkg":"libimage-exiftool-perl","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:exiftool\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 69524\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL steghide 18:44:40 ---
-{"ok":false,"tool":"steghide","pkg":"steghide","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:steghide\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 71426\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL arp-scan 18:44:54 ---
-{"ok":false,"tool":"arp-scan","pkg":"arp-scan","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:arp-scan\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 72934\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL cherrytree 18:45:07 ---
-{"ok":false,"tool":"cherrytree","pkg":"cherrytree","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:cherrytree\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 74443\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL recordmydesktop 18:45:21 ---
-{"ok":false,"tool":"recordmydesktop","pkg":"recordmydesktop","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:recordmydesktop\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 75951\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL maskprocessor 18:45:34 ---
-{"ok":false,"tool":"maskprocessor","pkg":"maskprocessor","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:maskprocessor\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 77460\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL rainbowcrack 18:45:48 ---
-{"ok":true,"tool":"rainbowcrack","pkg":"rainbowcrack","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\n/usr/bin/rcrack\nINSTALL_OK:rainbowcrack\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 79164\n"}
---- INSTALL redis 18:45:52 ---
-{"ok":true,"tool":"redis","pkg":"redis","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\n/usr/bin/redis-server\nINSTALL_OK:redis\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 79851\n"}
---- INSTALL elfutils 18:45:56 ---
-{"ok":true,"tool":"elfutils","pkg":"elfutils","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\n/usr/bin/eu-readelf\nINSTALL_OK:elfutils\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 80539\n"}
---- INSTALL ltrace 18:46:00 ---
-{"ok":false,"tool":"ltrace","pkg":"ltrace","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:ltrace\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 81227\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL strace 18:46:14 ---
-{"ok":false,"tool":"strace","pkg":"strace","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:strace\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 82734\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL zsh 18:46:27 ---
-{"ok":false,"tool":"zsh","pkg":"zsh","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:zsh\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 84242\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL vim 18:46:41 ---
-{"ok":false,"tool":"vim","pkg":"vim","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:vim\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 86355\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL aria2 18:46:54 ---
-{"ok":false,"tool":"aria2","pkg":"aria2","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:aria2\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 87862\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL sidguesser 18:47:07 ---
-{"ok":true,"tool":"sidguesser","pkg":"sidguesser","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\n/usr/bin/sidguess\nINSTALL_OK:sidguesser\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 89371\n"}
---- INSTALL netexec 18:47:11 ---
-{"ok":false,"tool":"netexec","pkg":"netexec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:netexec\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 90058\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL crackmapexec 18:47:25 ---
-{"ok":false,"tool":"crackmapexec","pkg":"crackmapexec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nROOT_UID:0\nINSTALL_FAIL:crackmapexec\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 91565\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
---- INSTALL pentestly 18:47:38 ---
-{"ok":true,"tool":"pentestly","pkg":"pentestly","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/pentestly'...\nfatal: could not read Username for 'https://github.com': No such device or address\nERROR: Could not open requirements file: [Errno 2] No such file or directory: '/opt/pentestly/requirements.txt'\nINSTALL_OK:pentestly\n"}
---- INSTALL ssrfmap 18:47:39 ---
-{"ok":true,"tool":"ssrfmap","pkg":"ssrfmap","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nCloning into '/opt/ssrfmap'...\nINSTALL_OK:ssrfmap\n"}
-=== E DONE 2026-11-19T18:47:41Z ===
-=== FINAL MEASURE 18:47:41 ===
+=== TEST92n-E 2026-11-19T19:08:15Z ===
+--- INSTALL ettercap 19:08:15 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL exiftool 19:08:26 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL steghide 19:08:26 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL arp-scan 19:08:27 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL cherrytree 19:08:27 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL recordmydesktop 19:08:28 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL maskprocessor 19:08:28 ---
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+--- INSTALL ltrace 19:08:29 ---
+{"ok":false,"tool":"ltrace","pkg":"ltrace","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL strace 19:08:30 ---
+{"ok":false,"tool":"strace","pkg":"strace","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL zsh 19:08:31 ---
+{"ok":false,"tool":"zsh","pkg":"zsh","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL vim 19:08:31 ---
+{"ok":false,"tool":"vim","pkg":"vim","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL aria2 19:08:33 ---
+{"ok":false,"tool":"aria2","pkg":"aria2","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL netexec 19:08:34 ---
+{"ok":false,"tool":"netexec","pkg":"netexec","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL crackmapexec 19:08:34 ---
+{"ok":false,"tool":"crackmapexec","pkg":"crackmapexec","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+=== E DONE 2026-11-19T19:08:35Z ===
+=== FINAL MEASURE 19:08:35 ===
 {
-  "present": 232,
-  "total": 266,
-  "measuredOn": "اتحاد 7 عقدة كالي حية — runnervmccnms (rootfs + proot) · runnervm0hi8g (rootfs + proot) · runnervmccnms (rootfs + proot) · runnervmccnms (rootfs + proot) …"
+  "present": 0,
+  "total": 0,
+  "measuredOn": null
 }
 
