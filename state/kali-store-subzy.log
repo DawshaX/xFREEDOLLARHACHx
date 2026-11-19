@@ -76,3 +76,45 @@ drwxr-xr-x 1 root root    4096 Nov 19 13:43 ..
 -rwxr-xr-x 1 root root 2692386 Nov 19 13:43 gotator
 MISS:subzy (binary)
 OK:gotator 1534615
+Unable to find image 'golang:1.23' locally
+1.23: Pulling from library/golang
+4f4fb700ef54: Pulling fs layer
+cffef7dc6f99: Pulling fs layer
+01b3c4a0d5c8: Pulling fs layer
+d64c83132511: Pulling fs layer
+6d6401b7636b: Pulling fs layer
+d5791340ef18: Pulling fs layer
+f014853ae203: Pulling fs layer
+4f4fb700ef54: Already exists
+01b3c4a0d5c8: Download complete
+6d6401b7636b: Download complete
+22fe002a19c1: Download complete
+f014853ae203: Download complete
+3a0f843aedf9: Download complete
+d64c83132511: Download complete
+d5791340ef18: Download complete
+cffef7dc6f99: Download complete
+f014853ae203: Pull complete
+6d6401b7636b: Pull complete
+cffef7dc6f99: Pull complete
+d64c83132511: Pull complete
+4f4fb700ef54: Pull complete
+01b3c4a0d5c8: Pull complete
+d5791340ef18: Pull complete
+Digest: sha256:60deed95d3888cc5e4d9ff8a10c54e5edc008c6ae3fba6187be6fb592e19e8c0
+Status: Downloaded newer image for golang:1.23
+Cloning into '/go/src/subzy'...
+go: downloading github.com/spf13/cobra v1.8.1
+go: downloading github.com/logrusorgru/aurora v2.0.3+incompatible
+go: downloading github.com/mitchellh/go-homedir v1.1.0
+go: downloading github.com/spf13/pflag v1.0.5
+OK:subzy-build
+Cloning into '/go/src/gotator'...
+OK:gotator-build
+total 14044
+drwxr-xr-x 2 1001 1001     4096 Nov 19 13:50 .
+drwxr-xr-x 1 root root     4096 Nov 19 13:50 ..
+-rwxr-xr-x 1 root root  2965083 Nov 19 13:50 gotator
+-rwxr-xr-x 1 root root 11403821 Nov 19 13:50 subzy
+OK:subzy 6265667
+OK:gotator 1694148
