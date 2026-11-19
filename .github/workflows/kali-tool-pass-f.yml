@@ -1,7 +1,7 @@
 # TEST93p — المسار F: المتبقي الحقيقي على الأسطول كلّه (بعد فكس المرحلتين +
 # retry البوابة + debs2 + ghidra/retdec + empire كامل). مسلسل واحد-واحد (الدرس:
 # الازدحام بيقتل) — بعد ما store workflows تخلص (التاربولات لازم تكون مرفوعة).
-name: "TEST93v-F4 — آخر 13 (subzy+gotator+faraday+dradis)"
+name: "TEST93w-F5 — آخر 5 (evilgrade king-phisher libreoffice mp vulners)"
 on:
   push:
     paths:
@@ -26,7 +26,7 @@ jobs:
         run: |
           L=state/tool-pass-f-log.txt
           echo "=== TEST93p-F $(date -u +%FT%TZ) ===" > $L
-          for tool in fern maskprocessor pgcli routersploit socialanalyzer vulners subzy gotator evilgrade libreoffice faraday dradis king-phisher; do
+          for tool in evilgrade king-phisher libreoffice maskprocessor vulners; do
             echo "--- INSTALL $tool $(date -u +%T) ---" >> $L
             curl -s -m 900 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>&1 || echo "REQ_FAIL:$tool" >> $L
             echo "" >> $L
