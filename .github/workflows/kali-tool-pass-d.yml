@@ -1,5 +1,5 @@
 # TEST92i — مسار D: pip + clone + amass/volatility (طبقات PIP/CLONE/STORE الفردية).
-name: "TEST93x-D — الموجة الحية: 18 pip+clone مسلسل"
+name: "TEST93y-D — الموجة الجديدة: 18 pip+clone"
 on:
   push:
     paths:
