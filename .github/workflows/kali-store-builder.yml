@@ -5,7 +5,7 @@
 # النشر: release «kali-store» على نفس الريبو (github.token contents:write — مقاس
 # بنفس نمط hub-release-refresh). Hack-STORAGE لما صلاحية الكتابة تتفعل، المثبت
 # بيقبل KALI_STORE_URL — نفس الملفات تعمل there بلا أي تغيير كود.
-name: kali store builder (docker كالي نظيف → tarballs → release kali-store)
+name: "kali store builder v2 (docker كالي نظيف → tarballs → release kali-store)"
 on:
   push:
     paths:
@@ -65,8 +65,10 @@ jobs:
       - name: رفع الأصول على release kali-store
         run: |
           ls -la store || true
-          gh release upload kali-store store/*.tar.gz store/manifest.txt --clobber -R "$GITHUB_REPOSITORY" 2>&1 || {
-            gh release create kali-store store/*.tar.gz store/manifest.txt -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف — تفريغ عند / على العقدة بلا dpkg (TEST91)"; }
+          gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "مبني من docker كالي نظيف — تفريغ عند / على العقدة بلا dpkg (TEST91)"
+          gh release upload kali-store store/*.tar.gz store/manifest.txt --clobber -R "$GITHUB_REPOSITORY"
+          echo "::notice::kali-store assets: $(ls store/*.tar.gz | wc -l) tarballs"
       - name: إبلاغ الهَب بالجرد (exec)
         run: |
           COUNT=$(ls store/*.tar.gz 2>/dev/null | wc -l)
