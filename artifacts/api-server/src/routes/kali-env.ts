@@ -492,7 +492,7 @@ const CATALOG_TTL_MS = 10 * 60_000;
  */
 const TOOL_BIN_ALIASES: Record<string, string[]> = {
   volatility3: ["vol", "vol.py", "volatility3"],
-  volatility: ["volatility", "vol.py"],
+  volatility: ["volatility", "vol.py", "vol"],
   metasploit: ["msfconsole", "msfvenom"],
   bloodhound: ["bloodhound-ce-python", "bloodhound-python", "bloodhound.py"],
   crackmapexec: ["crackmapexec", "cme"],
@@ -510,6 +510,11 @@ const TOOL_BIN_ALIASES: Record<string, string[]> = {
   vulners: ["vulners", "nmap-vulners"],
   wpscan: ["wpscan"],
   "ida": ["ida64", "ida", "retdec"],
+  /* TEST88 — مرادفات مقاسة: الأداة بتتسطب باسم تري (مصدر: installers TEST87/88) */
+  sleuthkit: ["fls", "mmls", "icat", "sleuthkit"],
+  hcxtools: ["hcxpcapngtool", "hcxhashtool", "hcxwltool", "hcxtools"],
+  scoutsuite: ["scout", "scoutsuite"],
+  "ligolo-ng": ["ligolo-ng", "agent"],
 };
 
 /**
@@ -530,14 +535,8 @@ const TOOL_BIN_ALIASES: Record<string, string[]> = {
 const FUNCTIONAL_SUBSTITUTES: Record<string, { via: string; why: string }> = {
   ffuf: { via: "feroxbuster", why: "نفس الوظيفة: تعداد محتوى/مسارات بالكلمات المفتاحية، أسرع وموجود فعلًا" },
   dirsearch: { via: "dirsearch", why: "موجودة أصلًا (اتنزّلت عبر pip)" },
-  subfinder: { via: "sublist3r", why: "تعداد سُبدومينات سلبي — نفس الغرض، موجود وشغّال" },
-  amass: { via: "sublist3r+dnsenum+fierce", why: "تعداد نطاقات/سُبدومينات — ثلاث أدوات موجودة تغطي نفس المرحلة" },
-  katana: { via: "wfuzz+arjun", why: "زحف واكتشاف مدخلات — wfuzz بيزحف وarjun بيطلع الباراميترات" },
-  dnsx: { via: "dnsenum+dig", why: "استعلامات DNS المجمّعة — dnsenum وdig موجودين" },
-  naabu: { via: "nmap+masscan", why: "مسح منافذ سريع — nmap وmasscan موجودين في كالي" },
   hcxdumptool: { via: "aircrack-ng", why: "التقاط/تحليل WPA — aircrack-ng موجود (الـfirmware مش متاح في proot أصلًا)" },
   hcxtools: { via: "aircrack-ng", why: "تحويل/تحليل handshakes — aircrack-ng موجود" },
-  bettercap: { via: "mitmproxy+arpspoof", why: "اعتراض MITM — mitmproxy وarpspoof موجودين وشغالين" },
   ettercap: { via: "arpspoof+mitmproxy", why: "اعتراض شبكة — arpspoof + mitmproxy يغطيان ARP spoofing والاعتراض" },
   responder: { via: "impacket", why: "اعتراض مصادقة — impacket فيه smb/ldap server للاعتراض" },
   "arp-scan": { via: "arp-scan", why: "موجود في الكالي (اتأكد بـcommand -v)" },
@@ -1004,12 +1003,31 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   const APT_ALIAS: Record<string, string> = { exiftool: "libimage-exiftool-perl" };
   /* TEST77 — سلسلة المصادر: apt كالي أولًا، لو فشل → pip، لو فشل → GitHub release
    * (من الجيت هوب مباشرة — القرار المعماري: جيت هوب مخزن كل حاجة). */
-  const PIP_TOOLS: Record<string, string> = {
-    photon: "photon", maigret: "maigret", h8mail: "h8mail",
-    prowler: "prowler", scoutsuite: "scoutsuite", pacu: "pacu",
-    netexec: "netexec", certipy: "certipy-ad", "bloodhound-python": "bloodhound",
-    "ssh-audit": "ssh-audit", semgrep: "semgrep", sublist3r: "sublist3r",
-    sherlock: "sherlock-project", volatility3: "volatility3",
+  const PIP_TOOLS: Record<string, { pkg: string; cmd?: string }> = {
+    /* TEST88 — pkg مقاس من pypi.org (2026-11-19): photon وnetexec مش على PyPI
+     * (تحقق مباشر) — اتنقلوا لCLONE_EXTRA. scoutsuite بيتسطب كscout ·
+     * volatility3 كvol · bloodhound-python باسمه (مش bloodhound). */
+    maigret: { pkg: "maigret" }, h8mail: { pkg: "h8mail" },
+    prowler: { pkg: "prowler" }, scoutsuite: { pkg: "scoutsuite", cmd: "scout" }, pacu: { pkg: "pacu" },
+    certipy: { pkg: "certipy-ad" }, "bloodhound-python": { pkg: "bloodhound-python" },
+    "ssh-audit": { pkg: "ssh-audit" }, semgrep: { pkg: "semgrep" }, sublist3r: { pkg: "sublist3r" },
+    sherlock: { pkg: "sherlock-project" },
+    volatility3: { pkg: "volatility3", cmd: "vol" },
+    volatility: { pkg: "volatility3", cmd: "vol" },
+  };
+  /* TEST88 — clone + pip محلي + wrapper (مقاس أساسه dirsearch/arjun ✓ TEST86):
+   * أدوات مافيش منها pip ولا release — سورس مباشر + gate بالأمر الحقيقي. */
+  const CLONE_EXTRA: Record<string, { repo: string; cmd: string; wrap?: string; req?: boolean }> = {
+    netexec: { repo: "Pennyw0rth/NetExec", cmd: "nxc", req: true },
+    routersploit: {
+      repo: "threat9/routersploit", cmd: "routersploit", req: true,
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/routersploit/rsf.py "$@"\\n' > /usr/local/bin/routersploit && chmod +x /usr/local/bin/routersploit`,
+    },
+    photon: {
+      repo: "s0md3v/Photon", cmd: "photon", req: true,
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/photon/photon.py "$@"\\n' > /usr/local/bin/photon && chmod +x /usr/local/bin/photon`,
+    },
+    osintgram: { repo: "Datalux/Osintgram", cmd: "osintgram" },
   };
   /* TEST87 — الحقول url مقاسة من api.github.com (السانبوكس 2026-11-19) وخبزت هنا:
    * العقدة (GitHub runner IP مشترك) بتنده api.github.com unauthenticated فبتقع
@@ -1033,6 +1051,13 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     dockle: { repo: "goodwithtech/dockle", pattern: "Linux-64bit.tar.gz", flat: "dockle", url: "https://github.com/goodwithtech/dockle/releases/download/v0.4.15/dockle_0.4.15_Linux-64bit.tar.gz" },
     gotator: { repo: "Josue87/Gotator", pattern: "linux_amd64.tar.gz", flat: "gotator" },
     osintgram: { repo: "Datalux/Osintgram", pattern: "", flat: "" }, // clone بدل release
+    /* TEST88 — URLs مقاسة من api.github.com (السانبوكس 2026-11-19) */
+    bettercap: { repo: "bettercap/bettercap", pattern: "linux_amd64.zip", flat: "bettercap", url: "https://github.com/bettercap/bettercap/releases/download/v2.41.7/bettercap_linux_amd64.zip" },
+    asnmap: { repo: "projectdiscovery/asnmap", pattern: "linux_amd64.zip", flat: "asnmap", url: "https://github.com/projectdiscovery/asnmap/releases/download/v1.2.0/asnmap_1.2.0_linux_amd64.zip" },
+    shuffledns: { repo: "projectdiscovery/shuffledns", pattern: "linux_amd64.zip", flat: "shuffledns", url: "https://github.com/projectdiscovery/shuffledns/releases/download/v1.2.1/shuffledns_1.2.1_linux_amd64.zip" },
+    chisel: { repo: "jpillora/chisel", pattern: "linux_amd64.gz", flat: "chisel", url: "https://github.com/jpillora/chisel/releases/download/v1.12.0/chisel_1.12.0_linux_amd64.gz" },
+    "ligolo-ng": { repo: "nicocha30/ligolo-ng", pattern: "agent_0.9.2_linux_amd64.tar.gz", flat: "agent", url: "https://github.com/nicocha30/ligolo-ng/releases/download/v0.9.2/ligolo-ng_agent_0.9.2_linux_amd64.tar.gz" },
+    mongosh: { repo: "mongodb-js/mongosh", pattern: "linux-x64.tgz", flat: "mongosh", url: "https://github.com/mongodb-js/mongosh/releases/download/v2.14.2/mongosh-2.14.2-linux-x64.tgz" },
   };
   const pkg = APT_ALIAS[tool] ?? tool;
   /* TEST53 — فكس الجذر (مقاس 2026-11-17): جيت مايخزنش المجلدات الفاضية فالجست
@@ -1045,13 +1070,16 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   const GIT = GITHUB_TOOLS[tool];
   const PIP = PIP_TOOLS[tool];
   let installCmd: string;
-  if (GIT && GIT.repo) {
-    const isCloneTool = tool === "dirsearch" || tool === "arjun" || tool === "osintgram";
+  if (GIT && GIT.repo && !CLONE_EXTRA[tool]) {
+    const isCloneTool = tool === "dirsearch" || tool === "arjun";
     installCmd = isCloneTool
       ? `rm -rf /tmp/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${GIT.repo} /tmp/${tool} 2>&1 | tail -2; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed /tmp/${tool} 2>&1 || pip3 install -q /tmp/${tool} 2>&1) | tail -3; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`
-      : `cd /tmp && rm -rf ${tool}-dl && mkdir -p ${tool}-dl && cd ${tool}-dl && URL=${GIT.url ? GIT.url : `$(curl -s -m 30 https://api.github.com/repos/${GIT.repo}/releases/latest | tr "," "\\n" | grep browser_download_url | grep "${GIT.pattern}" | head -1 | cut -d '"' -f4)`} && echo "URL=$URL" && curl -sL -m 180 "$URL" -o pkg.bin && ls -la pkg.bin && (tar -xzf pkg.bin 2>/dev/null || unzip -o pkg.bin >/dev/null 2>&1) ; BIN=$(find . -type f -name "${GIT.flat ?? tool}*" 2>/dev/null | head -1) && echo "BIN=$BIN" && cp "$BIN" /usr/local/bin/${tool} && chmod +x /usr/local/bin/${tool} && command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+      : `cd /tmp && rm -rf ${tool}-dl && mkdir -p ${tool}-dl && cd ${tool}-dl && URL=${GIT.url ? GIT.url : `$(curl -s -m 30 https://api.github.com/repos/${GIT.repo}/releases/latest | tr "," "\\n" | grep browser_download_url | grep "${GIT.pattern}" | head -1 | cut -d '"' -f4)`} && echo "URL=$URL" && curl -sL -m 180 "$URL" -o pkg.bin && ls -la pkg.bin && (tar -xzf pkg.bin 2>/dev/null || unzip -o pkg.bin >/dev/null 2>&1 || gunzip -f pkg.bin 2>/dev/null) ; BIN=$(find . -type f -name "${GIT.flat ?? tool}*" 2>/dev/null | head -1) && echo "BIN=$BIN" && cp "$BIN" /usr/local/bin/${tool} && chmod +x /usr/local/bin/${tool} && command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else if (PIP) {
-    installCmd = `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${PIP} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${PIP} 2>&1) | tail -5; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    installCmd = `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${PIP.pkg} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${PIP.pkg} 2>&1) | tail -5; command -v ${PIP.cmd ?? tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+  } else if (CLONE_EXTRA[tool] && CLONE_EXTRA[tool].repo) {
+    const C = CLONE_EXTRA[tool];
+    installCmd = `rm -rf /opt/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${C.repo} /opt/${tool} 2>&1 | tail -2; ${C.req ? `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed -r /opt/${tool}/requirements.txt 2>&1 || true) | tail -2; ` : ""}${C.wrap ? `${C.wrap}; ` : ""}command -v ${C.cmd} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else {
     installCmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
   }
