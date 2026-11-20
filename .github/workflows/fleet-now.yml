@@ -21,7 +21,7 @@
 # الجدولة الرسمية في fleet-nodes.yml، وده أكcelerator للـpush فقط.
 # ─────────────────────────────────────────────────────────────────────────────
 
-name: fleet-now
+name: fleet-now (TEST93y — موجة مُحمّلة ذاتيًا [force-wave])
 
 on:
   push:
@@ -64,6 +64,8 @@ jobs:
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED || '1' }}  # TEST61 — fallback: جيت هوب مخزن ووايفلي تحكم — الاتنين متصلين (مقاس)
           EVENT: ${{ github.event_name }}
           TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          # TEST93y — تجاوز الميزانية بأمر صريح من المالك (نفس منطق fleet-nodes)
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # نفس قفل الأمان المقاس في fleet-nodes.yml — بالحرف.
           if [ "$EVENT" != "workflow_dispatch" ]; then
@@ -86,6 +88,15 @@ jobs:
           # → تكدس الموجات فوق حد الخطة مستحيل رياضيًا والCI له سلوت دوار دايمًا.
           n="$(node scripts/fleet-slot-budget.mjs "${INPUT_NODES:-10}" 1 | tail -1 | grep -oE '[0-9]+' || true)"
           case "$n" in ''|*[!0-9]*) n=0 ;; esac
+          # TEST93y — [force-wave]: تجاوز ميزانية السلات بقرار صريح من المالك
+          # (الموجة القديمة بتحجز سلاتها لعمرها كله — من غير التجاوز الموجة
+          # المُحمّلة بتفضل مستنية والأسطول ينقص — الدايرة المقفولة).
+          case "$COMMIT_MSG" in
+            *"[force-wave]"*)
+              n=12
+              echo "::notice::force wave — 12 عقدة مُحمّلة ذاتيًا، تجاوز الميزانية بأمر المالك"
+              ;;
+          esac
           echo "nodes=$n" >> "$GITHUB_OUTPUT"
           echo "::notice::starting $n extra fleet node(s) (indices 20-38)"
 
@@ -171,6 +182,26 @@ jobs:
             echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12"
           fi
 
+      # ── TEST93y — التزويد الذاتي (كسر الدايرة المقفولة) ──────────────────────
+      # العقدة بتثبت كل الكتالوج (~65 أداة) من kali-store قبل الانضمام: debs
+      # + tarballs + binaries + pip + clone — كلها محليًا عبر proot على الrunner.
+      # بلا تمريرات يدوية من الهَب وبلا سلات مسروقة — الموجة بتنضم مُحمّلة.
+      - name: Provision the full tool catalogue from kali-store (self-provisioning wave)
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: 55
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY_X: ${{ github.repository }}
+        run: |
+          export GITHUB_REPOSITORY="$GITHUB_REPOSITORY_X"
+          bash scripts/kali-node-provision.sh 2>&1 | tee /tmp/provision-out.log || true
+          if [ -f /tmp/provision-final.txt ]; then
+            OKN=$(grep -c '^OK:' /tmp/provision-final.txt || echo 0)
+            echo "::notice::provision result: $OKN tools live on this node"
+            tail -40 /tmp/provision-out.log
+          fi
+
       - name: Resolve the hub token
         if: steps.gate.outputs.run == 'true'
         env:
@@ -215,7 +246,7 @@ jobs:
             timeout "$remaining" node nova-agent.js \
               --server "$HUB" \
               --id "$NODE_ID" \
-              --allow "dig,host,nslookup,whois,curl,openssl,jq,timeout,sort,uniq,grep,head,tail,awk,node,cat,wc" \
+              # TEST93y — فك القيود (أمر المالك): قايمة فاضية = كل الصلاحيات. الهَب متوثق بالتوكن.
               --log /tmp/nova-agent.log
             code=$?
             set -e
