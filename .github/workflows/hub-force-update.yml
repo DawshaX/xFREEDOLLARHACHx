@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/hub-force-update.yml"
+      - "artifacts/**"
 permissions:
   contents: read
 concurrency:
