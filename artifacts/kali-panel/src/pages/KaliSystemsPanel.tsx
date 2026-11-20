@@ -131,10 +131,10 @@ export default function KaliSystemsPanel() {
     }
   }, []);
 
-  const loadCat = useCallback(async () => {
+  const loadCat = useCallback(async (fresh = false) => {
     setCatBusy(true);
     try {
-      const r = await fetch(`${API}/kali-env/catalog`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(90_000) });
+      const r = await fetch(`${API}/kali-env/catalog${fresh ? "?fresh=1" : ""}`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(90_000) });
       if (!r.ok) {
         setCatErr(`HTTP ${r.status} — ${r.statusText}`);
         return;
@@ -150,7 +150,7 @@ export default function KaliSystemsPanel() {
 
   useEffect(() => {
     void loadSys();
-    void loadCat();
+    void loadCat(false);
     const iv = setInterval(() => void loadSys(), 10_000);
     return () => clearInterval(iv);
   }, [loadSys, loadCat]);
@@ -159,12 +159,8 @@ export default function KaliSystemsPanel() {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [runLog]);
 
-  const runTool = async (tool: string) => {
-    const tgt = (target[tool] ?? "").trim();
-    if (!tgt) {
-      setRunLog((l) => [...l, { text: `✗ ${tool}: اكتب الهدف الأول (${cat?.categories.flatMap((c) => c.tools).find((t) => t.name === tool)?.recipe?.targetLabel ?? "target"})`, kind: "err" }]);
-      return;
-    }
+  const runTool = async (tool: string, overrideTarget?: string) => {
+    const tgt = (overrideTarget ?? target[tool] ?? "").trim() || "--help";
     setRunBusy(tool);
     setRunLog((l) => [...l, { text: `▶ ${tool} ← ${tgt}`, kind: "cmd" }]);
     try {
@@ -389,9 +385,9 @@ export default function KaliSystemsPanel() {
                 {cat.present}/{cat.total} أداة · قياس على {cat.measuredOn}
               </span>
             )}
-            <button onClick={() => void loadCat()} disabled={catBusy} className="text-[9px] px-2 py-1 rounded flex items-center gap-1"
+            <button onClick={() => void loadCat(true)} disabled={catBusy} className="text-[9px] px-2 py-1 rounded flex items-center gap-1"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}>
-              <RefreshCw className={`w-3 h-3 ${catBusy ? "animate-spin" : ""}`} /> {catBusy ? "بيقيس…" : "أعد القياس"}
+              <RefreshCw className={`w-3 h-3 ${catBusy ? "animate-spin" : ""}`} /> {catBusy ? "بيقيس…" : "أعد القياس الحي"}
             </button>
           </div>
         </div>
@@ -455,6 +451,18 @@ export default function KaliSystemsPanel() {
                                   color: t.present ? "#44ff88" : "rgba(255,255,255,0.3)",
                                 }}>
                                 <Play className="w-2.5 h-2.5" /> {runBusy === t.name ? "بيشتغل…" : "شغّل"}
+                              </button>
+                              <button
+                                onClick={() => void runTool(t.name, "--help")}
+                                disabled={runBusy !== null || !t.present}
+                                title="اختبار فوري للأداة (--help)"
+                                className="text-[8px] font-black px-1.5 py-1 rounded"
+                                style={{
+                                  background: "rgba(255,43,77,0.12)",
+                                  border: "1px solid rgba(255,43,77,0.4)",
+                                  color: "#ff8095",
+                                }}>
+                                --help
                               </button>
                             </div>
                           )}

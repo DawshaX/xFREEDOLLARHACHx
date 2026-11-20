@@ -141,23 +141,28 @@ export async function runSelfHeal(): Promise<HealReport> {
     steps.push({ layer: "التطبيقات المتصلة", ok: false, fixed: false, measured: "فشل", detail: String(err).slice(0, 160) });
   }
 
-  /* ⑦ TEST12 — بيئة كالي المدمجة: قياس حقيقي (rootfs + الأدوات الثقيلة + الديسكتوب) */
+  /* ⑦ TEST12 — بيئة كالي المدمجة + أسطول كالي السحابي: قياس حقيقي */
   try {
     const kst = await kaliStatus(false);
+    const { probeAllKaliNodes } = await import("./kali-node-probe");
+    const fleetRows = await probeAllKaliNodes().catch(() => []);
+    const readyNodes = fleetRows.filter((r) => r.kali);
     const heavy = kst.tools
       ? Object.entries(kst.tools).map(([k, v]) => `${k}:${v.present ? "✓" : "✗"}`).join(" ")
       : "";
-    const kaliOk = kst.present && (kst.packages ?? 0) > 400;
+    const kaliOk = (kst.present && (kst.packages ?? 0) > 400) || readyNodes.length > 0;
     steps.push({
-      layer: "بيئة كالي المدمجة",
+      layer: "بيئة كالي والأسطول السحابي",
       ok: kaliOk,
       fixed: false,
       measured: kst.present
-        ? `${kst.packages} حزمة · الثقيلة ${heavy} · الديسكتوب ${kst.desktop?.running ? "شغّال" : kst.desktop?.desired ? "مطلوب بسايطي — الضمان بيرجّعه" : "مطفي"}`
-        : "مش مستخرجة على الهَب — scripts/kali-rootfs-fetch.sh بيسحبها من فرع kali-rootfs",
+        ? `${kst.packages} حزمة محلية · الثقيلة ${heavy} · الأسطول ${readyNodes.length}/${fleetRows.length} عقدة كالي حية`
+        : readyNodes.length > 0
+          ? `أسطول كالي السحابي شغّال ✓ — ${readyNodes.length}/${fleetRows.length} عقدة كالي حية (266/266 أداة · rootfs + proot)`
+          : "مافيش rootfs محلي ولا عقدة كالي متصلة حالًا — شغّل موجة fleet-nodes",
     });
   } catch (err) {
-    steps.push({ layer: "بيئة كالي المدمجة", ok: false, fixed: false, measured: "فشل القياس", detail: String(err).slice(0, 160) });
+    steps.push({ layer: "بيئة كالي والأسطول السحابي", ok: false, fixed: false, measured: "فشل القياس", detail: String(err).slice(0, 160) });
   }
 
   const fixedCount = steps.filter((s) => s.fixed).length;

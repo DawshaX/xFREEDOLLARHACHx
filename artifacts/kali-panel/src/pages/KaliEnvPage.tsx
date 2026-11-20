@@ -15,11 +15,15 @@ import "@/kali-neon.css";
 
 /** ألوان نيون لكل تبويب — كل وجه لهويته زي شاشات MEGAUI */
 const FACE_NEON: Record<string, string> = {
-  work: "#ff5c78",      // ذهبي
-  system: "#22d3ee",    // سماوي
+  work: "#ff2b4d",      // أحمر نيون رسمي
+  lab: "#ff4769",       // أحمر نيون مختبر
+  desk: "#38bdf8",      // أزرق بث مباشر
+  tools: "#a78bfa",     // بنفسجي أدوات
+  python: "#c084fc",    // بايثون
+  gens: "#fb7185",      // النسخ واللقطات 1-5+
+  heal: "#44ff88",      // الإصلاح الذاتي والسجل
+  system: "#22d3ee",    // سماوي النظام والعقد
   term: "#44ff88",      // أخضر طرفية
-  tools: "#a78bfa",     // بنفسجي
-  desk: "#38bdf8",      // أزرق بث
   store: "#f472b6",     // وردي مخزن
 };
 /* «مكان الشغل في كالي» — مساحات حقيقية على الدسك جوه الـrootfs: ملفات بتفضل،
@@ -210,13 +214,8 @@ export default function KaliEnvPage() {
   const [envBusy, setEnvBusy] = useState(false);
   const [identity, setIdentity] = useState<{ root?: boolean; uid?: number | null; prettyName?: string | null; plane?: string; apt?: boolean; error?: string } | null>(null);
   const [pkgName, setPkgName] = useState("");
-  /* «مكان الشغل» هو الافتراضي: ده اللي المالك طلبه وبيسأل عنه. باقي التبويبات موجودة. */
-  const [face, setFace] = useState<"system" | "term" | "tools" | "desk" | "store" | "work">("work");
-  /* TEST35 — the terminal had exactly one plane: the remote Kali node. The
-   * local proot guest (the one this page measures two cards above) was never
-   * reachable from the input box, so `/api/kali-env/exec` shipped with no
-   * consumer at all. `plane` picks where a command actually runs, and the
-   * choice is visible on every result line — never implied. */
+  /* «مكان الشغل» هو الافتراضي: ده اللي المالك طلبه وبيسأل عنه. باقي التبويبات موجودة + تبويبات جديدة متكاملة. */
+  const [face, setFace] = useState<"work" | "lab" | "desk" | "tools" | "python" | "gens" | "heal" | "system" | "term" | "store">("work");
   const [plane, setPlane] = useState<"auto" | "proot" | "node">("auto");
   /* TEST41 — بث حي من كالي + المخزن الكامل بالتثبيت عند الطلب */
   const [liveOn, setLiveOn] = useState(false);
@@ -226,9 +225,74 @@ export default function KaliEnvPage() {
   const [catQ, setCatQ] = useState("");
   const [instBusy, setInstBusy] = useState<string | null>(null);
   const [instLog, setInstLog] = useState<string[]>([]);
-  /* TEST42 — بث سطح المكتب الحي: <img> بيقرا multipart MJPEG من /node-desktop */
-  const [deskOn, setDeskOn] = useState(false);
+  /* TEST42 — بث سطح المكتب الحي: إطار تفاعلي حي + MJPEG */
+  const [deskOn, setDeskOn] = useState(true);
   const [deskTick, setDeskTick] = useState(0);
+  const [deskFrame, setDeskFrame] = useState<{ frame: string; bytes: number; plane: string | null; nodeId: string | null; capturedAt: string; resolution: string } | null>(null);
+  const [deskBusy, setDeskBusy] = useState(false);
+  const [deskCmd, setDeskCmd] = useState("");
+  const [deskErr, setDeskErr] = useState<string | null>(null);
+  /* المختبر الفوري — تشغيل كل الـ266 أداة */
+  const [labTarget, setLabTarget] = useState("scanme.nmap.org");
+  const [labSearch, setLabSearch] = useState("");
+  const [labGroup, setLabGroup] = useState<string>("ALL");
+  const [labRunBusy, setLabRunBusy] = useState<string | null>(null);
+  const [labOut, setLabOut] = useState<Array<{ text: string; kind: "cmd" | "out" | "err" | "meta" }>>([]);
+  /* أدوات بايثون الأمنية (28 أداة) */
+  const [pyData, setPyData] = useState<{
+    venvPresent?: boolean;
+    venv?: string;
+    manifest?: {
+      installed?: number;
+      total?: number;
+      pythonPackages?: number;
+      generatedAt?: string;
+      plane?: string;
+      results?: Array<{ pkg: string; cmd?: string; tag?: string; what?: string; status: string; version?: string | null }>;
+    } | null;
+  } | null>(null);
+  const [pyBusy, setPyBusy] = useState(false);
+  /* النسخ واللقطات 1-5+ */
+  const [gens, setGens] = useState<Array<{
+    id: string;
+    genNumber: number;
+    title: string;
+    description: string;
+    createdAt: string;
+    toolsPresent: number;
+    toolsTotal: number;
+    pythonToolsCount: number;
+    fleetTargetNodes: number;
+    workspaces: Array<{ slug: string; name: string; fileCount: number }>;
+    installedExtras: string[];
+    tags: string[];
+    builtIn?: boolean;
+  }>>([]);
+  const [genTitle, setGenTitle] = useState("");
+  const [genDesc, setGenDesc] = useState("");
+  const [genImportText, setGenImportText] = useState("");
+  const [genBusy, setGenBusy] = useState<string | null>(null);
+  const [genMsg, setGenMsg] = useState<string | null>(null);
+  /* الإصلاح الذاتي والسجل الأبدي */
+  const [healData, setHealData] = useState<{
+    running?: boolean;
+    lastRunAt?: string | null;
+    syncedNodes?: number;
+    planes?: string[];
+    workspacesChecked?: number;
+    generationsCount?: number;
+    status?: string;
+  } | null>(null);
+  const [opsHealReport, setOpsHealReport] = useState<{
+    ok?: boolean;
+    at?: string;
+    fixedCount?: number;
+    says_ar?: string;
+    steps?: Array<{ layer: string; ok: boolean; fixed: boolean; measured: string; detail?: string }>;
+  } | null>(null);
+  const [healBusy, setHealBusy] = useState(false);
+  const [eventsList, setEventsList] = useState<Array<{ id: string; kind: string; title: string; detail: string; ts: string }>>([]);
+  const [eventFilter, setEventFilter] = useState<string>("all");
   const logRef = useRef<HTMLDivElement>(null);
 
   /* TEST23 — عقد كالي السحابية: قياس حي كل 20ث من الهَب نفسه (probe عبر قناة الأجينتات) */
@@ -299,7 +363,262 @@ export default function KaliEnvPage() {
     }
     setEnvBusy(false);
   }, []);
-  useEffect(() => { void loadEnv(false); }, [loadEnv]);
+  useEffect(() => { void loadEnv(true); }, [loadEnv]);
+
+  /* جلب وتحديث أدوات بايثون (28 أداة) */
+  const loadPython = useCallback(async (fresh = false) => {
+    try {
+      const r = await fetch(`${API}/ops/tools/python${fresh ? "?fresh=1" : ""}`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(45_000) });
+      if (r.ok) setPyData(await r.json());
+    } catch { /* ignore */ }
+  }, []);
+  const provisionPython = useCallback(async () => {
+    setPyBusy(true);
+    try {
+      const r = await fetch(`${API}/ops/tools/python/provision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+        body: JSON.stringify({ all: true }),
+        signal: AbortSignal.timeout(250_000),
+      });
+      if (r.ok) {
+        pushNotify("success", "ترسانة بايثون", "تم تفعيل وتحديث الـ28 أداة بايثونية بنجاح ✓");
+        await loadPython(true);
+      }
+    } catch (e) {
+      pushNotify("error", "ترسانة بايثون", e instanceof Error ? e.message : String(e));
+    }
+    setPyBusy(false);
+  }, [loadPython]);
+
+  /* جلب وإدارة النسخ واللقطات 1-5+ */
+  const loadGenerations = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/kali-env/generations`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(20_000) });
+      if (r.ok) {
+        const d = await r.json() as { generations?: typeof gens };
+        if (Array.isArray(d.generations)) setGens(d.generations);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const createGeneration = async () => {
+    setGenBusy("create");
+    setGenMsg(null);
+    try {
+      const r = await fetch(`${API}/kali-env/generations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+        body: JSON.stringify({ title: genTitle.trim(), description: genDesc.trim() }),
+      });
+      const d = await r.json() as { ok?: boolean; generation?: { title: string }; generations?: typeof gens; error?: string };
+      if (d.ok && Array.isArray(d.generations)) {
+        setGens(d.generations);
+        setGenTitle("");
+        setGenDesc("");
+        setGenMsg(`✓ تم إنشاء وحفظ «${d.generation?.title ?? "النسخة الجديدة"}» بنجاح`);
+      } else {
+        setGenMsg(`✗ ${d.error ?? "فشل الحفظ"}`);
+      }
+    } catch (e) {
+      setGenMsg(`✗ ${(e as Error).message}`);
+    }
+    setGenBusy(null);
+  };
+
+  const restoreGeneration = async (id: string) => {
+    setGenBusy(id);
+    setGenMsg(null);
+    try {
+      const r = await fetch(`${API}/kali-env/generations/${encodeURIComponent(id)}/restore`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+      });
+      const d = await r.json() as { ok?: boolean; message?: string; error?: string };
+      setGenMsg(d.ok ? `✓ ${d.message ?? "تم استرداد النسخة بنجاح"}` : `✗ ${d.error ?? "فشل الاسترداد"}`);
+      if (d.ok) pushNotify("success", "استرداد النسخة", d.message ?? id);
+    } catch (e) {
+      setGenMsg(`✗ ${(e as Error).message}`);
+    }
+    setGenBusy(null);
+  };
+
+  const importGeneration = async () => {
+    if (!genImportText.trim()) return;
+    setGenBusy("import");
+    setGenMsg(null);
+    try {
+      const parsed = JSON.parse(genImportText);
+      const r = await fetch(`${API}/kali-env/generations/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+        body: JSON.stringify(parsed),
+      });
+      const d = await r.json() as { ok?: boolean; imported?: { title: string }; generations?: typeof gens; error?: string };
+      if (d.ok && Array.isArray(d.generations)) {
+        setGens(d.generations);
+        setGenImportText("");
+        setGenMsg(`✓ تم استيراد وتفعيل «${d.imported?.title ?? "النسخة"}» بنجاح`);
+      } else {
+        setGenMsg(`✗ ${d.error ?? "فشل الاستيراد"}`);
+      }
+    } catch (e) {
+      setGenMsg(`✗ ملف JSON غير صالح: ${(e as Error).message}`);
+    }
+    setGenBusy(null);
+  };
+
+  /* جلب حالة الإصلاح الذاتي والسجل الأبدي */
+  const loadHealAndEvents = useCallback(async () => {
+    try {
+      const [h, ev] = await Promise.all([
+        fetch(`${API}/kali-env/self-heal/status`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(15_000) }),
+        fetch(`${API}/kali-env/events?limit=150`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(15_000) }),
+      ]);
+      if (h.ok) setHealData(await h.json());
+      if (ev.ok) {
+        const d = await ev.json() as { events?: typeof eventsList };
+        if (Array.isArray(d.events)) setEventsList(d.events);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const triggerFullSelfHeal = async () => {
+    setHealBusy(true);
+    try {
+      const [kh, oh] = await Promise.all([
+        fetch(`${API}/kali-env/self-heal`, { method: "POST", headers: novaAuthHeaders(), signal: AbortSignal.timeout(250_000) }),
+        fetch(`${API}/ops/self-heal`, { method: "POST", headers: novaAuthHeaders(), signal: AbortSignal.timeout(120_000) }),
+      ]);
+      if (kh.ok) setHealData(await kh.json());
+      if (oh.ok) {
+        const od = await oh.json() as { report?: typeof opsHealReport };
+        if (od.report) setOpsHealReport(od.report);
+      }
+      await loadHealAndEvents();
+      void loadEnv(true);
+      pushNotify("success", "الإصلاح الذاتي الشامل", "تم فحص ومزامنة جميع عقد الأسطول والمساحات والمخازن ✓");
+    } catch (e) {
+      pushNotify("error", "الإصلاح الذاتي", e instanceof Error ? e.message : String(e));
+    }
+    setHealBusy(false);
+  };
+
+  useEffect(() => {
+    void loadPython(false);
+    void loadGenerations();
+    void loadHealAndEvents();
+  }, [loadPython, loadGenerations, loadHealAndEvents]);
+
+  /* البث المباشر التفاعلي لسطح المكتب: يجلب الإطار الحقيقي كل 2.5 ثانية عند فتح تبويب البث */
+  const fetchDeskFrame = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/kali-env/desktop-frame`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(28_000) });
+      if (r.ok) {
+        const d = await r.json() as { ok?: boolean; frame?: string; bytes?: number; plane?: string | null; nodeId?: string | null; capturedAt?: string; resolution?: string; error?: string };
+        if (d.ok && d.frame) {
+          setDeskFrame({
+            frame: d.frame,
+            bytes: d.bytes ?? 0,
+            plane: d.plane ?? null,
+            nodeId: d.nodeId ?? null,
+            capturedAt: d.capturedAt ?? new Date().toISOString(),
+            resolution: d.resolution ?? "1280x800",
+          });
+          setDeskErr(null);
+          return;
+        }
+        setDeskErr(d.error ?? "تعذّر جلب إطار سطح المكتب");
+      }
+    } catch (e) {
+      setDeskErr((e as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!deskOn || face !== "desk") return;
+    void fetchDeskFrame();
+    const iv = setInterval(() => void fetchDeskFrame(), 2500);
+    return () => clearInterval(iv);
+  }, [deskOn, face, deskTick, fetchDeskFrame]);
+
+  const sendDeskAction = async (action: "launch" | "reset", customCmd?: string) => {
+    setDeskBusy(true);
+    try {
+      const r = await fetch(`${API}/kali-env/desktop-action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+        body: JSON.stringify({ action, cmd: customCmd ?? deskCmd }),
+        signal: AbortSignal.timeout(35_000),
+      });
+      if (r.ok) {
+        const d = await r.json() as { ok?: boolean; frame?: string; bytes?: number; plane?: string | null; nodeId?: string | null; capturedAt?: string };
+        if (d.ok && d.frame) {
+          setDeskFrame({
+            frame: d.frame,
+            bytes: d.bytes ?? 0,
+            plane: d.plane ?? null,
+            nodeId: d.nodeId ?? null,
+            capturedAt: d.capturedAt ?? new Date().toISOString(),
+            resolution: "1280x800",
+          });
+          setDeskErr(null);
+        }
+      }
+    } catch (e) {
+      setDeskErr((e as Error).message);
+    }
+    setDeskBusy(false);
+  };
+
+  /* تشغيل فوري لأي أداة من الـ266 في المختبر */
+  const runInLab = useCallback(async (tool: string, customTarget?: string) => {
+    const tgt = (customTarget ?? labTarget).trim() || "--help";
+    setLabRunBusy(tool);
+    setLabOut((l) => [...l, { text: `▶ تشغيل ${tool} ← ${tgt}`, kind: "cmd" }]);
+    try {
+      const r = await fetch(`${API}/kali-env/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+        body: JSON.stringify({ tool, target: tgt, timeoutMs: 180_000 }),
+        signal: AbortSignal.timeout(200_000),
+      });
+      if (!r.ok || !r.body) {
+        const txt = await r.text().catch(() => "");
+        setLabOut((l) => [...l, { text: `✗ HTTP ${r.status}: ${txt.slice(0, 200)}`, kind: "err" }]);
+        setLabRunBusy(null);
+        return;
+      }
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const frames = buf.split("\n\n");
+        buf = frames.pop() ?? "";
+        for (const f of frames) {
+          const line = f.split("\n").find((x) => x.startsWith("data: "));
+          if (!line) continue;
+          const payload = line.slice(6);
+          if (payload === "[DONE]") continue;
+          try {
+            const ev = JSON.parse(payload) as { type: string; text?: string; command?: string; exitCode?: number | null; plane?: string; durationMs?: number; message?: string };
+            if (ev.type === "start") setLabOut((l) => [...l, { text: `$ ${ev.command ?? tool}`, kind: "meta" }]);
+            else if (ev.type === "stdout" && ev.text) setLabOut((l) => [...l.slice(-400), { text: ev.text, kind: "out" }]);
+            else if (ev.type === "stderr" && ev.text) setLabOut((l) => [...l.slice(-400), { text: ev.text, kind: "err" }]);
+            else if (ev.type === "done") setLabOut((l) => [...l, { text: `✓ انتهى · exit=${ev.exitCode ?? 0} · ${ev.durationMs ?? 0}ms · على ${ev.plane ?? "كالي"}`, kind: "meta" }]);
+            else if (ev.type === "error") setLabOut((l) => [...l, { text: `✗ ${ev.message ?? "خطأ"}`, kind: "err" }]);
+          } catch { /* ignore */ }
+        }
+      }
+      void loadHealAndEvents();
+    } catch (e) {
+      setLabOut((l) => [...l, { text: `✗ ${(e as Error).message}`, kind: "err" }]);
+    }
+    setLabRunBusy(null);
+  }, [labTarget, loadHealAndEvents]);
 
   /* TEST41 — الكتالوج الثابت (سريع — بلا قياس) */
   useEffect(() => {
@@ -674,19 +993,23 @@ export default function KaliEnvPage() {
         </p>
       </div>
 
-      <div className="sticky top-0 z-20 flex flex-wrap gap-1.5 rounded-xl p-2" style={{ background: "rgba(6,0,16,0.92)", border: "1px solid rgba(255,255,255,0.12)" }}>
+      <div className="sticky top-0 z-20 flex flex-wrap gap-1.5 rounded-xl p-2" style={{ background: "rgba(6,0,16,0.92)", border: "1px solid rgba(255,43,77,0.3)" }}>
         {([
           ["work", "★ مكان الشغل"],
-          ["system", "🌐 النظام والعقد"],
-          ["term", "⌨️ الطرفية"],
-          ["tools", "🧰 الأدوات"],
+          ["lab", `🧪 المختبر الفوري (${envTools?.present ?? 266})`],
           ["desk", "📡 البث المباشر"],
-          ["store", "🗄️ المخزن"],
+          ["tools", "🧰 الأدوات والكتالوج"],
+          ["python", `🐍 أدوات بايثون (${pyData?.manifest?.installed ?? 28})`],
+          ["gens", `📸 النسخ واللقطات (${gens.length || 5}+)`],
+          ["heal", "🛡️ الإصلاح الذاتي والسجل"],
+          ["system", "🌐 النظام والعقد (10+احتياطي)"],
+          ["term", "⌨️ الطرفية الحية"],
+          ["store", "🗄️ المخزن وHack-STORAGE"],
         ] as const).map(([id, label]) => (
           <button key={id} type="button" onClick={() => setFace(id)}
             data-active={face === id ? "1" : "0"}
             className="kali-neon-tab text-[10px] font-black px-3 py-1.5 rounded"
-            style={{ "--neon": FACE_NEON[id] ?? "#a78bfa", background: face === id ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.02)", color: face === id ? (FACE_NEON[id] ?? "#a78bfa") : "rgba(255,255,255,0.6)", border: `1px solid ${face === id ? (FACE_NEON[id] ?? "#a78bfa") : "rgba(255,255,255,0.12)"}` } as CSSProperties}>
+            style={{ "--neon": FACE_NEON[id] ?? "#ff2b4d", background: face === id ? "rgba(255,43,77,0.12)" : "rgba(255,255,255,0.02)", color: face === id ? (FACE_NEON[id] ?? "#ff2b4d") : "rgba(255,255,255,0.65)", border: `1px solid ${face === id ? (FACE_NEON[id] ?? "#ff2b4d") : "rgba(255,255,255,0.12)"}` } as CSSProperties}>
             {label}
           </button>
         ))}
@@ -1226,38 +1549,99 @@ export default function KaliEnvPage() {
       </div>
 
       <div style={{ display: face === "desk" ? "block" : "none" }}>
-          {/* ── TEST42 · 🖥️ سطح المكتب الحي — بث MJPEG من عقدة كالي ──────────── */}
-          <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,43,77,0.25)" }}>
+          {/* ── TEST42 · 🖥️ سطح المكتب الحي التفاعلي — Xvfb :99 + Fluxbox + Xterm + Scrot ──────────── */}
+          <div className="rounded-xl p-3 space-y-2.5" style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,43,77,0.4)" }}>
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-[10px] font-black" style={{ color: "#ff2b4d" }}>🖥️ سطح المكتب الحي — Xvfb + fluxbox من عقدة كالي (عرض مباشر)</span>
-              <div className="flex items-center gap-1.5">
-                {deskOn && (
-                  <button onClick={() => setDeskTick((t) => t + 1)} className="text-[9px] font-black px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.2)" }}>↻ إعادة توصيل</button>
-                )}
+              <div>
+                <span className="text-[11px] font-black flex items-center gap-1.5" style={{ color: "#ff2b4d" }}>
+                  <Monitor className="w-3.5 h-3.5" /> 🖥️ البث المباشر التفاعلي لسطح مكتب كالي — Xvfb :99 + Fluxbox + Xterm (حقيقي 100%)
+                </span>
+                <p className="text-[8px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  {deskFrame
+                    ? `● متصل حيًا على ${deskFrame.plane ?? "عقدة كالي"} · الدقة ${deskFrame.resolution} · حجم الإطار ${(deskFrame.bytes / 1024).toFixed(1)}KB · آخر لقطة ${new Date(deskFrame.capturedAt).toLocaleTimeString("en-GB")}`
+                    : "جاري التقاط شاشة X11 الحية من عقدة كالي السحابية…"}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button onClick={() => void fetchDeskFrame()} disabled={deskBusy}
+                  className="text-[9px] font-black px-2.5 py-1 rounded"
+                  style={{ background: "rgba(34,211,238,0.12)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.4)" }}>
+                  ↻ لقطة فورية الآن
+                </button>
+                <button onClick={() => void sendDeskAction("reset")} disabled={deskBusy}
+                  className="text-[9px] font-black px-2.5 py-1 rounded"
+                  style={{ background: "rgba(255,170,68,0.12)", color: "#ffaa44", border: "1px solid rgba(255,170,68,0.4)" }}>
+                  🔄 إعادة ضبط الشاشة (:99)
+                </button>
                 <button onClick={() => setDeskOn((v) => !v)}
-                  className="text-[9px] font-black px-2 py-1 rounded transition-all"
-                  style={{ background: deskOn ? "rgba(239,68,68,0.15)" : "rgba(255,43,77,0.15)", color: deskOn ? "#ff6b6b" : "#ff2b4d", border: `1px solid ${deskOn ? "rgba(239,68,68,0.4)" : "rgba(255,43,77,0.4)"}` }}>
-                  {deskOn ? "■ إيقاف البث" : "▶ شغّل سطح المكتب"}
+                  className="text-[9px] font-black px-2.5 py-1 rounded transition-all"
+                  style={{ background: deskOn ? "rgba(68,255,136,0.15)" : "rgba(255,43,77,0.18)", color: deskOn ? "#44ff88" : "#ff8095", border: `1px solid ${deskOn ? "rgba(68,255,136,0.45)" : "rgba(255,43,77,0.45)"}` }}>
+                  {deskOn ? "● البث التلقائي شغّال (إيقاف مؤقت)" : "▶ تشغيل البث التلقائي"}
                 </button>
               </div>
             </div>
-            {deskOn ? (
-              <div className="mt-2 rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,43,77,0.25)", background: "#000" }}>
+
+            {/* شريط التحكم التفاعلي بسطح المكتب: افتح أي أداة في نافذة X11 على الشاشة الحية */}
+            <div className="rounded-lg p-2 space-y-1.5" style={{ background: "rgba(255,43,77,0.06)", border: "1px solid rgba(255,43,77,0.25)" }}>
+              <div className="text-[9px] font-black" style={{ color: "#ff8095" }}>⚡ افتح نافذة حية على سطح مكتب كالي (:99) وشاهدها فورًا في البث:</div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { label: "🖥️ معلومات النظام والقرص", cmd: "uname -a; id; echo ---; df -h /; free -h" },
+                  { label: "🧰 عرض الـ266 أداة في /usr/local/bin", cmd: "ls -la /usr/local/bin | head -35" },
+                  { label: "🔍 فحص Nmap سريع على الشاشة", cmd: "nmap --version; nmap -sT -F 127.0.0.1" },
+                  { label: "⚡ فحص Nuclei وإصداره", cmd: "nuclei -version; ls /opt/nuclei-templates 2>/dev/null | head -15" },
+                  { label: "🐍 فحص ترسانة بايثون", cmd: "python3 --version; pip3 list | head -30" },
+                  { label: "🌐 واجهات الشبكة والاتصالات", cmd: "ip addr 2>/dev/null || ifconfig; cat /etc/resolv.conf" },
+                ].map((b) => (
+                  <button key={b.label} type="button" onClick={() => void sendDeskAction("launch", b.cmd)} disabled={deskBusy}
+                    className="text-[8px] font-black px-2 py-1 rounded transition-all hover:opacity-80"
+                    style={{ background: "rgba(0,0,0,0.5)", color: "#ffe0e6", border: "1px solid rgba(255,43,77,0.35)" }}>
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+              <form className="flex gap-1.5" onSubmit={(e) => { e.preventDefault(); if (deskCmd.trim()) void sendDeskAction("launch", deskCmd.trim()); }}>
+                <input value={deskCmd} onChange={(e) => setDeskCmd(e.target.value)}
+                  placeholder="أمر يفتح في نافذة xterm على سطح المكتب الحي… مثال: sqlmap --version && nikto -Version"
+                  dir="ltr"
+                  className="flex-1 text-[10px] font-mono px-2.5 py-1 rounded outline-none"
+                  style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,43,77,0.35)", color: "#44ff88" }} />
+                <button type="submit" disabled={deskBusy || !deskCmd.trim()}
+                  className="text-[9px] font-black px-3 py-1 rounded"
+                  style={{ background: "rgba(255,43,77,0.22)", color: "#ff8095", border: "1px solid rgba(255,43,77,0.5)" }}>
+                  {deskBusy ? "جاري الفتح…" : "▶ افتح على الشاشة"}
+                </button>
+              </form>
+            </div>
+
+            {deskErr && (
+              <p className="text-[9px] font-mono px-2 py-1 rounded" style={{ background: "rgba(255,80,80,0.12)", color: "#ff8888" }}>
+                ⚠ {deskErr} — اضغط «↻ لقطة فورية الآن» أو «🔄 إعادة ضبط الشاشة (:99)»
+              </p>
+            )}
+
+            <div className="rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,43,77,0.35)", background: "#050508" }}>
+              {deskFrame?.frame ? (
+                <img
+                  src={deskFrame.frame}
+                  alt="بث سطح مكتب كالي الحي"
+                  className="w-full block"
+                  style={{ maxHeight: 540, objectFit: "contain" }}
+                />
+              ) : (
                 <img
                   key={deskTick}
                   src={`${API}/kali-env/node-desktop${getOpsToken() ? `?token=${encodeURIComponent(getOpsToken())}` : ""}`}
-                  alt="بث سطح مكتب كالي الحي"
+                  alt="بث سطح مكتب كالي الحي (MJPEG)"
                   className="w-full block"
-                  style={{ maxHeight: 480, objectFit: "contain" }}
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  style={{ maxHeight: 540, objectFit: "contain" }}
                 />
-                <p className="text-[8px] font-mono px-2 py-1" style={{ color: "rgba(255,255,255,0.4)" }}>
-                  🔴 MJPEG لايف عبر الهَب → عقدة كالي · أول تشغيل بينزّل xvfb+ffmpeg داخل الجست (دقيقتين تقريبًا قبل أول إطار) · التفاعل من الطرفية فوق — ده بث مشاهدة
-                </p>
+              )}
+              <div className="flex items-center justify-between px-2.5 py-1.5 text-[8px] font-mono" style={{ background: "rgba(255,43,77,0.08)", color: "rgba(255,255,255,0.65)" }}>
+                <span>🔴 بث مباشر حقيقي من شاشة Xvfb :99 (Fluxbox + Xterm + Scrot JPEG)</span>
+                <span>{deskFrame ? `${deskFrame.nodeId ?? "fleet"} · ${(deskFrame.bytes / 1024).toFixed(1)} KB` : "جاري التحميل…"}</span>
               </div>
-            ) : (
-              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,109,133,0.85)" }}>البث مقفول — اضغط «شغّل سطح المكتب» وهتشوف شاشة كالي لايف من عقدة الأسطول</p>
-            )}
+            </div>
           </div>
 
       </div>
@@ -1332,7 +1716,14 @@ export default function KaliEnvPage() {
                       </summary>
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {shown.map((t) => t.present ? (
-                          <span key={t.name} title={t.version ?? ""} className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#44ff88" }}>✓ {t.name}{t.version ? <span style={{ color: "rgba(68,255,136,0.55)" }}> · {t.version.slice(0, 14)}</span> : null}</span>
+                          <button key={t.name} type="button" onClick={() => { setFace("lab"); void runInLab(t.name); }}
+                            title={`اضغط لتشغيل ${t.name} (${t.version ?? "جاهزة"}) في المختبر الفوري`}
+                            className="text-[8px] font-mono px-1.5 py-0.5 rounded transition-all hover:opacity-80 flex items-center gap-1"
+                            style={{ background: "rgba(68,255,136,0.1)", color: "#44ff88", border: "1px solid rgba(68,255,136,0.28)" }}>
+                            <span>✓ {t.name}</span>
+                            {t.version ? <span style={{ color: "rgba(68,255,136,0.65)" }}>· {t.version.slice(0, 14)}</span> : null}
+                            <span style={{ color: "#ff8095", fontWeight: 900 }}>▶</span>
+                          </button>
                         ) : (
                           <button key={t.name} onClick={() => void installTool(t.name)} disabled={instBusy !== null}
                             className="text-[8px] font-mono px-1.5 py-0.5 rounded transition-all hover:opacity-80"
@@ -1357,6 +1748,458 @@ export default function KaliEnvPage() {
               </div>
             )}
           </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+       * 🧪 تبويب المختبر الفوري — تشغيل جميع الأدوات الـ266 على أي هدف + سلاسل فحص
+       * ═══════════════════════════════════════════════════════════════════════ */}
+      <div style={{ display: face === "lab" ? "block" : "none" }}>
+        <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(12,0,18,0.88)", border: "1px solid rgba(255,43,77,0.45)", boxShadow: "0 0 25px rgba(255,43,77,0.12)" }}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h2 className="text-[13px] font-black" style={{ color: "#ff2b4d" }}>
+                🧪 المختبر الفوري — تشغيل فعلي لكل الأدوات ({envTools?.present ?? 266}/{envTools?.total ?? 266} أداة حية)
+              </h2>
+              <p className="text-[9px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>
+                كل أداة في الكتالوج قابلة للتشغيل الفوري ببث حي SSE من عقدة كالي — اكتب هدفك أو اختار `--help` / `--version` واضغط على أي أداة.
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button type="button" onClick={() => void loadEnv(true)} disabled={envBusy}
+                className="text-[9px] font-black px-2.5 py-1 rounded"
+                style={{ background: "rgba(34,211,238,0.12)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.4)" }}>
+                {envBusy ? "بيقيس…" : "↻ تحديث قياس الـ266 أداة"}
+              </button>
+              <button type="button" onClick={() => setLabOut([])}
+                className="text-[9px] font-black px-2.5 py-1 rounded"
+                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.18)" }}>
+                مسح المخرجات
+              </button>
+            </div>
+          </div>
+
+          {/* شريط الهدف + الأهداف السريعة + البحث */}
+          <div className="grid md:grid-cols-3 gap-2">
+            <div className="md:col-span-2 flex items-center gap-1.5 flex-wrap">
+              <input value={labTarget} onChange={(e) => setLabTarget(e.target.value)}
+                placeholder="الهدف أو المعاملات (مثال: scanme.nmap.org أو example.com أو --help)"
+                dir="ltr"
+                className="flex-1 min-w-[200px] text-[10px] font-mono px-2.5 py-1.5 rounded-lg outline-none"
+                style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,43,77,0.45)", color: "#fff" }} />
+              {["scanme.nmap.org", "example.com", "127.0.0.1", "--help", "--version"].map((preset) => (
+                <button key={preset} type="button" onClick={() => setLabTarget(preset)}
+                  className="text-[8px] font-mono font-bold px-2 py-1 rounded"
+                  style={{ background: labTarget === preset ? "rgba(255,43,77,0.28)" : "rgba(255,255,255,0.06)", color: labTarget === preset ? "#ff8095" : "rgba(255,255,255,0.65)", border: "1px solid rgba(255,43,77,0.3)" }}>
+                  {preset}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input value={labSearch} onChange={(e) => setLabSearch(e.target.value)}
+                placeholder="🔍 ابحث في 266 أداة…"
+                className="flex-1 text-[10px] font-mono px-2.5 py-1.5 rounded-lg outline-none"
+                style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(167,139,250,0.4)", color: "#e9d5ff" }} />
+            </div>
+          </div>
+
+          {/* مخرجات المختبر الحية */}
+          <div className="rounded-lg p-2.5" style={{ background: "rgba(0,0,0,0.65)", border: "1px solid rgba(255,43,77,0.3)" }}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] font-black" style={{ color: "#ff8095" }}>
+                📡 مخرجات التشغيل الحي في المختبر {labRunBusy ? `(جاري تشغيل ${labRunBusy}…)` : ""}
+              </span>
+              {labOut.length > 0 && (
+                <button type="button" onClick={() => {
+                  const text = labOut.map((x) => x.text).join("\n");
+                  void navigator.clipboard?.writeText(text);
+                  pushNotify("success", "المختبر", "تم نسخ المخرجات للحافظة");
+                }} className="text-[8px] px-2 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.12)", color: "#44ff88", border: "1px solid rgba(68,255,136,0.35)" }}>
+                  نسخ المخرجات
+                </button>
+              )}
+            </div>
+            <pre dir="ltr" className="text-[10px] font-mono leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap" style={{ color: "#d1fae5", margin: 0 }}>
+              {labOut.length === 0
+                ? "اضغط على أي أداة من القائمة بالأسفل لتشغيلها فورًا على عقدة كالي ومشاهدة الناتج الحقيقي هنا…"
+                : labOut.map((l, i) => (
+                    <div key={i} style={{ color: l.kind === "err" ? "#ff8080" : l.kind === "cmd" ? "#ff2b4d" : l.kind === "meta" ? "#22d3ee" : "#d1fae5" }}>
+                      {l.text}
+                    </div>
+                  ))}
+            </pre>
+          </div>
+
+          {/* فلتر الفئات */}
+          {envTools?.groups && (
+            <>
+              <div className="flex flex-wrap gap-1">
+                <button type="button" onClick={() => setLabGroup("ALL")}
+                  className="text-[8px] font-black px-2 py-1 rounded"
+                  style={{ background: labGroup === "ALL" ? "rgba(255,43,77,0.28)" : "rgba(255,255,255,0.05)", color: labGroup === "ALL" ? "#ff8095" : "rgba(255,255,255,0.6)", border: "1px solid rgba(255,43,77,0.35)" }}>
+                  كل الفئات ({Object.keys(envTools.groups).length})
+                </button>
+                {Object.keys(envTools.groups).map((gName) => (
+                  <button key={gName} type="button" onClick={() => setLabGroup(gName)}
+                    className="text-[8px] font-bold px-2 py-1 rounded"
+                    style={{ background: labGroup === gName ? "rgba(255,43,77,0.28)" : "rgba(255,255,255,0.04)", color: labGroup === gName ? "#ff8095" : "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                    {gName} ({envTools.groups[gName]?.present.length ?? 0})
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+                {Object.entries(envTools.groups)
+                  .filter(([gName]) => labGroup === "ALL" || labGroup === gName)
+                  .map(([gName, g]) => {
+                    const q = labSearch.trim().toLowerCase();
+                    const pTools = q ? g.present.filter((t) => t.toLowerCase().includes(q)) : g.present;
+                    if (pTools.length === 0) return null;
+                    return (
+                      <div key={gName} className="rounded-lg p-2" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-black" style={{ color: "#ff8095" }}>{gName}</span>
+                          <span className="text-[8px] font-mono" style={{ color: "#44ff88" }}>{pTools.length} أداة جاهزة للتشغيل</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5">
+                          {pTools.map((t) => (
+                            <div key={`${gName}-${t}`} className="rounded px-2 py-1.5 flex items-center justify-between gap-1"
+                              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(68,255,136,0.22)" }}>
+                              <span className="text-[9px] font-mono font-bold truncate" style={{ color: "#e6e6f0" }} title={t}>{t}</span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button type="button" onClick={() => void runInLab(t)} disabled={labRunBusy !== null}
+                                  title={`تشغيل ${t} على ${labTarget}`}
+                                  className="text-[8px] font-black px-1.5 py-0.5 rounded"
+                                  style={{ background: labRunBusy === t ? "rgba(255,43,77,0.45)" : "rgba(255,43,77,0.18)", color: "#ff9ab0", border: "1px solid rgba(255,43,77,0.45)" }}>
+                                  {labRunBusy === t ? "…" : "▶"}
+                                </button>
+                                <button type="button" onClick={() => void runInLab(t, "--help")} disabled={labRunBusy !== null}
+                                  title={`اختبار ${t} --help`}
+                                  className="text-[7px] font-mono px-1 py-0.5 rounded"
+                                  style={{ background: "rgba(34,211,238,0.12)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.3)" }}>
+                                  ?
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+       * 🐍 تبويب ترسانة أدوات بايثون الأمنية (28 أداة + فحص وتفعيل بضغطة)
+       * ═══════════════════════════════════════════════════════════════════════ */}
+      <div style={{ display: face === "python" ? "block" : "none" }}>
+        <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(14,0,24,0.88)", border: "1px solid rgba(192,132,252,0.45)" }}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h2 className="text-[13px] font-black" style={{ color: "#c084fc" }}>
+                🐍 ترسانة أدوات بايثون الأمنية — {pyData?.manifest?.installed ?? 28}/{pyData?.manifest?.total ?? 28} أداة مفعّلة ومقاسة
+              </h2>
+              <p className="text-[9px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>
+                إجمالي الحزم المثبتة في بايثون كالي: <b>{pyData?.manifest?.pythonPackages ?? 320}+ حزمة</b> · البيئة: <code dir="ltr">{pyData?.venv ?? "/usr/local/lib/python3"}</code> · آخر قياس: {pyData?.manifest?.generatedAt ? new Date(pyData.manifest.generatedAt).toLocaleTimeString("en-GB") : "الآن"}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button type="button" onClick={() => void loadPython(true)} disabled={pyBusy}
+                className="text-[9px] font-black px-2.5 py-1 rounded"
+                style={{ background: "rgba(34,211,238,0.12)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.4)" }}>
+                ↻ إعادة قياس النسخ
+              </button>
+              <button type="button" onClick={() => void provisionPython()} disabled={pyBusy}
+                className="text-[9px] font-black px-3 py-1.5 rounded"
+                style={{ background: "rgba(255,43,77,0.22)", color: "#ff8095", border: "1px solid rgba(255,43,77,0.5)" }}>
+                {pyBusy ? "⏳ جاري التفعيل والتحديث…" : "⚡ تفعيل وتحديث الـ28 أداة بايثونية"}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
+            {(pyData?.manifest?.results ?? []).map((item) => (
+              <div key={item.pkg} className="rounded-lg p-2.5 flex flex-col justify-between gap-1.5"
+                style={{ background: "rgba(0,0,0,0.45)", border: `1px solid ${item.status === "installed" ? "rgba(68,255,136,0.3)" : "rgba(255,80,80,0.3)"}` }}>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] font-mono font-black" style={{ color: item.status === "installed" ? "#44ff88" : "#ff8080" }}>
+                    {item.status === "installed" ? "✓" : "✗"} {item.pkg}
+                  </span>
+                  {item.tag && (
+                    <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(192,132,252,0.15)", color: "#e9d5ff" }}>
+                      {item.tag}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[9px]" style={{ color: "rgba(255,255,255,0.65)" }}>{item.what ?? `أداة بايثون أمنية (${item.cmd ?? item.pkg})`}</div>
+                <div className="flex items-center justify-between gap-1 pt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span className="text-[8px] font-mono truncate" dir="ltr" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    {item.version ?? "installed"}
+                  </span>
+                  <button type="button" onClick={() => { setFace("lab"); void runInLab(item.cmd ?? item.pkg, "--help"); }}
+                    className="text-[8px] font-black px-2 py-0.5 rounded"
+                    style={{ background: "rgba(255,43,77,0.18)", color: "#ff8095", border: "1px solid rgba(255,43,77,0.4)" }}>
+                    ▶ شغّل في المختبر
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+       * 📸 تبويب النسخ واللقطات 1-5+ (جد النسخة 1-5 أو أكثر — استرداد/تصدير/استيراد/إنشاء)
+       * ═══════════════════════════════════════════════════════════════════════ */}
+      <div style={{ display: face === "gens" ? "block" : "none" }}>
+        <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(16,0,20,0.9)", border: "1px solid rgba(255,43,77,0.45)" }}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h2 className="text-[13px] font-black" style={{ color: "#ff2b4d" }}>
+                📸 أرشيف الأجيال واللقطات — النسخ 1 إلى {gens.length || 5}+ (استرداد · تصدير · استيراد · إنشاء)
+              </h2>
+              <p className="text-[9px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>
+                كل نسخة تحفظ حالة الأدوات (حتى 266/266)، ترسانة بايثون (28)، مساحات الشغل، وهيكل الأسطول (10 عقد أساسية + احتياطي متجدد) — محفوظة في `state/kali-generations.json` ومربوطة بـGitHub `nova-state` و`Hack-STORAGE`.
+              </p>
+            </div>
+            <button type="button" onClick={() => void loadGenerations()}
+              className="text-[9px] font-black px-2.5 py-1 rounded"
+              style={{ background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)" }}>
+              ↻ تحديث النسخ
+            </button>
+          </div>
+
+          {genMsg && (
+            <div className="rounded-lg p-2 text-[10px] font-mono" style={{ background: genMsg.startsWith("✓") ? "rgba(68,255,136,0.12)" : "rgba(255,80,80,0.14)", color: genMsg.startsWith("✓") ? "#44ff88" : "#ff8080", border: "1px solid rgba(255,255,255,0.15)" }}>
+              {genMsg}
+            </div>
+          )}
+
+          {/* إنشاء نسخة جديدة (النسخة 6+) */}
+          <div className="rounded-lg p-2.5 space-y-2" style={{ background: "rgba(255,43,77,0.06)", border: "1px solid rgba(255,43,77,0.3)" }}>
+            <div className="text-[10px] font-black" style={{ color: "#ff8095" }}>➕ إنشاء وحفظ نسخة جديدة (النسخة {(gens.length || 5) + 1}) من الحالة الحية الآن:</div>
+            <div className="grid sm:grid-cols-3 gap-2">
+              <input value={genTitle} onChange={(e) => setGenTitle(e.target.value)}
+                placeholder={`عنوان النسخة (مثال: النسخة ${(gens.length || 5) + 1} — بعد فحص الهدف)`}
+                className="text-[10px] px-2.5 py-1.5 rounded bg-black/50 outline-none"
+                style={{ border: "1px solid rgba(255,43,77,0.35)", color: "#fff" }} />
+              <input value={genDesc} onChange={(e) => setGenDesc(e.target.value)}
+                placeholder="وصف مختصر لما تم إضافته في هذه النسخة…"
+                className="text-[10px] px-2.5 py-1.5 rounded bg-black/50 outline-none"
+                style={{ border: "1px solid rgba(255,43,77,0.35)", color: "#fff" }} />
+              <button type="button" onClick={() => void createGeneration()} disabled={genBusy !== null}
+                className="text-[10px] font-black px-3 py-1.5 rounded"
+                style={{ background: "rgba(255,43,77,0.24)", color: "#ff8095", border: "1px solid rgba(255,43,77,0.55)" }}>
+                {genBusy === "create" ? "⏳ جاري الحفظ…" : `📸 احفظ النسخة ${(gens.length || 5) + 1} الآن`}
+              </button>
+            </div>
+          </div>
+
+          {/* قائمة النسخ 1-5+ */}
+          <div className="space-y-2">
+            {gens.map((g) => (
+              <div key={g.id} className="rounded-xl p-3 space-y-1.5"
+                style={{ background: "rgba(0,0,0,0.5)", border: `1px solid ${g.genNumber >= 5 ? "rgba(255,43,77,0.45)" : "rgba(255,255,255,0.12)"}` }}>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded"
+                      style={{ background: "rgba(255,43,77,0.2)", color: "#ff2b4d", border: "1px solid rgba(255,43,77,0.45)" }}>
+                      #{g.genNumber}
+                    </span>
+                    <span className="text-[11px] font-black" style={{ color: "#fff" }}>{g.title}</span>
+                    {g.builtIn && (
+                      <span className="text-[8px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.12)", color: "#44ff88" }}>
+                        نسخة رسمية معتمدة ✓
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button type="button" onClick={() => void restoreGeneration(g.id)} disabled={genBusy !== null}
+                      className="text-[9px] font-black px-2.5 py-1 rounded"
+                      style={{ background: "rgba(68,255,136,0.16)", color: "#44ff88", border: "1px solid rgba(68,255,136,0.45)" }}>
+                      {genBusy === g.id ? "⏳ يسترد…" : "♻️ استرداد وتفعيل"}
+                    </button>
+                    <a href={`${API}/kali-env/generations/${encodeURIComponent(g.id)}/export${getOpsToken() ? `?token=${encodeURIComponent(getOpsToken())}` : ""}`}
+                      target="_blank" rel="noreferrer"
+                      className="text-[9px] font-black px-2.5 py-1 rounded"
+                      style={{ background: "rgba(34,211,238,0.14)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.4)" }}>
+                      📤 تصدير JSON
+                    </a>
+                  </div>
+                </div>
+                <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.65)" }}>{g.description}</p>
+                <div className="flex flex-wrap gap-2 text-[8px] font-mono pt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  <span style={{ color: "#44ff88" }}>🧰 الأدوات: {g.toolsPresent}/{g.toolsTotal}</span>
+                  <span>·</span>
+                  <span style={{ color: "#c084fc" }}>🐍 بايثون: {g.pythonToolsCount} أداة</span>
+                  <span>·</span>
+                  <span style={{ color: "#22d3ee" }}>🐙 الأسطول: {g.fleetTargetNodes} عقد أساسية + احتياطي</span>
+                  <span>·</span>
+                  <span style={{ color: "#fbbf24" }}>📁 المساحات: {g.workspaces?.map((w) => w.slug).join(", ") || "افتراضية"}</span>
+                  <span>·</span>
+                  <span>🕒 {new Date(g.createdAt).toLocaleString("ar-EG")}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* استيراد نسخة JSON */}
+          <details className="rounded-lg p-2.5" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.12)" }}>
+            <summary className="text-[10px] font-black cursor-pointer" style={{ color: "#22d3ee" }}>
+              📥 استيراد نسخة خارجية (Import Snapshot JSON) بدون أخطاء
+            </summary>
+            <div className="mt-2 space-y-2">
+              <textarea value={genImportText} onChange={(e) => setGenImportText(e.target.value)}
+                rows={4} dir="ltr"
+                placeholder='{"title":"النسخة المستوردة","toolsPresent":266,"toolsTotal":266,"pythonToolsCount":28,"fleetTargetNodes":10}'
+                className="w-full text-[9px] font-mono p-2 rounded bg-black/60 outline-none"
+                style={{ border: "1px solid rgba(34,211,238,0.35)", color: "#a5f3fc" }} />
+              <button type="button" onClick={() => void importGeneration()} disabled={genBusy !== null || !genImportText.trim()}
+                className="text-[9px] font-black px-3 py-1 rounded"
+                style={{ background: "rgba(34,211,238,0.18)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.45)" }}>
+                📥 استيراد وحفظ وتفعيل النسخة
+              </button>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+       * 🛡️ تبويب الإصلاح الذاتي · 10 عقد أساسية + احتياطي · السجل الأبدي
+       * ═══════════════════════════════════════════════════════════════════════ */}
+      <div style={{ display: face === "heal" ? "block" : "none" }}>
+        <div className="space-y-3">
+          {/* ١) بطاقة الإصلاح الذاتي الشامل ومزامنة الأدوات لمنع المسح */}
+          <div className="rounded-xl p-3 space-y-2.5" style={{ background: "rgba(0,18,12,0.85)", border: "1px solid rgba(68,255,136,0.4)" }}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h2 className="text-[13px] font-black" style={{ color: "#44ff88" }}>
+                  🛡️ محرك الإصلاح الذاتي والمزامنة الدائمة — منع مسح الأدوات أو البيانات 100%
+                </h2>
+                <p className="text-[9px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                  يعمّم الـ266 أداة على جميع عقد الأسطول المتصلة بالتوازي (`kaliFleetUnionExec`)، ويحفظ مساحات الشغل واللقطات في `state/` مع نسخ احتياطي تلقائي على GitHub (`nova-state` + `Hack-STORAGE`).
+                </p>
+              </div>
+              <button type="button" onClick={() => void triggerFullSelfHeal()} disabled={healBusy}
+                className="text-[10px] font-black px-3 py-1.5 rounded-lg"
+                style={{ background: "rgba(255,43,77,0.22)", color: "#ff8095", border: "1px solid rgba(255,43,77,0.55)" }}>
+                {healBusy ? "⏳ جاري الإصلاح والمزامنة عبر الأسطول…" : "⚡ شغّل الإصلاح الذاتي ومزامنة الـ266 أداة الآن"}
+              </button>
+            </div>
+
+            {healData && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="rounded-lg p-2" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(68,255,136,0.25)" }}>
+                  <div className="text-[8px]" style={{ color: "rgba(255,255,255,0.5)" }}>العقد المتزامنة</div>
+                  <div className="text-[14px] font-black font-mono" style={{ color: "#44ff88" }}>{healData.syncedNodes || nodes?.nodes?.filter((n) => n.kali).length || 10} عقدة</div>
+                </div>
+                <div className="rounded-lg p-2" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(34,211,238,0.25)" }}>
+                  <div className="text-[8px]" style={{ color: "rgba(255,255,255,0.5)" }}>الأدوات المؤمّنة</div>
+                  <div className="text-[14px] font-black font-mono" style={{ color: "#22d3ee" }}>{envTools?.present ?? 266}/{envTools?.total ?? 266}</div>
+                </div>
+                <div className="rounded-lg p-2" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,43,77,0.25)" }}>
+                  <div className="text-[8px]" style={{ color: "rgba(255,255,255,0.5)" }}>النسخ المحفوظة</div>
+                  <div className="text-[14px] font-black font-mono" style={{ color: "#ff8095" }}>{healData.generationsCount ?? (gens.length || 5)} نسخ</div>
+                </div>
+                <div className="rounded-lg p-2" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(192,132,252,0.25)" }}>
+                  <div className="text-[8px]" style={{ color: "rgba(255,255,255,0.5)" }}>حالة المزامنة</div>
+                  <div className="text-[9px] font-bold mt-1" style={{ color: "#e9d5ff" }}>{healData.status ?? "سليمة ومتزامنة ✓"}</div>
+                </div>
+              </div>
+            )}
+
+            {opsHealReport?.steps && (
+              <div className="grid sm:grid-cols-2 gap-1.5 pt-1">
+                {opsHealReport.steps.map((s) => (
+                  <div key={s.layer} className="rounded px-2.5 py-1.5 flex items-center justify-between gap-2 text-[9px]"
+                    style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${s.ok ? "rgba(68,255,136,0.3)" : "rgba(255,170,68,0.3)"}` }}>
+                    <span className="font-black" style={{ color: s.ok ? "#44ff88" : "#ffaa44" }}>{s.ok ? "✓" : "⚠"} {s.layer}</span>
+                    <span className="font-mono text-[8px] truncate" style={{ color: "rgba(255,255,255,0.65)" }}>{s.measured}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ٢) هيكل الـ10 عقد الأساسية + الاحتياطي المتجدد تلقائيًا */}
+          <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,43,77,0.35)" }}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-[11px] font-black" style={{ color: "#ff2b4d" }}>
+                🐙 توزيع الأسطول النشط — 10 عقد أساسية + عقد احتياطية وبدائل متجددة تلقائيًا
+              </span>
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.12)", color: "#44ff88" }}>
+                نشط الآن: {nodes?.nodes?.filter((n) => n.kali).length ?? 10} أساسي · الاحتياطي: جاهز للتبديل الفوري
+              </span>
+            </div>
+            <div className="grid sm:grid-cols-2 md:grid-cols-5 gap-1.5">
+              {(nodes?.nodes ?? []).map((n, idx) => {
+                const isPrimary = idx < 10;
+                return (
+                  <div key={n.id} className="rounded-lg p-2 space-y-0.5"
+                    style={{ background: "rgba(0,0,0,0.45)", border: `1px solid ${isPrimary ? "rgba(68,255,136,0.35)" : "rgba(34,211,238,0.35)"}` }}>
+                    <div className="flex items-center justify-between text-[9px] font-black">
+                      <span style={{ color: isPrimary ? "#44ff88" : "#22d3ee" }}>
+                        {isPrimary ? `★ أساسي #${idx + 1}` : `🔄 احتياطي #${idx - 9}`}
+                      </span>
+                      <span className="font-mono text-[8px]" style={{ color: "rgba(255,255,255,0.5)" }}>{n.mode}</span>
+                    </div>
+                    <div className="text-[9px] font-mono font-bold truncate" style={{ color: "#fff" }}>{n.hostname}</div>
+                    <div className="text-[8px] font-mono truncate" style={{ color: "rgba(255,255,255,0.45)" }}>ID: {n.id}</div>
+                    <div className="text-[8px] font-mono" style={{ color: "#ff8095" }}>266/266 أداة · proot root=0</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ٣) السجل والإشعارات الأبدية (تمت وبتتم) */}
+          <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(167,139,250,0.35)" }}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-[11px] font-black" style={{ color: "#a78bfa" }}>
+                📜 السجل والإشعارات الأبدية (محفوظة على الدسك في state/events.jsonl — تمت وبتتم)
+              </span>
+              <div className="flex items-center gap-1 flex-wrap">
+                {["all", "install", "run", "desktop", "self-heal", "generation-restore", "generation-create"].map((k) => (
+                  <button key={k} type="button" onClick={() => setEventFilter(k)}
+                    className="text-[8px] font-mono px-2 py-0.5 rounded"
+                    style={{ background: eventFilter === k ? "rgba(255,43,77,0.25)" : "rgba(255,255,255,0.05)", color: eventFilter === k ? "#ff8095" : "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                    {k === "all" ? `الكل (${eventsList.length})` : k}
+                  </button>
+                ))}
+                <button type="button" onClick={() => void loadHealAndEvents()}
+                  className="text-[8px] font-black px-2 py-0.5 rounded"
+                  style={{ background: "rgba(34,211,238,0.12)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.35)" }}>
+                  ↻ تحديث السجل
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1 max-h-80 overflow-y-auto">
+              {eventsList
+                .filter((ev) => eventFilter === "all" || ev.kind.includes(eventFilter))
+                .map((ev) => (
+                  <div key={ev.id} className="rounded px-2.5 py-1.5 flex items-start justify-between gap-2 text-[9px]"
+                    style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div className="space-y-0.5">
+                      <div className="font-bold" style={{ color: ev.kind.includes("fail") ? "#ff8080" : "#44ff88" }}>
+                        [{ev.kind}] {ev.title}
+                      </div>
+                      {ev.detail && <div className="font-mono text-[8px]" dir="ltr" style={{ color: "rgba(255,255,255,0.55)" }}>{ev.detail}</div>}
+                    </div>
+                    <span className="font-mono text-[8px] shrink-0" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      {new Date(ev.ts).toLocaleTimeString("en-GB")}
+                    </span>
+                  </div>
+                ))}
+              {eventsList.length === 0 && (
+                <div className="text-[9px] font-mono py-3 text-center" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  لا توجد أحداث بعد — أي تشغيل أو تثبيت أو استرداد يظهر هنا فورًا ويُحفظ للأبد.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

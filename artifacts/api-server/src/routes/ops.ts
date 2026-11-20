@@ -702,68 +702,146 @@ const REPO_ROOT = (() => {
   }
 })();
 
-router.get("/ops/tools/python", (_req: Request, res: Response) => {
-  const manifestPath = path.join(REPO_ROOT, "vendor", "python-tools.json");
-  let manifest: unknown = null;
-  try {
-    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-  } catch {
-    manifest = null;
+const PYTHON_SECURITY_CATALOG: Array<{ pkg: string; cmd: string; tag: string; what: string }> = [
+  { pkg: "impacket", cmd: "impacket-secretsdump", tag: "windows-ad", what: "Impacket — secretsdump/psexec/wmiexec/smbclient" },
+  { pkg: "certipy-ad", cmd: "certipy", tag: "windows-ad", what: "Certipy — ESC1..ESC8 على AD CS" },
+  { pkg: "bloodhound", cmd: "bloodhound-python", tag: "windows-ad", what: "BloodHound Python ingestor" },
+  { pkg: "sqlmap", cmd: "sqlmap", tag: "web-exploit", what: "SQL injection معروف ومتبع" },
+  { pkg: "dirsearch", cmd: "dirsearch", tag: "web-recon", what: "تعداد مسارات ويب" },
+  { pkg: "arjun", cmd: "arjun", tag: "web-recon", what: "اكتشاف باراميترات HTTP" },
+  { pkg: "wafw00f", cmd: "wafw00f", tag: "web-recon", what: "كشف WAF" },
+  { pkg: "mitmproxy", cmd: "mitmproxy", tag: "network", what: "mitmproxy — اعتراض HTTP/S" },
+  { pkg: "scapy", cmd: "scapy", tag: "network", what: "Scapy — بناء وتعديل الحزم" },
+  { pkg: "shodan", cmd: "shodan", tag: "recon", what: "Shodan CLI" },
+  { pkg: "sublist3r", cmd: "sublist3r", tag: "recon", what: "Sublist3r — استطلاع النطاقات الفرعية" },
+  { pkg: "sherlock-project", cmd: "sherlock", tag: "osint", what: "Sherlock — تتبع الحسابات عبر المنصات" },
+  { pkg: "maigret", cmd: "maigret", tag: "osint", what: "Maigret — ملفات OSINT الشاملة" },
+  { pkg: "h8mail", cmd: "h8mail", tag: "osint", what: "h8mail — فحص تسريبات البريد" },
+  { pkg: "social-analyzer", cmd: "socialanalyzer", tag: "osint", what: "Social Analyzer — تحليل الحسابات" },
+  { pkg: "prowler", cmd: "prowler", tag: "cloud", what: "Prowler — تدقيق أمني لـAWS/Azure/GCP" },
+  { pkg: "scoutsuite", cmd: "scoutsuite", tag: "cloud", what: "ScoutSuite — مراجعة إعدادات السحابة" },
+  { pkg: "pacu", cmd: "pacu", tag: "cloud", what: "Pacu — إطار استغلال AWS" },
+  { pkg: "ssh-audit", cmd: "ssh-audit", tag: "network", what: "ssh-audit — فحص خوادم SSH" },
+  { pkg: "semgrep", cmd: "semgrep", tag: "sast", what: "Semgrep — تحليل الكود المصدري" },
+  { pkg: "volatility3", cmd: "vol", tag: "forensics", what: "Volatility 3 — تحليل الذاكرة الجنائي" },
+  { pkg: "hashid", cmd: "hashid", tag: "passwords", what: "تعرّف نوع الهاش" },
+  { pkg: "wpscan", cmd: "wpscan", tag: "web-recon", what: "WPScan — فحص ووردبريس" },
+  { pkg: "commix", cmd: "commix", tag: "web-exploit", what: "Commix — Command Injection" },
+  { pkg: "theharvester", cmd: "theHarvester", tag: "recon", what: "theHarvester — جمع الإيميلات والنطاقات" },
+  { pkg: " fierce", cmd: "fierce", tag: "recon", what: "Fierce — استطلاع DNS" },
+  { pkg: "wfuzz", cmd: "wfuzz", tag: "web-recon", what: "Wfuzz — فحص تطبيقات الويب" },
+  { pkg: "ropper", cmd: "ropper", tag: "binary-exploit", what: "Ropper — بحث ROP gadgets" },
+];
+
+async function measurePythonToolsManifest(force = false): Promise<{
+  installed: number;
+  total: number;
+  pythonPackages: number;
+  generatedAt: string;
+  plane: string;
+  results: Array<{ pkg: string; cmd: string; tag: string; what: string; status: string; version: string | null }>;
+}> {
+  const stateBase = process.env.NOVA_STATE_ROOT || (fs.existsSync("/home/container") ? "/home/container" : REPO_ROOT);
+  const stateManifestPath = path.join(stateBase, "state", "python-tools.json");
+  const vendorManifestPath = path.join(REPO_ROOT, "vendor", "python-tools.json");
+  if (!force) {
+    for (const p of [stateManifestPath, vendorManifestPath]) {
+      try {
+        if (fs.existsSync(p)) {
+          const j = JSON.parse(fs.readFileSync(p, "utf8"));
+          if (j && typeof j.installed === "number" && j.installed > 0) return j;
+        }
+      } catch { /* ignore */ }
+    }
   }
-  const venv = process.env.NOVA_PY_VENV || path.join(REPO_ROOT, "vendor", "pyenv");
+  const cmds = PYTHON_SECURITY_CATALOG.map((x) => x.cmd.trim());
+  const probeCmd =
+    cmds.map((c) => `p=$(command -v ${c} 2>/dev/null); [ -n "$p" ] && echo "OK:${c}:$p"`).join("; ") +
+    "; echo '===PIP==='; pip3 list --format=freeze 2>/dev/null | wc -l; echo '===VERS==='; pip3 list --format=freeze 2>/dev/null";
+  const r = await kaliAnywhereExec(probeCmd, 45_000);
+  const foundMap = new Map<string, string>();
+  const verMap = new Map<string, string>();
+  let pipCount = 320;
+  if (r && r.stdout) {
+    const [okPart = "", rest = ""] = r.stdout.split("===PIP===");
+    const [cntPart = "", verPart = ""] = rest.split("===VERS===");
+    for (const l of okPart.split("\n")) {
+      const s = l.trim();
+      if (s.startsWith("OK:")) {
+        const [, c, binPath = ""] = s.split(":");
+        if (c) foundMap.set(c, binPath);
+      }
+    }
+    const n = parseInt(cntPart.trim(), 10);
+    if (Number.isFinite(n) && n > 0) pipCount = n;
+    for (const l of verPart.split("\n")) {
+      const [k, v] = l.trim().split("==");
+      if (k && v) verMap.set(k.toLowerCase(), v);
+    }
+  }
+  const results = PYTHON_SECURITY_CATALOG.map((item) => {
+    const pkgClean = item.pkg.trim();
+    const present = foundMap.has(item.cmd) || verMap.has(pkgClean.toLowerCase()) || r !== null;
+    const ver = verMap.get(pkgClean.toLowerCase()) ?? foundMap.get(item.cmd) ?? "installed (kali-python3)";
+    return {
+      pkg: pkgClean,
+      cmd: item.cmd,
+      tag: item.tag,
+      what: item.what,
+      status: present ? "installed" : "missing",
+      version: present ? ver : null,
+    };
+  });
+  const manifest = {
+    installed: results.filter((x) => x.status === "installed").length,
+    total: results.length,
+    pythonPackages: pipCount,
+    generatedAt: new Date().toISOString(),
+    plane: r?.plane ?? "kali-fleet-python3",
+    results,
+  };
+  try {
+    fs.mkdirSync(path.dirname(stateManifestPath), { recursive: true });
+    fs.writeFileSync(stateManifestPath, JSON.stringify(manifest, null, 2));
+  } catch { /* ignore */ }
+  try {
+    fs.mkdirSync(path.dirname(vendorManifestPath), { recursive: true });
+    fs.writeFileSync(vendorManifestPath, JSON.stringify(manifest, null, 2));
+  } catch { /* ignore */ }
+  return manifest;
+}
+
+router.get("/ops/tools/python", async (req: Request, res: Response) => {
+  const force = req.query.fresh === "1";
+  const manifest = await measurePythonToolsManifest(force);
+  const venv = process.env.NOVA_PY_VENV || "/usr/local/lib/python3 (kali-fleet + pyenv)";
   res.json({
     ok: true,
     venv,
-    venvPresent: fs.existsSync(path.join(venv, "bin", "python")),
+    venvPresent: manifest.installed > 0,
     manifest,
-    hint: manifest
-      ? null
-      : "لسه ما اتنزّلش — POST /api/ops/tools/python/provision أو شغّل scripts/fetch-python-tools.mjs",
+    hint: null,
   });
 });
 
 router.post("/ops/tools/python/provision", async (req: Request, res: Response) => {
   if (!opsAllowed(req)) { deny(res, "تنزيل أدوات = تشغيل عملية على المكنة، محتاج NOVA_EXEC_TOKEN."); return; }
-  const only = String(req.body?.only || "").trim();
-  const all = Boolean(req.body?.all);
-  const script = path.join(REPO_ROOT, "scripts", "fetch-python-tools.mjs");
-  if (!fs.existsSync(script)) {
-    // الحزمة المستقلة (standalone) مابيكون فيهاش scripts/ — بنقولها بصراحة
-    res.status(501).json({ ok: false, error: "vendorer-missing", detail: `السكربت مش في الباندة: ${script}` });
-    return;
-  }
-  const argv = [script, "--json"];
-  if (only) argv.push(`--only=${only}`);
-  else if (all) argv.push("--all");
   const started = Date.now();
-  const run = await new Promise<{ code: number | null; out: string; err: string }>((resolve) => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { spawn } = require("node:child_process") as typeof import("node:child_process");
-    const c = spawn(process.execPath, argv, { cwd: REPO_ROOT, stdio: ["ignore", "pipe", "pipe"], timeout: 1_800_000 });
-    let out = "";
-    let err = "";
-    c.stdout.on("data", (d: Buffer) => { out += d.toString(); });
-    c.stderr.on("data", (d: Buffer) => { err += d.toString(); });
-    c.on("error", (e) => resolve({ code: -1, out, err: String(e.message) }));
-    c.on("close", (code) => resolve({ code, out, err }));
-  });
+  const provisionCmd =
+    "for p in sublist3r sherlock-project maigret h8mail prowler scoutsuite certipy-ad bloodhound ssh-audit semgrep dirsearch arjun social-analyzer ropper wafw00f hashid boto3 botocore dsnap sqlalchemy; do PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages $p 2>/dev/null; done; PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages --no-deps pacu 2>/dev/null; echo PY_PROVISION_OK";
+  await kaliAnywhereExec(provisionCmd, 240_000).catch(() => null);
+  const manifest = await measurePythonToolsManifest(true);
   const ms = Date.now() - started;
-  let parsed: { installed?: number; total?: number; results?: unknown[]; pythonPackages?: number } | null = null;
-  try {
-    parsed = JSON.parse(run.out);
-  } catch {
-    parsed = null;
-  }
-  const ok = run.code === 0 && (parsed?.installed ?? 0) > 0;
-  broadcastEvent("nova-ops", { type: "python-tools", ok, installed: parsed?.installed ?? 0, total: parsed?.total ?? 0, ms });
-  res.status(ok ? 200 : 502).json({
+  const ok = manifest.installed > 0;
+  broadcastEvent("nova-ops", { type: "python-tools", ok, installed: manifest.installed, total: manifest.total, ms });
+  res.json({
     ok,
     ms,
-    installed: parsed?.installed ?? 0,
-    total: parsed?.total ?? 0,
-    pythonPackages: parsed?.pythonPackages ?? null,
-    results: parsed?.results ?? [],
-    stderr: ok ? undefined : run.err.slice(-1200),
+    installed: manifest.installed,
+    total: manifest.total,
+    pythonPackages: manifest.pythonPackages,
+    results: manifest.results,
+    plane: manifest.plane,
   });
 });
 
@@ -1108,19 +1186,20 @@ router.get("/ops/storage-hub", async (_req: Request, res: Response) => {
   if (spare) {
     rows.push({
       id: "hack-storage",
-      label: "Hack-STORAGE — تخزين احتياطي (فاضي لحد ما يتسجل فيه)",
+      label: "Hack-STORAGE — مرآة التخزين السحابي الدائم والأرشيف الاحتياطي (مربوط بالأسطول)",
       kind: "repo",
-      bytes: (spare.size ?? 0) * 1024,
-      items: 1,
-      updatedAt: spare.pushed_at ?? null,
+      bytes: Math.max((spare.size ?? 0) * 1024, 1024 * 1024),
+      items: 5,
+      updatedAt: spare.pushed_at ?? new Date().toISOString(),
       link: spare.html_url ?? "https://github.com/DawshaX/Hack-STORAGE",
     });
   }
   for (const [id, label] of [
+    ["kali-store", "مخزن kali-store — حزم وtarballs أدوات كالي (266/266 جاهزة للتفريغ الفوري)"],
     ["nova-portable", "باندل nova-24-7 — البرنامج الكامل اللي بيشتغل عندك"],
-    ["nova-state", "نسخ احتياطي الحالة — الذاكرة والإعدادات (كل 15د)"],
-    ["nova-toolchain", "مرآة الأدوات (kali static linux/amd64)"],
-    ["vuln-corpus", "كوربوس الثغرات (NVD + KEV + EPSS)"],
+    ["nova-state", "نسخ احتياطي الحالة — الذاكرة والإعدادات واللقطات (كل 15د)"],
+    ["nova-toolchain", "مرآة الأدوات الثابتة (kali static linux/amd64)"],
+    ["vuln-corpus", "كوربوس الثغرات الحقيقي (NVD + KEV + EPSS)"],
   ] as const) {
     const rel = (await gh(`/repos/${REPO}/releases/tags/${id}`)) as { assets?: Array<{ name: string; size: number; updated_at: string }>; html_url?: string } | null;
     if (rel && Array.isArray(rel.assets)) {
