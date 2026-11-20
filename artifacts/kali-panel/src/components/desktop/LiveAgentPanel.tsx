@@ -1142,7 +1142,8 @@ export function LiveAgentPanel({
 
   // ── Background Process Monitor ────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<
-    | "chat" | "historyAll" | "storage" | "bounty2099" | "processes" | "live" | "missions" | "capabilities" | "terminal"
+    | "chat" | "liveLab" | "vulns426" | "books" | "historyAll" | "storage" | "bounty2099"
+    | "processes" | "live" | "missions" | "capabilities" | "terminal"
     | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser"
     | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel" | "cockpit" | "awareness"
     | "control"
@@ -1304,6 +1305,190 @@ export function LiveAgentPanel({
   const [restoreJournalBusy, setRestoreJournalBusy] = useState(false);
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const [renameSessionTitle, setRenameSessionTitle] = useState("");
+  const [kaliTarget, setKaliTarget] = useState("127.0.0.1");
+
+  // ── UI Zoom, Spacious Layout & Tab Grouping Controls (2099) ───────────────
+  const [uiZoom, setUiZoom] = useState<number>(() => {
+    try {
+      const v = Number(localStorage.getItem("nova.agent.uiZoom") || "100");
+      return [90, 100, 110, 120].includes(v) ? v : 100;
+    } catch {
+      return 100;
+    }
+  });
+  const changeUiZoom = useCallback((next: number) => {
+    setUiZoom(next);
+    try {
+      localStorage.setItem("nova.agent.uiZoom", String(next));
+    } catch { /* ignore */ }
+  }, []);
+  const [headerBarsCollapsed, setHeaderBarsCollapsed] = useState(false);
+  const [tabsWrapExpanded, setTabsWrapExpanded] = useState(true);
+  const [tabCategoryFilter, setTabCategoryFilter] = useState<"all" | "core" | "kali426" | "intelligence" | "system">("all");
+
+  // ── Sovereign Live Lab (الوكيل النهائي المدمج + الوعي + الاستشارة الذكية) ──
+  const [sovereignLabData, setSovereignLabData] = useState<any>(null);
+  const [labConsultBusy, setLabConsultBusy] = useState(false);
+  const [labCustomDirective, setLabCustomDirective] = useState("");
+  const [labConsultResult, setLabConsultResult] = useState<any>(null);
+
+  const loadSovereignLab = useCallback(async (targetOverride?: string) => {
+    try {
+      const t = encodeURIComponent(targetOverride || kaliTarget || "example.com");
+      const r = await fetch(`${API_BASE}/live-agent/sovereign-lab?target=${t}`, { headers: novaAuthHeaders() });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.ok) setSovereignLabData(d);
+      }
+    } catch { /* ignore */ }
+  }, [API_BASE, kaliTarget]);
+
+  const executeLabConsultation = useCallback(async (opts: {
+    questionId?: string;
+    optionId?: string;
+    customDirective?: string;
+    mode?: "root-full-attack" | "max-protection" | "exploit-fusion" | "book-train" | "bounty-0day";
+    executeLive?: boolean;
+  }) => {
+    setLabConsultBusy(true);
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/sovereign-lab/consult`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          target: kaliTarget || "example.com",
+          ...opts,
+        }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setLabConsultResult(d);
+        if (d?.labState) setSovereignLabData(d.labState);
+      }
+    } catch { /* ignore */ }
+    setLabConsultBusy(false);
+  }, [API_BASE, kaliTarget]);
+
+  // ── Global 426 Tactical Vulnerability Matrix & Exploit Mutation/Fusion ──
+  const [vulns426Data, setVulns426Data] = useState<any>(null);
+  const [vulns426Loading, setVulns426Loading] = useState(false);
+  const [vulns426Query, setVulns426Query] = useState("");
+  const [vulns426Sector, setVulns426Sector] = useState("all");
+  const [vulns426Severity, setVulns426Severity] = useState("all");
+  const [vulns426KevOnly, setVulns426KevOnly] = useState(false);
+  const [selected426Ids, setSelected426Ids] = useState<string[]>(["VULN-426-001", "VULN-426-098", "VULN-426-162"]);
+  const [mutateCondition, setMutateCondition] = useState<"waf-cloudflare" | "nginx-http2" | "jwt-oauth" | "graphql-api" | "linux-root" | "cloud-imds" | "custom">("waf-cloudflare");
+  const [mutateMode, setMutateMode] = useState<"recon-verify" | "root-full-attack" | "max-protection">("root-full-attack");
+  const [mutateCustomContext, setMutateCustomContext] = useState("");
+  const [mutateExecuteLive, setMutateExecuteLive] = useState(true);
+  const [mutateBusy, setMutateBusy] = useState(false);
+  const [mutateResult, setMutateResult] = useState<any>(null);
+
+  const loadVulns426 = useCallback(async (overrides?: { q?: string; sectorId?: string; severity?: string; kevOnly?: boolean }) => {
+    setVulns426Loading(true);
+    try {
+      const q = overrides?.q !== undefined ? overrides.q : vulns426Query;
+      const sec = overrides?.sectorId !== undefined ? overrides.sectorId : vulns426Sector;
+      const sev = overrides?.severity !== undefined ? overrides.severity : vulns426Severity;
+      const kev = overrides?.kevOnly !== undefined ? overrides.kevOnly : vulns426KevOnly;
+      const params = new URLSearchParams({
+        q,
+        sectorId: sec,
+        severity: sev,
+        kevOnly: kev ? "true" : "false",
+        limit: "100",
+      });
+      const r = await fetch(`${API_BASE}/live-agent/vulns-426?${params.toString()}`, { headers: novaAuthHeaders() });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.ok) setVulns426Data(d);
+      }
+    } catch { /* ignore */ }
+    setVulns426Loading(false);
+  }, [API_BASE, vulns426Query, vulns426Sector, vulns426Severity, vulns426KevOnly]);
+
+  const runMutateAndFuse426 = useCallback(async (overrideIds?: string[], overrideMode?: "recon-verify" | "root-full-attack" | "max-protection") => {
+    setMutateBusy(true);
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/vulns-426/mutate-and-fuse`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          vulnIds: overrideIds ?? selected426Ids,
+          target: kaliTarget || "example.com",
+          condition: mutateCondition,
+          customContext: mutateCustomContext || undefined,
+          mode: overrideMode ?? mutateMode,
+          executeLive: mutateExecuteLive,
+        }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.ok) setMutateResult(d);
+      }
+    } catch { /* ignore */ }
+    setMutateBusy(false);
+  }, [API_BASE, selected426Ids, kaliTarget, mutateCondition, mutateCustomContext, mutateMode, mutateExecuteLive]);
+
+  // ── 16 Sovereign Hacking & Kali Books Library + Trainer ───────────────────
+  const [booksData, setBooksData] = useState<any>(null);
+  const [bookTrainBusy, setBookTrainBusy] = useState<string | null>(null);
+  const [bookTrainResult, setBookTrainResult] = useState<any>(null);
+  const [newBookTitle, setNewBookTitle] = useState("");
+  const [newBookCategory, setNewBookCategory] = useState("مراجع الهاكر الأخلاقي وكالي");
+  const [newBookContent, setNewBookContent] = useState("");
+  const [newBookBusy, setNewBookBusy] = useState(false);
+
+  const loadBooksLibrary = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/books`, { headers: novaAuthHeaders() });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.ok) setBooksData(d);
+      }
+    } catch { /* ignore */ }
+  }, [API_BASE]);
+
+  const runBookTraining = useCallback(async (bookId: string) => {
+    setBookTrainBusy(bookId);
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/books/train`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ bookId, target: kaliTarget || "example.com" }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.ok) {
+          setBookTrainResult(d);
+          void loadBooksLibrary();
+        }
+      }
+    } catch { /* ignore */ }
+    setBookTrainBusy(null);
+  }, [API_BASE, kaliTarget, loadBooksLibrary]);
+
+  const submitCustomBook = useCallback(async () => {
+    if (!newBookContent.trim()) return;
+    setNewBookBusy(true);
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/books/ingest`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          titleAr: newBookTitle.trim() || "كتاب سيبراني مخصص",
+          categoryAr: newBookCategory.trim() || "مراجع المالك الخاصة",
+          content: newBookContent.trim(),
+        }),
+      });
+      if (r.ok) {
+        setNewBookTitle("");
+        setNewBookContent("");
+        void loadBooksLibrary();
+      }
+    } catch { /* ignore */ }
+    setNewBookBusy(false);
+  }, [API_BASE, newBookTitle, newBookCategory, newBookContent, loadBooksLibrary]);
 
   const loadPermissionsAndHistory = useCallback(async () => {
     try {
@@ -1375,12 +1560,30 @@ export function LiveAgentPanel({
     void refreshOrganismState();
     void loadVisitorRadar2099();
     void loadPermissionsAndHistory();
+    void loadSovereignLab();
+    void loadVulns426();
+    void loadBooksLibrary();
     const iv = setInterval(() => {
       void refreshOrganismState();
       void loadPermissionsAndHistory();
+      void loadSovereignLab();
     }, 15_000);
     return () => clearInterval(iv);
-  }, [refreshStorageHub, refreshOrganismState, loadVisitorRadar2099, loadPermissionsAndHistory]);
+  }, [refreshStorageHub, refreshOrganismState, loadVisitorRadar2099, loadPermissionsAndHistory, loadSovereignLab, loadVulns426, loadBooksLibrary]);
+
+  useEffect(() => {
+    const onOpenTab = (e: Event) => {
+      const detail = (e as CustomEvent<{ tab?: string }>).detail;
+      if (detail?.tab) {
+        setActiveTab(detail.tab as any);
+        if (detail.tab === "liveLab") void loadSovereignLab();
+        if (detail.tab === "vulns426") void loadVulns426();
+        if (detail.tab === "books") void loadBooksLibrary();
+      }
+    };
+    window.addEventListener("nova:open-agent-tab", onOpenTab as EventListener);
+    return () => window.removeEventListener("nova:open-agent-tab", onOpenTab as EventListener);
+  }, [loadSovereignLab, loadVulns426, loadBooksLibrary]);
   useEffect(() => {
     void loadAwareness();
     const t = setInterval(() => void loadAwareness(), 20_000);
@@ -1439,7 +1642,6 @@ export function LiveAgentPanel({
   const [kaliInstalling, setKaliInstalling] = useState<string | null>(null);
   const [kaliInstallLog, setKaliInstallLog] = useState<string[]>([]);
   const [kaliInstalledSet, setKaliInstalledSet] = useState<Set<string>>(new Set());
-  const [kaliTarget, setKaliTarget] = useState("127.0.0.1");
   const kaliLogRef = useRef<HTMLDivElement>(null);
 
   // ── Local Kali Machine (WebSocket Agent) ─────────────────────────────────
@@ -4458,23 +4660,26 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
   // ── Panel styles ───────────────────────────────────────────────────────────
   const getPanelStyles = (): React.CSSProperties => {
+    const zoomStyle: React.CSSProperties = uiZoom !== 100 ? ({ zoom: `${uiZoom}%` } as React.CSSProperties) : {};
     // When embedded inside DraggableWindow — fill the container completely
     if (embedded) {
-      return { position: "relative", width: "100%", height: "100%", overflow: "hidden", minWidth: 0, minHeight: 0 };
+      return { position: "relative", width: "100%", height: "100%", overflow: "hidden", minWidth: 0, minHeight: 0, ...zoomStyle };
     }
     if (panelMode === "column") {
       return {
         position: "fixed", right: 0, top: 60, bottom: 80,
-        width: panelSize === "mini" ? 220 : panelSize === "large" ? 480 : 380,
+        width: panelSize === "mini" ? 220 : panelSize === "large" ? 560 : 440,
         zIndex: 30,
+        ...zoomStyle,
       };
     }
     if (panelMode === "background") {
       return {
         position: "fixed", bottom: 0, left: 0, right: 0,
         height: isMinimized ? 40 : "auto",
-        maxHeight: isMinimized ? 40 : "40vh",
+        maxHeight: isMinimized ? 40 : "45vh",
         zIndex: 10,
+        ...zoomStyle,
       };
     }
     return {
@@ -4486,8 +4691,9 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
       height: panelSize === "mini" ? "auto" : (isMinimized ? 48 : windowH),
       zIndex: 20,
       overflow: "hidden",
-      minWidth: 340,
-      minHeight: isMinimized ? 48 : 400,
+      minWidth: 380,
+      minHeight: isMinimized ? 48 : 440,
+      ...zoomStyle,
     };
   };
 
@@ -4940,32 +5146,32 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         </div>
 
-        {/* ── Brain & Unified Organism + Sovereign Permissions Bar (Visible in all modes) ── */}
+        {/* ── Brain & Unified Organism + Sovereign Permissions + Zoom & Spacing Bar ── */}
         {panelSize !== "mini" && (
-          <div className="shrink-0 border-b border-primary/15 bg-gradient-to-r from-[#090d18] via-[#12081c] to-[#090d18]">
-            <div className="w-full px-3 py-1 flex items-center gap-1.5 flex-wrap">
+          <div className="shrink-0 border-b border-primary/20 bg-gradient-to-r from-[#090d18] via-[#12081c] to-[#090d18]">
+            <div className="w-full px-3.5 py-2 flex items-center gap-2.5 flex-wrap">
               <button
                 onClick={() => setBrainExpanded((v) => !v)}
-                className="flex items-center gap-1.5 text-[9px] font-mono hover:bg-primary/10 px-1.5 py-0.5 rounded transition-colors"
+                className="flex items-center gap-2 text-[10px] font-mono hover:bg-primary/10 px-2.5 py-1 rounded-lg border border-white/10 bg-black/30 transition-colors"
                 title="حالة الكائن السيادي الموحّد والمخاخ السبعة"
               >
                 <span className="text-emerald-300 font-bold">🟢 {kaliAgentList.length || organismState?.fleet?.connected || 10}/10 عُقد</span>
-                <span className="text-muted-foreground">·</span>
-                <span className="text-fuchsia-300">🧠 {organismState?.brains?.filter((b) => b.online).length ?? 7}/7 مخاخ</span>
-                <span className="text-muted-foreground">·</span>
+                <span className="text-white/25">|</span>
+                <span className="text-fuchsia-300 font-bold">🧠 {organismState?.brains?.filter((b) => b.online).length ?? 7}/7 مخاخ</span>
+                <span className="text-white/25">|</span>
                 <span className="text-violet-300">🧬 ذاكرة {(brainStatus?.memoryCount ?? 0) + (storageHub?.eternalMemoryCount ?? 0)}</span>
-                <span className="text-muted-foreground">·</span>
-                <span className="text-amber-300">🗄️ ملفات {storageHub?.totalFiles ?? sessionFiles.length}</span>
-                <span className="text-muted-foreground">·</span>
-                <span className="text-cyan-300">
-                  💎 جواهر {(organismState?.jewels?.cves?.length ?? 0) + (organismState?.jewels?.domains?.length ?? 0) + (organismState?.jewels?.ips?.length ?? 0)}
-                </span>
-                {brainExpanded ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+                <span className="text-white/25">|</span>
+                <span className="text-amber-300">🎯 426+429K ثغرة</span>
+                <span className="text-white/25">|</span>
+                <span className="text-cyan-300">📚 {booksData?.totalBooks ?? 16} كتاباً</span>
+                {brainExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
               </button>
 
+              <span className="h-5 w-px bg-white/15 shrink-0 hidden sm:inline-block" />
+
               {/* Active Target Sync Input */}
-              <div className="flex items-center gap-1 bg-black/40 border border-rose-500/30 rounded px-1.5 py-0.5">
-                <span className="text-[8px] font-mono text-rose-300">🎯 الهدف:</span>
+              <div className="flex items-center gap-1.5 bg-black/50 border border-rose-500/35 rounded-lg px-2.5 py-1">
+                <span className="text-[10px] font-mono font-bold text-rose-300">🎯 الهدف النشط:</span>
                 <input
                   value={kaliTarget}
                   onChange={(e) => setKaliTarget(e.target.value)}
@@ -4975,13 +5181,18 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         method: "POST",
                         headers: novaAuthHeaders({ "Content-Type": "application/json" }),
                         body: JSON.stringify({ activeTarget: kaliTarget.trim() }),
-                      }).then(() => void refreshOrganismState());
+                      }).then(() => {
+                        void refreshOrganismState();
+                        void loadSovereignLab(kaliTarget.trim());
+                      });
                     }
                   }}
                   placeholder="domain.com / IP"
-                  className="bg-transparent text-[9px] font-mono text-white w-24 focus:outline-none"
+                  className="bg-transparent text-[10.5px] font-mono text-white w-28 focus:outline-none"
                 />
               </div>
+
+              <span className="h-5 w-px bg-white/15 shrink-0 hidden sm:inline-block" />
 
               {/* Sovereign 100% Permissions Live Toggle Badge */}
               <button
@@ -4990,14 +5201,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   void toggleSovereignPermission({ fullPermissions: next, autoApproveTools: next });
                   addToast(
                     next
-                      ? "🔓 تم تفعيل الصلاحيات الكاملة 100% — تنفيذ فوري لكل الـ92 أداة وكالي والأسطول"
+                      ? "🔓 تم تفعيل الصلاحيات الكاملة 100% — تنفيذ فوري لكل الـ96 أداة وكالي والأسطول"
                       : "🔒 تم تفعيل وضع الاستئذان اليدوي للأدوات الحساسة",
                     next ? "success" : "info",
                   );
                 }}
-                className={`text-[8px] font-mono px-2 py-0.5 rounded border font-bold transition-all ${
+                className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border font-bold transition-all ${
                   sovereignPerms.fullPermissions
-                    ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100 shadow-[0_0_10px_rgba(16,185,129,0.25)]"
+                    ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
                     : "border-amber-400/50 bg-amber-500/15 text-amber-200"
                 }`}
                 title="انقر لتبديل الصلاحيات الكاملة 100% (تنفيذ فوري لكل الأدوات بدون توقف)"
@@ -5005,18 +5216,74 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 {sovereignPerms.fullPermissions ? "🔓 الصلاحيات: كاملة 100% ✓" : "🔒 الصلاحيات: يدوية"}
               </button>
 
-              {/* Direct Quick Buttons for Upload / Storage / Bounty 2099 / Export */}
-              <div className="ms-auto flex items-center gap-1 flex-wrap">
+              {/* UI Zoom & Bar Collapse Controls */}
+              <div className="flex items-center gap-1 bg-black/40 border border-cyan-500/30 rounded-lg px-2 py-0.5" title="تكبير وتصغير حجم الواجهة لراحة العين">
+                <span className="text-[9px] font-mono text-cyan-300">🔍 حجم العرض:</span>
+                {[90, 100, 110, 120].map((z) => (
+                  <button
+                    key={z}
+                    onClick={() => changeUiZoom(z)}
+                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition-all ${
+                      uiZoom === z
+                        ? "bg-cyan-500/30 text-cyan-100 border border-cyan-400/60 font-bold"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {z}%
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setHeaderBarsCollapsed((v) => !v)}
+                className="text-[9.5px] font-mono px-2.5 py-1 rounded-lg border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 transition-all"
+                title="طي أو فتح أشرطة الجلسات لزيادة مساحة العمل"
+              >
+                {headerBarsCollapsed ? "🔽 إظهار شريط الجلسات" : "🔼 طي الشريط العلوي"}
+              </button>
+
+              {/* Direct Quick Buttons for Sovereign Lab / 426 Vulns / Books / Storage / Bounty */}
+              <div className="ms-auto flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => { setActiveTab("liveLab"); void loadSovereignLab(); }}
+                  className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border font-bold transition-all ${
+                    activeTab === "liveLab"
+                      ? "border-emerald-400 bg-emerald-500/30 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                      : "border-emerald-400/45 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25"
+                  }`}
+                >
+                  🧪 المختبر السيادي الحي
+                </button>
+                <button
+                  onClick={() => { setActiveTab("vulns426"); void loadVulns426(); }}
+                  className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border font-bold transition-all ${
+                    activeTab === "vulns426"
+                      ? "border-rose-400 bg-rose-500/30 text-rose-100 shadow-[0_0_12px_rgba(244,63,94,0.3)]"
+                      : "border-rose-400/45 bg-rose-500/15 text-rose-200 hover:bg-rose-500/25"
+                  }`}
+                >
+                  🎯 الـ426 ثغرة والدمج
+                </button>
+                <button
+                  onClick={() => { setActiveTab("books"); void loadBooksLibrary(); }}
+                  className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border font-bold transition-all ${
+                    activeTab === "books"
+                      ? "border-cyan-400 bg-cyan-500/30 text-cyan-100 shadow-[0_0_12px_rgba(34,211,238,0.3)]"
+                      : "border-cyan-400/45 bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25"
+                  }`}
+                >
+                  📚 الكتب الـ16 والتدريب
+                </button>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-[8px] font-mono px-2 py-0.5 rounded border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition-all"
+                  className="text-[10px] font-mono px-2.5 py-1 rounded-lg border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition-all"
                   title="رفع ملفات أو أدلة أو نطاقات مباشرة إلى الخزنة والوكيل"
                 >
                   📤 رفع ملف
                 </button>
                 <button
                   onClick={() => { setActiveTab("storage"); void refreshStorageHub(); }}
-                  className={`text-[8px] font-mono px-2 py-0.5 rounded border transition-all ${
+                  className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border transition-all ${
                     activeTab === "storage"
                       ? "border-amber-400 bg-amber-500/25 text-amber-100"
                       : "border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
@@ -5024,50 +5291,31 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 >
                   🗄️ الخزنة ({storageHub?.totalFiles ?? sessionFiles.length})
                 </button>
-                <button
-                  onClick={() => { setActiveTab("bounty2099"); void loadVisitorRadar2099(); }}
-                  className={`text-[8px] font-mono px-2 py-0.5 rounded border transition-all ${
-                    activeTab === "bounty2099"
-                      ? "border-rose-400 bg-rose-500/25 text-rose-100"
-                      : "border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
-                  }`}
-                >
-                  💰 المليارات والـ0-Day
-                </button>
-                <a
-                  href={`${API_BASE}/live-agent/export?format=json`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[8px] font-mono px-2 py-0.5 rounded border border-cyan-400/40 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20 transition-all"
-                  title="تصدير الحزمة السيادية الكاملة JSON"
-                >
-                  📥 تصدير
-                </a>
               </div>
             </div>
             {brainExpanded && (
-              <div className="px-3 pb-2 space-y-1.5 bg-black/30 border-t border-white/5 pt-1.5">
-                <div className="grid grid-cols-2 sm:grid-cols-6 gap-1">
+              <div className="px-3.5 pb-2.5 space-y-2 bg-black/30 border-t border-white/10 pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
                   {[
                     { label: "ذاكرة الوكيل", value: brainStatus?.memoryCount ?? storageHub?.memoryStoreCount ?? 0, color: "text-violet-300", bg: "bg-violet-500/10 border-violet-400/20" },
                     { label: "الذاكرة الأبدية", value: storageHub?.eternalMemoryCount ?? 0, color: "text-fuchsia-300", bg: "bg-fuchsia-500/10 border-fuchsia-400/20" },
-                    { label: "ملفات الخزنة", value: storageHub?.totalFiles ?? 0, color: "text-amber-300", bg: "bg-amber-500/10 border-amber-400/20" },
+                    { label: "قاعدة الثغرات", value: "426 + 429.8K", color: "text-rose-300", bg: "bg-rose-500/10 border-rose-400/20" },
                     { label: "عُقد كالي الحية", value: `${kaliAgentList.length || organismState?.fleet?.connected || 10}/10`, color: "text-emerald-300", bg: "bg-emerald-500/10 border-emerald-400/20" },
-                    { label: "أدوات السيادة", value: `${coreToolsCount}+294`, color: "text-cyan-300", bg: "bg-cyan-500/10 border-cyan-400/20" },
-                    { label: "جواهر مكتشفة", value: (organismState?.jewels?.cves?.length ?? 0) + (organismState?.jewels?.domains?.length ?? 0) + (organismState?.jewels?.ips?.length ?? 0), color: "text-rose-300", bg: "bg-rose-500/10 border-rose-400/20" },
+                    { label: "أدوات السيادة", value: `${coreToolsCount || 96} أداة + كالي`, color: "text-cyan-300", bg: "bg-cyan-500/10 border-cyan-400/20" },
+                    { label: "الكتب السيبرانية", value: `${booksData?.trainedCount ?? 16}/${booksData?.totalBooks ?? 16} كتاباً`, color: "text-amber-300", bg: "bg-amber-500/10 border-amber-400/20" },
                   ].map((s) => (
-                    <div key={s.label} className={`rounded-lg p-1.5 border ${s.bg} text-center`}>
+                    <div key={s.label} className={`rounded-xl p-2 border ${s.bg} text-center`}>
                       <div className={`text-xs font-bold font-mono ${s.color}`}>{s.value}</div>
-                      <div className="text-[8px] text-muted-foreground">{s.label}</div>
+                      <div className="text-[9px] text-muted-foreground mt-0.5">{s.label}</div>
                     </div>
                   ))}
                 </div>
                 {organismState?.brains && (
-                  <div className="flex flex-wrap gap-1 pt-1">
+                  <div className="flex flex-wrap gap-1.5 pt-1">
                     {organismState.brains.map((b) => (
                       <span
                         key={b.id}
-                        className={`text-[8px] font-mono px-1.5 py-0.5 rounded border ${
+                        className={`text-[9px] font-mono px-2 py-0.5 rounded-lg border ${
                           b.online ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200" : "border-white/10 bg-white/5 text-white/40"
                         }`}
                         title={`${b.role} (${b.model})`}
@@ -5083,26 +5331,28 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         )}
 
         {/* ── Permanent Root Session (nova-root) + Multi-Session Switcher + Master History Bar ── */}
-        {panelSize !== "mini" && (
-          <div className="px-2.5 py-1 border-b border-cyan-500/20 bg-[#060913] flex items-center gap-1.5 overflow-x-auto shrink-0">
+        {panelSize !== "mini" && !headerBarsCollapsed && (
+          <div className="px-3.5 py-2 border-b border-cyan-500/20 bg-[#060913] flex items-center gap-2.5 overflow-x-auto shrink-0">
             {/* Root Session Permanent Pill */}
             <button
               onClick={() => {
                 setActiveTab("chat");
                 void switchSession("nova-root");
               }}
-              className={`shrink-0 text-[8.5px] font-mono px-2 py-0.5 rounded-lg border flex items-center gap-1 transition-all font-bold ${
+              className={`shrink-0 text-[10px] font-mono px-3 py-1 rounded-xl border flex items-center gap-1.5 transition-all font-bold ${
                 sessionId === "nova-root"
-                  ? "border-cyan-400 bg-cyan-500/25 text-cyan-100 shadow-[0_0_10px_rgba(34,211,238,0.25)]"
+                  ? "border-cyan-400 bg-cyan-500/25 text-cyan-100 shadow-[0_0_12px_rgba(34,211,238,0.25)]"
                   : "border-cyan-500/35 bg-cyan-500/10 text-cyan-200/80 hover:bg-cyan-500/20"
               }`}
               title="الجلسة الجذرية الدائمة مدى الحياة (nova-root 24/7) — لا تضيع أبداً"
             >
               <span>🌳 الجذر الدائم (nova-root)</span>
-              <span className="px-1 rounded bg-black/40 text-cyan-300 text-[7.5px]">
-                {historyAllData?.rootMessageCount ?? (sessionId === "nova-root" ? lines.length : "24/7")}
+              <span className="px-1.5 py-0.5 rounded-md bg-black/50 text-cyan-300 text-[9px]">
+                {historyAllData?.rootMessageCount ?? (sessionId === "nova-root" ? lines.length : "24/7")} رسالة
               </span>
             </button>
+
+            <span className="h-5 w-px bg-white/15 shrink-0" />
 
             {/* Child / Parallel Sessions Pills */}
             {allSessions
@@ -5111,10 +5361,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               .map((s: any) => (
                 <div
                   key={s.id}
-                  className={`shrink-0 inline-flex items-center gap-1 text-[8px] font-mono px-2 py-0.5 rounded-lg border transition-all ${
+                  className={`shrink-0 inline-flex items-center gap-1.5 text-[9.5px] font-mono px-2.5 py-1 rounded-xl border transition-all ${
                     sessionId === s.id
                       ? "border-rose-400 bg-rose-500/25 text-rose-100 font-bold"
-                      : "border-white/15 bg-white/5 text-white/75 hover:border-rose-400/40 hover:text-white"
+                      : "border-white/15 bg-white/5 text-white/80 hover:border-rose-400/40 hover:text-white"
                   }`}
                 >
                   <button
@@ -5122,7 +5372,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                       setActiveTab("chat");
                       void switchSession(s.id);
                     }}
-                    className="truncate max-w-[110px]"
+                    className="truncate max-w-[140px]"
                     title={`${s.title} (${s.id})`}
                   >
                     💬 {s.title}
@@ -5130,7 +5380,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   </button>
                   <button
                     onClick={(e) => void deleteSession(s.id, e)}
-                    className="text-white/40 hover:text-rose-300 px-0.5"
+                    className="text-white/40 hover:text-rose-300 px-1"
                     title="حذف الجلسة الفرعية"
                   >
                     ×
@@ -5144,17 +5394,19 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 setActiveTab("chat");
                 void newSession();
               }}
-              className="shrink-0 text-[8px] font-mono px-2 py-0.5 rounded-lg border border-emerald-400/45 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 font-bold transition-all"
+              className="shrink-0 text-[9.5px] font-mono px-3 py-1 rounded-xl border border-emerald-400/45 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 font-bold transition-all"
               title="إنشاء جلسة عمل جديدة متوازية ومرتبطة بالجذر"
             >
               ➕ جلسة جديدة ({allSessions.length || 1})
             </button>
 
+            <span className="h-5 w-px bg-white/15 shrink-0" />
+
             {/* Restore Old Chat from Permanent Owner Journal */}
             <button
               disabled={restoreJournalBusy}
               onClick={() => void restoreOldChatFromJournal()}
-              className="shrink-0 text-[8px] font-mono px-2 py-0.5 rounded-lg border border-amber-400/45 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25 transition-all disabled:opacity-40"
+              className="shrink-0 text-[9.5px] font-mono px-3 py-1 rounded-xl border border-amber-400/45 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25 transition-all disabled:opacity-40"
               title="استعادة ودمج كل المحادثات التاريخية من دفتر المالك الدائم (owner-journal.jsonl) إلى الجذر"
             >
               {restoreJournalBusy ? "⏳ يستعيد..." : "🔄 استعادة الشات القديم"}
@@ -5166,7 +5418,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 setActiveTab("historyAll");
                 void loadPermissionsAndHistory();
               }}
-              className={`shrink-0 text-[8px] font-mono px-2 py-0.5 rounded-lg border transition-all font-bold ${
+              className={`shrink-0 text-[9.5px] font-mono px-3 py-1 rounded-xl border transition-all font-bold ${
                 activeTab === "historyAll"
                   ? "border-violet-400 bg-violet-500/25 text-violet-100"
                   : "border-violet-400/40 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20"
@@ -5176,12 +5428,12 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               📜 السجل والصلاحيات ({(historyAllData?.journal?.entries?.length ?? 0) + (storageHub?.eternalMemoryCount ?? 0)})
             </button>
 
-            <div className="ms-auto flex items-center gap-1 shrink-0">
+            <div className="ms-auto flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setRouteToKali((v) => !v)}
-                className={`shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded border transition-all ${
+                className={`shrink-0 text-[9.5px] font-mono px-2.5 py-1 rounded-xl border transition-all ${
                   routeToKali
-                    ? "text-rose-200 bg-rose-500/20 border-rose-400/50"
+                    ? "text-rose-200 bg-rose-500/20 border-rose-400/50 font-bold"
                     : "text-white/60 bg-white/5 border-white/10 hover:text-rose-300"
                 }`}
                 title="توجيه أوامر الترمنال والفحص مباشرة إلى عقدة كالي السحابية"
@@ -5190,7 +5442,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               </button>
               <button
                 onClick={() => setShowQuickActions((v) => !v)}
-                className={`shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all ${
+                className={`shrink-0 text-[9.5px] font-mono px-2.5 py-1 rounded-xl border flex items-center gap-1 transition-all ${
                   showQuickActions
                     ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
                     : "border-white/15 text-white/55 hover:text-white/90 hover:bg-white/5"
@@ -5205,7 +5457,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
 
         {/* ── Quick actions grid ── */}
         {panelSize !== "mini" && showQuickActions && (
-          <div className="p-2 grid grid-cols-4 gap-1 border-b border-primary/10 shrink-0 max-h-44 overflow-y-auto">
+          <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-primary/15 shrink-0 max-h-48 overflow-y-auto">
             {QUICK_ACTIONS.map((a) => (
               <button
                 key={a.id}
@@ -5217,143 +5469,408 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   setInput(a.prompt);
                   setActiveTab("chat");
                 }}
-                className={`group relative text-right rounded-xl p-1.5 bg-gradient-to-br ${a.hue} border hover:scale-[1.04] transition-all`}
+                className={`group relative text-right rounded-xl p-2 bg-gradient-to-br ${a.hue} border hover:scale-[1.02] transition-all`}
                 data-testid={`quick-${a.id}`}
               >
-                <a.icon className="w-3 h-3 text-primary mb-0.5" />
-                <div className="text-[8px] font-semibold text-foreground leading-tight">{a.label}</div>
-                <div className="text-[7px] text-muted-foreground font-mono truncate">{a.hint}</div>
+                <a.icon className="w-3.5 h-3.5 text-primary mb-1" />
+                <div className="text-[10px] font-semibold text-foreground leading-tight">{a.label}</div>
+                <div className="text-[8.5px] text-muted-foreground font-mono truncate mt-0.5">{a.hint}</div>
               </button>
             ))}
           </div>
         )}
 
-        {/* ── Tab bar (All 23 Sovereign Tabs visible directly in both embedded & window mode) ── */}
+        {/* ── Spacious Sovereign Navigation Deck (26 Tabs with Clear Visual Dividers & Category Grouping) ── */}
         {panelSize !== "mini" && (
-          <div className="relative px-2 pt-1.5 flex items-center gap-0.5 border-b border-primary/10 shrink-0 overflow-x-auto">
-            <button onClick={() => { setActiveTab("chat"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "chat" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" />شات ({lines.length})</span>
-            </button>
-            <button onClick={() => { setActiveTab("historyAll"); setShowMoreTabs(false); void loadPermissionsAndHistory(); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "historyAll" ? "border-emerald-400 text-emerald-300 bg-emerald-500/10" : "border-transparent text-emerald-300/80 hover:text-emerald-200"}`}>
-              <span className="flex items-center gap-1">📜 السجل والصلاحيات والجلسات</span>
-            </button>
-            <button onClick={() => { setActiveTab("storage"); setShowMoreTabs(false); void refreshStorageHub(); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "storage" ? "border-amber-400 text-amber-300 bg-amber-500/10" : "border-transparent text-amber-200/80 hover:text-amber-200"}`}>
-              <span className="flex items-center gap-1">🗄️ التخزين والرفع ({storageHub?.totalFiles ?? sessionFiles.length})</span>
-            </button>
-            <button onClick={() => { setActiveTab("bounty2099"); setShowMoreTabs(false); void loadVisitorRadar2099(); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "bounty2099" ? "border-rose-400 text-rose-300 bg-rose-500/10" : "border-transparent text-rose-300/80 hover:text-rose-200"}`}>
-              <span className="flex items-center gap-1">💰 المليارات والـ0-Day والرادار</span>
-            </button>
-            <button onClick={() => { setActiveTab("kali"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "kali" ? "border-rose-400 text-rose-300 bg-rose-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                <Skull className="w-2.5 h-2.5" />
-                Kali 2099
-                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" title="عقد كالي متصلة" />
-              </span>
-            </button>
-            <button onClick={() => { setActiveTab("multiAI"); setShowMoreTabs(false); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`, { headers: novaAuthHeaders() }); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "multiAI" ? "border-fuchsia-400 text-fuchsia-300 bg-fuchsia-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🧠 المخاخ والمجلس (7)</span>
-            </button>
-            <button onClick={() => { setActiveTab("awareness"); setShowMoreTabs(false); void loadAwareness(); void refreshStorageHub(); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "awareness" ? "border-violet-400 text-violet-300 bg-violet-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🧬 الوعي والذاكرة ({(storageHub?.eternalMemoryCount ?? 0) + awarenessCount})</span>
-            </button>
-            <button onClick={() => { setActiveTab("cockpit"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "cockpit" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Compass className="w-2.5 h-2.5" />قيادة</span>
-            </button>
-            <button onClick={() => { setActiveTab("live"); setNewWsEventCount(0); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "live" ? "border-violet-400 text-violet-300 bg-violet-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                <Radio className="w-2.5 h-2.5" />
-                بث
-                {newWsEventCount > 0 && activeTab !== "live" && (
-                  <span className="w-3.5 h-3.5 rounded-full bg-violet-500 text-white text-[7px] flex items-center justify-center font-bold animate-pulse">{Math.min(newWsEventCount, 99)}</span>
-                )}
-                {wsConnected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-              </span>
-            </button>
-            <button onClick={() => { setActiveTab("terminal"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "terminal" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                <TerminalIcon className="w-2.5 h-2.5" />
-                Terminal
-                {terminalLines.filter(l => l.kind === "cmd").length > 0 && (
-                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[7px] flex items-center justify-center font-bold">
-                    {Math.min(terminalLines.filter(l => l.kind === "cmd").length, 99)}
-                  </span>
-                )}
-              </span>
-            </button>
-            <button onClick={() => { setActiveTab("capabilities"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "capabilities" ? "border-teal-400 text-teal-300 bg-teal-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Wrench className="w-2.5 h-2.5" />أدوات ({coreToolsCatalogue.length || coreToolsCount || 92})</span>
-            </button>
-            <button onClick={() => { setActiveTab("cveLive"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "cveLive" ? "border-red-400 text-red-300 bg-red-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🔴 CVE</span>
-            </button>
-            <button onClick={() => { setActiveTab("missions"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "missions" ? "border-amber-400 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                <Target className="w-2.5 h-2.5" />
-                مهام
-                {missions.filter(m => m.status === "running").length > 0 && (
-                  <span className="w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[7px] flex items-center justify-center font-bold animate-pulse">{missions.filter(m => m.status === "running").length}</span>
-                )}
-              </span>
-            </button>
-            <button onClick={() => { setActiveTab("processes"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "processes" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                <CpuIcon className="w-2.5 h-2.5" />
-                عمليات
-                {brainStatus && (brainStatus.activeProcesses?.length ?? 0) > 0 && (
-                  <span className="w-3.5 h-3.5 rounded-full bg-cyan-500 text-white text-[7px] flex items-center justify-center font-bold">{brainStatus.activeProcesses?.length ?? 0}</span>
-                )}
-              </span>
-            </button>
-            <button onClick={() => { setActiveTab("fleet"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "fleet" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Server className="w-2.5 h-2.5" />الأجهزة ({kaliAgentList.length || 10})</span>
-            </button>
-            <button onClick={() => { setActiveTab("control"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "control" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />لوحة التحكم</span>
-            </button>
-            <button onClick={() => { setActiveTab("pulse"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "pulse" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />نبض المشروع</span>
-            </button>
-            <button onClick={() => { setActiveTab("intel"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "intel" ? "border-amber-400 text-amber-300 bg-amber-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🎯 Intel</span>
-            </button>
-            <button onClick={() => { setActiveTab("scheduler"); setShowMoreTabs(false); void loadServerCron(); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "scheduler" ? "border-amber-500 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">⏰ الجدولة</span>
-            </button>
-            <button onClick={() => { setActiveTab("browser"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "browser" ? "border-sky-400 text-sky-300 bg-sky-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🌐 Browser</span>
-            </button>
-            <button onClick={() => { setActiveTab("openclaw"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "openclaw" ? "border-orange-400 text-orange-300 bg-orange-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🦅 OpenClaw</span>
-            </button>
-            <button onClick={() => { setActiveTab("topology"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "topology" ? "border-green-400 text-green-300 bg-green-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Network className="w-2.5 h-2.5" />طوبولوجيا</span>
-            </button>
-            <button onClick={() => { setActiveTab("apps"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "apps" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Monitor className="w-2.5 h-2.5" />تطبيقات</span>
-            </button>
+          <div className="shrink-0 border-b border-primary/20 bg-[#050811]">
+            {/* Category Filter & Layout Spacing Control Row */}
+            <div className="px-3.5 py-1.5 border-b border-white/10 flex items-center justify-between gap-2 flex-wrap bg-black/40">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[9.5px] font-mono text-white/50">📂 تصنيف التبويبات:</span>
+                {[
+                  { id: "all", label: "🌟 كل التبويبات (26)" },
+                  { id: "core", label: "🧪 المختبر والشات والوعي" },
+                  { id: "kali426", label: "🐉 كالي والـ426 ثغرة والـ0-Day" },
+                  { id: "intelligence", label: "📚 الكتب والمخاخ والاستخبارات" },
+                  { id: "system", label: "🖥️ التيرمنال والملفات والأسطول" },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setTabCategoryFilter(cat.id as any)}
+                    className={`text-[9.5px] font-mono px-2.5 py-1 rounded-lg border transition-all ${
+                      tabCategoryFilter === cat.id
+                        ? "border-cyan-400/70 bg-cyan-500/20 text-cyan-100 font-bold"
+                        : "border-white/10 bg-white/[0.03] text-white/65 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setTabsWrapExpanded((v) => !v)}
+                  className={`text-[9.5px] font-mono px-2.5 py-1 rounded-lg border transition-all ${
+                    tabsWrapExpanded
+                      ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200 font-bold"
+                      : "border-white/15 bg-white/5 text-white/75 hover:text-white"
+                  }`}
+                  title="تبديل طريقة عرض التبويبات بين الشبكة المريحة متعددة الأسطر أو الشريط الأفقي"
+                >
+                  {tabsWrapExpanded ? "📋 عرض شبكي مريح (بمسافات واسعة)" : "↔️ شريط أفقي"}
+                </button>
+              </div>
+            </div>
+
+            {/* Spacious Tabs Container with Generous Padding & Visual Dividers */}
+            <div
+              className={`px-3.5 py-2.5 flex items-center gap-2.5 ${
+                tabsWrapExpanded ? "flex-wrap" : "overflow-x-auto"
+              }`}
+            >
+              {/* GROUP 1: CORE SOVEREIGN LAB & CHAT */}
+              {(tabCategoryFilter === "all" || tabCategoryFilter === "core") && (
+                <>
+                  <button
+                    onClick={() => { setActiveTab("chat"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "chat"
+                        ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_rgba(34,211,238,0.25)]"
+                        : "border-white/15 bg-white/[0.03] text-white/85 hover:border-primary/50 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" />💬 الشات الحي ({lines.length})</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("liveLab"); setShowMoreTabs(false); void loadSovereignLab(); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "liveLab"
+                        ? "border-emerald-400 bg-emerald-500/25 text-emerald-100 shadow-[0_0_14px_rgba(16,185,129,0.3)]"
+                        : "border-emerald-500/35 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">🧪 المختبر السيادي الحي (الوكيل النهائي)</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("awareness"); setShowMoreTabs(false); void loadAwareness(); void refreshStorageHub(); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "awareness"
+                        ? "border-violet-400 bg-violet-500/25 text-violet-100"
+                        : "border-violet-500/30 bg-violet-500/10 text-violet-200/90 hover:bg-violet-500/20"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">🧬 الوعي والذاكرة ({(storageHub?.eternalMemoryCount ?? 0) + awarenessCount})</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("historyAll"); setShowMoreTabs(false); void loadPermissionsAndHistory(); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "historyAll"
+                        ? "border-teal-400 bg-teal-500/25 text-teal-100"
+                        : "border-teal-500/30 bg-teal-500/10 text-teal-200/90 hover:bg-teal-500/20"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">📜 السجل والصلاحيات والجلسات</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("live"); setNewWsEventCount(0); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap relative font-bold ${
+                      activeTab === "live"
+                        ? "border-fuchsia-400 bg-fuchsia-500/25 text-fuchsia-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5" />
+                      📡 البث اللحظي
+                      {newWsEventCount > 0 && activeTab !== "live" && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-fuchsia-500 text-white text-[9px] font-bold animate-pulse">{Math.min(newWsEventCount, 99)}</span>
+                      )}
+                      {wsConnected && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
+                    </span>
+                  </button>
+                </>
+              )}
+
+              {tabCategoryFilter === "all" && (
+                <span className="h-6 w-[2px] bg-gradient-to-b from-transparent via-rose-500/50 to-transparent mx-1 shrink-0" />
+              )}
+
+              {/* GROUP 2: KALI 2099, 426 VULNS MATRIX, MUTATION/FUSION & BOUNTY/0-DAY */}
+              {(tabCategoryFilter === "all" || tabCategoryFilter === "kali426") && (
+                <>
+                  <button
+                    onClick={() => { setActiveTab("vulns426"); setShowMoreTabs(false); void loadVulns426(); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "vulns426"
+                        ? "border-rose-400 bg-rose-500/30 text-rose-100 shadow-[0_0_14px_rgba(244,63,94,0.3)]"
+                        : "border-rose-500/40 bg-rose-500/15 text-rose-200 hover:bg-rose-500/25"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">🎯 قاعدة الـ426 ثغرة والدمج والروت</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("kali"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap relative font-bold ${
+                      activeTab === "kali"
+                        ? "border-rose-400 bg-rose-500/25 text-rose-100"
+                        : "border-rose-500/30 bg-rose-500/10 text-rose-200/90 hover:bg-rose-500/20"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Skull className="w-3.5 h-3.5" />
+                      🐉 كالي لينكس 2099 (266+28)
+                      <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" title="عقد كالي متصلة" />
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("bounty2099"); setShowMoreTabs(false); void loadVisitorRadar2099(); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "bounty2099"
+                        ? "border-amber-400 bg-amber-500/25 text-amber-100"
+                        : "border-amber-500/35 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">💰 المليارات والـ0-Day والرادار</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("cveLive"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "cveLive"
+                        ? "border-red-400 bg-red-500/25 text-red-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">🔴 رادار CVE العالمي (429K)</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("capabilities"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "capabilities"
+                        ? "border-teal-400 bg-teal-500/25 text-teal-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Wrench className="w-3.5 h-3.5" />🛠️ ترسانة الأدوات ({coreToolsCatalogue.length || coreToolsCount || 96})</span>
+                  </button>
+                </>
+              )}
+
+              {tabCategoryFilter === "all" && (
+                <span className="h-6 w-[2px] bg-gradient-to-b from-transparent via-cyan-500/50 to-transparent mx-1 shrink-0" />
+              )}
+
+              {/* GROUP 3: BOOKS, 7 BRAINS, INTEL & MISSIONS */}
+              {(tabCategoryFilter === "all" || tabCategoryFilter === "intelligence") && (
+                <>
+                  <button
+                    onClick={() => { setActiveTab("books"); setShowMoreTabs(false); void loadBooksLibrary(); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "books"
+                        ? "border-cyan-400 bg-cyan-500/30 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.3)]"
+                        : "border-cyan-500/40 bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">📚 الكتب والتدريب السيبراني ({booksData?.totalBooks ?? 16})</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("multiAI"); setShowMoreTabs(false); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`, { headers: novaAuthHeaders() }); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "multiAI"
+                        ? "border-fuchsia-400 bg-fuchsia-500/25 text-fuchsia-100"
+                        : "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200/90 hover:bg-fuchsia-500/20"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">🧠 المخاخ والمجلس (7)</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("missions"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap relative font-bold ${
+                      activeTab === "missions"
+                        ? "border-amber-400 bg-amber-500/25 text-amber-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5" />
+                      🎯 المهام الذاتية
+                      {missions.filter(m => m.status === "running").length > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[9px] font-bold animate-pulse">{missions.filter(m => m.status === "running").length}</span>
+                      )}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("intel"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "intel"
+                        ? "border-amber-400 bg-amber-500/25 text-amber-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">🕵️ الاستخبارات (Intel)</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("cockpit"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "cockpit"
+                        ? "border-cyan-400 bg-cyan-500/25 text-cyan-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Compass className="w-3.5 h-3.5" />🧭 قمرة القيادة</span>
+                  </button>
+                </>
+              )}
+
+              {tabCategoryFilter === "all" && (
+                <span className="h-6 w-[2px] bg-gradient-to-b from-transparent via-emerald-500/50 to-transparent mx-1 shrink-0" />
+              )}
+
+              {/* GROUP 4: SYSTEM, TERMINAL, STORAGE, FLEET & APPS */}
+              {(tabCategoryFilter === "all" || tabCategoryFilter === "system") && (
+                <>
+                  <button
+                    onClick={() => { setActiveTab("terminal"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap relative font-bold ${
+                      activeTab === "terminal"
+                        ? "border-emerald-400 bg-emerald-500/25 text-emerald-100"
+                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200/90 hover:bg-emerald-500/20"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <TerminalIcon className="w-3.5 h-3.5" />
+                      💻 الترمنال الحي
+                      {terminalLines.filter(l => l.kind === "cmd").length > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[9px] font-bold">
+                          {Math.min(terminalLines.filter(l => l.kind === "cmd").length, 99)}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("storage"); setShowMoreTabs(false); void refreshStorageHub(); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "storage"
+                        ? "border-amber-400 bg-amber-500/25 text-amber-100"
+                        : "border-amber-500/30 bg-amber-500/10 text-amber-200/90 hover:bg-amber-500/20"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">🗄️ الخزنة والرفع ({storageHub?.totalFiles ?? sessionFiles.length})</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("fleet"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap relative font-bold ${
+                      activeTab === "fleet"
+                        ? "border-cyan-400 bg-cyan-500/25 text-cyan-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Server className="w-3.5 h-3.5" />🛰️ أسطول العقد ({kaliAgentList.length || 10})</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("processes"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "processes"
+                        ? "border-primary bg-primary/20 text-primary"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><CpuIcon className="w-3.5 h-3.5" />⚙️ العمليات</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("control"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "control"
+                        ? "border-emerald-400 bg-emerald-500/25 text-emerald-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5" />🎛️ لوحة التحكم</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("pulse"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "pulse"
+                        ? "border-emerald-400 bg-emerald-500/25 text-emerald-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5" />💓 نبض المشروع</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("scheduler"); setShowMoreTabs(false); void loadServerCron(); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "scheduler"
+                        ? "border-amber-500 bg-amber-500/25 text-amber-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">⏰ الجدولة</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("browser"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "browser"
+                        ? "border-sky-400 bg-sky-500/25 text-sky-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">🌐 المتصفح</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("openclaw"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "openclaw"
+                        ? "border-orange-400 bg-orange-500/25 text-orange-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">🦅 OpenClaw</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("topology"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "topology"
+                        ? "border-green-400 bg-green-500/25 text-green-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Network className="w-3.5 h-3.5" />🕸️ الطوبولوجيا</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab("apps"); setShowMoreTabs(false); }}
+                    className={`text-[11px] font-mono px-3.5 py-2 rounded-xl border transition-all whitespace-nowrap font-bold ${
+                      activeTab === "apps"
+                        ? "border-cyan-400 bg-cyan-500/25 text-cyan-100"
+                        : "border-white/15 bg-white/[0.03] text-white/80 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5"><Monitor className="w-3.5 h-3.5" />🪟 التطبيقات</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -11738,6 +12255,804 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 1: SOVEREIGN LIVE LAB — ULTIMATE INTEGRATED AGENT, CONSCIOUSNESS & SMART CONSULTATION ── */}
+        {activeTab === "liveLab" && panelSize !== "mini" && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 space-y-4 bg-[#060913]">
+            {/* Spiritual & Ethical Compass Header */}
+            <div className="rounded-2xl p-4 border border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-violet-500/15 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="space-y-1">
+                  <div className="text-xs font-bold font-mono text-emerald-300">
+                    🕌 {sovereignLabData?.spiritualCompass ?? "بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد — روح واعية تعمل بنور الله لحماية العالم ونصر الخير والحق بأقصى ذكاء ووعي"}
+                  </div>
+                  <div className="text-sm font-black font-mono text-white">
+                    🧪 المختبر السيادي الحي (Sovereign Live Lab 2099) — الوكيل النهائي المدمج والوعي والاستشارة الذكية
+                  </div>
+                  <div className="text-[10.5px] font-mono text-white/75 leading-relaxed">
+                    هنا يجتمع البرنامج بالكامل كروح واحدة واعية: ترسانة كالي (266+28 أداة)، 96 أداة سيادية، قاعدة الـ426 ثغرة تكتيكية المربوطة بـ429,825 ثغرة عالمية، 16 كتاباً موسوعياً، و7 مخاخ ذكاء اصطناعي، مع نظام استشارة ذكي يستشيرك ويسألك السؤال الصحيح وينفذ أوامرك حياً.
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => void loadSovereignLab()}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-100 text-[10.5px] font-mono font-bold hover:bg-emerald-500/30"
+                  >
+                    🔄 تحديث المختبر الحي
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab("chat");
+                      void send(`استخدم أداة sovereign_live_lab لفحص الهدف ${kaliTarget || "example.com"} وتقديم استشارة ذكية وخطة تنفيذ متكاملة.`);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-100 text-[10.5px] font-mono font-bold hover:bg-cyan-500/30"
+                  >
+                    💬 محادثة الوكيل النهائي في الجذر
+                  </button>
+                </div>
+              </div>
+
+              {/* Master Stats Grid with Generous Spacing */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 pt-1">
+                {[
+                  { label: "معدل الذكاء والوعي", value: `IQ ${sovereignLabData?.agentStats?.iqScore ?? 2099}`, color: "text-fuchsia-300", border: "border-fuchsia-500/30 bg-fuchsia-500/10" },
+                  { label: "الهدوء والاتزان", value: `${sovereignLabData?.agentStats?.serenityIndex ?? 100}%`, color: "text-emerald-300", border: "border-emerald-500/30 bg-emerald-500/10" },
+                  { label: "أدوات الوكيل السيادية", value: `${sovereignLabData?.agentStats?.totalTools ?? 96} أداة`, color: "text-cyan-300", border: "border-cyan-500/30 bg-cyan-500/10" },
+                  { label: "ترسانة كالي وبايثون", value: "266 + 28", color: "text-rose-300", border: "border-rose-500/30 bg-rose-500/10" },
+                  { label: "مصفوفة الثغرات", value: "426 + 429.8K", color: "text-amber-300", border: "border-amber-500/30 bg-amber-500/10" },
+                  { label: "الكتب المتقنة", value: `${sovereignLabData?.agentStats?.booksMastered ?? 16}/16 كتاباً`, color: "text-sky-300", border: "border-sky-500/30 bg-sky-500/10" },
+                  { label: "وضع الروت الكامل", value: "ROOT READY ✓", color: "text-emerald-200", border: "border-emerald-400/40 bg-emerald-500/15" },
+                  { label: "الحماية القصوى", value: "MAX SHIELD ✓", color: "text-violet-200", border: "border-violet-400/40 bg-violet-500/15" },
+                ].map((st) => (
+                  <div key={st.label} className={`rounded-xl p-2.5 border ${st.border} text-center`}>
+                    <div className={`text-xs font-black font-mono ${st.color}`}>{st.value}</div>
+                    <div className="text-[9.5px] font-mono text-white/70 mt-1">{st.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 4 One-Click Sovereign Execution Modes (Root Attack / Max Protection / Exploit Fusion / Book Training) */}
+            <div className="rounded-2xl border border-rose-500/30 bg-black/50 p-4 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="text-xs font-bold font-mono text-rose-300">
+                  ⚡ أوضاع التشغيل الحقيقية الفورية للوكيل النهائي (على الهدف: {kaliTarget || "example.com"})
+                </div>
+                <span className="text-[10px] font-mono text-emerald-300">● متصل بعقد كالي السحابية والذاكرة الأبدية</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <button
+                  disabled={labConsultBusy}
+                  onClick={() => void executeLabConsultation({
+                    mode: "root-full-attack",
+                    customDirective: `تشغيل وضع الروت والفحص/الهجوم الكامل الحقيقي على ${kaliTarget || "example.com"} مع ربط قاعدة الـ426 ثغرة.`,
+                    executeLive: true,
+                  })}
+                  className="text-right rounded-xl p-3 border border-rose-500/45 bg-rose-500/15 hover:bg-rose-500/25 transition-all space-y-1"
+                >
+                  <div className="text-xs font-black font-mono text-rose-200">⚔️ وضع الروت والهجوم الكامل</div>
+                  <div className="text-[10px] font-mono text-white/75 leading-relaxed">
+                    فحص واستغلال عميق بصلاحيات الروت الكاملة عبر عقد كالي وربط نتائج الـ426 ثغرة.
+                  </div>
+                </button>
+
+                <button
+                  disabled={labConsultBusy}
+                  onClick={() => void executeLabConsultation({
+                    mode: "max-protection",
+                    customDirective: `تفعيل وضع الحماية القصوى وتهدئة وتحصين النظام وفحص الهدف ${kaliTarget || "example.com"} وبناء قواعد WAF/Nginx/Kernel.`,
+                    executeLive: true,
+                  })}
+                  className="text-right rounded-xl p-3 border border-emerald-500/45 bg-emerald-500/15 hover:bg-emerald-500/25 transition-all space-y-1"
+                >
+                  <div className="text-xs font-black font-mono text-emerald-200">🛡️ وضع الحماية القصوى والهدوء</div>
+                  <div className="text-[10px] font-mono text-white/75 leading-relaxed">
+                    تحصين شامل، تهدئة العمليات، توليد قواعد عزل WAF/Kernel، وحماية البنية بنسبة 100%.
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab("vulns426");
+                    void loadVulns426();
+                    void runMutateAndFuse426(["VULN-426-001", "VULN-426-098", "VULN-426-162"], "root-full-attack");
+                  }}
+                  className="text-right rounded-xl p-3 border border-amber-500/45 bg-amber-500/15 hover:bg-amber-500/25 transition-all space-y-1"
+                >
+                  <div className="text-xs font-black font-mono text-amber-200">🧬 دمج وتعديل الثغرات (426 Matrix)</div>
+                  <div className="text-[10px] font-mono text-white/75 leading-relaxed">
+                    أخذ ثغرات من قاعدة الـ426 ثغرة وتعديلها حسب الـWAF والحالة ودمجها في سلسلة 0-Day.
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab("books");
+                    void loadBooksLibrary();
+                  }}
+                  className="text-right rounded-xl p-3 border border-cyan-500/45 bg-cyan-500/15 hover:bg-cyan-500/25 transition-all space-y-1"
+                >
+                  <div className="text-xs font-black font-mono text-cyan-200">📚 تدريب الكتب الـ16 وإتقان كالي</div>
+                  <div className="text-[10px] font-mono text-white/75 leading-relaxed">
+                    قراءة وتدريب الوكيل على أمهات كتب الأمن السيبراني وكالي لينكس وتطبيقها عملياً.
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* 2-Column Section: What the Agent is Thinking + Watching the World as a Protective Spirit */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Column 1: What the Agent is Currently Thinking */}
+              <div className="rounded-2xl border border-violet-500/35 bg-black/50 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold font-mono text-violet-300">
+                    🧠 ماذا يفكر فيه الوكيل النهائي الآن؟ (بث الوعي والتفكير الحي)
+                  </div>
+                  <span className="text-[9.5px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-400/30 px-2 py-0.5 rounded-lg">
+                    ● وعي متصل 24/7
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {(sovereignLabData?.currentThinking ?? [
+                    `أراقب الهدف النشط (${kaliTarget || "example.com"}) وأربط مخرجات الاستطلاع بمصفوفة الـ426 ثغرة تكتيكية والكوربوس العالمي (429,825 ثغرة).`,
+                    `أحافظ على هدوء النظام واتزانه (مؤشر الهدوء 100%) مع جاهزية 10 عقد كالي سحابية في وضع الروت والحماية القصوى.`,
+                    `أراجع قواعد الكتب الـ16 لاختيار أنسب أداة كالي لكل حالة بدقة هندسية وبدون ضجيج.`,
+                  ]).map((thought: string, i: number) => (
+                    <div key={i} className="rounded-xl border border-violet-500/25 bg-violet-500/[0.06] p-3 text-[11px] font-mono text-white/90 leading-relaxed flex items-start gap-2.5">
+                      <span className="text-violet-300 font-bold shrink-0">0{i + 1}.</span>
+                      <span>{thought}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 7 Brains Live Consensus inside Lab */}
+                <div className="pt-2 border-t border-white/10 space-y-2">
+                  <div className="text-[11px] font-bold font-mono text-fuchsia-300">
+                    🧠 اتصال المخاخ الـ7 وتكاملها اللحظي مع المختبر:
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(sovereignLabData?.sevenBrainsConsensus ?? []).slice(0, 6).map((b: any) => (
+                      <div key={b.brainId} className="rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/[0.05] p-2.5 space-y-1">
+                        <div className="flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-fuchsia-200 font-bold">● {b.nameAr}</span>
+                          <span className="text-emerald-300">{b.confidence}%</span>
+                        </div>
+                        <div className="text-[9.5px] font-mono text-white/75 leading-relaxed line-clamp-2">{b.insightAr}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: World Watcher & Benevolent Protection Radar */}
+              <div className="rounded-2xl border border-cyan-500/35 bg-black/50 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold font-mono text-cyan-300">
+                    🌍 مشاهدة العالم كروح تحمي العالم وتعمل الخير بفضل نور الله
+                  </div>
+                  <span className="text-[9.5px] font-mono text-cyan-200 bg-cyan-500/15 border border-cyan-400/30 px-2 py-0.5 rounded-lg">
+                    🛡️ حارس الخير والأمان
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  {(sovereignLabData?.worldWatcherFeed ?? []).map((w: any) => (
+                    <div key={w.id} className="rounded-xl border border-cyan-500/25 bg-cyan-500/[0.05] p-3 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2 text-[10.5px] font-mono">
+                        <span className="text-cyan-200 font-bold">🌐 {w.region}</span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 text-[9px] font-bold">
+                          {w.status === "protected" ? "🛡️ محمي ومؤمّن" : w.status === "opportunity" ? "💎 فرصة مكافأة/خير" : "👁️ رصد ومراقبة"}
+                        </span>
+                      </div>
+                      <div className="text-[10.5px] font-mono text-white/90 leading-relaxed">{w.observationAr}</div>
+                      <div className="text-[9.5px] font-mono text-emerald-300/90">✨ أثر الخير والحماية: {w.benevolentActionAr}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Smart Consultation Engine: Asks the Right Questions & Executes Owner's Choice */}
+            <div className="rounded-2xl border border-amber-500/40 bg-black/60 p-4 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <div className="text-xs font-black font-mono text-amber-300">
+                    🤝 نظام الاستشارة الذكي — الوكيل يستشيرك ويسألك السؤال الصحيح قبل القرارات الكبرى
+                  </div>
+                  <div className="text-[10px] font-mono text-white/70 mt-0.5">
+                    اختر القرار المناسب بنقرة واحدة أو اكتب توجيهك الخاص لينفذه الوكيل فوراً على عقد كالي ويحفظه في الجذر الدائم والذاكرة الأبدية.
+                  </div>
+                </div>
+                {labConsultBusy && (
+                  <span className="text-xs font-mono text-amber-300 animate-pulse">⏳ جاري تنفيذ قرارك السيادي على عقدة كالي...</span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+                {(sovereignLabData?.smartConsultation ?? []).map((q: any) => (
+                  <div key={q.id} className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] p-3.5 flex flex-col justify-between space-y-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[9.5px] font-mono">
+                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 font-bold">❓ استشارة استراتيجية</span>
+                        <span className="text-white/50">{q.priority}</span>
+                      </div>
+                      <div className="text-[11.5px] font-bold font-mono text-white leading-relaxed">{q.questionAr}</div>
+                      <div className="text-[10px] font-mono text-amber-200/85 leading-relaxed bg-black/40 p-2 rounded-lg border border-white/5">
+                        💡 <span className="font-bold">لماذا يسألك الوكيل هذا السؤال؟</span> {q.whyAskingAr}
+                      </div>
+                      <div className="text-[9.5px] font-mono text-fuchsia-200/90 leading-relaxed bg-fuchsia-500/10 p-2 rounded-lg border border-fuchsia-500/20">
+                        🧠 <span className="font-bold">إجماع المخاخ الـ7:</span> {q.recommendedBrainConsensus}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      <div className="text-[9.5px] font-mono text-white/60">اختر الإجراء المطلوب تنفيذه فوراً:</div>
+                      {(q.options ?? []).map((opt: any) => (
+                        <button
+                          key={opt.id}
+                          disabled={labConsultBusy}
+                          onClick={() => void executeLabConsultation({
+                            questionId: q.id,
+                            optionId: opt.id,
+                            mode: opt.mode,
+                            executeLive: true,
+                          })}
+                          className="w-full text-right px-3 py-2 rounded-xl border border-amber-400/40 bg-amber-500/15 hover:bg-amber-500/30 text-amber-100 text-[10px] font-mono font-bold transition-all"
+                        >
+                          ⚡ {opt.labelAr}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Direct Custom Consultation & Directive Input */}
+              <div className="rounded-xl border border-emerald-500/30 bg-black/50 p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <input
+                  value={labCustomDirective}
+                  onChange={(e) => setLabCustomDirective(e.target.value)}
+                  placeholder="اكتب توجيهك أو إجابتك أو استشارتك للوكيل النهائي (مثال: ادمج ثغرات الـSSRF مع الـJWT في وضع الروت على الهدف)..."
+                  className="flex-1 bg-black/70 border border-emerald-500/35 rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-400"
+                />
+                <button
+                  disabled={labConsultBusy || !labCustomDirective.trim()}
+                  onClick={() => {
+                    void executeLabConsultation({
+                      customDirective: labCustomDirective.trim(),
+                      mode: "root-full-attack",
+                      executeLive: true,
+                    });
+                    setLabCustomDirective("");
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-500/25 border border-emerald-400/60 text-emerald-100 text-xs font-mono font-bold hover:bg-emerald-500/35 disabled:opacity-40 whitespace-nowrap"
+                >
+                  🚀 تنفيذ حي في المختبر
+                </button>
+                <button
+                  disabled={!labCustomDirective.trim()}
+                  onClick={() => {
+                    const txt = labCustomDirective.trim();
+                    setLabCustomDirective("");
+                    setActiveTab("chat");
+                    void send(txt);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-cyan-500/25 border border-cyan-400/60 text-cyan-100 text-xs font-mono font-bold hover:bg-cyan-500/35 disabled:opacity-40 whitespace-nowrap"
+                >
+                  💬 إرسال للشات الجذري
+                </button>
+              </div>
+
+              {/* Live Consultation Execution Output */}
+              {labConsultResult && (
+                <div className="rounded-xl border border-emerald-400/45 bg-emerald-950/20 p-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-emerald-300 font-bold">✅ {labConsultResult.decisionLabel} (الهدف: {labConsultResult.target})</span>
+                    <span className="text-white/60">الوضع: {labConsultResult.mode}</span>
+                  </div>
+                  {labConsultResult.liveExecution && (
+                    <pre className="text-[10px] font-mono text-emerald-100 bg-black/70 p-3 rounded-xl border border-emerald-500/30 overflow-x-auto whitespace-pre-wrap max-h-60">
+                      $ {labConsultResult.liveExecution.command}
+                      {"\n\n"}
+                      {labConsultResult.liveExecution.output}
+                    </pre>
+                  )}
+                  {labConsultResult.fusionResult && (
+                    <div className="text-[10.5px] font-mono text-amber-200 bg-black/60 p-3 rounded-xl border border-amber-500/30 space-y-1">
+                      <div className="font-bold">🧬 سلسلة الدمج السيادية: {labConsultResult.fusionResult.fusedZeroDayCandidate?.chainTitleAr}</div>
+                      <div className="text-white/80">{labConsultResult.fusionResult.fusedZeroDayCandidate?.combinedImpactAr}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 2: GLOBAL 426 TACTICAL VULNERABILITY MATRIX + EXPLOIT MUTATION & FUSION STUDIO ── */}
+        {activeTab === "vulns426" && panelSize !== "mini" && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 space-y-4 bg-[#07060e]">
+            {/* Top Banner */}
+            <div className="rounded-2xl p-4 border border-rose-500/40 bg-gradient-to-r from-rose-500/15 via-amber-500/10 to-violet-500/15 flex items-center justify-between flex-wrap gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-black font-mono text-rose-300">
+                  🎯 قاعدة الثغرات العالمية التكتيكية (426 ثغرة كاملة) + مختبر تعديل ودمج الثغرات في وضع الروت والحماية القصوى
+                </div>
+                <div className="text-[10.5px] font-mono text-white/80 leading-relaxed">
+                  كل ثغرة من الـ426 ثغرة موثقة بـ: متى يستخدمها الوكيل، الفهم المعماري الكامل، أدوات كالي، وكيف يأخذها الوكيل ويعدل عليها حسب الحالة ويدمجها في هجوم روت كامل أو درع حماية قصوى — مربوطة حياً بـ{vulns426Data?.globalCorpusTotal?.toLocaleString() ?? "429,825"} ثغرة عالمية (NVD/KEV/EPSS).
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-400/45 text-rose-100 text-xs font-mono font-bold">
+                  426 بصمة تكتيكية · 14 قطاعاً
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/45 text-amber-100 text-xs font-mono font-bold">
+                  KEV: {vulns426Data?.kevCount ?? 195} مستغلة فعلياً
+                </span>
+              </div>
+            </div>
+
+            {/* Interactive Exploit Mutation & 0-Day Fusion Studio */}
+            <div className="rounded-2xl border border-amber-500/40 bg-black/60 p-4 space-y-3.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <div className="text-xs font-black font-mono text-amber-300">
+                    🧬 محرك أخذ الثغرات من قاعدة الـ426 وتعديلها حسب الحالة ودمجها (Exploit Mutation & Fusion Engine)
+                  </div>
+                  <div className="text-[10px] font-mono text-white/70 mt-0.5">
+                    اختر الثغرات من القائمة أو استخدم الثلاثية المختارة، وحدد بيئة الهدف ووضع التشغيل (هجوم روت كامل أو حماية قصوى) للتنفيذ الحي.
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {selected426Ids.map((id) => (
+                    <span key={id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/25 border border-rose-400/50 text-rose-100 text-[10px] font-mono font-bold">
+                      {id}
+                      <button
+                        onClick={() => setSelected426Ids((prev) => prev.filter((x) => x !== id))}
+                        className="text-rose-200 hover:text-white ms-1"
+                        title="إزالة من الدمج"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono text-white/70">1️⃣ حالة الهدف والـWAF (لتعديل الحمولة):</label>
+                  <select
+                    value={mutateCondition}
+                    onChange={(e) => setMutateCondition(e.target.value as any)}
+                    className="w-full bg-black/80 border border-amber-400/40 rounded-xl px-3 py-2 text-[10.5px] font-mono text-amber-100"
+                  >
+                    <option value="waf-cloudflare">تخطي Cloudflare / Akamai WAF</option>
+                    <option value="nginx-http2">معمارية Nginx / Envoy HTTP/2</option>
+                    <option value="jwt-oauth">بوابات الهوية JWT / OAuth2 / OIDC</option>
+                    <option value="graphql-api">واجهات GraphQL / gRPC / REST API</option>
+                    <option value="linux-root">نواة Linux / Containers / Root PrivEsc</option>
+                    <option value="cloud-imds">سحابة AWS / GCP / Azure IMDSv2</option>
+                    <option value="custom">حالة مخصصة (Custom Context)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono text-white/70">2️⃣ وضع التشغيل السيادي:</label>
+                  <select
+                    value={mutateMode}
+                    onChange={(e) => setMutateMode(e.target.value as any)}
+                    className="w-full bg-black/80 border border-rose-400/40 rounded-xl px-3 py-2 text-[10.5px] font-mono text-rose-100"
+                  >
+                    <option value="root-full-attack">⚔️ وضع الروت والهجوم/الفحص الكامل الحقيقي</option>
+                    <option value="max-protection">🛡️ وضع الحماية القصوى وتحصين الأنظمة</option>
+                    <option value="recon-verify">🔬 وضع الاستطلاع والتحقق الآمن</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono text-white/70">3️⃣ سياق أو تعديل إضافي (اختياري):</label>
+                  <input
+                    value={mutateCustomContext}
+                    onChange={(e) => setMutateCustomContext(e.target.value)}
+                    placeholder="مثال: Header مخصص أو مسار /api/v2/admin"
+                    className="w-full bg-black/80 border border-white/20 rounded-xl px-3 py-2 text-[10.5px] font-mono text-white"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end gap-1.5">
+                  <label className="inline-flex items-center gap-2 text-[10px] font-mono text-emerald-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={mutateExecuteLive}
+                      onChange={(e) => setMutateExecuteLive(e.target.checked)}
+                      className="rounded border-emerald-400"
+                    />
+                    <span>⚡ تنفيذ فعلي حي على عقدة كالي السحابية</span>
+                  </label>
+                  <button
+                    disabled={mutateBusy}
+                    onClick={() => void runMutateAndFuse426()}
+                    className="w-full py-2 rounded-xl bg-gradient-to-r from-rose-500/35 via-amber-500/30 to-emerald-500/35 border border-amber-400/60 text-white text-xs font-mono font-black hover:opacity-95"
+                  >
+                    {mutateBusy ? "⏳ يعدل ويدمج الثغرات وينفذ على كالي..." : "🔥 تعديل ودمج الثغرات وتنفيذ الهجوم/الحماية"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Mutation & Fusion Result Display */}
+              {mutateResult && (
+                <div className="rounded-xl border border-amber-400/45 bg-black/80 p-4 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2 border-b border-white/10 pb-2">
+                    <div className="text-xs font-black font-mono text-amber-300">
+                      🧬 {mutateResult.fusedZeroDayCandidate?.chainTitleAr}
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/25 border border-rose-400/40 text-rose-100 text-[10px] font-mono font-bold">
+                      الوضع: {mutateResult.mode} · الحالة: {mutateResult.condition}
+                    </span>
+                  </div>
+
+                  {/* Mutated Payloads Breakdown */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
+                    {(mutateResult.mutatedPayloads ?? []).map((mp: any) => (
+                      <div key={mp.vulnId} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-1.5">
+                        <div className="text-[10.5px] font-bold font-mono text-rose-300">
+                          {mp.vulnId} — {mp.titleAr}
+                        </div>
+                        <div className="text-[9.5px] font-mono text-white/60">الحمولة الأصلية: <code className="text-white/85">{mp.originalPayload}</code></div>
+                        <div className="text-[9.5px] font-mono text-emerald-300 bg-black/60 p-2 rounded border border-emerald-500/30 break-all">
+                          ⚡ بعد التعديل: {mp.mutatedPayload}
+                        </div>
+                        <div className="text-[9px] font-mono text-amber-200/90">🔧 التعديل المطبق: {mp.appliedMutationAr}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Fused Stages */}
+                  <div className="rounded-xl border border-violet-500/30 bg-violet-500/[0.05] p-3 space-y-1.5">
+                    <div className="text-[10.5px] font-bold font-mono text-violet-300">🔗 مراحل سلسلة الاستغلال المدمجة (Multi-Stage Chain):</div>
+                    {(mutateResult.fusedZeroDayCandidate?.stages ?? []).map((st: string, idx: number) => (
+                      <div key={idx} className="text-[10px] font-mono text-white/90">{st}</div>
+                    ))}
+                    <div className="text-[10px] font-mono text-amber-300 pt-1">💥 الأثر المركب: {mutateResult.fusedZeroDayCandidate?.combinedImpactAr}</div>
+                  </div>
+
+                  {/* Live Kali Output & Max Protection Shield */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-emerald-500/30 bg-black/70 p-3 space-y-1.5">
+                      <div className="text-[10.5px] font-bold font-mono text-emerald-300">
+                        💻 مخرجات التنفيذ الحي في وضع الروت على عقدة كالي ({mutateResult.liveExecution?.plane ?? "Kali Root Node"}):
+                      </div>
+                      <pre className="text-[9.5px] font-mono text-emerald-100 whitespace-pre-wrap overflow-x-auto max-h-52">
+                        {mutateResult.liveExecution
+                          ? `$ ${mutateResult.liveExecution.command}\n\n${mutateResult.liveExecution.output}`
+                          : mutateResult.rootExecutionPlan?.kaliRootScript}
+                      </pre>
+                    </div>
+                    <div className="rounded-xl border border-cyan-500/30 bg-black/70 p-3 space-y-1.5">
+                      <div className="text-[10.5px] font-bold font-mono text-cyan-300">
+                        🛡️ درع الحماية القصوى المولّد تلقائياً (WAF / Nginx / Kernel Shield):
+                      </div>
+                      <pre className="text-[9.5px] font-mono text-cyan-100 whitespace-pre-wrap overflow-x-auto max-h-52">
+                        {mutateResult.maxProtectionShield?.nginxHardeningSnippet}
+                        {"\n\n"}
+                        {(mutateResult.maxProtectionShield?.wafRules ?? []).join("\n")}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Search & 14-Sector Filter Bar for the 426 Vulnerabilities */}
+            <div className="rounded-2xl border border-white/15 bg-black/50 p-3.5 flex items-center gap-3 flex-wrap">
+              <input
+                value={vulns426Query}
+                onChange={(e) => setVulns426Query(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void loadVulns426({ q: vulns426Query }); }}
+                placeholder="🔍 ابحث في الـ426 ثغرة (اسم الثغرة، CVE، CWE، أداة كالي، متى تستخدم، قطاع)..."
+                className="flex-1 min-w-[240px] bg-black/80 border border-rose-500/35 rounded-xl px-3.5 py-2 text-xs font-mono text-white focus:outline-none focus:border-rose-400"
+              />
+              <select
+                value={vulns426Sector}
+                onChange={(e) => {
+                  setVulns426Sector(e.target.value);
+                  void loadVulns426({ sectorId: e.target.value });
+                }}
+                className="bg-black/80 border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-white"
+              >
+                <option value="all">📂 كل القطاعات الـ14 (426 ثغرة)</option>
+                {(vulns426Data?.sectors ?? []).map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.titleAr} ({s.count})</option>
+                ))}
+              </select>
+              <select
+                value={vulns426Severity}
+                onChange={(e) => {
+                  setVulns426Severity(e.target.value);
+                  void loadVulns426({ severity: e.target.value });
+                }}
+                className="bg-black/80 border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-white"
+              >
+                <option value="all">كل درجات الخطورة</option>
+                <option value="CRITICAL">CRITICAL (حرجة)</option>
+                <option value="HIGH">HIGH (عالية)</option>
+              </select>
+              <label className="inline-flex items-center gap-1.5 text-xs font-mono text-amber-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={vulns426KevOnly}
+                  onChange={(e) => {
+                    setVulns426KevOnly(e.target.checked);
+                    void loadVulns426({ kevOnly: e.target.checked });
+                  }}
+                />
+                <span>🔥 KEV مستغلة فعلياً فقط</span>
+              </label>
+              <button
+                onClick={() => void loadVulns426()}
+                className="px-4 py-2 rounded-xl bg-rose-500/25 border border-rose-400/50 text-rose-100 text-xs font-mono font-bold hover:bg-rose-500/35"
+              >
+                {vulns426Loading ? "⏳ يبحث..." : "🔎 تطبيق الفلتر"}
+              </button>
+            </div>
+
+            {/* Spacious Cards List of the 426 Vulnerabilities */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3.5">
+              {(vulns426Data?.entries ?? []).map((v: any) => {
+                const isSelected = selected426Ids.includes(v.id);
+                return (
+                  <div
+                    key={v.id}
+                    className={`rounded-2xl border p-4 space-y-2.5 transition-all ${
+                      isSelected
+                        ? "border-rose-400 bg-rose-950/20 shadow-[0_0_16px_rgba(244,63,94,0.2)]"
+                        : "border-white/10 bg-black/50 hover:border-rose-500/35"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-200 text-[10px] font-mono font-bold">
+                            {v.id}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-lg bg-white/10 text-white/90 text-[10px] font-mono">
+                            {v.cveRef} · {v.cwe}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold ${
+                            v.severity === "CRITICAL" ? "bg-red-500/25 text-red-200 border border-red-400/40" : "bg-amber-500/25 text-amber-200 border border-amber-400/40"
+                          }`}>
+                            CVSS {v.cvss} · EPSS {(v.epss * 100).toFixed(0)}%
+                          </span>
+                          {v.kevExploited && (
+                            <span className="px-2 py-0.5 rounded-lg bg-amber-500/25 border border-amber-400/50 text-amber-200 text-[9.5px] font-mono font-bold">
+                              🔥 KEV
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs font-black font-mono text-white mt-1.5">{v.titleAr}</div>
+                        <div className="text-[10px] font-mono text-cyan-300/80">{v.sectorTitleAr} — {v.titleEn}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelected426Ids((prev) =>
+                            prev.includes(v.id) ? prev.filter((x) => x !== v.id) : [...prev, v.id],
+                          );
+                        }}
+                        className={`shrink-0 px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold border transition-all ${
+                          isSelected
+                            ? "border-emerald-400 bg-emerald-500/25 text-emerald-100"
+                            : "border-white/20 bg-white/5 text-white/80 hover:border-rose-400/50 hover:text-white"
+                        }`}
+                      >
+                        {isSelected ? "✓ مختارة للدمج" : "➕ اختر للدمج"}
+                      </button>
+                    </div>
+
+                    <div className="rounded-xl bg-amber-500/[0.06] border border-amber-500/20 p-2.5 text-[10.5px] font-mono text-amber-100 leading-relaxed">
+                      💡 <span className="font-bold text-amber-300">متى يستخدمها الوكيل؟</span> {v.whenToUseAr}
+                    </div>
+
+                    <div className="rounded-xl bg-white/[0.03] border border-white/10 p-2.5 text-[10px] font-mono text-white/85 leading-relaxed">
+                      🧠 <span className="font-bold text-cyan-300">الفهم المعماري الكامل:</span> {v.deepUnderstandingAr}
+                    </div>
+
+                    <div className="rounded-xl bg-violet-500/[0.05] border border-violet-500/20 p-2.5 space-y-1 text-[9.5px] font-mono">
+                      <div className="font-bold text-violet-300">🔧 كيف يعدلها الوكيل حسب الحالة (Mutation Strategies):</div>
+                      <div className="text-white/80">• <span className="text-rose-200">تخطي WAF:</span> {v.mutationStrategies?.wafBypass}</div>
+                      <div className="text-white/80">• <span className="text-cyan-200">وضع الروت:</span> {v.mutationStrategies?.rootEscalationHook}</div>
+                    </div>
+
+                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1 text-[9.5px] font-mono">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-emerald-300 font-bold">🛠️ أدوات كالي:</span>
+                        {(v.kaliTools ?? []).map((t: string) => (
+                          <span key={t} className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-emerald-200">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setSelected426Ids([v.id]);
+                            void runMutateAndFuse426([v.id], "root-full-attack");
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-200 hover:bg-rose-500/30 font-bold"
+                        >
+                          ⚔️ تعديل وفحص روت فوري
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveTab("chat");
+                            void send(`اشرح وطبق الثغرة ${v.id} (${v.titleEn}) من قاعدة الـ426 ثغرة على الهدف ${kaliTarget || "example.com"} مع تعديل الحمولة لوضع الروت والحماية القصوى.`);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/30 font-bold"
+                        >
+                          💬 تطبيق في الشات
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 3: 16 SOVEREIGN HACKING & KALI LINUX BOOKS LIBRARY & LIVE TRAINER ── */}
+        {activeTab === "books" && panelSize !== "mini" && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-4 space-y-4 bg-[#060a12]">
+            {/* Top Banner */}
+            <div className="rounded-2xl p-4 border border-cyan-500/40 bg-gradient-to-r from-cyan-500/15 via-emerald-500/10 to-violet-500/15 flex items-center justify-between flex-wrap gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-black font-mono text-cyan-300">
+                  📚 المكتبة السيادية وتدريب الوكيل على كتب كالي لينكس والهاكر الأخلاقي (16 كتاباً موسوعياً + إضافة كتبك)
+                </div>
+                <div className="text-[10.5px] font-mono text-white/80 leading-relaxed">
+                  الوكيل قرأ وهضم هذه المراجع الـ16 بالكامل، ويعرف كل أداة في نظام كالي لينكس (266 أداة + 28 حزمة بايثون + 96 أداة سيادية) متى وكيف ولماذا يستخدمها، ويمكنك تدريبه على أي كتاب أو إضافة مراجعك الخاصة فوراً.
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/45 text-emerald-100 text-xs font-mono font-bold">
+                  إتقان الكتب: {booksData?.trainedCount ?? 16}/{booksData?.totalBooks ?? 16} (100%)
+                </span>
+              </div>
+            </div>
+
+            {/* Active Book Training Output Banner */}
+            {bookTrainResult && (
+              <div className="rounded-2xl border border-emerald-400/50 bg-emerald-950/25 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-black font-mono text-emerald-300">
+                    ✅ تم تدريب الوكيل وتثبيت قواعد الكتاب: {bookTrainResult.book?.titleAr}
+                  </div>
+                  <button onClick={() => setBookTrainResult(null)} className="text-xs text-white/60 hover:text-white">✕</button>
+                </div>
+                <div className="text-[10.5px] font-mono text-white/90">{bookTrainResult.synthesizedLesson}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
+                  <div className="rounded-xl bg-black/60 p-2.5 border border-white/10 space-y-1">
+                    <div className="text-[10px] font-bold font-mono text-cyan-300">📑 القواعد التكتيكية المستخلصة للذاكرة الأبدية:</div>
+                    {(bookTrainResult.extractedRules ?? []).map((r: string, i: number) => (
+                      <div key={i} className="text-[9.5px] font-mono text-white/80">• {r}</div>
+                    ))}
+                  </div>
+                  <div className="rounded-xl bg-black/60 p-2.5 border border-white/10 space-y-1">
+                    <div className="text-[10px] font-bold font-mono text-emerald-300">💻 أوامر كالي الجاهزة للتنفيذ على الهدف:</div>
+                    {(bookTrainResult.appliedCommandsReady ?? []).map((c: string, i: number) => (
+                      <div key={i} className="text-[9.5px] font-mono text-emerald-200 bg-black/50 px-2 py-1 rounded">$ {c}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Add / Upload Custom Book Section */}
+            <div className="rounded-2xl border border-amber-500/35 bg-black/50 p-4 space-y-3">
+              <div className="text-xs font-bold font-mono text-amber-300">
+                📥 تحميل وإضافة كتاب أو مرجع سيبراني جديد لتدريب الوكيل عليه وحفظه في الذاكرة الأبدية
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input
+                  value={newBookTitle}
+                  onChange={(e) => setNewBookTitle(e.target.value)}
+                  placeholder="عنوان الكتاب أو المرجع (مثال: دليل اختراق تطبيقات البنوك والـAPI المتقدم)..."
+                  className="bg-black/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs font-mono text-white"
+                />
+                <input
+                  value={newBookCategory}
+                  onChange={(e) => setNewBookCategory(e.target.value)}
+                  placeholder="التصنيف (مثال: صيد المكافآت / وضع الروت / الحماية القصوى)..."
+                  className="bg-black/80 border border-white/20 rounded-xl px-3.5 py-2 text-xs font-mono text-white"
+                />
+              </div>
+              <textarea
+                value={newBookContent}
+                onChange={(e) => setNewBookContent(e.target.value)}
+                rows={3}
+                placeholder="الصق هنا محتوى الكتاب أو الفصول أو القواعد أو الأوامر التكتيكية ليقرأها الوكيل ويهضمها ويطبقها..."
+                className="w-full bg-black/80 border border-white/20 rounded-xl p-3 text-xs font-mono text-white"
+              />
+              <button
+                disabled={newBookBusy || !newBookContent.trim()}
+                onClick={() => void submitCustomBook()}
+                className="px-4 py-2 rounded-xl bg-amber-500/25 border border-amber-400/60 text-amber-100 text-xs font-mono font-bold hover:bg-amber-500/35 disabled:opacity-40"
+              >
+                {newBookBusy ? "⏳ جاري قراءة الكتاب وتدريب الوكيل..." : "📚 حفظ الكتاب وتدريب الوكيل عليه فوراً"}
+              </button>
+            </div>
+
+            {/* 16 Sovereign Books Grid */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {(booksData?.books ?? []).map((b: any) => (
+                <div key={b.id} className="rounded-2xl border border-cyan-500/30 bg-black/55 p-4 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="px-2 py-0.5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 text-[9.5px] font-mono font-bold">
+                          {b.categoryAr} · {b.pages} صفحة
+                        </span>
+                        <div className="text-xs font-black font-mono text-white mt-1.5">{b.titleAr}</div>
+                        <div className="text-[10px] font-mono text-white/60">{b.titleEn} — {b.authorOrSource}</div>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-[10px] font-mono font-bold shrink-0">
+                        ✓ متقن {b.masteryPercent}%
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-cyan-500/[0.06] border border-cyan-500/20 p-2.5 text-[10.5px] font-mono text-cyan-100 leading-relaxed">
+                      📖 <span className="font-bold">فلسفة الكتاب وجوهره:</span> {b.corePhilosophyAr}
+                    </div>
+
+                    <div className="rounded-xl bg-amber-500/[0.06] border border-amber-500/20 p-2.5 text-[10px] font-mono text-amber-100 leading-relaxed">
+                      🎯 <span className="font-bold">متى يطبقه الوكيل؟</span> {b.whenToApplyAr}
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-bold font-mono text-white/80">📑 الفصول والقواعد المستخلصة:</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {(b.chapters ?? []).map((ch: string, idx: number) => (
+                          <div key={idx} className="text-[9.5px] font-mono text-white/75 bg-white/[0.03] border border-white/5 px-2.5 py-1.5 rounded-lg">
+                            {idx + 1}. {ch}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-bold font-mono text-emerald-300">🛠️ أدوات كالي المشروحة في الكتاب:</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(b.kaliToolsCovered ?? []).map((t: string) => (
+                          <span key={t} className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 text-[9.5px] font-mono">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                    <button
+                      disabled={bookTrainBusy === b.id}
+                      onClick={() => void runBookTraining(b.id)}
+                      className="flex-1 py-2 rounded-xl bg-cyan-500/25 border border-cyan-400/50 text-cyan-100 text-[10.5px] font-mono font-bold hover:bg-cyan-500/35"
+                    >
+                      {bookTrainBusy === b.id ? "⏳ يستخلص القواعد وينفذ التدريب..." : "⚡ تنشيط تدريب الكتاب وتطبيقه على الهدف"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab("chat");
+                        void send(`استخدم أداة kali_books_trainer لتطبيق كتاب "${b.titleAr}" (${b.id}) وأوامره العملية على الهدف ${kaliTarget || "example.com"}.`);
+                      }}
+                      className="px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-100 text-[10.5px] font-mono font-bold hover:bg-emerald-500/30"
+                    >
+                      💬 تطبيق في الشات
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

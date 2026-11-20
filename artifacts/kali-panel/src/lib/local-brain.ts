@@ -62,6 +62,7 @@ const SERVER_ONLY = new Set([
   /* TEST10: الشفاء الذاتي (بيشغل إصلاحات على السيرفر) وأوامر جهاز كالي */
   "self_heal", "kali_node_setup", "kali_run", "kali_desktop", "kali_provision", "state_backup",
   "kali_bounty_hunt", "kali_zeroday_lab", "kali_autopilot_2099", "kali_visitor_radar", "kali_attack_graph",
+  "kali_vuln_426_matrix", "kali_exploit_mutate_fuse", "kali_books_trainer", "sovereign_live_lab",
 ]);
 
 export const TOOL_TITLES_AR: Record<string, string> = {
@@ -165,6 +166,10 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   kali_autopilot_2099: "سلاسل Kali Autopilot الذكية 360°",
   kali_visitor_radar: "رادار الزوار وفحص الـIP وتنبيهات تليجرام",
   kali_attack_graph: "خريطة سطح الهجوم 360° وامتثال NIST CSF 2.0",
+  kali_vuln_426_matrix: "مصفوفة الـ426 بصمة استغلال عالمية ومتى تُستخدم",
+  kali_exploit_mutate_fuse: "تعديل ودمج الثغرات حسب الحالة + وضع الروت والحماية القصوى",
+  kali_books_trainer: "قراءة وتدريب الكتب السيبرانية وكالي 2099",
+  sovereign_live_lab: "المختبر السيادي الحي والوعي والاستشارة الذكية 2099",
 };
 
 /**
