@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "at": "2026-11-20T06:48:44.290Z",
+  "at": "2026-11-20T06:53:42.502Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
@@ -216,13 +216,13 @@
     "sha256": "afb6a6855dc4de2fa65bb51ecdaf9bb40da6f1d51fde3726fd926bbc109438fb"
   },
   "mode": "deepen",
-  "says_ar": "429523 ثغرة حقيقية · critical 40199 · high 163597 · 1786 مستغلّة فعلياً (KEV) · 408047 لها EPSS · 81954 منتج بـCPE · مزامنة 2026-11-20T06:48:44.290Z",
+  "says_ar": "429523 ثغرة حقيقية · critical 40199 · high 163597 · 1786 مستغلّة فعلياً (KEV) · 408047 لها EPSS · 81954 منتج بـCPE · مزامنة 2026-11-20T06:53:42.502Z",
   "deepen": {
     "nextStartIndex": 0,
     "windowPages": 12,
     "walkedFrom": 0,
     "nvdTotal": 429523,
     "coverage": 1,
-    "at": "2026-11-20T06:48:44.291Z"
+    "at": "2026-11-20T06:53:42.503Z"
   }
 }
