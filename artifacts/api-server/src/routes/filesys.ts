@@ -26,7 +26,11 @@ function safeAbs(p: string): string | null {
   const abs = path.isAbsolute(raw) ? path.resolve(raw) : path.resolve(ROOT, raw);
   // البرنامج هو وحدة تحكم المشغّل: بنمنع فقط الخروج من جذر المشروع افتراضيًا
   // (متغير NOVA_FM_UNLOCKED=1 يفتح الجهاز كله للمشغّل الموثق).
-  if (process.env.NOVA_FM_UNLOCKED !== "1" && !abs.startsWith(ROOT)) return null;
+  /* قياس 05:5xZ (شكوى المالك: أخطاء القراءة/الكتابة/الروت): القفل الافتراضي
+   * على جذر المشروع بيمنع المالك من ملفات جهازه هو (rootfs/عقد/سجلات).
+   * البرنامج وحدة تحكم المشغّل ومحمي بops-gate — الروت مفتوح افتراضيًا،
+   * وNOVA_FM_LOCKED=1 يرجّع السلوك القديم لو احتاج. */
+  if (process.env.NOVA_FM_LOCKED === "1" && !abs.startsWith(ROOT)) return null;
   return abs;
 }
 

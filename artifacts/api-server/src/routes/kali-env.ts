@@ -21,6 +21,7 @@ import { readProbeCache, probeAllKaliNodes, orderPrewarmedFirst } from "../lib/o
 import { PROOT_GUEST_EXEC } from "../lib/ops/kali-node-installer";
 import { execStreamOnLocalAgent, execOnLocalAgent } from "./local-agent";
 import { kaliSysInfo } from "../lib/ops/kali-sysinfo";
+import { appendNovaEvent } from "../lib/ops/nova-events";
 import {
   createWorkspace,
   deleteWorkspace,
@@ -919,6 +920,7 @@ router.post("/kali-env/run", async (req: Request, res: Response) => {
         onData: (stream, chunk) => send({ type: stream, text: chunk }),
       });
       send({ type: "done", plane: "proot", exitCode: result.exitCode, durationMs: result.durationMs, error: result.error });
+      appendNovaEvent("run", `${tool} ← ${tgt}`, `proot · exit=${result.exitCode} · ${Math.round(result.durationMs / 1000)}s`);
     } else {
       const result = await kaliAnywhereExec(finalCommand, tmo);
       if (!result) {
@@ -927,6 +929,7 @@ router.post("/kali-env/run", async (req: Request, res: Response) => {
         if (result.stdout) send({ type: "stdout", text: result.stdout });
         if (result.stderr) send({ type: "stderr", text: result.stderr });
         send({ type: "done", plane: result.plane, exitCode: result.exitCode, durationMs: result.durationMs });
+        appendNovaEvent("run", `${tool} ← ${tgt}`, `${result.plane} · exit=${result.exitCode} · ${Math.round(result.durationMs / 1000)}s`);
       }
     }
   } catch (e) {
@@ -1193,7 +1196,7 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
     'export DEBIAN_FRONTEND=noninteractive;' +
     /* TEST53 — نفس فكس الجذر: ال13 مجلد قبل أي apt-get جوه الجست (نفس قائمة المثبّت). */
     'for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p "/$d" 2>/dev/null; done;' +
-    'command -v Xvfb >/dev/null 2>&1 || { apt-get update -qq >/dev/null 2>&1; apt-get install -y -qq xvfb ffmpeg fluxbox xterm >/dev/null 2>&1; };' +
+    'command -v Xvfb >/dev/null 2>&1 || { apt-get update -qq >/dev/null 2>&1; apt-get install -y -qq --no-install-recommends xvfb ffmpeg fluxbox xterm >/dev/null 2>&1; command -v Xvfb >/dev/null 2>&1 || { DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --download-only xvfb ffmpeg fluxbox xterm >/dev/null 2>&1; cd /var/cache/apt/archives 2>/dev/null && for d in *.deb; do dpkg-deb -x "$d" / >/dev/null 2>&1; done; cd /; hash -r; }; }; command -v Xvfb >/dev/null 2>&1 && echo DESKTOP_READY >&2 || echo DESKTOP_TOOLS_MISSING >&2;' +
     'pkill -f "Xvfb :99" 2>/dev/null; pkill -f "x11grab" 2>/dev/null; sleep 0.4;' +
     'Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 & sleep 1.5;' +
     'DISPLAY=:99 fluxbox >/dev/null 2>&1 & DISPLAY=:99 xterm -maximized >/dev/null 2>&1 & sleep 0.8;' +
@@ -1202,6 +1205,7 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("X-Nova-Desktop-Node", node.id);
   res.flushHeaders?.();
+  appendNovaEvent("desktop", `🖥️ بث الديسكتوب الحي بدأ من ${node.id}`, node.mode);
 
   /* القياس الحي 02:3xZ: أول إطار حقيقي متأخر (تثبيت xvfb+ffmpeg جوه الجست دقائق)
    * والمتصفح بيبانله شاشة سوداء. الفكس: إطار «بيجاهز» فورًا + heartbeat يكرره
@@ -1421,7 +1425,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const gate = (Array.isArray(S.cmd) ? S.cmd : [S.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ");
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
     if (DEB_EXTRACT.has(tool)) {
-      installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && for d in *.deb; do dpkg-deb -x "$d" /tmp/debx 2>/dev/null; done; find /tmp/debx -type f \( -name "mp" -o -name "maskprocessor" \) -exec cp {} /usr/local/bin/ \; && chmod +x /usr/local/bin/mp /usr/local/bin/maskprocessor 2>/dev/null; echo EXTRACT_APPLIED`;
+      installCmd = `cd /tmp && rm -rf store-dl /tmp/debx && mkdir store-dl /tmp/debx && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && for d in *.deb; do dpkg-deb -x "$d" /tmp/debx 2>/dev/null; done; cp /tmp/debx/usr/bin/* /usr/local/bin/ 2>/dev/null; cp /tmp/debx/usr/games/* /usr/local/bin/ 2>/dev/null; find /tmp/debx -maxdepth 3 -type f -perm -111 -exec cp {} /usr/local/bin/ \; 2>/dev/null; chmod +x /usr/local/bin/* 2>/dev/null; echo EXTRACT_APPLIED`;
     } else if (storeDebs) {
       /* المرحلة 1 قصيرة: تنظيف statoverride + deb + dpkg — بلا بوابة ولا fallback */
       installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
@@ -1453,7 +1457,15 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   const brokenNodes = new Set<string>();
   for (let attempt = 0; attempt < 3; attempt++) {
     if (!r) break;
-    if (!/proot error|Permission denied|fatal error: see `proot|signal 6|path\.c:547|Assertion/.test([r.stdout, r.stderr].join("\n"))) break;
+    /* قياس 05:5xZ (شكوى المالك: «بدوس تثبيت وما بتتحملش»): جست مكسور بينجح
+     * HTTP بس الأمر أصلًا ما اتنفذش — البصمة: سطر ROOT_UID البادئ مش موجود
+     * في الناتج (الecho نفسه مات). نعتبره جست مكسور زي signal 6 ونعيد على
+     * عقدة تانية بدل ما نرد «الجست مش root» كاذبة. */
+    const out = [r.stdout, r.stderr].join("\n");
+    const broken =
+      /proot error|Permission denied|fatal error: see `proot|signal 6|path\.c:547|Assertion/.test(out) ||
+      !/^ROOT_UID:\d+$/m.test(r.stdout);
+    if (!broken) break;
     if (r.nodeId) brokenNodes.add(r.nodeId);
     r = await kaliAnywhereExec(cmd, 600_000, undefined, brokenNodes);
   }
@@ -1475,6 +1487,8 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   }
   const ok = /INSTALL_OK:/.test(r.stdout);
   const uid = Number((r.stdout.match(/^ROOT_UID:(\d+)$/m) ?? [])[1]);
+  /* سجل الأحداث الدائم — كل تثبيت حقيقي (نجاح أو فشل) يظهر في مركز الإشعارات. */
+  appendNovaEvent(ok ? "install" : "install-fail", `${ok ? "✓ تم تثبيت" : "✗ فشل تثبيت"} ${tool} (${r.plane ?? "طايرة؟"})`, tail.slice(0, 300));
   const tail = [r.stdout, r.stderr].filter(Boolean).join("\n").split("\n").slice(-12).join("\n");
   res.json({
     ok,

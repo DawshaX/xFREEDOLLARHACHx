@@ -1,8 +1,9 @@
-# [fleet-standby] 14 عقدة أساسية + 6 احتياط تتفعل تلقائيًا — ضمان الأسطول مدى الحياة
-# الطلب المالك 04:4xZ: «خليهم 14 عقدة + 6 احتياط ويتفعلو تلقائيًا».
+# [fleet-standby] 10 عقد شغّالة + الباقي احتياط/بدايل متجدد دايمًا — ضمان الأسطول مدى الحياة
+# تحديث 05:5xZ بطلب المالك: «خليهم 10 عقد بس والباقي احتياطي وبدايل وبيتجدد ديما».
+# الشغل على self-hosted (عقد الكالي نفسها) — صفر دقائق hosted المحدودة.
 # الآلية: كل 20د يقيس الأسطول الحي على الهَب. لو الأساسية (14) ناقصة → يحرق
 # fleet-now بعدد الناقص (حتى 6). لو الاتصال انهار كليًا → موجة كاملة 14.
-# العدادات: 14 أساسي · 20 سقف (14+6 احتياط تدخل لما أساسيات تقع).
+# العدادات: 10 شغّالة · أي زيادة = احتياط حي بيتجدد تلقائيًا لما شغّالة تقع.
 name: fleet-standby
 on:
   schedule:
@@ -16,7 +17,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   watchdog:
-    runs-on: ubuntu-latest
+    # self-hosted: على عقدة الكالي نفسها — مافيش استهلاك دقائق GitHub المحدودة
+    runs-on: self-hosted
     steps:
       - name: قياس الأسطول الحي وتفعيل الاحتياط عند النقص
         env:
@@ -33,14 +35,14 @@ jobs:
             sleep 10
           done
           CONNECTED=${CONNECTED:-0}
-          if [ "$CONNECTED" -lt 14 ]; then
-            NEED=$(( 14 - CONNECTED )); [ "$NEED" -gt 6 ] && NEED=6
-            echo "الأسطول ناقص ($CONNECTED/14) → تفعيل $NEED عقدة احتياط"
+          if [ "$CONNECTED" -lt 10 ]; then
+            NEED=$(( 10 - CONNECTED )); [ "$NEED" -gt 6 ] && NEED=6
+            echo "الأسطول ناقص ($CONNECTED/10) → تفعيل $NEED من الاحتياط"
             curl -s -m 20 -X POST \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ github.token }}" \
               "${GITHUB_API_URL:-https://api.github.com}/repos/${{ github.repository }}/actions/workflows/fleet-now.yml/dispatches" \
               -d '{"ref":"main"}' -o /dev/null -w "dispatch=%{http_code}\n"
           else
-            echo "الأسطول سليم ($CONNECTED/14) — الاحتياط محجوز"
+            echo "الأسطول سليم ($CONNECTED/10) — الاحتياط بيتجدد دايمًا"
           fi

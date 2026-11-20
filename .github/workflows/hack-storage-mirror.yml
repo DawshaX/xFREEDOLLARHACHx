@@ -16,7 +16,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   mirror:
-    runs-on: ubuntu-latest
+    # self-hosted — صفر دقائق hosted
+    runs-on: self-hosted
     steps:
       - name: تحضير Hack-STORAGE
         env:

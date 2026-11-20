@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, notificationsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
+import { readNovaEvents } from "../lib/ops/nova-events";
 
 const router: IRouter = Router();
 
@@ -9,23 +10,33 @@ router.get("/notifications", async (_req, res, next) => {
    * لازم يشتغل. المصدر الحقيقي هنا هو نبض الخلفية بتاع session-nexus:
    * كرون + مراقبون + صيد + حصاد الخزنة — كلها أحداث حصلت فعلاً على الجهاز. */
   if (!process.env.DATABASE_URL) {
+    /* سجل الأحداث الدائم (state/events.jsonl) أولًا — طلب المالك: كل حاجة
+     * تمت/بتتم تظهر هنا (تثبيت · تشغيل · بث · تحديث). بعده نبض الخلفية. */
+    const fileEvents = readNovaEvents(120).map((ev) => ({
+      id: ev.id,
+      title: ev.title,
+      body: ev.detail,
+      kind: ev.kind,
+      read: false,
+      createdAt: ev.ts,
+      source: "nova-events",
+    }));
     try {
       const { getNexusSnapshot } = await import("../lib/agent/session-nexus");
       const snap = getNexusSnapshot();
-      res.json(
-        snap.recentBackground.map((ev) => ({
-          id: ev.id,
-          title: ev.title,
-          body: ev.detail,
-          kind: ev.kind,
-          read: false,
-          createdAt: typeof ev.ts === "number" ? new Date(ev.ts).toISOString() : String(ev.ts),
-          source: ev.source,
-        })),
-      );
+      const nexusEvents = snap.recentBackground.map((ev) => ({
+        id: ev.id,
+        title: ev.title,
+        body: ev.detail,
+        kind: ev.kind,
+        read: false,
+        createdAt: typeof ev.ts === "number" ? new Date(ev.ts).toISOString() : String(ev.ts),
+        source: ev.source,
+      }));
+      res.json([...fileEvents, ...nexusEvents].slice(0, 120));
       return;
     } catch (e) {
-      next(e);
+      res.json(fileEvents);
       return;
     }
   }
