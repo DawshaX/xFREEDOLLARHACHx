@@ -34,7 +34,7 @@ jobs:
             UP=$(echo "$V" | grep -o '"uptimeSec":[0-9]*' | cut -d: -f2)
             echo "::notice::boot=$BOOT uptime=${UP}s (محاولة $i)"
             case "$BOOT" in
-              900fd30*|84744e3*|38660b6*|4591d42*) echo "لسه القديم — استنى"; sleep 60;;
+              900fd30*|84744e3*|38660b6*|4591d42*|a24f204*) echo "لسه القديم — استنى"; sleep 60;;
               "") echo "الهَب بيعيد التشغيل"; sleep 60;;
               *) echo "::notice::✓ الهَب اقفل على بوت جديد: $BOOT"; break;;
             esac
@@ -47,24 +47,28 @@ jobs:
             -d '{"command":"echo TERMINAL_OK && uname -a"}')
           echo "::notice::exec: $(echo "$R" | tr -d '\n\r' | tail -c 400)"
 
-      - name: measure the tools + Kali 2099 Eternal OS + Auto-Help + Assistant + Memory routes
+      - name: measure the tools + Kali 2099 Purple Eternal OS + Attack Graph + Autopilot + Connections routes
         run: |
           sleep 20
           WP=$(curl -s -o /dev/null -w "HTTP:%{http_code} SIZE:%{size_download}" "$HUB/kali-2099-wallpaper.jpg?token=$TOKEN")
           echo "::notice::wallpaper-2099: $WP"
-          TH=$(curl -s --max-time 30 "$HUB/api/kali-env/tool-help?tool=nmap&token=$TOKEN" | head -c 260)
+          AG=$(curl -s --max-time 30 "$HUB/api/kali-env/attack-graph?target=example.com&token=$TOKEN" | head -c 260)
+          echo "::notice::attack-graph-2099: $(echo "$AG" | tr -d '\n\r')"
+          AP=$(curl -s --max-time 30 "$HUB/api/kali-env/autopilot?token=$TOKEN" | head -c 260)
+          echo "::notice::autopilot-2099: $(echo "$AP" | tr -d '\n\r')"
+          CN=$(curl -s --max-time 30 "$HUB/api/kali-env/connections?token=$TOKEN" | head -c 260)
+          echo "::notice::connections-2099: $(echo "$CN" | tr -d '\n\r')"
+          TH=$(curl -s --max-time 30 "$HUB/api/kali-env/tool-help?tool=nmap&token=$TOKEN" | head -c 240)
           echo "::notice::tool-help-2099: $(echo "$TH" | tr -d '\n\r')"
           TG=$(curl -s --max-time 30 "$HUB/api/kali-env/tools-guide?token=$TOKEN" | head -c 220)
           echo "::notice::tools-guide-2099: $(echo "$TG" | tr -d '\n\r')"
-          AS=$(curl -s --max-time 30 -X POST "$HUB/api/kali-env/assistant" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"query":"خطة استطلاع دومين شامل","target":"example.com"}' | head -c 260)
+          AS=$(curl -s --max-time 30 -X POST "$HUB/api/kali-env/assistant" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"query":"خطة استطلاع دومين شامل","target":"example.com"}' | head -c 240)
           echo "::notice::assistant-2099: $(echo "$AS" | tr -d '\n\r')"
-          SS=$(curl -s --max-time 30 "$HUB/api/kali-env/session?token=$TOKEN" | head -c 260)
+          SS=$(curl -s --max-time 30 "$HUB/api/kali-env/session?token=$TOKEN" | head -c 240)
           echo "::notice::session-2099: $(echo "$SS" | tr -d '\n\r')"
-          MM=$(curl -s --max-time 30 "$HUB/api/kali-env/memory?token=$TOKEN" | head -c 260)
+          MM=$(curl -s --max-time 30 "$HUB/api/kali-env/memory?token=$TOKEN" | head -c 240)
           echo "::notice::memory-2099: $(echo "$MM" | tr -d '\n\r')"
           T=$(curl -s --max-time 120 "$HUB/api/kali-env/tools?token=$TOKEN")
           echo "::notice::tools: $(echo "$T" | grep -o '"total":[0-9]*' | head -1) · $(echo "$T" | grep -o '"present":[0-9]*' | head -1)"
           H=$(curl -s --max-time 60 "$HUB/api/kali-env/health?token=$TOKEN" | head -c 300)
           echo "::notice::health: $(echo "$H" | tr -d '\n\r')"
-          DF=$(curl -s --max-time 60 "$HUB/api/kali-env/desktop-frame?refresh=1&token=$TOKEN" | head -c 260)
-          echo "::notice::desktop-frame-2099: $(echo "$DF" | tr -d '\n\r')"
