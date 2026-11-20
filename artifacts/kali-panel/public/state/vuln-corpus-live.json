@@ -1,17 +1,17 @@
 {
   "measured": true,
-  "at": "2026-11-20T17:01:02.537Z",
-  "total": 429825,
+  "at": "2026-11-20T17:55:05.777Z",
+  "total": 429848,
   "bySeverity": {
-    "medium": 184254,
-    "critical": 40221,
-    "high": 163668,
+    "medium": 184263,
+    "critical": 40222,
+    "high": 163678,
     "unknown": 23587,
-    "low": 18020,
+    "low": 18023,
     "none": 75
   },
-  "kev": 1786,
-  "epssScored": 408211,
+  "kev": 1787,
+  "epssScored": 408325,
   "products": 81954,
   "mode": "deepen",
   "sources": [
@@ -9805,6 +9805,20 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-129448",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Deserialization of Untrusted Data in Apache Roller versions 4.0.0 through 6.1.4 allows an unauthenticated remote attacker to execute arbitrary code. The XML-RPC endpoint accepts vendor extension types and deserializes them before authenticating the requester.\n",
+      "cwe": [
+        "CWE-502"
+      ],
+      "kev": true,
+      "epss": 0.01191,
+      "pub": "2026-11-17T11:17:28.190",
+      "products": [],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-123218",
       "cvss": 9.8,
       "sev": "critical",
@@ -13854,25 +13868,7 @@
         "enterprise_linux_desktop"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2020-13671",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Drupal core does not properly sanitize certain filenames on uploaded files, which can lead to files being interpreted as the incorrect extension and served as the wrong MIME type or executed as PHP for certain hosting configurations. This issue affects: Drupal",
-      "cwe": [
-        "CWE-434"
-      ],
-      "kev": true,
-      "epss": 0.30945,
-      "pub": "2020-11-20T16:15:15.433",
-      "products": [
-        "drupal",
-        "drupal",
-        "drupal"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "429825 ثغرة حقيقية من NVD · 1786 مستغلّة فعلياً (KEV) · 81954 منتج · مزامنة 2026-11-20T17:01:02.537Z"
+  "says_ar": "429848 ثغرة حقيقية من NVD · 1787 مستغلّة فعلياً (KEV) · 81954 منتج · مزامنة 2026-11-20T17:55:05.777Z"
 }
