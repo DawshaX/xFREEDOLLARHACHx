@@ -26,6 +26,9 @@ const FENCED = [
   /<thought>[\s\S]*?<\/thought>/gi,
   /<thinking>[\s\S]*?<\/thinking>/gi,
   /<reasoning>[\s\S]*?<\/reasoning>/gi,
+  /<tool_call>[\s\S]*?<\/tool_call>/gi,
+  /\{\{\s*tool\s*:[^}]*\}\}/gi,
+  /\[\s*TOOL\s*:[^\]]*\]/gi,
   /```(?:thought|thinking|reasoning)[\s\S]*?```/gi,
 ];
 

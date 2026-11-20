@@ -67,8 +67,16 @@ jobs:
           echo "::notice::bounty-engine-2099: $(echo "$BE" | tr -d '\n\r')"
           BH=$(curl -s --max-time 45 -X POST "$HUB/api/kali-env/bounty-engine/hunt" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"target":"example.com","programId":"bugbounty-web-cloud","sendTelegram":true}' | head -c 320)
           echo "::notice::bounty-hunt-2099: $(echo "$BH" | tr -d '\n\r')"
+          IMP=$(curl -s --max-time 25 -X POST "$HUB/api/live-agent/import" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"name":"bounty-scope-2099.txt","content":"example.com api.example.com CVE-2024-21762 93.184.216.34","sessionId":"nova-root"}' | head -c 320)
+          echo "::notice::live-agent-import-2099: $(echo "$IMP" | tr -d '\n\r')"
+          STG=$(curl -s --max-time 25 "$HUB/api/live-agent/storage?token=$TOKEN" | head -c 320)
+          echo "::notice::live-agent-storage-2099: $(echo "$STG" | tr -d '\n\r')"
+          ORG=$(curl -s --max-time 25 "$HUB/api/live-agent/organism?token=$TOKEN" | head -c 340)
+          echo "::notice::live-agent-organism-2099: $(echo "$ORG" | tr -d '\n\r')"
           AG_CHAT=$(curl -s -N --max-time 25 -X POST "$HUB/api/live-agent/sessions/prod-verify-2099/messages" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"content":"شغّل مختبر الزيرو-داي kali_zeroday_lab وأوتوبايلوت kali_autopilot_2099 على example.com","mode":"auto"}' | tr '\n\r' ' ' | head -c 480)
           echo "::notice::live-agent-chat-2099: $AG_CHAT"
+          AG_FLEET=$(curl -s -N --max-time 25 -X POST "$HUB/api/live-agent/sessions/prod-verify-2099/messages" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"content":"اعرض حالة الأسطول المتصل الآن عبر fleet_list","mode":"auto"}' | tr '\n\r' ' ' | head -c 480)
+          echo "::notice::live-agent-fleet-chat-2099: $AG_FLEET"
           T=$(curl -s --max-time 120 "$HUB/api/kali-env/tools?token=$TOKEN")
           echo "::notice::tools: $(echo "$T" | grep -o '"total":[0-9]*' | head -1) · $(echo "$T" | grep -o '"present":[0-9]*' | head -1)"
           H=$(curl -s --max-time 60 "$HUB/api/kali-env/health?token=$TOKEN" | head -c 300)

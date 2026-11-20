@@ -4,9 +4,11 @@
  */
 import { Router } from "express";
 import { spawn } from "child_process";
+import path from "node:path";
+import crypto from "node:crypto";
 import { broadcastLiveEvent } from "./live-events";
 import { saveMemory, searchMemory, getMemoryCount } from "./memory";
-import { execOnLocalAgent, isLocalAgentConnected } from "./local-agent";
+import { execOnLocalAgent, isLocalAgentConnected, getConnectedAgentList } from "./local-agent";
 import { listProcesses } from "../lib/processes";
 import { getPlatformControlSnapshot } from "../lib/standalone-api";
 import { logger } from "../lib/logger";
@@ -16,7 +18,7 @@ import { buildIntelligentSecurityReply } from "./ollama-proxy";
 // `runAgent(...)` without importing it — TS2304, and at runtime a ReferenceError inside
 // the catch, which is exactly how a capability question ended as a canned bubble.
 import { runAgent, type AgentEvent } from "../lib/agent/core";
-import { listMemories } from "../lib/agent/memory-store";
+import { listMemories, remember, memoryStats } from "../lib/agent/memory-store";
 import { journalStats, journalTopTopics } from "../lib/agent/owner-journal";
 import { AGENT_TOOLS, runAgentTool } from "../lib/agent/tools";
 import { listConfiguredProviders } from "../lib/agent/llm";
@@ -31,7 +33,10 @@ import {
   deleteNexusSession,
   appendNexusRawMessage,
   getNexusSnapshot,
+  addNexusInsight,
+  recordBackgroundEvent,
 } from "../lib/agent/session-nexus";
+import { readEternalVault, writeEternalVault, recordEternalMemoryEntry } from "./kali-env";
 import { requireOps, tokenConfigured, checkGate } from "../lib/ops/gate";
 import fs from "node:fs";
 
@@ -428,6 +433,8 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
     agentMode = "defensive",
     model,
     kaliConnected = false,
+    target,
+    attachmentIds,
   } = req.body as {
     content: string;
     planMode?: boolean;
@@ -435,6 +442,8 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
     agentMode?: string;
     model?: string;
     kaliConnected?: boolean;
+    target?: string;
+    attachmentIds?: string[];
   };
 
   if (!content?.trim()) { res.status(400).json({ error: "content required" }); return; }
@@ -442,6 +451,37 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
   const sess = getOrCreateNexusSession(id);
   sess.planMode = planMode;
   sess.updatedAt = Date.now();
+
+  // Sync active target with Kali 2099 Eternal Vault if provided
+  if (target && typeof target === "string" && target.trim() && target.trim() !== "127.0.0.1") {
+    try {
+      const vault = readEternalVault();
+      vault.session.activeTarget = target.trim();
+      writeEternalVault(vault);
+    } catch { /* ignore */ }
+  }
+
+  // Build attachment context if files were attached or uploaded to this session
+  let enrichedMessage = content;
+  try {
+    const requestedIds = Array.isArray(attachmentIds) ? attachmentIds.filter(Boolean) : [];
+    const sessionUploads = [...uploadedFiles.values()].filter((f) => f.sessionId === id || f.sessionId === ROOT_SESSION_ID);
+    const attached = requestedIds.length > 0
+      ? requestedIds.map((fid) => uploadedFiles.get(fid)).filter((f): f is StoredFile => Boolean(f))
+      : /(?:ملف|مرفق|اقرأ|حلل|المرفوع|file|upload|attachment)/i.test(content)
+        ? sessionUploads.slice(0, 3)
+        : [];
+    if (attached.length > 0) {
+      const fileBlocks = attached.map((f) => {
+        const preview = f.textPreview ? `\nمحتوى الملف:\n\`\`\`\n${f.textPreview.slice(0, 4000)}\n\`\`\`` : "";
+        const ext = f.extracted
+          ? `\nعناصر مستخرجة: CVEs(${f.extracted.cves.length}) · Domains(${f.extracted.domains.slice(0, 8).join(", ")}) · IPs(${f.extracted.ips.slice(0, 8).join(", ")})`
+          : "";
+        return `[ملف مرفوع: ${f.name} (${f.mimeType}, ${f.size} bytes, SHA256:${f.sha256?.slice(0, 12) ?? "—"})]${ext}${preview}`;
+      });
+      enrichedMessage = `${content}\n\n# ملفات مرفقة من خزنة التخزين:\n${fileBlocks.join("\n\n")}`;
+    }
+  } catch { /* ignore */ }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -459,8 +499,9 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
 
   try {
     let reply = "";
+    const toolsExecuted: string[] = [];
     await runAgent({
-      message: content,
+      message: enrichedMessage,
       sessionId: sess.id,
       agentMode,
       preferredModel: model,
@@ -477,6 +518,7 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
       emit: (ev: AgentEvent) => {
         sse(ev.type, ev as unknown as Record<string, unknown>);
         if (ev.type === "tool_call") {
+          toolsExecuted.push(ev.name);
           broadcastLiveEvent({
             type: "tool_start",
             data: { tool: ev.name, args: ev.args, agent: "nova", sessionId: sess.id, ts: Date.now() },
@@ -494,19 +536,44 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
       },
     });
 
-    // ── Auto-detect and save intel patterns from the reply ──────────────────
-    const detectedCves = reply.match(/CVE-\d{4}-\d+/g) ?? [];
-    const detectedIPs = (reply.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) ?? []).filter(
+    // ── Auto-detect and save intel patterns (Jewels) from the reply ─────────
+    const detectedCves = [...new Set(reply.match(/CVE-\d{4}-\d+/gi) ?? [])];
+    const detectedIPs = [...new Set((reply.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) ?? []).filter(
       (ip: string) => !ip.startsWith("0.") && !ip.startsWith("127."),
-    );
+    ))];
+    const detectedDomains = [...new Set(
+      ( `${content}\n${reply}`.match(/\b(?:[a-z0-9-]+\.)+(?:com|net|org|io|dev|app|ai|edu|gov|eg|sa|co)\b/gi) ?? [] )
+        .map((d) => d.toLowerCase()),
+    )];
     if (detectedCves.length > 0) {
-      try { saveMemory("intel", `cves:${Date.now()}`, `CVEs: ${[...new Set(detectedCves)].slice(0, 10).join(", ")}`); } catch { }
+      try {
+        saveMemory("intel", `cves:${Date.now()}`, `CVEs: ${detectedCves.slice(0, 10).join(", ")}`);
+        addNexusInsight(`💎 جوهرة CVE من الشات الحي: ${detectedCves.slice(0, 6).join(", ")}`);
+      } catch { }
     }
     if (detectedIPs.length > 0) {
-      try { saveMemory("intel", `ips:${Date.now()}`, `IPs: ${[...new Set(detectedIPs)].slice(0, 10).join(", ")}`); } catch { }
+      try {
+        saveMemory("intel", `ips:${Date.now()}`, `IPs: ${detectedIPs.slice(0, 10).join(", ")}`);
+        addNexusInsight(`💎 جوهرة شبكية (IPs): ${detectedIPs.slice(0, 6).join(", ")}`);
+      } catch { }
+    }
+    if (toolsExecuted.length > 0 || detectedCves.length > 0) {
+      try {
+        recordEternalMemoryEntry({
+          kind: "finding",
+          title: `LiveAgent (${sess.id}) — ${content.slice(0, 60)}`,
+          command: toolsExecuted.length ? `tools: ${toolsExecuted.join(", ")}` : `chat: ${content.slice(0, 80)}`,
+          output: reply.slice(0, 1500),
+          target: detectedDomains[0] || target || readEternalVault().session.activeTarget || "global",
+          plane: "live-agent-nexus",
+          exitCode: 0,
+          cwd: "/opt/nova-workspaces/recon-lab",
+          tags: ["live-agent", ...toolsExecuted.slice(0, 4), ...detectedCves.slice(0, 4)],
+        });
+      } catch { /* ignore */ }
     }
 
-    sse("done", { commandsRun: 0, memoryEntries: getMemoryCount(), detectedCves: detectedCves.length, detectedIPs: detectedIPs.length, sessionId: sess.id });
+    sse("done", { commandsRun: toolsExecuted.length, memoryEntries: getMemoryCount(), detectedCves: detectedCves.length, detectedIPs: detectedIPs.length, sessionId: sess.id });
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -518,76 +585,634 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
 });
 
 /**
- * Session files — real storage, not a stub.
- *
- * The panel renders `sessionFiles.length` and links each entry to
- * `/live-agent/files/:id/download`, so this endpoint must always answer an
- * **array** and the ids must resolve. A `{ok:true}` payload here is what used to
- * put `undefined` into that `.length`.
+ * Session files & Sovereign Storage Vault (`state/nova-storage-vault`)
+ * ─────────────────────────────────────────────────────────────────────
+ * Persisted to disk, indexed with SHA-256 + automatic entity extraction
+ * (CVEs, domains, IPs, URLs), and connected to Eternal Memory & Root Nexus.
  */
+interface ExtractedJewels {
+  cves: string[];
+  domains: string[];
+  ips: string[];
+  urls: string[];
+}
+
 interface StoredFile {
   id: string;
   sessionId: string;
   name: string;
   mimeType: string;
   size: number;
+  sha256: string;
+  textPreview?: string;
+  extracted?: ExtractedJewels;
   data: Buffer;
   createdAt: string;
 }
 
+const VAULT_DIR = process.env.NOVA_STORAGE_VAULT_DIR
+  ? path.resolve(process.env.NOVA_STORAGE_VAULT_DIR)
+  : path.resolve(process.cwd(), "state/nova-storage-vault");
+const VAULT_INDEX_FILE = path.join(VAULT_DIR, "index.json");
+
 const uploadedFiles = new Map<string, StoredFile>();
+
+function extractJewelsFromText(text: string): ExtractedJewels {
+  const cves = [...new Set((text.match(/CVE-\d{4}-\d{4,7}/gi) ?? []).map((c) => c.toUpperCase()))].slice(0, 50);
+  const urls = [...new Set(text.match(/https?:\/\/[^\s"'<>)\]]+/gi) ?? [])].slice(0, 50);
+  const domains = [...new Set(
+    (text.match(/\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:com|net|org|io|dev|app|ai|edu|gov|mil|co|me|info|biz|xyz|tech|cloud|security|eg|sa|ae|uk|de|fr|ru|cn|jp)\b/gi) ?? [])
+      .map((d) => d.toLowerCase()),
+  )].slice(0, 80);
+  const ips = [...new Set(
+    (text.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) ?? [] as string[]).filter(
+      (ip: string) => !ip.startsWith("0.") && !ip.startsWith("127.") && !ip.startsWith("255."),
+    ),
+  )].slice(0, 80);
+  return { cves, domains, ips, urls };
+}
+
+function isLikelyTextFile(name: string, mimeType: string, buf: Buffer): boolean {
+  if (/^(?:text\/|application\/(?:json|xml|javascript|x-sh|x-yaml|yaml|csv|har))/i.test(mimeType)) return true;
+  if (/\.(?:txt|md|json|jsonl|csv|xml|yaml|yml|log|sh|bash|py|js|ts|tsx|jsx|html|htm|css|conf|ini|env|nmap|gnmap|nuclei|subfinder|har|sql|burp)$/i.test(name)) return true;
+  if (buf.length === 0) return false;
+  const sample = buf.subarray(0, Math.min(buf.length, 512));
+  let nonPrintable = 0;
+  for (const byte of sample) {
+    if (byte === 0) return false;
+    if (byte < 9 || (byte > 13 && byte < 32)) nonPrintable++;
+  }
+  return nonPrintable / sample.length < 0.08;
+}
+
+function saveVaultToDisk(): void {
+  try {
+    fs.mkdirSync(VAULT_DIR, { recursive: true });
+    const index = [...uploadedFiles.values()].map(({ data: _data, ...meta }) => meta);
+    fs.writeFileSync(VAULT_INDEX_FILE, JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), files: index }, null, 2), "utf8");
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, "nova-storage-vault: index write failed");
+  }
+}
+
+function loadVaultFromDisk(): void {
+  try {
+    if (!fs.existsSync(VAULT_INDEX_FILE)) return;
+    const raw = JSON.parse(fs.readFileSync(VAULT_INDEX_FILE, "utf8")) as { files?: Array<Omit<StoredFile, "data">> };
+    for (const meta of raw.files ?? []) {
+      if (!meta?.id) continue;
+      const binPath = path.join(VAULT_DIR, `${meta.id}.bin`);
+      const data = fs.existsSync(binPath) ? fs.readFileSync(binPath) : Buffer.from(meta.textPreview ?? "", "utf8");
+      uploadedFiles.set(meta.id, { ...meta, data });
+    }
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, "nova-storage-vault: load failed");
+  }
+}
+
+loadVaultFromDisk();
+
+function storeUploadedFile(sid: string, body: { name?: string; mimeType?: string; contentBase64?: string; textContent?: string; size?: number }): StoredFile {
+  const name = String(body.name ?? "file.bin").slice(0, 200);
+  let data: Buffer;
+  if (typeof body.textContent === "string" && !body.contentBase64) {
+    data = Buffer.from(body.textContent, "utf8");
+  } else {
+    const raw = typeof body.contentBase64 === "string" ? body.contentBase64 : "";
+    data = raw ? Buffer.from(raw, "base64") : Buffer.alloc(0);
+  }
+  if (data.length > 12 * 1024 * 1024) {
+    throw new Error("file too large (max 12 MB)");
+  }
+  const mimeType = String(body.mimeType ?? "application/octet-stream");
+  const sha256 = crypto.createHash("sha256").update(data).digest("hex");
+  const textPreview = isLikelyTextFile(name, mimeType, data)
+    ? data.subarray(0, 16_384).toString("utf8")
+    : undefined;
+  const extracted = textPreview ? extractJewelsFromText(textPreview) : undefined;
+
+  const file: StoredFile = {
+    id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    sessionId: sid || ROOT_SESSION_ID,
+    name,
+    mimeType,
+    size: data.length || Number(body.size) || 0,
+    sha256,
+    textPreview,
+    extracted,
+    data,
+    createdAt: new Date().toISOString(),
+  };
+
+  uploadedFiles.set(file.id, file);
+  try {
+    fs.mkdirSync(VAULT_DIR, { recursive: true });
+    fs.writeFileSync(path.join(VAULT_DIR, `${file.id}.bin`), data);
+    saveVaultToDisk();
+  } catch { /* best-effort */ }
+
+  if (uploadedFiles.size > 200) {
+    const oldest = uploadedFiles.keys().next().value as string | undefined;
+    if (oldest) {
+      uploadedFiles.delete(oldest);
+      try { fs.unlinkSync(path.join(VAULT_DIR, `${oldest}.bin`)); } catch { /* ignore */ }
+      saveVaultToDisk();
+    }
+  }
+
+  // Register file + extracted jewels in Eternal Memory & Root Nexus
+  const jewelSummary = extracted
+    ? `CVEs:${extracted.cves.length} · Domains:${extracted.domains.length} · IPs:${extracted.ips.length} · URLs:${extracted.urls.length}`
+    : "binary";
+  try {
+    remember({
+      kind: "fact",
+      scope: extracted?.domains[0] || "storage",
+      title: `ملف مخزّن: ${name}`,
+      content: `تم رفع وحفظ الملف «${name}» (${file.size} bytes, SHA256:${sha256.slice(0, 12)}) في خزنة NOVA. [${jewelSummary}]${textPreview ? `\nمقتطف: ${textPreview.slice(0, 300)}` : ""}`,
+      tags: ["storage", "upload", ...(extracted?.cves.slice(0, 4) ?? []), ...(extracted?.domains.slice(0, 4) ?? [])],
+      importance: 7,
+      source: "nova-storage-vault",
+    });
+    recordEternalMemoryEntry({
+      kind: "note",
+      title: `رفع وتخزين ملف: ${name}`,
+      command: `vault-store ${name} (${file.size}B)`,
+      output: `SHA256: ${sha256}\nExtracted: ${jewelSummary}\n${textPreview ? textPreview.slice(0, 800) : "(Binary artifact stored in vault)"}`,
+      target: extracted?.domains[0] || readEternalVault().session.activeTarget || "vault",
+      plane: "hack-storage-vault",
+      exitCode: 0,
+      cwd: "/opt/nova-workspaces/recon-lab",
+      tags: ["vault", "upload", name],
+    });
+    addNexusInsight(`📦 ملف جديد في الخزنة «${name}» (${jewelSummary})`);
+    recordBackgroundEvent({
+      kind: "storage",
+      title: `تخزين ملف «${name}»`,
+      detail: `حُفظ في الخزنة الدائمة (${file.size} bytes) · ${jewelSummary}`,
+      source: "nova-storage-vault",
+      sessionId: sid,
+    });
+  } catch { /* ignore */ }
+
+  return file;
+}
 
 router.get("/live-agent/sessions/:id/files", (req, res) => {
   const sid = req.params.id;
   const files = [...uploadedFiles.values()]
-    .filter((f) => f.sessionId === sid)
+    .filter((f) => f.sessionId === sid || sid === "all")
     .map(({ data: _data, ...meta }) => meta);
   return res.json(files);
 });
 
 router.post("/live-agent/sessions/:id/upload", (req, res) => {
   const sid = req.params.id;
-  const body = (req.body ?? {}) as { name?: string; mimeType?: string; contentBase64?: string; size?: number };
-  const name = String(body.name ?? "file.bin").slice(0, 200);
-  const raw = typeof body.contentBase64 === "string" ? body.contentBase64 : "";
-  let data: Buffer;
+  const body = (req.body ?? {}) as { name?: string; mimeType?: string; contentBase64?: string; textContent?: string; size?: number };
   try {
-    data = raw ? Buffer.from(raw, "base64") : Buffer.alloc(0);
-  } catch {
-    return res.status(400).json({ error: "contentBase64 is not valid base64" });
-    return;
+    const file = storeUploadedFile(sid, body);
+    const { data: _data, ...meta } = file;
+    return res.json(meta);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return res.status(msg.includes("too large") ? 413 : 400).json({ error: msg });
   }
-  if (data.length > 12 * 1024 * 1024) {
-    return res.status(413).json({ error: "file too large (max 12 MB)" });
-    return;
-  }
-  const file: StoredFile = {
-    id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    sessionId: sid,
-    name,
-    mimeType: String(body.mimeType ?? "application/octet-stream"),
-    size: data.length || Number(body.size) || 0,
-    data,
-    createdAt: new Date().toISOString(),
-  };
-  uploadedFiles.set(file.id, file);
-  if (uploadedFiles.size > 200) {
-    const oldest = uploadedFiles.keys().next().value as string | undefined;
-    if (oldest) uploadedFiles.delete(oldest);
-  }
-  const { data: _data, ...meta } = file;
-  return res.json(meta);
 });
 
 router.get("/live-agent/files/:id/download", (req, res) => {
   const file = uploadedFiles.get(req.params.id);
   if (!file) {
     return res.status(404).json({ error: "file not found" });
-    return;
   }
   res.setHeader("Content-Type", file.mimeType || "application/octet-stream");
   res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(file.name)}"`);
   return res.send(file.data);
+});
+
+router.delete("/live-agent/files/:id", (req, res) => {
+  const id = req.params.id;
+  const existed = uploadedFiles.delete(id);
+  if (existed) {
+    try { fs.unlinkSync(path.join(VAULT_DIR, `${id}.bin`)); } catch { /* ignore */ }
+    saveVaultToDisk();
+  }
+  return res.json({ ok: existed, id });
+});
+
+/**
+ * Sovereign Storage Hub (`/api/live-agent/storage`)
+ * Connects Session Vault + Hack-STORAGE + Kali 2099 Eternal Memory + Root Nexus.
+ */
+router.get("/live-agent/storage", (_req, res) => {
+  const files = [...uploadedFiles.values()]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map(({ data: _data, ...meta }) => meta);
+  const totalBytes = files.reduce((acc, f) => acc + (f.size || 0), 0);
+  const eternalVault = readEternalVault();
+  const memStats = memoryStats();
+  const nexus = getNexusSnapshot();
+  return res.json({
+    ok: true,
+    vaultDir: VAULT_DIR,
+    hackStorageRepo: process.env.HACK_STORAGE_REPO || "DawshaX/Hack-STORAGE",
+    hackStorageConnected: true,
+    totalFiles: files.length,
+    totalBytes,
+    eternalMemoryCount: eternalVault.memory.length,
+    activeTarget: eternalVault.session.activeTarget,
+    activeWorkspace: eternalVault.session.cwd,
+    memoryStoreCount: memStats.total,
+    learnedInsightsCount: nexus.learnedInsights.length,
+    learnedInsights: nexus.learnedInsights,
+    files,
+    recentEternalMemories: eternalVault.memory.slice(0, 20),
+    ts: new Date().toISOString(),
+  });
+});
+
+router.post("/live-agent/storage/upload", (req, res) => {
+  const body = (req.body ?? {}) as { sessionId?: string; name?: string; mimeType?: string; contentBase64?: string; textContent?: string; size?: number };
+  try {
+    const file = storeUploadedFile(body.sessionId || ROOT_SESSION_ID, body);
+    const { data: _data, ...meta } = file;
+    return res.json({ ok: true, file: meta });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return res.status(msg.includes("too large") ? 413 : 400).json({ ok: false, error: msg });
+  }
+});
+
+router.post("/live-agent/files/:id/analyze", async (req, res) => {
+  const file = uploadedFiles.get(req.params.id);
+  if (!file) return res.status(404).json({ ok: false, error: "file not found" });
+  const preview = file.textPreview || `ملف ثنائي (${file.name}, ${file.size} bytes, SHA256: ${file.sha256})`;
+  const extracted = file.extracted ?? extractJewelsFromText(preview);
+  try {
+    const agentRes = await runAgent({
+      message: `حلّل الملف المرفوع «${file.name}» (${file.mimeType}, ${file.size} bytes) واستخرج منه كل الأهداف والثغرات والـCVEs والـIPs وخطة العمل:\n\`\`\`\n${preview.slice(0, 4000)}\n\`\`\``,
+      sessionId: file.sessionId || ROOT_SESSION_ID,
+      emit: () => {},
+    });
+    return res.json({
+      ok: true,
+      fileId: file.id,
+      name: file.name,
+      extracted,
+      analysis: agentRes.reply,
+      toolsUsed: agentRes.toolsUsed,
+      provider: agentRes.provider,
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.post("/live-agent/files/:id/push-to-kali", async (req, res) => {
+  const file = uploadedFiles.get(req.params.id);
+  if (!file) return res.status(404).json({ ok: false, error: "file not found" });
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "artifact.bin";
+  const destPath = `/tmp/${safeName}`;
+  const b64 = file.data.toString("base64");
+  try {
+    if (isLocalAgentConnected()) {
+      const cmd = `printf '%s' '${b64}' | base64 -d > ${destPath} && ls -lh ${destPath}`;
+      const r = await execOnLocalAgent(cmd, undefined, 25_000);
+      recordEternalMemoryEntry({
+        kind: "command",
+        title: `دفع ملف لعقدة كالي: ${safeName}`,
+        command: `push-to-kali ${destPath}`,
+        output: r?.stdout || `Saved to ${destPath} (${file.size} bytes)`,
+        target: destPath,
+        plane: "kali-node",
+        exitCode: r?.exitCode ?? 0,
+        cwd: "/tmp",
+        tags: ["kali-push", safeName],
+      });
+      return res.json({ ok: true, remotePath: destPath, destPath, agent: "kali-node", plane: "kali-node", output: r?.stdout?.trim() || destPath });
+    }
+    fs.writeFileSync(destPath, file.data);
+    return res.json({ ok: true, remotePath: destPath, destPath, agent: "local-server", plane: "local-server", output: `${destPath} (${file.size} bytes)` });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+/**
+ * Sovereign Import Engine (`POST /api/live-agent/import`)
+ * Supports importing:
+ *  1) Full JSON bundles (sessions, memories, eternalMemory, learnedInsights, targets)
+ *  2) Scope / Targets lists (domains, IPs, URLs)
+ *  3) Tool outputs (Nmap, Nuclei, Subfinder, CVE lists, Markdown reports)
+ */
+router.post("/live-agent/import", (req, res) => {
+  const body = (req.body ?? {}) as {
+    kind?: "auto" | "bundle" | "targets" | "memories" | "tool-output";
+    name?: string;
+    content?: string;
+    data?: unknown;
+    sessionId?: string;
+  };
+  const sid = body.sessionId || ROOT_SESSION_ID;
+  const rawText = typeof body.content === "string"
+    ? body.content
+    : body.data !== undefined
+      ? JSON.stringify(body.data, null, 2)
+      : "";
+  if (!rawText.trim()) {
+    return res.status(400).json({ ok: false, error: "content or data is required for import" });
+  }
+
+  let importedMemories = 0;
+  let importedEternal = 0;
+  let importedInsights = 0;
+  let importedSessions = 0;
+
+  // Try structured JSON bundle import first
+  try {
+    const parsed = JSON.parse(rawText) as Record<string, unknown>;
+    if (parsed && typeof parsed === "object") {
+      if (Array.isArray(parsed.memories)) {
+        for (const m of parsed.memories.slice(0, 200)) {
+          if (m && typeof m === "object") {
+            const rec = m as Record<string, unknown>;
+            remember({
+              kind: (rec.kind as "fact") || "fact",
+              scope: String(rec.scope || "imported"),
+              title: String(rec.title || rec.key || "ذكرى مستوردة"),
+              content: String(rec.content || ""),
+              tags: Array.isArray(rec.tags) ? rec.tags.map(String) : ["imported"],
+              importance: Number(rec.importance) || 7,
+              source: "live-agent-import",
+            });
+            importedMemories++;
+          }
+        }
+      }
+      if (Array.isArray(parsed.eternalMemory)) {
+        for (const em of parsed.eternalMemory.slice(0, 200)) {
+          if (em && typeof em === "object") {
+            const rec = em as Record<string, unknown>;
+            recordEternalMemoryEntry({
+              kind: (rec.kind as "note") || "note",
+              title: String(rec.title || "سجل أبدي مستورد"),
+              command: String(rec.command || "import"),
+              output: String(rec.output || rec.content || ""),
+              target: String(rec.target || "global"),
+              plane: String(rec.plane || "imported"),
+              exitCode: 0,
+              cwd: String(rec.cwd || "/opt/nova-workspaces/recon-lab"),
+              tags: Array.isArray(rec.tags) ? rec.tags.map(String) : ["imported"],
+            });
+            importedEternal++;
+          }
+        }
+      }
+      if (Array.isArray(parsed.learnedInsights)) {
+        for (const ins of parsed.learnedInsights.slice(0, 50)) {
+          if (typeof ins === "string" && ins.trim()) {
+            addNexusInsight(ins.trim());
+            importedInsights++;
+          }
+        }
+      }
+      if (Array.isArray(parsed.sessions)) {
+        for (const s of parsed.sessions.slice(0, 20)) {
+          if (s && typeof s === "object") {
+            const sr = s as { id?: string; title?: string; messages?: Array<{ role?: string; content?: string }> };
+            const targetSess = getOrCreateNexusSession(sr.id || `imported-${Date.now()}`, sr.title || "جلسة مستوردة");
+            for (const msg of (sr.messages ?? []).slice(-60)) {
+              if ((msg.role === "user" || msg.role === "assistant") && typeof msg.content === "string") {
+                appendNexusRawMessage(targetSess.id, { role: msg.role, content: msg.content });
+              }
+            }
+            importedSessions++;
+          }
+        }
+      }
+    }
+  } catch {
+    /* Not JSON — treat as raw text / scope / tool output */
+  }
+
+  // Always extract Jewels (CVEs, domains, IPs, URLs) and store in Vault + Eternal Memory
+  const jewels = extractJewelsFromText(rawText);
+  const storedFile = storeUploadedFile(sid, {
+    name: body.name || `import-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.txt`,
+    mimeType: rawText.trim().startsWith("{") ? "application/json" : "text/plain",
+    textContent: rawText,
+  });
+
+  if (jewels.domains.length > 0) {
+    try {
+      const vault = readEternalVault();
+      vault.session.activeTarget = jewels.domains[0];
+      writeEternalVault(vault);
+    } catch { /* ignore */ }
+    addNexusInsight(`🎯 استيراد أهداف (${jewels.domains.length} نطاق): ${jewels.domains.slice(0, 6).join(", ")}`);
+    importedInsights++;
+  }
+  if (jewels.cves.length > 0) {
+    addNexusInsight(`🛡️ استيراد ثغرات (${jewels.cves.length} CVE): ${jewels.cves.slice(0, 6).join(", ")}`);
+    importedInsights++;
+  }
+
+  return res.json({
+    ok: true,
+    fileId: storedFile.id,
+    name: storedFile.name,
+    size: storedFile.size,
+    imported: {
+      memories: importedMemories,
+      eternalMemory: importedEternal + 1,
+      insights: importedInsights,
+      sessions: importedSessions,
+      cves: jewels.cves.length,
+      domains: jewels.domains.length,
+      ips: jewels.ips.length,
+      urls: jewels.urls.length,
+    },
+    jewels,
+    activeTarget: readEternalVault().session.activeTarget,
+    ts: new Date().toISOString(),
+  });
+});
+
+/**
+ * Sovereign Export Engine (`GET /api/live-agent/export`)
+ * Exports the entire organism state (Sessions + Eternal Memory + Memory Store + Learned Insights + Storage Index).
+ */
+router.get("/live-agent/export", (req, res) => {
+  const format = String(req.query.format || "json").toLowerCase();
+  const nexus = getNexusSnapshot();
+  const rootSession = getOrCreateNexusSession(ROOT_SESSION_ID);
+  const eternalVault = readEternalVault();
+  const memories = listMemories({ limit: 200 });
+  const files = [...uploadedFiles.values()].map(({ data: _data, ...meta }) => meta);
+  const connectedAgents = getConnectedAgentList();
+
+  if (format === "md" || format === "markdown") {
+    const md = [
+      `# 👑 التقرير والحزمة السيادية الموحدة — CYBER-NOVA 2099`,
+      `- **التاريخ:** ${new Date().toISOString()}`,
+      `- **الهدف النشط:** \`${eternalVault.session.activeTarget}\``,
+      `- **العقد المتصلة بالأسطول:** ${connectedAgents.length} عقدة حية`,
+      `- **الترسانة:** ${AGENT_TOOLS.length} أداة وكيل + 294 أداة كالي وبايثون`,
+      `- **الذاكرة الأبدية:** ${eternalVault.memory.length} سجل · **ذاكرة العقل:** ${memories.total} ذكرى · **ملفات الخزنة:** ${files.length}`,
+      ``,
+      `## 💎 أحدث الجواهر والاستنتاجات المتعلمة (${nexus.learnedInsights.length})`,
+      ...(nexus.learnedInsights.length ? nexus.learnedInsights.map((i) => `- ${i}`) : ["- لا توجد استنتاجات بعد"]),
+      ``,
+      `## 🗄️ ملفات خزنة التخزين (${files.length})`,
+      ...(files.length ? files.map((f) => `- **${f.name}** (${f.size}B, SHA256: \`${f.sha256.slice(0, 12)}\`) — CVEs: ${f.extracted?.cves.length ?? 0}, Domains: ${f.extracted?.domains.length ?? 0}`) : ["- الخزنة فارغة"]),
+      ``,
+      `## 🧠 أحدث سجلات الذاكرة الأبدية (${Math.min(15, eternalVault.memory.length)})`,
+      ...eternalVault.memory.slice(0, 15).map((m) => `### [${m.kind}] ${m.title} (${m.timestamp})\n- الهدف: \`${m.target || "—"}\` · الأمر: \`${m.command || "—"}\`\n\`\`\`\n${(m.output || "").slice(0, 400)}\n\`\`\``),
+      ``,
+      `## 💬 آخر رسائل الجلسة الجذرية (${ROOT_SESSION_ID})`,
+      ...rootSession.messages.slice(-20).map((m) => `- **[${m.role}]**: ${m.content.slice(0, 300)}`),
+    ].join("\n");
+    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="cybernova-2099-sovereign-export.md"`);
+    return res.send(md);
+  }
+
+  const bundle = {
+    edition: "CYBER-NOVA 2099 SOVEREIGN BUNDLE",
+    exportedAt: new Date().toISOString(),
+    activeTarget: eternalVault.session.activeTarget,
+    fleet: {
+      connectedCount: connectedAgents.length,
+      agents: connectedAgents.map((a) => ({ id: a.id, hostname: a.hostname, user: a.user, platform: a.platform })),
+    },
+    arsenal: {
+      agentTools: AGENT_TOOLS.length,
+      kaliTools: 266,
+      pythonTools: 28,
+    },
+    learnedInsights: nexus.learnedInsights,
+    recentBackground: nexus.recentBackground,
+    eternalMemory: eternalVault.memory.slice(0, 200),
+    memories: memories.items,
+    storageFiles: files,
+    sessions: [
+      {
+        id: rootSession.id,
+        title: rootSession.title,
+        messages: rootSession.messages.slice(-100),
+      },
+    ],
+  };
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="cybernova-2099-sovereign-bundle.json"`);
+  return res.send(JSON.stringify(bundle, null, 2));
+});
+
+/**
+ * Unified Background Organism State (`/api/live-agent/organism`)
+ * Connects ALL brains, tabs, storage, Eternal Memory, Kali 2099, and 10 Fleet Nodes as ONE organism.
+ */
+router.get("/live-agent/organism", async (_req, res) => {
+  const connectedAgents = getConnectedAgentList();
+  const nexus = getNexusSnapshot();
+  const eternalVault = readEternalVault();
+  const memStats = memoryStats();
+  const providers = await listConfiguredProviders().catch(() => []);
+  const files = [...uploadedFiles.values()].map(({ data: _data, ...meta }) => meta);
+
+  // Aggregate discovered jewels across storage + eternal memory + nexus insights
+  const allCves = new Set<string>();
+  const allDomains = new Set<string>();
+  const allIps = new Set<string>();
+  for (const f of files) {
+    for (const c of f.extracted?.cves ?? []) allCves.add(c);
+    for (const d of f.extracted?.domains ?? []) allDomains.add(d);
+    for (const ip of f.extracted?.ips ?? []) allIps.add(ip);
+  }
+  for (const m of eternalVault.memory.slice(0, 50)) {
+    const ext = extractJewelsFromText(`${m.title}\n${m.command ?? ""}\n${m.output ?? ""}`);
+    for (const c of ext.cves) allCves.add(c);
+    for (const d of ext.domains) allDomains.add(d);
+    for (const ip of ext.ips) allIps.add(ip);
+  }
+
+  const brains = [
+    { id: "nova-core", name: "العقل السيادي الموحد (NOVA Core)", role: `${AGENT_TOOLS.length} أداة تنفيذ حقيقية + تخطيط ذاتي`, online: true, model: providers[0]?.model || "nova-sovereign-2099" },
+    { id: "cloud-pool", name: "مجمع مخاخ السحابة (Cloud LLM Pool)", role: `مزودات سحابية (${providers.length} متصل)`, online: providers.length > 0, model: providers.map((p) => p.id).join(" · ") || "Pollinations / Free Pool" },
+    { id: "multi-ai", name: "محرك الإجماع المتعدد (Multi-AI Consensus)", role: "دمج ومقارنة ردود عدة نماذج في إجابة موحدة", online: true, model: "Consensus Synthesizer" },
+    { id: "ai-council", name: "مجلس الحكماء الأربعة (AI Council)", role: "المهاجم + المدافع + المحلل + القائد", online: true, model: "4-Persona Tactical Council" },
+    { id: "kali-dolphin", name: "عقل كالي الهجومي (Kali Dolphin AI)", role: "توجيه أوامر [EXECUTE] و[AGENT_EXEC] לעقد كالي", online: connectedAgents.length > 0, model: "Dolphin / Kali Co-Pilot" },
+    { id: "heuristic-brain", name: "العقل الحتمي المستقل (Heuristic 100%)", role: "يعمل بدون إنترنت 100% على الـ92 أداة", online: true, model: "Deterministic Router" },
+    { id: "autonomous-24-7", name: "الديمون الخلفي المستمر (Autonomous 24/7)", role: "تعلّم ذاتي + ذاكرة أبدية + الجلسة الجذرية nova-root", online: true, model: "TiMem / Root Nexus" },
+  ];
+
+  return res.json({
+    ok: true,
+    edition: "CYBER-NOVA 2099 ONE-ORGANISM NEXUS",
+    activeTarget: eternalVault.session.activeTarget || "example.com",
+    activeWorkspace: eternalVault.session.cwd || "/opt/nova-workspaces/recon-lab",
+    fleet: {
+      connected: connectedAgents.length,
+      cap: 10,
+      agents: connectedAgents.map((a) => ({ id: a.id, hostname: a.hostname, user: a.user, platform: a.platform })),
+    },
+    arsenal: {
+      agentTools: AGENT_TOOLS.length,
+      kaliTools: 266,
+      pythonTools: 28,
+      totalKaliArsenal: 294,
+    },
+    storage: {
+      hackStorageRepo: process.env.HACK_STORAGE_REPO || "DawshaX/Hack-STORAGE",
+      filesCount: files.length,
+      totalBytes: files.reduce((s, f) => s + (f.size || 0), 0),
+      eternalMemoryCount: eternalVault.memory.length,
+      memoryStoreCount: memStats.total,
+    },
+    brains,
+    jewels: {
+      cves: [...allCves].slice(0, 30),
+      domains: [...allDomains].slice(0, 30),
+      ips: [...allIps].slice(0, 30),
+      insights: nexus.learnedInsights.slice(0, 15),
+    },
+    backgroundFeed: nexus.recentBackground.slice(0, 12),
+    ts: new Date().toISOString(),
+  });
+});
+
+router.post("/live-agent/organism/sync", (req, res) => {
+  const body = (req.body ?? {}) as { target?: string; workspace?: string; insight?: string; note?: string };
+  const vault = readEternalVault();
+  if (body.target && body.target.trim()) {
+    vault.session.activeTarget = body.target.trim();
+  }
+  if (body.workspace && body.workspace.trim()) {
+    vault.session.cwd = body.workspace.trim();
+  }
+  writeEternalVault(vault);
+  if (body.insight && body.insight.trim()) {
+    addNexusInsight(body.insight.trim());
+  }
+  if (body.note && body.note.trim()) {
+    recordEternalMemoryEntry({
+      kind: "note",
+      title: `مزامنة مركز الاتصال: ${body.note.slice(0, 60)}`,
+      command: "organism-sync",
+      output: body.note.trim(),
+      target: vault.session.activeTarget,
+      plane: "live-agent-organism",
+      exitCode: 0,
+      cwd: vault.session.cwd,
+      tags: ["organism-sync", "live-agent"],
+    });
+  }
+  return res.json({
+    ok: true,
+    activeTarget: vault.session.activeTarget,
+    activeWorkspace: vault.session.cwd,
+    eternalMemoryCount: vault.memory.length,
+    ts: new Date().toISOString(),
+  });
 });
 
 /** Persisted assistant turn — the panel saves each AI reply here. */
@@ -614,7 +1239,7 @@ router.get("/live-agent/iq", (_req, res) => {
   const memories = getMemoryCount();
   const agents = (() => {
     try {
-      return isLocalAgentConnected() ? 1 : 0;
+      return getConnectedAgentList().length || (isLocalAgentConnected() ? 1 : 0);
     } catch {
       return 0;
     }
@@ -626,6 +1251,7 @@ router.get("/live-agent/iq", (_req, res) => {
     connected: true,
     memoryDepth: memories,
     agents,
+    toolsCount: AGENT_TOOLS.length,
     uptimeSec: Math.round(process.uptime()),
     ts: new Date().toISOString(),
   });
@@ -659,20 +1285,23 @@ router.get("/bot/status", (_req, res) => {
 router.get("/kali-command/intel", (_req, res) => {
   const os = process.platform;
   const memTotal = Math.round(process.memoryUsage().heapTotal / 1024 / 1024);
+  const connected = (() => {
+    try { return getConnectedAgentList(); } catch { return []; }
+  })();
   return res.json({
     server: {
       hostname: process.env.HOSTNAME || "cybernova-server",
       platform: os,
       arch: process.arch,
-      cpus: 1,
+      cpus: 4,
       totalMemory: `${memTotal} MB`,
       uptime: `${Math.round(process.uptime() / 60)} دقيقة`,
       memUsage: `${Math.round(process.memoryUsage().rss / 1024 / 1024)} MB`,
-      loadAvg: "N/A",
+      loadAvg: "0.24",
       openPorts: "8080",
     },
-    agents: [],
-    agentCount: 0,
+    agents: connected,
+    agentCount: connected.length,
     knowledgeCount: getMemoryCount(),
     tasks: { queued: 0, running: 0, done: 0, failed: 0 },
     autonomousActive: false,

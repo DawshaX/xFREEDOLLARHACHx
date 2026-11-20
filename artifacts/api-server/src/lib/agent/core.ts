@@ -393,12 +393,12 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
     },
   },
   {
-    test: /(?:زيرو\s*داي|زيروهات|zero[- ]?day|0[- ]?day|ثغرات عميقة|اكتشاف ثغرات جديدة)/i,
+    test: /(?:زيرو\s*داي|زيروهات|zero[- ]?day|0[- ]?day|ثغرات عميقة|اكتشاف ثغرات جديدة|kali_zeroday_lab)/i,
     tools: (msg) => {
       const host = extractTarget(msg) || "example.com";
       return [
         { tool: "kali_zeroday_lab", args: { target: host, focus: "web-api-ssrf-auth" } },
-        { tool: "vuln_combine", args: { query: host } },
+        { tool: "kali_attack_graph", args: { target: host } },
       ];
     },
   },
@@ -545,7 +545,7 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
     },
   },
   {
-    test: /(?:أدوات|ادوات|kali|أداة|tool)/i,
+    test: /(?:أدوات|ادوات|\bkali\b|أداة|\btool\b)/i,
     tools: (msg) => [{ tool: "kali_toolbox", args: { query: cleanQuery(msg), target: extractTarget(msg) ?? undefined } }],
   },
   {
@@ -739,7 +739,7 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
   if (greetingOnly(msg) && !host) {
     return { thought: "المستخدم بيسلّم — أرد بشكل شخصي وأعرض اللي أقدر أعمله.", steps: [] };
   }
-  if (/(?:انت مين|من أنت|مين انت|who are you|شخصيتك)/i.test(msg)) {
+  if (/(?:انت\s*مين|من\s*(?:أنت|انت)|مين\s*انت|who\s+are\s+you|شخصيتك)/i.test(msg) && !host) {
     return { thought: "المستخدم بيسأل عن كياني — أعرض شخصيتي وقدراتي وقواعدي.", steps: [] };
   }
 
@@ -777,13 +777,16 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
   // ── القدرات أول: «تقدر تفتح متصفح وتشتغل علي ميتاسبلويت؟» لازم تتحلّل من خريطة
   // القدرات (تحريفات الإملائية، عربي/إنجليزي) وتتحول لأدوات فعلًا — مش تتساب
   // للموديل يخمّن دقيقة ويرجّع إنكار غلط.
-  for (const step of capabilitySteps(msg, 3)) {
-    if (!AGENT_TOOL_NAMES.includes(step.tool)) continue;
-    if (steps.some((x) => x.tool === step.tool && JSON.stringify(x.args) === JSON.stringify(step.args))) continue;
-    steps.push(step);
+  const isSovereign2099 = /(?:kali_bounty_hunt|kali_zeroday_lab|kali_autopilot_2099|kali_visitor_radar|kali_attack_graph|مليارات|بونتي|مكافآت|زيرو\s*داي|زيرو-داي|0-?day|رادار\s+الزوار|أوتوبايلوت|اوتوبايلوت|خريطة\s+(?:سطح\s+)?الهجوم)/i.test(msg);
+  if (!isSovereign2099) {
+    for (const step of capabilitySteps(msg, 3)) {
+      if (!AGENT_TOOL_NAMES.includes(step.tool)) continue;
+      if (steps.some((x) => x.tool === step.tool && JSON.stringify(x.args) === JSON.stringify(step.args))) continue;
+      steps.push(step);
+    }
+    const capLabels = capabilityLabels(msg);
+    if (capLabels.length) labels.push(...capLabels);
   }
-  const capLabels = capabilityLabels(msg);
-  if (capLabels.length) labels.push(...capLabels);
 
   for (const rule of INTENT) {
     if (!rule.test.test(msg)) continue;
@@ -882,7 +885,11 @@ export function greetingAnswer(model: SelfModel = buildSelfModel(), opts: { repe
   const corpus = model.corpus.measured
     ? `فهرس **${model.corpus.total.toLocaleString("en-US")}** ثغرة حقيقية`
     : "فهرس ثغرات لسه بيتزامن";
-  const fleet = model.machines.registered ? `**${model.machines.registered}** ماكينة مسجّلة` : "مفيش ماكينة متصلة لسه";
+  const fleet = model.machines.connected
+    ? `**${model.machines.connected}** ماكينة متصلة الآن بالأسطول`
+    : model.machines.registered
+      ? `**${model.machines.registered}** ماكينة مسجّلة`
+      : "مفيش ماكينة متصلة لسه";
   /* TEST2-4: «الشات بيكرر نفس الرد حرفيًا». لو آخر رد مني كان نفس الترحيب،
    * التكرار الحرفي بيقراه المستخدم «عبط». التنوية نفسها لازم تبقى صادقة —
    * فالافتتاحية بتتغير بس الأرقام تفضل مقاسة من السجل الحي زي ما هي. */
@@ -891,7 +898,11 @@ export function greetingAnswer(model: SelfModel = buildSelfModel(), opts: { repe
     : "أهلاً بيك 👋 أنا **نوفا** — بشتغل مش بتتكلم بس.";
   /* TEST3 «مكمل معايا على نفس الخط»: الترحيب بيجيب آخر موضوع حقيقي من خط
    * المحادثة (لو فيه) — فاكرك واقفين فين، مش افتتاحية عامة كل مرة. */
-  const thread = opts.sessionId ? getNexusSession(opts.sessionId)?.thread?.filter(Boolean) ?? [] : [];
+  const thread = opts.sessionId
+    ? (getNexusSession(opts.sessionId)?.thread?.filter(
+        (t) => Boolean(t) && !/^مرحباً\s*—\s*جهاز\s+جديد\s+تم\s+توصيله/.test(String(t).trim()),
+      ) ?? [])
+    : [];
   const lastTopic = thread.length >= 1 ? thread[thread.length - 1] : null;
   return [
     opener,
@@ -914,9 +925,11 @@ export function identityAnswer(model: SelfModel = buildSelfModel()): string {
   const corpusLine = model.corpus.measured
     ? `فهرس **${model.corpus.total.toLocaleString("en-US")}** ثغرة حقيقية (NVD + KEV + EPSS) — بفتش جواه، مش بتخيل.`
     : "فهرس الثغرات لسه مش متزامن على السيرفر ده، فمش هدّعي إني بفتش فيه.";
-  const fleetLine = model.machines.registered
-    ? `**${model.machines.registered}** ماكينة مسجّلة في الأسطول${model.machines.names.length ? ` (${model.machines.names.slice(0, 3).join(" · ")})` : ""} — الأوامر عليها بتشتغل لحظة اتصال الوكيل.`
-    : "الأسطول جاهز بس مفيش ماكينة مسجّلة — أول ما تضيف واحدة أقدر أنفّذ عليها أوامر حقيقية.";
+  const fleetLine = model.machines.connected
+    ? `**${model.machines.connected}** ماكينة متصلة الآن بالأسطول${model.machines.names.length ? ` (${model.machines.names.slice(0, 3).join(" · ")})` : ""} — الأوامر والأدوات بتتنفّذ عليها فوراً.`
+    : model.machines.registered
+      ? `**${model.machines.registered}** ماكينة مسجّلة في الأسطول${model.machines.names.length ? ` (${model.machines.names.slice(0, 3).join(" · ")})` : ""} — الأوامر عليها بتشتغل لحظة اتصال الوكيل.`
+      : "الأسطول جاهز بس مفيش ماكينة مسجّلة — أول ما تضيف واحدة أقدر أنفّذ عليها أوامر حقيقية.";
 
   return [
     `أنا **نوفا** — العقل اللي جوه CyberNova، مش بوت ردود. كل حاجة تحت دي **مقاسة الآن**، مش محفوظة:`,
@@ -1042,10 +1055,29 @@ async function llmPlan(
     .filter((s) => s?.tool && AGENT_TOOL_NAMES.includes(String(s.tool)))
     .slice(0, 4)
     .map((s) => ({ tool: String(s.tool), args: (s.args ?? {}) as Record<string, unknown> }));
+
+  // If the LLM leaked inline tool tags like {{tool:fleet_list}} or [TOOL:fleet_list] instead of filling `steps`,
+  // extract them into real executable steps and strip the raw tags from text.
+  const combinedText = `${parsed.thought ?? ""}\n${parsed.answer_if_no_tools ?? ""}\n${result.text ?? ""}`;
+  const inlineToolMatches = [...combinedText.matchAll(/(?:\{\{\s*tool\s*:\s*([a-z0-9_]+)\s*\}\}|\[\s*tool\s*:\s*([a-z0-9_]+)\s*\])/gi)];
+  for (const m of inlineToolMatches) {
+    const tName = String(m[1] || m[2] || "").trim();
+    if (tName && AGENT_TOOL_NAMES.includes(tName) && !steps.some((s) => s.tool === tName) && steps.length < 4) {
+      steps.push({ tool: tName, args: {} });
+    }
+  }
+  const cleanDirect = parsed.answer_if_no_tools
+    ? String(parsed.answer_if_no_tools).replace(/\{\{\s*tool\s*:[^}]*\}\}/gi, "").replace(/\[\s*TOOL\s*:[^\]]*\]/gi, "").trim()
+    : undefined;
+  const cleanThoughtText = String(parsed.thought ?? "تمام، هبدأ بالخطة.")
+    .replace(/\{\{\s*tool\s*:[^}]*\}\}/gi, "")
+    .replace(/\[\s*TOOL\s*:[^\]]*\]/gi, "")
+    .trim();
+
   return {
-    thought: String(parsed.thought ?? "تمام، هبدأ بالخطة."),
+    thought: cleanThoughtText || "تمام، هبدأ بالخطة.",
     steps,
-    directAnswer: parsed.answer_if_no_tools ? String(parsed.answer_if_no_tools) : undefined,
+    directAnswer: cleanDirect || undefined,
     provider: result.provider,
     model: result.model,
   };
@@ -1437,8 +1469,12 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
    * دورة قدرة = الطلب اتحلّل لخطة أدوات من الخريطة. هنا مخطّط الـLLM بيتخطّى:
    * الردّ بيتبني من تنفيذ حقيقي + قياس، والفارق كان مقاس (65 ثانية → أقل من ثانية).
    */
+  const isSovereign2099Turn = /(?:kali_bounty_hunt|kali_zeroday_lab|kali_autopilot_2099|kali_visitor_radar|kali_attack_graph|مليارات|بونتي|مكافآت|زيرو\s*داي|زيرو-داي|0-?day|رادار\s+الزوار|أوتوبايلوت|اوتوبايلوت|خريطة\s+(?:سطح\s+)?الهجوم)/i.test(message);
   const capTurn =
-    capabilitySteps(message, 1).length > 0 && !greetingOnly(message) && !/(?:انت\s*مين|مين\s*انت|who\s+are\s+you)/i.test(message);
+    !isSovereign2099Turn &&
+    capabilitySteps(message, 1).length > 0 &&
+    !greetingOnly(message) &&
+    !/(?:انت\s*مين|مين\s*انت|من\s*(?:أنت|انت)|who\s+are\s+you)/i.test(message);
   /**
    * التحية وسؤال الهوية لردّهم قياس جاهز — استدعاء الموديل هناك ثمنه صفر معلومة.
    * مقاس على الحزمة: التحية كانت بتاخد 8.3 ثانية (وقت `llmComplete` لمزوّد مجاني)
@@ -1446,7 +1482,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
    */
   const measuredDirectTurn =
     (greetingOnly(message) || (SELF_QUESTION.test(message) && !extractTarget(message) && !extractFleetCommand(message))) &&
-    capabilitySteps(message, 1).length === 0;
+    !capTurn;
 
   let plan: { thought: string; steps: PlannedStep[]; directAnswer?: string } | null = null;
   let mode: "llm" | "heuristic" = "heuristic";
@@ -1463,6 +1499,17 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   if (!opts.forceHeuristic && !capTurn && !measuredDirectTurn) {
     const llm = await llmPlan(message, history, selfModel, sessionId, runMeta);
     if (llm && (llm.steps.length > 0 || llm.directAnswer)) {
+      if (llm.steps.length === 0) {
+        const hFallback = heuristicPlan(message);
+        const isGenericFallback =
+          hFallback.steps.length === 1 &&
+          hFallback.steps[0].tool === "platform_status" &&
+          !/(?:حالة|وضع|نظام|صحة|فحص|افحص|جهاز|أجهزة|أسطول|اسطول|أدوات|ادوات|status|system|check|scan)/i.test(message);
+        const promisedAction = /(?:هعمل\s+فحص|سأقوم\s+بفحص|أبدأ\s+بقائمة|هفحص|جاري\s+فحص|سأفحص)/i.test(llm.directAnswer ?? "");
+        if (hFallback.steps.length > 0 && (!isGenericFallback || promisedAction)) {
+          llm.steps = hFallback.steps;
+        }
+      }
       plan = llm;
       mode = "llm";
       provider = llm.provider;
