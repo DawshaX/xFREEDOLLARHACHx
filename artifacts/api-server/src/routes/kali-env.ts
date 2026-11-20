@@ -1372,7 +1372,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     dradis: { file: "dradis.tar.gz", cmd: ["dradis"] },
     recordmydesktop: { file: "recordmydesktop.tar.gz", cmd: ["recordmydesktop"] },
     wkhtmltopdf: { file: "wkhtmltopdf-debs.tar.gz", cmd: ["wkhtmltopdf"] },
-    maskprocessor: { file: "maskprocessor.tar.gz", cmd: ["maskprocessor", "mp"] },
+    maskprocessor: { file: "maskprocessor.tar.gz", cmd: ["mp32", "mp64", "maskprocessor", "mp"] },
     rainbowcrack: { file: "rainbowcrack.tar.gz", cmd: ["rcrack", "rainbowcrack"] },
     redis: { file: "redis-server.tar.gz", cmd: ["redis-server", "redis-cli"] },
     elfutils: { file: "elfutils.tar.gz", cmd: ["eu-readelf", "readelf"] },
