@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "at": "2026-11-20T14:30:42.590Z",
+  "at": "2026-11-20T14:57:15.779Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
@@ -67,7 +67,7 @@
     },
     {
       "product": "chrome",
-      "count": 12340
+      "count": 12342
     },
     {
       "product": "ubuntu_linux",
@@ -103,7 +103,7 @@
     },
     {
       "product": "windows_server_2016",
-      "count": 6010
+      "count": 6015
     },
     {
       "product": "windows_server_2008",
@@ -139,23 +139,23 @@
     },
     {
       "product": "windows_10_1809",
-      "count": 4131
+      "count": 4136
     },
     {
       "product": "windows_10_22h2",
-      "count": 4092
+      "count": 4097
     },
     {
       "product": "windows_10_21h2",
-      "count": 4086
+      "count": 4091
     },
     {
       "product": "windows_11_24h2",
-      "count": 3703
+      "count": 3709
     },
     {
       "product": "windows_server_2019",
-      "count": 3664
+      "count": 3669
     },
     {
       "product": "acrobat",
@@ -167,11 +167,11 @@
     },
     {
       "product": "windows_11_23h2",
-      "count": 3552
+      "count": 3557
     },
     {
       "product": "windows_10_1607",
-      "count": 3520
+      "count": 3525
     },
     {
       "product": "enterprise_linux",
@@ -191,7 +191,7 @@
     },
     {
       "product": "windows_11_25h2",
-      "count": 2961
+      "count": 2967
     },
     {
       "product": "ipados",
@@ -199,7 +199,7 @@
     },
     {
       "product": "windows_11_26h1",
-      "count": 2886
+      "count": 2892
     },
     {
       "product": "ios_xe",
@@ -212,17 +212,17 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 50908576,
-    "sha256": "39299349df88ddfd0af180b8bd5a28a5af816d38b31a8e7aab1e6eb27deecbcb"
+    "bytes": 50909239,
+    "sha256": "b01497e33e79c79de46a75190b498197c806a870a89339f0bf1aa22ef73d1b93"
   },
   "mode": "deepen",
-  "says_ar": "429790 ثغرة حقيقية · critical 40215 · high 163658 · 1786 مستغلّة فعلياً (KEV) · 408128 لها EPSS · 81954 منتج بـCPE · مزامنة 2026-11-20T14:30:42.590Z",
+  "says_ar": "429790 ثغرة حقيقية · critical 40215 · high 163658 · 1786 مستغلّة فعلياً (KEV) · 408128 لها EPSS · 81954 منتج بـCPE · مزامنة 2026-11-20T14:57:15.779Z",
   "deepen": {
     "nextStartIndex": 0,
     "windowPages": 12,
     "walkedFrom": 0,
     "nvdTotal": 429790,
     "coverage": 1,
-    "at": "2026-11-20T14:30:42.590Z"
+    "at": "2026-11-20T14:57:15.780Z"
   }
 }
