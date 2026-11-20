@@ -127,7 +127,7 @@ interface FleetAgent {
 const PHASE_META: Record<string, { label: string; color: string; pulse: boolean }> = {
   idle:     { label: "جاهز للعمل",        color: "#34d399", pulse: false },
   thinking: { label: "يفكّر ويحلّل...",    color: "#22d3ee", pulse: true },
-  tool:     { label: "ينفّذ أداة أمامك",   color: "#fbbf24", pulse: true },
+  tool:     { label: "ينفّذ أداة أمامك",   color: "#ff5c78", pulse: true },
   writing:  { label: "يكتب الخلاصة...",    color: "#e879f9", pulse: true },
 };
 
@@ -642,7 +642,7 @@ export function AgentWorkCockpit() {
               [
                 { id: "live",   label: "البث والتنفيذ الحي",     icon: Activity,    color: "#22d3ee", badge: liveFeed.length ? String(liveFeed.length) : "LIVE" },
                 { id: "memory", label: "الذاكرة والتعلّم",       icon: Brain,       color: "#c084fc", badge: `${memTotal}` },
-                { id: "tools",  label: "الأدوات والمهمات",       icon: Wrench,      color: "#fbbf24", badge: `${tools.length || 67}` },
+                { id: "tools",  label: "الأدوات والمهمات",       icon: Wrench,      color: "#ff5c78", badge: `${tools.length || 67}` },
                 { id: "files",  label: "الملفات والأسطول",       icon: FolderOpen,  color: "#34d399", badge: `${agents.length}` },
               ] as const
             ).map((t) => {
@@ -825,7 +825,7 @@ export function AgentWorkCockpit() {
                     { label: "إجمالي الذاكرة", value: memTotal, color: "#c084fc" },
                     { label: "دروس متعلّمة",   value: byKind.lesson ?? 0, color: "#34d399" },
                     { label: "حقائق ونتائج",    value: byKind.fact ?? 0, color: "#22d3ee" },
-                    { label: "تفضيلاتك",       value: byKind.preference ?? 0, color: "#fbbf24" },
+                    { label: "تفضيلاتك",       value: byKind.preference ?? 0, color: "#ff5c78" },
                     { label: "خلاصات Auto-Dream", value: autoDreamCount, color: "#f472b6" },
                   ].map((s) => (
                     <div

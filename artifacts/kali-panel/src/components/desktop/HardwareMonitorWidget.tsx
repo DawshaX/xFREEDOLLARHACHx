@@ -55,8 +55,8 @@ function MiniBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-const CPU_COLOR = (v: number) => v > 80 ? "#ef4444" : v > 60 ? "#f97316" : "#22d3ee";
-const MEM_COLOR = (v: number) => v > 85 ? "#ef4444" : v > 70 ? "#f97316" : "#a78bfa";
+const CPU_COLOR = (v: number) => v > 80 ? "#ef4444" : v > 60 ? "#ff2b4d" : "#22d3ee";
+const MEM_COLOR = (v: number) => v > 85 ? "#ef4444" : v > 70 ? "#ff2b4d" : "#a78bfa";
 
 export function HardwareMonitorWidget() {
   const [info, setInfo] = useState<SysInfo | null>(null);

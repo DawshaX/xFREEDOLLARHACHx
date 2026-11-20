@@ -101,7 +101,7 @@ const ACCENT: Record<MeshNode["kind"], string> = {
   brain: "#22d3ee",
   internal: "#a78bfa",
   machine: "#34d399",
-  slot: "#fbbf24",
+  slot: "#ff5c78",
 };
 
 function relative(ts?: number): string {

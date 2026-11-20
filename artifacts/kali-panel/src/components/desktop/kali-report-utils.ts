@@ -278,7 +278,7 @@ export function generateKaliReportHTML(data: KaliReportData): string {
       border-radius: 3px;
     }
     .finding.high {
-      border-left-color: #ff8800;
+      border-left-color: #ff2b4d;
     }
     .finding.medium {
       border-left-color: #ffaa00;

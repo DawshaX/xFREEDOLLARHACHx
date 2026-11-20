@@ -390,7 +390,7 @@ function DeviceProfilePanel({ agent, profile }: { agent: AgentInfo; profile: Dee
   const toolCategories = Object.entries(tools);
 
   const CAT_COLORS: Record<string, string> = {
-    recon: "#00aaff", exploit: "#ff4444", web: "#ff8800", password: "#ff44ff",
+    recon: "#00aaff", exploit: "#ff4444", web: "#ff2b4d", password: "#ff44ff",
     wireless: "#44ffff", mitm: "#ff6600", forensics: "#8844ff", privesc: "#ff0044",
     network: "#44ff88", utils: "#aaaa44", container: "#44aaff", post: "#ff2244",
   };
@@ -954,7 +954,7 @@ export default function KaliCommandCenter() {
                 </button>
                 {kaliEnv.desktopUrl && (
                   <a href={kaliEnv.desktopUrl} target="_blank" rel="noreferrer"
-                    className="text-[8px] px-1.5 py-0.5 rounded" style={{ color: "#ff8866", border: "1px solid rgba(255,100,80,0.5)" }}>
+                    className="text-[8px] px-1.5 py-0.5 rounded" style={{ color: "#ff8095", border: "1px solid rgba(255,43,77,0.5)" }}>
                     🖥️ افتح الديسكتوب في المتصفح ↗
                   </a>
                 )}

@@ -480,12 +480,12 @@ export default function LocalDeviceControl() {
                 </div>
 
                 {/* Tools Card */}
-                <div className="rounded-2xl border p-4" style={{ background: "rgba(251,191,36,0.04)", borderColor: "rgba(251,191,36,0.2)" }}>
+                <div className="rounded-2xl border p-4" style={{ background: "rgba(255,92,120,0.04)", borderColor: "rgba(255,92,120,0.2)" }}>
                   <div className="flex items-center gap-2 mb-3">
                     <Wrench className="w-4 h-4 text-amber-400" />
                     <span className="font-mono font-bold text-sm text-amber-300">أدوات الهجوم المكتشفة</span>
                     <span className="ms-auto font-mono text-[10px] px-2 py-0.5 rounded-full"
-                      style={{ background: "rgba(251,191,36,0.1)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.3)" }}>
+                      style={{ background: "rgba(255,92,120,0.1)", color: "#ff5c78", border: "1px solid rgba(255,92,120,0.3)" }}>
                       {preflight.tools.length} أداة
                     </span>
                   </div>
@@ -497,7 +497,7 @@ export default function LocalDeviceControl() {
                         <button key={tool}
                           onClick={() => { setActiveSection("terminal"); void execCmd(`which ${tool} && ${tool} --version 2>&1 | head -3`); }}
                           className="font-mono text-[10px] px-2 py-0.5 rounded-lg border transition hover:scale-105"
-                          style={{ background: "rgba(251,191,36,0.06)", borderColor: "rgba(251,191,36,0.2)", color: "#fbbf24" }}>
+                          style={{ background: "rgba(255,92,120,0.06)", borderColor: "rgba(255,92,120,0.2)", color: "#ff5c78" }}>
                           {tool}
                         </button>
                       ))}

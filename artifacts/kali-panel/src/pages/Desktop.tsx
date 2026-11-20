@@ -480,7 +480,7 @@ function DraggableDesktopIcon({
               boxShadow: isFavorite ? "0 0 6px rgba(250,204,21,0.4)" : "none",
               transition: "all 0.15s",
             }}>
-            <Star style={{ width: 9, height: 9, color: isFavorite ? "#fbbf24" : "rgba(255,255,255,0.4)", fill: isFavorite ? "#fbbf24" : "none" }} />
+            <Star style={{ width: 9, height: 9, color: isFavorite ? "#ff5c78" : "rgba(255,255,255,0.4)", fill: isFavorite ? "#ff5c78" : "none" }} />
           </button>
         )}
         {/* Persistent favorite indicator when not hovering */}
@@ -488,11 +488,11 @@ function DraggableDesktopIcon({
           <div style={{
             position: "absolute", top: -3, left: -3,
             width: 12, height: 12, borderRadius: 4,
-            background: "rgba(251,191,36,0.2)",
+            background: "rgba(255,92,120,0.2)",
             display: "flex", alignItems: "center", justifyContent: "center",
             pointerEvents: "none", zIndex: 10,
           }}>
-            <Star style={{ width: 7, height: 7, color: "#fbbf24", fill: "#fbbf24" }} />
+            <Star style={{ width: 7, height: 7, color: "#ff5c78", fill: "#ff5c78" }} />
           </div>
         )}
         {/* Hover tooltip */}
@@ -1326,7 +1326,7 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
             {[
               { version: "V3 Agent", features: ["Multi-step reasoning","Tool chaining","Context memory"], color: "#a855f7" },
               { version: "V6 Neural", features: ["Deep vulnerability analysis","Auto PoC generation","EPSS scoring"], color: "#f43f5e" },
-              { version: "V8 Sentinel", features: ["Real-time CVE monitoring","Proactive alerts","MITRE mapping"], color: "#f97316" },
+              { version: "V8 Sentinel", features: ["Real-time CVE monitoring","Proactive alerts","MITRE mapping"], color: "#ff2b4d" },
               { version: "V9 Supreme", features: ["Vector memory","Ollama vision","Autonomous mode"], color: "#06b6d4" },
             ].map(item => (
               <div key={item.version} className="rounded-xl border p-3" style={{ borderColor: item.color+"25", background: item.color+"08" }}>
@@ -1367,7 +1367,7 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
         <div className="p-5 grid grid-cols-2 gap-4">
           {[
             { label:"نماذج التهديد", value:"247", sub:"نموذج محدّث", color:"#f43f5e" },
-            { label:"دقة المحاكاة", value:"94.3%", sub:"آخر اختبار", color:"#f97316" },
+            { label:"دقة المحاكاة", value:"94.3%", sub:"آخر اختبار", color:"#ff2b4d" },
             { label:"إصدار النموذج", value:"v3.7", sub:"أسبوعي", color:"#a855f7" },
             { label:"التهديدات الحية", value:"1,797", sub:"CRITICAL", color:"#ef4444" },
           ].map(stat => (
@@ -1381,7 +1381,7 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
         <div className="px-5 space-y-3">
           {[
             { name:"APT-41 Simulation", status:"ready", desc:"محاكاة مجموعة APT صينية متقدمة", color:"#ef4444" },
-            { name:"Ransomware Pattern", status:"running", desc:"نمط هجوم الفدية الحديث 2025", color:"#f97316" },
+            { name:"Ransomware Pattern", status:"running", desc:"نمط هجوم الفدية الحديث 2025", color:"#ff2b4d" },
             { name:"Social Engineering ML",status:"ready", desc:"نموذج هندسة اجتماعية بالذكاء الاصطناعي", color:"#a855f7" },
           ].map(sim => (
             <div key={sim.name} className="rounded-xl border p-3 flex items-center gap-3" style={{ borderColor: sim.color+"25", background: sim.color+"08" }}>
@@ -1419,7 +1419,7 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
                 className="flex-1 bg-black/40 rounded-xl px-4 py-2 border border-orange-500/20 text-sm text-white outline-none placeholder:text-white/20 font-mono" />
               <button onClick={() => void analyzeTarget()} disabled={pocBusy || !pocQ.trim()}
                 className="px-5 py-2 rounded-xl font-bold text-sm font-mono transition-all disabled:opacity-50"
-                style={{ background:"linear-gradient(135deg,#f97316,#ef4444)", color:"#fff", boxShadow:"0 0 16px rgba(249,115,22,0.3)" }}>
+                style={{ background:"linear-gradient(135deg,#ff2b4d,#ef4444)", color:"#fff", boxShadow:"0 0 16px rgba(255,43,77,0.3)" }}>
                 {pocBusy ? "⏳ …يتحقق" : "🔍 تحليل"}
               </button>
             </div>
@@ -1434,7 +1434,7 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
             <div className="text-xs font-mono text-white/30">آخر تقارير PoC المولّدة:</div>
             {[
               { id:"POC-001", cve:"CVE-2025-8572", type:"RCE", severity:"CRITICAL", status:"مكتمل", color:"#ef4444" },
-              { id:"POC-002", cve:"CVE-2026-1306", type:"File Upload",severity:"HIGH",    status:"قيد التحليل", color:"#f97316" },
+              { id:"POC-002", cve:"CVE-2026-1306", type:"File Upload",severity:"HIGH",    status:"قيد التحليل", color:"#ff2b4d" },
               { id:"POC-003", cve:"CVE-2025-69633",type:"SQLi",   severity:"CRITICAL", status:"مكتمل", color:"#ef4444" },
             ].map(poc => (
               <div key={poc.id} className="rounded-xl border p-3 flex items-center gap-3" style={{ borderColor: poc.color+"25", background: poc.color+"08" }}>
@@ -1468,7 +1468,7 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
         </div>
         <div className="p-4 grid grid-cols-2 gap-3">
           {[
-            { cat:"Recon & OSINT",  tools:["Subdomains","WHOIS","Shodan","GitHub Search","DNS Lookup"], color:"#f59e0b", icon:"🔭" },
+            { cat:"Recon & OSINT",  tools:["Subdomains","WHOIS","Shodan","GitHub Search","DNS Lookup"], color:"#ff2b4d", icon:"🔭" },
             { cat:"Scanning",       tools:["Port Scanner","CVE Live Sync","NVD Search","SSL Checker","Active Scanner"], color:"#ef4444", icon:"🔍" },
             { cat:"Exploitation",   tools:["Exploit-DB","PoC Engine","SQL Injection","XSS Tester","RCE Lab"], color:"#dc2626", icon:"💥" },
             { cat:"Post-Exploit",   tools:["Audit Log","Reports","Evidence","Memory Dump","Timeline"], color:"#7c3aed", icon:"📋" },
@@ -2660,7 +2660,7 @@ export default function Desktop() {
               const active = selectedCategory === cat.id;
               const neonMap: Record<string, string> = {
                 "text-cyan-400":"#22d3ee", "text-primary":"#00ffb4", "text-emerald-400":"#34d399",
-                "text-violet-400":"#a78bfa", "text-rose-400":"#fb7185", "text-orange-400":"#fb923c",
+                "text-violet-400":"#a78bfa", "text-rose-400":"#fb7185", "text-orange-400":"#ff5c78",
                 "text-yellow-400":"#facc15", "text-blue-400":"#60a5fa", "text-fuchsia-400":"#e879f9",
                 "text-indigo-400":"#818cf8", "text-white":"#ffffff", "text-teal-400":"#2dd4bf",
               };

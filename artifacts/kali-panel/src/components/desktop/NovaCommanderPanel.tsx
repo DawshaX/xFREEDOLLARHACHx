@@ -531,7 +531,7 @@ export function NovaCommanderPanel() {
 
   // ── Phase colors ─────────────────────────────────────────────────────────────
   const PHASE_LABELS: Record<string, string> = { thinking: "🤔 تفكير", planning: "📋 تخطيط", writing: "✍ إجابة", executing: "⚡ تنفيذ", analyzing: "🧠 تحليل" };
-  const PHASE_COLORS: Record<string, string> = { thinking: "#a78bfa", planning: "#fbbf24", writing: "#4ade80", executing: "#f87171", analyzing: "#60a5fa" };
+  const PHASE_COLORS: Record<string, string> = { thinking: "#a78bfa", planning: "#ff5c78", writing: "#4ade80", executing: "#f87171", analyzing: "#60a5fa" };
   const PHASE_ORDER = ["thinking", "planning", "writing", "executing", "analyzing"];
 
   return (
@@ -546,7 +546,7 @@ export function NovaCommanderPanel() {
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-black tracking-widest" style={{ color: "#ff4444" }}>NOVA COMMANDER</span>
             <span className="text-[7px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,50,50,0.12)", border: "1px solid rgba(255,50,50,0.3)", color: "rgba(255,150,150,0.8)" }}>KALI AI v4</span>
-            {autonomous && <span className="text-[7px] font-mono px-1 rounded animate-pulse" style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.3)" }}>AUTO</span>}
+            {autonomous && <span className="text-[7px] font-mono px-1 rounded animate-pulse" style={{ background: "rgba(255,43,77,0.15)", color: "#ff5c78", border: "1px solid rgba(255,43,77,0.3)" }}>AUTO</span>}
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-[7px] font-mono flex items-center gap-1 ${aiOnline ? "text-violet-300" : "text-rose-900"}`}>
@@ -566,7 +566,7 @@ export function NovaCommanderPanel() {
             placeholder="127.0.0.1" />
           <button onClick={toggleAutonomous} title={autonomous ? "إيقاف وضع المستقل" : "تشغيل وضع المستقل"}
             className="text-[7px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all"
-            style={autonomous ? { border: "1px solid rgba(251,146,60,0.5)", color: "#fb923c", background: "rgba(251,146,60,0.1)" } : { border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.25)" }}>
+            style={autonomous ? { border: "1px solid rgba(255,43,77,0.5)", color: "#ff5c78", background: "rgba(255,43,77,0.1)" } : { border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.25)" }}>
             <Zap className="w-2 h-2" /> AUTO
           </button>
           <button onClick={() => { setShowTasks(v => !v); }}
@@ -1148,7 +1148,7 @@ export function NovaCommanderPanel() {
               { label: "AI Model", val: aiOnline ? aiModel.replace(":latest", "") : "offline", color: aiOnline ? "#a78bfa" : "#ff4444", dot: aiOnline },
               { label: "كالي جهاز", val: agentConnected ? `${agentList[0]?.user}@${agentList[0]?.hostname}` : "غير متصل", color: agentConnected ? "#44ff88" : "#ff6666", dot: agentConnected },
               { label: "المهام نشطة", val: `${tasks.filter(t => t.status === "running").length}/${tasks.length}`, color: "#38bdf8", dot: tasks.filter(t => t.status === "running").length > 0 },
-              { label: "وضع مستقل", val: autonomous ? "نشط ⚡" : "موقوف", color: autonomous ? "#fb923c" : "rgba(255,255,255,0.2)", dot: autonomous },
+              { label: "وضع مستقل", val: autonomous ? "نشط ⚡" : "موقوف", color: autonomous ? "#ff5c78" : "rgba(255,255,255,0.2)", dot: autonomous },
             ].map(s => (
               <div key={s.label} className="rounded-lg px-2 py-1.5 flex flex-col" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,50,50,0.1)" }}>
                 <div className="flex items-center gap-1 mb-0.5">
@@ -1161,11 +1161,11 @@ export function NovaCommanderPanel() {
           </div>
           {/* Autonomous log */}
           {autonomous && autoLog.length > 0 && (
-            <div className="rounded-lg p-2" style={{ background: "rgba(251,146,60,0.04)", border: "1px solid rgba(251,146,60,0.15)" }}>
-              <div className="text-[7px] font-black tracking-widest mb-1.5" style={{ color: "rgba(251,146,60,0.5)" }}>AUTO LOG</div>
+            <div className="rounded-lg p-2" style={{ background: "rgba(255,43,77,0.04)", border: "1px solid rgba(255,43,77,0.15)" }}>
+              <div className="text-[7px] font-black tracking-widest mb-1.5" style={{ color: "rgba(255,43,77,0.5)" }}>AUTO LOG</div>
               <div className="space-y-0.5 max-h-28 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
                 {autoLog.slice(-8).reverse().map((e, i) => (
-                  <div key={i} className="text-[7px] font-mono flex items-start gap-1.5" style={{ color: e.error ? "#ff6666" : "rgba(251,146,60,0.6)" }}>
+                  <div key={i} className="text-[7px] font-mono flex items-start gap-1.5" style={{ color: e.error ? "#ff6666" : "rgba(255,43,77,0.6)" }}>
                     <span className="shrink-0 opacity-50">{new Date(e.ts).toLocaleTimeString("ar")}</span>
                     <span className="font-bold shrink-0">{e.title}:</span>
                     <span className="truncate">{(e.result || e.error || "").slice(0, 60)}</span>

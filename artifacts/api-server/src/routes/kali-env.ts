@@ -880,6 +880,15 @@ router.post("/kali-env/run", async (req: Request, res: Response) => {
   }
   const command = `${tool} ${recipe.args.replace("{target}", shellQuote(tgt))}`;
 
+  /* إصلاح مقاس 2026-11-20 05:0xZ: proot بيطلع `route_dst_netlink: can't find
+   * interface "lo"` على أي فحص loopback (nmap -sV 127.0.0.1 → exit 1) لأن
+   * واجهة lo مش لاقية in the proot namespace. بنرفعها قبل التنفيذ — idempotent
+   * وصامت لو الأداة مش موجودة. */
+  const isLoopback = /^(localhost|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|\[?::1\]?)$/i.test(tgt);
+  const finalCommand = isLoopback
+    ? `(ip link set lo up 2>/dev/null || ifconfig lo up 2>/dev/null || true); ${command}`
+    : command;
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -901,13 +910,13 @@ router.post("/kali-env/run", async (req: Request, res: Response) => {
     const layout = detectProotLayout();
     if (layout.ready) {
       const result = await runInProot({
-        command,
+        command: finalCommand,
         timeoutMs: tmo,
         onData: (stream, chunk) => send({ type: stream, text: chunk }),
       });
       send({ type: "done", plane: "proot", exitCode: result.exitCode, durationMs: result.durationMs, error: result.error });
     } else {
-      const result = await kaliAnywhereExec(command, tmo);
+      const result = await kaliAnywhereExec(finalCommand, tmo);
       if (!result) {
         send({ type: "error", message: "مفيش طائرة تنفيذ: لا rootfs محلي ولا عقدة كالي حية" });
       } else {

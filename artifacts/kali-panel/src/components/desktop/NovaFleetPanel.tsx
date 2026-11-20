@@ -437,7 +437,7 @@ export function NovaProjectPulse() {
           { icon: Play, label: "شغّال الآن", value: running.length, color: "#22d3ee" },
           { icon: CheckCircle2, label: "منجز", value: done.length, color: "#34d399" },
           { icon: Server, label: "أجهزة متصلة", value: agents.length, color: "#a78bfa" },
-          { icon: Boxes, label: "أدوات نوفا", value: stats?.tools ?? 0, color: "#fbbf24" },
+          { icon: Boxes, label: "أدوات نوفا", value: stats?.tools ?? 0, color: "#ff5c78" },
         ].map((s) => (
           <div key={s.label} className="rounded-lg border border-white/10 bg-white/[0.02] p-1.5">
             <p className="flex items-center gap-1 text-[8px] text-white/40">

@@ -269,7 +269,7 @@ export function FloatingNovaButton() {
                 <span>☠ نوفا الجذرية</span>
                 <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300">24/7</span>
               </div>
-              <div className="text-[9px] flex items-center gap-1 font-mono" style={{ color: wsConnected ? "#22d3ee" : "#fbbf24" }}>
+              <div className="text-[9px] flex items-center gap-1 font-mono" style={{ color: wsConnected ? "#22d3ee" : "#ff5c78" }}>
                 <Sparkles className="w-2.5 h-2.5" />
                 {wsConnected ? "متصل · nova-root · العقل الموحد" : "WS جاري الربط بالجذر..."}
                 {streaming && <><Loader2 className="w-2.5 h-2.5 animate-spin text-rose-400" /><span className="text-rose-300">يفكر...</span></>}

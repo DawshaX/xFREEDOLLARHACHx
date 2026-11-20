@@ -87,7 +87,7 @@ export default function LiveBodyCard() {
             </div>
             {hunt.findings.slice(0, 5).map((f) => (
               <div key={f.id} className="flex items-center justify-between gap-2">
-                <span style={{ color: f.severity === "critical" ? "#ff5555" : f.severity === "high" ? "#ff9944" : "#ffcc44" }}>
+                <span style={{ color: f.severity === "critical" ? "#ff5555" : f.severity === "high" ? "#ff5c78" : "#ffcc44" }}>
                   [{f.severity}] {f.template}
                 </span>
                 <span className="text-white/40 truncate max-w-[45%]">{f.matchedAt}</span>

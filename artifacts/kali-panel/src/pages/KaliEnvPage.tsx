@@ -15,7 +15,7 @@ import "@/kali-neon.css";
 
 /** ألوان نيون لكل تبويب — كل وجه لهويته زي شاشات MEGAUI */
 const FACE_NEON: Record<string, string> = {
-  work: "#fbbf24",      // ذهبي
+  work: "#ff5c78",      // ذهبي
   system: "#22d3ee",    // سماوي
   term: "#44ff88",      // أخضر طرفية
   tools: "#a78bfa",     // بنفسجي
@@ -638,9 +638,9 @@ export default function KaliEnvPage() {
         </div>
       </div>
 
-      <div className="rounded-xl p-3" style={{ background: "rgba(255,85,68,0.05)", border: "1px solid rgba(255,85,68,0.35)" }}>
+      <div className="rounded-xl p-3" style={{ background: "rgba(255,43,77,0.05)", border: "1px solid rgba(255,43,77,0.35)" }}>
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <p className="text-[11px] font-black" style={{ color: "#ff8866" }}>نظام الجست — قياس حي، مش شكل</p>
+          <p className="text-[11px] font-black" style={{ color: "#ff8095" }}>نظام الجست — قياس حي، مش شكل</p>
           <button onClick={() => void loadIdentity()} className="text-[9px] px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.75)" }}>
             أعد قياس الجذر
           </button>
@@ -664,8 +664,8 @@ export default function KaliEnvPage() {
         )}
         <form className="mt-2 flex flex-wrap gap-1.5" onSubmit={(e) => { e.preventDefault(); const name = pkgName.trim().toLowerCase(); if (name) void installTool(name); }}>
           <input value={pkgName} onChange={(e) => setPkgName(e.target.value)} placeholder="ثبّت أي حزمة، مثال: ffuf"
-            className="text-[10px] font-mono px-2 py-1 rounded outline-none flex-1 min-w-[160px]" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,85,68,0.35)", color: "#ffe0d8" }} />
-          <button type="submit" disabled={instBusy !== null || !pkgName.trim()} className="text-[9px] font-black px-2.5 py-1 rounded" style={{ background: "rgba(255,85,68,0.16)", border: "1px solid rgba(255,85,68,0.45)", color: "#ff8866", opacity: instBusy || !pkgName.trim() ? 0.5 : 1 }}>
+            className="text-[10px] font-mono px-2 py-1 rounded outline-none flex-1 min-w-[160px]" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,43,77,0.35)", color: "#ffe0d8" }} />
+          <button type="submit" disabled={instBusy !== null || !pkgName.trim()} className="text-[9px] font-black px-2.5 py-1 rounded" style={{ background: "rgba(255,43,77,0.16)", border: "1px solid rgba(255,43,77,0.45)", color: "#ff8095", opacity: instBusy || !pkgName.trim() ? 0.5 : 1 }}>
             {instBusy ? `بيثبت ${instBusy}` : "ثبّت جوه كالي"}
           </button>
         </form>

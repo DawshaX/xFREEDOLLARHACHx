@@ -134,7 +134,7 @@ export default function CorpusPanel({ compact = false }: { compact?: boolean }) 
             )}
             {rows.map((r) => (
               <div key={r.id} className="flex items-center justify-between gap-2">
-                <span className="truncate" style={{ color: r.sev === "critical" ? "#ff5555" : r.sev === "high" ? "#ff9944" : "#8fb8ff" }}>
+                <span className="truncate" style={{ color: r.sev === "critical" ? "#ff5555" : r.sev === "high" ? "#ff5c78" : "#8fb8ff" }}>
                   {r.id}
                 </span>
                 <span className="text-white/35">{r.products[0] ?? "—"}</span>
@@ -173,7 +173,7 @@ export default function CorpusPanel({ compact = false }: { compact?: boolean }) 
           <div className="font-mono text-[10px] space-y-0.5">
             {hunt.findings.slice(0, compact ? 4 : 10).map((f) => (
               <div key={f.id} className="flex items-center justify-between gap-2">
-                <span style={{ color: f.severity === "critical" ? "#ff5555" : "#ff9944" }}>
+                <span style={{ color: f.severity === "critical" ? "#ff5555" : "#ff5c78" }}>
                   [{f.severity}] {f.template}
                 </span>
                 <span className="text-white/35 truncate max-w-[50%]">{f.matchedAt}</span>

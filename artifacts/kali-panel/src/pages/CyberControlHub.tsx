@@ -130,15 +130,15 @@ const SOURCE_ICON: Record<string, React.ReactNode> = {
 const PHASES = [
   { id: "reconnaissance",    label: "Reconnaissance",    color: "#06b6d4", icon: Eye },
   { id: "scanning",          label: "Scanning",           color: "#8b5cf6", icon: Network },
-  { id: "exploitation",      label: "Exploitation",       color: "#f59e0b", icon: Zap },
+  { id: "exploitation",      label: "Exploitation",       color: "#ff2b4d", icon: Zap },
   { id: "post-exploitation", label: "Post-Exploitation",  color: "#ef4444", icon: Skull },
   { id: "reporting",         label: "Reporting",          color: "#10b981", icon: FileText },
 ];
 
 const SEVERITIES = [
   { id: "critical", label: "Critical", color: "#ef4444" },
-  { id: "high",     label: "High",     color: "#f97316" },
-  { id: "medium",   label: "Medium",   color: "#f59e0b" },
+  { id: "high",     label: "High",     color: "#ff2b4d" },
+  { id: "medium",   label: "Medium",   color: "#ff2b4d" },
   { id: "low",      label: "Low",      color: "#06b6d4" },
   { id: "info",     label: "Info",     color: "#6b7280" },
 ];
@@ -1180,7 +1180,7 @@ function MissionTrackerPanel({ ctx }: { ctx: HubCtx }) {
           </div>
           {/* Stats */}
           <div className="grid grid-cols-4 gap-1 mb-2">
-            {[{ l: "كل", v: stats.total, c: "#ff3355" },{ l: "نشط", v: stats.active, c: "#34d399" },{ l: "اكتمل", v: stats.completed, c: "#60a5fa" },{ l: "نتائج", v: stats.findings, c: "#f59e0b" }].map(s => (
+            {[{ l: "كل", v: stats.total, c: "#ff3355" },{ l: "نشط", v: stats.active, c: "#34d399" },{ l: "اكتمل", v: stats.completed, c: "#60a5fa" },{ l: "نتائج", v: stats.findings, c: "#ff2b4d" }].map(s => (
               <div key={s.l} className="rounded-lg p-1.5 text-center border" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
                 <div className="font-mono font-black text-sm" style={{ color: s.c }}>{s.v}</div>
                 <div className="text-[8px] text-gray-500">{s.l}</div>
