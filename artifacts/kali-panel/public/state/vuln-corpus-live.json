@@ -1,17 +1,17 @@
 {
   "measured": true,
-  "at": "2026-11-20T13:06:25.399Z",
-  "total": 429754,
+  "at": "2026-11-20T13:36:05.939Z",
+  "total": 429778,
   "bySeverity": {
-    "medium": 184220,
-    "critical": 40209,
-    "high": 163648,
+    "medium": 184231,
+    "critical": 40211,
+    "high": 163655,
     "unknown": 23588,
-    "low": 18014,
+    "low": 18018,
     "none": 75
   },
   "kev": 1786,
-  "epssScored": 408057,
+  "epssScored": 408075,
   "products": 81954,
   "mode": "deepen",
   "sources": [
@@ -9512,6 +9512,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2026-8452",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Memory overflow vulnerability NetScaler ADC and NetScaler Gateway leading to unpredictable or erroneous behavior and Denial of Service if the appliance is configured as a Gateway (SSL VPN, ICA Proxy, CVPN, RDP Proxy) or AAA virtual server",
+      "cwe": [
+        "CWE-119"
+      ],
+      "kev": true,
+      "epss": 0.03579,
+      "pub": "2026-06-30T13:19:33.450",
+      "products": [
+        "netscaler_application_delivery_controller",
+        "netscaler_application_delivery_controller",
+        "netscaler_application_delivery_controller"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2026-16232",
       "cvss": 9.8,
       "sev": "critical",
@@ -9783,24 +9801,6 @@
       "pub": "2025-12-17T05:16:13.080",
       "products": [
         "live_update"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2026-8452",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Memory overflow vulnerability NetScaler ADC and NetScaler Gateway leading to unpredictable or erroneous behavior and Denial of Service if the appliance is configured as a Gateway (SSL VPN, ICA Proxy, CVPN, RDP Proxy) or AAA virtual server",
-      "cwe": [
-        "CWE-119"
-      ],
-      "kev": true,
-      "epss": 0.01011,
-      "pub": "2026-06-30T13:19:33.450",
-      "products": [
-        "netscaler_application_delivery_controller",
-        "netscaler_application_delivery_controller",
-        "netscaler_application_delivery_controller"
       ],
       "refs": []
     },
@@ -13874,5 +13874,5 @@
       "refs": []
     }
   ],
-  "says_ar": "429754 ثغرة حقيقية من NVD · 1786 مستغلّة فعلياً (KEV) · 81954 منتج · مزامنة 2026-11-20T13:06:25.399Z"
+  "says_ar": "429778 ثغرة حقيقية من NVD · 1786 مستغلّة فعلياً (KEV) · 81954 منتج · مزامنة 2026-11-20T13:36:05.939Z"
 }
