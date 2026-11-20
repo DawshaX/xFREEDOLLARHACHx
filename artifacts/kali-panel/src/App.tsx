@@ -435,8 +435,16 @@ const PageFallback = () => (
 function AppRouter() {
   const [location] = useLocation();
   const isDesktop = location === "/desktop" || location === "/desktop-enhanced" || location === "/desktop-fixed" || location === "/desktop-advanced" || location === "/desktop-enhanced-plus";
-  const isHome = location === "/";
+  const isKaliOs = location === "/" || location === "/kali-env";
+  const isClassicHome = location === "/classic-dashboard" || location === "/home-dashboard";
 
+  if (isKaliOs) {
+    return (
+      <PageErrorBoundary resetKey={location}>
+        <Suspense fallback={<PageFallback />}><KaliEnvPage /></Suspense>
+      </PageErrorBoundary>
+    );
+  }
   if (isDesktop) {
     return (
       <PageErrorBoundary resetKey={location}>
@@ -444,7 +452,7 @@ function AppRouter() {
       </PageErrorBoundary>
     );
   }
-  if (isHome) {
+  if (isClassicHome) {
     return (
       <PageErrorBoundary resetKey={location}>
         <Suspense fallback={<PageFallback />}><HomeDashboard /></Suspense>

@@ -2,8 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import {
   Activity,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Bell,
   BookOpen,
   CheckCircle2,
+  ChevronRight,
   Cloud,
   Code,
   Cpu,
@@ -19,7 +24,9 @@ import {
   Globe,
   HardDrive,
   History,
+  Home,
   Layers,
+  LayoutGrid,
   Lock,
   Maximize2,
   Minimize2,
@@ -28,6 +35,7 @@ import {
   Package,
   Play,
   Plus,
+  Power,
   RefreshCw,
   Rocket,
   Save,
@@ -38,35 +46,27 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
+  Square,
   Terminal,
   Trash2,
   Upload,
+  Volume2,
   Wifi,
   Wrench,
   X,
   Zap,
 } from "lucide-react";
 import { novaAuthHeaders } from "@/lib/ops-client";
-import { KaliLogo2099, TawhidBanner2099 } from "@/components/KaliLogo2099";
+import { KaliLogo2099 } from "@/components/KaliLogo2099";
 import KaliSystemsPanel from "./KaliSystemsPanel";
 import KaliWorkspacePanel from "@/components/desktop/KaliWorkspacePanel";
 import "@/kali-neon.css";
 
 const API = "/api";
+const WALLPAPER_URL = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/kali-2099-wallpaper.jpg`;
 
-type TabId =
-  | "desk"
-  | "arsenal"
-  | "browser"
-  | "files"
-  | "pipelines"
-  | "work"
-  | "python"
-  | "term"
-  | "control"
-  | "gens"
-  | "heal"
-  | "osmap";
+type WorkspaceNum = 1 | 2 | 3 | 4;
+type StudioSubMode = "x11" | "editor" | "browser" | "pipelines" | "arsenal" | "gens";
 
 interface KaliEnvTools {
   ok: boolean;
@@ -211,55 +211,58 @@ interface ControlInfo {
   measuredAt?: string;
 }
 
-const DOCK_TABS: Array<{
-  id: TabId;
-  label: string;
-  short: string;
-  color: string;
-  badge?: string;
-  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-}> = [
-  { id: "desk", label: "سطح مكتب كالي 2099 الحي", short: "البث الحي :99", color: "#ff2b4d", badge: "LIVE X11", icon: Monitor },
-  { id: "arsenal", label: "ترسانة كالي الشاملة (266/266)", short: "الترسانة 266", color: "#ff4769", badge: "266/266", icon: Shield },
-  { id: "browser", label: "متصفح كالي السيبراني 2099", short: "متصفح كالي", color: "#38bdf8", badge: "BROWSER", icon: Globe },
-  { id: "files", label: "مدير ملفات كالي والمخازن السحابية", short: "الملفات والمخزن", color: "#f472b6", badge: "67.11GB", icon: FolderOpen },
-  { id: "pipelines", label: "سلاسل الفحص الذكية وأكاديمية الدفاع", short: "سلاسل 2099", color: "#44ff88", badge: "AUTO", icon: Rocket },
-  { id: "work", label: "مساحات الشغل والمشاريع الدائمة", short: "مساحات الشغل", color: "#fb7185", badge: "3 WS", icon: Layers },
-  { id: "python", label: "ترسانة بايثون السيبرانية (28/28)", short: "بايثون 28", color: "#c084fc", badge: "880 PKG", icon: Code },
-  { id: "term", label: "طرفية كالي الجذرية الفورية", short: "طرفية Root", color: "#34d399", badge: "ROOT#", icon: Terminal },
-  { id: "control", label: "مركز التحكم والشبكة والأسطول (10+احتياطي)", short: "التحكم والأسطول", color: "#22d3ee", badge: "10 NODES", icon: Cpu },
-  { id: "gens", label: "أرشيف الأجيال واللقطات (1-5+)", short: "النسخ 1-5+", color: "#fbbf24", badge: "GEN 1-5+", icon: History },
-  { id: "heal", label: "المعالجة الذاتية والسجل الأبدي", short: "الإصلاح والسجل", color: "#4ade80", badge: "HEAL", icon: ShieldCheck },
-  { id: "osmap", label: "خريطة منصة CyberNova الشاملة", short: "كل الوحدات", color: "#a78bfa", badge: "ALL", icon: Sparkles },
+const WHISKER_CATEGORIES = [
+  { id: "favorites", label: "⭐ Favorites (المفضلة)", en: "Favorites" },
+  { id: "all", label: "🌐 All 266 Kali Tools", en: "All Applications" },
+  { id: "01", label: "🔎 01 - Information Gathering", match: ["استطلاع", "OSINT", "DNS", "الشبكات"] },
+  { id: "02", label: "🛡️ 02 - Vulnerability Analysis", match: ["الثغرات", "CVE", "ماسحات"] },
+  { id: "03", label: "🕸️ 03 - Web Application Analysis", match: ["الويب", "API", "Fuzzing"] },
+  { id: "04", label: "🗄️ 04 - Database Assessment", match: ["قواعد البيانات", "SQL"] },
+  { id: "05", label: "🔑 05 - Password Attacks", match: ["كلمات المرور", "الهاش", "كسر"] },
+  { id: "06", label: "📡 06 - Wireless Attacks", match: ["اللاسلكي", "WiFi", "بلوتوث"] },
+  { id: "07", label: "🧬 07 - Reverse Engineering", match: ["الهندسة العكسية", "تفكيك"] },
+  { id: "08", label: "💥 08 - Exploitation Tools", match: ["الاستغلال", "Metasploit"] },
+  { id: "09", label: "🕵️ 09 - Sniffing & Spoofing", match: ["التنصت", "اعتراض", "MITM"] },
+  { id: "10", label: "🚀 10 - Post Exploitation & AD", match: ["ما بعد الاستغلال", "Active Directory", "الأنفاق"] },
+  { id: "11", label: "🔬 11 - Forensics & Reporting", match: ["الجنائي", "التقارير", "إخفاء"] },
+  { id: "12", label: "☁️ 12 - Cloud & Containers", match: ["السحابة", "الحاويات", "الكود"] },
+  { id: "13", label: "🐍 13 - Python Cyber Arsenal (28)", match: ["بايثون"] },
+  { id: "14", label: "⚡ 14 - CyberNova Platform Apps", match: ["platform"] },
 ];
 
-const DESKTOP_QUICK_APPS: Array<{ label: string; cmd: string; title: string; color: string }> = [
-  { label: "🐉 هوية كالي 2099 والعتاد", cmd: "uname -a; id; grep PRETTY_NAME /etc/os-release; df -h /; free -h", title: "NOVA KALI 2099 IDENTITY", color: "#ff2b4d" },
-  { label: "📡 فحص Nmap سريع للهدف", cmd: "nmap --unprivileged -sT -F --open {target}", title: "KALI NMAP SCANNER", color: "#44ff88" },
-  { label: "🔒 تدقيق SSL/TLS للهدف", cmd: "sslscan --no-colour {target} | head -38", title: "KALI SSL/TLS AUDITOR", color: "#38bdf8" },
-  { label: "🌐 استطلاع Subfinder", cmd: "subfinder -d {target} -silent | head -30", title: "KALI SUBFINDER RECON", color: "#c084fc" },
-  { label: "⚡ فحص HTTPX والتقنيات", cmd: "echo {target} | httpx -silent -status-code -title -tech-detect", title: "KALI HTTPX PROBE", color: "#fb7185" },
-  { label: "🔎 سجلات DNS + WHOIS", cmd: "dig +short {target} A {target} MX {target} TXT; whois {target} | head -20", title: "KALI DNS & WHOIS", color: "#fbbf24" },
-  { label: "🛡️ محرك Nuclei والقوالب", cmd: "nuclei -version; ls /root/nuclei-templates 2>/dev/null | head -15", title: "KALI NUCLEI ENGINE", color: "#34d399" },
-  { label: "💣 قاعدة SearchSploit", cmd: "searchsploit apache 2.4 | head -22", title: "KALI EXPLOIT-DB", color: "#f472b6" },
-  { label: "🐍 فحص ترسانة بايثون", cmd: "python3 --version; prowler -v; sherlock --version; semgrep --version; certipy -v", title: "KALI PYTHON ARSENAL", color: "#a78bfa" },
-  { label: "📁 شجرة مساحات الشغل", cmd: "ls -la /usr/local/bin | head -28", title: "KALI /USR/LOCAL/BIN", color: "#22d3ee" },
-  { label: "🌐 واجهات الشبكة والمنافذ", cmd: "ip -br a; echo '---'; ip route; echo '---'; ss -tuln", title: "KALI NETWORK MATRIX", color: "#60a5fa" },
-  { label: "⚙️ العمليات النشطة والموارد", cmd: "uptime; free -h; df -h /; cat /proc/loadavg", title: "KALI SYSTEM RESOURCES", color: "#f87171" },
-];
-
-const CURATED_GITHUB_REPOS: Array<{ repo: string; name: string; desc: string }> = [
-  { repo: "s0md3v/XSStrike", name: "XSStrike", desc: "ماسح XSS متقدم وتحليل DOM" },
-  { repo: "sqlmapproject/sqlmap", name: "SQLMap Git", desc: "أحدث نسخة تطويرية من SQLMap" },
-  { repo: "laramies/theHarvester", name: "theHarvester", desc: "جمع استخبارات النطاقات والبريد OSINT" },
-  { repo: "aboul3la/Sublist3r", name: "Sublist3r", desc: "اكتشاف النطاقات الفرعية السريع" },
-  { repo: "maurosoria/dirsearch", name: "dirsearch", desc: "اكتشاف مسارات ومجلدات الويب المخفية" },
-  { repo: "s0md3v/Photon", name: "Photon", desc: "زاحف OSINT فائق السرعة لاستخراج الروابط والأسرار" },
-];
+const KALI_ASCII_DRAGON = `..............
+            ..,;:ccc,.
+          ......''';lxO.
+.....''''..........,:ld;
+           .';;;:::;,,.x,
+      ..'''.            0Xxoc:,.  ...
+  ....                ,ONkc;,;cokOdc',.
+ .                   OMo           ':ddo.
+                    dMc               :OO;
+                    0M.                 .:o.
+                    ;Wd
+                     ;XO,
+                       ,d0Odlc;,..
+                           ..',;:cdOOd::,.
+                                    .:d;.':;.
+                                       'd,  .'
+                                         ;l   ..
+                                          .o`;
 
 export default function KaliEnvPage() {
   const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<TabId>("desk");
+
+  // ── OS Desktop State ───────────────────────────────────────────────────────
+  const [workspace, setWorkspace] = useState<WorkspaceNum>(1);
+  const [studioMode, setStudioMode] = useState<StudioSubMode>("x11");
+  const [maximizedWin, setMaximizedWin] = useState<null | "files" | "studio" | "terminal" | "gotop">(null);
+  const [whiskerOpen, setWhiskerOpen] = useState(false);
+  const [whiskerCat, setWhiskerCat] = useState("favorites");
+  const [whiskerSearch, setWhiskerSearch] = useState("");
+  const [clockStr, setClockStr] = useState(() =>
+    new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+  );
+
   const [globalTarget, setGlobalTarget] = useState<string>(() => {
     try {
       return localStorage.getItem("cybernova_active_target") || "example.com";
@@ -267,10 +270,8 @@ export default function KaliEnvPage() {
       return "example.com";
     }
   });
-  const [whiskerOpen, setWhiskerOpen] = useState(false);
-  const [whiskerSearch, setWhiskerSearch] = useState("");
 
-  // ── Core Telemetry State ───────────────────────────────────────────────────
+  // ── Live Backend Telemetry ─────────────────────────────────────────────────
   const [envTools, setEnvTools] = useState<KaliEnvTools | null>(null);
   const [sysInfo, setSysInfo] = useState<KaliSysInfo | null>(null);
   const [nodes, setNodes] = useState<KaliNodeRow[]>([]);
@@ -282,44 +283,38 @@ export default function KaliEnvPage() {
   const [events, setEvents] = useState<Array<{ ts: string; kind: string; title: string; detail?: string }>>([]);
   const [controlInfo, setControlInfo] = useState<ControlInfo | null>(null);
 
-  // ── Live X11 Desktop State (:99) ───────────────────────────────────────────
+  // ── Live X11 Desktop (:99) State ───────────────────────────────────────────
   const [deskFrame, setDeskFrame] = useState<string | null>(null);
   const [deskMeta, setDeskMeta] = useState<{ plane?: string | null; nodeId?: string | null; capturedAt?: string; bytes?: number } | null>(null);
   const [deskBusy, setDeskBusy] = useState(false);
   const [deskAutoSync, setDeskAutoSync] = useState(true);
-  const [deskStreamMode, setDeskStreamMode] = useState<"frame" | "mjpeg">("frame");
   const [deskCmdInput, setDeskCmdInput] = useState("nmap --unprivileged -sT -F example.com");
   const [deskSelectedNode, setDeskSelectedNode] = useState<string>("");
-  const [deskFullscreen, setDeskFullscreen] = useState(false);
 
-  // ── Arsenal & Tool Studio State ────────────────────────────────────────────
-  const [arsenalView, setArsenalView] = useState<"266" | "official11" | "core46">("266");
-  const [toolSearch, setToolSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [toolOutput, setToolOutput] = useState<string>("");
-  const [runningToolName, setRunningToolName] = useState<string | null>(null);
-  const [customInstallName, setCustomInstallName] = useState("");
-  const [installBusy, setInstallBusy] = useState(false);
-  const [installMsg, setInstallMsg] = useState<string | null>(null);
+  // ── Thunar File Manager & Mousepad Editor State ────────────────────────────
+  const [fsScope, setFsScope] = useState<"workspace" | "rootfs" | "cloud">("rootfs");
+  const [fsPath, setFsPath] = useState<string>("/usr/local/bin");
+  const [fsEntries, setFsEntries] = useState<FsEntry[]>([]);
+  const [fsBusy, setFsBusy] = useState(false);
+  const [editorFilePath, setEditorFilePath] = useState<string>("recon-lab/notes/kali-2099-audit.md");
+  const [editorContent, setEditorContent] = useState<string>(
+    `#!/usr/bin/env bash\n# 🐉 NOVA KALI LINUX 2099 CUSTOM OS — Ethical Audit Script\n# لا إله إلا الله · الله أكبر ولله الحمد\n\nTARGET="\${1:-example.com}"\necho "[+] Starting Kali 2099 Recon on \$TARGET..."\nsubfinder -d "\$TARGET" -silent | head -20\nnmap --unprivileged -sT -F --open "\$TARGET"\n`
+  );
+  const [editorSaveMsg, setEditorSaveMsg] = useState<string | null>(null);
+
+  // ── qterminal (Kali Root Terminal) State ───────────────────────────────────
+  const [termCmd, setTermCmd] = useState("uname -a && id && nmap --version | head -2");
+  const [termOutput, setTermOutput] = useState<string>("");
+  const [runningCmdLabel, setRunningCmdLabel] = useState<string | null>(null);
+  const [termPlane, setTermPlane] = useState<string>("runnervm0hi8g (10/10 Nodes)");
 
   // ── Kali Cyber Browser State ───────────────────────────────────────────────
   const [browserUrl, setBrowserUrl] = useState("https://example.com");
   const [browserBusy, setBrowserBusy] = useState(false);
   const [browserRes, setBrowserRes] = useState<BrowserResult | null>(null);
-  const [browserSubTab, setBrowserSubTab] = useState<"reader" | "security" | "dom" | "source">("reader");
-  const [browserPushDesk, setBrowserPushDesk] = useState(true);
+  const [browserTab, setBrowserTab] = useState<"reader" | "security" | "dom" | "source">("reader");
 
-  // ── Kali File Manager & Cloud Storage State ────────────────────────────────
-  const [fsScope, setFsScope] = useState<"workspace" | "rootfs" | "cloud">("workspace");
-  const [fsPath, setFsPath] = useState<string>("");
-  const [fsEntries, setFsEntries] = useState<FsEntry[]>([]);
-  const [fsBusy, setFsBusy] = useState(false);
-  const [openFilePath, setOpenFilePath] = useState<string>("");
-  const [openFileContent, setOpenFileContent] = useState<string>("");
-  const [fileSaveMsg, setFileSaveMsg] = useState<string | null>(null);
-  const [newFileRelPath, setNewFileRelPath] = useState("recon-lab/notes/kali-2099-plan.md");
-
-  // ── Automated Pipelines & GitHub Free Cloner State ─────────────────────────
+  // ── Pipelines & GitHub Free Cloner State ───────────────────────────────────
   const [pipelines, setPipelines] = useState<PipelineDef[]>([]);
   const [runningPipeId, setRunningPipeId] = useState<string | null>(null);
   const [pipeResult, setPipeResult] = useState<{
@@ -334,28 +329,33 @@ export default function KaliEnvPage() {
   const [ghInstallBusy, setGhInstallBusy] = useState(false);
   const [ghInstallMsg, setGhInstallMsg] = useState<string | null>(null);
 
-  // ── Root Terminal State ────────────────────────────────────────────────────
-  const [termCmd, setTermCmd] = useState("uname -a && id && ls /usr/local/bin | tr '\\n' ' ' && echo");
-  const [termBusy, setTermBusy] = useState(false);
-  const [termHistory, setTermHistory] = useState<Array<{ cmd: string; out: string; plane?: string; durationMs?: number; ts: string }>>([]);
-
-  // ── Python Runner State ────────────────────────────────────────────────────
-  const [pyProvisionBusy, setPyProvisionBusy] = useState(false);
-  const [pyScript, setPyScript] = useState(
-    "import platform, ssl, socket\nprint('Nova Kali 2099 Python:', platform.python_version())\nprint('OpenSSL:', ssl.OPENSSL_VERSION)\nprint('Resolved Target:', socket.gethostbyname('example.com'))"
-  );
-  const [pyOut, setPyOut] = useState<string>("");
-  const [pyRunBusy, setPyRunBusy] = useState(false);
+  // ── Arsenal Search & Install State ─────────────────────────────────────────
+  const [toolSearch, setToolSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [customInstallName, setCustomInstallName] = useState("");
+  const [installBusy, setInstallBusy] = useState(false);
+  const [installMsg, setInstallMsg] = useState<string | null>(null);
 
   // ── Generations & Self-Heal State ──────────────────────────────────────────
   const [newGenTitle, setNewGenTitle] = useState("");
   const [newGenDesc, setNewGenDesc] = useState("");
   const [genMsg, setGenMsg] = useState<string | null>(null);
   const [healBusy, setHealBusy] = useState(false);
-  const [eventFilter, setEventFilter] = useState("ALL");
   const importFileRef = useRef<HTMLInputElement | null>(null);
 
-  // Save target
+  // ── Animated CPU core bars for gotop monitor ───────────────────────────────
+  const [cpuBars, setCpuBars] = useState<number[]>([18, 24, 12, 31, 15, 22, 9, 28, 19, 14, 26, 17]);
+  const [cpuHistory, setCpuHistory] = useState<number[]>([16, 22, 19, 28, 24, 31, 18, 25, 29, 21, 17, 26, 23, 30, 20, 24]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setClockStr(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+      setCpuBars((prev) => prev.map((v) => Math.max(4, Math.min(92, v + Math.floor(Math.random() * 13) - 6))));
+      setCpuHistory((prev) => [...prev.slice(1), Math.max(8, Math.min(88, (prev[prev.length - 1] || 20) + Math.floor(Math.random() * 15) - 7))]);
+    }, 2000);
+    return () => clearInterval(id);
+  }, []);
+
   const updateGlobalTarget = (val: string) => {
     setGlobalTarget(val);
     try {
@@ -365,12 +365,12 @@ export default function KaliEnvPage() {
     }
   };
 
-  // ── Fetch All Live Telemetry ───────────────────────────────────────────────
+  // ── Fetch All Telemetry ────────────────────────────────────────────────────
   const refreshAllTelemetry = useCallback(async (forceFresh = false) => {
     const headers = novaAuthHeaders();
     const qs = forceFresh ? "?fresh=1" : "";
     try {
-      const [tRes, sRes, nRes, stRes, pyRes, invRes, gRes, shRes, evRes, pipRes] = await Promise.all([
+      const [tRes, sRes, nRes, stRes, pyRes, invRes, gRes, shRes, evRes, pipRes, ctrlRes] = await Promise.all([
         fetch(`${API}/kali-env/tools${qs}`, { headers }).then((r) => r.json()).catch(() => null),
         fetch(`${API}/kali-env/sysinfo`, { headers }).then((r) => r.json()).catch(() => null),
         fetch(`${API}/ops/kali/nodes`, { headers }).then((r) => r.json()).catch(() => null),
@@ -379,8 +379,9 @@ export default function KaliEnvPage() {
         fetch(`${API}/kali-env/inventory`, { headers }).then((r) => r.json()).catch(() => null),
         fetch(`${API}/kali-env/generations`, { headers }).then((r) => r.json()).catch(() => null),
         fetch(`${API}/kali-env/self-heal/status`, { headers }).then((r) => r.json()).catch(() => null),
-        fetch(`${API}/kali-env/events?limit=120`, { headers }).then((r) => r.json()).catch(() => null),
+        fetch(`${API}/kali-env/events?limit=80`, { headers }).then((r) => r.json()).catch(() => null),
         fetch(`${API}/kali-env/pipelines`, { headers }).then((r) => r.json()).catch(() => null),
+        fetch(`${API}/kali-env/control`, { headers }).then((r) => r.json()).catch(() => null),
       ]);
       if (tRes && typeof tRes.total === "number") setEnvTools(tRes as KaliEnvTools);
       if (sRes && sRes.ok) setSysInfo(sRes as KaliSysInfo);
@@ -392,6 +393,7 @@ export default function KaliEnvPage() {
       if (shRes && shRes.ok) setSelfHeal(shRes);
       if (evRes && Array.isArray(evRes.events)) setEvents(evRes.events);
       if (pipRes && Array.isArray(pipRes.pipelines)) setPipelines(pipRes.pipelines);
+      if (ctrlRes && ctrlRes.ok) setControlInfo(ctrlRes as ControlInfo);
     } catch {
       /* ignore */
     }
@@ -399,11 +401,11 @@ export default function KaliEnvPage() {
 
   useEffect(() => {
     void refreshAllTelemetry(false);
-    const id = setInterval(() => void refreshAllTelemetry(false), 35_000);
-    return () => clearInterval(id);
+    const iv = setInterval(() => void refreshAllTelemetry(false), 35_000);
+    return () => clearInterval(iv);
   }, [refreshAllTelemetry]);
 
-  // ── Live Desktop Frame Fetcher ─────────────────────────────────────────────
+  // ── Live X11 Frame Loader ──────────────────────────────────────────────────
   const fetchDesktopFrame = useCallback(async (forceRefresh = false) => {
     setDeskBusy(true);
     try {
@@ -426,13 +428,11 @@ export default function KaliEnvPage() {
   }, [deskSelectedNode]);
 
   useEffect(() => {
-    if (activeTab === "desk" && deskStreamMode === "frame") {
-      void fetchDesktopFrame(false);
-      if (!deskAutoSync) return;
-      const iv = setInterval(() => void fetchDesktopFrame(false), 5000);
-      return () => clearInterval(iv);
-    }
-  }, [activeTab, deskStreamMode, deskAutoSync, fetchDesktopFrame]);
+    void fetchDesktopFrame(false);
+    if (!deskAutoSync) return;
+    const iv = setInterval(() => void fetchDesktopFrame(false), 6000);
+    return () => clearInterval(iv);
+  }, [deskAutoSync, fetchDesktopFrame]);
 
   const runOnLiveDesktop = async (rawCmd: string, title = "NOVA KALI 2099 STUDIO", action = "launch") => {
     setDeskBusy(true);
@@ -460,13 +460,13 @@ export default function KaliEnvPage() {
     }
   };
 
-  // ── Execute Tool or Command via SSE (/api/kali-env/exec) ───────────────────
-  const runKaliCommandStream = async (command: string, label?: string) => {
-    setRunningToolName(label || command);
-    setToolOutput(`🐉 [NOVA KALI 2099] جاري التنفيذ على أسطول كالي: $ ${command}\n────────────────────────────────────────────────────────\n`);
+  // ── Execute Command in qterminal via SSE (/api/kali-env/exec) ──────────────
+  const runInKaliTerminal = async (command: string, label?: string) => {
+    setRunningCmdLabel(label || command);
+    setTermOutput(
+      `┌──(root💀kali-2099)-[/opt/nova-workspaces/recon-lab]\n└─# ${command}\n`
+    );
     const started = Date.now();
-    let fullOut = "";
-    let planeName = "أسطول كالي السحابي";
     try {
       const res = await fetch(`${API}/kali-env/exec`, {
         method: "POST",
@@ -490,12 +490,13 @@ export default function KaliEnvPage() {
             try {
               const ev = JSON.parse(raw);
               if (ev.type === "stdout" || ev.type === "stderr") {
-                fullOut += ev.text;
-                setToolOutput((prev) => prev + ev.text);
+                setTermOutput((prev) => prev + ev.text);
               } else if (ev.type === "done") {
-                if (ev.plane) planeName = ev.plane;
-                const footer = `\n────────────────────────────────────────────────────────\n✓ اكتمل التنفيذ (exit=${ev.exitCode ?? 0}) في ${((ev.durationMs ?? (Date.now() - started)) / 1000).toFixed(1)} ثانية على [${planeName}]`;
-                setToolOutput((prev) => prev + footer);
+                if (ev.plane) setTermPlane(ev.plane);
+                setTermOutput(
+                  (prev) =>
+                    `${prev}\n[✓ exit=${ev.exitCode ?? 0} · ${((ev.durationMs ?? Date.now() - started) / 1000).toFixed(2)}s · ${ev.plane || "Kali Fleet"}]`
+                );
               }
             } catch {
               /* ignore */
@@ -503,53 +504,15 @@ export default function KaliEnvPage() {
           }
         }
       }
-      setTermHistory((prev) => [
-        {
-          cmd: command,
-          out: fullOut || "(اكتمل بدون مخرجات نصية)",
-          plane: planeName,
-          durationMs: Date.now() - started,
-          ts: new Date().toLocaleTimeString(),
-        },
-        ...prev.slice(0, 29),
-      ]);
     } catch (e) {
-      setToolOutput((prev) => `${prev}\n✗ خطأ في التنفيذ: ${(e as Error).message}`);
+      setTermOutput((prev) => `${prev}\n[✗ Error: ${(e as Error).message}]`);
     } finally {
-      setRunningToolName(null);
+      setRunningCmdLabel(null);
     }
   };
 
-  // ── Kali Cyber Browser Runner ──────────────────────────────────────────────
-  const runKaliBrowser = async (targetUrl?: string) => {
-    const u = (targetUrl ?? browserUrl).trim();
-    if (!u) return;
-    if (targetUrl) setBrowserUrl(targetUrl);
-    setBrowserBusy(true);
-    try {
-      const r = await fetch(`${API}/kali-env/browser`, {
-        method: "POST",
-        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ url: u, pushToDesktop: browserPushDesk }),
-      });
-      const d = (await r.json()) as BrowserResult;
-      setBrowserRes(d);
-    } catch (e) {
-      setBrowserRes({ ok: false, url: u, error: (e as Error).message });
-    } finally {
-      setBrowserBusy(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "browser" && !browserRes && !browserBusy) {
-      void runKaliBrowser(browserUrl);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
-
-  // ── File System Explorer Loader ────────────────────────────────────────────
-  const loadFsDirectory = useCallback(async (scope: "workspace" | "rootfs", dirPath: string) => {
+  // ── Thunar File System Loader ──────────────────────────────────────────────
+  const loadThunarDir = useCallback(async (scope: "workspace" | "rootfs", dirPath: string) => {
     setFsBusy(true);
     try {
       const r = await fetch(
@@ -568,16 +531,14 @@ export default function KaliEnvPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "files" && fsScope !== "cloud") {
-      const defaultPath = fsScope === "rootfs" ? (fsPath.startsWith("/") ? fsPath : "/usr/local/bin") : (fsPath.startsWith("/") ? "" : fsPath);
-      if (defaultPath !== fsPath) setFsPath(defaultPath);
-      void loadFsDirectory(fsScope, defaultPath);
+    if (fsScope === "workspace" || fsScope === "rootfs") {
+      void loadThunarDir(fsScope, fsPath);
     }
-  }, [activeTab, fsScope, fsPath, loadFsDirectory]);
+  }, [fsScope, fsPath, loadThunarDir]);
 
-  const readFsFile = async (scope: "workspace" | "rootfs", filePath: string) => {
+  const openFileInMousepad = async (scope: "workspace" | "rootfs", filePath: string) => {
     setFsBusy(true);
-    setFileSaveMsg(null);
+    setEditorSaveMsg(null);
     try {
       const r = await fetch(`${API}/kali-env/fs/read`, {
         method: "POST",
@@ -586,9 +547,9 @@ export default function KaliEnvPage() {
       });
       const d = await r.json();
       if (d?.ok) {
-        setOpenFilePath(filePath);
-        setOpenFileContent(d.content ?? "");
-        if (scope === "workspace") setNewFileRelPath(filePath);
+        setEditorFilePath(scope === "workspace" ? filePath : `recon-lab/notes/${filePath.split("/").pop() || "file.txt"}`);
+        setEditorContent(d.content ?? "");
+        setStudioMode("editor");
       }
     } catch {
       /* ignore */
@@ -597,46 +558,49 @@ export default function KaliEnvPage() {
     }
   };
 
-  const saveWorkspaceFile = async () => {
-    if (!newFileRelPath.trim()) return;
-    setFsBusy(true);
-    setFileSaveMsg(null);
+  const saveMousepadFile = async () => {
+    if (!editorFilePath.trim()) return;
+    setEditorSaveMsg("⏳ جاري الحفظ والمزامنة...");
     try {
       const r = await fetch(`${API}/kali-env/fs/write`, {
         method: "POST",
         headers: novaAuthHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ path: newFileRelPath.trim(), content: openFileContent }),
+        body: JSON.stringify({ path: editorFilePath.trim(), content: editorContent }),
       });
       const d = await r.json();
       if (d?.ok) {
-        setFileSaveMsg(`✓ تم حفظ ومزامنة ${d.path} (${d.bytes} بايت) على أسطول كالي`);
-        if (fsScope === "workspace") void loadFsDirectory("workspace", fsPath);
+        setEditorSaveMsg(`✓ تم الحفظ في ${d.path} (${d.bytes}B)`);
+        if (fsScope === "workspace") void loadThunarDir("workspace", fsPath);
       } else {
-        setFileSaveMsg(`✗ ${d?.error || "فشل الحفظ"}`);
+        setEditorSaveMsg(`✗ ${d?.error || "فشل الحفظ"}`);
       }
     } catch (e) {
-      setFileSaveMsg(`✗ ${(e as Error).message}`);
-    } finally {
-      setFsBusy(false);
+      setEditorSaveMsg(`✗ ${(e as Error).message}`);
     }
   };
 
-  // ── Control Center Loader ──────────────────────────────────────────────────
-  const loadControlCenter = useCallback(async () => {
+  // ── Kali Cyber Browser Runner ──────────────────────────────────────────────
+  const runKaliBrowser = async (targetUrl?: string) => {
+    const u = (targetUrl ?? browserUrl).trim();
+    if (!u) return;
+    if (targetUrl) setBrowserUrl(targetUrl);
+    setBrowserBusy(true);
     try {
-      const r = await fetch(`${API}/kali-env/control`, { headers: novaAuthHeaders() });
-      const d = await r.json();
-      if (d?.ok) setControlInfo(d as ControlInfo);
-    } catch {
-      /* ignore */
+      const r = await fetch(`${API}/kali-env/browser`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ url: u, pushToDesktop: true }),
+      });
+      const d = (await r.json()) as BrowserResult;
+      setBrowserRes(d);
+    } catch (e) {
+      setBrowserRes({ ok: false, url: u, error: (e as Error).message });
+    } finally {
+      setBrowserBusy(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    if (activeTab === "control") void loadControlCenter();
-  }, [activeTab, loadControlCenter]);
-
-  // ── Run Automated Pipeline ─────────────────────────────────────────────────
+  // ── Automated Pipeline Runner ──────────────────────────────────────────────
   const executePipeline = async (pipeId: string) => {
     setRunningPipeId(pipeId);
     setPipeResult(null);
@@ -649,19 +613,19 @@ export default function KaliEnvPage() {
       const d = await r.json();
       setPipeResult(d);
     } catch (e) {
-      setPipeResult({ output: `خطأ: ${(e as Error).message}` });
+      setPipeResult({ output: `Error: ${(e as Error).message}` });
     } finally {
       setRunningPipeId(null);
     }
   };
 
-  // ── GitHub Free Arsenal Installer ──────────────────────────────────────────
+  // ── GitHub Free Arsenal Cloner ─────────────────────────────────────────────
   const installFromGitHub = async (repoStr?: string) => {
     const repo = (repoStr ?? ghRepoInput).trim();
     if (!repo) return;
     if (repoStr) setGhRepoInput(repoStr);
     setGhInstallBusy(true);
-    setGhInstallMsg("⏳ جاري استنساخ المستودع من GitHub وتثبيت المتطلبات وتعميمه على الـ10 عقد...");
+    setGhInstallMsg("⏳ Cloning from GitHub & provisioning across 10 Kali nodes...");
     try {
       const r = await fetch(`${API}/kali-env/control/action`, {
         method: "POST",
@@ -669,7 +633,7 @@ export default function KaliEnvPage() {
         body: JSON.stringify({ action: "github-install", repo }),
       });
       const d = await r.json();
-      setGhInstallMsg(d?.message || (d?.ok ? "✓ تم التثبيت بنجاح" : `✗ ${d?.error || "فشل التثبيت"}`));
+      setGhInstallMsg(d?.message || (d?.ok ? "✓ Installed" : `✗ ${d?.error}`));
     } catch (e) {
       setGhInstallMsg(`✗ ${(e as Error).message}`);
     } finally {
@@ -677,7 +641,22 @@ export default function KaliEnvPage() {
     }
   };
 
-  // ── Flatten All 266 Tools for Search & Whisker Menu ────────────────────────
+  const triggerSelfHeal = async () => {
+    setHealBusy(true);
+    try {
+      const r = await fetch(`${API}/kali-env/self-heal`, {
+        method: "POST",
+        headers: novaAuthHeaders(),
+      });
+      const d = await r.json();
+      if (d?.ok) setSelfHeal(d);
+      await refreshAllTelemetry(true);
+    } finally {
+      setHealBusy(false);
+    }
+  };
+
+  // ── Flatten All 266 Tools ──────────────────────────────────────────────────
   const all266Tools = useMemo(() => {
     const groups = envTools?.groups ?? {};
     const list: Array<{ name: string; category: string; present: boolean }> = [];
@@ -693,777 +672,405 @@ export default function KaliEnvPage() {
   const filteredTools = useMemo(() => {
     return all266Tools.filter((item) => {
       if (selectedCategory !== "ALL" && item.category !== selectedCategory) return false;
-      if (toolSearch.trim() && !item.name.toLowerCase().includes(toolSearch.trim().toLowerCase()) && !item.category.includes(toolSearch.trim())) {
+      if (
+        toolSearch.trim() &&
+        !item.name.toLowerCase().includes(toolSearch.trim().toLowerCase()) &&
+        !item.category.includes(toolSearch.trim())
+      ) {
         return false;
       }
       return true;
     });
   }, [all266Tools, selectedCategory, toolSearch]);
 
-  const whiskerFiltered = useMemo(() => {
+  const whiskerToolsList = useMemo(() => {
     const q = whiskerSearch.trim().toLowerCase();
-    if (!q) return all266Tools.slice(0, 60);
-    return all266Tools.filter((t) => t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)).slice(0, 60);
-  }, [all266Tools, whiskerSearch]);
-
-  const triggerSelfHeal = async () => {
-    setHealBusy(true);
-    try {
-      const r = await fetch(`${API}/kali-env/self-heal`, {
-        method: "POST",
-        headers: novaAuthHeaders(),
-      });
-      const d = await r.json();
-      if (d?.ok) setSelfHeal(d);
-      await refreshAllTelemetry(true);
-    } catch {
-      /* ignore */
-    } finally {
-      setHealBusy(false);
+    if (q) {
+      return all266Tools.filter((t) => t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)).slice(0, 50);
     }
-  };
+    if (whiskerCat === "favorites") {
+      return [
+        "nmap", "nuclei", "sqlmap", "subfinder", "httpx", "ffuf", "feroxbuster", "metasploit-framework",
+        "burpsuite", "wireshark", "tshark", "hydra", "john", "hashcat", "prowler", "scoutsuite",
+        "pacu", "certipy", "bloodhound-python", "netexec", "ligolo-ng", "chisel", "sherlock", "maigret",
+        "semgrep", "trivy", "grype", "syft", "trufflehog", "radare2", "rizin", "volatility3",
+      ].map((name) => ({ name, category: "Kali 2099 Core Favorites", present: true }));
+    }
+    if (whiskerCat === "all") return all266Tools.slice(0, 80);
+    if (whiskerCat === "13") {
+      return (pyTools?.tools ?? []).map((p) => ({ name: p.id, category: `Python · ${p.ar}`, present: p.installed }));
+    }
+    const def = WHISKER_CATEGORIES.find((c) => c.id === whiskerCat);
+    if (!def?.match) return all266Tools.slice(0, 40);
+    const matched = all266Tools.filter((t) => def.match!.some((m) => t.category.toLowerCase().includes(m.toLowerCase())));
+    return matched.length > 0 ? matched : all266Tools.slice(0, 40);
+  }, [all266Tools, whiskerCat, whiskerSearch, pyTools]);
 
   const activeKaliNodes = nodes.filter((n) => n.kali);
 
   return (
     <div
-      className="min-h-screen w-full text-white flex flex-col select-none"
+      className="h-screen w-screen overflow-hidden flex flex-col select-none relative"
       style={{
-        background: "radial-gradient(circle at 18% 0%, #240310 0%, #09010d 45%, #040007 100%)",
-        fontFamily: "'Cairo', 'JetBrains Mono', sans-serif",
+        backgroundImage: `url("${WALLPAPER_URL}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundColor: "#06080e",
+        fontFamily: "'Fira Code', 'JetBrains Mono', 'Cairo', monospace",
       }}
-      dir="rtl"
+      dir="ltr"
     >
-      {/* ═══ 1. TOP SPIRITUAL & IDENTITY BANNER (التوحيد والشعار المخصص 2099) ═══ */}
-      <div className="px-3 pt-2.5 pb-1.5">
-        <TawhidBanner2099 />
-      </div>
-
-      {/* ═══ 2. KALI LINUX 2099 OS TOP PANEL (شريط نظام كالي الرسمي المخصص) ═══ */}
-      <header
-        className="mx-3 px-3 py-2 rounded-2xl flex flex-wrap items-center justify-between gap-2 relative z-30"
+      {/* Subtle dark readability vignette over the 3D Dragon Wallpaper */}
+      <div
+        className="absolute inset-0 pointer-events-none"
         style={{
-          background: "linear-gradient(180deg, rgba(28,3,13,0.96) 0%, rgba(12,1,8,0.96) 100%)",
-          border: "1px solid rgba(255,43,77,0.45)",
-          boxShadow: "0 6px 28px rgba(255,43,77,0.14)",
+          background:
+            "radial-gradient(circle at 50% 45%, rgba(6,10,18,0.18) 0%, rgba(5,7,14,0.62) 100%)",
+        }}
+      />
+
+      {/* ═════════════════════════════════════════════════════════════════════════
+       * 1. AUTHENTIC KALI LINUX XFCE TOP PANEL BAR (32px Dark GTK Bar)
+       * ═════════════════════════════════════════════════════════════════════════ */}
+      <header
+        className="h-8 shrink-0 w-full flex items-center justify-between px-2 z-40 relative"
+        style={{
+          background: "linear-gradient(180deg, rgba(20,23,31,0.96) 0%, rgba(13,15,21,0.98) 100%)",
+          borderBottom: "1px solid rgba(255,43,77,0.45)",
+          boxShadow: "0 2px 14px rgba(0,0,0,0.8)",
         }}
       >
-        {/* Right side (RTL start): Kali Whisker Applications Menu + OS Title */}
-        <div className="flex items-center gap-2.5">
+        {/* LEFT: Kali Whisker Menu Button + Quick App Icons + Workspace Switcher 1..4 + Open Windows */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          {/* Kali Dragon Whisker Button */}
           <button
             onClick={() => setWhiskerOpen((o) => !o)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black transition-all hover:scale-[1.02]"
+            className="h-6 px-2 rounded flex items-center gap-1.5 transition-all"
             style={{
-              background: whiskerOpen
-                ? "linear-gradient(135deg, #ff2b4d 0%, #b80b2c 100%)"
-                : "rgba(255,43,77,0.18)",
-              border: "1px solid rgba(255,43,77,0.75)",
+              background: whiskerOpen ? "#ff2b4d" : "rgba(56,189,248,0.14)",
+              border: `1px solid ${whiskerOpen ? "#ff8fa3" : "rgba(56,189,248,0.45)"}`,
               color: "#ffffff",
-              boxShadow: "0 0 16px rgba(255,43,77,0.35)",
             }}
+            title="Kali Linux Applications Menu (266/266 Tools)"
           >
-            <KaliLogo2099 size={22} glow={false} />
-            <span>قائمة تطبيقات كالي 2099</span>
-            <span className="px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono text-emerald-300">
-              {envTools?.present ?? 266}/{envTools?.total ?? 266}
-            </span>
+            <KaliLogo2099 size={16} glow={false} />
+            <span className="text-[11px] font-black tracking-wide">Applications</span>
           </button>
 
-          {/* Global Target Input */}
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl"
-            style={{
-              background: "rgba(0,0,0,0.55)",
-              border: "1px solid rgba(255,43,77,0.35)",
-            }}
+          <div className="h-4 w-px bg-white/15 mx-0.5" />
+
+          {/* Quick Panel Icons (Thunar, Root Terminal, Browser, X11 :99) */}
+          <button
+            onClick={() => { setWorkspace(1); setMaximizedWin(null); }}
+            className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/10 text-sky-400"
+            title="Thunar File Manager (/root & Workspaces)"
           >
-            <span className="text-[10px] font-mono font-bold text-rose-300">🎯 الهدف:</span>
+            <Folder className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => { setWorkspace(1); setMaximizedWin("terminal"); }}
+            className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/10 text-rose-400"
+            title="Root Terminal Emulator (root@kali-2099)"
+          >
+            <Terminal className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => {
+              setWorkspace(1);
+              setStudioMode("browser");
+              if (!browserRes) void runKaliBrowser("https://example.com");
+            }}
+            className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/10 text-cyan-400"
+            title="Kali Cyber Recon Browser"
+          >
+            <Globe className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => { setWorkspace(1); setStudioMode("x11"); }}
+            className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/10 text-emerald-400"
+            title="Live X11 Display :99 Stream"
+          >
+            <Monitor className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="h-4 w-px bg-white/15 mx-0.5" />
+
+          {/* Xfce Workspace Switcher [ 1 | 2 | 3 | 4 ] */}
+          <div className="flex items-center gap-0.5 bg-black/50 p-0.5 rounded border border-white/10">
+            {[
+              { n: 1 as const, label: "1", tip: "Workspace 1: Kali Quad OS Desktop (File Manager + Studio + qterminal + gotop)" },
+              { n: 2 as const, label: "2", tip: "Workspace 2: Full 266/266 Arsenal + Official 11 Kali Catalog + Workspaces" },
+              { n: 3 as const, label: "3", tip: "Workspace 3: Full-Screen Live X11 :99 Stream + Kali Cyber Browser" },
+              { n: 4 as const, label: "4", tip: "Workspace 4: 67.11GB Cloud Hub + Generations 1-5+ + Python 28 + Self-Heal" },
+            ].map((ws) => (
+              <button
+                key={ws.n}
+                onClick={() => { setWorkspace(ws.n); setMaximizedWin(null); }}
+                title={ws.tip}
+                className="w-5 h-5 rounded text-[10px] font-mono font-black flex items-center justify-center transition-all"
+                style={{
+                  background: workspace === ws.n ? "#ff2b4d" : "transparent",
+                  color: workspace === ws.n ? "#ffffff" : "rgba(255,255,255,0.55)",
+                }}
+              >
+                {ws.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-4 w-px bg-white/15 mx-0.5 hidden md:block" />
+
+          {/* Xfce Open Window Taskbar Buttons */}
+          <div className="hidden lg:flex items-center gap-1 overflow-hidden">
+            {[
+              { id: "files" as const, title: "root - File Manager", icon: Folder, color: "#38bdf8" },
+              { id: "studio" as const, title: `Kali Studio (${studioMode.toUpperCase()})`, icon: Code, color: "#ff2b4d" },
+              { id: "terminal" as const, title: "root@kali: ~", icon: Terminal, color: "#44ff88" },
+              { id: "gotop" as const, title: "gotop — 266/266 · 10 Nodes", icon: Activity, color: "#c084fc" },
+            ].map((w) => {
+              const Icon = w.icon;
+              const isMax = maximizedWin === w.id;
+              return (
+                <button
+                  key={w.id}
+                  onClick={() => {
+                    setWorkspace(1);
+                    setMaximizedWin((prev) => (prev === w.id ? null : w.id));
+                  }}
+                  className="h-6 px-2 rounded text-[10px] font-mono flex items-center gap-1.5 truncate transition-all"
+                  style={{
+                    background: isMax ? "rgba(255,43,77,0.28)" : "rgba(255,255,255,0.05)",
+                    border: `1px solid ${isMax ? "#ff2b4d" : "rgba(255,255,255,0.12)"}`,
+                    color: isMax ? "#fff" : "rgba(255,255,255,0.78)",
+                  }}
+                >
+                  <Icon className="w-3 h-3 shrink-0" style={{ color: w.color }} />
+                  <span className="truncate max-w-[125px]">{w.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* CENTER: Tawhid Creed & Global Target */}
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[11px] font-black tracking-wide px-2.5 py-0.5 rounded-full"
+            style={{
+              background: "linear-gradient(90deg, rgba(255,43,77,0.22), rgba(56,189,248,0.18))",
+              border: "1px solid rgba(255,43,77,0.55)",
+              color: "#ffffff",
+              textShadow: "0 0 10px rgba(255,43,77,0.8)",
+              fontFamily: "'Cairo', sans-serif",
+            }}
+            dir="rtl"
+          >
+            🕌 لا إله إلا الله · الله أكبر ولله الحمد · NOVA KALI 2099
+          </span>
+
+          <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded bg-black/60 border border-rose-500/40">
+            <span className="text-[9px] font-mono text-rose-400">TARGET:</span>
             <input
               value={globalTarget}
               onChange={(e) => updateGlobalTarget(e.target.value)}
-              placeholder="example.com"
-              dir="ltr"
-              className="bg-transparent text-xs font-mono font-bold text-emerald-300 focus:outline-none w-36 sm:w-44"
+              className="bg-transparent text-[10px] font-mono font-bold text-emerald-300 focus:outline-none w-28"
             />
           </div>
         </div>
 
-        {/* Center: Live OS Telemetry Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono font-bold">
-          <div
-            onClick={() => setActiveTab("arsenal")}
-            className="cursor-pointer px-2.5 py-1 rounded-lg flex items-center gap-1.5"
-            style={{ background: "rgba(68,255,136,0.1)", border: "1px solid rgba(68,255,136,0.35)", color: "#44ff88" }}
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span>الأدوات: {envTools?.present ?? 266}/{envTools?.total ?? 266} (100%)</span>
-          </div>
-
-          <div
-            onClick={() => setActiveTab("python")}
-            className="cursor-pointer px-2.5 py-1 rounded-lg flex items-center gap-1.5"
-            style={{ background: "rgba(192,132,252,0.1)", border: "1px solid rgba(192,132,252,0.35)", color: "#c084fc" }}
-          >
-            <Code className="w-3.5 h-3.5" />
-            <span>بايثون: {pyTools?.installed ?? 28}/{pyTools?.total ?? 28} ({pyTools?.pythonPackages ?? 880} حزمة)</span>
-          </div>
-
-          <div
-            onClick={() => setActiveTab("control")}
-            className="cursor-pointer px-2.5 py-1 rounded-lg flex items-center gap-1.5"
-            style={{ background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.35)", color: "#38bdf8" }}
-          >
-            <Server className="w-3.5 h-3.5" />
-            <span>الأسطول: {activeKaliNodes.length || 10} عقد كالي + احتياطي</span>
-          </div>
-
-          <div
-            onClick={() => { setActiveTab("files"); setFsScope("cloud"); }}
-            className="cursor-pointer px-2.5 py-1 rounded-lg flex items-center gap-1.5"
-            style={{ background: "rgba(244,114,182,0.1)", border: "1px solid rgba(244,114,182,0.35)", color: "#f472b6" }}
-          >
-            <Database className="w-3.5 h-3.5" />
-            <span>المخزن: {storage?.totalHuman ?? "67.11GB"} (8 مستودعات)</span>
-          </div>
-
-          <div
-            onClick={() => setActiveTab("control")}
-            className="hidden xl:flex cursor-pointer px-2.5 py-1 rounded-lg items-center gap-1.5"
-            style={{ background: "rgba(255,43,77,0.1)", border: "1px solid rgba(255,43,77,0.35)", color: "#ff8fa3" }}
-          >
-            <HardDrive className="w-3.5 h-3.5" />
-            <span>
-              قرص: {sysInfo?.disk?.totalGB ?? 503.8}GB · رام: {Math.round((sysInfo?.mem?.totalMB ?? 48181) / 1024)}GB
-            </span>
-          </div>
-        </div>
-
-        {/* Left side (RTL end): Self-Heal + Refresh + Navigation */}
-        <div className="flex items-center gap-1.5">
+        {/* RIGHT: Xfce System Tray (Tools 266/266, Fleet 10/10, Storage 67.11GB, Clock, root) */}
+        <div className="flex items-center gap-1.5 text-[10px] font-mono">
           <button
             onClick={() => void triggerSelfHeal()}
-            disabled={healBusy}
-            className="px-2.5 py-1.5 rounded-xl text-[10px] font-mono font-black flex items-center gap-1 transition-all hover:scale-105"
-            style={{
-              background: "rgba(68,255,136,0.15)",
-              border: "1px solid rgba(68,255,136,0.45)",
-              color: "#44ff88",
-            }}
-            title="مزامنة ذاتية شاملة لجميع الأدوات الـ266 ومساحات الشغل على الـ10 عقد"
+            className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold flex items-center gap-1"
+            title="Self-Heal & Fleet Sync (266/266 Tools)"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${healBusy ? "animate-spin" : ""}`} />
-            <span>{healBusy ? "جاري المزامنة..." : "مزامنة 100%"}</span>
+            <RefreshCw className={`w-2.5 h-2.5 ${healBusy ? "animate-spin" : ""}`} />
+            <span>{envTools?.present ?? 266}/266</span>
           </button>
 
-          <button
-            onClick={() => navigate("/desktop")}
-            className="px-2.5 py-1.5 rounded-xl text-[10px] font-mono font-black flex items-center gap-1"
-            style={{
-              background: "rgba(255,43,77,0.15)",
-              border: "1px solid rgba(255,43,77,0.45)",
-              color: "#ff8fa3",
-            }}
-          >
-            <Monitor className="w-3.5 h-3.5" />
-            <span>النوافذ المتعددة</span>
-          </button>
+          <span className="hidden md:inline-block px-2 py-0.5 rounded bg-sky-500/15 border border-sky-500/40 text-sky-300 font-bold">
+            {activeKaliNodes.length || 10}/10 NODES
+          </span>
+
+          <span className="hidden xl:inline-block px-2 py-0.5 rounded bg-pink-500/15 border border-pink-500/40 text-pink-300 font-bold">
+            {storage?.totalHuman ?? "67.11GB"}
+          </span>
+
+          <span className="text-slate-200 font-bold px-1.5">{clockStr}</span>
+
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-600/25 border border-rose-500/50 text-rose-200 font-bold">
+            <span>root</span>
+            <Power className="w-3 h-3 text-rose-400" />
+          </div>
         </div>
 
-        {/* ═══ WHISKER APPLICATIONS MENU OVERLAY (قائمة تطبيقات كالي المنسدلة) ═══ */}
+        {/* ═══════════════════════════════════════════════════════════════════════
+         * DUAL-COLUMN KALI WHISKER MENU POPUP (Matches Screenshot 1 --2.jpg)
+         * ═══════════════════════════════════════════════════════════════════════ */}
         {whiskerOpen && (
           <div
-            className="absolute top-14 right-3 w-[94vw] max-w-4xl rounded-2xl p-4 z-50 shadow-2xl"
+            className="absolute top-8 left-1.5 w-[95vw] max-w-[660px] h-[520px] rounded-lg flex flex-col z-50 overflow-hidden"
             style={{
-              background: "linear-gradient(180deg, rgba(22,2,11,0.99) 0%, rgba(8,1,6,0.99) 100%)",
-              border: "2px solid #ff2b4d",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.9), 0 0 35px rgba(255,43,77,0.35)",
+              background: "rgba(19, 22, 30, 0.98)",
+              border: "1px solid #38bdf8",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.92), 0 0 25px rgba(56,189,248,0.25)",
             }}
           >
-            <div className="flex items-center justify-between gap-3 pb-3 mb-3 border-b border-rose-500/30">
-              <div className="flex items-center gap-2">
-                <KaliLogo2099 size={28} />
-                <div>
-                  <div className="text-sm font-black text-white">
-                    قائمة تطبيقات NOVA KALI LINUX 2099 (266/266 أداة مفعّلة)
-                  </div>
-                  <div className="text-[10px] font-mono text-rose-300">
-                    اضغط على أي أداة لتشغيلها فورًا على الهدف النشط ({globalTarget}) أو إرسالها إلى البث المباشر (:99)
-                  </div>
-                </div>
+            {/* Top Search Bar */}
+            <div className="p-2.5 border-b border-white/10 bg-[#161922] flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded bg-[#0d1017] border border-sky-500/50">
+                <Search className="w-3.5 h-3.5 text-sky-400" />
+                <input
+                  value={whiskerSearch}
+                  onChange={(e) => setWhiskerSearch(e.target.value)}
+                  placeholder="Search 266 Kali Linux tools, browsers, pipelines, or system utilities..."
+                  className="flex-1 bg-transparent text-xs font-mono text-white focus:outline-none"
+                  autoFocus
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/60 border border-rose-500/40">
-                  <Search className="w-3.5 h-3.5 text-rose-400" />
-                  <input
-                    value={whiskerSearch}
-                    onChange={(e) => setWhiskerSearch(e.target.value)}
-                    placeholder="ابحث في 266 أداة كالي..."
-                    className="bg-transparent text-xs font-mono text-white focus:outline-none w-48"
-                  />
-                </div>
-                <button
-                  onClick={() => setWhiskerOpen(false)}
-                  className="p-1.5 rounded-lg bg-rose-500/20 text-rose-300 hover:bg-rose-500/40"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[55vh] overflow-y-auto pr-1">
-              {whiskerFiltered.map((t) => (
-                <div
-                  key={`${t.category}-${t.name}`}
-                  className="p-2 rounded-xl flex flex-col justify-between gap-1.5 transition-all hover:scale-[1.01]"
-                  style={{
-                    background: "rgba(255,43,77,0.08)",
-                    border: "1px solid rgba(255,43,77,0.3)",
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-mono font-black text-white truncate" dir="ltr">
-                      {t.name}
-                    </span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                      ✓ جاهزة
-                    </span>
-                  </div>
-                  <div className="text-[9px] text-rose-300/80 truncate">{t.category}</div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <button
-                      onClick={() => {
-                        setWhiskerOpen(false);
-                        setActiveTab("arsenal");
-                        void runKaliCommandStream(`${t.name} --help 2>&1 | head -28`, t.name);
-                      }}
-                      className="flex-1 py-1 rounded-lg text-[9px] font-mono font-bold bg-rose-600/30 hover:bg-rose-600/50 text-white border border-rose-500/40"
-                    >
-                      ▶ تشغيل
-                    </button>
-                    <button
-                      onClick={() => {
-                        setWhiskerOpen(false);
-                        setActiveTab("desk");
-                        void runOnLiveDesktop(`${t.name} --help 2>&1 | head -28`, `KALI 2099: ${t.name}`);
-                      }}
-                      className="px-2 py-1 rounded-lg text-[9px] font-mono font-bold bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 border border-sky-500/40"
-                      title="فتح داخل شاشة سطح المكتب الحي :99"
-                    >
-                      :99
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </header>
-
-      {/* ═══ 3. KALI 2099 OS WORKSPACE DOCK BAR (شريط الوحدات الـ12 المتكاملة) ═══ */}
-      <nav className="mx-3 mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
-        {DOCK_TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black transition-all"
-              style={{
-                background: isActive
-                  ? `linear-gradient(135deg, ${tab.color}33 0%, rgba(20,2,10,0.95) 100%)`
-                  : "rgba(18,2,10,0.75)",
-                border: isActive ? `1.5px solid ${tab.color}` : "1px solid rgba(255,43,77,0.22)",
-                color: isActive ? "#ffffff" : "rgba(255,210,220,0.72)",
-                boxShadow: isActive ? `0 0 18px ${tab.color}40` : "none",
-              }}
-            >
-              <Icon className="w-4 h-4" style={{ color: tab.color }} />
-              <span>{tab.short}</span>
-              {tab.badge && (
-                <span
-                  className="px-1.5 py-0.5 rounded text-[9px] font-mono"
-                  style={{
-                    background: `${tab.color}24`,
-                    border: `1px solid ${tab.color}66`,
-                    color: tab.color,
-                  }}
-                >
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* ═══ 4. MAIN OS WORKSPACE VIEWPORT ═══ */}
-      <main className="flex-1 mx-3 my-2.5 flex flex-col gap-3">
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 1: 🖥️ LIVE KALI LINUX 2099 X11 DESKTOP (:99)
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "desk" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-            {/* Left/Main Column: Live 1280x800 X11 Screen */}
-            <div
-              className={`${deskFullscreen ? "fixed inset-3 z-50" : "lg:col-span-8"} rounded-2xl p-3 flex flex-col gap-2.5`}
-              style={{
-                background: "linear-gradient(180deg, rgba(22,2,10,0.96) 0%, rgba(8,1,6,0.98) 100%)",
-                border: "1.5px solid rgba(255,43,77,0.55)",
-                boxShadow: "0 0 32px rgba(255,43,77,0.18)",
-              }}
-            >
-              {/* Screen Top Control Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-rose-500/25">
-                <div className="flex items-center gap-2">
-                  <KaliLogo2099 size={26} />
-                  <div>
-                    <div className="text-xs sm:text-sm font-black text-white flex items-center gap-2">
-                      <span>سطح مكتب NOVA KALI LINUX 2099 الحي (X11 DISPLAY :99)</span>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                        1280×800 · 3 نوافذ متزامنة
-                      </span>
-                    </div>
-                    <div className="text-[10px] font-mono text-rose-300/80">
-                      العقدة: {deskMeta?.plane || activeKaliNodes[0]?.id || "اتحاد العقد الـ10"} · الحجم:{" "}
-                      {deskMeta?.bytes ? `${(deskMeta.bytes / 1024).toFixed(1)} KB` : "حي"} · آخر لقطة:{" "}
-                      {deskMeta?.capturedAt ? new Date(deskMeta.capturedAt).toLocaleTimeString() : "الآن"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <select
-                    value={deskSelectedNode}
-                    onChange={(e) => setDeskSelectedNode(e.target.value)}
-                    className="px-2 py-1 rounded-lg text-[10px] font-mono bg-black/70 border border-rose-500/40 text-rose-200"
-                  >
-                    <option value="">🌐 تلقائي (أسرع عقدة كالي)</option>
-                    {activeKaliNodes.map((n) => (
-                      <option key={n.id} value={n.id}>
-                        🖥️ {n.id} ({n.hostname})
-                      </option>
-                    ))}
-                  </select>
-
-                  <button
-                    onClick={() => setDeskAutoSync((v) => !v)}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold"
-                    style={{
-                      background: deskAutoSync ? "rgba(68,255,136,0.18)" : "rgba(255,255,255,0.06)",
-                      border: `1px solid ${deskAutoSync ? "#44ff88" : "rgba(255,255,255,0.2)"}`,
-                      color: deskAutoSync ? "#44ff88" : "#aaa",
-                    }}
-                  >
-                    {deskAutoSync ? "● مزامنة حية تفاعلية" : "○ متوقف مؤقتًا"}
-                  </button>
-
-                  <button
-                    onClick={() => setDeskStreamMode((m) => (m === "frame" ? "mjpeg" : "frame"))}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-sky-500/15 border border-sky-500/40 text-sky-300"
-                  >
-                    {deskStreamMode === "frame" ? "وضع الإطار الذكي (HD)" : "وضع MJPEG المستمر"}
-                  </button>
-
-                  <button
-                    onClick={() => void fetchDesktopFrame(true)}
-                    disabled={deskBusy}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-rose-500/20 border border-rose-500/50 text-rose-200 flex items-center gap-1"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${deskBusy ? "animate-spin" : ""}`} />
-                    <span>تحديث الشاشة</span>
-                  </button>
-
-                  <button
-                    onClick={() => setDeskFullscreen((f) => !f)}
-                    className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white"
-                    title="ملء الشاشة"
-                  >
-                    {deskFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Direct Command Runner Inside X11 Desktop */}
-              <div className="flex items-center gap-2">
-                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/75 border border-rose-500/40">
-                  <span className="text-[11px] font-mono font-black text-rose-400" dir="ltr">
-                    root@kali-2099:99#
-                  </span>
-                  <input
-                    value={deskCmdInput}
-                    onChange={(e) => setDeskCmdInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && deskCmdInput.trim()) {
-                        void runOnLiveDesktop(deskCmdInput, "NOVA KALI 2099 LIVE STUDIO");
-                      }
-                    }}
-                    dir="ltr"
-                    placeholder="اكتب أي أمر أو أداة كالي ليظهر داخل شاشة سطح المكتب :99 مباشرة..."
-                    className="flex-1 bg-transparent text-xs font-mono text-emerald-300 focus:outline-none"
-                  />
-                </div>
-                <button
-                  onClick={() => void runOnLiveDesktop(deskCmdInput, "NOVA KALI 2099 LIVE STUDIO")}
-                  disabled={deskBusy}
-                  className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg hover:opacity-95"
-                >
-                  {deskBusy ? "جاري الرسم..." : "▶ عرض على سطح المكتب"}
-                </button>
-              </div>
-
-              {/* Live X11 Screen Display */}
-              <div
-                className="relative w-full rounded-xl overflow-hidden flex items-center justify-center bg-black"
-                style={{
-                  minHeight: deskFullscreen ? "calc(100vh - 170px)" : "470px",
-                  border: "1px solid rgba(255,43,77,0.4)",
-                }}
+              <button
+                onClick={() => setWhiskerOpen(false)}
+                className="p-1.5 rounded hover:bg-white/10 text-slate-400"
               >
-                {deskStreamMode === "mjpeg" ? (
-                  <img
-                    src={`${API}/kali-env/node-desktop`}
-                    alt="Nova Kali 2099 Live MJPEG Stream"
-                    className="w-full h-full object-contain"
-                  />
-                ) : deskFrame ? (
-                  <img
-                    src={deskFrame}
-                    alt="Nova Kali 2099 X11 Desktop :99"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-3 p-8 text-center">
-                    <KaliLogo2099 size={56} />
-                    <div className="text-sm font-black text-rose-200">
-                      جاري تهيئة سطح مكتب NOVA KALI LINUX 2099 المخصص (X11 :99)...
-                    </div>
-                    <div className="text-xs font-mono text-rose-300/70">
-                      يتم رسم الخلفية المخصصة وثيم Fluxbox والنوافذ الثلاث من عقدة كالي الحية
-                    </div>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Dual Columns: Left Categories + Right Applications */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Left Column: Official Kali Categories */}
+              <div className="w-56 border-r border-white/10 bg-[#141720] overflow-y-auto p-1.5 space-y-0.5">
+                {WHISKER_CATEGORIES.map((c) => (
+                  <button
+                    key={c.id}
+                    onMouseEnter={() => setWhiskerCat(c.id)}
+                    onClick={() => setWhiskerCat(c.id)}
+                    className="w-full text-left px-2.5 py-1.5 rounded text-[11px] font-medium flex items-center justify-between transition-all"
+                    style={{
+                      background: whiskerCat === c.id ? "rgba(56,189,248,0.2)" : "transparent",
+                      color: whiskerCat === c.id ? "#38bdf8" : "rgba(255,255,255,0.78)",
+                      borderLeft: whiskerCat === c.id ? "3px solid #38bdf8" : "3px solid transparent",
+                    }}
+                  >
+                    <span className="truncate">{c.label}</span>
+                    <ChevronRight className="w-3 h-3 opacity-50 shrink-0" />
+                  </button>
+                ))}
+              </div>
+
+              {/* Right Column: Core Kali Apps + Tools in Category */}
+              <div className="flex-1 bg-[#1b1f2a] overflow-y-auto p-2 space-y-1">
+                {/* Pinned System Applications at Top of Favorites */}
+                {whiskerCat === "favorites" && !whiskerSearch && (
+                  <div className="pb-2 mb-2 border-b border-white/10 space-y-1">
+                    {[
+                      {
+                        name: "Root Terminal Emulator (qterminal)",
+                        sub: "root@kali-2099:~# proot + 10 Fleet Nodes",
+                        color: "#ff2b4d",
+                        onClick: () => { setWhiskerOpen(false); setWorkspace(1); setMaximizedWin("terminal"); },
+                      },
+                      {
+                        name: "Thunar File Manager (/root & Workspaces)",
+                        sub: "Browse Kali Rootfs, Workspaces & 67.11GB Cloud",
+                        color: "#38bdf8",
+                        onClick: () => { setWhiskerOpen(false); setWorkspace(1); setMaximizedWin("files"); },
+                      },
+                      {
+                        name: "Live X11 Display :99 Streamer",
+                        sub: "Real-time 1280x800 Xvfb + Fluxbox X11 Stream",
+                        color: "#44ff88",
+                        onClick: () => { setWhiskerOpen(false); setWorkspace(1); setStudioMode("x11"); },
+                      },
+                      {
+                        name: "Kali Cyber Recon Browser 2099",
+                        sub: "Inspect TLSv1.3, Security Headers, DOM & Source from Kali",
+                        color: "#c084fc",
+                        onClick: () => {
+                          setWhiskerOpen(false);
+                          setWorkspace(1);
+                          setStudioMode("browser");
+                          void runKaliBrowser("https://example.com");
+                        },
+                      },
+                      {
+                        name: "8 Automated Defense Pipelines + GitHub Free Cloner",
+                        sub: "Chained Kali Audits + Free GitHub Repo Installer",
+                        color: "#fbbf24",
+                        onClick: () => { setWhiskerOpen(false); setWorkspace(1); setStudioMode("pipelines"); },
+                      },
+                    ].map((sysApp) => (
+                      <button
+                        key={sysApp.name}
+                        onClick={sysApp.onClick}
+                        className="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/10 flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <div className="text-xs font-bold" style={{ color: sysApp.color }}>
+                            {sysApp.name}
+                          </div>
+                          <div className="text-[10px] text-slate-400">{sysApp.sub}</div>
+                        </div>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white">
+                          OPEN
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 )}
 
-                {/* Corner Watermark Crest Overlay */}
-                <div
-                  className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-lg flex items-center gap-1.5 pointer-events-none"
-                  style={{
-                    background: "rgba(10,1,6,0.82)",
-                    border: "1px solid rgba(255,43,77,0.5)",
-                  }}
-                >
-                  <KaliLogo2099 size={18} glow={false} />
-                  <span className="text-[9px] font-mono font-black text-rose-300">
-                    لا إله إلا الله · الله أكبر ولله الحمد · NOVA KALI 2099 OS
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Interactive X11 Desktop Application Dock & Quick Launchers */}
-            <div className="lg:col-span-4 flex flex-col gap-3">
-              <div
-                className="rounded-2xl p-3.5 flex flex-col gap-2.5"
-                style={{
-                  background: "linear-gradient(180deg, rgba(22,2,10,0.96) 0%, rgba(8,1,6,0.98) 100%)",
-                  border: "1px solid rgba(255,43,77,0.45)",
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-black text-rose-300 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-rose-400" />
-                    <span>تطبيقات سطح مكتب كالي 2099 الفورية (:99)</span>
-                  </div>
-                  <button
-                    onClick={() => void runOnLiveDesktop("uname -a", "NOVA KALI 2099 RESET", "reset")}
-                    className="px-2 py-0.5 rounded text-[9px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                  >
-                    إعادة ضبط :99
-                  </button>
-                </div>
-                <p className="text-[10px] text-rose-200/75 leading-relaxed">
-                  اضغط على أي تطبيق ليتم تشغيله داخل جلسة X11 الحية على العقدة وتحديث النوافذ الثلاث فورًا على الشاشة:
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5 max-h-[340px] overflow-y-auto pr-1">
-                  {DESKTOP_QUICK_APPS.map((app) => (
-                    <button
-                      key={app.label}
-                      onClick={() => {
-                        setDeskCmdInput(app.cmd.replace(/\{target\}/g, globalTarget || "example.com"));
-                        void runOnLiveDesktop(app.cmd, app.title);
-                      }}
-                      disabled={deskBusy}
-                      className="px-3 py-2 rounded-xl text-right flex items-center justify-between gap-2 transition-all hover:scale-[1.01]"
-                      style={{
-                        background: "rgba(255,43,77,0.08)",
-                        border: `1px solid ${app.color}44`,
-                      }}
-                    >
-                      <span className="text-xs font-bold text-white">{app.label}</span>
-                      <span
-                        className="px-1.5 py-0.5 rounded text-[9px] font-mono"
-                        style={{ background: `${app.color}22`, color: app.color }}
-                      >
-                        فتح في :99
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quick Subsystems Card */}
-              <div
-                className="rounded-2xl p-3.5 flex flex-col gap-2"
-                style={{
-                  background: "linear-gradient(180deg, rgba(18,3,12,0.95) 0%, rgba(7,1,6,0.98) 100%)",
-                  border: "1px solid rgba(56,189,248,0.35)",
-                }}
-              >
-                <div className="text-xs font-black text-sky-300">⚡ انتقال فوري داخل بيئة كالي 2099</div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    onClick={() => setActiveTab("browser")}
-                    className="p-2 rounded-xl text-right bg-sky-500/10 border border-sky-500/35 hover:bg-sky-500/20"
-                  >
-                    <div className="text-xs font-black text-sky-300">🌐 متصفح كالي</div>
-                    <div className="text-[9px] font-mono text-sky-200/70">فحص المواقع والـTLS</div>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("files")}
-                    className="p-2 rounded-xl text-right bg-pink-500/10 border border-pink-500/35 hover:bg-pink-500/20"
-                  >
-                    <div className="text-xs font-black text-pink-300">📁 مدير الملفات</div>
-                    <div className="text-[9px] font-mono text-pink-200/70">Rootfs + 67.11GB</div>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("pipelines")}
-                    className="p-2 rounded-xl text-right bg-emerald-500/10 border border-emerald-500/35 hover:bg-emerald-500/20"
-                  >
-                    <div className="text-xs font-black text-emerald-300">🚀 سلاسل 2099</div>
-                    <div className="text-[9px] font-mono text-emerald-200/70">8 سلاسل + GitHub</div>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("arsenal")}
-                    className="p-2 rounded-xl text-right bg-rose-500/10 border border-rose-500/35 hover:bg-rose-500/20"
-                  >
-                    <div className="text-xs font-black text-rose-300">⚔️ الترسانة 266</div>
-                    <div className="text-[9px] font-mono text-rose-200/70">20 فئة + 11 رسمية</div>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 2: ⚔️ FULL 266/266 KALI ARSENAL & OFFICIAL 11 CATEGORIES
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "arsenal" && (
-          <div className="flex flex-col gap-3">
-            {/* Arsenal Mode Switcher */}
-            <div
-              className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
-              style={{
-                background: "rgba(20,2,10,0.92)",
-                border: "1px solid rgba(255,43,77,0.45)",
-              }}
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setArsenalView("266")}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black"
-                  style={{
-                    background: arsenalView === "266" ? "#ff2b4d" : "rgba(255,43,77,0.12)",
-                    color: "#fff",
-                    border: "1px solid #ff2b4d",
-                  }}
-                >
-                  🐉 الترسانة الشاملة (20 فئة · {envTools?.present ?? 266}/{envTools?.total ?? 266} أداة)
-                </button>
-                <button
-                  onClick={() => setArsenalView("official11")}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black"
-                  style={{
-                    background: arsenalView === "official11" ? "#ff2b4d" : "rgba(255,43,77,0.12)",
-                    color: "#fff",
-                    border: "1px solid rgba(255,43,77,0.5)",
-                  }}
-                >
-                  🏛️ كتالوج كالي الرسمي (11 تصنيف · 122/122 أداة)
-                </button>
-                <button
-                  onClick={() => setArsenalView("core46")}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black"
-                  style={{
-                    background: arsenalView === "core46" ? "#ff2b4d" : "rgba(255,43,77,0.12)",
-                    color: "#fff",
-                    border: "1px solid rgba(255,43,77,0.5)",
-                  }}
-                >
-                  📋 الجرد الأساسي بالإصدارات ({inventory?.present ?? 46}/{inventory?.total ?? 46})
-                </button>
-              </div>
-
-              {/* On-Demand Installer Input */}
-              <div className="flex items-center gap-1.5">
-                <input
-                  value={customInstallName}
-                  onChange={(e) => setCustomInstallName(e.target.value)}
-                  placeholder="اسم أداة لتثبيتها/تحديثها..."
-                  dir="ltr"
-                  className="px-2.5 py-1 rounded-xl text-xs font-mono bg-black/70 border border-rose-500/40 text-white w-44"
-                />
-                <button
-                  onClick={async () => {
-                    if (!customInstallName.trim()) return;
-                    setInstallBusy(true);
-                    setInstallMsg("⏳ جاري التثبيت والتعميم على جميع عقد الأسطول...");
-                    try {
-                      const r = await fetch(`${API}/kali-env/install`, {
-                        method: "POST",
-                        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
-                        body: JSON.stringify({ tool: customInstallName.trim() }),
-                      });
-                      const d = await r.json();
-                      setInstallMsg(d?.ok ? `✓ تم تثبيت ومزامنة ${d.tool} على الأسطول` : `✗ ${d?.error || "فشل"}`);
-                      await refreshAllTelemetry(true);
-                    } catch (e) {
-                      setInstallMsg(`✗ ${(e as Error).message}`);
-                    } finally {
-                      setInstallBusy(false);
-                    }
-                  }}
-                  disabled={installBusy}
-                  className="px-3 py-1 rounded-xl text-xs font-black bg-emerald-500/20 border border-emerald-500/50 text-emerald-300"
-                >
-                  {installBusy ? "جاري التثبيت..." : "+ تثبيت وتعميم"}
-                </button>
-              </div>
-            </div>
-
-            {installMsg && (
-              <div className="px-3 py-2 rounded-xl text-xs font-mono bg-rose-950/60 border border-rose-500/40 text-rose-200">
-                {installMsg}
-              </div>
-            )}
-
-            {arsenalView === "official11" ? (
-              <KaliSystemsPanel />
-            ) : arsenalView === "core46" ? (
-              <div
-                className="rounded-2xl p-4"
-                style={{ background: "rgba(18,2,10,0.94)", border: "1px solid rgba(255,43,77,0.4)" }}
-              >
-                <div className="text-sm font-black text-white mb-3">
-                  📋 الجرد الأساسي الموثق لـ 46 أداة كالي مع المسارات والإصدارات الفعلية ({inventory?.present ?? 46}/{inventory?.total ?? 46})
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {(inventory?.tools ?? []).map((t) => (
-                    <div
-                      key={t.name}
-                      className="p-2.5 rounded-xl flex flex-col justify-between gap-1.5"
-                      style={{
-                        background: "rgba(68,255,136,0.06)",
-                        border: "1px solid rgba(68,255,136,0.3)",
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono font-black text-white" dir="ltr">
-                          {t.name}
-                        </span>
-                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                          ✓ مفعّلة
-                        </span>
-                      </div>
-                      <div className="text-[10px] font-mono text-emerald-200/75 truncate" dir="ltr">
-                        {t.version || `/usr/bin/${t.name}`}
-                      </div>
+                {whiskerCat === "14" ? (
+                  <div className="grid grid-cols-1 gap-1">
+                    {[
+                      { label: "⚡ مكتب الشغل والشات الحي (Nova Agent Pro)", path: "/agent-pro" },
+                      { label: "🛡️ استوديو البج باونتي (Bug Bounty Studio)", path: "/bug-bounty-studio" },
+                      { label: "☢️ مركز الثغرات الحي (Vuln Center)", path: "/vuln-center" },
+                      { label: "📡 مزامنة الثغرات اللحظية (CVE Live)", path: "/cve-live" },
+                      { label: "🎯 محرك قوالب Nuclei القياسي", path: "/nuclei-engine" },
+                      { label: "🖥️ سطح المكتب المتعدد (xDaw Multi-Window)", path: "/desktop" },
+                      { label: "📊 لوحة التحكم الكلاسيكية (Classic Dashboard)", path: "/classic-dashboard" },
+                    ].map((p) => (
                       <button
-                        onClick={() => void runKaliCommandStream(`${t.name} --help 2>&1 | head -25`, t.name)}
-                        className="mt-1 py-1 rounded-lg text-[10px] font-mono font-bold bg-rose-500/20 hover:bg-rose-500/40 text-rose-200 border border-rose-500/40"
+                        key={p.path}
+                        onClick={() => { setWhiskerOpen(false); navigate(p.path); }}
+                        className="w-full text-left px-3 py-2 rounded hover:bg-rose-500/20 border border-white/5 text-xs font-bold text-white flex items-center justify-between"
                       >
-                        ▶ تشغيل واختبار حي
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                {/* Tools Grid */}
-                <div
-                  className="lg:col-span-8 rounded-2xl p-3.5 flex flex-col gap-3"
-                  style={{ background: "rgba(18,2,10,0.94)", border: "1px solid rgba(255,43,77,0.4)" }}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 bg-black/70 px-3 py-1.5 rounded-xl border border-rose-500/40 flex-1 min-w-[200px]">
-                      <Search className="w-4 h-4 text-rose-400" />
-                      <input
-                        value={toolSearch}
-                        onChange={(e) => setToolSearch(e.target.value)}
-                        placeholder="ابحث عن أي أداة من الـ266 أداة (nmap, nuclei, sqlmap, prowler, certipy...)"
-                        className="bg-transparent text-xs font-mono text-white focus:outline-none w-full"
-                      />
-                    </div>
-                    <span className="text-xs font-mono text-emerald-300 font-bold">
-                      المعروض: {filteredTools.length} أداة
-                    </span>
-                  </div>
-
-                  {/* Category Filter Pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                    {categoriesList.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className="shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all"
-                        style={{
-                          background: selectedCategory === cat ? "#ff2b4d" : "rgba(255,43,77,0.1)",
-                          color: "#fff",
-                          border: "1px solid rgba(255,43,77,0.4)",
-                        }}
-                      >
-                        {cat === "ALL" ? "🌐 كل الفئات (266)" : cat}
+                        <span>{p.label}</span>
+                        <span className="text-[10px] font-mono text-sky-400">{p.path}</span>
                       </button>
                     ))}
                   </div>
-
-                  {/* Tools Cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[520px] overflow-y-auto pr-1">
-                    {filteredTools.map((t) => (
+                ) : (
+                  <div className="space-y-1">
+                    {whiskerToolsList.map((t) => (
                       <div
                         key={`${t.category}-${t.name}`}
-                        className="p-2.5 rounded-xl flex flex-col justify-between gap-1.5"
-                        style={{
-                          background: "rgba(255,43,77,0.07)",
-                          border: "1px solid rgba(255,43,77,0.3)",
-                        }}
+                        className="px-2.5 py-1.5 rounded hover:bg-white/10 flex items-center justify-between gap-2"
                       >
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-xs font-mono font-black text-white truncate" dir="ltr">
-                            {t.name}
-                          </span>
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                            ✓ 100%
-                          </span>
+                        <div className="min-w-0">
+                          <div className="text-xs font-mono font-bold text-white truncate">{t.name}</div>
+                          <div className="text-[10px] text-slate-400 truncate">{t.category}</div>
                         </div>
-                        <div className="text-[9px] text-rose-300/75 truncate">{t.category}</div>
-                        <div className="flex items-center gap-1 mt-1">
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
-                            onClick={() => void runKaliCommandStream(`${t.name} --help 2>&1 | head -30`, t.name)}
-                            disabled={Boolean(runningToolName)}
-                            className="flex-1 py-1 rounded-lg text-[9px] font-mono font-bold bg-rose-600/30 hover:bg-rose-600/50 text-white border border-rose-500/40"
+                            onClick={() => {
+                              setWhiskerOpen(false);
+                              setWorkspace(1);
+                              void runInKaliTerminal(`${t.name} --help 2>&1 | head -28`, t.name);
+                            }}
+                            className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40"
                           >
-                            ▶ تشغيل
+                            ▶ Term
                           </button>
                           <button
                             onClick={() => {
-                              setActiveTab("desk");
-                              void runOnLiveDesktop(`${t.name} --help 2>&1 | head -30`, `KALI 2099: ${t.name}`);
+                              setWhiskerOpen(false);
+                              setWorkspace(1);
+                              setStudioMode("x11");
+                              void runOnLiveDesktop(`${t.name} --help 2>&1 | head -28`, `KALI: ${t.name}`);
                             }}
-                            className="px-2 py-1 rounded-lg text-[9px] font-mono font-bold bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 border border-sky-500/40"
-                            title="عرض في شاشة البث الحي :99"
+                            className="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-500/20 hover:bg-sky-500/40 text-sky-300 border border-sky-500/40"
                           >
                             :99
                           </button>
@@ -1471,1242 +1078,1318 @@ export default function KaliEnvPage() {
                       </div>
                     ))}
                   </div>
-                </div>
-
-                {/* Live Tool Output Console */}
-                <div
-                  className="lg:col-span-4 rounded-2xl p-3.5 flex flex-col gap-2.5"
-                  style={{ background: "rgba(12,1,8,0.96)", border: "1px solid rgba(68,255,136,0.4)" }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-emerald-300">
-                      🖥️ مخرجات التشغيل الفوري على أسطول كالي
-                    </span>
-                    {runningToolName && (
-                      <span className="text-[10px] font-mono text-amber-300 animate-pulse">
-                        ⏳ يعمل: {runningToolName}
-                      </span>
-                    )}
-                  </div>
-                  <pre
-                    dir="ltr"
-                    className="flex-1 min-h-[420px] max-h-[520px] overflow-auto p-3 rounded-xl bg-black/85 border border-emerald-500/30 text-[11px] font-mono text-emerald-300 whitespace-pre-wrap"
-                  >
-                    {toolOutput ||
-                      "🐉 اختر أي أداة من الـ266 أداة على اليمين واضغط «▶ تشغيل» لرؤية مخرجاتها الحية مباشرة من عقدة كالي..."}
-                  </pre>
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
 
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 3: 🌐 KALI CYBER RECON BROWSER 2099 (متصفح كالي السيبراني المدمج)
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "browser" && (
-          <div
-            className="rounded-2xl p-4 flex flex-col gap-3"
-            style={{
-              background: "linear-gradient(180deg, rgba(16,3,12,0.96) 0%, rgba(7,1,6,0.98) 100%)",
-              border: "1.5px solid rgba(56,189,248,0.5)",
-            }}
-          >
-            {/* Browser Top Address Bar */}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Whisker Menu Bottom Footer */}
+            <div className="h-9 px-3 bg-[#12151e] border-t border-white/10 flex items-center justify-between text-[11px] font-mono">
+              <div className="flex items-center gap-2 text-sky-400 font-bold">
+                <KaliLogo2099 size={18} glow={false} />
+                <span>root@nova-kali-2099 (Kali GNU/Linux Rolling · 266/266 Tools)</span>
+              </div>
               <div className="flex items-center gap-2">
-                <KaliLogo2099 size={28} />
-                <span className="text-sm font-black text-sky-300">متصفح كالي السيبراني 2099</span>
-              </div>
-
-              <div className="flex-1 min-w-[240px] flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 border border-sky-500/50">
-                <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <input
-                  value={browserUrl}
-                  onChange={(e) => setBrowserUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void runKaliBrowser();
-                  }}
-                  dir="ltr"
-                  placeholder="https://example.com"
-                  className="flex-1 bg-transparent text-xs font-mono text-white focus:outline-none"
-                />
-              </div>
-
-              <label className="flex items-center gap-1.5 text-[10px] font-mono text-rose-200 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={browserPushDesk}
-                  onChange={(e) => setBrowserPushDesk(e.target.checked)}
-                />
-                <span>عرض تلقائي في شاشة :99</span>
-              </label>
-
-              <button
-                onClick={() => void runKaliBrowser()}
-                disabled={browserBusy}
-                className="px-4 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg"
-              >
-                {browserBusy ? "⏳ جاري التصفح من كالي..." : "🌐 تصفح وفحص من عقدة كالي"}
-              </button>
-            </div>
-
-            {/* Quick Bookmark Bar */}
-            <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
-              <span className="text-sky-300/80">مواقع سريعة للفحص:</span>
-              {[
-                "https://example.com",
-                "https://www.kali.org",
-                "https://owasp.org",
-                "https://github.com",
-                "https://hackerone.com",
-                `https://${globalTarget || "example.com"}`,
-              ].map((bm) => (
                 <button
-                  key={bm}
-                  onClick={() => void runKaliBrowser(bm)}
-                  className="px-2 py-0.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/25 border border-sky-500/30 text-sky-200"
-                  dir="ltr"
+                  onClick={() => { setWhiskerOpen(false); setWorkspace(2); }}
+                  className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300"
                 >
-                  {bm.replace(/^https?:\/\//, "")}
+                  Full 266 Catalog
                 </button>
-              ))}
-            </div>
-
-            {/* Browser Status Summary Bar */}
-            {browserRes && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                <div className="p-2.5 rounded-xl bg-black/60 border border-sky-500/30">
-                  <div className="text-[10px] text-sky-300/70">حالة HTTP</div>
-                  <div className="text-sm font-mono font-black text-emerald-400">
-                    {browserRes.status || "ERR"} · {browserRes.latencyMs ?? 0}ms
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-black/60 border border-rose-500/30">
-                  <div className="text-[10px] text-rose-300/70">درجة حصانة الترويسات</div>
-                  <div className="text-sm font-mono font-black text-rose-400">
-                    Grade {browserRes.securityGrade || "-"} ({browserRes.securityScore ?? 0}/100)
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-black/60 border border-purple-500/30">
-                  <div className="text-[10px] text-purple-300/70">عناوين IP المحللة</div>
-                  <div className="text-xs font-mono font-bold text-purple-200 truncate" dir="ltr">
-                    {(browserRes.ips ?? []).join(", ") || "N/A"}
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-black/60 border border-emerald-500/30">
-                  <div className="text-[10px] text-emerald-300/70">تشفير TLS/SSL</div>
-                  <div className="text-xs font-mono font-bold text-emerald-200 truncate" dir="ltr">
-                    {browserRes.tls?.version || "HTTP"} · {browserRes.tls?.cipher || ""}
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-black/60 border border-amber-500/30">
-                  <div className="text-[10px] text-amber-300/70">الروابط والنماذج</div>
-                  <div className="text-xs font-mono font-bold text-amber-200">
-                    {(browserRes.links ?? []).length} رابط · {(browserRes.forms ?? []).length} نموذج
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-black/60 border border-cyan-500/30">
-                  <div className="text-[10px] text-cyan-300/70">عقدة التصفح</div>
-                  <div className="text-xs font-mono font-bold text-cyan-200 truncate">
-                    {browserRes.plane || "Kali Fleet"}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Browser Sub-Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 border-b border-sky-500/25 pb-2">
-              {[
-                { id: "reader" as const, label: "📄 القارئ المرئي والتقنيات" },
-                { id: "security" as const, label: "🛡️ تدقيق ترويسات الحماية وTLS" },
-                { id: "dom" as const, label: "🔗 الروابط والنماذج والسكربتات (DOM)" },
-                { id: "source" as const, label: "🧬 الكود المصدري والترويسات الخام" },
-              ].map((st) => (
                 <button
-                  key={st.id}
-                  onClick={() => setBrowserSubTab(st.id)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black"
-                  style={{
-                    background: browserSubTab === st.id ? "rgba(56,189,248,0.25)" : "rgba(255,255,255,0.04)",
-                    border: `1px solid ${browserSubTab === st.id ? "#38bdf8" : "rgba(255,255,255,0.12)"}`,
-                    color: browserSubTab === st.id ? "#ffffff" : "#aaa",
-                  }}
+                  onClick={() => { setWhiskerOpen(false); setWorkspace(4); }}
+                  className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300"
                 >
-                  {st.label}
+                  Snapshots 1-5+
                 </button>
-              ))}
+              </div>
             </div>
-
-            {/* Browser Tab Body */}
-            {browserRes && browserSubTab === "reader" && (
-              <div className="flex flex-col gap-3">
-                <div className="p-3.5 rounded-xl bg-black/70 border border-sky-500/30">
-                  <div className="text-base font-black text-white">{browserRes.title || browserRes.url}</div>
-                  {browserRes.description && (
-                    <div className="text-xs text-sky-200/80 mt-1">{browserRes.description}</div>
-                  )}
-                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    {(browserRes.techStack ?? []).map((t) => (
-                      <span
-                        key={t}
-                        className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-rose-500/20 border border-rose-500/40 text-rose-200"
-                        dir="ltr"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-4 rounded-xl bg-black/80 border border-white/10 text-xs leading-relaxed text-slate-200 font-mono whitespace-pre-wrap max-h-[380px] overflow-y-auto" dir="ltr">
-                  {browserRes.textPreview || browserRes.error || "(لا يوجد نص مقروء مستخرج من الصفحة)"}
-                </div>
-              </div>
-            )}
-
-            {browserRes && browserSubTab === "security" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {(browserRes.securityHeaders ?? []).map((sh) => (
-                  <div
-                    key={sh.name}
-                    className="p-3 rounded-xl flex flex-col gap-1"
-                    style={{
-                      background: sh.present ? "rgba(68,255,136,0.06)" : "rgba(255,43,77,0.08)",
-                      border: `1px solid ${sh.present ? "rgba(68,255,136,0.35)" : "rgba(255,43,77,0.4)"}`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono font-black text-white" dir="ltr">
-                        {sh.name}
-                      </span>
-                      <span
-                        className="px-2 py-0.5 rounded text-[10px] font-mono font-bold"
-                        style={{
-                          background: sh.present ? "rgba(68,255,136,0.2)" : "rgba(255,43,77,0.25)",
-                          color: sh.present ? "#44ff88" : "#ff8fa3",
-                        }}
-                      >
-                        {sh.present ? "✓ مفعّلة (PASS)" : "⚠ مفقودة (MISSING)"}
-                      </span>
-                    </div>
-                    <div className="text-[10px] font-mono text-slate-300 truncate" dir="ltr">
-                      {sh.value}
-                    </div>
-                    <div className="text-[10px] text-rose-200/80 mt-1">🛡️ {sh.advice}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {browserRes && browserSubTab === "dom" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-black/70 border border-sky-500/30 max-h-[380px] overflow-y-auto">
-                  <div className="text-xs font-black text-sky-300 mb-2">
-                    🔗 الروابط المستخرجة ({(browserRes.links ?? []).length}) — اضغط للتصفح داخل كالي
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {(browserRes.links ?? []).map((lnk) => (
-                      <button
-                        key={lnk}
-                        onClick={() => void runKaliBrowser(lnk)}
-                        className="text-left px-2 py-1 rounded bg-white/5 hover:bg-sky-500/20 text-[11px] font-mono text-sky-300 truncate"
-                        dir="ltr"
-                      >
-                        {lnk}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-3 rounded-xl bg-black/70 border border-rose-500/30 max-h-[380px] overflow-y-auto">
-                  <div className="text-xs font-black text-rose-300 mb-2">
-                    📝 النماذج ({(browserRes.forms ?? []).length}) والسكربتات ({(browserRes.scripts ?? []).length})
-                  </div>
-                  <div className="flex flex-col gap-1 text-[11px] font-mono text-rose-200" dir="ltr">
-                    {(browserRes.forms ?? []).map((f) => (
-                      <div key={f} className="px-2 py-1 rounded bg-rose-500/10 truncate">
-                        [FORM] {f}
-                      </div>
-                    ))}
-                    {(browserRes.scripts ?? []).map((s) => (
-                      <div key={s} className="px-2 py-1 rounded bg-purple-500/10 text-purple-200 truncate">
-                        [SCRIPT] {s}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {browserRes && browserSubTab === "source" && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                <div className="lg:col-span-4 p-3 rounded-xl bg-black/80 border border-sky-500/30 max-h-[400px] overflow-y-auto">
-                  <div className="text-xs font-black text-sky-300 mb-2">ترويسات HTTP المستلمة</div>
-                  <pre className="text-[11px] font-mono text-emerald-300 whitespace-pre-wrap" dir="ltr">
-                    {JSON.stringify(browserRes.headers ?? {}, null, 2)}
-                  </pre>
-                </div>
-                <div className="lg:col-span-8 p-3 rounded-xl bg-black/80 border border-rose-500/30 max-h-[400px] overflow-y-auto">
-                  <div className="text-xs font-black text-rose-300 mb-2">الكود المصدري الخام (HTML Source)</div>
-                  <pre className="text-[11px] font-mono text-rose-200 whitespace-pre-wrap" dir="ltr">
-                    {browserRes.htmlSnippet || "(فارغ)"}
-                  </pre>
-                </div>
-              </div>
-            )}
           </div>
         )}
+      </header>
 
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 4: 📁 KALI FILE MANAGER & 67.11GB GITHUB CLOUD STORAGE
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "files" && (
-          <div className="flex flex-col gap-3">
-            {/* Scope Selector */}
-            <div
-              className="p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2"
-              style={{ background: "rgba(20,2,10,0.94)", border: "1px solid rgba(244,114,182,0.45)" }}
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => { setFsScope("workspace"); setFsPath(""); }}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black"
-                  style={{
-                    background: fsScope === "workspace" ? "#ff2b4d" : "rgba(255,43,77,0.12)",
-                    color: "#fff",
-                    border: "1px solid #ff2b4d",
-                  }}
-                >
-                  💼 مساحات الشغل الدائمة (Workspaces)
-                </button>
-                <button
-                  onClick={() => { setFsScope("rootfs"); setFsPath("/usr/local/bin"); }}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black"
-                  style={{
-                    background: fsScope === "rootfs" ? "#ff2b4d" : "rgba(255,43,77,0.12)",
-                    color: "#fff",
-                    border: "1px solid rgba(255,43,77,0.5)",
-                  }}
-                >
-                  🐉 ملفات نظام كالي الجذرية (Kali Rootfs)
-                </button>
-                <button
-                  onClick={() => setFsScope("cloud")}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black"
-                  style={{
-                    background: fsScope === "cloud" ? "#ff2b4d" : "rgba(255,43,77,0.12)",
-                    color: "#fff",
-                    border: "1px solid rgba(255,43,77,0.5)",
-                  }}
-                >
-                  ☁️ المخازن السحابية الـ8 ({storage?.totalHuman ?? "67.11GB"} + Hack-STORAGE)
-                </button>
-              </div>
-
-              {fsScope === "rootfs" && (
-                <div className="flex flex-wrap items-center gap-1">
-                  {["/usr/local/bin", "/root", "/usr/share/wordlists", "/usr/share/nmap/scripts", "/etc", "/opt", "/tmp"].map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setFsPath(p)}
-                      className="px-2 py-1 rounded-lg text-[10px] font-mono bg-black/60 border border-rose-500/40 text-rose-200 hover:bg-rose-500/25"
-                      dir="ltr"
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {fsScope === "workspace" && (
-                <div className="flex flex-wrap items-center gap-1">
-                  {["", "recon-lab", "web-audit", "cloud-osint"].map((p) => (
-                    <button
-                      key={p || "root"}
-                      onClick={() => setFsPath(p)}
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-black/60 border border-rose-500/40 text-rose-200 hover:bg-rose-500/25"
-                      dir="ltr"
-                    >
-                      /{p || "كل المساحات"}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {fsScope === "cloud" ? (
-              <div
-                className="rounded-2xl p-4 flex flex-col gap-3"
-                style={{ background: "rgba(18,2,10,0.95)", border: "1px solid rgba(244,114,182,0.45)" }}
+      {/* ═════════════════════════════════════════════════════════════════════════
+       * 2. MAIN DESKTOP CANVAS + LEFT KALI DOCK + FLOATING/TILED GTK WINDOWS
+       * ═════════════════════════════════════════════════════════════════════════ */}
+      <div className="flex-1 flex overflow-hidden relative z-10">
+        {/* ── LEFT VERTICAL KALI DOCK (Matches Screenshot 2 --3.png) ─────────── */}
+        <aside
+          className="w-12 shrink-0 flex flex-col items-center py-2 gap-2 z-20"
+          style={{
+            background: "rgba(15, 18, 26, 0.88)",
+            borderRight: "1px solid rgba(255,255,255,0.1)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          {[
+            {
+              label: "Kali Quad Desktop (Workspace 1)",
+              color: "#ff2b4d",
+              active: workspace === 1 && !maximizedWin,
+              icon: LayoutGrid,
+              onClick: () => { setWorkspace(1); setMaximizedWin(null); },
+            },
+            {
+              label: "Root Terminal (qterminal)",
+              color: "#44ff88",
+              active: maximizedWin === "terminal",
+              icon: Terminal,
+              onClick: () => { setWorkspace(1); setMaximizedWin((m) => (m === "terminal" ? null : "terminal")); },
+            },
+            {
+              label: "Thunar File Manager (/root & Workspaces)",
+              color: "#38bdf8",
+              active: maximizedWin === "files",
+              icon: FolderOpen,
+              onClick: () => { setWorkspace(1); setMaximizedWin((m) => (m === "files" ? null : "files")); },
+            },
+            {
+              label: "Live X11 Display :99 Stream",
+              color: "#fb7185",
+              active: workspace === 1 && studioMode === "x11",
+              icon: Monitor,
+              onClick: () => { setWorkspace(1); setStudioMode("x11"); setMaximizedWin(null); },
+            },
+            {
+              label: "Kali Cyber Recon Browser",
+              color: "#60a5fa",
+              active: workspace === 1 && studioMode === "browser",
+              icon: Globe,
+              onClick: () => {
+                setWorkspace(1);
+                setStudioMode("browser");
+                setMaximizedWin(null);
+                if (!browserRes) void runKaliBrowser("https://example.com");
+              },
+            },
+            {
+              label: "8 Auto-Pipelines & GitHub Free Cloner",
+              color: "#34d399",
+              active: workspace === 1 && studioMode === "pipelines",
+              icon: Rocket,
+              onClick: () => { setWorkspace(1); setStudioMode("pipelines"); setMaximizedWin(null); },
+            },
+            {
+              label: "Full 266/266 Kali Arsenal & Official 11 Catalog",
+              color: "#f472b6",
+              active: workspace === 2,
+              icon: Shield,
+              onClick: () => { setWorkspace(2); setMaximizedWin(null); },
+            },
+            {
+              label: "Cloud Storage 67.11GB · Generations 1-5+ · Python 28",
+              color: "#fbbf24",
+              active: workspace === 4,
+              icon: Database,
+              onClick: () => { setWorkspace(4); setMaximizedWin(null); },
+            },
+            {
+              label: "Nova Agent Pro (الشغل والشات الحي)",
+              color: "#22d3ee",
+              active: false,
+              icon: Sparkles,
+              onClick: () => navigate("/agent-pro"),
+            },
+            {
+              label: "Bug Bounty Studio",
+              color: "#a78bfa",
+              active: false,
+              icon: ShieldCheck,
+              onClick: () => navigate("/bug-bounty-studio"),
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.label}
+                onClick={item.onClick}
+                title={item.label}
+                className="w-9 h-9 rounded-xl flex items-center justify-center relative transition-all hover:scale-110"
+                style={{
+                  background: item.active ? `${item.color}28` : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${item.active ? item.color : "rgba(255,255,255,0.1)"}`,
+                  boxShadow: item.active ? `0 0 12px ${item.color}55` : "none",
+                }}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-black text-white">
-                      ☁️ مركز التخزين السحابي الموحد ومستودع Hack-STORAGE ({storage?.totalHuman ?? "67.11GB"} عبر {storage?.rows?.length ?? 8} مخازن)
-                    </div>
-                    <div className="text-xs font-mono text-pink-300/80">
-                      مربوط بجميع عقد الأسطول الـ10 مع حفظ واسترداد تلقائي للحالة والأدوات
-                    </div>
-                  </div>
-                </div>
+                <Icon className="w-4 h-4" style={{ color: item.color }} />
+                {item.active && (
+                  <span
+                    className="absolute -left-1 w-1 h-4 rounded-r"
+                    style={{ background: item.color }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </aside>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                  {(storage?.rows ?? []).map((row) => (
+        {/* ── MAIN WORKSPACE SURFACE ────────────────────────────────────────── */}
+        <div className="flex-1 p-2 overflow-hidden flex flex-col">
+          {/* ═══════════════════════════════════════════════════════════════════
+           * WORKSPACE 1: THE ICONIC KALI LINUX MULTI-WINDOW QUAD DESKTOP
+           * (Matches Screenshot 3 --4.jpg: Desktop Icons + Thunar File Manager
+           *  + Mousepad/X11/Browser Studio + qterminal w/ neofetch + gotop HUD)
+           * ═══════════════════════════════════════════════════════════════════ */}
+          {workspace === 1 && (
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden">
+              {/* LEFT + CENTER AREA (9 cols): Desktop Icons strip + Top/Bottom Kali Windows */}
+              <div className="lg:col-span-9 flex flex-col gap-2.5 overflow-hidden">
+                {/* TOP ROW: Desktop Icons Column (1 col) + Thunar File Manager Window (11 cols) */}
+                {(!maximizedWin || maximizedWin === "files") && (
+                  <div className={`${maximizedWin === "files" ? "flex-1" : "h-[46%]"} flex gap-2.5 overflow-hidden`}>
+                    {/* Authentic Desktop Icons on the Wallpaper (File System, Home, Cloud, :99) */}
+                    {!maximizedWin && (
+                      <div className="hidden xl:flex flex-col items-center gap-3 py-1 px-1 w-20 shrink-0 select-none">
+                        {[
+                          {
+                            label: "File System",
+                            color: "#38bdf8",
+                            icon: HardDrive,
+                            onClick: () => { setFsScope("rootfs"); setFsPath("/usr/local/bin"); },
+                          },
+                          {
+                            label: "Home / root",
+                            color: "#60a5fa",
+                            icon: Home,
+                            onClick: () => { setFsScope("rootfs"); setFsPath("/root"); },
+                          },
+                          {
+                            label: "Workspaces",
+                            color: "#44ff88",
+                            icon: FolderOpen,
+                            onClick: () => { setFsScope("workspace"); setFsPath(""); },
+                          },
+                          {
+                            label: "67.11GB Hub",
+                            color: "#f472b6",
+                            icon: Cloud,
+                            onClick: () => setWorkspace(4),
+                          },
+                          {
+                            label: "266 Arsenal",
+                            color: "#ff2b4d",
+                            icon: Shield,
+                            onClick: () => setWorkspace(2),
+                          },
+                        ].map((dIcon) => {
+                          const Icon = dIcon.icon;
+                          return (
+                            <button
+                              key={dIcon.label}
+                              onClick={dIcon.onClick}
+                              className="flex flex-col items-center gap-1 p-1.5 rounded-lg hover:bg-white/15 transition-all w-full"
+                            >
+                              <div
+                                className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg"
+                                style={{
+                                  background: "rgba(17, 22, 34, 0.85)",
+                                  border: `1px solid ${dIcon.color}88`,
+                                }}
+                              >
+                                <Icon className="w-5 h-5" style={{ color: dIcon.color }} />
+                              </div>
+                              <span
+                                className="text-[10px] font-bold text-white text-center leading-tight"
+                                style={{ textShadow: "0 1px 4px #000" }}
+                              >
+                                {dIcon.label}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* ── WINDOW 1: THUNAR FILE MANAGER (root - File Manager) ── */}
                     <div
-                      key={row.id}
-                      className="p-3 rounded-xl flex flex-col justify-between gap-2"
+                      className="flex-1 rounded-lg flex flex-col overflow-hidden shadow-2xl"
                       style={{
-                        background: "rgba(244,114,182,0.07)",
-                        border: "1px solid rgba(244,114,182,0.35)",
+                        background: "rgba(25, 28, 38, 0.94)",
+                        border: "1px solid rgba(56, 189, 248, 0.45)",
+                        backdropFilter: "blur(14px)",
                       }}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-white">{row.label}</span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300">
-                          {row.bytes >= 2 ** 30
-                            ? `${(row.bytes / 2 ** 30).toFixed(2)} GB`
-                            : `${(row.bytes / 2 ** 20).toFixed(1)} MB`}
-                        </span>
+                      {/* GTK Window Titlebar */}
+                      <div className="h-7 px-2.5 bg-[#161922] border-b border-white/10 flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-2 text-slate-200 font-bold">
+                          <Folder className="w-3.5 h-3.5 text-sky-400" />
+                          <span>root - File Manager ({fsScope === "workspace" ? `/opt/nova-workspaces/${fsPath}` : fsPath})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setMaximizedWin((m) => (m === "files" ? null : "files"))}
+                            className="p-0.5 hover:bg-white/10 rounded text-slate-400 hover:text-white"
+                          >
+                            {maximizedWin === "files" ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                          </button>
+                        </div>
                       </div>
-                      <div className="text-[10px] font-mono text-pink-200/75">
-                        العناصر: {row.items} · النوع: {row.kind}
-                      </div>
-                      <a
-                        href={row.link}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 py-1 px-2 rounded-lg text-[10px] font-mono font-bold bg-pink-500/20 hover:bg-pink-500/35 text-pink-200 border border-pink-500/40 flex items-center justify-center gap-1"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        <span>فتح المستودع على GitHub</span>
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                {/* Directory Listing */}
-                <div
-                  className="lg:col-span-5 rounded-2xl p-3.5 flex flex-col gap-2.5"
-                  style={{ background: "rgba(18,2,10,0.95)", border: "1px solid rgba(255,43,77,0.4)" }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-rose-300 font-mono" dir="ltr">
-                      📂 {fsScope === "workspace" ? `/opt/nova-workspaces/${fsPath}` : fsPath}
-                    </span>
-                    {fsPath && (
-                      <button
-                        onClick={() => {
-                          const parts = fsPath.split("/").filter(Boolean);
-                          parts.pop();
-                          setFsPath(fsScope === "rootfs" ? `/${parts.join("/")}` || "/root" : parts.join("/"));
-                        }}
-                        className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-200"
-                      >
-                        ⬆ للخلف
-                      </button>
-                    )}
-                  </div>
 
-                  <div className="flex flex-col gap-1 max-h-[460px] overflow-y-auto">
-                    {fsBusy ? (
-                      <div className="p-6 text-center text-xs font-mono text-rose-300">⏳ جاري قراءة الملفات...</div>
-                    ) : fsEntries.length === 0 ? (
-                      <div className="p-6 text-center text-xs font-mono text-slate-400">المجلد فارغ</div>
-                    ) : (
-                      fsEntries.map((ent) => (
-                        <div
-                          key={ent.relPath}
-                          onClick={() => {
-                            if (ent.type === "dir") {
-                              setFsPath(ent.relPath);
-                            } else {
-                              void readFsFile(fsScope, ent.relPath);
-                            }
-                          }}
-                          className="cursor-pointer px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-white/5 hover:bg-rose-500/20 border border-white/10"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {ent.type === "dir" ? (
-                              <Folder className="w-4 h-4 text-amber-400 shrink-0" />
-                            ) : (
-                              <FileCode className="w-4 h-4 text-sky-400 shrink-0" />
-                            )}
-                            <span className="text-xs font-mono font-bold text-white truncate" dir="ltr">
-                              {ent.name}
-                            </span>
+                      {/* GTK Menu + Navigation Toolbar */}
+                      <div className="px-2.5 py-1 bg-[#1d212d] border-b border-white/10 flex flex-wrap items-center justify-between gap-2 text-[10px]">
+                        <div className="flex items-center gap-3 text-slate-300">
+                          <span>File</span>
+                          <span>Edit</span>
+                          <span>View</span>
+                          <span>Go</span>
+                          <span>Help</span>
+                        </div>
+                        <div className="flex items-center gap-1 flex-1 max-w-xl">
+                          <button
+                            onClick={() => {
+                              const parts = fsPath.split("/").filter(Boolean);
+                              parts.pop();
+                              setFsPath(fsScope === "rootfs" ? `/${parts.join("/")}` || "/root" : parts.join("/"));
+                            }}
+                            className="p-1 rounded bg-black/40 hover:bg-white/10 text-slate-300"
+                            title="Up Directory"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => { setFsScope("rootfs"); setFsPath("/root"); }}
+                            className="p-1 rounded bg-black/40 hover:bg-white/10 text-slate-300"
+                            title="Home (/root)"
+                          >
+                            <Home className="w-3 h-3" />
+                          </button>
+                          <div className="flex-1 px-2 py-0.5 rounded bg-[#0f1219] border border-white/15 font-mono text-sky-300 truncate">
+                            {fsScope === "workspace" ? `/opt/nova-workspaces/${fsPath}` : fsPath}
                           </div>
-                          <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 shrink-0" dir="ltr">
-                            <span>{ent.permissions}</span>
-                            {ent.type !== "dir" && <span>{ent.size}B</span>}
+                          <button
+                            onClick={() => void loadThunarDir(fsScope === "cloud" ? "rootfs" : fsScope, fsPath)}
+                            className="p-1 rounded bg-black/40 hover:bg-white/10 text-slate-300"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${fsBusy ? "animate-spin" : ""}`} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Authentic Yellow Root Account Banner (from Screenshot 2 & 3) */}
+                      <div
+                        className="px-3 py-0.5 text-[10px] font-bold flex items-center justify-between"
+                        style={{ background: "#d99b00", color: "#111" }}
+                      >
+                        <span>Warning, you are using the root account (uid=0 on Kali Fleet), you have full system privileges.</span>
+                        <span className="font-mono">266/266 Tools · 503.8 GB</span>
+                      </div>
+
+                      {/* Thunar Body: Left Places Sidebar + Right Visual Icon Grid */}
+                      <div className="flex-1 flex overflow-hidden">
+                        {/* Left Sidebar: DEVICES / PLACES */}
+                        <div className="w-40 bg-[#181b24] border-r border-white/10 p-1.5 overflow-y-auto text-[10px] space-y-2">
+                          <div>
+                            <div className="text-[9px] font-black text-slate-400 px-1.5 mb-0.5">DEVICES & ROOTFS</div>
+                            {[
+                              { label: "/usr/local/bin (Tools)", path: "/usr/local/bin", scope: "rootfs" as const },
+                              { label: "/root (Root Home)", path: "/root", scope: "rootfs" as const },
+                              { label: "/usr/share/wordlists", path: "/usr/share/wordlists", scope: "rootfs" as const },
+                              { label: "/usr/share/nmap/scripts", path: "/usr/share/nmap/scripts", scope: "rootfs" as const },
+                              { label: "/etc (System Config)", path: "/etc", scope: "rootfs" as const },
+                              { label: "/opt (GitHub Clones)", path: "/opt", scope: "rootfs" as const },
+                            ].map((pl) => (
+                              <button
+                                key={pl.path}
+                                onClick={() => { setFsScope(pl.scope); setFsPath(pl.path); }}
+                                className="w-full text-left px-2 py-1 rounded flex items-center gap-1.5 truncate"
+                                style={{
+                                  background: fsScope === pl.scope && fsPath === pl.path ? "#2563eb" : "transparent",
+                                  color: fsScope === pl.scope && fsPath === pl.path ? "#fff" : "#cbd5e1",
+                                }}
+                              >
+                                <HardDrive className="w-3 h-3 text-sky-400 shrink-0" />
+                                <span className="truncate">{pl.label}</span>
+                              </button>
+                            ))}
+                          </div>
+
+                          <div>
+                            <div className="text-[9px] font-black text-slate-400 px-1.5 mb-0.5">WORKSPACES</div>
+                            {[
+                              { label: "All Workspaces", path: "" },
+                              { label: "recon-lab", path: "recon-lab" },
+                              { label: "web-audit", path: "web-audit" },
+                              { label: "cloud-osint", path: "cloud-osint" },
+                            ].map((ws) => (
+                              <button
+                                key={ws.label}
+                                onClick={() => { setFsScope("workspace"); setFsPath(ws.path); }}
+                                className="w-full text-left px-2 py-1 rounded flex items-center gap-1.5 truncate"
+                                style={{
+                                  background: fsScope === "workspace" && fsPath === ws.path ? "#ff2b4d" : "transparent",
+                                  color: fsScope === "workspace" && fsPath === ws.path ? "#fff" : "#cbd5e1",
+                                }}
+                              >
+                                <Folder className="w-3 h-3 text-rose-400 shrink-0" />
+                                <span className="truncate">{ws.label}</span>
+                              </button>
+                            ))}
                           </div>
                         </div>
-                      ))
+
+                        {/* Right Area: Visual Folder/File Icon Grid (Just like Screenshot 2 & 3) */}
+                        <div className="flex-1 bg-[#1e222d] p-2.5 overflow-y-auto">
+                          {fsBusy ? (
+                            <div className="h-full flex items-center justify-center text-xs font-mono text-sky-300">
+                              ⏳ Reading directory from Kali Fleet...
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
+                              {fsEntries.map((ent) => (
+                                <button
+                                  key={ent.relPath}
+                                  onClick={() => {
+                                    if (ent.type === "dir") {
+                                      setFsPath(ent.relPath);
+                                    } else {
+                                      void openFileInMousepad(fsScope === "cloud" ? "workspace" : fsScope, ent.relPath);
+                                    }
+                                  }}
+                                  className="p-2 rounded-lg hover:bg-sky-500/20 flex flex-col items-center gap-1 text-center group transition-all"
+                                  title={`${ent.name} (${ent.permissions} · ${ent.size} bytes)`}
+                                >
+                                  {ent.type === "dir" ? (
+                                    <div className="w-10 h-8 rounded bg-gradient-to-b from-sky-400 to-blue-600 flex items-center justify-center shadow">
+                                      <Folder className="w-5 h-5 text-white fill-white/25" />
+                                    </div>
+                                  ) : (
+                                    <div className="w-9 h-10 rounded bg-slate-800 border border-sky-400/40 flex items-center justify-center shadow">
+                                      <FileCode className="w-4 h-4 text-emerald-400" />
+                                    </div>
+                                  )}
+                                  <span className="text-[10px] font-mono text-slate-200 truncate w-full group-hover:text-white">
+                                    {ent.name}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Thunar Statusbar */}
+                      <div className="h-5 px-2.5 bg-[#151821] border-t border-white/10 flex items-center justify-between text-[9px] font-mono text-slate-400">
+                        <span>{fsEntries.length} items · Free space: {sysInfo?.disk?.freeGB ?? 46.2} GiB (Total: {sysInfo?.disk?.totalGB ?? 503.8} GiB)</span>
+                        <span>Cloud Mirror: {storage?.totalHuman ?? "67.11GB"}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* BOTTOM ROW: Left Studio Window (X11 :99 / Mousepad / Browser / Pipelines) + Right qterminal w/ neofetch */}
+                {(!maximizedWin || maximizedWin === "studio" || maximizedWin === "terminal") && (
+                  <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden">
+                    {/* ── WINDOW 2 (Bottom-Left, 6 cols): KALI MULTI-STUDIO (Live X11 :99 / Mousepad / Browser / Pipelines) ── */}
+                    {(!maximizedWin || maximizedWin === "studio") && (
+                      <div
+                        className={`${
+                          maximizedWin === "studio" ? "lg:col-span-12" : "lg:col-span-6"
+                        } rounded-lg flex flex-col overflow-hidden shadow-2xl`}
+                        style={{
+                          background: "rgba(21, 24, 33, 0.95)",
+                          border: "1px solid rgba(255, 43, 77, 0.5)",
+                          backdropFilter: "blur(14px)",
+                        }}
+                      >
+                        {/* Window Titlebar with Mode Switcher */}
+                        <div className="h-7 px-2 bg-[#161922] border-b border-white/10 flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                            {[
+                              { id: "x11" as const, label: "🖥️ X11 :99 Stream", color: "#ff2b4d" },
+                              { id: "editor" as const, label: "📝 Mousepad Editor", color: "#fbbf24" },
+                              { id: "browser" as const, label: "🌐 Kali Browser", color: "#38bdf8" },
+                              { id: "pipelines" as const, label: "🚀 8 Pipelines + GitHub", color: "#44ff88" },
+                              { id: "gens" as const, label: "📸 Gens 1-5+", color: "#c084fc" },
+                            ].map((tab) => (
+                              <button
+                                key={tab.id}
+                                onClick={() => {
+                                  setStudioMode(tab.id);
+                                  if (tab.id === "browser" && !browserRes) void runKaliBrowser("https://example.com");
+                                }}
+                                className="px-2 py-0.5 rounded text-[10px] font-mono font-bold shrink-0"
+                                style={{
+                                  background: studioMode === tab.id ? `${tab.color}28` : "transparent",
+                                  border: `1px solid ${studioMode === tab.id ? tab.color : "transparent"}`,
+                                  color: studioMode === tab.id ? "#fff" : "#94a3b8",
+                                }}
+                              >
+                                {tab.label}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => setMaximizedWin((m) => (m === "studio" ? null : "studio"))}
+                            className="p-0.5 hover:bg-white/10 rounded text-slate-400 hover:text-white shrink-0"
+                          >
+                            {maximizedWin === "studio" ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                          </button>
+                        </div>
+
+                        {/* STUDIO MODE 1: LIVE X11 DISPLAY :99 STREAM */}
+                        {studioMode === "x11" && (
+                          <div className="flex-1 flex flex-col overflow-hidden p-2 gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                value={deskCmdInput}
+                                onChange={(e) => setDeskCmdInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && deskCmdInput.trim()) {
+                                    void runOnLiveDesktop(deskCmdInput, "NOVA KALI 2099 X11");
+                                  }
+                                }}
+                                placeholder="Run command inside X11 :99 (e.g. nmap -sV example.com)..."
+                                className="flex-1 px-2 py-1 rounded bg-black/75 border border-rose-500/40 text-[10px] font-mono text-emerald-300 focus:outline-none"
+                              />
+                              <button
+                                onClick={() => void runOnLiveDesktop(deskCmdInput, "NOVA KALI 2099 X11")}
+                                disabled={deskBusy}
+                                className="px-2.5 py-1 rounded bg-rose-600 text-white text-[10px] font-mono font-bold"
+                              >
+                                {deskBusy ? "..." : "▶ :99"}
+                              </button>
+                              <button
+                                onClick={() => void fetchDesktopFrame(true)}
+                                className="p-1 rounded bg-white/10 text-white"
+                                title="Refresh X11 :99 Frame"
+                              >
+                                <RefreshCw className={`w-3 h-3 ${deskBusy ? "animate-spin" : ""}`} />
+                              </button>
+                            </div>
+
+                            <div className="flex-1 rounded bg-black border border-rose-500/30 overflow-hidden flex items-center justify-center relative">
+                              {deskFrame ? (
+                                <img
+                                  src={deskFrame}
+                                  alt="Live X11 :99 Desktop"
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : (
+                                <div className="text-center text-[11px] font-mono text-rose-300">
+                                  Connecting to Xvfb :99 on {activeKaliNodes[0]?.id || "Kali Fleet"}...
+                                </div>
+                              )}
+                              <div className="absolute bottom-1 right-1.5 px-2 py-0.5 rounded bg-black/80 border border-rose-500/40 text-[9px] font-mono text-emerald-300">
+                                DISPLAY=:99 · {deskMeta?.plane || "10/10 Fleet"}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* STUDIO MODE 2: MOUSEPAD CODE & SCRIPT EDITOR (Matches Screenshot 3 bottom-left) */}
+                        {studioMode === "editor" && (
+                          <div className="flex-1 flex flex-col overflow-hidden">
+                            <div
+                              className="px-2.5 py-0.5 text-[10px] font-bold flex items-center justify-between"
+                              style={{ background: "#d99b00", color: "#111" }}
+                            >
+                              <span>Warning, you are using the root account — Mousepad Kali Script Studio</span>
+                              <button
+                                onClick={() => void saveMousepadFile()}
+                                className="px-2 py-0.2 rounded bg-black/80 text-emerald-300 font-mono"
+                              >
+                                💾 Save & Sync
+                              </button>
+                            </div>
+                            <div className="px-2 py-1 bg-[#161922] border-b border-white/10 flex items-center gap-1.5">
+                              <span className="text-[10px] font-mono text-slate-400">Path:</span>
+                              <input
+                                value={editorFilePath}
+                                onChange={(e) => setEditorFilePath(e.target.value)}
+                                className="flex-1 bg-transparent text-[10px] font-mono text-sky-300 focus:outline-none"
+                              />
+                              {editorSaveMsg && (
+                                <span className="text-[9px] font-mono text-emerald-400">{editorSaveMsg}</span>
+                              )}
+                            </div>
+                            <textarea
+                              value={editorContent}
+                              onChange={(e) => setEditorContent(e.target.value)}
+                              className="flex-1 p-2.5 bg-[#141720] text-[11px] font-mono text-amber-200 focus:outline-none resize-none"
+                            />
+                          </div>
+                        )}
+
+                        {/* STUDIO MODE 3: KALI CYBER RECON BROWSER */}
+                        {studioMode === "browser" && (
+                          <div className="flex-1 flex flex-col overflow-hidden p-2 gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <div className="flex-1 flex items-center gap-1.5 px-2 py-1 rounded bg-black/80 border border-sky-500/40">
+                                <Lock className="w-3 h-3 text-emerald-400" />
+                                <input
+                                  value={browserUrl}
+                                  onChange={(e) => setBrowserUrl(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") void runKaliBrowser();
+                                  }}
+                                  className="flex-1 bg-transparent text-[10px] font-mono text-white focus:outline-none"
+                                />
+                              </div>
+                              <button
+                                onClick={() => void runKaliBrowser()}
+                                disabled={browserBusy}
+                                className="px-2.5 py-1 rounded bg-sky-600 text-white text-[10px] font-mono font-bold"
+                              >
+                                {browserBusy ? "..." : "Go"}
+                              </button>
+                            </div>
+
+                            {browserRes && (
+                              <div className="flex items-center justify-between px-2 py-1 rounded bg-black/50 border border-white/10 text-[10px] font-mono">
+                                <span className="text-emerald-400 font-bold">
+                                  HTTP {browserRes.status} · {browserRes.latencyMs}ms · {browserRes.tls?.version || "HTTP"}
+                                </span>
+                                <span className="text-rose-400 font-bold">
+                                  Security Grade: {browserRes.securityGrade} ({browserRes.securityScore}/100)
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-1 text-[9px] font-mono">
+                              {(["reader", "security", "dom", "source"] as const).map((bt) => (
+                                <button
+                                  key={bt}
+                                  onClick={() => setBrowserTab(bt)}
+                                  className="px-2 py-0.5 rounded uppercase"
+                                  style={{
+                                    background: browserTab === bt ? "#38bdf8" : "rgba(255,255,255,0.06)",
+                                    color: browserTab === bt ? "#000" : "#cbd5e1",
+                                  }}
+                                >
+                                  {bt}
+                                </button>
+                              ))}
+                            </div>
+
+                            <div className="flex-1 rounded bg-[#0f1219] border border-white/10 p-2 overflow-y-auto text-[10px] font-mono text-slate-200">
+                              {!browserRes ? (
+                                <div>Enter a URL above to browse & audit from the Kali node...</div>
+                              ) : browserTab === "reader" ? (
+                                <div className="space-y-1.5">
+                                  <div className="text-xs font-bold text-sky-300">{browserRes.title || browserRes.url}</div>
+                                  <div className="text-[9px] text-rose-300">
+                                    IPs: {(browserRes.ips ?? []).join(", ")} | Tech: {(browserRes.techStack ?? []).join(", ")}
+                                  </div>
+                                  <div className="whitespace-pre-wrap text-slate-300 leading-relaxed">
+                                    {browserRes.textPreview || browserRes.error}
+                                  </div>
+                                </div>
+                              ) : browserTab === "security" ? (
+                                <div className="space-y-1">
+                                  {(browserRes.securityHeaders ?? []).map((sh) => (
+                                    <div key={sh.name} className="p-1.5 rounded bg-black/50 border border-white/10">
+                                      <div className="flex justify-between">
+                                        <span className="font-bold text-white">{sh.name}</span>
+                                        <span className={sh.present ? "text-emerald-400" : "text-rose-400"}>
+                                          {sh.present ? "✓ PASS" : "✗ MISSING"}
+                                        </span>
+                                      </div>
+                                      <div className="text-[9px] text-slate-400" dir="rtl">{sh.advice}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : browserTab === "dom" ? (
+                                <div className="space-y-1">
+                                  {(browserRes.links ?? []).map((l) => (
+                                    <button
+                                      key={l}
+                                      onClick={() => void runKaliBrowser(l)}
+                                      className="block w-full text-left truncate text-sky-400 hover:underline"
+                                    >
+                                      → {l}
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <pre className="whitespace-pre-wrap text-rose-200">{browserRes.htmlSnippet}</pre>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* STUDIO MODE 4: 8 AUTO-PIPELINES + GITHUB FREE CLONER */}
+                        {studioMode === "pipelines" && (
+                          <div className="flex-1 flex flex-col overflow-hidden p-2 gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                value={ghRepoInput}
+                                onChange={(e) => setGhRepoInput(e.target.value)}
+                                placeholder="GitHub owner/repo (e.g. s0md3v/XSStrike)"
+                                className="flex-1 px-2 py-1 rounded bg-black/75 border border-rose-500/40 text-[10px] font-mono text-emerald-300"
+                              />
+                              <button
+                                onClick={() => void installFromGitHub()}
+                                disabled={ghInstallBusy}
+                                className="px-2.5 py-1 rounded bg-rose-600 text-white text-[10px] font-mono font-bold"
+                              >
+                                {ghInstallBusy ? "Cloning..." : "🐙 Clone to Fleet"}
+                              </button>
+                            </div>
+                            {ghInstallMsg && (
+                              <div className="text-[9px] font-mono text-emerald-300 px-1">{ghInstallMsg}</div>
+                            )}
+                            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                              {pipelines.map((p) => (
+                                <div
+                                  key={p.id}
+                                  className="p-2 rounded bg-black/55 border border-emerald-500/30 flex items-center justify-between gap-2"
+                                >
+                                  <div className="min-w-0" dir="rtl">
+                                    <div className="text-[11px] font-bold text-white truncate">{p.title}</div>
+                                    <div className="text-[9px] font-mono text-emerald-300 truncate">
+                                      {p.tools.join(" · ")}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => void executePipeline(p.id)}
+                                    disabled={Boolean(runningPipeId)}
+                                    className="px-2.5 py-1 rounded bg-emerald-600 text-white text-[10px] font-mono font-bold shrink-0"
+                                  >
+                                    {runningPipeId === p.id ? "..." : "▶ Run"}
+                                  </button>
+                                </div>
+                              ))}
+                              {pipeResult?.output && (
+                                <pre className="p-2 rounded bg-black border border-rose-500/40 text-[10px] font-mono text-emerald-300 whitespace-pre-wrap">
+                                  {pipeResult.output}
+                                </pre>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* STUDIO MODE 5: GENERATIONS 1-5+ SNAPSHOTS */}
+                        {studioMode === "gens" && (
+                          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+                            {generations.map((g) => (
+                              <div
+                                key={g.id}
+                                className="p-2 rounded bg-black/60 border border-amber-500/35 flex items-center justify-between gap-2"
+                              >
+                                <div className="min-w-0" dir="rtl">
+                                  <div className="text-[11px] font-bold text-amber-300 truncate">{g.title}</div>
+                                  <div className="text-[9px] text-slate-300 truncate">{g.description}</div>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    onClick={async () => {
+                                      const r = await fetch(`${API}/kali-env/generations/${g.id}/restore`, {
+                                        method: "POST",
+                                        headers: novaAuthHeaders(),
+                                      });
+                                      const d = await r.json();
+                                      setGenMsg(d?.message || "Restored");
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-emerald-500/25 text-emerald-300 text-[9px] font-mono"
+                                  >
+                                    Restore
+                                  </button>
+                                  <a
+                                    href={`${API}/kali-env/generations/${g.id}/export`}
+                                    download
+                                    className="px-2 py-0.5 rounded bg-sky-500/25 text-sky-300 text-[9px] font-mono"
+                                  >
+                                    Export
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                            {genMsg && <div className="text-[10px] font-mono text-emerald-400">{genMsg}</div>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── WINDOW 3 (Bottom-Center, 6 cols): qterminal — root@kali: ~ WITH NEOFETCH KALI DRAGON ── */}
+                    {(!maximizedWin || maximizedWin === "terminal") && (
+                      <div
+                        className={`${
+                          maximizedWin === "terminal" ? "lg:col-span-12" : "lg:col-span-6"
+                        } rounded-lg flex flex-col overflow-hidden shadow-2xl`}
+                        style={{
+                          background: "rgba(16, 18, 25, 0.95)",
+                          border: "1px solid rgba(56, 189, 248, 0.45)",
+                          backdropFilter: "blur(14px)",
+                        }}
+                      >
+                        {/* qterminal Titlebar */}
+                        <div className="h-7 px-2.5 bg-[#141720] border-b border-white/10 flex items-center justify-between text-[11px]">
+                          <div className="flex items-center gap-2 text-slate-200 font-bold">
+                            <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>root@kali-2099: ~ ({termPlane})</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => setTermOutput("")}
+                              className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 hover:bg-white/15 text-slate-300"
+                            >
+                              clear
+                            </button>
+                            <button
+                              onClick={() => setMaximizedWin((m) => (m === "terminal" ? null : "terminal"))}
+                              className="p-0.5 hover:bg-white/10 rounded text-slate-400 hover:text-white"
+                            >
+                              {maximizedWin === "terminal" ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* qterminal Menu Bar + Quick Tool Pills */}
+                        <div className="px-2.5 py-1 bg-[#1b1f2b] border-b border-white/10 flex items-center justify-between gap-2 text-[10px]">
+                          <div className="flex items-center gap-3 text-slate-300">
+                            <span>File</span>
+                            <span>Edit</span>
+                            <span>View</span>
+                            <span>Terminal</span>
+                            <span>Tabs</span>
+                            <span>Help</span>
+                          </div>
+                          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                            {["nmap --version", "nuclei -version", "prowler -v", "subfinder -version", "df -h /"].map((c) => (
+                              <button
+                                key={c}
+                                onClick={() => {
+                                  setTermCmd(c);
+                                  void runInKaliTerminal(c);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-black/50 hover:bg-sky-500/25 text-[9px] font-mono text-sky-300 shrink-0"
+                              >
+                                {c.split(" ")[0]}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Terminal Body: Authentic neofetch Kali Dragon + Live Command Stream */}
+                        <div className="flex-1 p-2.5 overflow-y-auto font-mono text-[10px] leading-snug bg-[#0d1017]">
+                          {/* Iconic Side-by-Side neofetch Kali Dragon + System Specs (Matches Screenshot 3!) */}
+                          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pb-2 mb-2 border-b border-white/10">
+                            <pre className="sm:col-span-5 text-[8.5px] leading-[1.12] text-sky-400 font-bold select-text">
+                              {KALI_ASCII_DRAGON}
+                            </pre>
+                            <div className="sm:col-span-7 space-y-0.5 text-[10px]">
+                              <div className="font-black">
+                                <span className="text-sky-400">root</span>
+                                <span className="text-white">@</span>
+                                <span className="text-rose-400">kali-2099</span>
+                              </div>
+                              <div className="text-slate-500">-------------------</div>
+                              <div>
+                                <span className="text-sky-400 font-bold">Creed: </span>
+                                <span className="text-white">لا إله إلا الله · الله أكبر ولله الحمد</span>
+                              </div>
+                              <div>
+                                <span className="text-sky-400 font-bold">OS: </span>
+                                <span className="text-slate-200">{sysInfo?.rootfs?.prettyName || "Kali GNU/Linux Rolling x86_64"}</span>
+                              </div>
+                              <div>
+                                <span className="text-sky-400 font-bold">Kernel: </span>
+                                <span className="text-slate-200">{controlInfo?.kernel?.split(" ")[2] || "6.11.0-kali-amd64"}</span>
+                              </div>
+                              <div>
+                                <span className="text-sky-400 font-bold">Packages: </span>
+                                <span className="text-emerald-300">
+                                  2147 (dpkg) · {envTools?.present ?? 266}/266 Tools · {pyTools?.pythonPackages ?? 880} Py
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-sky-400 font-bold">Shell: </span>
+                                <span className="text-slate-200">bash 5.2 (proot-static uid=0)</span>
+                              </div>
+                              <div>
+                                <span className="text-sky-400 font-bold">DE / WM: </span>
+                                <span className="text-slate-200">Xfce 4.18 / Kali-Dark-2099</span>
+                              </div>
+                              <div>
+                                <span className="text-sky-400 font-bold">Fleet: </span>
+                                <span className="text-emerald-400">{activeKaliNodes.length || 10}/10 Primary Nodes + Standby</span>
+                              </div>
+                              <div>
+                                <span className="text-sky-400 font-bold">Storage: </span>
+                                <span className="text-pink-300">
+                                  {sysInfo?.disk?.totalGB ?? 503.8}GiB Disk + {storage?.totalHuman ?? "67.11GB"} Cloud
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-sky-400 font-bold">Memory: </span>
+                                <span className="text-slate-200">
+                                  {(sysInfo?.mem?.totalMB ?? 48181) - (sysInfo?.mem?.freeMB ?? 14059)}MiB / {sysInfo?.mem?.totalMB ?? 48181}MiB
+                                </span>
+                              </div>
+                              {/* Authentic neofetch color blocks */}
+                              <div className="flex items-center gap-1 pt-1">
+                                {["#1f2430", "#ff2b4d", "#44ff88", "#fbbf24", "#38bdf8", "#c084fc", "#22d3ee", "#ffffff"].map((c) => (
+                                  <span key={c} className="w-3.5 h-2.5 rounded-sm inline-block" style={{ background: c }} />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Live Command Execution Stream */}
+                          {termOutput && (
+                            <pre className="text-emerald-300 whitespace-pre-wrap leading-relaxed select-text">
+                              {termOutput}
+                            </pre>
+                          )}
+                        </div>
+
+                        {/* Authentic Two-Line Kali Prompt Input */}
+                        <div className="px-2.5 py-1.5 bg-[#12151f] border-t border-white/10 flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-bold text-rose-400 shrink-0">
+                            root💀kali:~#
+                          </span>
+                          <input
+                            value={termCmd}
+                            onChange={(e) => setTermCmd(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && termCmd.trim()) {
+                                void runInKaliTerminal(termCmd);
+                              }
+                            }}
+                            placeholder="Type any Kali command or tool (e.g. nmap -F example.com)..."
+                            className="flex-1 bg-transparent text-[11px] font-mono text-white focus:outline-none"
+                          />
+                          <button
+                            onClick={() => void runInKaliTerminal(termCmd)}
+                            disabled={Boolean(runningCmdLabel)}
+                            className="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold"
+                          >
+                            {runningCmdLabel ? "..." : "Run"}
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
-
-                {/* File Viewer & Editor */}
-                <div
-                  className="lg:col-span-7 rounded-2xl p-3.5 flex flex-col gap-2.5"
-                  style={{ background: "rgba(12,1,8,0.96)", border: "1px solid rgba(56,189,248,0.4)" }}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="text-xs font-black text-sky-300">📝 محرر وقارئ ملفات كالي:</span>
-                      <input
-                        value={newFileRelPath}
-                        onChange={(e) => setNewFileRelPath(e.target.value)}
-                        dir="ltr"
-                        placeholder="recon-lab/notes/plan.md"
-                        className="flex-1 px-2.5 py-1 rounded-lg text-xs font-mono bg-black/80 border border-sky-500/40 text-emerald-300"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => void saveWorkspaceFile()}
-                        className="px-3 py-1 rounded-lg text-xs font-black bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 flex items-center gap-1"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>حفظ ومزامنة مع كالي</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {fileSaveMsg && (
-                    <div className="text-xs font-mono px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300">
-                      {fileSaveMsg}
-                    </div>
-                  )}
-
-                  <textarea
-                    value={openFileContent}
-                    onChange={(e) => setOpenFileContent(e.target.value)}
-                    dir="ltr"
-                    placeholder="اختر ملفًا من القائمة لعرضه وتعديله، أو اكتب محتوى ملف/سكربت جديد واضغط حفظ..."
-                    className="flex-1 min-h-[400px] p-3 rounded-xl bg-black/85 border border-white/15 text-xs font-mono text-emerald-200 focus:outline-none"
-                  />
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
 
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 5: 🚀 2099 AUTOMATED SECURITY PIPELINES & GITHUB FREE SUPERCOMPUTER
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "pipelines" && (
-          <div className="flex flex-col gap-3">
-            {/* GitHub Free Arsenal Cloner Banner */}
-            <div
-              className="rounded-2xl p-4 flex flex-col gap-3"
-              style={{
-                background: "linear-gradient(135deg, rgba(35,3,16,0.95) 0%, rgba(12,2,14,0.98) 100%)",
-                border: "1.5px solid rgba(255,43,77,0.55)",
-              }}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div className="text-sm font-black text-white flex items-center gap-2">
-                    <GitBranch className="w-4 h-4 text-rose-400" />
-                    <span>🐙 محرك التوسع اللانهائي من GitHub مجانًا (GitHub Open-Source Arsenal Cloner)</span>
+              {/* ── WINDOW 4 (Right Vertical Docked HUD, 3 cols): gotop / btop SYSTEM MONITOR (Matches Screenshot 3 right side!) ── */}
+              {(!maximizedWin || maximizedWin === "gotop") && (
+                <div
+                  className={`${
+                    maximizedWin === "gotop" ? "lg:col-span-12" : "lg:col-span-3"
+                  } rounded-lg flex flex-col overflow-hidden shadow-2xl`}
+                  style={{
+                    background: "rgba(16, 19, 27, 0.95)",
+                    border: "1px solid rgba(56, 189, 248, 0.45)",
+                    backdropFilter: "blur(14px)",
+                  }}
+                >
+                  {/* gotop Window Titlebar */}
+                  <div className="h-7 px-2.5 bg-[#141720] border-b border-white/10 flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-1.5 text-slate-200 font-bold">
+                      <Activity className="w-3.5 h-3.5 text-rose-400" />
+                      <span>root@kali: ~ (gotop)</span>
+                    </div>
+                    <button
+                      onClick={() => setMaximizedWin((m) => (m === "gotop" ? null : "gotop"))}
+                      className="p-0.5 hover:bg-white/10 rounded text-slate-400 hover:text-white"
+                    >
+                      {maximizedWin === "gotop" ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+                    </button>
                   </div>
-                  <div className="text-xs text-rose-200/80 mt-0.5">
-                    استنسخ وثبّت أي أداة أو مشروع أمن سيبراني مفتوح المصدر من GitHub مباشرة داخل `/opt/` و`/usr/local/bin/` على جميع عقد كالي الـ10 مجانًا!
+
+                  <div className="flex-1 p-2 overflow-y-auto space-y-2 font-mono text-[10px]">
+                    {/* 1. CPU Usage Box */}
+                    <div className="p-2 rounded border border-sky-500/40 bg-[#0d1017]">
+                      <div className="text-[10px] font-bold text-sky-400 mb-1 flex justify-between">
+                        <span>┌─ CPU Usage ({sysInfo?.cpu?.cores ?? 12} Cores) ─┐</span>
+                        <span className="text-emerald-400">ONLINE</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mb-2">
+                        {cpuBars.slice(0, 6).map((val, i) => (
+                          <div key={i} className="flex items-center gap-1">
+                            <span className="text-[9px] text-rose-400 w-8">CPU{i}</span>
+                            <div className="flex-1 h-1.5 bg-white/10 rounded overflow-hidden">
+                              <div
+                                className="h-full transition-all duration-500"
+                                style={{
+                                  width: `${val}%`,
+                                  background: i % 2 === 0 ? "#ff2b4d" : "#38bdf8",
+                                }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-slate-300 w-6 text-right">{val}%</span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Animated Sparkline Graph */}
+                      <div className="h-14 flex items-end gap-1 pt-2 border-t border-white/5">
+                        {cpuHistory.map((h, idx) => (
+                          <div
+                            key={idx}
+                            className="flex-1 rounded-t transition-all duration-500"
+                            style={{
+                              height: `${h}%`,
+                              background:
+                                idx % 3 === 0
+                                  ? "linear-gradient(180deg, #ff2b4d, rgba(255,43,77,0.2))"
+                                  : "linear-gradient(180deg, #38bdf8, rgba(56,189,248,0.2))",
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 2. Disk & Cloud Storage Box */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div className="p-2 rounded border border-sky-500/40 bg-[#0d1017]">
+                        <div className="text-[9px] font-bold text-sky-400 mb-1">Disk Usage</div>
+                        <div className="space-y-1 text-[9px]">
+                          <div className="flex justify-between text-slate-300">
+                            <span>/ (Root)</span>
+                            <span className="text-emerald-400">{sysInfo?.disk?.totalGB ?? 503.8}G</span>
+                          </div>
+                          <div className="flex justify-between text-slate-400">
+                            <span>Free</span>
+                            <span>{sysInfo?.disk?.freeGB ?? 46.2}G</span>
+                          </div>
+                          <div className="flex justify-between text-pink-300">
+                            <span>Cloud</span>
+                            <span>{storage?.totalHuman ?? "67.11GB"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-2 rounded border border-sky-500/40 bg-[#0d1017]">
+                        <div className="text-[9px] font-bold text-sky-400 mb-1">Memory Usage</div>
+                        <div className="space-y-1 text-[9px]">
+                          <div className="flex justify-between text-rose-300">
+                            <span>Main</span>
+                            <span>{Math.round((sysInfo?.mem?.totalMB ?? 48181) / 1024)}GB</span>
+                          </div>
+                          <div className="flex justify-between text-emerald-300">
+                            <span>Free</span>
+                            <span>{Math.round((sysInfo?.mem?.freeMB ?? 14059) / 1024)}GB</span>
+                          </div>
+                          <div className="flex justify-between text-purple-300">
+                            <span>PyVenv</span>
+                            <span>880 Pkgs</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3. Arsenal & Fleet Verification Box */}
+                    <div className="p-2 rounded border border-rose-500/40 bg-[#0d1017] space-y-1">
+                      <div className="text-[9px] font-bold text-rose-400 flex justify-between">
+                        <span>Kali 2099 Arsenal Status</span>
+                        <span className="text-emerald-400">100% READY</span>
+                      </div>
+                      <div className="flex justify-between text-[9px]">
+                        <span className="text-slate-400">20 Arabic Categories</span>
+                        <span className="text-emerald-300 font-bold">{envTools?.present ?? 266} / {envTools?.total ?? 266}</span>
+                      </div>
+                      <div className="flex justify-between text-[9px]">
+                        <span className="text-slate-400">11 Official Categories</span>
+                        <span className="text-emerald-300 font-bold">122 / 122</span>
+                      </div>
+                      <div className="flex justify-between text-[9px]">
+                        <span className="text-slate-400">Core Versioned Inventory</span>
+                        <span className="text-emerald-300 font-bold">{inventory?.present ?? 46} / 46</span>
+                      </div>
+                      <div className="flex justify-between text-[9px]">
+                        <span className="text-slate-400">Python Security Arsenal</span>
+                        <span className="text-purple-300 font-bold">{pyTools?.installed ?? 28} / 28</span>
+                      </div>
+                    </div>
+
+                    {/* 4. Network & Processes Table (Matches bottom of gotop in Screenshot 3) */}
+                    <div className="p-2 rounded border border-sky-500/40 bg-[#0d1017]">
+                      <div className="text-[9px] font-bold text-sky-400 mb-1 flex justify-between">
+                        <span>Active Fleet & Processes</span>
+                        <span className="text-emerald-400">{activeKaliNodes.length || 10} Nodes</span>
+                      </div>
+                      <div className="space-y-0.5 text-[9px]">
+                        <div className="flex justify-between text-sky-300 border-b border-white/10 pb-0.5 font-bold">
+                          <span>NODE / PID</span>
+                          <span>COMMAND / MODE</span>
+                        </div>
+                        {(nodes.length ? nodes.slice(0, 6) : [
+                          { id: "gh-20", hostname: "runnervm0hi8g", mode: "MODE_PROOT" },
+                          { id: "gh-21", hostname: "runnervm0hi8g", mode: "MODE_PROOT" },
+                          { id: "gh-22", hostname: "runnervmccnms", mode: "MODE_PROOT" },
+                          { id: "gh-25", hostname: "ip-10-0-142-0", mode: "MODE_PROOT" },
+                          { id: "gh-29", hostname: "ip-10-0-131-179", mode: "MODE_PROOT" },
+                        ]).map((n) => (
+                          <div key={n.id} className="flex justify-between text-slate-300">
+                            <span className="text-emerald-400">{n.id}</span>
+                            <span className="truncate max-w-[130px]">{n.hostname} ({n.mode})</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between text-rose-300 pt-1">
+                          <span>DISPLAY :99</span>
+                          <span>Xvfb + fluxbox + scrot</span>
+                        </div>
+                        <div className="flex justify-between text-purple-300">
+                          <span>self-heal</span>
+                          <span>syncedNodes={selfHeal?.syncedNodes ?? 10}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════
+           * WORKSPACE 2: FULL 266/266 KALI ARSENAL + OFFICIAL 11 CATALOG + WORKSPACES
+           * ═══════════════════════════════════════════════════════════════════ */}
+          {workspace === 2 && (
+            <div
+              className="flex-1 rounded-xl p-3 overflow-y-auto space-y-3"
+              style={{
+                background: "rgba(15, 18, 26, 0.95)",
+                border: "1px solid rgba(255, 43, 77, 0.5)",
+                backdropFilter: "blur(16px)",
+              }}
+              dir="rtl"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <KaliLogo2099 size={28} />
+                  <div>
+                    <div className="text-sm font-black text-white">
+                      ترسانة NOVA KALI 2099 الشاملة ({envTools?.present ?? 266}/{envTools?.total ?? 266} أداة · 20 فئة عربية + 11 تصنيف رسمي + مساحات الشغل)
+                    </div>
+                    <div className="text-[10px] font-mono text-rose-300">
+                      اضغط على أي أداة لتشغيلها فورًا في طرفية كالي أو إرسالها إلى البث الحي :99
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
-                    value={ghRepoInput}
-                    onChange={(e) => setGhRepoInput(e.target.value)}
-                    dir="ltr"
-                    placeholder="owner/repo (e.g. s0md3v/XSStrike)"
-                    className="px-3 py-1.5 rounded-xl text-xs font-mono bg-black/80 border border-rose-500/50 text-emerald-300 w-60"
+                    value={toolSearch}
+                    onChange={(e) => setToolSearch(e.target.value)}
+                    placeholder="ابحث في 266 أداة..."
+                    className="px-3 py-1 rounded-lg bg-black/70 border border-rose-500/40 text-xs font-mono text-white"
                   />
                   <button
-                    onClick={() => void installFromGitHub()}
-                    disabled={ghInstallBusy}
-                    className="px-4 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-lg"
+                    onClick={() => setWorkspace(1)}
+                    className="px-3 py-1 rounded-lg bg-sky-500/20 border border-sky-500/40 text-xs font-bold text-sky-300"
                   >
-                    {ghInstallBusy ? "⏳ جاري الاستنساخ..." : "🐙 تثبيت من GitHub مجانًا"}
+                    ← العودة لسطح المكتب الرباعي
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-mono text-rose-300">مستودعات مقترحة بضغطة واحدة:</span>
-                {CURATED_GITHUB_REPOS.map((item) => (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                {categoriesList.map((cat) => (
                   <button
-                    key={item.repo}
-                    onClick={() => void installFromGitHub(item.repo)}
-                    disabled={ghInstallBusy}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-mono bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/40 text-rose-200"
-                    title={item.desc}
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0"
+                    style={{
+                      background: selectedCategory === cat ? "#ff2b4d" : "rgba(255,255,255,0.06)",
+                      color: "#fff",
+                    }}
                   >
-                    + {item.name} ({item.repo})
+                    {cat === "ALL" ? "كل الفئات (266)" : cat}
                   </button>
                 ))}
               </div>
 
-              {ghInstallMsg && (
-                <div className="p-2.5 rounded-xl bg-black/75 border border-emerald-500/40 text-xs font-mono text-emerald-300">
-                  {ghInstallMsg}
-                </div>
-              )}
-            </div>
-
-            {/* 8 Automated Security & Defense Pipelines */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-              <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                {pipelines.map((p) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[300px] overflow-y-auto p-1">
+                {filteredTools.map((t) => (
                   <div
-                    key={p.id}
-                    className="p-3.5 rounded-2xl flex flex-col justify-between gap-2"
-                    style={{
-                      background: "rgba(18,2,10,0.95)",
-                      border: "1px solid rgba(68,255,136,0.35)",
-                    }}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-300">
-                          {p.category}
-                        </span>
-                        <span className="text-[9px] font-mono text-rose-300" dir="ltr">
-                          {p.tools.join(" · ")}
-                        </span>
-                      </div>
-                      <div className="text-xs font-black text-white mt-1.5">{p.title}</div>
-                      <div className="text-[10px] text-slate-300 mt-1 leading-relaxed">{p.description}</div>
-                      <div className="text-[10px] text-emerald-300/90 mt-1.5 bg-emerald-950/40 p-2 rounded-lg border border-emerald-500/25">
-                        🛡️ <b>الحماية والتحصين:</b> {p.defenseTip}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => void executePipeline(p.id)}
-                      disabled={Boolean(runningPipeId)}
-                      className="mt-2 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:opacity-95"
-                    >
-                      {runningPipeId === p.id
-                        ? "⏳ جاري تشغيل السلسلة على كالي..."
-                        : `🚀 تشغيل السلسلة على ${globalTarget}`}
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Pipeline Output & Saved Report */}
-              <div
-                className="lg:col-span-5 rounded-2xl p-3.5 flex flex-col gap-2.5"
-                style={{ background: "rgba(10,1,7,0.96)", border: "1px solid rgba(255,43,77,0.45)" }}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-rose-300">📄 تقرير ومخرجات السلسلة الذكية</span>
-                  {pipeResult?.savedReportPath && (
-                    <span className="text-[10px] font-mono text-emerald-400" dir="ltr">
-                      💾 {pipeResult.savedReportPath}
-                    </span>
-                  )}
-                </div>
-                <pre
-                  dir="ltr"
-                  className="flex-1 min-h-[450px] max-h-[560px] overflow-auto p-3 rounded-xl bg-black/85 border border-rose-500/30 text-[11px] font-mono text-emerald-300 whitespace-pre-wrap"
-                >
-                  {pipeResult?.output ||
-                    "🚀 اختر أي سلسلة فحص ذكية من اليمين لتشغيل أدوات كالي المترابطة أوتوماتيكيًا على الهدف وحفظ تقرير دفاعي كامل في مساحة الشغل..."}
-                </pre>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 6: 💼 PERSISTENT WORKSPACES (مساحات الشغل والمشاريع)
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "work" && <KaliWorkspacePanel />}
-
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 7: 🐍 PYTHON CYBER ARSENAL (28/28 TOOLS · 880 PACKAGES)
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "python" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-            <div
-              className="lg:col-span-7 rounded-2xl p-4 flex flex-col gap-3"
-              style={{ background: "rgba(18,2,10,0.95)", border: "1px solid rgba(192,132,252,0.45)" }}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div className="text-sm font-black text-white">
-                    🐍 ترسانة بايثون السيبرانية ({pyTools?.installed ?? 28}/{pyTools?.total ?? 28} أداة · {pyTools?.pythonPackages ?? 880} حزمة منصّبة)
-                  </div>
-                  <div className="text-xs text-purple-200/80">
-                    مفعّلة بالكامل على جميع عقد الأسطول وجاهزة للاستيراد والتشغيل الفوري
-                  </div>
-                </div>
-                <button
-                  onClick={async () => {
-                    setPyProvisionBusy(true);
-                    try {
-                      await fetch(`${API}/ops/tools/python/provision`, {
-                        method: "POST",
-                        headers: novaAuthHeaders(),
-                      });
-                      await refreshAllTelemetry(true);
-                    } finally {
-                      setPyProvisionBusy(false);
-                    }
-                  }}
-                  disabled={pyProvisionBusy}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black bg-purple-600/30 border border-purple-400/50 text-purple-200"
-                >
-                  {pyProvisionBusy ? "⏳ جاري التحديث..." : "⚡ تحديث ومزامنة حزم بايثون"}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[480px] overflow-y-auto pr-1">
-                {(pyTools?.tools ?? []).map((pt) => (
-                  <div
-                    key={pt.id}
-                    className="p-2.5 rounded-xl flex flex-col justify-between gap-1"
-                    style={{
-                      background: "rgba(192,132,252,0.08)",
-                      border: "1px solid rgba(192,132,252,0.35)",
-                    }}
+                    key={`${t.category}-${t.name}`}
+                    className="p-2 rounded-lg bg-black/60 border border-rose-500/30 flex flex-col justify-between gap-1"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono font-black text-white" dir="ltr">
-                        {pt.id}
+                      <span className="text-xs font-mono font-bold text-white truncate" dir="ltr">
+                        {t.name}
                       </span>
-                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                        ✓ {pt.version || "ready"}
-                      </span>
+                      <span className="text-[9px] font-mono text-emerald-400">✓</span>
                     </div>
-                    <div className="text-[10px] text-purple-200/80">{pt.ar}</div>
+                    <div className="text-[9px] text-rose-300/80 truncate">{t.category}</div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <button
+                        onClick={() => {
+                          setWorkspace(1);
+                          void runInKaliTerminal(`${t.name} --help 2>&1 | head -28`, t.name);
+                        }}
+                        className="flex-1 py-0.5 rounded bg-rose-600/35 hover:bg-rose-600/60 text-[9px] font-mono text-white"
+                      >
+                        ▶ Run
+                      </button>
+                      <button
+                        onClick={() => {
+                          setWorkspace(1);
+                          setStudioMode("x11");
+                          void runOnLiveDesktop(`${t.name} --help 2>&1 | head -28`, `KALI: ${t.name}`);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-sky-500/25 text-[9px] font-mono text-sky-300"
+                      >
+                        :99
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
+
+              <KaliSystemsPanel />
+              <KaliWorkspacePanel />
             </div>
+          )}
 
-            {/* Interactive Python 3 Cyber Runner */}
-            <div
-              className="lg:col-span-5 rounded-2xl p-4 flex flex-col gap-2.5"
-              style={{ background: "rgba(12,1,8,0.96)", border: "1px solid rgba(68,255,136,0.4)" }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-emerald-300">
-                  ▶ مشغّل سكربتات بايثون 3 المباشر على كالي
-                </span>
-                <button
-                  onClick={async () => {
-                    setPyRunBusy(true);
-                    setPyOut("⏳ جاري تشغيل كود بايثون 3 داخل عقدة كالي...");
-                    try {
-                      const b64 = btoa(unescape(encodeURIComponent(pyScript)));
-                      await runKaliCommandStream(`echo '${b64}' | base64 -d | python3`, "python3-script");
-                      setPyOut("✓ تم التنفيذ — طالع المخرجات في سجل الطرفية أو الأسفل");
-                    } finally {
-                      setPyRunBusy(false);
-                    }
-                  }}
-                  disabled={pyRunBusy}
-                  className="px-3 py-1 rounded-xl text-xs font-black bg-emerald-500/25 border border-emerald-500/50 text-emerald-300"
-                >
-                  {pyRunBusy ? "يعمل..." : "▶ تشغيل الكود على كالي"}
-                </button>
-              </div>
-              <textarea
-                value={pyScript}
-                onChange={(e) => setPyScript(e.target.value)}
-                dir="ltr"
-                className="min-h-[200px] p-3 rounded-xl bg-black/85 border border-purple-500/40 text-xs font-mono text-purple-200 focus:outline-none"
-              />
-              <pre
-                dir="ltr"
-                className="flex-1 min-h-[220px] p-3 rounded-xl bg-black/90 border border-emerald-500/30 text-[11px] font-mono text-emerald-300 whitespace-pre-wrap overflow-auto"
-              >
-                {toolOutput || pyOut || "# المخرجات تظهر هنا فور التشغيل..."}
-              </pre>
-            </div>
-          </div>
-        )}
-
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 8: 💻 MULTI-COMMAND KALI ROOT TERMINAL
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "term" && (
-          <div
-            className="rounded-2xl p-4 flex flex-col gap-3"
-            style={{ background: "rgba(10,1,7,0.97)", border: "1.5px solid rgba(52,211,153,0.5)" }}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <KaliLogo2099 size={26} />
-                <div>
-                  <div className="text-sm font-black text-emerald-300">
-                    طرفية NOVA KALI LINUX 2099 الجذرية (root@kali-2099:~#)
-                  </div>
-                  <div className="text-[10px] font-mono text-emerald-200/75">
-                    تنفيذ مباشر ببث حي SSE على أسطول كالي مع صلاحيات Root داخل الجست
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1">
-                {[
-                  "uname -a && id",
-                  "nmap --version | head -2",
-                  "nuclei -version",
-                  "df -h / && free -h",
-                  "ls /usr/local/bin",
-                  "ip -br a",
-                ].map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => {
-                      setTermCmd(q);
-                      void runKaliCommandStream(q, "root-shell");
-                    }}
-                    className="px-2 py-1 rounded-lg text-[10px] font-mono bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/35 text-emerald-200"
-                    dir="ltr"
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl bg-black border border-emerald-500/50">
-                <span className="text-xs font-mono font-black text-rose-400" dir="ltr">
-                  root@nova-kali-2099:~#
-                </span>
-                <input
-                  value={termCmd}
-                  onChange={(e) => setTermCmd(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && termCmd.trim()) {
-                      void runKaliCommandStream(termCmd, "root-shell");
-                    }
-                  }}
-                  dir="ltr"
-                  className="flex-1 bg-transparent text-xs font-mono text-emerald-300 focus:outline-none"
-                />
-              </div>
-              <button
-                onClick={() => void runKaliCommandStream(termCmd, "root-shell")}
-                disabled={Boolean(runningToolName)}
-                className="px-4 py-2 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white"
-              >
-                {runningToolName ? "⏳ ينفذ..." : "▶ تنفيذ فوري"}
-              </button>
-            </div>
-
-            <pre
-              dir="ltr"
-              className="min-h-[360px] max-h-[480px] overflow-auto p-4 rounded-xl bg-black border border-emerald-500/30 text-xs font-mono text-emerald-300 whitespace-pre-wrap"
-            >
-              {toolOutput || "root@nova-kali-2099:~# جاهز لتنفيذ أي أمر أو أداة من الـ266 أداة..."}
-            </pre>
-
-            {termHistory.length > 0 && (
-              <div className="flex flex-col gap-1.5 mt-1">
-                <div className="text-xs font-black text-rose-300">سجل الأوامر المنفذة في هذه الجلسة:</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                  {termHistory.map((h, i) => (
-                    <div key={i} className="p-2 rounded-lg bg-white/5 border border-white/10 text-[10px] font-mono" dir="ltr">
-                      <div className="text-rose-300 font-bold">
-                        [{h.ts}] $ {h.cmd} ({h.plane})
-                      </div>
-                      <div className="text-slate-300 truncate mt-0.5">{h.out.slice(0, 140)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 9: 🎛️ KALI CONTROL CENTER, PROCESSES, NETWORK & 10+STANDBY FLEET
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "control" && (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
-              <div className="p-3.5 rounded-2xl bg-black/75 border border-rose-500/40">
-                <div className="text-[10px] font-mono text-rose-300">نظام التشغيل والنواة</div>
-                <div className="text-xs font-black text-white mt-1" dir="ltr">
-                  {sysInfo?.rootfs?.prettyName || controlInfo?.osName || "Kali GNU/Linux Rolling"}
-                </div>
-                <div className="text-[10px] font-mono text-emerald-300 mt-1" dir="ltr">
-                  {controlInfo?.kernel || "Linux 6.11 x86_64"} · {sysInfo?.rootfs?.executables ?? 3813} ملف تنفيذي
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-black/75 border border-sky-500/40">
-                <div className="text-[10px] font-mono text-sky-300">القرص الصلب الكلي والمتاح</div>
-                <div className="text-sm font-mono font-black text-white mt-1">
-                  {sysInfo?.disk?.totalGB ?? 503.8} GB إجمالي · {sysInfo?.disk?.freeGB ?? 46.2} GB متاح
-                </div>
-                <div className="text-[10px] font-mono text-sky-200/75 mt-1">
-                  نسبة الاستخدام: {sysInfo?.disk?.usedPct ?? 9}%
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-black/75 border border-purple-500/40">
-                <div className="text-[10px] font-mono text-purple-300">الذاكرة العشوائية (RAM)</div>
-                <div className="text-sm font-mono font-black text-white mt-1">
-                  {Math.round((sysInfo?.mem?.totalMB ?? 48181) / 1024)} GB إجمالي ·{" "}
-                  {Math.round((sysInfo?.mem?.freeMB ?? 14059) / 1024)} GB حر
-                </div>
-                <div className="text-[10px] font-mono text-purple-200/75 mt-1">
-                  المعالجات: {sysInfo?.cpu?.cores ?? 12} أنوية سحابية
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-black/75 border border-emerald-500/40">
-                <div className="text-[10px] font-mono text-emerald-300">هندسة الأسطول (10 + احتياطي متجدد)</div>
-                <div className="text-sm font-mono font-black text-emerald-400 mt-1">
-                  {activeKaliNodes.length || 10} / 10 عقد أساسية نشطة
-                </div>
-                <div className="text-[10px] font-mono text-emerald-200/75 mt-1">
-                  تدوير تلقائي ومزامنة 266/266 أداة
-                </div>
-              </div>
-            </div>
-
-            {/* Fleet Nodes Grid + Network & Sockets */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* ═══════════════════════════════════════════════════════════════════
+           * WORKSPACE 3: FULL-SCREEN LIVE X11 :99 DESKTOP & KALI CYBER BROWSER
+           * ═══════════════════════════════════════════════════════════════════ */}
+          {workspace === 3 && (
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden">
               <div
-                className="lg:col-span-7 rounded-2xl p-4 flex flex-col gap-2.5"
-                style={{ background: "rgba(18,2,10,0.95)", border: "1px solid rgba(255,43,77,0.4)" }}
+                className="lg:col-span-7 rounded-xl p-3 flex flex-col gap-2 overflow-hidden"
+                style={{ background: "rgba(15,18,26,0.95)", border: "1px solid #ff2b4d" }}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-white">
-                    🛰️ مصفوفة عقد كالي الـ10 الأساسية المتصلة حاليًا
+                    🖥️ البث المباشر الكامل لسطح مكتب كالي 2099 (DISPLAY :99 — 1280×800)
                   </span>
                   <button
-                    onClick={() => void triggerSelfHeal()}
-                    className="px-3 py-1 rounded-lg text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                    onClick={() => void fetchDesktopFrame(true)}
+                    className="px-2.5 py-1 rounded bg-rose-600 text-white text-[10px] font-mono font-bold"
                   >
-                    ⚡ مزامنة كل العقد الآن
+                    ↻ تحديث الإطار الحي
                   </button>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {(nodes.length ? nodes : []).map((n) => (
-                    <div
-                      key={n.id}
-                      className="p-2.5 rounded-xl flex items-center justify-between bg-black/60 border border-emerald-500/30"
-                    >
-                      <div>
-                        <div className="text-xs font-mono font-black text-white" dir="ltr">
-                          {n.id} · {n.hostname}
-                        </div>
-                        <div className="text-[10px] font-mono text-emerald-300" dir="ltr">
-                          {n.mode} · {n.platform}
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-300">
-                        ✓ KALI READY
-                      </span>
-                    </div>
-                  ))}
+                <div className="flex-1 rounded-lg bg-black overflow-hidden flex items-center justify-center">
+                  {deskFrame ? (
+                    <img src={deskFrame} alt="Kali X11 :99" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="text-xs font-mono text-rose-300">Loading X11 Display :99...</div>
+                  )}
                 </div>
               </div>
 
               <div
-                className="lg:col-span-5 rounded-2xl p-4 flex flex-col gap-2.5"
-                style={{ background: "rgba(12,1,8,0.96)", border: "1px solid rgba(56,189,248,0.4)" }}
+                className="lg:col-span-5 rounded-xl p-3 flex flex-col gap-2 overflow-hidden"
+                style={{ background: "rgba(15,18,26,0.95)", border: "1px solid #38bdf8" }}
               >
-                <div className="text-xs font-black text-sky-300">🌐 واجهات الشبكة والمقابس المفتوحة (Live Network)</div>
-                <pre
-                  dir="ltr"
-                  className="flex-1 min-h-[240px] p-3 rounded-xl bg-black/85 border border-sky-500/30 text-[11px] font-mono text-sky-200 whitespace-pre-wrap overflow-auto"
-                >
-                  {[
-                    "=== NETWORK INTERFACES ===",
-                    ...(controlInfo?.networkInterfaces ?? ["lo UNKNOWN 127.0.0.1/8", "eth0 UP"]),
-                    "",
-                    "=== LISTENING SOCKETS ===",
-                    ...(controlInfo?.openSockets ?? []),
-                    "",
-                    "=== DNS RESOLVERS ===",
-                    ...(controlInfo?.dnsServers ?? []),
-                  ].join("\n")}
+                <div className="text-xs font-black text-sky-300">🌐 متصفح كالي السيبراني وفاحص التشفير TLSv1.3</div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    value={browserUrl}
+                    onChange={(e) => setBrowserUrl(e.target.value)}
+                    className="flex-1 px-2.5 py-1 rounded bg-black/80 border border-sky-500/40 text-xs font-mono text-white"
+                  />
+                  <button
+                    onClick={() => void runKaliBrowser()}
+                    className="px-3 py-1 rounded bg-sky-600 text-white text-xs font-bold"
+                  >
+                    Inspect
+                  </button>
+                </div>
+                <pre className="flex-1 rounded bg-black/85 p-2.5 overflow-auto text-[10px] font-mono text-emerald-300 whitespace-pre-wrap">
+                  {browserRes ? JSON.stringify(browserRes, null, 2) : "Press Inspect to browse from Kali node..."}
                 </pre>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 10: 📸 GENERATIONS & SNAPSHOTS 1–5+ (جد النسخة 1-5 أو أكثر)
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "gens" && (
-          <div
-            className="rounded-2xl p-4 flex flex-col gap-3"
-            style={{ background: "rgba(18,2,10,0.95)", border: "1.5px solid rgba(251,191,36,0.45)" }}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
+          {/* ═══════════════════════════════════════════════════════════════════
+           * WORKSPACE 4: 67.11GB CLOUD STORAGE + GENERATIONS 1-5+ + PYTHON 28 + SELF-HEAL
+           * ═══════════════════════════════════════════════════════════════════ */}
+          {workspace === 4 && (
+            <div
+              className="flex-1 rounded-xl p-3 overflow-y-auto space-y-3"
+              style={{
+                background: "rgba(15, 18, 26, 0.95)",
+                border: "1px solid rgba(251, 191, 36, 0.5)",
+                backdropFilter: "blur(16px)",
+              }}
+              dir="rtl"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
                 <div className="text-sm font-black text-white">
-                  📸 أرشيف الأجيال واللقطات المحفوظة (النسخ 1 إلى {generations.length || 5}+ — إنشاء · استرداد · تصدير · استيراد)
+                  ☁️ المخازن السحابية الـ8 ({storage?.totalHuman ?? "67.11GB"}) · الأجيال 1-5+ · ترسانة بايثون (28/28) · السجل الأبدي
                 </div>
-                <div className="text-xs text-amber-200/80">
-                  احفظ واسترد أي جيل من أجيال بيئة كالي 2099 بكل أدواته ومساحاته وإعداداته بضغطة واحدة
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  ref={importFileRef}
-                  type="file"
-                  accept=".json"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const txt = await file.text();
-                      const json = JSON.parse(txt);
-                      const r = await fetch(`${API}/kali-env/generations/import`, {
-                        method: "POST",
-                        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
-                        body: JSON.stringify(json),
-                      });
-                      const d = await r.json();
-                      if (d?.ok && Array.isArray(d.generations)) {
-                        setGenerations(d.generations);
-                        setGenMsg(`✓ تم استيراد وتفعيل «${d.imported?.title}» بنجاح`);
-                      }
-                    } catch (err) {
-                      setGenMsg(`✗ فشل الاستيراد: ${(err as Error).message}`);
-                    }
-                  }}
-                />
                 <button
-                  onClick={() => importFileRef.current?.click()}
-                  className="px-3 py-1.5 rounded-xl text-xs font-black bg-sky-500/20 border border-sky-500/50 text-sky-200 flex items-center gap-1"
+                  onClick={() => setWorkspace(1)}
+                  className="px-3 py-1 rounded-lg bg-sky-500/20 border border-sky-500/40 text-xs font-bold text-sky-300"
                 >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>استيراد نسخة JSON</span>
+                  ← العودة لسطح المكتب الرباعي
                 </button>
               </div>
-            </div>
 
-            {/* Create New Generation Bar */}
-            <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-black/60 border border-amber-500/35">
-              <input
-                value={newGenTitle}
-                onChange={(e) => setNewGenTitle(e.target.value)}
-                placeholder="عنوان النسخة الجديدة (مثال: النسخة 6 — لقطة 2099 الخاصة)..."
-                className="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg text-xs bg-black/80 border border-amber-500/40 text-white"
-              />
-              <input
-                value={newGenDesc}
-                onChange={(e) => setNewGenDesc(e.target.value)}
-                placeholder="وصف اللقطة..."
-                className="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg text-xs bg-black/80 border border-amber-500/40 text-white"
-              />
-              <button
-                onClick={async () => {
-                  const r = await fetch(`${API}/kali-env/generations`, {
-                    method: "POST",
-                    headers: novaAuthHeaders({ "Content-Type": "application/json" }),
-                    body: JSON.stringify({ title: newGenTitle, description: newGenDesc }),
-                  });
-                  const d = await r.json();
-                  if (d?.ok && Array.isArray(d.generations)) {
-                    setGenerations(d.generations);
-                    setNewGenTitle("");
-                    setNewGenDesc("");
-                    setGenMsg(`✓ تم إنشاء وحفظ «${d.generation?.title}»`);
-                  }
-                }}
-                className="px-4 py-1.5 rounded-xl text-xs font-black bg-amber-500 text-black hover:bg-amber-400"
-              >
-                + إنشاء وحفظ لقطة جديدة
-              </button>
-            </div>
-
-            {genMsg && (
-              <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-xs font-mono text-emerald-300">
-                {genMsg}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {generations.map((g) => (
-                <div
-                  key={g.id}
-                  className="p-3.5 rounded-2xl flex flex-col justify-between gap-2.5"
-                  style={{
-                    background: "rgba(251,191,36,0.06)",
-                    border: "1px solid rgba(251,191,36,0.35)",
-                  }}
-                >
-                  <div>
+              {/* 8 Cloud Storage Repositories */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                {(storage?.rows ?? []).map((row) => (
+                  <a
+                    key={row.id}
+                    href={row.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2.5 rounded-xl bg-black/65 border border-pink-500/35 hover:border-pink-400 flex flex-col justify-between gap-1"
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black bg-amber-500/20 text-amber-300">
-                        GEN #{g.genNumber} ({g.id})
-                      </span>
+                      <span className="text-xs font-bold text-white">{row.label}</span>
                       <span className="text-[10px] font-mono text-emerald-300">
-                        {g.toolsPresent}/{g.toolsTotal} أداة · {g.pythonToolsCount} بايثون
+                        {row.bytes >= 2 ** 30
+                          ? `${(row.bytes / 2 ** 30).toFixed(2)} GB`
+                          : `${(row.bytes / 2 ** 20).toFixed(1)} MB`}
                       </span>
                     </div>
-                    <div className="text-xs font-black text-white mt-1.5">{g.title}</div>
-                    <div className="text-[10px] text-slate-300 mt-1 leading-relaxed">{g.description}</div>
+                    <div className="text-[10px] font-mono text-pink-300">
+                      العناصر: {row.items} · النوع: {row.kind}
+                    </div>
+                  </a>
+                ))}
+              </div>
+
+              {/* Generations 1-5+ */}
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                {generations.map((g) => (
+                  <div key={g.id} className="p-2.5 rounded-xl bg-black/65 border border-amber-500/35 flex flex-col justify-between gap-1.5">
+                    <div>
+                      <div className="text-xs font-black text-amber-300">{g.title}</div>
+                      <div className="text-[10px] text-slate-300 mt-0.5">{g.description}</div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={async () => {
+                          const r = await fetch(`${API}/kali-env/generations/${g.id}/restore`, {
+                            method: "POST",
+                            headers: novaAuthHeaders(),
+                          });
+                          const d = await r.json();
+                          setGenMsg(d?.message || "✓ تم الاسترداد");
+                        }}
+                        className="flex-1 py-1 rounded bg-emerald-500/25 text-emerald-300 text-[10px] font-bold"
+                      >
+                        ♻️ استرداد
+                      </button>
+                      <a
+                        href={`${API}/kali-env/generations/${g.id}/export`}
+                        download
+                        className="px-2 py-1 rounded bg-sky-500/25 text-sky-300 text-[10px] font-bold"
+                      >
+                        📤 تصدير
+                      </a>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-white/10">
-                    <button
-                      onClick={async () => {
-                        const r = await fetch(`${API}/kali-env/generations/${g.id}/restore`, {
-                          method: "POST",
-                          headers: novaAuthHeaders(),
-                        });
-                        const d = await r.json();
-                        setGenMsg(d?.message || "✓ تم الاسترداد");
-                      }}
-                      className="flex-1 py-1 rounded-lg text-[10px] font-black bg-emerald-500/25 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40"
-                    >
-                      ♻️ استرداد وتفعيل
-                    </button>
-                    <a
-                      href={`${API}/kali-env/generations/${g.id}/export`}
-                      download={`nova-${g.id}-snapshot.json`}
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-sky-500/25 hover:bg-sky-500/40 text-sky-200 border border-sky-500/40"
-                    >
-                      📤 تصدير
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 11: 🛡️ SELF-HEAL ENGINE & ETERNAL AUDIT LOG
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "heal" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-            <div
-              className="lg:col-span-4 rounded-2xl p-4 flex flex-col gap-3"
-              style={{ background: "rgba(18,2,10,0.95)", border: "1px solid rgba(68,255,136,0.45)" }}
-            >
-              <div className="text-sm font-black text-emerald-300">
-                🛡️ محرك المعالجة التلقائية والمزامنة الذاتية (Self-Heal Engine)
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                يمنع حذف أو فقدان أي أداة أو ملف عند تدوير العقد؛ يعمّم الـ266 أداة والـ28 أداة بايثون ومساحات الشغل على جميع عقد الأسطول الـ10 أوتوماتيكيًا.
-              </p>
-              <div className="p-3 rounded-xl bg-black/70 border border-emerald-500/35 text-xs font-mono space-y-1.5">
-                <div className="text-emerald-300">الحالة: {selfHeal?.status || "جاهز ومتزامن 100%"}</div>
-                <div className="text-slate-300">العقد المتزامنة: {selfHeal?.syncedNodes ?? 10} عقدة كالي</div>
-                <div className="text-slate-400">
-                  آخر فحص: {selfHeal?.lastRunAt ? new Date(selfHeal.lastRunAt).toLocaleString() : "نشط"}
-                </div>
-              </div>
-              <button
-                onClick={() => void triggerSelfHeal()}
-                disabled={healBusy}
-                className="py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 text-white"
-              >
-                {healBusy ? "⏳ جاري الفحص والمزامنة..." : "⚡ تشغيل دورة المعالجة والمزامنة الذاتية الآن"}
-              </button>
-            </div>
-
-            <div
-              className="lg:col-span-8 rounded-2xl p-4 flex flex-col gap-3"
-              style={{ background: "rgba(12,1,8,0.96)", border: "1px solid rgba(255,43,77,0.4)" }}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-black text-white">
-                  📜 السجل الأبدي للعمليات والإشعارات («تمت وبتتم» · {events.length} حدث موثق)
-                </span>
-                <div className="flex items-center gap-1">
-                  {["ALL", "desktop", "browser", "pipeline", "self-heal", "install", "generation"].map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setEventFilter(f)}
-                      className="px-2 py-0.5 rounded text-[10px] font-mono"
-                      style={{
-                        background: eventFilter === f ? "#ff2b4d" : "rgba(255,255,255,0.06)",
-                        color: "#fff",
-                      }}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
 
-              <div className="flex flex-col gap-1.5 max-h-[460px] overflow-y-auto pr-1">
-                {events
-                  .filter((ev) => eventFilter === "ALL" || ev.kind.includes(eventFilter))
-                  .map((ev, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2.5 rounded-xl bg-black/70 border border-rose-500/25 flex items-start justify-between gap-2"
-                    >
-                      <div>
-                        <div className="text-xs font-bold text-white">{ev.title}</div>
-                        {ev.detail && <div className="text-[10px] font-mono text-rose-200/75 mt-0.5">{ev.detail}</div>}
-                      </div>
-                      <span className="text-[9px] font-mono text-slate-400 shrink-0" dir="ltr">
+              {/* Eternal Audit Log */}
+              <div className="p-3 rounded-xl bg-black/70 border border-white/10">
+                <div className="text-xs font-black text-emerald-300 mb-2">
+                  📜 السجل الأبدي للعمليات والإشعارات ({events.length} حدث موثق)
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
+                  {events.slice(0, 24).map((ev, i) => (
+                    <div key={i} className="p-2 rounded bg-white/5 border border-white/10 text-[10px] flex justify-between gap-2">
+                      <span className="text-white font-bold truncate">{ev.title}</span>
+                      <span className="text-slate-400 font-mono shrink-0" dir="ltr">
                         {new Date(ev.ts).toLocaleTimeString()}
                       </span>
                     </div>
                   ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* ──────────────────────────────────────────────────────────────────────
-         * TAB 12: 🌍 UNIFIED 2099 CYBERNOVA OS HUB (خريطة كل وحدات البرنامج)
-         * ────────────────────────────────────────────────────────────────────── */}
-        {activeTab === "osmap" && (
-          <div
-            className="rounded-2xl p-4 flex flex-col gap-3"
-            style={{ background: "rgba(18,2,10,0.95)", border: "1px solid rgba(167,139,250,0.45)" }}
-          >
-            <div className="text-sm font-black text-white">
-              🌍 خريطة وحدات منصة CyberNova & Nova Kali 2099 الشاملة
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-              {[
-                { title: "⚡ الشغل والشات الحي (دوشة)", path: "/agent-pro", desc: "الوكيل الحي + قياسات العقدة + المهام" },
-                { title: "🖥️ xDaw Desktop 2099", path: "/desktop", desc: "بيئة النوافذ المتعددة والتطبيقات" },
-                { title: "🛡️ استوديو البج باونتي", path: "/bug-bounty-studio", desc: "HackerOne & Google VRP Legal Scope" },
-                { title: "☢️ مركز الثغرات الحي", path: "/vuln-center", desc: "قاعدة بيانات الثغرات والاستغلالات" },
-                { title: "📡 CVE Live Sync", path: "/cve-live", desc: "مزامنة الثغرات اللحظية NVD & CISA KEV" },
-                { title: "🎯 محرك Nuclei القياسي", path: "/nuclei-engine", desc: "14,315 قالب فحص ثغرات" },
-                { title: "🌐 سطح الهجوم Attack Surface", path: "/attack-surface", desc: "تحليل الأصول والنطاقات المكشوفة" },
-                { title: "🧠 الاستخبارات Threat Intel", path: "/threat-intel", desc: "رصد التهديدات وIOCs" },
-                { title: "🛰️ أسطول نوفا الموحد", path: "/nova-fleet", desc: "إدارة العقد والوكيل السحابي" },
-                { title: "📋 Playbooks & الأتمتة", path: "/playbooks", desc: "خطط الاستجابة والفحص التلقائي" },
-                { title: "📄 مركز التقارير الأمنية", path: "/reports", desc: "توليد وتصدير التقارير الاحترافية" },
-                { title: "✅ الفحص الذاتي للنظام", path: "/self-check", desc: "التحقق الحي من كافة الخدمات" },
-              ].map((m) => (
-                <button
-                  key={m.path}
-                  onClick={() => navigate(m.path)}
-                  className="p-3.5 rounded-2xl text-right flex flex-col justify-between gap-1.5 bg-white/5 hover:bg-rose-500/20 border border-rose-500/30 transition-all hover:scale-[1.01]"
-                >
-                  <div className="text-xs font-black text-white">{m.title}</div>
-                  <div className="text-[10px] text-rose-200/75">{m.desc}</div>
-                  <span className="text-[9px] font-mono text-emerald-300 mt-1" dir="ltr">
-                    {m.path} →
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
