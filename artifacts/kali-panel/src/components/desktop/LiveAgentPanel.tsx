@@ -11004,7 +11004,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         { persona: "🎯 صائد المكافآت (Bounty Hunter)", role: "استطلاع عميق + CVSS 4.0 + تقارير HackerOne/Bugcrowd", color: "#fbbf24" },
                         { persona: "⚔️ مهندس الاستغلال (Red Team / 0-Day)", role: "تحليل البروتوكولات والـCWE وسلاسل الهجوم", color: "#f43f5e" },
                         { persona: "🛡️ المدافع السيادي (Blue/Purple NIST 2.0)", role: "كشف الشذوذات والتحصين الفوري", color: "#38bdf8" },
-                        { persona: "👑 القائد الاستراتيجي (Sovereign Synthesis)", role: "توحيد القرار والتنفيذ عبر 92 أداة و10 عقد", color: "#c084fc" },
+                        { persona: "👑 القائد الاستراتيجي (Sovereign Synthesis)", role: "توحيد القرار والتنفيذ عبر 96 أداة سيادية و426 ثغرة و10 عقد", color: "#c084fc" },
                       ];
                       const r = await fetch(`${API_BASE}/live-agent/sessions/${sessionId || "nova-root"}/messages`, {
                         method: "POST",
@@ -11069,7 +11069,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   <div className="text-[9px] font-bold text-fuchsia-300">Nova Multi-AI 2099 — 7 مخاخ سيادية متصلة ومفعّلة</div>
                   <div className="w-full max-w-md rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-right space-y-1">
                     <div className="text-[8.5px] font-bold text-emerald-300">
-                      ✅ السلسلة السيادية متصلة تلقائياً (7 مخاخ + مجلس الحكماء الأربعة + 92 أداة)
+                      ✅ السلسلة السيادية متصلة تلقائياً (7 مخاخ + مجلس الحكماء الأربعة + 96 أداة سيادية + 426 ثغرة + 16 كتاباً)
                     </div>
                     <div className="text-[7.5px] text-emerald-100/80 font-mono leading-relaxed">
                       Pollinations Free · OVH Llama-3.3-70B · Gemini · Groq · Mistral · OpenRouter · Self-Model + Kali 2099 تعمل كلها كرجل واحد على نفس خط الجلسة الدائمة دون الحاجة لإدخال مفاتيح يدوية.
@@ -12006,7 +12006,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   💰 مركز سكة المليارات، مختبر الـ0-Day، رادار الزوار، والأوتوبايلوت السيادي 2099
                 </div>
                 <div className="text-[9px] text-white/70 font-mono mt-0.5">
-                  متصل مباشرة بـ10 عقد كالي سحابية و92 أداة وكيل و294 أداة كالي وبايثون · كل فحص يُحفظ في الذاكرة الأبدية ويُرسل للوكيل الحي.
+                  متصل مباشرة بـ10 عقد كالي سحابية و96 أداة وكيل سيادية و426 ثغرة تكتيكية و294 أداة كالي وبايثون · كل فحص يُحفظ في الذاكرة الأبدية ويُرسل للوكيل الحي.
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
