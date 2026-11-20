@@ -1487,9 +1487,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   }
   const ok = /INSTALL_OK:/.test(r.stdout);
   const uid = Number((r.stdout.match(/^ROOT_UID:(\d+)$/m) ?? [])[1]);
-  /* سجل الأحداث الدائم — كل تثبيت حقيقي (نجاح أو فشل) يظهر في مركز الإشعارات. */
-  appendNovaEvent(ok ? "install" : "install-fail", `${ok ? "✓ تم تثبيت" : "✗ فشل تثبيت"} ${tool} (${r.plane ?? "طايرة؟"})`, tail.slice(0, 300));
   const tail = [r.stdout, r.stderr].filter(Boolean).join("\n").split("\n").slice(-12).join("\n");
+  /* سجل الأحداث الدائم — كل تثبيت حقيقي (نجاح أو فشل) يظهر في مركز الإشعارات.
+   * (بعد تعريف tail — خطأ TDZ مقاس 07:4xZ خلّى /install يرجع 500 — اتصلّح.) */
+  appendNovaEvent(ok ? "install" : "install-fail", `${ok ? "✓ تم تثبيت" : "✗ فشل تثبيت"} ${tool} (${r.plane ?? "طايرة؟"})`, tail.slice(0, 300));
   res.json({
     ok,
     tool,
