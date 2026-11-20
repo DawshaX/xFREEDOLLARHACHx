@@ -21,7 +21,7 @@
 # الجدولة الرسمية في fleet-nodes.yml، وده أكcelerator للـpush فقط.
 # ─────────────────────────────────────────────────────────────────────────────
 
-name: fleet-now
+name: fleet-now (TEST93y — موجة مُحمّلة ذاتيًا [force-wave])
 
 on:
   push:
