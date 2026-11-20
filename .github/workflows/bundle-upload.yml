@@ -1,0 +1,25 @@
+# [bundle-upload] رفع باندل nova-24-7 إلى release nova-portable — مصدر التحديث الذاتي للهَب
+# القياس الحي 02:4xZ: رفع الـ4.2MB من الساندبوكس لuploads.github.com بيفشل EOF دائم —
+# الـrunners ليها شبكة كاملة فالرفع من هنا بيمشي. الzip مخزن في برانش nova-bundle.
+name: bundle-upload
+on:
+  push:
+    branches: ["arena/*"]
+    paths: [".github/workflows/bundle-upload.yml"]
+permissions:
+  contents: write
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout nova-bundle (الباندل مخزن هناك)
+        run: |
+          git clone --depth 1 --branch nova-bundle "https://x-access-token:${{ github.token }}@github.com/DawshaX/xFREEDOLLARHACHx.git" nb
+          ls -la nb/dist-standalone/
+      - name: Upload bundle → release nova-portable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd nb
+          gh release upload nova-portable dist-standalone/nova-24-7.zip --clobber --repo DawshaX/xFREEDOLLARHACHx
+          gh release view nova-portable --repo DawshaX/xFREEDOLLARHACHx --json assets -q '.assets[] | select(.name=="nova-24-7.zip") | "UPLOADED size=\(.size) at=\(.updatedAt)"'

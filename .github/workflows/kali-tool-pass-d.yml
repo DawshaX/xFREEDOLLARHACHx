@@ -1,0 +1,41 @@
+# TEST92i — مسار D: pip + clone + amass/volatility (طبقات PIP/CLONE/STORE الفردية).
+name: "TEST93y-D — الموجة الجديدة: 18 pip+clone"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-tool-pass-d.yml"
+permissions:
+  contents: write
+concurrency:
+  group: kali-tool-pass-d
+  cancel-in-progress: false
+jobs:
+  pass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: تثبيت pip/clone (18 — واحد-واحد)
+        continue-on-error: true
+        run: |
+          L=state/tool-pass-d-log.txt
+          echo "=== TEST92i-D $(date -u +%FT%TZ) ===" > $L
+          for tool in maigret h8mail prowler scoutsuite pacu certipy bloodhound-python ssh-audit semgrep sherlock sublist3r dirsearch arjun photon osintgram gh-dork amass volatility; do
+            echo "--- INSTALL $tool $(date -u +%T) ---" >> $L
+            curl -s -m 900 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>&1 || echo "REQ_FAIL:$tool" >> $L
+            echo "" >> $L
+          done
+          echo "=== D DONE $(date -u +%FT%TZ) ===" >> $L
+          true
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/tool-pass-d-log.txt
+          git commit -m "state: TEST92i-D pass [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/1aad5cfd-xfreedollarhachx
+          git push origin HEAD:arena/1aad5cfd-xfreedollarhachx
+          exit 0

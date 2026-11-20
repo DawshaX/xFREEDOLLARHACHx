@@ -1,0 +1,76 @@
+# TEST93k — light-b: نص الحزم الخفيفة الثاني + pip tarballs + vulners.
+name: "kali store light-b v9 (14 حزمة + pip → tarballs → release kali-store)"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-store-light-b.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: kali-store-light-b
+  cancel-in-progress: false
+jobs:
+  light-b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: tarballs (حزمة-حزمة + pip)
+        run: |
+          mkdir -p store state
+          docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
+            export DEBIAN_FRONTEND=noninteractive
+            echo "=== light-b $(date -u +%FT%TZ) ===" | tee /store/build-light-b.log
+            apt-get update 2>&1 | tail -2 | tee -a /store/build-light-b.log || true
+            PKGS="redis-server elfutils ltrace strace zsh vim aria2 python3-pip dvcs-ripper king-phisher w3af sidguesser crackmapexec netexec"
+            apt-get install -y --no-install-recommends curl ca-certificates git python3-pip unzip >/dev/null 2>&1 || true
+            for p in $PKGS; do
+              if apt-get install -y --no-install-recommends $p >> /store/apt-b.log 2>&1; then
+                dpkg -L $p | grep -v -E "^/etc/|/usr/share/doc/|/usr/share/man/" > /tmp/fl.txt
+                tar czf /store/$p.tar.gz -T /tmp/fl.txt 2>/dev/null || true
+                echo "OK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-light-b.log
+              else
+                echo "MISS:$p" | tee -a /store/build-light-b.log
+              fi
+            done
+            PIP_PKGS="pgcli pentestly ssrfmap gh-dork social-analyzer fernet"
+            PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --break-system-packages -q $PIP_PKGS > /store/pip-b.log 2>&1 || true
+            SITE=$(python3 -c "import site;print(site.getsitepackages()[0])" 2>/dev/null || echo /usr/lib/python3/dist-packages)
+            for p in $PIP_PKGS; do
+              if pip3 show $p >/dev/null 2>&1; then
+                tar czf /store/$p.tar.gz "$SITE" $(command -v $p 2>/dev/null) 2>/dev/null || true
+                echo "PIPOK:$p $(stat -c%s /store/$p.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-light-b.log
+              else
+                echo "PIPMISS:$p" | tee -a /store/build-light-b.log
+              fi
+            done
+            git clone --depth 1 https://github.com/vulnersCom/nmap-vulners /usr/share/nmap/vulners >/dev/null 2>&1 || true
+            if [ -d /usr/share/nmap/vulners ]; then
+              tar czf /store/vulners.tar.gz /usr/share/nmap/vulners 2>/dev/null || true
+              echo "OK:vulners" | tee -a /store/build-light-b.log
+            fi
+            echo "LIGHT_B_DONE" | tee -a /store/build-light-b.log
+            true
+          ' || echo "docker-exit:$?" | tee -a state/kali-store-light-b.log
+          cp store/build-light-b.log state/kali-store-light-b.log 2>/dev/null || true
+      - name: رفع الأصول
+        continue-on-error: true
+        run: |
+          shopt -s nullglob
+          ASSETS=(store/*.tar.gz)
+          echo "light-b tarballs: ${#ASSETS[@]}"
+          gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "TEST93k"
+          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" store/build-light-b.log --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ light-b: ${#ASSETS[@]}"
+          exit 0
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/kali-store-light-b.log; git commit -m "state: light-b log [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/1aad5cfd-xfreedollarhachx; git push origin HEAD:arena/1aad5cfd-xfreedollarhachx; exit 0

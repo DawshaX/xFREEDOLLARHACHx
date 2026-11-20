@@ -1,0 +1,43 @@
+=== TEST93p-F 2026-11-19T23:52:01Z ===
+--- INSTALL ghidra 23:52:01 ---
+{"ok":true,"tool":"ghidra","pkg":"ghidra","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/local/bin/ghidraRun\nINSTALL_OK:ghidra\n"}
+--- INSTALL retdec 23:52:14 ---
+{"ok":true,"tool":"retdec","pkg":"retdec","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/local/bin/retdec-decompiler\nINSTALL_OK:retdec\n"}
+--- INSTALL empire 23:52:26 ---
+{"ok":true,"tool":"empire","pkg":"empire","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\n/usr/bin/powershell-empire\nINSTALL_OK:empire\n"}
+--- INSTALL dradis 23:54:07 ---
+{"ok":true,"tool":"dradis","pkg":"dradis","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:dradis\n"}
+--- INSTALL faraday 23:57:55 ---
+{"ok":true,"tool":"faraday","pkg":"faraday","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":0,"output":"ROOT_UID:0\nSTORE_MISS\nSTORE_EXTRACTED\n\nROOT_UID:0\nINSTALL_OK:faraday\n"}
+--- INSTALL libreoffice 00:02:36 ---
+{"ok":false,"tool":"libreoffice","pkg":"libreoffice","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 30536\n","error":"التثبيت فشل جوه الجست — الناتج تحت"}
+--- INSTALL casefile 00:02:40 ---
+{"ok":true,"tool":"casefile","pkg":"casefile","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\n\nSetting up casefile (1.0.1-1kali0) ...\n\nROOT_UID:0\nINSTALL_OK:casefile\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 30779\n"}
+--- INSTALL wkhtmltopdf 00:02:54 ---
+{"ok":true,"tool":"wkhtmltopdf","pkg":"wkhtmltopdf","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nProcessing triggers for man-db (2.13.1-1) ...\nsetpriv: setresgid failed: Operation not permitted\n\nROOT_UID:0\nINSTALL_OK:wkhtmltopdf\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 31840\n"}
+--- INSTALL pandoc 00:03:11 ---
+{"ok":true,"tool":"pandoc","pkg":"pandoc","inCatalog":true,"root":true,"uid":0,"plane":"runnervmccnms — عقدة كالي سحابية (rootfs + proot)","exitCode":1,"output":"ROOT_UID:0\nProcessing triggers for man-db (2.13.1-1) ...\nsetpriv: setresgid failed: Operation not permitted\n\nROOT_UID:0\nINSTALL_OK:pandoc\n\nproot-static: ./path/path.c:547: compare_paths2: Assertion `length2 > 0' failed.\nproot warning: signal 6 received from process 32314\n"}
+--- INSTALL legion 00:03:28 ---
+REQ_FAIL:legion
+
+--- INSTALL fern 00:18:28 ---
+REQ_FAIL:fern
+
+--- INSTALL venom 00:25:41 ---
+{"ok":false,"tool":"venom","pkg":"venom","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL w3af 00:25:41 ---
+{"ok":false,"tool":"w3af","pkg":"w3af","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL keepnote 00:25:42 ---
+{"ok":false,"tool":"keepnote","pkg":"keepnote","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL evilgrade 00:25:42 ---
+{"ok":false,"tool":"evilgrade","pkg":"evilgrade","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+--- INSTALL king-phisher 00:25:43 ---
+{"ok":false,"tool":"king-phisher","pkg":"king-phisher","inCatalog":true,"root":false,"uid":null,"plane":"الهَب — مافيش عقدة كالي ردت","exitCode":127,"output":"مافيش عقدة كالي ردت","error":"الجست مش root (uid≠0) — dpkg هيرفض. الهَب لازم يكون بنسخة TEST57"}
+=== F DONE 2026-11-20T00:25:43Z ===
+=== FINAL MEASURE (union) 00:25:43 ===
+{
+  "present": 254,
+  "total": 266,
+  "measuredOn": "اتحاد 1 عقدة كالي حية — runnervmccnms (rootfs + proot)"
+}
+

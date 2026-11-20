@@ -2,7 +2,7 @@
 # النصف الأول من الـ47 الناقصة على عقد الأسطول الحية (الأسطول قام 04:02
 # بالمخزن الكامل — metasploit msfconsole جاهز مقاس). السلسلة الكاملة في
 # المثبت: STORE → GitHub → pip → clone → apt — كل أداة بتلاقي أطبق مصدر.
-name: "TEST92f — تفعيل A retry على الأسطول"
+name: "TEST92m — تفعيل A منفردا (STORE/apt)"
 on:
   push:
     paths:

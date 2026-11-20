@@ -1,0 +1,43 @@
+# TEST92h — مسار C: أدوات GitHub binaries (سريع — كل واحدة URL مخبوزة ~10-30ث).
+# العقد الجديدة (موجة TEST93i) مبنية من المخزن الكامل لكن أدوات الURL layer
+# كانت على العقد القديمة الميتة — بتركب من جديد واحد-واحد بretry الجست.
+name: "TEST93y-C — الموجة الجديدة: 18 binaries"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-tool-pass-c.yml"
+permissions:
+  contents: write
+concurrency:
+  group: kali-tool-pass-c
+  cancel-in-progress: false
+jobs:
+  pass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: تثبيت GitHub binaries (18 — واحد-واحد)
+        continue-on-error: true
+        run: |
+          L=state/tool-pass-c-log.txt
+          echo "=== TEST92h-C $(date -u +%FT%TZ) ===" > $L
+          for tool in subfinder naabu dnsx httpx katana cariddi bettercap asnmap shuffledns chisel ligolo-ng mongosh grype syft trufflehog dockle subzy gotator; do
+            echo "--- INSTALL $tool $(date -u +%T) ---" >> $L
+            curl -s -m 900 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>&1 || echo "REQ_FAIL:$tool" >> $L
+            echo "" >> $L
+          done
+          echo "=== C DONE $(date -u +%FT%TZ) ===" >> $L
+          true
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/tool-pass-c-log.txt
+          git commit -m "state: TEST92h-C pass [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/1aad5cfd-xfreedollarhachx
+          git push origin HEAD:arena/1aad5cfd-xfreedollarhachx
+          exit 0

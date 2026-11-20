@@ -16,7 +16,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { requireOps } from "../lib/ops/gate";
 import { detectProotLayout, prootHealth, runInProot } from "../lib/ops/proot";
-import { kaliAnywhereExec, kaliAnywhereExecStream } from "../lib/ops/kali-anywhere";
+import { kaliAnywhereExec, kaliFleetUnionExec, kaliAnywhereExecStream } from "../lib/ops/kali-anywhere";
 import { readProbeCache, probeAllKaliNodes, orderPrewarmedFirst } from "../lib/ops/kali-node-probe";
 import { PROOT_GUEST_EXEC } from "../lib/ops/kali-node-installer";
 import { execStreamOnLocalAgent, execOnLocalAgent } from "./local-agent";
@@ -188,7 +188,7 @@ const APT_CATALOG: Record<string, string[]> = {
     "censys", "shodan", "isr-evilgrade".replace("isr-", ""),
   ],
   "02-تحليل-الثغرات": [
-    "nikto", "nuclei", "wapiti", "legs", "nmap", " Lynis".trim().toLowerCase(), "unix-privesc-check",
+    "nikto", "nuclei", "wapiti", "legion", "nmap", " Lynis".trim().toLowerCase(), "unix-privesc-check",
     "checksec", "gvm", "openvas", "pentestly", "pip-audit", "trivy", "grype",
   ],
   "03-تحليل-تطبيقات-الويب": [
@@ -208,7 +208,7 @@ const APT_CATALOG: Record<string, string[]> = {
   ],
   "06-هجمات-اللاسلكي": [
     "aircrack-ng", "airmon-ng", "airodump-ng", "aireplay-ng", "airbase-ng", "reaver",
-    "bully", "wifite", "kismet", "hcxdumptool", "hcxtools", "hashcat", "fernet",
+    "bully", "wifite", "kismet", "hcxdumptool", "hcxtools", "hashcat", "fern",
     "fern-wifi-cracker", "pixiewps", "wifipumpkin3", "eaphammer", "hostapd-wpe",
   ],
   "07-الهندسة-العكسية": [
@@ -351,7 +351,27 @@ router.get("/kali-env/tools", async (_req, res) => {
       })
       .join("; ") + "; true"; /* TEST60 — exit code بتاع آخر أداة مش مطلوب: القياس من سطور OK: — لو آخر أداة ناقصة كان الرد كله بيرمي ويبقى total:0 (مقاس حي 07:25Z) */
     const fleet = await fleetKaliSummary();
-    const r = await kaliAnywhereExec(probe, 60_000);
+    /* TEST93q — القياس الاتحادي: probe على كل العقد الحية (حتى 6) بالتوازي
+     * وunion للنتائج. عقدة طازة عمرها ما تتسطب عليها C/D كانت بتدبل كتالوج
+     * العقد المتراكم (مقاس حي 10:2xZ: 205 عقدة E فوق 228 عقدة C/D/E). الاتحاد
+     * هو الكتالوج الحقيقي: كل أداة «موجودة» بس لو **مقاسة موجودة على عقدة حية**. */
+        /* TEST93w — maxNodes 16: مقاس 14:28 — كاب ال6 كان بيستثني runnervm0hi8g
+     * (اللي عليها C/D/F كاملة) فالاتحاد كان 209 كاذبة بدل ~261. البروب رخيص
+     * (command -v ×266 لكل عقدة) — غطي كل الأسطول. */
+    const union = await kaliFleetUnionExec(probe, 90_000, 16);
+    const foundUnion = new Set<string>();
+    for (const so of union.stdouts) {
+      for (const l of so.split("\n").map((x) => x.trim()).filter((x) => x.startsWith("OK:"))) foundUnion.add(l.slice(3));
+    }
+    let r: { stdout: string; plane: string } | null = null;
+    if (foundUnion.size) {
+      r = {
+        stdout: [...foundUnion].map((t) => `OK:${t}`).join("\n"),
+        plane: `اتحاد ${union.planes.length} عقدة كالي حية — ${union.planes.slice(0, 4).join(" · ")}${union.planes.length > 4 ? " …" : ""}`,
+      };
+    } else {
+      r = await kaliAnywhereExec(probe, 60_000);
+    }
     if (r && r.stdout && r.stdout.includes("OK:")) {
       const found = new Set(
         r.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)),
@@ -530,10 +550,10 @@ const TOOL_BIN_ALIASES: Record<string, string[]> = {
   "peass-ng": ["linpeas", "linpeas.sh"],
   socialanalyzer: ["social-analyzer", "socialanalyzer"],
   "gh-dork": ["gh-dork"],
-  fernet: ["fernet"],
+  fern: ["fern"],
   pentestly: ["pentestly"],
   ssrfmap: ["ssrfmap"],
-  sidguesser: ["sidsweep", "sidguesser"],
+  sidguesser: ["sidguess", "sidguesser"],
   aria2: ["aria2c", "aria2"],
   "king-phisher": ["king-phisher"],
 };
@@ -915,6 +935,191 @@ const DESKTOP_FRAME_TEST = Buffer.from(
   "base64",
 );
 
+/* إطار «بيجاهز» — بيتبعت فورًا مع heartbeat لحد أول إطار حقيقي من العقدة
+ * (القياس الحي: تثبيت xvfb+ffmpeg جوه الجست بياخد دقائق — من غير الإطار ده
+ * المتصفح شاشة سوداء والproxy مايفتحش — إثبات 2026-11-20 02:3xZ: HTTP 000 خلال 25s). */
+const DESKTOP_FRAME_PREP = Buffer.from(
+  "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABIMDRANCxIQDhAUExIVGywdGxgYGzYnKSAsQDlEQz85Pj1HUGZXR0thTT0+WXlaYWltcnNyRVV9hn" +
+  "xvhWZwcm7/2wBDARMUFBsXGzQdHTRuST5Jbm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm7/wAARCAGQ" +
+  "AoADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhBy" +
+  "JxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKT" +
+  "lJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAA" +
+  "AAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRom" +
+  "JygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExc" +
+  "bHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDEVdPs9IsZ7iw+0SXHmZbzmTG1sdqi+36V/wBAb/yaejUP+QBp" +
+  "P/bb/wBDFZdc1Ompptt7vq+78y5StojU+36V/wBAb/yaej7fpX/QG/8AJp6y6K09hHu/vf8AmLnf9JGp9v0r/oDf+TT0fb9K/wCgN/5NPWXRR7" +
+  "CPd/e/8w53/SRqfb9K/wCgN/5NPR9v0r/oDf8Ak09ZdFHsI9397/zDnf8ASRqfb9K/6A3/AJNPR9v0r/oDf+TT1l0Uewj3f3v/ADDnf9JGp9v0" +
+  "r/oDf+TT0fb9K/6A3/k09ZdFHsI9397/AMw53/SRqfb9K/6A3/k09H2/Sv8AoDf+TT1l0Uewj3f3v/MOd/0kan2/Sv8AoDf+TT0fb9K/6A3/AJ" +
+  "NPWXRR7CPd/e/8w53/AEkan2/Sv+gN/wCTT0fb9K/6A3/k09ZdFHsI9397/wAw53/SRqfb9K/6A3/k09H2/Sv+gN/5NPWXRR7CPd/e/wDMOd/0" +
+  "kan2/Sv+gN/5NPR9v0r/AKA3/k09ZdFHsI9397/zDnf9JGp9v0r/AKA3/k09H2/Sv+gN/wCTT1l0Uewj3f3v/MOd/wBJGp9v0r/oDf8Ak09H2/" +
+  "Sv+gN/5NPWXRR7CPd/e/8AMOd/0kan2/Sv+gN/5NPR9v0r/oDf+TT1l0Uewj3f3v8AzDnf9JGp9v0r/oDf+TT0fb9K/wCgN/5NPWXRR7CPd/e/" +
+  "8w53/SRqfb9K/wCgN/5NPR9v0r/oDf8Ak09ZdFHsI9397/zDnf8ASRqfb9K/6A3/AJNPR9v0r/oDf+TT1l0Uewj3f3v/ADDnf9JGp9v0r/oDf+" +
+  "TT0fb9K/6A3/k09ZdFHsI9397/AMw53/SRqfb9K/6A3/k09H2/Sv8AoDf+TT1l0Uewj3f3v/MOd/0kan2/Sv8AoDf+TT0fb9K/6A3/AJNPWXRR" +
+  "7CPd/e/8w53/AEkan2/Sv+gN/wCTT0fb9K/6A3/k09ZdFHsI9397/wAw53/SRqfb9K/6A3/k09H2/Sv+gN/5NPWXRR7CPd/e/wDMOd/0kan2/S" +
+  "v+gN/5NPR9v0r/AKA3/k09ZdFHsI9397/zDnf9JGp9v0r/AKA3/k09H2/Sv+gN/wCTT1l0Uewj3f3v/MOd/wBJGp9v0r/oDf8Ak09H2/Sv+gN/" +
+  "5NPWXRR7CPd/e/8AMOd/0kan2/Sv+gN/5NPR9v0r/oDf+TT1l0Uewj3f3v8AzDnf9JGp9v0r/oDf+TT0fb9K/wCgN/5NPWXRR7CPd/e/8w53/S" +
+  "Rqfb9K/wCgN/5NPR9v0r/oDf8Ak09ZdFHsI9397/zDnf8ASRqfb9K/6A3/AJNPR9v0r/oDf+TT1l0Uewj3f3v/ADDnf9JGp9v0r/oDf+TT0fb9" +
+  "K/6A3/k09ZdFHsI9397/AMw53/SRqfb9K/6A3/k09H2/Sv8AoDf+TT1l0Uewj3f3v/MOd/0kan2/Sv8AoDf+TT0fb9K/6A3/AJNPWXRR7CPd/e" +
+  "/8w53/AEkan2/Sv+gN/wCTT0fb9K/6A3/k09ZdFHsI9397/wAw53/SRqfb9K/6A3/k09H2/Sv+gN/5NPWXRR7CPd/e/wDMOd/0kan2/Sv+gN/5" +
+  "NPR9v0r/AKA3/k09ZdFHsI9397/zDnf9JGp9v0r/AKA3/k09H2/Sv+gN/wCTT1l0Uewj3f3v/MOd/wBJGp9v0r/oDf8Ak09H2/Sv+gN/5NPWXR" +
+  "R7CPd/e/8AMOd/0kan2/Sv+gN/5NPR9v0r/oDf+TT1l0Uewj3f3v8AzDnf9JGp9v0r/oDf+TT0fb9K/wCgN/5NPWXRR7CPd/e/8w53/SRqfb9K" +
+  "/wCgN/5NPUrLp95pF9Pb2H2eS38vDecz53NjvWNWpp//ACANW/7Y/wDoZrOpTUEmm911fdeY4yvow1D/AJAGk/8Abb/0MVl1qah/yANJ/wC23/" +
+  "oYrLrSh8L9X+bFPf7vyCiiitiQooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo" +
+  "AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoo" +
+  "ooAK1NP/5AGrf9sf8A0M1l1qaf/wAgDVv+2P8A6Gaxr/CvVfmiob/f+Qah/wAgDSf+23/oYrLrU1D/AJAGk/8Abb/0MVl0UPhfq/zYT3+78goo" +
+  "orYkKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiig" +
+  "AooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACtTT/8AkAat/wBsf/Qz" +
+  "WXWpp/8AyANW/wC2P/oZrGv8K9V+aKhv9/5BqH/IA0n/ALbf+hisutTUP+QBpP8A22/9DFZdFD4X6v8ANhPf7vyCiiitiQooooAKKKKACiiigA" +
+  "ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiii" +
+  "gAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK1NP/AOQBq3/bH/0M1l1qaf8A8gDVv+2P/oZrGv" +
+  "8ACvVfmiob/f8AkGof8gDSf+23/oYrLrU1D/kAaT/22/8AQxWXRQ+F+r/NhPf7vyCiiitiQooooAKKKKACiiigAooooAKKKKACiiigAooooAKK" +
+  "KKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA" +
+  "KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK1NP8A+QBq3/bH/wBDNZdamn/8gDVv+2P/AKGaxr/CvVfmiob/AH/kGof8gDSf" +
+  "+23/AKGKy61NQ/5AGk/9tv8A0MVl0UPhfq/zYT3+78gooorYkKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoo" +
+  "ooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigA" +
+  "ooooAKKKKACiiigAooooAKKKKACtTT/+QBq3/bH/ANDNZdamn/8AIA1b/tj/AOhmsa/wr1X5oqG/3/kGof8AIA0n/tt/6GKy61NQ/wCQBpP/AG" +
+  "2/9DFZdFD4X6v82E9/u/IKKKK2JCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii" +
+  "igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC" +
+  "iiigArU0//AJAGrf8AbH/0M1l1qaf/AMgDVv8Atj/6Gaxr/CvVfmiob/f+Qah/yANJ/wC23/oYrLrU1D/kAaT/ANtv/QxWXRQ+F+r/ADYT3+78" +
+  "gooorYkKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi" +
+  "iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACtTT/wDkAat/2x/9" +
+  "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" +
+  "oaoWWqXFhePcW5A3k7kbkEehqnRQqFNOTtvuHPLTyNpddtFuhdDSoxcA53iUgZ9cYxWfqd++pXjXEiKjEAYXpxVWinCjCD5ktfVg5NqwUUUVqS" +
+  "FFFFABRRRQAUUUUAFFFFABWpp//IA1b/tj/wChmsutTT/+QBq3/bH/ANDNY1/hXqvzRUN/v/INQ/5AGk/9tv8A0MVl1qah/wAgDSf+23/oYrLo" +
+  "ofC/V/mwnv8Ad+QUUUVsSFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRR" +
+  "QAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABW" +
+  "pp//ACANW/7Y/wDoZrLrU0//AJAGrf8AbH/0M1jX+Feq/NFQ3+/8g1D/AJAGk/8Abb/0MVl1qah/yANJ/wC23/oYrLoofC/V/mwnv935BRRRWx" +
+  "IUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRR" +
+  "RQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFamn/wDIA1b/ALY/+hmsut" +
+  "TT/wDkAat/2x/9DNY1/hXqvzRUN/v/ACDUP+QBpP8A22/9DFZdamof8gDSf+23/oYrLoofC/V/mwnv935BRRRWxIUUUUAFFFFABRRRQAUUUUAF" +
+  "FFFABRRRQAUUUUAFFFFABRRRQBd03ThqPmxxzBbhV3Rxlf8AWY6jOeDU1xoksc0NtE4lvHTe8IwPLHXGSeTjtTNJvYNPaW4ZGe5C4gGBtUnuea" +
+  "nuNXikv7XUIkdLtMGcYG1yO457imIh0vR5r+WBnAjt5JNm8soJI5OATk1b/sWCUaj5XmBrULsHnIwbJIJJAwOB07U+bXbX+1bKS3ilSztizbMD" +
+  "cWYknjOPTvVa11O2jj1SOZZsXhGwoB8vJPPPvRoBn3VpPZyBLhNhZQy8ggg9wRwaLS1e7kZIyoKoznd6AZNWdVv47tLWGBXEVtEEDPjc3qeOlT" +
+  "aTr1zpyGHzW8gK21VRThiODz70gMqtZdIjXREvHbdLKxVR56Iqj1Oep9uKoXl5Pfzma6k8yQgDOAOPwqxNfxSaHb2QV/NilZySBtwaALeoaF5E" +
+  "9va2gM1xKoYkzJgnBJAXqBx1JqmNFvyFPkDDNtB8xcbvTOeD7VfOt2x8QW1/sl8qKMIwwNxO0jjn3qFNWgWxghKybo737QTgYK+nXrT0ApxaXe" +
+  "StOEhObf8A1uWA2fmfag6Vei5EHkEyMm8YIIK+uemPetu3uobyHXrjEiwyBD0G4DJ7ZqGPxDBE0cKRO1utsYNzKpc574OR+FFgMltNu1uIofJL" +
+  "PKMx7SGDD2I4NE+mXdtbmeWMCIPs3h1YbvTg1p2mtMmo2ZTfPHDuAQxpF97+6F/x5p2oLFaeGltv3qO9zvVJgFfbjqRnigDMs7RJ7G8mZJmaBV" +
+  "KlCoVck/ezz+VOl0W/hEnmQYMa72AdSQvrgHpS2F/Fbadf27q5e5VQhUDAwT1/OtCXXbZ9UvLkJNsntTCoIGQ3HXnpxQBkyaddRwiV4wqld4Bd" +
+  "d23125zj8Ks32iyWlvbSiaJ/OUMQZEG0k44+bkc9RxU41eB9OeC5V7h/K8uMSRL+7PYh+vHpimS6jZ3EGnieOVmtAEePaNsgz65yPyo0ApT6fc" +
+  "QQCZ1Vot23fHIrgH0ypNa17oVtb/2jseY/ZY43TJHJbrnio7zV7OXTLq1gidfNkDpiFECgHocHn61Je67bXH9o7EmH2qONEyBwV655o0AqXmiz" +
+  "LdTpaQSiOFVZ/OdMrnucHGKrnSb0XIt/IPmFPMGGGNvrnOMe9ad7rttcf2jsSYfao40TIHBXOc80+DWI53igjgmdTY/ZpAoG7Pqozz9KNAMW50" +
+  "+5tIY5Z4wscudjBgQ2PoaLawubuMvDHlAdpZmCjPpkkc+1amu+XDpOm2gLCSMOWR8BlBPGR2+lVbe/t20kWF2JVVZvNV4gCTxjBBI/OgCCPSr2" +
+  "Rp1WAg2+PNDELtz9TUV3aT2UgjuI9jMoYcggg9wRwa1rjXorn+1C0TobtUWMDBxt9apatfxXqWYiVwYLdYm3AckentQBN/ZUUehLfSMWkkYhVW" +
+  "ZFCjHvkk+w5pdT0RoNRlt7JXeOJFZnkYALkdzwBUE1/FJodvZBX82KVnJIG3BrTn8RW8012ojcQ3CphmjVypX1U8EUaAY4028N0bbyG80DcRxj" +
+  "Hrnpj3qe00aefUIbWYiESjcsmQwI9ucN+Bq1Br4ju3aXfNE9v5GTGgKjthQMY9jTE1oR31lIWeWG2ZiF8pI8A9cBf8aNAM28tmtLhomZGwTgo4" +
+  "bv7E4+lWE0W/dYysGfNTzEG9csvsM5P0qC9eGS6kkt2kZHYt86hSMnpwTWvBrltHfaZOyTbLSDy3AAyTtI456UAZlvpd5cxrJFDlWJCksF3Edh" +
+  "k8/hSQ6ddTK7rCQsbbGLELhvTnqfatCLWLV0sftCTK9lIXTywCHBOecnjoPWkl1mC8tJobqORN1ybhTFg/8AATnH50aAM1PRWg1Se2sld44VVm" +
+  "eRgAuR3PAFZtzbTWspinQo4GcH09fet648RW81xegRuIbkJhmjVypUd1PBFZGpXrXsyMXZxGgRSyKnA9l4A/OhgVKKKKQwooooAKKKKACiiigA" +
+  "ooooAKKKKACiiigAooooAKKKKACiiigArU0//kAat/2x/wDQzWXWpp//ACANW/7Y/wDoZrGv8K9V+aKhv9/5BqH/ACANJ/7bf+hisutTUP8AkA" +
+  "aT/wBtv/QxWXRQ+F+r/NhPf7vyCiiitiQooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACii" +
+  "igAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAC" +
+  "iiigAooooAK1NP/wCQBq3/AGx/9DNZdamn/wDIA1b/ALY/+hmsa/wr1X5oqG/3/kGof8gDSf8Att/6GKy61NQ/5AGk/wDbb/0MVl0UPhfq/wA2" +
+  "E9/u/IKKKK2JCiiigAooooAKKKKACiiigAooooAKKKKACiiigAqeCznuInkjUeXH952YKB+JNQVs2czJ4YusBPllUDKKev1HNROTitCopN6mXP" +
+  "azW6xNMm0SqHTkHI9airp7e2t91uWt4W/4lxkIKDluOT7+9VdLEd7BseALK0n+uW3R1C46Efw/X9azVbS9i3T1MQRSGIyiNjGDgvjgH0zTra3l" +
+  "u51hgXfI3QZAz371uW/mLot7BbrHM8VxgBIg+V9cEHI9zVHw3/yHLb6t/wCgmq9o+WT7C5FdLuU5bSeGBJpExHISqnI5I4NQ10SC1gg0+WeCJl" +
+  "lmlSQsgJI3EAk+1PFjY2d3aWF0I2Ys0juQOeoQZ9Pap9tbdD9l2Oaqa2tJrosIU3bBuYlgoUepJ4rQ1VIVtFDW8kdwJPvmFYgV9MAnP1p+hysm" +
+  "n6lgIdsW4bkB/mOR7VTqPl5kSoe9ZmMylWKnGQccHIorYn2R6FZSJFAJZncNI0a5xk+3/wCqrkunKtlepOEkeKIOkiW6xjPXgj735UnVS3H7Nv" +
+  "Y5uiuotre3a406BraEpNabn+QZY4659ap+Vaz2Omz3EccYkmKSMihQVz3x/OhVl2/rX/IPZ+Zh1LbWs10zrAm4opduQMAdTzWxq0VvHb3Km2ZS" +
+  "HHkyLCqKBnpkN83FVdBijmnuRLGrhbZ2AYZweOaftLwckLktKxmUV09vBbtd6Xbm2gKT22ZCYxljtJzn1461g2SKdUgjYBlMyqQRkEbqI1L3Bw" +
+  "sVqltrWa6Z1gTcUUu3IGAOp5reulhS31R1trcNbTKIv3Y4ycH6/jTms7ZdaukEEez7GZAu0YDccgdqn22m39af5ley1Oaorp7eC3a70u3NtAUn" +
+  "tsyExjLHaTnPrx1qC2so5rXSzHDG+24ZZjtHTdwG/D1o9su39a/5B7J/18v8zBEUhiMojYxg4L44B9M02ulcuLDUobWKNmjujtjWJWwufTFIIL" +
+  "FILcrbtNbvD+8ZIlPzdyXLAqR6Ue27oPZeZzdFb2n20F3YRxrEImAYvM8SujemWzlaxIfK85PP3+Vn5tmN2PbNaRne67EONrDKK0/+JH/1Ef8A" +
+  "xyqN19n88/ZPN8rjHm43fpTUr9BONuoT2s1usTTJtEqh05ByPWoq6qSGOXT7Xy445b0Wi+XHIMjHcgdzVazgtV0+1kEBmYs32hVhDt16HJGz8K" +
+  "xVbTVGjpa6HPUVv2lvafZJnt4jJKLgjb5SzMqdhgnH4ilt4Ld/7Va2tV+RUMSSqGKE5yB1/L8Kr2y10F7NnP0Vp63FFEbUhEjnaEGZEGAG+nY1" +
+  "es7YNpemvFawyu8rCQtGCSu49fb37U3USipdxKF20c9RXRRWMQuJpLdonthcbNggWUge5PRffNI9lBDPqqW0KSXEZXyY2XdgHrgHrS9sh+yZz1" +
+  "FdS9nZ/bIRJDEkhsg6oqjDP9ONx+p5rH1dYVWDZBJFNgiTdGI93odoJxRGqpO1glTcVczqK2LCFW0nzLWCOe788B1dQxVMeh7e9XfslqJdWFpD" +
+  "FL5aoYwQGCtznH49vwodVJ2sCptnNUV0y2lkbmPzo40uja7jCFGPM7fLwM+1R28NtJq1gjWrK5DiVZYlQPgHB2AnFL2y7D9k+5ztFbF2kUuhvP" +
+  "5MaSJdGNSihflx0PrWPWsZcxnKNgoooqhBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAVqaf/yANW/7Y/8AoZrLrU0//kAat/2x/wDQzWNf" +
+  "4V6r80VDf7/yDUP+QBpP/bb/ANDFZdamof8AIA0n/tt/6GKy6KHwv1f5sJ7/AHfkFFFFbEhRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUU" +
+  "UUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAVYt72S3triBFUrcABiRyMelV6KTSe4J2" +
+  "CrEt7JLZQ2rKvlwklSBycnvVeihpML2CpIZRETuijlB7OD/Qg1HRRuBPeXkt7KJJsfKoVVUYCgdAKgoooSS0QN3CrFveyW9tcQIqlbgAMSORj0" +
+  "qvRQ0nuCdgooopgFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFamn/8AIA1b/tj/AOhmsutTT/8AkAat/wBsf/QzWNf4V6r8" +
+  "0VDf7/yDUP8AkAaT/wBtv/QxWXWpqH/IA0n/ALbf+hisuih8L9X+bCe/3fkFFFFbEhRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFF" +
+  "FFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUA" +
+  "FFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAVqaf/AMgDVv8Atj/6Gay61NP/AOQBq3/bH/0M1jX+Feq/NFQ3+/8AINQ/5AGk/wDbb/" +
+  "0MVl1qah/yANJ/7bf+hisuih8L9X+bCe/3fkFFFFbEhRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRR" +
+  "QAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABR" +
+  "RRQAUUUUAFFFFABRRRQAVqaf8A8gDVv+2P/oZrLrU0/wD5AGrf9sf/AEM1jX+Feq/NFQ3+/wDINQ/5AGk/9tv/AEMVl1qah/yANJ/7bf8AoYrL" +
+  "oofC/V/mwnv935BRRRWxIUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFF" +
+  "ABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFa" +
+  "mn/8gDVv+2P/AKGay61NP/5AGrf9sf8A0M1jX+Feq/NFQ3+/8g1D/kAaT/22/wDQxWXWpqH/ACANJ/7bf+hisuih8L9X+bCe/wB35BRRRWxIUU" +
+  "UUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQA" +
+  "UUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFamn/8AIA1b/tj/AOhmsutTT/" +
+  "8AkAat/wBsf/QzWNf4V6r80VDf7/yDUP8AkAaT/wBtv/QxWXWpqH/IA0n/ALbf+hisuih8L9X+bCe/3fkFFFFbEhRRRQAUUUUAFFFFABRRRQAU" +
+  "UUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQ" +
+  "AUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAVqaf/AMgDVv8Atj/6Gay61NP/AOQBq3/bH/0M1jX+Feq/" +
+  "NFQ3+/8AINQ/5AGk/wDbb/0MVl1qah/yANJ/7bf+hisuih8L9X+bCe/3fkFFFFbEhRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFF" +
+  "FABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAF" +
+  "FFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAVqaf8A8gDVv+2P/oZrLrU0/wD5AGrf9sf/AEM1jX+Feq/NFQ3+/wDINQ/5AGk/9tv/AE" +
+  "MVl1qah/yANJ/7bf8AoYrLoofC/V/mwnv935BRRRWxIUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUU" +
+  "UAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAU" +
+  "UUUAFFFFABRRRQAUUUUAFamn/8gDVv+2P/AKGay61NP/5AGrf9sf8A0M1jX+Feq/NFQ3+/8g1D/kAaT/22/wDQxWXWpqH/ACANJ/7bf+hisuih" +
+  "8L9X+bCe/wB35BRRRWxIUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFA" +
+  "BRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFam" +
+  "n/8AIA1b/tj/AOhmsutTT/8AkAat/wBsf/QzWNf4V6r80VDf7/yDUP8AkAaT/wBtv/QxWXWyrafeaRYwXF/9nkt/Myvks+dzZ7VF9g0r/oM/+S" +
+  "r1nTqKCaae76Pu/Ico31Rl0VqfYNK/6DP/AJKvR9g0r/oM/wDkq9ae3j2f3P8AyFyP+mjLorU+waV/0Gf/ACVej7BpX/QZ/wDJV6Pbx7P7n/kH" +
+  "I/6aMuitT7BpX/QZ/wDJV6PsGlf9Bn/yVej28ez+5/5ByP8Apoy6K1PsGlf9Bn/yVej7BpX/AEGf/JV6Pbx7P7n/AJByP+mjLorU+waV/wBBn/" +
+  "yVej7BpX/QZ/8AJV6Pbx7P7n/kHI/6aMuitT7BpX/QZ/8AJV6PsGlf9Bn/AMlXo9vHs/uf+Qcj/poy6K1PsGlf9Bn/AMlXo+waV/0Gf/JV6Pbx" +
+  "7P7n/kHI/wCmjLorU+waV/0Gf/JV6PsGlf8AQZ/8lXo9vHs/uf8AkHI/6aMuitT7BpX/AEGf/JV6PsGlf9Bn/wAlXo9vHs/uf+Qcj/poy6K1Ps" +
+  "Glf9Bn/wAlXo+waV/0Gf8AyVej28ez+5/5ByP+mjLorU+waV/0Gf8AyVej7BpX/QZ/8lXo9vHs/uf+Qcj/AKaMuitT7BpX/QZ/8lXo+waV/wBB" +
+  "n/yVej28ez+5/wCQcj/poy6K1PsGlf8AQZ/8lXo+waV/0Gf/ACVej28ez+5/5ByP+mjLorU+waV/0Gf/ACVej7BpX/QZ/wDJV6Pbx7P7n/kHI/" +
+  "6aMuitT7BpX/QZ/wDJV6PsGlf9Bn/yVej28ez+5/5ByP8Apoy6K1PsGlf9Bn/yVej7BpX/AEGf/JV6Pbx7P7n/AJByP+mjLorU+waV/wBBn/yV" +
+  "ej7BpX/QZ/8AJV6Pbx7P7n/kHI/6aMuitT7BpX/QZ/8AJV6PsGlf9Bn/AMlXo9vHs/uf+Qcj/poy6K1PsGlf9Bn/AMlXo+waV/0Gf/JV6Pbx7P" +
+  "7n/kHI/wCmjLorU+waV/0Gf/JV6PsGlf8AQZ/8lXo9vHs/uf8AkHI/6aMuitT7BpX/AEGf/JV6PsGlf9Bn/wAlXo9vHs/uf+Qcj/poy6K1PsGl" +
+  "f9Bn/wAlXo+waV/0Gf8AyVej28ez+5/5ByP+mjLorU+waV/0Gf8AyVej7BpX/QZ/8lXo9vHs/uf+Qcj/AKaMuitT7BpX/QZ/8lXo+waV/wBBn/" +
+  "yVej28ez+5/wCQcj/poy6K1PsGlf8AQZ/8lXo+waV/0Gf/ACVej28ez+5/5ByP+mjLorU+waV/0Gf/ACVej7BpX/QZ/wDJV6Pbx7P7n/kHI/6a" +
+  "MuitT7BpX/QZ/wDJV6PsGlf9Bn/yVej28ez+5/5ByP8Apoy6K1PsGlf9Bn/yVej7BpX/AEGf/JV6Pbx7P7n/AJByP+mjLorU+waV/wBBn/yVej" +
+  "7BpX/QZ/8AJV6Pbx7P7n/kHI/6aMuitT7BpX/QZ/8AJV6PsGlf9Bn/AMlXo9vHs/uf+Qcj/poy6K1PsGlf9Bn/AMlXo+waV/0Gf/JV6Pbx7P7n" +
+  "/kHI/wCmjLorU+waV/0Gf/JV6PsGlf8AQZ/8lXo9vHs/uf8AkHI/6aMuitT7BpX/AEGf/JV6PsGlf9Bn/wAlXo9vHs/uf+Qcj/poy6K1PsGlf9" +
+  "Bn/wAlXo+waV/0Gf8AyVej28ez+5/5ByP+mjLorU+waV/0Gf8AyVej7BpX/QZ/8lXo9vHs/uf+Qcj/AKaMuitT7BpX/QZ/8lXo+waV/wBBn/yV" +
+  "ej28ez+5/wCQcj/poy6K1PsGlf8AQZ/8lXo+waV/0Gf/ACVej28ez+5/5ByP+mjLorU+waV/0Gf/ACVej7BpX/QZ/wDJV6Pbx7P7n/kHI/6aMu" +
+  "tTT/8AkAat/wBsf/QzR9g0r/oM/wDkq9Ss2n2ekX0Fvf8A2iS48vC+SyY2tnvWdSoppJJ7ro+68hxjbVn/2Q==",
+  "base64",
+);
+
 function desktopStreamScript(kcmd: string, mode: string): string {
   const argv =
     mode === "MODE_PROOT"
@@ -985,10 +1190,20 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
   res.setHeader("X-Nova-Desktop-Node", node.id);
   res.flushHeaders?.();
 
+  /* القياس الحي 02:3xZ: أول إطار حقيقي متأخر (تثبيت xvfb+ffmpeg جوه الجست دقائق)
+   * والمتصفح بيبانله شاشة سوداء. الفكس: إطار «بيجاهز» فورًا + heartbeat يكرره
+   * كل 1.5 ثانية لحد أول إطار حقيقي — البث بيفتح فورًا والمتصفح مش ميت. */
+  sendFrame(DESKTOP_FRAME_PREP);
+  const prepIv = setInterval(() => {
+    if (res.writableEnded || res.destroyed) { clearInterval(prepIv); return; }
+    sendFrame(DESKTOP_FRAME_PREP);
+  }, 1500);
+
   let jpeg = Buffer.alloc(0);
   let sent = 0;
   const onData = (streamType: string, data: string) => {
     if (streamType !== "stdout" || res.writableEnded || res.destroyed) return;
+    if (sent === 0) clearInterval(prepIv);
     jpeg = Buffer.concat([jpeg, Buffer.from(data.replace(/\s+/g, ""), "base64")]);
     // استخراج الإطارات الكاملة: من علامة بداية JPEG (FFD8) لعلامة النهاية (FFD9)
     for (;;) {
@@ -1003,6 +1218,7 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
   };
   void execStreamOnLocalAgent(desktopStreamScript(kcmd, node.mode), node.id, 840_000, onData);
   res.on("close", () => {
+    clearInterval(prepIv);
     // إيقاف ffmpeg وXvfb على العقدة لما المتصفح يقفل البث (نضّف — مافيش عمليات يتيمة)
     void execOnLocalAgent(
       'pkill -f "x11grab" 2>/dev/null; pkill -f "Xvfb :99" 2>/dev/null; true',
@@ -1056,6 +1272,43 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
       repo: "Datalux/Osintgram", cmd: "osintgram",
       wrap: `printf '#!/bin/sh\\nexec python3 /opt/osintgram/main.py "$@"\\n' > /usr/local/bin/osintgram && chmod +x /usr/local/bin/osintgram`,
     },
+    /* TEST93o — المتبقي بلا pypi ولا release: clone + wrapper */
+    pentestly: {
+      repo: "meatballs89/pentestly", cmd: "pentestly", req: true,
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/pentestly/pentestly.py "$@"\\n' > /usr/local/bin/pentestly && chmod +x /usr/local/bin/pentestly`,
+    },
+    ssrfmap: {
+      repo: "swisskyrepo/SSRFmap", cmd: "ssrfmap",
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/ssrfmap/ssrfmap.py "$@"\\n' > /usr/local/bin/ssrfmap && chmod +x /usr/local/bin/ssrfmap`,
+    },
+    "gh-dork": {
+      repo: "molly/gh-dork", cmd: "gh-dork", req: true,
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/gh-dork/gh-dork.py "$@"\\n' > /usr/local/bin/gh-dork && chmod +x /usr/local/bin/gh-dork`,
+    },
+    "dvcs-ripper": {
+      repo: "kost/dvcs-ripper", cmd: ["rip-git", "rip-svn"],
+      wrap: `for f in rip-git rip-svn rip-hg rip-bzr; do cp /opt/dvcs-ripper/$f.pl /usr/local/bin/$f 2>/dev/null && chmod +x /usr/local/bin/$f; done; true`,
+    },
+    "king-phisher": {
+      repo: "CrimsonForge-io/king-phisher", cmd: ["king-phisher"],
+      wrap: `[ -f /opt/king-phisher/KingPhisher ] && { printf "#!/bin/sh\nexec python3 /opt/king-phisher/KingPhisher \"$@\"\n" > /usr/local/bin/king-phisher; chmod +x /usr/local/bin/king-phisher; }; true`,
+    },
+    venom: {
+      repo: "r00t-3xp10it/venom", cmd: "venom",
+      wrap: `cp /opt/venom/venom.sh /usr/local/bin/venom && chmod +x /usr/local/bin/venom`,
+    },
+    w3af: {
+      repo: "andresriancho/w3af", cmd: ["w3af_console", "w3af"], req: true,
+      wrap: `printf '#!/bin/sh\nexec python3 /opt/w3af/w3af_console "$@"\n' > /usr/local/bin/w3af_console && cp /usr/local/bin/w3af_console /usr/local/bin/w3af && chmod +x /usr/local/bin/w3af_console /usr/local/bin/w3af`,
+    },
+    keepnote: {
+      repo: "mdrasmus/keepnote", cmd: "keepnote",
+      wrap: `[ -f /opt/keepnote/bin/keepnote ] && cp /opt/keepnote/bin/keepnote /usr/local/bin/keepnote && chmod +x /usr/local/bin/keepnote; true`,
+    },
+    evilgrade: {
+      repo: "infobyte/evilgrade", cmd: "evilgrade",
+      wrap: `[ -f /opt/evilgrade/evilgrade.sh ] && cp /opt/evilgrade/evilgrade.sh /usr/local/bin/evilgrade && chmod +x /usr/local/bin/evilgrade; true`,
+    },
   };
   /* TEST87 — الحقول url مقاسة من api.github.com (السانبوكس 2026-11-19) وخبزت هنا:
    * العقدة (GitHub runner IP مشترك) بتنده api.github.com unauthenticated فبتقع
@@ -1072,12 +1325,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     arjun: { repo: "s0md3v/Arjun", pattern: "", flat: "" },
     katana: { repo: "projectdiscovery/katana", pattern: "linux_amd64.zip", flat: "katana", url: "https://github.com/projectdiscovery/katana/releases/download/v1.8.0/katana_1.8.0_linux_amd64.zip" },
     cariddi: { repo: "edoardottt/cariddi", pattern: "linux_amd64.zip", flat: "cariddi", url: "https://github.com/edoardottt/cariddi/releases/download/v1.4.6/cariddi_1.4.6_linux_amd64.zip" },
-    subzy: { repo: "LukaSikter/subzy", pattern: "linux_amd64.tar.gz", flat: "subzy" },
     grype: { repo: "anchore/grype", pattern: "linux_amd64.tar.gz", flat: "grype", url: "https://github.com/anchore/grype/releases/download/v0.122.1/grype_0.122.1_linux_amd64.tar.gz" },
     syft: { repo: "anchore/syft", pattern: "linux_amd64.tar.gz", flat: "syft", url: "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz" },
     trufflehog: { repo: "trufflesecurity/trufflehog", pattern: "linux_amd64.tar.gz", flat: "trufflehog", url: "https://github.com/trufflesecurity/trufflehog/releases/download/v3.99.9/trufflehog_3.99.9_linux_amd64.tar.gz" },
     dockle: { repo: "goodwithtech/dockle", pattern: "Linux-64bit.tar.gz", flat: "dockle", url: "https://github.com/goodwithtech/dockle/releases/download/v0.4.15/dockle_0.4.15_Linux-64bit.tar.gz" },
-    gotator: { repo: "Josue87/Gotator", pattern: "linux_amd64.tar.gz", flat: "gotator" },
     osintgram: { repo: "Datalux/Osintgram", pattern: "", flat: "" }, // clone بدل release
     /* TEST88 — URLs مقاسة من api.github.com (السانبوكس 2026-11-19) */
     bettercap: { repo: "bettercap/bettercap", pattern: "linux_amd64.zip", flat: "bettercap", url: "https://github.com/bettercap/bettercap/releases/download/v2.41.7/bettercap_linux_amd64.zip" },
@@ -1108,11 +1359,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     steghide: { file: "steghide.tar.gz", cmd: ["steghide"] },
     "arp-scan": { file: "arp-scan.tar.gz", cmd: ["arp-scan"] },
     cherrytree: { file: "cherrytree.tar.gz", cmd: ["cherrytree"] },
-    casefile: { file: "casefile.tar.gz", cmd: ["casefile"] },
+    casefile: { file: "casefile-debs.tar.gz", cmd: ["casefile"] },
     dradis: { file: "dradis.tar.gz", cmd: ["dradis"] },
     recordmydesktop: { file: "recordmydesktop.tar.gz", cmd: ["recordmydesktop"] },
-    wkhtmltopdf: { file: "wkhtmltopdf.tar.gz", cmd: ["wkhtmltopdf"] },
-    evilgrade: { file: "evilgrade.tar.gz", cmd: ["evilgrade"] },
+    wkhtmltopdf: { file: "wkhtmltopdf-debs.tar.gz", cmd: ["wkhtmltopdf"] },
     maskprocessor: { file: "maskprocessor.tar.gz", cmd: ["maskprocessor", "mp"] },
     rainbowcrack: { file: "rainbowcrack.tar.gz", cmd: ["rcrack", "rainbowcrack"] },
     redis: { file: "redis-server.tar.gz", cmd: ["redis-server", "redis-cli"] },
@@ -1123,36 +1373,49 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     vim: { file: "vim.tar.gz", cmd: ["vim"] },
     aria2: { file: "aria2.tar.gz", cmd: ["aria2c", "aria2"] },
     "python3-pip": { file: "python3-pip.tar.gz", cmd: ["pip3"] },
-    "dvcs-ripper": { file: "dvcs-ripper.tar.gz", cmd: ["rip-git", "rip-svn"] },
-    "king-phisher": { file: "king-phisher.tar.gz", cmd: ["king-phisher"] },
     ghidra: { file: "ghidra.tar.gz", cmd: ["ghidraRun", "ghidra", "analyzeHeadless"] },
-    w3af: { file: "w3af.tar.gz", cmd: ["w3af_console", "w3af_gui", "w3af"] },
-    sidguesser: { file: "sidguesser.tar.gz", cmd: ["sidsweep", "sidguesser"] },
+    retdec: { file: "retdec.tar.gz", cmd: ["retdec-decompiler", "retdec"] },
+    sidguesser: { file: "sidguesser.tar.gz", cmd: ["sidguess", "sidguesser"] },
     netexec: { file: "netexec.tar.gz", cmd: ["nxc", "netexec"] },
     crackmapexec: { file: "crackmapexec.tar.gz", cmd: ["crackmapexec", "cme"] },
     empire: { file: "powershell-empire.tar.gz", cmd: ["powershell-empire", "empire"] },
     faraday: { file: "faraday.tar.gz", cmd: ["faraday-client", "faraday"] },
-    libreoffice: { file: "libreoffice.tar.gz", cmd: ["libreoffice", "soffice"] },
     gvm: { file: "gvm.tar.gz", cmd: ["gvm-cli", "gvmd", "gvm-setup"] },
-    fernet: { file: "fernet.tar.gz", cmd: ["fernet"] },
+        pandoc: { file: "pandoc-debs.tar.gz", cmd: ["pandoc"] },
+    legion: { file: "legion-debs.tar.gz", cmd: ["legion"] },
+    subzy: { file: "subzy.tar.gz", cmd: ["subzy"] },
+    gotator: { file: "gotator.tar.gz", cmd: ["gotator"] },
+    fern: { file: "fern-debs.tar.gz", cmd: ["fern", "fern-wifi-cracker"] },
     pgcli: { file: "pgcli.tar.gz", cmd: ["pgcli"], pip: "pgcli" },
-    pentestly: { file: "pentestly.tar.gz", cmd: ["pentestly"] },
-    ssrfmap: { file: "ssrfmap.tar.gz", cmd: ["ssrfmap"] },
-    "gh-dork": { file: "gh-dork.tar.gz", cmd: ["gh-dork"] },
     socialanalyzer: { file: "social-analyzer.tar.gz", cmd: ["social-analyzer", "socialanalyzer"], pip: "social-analyzer" },
     "peass-ng": { file: "peass-ng.tar.gz", cmd: ["linpeas", "linpeas.sh"] },
-    vulners: { file: "vulners.tar.gz", cmd: ["vulners"] },
   };
   const GIT = GITHUB_TOOLS[tool];
   const PIP = PIP_TOOLS[tool];
+  /* TEST93o — المسار من مرحلتين قصيرتين للأدوات اللي ليها حزم deb: درس TEST80
+   * المقاس مرة تانية 08:40/09:04 — الأمر المركب الطويل = proot signal 6 حتى
+   * بعد نجاح dpkg نفسه (البوابة بتتقتل). التثبيت قصير ثم البوابة قصيرة. */
+  const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec", "wkhtmltopdf", "pandoc", "legion", "fern", "casefile"]);
+  const storeDebs = Boolean(STORE_TOOLS[tool] && DEBS_TOOLS.has(tool));
+  /* TEST93x — استخراج يدوي بدون dpkg: postinst بتاع maskprocessor بيحاول
+   * systemctl (مش موجود في proot) → bus fail → proot signal 6 دائم (مقاس ×6).
+   * الdeb فيه باينر واحد /usr/bin/mp — dpkg-deb -x وcp كفاية. */
+  const DEB_EXTRACT = new Set(["maskprocessor"]);
+  const storeGate = STORE_TOOLS[tool] ? (Array.isArray(STORE_TOOLS[tool].cmd) ? STORE_TOOLS[tool].cmd : [STORE_TOOLS[tool].cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ") : "";
   let installCmd: string;
   if (STORE_TOOLS[tool] && STORE_TOOLS[tool].file) {
     const S = STORE_TOOLS[tool];
     const gate = (Array.isArray(S.cmd) ? S.cmd : [S.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ");
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
-    /* TEST91 v7 — مسار موحد: أجزاء .part_00.. (split 1900M — حد الasset 2GB
-     * مقاس) أولًا، ولو مافيش أجزاء → الملف المباشر. cat|tar بيفك عند / بلا dpkg. */
-    installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    if (DEB_EXTRACT.has(tool)) {
+      installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && for d in *.deb; do dpkg-deb -x "$d" /tmp/debx 2>/dev/null; done; find /tmp/debx -type f \( -name "mp" -o -name "maskprocessor" \) -exec cp {} /usr/local/bin/ \; && chmod +x /usr/local/bin/mp /usr/local/bin/maskprocessor 2>/dev/null; echo EXTRACT_APPLIED`;
+    } else if (storeDebs) {
+      /* المرحلة 1 قصيرة: تنظيف statoverride + deb + dpkg — بلا بوابة ولا fallback */
+      installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
+    } else {
+      /* تاربولات parts (metasploit/empire/faraday/dradis) — TEST93p: بلا بوابة هنا (البوابة المنفصلة تحت مع retry — درس TEST80/TEST92q) */
+      installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; echo STORE_EXTRACTED`;
+    }
   } else if (GIT && GIT.repo && !CLONE_EXTRA[tool]) {
     const isCloneTool = tool === "dirsearch" || tool === "arjun";
     installCmd = isCloneTool
@@ -1164,17 +1427,39 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const C = CLONE_EXTRA[tool];
     installCmd = `rm -rf /opt/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${C.repo} /opt/${tool} 2>&1 | tail -2; ${C.req ? `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed -r /opt/${tool}/requirements.txt 2>&1 || true) | tail -2; ` : ""}${C.wrap ? `${C.wrap}; ` : ""}${(Array.isArray(C.cmd) ? C.cmd : [C.cmd]).map((c) => `command -v ${c}`).join(" || ")} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else {
-    installCmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
+    installCmd = `dpkg --configure -a 2>&1 | tail -1; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
   }
   const cmd = `echo ROOT_UID:$(id -u); for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; ${installCmd}`;
   /* TEST93g — retry على الجست المكسور: المنافسة بتكسر guests (مقاس TEST66
    * ومقاس 05:38: proot execve Permission denied على جزء من العقد). أول محاولة
    * بتفشل بفشل proot → نعيد مرة تانية فبتروح عقدة تانية سليمة من الأسطول. */
-  let r = await kaliAnywhereExec(cmd, 420_000);
-  if (r && /proot error|Permission denied|fatal error: see `proot/.test([r.stdout, r.stderr].join("\n"))) {
-    r = await kaliAnywhereExec(cmd, 420_000);
+  let r = await kaliAnywhereExec(cmd, 600_000);
+  /* TEST93x — retry مع استبعاد: العقدة اللي جستها بيسقّطها proot signal 6 دائم
+   * (مقاس E 18:4x: 14 أداة فشلت كلها على نفس العقدة والمحاولة التالية رجعت لها)
+   * → المحاولة التالية تستبعد nodeId الفاشل فتروح عقدة سليمة. */
+  const brokenNodes = new Set<string>();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (!r) break;
+    if (!/proot error|Permission denied|fatal error: see `proot|signal 6|path\.c:547|Assertion/.test([r.stdout, r.stderr].join("\n"))) break;
+    if (r.nodeId) brokenNodes.add(r.nodeId);
+    r = await kaliAnywhereExec(cmd, 600_000, undefined, brokenNodes);
   }
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
+  /* TEST93t — العقدة اللي التثبيت حصل عليها: البوابة بتتثبت عليها (مقاس F2:
+   * البوابة على عقدة تانية طازة → INSTALL_FAIL كاذبة رغم «Setting up ✓») */
+  const installNodeId = r.nodeId ?? (r.plane || "").split(" — ")[0].trim();
+  /* المرحلة 2 قصيرة: بوابة منفصلة مع retry ×3 — بعد ما dpkg/الاستخراج خلص فعليًا
+   * في المرحلة 1. proot signal 6 عشوائي بيقتل حتى الأوامر القصيرة (مقاس TEST92q:
+   * sidguesser «Setting up ✓» والبوابة اتقتلت → INSTALL_FAIL كاذبة). */
+  if ((storeDebs || (STORE_TOOLS[tool] && STORE_TOOLS[tool].file)) && r && storeGate && !DEB_EXTRACT.has(tool)) {
+    let gout = "";
+    for (let gi = 0; gi < 5; gi++) {
+      const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 2; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000, installNodeId);
+      if (gr) gout = gr.stdout;
+      if (gout.includes(`INSTALL_OK:${tool}`)) break;
+    }
+    if (gout) r = { ...r, stdout: `${r.stdout}\n${gout}` };
+  }
   const ok = /INSTALL_OK:/.test(r.stdout);
   const uid = Number((r.stdout.match(/^ROOT_UID:(\d+)$/m) ?? [])[1]);
   const tail = [r.stdout, r.stderr].filter(Boolean).join("\n").split("\n").slice(-12).join("\n");
