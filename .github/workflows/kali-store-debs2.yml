@@ -1,6 +1,6 @@
 # TEST93t v7 — debs النهائية: ettercap (common+text-only) + maskprocessor (mp)
 # + casefile من kali pool مباشرة (اتشال من الindex — الملف لسه في الميرور).
-name: "kali store debs v8 (casefile pool ×3 → release kali-store)"
+name: "kali store debs v9 (libreoffice بتبعياته → release kali-store)"
 on:
   push:
     paths:
@@ -9,7 +9,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: kali-store-debs8
+  group: kali-store-debs9
   cancel-in-progress: false
 jobs:
   debs7:
@@ -30,6 +30,16 @@ jobs:
             echo "=== debs v7 $(date -u +%FT%TZ) ===" | tee /store/build-debs2.log
             apt-get update 2>&1 | tail -2 | tee -a /store/build-debs2.log || true
             apt-get install -y --no-install-recommends curl ca-certificates apt-utils >/dev/null 2>&1 || true
+            # libreoffice — بتبعيات recursive (نفس نمط legion)
+            DEPS_LO=$(apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances libreoffice 2>/dev/null | grep "^\w" | sort -u)
+            rm -rf /tmp/dl-libreoffice && mkdir -p /tmp/dl-libreoffice && cd /tmp/dl-libreoffice
+            if apt-get download $DEPS_LO >> /store/debs2.log 2>&1; then
+              tar czf /store/libreoffice-debs.tar.gz *.deb 2>/dev/null || true
+              echo "OK:libreoffice debs=$(ls *.deb 2>/dev/null | wc -l) size=$(stat -c%s /store/libreoffice-debs.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-debs2.log
+            else
+              echo "MISS:libreoffice" | tee -a /store/build-debs2.log
+            fi
+            cd /store
             for BASE in "http://http.kali.org/kali/pool/main/c/casefile/" "https://http.kali.org/kali/pool/main/c/casefile/" "http://old.kali.org/kali/pool/main/c/casefile/"; do
               echo "try base=$BASE" | tee -a /store/build-debs2.log
               POOL_CASE=$(curl -sfL -m 60 "$BASE" 2>/dev/null | grep -oE "casefile_[A-Za-z0-9._~+-]+\.deb" | sort -V | tail -1)

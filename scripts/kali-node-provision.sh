@@ -28,7 +28,7 @@ gh release download kali-store -R "$GITHUB_REPOSITORY" --clobber >> /tmp/provisi
 ls -la /tmp/store | head -50 >> /tmp/provision.log
 
 # ── 1) حزم debs لكل أداة (23) ──
-DEBS="ettercap exiftool steghide arp-scan cherrytree recordmydesktop wkhtmltopdf maskprocessor rainbowcrack redis elfutils ltrace strace zsh vim aria2 sidguesser netexec crackmapexec pandoc legion fern casefile"
+DEBS="ettercap exiftool steghide arp-scan cherrytree recordmydesktop wkhtmltopdf maskprocessor rainbowcrack redis elfutils ltrace strace zsh vim aria2 sidguesser netexec crackmapexec pandoc legion fern casefile libreoffice"
 OKD=0; MISSD=""
 for b in $DEBS; do
   [ -f "$b-debs.tar.gz" ] || { MISSD="$MISSD $b"; continue; }
@@ -42,10 +42,10 @@ for b in $DEBS; do
   fi
   OKD=$((OKD+1))
 done
-echo "debs: $OKD/23${MISSD:+ — miss:$MISSD}"
+echo "debs: $OKD/24${MISSD:+ — miss:$MISSD}"
 
 # ── 2) الثقيلة: parts + tarballs (فك ملفي مباشر على $R — أسرع من proot) ──
-for big in ghidra.tar.gz retdec.tar.gz python3-pip.tar.gz; do
+for big in ghidra.tar.gz retdec.tar.gz python3-pip.tar.gz vulners.tar.gz social-analyzer.tar.gz peass-ng.tar.gz; do
   [ -f "$big" ] && tar xzf "$big" -C "$R" 2>/dev/null && echo "OK:big $big"
 done
 for big in powershell-empire.tar.gz faraday.tar.gz dradis.tar.gz; do
