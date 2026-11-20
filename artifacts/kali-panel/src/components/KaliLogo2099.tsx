@@ -128,7 +128,7 @@ export function TawhidBanner2099({ compact = false }: { compact?: boolean }) {
                 textShadow: "0 0 12px rgba(255,43,77,0.85)",
               }}
             >
-              لا إله إلا الله · الله أكبر ولله الحمد
+              بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد · سبحان الله وبحمده سبحان الله العظيم
             </span>
             <span
               className="px-2 py-0.5 rounded-full text-[9px] font-mono font-black"
@@ -143,7 +143,7 @@ export function TawhidBanner2099({ compact = false }: { compact?: boolean }) {
           </div>
           {!compact && (
             <span className="text-[10px] font-mono" style={{ color: "rgba(255,210,220,0.78)" }}>
-              مشروع الدفاع السيبراني الأخلاقي ونشر العلم النافع وحماية العالم · 266/266 أداة · 28 بايثون · 10 عقد سحابية · 67.11GB مخزن
+              خالصًا لوجه الله الكريم في نشر العلم النافع والدفاع السيبراني الأخلاقي وحماية العالم · 266/266 أداة · 28 بايثون · 10 عقد سحابية · 67.11GB مخزن
             </span>
           )}
         </div>
