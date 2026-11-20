@@ -50,7 +50,15 @@ jobs:
           done
       - name: terminal exec test (TEST70 — الفشل المحلي ينزل للأسطول)
         run: |
-          sleep 20
+          for w in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            H=$(curl -s --max-time 20 "$HUB/api/kali-env/health?token=$TOKEN")
+            KREADY=$(echo "$H" | grep -o '"kaliReady":[0-9]*' | head -1 | cut -d':' -f2)
+            if [ "${KREADY:-0}" -ge 1 ]; then
+              echo "::notice::fleet-ready: kaliReady=$KREADY"
+              break
+            fi
+            sleep 20
+          done
           R=$(curl -s --max-time 120 -X POST "$HUB/api/kali-env/exec" \
             -H "x-nova-token: $TOKEN" -H "content-type: application/json" \
             -d '{"command":"echo TERMINAL_OK && uname -a"}')
