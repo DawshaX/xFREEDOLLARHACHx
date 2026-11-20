@@ -1260,12 +1260,14 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
 router.get("/kali-env/desktop-frame", async (req: Request, res: Response) => {
   const preferNode = String(req.query.nodeId ?? "").trim() || undefined;
   const frameCmd =
-    'if ! DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg >/dev/null 2>&1; then ' +
-    'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
-    'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & sleep 1.2; ' +
-    'DISPLAY=:99 fluxbox >/dev/null 2>&1 & ' +
-    'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP — 266/266 TOOLS" -e "sh -c \'echo === NOVA KALI LINUX LIVE DESKTOP ===; uname -a; id; echo --- Tools Ready: 266/266 ---; ls /usr/local/bin | tr \"\\n\" \" \"; echo; df -h /; sleep 3600\'" >/dev/null 2>&1 & sleep 1.0; ' +
-    'DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
+    'if [ ! -s /tmp/novadesk.jpg ]; then ' +
+    '(echo "=== NOVA KALI LINUX LIVE DESKTOP (266/266 TOOLS) ==="; uname -a; id; echo "--- Tools in /usr/local/bin ---"; ls /usr/local/bin | tr "\\n" " "; echo; df -h /) > /tmp/desk-out.txt 2>&1; ' +
+    'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 2>/dev/null; ' +
+    'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & XPID=$!; sleep 0.6; ' +
+    'DISPLAY=:99 fluxbox >/dev/null 2>&1 & FPID=$!; ' +
+    'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP — 266/266 TOOLS" -e "cat /tmp/desk-out.txt; sleep 5" >/dev/null 2>&1 & TPID=$!; ' +
+    'sleep 0.8; DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
+    'kill -9 $TPID $FPID $XPID 2>/dev/null; ' +
     'fi; ' +
     'if [ -s /tmp/novadesk.jpg ]; then base64 -w0 /tmp/novadesk.jpg; fi';
   const r = await kaliAnywhereExec(frameCmd, 25_000, preferNode);
@@ -1291,26 +1293,25 @@ router.post("/kali-env/desktop-action", async (req: Request, res: Response) => {
   const rawCmd = String(body.cmd ?? "uname -a; id; nmap --version").trim().slice(0, 300);
   const preferNode = String(body.nodeId ?? "").trim() || undefined;
   const safeCmd = rawCmd.replace(/'/g, "'\\''");
-  let deskCmd: string;
-  if (action === "reset") {
-    deskCmd =
-      'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
-      'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & sleep 1.2; ' +
-      'DISPLAY=:99 fluxbox >/dev/null 2>&1 & ' +
-      'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP" -e "sh -c \'echo === NOVA KALI DESKTOP RESET ===; uname -a; id; sleep 3600\'" >/dev/null 2>&1 & sleep 1.0; ' +
-      'DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null; base64 -w0 /tmp/novadesk.jpg 2>/dev/null';
-  } else {
-    deskCmd =
-      'if ! DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg >/dev/null 2>&1; then ' +
-      'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
-      'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & sleep 1.2; ' +
-      'DISPLAY=:99 fluxbox >/dev/null 2>&1 & sleep 0.5; ' +
-      'fi; ' +
-      `DISPLAY=:99 xterm -geometry 115x32+45+45 -bg black -fg cyan -T "NOVA KALI RUN" -e "sh -c '${safeCmd}; echo; echo === DONE ===; sleep 600'" >/dev/null 2>&1 & ` +
-      'sleep 1.2; DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
-      'base64 -w0 /tmp/novadesk.jpg 2>/dev/null';
-  }
-  const r = await kaliAnywhereExec(deskCmd, 30_000, preferNode);
+  const deskCmd =
+    action === "reset"
+      ? '(echo "=== NOVA KALI DESKTOP RESET ==="; date -u; uname -a; id; df -h /) > /tmp/desk-out.txt 2>&1; ' +
+        'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
+        'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & XPID=$!; sleep 0.6; ' +
+        'DISPLAY=:99 fluxbox >/dev/null 2>&1 & FPID=$!; ' +
+        'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP" -e "cat /tmp/desk-out.txt; sleep 5" >/dev/null 2>&1 & TPID=$!; ' +
+        'sleep 0.8; DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null; ' +
+        'kill -9 $TPID $FPID $XPID 2>/dev/null; ' +
+        'base64 -w0 /tmp/novadesk.jpg 2>/dev/null'
+      : `(echo "=== $ ${safeCmd} ==="; ${safeCmd}) > /tmp/desk-out.txt 2>&1; ` +
+        'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
+        'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & XPID=$!; sleep 0.6; ' +
+        'DISPLAY=:99 fluxbox >/dev/null 2>&1 & FPID=$!; ' +
+        'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg cyan -T "NOVA KALI RUN" -e "cat /tmp/desk-out.txt; sleep 5" >/dev/null 2>&1 & TPID=$!; ' +
+        'sleep 0.8; DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
+        'kill -9 $TPID $FPID $XPID 2>/dev/null; ' +
+        'base64 -w0 /tmp/novadesk.jpg 2>/dev/null';
+  const r = await kaliAnywhereExec(deskCmd, 25_000, preferNode);
   const b64 = (r?.stdout ?? "").replace(/\s+/g, "");
   appendNovaEvent("desktop", `🖥️ أمر على سطح المكتب: ${rawCmd.slice(0, 80)}`, r?.plane ?? "fleet");
   res.json({
