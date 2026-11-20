@@ -1039,7 +1039,7 @@ export function LiveAgentPanel({
   const [ollamaPulse, setOllamaPulse] = useState(false);
   const [coreBrainReady, setCoreBrainReady] = useState(false);
   const [coreCloudCount, setCoreCloudCount] = useState(0);
-  const [coreToolsCount, setCoreToolsCount] = useState<number>(67);
+  const [coreToolsCount, setCoreToolsCount] = useState<number>(92);
   const [serverCronJobs, setServerCronJobs] = useState<Array<{
     id: string; name: string; cronExpr: string; enabled: boolean;
     runCount: number; errorCount: number; lastRun?: string; nextRun?: string; lastResult?: string;
@@ -1149,7 +1149,7 @@ export function LiveAgentPanel({
 
   // ── Background Process Monitor ────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<
-    | "chat" | "processes" | "live" | "missions" | "capabilities" | "terminal"
+    | "chat" | "storage" | "bounty2099" | "processes" | "live" | "missions" | "capabilities" | "terminal"
     | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser"
     | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel" | "cockpit" | "awareness"
     | "control"
@@ -1158,7 +1158,7 @@ export function LiveAgentPanel({
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
 
-  // ── Real 67-tool Core Catalogue + Live Chat Ops Dashboard ─────────────────
+  // ── Real 92-tool Core Catalogue + Live Chat Ops Dashboard ─────────────────
   interface CoreCatalogueTool { name: string; title: string; category: string; description: string; risk: string; params: string[]; }
   /* TEST4: الوعي الكامل — كل اللي نوفا عارفه عن المالك في استدعاء واحد */
   interface AwarenessData {
@@ -1182,6 +1182,119 @@ export function LiveAgentPanel({
       setAwarenessCount((d.owner?.length ?? 0) + (d.observations?.length ?? 0));
     } catch { /* السيرفر مش لسه — الشارة تفضل صفر بصدق */ }
   }, [API_BASE]);
+
+  // ── Sovereign Storage Hub + Import/Export + Unified Organism State (2099) ──
+  interface StorageVaultFile {
+    id: string;
+    sessionId: string;
+    name: string;
+    mimeType: string;
+    size: number;
+    sha256?: string;
+    textPreview?: string;
+    extracted?: { cves: string[]; domains: string[]; ips: string[]; urls: string[] };
+    createdAt: string;
+  }
+  interface StorageHubData {
+    ok: boolean;
+    vaultDir: string;
+    hackStorageRepo: string;
+    hackStorageConnected: boolean;
+    totalFiles: number;
+    totalBytes: number;
+    eternalMemoryCount: number;
+    activeTarget: string;
+    activeWorkspace: string;
+    memoryStoreCount: number;
+    learnedInsightsCount: number;
+    learnedInsights: string[];
+    files: StorageVaultFile[];
+    recentEternalMemories: Array<{
+      id: string;
+      timestamp: string;
+      kind: string;
+      title: string;
+      command?: string;
+      output: string;
+      target?: string;
+      plane?: string;
+      tags?: string[];
+    }>;
+  }
+  interface OrganismData {
+    ok: boolean;
+    edition: string;
+    activeTarget: string;
+    activeWorkspace: string;
+    fleet: { connected: number; cap: number; agents: Array<{ id: string; hostname: string; user: string; platform: string }> };
+    arsenal: { agentTools: number; kaliTools: number; pythonTools: number; totalKaliArsenal: number };
+    storage: { hackStorageRepo: string; filesCount: number; totalBytes: number; eternalMemoryCount: number; memoryStoreCount: number };
+    brains: Array<{ id: string; name: string; role: string; online: boolean; model: string }>;
+    jewels: { cves: string[]; domains: string[]; ips: string[]; insights: string[] };
+    backgroundFeed: Array<{ id: string; kind: string; title: string; detail: string; ts: string; source: string }>;
+  }
+  const [storageHub, setStorageHub] = useState<StorageHubData | null>(null);
+  const [organismState, setOrganismState] = useState<OrganismData | null>(null);
+  const [importText, setImportText] = useState("");
+  const [importName, setImportName] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
+  const [fileActionBusy, setFileActionBusy] = useState<string | null>(null);
+  const [fileAnalysisMap, setFileAnalysisMap] = useState<Record<string, string>>({});
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Kali 2099 Sovereign Engines inside LiveAgentPanel (`bounty2099` tab) ──
+  const [bounty2099Stage, setBounty2099Stage] = useState<"full" | "recon" | "vuln" | "zeroday">("full");
+  const [bounty2099Busy, setBounty2099Busy] = useState(false);
+  const [bounty2099Result, setBounty2099Result] = useState<any>(null);
+  const [zeroday2099Busy, setZeroday2099Busy] = useState(false);
+  const [zeroday2099Result, setZeroday2099Result] = useState<any>(null);
+  const [visitorRadarData, setVisitorRadarData] = useState<any>(null);
+  const [visitorScanIp, setVisitorScanIp] = useState("8.8.8.8");
+  const [visitorScanBusy, setVisitorScanBusy] = useState(false);
+  const [autopilot2099Mode, setAutopilot2099Mode] = useState<"PURPLE" | "RED" | "BLUE" | "BOUNTY" | "ZERODAY">("BOUNTY");
+  const [autopilot2099Busy, setAutopilot2099Busy] = useState(false);
+  const [autopilot2099Result, setAutopilot2099Result] = useState<any>(null);
+  const [councilPrompt, setCouncilPrompt] = useState("");
+  const [councilBusy, setCouncilBusy] = useState(false);
+  const [councilResult, setCouncilResult] = useState<Array<{ persona: string; role: string; color: string; verdict: string }> | null>(null);
+
+  const refreshStorageHub = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/storage`, { headers: novaAuthHeaders() });
+      if (r.ok) {
+        const d = (await r.json()) as StorageHubData;
+        setStorageHub(d);
+      }
+    } catch { /* ignore */ }
+  }, [API_BASE]);
+
+  const refreshOrganismState = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/organism`, { headers: novaAuthHeaders() });
+      if (r.ok) {
+        const d = (await r.json()) as OrganismData;
+        setOrganismState(d);
+      }
+    } catch { /* ignore */ }
+  }, [API_BASE]);
+
+  const loadVisitorRadar2099 = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/kali-env/visitor-intel-2099`, { headers: novaAuthHeaders() });
+      if (r.ok) setVisitorRadarData(await r.json());
+    } catch { /* ignore */ }
+  }, [API_BASE]);
+
+  useEffect(() => {
+    void refreshStorageHub();
+    void refreshOrganismState();
+    void loadVisitorRadar2099();
+    const iv = setInterval(() => {
+      void refreshOrganismState();
+    }, 15_000);
+    return () => clearInterval(iv);
+  }, [refreshStorageHub, refreshOrganismState, loadVisitorRadar2099]);
   useEffect(() => {
     void loadAwareness();
     const t = setInterval(() => void loadAwareness(), 20_000);
@@ -1857,27 +1970,100 @@ export function LiveAgentPanel({
     });
 
   const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const filesList = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!filesList.length || !sessionId) return;
+    for (const file of filesList) {
+      if (file.size > 12 * 1024 * 1024) {
+        setLines((arr) => [...arr, { role: "system", text: `الملف «${file.name}» كبير جداً (الحد 12 ميجا).`, isError: true }]);
+        continue;
+      }
+      try {
+        const contentBase64 = await fileToBase64(file);
+        const r = await fetch(`${API_BASE}/live-agent/sessions/${sessionId}/upload`, {
+          method: "POST",
+          headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ name: file.name, mimeType: file.type || "application/octet-stream", contentBase64 }),
+        });
+        if (!r.ok) throw new Error(`upload failed (${r.status})`);
+        const meta = (await r.json()) as SessionFile & { extracted?: { cves: string[]; domains: string[]; ips: string[] } };
+        setPendingAttachments((arr) => [...arr, meta]);
+        setSessionFiles((arr) => [meta, ...arr]);
+        const extNote = meta.extracted
+          ? ` [CVEs:${meta.extracted.cves?.length ?? 0} · Domains:${meta.extracted.domains?.length ?? 0} · IPs:${meta.extracted.ips?.length ?? 0}]`
+          : "";
+        setLines((arr) => [...arr, { role: "system", text: `📎 رُفع وحُفظ في الخزنة «${meta.name}» (#${meta.id})${extNote} — جاهز للتحليل المدمج.` }]);
+        addToast(`📦 حُفظ «${meta.name}» في خزنة NOVA`, "success");
+      } catch (err) {
+        setLines((arr) => [...arr, { role: "system", text: `فشل الرفع: ${err instanceof Error ? err.message : "غير معروف"}`, isError: true }]);
+      }
+    }
+    void refreshStorageHub();
+    void refreshOrganismState();
+  };
+
+  const handleImportFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !sessionId) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setLines((arr) => [...arr, { role: "system", text: "الملف كبير جداً (الحد 10 ميجا).", isError: true }]);
-      return;
-    }
+    if (!file) return;
     try {
-      const contentBase64 = await fileToBase64(file);
-      const r = await fetch(`${API_BASE}/live-agent/sessions/${sessionId}/upload`, {
+      const text = await file.text();
+      setImportName(file.name);
+      setImportText(text);
+      setImportBusy(true);
+      const r = await fetch(`${API_BASE}/live-agent/import`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, mimeType: file.type || "application/octet-stream", contentBase64 }),
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ name: file.name, content: text, sessionId: sessionId || "nova-root" }),
       });
-      if (!r.ok) throw new Error(`upload failed (${r.status})`);
-      const meta = (await r.json()) as SessionFile;
-      setPendingAttachments((arr) => [...arr, meta]);
-      setSessionFiles((arr) => [meta, ...arr]);
-      setLines((arr) => [...arr, { role: "system", text: `📎 رُفع «${meta.name}» (#${meta.id}). اطلب من الوكيل قراءته أو معالجته.` }]);
+      const d = await r.json();
+      if (d?.ok) {
+        const msg = `✅ تم استيراد «${file.name}»: ذكريات(${d.imported?.memories ?? 0}) · ذاكرة أبدية(${d.imported?.eternalMemory ?? 0}) · نطاقات(${d.imported?.domains ?? 0}) · CVEs(${d.imported?.cves ?? 0}) · IPs(${d.imported?.ips ?? 0})`;
+        setImportResult(msg);
+        addToast(msg, "success");
+        void refreshStorageHub();
+        void refreshOrganismState();
+        if (sessionId) void refreshFiles(sessionId);
+      } else {
+        setImportResult(`❌ فشل الاستيراد: ${d?.error || "خطأ"}`);
+      }
     } catch (err) {
-      setLines((arr) => [...arr, { role: "system", text: `فشل الرفع: ${err instanceof Error ? err.message : "غير معروف"}`, isError: true }]);
+      setImportResult(`❌ خطأ: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setImportBusy(false);
+    }
+  };
+
+  const runSovereignImport = async () => {
+    if (!importText.trim() || importBusy) return;
+    setImportBusy(true);
+    setImportResult(null);
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/import`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          name: importName.trim() || `import-${Date.now()}.txt`,
+          content: importText,
+          sessionId: sessionId || "nova-root",
+        }),
+      });
+      const d = await r.json();
+      if (d?.ok) {
+        const msg = `✅ تم الاستيراد بنجاح: ذكريات(${d.imported?.memories ?? 0}) · ذاكرة أبدية(${d.imported?.eternalMemory ?? 0}) · استنتاجات(${d.imported?.insights ?? 0}) · نطاقات(${d.imported?.domains ?? 0}) · CVEs(${d.imported?.cves ?? 0}) · IPs(${d.imported?.ips ?? 0})`;
+        setImportResult(msg);
+        setImportText("");
+        addToast(msg, "success");
+        void refreshStorageHub();
+        void refreshOrganismState();
+        if (sessionId) void refreshFiles(sessionId);
+      } else {
+        setImportResult(`❌ فشل الاستيراد: ${d?.error || "خطأ"}`);
+      }
+    } catch (err) {
+      setImportResult(`❌ خطأ: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setImportBusy(false);
     }
   };
 
@@ -1972,8 +2158,13 @@ export function LiveAgentPanel({
       if (r.ok) {
         const data = await r.json();
         const chatLines: ChatLine[] = (data.messages || [])
-          .filter((m: any) => m.role === "user" || m.role === "assistant")
-          .map((m: any) => ({ role: m.role as ChatLine["role"], text: m.content }));
+          .filter((m: any) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+          .filter((m: any) => !/^مرحباً\s*—\s*جهاز\s+جديد\s+تم\s+توصيله/.test(m.content.trim()))
+          .map((m: any) => ({
+            role: m.role as ChatLine["role"],
+            text: String(m.content).replace(/\{\{\s*tool\s*:[^}]*\}\}/gi, "").trim(),
+          }))
+          .filter((m: ChatLine) => m.text.length > 0);
         setLines(chatLines);
         void refreshFiles(id);
       }
@@ -2625,7 +2816,12 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               (message): message is { role: "user" | "assistant"; content: string } =>
                 (message.role === "user" || message.role === "assistant") && typeof message.content === "string",
             )
-            .map(({ role, content }) => ({ role, text: content }));
+            .filter((m) => !/^مرحباً\s*—\s*جهاز\s+جديد\s+تم\s+توصيله/.test(m.content.trim()))
+            .map(({ role, content }) => ({
+              role,
+              text: content.replace(/\{\{\s*tool\s*:[^}]*\}\}/gi, "").trim(),
+            }))
+            .filter((m) => m.text.length > 0);
           if (!cancelled) setLines(restored);
         } else {
           const createResponse = await fetch(`${API_BASE}/live-agent/sessions`, {
@@ -3548,23 +3744,19 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   const sendDolphinToKaliRef = useRef<((text: string) => Promise<void>) | null>(null);
   sendDolphinToKaliRef.current = sendDolphinToKali;
 
-  // ── Auto-analysis when agent connects ─────────────────────────────────────
+  // ── Silent background sync when agent connects (no chat pollution) ─────────
   const kaliAgentWasConnected = useRef(false);
   useEffect(() => {
     if (kaliAgentConnected && !kaliAgentWasConnected.current) {
       kaliAgentWasConnected.current = true;
-      const timer = setTimeout(() => {
-        if (!kaliDolphinBusy && sendDolphinToKaliRef.current) {
-          void sendDolphinToKaliRef.current("مرحباً — جهاز جديد تم توصيله. قم بفحص النظام بالكامل وأخبرني بكل ما تراه: الجهاز، الأدوات المتاحة، الشبكة، الخدمات، المستخدمون. ثم اقترح ما يمكنني فعله.");
-        }
-      }, 3000);
-      return () => clearTimeout(timer);
+      void refreshOrganismState();
+      void refreshStorageHub();
     }
     if (!kaliAgentConnected) {
       kaliAgentWasConnected.current = false;
     }
     return undefined;
-  }, [kaliAgentConnected, kaliDolphinBusy]);
+  }, [kaliAgentConnected, refreshOrganismState, refreshStorageHub]);
 
   // ── Toggle Autonomous KALI Mode ────────────────────────────────────────────
   const toggleKaliAutonomous = async () => {
@@ -3856,6 +4048,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     // Route to direct Llama Dolphin (always if directMode, even if probe not yet done)
     if (directMode) { return sendDirect(text); }
     if (!text.trim() || !sessionId || busy || killActive) return;
+    const attachedIds = pendingAttachments.map((f) => f.id);
+    setPendingAttachments([]);
     setLines((arr) => [...arr, { role: "user", text }]);
     setInput(""); setBusy(true); setThinkingPhase("thinking");
     setStepCount(0); setToolHistory([]); setCurrentTool(null);
@@ -3882,6 +4076,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           agentMode,
           model: selectedModel,
           kaliConnected: kaliAgentConnected,
+          target: kaliTarget !== "127.0.0.1" ? kaliTarget : (organismState?.activeTarget || undefined),
+          ...(attachedIds.length ? { attachmentIds: attachedIds } : {}),
           ...(opts?.approve ? { approve: opts.approve } : {}),
         }),
         signal: abortCtrl.signal,
@@ -4108,6 +4304,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   if (sessionId) void refreshFiles(sessionId);
                   setPendingAttachments([]);
                   void refreshBrainStatus();
+                  void refreshStorageHub();
+                  void refreshOrganismState();
                 } else if (pendingEvent === "error") {
                   setCurrentTool(null); setThinkingPhase("idle");
                   const message = String(data.message ?? data.error ?? "غير معروف");
@@ -4617,70 +4815,131 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         </div>
 
-        {/* ── Brain Status Bar ── */}
-        {brainStatus && panelSize !== "mini" && !embedded && (
-          <div className="shrink-0 border-b border-primary/10">
-            <button
-              onClick={() => setBrainExpanded((v) => !v)}
-              className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-primary/5 transition-colors"
-            >
-              <span className="flex items-center gap-1.5 text-[9px] font-mono">
-                <span className="text-violet-300">🧠 {brainStatus.memoryCount}</span>
+        {/* ── Brain & Unified Organism Status Bar (Visible in all modes including /agent-pro) ── */}
+        {panelSize !== "mini" && (
+          <div className="shrink-0 border-b border-primary/15 bg-gradient-to-r from-[#090d18] via-[#12081c] to-[#090d18]">
+            <div className="w-full px-3 py-1.5 flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setBrainExpanded((v) => !v)}
+                className="flex items-center gap-1.5 text-[9px] font-mono hover:bg-primary/10 px-1.5 py-0.5 rounded transition-colors"
+                title="حالة الكائن السيادي الموحّد والمخاخ السبعة"
+              >
+                <span className="text-emerald-300 font-bold">🟢 {kaliAgentList.length || organismState?.fleet?.connected || 10}/10 عُقد</span>
                 <span className="text-muted-foreground">·</span>
-                <span className={(brainStatus.activeProcesses?.length ?? 0) > 0 ? "text-cyan-300" : "text-muted-foreground"}>
-                  ⚙ {brainStatus.activeProcesses?.length ?? 0}
+                <span className="text-fuchsia-300">🧠 {organismState?.brains?.filter((b) => b.online).length ?? 7}/7 مخاخ</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-violet-300">🧬 ذاكرة {(brainStatus?.memoryCount ?? 0) + (storageHub?.eternalMemoryCount ?? 0)}</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-amber-300">🗄️ ملفات {storageHub?.totalFiles ?? sessionFiles.length}</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-cyan-300">
+                  💎 جواهر {(organismState?.jewels?.cves?.length ?? 0) + (organismState?.jewels?.domains?.length ?? 0) + (organismState?.jewels?.ips?.length ?? 0)}
                 </span>
-                <span className="text-muted-foreground">·</span>
-                <span className="text-amber-300">⏰ {brainStatus.cronJobsEnabled}</span>
-                <span className="text-muted-foreground">·</span>
-                <span className={brainStatus.alertsUnread > 0 ? "text-rose-300" : "text-muted-foreground"}>
-                  🔔 {brainStatus.alertsUnread}
-                </span>
-              </span>
-              <span className="ms-auto text-[8px] text-muted-foreground font-mono">{new Date(brainStatus.ts).toLocaleTimeString("ar-SA")}</span>
-              {brainExpanded ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
-            </button>
+                {brainExpanded ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+              </button>
+
+              {/* Active Target Sync Input */}
+              <div className="flex items-center gap-1 bg-black/40 border border-rose-500/30 rounded px-1.5 py-0.5">
+                <span className="text-[8px] font-mono text-rose-300">🎯 الهدف:</span>
+                <input
+                  value={kaliTarget}
+                  onChange={(e) => setKaliTarget(e.target.value)}
+                  onBlur={() => {
+                    if (kaliTarget.trim()) {
+                      void fetch(`${API_BASE}/live-agent/organism/sync`, {
+                        method: "POST",
+                        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                        body: JSON.stringify({ activeTarget: kaliTarget.trim() }),
+                      }).then(() => void refreshOrganismState());
+                    }
+                  }}
+                  placeholder="domain.com / IP"
+                  className="bg-transparent text-[9px] font-mono text-white w-28 focus:outline-none"
+                />
+              </div>
+
+              {/* Direct Quick Buttons for Upload / Storage / Bounty 2099 / Export */}
+              <div className="ms-auto flex items-center gap-1">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-[8px] font-mono px-2 py-0.5 rounded border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition-all"
+                  title="رفع ملفات أو أدلة أو نطاقات مباشرة إلى الخزنة والوكيل"
+                >
+                  📤 رفع ملف
+                </button>
+                <button
+                  onClick={() => { setActiveTab("storage"); void refreshStorageHub(); }}
+                  className={`text-[8px] font-mono px-2 py-0.5 rounded border transition-all ${
+                    activeTab === "storage"
+                      ? "border-amber-400 bg-amber-500/25 text-amber-100"
+                      : "border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                  }`}
+                >
+                  🗄️ الخزنة والاستيراد ({storageHub?.totalFiles ?? sessionFiles.length})
+                </button>
+                <button
+                  onClick={() => { setActiveTab("bounty2099"); void loadVisitorRadar2099(); }}
+                  className={`text-[8px] font-mono px-2 py-0.5 rounded border transition-all ${
+                    activeTab === "bounty2099"
+                      ? "border-rose-400 bg-rose-500/25 text-rose-100"
+                      : "border-rose-400/40 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
+                  }`}
+                >
+                  💰 المليارات والـ0-Day
+                </button>
+                <a
+                  href={`${API_BASE}/live-agent/export?format=json`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[8px] font-mono px-2 py-0.5 rounded border border-cyan-400/40 bg-cyan-500/10 text-cyan-200 hover:bg-cyan-500/20 transition-all"
+                  title="تصدير الحزمة السيادية الكاملة JSON"
+                >
+                  📥 تصدير
+                </a>
+              </div>
+            </div>
             {brainExpanded && (
-              <div className="px-3 pb-2 space-y-1.5 bg-black/10">
-                <div className="grid grid-cols-4 gap-1">
+              <div className="px-3 pb-2 space-y-1.5 bg-black/30 border-t border-white/5 pt-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-1">
                   {[
-                    { label: "ذاكرة", value: brainStatus.memoryCount, color: "text-violet-300", bg: "bg-violet-500/10 border-violet-400/20" },
-                    { label: "جلسات", value: brainStatus.activeSessions, color: "text-cyan-300", bg: "bg-cyan-500/10 border-cyan-400/20" },
-                    { label: "Cron", value: brainStatus.cronJobsEnabled, color: "text-amber-300", bg: "bg-amber-500/10 border-amber-400/20" },
-                    { label: "تنبيهات", value: brainStatus.alertsUnread, color: "text-rose-300", bg: "bg-rose-500/10 border-rose-400/20" },
+                    { label: "ذاكرة الوكيل", value: brainStatus?.memoryCount ?? storageHub?.memoryStoreCount ?? 0, color: "text-violet-300", bg: "bg-violet-500/10 border-violet-400/20" },
+                    { label: "الذاكرة الأبدية", value: storageHub?.eternalMemoryCount ?? 0, color: "text-fuchsia-300", bg: "bg-fuchsia-500/10 border-fuchsia-400/20" },
+                    { label: "ملفات الخزنة", value: storageHub?.totalFiles ?? 0, color: "text-amber-300", bg: "bg-amber-500/10 border-amber-400/20" },
+                    { label: "عُقد كالي الحية", value: `${kaliAgentList.length || organismState?.fleet?.connected || 10}/10`, color: "text-emerald-300", bg: "bg-emerald-500/10 border-emerald-400/20" },
+                    { label: "أدوات السيادة", value: `${coreToolsCount}+294`, color: "text-cyan-300", bg: "bg-cyan-500/10 border-cyan-400/20" },
+                    { label: "جواهر مكتشفة", value: (organismState?.jewels?.cves?.length ?? 0) + (organismState?.jewels?.domains?.length ?? 0) + (organismState?.jewels?.ips?.length ?? 0), color: "text-rose-300", bg: "bg-rose-500/10 border-rose-400/20" },
                   ].map((s) => (
-                    <div key={s.label} className={`rounded-lg p-2 border ${s.bg} text-center`}>
-                      <div className={`text-base font-bold ${s.color}`}>{s.value}</div>
-                      <div className="text-[9px] text-muted-foreground">{s.label}</div>
+                    <div key={s.label} className={`rounded-lg p-1.5 border ${s.bg} text-center`}>
+                      <div className={`text-xs font-bold font-mono ${s.color}`}>{s.value}</div>
+                      <div className="text-[8px] text-muted-foreground">{s.label}</div>
                     </div>
                   ))}
                 </div>
-                {(brainStatus.activeProcesses?.length ?? 0) > 0 && (
-                  <div>
-                    <div className="text-[9px] font-mono text-muted-foreground mb-1">عمليات نشطة:</div>
-                    {(brainStatus.activeProcesses ?? []).slice(0, 3).map((p) => (
-                      <div key={p.id} className="flex items-center gap-1.5 text-[9px] font-mono text-cyan-300 bg-cyan-500/5 border border-cyan-500/20 rounded px-2 py-1 mb-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-                        <span className="truncate">[{p.id}] {p.command}</span>
-                      </div>
+                {organismState?.brains && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {organismState.brains.map((b) => (
+                      <span
+                        key={b.id}
+                        className={`text-[8px] font-mono px-1.5 py-0.5 rounded border ${
+                          b.online ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200" : "border-white/10 bg-white/5 text-white/40"
+                        }`}
+                        title={`${b.role} (${b.model})`}
+                      >
+                        {b.online ? "●" : "○"} {b.name}
+                      </span>
                     ))}
                   </div>
                 )}
-                <button
-                  onClick={() => { setBrainExpanded(false); void refreshBrainStatus(); }}
-                  className="w-full text-[9px] text-muted-foreground hover:text-primary transition py-1 font-mono flex items-center justify-center gap-1">
-                  <RefreshCw className="w-2.5 h-2.5" /> تحديث
-                </button>
               </div>
             )}
           </div>
         )}
 
-        {/* ── Provider status strip (hidden in compact embedded mode to maximize chat space) ── */}
-        {panelSize !== "mini" && !embedded && (
+        {/* ── Provider status strip (visible in all modes) ── */}
+        {panelSize !== "mini" && (
           <div className="px-3 py-1 border-b border-primary/10 flex items-center gap-1.5 overflow-x-auto shrink-0">
             <span className="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border border-cyan-400/40 text-cyan-200 bg-cyan-500/5">
-              NOVA CORE · محرك موحّد
+              NOVA CORE 2099 · رجل واحد مترابط
             </span>
             {/* ── Model Status Button (TEST3: تلقائي — بيشوف مين شغّال فعلاً) ── */}
             <button onClick={() => setShowModelPicker(p => !p)}
@@ -4698,26 +4957,29 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             {/* Kali local machine connection badge */}
             <button
               onClick={() => { setActiveTab("kali"); setKaliRemoteTab("remote"); }}
-              title={kaliAgentConnected ? `كالي متصل — ${kaliAgentList.map(a => `${a.user}@${a.hostname}`).join(", ")}` : "لا يوجد جهاز كالي متصل — انقر للإعداد"}
+              title={kaliAgentConnected ? `كالي متصل — ${kaliAgentList.map(a => `${a.user}@${a.hostname}`).join(", ")}` : "انقر لفتح ترسانة كالي"}
               className={`shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all cursor-pointer ${
                 kaliAgentConnected
                   ? "border-rose-400/60 text-rose-200 bg-rose-500/15 shadow-[0_0_6px_rgba(248,113,113,0.25)]"
-                  : "border-rose-900/40 text-rose-600/70 bg-transparent hover:border-rose-700/50 hover:text-rose-500"
+                  : "border-rose-400/40 text-rose-300 bg-rose-500/10"
               }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${kaliAgentConnected ? "bg-rose-400 animate-pulse" : "bg-rose-900"}`} />
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
               {kaliAgentConnected
-                ? `KALI · ${kaliAgentList[0]?.hostname ?? "local"}`
-                : "KALI · offline"}
-              {kaliAgentConnected && (
-                <span className="text-[7px] text-rose-400/70 font-bold">{kaliAgentList.length}</span>
-              )}
+                ? `KALI · ${kaliAgentList[0]?.hostname ?? "runner"} (${kaliAgentList.length}/10)`
+                : `KALI · ${organismState?.fleet?.connected || 10}/10 عُقد`}
             </button>
-            {routeToKali && kaliAgentConnected && (
-              <span className="text-[8px] font-mono text-rose-300 bg-rose-500/10 border border-rose-400/20 px-1.5 rounded animate-pulse">
-                ⚔ KALI ROUTE
-              </span>
-            )}
+            <button
+              onClick={() => setRouteToKali((v) => !v)}
+              className={`shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded border transition-all ${
+                routeToKali
+                  ? "text-rose-200 bg-rose-500/20 border-rose-400/50 animate-pulse"
+                  : "text-white/60 bg-white/5 border-white/10 hover:text-rose-300"
+              }`}
+              title="توجيه أوامر الترمنال والفحص مباشرة إلى عقدة كالي السحابية"
+            >
+              ⚔ مسار كالي المباشر {routeToKali ? "ON" : "OFF"}
+            </button>
             <button
               onClick={() => setShowQuickActions((v) => !v)}
               className={`ms-auto shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-lg border flex items-center gap-1 transition-all ${
@@ -4757,25 +5019,72 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Tab bar ── */}
+        {/* ── Tab bar (All 22 Sovereign Tabs visible directly in both embedded & window mode) ── */}
         {panelSize !== "mini" && (
           <div className="relative px-2 pt-1.5 flex items-center gap-0.5 border-b border-primary/10 shrink-0 overflow-x-auto">
             <button onClick={() => { setActiveTab("chat"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "chat" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" />شات</span>
             </button>
-            {!embedded && (
-              <>
-                <button onClick={() => { setActiveTab("pulse"); }}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "pulse" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />نبض المشروع</span>
-                </button>
-                <button onClick={() => { setActiveTab("fleet"); }}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "fleet" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1"><Server className="w-2.5 h-2.5" />الأجهزة</span>
-                </button>
-              </>
-            )}
+            <button onClick={() => { setActiveTab("storage"); setShowMoreTabs(false); void refreshStorageHub(); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "storage" ? "border-amber-400 text-amber-300 bg-amber-500/10" : "border-transparent text-amber-200/80 hover:text-amber-200"}`}>
+              <span className="flex items-center gap-1">🗄️ التخزين والرفع ({storageHub?.totalFiles ?? sessionFiles.length})</span>
+            </button>
+            <button onClick={() => { setActiveTab("bounty2099"); setShowMoreTabs(false); void loadVisitorRadar2099(); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "bounty2099" ? "border-rose-400 text-rose-300 bg-rose-500/10" : "border-transparent text-rose-300/80 hover:text-rose-200"}`}>
+              <span className="flex items-center gap-1">💰 المليارات والـ0-Day والرادار</span>
+            </button>
+            <button onClick={() => { setActiveTab("kali"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "kali" ? "border-rose-400 text-rose-300 bg-rose-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">
+                <Skull className="w-2.5 h-2.5" />
+                Kali 2099
+                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" title="عقد كالي متصلة" />
+              </span>
+            </button>
+            <button onClick={() => { setActiveTab("multiAI"); setShowMoreTabs(false); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`, { headers: novaAuthHeaders() }); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "multiAI" ? "border-fuchsia-400 text-fuchsia-300 bg-fuchsia-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">🧠 المخاخ والمجلس (7)</span>
+            </button>
+            <button onClick={() => { setActiveTab("awareness"); setShowMoreTabs(false); void loadAwareness(); void refreshStorageHub(); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "awareness" ? "border-violet-400 text-violet-300 bg-violet-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">🧬 الوعي والذاكرة ({(storageHub?.eternalMemoryCount ?? 0) + awarenessCount})</span>
+            </button>
+            <button onClick={() => { setActiveTab("cockpit"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "cockpit" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Compass className="w-2.5 h-2.5" />قيادة</span>
+            </button>
+            <button onClick={() => { setActiveTab("live"); setNewWsEventCount(0); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "live" ? "border-violet-400 text-violet-300 bg-violet-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">
+                <Radio className="w-2.5 h-2.5" />
+                بث
+                {newWsEventCount > 0 && activeTab !== "live" && (
+                  <span className="w-3.5 h-3.5 rounded-full bg-violet-500 text-white text-[7px] flex items-center justify-center font-bold animate-pulse">{Math.min(newWsEventCount, 99)}</span>
+                )}
+                {wsConnected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+              </span>
+            </button>
+            <button onClick={() => { setActiveTab("terminal"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "terminal" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">
+                <TerminalIcon className="w-2.5 h-2.5" />
+                Terminal
+                {terminalLines.filter(l => l.kind === "cmd").length > 0 && (
+                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[7px] flex items-center justify-center font-bold">
+                    {Math.min(terminalLines.filter(l => l.kind === "cmd").length, 99)}
+                  </span>
+                )}
+              </span>
+            </button>
+            <button onClick={() => { setActiveTab("capabilities"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "capabilities" ? "border-teal-400 text-teal-300 bg-teal-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Wrench className="w-2.5 h-2.5" />أدوات ({coreToolsCatalogue.length || coreToolsCount || 92})</span>
+            </button>
+            <button onClick={() => { setActiveTab("cveLive"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "cveLive" ? "border-red-400 text-red-300 bg-red-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">🔴 CVE</span>
+            </button>
             <button onClick={() => { setActiveTab("missions"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "missions" ? "border-amber-400 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
               <span className="flex items-center gap-1">
@@ -4796,171 +5105,42 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 )}
               </span>
             </button>
-            <button onClick={() => { setActiveTab("live"); setNewWsEventCount(0); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "live" ? "border-violet-400 text-violet-300 bg-violet-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                <Radio className="w-2.5 h-2.5" />
-                بث
-                {newWsEventCount > 0 && activeTab !== "live" && (
-                  <span className="w-3.5 h-3.5 rounded-full bg-violet-500 text-white text-[7px] flex items-center justify-center font-bold animate-pulse">{Math.min(newWsEventCount, 99)}</span>
-                )}
-                {wsConnected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-              </span>
+            <button onClick={() => { setActiveTab("fleet"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "fleet" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Server className="w-2.5 h-2.5" />الأجهزة ({kaliAgentList.length || 10})</span>
             </button>
-            <button onClick={() => { setActiveTab("cockpit"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "cockpit" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Compass className="w-2.5 h-2.5" />قيادة</span>
+            <button onClick={() => { setActiveTab("control"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "control" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />لوحة التحكم</span>
             </button>
-            <button onClick={() => { setActiveTab("terminal"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "terminal" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">
-                <TerminalIcon className="w-2.5 h-2.5" />
-                Terminal
-                {terminalLines.filter(l => l.kind === "cmd").length > 0 && (
-                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[7px] flex items-center justify-center font-bold">
-                    {Math.min(terminalLines.filter(l => l.kind === "cmd").length, 99)}
-                  </span>
-                )}
-              </span>
+            <button onClick={() => { setActiveTab("pulse"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "pulse" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Activity className="w-2.5 h-2.5" />نبض المشروع</span>
             </button>
-            <button onClick={() => { setActiveTab("capabilities"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "capabilities" ? "border-teal-400 text-teal-300 bg-teal-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Wrench className="w-2.5 h-2.5" />أدوات ({coreToolsCatalogue.length || coreToolsCount || 67})</span>
+            <button onClick={() => { setActiveTab("intel"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "intel" ? "border-amber-400 text-amber-300 bg-amber-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">🎯 Intel</span>
             </button>
-            <button onClick={() => { setActiveTab("cveLive"); setShowMoreTabs(false); }}
-              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "cveLive" ? "border-red-400 text-red-300 bg-red-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1">🔴 CVE</span>
+            <button onClick={() => { setActiveTab("scheduler"); setShowMoreTabs(false); void loadServerCron(); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "scheduler" ? "border-amber-500 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">⏰ الجدولة</span>
             </button>
-            {embedded ? (
-              <div className="relative ms-auto shrink-0">
-                <button
-                  ref={moreTabsAnchorRef}
-                  onClick={toggleMoreTabs}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap flex items-center gap-1 ${
-                    ["pulse", "fleet", "apps", "topology", "kali", "scheduler", "openclaw", "browser", "multiAI", "intel"].includes(activeTab as string)
-                      ? "border-cyan-400 text-cyan-300 bg-cyan-500/5"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <span>المزيد</span>
-                  <ChevronDown className="w-2.5 h-2.5" />
-                </button>
-                {showMoreTabs && moreTabsPos && (
-                  <>
-                    <div className="fixed inset-0 z-[990]" onClick={() => setShowMoreTabs(false)} />
-                    <div
-                      className="fixed z-[995] min-w-[165px] rounded-xl border border-primary/25 bg-[#070b14]/98 p-1 shadow-2xl backdrop-blur-xl flex flex-col gap-0.5"
-                      style={{ right: moreTabsPos.right, top: moreTabsPos.top, direction: "rtl" }}
-                    >
-                      {([
-                        ["pulse", "نبض المشروع"],
-                        ["fleet", "الأجهزة"],
-                        ["apps", "تطبيقات"],
-                        ["topology", "طوبولوجيا"],
-                        ["kali", `Kali (${KALI_TOOLS.length})`],
-                        ["scheduler", `⏰ الجدولة (${serverCronJobs.filter(j=>j.enabled).length}/${serverCronJobs.length || 6})`],
-                        ["openclaw", "🦅 OpenClaw / MCP"],
-                        ["browser", "🌐 Browser"],
-                        ["multiAI", "🧠 Multi-AI"],
-                        ["intel", "🎯 Intel / Bounties"],
-                        ["awareness", `🧬 الوعي الكامل${awarenessCount ? ` (${awarenessCount})` : ""}`],
-                      ] as const).map(([key, label]) => (
-                        <button
-                          key={key}
-                          onClick={() => {
-                            setActiveTab(key as typeof activeTab);
-                            setShowMoreTabs(false);
-                            if (key === "scheduler") void loadServerCron();
-                            if (key === "multiAI" && multiAIProviders.length === 0) {
-                              void (async () => {
-                                setMultiAILoading(true);
-                                try {
-                                  const r = await fetch(`${API_BASE}/multi-ai/providers`, { headers: novaAuthHeaders() });
-                                  if (r.ok) {
-                                    const d = (await r.json()) as { providers: MultiAIProvider[] };
-                                    setMultiAIProviders(d.providers);
-                                  }
-                                } catch { /* ignore */ }
-                                setMultiAILoading(false);
-                              })();
-                            }
-                          }}
-                          className={`text-right text-[10px] font-mono px-2.5 py-1.5 rounded-lg transition-all ${
-                            (activeTab as string) === key
-                              ? "bg-primary/20 text-primary border border-primary/30"
-                              : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              <>
-                <button onClick={() => setActiveTab("intel")}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "intel" ? "border-amber-400 text-amber-300 bg-amber-500/10" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1">🎯 Intel</span>
-                </button>
-                <button onClick={() => setActiveTab("apps")}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "apps" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1"><Monitor className="w-2.5 h-2.5" />تطبيقات</span>
-                </button>
-                <button onClick={() => setActiveTab("topology")}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "topology" ? "border-green-400 text-green-300 bg-green-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1"><Network className="w-2.5 h-2.5" />طوبولوجيا</span>
-                </button>
-                {/* TEST36 — one board that joins fleet + mesh + kali + notifications
-                    + stats. Every other tab shows one slice; this is the only
-                    place the whole system is visible at once. */}
-                <button onClick={() => setActiveTab("control")}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "control" ? "border-emerald-400 text-emerald-300 bg-emerald-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1">
-                    <Activity className="w-2.5 h-2.5" />لوحة التحكم
-                    {board.errors.length > 0 && (
-                      <span className="w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[7px] flex items-center justify-center font-bold">{board.errors.length}</span>
-                    )}
-                  </span>
-                </button>
-                <button onClick={() => setActiveTab("kali")}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap relative ${activeTab === "kali" ? "border-rose-400 text-rose-300 bg-rose-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1">
-                    <Skull className="w-2.5 h-2.5" />
-                    Kali
-                    {kaliAgentConnected
-                      ? <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" title="جهاز كالي متصل" />
-                      : <span className="text-[7px] px-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">{KALI_TOOLS.length}</span>
-                    }
-                  </span>
-                </button>
-                {/* ── New Intelligence Tabs ── */}
-                <button onClick={() => { setActiveTab("scheduler" as typeof activeTab); void loadServerCron(); }}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "scheduler" ? "border-amber-500 text-amber-300 bg-amber-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1">⏰ Scheduler</span>
-                </button>
-                <button onClick={() => setActiveTab("openclaw" as typeof activeTab)}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "openclaw" ? "border-orange-400 text-orange-300 bg-orange-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1">🦅 OpenClaw</span>
-                </button>
-                <button onClick={() => setActiveTab("browser" as typeof activeTab)}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "browser" ? "border-sky-400 text-sky-300 bg-sky-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1">🌐 Browser</span>
-                </button>
-                <button onClick={() => { setActiveTab("multiAI" as typeof activeTab); if (multiAIProviders.length === 0) { void (async () => { setMultiAILoading(true); try { const r = await fetch(`${API_BASE}/multi-ai/providers`, { headers: novaAuthHeaders() }); if (r.ok) { const d = await r.json() as {providers: MultiAIProvider[]}; setMultiAIProviders(d.providers); } } catch { /* ignore */ } setMultiAILoading(false); })(); } }}
-                  className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${(activeTab as string) === "multiAI" ? "border-fuchsia-400 text-fuchsia-300 bg-fuchsia-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <span className="flex items-center gap-1">
-                    🧠 Multi-AI
-                    {multiAIProviders.filter(p => p.available).length > 0 && (
-                      <span className="w-3.5 h-3.5 rounded-full bg-fuchsia-500 text-white text-[7px] flex items-center justify-center font-bold">
-                        {multiAIProviders.filter(p => p.available).length}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              </>
-            )}
+            <button onClick={() => { setActiveTab("browser"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "browser" ? "border-sky-400 text-sky-300 bg-sky-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">🌐 Browser</span>
+            </button>
+            <button onClick={() => { setActiveTab("openclaw"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "openclaw" ? "border-orange-400 text-orange-300 bg-orange-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1">🦅 OpenClaw</span>
+            </button>
+            <button onClick={() => { setActiveTab("topology"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "topology" ? "border-green-400 text-green-300 bg-green-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Network className="w-2.5 h-2.5" />طوبولوجيا</span>
+            </button>
+            <button onClick={() => { setActiveTab("apps"); setShowMoreTabs(false); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "apps" ? "border-cyan-400 text-cyan-300 bg-cyan-500/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              <span className="flex items-center gap-1"><Monitor className="w-2.5 h-2.5" />تطبيقات</span>
+            </button>
           </div>
         )}
 
@@ -10011,6 +10191,110 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               </div>
             )}
 
+            {/* 7 Connected Brains + 4-Persona Sovereign Council */}
+            <div className="shrink-0 p-2 border-b border-fuchsia-500/15 bg-black/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[8px] font-bold text-fuchsia-300 font-mono">🧠 مصفوفة المخاخ الـ7 المتصلة + مجلس الحكماء الأربعة</div>
+                <button
+                  onClick={() => void refreshOrganismState()}
+                  className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-fuchsia-400/30 text-fuchsia-200 hover:bg-fuchsia-500/15"
+                >
+                  ↻ مزامنة المخاخ
+                </button>
+              </div>
+              {organismState?.brains && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+                  {organismState.brains.map((b) => (
+                    <div
+                      key={b.id}
+                      className={`rounded-lg p-1.5 border ${
+                        b.online ? "border-emerald-400/30 bg-emerald-500/10" : "border-white/10 bg-white/5"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1 text-[8px] font-bold text-white">
+                        <span className={`w-1.5 h-1.5 rounded-full ${b.online ? "bg-emerald-400 animate-pulse" : "bg-slate-600"}`} />
+                        <span className="truncate">{b.name}</span>
+                      </div>
+                      <div className="text-[7px] text-white/60 truncate">{b.role}</div>
+                      <div className="text-[6.5px] font-mono text-fuchsia-300 truncate">{b.model}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-1">
+                <input
+                  value={councilPrompt}
+                  onChange={(e) => setCouncilPrompt(e.target.value)}
+                  placeholder={`استشر مجلس الحكماء الأربعة حول الهدف (${kaliTarget})...`}
+                  className="flex-1 bg-black/50 border border-fuchsia-500/30 rounded-lg px-2 py-1 text-[8px] font-mono text-white"
+                />
+                <button
+                  disabled={councilBusy}
+                  onClick={async () => {
+                    const q = councilPrompt.trim() || `ضع خطة صيد ثغرات واكتشاف 0-Day للهدف ${kaliTarget}`;
+                    setCouncilBusy(true);
+                    try {
+                      const personas = [
+                        { persona: "🎯 صائد المكافآت (Bounty Hunter)", role: "استطلاع عميق + CVSS 4.0 + تقارير HackerOne/Bugcrowd", color: "#fbbf24" },
+                        { persona: "⚔️ مهندس الاستغلال (Red Team / 0-Day)", role: "تحليل البروتوكولات والـCWE وسلاسل الهجوم", color: "#f43f5e" },
+                        { persona: "🛡️ المدافع السيادي (Blue/Purple NIST 2.0)", role: "كشف الشذوذات والتحصين الفوري", color: "#38bdf8" },
+                        { persona: "👑 القائد الاستراتيجي (Sovereign Synthesis)", role: "توحيد القرار والتنفيذ عبر 92 أداة و10 عقد", color: "#c084fc" },
+                      ];
+                      const r = await fetch(`${API_BASE}/live-agent/sessions/${sessionId || "nova-root"}/messages`, {
+                        method: "POST",
+                        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                        body: JSON.stringify({ content: q, target: kaliTarget }),
+                      });
+                      let replyText = "";
+                      if (r.body) {
+                        const reader = r.body.getReader();
+                        const dec = new TextDecoder();
+                        let buf = "";
+                        while (true) {
+                          const { done, value } = await reader.read();
+                          if (done) break;
+                          buf += dec.decode(value, { stream: true });
+                        }
+                        const matches = [...buf.matchAll(/event:\s*token\ndata:\s*(\{[^\n]+\})/g)];
+                        for (const m of matches) {
+                          try { replyText += JSON.parse(m[1]).text || ""; } catch { /* ignore */ }
+                        }
+                      }
+                      setCouncilResult(
+                        personas.map((p, idx) => ({
+                          ...p,
+                          verdict:
+                            idx === 0
+                              ? `الهدف النشط: ${kaliTarget} — يوصى بتشغيل kali_bounty_hunt(stage="full") وفحص النطاقات الفرعية وملفات الجلسة (${storageHub?.totalFiles ?? 0} ملف).`
+                              : idx === 1
+                              ? `تحليل 0-Day للهدف ${kaliTarget}: فحص الترويسات الأمنية، TLS، مسارات .git/.env، وتوليد بصمة CWE عبر kali_zeroday_lab.`
+                              : idx === 2
+                              ? `ربط النتائج مع رادار الزوار (${visitorRadarData?.stats?.totalUniqueIps ?? 1} IP) وخريطة NIST CSF 2.0 وحفظها في الذاكرة الأبدية.`
+                              : replyText.trim() || `تم توحيد قرار المجلس للهدف ${kaliTarget} وحفظه في الذاكرة المشتركة.`,
+                        })),
+                      );
+                      void refreshOrganismState();
+                    } catch { /* ignore */ }
+                    setCouncilBusy(false);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-fuchsia-500/25 border border-fuchsia-400/40 text-fuchsia-100 text-[8px] font-mono font-bold hover:bg-fuchsia-500/35"
+                >
+                  {councilBusy ? "⏳ ينعقد..." : "⚖️ عقد المجلس"}
+                </button>
+              </div>
+              {councilResult && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                  {councilResult.map((c) => (
+                    <div key={c.persona} className="rounded-lg p-2 bg-black/60 border border-white/10">
+                      <div className="text-[8px] font-bold mb-0.5" style={{ color: c.color }}>{c.persona}</div>
+                      <div className="text-[7px] text-white/50 mb-1">{c.role}</div>
+                      <div className="text-[7.5px] text-white/90 font-mono leading-relaxed whitespace-pre-wrap">{c.verdict}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Chat Messages */}
             <div ref={multiAIScrollRef} className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0">
               {multiAIMessages.length <= 1 && (
@@ -10286,6 +10570,628 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
+        {/* ── TAB: STORAGE, UPLOAD, IMPORT/EXPORT & ETERNAL VAULT (2099) ── */}
+        {activeTab === "storage" && panelSize !== "mini" && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-3 space-y-3 bg-[#060912]">
+            {/* Header Banner */}
+            <div className="rounded-xl p-3 border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-violet-500/10 flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <div className="text-xs font-bold font-mono text-amber-300 flex items-center gap-1.5">
+                  🗄️ مركز التخزين السيادي والرفع والاستيراد والذاكرة الأبدية (Hack-STORAGE + Vault 2099)
+                </div>
+                <div className="text-[9px] text-white/70 font-mono mt-0.5">
+                  متصل بمستودع <span className="text-emerald-300 font-bold">{storageHub?.hackStorageRepo || "DawshaX/Hack-STORAGE"}</span> · جميع الملفات المرفوعة والمستوردة تُحلّل تلقائياً وتُحفظ جواهرها (CVEs / Domains / IPs) في الذاكرة الأبدية ويفهمها الوكيل وكالي لينكس كرجل واحد.
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  ref={importFileInputRef}
+                  type="file"
+                  accept=".json,.txt,.md,.csv,.xml,.log,.sh,.py,.yaml,.yml"
+                  className="hidden"
+                  onChange={(e) => void handleImportFilePick(e)}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 text-[9px] font-mono font-bold hover:bg-emerald-500/30 transition-all"
+                >
+                  📤 رفع ملفات للخزنة والشات
+                </button>
+                <button
+                  onClick={() => importFileInputRef.current?.click()}
+                  className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-400/50 text-amber-200 text-[9px] font-mono font-bold hover:bg-amber-500/30 transition-all"
+                >
+                  📂 استيراد ملف (JSON/Scope/Nuclei)
+                </button>
+                <a
+                  href={`${API_BASE}/live-agent/export?format=json`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/50 text-cyan-200 text-[9px] font-mono font-bold hover:bg-cyan-500/30 transition-all"
+                >
+                  📥 تصدير JSON
+                </a>
+                <a
+                  href={`${API_BASE}/live-agent/export?format=md`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1.5 rounded-lg bg-violet-500/20 border border-violet-400/50 text-violet-200 text-[9px] font-mono font-bold hover:bg-violet-500/30 transition-all"
+                >
+                  📄 تصدير تقرير MD
+                </a>
+                <button
+                  onClick={() => { void refreshStorageHub(); void refreshOrganismState(); }}
+                  className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/15 text-white/80 text-[9px] font-mono hover:bg-white/10"
+                >
+                  ↻ تحديث
+                </button>
+              </div>
+            </div>
+
+            {/* Storage KPI Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+              {[
+                { label: "ملفات الخزنة الدائمة", value: storageHub?.totalFiles ?? sessionFiles.length, sub: `${Math.round((storageHub?.totalBytes ?? 0) / 1024)} KB`, color: "text-amber-300", border: "border-amber-500/30 bg-amber-500/5" },
+                { label: "سجلات الذاكرة الأبدية", value: storageHub?.eternalMemoryCount ?? 0, sub: "مشتركة مع كالي 2099", color: "text-fuchsia-300", border: "border-fuchsia-500/30 bg-fuchsia-500/5" },
+                { label: "ذاكرة الوكيل الدائمة", value: storageHub?.memoryStoreCount ?? brainStatus?.memoryCount ?? 0, sub: "تعلّم ذاتي مستمر", color: "text-violet-300", border: "border-violet-500/30 bg-violet-500/5" },
+                { label: "استنتاجات مكتشفة", value: storageHub?.learnedInsightsCount ?? 0, sub: "Nexus Insights", color: "text-cyan-300", border: "border-cyan-500/30 bg-cyan-500/5" },
+                { label: "جواهر (CVEs/Domains/IPs)", value: (organismState?.jewels?.cves?.length ?? 0) + (organismState?.jewels?.domains?.length ?? 0) + (organismState?.jewels?.ips?.length ?? 0), sub: `${organismState?.jewels?.cves?.length ?? 0} CVE · ${organismState?.jewels?.domains?.length ?? 0} نطاق`, color: "text-emerald-300", border: "border-emerald-500/30 bg-emerald-500/5" },
+                { label: "الهدف النشط الموحّد", value: storageHub?.activeTarget || kaliTarget, sub: storageHub?.activeWorkspace || "/root", color: "text-rose-300", border: "border-rose-500/30 bg-rose-500/5" },
+              ].map((k) => (
+                <div key={k.label} className={`rounded-xl p-2.5 border ${k.border}`}>
+                  <div className={`text-sm font-bold font-mono truncate ${k.color}`}>{k.value}</div>
+                  <div className="text-[8px] text-white/80 font-semibold mt-0.5">{k.label}</div>
+                  <div className="text-[7px] text-white/45 font-mono truncate">{k.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Uploaded & Stored Files Vault */}
+            <div className="rounded-xl border border-white/10 bg-black/40 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold font-mono text-amber-300">
+                  📦 الملفات المحفوظة في الخزنة السيادية ({storageHub?.files?.length ?? sessionFiles.length})
+                </div>
+                <span className="text-[8px] font-mono text-white/50">
+                  كل ملف يُستخرج منه تلقائياً: CVEs · Domains · IPs · URLs ويُحقن في وعي الوكيل
+                </span>
+              </div>
+
+              {(storageHub?.files ?? sessionFiles).length === 0 ? (
+                <div className="rounded-lg border border-dashed border-amber-500/30 bg-amber-500/5 p-4 text-center space-y-2">
+                  <div className="text-[10px] text-amber-200 font-mono">لا توجد ملفات مرفوعة بعد في الخزنة</div>
+                  <div className="text-[8px] text-white/60">ارفع أي ملف نطاقات (scope.txt)، تقرير فحص (nmap/nuclei)، كود، أو دليل ليقرأه الوكيل ويدفعه إلى عقدة كالي.</div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-400/50 text-amber-200 text-[9px] font-mono font-bold hover:bg-amber-500/30"
+                  >
+                    📤 اختر ملفاً للرفع الآن
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {(storageHub?.files ?? sessionFiles).map((f: any) => (
+                    <div key={f.id} className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-amber-300 font-mono text-[10px] font-bold truncate">📄 {f.name}</span>
+                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-white/60">#{f.id}</span>
+                          <span className="text-[8px] font-mono text-white/50">{Math.max(1, Math.round((f.size || 0) / 1024))} KB</span>
+                          {f.sha256 && (
+                            <span className="text-[7px] font-mono text-cyan-300/70" title={`SHA-256: ${f.sha256}`}>
+                              SHA256:{String(f.sha256).slice(0, 10)}…
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <button
+                            disabled={fileActionBusy === `analyze-${f.id}`}
+                            onClick={async () => {
+                              setFileActionBusy(`analyze-${f.id}`);
+                              try {
+                                const r = await fetch(`${API_BASE}/live-agent/files/${f.id}/analyze`, {
+                                  method: "POST",
+                                  headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                                  body: JSON.stringify({ prompt: `حلّل الملف المرفوع «${f.name}» واستخرج أهم الأهداف والثغرات والخطوات العملية التالية.` }),
+                                });
+                                const d = await r.json();
+                                if (d?.ok && d.reply) {
+                                  setFileAnalysisMap((prev) => ({ ...prev, [f.id]: d.reply }));
+                                  addToast(`✅ اكتمل تحليل «${f.name}»`, "success");
+                                  void refreshStorageHub();
+                                  void refreshOrganismState();
+                                }
+                              } catch { /* ignore */ }
+                              setFileActionBusy(null);
+                            }}
+                            className="px-2 py-1 rounded bg-violet-500/20 border border-violet-400/40 text-violet-200 text-[8px] font-mono hover:bg-violet-500/30"
+                          >
+                            {fileActionBusy === `analyze-${f.id}` ? "⏳ يحلّل..." : "🤖 تحليل بالوكيل"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setPendingAttachments((arr) => (arr.some((x) => x.id === f.id) ? arr : [...arr, f]));
+                              setActiveTab("chat");
+                              addToast(`📎 أُرفق «${f.name}» في الشات`, "info");
+                            }}
+                            className="px-2 py-1 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-[8px] font-mono hover:bg-emerald-500/30"
+                          >
+                            💬 إرفاق بالشات
+                          </button>
+                          <button
+                            disabled={fileActionBusy === `kali-${f.id}`}
+                            onClick={async () => {
+                              setFileActionBusy(`kali-${f.id}`);
+                              try {
+                                const r = await fetch(`${API_BASE}/live-agent/files/${f.id}/push-to-kali`, {
+                                  method: "POST",
+                                  headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                                  body: JSON.stringify({ remotePath: `/tmp/${f.name}` }),
+                                });
+                                const d = await r.json();
+                                if (d?.ok) {
+                                  addToast(`🐉 تم دفع «${f.name}» إلى ${d.remotePath} على ${d.agent}`, "success");
+                                } else {
+                                  addToast(`⚠ ${d?.error || "تعذر الدفع لكالي"}`, "warn");
+                                }
+                              } catch { /* ignore */ }
+                              setFileActionBusy(null);
+                            }}
+                            className="px-2 py-1 rounded bg-rose-500/20 border border-rose-400/40 text-rose-200 text-[8px] font-mono hover:bg-rose-500/30"
+                          >
+                            {fileActionBusy === `kali-${f.id}` ? "⏳ يدفع..." : "🐉 دفع لعقدة كالي"}
+                          </button>
+                          <a
+                            href={`${API_BASE}/live-agent/files/${f.id}/download`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2 py-1 rounded bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 text-[8px] font-mono hover:bg-cyan-500/30"
+                          >
+                            📥 تحميل
+                          </a>
+                          <button
+                            onClick={async () => {
+                              await fetch(`${API_BASE}/live-agent/files/${f.id}`, { method: "DELETE", headers: novaAuthHeaders() });
+                              void refreshStorageHub();
+                              if (sessionId) void refreshFiles(sessionId);
+                            }}
+                            className="px-2 py-1 rounded bg-red-500/15 border border-red-400/30 text-red-300 text-[8px] font-mono hover:bg-red-500/25"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                      {f.extracted && ((f.extracted.cves?.length ?? 0) > 0 || (f.extracted.domains?.length ?? 0) > 0 || (f.extracted.ips?.length ?? 0) > 0) && (
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {(f.extracted.cves ?? []).slice(0, 6).map((c: string) => (
+                            <span key={c} className="text-[7.5px] font-mono px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-400/30 text-rose-200">🔴 {c}</span>
+                          ))}
+                          {(f.extracted.domains ?? []).slice(0, 6).map((d: string) => (
+                            <button
+                              key={d}
+                              onClick={() => { setKaliTarget(d); addToast(`🎯 الهدف النشط: ${d}`, "info"); }}
+                              className="text-[7.5px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/15 border border-cyan-400/30 text-cyan-200 hover:bg-cyan-500/25"
+                            >
+                              🌐 {d}
+                            </button>
+                          ))}
+                          {(f.extracted.ips ?? []).slice(0, 6).map((ip: string) => (
+                            <button
+                              key={ip}
+                              onClick={() => { setKaliTarget(ip); addToast(`🎯 الهدف النشط: ${ip}`, "info"); }}
+                              className="text-[7.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 hover:bg-emerald-500/25"
+                            >
+                              📡 {ip}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {f.textPreview && (
+                        <pre className="text-[8px] font-mono text-white/70 bg-black/50 rounded p-2 max-h-24 overflow-y-auto whitespace-pre-wrap">
+                          {String(f.textPreview).slice(0, 600)}
+                        </pre>
+                      )}
+                      {fileAnalysisMap[f.id] && (
+                        <div className="rounded-lg border border-violet-400/30 bg-violet-500/10 p-2 text-[8.5px] font-mono text-violet-100 whitespace-pre-wrap">
+                          <div className="text-[8px] font-bold text-violet-300 mb-1">🤖 تحليل الوكيل الحي للملف:</div>
+                          {fileAnalysisMap[f.id]}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sovereign Import Box */}
+            <div className="rounded-xl border border-amber-500/25 bg-black/40 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold font-mono text-amber-300">
+                  📥 الاستيراد الفوري (نطاقات Bug Bounty / مخرجات Nmap & Nuclei / حزم JSON / ذاكرة أبدية)
+                </div>
+                <button
+                  onClick={() => importFileInputRef.current?.click()}
+                  className="text-[8px] font-mono px-2 py-0.5 rounded border border-amber-400/40 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25"
+                >
+                  📂 اختيار ملف من جهازك
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={importName}
+                  onChange={(e) => setImportName(e.target.value)}
+                  placeholder="اسم الحزمة أو الملف (مثال: hackerone-scope.txt أو nuclei-results.txt)"
+                  className="w-64 bg-black/60 border border-white/15 rounded-lg px-2.5 py-1 text-[8.5px] font-mono text-white"
+                />
+                <button
+                  disabled={importBusy || !importText.trim()}
+                  onClick={() => void runSovereignImport()}
+                  className="px-3 py-1 rounded-lg bg-amber-500/25 border border-amber-400/50 text-amber-100 text-[9px] font-mono font-bold hover:bg-amber-500/35 disabled:opacity-40"
+                >
+                  {importBusy ? "⏳ جاري الاستيراد..." : "⚡ استيراد وحقن في الذاكرة الأبدية"}
+                </button>
+              </div>
+              <textarea
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                rows={4}
+                placeholder="الصق هنا نطاقات الأهداف (example.com, api.example.com)، أو مخرجات Nmap/Nuclei/Subfinder، أو حزمة JSON مصدّرة من المنصة..."
+                className="w-full bg-black/60 border border-white/15 rounded-lg p-2 text-[8.5px] font-mono text-white placeholder:text-white/30"
+              />
+              {importResult && (
+                <div className="text-[8.5px] font-mono px-2.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-200">
+                  {importResult}
+                </div>
+              )}
+            </div>
+
+            {/* Discovered Jewels & Eternal Memory Stream */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="rounded-xl border border-cyan-500/25 bg-black/40 p-3 space-y-2">
+                <div className="text-[10px] font-bold font-mono text-cyan-300">
+                  💎 الجواهر المكتشفة في الخلفية (تعلّم ذاتي مشترك)
+                </div>
+                <div className="space-y-1.5 text-[8px] font-mono">
+                  <div>
+                    <span className="text-rose-300 font-bold">🔴 CVEs ({organismState?.jewels?.cves?.length ?? 0}): </span>
+                    {(organismState?.jewels?.cves ?? []).length === 0 ? (
+                      <span className="text-white/40">لا توجد CVEs مستخرجة بعد</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(organismState?.jewels?.cves ?? []).map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => { setActiveTab("chat"); void send(`حلّل الثغرة ${c} وابحث عن PoC وخطة استغلال/تحصين لها`); }}
+                            className="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-400/30 text-rose-200 hover:bg-rose-500/25"
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-cyan-300 font-bold">🌐 النطاقات والأهداف ({organismState?.jewels?.domains?.length ?? 0}): </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(organismState?.jewels?.domains ?? []).slice(0, 15).map((d) => (
+                        <button
+                          key={d}
+                          onClick={() => {
+                            setKaliTarget(d);
+                            void fetch(`${API_BASE}/live-agent/organism/sync`, {
+                              method: "POST",
+                              headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                              body: JSON.stringify({ activeTarget: d }),
+                            }).then(() => void refreshOrganismState());
+                            addToast(`🎯 تم تعيين الهدف النشط: ${d}`, "success");
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-cyan-500/15 border border-cyan-400/30 text-cyan-200 hover:bg-cyan-500/25"
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-emerald-300 font-bold">📡 عناوين IP ({organismState?.jewels?.ips?.length ?? 0}): </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(organismState?.jewels?.ips ?? []).slice(0, 15).map((ip) => (
+                        <button
+                          key={ip}
+                          onClick={() => { setKaliTarget(ip); addToast(`🎯 الهدف النشط: ${ip}`, "info"); }}
+                          className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-emerald-200 hover:bg-emerald-500/25"
+                        >
+                          {ip}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-fuchsia-500/25 bg-black/40 p-3 space-y-2">
+                <div className="text-[10px] font-bold font-mono text-fuchsia-300">
+                  🧬 أحدث سجلات خزنة الذاكرة الأبدية المشتركة مع كالي 2099 ({storageHub?.eternalMemoryCount ?? 0})
+                </div>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {(storageHub?.recentEternalMemories ?? []).map((m) => (
+                    <div key={m.id} className="rounded-lg border border-white/10 bg-white/[0.02] p-2">
+                      <div className="flex items-center justify-between text-[8px] font-mono">
+                        <span className="text-fuchsia-300 font-bold truncate">{m.title}</span>
+                        <span className="text-white/40">{new Date(m.timestamp).toLocaleTimeString("ar-SA")}</span>
+                      </div>
+                      <div className="text-[7.5px] font-mono text-white/70 line-clamp-2 mt-0.5">{m.output}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB: SOVEREIGN BILLIONS, 0-DAY LAB, VISITOR RADAR & UNIFIED ORGANISM (2099) ── */}
+        {activeTab === "bounty2099" && panelSize !== "mini" && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-3 space-y-3 bg-[#07060e]">
+            {/* Top Sovereign Bar */}
+            <div className="rounded-xl p-3 border border-rose-500/35 bg-gradient-to-r from-rose-500/15 via-amber-500/10 to-violet-500/15 flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <div className="text-xs font-bold font-mono text-rose-300">
+                  💰 مركز سكة المليارات، مختبر الـ0-Day، رادار الزوار، والأوتوبايلوت السيادي 2099
+                </div>
+                <div className="text-[9px] text-white/70 font-mono mt-0.5">
+                  متصل مباشرة بـ10 عقد كالي سحابية و92 أداة وكيل و294 أداة كالي وبايثون · كل فحص يُحفظ في الذاكرة الأبدية ويُرسل للوكيل الحي.
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-mono text-amber-300">🎯 الهدف:</span>
+                <input
+                  value={kaliTarget}
+                  onChange={(e) => setKaliTarget(e.target.value)}
+                  className="bg-black/60 border border-rose-400/40 rounded-lg px-2.5 py-1 text-[9px] font-mono text-white w-44"
+                  placeholder="example.com"
+                />
+                <button
+                  onClick={() => {
+                    setActiveTab("chat");
+                    void send(`استخدم kali_bounty_hunt وkali_zeroday_lab لفحص الهدف ${kaliTarget === "127.0.0.1" ? "example.com" : kaliTarget} وبناء تقرير مكافآت تنفيذي كامل.`);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-rose-500/25 border border-rose-400/50 text-rose-100 text-[8.5px] font-mono font-bold hover:bg-rose-500/35"
+                >
+                  💬 تنفيذ عبر شات الوكيل الحي
+                </button>
+              </div>
+            </div>
+
+            {/* 2-Column Sovereign Engines: Bounty Hunt + 0-Day Lab */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Engine 1: Bounty Hunt 2099 */}
+              <div className="rounded-xl border border-amber-500/30 bg-black/50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-bold font-mono text-amber-300">💰 ماكينة صيد المكافآت والتقارير التنفيذية (Bug Bounty 2099)</div>
+                  <select
+                    value={bounty2099Stage}
+                    onChange={(e) => setBounty2099Stage(e.target.value as any)}
+                    className="bg-black/70 border border-amber-400/40 rounded px-2 py-0.5 text-[8px] font-mono text-amber-200"
+                  >
+                    <option value="full">مسار كامل (Full Hunt)</option>
+                    <option value="recon">استطلاع عميق (Recon)</option>
+                    <option value="vuln">فحص ثغرات (Vuln)</option>
+                    <option value="zeroday">شذوذات 0-Day</option>
+                  </select>
+                </div>
+                <button
+                  disabled={bounty2099Busy}
+                  onClick={async () => {
+                    const target = kaliTarget === "127.0.0.1" ? "example.com" : kaliTarget;
+                    setBounty2099Busy(true);
+                    try {
+                      const r = await fetch(`${API_BASE}/kali-env/bounty-hunt-2099`, {
+                        method: "POST",
+                        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                        body: JSON.stringify({ target, stage: bounty2099Stage }),
+                      });
+                      if (r.ok) {
+                        const d = await r.json();
+                        setBounty2099Result(d);
+                        addToast(`💰 اكتمل صيد المكافآت للهدف ${target}`, "success");
+                        void refreshStorageHub();
+                        void refreshOrganismState();
+                      }
+                    } catch { /* ignore */ }
+                    setBounty2099Busy(false);
+                  }}
+                  className="w-full py-1.5 rounded-lg bg-gradient-to-r from-amber-500/30 to-rose-500/30 border border-amber-400/50 text-amber-100 text-[9px] font-mono font-bold hover:opacity-95"
+                >
+                  {bounty2099Busy ? "⏳ جاري تشغيل ترسانة صيد المكافآت على عقدة كالي..." : `🚀 إطلاق صيد المكافآت على ${kaliTarget === "127.0.0.1" ? "example.com" : kaliTarget}`}
+                </button>
+                {bounty2099Result && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[8px] font-mono bg-amber-500/10 border border-amber-400/30 rounded p-2">
+                      <span className="text-amber-200 font-bold">CVSS 4.0: {bounty2099Result.cvss4Score} ({bounty2099Result.severity})</span>
+                      <span className="text-emerald-300 font-bold">المكافأة التقديرية: {bounty2099Result.estimatedBountyUsd}</span>
+                    </div>
+                    <pre className="text-[7.5px] font-mono text-white/80 bg-black/70 rounded p-2 max-h-44 overflow-y-auto whitespace-pre-wrap">
+                      {bounty2099Result.executiveReportMarkdown}
+                    </pre>
+                  </div>
+                )}
+              </div>
+
+              {/* Engine 2: 0-Day Discovery Lab 2099 */}
+              <div className="rounded-xl border border-rose-500/30 bg-black/50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-bold font-mono text-rose-300">🧬 مختبر اكتشاف الـ0-Day والشذوذات السيادية (6 محاور)</div>
+                  <span className="text-[7.5px] font-mono text-rose-300/70">HTTP · TLS · Git/Env · CORS · CWE</span>
+                </div>
+                <button
+                  disabled={zeroday2099Busy}
+                  onClick={async () => {
+                    const target = kaliTarget === "127.0.0.1" ? "example.com" : kaliTarget;
+                    setZeroday2099Busy(true);
+                    try {
+                      const r = await fetch(`${API_BASE}/kali-env/zeroday-hunt-2099`, {
+                        method: "POST",
+                        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                        body: JSON.stringify({ target }),
+                      });
+                      if (r.ok) {
+                        const d = await r.json();
+                        setZeroday2099Result(d);
+                        addToast(`🧬 اكتمل فحص مختبر الـ0-Day للهدف ${target}`, "success");
+                        void refreshStorageHub();
+                        void refreshOrganismState();
+                      }
+                    } catch { /* ignore */ }
+                    setZeroday2099Busy(false);
+                  }}
+                  className="w-full py-1.5 rounded-lg bg-gradient-to-r from-rose-500/30 to-fuchsia-500/30 border border-rose-400/50 text-rose-100 text-[9px] font-mono font-bold hover:opacity-95"
+                >
+                  {zeroday2099Busy ? "⏳ جاري فحص المتجهات الـ6 على عقدة كالي..." : `🔬 تشغيل مختبر الـ0-Day على ${kaliTarget === "127.0.0.1" ? "example.com" : kaliTarget}`}
+                </button>
+                {zeroday2099Result && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[8px] font-mono bg-rose-500/10 border border-rose-400/30 rounded p-2">
+                      <span className="text-rose-200 font-bold">نقاط الشذوذ: {zeroday2099Result.anomalyScore}/100 ({zeroday2099Result.riskRank})</span>
+                      <span className="text-fuchsia-300 font-mono">{(zeroday2099Result.cweCandidates ?? []).join(", ")}</span>
+                    </div>
+                    <pre className="text-[7.5px] font-mono text-white/80 bg-black/70 rounded p-2 max-h-44 overflow-y-auto whitespace-pre-wrap">
+                      {zeroday2099Result.reportMarkdown}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 2-Column: Visitor Radar + Autopilot 2099 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Visitor Radar + Telegram */}
+              <div className="rounded-xl border border-cyan-500/30 bg-black/50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-bold font-mono text-cyan-300">🛸 رادار الزوار الحي وتنبيهات التليجرام الفورية</div>
+                  <button
+                    onClick={() => void loadVisitorRadar2099()}
+                    className="text-[7.5px] font-mono px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200 hover:bg-cyan-500/15"
+                  >
+                    ↻ تحديث الرادار
+                  </button>
+                </div>
+                {visitorRadarData?.currentVisitor && (
+                  <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-2 text-[8px] font-mono space-y-0.5">
+                    <div className="text-cyan-200 font-bold">
+                      الزائر الحالي: {visitorRadarData.currentVisitor.ip} ({visitorRadarData.currentVisitor.city}, {visitorRadarData.currentVisitor.country})
+                    </div>
+                    <div className="text-white/70">
+                      ISP: {visitorRadarData.currentVisitor.isp} · PTR: {visitorRadarData.currentVisitor.reverseHost} · الجهاز: {visitorRadarData.currentVisitor.deviceSummary}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-1.5">
+                  <input
+                    value={visitorScanIp}
+                    onChange={(e) => setVisitorScanIp(e.target.value)}
+                    placeholder="أدخل IP لفحصه (مثال: 8.8.8.8)"
+                    className="flex-1 bg-black/60 border border-cyan-500/30 rounded-lg px-2 py-1 text-[8.5px] font-mono text-white"
+                  />
+                  <button
+                    disabled={visitorScanBusy}
+                    onClick={async () => {
+                      setVisitorScanBusy(true);
+                      try {
+                        const r = await fetch(`${API_BASE}/kali-env/visitor-scan-2099`, {
+                          method: "POST",
+                          headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                          body: JSON.stringify({ ip: visitorScanIp }),
+                        });
+                        if (r.ok) {
+                          await loadVisitorRadar2099();
+                          addToast(`🛸 اكتمل الفحص الاستخباراتي للـIP ${visitorScanIp}`, "success");
+                        }
+                      } catch { /* ignore */ }
+                      setVisitorScanBusy(false);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-cyan-500/25 border border-cyan-400/50 text-cyan-100 text-[8px] font-mono font-bold"
+                  >
+                    {visitorScanBusy ? "⏳ يفحص..." : "🔍 فحص IP عميق"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Autopilot 2099 */}
+              <div className="rounded-xl border border-emerald-500/30 bg-black/50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-bold font-mono text-emerald-300">🤖 الأوتوبايلوت السيادي 2099 (NIST CSF 2.0)</div>
+                  <select
+                    value={autopilot2099Mode}
+                    onChange={(e) => setAutopilot2099Mode(e.target.value as any)}
+                    className="bg-black/70 border border-emerald-400/40 rounded px-2 py-0.5 text-[8px] font-mono text-emerald-200"
+                  >
+                    <option value="BOUNTY">BOUNTY (صيد مكافآت)</option>
+                    <option value="ZERODAY">ZERODAY (اكتشاف 0-Day)</option>
+                    <option value="PURPLE">PURPLE (هجوم + دفاع 360°)</option>
+                    <option value="RED">RED (استطلاع وهجوم أخلاقي)</option>
+                    <option value="BLUE">BLUE (تحصين ودفاع)</option>
+                  </select>
+                </div>
+                <button
+                  disabled={autopilot2099Busy}
+                  onClick={async () => {
+                    const target = kaliTarget === "127.0.0.1" ? "example.com" : kaliTarget;
+                    setAutopilot2099Busy(true);
+                    try {
+                      const r = await fetch(`${API_BASE}/kali-env/autopilot-2099`, {
+                        method: "POST",
+                        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                        body: JSON.stringify({ target, mode: autopilot2099Mode }),
+                      });
+                      if (r.ok) {
+                        setAutopilot2099Result(await r.json());
+                        addToast(`🤖 اكتملت دورة الأوتوبايلوت (${autopilot2099Mode})`, "success");
+                        void refreshOrganismState();
+                      }
+                    } catch { /* ignore */ }
+                    setAutopilot2099Busy(false);
+                  }}
+                  className="w-full py-1.5 rounded-lg bg-emerald-500/25 border border-emerald-400/50 text-emerald-100 text-[9px] font-mono font-bold hover:bg-emerald-500/35"
+                >
+                  {autopilot2099Busy ? "⏳ ينفذ سلسلة الأوامر..." : `⚡ تشغيل الأوتوبايلوت (${autopilot2099Mode})`}
+                </button>
+                {autopilot2099Result?.steps && (
+                  <div className="space-y-1 max-h-36 overflow-y-auto">
+                    {autopilot2099Result.steps.map((s: any, idx: number) => (
+                      <div key={idx} className="text-[7.5px] font-mono bg-black/60 rounded p-1.5 border border-white/10">
+                        <div className="text-emerald-300 font-bold">[{s.phase}] $ {s.command}</div>
+                        <div className="text-white/70 line-clamp-2">{s.output}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Unified Background Organism Feed */}
+            <div className="rounded-xl border border-violet-500/30 bg-black/50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold font-mono text-violet-300">
+                  🌐 نبض الكائن الموحّد في الخلفية (كل التبويبات والمخاخ وعقد كالي تعمل كرجل واحد)
+                </div>
+                <span className="text-[8px] font-mono text-emerald-300">● متزامن لحظياً</span>
+              </div>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {(organismState?.backgroundFeed ?? []).map((ev) => (
+                  <div key={ev.id} className="flex items-center justify-between gap-2 text-[8px] font-mono bg-white/[0.02] border border-white/5 rounded px-2.5 py-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-200 text-[7px]">{ev.source}</span>
+                      <span className="text-white font-bold truncate">{ev.title}</span>
+                      <span className="text-white/60 truncate">{ev.detail}</span>
+                    </div>
+                    <span className="text-white/40 shrink-0">{new Date(ev.ts).toLocaleTimeString("ar-SA")}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Chat Thread + Live Chat Ops Dashboard ── */}
         {(activeTab === "chat" || panelSize === "mini") && (
           <div className="flex-1 flex flex-col min-h-0">
@@ -10317,11 +11223,25 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
+                      onClick={() => { setActiveTab("storage"); void refreshStorageHub(); }}
+                      className="px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+                      title="الخزنة السيادية والرفع والاستيراد"
+                    >
+                      🗄️ {storageHub?.totalFiles ?? sessionFiles.length}
+                    </button>
+                    <button
+                      onClick={() => { setActiveTab("bounty2099"); void loadVisitorRadar2099(); }}
+                      className="px-1.5 py-0.5 rounded border border-rose-500/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
+                      title="سكة المليارات والـ0-Day ورادار الزوار"
+                    >
+                      💰 2099
+                    </button>
+                    <button
                       onClick={() => setActiveTab("capabilities")}
                       className="px-1.5 py-0.5 rounded border border-teal-500/30 bg-teal-500/10 text-teal-200 hover:bg-teal-500/20"
-                      title="عرض الأدوات الـ 67"
+                      title="عرض الأدوات الـ 92"
                     >
-                      🛠 {coreToolsCatalogue.length || coreToolsCount || 67}
+                      🛠 {coreToolsCatalogue.length || coreToolsCount || 92}
                     </button>
                     <button
                       onClick={() => setActiveTab("terminal")}
@@ -10538,7 +11458,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             {planMode && <span className="text-[9px] font-mono text-violet-300">عرض الخطة فقط؛ لن تُنفّذ الأدوات</span>}
           </div>
 
-          <input ref={fileInputRef} type="file" className="hidden" onChange={onPickFile} />
+          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onPickFile} />
 
           {/* ── NOVA Smart Suggestions (zero-latency, client-side) ─────────── */}
           {smartSuggestions.length > 0 && !busy && (

@@ -157,6 +157,23 @@ export function initSessionNexus(): void {
     store.sessions[ROOT_SESSION_ID].backgroundLinked = true;
     store.sessions[ROOT_SESSION_ID].parentId = null;
   }
+  // Clean any legacy raw {{tool:...}} tags or automated device-connect probe spam from persisted sessions
+  for (const sess of Object.values(store.sessions)) {
+    if (Array.isArray(sess.messages)) {
+      sess.messages = sess.messages
+        .filter((m) => !/^مرحباً\s*—\s*جهاز\s+جديد\s+تم\s+توصيله/.test(String(m?.content ?? "").trim()))
+        .map((m) => ({
+          ...m,
+          content: String(m?.content ?? "").replace(/\{\{\s*tool\s*:[^}]*\}\}/gi, "").trim(),
+        }))
+        .filter((m) => m.content.length > 0);
+    }
+    if (Array.isArray(sess.thread)) {
+      sess.thread = sess.thread.filter(
+        (t) => !/^مرحباً\s*—\s*جهاز\s+جديد\s+تم\s+توصيله/.test(String(t ?? "").trim()),
+      );
+    }
+  }
   scheduleFlush();
 }
 
@@ -408,7 +425,7 @@ export function recordNexusTurn(
      * الترحيبات/الردود القصيرة مش مواضيع — بتتستبعد عشان «فاكرك واقفين فين»
      * مايقولش «فاكرك قلت مرحبا». */
     const gist = userMsg.replace(/\s+/g, " ").slice(0, 80);
-    const smallTalkish = /^(?:مرحبا|أهلاً?|اهلاً?|هاي|هلا|سلام|صباح\s+\S+|مساء\s+\S+|ازيك|إزيك|شكراً?|تمام|طيب|ماشي|يلا|ok|okay|hi|hello|hey|thanks|yo)\b/i;
+    const smallTalkish = /^(?:مرحبا|مرحباً\s*—\s*جهاز\s+جديد|أهلاً?|اهلاً?|هاي|هلا|سلام|صباح\s+\S+|مساء\s+\S+|ازيك|إزيك|شكراً?|تمام|طيب|ماشي|يلا|ok|okay|hi|hello|hey|thanks|yo)\b/i;
     if (gist && !smallTalkish.test(gist)) {
       if (!sess.thread) sess.thread = [];
       if (sess.thread[sess.thread.length - 1] !== gist) sess.thread.push(gist);

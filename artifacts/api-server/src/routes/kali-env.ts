@@ -3147,7 +3147,7 @@ function defaultPersistentSession(): KaliPersistentSessionState {
 
 let eternalVaultCache: KaliEternalVaultFile | null = null;
 
-function readEternalVault(): KaliEternalVaultFile {
+export function readEternalVault(): KaliEternalVaultFile {
   if (eternalVaultCache) return eternalVaultCache;
   const p = getEternalVaultPath();
   try {
@@ -3189,14 +3189,14 @@ function readEternalVault(): KaliEternalVaultFile {
   return eternalVaultCache;
 }
 
-function writeEternalVault(vault: KaliEternalVaultFile): void {
+export function writeEternalVault(vault: KaliEternalVaultFile): void {
   eternalVaultCache = vault;
   try {
     fs.writeFileSync(getEternalVaultPath(), JSON.stringify(vault, null, 2), "utf8");
   } catch { /* ignore */ }
 }
 
-function recordEternalMemoryEntry(entry: Omit<EternalMemoryEntry, "id" | "timestamp">): EternalMemoryEntry {
+export function recordEternalMemoryEntry(entry: Omit<EternalMemoryEntry, "id" | "timestamp">): EternalMemoryEntry {
   const vault = readEternalVault();
   const full: EternalMemoryEntry = {
     id: `mem-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
