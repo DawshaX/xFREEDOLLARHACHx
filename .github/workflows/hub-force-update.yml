@@ -19,8 +19,9 @@ jobs:
       TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
       HUB: https://nova.waifly.com
     steps:
-      - name: force the auto-update (bypass backoff)
+      - name: wait for standalone-bundle to publish nova-bundle + force auto-update
         run: |
+          sleep 55
           R=$(curl -s --max-time 300 -w "\nHTTP:%{http_code}" -X POST "$HUB/api/nova-core/auto-update?force=1" \
             -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}')
           echo "::notice::force-update: $(echo "$R" | tail -c 400 | tr -d '\n\r')"
@@ -33,7 +34,7 @@ jobs:
             UP=$(echo "$V" | grep -o '"uptimeSec":[0-9]*' | cut -d: -f2)
             echo "::notice::boot=$BOOT uptime=${UP}s (محاولة $i)"
             case "$BOOT" in
-              900fd30*|84744e3*) echo "لسه القديم — استنى"; sleep 60;;
+              900fd30*|84744e3*|38660b6*|4591d42*) echo "لسه القديم — استنى"; sleep 60;;
               "") echo "الهَب بيعيد التشغيل"; sleep 60;;
               *) echo "::notice::✓ الهَب اقفل على بوت جديد: $BOOT"; break;;
             esac
@@ -46,22 +47,24 @@ jobs:
             -d '{"command":"echo TERMINAL_OK && uname -a"}')
           echo "::notice::exec: $(echo "$R" | tr -d '\n\r' | tail -c 400)"
 
-      - name: measure the tools + Kali 2099 Graphical OS Desktop routes
+      - name: measure the tools + Kali 2099 Eternal OS + Auto-Help + Assistant + Memory routes
         run: |
           sleep 20
-          WP=$(curl -s -o /dev/null -w "HTTP:%{http_code} SIZE:%{size_download}" "$HUB/kali-2099-wallpaper.jpg")
+          WP=$(curl -s -o /dev/null -w "HTTP:%{http_code} SIZE:%{size_download}" "$HUB/kali-2099-wallpaper.jpg?token=$TOKEN")
           echo "::notice::wallpaper-2099: $WP"
+          TH=$(curl -s --max-time 30 "$HUB/api/kali-env/tool-help?tool=nmap&token=$TOKEN" | head -c 260)
+          echo "::notice::tool-help-2099: $(echo "$TH" | tr -d '\n\r')"
+          TG=$(curl -s --max-time 30 "$HUB/api/kali-env/tools-guide?token=$TOKEN" | head -c 220)
+          echo "::notice::tools-guide-2099: $(echo "$TG" | tr -d '\n\r')"
+          AS=$(curl -s --max-time 30 -X POST "$HUB/api/kali-env/assistant" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"query":"خطة استطلاع دومين شامل","target":"example.com"}' | head -c 260)
+          echo "::notice::assistant-2099: $(echo "$AS" | tr -d '\n\r')"
+          SS=$(curl -s --max-time 30 "$HUB/api/kali-env/session?token=$TOKEN" | head -c 260)
+          echo "::notice::session-2099: $(echo "$SS" | tr -d '\n\r')"
+          MM=$(curl -s --max-time 30 "$HUB/api/kali-env/memory?token=$TOKEN" | head -c 260)
+          echo "::notice::memory-2099: $(echo "$MM" | tr -d '\n\r')"
           T=$(curl -s --max-time 120 "$HUB/api/kali-env/tools?token=$TOKEN")
           echo "::notice::tools: $(echo "$T" | grep -o '"total":[0-9]*' | head -1) · $(echo "$T" | grep -o '"present":[0-9]*' | head -1)"
           H=$(curl -s --max-time 60 "$HUB/api/kali-env/health?token=$TOKEN" | head -c 300)
           echo "::notice::health: $(echo "$H" | tr -d '\n\r')"
           DF=$(curl -s --max-time 60 "$HUB/api/kali-env/desktop-frame?refresh=1&token=$TOKEN" | head -c 260)
           echo "::notice::desktop-frame-2099: $(echo "$DF" | tr -d '\n\r')"
-          BR=$(curl -s --max-time 60 -X POST "$HUB/api/kali-env/browser" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"url":"https://example.com"}' | head -c 300)
-          echo "::notice::browser-2099: $(echo "$BR" | tr -d '\n\r')"
-          FS=$(curl -s --max-time 30 "$HUB/api/kali-env/fs?scope=workspace&token=$TOKEN" | head -c 260)
-          echo "::notice::fs-2099: $(echo "$FS" | tr -d '\n\r')"
-          PP=$(curl -s --max-time 30 "$HUB/api/kali-env/pipelines?token=$TOKEN" | head -c 260)
-          echo "::notice::pipelines-2099: $(echo "$PP" | tr -d '\n\r')"
-          CT=$(curl -s --max-time 40 "$HUB/api/kali-env/control?token=$TOKEN" | head -c 260)
-          echo "::notice::control-2099: $(echo "$CT" | tr -d '\n\r')"
