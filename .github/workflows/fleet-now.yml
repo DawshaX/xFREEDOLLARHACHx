@@ -171,6 +171,26 @@ jobs:
             echo "::notice::extra tools present: $(grep -c '^OK:' /tmp/kali-extras.txt 2>/dev/null || echo 0)/12"
           fi
 
+      # ── TEST93y — التزويد الذاتي (كسر الدايرة المقفولة) ──────────────────────
+      # العقدة بتثبت كل الكتالوج (~65 أداة) من kali-store قبل الانضمام: debs
+      # + tarballs + binaries + pip + clone — كلها محليًا عبر proot على الrunner.
+      # بلا تمريرات يدوية من الهَب وبلا سلات مسروقة — الموجة بتنضم مُحمّلة.
+      - name: Provision the full tool catalogue from kali-store (self-provisioning wave)
+        if: steps.gate.outputs.run == 'true'
+        continue-on-error: true
+        timeout-minutes: 55
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY_X: ${{ github.repository }}
+        run: |
+          export GITHUB_REPOSITORY="$GITHUB_REPOSITORY_X"
+          bash scripts/kali-node-provision.sh 2>&1 | tee /tmp/provision-out.log || true
+          if [ -f /tmp/provision-final.txt ]; then
+            OKN=$(grep -c '^OK:' /tmp/provision-final.txt || echo 0)
+            echo "::notice::provision result: $OKN tools live on this node"
+            tail -40 /tmp/provision-out.log
+          fi
+
       - name: Resolve the hub token
         if: steps.gate.outputs.run == 'true'
         env:
@@ -215,7 +235,7 @@ jobs:
             timeout "$remaining" node nova-agent.js \
               --server "$HUB" \
               --id "$NODE_ID" \
-              --allow "dig,host,nslookup,whois,curl,openssl,jq,timeout,sort,uniq,grep,head,tail,awk,node,cat,wc" \
+              # TEST93y — فك القيود (أمر المالك): قايمة فاضية = كل الصلاحيات. الهَب متوثق بالتوكن.
               --log /tmp/nova-agent.log
             code=$?
             set -e
