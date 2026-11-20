@@ -148,6 +148,26 @@ jobs:
             gh release upload nova-portable "$f" --clobber --repo "$GITHUB_REPOSITORY"
             echo "published: $n"
           done
+      # مقاس 08:4xZ: الأوبديتر بيحمّل من raw nova-bundle أولًا — وبدون مزامنة
+      # الفرع كان بيسطّب نفس الزيب القديم كل دورة (release اتحدّث والفرع لأ).
+      - name: Sync nova-bundle branch (مصدر التحديث الذاتي)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          rm -rf /tmp/nbsync && mkdir -p /tmp/nbsync && cd /tmp/nbsync
+          git init -q
+          git config user.email "bot@users.noreply.github.com"
+          git config user.name "nova-bundle-bot"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git checkout -b nova-bundle
+          mkdir -p bundle
+          cp "$GITHUB_WORKSPACE/dist-standalone/nova-24-7.zip" bundle/nova-24-7.zip
+          git add -f bundle/nova-24-7.zip
+          git commit -m "nova-24-7.zip — ${GITHUB_SHA}"
+          git push -f origin nova-bundle
+          echo "nova-bundle synced: ${GITHUB_SHA}"
 
       - name: wait, then publish again — the first attempt is allowed to fail
         if: steps.publish.outcome == 'failure'
