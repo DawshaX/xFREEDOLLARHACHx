@@ -88,6 +88,12 @@ const LAUNCH_GROUPS: Array<{ group: string; color: string; tiles: Tile[] }> = [
     { id: "playbooks", label: "Playbooks",hint: "وصفات جاهزة",    icon: ListChecks,   hue: "from-indigo-500/20 to-violet-950/25 border-indigo-400/45 text-indigo-200", action: { kind: "win", win: "playbooks" } },
     { id: "cron",      label: "Cron",     hint: "مهام مجدولة",    icon: CalendarClock,hue: "from-emerald-500/20 to-green-950/25 border-emerald-400/45 text-emerald-200", action: { kind: "arena", arena: "cron" } },
   ] },
+  { group: "💰 سكة المليارات والـ0-Day وكالي 2099", color: "#fbbf24", tiles: [
+    { id: "bounty_hunt", label: "صيد المليارات", hint: "Bug Bounty + PoC ($)", icon: Target, hue: "from-amber-500/25 to-emerald-950/30 border-amber-400/55 text-amber-200", action: { kind: "prompt", text: "شغّل kali_bounty_hunt لبناء تقرير Bug Bounty تنفيذي مع تقييم المكافأة ($) على الهدف: " } },
+    { id: "zeroday_lab", label: "مختبر الـ0-Day", hint: "دمج الثغرات واكتشاف 0-Day", icon: Sparkles, hue: "from-rose-500/25 to-purple-950/30 border-rose-400/55 text-rose-200", action: { kind: "prompt", text: "شغّل kali_zeroday_lab وvuln_combine لاكتشاف ثغرات 0-Day عميقة على الهدف: " } },
+    { id: "autopilot_2099", label: "أوتوبايلوت 360°", hint: "سلاسل Red/Blue/Purple", icon: Zap, hue: "from-purple-500/25 to-indigo-950/30 border-purple-400/55 text-purple-200", action: { kind: "prompt", text: "شغّل kali_autopilot_2099 بوضع autopilot-purple-360 على الهدف: " } },
+    { id: "visitor_radar", label: "رادار الزوار", hint: "IP Auto-Recon + Telegram", icon: Eye, hue: "from-emerald-500/25 to-cyan-950/30 border-emerald-400/55 text-emerald-200", action: { kind: "prompt", text: "شغّل kali_visitor_radar واعرض بصمة الزوار وفحص الـIP وتنبيهات تليجرام: " } },
+  ] },
 ];
 
 const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color: string }> = [

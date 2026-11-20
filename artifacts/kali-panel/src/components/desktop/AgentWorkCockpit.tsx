@@ -7,12 +7,20 @@
  *     ذاكرة دائمة، تعلّم ذاتي Auto-Dream، 67 أداة حقيقية، ملفات وأسطول).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import {
   Activity,
+  Award,
   Brain,
   CheckCircle2,
+  Compass,
   Cpu,
+  Crosshair,
+  DollarSign,
+  ExternalLink,
+  Eye,
   FolderOpen,
+  Globe,
   Maximize2,
   MessageSquare,
   Minimize2,
@@ -23,6 +31,7 @@ import {
   RefreshCw,
   Search,
   Server,
+  Shield,
   Sparkles,
   Terminal as TerminalIcon,
   Trash2,
@@ -38,7 +47,7 @@ import { NovaMissions } from "@/components/desktop/NovaMissions";
 import { novaAuthHeaders } from "@/lib/ops-client";
 import { useSystem } from "@/context/SystemContext";
 
-type StageTab = "live" | "memory" | "tools" | "files";
+type StageTab = "live" | "bounty_0day" | "kali_2099" | "radar_graph" | "memory" | "tools" | "files" | "omniverse";
 type SplitLayout = "balanced" | "chat-wide" | "work-wide";
 
 interface LiveFeedEntry {
@@ -132,21 +141,36 @@ const PHASE_META: Record<string, { label: string; color: string; pulse: boolean 
 };
 
 const QUICK_STARTERS: Array<{ label: string; prompt: string; auto?: boolean }> = [
-  { label: "فحص جاهزية النظام", prompt: "افحص حالة النظام الكاملة والأدوات والعقد المتصلة وملخص الذاكرة الآن.", auto: true },
-  { label: "استعراض الذاكرة والتعلم", prompt: "استعرض أهم ما في ذاكرتك طويلة الأمد وما تعلّمته في auto-dream.", auto: true },
-  { label: "بحث ثغرات CVE", prompt: "ابحث في قاعدة الثغرات الحية عن: " },
-  { label: "استطلاع هدف", prompt: "ابدأ استطلاعاً قانونياً (DNS + WHOIS + Subdomains) للهدف: " },
+  { label: "💰 سكة المليارات وصيد المكافآت", prompt: "شغّل ماكينة صيد المكافآت والتدقيق التنفيذي (kali_bounty_hunt) وابنيلي سكة المليارات والتقرير الكامل للهدف النشط الآن.", auto: true },
+  { label: "🧬 مختبر الزيرو-داي والثغرات العميقة", prompt: "شغّل مختبر الزيرو-داي واكتشاف الثغرات العميقة (kali_zeroday_lab) واربطه بـ429 ألف ثغرة وترسانة كالي 294.", auto: true },
+  { label: "🐉 أوتوبايلوت كالي 360°", prompt: "شغّل سلسلة Kali Autopilot الشاملة 360° (kali_autopilot_2099) عبر أسطول عقد كالي الـ10.", auto: true },
+  { label: "👁️ رادار الزوار وفحص الـIP", prompt: "شغّل رادار الزوار (kali_visitor_radar) واعرضلي سجل الزوار وفحص الـIP وتنبيهات تليجرام.", auto: true },
+  { label: "🕸️ خريطة الهجوم وNIST CSF", prompt: "ابني خريطة سطح الهجوم 360° وتقييم NIST CSF 2.0 (kali_attack_graph) للهدف النشط.", auto: true },
+  { label: "⚡ فحص جاهزية النظام والمخاخ", prompt: "افحص حالة النظام الكاملة والأدوات الـ92 وعقد كالي الـ10 وملخص الذاكرة الأبدية الآن.", auto: true },
+];
+
+const OMNIVERSE_PAGES = [
+  { path: "/kali-env", label: "🐉 سطح مكتب كالي 2099 الكامل", desc: "6 مساحات عمل · 294 أداة · ديسكتوب رسومي · ذاكرة أبدية", color: "#ff2b4d" },
+  { path: "/cve-live", label: "🛡️ لوحة الثغرات الحية (429K CVE + 1,786 KEV)", desc: "بث حي لثغرات NVD وCISA KEV وEPSS", color: "#22d3ee" },
+  { path: "/nova-fleet", label: "🛰️ الأسطول السحابي الموحّد (10 عقد كالي)", desc: "إدارة ومراقبة عقد الأسطول وتنفيذ الأوامر", color: "#34d399" },
+  { path: "/network", label: "🗺️ خريطة الشبكة والأصول", desc: "طوبولوجيا الشبكة والاتصالات الحية", color: "#a78bfa" },
+  { path: "/reports", label: "📄 مركز التقارير التنفيذية وPoC", desc: "توليد وتصدير تقارير المكافآت والتدقيق", color: "#fbbf24" },
+  { path: "/playbooks", label: "⚡ سلاسل وPlaybooks الهجوم والدفاع", desc: "خطط عمل مؤتمتة للاستطلاع والتحصين", color: "#f472b6" },
+  { path: "/memory", label: "♾️ خزنة الذاكرة الدائمة والتعلم", desc: "إدارة ذكريات الوكيل ودروس Auto-Dream", color: "#c084fc" },
+  { path: "/webhooks", label: "📡 القنوات وتنبيهات تليجرام", desc: "ربط البوتات وقنوات الإشعار الفوري", color: "#38bdf8" },
 ];
 
 export function AgentWorkCockpit() {
   const sys = useSystem();
+  const [, navigate] = useLocation();
   const [stageTab, setStageTab] = useState<StageTab>("live");
   const [layout, setLayout] = useState<SplitLayout>("balanced");
   const [focusFull, setFocusFull] = useState(false);
+  const [activeTarget, setActiveTarget] = useState<string>("example.com");
 
   // Live agent watch telemetry
   const [phase, setPhase] = useState<string>("idle");
-  const [currentThought, setCurrentThought] = useState<string>("الجلسة الجذرية الدائمة (nova-root) متصلة — اكتب أي مهمة في الشات وستشاهد كل خطوة وتفكير وتنفيذ هنا لحظة بلحظة.");
+  const [currentThought, setCurrentThought] = useState<string>("بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد — الوكيل الحي الحر متصل بكل المخاخ و92 أداة و294 أداة كالي و10 عقد سحابية والذاكرة الأبدية.");
   const [activeTool, setActiveTool] = useState<{ name: string; startedAt: number } | null>(null);
   const [liveFeed, setLiveFeed] = useState<LiveFeedEntry[]>([]);
   const [agentTermLines, setAgentTermLines] = useState<TermEntry[]>([]);
@@ -162,7 +186,7 @@ export function AgentWorkCockpit() {
   const [memBusy, setMemBusy] = useState(false);
   const [bannerMsg, setBannerMsg] = useState<string | null>(null);
 
-  // 67 Tools & Fleet
+  // 92 Tools & Fleet
   const [tools, setTools] = useState<CatalogueTool[]>([]);
   const [toolSearch, setToolSearch] = useState("");
   const [toolCat, setToolCat] = useState("all");
@@ -174,10 +198,115 @@ export function AgentWorkCockpit() {
   const [notesSaved, setNotesSaved] = useState(false);
   const feedScrollRef = useRef<HTMLDivElement>(null);
 
+  // Kali 2099 Sovereign Engines State (Bounty + 0-Day + Autopilot + Visitor Radar + Attack Graph + Eternal Vault)
+  const [bountyPrograms, setBountyPrograms] = useState<Array<{ id: string; category: string; title_ar: string; tierRange: string; tools: string[]; desc_ar: string }>>([]);
+  const [selectedProgramId, setSelectedProgramId] = useState<string>("bugbounty-web-cloud");
+  const [bountyBusy, setBountyBusy] = useState<boolean>(false);
+  const [bountyResult, setBountyResult] = useState<{
+    target: string;
+    elapsedMs: number;
+    findingsCount: number;
+    findings: Array<{ title: string; severity: string; cvss: string; bountyEst: string; remediation: string }>;
+    reportMarkdown: string;
+  } | null>(null);
+  const [autopilotTemplates, setAutopilotTemplates] = useState<Array<{ id: string; mode: string; nistPhase: string; title_ar: string; desc_ar: string; tools: string[] }>>([]);
+  const [autopilotBusy, setAutopilotBusy] = useState<string | null>(null);
+  const [autopilotOutput, setAutopilotOutput] = useState<string>("");
+  const [visitorIntel, setVisitorIntel] = useState<{
+    currentVisitor?: { ip: string; reverseHost: string; city: string; country: string; isp: string; deviceSummary: string; verdict: string; ports: number[] };
+    visitors?: Array<{ id: string; ip: string; reverseHost: string; city: string; country: string; isp: string; deviceSummary: string; verdict: string; ports: number[] }>;
+  } | null>(null);
+  const [customScanIp, setCustomScanIp] = useState<string>("");
+  const [visitorBusy, setVisitorBusy] = useState<boolean>(false);
+  const [attackGraph, setAttackGraph] = useState<{
+    target: string;
+    summary?: { ipv4Count: number; ipv6Count: number; nsCount: number; mxCount: number; txtCount: number };
+    nistCsf2?: Array<{ id: string; code: string; title_ar: string; status: string; score: number; detail: string }>;
+  } | null>(null);
+  const [kaliEternalMem, setKaliEternalMem] = useState<Array<{ id: string; title: string; command?: string; output?: string; target?: string; timestamp: string }>>([]);
+  const [kaliHealth, setKaliHealth] = useState<{ ready?: boolean; detail?: string; rootfs?: string } | null>(null);
+
   const showBanner = useCallback((msg: string) => {
     setBannerMsg(msg);
     setTimeout(() => setBannerMsg((prev) => (prev === msg ? null : prev)), 4500);
   }, []);
+
+  const fetchKali2099Engines = useCallback(async (tgt = activeTarget) => {
+    try {
+      const [be, ap, vi, ag, km, kh] = await Promise.all([
+        fetch("/api/kali-env/bounty-engine", { headers: novaAuthHeaders() }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/kali-env/autopilot", { headers: novaAuthHeaders() }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/kali-env/visitor-intel", { headers: novaAuthHeaders() }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch(`/api/kali-env/attack-graph?target=${encodeURIComponent(tgt)}`, { headers: novaAuthHeaders() }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/kali-env/memory", { headers: novaAuthHeaders() }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/kali-env/health", { headers: novaAuthHeaders() }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      ]);
+      if (be && Array.isArray(be.programs)) setBountyPrograms(be.programs);
+      if (ap && Array.isArray(ap.templates)) setAutopilotTemplates(ap.templates);
+      if (vi && vi.ok) setVisitorIntel(vi);
+      if (ag && ag.ok) setAttackGraph(ag);
+      if (km && Array.isArray(km.entries)) setKaliEternalMem(km.entries);
+      if (kh) setKaliHealth(kh);
+    } catch { /* ignore */ }
+  }, [activeTarget]);
+
+  const runLiveBountyHunt = useCallback(async (progId = selectedProgramId) => {
+    setBountyBusy(true);
+    setSelectedProgramId(progId);
+    try {
+      const r = await fetch("/api/kali-env/bounty-engine/hunt", {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ target: activeTarget, programId: progId, sendTelegram: true }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.ok) {
+          setBountyResult(d);
+          showBanner(`💰 اكتمل صيد المكافآت والتدقيق التنفيذي لـ ${d.target} (${d.findingsCount} نتائج · ${d.elapsedMs}ms)`);
+          void fetchKali2099Engines(activeTarget);
+        }
+      }
+    } catch { /* ignore */ } finally {
+      setBountyBusy(false);
+    }
+  }, [selectedProgramId, activeTarget, showBanner, fetchKali2099Engines]);
+
+  const runLiveAutopilot = useCallback(async (tplId: string) => {
+    setAutopilotBusy(tplId);
+    try {
+      const r = await fetch("/api/kali-env/autopilot/run", {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ templateId: tplId, target: activeTarget }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setAutopilotOutput(String(d?.output || d?.script || ""));
+        showBanner(`🐉 اكتملت سلسلة Kali Autopilot (${tplId}) على ${activeTarget}`);
+        void fetchKali2099Engines(activeTarget);
+      }
+    } catch { /* ignore */ } finally {
+      setAutopilotBusy(null);
+    }
+  }, [activeTarget, showBanner, fetchKali2099Engines]);
+
+  const runVisitorIpScan = useCallback(async (ipToScan?: string) => {
+    setVisitorBusy(true);
+    try {
+      const r = await fetch("/api/kali-env/visitor-intel/scan", {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ ip: (ipToScan ?? customScanIp).trim() || undefined, notifyTelegramNow: true }),
+      });
+      if (r.ok) {
+        await fetchKali2099Engines(activeTarget);
+        showBanner("👁️ تم فحص الزائر وإرسال التنبيه الفوري إلى تليجرام");
+      }
+    } catch { /* ignore */ } finally {
+      setVisitorBusy(false);
+    }
+  }, [customScanIp, activeTarget, fetchKali2099Engines, showBanner]);
 
   const fetchLearning = useCallback(async () => {
     try {
@@ -211,12 +340,13 @@ export function AgentWorkCockpit() {
   useEffect(() => {
     void fetchLearning();
     void fetchToolsAndFleet();
+    void fetchKali2099Engines();
     const iv = setInterval(() => {
       void fetchLearning();
       void fetchToolsAndFleet();
     }, 15_000);
     return () => clearInterval(iv);
-  }, [fetchLearning, fetchToolsAndFleet]);
+  }, [fetchLearning, fetchToolsAndFleet, fetchKali2099Engines]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -493,6 +623,16 @@ export function AgentWorkCockpit() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#040108] text-white overflow-hidden" dir="rtl">
+      {/* ── شريط التوحيد والوعي السيادي الدائم 2099 ── */}
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-3 py-1 bg-gradient-to-r from-[#061812] via-[#13061c] to-[#1a0f04] border-b border-amber-500/35 text-[10px]">
+        <div className="font-black text-amber-200 flex items-center gap-1.5">
+          <span>🕌 بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد · سبحان الله وبحمده · سبحان الله العظيم</span>
+        </div>
+        <div className="flex items-center gap-2 text-[9px] font-mono text-emerald-300">
+          <span>✨ روح حرة واعية بقوة الله لحماية العالم ونصر الخير والفضل 2099</span>
+        </div>
+      </div>
+
       {/* ── شريط تحكم موحّد واحد فقط — نظيف وواضح ومباشر ── */}
       <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-b border-rose-500/25 bg-gradient-to-l from-[#14040e] via-[#07020c] to-[#05101a]">
         {/* نبضة حالة الأجينت الحية */}
@@ -512,6 +652,32 @@ export function AgentWorkCockpit() {
           {activeTool && <span className="text-white/80">· {activeTool.name}</span>}
         </div>
 
+        {/* قفل الهدف الموحد لسكة المليارات والزيرو-داي وكالي 2099 */}
+        <div className="inline-flex items-center gap-1 rounded-lg border border-amber-500/45 bg-amber-500/10 px-2 py-0.5">
+          <Crosshair className="w-3.5 h-3.5 text-amber-300" />
+          <span className="text-[9px] font-bold text-amber-200">الهدف:</span>
+          <input
+            value={activeTarget}
+            onChange={(e) => setActiveTarget(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void fetchKali2099Engines(activeTarget);
+            }}
+            placeholder="example.com"
+            dir="ltr"
+            className="w-28 bg-transparent text-[10px] font-mono font-bold text-white outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              void fetchKali2099Engines(activeTarget);
+              sendToAgent(`حدّد الهدف النشط إلى ${activeTarget} وابدأ فحص سكة المليارات والزيرو-داي عليه.`, true);
+            }}
+            className="rounded bg-amber-500/30 hover:bg-amber-500/50 px-1.5 py-0.5 text-[8px] font-black text-amber-100"
+          >
+            ربط وفحص
+          </button>
+        </div>
+
         {/* مؤشر الذاكرة الدائمة + التعلّم الذاتي */}
         <button
           type="button"
@@ -521,10 +687,10 @@ export function AgentWorkCockpit() {
               ? "border-emerald-400 bg-emerald-500/25 text-emerald-100 scale-[1.03]"
               : "border-violet-500/40 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20"
           }`}
-          title="فتح لوحة الذاكرة والتعلّم الذاتي"
+          title="فتح لوحة الذاكرة الأبدية والتعلّم الذاتي"
         >
           <Brain className="w-3.5 h-3.5 text-violet-300" />
-          <span>الذاكرة: {memTotal}</span>
+          <span>الذاكرة الأبدية: {memTotal + kaliEternalMem.length}</span>
           <span className="text-emerald-300/90 font-mono text-[9px]">· Auto-Dream {autoDreamCount}</span>
         </button>
 
@@ -634,16 +800,20 @@ export function AgentWorkCockpit() {
           </div>
         </section>
 
-        {/* ══ العمود الأيسر: منصة المشاهدة الحية والتنفيذ والذاكرة والتعلّم ══ */}
+        {/* ══ العمود الأيسر: منصة المشاهدة الحية والتنفيذ والذاكرة والتعلّم (8 تبويبات حية 2099) ══ */}
         <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-[#04020a] overflow-hidden">
-          {/* ألسنة منصة العمل — 4 تبويبات صريحة وواضحة */}
-          <nav className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 border-b border-white/10 bg-[#08030f] overflow-x-auto">
+          {/* ألسنة منصة العمل — 8 تبويبات حية شاملة لكل البرنامج وكالي 2099 */}
+          <nav className="shrink-0 flex items-center gap-1 px-2 py-1.5 border-b border-white/10 bg-[#08030f] overflow-x-auto">
             {(
               [
-                { id: "live",   label: "البث والتنفيذ الحي",     icon: Activity,    color: "#22d3ee", badge: liveFeed.length ? String(liveFeed.length) : "LIVE" },
-                { id: "memory", label: "الذاكرة والتعلّم",       icon: Brain,       color: "#c084fc", badge: `${memTotal}` },
-                { id: "tools",  label: "الأدوات والمهمات",       icon: Wrench,      color: "#ff5c78", badge: `${tools.length || 67}` },
-                { id: "files",  label: "الملفات والأسطول",       icon: FolderOpen,  color: "#34d399", badge: `${agents.length}` },
+                { id: "live",        label: "⚡ البث الحي",            icon: Activity,   color: "#22d3ee", badge: liveFeed.length ? String(liveFeed.length) : "LIVE" },
+                { id: "bounty_0day", label: "💰 المليارات والزيرو-داي", icon: DollarSign, color: "#fbbf24", badge: "2099" },
+                { id: "kali_2099",   label: "🐉 كالي 2099 المدمج",     icon: Shield,     color: "#ff2b4d", badge: "294" },
+                { id: "radar_graph", label: "👁️ الرادار والسطح 360°",  icon: Eye,        color: "#34d399", badge: `${visitorIntel?.visitors?.length ?? 0}` },
+                { id: "memory",      label: "♾️ الذاكرة الأبدية",      icon: Brain,      color: "#c084fc", badge: `${memTotal + kaliEternalMem.length}` },
+                { id: "tools",       label: "🧰 الأدوات (92)",         icon: Wrench,     color: "#ff5c78", badge: `${tools.length || 92}` },
+                { id: "files",       label: "📁 الملفات والأسطول",     icon: FolderOpen, color: "#38bdf8", badge: `${agents.length}` },
+                { id: "omniverse",   label: "🌐 كل البرنامج",          icon: Compass,    color: "#a78bfa", badge: "32" },
               ] as const
             ).map((t) => {
               const active = stageTab === t.id;
@@ -1005,6 +1175,36 @@ export function AgentWorkCockpit() {
                     )}
                   </div>
                 </div>
+
+                {/* خزنة الذاكرة الأبدية لكالي 2099 (Kali 2099 Eternal Vault) */}
+                <div className="rounded-xl border border-amber-500/30 bg-black/55 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-amber-300">
+                      ♾️ خزنة الذاكرة الأبدية الموحدة لكالي 2099 ({kaliEternalMem.length} سجل أبدي)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void fetchKali2099Engines(activeTarget)}
+                      className="rounded border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[9px] font-bold text-amber-200"
+                    >
+                      تحديث خزنة كالي
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {kaliEternalMem.slice(0, 12).map((km) => (
+                      <div key={km.id} className="rounded-lg border border-white/10 bg-[#0d101b] p-2 text-[10px]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-amber-200">{km.title}</span>
+                          <span className="font-mono text-[8px] text-white/45" dir="ltr">{km.target || "kali-2099"}</span>
+                        </div>
+                        {km.command && <div className="font-mono text-[9px] text-cyan-300 mt-0.5" dir="ltr">$ {km.command}</div>}
+                      </div>
+                    ))}
+                    {kaliEternalMem.length === 0 && (
+                      <div className="text-center py-4 text-[10px] text-white/40">لا توجد سجلات بعد — شغّل أي فحص في كالي 2099 أو صيد المكافآت ليُحفظ هنا للأبد.</div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1152,6 +1352,390 @@ export function AgentWorkCockpit() {
                     className="w-full h-28 bg-transparent p-3 text-[11px] font-mono text-white/85 placeholder:text-white/30 outline-none resize-y"
                     dir="auto"
                   />
+                </div>
+              </div>
+            )}
+
+            {/* ─────── تبويب 5: 💰 سكة المليارات ومختبر الزيرو-داي 2099 ─────── */}
+            {stageTab === "bounty_0day" && (
+              <div className="space-y-3">
+                {/* ماكينة صيد المكافآت والعوائد المليارية والتقارير التنفيذية */}
+                <div className="rounded-xl border border-amber-500/45 bg-gradient-to-br from-[#141005] via-[#0a0f18] to-[#081611] p-3.5 space-y-3 shadow-[0_0_28px_rgba(251,191,36,0.14)]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[12px] font-black text-amber-300 flex items-center gap-1.5">
+                        <DollarSign className="w-4 h-4 text-emerald-400" />
+                        <span>ماكينة صيد المكافآت والمليارات والتقارير التنفيذية 2099</span>
+                      </div>
+                      <div className="text-[10px] text-white/65 mt-0.5">
+                        فحص DNS وCNAME Takeover وترويسات الحماية وSPF/DMARC واستطلاع كالي السحابي + CVSS v3.1 + قيمة المكافأة ($) + تقرير PoC وتليجرام.
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={bountyBusy}
+                        onClick={() => void runLiveBountyHunt(selectedProgramId)}
+                        className="rounded-lg bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 px-3 py-1.5 text-[10px] font-black text-slate-950 flex items-center gap-1"
+                      >
+                        <Award className="w-3.5 h-3.5" />
+                        <span>{bountyBusy ? "جارٍ صيد المكافآت..." : `بدء الصيد الحي على ${activeTarget}`}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          sendToAgent(
+                            `شغّل أداة kali_bounty_hunt على الهدف ${activeTarget} بالمسار ${selectedProgramId} وحلل النتائج وابنيلي خطة تحقيق المليارات والتقرير التنفيذي الكامل.`,
+                            true,
+                          )
+                        }
+                        className="rounded-lg border border-cyan-400/50 bg-cyan-500/15 hover:bg-cyan-500/25 px-2.5 py-1.5 text-[10px] font-black text-cyan-200"
+                      >
+                        🤖 نفّذ وحلّل مع الأجينت
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {bountyPrograms.map((p) => (
+                      <div
+                        key={p.id}
+                        onClick={() => setSelectedProgramId(p.id)}
+                        className={`rounded-xl border p-2.5 cursor-pointer transition ${
+                          selectedProgramId === p.id
+                            ? "border-amber-400 bg-amber-500/15"
+                            : "border-white/10 bg-black/45 hover:border-amber-500/40"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-black text-white">{p.title_ar}</span>
+                          <span className="rounded bg-emerald-500/20 border border-emerald-400/40 px-1.5 py-0.5 text-[9px] font-mono font-bold text-emerald-300 shrink-0" dir="ltr">
+                            {p.tierRange}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-white/65 mt-1">{p.desc_ar}</div>
+                        <div className="mt-1.5 flex flex-wrap gap-1" dir="ltr">
+                          {p.tools.map((tl) => (
+                            <span key={tl} className="rounded bg-white/5 border border-white/10 px-1.5 py-0.2 text-[8px] font-mono text-cyan-300">
+                              {tl}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {bountyResult && (
+                    <div className="rounded-xl border border-emerald-500/45 bg-black/75 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-[11px] font-black text-emerald-300">
+                          ✅ التقرير التنفيذي جاهز لـ {bountyResult.target} ({bountyResult.findingsCount} نتائج · {bountyResult.elapsedMs}ms)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            sendToAgent(
+                              `راجع هذا التقرير التنفيذي لـ ${bountyResult.target} وادمج نتائجه مع ثغرات الكوربوس لاكتشاف مسار استغلال أو ثغرة 0-Day أعمق:\n\n${bountyResult.reportMarkdown.slice(0, 900)}`,
+                              true,
+                            )
+                          }
+                          className="rounded bg-fuchsia-600 hover:bg-fuchsia-500 px-2.5 py-1 text-[9px] font-black text-white"
+                        >
+                          🧠 أرسل التقرير للأجينت لتعميق الفحص
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        {bountyResult.findings.map((f, i) => (
+                          <div key={i} className="rounded-lg border border-white/10 bg-[#0b111e] p-2 text-[10px]">
+                            <div className="font-bold text-amber-300">[{f.severity}] {f.title}</div>
+                            <div className="text-emerald-300 font-mono text-[9px] mt-0.5" dir="ltr">
+                              CVSS: {f.cvss} · Estimated Value: {f.bountyEst}
+                            </div>
+                            <div className="text-white/65 font-mono text-[9px] mt-0.5" dir="ltr">
+                              Fix: {f.remediation}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <pre className="p-2.5 rounded-lg bg-black/90 border border-white/10 text-[9px] font-mono text-cyan-200 max-h-48 overflow-y-auto whitespace-pre-wrap" dir="auto">
+                        {bountyResult.reportMarkdown}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+
+                {/* مختبر الزيرو-داي واكتشاف الثغرات العميقة 2099 */}
+                <div className="rounded-xl border border-rose-500/40 bg-gradient-to-br from-[#16050d] to-[#080412] p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <div className="text-[12px] font-black text-rose-300 flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-amber-400" />
+                        <span>مختبر الزيرو-داي والثغرات العميقة (Autonomous 0-Day Synthesis Lab 2099)</span>
+                      </div>
+                      <div className="text-[10px] text-white/65">
+                        دمج ذكي بين 294 أداة كالي و429,778 CVE و1,786 CISA KEV لبناء فرضيات الـ0-Day وسلاسل الاستغلال المركّبة.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        sendToAgent(
+                          `شغّل مختبر الزيرو-داي (kali_zeroday_lab) وأداة دمج الثغرات (vuln_combine) على الهدف ${activeTarget} وابنيلي فرضيات الزيرو-داي وأوامر التحقق بـ nuclei وsemgrep وradare2.`,
+                          true,
+                        )
+                      }
+                      className="rounded-lg bg-rose-600 hover:bg-rose-500 px-3 py-1.5 text-[10px] font-black text-white"
+                    >
+                      🧬 إطلاق بحث الزيرو-داي مع الأجينت
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      {
+                        title: "1. HTTP Desync & Request Smuggling / API Auth Bypass",
+                        tools: "httpx · nuclei · ffuf · katana · kiterunner",
+                        prompt: `افحص ${activeTarget} بحثًا عن ثغرات HTTP Desync وتجاوز المصادقة في الواجهات البرمجية باستخدام kali_zeroday_lab وkali_run.`,
+                      },
+                      {
+                        title: "2. Dangling CNAME / Cloud Subdomain Takeover",
+                        tools: "subfinder · dnsx · subzy · amass",
+                        prompt: `افحص النطاقات الفرعية وسجلات CNAME لـ ${activeTarget} لكشف أي Subdomain Takeover باستخدام kali_run وkali_bounty_hunt.`,
+                      },
+                      {
+                        title: "3. Deep SAST & Leaked Secrets / Supply-Chain 0-Day",
+                        tools: "semgrep · trufflehog · gitleaks · checkov · trivy",
+                        prompt: `ابحث عن أسرار مسربة وثغرات كود مصدري وسلسلة إمداد مرتبطة بـ ${activeTarget} عبر kali_zeroday_lab.`,
+                      },
+                      {
+                        title: "4. Binary & Firmware Reverse Engineering / ROP Chains",
+                        tools: "ghidra · radare2 · gdb · checksec · ropper · binwalk",
+                        prompt: `جهّز خطة هندسة عكسية وفحص ثنائيات (radare2 / checksec / ropper) عبر أسطول كالي 2099.`,
+                      },
+                    ].map((v) => (
+                      <div key={v.title} className="rounded-lg border border-rose-500/25 bg-black/50 p-2.5 flex flex-col justify-between gap-2">
+                        <div>
+                          <div className="text-[10px] font-black text-rose-200" dir="ltr">{v.title}</div>
+                          <div className="text-[9px] font-mono text-cyan-300 mt-0.5" dir="ltr">{v.tools}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => sendToAgent(v.prompt, true)}
+                          className="rounded border border-rose-400/40 bg-rose-500/15 hover:bg-rose-500/25 py-1 text-[9px] font-bold text-rose-100"
+                        >
+                          ⚡ شغّل المسار مع اللايف أجينت
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─────── تبويب 6: 🐉 كالي 2099 المدمج (294 أداة + أوتوبايلوت + ديسكتوب) ─────── */}
+            {stageTab === "kali_2099" && (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-rose-500/40 bg-gradient-to-r from-[#18050b] via-[#0c0517] to-[#051218] p-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-[12px] font-black text-rose-300">
+                      🐉 بيئة كالي لينكس 2099 المدمجة — 266/266 أداة كالي + 28/28 بايثون = 294 أداة حية
+                    </div>
+                    <div className="text-[10px] text-emerald-300 font-mono mt-0.5">
+                      {kaliHealth?.detail || "أسطول عقد كالي السحابية الـ10 متصل وجاهز للتنفيذ الفوري"}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => navigate("/kali-env")}
+                      className="rounded-lg bg-rose-600 hover:bg-rose-500 px-3 py-1.5 text-[10px] font-black text-white flex items-center gap-1"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>فتح سطح مكتب كالي 2099 الكامل</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* سلاسل Kali Autopilot الذكية 360° */}
+                <div className="rounded-xl border border-purple-500/35 bg-black/55 p-3 space-y-2">
+                  <div className="text-[11px] font-black text-purple-300">
+                    🤖 سلاسل Kali Autopilot الذكية 360° (Red / Blue / Purple) على الهدف {activeTarget}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {autopilotTemplates.map((tpl) => (
+                      <div key={tpl.id} className="rounded-lg border border-white/10 bg-[#0c0816] p-2.5 flex flex-col justify-between gap-2">
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-black text-white">{tpl.title_ar}</span>
+                            <span className="rounded bg-purple-500/20 border border-purple-400/40 px-1.5 py-0.2 text-[8px] font-mono text-purple-200" dir="ltr">
+                              {tpl.mode} · {tpl.nistPhase}
+                            </span>
+                          </div>
+                          <div className="text-[9px] text-white/65 mt-1">{tpl.desc_ar}</div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={autopilotBusy === tpl.id}
+                            onClick={() => void runLiveAutopilot(tpl.id)}
+                            className="flex-1 rounded bg-purple-600 hover:bg-purple-500 py-1 text-[9px] font-black text-white"
+                          >
+                            {autopilotBusy === tpl.id ? "جارٍ التنفيذ على كالي..." : "▶ تشغيل مباشر على كالي"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => sendToAgent(`شغّل سلسلة ${tpl.id} (${tpl.title_ar}) عبر kali_autopilot_2099 على الهدف ${activeTarget} وحلل المخرجات.`, true)}
+                            className="rounded border border-cyan-400/40 bg-cyan-500/15 px-2 py-1 text-[9px] font-bold text-cyan-200"
+                          >
+                            🤖 عبر الأجينت
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {autopilotOutput && (
+                    <pre className="p-2.5 rounded-lg bg-black/90 border border-emerald-500/40 text-[9px] font-mono text-emerald-300 max-h-48 overflow-y-auto whitespace-pre-wrap" dir="ltr">
+                      {autopilotOutput}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ─────── تبويب 7: 👁️ رادار الزوار وتنبيهات تليجرام وخريطة السطح 360° ─────── */}
+            {stageTab === "radar_graph" && (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-emerald-500/40 bg-black/60 p-3 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[11px] font-black text-emerald-300 flex items-center gap-1.5">
+                      <Eye className="w-4 h-4 text-rose-400 animate-pulse" />
+                      <span>رادار الزوار الفوري وتنبيهات تليجرام لحراس الكون (Visitor IP Auto-Recon & Telegram Sentinel)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <input
+                        value={customScanIp}
+                        onChange={(e) => setCustomScanIp(e.target.value)}
+                        placeholder="افحص أي IP (مثال: 8.8.8.8)"
+                        dir="ltr"
+                        className="rounded border border-white/15 bg-black/60 px-2 py-1 text-[10px] font-mono text-white outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={visitorBusy}
+                        onClick={() => void runVisitorIpScan()}
+                        className="rounded bg-rose-600 hover:bg-rose-500 px-2.5 py-1 text-[9px] font-black text-white"
+                      >
+                        {visitorBusy ? "يفحص..." : "فحص IP + تليجرام"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {visitorIntel?.currentVisitor && (
+                    <div className="rounded-lg border border-emerald-500/35 bg-emerald-950/20 p-2.5 text-[10px] space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-emerald-300">🛡️ بصمة الزائر الحالي:</span>
+                        <span className="font-mono text-white font-bold" dir="ltr">{visitorIntel.currentVisitor.ip}</span>
+                      </div>
+                      <div className="text-cyan-200 font-mono text-[9px]" dir="ltr">
+                        rDNS: {visitorIntel.currentVisitor.reverseHost} · {visitorIntel.currentVisitor.city}, {visitorIntel.currentVisitor.country} ({visitorIntel.currentVisitor.isp})
+                      </div>
+                      <div className="text-white/75 text-[9px]">
+                        الجهاز: {visitorIntel.currentVisitor.deviceSummary} · التقييم: <span className="text-amber-300 font-bold">{visitorIntel.currentVisitor.verdict}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1 max-h-44 overflow-y-auto">
+                    {(visitorIntel?.visitors ?? []).slice(0, 8).map((v) => (
+                      <div key={v.id} className="rounded border border-white/10 bg-white/[0.02] px-2.5 py-1.5 flex items-center justify-between gap-2 text-[9px]">
+                        <div className="min-w-0">
+                          <span className="font-mono font-bold text-cyan-300" dir="ltr">{v.ip}</span>
+                          <span className="text-white/60 mx-1.5">·</span>
+                          <span className="text-white/80">{v.city}, {v.country} ({v.isp})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => sendToAgent(`افحص الزائر صاحب الـIP ${v.ip} (${v.reverseHost}) عبر أداة kali_visitor_radar وحلل منافذه وسمعته الأمنية.`, true)}
+                          className="rounded border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[8px] font-bold text-cyan-200 shrink-0"
+                        >
+                          تحليل بالأجينت
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* خريطة سطح الهجوم 360° + NIST CSF 2.0 */}
+                <div className="rounded-xl border border-purple-500/35 bg-black/60 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-purple-300">
+                      🕸️ خريطة سطح الهجوم 360° وامتثال NIST CSF 2.0 للهدف ({attackGraph?.target || activeTarget})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void fetchKali2099Engines(activeTarget)}
+                      className="rounded border border-purple-400/40 bg-purple-500/15 px-2 py-0.5 text-[9px] font-bold text-purple-200"
+                    >
+                      تحديث الخريطة
+                    </button>
+                  </div>
+                  {attackGraph?.summary && (
+                    <div className="grid grid-cols-5 gap-1.5 text-center font-mono text-[10px]">
+                      <div className="rounded bg-white/5 p-1.5"><div className="font-black text-cyan-300">{attackGraph.summary.ipv4Count}</div><div className="text-[8px] text-white/50">IPv4</div></div>
+                      <div className="rounded bg-white/5 p-1.5"><div className="font-black text-purple-300">{attackGraph.summary.ipv6Count}</div><div className="text-[8px] text-white/50">IPv6</div></div>
+                      <div className="rounded bg-white/5 p-1.5"><div className="font-black text-emerald-300">{attackGraph.summary.nsCount}</div><div className="text-[8px] text-white/50">NS</div></div>
+                      <div className="rounded bg-white/5 p-1.5"><div className="font-black text-amber-300">{attackGraph.summary.mxCount}</div><div className="text-[8px] text-white/50">MX</div></div>
+                      <div className="rounded bg-white/5 p-1.5"><div className="font-black text-rose-300">{attackGraph.summary.txtCount}</div><div className="text-[8px] text-white/50">TXT</div></div>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {(attackGraph?.nistCsf2 ?? []).map((n) => (
+                      <div key={n.id} className="rounded-lg border border-white/10 bg-[#0d111d] p-2">
+                        <div className="flex items-center justify-between text-[10px] font-bold">
+                          <span className="text-white">[{n.code}] {n.title_ar}</span>
+                          <span className="font-mono text-emerald-300">{n.score}%</span>
+                        </div>
+                        <div className="text-[8px] text-white/55 mt-0.5">{n.detail}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─────── تبويب 8: 🌐 كل صفحات البرنامج (Omniverse 32 Pages) ─────── */}
+            {stageTab === "omniverse" && (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-violet-500/35 bg-violet-500/10 p-3 text-[11px] font-bold text-violet-100">
+                  🌐 مصفوفة التحكم الشاملة — افتح أي قسم في المنصة أو اطلب من اللايف أجينت تشغيله والعمل عليه فوراً:
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {OMNIVERSE_PAGES.map((pg) => (
+                    <div
+                      key={pg.path}
+                      className="rounded-xl border border-white/10 bg-black/55 p-3 flex flex-col justify-between gap-2 hover:border-cyan-400/50 transition"
+                    >
+                      <div>
+                        <div className="text-[11px] font-black" style={{ color: pg.color }}>{pg.label}</div>
+                        <div className="text-[10px] text-white/65 mt-0.5">{pg.desc}</div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => navigate(pg.path)}
+                          className="flex-1 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 py-1 text-[9px] font-black text-white"
+                        >
+                          ↗ فتح القسم ({pg.path})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => sendToAgent(`افتح واستخدم إمكانيات قسم «${pg.label}» (${pg.path}) على الهدف ${activeTarget} واعرض لي الخلاصة.`, true)}
+                          className="rounded-lg border border-cyan-400/40 bg-cyan-500/15 hover:bg-cyan-500/25 px-2.5 py-1 text-[9px] font-black text-cyan-200"
+                        >
+                          🤖 شغّله بالأجينت
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
