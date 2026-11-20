@@ -33,7 +33,7 @@ jobs:
             UP=$(echo "$V" | grep -o '"uptimeSec":[0-9]*' | cut -d: -f2)
             echo "::notice::boot=$BOOT uptime=${UP}s (محاولة $i)"
             case "$BOOT" in
-              900fd30*) echo "لسه القديم — استنى"; sleep 60;;
+              900fd30*|84744e3*) echo "لسه القديم — استنى"; sleep 60;;
               "") echo "الهَب بيعيد التشغيل"; sleep 60;;
               *) echo "::notice::✓ الهَب اقفل على بوت جديد: $BOOT"; break;;
             esac
@@ -46,9 +46,11 @@ jobs:
             -d '{"command":"echo TERMINAL_OK && uname -a"}')
           echo "::notice::exec: $(echo "$R" | tr -d '\n\r' | tail -c 400)"
 
-      - name: measure the tools + Kali 2099 OS routes
+      - name: measure the tools + Kali 2099 Graphical OS Desktop routes
         run: |
           sleep 20
+          WP=$(curl -s -o /dev/null -w "HTTP:%{http_code} SIZE:%{size_download}" "$HUB/kali-2099-wallpaper.jpg")
+          echo "::notice::wallpaper-2099: $WP"
           T=$(curl -s --max-time 120 "$HUB/api/kali-env/tools?token=$TOKEN")
           echo "::notice::tools: $(echo "$T" | grep -o '"total":[0-9]*' | head -1) · $(echo "$T" | grep -o '"present":[0-9]*' | head -1)"
           H=$(curl -s --max-time 60 "$HUB/api/kali-env/health?token=$TOKEN" | head -c 300)
