@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "at": "2026-11-20T11:41:01.374Z",
+  "at": "2026-11-20T11:52:33.501Z",
   "sources": [
     "NVD 2.0",
     "CISA KEV",
@@ -67,7 +67,7 @@
     },
     {
       "product": "chrome",
-      "count": 12331
+      "count": 12332
     },
     {
       "product": "ubuntu_linux",
@@ -212,17 +212,17 @@
   ],
   "files": {
     "corpus": "cves.jsonl.gz",
-    "bytes": 50897303,
-    "sha256": "0e1cd0e33150028b8219ae279361c08c3a98ecd70075d15bdb5fc30d443f2607"
+    "bytes": 50897401,
+    "sha256": "03f29224068c9f287991d8e155537f443443ca28498ccdabcb19331a1c1a26d7"
   },
   "mode": "deepen",
-  "says_ar": "429733 ثغرة حقيقية · critical 40209 · high 163643 · 1786 مستغلّة فعلياً (KEV) · 408047 لها EPSS · 81954 منتج بـCPE · مزامنة 2026-11-20T11:41:01.374Z",
+  "says_ar": "429733 ثغرة حقيقية · critical 40209 · high 163643 · 1786 مستغلّة فعلياً (KEV) · 408047 لها EPSS · 81954 منتج بـCPE · مزامنة 2026-11-20T11:52:33.501Z",
   "deepen": {
     "nextStartIndex": 0,
     "windowPages": 12,
     "walkedFrom": 0,
     "nvdTotal": 429733,
     "coverage": 1,
-    "at": "2026-11-20T11:41:01.374Z"
+    "at": "2026-11-20T11:52:33.502Z"
   }
 }
