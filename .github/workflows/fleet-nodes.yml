@@ -33,6 +33,7 @@ on:
   # Pushing a change to this file starts a wave — the only trigger available
   # when the connected GitHub app has no actions:write permission.
   push:
+    branches: [main]
     paths:
       - ".github/workflows/fleet-nodes.yml"
   workflow_dispatch:
@@ -40,11 +41,10 @@ on:
       nodes:
         description: How many nodes to start (1-20)
         required: false
-        default: "4"
+        default: "10"
   schedule:
-    # Every 5 hours: a job may run 6 h, so the next wave is already up before
-    # the previous one expires — the fleet never fully disappears.
-    - cron: "0 */5 * * *"
+    # Every 30 minutes: keeps a fresh 10-node wave queued so the fleet never drops to 0.
+    - cron: "*/30 * * * *"
 
 permissions:
   contents: read
@@ -56,7 +56,7 @@ concurrency:
   # بيخلي الموجة المصلّحة تشتغل فورًا على السلات الفاضية (~8) بدل انتظار
   # الموجة القديمة لساعات. max-parallel 12 + خطة prepare (TEST34) بتحسب
   # الموجود فمافيش تجاوز للحد 20 jobs.
-  group: nova-fleet-r3
+  group: nova-fleet-r4
   cancel-in-progress: false
 
 jobs:
@@ -67,7 +67,7 @@ jobs:
     # main only, stated per job (not only in the commit's branches filter):
     # a push or a manual run on a feature branch must never commit its report
     # to that branch — the report belongs on the branch the site reads.
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/arena/')
+    if: github.ref == 'refs/heads/main'
     outputs:
       nodes: ${{ steps.plan.outputs.nodes }}
     steps:
