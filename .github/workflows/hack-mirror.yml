@@ -4,7 +4,7 @@
 # الآلية: كل ساعة — (1) مرآة نسخة الحالة nova-state (الذاكرة والإعدادات) كاملة
 # بفروعها على Hack-STORAGE، (2) مرآة أحدث باندل nova-24-7، (3) تقرير مخزون
 # بالأحجام. كل التخزين على repo حرة بلا حدود دقايق.
-name: hack-storage-mirror
+name: hack-mirror
 on:
   schedule:
     - cron: "5 * * * *"
@@ -12,7 +12,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: hack-storage-mirror
+  group: hack-mirror-2
   cancel-in-progress: false
 jobs:
   mirror:
