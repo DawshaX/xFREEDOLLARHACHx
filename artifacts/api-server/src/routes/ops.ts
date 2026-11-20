@@ -1135,7 +1135,7 @@ router.get("/ops/storage-hub", async (_req: Request, res: Response) => {
 
 /* ── TEST27 — «الظهور اللحظي»: بث حي موحّد عبر SSE — نفس مسار كل الطرفيات ──
  * الهَب أولًا، وإلا أول عقدة كالي سحابية — chunks حرف بحرف زي ما بتتولد. */
-async function handleKaliStream(cmd: string, timeoutMs: number, res: Response): Promise<void> {
+async function handleKaliStream(cmd: string, timeoutMs: number, res: Response, preferNodeId?: string): Promise<void> {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -1148,7 +1148,7 @@ async function handleKaliStream(cmd: string, timeoutMs: number, res: Response): 
   res.on("close", () => { closed = true; });
   const r = await kaliAnywhereExecStream(cmd, timeoutMs, (streamType, chunk) => {
     if (!closed) sseWrite({ type: streamType, text: chunk });
-  });
+  }, preferNodeId);
   if (closed) return;
   if (!r) {
     sseWrite({ type: "error", text: "مافيش كالي على الهَب ولا عقدة سحابية جاهزة متصلة دلوقتي — موجة fleet-nodes كل 5 ساعات بتثبتها تلقائيًا، أو دوس «ثبّت كالي على أول عقدة»" });
@@ -1168,7 +1168,7 @@ router.get("/ops/kali/exec-stream", async (req: Request, res: Response) => {
   const cmd = String(req.query.command ?? "").trim().slice(0, 500);
   if (!cmd) { res.status(400).json({ ok: false, error: "cmd_required" }); return; }
   const tmo = req.query.timeout ? Math.min(parseInt(String(req.query.timeout), 10) || 120_000, 600_000) : 120_000;
-  await handleKaliStream(cmd, tmo, res);
+  await handleKaliStream(cmd, tmo, res, String(req.query.nodeId ?? "").trim() || undefined);
 });
 
 router.post("/ops/kali/exec-stream", async (req: Request, res: Response) => {
@@ -1181,7 +1181,7 @@ router.post("/ops/kali/exec-stream", async (req: Request, res: Response) => {
   const cmd = String(body.command ?? body.cmd ?? "").trim().slice(0, 500);
   if (!cmd) { res.status(400).json({ ok: false, error: "cmd_required" }); return; }
   const tmo = Math.min(Number(body.timeout) || 120_000, 600_000);
-  await handleKaliStream(cmd, tmo, res);
+  await handleKaliStream(cmd, tmo, res, String(body.nodeId ?? "").trim() || undefined);
 });
 
 router.get("/ops/kali/nodes", async (_req: Request, res: Response) => {
