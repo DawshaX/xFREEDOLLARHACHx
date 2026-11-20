@@ -20,17 +20,16 @@ jobs:
     steps:
       - name: تحضير Hack-STORAGE
         env:
-          HS_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          HS_TOKEN: ${{ secrets.HACK_STORAGE_TOKEN }}
         run: |
           git config --global user.email "bot@users.noreply.github.com"
           git config --global user.name "nova-storage-bot"
-          git clone --depth 1 "https://x-access-token:${{ secrets.HACK_STORAGE_TOKEN || secrets.NOVA_EXEC_TOKEN }}@github.com/DawshaX/Hack-STORAGE.git" hs || \
-          git clone --depth 1 "https://x-access-token:${{ secrets.NOVA_EXEC_TOKEN }}@github.com/DawshaX/Hack-STORAGE.git" hs
+          git clone --depth 1 "https://x-access-token:${{ secrets.HACK_STORAGE_TOKEN }}@github.com/DawshaX/Hack-STORAGE.git" hs
           cd hs
           mkdir -p mirror/nova-state mirror/nova-bundle
       - name: مرآة نسخة الحالة الأحدث (الذاكرة الدائمة)
         env:
-          GH_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          GH_TOKEN: ${{ secrets.HACK_STORAGE_TOKEN }}
         run: |
           cd hs
           ASSET=$(gh release view nova-state --repo DawshaX/xFREEDOLLARHACHx --json assets -q '.assets | sort_by(.updatedAt) | last | .name' 2>/dev/null || true)
@@ -42,7 +41,7 @@ jobs:
           echo "آخر مرآة: $STAMP" > mirror/last-mirror.txt
       - name: مرآة باندل nova-24-7 (البرنامج الكامل)
         env:
-          GH_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          GH_TOKEN: ${{ secrets.HACK_STORAGE_TOKEN }}
         run: |
           cd hs
           gh release download "nova-portable" --repo DawshaX/xFREEDOLLARHACHx -p "nova-24-7.zip" -O "mirror/nova-bundle/nova-24-7.zip" --clobber || true
