@@ -410,7 +410,7 @@ export async function checkForUpdate(opts: { install?: boolean; force?: boolean 
      * من غير ده: نفس الzip بيتنزّل ويتثبت ويعيد التشغيل للأبد لأن توقيت
      * الأصل أكبر من builtAt المحلي بثبات (الحزمة اللي فيها نفس builtAt!). */
     const storedNow = readState();
-    if (storedNow.installedReleaseAt && storedNow.installedReleaseAt === releaseAt) {
+    if (opts.force !== true && storedNow.installedReleaseAt && storedNow.installedReleaseAt === releaseAt) {
       const boot = bootBuild().builtAt;
       const disk = build.builtAt;
       if (boot && disk && boot !== disk) {
@@ -489,7 +489,7 @@ export async function checkForUpdate(opts: { install?: boolean; force?: boolean 
         });
       }
     }
-    const started = startInstaller(releaseAt);
+    const started = startInstaller(releaseAt, opts.force === true);
     return started;
   } finally {
     running = false;
@@ -497,8 +497,18 @@ export async function checkForUpdate(opts: { install?: boolean; force?: boolean 
 }
 
 /** Download the updater and run it; the supervisor reloads us when it finishes. */
-function startInstaller(releaseAt: string): AutoUpdateState {
+function startInstaller(releaseAt: string, force = false): AutoUpdateState {
   const scriptPath = path.join(os.tmpdir(), "nova-self-update.py");
+  if (force) {
+    try {
+      const ledgerFile = path.join(stateDir(), "nova-update-ledger.json");
+      const markFile = path.join(stateDir(), ".nova-update-in-progress");
+      if (fs.existsSync(ledgerFile)) fs.unlinkSync(ledgerFile);
+      if (fs.existsSync(markFile)) fs.unlinkSync(markFile);
+    } catch {
+      /* ignore */
+    }
+  }
   const base = writeState({
     lastCheckAt: new Date().toISOString(),
     latestReleaseAt: releaseAt,
@@ -516,7 +526,9 @@ function startInstaller(releaseAt: string): AutoUpdateState {
       fs.writeFileSync(scriptPath, body);
       appendLog(`updater saved to ${scriptPath}`);
 
-      const child = spawn("python3", [scriptPath, "--dir", appDir(), "--url", ASSET_URL], {
+      const args = [scriptPath, "--dir", appDir(), "--url", ASSET_URL];
+      if (force) args.push("--force");
+      const child = spawn("python3", args, {
         cwd: appDir(),
         env: { ...process.env, NOVA_PORT: process.env.PORT || process.env.SERVER_PORT || "" },
         stdio: ["ignore", "pipe", "pipe"],

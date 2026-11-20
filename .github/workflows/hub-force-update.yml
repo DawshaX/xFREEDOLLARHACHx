@@ -22,50 +22,49 @@ jobs:
     steps:
       - name: wait for standalone-bundle to publish nova-bundle + force auto-update
         run: |
-          sleep 55
+          sleep 65
           R=$(curl -s --max-time 300 -w "\nHTTP:%{http_code}" -X POST "$HUB/api/nova-core/auto-update?force=1" \
             -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}')
           echo "::notice::force-update: $(echo "$R" | tail -c 400 | tr -d '\n\r')"
       - name: wait for the reboot + read the new boot commit
         run: |
-          sleep 100
+          sleep 45
           for i in 1 2 3 4 5 6; do
             V=$(curl -s --max-time 30 "$HUB/api/nova-core/version?token=$TOKEN&i=$i")
             BOOT=$(echo "$V" | grep -o '"boot":{"commit":"[^"]*"' | cut -d'"' -f5)
+            DISK=$(echo "$V" | grep -o '"disk":{"commit":"[^"]*"' | cut -d'"' -f5)
             UP=$(echo "$V" | grep -o '"uptimeSec":[0-9]*' | cut -d: -f2)
-            echo "::notice::boot=$BOOT uptime=${UP}s (محاولة $i)"
+            echo "::notice::boot=$BOOT disk=$DISK uptime=${UP}s (محاولة $i)"
             case "$BOOT" in
-              900fd30*|84744e3*|38660b6*|4591d42*|a24f204*|d8c2e13*) echo "لسه القديم — استنى"; sleep 60;;
-              "") echo "الهَب بيعيد التشغيل"; sleep 60;;
+              900fd30*|84744e3*|38660b6*|4591d42*|a24f204*|d8c2e13*|a9a3668*|36c8aa0*|3079bc1*|0442bb4*|059e927*)
+                echo "لسه القديم ($BOOT) — نطلب restart قسري لو الملفات اتحدثت"
+                curl -s --max-time 20 -X POST "$HUB/api/nova-core/restart?force=1" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}' || true
+                sleep 45
+                ;;
+              "") echo "الهَب بيعيد التشغيل"; sleep 40;;
               *) echo "::notice::✓ الهَب اقفل على بوت جديد: $BOOT"; break;;
             esac
           done
       - name: terminal exec test (TEST70 — الفشل المحلي ينزل للأسطول)
         run: |
-          sleep 30
+          sleep 20
           R=$(curl -s --max-time 120 -X POST "$HUB/api/kali-env/exec" \
             -H "x-nova-token: $TOKEN" -H "content-type: application/json" \
             -d '{"command":"echo TERMINAL_OK && uname -a"}')
           echo "::notice::exec: $(echo "$R" | tr -d '\n\r' | tail -c 400)"
 
-      - name: measure the tools + Kali 2099 Purple Eternal OS + Visitor Radar & Telegram Sentinel routes
+      - name: measure the tools + Kali 2099 + Live Agent Sessions, Permissions & History routes
         run: |
-          sleep 20
-          WP=$(curl -s -o /dev/null -w "HTTP:%{http_code} SIZE:%{size_download}" "$HUB/kali-2099-wallpaper.jpg?token=$TOKEN")
-          echo "::notice::wallpaper-2099: $WP"
-          VI=$(curl -s --max-time 30 "$HUB/api/kali-env/visitor-intel?track=1&token=$TOKEN" | head -c 280)
-          echo "::notice::visitor-intel-2099: $(echo "$VI" | tr -d '\n\r')"
-          VS=$(curl -s --max-time 40 -X POST "$HUB/api/kali-env/visitor-intel/scan" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"ip":"8.8.8.8","notifyTelegramNow":true}' | head -c 280)
-          echo "::notice::visitor-scan-2099: $(echo "$VS" | tr -d '\n\r')"
-          AG=$(curl -s --max-time 30 "$HUB/api/kali-env/attack-graph?target=example.com&token=$TOKEN" | head -c 240)
-          echo "::notice::attack-graph-2099: $(echo "$AG" | tr -d '\n\r')"
-          AP=$(curl -s --max-time 30 "$HUB/api/kali-env/autopilot?token=$TOKEN" | head -c 240)
-          echo "::notice::autopilot-2099: $(echo "$AP" | tr -d '\n\r')"
-          CN=$(curl -s --max-time 30 "$HUB/api/kali-env/connections?token=$TOKEN" | head -c 240)
-          echo "::notice::connections-2099: $(echo "$CN" | tr -d '\n\r')"
-          BE=$(curl -s --max-time 30 "$HUB/api/kali-env/bounty-engine?token=$TOKEN" | head -c 260)
-          echo "::notice::bounty-engine-2099: $(echo "$BE" | tr -d '\n\r')"
-          BH=$(curl -s --max-time 45 -X POST "$HUB/api/kali-env/bounty-engine/hunt" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"target":"example.com","programId":"bugbounty-web-cloud","sendTelegram":true}' | head -c 320)
+          sleep 15
+          PERMS=$(curl -s --max-time 25 "$HUB/api/live-agent/permissions?token=$TOKEN" | head -c 340)
+          echo "::notice::live-agent-permissions-2099: $(echo "$PERMS" | tr -d '\n\r')"
+          REST=$(curl -s --max-time 25 -X POST "$HUB/api/live-agent/sessions/restore-journal" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}' | head -c 340)
+          echo "::notice::live-agent-restore-journal-2099: $(echo "$REST" | tr -d '\n\r')"
+          HIST=$(curl -s --max-time 25 "$HUB/api/live-agent/history-all?token=$TOKEN" | head -c 380)
+          echo "::notice::live-agent-history-all-2099: $(echo "$HIST" | tr -d '\n\r')"
+          ZD=$(curl -s --max-time 40 -X POST "$HUB/api/kali-env/zeroday-hunt-2099" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"target":"example.com"}' | head -c 320)
+          echo "::notice::zeroday-hunt-2099: $(echo "$ZD" | tr -d '\n\r')"
+          BH=$(curl -s --max-time 45 -X POST "$HUB/api/kali-env/bounty-hunt-2099" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"target":"example.com","programId":"bugbounty-web-cloud","sendTelegram":true}' | head -c 320)
           echo "::notice::bounty-hunt-2099: $(echo "$BH" | tr -d '\n\r')"
           IMP=$(curl -s --max-time 25 -X POST "$HUB/api/live-agent/import" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"name":"bounty-scope-2099.txt","content":"example.com api.example.com CVE-2024-21762 93.184.216.34","sessionId":"nova-root"}' | head -c 320)
           echo "::notice::live-agent-import-2099: $(echo "$IMP" | tr -d '\n\r')"
@@ -73,10 +72,10 @@ jobs:
           echo "::notice::live-agent-storage-2099: $(echo "$STG" | tr -d '\n\r')"
           ORG=$(curl -s --max-time 25 "$HUB/api/live-agent/organism?token=$TOKEN" | head -c 340)
           echo "::notice::live-agent-organism-2099: $(echo "$ORG" | tr -d '\n\r')"
-          AG_CHAT=$(curl -s -N --max-time 25 -X POST "$HUB/api/live-agent/sessions/prod-verify-2099/messages" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"content":"شغّل مختبر الزيرو-داي kali_zeroday_lab وأوتوبايلوت kali_autopilot_2099 على example.com","mode":"auto"}' | tr '\n\r' ' ' | head -c 480)
+          AG_CHAT=$(curl -s -N --max-time 25 -X POST "$HUB/api/live-agent/sessions/nova-root/messages" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"content":"شغّل مختبر الزيرو-داي kali_zeroday_lab وأوتوبايلوت kali_autopilot_2099 على example.com","mode":"auto"}' | tr '\n\r' ' ' | head -c 480)
           echo "::notice::live-agent-chat-2099: $AG_CHAT"
-          AG_FLEET=$(curl -s -N --max-time 25 -X POST "$HUB/api/live-agent/sessions/prod-verify-2099/messages" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"content":"اعرض حالة الأسطول المتصل الآن عبر fleet_list","mode":"auto"}' | tr '\n\r' ' ' | head -c 480)
-          echo "::notice::live-agent-fleet-chat-2099: $AG_FLEET"
+          AG_SENSITIVE=$(curl -s -N --max-time 25 -X POST "$HUB/api/live-agent/sessions/nova-root/messages" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"content":"شغّل الشفاء الذاتي self_heal الآن","mode":"auto"}' | tr '\n\r' ' ' | head -c 480)
+          echo "::notice::live-agent-sensitive-tool-2099: $AG_SENSITIVE"
           T=$(curl -s --max-time 120 "$HUB/api/kali-env/tools?token=$TOKEN")
           echo "::notice::tools: $(echo "$T" | grep -o '"total":[0-9]*' | head -1) · $(echo "$T" | grep -o '"present":[0-9]*' | head -1)"
           H=$(curl -s --max-time 60 "$HUB/api/kali-env/health?token=$TOKEN" | head -c 300)

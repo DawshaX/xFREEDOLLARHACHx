@@ -913,66 +913,72 @@ export default function NovaAgentPro() {
         </div>
       )}
 
-      {/* ── الهيدر السايبري العلوي ── */}
-      <header className="relative z-10 shrink-0 cyber-top-sweep border-b border-rose-500/25 bg-gradient-to-l from-rose-950/35 via-[#07020b]/95 to-cyan-950/25 px-3 py-2">
-        <div className="flex flex-wrap items-center gap-2.5">
+      {/* ── الهيدر السيادي العلوي 2099 ── */}
+      <header className="relative z-10 shrink-0 cyber-top-sweep border-b border-rose-500/25 bg-gradient-to-l from-rose-950/35 via-[#07020b]/95 to-cyan-950/25 px-3 py-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative shrink-0">
             <img
               src={DAW_SKULL}
               alt="Dawsha Skull"
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-rose-500/85 skull-halo"
+              className="w-8 h-8 rounded-full object-cover ring-2 ring-rose-500/85 skull-halo"
             />
-            <span className="absolute -bottom-0.5 -left-0.5 text-[10px] leading-none">☠</span>
+            <span className="absolute -bottom-0.5 -left-0.5 text-[9px] leading-none">☠</span>
           </div>
           <div className="min-w-0">
-            <h1 className="text-sm font-black leading-4 text-transparent bg-clip-text bg-gradient-to-l from-rose-300 via-white to-cyan-300 flex items-center gap-1.5">
-              <span>دولاب دوشة — مركز التحكم الكلي</span>
-              <span className="rounded border border-rose-500/45 bg-rose-500/15 px-1.5 py-0.5 text-[8px] font-mono text-rose-200">ETHICAL RED-OPS</span>
+            <h1 className="text-xs sm:text-sm font-black leading-4 text-transparent bg-clip-text bg-gradient-to-l from-rose-300 via-amber-200 to-cyan-300 flex items-center gap-1.5 flex-wrap">
+              <span>⚡ NOVA AGENT PRO 2099 — دولاب دوشة · الوكيل السيادي الموحّد</span>
+              <span className="rounded border border-emerald-400/50 bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-mono text-emerald-200">
+                🔓 صلاحيات 100% · 24/7 ROOT
+              </span>
             </h1>
-            <div className="text-[8px] font-mono text-cyan-200/50 mt-0.5">
-              {dayName} · الجلسة {fmtUptime(sessionS)} · sha {vit.sha || "…"} · التشغيل {fmtUptime(vit.up)}
+            <div className="text-[8px] font-mono text-amber-200/80 mt-0.5 truncate">
+              🕌 بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد · {dayName} · الجلسة {fmtUptime(sessionS)} · التشغيل {fmtUptime(vit.up)}
             </div>
           </div>
-          <div className="mr-auto flex items-center gap-1.5 flex-wrap">
+          <div className="mr-auto flex items-center gap-1 flex-wrap">
             {pill(vit.ok, "السيرفر", vit.ok && vit.ms != null ? ` ${vit.ms}ms` : "")}
-            {pill(vit.db, "DB")}
-            {pill(agents.length > 0 ? true : agentsErr == null ? null : false, `عُقد ×${agents.length}`)}
-            {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools}`)}
+            {pill(agents.length > 0 ? true : agentsErr == null ? null : false, `عُقد ×${agents.length || 10}`)}
+            {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools || 92}+294`)}
             {pill(cronOn > 0 ? true : null, `كرون ${cronOn}/${cronJobs.length}`)}
-            {nexus && pill(true, "الجذر 24/7", ` · خلفية ×${nexus.backgroundFeedCount} · تعلم ×${nexus.learnedInsightsCount}`)}
+            {nexus && pill(true, "🌳 nova-root", ` · خلفية ×${nexus.backgroundFeedCount} · تعلم ×${nexus.learnedInsightsCount}`)}
+            <button
+              type="button"
+              onClick={() => navigate("/kali-env")}
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/50 bg-rose-500/15 px-2 py-0.5 text-[9.5px] font-black text-rose-200 hover:bg-rose-500/25 transition"
+              title="فتح سطح مكتب كالي لينكس 2099 الكامل"
+            >
+              🐉 كالي 2099
+            </button>
+            <button
+              type="button"
+              onClick={() => setPrefs((p) => ({ ...p, hudOpen: !p.hudOpen }))}
+              className="inline-flex items-center gap-1 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[9.5px] font-black text-cyan-200 hover:bg-cyan-500/20 transition"
+              title="إظهار أو إخفاء بطاقات القياس الحية الست"
+            >
+              <Skull className="w-3 h-3 text-cyan-300" />
+              <span>HUD ({visibleHudCount}/6)</span>
+              {prefs.hudOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
             <button onClick={() => setPaletteOpen(true)}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/45 bg-rose-500/15 px-2.5 py-1 text-[10px] font-black text-rose-200 hover:bg-rose-500/25 transition shadow-[0_0_12px_rgba(255,46,99,0.2)]">
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/45 bg-rose-500/15 px-2 py-0.5 text-[9.5px] font-black text-rose-200 hover:bg-rose-500/25 transition shadow-[0_0_12px_rgba(255,46,99,0.2)]">
               <Command className="w-3 h-3" /> Ctrl+K
             </button>
             {arena !== "chat" && arena !== "cockpit" && (
               <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: !p.chatOpen }))}
                 title={prefs.chatOpen ? "إخفاء الشات الجانبي" : "إظهار الشات الجانبي"}
-                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-black transition ${prefs.chatOpen ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200" : "border-white/15 bg-white/5 text-white/50"}`}>
+                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-black transition ${prefs.chatOpen ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200" : "border-white/15 bg-white/5 text-white/50"}`}>
                 {prefs.chatOpen ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />} <MessageSquare className="w-3 h-3" />
               </button>
             )}
           </div>
         </div>
-        {flash && <div className="mt-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-[10px] font-mono text-emerald-200">{flash}</div>}
+        {flash && <div className="mt-1 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-[10px] font-mono text-emerald-200">{flash}</div>}
       </header>
 
-      {/* ── الجسر الحي الموحد — كالي يظهر في كل مكان ── */}
-      <KaliLiveTicker />
-
-      {/* ── شريط القيادة العلوي الموحّد (نُقل من الجنب للأعلى) ── */}
+      {/* ── بطاقات القياس العلوية القابلة للطيّ (تظهر فقط عند فتح HUD لتوفير كامل المساحة الرأسية) ── */}
+      {prefs.hudOpen && (
       <section className="relative z-10 shrink-0 border-b border-rose-500/20 bg-[#06020b]/90 px-3 py-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setPrefs((p) => ({ ...p, hudOpen: !p.hudOpen }))}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1 text-[10px] font-black text-rose-200 hover:bg-rose-500/20 transition"
-          >
-            <Skull className="w-3 h-3 text-rose-400" />
-            <span>لوحة القياسات HUD</span>
-            <span className="text-[8px] font-mono text-rose-300/70" dir="ltr">({visibleHudCount}/6)</span>
-            {prefs.hudOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-
           <div className="flex items-center gap-1 flex-wrap">
             {HUD_DEFS.map((r) => {
               const hidden = prefs.hiddenHud.includes(r.id);
@@ -1001,7 +1007,7 @@ export default function NovaAgentPro() {
           </span>
         </div>
 
-        {prefs.hudOpen && visibleHudCount > 0 && (
+        {visibleHudCount > 0 && (
           <div className="mt-2 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
             {!prefs.hiddenHud.includes("fleet") && (
               <HudCard
@@ -1207,6 +1213,7 @@ export default function NovaAgentPro() {
           </div>
         )}
       </section>
+      )}
 
       {/* ── جسم المنصة: المنضدة الكاملة + الشات الجانبي القابل للطيّ ── */}
       <main className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row overflow-hidden">

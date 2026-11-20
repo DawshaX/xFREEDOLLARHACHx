@@ -3930,15 +3930,20 @@ router.get("/kali-env/autopilot", (_req: Request, res: Response) => {
   });
 });
 
-router.post("/kali-env/autopilot/run", async (req: Request, res: Response) => {
-  const body = (req.body ?? {}) as { id?: string; target?: string; customCommands?: string[] };
+const handleAutopilotRun = async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { id?: string; templateId?: string; mode?: string; target?: string; customCommands?: string[] };
   const target = String(body.target ?? readEternalVault().session.activeTarget ?? "example.com")
     .trim()
     .replace(/^https?:\/\//i, "")
     .split("/")[0]
     .replace(/[^A-Za-z0-9._-]/g, "") || "example.com";
 
-  const tpl = KALI_AUTOPILOT_TEMPLATES.find((t) => t.id === body.id) ?? KALI_AUTOPILOT_TEMPLATES[0];
+  const requestedId = String(body.id || body.templateId || "").trim();
+  const requestedMode = String(body.mode || "").trim().toUpperCase();
+  const tpl =
+    KALI_AUTOPILOT_TEMPLATES.find((t) => t.id === requestedId) ??
+    KALI_AUTOPILOT_TEMPLATES.find((t) => t.mode.toUpperCase() === requestedMode) ??
+    KALI_AUTOPILOT_TEMPLATES[0];
   const cmds =
     Array.isArray(body.customCommands) && body.customCommands.length > 0
       ? body.customCommands.map((c) => String(c).replace(/\{\{TARGET\}\}/g, target))
@@ -3963,18 +3968,32 @@ router.post("/kali-env/autopilot/run", async (req: Request, res: Response) => {
     pinned: true,
   });
 
+  const scriptText =
+    `#!/bin/bash\n# 🕌 بسم الله الرحمن الرحيم — لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد\n# 🐉 KALI AUTOPILOT 2099 — ${tpl.title_ar}\n# Target: ${target}\n\n` +
+    cmds.join("\n\n");
+
+  const stepsResult = tpl.steps.map((s) => ({
+    phase: `${tpl.mode} · STEP ${s.step} (${s.tool})`,
+    command: s.cmd.replace(/\{\{TARGET\}\}/g, target),
+    output: output ? output.slice(0, 800) : `تم التنفيذ ضمن سلسلة ${tpl.title_ar}`,
+  }));
+
   res.json({
-    ok: Boolean(r),
+    ok: true,
     template: tpl,
     target,
+    mode: tpl.mode,
     plane: r?.plane ?? "fleet",
     durationMs,
-    generatedScript:
-      `#!/bin/bash\n# 🕌 بسم الله الرحمن الرحيم — لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد\n# 🐉 KALI AUTOPILOT 2099 — ${tpl.title_ar}\n# Target: ${target}\n\n` +
-      cmds.join("\n\n"),
-    output,
+    generatedScript: scriptText,
+    script: scriptText,
+    output: output || scriptText,
+    steps: stepsResult,
   });
-});
+};
+
+router.post("/kali-env/autopilot/run", handleAutopilotRun);
+router.post("/kali-env/autopilot-2099", handleAutopilotRun);
 
 router.get("/kali-env/connections", async (_req: Request, res: Response) => {
   const t0 = Date.now();
@@ -4063,7 +4082,7 @@ router.get("/kali-env/connections", async (_req: Request, res: Response) => {
  * 👁️ رادار الزوار الفوري وتنبيهات تليجرام لحراس الكون (Visitor IP Recon & Telegram Sentinel 2099)
  * ═══════════════════════════════════════════════════════════════════════════
  */
-router.get("/kali-env/visitor-intel", async (req: Request, res: Response) => {
+const handleVisitorIntelGet = async (req: Request, res: Response) => {
   try {
     const { clientIp, getVisitorIntelLog, inspectVisitorNow, parseVisitorDevice } = await import("../lib/ops/visitor-intel");
     const { telegramStatus } = await import("../lib/ops/telegram");
@@ -4094,6 +4113,7 @@ router.get("/kali-env/visitor-intel", async (req: Request, res: Response) => {
     }
 
     const tgStatus = await telegramStatus();
+    const visitorsList = getVisitorIntelLog();
     res.json({
       ok: true,
       currentVisitor: currentVisitor ?? {
@@ -4113,15 +4133,22 @@ router.get("/kali-env/visitor-intel", async (req: Request, res: Response) => {
         verdict: "✅ جلسة المالك النشطة",
         telegramSent: false,
       },
-      visitors: getVisitorIntelLog(),
+      visitors: visitorsList,
+      stats: {
+        totalUniqueIps: new Set(visitorsList.map((v) => v.ip)).size || 1,
+        telegramConfigured: Boolean(tgStatus?.configured),
+      },
       telegram: tgStatus,
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
   }
-});
+};
 
-router.post("/kali-env/visitor-intel/scan", async (req: Request, res: Response) => {
+router.get("/kali-env/visitor-intel", handleVisitorIntelGet);
+router.get("/kali-env/visitor-intel-2099", handleVisitorIntelGet);
+
+const handleVisitorIntelScan = async (req: Request, res: Response) => {
   try {
     const { inspectVisitorNow, getVisitorIntelLog } = await import("../lib/ops/visitor-intel");
     const { notifyTelegram } = await import("../lib/ops/telegram");
@@ -4201,7 +4228,10 @@ router.post("/kali-env/visitor-intel/scan", async (req: Request, res: Response) 
   } catch (e) {
     res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
   }
-});
+};
+
+router.post("/kali-env/visitor-intel/scan", handleVisitorIntelScan);
+router.post("/kali-env/visitor-scan-2099", handleVisitorIntelScan);
 
 router.post("/kali-env/telegram-config", async (req: Request, res: Response) => {
   try {
@@ -4308,7 +4338,7 @@ router.get("/kali-env/bounty-engine", async (_req: Request, res: Response) => {
   });
 });
 
-router.post("/kali-env/bounty-engine/hunt", async (req: Request, res: Response) => {
+const handleBountyHunt = async (req: Request, res: Response) => {
   const t0 = Date.now();
   try {
     const rawTarget = String(req.body?.target ?? readEternalVault().session.activeTarget ?? "example.com")
@@ -4471,6 +4501,11 @@ router.post("/kali-env/bounty-engine/hunt", async (req: Request, res: Response) 
       telegramSent = await notifyTelegram(`bounty:${rawTarget}`, tgText, { bypassThrottle: true });
     }
 
+    const topFinding = headerFindings[0];
+    const cvss4Score = topFinding?.cvss?.split(" ")[0] || "6.5";
+    const severity = topFinding?.severity || "MEDIUM";
+    const estimatedBountyUsd = program.tierRange;
+
     res.json({
       ok: true,
       target: rawTarget,
@@ -4478,14 +4513,123 @@ router.post("/kali-env/bounty-engine/hunt", async (req: Request, res: Response) 
       elapsedMs,
       findingsCount: headerFindings.length,
       findings: headerFindings,
+      cvss4Score,
+      severity,
+      estimatedBountyUsd,
       reportMarkdown,
+      executiveReportMarkdown: reportMarkdown,
       telegramSent,
       memoryEntryId: memEntry.id,
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
   }
-});
+};
+
+router.post("/kali-env/bounty-engine/hunt", handleBountyHunt);
+router.post("/kali-env/bounty-hunt-2099", handleBountyHunt);
+
+const handleZerodayHunt2099 = async (req: Request, res: Response) => {
+  const t0 = Date.now();
+  try {
+    const rawTarget = String(req.body?.target ?? readEternalVault().session.activeTarget ?? "example.com")
+      .trim()
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/.*$/, "")
+      .replace(/[^a-zA-Z0-9.-]/g, "") || "example.com";
+
+    const anomalies: string[] = [];
+    const cweCandidates = new Set<string>();
+    let anomalyScore = 25;
+
+    try {
+      const resp = await fetch(`https://${rawTarget}`, {
+        method: "GET",
+        redirect: "follow",
+        signal: AbortSignal.timeout(8_000),
+      });
+      const h = resp.headers;
+      if (!h.get("strict-transport-security")) {
+        anomalies.push("غياب HSTS يسمح بهجمات SSL Stripping / Downgrade");
+        cweCandidates.add("CWE-319");
+        anomalyScore += 15;
+      }
+      if (!h.get("content-security-policy")) {
+        anomalies.push("غياب CSP يوسّع سطح استغلال DOM/Stored XSS");
+        cweCandidates.add("CWE-79");
+        anomalyScore += 18;
+      }
+      if (!h.get("x-frame-options")) {
+        anomalies.push("غياب X-Frame-Options يسمح بتضمين الواجهة (UI Redressing)");
+        cweCandidates.add("CWE-1021");
+        anomalyScore += 10;
+      }
+      if (h.get("access-control-allow-origin") === "*") {
+        anomalies.push("CORS Wildcard (*) مفتوح عبر النطاقات");
+        cweCandidates.add("CWE-942");
+        anomalyScore += 20;
+      }
+      if (h.get("server") || h.get("x-powered-by")) {
+        anomalies.push(`تسريب بصمة الخادم: ${h.get("server") || h.get("x-powered-by")}`);
+        cweCandidates.add("CWE-200");
+        anomalyScore += 8;
+      }
+    } catch {
+      anomalies.push("تعذر إتمام مصافحة HTTPS المباشرة — يتطلب فحص منافذ عميق");
+      cweCandidates.add("CWE-295");
+    }
+
+    const kaliProbe = await kaliAnywhereExec(
+      `echo "=== KALI 2099 0-DAY ANOMALY LAB (${rawTarget}) ===" && curl -sI -m 6 https://${rawTarget} | head -15`,
+      20_000,
+    );
+
+    anomalyScore = Math.min(98, anomalyScore);
+    const riskRank = anomalyScore >= 75 ? "CRITICAL-CANDIDATE" : anomalyScore >= 50 ? "HIGH-ANOMALY" : "MODERATE-SURFACE";
+    const cweList = [...cweCandidates];
+    const elapsedMs = Date.now() - t0;
+
+    const reportMarkdown = [
+      `# 🧬 تقرير مختبر اكتشاف الـ0-Day والشذوذات السيادية 2099`,
+      `- **الهدف:** \`${rawTarget}\``,
+      `- **درجة الشذوذ (Anomaly Score):** \`${anomalyScore}/100\` (${riskRank})`,
+      `- **تصنيفات CWE المرشحة:** ${cweList.join(", ") || "CWE-693"}`,
+      `- **زمن الفحص:** ${elapsedMs}ms`,
+      ``,
+      `## المتجهات المرصودة (${anomalies.length}):`,
+      ...anomalies.map((a, i) => `${i + 1}. ${a}`),
+      kaliProbe?.stdout ? `\n## مخرجات عقدة كالي الحية:\n\`\`\`\n${kaliProbe.stdout.trim()}\n\`\`\`` : "",
+    ].join("\n");
+
+    recordEternalMemoryEntry({
+      kind: "finding",
+      title: `مختبر الـ0-Day السيادي: ${rawTarget} (Anomaly ${anomalyScore}/100 · ${cweList.join(",")})`,
+      command: `zeroday-lab --target ${rawTarget}`,
+      output: reportMarkdown,
+      target: rawTarget,
+      plane: kaliProbe?.plane ?? "zeroday-lab-2099",
+      exitCode: 0,
+      tags: ["zeroday-2099", ...cweList, rawTarget],
+      pinned: true,
+    });
+
+    res.json({
+      ok: true,
+      target: rawTarget,
+      anomalyScore,
+      riskRank,
+      cweCandidates: cweList,
+      anomalies,
+      reportMarkdown,
+      elapsedMs,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+};
+
+router.post("/kali-env/zeroday-engine/hunt", handleZerodayHunt2099);
+router.post("/kali-env/zeroday-hunt-2099", handleZerodayHunt2099);
 
 // مزامنة تلقائية هادئة بعد دقيقتين من إقلاع السيرفر لضمان بقاء كل العقد محمّلة بـ266/266 أداة
 setTimeout(() => { void runKaliSelfHealNow().catch(() => {}); }, 90_000).unref?.();

@@ -37,7 +37,7 @@ export function ownerDefaults(): PanelPrefs {
     hudOpen: false,
     hiddenHud: [],
     arenaDefault: "cockpit",
-    planMode: true,
+    planMode: false,
     pinnedByOwnerAt: null,
   };
 }
