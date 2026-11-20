@@ -1,0 +1,68 @@
+# TEST93p — empire منفرد: powershell-empire على release kali-store أوله جزء واحد
+# بس (part_00 — الباقي مرفعش). البناء منفرد بمهلة أطول + رفع كل part بلوج
+# مستقل — مافيش صمت لو جزء فشل.
+name: "kali store empire (منفرد → release kali-store)"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-store-empire.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: kali-store-empire
+  cancel-in-progress: false
+jobs:
+  empire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: بناء powershell-empire.tar.gz + split
+        run: |
+          mkdir -p store state
+          docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
+            export DEBIAN_FRONTEND=noninteractive
+            echo "=== empire $(date -u +%FT%TZ) ===" | tee /store/build-empire.log
+            apt-get update 2>&1 | tail -2 | tee -a /store/build-empire.log || true
+            apt-get install -y --no-install-recommends curl ca-certificates >/dev/null 2>&1 || true
+            if apt-get install -y --no-install-recommends powershell-empire >> /store/apt-empire.log 2>&1; then
+              dpkg -L powershell-empire powershell-empire-common 2>/dev/null | grep -v -E "^/etc/|/usr/share/doc/|/usr/share/man/" > /tmp/fl.txt
+              tar czf /store/powershell-empire.tar.gz -T /tmp/fl.txt 2>/dev/null || true
+              SZ=$(stat -c%s /store/powershell-empire.tar.gz 2>/dev/null || echo 0)
+              split -b 1900M -d /store/powershell-empire.tar.gz /store/powershell-empire.tar.gz.part_ && rm -f /store/powershell-empire.tar.gz
+              echo "OK:powershell-empire orig=$SZ parts=$(ls /store/powershell-empire.tar.gz.part_* 2>/dev/null | wc -l)" | tee -a /store/build-empire.log
+            else
+              echo "MISS:powershell-empire" | tee -a /store/build-empire.log
+            fi
+            echo "EMPIRE_DONE" | tee -a /store/build-empire.log
+            true
+          ' || echo "docker-exit:$?" | tee -a state/kali-store-empire.log
+          cp store/build-empire.log state/kali-store-empire.log 2>/dev/null || true
+          cp store/apt-empire.log state/kali-store-empire-apt.log 2>/dev/null || true
+          ls -la store | tee -a state/kali-store-empire.log
+      - name: رفع الأجزاء (كل جزء لوحده بلوج)
+        continue-on-error: true
+        run: |
+          gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "TEST93p"
+          for f in store/powershell-empire.tar.gz.part_*; do
+            [ -e "$f" ] || continue
+            for i in 1 2 3; do
+              if gh release upload kali-store "$f" --clobber -R "$GITHUB_REPOSITORY"; then echo "UP_OK:$(basename $f) try$i" | tee -a state/kali-store-empire.log; break; fi
+              echo "UP_RETRY:$(basename $f) try$i" | tee -a state/kali-store-empire.log; sleep 8
+            done
+          done
+          gh release upload kali-store store/build-empire.log store/apt-empire.log --clobber -R "$GITHUB_REPOSITORY" || true
+          exit 0
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/kali-store-empire.log state/kali-store-empire-apt.log 2>/dev/null || true
+          git commit -m "state: empire log [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/1aad5cfd-xfreedollarhachx; git push origin HEAD:arena/1aad5cfd-xfreedollarhachx; exit 0

@@ -16,7 +16,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { requireOps } from "../lib/ops/gate";
 import { detectProotLayout, prootHealth, runInProot } from "../lib/ops/proot";
-import { kaliAnywhereExec, kaliAnywhereExecStream } from "../lib/ops/kali-anywhere";
+import { kaliAnywhereExec, kaliFleetUnionExec, kaliAnywhereExecStream } from "../lib/ops/kali-anywhere";
 import { readProbeCache, probeAllKaliNodes, orderPrewarmedFirst } from "../lib/ops/kali-node-probe";
 import { PROOT_GUEST_EXEC } from "../lib/ops/kali-node-installer";
 import { execStreamOnLocalAgent, execOnLocalAgent } from "./local-agent";
@@ -188,7 +188,7 @@ const APT_CATALOG: Record<string, string[]> = {
     "censys", "shodan", "isr-evilgrade".replace("isr-", ""),
   ],
   "02-تحليل-الثغرات": [
-    "nikto", "nuclei", "wapiti", "legs", "nmap", " Lynis".trim().toLowerCase(), "unix-privesc-check",
+    "nikto", "nuclei", "wapiti", "legion", "nmap", " Lynis".trim().toLowerCase(), "unix-privesc-check",
     "checksec", "gvm", "openvas", "pentestly", "pip-audit", "trivy", "grype",
   ],
   "03-تحليل-تطبيقات-الويب": [
@@ -208,7 +208,7 @@ const APT_CATALOG: Record<string, string[]> = {
   ],
   "06-هجمات-اللاسلكي": [
     "aircrack-ng", "airmon-ng", "airodump-ng", "aireplay-ng", "airbase-ng", "reaver",
-    "bully", "wifite", "kismet", "hcxdumptool", "hcxtools", "hashcat", "fernet",
+    "bully", "wifite", "kismet", "hcxdumptool", "hcxtools", "hashcat", "fern",
     "fern-wifi-cracker", "pixiewps", "wifipumpkin3", "eaphammer", "hostapd-wpe",
   ],
   "07-الهندسة-العكسية": [
@@ -351,7 +351,27 @@ router.get("/kali-env/tools", async (_req, res) => {
       })
       .join("; ") + "; true"; /* TEST60 — exit code بتاع آخر أداة مش مطلوب: القياس من سطور OK: — لو آخر أداة ناقصة كان الرد كله بيرمي ويبقى total:0 (مقاس حي 07:25Z) */
     const fleet = await fleetKaliSummary();
-    const r = await kaliAnywhereExec(probe, 60_000);
+    /* TEST93q — القياس الاتحادي: probe على كل العقد الحية (حتى 6) بالتوازي
+     * وunion للنتائج. عقدة طازة عمرها ما تتسطب عليها C/D كانت بتدبل كتالوج
+     * العقد المتراكم (مقاس حي 10:2xZ: 205 عقدة E فوق 228 عقدة C/D/E). الاتحاد
+     * هو الكتالوج الحقيقي: كل أداة «موجودة» بس لو **مقاسة موجودة على عقدة حية**. */
+        /* TEST93w — maxNodes 16: مقاس 14:28 — كاب ال6 كان بيستثني runnervm0hi8g
+     * (اللي عليها C/D/F كاملة) فالاتحاد كان 209 كاذبة بدل ~261. البروب رخيص
+     * (command -v ×266 لكل عقدة) — غطي كل الأسطول. */
+    const union = await kaliFleetUnionExec(probe, 90_000, 16);
+    const foundUnion = new Set<string>();
+    for (const so of union.stdouts) {
+      for (const l of so.split("\n").map((x) => x.trim()).filter((x) => x.startsWith("OK:"))) foundUnion.add(l.slice(3));
+    }
+    let r: { stdout: string; plane: string } | null = null;
+    if (foundUnion.size) {
+      r = {
+        stdout: [...foundUnion].map((t) => `OK:${t}`).join("\n"),
+        plane: `اتحاد ${union.planes.length} عقدة كالي حية — ${union.planes.slice(0, 4).join(" · ")}${union.planes.length > 4 ? " …" : ""}`,
+      };
+    } else {
+      r = await kaliAnywhereExec(probe, 60_000);
+    }
     if (r && r.stdout && r.stdout.includes("OK:")) {
       const found = new Set(
         r.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)),
@@ -530,10 +550,10 @@ const TOOL_BIN_ALIASES: Record<string, string[]> = {
   "peass-ng": ["linpeas", "linpeas.sh"],
   socialanalyzer: ["social-analyzer", "socialanalyzer"],
   "gh-dork": ["gh-dork"],
-  fernet: ["fernet"],
+  fern: ["fern"],
   pentestly: ["pentestly"],
   ssrfmap: ["ssrfmap"],
-  sidguesser: ["sidsweep", "sidguesser"],
+  sidguesser: ["sidguess", "sidguesser"],
   aria2: ["aria2c", "aria2"],
   "king-phisher": ["king-phisher"],
 };
@@ -1056,6 +1076,43 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
       repo: "Datalux/Osintgram", cmd: "osintgram",
       wrap: `printf '#!/bin/sh\\nexec python3 /opt/osintgram/main.py "$@"\\n' > /usr/local/bin/osintgram && chmod +x /usr/local/bin/osintgram`,
     },
+    /* TEST93o — المتبقي بلا pypi ولا release: clone + wrapper */
+    pentestly: {
+      repo: "meatballs89/pentestly", cmd: "pentestly", req: true,
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/pentestly/pentestly.py "$@"\\n' > /usr/local/bin/pentestly && chmod +x /usr/local/bin/pentestly`,
+    },
+    ssrfmap: {
+      repo: "swisskyrepo/SSRFmap", cmd: "ssrfmap",
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/ssrfmap/ssrfmap.py "$@"\\n' > /usr/local/bin/ssrfmap && chmod +x /usr/local/bin/ssrfmap`,
+    },
+    "gh-dork": {
+      repo: "molly/gh-dork", cmd: "gh-dork", req: true,
+      wrap: `printf '#!/bin/sh\\nexec python3 /opt/gh-dork/gh-dork.py "$@"\\n' > /usr/local/bin/gh-dork && chmod +x /usr/local/bin/gh-dork`,
+    },
+    "dvcs-ripper": {
+      repo: "kost/dvcs-ripper", cmd: ["rip-git", "rip-svn"],
+      wrap: `for f in rip-git rip-svn rip-hg rip-bzr; do cp /opt/dvcs-ripper/$f.pl /usr/local/bin/$f 2>/dev/null && chmod +x /usr/local/bin/$f; done; true`,
+    },
+    "king-phisher": {
+      repo: "CrimsonForge-io/king-phisher", cmd: ["king-phisher"],
+      wrap: `[ -f /opt/king-phisher/KingPhisher ] && { printf "#!/bin/sh\nexec python3 /opt/king-phisher/KingPhisher \"$@\"\n" > /usr/local/bin/king-phisher; chmod +x /usr/local/bin/king-phisher; }; true`,
+    },
+    venom: {
+      repo: "r00t-3xp10it/venom", cmd: "venom",
+      wrap: `cp /opt/venom/venom.sh /usr/local/bin/venom && chmod +x /usr/local/bin/venom`,
+    },
+    w3af: {
+      repo: "andresriancho/w3af", cmd: ["w3af_console", "w3af"], req: true,
+      wrap: `printf '#!/bin/sh\nexec python3 /opt/w3af/w3af_console "$@"\n' > /usr/local/bin/w3af_console && cp /usr/local/bin/w3af_console /usr/local/bin/w3af && chmod +x /usr/local/bin/w3af_console /usr/local/bin/w3af`,
+    },
+    keepnote: {
+      repo: "mdrasmus/keepnote", cmd: "keepnote",
+      wrap: `[ -f /opt/keepnote/bin/keepnote ] && cp /opt/keepnote/bin/keepnote /usr/local/bin/keepnote && chmod +x /usr/local/bin/keepnote; true`,
+    },
+    evilgrade: {
+      repo: "infobyte/evilgrade", cmd: "evilgrade",
+      wrap: `[ -f /opt/evilgrade/evilgrade.sh ] && cp /opt/evilgrade/evilgrade.sh /usr/local/bin/evilgrade && chmod +x /usr/local/bin/evilgrade; true`,
+    },
   };
   /* TEST87 — الحقول url مقاسة من api.github.com (السانبوكس 2026-11-19) وخبزت هنا:
    * العقدة (GitHub runner IP مشترك) بتنده api.github.com unauthenticated فبتقع
@@ -1072,12 +1129,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     arjun: { repo: "s0md3v/Arjun", pattern: "", flat: "" },
     katana: { repo: "projectdiscovery/katana", pattern: "linux_amd64.zip", flat: "katana", url: "https://github.com/projectdiscovery/katana/releases/download/v1.8.0/katana_1.8.0_linux_amd64.zip" },
     cariddi: { repo: "edoardottt/cariddi", pattern: "linux_amd64.zip", flat: "cariddi", url: "https://github.com/edoardottt/cariddi/releases/download/v1.4.6/cariddi_1.4.6_linux_amd64.zip" },
-    subzy: { repo: "LukaSikter/subzy", pattern: "linux_amd64.tar.gz", flat: "subzy" },
     grype: { repo: "anchore/grype", pattern: "linux_amd64.tar.gz", flat: "grype", url: "https://github.com/anchore/grype/releases/download/v0.122.1/grype_0.122.1_linux_amd64.tar.gz" },
     syft: { repo: "anchore/syft", pattern: "linux_amd64.tar.gz", flat: "syft", url: "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz" },
     trufflehog: { repo: "trufflesecurity/trufflehog", pattern: "linux_amd64.tar.gz", flat: "trufflehog", url: "https://github.com/trufflesecurity/trufflehog/releases/download/v3.99.9/trufflehog_3.99.9_linux_amd64.tar.gz" },
     dockle: { repo: "goodwithtech/dockle", pattern: "Linux-64bit.tar.gz", flat: "dockle", url: "https://github.com/goodwithtech/dockle/releases/download/v0.4.15/dockle_0.4.15_Linux-64bit.tar.gz" },
-    gotator: { repo: "Josue87/Gotator", pattern: "linux_amd64.tar.gz", flat: "gotator" },
     osintgram: { repo: "Datalux/Osintgram", pattern: "", flat: "" }, // clone بدل release
     /* TEST88 — URLs مقاسة من api.github.com (السانبوكس 2026-11-19) */
     bettercap: { repo: "bettercap/bettercap", pattern: "linux_amd64.zip", flat: "bettercap", url: "https://github.com/bettercap/bettercap/releases/download/v2.41.7/bettercap_linux_amd64.zip" },
@@ -1108,11 +1163,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     steghide: { file: "steghide.tar.gz", cmd: ["steghide"] },
     "arp-scan": { file: "arp-scan.tar.gz", cmd: ["arp-scan"] },
     cherrytree: { file: "cherrytree.tar.gz", cmd: ["cherrytree"] },
-    casefile: { file: "casefile.tar.gz", cmd: ["casefile"] },
+    casefile: { file: "casefile-debs.tar.gz", cmd: ["casefile"] },
     dradis: { file: "dradis.tar.gz", cmd: ["dradis"] },
     recordmydesktop: { file: "recordmydesktop.tar.gz", cmd: ["recordmydesktop"] },
-    wkhtmltopdf: { file: "wkhtmltopdf.tar.gz", cmd: ["wkhtmltopdf"] },
-    evilgrade: { file: "evilgrade.tar.gz", cmd: ["evilgrade"] },
+    wkhtmltopdf: { file: "wkhtmltopdf-debs.tar.gz", cmd: ["wkhtmltopdf"] },
     maskprocessor: { file: "maskprocessor.tar.gz", cmd: ["maskprocessor", "mp"] },
     rainbowcrack: { file: "rainbowcrack.tar.gz", cmd: ["rcrack", "rainbowcrack"] },
     redis: { file: "redis-server.tar.gz", cmd: ["redis-server", "redis-cli"] },
@@ -1123,36 +1177,49 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     vim: { file: "vim.tar.gz", cmd: ["vim"] },
     aria2: { file: "aria2.tar.gz", cmd: ["aria2c", "aria2"] },
     "python3-pip": { file: "python3-pip.tar.gz", cmd: ["pip3"] },
-    "dvcs-ripper": { file: "dvcs-ripper.tar.gz", cmd: ["rip-git", "rip-svn"] },
-    "king-phisher": { file: "king-phisher.tar.gz", cmd: ["king-phisher"] },
     ghidra: { file: "ghidra.tar.gz", cmd: ["ghidraRun", "ghidra", "analyzeHeadless"] },
-    w3af: { file: "w3af.tar.gz", cmd: ["w3af_console", "w3af_gui", "w3af"] },
-    sidguesser: { file: "sidguesser.tar.gz", cmd: ["sidsweep", "sidguesser"] },
+    retdec: { file: "retdec.tar.gz", cmd: ["retdec-decompiler", "retdec"] },
+    sidguesser: { file: "sidguesser.tar.gz", cmd: ["sidguess", "sidguesser"] },
     netexec: { file: "netexec.tar.gz", cmd: ["nxc", "netexec"] },
     crackmapexec: { file: "crackmapexec.tar.gz", cmd: ["crackmapexec", "cme"] },
     empire: { file: "powershell-empire.tar.gz", cmd: ["powershell-empire", "empire"] },
     faraday: { file: "faraday.tar.gz", cmd: ["faraday-client", "faraday"] },
-    libreoffice: { file: "libreoffice.tar.gz", cmd: ["libreoffice", "soffice"] },
     gvm: { file: "gvm.tar.gz", cmd: ["gvm-cli", "gvmd", "gvm-setup"] },
-    fernet: { file: "fernet.tar.gz", cmd: ["fernet"] },
+        pandoc: { file: "pandoc-debs.tar.gz", cmd: ["pandoc"] },
+    legion: { file: "legion-debs.tar.gz", cmd: ["legion"] },
+    subzy: { file: "subzy.tar.gz", cmd: ["subzy"] },
+    gotator: { file: "gotator.tar.gz", cmd: ["gotator"] },
+    fern: { file: "fern-debs.tar.gz", cmd: ["fern", "fern-wifi-cracker"] },
     pgcli: { file: "pgcli.tar.gz", cmd: ["pgcli"], pip: "pgcli" },
-    pentestly: { file: "pentestly.tar.gz", cmd: ["pentestly"] },
-    ssrfmap: { file: "ssrfmap.tar.gz", cmd: ["ssrfmap"] },
-    "gh-dork": { file: "gh-dork.tar.gz", cmd: ["gh-dork"] },
     socialanalyzer: { file: "social-analyzer.tar.gz", cmd: ["social-analyzer", "socialanalyzer"], pip: "social-analyzer" },
     "peass-ng": { file: "peass-ng.tar.gz", cmd: ["linpeas", "linpeas.sh"] },
-    vulners: { file: "vulners.tar.gz", cmd: ["vulners"] },
   };
   const GIT = GITHUB_TOOLS[tool];
   const PIP = PIP_TOOLS[tool];
+  /* TEST93o — المسار من مرحلتين قصيرتين للأدوات اللي ليها حزم deb: درس TEST80
+   * المقاس مرة تانية 08:40/09:04 — الأمر المركب الطويل = proot signal 6 حتى
+   * بعد نجاح dpkg نفسه (البوابة بتتقتل). التثبيت قصير ثم البوابة قصيرة. */
+  const DEBS_TOOLS = new Set(["ettercap", "exiftool", "steghide", "arp-scan", "cherrytree", "recordmydesktop", "maskprocessor", "rainbowcrack", "redis", "elfutils", "ltrace", "strace", "zsh", "vim", "aria2", "sidguesser", "netexec", "crackmapexec", "wkhtmltopdf", "pandoc", "legion", "fern", "casefile"]);
+  const storeDebs = Boolean(STORE_TOOLS[tool] && DEBS_TOOLS.has(tool));
+  /* TEST93x — استخراج يدوي بدون dpkg: postinst بتاع maskprocessor بيحاول
+   * systemctl (مش موجود في proot) → bus fail → proot signal 6 دائم (مقاس ×6).
+   * الdeb فيه باينر واحد /usr/bin/mp — dpkg-deb -x وcp كفاية. */
+  const DEB_EXTRACT = new Set(["maskprocessor"]);
+  const storeGate = STORE_TOOLS[tool] ? (Array.isArray(STORE_TOOLS[tool].cmd) ? STORE_TOOLS[tool].cmd : [STORE_TOOLS[tool].cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ") : "";
   let installCmd: string;
   if (STORE_TOOLS[tool] && STORE_TOOLS[tool].file) {
     const S = STORE_TOOLS[tool];
     const gate = (Array.isArray(S.cmd) ? S.cmd : [S.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ");
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
-    /* TEST91 v7 — مسار موحد: أجزاء .part_00.. (split 1900M — حد الasset 2GB
-     * مقاس) أولًا، ولو مافيش أجزاء → الملف المباشر. cat|tar بيفك عند / بلا dpkg. */
-    installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; ${gate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    if (DEB_EXTRACT.has(tool)) {
+      installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && for d in *.deb; do dpkg-deb -x "$d" /tmp/debx 2>/dev/null; done; find /tmp/debx -type f \( -name "mp" -o -name "maskprocessor" \) -exec cp {} /usr/local/bin/ \; && chmod +x /usr/local/bin/mp /usr/local/bin/maskprocessor 2>/dev/null; echo EXTRACT_APPLIED`;
+    } else if (storeDebs) {
+      /* المرحلة 1 قصيرة: تنظيف statoverride + deb + dpkg — بلا بوابة ولا fallback */
+      installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
+    } else {
+      /* تاربولات parts (metasploit/empire/faraday/dradis) — TEST93p: بلا بوابة هنا (البوابة المنفصلة تحت مع retry — درس TEST80/TEST92q) */
+      installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; echo STORE_EXTRACTED`;
+    }
   } else if (GIT && GIT.repo && !CLONE_EXTRA[tool]) {
     const isCloneTool = tool === "dirsearch" || tool === "arjun";
     installCmd = isCloneTool
@@ -1164,17 +1231,39 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const C = CLONE_EXTRA[tool];
     installCmd = `rm -rf /opt/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${C.repo} /opt/${tool} 2>&1 | tail -2; ${C.req ? `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed -r /opt/${tool}/requirements.txt 2>&1 || true) | tail -2; ` : ""}${C.wrap ? `${C.wrap}; ` : ""}${(Array.isArray(C.cmd) ? C.cmd : [C.cmd]).map((c) => `command -v ${c}`).join(" || ")} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else {
-    installCmd = `DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
+    installCmd = `dpkg --configure -a 2>&1 | tail -1; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
   }
   const cmd = `echo ROOT_UID:$(id -u); for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; ${installCmd}`;
   /* TEST93g — retry على الجست المكسور: المنافسة بتكسر guests (مقاس TEST66
    * ومقاس 05:38: proot execve Permission denied على جزء من العقد). أول محاولة
    * بتفشل بفشل proot → نعيد مرة تانية فبتروح عقدة تانية سليمة من الأسطول. */
-  let r = await kaliAnywhereExec(cmd, 420_000);
-  if (r && /proot error|Permission denied|fatal error: see `proot/.test([r.stdout, r.stderr].join("\n"))) {
-    r = await kaliAnywhereExec(cmd, 420_000);
+  let r = await kaliAnywhereExec(cmd, 600_000);
+  /* TEST93x — retry مع استبعاد: العقدة اللي جستها بيسقّطها proot signal 6 دائم
+   * (مقاس E 18:4x: 14 أداة فشلت كلها على نفس العقدة والمحاولة التالية رجعت لها)
+   * → المحاولة التالية تستبعد nodeId الفاشل فتروح عقدة سليمة. */
+  const brokenNodes = new Set<string>();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (!r) break;
+    if (!/proot error|Permission denied|fatal error: see `proot|signal 6|path\.c:547|Assertion/.test([r.stdout, r.stderr].join("\n"))) break;
+    if (r.nodeId) brokenNodes.add(r.nodeId);
+    r = await kaliAnywhereExec(cmd, 600_000, undefined, brokenNodes);
   }
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
+  /* TEST93t — العقدة اللي التثبيت حصل عليها: البوابة بتتثبت عليها (مقاس F2:
+   * البوابة على عقدة تانية طازة → INSTALL_FAIL كاذبة رغم «Setting up ✓») */
+  const installNodeId = r.nodeId ?? (r.plane || "").split(" — ")[0].trim();
+  /* المرحلة 2 قصيرة: بوابة منفصلة مع retry ×3 — بعد ما dpkg/الاستخراج خلص فعليًا
+   * في المرحلة 1. proot signal 6 عشوائي بيقتل حتى الأوامر القصيرة (مقاس TEST92q:
+   * sidguesser «Setting up ✓» والبوابة اتقتلت → INSTALL_FAIL كاذبة). */
+  if ((storeDebs || (STORE_TOOLS[tool] && STORE_TOOLS[tool].file)) && r && storeGate && !DEB_EXTRACT.has(tool)) {
+    let gout = "";
+    for (let gi = 0; gi < 5; gi++) {
+      const gr = await kaliAnywhereExec(`echo ROOT_UID:$(id -u); sleep 2; ${storeGate} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`, 90_000, installNodeId);
+      if (gr) gout = gr.stdout;
+      if (gout.includes(`INSTALL_OK:${tool}`)) break;
+    }
+    if (gout) r = { ...r, stdout: `${r.stdout}\n${gout}` };
+  }
   const ok = /INSTALL_OK:/.test(r.stdout);
   const uid = Number((r.stdout.match(/^ROOT_UID:(\d+)$/m) ?? [])[1]);
   const tail = [r.stdout, r.stderr].filter(Boolean).join("\n").split("\n").slice(-12).join("\n");

@@ -1,0 +1,68 @@
+# TEST93t v7 — debs النهائية: ettercap (common+text-only) + maskprocessor (mp)
+# + casefile من kali pool مباشرة (اتشال من الindex — الملف لسه في الميرور).
+name: "kali store debs v8 (casefile pool ×3 → release kali-store)"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-store-debs2.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: kali-store-debs8
+  cancel-in-progress: false
+jobs:
+  debs7:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: تحميل debs لكل أداة
+        continue-on-error: true
+        run: |
+          mkdir -p store state
+          docker run --rm -v "$PWD/store:/store" -w /store kalilinux/kali-rolling:latest bash -c '
+            export DEBIAN_FRONTEND=noninteractive
+            echo "=== debs v7 $(date -u +%FT%TZ) ===" | tee /store/build-debs2.log
+            apt-get update 2>&1 | tail -2 | tee -a /store/build-debs2.log || true
+            apt-get install -y --no-install-recommends curl ca-certificates apt-utils >/dev/null 2>&1 || true
+            for BASE in "http://http.kali.org/kali/pool/main/c/casefile/" "https://http.kali.org/kali/pool/main/c/casefile/" "http://old.kali.org/kali/pool/main/c/casefile/"; do
+              echo "try base=$BASE" | tee -a /store/build-debs2.log
+              POOL_CASE=$(curl -sfL -m 60 "$BASE" 2>/dev/null | grep -oE "casefile_[A-Za-z0-9._~+-]+\.deb" | sort -V | tail -1)
+              [ -n "$POOL_CASE" ] && { echo "$BASE" > /tmp/casefile-base; echo "$POOL_CASE" > /tmp/casefile-name; break; }
+            done
+            echo "pool-casefile=$(cat /tmp/casefile-name 2>/dev/null)" | tee -a /store/build-debs2.log
+            if [ -f /tmp/casefile-name ]; then
+              rm -rf /tmp/debs-casefile && mkdir -p /tmp/debs-casefile && cd /tmp/debs-casefile
+              curl -sfL -m 240 "$(cat /tmp/casefile-base)$(cat /tmp/casefile-name)" -o casefile.deb
+              tar czf /store/casefile-debs.tar.gz casefile.deb
+              echo "OK:casefile(pool) size=$(stat -c%s /store/casefile-debs.tar.gz 2>/dev/null || echo 0)" | tee -a /store/build-debs2.log
+              cd /store
+            else
+              echo "MISS:casefile (pool — مش موجود في الميرورات)" | tee -a /store/build-debs2.log
+            fi
+            echo "DEBS7_DONE" | tee -a /store/build-debs2.log
+            true
+          ' || echo "docker-exit:$?" | tee -a state/kali-store-debs2.log
+          cp store/build-debs2.log state/kali-store-debs2.log 2>/dev/null || true
+          ls -la store | tee -a state/kali-store-debs2.log
+      - name: رفع حزم الdeb
+        continue-on-error: true
+        run: |
+          shopt -s nullglob
+          ASSETS=(store/*-debs.tar.gz store/build-debs2.log)
+          echo "debs7 bundles: ${#ASSETS[@]}"
+          gh release view kali-store -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create kali-store -R "$GITHUB_REPOSITORY" --title "kali-store — tarballs بدون dpkg" --notes "TEST93t"
+          [ ${#ASSETS[@]} -gt 0 ] && gh release upload kali-store "${ASSETS[@]}" --clobber -R "$GITHUB_REPOSITORY" && echo "::notice::✓ debs7: ${#ASSETS[@]}"
+          exit 0
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/kali-store-debs2.log; git commit -m "state: debs v7 log [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/1aad5cfd-xfreedollarhachx; git push origin HEAD:arena/1aad5cfd-xfreedollarhachx; exit 0

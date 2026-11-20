@@ -1,0 +1,51 @@
+# TEST92n — المسار النهائي E: أدوات DEBS (طبقة الجديدة — dpkg -i على الجست
+# النظيف) + بقية pip. مسلسل منفرد (الدرس: الازدحام بيقتل الردود).
+name: "TEST93y-E — الموجة الجديدة: 20 DEBS+clone"
+on:
+  push:
+    paths:
+      - ".github/workflows/kali-tool-pass-e.yml"
+permissions:
+  contents: write
+concurrency:
+  group: kali-tool-pass-e
+  cancel-in-progress: false
+jobs:
+  pass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+      HUB: https://nova.waifly.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: تثبيت DEBS+pip (20 — واحد-واحد مسلسل)
+        continue-on-error: true
+        run: |
+          L=state/tool-pass-e-log.txt
+          echo "=== TEST92n-E $(date -u +%FT%TZ) ===" > $L
+          for tool in ettercap exiftool steghide arp-scan cherrytree recordmydesktop maskprocessor rainbowcrack redis elfutils ltrace strace zsh vim aria2 sidguesser netexec crackmapexec pentestly ssrfmap; do
+            echo "--- INSTALL $tool $(date -u +%T) ---" >> $L
+            curl -s -m 300 -X POST -H "x-nova-token: $TOKEN" -H "Content-Type: application/json" -d "{\"tool\":\"$tool\"}" "$HUB/api/kali-env/install" >> $L 2>&1 || echo "REQ_FAIL:$tool" >> $L
+            echo "" >> $L
+          done
+          echo "=== E DONE $(date -u +%FT%TZ) ===" >> $L
+          true
+      - name: القياس النهائي (tools + inventory)
+        continue-on-error: true
+        run: |
+          L=state/tool-pass-e-log.txt
+          echo "=== FINAL MEASURE $(date -u +%T) ===" >> $L
+          curl -s -m 280 "$HUB/api/kali-env/tools?fresh=$RANDOM" -H "x-nova-token: $TOKEN" -o /tmp/tools.json || true
+          jq '{present, total, measuredOn}' /tmp/tools.json >> $L 2>/dev/null || true
+          echo "" >> $L
+          true
+      - name: كوميت اللوج
+        continue-on-error: true
+        run: |
+          git config user.name "nova-bot"; git config user.email "nova@bot.local"
+          git add -f state/tool-pass-e-log.txt
+          git commit -m "state: TEST92n-E pass [skip ci]" || true
+          git pull --no-rebase --no-edit origin arena/1aad5cfd-xfreedollarhachx
+          git push origin HEAD:arena/1aad5cfd-xfreedollarhachx
+          exit 0

@@ -39,6 +39,8 @@ export type KaliAnywhereResult = {
   exitCode: number | null;
   durationMs: number;
   plane: string;
+  /** TEST93x — id العقدة الفعلي (hostnames بتتكرر — 11 عقدة runnervmccnms مقاس 17:33) */
+  nodeId?: string;
 };
 
 export function isLinuxFleetNode(a: { platform: string; capabilities?: string[] }): boolean {
@@ -94,7 +96,6 @@ export async function kaliAnywhereExecStream(
     return { stdout: "", stderr: String((e as Error)?.message ?? e).slice(0, 300), exitCode: 127, durationMs: 0, plane: "الهَب — التعذّر على الأسطول" };
   }
   for (const a of nodes) {
-    if (a.mode !== "MODE_BARE" && a.mode !== "MODE_PROOT") continue; // مش جاهزة — التالية (الجاهزة بتتجرب الأول)
     const plane = `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
     broadcastStart(plane);
     const wrappedOnData = (t: "stdout" | "stderr", c: string) => { onData(t, c); broadcastChunk(c); };
@@ -114,6 +115,7 @@ export async function kaliAnywhereExecStream(
       exitCode: rr.exitCode,
       durationMs: rr.durationMs,
       plane,
+      nodeId: a.id,
     };
   }
   /* مافيش عقدة ردت — فشل محلي صادق (exitCode 127) بخصوص الاختناق إن وجد */
@@ -123,10 +125,62 @@ export async function kaliAnywhereExecStream(
   };
 }
 
-/** التنفيذ الموحّد: هَب → عقدة. null = مافيش طايرة كالي متاحة حالًا. */
-export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise<KaliAnywhereResult | null> {
-  if (!cmd.trim()) return null;
-  // ── بث حي لكل الصفحات: أي تنفيذ كالي يظهر فورًا في كل مكان ──────────
+/** TEST93q — القياس الاتحادي: نفس الأمر على كل العقد الجاهزة (حتى 6) بالتوازي،
+ * والرد = نتائج كل عقدة لوحدها. ليه؟ القياس الأحادي بيخلي عقدة طازة تدبل
+ * الكتالوج المتراكم (مقاس حي 10:2xZ: عقدة pass-E الطازة قاست 205 فوق 228 اللي
+ * قاستها عقدة C/D/E). الكتالوج الحقيقي للأسطول = اتحاد اللي كل عقدة **مقاسة**
+ * عندها فعلًا — مش آخر قياس اتكتب. */
+export async function kaliFleetUnionExec(
+  cmd: string,
+  timeoutMs = 90_000,
+  maxNodes = 16,
+): Promise<{ planes: string[]; stdouts: string[] }> {
+  if (!cmd.trim()) return { planes: [], stdouts: [] };
+  let nodes: Array<{ id: string; hostname: string; mode: string }> = [];
+  try {
+    const all = (await orderedFleetNodes()).filter((a) => a.mode === "MODE_BARE" || a.mode === "MODE_PROOT");
+    /* TEST93w — dedupe بالid (مقاس: العقد مكررة في orderedFleetNodes) */
+    const seen = new Set<string>();
+    nodes = all.filter((a) => (seen.has(a.id) ? false : (seen.add(a.id), true))).slice(0, maxNodes);
+  } catch {
+    return { planes: [], stdouts: [] };
+  }
+  if (!nodes.length) return { planes: [], stdouts: [] };
+  const probe1 = async (a: { id: string; hostname: string; mode: string; }) => {
+    const rr = await execOnLocalAgent(remoteRunCmd(cmd, a.mode, timeoutMs), a.id, timeoutMs + 10_000);
+    if (!rr || !rr.stdout) throw new Error(`no-reply:${a.hostname}`);
+    return { plane: `${a.hostname} (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`, stdout: rr.stdout };
+  };
+  const results = await Promise.allSettled(nodes.map(probe1));
+  const planes: string[] = [];
+  const stdouts: string[] = [];
+  const failed: typeof nodes = [];
+  results.forEach((x, i) => {
+    if (x.status === "fulfilled") {
+      planes.push(x.value.plane);
+      stdouts.push(x.value.stdout);
+    } else {
+      failed.push(nodes[i]);
+    }
+  });
+  /* TEST93w — retry تسلسلي للعقد اللي بورت (مقاس 14:08: العقد المرهقة بعد
+   * تثبيت ثقيل بوركت الprobe 45s فاتشالت من الاتحاد — 253 نزلت 209 كاذبة) */
+  for (const a of failed.slice(0, 3)) {
+    try {
+      const v = await probe1(a);
+      planes.push(v.plane);
+      stdouts.push(v.stdout);
+    } catch { /* وقعت فعلاً — من غيرها */ }
+  }
+  return { planes, stdouts };
+}
+
+/** التنفيذ الموحّد: هَب → عقدة. null = مافيش طايرة كالي متاحة حالًا.
+ * TEST93t — preferHostname: بيثبت التنفيذ على عقدة معينة (hostname أول بالترتيب) —
+ * مقاس F2 11:17: مرحلة التثبيت على runnervmccnms والبوابة راحت على عقدة طازة
+ * تانية → INSTALL_FAIL كاذبة رغم «Setting up ✓». */
+export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000, preferNodeId?: string, excludeNodeIds?: Set<string>): Promise<KaliAnywhereResult | null> {
+  if (!cmd.trim()) return null;  // ── بث حي لكل الصفحات: أي تنفيذ كالي يظهر فورًا في كل مكان ──────────
   const execId = `kali-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const broadcastStart = (plane: string) => {
     try {
@@ -163,9 +217,17 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise
     try { broadcastEvent("kali_exec_done", { id: execId, cmd: cmd.slice(0, 200), plane: "fleet-enumeration-failed", exitCode: 127, durationMs: Date.now() - Date.now(), running: false }); } catch {}
     return { stdout: "", stderr: String((e as Error)?.message ?? e).slice(0, 300), exitCode: 127, durationMs: 0, plane: "الهَب — التعذّر على الأسطول" };
   }
+  /* TEST93t — التثبيت على عقدة معينة أولاً (البوابة لازم نفس عقدة التثبيت) */
+  if (preferNodeId) {
+    const hit = nodes.find((n) => n.id === preferNodeId) ?? nodes.find((n) => n.hostname === preferNodeId);
+    if (hit) nodes = [hit, ...nodes.filter((n) => n.id !== hit.id)];
+  }
   let lastErr: string | null = null;
   for (const a of nodes) {
     if (a.mode !== "MODE_BARE" && a.mode !== "MODE_PROOT") continue; // مش جاهزة — التالية (الجاهزة بتتجرب الأول)
+    /* TEST93x — استبعاد العقد المكسورة (مقاس E 18:4x: جست عقدة signal 6 دائم
+     * على كل الأوامر — الretry بيضرب نفسها. المحاولة التالية على عقدة سليمة) */
+    if (excludeNodeIds?.has(a.id)) continue;
     const plane = `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
     broadcastStart(plane);
     let rr: Awaited<ReturnType<typeof execOnLocalAgent>> = null;
@@ -184,6 +246,7 @@ export async function kaliAnywhereExec(cmd: string, timeoutMs = 60_000): Promise
       exitCode: rr.exitCode,
       durationMs: rr.durationMs,
       plane,
+      nodeId: a.id,
     };
   }
   /* مافيش عقدة ردت — فشل محلي صادق (exitCode 127) بخصوص الاختناق إن وجد */

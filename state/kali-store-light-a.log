@@ -1,0 +1,16 @@
+=== light-a 2026-11-19T07:32:06Z ===
+Fetched 22.2 MB in 1s (24.4 MB/s)
+Reading package lists...
+MISS:ettercap
+OK:exiftool 45
+OK:libimage-exiftool-perl 276089441
+OK:steghide 552111284
+OK:arp-scan 1656213562
+OK:cherrytree 2949902982
+OK:casefile 45
+OK:recordmydesktop 6796784287
+MISS:wkhtmltopdf
+MISS:evilgrade
+OK:maskprocessor 25815594268
+OK:rainbowcrack 49150435225
+LIGHT_A_DONE
