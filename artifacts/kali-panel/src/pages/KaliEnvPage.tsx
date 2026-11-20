@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { Activity, Monitor, Play, RefreshCw, Square, Terminal, Wrench, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { pushNotify } from "@/lib/sse";
-import { novaAuthHeaders } from "@/lib/ops-client";
+import { novaAuthHeaders, getOpsToken } from "@/lib/ops-client";
 import { useKali } from "@/context/KaliContext";
 import { KaliLiveTicker, KaliStatusCard } from "@/components/desktop/KaliLiveBridge";
 /* TEST38 — لوحة الأنظمة الحقيقية: حالة النظام (CPU/RAM/قرص/عمليات/شبكة/GPU/rootfs)
@@ -509,7 +509,7 @@ export default function KaliEnvPage() {
   const execOnNode = async (c: string): Promise<number | null> => {
     let finalExit: number | null = null;
     await new Promise<void>((resolve) => {
-      const es = new EventSource(`${API}/ops/kali/exec-stream?command=${encodeURIComponent(c)}&timeout=120000`);
+      const es = new EventSource(`${API}/ops/kali/exec-stream?command=${encodeURIComponent(c)}&timeout=120000${getOpsToken() ? `&token=${encodeURIComponent(getOpsToken())}` : ""}`);
       es.onmessage = (ev) => {
         try {
           const d = JSON.parse(ev.data) as { type: string; text?: string; exitCode?: number | null; durationMs?: number; plane?: string };
@@ -1245,7 +1245,7 @@ export default function KaliEnvPage() {
               <div className="mt-2 rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,204,0,0.25)", background: "#000" }}>
                 <img
                   key={deskTick}
-                  src={`${API}/kali-env/node-desktop`}
+                  src={`${API}/kali-env/node-desktop${getOpsToken() ? `?token=${encodeURIComponent(getOpsToken())}` : ""}`}
                   alt="بث سطح مكتب كالي الحي"
                   className="w-full block"
                   style={{ maxHeight: 480, objectFit: "contain" }}
