@@ -4,6 +4,7 @@ interface KaliLogo2099Props {
   size?: number;
   className?: string;
   glow?: boolean;
+  animated?: boolean;
 }
 
 /**

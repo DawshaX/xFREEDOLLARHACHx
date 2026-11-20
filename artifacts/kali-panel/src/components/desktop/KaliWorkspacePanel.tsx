@@ -239,7 +239,7 @@ export default function KaliWorkspacePanel() {
           if (!line) continue;
           try {
             const d = JSON.parse(line.slice(6)) as { type?: string; text?: string; plane?: string };
-            if (d.text) setLabLog((l) => [...l.slice(-300), { text: d.text, kind: d.type === "stderr" || d.type === "error" ? "err" : undefined }]);
+            if (d.text) setLabLog((l) => [...l.slice(-300), { text: String(d.text ?? ""), kind: d.type === "stderr" || d.type === "error" ? "err" : undefined }]);
             if (d.plane) setLabLog((l) => [...l, { text: `↳ اتنفذت على: ${d.plane}`, kind: "cmd" }]);
           } catch { /* سطر ناقص */ }
         }
