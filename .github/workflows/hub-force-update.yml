@@ -46,10 +46,20 @@ jobs:
             -d '{"command":"echo TERMINAL_OK && uname -a"}')
           echo "::notice::exec: $(echo "$R" | tr -d '\n\r' | tail -c 400)"
 
-      - name: measure the tools route (the TEST60 fix — total>0؟)
+      - name: measure the tools + Kali 2099 OS routes
         run: |
           sleep 20
           T=$(curl -s --max-time 120 "$HUB/api/kali-env/tools?token=$TOKEN")
           echo "::notice::tools: $(echo "$T" | grep -o '"total":[0-9]*' | head -1) · $(echo "$T" | grep -o '"present":[0-9]*' | head -1)"
           H=$(curl -s --max-time 60 "$HUB/api/kali-env/health?token=$TOKEN" | head -c 300)
           echo "::notice::health: $(echo "$H" | tr -d '\n\r')"
+          DF=$(curl -s --max-time 60 "$HUB/api/kali-env/desktop-frame?refresh=1&token=$TOKEN" | head -c 260)
+          echo "::notice::desktop-frame-2099: $(echo "$DF" | tr -d '\n\r')"
+          BR=$(curl -s --max-time 60 -X POST "$HUB/api/kali-env/browser" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"url":"https://example.com"}' | head -c 300)
+          echo "::notice::browser-2099: $(echo "$BR" | tr -d '\n\r')"
+          FS=$(curl -s --max-time 30 "$HUB/api/kali-env/fs?scope=workspace&token=$TOKEN" | head -c 260)
+          echo "::notice::fs-2099: $(echo "$FS" | tr -d '\n\r')"
+          PP=$(curl -s --max-time 30 "$HUB/api/kali-env/pipelines?token=$TOKEN" | head -c 260)
+          echo "::notice::pipelines-2099: $(echo "$PP" | tr -d '\n\r')"
+          CT=$(curl -s --max-time 40 "$HUB/api/kali-env/control?token=$TOKEN" | head -c 260)
+          echo "::notice::control-2099: $(echo "$CT" | tr -d '\n\r')"
