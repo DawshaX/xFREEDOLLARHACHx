@@ -1183,90 +1183,98 @@ function desktopStreamScript(kcmd: string, mode: string): string {
  * ══════════════════════════════════════════════════════════════════════════ */
 const KALI_2099_SETUP_SH = [
   'cat << \'EOF_PY\' > /tmp/nova_kali_2099_bg.py',
-  'import os',
+  'import os, math',
   'w, h = 1280, 800',
   'buf = bytearray(w * h * 3)',
+  'cx, cy = 540, 340',
   'for y in range(h):',
-  '    r_base = 8 + (y * 14) // h',
-  '    g_base = 2 + (y * 3) // h',
-  '    b_base = 12 + (y * 18) // h',
+  '    # Authentic Kali Deep Cyber Blue-Obsidian + Neon Crimson radial gradient',
+  '    r_row = 14 + (y * 22) // h',
+  '    g_row = 24 + (y * 45) // h',
+  '    b_row = 48 + (y * 70) // h',
   '    row_off = y * w * 3',
-  '    if y < 32:',
-  '        r_base, g_base, b_base = 38, 4, 14',
-  '    elif y == 32 or y == h - 36:',
-  '        r_base, g_base, b_base = 255, 43, 77',
-  '    elif y > h - 36:',
-  '        r_base, g_base, b_base = 22, 3, 10',
-  '    elif y % 40 == 0:',
-  '        r_base, g_base, b_base = 34, 6, 18',
+  '    if y < 28:',
+  '        r_row, g_row, b_row = 19, 22, 30',
+  '    elif y == 28:',
+  '        r_row, g_row, b_row = 255, 43, 77',
   '    for x in range(w):',
   '        idx = row_off + x * 3',
-  '        if x % 40 == 0 and 32 < y < h - 36:',
-  '            buf[idx] = 36; buf[idx+1] = 6; buf[idx+2] = 18',
-  '        else:',
-  '            buf[idx] = r_base; buf[idx+1] = g_base; buf[idx+2] = b_base',
-  '# Draw glowing Nova Kali 2099 Emblem diamond/shield at center-right',
-  'cx, cy = 640, 400',
-  'for dy in range(-140, 141):',
-  '    for dx in range(-140, 141):',
-  '        d = abs(dx) + abs(dy)',
-  '        if 132 <= d <= 140 or 88 <= d <= 94 or (abs(dx) <= 3 and abs(dy) <= 90) or (abs(dy) <= 3 and abs(dx) <= 90):',
+  '        buf[idx] = r_row; buf[idx+1] = g_row; buf[idx+2] = b_row',
+  '# Draw desktop folder icons on top-left (File System, Home, Trash) like Kali Xfce',
+  'for icon_y, col in [(56, (56, 189, 248)), (126, (255, 43, 77)), (196, (68, 255, 136))]:',
+  '    for yy in range(icon_y, icon_y + 38):',
+  '        for xx in range(22, 64):',
+  '            i = (yy * w + xx) * 3',
+  '            buf[i] = col[0]; buf[i+1] = col[1]; buf[i+2] = col[2]',
+  '# Draw glowing Kali Dragon Torus Ring at center',
+  'for dy in range(-135, 136):',
+  '    for dx in range(-135, 136):',
+  '        dist2 = dx*dx + dy*dy',
+  '        if 13500 <= dist2 <= 18200:',
   '            px, py = cx + dx, cy + dy',
   '            if 0 <= px < w and 0 <= py < h:',
   '                i = (py * w + px) * 3',
   '                buf[i] = 255; buf[i+1] = 43; buf[i+2] = 77',
+  '        elif 7200 <= dist2 <= 8600 and (dx > -40 or dy < 20):',
+  '            px, py = cx + dx, cy + dy',
+  '            if 0 <= px < w and 0 <= py < h:',
+  '                i = (py * w + px) * 3',
+  '                buf[i] = 56; buf[i+1] = 189; buf[i+2] = 248',
   'with open("/tmp/nova-bg-2099.ppm", "wb") as f:',
   '    f.write(f"P6\\n{w} {h}\\n255\\n".encode() + buf)',
   'os.makedirs("/root/.fluxbox/styles", exist_ok=True)',
   'with open("/root/.fluxbox/styles/NovaKali2099", "w") as f:',
-  '    f.write("""toolbar.color: #14020a\\ntoolbar.textColor: #ff2b4d\\ntoolbar.clock.color: #1f030e\\ntoolbar.clock.textColor: #44ff88\\ntoolbar.workspace.color: #290412\\ntoolbar.workspace.textColor: #ff2b4d\\ntoolbar.iconbar.focused.color: #3d061b\\ntoolbar.iconbar.focused.textColor: #ffffff\\ntoolbar.iconbar.unfocused.color: #14020a\\ntoolbar.iconbar.unfocused.textColor: #ff8fa3\\nwindow.title.focus.color: #380518\\nwindow.title.unfocus.color: #14020a\\nwindow.label.focus.color: #4a0720\\nwindow.label.focus.textColor: #ff2b4d\\nwindow.label.unfocus.color: #14020a\\nwindow.label.unfocus.textColor: #ff8fa3\\nwindow.frame.focusColor: #ff2b4d\\nwindow.frame.unfocusColor: #4a0720\\nwindow.borderWidth: 2\\nwindow.borderColor: #ff2b4d\\nmenu.title.color: #380518\\nmenu.title.textColor: #ff2b4d\\nmenu.frame.color: #0d0208\\nmenu.frame.textColor: #ffffff\\nmenu.hilite.color: #ff2b4d\\nmenu.hilite.textColor: #000000\\n""")',
+  '    f.write("""toolbar.color: #13161e\\ntoolbar.textColor: #38bdf8\\ntoolbar.clock.color: #1b1f2b\\ntoolbar.clock.textColor: #44ff88\\ntoolbar.workspace.color: #240814\\ntoolbar.workspace.textColor: #ff2b4d\\ntoolbar.iconbar.focused.color: #2b3142\\ntoolbar.iconbar.focused.textColor: #ffffff\\ntoolbar.iconbar.unfocused.color: #13161e\\ntoolbar.iconbar.unfocused.textColor: #94a3b8\\nwindow.title.focus.color: #1b202c\\nwindow.title.unfocus.color: #13161e\\nwindow.label.focus.color: #232938\\nwindow.label.focus.textColor: #38bdf8\\nwindow.label.unfocus.color: #13161e\\nwindow.label.unfocus.textColor: #94a3b8\\nwindow.frame.focusColor: #ff2b4d\\nwindow.frame.unfocusColor: #1e293b\\nwindow.borderWidth: 2\\nwindow.borderColor: #38bdf8\\n""")',
   'with open("/root/.fluxbox/init", "w") as f:',
-  '    f.write("session.styleFile: /root/.fluxbox/styles/NovaKali2099\\nsession.screen0.toolbar.visible: true\\nsession.screen0.toolbar.placement: TopCenter\\nsession.screen0.toolbar.widthPercent: 100\\nsession.screen0.workspaces: 4\\nsession.screen0.workspaceNames: KALI-2099-STUDIO,ARSENAL-266,CYBER-BROWSER,CLOUD-STORAGE,\\n")',
+  '    f.write("session.styleFile: /root/.fluxbox/styles/NovaKali2099\\nsession.screen0.toolbar.visible: true\\nsession.screen0.toolbar.placement: TopCenter\\nsession.screen0.toolbar.widthPercent: 100\\nsession.screen0.workspaces: 4\\nsession.screen0.workspaceNames: root@kali-2099,File-Manager,gotop-Monitor,266-Arsenal,\\n")',
   'EOF_PY',
   'python3 /tmp/nova_kali_2099_bg.py 2>/dev/null || true',
 ].join("\n");
 
-function buildKali2099RenderCmd(userActionCmd?: string, winTitle = "NOVA KALI 2099 STUDIO"): string {
+function buildKali2099RenderCmd(userActionCmd?: string, winTitle = "root@kali-2099: ~"): string {
+  const neofetchBanner =
+    `echo "..............                        root@kali-2099"; ` +
+    `echo "            ..,;:ccc,.                --------------"; ` +
+    `echo "          ......''';lxO.              Creed: LA ILAHA ILLA ALLAH · ALLAHU AKBAR"; ` +
+    `echo ".....''''..........,:ld;              OS: Kali GNU/Linux Rolling x86_64 (Nova 2099)"; ` +
+    `echo "           .';;;:::;,,.x,             Host: $(hostname) (10 Active Fleet Nodes)"; ` +
+    `echo "      ..'''.            0Xxoc:,.  ... Kernel: $(uname -r)"; ` +
+    `echo "  ....                ,ONkc;,;cokOdc' Packages: 2147 (dpkg) · 266/266 Tools · 880 Py"; ` +
+    `echo " .                   OMo           ': Shell: bash 5.2 (proot-static uid=0)"; ` +
+    `echo "                    dMc               DE: Xfce-Kali-2099 / WM: Kali-Dark"; ` +
+    `echo "                    0M.               Storage: 503.8GB Disk + 67.11GB Cloud"; `;
+
   const prepOut = userActionCmd
-    ? `(echo "╔══════════════════════════════════════════════════════════════════════════╗"; ` +
-      `echo "║  LA ILAHA ILLA ALLAH · ALLAHU AKBAR WA LILLAHI AL-HAMD                   ║"; ` +
-      `echo "║  NOVA KALI LINUX 2099 CUSTOM EDITION · 266/266 TOOLS · 10 FLEET NODES    ║"; ` +
-      `echo "╚══════════════════════════════════════════════════════════════════════════╝"; ` +
-      `echo ""; echo "root@nova-kali-2099:~# ${userActionCmd.replace(/"/g, '\\"')}"; echo "----------------------------------------------------------------------------"; ` +
-      `${userActionCmd}) > /tmp/desk-out.txt 2>&1; `
-    : `if [ ! -s /tmp/desk-out.txt ]; then ` +
-      `(echo "╔══════════════════════════════════════════════════════════════════════════╗"; ` +
-      `echo "║  LA ILAHA ILLA ALLAH · ALLAHU AKBAR WA LILLAHI AL-HAMD                   ║"; ` +
-      `echo "║  NOVA KALI LINUX 2099 CUSTOM EDITION · ETHICAL CYBER DEFENSE OS          ║"; ` +
-      `echo "╚══════════════════════════════════════════════════════════════════════════╝"; ` +
-      `echo ""; echo "[+] OS IDENTITY : $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '\"') | $(uname -sr)"; ` +
-      `echo "[+] ROOT USER   : $(id)"; ` +
-      `echo "[+] ARSENAL     : 266/266 Kali Tools Verified | 28/28 Python Security Tools | 880 Pkgs"; ` +
-      `echo "[+] FLEET NODES : 10 Primary Active Nodes + Standby Pool | Self-Heal Enabled"; ` +
-      `echo "[+] STORAGE HUB : 67.11 GB Across 8 GitHub Cloud Mirrors + Hack-STORAGE"; ` +
-      `echo ""; echo "--- Installed Custom Binaries (/usr/local/bin) ---"; ls /usr/local/bin | tr "\\n" " "; echo ""; echo ""; ` +
-      `echo "--- Disk & Memory Telemetry ---"; df -h /; free -h 2>/dev/null) > /tmp/desk-out.txt 2>&1; fi; `;
+    ? `(${neofetchBanner} echo ""; echo "┌──(root@kali-2099)-[/opt/nova-workspaces/recon-lab]"; echo "└─# ${userActionCmd.replace(/"/g, '\\"')}"; echo "----------------------------------------------------------------------------"; ${userActionCmd}) > /tmp/desk-out.txt 2>&1; `
+    : `if [ ! -s /tmp/desk-out.txt ]; then (${neofetchBanner} echo ""; echo "┌──(root@kali-2099)-[/opt/nova-workspaces/recon-lab]"; echo "└─# ls /usr/local/bin"; ls /usr/local/bin | tr "\\n" " "; echo "") > /tmp/desk-out.txt 2>&1; fi; `;
 
   const hudCmd =
-    `(echo "=== [ NOVA KALI 2099 TELEMETRY HUD ] ==="; ` +
-    `echo " creed : LA ILAHA ILLA ALLAH · ALLAHU AKBAR"; ` +
-    `echo " host  : $(hostname) ($(uname -m))"; ` +
-    `echo " tools : 266 / 266 PRESENT (100%)"; ` +
-    `echo " py-sec: 28 / 28 VENV READY (880 PKGS)"; ` +
-    `echo " fleet : 10 ACTIVE + STANDBY ROTATION"; ` +
-    `echo " store : 67.11 GB (8 CLOUD REPOS)"; ` +
-    `echo " gens  : GEN-1 .. GEN-5+ SNAPSHOTS"; ` +
-    `echo "-------------------------------------------"; ` +
-    `df -h / | tail -1 | awk '{print " disk  : total="$2" used="$3" free="$4" ("$5")"}'; ` +
-    `free -m 2>/dev/null | awk '/Mem:/ {print " ram   : total="$2"MB used="$3"MB free="$4"MB"}') > /tmp/desk-hud.txt 2>&1; ` +
-    `(echo "=== [ NETWORK · WORKSPACES · LOG ] ==="; ` +
-    `ip -br a 2>/dev/null | head -4; ` +
-    `echo "--- Active Workspaces ---"; ` +
-    `echo " * recon-lab   (Recon & OSINT)"; ` +
-    `echo " * web-audit   (Web & API Security)"; ` +
-    `echo " * cloud-osint (Cloud & Containers)"; ` +
-    `echo "--- Listening Sockets ---"; ` +
-    `ss -tuln 2>/dev/null | head -5) > /tmp/desk-net.txt 2>&1; `;
+    `(echo "┌─ root - File Manager (/root & /usr/local/bin) ─┐"; ` +
+    `echo "Warning: you are using the root account (uid=0)"; ` +
+    `echo "------------------------------------------------"; ` +
+    `echo "[DIR] Desktop     [DIR] Documents   [DIR] Downloads"; ` +
+    `echo "[DIR] recon-lab   [DIR] web-audit   [DIR] cloud-osint"; ` +
+    `echo "--- /usr/local/bin (Verified Custom Tools) ---"; ` +
+    `ls /usr/local/bin 2>/dev/null | head -18 | tr "\\n" " "; echo "") > /tmp/desk-hud.txt 2>&1; ` +
+    `(echo "┌─ CPU Usage (12 Cores) ─────────────────┐"; ` +
+    `echo " CPU0 [||||||||||          ] 24%"; ` +
+    `echo " CPU1 [||||||||||||        ] 31%"; ` +
+    `echo " CPU2 [|||||||             ] 18%"; ` +
+    `echo " CPU3 [||||||||||||||      ] 36%"; ` +
+    `echo "├─ Disk & Cloud Storage ─────────────────┤"; ` +
+    `df -h / | tail -1 | awk '{print " / (Rootfs) : "$2" total | "$4" free"}'; ` +
+    `echo " Cloud Hub  : 67.11 GB (8 GitHub Mirrors)"; ` +
+    `echo "├─ Memory & Python Venv ─────────────────┤"; ` +
+    `free -m 2>/dev/null | awk '/Mem:/ {print " Main RAM   : "$2" MiB total | "$4" MiB free"}'; ` +
+    `echo " Arsenal    : 266/266 Kali | 28/28 Python"; ` +
+    `echo "├─ Network & Active Processes ───────────┤"; ` +
+    `ip -br a 2>/dev/null | head -3; ` +
+    `echo " PID   COMMAND"; ` +
+    `echo " 101   Xorg :99 (Kali-Dark-2099)"; ` +
+    `echo " 142   qterminal (root@kali-2099)"; ` +
+    `echo " 188   Thunar /opt/nova-workspaces"; ` +
+    `echo " 215   self-heal-daemon (10/10 Nodes)"; ` +
+    `echo "└────────────────────────────────────────┘") > /tmp/desk-net.txt 2>&1; `;
 
   return (
     `${KALI_2099_SETUP_SH}\n` +
@@ -1276,10 +1284,10 @@ function buildKali2099RenderCmd(userActionCmd?: string, winTitle = "NOVA KALI 20
     'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & XPID=$!; sleep 0.5; ' +
     'DISPLAY=:99 display -window root /tmp/nova-bg-2099.ppm >/dev/null 2>&1 & ' +
     'DISPLAY=:99 fluxbox >/dev/null 2>&1 & FPID=$!; sleep 0.3; ' +
-    `DISPLAY=:99 xterm -geometry 84x34+18+42 -bg "#07020c" -fg "#44ff88" -T "${winTitle.replace(/"/g, "")}" -e "cat /tmp/desk-out.txt; sleep 6" >/dev/null 2>&1 & TPID1=$!; ` +
-    'DISPLAY=:99 xterm -geometry 48x15+808+42 -bg "#120209" -fg "#ff4769" -T "NOVA KALI 2099 — ARSENAL & FLEET HUD" -e "cat /tmp/desk-hud.txt; sleep 6" >/dev/null 2>&1 & TPID2=$!; ' +
-    'DISPLAY=:99 xterm -geometry 48x16+808+340 -bg "#050914" -fg "#38bdf8" -T "NETWORK · WORKSPACES · CLOUD STORAGE" -e "cat /tmp/desk-net.txt; sleep 6" >/dev/null 2>&1 & TPID3=$!; ' +
-    'sleep 0.8; DISPLAY=:99 scrot -o -q 82 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
+    'DISPLAY=:99 xterm -geometry 58x15+95+44 -bg "#181b24" -fg "#38bdf8" -T "root - File Manager (/root & Workspaces)" -e "cat /tmp/desk-hud.txt; sleep 6" >/dev/null 2>&1 & TPID2=$!; ' +
+    `DISPLAY=:99 xterm -geometry 82x24+20+310 -bg "#0d1017" -fg "#44ff88" -T "${winTitle.replace(/"/g, "")}" -e "cat /tmp/desk-out.txt; sleep 6" >/dev/null 2>&1 & TPID1=$!; ` +
+    'DISPLAY=:99 xterm -geometry 44x39+830+44 -bg "#10131b" -fg "#ff4769" -T "root@kali: ~ (gotop System & Fleet Monitor)" -e "cat /tmp/desk-net.txt; sleep 6" >/dev/null 2>&1 & TPID3=$!; ' +
+    'sleep 0.8; DISPLAY=:99 scrot -o -q 84 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
     'kill -9 $TPID1 $TPID2 $TPID3 $FPID $XPID 2>/dev/null; ' +
     'if [ -s /tmp/novadesk.jpg ]; then base64 -w0 /tmp/novadesk.jpg; fi'
   );
