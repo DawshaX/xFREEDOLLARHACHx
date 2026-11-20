@@ -1,0 +1,59 @@
+# [hack-storage-mirror] مرآة كل الجديد على DawshaX/Hack-STORAGE — ضمان التخزين الحر مدى الحياة
+# الطلب المالك 04:4xZ: «Hack-STORAGE مخزن فعال موجودة واضافي ويتخزن عليه كل الي جاي
+# لضمان الاستمرار والتخزين الكثير الحر».
+# الآلية: كل ساعة — (1) مرآة نسخة الحالة nova-state (الذاكرة والإعدادات) كاملة
+# بفروعها على Hack-STORAGE، (2) مرآة أحدث باندل nova-24-7، (3) تقرير مخزون
+# بالأحجام. كل التخزين على repo حرة بلا حدود دقايق.
+name: hack-storage-mirror
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: hack-storage-mirror
+  cancel-in-progress: false
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: تحضير Hack-STORAGE
+        env:
+          HS_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          git config --global user.email "bot@users.noreply.github.com"
+          git config --global user.name "nova-storage-bot"
+          git clone --depth 1 "https://x-access-token:${{ secrets.HACK_STORAGE_TOKEN || secrets.NOVA_EXEC_TOKEN }}@github.com/DawshaX/Hack-STORAGE.git" hs || \
+          git clone --depth 1 "https://x-access-token:${{ secrets.NOVA_EXEC_TOKEN }}@github.com/DawshaX/Hack-STORAGE.git" hs
+          cd hs
+          mkdir -p mirror/nova-state mirror/nova-bundle
+      - name: مرآة نسخة الحالة الأحدث (الذاكرة الدائمة)
+        env:
+          GH_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          cd hs
+          ASSET=$(gh release view nova-state --repo DawshaX/xFREEDOLLARHACHx --json assets -q '.assets | sort_by(.updatedAt) | last | .name' 2>/dev/null || true)
+          if [ -n "$ASSET" ]; then
+            echo "آخر أست حالة: $ASSET"
+            gh release download "nova-state" --repo DawshaX/xFREEDOLLARHACHx -p "$ASSET" -O "mirror/nova-state/$ASSET" --clobber || true
+          fi
+          STAMP=$(date -u +"%Y-%m-%dT%H:%MZ")
+          echo "آخر مرآة: $STAMP" > mirror/last-mirror.txt
+      - name: مرآة باندل nova-24-7 (البرنامج الكامل)
+        env:
+          GH_TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+        run: |
+          cd hs
+          gh release download "nova-portable" --repo DawshaX/xFREEDOLLARHACHx -p "nova-24-7.zip" -O "mirror/nova-bundle/nova-24-7.zip" --clobber || true
+      - name: رفع المرآة على Hack-STORAGE
+        run: |
+          cd hs
+          git add -A mirror/
+          git commit -m "مرآة تلقائية $(date -u +%Y-%m-%dT%H:%MZ) — nova-state + nova-bundle" || echo "مافيش جديد"
+          git push origin HEAD 2>&1 || git push origin main 2>&1 || echo "push retry later"
+      - name: تقرير المخزون
+        run: |
+          cd hs
+          du -sh mirror/* 2>/dev/null | head -10
+          echo "المخزن الحر Hack-STORAGE — تخزين مستمر مدى الحياة ✓"

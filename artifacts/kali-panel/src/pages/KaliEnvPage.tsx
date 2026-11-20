@@ -234,7 +234,7 @@ export default function KaliEnvPage() {
   /* TEST23 — عقد كالي السحابية: قياس حي كل 20ث من الهَب نفسه (probe عبر قناة الأجينتات) */
   const loadNodes = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/ops/kali/nodes`);
+      const r = await fetch(`${API}/ops/kali/nodes`, { headers: novaAuthHeaders() });
       if (r.ok) setNodes((await r.json()) as KaliNodes);
     } catch { /* البولينج الجاي يجرب */ }
   }, []);
@@ -270,7 +270,7 @@ export default function KaliEnvPage() {
   /* TEST24 — المخزن الموحد: «فين اللي عملتو» — مقاس حي كل 60ث */
   const loadStore = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/ops/storage-hub`);
+      const r = await fetch(`${API}/ops/storage-hub`, { headers: novaAuthHeaders() });
       if (r.ok) setStore((await r.json()) as StorageHub);
     } catch { /* الجاي يجرب */ }
   }, []);
@@ -371,7 +371,7 @@ export default function KaliEnvPage() {
   const installOnNode = async () => {
     setInstallBusy(true);
     try {
-      const r = await fetch(`${API}/ops/kali/nodes/install`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      const r = await fetch(`${API}/ops/kali/nodes/install`, { method: "POST", headers: { "Content-Type": "application/json", ...novaAuthHeaders() }, body: JSON.stringify({}) });
       const d = (await r.json()) as { ok?: boolean; already?: boolean; detail?: string };
       pushNotify("success", d.already ? "التثبيت شغال بالفعل" : "التثبيت السحابي بدأ", d.detail ?? `HTTP ${r.status}`);
     } catch (e: unknown) {
@@ -383,7 +383,7 @@ export default function KaliEnvPage() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/ops/kali`);
+      const r = await fetch(`${API}/ops/kali`, { headers: novaAuthHeaders() });
       if (r.ok) {
         const d = (await r.json()) as { status: KaliStatus; desktopUrl?: string | null };
         setSt(d.status);
@@ -402,7 +402,7 @@ export default function KaliEnvPage() {
   /* TEST13 — حالة التجهيز الذاتي (الهَب بيسحب البيئة بنفسه) */
   const loadProv = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/ops/kali/provision/status`);
+      const r = await fetch(`${API}/ops/kali/provision/status`, { headers: novaAuthHeaders() });
       if (r.ok) {
         const d = (await r.json()) as { provision: ProvisionState };
         setProv(d.provision);
@@ -423,7 +423,7 @@ export default function KaliEnvPage() {
   const startProv = async () => {
     setProvBusy(true);
     try {
-      const r = await fetch(`${API}/ops/kali/provision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "yes" }) });
+      const r = await fetch(`${API}/ops/kali/provision`, { method: "POST", headers: { "Content-Type": "application/json", ...novaAuthHeaders() }, body: JSON.stringify({ confirm: "yes" }) });
       const d = (await r.json()) as { ok?: boolean; detail?: string; skipped?: boolean; cloudFirst?: boolean };
       pushNotify(r.ok && d.ok ? "success" : "warning", d.cloudFirst ? "وضع سحابي أولًا" : d.skipped ? "كالي جاهزة بالفعل" : "تجهيز بيئة كالي محليًا (استثناء)", d.detail ?? `HTTP ${r.status}`);
     } catch (e: unknown) {
@@ -732,7 +732,7 @@ export default function KaliEnvPage() {
                 style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${n.kali ? "rgba(68,255,136,0.4)" : "rgba(255,255,255,0.12)"}` }}>
                 <span className="text-[10px] font-black" style={{ color: "#e0e0e0" }} title={n.id}>🖥️ {n.hostname || "عقدة بدون اسم"}<span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.35)" }}> · {n.id.slice(0, 8)}</span></span>
                 <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
-                  style={{ background: n.kali ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: n.kali ? "#44ff88" : "rgba(255,170,68,0.9)" }}>
+                  style={{ background: n.kali ? "rgba(68,255,136,0.1)" : "rgba(255,255,255,0.05)", color: n.kali ? "#44ff88" : "rgba(255,109,133,0.9)" }}>
                   {n.probed ? (n.mode === "bare" ? "نظام كالي ✓" : n.mode === "proot" ? "rootfs كالي سحابية + proot ✓" : "جاهزة للتثبيت — الزر فوق") : "مش بردّ على الprobe"}
                 </span>
                 <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>متصل من {new Date(n.connectedAt).toLocaleTimeString("en-GB")}</span>
@@ -740,7 +740,7 @@ export default function KaliEnvPage() {
             ))}
           </div>
         ) : (
-          <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>
+          <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,109,133,0.85)" }}>
             {nodes
               ? "مافيش عقدة لينكس متصلة دلوقتي — موجة fleet-nodes بتحط عقد جديدة كل 5 ساعات (أو شغّلها من Actions)، وأول ما توصل تظهر هنا وكالي تكون مثبتة عليها جاهزة."
               : "بيقيس العقد المتصلة…"}
@@ -777,10 +777,10 @@ export default function KaliEnvPage() {
             </div>
           </details>
           <details className="mt-2">
-            <summary className="text-[9px] font-mono cursor-pointer" style={{ color: "rgba(255,170,68,0.75)" }}>استثناء: تحميل التبيئة محليًا على السيرفر ده (تأكيد مزدوج — خطر على الحصة)</summary>
+            <summary className="text-[9px] font-mono cursor-pointer" style={{ color: "rgba(255,109,133,0.75)" }}>استثناء: تحميل التبيئة محليًا على السيرفر ده (تأكيد مزدوج — خطر على الحصة)</summary>
             <button onClick={startProv} disabled={provBusy || prov?.running === true}
               className="mt-1.5 text-[10px] font-black px-3 py-1.5 rounded-lg"
-              style={{ background: "rgba(255,170,68,0.1)", border: "1px solid rgba(255,170,68,0.5)", color: "#ffaa44" }}>
+              style={{ background: "rgba(255,109,133,0.1)", border: "1px solid rgba(255,109,133,0.5)", color: "#ffaa44" }}>
               {prov?.running ? "⏳ التجهيز شغال…" : provBusy ? "بدين…" : "⚠️ اعرف المخاطرة — جهّز محليًا"}
             </button>
           </details>
@@ -890,7 +890,7 @@ export default function KaliEnvPage() {
               <span className="text-[8px] font-mono py-1" style={{ color: "rgba(255,255,255,0.4)" }}>البث الحي تحت في الطرفية — الحرف بيطلع لحظة تولده</span>
             </div>
           ) : (
-            <p className="mt-1 text-[8px] font-mono" style={{ color: live.exitCode === 0 ? "rgba(68,255,136,0.8)" : live.exitCode === null ? "rgba(255,170,68,0.8)" : "#ff8888" }}>
+            <p className="mt-1 text-[8px] font-mono" style={{ color: live.exitCode === 0 ? "rgba(68,255,136,0.8)" : live.exitCode === null ? "rgba(255,109,133,0.8)" : "#ff8888" }}>
               {live.exitCode === null ? "البث اتقطع" : `exit=${live.exitCode} · ${live.durationMs ?? 0}ms`} — النتيجة كاملة في الطرفية تحت
             </p>
           )}
@@ -900,10 +900,10 @@ export default function KaliEnvPage() {
       {/* TEST30 — إحصائيات الشغل الحقيقي: دايمًا ظاهرة (الأصفار صادقة) — كانت بتتخبي لما total=0
           فالصفحة بقت شكلها «زي ما هي» حتى بعد التحديث. + بصمة البنية تحت عشان المالك يشوف فورًا
           إن الكود اللي شغال على waifly هو آخر build (commit + builtAt من /api/nova-core/version). */}
-      <div className="rounded-xl p-3" style={{ background: "rgba(255,170,68,0.04)", border: "1px solid rgba(255,170,68,0.3)" }}>
+      <div className="rounded-xl p-3" style={{ background: "rgba(255,109,133,0.04)", border: "1px solid rgba(255,109,133,0.3)" }}>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <p className="text-[11px] font-black" style={{ color: "#ffaa44" }}>📊 إحصائيات الشغل الحقيقي على كالي — عدّاد من كل تنفيذ فعلًا</p>
-          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,170,68,0.1)", color: "#ffc76b" }}>
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,109,133,0.1)", color: "#ffc76b" }}>
             {nodes?.stats ? `${nodes.stats.total} تنفيذ · ✓${nodes.stats.ok} · ✗${nodes.stats.fail}` : "…"}
           </span>
         </div>
@@ -928,7 +928,7 @@ export default function KaliEnvPage() {
 
       {/* بنية الهَب الحيّة — من `/api/ops/version` بتاع نفس السيرفر اللي بيرد.
           مفيش Waifly ولا runner برّه: اللي بيقيس هو اللي بيشتغل. */}
-      <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.04)", border: `1px solid ${hubVersion && hubVersion !== "pending" && !hubVersion.stale?.suspect ? "rgba(68,255,136,0.35)" : "rgba(255,170,68,0.3)"}` }}>
+      <div className="rounded-xl p-3" style={{ background: "rgba(68,255,136,0.04)", border: `1px solid ${hubVersion && hubVersion !== "pending" && !hubVersion.stale?.suspect ? "rgba(68,255,136,0.35)" : "rgba(255,109,133,0.3)"}` }}>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <p className="text-[11px] font-black" style={{ color: "#44ff88" }}>🏷️ البنية الشغّالة على الهَب — قياس حي من /api/ops/version</p>
           {hubVersionAt && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(68,255,136,0.1)", color: "#7cffb0" }}>قرأت {hubVersionAt}</span>}
@@ -984,9 +984,9 @@ export default function KaliEnvPage() {
               ) : (
                 <button key={k} onClick={() => void installTool(k)} disabled={instBusy !== null} title={`ثبّت ${k} على العقدة (apt جوه كالي — قد ياخد دقايق)`}
                   className="rounded-lg px-2 py-1.5 text-right transition-all hover:opacity-80"
-                  style={{ background: "rgba(255,170,68,0.06)", border: "1px dashed rgba(255,170,68,0.35)" }}>
+                  style={{ background: "rgba(255,109,133,0.06)", border: "1px dashed rgba(255,109,133,0.35)" }}>
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] font-black" style={{ color: instBusy === k ? "#ffd08a" : "rgba(255,170,68,0.9)" }}>{instBusy === k ? "⏳ بتثبت…" : `＋ ${k}`}</span>
+                    <span className="text-[10px] font-black" style={{ color: instBusy === k ? "#ffd08a" : "rgba(255,109,133,0.9)" }}>{instBusy === k ? "⏳ بتثبت…" : `＋ ${k}`}</span>
                   </div>
                   <div className="text-[8px] font-mono mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>مش منصّبة — دوس تثبت</div>
                 </button>
@@ -999,7 +999,7 @@ export default function KaliEnvPage() {
         ) : (
           <>
             <p className="text-[10px] font-black mb-1 flex items-center gap-1.5" style={{ color: "#ffaa44" }}><Wrench className="w-3.5 h-3.5" /> الأدوات</p>
-            <p className="text-[9px] font-mono" style={{ color: "rgba(255,170,68,0.85)" }}>
+            <p className="text-[9px] font-mono" style={{ color: "rgba(255,109,133,0.85)" }}>
               القياس بيبدأ تلقائيًا أول ما عقدة كالي تتصل (القسم فوق) — البناء بيعملها بنفسها من فرع kali-rootfs بأدواتها الكاملة.
             </p>
           </>
@@ -1073,7 +1073,7 @@ export default function KaliEnvPage() {
             🐧 بروب الحقيقي (proot) — قياس مباشر من /api/kali-env
             {envHealth && (
               <span className="text-[8px] font-mono px-1.5 py-0.5 rounded"
-                style={{ background: envHealth.ok ? "rgba(68,255,136,0.12)" : "rgba(255,170,68,0.12)", color: envHealth.ok ? "#44ff88" : "#ffaa44" }}>
+                style={{ background: envHealth.ok ? "rgba(68,255,136,0.12)" : "rgba(255,109,133,0.12)", color: envHealth.ok ? "#44ff88" : "#ffaa44" }}>
                 {envHealth.ok ? "● شغّال" : envHealth.ready ? "◐ ناقص" : "○ مش منصّب"}
               </span>
             )}
@@ -1103,7 +1103,7 @@ export default function KaliEnvPage() {
                 <div className="text-[9px] font-mono break-all" style={{ color: "rgba(255,255,255,0.7)" }}>{envHealth.rootfs ?? "—"}</div>
               </div>
             </div>
-            <p className="text-[9px] font-mono mt-1.5" style={{ color: envHealth.ok ? "rgba(68,255,136,0.8)" : "rgba(255,170,68,0.85)" }}>
+            <p className="text-[9px] font-mono mt-1.5" style={{ color: envHealth.ok ? "rgba(68,255,136,0.8)" : "rgba(255,109,133,0.85)" }}>
               {envHealth.detail}
             </p>
             {!envHealth.ready && envHealth.searched?.length ? (
@@ -1130,7 +1130,7 @@ export default function KaliEnvPage() {
                   </span>
                 )}
                 {envTools.fleet && (
-                  <span className="text-[8px] font-mono" style={{ color: envTools.fleet.kaliReady > 0 ? "rgba(68,255,136,0.85)" : "rgba(255,170,68,0.8)" }}>
+                  <span className="text-[8px] font-mono" style={{ color: envTools.fleet.kaliReady > 0 ? "rgba(68,255,136,0.85)" : "rgba(255,109,133,0.8)" }}>
                     أسطول كالي: {envTools.fleet.kaliReady}/{envTools.fleet.connected} عقدة جاهزة
                   </span>
                 )}
@@ -1140,7 +1140,7 @@ export default function KaliEnvPage() {
                   <div key={group} className="rounded-lg px-2 py-1.5" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-[9px] font-black" style={{ color: "#22d3ee" }}>{group}</span>
-                      <span className="text-[8px] font-mono" style={{ color: g.missing.length ? "rgba(255,170,68,0.8)" : "rgba(68,255,136,0.8)" }}>
+                      <span className="text-[8px] font-mono" style={{ color: g.missing.length ? "rgba(255,109,133,0.8)" : "rgba(68,255,136,0.8)" }}>
                         {g.present.length}/{g.present.length + g.missing.length}
                       </span>
                     </div>
@@ -1157,7 +1157,7 @@ export default function KaliEnvPage() {
               </div>
             </>
           ) : (
-            <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,170,68,0.85)" }}>
+            <p className="text-[9px] font-mono mt-1.5" style={{ color: "rgba(255,109,133,0.85)" }}>
               {envTools.reason ?? "proot/rootfs مش منصّب"} — القياس الحقيقي بيبدأ أول ما البيئة تتثبّت.
             </p>
           )
@@ -1215,7 +1215,7 @@ export default function KaliEnvPage() {
                 </p>
               </div>
             ) : (
-              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>بيقيس المساحات من جيت هوب…</p>
+              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,109,133,0.85)" }}>بيقيس المساحات من جيت هوب…</p>
             )}
           </div>
 
@@ -1227,22 +1227,22 @@ export default function KaliEnvPage() {
 
       <div style={{ display: face === "desk" ? "block" : "none" }}>
           {/* ── TEST42 · 🖥️ سطح المكتب الحي — بث MJPEG من عقدة كالي ──────────── */}
-          <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,204,0,0.25)" }}>
+          <div className="rounded-xl p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,43,77,0.25)" }}>
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-[10px] font-black" style={{ color: "#ffcc00" }}>🖥️ سطح المكتب الحي — Xvfb + fluxbox من عقدة كالي (عرض مباشر)</span>
+              <span className="text-[10px] font-black" style={{ color: "#ff2b4d" }}>🖥️ سطح المكتب الحي — Xvfb + fluxbox من عقدة كالي (عرض مباشر)</span>
               <div className="flex items-center gap-1.5">
                 {deskOn && (
                   <button onClick={() => setDeskTick((t) => t + 1)} className="text-[9px] font-black px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.2)" }}>↻ إعادة توصيل</button>
                 )}
                 <button onClick={() => setDeskOn((v) => !v)}
                   className="text-[9px] font-black px-2 py-1 rounded transition-all"
-                  style={{ background: deskOn ? "rgba(239,68,68,0.15)" : "rgba(255,204,0,0.15)", color: deskOn ? "#ff6b6b" : "#ffcc00", border: `1px solid ${deskOn ? "rgba(239,68,68,0.4)" : "rgba(255,204,0,0.4)"}` }}>
+                  style={{ background: deskOn ? "rgba(239,68,68,0.15)" : "rgba(255,43,77,0.15)", color: deskOn ? "#ff6b6b" : "#ff2b4d", border: `1px solid ${deskOn ? "rgba(239,68,68,0.4)" : "rgba(255,43,77,0.4)"}` }}>
                   {deskOn ? "■ إيقاف البث" : "▶ شغّل سطح المكتب"}
                 </button>
               </div>
             </div>
             {deskOn ? (
-              <div className="mt-2 rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,204,0,0.25)", background: "#000" }}>
+              <div className="mt-2 rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,43,77,0.25)", background: "#000" }}>
                 <img
                   key={deskTick}
                   src={`${API}/kali-env/node-desktop${getOpsToken() ? `?token=${encodeURIComponent(getOpsToken())}` : ""}`}
@@ -1256,7 +1256,7 @@ export default function KaliEnvPage() {
                 </p>
               </div>
             ) : (
-              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>البث مقفول — اضغط «شغّل سطح المكتب» وهتشوف شاشة كالي لايف من عقدة الأسطول</p>
+              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,109,133,0.85)" }}>البث مقفول — اضغط «شغّل سطح المكتب» وهتشوف شاشة كالي لايف من عقدة الأسطول</p>
             )}
           </div>
 
@@ -1299,7 +1299,7 @@ export default function KaliEnvPage() {
                 </div>
               );
             })() : (
-              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,170,68,0.85)" }}>
+              <p className="text-[9px] font-mono mt-2" style={{ color: "rgba(255,109,133,0.85)" }}>
                 {liveOn ? "بينبّض… أول قياس جاي في ثواني" : "البث مقفول — اضغط «ابدأ البث الحي» وتشوف النظام يتنفس لايف"}
               </p>
             )}
@@ -1326,7 +1326,7 @@ export default function KaliEnvPage() {
                     <details key={group} className="rounded-lg px-2 py-1.5" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(153,102,255,0.14)" }}>
                       <summary className="cursor-pointer flex items-center justify-between gap-2">
                         <span className="text-[9px] font-black" style={{ color: "#9966ff" }}>{group} {(() => { const n = shown.find((t) => t.version)?.version; return n ? <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>· إصدارات مقروءة</span> : null; })()}</span>
-                        <span className="text-[8px] font-mono" style={{ color: present === shown.length ? "rgba(68,255,136,0.85)" : "rgba(255,170,68,0.8)" }}>
+                        <span className="text-[8px] font-mono" style={{ color: present === shown.length ? "rgba(68,255,136,0.85)" : "rgba(255,109,133,0.8)" }}>
                           {present}/{shown.length} جاهزة
                         </span>
                       </summary>
@@ -1336,7 +1336,7 @@ export default function KaliEnvPage() {
                         ) : (
                           <button key={t.name} onClick={() => void installTool(t.name)} disabled={instBusy !== null}
                             className="text-[8px] font-mono px-1.5 py-0.5 rounded transition-all hover:opacity-80"
-                            style={{ background: "rgba(255,170,68,0.08)", color: instBusy === t.name ? "#ffd08a" : "rgba(255,255,255,0.55)", border: "1px solid rgba(255,170,68,0.2)" }}>
+                            style={{ background: "rgba(255,109,133,0.08)", color: instBusy === t.name ? "#ffd08a" : "rgba(255,255,255,0.55)", border: "1px solid rgba(255,109,133,0.2)" }}>
                             {instBusy === t.name ? `⏳ ${t.name}` : `＋ ${t.name}`}
                           </button>
                         ))}
