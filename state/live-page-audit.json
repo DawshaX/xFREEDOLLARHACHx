@@ -1,67 +1,67 @@
 {
-  "at": "2026-11-20T13:26:30.590Z",
+  "at": "2026-11-20T21:26:38.284Z",
   "hub": "https://nova.waifly.com",
   "checks": [
     {
       "name": "login+page",
       "ok": true,
-      "ms": 865,
-      "detail": "200 · shell=index-CSBkunf_.js",
+      "ms": 690,
+      "detail": "200 · shell=index-C-5qi0Vc.js",
       "loginStatus": 302,
       "pageStatus": 200,
       "cookieSent": true,
-      "shellAsset": "index-CSBkunf_.js"
+      "shellAsset": "index-C-5qi0Vc.js"
     },
     {
       "name": "ops/kali/nodes",
       "ok": true,
-      "ms": 992,
-      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=0/0 · stats.ok=456/500",
+      "ms": 1140,
+      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=1/1 · stats.ok=465/500",
       "hubPackages": 0,
-      "kaliNodes": 0
+      "kaliNodes": 1
     },
     {
       "name": "kali-env/health",
-      "ok": false,
-      "ms": 1113,
-      "detail": "readyAnywhere=false · fleet.kaliReady=0/0"
+      "ok": true,
+      "ms": 1237,
+      "detail": "readyAnywhere=true · fleet.kaliReady=1/1"
     },
     {
       "name": "kali-env/tools",
-      "ok": false,
-      "ms": 1236,
-      "detail": "200 · proot/rootfs not installed AND no live Kali node answered",
-      "present": 0,
-      "total": 0
+      "ok": true,
+      "ms": 2064,
+      "detail": "present=265/266 · measuredOn=اتحاد 1 عقدة كالي حية — runnervm0hi8g (rootfs + proot)",
+      "present": 265,
+      "total": 266
     },
     {
       "name": "kali-env/catalog",
       "ok": true,
-      "ms": 1358,
-      "detail": "127/127 عبر 11 فئة · cachedFrom=2026-11-20T13:09:07.522Z",
+      "ms": 2827,
+      "detail": "127/127 عبر 11 فئة · cachedFrom=-",
       "present": 127,
       "total": 127
     },
     {
       "name": "terminal exec",
-      "ok": false,
-      "ms": 1486,
-      "detail": "200 · 126ms · data: {\"type\":\"start\",\"command\":\"uname -a\",\"cwd\":\"/opt/nova-workspaces/recon-lab\"}\n\ndata: {\"type\":\"done\",\"exitCode\":127,"
+      "ok": true,
+      "ms": 3332,
+      "detail": "200 · 504ms · Linux runnervm0hi8g 7.0.0-1020-azure #21-Ubuntu SMP PREEMPT Tue Oct 27 22:34:38 UTC 2"
     },
     {
       "name": "install button (ffuf)",
       "ok": false,
-      "ms": 1615,
-      "detail": "200 · 0s · exit=127 · plane=الهَب — مافيش عقدة كالي ردت · مافيش عقدة كالي ردت",
+      "ms": 4220,
+      "detail": "200 · 1s · exit=127 · plane=الهَب — مافيش عقدة كالي ردت · مافيش عقدة كالي ردت",
       "installOk": false
     },
     {
       "name": "ops/storage-hub",
       "ok": true,
-      "ms": 5287,
-      "detail": "total=67.11GB · rows=8"
+      "ms": 8280,
+      "detail": "total=67.12GB · rows=8"
     }
   ],
   "ok": false,
-  "summary": "4/8 ✓ · فاشل: kali-env/health, kali-env/tools, terminal exec, install button (ffuf)"
+  "summary": "7/8 ✓ · فاشل: install button (ffuf)"
 }
