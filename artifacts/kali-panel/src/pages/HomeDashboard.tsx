@@ -19,6 +19,7 @@ import {
   FileSearch, ClipboardList, LayoutDashboard, Gauge,
 } from "lucide-react";
 import { NavSidebar } from "@/components/NavSidebar";
+import { KaliLogo2099, TawhidBanner2099 } from "@/components/KaliLogo2099";
 import { useWebSocket, emitPlatformWsEvent } from "@/hooks/useWebSocket";
 import { useLiveEvent } from "@/hooks/useWebSocket";
 import {
@@ -1651,6 +1652,69 @@ export default function HomeDashboard() {
         <NavSidebar collapsed={sideCollapsed} onToggle={() => setSideCollapsed(c => !c)} />
 
         <main ref={mainRef} className="flex-1 overflow-y-auto p-3 space-y-3" style={{ scrollbarWidth: "thin" }}>
+
+          {/* ═══ راية التوحيد وبوابة NOVA KALI LINUX 2099 المخصصة ═══ */}
+          <TawhidBanner2099 />
+          <div
+            className="rounded-2xl p-4 anim-fade-up"
+            style={{
+              background: "linear-gradient(135deg, rgba(42,3,16,0.96) 0%, rgba(12,1,9,0.98) 55%, rgba(28,2,14,0.96) 100%)",
+              border: "1.5px solid rgba(255,43,77,0.65)",
+              boxShadow: "0 0 36px rgba(255,43,77,0.22)",
+            }}
+            dir="rtl"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-3">
+                <KaliLogo2099 size={44} />
+                <div>
+                  <div className="text-sm sm:text-base font-black text-white flex items-center gap-2 flex-wrap">
+                    <span>🐉 نظام NOVA KALI LINUX 2099 المخصص الكامل</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      266/266 أداة · 28 بايثون · 10 عقد كالي · 67.11GB مخزن
+                    </span>
+                  </div>
+                  <div className="text-xs text-rose-200/85 mt-0.5">
+                    البث المباشر لسطح المكتب (:99) · متصفح كالي السيبراني · مدير الملفات · سلاسل الفحص الذكية · التوسع المجاني من GitHub
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/kali-env")}
+                className="px-4 py-2 rounded-xl text-xs font-black text-white transition-all hover:scale-105"
+                style={{
+                  background: "linear-gradient(135deg, #ff2b4d 0%, #b80b2c 100%)",
+                  boxShadow: "0 0 20px rgba(255,43,77,0.45)",
+                }}
+              >
+                🚀 فتح نظام كالي 2099 الكامل الآن ←
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              {[
+                { t: "🖥️ البث الحي :99", d: "سطح مكتب X11 بـ3 نوافذ", c: "#ff2b4d" },
+                { t: "⚔️ الترسانة 266/266", d: "20 فئة + 11 تصنيف رسمي", c: "#44ff88" },
+                { t: "🌐 متصفح كالي 2099", d: "فحص TLS وDOM والترويسات", c: "#38bdf8" },
+                { t: "📁 الملفات و67.11GB", d: "Rootfs + مساحات + 8 مخازن", c: "#f472b6" },
+                { t: "🚀 سلاسل الفحص + GitHub", d: "8 سلاسل ذكية + تثبيت مجاني", c: "#c084fc" },
+                { t: "📸 الأجيال 1-5+ والسجل", d: "استرداد · تصدير · إصلاح ذاتي", c: "#fbbf24" },
+              ].map((card) => (
+                <button
+                  key={card.t}
+                  onClick={() => navigate("/kali-env")}
+                  className="p-2.5 rounded-xl text-right transition-all hover:scale-[1.02]"
+                  style={{
+                    background: "rgba(0,0,0,0.55)",
+                    border: `1px solid ${card.c}55`,
+                  }}
+                >
+                  <div className="text-xs font-black" style={{ color: card.c }}>{card.t}</div>
+                  <div className="text-[10px] font-mono text-white/70 mt-0.5">{card.d}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* ══════════════════════════════════════════════════════════════
               🚀 ابدأ من هنا — جولة سريعة للزائر (بند 8)

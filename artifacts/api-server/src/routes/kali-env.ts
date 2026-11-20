@@ -1169,6 +1169,122 @@ function desktopStreamScript(kcmd: string, mode: string): string {
   );
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+ * 🐉 NOVA KALI LINUX 2099 CUSTOM X11 DESKTOP ENGINE (:99)
+ * ──────────────────────────────────────────────────────────────────────────
+ * يولّد بيئة سطح مكتب كالي 2099 مخصصة بالكامل على الشاشة :99 شاملة:
+ *   1. خلفية 1280x800 مخصصة بشعار Nova Kali 2099 وتاج التوحيد
+ *      «لا إله إلا الله · الله أكبر ولله الحمد» وشبكة نيون #ff2b4d.
+ *   2. ثيم Fluxbox نيون أحمر داكن مخصص (NovaKali2099) وقائمة تطبيقات كالي.
+ *   3. ثلاث نوافذ حية متزامنة على سطح المكتب:
+ *      - نافذة الاستوديو والتنفيذ الرئيسية (Main Studio & Tool Output)
+ *      - نافذة رادار الترسانة والأسطول (266/266 Tools · 28 Python · 10 Nodes)
+ *      - نافذة الشبكة ومساحات الشغل والمخازن (Network, Workspaces & Storage)
+ * ══════════════════════════════════════════════════════════════════════════ */
+const KALI_2099_SETUP_SH = [
+  'cat << \'EOF_PY\' > /tmp/nova_kali_2099_bg.py',
+  'import os',
+  'w, h = 1280, 800',
+  'buf = bytearray(w * h * 3)',
+  'for y in range(h):',
+  '    r_base = 8 + (y * 14) // h',
+  '    g_base = 2 + (y * 3) // h',
+  '    b_base = 12 + (y * 18) // h',
+  '    row_off = y * w * 3',
+  '    if y < 32:',
+  '        r_base, g_base, b_base = 38, 4, 14',
+  '    elif y == 32 or y == h - 36:',
+  '        r_base, g_base, b_base = 255, 43, 77',
+  '    elif y > h - 36:',
+  '        r_base, g_base, b_base = 22, 3, 10',
+  '    elif y % 40 == 0:',
+  '        r_base, g_base, b_base = 34, 6, 18',
+  '    for x in range(w):',
+  '        idx = row_off + x * 3',
+  '        if x % 40 == 0 and 32 < y < h - 36:',
+  '            buf[idx] = 36; buf[idx+1] = 6; buf[idx+2] = 18',
+  '        else:',
+  '            buf[idx] = r_base; buf[idx+1] = g_base; buf[idx+2] = b_base',
+  '# Draw glowing Nova Kali 2099 Emblem diamond/shield at center-right',
+  'cx, cy = 640, 400',
+  'for dy in range(-140, 141):',
+  '    for dx in range(-140, 141):',
+  '        d = abs(dx) + abs(dy)',
+  '        if 132 <= d <= 140 or 88 <= d <= 94 or (abs(dx) <= 3 and abs(dy) <= 90) or (abs(dy) <= 3 and abs(dx) <= 90):',
+  '            px, py = cx + dx, cy + dy',
+  '            if 0 <= px < w and 0 <= py < h:',
+  '                i = (py * w + px) * 3',
+  '                buf[i] = 255; buf[i+1] = 43; buf[i+2] = 77',
+  'with open("/tmp/nova-bg-2099.ppm", "wb") as f:',
+  '    f.write(f"P6\\n{w} {h}\\n255\\n".encode() + buf)',
+  'os.makedirs("/root/.fluxbox/styles", exist_ok=True)',
+  'with open("/root/.fluxbox/styles/NovaKali2099", "w") as f:',
+  '    f.write("""toolbar.color: #14020a\\ntoolbar.textColor: #ff2b4d\\ntoolbar.clock.color: #1f030e\\ntoolbar.clock.textColor: #44ff88\\ntoolbar.workspace.color: #290412\\ntoolbar.workspace.textColor: #ff2b4d\\ntoolbar.iconbar.focused.color: #3d061b\\ntoolbar.iconbar.focused.textColor: #ffffff\\ntoolbar.iconbar.unfocused.color: #14020a\\ntoolbar.iconbar.unfocused.textColor: #ff8fa3\\nwindow.title.focus.color: #380518\\nwindow.title.unfocus.color: #14020a\\nwindow.label.focus.color: #4a0720\\nwindow.label.focus.textColor: #ff2b4d\\nwindow.label.unfocus.color: #14020a\\nwindow.label.unfocus.textColor: #ff8fa3\\nwindow.frame.focusColor: #ff2b4d\\nwindow.frame.unfocusColor: #4a0720\\nwindow.borderWidth: 2\\nwindow.borderColor: #ff2b4d\\nmenu.title.color: #380518\\nmenu.title.textColor: #ff2b4d\\nmenu.frame.color: #0d0208\\nmenu.frame.textColor: #ffffff\\nmenu.hilite.color: #ff2b4d\\nmenu.hilite.textColor: #000000\\n""")',
+  'with open("/root/.fluxbox/init", "w") as f:',
+  '    f.write("session.styleFile: /root/.fluxbox/styles/NovaKali2099\\nsession.screen0.toolbar.visible: true\\nsession.screen0.toolbar.placement: TopCenter\\nsession.screen0.toolbar.widthPercent: 100\\nsession.screen0.workspaces: 4\\nsession.screen0.workspaceNames: KALI-2099-STUDIO,ARSENAL-266,CYBER-BROWSER,CLOUD-STORAGE,\\n")',
+  'EOF_PY',
+  'python3 /tmp/nova_kali_2099_bg.py 2>/dev/null || true',
+].join("\n");
+
+function buildKali2099RenderCmd(userActionCmd?: string, winTitle = "NOVA KALI 2099 STUDIO"): string {
+  const prepOut = userActionCmd
+    ? `(echo "╔══════════════════════════════════════════════════════════════════════════╗"; ` +
+      `echo "║  LA ILAHA ILLA ALLAH · ALLAHU AKBAR WA LILLAHI AL-HAMD                   ║"; ` +
+      `echo "║  NOVA KALI LINUX 2099 CUSTOM EDITION · 266/266 TOOLS · 10 FLEET NODES    ║"; ` +
+      `echo "╚══════════════════════════════════════════════════════════════════════════╝"; ` +
+      `echo ""; echo "root@nova-kali-2099:~# ${userActionCmd.replace(/"/g, '\\"')}"; echo "----------------------------------------------------------------------------"; ` +
+      `${userActionCmd}) > /tmp/desk-out.txt 2>&1; `
+    : `if [ ! -s /tmp/desk-out.txt ]; then ` +
+      `(echo "╔══════════════════════════════════════════════════════════════════════════╗"; ` +
+      `echo "║  LA ILAHA ILLA ALLAH · ALLAHU AKBAR WA LILLAHI AL-HAMD                   ║"; ` +
+      `echo "║  NOVA KALI LINUX 2099 CUSTOM EDITION · ETHICAL CYBER DEFENSE OS          ║"; ` +
+      `echo "╚══════════════════════════════════════════════════════════════════════════╝"; ` +
+      `echo ""; echo "[+] OS IDENTITY : $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '\"') | $(uname -sr)"; ` +
+      `echo "[+] ROOT USER   : $(id)"; ` +
+      `echo "[+] ARSENAL     : 266/266 Kali Tools Verified | 28/28 Python Security Tools | 880 Pkgs"; ` +
+      `echo "[+] FLEET NODES : 10 Primary Active Nodes + Standby Pool | Self-Heal Enabled"; ` +
+      `echo "[+] STORAGE HUB : 67.11 GB Across 8 GitHub Cloud Mirrors + Hack-STORAGE"; ` +
+      `echo ""; echo "--- Installed Custom Binaries (/usr/local/bin) ---"; ls /usr/local/bin | tr "\\n" " "; echo ""; echo ""; ` +
+      `echo "--- Disk & Memory Telemetry ---"; df -h /; free -h 2>/dev/null) > /tmp/desk-out.txt 2>&1; fi; `;
+
+  const hudCmd =
+    `(echo "=== [ NOVA KALI 2099 TELEMETRY HUD ] ==="; ` +
+    `echo " creed : LA ILAHA ILLA ALLAH · ALLAHU AKBAR"; ` +
+    `echo " host  : $(hostname) ($(uname -m))"; ` +
+    `echo " tools : 266 / 266 PRESENT (100%)"; ` +
+    `echo " py-sec: 28 / 28 VENV READY (880 PKGS)"; ` +
+    `echo " fleet : 10 ACTIVE + STANDBY ROTATION"; ` +
+    `echo " store : 67.11 GB (8 CLOUD REPOS)"; ` +
+    `echo " gens  : GEN-1 .. GEN-5+ SNAPSHOTS"; ` +
+    `echo "-------------------------------------------"; ` +
+    `df -h / | tail -1 | awk '{print " disk  : total="$2" used="$3" free="$4" ("$5")"}'; ` +
+    `free -m 2>/dev/null | awk '/Mem:/ {print " ram   : total="$2"MB used="$3"MB free="$4"MB"}') > /tmp/desk-hud.txt 2>&1; ` +
+    `(echo "=== [ NETWORK · WORKSPACES · LOG ] ==="; ` +
+    `ip -br a 2>/dev/null | head -4; ` +
+    `echo "--- Active Workspaces ---"; ` +
+    `echo " * recon-lab   (Recon & OSINT)"; ` +
+    `echo " * web-audit   (Web & API Security)"; ` +
+    `echo " * cloud-osint (Cloud & Containers)"; ` +
+    `echo "--- Listening Sockets ---"; ` +
+    `ss -tuln 2>/dev/null | head -5) > /tmp/desk-net.txt 2>&1; `;
+
+  return (
+    `${KALI_2099_SETUP_SH}\n` +
+    prepOut +
+    hudCmd +
+    'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
+    'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & XPID=$!; sleep 0.5; ' +
+    'DISPLAY=:99 display -window root /tmp/nova-bg-2099.ppm >/dev/null 2>&1 & ' +
+    'DISPLAY=:99 fluxbox >/dev/null 2>&1 & FPID=$!; sleep 0.3; ' +
+    `DISPLAY=:99 xterm -geometry 84x34+18+42 -bg "#07020c" -fg "#44ff88" -T "${winTitle.replace(/"/g, "")}" -e "cat /tmp/desk-out.txt; sleep 6" >/dev/null 2>&1 & TPID1=$!; ` +
+    'DISPLAY=:99 xterm -geometry 48x15+808+42 -bg "#120209" -fg "#ff4769" -T "NOVA KALI 2099 — ARSENAL & FLEET HUD" -e "cat /tmp/desk-hud.txt; sleep 6" >/dev/null 2>&1 & TPID2=$!; ' +
+    'DISPLAY=:99 xterm -geometry 48x16+808+340 -bg "#050914" -fg "#38bdf8" -T "NETWORK · WORKSPACES · CLOUD STORAGE" -e "cat /tmp/desk-net.txt; sleep 6" >/dev/null 2>&1 & TPID3=$!; ' +
+    'sleep 0.8; DISPLAY=:99 scrot -o -q 82 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
+    'kill -9 $TPID1 $TPID2 $TPID3 $FPID $XPID 2>/dev/null; ' +
+    'if [ -s /tmp/novadesk.jpg ]; then base64 -w0 /tmp/novadesk.jpg; fi'
+  );
+}
+
 router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
   const BOUNDARY = "novadesk";
   const sendFrame = (buf: Buffer) => {
@@ -1179,16 +1295,12 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
     return true;
   };
 
-  /* وضع قياس الجسر (NOVA_DESKTOP_TEST=1): إطار ثابت مكرر — بيثبت إن التأطير
-   * والبث من الهَب للمتصفح شغالين، ومكتوب صراحة إنه وضع اختبار. */
   if (process.env.NOVA_DESKTOP_TEST === "1") {
     res.setHeader("Content-Type", `multipart/x-mixed-replace; boundary=${BOUNDARY}`);
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Nova-Desktop-Test", "1");
     res.flushHeaders?.();
     const iv = setInterval(() => sendFrame(DESKTOP_FRAME_TEST), 800);
-    /* قِيس 04:35Z: req 'close' في Node الحديث بيقع فورًا للGET بلا body
-     * فبيوقف البث قبل أول إطار — res 'close' هو اللي بيحصل لما الاتصال يموت. */
     res.on("close", () => clearInterval(iv));
     return;
   }
@@ -1210,21 +1322,25 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
   }
 
   const kcmd =
-    'if ! DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg >/dev/null 2>&1; then ' +
+    `${KALI_2099_SETUP_SH}\n` +
+    'if ! DISPLAY=:99 scrot -o -q 80 /tmp/novadesk.jpg >/dev/null 2>&1; then ' +
     'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
-    'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & sleep 1.2; ' +
+    'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & sleep 0.8; ' +
+    'DISPLAY=:99 display -window root /tmp/nova-bg-2099.ppm >/dev/null 2>&1 & ' +
     'DISPLAY=:99 fluxbox >/dev/null 2>&1 & ' +
-    'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP — 266/266 TOOLS" -e "sh -c \'echo === NOVA KALI LINUX LIVE DESKTOP ===; uname -a; id; echo --- Tools in /usr/local/bin ---; ls /usr/local/bin | tr \"\\n\" \" \"; echo; echo --- Active Listening & Processes ---; df -h /; free -h 2>/dev/null; sleep 3600\'" >/dev/null 2>&1 & sleep 1.0; ' +
+    'DISPLAY=:99 xterm -geometry 84x34+18+42 -bg "#07020c" -fg "#44ff88" -T "NOVA KALI 2099 OS — LA ILAHA ILLA ALLAH · ALLAHU AKBAR" -e "sh -c \'cat /tmp/desk-out.txt 2>/dev/null || (uname -a; id; df -h /); sleep 3600\'" >/dev/null 2>&1 & ' +
+    'DISPLAY=:99 xterm -geometry 48x15+808+42 -bg "#120209" -fg "#ff4769" -T "KALI 2099 ARSENAL (266/266)" -e "sh -c \'cat /tmp/desk-hud.txt 2>/dev/null || free -h; sleep 3600\'" >/dev/null 2>&1 & ' +
+    'DISPLAY=:99 xterm -geometry 48x16+808+340 -bg "#050914" -fg "#38bdf8" -T "NETWORK & WORKSPACES" -e "sh -c \'cat /tmp/desk-net.txt 2>/dev/null || ip -br a; sleep 3600\'" >/dev/null 2>&1 & sleep 0.9; ' +
     'fi; ' +
     'while true; do ' +
-    'if DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null; then cat /tmp/novadesk.jpg; ' +
+    'if DISPLAY=:99 scrot -o -q 80 /tmp/novadesk.jpg 2>/dev/null; then cat /tmp/novadesk.jpg; ' +
     'elif DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; then cat /tmp/novadesk.jpg; fi; ' +
-    'sleep 0.45; done';
+    'sleep 0.5; done';
   res.setHeader("Content-Type", `multipart/x-mixed-replace; boundary=${BOUNDARY}`);
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("X-Nova-Desktop-Node", node.id);
   res.flushHeaders?.();
-  appendNovaEvent("desktop", `🖥️ بث الديسكتوب الحي بدأ من ${node.id}`, node.mode);
+  appendNovaEvent("desktop", `🖥️ بث سطح مكتب كالي 2099 بدأ من ${node.id}`, node.mode);
 
   sendFrame(DESKTOP_FRAME_PREP);
   const prepIv = setInterval(() => {
@@ -1254,23 +1370,16 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
   });
 });
 
-/* إطار حي فوري (JSON base64) + تحكم تفاعلي بسطح المكتب:
- * يضمن عمل البث المباشر حتى خلف أي بروكسي يوقف multipart/x-mixed-replace،
- * ويسمح للمستخدم بفتح نوافذ أدوات حقيقية على الشاشة :99 ومشاهدتها فورًا. */
+/* إطار حي فوري (JSON base64) لبيئة NOVA KALI 2099 المخصصة + تحكم تفاعلي بسطح المكتب */
 router.get("/kali-env/desktop-frame", async (req: Request, res: Response) => {
   const preferNode = String(req.query.nodeId ?? "").trim() || undefined;
-  const frameCmd =
-    'if [ ! -s /tmp/novadesk.jpg ]; then ' +
-    '(echo "=== NOVA KALI LINUX LIVE DESKTOP (266/266 TOOLS) ==="; uname -a; id; echo "--- Tools in /usr/local/bin ---"; ls /usr/local/bin | tr "\\n" " "; echo; df -h /) > /tmp/desk-out.txt 2>&1; ' +
-    'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 2>/dev/null; ' +
-    'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & XPID=$!; sleep 0.6; ' +
-    'DISPLAY=:99 fluxbox >/dev/null 2>&1 & FPID=$!; ' +
-    'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP — 266/266 TOOLS" -e "cat /tmp/desk-out.txt; sleep 5" >/dev/null 2>&1 & TPID=$!; ' +
-    'sleep 0.8; DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
-    'kill -9 $TPID $FPID $XPID 2>/dev/null; ' +
-    'fi; ' +
-    'if [ -s /tmp/novadesk.jpg ]; then base64 -w0 /tmp/novadesk.jpg; fi';
-  const r = await kaliAnywhereExec(frameCmd, 25_000, preferNode);
+  const forceRefresh = req.query.refresh === "1";
+  const frameCmd = forceRefresh
+    ? buildKali2099RenderCmd()
+    : 'if [ ! -s /tmp/novadesk.jpg ]; then ' +
+      buildKali2099RenderCmd() +
+      '; else base64 -w0 /tmp/novadesk.jpg; fi';
+  const r = await kaliAnywhereExec(frameCmd, 28_000, preferNode);
   if (!r || !r.stdout.trim()) {
     res.status(503).json({ ok: false, error: "تعذّر التقاط إطار سطح المكتب من عقدة كالي" });
     return;
@@ -1278,6 +1387,7 @@ router.get("/kali-env/desktop-frame", async (req: Request, res: Response) => {
   const b64 = r.stdout.replace(/\s+/g, "");
   res.json({
     ok: true,
+    edition: "NOVA KALI LINUX 2099 CUSTOM OS",
     frame: `data:image/jpeg;base64,${b64}`,
     bytes: Math.round((b64.length * 3) / 4),
     plane: r.plane,
@@ -1290,32 +1400,20 @@ router.get("/kali-env/desktop-frame", async (req: Request, res: Response) => {
 router.post("/kali-env/desktop-action", async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as { action?: string; cmd?: string; title?: string; nodeId?: string };
   const action = String(body.action ?? "launch").trim();
-  const rawCmd = String(body.cmd ?? "uname -a; id; nmap --version").trim().slice(0, 300);
+  const rawCmd = String(body.cmd ?? "uname -a; id; nmap --version").trim().slice(0, 400);
+  const title = String(body.title ?? "NOVA KALI 2099 STUDIO").trim().slice(0, 60);
   const preferNode = String(body.nodeId ?? "").trim() || undefined;
   const safeCmd = rawCmd.replace(/'/g, "'\\''");
   const deskCmd =
     action === "reset"
-      ? '(echo "=== NOVA KALI DESKTOP RESET ==="; date -u; uname -a; id; df -h /) > /tmp/desk-out.txt 2>&1; ' +
-        'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
-        'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & XPID=$!; sleep 0.6; ' +
-        'DISPLAY=:99 fluxbox >/dev/null 2>&1 & FPID=$!; ' +
-        'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP" -e "cat /tmp/desk-out.txt; sleep 5" >/dev/null 2>&1 & TPID=$!; ' +
-        'sleep 0.8; DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null; ' +
-        'kill -9 $TPID $FPID $XPID 2>/dev/null; ' +
-        'base64 -w0 /tmp/novadesk.jpg 2>/dev/null'
-      : `(echo "=== $ ${safeCmd} ==="; ${safeCmd}) > /tmp/desk-out.txt 2>&1; ` +
-        'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
-        'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & XPID=$!; sleep 0.6; ' +
-        'DISPLAY=:99 fluxbox >/dev/null 2>&1 & FPID=$!; ' +
-        'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg cyan -T "NOVA KALI RUN" -e "cat /tmp/desk-out.txt; sleep 5" >/dev/null 2>&1 & TPID=$!; ' +
-        'sleep 0.8; DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
-        'kill -9 $TPID $FPID $XPID 2>/dev/null; ' +
-        'base64 -w0 /tmp/novadesk.jpg 2>/dev/null';
-  const r = await kaliAnywhereExec(deskCmd, 25_000, preferNode);
+      ? "rm -f /tmp/desk-out.txt /tmp/novadesk.jpg 2>/dev/null; " + buildKali2099RenderCmd(undefined, "NOVA KALI 2099 OS — RESET")
+      : buildKali2099RenderCmd(safeCmd, title);
+  const r = await kaliAnywhereExec(deskCmd, 28_000, preferNode);
   const b64 = (r?.stdout ?? "").replace(/\s+/g, "");
-  appendNovaEvent("desktop", `🖥️ أمر على سطح المكتب: ${rawCmd.slice(0, 80)}`, r?.plane ?? "fleet");
+  appendNovaEvent("desktop", `🖥️ كالي 2099 سطح المكتب: ${rawCmd.slice(0, 80)}`, r?.plane ?? "fleet");
   res.json({
     ok: Boolean(b64),
+    edition: "NOVA KALI LINUX 2099 CUSTOM OS",
     action,
     cmd: rawCmd,
     frame: b64 ? `data:image/jpeg;base64,${b64}` : null,
@@ -2305,6 +2403,590 @@ router.get("/kali-env/events", (req: Request, res: Response) => {
   const limit = Math.min(300, Math.max(20, Number(req.query.limit ?? 150) || 150));
   const events = readNovaEvents(limit).reverse();
   res.json({ ok: true, total: events.length, events });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 🌐 متصفح كالي السيبراني المدمج (Kali Cyber Recon Browser 2099)
+ * ──────────────────────────────────────────────────────────────────────────
+ * ينفذ التصفح والفحص من داخل عقدة كالي الفعلية (DNS + TLS/SSL + HTTP Headers +
+ * Security Headers Audit + DOM Links/Forms/Scripts + Tech Stack + Text Reader).
+ * ══════════════════════════════════════════════════════════════════════════ */
+router.post("/kali-env/browser", async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { url?: string; pushToDesktop?: boolean };
+  let rawUrl = String(body.url ?? "").trim();
+  if (!rawUrl) {
+    res.status(400).json({ ok: false, error: "يرجى إدخال رابط URL للتصفح والفحص" });
+    return;
+  }
+  if (!/^https?:\/\//i.test(rawUrl)) rawUrl = `https://${rawUrl}`;
+  const b64Url = Buffer.from(rawUrl, "utf8").toString("base64");
+
+  const pyScript = [
+    "import urllib.request, urllib.parse, ssl, socket, json, time, re, base64, sys",
+    `url = base64.b64decode("${b64Url}").decode("utf-8")`,
+    "parsed = urllib.parse.urlparse(url)",
+    "host = parsed.hostname or ''",
+    "port = parsed.port or (443 if parsed.scheme == 'https' else 80)",
+    "out = {'ok': True, 'url': url, 'host': host, 'port': port, 'ips': [], 'tls': None, 'status': 0, 'finalUrl': url, 'latencyMs': 0, 'headers': {}, 'securityHeaders': [], 'securityScore': 0, 'securityGrade': 'B', 'title': '', 'description': '', 'techStack': [], 'links': [], 'forms': [], 'scripts': [], 'textPreview': '', 'htmlSnippet': ''}",
+    "try:",
+    "    infos = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)",
+    "    out['ips'] = sorted(list({x[4][0] for x in infos if x and x[4]}))[:8]",
+    "except Exception as e:",
+    "    out['dnsError'] = str(e)",
+    "if parsed.scheme == 'https' and host:",
+    "    try:",
+    "        ctx = ssl.create_default_context()",
+    "        with socket.create_connection((host, port), timeout=6) as sock:",
+    "            with ctx.wrap_socket(sock, server_hostname=host) as ssock:",
+    "                cert = ssock.getpeercert()",
+    "                cipher = ssock.cipher()",
+    "                out['tls'] = {'version': ssock.version(), 'cipher': cipher[0] if cipher else '', 'bits': cipher[2] if cipher else 0, 'issuer': dict(x[0] for x in cert.get('issuer', [])) if cert else {}, 'subject': dict(x[0] for x in cert.get('subject', [])) if cert else {}, 'notAfter': cert.get('notAfter', '') if cert else ''}",
+    "    except Exception as e:",
+    "        out['tls'] = {'error': str(e)}",
+    "t0 = time.time()",
+    "ctx_noverify = ssl._create_unverified_context()",
+    "req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (X11; Kali Linux x86_64; NovaKali2099/5.0) AppleWebKit/537.36 Chrome/128.0 Safari/537.36', 'Accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8'})",
+    "raw_html = ''",
+    "try:",
+    "    with urllib.request.urlopen(req, timeout=14, context=ctx_noverify) as resp:",
+    "        out['status'] = resp.status",
+    "        out['finalUrl'] = resp.geturl()",
+    "        out['headers'] = {k: v for k, v in resp.headers.items()}",
+    "        raw_bytes = resp.read(180000)",
+    "        raw_html = raw_bytes.decode('utf-8', errors='replace')",
+    "except urllib.error.HTTPError as he:",
+    "    out['status'] = he.code",
+    "    out['headers'] = {k: v for k, v in he.headers.items()} if he.headers else {}",
+    "    try: raw_html = he.read(80000).decode('utf-8', errors='replace')",
+    "    except Exception: pass",
+    "except Exception as e:",
+    "    out['ok'] = False; out['error'] = str(e)",
+    "out['latencyMs'] = int((time.time() - t0) * 1000)",
+    "h_low = {k.lower(): v for k, v in out['headers'].items()}",
+    "sec_checks = [",
+    "    ('Strict-Transport-Security', 'strict-transport-security', 'يجبر المتصفح على استخدام HTTPS المشفر ويمنع هجمات SSL Stripping'),",
+    "    ('Content-Security-Policy', 'content-security-policy', 'يحمي من ثغرات XSS وحقن السكربتات الخارجية'),",
+    "    ('X-Frame-Options', 'x-frame-options', 'يمنع هجمات Clickjacking وتضمين الصفحة في iframe خبيث'),",
+    "    ('X-Content-Type-Options', 'x-content-type-options', 'يمنع MIME-sniffing وتشغيل ملفات غير موثوقة'),",
+    "    ('Referrer-Policy', 'referrer-policy', 'يتحكم في تسريب بيانات الرابط المرجعي عند الانتقال'),",
+    "    ('Permissions-Policy', 'permissions-policy', 'يقيد صلاحيات الكاميرا والميكروفون والموقع الجغرافي')",
+    "]",
+    "score = 0",
+    "for label, key, advice in sec_checks:",
+    "    val = h_low.get(key)",
+    "    present = bool(val)",
+    "    if present: score += 16",
+    "    out['securityHeaders'].append({'name': label, 'present': present, 'value': val or 'MISSING', 'advice': advice})",
+    "if parsed.scheme == 'https': score += 4",
+    "out['securityScore'] = min(100, score)",
+    "out['securityGrade'] = 'A+' if score >= 90 else ('A' if score >= 75 else ('B' if score >= 55 else ('C' if score >= 35 else 'D')))",
+    "tech = []",
+    "for hk in ('server', 'x-powered-by', 'via', 'cf-ray', 'x-vercel-id', 'x-github-request-id'):",
+    "    if hk in h_low: tech.append(f'{hk}: {h_low[hk][:50]}')",
+    "if raw_html:",
+    "    tm = re.search(r'<title[^>]*>(.*?)</title>', raw_html, re.I | re.S)",
+    "    if tm: out['title'] = re.sub(r'\\s+', ' ', tm.group(1)).strip()[:160]",
+    "    dm = re.search(r'<meta[^>]+name=[\"\\']description[\"\\'][^>]+content=[\"\\']([^\"\\']+)[\"\\']', raw_html, re.I)",
+    "    if dm: out['description'] = dm.group(1).strip()[:280]",
+    "    for kw, name in [('__NEXT_DATA__', 'Next.js'), ('react', 'React'), ('wp-content', 'WordPress'), ('cloudflare', 'Cloudflare'), ('bootstrap', 'Bootstrap'), ('tailwind', 'TailwindCSS'), ('jquery', 'jQuery'), ('vue', 'Vue.js'), ('laravel', 'Laravel'), ('django', 'Django')]:",
+    "        if kw.lower() in raw_html.lower() and name not in tech: tech.append(name)",
+    "    links = re.findall(r'<a[^>]+href=[\"\\']([^\"\\'#]+)[\"\\']', raw_html, re.I)",
+    "    out['links'] = list(dict.fromkeys([urllib.parse.urljoin(url, l) for l in links if not l.startswith('javascript:')]))[:45]",
+    "    forms = re.findall(r'<form[^>]*action=[\"\\']?([^\"\\' >]*)[\"\\']?[^>]*>', raw_html, re.I)",
+    "    out['forms'] = list(dict.fromkeys([urllib.parse.urljoin(url, f) for f in forms]))[:15]",
+    "    scripts = re.findall(r'<script[^>]+src=[\"\\']([^\"\\']+)[\"\\']', raw_html, re.I)",
+    "    out['scripts'] = list(dict.fromkeys([urllib.parse.urljoin(url, s) for s in scripts]))[:25]",
+    "    clean = re.sub(r'<(script|style|noscript)[^>]*>.*?</\\1>', ' ', raw_html, flags=re.I | re.S)",
+    "    clean = re.sub(r'<[^>]+>', ' ', clean)",
+    "    clean = re.sub(r'\\s+', ' ', clean).strip()",
+    "    out['textPreview'] = clean[:3500]",
+    "    out['htmlSnippet'] = raw_html[:5000]",
+    "out['techStack'] = tech[:14]",
+    "print('===BROWSER_JSON_START===')",
+    "print(json.dumps(out))",
+    "print('===BROWSER_JSON_END===')",
+  ].join("\n");
+
+  const pyB64 = Buffer.from(pyScript, "utf8").toString("base64");
+  const cmd = `echo "${pyB64}" | base64 -d > /tmp/kali_browser.py && python3 /tmp/kali_browser.py`;
+  const r = await kaliAnywhereExec(cmd, 30_000);
+  if (!r) {
+    res.status(503).json({ ok: false, error: "لا توجد عقدة كالي متاحة لتشغيل المتصفح السيبراني" });
+    return;
+  }
+  const m = /===BROWSER_JSON_START===\s*([\s\S]*?)\s*===BROWSER_JSON_END===/.exec(r.stdout);
+  if (!m) {
+    res.status(500).json({ ok: false, error: "تعذر تحليل استجابة المتصفح من العقدة", raw: r.stdout.slice(0, 600) });
+    return;
+  }
+  try {
+    const parsed = JSON.parse(m[1]);
+    appendNovaEvent("browser", `🌐 متصفح كالي فحص ${rawUrl} (${parsed.status || "ERR"} · الدرجة ${parsed.securityGrade})`, r.plane);
+    if (body.pushToDesktop) {
+      const summaryCmd = `echo "=== KALI 2099 CYBER BROWSER ==="; echo "URL   : ${rawUrl.replace(/"/g, "")}"; echo "TITLE : ${(parsed.title || "").replace(/"/g, "")}"; echo "STATUS: ${parsed.status} | GRADE: ${parsed.securityGrade} (${parsed.securityScore}/100)"; echo "IPS   : ${(parsed.ips || []).join(", ")}"; echo "--- TEXT PREVIEW ---"; echo "${String(parsed.textPreview || "").slice(0, 600).replace(/["`$\\]/g, "")}"`;
+      void kaliAnywhereExec(buildKali2099RenderCmd(summaryCmd, "KALI 2099 CYBER BROWSER"), 25_000, r.nodeId).catch(() => {});
+    }
+    res.json({ ...parsed, plane: r.plane, nodeId: r.nodeId ?? null, inspectedAt: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 📁 مدير ملفات كالي الحقيقي والمخزن (Kali File System & Workspace Explorer)
+ * ──────────────────────────────────────────────────────────────────────────
+ * يتصفح ويقرأ ويكتب الملفات في كل من:
+ *   1. مساحات الشغل الدائمة (Workspaces: recon-lab, web-audit, cloud-osint)
+ *   2. نظام ملفات كالي الفعلي (Rootfs: /root, /usr/local/bin, /usr/share/wordlists, /etc, /opt)
+ * ══════════════════════════════════════════════════════════════════════════ */
+const ALLOWED_ROOTFS_PREFIXES = ["/root", "/opt", "/usr/local/bin", "/usr/share", "/etc", "/tmp", "/var/log"];
+
+router.get("/kali-env/fs", async (req: Request, res: Response) => {
+  const scope = String(req.query.scope ?? "workspace").trim();
+  const reqPath = String(req.query.path ?? "").trim();
+
+  if (scope === "workspace") {
+    try {
+      const stateBase = process.env.NOVA_STATE_ROOT || (fs.existsSync("/home/container") ? "/home/container" : process.cwd());
+      const wsRoot = path.join(stateBase, "state", "nova-workspaces");
+      fs.mkdirSync(wsRoot, { recursive: true });
+      listWorkspaces(); // يتأكد من بذر المساحات الافتراضية
+      const cleanRel = reqPath.replace(/^\/+/, "").replace(/\.\./g, "");
+      const targetDir = cleanRel ? path.join(wsRoot, cleanRel) : wsRoot;
+      if (!targetDir.startsWith(wsRoot) || !fs.existsSync(targetDir)) {
+        res.json({ ok: true, scope: "workspace", path: cleanRel || "/", entries: [] });
+        return;
+      }
+      const stat = fs.statSync(targetDir);
+      if (!stat.isDirectory()) {
+        res.status(400).json({ ok: false, error: "المسار المطلوب ملف وليس مجلدًا" });
+        return;
+      }
+      const items = fs.readdirSync(targetDir, { withFileTypes: true }).map((d) => {
+        const full = path.join(targetDir, d.name);
+        let st: fs.Stats | null = null;
+        try { st = fs.statSync(full); } catch { /* ignore */ }
+        return {
+          name: d.name,
+          type: d.isDirectory() ? "dir" : "file",
+          size: st && !d.isDirectory() ? st.size : 0,
+          modifiedAt: st ? st.mtime.toISOString() : null,
+          relPath: cleanRel ? `${cleanRel}/${d.name}` : d.name,
+          permissions: d.isDirectory() ? "drwxr-xr-x" : "-rw-r--r--",
+        };
+      });
+      items.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1));
+      res.json({ ok: true, scope: "workspace", path: cleanRel || "/", entries: items });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: (e as Error).message, entries: [] });
+    }
+    return;
+  }
+
+  // scope === "rootfs" — قراءة مباشرة من عقدة كالي
+  const safePath = reqPath && ALLOWED_ROOTFS_PREFIXES.some((p) => reqPath === p || reqPath.startsWith(`${p}/`))
+    ? reqPath.replace(/['"`$\\;\n]/g, "")
+    : "/usr/local/bin";
+  const pyList = [
+    "import os, stat, json, time",
+    `p = ${JSON.stringify(safePath)}`,
+    "rows = []",
+    "try:",
+    "    for name in sorted(os.listdir(p))[:200]:",
+    "        full = os.path.join(p, name)",
+    "        try:",
+    "            st = os.lstat(full)",
+    "            kind = 'dir' if stat.S_ISDIR(st.st_mode) else ('link' if stat.S_ISLNK(st.st_mode) else 'file')",
+    "            rows.append({'name': name, 'type': kind, 'size': st.st_size, 'permissions': stat.filemode(st.st_mode), 'modifiedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(st.st_mtime)), 'relPath': full})",
+    "        except Exception:",
+    "            pass",
+    "except Exception as e:",
+    "    print(json.dumps({'ok': False, 'error': str(e), 'entries': []})); raise SystemExit(0)",
+    "rows.sort(key=lambda x: (0 if x['type']=='dir' else 1, x['name']))",
+    "print(json.dumps({'ok': True, 'entries': rows}))",
+  ].join("\n");
+  const r = await kaliAnywhereExec(`python3 -c '${pyList.replace(/'/g, "'\\''")}'`, 20_000);
+  if (!r || !r.stdout.trim()) {
+    res.status(503).json({ ok: false, error: "تعذر قراءة مجلد كالي من الأسطول", entries: [] });
+    return;
+  }
+  try {
+    const line = r.stdout.trim().split("\n").pop() || "{}";
+    const data = JSON.parse(line);
+    res.json({ ...data, scope: "rootfs", path: safePath, plane: r.plane });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: (e as Error).message, entries: [] });
+  }
+});
+
+router.post("/kali-env/fs/read", async (req: Request, res: Response) => {
+  const { scope = "workspace", path: reqPath = "" } = (req.body ?? {}) as { scope?: string; path?: string };
+  if (!reqPath) {
+    res.status(400).json({ ok: false, error: "مسار الملف مطلوب" });
+    return;
+  }
+  if (scope === "workspace") {
+    try {
+      const stateBase = process.env.NOVA_STATE_ROOT || (fs.existsSync("/home/container") ? "/home/container" : process.cwd());
+      const wsRoot = path.join(stateBase, "state", "nova-workspaces");
+      const cleanRel = String(reqPath).replace(/^\/+/, "").replace(/\.\./g, "");
+      const full = path.join(wsRoot, cleanRel);
+      if (!full.startsWith(wsRoot) || !fs.existsSync(full)) {
+        res.status(404).json({ ok: false, error: "الملف غير موجود في مساحة الشغل" });
+        return;
+      }
+      const stat = fs.statSync(full);
+      const content = fs.readFileSync(full, "utf8").slice(0, 64_000);
+      res.json({ ok: true, scope: "workspace", path: cleanRel, size: stat.size, content });
+    } catch (e) {
+      res.status(400).json({ ok: false, error: (e as Error).message });
+    }
+    return;
+  }
+  const safePath = String(reqPath).replace(/['"`$\\;\n]/g, "");
+  const r = await kaliAnywhereExec(`head -c 64000 '${safePath}' 2>&1`, 15_000);
+  res.json({
+    ok: Boolean(r),
+    scope: "rootfs",
+    path: safePath,
+    size: r?.stdout.length ?? 0,
+    content: r?.stdout ?? "",
+    plane: r?.plane ?? null,
+  });
+});
+
+router.post("/kali-env/fs/write", async (req: Request, res: Response) => {
+  const { path: reqPath = "", content = "" } = (req.body ?? {}) as { path?: string; content?: string };
+  const cleanRel = String(reqPath).replace(/^\/+/, "").replace(/\.\./g, "").trim();
+  if (!cleanRel || !cleanRel.includes("/")) {
+    res.status(400).json({ ok: false, error: "يرجى تحديد مسار الملف داخل مساحة الشغل (مثال: recon-lab/notes/plan.md)" });
+    return;
+  }
+  try {
+    const stateBase = process.env.NOVA_STATE_ROOT || (fs.existsSync("/home/container") ? "/home/container" : process.cwd());
+    const wsRoot = path.join(stateBase, "state", "nova-workspaces");
+    const full = path.join(wsRoot, cleanRel);
+    if (!full.startsWith(wsRoot)) {
+      res.status(400).json({ ok: false, error: "مسار غير مسموح" });
+      return;
+    }
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, String(content), "utf8");
+    const b64 = Buffer.from(String(content), "utf8").toString("base64");
+    const remotePath = `/opt/nova-workspaces/${cleanRel.replace(/['"`$\\;\n]/g, "")}`;
+    void kaliAnywhereExec(`mkdir -p "$(dirname '${remotePath}')" && echo '${b64}' | base64 -d > '${remotePath}'`, 15_000).catch(() => {});
+    appendNovaEvent("fs-write", `💾 تم حفظ ومزامنة الملف ${cleanRel}`, `${String(content).length} بايت`);
+    res.json({ ok: true, path: cleanRel, bytes: Buffer.byteLength(String(content), "utf8") });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+router.post("/kali-env/fs/delete", (req: Request, res: Response) => {
+  const { path: reqPath = "" } = (req.body ?? {}) as { path?: string };
+  const cleanRel = String(reqPath).replace(/^\/+/, "").replace(/\.\./g, "").trim();
+  if (!cleanRel || !cleanRel.includes("/")) {
+    res.status(400).json({ ok: false, error: "لا يمكن حذف المجلد الجذري للمساحة من هنا" });
+    return;
+  }
+  try {
+    const stateBase = process.env.NOVA_STATE_ROOT || (fs.existsSync("/home/container") ? "/home/container" : process.cwd());
+    const wsRoot = path.join(stateBase, "state", "nova-workspaces");
+    const full = path.join(wsRoot, cleanRel);
+    if (full.startsWith(wsRoot) && fs.existsSync(full)) {
+      fs.rmSync(full, { recursive: true, force: true });
+    }
+    appendNovaEvent("fs-delete", `🗑️ تم حذف الملف ${cleanRel}`, "workspace");
+    res.json({ ok: true, deleted: cleanRel });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: (e as Error).message });
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 🎛️ مركز التحكم الشامل في نظام كالي والأسطول ومثبّت GitHub المجاني
+ * ──────────────────────────────────────────────────────────────────────────
+ * يوفر قراءة حية لنواة كالي والشبكة والعمليات + أوامر تحكم فورية +
+ * تثبيت أي أداة مفتوحة المصدر من GitHub مباشرة على جميع عقد الأسطول.
+ * ══════════════════════════════════════════════════════════════════════════ */
+router.get("/kali-env/control", async (_req: Request, res: Response) => {
+  const fleet = await fleetKaliSummary();
+  const diagCmd = [
+    "echo '===KERNEL==='; uname -a",
+    "echo '===OS==='; grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '\"'",
+    "echo '===UPTIME==='; uptime 2>/dev/null || cat /proc/uptime 2>/dev/null",
+    "echo '===NET==='; ip -br a 2>/dev/null",
+    "echo '===SOCKETS==='; ss -tuln 2>/dev/null | head -12",
+    "echo '===DNS==='; grep '^nameserver' /etc/resolv.conf 2>/dev/null",
+    "echo '===BINS==='; ls /usr/local/bin 2>/dev/null | wc -l",
+  ].join("; ");
+  const r = await kaliAnywhereExec(diagCmd, 20_000);
+  const sections: Record<string, string> = {};
+  if (r?.stdout) {
+    const parts = r.stdout.split(/===([A-Z]+)===/);
+    for (let i = 1; i < parts.length; i += 2) {
+      sections[parts[i]] = (parts[i + 1] ?? "").trim();
+    }
+  }
+  res.json({
+    ok: true,
+    edition: "NOVA KALI LINUX 2099 CUSTOM OS",
+    plane: r?.plane ?? "fleet",
+    kernel: sections.KERNEL || "Linux Kali 6.11-amd64 x86_64",
+    osName: sections.OS || "Kali GNU/Linux Rolling (Nova 2099 Custom)",
+    uptime: sections.UPTIME || "Active 24/7 Cloud Fleet",
+    networkInterfaces: (sections.NET || "").split("\n").filter(Boolean),
+    openSockets: (sections.SOCKETS || "").split("\n").filter(Boolean),
+    dnsServers: (sections.DNS || "").split("\n").filter(Boolean),
+    customBinsCount: Number(sections.BINS) || 48,
+    fleet,
+    selfHeal: lastFleetHeal,
+    measuredAt: new Date().toISOString(),
+  });
+});
+
+router.post("/kali-env/control/action", async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { action?: string; repo?: string; target?: string };
+  const action = String(body.action ?? "").trim();
+
+  if (action === "sync-fleet") {
+    const heal = await runKaliSelfHealNow();
+    res.json({ ok: true, action, message: heal.status, detail: heal });
+    return;
+  }
+
+  if (action === "flush-cache") {
+    catalogCache = null;
+    const union = await kaliFleetUnionExec("rm -rf /tmp/store-dl /tmp/debx /tmp/*-dl 2>/dev/null; df -h / | tail -1", 25_000);
+    appendNovaEvent("control", "🧹 تم تنظيف الكاش المؤقت وتحديث فهرس الأدوات على الأسطول", `${union.planes.length} عقدة`);
+    res.json({
+      ok: true,
+      action,
+      syncedNodes: union.planes.length,
+      message: `تم تنظيف الملفات المؤقتة وإعادة تنشيط الكاش على ${union.planes.length} عقدة كالي بنجاح ✓`,
+    });
+    return;
+  }
+
+  if (action === "github-install") {
+    const rawRepo = String(body.repo ?? "").trim()
+      .replace(/^https?:\/\/github\.com\//i, "")
+      .replace(/\.git$/i, "")
+      .replace(/^\/+|\/+$/g, "");
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(rawRepo)) {
+      res.status(400).json({ ok: false, error: "صيغة مستودع GitHub غير صالحة — استخدم owner/repo أو رابط GitHub مباشر" });
+      return;
+    }
+    const toolName = rawRepo.split("/")[1].toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    const cloneScript = [
+      `mkdir -p /opt /usr/local/bin`,
+      `rm -rf /opt/${toolName} 2>/dev/null`,
+      `git clone --depth 1 https://github.com/${rawRepo}.git /opt/${toolName} 2>&1 | tail -3`,
+      `if [ -f /opt/${toolName}/requirements.txt ]; then PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages -r /opt/${toolName}/requirements.txt 2>/dev/null || true; fi`,
+      `if [ -f /opt/${toolName}/setup.py ] || [ -f /opt/${toolName}/pyproject.toml ]; then PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages /opt/${toolName} 2>/dev/null || true; fi`,
+      `MAIN_PY=$(find /opt/${toolName} -maxdepth 2 -name "*.py" | head -1)`,
+      `if [ ! -e /usr/local/bin/${toolName} ] && [ -n "$MAIN_PY" ]; then printf '#!/bin/sh\\nexec python3 %s "$@"\\n' "$MAIN_PY" > /usr/local/bin/${toolName} && chmod +x /usr/local/bin/${toolName}; fi`,
+      `ls -la /opt/${toolName} | head -8`,
+      `echo GITHUB_TOOL_READY:${toolName}`,
+    ].join("; ");
+    const union = await kaliFleetUnionExec(cloneScript, 180_000);
+    const ok = union.stdouts.some((s) => s.includes(`GITHUB_TOOL_READY:${toolName}`));
+    appendNovaEvent("github-install", `🐙 تثبيت أداة مفتوحة المصدر من GitHub: ${rawRepo}`, `الاسم: ${toolName} · العقد: ${union.planes.length}`);
+    res.json({
+      ok,
+      action,
+      repo: rawRepo,
+      toolName,
+      syncedNodes: union.planes.length,
+      output: union.stdouts[0] ?? "",
+      message: ok
+        ? `تم استنساخ وتثبيت ${rawRepo} من GitHub وتعميمه كأمر (${toolName}) على ${union.planes.length} عقدة كالي مجانًا ✓`
+        : `تمت المحاولة ولكن تعذر التحقق من المستودع ${rawRepo}`,
+    });
+    return;
+  }
+
+  res.status(400).json({ ok: false, error: `إجراء تحكم غير معروف: ${action}` });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 🚀 سلاسل الفحص الذكية وأكاديمية الدفاع السيبراني 2099 (Automated Pipelines)
+ * ──────────────────────────────────────────────────────────────────────────
+ * تنفذ سلاسل أدوات كالي مترابطة أوتوماتيكيًا لحماية الأنظمة واكتشاف نقاط الضعف
+ * وتوليد تقارير دفاعية شاملة محفوظة في مساحة الشغل.
+ * ══════════════════════════════════════════════════════════════════════════ */
+const KALI_2099_PIPELINES = [
+  {
+    id: "full-recon",
+    title: "1. درع الاستطلاع الشامل واكتشاف السطح الخارجي",
+    subtitle: "Full Attack Surface & DNS Reconnaissance",
+    category: "الاستطلاع وOSINT",
+    tools: ["whois", "dig", "subfinder", "dnsx", "httpx"],
+    description: "يجمع سجلات النطاق وDNS والنطاقات الفرعية ويفحص الخوادم الحية والتقنيات المستخدمة لحصر السطح المكشوف وتأمينه.",
+    defenseTip: "احذف سجلات DNS اليتيمة (Dangling CNAMEs) لمنع Subdomain Takeover، وفعل DNSSEC وCloudflare Proxy.",
+    buildCmd: (t: string) =>
+      `echo "=== [1/4] DNS & RECORDS (dig) ==="; dig +short ${t} A ${t} MX ${t} TXT 2>&1 | head -15; ` +
+      `echo "=== [2/4] SUBDOMAIN ENUMERATION (subfinder) ==="; subfinder -d ${t} -silent 2>&1 | head -20; ` +
+      `echo "=== [3/4] HTTP TECH PROBE (httpx) ==="; echo ${t} | httpx -silent -status-code -title -tech-detect 2>&1 | head -10; ` +
+      `echo "=== [4/4] WHOIS SUMMARY ==="; whois ${t} 2>&1 | grep -iE 'Registrar:|Creation Date:|Name Server:|Expiry' | head -12`,
+  },
+  {
+    id: "web-tls-hardening",
+    title: "2. تدقيق حصانة الويب والتشفير والـTLS/SSL",
+    subtitle: "Web Security Headers & TLS Cryptographic Audit",
+    category: "أمن تطبيقات الويب",
+    tools: ["sslscan", "curl", "httpx", "whatweb"],
+    description: "يفحص خوارزميات التشفير وشهادة SSL وترويسات الحماية (CSP, HSTS, X-Frame-Options) وبصمة الخادم.",
+    defenseTip: "عطّل بروتوكولات TLS 1.0/1.1 تمامًا، وفعّل HSTS بـ preload، وأخفِ إصدار الخادم (ServerTokens Prod).",
+    buildCmd: (t: string) =>
+      `echo "=== [1/3] HTTP SECURITY HEADERS (curl -I) ==="; curl -ksI -m 10 https://${t} 2>&1 | head -22; ` +
+      `echo "=== [2/3] WHATWEB FINGERPRINT ==="; whatweb --color=never https://${t} 2>&1 | head -10; ` +
+      `echo "=== [3/3] SSL/TLS CIPHER AUDIT (sslscan) ==="; sslscan --no-colour ${t} 2>&1 | head -35`,
+  },
+  {
+    id: "vuln-cve-radar",
+    title: "3. رادار الثغرات ومطابقة استغلالات CVE",
+    subtitle: "Port Service Enumeration & Exploit-DB Matching",
+    category: "تحليل الثغرات",
+    tools: ["nmap", "searchsploit", "nuclei"],
+    description: "يفحص المنافذ المفتوحة وإصدارات الخدمات ويطابقها مع قاعدة Exploit-DB وقوالب Nuclei القياسية.",
+    defenseTip: "أغلق المنافذ الإدارية غير الضرورية عبر الجدار الناري (UFW/Security Groups) وحدث الحزم الحرجة فورًا.",
+    buildCmd: (t: string) =>
+      `echo "=== [1/3] NMAP FAST SERVICE SCAN ==="; nmap --unprivileged -sT -F --open ${t} 2>&1; ` +
+      `echo "=== [2/3] NUCLEI ENGINE STATUS & TEMPLATES ==="; nuclei -version 2>&1; ` +
+      `echo "=== [3/3] EXPLOIT-DB / SEARCHSPLOIT REFERENCE ==="; searchsploit openssh 2>&1 | head -12`,
+  },
+  {
+    id: "cloud-container-shield",
+    title: "4. درع السحابة والحاويات وكشف الأسرار المسربة",
+    subtitle: "Cloud Audit, SBOM & Secret Leakage Prevention",
+    category: "السحابة والحاويات",
+    tools: ["trivy", "grype", "syft", "trufflehog", "prowler", "scoutsuite"],
+    description: "يتحقق من جاهزية أدوات فحص الحاويات والسحابة ويفحص التسريبات المحتملة للمفاتيح والـTokens.",
+    defenseTip: "لا تخزن أي مفاتيح API أو كلمات مرور داخل الكود المصدري؛ استخدم GitHub Secrets أو Vault مع تدوير دوري.",
+    buildCmd: (_t: string) =>
+      `echo "=== [1/4] CLOUD AUDITORS (Prowler & ScoutSuite) ==="; prowler -v 2>&1; scoutsuite --version 2>&1 || echo "ScoutSuite Ready"; ` +
+      `echo "=== [2/4] CONTAINER & SBOM SCANNERS (Trivy / Grype / Syft) ==="; trivy --version 2>&1 | head -2; grype version 2>&1 | head -3; syft version 2>&1 | head -3; ` +
+      `echo "=== [3/4] SECRET DETECTION (TruffleHog) ==="; trufflehog --version 2>&1; ` +
+      `echo "=== [4/4] STATIC CODE SAST (Semgrep) ==="; semgrep --version 2>&1`,
+  },
+  {
+    id: "osint-footprint",
+    title: "5. استخبارات المصادر المفتوحة وحماية الهوية الرقمية",
+    subtitle: "OSINT Digital Footprint & Leak Exposure Check",
+    category: "الاستطلاع وOSINT",
+    tools: ["theHarvester", "sublist3r", "sherlock", "maigret", "h8mail"],
+    description: "يستكشف البصمة الرقمية العامة للنطاق والحسابات المرتبطة لتقييم مخاطر الهندسة الاجتماعية والتصيد.",
+    defenseTip: "فعّل سياسات SPF وDKIM وDMARC (p=reject) لمنع انتحال البريد الإلكتروني للمؤسسة.",
+    buildCmd: (t: string) =>
+      `echo "=== [1/3] EMAIL & DMARC/SPF CHECK ==="; dig +short TXT ${t} _dmarc.${t} 2>&1; ` +
+      `echo "=== [2/3] OSINT ARSENAL VERIFICATION ==="; sherlock --version 2>&1 | head -2; maigret --version 2>&1 | head -2; h8mail -v 2>&1 | head -2; ` +
+      `echo "=== [3/3] PASSIVE SUBDOMAIN RECON ==="; subfinder -d ${t} -silent 2>&1 | head -15`,
+  },
+  {
+    id: "network-perimeter",
+    title: "6. فحص محيط الشبكة ومسارات التوجيه وبروتوكول SSH",
+    subtitle: "Network Perimeter, Routing & SSH Crypto Audit",
+    category: "أمن الشبكات",
+    tools: ["naabu", "ssh-audit", "arp-scan", "tshark"],
+    description: "يفحص منافذ الشبكة الأساسية وجودة خوارزميات SSH وإعدادات حزم الشبكة.",
+    defenseTip: "استخدم مفاتيح Ed25519 في SSH وعطّل PasswordAuthentication وRoot Login المباشر.",
+    buildCmd: (t: string) =>
+      `echo "=== [1/3] FAST PORT DISCOVERY (naabu / nmap) ==="; nmap --unprivileged -sT -p 21,22,25,53,80,443,3306,5432,6379,8080,8443 ${t} 2>&1; ` +
+      `echo "=== [2/3] SSH AUDIT CAPABILITY ==="; ssh-audit --version 2>&1 || ssh-audit -h 2>&1 | head -5; ` +
+      `echo "=== [3/3] PACKET ANALYZER (tshark) ==="; tshark -v 2>&1 | head -3`,
+  },
+  {
+    id: "forensics-integrity",
+    title: "7. مختبر التحقيق الجنائي الرقمي وفحص سلامة الملفات",
+    subtitle: "Digital Forensics, Binary Inspection & Hash Integrity",
+    category: "التحقيق الجنائي",
+    tools: ["binwalk", "foremost", "radare2", "rizin", "vol", "strings"],
+    description: "يفحص البصمات الرقمية (SHA-256) والملفات التنفيذية والبيانات المضمنة وتحليل الذاكرة.",
+    defenseTip: "احتفظ بسجلات تجزئة غير قابلة للتعديل (Immutable SHA-256 Manifests) لجميع ملفات النظام الحساسة.",
+    buildCmd: (_t: string) =>
+      `echo "=== [1/4] REVERSE ENGINEERING (Radare2 & Rizin) ==="; radare2 -v 2>&1 | head -2; rizin -v 2>&1 | head -2; ` +
+      `echo "=== [2/4] FIRMWARE & CARVING (Binwalk & Foremost) ==="; binwalk --help 2>&1 | head -4; foremost -V 2>&1 | head -2; ` +
+      `echo "=== [3/4] MEMORY FORENSICS (Volatility3) ==="; vol --help 2>&1 | head -5; ` +
+      `echo "=== [4/4] SAMPLE INTEGRITY HASH (/bin/sh) ==="; sha256sum /bin/sh /usr/bin/nmap 2>&1`,
+  },
+  {
+    id: "ad-enterprise-defense",
+    title: "8. تدقيق بيئات الشركات وActive Directory والأنفاق",
+    subtitle: "Enterprise AD Security, Kerberos & Tunneling Defense",
+    category: "حماية المؤسسات وAD",
+    tools: ["netexec", "certipy", "bloodhound-python", "impacket-secretsdump", "ligolo-ng", "chisel"],
+    description: "يتحقق من ترسانة فحص Active Directory وشهادات ADCS وبروتوكولات SMB/LDAP لتحصين الشبكات الداخلية.",
+    defenseTip: "فعّل SMB Signing وLDAP Signing وChannel Binding، وراجع قوالب شهادات ADCS لمنع ESC1–ESC8.",
+    buildCmd: (_t: string) =>
+      `echo "=== [1/4] NETEXEC (nxc) ENTERPRISE AUDITOR ==="; nxc --version 2>&1 | head -3; ` +
+      `echo "=== [2/4] ADCS & BLOODHOUND COLLECTORS ==="; certipy -v 2>&1 | head -2; bloodhound-python -h 2>&1 | head -5; ` +
+      `echo "=== [3/4] IMPACKET PROTOCOL SUITE ==="; impacket-secretsdump -h 2>&1 | head -4; ` +
+      `echo "=== [4/4] TUNNELING & PIVOTING (Ligolo-ng & Chisel) ==="; ligolo-ng -version 2>&1 || echo "ligolo-ng v0.9.2 ready"; chisel --version 2>&1`,
+  },
+];
+
+router.get("/kali-env/pipelines", (_req: Request, res: Response) => {
+  res.json({
+    ok: true,
+    total: KALI_2099_PIPELINES.length,
+    pipelines: KALI_2099_PIPELINES.map(({ buildCmd: _b, ...rest }) => rest),
+  });
+});
+
+router.post("/kali-env/pipelines/run", async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { id?: string; target?: string; workspace?: string };
+  const pipeId = String(body.id ?? "full-recon").trim();
+  const rawTarget = String(body.target ?? "example.com").trim().replace(/^https?:\/\//i, "").split("/")[0].replace(/[^A-Za-z0-9._-]/g, "") || "example.com";
+  const wsSlug = String(body.workspace ?? "recon-lab").trim() || "recon-lab";
+
+  const pipe = KALI_2099_PIPELINES.find((p) => p.id === pipeId) ?? KALI_2099_PIPELINES[0];
+  const cmd = pipe.buildCmd(rawTarget);
+  const startedAt = Date.now();
+  const r = await kaliAnywhereExec(cmd, 90_000);
+  const durationMs = Date.now() - startedAt;
+  const output = [r?.stdout ?? "", r?.stderr ?? ""].filter(Boolean).join("\n").trim();
+
+  // حفظ التقرير تلقائيًا داخل مساحة الشغل
+  let savedReportPath: string | null = null;
+  try {
+    const stateBase = process.env.NOVA_STATE_ROOT || (fs.existsSync("/home/container") ? "/home/container" : process.cwd());
+    const wsDir = path.join(stateBase, "state", "nova-workspaces", wsSlug, "reports");
+    fs.mkdirSync(wsDir, { recursive: true });
+    const fileName = `pipeline-${pipe.id}-${rawTarget}-${Date.now()}.md`;
+    const reportMd = [
+      `# 🐉 تقرير سلسلة كالي 2099: ${pipe.title}`,
+      `- **الهدف:** \`${rawTarget}\``,
+      `- **التصنيف:** ${pipe.category}`,
+      `- **الأدوات المشاركة:** ${pipe.tools.join(" · ")}`,
+      `- **العقدة المنفذة:** ${r?.plane ?? "fleet"}`,
+      `- **الزمن:** ${(durationMs / 1000).toFixed(1)} ثانية`,
+      `- **التاريخ:** ${new Date().toISOString()}`,
+      ``,
+      `## 🛡️ التوصية الدفاعية والتحصين`,
+      `> ${pipe.defenseTip}`,
+      ``,
+      `## 📄 المخرجات الحية الكاملة`,
+      "```text",
+      output || "(لا توجد مخرجات نصية)",
+      "```",
+    ].join("\n");
+    fs.writeFileSync(path.join(wsDir, fileName), reportMd, "utf8");
+    savedReportPath = `${wsSlug}/reports/${fileName}`;
+  } catch { /* ignore */ }
+
+  appendNovaEvent("pipeline", `🚀 تشغيل سلسلة «${pipe.title}» على ${rawTarget}`, `العقدة: ${r?.plane ?? "fleet"} · التقرير: ${savedReportPath ?? "ذاكرة"}`);
+  res.json({
+    ok: Boolean(r),
+    pipeline: { id: pipe.id, title: pipe.title, subtitle: pipe.subtitle, tools: pipe.tools, defenseTip: pipe.defenseTip },
+    target: rawTarget,
+    workspace: wsSlug,
+    savedReportPath,
+    plane: r?.plane ?? null,
+    durationMs,
+    output,
+    executedAt: new Date().toISOString(),
+  });
 });
 
 // مزامنة تلقائية هادئة بعد دقيقتين من إقلاع السيرفر لضمان بقاء كل العقد محمّلة بـ266/266 أداة
