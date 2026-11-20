@@ -66,6 +66,7 @@ export async function kaliAnywhereExecStream(
   cmd: string,
   timeoutMs: number,
   onData: (streamType: "stdout" | "stderr", chunk: string) => void,
+  preferNodeId?: string,
 ): Promise<KaliAnywhereResult | null> {
   if (!cmd.trim()) return null;
   const execId = `kali-stream-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -94,6 +95,12 @@ export async function kaliAnywhereExecStream(
     nodes = await orderedFleetNodes();
   } catch (e) {
     return { stdout: "", stderr: String((e as Error)?.message ?? e).slice(0, 300), exitCode: 127, durationMs: 0, plane: "الهَب — التعذّر على الأسطول" };
+  }
+  /* nodeId محدد (من الطرفية أو القياس الحي) = العقدة دي أولًا — إثبات تشغيل على
+   * عقدة مُحمّلة بالـid بدل أول عقدة ردت (bare). لو ماتلقتش/مردّتش → الترتيب الطبيعي. */
+  if (preferNodeId) {
+    const hit = nodes.find((a) => a.id === preferNodeId);
+    if (hit) nodes = [hit, ...nodes.filter((a) => a.id !== preferNodeId)];
   }
   for (const a of nodes) {
     const plane = `${a.hostname} — عقدة كالي سحابية (${a.mode === "MODE_BARE" ? "نظام كالي" : "rootfs + proot"})`;
