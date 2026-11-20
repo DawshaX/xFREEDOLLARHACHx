@@ -138,7 +138,11 @@ export const KALI_CATEGORIES = [
  * it reaches the guest, so a target can never become a second command.
  */
 export const TOOL_RECIPES: Record<string, { args: string; targetLabel: string; hint: string }> = {
-  nmap: { args: "-sV -T4 {target}", targetLabel: "host / CIDR", hint: "فحص منافذ وخدمات" },
+  /* قياس 2026-11-20 05:3xZ على عقدة كالي: في proot بـfake-root، nmap بيفشل
+   * `route_dst_netlink: can't find interface "lo"` على أي هدف (raw sockets
+   * بيرفضها الكيرنل). بالـ`--unprivileged -sT` القياس الحي: 127.0.0.1 →
+   * 22/tcp open ssh · RC=0 في 0.17s. نفس البادئة لحماية الloopback. */
+  nmap: { args: "--unprivileged -sT -sV -T4 {target}", targetLabel: "host / CIDR", hint: "فحص منافذ وخدمات" },
   masscan: { args: "{target} -p1-1000 --rate=1000", targetLabel: "host / CIDR", hint: "فحص سريع جدًا" },
   subfinder: { args: "-d {target}", targetLabel: "domain", hint: "تعداد النطاقات الفرعية" },
   httpx: { args: "-u {target} -status-code -title", targetLabel: "URL", hint: "فحص HTTP حي" },
