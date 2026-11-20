@@ -240,7 +240,7 @@ export function NovaSystemCard({ compact = false }: { compact?: boolean }) {
               label="عقد المِش"
               value={snap.mesh ? `${snap.mesh.stats.online}/${snap.mesh.stats.nodes}` : "—"}
               hint={snap.mesh ? `${snap.mesh.stats.machines} ماكينة · ${snap.mesh.stats.slots} سلوت` : "المِش مش متاح"}
-              color="#fbbf24"
+              color="#ff5c78"
             />
           </div>
 

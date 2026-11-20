@@ -16,7 +16,7 @@ interface Node { id: string; x: number; y: number; vx: number; vy: number; host:
 
 const RISK_COLORS: Record<TopologyHost["riskLevel"], { fill: string; stroke: string; text: string; pulse: string }> = {
   critical: { fill: "#7f1d1d", stroke: "#ef4444", text: "#fca5a5", pulse: "rgba(239,68,68,0.4)" },
-  high:     { fill: "#78350f", stroke: "#f97316", text: "#fdba74", pulse: "rgba(249,115,22,0.4)" },
+  high:     { fill: "#78350f", stroke: "#ff2b4d", text: "#fdba74", pulse: "rgba(255,43,77,0.4)" },
   medium:   { fill: "#713f12", stroke: "#eab308", text: "#fde047", pulse: "rgba(234,179,8,0.3)" },
   low:      { fill: "#14532d", stroke: "#22c55e", text: "#86efac", pulse: "rgba(34,197,94,0.3)" },
   info:     { fill: "#1e3a5f", stroke: "#38bdf8", text: "#7dd3fc", pulse: "rgba(56,189,248,0.3)" },

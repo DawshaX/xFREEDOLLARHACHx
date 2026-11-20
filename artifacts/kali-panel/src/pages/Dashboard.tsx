@@ -182,7 +182,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="rounded-xl p-3 space-y-1.5" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.28)" }}>
+          <div className="rounded-xl p-3 space-y-1.5" style={{ background: "rgba(255,43,77,0.06)", border: "1px solid rgba(255,43,77,0.28)" }}>
             <div className="text-[11px] font-black text-amber-300">🧭 3. اللي هيعمله بعد كده</div>
             <div className="text-[10px] text-amber-100/85 leading-relaxed">
               • فحص تعارض بروتوكولات HTTP/2 وWeb Cache Deception بهدوء (-rl 10).<br />

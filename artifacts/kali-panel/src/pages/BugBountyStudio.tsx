@@ -3182,7 +3182,7 @@ ${reportFix}
           </span>
           {[
             { label: "📚 الكوربوس", value: vitals.corpusTotal == null ? "غير مقاس" : vitals.corpusTotal.toLocaleString("en-US"), c: "#00ff88" },
-            { label: "🎯 KEV", value: vitals.kev == null ? "—" : String(vitals.kev), c: "#f59e0b" },
+            { label: "🎯 KEV", value: vitals.kev == null ? "—" : String(vitals.kev), c: "#ff2b4d" },
             { label: "💎 خزنة الاكتشافات", value: vitals.vaultVulns == null ? "غير مقاس" : `${vitals.vaultVulns} ثغرة`, c: "#e879f9" },
             { label: "🧠 قواعد التعلّم", value: vitals.vaultRules == null ? "غير مقاس" : `${vitals.vaultRules} قاعدة`, c: "#22d3ee" },
             { label: "🖥️ الوكلاء", value: vitals.agents == null ? "غير مقاس" : `${vitals.agents} متصل`, c: "#a78bfa" },

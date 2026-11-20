@@ -99,14 +99,14 @@ const ARENAS: Array<{ key: ArenaKey; labelAr: string; icon: typeof Brain; color:
   { key: "kali-full",labelAr: "🐉 كالي المتكامل",    icon: TerminalIcon,      color: "#ff4400" },
   { key: "cron",     labelAr: "الجدولة",             icon: CalendarClock,     color: "#34d399" },
   { key: "events",   labelAr: "نبض الأحداث",         icon: Activity,          color: "#4ade80" },
-  { key: "missions", labelAr: "المهمات",             icon: ListChecks,        color: "#fbbf24" },
+  { key: "missions", labelAr: "المهمات",             icon: ListChecks,        color: "#ff5c78" },
   { key: "brain",    labelAr: "المخ والمجلس",        icon: Brain,             color: "#a78bfa" },
   { key: "nexus",    labelAr: "الخلفية ٢٤/٧",        icon: Radar,             color: "#2dd4bf" },
-  { key: "alerts",   labelAr: "الإشعارات 🔔",          icon: Bell,              color: "#fb923c" },
+  { key: "alerts",   labelAr: "الإشعارات 🔔",          icon: Bell,              color: "#ff5c78" },
   { key: "notes",    labelAr: "الدفاتر 📓",            icon: BookOpen,          color: "#fde047" },
   { key: "hardware", labelAr: "العتاد الحي",         icon: Cpu,               color: "#38bdf8" },
   { key: "hunt",     labelAr: "الصيد",               icon: Crosshair,         color: "#f43f5e" },
-  { key: "channels", labelAr: "القنوات",             icon: Cable,             color: "#f59e0b" },
+  { key: "channels", labelAr: "القنوات",             icon: Cable,             color: "#ff2b4d" },
   { key: "nav",      labelAr: "كل الأقسام",          icon: Compass,           color: "#60a5fa" },
 ];
 
@@ -211,7 +211,7 @@ function HudCard({
 
 function MeterCompact({ label, value }: { label: string; value: number | null }) {
   const v = value ?? 0;
-  const color = value == null ? "#64748b" : v > 85 ? "#ff2e63" : v > 60 ? "#fbbf24" : "#22d3ee";
+  const color = value == null ? "#64748b" : v > 85 ? "#ff2e63" : v > 60 ? "#ff5c78" : "#22d3ee";
   return (
     <div className="space-y-0.5" dir="ltr">
       <div className="flex justify-between text-[8px] font-mono text-white/55">
@@ -1142,11 +1142,11 @@ export default function NovaAgentPro() {
               <HudCard
                 title="الاستقلالية 24/7"
                 icon={autoEffectiveOn ? Zap : ZapOff}
-                color={autoEffectiveOn ? "#34d399" : "#fbbf24"}
+                color={autoEffectiveOn ? "#34d399" : "#ff5c78"}
                 badge={autoEffectiveOn ? `⚡ ×${autoEffectiveCycles}` : "OFF"}
               >
                 <div className="flex items-center justify-between gap-1.5">
-                  <span className="text-[9px] font-mono truncate" style={{ color: autoEffectiveOn ? "#34d399" : "#fbbf24" }}>
+                  <span className="text-[9px] font-mono truncate" style={{ color: autoEffectiveOn ? "#34d399" : "#ff5c78" }}>
                     {autoEffectiveOn ? (autoState.running ? "نشط 24/7" : "مفعّل") : "موقوف مؤقتاً"}
                   </span>
                   <div className="flex items-center gap-1 shrink-0">
@@ -1156,7 +1156,7 @@ export default function NovaAgentPro() {
                       onClick={() => void toggleAutonomyReal()}
                       className="rounded border px-1.5 py-0.5 text-[8px] font-black transition disabled:opacity-40"
                       style={autoEffectiveOn
-                        ? { borderColor: "#fbbf2460", background: "#fbbf2418", color: "#fbbf24" }
+                        ? { borderColor: "#ff5c7860", background: "#ff5c7818", color: "#ff5c78" }
                         : { borderColor: "#34d39960", background: "#34d39918", color: "#34d399" }}
                     >
                       {autoEffectiveOn ? "إيقاف" : "تشغيل"}
@@ -1512,7 +1512,7 @@ export default function NovaAgentPro() {
                       { label: "Nuclei سريع", cmd: "nuclei -version 2>&1 | head -2", color: "#a78bfa" },
                       { label: "Subfinder", cmd: "subfinder -version 2>&1 | head -2", color: "#22d3ee" },
                       { label: "Httpx", cmd: "httpx -version 2>&1 | head -2", color: "#f43f5e" },
-                      { label: "Katana", cmd: "katana -version 2>&1 | head -2", color: "#fbbf24" },
+                      { label: "Katana", cmd: "katana -version 2>&1 | head -2", color: "#ff5c78" },
                     ].map(t => (
                       <button key={t.label} onClick={() => void kali.exec(t.cmd, { source: "kali-full:quick-tool" })} className="rounded-lg px-3 py-2 text-[10px] font-bold text-right" style={{ background: `${t.color}10`, border: `1px solid ${t.color}30`, color: t.color }}>
                         <div>{t.label}</div>
@@ -1612,7 +1612,7 @@ export default function NovaAgentPro() {
                 {notifs.length === 0 && <div className="rounded-xl border border-white/8 bg-white/[0.02] p-6 text-center text-[11px] font-mono text-white/35">لسه هادي — أول نبضة من الكرون/المراقبين هتبان هنا فورًا.</div>}
                 {notifs.slice(0, 60).map((n) => (
                   <div key={n.id} className={`rounded-xl border px-3 py-2 flex items-center gap-3 ${n.read ? "opacity-50" : ""}`}
-                    style={{ borderColor: "#fb923c22", background: n.read ? "transparent" : "#fb923c0a" }}>
+                    style={{ borderColor: "#ff5c7822", background: n.read ? "transparent" : "#ff5c780a" }}>
                     <Bell className="w-3.5 h-3.5 text-orange-300 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="text-[11px] font-bold text-white/85 truncate">{n.title}</div>

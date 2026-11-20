@@ -304,7 +304,7 @@ export default function KaliWorkspacePanel() {
   /* ── أنماط ── */
   const card: React.CSSProperties = { background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12 };
   const btn = "text-[10px] font-black px-2.5 py-1.5 rounded-lg disabled:opacity-40 transition-colors";
-  const accent = "#ff8866";
+  const accent = "#ff8095";
   const good = "#5fd6a8";
   const warn = "#f5b461";
   const bad = "#f47b7b";
@@ -337,7 +337,7 @@ export default function KaliWorkspacePanel() {
       </div>
 
       {/* ══ ١) شريط الحالة — أول حاجة المستخدم بيشوفها ══ */}
-      <div style={{ ...card, background: "linear-gradient(135deg, rgba(255,85,68,0.09), rgba(140,255,220,0.05))" }} className="p-3">
+      <div style={{ ...card, background: "linear-gradient(135deg, rgba(255,43,77,0.09), rgba(140,255,220,0.05))" }} className="p-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Shield size={18} style={{ color: health?.ready ? good : bad }} />
@@ -391,7 +391,7 @@ export default function KaliWorkspacePanel() {
           <div className="flex items-center gap-1.5 flex-wrap">
             {list.map((w) => (
               <div key={w.slug} className="flex items-center gap-1 rounded-lg px-2 py-1"
-                style={{ background: sel === w.slug ? "rgba(255,85,68,0.18)" : "rgba(255,255,255,0.05)", border: `1px solid ${sel === w.slug ? "rgba(255,85,68,0.55)" : "rgba(255,255,255,0.12)"}` }}>
+                style={{ background: sel === w.slug ? "rgba(255,43,77,0.18)" : "rgba(255,255,255,0.05)", border: `1px solid ${sel === w.slug ? "rgba(255,43,77,0.55)" : "rgba(255,255,255,0.12)"}` }}>
                 <button type="button" onClick={() => setSel(w.slug)} className="text-[10px] font-bold" style={{ color: sel === w.slug ? accent : "#ccc" }}>
                   {w.slug}
                 </button>
@@ -408,7 +408,7 @@ export default function KaliWorkspacePanel() {
             className="flex-1 text-[10px] px-2.5 py-1.5 rounded-lg bg-black/40 outline-none"
             style={{ border: "1px solid rgba(255,255,255,0.15)", color: "#fff" }} />
           <button type="button" onClick={() => void create()} disabled={busy || !name.trim()} className={btn}
-            style={{ background: "rgba(255,85,68,0.2)", color: accent, border: "1px solid rgba(255,85,68,0.5)" }}>
+            style={{ background: "rgba(255,43,77,0.2)", color: accent, border: "1px solid rgba(255,43,77,0.5)" }}>
             <Plus size={11} className="inline" /> اعمل مساحة
           </button>
         </div>

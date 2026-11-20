@@ -33,7 +33,7 @@ interface Stats {
 
 const SEV_COLOR: Record<string, string> = {
   CRITICAL: "#ff2244",
-  HIGH: "#ff8800",
+  HIGH: "#ff2b4d",
   MEDIUM: "#ffcc00",
   LOW: "#44aaff",
   UNKNOWN: "#888",

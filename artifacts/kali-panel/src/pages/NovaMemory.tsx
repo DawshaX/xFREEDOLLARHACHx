@@ -42,7 +42,7 @@ interface Stats {
 const KIND_META: Record<Kind, { label: string; icon: typeof Brain; color: string }> = {
   fact: { label: "حقيقة", icon: ShieldCheck, color: "#22d3ee" },
   preference: { label: "تفضيل", icon: SlidersHorizontal, color: "#a78bfa" },
-  lesson: { label: "درس", icon: Lightbulb, color: "#fbbf24" },
+  lesson: { label: "درس", icon: Lightbulb, color: "#ff5c78" },
   event: { label: "حدث", icon: BookMarked, color: "#34d399" },
   session: { label: "جلسة", icon: MessagesSquare, color: "#f472b6" },
 };

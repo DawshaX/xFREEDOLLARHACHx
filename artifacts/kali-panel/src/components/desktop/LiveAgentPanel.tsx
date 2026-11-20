@@ -1379,7 +1379,7 @@ export function LiveAgentPanel({
       if (cpuR.ok) {
         const d = await cpuR.json() as { stdout?: string };
         const v = parseFloat(d.stdout?.trim() ?? "0");
-        if (!isNaN(v)) setHwCpu({ label: "CPU", value: Math.round(v), max: 100, unit: "%", color: v > 80 ? "#f87171" : v > 50 ? "#fbbf24" : "#4ade80" });
+        if (!isNaN(v)) setHwCpu({ label: "CPU", value: Math.round(v), max: 100, unit: "%", color: v > 80 ? "#f87171" : v > 50 ? "#ff5c78" : "#4ade80" });
       }
       // RAM
       const ramR = await fetch(`${API_BASE}/local-agent/exec`, {
@@ -1391,7 +1391,7 @@ export function LiveAgentPanel({
         const parts = (d.stdout?.trim() ?? "").split(" ");
         const used = parseInt(parts[0] ?? "0"); const total = parseInt(parts[1] ?? "1");
         const pct = total > 0 ? Math.round((used / total) * 100) : 0;
-        setHwRam({ label: "RAM", value: used, max: total, unit: "MB", color: pct > 85 ? "#f87171" : pct > 60 ? "#fbbf24" : "#60a5fa", raw: `${used}/${total}MB (${pct}%)` });
+        setHwRam({ label: "RAM", value: used, max: total, unit: "MB", color: pct > 85 ? "#f87171" : pct > 60 ? "#ff5c78" : "#60a5fa", raw: `${used}/${total}MB (${pct}%)` });
       }
       // Disks
       const diskR = await fetch(`${API_BASE}/local-agent/exec`, {
@@ -5043,7 +5043,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               )}
               {missions.map((ms) => (
                 <div key={ms.id} className={`rounded-xl border p-2 transition-all ${
-                  ms.status === "running" ? "bg-amber-500/8 border-amber-400/40 shadow-[0_0_12px_rgba(251,191,36,0.1)]" :
+                  ms.status === "running" ? "bg-amber-500/8 border-amber-400/40 shadow-[0_0_12px_rgba(255,92,120,0.1)]" :
                   ms.status === "done" ? "bg-emerald-500/5 border-emerald-500/25" :
                   ms.status === "failed" ? "bg-rose-500/5 border-rose-500/25" :
                   "bg-background/30 border-border/30"
@@ -5618,7 +5618,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                             step: "1",
                             title: "تثبيت Node.js (إذا لم يكن مثبتاً)",
                             cmd: "curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs",
-                            color: "rgba(251,146,60,0.5)",
+                            color: "rgba(255,43,77,0.5)",
                             key: "step1",
                           },
                           {
@@ -5915,8 +5915,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   {[
                     { label: "AI Model", val: ngrokOnline ? ngrokModel : "offline", color: ngrokOnline ? "#a78bfa" : "#ff4444", dot: ngrokOnline },
                     { label: "كالي جهاز", val: kaliAgentConnected ? `${kaliAgentList[0]?.user}@${kaliAgentList[0]?.hostname}` : "غير متصل", color: kaliAgentConnected ? "#44ff88" : "#ff6666", dot: kaliAgentConnected },
-                    { label: "ذاكرة AI", val: `${kaliCmdIntel?.knowledgeCount ?? 0} إدخال`, color: "#fbbf24", dot: (kaliCmdIntel?.knowledgeCount ?? 0) > 0 },
-                    { label: "وضع مستقل", val: kaliAutonomousKali ? "نشط ⚡" : "موقوف", color: kaliAutonomousKali ? "#fb923c" : "rgba(255,255,255,0.2)", dot: kaliAutonomousKali },
+                    { label: "ذاكرة AI", val: `${kaliCmdIntel?.knowledgeCount ?? 0} إدخال`, color: "#ff5c78", dot: (kaliCmdIntel?.knowledgeCount ?? 0) > 0 },
+                    { label: "وضع مستقل", val: kaliAutonomousKali ? "نشط ⚡" : "موقوف", color: kaliAutonomousKali ? "#ff5c78" : "rgba(255,255,255,0.2)", dot: kaliAutonomousKali },
                     { label: "المهام نشطة", val: `${kaliCmdTasks.filter(t=>t.status==="running").length}/${kaliCmdTasks.length}`, color: "#38bdf8", dot: kaliCmdTasks.filter(t=>t.status==="running").length > 0 },
                     { label: "Load Avg", val: kaliCmdIntel?.server.loadAvg?.split(",")[0]?.trim() ?? "N/A", color: "rgba(255,255,255,0.4)", dot: false },
                   ].map(s => (
@@ -6141,7 +6141,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   <div className="grid grid-cols-4 gap-1 mb-2">
                     {[
                       { label: "قيد الانتظار", val: kaliCmdTasks.filter(t=>t.status==="queued").length, color: "rgba(255,255,255,0.3)" },
-                      { label: "تعمل", val: kaliCmdTasks.filter(t=>t.status==="running").length, color: "#fbbf24" },
+                      { label: "تعمل", val: kaliCmdTasks.filter(t=>t.status==="running").length, color: "#ff5c78" },
                       { label: "منجزة", val: kaliCmdTasks.filter(t=>t.status==="done").length, color: "#44ff88" },
                       { label: "فاشلة", val: kaliCmdTasks.filter(t=>t.status==="failed").length, color: "#ff4444" },
                     ].map(s => (
@@ -6153,7 +6153,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   </div>
                   {kaliCmdTasks.slice().reverse().slice(0, 5).map(t => (
                     <div key={t.id} className="flex items-center gap-1.5 py-0.5 border-b border-rose-900/10 last:border-0">
-                      <span className={`text-[8px] shrink-0 ${t.status==="running" ? "animate-spin" : ""}`} style={{ color: t.status==="done" ? "#44ff88" : t.status==="running" ? "#fbbf24" : t.status==="failed" ? "#ff4444" : "rgba(255,255,255,0.2)" }}>
+                      <span className={`text-[8px] shrink-0 ${t.status==="running" ? "animate-spin" : ""}`} style={{ color: t.status==="done" ? "#44ff88" : t.status==="running" ? "#ff5c78" : t.status==="failed" ? "#ff4444" : "rgba(255,255,255,0.2)" }}>
                         {t.status==="done" ? "✓" : t.status==="running" ? "⟳" : t.status==="failed" ? "✗" : "◌"}
                       </span>
                       <span className="text-[7px] font-mono truncate flex-1" style={{ color: "rgba(255,200,200,0.6)" }}>{t.title}</span>
@@ -6163,27 +6163,27 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 </div>
 
                 {/* Autonomous Mode Control */}
-                <div className="rounded-lg p-2" style={{ background: "rgba(255,140,0,0.04)", border: `1px solid ${kaliAutonomousKali ? "rgba(251,146,60,0.4)" : "rgba(255,50,50,0.1)"}` }}>
+                <div className="rounded-lg p-2" style={{ background: "rgba(255,140,0,0.04)", border: `1px solid ${kaliAutonomousKali ? "rgba(255,43,77,0.4)" : "rgba(255,50,50,0.1)"}` }}>
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-1.5">
-                      <Zap className="w-3 h-3" style={{ color: kaliAutonomousKali ? "#fb923c" : "rgba(255,100,100,0.4)" }} />
-                      <span className="text-[7px] font-black tracking-widest" style={{ color: kaliAutonomousKali ? "#fb923c" : "rgba(255,80,80,0.5)" }}>AUTONOMOUS MODE</span>
+                      <Zap className="w-3 h-3" style={{ color: kaliAutonomousKali ? "#ff5c78" : "rgba(255,100,100,0.4)" }} />
+                      <span className="text-[7px] font-black tracking-widest" style={{ color: kaliAutonomousKali ? "#ff5c78" : "rgba(255,80,80,0.5)" }}>AUTONOMOUS MODE</span>
                     </div>
                     <button onClick={toggleKaliAutonomous}
                       className="text-[8px] font-mono px-2.5 py-1 rounded-lg font-bold transition-all"
                       style={kaliAutonomousKali
-                        ? { background: "rgba(251,146,60,0.2)", border: "1px solid rgba(251,146,60,0.5)", color: "#fb923c" }
+                        ? { background: "rgba(255,43,77,0.2)", border: "1px solid rgba(255,43,77,0.5)", color: "#ff5c78" }
                         : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}>
                       {kaliAutonomousKali ? "⏹ إيقاف" : "⚡ تشغيل"}
                     </button>
                   </div>
                   {kaliAutonomousKali ? (
-                    <div className="text-[7px] font-mono" style={{ color: "rgba(251,146,60,0.7)" }}>
+                    <div className="text-[7px] font-mono" style={{ color: "rgba(255,43,77,0.7)" }}>
                       KALI AI يُنفّذ عمليات دورية تلقائياً — مراقبة مستمرة للشبكة والنظام
                       {kaliAutonomousLog.length > 0 && (
                         <div className="mt-1 space-y-0.5">
                           {kaliAutonomousLog.slice(-3).map((e, i) => (
-                            <div key={i} className="truncate" style={{ color: e.error ? "#ff6666" : "rgba(251,146,60,0.5)" }}>
+                            <div key={i} className="truncate" style={{ color: e.error ? "#ff6666" : "rgba(255,43,77,0.5)" }}>
                               {new Date(e.ts).toLocaleTimeString("ar")} — {e.title}: {(e.result || e.error || "").substring(0, 60)}
                             </div>
                           ))}
@@ -6198,30 +6198,30 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 </div>
 
                 {/* ── QUICK LAUNCH — فتح التطبيقات مباشرة ── */}
-                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(251,146,60,0.3)", background: "rgba(255,100,0,0.03)" }}>
+                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,43,77,0.3)", background: "rgba(255,100,0,0.03)" }}>
                   <button onClick={() => toggleDash("quicklaunch")} className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-orange-500/5 transition-all">
                     <span className="text-base">🚀</span>
-                    <span className="text-[8px] font-black tracking-widest flex-1 text-left" style={{ color: "rgba(251,146,60,0.9)" }}>QUICK LAUNCH — فتح التطبيقات</span>
+                    <span className="text-[8px] font-black tracking-widest flex-1 text-left" style={{ color: "rgba(255,43,77,0.9)" }}>QUICK LAUNCH — فتح التطبيقات</span>
                     {kaliAgentConnected && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shrink-0" />}
-                    <span className="text-[9px]" style={{ color: "rgba(251,146,60,0.5)" }}>{dashExpand.quicklaunch ? "▲" : "▼"}</span>
+                    <span className="text-[9px]" style={{ color: "rgba(255,43,77,0.5)" }}>{dashExpand.quicklaunch ? "▲" : "▼"}</span>
                   </button>
                   {dashExpand.quicklaunch && (
                     <div className="px-2 pb-2 space-y-1.5">
                       {!kaliAgentConnected && (
-                        <div className="text-[8px] font-mono text-center py-1.5 rounded" style={{ color: "rgba(251,146,60,0.5)", background: "rgba(0,0,0,0.2)" }}>
+                        <div className="text-[8px] font-mono text-center py-1.5 rounded" style={{ color: "rgba(255,43,77,0.5)", background: "rgba(0,0,0,0.2)" }}>
                           وصّل nova-agent أولاً على الجهاز المستهدف
                         </div>
                       )}
                       <div className="grid grid-cols-3 gap-1">
                         {([
                           { id: "chrome",   label: "Chrome",    emoji: "🌐", cmd: "DISPLAY=:0 nohup google-chrome --no-sandbox --disable-dev-shm-usage 2>/dev/null & sleep 1 && echo 'Chrome launched'", color: "#4ade80" },
-                          { id: "firefox",  label: "Firefox",   emoji: "🦊", cmd: "DISPLAY=:0 nohup firefox --no-remote 2>/dev/null & sleep 1 && echo 'Firefox launched'", color: "#fb923c" },
+                          { id: "firefox",  label: "Firefox",   emoji: "🦊", cmd: "DISPLAY=:0 nohup firefox --no-remote 2>/dev/null & sleep 1 && echo 'Firefox launched'", color: "#ff5c78" },
                           { id: "burp",     label: "BurpSuite", emoji: "🕷",  cmd: "DISPLAY=:0 nohup burpsuite 2>/dev/null & sleep 2 && echo 'Burp launched' || (DISPLAY=:0 nohup java -jar /opt/burpsuite*.jar 2>/dev/null & echo 'Burp jar')", color: "#f87171" },
                           { id: "terminal", label: "Terminal",  emoji: "💻", cmd: "DISPLAY=:0 nohup xterm -fa 'JetBrains Mono' -fs 11 -bg black -fg '#44ff88' 2>/dev/null & sleep 0.5 && echo 'xterm launched'", color: "#60a5fa" },
                           { id: "vscode",   label: "VS Code",   emoji: "📝", cmd: "DISPLAY=:0 nohup code --no-sandbox 2>/dev/null & sleep 1 && echo 'VSCode launched'", color: "#818cf8" },
                           { id: "wireshark",label: "Wireshark", emoji: "🦈", cmd: "DISPLAY=:0 nohup wireshark 2>/dev/null & sleep 1 && echo 'Wireshark launched'", color: "#34d399" },
                           { id: "metasploit",label: "Metasploit",emoji: "💀", cmd: "DISPLAY=:0 nohup xterm -e 'msfconsole' 2>/dev/null & echo 'MSF launched'", color: "#a78bfa" },
-                          { id: "nmap_gui", label: "Zenmap",    emoji: "🗺", cmd: "DISPLAY=:0 nohup zenmap 2>/dev/null & echo 'Zenmap launched'", color: "#fbbf24" },
+                          { id: "nmap_gui", label: "Zenmap",    emoji: "🗺", cmd: "DISPLAY=:0 nohup zenmap 2>/dev/null & echo 'Zenmap launched'", color: "#ff5c78" },
                           { id: "screenshot_btn", label: "📸 شاشة", emoji: "📸", cmd: "echo capture", color: "#67e8f9" },
                         ] as const).map(app => (
                           <button key={app.id}
@@ -6244,9 +6244,9 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         ))}
                       </div>
                       {quickLaunchLog.length > 0 && (
-                        <div className="mt-1 rounded-lg p-1.5 space-y-0.5" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(251,146,60,0.1)" }}>
+                        <div className="mt-1 rounded-lg p-1.5 space-y-0.5" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,43,77,0.1)" }}>
                           {quickLaunchLog.slice(0,4).map((l, i) => (
-                            <div key={i} className="text-[7px] font-mono truncate" style={{ color: l.startsWith("❌") ? "#f87171" : l.startsWith("⚠") ? "#fbbf24" : "#86efac" }}>{l}</div>
+                            <div key={i} className="text-[7px] font-mono truncate" style={{ color: l.startsWith("❌") ? "#f87171" : l.startsWith("⚠") ? "#ff5c78" : "#86efac" }}>{l}</div>
                           ))}
                         </div>
                       )}
@@ -6390,7 +6390,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                     ) : (
                       dashCVEs.map((cve, i) => {
                         const score = cve.cvss ?? cve.cvssScore ?? 0;
-                        const scoreColor = score >= 9.0 ? "#ff4444" : score >= 7.0 ? "#fb923c" : "#fbbf24";
+                        const scoreColor = score >= 9.0 ? "#ff4444" : score >= 7.0 ? "#ff5c78" : "#ff5c78";
                         return (
                           <div key={cve.id ?? i}
                             className="rounded-lg px-2 py-1.5 cursor-pointer transition-all"
@@ -6424,11 +6424,11 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 </div>
 
                 {/* ── Quick Strike (Standalone — no Kali agent needed) ── */}
-                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(251,146,60,0.18)" }}>
+                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,43,77,0.18)" }}>
                   <button onClick={() => toggleDash("quickstrike")} className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-orange-500/5 transition-all">
                     <span className="text-sm">⚔️</span>
-                    <span className="text-[8px] font-black tracking-widest flex-1 text-left" style={{ color: "rgba(251,146,60,0.8)" }}>QUICK STRIKE — مستقل بدون كالي</span>
-                    <span className="text-[7px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.25)", color: "rgba(251,146,60,0.7)" }}>NO AGENT</span>
+                    <span className="text-[8px] font-black tracking-widest flex-1 text-left" style={{ color: "rgba(255,43,77,0.8)" }}>QUICK STRIKE — مستقل بدون كالي</span>
+                    <span className="text-[7px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(255,43,77,0.1)", border: "1px solid rgba(255,43,77,0.25)", color: "rgba(255,43,77,0.7)" }}>NO AGENT</span>
                   </button>
                   <div className="px-2 pb-2 grid grid-cols-2 gap-1">
                     {[
@@ -6442,9 +6442,9 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                       <button key={m.label}
                         onClick={() => { setInput(m.prompt); setActiveTab("chat"); }}
                         className="text-[7px] font-mono px-2 py-1.5 rounded-lg text-right transition-all"
-                        style={{ background: "rgba(251,146,60,0.04)", border: "1px solid rgba(251,146,60,0.15)", color: "rgba(251,200,150,0.8)" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(251,146,60,0.1)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(251,146,60,0.04)"; }}>
+                        style={{ background: "rgba(255,43,77,0.04)", border: "1px solid rgba(255,43,77,0.15)", color: "rgba(251,200,150,0.8)" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,43,77,0.1)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,43,77,0.04)"; }}>
                         {m.label}
                       </button>
                     ))}
@@ -6752,7 +6752,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                       const passed = ["thinking","planning","writing","executing","analyzing"].indexOf(kaliPhase) >
                                      ["thinking","planning","writing","executing","analyzing"].indexOf(p);
                       const labels: Record<string, string> = { thinking:"🤔 تفكير", planning:"📋 تخطيط", writing:"✍ إجابة", executing:"⚡ تنفيذ", analyzing:"🧠 تحليل" };
-                      const colors: Record<string, string> = { thinking:"#a78bfa", planning:"#fbbf24", writing:"#4ade80", executing:"#f87171", analyzing:"#60a5fa" };
+                      const colors: Record<string, string> = { thinking:"#a78bfa", planning:"#ff5c78", writing:"#4ade80", executing:"#f87171", analyzing:"#60a5fa" };
                       return (
                         <div key={p} className="flex items-center gap-1">
                           <div className={`w-1.5 h-1.5 rounded-full transition-all ${active ? "animate-pulse scale-125" : ""}`}
@@ -6928,7 +6928,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                       </div>
                       <span className="text-[9px] font-black tracking-widest" style={{ color: "#ff4444", fontFamily: "'Orbitron','Rajdhani',sans-serif", textShadow: "0 0 8px rgba(255,50,50,0.5)" }}>KALI AI v7</span>
                       {kaliAutonomousKali && (
-                        <span className="text-[6px] font-mono px-1 py-0.5 rounded animate-pulse" style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.3)" }}>AUTO</span>
+                        <span className="text-[6px] font-mono px-1 py-0.5 rounded animate-pulse" style={{ background: "rgba(255,43,77,0.15)", color: "#ff5c78", border: "1px solid rgba(255,43,77,0.3)" }}>AUTO</span>
                       )}
                     </div>
                     {/* Model status */}
@@ -6957,7 +6957,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         title={kaliAutonomousKali ? "إيقاف وضع المستقل" : "تشغيل وضع المستقل"}
                         className="text-[7px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all"
                         style={kaliAutonomousKali
-                          ? { border: "1px solid rgba(251,146,60,0.5)", color: "#fb923c", background: "rgba(251,146,60,0.1)" }
+                          ? { border: "1px solid rgba(255,43,77,0.5)", color: "#ff5c78", background: "rgba(255,43,77,0.1)" }
                           : { border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.25)" }}>
                         <Zap className="w-2 h-2" />
                         {kaliAutonomousKali ? "إيقاف AUTO" : "AUTO"}
@@ -7033,7 +7033,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                         emerald: { border: "rgba(52,211,153,0.3)", color: "rgba(52,211,153,0.9)", bg: "rgba(52,211,153,0.06)", hoverBg: "rgba(52,211,153,0.15)" },
                         blue:    { border: "rgba(96,165,250,0.3)", color: "rgba(96,165,250,0.9)", bg: "rgba(96,165,250,0.06)", hoverBg: "rgba(96,165,250,0.15)" },
                         purple:  { border: "rgba(167,139,250,0.3)", color: "rgba(167,139,250,0.9)", bg: "rgba(167,139,250,0.06)", hoverBg: "rgba(167,139,250,0.15)" },
-                        orange:  { border: "rgba(251,146,60,0.3)", color: "rgba(251,146,60,0.9)", bg: "rgba(251,146,60,0.06)", hoverBg: "rgba(251,146,60,0.15)" },
+                        orange:  { border: "rgba(255,43,77,0.3)", color: "rgba(255,43,77,0.9)", bg: "rgba(255,43,77,0.06)", hoverBg: "rgba(255,43,77,0.15)" },
                         red:     { border: "rgba(248,113,113,0.3)", color: "rgba(248,113,113,0.9)", bg: "rgba(248,113,113,0.06)", hoverBg: "rgba(248,113,113,0.15)" },
                         rose:    { border: "rgba(251,113,133,0.3)", color: "rgba(251,113,133,0.9)", bg: "rgba(251,113,133,0.06)", hoverBg: "rgba(251,113,133,0.15)" },
                         yellow:  { border: "rgba(250,204,21,0.3)", color: "rgba(250,204,21,0.9)", bg: "rgba(250,204,21,0.06)", hoverBg: "rgba(250,204,21,0.15)" },
@@ -7110,11 +7110,11 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                           </div>
                         );
                         if (line.role === "confirm") {
-                          const riskColors: Record<string, string> = { critical: "#ff4444", high: "#f87171", medium: "#fbbf24", low: "#60a5fa" };
+                          const riskColors: Record<string, string> = { critical: "#ff4444", high: "#f87171", medium: "#ff5c78", low: "#60a5fa" };
                           const riskLabels: Record<string, string> = { critical: "خطر بالغ", high: "خطر عالٍ", medium: "خطر متوسط", low: "خطر منخفض" };
                           const riskIcons: Record<string, string> = { critical: "🔴", high: "🟠", medium: "🟡", low: "🔵" };
                           const riskKey = line.risk || "medium";
-                          const riskColor = riskColors[riskKey] || "#fbbf24";
+                          const riskColor = riskColors[riskKey] || "#ff5c78";
                           return (
                             <div key={i} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${riskColor}40`, background: "rgba(0,0,0,0.4)" }}>
                               <div className="flex items-center gap-1.5 px-2.5 py-1.5" style={{ background: `${riskColor}18`, borderBottom: `1px solid ${riskColor}25` }}>
@@ -7300,7 +7300,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                           )}
                             title="اقتراح أدوات الاستغلال"
                             className="text-[7px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 transition"
-                            style={{ border: "1px solid rgba(251,146,60,0.3)", color: "rgba(251,146,60,0.6)" }}>
+                            style={{ border: "1px solid rgba(255,43,77,0.3)", color: "rgba(255,43,77,0.6)" }}>
                             <Zap className="w-2 h-2" />
                             Exploit
                           </button>
@@ -7310,7 +7310,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                           <div className="flex items-center gap-1">
                             <div className="w-16 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
                               <div className="h-full rounded-full transition-all"
-                                style={{ width: `${kaliMissionProgress.percentage}%`, background: kaliMissionProgress.percentage >= 80 ? "#22c55e" : kaliMissionProgress.percentage >= 40 ? "#f59e0b" : "#ef4444" }} />
+                                style={{ width: `${kaliMissionProgress.percentage}%`, background: kaliMissionProgress.percentage >= 80 ? "#22c55e" : kaliMissionProgress.percentage >= 40 ? "#ff2b4d" : "#ef4444" }} />
                             </div>
                             <span className="text-[6px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>
                               {kaliMissionProgress.percentage}%
@@ -7328,16 +7328,16 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   </div>
                   {/* ── Exploit Suggestions Panel ── */}
                   {kaliShowExploitPanel && kaliExploitSuggestions.length > 0 && (
-                    <div className="shrink-0 border-t overflow-y-auto max-h-40" style={{ borderColor: "rgba(251,146,60,0.2)", background: "rgba(5,2,0,0.98)" }}>
-                      <div className="flex items-center justify-between px-3 py-1 border-b" style={{ borderColor: "rgba(251,146,60,0.15)" }}>
-                        <span className="text-[8px] font-bold" style={{ color: "rgba(251,146,60,0.8)" }}>🎯 اقتراحات الاستغلال ({kaliExploitSuggestions.length})</span>
+                    <div className="shrink-0 border-t overflow-y-auto max-h-40" style={{ borderColor: "rgba(255,43,77,0.2)", background: "rgba(5,2,0,0.98)" }}>
+                      <div className="flex items-center justify-between px-3 py-1 border-b" style={{ borderColor: "rgba(255,43,77,0.15)" }}>
+                        <span className="text-[8px] font-bold" style={{ color: "rgba(255,43,77,0.8)" }}>🎯 اقتراحات الاستغلال ({kaliExploitSuggestions.length})</span>
                         <button onClick={() => setKaliShowExploitPanel(false)} style={{ color: "rgba(255,255,255,0.3)" }}><X className="w-3 h-3" /></button>
                       </div>
                       <div className="flex flex-col gap-0.5 p-1">
                         {kaliExploitSuggestions.map((s, i) => (
                           <div key={i} className="flex items-start gap-2 px-2 py-1 rounded text-[8px] font-mono cursor-pointer hover:bg-white/5 transition"
                             onClick={() => { void sendDolphinToKali(`نفّذ: ${s.command}`); setKaliShowExploitPanel(false); }}>
-                            <span style={{ color: s.riskLevel === "critical" ? "#ef4444" : s.riskLevel === "high" ? "#f97316" : s.riskLevel === "medium" ? "#eab308" : "#22c55e" }}>●</span>
+                            <span style={{ color: s.riskLevel === "critical" ? "#ef4444" : s.riskLevel === "high" ? "#ff2b4d" : s.riskLevel === "medium" ? "#eab308" : "#22c55e" }}>●</span>
                             <div>
                               <div style={{ color: "rgba(255,160,80,0.9)" }}>{s.tool}</div>
                               <div style={{ color: "rgba(255,255,255,0.35)" }}>{s.description}</div>
@@ -7532,7 +7532,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                               kaliFindings.slice(0, 50).map((finding) => {
                                 const typeColor: Record<string, string> = {
                                   ip: "#60a5fa", cve: "#f87171", cred: "#ff4444", hash: "#a78bfa",
-                                  port: "#34d399", service: "#fbbf24", url: "#60a5fa", file: "#e5e7eb",
+                                  port: "#34d399", service: "#ff5c78", url: "#60a5fa", file: "#e5e7eb",
                                   user: "#818cf8", vuln: "#f87171",
                                 };
                                 const typeIcon: Record<string, string> = {
@@ -7592,7 +7592,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                                 { type: "cred", label: "🔑 Cred", color: "#ff4444" },
                                 { type: "hash", label: "#️⃣ Hash", color: "#a78bfa" },
                                 { type: "port", label: "🔌 Port", color: "#34d399" },
-                                { type: "service", label: "⚙ Svc", color: "#fbbf24" },
+                                { type: "service", label: "⚙ Svc", color: "#ff5c78" },
                               ].map(t => {
                                 const count = kaliFindings.filter(f => f.type === t.type).length;
                                 return (
@@ -8358,14 +8358,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                             <div key={i}>
                               <div className="flex items-center justify-between mb-0.5">
                                 <span className="text-[7px] font-mono text-cyan-400 truncate flex-1">{d.mount}</span>
-                                <span className="text-[7px] font-mono shrink-0 ml-2" style={{ color: d.pct > 85 ? "#f87171" : d.pct > 60 ? "#fbbf24" : "#4ade80" }}>{d.pct}%</span>
+                                <span className="text-[7px] font-mono shrink-0 ml-2" style={{ color: d.pct > 85 ? "#f87171" : d.pct > 60 ? "#ff5c78" : "#4ade80" }}>{d.pct}%</span>
                                 <span className="text-[6px] font-mono shrink-0 ml-1 text-cyan-900">{d.fs}</span>
                               </div>
                               <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
                                 <div className="h-full rounded-full transition-all"
                                   style={{
                                     width: `${d.pct}%`,
-                                    background: d.pct > 85 ? "#f87171" : d.pct > 60 ? "#fbbf24" : "#22d3ee",
+                                    background: d.pct > 85 ? "#f87171" : d.pct > 60 ? "#ff5c78" : "#22d3ee",
                                   }} />
                               </div>
                             </div>
@@ -8465,7 +8465,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                             <div key={i} className="grid grid-cols-4 gap-1 py-0.5 border-b border-cyan-900/10 last:border-0">
                               <span className="text-[7px] font-mono text-cyan-700">{p.pid}</span>
                               <span className="text-[7px] font-mono text-cyan-300 truncate">{p.name}</span>
-                              <span className="text-[7px] font-mono" style={{ color: parseFloat(p.cpu) > 50 ? "#f87171" : parseFloat(p.cpu) > 20 ? "#fbbf24" : "#4ade80" }}>{p.cpu}</span>
+                              <span className="text-[7px] font-mono" style={{ color: parseFloat(p.cpu) > 50 ? "#f87171" : parseFloat(p.cpu) > 20 ? "#ff5c78" : "#4ade80" }}>{p.cpu}</span>
                               <span className="text-[7px] font-mono text-cyan-600">{p.mem}</span>
                             </div>
                           ))}
@@ -10937,7 +10937,7 @@ function OpenClawPanel({ apiBase, agentConnected }: { apiBase: string; agentConn
         <div className="text-[9px] font-bold text-orange-400 uppercase tracking-wide">MCP Server Endpoint</div>
         <div className="flex items-center gap-2">
           <code className="flex-1 text-[8px] font-mono text-orange-200 break-all bg-black/50 px-2 py-1 rounded">{endpoint}</code>
-          <button onClick={() => copyText(endpoint, "endpoint")} className="shrink-0 px-2 py-1 rounded text-[8px] font-mono transition-all" style={{ background: "rgba(255,140,0,0.1)", border: "1px solid rgba(255,140,0,0.2)", color: copied === "endpoint" ? "#4ade80" : "#fb923c" }}>
+          <button onClick={() => copyText(endpoint, "endpoint")} className="shrink-0 px-2 py-1 rounded text-[8px] font-mono transition-all" style={{ background: "rgba(255,140,0,0.1)", border: "1px solid rgba(255,140,0,0.2)", color: copied === "endpoint" ? "#4ade80" : "#ff5c78" }}>
             {copied === "endpoint" ? "✓ تم" : "نسخ"}
           </button>
         </div>
@@ -11007,7 +11007,7 @@ function OpenClawPanel({ apiBase, agentConnected }: { apiBase: string; agentConn
           <div className="text-[9px] font-bold text-orange-400">🧪 اختبار MCP مباشر</div>
           <button onClick={() => void testExec()} disabled={testBusy || !agentConnected}
             className="px-3 py-1 rounded-lg text-[8px] font-mono transition-all disabled:opacity-40"
-            style={{ background: "rgba(255,140,0,0.12)", border: "1px solid rgba(255,140,0,0.3)", color: "#fb923c" }}>
+            style={{ background: "rgba(255,140,0,0.12)", border: "1px solid rgba(255,140,0,0.3)", color: "#ff5c78" }}>
             {testBusy ? "⏳ جارٍ..." : "▶ تشغيل kali_exec"}
           </button>
         </div>
@@ -11030,7 +11030,7 @@ function OpenClawPanel({ apiBase, agentConnected }: { apiBase: string; agentConn
           />
           <button onClick={() => void sendChat()} disabled={chatBusy || !chatMsg.trim() || !agentConnected}
             className="shrink-0 px-2.5 py-1.5 rounded-lg text-[8px] font-mono transition-all disabled:opacity-40"
-            style={{ background: "rgba(255,140,0,0.15)", border: "1px solid rgba(255,140,0,0.3)", color: "#fb923c" }}>
+            style={{ background: "rgba(255,140,0,0.15)", border: "1px solid rgba(255,140,0,0.3)", color: "#ff5c78" }}>
             {chatBusy ? "⏳" : "إرسال"}
           </button>
         </div>
@@ -11092,7 +11092,7 @@ export function NovaIQBadge() {
     return () => clearInterval(t);
   }, [fetchIQ]);
 
-  const iqColor = iq >= 150 ? "#00ff88" : iq >= 120 ? "#fbbf24" : iq >= 90 ? "#60a5fa" : "#f87171";
+  const iqColor = iq >= 150 ? "#00ff88" : iq >= 120 ? "#ff5c78" : iq >= 90 ? "#60a5fa" : "#f87171";
   const iqLabel = iq >= 160 ? "GENIUS" : iq >= 130 ? "SUPERIOR" : iq >= 110 ? "HIGH" : iq >= 90 ? "AVERAGE" : "LEARNING";
 
   return (
@@ -11153,7 +11153,7 @@ export function NovaCveLiveTab() {
   const [hunting, setHunting] = React.useState(false);
   const [liveCount, setLiveCount] = React.useState(0);
 
-  const sevColor: Record<string,string> = { CRITICAL: "#ff0044", HIGH: "#ff6600", MEDIUM: "#fbbf24", LOW: "#60a5fa", UNKNOWN: "#94a3b8" };
+  const sevColor: Record<string,string> = { CRITICAL: "#ff0044", HIGH: "#ff6600", MEDIUM: "#ff5c78", LOW: "#60a5fa", UNKNOWN: "#94a3b8" };
 
   // Load initial buffer
   React.useEffect(() => {
@@ -11682,7 +11682,7 @@ export function NovaAutonomousChat({ sessionId = "default" }: { sessionId?: stri
           </div>
         ))}
         {pendingConfirm && (
-          <div className="p-3 rounded-xl space-y-2" style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.45)" }}>
+          <div className="p-3 rounded-xl space-y-2" style={{ background: "rgba(255,92,120,0.08)", border: "1px solid rgba(255,92,120,0.45)" }}>
             <div className="text-[9px] font-black text-amber-300">⏸️ موافقة مطلوبة قبل التنفيذ</div>
             <div className="text-[8px] text-amber-100/80 leading-relaxed">{pendingConfirm.reason}</div>
             <pre className="text-[8px] text-amber-200/70 whitespace-pre-wrap break-all font-mono">{pendingConfirm.tool} {pendingConfirm.args}</pre>

@@ -164,7 +164,7 @@ export default function Settings() {
           {(showGuide || (!statusOk && probe !== null)) && (
             <div className="rounded-xl p-4 space-y-3 text-[11px] font-mono"
               style={{ background: "rgba(255,100,0,0.04)", border: "1px solid rgba(255,100,0,0.15)" }}>
-              <div className="font-black text-[12px]" style={{ color: "#ff9944" }}>
+              <div className="font-black text-[12px]" style={{ color: "#ff5c78" }}>
                 {statusCors ? "⚠ Ollama شغّال لكن CORS مطلوب" : "❌ Ollama غير شغّال"}
               </div>
               <div style={{ color: "rgba(255,255,255,0.55)" }}>شغّل Ollama بهذا الأمر:</div>

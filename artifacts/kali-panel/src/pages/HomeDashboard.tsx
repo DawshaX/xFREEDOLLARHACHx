@@ -246,7 +246,7 @@ const SERVICES = {
 const TOTAL = Object.values(SERVICES).reduce((s, a) => s + a.length, 0);
 const SRC_COLORS: Record<string, string> = {
   NVD:"#34d399", GitHub:"#a78bfa", "CISA-KEV":"#f87171",
-  ExploitDB:"#fbbf24", PacketStorm:"#f97316", VulDB:"#22d3ee", CIRCL:"#60a5fa",
+  ExploitDB:"#ff5c78", PacketStorm:"#ff2b4d", VulDB:"#22d3ee", CIRCL:"#60a5fa",
 };
 const SOURCE_URLS: Record<string, (id: string) => string> = {
   "NVD":         (id) => `https://nvd.nist.gov/vuln/detail/${id}`,
@@ -259,7 +259,7 @@ const SOURCE_URLS: Record<string, (id: string) => string> = {
   "CIRCL":       (id) => `https://cve.circl.lu/cve/${id}`,
 };
 const ACT_COLORS: Record<ActivityType, string> = {
-  cve:"#f87171", hunt:"#fbbf24", system:"#22d3ee", api:"#a78bfa", alert:"#fb923c", nav:"#34d399", refresh:"#60a5fa",
+  cve:"#f87171", hunt:"#ff5c78", system:"#22d3ee", api:"#a78bfa", alert:"#ff5c78", nav:"#34d399", refresh:"#60a5fa",
 };
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
@@ -349,7 +349,7 @@ function LiveVitalsStrip({ sys, cveDbStats, snapshotTotal, corpusAgeMin, corpusG
     { label: "📚 الكوربوس", value: total == null ? "غير مقاس" : `${total.toLocaleString("en-US")} ثغرة`, color: "#00ff88", hint: "NVD 2.0 + CISA KEV + EPSS — الرقم الحي من /cve/db/stats", to: "/cve-db" },
     { label: "⟳ الطروة", value: ageText, color: ageColor, hint: "عمر آخر مزامنة كوربوس — أخضر ≤90د", to: "/cve-live" },
     { label: "⚡ آخر كسب", value: corpusGain ? `+${corpusGain.gained.toLocaleString("en-US")}` : "—", color: "#e879f9", hint: corpusGain ? `عبر ${corpusGain.via}` : "أول مزامنة لسه ما حصلتش", to: "/cve-live" },
-    { label: "🎯 KEV", value: cveDbStats?.corpus?.kev != null ? `${cveDbStats.corpus.kev}` : "—", color: "#f59e0b", hint: "ثغرات CISA KEV المقاسة في الكوربوس", to: "/cve-db" },
+    { label: "🎯 KEV", value: cveDbStats?.corpus?.kev != null ? `${cveDbStats.corpus.kev}` : "—", color: "#ff2b4d", hint: "ثغرات CISA KEV المقاسة في الكوربوس", to: "/cve-db" },
     // TEST7 «اجمع الثغرات»: التغطية من قاعدة NVD الكاملة — قِيس من كيرسر الـwalk
     { label: "🗺️ تغطية NVD", value: (() => { const cov = cveDbStats?.corpus?.coverage; const nvd = cveDbStats?.corpus?.nvdTotal; return cov != null && nvd ? `${Math.round(cov * 100)}% من ${nvd.toLocaleString("en-US")}` : "—"; })(), color: "#38bdf8", hint: "الكوربوس بيكمّل قاعدة NVD جولة ورا جولة (walk) — كل دمج بيزود", to: "/cve-db" },
   ];
@@ -483,12 +483,12 @@ function ThreatGauge({ cveDbStats }: { cveDbStats: CveDbStats | null }) {
   const low  = (sev["LOW"] ?? sev["low"] ?? 0);
   const score = Math.min(100, Math.round(((crit * 10 + high * 7 + med * 4 + low * 1) / (t * 10)) * 100));
   const level = score >= 70 ? { label: "CRITICAL", color: "#f87171", bg: "rgba(248,113,113,0.12)" }
-              : score >= 45 ? { label: "HIGH",     color: "#fb923c", bg: "rgba(251,146,60,0.12)" }
+              : score >= 45 ? { label: "HIGH",     color: "#ff5c78", bg: "rgba(255,43,77,0.12)" }
               : score >= 25 ? { label: "MEDIUM",   color: "#facc15", bg: "rgba(250,204,21,0.12)" }
               :               { label: "LOW",      color: "#34d399", bg: "rgba(52,211,153,0.12)" };
   const bars = [
     { label: "CRITICAL", v: crit, c: "#f87171", pct: Math.round((crit/t)*100) },
-    { label: "HIGH",     v: high, c: "#fb923c", pct: Math.round((high/t)*100) },
+    { label: "HIGH",     v: high, c: "#ff5c78", pct: Math.round((high/t)*100) },
     { label: "MEDIUM",   v: med,  c: "#facc15", pct: Math.round((med/t)*100)  },
     { label: "LOW",      v: low,  c: "#60a5fa", pct: Math.round((low/t)*100)  },
   ];
@@ -1462,7 +1462,7 @@ export default function HomeDashboard() {
   const cats   = Object.keys(SERVICES) as SvcKey[];
   const catArr = SERVICES[activeCat as SvcKey] as readonly { id: string; name: string; icon: React.ComponentType<{ className?: string }> }[];
   const catAct = catArr.filter(s => isActive(s.id)).length;
-  const sevColor = (s: string) => s === "CRITICAL" ? "#f87171" : s === "HIGH" ? "#fb923c" : s === "MEDIUM" ? "#facc15" : "#60a5fa";
+  const sevColor = (s: string) => s === "CRITICAL" ? "#f87171" : s === "HIGH" ? "#ff5c78" : s === "MEDIUM" ? "#facc15" : "#60a5fa";
 
   const BOT_CARDS = [
     { label:"استوديو البج باونتي", desc:"HackerOne & VRP Studio", icon:Shield,   path:"/bug-bounty-studio", color:"text-emerald-400 border-emerald-500/40 bg-emerald-500/15" },
@@ -1617,11 +1617,11 @@ export default function HomeDashboard() {
           {/* Activity log */}
           <button onClick={() => { setActivityLogOpen(o => !o); addLog("nav", "فتح سجل الأحداث"); }} title="سجل الأحداث"
             className="relative flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-mono transition-all hover:scale-105"
-            style={{ background: activityLogOpen ? "rgba(251,146,60,0.15)" : "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.25)", color: "#fb923c" }}>
+            style={{ background: activityLogOpen ? "rgba(255,43,77,0.15)" : "rgba(255,43,77,0.08)", border: "1px solid rgba(255,43,77,0.25)", color: "#ff5c78" }}>
             <History className="w-3 h-3" />
             <span className="hidden sm:inline">السجل</span>
             {activityLog.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[7px] font-black flex items-center justify-center" style={{ background: "#fb923c", color: "#000" }}>
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[7px] font-black flex items-center justify-center" style={{ background: "#ff5c78", color: "#000" }}>
                 {activityLog.length > 99 ? "!" : activityLog.length}
               </span>
             )}
@@ -1814,7 +1814,7 @@ export default function HomeDashboard() {
                 </div>
 
                 {/* 3. الي هيعملو بعد كده (What It Will Do Next) */}
-                <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.28)" }}>
+                <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(255,43,77,0.06)", border: "1px solid rgba(255,43,77,0.28)" }}>
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black text-amber-300">🧭 3. اللي هيعمله بعد كده (الخطة القادمة)</span>
                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
@@ -1908,7 +1908,7 @@ export default function HomeDashboard() {
                 { id: "journal",     label: "📋 اليوميات",    count: activityLog.length,                                                                              color: "#34d399" },
                 { id: "running",     label: "⚡ الجارية",     count: agentTasksList.filter(t => t.status === "running").length,                                        color: "#60a5fa" },
                 { id: "completed",   label: "✅ المنجزة",     count: agentTasksList.filter(t => t.status === "completed").length,                                      color: "#34d399" },
-                { id: "pending",     label: "⏳ الانتظار",    count: agentTasksList.filter(t => ["planned","pending","failed"].includes(t.status)).length,              color: "#fb923c" },
+                { id: "pending",     label: "⏳ الانتظار",    count: agentTasksList.filter(t => ["planned","pending","failed"].includes(t.status)).length,              color: "#ff5c78" },
                 { id: "session",     label: "💻 الجلسة",      count: null,                                                                                             color: "#a78bfa" },
               ] as const).map(tab => (
                 <button key={tab.id} onClick={() => setActiveTaskTab(tab.id)}
@@ -1962,18 +1962,18 @@ export default function HomeDashboard() {
                             { key: "CIRCL", val: sc.circl, src: "CIRCL"      },
                           ].filter(x => x.val > 0);
                           return (
-                            <div key={i} className="rounded-xl overflow-hidden log-entry-in" style={{ background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.2)" }}>
-                              <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ borderColor: "rgba(251,191,36,0.1)" }}>
+                            <div key={i} className="rounded-xl overflow-hidden log-entry-in" style={{ background: "rgba(255,92,120,0.04)", border: "1px solid rgba(255,92,120,0.2)" }}>
+                              <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ borderColor: "rgba(255,92,120,0.1)" }}>
                                 <span className="text-[8px] font-mono shrink-0" style={{ color: "rgba(255,255,255,0.2)" }}>{entry.ts.toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</span>
                                 <span className="text-[10px] text-white/70 flex-1">{entry.msg}</span>
-                                <span className="px-1.5 py-px rounded text-[7px] font-black shrink-0" style={{ background: "rgba(251,191,36,0.18)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.3)" }}>بحث</span>
+                                <span className="px-1.5 py-px rounded text-[7px] font-black shrink-0" style={{ background: "rgba(255,92,120,0.18)", color: "#ff5c78", border: "1px solid rgba(255,92,120,0.3)" }}>بحث</span>
                               </div>
                               <div className="flex flex-wrap gap-1.5 px-3 py-2 items-center">
                                 {srcMap.map(({ key, val, src }) => (
                                   <button key={key} onClick={() => { setCveBrowserSrc(src); setCveBrowserOpen(true); addLog("nav", `فلتر KB: ${src}`); }}
                                     className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black hover:scale-105 transition-all"
                                     style={{ background: `${SRC_COLORS[src] ?? "#ffffff"}12`, color: SRC_COLORS[src] ?? "#ffffff60", border: `1px solid ${SRC_COLORS[src] ?? "#ffffff"}28` }}>
-                                    {key} <span style={{ color: "#fbbf24" }}>+{val}</span>
+                                    {key} <span style={{ color: "#ff5c78" }}>+{val}</span>
                                   </button>
                                 ))}
                                 <button onClick={() => { setCveBrowserOpen(true); addLog("nav", "فتح نتائج الصيد في KB"); }}
@@ -2078,11 +2078,11 @@ export default function HomeDashboard() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {agentTasksList.filter(t => ["planned","pending","failed"].includes(t.status)).map(t => (
-                        <div key={t.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: t.status === "failed" ? "rgba(239,68,68,0.06)" : "rgba(251,146,60,0.06)", border: `1px solid ${t.status === "failed" ? "rgba(239,68,68,0.3)" : "rgba(251,146,60,0.25)"}` }}>
-                          <Clock className="w-4 h-4 shrink-0" style={{ color: t.status === "failed" ? "#ef4444" : "#fb923c" }} />
+                        <div key={t.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: t.status === "failed" ? "rgba(239,68,68,0.06)" : "rgba(255,43,77,0.06)", border: `1px solid ${t.status === "failed" ? "rgba(239,68,68,0.3)" : "rgba(255,43,77,0.25)"}` }}>
+                          <Clock className="w-4 h-4 shrink-0" style={{ color: t.status === "failed" ? "#ef4444" : "#ff5c78" }} />
                           <div className="min-w-0 flex-1">
                             <div className="text-[11px] font-bold text-white/75 truncate">{t.title}</div>
-                            <div className="text-[9px] font-mono mt-0.5" style={{ color: t.status === "failed" ? "rgba(239,68,68,0.6)" : "rgba(251,146,60,0.6)" }}>{t.status.toUpperCase()}</div>
+                            <div className="text-[9px] font-mono mt-0.5" style={{ color: t.status === "failed" ? "rgba(239,68,68,0.6)" : "rgba(255,43,77,0.6)" }}>{t.status.toUpperCase()}</div>
                           </div>
                         </div>
                       ))}
@@ -2116,8 +2116,8 @@ export default function HomeDashboard() {
                           { label: "إجمالي الإجراءات", value: String(activityLog.length),  color: "#34d399" },
                           { label: "تنقل بين الصفحات", value: String(navs),                 color: "#60a5fa" },
                           { label: "استدعاءات API",   value: String(apis),                  color: "#a78bfa" },
-                          { label: "مهام الأجينت",    value: String(agentTasksList.length),  color: "#fb923c" },
-                          { label: "تنبيهات",          value: String(alerts),                color: "#fb923c" },
+                          { label: "مهام الأجينت",    value: String(agentTasksList.length),  color: "#ff5c78" },
+                          { label: "تنبيهات",          value: String(alerts),                color: "#ff5c78" },
                         ].map(({ label, value, color }) => (
                           <div key={label} className="flex flex-col items-center justify-center p-3 rounded-xl" style={{ background: `${color}08`, border: `1px solid ${color}22` }}>
                             <div className="text-[20px] font-black font-mono" style={{ color, textShadow: `0 0 10px ${color}55` }}>{value}</div>
@@ -2202,7 +2202,7 @@ export default function HomeDashboard() {
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-mono shrink-0" style={{ background: "rgba(30,100,255,0.12)", color: "#60a5fa", border: "1px solid rgba(30,100,255,0.3)" }}>
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />LIVE DB
                 </div>
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-mono shrink-0" style={{ background: sseConnected ? "rgba(52,211,153,0.08)" : "rgba(255,100,0,0.08)", color: sseConnected ? "#34d399" : "#fb923c", border: `1px solid ${sseConnected ? "rgba(52,211,153,0.25)" : "rgba(255,100,0,0.25)"}` }}>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-mono shrink-0" style={{ background: sseConnected ? "rgba(52,211,153,0.08)" : "rgba(255,100,0,0.08)", color: sseConnected ? "#34d399" : "#ff5c78", border: `1px solid ${sseConnected ? "rgba(52,211,153,0.25)" : "rgba(255,100,0,0.25)"}` }}>
                   <div className={`w-1.5 h-1.5 rounded-full ${sseConnected ? "bg-emerald-400 animate-pulse" : "bg-orange-400"}`} />
                   {sseConnected ? "STREAM LIVE" : "CONNECTING…"}
                 </div>
@@ -2333,8 +2333,8 @@ export default function HomeDashboard() {
                   </div>
                   {/* High */}
                   <div className="p-4 flex flex-col items-center justify-center text-center" style={{ borderRight: "1px solid rgba(255,255,255,0.05)" }}>
-                    <div className="text-[8px] font-mono font-black uppercase tracking-widest mb-1" style={{ color: "rgba(251,146,60,0.55)" }}>HIGH</div>
-                    <div className="text-[26px] font-black font-mono" style={{ color: "#fb923c", textShadow: "0 0 12px rgba(251,146,60,0.45)" }}>
+                    <div className="text-[8px] font-mono font-black uppercase tracking-widest mb-1" style={{ color: "rgba(255,43,77,0.55)" }}>HIGH</div>
+                    <div className="text-[26px] font-black font-mono" style={{ color: "#ff5c78", textShadow: "0 0 12px rgba(255,43,77,0.45)" }}>
                       {((cveDbStats?.bySeverity?.["HIGH"] ?? cveDbStats?.bySeverity?.["high"]) ?? 0).toLocaleString()}
                     </div>
                   </div>
@@ -2425,7 +2425,7 @@ export default function HomeDashboard() {
                       <button key={i} onClick={() => { setCveBrowserSrc(src); setCveBrowserOpen(true); addLog("nav", `فتح متصفح CVE — المصدر: ${src}`); }}
                         className="flex items-center gap-1.5 shrink-0 px-2 py-1 rounded transition-all hover:scale-105 active:scale-95"
                         style={{ background: "rgba(30,100,255,0.1)", border: "1px solid rgba(30,100,255,0.2)" }}>
-                        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ["#34d399","#a78bfa","#f87171","#fbbf24","#f97316","#22d3ee","#60a5fa","#ec4899","#10b981"][i % 9] }} />
+                        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ["#34d399","#a78bfa","#f87171","#ff5c78","#ff2b4d","#22d3ee","#60a5fa","#ec4899","#10b981"][i % 9] }} />
                         <span className="text-[9px] font-mono font-black" style={{ color: "rgba(255,255,255,0.75)" }}>{src}</span>
                         <span className="text-[9px] font-mono font-bold" style={{ color: "rgba(147,197,253,0.65)" }}>{cnt.toLocaleString()}</span>
                       </button>
@@ -2459,7 +2459,7 @@ export default function HomeDashboard() {
                           className="flex items-center gap-1.5 px-2 py-1 rounded transition-all hover:scale-105"
                           style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)" }}>
                           <span className="text-[9px] font-black font-mono" style={{ color: "#f87171" }}>{c.id}</span>
-                          <span className="text-[8px] font-mono font-black" style={{ color: "#fbbf24" }}>EPSS {(c.epssScore * 100).toFixed(0)}%</span>
+                          <span className="text-[8px] font-mono font-black" style={{ color: "#ff5c78" }}>EPSS {(c.epssScore * 100).toFixed(0)}%</span>
                           {c.exploitType && <span className="text-[7px] font-mono px-1 rounded" style={{ background: "rgba(168,85,247,0.15)", color: "#c084fc" }}>{c.exploitType}</span>}
                         </button>
                       ))}
@@ -2471,13 +2471,13 @@ export default function HomeDashboard() {
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 border-t" style={{ borderColor: "rgba(255,255,255,0.04)", background: "rgba(0,0,0,0.55)" }}>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <div className={`w-1.5 h-1.5 rounded-full ${sseConnected ? "bg-emerald-400 animate-pulse" : "bg-orange-400 animate-pulse"}`} />
-                    <span className="text-[8px] font-mono font-black" style={{ color: sseConnected ? "rgba(52,211,153,0.65)" : "rgba(251,146,60,0.65)" }}>
+                    <span className="text-[8px] font-mono font-black" style={{ color: sseConnected ? "rgba(52,211,153,0.65)" : "rgba(255,43,77,0.65)" }}>
                       {sseConnected ? "بث مباشر (SSE + WebSocket) · 9 مصادر:" : "جاري الاتصال:"}
                     </span>
                   </div>
                   {(["NVD","GitHub","CISA","ExploitDB","PacketStorm","VulDB","CIRCL","Immunefi-Web3","AI-Mutated"] as const).map((src, i) => (
                     <div key={i} className="flex items-center gap-1 shrink-0">
-                      <div className="w-1 h-1 rounded-full" style={{ background: ["#34d399","#a78bfa","#f87171","#fbbf24","#f97316","#22d3ee","#60a5fa","#ec4899","#10b981"][i] }} />
+                      <div className="w-1 h-1 rounded-full" style={{ background: ["#34d399","#a78bfa","#f87171","#ff5c78","#ff2b4d","#22d3ee","#60a5fa","#ec4899","#10b981"][i] }} />
                       <span className="text-[8px] font-mono" style={{ color: "rgba(255,255,255,0.3)" }}>{src}</span>
                     </div>
                   ))}
@@ -2590,7 +2590,7 @@ export default function HomeDashboard() {
                     {["ALL","CRITICAL","HIGH","MEDIUM","LOW"].map(s => (
                       <button key={s} onClick={() => setCveBrowserSev(s)}
                         className="text-[9px] font-black px-2 py-1 rounded transition-all hover:scale-105"
-                        style={{ background: cveBrowserSev === s ? (s==="CRITICAL"?"rgba(248,113,113,0.25)":s==="HIGH"?"rgba(251,146,60,0.25)":s==="MEDIUM"?"rgba(250,204,21,0.25)":s==="LOW"?"rgba(96,165,250,0.25)":"rgba(255,255,255,0.15)") : "rgba(255,255,255,0.05)", color: cveBrowserSev === s ? (s==="CRITICAL"?"#f87171":s==="HIGH"?"#fb923c":s==="MEDIUM"?"#facc15":s==="LOW"?"#60a5fa":"#fff") : "rgba(255,255,255,0.3)", border: `1px solid ${cveBrowserSev === s ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.08)"}` }}>
+                        style={{ background: cveBrowserSev === s ? (s==="CRITICAL"?"rgba(248,113,113,0.25)":s==="HIGH"?"rgba(255,43,77,0.25)":s==="MEDIUM"?"rgba(250,204,21,0.25)":s==="LOW"?"rgba(96,165,250,0.25)":"rgba(255,255,255,0.15)") : "rgba(255,255,255,0.05)", color: cveBrowserSev === s ? (s==="CRITICAL"?"#f87171":s==="HIGH"?"#ff5c78":s==="MEDIUM"?"#facc15":s==="LOW"?"#60a5fa":"#fff") : "rgba(255,255,255,0.3)", border: `1px solid ${cveBrowserSev === s ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.08)"}` }}>
                         {s === "ALL" ? "الكل" : s}
                       </button>
                     ))}
