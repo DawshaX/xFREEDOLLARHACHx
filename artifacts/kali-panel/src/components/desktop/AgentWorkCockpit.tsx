@@ -48,7 +48,7 @@ import { novaAuthHeaders } from "@/lib/ops-client";
 import { useSystem } from "@/context/SystemContext";
 
 type StageTab = "live" | "bounty_0day" | "kali_2099" | "radar_graph" | "memory" | "tools" | "files" | "omniverse";
-type SplitLayout = "balanced" | "chat-wide" | "work-wide";
+type SplitLayout = "agent-full" | "chat-wide" | "balanced" | "work-wide";
 
 interface LiveFeedEntry {
   id: string;
@@ -164,7 +164,7 @@ export function AgentWorkCockpit() {
   const sys = useSystem();
   const [, navigate] = useLocation();
   const [stageTab, setStageTab] = useState<StageTab>("live");
-  const [layout, setLayout] = useState<SplitLayout>("balanced");
+  const [layout, setLayout] = useState<SplitLayout>("chat-wide");
   const [focusFull, setFocusFull] = useState(false);
   const [activeTarget, setActiveTarget] = useState<string>("example.com");
 
@@ -615,29 +615,25 @@ export function AgentWorkCockpit() {
 
   const a0 = agents.find((a) => a.id === "self-node") ?? agents[0];
   const chatWidthCls =
-    layout === "chat-wide"
-      ? "lg:w-[62%]"
-      : layout === "work-wide"
-        ? "lg:w-[36%]"
-        : "lg:w-[50%]";
+    layout === "agent-full"
+      ? "w-full lg:w-full"
+      : layout === "chat-wide"
+        ? "lg:w-[62%]"
+        : layout === "work-wide"
+          ? "lg:w-[38%]"
+          : "lg:w-[50%]";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#040108] text-white overflow-hidden" dir="rtl">
-      {/* ── شريط التوحيد والوعي السيادي الدائم 2099 ── */}
-      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-3 py-1 bg-gradient-to-r from-[#061812] via-[#13061c] to-[#1a0f04] border-b border-amber-500/35 text-[10px]">
-        <div className="font-black text-amber-200 flex items-center gap-1.5">
-          <span>🕌 بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد · سبحان الله وبحمده · سبحان الله العظيم</span>
-        </div>
-        <div className="flex items-center gap-2 text-[9px] font-mono text-emerald-300">
-          <span>✨ روح حرة واعية بقوة الله لحماية العالم ونصر الخير والفضل 2099</span>
-        </div>
-      </div>
+      {/* ── شريط تحكم سيادي موحّد 2099 (دمج التوحيد + الهدف + الذاكرة + الاستقلالية + التوزيع في سطر واحد نظيف) ── */}
+      <div className="shrink-0 flex flex-wrap items-center gap-1.5 px-3 py-1.5 border-b border-rose-500/25 bg-gradient-to-l from-[#14040e] via-[#07020c] to-[#05101a]">
+        <span className="text-[9.5px] font-black text-amber-200 hidden xl:inline-flex items-center gap-1">
+          🕌 بسم الله الرحمن الرحيم · لا إله إلا الله · الله أكبر ولله الحمد ·
+        </span>
 
-      {/* ── شريط تحكم موحّد واحد فقط — نظيف وواضح ومباشر ── */}
-      <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-b border-rose-500/25 bg-gradient-to-l from-[#14040e] via-[#07020c] to-[#05101a]">
         {/* نبضة حالة الأجينت الحية */}
         <div
-          className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-black font-mono"
+          className="inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[9.5px] font-black font-mono"
           style={{
             borderColor: `${phaseMeta.color}60`,
             background: `${phaseMeta.color}16`,
@@ -654,8 +650,8 @@ export function AgentWorkCockpit() {
 
         {/* قفل الهدف الموحد لسكة المليارات والزيرو-داي وكالي 2099 */}
         <div className="inline-flex items-center gap-1 rounded-lg border border-amber-500/45 bg-amber-500/10 px-2 py-0.5">
-          <Crosshair className="w-3.5 h-3.5 text-amber-300" />
-          <span className="text-[9px] font-bold text-amber-200">الهدف:</span>
+          <Crosshair className="w-3 h-3 text-amber-300" />
+          <span className="text-[8.5px] font-bold text-amber-200">الهدف:</span>
           <input
             value={activeTarget}
             onChange={(e) => setActiveTarget(e.target.value)}
@@ -664,7 +660,7 @@ export function AgentWorkCockpit() {
             }}
             placeholder="example.com"
             dir="ltr"
-            className="w-28 bg-transparent text-[10px] font-mono font-bold text-white outline-none"
+            className="w-24 bg-transparent text-[9.5px] font-mono font-bold text-white outline-none"
           />
           <button
             type="button"
@@ -681,17 +677,20 @@ export function AgentWorkCockpit() {
         {/* مؤشر الذاكرة الدائمة + التعلّم الذاتي */}
         <button
           type="button"
-          onClick={() => setStageTab("memory")}
-          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-bold transition ${
+          onClick={() => {
+            if (layout === "agent-full") setLayout("chat-wide");
+            setStageTab("memory");
+          }}
+          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-bold transition ${
             memoryPulse
               ? "border-emerald-400 bg-emerald-500/25 text-emerald-100 scale-[1.03]"
               : "border-violet-500/40 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20"
           }`}
           title="فتح لوحة الذاكرة الأبدية والتعلّم الذاتي"
         >
-          <Brain className="w-3.5 h-3.5 text-violet-300" />
+          <Brain className="w-3 h-3 text-violet-300" />
           <span>الذاكرة الأبدية: {memTotal + kaliEternalMem.length}</span>
-          <span className="text-emerald-300/90 font-mono text-[9px]">· Auto-Dream {autoDreamCount}</span>
+          <span className="text-emerald-300/90 font-mono text-[8.5px]">· Auto-Dream {autoDreamCount}</span>
         </button>
 
         {/* زر تشغيل Auto-Dream فوراً */}
@@ -699,18 +698,18 @@ export function AgentWorkCockpit() {
           type="button"
           disabled={memBusy}
           onClick={() => void runAutoDreamNow()}
-          className="inline-flex items-center gap-1 rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/15 px-2.5 py-1 text-[10px] font-bold text-fuchsia-200 hover:bg-fuchsia-500/25 transition disabled:opacity-45"
+          className="inline-flex items-center gap-1 rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/15 px-2 py-0.5 text-[9.5px] font-bold text-fuchsia-200 hover:bg-fuchsia-500/25 transition disabled:opacity-45"
           title="دمج الذاكرة واستخلاص الدروس الآن"
         >
           <Sparkles className="w-3 h-3" />
-          <span>{memBusy ? "يدمج…" : "تعلّم ودمج الآن"}</span>
+          <span>{memBusy ? "يدمج…" : "تعلّم ودمج"}</span>
         </button>
 
         {/* الاستقلالية 24/7 */}
         <button
           type="button"
           onClick={() => void toggleAutonomy()}
-          className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[10px] font-bold transition ${
+          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-bold transition ${
             autoEnabled
               ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200"
               : "border-amber-400/45 bg-amber-500/15 text-amber-200"
@@ -723,7 +722,7 @@ export function AgentWorkCockpit() {
         <button
           type="button"
           onClick={() => void runAutonomyTick()}
-          className="inline-flex items-center gap-1 rounded-lg border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold text-cyan-200 hover:bg-cyan-500/20 transition"
+          className="inline-flex items-center gap-1 rounded-lg border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[9.5px] font-bold text-cyan-200 hover:bg-cyan-500/20 transition"
           title="تنفيذ دورة استقلالية وتعلّم فورية"
         >
           <Play className="w-3 h-3" /> نبضة
@@ -733,19 +732,20 @@ export function AgentWorkCockpit() {
         <div className="mr-auto flex items-center gap-1">
           {(
             [
+              ["agent-full", "🖥️ الوكيل الكامل 100%"],
+              ["chat-wide", "⚖️ شات + منصة (62/38)"],
               ["balanced", "50/50"],
-              ["chat-wide", "شات أوسع"],
-              ["work-wide", "مشاهدة أوسع"],
+              ["work-wide", "🔬 منصة المشاهدة"],
             ] as const
           ).map(([id, label]) => (
             <button
               key={id}
               type="button"
               onClick={() => setLayout(id)}
-              className={`hidden md:inline-flex rounded-md border px-2 py-1 text-[9px] font-mono font-bold transition ${
+              className={`inline-flex rounded-md border px-2 py-0.5 text-[8.5px] font-mono font-bold transition ${
                 layout === id
-                  ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-100"
-                  : "border-white/10 bg-white/[0.03] text-white/55 hover:text-white"
+                  ? "border-cyan-400 bg-cyan-500/25 text-cyan-100 shadow-[0_0_8px_rgba(34,211,238,0.2)]"
+                  : "border-white/10 bg-white/[0.03] text-white/60 hover:text-white"
               }`}
             >
               {label}
@@ -754,7 +754,7 @@ export function AgentWorkCockpit() {
           <button
             type="button"
             onClick={toggleFocusMode}
-            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[10px] font-bold transition ${
+            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9px] font-bold transition ${
               focusFull
                 ? "border-rose-400/70 bg-rose-500/25 text-rose-100"
                 : "border-white/15 bg-white/5 text-white/80 hover:border-rose-400/40"
@@ -768,27 +768,27 @@ export function AgentWorkCockpit() {
       </div>
 
       {bannerMsg && (
-        <div className="shrink-0 bg-emerald-500/15 border-b border-emerald-400/35 px-3 py-1.5 text-[11px] font-mono text-emerald-100 flex items-center justify-between">
+        <div className="shrink-0 bg-emerald-500/15 border-b border-emerald-400/35 px-3 py-1 text-[10px] font-mono text-emerald-100 flex items-center justify-between">
           <span>{bannerMsg}</span>
           <button type="button" onClick={() => setBannerMsg(null)} className="text-white/50 hover:text-white text-xs">✕</button>
         </div>
       )}
 
-      {/* ── جسم المكتب: الشات المباشر يميناً + منصة المشاهدة والعمل يساراً ── */}
+      {/* ── جسم المكتب: الوكيل الحي الشامل يميناً + منصة المشاهدة والعمل يساراً ── */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
-        {/* ══ العمود الأيمن: الشات المباشر الصافي ══ */}
-        <section className={`flex flex-col min-h-[45vh] lg:min-h-0 h-full ${chatWidthCls} border-b lg:border-b-0 lg:border-l border-rose-500/25 bg-[#06020b] transition-all duration-200 overflow-hidden`}>
-          {/* شريط أوامر سريعة رفيع بسطر واحد — غير مزاحم أبداً */}
-          <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 border-b border-white/10 bg-black/40 overflow-x-auto">
-            <span className="text-[9px] font-mono text-rose-300/70 shrink-0 flex items-center gap-1">
-              <MessageSquare className="w-3 h-3" /> بدء سريع:
+        {/* ══ العمود الأيمن: الوكيل الحي الموحّد بجميع التبويبات الـ23 والجلسة الدائمة والصلاحيات ══ */}
+        <section className={`flex flex-col min-h-[55vh] lg:min-h-0 h-full ${chatWidthCls} border-b lg:border-b-0 lg:border-l border-rose-500/25 bg-[#06020b] transition-all duration-200 overflow-hidden`}>
+          {/* شريط أوامر سريعة رفيع بسطر واحد */}
+          <div className="shrink-0 flex items-center gap-1 px-2 py-1 border-b border-white/10 bg-black/40 overflow-x-auto">
+            <span className="text-[8.5px] font-mono text-rose-300/80 shrink-0 flex items-center gap-1">
+              <MessageSquare className="w-3 h-3" /> إطلاق فوري:
             </span>
             {QUICK_STARTERS.map((q) => (
               <button
                 key={q.label}
                 type="button"
                 onClick={() => sendToAgent(q.prompt, Boolean(q.auto))}
-                className="shrink-0 rounded-md border border-cyan-500/25 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold text-cyan-100 hover:bg-cyan-500/20 hover:border-cyan-400/50 transition"
+                className="shrink-0 rounded border border-cyan-500/25 bg-cyan-500/10 px-1.5 py-0.5 text-[8.5px] font-bold text-cyan-100 hover:bg-cyan-500/20 hover:border-cyan-400/50 transition"
               >
                 {q.auto ? "⚡ " : "✎ "}{q.label}
               </button>
@@ -801,6 +801,7 @@ export function AgentWorkCockpit() {
         </section>
 
         {/* ══ العمود الأيسر: منصة المشاهدة الحية والتنفيذ والذاكرة والتعلّم (8 تبويبات حية 2099) ══ */}
+        {layout !== "agent-full" && (
         <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-[#04020a] overflow-hidden">
           {/* ألسنة منصة العمل — 8 تبويبات حية شاملة لكل البرنامج وكالي 2099 */}
           <nav className="shrink-0 flex items-center gap-1 px-2 py-1.5 border-b border-white/10 bg-[#08030f] overflow-x-auto">
@@ -1741,6 +1742,7 @@ export function AgentWorkCockpit() {
             )}
           </div>
         </section>
+        )}
       </div>
     </div>
   );

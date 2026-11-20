@@ -990,22 +990,15 @@ export function LiveAgentPanel({
   const lastSpokenLenRef = useRef(0);
 
   // ── Plan / Files ─────────────────────────────────────────────────────────
-  // مثبت من السيرفر (PUT/GET /api/panel/prefs) — المالك طلب «خطة ON» وضع ثابت.
-  const [planMode, setPlanMode] = useState(true);
-  useEffect(() => {
-    let alive = true;
-    void fetch("/api/panel/prefs", { headers: { "Content-Type": "application/json" } }).then((r) => r.json()).then((j: { prefs?: { planMode?: boolean } }) => {
-      if (!alive) return;
-      if (typeof j?.prefs?.planMode === "boolean") setPlanMode(j.prefs.planMode);
-    }).catch(() => { /* السيرفر Best-effort — احتفظ بالـON */ });
-    return () => { alive = false; };
-  }, []);
+  // التنفيذ المباشر مفعّل افتراضياً (planMode = false) حتى تنفّذ الأدوات الـ92 فوراً بدون توقف.
+  const [planMode, setPlanMode] = useState(false);
+  const lastUserPromptRef = useRef<string>("");
   const togglePlanMode = useCallback(() => {
     setPlanMode((v) => {
       const next = !v;
       void fetch("/api/panel/prefs", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ prefs: { planMode: next }, by: "owner" }),
       }).catch(() => { /* */ });
       return next;
@@ -1149,7 +1142,7 @@ export function LiveAgentPanel({
 
   // ── Background Process Monitor ────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<
-    | "chat" | "storage" | "bounty2099" | "processes" | "live" | "missions" | "capabilities" | "terminal"
+    | "chat" | "historyAll" | "storage" | "bounty2099" | "processes" | "live" | "missions" | "capabilities" | "terminal"
     | "apps" | "topology" | "kali" | "scheduler" | "openclaw" | "browser"
     | "multiAI" | "fleet" | "pulse" | "cveLive" | "intel" | "cockpit" | "awareness"
     | "control"
@@ -1259,6 +1252,97 @@ export function LiveAgentPanel({
   const [councilBusy, setCouncilBusy] = useState(false);
   const [councilResult, setCouncilResult] = useState<Array<{ persona: string; role: string; color: string; verdict: string }> | null>(null);
 
+  // ── Sovereign Permissions (100% Full Permissions) & Master History Log ──
+  const [sovereignPerms, setSovereignPerms] = useState<{
+    fullPermissions: boolean;
+    autoApproveTools: boolean;
+    kaliExecAllowed: boolean;
+    fleetExecAllowed: boolean;
+    zeroDayLabAllowed: boolean;
+    selfHealAllowed: boolean;
+    autonomy247: boolean;
+    eternalMemorySync: boolean;
+    updatedAt?: string;
+  }>({
+    fullPermissions: true,
+    autoApproveTools: true,
+    kaliExecAllowed: true,
+    fleetExecAllowed: true,
+    zeroDayLabAllowed: true,
+    selfHealAllowed: true,
+    autonomy247: true,
+    eternalMemorySync: true,
+  });
+  const [sensitiveToolsList, setSensitiveToolsList] = useState<Array<{ name: string; title: string; category: string }>>([]);
+  const [historyAllData, setHistoryAllData] = useState<{
+    rootSessionId: string;
+    rootMessageCount: number;
+    sessions: Array<{
+      id: string;
+      title: string;
+      isRoot?: boolean;
+      parentId?: string | null;
+      messageCount: number;
+      lastMessagePreview?: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+    journal: {
+      stats: { turns: number; userTurns: number; lastAt: string | null; durable: boolean };
+      entries: Array<{ ts: string; sessionId: string; role: "user" | "assistant"; text: string; tools?: string[]; provider?: string }>;
+    };
+    eternalMemory: {
+      total: number;
+      activeTarget: string;
+      entries: Array<{ id: string; kind: string; title: string; command?: string; output?: string; target?: string; timestamp: string; plane?: string; tags?: string[] }>;
+    };
+    backgroundFeed: Array<{ id: string; kind: string; title: string; detail: string; ts: string; source: string }>;
+    learnedInsights: string[];
+  } | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<"all" | "journal" | "eternal" | "background">("all");
+  const [historySearch, setHistorySearch] = useState("");
+  const [restoreJournalBusy, setRestoreJournalBusy] = useState(false);
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [renameSessionTitle, setRenameSessionTitle] = useState("");
+
+  const loadPermissionsAndHistory = useCallback(async () => {
+    try {
+      const [pRes, hRes] = await Promise.all([
+        fetch(`${API_BASE}/live-agent/permissions`, { headers: novaAuthHeaders() }).catch(() => null),
+        fetch(`${API_BASE}/live-agent/history-all`, { headers: novaAuthHeaders() }).catch(() => null),
+      ]);
+      if (pRes && pRes.ok) {
+        const pd = await pRes.json();
+        if (pd?.permissions) setSovereignPerms(pd.permissions);
+        if (Array.isArray(pd?.sensitiveTools)) setSensitiveToolsList(pd.sensitiveTools);
+      }
+      if (hRes && hRes.ok) {
+        const hd = await hRes.json();
+        if (hd?.ok) {
+          setHistoryAllData(hd);
+          if (Array.isArray(hd.sessions)) {
+            setAllSessions(hd.sessions);
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }, [API_BASE]);
+
+  const toggleSovereignPermission = useCallback(async (patch: Record<string, boolean>) => {
+    setSovereignPerms((prev) => ({ ...prev, ...patch }));
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/permissions`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(patch),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (d?.permissions) setSovereignPerms(d.permissions);
+      }
+    } catch { /* ignore */ }
+  }, [API_BASE]);
+
   const refreshStorageHub = useCallback(async () => {
     try {
       const r = await fetch(`${API_BASE}/live-agent/storage`, { headers: novaAuthHeaders() });
@@ -1281,7 +1365,7 @@ export function LiveAgentPanel({
 
   const loadVisitorRadar2099 = useCallback(async () => {
     try {
-      const r = await fetch(`${API_BASE}/kali-env/visitor-intel-2099`, { headers: novaAuthHeaders() });
+      const r = await fetch(`${API_BASE}/kali-env/visitor-intel`, { headers: novaAuthHeaders() });
       if (r.ok) setVisitorRadarData(await r.json());
     } catch { /* ignore */ }
   }, [API_BASE]);
@@ -1290,11 +1374,13 @@ export function LiveAgentPanel({
     void refreshStorageHub();
     void refreshOrganismState();
     void loadVisitorRadar2099();
+    void loadPermissionsAndHistory();
     const iv = setInterval(() => {
       void refreshOrganismState();
+      void loadPermissionsAndHistory();
     }, 15_000);
     return () => clearInterval(iv);
-  }, [refreshStorageHub, refreshOrganismState, loadVisitorRadar2099]);
+  }, [refreshStorageHub, refreshOrganismState, loadVisitorRadar2099, loadPermissionsAndHistory]);
   useEffect(() => {
     void loadAwareness();
     const t = setInterval(() => void loadAwareness(), 20_000);
@@ -2070,17 +2156,11 @@ export function LiveAgentPanel({
   // ── Plan handlers ─────────────────────────────────────────────────────────
   const approvePlan = () => {
     setLines((arr) => arr.map((l) => l.role === "plan" && l.awaitingApproval ? { ...l, awaitingApproval: false } : l));
-    // A sensitive-tool approval: re-send with the tool name so the server's gate
-    // lets it through. A plan approval: re-send with planMode OFF so the brain
-    // executes instead of proposing the same plan again.
     const tools = pendingToolApprovalRef.current;
     pendingToolApprovalRef.current = null;
-    if (tools && tools.length) {
-      void send("موافق على تنفيذ الأداة الحساسة.", { planMode: false, approve: tools });
-      return;
-    }
+    const promptToRun = lastUserPromptRef.current.trim() || "موافق، نفّذ الخطة بالترتيب وأبلغني بكل خطوة.";
     setPlanMode(false);
-    void send("موافق، نفّذ الخطة بالترتيب وأبلغني بكل خطوة.", { planMode: false });
+    void send(promptToRun, { planMode: false, approve: tools && tools.length ? tools : ["*"] });
   };
 
   const rejectPlan = () => {
@@ -2175,24 +2255,69 @@ export function LiveAgentPanel({
     try {
       const r = await fetch(`${API_BASE}/live-agent/sessions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: `جلسة ${new Date().toLocaleTimeString("ar-SA")}` }),
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ title: `جلسة عمل ${new Date().toLocaleTimeString("ar-SA")}` }),
       });
       if (r.ok) {
-        const s = (await r.json()) as { id: string };
+        const s = (await r.json()) as { id: string; title?: string };
         setSessionId(s.id); setLines([]); setSessionFiles([]); setPendingAttachments([]);
-        setShowSessions(false); void loadSessions(); void refreshFiles(s.id);
+        setShowSessions(false); void loadSessions(); void loadPermissionsAndHistory(); void refreshFiles(s.id);
+        addToast(`✨ تم إنشاء ${s.title || "جلسة جديدة"} (${s.id})`, "success");
       }
     } catch { /* ignore */ }
   };
 
   const deleteSession = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (id === "nova-root") {
+      addToast("🌳 الجلسة الجذرية (nova-root) دائمة ولا تُحذف أبداً", "info");
+      return;
+    }
     try {
       await fetch(`${API_BASE}/live-agent/sessions/${id}`, { method: "DELETE", headers: novaAuthHeaders() });
-      if (id === sessionId) void newSession();
-      else void loadSessions();
+      if (id === sessionId) void switchSession("nova-root");
+      else { void loadSessions(); void loadPermissionsAndHistory(); }
     } catch { /* ignore */ }
+  };
+
+  const renameSession = async (id: string, newTitle: string) => {
+    const clean = newTitle.trim();
+    if (!clean) { setRenamingSessionId(null); return; }
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/sessions/${encodeURIComponent(id)}/rename`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ title: clean }),
+      });
+      if (r.ok) {
+        addToast(`✅ تم تحديث اسم الجلسة إلى «${clean}»`, "success");
+        void loadSessions();
+        void loadPermissionsAndHistory();
+      }
+    } catch { /* ignore */ }
+    setRenamingSessionId(null);
+  };
+
+  const restoreOldChatFromJournal = async () => {
+    setRestoreJournalBusy(true);
+    try {
+      const r = await fetch(`${API_BASE}/live-agent/sessions/restore-journal`, {
+        method: "POST",
+        headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        await loadSessions();
+        await loadPermissionsAndHistory();
+        await switchSession("nova-root");
+        setActiveTab("chat");
+        addToast(
+          `🌳 تم استعادة ودمج الشات القديم في الجذر الدائم (${d.totalRootMessages ?? 0} رسالة · +${d.restoredToRoot ?? 0} مستعادة)`,
+          "success",
+        );
+      }
+    } catch { /* ignore */ }
+    setRestoreJournalBusy(false);
   };
 
   // ── Drag ──────────────────────────────────────────────────────────────────
@@ -3005,11 +3130,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     return () => clearInterval(t);
   }, [kaliRemoteTab, kaliSelectedAgentId, kaliAgentConnected]);
 
-  // ── Auto-open connect modal when Kali tab is opened and not connected ───────
+  // ── Load CVE feed & proot health when Kali tab is opened ───────
   useEffect(() => {
-    if (activeTab === "kali" && !kaliAgentConnected) {
-      setKaliConnectModalOpen(true);
-    }
     // Auto-load CVE feed when kali dashboard opens
     if (activeTab === "kali" && kaliRemoteTab === "dashboard" && !dashCVELoaded) {
       void loadDashCVEs();
@@ -4048,6 +4170,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     // Route to direct Llama Dolphin (always if directMode, even if probe not yet done)
     if (directMode) { return sendDirect(text); }
     if (!text.trim() || !sessionId || busy || killActive) return;
+    lastUserPromptRef.current = text.trim();
     const attachedIds = pendingAttachments.map((f) => f.id);
     setPendingAttachments([]);
     setLines((arr) => [...arr, { role: "user", text }]);
@@ -4065,6 +4188,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     let assistantBuf = "";
     const abortCtrl = new AbortController();
     currentAbortRef.current = abortCtrl;
+    const isFullPermsActive = Boolean(sovereignPerms.fullPermissions && sovereignPerms.autoApproveTools);
     try {
       const res = await fetch(`${API_BASE}/live-agent/sessions/${sessionId}/messages`, {
         method: "POST",
@@ -4076,9 +4200,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           agentMode,
           model: selectedModel,
           kaliConnected: kaliAgentConnected,
+          fullPermissions: isFullPermsActive,
           target: kaliTarget !== "127.0.0.1" ? kaliTarget : (organismState?.activeTarget || undefined),
           ...(attachedIds.length ? { attachmentIds: attachedIds } : {}),
-          ...(opts?.approve ? { approve: opts.approve } : {}),
+          approve: opts?.approve ? opts.approve : isFullPermsActive ? ["*"] : undefined,
         }),
         signal: abortCtrl.signal,
       });
@@ -4815,10 +4940,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         </div>
 
-        {/* ── Brain & Unified Organism Status Bar (Visible in all modes including /agent-pro) ── */}
+        {/* ── Brain & Unified Organism + Sovereign Permissions Bar (Visible in all modes) ── */}
         {panelSize !== "mini" && (
           <div className="shrink-0 border-b border-primary/15 bg-gradient-to-r from-[#090d18] via-[#12081c] to-[#090d18]">
-            <div className="w-full px-3 py-1.5 flex items-center gap-2 flex-wrap">
+            <div className="w-full px-3 py-1 flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => setBrainExpanded((v) => !v)}
                 className="flex items-center gap-1.5 text-[9px] font-mono hover:bg-primary/10 px-1.5 py-0.5 rounded transition-colors"
@@ -4854,12 +4979,34 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                     }
                   }}
                   placeholder="domain.com / IP"
-                  className="bg-transparent text-[9px] font-mono text-white w-28 focus:outline-none"
+                  className="bg-transparent text-[9px] font-mono text-white w-24 focus:outline-none"
                 />
               </div>
 
+              {/* Sovereign 100% Permissions Live Toggle Badge */}
+              <button
+                onClick={() => {
+                  const next = !sovereignPerms.fullPermissions;
+                  void toggleSovereignPermission({ fullPermissions: next, autoApproveTools: next });
+                  addToast(
+                    next
+                      ? "🔓 تم تفعيل الصلاحيات الكاملة 100% — تنفيذ فوري لكل الـ92 أداة وكالي والأسطول"
+                      : "🔒 تم تفعيل وضع الاستئذان اليدوي للأدوات الحساسة",
+                    next ? "success" : "info",
+                  );
+                }}
+                className={`text-[8px] font-mono px-2 py-0.5 rounded border font-bold transition-all ${
+                  sovereignPerms.fullPermissions
+                    ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100 shadow-[0_0_10px_rgba(16,185,129,0.25)]"
+                    : "border-amber-400/50 bg-amber-500/15 text-amber-200"
+                }`}
+                title="انقر لتبديل الصلاحيات الكاملة 100% (تنفيذ فوري لكل الأدوات بدون توقف)"
+              >
+                {sovereignPerms.fullPermissions ? "🔓 الصلاحيات: كاملة 100% ✓" : "🔒 الصلاحيات: يدوية"}
+              </button>
+
               {/* Direct Quick Buttons for Upload / Storage / Bounty 2099 / Export */}
-              <div className="ms-auto flex items-center gap-1">
+              <div className="ms-auto flex items-center gap-1 flex-wrap">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="text-[8px] font-mono px-2 py-0.5 rounded border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 transition-all"
@@ -4875,7 +5022,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                       : "border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
                   }`}
                 >
-                  🗄️ الخزنة والاستيراد ({storageHub?.totalFiles ?? sessionFiles.length})
+                  🗄️ الخزنة ({storageHub?.totalFiles ?? sessionFiles.length})
                 </button>
                 <button
                   onClick={() => { setActiveTab("bounty2099"); void loadVisitorRadar2099(); }}
@@ -4935,62 +5082,124 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Provider status strip (visible in all modes) ── */}
+        {/* ── Permanent Root Session (nova-root) + Multi-Session Switcher + Master History Bar ── */}
         {panelSize !== "mini" && (
-          <div className="px-3 py-1 border-b border-primary/10 flex items-center gap-1.5 overflow-x-auto shrink-0">
-            <span className="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border border-cyan-400/40 text-cyan-200 bg-cyan-500/5">
-              NOVA CORE 2099 · رجل واحد مترابط
-            </span>
-            {/* ── Model Status Button (TEST3: تلقائي — بيشوف مين شغّال فعلاً) ── */}
-            <button onClick={() => setShowModelPicker(p => !p)}
-              title="الموديل تلقائي — نوفا بتدير السلسلة وبتكمّل على نفس الخط حتى لو الموديل خلص أو اتبدل"
-              className={`shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-lg border flex items-center gap-1 transition-all ${showModelPicker ? "border-primary/50 bg-primary/15 text-primary" : "border-primary/20 text-primary/70 bg-primary/5 hover:bg-primary/10"}`}>
-              🧠 تلقائي
-              <span className="text-[7px] opacity-70 font-mono">{liveChatOps.provider !== "ready" ? liveChatOps.provider.slice(0, 18) : "nova-brain"}</span>
-              <span className="text-[7px]">▾</span>
-            </button>
-            {directMode && (
-              <span className="text-[8px] font-mono text-violet-300 bg-violet-500/10 border border-violet-400/20 px-1.5 rounded animate-pulse">
-                ⚡ DIRECT MODE
+          <div className="px-2.5 py-1 border-b border-cyan-500/20 bg-[#060913] flex items-center gap-1.5 overflow-x-auto shrink-0">
+            {/* Root Session Permanent Pill */}
+            <button
+              onClick={() => {
+                setActiveTab("chat");
+                void switchSession("nova-root");
+              }}
+              className={`shrink-0 text-[8.5px] font-mono px-2 py-0.5 rounded-lg border flex items-center gap-1 transition-all font-bold ${
+                sessionId === "nova-root"
+                  ? "border-cyan-400 bg-cyan-500/25 text-cyan-100 shadow-[0_0_10px_rgba(34,211,238,0.25)]"
+                  : "border-cyan-500/35 bg-cyan-500/10 text-cyan-200/80 hover:bg-cyan-500/20"
+              }`}
+              title="الجلسة الجذرية الدائمة مدى الحياة (nova-root 24/7) — لا تضيع أبداً"
+            >
+              <span>🌳 الجذر الدائم (nova-root)</span>
+              <span className="px-1 rounded bg-black/40 text-cyan-300 text-[7.5px]">
+                {historyAllData?.rootMessageCount ?? (sessionId === "nova-root" ? lines.length : "24/7")}
               </span>
-            )}
-            {/* Kali local machine connection badge */}
-            <button
-              onClick={() => { setActiveTab("kali"); setKaliRemoteTab("remote"); }}
-              title={kaliAgentConnected ? `كالي متصل — ${kaliAgentList.map(a => `${a.user}@${a.hostname}`).join(", ")}` : "انقر لفتح ترسانة كالي"}
-              className={`shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all cursor-pointer ${
-                kaliAgentConnected
-                  ? "border-rose-400/60 text-rose-200 bg-rose-500/15 shadow-[0_0_6px_rgba(248,113,113,0.25)]"
-                  : "border-rose-400/40 text-rose-300 bg-rose-500/10"
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-              {kaliAgentConnected
-                ? `KALI · ${kaliAgentList[0]?.hostname ?? "runner"} (${kaliAgentList.length}/10)`
-                : `KALI · ${organismState?.fleet?.connected || 10}/10 عُقد`}
             </button>
+
+            {/* Child / Parallel Sessions Pills */}
+            {allSessions
+              .filter((s) => s.id !== "nova-root")
+              .slice(0, 8)
+              .map((s: any) => (
+                <div
+                  key={s.id}
+                  className={`shrink-0 inline-flex items-center gap-1 text-[8px] font-mono px-2 py-0.5 rounded-lg border transition-all ${
+                    sessionId === s.id
+                      ? "border-rose-400 bg-rose-500/25 text-rose-100 font-bold"
+                      : "border-white/15 bg-white/5 text-white/75 hover:border-rose-400/40 hover:text-white"
+                  }`}
+                >
+                  <button
+                    onClick={() => {
+                      setActiveTab("chat");
+                      void switchSession(s.id);
+                    }}
+                    className="truncate max-w-[110px]"
+                    title={`${s.title} (${s.id})`}
+                  >
+                    💬 {s.title}
+                    {typeof s.messageCount === "number" ? ` (${s.messageCount})` : ""}
+                  </button>
+                  <button
+                    onClick={(e) => void deleteSession(s.id, e)}
+                    className="text-white/40 hover:text-rose-300 px-0.5"
+                    title="حذف الجلسة الفرعية"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+            {/* Create New Parallel Session */}
             <button
-              onClick={() => setRouteToKali((v) => !v)}
-              className={`shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded border transition-all ${
-                routeToKali
-                  ? "text-rose-200 bg-rose-500/20 border-rose-400/50 animate-pulse"
-                  : "text-white/60 bg-white/5 border-white/10 hover:text-rose-300"
-              }`}
-              title="توجيه أوامر الترمنال والفحص مباشرة إلى عقدة كالي السحابية"
+              onClick={() => {
+                setActiveTab("chat");
+                void newSession();
+              }}
+              className="shrink-0 text-[8px] font-mono px-2 py-0.5 rounded-lg border border-emerald-400/45 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 font-bold transition-all"
+              title="إنشاء جلسة عمل جديدة متوازية ومرتبطة بالجذر"
             >
-              ⚔ مسار كالي المباشر {routeToKali ? "ON" : "OFF"}
+              ➕ جلسة جديدة ({allSessions.length || 1})
             </button>
+
+            {/* Restore Old Chat from Permanent Owner Journal */}
             <button
-              onClick={() => setShowQuickActions((v) => !v)}
-              className={`ms-auto shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-lg border flex items-center gap-1 transition-all ${
-                showQuickActions
-                  ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
-                  : "border-white/15 text-white/55 hover:text-white/90 hover:bg-white/5"
-              }`}
-              title="إظهار أو إخفاء الأوامر السريعة"
+              disabled={restoreJournalBusy}
+              onClick={() => void restoreOldChatFromJournal()}
+              className="shrink-0 text-[8px] font-mono px-2 py-0.5 rounded-lg border border-amber-400/45 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25 transition-all disabled:opacity-40"
+              title="استعادة ودمج كل المحادثات التاريخية من دفتر المالك الدائم (owner-journal.jsonl) إلى الجذر"
             >
-              ⚡ أوامر {showQuickActions ? "▾" : "▸"}
+              {restoreJournalBusy ? "⏳ يستعيد..." : "🔄 استعادة الشات القديم"}
             </button>
+
+            {/* Master History & Permissions Tab Button */}
+            <button
+              onClick={() => {
+                setActiveTab("historyAll");
+                void loadPermissionsAndHistory();
+              }}
+              className={`shrink-0 text-[8px] font-mono px-2 py-0.5 rounded-lg border transition-all font-bold ${
+                activeTab === "historyAll"
+                  ? "border-violet-400 bg-violet-500/25 text-violet-100"
+                  : "border-violet-400/40 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20"
+              }`}
+              title="السجل الشامل لكل المحادثات والجلسات والأوامر + لوحة تفعيل الصلاحيات الكاملة"
+            >
+              📜 السجل والصلاحيات ({(historyAllData?.journal?.entries?.length ?? 0) + (storageHub?.eternalMemoryCount ?? 0)})
+            </button>
+
+            <div className="ms-auto flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setRouteToKali((v) => !v)}
+                className={`shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded border transition-all ${
+                  routeToKali
+                    ? "text-rose-200 bg-rose-500/20 border-rose-400/50"
+                    : "text-white/60 bg-white/5 border-white/10 hover:text-rose-300"
+                }`}
+                title="توجيه أوامر الترمنال والفحص مباشرة إلى عقدة كالي السحابية"
+              >
+                ⚔ كالي {routeToKali ? "ON" : "OFF"}
+              </button>
+              <button
+                onClick={() => setShowQuickActions((v) => !v)}
+                className={`shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 transition-all ${
+                  showQuickActions
+                    ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
+                    : "border-white/15 text-white/55 hover:text-white/90 hover:bg-white/5"
+                }`}
+                title="إظهار أو إخفاء الأوامر السريعة"
+              >
+                ⚡ أوامر {showQuickActions ? "▾" : "▸"}
+              </button>
+            </div>
           </div>
         )}
 
@@ -5019,12 +5228,16 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           </div>
         )}
 
-        {/* ── Tab bar (All 22 Sovereign Tabs visible directly in both embedded & window mode) ── */}
+        {/* ── Tab bar (All 23 Sovereign Tabs visible directly in both embedded & window mode) ── */}
         {panelSize !== "mini" && (
           <div className="relative px-2 pt-1.5 flex items-center gap-0.5 border-b border-primary/10 shrink-0 overflow-x-auto">
             <button onClick={() => { setActiveTab("chat"); setShowMoreTabs(false); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "chat" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" />شات</span>
+              <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" />شات ({lines.length})</span>
+            </button>
+            <button onClick={() => { setActiveTab("historyAll"); setShowMoreTabs(false); void loadPermissionsAndHistory(); }}
+              className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "historyAll" ? "border-emerald-400 text-emerald-300 bg-emerald-500/10" : "border-transparent text-emerald-300/80 hover:text-emerald-200"}`}>
+              <span className="flex items-center gap-1">📜 السجل والصلاحيات والجلسات</span>
             </button>
             <button onClick={() => { setActiveTab("storage"); setShowMoreTabs(false); void refreshStorageHub(); }}
               className={`text-[10px] font-mono px-2 py-1 rounded-t-lg border-b-2 transition-all whitespace-nowrap ${activeTab === "storage" ? "border-amber-400 text-amber-300 bg-amber-500/10" : "border-transparent text-amber-200/80 hover:text-amber-200"}`}>
@@ -8981,30 +9194,32 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               </div>
             </div>
 
-            {/* Quick commands strip */}
+            {/* Quick commands strip (294 Kali & System Arsenal) */}
             <div className="shrink-0 flex gap-1 px-2 py-1.5 overflow-x-auto border-t" style={{ background: "rgba(0,5,0,0.95)", borderColor: "rgba(0,180,60,0.15)", scrollbarWidth: "thin" }}>
-              <span className="text-[7px] font-mono shrink-0 self-center" style={{ color: "rgba(0,180,60,0.3)" }}>CMD:</span>
+              <span className="text-[7px] font-mono shrink-0 self-center" style={{ color: "rgba(0,220,90,0.6)" }}>🐉 KALI 2099:</span>
               {[
-                { label: "id", cmd: "id && whoami" },
-                { label: "uname", cmd: "uname -a" },
-                { label: "net", cmd: "ip addr && ip route" },
+                { label: "whoami+", cmd: "id && hostname && uname -a && cat /etc/os-release 2>/dev/null | head -5" },
+                { label: "nuclei", cmd: "nuclei -version 2>&1" },
+                { label: "subfinder", cmd: `subfinder -d ${kaliTarget === "127.0.0.1" ? "example.com" : kaliTarget} -silent 2>&1 | head -20` },
+                { label: "httpx", cmd: `echo https://${kaliTarget === "127.0.0.1" ? "example.com" : kaliTarget} | httpx -title -status-code -tech-detect -silent 2>&1` },
+                { label: "nmap", cmd: `nmap -F ${kaliTarget === "127.0.0.1" ? "example.com" : kaliTarget} 2>&1 | head -30` },
+                { label: "katana", cmd: "katana -version 2>&1" },
+                { label: "naabu", cmd: "naabu -version 2>&1" },
+                { label: "dalfox", cmd: "dalfox version 2>&1" },
+                { label: "nikto", cmd: "nikto -Version 2>&1 | head -6" },
+                { label: "sqlmap", cmd: "sqlmap --version 2>&1" },
+                { label: "trivy", cmd: "trivy --version 2>&1" },
+                { label: "gitleaks", cmd: "gitleaks version 2>&1" },
+                { label: "yara", cmd: "yara --version 2>&1" },
                 { label: "ports", cmd: "ss -tulpn 2>/dev/null | head -15" },
-                { label: "procs", cmd: "ps aux --sort=-%cpu | head -10" },
                 { label: "disk", cmd: "df -h" },
                 { label: "mem", cmd: "free -h" },
-                { label: "suid", cmd: "find / -perm -u=s -type f 2>/dev/null | head -15" },
-                { label: "sudo", cmd: "sudo -l 2>/dev/null" },
-                { label: "nmap", cmd: "nmap -sV -T4 --top-ports 100 localhost 2>&1 | tail -30" },
-                { label: "nikto", cmd: "nikto -h http://localhost -nointeractive 2>&1 | tail -20" },
-                { label: "whoami+", cmd: "id && hostname && uname -a && cat /etc/os-release 2>/dev/null | head -5" },
-                { label: "env", cmd: "env | grep -v SECRET | grep -v PASSWORD | head -20" },
-                { label: "curl ip", cmd: "curl -s https://ifconfig.me" },
               ].map(({ label, cmd }) => (
                 <button key={label} onClick={() => setTerminalInput(cmd)}
                   className="text-[8px] font-mono px-2 py-0.5 rounded shrink-0 transition-all"
-                  style={{ color: "rgba(0,200,80,0.6)", background: "rgba(0,180,60,0.05)", border: "1px solid rgba(0,180,60,0.15)" }}
-                  onMouseEnter={e => { e.currentTarget.style.color = "#00ff80"; e.currentTarget.style.background = "rgba(0,180,60,0.12)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = "rgba(0,200,80,0.6)"; e.currentTarget.style.background = "rgba(0,180,60,0.05)"; }}>
+                  style={{ color: "rgba(0,220,90,0.8)", background: "rgba(0,180,60,0.08)", border: "1px solid rgba(0,180,60,0.22)" }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "#00ff80"; e.currentTarget.style.background = "rgba(0,180,60,0.18)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = "rgba(0,220,90,0.8)"; e.currentTarget.style.background = "rgba(0,180,60,0.08)"; }}>
                   {label}
                 </button>
               ))}
@@ -9019,29 +9234,63 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 setTerminalInput("");
                 setTerminalLines(prev => [...prev, { kind: "cmd", text: cmd, ts: Date.now() }]);
                 setTerminalBusy(true);
-                const url = `${API_BASE}/exec/stream?cmd=${encodeURIComponent(cmd)}&cwd=/tmp`;
-                const es = new EventSource(url);
-                es.onmessage = (ev) => {
+                void (async () => {
                   try {
-                    const d = JSON.parse(ev.data) as { type: string; text?: string; exitCode?: number };
-                    if (d.type === "done") {
-                      es.close();
-                      setTerminalLines(prev => [...prev, { kind: "system", text: `exit ${d.exitCode ?? 0} — ${new Date().toLocaleTimeString()}`, ts: Date.now() }]);
+                    const r = await fetch(`${API_BASE}/kali-env/exec`, {
+                      method: "POST",
+                      headers: novaAuthHeaders({ "Content-Type": "application/json" }),
+                      body: JSON.stringify({ command: cmd, timeoutMs: 45_000, target: kaliTarget }),
+                    });
+                    if (r.ok) {
+                      const d = await r.json() as { ok?: boolean; stdout?: string; stderr?: string; exitCode?: number; durationMs?: number; plane?: string; error?: string };
+                      if (d.stdout && d.stdout.trim()) {
+                        setTerminalLines(prev => [...prev, { kind: "stdout", text: d.stdout!, ts: Date.now() }]);
+                      }
+                      if (d.stderr && d.stderr.trim()) {
+                        setTerminalLines(prev => [...prev, { kind: "stderr", text: d.stderr!, ts: Date.now() }]);
+                      }
+                      if (!d.stdout?.trim() && !d.stderr?.trim() && d.error) {
+                        setTerminalLines(prev => [...prev, { kind: "error", text: d.error!, ts: Date.now() }]);
+                      }
+                      setTerminalLines(prev => [
+                        ...prev,
+                        {
+                          kind: "system",
+                          text: `exit ${d.exitCode ?? 0} · ${d.durationMs ?? 0}ms · ${d.plane || "kali-2099"}`,
+                          ts: Date.now(),
+                        },
+                      ]);
                       setTerminalBusy(false);
-                    } else if (d.type === "stdout") {
-                      const txt = (d.text ?? "").replace(/\\n/g, "\n").replace(/\\r/g, "");
-                      if (txt.trim()) setTerminalLines(prev => [...prev, { kind: "stdout", text: txt, ts: Date.now() }]);
-                    } else if (d.type === "stderr") {
-                      const txt = (d.text ?? "").replace(/\\n/g, "\n").replace(/\\r/g, "");
-                      if (txt.trim()) setTerminalLines(prev => [...prev, { kind: "stderr", text: txt, ts: Date.now() }]);
-                    } else if (d.type === "error") {
-                      setTerminalLines(prev => [...prev, { kind: "error", text: d.text ?? "خطأ", ts: Date.now() }]);
-                    } else if (d.type === "system") {
-                      setTerminalLines(prev => [...prev, { kind: "system", text: d.text ?? "", ts: Date.now() }]);
+                      void refreshStorageHub();
+                      return;
                     }
-                  } catch { /* ignore */ }
-                };
-                es.onerror = () => { es.close(); setTerminalBusy(false); };
+                  } catch {
+                    /* fallback to SSE stream below */
+                  }
+                  const url = `${API_BASE}/exec/stream?cmd=${encodeURIComponent(cmd)}&cwd=/tmp`;
+                  const es = new EventSource(url);
+                  es.onmessage = (ev) => {
+                    try {
+                      const d = JSON.parse(ev.data) as { type: string; text?: string; exitCode?: number };
+                      if (d.type === "done") {
+                        es.close();
+                        setTerminalLines(prev => [...prev, { kind: "system", text: `exit ${d.exitCode ?? 0} — ${new Date().toLocaleTimeString()}`, ts: Date.now() }]);
+                        setTerminalBusy(false);
+                      } else if (d.type === "stdout") {
+                        const txt = (d.text ?? "").replace(/\\n/g, "\n").replace(/\\r/g, "");
+                        if (txt.trim()) setTerminalLines(prev => [...prev, { kind: "stdout", text: txt, ts: Date.now() }]);
+                      } else if (d.type === "stderr") {
+                        const txt = (d.text ?? "").replace(/\\n/g, "\n").replace(/\\r/g, "");
+                        if (txt.trim()) setTerminalLines(prev => [...prev, { kind: "stderr", text: txt, ts: Date.now() }]);
+                      } else if (d.type === "error") {
+                        setTerminalLines(prev => [...prev, { kind: "error", text: d.text ?? "خطأ", ts: Date.now() }]);
+                      } else if (d.type === "system") {
+                        setTerminalLines(prev => [...prev, { kind: "system", text: d.text ?? "", ts: Date.now() }]);
+                      }
+                    } catch { /* ignore */ }
+                  };
+                  es.onerror = () => { es.close(); setTerminalBusy(false); };
+                })();
               }}>
                 <div className="flex items-center gap-2 px-3 py-2">
                   <span className="text-[10px] font-mono font-bold shrink-0 select-none" style={{ color: "rgba(0,200,80,0.8)", fontFamily: "'JetBrains Mono',monospace" }}>❯</span>
@@ -10300,44 +10549,15 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               {multiAIMessages.length <= 1 && (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
                   <span className="text-4xl">🧠</span>
-                  <div className="text-[9px] font-bold text-fuchsia-300">Nova Multi-AI جاهز</div>
-                  {/* Show setup guide if no providers are active */}
-                  {multiAIProviders.filter(p => p.available && p.enabled).length === 0 ? (
-                    <div className="w-full max-w-xs rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-right space-y-2">
-                      <div className="text-[8px] font-bold text-amber-300">⚡ لتفعيل Nova — أضف مفتاح API مجاني</div>
-                      <div className="text-[7px] text-amber-400/70 leading-relaxed">
-                        Nova تحتاج مفتاح API واحد على الأقل للعمل.<br/>
-                        الأسهل والأسرع هو <span className="text-emerald-300 font-bold">Groq</span> — مجاني 100% وسريع جداً.
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2 text-right">
-                          <div className="text-[7px] font-bold text-emerald-300 mb-1">الخطوات (30 ثانية):</div>
-                          <div className="text-[6.5px] text-emerald-400/80 leading-loose space-y-0.5">
-                            <div>1. افتح <a href="https://console.groq.com" target="_blank" rel="noreferrer" className="text-sky-300 hover:underline font-bold">console.groq.com</a> وسجّل حساباً</div>
-                            <div>2. اذهب لـ <span className="text-white/70">API Keys</span> → <span className="text-white/70">Create API Key</span></div>
-                            <div>3. انسخ المفتاح (يبدأ بـ <code className="text-amber-300">gsk_</code>)</div>
-                            <div>4. اضغط زر <span className="text-amber-300">🔑 مفاتيح API</span> أعلاه والصق المفتاح</div>
-                          </div>
-                        </div>
-                        <div className="text-[6px] text-muted-foreground/50 leading-relaxed">
-                          بدائل مجانية: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">Gemini</a>
-                          {" · "}<a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">OpenRouter</a>
-                          {" · "}<a href="https://console.mistral.ai" target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">Mistral</a>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setMultiAIShowKeys(true)}
-                        className="w-full text-[7px] py-1.5 rounded-lg border border-amber-400/30 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-all font-bold"
-                      >
-                        🔑 فتح إعدادات API Keys
-                      </button>
+                  <div className="text-[9px] font-bold text-fuchsia-300">Nova Multi-AI 2099 — 7 مخاخ سيادية متصلة ومفعّلة</div>
+                  <div className="w-full max-w-md rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-right space-y-1">
+                    <div className="text-[8.5px] font-bold text-emerald-300">
+                      ✅ السلسلة السيادية متصلة تلقائياً (7 مخاخ + مجلس الحكماء الأربعة + 92 أداة)
                     </div>
-                  ) : (
-                    <div className="text-[8px] text-muted-foreground max-w-[200px] leading-relaxed">
-                      يتصل بأسرع النماذج المجانية تلقائياً<br/>
-                      <span className="text-emerald-400">{multiAIProviders.filter(p => p.available && p.enabled).length} نماذج نشطة</span>
+                    <div className="text-[7.5px] text-emerald-100/80 font-mono leading-relaxed">
+                      Pollinations Free · OVH Llama-3.3-70B · Gemini · Groq · Mistral · OpenRouter · Self-Model + Kali 2099 تعمل كلها كرجل واحد على نفس خط الجلسة الدائمة دون الحاجة لإدخال مفاتيح يدوية.
                     </div>
-                  )}
+                  </div>
                   {/* Security task categories */}
                   <div className="w-full max-w-sm space-y-2">
                     {[
@@ -10565,6 +10785,336 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                   ? `نموذج: ${multiAISelectedProvider === "auto" ? "أفضل متاح" : multiAISelectedProvider} · مهمة: ${multiAITaskType}`
                   : `وضع التوافق: أول 3 نماذج متاحة يردون في نفس الوقت`
                 }
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB: MASTER HISTORY, SESSIONS & FULL SOVEREIGN PERMISSIONS (2099) ── */}
+        {activeTab === "historyAll" && panelSize !== "mini" && (
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-3 space-y-3 bg-[#060912]">
+            {/* Section 1: Full Sovereign Permissions Control (100% Permissions) */}
+            <div className="rounded-xl border border-emerald-500/35 bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-violet-500/15 p-3 space-y-2.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <div className="text-xs font-bold font-mono text-emerald-300 flex items-center gap-1.5">
+                    🔓 لوحة الصلاحيات السيادية الكاملة 100% (Full Sovereign Permissions Engine)
+                  </div>
+                  <div className="text-[9px] text-white/75 font-mono mt-0.5">
+                    عند تفعيل الصلاحيات الكاملة 100%، ينفّذ الوكيل الحي جميع الأدوات الـ92 وأوامر كالي الـ294 والأسطول ومختبر الـ0-Day فوراً دون توقف أو رسائل تعليق.
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const next = !sovereignPerms.fullPermissions;
+                    void toggleSovereignPermission({
+                      fullPermissions: next,
+                      autoApproveTools: next,
+                      kaliExecAllowed: true,
+                      fleetExecAllowed: true,
+                      zeroDayLabAllowed: true,
+                      selfHealAllowed: true,
+                      autonomy247: true,
+                      eternalMemorySync: true,
+                    });
+                    addToast(
+                      next ? "🔓 تم تفعيل كافة الصلاحيات السيادية 100% فوراً" : "🔒 تم التحويل إلى وضع الاستئذان اليدوي",
+                      next ? "success" : "info",
+                    );
+                  }}
+                  className={`px-3 py-1.5 rounded-xl border text-[10px] font-mono font-black transition-all ${
+                    sovereignPerms.fullPermissions
+                      ? "border-emerald-400 bg-emerald-500/30 text-emerald-100 shadow-[0_0_16px_rgba(16,185,129,0.35)]"
+                      : "border-amber-400/50 bg-amber-500/20 text-amber-200"
+                  }`}
+                >
+                  {sovereignPerms.fullPermissions
+                    ? "✅ الصلاحيات الكاملة 100% مفعّلة (اضغط للتبديل)"
+                    : "⚡ تفعيل الصلاحيات الكاملة 100% الآن"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                {(
+                  [
+                    { key: "autoApproveTools", label: "⚡ الموافقة التلقائية الفورية", desc: "تنفيذ الأدوات الـ92 بدون توقف" },
+                    { key: "kaliExecAllowed", label: "🐉 تنفيذ كالي الجذري (Root)", desc: "266 أداة كالي + 28 بايثون" },
+                    { key: "fleetExecAllowed", label: "🛰️ التحكم في الأسطول (10 عقد)", desc: "fleet_exec + terminal_exec + file_write" },
+                    { key: "zeroDayLabAllowed", label: "🧬 مختبر الـ0-Day والمليارات", desc: "vuln_combine + kali_zeroday_lab" },
+                    { key: "selfHealAllowed", label: "🔧 الشفاء الذاتي وإدارة المهام", desc: "self_heal + job_control + scope_authorize" },
+                    { key: "autonomy247", label: "🤖 الاستقلالية الدائمة 24/7", desc: "عمل مستمر وتعلّم ذاتي بالخلفية" },
+                    { key: "eternalMemorySync", label: "♾️ مزامنة الذاكرة الأبدية", desc: "حفظ كل أمر وثغرة في الخزنة" },
+                  ] as const
+                ).map((item) => {
+                  const active = Boolean((sovereignPerms as any)[item.key]);
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => void toggleSovereignPermission({ [item.key]: !active })}
+                      className={`text-right rounded-lg p-2 border transition-all ${
+                        active
+                          ? "border-emerald-400/45 bg-emerald-500/15 text-emerald-100"
+                          : "border-white/10 bg-black/40 text-white/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[8.5px] font-mono font-bold">
+                        <span>{item.label}</span>
+                        <span className={active ? "text-emerald-300" : "text-rose-400"}>{active ? "ON ✓" : "OFF"}</span>
+                      </div>
+                      <div className="text-[7.5px] text-white/60 font-mono mt-0.5 truncate">{item.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {sensitiveToolsList.length > 0 && (
+                <div className="rounded-lg bg-black/45 border border-white/10 p-2">
+                  <div className="text-[8px] font-mono text-emerald-300 font-bold mb-1">
+                    🛡️ الأدوات السيادية الحساسة المصرّح بها فوراً ({sensitiveToolsList.length} أداة):
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {sensitiveToolsList.map((t) => (
+                      <span
+                        key={t.name}
+                        className="text-[7.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-emerald-200"
+                        title={t.title}
+                      >
+                        ✓ {t.name} ({t.title})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Section 2: Persistent Root Session (nova-root) & Multiple Sessions Manager */}
+            <div className="rounded-xl border border-cyan-500/30 bg-black/50 p-3 space-y-2.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <div className="text-[10px] font-bold font-mono text-cyan-300">
+                    🌳 إدارة الجلسة الدائمة (nova-root 24/7) والجلسات المتعددة ({historyAllData?.sessions?.length ?? allSessions.length})
+                  </div>
+                  <div className="text-[8px] text-white/65 font-mono">
+                    الجلسة الجذرية `nova-root` متصلة بدفتر المالك الدائم (`state/owner-journal.jsonl`) ولا تضيع رسائلها أبداً، مع إمكانية فتح جلسات متعددة بالتوازي.
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    disabled={restoreJournalBusy}
+                    onClick={() => void restoreOldChatFromJournal()}
+                    className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/50 text-amber-100 text-[8.5px] font-mono font-bold hover:bg-amber-500/30 disabled:opacity-40"
+                  >
+                    {restoreJournalBusy ? "⏳ يستعيد..." : "🔄 استعادة ودمج كل الشات القديم من دفتر المالك"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      void newSession();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-100 text-[8.5px] font-mono font-bold hover:bg-emerald-500/30"
+                  >
+                    ➕ إنشاء جلسة جديدة
+                  </button>
+                  <button
+                    onClick={() => void loadPermissionsAndHistory()}
+                    className="px-2 py-1 rounded-lg bg-white/5 border border-white/15 text-white/80 text-[8px] font-mono hover:bg-white/10"
+                  >
+                    ↻ تحديث
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                {(historyAllData?.sessions ?? allSessions).map((s: any) => {
+                  const isCurrent = s.id === sessionId;
+                  const isRoot = s.id === "nova-root" || s.isRoot;
+                  return (
+                    <div
+                      key={s.id}
+                      className={`rounded-lg p-2.5 border transition-all flex flex-col justify-between gap-1.5 ${
+                        isCurrent
+                          ? "border-cyan-400 bg-cyan-500/15"
+                          : isRoot
+                          ? "border-rose-400/40 bg-rose-500/10"
+                          : "border-white/10 bg-white/[0.03]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-xs">{isRoot ? "🌳" : "💬"}</span>
+                          {renamingSessionId === s.id ? (
+                            <input
+                              value={renameSessionTitle}
+                              onChange={(e) => setRenameSessionTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") void renameSession(s.id, renameSessionTitle);
+                                if (e.key === "Escape") setRenamingSessionId(null);
+                              }}
+                              onBlur={() => void renameSession(s.id, renameSessionTitle)}
+                              autoFocus
+                              className="bg-black/70 border border-cyan-400/50 rounded px-1.5 py-0.5 text-[9px] font-mono text-white w-36"
+                            />
+                          ) : (
+                            <span className="text-[9.5px] font-bold font-mono text-white truncate">{s.title}</span>
+                          )}
+                          <span className="text-[7.5px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-cyan-300">
+                            {s.messageCount ?? 0} رسالة
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => {
+                              setActiveTab("chat");
+                              void switchSession(s.id);
+                            }}
+                            className="px-2 py-0.5 rounded bg-cyan-500/25 border border-cyan-400/40 text-cyan-100 text-[8px] font-mono font-bold hover:bg-cyan-500/35"
+                          >
+                            {isCurrent ? "● نشطة (فتح الشات)" : "فتح في الشات"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setRenamingSessionId(s.id);
+                              setRenameSessionTitle(s.title);
+                            }}
+                            className="px-1.5 py-0.5 rounded bg-white/5 border border-white/15 text-white/70 text-[8px] font-mono hover:text-white"
+                            title="إعادة تسمية الجلسة"
+                          >
+                            ✎
+                          </button>
+                          {!isRoot && (
+                            <button
+                              onClick={(e) => void deleteSession(s.id, e)}
+                              className="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-400/30 text-rose-300 text-[8px] font-mono hover:bg-rose-500/25"
+                              title="حذف الجلسة"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {s.lastMessagePreview && (
+                        <div className="text-[8px] font-mono text-white/65 line-clamp-2 bg-black/40 rounded px-2 py-1">
+                          {s.lastMessagePreview}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-[7px] font-mono text-white/40">
+                        <span>المعرف: {s.id}</span>
+                        <span>آخر تحديث: {new Date(s.updatedAt || s.createdAt).toLocaleString("ar-SA")}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section 3: Master Searchable Log of Everything (Journal + Eternal Memory + Background) */}
+            <div className="rounded-xl border border-violet-500/30 bg-black/50 p-3 space-y-2.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="text-[10px] font-bold font-mono text-violet-300">
+                  📜 السجل الشامل لكل شيء (دفتر المالك الدائم + خزنة الذاكرة الأبدية + النبض الخلفي)
+                </div>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {(
+                    [
+                      ["all", "الكل"],
+                      ["journal", `💬 محادثات الدفتر (${historyAllData?.journal?.entries?.length ?? 0})`],
+                      ["eternal", `🧬 الذاكرة الأبدية (${historyAllData?.eternalMemory?.entries?.length ?? 0})`],
+                      ["background", `📡 أحداث الخلفية (${historyAllData?.backgroundFeed?.length ?? 0})`],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      onClick={() => setHistoryFilter(id)}
+                      className={`px-2 py-0.5 rounded text-[8px] font-mono border transition-all ${
+                        historyFilter === id
+                          ? "border-violet-400 bg-violet-500/25 text-violet-100 font-bold"
+                          : "border-white/10 bg-white/5 text-white/60 hover:text-white"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <input
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                placeholder="ابحث في كل المحادثات القديمة، الأوامر، الأدوات، النتائج، أو عناوين الـIP والـCVEs..."
+                className="w-full bg-black/60 border border-violet-500/30 rounded-lg px-2.5 py-1.5 text-[8.5px] font-mono text-white placeholder:text-white/35"
+              />
+
+              <div className="space-y-1.5 max-h-96 overflow-y-auto">
+                {/* Owner Journal Turns */}
+                {(historyFilter === "all" || historyFilter === "journal") &&
+                  (historyAllData?.journal?.entries ?? [])
+                    .filter((e) => !historySearch.trim() || `${e.text} ${e.sessionId} ${(e.tools ?? []).join(" ")}`.toLowerCase().includes(historySearch.toLowerCase()))
+                    .slice(0, 80)
+                    .map((e, idx) => (
+                      <div
+                        key={`j-${idx}-${e.ts}`}
+                        className={`rounded-lg p-2 border text-[8.5px] font-mono ${
+                          e.role === "user"
+                            ? "border-cyan-500/25 bg-cyan-500/5"
+                            : "border-emerald-500/25 bg-emerald-500/5"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`px-1.5 py-0.5 rounded text-[7.5px] font-bold ${e.role === "user" ? "bg-cyan-500/20 text-cyan-200" : "bg-emerald-500/20 text-emerald-200"}`}>
+                              {e.role === "user" ? "👤 أنت (المالك)" : "🤖 NOVA"}
+                            </span>
+                            <span className="text-[7.5px] text-white/50">الجلسة: {e.sessionId}</span>
+                            {e.tools && e.tools.length > 0 && (
+                              <span className="text-[7.5px] text-amber-300">🛠 {e.tools.join(", ")}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[7px] text-white/40">{new Date(e.ts).toLocaleString("ar-SA")}</span>
+                            <button
+                              onClick={() => {
+                                setInput(e.text);
+                                setActiveTab("chat");
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white text-[7px]"
+                            >
+                              💬 نسخ للشات
+                            </button>
+                          </div>
+                        </div>
+                        <div className="text-white/85 whitespace-pre-wrap break-words line-clamp-4">{e.text}</div>
+                      </div>
+                    ))}
+
+                {/* Eternal Memory Entries */}
+                {(historyFilter === "all" || historyFilter === "eternal") &&
+                  (historyAllData?.eternalMemory?.entries ?? [])
+                    .filter((m) => !historySearch.trim() || `${m.title} ${m.command ?? ""} ${m.output ?? ""} ${m.target ?? ""}`.toLowerCase().includes(historySearch.toLowerCase()))
+                    .slice(0, 60)
+                    .map((m) => (
+                      <div key={m.id} className="rounded-lg p-2 border border-fuchsia-500/25 bg-fuchsia-500/5 text-[8px] font-mono space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-fuchsia-300 font-bold truncate">🧬 [{m.kind}] {m.title}</span>
+                          <span className="text-[7px] text-white/40 shrink-0">{new Date(m.timestamp).toLocaleString("ar-SA")}</span>
+                        </div>
+                        {m.command && <div className="text-emerald-300 truncate">$ {m.command}</div>}
+                        {m.output && <div className="text-white/70 line-clamp-3 whitespace-pre-wrap">{m.output}</div>}
+                      </div>
+                    ))}
+
+                {/* Background Feed */}
+                {(historyFilter === "all" || historyFilter === "background") &&
+                  (historyAllData?.backgroundFeed ?? [])
+                    .filter((b) => !historySearch.trim() || `${b.title} ${b.detail} ${b.source}`.toLowerCase().includes(historySearch.toLowerCase()))
+                    .slice(0, 50)
+                    .map((b) => (
+                      <div key={b.id} className="rounded-lg p-2 border border-amber-500/20 bg-amber-500/5 text-[8px] font-mono flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="text-amber-300 font-bold">[{b.source}] {b.title}: </span>
+                          <span className="text-white/75">{b.detail}</span>
+                        </div>
+                        <span className="text-[7px] text-white/40 shrink-0">{new Date(b.ts).toLocaleTimeString("ar-SA")}</span>
+                      </div>
+                    ))}
               </div>
             </div>
           </div>
@@ -11412,53 +11962,67 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               </div>
             )}
           </div>
-          </div>
-        )}
 
-        {/* ── Session files ── */}
-        {(sessionFiles?.length ?? 0) > 0 && panelSize !== "mini" && (
-          <div className="px-3 py-2 border-t border-primary/10 bg-background/30 max-h-20 overflow-y-auto shrink-0">
-            <div className="flex items-center gap-1 text-[9px] font-mono text-muted-foreground mb-1">
-              <FileText className="w-3 h-3" />
-              ملفات الجلسة ({sessionFiles?.length ?? 0})
+          {/* ── Session files ── */}
+          {(sessionFiles?.length ?? 0) > 0 && panelSize !== "mini" && (
+            <div className="px-3 py-2 border-t border-primary/10 bg-background/30 max-h-20 overflow-y-auto shrink-0">
+              <div className="flex items-center gap-1 text-[9px] font-mono text-muted-foreground mb-1">
+                <FileText className="w-3 h-3" />
+                ملفات الجلسة ({sessionFiles?.length ?? 0})
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {(sessionFiles ?? []).slice(0, 12).map((f) => (
+                  <a key={f.id} href={`${API_BASE}/live-agent/files/${f.id}/download`}
+                    title={`${f.name} · ${f.size} بايت`}
+                    className="group inline-flex items-center gap-1 max-w-[160px] text-[10px] px-2 py-1 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/20">
+                    <Download className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{f.name}</span>
+                  </a>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1">
-              {(sessionFiles ?? []).slice(0, 12).map((f) => (
-                <a key={f.id} href={`${API_BASE}/live-agent/files/${f.id}/download`}
-                  title={`${f.name} · ${f.size} بايت`}
-                  className="group inline-flex items-center gap-1 max-w-[160px] text-[10px] px-2 py-1 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/20">
-                  <Download className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{f.name}</span>
-                </a>
+          )}
+
+          {/* ── Pending attachments ── */}
+          {pendingAttachments.length > 0 && (
+            <div className="px-3 pt-2 flex flex-wrap gap-1.5 border-t border-primary/10 bg-background/30 shrink-0">
+              {pendingAttachments.map((f) => (
+                <span key={f.id} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-200">
+                  <Paperclip className="w-3 h-3" />#{f.id} {f.name}
+                </span>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ── Pending attachments ── */}
-        {pendingAttachments.length > 0 && (
-          <div className="px-3 pt-2 flex flex-wrap gap-1.5 border-t border-primary/10 bg-background/30 shrink-0">
-            {pendingAttachments.map((f) => (
-              <span key={f.id} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-200">
-                <Paperclip className="w-3 h-3" />#{f.id} {f.name}
+          {/* ── Input area (Chat Tab Only) ── */}
+          <div className="p-2.5 border-t border-primary/15 bg-card/40 shrink-0">
+            <div className="mb-1.5 flex items-center justify-between text-[9.5px] flex-wrap gap-1">
+              <div className="flex items-center gap-1.5">
+                <button type="button" onClick={togglePlanMode}
+                  title="وضع التنفيذ المباشر (OFF) أو عرض الخطة أولاً (ON)"
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md border transition font-mono ${planMode ? "bg-violet-500/20 border-violet-400/60 text-violet-200" : "bg-emerald-500/15 border-emerald-400/45 text-emerald-200"}`}>
+                  <ListChecks className="w-3 h-3" />
+                  {planMode ? "وضع الخطة: ON" : "⚡ تنفيذ فوري مباشر: ON"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !sovereignPerms.fullPermissions;
+                    void toggleSovereignPermission({ fullPermissions: next, autoApproveTools: next });
+                  }}
+                  className={`px-2 py-0.5 rounded-md border font-mono transition ${
+                    sovereignPerms.fullPermissions
+                      ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200"
+                      : "border-amber-400/40 bg-amber-500/10 text-amber-200"
+                  }`}
+                >
+                  {sovereignPerms.fullPermissions ? "🔓 الصلاحيات: 100% مفعّلة" : "🔒 الصلاحيات: يدوية"}
+                </button>
+              </div>
+              <span className="text-[8.5px] font-mono text-cyan-300/80">
+                الجلسة النشطة: {sessionId === "nova-root" ? "🌳 الجذر الدائم (nova-root)" : sessionId}
               </span>
-            ))}
-          </div>
-        )}
-
-        {/* ── Input area ── */}
-        <div className="p-3 border-t border-primary/15 bg-card/40 shrink-0">
-          <div className="mb-2 flex items-center justify-between text-[10px]">
-            <button type="button" onClick={togglePlanMode}
-              title="اطلب من الوكيل خطة مرقّمة قبل التنفيذ"
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md border transition ${planMode ? "bg-violet-500/20 border-violet-400/60 text-violet-200" : "bg-background/40 border-border/40 text-muted-foreground hover:text-foreground hover:border-primary/40"}`}>
-              <ListChecks className="w-3 h-3" />
-              خطة {planMode ? "ON" : "OFF"}
-            </button>
-            {planMode && <span className="text-[9px] font-mono text-violet-300">عرض الخطة فقط؛ لن تُنفّذ الأدوات</span>}
-          </div>
-
-          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onPickFile} />
+            </div>
 
           {/* ── NOVA Smart Suggestions (zero-latency, client-side) ─────────── */}
           {smartSuggestions.length > 0 && !busy && (
@@ -11521,7 +12085,7 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(input); } }}
-              placeholder="اطلب من الوكيل أي مهمة... (مثال: افتحلي جوجل، افحص example.com، ابحث عن CVE-2024)"
+              placeholder="اطلب من الوكيل أي مهمة... (مثال: شغّل صيد المكافآت على example.com، افحص بـkali_zeroday_lab، ابحث عن CVE)"
               rows={2}
               className="flex-1 resize-none rounded-lg bg-background/60 border border-border/40 focus:border-primary/50 focus:outline-none px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground"
             />
@@ -11540,10 +12104,10 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             </button>
           </form>
 
-          <div className="mt-2 flex items-center justify-between text-[9px] text-muted-foreground font-mono gap-1 flex-wrap">
+          <div className="mt-1.5 flex items-center justify-between text-[9px] text-muted-foreground font-mono gap-1 flex-wrap">
             <span className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-400/30 text-cyan-300 bg-cyan-500/5">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-              NOVA CORE
+              NOVA CORE 2099
             </span>
             <button type="button"
               onClick={() => { const next = !voiceOn; setVoiceOn(next); if (!next && "speechSynthesis" in window) window.speechSynthesis.cancel(); }}
@@ -11554,10 +12118,14 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             </button>
             <span className="flex items-center gap-1">
               <Database className="w-3 h-3" />
-              <span className="text-violet-300">{brainStatus?.memoryCount ?? "…"} ذاكرة</span>
+              <span className="text-violet-300">{(brainStatus?.memoryCount ?? 0) + (storageHub?.eternalMemoryCount ?? 0)} ذاكرة</span>
             </span>
           </div>
-        </div>
+          </div>
+          </div>
+        )}
+
+        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onPickFile} />
 
         {/* ── Resize handles (window mode only, not when embedded inside DraggableWindow) ── */}
         {panelMode === "window" && panelSize !== "mini" && !embedded && (

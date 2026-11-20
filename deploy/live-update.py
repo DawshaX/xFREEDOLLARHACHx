@@ -182,23 +182,25 @@ def set_mark(dest: str, url: str) -> None:
 
 
 def backoff_reason(dest: str, url: str) -> str | None:
-    """«واقف» لو آخر محاولة ماتت في نصها، أو نفس المصدر فشل مرتين lately."""
+    """«واقف» فقط لو حصل فشل متكرر خلال آخر دقيقتين؛ غير كده يمسح السجل القديم ويكمّل."""
     key = _url_key(url)
     try:
         m = mark_path(dest)
         if os.path.exists(m) and (time.time() - os.path.getmtime(m)) > 180:
-            n = bump_fail(dest, url, "المحاولة السابقة ماتت في النص (العلامة اتسابَت)")
-            return f"المحاولة السابقة وقفت في النص (فشل رقم {n}) — هنجرب تاني لو فضلت محاولات" if n < 2 else "المحاولة السابقة وقفت في النص ومرتين فشل — سكون 6 ساعات"
+            clear_mark(dest)
     except OSError:
         pass
     entry = read_ledger(dest).get(key)
-    if isinstance(entry, dict) and int(entry.get("fails", 0)) >= 2:
+    if isinstance(entry, dict) and int(entry.get("fails", 0)) >= 5:
         try:
-            age_h = (time.time() - time.mktime(time.strptime(str(entry.get("last")), "%Y-%m-%dT%H:%M:%SZ"))) / 3600
+            age_m = (time.time() - time.mktime(time.strptime(str(entry.get("last")), "%Y-%m-%dT%H:%M:%SZ"))) / 60
         except Exception:
-            age_h = 0
-        if age_h < 6:
-            return f"نفس المصدر فشل {entry.get('fails')} مرة من {round(age_h * 60)} دقيقة — سكون لحد ما الوضع يتغيّر (امسح state/nova-update-ledger.json أو بدّل NOVA_UPDATE_URL)"
+            age_m = 999
+        if age_m < 2:
+            return f"نفس المصدر فشل {entry.get('fails')} مرة من {round(age_m, 1)} دقيقة — سكون قصير"
+        clear_fails(dest, url)
+    else:
+        clear_fails(dest, url)
     return None
 
 
@@ -372,7 +374,9 @@ def main() -> int:
         why = backoff_reason(dest, args.url)
         if why:
             log(f"⏸ {why}")
-            return 0
+            return 3
+    else:
+        clear_fails(dest, args.url)
     set_mark(dest, args.url)
 
     try:

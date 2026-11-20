@@ -17,7 +17,7 @@ import path from "node:path";
 import { logger } from "../logger";
 import { broadcastEvent } from "../ws-hub";
 import { memoryStats, remember } from "./memory-store";
-import { appendOwnerTurn } from "./owner-journal";
+import { appendOwnerTurn, journalRecent } from "./owner-journal";
 import { detectPatterns, saveMemoryLite } from "../nova-learner-lite";
 
 export const ROOT_SESSION_ID = "nova-root";
@@ -73,10 +73,10 @@ const DEFAULT_SESSIONS_FILE = process.env.NOVA_SESSIONS_FILE
   ? path.resolve(process.env.NOVA_SESSIONS_FILE)
   : path.resolve(process.cwd(), "state/nova-sessions.json");
 
-const MAX_MESSAGES_PER_SESSION = 180;
-const MAX_BACKGROUND_FEED = 60;
-const MAX_INSIGHTS = 30;
-const MAX_CHILD_SESSIONS = 48;
+const MAX_MESSAGES_PER_SESSION = 500;
+const MAX_BACKGROUND_FEED = 120;
+const MAX_INSIGHTS = 80;
+const MAX_CHILD_SESSIONS = 100;
 
 let store: NexusStoreFile = {
   version: 1,
@@ -174,7 +174,107 @@ export function initSessionNexus(): void {
       );
     }
   }
+  try {
+    syncJournalIntoNexus();
+  } catch {
+    /* ignore */
+  }
   scheduleFlush();
+}
+
+function syncJournalIntoNexus(): { restoredToRoot: number; sessionsRecovered: number; totalRootMessages: number } {
+  const entries = journalRecent(350);
+  if (!store.sessions[ROOT_SESSION_ID]) {
+    store.sessions[ROOT_SESSION_ID] = makeRootSession();
+  }
+  const root = store.sessions[ROOT_SESSION_ID];
+  const rootSeen = new Set(
+    root.messages.map((m) => `${m.role}:${m.content.trim().slice(0, 140)}`),
+  );
+  let restoredToRoot = 0;
+  let sessionsRecovered = 0;
+
+  for (const entry of entries) {
+    if (entry.role !== "user" && entry.role !== "assistant") continue;
+    const cleaned = String(entry.text ?? "")
+      .replace(/\{\{\s*tool\s*:[^}]*\}\}/gi, "")
+      .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, "")
+      .trim();
+    if (!cleaned || /^مرحباً\s*—\s*جهاز\s+جديد\s+تم\s+توصيله/.test(cleaned)) continue;
+    const tsMs = typeof entry.ts === "number" && Number.isFinite(entry.ts) ? entry.ts : Date.now();
+    const sig = `${entry.role}:${cleaned.slice(0, 140)}`;
+
+    if (!rootSeen.has(sig)) {
+      rootSeen.add(sig);
+      root.messages.push({
+        role: entry.role,
+        content: cleaned,
+        ts: tsMs,
+        ...(entry.provider ? { provider: entry.provider } : {}),
+      });
+      restoredToRoot++;
+    }
+
+    const sid = String(entry.sessionId || "").trim();
+    if (sid && sid !== ROOT_SESSION_ID) {
+      if (!store.sessions[sid]) {
+        store.sessions[sid] = {
+          id: sid,
+          title: `جلسة مستعادة (${sid.slice(-6)})`,
+          isRoot: false,
+          parentId: ROOT_SESSION_ID,
+          backgroundLinked: true,
+          planMode: false,
+          pendingPlan: null,
+          messages: [],
+          summary: "جلسة مستعادة تلقائياً من دفتر المالك الدائم.",
+          createdAt: tsMs,
+          updatedAt: tsMs,
+        };
+        sessionsRecovered++;
+      }
+      const child = store.sessions[sid];
+      const childExists = child.messages.some(
+        (m) => m.role === entry.role && m.content.trim().slice(0, 140) === cleaned.slice(0, 140),
+      );
+      if (!childExists) {
+        child.messages.push({
+          role: entry.role,
+          content: cleaned,
+          ts: tsMs,
+          ...(entry.provider ? { provider: entry.provider } : {}),
+        });
+        child.updatedAt = Math.max(child.updatedAt, tsMs);
+      }
+    }
+  }
+
+  if (restoredToRoot > 0) {
+    root.messages.sort((a, b) => a.ts - b.ts);
+    trimSessionMessages(root);
+    root.updatedAt = Date.now();
+  }
+  return { restoredToRoot, sessionsRecovered, totalRootMessages: root.messages.length };
+}
+
+export function restoreAllJournalToNexus(): { restoredToRoot: number; sessionsRecovered: number; totalRootMessages: number } {
+  ensureBooted();
+  const res = syncJournalIntoNexus();
+  flushSessionNexus();
+  return res;
+}
+
+export function renameNexusSession(id: string, title: string): NexusSession | null {
+  ensureBooted();
+  const sess = store.sessions[id];
+  if (!sess) return null;
+  const cleanTitle = String(title || "").trim();
+  if (cleanTitle) {
+    sess.title = cleanTitle.slice(0, 100);
+    sess.updatedAt = Date.now();
+    scheduleFlush();
+  }
+  return sess;
 }
 
 function ensureBooted(): void {

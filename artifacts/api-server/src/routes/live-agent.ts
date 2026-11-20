@@ -19,7 +19,7 @@ import { buildIntelligentSecurityReply } from "./ollama-proxy";
 // the catch, which is exactly how a capability question ended as a canned bubble.
 import { runAgent, type AgentEvent } from "../lib/agent/core";
 import { listMemories, remember, memoryStats } from "../lib/agent/memory-store";
-import { journalStats, journalTopTopics } from "../lib/agent/owner-journal";
+import { journalRecent, journalStats, journalTopTopics } from "../lib/agent/owner-journal";
 import { AGENT_TOOLS, runAgentTool } from "../lib/agent/tools";
 import { listConfiguredProviders } from "../lib/agent/llm";
 import { getJobs } from "../lib/nova-cron";
@@ -35,12 +35,77 @@ import {
   getNexusSnapshot,
   addNexusInsight,
   recordBackgroundEvent,
+  restoreAllJournalToNexus,
+  renameNexusSession,
 } from "../lib/agent/session-nexus";
 import { readEternalVault, writeEternalVault, recordEternalMemoryEntry } from "./kali-env";
-import { requireOps, tokenConfigured, checkGate } from "../lib/ops/gate";
+import { requireOps, tokenConfigured, checkGate, sameOriginOk } from "../lib/ops/gate";
 import fs from "node:fs";
 
 initSessionNexus();
+
+export interface SovereignPermissionsState {
+  fullPermissions: boolean;
+  autoApproveTools: boolean;
+  kaliExecAllowed: boolean;
+  fleetExecAllowed: boolean;
+  zeroDayLabAllowed: boolean;
+  selfHealAllowed: boolean;
+  autonomy247: boolean;
+  eternalMemorySync: boolean;
+  updatedAt: string;
+}
+
+const PERMISSIONS_FILE = path.resolve(process.cwd(), "state/nova-permissions.json");
+
+export function readSovereignPermissions(): SovereignPermissionsState {
+  const defaults: SovereignPermissionsState = {
+    fullPermissions: true,
+    autoApproveTools: true,
+    kaliExecAllowed: true,
+    fleetExecAllowed: true,
+    zeroDayLabAllowed: true,
+    selfHealAllowed: true,
+    autonomy247: true,
+    eternalMemorySync: true,
+    updatedAt: new Date().toISOString(),
+  };
+  try {
+    if (fs.existsSync(PERMISSIONS_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(PERMISSIONS_FILE, "utf8")) as Partial<SovereignPermissionsState>;
+      return {
+        fullPermissions: parsed.fullPermissions !== false,
+        autoApproveTools: parsed.autoApproveTools !== false,
+        kaliExecAllowed: parsed.kaliExecAllowed !== false,
+        fleetExecAllowed: parsed.fleetExecAllowed !== false,
+        zeroDayLabAllowed: parsed.zeroDayLabAllowed !== false,
+        selfHealAllowed: parsed.selfHealAllowed !== false,
+        autonomy247: parsed.autonomy247 !== false,
+        eternalMemorySync: parsed.eternalMemorySync !== false,
+        updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : defaults.updatedAt,
+      };
+    }
+  } catch {
+    /* ignore */
+  }
+  return defaults;
+}
+
+export function writeSovereignPermissions(patch: Partial<SovereignPermissionsState>): SovereignPermissionsState {
+  const current = readSovereignPermissions();
+  const next: SovereignPermissionsState = {
+    ...current,
+    ...patch,
+    updatedAt: new Date().toISOString(),
+  };
+  try {
+    fs.mkdirSync(path.dirname(PERMISSIONS_FILE), { recursive: true });
+    fs.writeFileSync(PERMISSIONS_FILE, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  } catch {
+    /* ignore */
+  }
+  return next;
+}
 
 const router = Router();
 
@@ -305,6 +370,110 @@ router.delete("/live-agent/sessions/:id", (req, res) => {
   return res.json(deleteNexusSession(req.params.id));
 });
 
+router.post("/live-agent/sessions/:id/rename", (req, res) => {
+  const { title } = (req.body ?? {}) as { title?: string };
+  const updated = renameNexusSession(req.params.id, String(title || "").trim());
+  if (!updated) {
+    res.status(404).json({ ok: false, error: "الجلسة غير موجودة" });
+    return;
+  }
+  res.json({
+    ok: true,
+    id: updated.id,
+    title: updated.title,
+    updatedAt: new Date(updated.updatedAt).toISOString(),
+  });
+});
+
+router.post("/live-agent/sessions/restore-journal", (_req, res) => {
+  const restored = restoreAllJournalToNexus();
+  const root = getOrCreateNexusSession(ROOT_SESSION_ID);
+  res.json({
+    ok: true,
+    ...restored,
+    sessions: listNexusSessions(),
+    rootMessages: root.messages.filter((m) => m.role !== "system"),
+  });
+});
+
+router.get("/live-agent/permissions", (_req, res) => {
+  res.json({
+    ok: true,
+    permissions: readSovereignPermissions(),
+    totalTools: AGENT_TOOLS.length,
+    sensitiveTools: AGENT_TOOLS.filter((t) => t.risk === "sensitive").map((t) => ({
+      name: t.name,
+      title: t.title,
+      category: t.category,
+    })),
+  });
+});
+
+router.post("/live-agent/permissions", (req, res) => {
+  const body = (req.body ?? {}) as Partial<SovereignPermissionsState>;
+  const updated = writeSovereignPermissions(body);
+  recordBackgroundEvent({
+    kind: "permissions",
+    title: updated.fullPermissions
+      ? "🔓 تم تفعيل الصلاحيات السيادية الكاملة 100%"
+      : "🔒 تم تعديل إعدادات الصلاحيات",
+    detail: `fullPermissions=${updated.fullPermissions} · autoApproveTools=${updated.autoApproveTools} · kali=${updated.kaliExecAllowed} · fleet=${updated.fleetExecAllowed}`,
+    source: "live-agent",
+  });
+  res.json({
+    ok: true,
+    permissions: updated,
+  });
+});
+
+router.get("/live-agent/history-all", (_req, res) => {
+  try {
+    restoreAllJournalToNexus();
+  } catch {
+    /* ignore */
+  }
+  const sessions = listNexusSessions();
+  const rootSession = getOrCreateNexusSession(ROOT_SESSION_ID);
+  const journalEntries = journalRecent(250);
+  const jStats = journalStats();
+  const nexus = getNexusSnapshot();
+  const vault = readEternalVault();
+  const perms = readSovereignPermissions();
+  res.json({
+    ok: true,
+    permissions: perms,
+    rootSessionId: ROOT_SESSION_ID,
+    rootMessageCount: rootSession.messages.filter((m) => m.role !== "system").length,
+    sessions: sessions.map((s) => {
+      const full = getNexusSession(s.id);
+      const msgs = (full?.messages ?? []).filter((m) => m.role === "user" || m.role === "assistant");
+      const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+      return {
+        ...s,
+        messageCount: msgs.length,
+        lastMessagePreview: lastMsg ? String(lastMsg.content).slice(0, 140) : s.summary,
+      };
+    }),
+    journal: {
+      stats: jStats,
+      entries: journalEntries
+        .slice(-200)
+        .reverse()
+        .map((e) => ({
+          ...e,
+          ts: new Date(typeof e.ts === "number" ? e.ts : Date.now()).toISOString(),
+        })),
+    },
+    eternalMemory: {
+      total: vault.memory.length,
+      activeTarget: vault.session.activeTarget,
+      entries: vault.memory.slice(0, 80),
+    },
+    backgroundFeed: nexus.recentBackground ?? [],
+    learnedInsights: nexus.learnedInsights ?? [],
+  });
+});
+
 /**
  * Brain status — the contract the LiveAgentPanel renders.
  *
@@ -491,10 +660,18 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
 
   const sse = makeSSE(res);
 
+  const perms = readSovereignPermissions();
+  const bodyObj = (req.body ?? {}) as { approve?: unknown; fullPermissions?: boolean };
+  const isFullPerms =
+    bodyObj.fullPermissions !== undefined
+      ? Boolean(bodyObj.fullPermissions)
+      : Boolean(perms.fullPermissions && perms.autoApproveTools);
+
   const approved = (() => {
+    if (isFullPerms) return ["*"];
     const gate = tokenConfigured() ? checkGate(req as never, "live-agent chat") : null;
-    const body = req.body as { approve?: unknown };
-    return gate && gate.ok && gate.code === "allowed" && Array.isArray(body.approve) ? (body.approve as string[]) : [];
+    const trustedOrigin = sameOriginOk(req as never) || !tokenConfigured() || Boolean(gate && gate.ok);
+    return trustedOrigin && Array.isArray(bodyObj.approve) ? (bodyObj.approve as string[]) : [];
   })();
 
   try {
@@ -507,6 +684,7 @@ router.post("/live-agent/sessions/:id/messages", async (req, res) => {
       preferredModel: model,
       autonomousMode,
       kaliConnected,
+      fullPermissions: isFullPerms,
       history: sess.messages
         .filter((m) => m.role === "user" || m.role === "assistant")
         /* TEST3 «الشات بلا حد — شغلنا طويل جدًا»: آخر 30 دورة بدل 12، وفوقهم

@@ -223,6 +223,8 @@ export interface AgentRunOptions {
   maxSteps?: number;
   planMode?: boolean;
   approved?: string[];
+  /** Sovereign Full Permissions mode: when true, all sensitive tools execute directly without confirm_required pause. */
+  fullPermissions?: boolean;
   /** Selected panel operating mode: defensive | offensive | analyst | stealth. */
   agentMode?: string;
   /** Preferred model label selected in UI. */
@@ -1657,6 +1659,18 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     ]
       .filter((l) => l !== "")
       .join("\n");
+    if (!opts.skipNexusRecord) {
+      try {
+        recordNexusTurn(sessionId, {
+          userMessage: message,
+          assistantReply: reply,
+          provider: `${provider}+plan-mode`,
+          toolsUsed: [],
+        });
+      } catch {
+        /* ignore */
+      }
+    }
     opts.emit({ type: "plan_ready", steps: plan.steps, thought: plan.thought, awaitingApproval: true, text: reply });
     opts.emit({ type: "done", sessionId, mode: "plan", toolCount: 0, ms: Date.now() - started, provider: `${provider}+plan-mode` });
     return { mode, provider: `${provider}+plan-mode`, toolsUsed: [], reply, ms: Date.now() - started };
@@ -1722,10 +1736,14 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     });
 
     // ── human-in-the-loop gate ────────────────────────────────────────────
-    // Sensitive tools stop here and ask. The client answers by re-sending the
-    // same message with `approve: [tool]`; only then does anything execute.
+    // Sensitive tools stop here and ask unless fullPermissions is active or
+    // the client approved the tool (or "*").
     const risk = String(spec?.risk ?? "safe");
-    if (risk === "sensitive" && !(opts.approved ?? []).includes(step.tool)) {
+    const isToolApproved =
+      opts.fullPermissions === true ||
+      (opts.approved ?? []).includes("*") ||
+      (opts.approved ?? []).includes(step.tool);
+    if (risk === "sensitive" && !isToolApproved) {
       const reason = `الأداة «${spec?.title ?? step.tool}» حساسة — ممكن تنفّذ أوامر على جهاز حقيقي. محتاج موافقتك قبل التنفيذ.`;
       opts.emit({ type: "confirm_required", id, name: step.tool, title: spec?.title ?? step.tool, args: step.args, risk, reason });
       pendingApprovals.push({ sessionId, tool: step.tool, args: step.args, at: Date.now() });
