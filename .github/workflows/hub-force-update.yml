@@ -63,6 +63,10 @@ jobs:
           echo "::notice::autopilot-2099: $(echo "$AP" | tr -d '\n\r')"
           CN=$(curl -s --max-time 30 "$HUB/api/kali-env/connections?token=$TOKEN" | head -c 240)
           echo "::notice::connections-2099: $(echo "$CN" | tr -d '\n\r')"
+          BE=$(curl -s --max-time 30 "$HUB/api/kali-env/bounty-engine?token=$TOKEN" | head -c 260)
+          echo "::notice::bounty-engine-2099: $(echo "$BE" | tr -d '\n\r')"
+          BH=$(curl -s --max-time 45 -X POST "$HUB/api/kali-env/bounty-engine/hunt" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"target":"example.com","programId":"bugbounty-web-cloud","sendTelegram":true}' | head -c 320)
+          echo "::notice::bounty-hunt-2099: $(echo "$BH" | tr -d '\n\r')"
           T=$(curl -s --max-time 120 "$HUB/api/kali-env/tools?token=$TOKEN")
           echo "::notice::tools: $(echo "$T" | grep -o '"total":[0-9]*' | head -1) · $(echo "$T" | grep -o '"present":[0-9]*' | head -1)"
           H=$(curl -s --max-time 60 "$HUB/api/kali-env/health?token=$TOKEN" | head -c 300)
