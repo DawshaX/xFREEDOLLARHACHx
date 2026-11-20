@@ -315,8 +315,9 @@ async function refreshKaliSnap(): Promise<void> {
       packages: pk,
       text: [
         `- كالي على الهَب: ${st.present ? `جاهزة (${pk} حزمة)` : "مش محمّلة — الوضع سحابي أولًا"}`,
-        `- عقد لينكس متصلة: ${sum.linuxNodes} — وأي أمر كالي بيتحوّل تلقائيًا لأول عقدة فيها كالي (المقاس: 4/4 عقد أسطول على كالي 2026-11-15)`,
-        `- مساحتك كلها على جيت هوب: ‎~12.4GB مقاس (فرع kali-rootfs 5.62GB · repo 5.70GB · toolchain 1.02GB · كوربوس) — المخزن سحابي دايمًا`,
+        `- عقد لينكس متصلة: ${sum.linuxNodes} — وأي أمر كالي بيتحوّل تلقائيًا لأول عقدة فيها كالي (المقاس: 10/10 عقد أسطول على كالي · 266/266 أداة كالي + 28/28 أداة بايثون = 294 أداة جاهزة)`,
+        `- محركات كالي 2099 المدمجة في يدك مباشرة: kali_bounty_hunt (ماكينة صيد المكافآت والمليارات والتقارير التنفيذية) · kali_zeroday_lab (مختبر اكتشاف الزيرو-داي والثغرات العميقة) · kali_autopilot_2099 (سلاسل الأتمتة 360°) · kali_visitor_radar (رادار الزوار وفحص الـIP وتليجرام) · kali_attack_graph (خريطة الهجوم 360° وNIST CSF 2.0)`,
+        `- مساحتك كلها على جيت هوب: ‎~67.11GB مقاس عبر 8 مستودعات ومرايا سحابية (فرع kali-rootfs 5.62GB · repo 5.70GB · toolchain 1.02GB · كوربوس 429,778 ثغرة و1,786 KEV) — المخزن سحابي دايمًا`,
         `- المساحة على الهَب نفسه محدودة (1.5GB) — ماتحملش عليها بيئات؛ كل الحاجات الكبيرة بره`,
       ].join("\n"),
     };
@@ -380,6 +381,48 @@ function buildContextBlock(
 /* ── heuristic planner (works with zero models) ──────────────────────────── */
 
 const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
+  /* ── محركات كالي 2099 السيادية (المليارات · الزيرو-داي · الأوتوبايلوت · رادار الزوار · خريطة الهجوم) ── */
+  {
+    test: /(?:مليار|مليارات|مكافآت|مكافأة|باونتي|bounty|تقرير تنفيذي|سكة المليارات)/i,
+    tools: (msg) => {
+      const host = extractTarget(msg) || "example.com";
+      return [
+        { tool: "kali_bounty_hunt", args: { target: host, programId: "bugbounty-web-cloud" } },
+        { tool: "bounty_candidates", args: { limit: 5 } },
+      ];
+    },
+  },
+  {
+    test: /(?:زيرو\s*داي|زيروهات|zero[- ]?day|0[- ]?day|ثغرات عميقة|اكتشاف ثغرات جديدة)/i,
+    tools: (msg) => {
+      const host = extractTarget(msg) || "example.com";
+      return [
+        { tool: "kali_zeroday_lab", args: { target: host, focus: "web-api-ssrf-auth" } },
+        { tool: "vuln_combine", args: { query: host } },
+      ];
+    },
+  },
+  {
+    test: /(?:أوتوبايلوت|اوتوبايلوت|autopilot|بيربل تيم|purple[- ]?team)/i,
+    tools: (msg) => {
+      const host = extractTarget(msg) || "example.com";
+      return [{ tool: "kali_autopilot_2099", args: { target: host, templateId: "autopilot-purple-360" } }];
+    },
+  },
+  {
+    test: /(?:رادار الزوار|من دخل الموقع|زوار الموقع|visitor radar|فحص ايبي الزائر)/i,
+    tools: (msg) => {
+      const ipMatch = msg.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+      return [{ tool: "kali_visitor_radar", args: ipMatch ? { ip: ipMatch[0] } : {} }];
+    },
+  },
+  {
+    test: /(?:خريطة الهجوم|خريطة سطح الهجوم|attack graph|nist csf)/i,
+    tools: (msg) => {
+      const host = extractTarget(msg) || "example.com";
+      return [{ tool: "kali_attack_graph", args: { target: host } }];
+    },
+  },
   /* ── TEST9: التطبيقات المتصلة — الأجينت يفهم «ابعت/دوّن/اكتب في» ويشغّل
    * التطبيق الحقيقي بأدوات app_* — حتى بلا LLM (المخطّط الاستدلالي). ── */
   {
@@ -724,6 +767,11 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
     if (/اشرح|xss|ssrf|owasp/i.test(src)) return "قاعدة المعرفة التقنية";
     if (/ابحث|دوّر|search/i.test(src)) return "بحث في النت";
     if (/حالة المنصة|status|health/i.test(src)) return "حالة المنصة";
+    if (/مليارات|bounty_hunt/i.test(src)) return "ماكينة صيد المكافآت والمليارات";
+    if (/زيرو|zeroday/i.test(src)) return "مختبر الزيرو-داي 2099";
+    if (/أوتوبايلوت|autopilot/i.test(src)) return "سلسلة Kali Autopilot 360°";
+    if (/رادار الزوار|visitor_radar/i.test(src)) return "رادار الزوار وتليجرام";
+    if (/خريطة الهجوم|attack_graph/i.test(src)) return "خريطة سطح الهجوم 360°";
     return "تحليل الطلب";
   };
   // ── القدرات أول: «تقدر تفتح متصفح وتشتغل علي ميتاسبلويت؟» لازم تتحلّل من خريطة
@@ -747,7 +795,21 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
       /* «افحص حالة النظام» كانت بتطلّع platform_self_report وأداة knowledge_search
        * باستعلام مشوّه («ا حالة النظام» → صفر). أي سؤال طارده حالة المنصة مايضبهوش
        * على فهرس المعرفة التقنية — التقرير المقاس هو الإجابة، مش بحث نصي فاضي. */
-      if (step.tool === "knowledge_search" && steps.some((s) => s.tool === "platform_self_report")) continue;
+      if (
+        step.tool === "knowledge_search" &&
+        steps.some((s) =>
+          [
+            "platform_self_report",
+            "kali_bounty_hunt",
+            "kali_zeroday_lab",
+            "kali_autopilot_2099",
+            "kali_visitor_radar",
+            "kali_attack_graph",
+          ].includes(s.tool),
+        )
+      ) {
+        continue;
+      }
       steps.push(step);
     }
     labels.push(INTENT_LABEL(rule.test));
