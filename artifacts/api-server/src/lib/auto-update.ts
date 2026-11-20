@@ -18,6 +18,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { appendNovaEvent } from "./ops/nova-events";
 import os from "node:os";
 import { spawn } from "node:child_process";
 import { bootBuild, requestReload, restartHistory, selfRespawn } from "./self-restart";
@@ -544,6 +545,7 @@ function startInstaller(releaseAt: string): AutoUpdateState {
           installedReleaseAt: releaseAt, // TEST72 — الجرس ده اتقرع وخلاص: الفحص الجاي يقول up-to-date
         });
         appendLog("files installed — writing the reload marker from the app itself");
+        appendNovaEvent("update", "✓ اتطبّقت نسخة جديدة — بنطلب إعادة تشغيل", `releaseAt=${releaseAt}`);
         requestReload({
           verifyMs: 9000,
           then: () => {
