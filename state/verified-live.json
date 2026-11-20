@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "at": "2026-11-19T21:03:24.640Z",
+  "at": "2026-11-20T07:58:44.726Z",
   "verdict": "AMBER",
   "counts": {
-    "pass": 20,
+    "pass": 21,
     "fail": 0,
     "blocked": 0,
-    "review": 4
+    "review": 2
   },
   "meta": {
     "tools": [
@@ -28,25 +28,25 @@
       "check": "dns resolution (getent — the resolver, not the scanner)",
       "status": "pass",
       "detail": "2600:3c01::f03c:91ff:fe18:bb2f scanme.nmap.org · dnsx=present",
-      "at": "2026-11-19T21:00:17.140Z"
+      "at": "2026-11-20T07:47:26.727Z"
     },
     {
       "layer": "cli",
       "check": "subfinder -d vulnweb.com",
       "status": "pass",
-      "detail": "519 سوبدومين (المطلوب ≥2) · 0l9l.vulnweb.com, tuubalme.vulnweb.com, cart.vulnweb.com",
-      "at": "2026-11-19T21:00:25.979Z",
-      "count": 519,
-      "ms": 8838
+      "detail": "518 سوبدومين (المطلوب ≥2) · 2lp7.vulnweb.com, scan-report-testphp.vulnweb.com, 19y7.vulnweb.com",
+      "at": "2026-11-20T07:47:35.366Z",
+      "count": 518,
+      "ms": 8638
     },
     {
       "layer": "cli",
       "check": "httpx https://demo.testfire.net/",
-      "status": "review",
-      "detail": "status=مفيش (المطلوب 200) · exit=0 · 0B · السبب: مفيش مخرجات · مفاتيح الرد: مفيش JSON · 951ms",
-      "at": "2026-11-19T21:00:26.931Z",
-      "ms": 951,
-      "httpStatus": 0,
+      "status": "pass",
+      "detail": "200 · Altoro Mutual ·",
+      "at": "2026-11-20T07:47:36.595Z",
+      "ms": 1227,
+      "httpStatus": 200,
       "toolError": null,
       "toolFailed": false
     },
@@ -55,18 +55,18 @@
       "check": "katana crawl testphp.vulnweb.com",
       "status": "pass",
       "detail": "1 رابط متكرول (المطلوب ≥1)",
-      "at": "2026-11-19T21:00:48.477Z",
+      "at": "2026-11-20T07:47:58.203Z",
       "count": 1,
-      "ms": 21546
+      "ms": 21608
     },
     {
       "layer": "cli",
       "check": "nuclei -u testphp.vulnweb.com (high,critical)",
       "status": "review",
       "detail": "4 طلب اتفحص (المطلوب >50) و0 نتيجة high/critical · exit=0",
-      "at": "2026-11-19T21:01:27.697Z",
+      "at": "2026-11-20T07:48:30.253Z",
       "count": 0,
-      "ms": 29809,
+      "ms": 22932,
       "cutOff": false
     },
     {
@@ -74,16 +74,16 @@
       "check": "nmap scanme.nmap.org:80,22",
       "status": "pass",
       "detail": "2 بورت مفتوح · 22/tcp open · 80/tcp open",
-      "at": "2026-11-19T21:01:27.893Z",
+      "at": "2026-11-20T07:48:30.413Z",
       "count": 2,
-      "ms": 196
+      "ms": 159
     },
     {
       "layer": "cli",
       "check": "hub ",
       "status": "review",
       "detail": "/api/health → HTTP 000 · بلا رد · ops/version بلا رد · 17ms · السبب: TypeError Failed to parse URL from /api/health ERR_INVALID_URL",
-      "at": "2026-11-19T21:01:27.911Z",
+      "at": "2026-11-20T07:48:30.431Z",
       "hubUrl": "",
       "httpStatus": 0,
       "opsStatus": 0,
@@ -95,97 +95,89 @@
       "check": "ffuf fuzz testphp.vulnweb.com",
       "status": "pass",
       "detail": "61 طلب مُرسل و0 مطابقة (1 سطر مخرجات)",
-      "at": "2026-11-19T21:02:27.940Z",
+      "at": "2026-11-20T07:49:30.471Z",
       "count": 0,
       "sent": 61,
-      "ms": 60028
+      "ms": 60040
     },
     {
       "layer": "engine",
       "check": "engine reachable",
       "status": "pass",
       "detail": "HTTP 200",
-      "at": "2026-11-19T21:02:27.955Z"
+      "at": "2026-11-20T07:49:30.488Z"
     },
     {
       "layer": "engine",
       "check": "kinds report tool presence",
       "status": "pass",
       "detail": "27 نوع شغال على النود: recon.dns, recon.tls, recon.headers, recon.ports, recon.certspotter, infra.freehosts, recon.securitytxt, recon.jspaths, intel.cvebytech, intel.advisories, intel.corpus, tools.nuclei, tools.httpx, tools.subfinder, tools.katana, tools.nmap, tools.amass, tools.naabu, tools.ffuf,…",
-      "at": "2026-11-19T21:02:27.963Z"
+      "at": "2026-11-20T07:49:30.495Z"
     },
     {
       "layer": "engine",
       "check": "bounty catalog served",
       "status": "pass",
-      "detail": "745 برنامج (509 بمكافأة) · آخر تحديث 3.2 يوم · ops/bounty/programs-catalog.json",
-      "at": "2026-11-19T21:02:27.980Z"
+      "detail": "745 برنامج (509 بمكافأة) · آخر تحديث 3.7 يوم · ops/bounty/programs-catalog.json",
+      "at": "2026-11-20T07:49:30.516Z"
     },
     {
       "layer": "engine",
       "check": "catalog lookup over HTTP",
       "status": "pass",
       "detail": "aces-dev.wnba.com → hackerone:nba-public (domain · استقبال open) · ونطاق مجهول → match:null",
-      "at": "2026-11-19T21:02:27.996Z"
+      "at": "2026-11-20T07:49:30.534Z"
     },
     {
       "layer": "engine",
       "check": "program registered active (demo.testfire.net)",
       "status": "pass",
       "detail": "id=demo.testfire.net · policy=https://demo.testfire.net/",
-      "at": "2026-11-19T21:02:28.096Z"
+      "at": "2026-11-20T07:49:30.729Z"
     },
     {
       "layer": "engine",
       "check": "job created",
       "status": "pass",
-      "detail": "job=20261119-da370b · 7 مهمة",
-      "at": "2026-11-19T21:02:28.103Z"
+      "detail": "job=20261120-339065 · 7 مهمة",
+      "at": "2026-11-20T07:49:30.736Z"
     },
     {
       "layer": "engine",
       "check": "job executed",
       "status": "pass",
-      "detail": "5/7 done · 2 failed · 4 finding · done",
-      "at": "2026-11-19T21:02:40.128Z",
-      "jobId": "20261119-da370b"
-    },
-    {
-      "layer": "engine",
-      "check": "failed tasks",
-      "status": "review",
-      "detail": "recon.headers: الطلب لـdemo.testfire.net موصّلش (Error: connect ECONNREFUSED 65.61.137.117:443) — النتيجة «مجهولة» مش «ناقصة» · recon.tls: handshake لـdemo.testfire.net فشل (Error: connect ECONNREFUSED 65.61.137.117:443) — مفيش استنتاج عن الشهادة",
-      "at": "2026-11-19T21:02:40.128Z",
-      "jobId": "20261119-da370b"
+      "detail": "7/7 done · 0 failed · 11 finding · done",
+      "at": "2026-11-20T07:58:04.267Z",
+      "jobId": "20261120-339065"
     },
     {
       "layer": "engine",
       "check": "evidence hashed on disk",
       "status": "pass",
-      "detail": "4 ملف في state/jobs/20261119-da370b/evidence · 3 فيهم بايتات · فاضي: tools.httpx-e3b0c44298fc.txt (1 — 1 منها صفر مخرجات بحاشية الفراغ، و0 مفاقيد فعلية)",
-      "at": "2026-11-19T21:02:40.129Z",
-      "jobId": "20261119-da370b",
-      "evidence": 4,
-      "emptyEvidence": 1,
-      "zeroOutputEvidence": 1,
+      "detail": "6 ملف في state/jobs/20261120-339065/evidence · 6 فيهم بايتات",
+      "at": "2026-11-20T07:58:04.267Z",
+      "jobId": "20261120-339065",
+      "evidence": 6,
+      "emptyEvidence": 0,
+      "zeroOutputEvidence": 0,
       "lostEvidence": 0
     },
     {
       "layer": "engine",
       "check": "report is honest about coverage",
       "status": "pass",
-      "detail": "668 بايت · فيه «Coverage gaps»=true · «reportable»=true",
-      "at": "2026-11-19T21:02:40.131Z",
-      "jobId": "20261119-da370b"
+      "detail": "614 بايت · فيه «Coverage gaps»=true · «reportable»=true",
+      "at": "2026-11-20T07:58:04.270Z",
+      "jobId": "20261120-339065"
     },
     {
       "layer": "engine",
       "check": "findings vault is idempotent",
       "status": "pass",
-      "detail": "أول sync: +4/-15 (من مهام 4 · من الكتالوج القديم 11) · تاني: +0/-15 ومحدّثة 15 · متأكَّدة 0",
-      "at": "2026-11-19T21:02:40.170Z",
-      "jobId": "20261119-da370b",
-      "vaultTotal": 15,
+      "detail": "أول sync: +20/-31 (من مهام 29 · من الكتالوج القديم 11) · تاني: +0/-31 ومحدّثة 40 · متأكَّدة 0",
+      "at": "2026-11-20T07:58:04.459Z",
+      "jobId": "20261120-339065",
+      "vaultTotal": 31,
       "vaultVerified": 0
     },
     {
@@ -193,7 +185,7 @@
       "check": "report draft gated on reproduction",
       "status": "pass",
       "detail": "3 مفتاح: 0 مسودة (200) · 3 مرفوضة (409) · البنية=true · سبب الرفض موجود=true",
-      "at": "2026-11-19T21:02:40.176Z",
+      "at": "2026-11-20T07:58:04.465Z",
       "keys": "e5343c5c880aab86:409,643787b5159b7cc1:409,ec1d588bcee35a2e:409"
     },
     {
@@ -201,7 +193,7 @@
       "check": "hunt candidates stay context-only",
       "status": "pass",
       "detail": "12 مرشّح من 745 برنامج · أعلى استجابة 100% · مفلوت {\"notBounty\":236,\"pausedOrClosed\":0,\"lowEfficiency\":374,\"platform\":0,\"query\":0} · CIDR سياق بس=true · ترتيب=true",
-      "at": "2026-11-19T21:02:40.179Z",
+      "at": "2026-11-20T07:58:04.467Z",
       "catalogPresent": true
     },
     {
@@ -209,7 +201,7 @@
       "check": "negative control refuses example.com",
       "status": "pass",
       "detail": "HTTP 403 · برنامج Negative control (must never be scanned actively) محدد passive_only — استطلاع ومصادر عامة بس، من غير لمس الخدمة. للتفعيل لازم تأكيد إذن مكتوب: program_d…",
-      "at": "2026-11-19T21:02:40.181Z",
+      "at": "2026-11-20T07:58:04.469Z",
       "negative": true
     },
     {
@@ -217,7 +209,7 @@
       "check": "fleet agents registered",
       "status": "pass",
       "detail": "1 عقدة (self-node)",
-      "at": "2026-11-19T21:02:40.184Z",
+      "at": "2026-11-20T07:58:04.471Z",
       "agents": 1
     },
     {
@@ -225,7 +217,7 @@
       "check": "council llm seats answer",
       "status": "pass",
       "detail": "5 مقعد · chat HTTP 200 · delta ✓ (pollinations:openai-fast, ovh-llama, pollinations:mistral)",
-      "at": "2026-11-19T21:03:24.640Z",
+      "at": "2026-11-20T07:58:44.726Z",
       "seats": 5,
       "chatStatus": 200
     }
