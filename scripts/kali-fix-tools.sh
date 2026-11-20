@@ -1,51 +1,42 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# إصلاح الأدوات العنيدة — قياس حي 2026-11-20 05:1xZ: بعد 261/266 فضل 4
-# (maskprocessor · vulners · ettercap · fern) السبب المقاس:
-#   • apt في الجست بيفشل بـ"E: Unmet dependencies" (حالة dpkg مكسورة معروفة)
-#   • مسار /kali-env/install بيتوجه ساعات لجست بلا root (exit 2 فوري)
-# الحل هنا: بدائل مستقلة 100% — apt-get download + dpkg-deb -x (من غير dpkg db)،
-# pip، وclone + wrapper. كل خطوة مقاسة بcommand -v حقيقي.
-# التشغيل: من العقدة → bash scripts/kali-fix-tools.sh
-# أو من الهَب عبر exec-stream — idempotent: المتوفر يتخطى بسلام.
+# إصلاح الأدوات العنيدة v2 — قياس 05:2xZ: fern ✓ clone+wrapper. المتبقي:
+# vulners (pip بلا CLI → wrapper للnmap --script vulners + تحميل الNSE)
+# maskprocessor · ettercap (apt download + dpkg-deb -x — من غير dpkg db).
+# idempotent: المتوفر يتخطى. كل خطوة تطبع الخطأ الحقيقي لو فشلت.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
-R="$HOME/xFREEDOLLARHACHx/scripts/kali-exec.sh"
-[ -f "$R" ] || R="$(cd "$(dirname "$0")" && pwd)/kali-exec.sh"
-ROOTFS="$HOME/kali-rootfs/rootfs"
+W="$(cd "$(dirname "$0")/.." && pwd)"
+R="$W/scripts/kali-exec.sh"
+G() { bash "$R" bash -lc "$1" 2>/dev/null | grep -v proot; }
 
-echo "== حالة قبل =="
+echo "== قبل =="
 for t in vulners ettercap mp fern; do
-  p="$(bash "$R" bash -lc "command -v $t" 2>/dev/null || true)"
-  echo "  $t -> ${p:-MISSING}"
+  p="$(G "command -v $t" || true)"; echo "  $t -> ${p:-MISSING}"
 done
 
-echo "== 1) vulners (pip) =="
-bash "$R" bash -lc 'pip3 install --break-system-packages -q vulners 2>&1 | tail -1; command -v vulners || echo "vulners: no CLI (module only)"' 2>/dev/null | grep -v proot || true
+echo "== 1) vulners: NSE script + CLI wrapper =="
+if ! G 'command -v vulners' | grep -q .; then
+  G 'mkdir -p /usr/share/nmap/scripts /usr/local/bin; curl -sf -m 60 -o /usr/share/nmap/scripts/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse && echo NSE-DOWNLOADED || echo NSE-FAIL; printf "#!/bin/sh\nexec nmap --script vulners \"$@\"\n" > /usr/local/bin/vulners && chmod +x /usr/local/bin/vulners; command -v vulners' || true
+fi
 
-echo "== 2) maskprocessor (deb مستقل — من غير dpkg db) =="
-bash "$R" bash -lc 'command -v mp' 2>/dev/null | grep -q . || {
-  bash "$R" bash -lc 'apt-get download maskprocessor 2>&1 | tail -1; ls maskprocessor*.deb 2>/dev/null' 2>/dev/null | grep -v proot || true
-  # الdeb اتنزل جوه الجست في /root — نستخرجه بالdpkg-deb بتاع الجست نفسه في الrootfs
-  bash "$R" bash -lc 'for d in maskprocessor*.deb; do dpkg-deb -x "$d" / 2>&1 | tail -1; done; command -v mp' 2>/dev/null | grep -v proot || true
-}
+echo "== 2) maskprocessor: apt download + extract (verbose) =="
+if ! G 'command -v mp' | grep -q .; then
+  G 'apt-get download maskprocessor 2>&1 | tail -3; ls -la /root/maskprocessor*.deb 2>&1 | tail -2' || true
+  G 'cd /root && for d in maskprocessor*.deb; do dpkg-deb -x "$d" / && echo EXTRACTED-$d; done; command -v mp' || true
+fi
 
-echo "== 3) ettercap-text-only (apt — لو فشل: download + extract) =="
-bash "$R" bash -lc 'command -v ettercap' 2>/dev/null | grep -q . || {
-  bash "$R" bash -lc 'apt-get install -y ettercap-text-only 2>&1 | tail -2' 2>/dev/null | grep -v proot || true
-  bash "$R" bash -lc 'command -v ettercap' 2>/dev/null | grep -q . || {
-    bash "$R" bash -lc 'apt-get download ettercap-common ettercap-text-only 2>&1 | tail -1; for d in ettercap*.deb; do dpkg-deb -x "$d" / 2>&1 | tail -1; done; command -v ettercap' 2>/dev/null | grep -v proot || true
-  }
-}
+echo "== 3) ettercap-text-only: apt ثم download+extract (verbose) =="
+if ! G 'command -v ettercap' | grep -q .; then
+  G 'apt-get install -y ettercap-text-only 2>&1 | tail -4; command -v ettercap' || true
+fi
+if ! G 'command -v ettercap' | grep -q .; then
+  G 'apt-get download ettercap-common 2>&1 | tail -2; apt-get download ettercap-text-only 2>&1 | tail -2; ls /root/ettercap*.deb 2>&1 | tail -3' || true
+  G 'cd /root && for d in ettercap*.deb; do dpkg-deb -x "$d" / && echo EXTRACTED-$d; done; command -v ettercap' || true
+fi
 
-echo "== 4) fern-wifi-cracker (clone + wrapper — مستقل عن apt) =="
-bash "$R" bash -lc 'command -v fern' 2>/dev/null | grep -q . || {
-  bash "$R" bash -lc 'git clone --depth 1 https://github.com/savio-code/fern-wifi-cracker.git /opt/fern 2>&1 | tail -1; printf "#!/bin/sh\nexec python3 /opt/fern/Fern.py \"$@\"\n" > /usr/local/bin/fern && chmod +x /usr/local/bin/fern; command -v fern' 2>/dev/null | grep -v proot || true
-}
-
-echo "== الحالة بعد =="
+echo "== بعد =="
 for t in vulners ettercap mp fern; do
-  p="$(bash "$R" bash -lc "command -v $t" 2>/dev/null || true)"
-  echo "  $t -> ${p:-MISSING}"
+  p="$(G "command -v $t" || true)"; echo "  $t -> ${p:-MISSING}"
 done
 echo "KALI-FIX-TOOLS-DONE"
