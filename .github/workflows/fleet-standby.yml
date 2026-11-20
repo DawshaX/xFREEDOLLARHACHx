@@ -17,8 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   watchdog:
-    # self-hosted: على عقدة الكالي نفسها — مافيش استهلاك دقائق GitHub المحدودة
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: قياس الأسطول الحي وتفعيل الاحتياط عند النقص
         env:
