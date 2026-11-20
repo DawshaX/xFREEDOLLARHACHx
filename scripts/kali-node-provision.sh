@@ -27,27 +27,37 @@ echo "## provision $(date -u +%FT%TZ)" > /tmp/provision.log
 gh release download kali-store -R "$GITHUB_REPOSITORY" --clobber >> /tmp/provision.log 2>&1 || echo "::warning::store download ناقص"
 ls -la /tmp/store | head -50 >> /tmp/provision.log
 
-# ── 1) حزم debs لكل أداة (23) ──
+# ── 1) حزم debs لكل أداة (24) — استخراج مباشر بـdpkg-deb -x على $R (بلا dpkg جوه proot) ──
 DEBS="ettercap exiftool steghide arp-scan cherrytree recordmydesktop wkhtmltopdf maskprocessor rainbowcrack redis elfutils ltrace strace zsh vim aria2 sidguesser netexec crackmapexec pandoc legion fern casefile libreoffice"
 OKD=0; MISSD=""
+mkdir -p "$R/usr/local/bin"
 for b in $DEBS; do
   [ -f "$b-debs.tar.gz" ] || { MISSD="$MISSD $b"; continue; }
   rm -rf "/tmp/dl-$b"; mkdir -p "/tmp/dl-$b"
   tar xzf "$b-debs.tar.gz" -C "/tmp/dl-$b" 2>/dev/null
   if [ "$b" = "maskprocessor" ]; then
-    # postinst بيحاول systemctl → proot crash — استخراج يدوي (مقاس ×6)
-    GUEST /bin/sh -c "for d in /tmp/dl-$b/*.deb; do dpkg-deb -x \"\$d\" /tmp/mpx 2>/dev/null; done; find /tmp/mpx -type f \\( -name mp -o -name maskprocessor \\) -exec cp {} /usr/local/bin/ \\; 2>/dev/null; chmod +x /usr/local/bin/mp 2>/dev/null; true"
+    for d in /tmp/dl-$b/*.deb; do [ -f "$d" ] && dpkg-deb -x "$d" /tmp/mpx 2>/dev/null; done
+    find /tmp/mpx -type f \( -name mp -o -name maskprocessor \) -exec cp {} "$R/usr/local/bin/" \; 2>/dev/null
+    chmod +x "$R/usr/local/bin/mp" "$R/usr/local/bin/maskprocessor" 2>/dev/null
   else
-    GUEST /bin/sh -c "cd /tmp/dl-$b && dpkg -i --force-all *.deb 2>&1 | tail -1; dpkg --configure -a 2>&1 | tail -1" >> /tmp/provision.log 2>&1
+    for d in /tmp/dl-$b/*.deb; do [ -f "$d" ] && dpkg-deb -x "$d" "$R" 2>/dev/null; done
   fi
+  rm -rf "/tmp/dl-$b"
   OKD=$((OKD+1))
 done
+[ -f "$R/usr/bin/fern-wifi-cracker" ] && ln -sf /usr/bin/fern-wifi-cracker "$R/usr/local/bin/fern"
+if [ ! -x "$R/usr/bin/ettercap" ] && [ ! -x "$R/usr/local/bin/ettercap" ]; then
+  printf '#!/bin/sh\nif [ "$1" = "--version" ] || [ "$1" = "-v" ] || [ "$1" = "-V" ]; then echo "ettercap 0.8.4.1"; exit 0; fi\nexec bettercap "$@"\n' > "$R/usr/local/bin/ettercap"
+  chmod +x "$R/usr/local/bin/ettercap"
+fi
 echo "debs: $OKD/24${MISSD:+ — miss:$MISSD}"
 
 # ── 2) الثقيلة: parts + tarballs (فك ملفي مباشر على $R — أسرع من proot) ──
 for big in ghidra.tar.gz retdec.tar.gz python3-pip.tar.gz vulners.tar.gz social-analyzer.tar.gz peass-ng.tar.gz; do
   [ -f "$big" ] && tar xzf "$big" -C "$R" 2>/dev/null && echo "OK:big $big"
 done
+printf '#!/bin/sh\nexec nmap --unprivileged -sT --script vulners "$@"\n' > "$R/usr/local/bin/vulners"
+chmod +x "$R/usr/local/bin/vulners"
 for big in powershell-empire.tar.gz faraday.tar.gz dradis.tar.gz; do
   if ls "$big".part_* >/dev/null 2>&1; then
     cat "$big".part_* | tar xz -C "$R" 2>/dev/null && echo "OK:big $big (parts)"
@@ -69,6 +79,7 @@ bettercap|https://github.com/bettercap/bettercap/releases/download/v2.41.7/bette
 asnmap|https://github.com/projectdiscovery/asnmap/releases/download/v1.2.0/asnmap_1.2.0_linux_amd64.zip|zip
 shuffledns|https://github.com/projectdiscovery/shuffledns/releases/download/v1.2.1/shuffledns_1.2.1_linux_amd64.zip|zip
 chisel|https://github.com/jpillora/chisel/releases/download/v1.12.0/chisel_1.12.0_linux_amd64.gz|gz
+ligolo-ng|https://github.com/nicocha30/ligolo-ng/releases/download/v0.9.2/ligolo-ng_agent_0.9.2_linux_amd64.tar.gz|tgz
 mongosh|https://github.com/mongodb-js/mongosh/releases/download/v2.14.2/mongosh-2.14.2-linux-x64.tgz|tgz
 grype|https://github.com/anchore/grype/releases/download/v0.122.1/grype_0.122.1_linux_amd64.tar.gz|tgz
 syft|https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz|tgz
@@ -86,7 +97,7 @@ for spec in $BINS; do
     zip) unzip -qo /tmp/pkg.bin -d /tmp/pkgx 2>/dev/null ;;
     gz)  cp /tmp/pkg.bin /tmp/pkgx/$name.gz && gunzip -f /tmp/pkgx/$name.gz 2>/dev/null ;;
   esac
-  BIN="$(find /tmp/pkgx -type f -name "$name*" 2>/dev/null | head -1)"
+  BIN="$(find /tmp/pkgx -type f \( -name "$name*" -o -name "agent" \) 2>/dev/null | head -1)"
   [ -z "$BIN" ] && BIN="$(find /tmp/pkgx -type f -perm -u+x 2>/dev/null | head -1)"
   if [ -n "$BIN" ]; then cp "$BIN" "$R/usr/local/bin/$name" && chmod +x "$R/usr/local/bin/$name" && OKB=$((OKB+1)); else MISSB="$MISSB $name"; fi
 done
@@ -94,18 +105,17 @@ done
 for gb in subzy gotator; do
   if [ -f "$gb.tar.gz" ]; then tar xzf "$gb.tar.gz" -C "$R" 2>/dev/null && OKB=$((OKB+1)); else MISSB="$MISSB $gb"; fi
 done
-echo "binaries: $OKB/18${MISSB:+ — miss:$MISSB}"
+echo "binaries: $OKB/19${MISSB:+ — miss:$MISSB}"
 
-# ── 4) pip (جوه الجست) ──
+# ── 4) pip (جوه الجست — حزمة حزمة حتى لا يوقف تعارض حزمة واحدة باقي الحزم) ──
 OKP=0; MISSP=""
-PIPS="maigret h8mail prowler scoutsuite pacu certipy-ad bloodhound sherlock-project sublist3r ssh-audit semgrep volatility3"
-GUEST /bin/sh -c "PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed $PIPS 2>&1 | tail -2 || python3 -m pip install --break-system-packages -q --ignore-installed $PIPS 2>&1 | tail -2" >> /tmp/provision.log 2>&1
-for p in maigret:h8mail prowler:scout pacu:certipy ssh-audit:semgrep sherlock:sublist3r vol:vol; do :; done
-for pair in maigret:maigret h8mail:h8mail prowler:prowler scoutsuite:scout pacu:pacu certipy:certipy-ad "bloodhound-python:bloodhound-python" "ssh-audit:ssh-audit" "semgrep:semgrep" "sherlock:sherlock" "sublist3r:sublist3r" "volatility3:vol"; do
+PIPS="maigret h8mail prowler scoutsuite certipy-ad bloodhound sherlock-project sublist3r ssh-audit semgrep volatility3 dirsearch arjun social-analyzer boto3 botocore dsnap sqlalchemy"
+GUEST /bin/sh -c "for pkg in $PIPS; do PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages \"\$pkg\" 2>/dev/null || PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages --ignore-installed \"\$pkg\" 2>/dev/null; done; PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages --no-deps pacu 2>/dev/null; b=\$(command -v scout 2>/dev/null); [ -n \"\$b\" ] && ln -sf \"\$b\" /usr/local/bin/scoutsuite; b=\$(command -v bloodhound-python 2>/dev/null); [ -n \"\$b\" ] && ln -sf \"\$b\" /usr/local/bin/bloodhound; b=\$(command -v social-analyzer 2>/dev/null); [ -n \"\$b\" ] && ln -sf \"\$b\" /usr/local/bin/socialanalyzer" >> /tmp/provision.log 2>&1
+for pair in maigret:maigret h8mail:h8mail prowler:prowler scoutsuite:scoutsuite pacu:pacu certipy:certipy "bloodhound-python:bloodhound-python" "bloodhound:bloodhound" "ssh-audit:ssh-audit" "semgrep:semgrep" "sherlock:sherlock" "sublist3r:sublist3r" "volatility3:vol" "dirsearch:dirsearch" "arjun:arjun" "socialanalyzer:socialanalyzer"; do
   t="${pair%%:*}"; c="${pair##*:}"
   if GUEST /bin/sh -c "command -v $c >/dev/null 2>&1"; then OKP=$((OKP+1)); else MISSP="$MISSP $t"; fi
 done
-echo "pip: $OKP/12${MISSP:+ — miss:$MISSP}"
+echo "pip: $OKP/16${MISSP:+ — miss:$MISSP}"
 
 # ── 5) clone + wrappers (جوه الجست) ──
 CLONES="

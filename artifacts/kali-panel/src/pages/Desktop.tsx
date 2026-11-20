@@ -1189,7 +1189,8 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
       return page("/dashboard", "Dashboard");
     case "settings":    case "firewall-config":   return page("/settings", "Settings");
     case "status":      case "service-manager":   return <ServicesStatusWin apiOnline={apiOnline} />;
-    case "playbooks":   case "backup-manager":    return page("/playbooks", "Playbooks");
+    case "playbooks":   return page("/playbooks", "Playbooks");
+    case "backup-manager": return page("/backup-manager", "Backup Manager");
     case "workspaces":  return page("/workspaces", "Workspaces");
     case "memory":      return page("/memory", "Agent Memory");
     case "jobs":        return page("/jobs", "Jobs");
@@ -1224,13 +1225,7 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
     case "incident-response":
     case "reports":     return <PdfReportsWindow />;
     case "bookmarks":   return page("/bookmarks", "Bookmarks");
-    case "steganography": return (
-      <div className="flex flex-col items-center justify-center h-full opacity-40">
-        <EyeOff className="w-16 h-16 mb-4 text-primary/50" />
-        <h3 className="text-lg font-bold">إخفاء البيانات</h3>
-        <p className="text-sm text-muted-foreground">قيد التطوير</p>
-      </div>
-    );
+    case "steganography": return page("/steganography", "Steganography");
     // Network tools
     case "port-scanner": return page("/port-scanner", "Port Scanner");
     case "dns-lookup":  return page("/dns-lookup", "DNS Lookup");
@@ -1242,13 +1237,7 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
     // System tools
     case "hash-calculator": return page("/hash-calculator", "Hash Calculator");
     case "encryption-tool": return page("/encryption-tool", "Encryption");
-    case "xdaw":        return (
-      <div className="flex flex-col items-center justify-center h-full opacity-40">
-        <Music2 className="w-16 h-16 mb-4 text-primary/50" />
-        <h3 className="text-lg font-bold">Nova DAW</h3>
-        <p className="text-sm text-muted-foreground">محطة العمل الصوتية</p>
-      </div>
-    );
+    case "xdaw":        return page("/kali-env", "Nova Kali Studio");
     // ── NEW: AI Evolution windows ──────────────────────────────────────────
     case "reverse-evolution": return (
       <div className="flex flex-col h-full bg-[#050510] overflow-auto" dir="rtl">

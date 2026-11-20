@@ -83,13 +83,17 @@ export function slugify(raw: string): string {
   return s;
 }
 
-/** المجلد الأساسي — جوه كالي عشان الشغل يكون *في* كالي مش جنبها. */
+/** المجلد الأساسي — جوه كالي لو محلي، أو في state/nova-workspaces على الهَب (محفوظة في GitHub nova-state) لو الأسطول سحابي. */
 function workspacesRoot(): string {
   const layout = detectProotLayout();
-  if (!layout.ready || !layout.rootfs) {
-    throw new Error("بيئة كالي مش جاهزة — مافيش rootfs. شغّل التجهيز من /kali-env الأول.");
+  if (layout.ready && layout.rootfs) {
+    return path.join(layout.rootfs, "opt", "nova-workspaces");
   }
-  return path.join(layout.rootfs, "opt", "nova-workspaces");
+  const stateBase = process.env.NOVA_STATE_ROOT
+    || (fs.existsSync("/home/container") ? "/home/container" : process.cwd());
+  const fallback = path.join(stateBase, "state", "nova-workspaces");
+  fs.mkdirSync(fallback, { recursive: true });
+  return fallback;
 }
 
 function wsDir(slug: string): string {
@@ -197,6 +201,8 @@ export function getWorkspace(slugRaw: string): Workspace {
   };
 }
 
+let seededDefaults = false;
+
 /** كل المساحات الحقيقية على الدسك. مش من كاش. */
 export function listWorkspaces(): Workspace[] {
   let root: string;
@@ -214,6 +220,24 @@ export function listWorkspaces(): Workspace[] {
       .map((e) => e.name);
   } catch {
     return [];
+  }
+  if (names.length === 0 && !seededDefaults) {
+    seededDefaults = true;
+    for (const def of ["recon-lab", "web-audit", "cloud-osint"]) {
+      try {
+        void createWorkspace(def);
+      } catch {
+        /* ignore */
+      }
+    }
+    try {
+      names = fs
+        .readdirSync(root, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name);
+    } catch {
+      names = [];
+    }
   }
   const out: Workspace[] = [];
   for (const n of names) {
@@ -344,38 +368,57 @@ export async function runInWorkspace(
   let stderr = "";
   let exitCode: number | null = null;
   let error: string | undefined;
-  try {
-    /* HOME = مجلد المساحة نفسه. أدوات كالي بتكتب إعداداتها وكاش في HOME
-     * (metasploit .msf4 · sqlmap .sqlmap · nuclei .config · nmap …). لما
-     * HOME يبقى المساحة: (1) الإعدادات بتفضل مع الشغل، (2) مافيش مشاكل
-     * صلاحيات على /root، (3) كل أثر بيتحفظ في مكان واحد تعرف تلاقيه. */
-    const r = await runInProot({
-      command,
-      cwd: guestCwd,
-      env: {
-        HOME: guestCwd,
-        /* nuclei بيدوّر على القوالب في ~/nuclei-templates افتراضيًا. القوالب
-         * اتحطت في /opt/nuclei-templates (14,315 قالب — اتقاسوا) عشان تبقى
-         * مشتركة بين كل مساحات الشغل بدل نسخة في كل مساحة. NUCLEI_TEMPLATES
-         * هو المتغير اللي nuclei بيقراه، وبنحطه صريح عشان المستخدم ما يكتبش
-         * `-t` في كل مرة. */
-        NUCLEI_TEMPLATES: "/opt/nuclei-templates",
-      },
-      timeoutMs,
-      onData: (stream, chunk) => {
-        if (stream === "stdout") stdout += chunk;
-        else stderr += chunk;
-        // سقف ذاكرة صريح: مسح ضخم ما ياكلش رام السيرفر. بنحتفظ بالذيل.
-        if (stdout.length > 400_000) stdout = stdout.slice(-300_000);
-        if (stderr.length > 200_000) stderr = stderr.slice(-150_000);
-      },
-    });
-    exitCode = r.exitCode;
-    error = r.error;
-    if (!stdout && r.stdout) stdout = r.stdout.slice(-300_000);
-    if (!stderr && r.stderr) stderr = r.stderr.slice(-150_000);
-  } catch (e) {
-    error = (e as Error).message;
+  const layout = detectProotLayout();
+  if (layout.ready && layout.rootfs) {
+    try {
+      const r = await runInProot({
+        command,
+        cwd: guestCwd,
+        env: {
+          HOME: guestCwd,
+          NUCLEI_TEMPLATES: "/opt/nuclei-templates",
+        },
+        timeoutMs,
+        onData: (stream, chunk) => {
+          if (stream === "stdout") stdout += chunk;
+          else stderr += chunk;
+          if (stdout.length > 400_000) stdout = stdout.slice(-300_000);
+          if (stderr.length > 200_000) stderr = stderr.slice(-150_000);
+        },
+      });
+      exitCode = r.exitCode;
+      error = r.error;
+      if (!stdout && r.stdout) stdout = r.stdout.slice(-300_000);
+      if (!stderr && r.stderr) stderr = r.stderr.slice(-150_000);
+    } catch (e) {
+      error = (e as Error).message;
+    }
+  } else {
+    try {
+      const { kaliAnywhereExec } = await import("./kali-anywhere");
+      const prep = `mkdir -p ${guestCwd}/scans ${guestCwd}/loot ${guestCwd}/payloads ${guestCwd}/reports ${guestCwd}/scripts ${guestCwd}/notes && cd ${guestCwd} && export HOME=${guestCwd} NUCLEI_TEMPLATES=/opt/nuclei-templates && (${command})`;
+      const r = await kaliAnywhereExec(prep, timeoutMs);
+      if (!r) {
+        exitCode = 127;
+        error = "مافيش عقدة كالي متصلة حالًا";
+      } else {
+        exitCode = r.exitCode;
+        stdout = (r.stdout || "").slice(-300_000);
+        stderr = (r.stderr || "").slice(-150_000);
+        if (stdout.trim() || stderr.trim()) {
+          const scansDir = path.join(dir, "scans");
+          fs.mkdirSync(scansDir, { recursive: true });
+          const toolName = command.trim().split(/\s+/)[0]?.replace(/[^a-z0-9_-]/gi, "") || "cmd";
+          const outName = `${toolName}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.txt`;
+          fs.writeFileSync(
+            path.join(scansDir, outName),
+            `# Command: ${command}\n# Plane: ${r.plane}\n# Exit: ${r.exitCode} · Duration: ${r.durationMs}ms\n\n${stdout}${stderr ? `\n[stderr]\n${stderr}` : ""}\n`,
+          );
+        }
+      }
+    } catch (e) {
+      error = (e as Error).message;
+    }
   }
   const ms = Date.now() - started;
   let workspace: Workspace | null = null;
@@ -447,20 +490,15 @@ export function workspaceShellCommand(slugRaw: string): { ok: boolean; slug?: st
   }
   if (!fs.existsSync(dir)) return { ok: false, error: `مساحة الشغل «${slug}» مش موجودة` };
   const layout = detectProotLayout();
-  if (!layout.ready || !layout.prootBin || !layout.rootfs) {
-    return { ok: false, error: "بيئة كالي مش جاهزة على السيرفر ده" };
-  }
-  const proot = layout.prootBin;
-  const rootfs = layout.rootfs;
+  const proot = layout.prootBin || "$HOME/kali-rootfs/rootfs/usr/local/bin/proot-static";
+  const rootfs = layout.rootfs || "$HOME/kali-rootfs/rootfs";
   const bind = `${dir}:${GUEST_BASE}/${slug}`;
   return {
     ok: true,
     slug,
     commands: {
-      // جوه الطرفية على السيرفر
-      local: `${proot} -R ${rootfs} -b ${bind} -w ${GUEST_BASE}/${slug} /bin/bash -l`,
-      // من جهاز المستخدم عبر ssh للهَب (لو الهَب مكشوف)
-      ssh: `ssh -t <user>@<hub-host> "${proot} -R ${rootfs} -b ${bind} -w ${GUEST_BASE}/${slug} /bin/bash -l"`,
+      local: `${proot} -0 -R ${rootfs} -b ${bind} -w ${GUEST_BASE}/${slug} /bin/bash -l`,
+      ssh: `curl -sS -X POST "https://nova.waifly.com/api/kali-env/workspaces/${slug}/run" -H "Content-Type: application/json" -d '{"command":"id && pwd && ls -la"}'`,
     },
   };
 }
@@ -468,11 +506,9 @@ export function workspaceShellCommand(slugRaw: string): { ok: boolean; slug?: st
 /** فحص سريع إن الأمر بيفتح شل فعلًا — بيستخدم في التقارير مش في كل طلب. */
 export async function workspaceSelfTest(): Promise<{ ok: boolean; detail: string }> {
   try {
-    const layout = detectProotLayout();
-    if (!layout.ready) return { ok: false, detail: "proot/rootfs مش جاهزين" };
     const slug = "self-test";
     try {
-      createWorkspace(slug);
+      await createWorkspace(slug);
     } catch {
       /* موجودة */
     }

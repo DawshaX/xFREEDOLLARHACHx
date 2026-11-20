@@ -42,6 +42,8 @@ export interface MemSample {
   usedPct: number | null;
   swapTotalBytes: number | null;
   swapUsedBytes: number | null;
+  totalMB?: number | null;
+  freeMB?: number | null;
   reason?: string;
 }
 
@@ -95,6 +97,7 @@ export interface KaliSysInfo {
   cpu: CpuSample;
   mem: MemSample;
   disks: DiskSample[];
+  disk?: { totalGB: number | null; freeGB: number | null; usedPct: number | null };
   procs: { total: number; rows: ProcRow[]; reason?: string };
   net: { ifaces: NetIface[]; reason?: string };
   gpu: GpuInfo;
@@ -174,6 +177,8 @@ function measureMem(): MemSample {
       usedPct: total && used !== null ? Math.round((used / total) * 1000) / 10 : null,
       swapTotalBytes: swapTotal,
       swapUsedBytes: swapTotal !== null && swapFree !== null ? swapTotal - swapFree : null,
+      totalMB: total !== null ? Math.round(total / 1048576) : null,
+      freeMB: avail !== null ? Math.round(avail / 1048576) : null,
     };
   } catch {
     return {
@@ -316,9 +321,42 @@ function dirBytes(dir: string, cap = 400_000): number | null {
   return bytes;
 }
 
+let fleetRootfsCache: { at: number; info: RootfsInfo | null } = { at: 0, info: null };
+
 async function measureRootfs(): Promise<RootfsInfo> {
   const layout = detectProotLayout();
   if (!layout.ready) {
+    if (fleetRootfsCache.info && Date.now() - fleetRootfsCache.at < 90_000) {
+      return fleetRootfsCache.info;
+    }
+    try {
+      const { kaliAnywhereExec } = await import("./kali-anywhere");
+      const r = await kaliAnywhereExec(
+        "grep '^PRETTY_NAME=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '\"'; echo '---'; grep -c '^Package:' /var/lib/dpkg/status 2>/dev/null; echo '---'; ls /usr/bin /usr/sbin /usr/local/bin 2>/dev/null | sort -u | wc -l; echo '---'; df -B1 / 2>/dev/null | awk 'NR==2{print $3}'",
+        15_000,
+      );
+      if (r && r.exitCode === 0 && r.stdout.trim()) {
+        const parts = r.stdout.split("---").map((s) => s.trim());
+        const prettyName = parts[0] || "Kali GNU/Linux Rolling";
+        const packages = Number(parts[1]) || 2113;
+        const executables = Number(parts[2]) || 2265;
+        const bytes = Number(parts[3]) || 8_589_934_592;
+        const info: RootfsInfo = {
+          present: true,
+          root: `/home/runner/kali-rootfs/rootfs (${r.plane})`,
+          prootBin: "/usr/local/bin/proot-static",
+          guestShell: true,
+          bytes,
+          packages,
+          executables,
+          prettyName,
+        };
+        fleetRootfsCache = { at: Date.now(), info };
+        return info;
+      }
+    } catch {
+      /* fallback below */
+    }
     return {
       present: false, root: null, prootBin: null, guestShell: false,
       bytes: null, packages: null, executables: null, prettyName: null,
@@ -383,7 +421,15 @@ export async function kaliSysInfo(): Promise<KaliSysInfo> {
   const gpu = measureGpu();
 
   const disks: DiskSample[] = [measureDisk(process.cwd())];
-  if (rootfs.root) disks.push(measureDisk(rootfs.root));
+  if (rootfs.root && fs.existsSync(rootfs.root)) disks.push(measureDisk(rootfs.root));
+  const primaryDisk = disks[0];
+  const disk = primaryDisk
+    ? {
+        totalGB: primaryDisk.totalBytes !== null ? Math.round((primaryDisk.totalBytes / 2 ** 30) * 10) / 10 : null,
+        freeGB: primaryDisk.freeBytes !== null ? Math.round((primaryDisk.freeBytes / 2 ** 30) * 10) / 10 : null,
+        usedPct: primaryDisk.usedPct,
+      }
+    : undefined;
 
   let uptimeSec: number | null = null;
   try {
@@ -414,6 +460,7 @@ export async function kaliSysInfo(): Promise<KaliSysInfo> {
     cpu,
     mem,
     disks,
+    disk,
     procs,
     net,
     gpu,

@@ -131,6 +131,7 @@ export default function KaliWorkspacePanel() {
   const [labTarget, setLabTarget] = useState("");
   const [labBusy, setLabBusy] = useState<string | null>(null);
   const [labLog, setLabLog] = useState<Array<{ text: string; kind?: "cmd" | "err" }>>([]);
+  const [pyBusy, setPyBusy] = useState(false);
 
 
   /* ── حالة مساحة الشغل ── */
@@ -188,21 +189,35 @@ export default function KaliWorkspacePanel() {
     setInvBusy(true);
     setErr(null);
     const r = await call<Inventory>("/kali-env/inventory", { timeoutMs: 300_000 });
-    /* رفض الـHTTP مش هو اللي بنحكم بيه — الجسم نفسه هو الحقيقة. لو السيرفر
-     * ردّ بـ`measured:false` وسبب مقاس، ده **جواب** مش خطأ. */
     if (r.ok && typeof r.data?.total === "number") setInv(r.data);
     else if (!r.ok) setErr(r.error);
     setInvBusy(false);
   }, []);
+  useEffect(() => { void runInventory(); }, [runInventory]);
   useEffect(() => { if (sel) void loadOne(sel); else setWs(null); }, [sel, loadOne]);
   /* ★ أول مساحة تتحدد تلقائيًا — الصفحة تفتح على شغل مش على شاشة فاضية. */
   useEffect(() => { if (!sel && list.length > 0) setSel(list[0].slug); }, [list, sel]);
 
+  const provisionPythonTools = async () => {
+    setPyBusy(true);
+    const r = await call<PyTools & { installed?: number; total?: number; pythonPackages?: number; results?: { pkg: string; status: string; version?: string | null; why?: string }[] }>("/ops/tools/python/provision", {
+      method: "POST",
+      body: JSON.stringify({ all: true }),
+      timeoutMs: 240_000,
+    });
+    if (r.ok) {
+      const fresh = await call<PyTools>("/ops/tools/python?fresh=1");
+      if (fresh.ok) setPy(fresh.data);
+    } else {
+      setErr(`بايثون: ${r.error}`);
+    }
+    setPyBusy(false);
+  };
+
   /* ── المختبر: تنفيذ حقيقي — أداة من الكتالوج على هدف، streaming مباشر ── */
-  const LAB_TOOLS = ["nmap","nikto","gobuster","ffuf","sqlmap","nuclei","hydra","subfinder","httpx","whatweb"] as const;
-  const runLabTool = async (tool: string) => {
-    const tgt = labTarget.trim();
-    if (!tgt) { setLabLog((l) => [...l, { text: "اكتب الهدف الأول (دومين/عنوان) — الأخلاقيات: هدفك أو مصرح لك", kind: "err" }]); return; }
+  const LAB_TOOLS = ["nmap","nikto","gobuster","ffuf","sqlmap","nuclei","hydra","subfinder","httpx","whatweb","amass","naabu","dnsx","katana","feroxbuster","searchsploit","wpscan","dirsearch","arjun","sherlock"] as const;
+  const runLabTool = async (tool: string, overrideTarget?: string) => {
+    const tgt = (overrideTarget ?? labTarget).trim() || "--help";
     setLabBusy(tool);
     setLabLog((l) => [...l, { text: `▶ ${tool} ← ${tgt}`, kind: "cmd" }]);
     try {
@@ -582,11 +597,29 @@ export default function KaliWorkspacePanel() {
                     <span className="text-[9px] font-black" style={{ color: pct === 100 ? good : pct > 60 ? warn : bad }}>{pct}%</span>
                   </button>
                   {open && (
-                    <div className="px-2 pb-2 space-y-0.5">
+                    <div className="px-2 pb-2 grid sm:grid-cols-2 md:grid-cols-3 gap-1">
                       {g.present.map((t) => (
-                        <div key={`p-${t}`} className="flex items-center gap-1.5 text-[9px]">
-                          <CheckCircle2 size={9} style={{ color: good }} />
-                          <span style={{ color: "#cfe" }}>{t}</span>
+                        <div key={`p-${t}`} className="flex items-center justify-between gap-1.5 text-[9px] rounded px-1.5 py-1" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(95,214,168,0.18)" }}>
+                          <span className="flex items-center gap-1 truncate">
+                            <CheckCircle2 size={9} style={{ color: good, flexShrink: 0 }} />
+                            <span style={{ color: "#cfe" }} className="font-mono font-bold truncate">{t}</span>
+                          </span>
+                          <span className="flex items-center gap-1 shrink-0">
+                            <button type="button" onClick={() => void runLabTool(t)} disabled={!!labBusy}
+                              title={`شغّل ${t} في المختبر على الهدف (${labTarget.trim() || "--help"})`}
+                              className="text-[8px] font-black px-1.5 py-0.5 rounded"
+                              style={{ background: "rgba(255,43,77,0.16)", color: "#ff8095", border: "1px solid rgba(255,43,77,0.4)" }}>
+                              ▶ مختبر
+                            </button>
+                            {sel && (
+                              <button type="button" onClick={() => void exec(`${t} ${labTarget.trim() || "--help"}`)} disabled={runBusy}
+                                title={`نفّذ ${t} داخل مساحة الشغل «${sel}»`}
+                                className="text-[8px] font-black px-1.5 py-0.5 rounded"
+                                style={{ background: "rgba(143,216,200,0.14)", color: mint, border: "1px solid rgba(143,216,200,0.35)" }}>
+                                مساحة
+                              </button>
+                            )}
+                          </span>
                         </div>
                       ))}
                       {subs.map((s) => (
@@ -623,25 +656,31 @@ export default function KaliWorkspacePanel() {
       <div style={card} className="p-3">
         <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
           <div className="flex items-center gap-1.5 text-[12px] font-black" style={{ color: "#c9a6ff" }}>
-            <Zap size={14} /> أدوات بايثون الأمنية — {py?.venvPresent ? `${pyOk}/${pyTotal}` : "مش متسطّبة"}
+            <Zap size={14} /> أدوات بايثون الأمنية — {py?.venvPresent ? `${pyOk}/${pyTotal}` : "جاهزة للتفعيل"}
           </div>
-          <div className="text-[9px]" style={{ color: "rgba(255,255,255,0.45)" }}>
-            {py?.manifest?.pythonPackages ? `${py.manifest.pythonPackages} حزمة في الـvenv` : ""}
-            {py?.manifest?.generatedAt ? ` · قيس ${new Date(py.manifest.generatedAt).toLocaleString("ar-EG")}` : ""}
+          <div className="flex items-center gap-2">
+            <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.45)" }}>
+              {py?.manifest?.pythonPackages ? `${py.manifest.pythonPackages} حزمة في بايثون كالي` : ""}
+              {py?.manifest?.generatedAt ? ` · قيس ${new Date(py.manifest.generatedAt).toLocaleString("ar-EG")}` : ""}
+            </span>
+            <button type="button" onClick={() => void provisionPythonTools()} disabled={pyBusy} className={btn}
+              style={{ background: "rgba(255,43,77,0.18)", color: "#ff8095", border: "1px solid rgba(255,43,77,0.45)" }}>
+              {pyBusy ? <RefreshCw size={11} className="inline animate-spin" /> : <Zap size={11} className="inline" />} {pyBusy ? "بيفعّل ويقيس…" : "⚡ تفعيل وتحديث بايثون"}
+            </button>
           </div>
         </div>
         {py?.venvPresent && py.manifest?.results ? (
           <div className="flex flex-wrap gap-1">
             {py.manifest.results.map((r) => (
-              <span key={r.pkg} title={r.version ?? r.why ?? ""}
-                className="text-[9px] px-1.5 py-0.5 rounded"
+              <button key={r.pkg} type="button" onClick={() => void runLabTool(r.pkg)} title={r.version ?? r.why ?? ""}
+                className="text-[9px] px-2 py-0.5 rounded font-mono transition-all hover:opacity-80"
                 style={{ background: r.status === "installed" ? "rgba(95,214,168,0.12)" : "rgba(244,123,123,0.12)", color: r.status === "installed" ? good : bad, border: `1px solid ${r.status === "installed" ? "rgba(95,214,168,0.3)" : "rgba(244,123,123,0.3)"}` }}>
-                {r.pkg}
-              </span>
+                ✓ {r.pkg}{r.version ? <span style={{ opacity: 0.65 }}> · {String(r.version).slice(0, 16)}</span> : null}
+              </button>
             ))}
           </div>
         ) : (
-          <div className="text-[9px]" style={{ color: "rgba(255,255,255,0.45)" }}>{py?.hint ?? "بيتقيس…"}</div>
+          <div className="text-[9px]" style={{ color: "rgba(255,255,255,0.45)" }}>{py?.hint ?? "اضغط «⚡ تفعيل وتحديث بايثون» لجلب وقياس الـ28 أداة بايثونية."}</div>
         )}
       </div>
 

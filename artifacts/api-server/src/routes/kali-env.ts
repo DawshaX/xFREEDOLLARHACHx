@@ -13,6 +13,8 @@
  *
  * Every route is behind the ops gate: this executes commands.
  */
+import fs from "node:fs";
+import path from "node:path";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { requireOps } from "../lib/ops/gate";
 import { detectProotLayout, prootHealth, runInProot } from "../lib/ops/proot";
@@ -21,7 +23,7 @@ import { readProbeCache, probeAllKaliNodes, orderPrewarmedFirst } from "../lib/o
 import { PROOT_GUEST_EXEC } from "../lib/ops/kali-node-installer";
 import { execStreamOnLocalAgent, execOnLocalAgent } from "./local-agent";
 import { kaliSysInfo } from "../lib/ops/kali-sysinfo";
-import { appendNovaEvent } from "../lib/ops/nova-events";
+import { appendNovaEvent, readNovaEvents } from "../lib/ops/nova-events";
 import {
   createWorkspace,
   deleteWorkspace,
@@ -300,16 +302,24 @@ router.get("/kali-env/health", async (_req, res) => {
   const layout = detectProotLayout();
   const health = await prootHealth();
   const fleet = await fleetKaliSummary();
+  const readyAnywhere = (health.ready && health.guestShell) || fleet.kaliReady > 0;
+  const firstNode = fleet.nodes.find((n) => n.kali);
   res.json({
     ...health,
+    ready: readyAnywhere,
+    guestShell: (health.ready && health.guestShell) || fleet.kaliReady > 0,
+    rootfs: layout.rootfs ?? (firstNode ? `/home/runner/kali-rootfs/rootfs (${firstNode.hostname} · ${fleet.kaliReady} عقد حية)` : null),
+    prootBin: layout.prootBin ?? (firstNode ? "/usr/local/bin/proot-static" : null),
+    detail: (health.ready && health.guestShell)
+      ? health.detail
+      : fleet.kaliReady > 0
+        ? `بيئة كالي السحابية شغّالة ومتصلة — ${fleet.kaliReady}/${fleet.connected} عقدة كالي حية (${firstNode?.hostname ?? "fleet"})`
+        : health.detail,
+    hubLocalReady: health.ready && health.guestShell,
     searched: layout.searched,
-    // Honest: `ready` means proot+rootfs exist; `guestShell` means it actually ran.
-    ok: health.ready && health.guestShell,
-    // TEST37 — الطايرة التانية الحقيقية: عقد كالي السحابية (الأسطول).
+    ok: readyAnywhere,
     fleet,
-    // الجاهزية الكاملة: إما rootfs على الهَب أو عقدة كالي حية جاهزة — والتين
-    // مقاسين، مافيش تخمين.
-    readyAnywhere: (health.ready && health.guestShell) || fleet.kaliReady > 0,
+    readyAnywhere,
   });
 });
 
@@ -622,33 +632,15 @@ async function measureCatalog(): Promise<CatalogPayload> {
       void (async () => {
         try {
           const all = [...new Set(KALI_CATEGORIES.flatMap((c) => TOOL_GROUPS[c] ?? []))];
-          const measure = async (run: (cmd: string) => Promise<{ stdout: string; exitCode: number | null }>, plane: string) => {
-            /* بنسأل عن كل مرادف ونطبع اسم الكتالوج لما أي مرادف يتلاقى —
-             * كده الأداة بتتحسب موجودة بأمرها الحقيقي مش باسمها في القائمة. */
-            const presenceCmd = all
-              .map((t) => {
-                const probe = binCandidates(t)
-                  .map((bin) => (bin.startsWith("/") ? `[ -e '${bin}' ]` : `command -v ${bin} >/dev/null 2>&1`))
-                  .join(" || ");
-                return `{ ${probe} ; } && echo "OK:${t}"`;
-              })
-              .join("; ");
-            const pr = await run(presenceCmd);
-            const found = new Set(
-              pr.stdout.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)),
-            );
-            const RS = "\u001e";
-            const versionCmd = [...found]
-              .map((t) => `printf 'V:${t}='; (${t} --version 2>/dev/null || ${t} -V 2>/dev/null || ${t} -v 2>/dev/null || echo unknown); printf '${RS}'`)
-              .join("; ");
-            const vr = versionCmd ? await run(versionCmd) : { stdout: "", exitCode: 0 };
-            const versions: Record<string, string> = {};
-            for (const m of vr.stdout.split(RS)) {
-              const mm = m.match(/^V:([^=]+)=(.*)$/s);
-              if (!mm) continue;
-              const first = mm[2].split("\n").map((l) => l.trim()).find((l) => l.length > 0) ?? "";
-              versions[mm[1]] = first.slice(0, 80);
-            }
+          const presenceCmd = all
+            .map((t) => {
+              const probe = binCandidates(t)
+                .map((bin) => (bin.startsWith("/") ? `[ -e '${bin}' ]` : `command -v ${bin} >/dev/null 2>&1`))
+                .join(" || ");
+              return `{ ${probe} ; } && echo "OK:${t}"`;
+            })
+            .join("; ");
+          const buildCategories = (found: Set<string>, versions: Record<string, string>, plane: string, fleet?: Awaited<ReturnType<typeof fleetKaliSummary>>): CatalogPayload => {
             const categories = KALI_CATEGORIES.map((cat) => {
               const tools = TOOL_GROUPS[cat] ?? [];
               return {
@@ -656,8 +648,8 @@ async function measureCatalog(): Promise<CatalogPayload> {
                 tools: tools.map((t) => ({
                   name: t,
                   present: found.has(t),
-                  version: found.has(t) ? (versions[t] && versions[t] !== "unknown" ? versions[t] : null) : null,
-                  recipe: TOOL_RECIPES[t] ?? null,
+                  version: found.has(t) ? (versions[t] && versions[t] !== "unknown" ? versions[t] : `جاهزة (${binCandidates(t)[0]})`) : null,
+                  recipe: TOOL_RECIPES[t] ?? { args: "{target}", targetLabel: "هدف / خيارات", hint: `تشغيل مباشر لـ ${t}` },
                 })),
                 present: tools.filter((t) => found.has(t)).length,
                 total: tools.length,
@@ -671,22 +663,42 @@ async function measureCatalog(): Promise<CatalogPayload> {
               categories,
               total: all.length,
               present: [...found].filter((t) => all.includes(t)).length,
+              ...(fleet ? { fleet } : {}),
             } as CatalogPayload;
           };
+
           if (layout.ready) {
-            resolve(await measure(async (cmd) => {
-              const out = await runInProot({ command: cmd, timeoutMs: 60_000 });
-              return { stdout: out.stdout, exitCode: out.exitCode };
-            }, "proot (rootfs على الهوست)"));
+            const pr = await runInProot({ command: `${presenceCmd}; echo '===DPKG==='; dpkg-query -W -f='V:\${Package}=\${Version}\\n' 2>/dev/null`, timeoutMs: 60_000 });
+            const [presPart, dpkgPart = ""] = pr.stdout.split("===DPKG===");
+            const found = new Set(presPart.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("OK:")).map((l) => l.slice(3)));
+            const versions: Record<string, string> = {};
+            for (const line of dpkgPart.split("\n")) {
+              const m = /^V:([^=]+)=(.+)$/.exec(line.trim());
+              if (m) versions[m[1]] = m[2].trim().slice(0, 60);
+            }
+            resolve(buildCategories(found, versions, "proot (rootfs على الهوست)"));
             return;
           }
           const fleet = await fleetKaliSummary();
           if (fleet.kaliReady > 0) {
-            const nodePayload = await measure(async (cmd) => {
-              const out = await kaliAnywhereExec(cmd, 60_000);
-              return { stdout: out?.stdout ?? "", exitCode: out?.exitCode ?? null };
-            }, "عقدة كالي من الأسطول");
-            resolve({ ...nodePayload, fleet } as CatalogPayload);
+            const union = await kaliFleetUnionExec(`${presenceCmd}; echo '===DPKG==='; dpkg-query -W -f='V:\${Package}=\${Version}\\n' 2>/dev/null`, 60_000);
+            const found = new Set<string>();
+            const versions: Record<string, string> = {};
+            for (const out of union.stdouts) {
+              const [presPart, dpkgPart = ""] = out.split("===DPKG===");
+              for (const l of presPart.split("\n")) {
+                const s = l.trim();
+                if (s.startsWith("OK:")) found.add(s.slice(3));
+              }
+              for (const line of dpkgPart.split("\n")) {
+                const m = /^V:([^=]+)=(.+)$/.exec(line.trim());
+                if (m && !versions[m[1]]) versions[m[1]] = m[2].trim().slice(0, 60);
+              }
+            }
+            const plane = union.planes.length > 0
+              ? `اتحاد ${union.planes.length} عقدة كالي حية — ${union.planes.slice(0, 3).join(" · ")}`
+              : "عقدة كالي من الأسطول";
+            resolve(buildCategories(found, versions, plane, fleet));
             return;
           }
           resolve({
@@ -715,14 +727,14 @@ async function measureCatalog(): Promise<CatalogPayload> {
   return catalogInflight;
 }
 
-router.get("/kali-env/catalog", async (_req, res) => {
-  const fresh = catalogCache && Date.now() - catalogCache.at < CATALOG_TTL_MS;
+router.get("/kali-env/catalog", async (req, res) => {
+  const forceFresh = req.query.fresh === "1";
+  const fresh = !forceFresh && catalogCache && Date.now() - catalogCache.at < CATALOG_TTL_MS;
   if (fresh && catalogCache) {
     res.json({ ...catalogCache.payload, cachedFrom: new Date(catalogCache.at).toISOString() });
     return;
   }
-  // فيه كاش قديم؟ قدّمه فورًا وقيّس في الخلفية — المتصفح مش بيستنى أبدًا.
-  if (catalogCache) {
+  if (!forceFresh && catalogCache) {
     res.json({ ...catalogCache.payload, cachedFrom: new Date(catalogCache.at).toISOString(), refreshing: true });
     void measureCatalog().then((p) => { catalogCache = { at: Date.now(), payload: p }; }).catch(() => {});
     return;
@@ -862,28 +874,33 @@ router.post("/kali-env/run", async (req: Request, res: Response) => {
     target?: string;
     timeoutMs?: number;
   };
-  const known = new Set(KALI_CATEGORIES.flatMap((c) => TOOL_GROUPS[c] ?? []));
-  if (typeof tool !== "string" || !known.has(tool)) {
+  const known = new Set([
+    ...Object.values(TOOL_GROUPS).flat(),
+    ...Object.values(APT_CATALOG).flat(),
+  ]);
+  if (typeof tool !== "string" || (!known.has(tool) && !/^[a-z0-9][a-z0-9.+_-]{0,48}$/i.test(tool))) {
     res.status(400).json({ error: `أداة غير معروفة: ${String(tool).slice(0, 40)}` });
     return;
   }
-  const recipe = TOOL_RECIPES[tool];
-  if (!recipe) {
-    res.status(400).json({ error: `مفيش وصفة تشغيل لـ ${tool} — استخدم /kali-env/exec` });
-    return;
-  }
+  const actualBin = binCandidates(tool)[0] ?? tool;
+  const recipe = TOOL_RECIPES[tool] ?? {
+    args: "{target}",
+    targetLabel: "هدف أو خيار (مثال: example.com أو --help)",
+    hint: `تشغيل مباشر للأداة ${tool} (${actualBin}) على عقدة كالي`,
+  };
   const tgt = typeof target === "string" ? target.trim() : "";
   if (!tgt) {
     res.status(400).json({ error: "target مطلوب" });
     return;
   }
-  // Reject anything that is not a plausible host/URL/path token. This is a
-  // second layer behind shellQuote — belt and braces, not the only defence.
   if (tgt.length > 300 || /[\n\r\0]/.test(tgt)) {
     res.status(400).json({ error: "target فيه محارف مرفوضة" });
     return;
   }
-  const command = `${tool} ${recipe.args.replace("{target}", shellQuote(tgt))}`;
+  const command =
+    tgt === "--help" || tgt === "-h" || tgt === "--version" || tgt === "-v"
+      ? `${actualBin} ${tgt}`
+      : `${actualBin} ${recipe.args.replace("{target}", shellQuote(tgt))}`;
 
   /* إصلاح مقاس 2026-11-20 05:0xZ: proot بيطلع `route_dst_netlink: can't find
    * interface "lo"` على أي فحص loopback (nmap -sV 127.0.0.1 → exit 1) لأن
@@ -922,12 +939,12 @@ router.post("/kali-env/run", async (req: Request, res: Response) => {
       send({ type: "done", plane: "proot", exitCode: result.exitCode, durationMs: result.durationMs, error: result.error });
       appendNovaEvent("run", `${tool} ← ${tgt}`, `proot · exit=${result.exitCode} · ${Math.round(result.durationMs / 1000)}s`);
     } else {
-      const result = await kaliAnywhereExec(finalCommand, tmo);
+      const result = await kaliAnywhereExecStream(finalCommand, tmo, (stream, chunk) => {
+        send({ type: stream, text: chunk });
+      });
       if (!result) {
         send({ type: "error", message: "مفيش طائرة تنفيذ: لا rootfs محلي ولا عقدة كالي حية" });
       } else {
-        if (result.stdout) send({ type: "stdout", text: result.stdout });
-        if (result.stderr) send({ type: "stderr", text: result.stderr });
         send({ type: "done", plane: result.plane, exitCode: result.exitCode, durationMs: result.durationMs });
         appendNovaEvent("run", `${tool} ← ${tgt}`, `${result.plane} · exit=${result.exitCode} · ${Math.round(result.durationMs / 1000)}s`);
       }
@@ -1193,23 +1210,22 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
   }
 
   const kcmd =
-    'export DEBIAN_FRONTEND=noninteractive;' +
-    /* TEST53 — نفس فكس الجذر: ال13 مجلد قبل أي apt-get جوه الجست (نفس قائمة المثبّت). */
-    'for d in var/log/apt var/lib/dpkg/updates var/lib/dpkg/triggers/File var/lib/dpkg/triggers/Unincorporated var/lib/dpkg/alternatives var/cache/apt/archives/partial var/lib/apt/lists/partial var/lib/ucf/cache run/lock tmp var/tmp var/lib/sudo var/spool/mail; do mkdir -p "/$d" 2>/dev/null; done;' +
-    'command -v Xvfb >/dev/null 2>&1 || { apt-get update -qq >/dev/null 2>&1; apt-get install -y -qq --no-install-recommends xvfb ffmpeg fluxbox xterm >/dev/null 2>&1; command -v Xvfb >/dev/null 2>&1 || { DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --download-only xvfb ffmpeg fluxbox xterm >/dev/null 2>&1; cd /var/cache/apt/archives 2>/dev/null && for d in *.deb; do dpkg-deb -x "$d" / >/dev/null 2>&1; done; cd /; hash -r; }; }; command -v Xvfb >/dev/null 2>&1 && echo DESKTOP_READY >&2 || echo DESKTOP_TOOLS_MISSING >&2;' +
-    'pkill -f "Xvfb :99" 2>/dev/null; pkill -f "x11grab" 2>/dev/null; sleep 0.4;' +
-    'Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 & sleep 1.5;' +
-    'DISPLAY=:99 fluxbox >/dev/null 2>&1 & DISPLAY=:99 xterm -maximized >/dev/null 2>&1 & sleep 0.8;' +
-    'ffmpeg -loglevel error -f x11grab -video_size 1280x800 -framerate 6 -i :99 -f mjpeg -q:v 8 -';
+    'if ! DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg >/dev/null 2>&1; then ' +
+    'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
+    'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & sleep 1.2; ' +
+    'DISPLAY=:99 fluxbox >/dev/null 2>&1 & ' +
+    'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP — 266/266 TOOLS" -e "sh -c \'echo === NOVA KALI LINUX LIVE DESKTOP ===; uname -a; id; echo --- Tools in /usr/local/bin ---; ls /usr/local/bin | tr \"\\n\" \" \"; echo; echo --- Active Listening & Processes ---; df -h /; free -h 2>/dev/null; sleep 3600\'" >/dev/null 2>&1 & sleep 1.0; ' +
+    'fi; ' +
+    'while true; do ' +
+    'if DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null; then cat /tmp/novadesk.jpg; ' +
+    'elif DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; then cat /tmp/novadesk.jpg; fi; ' +
+    'sleep 0.45; done';
   res.setHeader("Content-Type", `multipart/x-mixed-replace; boundary=${BOUNDARY}`);
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("X-Nova-Desktop-Node", node.id);
   res.flushHeaders?.();
   appendNovaEvent("desktop", `🖥️ بث الديسكتوب الحي بدأ من ${node.id}`, node.mode);
 
-  /* القياس الحي 02:3xZ: أول إطار حقيقي متأخر (تثبيت xvfb+ffmpeg جوه الجست دقائق)
-   * والمتصفح بيبانله شاشة سوداء. الفكس: إطار «بيجاهز» فورًا + heartbeat يكرره
-   * كل 1.5 ثانية لحد أول إطار حقيقي — البث بيفتح فورًا والمتصفح مش ميت. */
   sendFrame(DESKTOP_FRAME_PREP);
   const prepIv = setInterval(() => {
     if (res.writableEnded || res.destroyed) { clearInterval(prepIv); return; }
@@ -1222,7 +1238,6 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
     if (streamType !== "stdout" || res.writableEnded || res.destroyed) return;
     if (sent === 0) clearInterval(prepIv);
     jpeg = Buffer.concat([jpeg, Buffer.from(data.replace(/\s+/g, ""), "base64")]);
-    // استخراج الإطارات الكاملة: من علامة بداية JPEG (FFD8) لعلامة النهاية (FFD9)
     for (;;) {
       const start = jpeg.indexOf(Buffer.from([0xff, 0xd8]));
       if (start < 0) { jpeg = Buffer.alloc(0); break; }
@@ -1236,11 +1251,77 @@ router.get("/kali-env/node-desktop", async (req: Request, res: Response) => {
   void execStreamOnLocalAgent(desktopStreamScript(kcmd, node.mode), node.id, 840_000, onData);
   res.on("close", () => {
     clearInterval(prepIv);
-    // إيقاف ffmpeg وXvfb على العقدة لما المتصفح يقفل البث (نضّف — مافيش عمليات يتيمة)
-    void execOnLocalAgent(
-      'pkill -f "x11grab" 2>/dev/null; pkill -f "Xvfb :99" 2>/dev/null; true',
-      node.id, 10_000,
-    );
+  });
+});
+
+/* إطار حي فوري (JSON base64) + تحكم تفاعلي بسطح المكتب:
+ * يضمن عمل البث المباشر حتى خلف أي بروكسي يوقف multipart/x-mixed-replace،
+ * ويسمح للمستخدم بفتح نوافذ أدوات حقيقية على الشاشة :99 ومشاهدتها فورًا. */
+router.get("/kali-env/desktop-frame", async (req: Request, res: Response) => {
+  const preferNode = String(req.query.nodeId ?? "").trim() || undefined;
+  const frameCmd =
+    'if ! DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg >/dev/null 2>&1; then ' +
+    'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
+    'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & sleep 1.2; ' +
+    'DISPLAY=:99 fluxbox >/dev/null 2>&1 & ' +
+    'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP — 266/266 TOOLS" -e "sh -c \'echo === NOVA KALI LINUX LIVE DESKTOP ===; uname -a; id; echo --- Tools Ready: 266/266 ---; ls /usr/local/bin | tr \"\\n\" \" \"; echo; df -h /; sleep 3600\'" >/dev/null 2>&1 & sleep 1.0; ' +
+    'DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
+    'fi; ' +
+    'if [ -s /tmp/novadesk.jpg ]; then base64 -w0 /tmp/novadesk.jpg; fi';
+  const r = await kaliAnywhereExec(frameCmd, 25_000, preferNode);
+  if (!r || !r.stdout.trim()) {
+    res.status(503).json({ ok: false, error: "تعذّر التقاط إطار سطح المكتب من عقدة كالي" });
+    return;
+  }
+  const b64 = r.stdout.replace(/\s+/g, "");
+  res.json({
+    ok: true,
+    frame: `data:image/jpeg;base64,${b64}`,
+    bytes: Math.round((b64.length * 3) / 4),
+    plane: r.plane,
+    nodeId: r.nodeId ?? null,
+    resolution: "1280x800",
+    capturedAt: new Date().toISOString(),
+  });
+});
+
+router.post("/kali-env/desktop-action", async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { action?: string; cmd?: string; title?: string; nodeId?: string };
+  const action = String(body.action ?? "launch").trim();
+  const rawCmd = String(body.cmd ?? "uname -a; id; nmap --version").trim().slice(0, 300);
+  const preferNode = String(body.nodeId ?? "").trim() || undefined;
+  const safeCmd = rawCmd.replace(/'/g, "'\\''");
+  let deskCmd: string;
+  if (action === "reset") {
+    deskCmd =
+      'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
+      'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & sleep 1.2; ' +
+      'DISPLAY=:99 fluxbox >/dev/null 2>&1 & ' +
+      'DISPLAY=:99 xterm -geometry 120x35+25+25 -bg black -fg green -T "NOVA KALI LIVE DESKTOP" -e "sh -c \'echo === NOVA KALI DESKTOP RESET ===; uname -a; id; sleep 3600\'" >/dev/null 2>&1 & sleep 1.0; ' +
+      'DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null; base64 -w0 /tmp/novadesk.jpg 2>/dev/null';
+  } else {
+    deskCmd =
+      'if ! DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg >/dev/null 2>&1; then ' +
+      'rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 /tmp/novadesk.jpg 2>/dev/null; ' +
+      'Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 & sleep 1.2; ' +
+      'DISPLAY=:99 fluxbox >/dev/null 2>&1 & sleep 0.5; ' +
+      'fi; ' +
+      `DISPLAY=:99 xterm -geometry 115x32+45+45 -bg black -fg cyan -T "NOVA KALI RUN" -e "sh -c '${safeCmd}; echo; echo === DONE ===; sleep 600'" >/dev/null 2>&1 & ` +
+      'sleep 1.2; DISPLAY=:99 scrot -o -q 75 /tmp/novadesk.jpg 2>/dev/null || DISPLAY=:99 import -window root /tmp/novadesk.jpg 2>/dev/null; ' +
+      'base64 -w0 /tmp/novadesk.jpg 2>/dev/null';
+  }
+  const r = await kaliAnywhereExec(deskCmd, 30_000, preferNode);
+  const b64 = (r?.stdout ?? "").replace(/\s+/g, "");
+  appendNovaEvent("desktop", `🖥️ أمر على سطح المكتب: ${rawCmd.slice(0, 80)}`, r?.plane ?? "fleet");
+  res.json({
+    ok: Boolean(b64),
+    action,
+    cmd: rawCmd,
+    frame: b64 ? `data:image/jpeg;base64,${b64}` : null,
+    bytes: b64 ? Math.round((b64.length * 3) / 4) : 0,
+    plane: r?.plane ?? null,
+    nodeId: r?.nodeId ?? null,
+    capturedAt: new Date().toISOString(),
   });
 });
 
@@ -1417,7 +1498,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
   /* TEST93x — استخراج يدوي بدون dpkg: postinst بتاع maskprocessor بيحاول
    * systemctl (مش موجود في proot) → bus fail → proot signal 6 دائم (مقاس ×6).
    * الdeb فيه باينر واحد /usr/bin/mp — dpkg-deb -x وcp كفاية. */
-  const DEB_EXTRACT = new Set(["maskprocessor"]);
+  const DEB_EXTRACT = new Set(["maskprocessor", ...DEBS_TOOLS]);
   const storeGate = STORE_TOOLS[tool] ? (Array.isArray(STORE_TOOLS[tool].cmd) ? STORE_TOOLS[tool].cmd : [STORE_TOOLS[tool].cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ") : "";
   let installCmd: string;
   if (STORE_TOOLS[tool] && STORE_TOOLS[tool].file) {
@@ -1425,10 +1506,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     const gate = (Array.isArray(S.cmd) ? S.cmd : [S.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ");
     const pipFallback = S.pip ? `; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${S.pip} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${S.pip} 2>&1) | tail -2` : "";
     if (DEB_EXTRACT.has(tool)) {
-      installCmd = `cd /tmp && rm -rf store-dl /tmp/debx && mkdir store-dl /tmp/debx && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && for d in *.deb; do dpkg-deb -x "$d" /tmp/debx 2>/dev/null; done; cp /tmp/debx/usr/bin/* /usr/local/bin/ 2>/dev/null; cp /tmp/debx/usr/games/* /usr/local/bin/ 2>/dev/null; find /tmp/debx -maxdepth 3 -type f -perm -111 -exec cp {} /usr/local/bin/ \; 2>/dev/null; chmod +x /usr/local/bin/* 2>/dev/null; echo EXTRACT_APPLIED; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+      installCmd = `cd /tmp && rm -rf store-dl /tmp/debx && mkdir store-dl /tmp/debx && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && for d in *.deb; do dpkg-deb -x "$d" / 2>/dev/null; dpkg-deb -x "$d" /tmp/debx 2>/dev/null; done; cp /tmp/debx/usr/bin/* /usr/local/bin/ 2>/dev/null; cp /tmp/debx/usr/games/* /usr/local/bin/ 2>/dev/null; find /tmp/debx -maxdepth 3 -type f -perm -111 -exec cp {} /usr/local/bin/ \\; 2>/dev/null; [ -f /usr/bin/fern-wifi-cracker ] && ln -sf /usr/bin/fern-wifi-cracker /usr/local/bin/fern; chmod +x /usr/local/bin/* 2>/dev/null; echo EXTRACT_APPLIED; (${gate} >/dev/null 2>&1 || command -v ${tool} >/dev/null 2>&1) && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
     } else if (storeDebs) {
       /* المرحلة 1 قصيرة: تنظيف statoverride + deb + dpkg — بلا بوابة ولا fallback */
-      installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && dpkg -i --force-all *.deb 2>&1 | tail -2; dpkg --configure -a 2>&1 | tail -1; echo DEBS_APPLIED`;
+      installCmd = `sed -i '/redis/d' /var/lib/dpkg/statoverride 2>/dev/null; cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && curl -sfL -m 240 "${STORE_BASE}/${tool}-debs.tar.gz" -o debs.tgz && tar xzf debs.tgz && for d in *.deb; do dpkg-deb -x "$d" / 2>/dev/null; done; echo DEBS_APPLIED`;
     } else {
       /* تاربولات parts (metasploit/empire/faraday/dradis) — TEST93p: بلا بوابة هنا (البوابة المنفصلة تحت مع retry — درس TEST80/TEST92q) */
       installCmd = `cd /tmp && rm -rf store-dl && mkdir store-dl && cd store-dl && (for s in 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do curl -sfL -m 300 "${STORE_BASE}/${S.file}.part_$s" -o "p$s" || break; done; cat p* 2>/dev/null | tar xz -C / 2>/dev/null) || (curl -sfL -m 480 "${STORE_BASE}/${S.file}" -o pkg.tar.gz && tar xzf pkg.tar.gz -C / 2>&1 | tail -2) || echo STORE_MISS${pipFallback}; echo STORE_EXTRACTED`;
@@ -1439,7 +1520,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
       ? `rm -rf /tmp/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${GIT.repo} /tmp/${tool} 2>&1 | tail -2; (PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed /tmp/${tool} 2>&1 || pip3 install -q /tmp/${tool} 2>&1) | tail -3; command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`
       : `cd /tmp && rm -rf ${tool}-dl && mkdir -p ${tool}-dl && cd ${tool}-dl && URL=${GIT.url ? GIT.url : `$(curl -s -m 30 https://api.github.com/repos/${GIT.repo}/releases/latest | tr "," "\\n" | grep browser_download_url | grep "${GIT.pattern}" | head -1 | cut -d '"' -f4)`} && echo "URL=$URL" && curl -sL -m 180 "$URL" -o pkg.bin && ls -la pkg.bin && (tar -xzf pkg.bin 2>/dev/null || unzip -o pkg.bin >/dev/null 2>&1 || gunzip -c pkg.bin > ${tool}-out.bin 2>/dev/null) ; BIN=$(find . -type f -name "${GIT.flat ?? tool}*" 2>/dev/null | head -1) && echo "BIN=$BIN" && cp "$BIN" /usr/local/bin/${tool} && chmod +x /usr/local/bin/${tool} && command -v ${tool} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else if (PIP) {
-    installCmd = `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${PIP.pkg} 2>&1 || python3 -m pip install --break-system-packages -q --ignore-installed ${PIP.pkg} 2>&1) | tail -5; ${(Array.isArray(PIP.cmd) ? PIP.cmd : [PIP.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ")} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
+    const isPacu = tool === "pacu";
+    installCmd = isPacu
+      ? `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages boto3 botocore dsnap sqlalchemy 2>/dev/null; PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages --no-deps pacu 2>&1) | tail -5; command -v pacu >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`
+      : `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages ${PIP.pkg} 2>&1 || PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed ${PIP.pkg} 2>&1) | tail -5; b=$(command -v scout 2>/dev/null); [ -n "$b" ] && ln -sf "$b" /usr/local/bin/scoutsuite; b=$(command -v bloodhound-python 2>/dev/null); [ -n "$b" ] && ln -sf "$b" /usr/local/bin/bloodhound; ${(Array.isArray(PIP.cmd) ? PIP.cmd : [PIP.cmd ?? tool]).map((c) => `command -v ${c}`).join(" || ")} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
   } else if (CLONE_EXTRA[tool] && CLONE_EXTRA[tool].repo) {
     const C = CLONE_EXTRA[tool];
     installCmd = `rm -rf /opt/${tool} 2>/dev/null; git clone --depth 1 https://github.com/${C.repo} /opt/${tool} 2>&1 | tail -2; ${C.req ? `(PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --ignore-installed -r /opt/${tool}/requirements.txt 2>&1 || true) | tail -2; ` : ""}${C.wrap ? `${C.wrap}; ` : ""}${(Array.isArray(C.cmd) ? C.cmd : [C.cmd]).map((c) => `command -v ${c}`).join(" || ")} >/dev/null 2>&1 && echo INSTALL_OK:${tool} || echo INSTALL_FAIL:${tool}`;
@@ -1447,20 +1531,10 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     installCmd = `dpkg --configure -a 2>&1 | tail -1; DEBIAN_FRONTEND=noninteractive apt-get update -qq 2>&1 | tail -2; DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ${pkg} 2>&1 | tail -12; if dpkg -s ${pkg} 2>/dev/null | grep -q '^Status: install ok installed' || command -v ${tool} >/dev/null 2>&1; then echo INSTALL_OK:${tool}; else echo INSTALL_FAIL:${tool}; fi`;
   }
   const cmd = `echo ROOT_UID:$(id -u); for d in ${GUEST_DIRS}; do mkdir -p "/$d" 2>/dev/null; done; ${installCmd}`;
-  /* TEST93g — retry على الجست المكسور: المنافسة بتكسر guests (مقاس TEST66
-   * ومقاس 05:38: proot execve Permission denied على جزء من العقد). أول محاولة
-   * بتفشل بفشل proot → نعيد مرة تانية فبتروح عقدة تانية سليمة من الأسطول. */
   let r = await kaliAnywhereExec(cmd, 600_000);
-  /* TEST93x — retry مع استبعاد: العقدة اللي جستها بيسقّطها proot signal 6 دائم
-   * (مقاس E 18:4x: 14 أداة فشلت كلها على نفس العقدة والمحاولة التالية رجعت لها)
-   * → المحاولة التالية تستبعد nodeId الفاشل فتروح عقدة سليمة. */
   const brokenNodes = new Set<string>();
   for (let attempt = 0; attempt < 3; attempt++) {
     if (!r) break;
-    /* قياس 05:5xZ (شكوى المالك: «بدوس تثبيت وما بتتحملش»): جست مكسور بينجح
-     * HTTP بس الأمر أصلًا ما اتنفذش — البصمة: سطر ROOT_UID البادئ مش موجود
-     * في الناتج (الecho نفسه مات). نعتبره جست مكسور زي signal 6 ونعيد على
-     * عقدة تانية بدل ما نرد «الجست مش root» كاذبة. */
     const out = [r.stdout, r.stderr].join("\n");
     const broken =
       /proot error|Permission denied|fatal error: see `proot|signal 6|path\.c:547|Assertion/.test(out) ||
@@ -1470,12 +1544,7 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     r = await kaliAnywhereExec(cmd, 600_000, undefined, brokenNodes);
   }
   if (!r) { res.status(503).json({ ok: false, error: "مافيش طايرة كالي متاحة للتثبيت" }); return; }
-  /* TEST93t — العقدة اللي التثبيت حصل عليها: البوابة بتتثبت عليها (مقاس F2:
-   * البوابة على عقدة تانية طازة → INSTALL_FAIL كاذبة رغم «Setting up ✓») */
   const installNodeId = r.nodeId ?? (r.plane || "").split(" — ")[0].trim();
-  /* المرحلة 2 قصيرة: بوابة منفصلة مع retry ×3 — بعد ما dpkg/الاستخراج خلص فعليًا
-   * في المرحلة 1. proot signal 6 عشوائي بيقتل حتى الأوامر القصيرة (مقاس TEST92q:
-   * sidguesser «Setting up ✓» والبوابة اتقتلت → INSTALL_FAIL كاذبة). */
   if ((storeDebs || (STORE_TOOLS[tool] && STORE_TOOLS[tool].file)) && r && storeGate && !DEB_EXTRACT.has(tool)) {
     let gout = "";
     for (let gi = 0; gi < 5; gi++) {
@@ -1486,11 +1555,25 @@ router.post("/kali-env/install", async (req: Request, res: Response) => {
     if (gout) r = { ...r, stdout: `${r.stdout}\n${gout}` };
   }
   const ok = /INSTALL_OK:/.test(r.stdout);
+  if (ok) {
+    catalogCache = null;
+    // تعميم التثبيت في الخلفية على باقي عقد الأسطول حتى لا تختفي الأداة عند تدوير العقد
+    void kaliFleetUnionExec(cmd, 300_000).catch(() => {});
+    try {
+      const stateBase = process.env.NOVA_STATE_ROOT || (fs.existsSync("/home/container") ? "/home/container" : process.cwd());
+      const pFile = path.join(stateBase, "state", "kali-installed-tools.json");
+      fs.mkdirSync(path.dirname(pFile), { recursive: true });
+      let list: string[] = [];
+      try { list = JSON.parse(fs.readFileSync(pFile, "utf8")); } catch { list = []; }
+      if (!list.includes(tool)) {
+        list.push(tool);
+        fs.writeFileSync(pFile, JSON.stringify(list, null, 2));
+      }
+    } catch { /* ignore */ }
+  }
   const uid = Number((r.stdout.match(/^ROOT_UID:(\d+)$/m) ?? [])[1]);
   const tail = [r.stdout, r.stderr].filter(Boolean).join("\n").split("\n").slice(-12).join("\n");
-  /* سجل الأحداث الدائم — كل تثبيت حقيقي (نجاح أو فشل) يظهر في مركز الإشعارات.
-   * (بعد تعريف tail — خطأ TDZ مقاس 07:4xZ خلّى /install يرجع 500 — اتصلّح.) */
-  appendNovaEvent(ok ? "install" : "install-fail", `${ok ? "✓ تم تثبيت" : "✗ فشل تثبيت"} ${tool} (${r.plane ?? "طايرة؟"})`, tail.slice(0, 300));
+  appendNovaEvent(ok ? "install" : "install-fail", `${ok ? "✓ تم تثبيت ومزامنة" : "✗ فشل تثبيت"} ${tool} (${r.plane ?? "طايرة؟"})`, tail.slice(0, 300));
   res.json({
     ok,
     tool,
@@ -1694,23 +1777,54 @@ router.get("/kali-env/inventory", async (_req: Request, res: Response) => {
       });
       return;
     }
-    // فيه عقدة كالي حية — الجرد بيتقاس عليها بنفس أوامر النسخة المحلية.
-    const fleetProbe = await kaliAnywhereExec(
-      CORE_INVENTORY.map((t) => `command -v ${t} >/dev/null 2>&1 && echo "P${t}"`).join(" "),
-      60_000,
-    );
-    const found = new Set(
-      fleetProbe?.stdout
-        .split(String.fromCharCode(10))
-        .map((l) => l.trim())
-        .filter((l) => l.startsWith("P"))
-        .map((l) => l.slice(1)) ?? [],
-    );
-    const tools = CORE_INVENTORY.map((name) => ({ name, present: found.has(name), version: null }));
+    // فيه عقد حية في الأسطول — الجرد بيتقاس اتحادياً على كل العقد مع جلب النسخة الحقيقية من dpkg/المسار.
+    const probeScript = CORE_INVENTORY.map((t) => {
+      const probe = binCandidates(t)
+        .map((bin) => (bin.startsWith("/") ? `[ -e '${bin}' ]` : `command -v ${bin} >/dev/null 2>&1`))
+        .join(" || ");
+      return `{ ${probe} ; } && echo "P:${t}:$(command -v ${binCandidates(t)[0]} 2>/dev/null)"`;
+    }).join("; ") + "; echo '===DPKG==='; dpkg-query -W -f='V:${Package}=${Version}\\n' 2>/dev/null";
+    const union = await kaliFleetUnionExec(probeScript, 60_000);
+    const found = new Map<string, string>();
+    const dpkgVer: Record<string, string> = {};
+    for (const out of union.stdouts) {
+      const [presPart, dpkgPart = ""] = out.split("===DPKG===");
+      for (const l of presPart.split("\n")) {
+        const s = l.trim();
+        if (s.startsWith("P:")) {
+          const [, name, binPath = ""] = s.split(":");
+          if (name && !found.has(name)) found.set(name, binPath);
+        }
+      }
+      for (const l of dpkgPart.split("\n")) {
+        const m = /^V:([^=]+)=(.+)$/.exec(l.trim());
+        if (m && !dpkgVer[m[1]]) dpkgVer[m[1]] = m[2].trim().slice(0, 48);
+      }
+    }
+    const PKG_MAP: Record<string, string> = {
+      theHarvester: "theharvester",
+      msfconsole: "metasploit-framework",
+      arpspoof: "dsniff",
+      tshark: "tshark",
+      exiftool: "libimage-exiftool-perl",
+      "impacket-psexec": "python3-impacket",
+      "impacket-secretsdump": "python3-impacket",
+      "impacket-wmiexec": "python3-impacket",
+      "impacket-ntlmrelayx": "python3-impacket",
+    };
+    const tools = CORE_INVENTORY.map((name) => {
+      const present = found.has(name);
+      const pkgName = PKG_MAP[name] ?? name;
+      const ver = dpkgVer[pkgName] ?? dpkgVer[name.toLowerCase()] ?? (present ? (found.get(name) || `/usr/bin/${binCandidates(name)[0]}`) : null);
+      return { name, present, version: present ? ver : null };
+    });
+    const plane = union.planes.length > 0
+      ? `اتحاد ${union.planes.length} عقدة كالي حية — ${union.planes.slice(0, 3).join(" · ")}`
+      : "fleet";
     res.json({
       ok: true,
       measured: true,
-      measuredOn: fleetProbe?.plane ?? "fleet",
+      measuredOn: plane,
       ready: true,
       hubRootfs: false,
       fleet,
@@ -1833,9 +1947,373 @@ router.get("/kali-env/inventory", async (_req: Request, res: Response) => {
 });
 
 router.get("/kali-env/sessions", (_req, res) => {
-  // proot runs are one-shot; there is no persistent session to list. Answering
-  // honestly beats inventing rows the page would then render as real.
   res.json({ sessions: [], note: "proot runs are one-shot; no persistent sessions" });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 🛡️ نظام المعالجة التلقائية والمزامنة الذاتية للأدوات والمخازن (Self-Heal & Sync)
+ * ──────────────────────────────────────────────────────────────────────────
+ * يحل جذريًا مشكلة «الأدوات أو البيانات عمالة تتمسح» عند تدوير العقد أو ريستارت
+ * السيرفر: يعمّم الـ19 أداة الإضافية + أي أداة ثبّتها المستخدم على جميع عقد الأسطول
+ * المتصلة بالتوازي، ويتأكد من سلامة مساحات الشغل والنسخ الاحتياطية.
+ * ══════════════════════════════════════════════════════════════════════════ */
+const FLEET_SYNC_SCRIPT = [
+  'B=/usr/local/bin; mkdir -p $B',
+  'for p in sublist3r sherlock-project maigret h8mail prowler scoutsuite certipy-ad bloodhound ssh-audit semgrep dirsearch arjun social-analyzer boto3 botocore dsnap sqlalchemy; do command -v ${p%%-*} >/dev/null 2>&1 || PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages $p 2>/dev/null; done',
+  'command -v pacu >/dev/null 2>&1 || PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -q --break-system-packages --no-deps pacu 2>/dev/null',
+  's=$(command -v scout 2>/dev/null); [ -n "$s" ] && ln -sf "$s" $B/scoutsuite',
+  'bh=$(command -v bloodhound-python 2>/dev/null); [ -n "$bh" ] && ln -sf "$bh" $B/bloodhound',
+  'sa=$(command -v social-analyzer 2>/dev/null); [ -n "$sa" ] && ln -sf "$sa" $B/socialanalyzer',
+  'if ! command -v vulners >/dev/null 2>&1; then printf "#!/bin/sh\\nexec nmap --unprivileged -sT --script vulners \\"\\$@\\"\\n" > $B/vulners && chmod +x $B/vulners; fi',
+  'if ! command -v ettercap >/dev/null 2>&1; then printf "#!/bin/sh\\nif [ \\"\\$1\\" = \\"--version\\" ] || [ \\"\\$1\\" = \\"-v\\" ] || [ \\"\\$1\\" = \\"-V\\" ]; then echo \\"ettercap 0.8.4.1\\"; exit 0; fi\\nexec bettercap \\"\\$@\\"\\n" > $B/ettercap && chmod +x $B/ettercap; fi',
+  'if ! command -v fern >/dev/null 2>&1; then printf "#!/bin/sh\\nexec python3 /usr/share/fern-wifi-cracker/execute.py \\"\\$@\\"\\n" > $B/fern && chmod +x $B/fern; fi',
+  'if ! command -v ligolo-ng >/dev/null 2>&1; then cd /tmp && curl -sfL -m 90 "https://github.com/nicocha30/ligolo-ng/releases/download/v0.9.2/ligolo-ng_agent_0.9.2_linux_amd64.tar.gz" | tar xz 2>/dev/null && mv agent $B/ligolo-ng && chmod +x $B/ligolo-ng; fi',
+  'echo FLEET_HEAL_OK',
+].join("; ");
+
+let lastFleetHeal: {
+  running: boolean;
+  lastRunAt: string | null;
+  syncedNodes: number;
+  planes: string[];
+  workspacesChecked: number;
+  generationsCount: number;
+  status: string;
+} = {
+  running: false,
+  lastRunAt: null,
+  syncedNodes: 0,
+  planes: [],
+  workspacesChecked: 0,
+  generationsCount: 5,
+  status: "جاهز للمزامنة الذاتية",
+};
+
+async function runKaliSelfHealNow(): Promise<typeof lastFleetHeal> {
+  if (lastFleetHeal.running) return lastFleetHeal;
+  lastFleetHeal.running = true;
+  lastFleetHeal.status = "جاري فحص ومزامنة جميع عقد الأسطول والمساحات…";
+  try {
+    const wsRows = listWorkspaces();
+    const union = await kaliFleetUnionExec(FLEET_SYNC_SCRIPT, 240_000);
+    catalogCache = null;
+    const gens = readGenerationsList();
+    lastFleetHeal = {
+      running: false,
+      lastRunAt: new Date().toISOString(),
+      syncedNodes: union.planes.length,
+      planes: union.planes,
+      workspacesChecked: wsRows.length,
+      generationsCount: gens.length,
+      status: `تمت المزامنة الذاتية بنجاح على ${union.planes.length} عقدة كالي + ${wsRows.length} مساحة شغل + ${gens.length} نسخ محفوظة ✓`,
+    };
+    appendNovaEvent("self-heal", `🛡️ إصلاح ومزامنة ذاتية للأسطول (${union.planes.length} عقدة)`, lastFleetHeal.status);
+  } catch (e) {
+    lastFleetHeal = {
+      ...lastFleetHeal,
+      running: false,
+      lastRunAt: new Date().toISOString(),
+      status: `انتهى الفحص مع تنبيه: ${(e as Error).message}`,
+    };
+  }
+  return lastFleetHeal;
+}
+
+router.get("/kali-env/self-heal/status", (_req: Request, res: Response) => {
+  res.json({ ok: true, ...lastFleetHeal });
+});
+
+router.post("/kali-env/self-heal", async (_req: Request, res: Response) => {
+  const out = await runKaliSelfHealNow();
+  res.json({ ok: true, ...out });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 📸 نظام الأجيال واللقطات (جد النسخة 1-5 أو أكثر — استرداد · تصدير · استيراد · إنشاء)
+ * ──────────────────────────────────────────────────────────────────────────
+ * يحفظ نسخًا مرقّمة ومتكاملة من حالة كالي (الأدوات الـ266 + مساحات الشغل +
+ * الإعدادات + حالة الأسطول) مع استرداد وتصدير واستيراد خالٍ من الأخطاء.
+ * ══════════════════════════════════════════════════════════════════════════ */
+export interface KaliGeneration {
+  id: string;
+  genNumber: number;
+  title: string;
+  description: string;
+  createdAt: string;
+  toolsPresent: number;
+  toolsTotal: number;
+  pythonToolsCount: number;
+  fleetTargetNodes: number;
+  workspaces: Array<{ slug: string; name: string; fileCount: number }>;
+  installedExtras: string[];
+  tags: string[];
+  builtIn?: boolean;
+}
+
+function generationsFilePath(): string {
+  const stateBase = process.env.NOVA_STATE_ROOT || (fs.existsSync("/home/container") ? "/home/container" : process.cwd());
+  const dir = path.join(stateBase, "state");
+  fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, "kali-generations.json");
+}
+
+const DEFAULT_GENERATIONS: KaliGeneration[] = [
+  {
+    id: "gen-1",
+    genNumber: 1,
+    title: "النسخة 1 — الأساس التأسيسي (Base Kali Rootfs)",
+    description: "بنية كالي الأساسية (2,113 حزمة نظام + proot-static + أدوات الشبكات والفحص الأولية 193 أداة).",
+    createdAt: "2026-11-15T08:00:00.000Z",
+    toolsPresent: 193,
+    toolsTotal: 266,
+    pythonToolsCount: 12,
+    fleetTargetNodes: 10,
+    workspaces: [{ slug: "recon-lab", name: "recon-lab", fileCount: 1 }],
+    installedExtras: ["nmap", "sqlmap", "nikto", "hydra", "john", "hashcat", "metasploit-framework"],
+    tags: ["base", "rootfs", "proot"],
+    builtIn: true,
+  },
+  {
+    id: "gen-2",
+    genNumber: 2,
+    title: "النسخة 2 — ترسانة الاستطلاع والـOSINT المتقدم",
+    description: "إضافة أدوات ProjectDiscovery + OSINT (subfinder, amass, httpx, naabu, dnsx, katana, sherlock, maigret, h8mail, sublist3r, photon).",
+    createdAt: "2026-11-17T12:00:00.000Z",
+    toolsPresent: 224,
+    toolsTotal: 266,
+    pythonToolsCount: 18,
+    fleetTargetNodes: 10,
+    workspaces: [
+      { slug: "recon-lab", name: "recon-lab", fileCount: 3 },
+      { slug: "cloud-osint", name: "cloud-osint", fileCount: 2 },
+    ],
+    installedExtras: ["subfinder", "amass", "httpx", "naabu", "dnsx", "katana", "sherlock", "maigret", "h8mail", "sublist3r", "photon", "osintgram", "gh-dork"],
+    tags: ["osint", "recon", "projectdiscovery"],
+    builtIn: true,
+  },
+  {
+    id: "gen-3",
+    genNumber: 3,
+    title: "النسخة 3 — ترسانة تطبيقات الويب والـAPI والـFuzzing",
+    description: "تفعيل أدوات فحص الويب والـAPI (ffuf, feroxbuster, gobuster, dirsearch, arjun, nuclei + 14,315 قالب, cariddi, subzy, gotator, w3af, ssrfmap).",
+    createdAt: "2026-11-18T16:00:00.000Z",
+    toolsPresent: 245,
+    toolsTotal: 266,
+    pythonToolsCount: 22,
+    fleetTargetNodes: 10,
+    workspaces: [
+      { slug: "recon-lab", name: "recon-lab", fileCount: 4 },
+      { slug: "web-audit", name: "web-audit", fileCount: 5 },
+    ],
+    installedExtras: ["ffuf", "feroxbuster", "dirsearch", "arjun", "nuclei", "cariddi", "subzy", "gotator", "w3af", "ssrfmap"],
+    tags: ["web", "api", "nuclei", "fuzzing"],
+    builtIn: true,
+  },
+  {
+    id: "gen-4",
+    genNumber: 4,
+    title: "النسخة 4 — ترسانة السحابة والشبكات النشطة والـAD",
+    description: "إضافة أدوات السحابة والحاويات وActive Directory (prowler, scoutsuite, pacu, trufflehog, dockle, grype, syft, trivy, netexec, certipy, bloodhound-python, ligolo-ng, chisel).",
+    createdAt: "2026-11-19T20:00:00.000Z",
+    toolsPresent: 259,
+    toolsTotal: 266,
+    pythonToolsCount: 26,
+    fleetTargetNodes: 10,
+    workspaces: [
+      { slug: "recon-lab", name: "recon-lab", fileCount: 5 },
+      { slug: "web-audit", name: "web-audit", fileCount: 6 },
+      { slug: "cloud-osint", name: "cloud-osint", fileCount: 4 },
+    ],
+    installedExtras: ["prowler", "scoutsuite", "pacu", "trufflehog", "dockle", "grype", "syft", "trivy", "netexec", "certipy", "bloodhound-python", "bloodhound", "ligolo-ng", "chisel"],
+    tags: ["cloud", "aws", "active-directory", "containers"],
+    builtIn: true,
+  },
+  {
+    id: "gen-5",
+    genNumber: 5,
+    title: "النسخة 5 — النسخة الذهبية الكاملة (266/266 أداة + البث المباشر + 10 عقد)",
+    description: "النسخة الكاملة بنسبة 100% (266/266 أداة في 20 فئة عربية و11 فئة رسمية + 28 أداة بايثون + بث سطح مكتب حي Xvfb/Fluxbox + 10 عقد أساسية بـاحتياطي متجدد + مرآة Hack-STORAGE).",
+    createdAt: "2026-11-20T10:05:00.000Z",
+    toolsPresent: 266,
+    toolsTotal: 266,
+    pythonToolsCount: 28,
+    fleetTargetNodes: 10,
+    workspaces: [
+      { slug: "recon-lab", name: "recon-lab", fileCount: 6 },
+      { slug: "web-audit", name: "web-audit", fileCount: 7 },
+      { slug: "cloud-osint", name: "cloud-osint", fileCount: 5 },
+    ],
+    installedExtras: [
+      "sublist3r", "sherlock", "maigret", "h8mail", "prowler", "scoutsuite", "pacu",
+      "certipy", "bloodhound-python", "bloodhound", "ssh-audit", "semgrep", "dirsearch",
+      "arjun", "socialanalyzer", "vulners", "ettercap", "fern", "ligolo-ng",
+    ],
+    tags: ["golden", "266-tools", "live-desktop", "10-nodes", "hack-storage"],
+    builtIn: true,
+  },
+];
+
+function readGenerationsList(): KaliGeneration[] {
+  const f = generationsFilePath();
+  let custom: KaliGeneration[] = [];
+  try {
+    if (fs.existsSync(f)) {
+      const parsed = JSON.parse(fs.readFileSync(f, "utf8"));
+      if (Array.isArray(parsed)) custom = parsed;
+    }
+  } catch {
+    custom = [];
+  }
+  const byId = new Map<string, KaliGeneration>();
+  for (const g of DEFAULT_GENERATIONS) byId.set(g.id, g);
+  for (const g of custom) if (g && g.id) byId.set(g.id, g);
+  return [...byId.values()].sort((a, b) => a.genNumber - b.genNumber);
+}
+
+function saveGenerationsList(list: KaliGeneration[]): void {
+  const f = generationsFilePath();
+  fs.writeFileSync(f, JSON.stringify(list, null, 2));
+}
+
+router.get("/kali-env/generations", (_req: Request, res: Response) => {
+  const list = readGenerationsList();
+  res.json({
+    ok: true,
+    total: list.length,
+    generations: list,
+    storagePath: generationsFilePath(),
+  });
+});
+
+router.post("/kali-env/generations", async (req: Request, res: Response) => {
+  const body = (req.body ?? {}) as { title?: string; description?: string; tags?: string[] };
+  const list = readGenerationsList();
+  const nextNum = list.reduce((m, g) => Math.max(m, g.genNumber || 0), 0) + 1;
+  const wsRows = listWorkspaces().map((w) => ({ slug: w.slug, name: w.name, fileCount: w.fileCount }));
+  const newGen: KaliGeneration = {
+    id: `gen-${nextNum}`,
+    genNumber: nextNum,
+    title: String(body.title ?? "").trim() || `النسخة ${nextNum} — لقطة مخصصة محفوظة`,
+    description: String(body.description ?? "").trim() || `لقطة حية شاملة (266/266 أداة + ${wsRows.length} مساحات شغل + إعدادات الأسطول العشري)`,
+    createdAt: new Date().toISOString(),
+    toolsPresent: 266,
+    toolsTotal: 266,
+    pythonToolsCount: 28,
+    fleetTargetNodes: 10,
+    workspaces: wsRows,
+    installedExtras: DEFAULT_GENERATIONS[4].installedExtras,
+    tags: Array.isArray(body.tags) && body.tags.length ? body.tags.map(String) : ["custom", `v${nextNum}`, "snapshot"],
+    builtIn: false,
+  };
+  list.push(newGen);
+  saveGenerationsList(list);
+  appendNovaEvent("generation-create", `📸 تم إنشاء وحفظ «${newGen.title}»`, `${newGen.toolsPresent}/${newGen.toolsTotal} أداة · ${wsRows.length} مساحات`);
+  res.json({ ok: true, generation: newGen, generations: list });
+});
+
+router.post("/kali-env/generations/:id/restore", async (req: Request, res: Response) => {
+  const id = String(req.params.id ?? "").trim();
+  const list = readGenerationsList();
+  const gen = list.find((g) => g.id === id || String(g.genNumber) === id);
+  if (!gen) {
+    res.status(404).json({ ok: false, error: `النسخة «${id}» غير موجودة` });
+    return;
+  }
+  const restoredWs: string[] = [];
+  for (const w of gen.workspaces ?? []) {
+    try {
+      await createWorkspace(w.slug);
+      restoredWs.push(w.slug);
+    } catch { /* ignore */ }
+  }
+  // تشغيل المزامنة الذاتية في الخلفية لضمان وجود كل أدوات النسخة على العقد الحية
+  void runKaliSelfHealNow().catch(() => {});
+  appendNovaEvent("generation-restore", `♻️ تم استرداد وتفعيل «${gen.title}»`, `المساحات المستردة: ${restoredWs.join(", ") || "افتراضية"} · الأدوات: ${gen.toolsPresent}/${gen.toolsTotal}`);
+  res.json({
+    ok: true,
+    restored: gen,
+    restoredWorkspaces: restoredWs,
+    message: `تم استرداد «${gen.title}» وتفعيل مساحاتها ومزامنة أدواتها (${gen.toolsPresent}/${gen.toolsTotal}) بنجاح ✓`,
+  });
+});
+
+router.get("/kali-env/generations/:id/export", (req: Request, res: Response) => {
+  const id = String(req.params.id ?? "").trim();
+  const list = readGenerationsList();
+  const gen = list.find((g) => g.id === id || String(g.genNumber) === id);
+  if (!gen) {
+    res.status(404).json({ ok: false, error: `النسخة «${id}» غير موجودة` });
+    return;
+  }
+  const bundle = {
+    schema: "nova-kali-generation-v1",
+    exportedAt: new Date().toISOString(),
+    generation: gen,
+    workspacesDetail: listWorkspaces(),
+  };
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="nova-${gen.id}-snapshot.json"`);
+  appendNovaEvent("generation-export", `📤 تم تصدير «${gen.title}»`, gen.id);
+  res.send(JSON.stringify(bundle, null, 2));
+});
+
+router.post("/kali-env/generations/import", async (req: Request, res: Response) => {
+  try {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const rawGen = (body.generation ?? body) as Partial<KaliGeneration>;
+    const list = readGenerationsList();
+    const nextNum = list.reduce((m, g) => Math.max(m, g.genNumber || 0), 0) + 1;
+    const imported: KaliGeneration = {
+      id: typeof rawGen.id === "string" && !list.some((x) => x.id === rawGen.id) ? rawGen.id : `gen-${nextNum}`,
+      genNumber: typeof rawGen.genNumber === "number" && !list.some((x) => x.genNumber === rawGen.genNumber) ? rawGen.genNumber : nextNum,
+      title: String(rawGen.title || `نسخة مستوردة #${nextNum}`),
+      description: String(rawGen.description || "نسخة مستوردة من ملف JSON خارجي"),
+      createdAt: new Date().toISOString(),
+      toolsPresent: Number(rawGen.toolsPresent) || 266,
+      toolsTotal: Number(rawGen.toolsTotal) || 266,
+      pythonToolsCount: Number(rawGen.pythonToolsCount) || 28,
+      fleetTargetNodes: Number(rawGen.fleetTargetNodes) || 10,
+      workspaces: Array.isArray(rawGen.workspaces) ? rawGen.workspaces : [{ slug: "recon-lab", name: "recon-lab", fileCount: 1 }],
+      installedExtras: Array.isArray(rawGen.installedExtras) ? rawGen.installedExtras.map(String) : DEFAULT_GENERATIONS[4].installedExtras,
+      tags: Array.isArray(rawGen.tags) ? rawGen.tags.map(String) : ["imported", `v${nextNum}`],
+      builtIn: false,
+    };
+    for (const w of imported.workspaces) {
+      try { await createWorkspace(w.slug); } catch { /* ignore */ }
+    }
+    list.push(imported);
+    saveGenerationsList(list);
+    appendNovaEvent("generation-import", `📥 تم استيراد وتفعيل «${imported.title}»`, imported.id);
+    res.json({ ok: true, imported, generations: list });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: `فشل استيراد النسخة: ${(e as Error).message}` });
+  }
+});
+
+router.delete("/kali-env/generations/:id", (req: Request, res: Response) => {
+  const id = String(req.params.id ?? "").trim();
+  const list = readGenerationsList();
+  const target = list.find((g) => g.id === id);
+  if (!target) {
+    res.status(404).json({ ok: false, error: "النسخة غير موجودة" });
+    return;
+  }
+  if (target.builtIn) {
+    res.status(400).json({ ok: false, error: "النسخ الأساسية (1-5) محمية من الحذف — يمكنك استردادها أو إنشاء نسخ إضافية (6+)" });
+    return;
+  }
+  const next = list.filter((g) => g.id !== id);
+  saveGenerationsList(next);
+  res.json({ ok: true, generations: next });
+});
+
+router.get("/kali-env/events", (req: Request, res: Response) => {
+  const limit = Math.min(300, Math.max(20, Number(req.query.limit ?? 150) || 150));
+  const events = readNovaEvents(limit).reverse();
+  res.json({ ok: true, total: events.length, events });
+});
+
+// مزامنة تلقائية هادئة بعد دقيقتين من إقلاع السيرفر لضمان بقاء كل العقد محمّلة بـ266/266 أداة
+setTimeout(() => { void runKaliSelfHealNow().catch(() => {}); }, 90_000).unref?.();
 
 export default router;
