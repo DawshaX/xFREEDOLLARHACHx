@@ -64,6 +64,8 @@ jobs:
           FLEET_ENABLED: ${{ vars.FLEET_ENABLED || '1' }}  # TEST61 — fallback: جيت هوب مخزن ووايفلي تحكم — الاتنين متصلين (مقاس)
           EVENT: ${{ github.event_name }}
           TOKEN: ${{ secrets.NOVA_EXEC_TOKEN }}
+          # TEST93y — تجاوز الميزانية بأمر صريح من المالك (نفس منطق fleet-nodes)
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           # نفس قفل الأمان المقاس في fleet-nodes.yml — بالحرف.
           if [ "$EVENT" != "workflow_dispatch" ]; then
@@ -86,6 +88,15 @@ jobs:
           # → تكدس الموجات فوق حد الخطة مستحيل رياضيًا والCI له سلوت دوار دايمًا.
           n="$(node scripts/fleet-slot-budget.mjs "${INPUT_NODES:-10}" 1 | tail -1 | grep -oE '[0-9]+' || true)"
           case "$n" in ''|*[!0-9]*) n=0 ;; esac
+          # TEST93y — [force-wave]: تجاوز ميزانية السلات بقرار صريح من المالك
+          # (الموجة القديمة بتحجز سلاتها لعمرها كله — من غير التجاوز الموجة
+          # المُحمّلة بتفضل مستنية والأسطول ينقص — الدايرة المقفولة).
+          case "$COMMIT_MSG" in
+            *"[force-wave]"*)
+              n=12
+              echo "::notice::force wave — 12 عقدة مُحمّلة ذاتيًا، تجاوز الميزانية بأمر المالك"
+              ;;
+          esac
           echo "nodes=$n" >> "$GITHUB_OUTPUT"
           echo "::notice::starting $n extra fleet node(s) (indices 20-38)"
 
