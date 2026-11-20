@@ -4,7 +4,7 @@
 # الآلية: كل 20د يقيس الأسطول الحي على الهَب. لو الأساسية (14) ناقصة → يحرق
 # fleet-now بعدد الناقص (حتى 6). لو الاتصال انهار كليًا → موجة كاملة 14.
 # العدادات: 10 شغّالة · أي زيادة = احتياط حي بيتجدد تلقائيًا لما شغّالة تقع.
-name: fleet-standby
+name: fleet-watch
 on:
   schedule:
     - cron: "*/20 * * * *"
@@ -13,7 +13,7 @@ permissions:
   contents: read
   actions: write
 concurrency:
-  group: fleet-standby
+  group: fleet-watch-2
   cancel-in-progress: false
 jobs:
   watchdog:
