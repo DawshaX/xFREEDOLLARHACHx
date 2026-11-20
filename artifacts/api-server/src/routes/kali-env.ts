@@ -536,7 +536,7 @@ const TOOL_BIN_ALIASES: Record<string, string[]> = {
   scoutsuite: ["scout", "scoutsuite"],
   "ligolo-ng": ["ligolo-ng", "agent"],
   /* TEST91 — أدوات المخزن: أمر التثبيت ≠ اسم الأداة في الكتالوج كثيرًا */
-  maskprocessor: ["maskprocessor", "mp"],
+  maskprocessor: ["mp32", "mp64", "maskprocessor", "mp"],
   rainbowcrack: ["rcrack", "rainbowcrack"],
   redis: ["redis-server", "redis-cli"],
   elfutils: ["eu-readelf", "readelf"],
