@@ -79,7 +79,7 @@ export const TOOL_TITLES_AR: Record<string, string> = {
   free_hosts: "قياس الاستضافة المجانية",
   autonomy_state: "حالة الاستقلالية",
   corpus_stats: "إحصاءات الفهرس",
-  corpus_query: "بحث في الكوربوس الحقيقي (332K+)",
+  corpus_query: "بحث في الكوربوس الحقيقي (429K+)",
   vuln_combine: "دمج ثغرات → فرضية زيرو داي",
   platform_status: "حالة المنصة",
   mission_status: "حالة المهمة",

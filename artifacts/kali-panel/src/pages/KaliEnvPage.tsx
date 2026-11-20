@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { KaliLogo2099 } from "@/components/KaliLogo2099";
+import { SovereignKnowledgeLabView } from "@/components/desktop/SovereignKnowledgeLabView";
 import {
   Terminal as TerminalIcon,
   Shield,
@@ -444,7 +445,7 @@ export default function KaliEnvPage() {
   const [whiskerOpen, setWhiskerOpen] = useState(false);
   const [whiskerCat, setWhiskerCat] = useState("all");
   const [whiskerSearch, setWhiskerSearch] = useState("");
-  const [activeWorkspace, setActiveWorkspace] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
+  const [activeWorkspace, setActiveWorkspace] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
   const [teamMode, setTeamMode] = useState<"PURPLE" | "RED" | "BLUE">("PURPLE");
   const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
   const [cmdPaletteQuery, setCmdPaletteQuery] = useState("");
@@ -1593,8 +1594,8 @@ export default function KaliEnvPage() {
             />
           </div>
 
-          {/* 6 Ergonomic Workspaces */}
-          <div className="flex items-center gap-0.5 bg-[#090c12] p-0.5 rounded border border-slate-800" dir="ltr">
+          {/* 7 Ergonomic Workspaces with spacious layout */}
+          <div className="flex items-center gap-1 bg-[#090c12] p-0.5 rounded border border-slate-800" dir="ltr">
             {(
               [
                 { id: 1, label: "1:Desktop", title: "سطح المكتب الرباعي المتكامل" },
@@ -1603,6 +1604,7 @@ export default function KaliEnvPage() {
                 { id: 4, label: "4:Memory", title: "الذاكرة الأبدية والجلسة الدائمة والمخزن 67.11GB" },
                 { id: 5, label: "5:AllApps", title: "فتح كل شيء — دمج وتشغيل جميع شاشات المنصة الـ 32" },
                 { id: 6, label: "6:Purple360", title: "خريطة سطح الهجوم 360° + رادار الزوار وتليجرام + Kali Autopilot" },
+                { id: 7, label: "7:LiveLab·426", title: "🧪 المختبر السيادي الحي + قاعدة الـ426 ثغرة والدمج + الكتب الـ16" },
               ] as const
             ).map((ws) => (
               <button
@@ -1679,6 +1681,15 @@ export default function KaliEnvPage() {
             <Brain className="w-3 h-3 text-amber-400" />
             <span>MEM:{eternalMemory.length}</span>
             <span className="hidden sm:inline text-purple-300">· {storageText}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveWorkspace(7)}
+            className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/40 text-rose-300 font-mono text-[10px] font-bold hover:bg-rose-500/25"
+            title="المختبر السيادي الحي + مصفوفة الـ426 ثغرة والدمج + مكتبة الـ16 كتاباً"
+          >
+            <BookOpen className="w-3 h-3 text-amber-400" />
+            <span>426 VULNS · 16 BOOKS</span>
           </button>
 
           <button
@@ -3995,6 +4006,25 @@ export default function KaliEnvPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════
+           * WORKSPACE 7: SOVEREIGN LIVE LAB + 426 VULN MATRIX + 16 CYBER BOOKS
+           * ═══════════════════════════════════════════════════════════════════ */}
+          {activeWorkspace === 7 && (
+            <div className="h-full w-full rounded-xl overflow-hidden border border-cyan-500/40 shadow-[0_12px_40px_rgba(0,0,0,0.85)]">
+              <SovereignKnowledgeLabView
+                activeTarget={activeTarget}
+                onTargetChange={(next) => {
+                  setActiveTarget(next);
+                  setPipeTarget(next);
+                }}
+                onRunTerminalCommand={(cmd) => {
+                  setActiveWorkspace(2);
+                  void execInTerminal(cmd);
+                }}
+              />
             </div>
           )}
         </main>

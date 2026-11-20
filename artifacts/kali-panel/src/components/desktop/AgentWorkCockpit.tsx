@@ -44,10 +44,11 @@ import { NovaUnifiedChat } from "@/components/desktop/NovaUnifiedChat";
 import { KaliTerminal } from "@/components/desktop/KaliTerminal";
 import { AdvancedFileManager } from "@/components/desktop/AdvancedFileManager";
 import { NovaMissions } from "@/components/desktop/NovaMissions";
+import { SovereignKnowledgeLabView } from "@/components/desktop/SovereignKnowledgeLabView";
 import { novaAuthHeaders } from "@/lib/ops-client";
 import { useSystem } from "@/context/SystemContext";
 
-type StageTab = "live" | "bounty_0day" | "kali_2099" | "radar_graph" | "memory" | "tools" | "files" | "omniverse";
+type StageTab = "sovereign_lab" | "live" | "bounty_0day" | "kali_2099" | "radar_graph" | "memory" | "tools" | "files" | "omniverse";
 type SplitLayout = "agent-full" | "chat-wide" | "balanced" | "work-wide";
 
 interface LiveFeedEntry {
@@ -825,19 +826,20 @@ export function AgentWorkCockpit() {
           </div>
         </section>
 
-        {/* ══ العمود الأيسر: منصة المشاهدة الحية والتنفيذ والذاكرة والتعلّم (8 تبويبات حية 2099) ══ */}
+        {/* ══ العمود الأيسر: منصة المشاهدة الحية والتنفيذ والذاكرة والتعلّم (9 تبويبات حية 2099) ══ */}
         {layout !== "agent-full" && (
         <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-[#04020a] overflow-hidden">
-          {/* ألسنة منصة العمل — 8 تبويبات حية شاملة لكل البرنامج وكالي 2099 */}
-          <nav className="shrink-0 flex items-center gap-1 px-2 py-1.5 border-b border-white/10 bg-[#08030f] overflow-x-auto">
+          {/* ألسنة منصة العمل — 9 تبويبات حية شاملة لكل البرنامج وكالي 2099 */}
+          <nav className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-[#08030f] overflow-x-auto">
             {(
               [
+                { id: "sovereign_lab", label: "🧪 المختبر والـ426 ثغرة والكتب", icon: Sparkles, color: "#00f5d4", badge: "426+16" },
                 { id: "live",        label: "⚡ البث الحي",            icon: Activity,   color: "#22d3ee", badge: liveFeed.length ? String(liveFeed.length) : "LIVE" },
                 { id: "bounty_0day", label: "💰 المليارات والزيرو-داي", icon: DollarSign, color: "#fbbf24", badge: "2099" },
                 { id: "kali_2099",   label: "🐉 كالي 2099 المدمج",     icon: Shield,     color: "#ff2b4d", badge: "294" },
                 { id: "radar_graph", label: "👁️ الرادار والسطح 360°",  icon: Eye,        color: "#34d399", badge: `${visitorIntel?.visitors?.length ?? 0}` },
                 { id: "memory",      label: "♾️ الذاكرة الأبدية",      icon: Brain,      color: "#c084fc", badge: `${memTotal + kaliEternalMem.length}` },
-                { id: "tools",       label: "🧰 الأدوات (92)",         icon: Wrench,     color: "#ff5c78", badge: `${tools.length || 92}` },
+                { id: "tools",       label: "🧰 الأدوات (96)",         icon: Wrench,     color: "#ff5c78", badge: `${tools.length || 96}` },
                 { id: "files",       label: "📁 الملفات والأسطول",     icon: FolderOpen, color: "#38bdf8", badge: `${agents.length}` },
                 { id: "omniverse",   label: "🌐 كل البرنامج",          icon: Compass,    color: "#a78bfa", badge: "32" },
               ] as const
@@ -848,7 +850,7 @@ export function AgentWorkCockpit() {
                   key={t.id}
                   type="button"
                   onClick={() => setStageTab(t.id)}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-black transition-all"
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[10px] font-black transition-all"
                   style={
                     active
                       ? { borderColor: `${t.color}85`, background: `${t.color}20`, color: t.color, boxShadow: `0 0 14px ${t.color}25 inset` }
@@ -867,6 +869,17 @@ export function AgentWorkCockpit() {
 
           {/* محتوى منصة العمل */}
           <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+            {/* ─────── تبويب 0: المختبر السيادي الحي + مصفوفة الـ426 ثغرة والدمج + الكتب الـ16 ─────── */}
+            {stageTab === "sovereign_lab" && (
+              <div className="h-[calc(100vh-140px)] min-h-[620px] rounded-2xl overflow-hidden border border-cyan-500/35">
+                <SovereignKnowledgeLabView
+                  activeTarget={activeTarget}
+                  onTargetChange={(next) => setActiveTarget(next)}
+                  onSendToAgent={(prompt) => sendToAgent(prompt, true)}
+                />
+              </div>
+            )}
+
             {/* ─────── تبويب 1: البث والتنفيذ الحي + التيرمنال ─────── */}
             {stageTab === "live" && (
               <div className="space-y-3">

@@ -1319,7 +1319,7 @@ router.get("/live-agent/organism", async (_req, res) => {
     { id: "multi-ai", name: "محرك الإجماع المتعدد (Multi-AI Consensus)", role: "دمج ومقارنة ردود عدة نماذج في إجابة موحدة", online: true, model: "Consensus Synthesizer" },
     { id: "ai-council", name: "مجلس الحكماء الأربعة (AI Council)", role: "المهاجم + المدافع + المحلل + القائد", online: true, model: "4-Persona Tactical Council" },
     { id: "kali-dolphin", name: "عقل كالي الهجومي (Kali Dolphin AI)", role: "توجيه أوامر [EXECUTE] و[AGENT_EXEC] לעقد كالي", online: connectedAgents.length > 0, model: "Dolphin / Kali Co-Pilot" },
-    { id: "heuristic-brain", name: "العقل الحتمي المستقل (Heuristic 100%)", role: "يعمل بدون إنترنت 100% على الـ92 أداة", online: true, model: "Deterministic Router" },
+    { id: "heuristic-brain", name: "العقل الحتمي المستقل (Heuristic 100%)", role: `يعمل بدون إنترنت 100% على الـ${AGENT_TOOLS.length} أداة سيادية ومصفوفة الـ426 ثغرة`, online: true, model: "Deterministic Router" },
     { id: "autonomous-24-7", name: "الديمون الخلفي المستمر (Autonomous 24/7)", role: "تعلّم ذاتي + ذاكرة أبدية + الجلسة الجذرية nova-root", online: true, model: "TiMem / Root Nexus" },
   ];
 
