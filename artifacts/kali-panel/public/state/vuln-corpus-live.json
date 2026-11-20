@@ -1,17 +1,17 @@
 {
   "measured": true,
-  "at": "2026-11-20T19:05:19.971Z",
-  "total": 429882,
+  "at": "2026-11-20T22:02:33.633Z",
+  "total": 429986,
   "bySeverity": {
-    "medium": 184277,
-    "critical": 40224,
-    "high": 163693,
-    "unknown": 23587,
-    "low": 18026,
+    "medium": 184319,
+    "critical": 40234,
+    "high": 163760,
+    "unknown": 23569,
+    "low": 18029,
     "none": 75
   },
-  "kev": 1787,
-  "epssScored": 408433,
+  "kev": 1790,
+  "epssScored": 408589,
   "products": 81954,
   "mode": "deepen",
   "sources": [
@@ -9815,7 +9815,27 @@
       "kev": true,
       "epss": 0.01191,
       "pub": "2026-11-17T11:17:28.190",
-      "products": [],
+      "products": [
+        "roller"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-123890",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "VMware vCenter contains an authentication bypass vulnerability in the VMware Directory Service.\nAffected versions: 9.1.x (fixed in 9.1.1.0200); 9.0.x (fixed in 9.0.2.0200); 8.0 (fixed in 8.0 U3m); 5.x (fixed in 5.2.5).\nTelco Cloud Platform 3.0, 4.x, 5.0.x, 5.1",
+      "cwe": [
+        "CWE-288"
+      ],
+      "kev": true,
+      "epss": 0.00843,
+      "pub": "2026-11-19T15:17:25.407",
+      "products": [
+        "cloud_foundation",
+        "telco_cloud_infrastructure",
+        "telco_cloud_platform"
+      ],
       "refs": []
     },
     {
@@ -9849,6 +9869,22 @@
       "pub": "2026-11-04T22:17:44.613",
       "products": [
         "gpustack"
+      ],
+      "refs": []
+    },
+    {
+      "id": "CVE-2026-76466",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "A vulnerability in the database service feature of Cisco Expressway Series could allow an unauthenticated, remote attacker with network access to a Cisco Expressway device to execute arbitrary operating system commands as&nbsp;root.\r\n\r\nThis vulnerability is du",
+      "cwe": [
+        "CWE-798"
+      ],
+      "kev": true,
+      "epss": 0.00417,
+      "pub": "2026-10-21T17:19:06.813",
+      "products": [
+        "expressway"
       ],
       "refs": []
     },
@@ -13834,41 +13870,7 @@
         "dnr-322l_firmware"
       ],
       "refs": []
-    },
-    {
-      "id": "CVE-2017-6884",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "A command injection vulnerability was discovered on the Zyxel EMG2926 home router with firmware V1.00(AAQT.4)b8. The vulnerability is located in the diagnostic tools, specifically the nslookup function. A malicious user may exploit numerous vectors to execute ",
-      "cwe": [
-        "CWE-78"
-      ],
-      "kev": true,
-      "epss": 0.32976,
-      "pub": "2017-04-06T17:59:00.163",
-      "products": [
-        "emg2926_firmware"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2017-5070",
-      "cvss": 8.8,
-      "sev": "high",
-      "desc": "Type confusion in V8 in Google Chrome prior to 59.0.3071.86 for Linux, Windows, and Mac, and 59.0.3071.92 for Android, allowed a remote attacker to execute arbitrary code inside a sandbox via a crafted HTML page.",
-      "cwe": [
-        "CWE-843"
-      ],
-      "kev": true,
-      "epss": 0.32071,
-      "pub": "2017-10-27T05:29:00.847",
-      "products": [
-        "chrome",
-        "chrome",
-        "enterprise_linux_desktop"
-      ],
-      "refs": []
     }
   ],
-  "says_ar": "429882 ثغرة حقيقية من NVD · 1787 مستغلّة فعلياً (KEV) · 81954 منتج · مزامنة 2026-11-20T19:05:19.971Z"
+  "says_ar": "429986 ثغرة حقيقية من NVD · 1790 مستغلّة فعلياً (KEV) · 81954 منتج · مزامنة 2026-11-20T22:02:33.633Z"
 }
