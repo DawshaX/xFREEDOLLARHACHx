@@ -127,6 +127,11 @@ export default function KaliWorkspacePanel() {
   const [loading, setLoading] = useState(true);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [showAllMissing, setShowAllMissing] = useState(false);
+  /* ── المختبر: تشغيل حقيقي فوري لأداة على هدف (SSE من /kali-env/run) ── */
+  const [labTarget, setLabTarget] = useState("");
+  const [labBusy, setLabBusy] = useState<string | null>(null);
+  const [labLog, setLabLog] = useState<Array<{ text: string; kind?: "cmd" | "err" }>>([]);
+
 
   /* ── حالة مساحة الشغل ── */
   const [list, setList] = useState<Ws[]>([]);
@@ -192,6 +197,43 @@ export default function KaliWorkspacePanel() {
   useEffect(() => { if (sel) void loadOne(sel); else setWs(null); }, [sel, loadOne]);
   /* ★ أول مساحة تتحدد تلقائيًا — الصفحة تفتح على شغل مش على شاشة فاضية. */
   useEffect(() => { if (!sel && list.length > 0) setSel(list[0].slug); }, [list, sel]);
+
+  /* ── المختبر: تنفيذ حقيقي — أداة من الكتالوج على هدف، streaming مباشر ── */
+  const LAB_TOOLS = ["nmap","nikto","gobuster","ffuf","sqlmap","nuclei","hydra","subfinder","httpx","whatweb"] as const;
+  const runLabTool = async (tool: string) => {
+    const tgt = labTarget.trim();
+    if (!tgt) { setLabLog((l) => [...l, { text: "اكتب الهدف الأول (دومين/عنوان) — الأخلاقيات: هدفك أو مصرح لك", kind: "err" }]); return; }
+    setLabBusy(tool);
+    setLabLog((l) => [...l, { text: `▶ ${tool} ← ${tgt}`, kind: "cmd" }]);
+    try {
+      const r = await fetch(`/api/kali-env/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
+        body: JSON.stringify({ tool, target: tgt, timeoutMs: 180_000 }),
+        signal: AbortSignal.timeout(200_000),
+      });
+      if (!r.ok || !r.body) { const t = await r.text().catch(() => ""); setLabLog((l) => [...l, { text: `✗ HTTP ${r.status}: ${t.slice(0,160)}`, kind: "err" }]); setLabBusy(null); return; }
+      const rd = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
+      for (;;) {
+        const { done, value } = await rd.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const parts = buf.split("\n\n"); buf = parts.pop() ?? "";
+        for (const part of parts) {
+          const line = part.split("\n").find((x) => x.startsWith("data: "));
+          if (!line) continue;
+          try {
+            const d = JSON.parse(line.slice(6)) as { type?: string; text?: string; plane?: string };
+            if (d.text) setLabLog((l) => [...l.slice(-300), { text: d.text, kind: d.type === "stderr" || d.type === "error" ? "err" : undefined }]);
+            if (d.plane) setLabLog((l) => [...l, { text: `↳ اتنفذت على: ${d.plane}`, kind: "cmd" }]);
+          } catch { /* سطر ناقص */ }
+        }
+      }
+    } catch (e) {
+      setLabLog((l) => [...l, { text: `✗ ${e instanceof Error ? e.message : String(e)}`, kind: "err" }]);
+    }
+    setLabBusy(null);
+  };
 
   /* ── أفعال المساحة ── */
   const create = async () => {
@@ -270,6 +312,30 @@ export default function KaliWorkspacePanel() {
 
   return (
     <div className="space-y-3" dir="rtl">
+      {/* ══ المختبر — تشغيل حقيقي فوري: أداة من الكتالوج على هدفك (SSE مباشر) ══ */}
+      <div className="p-3" style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,43,77,0.35)" }}>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className="text-[11px] font-black" style={{ color: "#ff2b4d" }}>⚡ المختبر — تشغيل حقيقي فوري على عقدة كالي</span>
+          <button type="button" onClick={() => setLabLog([])} className="text-[9px] px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)" }}>مسح السجل</button>
+        </div>
+        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+          <input value={labTarget} onChange={(e) => setLabTarget(e.target.value)} placeholder="هدفك (مثال: example.com)"
+            className="text-[10px] px-2 py-1 rounded flex-1 min-w-[200px]" style={{ background: "rgba(0,0,0,0.5)", color: "#fff", border: "1px solid rgba(255,43,77,0.35)", outline: "none" }} />
+          {LAB_TOOLS.map((t) => (
+            <button key={t} type="button" onClick={() => void runLabTool(t)} disabled={!!labBusy}
+              className="text-[9px] font-black px-2 py-1 rounded" style={{ background: labBusy === t ? "rgba(255,43,77,0.35)" : "rgba(255,43,77,0.12)", color: "#ff9ab0", border: "1px solid rgba(255,43,77,0.4)" }}>
+              {labBusy === t ? "…" : t}
+            </button>
+          ))}
+        </div>
+        {labLog.length > 0 && (
+          <pre dir="ltr" className="mt-2 text-[10px] leading-4 max-h-56 overflow-auto rounded p-2" style={{ background: "rgba(0,0,0,0.6)", color: "#c9f7d9", border: "1px solid rgba(255,43,77,0.2)" }}>
+            {labLog.map((l, i) => <div key={i} style={{ color: l.kind === "err" ? "#ff8f8f" : l.kind === "cmd" ? "#ff2b4d" : undefined }}>{l.text}</div>)}
+          </pre>
+        )}
+        <p className="text-[8px] mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>تنفيذ حقيقي streaming على عقدة كالي — الهاك الأخلاقي: هدفك أو مصرّح لك بس</p>
+      </div>
+
       {/* ══ ١) شريط الحالة — أول حاجة المستخدم بيشوفها ══ */}
       <div style={{ ...card, background: "linear-gradient(135deg, rgba(255,85,68,0.09), rgba(140,255,220,0.05))" }} className="p-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">

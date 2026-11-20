@@ -20,6 +20,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, Cpu, HardDrive, Network, Play, RefreshCw, Terminal, Wrench } from "lucide-react";
 
+import { novaAuthHeaders } from "@/lib/ops-client";
+
 const API = "/api";
 
 type ToolRow = {
@@ -111,7 +113,7 @@ export default function KaliSystemsPanel() {
 
   const loadSys = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/kali-env/sysinfo`, { signal: AbortSignal.timeout(15_000) });
+      const r = await fetch(`${API}/kali-env/sysinfo`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(15_000) });
       if (!r.ok) {
         setSysErr(`HTTP ${r.status} — ${r.statusText}`);
         return;
@@ -132,7 +134,7 @@ export default function KaliSystemsPanel() {
   const loadCat = useCallback(async () => {
     setCatBusy(true);
     try {
-      const r = await fetch(`${API}/kali-env/catalog`, { signal: AbortSignal.timeout(90_000) });
+      const r = await fetch(`${API}/kali-env/catalog`, { headers: novaAuthHeaders(), signal: AbortSignal.timeout(90_000) });
       if (!r.ok) {
         setCatErr(`HTTP ${r.status} — ${r.statusText}`);
         return;
@@ -168,7 +170,7 @@ export default function KaliSystemsPanel() {
     try {
       const r = await fetch(`${API}/kali-env/run`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...novaAuthHeaders() },
         body: JSON.stringify({ tool, target: tgt, timeoutMs: 180_000 }),
       });
       if (!r.ok || !r.body) {
