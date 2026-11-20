@@ -1,67 +1,67 @@
 {
-  "at": "2026-11-20T04:21:15.042Z",
+  "at": "2026-11-20T13:26:30.590Z",
   "hub": "https://nova.waifly.com",
   "checks": [
     {
       "name": "login+page",
-      "ok": false,
-      "ms": 821,
-      "detail": "200 · shell=?",
-      "loginStatus": 502,
-      "pageStatus": 502,
-      "cookieSent": false,
-      "shellAsset": null
+      "ok": true,
+      "ms": 865,
+      "detail": "200 · shell=index-CSBkunf_.js",
+      "loginStatus": 302,
+      "pageStatus": 200,
+      "cookieSent": true,
+      "shellAsset": "index-CSBkunf_.js"
     },
     {
       "name": "ops/kali/nodes",
-      "ok": false,
-      "ms": 951,
-      "detail": "hub.kali=undefined · hub.packages=null · عقد كالي=0/0 · stats.ok=undefined/undefined",
-      "hubPackages": null,
+      "ok": true,
+      "ms": 992,
+      "detail": "hub.kali=false · hub.packages=0 · عقد كالي=0/0 · stats.ok=456/500",
+      "hubPackages": 0,
       "kaliNodes": 0
     },
     {
       "name": "kali-env/health",
       "ok": false,
-      "ms": 1081,
-      "detail": "readyAnywhere=undefined · fleet.kaliReady=undefined/undefined"
+      "ms": 1113,
+      "detail": "readyAnywhere=false · fleet.kaliReady=0/0"
     },
     {
       "name": "kali-env/tools",
       "ok": false,
-      "ms": 1209,
-      "detail": "502 · <html>\n  <head>\n    <meta charset=\"utf-8\">\n    <title>502 Error</title>\n    <!--importer 502.scss-->\n    <link rel=\"stylesheet\" href=\"https://waifly.com/502.css",
-      "present": null,
-      "total": null
-    },
-    {
-      "name": "kali-env/catalog",
-      "ok": false,
-      "ms": 1339,
-      "detail": "502 · فاضي",
+      "ms": 1236,
+      "detail": "200 · proot/rootfs not installed AND no live Kali node answered",
       "present": 0,
       "total": 0
     },
     {
+      "name": "kali-env/catalog",
+      "ok": true,
+      "ms": 1358,
+      "detail": "127/127 عبر 11 فئة · cachedFrom=2026-11-20T13:09:07.522Z",
+      "present": 127,
+      "total": 127
+    },
+    {
       "name": "terminal exec",
       "ok": false,
-      "ms": 1470,
-      "detail": "502 · 130ms · <html>\n  <head>\n    <meta charset=\"utf-8\">\n    <title>502 Error</title>\n    <!--importer 502.scss-->\n    <link rel=\"styl"
+      "ms": 1486,
+      "detail": "200 · 126ms · data: {\"type\":\"start\",\"command\":\"uname -a\",\"cwd\":\"/opt/nova-workspaces/recon-lab\"}\n\ndata: {\"type\":\"done\",\"exitCode\":127,"
     },
     {
       "name": "install button (ffuf)",
       "ok": false,
-      "ms": 1599,
-      "detail": "502 · 0s · exit=undefined · plane=? · <html>\n  <head>\n    <meta charset=\"utf-8\">\n    <title>502 Error</title>\n    <!--importer 502.scss-->\n    <link rel=\"stylesheet\" href=\"https://waifly.com/502.css\">\n\n        <link rel=\"icon\" type=\"image",
+      "ms": 1615,
+      "detail": "200 · 0s · exit=127 · plane=الهَب — مافيش عقدة كالي ردت · مافيش عقدة كالي ردت",
       "installOk": false
     },
     {
       "name": "ops/storage-hub",
-      "ok": false,
-      "ms": 1728,
-      "detail": "total=undefined · rows=0"
+      "ok": true,
+      "ms": 5287,
+      "detail": "total=67.11GB · rows=8"
     }
   ],
   "ok": false,
-  "summary": "0/8 ✓ · فاشل: login+page, ops/kali/nodes, kali-env/health, kali-env/tools, kali-env/catalog, terminal exec, install button (ffuf), ops/storage-hub"
+  "summary": "4/8 ✓ · فاشل: kali-env/health, kali-env/tools, terminal exec, install button (ffuf)"
 }
