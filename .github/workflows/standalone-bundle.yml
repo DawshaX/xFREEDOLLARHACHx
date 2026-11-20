@@ -148,30 +148,6 @@ jobs:
             gh release upload nova-portable "$f" --clobber --repo "$GITHUB_REPOSITORY"
             echo "published: $n"
           done
-          name: "NOVA — النسخة المحمولة 24/7"
-          body: |
-            حزمة جاهزة للتشغيل على أي استضافة مجانية **بدون تثبيت وبدون كارت**:
-
-            1. نزّل `nova-24-7.zip` وفك الضغط.
-            2. شغّل: `node server.mjs` (أو `sh start.sh`).
-            3. البورت من `PORT` أو `SERVER_PORT`، والاستماع على `0.0.0.0`.
-            4. لـHTTPS مجاني بدون حساب: `sh start-tunnel.sh`.
-
-            الحجم ~10MB · الذاكرة ~90–110MB RSS · مفيش npm install ولا build.
-
-            ---
-
-            **نود الأسطول — `nova-node-kit.zip` (13 KB):**
-            ملفات جاهزة تخلي أي سيرفر/جهاز تاني يبقى نود تابع للهاب.
-            ارفع الملفات → خلّي Main file = `index.js` → Start.
-            مفيش أي إعداد مطلوب (عنوان الهاب مدمج)، والاتصال صادر فمش محتاج IP عام.
-            بديل بدون رفع: `curl -fsSL <hub>/api/local-agent/download-agent | bash -s -- --id node-2`
-          files: |
-            dist-standalone/nova-24-7.zip
-            dist-node-kit/nova-node-kit.zip
-          make_latest: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: wait, then publish again — the first attempt is allowed to fail
         if: steps.publish.outcome == 'failure'
