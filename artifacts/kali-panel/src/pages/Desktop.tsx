@@ -33,6 +33,7 @@ import { NodesWindow } from "@/components/desktop/NodesWindow";
 import { ScannerWindow } from "@/components/desktop/ScannerWindow";
 import { TerminalWindow } from "@/components/desktop/TerminalWindow";
 import { GpuParticleCanvas, PerformanceMonitor } from "@/components/desktop/DesktopGpuEngine";
+import { KaliLogo2099 } from "@/components/KaliLogo2099";
 import { useLiveEvent } from "@/hooks/useWebSocket";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -2500,12 +2501,12 @@ export default function Desktop() {
               <span key={rep} style={{
                 fontFamily:"'Cairo','Tajawal','monospace',sans-serif",
                 fontSize:13, fontWeight:700,
-                color:"rgba(255,220,50,0.9)",
-                textShadow:"0 0 10px rgba(255,220,50,0.6), 0 0 20px rgba(255,180,0,0.3)",
+                color:"#ff8fa3",
+                textShadow:"0 0 10px rgba(255,43,77,0.7), 0 0 20px rgba(255,43,77,0.35)",
                 letterSpacing:"0.05em",
                 paddingLeft:60,
               }}>
-                ★☆✦★ ☠ 🎯 ✦ · &nbsp;بسم الله&nbsp; · &nbsp;توكلت على الله&nbsp; · &nbsp;لا حول ولا قوة إلا بالله&nbsp; · &nbsp;الله أكبر&nbsp; 🎯 · &nbsp;رحلة المليار&nbsp; ⟶ 💰 ☠ 🎯 ^_^ ☠ · &nbsp;والفضل والحمد لله&nbsp; ★☆✦★
+                🕌 لا إله إلا الله · الله أكبر ولله الحمد · 🐉 NOVA KALI LINUX 2099 CUSTOM OS · 266/266 TOOLS · 28 PYTHON · 10 FLEET NODES · 67.11GB GITHUB CLOUD · حماية العالم ونشر الخير والعلم النافع للكل ★
               </span>
             ))}
           </div>
@@ -2513,6 +2514,22 @@ export default function Desktop() {
 
         {/* ── RIGHT: time + status + notifs ── */}
         <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+          {/* Direct Kali 2099 OS Launch Button */}
+          <button
+            onClick={() => navigate("/kali-env")}
+            title="فتح بيئة NOVA KALI LINUX 2099 المخصصة الكاملة"
+            style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 9,
+              background: "linear-gradient(135deg, #ff2b4d 0%, #b80b2c 100%)",
+              border: "1px solid #ff8fa3",
+              color: "#ffffff", cursor: "pointer",
+              boxShadow: "0 0 14px rgba(255,43,77,0.45)",
+              fontFamily: "'Cairo', monospace", fontSize: 10, fontWeight: 900,
+            }}
+          >
+            <KaliLogo2099 size={16} glow={false} />
+            <span>كالي 2099 (266/266)</span>
+          </button>
           {/* Progress bar — مقاس: CPU% من السيرفر (liveProgress == cpu.usage) */}
           <div style={{ display:"flex", alignItems:"center", gap:4 }} title="استهلاك المعالج المقاس من /monitor/system">
             <TrendingUp style={{ width:10, height:10, color:"#4488ff" }} />

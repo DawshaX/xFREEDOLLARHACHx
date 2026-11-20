@@ -5,6 +5,7 @@ import { NotificationCenter } from "./NotificationCenter";
 import { FloatingNovaButton } from "./FloatingNovaButton";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { LanguagePicker } from "./LanguagePicker";
+import { KaliLogo2099 } from "./KaliLogo2099";
 import { novaAuthHeaders } from "@/lib/ops-client";
 import {
   Cpu, MemoryStick, Clock, Monitor, Skull,
@@ -16,11 +17,11 @@ interface AppShellProps {
 }
 
 const MARQUEE_MSGS = [
-  "☠ CyberNova v10 · Internal WebSocket Hub Active · Agents & Memory Synced",
-  "⚡ ALL SYSTEMS NOMINAL · CVE SYNC ACTIVE · THREAT MONITOR LIVE",
-  "🛡️ BUG BOUNTY STUDIO READY · HACKERONE & GOOGLE VRP LEGAL SCOPE",
-  "⚔ OFFENSIVE & DEFENSIVE SECURITY PLATFORM · AUTHORIZED USE ONLY",
-  "◈ AI NEURAL CORE ACTIVE · SHARED MEMORY & MISSION BUS CONNECTED",
+  "🕌 لا إله إلا الله · الله أكبر ولله الحمد · NOVA KALI LINUX 2099 CUSTOM OS · 266/266 TOOLS",
+  "🐉 بيئة كالي لينكس 2099 المخصصة · 266 أداة · 28 بايثون · 10 عقد كالي + احتياطي · 67.11GB مخزن",
+  "⚡ البث المباشر لسطح مكتب كالي (:99) + متصفح كالي السيبراني + سلاسل الفحص الذكية",
+  "🛡️ حماية العالم ونشر الخير والعلم النافع · BUG BOUNTY STUDIO & ETHICAL DEFENSE",
+  "◈ AI NEURAL CORE ACTIVE · GITHUB FREE CLOUD SUPERCOMPUTER & SELF-HEAL SYNCED",
 ];
 
 function TopMarquee({ lastWsText }: { lastWsText: string | null }) {
@@ -239,25 +240,16 @@ export function AppShell({ children }: AppShellProps) {
         {/* LEFT — Brand + status pills */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <div
-              className="w-5 h-5 rounded-md flex items-center justify-center"
-              style={{
-                background: "rgba(180,0,0,0.3)",
-                border: "1px solid rgba(255,30,30,0.6)",
-                boxShadow: "0 0 10px rgba(255,0,0,0.3)",
-              }}
-            >
-              <Skull style={{ width: 11, height: 11, color: "#ff4444", filter: "drop-shadow(0 0 4px rgba(255,50,50,1))" }} />
-            </div>
+            <KaliLogo2099 size={24} />
             <div className="hidden sm:flex flex-col leading-none">
               <span
-                className="text-[10px] font-black tracking-[0.22em]"
-                style={{ color: "#ff3333", textShadow: "0 0 10px rgba(255,30,30,0.8), 0 0 20px rgba(255,0,0,0.4)" }}
+                className="text-[10px] font-black tracking-[0.18em]"
+                style={{ color: "#ff2b4d", textShadow: "0 0 10px rgba(255,43,77,0.85)" }}
               >
-                CYBERNOVA
+                NOVA KALI 2099
               </span>
-              <span className="text-[7px] font-mono tracking-wider" style={{ color: "rgba(255,80,80,0.35)" }}>
-                xDaw · حمو دوشة
+              <span className="text-[7px] font-mono tracking-wider" style={{ color: "rgba(255,180,195,0.75)" }}>
+                لا إله إلا الله · الله أكبر ولله الحمد
               </span>
             </div>
           </div>
@@ -407,6 +399,21 @@ export function AppShell({ children }: AppShellProps) {
             <Clock style={{ width: 10, height: 10 }} />
             <span className="font-black tracking-wider">{t}</span>
           </div>
+
+          {/* Dedicated Kali 2099 OS button */}
+          <button
+            onClick={() => navigate("/kali-env")}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black font-mono transition-all hover:scale-[1.03]"
+            style={{
+              background: location === "/kali-env" ? "linear-gradient(135deg, #ff2b4d 0%, #b80b2c 100%)" : "rgba(255,43,77,0.2)",
+              border: "1px solid #ff2b4d",
+              color: "#ffffff",
+              boxShadow: "0 0 12px rgba(255,43,77,0.35)",
+            }}
+          >
+            <KaliLogo2099 size={14} glow={false} />
+            <span>كالي 2099 (266)</span>
+          </button>
 
           {/* Dedicated Work + Chat Cockpit button */}
           <button
