@@ -3969,7 +3969,9 @@ router.post("/kali-env/autopilot/run", async (req: Request, res: Response) => {
     target,
     plane: r?.plane ?? "fleet",
     durationMs,
-    generatedScript: `#!/bin/bash\n# 🐉 KALI AUTOPILOT 2099 — ${tpl.title_ar}\n# Target: ${target}\n\n` + cmds.join("\n\n"),
+    generatedScript:
+      `#!/bin/bash\n# 🕌 بسم الله الرحمن الرحيم — لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد\n# 🐉 KALI AUTOPILOT 2099 — ${tpl.title_ar}\n# Target: ${target}\n\n` +
+      cmds.join("\n\n"),
     output,
   });
 });
@@ -3978,6 +3980,9 @@ router.get("/kali-env/connections", async (_req: Request, res: Response) => {
   const vault = readEternalVault();
   const cached = readProbeCache();
   const activeNodes = cached.rows.filter((r) => r.ready).length || 10;
+  const { getVisitorIntelLog } = await import("../lib/ops/visitor-intel");
+  const { telegramConfigured } = await import("../lib/ops/telegram");
+  const vCount = getVisitorIntelLog().length;
 
   res.json({
     ok: true,
@@ -3992,6 +3997,15 @@ router.get("/kali-env/connections", async (_req: Request, res: Response) => {
         status: "CONNECTED",
         metrics: `${activeNodes}/10 عقدة حية · 266/266 أداة · 28/28 بايثون`,
         latencyMs: 38,
+      },
+      {
+        id: "telegram-visitor-sentinel",
+        name: "رادار الزوار وتنبيهات تليجرام الفورية (Visitor IP Recon & Telegram Shield)",
+        category: "Active Sentinel",
+        protocol: "Telegram Bot API + GeoIP + rDNS + Shodan",
+        status: telegramConfigured() ? "CONNECTED" : "READY (AWAITING TOKEN)",
+        metrics: `${vCount} زائر مفحوص وموثّق · فحص IP وrDNS وISP والمتصفح تلقائيًا`,
+        latencyMs: 24,
       },
       {
         id: "github-storage-hub",
@@ -4040,6 +4054,204 @@ router.get("/kali-env/connections", async (_req: Request, res: Response) => {
       },
     ],
   });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 👁️ رادار الزوار الفوري وتنبيهات تليجرام لحراس الكون (Visitor IP Recon & Telegram Sentinel 2099)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+router.get("/kali-env/visitor-intel", async (req: Request, res: Response) => {
+  try {
+    const { clientIp, getVisitorIntelLog, inspectVisitorNow, parseVisitorDevice } = await import("../lib/ops/visitor-intel");
+    const { telegramStatus } = await import("../lib/ops/telegram");
+    const rawIp = clientIp(req) || "127.0.0.1";
+    const ua = String(req.headers["user-agent"] || "Mozilla/5.0");
+    const track = req.query.track === "1";
+    const forceTelegram = req.query.forceTelegram === "1";
+
+    let currentVisitor = getVisitorIntelLog().find((v) => v.ip === rawIp) ?? null;
+    if (track || !currentVisitor) {
+      currentVisitor = await inspectVisitorNow(rawIp, {
+        userAgent: ua,
+        path: String(req.query.page || "/kali-env"),
+        forceTelegram,
+      });
+      if (track) {
+        recordEternalMemoryEntry({
+          kind: "finding",
+          title: `رصد وفحص زائر للمنصة: ${currentVisitor.ip} (${currentVisitor.country} · ${currentVisitor.deviceSummary})`,
+          command: `whois ${currentVisitor.ip} && dig -x ${currentVisitor.ip} +short`,
+          output: `IP: ${currentVisitor.ip}\nrDNS: ${currentVisitor.reverseHost}\nالمكان: ${currentVisitor.city}، ${currentVisitor.country}\nالمزود (ISP/Org): ${currentVisitor.isp} / ${currentVisitor.org}\nالجهاز والمتصفح: ${currentVisitor.deviceSummary}\nالتقييم الأمني: ${currentVisitor.verdict}\nإشعار تليجرام: ${currentVisitor.telegramSent ? "تم الإرسال بنجاح ✅" : "مسجل في الرادار الحي 📌"}`,
+          target: currentVisitor.ip,
+          plane: "visitor-radar-2099",
+          exitCode: 0,
+          tags: ["visitor-radar", "telegram-sentinel", currentVisitor.ip],
+        });
+      }
+    }
+
+    const tgStatus = await telegramStatus();
+    res.json({
+      ok: true,
+      currentVisitor: currentVisitor ?? {
+        id: "vis-self",
+        timestamp: new Date().toISOString(),
+        ip: rawIp,
+        reverseHost: "localhost",
+        city: "محلي",
+        country: "عقدة داخلية",
+        isp: "NOVA Internal Plane",
+        org: "NOVA 2099",
+        userAgent: ua,
+        deviceSummary: parseVisitorDevice(ua),
+        path: "/",
+        ports: [],
+        vulns: [],
+        verdict: "✅ جلسة المالك النشطة",
+        telegramSent: false,
+      },
+      visitors: getVisitorIntelLog(),
+      telegram: tgStatus,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+router.post("/kali-env/visitor-intel/scan", async (req: Request, res: Response) => {
+  try {
+    const { inspectVisitorNow, getVisitorIntelLog } = await import("../lib/ops/visitor-intel");
+    const { notifyTelegram } = await import("../lib/ops/telegram");
+    const rawIp = String(req.body?.ip ?? "").trim().replace(/[^a-zA-Z0-9.:-]/g, "");
+    if (!rawIp) {
+      res.status(400).json({ ok: false, error: "يرجى تمرير عنوان IP صالح للفحص" });
+      return;
+    }
+
+    const baseRec = await inspectVisitorNow(rawIp, {
+      userAgent: String(req.headers["user-agent"] || "NOVA-2099-Deep-Scanner"),
+      path: "/visitor-deep-scan",
+      forceTelegram: false,
+    });
+
+    // فحص استخباراتي إضافي من طائرة كالي (whois + dig -x) إن توفرت
+    let kaliReconOutput = "";
+    const r = await kaliAnywhereExec(
+      `echo "=== PTR / REVERSE DNS ===" && (dig -x ${rawIp} +short 2>/dev/null || host ${rawIp} 2>/dev/null || echo "No PTR") && echo "=== WHOIS SUMMARY ===" && (whois ${rawIp} 2>/dev/null | grep -iE 'netname|orgname|org-name|descr|country|cidr|route|abuse' | head -20 || echo "Whois lookup completed")`,
+      20_000,
+    );
+    if (r && r.stdout) {
+      kaliReconOutput = r.stdout.trim();
+    } else {
+      kaliReconOutput = [
+        `=== NOVA 2099 PASSIVE & DNS RECON (${rawIp}) ===`,
+        `IP Address   : ${baseRec.ip}`,
+        `Reverse Host : ${baseRec.reverseHost}`,
+        `Location     : ${baseRec.city}, ${baseRec.country}`,
+        `ISP / Org    : ${baseRec.isp} / ${baseRec.org}`,
+        `Device / UA  : ${baseRec.deviceSummary}`,
+        `Open Ports   : ${baseRec.ports.join(", ") || "None indexed"}`,
+        `Known CVEs   : ${baseRec.vulns.join(", ") || "0 CVEs"}`,
+        `Verdict      : ${baseRec.verdict}`,
+      ].join("\n");
+    }
+
+    const tgMessage = [
+      `🕌 بسم الله الرحمن الرحيم — لا إله إلا الله · الله أكبر ولله الحمد`,
+      `🛡️ تقرير الفحص العميق للزائر — منظمة حراس الكون (NOVA KALI 2099)`,
+      `━━━━━━━━━━━━━━━━━━━━`,
+      `🌐 عنوان IP: ${baseRec.ip}`,
+      `🏷️ الاسم العكسي (rDNS): ${baseRec.reverseHost}`,
+      `📍 الدولة والمدينة: ${baseRec.city}، ${baseRec.country}`,
+      `🏢 المزود والمنظمة (ISP/Org): ${baseRec.isp} · ${baseRec.org}`,
+      `💻 الجهاز والمتصفح: ${baseRec.deviceSummary}`,
+      `🔌 البورتات المرصودة: ${baseRec.ports.join(", ") || "لا توجد منافذ مكشوفة"}`,
+      `🧬 الثغرات المسجلة (CVEs): ${baseRec.vulns.join(", ") || "سليم (0)"}`,
+      `⚖️ التقييم الأمني: ${baseRec.verdict}`,
+      `━━━━━━━━━━━━━━━━━━━━`,
+      `📜 مخرجات الفحص الاستخباراتي:`,
+      kaliReconOutput.slice(0, 900),
+    ].join("\n");
+
+    const tgSent = await notifyTelegram(`visitor-deep:${rawIp}`, tgMessage, { bypassThrottle: true });
+    baseRec.telegramSent = baseRec.telegramSent || tgSent;
+
+    recordEternalMemoryEntry({
+      kind: "finding",
+      title: `فحص عميق لـ IP الزائر: ${rawIp} (${baseRec.country} · ${baseRec.isp})`,
+      command: `whois ${rawIp} && dig -x ${rawIp} +short`,
+      output: `${tgMessage}\n\n[Telegram Alert Sent: ${tgSent}]`,
+      target: rawIp,
+      plane: r?.plane ?? "visitor-sentinel-2099",
+      exitCode: 0,
+      tags: ["visitor-deep-scan", "telegram-alert", rawIp],
+      pinned: true,
+    });
+
+    res.json({
+      ok: true,
+      visitor: baseRec,
+      reconOutput: kaliReconOutput,
+      telegramSent: tgSent,
+      visitors: getVisitorIntelLog(),
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+router.post("/kali-env/telegram-config", async (req: Request, res: Response) => {
+  try {
+    const { setRuntimeConfig } = await import("../lib/ops/runtime-config");
+    const { notifyTelegram, telegramStatus, ensureChatId } = await import("../lib/ops/telegram");
+    const { getVisitorIntelLog } = await import("../lib/ops/visitor-intel");
+
+    const botToken = typeof req.body?.botToken === "string" ? req.body.botToken.trim() : undefined;
+    const chatId = typeof req.body?.chatId === "string" ? req.body.chatId.trim() : undefined;
+    const sendTest = Boolean(req.body?.sendTest);
+
+    const errors: string[] = [];
+    if (botToken !== undefined && botToken !== "") {
+      const r1 = await setRuntimeConfig("telegram.botToken", botToken);
+      if (!r1.ok) errors.push(r1.reasonAr);
+    }
+    if (chatId !== undefined && chatId !== "") {
+      const r2 = await setRuntimeConfig("telegram.chatId", chatId);
+      if (!r2.ok) errors.push(r2.reasonAr);
+    }
+
+    ensureChatId();
+
+    let testSent = false;
+    if (sendTest) {
+      const visitors = getVisitorIntelLog();
+      const latest = visitors[0];
+      const msg = [
+        `🕌 بسم الله الرحمن الرحيم`,
+        `✨ لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد ✨`,
+        `🛡️ تنبيه حي من رادار حراس الكون — NOVA KALI LINUX 2099 ETERNAL OS`,
+        `━━━━━━━━━━━━━━━━━━━━`,
+        `✅ قناة تنبيهات تليجرام متصلة وتعمل بكفاءة 100%`,
+        `👁️ إجمالي الزوار المفحوصين بالرادار: ${visitors.length}`,
+        latest
+          ? `🌐 آخر زائر مرصود:\n• IP: ${latest.ip}\n• الاسم (rDNS): ${latest.reverseHost}\n• المكان: ${latest.city}، ${latest.country} (${latest.isp})\n• الجهاز: ${latest.deviceSummary}\n• التقييم: ${latest.verdict}`
+          : `🌐 الرادار يراقب كل زائر يدخل المنصة لحظة بلحظة.`,
+        `⏱️ الوقت: ${new Date().toISOString()}`,
+      ].join("\n");
+      testSent = await notifyTelegram("kali2099:test", msg, { bypassThrottle: true });
+    }
+
+    const status = await telegramStatus();
+    res.json({
+      ok: errors.length === 0,
+      errors,
+      testSent,
+      telegram: status,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
 });
 
 // مزامنة تلقائية هادئة بعد دقيقتين من إقلاع السيرفر لضمان بقاء كل العقد محمّلة بـ266/266 أداة

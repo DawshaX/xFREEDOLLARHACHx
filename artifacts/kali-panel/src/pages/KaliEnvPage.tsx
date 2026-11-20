@@ -250,6 +250,37 @@ interface ConnectionPlaneItem {
   latencyMs: number;
 }
 
+interface VisitorIntelRecord {
+  id: string;
+  timestamp: string;
+  ip: string;
+  reverseHost: string;
+  city: string;
+  country: string;
+  isp: string;
+  org: string;
+  userAgent: string;
+  deviceSummary: string;
+  path: string;
+  ports: number[];
+  vulns: string[];
+  verdict: string;
+  telegramSent: boolean;
+}
+
+interface VisitorIntelResp {
+  ok: boolean;
+  currentVisitor: VisitorIntelRecord;
+  visitors: VisitorIntelRecord[];
+  telegram: {
+    tokenSet?: boolean;
+    chatIdKnown?: boolean;
+    chatId?: string;
+    bot?: { id?: number; username?: string; firstName?: string } | null;
+    noteAr?: string;
+  };
+}
+
 const KALI_WHISKER_CATEGORIES = [
   { id: "all", code: "00", label: "All Applications (294)", ar: "كل التطبيقات والأدوات" },
   { id: "الاستطلاع وOSINT", code: "01", label: "01 - Information Gathering", ar: "جمع المعلومات وOSINT" },
@@ -401,8 +432,8 @@ export default function KaliEnvPage() {
   const [studioMode, setStudioMode] = useState<"x11" | "graph" | "autopilot" | "editor" | "browser" | "pipelines">("x11");
   // Terminal right-pane mode (`auto-help` | `assistant`)
   const [termSideMode, setTermSideMode] = useState<"auto-help" | "assistant">("auto-help");
-  // Gotop right-window mode (`gotop` | `memory` | `connections`)
-  const [rightMonitorTab, setRightMonitorTab] = useState<"gotop" | "memory" | "connections">("gotop");
+  // Gotop right-window mode (`gotop` | `memory` | `connections` | `visitors`)
+  const [rightMonitorTab, setRightMonitorTab] = useState<"gotop" | "memory" | "connections" | "visitors">("gotop");
 
   // Embedded Universal App inside Kali OS ("Open Everything")
   const [embeddedAppRoute, setEmbeddedAppRoute] = useState<string>("/agent-pro");
@@ -424,6 +455,14 @@ export default function KaliEnvPage() {
   const [autopilotOutput, setAutopilotOutput] = useState<string>("");
   const [autopilotScript, setAutopilotScript] = useState<string>("");
   const [connections, setConnections] = useState<ConnectionPlaneItem[]>([]);
+  const [visitorIntel, setVisitorIntel] = useState<VisitorIntelResp | null>(null);
+  const [visitorScanIp, setVisitorScanIp] = useState<string>("");
+  const [visitorScanning, setVisitorScanning] = useState<boolean>(false);
+  const [visitorScanOutput, setVisitorScanOutput] = useState<string>("");
+  const [tgBotTokenInput, setTgBotTokenInput] = useState<string>("");
+  const [tgChatIdInput, setTgChatIdInput] = useState<string>("");
+  const [tgConfigBusy, setTgConfigBusy] = useState<boolean>(false);
+  const [tgConfigMsg, setTgConfigMsg] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [healing, setHealing] = useState(false);
 
@@ -463,10 +502,11 @@ export default function KaliEnvPage() {
         title: "1: root@kali-2099 (Main)",
         cwd: "/opt/nova-workspaces/recon-lab",
         lines: [
-          "╔════════════════════════════════════════════════════════════════════════════╗",
-          "║  لا إله إلا الله · الله أكبر ولله الحمد · NOVA KALI LINUX 2099 ETERNAL OS  ║",
-          "║  جلسة دائمة متصلة بالذاكرة الأبدية · 266/266 أداة كالي · 28/28 بايثون      ║",
-          "╚════════════════════════════════════════════════════════════════════════════╝",
+          "╔══════════════════════════════════════════════════════════════════════════════════╗",
+          "║  بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد ║",
+          "║  سبحان الله وبحمده · سبحان الله العظيم — NOVA KALI LINUX 2099 ETERNAL OS         ║",
+          "║  جلسة دائمة متصلة بالذاكرة الأبدية · 266/266 أداة كالي · 28/28 بايثون            ║",
+          "╚══════════════════════════════════════════════════════════════════════════════════╝",
         ],
         history: ["uname -a && id", "nmap --version", "nuclei -version", "ls -la /usr/local/bin"],
       },
@@ -1114,6 +1154,118 @@ export default function KaliEnvPage() {
     }
   }, [ghRepoInput]);
 
+  const loadVisitorIntel = useCallback(async (track = false) => {
+    try {
+      const r = await apiFetch<VisitorIntelResp>(
+        `/api/kali-env/visitor-intel${track ? "?track=1&page=/kali-env" : ""}`,
+      );
+      if (r?.ok) {
+        setVisitorIntel({
+          ...r,
+          visitors: Array.isArray(r.visitors) ? r.visitors : [],
+        });
+        if (!visitorScanIp && r.currentVisitor?.ip) {
+          setVisitorScanIp(r.currentVisitor.ip);
+        }
+      }
+    } catch { /* ignore */ }
+  }, [visitorScanIp]);
+
+  const runDeepVisitorScan = useCallback(
+    async (ipToScan?: string) => {
+      const targetIp = (ipToScan || visitorScanIp || visitorIntel?.currentVisitor?.ip || "").trim();
+      if (!targetIp) return;
+      setVisitorScanning(true);
+      setVisitorScanOutput(`⏳ جاري الفحص الاستخباراتي العميق للزائر (${targetIp}) وإرسال التقرير الفوري للتليجرام...`);
+      try {
+        const r = await apiFetch<{
+          ok: boolean;
+          visitor: VisitorIntelRecord;
+          reconOutput: string;
+          telegramSent: boolean;
+          visitors: VisitorIntelRecord[];
+        }>("/api/kali-env/visitor-intel/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ip: targetIp, notifyTelegramNow: true }),
+        });
+        if (r?.ok) {
+          setVisitorIntel((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  currentVisitor: r.visitor ?? prev.currentVisitor,
+                  visitors: Array.isArray(r.visitors) ? r.visitors : prev.visitors,
+                }
+              : prev,
+          );
+          setVisitorScanOutput(
+            [
+              `🕌 بسم الله الرحمن الرحيم — لا إله إلا الله · الله أكبر ولله الحمد`,
+              `🛡️ [رادار حراس الكون 2099] تقرير فحص الزائر (${r.visitor?.ip ?? targetIp}):`,
+              `• الاسم العكسي (rDNS): ${r.visitor?.reverseHost}`,
+              `• المكان: ${r.visitor?.city}، ${r.visitor?.country} (${r.visitor?.isp} / ${r.visitor?.org})`,
+              `• الجهاز والمتصفح: ${r.visitor?.deviceSummary}`,
+              `• التقييم الأمني: ${r.visitor?.verdict}`,
+              `• حالة تنبيه تليجرام: ${r.telegramSent ? "تم الإرسال لتليجرام بنجاح ✅" : "محفوظ في الرادار والذاكرة الأبدية 📌"}`,
+              `------------------------------------------------------------`,
+              r.reconOutput || "(اكتمل الفحص)",
+            ].join("\n"),
+          );
+          await loadEternalMemory();
+        }
+      } catch (e) {
+        setVisitorScanOutput(`✗ تعذر إتمام الفحص: ${(e as Error).message}`);
+      } finally {
+        setVisitorScanning(false);
+      }
+    },
+    [visitorScanIp, visitorIntel, loadEternalMemory],
+  );
+
+  const saveAndTestTelegram = useCallback(
+    async (sendTest = true) => {
+      setTgConfigBusy(true);
+      setTgConfigMsg("⏳ جاري حفظ إعدادات تليجرام وإرسال تنبيه حي لحراس الكون...");
+      try {
+        const r = await apiFetch<{
+          ok: boolean;
+          errors: string[];
+          testSent: boolean;
+          telegram: VisitorIntelResp["telegram"];
+        }>("/api/kali-env/telegram-config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            botToken: tgBotTokenInput.trim() || undefined,
+            chatId: tgChatIdInput.trim() || undefined,
+            sendTest,
+          }),
+        });
+        if (r) {
+          setVisitorIntel((prev) => (prev ? { ...prev, telegram: r.telegram ?? prev.telegram } : prev));
+          if (r.errors?.length) {
+            setTgConfigMsg(`⚠️ ${r.errors.join(" · ")}`);
+          } else if (r.testSent) {
+            setTgConfigMsg("✅ تم الربط وإرسال تنبيه تليجرام الحي بنجاح! (تفقد محادثة البوت الآن)");
+          } else {
+            setTgConfigMsg(
+              r.telegram?.tokenSet
+                ? "✅ تم حفظ التوكن بنجاح! أرسل /start للبوت أو أدخل Chat ID ليصل التنبيه فورًا."
+                : "ℹ️ أدخل توكن البوت (Bot Token) ومعرف الشات (Chat ID) لتفعيل الإرسال الفوري.",
+            );
+          }
+          setTgBotTokenInput("");
+        }
+      } catch (e) {
+        setTgConfigMsg(`✗ خطأ: ${(e as Error).message}`);
+      } finally {
+        setTgConfigBusy(false);
+      }
+    },
+    [tgBotTokenInput, tgChatIdInput],
+  );
+
   const triggerSelfHeal = useCallback(async () => {
     setHealing(true);
     try {
@@ -1131,7 +1283,8 @@ export default function KaliEnvPage() {
     void loadFs("workspace", "/");
     void runCyberBrowser("https://example.com");
     void loadAttackGraph("example.com");
-  }, [refreshAll, captureDesktopFrame, loadFs, runCyberBrowser, loadAttackGraph]);
+    void loadVisitorIntel(true);
+  }, [refreshAll, captureDesktopFrame, loadFs, runCyberBrowser, loadAttackGraph, loadVisitorIntel]);
 
   useEffect(() => {
     if (!autoStream) return;
@@ -1293,6 +1446,36 @@ export default function KaliEnvPage() {
       />
 
       {/* ═══════════════════════════════════════════════════════════════════════
+       * 0. SACRED TAWHID & DHIKR ETERNAL RIBBON (ALWAYS VISIBLE ON ALL SCREENS)
+       * ═══════════════════════════════════════════════════════════════════════ */}
+      <div
+        className="relative z-40 h-6 w-full bg-gradient-to-r from-[#240410] via-[#3a071b] to-[#240410] border-b border-[#ff2b4d]/45 px-3 flex items-center justify-between text-[11px] shadow-[0_0_18px_rgba(255,43,77,0.3)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 truncate">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+          <span className="font-black tracking-wide text-white drop-shadow-[0_0_10px_rgba(255,43,77,0.9)] truncate">
+            بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد · سبحان الله وبحمده سبحان الله العظيم
+          </span>
+        </div>
+        <div className="hidden md:flex items-center gap-2 shrink-0 text-[10px] font-mono">
+          <span className="text-[#ff8fa3] font-bold">
+            منظمة حراس الكون · خالصًا لوجه الله في نشر العلم النافع والدفاع الأخلاقي
+          </span>
+          <button
+            onClick={() => {
+              setActiveWorkspace(6);
+              setRightMonitorTab("visitors");
+            }}
+            className="px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/50 text-cyan-200 font-bold flex items-center gap-1"
+          >
+            <Eye className="w-3 h-3 text-emerald-400" />
+            <span>رادار الزوار وتليجرام ({visitorIntel?.visitors?.length ?? 1})</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
        * 1. AUTHENTIC KALI LINUX XFCE TOP PANEL (36px) + PURPLE/RED/BLUE SWITCH + Ctrl+K
        * ═══════════════════════════════════════════════════════════════════════ */}
       <header
@@ -1350,7 +1533,7 @@ export default function KaliEnvPage() {
                 { id: 3, label: "3:Arsenal", title: "موسوعة الـ 266 أداة كالي + 28 بايثون بالوصف والأوامر" },
                 { id: 4, label: "4:Memory", title: "الذاكرة الأبدية والجلسة الدائمة والمخزن 67.11GB" },
                 { id: 5, label: "5:AllApps", title: "فتح كل شيء — دمج وتشغيل جميع شاشات المنصة الـ 32" },
-                { id: 6, label: "6:Purple360", title: "خريطة سطح الهجوم 360° + Kali Autopilot + مركز الاتصالات" },
+                { id: 6, label: "6:Purple360", title: "خريطة سطح الهجوم 360° + رادار الزوار وتليجرام + Kali Autopilot" },
               ] as const
             ).map((ws) => (
               <button
@@ -1372,16 +1555,8 @@ export default function KaliEnvPage() {
           </div>
         </div>
 
-        {/* Center: Sacred Tawhid Banner + Red/Blue/Purple Mode Selector */}
-        <div className="hidden xl:flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-0.5 rounded-full bg-gradient-to-r from-[#240611] via-[#380819] to-[#240611] border border-[#ff2b4d]/45 shadow-[0_0_15px_rgba(255,43,77,0.25)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-            <span className="text-[11px] font-black tracking-wide text-white">
-              لا إله إلا الله · الله أكبر ولله الحمد
-            </span>
-          </div>
-
-          {/* Kali Red / Blue / Purple Team Mode Switcher */}
+        {/* Center: Red/Blue/Purple Mode Selector */}
+        <div className="hidden lg:flex items-center gap-2">
           <div className="flex items-center gap-0.5 bg-[#0c0f17] p-0.5 rounded border border-slate-800" dir="ltr">
             {(
               [
@@ -1405,6 +1580,20 @@ export default function KaliEnvPage() {
 
         {/* Left side: System Tray Indicators */}
         <div className="flex items-center gap-1.5" dir="ltr">
+          <button
+            onClick={() => {
+              setActiveWorkspace(1);
+              setWinGotopOpen(true);
+              setRightMonitorTab("visitors");
+            }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 font-mono text-[10px] font-bold hover:bg-cyan-500/25"
+            title="رادار الزوار الفوري وتنبيهات تليجرام"
+          >
+            <Eye className="w-3 h-3 text-[#ff2b4d]" />
+            <span>VIS:{visitorIntel?.visitors?.length ?? 1}</span>
+            <span className="text-emerald-300">· TG</span>
+          </button>
+
           <button
             onClick={() => setActiveWorkspace(3)}
             className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 font-mono text-[10px] font-bold hover:bg-emerald-500/25"
@@ -2650,7 +2839,15 @@ export default function KaliEnvPage() {
                           rightMonitorTab === "connections" ? "bg-purple-600 text-white" : "text-purple-300"
                         }`}
                       >
-                        الاتصالات (6)
+                        الاتصالات ({connections.length || 7})
+                      </button>
+                      <button
+                        onClick={() => setRightMonitorTab("visitors")}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                          rightMonitorTab === "visitors" ? "bg-cyan-500 text-slate-950" : "text-cyan-300"
+                        }`}
+                      >
+                        👁️ الزوار+تليجرام ({visitorIntel?.visitors?.length ?? 1})
                       </button>
                     </div>
                     <div className="flex items-center gap-1" dir="ltr">
@@ -2793,6 +2990,128 @@ export default function KaliEnvPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {rightMonitorTab === "visitors" && (
+                    <div className="flex-1 overflow-y-auto p-2.5 space-y-2" dir="rtl">
+                      {/* Current Visitor & Quick Scan */}
+                      <div className="p-2.5 rounded-lg bg-[#111624] border border-cyan-500/40 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-black text-cyan-300">
+                            👁️ رادار الزوار وتنبيهات تليجرام (حراس الكون)
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-mono font-bold">
+                            {visitorIntel?.telegram?.tokenSet ? "TELEGRAM ACTIVE" : "RADAR ACTIVE"}
+                          </span>
+                        </div>
+
+                        {visitorIntel?.currentVisitor && (
+                          <div className="p-2 rounded bg-black/50 border border-slate-800 text-[10px] space-y-0.5">
+                            <div className="flex items-center justify-between font-mono" dir="ltr">
+                              <span className="text-emerald-400 font-bold">IP: {visitorIntel.currentVisitor.ip}</span>
+                              <span className="text-cyan-300">{visitorIntel.currentVisitor.reverseHost}</span>
+                            </div>
+                            <div className="text-slate-300">
+                              المكان: {visitorIntel.currentVisitor.city}، {visitorIntel.currentVisitor.country} ({visitorIntel.currentVisitor.isp})
+                            </div>
+                            <div className="text-slate-400">الجهاز: {visitorIntel.currentVisitor.deviceSummary}</div>
+                            <div className="text-amber-300 font-bold">{visitorIntel.currentVisitor.verdict}</div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-1 pt-1">
+                          <input
+                            value={visitorScanIp}
+                            onChange={(e) => setVisitorScanIp(e.target.value)}
+                            placeholder="أدخل IP أي زائر لفحصه وإرساله لتليجرام..."
+                            dir="ltr"
+                            className="flex-1 px-2 py-1 rounded bg-[#080a10] border border-slate-700 text-[11px] font-mono text-cyan-300"
+                          />
+                          <button
+                            onClick={() => void runDeepVisitorScan()}
+                            disabled={visitorScanning}
+                            className="px-2.5 py-1 rounded bg-[#ff2b4d] hover:bg-[#ff4769] text-white text-[10px] font-bold shrink-0"
+                          >
+                            {visitorScanning ? "يفحص..." : "فحص + تليجرام ▶"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Telegram Bot Configuration & Instant Test */}
+                      <div className="p-2.5 rounded-lg bg-[#111624] border border-purple-500/35 space-y-1.5">
+                        <div className="text-[10px] font-black text-purple-300">
+                          ضبط واختبار تنبيهات تليجرام الفورية لكل زائر:
+                        </div>
+                        <input
+                          value={tgBotTokenInput}
+                          onChange={(e) => setTgBotTokenInput(e.target.value)}
+                          placeholder={
+                            visitorIntel?.telegram?.tokenSet
+                              ? "توكن البوت محفوظ ✓ (أدخل توكن جديد للتحديث)"
+                              : "أدخل TELEGRAM_BOT_TOKEN (مثال: 123456:ABC...)"
+                          }
+                          dir="ltr"
+                          className="w-full px-2 py-1 rounded bg-[#080a10] border border-slate-700 text-[10px] font-mono text-slate-200"
+                        />
+                        <div className="flex items-center gap-1">
+                          <input
+                            value={tgChatIdInput}
+                            onChange={(e) => setTgChatIdInput(e.target.value)}
+                            placeholder={
+                              visitorIntel?.telegram?.chatId
+                                ? `Chat ID: ${visitorIntel.telegram.chatId}`
+                                : "أدخل TELEGRAM_CHAT_ID أو @channel"
+                            }
+                            dir="ltr"
+                            className="flex-1 px-2 py-1 rounded bg-[#080a10] border border-slate-700 text-[10px] font-mono text-slate-200"
+                          />
+                          <button
+                            onClick={() => void saveAndTestTelegram(true)}
+                            disabled={tgConfigBusy}
+                            className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shrink-0"
+                          >
+                            {tgConfigBusy ? "..." : "حفظ وإرسال تنبيه حي"}
+                          </button>
+                        </div>
+                        {tgConfigMsg && <div className="text-[10px] text-amber-300 font-bold">{tgConfigMsg}</div>}
+                      </div>
+
+                      {visitorScanOutput && (
+                        <pre
+                          dir="ltr"
+                          className="p-2 rounded bg-black/90 border border-cyan-500/40 text-[10px] font-mono text-emerald-300 max-h-36 overflow-y-auto whitespace-pre-wrap"
+                        >
+                          {visitorScanOutput}
+                        </pre>
+                      )}
+
+                      {/* Recent Visitors List */}
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-bold text-slate-300">
+                          سجل الزوار المفحوصين تلقائيًا ({visitorIntel?.visitors?.length ?? 0}):
+                        </div>
+                        {(visitorIntel?.visitors ?? []).slice(0, 15).map((v) => (
+                          <div key={v.id} className="p-2 rounded bg-[#141824] border border-slate-800 space-y-0.5 text-[10px]">
+                            <div className="flex items-center justify-between font-mono" dir="ltr">
+                              <span className="text-cyan-300 font-bold">{v.ip}</span>
+                              <button
+                                onClick={() => {
+                                  setVisitorScanIp(v.ip);
+                                  void runDeepVisitorScan(v.ip);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-[#ff2b4d] text-white text-[9px] font-sans font-bold"
+                              >
+                                فحص عميق
+                              </button>
+                            </div>
+                            <div className="text-slate-300">
+                              {v.city}، {v.country} · {v.isp} ({v.reverseHost})
+                            </div>
+                            <div className="text-slate-400 truncate">{v.deviceSummary}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </section>
@@ -3431,6 +3750,85 @@ export default function KaliEnvPage() {
                       className="p-2 rounded bg-black/90 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 max-h-40 overflow-y-auto whitespace-pre-wrap"
                     >
                       {autopilotOutput}
+                    </pre>
+                  )}
+                </div>
+
+                {/* Live Visitor IP Radar & Telegram Sentinel Card */}
+                <div className="p-3 rounded-xl bg-[#0c0f18]/95 border border-[#ff2b4d]/45 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-black text-white flex items-center gap-1.5">
+                      <Eye className="w-4 h-4 text-[#ff2b4d]" />
+                      <span>رادار الزوار وتنبيهات تليجرام الفورية (حراس الكون 2099)</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">
+                      {visitorIntel?.visitors?.length ?? 1} زائر مفحوص
+                    </span>
+                  </div>
+
+                  {visitorIntel?.currentVisitor && (
+                    <div className="p-2 rounded-lg bg-[#141926] border border-cyan-500/35 text-[11px] space-y-1">
+                      <div className="flex items-center justify-between font-mono" dir="ltr">
+                        <span className="text-emerald-400 font-bold">IP: {visitorIntel.currentVisitor.ip}</span>
+                        <span className="text-cyan-300">{visitorIntel.currentVisitor.reverseHost}</span>
+                      </div>
+                      <div className="text-slate-300">
+                        الموقع والمزود: {visitorIntel.currentVisitor.city}، {visitorIntel.currentVisitor.country} · {visitorIntel.currentVisitor.isp} ({visitorIntel.currentVisitor.org})
+                      </div>
+                      <div className="text-slate-400">الجهاز والمتصفح: {visitorIntel.currentVisitor.deviceSummary}</div>
+                      <div className="text-amber-300 font-bold">{visitorIntel.currentVisitor.verdict}</div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      value={visitorScanIp}
+                      onChange={(e) => setVisitorScanIp(e.target.value)}
+                      placeholder="IP الزائر أو الهدف لفحصه وإرساله لتليجرام..."
+                      dir="ltr"
+                      className="flex-1 px-2.5 py-1.5 rounded bg-[#080a10] border border-slate-700 text-xs font-mono text-cyan-300"
+                    />
+                    <button
+                      onClick={() => void runDeepVisitorScan()}
+                      disabled={visitorScanning}
+                      className="px-3 py-1.5 rounded bg-[#ff2b4d] hover:bg-[#ff4769] text-white text-xs font-bold shrink-0"
+                    >
+                      {visitorScanning ? "يفحص..." : "فحص عميق + تليجرام ▶"}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                    <input
+                      value={tgBotTokenInput}
+                      onChange={(e) => setTgBotTokenInput(e.target.value)}
+                      placeholder={visitorIntel?.telegram?.tokenSet ? "Bot Token محفوظ ✓" : "TELEGRAM_BOT_TOKEN"}
+                      dir="ltr"
+                      className="px-2 py-1 rounded bg-[#080a10] border border-slate-700 text-[10px] font-mono text-slate-200"
+                    />
+                    <div className="flex items-center gap-1">
+                      <input
+                        value={tgChatIdInput}
+                        onChange={(e) => setTgChatIdInput(e.target.value)}
+                        placeholder={visitorIntel?.telegram?.chatId ? `Chat: ${visitorIntel.telegram.chatId}` : "TELEGRAM_CHAT_ID"}
+                        dir="ltr"
+                        className="flex-1 px-2 py-1 rounded bg-[#080a10] border border-slate-700 text-[10px] font-mono text-slate-200"
+                      />
+                      <button
+                        onClick={() => void saveAndTestTelegram(true)}
+                        disabled={tgConfigBusy}
+                        className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shrink-0"
+                      >
+                        {tgConfigBusy ? "..." : "ربط وتنبيه"}
+                      </button>
+                    </div>
+                  </div>
+                  {tgConfigMsg && <div className="text-[10px] text-amber-300 font-bold">{tgConfigMsg}</div>}
+                  {visitorScanOutput && (
+                    <pre
+                      dir="ltr"
+                      className="p-2 rounded bg-black/90 border border-cyan-500/40 text-[10px] font-mono text-emerald-300 max-h-36 overflow-y-auto whitespace-pre-wrap"
+                    >
+                      {visitorScanOutput}
                     </pre>
                   )}
                 </div>
