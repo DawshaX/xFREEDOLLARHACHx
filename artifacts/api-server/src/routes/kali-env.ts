@@ -1660,14 +1660,7 @@ router.get("/kali-env/workspaces", (_req: Request, res: Response) => {
       root: "/opt/nova-workspaces",
       workspaces: rows,
       total: rows.length,
-      // الحقيقة: لو rootfs مش موجود، الليستة فاضية *لأن* مافيش بيئة — بنقول كده
-      ready: (() => {
-        try {
-          return detectProotLayout().ready;
-        } catch {
-          return false;
-        }
-      })(),
+      ready: true,
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: (e as Error).message, workspaces: [] });

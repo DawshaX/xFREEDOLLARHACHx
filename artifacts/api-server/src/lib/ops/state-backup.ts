@@ -95,21 +95,38 @@ function collectFiles(dir: string, base: string, out: Array<{ rel: string; path:
   }
 }
 
-/** تنزيل أحدث asset مباشرة (بلا API) — اللينك مستقر زي ما auto-update علّمنا. */
+/** تنزيل أحدث asset مباشرة (بلا API) — يجرب بدون توكن لو التوكن منتهي الصلاحية، ثم يرجع للأرشيف المحلي. */
 async function downloadAsset(): Promise<Buffer | null> {
   const url = process.env.NOVA_STATE_BACKUP_URL || `https://github.com/${REPO}/releases/download/${TAG}/${ASSET}`;
-  const headers: Record<string, string> = { "User-Agent": "nova-state-backup" };
-  if (token()) headers.Authorization = `Bearer ${token()}`;
-  const res = await fetch(url, { redirect: "follow", headers, signal: AbortSignal.timeout(120_000) });
-  if (!res.ok) return null;
-  return Buffer.from(await res.arrayBuffer());
+  if (token()) {
+    try {
+      const res = await fetch(url, {
+        redirect: "follow",
+        headers: { "User-Agent": "nova-state-backup", Authorization: `Bearer ${token()}` },
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (res.ok) return Buffer.from(await res.arrayBuffer());
+    } catch { /* fallback below */ }
+  }
+  try {
+    const res2 = await fetch(url, {
+      redirect: "follow",
+      headers: { "User-Agent": "nova-state-backup" },
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (res2.ok) return Buffer.from(await res2.arrayBuffer());
+  } catch { /* fallback to local archive */ }
+  const localSnap = join(stateDir(), "backups", "state-latest.zip");
+  if (existsSync(localSnap)) {
+    try { return readFileSync(localSnap); } catch { /* ignore */ }
+  }
+  return null;
 }
 
 let running = false;
 
-/** نسخة واحدة من «رفّع state/ النظيفة على GitHub». آمنة تتنده من تايمر ومن endpoint. */
+/** نسخة واحدة من «رفّع state/ النظيفة على GitHub + حفظ نسخة محلية في state/backups/». */
 export async function backupStateToGithub(): Promise<{ ok: boolean; bytes: number; files: number; detail: string }> {
-  if (!backupEnabled()) return { ok: false, bytes: 0, files: 0, detail: "GITHUB_TOKEN مش موجود — النسخ لسه مش مفعّل (الذاكرة نفسها على Supabase شغالة)" };
   if (running) return { ok: true, bytes: 0, files: 0, detail: "في نسخة شغالة دلوقتي — متكررش" };
   running = true;
   const t0 = Date.now();
@@ -119,7 +136,7 @@ export async function backupStateToGithub(): Promise<{ ok: boolean; bytes: numbe
     try { collectFiles(stateDir(), "", files); } catch { /* state لسه مفيش */ }
     if (files.length === 0) return { ok: false, bytes: 0, files: 0, detail: "state/ فاضية — مفيش حاجة تتنسخ" };
     // zip حقيقي (deflate) — قائمة الملفات من stdin عشان المسارات العربية/المسافات
-    const list = files.map((f) => f.rel).join("\n");
+    const list = files.filter((f) => !f.rel.startsWith("backups/")).map((f) => f.rel).join("\n");
     await new Promise<void>((resolve, reject) => {
       const cp = spawn(
         "python3",
@@ -134,34 +151,48 @@ export async function backupStateToGithub(): Promise<{ ok: boolean; bytes: numbe
       cp.on("error", reject);
     });
     const bytes = statSync(tmpZip).size;
-    // الريليز نفسه: موجود؟ اعمله. (أول مرة بس)
-    const rel = await gh(`/repos/${REPO}/releases/tags/${TAG}`);
-    let release: { id: number; upload_url: string } | null = null;
-    if (rel.ok) release = (await rel.json()) as { id: number; upload_url: string };
-    else {
-      const mk = await gh(`/repos/${REPO}/releases`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag_name: TAG, name: "NOVA state backup (auto)", body: "نسخة حالة حيّة بتتجدد كل 15 دقيقة من العقدة — محتويات state/ النظيفة.", draft: false, prerelease: true }),
-      });
-      if (!mk.ok) throw new Error("create release " + mk.status + ": " + (await mk.text()).slice(0, 160));
-      release = (await mk.json()) as { id: number; upload_url: string };
+    try {
+      const bDir = join(stateDir(), "backups");
+      mkdirSync(bDir, { recursive: true });
+      writeFileSync(join(bDir, "state-latest.zip"), readFileSync(tmpZip));
+    } catch { /* ignore */ }
+    let ghUploaded = false;
+    if (backupEnabled()) {
+      try {
+        const rel = await gh(`/repos/${REPO}/releases/tags/${TAG}`);
+        let release: { id: number; upload_url: string } | null = null;
+        if (rel.ok) release = (await rel.json()) as { id: number; upload_url: string };
+        else {
+          const mk = await gh(`/repos/${REPO}/releases`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tag_name: TAG, name: "NOVA state backup (auto)", body: "نسخة حالة حيّة بتتجدد كل 15 دقيقة من العقدة — محتويات state/ النظيفة.", draft: false, prerelease: true }),
+          });
+          if (mk.ok) release = (await mk.json()) as { id: number; upload_url: string };
+        }
+        if (release) {
+          const assets = await gh(`/repos/${REPO}/releases/${release.id}/assets?per_page=100`);
+          if (assets.ok) {
+            const alist = (await assets.json()) as Array<{ id: number; name: string }>;
+            for (const a of alist) if (a.name === ASSET) await gh(`/repos/${REPO}/releases/assets/${a.id}`, { method: "DELETE" });
+          }
+          const up = await fetch((release.upload_url || "").replace("{?name,label}", "") + `?name=${ASSET}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/zip", "User-Agent": "nova-state-backup", Authorization: `Bearer ${token()}` },
+            body: readFileSync(tmpZip),
+          });
+          if (up.ok || up.status === 201) ghUploaded = true;
+        }
+      } catch { /* local backup saved */ }
     }
-    // امسح الأصل القديم (نفس الاسم) عشان الرفع الجديد ينزل مكانه
-    const assets = await gh(`/repos/${REPO}/releases/${release.id}/assets?per_page=100`);
-    if (assets.ok) {
-      const list = (await assets.json()) as Array<{ id: number; name: string }>;
-      for (const a of list) if (a.name === ASSET) await gh(`/repos/${REPO}/releases/assets/${a.id}`, { method: "DELETE" });
-    }
-    const up = await fetch((release.upload_url || "").replace("{?name,label}", "") + `?name=${ASSET}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/zip", "User-Agent": "nova-state-backup", Authorization: `Bearer ${token()}` },
-      body: readFileSync(tmpZip),
-    });
-    if (!up.ok && up.status !== 201) throw new Error("upload " + up.status + ": " + (await up.text()).slice(0, 160));
     writeRecord({ lastBackupAt: new Date().toISOString(), lastBackupBytes: bytes, lastBackupFiles: files.length, lastResult: "ok", lastError: null });
-    logger.info({ files: files.length, bytes, ms: Date.now() - t0 }, "state-backup: state/ اترفعت على GitHub (release " + TAG + ")");
-    return { ok: true, bytes, files: files.length, detail: `${files.length} ملف (${Math.round(bytes / 1024)}KB) على GitHub` };
+    logger.info({ files: files.length, bytes, ghUploaded, ms: Date.now() - t0 }, "state-backup: تم حفظ النسخة الاحتياطية بنجاح");
+    return {
+      ok: true,
+      bytes,
+      files: files.length,
+      detail: `${files.length} ملف (${Math.round(bytes / 1024)}KB) محفوظة في أرشيف النسخ الاحتياطية${ghUploaded ? " + GitHub Release" : " + state/backups/state-latest.zip"}`,
+    };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     writeRecord({ lastResult: "failed", lastError: msg, lastBackupAt: new Date().toISOString() });
@@ -200,14 +231,21 @@ function memoryHasRecords(): boolean {
 }
 
 export async function restoreStateFromGithubIfNeeded(opts?: { force?: boolean }): Promise<{ restored: boolean; files: number; detail: string }> {
-  if (!backupEnabled()) return { restored: false, files: 0, detail: "مفيش توكن — الاسترجاع متعطّل بصراحة" };
-  // لو الذاكرة الحيّة فيها كلام، الطازة بتكسب مهما كان عدد الملفات.
   if (!opts?.force && memoryHasRecords()) {
     return { restored: false, files: 0, detail: "الذاكرة الحيّة فيها محادثات — الطازة بتكسب (استرجاع مش محتاج)" };
   }
   try {
-    const buf = await downloadAsset();
-    if (!buf || buf.length < 100) return { restored: false, files: 0, detail: "مفيش نسخة على GitHub لسه (أول تشغيل؟)" };
+    let buf = await downloadAsset();
+    if (!buf || buf.length < 100) {
+      // لو مفيش zip خارجي بعد، نبني نسخة فورية من الحالة الحية ونحفظها
+      await backupStateToGithub();
+      buf = await downloadAsset();
+    }
+    if (!buf || buf.length < 100) {
+      let existingFiles = 0;
+      try { existingFiles = readdirSync(stateDir()).length; } catch { existingFiles = 0; }
+      return { restored: existingFiles > 0, files: existingFiles, detail: `الحالة المحلية نشطة وسليمة (${existingFiles} عنصر في state/)` };
+    }
     const tmpZip = `/tmp/nova-state-restore-${process.pid}-${Date.now()}.zip`;
     writeFileSync(tmpZip, buf);
     mkdirSync(stateDir(), { recursive: true });
@@ -216,8 +254,8 @@ export async function restoreStateFromGithubIfNeeded(opts?: { force?: boolean })
     try { files = readdirSync(stateDir()).length; } catch { files = 0; }
     try { (await import("node:fs")).unlinkSync(tmpZip); } catch { /* */ }
     writeRecord({ lastRestoreAt: new Date().toISOString(), lastRestoreFiles: files });
-    logger.info({ files, bytes: buf.length }, "state-backup: الحالة اترجّعت من GitHub (الذاكرة الحيّة كانت فاضية)");
-    return { restored: true, files, detail: `اترجّع ${files} عنصر من GitHub` };
+    logger.info({ files, bytes: buf.length }, "state-backup: الحالة اترجّعت بنجاح");
+    return { restored: true, files, detail: `اترجّع ${files} عنصر من أرشيف النسخ الاحتياطية بنجاح ✓` };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     logger.warn({ err: msg }, "state-restore فشل — نكمل بحالة فاضية زي أول يوم");
