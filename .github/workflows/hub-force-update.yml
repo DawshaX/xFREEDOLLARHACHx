@@ -22,28 +22,30 @@ jobs:
     steps:
       - name: wait for standalone-bundle to publish nova-bundle + force auto-update
         run: |
-          sleep 65
+          sleep 75
           R=$(curl -s --max-time 300 -w "\nHTTP:%{http_code}" -X POST "$HUB/api/nova-core/auto-update?force=1" \
             -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}')
           echo "::notice::force-update: $(echo "$R" | tail -c 400 | tr -d '\n\r')"
       - name: wait for the reboot + read the new boot commit
         run: |
-          sleep 45
+          sleep 35
           for i in 1 2 3 4 5 6; do
             V=$(curl -s --max-time 30 "$HUB/api/nova-core/version?token=$TOKEN&i=$i")
-            BOOT=$(echo "$V" | grep -o '"boot":{"commit":"[^"]*"' | cut -d'"' -f5)
-            DISK=$(echo "$V" | grep -o '"disk":{"commit":"[^"]*"' | cut -d'"' -f5)
+            BOOT=$(echo "$V" | grep -o '"boot":{"commit":"[^"]*"' | cut -d'"' -f6)
+            DISK=$(echo "$V" | grep -o '"disk":{"commit":"[^"]*"' | cut -d'"' -f6)
             UP=$(echo "$V" | grep -o '"uptimeSec":[0-9]*' | cut -d: -f2)
-            echo "::notice::boot=$BOOT disk=$DISK uptime=${UP}s (محاولة $i)"
-            case "$BOOT" in
-              900fd30*|84744e3*|38660b6*|4591d42*|a24f204*|d8c2e13*|a9a3668*|36c8aa0*|3079bc1*|0442bb4*|059e927*|11cdf36*|9b7d7fa*)
-                echo "لسه القديم ($BOOT) — نطلب restart قسري لو الملفات اتحدثت"
-                curl -s --max-time 20 -X POST "$HUB/api/nova-core/restart?force=1" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}' || true
-                sleep 45
-                ;;
-              "") echo "الهَب بيعيد التشغيل"; sleep 40;;
-              *) echo "::notice::✓ الهَب اقفل على بوت جديد: $BOOT"; break;;
-            esac
+            PERMS_CHK=$(curl -s --max-time 15 "$HUB/api/live-agent/permissions?token=$TOKEN")
+            TCOUNT=$(echo "$PERMS_CHK" | grep -o '"totalTools":[0-9]*' | cut -d: -f2)
+            echo "::notice::boot=$BOOT disk=$DISK tools=$TCOUNT uptime=${UP}s (محاولة $i)"
+            if [ "$TCOUNT" = "96" ]; then
+              echo "::notice::✓ الهَب اقفل على النسخة السيادية الجديدة (96 أداة): boot=$BOOT uptime=${UP}s"
+              break
+            fi
+            echo "النسخة على الهَب لسه قديمة (boot=$BOOT tools=$TCOUNT) — نطلب auto-update?force=1 ثم restart?force=1"
+            curl -s --max-time 180 -X POST "$HUB/api/nova-core/auto-update?force=1" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}' || true
+            sleep 25
+            curl -s --max-time 20 -X POST "$HUB/api/nova-core/restart?force=1" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}' || true
+            sleep 35
           done
       - name: terminal exec test (TEST70 — الفشل المحلي ينزل للأسطول)
         run: |
