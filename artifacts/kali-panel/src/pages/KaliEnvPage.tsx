@@ -1,42 +1,21 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { KaliLogo2099 } from "@/components/KaliLogo2099";
-
-async function apiFetch<T = any>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return (await res.json()) as T;
-}
 import {
   Terminal as TerminalIcon,
   Shield,
   Cpu,
-  HardDrive,
   RefreshCw,
   Play,
   CheckCircle2,
   Folder,
   FolderOpen,
   Search,
-  Layers,
   Sparkles,
   Wrench,
-  Activity,
-  Database,
-  Globe,
-  Monitor,
   Compass,
-  FileText,
   FileCode,
-  Rocket,
-  Lock,
-  Unlock,
-  Plus,
-  Trash2,
   Save,
-  Eye,
-  Github,
-  Minimize2,
   Maximize2,
   X,
   ChevronRight,
@@ -44,29 +23,34 @@ import {
   ArrowUp,
   Home,
   LayoutGrid,
-  Sliders,
   Crosshair,
   Bot,
   BookOpen,
   Brain,
-  Pin,
-  History,
   ExternalLink,
-  Copy,
-  HelpCircle,
   Command,
+  Network,
   Zap,
+  Radio,
+  Layers,
+  GitBranch,
 } from "lucide-react";
 
+async function apiFetch<T = any>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return (await res.json()) as T;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
- * NOVA KALI LINUX 2099 — GRAPHICAL MULTI-WINDOW OS DESKTOP (ETERNAL EDITION)
+ * NOVA KALI LINUX 2099 — GRAPHICAL MULTI-WINDOW OS DESKTOP (ETERNAL PURPLE EDITION)
  * لا إله إلا الله · الله أكبر ولله الحمد
  *
- * - Authentic Kali Linux Xfce Dark Multi-Window OS + 5 Ergonomic Layout Modes
+ * - Authentic Kali Linux Xfce Dark Multi-Window OS + 6 Ergonomic Workspaces
+ * - Red / Blue (SOC-in-a-Box) / Purple (NIST CSF 2.0) Team Mode + Ctrl+K Palette
+ * - Live 360° Attack Surface Graph + Kali Autopilot Chain Builder + Connections Hub
  * - Multi-Tab Persistent Live Terminal (qterminal) + Auto-Help & Tool Intelligence
- * - Dedicated AI Co-Pilot Assistant Terminal (ترمنال المساعد الذكي والتوجيه التلقائي)
- * - Eternal Memory Vault (الذاكرة الأبدية) + Persistent Session (الجلسة الدائمة)
- * - Universal "Open Everything" App Host (فتح كل شيء — دمج كافة شاشات وقدرات البرنامج)
+ * - Dedicated AI Co-Pilot Assistant Terminal + Eternal Memory Vault + 32 Platform Apps
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 interface HealthResp {
@@ -81,16 +65,25 @@ interface ToolsResp {
   total: number;
   present: number;
   missing?: string[];
-  groups: Record<string, { present: string[]; missing: string[]; total: number }>;
+  groups?: Record<string, { present?: string[]; missing?: string[]; total?: number }>;
   allPresent?: string[];
+}
+
+interface CatalogCategoryItem {
+  id: string;
+  tools: { name: string; present: boolean; version?: string | null; recipe?: string | null }[];
+  present: number;
+  total: number;
 }
 
 interface CatalogResp {
   ok: boolean;
-  totalCatalog: number;
-  installedCount: number;
-  installed: string[];
-  categories: Record<string, { tool: string; installed: boolean }[]>;
+  total?: number;
+  present?: number;
+  totalCatalog?: number;
+  installedCount?: number;
+  installed?: string[];
+  categories?: CatalogCategoryItem[] | Record<string, { tool?: string; name?: string; installed?: boolean; present?: boolean }[]>;
 }
 
 interface PythonToolsResp {
@@ -170,20 +163,6 @@ interface PipelineItem {
   defenseTip: string;
 }
 
-interface GenerationSnapshot {
-  gen: number;
-  codename: string;
-  title: string;
-  timestamp: string;
-  toolsTotal: number;
-  toolsPresent: number;
-  pythonTools: number;
-  activeNodes: number;
-  storageGb: string;
-  highlights: string[];
-  verified: boolean;
-}
-
 interface KaliToolGuideItem {
   tool: string;
   title_ar: string;
@@ -226,6 +205,51 @@ interface AssistantMsg {
   ts: string;
 }
 
+interface AttackGraphNode {
+  id: string;
+  label: string;
+  type: "target" | "ip" | "ns" | "mx" | "service" | "fleet" | "defense";
+  ring: number;
+  status: "ok" | "warn" | "critical" | "info";
+  detail: string;
+  recommendedCmd: string;
+}
+
+interface AttackGraphResp {
+  ok: boolean;
+  target: string;
+  summary: {
+    ipv4Count: number;
+    ipv6Count: number;
+    nsCount: number;
+    mxCount: number;
+    txtCount: number;
+    txtPreview: string[];
+  };
+  nistCsf2: { id: string; code: string; title_ar: string; status: string; score: number; tools: string[] }[];
+  nodes: AttackGraphNode[];
+  edges: { from: string; to: string; label: string }[];
+}
+
+interface AutopilotTemplate {
+  id: string;
+  mode: string;
+  nistPhase: string;
+  title_ar: string;
+  desc_ar: string;
+  steps: { step: number; tool: string; label_ar: string; cmd: string }[];
+}
+
+interface ConnectionPlaneItem {
+  id: string;
+  name: string;
+  category: string;
+  protocol: string;
+  status: string;
+  metrics: string;
+  latencyMs: number;
+}
+
 const KALI_WHISKER_CATEGORIES = [
   { id: "all", code: "00", label: "All Applications (294)", ar: "كل التطبيقات والأدوات" },
   { id: "الاستطلاع وOSINT", code: "01", label: "01 - Information Gathering", ar: "جمع المعلومات وOSINT" },
@@ -247,7 +271,7 @@ const KALI_WHISKER_CATEGORIES = [
 const PLATFORM_APPS = [
   { name: "Nova Agent Pro (الوكيل الذكي المتقدم)", route: "/agent-pro", desc: "وكيل العمليات المستقل وتنفيذ المهام المركبة", cat: "الذكاء والقيادة" },
   { name: "Bug Bounty Studio (استوديو صيد الثغرات)", route: "/bug-bounty-studio", desc: "منصة صيد الثغرات وإدارة الأهداف والتقارير", cat: "الفحص والثغرات" },
-  { name: "Vuln Center (مركز الـ 429,733 ثغرة CVE)", route: "/vuln-center", desc: "قاعدة بيانات الثغرات العالمية + CISA KEV + Exploit-DB", cat: "الفحص والثغرات" },
+  { name: "Vuln Center (مركز الـ 429,754 ثغرة CVE)", route: "/vuln-center", desc: "قاعدة بيانات الثغرات العالمية + CISA KEV + Exploit-DB", cat: "الفحص والثغرات" },
   { name: "Cyber Control Hub (مركز التحكم السيبراني)", route: "/cyber-control-hub", desc: "غرفة العمليات المركزية والتحكم بالأنظمة", cat: "الذكاء والقيادة" },
   { name: "Nova Commander (القائد التكتيكي)", route: "/nova-commander", desc: "قيادة الأسطول وتوجيه المهام المتوازية", cat: "الذكاء والقيادة" },
   { name: "Nova Brain Ops (عمليات العقل السيبراني)", route: "/nova-brain-ops", desc: "تحليلات الذاكرة والتعلم الذاتي المستمر", cat: "الذكاء والقيادة" },
@@ -288,16 +312,81 @@ const QUICK_DESKTOP_LAUNCHERS = [
   { id: "python-venv", label: "Python 28 Venv", cmd: "prowler -v && semgrep --version && certipy -v && vol --help | head -10" },
 ];
 
-const SESSION_STORAGE_KEY = "nova_kali_2099_eternal_session_v2";
+const SESSION_STORAGE_KEY = "nova_kali_2099_eternal_session_v3";
+
+/** Safe helper that normalizes `/api/kali-env/catalog` categories whether Array or Record */
+function extractNormalizedTools(
+  catalog: CatalogResp | null,
+  toolsData: ToolsResp | null,
+  toolsGuideMap: Record<string, KaliToolGuideItem>,
+): { name: string; cat: string; ok: boolean }[] {
+  const result: { name: string; cat: string; ok: boolean }[] = [];
+  const seen = new Set<string>();
+
+  const cats = catalog?.categories;
+  if (Array.isArray(cats)) {
+    for (const catObj of cats) {
+      if (!catObj || typeof catObj !== "object") continue;
+      const catName = String(catObj.id || "Kali Catalog");
+      const toolsArr = Array.isArray(catObj.tools) ? catObj.tools : [];
+      for (const item of toolsArr) {
+        if (!item || typeof item !== "object") continue;
+        const tName = String(item.name || "");
+        if (!tName || seen.has(tName)) continue;
+        seen.add(tName);
+        result.push({ name: tName, cat: catName, ok: Boolean(item.present ?? true) });
+      }
+    }
+  } else if (cats && typeof cats === "object") {
+    for (const [catName, list] of Object.entries(cats)) {
+      if (!Array.isArray(list)) continue;
+      for (const item of list) {
+        if (!item || typeof item !== "object") continue;
+        const tName = String(item.tool || item.name || "");
+        if (!tName || seen.has(tName)) continue;
+        seen.add(tName);
+        result.push({ name: tName, cat: catName, ok: Boolean(item.installed ?? item.present ?? true) });
+      }
+    }
+  }
+
+  // Also include all tools from `toolsData.groups`
+  if (toolsData?.groups && typeof toolsData.groups === "object") {
+    for (const [grpName, grp] of Object.entries(toolsData.groups)) {
+      const pres = Array.isArray(grp?.present) ? grp.present : [];
+      for (const tName of pres) {
+        if (typeof tName === "string" && tName && !seen.has(tName)) {
+          seen.add(tName);
+          result.push({ name: tName, cat: grpName, ok: true });
+        }
+      }
+    }
+  }
+
+  // Also include all tools from `toolsGuideMap` so all 266 tools are always present
+  if (toolsGuideMap && typeof toolsGuideMap === "object") {
+    for (const [tName, guide] of Object.entries(toolsGuideMap)) {
+      if (tName && !seen.has(tName)) {
+        seen.add(tName);
+        result.push({ name: tName, cat: guide?.category_ar || "ترسانة كالي (266)", ok: true });
+      }
+    }
+  }
+
+  return result;
+}
 
 export default function KaliEnvPage() {
   const [, setLocation] = useLocation();
 
-  // ── OS Shell State & Ergonomic Layout Presets ──
+  // ── OS Shell State & Ergonomic Layout Presets (1..6) ──
   const [whiskerOpen, setWhiskerOpen] = useState(false);
   const [whiskerCat, setWhiskerCat] = useState("all");
   const [whiskerSearch, setWhiskerSearch] = useState("");
-  const [activeWorkspace, setActiveWorkspace] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [activeWorkspace, setActiveWorkspace] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
+  const [teamMode, setTeamMode] = useState<"PURPLE" | "RED" | "BLUE">("PURPLE");
+  const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
+  const [cmdPaletteQuery, setCmdPaletteQuery] = useState("");
   const [clockStr, setClockStr] = useState("");
 
   // Window visibility & maximize state (in Workspace 1 Quad Desktop)
@@ -308,12 +397,12 @@ export default function KaliEnvPage() {
   const [maximizedWin, setMaximizedWin] = useState<null | "thunar" | "studio" | "terminal" | "gotop">(null);
   const [focusedWin, setFocusedWin] = useState<"thunar" | "studio" | "terminal" | "gotop">("terminal");
 
-  // Studio sub-mode inside Window 2
-  const [studioMode, setStudioMode] = useState<"x11" | "editor" | "browser" | "pipelines" | "app-embed">("x11");
-  // Terminal right-pane mode (Auto-Help vs Assistant Terminal vs Memory)
-  const [termSideMode, setTermSideMode] = useState<"auto-help" | "assistant" | "memory">("auto-help");
-  // Gotop right-window mode (`gotop` telemetry vs `memory` Eternal Vault)
-  const [rightMonitorTab, setRightMonitorTab] = useState<"gotop" | "memory">("gotop");
+  // Studio sub-mode inside Window 2 (`x11` | `graph` | `autopilot` | `editor` | `browser` | `pipelines`)
+  const [studioMode, setStudioMode] = useState<"x11" | "graph" | "autopilot" | "editor" | "browser" | "pipelines">("x11");
+  // Terminal right-pane mode (`auto-help` | `assistant`)
+  const [termSideMode, setTermSideMode] = useState<"auto-help" | "assistant">("auto-help");
+  // Gotop right-window mode (`gotop` | `memory` | `connections`)
+  const [rightMonitorTab, setRightMonitorTab] = useState<"gotop" | "memory" | "connections">("gotop");
 
   // Embedded Universal App inside Kali OS ("Open Everything")
   const [embeddedAppRoute, setEmbeddedAppRoute] = useState<string>("/agent-pro");
@@ -326,9 +415,15 @@ export default function KaliEnvPage() {
   const [pyTools, setPyTools] = useState<PythonToolsResp | null>(null);
   const [storageHub, setStorageHub] = useState<StorageHubResp | null>(null);
   const [fleet, setFleet] = useState<FleetStatusResp | null>(null);
-  const [generations, setGenerations] = useState<GenerationSnapshot[]>([]);
   const [pipelines, setPipelines] = useState<PipelineItem[]>([]);
   const [toolsGuideMap, setToolsGuideMap] = useState<Record<string, KaliToolGuideItem>>({});
+  const [attackGraph, setAttackGraph] = useState<AttackGraphResp | null>(null);
+  const [selectedGraphNode, setSelectedGraphNode] = useState<AttackGraphNode | null>(null);
+  const [autopilotTemplates, setAutopilotTemplates] = useState<AutopilotTemplate[]>([]);
+  const [autopilotRunningId, setAutopilotRunningId] = useState<string | null>(null);
+  const [autopilotOutput, setAutopilotOutput] = useState<string>("");
+  const [autopilotScript, setAutopilotScript] = useState<string>("");
+  const [connections, setConnections] = useState<ConnectionPlaneItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [healing, setHealing] = useState(false);
 
@@ -336,7 +431,7 @@ export default function KaliEnvPage() {
   const [activeTarget, setActiveTarget] = useState<string>(() => {
     try {
       const s = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || "{}");
-      return s.activeTarget || "example.com";
+      return typeof s.activeTarget === "string" && s.activeTarget ? s.activeTarget : "example.com";
     } catch {
       return "example.com";
     }
@@ -344,7 +439,7 @@ export default function KaliEnvPage() {
   const [sessionCwd, setSessionCwd] = useState<string>(() => {
     try {
       const s = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || "{}");
-      return s.cwd || "/opt/nova-workspaces/recon-lab";
+      return typeof s.cwd === "string" && s.cwd ? s.cwd : "/opt/nova-workspaces/recon-lab";
     } catch {
       return "/opt/nova-workspaces/recon-lab";
     }
@@ -352,7 +447,15 @@ export default function KaliEnvPage() {
   const [terminalTabs, setTerminalTabs] = useState<PersistentTerminalTab[]>(() => {
     try {
       const s = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || "{}");
-      if (Array.isArray(s.terminalTabs) && s.terminalTabs.length > 0) return s.terminalTabs;
+      if (Array.isArray(s.terminalTabs) && s.terminalTabs.length > 0) {
+        return s.terminalTabs.map((t: any, i: number) => ({
+          id: String(t?.id || `tab-${i}`),
+          title: String(t?.title || `${i + 1}: root@kali`),
+          cwd: String(t?.cwd || "/opt/nova-workspaces/recon-lab"),
+          lines: Array.isArray(t?.lines) ? t.lines.map(String) : [],
+          history: Array.isArray(t?.history) ? t.history.map(String) : [],
+        }));
+      }
     } catch { /* ignore */ }
     return [
       {
@@ -399,7 +502,7 @@ export default function KaliEnvPage() {
   const [loadingLiveHelp, setLoadingLiveHelp] = useState(false);
   const termBottomRef = useRef<HTMLDivElement>(null);
 
-  // ── Dedicated Assistant Terminal State (ترمنال المساعد الذكي) ──
+  // ── Dedicated Assistant Terminal State ──
   const [assistantHistory, setAssistantHistory] = useState<AssistantMsg[]>([
     {
       id: "welcome-msg",
@@ -419,9 +522,7 @@ export default function KaliEnvPage() {
 
   // ── Live X11 :99 Stream State ──
   const [desktopFrame, setDesktopFrame] = useState<string | null>(null);
-  const [desktopPlane, setDesktopPlane] = useState<string>("runnervm0hi8g · :99");
   const [desktopLoading, setDesktopLoading] = useState(false);
-  const [desktopCustomCmd, setDesktopCustomCmd] = useState("");
   const [autoStream, setAutoStream] = useState(false);
 
   // ── Thunar File Manager & Mousepad Editor State ──
@@ -441,7 +542,6 @@ export default function KaliEnvPage() {
   const [browserUrl, setBrowserUrl] = useState("https://example.com");
   const [browserLoading, setBrowserLoading] = useState(false);
   const [browserData, setBrowserData] = useState<BrowserResp | null>(null);
-  const [browserViewMode, setBrowserViewMode] = useState<"headers" | "source" | "links">("headers");
 
   // ── Pipelines & GitHub Free Cloner State ──
   const [pipeTarget, setPipeTarget] = useState("example.com");
@@ -451,13 +551,28 @@ export default function KaliEnvPage() {
   const [ghInstalling, setGhInstalling] = useState(false);
   const [ghOutput, setGhOutput] = useState<string>("");
 
-  // ──CPU Graph Animation State for `gotop` ──
+  // ── CPU Graph Animation State for `gotop` ──
   const [cpuTicks, setCpuTicks] = useState<number[][]>([
     [18, 22, 29, 24, 31, 27, 35, 28, 22, 30, 26, 29],
     [14, 19, 25, 21, 18, 24, 29, 22, 17, 23, 20, 24],
     [22, 28, 33, 39, 31, 26, 34, 41, 36, 29, 33, 37],
     [11, 15, 19, 14, 21, 18, 24, 19, 16, 22, 18, 20],
   ]);
+
+  // Global Ctrl+K shortcut for Universal Command Palette
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdPaletteOpen((v) => !v);
+      } else if (e.key === "Escape") {
+        setCmdPaletteOpen(false);
+        setWhiskerOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Clock & CPU waveform ticker
   useEffect(() => {
@@ -479,7 +594,7 @@ export default function KaliEnvPage() {
     return () => clearInterval(iv);
   }, []);
 
-  // Persist session to localStorage & backend `/api/kali-env/session`
+  // Persist session to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -519,19 +634,28 @@ export default function KaliEnvPage() {
     }
   }, [termCmd, toolsGuideMap]);
 
-  // ── Load All Backend Data + Persistent Session + Tool Guides ──
+  const loadAttackGraph = useCallback(async (target = activeTarget) => {
+    try {
+      const g = await apiFetch<AttackGraphResp>(`/api/kali-env/attack-graph?target=${encodeURIComponent(target)}`);
+      if (g?.ok && Array.isArray(g.nodes)) {
+        setAttackGraph(g);
+        setSelectedGraphNode(g.nodes[0] ?? null);
+      }
+    } catch { /* ignore */ }
+  }, [activeTarget]);
+
+  // ── Load All Backend Data + Persistent Session + Tool Guides + Autopilot + Connections ──
   const refreshAll = useCallback(async (forceFresh = false) => {
     setLoading(true);
     try {
       const qs = forceFresh ? "?fresh=1" : "";
-      const [h, t, c, p, s, fl, g, pp, sess, tg] = await Promise.all([
+      const [h, t, c, p, s, fl, pp, sess, tg, ap, conn] = await Promise.all([
         apiFetch<HealthResp>("/api/kali-env/health").catch(() => null),
         apiFetch<ToolsResp>(`/api/kali-env/tools${qs}`).catch(() => null),
         apiFetch<CatalogResp>(`/api/kali-env/catalog${qs}`).catch(() => null),
         apiFetch<PythonToolsResp>("/api/ops/tools/python").catch(() => null),
         apiFetch<StorageHubResp>("/api/ops/storage-hub").catch(() => null),
         apiFetch<FleetStatusResp>("/api/ops/fleet/status").catch(() => null),
-        apiFetch<{ ok: boolean; generations: GenerationSnapshot[] }>("/api/kali-env/generations").catch(() => null),
         apiFetch<{ ok: boolean; pipelines: PipelineItem[] }>("/api/kali-env/pipelines").catch(() => null),
         apiFetch<{
           ok: boolean;
@@ -544,6 +668,8 @@ export default function KaliEnvPage() {
           recentMemory: EternalMemoryEntry[];
         }>("/api/kali-env/session").catch(() => null),
         apiFetch<{ ok: boolean; guides: Record<string, KaliToolGuideItem> }>("/api/kali-env/tools-guide").catch(() => null),
+        apiFetch<{ ok: boolean; templates: AutopilotTemplate[] }>("/api/kali-env/autopilot").catch(() => null),
+        apiFetch<{ ok: boolean; connections: ConnectionPlaneItem[] }>("/api/kali-env/connections").catch(() => null),
       ]);
       if (h) setHealth(h);
       if (t) setToolsData(t);
@@ -551,34 +677,37 @@ export default function KaliEnvPage() {
       if (p) setPyTools(p);
       if (s) setStorageHub(s);
       if (fl) setFleet(fl);
-      if (g?.generations) setGenerations(g.generations);
-      if (pp?.pipelines) setPipelines(pp.pipelines);
-      if (tg?.guides) setToolsGuideMap(tg.guides);
-      if (sess?.recentMemory) setEternalMemory(sess.recentMemory);
-      if (sess?.session?.assistantHistory?.length) setAssistantHistory(sess.session.assistantHistory);
+      if (Array.isArray(pp?.pipelines)) setPipelines(pp!.pipelines);
+      if (tg?.guides && typeof tg.guides === "object") setToolsGuideMap(tg.guides);
+      if (Array.isArray(sess?.recentMemory)) setEternalMemory(sess!.recentMemory);
+      if (Array.isArray(sess?.session?.assistantHistory) && sess!.session.assistantHistory.length > 0) {
+        setAssistantHistory(sess!.session.assistantHistory);
+      }
+      if (Array.isArray(ap?.templates)) setAutopilotTemplates(ap!.templates);
+      if (Array.isArray(conn?.connections)) setConnections(conn!.connections);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const loadEternalMemory = useCallback(async (q = memorySearch, kind = memoryFilterKind) => {
-    try {
-      const r = await apiFetch<{ ok: boolean; items: EternalMemoryEntry[] }>(
-        `/api/kali-env/memory?q=${encodeURIComponent(q)}&kind=${encodeURIComponent(kind)}`,
-      );
-      if (r?.items) setEternalMemory(r.items);
-    } catch { /* ignore */ }
-  }, [memorySearch, memoryFilterKind]);
+  const loadEternalMemory = useCallback(
+    async (q = memorySearch, kind = memoryFilterKind) => {
+      try {
+        const r = await apiFetch<{ ok: boolean; items: EternalMemoryEntry[] }>(
+          `/api/kali-env/memory?q=${encodeURIComponent(q)}&kind=${encodeURIComponent(kind)}`,
+        );
+        if (Array.isArray(r?.items)) setEternalMemory(r.items);
+      } catch { /* ignore */ }
+    },
+    [memorySearch, memoryFilterKind],
+  );
 
   // ── Capture / Action on Live X11 Desktop (:99) ──
   const captureDesktopFrame = useCallback(async (force = true) => {
     setDesktopLoading(true);
     try {
-      const d = await apiFetch<{ ok: boolean; frame?: string; plane?: string }>(
-        `/api/kali-env/desktop-frame${force ? "?refresh=1" : ""}`,
-      );
+      const d = await apiFetch<{ ok: boolean; frame?: string }>(`/api/kali-env/desktop-frame${force ? "?refresh=1" : ""}`);
       if (d?.frame) setDesktopFrame(d.frame);
-      if (d?.plane) setDesktopPlane(d.plane);
     } catch { /* ignore */ } finally {
       setDesktopLoading(false);
     }
@@ -590,13 +719,12 @@ export default function KaliEnvPage() {
       setStudioMode("x11");
       const finalCmd = cmd ? cmd.replace(/\{\{TARGET\}\}/g, activeTarget) : undefined;
       try {
-        const d = await apiFetch<{ ok: boolean; frame?: string; plane?: string }>("/api/kali-env/desktop-action", {
+        const d = await apiFetch<{ ok: boolean; frame?: string }>("/api/kali-env/desktop-action", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action, cmd: finalCmd }),
         });
         if (d?.frame) setDesktopFrame(d.frame);
-        if (d?.plane) setDesktopPlane(d.plane);
       } catch { /* ignore */ } finally {
         setDesktopLoading(false);
       }
@@ -609,12 +737,10 @@ export default function KaliEnvPage() {
     async (scope = fsScope, targetPath = fsPath) => {
       setFsLoading(true);
       try {
-        const r = await apiFetch<FsResp>(
-          `/api/kali-env/fs?scope=${scope}&path=${encodeURIComponent(targetPath)}`,
-        );
+        const r = await apiFetch<FsResp>(`/api/kali-env/fs?scope=${scope}&path=${encodeURIComponent(targetPath)}`);
         if (r?.ok) {
-          setFsEntries(r.entries || []);
-          setFsPath(r.path);
+          setFsEntries(Array.isArray(r.entries) ? r.entries : []);
+          setFsPath(r.path || "/");
           if (typeof r.fileContent === "string") {
             setEditorContent(r.fileContent);
             setEditorPath(targetPath.replace(/^\/+/, ""));
@@ -685,8 +811,12 @@ export default function KaliEnvPage() {
       setTerminalTabs((prev) => {
         const updated = prev.map((t) => {
           if (t.id !== activeTabId) return t;
-          const nextLines = [...t.lines, ...newLines].slice(-300);
-          const nextHist = newHistoryCmd ? [...t.history.filter((h) => h !== newHistoryCmd), newHistoryCmd].slice(-100) : t.history;
+          const prevLines = Array.isArray(t.lines) ? t.lines : [];
+          const prevHist = Array.isArray(t.history) ? t.history : [];
+          const nextLines = [...prevLines, ...newLines].slice(-300);
+          const nextHist = newHistoryCmd
+            ? [...prevHist.filter((h) => h !== newHistoryCmd), newHistoryCmd].slice(-100)
+            : prevHist;
           return { ...t, lines: nextLines, history: nextHist, cwd: newCwd ?? t.cwd };
         });
         void syncSessionToBackend({ terminalTabs: updated, cwd: newCwd ?? sessionCwd });
@@ -703,7 +833,6 @@ export default function KaliEnvPage() {
       if (!raw || termRunning) return;
       const c = raw.replace(/\{\{TARGET\}\}/g, activeTarget);
 
-      // Handle `cd <dir>` statefully in the persistent session!
       const cdMatch = c.match(/^cd\s+([^\s;&|]+)$/);
       let nextCwd = activeTab?.cwd || sessionCwd;
       if (cdMatch) {
@@ -725,11 +854,7 @@ export default function KaliEnvPage() {
 
       setTermRunning(true);
       setHistoryIdx(-1);
-      appendLinesToActiveTab(
-        [`┌──(root💀kali-2099)-[${nextCwd}]`, `└─# ${c}`],
-        c,
-        nextCwd,
-      );
+      appendLinesToActiveTab([`┌──(root💀kali-2099)-[${nextCwd}]`, `└─# ${c}`], c, nextCwd);
 
       try {
         const resp = await fetch("/api/kali-env/exec", {
@@ -745,7 +870,6 @@ export default function KaliEnvPage() {
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
         let buf = "";
-        const outChunkLines: string[] = [];
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -761,7 +885,6 @@ export default function KaliEnvPage() {
               const ev = JSON.parse(payload);
               if (ev.type === "stdout" || ev.type === "stderr") {
                 const split = String(ev.text || "").replace(/\r/g, "").split("\n");
-                outChunkLines.push(...split);
                 appendLinesToActiveTab(split);
               } else if (ev.type === "done") {
                 appendLinesToActiveTab([
@@ -811,8 +934,10 @@ export default function KaliEnvPage() {
       setAssistantBusy(true);
       setTermSideMode("assistant");
 
-      const lastHistoryCmd = activeTab?.history[activeTab.history.length - 1] ?? "";
-      const lastTermLines = (activeTab?.lines ?? []).slice(-25).join("\n");
+      const histArr = Array.isArray(activeTab?.history) ? activeTab.history : [];
+      const linesArr = Array.isArray(activeTab?.lines) ? activeTab.lines : [];
+      const lastHistoryCmd = histArr[histArr.length - 1] ?? "";
+      const lastTermLines = linesArr.slice(-25).join("\n");
 
       try {
         const r = await apiFetch<{
@@ -832,16 +957,22 @@ export default function KaliEnvPage() {
             lastOutput: lastTermLines,
           }),
         });
-        if (r?.assistantHistory) {
+        if (Array.isArray(r?.assistantHistory)) {
           setAssistantHistory(r.assistantHistory);
         } else if (r?.reply_ar) {
           setAssistantHistory((prev) => [
             ...prev,
             { id: `u-${Date.now()}`, role: "user", text: q, ts: new Date().toISOString() },
-            { id: `a-${Date.now() + 1}`, role: "assistant", text: r.reply_ar, commands: r.commands, ts: new Date().toISOString() },
+            {
+              id: `a-${Date.now() + 1}`,
+              role: "assistant",
+              text: r.reply_ar,
+              commands: Array.isArray(r.commands) ? r.commands : [],
+              ts: new Date().toISOString(),
+            },
           ]);
         }
-        if (r?.matchedGuides?.[0]) {
+        if (r?.matchedGuides?.[0]?.tool) {
           setInspectedTool(r.matchedGuides[0].tool);
         }
         void loadEternalMemory();
@@ -851,6 +982,39 @@ export default function KaliEnvPage() {
       }
     },
     [assistantInput, assistantBusy, activeTab, activeTarget, sessionCwd, loadEternalMemory],
+  );
+
+  // ── Run Kali Autopilot 2099 Chain ──
+  const runAutopilotChain = useCallback(
+    async (tplId: string) => {
+      setAutopilotRunningId(tplId);
+      setAutopilotOutput("⏳ جاري تشغيل سلسلة Kali Autopilot 2099 على الأسطول وحفظ المخرجات في الذاكرة الأبدية...");
+      try {
+        const r = await apiFetch<{
+          ok: boolean;
+          plane: string;
+          durationMs: number;
+          generatedScript: string;
+          output: string;
+        }>("/api/kali-env/autopilot/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: tplId, target: activeTarget }),
+        });
+        if (r) {
+          setAutopilotScript(r.generatedScript || "");
+          setAutopilotOutput(
+            `[+] العقدة المنفذة: ${r.plane} · الزمن: ${((r.durationMs ?? 0) / 1000).toFixed(1)}s\n------------------------------------------------------------\n${r.output || "(اكتمل التنفيذ)"}`,
+          );
+          void loadEternalMemory();
+        }
+      } catch (e) {
+        setAutopilotOutput(`✗ خطأ: ${(e as Error).message}`);
+      } finally {
+        setAutopilotRunningId(null);
+      }
+    },
+    [activeTarget, loadEternalMemory],
   );
 
   // ── Save Custom Note / Finding to Eternal Memory ──
@@ -887,42 +1051,45 @@ export default function KaliEnvPage() {
   );
 
   // ── Run Automated Pipeline ──
-  const runPipeline = useCallback(async (pipeId: string) => {
-    setRunningPipeId(pipeId);
-    setPipeOutput("⏳ جاري تشغيل السلسلة الذكية على عقدة كالي 2099 وحفظ التقرير في الذاكرة الأبدية...");
-    try {
-      const r = await apiFetch<{
-        ok: boolean;
-        output: string;
-        savedReportPath: string | null;
-        plane: string | null;
-        durationMs: number;
-        pipeline: { title: string; defenseTip: string };
-      }>("/api/kali-env/pipelines/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: pipeId, target: pipeTarget, workspace: "recon-lab" }),
-      });
-      if (r) {
-        setPipeOutput(
-          [
-            `╔══ [ ${r.pipeline.title} ] ══╗`,
-            `[+] العقدة: ${r.plane ?? "fleet"} · الزمن: ${((r.durationMs ?? 0) / 1000).toFixed(1)}s`,
-            `[+] التقرير المحفوظ: ${r.savedReportPath ?? "recon-lab/reports"} (ومثبت في الذاكرة الأبدية)`,
-            `[+] نصيحة التحصين: ${r.pipeline.defenseTip}`,
-            `------------------------------------------------------------`,
-            r.output || "(اكتمل التنفيذ)",
-          ].join("\n"),
-        );
-        await loadFs("workspace", "/");
-        await loadEternalMemory();
+  const runPipeline = useCallback(
+    async (pipeId: string) => {
+      setRunningPipeId(pipeId);
+      setPipeOutput("⏳ جاري تشغيل السلسلة الذكية على عقدة كالي 2099 وحفظ التقرير في الذاكرة الأبدية...");
+      try {
+        const r = await apiFetch<{
+          ok: boolean;
+          output: string;
+          savedReportPath: string | null;
+          plane: string | null;
+          durationMs: number;
+          pipeline: { title: string; defenseTip: string };
+        }>("/api/kali-env/pipelines/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: pipeId, target: pipeTarget, workspace: "recon-lab" }),
+        });
+        if (r) {
+          setPipeOutput(
+            [
+              `╔══ [ ${r.pipeline?.title ?? pipeId} ] ══╗`,
+              `[+] العقدة: ${r.plane ?? "fleet"} · الزمن: ${((r.durationMs ?? 0) / 1000).toFixed(1)}s`,
+              `[+] التقرير المحفوظ: ${r.savedReportPath ?? "recon-lab/reports"} (ومثبت في الذاكرة الأبدية)`,
+              `[+] نصيحة التحصين: ${r.pipeline?.defenseTip ?? ""}`,
+              `------------------------------------------------------------`,
+              r.output || "(اكتمل التنفيذ)",
+            ].join("\n"),
+          );
+          await loadFs("workspace", "/");
+          await loadEternalMemory();
+        }
+      } catch (e) {
+        setPipeOutput(`✗ خطأ: ${(e as Error).message}`);
+      } finally {
+        setRunningPipeId(null);
       }
-    } catch (e) {
-      setPipeOutput(`✗ خطأ: ${(e as Error).message}`);
-    } finally {
-      setRunningPipeId(null);
-    }
-  }, [pipeTarget, loadFs, loadEternalMemory]);
+    },
+    [pipeTarget, loadFs, loadEternalMemory],
+  );
 
   const installFromGithub = useCallback(async () => {
     if (!ghRepoInput.trim()) return;
@@ -963,7 +1130,8 @@ export default function KaliEnvPage() {
     void captureDesktopFrame(false);
     void loadFs("workspace", "/");
     void runCyberBrowser("https://example.com");
-  }, [refreshAll, captureDesktopFrame, loadFs, runCyberBrowser]);
+    void loadAttackGraph("example.com");
+  }, [refreshAll, captureDesktopFrame, loadFs, runCyberBrowser, loadAttackGraph]);
 
   useEffect(() => {
     if (!autoStream) return;
@@ -973,7 +1141,7 @@ export default function KaliEnvPage() {
     return () => clearInterval(iv);
   }, [autoStream, captureDesktopFrame]);
 
-  // ── Derived Metrics & Current Tool Guide ──
+  // ── Derived Metrics & Safe Normalized Lists ──
   const totalTools = toolsData?.total ?? 266;
   const presentTools = toolsData?.present ?? 266;
   const pyPresent = pyTools?.installed ?? 28;
@@ -983,18 +1151,23 @@ export default function KaliEnvPage() {
 
   const currentToolGuide = useMemo<KaliToolGuideItem>(() => {
     const key = inspectedTool.toLowerCase();
-    if (toolsGuideMap[key]) {
-      const g = toolsGuideMap[key];
+    const g = toolsGuideMap?.[key];
+    if (g && typeof g === "object") {
       return {
         ...g,
-        recipes: g.recipes.map((r) => ({ ...r, cmd: r.cmd.replace(/\{\{TARGET\}\}/g, activeTarget) })),
+        flags: Array.isArray(g.flags) ? g.flags : [],
+        recipes: (Array.isArray(g.recipes) ? g.recipes : []).map((r) => ({
+          ...r,
+          cmd: String(r.cmd || "").replace(/\{\{TARGET\}\}/g, activeTarget),
+        })),
       };
     }
     return {
       tool: key || "nmap",
       title_ar: `أداة كالي العملياتية (${key || "nmap"})`,
       category_ar: "ترسانة كالي الشاملة (266 أداة)",
-      description_ar: "أداة أمنية محققة ضمن ترسانة الـ 266 أداة في بيئة NOVA KALI LINUX 2099، متوفرة في مسار النظام وجاهزة للتنفيذ المباشر.",
+      description_ar:
+        "أداة أمنية محققة ضمن ترسانة الـ 266 أداة في بيئة NOVA KALI LINUX 2099، متوفرة في مسار النظام وجاهزة للتنفيذ المباشر.",
       usage_ar: `${key || "nmap"} [الخيارات] ${activeTarget}`,
       binaryPath: `/usr/local/bin/${key || "nmap"}`,
       flags: [
@@ -1002,54 +1175,56 @@ export default function KaliEnvPage() {
         { flag: "--version / -V", desc_ar: "عرض رقم الإصدار المثبت" },
       ],
       recipes: [
-        { label_ar: `عرض المساعدة الكاملة لـ ${key}`, cmd: `${key} --help 2>&1 | head -40 || ${key} -h 2>&1 | head -40`, note_ar: "دليل الأداة من العقدة" },
-        { label_ar: `فحص الهدف (${activeTarget})`, cmd: `${key} ${activeTarget}`, note_ar: "تشغيل مباشر على الهدف النشط" },
+        {
+          label_ar: `عرض المساعدة الكاملة لـ ${key}`,
+          cmd: `${key} --help 2>&1 | head -40 || ${key} -h 2>&1 | head -40`,
+          note_ar: "دليل الأداة من العقدة",
+        },
+        {
+          label_ar: `فحص الهدف (${activeTarget})`,
+          cmd: `${key} ${activeTarget}`,
+          note_ar: "تشغيل مباشر على الهدف النشط",
+        },
       ],
     };
   }, [inspectedTool, toolsGuideMap, activeTarget]);
 
+  const allNormalizedTools = useMemo(
+    () => extractNormalizedTools(catalog, toolsData, toolsGuideMap),
+    [catalog, toolsData, toolsGuideMap],
+  );
+
   const whiskerTools = useMemo(() => {
     const q = whiskerSearch.trim().toLowerCase();
     if (whiskerCat === "python-28") {
-      return (pyTools?.tools ?? [])
-        .map((t) => ({ name: t.name, cat: "Python Arsenal (28)", ok: t.ok }))
+      const pyArr = Array.isArray(pyTools?.tools) ? pyTools!.tools : [];
+      return pyArr
+        .map((t) => ({ name: String(t.name), cat: "Python Arsenal (28)", ok: Boolean(t.ok) }))
         .filter((t) => !q || t.name.toLowerCase().includes(q));
     }
     if (whiskerCat === "pipelines-8" || whiskerCat === "platform-routes") {
       return [];
     }
-    const items: { name: string; cat: string; ok: boolean }[] = [];
-    if (catalog?.categories) {
-      for (const [cat, list] of Object.entries(catalog.categories)) {
-        if (whiskerCat !== "all" && whiskerCat !== cat) continue;
-        for (const item of list) {
-          if (q && !item.tool.toLowerCase().includes(q) && !cat.toLowerCase().includes(q)) continue;
-          items.push({ name: item.tool, cat, ok: item.installed });
-        }
-      }
-    }
-    if (whiskerCat === "all" && toolsData?.allPresent) {
-      const seen = new Set(items.map((i) => i.name));
-      for (const toolName of toolsData.allPresent) {
-        if (!seen.has(toolName) && (!q || toolName.toLowerCase().includes(q))) {
-          items.push({ name: toolName, cat: "Kali Arsenal (266)", ok: true });
-        }
-      }
-    }
-    return items;
-  }, [catalog, toolsData, pyTools, whiskerCat, whiskerSearch]);
+    return allNormalizedTools.filter((item) => {
+      if (whiskerCat !== "all" && item.cat !== whiskerCat) return false;
+      if (q && !item.name.toLowerCase().includes(q) && !item.cat.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [allNormalizedTools, pyTools, whiskerCat, whiskerSearch]);
 
   const openToolWithAutoHelp = useCallback(
     (toolName: string, autoExec = false) => {
       setInspectedTool(toolName);
       setLiveToolHelpText(null);
       setTermSideMode("auto-help");
-      const guide = toolsGuideMap[toolName];
-      const defaultCmd = guide?.recipes?.[0]?.cmd?.replace(/\{\{TARGET\}\}/g, activeTarget) || `${toolName} --help 2>&1 | head -35`;
+      const guide = toolsGuideMap?.[toolName];
+      const defaultCmd =
+        guide?.recipes?.[0]?.cmd?.replace(/\{\{TARGET\}\}/g, activeTarget) || `${toolName} --help 2>&1 | head -35`;
       setTermCmd(defaultCmd);
       setWinTerminalOpen(true);
       setFocusedWin("terminal");
       setWhiskerOpen(false);
+      setCmdPaletteOpen(false);
       if (autoExec) {
         void execInTerminal(defaultCmd);
       }
@@ -1061,6 +1236,7 @@ export default function KaliEnvPage() {
     setEmbeddedAppRoute(app.route);
     setEmbeddedAppTitle(app.name);
     setWhiskerOpen(false);
+    setCmdPaletteOpen(false);
     setActiveWorkspace(5);
   }, []);
 
@@ -1071,9 +1247,7 @@ export default function KaliEnvPage() {
       id: newId,
       title: `${idx}: root@kali (${sessionCwd.split("/").pop() || "~"})`,
       cwd: sessionCwd,
-      lines: [
-        `[+] جلسة طرفية دائمة رقم #${idx} — متصلة بالذاكرة الأبدية (${sessionCwd})`,
-      ],
+      lines: [`[+] جلسة طرفية دائمة رقم #${idx} — متصلة بالذاكرة الأبدية (${sessionCwd})`],
       history: ["uname -a", "ls -la"],
     };
     setTerminalTabs((prev) => [...prev, newTab]);
@@ -1107,17 +1281,25 @@ export default function KaliEnvPage() {
         if (whiskerOpen) setWhiskerOpen(false);
       }}
     >
-      {/* Subtle dark cyber overlay for crisp contrast */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#05070e]/50 via-[#05070e]/25 to-[#05070e]/65 z-0" />
+      {/* Subtle dark cyber overlay aligned with Red / Blue / Purple Team Mode */}
+      <div
+        className={`pointer-events-none absolute inset-0 z-0 transition-colors duration-500 ${
+          teamMode === "PURPLE"
+            ? "bg-gradient-to-b from-[#0b0618]/55 via-[#05070e]/30 to-[#0e0418]/65"
+            : teamMode === "BLUE"
+              ? "bg-gradient-to-b from-[#041022]/55 via-[#05070e]/30 to-[#031426]/65"
+              : "bg-gradient-to-b from-[#1a040a]/55 via-[#05070e]/30 to-[#180309]/65"
+        }`}
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════════
-       * 1. AUTHENTIC KALI LINUX XFCE TOP PANEL (36px) + TAWHID BANNER + TARGET BAR
+       * 1. AUTHENTIC KALI LINUX XFCE TOP PANEL (36px) + PURPLE/RED/BLUE SWITCH + Ctrl+K
        * ═══════════════════════════════════════════════════════════════════════ */}
       <header
         className="relative z-40 h-9 w-full bg-[#0d1017]/95 backdrop-blur-md border-b border-cyan-500/25 flex items-center justify-between px-2.5 text-xs shadow-[0_2px_20px_rgba(0,0,0,0.85)]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Right side (RTL start): Kali Dragon Applications Button + Quick Target + Workspace Switcher */}
+        {/* Right side: Applications Button + Ctrl+K Fuzzy Launcher + Active Target + 6 Workspaces */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setWhiskerOpen((v) => !v)}
@@ -1126,13 +1308,23 @@ export default function KaliEnvPage() {
                 ? "bg-[#ff2b4d] text-white shadow-[0_0_15px_rgba(255,43,77,0.6)]"
                 : "bg-[#171c28] hover:bg-[#22293a] text-cyan-400 border border-cyan-500/30"
             }`}
-            title="قائمة تطبيقات كالي لينكس (266 أداة + 28 بايثون + فتح كل شيء)"
           >
             <KaliLogo2099 size={18} animated={false} />
             <span className="tracking-wide text-[11px] font-black text-white">Applications</span>
           </button>
 
-          {/* Active Target Global Input (متصل بكل الأدوات والمساعد التلقائي) */}
+          {/* Universal Fuzzy Command Palette Trigger (Ctrl+K) */}
+          <button
+            onClick={() => setCmdPaletteOpen(true)}
+            className="flex items-center gap-1 px-2 py-1 rounded bg-[#141926] hover:bg-purple-500/25 border border-purple-500/40 text-purple-200 text-[10px] font-mono font-bold"
+            title="البحث الشامل والتشغيل الفوري (Ctrl+K)"
+          >
+            <Search className="w-3 h-3 text-purple-400" />
+            <span className="hidden sm:inline">بحث شامل</span>
+            <kbd className="px-1 rounded bg-black/50 text-[9px] text-cyan-300">Ctrl+K</kbd>
+          </button>
+
+          {/* Active Target Global Input */}
           <div className="hidden md:flex items-center gap-1 bg-[#131824] border border-cyan-500/30 rounded px-2 py-0.5">
             <Crosshair className="w-3.5 h-3.5 text-[#ff2b4d]" />
             <span className="text-[10px] text-slate-400">الهدف:</span>
@@ -1142,24 +1334,23 @@ export default function KaliEnvPage() {
                 setActiveTarget(e.target.value);
                 setPipeTarget(e.target.value);
               }}
+              onKeyDown={(e) => e.key === "Enter" && void loadAttackGraph(activeTarget)}
               dir="ltr"
               className="w-28 bg-transparent text-[11px] font-mono font-bold text-cyan-300 focus:outline-none"
               placeholder="example.com"
-              title="الهدف النشط — يتحدث تلقائيًا في جميع الأوامر والمساعد الذكي"
             />
           </div>
 
-          <div className="h-4 w-px bg-slate-700/80 mx-0.5" />
-
-          {/* 5 Ergonomic Layout / Workspace Modes */}
-          <div className="flex items-center gap-1 bg-[#090c12] p-0.5 rounded border border-slate-800" dir="ltr">
+          {/* 6 Ergonomic Workspaces */}
+          <div className="flex items-center gap-0.5 bg-[#090c12] p-0.5 rounded border border-slate-800" dir="ltr">
             {(
               [
-                { id: 1, label: "1: Desktop", title: "سطح المكتب الرباعي المتكامل (Thunar + Studio + Terminal + Gotop)" },
-                { id: 2, label: "2: Terminal+AI", title: "غرفة الترمنال المزدوج + ترمنال المساعد الذكي + الوصف التلقائي للأدوات" },
-                { id: 3, label: "3: Arsenal 294", title: "موسوعة ومشغل الـ 266 أداة كالي + 28 بايثون بالوصف والأوامر الجاهزة" },
-                { id: 4, label: "4: Eternal Mem", title: "الذاكرة الأبدية + الجلسة الدائمة + المخزن السحابي 67.11GB" },
-                { id: 5, label: "5: All Apps (32)", title: "فتح كل شيء — تشغيل أي شاشة أو نظام في المنصة داخل سطح المكتب" },
+                { id: 1, label: "1:Desktop", title: "سطح المكتب الرباعي المتكامل" },
+                { id: 2, label: "2:Term+AI", title: "غرفة التريمنال المزدوج + ترمنال المساعد الذكي" },
+                { id: 3, label: "3:Arsenal", title: "موسوعة الـ 266 أداة كالي + 28 بايثون بالوصف والأوامر" },
+                { id: 4, label: "4:Memory", title: "الذاكرة الأبدية والجلسة الدائمة والمخزن 67.11GB" },
+                { id: 5, label: "5:AllApps", title: "فتح كل شيء — دمج وتشغيل جميع شاشات المنصة الـ 32" },
+                { id: 6, label: "6:Purple360", title: "خريطة سطح الهجوم 360° + Kali Autopilot + مركز الاتصالات" },
               ] as const
             ).map((ws) => (
               <button
@@ -1179,73 +1370,44 @@ export default function KaliEnvPage() {
               </button>
             ))}
           </div>
-
-          {/* Window Toggle Pills when on Workspace 1 */}
-          {activeWorkspace === 1 && (
-            <div className="hidden xl:flex items-center gap-1 mr-1">
-              <button
-                onClick={() => setWinThunarOpen((v) => !v)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 border ${
-                  winThunarOpen
-                    ? "bg-[#1a202c] text-cyan-300 border-cyan-500/35"
-                    : "bg-[#10131a]/60 text-slate-500 border-slate-800"
-                }`}
-              >
-                <Folder className="w-3 h-3 text-cyan-400" />
-                <span>Thunar</span>
-              </button>
-              <button
-                onClick={() => setWinStudioOpen((v) => !v)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 border ${
-                  winStudioOpen
-                    ? "bg-[#1a202c] text-[#ff8fa3] border-[#ff2b4d]/35"
-                    : "bg-[#10131a]/60 text-slate-500 border-slate-800"
-                }`}
-              >
-                <Monitor className="w-3 h-3 text-[#ff2b4d]" />
-                <span>Studio :99</span>
-              </button>
-              <button
-                onClick={() => setWinTerminalOpen((v) => !v)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 border ${
-                  winTerminalOpen
-                    ? "bg-[#1a202c] text-emerald-300 border-emerald-500/35"
-                    : "bg-[#10131a]/60 text-slate-500 border-slate-800"
-                }`}
-              >
-                <TerminalIcon className="w-3 h-3 text-emerald-400" />
-                <span>qterminal+AI</span>
-              </button>
-              <button
-                onClick={() => setWinGotopOpen((v) => !v)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 border ${
-                  winGotopOpen
-                    ? "bg-[#1a202c] text-amber-300 border-amber-500/35"
-                    : "bg-[#10131a]/60 text-slate-500 border-slate-800"
-                }`}
-              >
-                <Brain className="w-3 h-3 text-amber-400" />
-                <span>gotop+Memory</span>
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Center: Sacred Tawhid Banner */}
-        <div className="hidden lg:flex items-center gap-2 px-3 py-0.5 rounded-full bg-gradient-to-r from-[#240611] via-[#380819] to-[#240611] border border-[#ff2b4d]/45 shadow-[0_0_15px_rgba(255,43,77,0.25)]">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-          <span className="text-[11px] font-black tracking-wide text-white">
-            لا إله إلا الله · الله أكبر ولله الحمد
-          </span>
-          <span className="text-[10px] font-mono text-[#ff8fa3]">| KALI 2099 ETERNAL OS</span>
+        {/* Center: Sacred Tawhid Banner + Red/Blue/Purple Mode Selector */}
+        <div className="hidden xl:flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-0.5 rounded-full bg-gradient-to-r from-[#240611] via-[#380819] to-[#240611] border border-[#ff2b4d]/45 shadow-[0_0_15px_rgba(255,43,77,0.25)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-[11px] font-black tracking-wide text-white">
+              لا إله إلا الله · الله أكبر ولله الحمد
+            </span>
+          </div>
+
+          {/* Kali Red / Blue / Purple Team Mode Switcher */}
+          <div className="flex items-center gap-0.5 bg-[#0c0f17] p-0.5 rounded border border-slate-800" dir="ltr">
+            {(
+              [
+                { id: "RED", label: "RED", color: "bg-[#ff2b4d] text-white" },
+                { id: "BLUE", label: "BLUE SOC", color: "bg-cyan-500 text-slate-950" },
+                { id: "PURPLE", label: "PURPLE 2099", color: "bg-purple-600 text-white" },
+              ] as const
+            ).map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setTeamMode(m.id)}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-black transition-all ${
+                  teamMode === m.id ? m.color : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Left side (RTL end): System Tray Indicators */}
+        {/* Left side: System Tray Indicators */}
         <div className="flex items-center gap-1.5" dir="ltr">
           <button
             onClick={() => setActiveWorkspace(3)}
             className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 font-mono text-[10px] font-bold hover:bg-emerald-500/25"
-            title="جميع أدوات كالي (266/266) وبايثون (28/28) محققة وبالوصف الكامل"
           >
             <CheckCircle2 className="w-3 h-3 text-emerald-400" />
             <span>{presentTools}/{totalTools}</span>
@@ -1255,26 +1417,25 @@ export default function KaliEnvPage() {
           <button
             onClick={() => setActiveWorkspace(4)}
             className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/35 text-amber-300 font-mono text-[10px] font-bold hover:bg-amber-500/25"
-            title="الذاكرة الأبدية والجلسة الدائمة والمخزن السحابي"
           >
             <Brain className="w-3 h-3 text-amber-400" />
             <span>MEM:{eternalMemory.length}</span>
             <span className="hidden sm:inline text-purple-300">· {storageText}</span>
           </button>
 
-          <div
-            className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/35 text-cyan-300 font-mono text-[10px] font-bold"
-            title="10 عقد كالي سحابية نشطة"
+          <button
+            onClick={() => setActiveWorkspace(6)}
+            className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/35 text-purple-300 font-mono text-[10px] font-bold hover:bg-purple-500/25"
+            title="خريطة الهجوم 360° + الاتصالات الحية"
           >
-            <Cpu className="w-3 h-3 text-cyan-400" />
-            <span>{activeNodes}/10</span>
-          </div>
+            <Network className="w-3 h-3 text-purple-400" />
+            <span>{activeNodes}/10 NODES</span>
+          </button>
 
           <button
             onClick={() => void triggerSelfHeal()}
             disabled={healing}
             className="px-2 py-0.5 rounded bg-[#ff2b4d]/20 hover:bg-[#ff2b4d]/35 border border-[#ff2b4d]/50 text-[#ff8fa3] font-mono text-[10px] font-bold flex items-center gap-1"
-            title="مداواة ذاتية ومزامنة فورية للأسطول"
           >
             <RefreshCw className={`w-3 h-3 ${healing || loading ? "animate-spin" : ""}`} />
             <span className="hidden md:inline">Heal</span>
@@ -1287,6 +1448,114 @@ export default function KaliEnvPage() {
       </header>
 
       {/* ═══════════════════════════════════════════════════════════════════════
+       * UNIVERSAL FUZZY COMMAND PALETTE OVERLAY (Ctrl+K / ⌘K — KDE Plasma 6.5 Style)
+       * ═══════════════════════════════════════════════════════════════════════ */}
+      {cmdPaletteOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-start justify-center pt-16 px-4"
+          onClick={() => setCmdPaletteOpen(false)}
+        >
+          <div
+            className="w-full max-w-2xl bg-[#111520] border-2 border-purple-500/50 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-3 bg-[#0b0e16] border-b border-slate-800 flex items-center gap-2.5">
+              <Search className="w-4 h-4 text-purple-400" />
+              <input
+                value={cmdPaletteQuery}
+                onChange={(e) => setCmdPaletteQuery(e.target.value)}
+                placeholder="ابحث فورًا في 294 أداة كالي وبايثون، 32 نظامًا، سلاسل Autopilot، والذاكرة الأبدية..."
+                className="flex-1 bg-transparent text-xs text-white focus:outline-none"
+                autoFocus
+              />
+              <button
+                onClick={() => setCmdPaletteOpen(false)}
+                className="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-slate-400"
+              >
+                ESC
+              </button>
+            </div>
+            <div className="max-h-96 overflow-y-auto p-2.5 space-y-2">
+              {/* Matched Platform Apps */}
+              <div className="text-[10px] font-bold text-purple-300 px-1">أنظمة وشاشات المنصة (فتح فوري):</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {PLATFORM_APPS.filter(
+                  (a) =>
+                    !cmdPaletteQuery ||
+                    a.name.toLowerCase().includes(cmdPaletteQuery.toLowerCase()) ||
+                    a.desc.includes(cmdPaletteQuery),
+                )
+                  .slice(0, 6)
+                  .map((app) => (
+                    <button
+                      key={app.route}
+                      onClick={() => openPlatformAppInDesktop(app)}
+                      className="p-2 rounded-lg bg-[#171c2b] hover:bg-purple-500/25 border border-slate-800 text-right flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-cyan-300 truncate">{app.name}</div>
+                        <div className="text-[10px] text-slate-400 truncate">{app.desc}</div>
+                      </div>
+                      <span className="text-[9px] font-mono text-purple-300 shrink-0" dir="ltr">
+                        {app.route}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+
+              {/* Matched Kali & Python Tools */}
+              <div className="text-[10px] font-bold text-emerald-400 px-1 pt-1">أدوات كالي وبايثون (شرح + تشغيل):</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {allNormalizedTools
+                  .filter(
+                    (t) =>
+                      !cmdPaletteQuery ||
+                      t.name.toLowerCase().includes(cmdPaletteQuery.toLowerCase()) ||
+                      t.cat.includes(cmdPaletteQuery),
+                  )
+                  .slice(0, 10)
+                  .map((t) => (
+                    <div
+                      key={t.name}
+                      className="p-2 rounded-lg bg-[#161b26] border border-slate-800 flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-mono font-bold text-emerald-300" dir="ltr">
+                          {t.name}
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          {toolsGuideMap[t.name]?.title_ar ?? t.cat}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => {
+                            setActiveWorkspace(1);
+                            openToolWithAutoHelp(t.name, false);
+                          }}
+                          className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold"
+                        >
+                          شرح
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveWorkspace(1);
+                            openToolWithAutoHelp(t.name, true);
+                          }}
+                          className="px-2 py-0.5 rounded bg-[#ff2b4d] text-white text-[10px] font-bold"
+                        >
+                          تشغيل
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
        * 2. AUTHENTIC DUAL-COLUMN KALI WHISKER APPLICATION MENU (14 CATEGORIES)
        * ═══════════════════════════════════════════════════════════════════════ */}
       {whiskerOpen && (
@@ -1294,7 +1563,6 @@ export default function KaliEnvPage() {
           className="fixed top-10 right-2.5 z-50 w-[760px] max-w-[96vw] h-[560px] bg-[#12151e]/98 backdrop-blur-xl border-2 border-cyan-500/45 rounded-xl shadow-[0_25px_70px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Whisker Header + Search */}
           <div className="p-3 bg-[#0c0e14] border-b border-slate-800 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <KaliLogo2099 size={30} animated />
@@ -1302,7 +1570,7 @@ export default function KaliEnvPage() {
                 <div className="text-xs font-black text-white flex items-center gap-2">
                   <span>KALI LINUX 2099 — WHISKER APPLICATION MENU</span>
                   <span className="px-2 py-0.5 rounded bg-[#ff2b4d]/20 text-[#ff8fa3] font-mono text-[10px]">
-                    root@kali-2099 (Eternal Session)
+                    {teamMode} MODE
                   </span>
                 </div>
                 <div className="text-[11px] text-cyan-400">
@@ -1322,9 +1590,7 @@ export default function KaliEnvPage() {
             </div>
           </div>
 
-          {/* Dual Columns: Categories + Tools/Apps */}
           <div className="flex-1 flex min-h-0">
-            {/* Categories Column */}
             <div className="w-64 bg-[#0e1118] border-l border-slate-800/90 overflow-y-auto p-1.5 space-y-0.5">
               {KALI_WHISKER_CATEGORIES.map((cat) => (
                 <button
@@ -1347,7 +1613,6 @@ export default function KaliEnvPage() {
               ))}
             </div>
 
-            {/* Applications / Tools List Column */}
             <div className="flex-1 bg-[#141822] overflow-y-auto p-2.5 space-y-1.5">
               {whiskerCat === "pipelines-8" ? (
                 pipelines.map((p) => (
@@ -1358,13 +1623,6 @@ export default function KaliEnvPage() {
                     <div>
                       <div className="text-xs font-bold text-white">{p.title}</div>
                       <div className="text-[11px] text-slate-400">{p.description}</div>
-                      <div className="flex flex-wrap gap-1 mt-1" dir="ltr">
-                        {p.tools.map((t) => (
-                          <span key={t} className="px-1.5 py-0.5 rounded bg-black/40 text-cyan-300 font-mono text-[9px]">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
                     </div>
                     <button
                       onClick={() => {
@@ -1415,52 +1673,47 @@ export default function KaliEnvPage() {
                   ))}
                 </div>
               ) : (
-                <>
-                  {/* Tools list with Auto-Description & Instant Run */}
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {whiskerTools.slice(0, 120).map((t) => {
-                      const g = toolsGuideMap[t.name];
-                      return (
-                        <div
-                          key={t.name}
-                          className="p-2 rounded-lg bg-[#1b202e]/90 hover:bg-[#232a3c] border border-slate-800 hover:border-cyan-500/40 flex items-center justify-between gap-2 transition-all"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-black text-emerald-300" dir="ltr">
-                                {t.name}
-                              </span>
-                              <span className="text-[11px] font-bold text-white truncate">
-                                {g?.title_ar ?? t.cat}
-                              </span>
-                            </div>
-                            <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                              {g?.description_ar ?? `أداة محققة وجاهزة للتشغيل الفوري (${t.cat})`}
-                            </div>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {whiskerTools.slice(0, 120).map((t) => {
+                    const g = toolsGuideMap?.[t.name];
+                    return (
+                      <div
+                        key={t.name}
+                        className="p-2 rounded-lg bg-[#1b202e]/90 hover:bg-[#232a3c] border border-slate-800 hover:border-cyan-500/40 flex items-center justify-between gap-2 transition-all"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-black text-emerald-300" dir="ltr">
+                              {t.name}
+                            </span>
+                            <span className="text-[11px] font-bold text-white truncate">
+                              {g?.title_ar ?? t.cat}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => openToolWithAutoHelp(t.name, false)}
-                              className="px-2 py-1 rounded bg-cyan-500/15 hover:bg-cyan-500/30 border border-cyan-500/35 text-cyan-300 text-[10px] font-bold flex items-center gap-1"
-                              title="فتح الوصف الكامل والخيارات والأوامر الجاهزة"
-                            >
-                              <BookOpen className="w-3 h-3" />
-                              <span>شرح وأوامر</span>
-                            </button>
-                            <button
-                              onClick={() => openToolWithAutoHelp(t.name, true)}
-                              className="px-2 py-1 rounded bg-[#ff2b4d] hover:bg-[#ff4769] text-white text-[10px] font-bold flex items-center gap-1"
-                              title="تشغيل مباشر في الطرفية"
-                            >
-                              <Play className="w-3 h-3" />
-                              <span>تشغيل</span>
-                            </button>
+                          <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                            {g?.description_ar ?? `أداة محققة وجاهزة للتشغيل الفوري (${t.cat})`}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => openToolWithAutoHelp(t.name, false)}
+                            className="px-2 py-1 rounded bg-cyan-500/15 hover:bg-cyan-500/30 border border-cyan-500/35 text-cyan-300 text-[10px] font-bold flex items-center gap-1"
+                          >
+                            <BookOpen className="w-3 h-3" />
+                            <span>شرح وأوامر</span>
+                          </button>
+                          <button
+                            onClick={() => openToolWithAutoHelp(t.name, true)}
+                            className="px-2 py-1 rounded bg-[#ff2b4d] hover:bg-[#ff4769] text-white text-[10px] font-bold flex items-center gap-1"
+                          >
+                            <Play className="w-3 h-3" />
+                            <span>تشغيل</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
@@ -1468,7 +1721,7 @@ export default function KaliEnvPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
-       * 3. MAIN DESKTOP WORKSPACE AREA (LEFT KALI DOCK + 5 WORKSPACE LAYOUTS)
+       * 3. MAIN DESKTOP WORKSPACE AREA (LEFT KALI DOCK + 6 WORKSPACE LAYOUTS)
        * ═══════════════════════════════════════════════════════════════════════ */}
       <div className="relative z-10 flex-1 flex min-h-0 overflow-hidden">
         {/* Authentic Kali Left Dock */}
@@ -1486,11 +1739,9 @@ export default function KaliEnvPage() {
           <button
             onClick={() => setActiveWorkspace(1)}
             className={`p-2 rounded-xl transition-all ${
-              activeWorkspace === 1
-                ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50"
-                : "text-slate-400 hover:bg-slate-800/70"
+              activeWorkspace === 1 ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50" : "text-slate-400 hover:bg-slate-800/70"
             }`}
-            title="1: سطح المكتب الرباعي المتكامل (Quad Kali OS Desktop)"
+            title="1: سطح المكتب الرباعي المتكامل"
           >
             <LayoutGrid className="w-4 h-4" />
           </button>
@@ -1498,11 +1749,9 @@ export default function KaliEnvPage() {
           <button
             onClick={() => setActiveWorkspace(2)}
             className={`p-2 rounded-xl transition-all ${
-              activeWorkspace === 2
-                ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50"
-                : "text-slate-400 hover:bg-slate-800/70"
+              activeWorkspace === 2 ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50" : "text-slate-400 hover:bg-slate-800/70"
             }`}
-            title="2: غرفة الترمنال المزدوج + ترمنال المساعد الذكي + المساعد التلقائي للأدوات"
+            title="2: التريمنال المزدوج + ترمنال المساعد الذكي"
           >
             <TerminalIcon className="w-4 h-4" />
           </button>
@@ -1510,11 +1759,9 @@ export default function KaliEnvPage() {
           <button
             onClick={() => setActiveWorkspace(3)}
             className={`p-2 rounded-xl transition-all ${
-              activeWorkspace === 3
-                ? "bg-[#ff2b4d]/25 text-[#ff8fa3] border border-[#ff2b4d]/50"
-                : "text-slate-400 hover:bg-slate-800/70"
+              activeWorkspace === 3 ? "bg-[#ff2b4d]/25 text-[#ff8fa3] border border-[#ff2b4d]/50" : "text-slate-400 hover:bg-slate-800/70"
             }`}
-            title="3: موسوعة ومشغل الـ 266 أداة كالي + 28 بايثون مع الوصف الكامل"
+            title="3: موسوعة ومشغل الـ 294 أداة بالوصف الكامل"
           >
             <Wrench className="w-4 h-4" />
           </button>
@@ -1522,11 +1769,9 @@ export default function KaliEnvPage() {
           <button
             onClick={() => setActiveWorkspace(4)}
             className={`p-2 rounded-xl transition-all ${
-              activeWorkspace === 4
-                ? "bg-amber-500/25 text-amber-300 border border-amber-500/50"
-                : "text-slate-400 hover:bg-slate-800/70"
+              activeWorkspace === 4 ? "bg-amber-500/25 text-amber-300 border border-amber-500/50" : "text-slate-400 hover:bg-slate-800/70"
             }`}
-            title="4: الذاكرة الأبدية + الجلسة الدائمة + المخزن السحابي 67.11GB"
+            title="4: الذاكرة الأبدية والجلسة الدائمة"
           >
             <Brain className="w-4 h-4" />
           </button>
@@ -1534,25 +1779,30 @@ export default function KaliEnvPage() {
           <button
             onClick={() => setActiveWorkspace(5)}
             className={`p-2 rounded-xl transition-all ${
-              activeWorkspace === 5
-                ? "bg-purple-500/25 text-purple-300 border border-purple-500/50"
-                : "text-slate-400 hover:bg-slate-800/70"
+              activeWorkspace === 5 ? "bg-purple-500/25 text-purple-300 border border-purple-500/50" : "text-slate-400 hover:bg-slate-800/70"
             }`}
-            title="5: فتح كل شيء — جميع شاشات وأنظمة المنصة الـ 32 مدمجة داخل كالي"
+            title="5: فتح كل شيء (32 نظامًا مدمجًا)"
           >
             <Compass className="w-4 h-4" />
           </button>
 
+          <button
+            onClick={() => setActiveWorkspace(6)}
+            className={`p-2 rounded-xl transition-all ${
+              activeWorkspace === 6 ? "bg-pink-500/25 text-pink-300 border border-pink-500/50" : "text-slate-400 hover:bg-slate-800/70"
+            }`}
+            title="6: خريطة سطح الهجوم 360° + Kali Autopilot + مركز الاتصالات"
+          >
+            <Network className="w-4 h-4" />
+          </button>
+
           <div className="mt-auto flex flex-col items-center gap-1.5">
             <button
-              onClick={() => {
-                setActiveWorkspace(2);
-                setTermSideMode("assistant");
-              }}
-              className="p-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/35 border border-emerald-500/40 text-emerald-300"
-              title="ترمنال المساعد الذكي (AI Co-Pilot)"
+              onClick={() => setCmdPaletteOpen(true)}
+              className="p-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/35 border border-purple-500/40 text-purple-300"
+              title="البحث الشامل الفوري (Ctrl+K)"
             >
-              <Bot className="w-4 h-4" />
+              <Command className="w-4 h-4" />
             </button>
             <button
               onClick={() => setLocation("/classic-dashboard")}
@@ -1571,7 +1821,6 @@ export default function KaliEnvPage() {
            * ═════════════════════════════════════════════════════════════════ */}
           {activeWorkspace === 1 && (
             <div className="relative z-10 flex-1 grid grid-cols-12 gap-2.5 min-h-0">
-              {/* LEFT / CENTER COLUMN (8 cols, or 12 if Gotop hidden / maximized) */}
               <div
                 className={`${
                   maximizedWin === "gotop"
@@ -1581,7 +1830,7 @@ export default function KaliEnvPage() {
                       : "col-span-12"
                 } flex flex-col gap-2.5 min-h-0`}
               >
-                {/* TOP ROW: Window 1 (Thunar File Manager) + Window 2 (Kali Multi-Studio :99) */}
+                {/* TOP ROW: Window 1 (Thunar File Manager) + Window 2 (Kali Multi-Studio) */}
                 {(winThunarOpen || winStudioOpen) && maximizedWin !== "terminal" && (
                   <div
                     className={`${
@@ -1602,19 +1851,17 @@ export default function KaliEnvPage() {
                           focusedWin === "thunar" ? "border-cyan-400/75 shadow-[0_0_25px_rgba(56,189,248,0.2)]" : "border-slate-700/80"
                         } flex flex-col min-h-0 overflow-hidden`}
                       >
-                        {/* GTK Titlebar */}
                         <div className="h-7 bg-[#0d1017] border-b border-slate-800 px-2.5 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
                             <span className="text-[11px] font-bold text-slate-200 font-mono" dir="ltr">
-                              root - Thunar File Manager ({fsScope === "workspace" ? `/workspaces${fsPath}` : fsPath})
+                              root - Thunar ({fsScope === "workspace" ? `/workspaces${fsPath}` : fsPath})
                             </span>
                           </div>
                           <div className="flex items-center gap-1" dir="ltr">
                             <button
                               onClick={() => setMaximizedWin((m) => (m === "thunar" ? null : "thunar"))}
                               className="p-0.5 rounded hover:bg-slate-700 text-slate-400 hover:text-cyan-300"
-                              title="تكبير / استعادة النافذة"
                             >
                               <Maximize2 className="w-3 h-3" />
                             </button>
@@ -1627,7 +1874,6 @@ export default function KaliEnvPage() {
                           </div>
                         </div>
 
-                        {/* Location Toolbar */}
                         <div className="h-8 bg-[#181c26] border-b border-slate-800 px-2 flex items-center gap-1.5" dir="ltr">
                           <button
                             onClick={() => {
@@ -1637,14 +1883,12 @@ export default function KaliEnvPage() {
                               void loadFs(fsScope, "/" + parts.join("/"));
                             }}
                             className="p-1 rounded bg-[#212736] hover:bg-slate-700 text-slate-200"
-                            title="المجلد الأعلى"
                           >
                             <ArrowUp className="w-3 h-3" />
                           </button>
                           <button
                             onClick={() => void loadFs(fsScope, "/")}
                             className="p-1 rounded bg-[#212736] hover:bg-slate-700 text-cyan-400"
-                            title="الجذر الرئيسي"
                           >
                             <Home className="w-3 h-3" />
                           </button>
@@ -1669,7 +1913,6 @@ export default function KaliEnvPage() {
                           </button>
                         </div>
 
-                        {/* Authentic Kali Yellow Root Warning Banner */}
                         <div
                           className="bg-[#d97706]/90 text-slate-950 px-2.5 py-0.5 text-[10px] font-bold flex items-center gap-1.5"
                           dir="ltr"
@@ -1678,7 +1921,6 @@ export default function KaliEnvPage() {
                           <span>Warning: you are using the root account (uid=0) — Eternal Session Active.</span>
                         </div>
 
-                        {/* Places Sidebar + Folder Grid */}
                         <div className="flex-1 flex min-h-0" dir="ltr">
                           <div className="w-32 bg-[#10131b] border-r border-slate-800 p-1.5 overflow-y-auto space-y-0.5 text-[10px] font-mono">
                             <div className="text-[9px] font-bold text-slate-500 px-1">PLACES</div>
@@ -1740,31 +1982,10 @@ export default function KaliEnvPage() {
                             )}
                           </div>
                         </div>
-
-                        {/* Statusbar */}
-                        <div className="h-6 bg-[#0d1017] border-t border-slate-800 px-2 flex items-center justify-between text-[10px] font-mono text-slate-400">
-                          <span>{fsEntries.length} عنصر</span>
-                          {fsScope === "workspace" && (
-                            <div className="flex items-center gap-1">
-                              <input
-                                value={newDirName}
-                                onChange={(e) => setNewDirName(e.target.value)}
-                                placeholder="مجلد جديد..."
-                                className="w-24 px-1.5 py-0.5 rounded bg-[#181c26] border border-slate-700 text-[10px] text-white"
-                              />
-                              <button
-                                onClick={() => void createWorkspaceDir()}
-                                className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold"
-                              >
-                                +إنشاء
-                              </button>
-                            </div>
-                          )}
-                        </div>
                       </section>
                     )}
 
-                    {/* WINDOW 2: KALI MULTI-STUDIO (LIVE X11 :99 / EDITOR / BROWSER / PIPELINES) */}
+                    {/* WINDOW 2: KALI MULTI-STUDIO (LIVE X11 :99 / 360° GRAPH / AUTOPILOT / EDITOR / BROWSER / PIPELINES) */}
                     {winStudioOpen && maximizedWin !== "thunar" && (
                       <section
                         onClick={() => setFocusedWin("studio")}
@@ -1774,21 +1995,22 @@ export default function KaliEnvPage() {
                           focusedWin === "studio" ? "border-[#ff2b4d]/80 shadow-[0_0_25px_rgba(255,43,77,0.2)]" : "border-slate-700/80"
                         } flex flex-col min-h-0 overflow-hidden`}
                       >
-                        {/* GTK Titlebar + Sub-Mode Switcher */}
                         <div className="h-7 bg-[#0d1017] border-b border-slate-800 px-2.5 flex items-center justify-between">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 overflow-x-auto">
                             {(
                               [
                                 { id: "x11", label: "Live X11 :99" },
-                                { id: "editor", label: "Mousepad Editor" },
+                                { id: "graph", label: "360° Attack Graph" },
+                                { id: "autopilot", label: "Kali Autopilot" },
+                                { id: "editor", label: "Mousepad" },
                                 { id: "browser", label: "Cyber Browser" },
-                                { id: "pipelines", label: "8 Auto-Pipelines" },
+                                { id: "pipelines", label: "8 Pipelines" },
                               ] as const
                             ).map((m) => (
                               <button
                                 key={m.id}
                                 onClick={() => setStudioMode(m.id)}
-                                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
+                                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all shrink-0 ${
                                   studioMode === m.id
                                     ? "bg-[#ff2b4d] text-white"
                                     : "bg-[#181c26] text-slate-400 hover:text-white"
@@ -1802,7 +2024,6 @@ export default function KaliEnvPage() {
                             <button
                               onClick={() => setMaximizedWin((m) => (m === "studio" ? null : "studio"))}
                               className="p-0.5 rounded hover:bg-slate-700 text-slate-400 hover:text-cyan-300"
-                              title="تكبير / استعادة النافذة"
                             >
                               <Maximize2 className="w-3 h-3" />
                             </button>
@@ -1815,7 +2036,6 @@ export default function KaliEnvPage() {
                           </div>
                         </div>
 
-                        {/* Studio Body */}
                         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                           {studioMode === "x11" && (
                             <div className="flex-1 flex flex-col min-h-0">
@@ -1852,9 +2072,104 @@ export default function KaliEnvPage() {
                                 {desktopFrame ? (
                                   <img src={desktopFrame} alt="Kali X11 :99" className="w-full h-full object-contain" />
                                 ) : (
-                                  <div className="text-xs text-slate-400 font-mono">جاري التقاط بث X11 :99...</div>
+                                  <div className="text-xs text-slate-400 font-mono">
+                                    {desktopLoading ? "جاري التقاط بث X11 :99..." : "اضغط تحديث :99 لعرض سطح المكتب"}
+                                  </div>
                                 )}
                               </div>
+                            </div>
+                          )}
+
+                          {/* 360° LIVE ATTACK SURFACE TOPOLOGY GRAPH */}
+                          {studioMode === "graph" && (
+                            <div className="flex-1 flex flex-col p-2.5 gap-2 min-h-0 overflow-y-auto">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-black text-purple-300">
+                                  خريطة سطح الهجوم والأصول الحية 360° للهدف: {attackGraph?.target || activeTarget}
+                                </span>
+                                <button
+                                  onClick={() => void loadAttackGraph(activeTarget)}
+                                  className="px-2.5 py-0.5 rounded bg-purple-600 text-white text-[10px] font-bold"
+                                >
+                                  تحديث الخريطة
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                                {(attackGraph?.nodes ?? []).map((n) => (
+                                  <div
+                                    key={n.id}
+                                    onClick={() => setSelectedGraphNode(n)}
+                                    className={`p-2 rounded-lg border cursor-pointer transition-all ${
+                                      selectedGraphNode?.id === n.id
+                                        ? "bg-purple-500/20 border-purple-400"
+                                        : "bg-[#0e1118] border-slate-800 hover:border-cyan-500/40"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] font-mono font-bold text-cyan-300" dir="ltr">
+                                        {n.label}
+                                      </span>
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/50 text-emerald-300 font-mono">
+                                        {n.type.toUpperCase()}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 mt-1 line-clamp-1">{n.detail}</div>
+                                  </div>
+                                ))}
+                              </div>
+                              {selectedGraphNode && (
+                                <div className="p-2 rounded-lg bg-[#0b0e15] border border-cyan-500/40 flex items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <div className="text-[11px] font-bold text-white">{selectedGraphNode.detail}</div>
+                                    <div className="text-[10px] font-mono text-emerald-300 truncate" dir="ltr">
+                                      $ {selectedGraphNode.recommendedCmd}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      setTermCmd(selectedGraphNode.recommendedCmd);
+                                      void execInTerminal(selectedGraphNode.recommendedCmd);
+                                    }}
+                                    className="px-2.5 py-1 rounded bg-[#ff2b4d] text-white text-[10px] font-bold shrink-0"
+                                  >
+                                    فحص العقدة ▶
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* KALI AUTOPILOT 2099 CHAIN BUILDER */}
+                          {studioMode === "autopilot" && (
+                            <div className="flex-1 flex flex-col p-2.5 gap-2 min-h-0 overflow-y-auto">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                {autopilotTemplates.map((tpl) => (
+                                  <div
+                                    key={tpl.id}
+                                    className="p-2 rounded-lg bg-[#0e1118] border border-slate-800 flex items-center justify-between gap-2"
+                                  >
+                                    <div className="min-w-0">
+                                      <div className="text-[11px] font-bold text-white truncate">{tpl.title_ar}</div>
+                                      <div className="text-[9px] font-mono text-purple-300">{tpl.nistPhase}</div>
+                                    </div>
+                                    <button
+                                      onClick={() => void runAutopilotChain(tpl.id)}
+                                      disabled={autopilotRunningId !== null}
+                                      className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold shrink-0"
+                                    >
+                                      {autopilotRunningId === tpl.id ? "..." : "تشغيل Autopilot"}
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                              {autopilotOutput && (
+                                <pre
+                                  dir="ltr"
+                                  className="p-2 rounded bg-black/90 border border-purple-500/40 text-[10px] font-mono text-emerald-300 max-h-36 overflow-y-auto whitespace-pre-wrap"
+                                >
+                                  {autopilotOutput}
+                                </pre>
+                              )}
                             </div>
                           )}
 
@@ -1918,7 +2233,7 @@ export default function KaliEnvPage() {
                                     </span>
                                   </div>
                                   <div className="grid grid-cols-2 gap-1">
-                                    {browserData.securityAudit?.map((h) => (
+                                    {(Array.isArray(browserData.securityAudit) ? browserData.securityAudit : []).map((h) => (
                                       <div
                                         key={h.header}
                                         className={`p-1.5 rounded border text-[10px] font-mono ${
@@ -1944,7 +2259,9 @@ export default function KaliEnvPage() {
                                   <div key={p.id} className="p-2 rounded bg-[#0e1118] border border-slate-800 flex items-center justify-between gap-1">
                                     <div className="min-w-0">
                                       <div className="text-[11px] font-bold text-white truncate">{p.title}</div>
-                                      <div className="text-[9px] font-mono text-cyan-400 truncate">{p.tools.join(" · ")}</div>
+                                      <div className="text-[9px] font-mono text-cyan-400 truncate">
+                                        {(Array.isArray(p.tools) ? p.tools : []).join(" · ")}
+                                      </div>
                                     </div>
                                     <button
                                       onClick={() => void runPipeline(p.id)}
@@ -1978,7 +2295,6 @@ export default function KaliEnvPage() {
                     onClick={() => setFocusedWin("terminal")}
                     className="flex-1 bg-[#0b0d13]/95 backdrop-blur-md rounded-lg border border-emerald-500/45 shadow-[0_0_30px_rgba(16,185,129,0.15)] flex flex-col min-h-0 overflow-hidden"
                   >
-                    {/* Terminal Titlebar + Persistent Session Tabs */}
                     <div className="h-8 bg-[#121620] border-b border-slate-800 px-2 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1 overflow-x-auto" dir="ltr">
                         <TerminalIcon className="w-3.5 h-3.5 text-emerald-400 mr-1 shrink-0" />
@@ -1994,10 +2310,7 @@ export default function KaliEnvPage() {
                           >
                             <span>{tab.title}</span>
                             {terminalTabs.length > 1 && (
-                              <span
-                                onClick={(e) => closeTerminalTab(tab.id, e)}
-                                className="hover:text-[#ff2b4d] px-0.5"
-                              >
+                              <span onClick={(e) => closeTerminalTab(tab.id, e)} className="hover:text-[#ff2b4d] px-0.5">
                                 ×
                               </span>
                             )}
@@ -2006,13 +2319,11 @@ export default function KaliEnvPage() {
                         <button
                           onClick={addNewTerminalTab}
                           className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold"
-                          title="فتح جلسة طرفية دائمة جديدة"
                         >
                           + Tab
                         </button>
                       </div>
 
-                      {/* Right side of Terminal Titlebar: Mode toggles + Maximize */}
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => setTermSideMode("auto-help")}
@@ -2039,19 +2350,15 @@ export default function KaliEnvPage() {
                         <button
                           onClick={() => setMaximizedWin((m) => (m === "terminal" ? null : "terminal"))}
                           className="p-1 rounded hover:bg-slate-700 text-slate-300"
-                          title="تكبير الطرفية والمساعد لملء الشاشة"
                         >
                           <Maximize2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
 
-                    {/* Split Inside Window 3: Left = Live qterminal (7 cols), Right = Auto-Help / AI Co-Pilot Terminal (5 cols) */}
                     <div className="flex-1 grid grid-cols-12 min-h-0 overflow-hidden">
-                      {/* Live qterminal Output + Command Prompt */}
                       <div className="col-span-12 lg:col-span-7 flex flex-col min-h-0 border-l border-slate-800/90" dir="ltr">
                         <div className="flex-1 overflow-y-auto p-2.5 font-mono text-[11px] space-y-1.5">
-                          {/* Compact Neofetch Header + Scrollback */}
                           <div className="flex items-center justify-between text-[10px] text-slate-400 bg-[#11151f] px-2.5 py-1 rounded border border-slate-800/80">
                             <span className="text-cyan-400 font-bold">
                               root@kali-2099 ({activeTab?.cwd || sessionCwd})
@@ -2062,7 +2369,7 @@ export default function KaliEnvPage() {
                           </div>
 
                           <div className="space-y-0.5 pt-1">
-                            {(activeTab?.lines ?? []).map((ln, idx) => (
+                            {(Array.isArray(activeTab?.lines) ? activeTab.lines : []).map((ln, idx) => (
                               <div
                                 key={idx}
                                 className={`whitespace-pre-wrap break-all leading-relaxed ${
@@ -2082,7 +2389,6 @@ export default function KaliEnvPage() {
                           </div>
                         </div>
 
-                        {/* Instant Auto-Suggest Flags Strip right above input */}
                         <div className="bg-[#10141d] border-t border-slate-800/80 px-2.5 py-1 flex items-center justify-between gap-2 overflow-x-auto">
                           <div className="flex items-center gap-1.5 shrink-0">
                             <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono text-[10px] font-bold">
@@ -2106,7 +2412,6 @@ export default function KaliEnvPage() {
                           </div>
                         </div>
 
-                        {/* Live Command Input Bar */}
                         <div className="h-9 bg-[#07090e] border-t border-slate-800 px-2.5 flex items-center gap-2">
                           <span className="text-[11px] font-mono font-bold text-[#ff2b4d] shrink-0">
                             root💀kali:~#
@@ -2119,7 +2424,7 @@ export default function KaliEnvPage() {
                                 void execInTerminal();
                               } else if (e.key === "ArrowUp") {
                                 e.preventDefault();
-                                const hist = activeTab?.history ?? [];
+                                const hist = Array.isArray(activeTab?.history) ? activeTab.history : [];
                                 if (hist.length > 0) {
                                   const nextIdx = historyIdx < 0 ? hist.length - 1 : Math.max(0, historyIdx - 1);
                                   setHistoryIdx(nextIdx);
@@ -2140,7 +2445,6 @@ export default function KaliEnvPage() {
                         </div>
                       </div>
 
-                      {/* Right Pane Inside Terminal Window: AUTO-HELP & TOOL DESCRIPTION OR AI ASSISTANT TERMINAL */}
                       <div className="col-span-12 lg:col-span-5 bg-[#0f131c] flex flex-col min-h-0 overflow-hidden" dir="rtl">
                         {termSideMode === "auto-help" ? (
                           <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
@@ -2163,7 +2467,6 @@ export default function KaliEnvPage() {
                               </button>
                             </div>
 
-                            {/* Quick Tool Selector Chips */}
                             <div className="flex items-center gap-1 overflow-x-auto pb-1" dir="ltr">
                               {["nmap", "nuclei", "subfinder", "httpx", "sqlmap", "ffuf", "trivy", "netexec", "radare2"].map((t) => (
                                 <button
@@ -2180,7 +2483,6 @@ export default function KaliEnvPage() {
                               ))}
                             </div>
 
-                            {/* Tool Card */}
                             <div className="p-2.5 rounded-lg bg-[#151a26] border border-cyan-500/30 space-y-1.5">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-black text-white">{currentToolGuide.title_ar}</span>
@@ -2188,34 +2490,9 @@ export default function KaliEnvPage() {
                                   {currentToolGuide.binaryPath}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-slate-300 leading-relaxed">
-                                {currentToolGuide.description_ar}
-                              </p>
-                              <div className="text-[10px] font-mono text-cyan-300 bg-black/40 px-2 py-1 rounded" dir="ltr">
-                                Usage: {currentToolGuide.usage_ar}
-                              </div>
+                              <p className="text-[11px] text-slate-300 leading-relaxed">{currentToolGuide.description_ar}</p>
                             </div>
 
-                            {/* Flags Table */}
-                            <div className="space-y-1">
-                              <div className="text-[10px] font-bold text-slate-400">أهم الخيارات والمعاملات (اضغط للإضافة للأمر):</div>
-                              <div className="grid grid-cols-1 gap-1">
-                                {currentToolGuide.flags.map((f) => (
-                                  <button
-                                    key={f.flag}
-                                    onClick={() => setTermCmd((prev) => `${prev.trim()} ${f.flag.split(" ")[0]}`)}
-                                    className="text-right p-1.5 rounded bg-[#141923] hover:bg-[#1c2331] border border-slate-800 flex items-center justify-between gap-2"
-                                  >
-                                    <span className="text-[10px] text-slate-300">{f.desc_ar}</span>
-                                    <code className="text-[10px] font-mono font-bold text-cyan-300 shrink-0" dir="ltr">
-                                      {f.flag}
-                                    </code>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Ready Recipes */}
                             <div className="space-y-1">
                               <div className="text-[10px] font-bold text-emerald-400">
                                 أوامر تكتيكية جاهزة للهدف ({activeTarget}):
@@ -2227,23 +2504,15 @@ export default function KaliEnvPage() {
                                 >
                                   <div className="flex items-center justify-between gap-2">
                                     <span className="text-[11px] font-bold text-white">{r.label_ar}</span>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <button
-                                        onClick={() => setTermCmd(r.cmd)}
-                                        className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[9px] font-bold"
-                                      >
-                                        نسخ للأمر
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setTermCmd(r.cmd);
-                                          void execInTerminal(r.cmd);
-                                        }}
-                                        className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-bold"
-                                      >
-                                        تشغيل ▶
-                                      </button>
-                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setTermCmd(r.cmd);
+                                        void execInTerminal(r.cmd);
+                                      }}
+                                      className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-bold"
+                                    >
+                                      تشغيل ▶
+                                    </button>
                                   </div>
                                   <div className="text-[10px] font-mono text-emerald-300 bg-black/50 px-2 py-1 rounded truncate" dir="ltr">
                                     {r.cmd}
@@ -2262,7 +2531,6 @@ export default function KaliEnvPage() {
                             )}
                           </div>
                         ) : (
-                          /* DEDICATED AI CO-PILOT ASSISTANT TERMINAL (ترمنال المساعد الذكي) */
                           <div className="flex-1 flex flex-col min-h-0">
                             <div className="p-2 bg-[#131824] border-b border-slate-800 flex items-center justify-between gap-1 overflow-x-auto">
                               {[
@@ -2292,7 +2560,7 @@ export default function KaliEnvPage() {
                                   }`}
                                 >
                                   <div className="whitespace-pre-wrap leading-relaxed">{msg.text}</div>
-                                  {msg.commands && msg.commands.length > 0 && (
+                                  {Array.isArray(msg.commands) && msg.commands.length > 0 && (
                                     <div className="mt-2 space-y-1">
                                       {msg.commands.map((c, idx) => (
                                         <div
@@ -2348,7 +2616,7 @@ export default function KaliEnvPage() {
                 )}
               </div>
 
-              {/* RIGHT VERTICAL COLUMN: WINDOW 4 (`gotop` System Monitor + Eternal Memory Vault) */}
+              {/* RIGHT VERTICAL COLUMN: WINDOW 4 (`gotop` + Eternal Memory + Live Connections) */}
               {winGotopOpen && maximizedWin !== "thunar" && maximizedWin !== "studio" && maximizedWin !== "terminal" && (
                 <section
                   onClick={() => setFocusedWin("gotop")}
@@ -2358,8 +2626,7 @@ export default function KaliEnvPage() {
                     focusedWin === "gotop" ? "border-[#ff2b4d]/80 shadow-[0_0_25px_rgba(255,43,77,0.2)]" : "border-slate-700/80"
                   } flex flex-col min-h-0 overflow-hidden`}
                 >
-                  {/* GTK Titlebar with Switch between `gotop` & `Eternal Memory` */}
-                  <div className="h-7 bg-[#090b10] border-b border-slate-800 px-2.5 flex items-center justify-between">
+                  <div className="h-7 bg-[#090b10] border-b border-slate-800 px-2 flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => setRightMonitorTab("gotop")}
@@ -2367,16 +2634,23 @@ export default function KaliEnvPage() {
                           rightMonitorTab === "gotop" ? "bg-[#ff2b4d] text-white" : "text-slate-400 hover:text-white"
                         }`}
                       >
-                        gotop Monitor
+                        gotop
                       </button>
                       <button
                         onClick={() => setRightMonitorTab("memory")}
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 ${
-                          rightMonitorTab === "memory" ? "bg-amber-500 text-slate-950" : "text-amber-300 hover:bg-slate-800"
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                          rightMonitorTab === "memory" ? "bg-amber-500 text-slate-950" : "text-amber-300"
                         }`}
                       >
-                        <Brain className="w-3 h-3" />
-                        <span>الذاكرة الأبدية ({eternalMemory.length})</span>
+                        الذاكرة ({eternalMemory.length})
+                      </button>
+                      <button
+                        onClick={() => setRightMonitorTab("connections")}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                          rightMonitorTab === "connections" ? "bg-purple-600 text-white" : "text-purple-300"
+                        }`}
+                      >
+                        الاتصالات (6)
                       </button>
                     </div>
                     <div className="flex items-center gap-1" dir="ltr">
@@ -2395,9 +2669,8 @@ export default function KaliEnvPage() {
                     </div>
                   </div>
 
-                  {rightMonitorTab === "gotop" ? (
+                  {rightMonitorTab === "gotop" && (
                     <div className="flex-1 overflow-y-auto p-2.5 space-y-2 font-mono text-[11px]" dir="ltr">
-                      {/* CPU Usage Waveform Box */}
                       <div className="p-2 rounded bg-[#080a0f] border border-slate-800">
                         <div className="flex items-center justify-between text-[10px] text-cyan-400 font-bold mb-1.5">
                           <span>┌─ CPU Usage (12 Cores · x86_64) ─┐</span>
@@ -2423,56 +2696,25 @@ export default function KaliEnvPage() {
                         </div>
                       </div>
 
-                      {/* Disks & 67.11GB Cloud Storage Box */}
-                      <div className="p-2 rounded bg-[#080a0f] border border-slate-800">
-                        <div className="text-[10px] text-amber-400 font-bold mb-1">
-                          ┌─ Disks & 67.11GB Cloud Hub ─┐
+                      {/* NIST CSF 2.0 Kali Purple Posture */}
+                      <div className="p-2 rounded bg-[#080a0f] border border-purple-500/30" dir="rtl">
+                        <div className="text-[10px] font-bold text-purple-300 mb-1.5">
+                          مصفوفة Kali Purple (NIST CSF 2.0 — 6 وظائف):
                         </div>
-                        <div className="space-y-1 text-[10px]">
-                          <div className="flex justify-between text-slate-300">
-                            <span>/ (Kali Rootfs)</span>
-                            <span className="text-emerald-400">503.8G Total · 492G Free</span>
-                          </div>
-                          <div className="flex justify-between text-slate-300">
-                            <span>Eternal Memory</span>
-                            <span className="text-amber-300">{eternalMemory.length} Records Saved</span>
-                          </div>
-                          <div className="flex justify-between text-slate-300">
-                            <span>GitHub Cloud Hub</span>
-                            <span className="text-purple-300">{storageText} (8 Mirrors)</span>
-                          </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          {(attackGraph?.nistCsf2 ?? []).map((p) => (
+                            <div key={p.id} className="p-1.5 rounded bg-[#121622] border border-slate-800 flex items-center justify-between">
+                              <span className="text-[10px] text-slate-200 truncate">{p.title_ar}</span>
+                              <span className="text-[9px] font-mono text-emerald-400 font-bold">{p.score}%</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
 
-                      {/* Memory & Arsenal Verification */}
-                      <div className="p-2 rounded bg-[#080a0f] border border-slate-800">
-                        <div className="text-[10px] text-emerald-400 font-bold mb-1">
-                          ┌─ Memory & 294 Arsenal Status ─┐
-                        </div>
-                        <div className="space-y-1 text-[10px]">
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Kali Tools</span>
-                            <span className="text-emerald-400 font-bold">{presentTools} / {totalTools} (100%)</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Python Arsenal</span>
-                            <span className="text-cyan-300 font-bold">{pyPresent} / {pyTotal} (880 Pkgs)</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Fleet Nodes</span>
-                            <span className="text-[#ff8fa3] font-bold">{activeNodes} / 10 Active</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Quick Platform App Jump inside Monitor */}
                       <div className="p-2 rounded bg-[#080a0f] border border-slate-800" dir="rtl">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-[10px] font-bold text-cyan-300">فتح سريع لأنظمة المنصة:</span>
-                          <button
-                            onClick={() => setActiveWorkspace(5)}
-                            className="text-[9px] text-[#ff8fa3] hover:underline"
-                          >
+                          <button onClick={() => setActiveWorkspace(5)} className="text-[9px] text-[#ff8fa3] hover:underline">
                             عرض الـ 32 نظامًا ←
                           </button>
                         </div>
@@ -2489,8 +2731,9 @@ export default function KaliEnvPage() {
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    /* ETERNAL MEMORY VAULT MINI-VIEW IN RIGHT MONITOR */
+                  )}
+
+                  {rightMonitorTab === "memory" && (
                     <div className="flex-1 flex flex-col min-h-0 p-2 gap-2" dir="rtl">
                       <div className="flex items-center gap-1">
                         <input
@@ -2528,14 +2771,28 @@ export default function KaliEnvPage() {
                                 $ {m.command}
                               </div>
                             )}
-                            {m.output && (
-                              <div className="text-[10px] font-mono text-slate-400 line-clamp-2" dir="ltr">
-                                {m.output}
-                              </div>
-                            )}
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {rightMonitorTab === "connections" && (
+                    <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5" dir="rtl">
+                      {connections.map((c) => (
+                        <div key={c.id} className="p-2 rounded-lg bg-[#141824] border border-purple-500/30 space-y-0.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-white">{c.name}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[9px]">
+                              {c.status}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-cyan-300">{c.metrics}</div>
+                          <div className="text-[9px] font-mono text-slate-400" dir="ltr">
+                            {c.protocol} · {c.latencyMs}ms
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </section>
@@ -2548,7 +2805,6 @@ export default function KaliEnvPage() {
            * ═════════════════════════════════════════════════════════════════ */}
           {activeWorkspace === 2 && (
             <div className="relative z-10 flex-1 grid grid-cols-12 gap-3 min-h-0">
-              {/* Left 7 cols: Full-Height Multi-Tab Persistent Terminal */}
               <div className="col-span-12 lg:col-span-7 bg-[#090c12]/95 rounded-xl border border-emerald-500/45 flex flex-col min-h-0 overflow-hidden shadow-2xl" dir="ltr">
                 <div className="h-9 bg-[#111622] border-b border-slate-800 px-3 flex items-center justify-between">
                   <div className="flex items-center gap-1.5 overflow-x-auto">
@@ -2575,7 +2831,7 @@ export default function KaliEnvPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-3 font-mono text-xs space-y-1">
-                  {(activeTab?.lines ?? []).map((ln, idx) => (
+                  {(Array.isArray(activeTab?.lines) ? activeTab.lines : []).map((ln, idx) => (
                     <div
                       key={idx}
                       className={`whitespace-pre-wrap break-all ${
@@ -2610,9 +2866,7 @@ export default function KaliEnvPage() {
                 </div>
               </div>
 
-              {/* Right 5 cols: Dedicated AI Assistant Terminal + Automatic Tool Intelligence */}
               <div className="col-span-12 lg:col-span-5 flex flex-col gap-3 min-h-0">
-                {/* Top Half: Auto-Help for Current Tool */}
                 <div className="h-1/2 bg-[#0e121b]/95 rounded-xl border border-cyan-500/40 p-3 flex flex-col min-h-0 overflow-y-auto">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                     <div className="text-xs font-black text-cyan-300 flex items-center gap-1.5">
@@ -2633,7 +2887,9 @@ export default function KaliEnvPage() {
                       <div key={i} className="p-2 rounded bg-[#151b28] border border-slate-800 flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <div className="text-[11px] font-bold text-emerald-300">{r.label_ar}</div>
-                          <div className="text-[10px] font-mono text-slate-400 truncate" dir="ltr">{r.cmd}</div>
+                          <div className="text-[10px] font-mono text-slate-400 truncate" dir="ltr">
+                            {r.cmd}
+                          </div>
                         </div>
                         <button
                           onClick={() => {
@@ -2649,7 +2905,6 @@ export default function KaliEnvPage() {
                   </div>
                 </div>
 
-                {/* Bottom Half: AI Co-Pilot Assistant Terminal */}
                 <div className="h-1/2 bg-[#0e121b]/95 rounded-xl border border-emerald-500/40 flex flex-col min-h-0 overflow-hidden">
                   <div className="h-8 bg-[#141a26] border-b border-slate-800 px-3 flex items-center justify-between">
                     <div className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
@@ -2666,7 +2921,7 @@ export default function KaliEnvPage() {
                         }`}
                       >
                         <div className="whitespace-pre-wrap">{m.text}</div>
-                        {m.commands?.map((c, i) => (
+                        {(Array.isArray(m.commands) ? m.commands : []).map((c, i) => (
                           <button
                             key={i}
                             onClick={() => {
@@ -2690,10 +2945,7 @@ export default function KaliEnvPage() {
                       placeholder="اكتب هدفك أو سؤالك (مثل: فحص دومين، شرح sqlmap، تحليل آخر أمر)..."
                       className="flex-1 bg-transparent text-xs text-white focus:outline-none"
                     />
-                    <button
-                      onClick={() => void askAssistant()}
-                      className="px-3 py-1 rounded bg-emerald-600 text-white text-xs font-bold"
-                    >
+                    <button onClick={() => void askAssistant()} className="px-3 py-1 rounded bg-emerald-600 text-white text-xs font-bold">
                       إرسال
                     </button>
                   </div>
@@ -2711,11 +2963,10 @@ export default function KaliEnvPage() {
                 <div>
                   <h2 className="text-sm font-black text-white flex items-center gap-2">
                     <Wrench className="w-4 h-4 text-[#ff2b4d]" />
-                    <span>موسوعة ومشغّل ترسانة كالي 2099 ({presentTools}/{totalTools} أداة كالي + {pyPresent}/{pyTotal} أداة بايثون)</span>
+                    <span>
+                      موسوعة ومشغّل ترسانة كالي 2099 ({presentTools}/{totalTools} أداة كالي + {pyPresent}/{pyTotal} أداة بايثون)
+                    </span>
                   </h2>
-                  <p className="text-xs text-slate-400">
-                    كل أداة مزودة بوصف عملي، خيارات سطر الأوامر، وأوامر جاهزة للهدف النشط ({activeTarget})
-                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -2742,10 +2993,9 @@ export default function KaliEnvPage() {
               </div>
 
               <div className="flex-1 grid grid-cols-12 gap-3 pt-2.5 min-h-0">
-                {/* Left 8 cols: Tools Grid */}
                 <div className="col-span-12 lg:col-span-8 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2 pr-1">
                   {whiskerTools.map((t) => {
-                    const g = toolsGuideMap[t.name];
+                    const g = toolsGuideMap?.[t.name];
                     return (
                       <div
                         key={t.name}
@@ -2765,9 +3015,7 @@ export default function KaliEnvPage() {
                           </span>
                         </div>
                         <div className="text-xs font-bold text-white mt-1">{g?.title_ar ?? t.name}</div>
-                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">
-                          {g?.description_ar}
-                        </p>
+                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{g?.description_ar}</p>
                         <div className="flex items-center justify-end gap-1.5 mt-2">
                           <button
                             onClick={(e) => {
@@ -2785,7 +3033,6 @@ export default function KaliEnvPage() {
                   })}
                 </div>
 
-                {/* Right 4 cols: Selected Tool Deep Inspector */}
                 <div className="col-span-12 lg:col-span-4 bg-[#141824] rounded-xl border border-cyan-500/35 p-3 overflow-y-auto space-y-2.5">
                   <div className="text-sm font-black text-cyan-300">{currentToolGuide.title_ar}</div>
                   <p className="text-xs text-slate-300 leading-relaxed">{currentToolGuide.description_ar}</p>
@@ -2797,7 +3044,9 @@ export default function KaliEnvPage() {
                     {currentToolGuide.flags.map((f) => (
                       <div key={f.flag} className="p-1.5 rounded bg-[#0e1118] border border-slate-800 flex justify-between text-[11px]">
                         <span className="text-slate-300">{f.desc_ar}</span>
-                        <code className="text-cyan-300 font-mono" dir="ltr">{f.flag}</code>
+                        <code className="text-cyan-300 font-mono" dir="ltr">
+                          {f.flag}
+                        </code>
                       </div>
                     ))}
                   </div>
@@ -2841,9 +3090,6 @@ export default function KaliEnvPage() {
                     <Brain className="w-4 h-4 text-amber-400" />
                     <span>الذاكرة الأبدية والجلسة الدائمة (Eternal Memory Vault — {eternalMemory.length} سجل محفوظ)</span>
                   </h2>
-                  <p className="text-xs text-slate-400">
-                    كل أمر، مخرج، تقرير سلسلة، واستشارة ذكية يُحفظ تلقائيًا في الذاكرة الأبدية مع إمكانية البحث والتثبيت وإعادة التشغيل بضغطة واحدة
-                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -2873,7 +3119,6 @@ export default function KaliEnvPage() {
               </div>
 
               <div className="flex-1 grid grid-cols-12 gap-3 min-h-0">
-                {/* Left 8 cols: Eternal Memory Stream */}
                 <div className="col-span-12 lg:col-span-8 overflow-y-auto space-y-2 pr-1">
                   {eternalMemory.map((m) => (
                     <div
@@ -2885,14 +3130,11 @@ export default function KaliEnvPage() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold">
-                            {m.kind.toUpperCase()}
+                            {String(m.kind || "note").toUpperCase()}
                           </span>
                           <span className="text-xs font-bold text-white">{m.title}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono text-slate-400" dir="ltr">
-                            {m.timestamp.slice(0, 19).replace("T", " ")}
-                          </span>
                           <button
                             onClick={() => void togglePinMemory(m.id)}
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -2932,7 +3174,6 @@ export default function KaliEnvPage() {
                   ))}
                 </div>
 
-                {/* Right 4 cols: Add Eternal Note + 67.11GB Cloud Mirrors */}
                 <div className="col-span-12 lg:col-span-4 flex flex-col gap-3 overflow-y-auto">
                   <div className="p-3 rounded-xl bg-[#141824] border border-amber-500/35 space-y-2">
                     <div className="text-xs font-black text-amber-300">إضافة اكتشاف / ملاحظة للذاكرة الأبدية</div>
@@ -2958,10 +3199,8 @@ export default function KaliEnvPage() {
                   </div>
 
                   <div className="p-3 rounded-xl bg-[#141824] border border-purple-500/35 space-y-1.5">
-                    <div className="text-xs font-black text-purple-300">
-                      المخازن السحابية الثمانية ({storageText})
-                    </div>
-                    {(storageHub?.repos ?? []).map((r) => (
+                    <div className="text-xs font-black text-purple-300">المخازن السحابية الثمانية ({storageText})</div>
+                    {(Array.isArray(storageHub?.repos) ? storageHub!.repos : []).map((r) => (
                       <div key={r.name} className="p-1.5 rounded bg-[#0e1118] flex justify-between text-xs font-mono" dir="ltr">
                         <span className="text-white">{r.name}</span>
                         <span className="text-purple-300 font-bold">{r.sizeHuman}</span>
@@ -2978,15 +3217,11 @@ export default function KaliEnvPage() {
            * ═════════════════════════════════════════════════════════════════ */}
           {activeWorkspace === 5 && (
             <div className="relative z-10 flex-1 grid grid-cols-12 gap-2.5 min-h-0">
-              {/* Left 4 cols: Complete Directory of all 32 Platform Capabilities */}
               <div className="col-span-12 lg:col-span-4 bg-[#0e1118]/95 rounded-xl border border-purple-500/40 p-2.5 flex flex-col min-h-0 overflow-hidden">
                 <div className="pb-2 border-b border-slate-800">
                   <div className="text-xs font-black text-purple-300 flex items-center gap-1.5">
                     <Compass className="w-4 h-4 text-[#ff2b4d]" />
                     <span>فتح كل شيء — الدمج الشامل لكل قدرات المنصة (32 نظامًا)</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">
-                    اضغط على أي نظام لفتحه فورًا داخل نافذة كالي اليمنى أو في صفحة مستقلة
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-1.5 pt-2">
@@ -3010,7 +3245,6 @@ export default function KaliEnvPage() {
                           setLocation(app.route);
                         }}
                         className="px-2 py-1 rounded bg-slate-800 hover:bg-[#ff2b4d] text-[10px] font-mono text-slate-200 shrink-0"
-                        title="فتح بملء المتصفح"
                       >
                         ملء الشاشة ↗
                       </button>
@@ -3019,7 +3253,6 @@ export default function KaliEnvPage() {
                 </div>
               </div>
 
-              {/* Right 8 cols: Live Embedded Platform Window */}
               <div className="col-span-12 lg:col-span-8 bg-[#0b0d13]/95 rounded-xl border border-cyan-500/45 flex flex-col min-h-0 overflow-hidden shadow-2xl">
                 <div className="h-8 bg-[#121620] border-b border-slate-800 px-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -3043,6 +3276,184 @@ export default function KaliEnvPage() {
                   title={embeddedAppTitle}
                   className="flex-1 w-full h-full border-0 bg-[#06080f]"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* ═════════════════════════════════════════════════════════════════
+           * WORKSPACE 6: KALI PURPLE 360° ATTACK SURFACE GRAPH + AUTOPILOT + CONNECTIONS
+           * ═════════════════════════════════════════════════════════════════ */}
+          {activeWorkspace === 6 && (
+            <div className="relative z-10 flex-1 grid grid-cols-12 gap-3 min-h-0 overflow-hidden">
+              {/* Left 7 cols: 360° Attack Surface Graph + NIST CSF 2.0 Matrix */}
+              <div className="col-span-12 lg:col-span-7 bg-[#0c0f18]/95 rounded-xl border border-purple-500/45 p-3 flex flex-col gap-2.5 min-h-0 overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div>
+                    <h2 className="text-sm font-black text-purple-300 flex items-center gap-2">
+                      <Network className="w-4 h-4 text-[#ff2b4d]" />
+                      <span>خريطة سطح الهجوم والأصول الحية 360° (BloodHound / Surface Command Style)</span>
+                    </h2>
+                    <p className="text-[11px] text-slate-400">
+                      تحليل حي لـ DNS، عناوين IPv4/IPv6، خوادم البريد والأسماء، والخدمات للهدف ({activeTarget})
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => void loadAttackGraph(activeTarget)}
+                    className="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold"
+                  >
+                    فحص الهدف وتحديث الخريطة
+                  </button>
+                </div>
+
+                {/* Interactive SVG Visual Topology */}
+                <div className="relative h-56 bg-[#07090f] rounded-xl border border-slate-800 p-3 flex items-center justify-center overflow-hidden">
+                  <svg viewBox="0 0 700 220" className="w-full h-full">
+                    {/* Connecting lines from center Target (350,110) to surrounding nodes */}
+                    {(attackGraph?.nodes ?? []).slice(1, 9).map((n, idx, arr) => {
+                      const angle = (idx / Math.max(1, arr.length)) * Math.PI * 2;
+                      const x = Math.round(350 + Math.cos(angle) * 230);
+                      const y = Math.round(110 + Math.sin(angle) * 80);
+                      return (
+                        <g key={n.id} onClick={() => setSelectedGraphNode(n)} className="cursor-pointer">
+                          <line x1={350} y1={110} x2={x} y2={y} stroke="#a855f7" strokeWidth="1.5" strokeDasharray="4 3" />
+                          <rect
+                            x={x - 68}
+                            y={y - 16}
+                            width={136}
+                            height={32}
+                            rx={8}
+                            fill={selectedGraphNode?.id === n.id ? "#3b0764" : "#111827"}
+                            stroke={n.status === "ok" ? "#10b981" : n.status === "warn" ? "#f59e0b" : "#38bdf8"}
+                            strokeWidth="1.5"
+                          />
+                          <text x={x} y={y + 4} textAnchor="middle" fill="#e2e8f0" fontSize="10" fontFamily="monospace">
+                            {n.label.slice(0, 18)}
+                          </text>
+                        </g>
+                      );
+                    })}
+                    {/* Center Target Node */}
+                    <g>
+                      <circle cx={350} cy={110} r={42} fill="#2e0516" stroke="#ff2b4d" strokeWidth="2.5" />
+                      <text x={350} y={106} textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                        {activeTarget.slice(0, 14)}
+                      </text>
+                      <text x={350} y={122} textAnchor="middle" fill="#ff8fa3" fontSize="9" fontFamily="monospace">
+                        TARGET 360°
+                      </text>
+                    </g>
+                  </svg>
+                </div>
+
+                {selectedGraphNode && (
+                  <div className="p-2.5 rounded-xl bg-[#131826] border border-cyan-500/40 flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-bold text-cyan-300" dir="ltr">
+                        [{selectedGraphNode.type.toUpperCase()}] {selectedGraphNode.label}
+                      </div>
+                      <div className="text-[11px] text-slate-300">{selectedGraphNode.detail}</div>
+                      <div className="text-[10px] font-mono text-emerald-300 mt-0.5" dir="ltr">
+                        $ {selectedGraphNode.recommendedCmd}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setActiveWorkspace(1);
+                        setTermCmd(selectedGraphNode.recommendedCmd);
+                        void execInTerminal(selectedGraphNode.recommendedCmd);
+                      }}
+                      className="px-3 py-1.5 rounded bg-[#ff2b4d] text-white text-xs font-bold shrink-0"
+                    >
+                      تشغيل الفحص في التريمنال ▶
+                    </button>
+                  </div>
+                )}
+
+                {/* NIST CSF 2.0 6-Pillar Kali Purple Matrix */}
+                <div className="space-y-1.5">
+                  <div className="text-xs font-black text-white">
+                    مصفوفة Kali Purple الدفاعية والهجومية (NIST CSF 2.0 — 6 Pillars):
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {(attackGraph?.nistCsf2 ?? []).map((pillar) => (
+                      <div key={pillar.id} className="p-2.5 rounded-xl bg-[#131826] border border-slate-800 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white">{pillar.title_ar}</span>
+                          <span className="text-xs font-mono font-black text-emerald-400">{pillar.score}%</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1" dir="ltr">
+                          {pillar.tools.map((t) => (
+                            <button
+                              key={t}
+                              onClick={() => {
+                                setActiveWorkspace(1);
+                                openToolWithAutoHelp(t, false);
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-black/50 hover:bg-purple-500/30 text-cyan-300 font-mono text-[9px]"
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right 5 cols: Kali Autopilot 2099 + Live Unified Connections Hub */}
+              <div className="col-span-12 lg:col-span-5 flex flex-col gap-3 min-h-0 overflow-y-auto">
+                <div className="p-3 rounded-xl bg-[#0c0f18]/95 border border-emerald-500/40 space-y-2">
+                  <div className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-[#ff2b4d]" />
+                    <span>باني ومشغّل سلاسل Kali Autopilot 2099 (Red / Blue / Purple / AI-SPM)</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {autopilotTemplates.map((tpl) => (
+                      <div key={tpl.id} className="p-2.5 rounded-lg bg-[#141926] border border-slate-800 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-white">{tpl.title_ar}</span>
+                          <button
+                            onClick={() => void runAutopilotChain(tpl.id)}
+                            disabled={autopilotRunningId !== null}
+                            className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shrink-0"
+                          >
+                            {autopilotRunningId === tpl.id ? "جاري التشغيل..." : "تشغيل السلسلة ▶"}
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-slate-400">{tpl.desc_ar}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {autopilotOutput && (
+                    <pre
+                      dir="ltr"
+                      className="p-2 rounded bg-black/90 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 max-h-40 overflow-y-auto whitespace-pre-wrap"
+                    >
+                      {autopilotOutput}
+                    </pre>
+                  )}
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#0c0f18]/95 border border-cyan-500/40 space-y-2">
+                  <div className="text-xs font-black text-cyan-300 flex items-center gap-1.5">
+                    <Radio className="w-4 h-4 text-emerald-400" />
+                    <span>مركز الاتصالات والتكاملات الحية الموحد (Unified Connections 2099)</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {connections.map((c) => (
+                      <div key={c.id} className="p-2 rounded-lg bg-[#141926] border border-slate-800 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-white truncate">{c.name}</div>
+                          <div className="text-[10px] text-cyan-300">{c.metrics}</div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold shrink-0" dir="ltr">
+                          {c.status} ({c.latencyMs}ms)
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}
