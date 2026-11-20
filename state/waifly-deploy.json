@@ -1,67 +1,51 @@
 {
-  "at": "2026-11-20T04:20:05.426Z",
+  "at": "2026-11-20T13:26:27.489Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-20T04:19:19Z",
-    "size": 4260266
+    "updatedAt": "2026-11-20T13:00:00Z",
+    "size": 4468036
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "86fa40ce92d15f8c78b8a225850765443dcbf01d",
-    "builtAt": "2026-11-20T04:04:04.609Z",
+    "commit": "3b379bf9ac7c932681c1f58566de8ec9bac0d53d",
+    "builtAt": "2026-11-20T12:59:38.806Z",
     "files": 190,
-    "builtBy": "local"
+    "builtBy": "github-actions"
   },
   "boot": {
-    "commit": "86fa40ce92d15f8c78b8a225850765443dcbf01d",
-    "builtAt": "2026-11-20T04:04:04.609Z",
+    "commit": "3b379bf9ac7c932681c1f58566de8ec9bac0d53d",
+    "builtAt": "2026-11-20T12:59:38.806Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-20T04:17:32Z) — حارس لوب التحديث",
-    "lastCheckAt": "2026-11-20T04:18:50.146Z",
-    "currentBuiltAt": "2026-11-20T04:04:04.609Z",
-    "latestReleaseAt": "2026-11-20T04:17:32Z",
+    "lastDetail": "مفيش أحدث من اللي شغّال (فرق 21 ثانية)",
+    "lastCheckAt": "2026-11-20T13:26:02.931Z",
+    "currentBuiltAt": "2026-11-20T12:59:38.806Z",
+    "latestReleaseAt": "2026-11-20T13:00:00Z",
     "restartNeeded": false
   },
-  "updaterInstall": {
-    "status": 200,
-    "lastResult": "installing",
-    "detail": "بينزّل النسخة الجديدة ويطبّقها — البرنامج هيعيد تشغيل نفسه"
-  },
-  "restartHttp": 200,
-  "action": "restart_requested",
-  "bootAfter": {
-    "commit": "86fa40ce92d15f8c78b8a225850765443dcbf01d",
-    "builtAt": "2026-11-20T04:04:04.609Z",
-    "dir": "/home/container"
-  },
-  "fresh": false,
+  "updaterInstall": null,
+  "restartHttp": null,
+  "action": "fresh",
+  "bootAfter": null,
+  "fresh": true,
   "notes": [],
   "page": {
     "status": 200,
     "cacheControl": "no-store",
-    "servedAsset": "/assets/index-BzXc2RwZ.js",
+    "servedAsset": "/assets/index-CSBkunf_.js",
     "htmlBytes": 2484
   },
   "fleet": {
     "status": 200,
-    "count": 9,
+    "count": 1,
     "ids": [
-      "self-node",
-      "gh-22-0036",
-      "gh-21-0044",
-      "gh-24-0045",
-      "gh-28-0038",
-      "gh-25-0042",
-      "gh-31-0038",
-      "gh-29-0041",
-      "gh-23-0037"
+      "self-node"
     ]
   }
 }
