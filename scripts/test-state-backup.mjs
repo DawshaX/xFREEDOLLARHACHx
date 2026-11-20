@@ -27,16 +27,16 @@ fs.mkdirSync(path.join(work, "state", "vuln-corpus"), { recursive: true });
 fs.writeFileSync(path.join(work, "state", "vuln-corpus", "cves.jsonl.gz"), "gzip-fake");
 fs.writeFileSync(path.join(work, "state", "draft.json.tmp"), "transient");
 
-await t("بلا توكن: النسخ يقول «مش مفعّل» بصراحة", async () => {
+await t("بلا توكن: النسخ يحفظ الأرشيف المحلي ويوضّح عدم الرفع السحابي", async () => {
   const out = await sb.backupStateToGithub();
-  assert.equal(out.ok, false);
-  assert.match(out.detail, /GITHUB_TOKEN/);
+  assert.equal(out.ok, true);
+  assert.match(out.detail, /state-latest\.zip/);
 });
 
-await t("بلا توكن: الاسترجاع متعطّل بصراحة مش استثناء", async () => {
+await t("بلا توكن: الاسترجاع يسترجع من الأرشيف المحلي أو الإصدار العام", async () => {
   const out = await sb.restoreStateFromGithubIfNeeded();
-  assert.equal(out.restored, false);
-  assert.match(out.detail, /توكن/);
+  assert.equal(out.restored, true);
+  assert.match(out.detail, /اترجّع/);
 });
 
 await t("لو الذاكرة الحيّة فيها محادثات: الاسترجاع بيقول الطازة كسبت", async () => {

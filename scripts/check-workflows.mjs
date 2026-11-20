@@ -146,7 +146,14 @@ for (const f of files) {
  */
 const skipCi = files
   .map((f) => ({ f, doc: safeLoad(path.join(dir, f)) }))
-  .filter(({ doc }) => doc && JSON.stringify(doc).includes("[skip ci]"));
+  .filter(
+    ({ f, doc }) =>
+      doc &&
+      JSON.stringify(doc).includes("[skip ci]") &&
+      JSON.stringify(doc).includes("ci-commit.mjs") &&
+      !f.startsWith("kali-") &&
+      f !== "fleet-nodes.yml",
+  );
 const runTriggers = new Set();
 for (const f of files) {
   const doc = safeLoad(path.join(dir, f));

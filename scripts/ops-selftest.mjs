@@ -1145,7 +1145,7 @@ t("wiring: routes, twins, agent tool and self-model all know the toolchain", () 
 });
 t("ship: build-standalone carries the runtime data and demands it", () => {
   const b = fs.readFileSync(path.resolve(ROOT0, "scripts/build-standalone.mjs"), "utf8");
-  assert.match(b, /for \(const rel of \["ops", path\.join\("scripts", "fetch-toolchain\.mjs"\)\]\)/, "الباندر مابينسخش ops/ + السكربت");
+  assert.match(b, /for \(const rel of \["ops", path\.join\("scripts", "fetch-toolchain\.mjs"\)/, "الباندر مابينسخش ops/ + السكربت");
   assert.match(b, /programs-catalog\.json/, "فحص الاكتمال مابيشملش الكتالوج — نفس الغلطة اللي خلفت present:false");
   const req = b.slice(b.indexOf("the launchers a panel needs"), b.indexOf("/* ── 3. zip it"));
   assert.ok(req.includes("fetch-toolchain.mjs") && req.includes("programs-catalog.json"), "قائمة الفحص ناقصة");

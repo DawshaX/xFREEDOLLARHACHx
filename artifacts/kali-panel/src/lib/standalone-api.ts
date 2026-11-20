@@ -6006,6 +6006,14 @@ if (path === "/fleet/system") {
     };
   }
 
+  if (path.startsWith("/kali-env/") || path === "/ops/tools/python" || path === "/ops/fleet/status") {
+    return {
+      ok: true,
+      static: true,
+      note: "الوضع الثابت: مسارات بيئة كالي 2099 الحية تعمل على الهَب (https://nova.waifly.com).",
+    };
+  }
+
   if (path === "/local-agent/agents") {
     // One real node, no pretending: this browser tab, running the engine right
     // now. It is the only machine a static page can honestly claim.

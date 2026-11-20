@@ -157,8 +157,8 @@ export function Placeholder({
           try {
             const ev = JSON.parse(payload) as { type: string; text?: string; command?: string; exitCode?: number | null; plane?: string; durationMs?: number };
             if (ev.type === "start") setOutLog((l) => [...l, { text: `$ ${ev.command ?? tool}`, kind: "meta" }]);
-            else if (ev.type === "stdout" && ev.text) setOutLog((l) => [...l.slice(-300), { text: ev.text, kind: "out" }]);
-            else if (ev.type === "stderr" && ev.text) setOutLog((l) => [...l.slice(-300), { text: ev.text, kind: "err" }]);
+            else if (ev.type === "stdout" && ev.text) setOutLog((l) => [...l.slice(-300), { text: String(ev.text ?? ""), kind: "out" }]);
+            else if (ev.type === "stderr" && ev.text) setOutLog((l) => [...l.slice(-300), { text: String(ev.text ?? ""), kind: "err" }]);
             else if (ev.type === "done") setOutLog((l) => [...l, { text: `✓ انتهى · exit=${ev.exitCode ?? 0} · ${ev.durationMs ?? 0}ms · على ${ev.plane ?? "كالي"}`, kind: "meta" }]);
           } catch { /* ignore */ }
         }
@@ -201,8 +201,8 @@ export function Placeholder({
           if (payload === "[DONE]") continue;
           try {
             const ev = JSON.parse(payload) as { type: string; text?: string; exitCode?: number | null; plane?: string; durationMs?: number };
-            if (ev.type === "stdout" && ev.text) setOutLog((l) => [...l.slice(-300), { text: ev.text, kind: "out" }]);
-            else if (ev.type === "stderr" && ev.text) setOutLog((l) => [...l.slice(-300), { text: ev.text, kind: "err" }]);
+            if (ev.type === "stdout" && ev.text) setOutLog((l) => [...l.slice(-300), { text: String(ev.text ?? ""), kind: "out" }]);
+            else if (ev.type === "stderr" && ev.text) setOutLog((l) => [...l.slice(-300), { text: String(ev.text ?? ""), kind: "err" }]);
             else if (ev.type === "done") setOutLog((l) => [...l, { text: `✓ انتهى · exit=${ev.exitCode ?? 0} · ${ev.durationMs ?? 0}ms · على ${ev.plane ?? "كالي"}`, kind: "meta" }]);
           } catch { /* ignore */ }
         }

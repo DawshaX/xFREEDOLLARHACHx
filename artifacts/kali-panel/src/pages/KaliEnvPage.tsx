@@ -34,6 +34,10 @@ import {
   Radio,
   Layers,
   GitBranch,
+  Eye,
+  DollarSign,
+  Award,
+  FileCheck2,
 } from "lucide-react";
 
 async function apiFetch<T = any>(url: string, init?: RequestInit): Promise<T> {
@@ -281,6 +285,32 @@ interface VisitorIntelResp {
   };
 }
 
+interface BountyProgramItem {
+  id: string;
+  category: string;
+  title_ar: string;
+  tierRange: string;
+  tools: string[];
+  desc_ar: string;
+}
+
+interface BountyHuntResp {
+  ok: boolean;
+  target: string;
+  program: BountyProgramItem;
+  elapsedMs: number;
+  findingsCount: number;
+  findings: {
+    title: string;
+    severity: "HIGH" | "MEDIUM" | "LOW" | "INFO";
+    cvss: string;
+    bountyEst: string;
+    remediation: string;
+  }[];
+  reportMarkdown: string;
+  telegramSent: boolean;
+}
+
 const KALI_WHISKER_CATEGORIES = [
   { id: "all", code: "00", label: "All Applications (294)", ar: "كل التطبيقات والأدوات" },
   { id: "الاستطلاع وOSINT", code: "01", label: "01 - Information Gathering", ar: "جمع المعلومات وOSINT" },
@@ -463,6 +493,10 @@ export default function KaliEnvPage() {
   const [tgChatIdInput, setTgChatIdInput] = useState<string>("");
   const [tgConfigBusy, setTgConfigBusy] = useState<boolean>(false);
   const [tgConfigMsg, setTgConfigMsg] = useState<string>("");
+  const [bountyPrograms, setBountyPrograms] = useState<BountyProgramItem[]>([]);
+  const [selectedBountyProgramId, setSelectedBountyProgramId] = useState<string>("bugbounty-web-cloud");
+  const [bountyHunting, setBountyHunting] = useState<boolean>(false);
+  const [bountyResult, setBountyResult] = useState<BountyHuntResp | null>(null);
   const [loading, setLoading] = useState(true);
   const [healing, setHealing] = useState(false);
 
@@ -1266,6 +1300,40 @@ export default function KaliEnvPage() {
     [tgBotTokenInput, tgChatIdInput],
   );
 
+  const loadBountyEngine = useCallback(async () => {
+    try {
+      const r = await apiFetch<{ ok: boolean; programs: BountyProgramItem[] }>("/api/kali-env/bounty-engine");
+      if (Array.isArray(r?.programs)) {
+        setBountyPrograms(r.programs);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const runBountyHunt = useCallback(
+    async (progId = selectedBountyProgramId) => {
+      setBountyHunting(true);
+      setSelectedBountyProgramId(progId);
+      try {
+        const r = await apiFetch<BountyHuntResp>("/api/kali-env/bounty-engine/hunt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            target: activeTarget,
+            programId: progId,
+            sendTelegram: true,
+          }),
+        });
+        if (r?.ok) {
+          setBountyResult(r);
+          await loadEternalMemory();
+        }
+      } catch { /* ignore */ } finally {
+        setBountyHunting(false);
+      }
+    },
+    [selectedBountyProgramId, activeTarget, loadEternalMemory],
+  );
+
   const triggerSelfHeal = useCallback(async () => {
     setHealing(true);
     try {
@@ -1284,7 +1352,8 @@ export default function KaliEnvPage() {
     void runCyberBrowser("https://example.com");
     void loadAttackGraph("example.com");
     void loadVisitorIntel(true);
-  }, [refreshAll, captureDesktopFrame, loadFs, runCyberBrowser, loadAttackGraph, loadVisitorIntel]);
+    void loadBountyEngine();
+  }, [refreshAll, captureDesktopFrame, loadFs, runCyberBrowser, loadAttackGraph, loadVisitorIntel, loadBountyEngine]);
 
   useEffect(() => {
     if (!autoStream) return;
@@ -3830,6 +3899,79 @@ export default function KaliEnvPage() {
                     >
                       {visitorScanOutput}
                     </pre>
+                  )}
+                </div>
+
+                {/* 💰 ماكينة صيد المكافآت والعوائد المليارية والتقارير التنفيذية 2099 */}
+                <div className="p-3 rounded-xl bg-gradient-to-br from-[#0e1512]/95 via-[#0c121b]/95 to-[#181209]/95 border border-amber-500/50 space-y-2.5 shadow-[0_0_24px_rgba(245,158,11,0.16)]">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="text-xs font-black text-amber-300 flex items-center gap-1.5">
+                      <DollarSign className="w-4 h-4 text-emerald-400" />
+                      <span>ماكينة صيد المكافآت والعوائد المليارية والتقارير التنفيذية 2099</span>
+                    </div>
+                    <button
+                      onClick={() => void runBountyHunt(selectedBountyProgramId)}
+                      disabled={bountyHunting}
+                      className="px-2.5 py-1 rounded bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-slate-950 text-[10px] font-black flex items-center gap-1"
+                    >
+                      <Award className="w-3.5 h-3.5" />
+                      <span>{bountyHunting ? "جارٍ صيد المكافآت وتوليد التقرير..." : `بدء الصيد والتدقيق على ${activeTarget}`}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {bountyPrograms.map((p) => (
+                      <div
+                        key={p.id}
+                        onClick={() => setSelectedBountyProgramId(p.id)}
+                        className={`p-2 rounded-lg border cursor-pointer transition ${
+                          selectedBountyProgramId === p.id
+                            ? "bg-amber-950/35 border-amber-400/70"
+                            : "bg-[#111622] border-slate-800 hover:border-amber-500/40"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold text-white">{p.title_ar}</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold shrink-0" dir="ltr">
+                            {p.tierRange}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-300 mt-0.5">{p.desc_ar}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {bountyResult && (
+                    <div className="p-2.5 rounded-lg bg-[#080b11] border border-emerald-500/50 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-black text-emerald-300">
+                          ✅ اكتمل التدقيق التنفيذي لـ {bountyResult.target} ({bountyResult.findingsCount} نتائج · {bountyResult.elapsedMs}ms)
+                        </span>
+                        <button
+                          onClick={() => {
+                            setEditorPath(`/opt/nova-workspaces/recon-lab/bounty-report-${bountyResult.target}.md`);
+                            setEditorContent(bountyResult.reportMarkdown);
+                            setActiveWorkspace(2);
+                          }}
+                          className="px-2 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold flex items-center gap-1"
+                        >
+                          <FileCheck2 className="w-3 h-3" />
+                          <span>فتح التقرير في المحرر</span>
+                        </button>
+                      </div>
+                      <div className="space-y-1 max-h-36 overflow-y-auto">
+                        {bountyResult.findings.map((f, idx) => (
+                          <div key={idx} className="p-1.5 rounded bg-[#101624] border border-slate-800 text-[10px]">
+                            <div className="font-bold text-amber-300">
+                              [{f.severity}] {f.title}
+                            </div>
+                            <div className="text-emerald-300 font-mono" dir="ltr">
+                              CVSS: {f.cvss} · Est: {f.bountyEst}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
 
