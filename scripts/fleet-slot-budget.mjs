@@ -53,9 +53,9 @@
 /** WANTED: argv[2] ← FLEET_NODES ← 19. الرقم مش hardcoded في الـ workflow. */
 const WANTED = Math.max(
   0,
-  Number(process.argv[2] ?? process.env.FLEET_NODES ?? 19) || 19,
+  Number(process.argv[2] ?? process.env.FLEET_NODES ?? 10) || 10,
 );
-const RESERVE = Math.max(0, Number(process.argv[3] ?? 1));
+const RESERVE = Math.max(10, Number(process.argv[3] ?? 10));
 const PLAN_MAX = Number(process.env.GH_PLAN_MAX ?? 20);
 /** عمر العقدة 6 ساعات (timeout-minutes: 350 ≈ 5.8h). أي run أقدم من كده ميت. */
 const NODE_TTL_MIN = Math.max(30, Number(process.env.NODE_TTL_MIN ?? 360));
