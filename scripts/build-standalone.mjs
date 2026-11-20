@@ -387,7 +387,7 @@ if (fs.existsSync(agentSrc)) {
 // `ops/` كله 804 KB (الكتالوج 780 KB + أهداف التحقق 3.8 KB): رخيص مقابل 300 MB.
 // `scripts/fetch-toolchain.mjs` بقى داخل الحزمة عشان المحرك يقدر يجهّز إيده
 // بنفسه على الحاوية (`POST /api/ops/tools/provision`) من غير root ومن غير git.
-for (const rel of ["ops", path.join("scripts", "fetch-toolchain.mjs")]) {
+for (const rel of ["ops", path.join("scripts", "fetch-toolchain.mjs"), path.join("scripts", "fetch-python-tools.mjs")]) {
   const src = path.join(ROOT, rel);
   if (!fs.existsSync(src)) {
     console.error(`✗ الحزمة محتاجة ${rel} وقت التشغيل وهو مش في الشجرة — الباندر ما بيكملش.`);
