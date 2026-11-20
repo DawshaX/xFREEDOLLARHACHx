@@ -1,9 +1,9 @@
 {
-  "at": "2026-11-20T12:27:49.426Z",
-  "seat": null,
+  "at": "2026-11-20T13:28:13.238Z",
+  "seat": "openai",
   "thinking": {
-    "reply": null,
-    "why": "مفيش مقعد رد",
+    "reply": "المنصة حالياً معكوسة في المدى القصير: حجم الهجمات مرتفع لكنه معاد احتوائه، والعميل يركز على تحسين الواجهة ب٢٤ ساعة معدلة. أهم خطوة هي تنفيذ اختبار استقرار SLO لواجهة المستخدم قبل ٢٤ ساعة مطلقاً.",
+    "why": "الإجابة لا تتطلب البحث أو lookup",
     "action": {
       "kind": "none",
       "arg": ""
@@ -13,10 +13,10 @@
   "answered": null,
   "senses": {
     "corpus": {
-      "total": 429733,
-      "at": "2026-11-20T11:52:33.501Z",
+      "total": 429754,
+      "at": "2026-11-20T13:06:25.399Z",
       "critical": 40209,
-      "high": 163643,
+      "high": 163648,
       "kev": 1786,
       "coverage": 1,
       "nextStartIndex": 0,
@@ -399,19 +399,13 @@
       "says": "اتفحص 4 هدف بصراحة — صفر مطابقات النهاردة. ده نتيجة، مش فشل."
     },
     "advisories": {
-      "total": 1014,
-      "at": "2026-11-19T13:12:07.727Z",
+      "total": 1005,
+      "at": "2026-11-20T12:57:58.906Z",
       "critical": 171
     }
   },
-  "failures": [
-    "openai: The operation was aborted due to timeout",
-    "mistral: HTTP 402",
-    "ovh-llama: The operation was aborted due to timeout",
-    "ovh-ai: The operation was aborted due to timeout",
-    "llama: HTTP 404"
-  ],
-  "says_ar": "المحاولة فشلت — التفاصيل في failures",
+  "failures": [],
+  "says_ar": "فكّرت على openai · المنصة حالياً معكوسة في المدى القصير: حجم الهجمات مرتفع لكنه معاد احتوائه، والعميل يركز على تحسين الواجهة ب٢٤ ساعة معدلة. أهم خطوة هي تنفيذ اختبار استقرار SLO لواجهة المستخدم قبل ٢",
   "sources": [
     "state/vuln-corpus-index.json",
     "state/hunt-latest.json",
