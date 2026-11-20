@@ -425,6 +425,49 @@ const INTENT: Array<{ test: RegExp; tools: (msg: string) => PlannedStep[] }> = [
       return [{ tool: "kali_attack_graph", args: { target: host } }];
     },
   },
+  {
+    test: /(?:426|مصفوفة الثغرات|قاعدة الثغرات العالمية|kali_vuln_426_matrix|متى يستخدمها)/i,
+    tools: (msg) => {
+      const q = cleanQuery(msg).replace(/426|مصفوفة|قاعدة|الثغرات|العالمية/gi, "").trim();
+      return [{ tool: "kali_vuln_426_matrix", args: { query: q, limit: 10 } }];
+    },
+  },
+  {
+    test: /(?:تعديل ثغرة|تعديل الثغرات|تحوير ثغرة|دمج ثغرات|دمج الثغرات|وضع الروت|الحماية القصوى|الحماية القصوي|هجوم كامل|kali_exploit_mutate_fuse)/i,
+    tools: (msg) => {
+      const host = extractTarget(msg) || "example.com";
+      const mode = /حماية|تحصين/i.test(msg) ? "max-protection" : "root-full-attack";
+      const condition = /jwt|oauth|توكن/i.test(msg)
+        ? "jwt-oauth"
+        : /graphql|api/i.test(msg)
+          ? "graphql-api"
+          : /روت|root|لينكس|linux/i.test(msg)
+            ? "linux-root"
+            : "waf-cloudflare";
+      return [{ tool: "kali_exploit_mutate_fuse", args: { target: host, condition, mode } }];
+    },
+  },
+  {
+    test: /(?:قراءة كتب|قرائة كتب|تدريب كتب|الكتب السيبرانية|حملو كتب|كتاب كالي|كتاب سكة المليارات|kali_books_trainer)/i,
+    tools: (msg) => {
+      const host = extractTarget(msg) || "example.com";
+      const bookId = /مليارات|باونتي|bounty/i.test(msg)
+        ? "book-bug-bounty-billions-2099"
+        : /426/i.test(msg)
+          ? "book-global-426-vuln-matrix"
+          : /روت|root|تصعيد/i.test(msg)
+            ? "book-linux-root-privesc-2099"
+            : "book-kali-revealed-2099";
+      return [{ tool: "kali_books_trainer", args: { bookId, target: host } }];
+    },
+  },
+  {
+    test: /(?:المختبر الحي|المختبر السيادي|الاجينت النهائي|الأجينت النهائي|يستشيرني|استشارة ذكية|ما يفكر|sovereign_live_lab)/i,
+    tools: (msg) => {
+      const host = extractTarget(msg) || "example.com";
+      return [{ tool: "sovereign_live_lab", args: { target: host } }];
+    },
+  },
   /* ── TEST9: التطبيقات المتصلة — الأجينت يفهم «ابعت/دوّن/اكتب في» ويشغّل
    * التطبيق الحقيقي بأدوات app_* — حتى بلا LLM (المخطّط الاستدلالي). ── */
   {
@@ -774,12 +817,16 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
     if (/أوتوبايلوت|autopilot/i.test(src)) return "سلسلة Kali Autopilot 360°";
     if (/رادار الزوار|visitor_radar/i.test(src)) return "رادار الزوار وتليجرام";
     if (/خريطة الهجوم|attack_graph/i.test(src)) return "خريطة سطح الهجوم 360°";
+    if (/426|kali_vuln_426_matrix/i.test(src)) return "مصفوفة الـ426 بصمة استغلال عالمية";
+    if (/تعديل ثغرة|دمج الثغرات|kali_exploit_mutate_fuse/i.test(src)) return "تعديل ودمج الثغرات ووضع الروت والحماية القصوى";
+    if (/كتب|kali_books_trainer/i.test(src)) return "تدريب وتطبيق الكتب السيبرانية الـ16";
+    if (/المختبر الحي|sovereign_live_lab/i.test(src)) return "المختبر السيادي الحي والوعي والاستشارة الذكية";
     return "تحليل الطلب";
   };
   // ── القدرات أول: «تقدر تفتح متصفح وتشتغل علي ميتاسبلويت؟» لازم تتحلّل من خريطة
   // القدرات (تحريفات الإملائية، عربي/إنجليزي) وتتحول لأدوات فعلًا — مش تتساب
   // للموديل يخمّن دقيقة ويرجّع إنكار غلط.
-  const isSovereign2099 = /(?:kali_bounty_hunt|kali_zeroday_lab|kali_autopilot_2099|kali_visitor_radar|kali_attack_graph|مليارات|بونتي|مكافآت|زيرو\s*داي|زيرو-داي|0-?day|رادار\s+الزوار|أوتوبايلوت|اوتوبايلوت|خريطة\s+(?:سطح\s+)?الهجوم)/i.test(msg);
+  const isSovereign2099 = /(?:kali_bounty_hunt|kali_zeroday_lab|kali_autopilot_2099|kali_visitor_radar|kali_attack_graph|kali_vuln_426_matrix|kali_exploit_mutate_fuse|kali_books_trainer|sovereign_live_lab|مليارات|بونتي|مكافآت|زيرو\s*داي|زيرو-داي|0-?day|رادار\s+الزوار|أوتوبايلوت|اوتوبايلوت|خريطة\s+(?:سطح\s+)?الهجوم|426|تعديل\s+ثغرة|دمج\s+ثغرات|وضع\s+الروت|الحماية\s+القصو[ىي]|المختبر\s+الحي|قرائة\s+كتب|قراءة\s+كتب)/i.test(msg);
   if (!isSovereign2099) {
     for (const step of capabilitySteps(msg, 3)) {
       if (!AGENT_TOOL_NAMES.includes(step.tool)) continue;
@@ -810,6 +857,10 @@ export function heuristicPlan(message: string): { thought: string; steps: Planne
             "kali_autopilot_2099",
             "kali_visitor_radar",
             "kali_attack_graph",
+            "kali_vuln_426_matrix",
+            "kali_exploit_mutate_fuse",
+            "kali_books_trainer",
+            "sovereign_live_lab",
           ].includes(s.tool),
         )
       ) {
@@ -936,6 +987,7 @@ export function identityAnswer(model: SelfModel = buildSelfModel()): string {
   return [
     `أنا **نوفا** — العقل اللي جوه CyberNova، مش بوت ردود. كل حاجة تحت دي **مقاسة الآن**، مش محفوظة:`,
     `- **${model.tools.count}** أداة حقيقية مسجّلة باسمها${topCategories ? ` (${topCategories})` : ""}.`,
+    `- **ترسانة كالي 2099 والمعرفة السيادية:** متصلة بترسانة كالي (266+28 حزمة) بوضع الروت عبر الأسطول، ومستوعبة لـ16 كتاباً سيبرانياً موسوعياً، ومصفوفة الـ426 بصمة استغلال عالمية القابلة للتعديل والدمج، والمختبر السيادي الحي.`,
     `- ${buildLine(model)}`,
     `- ${corpusLine}`,
     `- ${fleetLine}`,

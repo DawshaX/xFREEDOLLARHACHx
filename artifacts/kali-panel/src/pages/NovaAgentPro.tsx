@@ -935,16 +935,31 @@ export default function NovaAgentPro() {
               🕌 بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد · {dayName} · الجلسة {fmtUptime(sessionS)} · التشغيل {fmtUptime(vit.up)}
             </div>
           </div>
-          <div className="mr-auto flex items-center gap-1 flex-wrap">
+          <div className="mr-auto flex items-center gap-1.5 flex-wrap">
             {pill(vit.ok, "السيرفر", vit.ok && vit.ms != null ? ` ${vit.ms}ms` : "")}
             {pill(agents.length > 0 ? true : agentsErr == null ? null : false, `عُقد ×${agents.length || 10}`)}
-            {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools || 92}+294`)}
+            {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools || 96}+294`)}
+            {pill(true, "🎯 426+429K ثغرة")}
+            {pill(true, "📚 16 كتاباً")}
             {pill(cronOn > 0 ? true : null, `كرون ${cronOn}/${cronJobs.length}`)}
             {nexus && pill(true, "🌳 nova-root", ` · خلفية ×${nexus.backgroundFeedCount} · تعلم ×${nexus.learnedInsightsCount}`)}
             <button
               type="button"
+              onClick={() => {
+                setArena("cockpit");
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "liveLab" } }));
+                }, 50);
+              }}
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/55 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-black text-emerald-100 hover:bg-emerald-500/30 transition"
+              title="فتح المختبر السيادي الحي (الوكيل النهائي المدمج والوعي والاستشارة الذكية)"
+            >
+              🧪 المختبر السيادي الحي
+            </button>
+            <button
+              type="button"
               onClick={() => navigate("/kali-env")}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/50 bg-rose-500/15 px-2 py-0.5 text-[9.5px] font-black text-rose-200 hover:bg-rose-500/25 transition"
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/50 bg-rose-500/15 px-2.5 py-1 text-[10px] font-black text-rose-200 hover:bg-rose-500/25 transition"
               title="فتح سطح مكتب كالي لينكس 2099 الكامل"
             >
               🐉 كالي 2099
@@ -1218,20 +1233,25 @@ export default function NovaAgentPro() {
       {/* ── جسم المنصة: المنضدة الكاملة + الشات الجانبي القابل للطيّ ── */}
       <main className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row overflow-hidden">
         <section className="flex min-w-0 flex-1 flex-col min-h-0">
-          <nav className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 border-b border-rose-500/15 overflow-x-auto bg-[#07020b]/85">
-            {ARENAS.map(({ key, labelAr, icon: Icon, color }) => {
+          <nav className="shrink-0 flex items-center gap-2 px-3.5 py-2 border-b border-rose-500/20 overflow-x-auto bg-[#07020b]/90">
+            {ARENAS.map(({ key, labelAr, icon: Icon, color }, idx) => {
               const active = arena === key;
               const badge = key === "cron" && cronJobs.length > 0 ? `${cronOn}/${cronJobs.length}` : null;
               return (
-                <button key={key} onClick={() => setArena(key)}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[10px] font-black transition-all"
-                  style={active
-                    ? { borderColor: color + "80", background: `${color}22`, color, boxShadow: `0 0 16px ${color}35 inset, 0 0 10px ${color}25` }
-                    : { borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)", color: "rgba(255,255,255,0.55)" }}>
-                  <Icon className="w-3.5 h-3.5" />
-                  {labelAr}
-                  {badge && <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-1.5 text-[8px] text-emerald-300 font-mono" dir="ltr">{badge}</span>}
-                </button>
+                <React.Fragment key={key}>
+                  {idx > 0 && (idx === 4 || idx === 8 || idx === 12) && (
+                    <span className="h-5 w-px bg-white/15 shrink-0 mx-0.5" />
+                  )}
+                  <button onClick={() => setArena(key)}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-black transition-all"
+                    style={active
+                      ? { borderColor: color + "85", background: `${color}25`, color, boxShadow: `0 0 16px ${color}35 inset, 0 0 10px ${color}25` }
+                      : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.7)" }}>
+                    <Icon className="w-3.5 h-3.5" />
+                    {labelAr}
+                    {badge && <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-1.5 text-[8.5px] text-emerald-300 font-mono" dir="ltr">{badge}</span>}
+                  </button>
+                </React.Fragment>
               );
             })}
           </nav>

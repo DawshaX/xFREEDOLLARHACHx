@@ -1994,3 +1994,257 @@ router.post("/nova/sessions/:id/auto-chat", async (req, res) => {
     }
   } finally { res.end(); }
 });
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 2099 SOVEREIGN LIVE LAB, 426 GLOBAL VULNERABILITY MATRIX, EXPLOIT MUTATION
+ * & FUSION, AND 16 KALI/HACKING BOOKS TRAINING ENDPOINTS
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+router.get("/live-agent/sovereign-lab", async (req, res) => {
+  try {
+    const { getSovereignLabState } = await import("../lib/sovereign-knowledge-2099");
+    const eternal = readEternalVault();
+    const target = String(req.query.target || eternal.session.activeTarget || "example.com").trim();
+    return res.json(getSovereignLabState(target));
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/live-agent/sovereign-lab/consult", async (req, res) => {
+  try {
+    const { getSovereignLabState, mutateAndFuseVulnerabilities, trainAgentOnBook } = await import("../lib/sovereign-knowledge-2099");
+    const { runKali } = await import("../lib/ops/kali-env");
+    const body = (req.body ?? {}) as {
+      target?: string;
+      questionId?: string;
+      optionId?: string;
+      customDirective?: string;
+      mode?: "root-full-attack" | "max-protection" | "exploit-fusion" | "book-train" | "bounty-0day";
+      executeLive?: boolean;
+    };
+
+    const eternal = readEternalVault();
+    const target = String(body.target || eternal.session.activeTarget || "example.com")
+      .trim()
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/.*$/, "") || "example.com";
+
+    eternal.session.activeTarget = target;
+    const mode = body.mode || "root-full-attack";
+    const directive = String(body.customDirective || "").trim();
+
+    const fusion = mutateAndFuseVulnerabilities({
+      target,
+      condition: mode === "root-full-attack" ? "linux-root" : "waf-cloudflare",
+      customContext: directive || undefined,
+      mode: mode === "max-protection" ? "max-protection" : mode === "root-full-attack" ? "root-full-attack" : "recon-verify",
+    });
+
+    let liveKaliResult: unknown = null;
+    if (body.executeLive !== false) {
+      try {
+        liveKaliResult = await runKali(fusion.executableKaliCommand, 25_000);
+      } catch (e) {
+        liveKaliResult = { ok: false, error: (e as Error).message };
+      }
+    }
+
+    let bookResult: unknown = null;
+    if (mode === "book-train") {
+      bookResult = trainAgentOnBook("book-bug-bounty-billions-2099", target);
+    }
+
+    const summaryAr = directive
+      ? `🧠 استجاب الوكيل النهائي لتوجيهك («${directive}») على الهدف «${target}» بعد استشارة المخاخ الـ7 وتطبيق وضع «${fusion.modeLabelAr}».`
+      : `🧠 نفّذ الوكيل النهائي قرار الاستشارة الذكية (${body.optionId || mode}) على الهدف «${target}» بوضع «${fusion.modeLabelAr}» مع CVSS مركّب ${fusion.combinedCvss}.`;
+
+    appendNexusRawMessage(ROOT_SESSION_ID, {
+      role: "user",
+      content: directive || `[استشارة المختبر السيادي الحي] تطبيق الخيار ${body.optionId || mode} على الهدف ${target}`,
+    });
+    appendNexusRawMessage(ROOT_SESSION_ID, {
+      role: "assistant",
+      content: `${summaryAr}\n\n- **السلسلة المدمجة:** ${fusion.titleAr}\n- **الأمر المنفذ على كالي:** \`${fusion.executableKaliCommand}\`\n- **درع الحماية القصوى:** ${fusion.maxProtectionBlueprint.shieldNameAr}`,
+    });
+
+    eternal.memory.unshift({
+      id: `lab-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      kind: "finding",
+      title: `🧪 قرار المختبر السيادي الحي (${mode}) على ${target}`,
+      target,
+      command: fusion.executableKaliCommand,
+      output: summaryAr,
+      tags: ["sovereign-lab", mode, target],
+    });
+    writeEternalVault(eternal);
+
+    return res.json({
+      ok: true,
+      target,
+      mode,
+      decisionLabel: summaryAr,
+      summaryAr,
+      fusion,
+      fusionResult: {
+        ...fusion,
+        fusedZeroDayCandidate: fusion,
+      },
+      bookResult,
+      liveKaliResult,
+      liveExecution: liveKaliResult
+        ? {
+            command: fusion.executableKaliCommand,
+            output:
+              typeof (liveKaliResult as any)?.stdout === "string"
+                ? `${(liveKaliResult as any).stdout}\n${(liveKaliResult as any).stderr || ""}`.trim()
+                : JSON.stringify(liveKaliResult, null, 2),
+          }
+        : null,
+      labState: getSovereignLabState(target),
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/live-agent/vulns-426", async (req, res) => {
+  try {
+    const { searchGlobal426Vulns } = await import("../lib/sovereign-knowledge-2099");
+    const query = String(req.query.q ?? req.query.query ?? "").trim();
+    const sectorId = String(req.query.sectorId ?? "").trim();
+    const severity = String(req.query.severity ?? "").trim();
+    const kevOnly = req.query.kevOnly === "true" || req.query.kevOnly === "1";
+    const limit = Number(req.query.limit ?? 80) || 80;
+    const offset = Number(req.query.offset ?? 0) || 0;
+    const result = await searchGlobal426Vulns({ query, sectorId, severity, kevOnly, limit, offset });
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/live-agent/vulns-426/mutate-and-fuse", async (req, res) => {
+  try {
+    const { mutateAndFuseVulnerabilities } = await import("../lib/sovereign-knowledge-2099");
+    const { runKali } = await import("../lib/ops/kali-env");
+    const body = (req.body ?? {}) as {
+      vulnIds?: string[];
+      target?: string;
+      condition?: "waf-cloudflare" | "nginx-http2" | "jwt-oauth" | "graphql-api" | "linux-root" | "cloud-imds" | "custom";
+      customContext?: string;
+      mode?: "recon-verify" | "root-full-attack" | "max-protection";
+      executeLive?: boolean;
+    };
+
+    const fused = mutateAndFuseVulnerabilities(body);
+    let liveExecution: unknown = null;
+    if (body.executeLive) {
+      try {
+        liveExecution = await runKali(fused.executableKaliCommand, 25_000);
+      } catch (e) {
+        liveExecution = { ok: false, error: (e as Error).message };
+      }
+    }
+
+    try {
+      const eternal = readEternalVault();
+      eternal.memory.unshift({
+        id: `fuse426-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        kind: "finding",
+        title: `🧬 تعديل ودمج ثغرات الـ426: ${fused.titleAr}`,
+        target: fused.target,
+        command: fused.executableKaliCommand,
+        output: `${fused.howItWorksTogetherAr}\nCVSS: ${fused.combinedCvss} | Novelty: ${fused.noveltyScore}%`,
+        tags: ["vuln-426", fused.condition, fused.mode, fused.target],
+      });
+      writeEternalVault(eternal);
+    } catch {
+      /* ignore */
+    }
+
+    return res.json({
+      ...fused,
+      fused,
+      fusedZeroDayCandidate: fused,
+      liveExecution: liveExecution
+        ? {
+            plane: "Kali Cloud Root Node",
+            command: fused.executableKaliCommand,
+            output:
+              typeof (liveExecution as any)?.stdout === "string"
+                ? `${(liveExecution as any).stdout}\n${(liveExecution as any).stderr || ""}`.trim()
+                : JSON.stringify(liveExecution, null, 2),
+          }
+        : null,
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/live-agent/books", async (_req, res) => {
+  try {
+    const { SOVEREIGN_HACKING_BOOKS, loadBooksTrainingState } = await import("../lib/sovereign-knowledge-2099");
+    const st = loadBooksTrainingState();
+    return res.json({
+      ok: true,
+      totalBooks: SOVEREIGN_HACKING_BOOKS.length + st.customBooks.length,
+      trainedCount: SOVEREIGN_HACKING_BOOKS.length + st.customBooks.length,
+      totalTrainRuns: st.totalTrainRuns,
+      books: SOVEREIGN_HACKING_BOOKS.map((b) => ({
+        ...b,
+        masteryPercent: 100,
+        chapters: b.chapters.map((c) => `${c.titleAr}: ${c.summaryAr}`),
+        trainingRecord: st.trainedBooks[b.id] ?? null,
+      })),
+      customBooks: st.customBooks,
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/live-agent/books/train", async (req, res) => {
+  try {
+    const { trainAgentOnBook } = await import("../lib/sovereign-knowledge-2099");
+    const body = (req.body ?? {}) as { bookId?: string; target?: string };
+    const eternal = readEternalVault();
+    const target = String(body.target || eternal.session.activeTarget || "example.com").trim();
+    const result = trainAgentOnBook(String(body.bookId || "book-kali-revealed-2099"), target);
+
+    appendNexusRawMessage(ROOT_SESSION_ID, {
+      role: "assistant",
+      content: `📚 **تدريب الكتاب السيبراني:** ${result.messageAr}\n- **الهدف التطبيقي:** \`${result.appliedToTarget}\`\n- **أوامر كالي الجاهزة:**\n${result.readyKaliCommands.map((c) => `  - \`${c}\``).join("\n")}`,
+    });
+
+    return res.json({
+      ...result,
+      synthesizedLesson: result.messageAr,
+      extractedRules: result.extractedTactics,
+      appliedCommandsReady: result.readyKaliCommands,
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/live-agent/books/ingest", async (req, res) => {
+  try {
+    const { ingestCustomBook } = await import("../lib/sovereign-knowledge-2099");
+    const body = (req.body ?? {}) as { titleAr?: string; categoryAr?: string; content?: string };
+    if (!body.content || !String(body.content).trim()) {
+      return res.status(400).json({ ok: false, error: "يرجى إدخال محتوى الكتاب أو الدليل التقني." });
+    }
+    const result = ingestCustomBook({
+      titleAr: String(body.titleAr || "كتاب سيبراني مخصص"),
+      categoryAr: body.categoryAr,
+      content: String(body.content),
+    });
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});

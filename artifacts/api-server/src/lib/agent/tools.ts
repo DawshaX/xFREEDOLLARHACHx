@@ -98,7 +98,7 @@ export interface AgentTool {
   name: string;
   title: string;
   description: string;
-  category: "recon" | "intel" | "memory" | "mission" | "utility" | "platform" | "fleet";
+  category: "recon" | "intel" | "memory" | "mission" | "utility" | "platform" | "fleet" | "knowledge";
   risk: "safe" | "active" | "sensitive" | "risky";
   input_schema: {
     type: "object";
@@ -1110,6 +1110,76 @@ export const AGENT_TOOLS: AgentTool[] = [
       type: "object",
       properties: {
         target: { type: "string", description: "النطاق المراد بناء خريطة هجومه" },
+      },
+    },
+  },
+  {
+    name: "kali_vuln_426_matrix",
+    title: "مصفوفة الـ426 بصمة استغلال عالمية ومتى تُستخدم",
+    description:
+      "يبحث ويحلل في قاعدة الـ426 بصمة استغلال تكتيكية عالمية (متصلة بكوربوس الـ429,825 CVE و1,786 KEV): يشرح للوكيل متى يستخدم كل ثغرة، وكيف يفهمها معمارياً، وأدوات كالي المرتبطة بها، وكيف يعدّلها حسب الحالة، وقاعدة الحماية القصوى.",
+    category: "intel",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "كلمة بحث أو رقم (1..426) أو تقنية (مثل: http2, jwt, ssrf, graphql, sqli, race, root, web3)" },
+        sectorId: { type: "string", description: "قطاع محدد من القطاعات الـ14 (اختياري)" },
+        limit: { type: "number", description: "عدد النتائج (افتراضي: 12)" },
+      },
+    },
+  },
+  {
+    name: "kali_exploit_mutate_fuse",
+    title: "تعديل ودمج الثغرات حسب الحالة + وضع الروت والحماية القصوى",
+    description:
+      "يأخذ ثغرة أو عدة ثغرات من مصفوفة الـ426 ويعدّل حمولتها وأوامرها حسب حالة الهدف (WAF Cloudflare, Nginx HTTP/2, JWT/OAuth, GraphQL, Linux Root, Cloud IMDS) ويدمجها في سلسلة 0-Day موحدة مع إمكانية الفحص الحي بوضع الروت أو توليد درع الحماية القصوى.",
+    category: "mission",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: "الهدف أو النطاق المراد تكييف السلسلة له" },
+        vulnIds: { type: "string", description: "معرفات الثغرات مفصولة بفاصلة مثل VULN-426-001,VULN-426-098" },
+        condition: {
+          type: "string",
+          enum: ["waf-cloudflare", "nginx-http2", "jwt-oauth", "graphql-api", "linux-root", "cloud-imds", "custom"],
+          description: "بيئة وحالة الهدف لتعديل الثغرة وفقها",
+        },
+        mode: {
+          type: "string",
+          enum: ["recon-verify", "root-full-attack", "max-protection"],
+          description: "وضع التشغيل: استطلاع وتحقق، أو هجوم وفحص الروت الكامل، أو الحماية القصوى",
+        },
+      },
+    },
+  },
+  {
+    name: "kali_books_trainer",
+    title: "قراءة وتدريب الكتب السيبرانية وكالي 2099",
+    description:
+      "يقرأ ويدرّب الوكيل على مكتبة الكتب السيبرانية الـ16 (إتقان كالي والروت، سكة المليارات Bug Bounty، موسوعة الـ426، اكتشاف الزيرو-داي، تصعيد صلاحيات لينكس، أمن الـAPI وWeb3، والحماية القصوى) ويستخلص التكتيكات وأوامر كالي للهدف النشط في الذاكرة الأبدية.",
+    category: "knowledge",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        bookId: { type: "string", description: "معرّف الكتاب (مثل book-kali-revealed-2099 أو book-bug-bounty-billions-2099 أو book-global-426-vuln-matrix)" },
+        target: { type: "string", description: "الهدف لتطبيق تكتيكات الكتاب عليه (اختياري)" },
+      },
+    },
+  },
+  {
+    name: "sovereign_live_lab",
+    title: "المختبر السيادي الحي والوعي والاستشارة الذكية 2099",
+    description:
+      "يفتح المختبر السيادي الحي للوكيل النهائي المدمج: يعرض رادار التفكير والوعي الحي، إحصائيات الترسانة والأسطول، ويولّد استشارات الوكيل الذكية وأسئلته الصحيحة للمالك مع إجماع المخاخ الـ7 وتنفيذ وضع الروت والحماية القصوى.",
+    category: "platform",
+    risk: "safe",
+    input_schema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: "الهدف النشط في المختبر" },
       },
     },
   },
@@ -2711,6 +2781,68 @@ export async function runAgentTool(name: string, rawArgs: Record<string, unknown
           true,
           `خريطة سطح الهجوم 360° لـ ${rawTarget}: IPv4(${a4.length}) · IPv6(${a6.length}) · NS(${ns.length}) · MX(${mx.length}) · TXT(${txt.length}) — جاهزة مع تقييم NIST CSF 2.0.`,
           { target: rawTarget, ipv4: a4, ipv6: a6, ns, mx: mx.map((m) => m.exchange), txtCount: txt.length },
+        );
+      }
+      case "kali_vuln_426_matrix": {
+        const { searchGlobal426Vulns } = await import("../sovereign-knowledge-2099");
+        const query = String(rawArgs.query ?? "").trim();
+        const sectorId = String(rawArgs.sectorId ?? "").trim();
+        const limit = Math.min(30, Math.max(1, Number(rawArgs.limit ?? 8) || 8));
+        const res = await searchGlobal426Vulns({ query, sectorId, limit });
+        return done(
+          true,
+          `مصفوفة الـ426 بصمة استغلال عالمية: طابقت ${res.matchedCount} من أصل ${res.totalTactical426} بصمة تكتيكية (متصلة بالكوربوس العالمي) — أول نتيجة: ${res.items[0]?.titleAr ?? "—"}.`,
+          res,
+        );
+      }
+      case "kali_exploit_mutate_fuse": {
+        const { mutateAndFuseVulnerabilities } = await import("../sovereign-knowledge-2099");
+        const target = String(rawArgs.target ?? getMissionsState()[0]?.target ?? "example.com").trim();
+        const rawIds = String(rawArgs.vulnIds ?? "VULN-426-001,VULN-426-098,VULN-426-162")
+          .split(/[\s,|]+/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const condition = (rawArgs.condition as any) ?? "waf-cloudflare";
+        const mode = (rawArgs.mode as any) ?? "root-full-attack";
+        const fused = mutateAndFuseVulnerabilities({
+          target,
+          vulnIds: rawIds,
+          condition,
+          mode,
+        });
+        return done(
+          true,
+          `تم تعديل ودمج السلسلة (${fused.mutatedChainSteps.map((s) => s.vulnId).join(" + ")}) للهدف ${fused.target} بوضع «${fused.modeLabelAr}» — CVSS المركّب: ${fused.combinedCvss} · درجة الابتكار: ${fused.noveltyScore}% · درع الحماية القصوى جاهز.`,
+          fused,
+        );
+      }
+      case "kali_books_trainer": {
+        const { trainAgentOnBook, SOVEREIGN_HACKING_BOOKS } = await import("../sovereign-knowledge-2099");
+        const rawBook = String(rawArgs.bookId ?? "").trim().toLowerCase();
+        const matched =
+          SOVEREIGN_HACKING_BOOKS.find(
+            (b) =>
+              b.id.toLowerCase() === rawBook ||
+              b.titleAr.toLowerCase().includes(rawBook) ||
+              b.titleEn.toLowerCase().includes(rawBook) ||
+              b.category.toLowerCase().includes(rawBook),
+          ) ?? SOVEREIGN_HACKING_BOOKS[0];
+        const target = String(rawArgs.target ?? getMissionsState()[0]?.target ?? "example.com").trim();
+        const trained = trainAgentOnBook(matched.id, target);
+        return done(
+          true,
+          `${trained.messageAr} — أهم التكتيكات المستخلصة: ${trained.extractedTactics.slice(0, 2).join(" · ")}`,
+          trained,
+        );
+      }
+      case "sovereign_live_lab": {
+        const { getSovereignLabState } = await import("../sovereign-knowledge-2099");
+        const target = String(rawArgs.target ?? getMissionsState()[0]?.target ?? "example.com").trim();
+        const lab = getSovereignLabState(target);
+        return done(
+          true,
+          `المختبر السيادي الحي 2099 نشط على الهدف «${lab.activeTarget}» — الوعي: ${lab.consciousness.serenityIndex}% · الكتب المدربة: ${lab.stats.booksTotal} · مصفوفة الـ426 بصمة تكتيكية جاهزة · ${lab.smartConsultations.length} استشارات ذكية مطروحة للمالك.`,
+          lab,
         );
       }
       default:

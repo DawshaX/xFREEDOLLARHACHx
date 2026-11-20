@@ -164,13 +164,13 @@ export function AgentWorkCockpit() {
   const sys = useSystem();
   const [, navigate] = useLocation();
   const [stageTab, setStageTab] = useState<StageTab>("live");
-  const [layout, setLayout] = useState<SplitLayout>("chat-wide");
+  const [layout, setLayout] = useState<SplitLayout>("agent-full");
   const [focusFull, setFocusFull] = useState(false);
   const [activeTarget, setActiveTarget] = useState<string>("example.com");
 
   // Live agent watch telemetry
   const [phase, setPhase] = useState<string>("idle");
-  const [currentThought, setCurrentThought] = useState<string>("بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد — الوكيل الحي الحر متصل بكل المخاخ و92 أداة و294 أداة كالي و10 عقد سحابية والذاكرة الأبدية.");
+  const [currentThought, setCurrentThought] = useState<string>("بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد — الوكيل النهائي المدمج متصل بالمختبر الحي و7 مخاخ و96 أداة سيادية وقاعدة الـ426 ثغرة تكتيكية (المربوطة بـ429,825 ثغرة عالمية) و16 كتاباً موسوعياً و294 أداة كالي و10 عقد سحابية والذاكرة الأبدية.");
   const [activeTool, setActiveTool] = useState<{ name: string; startedAt: number } | null>(null);
   const [liveFeed, setLiveFeed] = useState<LiveFeedEntry[]>([]);
   const [agentTermLines, setAgentTermLines] = useState<TermEntry[]>([]);
@@ -728,11 +728,36 @@ export function AgentWorkCockpit() {
           <Play className="w-3 h-3" /> نبضة
         </button>
 
+        {/* أزرار الانتقال الفوري للمختبر السيادي والـ426 ثغرة والكتب */}
+        <div className="inline-flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "liveLab" } }))}
+            className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/55 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-black text-emerald-100 hover:bg-emerald-500/30 transition"
+          >
+            🧪 المختبر السيادي الحي
+          </button>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "vulns426" } }))}
+            className="inline-flex items-center gap-1 rounded-lg border border-rose-400/55 bg-rose-500/20 px-2.5 py-1 text-[10px] font-black text-rose-100 hover:bg-rose-500/30 transition"
+          >
+            🎯 قاعدة الـ426 ثغرة والدمج
+          </button>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "books" } }))}
+            className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/55 bg-cyan-500/20 px-2.5 py-1 text-[10px] font-black text-cyan-100 hover:bg-cyan-500/30 transition"
+          >
+            📚 الكتب الـ16 والتدريب
+          </button>
+        </div>
+
         {/* أدوات التحكم في التوزيع وملء الشاشة */}
-        <div className="mr-auto flex items-center gap-1">
+        <div className="mr-auto flex items-center gap-1.5">
           {(
             [
-              ["agent-full", "🖥️ الوكيل الكامل 100%"],
+              ["agent-full", "🖥️ العرض المريح الكامل (100%)"],
               ["chat-wide", "⚖️ شات + منصة (62/38)"],
               ["balanced", "50/50"],
               ["work-wide", "🔬 منصة المشاهدة"],
