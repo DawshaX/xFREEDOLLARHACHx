@@ -122,29 +122,21 @@ jobs:
           # الدقائق مجانية على repo public، والتوفير الوحيد المقصود بيفضل في الـskipped الجُرّة
           # (شوف تعليق gate تحت). workflow_dispatch لسه بياخد input المالك حرفيًا.
           if [ "$EVENT" = "workflow_dispatch" ]; then
-            # dispatch = قرار المالك الصريح — الرقم حرفيًا بلا ميزانية.
+            # dispatch = قرار المالك الصريح — الرقم حرفيًا بلا ميزانية (حد أقصى 10 عقد).
             n="${INPUT_NODES:-10}"  # TEST62 — أمر المالك: 10 عقد بس
-            case "$n" in ''|*[!0-9]*) n=19 ;; esac
+            case "$n" in ''|*[!0-9]*) n=10 ;; esac
             if [ "$n" -lt 1 ];  then n=1;  fi
-            # GitHub free plan: 20 concurrent jobs. Leave one for other workflows.
-            if [ "$n" -gt 19 ]; then n=19; fi
+            if [ "$n" -gt 10 ]; then n=10; fi
           else
-            # TEST33 — ميزانية السلوت (مقاس حي 10:39Z: occupied=23 → nodes=0 سكب ذاتي):
-            # الموجة المجدولة/ب-push متكدّدش فوق الموجات الحية — قرار المالك 19/19
-            # محفوظ بالسقف (occupied=0 → nodes=19)، اللي اتمنع هو التكدس اللي جوّع CI.
-            # TEST34 — WANTED من FLEET_NODES (افتراضي 19)، مش رقم مكتوب في السطر.
-            WANT="${FLEET_NODES:-10}"  # TEST62 — أمر المالك: 10 عقد بس
-            case "$WANT" in ''|*[!0-9]*) WANT=19 ;; esac
-            if [ "$WANT" -gt 19 ]; then WANT=19; fi
+            # TEST33 — ميزانية السلوت + أمر المالك: 10 عقد فقط والباقي احتياطي للسيرفرات والبناء
+            WANT="10"
             n="$(node scripts/fleet-slot-budget.mjs "$WANT" 1 | tail -1 | grep -oE '[0-9]+' || true)"
-            case "$n" in ''|*[!0-9]*) n=0 ;; esac
-            # TEST56 — تنفيذ فوري: كوميت رسالته فيها [force-wave] بيتجاوز ميزانية
-            # السلات عمدًا (نفس فلسفة dispatch — «القرار الصريح بلا ميزانية»).
-            # الجدولة بتاع GitHub بترتب السلات الفاضية حالًا والباقي في الطابور بنظام.
+            case "$n" in ''|*[!0-9]*) n=10 ;; esac
+            if [ "$n" -gt 10 ]; then n=10; fi
             case "$COMMIT_MSG" in
               *"[force-wave]"*)
-                n=19
-                echo "::notice::force wave — تجاوز ميزانية السلات بقرار صريح من المالك (علامة [force-wave])"
+                n=10
+                echo "::notice::force wave — 10 عقد بقرار صريح من المالك"
                 ;;
             esac
           fi
@@ -156,7 +148,7 @@ jobs:
     needs: prepare
     if: needs.prepare.outputs.nodes != '0' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/arena/'))
     # With nodes=0 the whole matrix must not even be scheduled: otherwise every
-    # push to this file queues 19 jobs that each boot a runner just to skip.
+    # push to this file queues 10 jobs that each boot a runner just to skip.
     runs-on: ubuntu-latest
     timeout-minutes: 350          # < 6 h hard cap, so the job ends cleanly
     # TEST56 — التقرير المقاس بيندفع من العقدة نفسها (ci-commit) فمحتاجة write
@@ -164,20 +156,9 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
-      # TEST49 — كانت 20: الموجة بتحجز كل سلات الحساب فأي فحص/جدولة (المرآة
-      # كل 30د · gates · catalog) بيستنى ساعات أو يتأجل نهائيًا (مقاس 3 مرات
-      # 2026-11-16). 12 عقدة تكفي التغطية 24/7 (كل عقدة تعيش ~6 ساعات) وسيب
-      # ~8 سلات فاضية دايمًا للصيانة — النظام يتنفس.
-      # ★ اتقاس 2026-11-18: 12 هنا + 19 في fleet-now = 31 runner محجوز في
-      #   نفس اللحظة (وكل واحد لحد 6 ساعات) → «All runners are busy» و26 run
-      #   واقف. الريبو عام فالدقايق مجانية؛ اللي بيخلص هو **السعة المتزامنة**.
-      #   نزّلناها لـ4: التغطية 24/7 زي ما هي (الmatrix بتلف بالدور)، بس
-      #   الحساب بيفضل فيه سلات فاضية للبناء والصيانة.
-      max-parallel: 12  # TEST62c — أمر المالك: 10 عقد مع بعض (كان 4 فالعقد بتستنى ساعات)
+      max-parallel: 10  # TEST62c — أمر المالك: 10 عقد فقط وترك 10 سلات للبناء والتحديث الفوري
       matrix:
-        # A plain list: GitHub's expression language has no range(), and a
-        # literal list is easier to read than nested join/split gymnastics.
-        i: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        i: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       # ليه فهرس > المطلوب بيسكب؟ (شرح بالحرف بعد شكوى «15/19 skipped»):
       # المصفوفة ثابتة 1..19 (GitHub مافيهوش range() في الexpressions) وprepare بيحسب
@@ -247,6 +228,12 @@ jobs:
       # بتعيش جوه rootfs proot على $HOME — طبقة تشغيل مؤقتة زي TEST19).
       # الدليل المقاس حي (2026-11-15): 64 جزء × 90MB · 2113 حزمة · nmap 7.991
       # داخل proot · ~7 دقايق على المسار البطيء.
+      - name: Free 38GB of unused SDKs on runner disk before Kali rootfs + store
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          df -h /
+
       - name: Pre-warm Kali rootfs on the node (cloud-only, ~7 min, best effort)
         if: steps.gate.outputs.run == 'true'
         continue-on-error: true

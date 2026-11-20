@@ -4,13 +4,14 @@
 name: hub force update (bypass backoff → TEST60 bundle)
 on:
   push:
+    branches: [main]
     paths:
       - ".github/workflows/hub-force-update.yml"
 permissions:
   contents: read
 concurrency:
-  group: hub-force-update
-  cancel-in-progress: false
+  group: hub-force-update-r2
+  cancel-in-progress: true
 jobs:
   update:
     runs-on: ubuntu-latest
