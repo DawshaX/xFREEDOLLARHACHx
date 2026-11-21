@@ -164,8 +164,8 @@ const OMNIVERSE_PAGES = [
 export function AgentWorkCockpit() {
   const sys = useSystem();
   const [, navigate] = useLocation();
-  const [stageTab, setStageTab] = useState<StageTab>("live");
-  const [layout, setLayout] = useState<SplitLayout>("agent-full");
+  const [stageTab, setStageTab] = useState<StageTab>("sovereign_lab");
+  const [layout, setLayout] = useState<SplitLayout>("balanced");
   const [focusFull, setFocusFull] = useState(false);
   const [activeTarget, setActiveTarget] = useState<string>("example.com");
 
@@ -733,22 +733,34 @@ export function AgentWorkCockpit() {
         <div className="inline-flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "liveLab" } }))}
-            className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/55 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-black text-emerald-100 hover:bg-emerald-500/30 transition"
+            onClick={() => {
+              setStageTab("sovereign_lab");
+              if (layout === "agent-full") setLayout("balanced");
+              window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "liveLab" } }));
+            }}
+            className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/55 bg-emerald-500/20 px-2.5 py-0.5 text-[9.5px] font-black text-emerald-100 hover:bg-emerald-500/30 transition"
           >
             🧪 المختبر السيادي الحي
           </button>
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "vulns426" } }))}
-            className="inline-flex items-center gap-1 rounded-lg border border-rose-400/55 bg-rose-500/20 px-2.5 py-1 text-[10px] font-black text-rose-100 hover:bg-rose-500/30 transition"
+            onClick={() => {
+              setStageTab("sovereign_lab");
+              if (layout === "agent-full") setLayout("balanced");
+              window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "vulns426" } }));
+            }}
+            className="inline-flex items-center gap-1 rounded-lg border border-rose-400/55 bg-rose-500/20 px-2.5 py-0.5 text-[9.5px] font-black text-rose-100 hover:bg-rose-500/30 transition"
           >
             🎯 قاعدة الـ426 ثغرة والدمج
           </button>
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "books" } }))}
-            className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/55 bg-cyan-500/20 px-2.5 py-1 text-[10px] font-black text-cyan-100 hover:bg-cyan-500/30 transition"
+            onClick={() => {
+              setStageTab("sovereign_lab");
+              if (layout === "agent-full") setLayout("balanced");
+              window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "books" } }));
+            }}
+            className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/55 bg-cyan-500/20 px-2.5 py-0.5 text-[9.5px] font-black text-cyan-100 hover:bg-cyan-500/30 transition"
           >
             📚 الكتب الـ16 والتدريب
           </button>
@@ -758,10 +770,10 @@ export function AgentWorkCockpit() {
         <div className="mr-auto flex items-center gap-1.5">
           {(
             [
-              ["agent-full", "🖥️ العرض المريح الكامل (100%)"],
-              ["chat-wide", "⚖️ شات + منصة (62/38)"],
-              ["balanced", "50/50"],
-              ["work-wide", "🔬 منصة المشاهدة"],
+              ["balanced", "⚖️ شات + المختبر الحي (50/50)"],
+              ["chat-wide", "💬 توسيع الشات (62/38)"],
+              ["work-wide", "🧪 توسيع المختبر (38/62)"],
+              ["agent-full", "🖥️ شاشة كاملة (100%)"],
             ] as const
           ).map(([id, label]) => (
             <button

@@ -497,13 +497,11 @@ export default function NovaAgentPro() {
     void opsFetch<{ prefs?: Partial<Prefs> & Record<string, unknown> }>("/panel/prefs").then((r) => {
       prefsHydrated.current = true;
       if (!alive || !r.ok || !r.data?.prefs) return;
-      const arenaDef = (r.data.prefs as Record<string, unknown>).arenaDefault;
-      if (typeof arenaDef === "string" && ARENAS.some((a) => a.key === arenaDef) && arenaDef !== "cockpit") setArena(arenaDef as ArenaKey);
       const sp = r.data.prefs as Partial<Prefs> & { autonomyMode?: string; offensivePosture?: boolean; rootSessionId?: string };
       setPrefs((p) => ({
         ...p,
         hiddenHud: Array.isArray(sp.hiddenHud) ? (sp.hiddenHud as HudCardId[]) : p.hiddenHud,
-        hudOpen: typeof sp.hudOpen === "boolean" ? sp.hudOpen : p.hudOpen,
+        hudOpen: false,
         chatOpen: typeof sp.chatOpen === "boolean" ? sp.chatOpen : p.chatOpen,
         chatWide: typeof sp.chatWide === "boolean" ? sp.chatWide : p.chatWide,
         autonomyMode: (sp.autonomyMode === "autonomous" || sp.autonomyMode === "assist" || sp.autonomyMode === "off") ? sp.autonomyMode : "autonomous",
@@ -1237,23 +1235,23 @@ export default function NovaAgentPro() {
       {/* ── جسم المنصة: المنضدة الكاملة + الشات الجانبي القابل للطيّ ── */}
       <main className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row overflow-hidden">
         <section className="flex min-w-0 flex-1 flex-col min-h-0">
-          <nav className="shrink-0 flex items-center gap-2 px-3.5 py-2 border-b border-rose-500/20 overflow-x-auto bg-[#07020b]/90">
+          <nav className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 border-b border-rose-500/20 overflow-x-auto bg-[#07020b]/90">
             {ARENAS.map(({ key, labelAr, icon: Icon, color }, idx) => {
               const active = arena === key;
               const badge = key === "cron" && cronJobs.length > 0 ? `${cronOn}/${cronJobs.length}` : null;
               return (
                 <React.Fragment key={key}>
                   {idx > 0 && (idx === 4 || idx === 8 || idx === 12) && (
-                    <span className="h-5 w-px bg-white/15 shrink-0 mx-0.5" />
+                    <span className="h-4 w-px bg-white/15 shrink-0 mx-0.5" />
                   )}
                   <button onClick={() => setArena(key)}
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-black transition-all"
+                    className="shrink-0 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[10px] font-black transition-all"
                     style={active
-                      ? { borderColor: color + "85", background: `${color}25`, color, boxShadow: `0 0 16px ${color}35 inset, 0 0 10px ${color}25` }
+                      ? { borderColor: color + "85", background: `${color}25`, color, boxShadow: `0 0 12px ${color}35 inset` }
                       : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.7)" }}>
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-3 h-3" />
                     {labelAr}
-                    {badge && <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-1.5 text-[8.5px] text-emerald-300 font-mono" dir="ltr">{badge}</span>}
+                    {badge && <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-1.5 text-[8px] text-emerald-300 font-mono" dir="ltr">{badge}</span>}
                   </button>
                 </React.Fragment>
               );
