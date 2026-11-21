@@ -1,7 +1,7 @@
 # TEST65 — فكس العطل الحي 12:06Z: الهَب شغال بكود قديم (900fd30) والأبديتر في
 # backoff (نفس الحزمة فشلت 7/7) — الكود نفسه بيقول الحل: POST ?force=1.
 # POST من الrunner شغال (مقاس 09:33-09:36 في kali-tools-install) — من السانبوكس مفصول.
-name: hub force update (bypass backoff → TEST60 bundle)
+name: hub force update (bypass backoff → TEST70 bundle)
 on:
   push:
     branches: [main]
