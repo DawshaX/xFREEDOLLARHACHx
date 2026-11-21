@@ -1,32 +1,32 @@
 {
-  "at": "2026-11-21T02:42:34.300Z",
+  "at": "2026-11-21T10:42:41.387Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-21T00:27:38Z",
-    "size": 4602327
+    "updatedAt": "2026-11-21T03:13:13Z",
+    "size": 4605111
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "d92bace560d51259fe1717d4d5117ea4c76383ac",
-    "builtAt": "2026-11-21T00:27:15.091Z",
-    "files": 191,
+    "commit": "38611ec8c84b8c5938f52c062aadcd57376f9160",
+    "builtAt": "2026-11-21T03:12:48.087Z",
+    "files": 192,
     "builtBy": "github-actions"
   },
   "boot": {
-    "commit": "d92bace560d51259fe1717d4d5117ea4c76383ac",
-    "builtAt": "2026-11-21T00:27:15.091Z",
+    "commit": "38611ec8c84b8c5938f52c062aadcd57376f9160",
+    "builtAt": "2026-11-21T03:12:48.087Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-21T00:27:38Z) — حارس لوب التحديث",
-    "lastCheckAt": "2026-11-21T02:40:22.933Z",
-    "currentBuiltAt": "2026-11-21T00:27:15.091Z",
-    "latestReleaseAt": "2026-11-21T00:27:38Z",
+    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-21T03:13:13Z) — حارس لوب التحديث",
+    "lastCheckAt": "2026-11-21T10:38:53.400Z",
+    "currentBuiltAt": "2026-11-21T03:12:48.087Z",
+    "latestReleaseAt": "2026-11-21T03:13:13Z",
     "restartNeeded": false
   },
   "updaterInstall": null,
@@ -38,24 +38,14 @@
   "page": {
     "status": 200,
     "cacheControl": "no-store",
-    "servedAsset": "/assets/index-0L2HiqQ4.js",
+    "servedAsset": "/assets/index-gDXuFKEr.js",
     "htmlBytes": 2484
   },
   "fleet": {
     "status": 200,
-    "count": 11,
+    "count": 1,
     "ids": [
-      "self-node",
-      "gh-6-2222",
-      "gh-4-2223",
-      "gh-3-2223",
-      "gh-9-2223",
-      "gh-10-2224",
-      "gh-1-2222",
-      "gh-2-2228",
-      "gh-7-2228",
-      "gh-8-2227",
-      "gh-5-2227"
+      "self-node"
     ]
   }
 }
