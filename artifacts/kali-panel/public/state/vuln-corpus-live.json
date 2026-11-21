@@ -1,17 +1,17 @@
 {
   "measured": true,
-  "at": "2026-11-21T03:18:04.946Z",
-  "total": 430019,
+  "at": "2026-11-21T06:35:39.507Z",
+  "total": 430062,
   "bySeverity": {
-    "medium": 184330,
-    "critical": 40234,
-    "high": 163765,
-    "unknown": 23585,
+    "medium": 184337,
+    "critical": 40235,
+    "high": 163768,
+    "unknown": 23617,
     "low": 18030,
     "none": 75
   },
   "kev": 1790,
-  "epssScored": 408599,
+  "epssScored": 408645,
   "products": 81954,
   "mode": "deepen",
   "sources": [
@@ -9668,6 +9668,24 @@
       "refs": []
     },
     {
+      "id": "CVE-2024-10441",
+      "cvss": 9.8,
+      "sev": "critical",
+      "desc": "Improper encoding or escaping of output vulnerability in the system plugin daemon in Synology BeeStation OS (BSM) before 1.1-65374 and Synology DiskStation Manager (DSM) before 7.2-64570-4, 7.2.1-69057-6 and 7.2.2-72806-1 allows remote attackers to execute arb",
+      "cwe": [
+        "CWE-116"
+      ],
+      "kev": true,
+      "epss": 0.02415,
+      "pub": "2025-03-19T02:15:27.120",
+      "products": [
+        "beestation_os",
+        "beestation_os",
+        "beestation_os"
+      ],
+      "refs": []
+    },
+    {
       "id": "CVE-2025-53521",
       "cvss": 9.8,
       "sev": "critical",
@@ -9682,24 +9700,6 @@
         "big-ip_access_policy_manager",
         "big-ip_access_policy_manager",
         "big-ip_access_policy_manager"
-      ],
-      "refs": []
-    },
-    {
-      "id": "CVE-2024-10441",
-      "cvss": 9.8,
-      "sev": "critical",
-      "desc": "Improper encoding or escaping of output vulnerability in the system plugin daemon in Synology BeeStation OS (BSM) before 1.1-65374 and Synology DiskStation Manager (DSM) before 7.2-64570-4, 7.2.1-69057-6 and 7.2.2-72806-1 allows remote attackers to execute arb",
-      "cwe": [
-        "CWE-116"
-      ],
-      "kev": true,
-      "epss": 0.0215,
-      "pub": "2025-03-19T02:15:27.120",
-      "products": [
-        "beestation_os",
-        "beestation_os",
-        "beestation_os"
       ],
       "refs": []
     },
@@ -13872,5 +13872,5 @@
       "refs": []
     }
   ],
-  "says_ar": "430019 ثغرة حقيقية من NVD · 1790 مستغلّة فعلياً (KEV) · 81954 منتج · مزامنة 2026-11-21T03:18:04.946Z"
+  "says_ar": "430062 ثغرة حقيقية من NVD · 1790 مستغلّة فعلياً (KEV) · 81954 منتج · مزامنة 2026-11-21T06:35:39.507Z"
 }
