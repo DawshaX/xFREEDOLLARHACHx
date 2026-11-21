@@ -23,10 +23,10 @@ jobs:
     steps:
       - name: wait for standalone-bundle to publish nova-bundle + force auto-update
         run: |
-          ST_CHK=$(curl -s --max-time 15 "$HUB/api/live-agent/storage-tiers?token=$TOKEN")
-          ST_OK=$(echo "$ST_CHK" | grep -o '"ioBudgetProtected":true' || true)
+          ST_CHK=$(curl -s --max-time 15 -X POST "$HUB/api/live-agent/storage-tiers/sync" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"note":"probe"}')
+          ST_OK=$(echo "$ST_CHK" | grep -o '"savedMemoryId":' || true)
           if [ -n "$ST_OK" ]; then
-            echo "::notice::force-update: الهَب بالفعل على النسخة المحدثة (التخزين رباعي الطبقات + الشات المدمج)"
+            echo "::notice::force-update: الهَب بالفعل على النسخة المحدثة (التخزين رباعي الطبقات النشط + الشات المدمج)"
           else
             sleep 75
             R=$(curl -s --max-time 300 -w "\nHTTP:%{http_code}" -X POST "$HUB/api/nova-core/auto-update?force=1" \
@@ -41,11 +41,11 @@ jobs:
             BOOT=$(echo "$V" | grep -o '"boot":{"commit":"[^"]*"' | cut -d'"' -f6)
             DISK=$(echo "$V" | grep -o '"disk":{"commit":"[^"]*"' | cut -d'"' -f6)
             UP=$(echo "$V" | grep -o '"uptimeSec":[0-9]*' | cut -d: -f2)
-            ST_CHK=$(curl -s --max-time 15 "$HUB/api/live-agent/storage-tiers?token=$TOKEN")
-            ST_OK=$(echo "$ST_CHK" | grep -o '"ioBudgetProtected":true' || true)
-            echo "::notice::boot=$BOOT disk=$DISK storage4Tier=${ST_OK:-pending} uptime=${UP}s (محاولة $i)"
+            ST_CHK=$(curl -s --max-time 15 -X POST "$HUB/api/live-agent/storage-tiers/sync" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"note":"probe"}')
+            ST_OK=$(echo "$ST_CHK" | grep -o '"savedMemoryId":' || true)
+            echo "::notice::boot=$BOOT disk=$DISK storageSync=${ST_OK:-pending} uptime=${UP}s (محاولة $i)"
             if [ -n "$ST_OK" ]; then
-              echo "::notice::✓ الهَب اقفل على النسخة السيادية الجديدة (التخزين رباعي الطبقات + الشات المدمج): boot=$BOOT uptime=${UP}s"
+              echo "::notice::✓ الهَب اقفل على النسخة السيادية الجديدة (التخزين رباعي الطبقات النشط + الشات المدمج): boot=$BOOT uptime=${UP}s"
               break
             fi
             echo "النسخة على الهَب لسه قديمة (boot=$BOOT) — نطلب auto-update?force=1 ثم restart?force=1"
