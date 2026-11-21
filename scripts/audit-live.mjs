@@ -34,7 +34,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args0 = process.argv.slice(2);
 const DIST = path.join(ROOT, "artifacts/kali-panel/dist/public");
 const APP_TSX = path.join(ROOT, "artifacts/kali-panel/src/App.tsx");
-const HOST = "https://dawshax.github.io/xFREEDOLLARHACHx";
+const HOST = "https://nova.waifly.com/xFREEDOLLARHACHx";
 const serverArg = args0.find((a) => a.startsWith("--server="));
 const API = (serverArg ? serverArg.split("=")[1] : process.env.AUDIT_API || "http://127.0.0.1:8080").replace(/\/$/, "");
 const SETTLE_MS = Number(process.env.SETTLE_MS || 2000);
@@ -91,6 +91,11 @@ export async function renderRoute(route) {
   // شايفة إن الـendpoint بيرد 404. وفشل الشبكة كان بيرجع 200 {} (عشان `.json()`
   // ما يقعش) — يعني صفحة معتمدة على endpoint ميت كانت بتعدّي.
   // دلوقتي كل نداء بيتسجل: {url, status, ok, bodyBytes}، والفشل بيظهر في التقرير.
+  const opsToken = (process.env.NOVA_EXEC_TOKEN || process.env.NOVA_AUDIT_TOKEN || "108a88397d04dae87c34d0301b1af85e134145d61fa9d07d").trim();
+  try {
+    if (opsToken) window.localStorage.setItem("cybernova_ops_token", opsToken);
+  } catch { /* ignore */ }
+
   const apiCalls = [];
   const proxyFetch = async (input, init) => {
     let url = typeof input === "string" ? input : input?.url ?? String(input);
@@ -103,7 +108,9 @@ export async function renderRoute(route) {
         apiCalls.push({ url, status: 0, thirdParty: true, ok: true, bodyBytes: 2 });
         return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
       }
-      const res = await realFetch(url, { ...init, signal: AbortSignal.timeout(8000) });
+      const headers = new Headers(init?.headers ?? undefined);
+      if (opsToken && !headers.has("x-nova-token")) headers.set("x-nova-token", opsToken);
+      const res = await realFetch(url, { ...init, headers, signal: AbortSignal.timeout(8000) });
       const body = await res.arrayBuffer();
       apiCalls.push({ url, status: res.status, ok: res.ok, bodyBytes: body.byteLength });
       return new Response(body, {
@@ -153,6 +160,8 @@ export async function renderRoute(route) {
   }
   globalThis.fetch = proxyFetch;
   globalThis.BroadcastChannel = StubBC;
+  globalThis.WebSocket = window.WebSocket;
+  globalThis.EventSource = window.EventSource;
   globalThis.console.error = (...a) =>
     errors.push("console.error: " + a.map((x) => (x && x.stack ? String(x.stack) : String(x))).join(" ").slice(0, 1200));
 

@@ -109,8 +109,16 @@ async function renderRoute(route) {
       /* ignore */
     }
   }
+  window.WebSocket = class {
+    static CONNECTING = 0; static OPEN = 1; static CLOSING = 2; static CLOSED = 3;
+    constructor() { this.readyState = 3; }
+    send() {} close() {} addEventListener() {} removeEventListener() {}
+  };
+  window.EventSource = class { constructor() {} addEventListener() {} removeEventListener() {} close() {} };
   globalThis.fetch = window.fetch;
   globalThis.BroadcastChannel = StubBroadcastChannel;
+  globalThis.WebSocket = window.WebSocket;
+  globalThis.EventSource = window.EventSource;
 
   process.on("uncaughtException", (e) => errors.push("uncaughtException: " + String(e?.message ?? e).slice(0, 200)));
   process.on("unhandledRejection", (e) => errors.push("unhandledRejection: " + String(e?.message ?? e).slice(0, 200)));

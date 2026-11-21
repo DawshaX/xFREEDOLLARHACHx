@@ -2,6 +2,7 @@ import { Router } from "express";
 import { spawn } from "child_process";
 import { broadcastLiveEvent } from "./live-events";
 import { logger } from "../lib/logger";
+import { userFromCookieHeader } from "../lib/panel-auth";
 
 const router = Router();
 
@@ -196,7 +197,16 @@ function execAllowed(req: {
   query?: Record<string, unknown>;
   headers?: Record<string, unknown>;
 }): boolean {
-  if (tokenRequired()) return tokenOk(req);
+  if (tokenRequired()) {
+    if (tokenOk(req)) return true;
+    try {
+      const cookie = String((req.headers?.cookie as string) || "");
+      if (cookie && userFromCookieHeader(cookie) !== null) return true;
+    } catch {
+      /* ignore */
+    }
+    return false;
+  }
   return sameOriginOk(req);
 }
 

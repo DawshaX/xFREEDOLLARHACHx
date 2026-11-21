@@ -253,7 +253,7 @@ export function authLimiter() {
 export function apiLimiter() {
   return rateLimit({
     windowMs: 60 * 1000,
-    limit: Number(process.env.NOVA_API_RATE_LIMIT || 600),
+    limit: Number(process.env.NOVA_API_RATE_LIMIT || 3000),
     standardHeaders: "draft-7",
     legacyHeaders: false,
     // SSE and long-poll endpoints must not be counted: one connection is one

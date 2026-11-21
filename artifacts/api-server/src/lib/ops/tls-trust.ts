@@ -23,6 +23,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import tls from "node:tls";
 import { X509Certificate } from "node:crypto";
 import { config as loadEnv } from "dotenv";
 
@@ -127,6 +128,34 @@ export function ensureTlsTrust(opts: { quiet?: boolean } = {}): TlsTrustResult {
         }
       }
     }
+  }
+
+  if (certs.length === 0) {
+    return { added: 0, bundle: null, sources, skipped: "مفيش شهادة إضافية فوق حزمة Node" };
+  }
+
+  try {
+    const tlsAny = tls as unknown as {
+      getCACertificates?: (type?: string) => string[];
+      setDefaultCACertificates?: (certs: string[]) => void;
+    };
+    if (typeof tlsAny.getCACertificates === "function" && typeof tlsAny.setDefaultCACertificates === "function") {
+      const base = tlsAny.getCACertificates("default");
+      const baseSet = new Set(base);
+      const runtimeExtra: string[] = [];
+      for (const c of certs) {
+        if (!baseSet.has(c)) {
+          baseSet.add(c);
+          runtimeExtra.push(c);
+        }
+      }
+      if (runtimeExtra.length > 0) {
+        tlsAny.setDefaultCACertificates([...base, ...runtimeExtra]);
+        extra = Math.max(extra, runtimeExtra.length);
+      }
+    }
+  } catch {
+    /* ignore */
   }
 
   if (extra === 0) {

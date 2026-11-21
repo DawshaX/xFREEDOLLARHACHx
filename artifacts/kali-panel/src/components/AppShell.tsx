@@ -56,6 +56,14 @@ function TopMarquee({ lastWsText }: { lastWsText: string | null }) {
 export function AppShell({ children }: AppShellProps) {
   const [location, navigate] = useLocation();
   const isWorkCockpit = location === "/agent-pro" || location === "/workspace" || location === "/cockpit";
+  const isChatOrWorkPage =
+    isWorkCockpit ||
+    location === "/live-agent" ||
+    location === "/agent" ||
+    location === "/nova-agent" ||
+    location === "/nova-core" ||
+    location === "/chat" ||
+    location === "/nova-fleet";
   const [collapsed, setCollapsed] = useState<boolean>(isWorkCockpit);
   const [focusMode, setFocusMode] = useState<boolean>(false);
 
@@ -420,20 +428,20 @@ export function AppShell({ children }: AppShellProps) {
             onClick={() => navigate("/agent-pro")}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black font-mono transition-all hover:scale-[1.02]"
             style={{
-              background: isWorkCockpit ? "rgba(34,211,238,0.22)" : "rgba(34,211,238,0.12)",
-              border: isWorkCockpit ? "1px solid rgba(34,211,238,0.7)" : "1px solid rgba(34,211,238,0.35)",
-              color: "#67e8f9",
+              background: isWorkCockpit ? "rgba(16,185,129,0.28)" : "rgba(34,211,238,0.14)",
+              border: isWorkCockpit ? "1px solid rgba(16,185,129,0.8)" : "1px solid rgba(34,211,238,0.45)",
+              color: isWorkCockpit ? "#6ee7b7" : "#67e8f9",
             }}
           >
             <Sparkles style={{ width: 11, height: 11 }} />
-            الشغل والشات
+            ⚡ صفحة الشغل والوكيل
           </button>
 
           {/* Dashboard nav */}
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black font-mono transition-all"
-            style={{ color: "rgba(255,100,100,0.5)", border: "1px solid rgba(255,100,100,0.1)" }}
+            style={{ color: "rgba(255,100,100,0.65)", border: "1px solid rgba(255,100,100,0.18)" }}
           >
             <Monitor style={{ width: 11, height: 11 }} />
             Dashboard
@@ -469,7 +477,7 @@ export function AppShell({ children }: AppShellProps) {
           </button>
         )}
         <main
-          className="flex-1 overflow-y-auto"
+          className={isWorkCockpit ? "flex-1 overflow-hidden flex flex-col" : "flex-1 overflow-y-auto"}
           style={{
             background: "linear-gradient(180deg, #060010 0%, #03000a 100%)",
             scrollbarWidth: "thin",
@@ -481,8 +489,8 @@ export function AppShell({ children }: AppShellProps) {
         {!focusMode && <NavSidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />}
       </div>
 
-      {/* Global Floating Live Agent connected via Internal WebSocket */}
-      <FloatingNovaButton />
+      {/* Global Floating Live Agent connected via Internal WebSocket (hidden on dedicated chat/work pages so it never blocks the input) */}
+      {!isChatOrWorkPage && <FloatingNovaButton />}
     </div>
   );
 }

@@ -1489,10 +1489,10 @@ function WinBody({ w, handleClientTool, openWindow, apiOnline }: {
       </div>
     );
     default: return (
-      <div className="flex flex-col items-center justify-center h-full opacity-40">
-        <Wrench className="w-16 h-16 mb-4 text-primary/50" />
-        <h3 className="text-lg font-bold">{w.title}</h3>
-        <p className="text-sm text-muted-foreground">قيد التطوير</p>
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-2">
+        <Wrench className="w-12 h-12 mb-2 text-cyan-400" />
+        <h3 className="text-base font-bold text-white">{w.title}</h3>
+        <p className="text-xs text-slate-300 font-mono">وحدة نشطة متصلة بنواة NOVA KALI 2099</p>
       </div>
     );
   }

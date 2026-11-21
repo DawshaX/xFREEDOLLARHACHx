@@ -23,9 +23,9 @@ export default function DesktopNetworkFix() {
     let apiConnected = false;
     let ollamaConnected = false;
 
-    // Check API with multiple methods
+    // Check API via relative healthz endpoint
     try {
-      const response = await fetch("/api/health", { 
+      const response = await fetch("/api/healthz", { 
         signal: AbortSignal.timeout(3000) 
       });
       if (response.ok) {
@@ -35,28 +35,16 @@ export default function DesktopNetworkFix() {
       }
     } catch (error) {
       errors.push("API unreachable");
-      
-      // Try direct connection to localhost
-      try {
-        const directResponse = await fetch("http://localhost:3000/api/health", { 
-          signal: AbortSignal.timeout(3000) 
-        });
-        if (directResponse.ok) {
-          apiConnected = true;
-          errors.push("API reachable via localhost");
-        }
-      } catch (directError) {
-        errors.push("API not reachable via localhost either");
-      }
     }
 
-    // Check Ollama
+    // Check Ollama via server proxy
     try {
-      const response = await fetch("http://127.0.0.1:11434/api/tags", { 
+      const response = await fetch("/api/ollama/probe", { 
         signal: AbortSignal.timeout(3000) 
       });
       if (response.ok) {
-        ollamaConnected = true;
+        const d = (await response.json().catch(() => null)) as { connected?: boolean; online?: boolean } | null;
+        ollamaConnected = Boolean(d?.connected || d?.online || response.ok);
       } else {
         errors.push("Ollama not responding");
       }

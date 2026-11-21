@@ -1612,7 +1612,7 @@ export function LiveAgentPanel({
   const [coreToolsCatalogue, setCoreToolsCatalogue] = useState<CoreCatalogueTool[]>([]);
   const [coreCatFilter, setCoreCatFilter] = useState<string>("all");
   const [showLegacyKaliCatalog, setShowLegacyKaliCatalog] = useState(false);
-  const [showChatOpsStrip, setShowChatOpsStrip] = useState(true);
+  const [showChatOpsStrip, setShowChatOpsStrip] = useState(false);
   const [liveChatOps, setLiveChatOps] = useState<{
     mode: string;
     provider: string;
@@ -2042,7 +2042,7 @@ export function LiveAgentPanel({
     currentStep: number; percentage: number;
   } | null>(null);
 
-  // ── KALI Command Center — polling tasks + intel ───────────────────────────
+  // ── KALI Command Center — polling tasks + intel (throttled to avoid UI freeze) ──
   useEffect(() => {
     const load = async () => {
       try {
@@ -2055,7 +2055,11 @@ export function LiveAgentPanel({
       } catch { /* ignore */ }
     };
     void load();
-    const iv = setInterval(load, 4000);
+    const iv = setInterval(() => {
+      if (activeTabRef.current === "kali" || activeTabRef.current === "control") {
+        void load();
+      }
+    }, 30_000);
     return () => clearInterval(iv);
   }, []);
 
@@ -2587,10 +2591,10 @@ export function LiveAgentPanel({
     return false;
   }, [ngrokModel]);
 
-  // ── ngrok probe on mount + every 30s ─────────────────────────────────────
+  // ── ngrok probe on mount + every 45s ─────────────────────────────────────
   useEffect(() => {
     void probeNgrok();
-    const t = setInterval(probeNgrok, 10_000);
+    const t = setInterval(probeNgrok, 45_000);
     return () => clearInterval(t);
   }, [probeNgrok]);
 
@@ -3323,15 +3327,15 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     };
     void tick();
     void loadServerCron();
-    const t = setInterval(() => { void tick(); }, 15_000);
+    const t = setInterval(() => { void tick(); }, 30_000);
     return () => { active = false; clearInterval(t); };
   }, [loadServerCron]);
 
 
-  // ── Brain status polling every 15s ─────────────────────────────────────────
+  // ── Brain status polling every 30s ─────────────────────────────────────────
   useEffect(() => {
     void refreshBrainStatus();
-    const t = setInterval(refreshBrainStatus, 15_000);
+    const t = setInterval(refreshBrainStatus, 30_000);
     return () => clearInterval(t);
   }, []);
 
@@ -3395,33 +3399,31 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Kali local-agent polling — 2s when offline, 5s when connected ─────────
+  // ── Kali local-agent polling — 20s interval, only updates state on change ──
   useEffect(() => {
-    let intervalMs = kaliAgentConnected ? 5_000 : 2_000;
-    let t: ReturnType<typeof setInterval>;
-
     const poll = async () => {
       try {
         const r = await fetch(`${API_BASE}/local-agent/status`, { headers: novaAuthHeaders() });
         if (r.ok) {
           const d = await r.json() as { connected: boolean; agents: Array<{ id: string; hostname: string; platform: string; user: string; connectedAt: number }> };
-          setKaliAgentConnected(d.connected);
-          setKaliAgentList(d.agents ?? []);
-          if (d.agents?.length > 0) {
-            setKaliSelectedAgentId(prev => prev ?? d.agents[0].id);
+          setKaliAgentConnected((prev) => (prev === d.connected ? prev : d.connected));
+          const nextAgents = d.agents ?? [];
+          setKaliAgentList((prev) => (prev.length === nextAgents.length && prev[0]?.id === nextAgents[0]?.id ? prev : nextAgents));
+          if (nextAgents.length > 0) {
+            setKaliSelectedAgentId((prev) => prev ?? nextAgents[0].id);
             setRouteToKali(true);
           } else {
-            setKaliSelectedAgentId(null);
-            setRouteToKali(false);
+            setKaliSelectedAgentId((prev) => (prev === null ? prev : null));
+            setRouteToKali((prev) => (prev === false ? prev : false));
           }
         }
       } catch { /* ignore */ }
     };
 
     void poll();
-    t = setInterval(poll, intervalMs);
+    const t = setInterval(poll, 20_000);
     return () => clearInterval(t);
-  }, [kaliAgentConnected]);
+  }, []);
 
   // ── Fetch deep profile when agent connects ────────────────────────────────
   useEffect(() => {
@@ -4198,12 +4200,9 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     }, 10_000);
   };
 
-  // ── Ollama pulse animation ─────────────────────────────────────────────────
+  // ── Ollama pulse animation (state mirrors busy without 800ms full-tree re-renders) ──
   useEffect(() => {
-    if (!busy) { setOllamaPulse(false); return; }
-    setOllamaPulse(true);
-    const t = setInterval(() => setOllamaPulse((v) => !v), 800);
-    return () => clearInterval(t);
+    setOllamaPulse(busy);
   }, [busy]);
 
   // ── Prefill events from other pages ──────────────────────────────────────
@@ -4224,8 +4223,12 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
     };
   }, [addToast]);
 
-  // ── Auto-scroll ────────────────────────────────────────────────────────────
-  useEffect(() => { scrollRef.current?.scrollTo({ top: 1e9, behavior: "smooth" }); }, [lines]);
+  // ── Auto-scroll (instant scrollTop update prevents smooth-scroll layout thrashing during SSE streaming) ──
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [lines]);
 
   // ── SSE Live Events Feed ───────────────────────────────────────────────────
   const [wsConnected, setWsConnected] = useState(false);
@@ -5163,11 +5166,24 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 </button>
               </>
             )}
+
+            {/* Toggle Full Sovereign Header Bars & Sessions Drawer */}
+            <button
+              onClick={() => setHeaderBarsCollapsed((v) => !v)}
+              className={`px-2 py-0.5 rounded-lg text-[9.5px] font-mono font-bold border transition-all ${
+                !headerBarsCollapsed
+                  ? "border-cyan-400/60 bg-cyan-500/20 text-cyan-100"
+                  : "border-white/15 bg-white/5 text-cyan-200 hover:bg-cyan-500/15"
+              }`}
+              title="فتح أو طي شريط الجلسات المتعددة، المخاخ السبعة، تكبير العرض، وتصنيف الـ26 تبويباً"
+            >
+              {headerBarsCollapsed ? "🎛️ الجلسات والخيارات ▾" : "🔼 طي الأشرطة"}
+            </button>
           </div>
         </div>
 
-        {/* ── Brain & Unified Organism + Sovereign Permissions + Zoom & Spacing Bar ── */}
-        {panelSize !== "mini" && (
+        {/* ── Brain & Unified Organism + Sovereign Permissions + Zoom & Spacing Bar (Collapsible to keep Chat spacious) ── */}
+        {panelSize !== "mini" && !headerBarsCollapsed && (
           <div className="shrink-0 border-b border-primary/20 bg-gradient-to-r from-[#090d18] via-[#12081c] to-[#090d18]">
             <div className="w-full px-3.5 py-2 flex items-center gap-2.5 flex-wrap">
               <button
@@ -5503,7 +5519,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
         {/* ── Spacious Sovereign Navigation Deck (26 Tabs with Clear Visual Dividers & Category Grouping) ── */}
         {panelSize !== "mini" && (
           <div className="shrink-0 border-b border-primary/20 bg-[#050811]">
-            {/* Category Filter & Layout Spacing Control Row */}
+            {/* Category Filter & Layout Spacing Control Row (only when expanded) */}
+            {!headerBarsCollapsed && (
             <div className="px-3.5 py-1.5 border-b border-white/10 flex items-center justify-between gap-2 flex-wrap bg-black/40">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[9.5px] font-mono text-white/50">📂 تصنيف التبويبات:</span>
@@ -5541,11 +5558,12 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
                 </button>
               </div>
             </div>
+            )}
 
             {/* Spacious Tabs Container with Generous Padding & Visual Dividers */}
             <div
-              className={`px-3 py-1.5 flex items-center gap-2 ${
-                tabsWrapExpanded ? "flex-wrap max-h-28 overflow-y-auto" : "overflow-x-auto"
+              className={`px-2.5 py-1 flex items-center gap-1.5 ${
+                tabsWrapExpanded && !headerBarsCollapsed ? "flex-wrap max-h-28 overflow-y-auto" : "overflow-x-auto"
               }`}
             >
               {/* GROUP 1: CORE SOVEREIGN LAB & CHAT */}
@@ -13406,31 +13424,29 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
             )}
           </div>
 
-          {/* ── Session files ── */}
+          {/* ── Session files (compact 1-line strip) ── */}
           {(sessionFiles?.length ?? 0) > 0 && panelSize !== "mini" && (
-            <div className="px-3 py-2 border-t border-primary/10 bg-background/30 max-h-20 overflow-y-auto shrink-0">
-              <div className="flex items-center gap-1 text-[9px] font-mono text-muted-foreground mb-1">
+            <div className="px-2.5 py-1 border-t border-primary/10 bg-background/30 flex items-center gap-1.5 overflow-x-auto shrink-0">
+              <span className="flex items-center gap-1 text-[9px] font-mono text-muted-foreground shrink-0">
                 <FileText className="w-3 h-3" />
-                ملفات الجلسة ({sessionFiles?.length ?? 0})
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {(sessionFiles ?? []).slice(0, 12).map((f) => (
-                  <a key={f.id} href={`${API_BASE}/live-agent/files/${f.id}/download`}
-                    title={`${f.name} · ${f.size} بايت`}
-                    className="group inline-flex items-center gap-1 max-w-[160px] text-[10px] px-2 py-1 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/20">
-                    <Download className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{f.name}</span>
-                  </a>
-                ))}
-              </div>
+                ملفات ({sessionFiles?.length ?? 0}):
+              </span>
+              {(sessionFiles ?? []).slice(0, 10).map((f) => (
+                <a key={f.id} href={`${API_BASE}/live-agent/files/${f.id}/download`}
+                  title={`${f.name} · ${f.size} بايت`}
+                  className="shrink-0 inline-flex items-center gap-1 max-w-[140px] text-[9.5px] px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/20">
+                  <Download className="w-2.5 h-2.5 shrink-0" />
+                  <span className="truncate">{f.name}</span>
+                </a>
+              ))}
             </div>
           )}
 
           {/* ── Pending attachments ── */}
           {pendingAttachments.length > 0 && (
-            <div className="px-3 pt-2 flex flex-wrap gap-1.5 border-t border-primary/10 bg-background/30 shrink-0">
+            <div className="px-3 pt-1.5 flex flex-wrap gap-1.5 border-t border-primary/10 bg-background/30 shrink-0">
               {pendingAttachments.map((f) => (
-                <span key={f.id} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-200">
+                <span key={f.id} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-200">
                   <Paperclip className="w-3 h-3" />#{f.id} {f.name}
                 </span>
               ))}
@@ -13438,8 +13454,8 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
           )}
 
           {/* ── Input area (Chat Tab Only) ── */}
-          <div className="p-2.5 border-t border-primary/15 bg-card/40 shrink-0">
-            <div className="mb-1.5 flex items-center justify-between text-[9.5px] flex-wrap gap-1">
+          <div className="p-2 border-t border-primary/15 bg-card/40 shrink-0">
+            <div className="mb-1 flex items-center justify-between text-[9px] flex-wrap gap-1">
               <div className="flex items-center gap-1.5">
                 <button type="button" onClick={togglePlanMode}
                   title="وضع التنفيذ المباشر (OFF) أو عرض الخطة أولاً (ON)"
@@ -13467,25 +13483,23 @@ ${buildNovaContext({ agentMode, kaliConnected: routeToKali && kaliAgentConnected
               </span>
             </div>
 
-          {/* ── NOVA Smart Suggestions (zero-latency, client-side) ─────────── */}
+          {/* ── NOVA Smart Suggestions (compact horizontal strip so it never pushes chat out of view) ── */}
           {smartSuggestions.length > 0 && !busy && (
-            <div className="px-2 pb-1.5">
-              <div className="flex items-center gap-1 mb-1.5">
-                <Sparkles className="w-3 h-3 text-violet-400 shrink-0 animate-pulse" />
-                <span className="text-[8px] font-bold text-violet-400/80 uppercase tracking-wider">NOVA يقترح</span>
-                <button onClick={() => setSmartSuggestions([])} className="ml-auto text-violet-700 hover:text-violet-400 transition-colors">
-                  <X className="w-2.5 h-2.5" />
+            <div className=" pb-1 flex items-center gap-1.5 overflow-x-auto">
+              <span className="flex items-center gap-1 text-[8px] font-bold text-violet-400/90 shrink-0">
+                <Sparkles className="w-2.5 h-2.5 text-violet-400" />
+                اقتراح:
+              </span>
+              {smartSuggestions.map((s, i) => (
+                <button key={i} onClick={() => { setInput(s.replace(/^[^\w؀-ۿ]+/, "").trim()); setSmartSuggestions([]); }}
+                  className="shrink-0 text-right text-[8.5px] px-2 py-0.5 rounded-md border transition-all hover:bg-violet-500/15 hover:border-violet-400/40 hover:text-violet-200 font-mono cursor-pointer max-w-[240px] truncate"
+                  style={{ background: "rgba(139,92,246,0.08)", borderColor: "rgba(139,92,246,0.22)", color: "#c4b5fd" }}>
+                  {s}
                 </button>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                {smartSuggestions.map((s, i) => (
-                  <button key={i} onClick={() => { setInput(s.replace(/^[^\w؀-ۿ]+/, "").trim()); setSmartSuggestions([]); }}
-                    className="text-left text-[8.5px] px-2.5 py-1.5 rounded-lg border transition-all hover:bg-violet-500/15 hover:border-violet-400/40 hover:text-violet-200 font-mono cursor-pointer"
-                    style={{ background: "rgba(139,92,246,0.06)", borderColor: "rgba(139,92,246,0.18)", color: "#c4b5fd" }}>
-                    {s}
-                  </button>
-                ))}
-              </div>
+              ))}
+              <button onClick={() => setSmartSuggestions([])} className="ms-auto shrink-0 text-violet-400/60 hover:text-violet-300 px-1">
+                <X className="w-2.5 h-2.5" />
+              </button>
             </div>
           )}
 

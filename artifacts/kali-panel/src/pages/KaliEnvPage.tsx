@@ -1566,6 +1566,16 @@ export default function KaliEnvPage() {
             <span className="tracking-wide text-[11px] font-black text-white">Applications</span>
           </button>
 
+          {/* Direct 1-Click Launch to Unified Work Studio & Live Agent (/agent-pro) */}
+          <button
+            onClick={() => navigate("/agent-pro")}
+            className="flex items-center gap-1 px-2.5 py-1 rounded bg-gradient-to-r from-emerald-500/25 to-cyan-500/25 hover:from-emerald-500/40 hover:to-cyan-500/40 border border-emerald-400/60 text-emerald-100 text-[10.5px] font-mono font-black shadow-[0_0_12px_rgba(16,185,129,0.25)] transition-all"
+            title="فتح صفحة الشغل الشاملة والوكيل الحي والمختبر والـ426 ثغرة"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+            <span>⚡ صفحة الشغل والوكيل</span>
+          </button>
+
           {/* Universal Fuzzy Command Palette Trigger (Ctrl+K) */}
           <button
             onClick={() => setCmdPaletteOpen(true)}

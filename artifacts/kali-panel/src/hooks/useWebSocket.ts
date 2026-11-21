@@ -306,7 +306,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
       ws.onerror = () => {
         setConnected(false);
-        ws.close();
+        ws.onerror = null;
+        try {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.close();
+          }
+        } catch {
+          // ignore
+        }
       };
     } catch {
       setConnected(false);

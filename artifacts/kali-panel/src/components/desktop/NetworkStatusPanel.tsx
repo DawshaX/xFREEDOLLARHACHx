@@ -25,7 +25,7 @@ export default function NetworkStatusPanel() {
         // Check API connection
         let apiConnected = false;
         try {
-          const apiResponse = await fetch("/api/health", { 
+          const apiResponse = await fetch("/api/healthz", { 
             signal: AbortSignal.timeout(3000) 
           });
           apiConnected = apiResponse.ok;
@@ -33,11 +33,19 @@ export default function NetworkStatusPanel() {
           apiConnected = false;
         }
         
-        // Check Ollama connection
-        const ollamaResponse = await fetch("http://127.0.0.1:11434/api/tags", { 
-          signal: AbortSignal.timeout(3000) 
-        });
-        const ollamaConnected = ollamaResponse.ok;
+        // Check Ollama connection via server proxy
+        let ollamaConnected = false;
+        try {
+          const ollamaResponse = await fetch("/api/ollama/probe", { 
+            signal: AbortSignal.timeout(3000) 
+          });
+          if (ollamaResponse.ok) {
+            const d = (await ollamaResponse.json().catch(() => null)) as { connected?: boolean; online?: boolean } | null;
+            ollamaConnected = Boolean(d?.connected || d?.online || ollamaResponse.ok);
+          }
+        } catch {
+          ollamaConnected = false;
+        }
         
         const latency = Date.now() - startTime;
         

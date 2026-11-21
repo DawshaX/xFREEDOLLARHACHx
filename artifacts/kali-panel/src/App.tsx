@@ -99,6 +99,7 @@ const AutoExplorer = lazy(() => import("@/pages/AutoExplorer"));
 const AIPage = lazy(() => import("@/pages/AIPage"));
 const CyberControlHub = lazy(() => import("@/pages/CyberControlHub"));
 const KaliCommandCenter = lazy(() => import("@/pages/KaliCommandCenter"));
+const KaliSystemsPanel = lazy(() => import("@/pages/KaliSystemsPanel"));
 const KaliEnvPage = lazy(() => import("@/pages/KaliEnvPage"));
 const KaliTerminalPage = lazy(() => import("@/pages/KaliTerminalPage"));
 const NovaCommander = lazy(() => import("@/pages/NovaCommander"));
@@ -419,6 +420,7 @@ function InnerRoutes() {
       <Route path="/legacy/github" component={LegacyGithub} />
       <Route path="/legacy/web-search" component={LegacyWebSearch} />
       <Route path="/legacy/nova-sentinel-v3" component={LegacyNovaSentinelV3} />
+      <Route path="/kali-systems" component={KaliSystemsPanel} />
 
       <Route component={NotFound} />
 
