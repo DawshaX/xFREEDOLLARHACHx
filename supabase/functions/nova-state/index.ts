@@ -62,6 +62,12 @@ Deno.serve(async (req) => {
         return json({ error: `refusing to wipe ${prev} records with an empty doc`, guard: "anti-wipe" }, 409);
       }
 
+      const prevSeq = Number((cur?.doc as { seq?: number } | undefined)?.seq ?? -1);
+      const nextSeq = Number((doc as { seq?: number } | undefined)?.seq ?? -2);
+      if (prev === records.length && prevSeq > 0 && prevSeq === nextSeq) {
+        return json({ ok: true, skippedUnchanged: true, records: records.length, previous: prev, bytes: raw.length, at: new Date().toISOString() });
+      }
+
       const { error } = await db
         .from(TABLE)
         .upsert({ id: ROW, doc, updated_at: new Date().toISOString() }, { onConflict: "id" });

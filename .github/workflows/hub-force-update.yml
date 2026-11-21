@@ -23,10 +23,10 @@ jobs:
     steps:
       - name: wait for standalone-bundle to publish nova-bundle + force auto-update
         run: |
-          PERMS_CHK=$(curl -s --max-time 15 "$HUB/api/live-agent/permissions?token=$TOKEN")
-          TCOUNT=$(echo "$PERMS_CHK" | grep -o '"totalTools":[0-9]*' | cut -d: -f2)
-          if [ "$TCOUNT" = "96" ]; then
-            echo "::notice::force-update: الهَب بالفعل على النسخة السيادية الحديثة (96 أداة) — لا حاجة لإعادة تشغيل تقطع اتصالات العقد الـ10"
+          ST_CHK=$(curl -s --max-time 15 "$HUB/api/live-agent/storage-tiers?token=$TOKEN")
+          ST_OK=$(echo "$ST_CHK" | grep -o '"ioBudgetProtected":true' || true)
+          if [ -n "$ST_OK" ]; then
+            echo "::notice::force-update: الهَب بالفعل على النسخة المحدثة (التخزين رباعي الطبقات + الشات المدمج)"
           else
             sleep 75
             R=$(curl -s --max-time 300 -w "\nHTTP:%{http_code}" -X POST "$HUB/api/nova-core/auto-update?force=1" \
@@ -41,14 +41,14 @@ jobs:
             BOOT=$(echo "$V" | grep -o '"boot":{"commit":"[^"]*"' | cut -d'"' -f6)
             DISK=$(echo "$V" | grep -o '"disk":{"commit":"[^"]*"' | cut -d'"' -f6)
             UP=$(echo "$V" | grep -o '"uptimeSec":[0-9]*' | cut -d: -f2)
-            PERMS_CHK=$(curl -s --max-time 15 "$HUB/api/live-agent/permissions?token=$TOKEN")
-            TCOUNT=$(echo "$PERMS_CHK" | grep -o '"totalTools":[0-9]*' | cut -d: -f2)
-            echo "::notice::boot=$BOOT disk=$DISK tools=$TCOUNT uptime=${UP}s (محاولة $i)"
-            if [ "$TCOUNT" = "96" ]; then
-              echo "::notice::✓ الهَب اقفل على النسخة السيادية الجديدة (96 أداة): boot=$BOOT uptime=${UP}s"
+            ST_CHK=$(curl -s --max-time 15 "$HUB/api/live-agent/storage-tiers?token=$TOKEN")
+            ST_OK=$(echo "$ST_CHK" | grep -o '"ioBudgetProtected":true' || true)
+            echo "::notice::boot=$BOOT disk=$DISK storage4Tier=${ST_OK:-pending} uptime=${UP}s (محاولة $i)"
+            if [ -n "$ST_OK" ]; then
+              echo "::notice::✓ الهَب اقفل على النسخة السيادية الجديدة (التخزين رباعي الطبقات + الشات المدمج): boot=$BOOT uptime=${UP}s"
               break
             fi
-            echo "النسخة على الهَب لسه قديمة (boot=$BOOT tools=$TCOUNT) — نطلب auto-update?force=1 ثم restart?force=1"
+            echo "النسخة على الهَب لسه قديمة (boot=$BOOT) — نطلب auto-update?force=1 ثم restart?force=1"
             curl -s --max-time 180 -X POST "$HUB/api/nova-core/auto-update?force=1" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}' || true
             sleep 25
             curl -s --max-time 20 -X POST "$HUB/api/nova-core/restart?force=1" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{}' || true
@@ -87,6 +87,8 @@ jobs:
           echo "::notice::books-library-2099: $(echo "$BOOKS" | tr -d '\n\r')"
           TRAIN=$(curl -s --max-time 25 -X POST "$HUB/api/live-agent/books/train" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"bookId":"book-kali-revealed-2099","target":"example.com"}' | head -c 360)
           echo "::notice::books-train-2099: $(echo "$TRAIN" | tr -d '\n\r')"
+          ST4=$(curl -s --max-time 25 -X POST "$HUB/api/live-agent/storage-tiers/sync" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"note":"قياس حي للمزامنة رباعية الطبقات وحماية Disk IO"}' | head -c 420)
+          echo "::notice::storage-4tier-sync-2099: $(echo "$ST4" | tr -d '\n\r')"
           AG_LAB=$(curl -s -N --max-time 25 -X POST "$HUB/api/live-agent/sessions/nova-root/messages" -H "x-nova-token: $TOKEN" -H "content-type: application/json" -d '{"content":"شغّل المختبر السيادي الحي sovereign_live_lab وقاعدة الـ426 ثغرة kali_vuln_426_matrix ودمج الثغرات kali_exploit_mutate_fuse وتدريب الكتب kali_books_trainer على example.com","mode":"auto"}' | tr '\n\r' ' ' | head -c 520)
           echo "::notice::live-agent-sovereign-tools-2099: $AG_LAB"
           T=$(curl -s --max-time 120 "$HUB/api/kali-env/tools?token=$TOKEN")

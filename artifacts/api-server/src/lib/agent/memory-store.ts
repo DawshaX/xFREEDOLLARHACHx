@@ -118,12 +118,17 @@ const MIRROR_ROW = process.env.NOVA_MEMORY_ROW || "main";
  * (أدق وأسرع)، و`NOVA_STATE_EDGE=0` بيطفي التزامن خالص.
  */
 const EDGE_STATE = (process.env.NOVA_STATE_EDGE_URL || `${MIRROR_URL}/functions/v1/nova-state`).replace(/\/+$/, "");
+const SECONDARY_MIRROR_URL =
+  SUPERVISED && !process.env.NOVA_SUPABASE_URL && !process.env.NOVA_STATE_EDGE_URL
+    ? "https://rckyetgfuflynzcsumsc.supabase.co/functions/v1/nova-state"
+    : "";
 const edgeOn = process.env.NOVA_STATE_EDGE !== "0" && Boolean(EDGE_STATE) && SUPERVISED;
 const mirrorOn = Boolean(MIRROR_URL && MIRROR_KEY) || edgeOn;
 const mirrorVia: "rest" | "edge" | "off" = MIRROR_URL && MIRROR_KEY ? "rest" : edgeOn ? "edge" : "off";
 let mirrorState: "off" | "idle" | "ok" | "error" = mirrorOn ? "idle" : "off";
 let mirrorError: string | null = null;
 let mirrorTimer: NodeJS.Timeout | null = null;
+let lastMirroredSeq = -1;
 
 function mirrorHeaders(): Record<string, string> {
   const h: Record<string, string> = { "content-type": "application/json" };
@@ -172,6 +177,7 @@ async function mirrorLoad(): Promise<MemoryFile | null> {
 /** Replace the row with the current document. Debounced; never throws. */
 function mirrorSchedule(): void {
   if (!mirrorOn || mirrorTimer) return;
+  if (lastMirroredSeq > 0 && store.seq === lastMirroredSeq) return;
   mirrorTimer = setTimeout(() => {
     mirrorTimer = null;
     void mirrorPush();
@@ -195,13 +201,23 @@ async function mirrorPush(): Promise<void> {
         signal: AbortSignal.timeout(20_000),
       },
     );
+    if (SECONDARY_MIRROR_URL && !MIRROR_KEY) {
+      void fetch(SECONDARY_MIRROR_URL, {
+        method: "POST",
+        headers: mirrorHeaders(),
+        body: JSON.stringify({ doc: store, records: store.records.length }),
+        signal: AbortSignal.timeout(20_000),
+      }).catch(() => {});
+    }
     if (res.ok) {
       mirrorState = "ok";
       mirrorError = null;
+      lastMirroredSeq = store.seq;
     } else if (res.status >= 500) {
       // خطأ سيرفر لحظي (cold-start للـedge مقاس على waifly) — محاولة تانية
       const res2 = await retryMirrorPush();
       mirrorState = res2.ok ? "ok" : "error";
+      if (res2.ok) lastMirroredSeq = store.seq;
       mirrorError = res2.ok ? null : `push HTTP ${res.status} → إعادة ${res2.ok ? "نجحت" : "HTTP " + res2.status}`;
     } else {
       mirrorState = "error";
