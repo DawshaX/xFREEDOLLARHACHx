@@ -1,32 +1,32 @@
 {
-  "at": "2026-11-20T21:26:35.223Z",
+  "at": "2026-11-21T02:42:34.300Z",
   "hub": "https://nova.waifly.com",
   "reachable": true,
   "asset": {
-    "updatedAt": "2026-11-20T18:56:31Z",
-    "size": 4587347
+    "updatedAt": "2026-11-21T00:27:38Z",
+    "size": 4602327
   },
   "disk": {
     "name": "nova-24-7",
     "version": "2099.1",
-    "commit": "d9490e43d4480b38755cb82b2c8c6f31248a2680",
-    "builtAt": "2026-11-20T18:56:07.674Z",
+    "commit": "d92bace560d51259fe1717d4d5117ea4c76383ac",
+    "builtAt": "2026-11-21T00:27:15.091Z",
     "files": 191,
     "builtBy": "github-actions"
   },
   "boot": {
-    "commit": "d9490e43d4480b38755cb82b2c8c6f31248a2680",
-    "builtAt": "2026-11-20T18:56:07.674Z",
+    "commit": "d92bace560d51259fe1717d4d5117ea4c76383ac",
+    "builtAt": "2026-11-21T00:27:15.091Z",
     "dir": "/home/container"
   },
   "stale": false,
   "updater": {
     "enabled": true,
     "lastResult": "up-to-date",
-    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-20T18:56:31Z) — حارس لوب التحديث",
-    "lastCheckAt": "2026-11-20T21:21:44.651Z",
-    "currentBuiltAt": "2026-11-20T18:56:07.674Z",
-    "latestReleaseAt": "2026-11-20T18:56:31Z",
+    "lastDetail": "نفس الحزمة اللي اتثبتت فعلًا (2026-11-21T00:27:38Z) — حارس لوب التحديث",
+    "lastCheckAt": "2026-11-21T02:40:22.933Z",
+    "currentBuiltAt": "2026-11-21T00:27:15.091Z",
+    "latestReleaseAt": "2026-11-21T00:27:38Z",
     "restartNeeded": false
   },
   "updaterInstall": null,
@@ -38,15 +38,24 @@
   "page": {
     "status": 200,
     "cacheControl": "no-store",
-    "servedAsset": "/assets/index-C-5qi0Vc.js",
+    "servedAsset": "/assets/index-0L2HiqQ4.js",
     "htmlBytes": 2484
   },
   "fleet": {
     "status": 200,
-    "count": 2,
+    "count": 11,
     "ids": [
       "self-node",
-      "gh-1-1623"
+      "gh-6-2222",
+      "gh-4-2223",
+      "gh-3-2223",
+      "gh-9-2223",
+      "gh-10-2224",
+      "gh-1-2222",
+      "gh-2-2228",
+      "gh-7-2228",
+      "gh-8-2227",
+      "gh-5-2227"
     ]
   }
 }
