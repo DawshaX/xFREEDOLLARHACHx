@@ -1,0 +1,228 @@
+{
+  "version": 1,
+  "at": "2026-11-21T13:30:14.578Z",
+  "sources": [
+    "NVD 2.0",
+    "CISA KEV",
+    "EPSS"
+  ],
+  "total": 430157,
+  "bySeverity": {
+    "medium": 184390,
+    "critical": 40235,
+    "high": 163808,
+    "unknown": 23617,
+    "low": 18032,
+    "none": 75
+  },
+  "byYear": {
+    "1999": 1579,
+    "2000": 1243,
+    "2001": 1556,
+    "2002": 2393,
+    "2003": 1555,
+    "2004": 2707,
+    "2005": 4770,
+    "2006": 7145,
+    "2007": 6580,
+    "2008": 7179,
+    "2009": 5054,
+    "2010": 5251,
+    "2011": 4900,
+    "2012": 5946,
+    "2013": 6836,
+    "2014": 9011,
+    "2015": 8787,
+    "2016": 10658,
+    "2017": 17113,
+    "2018": 17821,
+    "2019": 17689,
+    "2020": 21142,
+    "2021": 23501,
+    "2022": 27642,
+    "2023": 31517,
+    "2024": 39382,
+    "2025": 45544,
+    "2026": 95656
+  },
+  "kev": 1790,
+  "epssScored": 408645,
+  "products": 81954,
+  "topProducts": [
+    {
+      "product": "linux_kernel",
+      "count": 69420
+    },
+    {
+      "product": "android",
+      "count": 22978
+    },
+    {
+      "product": "windows_10",
+      "count": 16232
+    },
+    {
+      "product": "debian_linux",
+      "count": 14180
+    },
+    {
+      "product": "chrome",
+      "count": 12398
+    },
+    {
+      "product": "ubuntu_linux",
+      "count": 11569
+    },
+    {
+      "product": "firefox",
+      "count": 11017
+    },
+    {
+      "product": "fedora",
+      "count": 10292
+    },
+    {
+      "product": "windows_server_2012",
+      "count": 7799
+    },
+    {
+      "product": "mac_os_x",
+      "count": 7753
+    },
+    {
+      "product": "iphone_os",
+      "count": 7195
+    },
+    {
+      "product": "junos",
+      "count": 6236
+    },
+    {
+      "product": "windows_server_2016",
+      "count": 6044
+    },
+    {
+      "product": "macos",
+      "count": 6038
+    },
+    {
+      "product": "windows_server_2008",
+      "count": 5836
+    },
+    {
+      "product": "safari",
+      "count": 5742
+    },
+    {
+      "product": "flash_player",
+      "count": 5312
+    },
+    {
+      "product": "php",
+      "count": 4568
+    },
+    {
+      "product": "internet_explorer",
+      "count": 4236
+    },
+    {
+      "product": "gitlab",
+      "count": 4232
+    },
+    {
+      "product": "wireshark",
+      "count": 4181
+    },
+    {
+      "product": "windows_10_1809",
+      "count": 4166
+    },
+    {
+      "product": "moodle",
+      "count": 4142
+    },
+    {
+      "product": "windows_10_22h2",
+      "count": 4126
+    },
+    {
+      "product": "windows_10_21h2",
+      "count": 4120
+    },
+    {
+      "product": "windows_11_24h2",
+      "count": 3739
+    },
+    {
+      "product": "windows_server_2019",
+      "count": 3700
+    },
+    {
+      "product": "acrobat",
+      "count": 3595
+    },
+    {
+      "product": "windows_11_23h2",
+      "count": 3587
+    },
+    {
+      "product": "jre",
+      "count": 3566
+    },
+    {
+      "product": "windows_10_1607",
+      "count": 3553
+    },
+    {
+      "product": "enterprise_linux",
+      "count": 3475
+    },
+    {
+      "product": "ios",
+      "count": 3378
+    },
+    {
+      "product": "jdk",
+      "count": 3245
+    },
+    {
+      "product": "mysql",
+      "count": 3045
+    },
+    {
+      "product": "windows_11_25h2",
+      "count": 2997
+    },
+    {
+      "product": "ipados",
+      "count": 2938
+    },
+    {
+      "product": "windows_11_26h1",
+      "count": 2922
+    },
+    {
+      "product": "ios_xe",
+      "count": 2867
+    },
+    {
+      "product": "websphere_application_server",
+      "count": 2843
+    }
+  ],
+  "files": {
+    "corpus": "cves.jsonl.gz",
+    "bytes": 50998300,
+    "sha256": "fdfc989c703acc1d1bc1555e497a3236159267cd690d7f7f8a7f7c8e5e0a9689"
+  },
+  "mode": "deepen",
+  "says_ar": "430157 ثغرة حقيقية · critical 40235 · high 163808 · 1790 مستغلّة فعلياً (KEV) · 408645 لها EPSS · 81954 منتج بـCPE · مزامنة 2026-11-21T13:30:14.578Z",
+  "deepen": {
+    "nextStartIndex": 0,
+    "windowPages": 12,
+    "walkedFrom": 0,
+    "nvdTotal": 430157,
+    "coverage": 1,
+    "at": "2026-11-21T13:30:14.579Z"
+  }
+}
