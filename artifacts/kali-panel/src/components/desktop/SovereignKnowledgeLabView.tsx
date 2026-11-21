@@ -233,6 +233,21 @@ export const SovereignKnowledgeLabView: React.FC<SovereignKnowledgeLabViewProps>
   }, [customTitle, customCategory, customTools, customContent, refreshBooks]);
 
   useEffect(() => {
+    setSection(initialSection);
+  }, [initialSection]);
+
+  useEffect(() => {
+    const onOpenTab = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab;
+      if (tab === "liveLab" || tab === "vulns426" || tab === "books") {
+        setSection(tab);
+      }
+    };
+    window.addEventListener("nova:open-agent-tab", onOpenTab);
+    return () => window.removeEventListener("nova:open-agent-tab", onOpenTab);
+  }, []);
+
+  useEffect(() => {
     void refreshLab();
     void refreshVulns();
     void refreshBooks();
@@ -244,67 +259,62 @@ export const SovereignKnowledgeLabView: React.FC<SovereignKnowledgeLabViewProps>
       className="h-full w-full flex flex-col bg-[#07060e] text-slate-100 overflow-hidden select-text"
       style={localZoom !== 100 ? ({ zoom: `${localZoom}%` } as React.CSSProperties) : undefined}
     >
-      {/* شريط التحكم العلوي الفسيح مع الفواصل البصرية وأدوات التكبير والتصغير */}
-      <div className="shrink-0 px-4 py-3 bg-gradient-to-r from-[#0d1220] via-[#100d22] to-[#0a1618] border-b border-cyan-500/30 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2.5 flex-wrap">
+      {/* شريط التحكم العلوي المدمج في سطر واحد مع الفواصل البصرية وأدوات التكبير والتصغير */}
+      <div className="shrink-0 px-3 py-1.5 bg-gradient-to-r from-[#0d1220] via-[#100d22] to-[#0a1618] border-b border-cyan-500/30 flex items-center justify-between gap-2 overflow-x-auto">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setSection("liveLab")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black font-mono transition-all border ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-black font-mono transition-all border whitespace-nowrap ${
               section === "liveLab"
-                ? "bg-cyan-500/25 border-cyan-400 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.3)]"
+                ? "bg-cyan-500/25 border-cyan-400 text-cyan-100 shadow-[0_0_12px_rgba(34,211,238,0.25)]"
                 : "bg-white/[0.04] border-white/10 text-slate-300 hover:text-white hover:bg-white/[0.08]"
             }`}
           >
-            🧪 المختبر السيادي الحي والوعي والاستشارة
+            🧪 المختبر الحي والوعي
           </button>
-
-          <span className="text-slate-600 font-bold select-none">|</span>
 
           <button
             onClick={() => setSection("vulns426")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black font-mono transition-all border ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-black font-mono transition-all border whitespace-nowrap ${
               section === "vulns426"
-                ? "bg-rose-500/25 border-rose-400 text-rose-100 shadow-[0_0_16px_rgba(244,63,94,0.3)]"
+                ? "bg-rose-500/25 border-rose-400 text-rose-100 shadow-[0_0_12px_rgba(244,63,94,0.25)]"
                 : "bg-white/[0.04] border-white/10 text-slate-300 hover:text-white hover:bg-white/[0.08]"
             }`}
           >
-            🎯 قاعدة الـ426 ثغرة ومحرك التعديل والدمج (Root & Max Protection)
+            🎯 الـ426 ثغرة والدمج
           </button>
-
-          <span className="text-slate-600 font-bold select-none">|</span>
 
           <button
             onClick={() => setSection("books")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-black font-mono transition-all border ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-black font-mono transition-all border whitespace-nowrap ${
               section === "books"
-                ? "bg-amber-500/25 border-amber-400 text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.3)]"
+                ? "bg-amber-500/25 border-amber-400 text-amber-100 shadow-[0_0_12px_rgba(251,191,36,0.25)]"
                 : "bg-white/[0.04] border-white/10 text-slate-300 hover:text-white hover:bg-white/[0.08]"
             }`}
           >
-            📚 مكتبة الـ16 كتاباً وتدريب كالي الحي
+            📚 الـ16 كتاباً وكالي
           </button>
         </div>
 
         {/* الهدف النشط + أزرار التكبير والتصغير */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-black/60 border border-cyan-500/35 rounded-xl px-3 py-1.5">
-            <span className="text-[11px] font-mono text-cyan-300 font-bold">🎯 الهدف:</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 bg-black/60 border border-cyan-500/35 rounded-lg px-2 py-0.5">
+            <span className="text-[10px] font-mono text-cyan-300 font-bold">🎯:</span>
             <input
               value={activeTarget}
               onChange={(e) => onTargetChange?.(e.target.value)}
               dir="ltr"
-              className="w-36 bg-transparent text-xs font-mono font-bold text-white focus:outline-none"
+              className="w-28 bg-transparent text-[11px] font-mono font-bold text-white focus:outline-none"
               placeholder="example.com"
             />
           </div>
 
-          <div className="flex items-center gap-1 bg-black/60 border border-white/15 rounded-xl px-2 py-1">
-            <span className="text-[10px] font-mono text-slate-400 px-1">🔍 الحجم:</span>
-            {[90, 100, 110, 120].map((z) => (
+          <div className="flex items-center gap-0.5 bg-black/60 border border-white/15 rounded-lg px-1.5 py-0.5">
+            {[90, 100, 110].map((z) => (
               <button
                 key={z}
                 onClick={() => setLocalZoom(z)}
-                className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition ${
+                className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold transition ${
                   localZoom === z ? "bg-cyan-500/30 text-cyan-200 border border-cyan-400/50" : "text-slate-400 hover:text-white"
                 }`}
               >

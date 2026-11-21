@@ -830,12 +830,21 @@ export function initMemory(): void {
   flushMemory();
 }
 
-process.on("exit", flushMemory);
-process.on("SIGTERM", () => {
-  flushMemory();
-  process.exit(0);
-});
-process.on("SIGINT", () => {
-  flushMemory();
-  process.exit(0);
-});
+const gMem = globalThis as Record<string, unknown>;
+if (!gMem.__novaMemoryExitHooksRegistered) {
+  gMem.__novaMemoryExitHooksRegistered = true;
+  try {
+    if (typeof process.setMaxListeners === "function") {
+      process.setMaxListeners(Math.max(30, process.getMaxListeners?.() ?? 10));
+    }
+  } catch { /* ignore */ }
+  process.on("exit", flushMemory);
+  process.on("SIGTERM", () => {
+    flushMemory();
+    process.exit(0);
+  });
+  process.on("SIGINT", () => {
+    flushMemory();
+    process.exit(0);
+  });
+}

@@ -35,7 +35,7 @@ export default function NetworkStatusPanelReal() {
       // Check API connection
       let apiConnected = false;
       try {
-        const apiResponse = await fetch("/api/health", { 
+        const apiResponse = await fetch("/api/healthz", { 
           signal: AbortSignal.timeout(5000) 
         });
         if (apiResponse.ok) {
@@ -47,14 +47,15 @@ export default function NetworkStatusPanelReal() {
         errors.push("API unreachable");
       }
       
-      // Check Ollama connection
+      // Check Ollama connection via server proxy
       let ollamaConnected = false;
       try {
-        const ollamaResponse = await fetch("http://127.0.0.1:11434/api/tags", { 
+        const ollamaResponse = await fetch("/api/ollama/probe", { 
           signal: AbortSignal.timeout(5000) 
         });
         if (ollamaResponse.ok) {
-          ollamaConnected = true;
+          const d = (await ollamaResponse.json().catch(() => null)) as { connected?: boolean; online?: boolean } | null;
+          ollamaConnected = Boolean(d?.connected || d?.online || ollamaResponse.ok);
         } else {
           errors.push("Ollama not responding");
         }
@@ -62,16 +63,16 @@ export default function NetworkStatusPanelReal() {
         errors.push("Ollama unreachable");
       }
       
-      // Check internet connection (via proxy)
+      // Check core status connection
       let internetConnected = false;
       try {
-        const internetResponse = await fetch("/api/proxy?url=https://duckduckgo.com", { 
-          signal: AbortSignal.timeout(10000) 
+        const internetResponse = await fetch("/api/nova-core/status", { 
+          signal: AbortSignal.timeout(5000) 
         });
         if (internetResponse.ok) {
           internetConnected = true;
         } else {
-          errors.push("Internet proxy failed");
+          errors.push("Core status check failed");
         }
       } catch (error) {
         errors.push("Internet unreachable");

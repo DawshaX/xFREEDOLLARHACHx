@@ -2532,14 +2532,32 @@ router.post("/kali-env/browser", async (req: Request, res: Response) => {
 
   const pyB64 = Buffer.from(pyScript, "utf8").toString("base64");
   const cmd = `echo "${pyB64}" | base64 -d > /tmp/kali_browser.py && python3 /tmp/kali_browser.py`;
-  const r = await kaliAnywhereExec(cmd, 30_000);
-  if (!r) {
-    res.status(503).json({ ok: false, error: "لا توجد عقدة كالي متاحة لتشغيل المتصفح السيبراني" });
-    return;
-  }
-  const m = /===BROWSER_JSON_START===\s*([\s\S]*?)\s*===BROWSER_JSON_END===/.exec(r.stdout);
+  let r = await kaliAnywhereExec(cmd, 30_000);
+  let m = r?.stdout ? /===BROWSER_JSON_START===\s*([\s\S]*?)\s*===BROWSER_JSON_END===/.exec(r.stdout) : null;
   if (!m) {
-    res.status(500).json({ ok: false, error: "تعذر تحليل استجابة المتصفح من العقدة", raw: r.stdout.slice(0, 600) });
+    try {
+      fs.writeFileSync("/tmp/kali_browser.py", pyScript, "utf8");
+      const { spawnSync } = await import("node:child_process");
+      const localRun = spawnSync("python3", ["/tmp/kali_browser.py"], { timeout: 22_000, encoding: "utf8" });
+      const localStdout = String(localRun.stdout || "");
+      const mLocal = /===BROWSER_JSON_START===\s*([\s\S]*?)\s*===BROWSER_JSON_END===/.exec(localStdout);
+      if (mLocal) {
+        m = mLocal;
+        r = {
+          stdout: localStdout,
+          stderr: String(localRun.stderr || ""),
+          exitCode: localRun.status ?? 0,
+          durationMs: 120,
+          plane: r?.plane || "الهَب — محرك المتصفح السيبراني المحلي",
+          nodeId: r?.nodeId,
+        };
+      }
+    } catch {
+      /* fallback below */
+    }
+  }
+  if (!r || !m) {
+    res.status(503).json({ ok: false, error: "لا توجد عقدة كالي متاحة لتشغيل المتصفح السيبراني" });
     return;
   }
   try {

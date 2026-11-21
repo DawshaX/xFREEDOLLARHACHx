@@ -165,6 +165,7 @@ export function AgentWorkCockpit() {
   const sys = useSystem();
   const [, navigate] = useLocation();
   const [stageTab, setStageTab] = useState<StageTab>("sovereign_lab");
+  const [labSection, setLabSection] = useState<"liveLab" | "vulns426" | "books">("liveLab");
   const [layout, setLayout] = useState<SplitLayout>("balanced");
   const [focusFull, setFocusFull] = useState(false);
   const [activeTarget, setActiveTarget] = useState<string>("example.com");
@@ -626,15 +627,11 @@ export function AgentWorkCockpit() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#040108] text-white overflow-hidden" dir="rtl">
-      {/* ── شريط تحكم سيادي موحّد 2099 (دمج التوحيد + الهدف + الذاكرة + الاستقلالية + التوزيع في سطر واحد نظيف) ── */}
-      <div className="shrink-0 flex flex-wrap items-center gap-1.5 px-3 py-1.5 border-b border-rose-500/25 bg-gradient-to-l from-[#14040e] via-[#07020c] to-[#05101a]">
-        <span className="text-[9.5px] font-black text-amber-200 hidden xl:inline-flex items-center gap-1">
-          🕌 بسم الله الرحمن الرحيم · لا إله إلا الله · الله أكبر ولله الحمد ·
-        </span>
-
+      {/* ── شريط تحكم سيادي موحّد 2099 (في سطر واحد نظيف بلا التفاف) ── */}
+      <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 border-b border-rose-500/25 bg-gradient-to-l from-[#14040e] via-[#07020c] to-[#05101a] overflow-x-auto">
         {/* نبضة حالة الأجينت الحية */}
         <div
-          className="inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[9.5px] font-black font-mono"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[9.5px] font-black font-mono"
           style={{
             borderColor: `${phaseMeta.color}60`,
             background: `${phaseMeta.color}16`,
@@ -650,7 +647,7 @@ export function AgentWorkCockpit() {
         </div>
 
         {/* قفل الهدف الموحد لسكة المليارات والزيرو-داي وكالي 2099 */}
-        <div className="inline-flex items-center gap-1 rounded-lg border border-amber-500/45 bg-amber-500/10 px-2 py-0.5">
+        <div className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-amber-500/45 bg-amber-500/10 px-2 py-0.5">
           <Crosshair className="w-3 h-3 text-amber-300" />
           <span className="text-[8.5px] font-bold text-amber-200">الهدف:</span>
           <input
@@ -671,7 +668,56 @@ export function AgentWorkCockpit() {
             }}
             className="rounded bg-amber-500/30 hover:bg-amber-500/50 px-1.5 py-0.5 text-[8px] font-black text-amber-100"
           >
-            ربط وفحص
+            فحص
+          </button>
+        </div>
+
+        {/* أزرار الانتقال الفوري للمختبر السيادي والـ426 ثغرة والكتب */}
+        <div className="shrink-0 inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setStageTab("sovereign_lab");
+              setLabSection("liveLab");
+              if (layout === "agent-full") setLayout("balanced");
+            }}
+            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-black transition ${
+              stageTab === "sovereign_lab" && labSection === "liveLab"
+                ? "border-emerald-400 bg-emerald-500/30 text-emerald-100"
+                : "border-emerald-400/45 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25"
+            }`}
+          >
+            🧪 المختبر الحي
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStageTab("sovereign_lab");
+              setLabSection("vulns426");
+              if (layout === "agent-full") setLayout("balanced");
+            }}
+            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-black transition ${
+              stageTab === "sovereign_lab" && labSection === "vulns426"
+                ? "border-rose-400 bg-rose-500/30 text-rose-100"
+                : "border-rose-400/45 bg-rose-500/15 text-rose-200 hover:bg-rose-500/25"
+            }`}
+          >
+            🎯 الـ426 ثغرة والدمج
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStageTab("sovereign_lab");
+              setLabSection("books");
+              if (layout === "agent-full") setLayout("balanced");
+            }}
+            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-black transition ${
+              stageTab === "sovereign_lab" && labSection === "books"
+                ? "border-cyan-400 bg-cyan-500/30 text-cyan-100"
+                : "border-cyan-400/45 bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25"
+            }`}
+          >
+            📚 الكتب الـ16
           </button>
         </div>
 
@@ -682,105 +728,46 @@ export function AgentWorkCockpit() {
             if (layout === "agent-full") setLayout("chat-wide");
             setStageTab("memory");
           }}
-          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-bold transition ${
+          className={`shrink-0 inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9px] font-bold transition ${
             memoryPulse
-              ? "border-emerald-400 bg-emerald-500/25 text-emerald-100 scale-[1.03]"
+              ? "border-emerald-400 bg-emerald-500/25 text-emerald-100"
               : "border-violet-500/40 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20"
           }`}
           title="فتح لوحة الذاكرة الأبدية والتعلّم الذاتي"
         >
           <Brain className="w-3 h-3 text-violet-300" />
-          <span>الذاكرة الأبدية: {memTotal + kaliEternalMem.length}</span>
-          <span className="text-emerald-300/90 font-mono text-[8.5px]">· Auto-Dream {autoDreamCount}</span>
-        </button>
-
-        {/* زر تشغيل Auto-Dream فوراً */}
-        <button
-          type="button"
-          disabled={memBusy}
-          onClick={() => void runAutoDreamNow()}
-          className="inline-flex items-center gap-1 rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/15 px-2 py-0.5 text-[9.5px] font-bold text-fuchsia-200 hover:bg-fuchsia-500/25 transition disabled:opacity-45"
-          title="دمج الذاكرة واستخلاص الدروس الآن"
-        >
-          <Sparkles className="w-3 h-3" />
-          <span>{memBusy ? "يدمج…" : "تعلّم ودمج"}</span>
+          <span>ذاكرة: {memTotal + kaliEternalMem.length}</span>
         </button>
 
         {/* الاستقلالية 24/7 */}
         <button
           type="button"
           onClick={() => void toggleAutonomy()}
-          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-bold transition ${
+          className={`shrink-0 inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9px] font-bold transition ${
             autoEnabled
               ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200"
               : "border-amber-400/45 bg-amber-500/15 text-amber-200"
           }`}
         >
           {autoEnabled ? <Zap className="w-3 h-3" /> : <ZapOff className="w-3 h-3" />}
-          <span>{autoEnabled ? "24/7 مفعّل" : "تفعيل 24/7"}</span>
+          <span>{autoEnabled ? "24/7" : "تفعيل 24/7"}</span>
         </button>
-
-        <button
-          type="button"
-          onClick={() => void runAutonomyTick()}
-          className="inline-flex items-center gap-1 rounded-lg border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[9.5px] font-bold text-cyan-200 hover:bg-cyan-500/20 transition"
-          title="تنفيذ دورة استقلالية وتعلّم فورية"
-        >
-          <Play className="w-3 h-3" /> نبضة
-        </button>
-
-        {/* أزرار الانتقال الفوري للمختبر السيادي والـ426 ثغرة والكتب */}
-        <div className="inline-flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              setStageTab("sovereign_lab");
-              if (layout === "agent-full") setLayout("balanced");
-              window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "liveLab" } }));
-            }}
-            className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/55 bg-emerald-500/20 px-2.5 py-0.5 text-[9.5px] font-black text-emerald-100 hover:bg-emerald-500/30 transition"
-          >
-            🧪 المختبر السيادي الحي
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setStageTab("sovereign_lab");
-              if (layout === "agent-full") setLayout("balanced");
-              window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "vulns426" } }));
-            }}
-            className="inline-flex items-center gap-1 rounded-lg border border-rose-400/55 bg-rose-500/20 px-2.5 py-0.5 text-[9.5px] font-black text-rose-100 hover:bg-rose-500/30 transition"
-          >
-            🎯 قاعدة الـ426 ثغرة والدمج
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setStageTab("sovereign_lab");
-              if (layout === "agent-full") setLayout("balanced");
-              window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "books" } }));
-            }}
-            className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/55 bg-cyan-500/20 px-2.5 py-0.5 text-[9.5px] font-black text-cyan-100 hover:bg-cyan-500/30 transition"
-          >
-            📚 الكتب الـ16 والتدريب
-          </button>
-        </div>
 
         {/* أدوات التحكم في التوزيع وملء الشاشة */}
-        <div className="mr-auto flex items-center gap-1.5">
+        <div className="mr-auto shrink-0 flex items-center gap-1">
           {(
             [
-              ["balanced", "⚖️ شات + المختبر الحي (50/50)"],
-              ["chat-wide", "💬 توسيع الشات (62/38)"],
-              ["work-wide", "🧪 توسيع المختبر (38/62)"],
-              ["agent-full", "🖥️ شاشة كاملة (100%)"],
+              ["balanced", "⚖️ 50/50"],
+              ["chat-wide", "💬 توسيع الشات"],
+              ["work-wide", "🧪 توسيع المختبر"],
+              ["agent-full", "🖥️ الشات 100%"],
             ] as const
           ).map(([id, label]) => (
             <button
               key={id}
               type="button"
               onClick={() => setLayout(id)}
-              className={`inline-flex rounded-md border px-2 py-0.5 text-[8.5px] font-mono font-bold transition ${
+              className={`inline-flex rounded-md border px-2 py-0.5 text-[8.5px] font-mono font-bold transition whitespace-nowrap ${
                 layout === id
                   ? "border-cyan-400 bg-cyan-500/25 text-cyan-100 shadow-[0_0_8px_rgba(34,211,238,0.2)]"
                   : "border-white/10 bg-white/[0.03] text-white/60 hover:text-white"
@@ -792,7 +779,7 @@ export function AgentWorkCockpit() {
           <button
             type="button"
             onClick={toggleFocusMode}
-            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9px] font-bold transition ${
+            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9px] font-bold transition whitespace-nowrap ${
               focusFull
                 ? "border-rose-400/70 bg-rose-500/25 text-rose-100"
                 : "border-white/15 bg-white/5 text-white/80 hover:border-rose-400/40"
@@ -800,7 +787,7 @@ export function AgentWorkCockpit() {
             title={focusFull ? "إظهار القوائم الجانبية" : "ملء الشاشة (إخفاء القوائم)"}
           >
             {focusFull ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-            <span>{focusFull ? "إظهار القوائم" : "ملء الشاشة"}</span>
+            <span>{focusFull ? "القوائم" : "ملء الشاشة"}</span>
           </button>
         </div>
       </div>
@@ -842,11 +829,11 @@ export function AgentWorkCockpit() {
         {layout !== "agent-full" && (
         <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-[#04020a] overflow-hidden">
           {/* ألسنة منصة العمل — 9 تبويبات حية شاملة لكل البرنامج وكالي 2099 */}
-          <nav className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-[#08030f] overflow-x-auto">
+          <nav className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 border-b border-white/10 bg-[#08030f] overflow-x-auto">
             {(
               [
                 { id: "sovereign_lab", label: "🧪 المختبر والـ426 ثغرة والكتب", icon: Sparkles, color: "#00f5d4", badge: "426+16" },
-                { id: "live",        label: "⚡ البث الحي",            icon: Activity,   color: "#22d3ee", badge: liveFeed.length ? String(liveFeed.length) : "LIVE" },
+                { id: "live",        label: "⚡ البث والتيرمنال",       icon: Activity,   color: "#22d3ee", badge: liveFeed.length ? String(liveFeed.length) : "LIVE" },
                 { id: "bounty_0day", label: "💰 المليارات والزيرو-داي", icon: DollarSign, color: "#fbbf24", badge: "2099" },
                 { id: "kali_2099",   label: "🐉 كالي 2099 المدمج",     icon: Shield,     color: "#ff2b4d", badge: "294" },
                 { id: "radar_graph", label: "👁️ الرادار والسطح 360°",  icon: Eye,        color: "#34d399", badge: `${visitorIntel?.visitors?.length ?? 0}` },
@@ -862,16 +849,16 @@ export function AgentWorkCockpit() {
                   key={t.id}
                   type="button"
                   onClick={() => setStageTab(t.id)}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[10px] font-black transition-all"
+                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[9.5px] font-black transition-all"
                   style={
                     active
-                      ? { borderColor: `${t.color}85`, background: `${t.color}20`, color: t.color, boxShadow: `0 0 14px ${t.color}25 inset` }
+                      ? { borderColor: `${t.color}85`, background: `${t.color}20`, color: t.color, boxShadow: `0 0 12px ${t.color}25 inset` }
                       : { borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)", color: "rgba(255,255,255,0.6)" }
                   }
                 >
-                  <t.icon className="w-3.5 h-3.5" />
+                  <t.icon className="w-3 h-3" />
                   <span>{t.label}</span>
-                  <span className="rounded-full bg-black/40 border border-white/15 px-1.5 text-[8px] font-mono" dir="ltr">
+                  <span className="rounded-full bg-black/40 border border-white/15 px-1 text-[8px] font-mono" dir="ltr">
                     {t.badge}
                   </span>
                 </button>
@@ -879,18 +866,18 @@ export function AgentWorkCockpit() {
             })}
           </nav>
 
-          {/* محتوى منصة العمل */}
+          {/* محتوى منصة العمل (المختبر يأخذ كامل الارتفاع بدون سكرول مزدوج) */}
+          {stageTab === "sovereign_lab" ? (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <SovereignKnowledgeLabView
+                activeTarget={activeTarget}
+                initialSection={labSection}
+                onTargetChange={(next) => setActiveTarget(next)}
+                onSendToAgent={(prompt) => sendToAgent(prompt, true)}
+              />
+            </div>
+          ) : (
           <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
-            {/* ─────── تبويب 0: المختبر السيادي الحي + مصفوفة الـ426 ثغرة والدمج + الكتب الـ16 ─────── */}
-            {stageTab === "sovereign_lab" && (
-              <div className="h-[calc(100vh-140px)] min-h-[620px] rounded-2xl overflow-hidden border border-cyan-500/35">
-                <SovereignKnowledgeLabView
-                  activeTarget={activeTarget}
-                  onTargetChange={(next) => setActiveTarget(next)}
-                  onSendToAgent={(prompt) => sendToAgent(prompt, true)}
-                />
-              </div>
-            )}
 
             {/* ─────── تبويب 1: البث والتنفيذ الحي + التيرمنال ─────── */}
             {stageTab === "live" && (
@@ -1791,6 +1778,7 @@ export function AgentWorkCockpit() {
               </div>
             )}
           </div>
+          )}
         </section>
         )}
       </div>

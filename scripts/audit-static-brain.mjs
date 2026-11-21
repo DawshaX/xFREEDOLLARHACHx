@@ -237,7 +237,9 @@ async function phaseLinkedServer() {
     findings.push({ kind: "no-server", detail: "phase 2 needs --server=" });
     return;
   }
+  const opsToken = (process.env.NOVA_EXEC_TOKEN || process.env.NOVA_AUDIT_TOKEN || "").trim();
   const probe = await NATIVE_FETCH(`${SERVER}/api/nova-core/status`, {
+    headers: opsToken ? { "x-nova-token": opsToken } : undefined,
     signal: AbortSignal.timeout(6000),
   }).catch((err) => ({ ok: false, reason: err?.message ?? String(err) }));
   if (!probe?.ok) {
@@ -249,7 +251,6 @@ async function phaseLinkedServer() {
     // so a linked chat without one is a 403 — which used to look like "no events"
     // (an empty reply) instead of "the gate said no". Seed the token the same way
     // the ops room does; if none is configured the diagnostic below says so.
-    const opsToken = (process.env.NOVA_EXEC_TOKEN || process.env.NOVA_AUDIT_TOKEN || "").trim();
     const { window, sockets } = bootDom({
       remoteBase: SERVER,
       search: "?standalone=1",

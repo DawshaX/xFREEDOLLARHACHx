@@ -915,53 +915,58 @@ export default function NovaAgentPro() {
         </div>
       )}
 
-      {/* ── الهيدر السيادي العلوي 2099 ── */}
-      <header className="relative z-10 shrink-0 cyber-top-sweep border-b border-rose-500/25 bg-gradient-to-l from-rose-950/35 via-[#07020b]/95 to-cyan-950/25 px-3 py-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative shrink-0">
+      {/* ── الهيدر السيادي الموحّد 2099 (مدمج مع شريط الأقسام في سطر واحد نظيف لتوفير كامل المساحة الرأسية للشغل والشات) ── */}
+      <header className="relative z-10 shrink-0 cyber-top-sweep border-b border-rose-500/25 bg-gradient-to-l from-rose-950/35 via-[#07020b]/95 to-cyan-950/25 px-2.5 py-1">
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <div className="relative shrink-0 flex items-center gap-2">
             <img
               src={DAW_SKULL}
               alt="Dawsha Skull"
-              className="w-8 h-8 rounded-full object-cover ring-2 ring-rose-500/85 skull-halo"
+              className="w-6 h-6 rounded-full object-cover ring-2 ring-rose-500/85 skull-halo"
             />
-            <span className="absolute -bottom-0.5 -left-0.5 text-[9px] leading-none">☠</span>
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xs sm:text-sm font-black leading-4 text-transparent bg-clip-text bg-gradient-to-l from-rose-300 via-amber-200 to-cyan-300 flex items-center gap-1.5 flex-wrap">
-              <span>⚡ NOVA AGENT PRO 2099 — دولاب دوشة · الوكيل السيادي الموحّد</span>
-              <span className="rounded border border-emerald-400/50 bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-mono text-emerald-200">
-                🔓 صلاحيات 100% · 24/7 ROOT
-              </span>
-            </h1>
-            <div className="text-[8px] font-mono text-amber-200/80 mt-0.5 truncate">
-              🕌 بسم الله الرحمن الرحيم · لا إله إلا الله وحده لا شريك له · الله أكبر ولله الحمد · {dayName} · الجلسة {fmtUptime(sessionS)} · التشغيل {fmtUptime(vit.up)}
+            <div className="min-w-0 shrink-0">
+              <h1 className="text-[11px] font-black leading-tight text-transparent bg-clip-text bg-gradient-to-l from-rose-300 via-amber-200 to-cyan-300 flex items-center gap-1.5 whitespace-nowrap">
+                <span>⚡ استوديو الشغل والوكيل 2099</span>
+                <span className="rounded border border-emerald-400/50 bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-mono text-emerald-200">
+                  🔓 100% · nova-root
+                </span>
+              </h1>
             </div>
           </div>
-          <div className="mr-auto flex items-center gap-1.5 flex-wrap">
+
+          <span className="h-4 w-px bg-white/15 shrink-0" />
+
+          {/* شريط الأقسام المدمج مباشرة في الهيدر */}
+          <nav className="flex items-center gap-1 shrink-0">
+            {ARENAS.map(({ key, labelAr, icon: Icon, color }) => {
+              const active = arena === key;
+              const badge = key === "cron" && cronJobs.length > 0 ? `${cronOn}/${cronJobs.length}` : null;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setArena(key)}
+                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-black transition-all whitespace-nowrap"
+                  style={
+                    active
+                      ? { borderColor: color + "85", background: `${color}25`, color, boxShadow: `0 0 10px ${color}35 inset` }
+                      : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.7)" }
+                  }
+                >
+                  <Icon className="w-3 h-3" />
+                  {labelAr}
+                  {badge && <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-1 text-[7.5px] text-emerald-300 font-mono" dir="ltr">{badge}</span>}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="mr-auto flex items-center gap-1 shrink-0">
             {pill(vit.ok, "السيرفر", vit.ok && vit.ms != null ? ` ${vit.ms}ms` : "")}
             {pill(agents.length > 0 ? true : agentsErr == null ? null : false, `عُقد ×${agents.length || 10}`)}
-            {pill(vit.tools > 0 ? true : null, `أدوات ×${vit.tools || 96}+294`)}
-            {pill(true, "🎯 426+429K ثغرة")}
-            {pill(true, "📚 16 كتاباً")}
-            {pill(cronOn > 0 ? true : null, `كرون ${cronOn}/${cronJobs.length}`)}
-            {nexus && pill(true, "🌳 nova-root", ` · خلفية ×${nexus.backgroundFeedCount} · تعلم ×${nexus.learnedInsightsCount}`)}
-            <button
-              type="button"
-              onClick={() => {
-                setArena("cockpit");
-                setTimeout(() => {
-                  window.dispatchEvent(new CustomEvent("nova:open-agent-tab", { detail: { tab: "liveLab" } }));
-                }, 50);
-              }}
-              className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/55 bg-emerald-500/20 px-2.5 py-1 text-[10px] font-black text-emerald-100 hover:bg-emerald-500/30 transition"
-              title="فتح المختبر السيادي الحي (الوكيل النهائي المدمج والوعي والاستشارة الذكية)"
-            >
-              🧪 المختبر السيادي الحي
-            </button>
             <button
               type="button"
               onClick={() => navigate("/kali-env")}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/50 bg-rose-500/15 px-2.5 py-1 text-[10px] font-black text-rose-200 hover:bg-rose-500/25 transition"
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/50 bg-rose-500/15 px-2 py-0.5 text-[9.5px] font-black text-rose-200 hover:bg-rose-500/25 transition whitespace-nowrap"
               title="فتح سطح مكتب كالي لينكس 2099 الكامل"
             >
               🐉 كالي 2099
@@ -969,7 +974,7 @@ export default function NovaAgentPro() {
             <button
               type="button"
               onClick={() => setPrefs((p) => ({ ...p, hudOpen: !p.hudOpen }))}
-              className="inline-flex items-center gap-1 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[9.5px] font-black text-cyan-200 hover:bg-cyan-500/20 transition"
+              className="inline-flex items-center gap-1 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-black text-cyan-200 hover:bg-cyan-500/20 transition whitespace-nowrap"
               title="إظهار أو إخفاء بطاقات القياس الحية الست"
             >
               <Skull className="w-3 h-3 text-cyan-300" />
@@ -977,13 +982,13 @@ export default function NovaAgentPro() {
               {prefs.hudOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
             <button onClick={() => setPaletteOpen(true)}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/45 bg-rose-500/15 px-2 py-0.5 text-[9.5px] font-black text-rose-200 hover:bg-rose-500/25 transition shadow-[0_0_12px_rgba(255,46,99,0.2)]">
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/45 bg-rose-500/15 px-2 py-0.5 text-[9px] font-black text-rose-200 hover:bg-rose-500/25 transition whitespace-nowrap">
               <Command className="w-3 h-3" /> Ctrl+K
             </button>
             {arena !== "chat" && arena !== "cockpit" && (
               <button onClick={() => setPrefs((p) => ({ ...p, chatOpen: !p.chatOpen }))}
                 title={prefs.chatOpen ? "إخفاء الشات الجانبي" : "إظهار الشات الجانبي"}
-                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9.5px] font-black transition ${prefs.chatOpen ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200" : "border-white/15 bg-white/5 text-white/50"}`}>
+                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[9px] font-black transition ${prefs.chatOpen ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200" : "border-white/15 bg-white/5 text-white/50"}`}>
                 {prefs.chatOpen ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />} <MessageSquare className="w-3 h-3" />
               </button>
             )}
@@ -1235,29 +1240,6 @@ export default function NovaAgentPro() {
       {/* ── جسم المنصة: المنضدة الكاملة + الشات الجانبي القابل للطيّ ── */}
       <main className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row overflow-hidden">
         <section className="flex min-w-0 flex-1 flex-col min-h-0">
-          <nav className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 border-b border-rose-500/20 overflow-x-auto bg-[#07020b]/90">
-            {ARENAS.map(({ key, labelAr, icon: Icon, color }, idx) => {
-              const active = arena === key;
-              const badge = key === "cron" && cronJobs.length > 0 ? `${cronOn}/${cronJobs.length}` : null;
-              return (
-                <React.Fragment key={key}>
-                  {idx > 0 && (idx === 4 || idx === 8 || idx === 12) && (
-                    <span className="h-4 w-px bg-white/15 shrink-0 mx-0.5" />
-                  )}
-                  <button onClick={() => setArena(key)}
-                    className="shrink-0 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[10px] font-black transition-all"
-                    style={active
-                      ? { borderColor: color + "85", background: `${color}25`, color, boxShadow: `0 0 12px ${color}35 inset` }
-                      : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.7)" }}>
-                    <Icon className="w-3 h-3" />
-                    {labelAr}
-                    {badge && <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-1.5 text-[8px] text-emerald-300 font-mono" dir="ltr">{badge}</span>}
-                  </button>
-                </React.Fragment>
-              );
-            })}
-          </nav>
-
           <div className={`min-h-0 flex-1 ${arena === "cockpit" ? "flex flex-col overflow-hidden p-0" : arena === "chat" ? "flex flex-col overflow-hidden p-2" : "overflow-y-auto p-3"}`}>
             <ErrorIsland title={arena}>
             {arena === "cockpit" && <AgentWorkCockpit />}
@@ -1750,7 +1732,8 @@ export default function NovaAgentPro() {
         )}
       </main>
 
-      {/* ── الفوتر: التيكر الحي ── */}
+      {/* ── الفوتر: التيكر الحي (يختفي في وضع استوديو الشغل الكامل لمنح أقصى ارتفاع للشات والمختبر) ── */}
+      {arena !== "cockpit" && (
       <footer className="relative z-10 shrink-0 border-t border-rose-500/15 px-3 py-1 flex items-center gap-3 text-[9px] font-mono text-white/35 overflow-hidden bg-[#07020b]/90">
         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: vit.ok ? DOT.ok : vit.ok == null ? DOT.wait : DOT.bad }} />
         <span className="shrink-0">{vit.ok === true ? "المنصة واعية" : vit.ok == null ? "يتقاس…" : "السيرفر مش واصل"}</span>
@@ -1762,6 +1745,7 @@ export default function NovaAgentPro() {
         {ticker.length === 0 && <span className="text-white/25">القناة هادية…</span>}
         <span className="mr-auto shrink-0 text-rose-300/60">DAWSHA CYBER-OPS v8</span>
       </footer>
+      )}
     </div>
   );
 }

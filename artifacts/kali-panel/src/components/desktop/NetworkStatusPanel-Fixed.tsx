@@ -30,9 +30,9 @@ export default function NetworkStatusPanelFixed() {
       let apiConnected = false;
       let apiError = "";
       
-      // Try health endpoint first
+      // Try healthz endpoint first
       try {
-        const healthResponse = await fetch("/api/health", { 
+        const healthResponse = await fetch("/api/healthz", { 
           signal: AbortSignal.timeout(5000) 
         });
         if (healthResponse.ok) {
@@ -45,30 +45,31 @@ export default function NetworkStatusPanelFixed() {
         
         // Try alternative endpoint
         try {
-          const processesResponse = await fetch("/api/processes", { 
+          const processesResponse = await fetch("/api/nova-core/status", { 
             signal: AbortSignal.timeout(3000) 
           });
           if (processesResponse.ok) {
             apiConnected = true;
             apiError = "";
           } else {
-            apiError = `Processes: ${processesResponse.status}`;
+            apiError = `Status: ${processesResponse.status}`;
           }
         } catch (error2) {
           apiError = "All endpoints failed";
         }
       }
       
-      // Check Ollama connection
+      // Check Ollama connection via server proxy
       let ollamaConnected = false;
       let ollamaError = "";
       
       try {
-        const ollamaResponse = await fetch("http://127.0.0.1:11434/api/tags", { 
+        const ollamaResponse = await fetch("/api/ollama/probe", { 
           signal: AbortSignal.timeout(5000) 
         });
         if (ollamaResponse.ok) {
-          ollamaConnected = true;
+          const d = (await ollamaResponse.json().catch(() => null)) as { connected?: boolean; online?: boolean } | null;
+          ollamaConnected = Boolean(d?.connected || d?.online || ollamaResponse.ok);
         } else {
           ollamaError = `Ollama: ${ollamaResponse.status}`;
         }
