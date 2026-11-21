@@ -2285,13 +2285,14 @@ router.post("/live-agent/storage-tiers/sync", async (req, res) => {
     flushMemory();
 
     const allMem = listMemories({ limit: 500 });
+    const recordsList = Array.isArray(allMem.items) ? allMem.items : [];
     const payload = JSON.stringify({
       doc: {
         version: 2,
         seq: Date.now(),
-        records: allMem.records,
+        records: recordsList,
       },
-      records: allMem.records.length,
+      records: recordsList.length,
     });
 
     const [primarySync, secondarySync] = await Promise.all([
